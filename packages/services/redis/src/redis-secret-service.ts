@@ -58,7 +58,7 @@ export class RedisSecretService implements SecretService {
 
   async getSecret(key: string): Promise<string> {
     const data = await this.redis.hgetall(this.secretKey(key))
-    if (!data.ciphertext) throw new Error(`Secret not found: ${key}`)
+    if (!data.ciphertext) throw new Error('Requested secret not found')
 
     const kek = this.getKEK(Number(data.key_version))
     return envelopeDecrypt<string>(kek, data.ciphertext!, data.wrapped_dek!)
