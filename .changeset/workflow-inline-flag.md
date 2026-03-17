@@ -1,6 +1,6 @@
 ---
-"@pikku/core": minor
-"@pikku/cli": minor
+"@pikku/core": patch
+"@pikku/cli": patch
 ---
 
 Add `inline` property to workflow function definitions. When `inline: true` is set on a workflow, it always executes inline without dispatching to the queue service, even when a queue service is available. This is useful for workflows that should run synchronously within the parent process (e.g. scaffolding/setup steps that produce local files).
