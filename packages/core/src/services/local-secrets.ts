@@ -35,7 +35,7 @@ export class LocalSecretService implements SecretService {
     if (value) {
       return JSON.parse(value)
     }
-    throw new Error(`Secret Not Found: ${key}`)
+    throw new Error('Requested secret not found')
   }
 
   /**
@@ -57,7 +57,7 @@ export class LocalSecretService implements SecretService {
     if (value) {
       return value
     }
-    throw new Error(`Secret Not Found: ${key}`)
+    throw new Error('Requested secret not found')
   }
 
   /**

@@ -2,6 +2,15 @@ import { InvalidSessionError } from '../errors/errors.js'
 import type { CoreUserSession } from '../types/core.types.js'
 import { pikkuMiddleware, pikkuMiddlewareFactory } from '../types/core.types.js'
 
+const constantTimeEqual = (a: string, b: string): boolean => {
+  if (a.length !== b.length) return false
+  let result = 0
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  }
+  return result === 0
+}
+
 /**
  * Bearer token middleware that extracts and validates tokens from the Authorization header.
  *
@@ -55,7 +64,7 @@ export const authBearer = pikkuMiddlewareFactory<{
 
         let userSession: CoreUserSession | null = null
 
-        if (token && bearerToken === token.value) {
+        if (token && constantTimeEqual(bearerToken, token.value)) {
           userSession = token.userSession
         } else if (jwtService && !token) {
           userSession = await jwtService.decode(bearerToken)

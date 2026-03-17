@@ -35,8 +35,15 @@ export const authCookie = pikkuMiddlewareFactory<{
   name: string
   options: SerializeOptions
   expiresIn: RelativeTimeInput
-}>(({ name, options, expiresIn }) =>
-  pikkuMiddleware(
+}>(({ name, options, expiresIn }) => {
+  const mergedOptions: SerializeOptions = {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    ...options,
+  }
+  return pikkuMiddleware(
     async (
       { jwt: jwtService, logger },
       { http, setSession, getSession, session, hasSessionChanged },
@@ -67,7 +74,7 @@ export const authCookie = pikkuMiddlewareFactory<{
             name,
             await jwtService.encode(expiresIn, currentSession),
             {
-              ...options,
+              ...mergedOptions,
               expires: getRelativeTimeOffsetFromNow(expiresIn),
             }
           )
@@ -77,4 +84,4 @@ export const authCookie = pikkuMiddlewareFactory<{
       }
     }
   )
-)
+})
