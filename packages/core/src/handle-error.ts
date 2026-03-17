@@ -1,3 +1,4 @@
+import { isProduction } from './env.js'
 import { getErrorResponse } from './errors/error-handler.js'
 import { NotFoundError } from './errors/errors.js'
 import type { Logger } from './services/logger.js'
@@ -55,7 +56,7 @@ export const handleHTTPError = (
     if (trackerId) {
       logger.warn(`Error id: ${trackerId}`)
       const errorBody: Record<string, unknown> = { errorId: trackerId }
-      if (exposeErrors && e instanceof Error) {
+      if (exposeErrors && !isProduction() && e instanceof Error) {
         errorBody.message = e.message
         errorBody.stack = e.stack
       }
