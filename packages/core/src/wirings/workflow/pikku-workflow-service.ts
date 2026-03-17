@@ -386,12 +386,17 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     data: any
   ): Promise<void> {
     const queueService = this.verifyQueueService()
-    await queueService.add(this.getConfig().stepWorkerQueueName, {
-      runId,
-      stepName,
-      rpcName,
-      data,
-    })
+    await queueService.add(
+      this.getConfig().stepWorkerQueueName,
+      JSON.parse(
+        JSON.stringify({
+          runId,
+          stepName,
+          rpcName,
+          data,
+        })
+      )
+    )
   }
 
   /**
@@ -852,12 +857,14 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
       await getSingletonServices()!.queueService!.add(
         this.getConfig().stepWorkerQueueName,
-        {
-          runId,
-          stepName,
-          rpcName,
-          data,
-        },
+        JSON.parse(
+          JSON.stringify({
+            runId,
+            stepName,
+            rpcName,
+            data,
+          })
+        ),
         {
           // attempts includes initial attempt, retries doesn't
           attempts: retries + 1,
