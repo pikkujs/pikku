@@ -263,7 +263,7 @@ function generateFunctionFile(
   const returnCast = parsed.responseSchema ? ' as any' : ''
   funcConfig.push(
     `  func: async (${funcParams}) => {`,
-    `    return ${camelName}.call('${method}', '${parsed.path}'${hasInput ? ', data' : ''})${returnCast}`,
+    `    return ${camelName}.call(${JSON.stringify(method)}, ${JSON.stringify(parsed.path)}${hasInput ? ', data' : ''})${returnCast}`,
     '  },'
   )
 

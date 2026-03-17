@@ -6,7 +6,7 @@ import { UnprocessableContentError } from '@pikku/core/errors'
 
 const ajv = new Ajv({
   removeAdditional: false,
-  coerceTypes: true,
+  coerceTypes: false,
   useDefaults: true,
 })
 addFormats.default(ajv as any)
@@ -35,7 +35,6 @@ export class AjvSchemaService implements SchemaService {
     if (!result) {
       this.logger.error(
         `failed to validate request data against schema '${schemaName}'`,
-        json,
         validator.errors
       )
       const errorText = ajv.errorsText(validator.errors)
