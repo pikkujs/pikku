@@ -530,7 +530,7 @@ export const fetchData = async <In, Out>(
         apiRoute,
         apiType,
       })
-      throw new NotFoundError(`Route not found: ${apiRoute}`)
+      throw new NotFoundError()
     }
 
     // Execute the matched route along with its middleware and session management

@@ -14,7 +14,7 @@ import type { GatewaysMeta } from './wirings/gateway/gateway.types.js'
 import type { ScheduledTasksMeta } from './wirings/scheduler/scheduler.types.js'
 import type { TriggerMeta } from './wirings/trigger/trigger.types.js'
 
-const PIKKU_STATE_KEY = Symbol.for('@pikku/core/state')
+const PIKKU_STATE_KEY = Symbol('@pikku/core/state')
 
 export const getAllPackageStates = (): Map<string, PikkuPackageState> => {
   if (!(globalThis as any)[PIKKU_STATE_KEY]) {

@@ -141,7 +141,14 @@ export class PikkuFetchHTTPRequest<In = unknown>
         body = { data: buffer }
       } else if (contentType === 'application/x-www-form-urlencoded') {
         const text = await this.request.text()
-        body = Object.fromEntries(new URLSearchParams(text))
+        const params = new URLSearchParams(text)
+        let count = 0
+        for (const _ of params) {
+          if (++count > 256) {
+            throw new UnprocessableContentError('Too many form parameters')
+          }
+        }
+        body = Object.fromEntries(params)
       } else {
         throw new UnprocessableContentError(
           `Unsupported content type ${contentType}`
