@@ -1,5 +1,5 @@
 import { readFile } from 'fs/promises'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import type { JSONSchema7 } from 'json-schema'
 
 export class SchemaService {
@@ -12,12 +12,11 @@ export class SchemaService {
       return this.schemaCache.get(schemaName)!
     }
 
-    const schemaPath = join(
-      this.pikkuMetaPath,
-      'schemas',
-      'schemas',
-      `${schemaName}.schema.json`
-    )
+    if (!/^[a-zA-Z0-9_\-\.]+$/.test(schemaName)) {
+      return null
+    }
+    const schemasDir = resolve(this.pikkuMetaPath, 'schemas', 'schemas')
+    const schemaPath = join(schemasDir, `${schemaName}.schema.json`)
 
     try {
       const content = await readFile(schemaPath, 'utf-8')

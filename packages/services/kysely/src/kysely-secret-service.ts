@@ -100,7 +100,7 @@ export class KyselySecretService implements SecretService {
       .where('key', '=', key)
       .executeTakeFirst()
 
-    if (!row) throw new Error(`Secret not found: ${key}`)
+    if (!row) throw new Error('Requested secret not found')
 
     const kek = this.getKEK(row.key_version)
     const result = await envelopeDecrypt<string>(

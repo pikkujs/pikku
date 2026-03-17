@@ -107,7 +107,7 @@ export class PikkuUWSServer {
    * Enables the server to exit gracefully when a SIGINT signal is received.
    */
   public async enableExitOnSigInt() {
-    process.removeAllListeners('SIGINT').on('SIGINT', async () => {
+    process.on('SIGINT', async () => {
       this.logger.info('Stopping server...')
       await stopSingletonServices()
       await this.stop()

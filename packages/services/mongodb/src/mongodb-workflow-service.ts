@@ -515,6 +515,9 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     name: string,
     value: unknown
   ): Promise<void> {
+    if (!/^[a-zA-Z0-9_]+$/.test(name)) {
+      throw new Error('Invalid state key name')
+    }
     await this.runs.updateOne(
       { _id: runId },
       {
