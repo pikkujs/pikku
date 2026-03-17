@@ -66,6 +66,9 @@ export enum ErrorCode {
   MISSING_MODEL = 'PKU145',
   INVALID_MODEL = 'PKU146',
 
+  // File structure errors
+  SCHEMA_AND_WIRING_COLOCATED = 'PKU490',
+
   // Optimization diagnostics
   SERVICES_NOT_DESTRUCTURED = 'PKU410',
   WIRES_NOT_DESTRUCTURED = 'PKU411',
