@@ -52,8 +52,9 @@ export abstract class CloudflareWebSocketHibernationServer<
         response,
         bubbleErrors: true,
       })
-    } catch {
-      // Something went wrong, the cloudflare response will deal with it.
+    } catch (e) {
+      server.close(1008, 'Unauthorized')
+      return new Response(null, { status: 403 }) as any
     }
 
     return response.status(101).toResponse({ webSocket: client }) as any

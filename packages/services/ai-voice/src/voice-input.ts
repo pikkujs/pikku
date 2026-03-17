@@ -13,9 +13,22 @@ function base64ToUint8Array(base64: string): Uint8Array {
   return bytes
 }
 
+const MAX_AUDIO_SIZE = 50 * 1024 * 1024
+
 async function fetchAsUint8Array(url: string): Promise<Uint8Array> {
+  const parsed = new URL(url)
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    throw new Error('Only HTTP(S) URLs are supported for audio')
+  }
   const response = await fetch(url)
+  const contentLength = response.headers.get('content-length')
+  if (contentLength && parseInt(contentLength, 10) > MAX_AUDIO_SIZE) {
+    throw new Error('Audio file exceeds maximum size')
+  }
   const buffer = await response.arrayBuffer()
+  if (buffer.byteLength > MAX_AUDIO_SIZE) {
+    throw new Error('Audio file exceeds maximum size')
+  }
   return new Uint8Array(buffer)
 }
 

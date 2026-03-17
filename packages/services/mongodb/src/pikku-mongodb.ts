@@ -29,7 +29,7 @@ export class PikkuMongoDB {
       this.logger.info('MongoDB connection successful')
     } catch (error) {
       this.logger.error('Error connecting to MongoDB', error)
-      process.exit(1)
+      throw error
     }
   }
 

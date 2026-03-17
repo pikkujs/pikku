@@ -6,7 +6,6 @@ import postgres from 'postgres'
 export class PikkuKysely<DB> {
   public kysely: Kysely<DB>
   private postgres: postgres.Sql<{}>
-  private poolConfig?: postgres.Options<{}>
   private ownsConnection: boolean
 
   constructor(
@@ -25,7 +24,6 @@ export class PikkuKysely<DB> {
       this.ownsConnection = true
     } else {
       // It's a config object
-      this.poolConfig = connectionOrConfig
       this.postgres = postgres(connectionOrConfig)
       this.ownsConnection = true
     }
@@ -43,13 +41,7 @@ export class PikkuKysely<DB> {
   }
 
   public async init() {
-    if (this.poolConfig) {
-      this.logger.info(
-        `Connecting to database: ${this.poolConfig.host}:${this.poolConfig.port} with name ${this.poolConfig.database}`
-      )
-    } else {
-      this.logger.info('Connecting to database...')
-    }
+    this.logger.info('Connecting to database...')
 
     try {
       const response = await this.postgres`SELECT version();`
@@ -57,7 +49,7 @@ export class PikkuKysely<DB> {
       this.logger.info(version)
     } catch (error) {
       this.logger.error('Error connecting to database', error)
-      process.exit(1)
+      throw error
     }
   }
 
