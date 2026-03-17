@@ -105,6 +105,9 @@ export class PikkuFetchHTTPRequest<In = unknown>
     const merged: Record<string, unknown> = {}
     for (const part of parts) {
       for (const [key, value] of Object.entries(part)) {
+        if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+          continue
+        }
         if (key in merged && !valuesAreEquivalent(merged[key], value)) {
           throw new UnprocessableContentError(
             `Conflicting values for key "${key}": "${merged[key]}" vs "${value}"`

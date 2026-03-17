@@ -32,6 +32,7 @@ import {
   getCreateWireServices,
 } from '../../pikku-state.js'
 import { PikkuSessionService } from '../../services/user-session-service.js'
+import { getErrorResponse } from '../../errors/error-handler.js'
 import { handleHTTPError } from '../../handle-error.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
@@ -552,10 +553,11 @@ export const fetchData = async <In, Out>(
       // For SSE routes, send error through the stream since the response is already in stream mode
       singletonServices.logger.error(e instanceof Error ? e.message : e)
       try {
+        const errorResponse = getErrorResponse(e)
         response.arrayBuffer(
           JSON.stringify({
             type: 'error',
-            errorText: e instanceof Error ? e.message : String(e),
+            errorText: errorResponse?.message ?? 'Internal server error',
           })
         )
         response.arrayBuffer(JSON.stringify({ type: 'done' }))

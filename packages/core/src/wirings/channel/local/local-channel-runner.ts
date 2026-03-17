@@ -5,6 +5,8 @@ import { processMessageHandlers } from '../channel-handler.js'
 import type { CoreChannel, RunChannelOptions } from '../channel.types.js'
 import { PikkuLocalChannelHandler } from './local-channel-handler.js'
 import type { PikkuWire, WireServices } from '../../../types/core.types.js'
+import { isProduction } from '../../../env.js'
+import { getErrorResponse } from '../../../errors/error-handler.js'
 import { handleHTTPError } from '../../../handle-error.js'
 import {
   PikkuSessionService,
@@ -121,9 +123,10 @@ export const runLocalChannel = async ({
             }
           } catch (e: any) {
             singletonServices.logger.error(`Error handling onConnect: ${e}`)
+            const errorResponse = getErrorResponse(e)
             channel.send({
-              error: e.message || 'Unknown error',
-              errorName: e.constructor?.name,
+              error: errorResponse?.message ?? (isProduction() ? 'Internal server error' : e.message),
+              ...(!isProduction() && { errorName: e.constructor?.name }),
             })
           }
         }
@@ -143,9 +146,10 @@ export const runLocalChannel = async ({
             })
           } catch (e: any) {
             singletonServices.logger.error(`Error handling onDisconnect: ${e}`)
+            const errorResponse = getErrorResponse(e)
             channel.send({
-              error: e.message || 'Unknown error',
-              errorName: e.constructor?.name,
+              error: errorResponse?.message ?? (isProduction() ? 'Internal server error' : e.message),
+              ...(!isProduction() && { errorName: e.constructor?.name }),
             })
           }
         }
@@ -165,9 +169,10 @@ export const runLocalChannel = async ({
           await channel.send(result)
         } catch (e: any) {
           singletonServices.logger.error(e)
+          const errorResponse = getErrorResponse(e)
           channel.send({
-            error: e.message || 'Unknown error',
-            errorName: e.constructor?.name,
+            error: errorResponse?.message ?? (isProduction() ? 'Internal server error' : e.message),
+            ...(!isProduction() && { errorName: e.constructor?.name }),
           })
           setTimeout(() => channel.close(), 200)
         }
