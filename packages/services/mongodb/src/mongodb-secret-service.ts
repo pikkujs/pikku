@@ -89,7 +89,7 @@ export class MongoDBSecretService implements SecretService {
 
   async getSecret(key: string): Promise<string> {
     const row = await this.secrets.findOne({ _id: key })
-    if (!row) throw new Error(`Secret not found: ${key}`)
+    if (!row) throw new Error('Requested secret not found')
 
     const kek = this.getKEK(row.keyVersion)
     const result = await envelopeDecrypt<string>(
