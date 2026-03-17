@@ -1,4 +1,5 @@
 import type { ContentService, Logger } from '@pikku/core/services'
+import { createHash } from 'crypto'
 import { readFile } from 'fs/promises'
 
 const B2_AUTH_URL = 'https://api.backblazeb2.com/b2api/v2/b2_authorize_account'
@@ -87,6 +88,7 @@ export class B2Content implements ContentService {
     contentType = 'application/octet-stream'
   ) {
     const { uploadUrl, authorizationToken } = await this.getUploadToken()
+    const sha1 = createHash('sha1').update(data).digest('hex')
     const res = await fetch(uploadUrl, {
       method: 'POST',
       headers: {
@@ -94,7 +96,7 @@ export class B2Content implements ContentService {
         'X-Bz-File-Name': encodeURIComponent(fileName),
         'Content-Type': contentType,
         'Content-Length': String(data.byteLength),
-        'X-Bz-Content-Sha1': 'do_not_verify',
+        'X-Bz-Content-Sha1': sha1,
       },
       body: data as unknown as BodyInit,
     })
@@ -104,22 +106,43 @@ export class B2Content implements ContentService {
     return res.json()
   }
 
+  private async getDownloadAuthorization(
+    fileNamePrefix: string,
+    validDurationInSeconds: number
+  ): Promise<string> {
+    const data = await this.b2Post('b2_get_download_authorization', {
+      bucketId: this.bucketId,
+      fileNamePrefix,
+      validDurationInSeconds,
+    })
+    return data.authorizationToken
+  }
+
   async signContentKey(
     contentKey: string,
-    _dateLessThan: Date,
-    _dateGreaterThan?: Date
+    dateLessThan: Date,
   ): Promise<string> {
     const auth = await this.ensureAuthorized()
     const bucketName = await this.getBucketName()
-    return `${auth.downloadUrl}/file/${bucketName}/${contentKey}`
+    const durationSeconds = Math.max(1, Math.floor((dateLessThan.getTime() - Date.now()) / 1000))
+    const downloadAuth = await this.getDownloadAuthorization(contentKey, durationSeconds)
+    return `${auth.downloadUrl}/file/${bucketName}/${contentKey}?Authorization=${downloadAuth}`
   }
 
   async signURL(
     url: string,
-    _dateLessThan: Date,
-    _dateGreaterThan?: Date
+    dateLessThan: Date,
   ): Promise<string> {
-    return url
+    const durationSeconds = Math.max(1, Math.floor((dateLessThan.getTime() - Date.now()) / 1000))
+    const parsed = new URL(url)
+    const pathParts = parsed.pathname.split('/file/')
+    if (pathParts.length < 2) {
+      return url
+    }
+    const filePrefix = pathParts[1]!.split('/').slice(1).join('/')
+    const downloadAuth = await this.getDownloadAuthorization(filePrefix, durationSeconds)
+    parsed.searchParams.set('Authorization', downloadAuth)
+    return parsed.toString()
   }
 
   async getUploadURL(
