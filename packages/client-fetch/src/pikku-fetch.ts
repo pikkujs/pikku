@@ -21,7 +21,7 @@ export const corePikkuFetch = async (
     const keys = Object.keys(data)
     for (const key of keys) {
       if (uri.includes(`:${key}`)) {
-        uri = uri.replace(`:${key}`, data[key])
+        uri = uri.replace(`:${key}`, encodeURIComponent(String(data[key])))
         delete data[key]
       }
     }

@@ -54,8 +54,9 @@ export class PikkuDuplexResponse implements PikkuHTTPResponse {
   // Set headers (for content-type, cookies, etc.)
   public header(name: string, value: string): this {
     if (!this.aborted) {
+      const sanitized = (s: string) => s.replace(/[\r\n]/g, '')
       // Write the header to the response (e.g., Content-Type)
-      this.duplex.write(`${name}: ${value}\r\n`)
+      this.duplex.write(`${sanitized(name)}: ${sanitized(value)}\r\n`)
     }
     return this
   }

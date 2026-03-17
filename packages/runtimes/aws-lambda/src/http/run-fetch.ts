@@ -9,7 +9,7 @@ export const runFetch = async (
   const request = lambdaEventToRequest(event)
   const response = new PikkuFetchHTTPResponse()
 
-  if (request.method === 'options') {
+  if (request.method === 'OPTIONS') {
     response.header(
       'Access-Control-Allow-Headers',
       'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'

@@ -7,6 +7,7 @@ import type { CorsOptions, CorsOptionsDelegate } from 'cors'
 import getRawBody from 'raw-body'
 import contentType from 'content-type'
 import { mkdir, writeFile } from 'fs/promises'
+import { resolve, normalize } from 'path'
 
 import type { CoreConfig } from '@pikku/core'
 import { stopSingletonServices } from '@pikku/core'
@@ -72,8 +73,15 @@ export class PikkuExpressServer {
       )
     }
 
+    const basePath = resolve(configContent.localFileUploadPath)
+
     this.app.put('/reaper/*path', async (req, res) => {
       const key = (req.params as any).path.join('/')
+      const targetPath = resolve(basePath, normalize(key))
+      if (!targetPath.startsWith(basePath + '/')) {
+        res.status(400).end('Invalid path')
+        return
+      }
 
       const file = await getRawBody(req, {
         length: req.headers['content-length'],
@@ -81,12 +89,9 @@ export class PikkuExpressServer {
         encoding: contentType.parse(req).parameters.charset,
       })
 
-      const parts = key.split('/')
-      const fileName = parts.pop()
-      const dir = `${configContent.localFileUploadPath}/${parts.join('/')}`
-
+      const dir = targetPath.substring(0, targetPath.lastIndexOf('/'))
       await mkdir(dir, { recursive: true })
-      await writeFile(`${dir}/${fileName}`, file, 'binary')
+      await writeFile(targetPath, file, 'binary')
       res.end()
     })
   }

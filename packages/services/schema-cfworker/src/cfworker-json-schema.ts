@@ -33,7 +33,6 @@ export class CFWorkerSchemaService implements SchemaService {
     if (!result.valid) {
       this.logger.error(
         `failed to validate request data against schema '${schemaName}'`,
-        json,
         result.errors
       )
       throw new UnprocessableContentError(
