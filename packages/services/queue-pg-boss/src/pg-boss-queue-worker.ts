@@ -12,6 +12,7 @@ import {
   QueueJobDiscardedError,
 } from '@pikku/core/queue'
 import { pikkuState } from '@pikku/core/internal'
+import type { Logger } from '@pikku/core/services'
 import { mapPgBossJobToQueueJob } from './utils.js'
 
 export const mapPikkuWorkerToPgBoss = (
@@ -129,7 +130,7 @@ export class PgBossQueueWorkers implements QueueWorkers {
    * Scan state and register all compatible processors
    */
   async registerQueues(
-    logger?: any
+    logger?: Logger
   ): Promise<Record<string, ConfigValidationResult[]>> {
     if (!logger) {
       logger = pikkuState(null, 'package', 'singletonServices')?.logger
