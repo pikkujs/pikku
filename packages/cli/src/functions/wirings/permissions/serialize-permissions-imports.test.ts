@@ -232,8 +232,7 @@ describe('serializePermissionsImports', () => {
 
     assert.strictEqual(
       result,
-      `/* Side-effect imports for direct addPermission calls */\nimport '../../../src/permissions/direct.js'`,
-      'Should generate side-effect imports for non-factory permissions'
+      `/* Side-effect imports for direct addPermission calls */\nimport '../../../src/permissions/direct.js'`
     )
   })
 

@@ -307,14 +307,12 @@ export const createSingletonServices: CreateSingletonServices<
           undefined)
         : undefined
       const oldProgram = unfilteredState?.program ?? undefined
-      const previousSchemas = unfilteredState?.schemas ?? undefined
       const inspectStart = Date.now()
       unfilteredState = await inspect(logger, wiringFiles, {
         setupOnly,
         rootDir,
         isAddon: !!config.addon,
         oldProgram,
-        previousSchemas,
         types: {
           configFileType: config.configFile,
           userSessionType: config.userSessionType,
