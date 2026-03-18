@@ -67,6 +67,8 @@ function primitiveTypeToSchema(typeStr: string): JSONValue | null {
 let cachedSchemaProgram: ts.Program | undefined
 let cachedParsedConfig: ts.ParsedCommandLine | undefined
 let cachedTsconfigPath: string | undefined
+let cachedCustomTypesContent: string | undefined
+let cachedTSSchemas: Record<string, JSONValue> | undefined
 
 function createProgramWithVirtualFile(
   tsconfig: string,
@@ -331,6 +333,11 @@ export async function generateAllSchemas(
     requiredTypes
   )
 
+  if (cachedTSSchemas && cachedCustomTypesContent === customTypesContent) {
+    logger.debug('Reusing cached TS schemas (types unchanged)')
+    return { ...cachedTSSchemas, ...zodSchemas }
+  }
+
   const tsSchemas = generateTSSchemas(
     logger,
     config.tsconfig,
@@ -342,6 +349,9 @@ export async function generateAllSchemas(
     config.schema?.additionalProperties,
     state.schemaLookup
   )
+
+  cachedCustomTypesContent = customTypesContent
+  cachedTSSchemas = tsSchemas
 
   return { ...tsSchemas, ...zodSchemas }
 }

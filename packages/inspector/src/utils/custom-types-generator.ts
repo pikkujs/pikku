@@ -16,6 +16,7 @@ export function generateCustomTypes(
   requiredTypes: Set<string>
 ) {
   const typeDeclarations = Array.from(typesMap.customTypes.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
     .filter(([_name, { type }]) => {
       const hasUndefinedGeneric =
         /\b(Name|In|Out|Key)\b/.test(type) && /\[.*\]/.test(type)
