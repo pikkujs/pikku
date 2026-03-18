@@ -1,5 +1,31 @@
 # @pikku/kysely-postgres
 
+## 0.12.6
+
+### Patch Changes
+
+- a2ee6d0: Stop logging database host, port, and name at info level. Replace process.exit(1) with thrown error on connection failure.
+- 8b9b2e9: Fix child workflow completion in queued execution mode. When a sub-workflow completes, the parent step is now marked as succeeded and the parent orchestrator resumes automatically via `onChildWorkflowCompleted`. Adds `parentStepId` to `WorkflowRunWire` to track the parent step without querying. Retains advisory locks in PgKyselyWorkflowService for concurrency safety. Fixes pgboss `registerQueues` to accept an optional logger parameter.
+- Updated dependencies [e412b4d]
+- Updated dependencies [53dc8c8]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [87433f0]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [b973d44]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [8b9b2e9]
+  - @pikku/core@0.12.9
+  - @pikku/kysely@0.12.5
+
 ## 0.12.5
 
 ### Patch Changes

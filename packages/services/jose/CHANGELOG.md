@@ -1,5 +1,28 @@
 ## 0.12.0
 
+## 0.12.3
+
+### Patch Changes
+
+- a2ee6d0: Enforce HS256 algorithm during JWT verification to prevent algorithm confusion attacks. Stop logging secret key IDs at info level.
+- Updated dependencies [e412b4d]
+- Updated dependencies [53dc8c8]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [b973d44]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [8b9b2e9]
+  - @pikku/core@0.12.9
+
 ## 0.12.2
 
 ### Patch Changes

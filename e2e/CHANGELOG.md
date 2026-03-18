@@ -1,5 +1,36 @@
 # @pikku/e2e
 
+## 0.0.7
+
+### Patch Changes
+
+- Updated dependencies [e412b4d]
+- Updated dependencies [53dc8c8]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [87433f0]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [a2ee6d0]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [e3142ad]
+- Updated dependencies [87433f0]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [b973d44]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [8b9b2e9]
+  - @pikku/core@0.12.9
+  - @pikku/kysely@0.12.5
+  - @pikku/kysely-postgres@0.12.6
+  - @pikku/schema-cfworker@0.12.2
+  - @pikku/uws@0.12.4
+  - @pikku/kysely-mysql@0.12.9
+
 ## 0.0.6
 
 ### Patch Changes

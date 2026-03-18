@@ -1,5 +1,11 @@
 ## 0.12.0
 
+## 0.12.1
+
+### Patch Changes
+
+- 3fbd05c: Encode URI path parameters with encodeURIComponent to prevent path injection via user-supplied data values.
+
 ### New Features
 
 - Auto-remove `Content-Type` header for bodyless requests (GET/DELETE)

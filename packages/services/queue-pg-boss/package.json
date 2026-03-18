@@ -1,6 +1,6 @@
 {
   "name": "@pikku/queue-pg-boss",
-  "version": "0.12.2",
+  "version": "0.12.3",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/index.js",
@@ -14,7 +14,7 @@
     "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.2"
+    "@pikku/core": "^0.12.9"
   },
   "dependencies": {
     "pg-boss": "^12.14.0"

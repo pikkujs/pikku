@@ -1,5 +1,30 @@
 # pikku-vscode
 
+## 0.1.10
+
+### Patch Changes
+
+- Updated dependencies [e412b4d]
+- Updated dependencies [5866b66]
+- Updated dependencies [53dc8c8]
+- Updated dependencies [e412b4d]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [b973d44]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [8b9b2e9]
+  - @pikku/core@0.12.9
+  - @pikku/inspector@0.12.4
+
 ## 0.1.9
 
 ### Patch Changes

@@ -1,5 +1,29 @@
 ## 0.12.0
 
+## 0.12.3
+
+### Patch Changes
+
+- 8b9b2e9: Accept optional logger parameter in `registerQueues()` instead of reaching into pikku state directly. Falls back to `getSingletonServices()` for backwards compatibility.
+- 8b9b2e9: Fix child workflow completion in queued execution mode. When a sub-workflow completes, the parent step is now marked as succeeded and the parent orchestrator resumes automatically via `onChildWorkflowCompleted`. Adds `parentStepId` to `WorkflowRunWire` to track the parent step without querying. Retains advisory locks in PgKyselyWorkflowService for concurrency safety. Fixes pgboss `registerQueues` to accept an optional logger parameter.
+- Updated dependencies [e412b4d]
+- Updated dependencies [53dc8c8]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [b973d44]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [8b9b2e9]
+  - @pikku/core@0.12.9
+
 ## 0.12.2
 
 ### Patch Changes

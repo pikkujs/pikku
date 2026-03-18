@@ -15,8 +15,8 @@
   },
   "dependencies": {
     "@auth/core": "^0.37.0",
-    "@pikku/auth-js": "^0.12.2",
-    "@pikku/core": "^0.12.8",
+    "@pikku/auth-js": "^0.12.3",
+    "@pikku/core": "^0.12.9",
     "@pikku/queue-bullmq": "^0.12.2",
     "tslib": "^2.8.1",
     "tsx": "^4.21.0",

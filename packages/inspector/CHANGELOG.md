@@ -1,5 +1,37 @@
 ## 0.12.0
 
+## 0.12.4
+
+### Patch Changes
+
+- 5866b66: Add critical error (PKU490) when Zod schemas and wiring calls (wireHTTPRoutes, addPermission, addHTTPMiddleware) coexist in the same file. The CLI uses tsImport to extract Zod schemas at runtime, which executes all top-level code — wiring side-effects crash in this context because pikku state metadata doesn't exist. Schemas and wirings must be in separate files.
+- e412b4d: Optimize CLI codegen performance: 12x faster `pikku all`
+
+  - Reuse schemas across re-inspections (skip redundant `ts-json-schema-generator` runs)
+  - Cache TS schemas to disk (`.pikku/schema-cache.json`) for cross-run reuse
+  - Pass `oldProgram` to `ts.createProgram` for incremental TS compilation
+  - Cache parsed tsconfig in schema generator between runs
+  - Auto-include direct `addPermission`/`addHTTPMiddleware` in bootstrap via side-effect imports
+  - Skip `pikkuAuth()` errors when nested inside `addPermission`/`addHTTPPermission`
+
+- Updated dependencies [e412b4d]
+- Updated dependencies [53dc8c8]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [b973d44]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [8b9b2e9]
+  - @pikku/core@0.12.9
+
 ## 0.12.3
 
 ### Patch Changes
