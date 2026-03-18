@@ -1,7 +1,7 @@
 ---
-"@pikku/express-server": patch
-"@pikku/fastify-server": patch
-"@pikku/uws-server": patch
+"@pikku/express": patch
+"@pikku/fastify": patch
+"@pikku/uws": patch
 ---
 
 Stop calling removeAllListeners('SIGINT') which destructively removes third-party signal handlers.
