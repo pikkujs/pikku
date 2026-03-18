@@ -327,6 +327,7 @@ export const createSingletonServices: CreateSingletonServices<
               tsconfig: config.tsconfig,
               schemasFromTypes: config.schemasFromTypes,
               schema: config.schema,
+              cacheDir: config.schemaDirectory,
             }
           : undefined,
         openAPI:

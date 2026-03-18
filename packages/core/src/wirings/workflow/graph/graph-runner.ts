@@ -4,6 +4,17 @@ import { pikkuState, getSingletonServices } from '../../../pikku-state.js'
 import type { WorkflowRuntimeMeta, WorkflowRunWire } from '../workflow.types.js'
 import { RPCNotFoundError } from '../../rpc/rpc-runner.js'
 
+export class ChildWorkflowStartedException extends Error {
+  name = 'ChildWorkflowStartedException'
+  constructor(
+    public parentRunId: string,
+    public stepId: string,
+    public childRunId: string
+  ) {
+    super(`Child workflow started: ${childRunId}`)
+  }
+}
+
 function buildTemplateRegex(nodeId: string): RegExp | null {
   if (!nodeId.includes('${')) return null
   const escaped = nodeId
@@ -446,10 +457,11 @@ export async function executeGraphStep(
 
     const subWorkflowMeta = pikkuState(null, 'workflows', 'meta')[rpcName]
     if (subWorkflowMeta) {
-      const childWire = {
+      const childWire: WorkflowRunWire = {
         type: 'workflow',
         id: rpcName,
         parentRunId: runId,
+        parentStepId: stepId,
       }
       const shouldInline = subWorkflowMeta.inline || !getSingletonServices()?.queueService
       const { runId: childRunId } = await workflowService.startWorkflow(
@@ -461,22 +473,17 @@ export async function executeGraphStep(
       )
       await workflowService.setStepChildRunId(stepId, childRunId)
 
-      while (true) {
+      if (shouldInline) {
         const childRun = await workflowService.getRun(childRunId)
-        if (!childRun) {
-          throw new Error(`Child workflow run not found: ${childRunId}`)
+        if (childRun?.status === 'failed') {
+          throw new Error(childRun.error?.message || 'Sub-workflow failed')
         }
-        if (['completed', 'failed', 'cancelled'].includes(childRun.status)) {
-          if (childRun.status === 'failed') {
-            throw new Error(childRun.error?.message || 'Sub-workflow failed')
-          }
-          if (childRun.status === 'cancelled') {
-            throw new Error('Sub-workflow was cancelled')
-          }
-          result = childRun.output
-          break
+        if (childRun?.status === 'cancelled') {
+          throw new Error('Sub-workflow was cancelled')
         }
-        await new Promise((resolve) => setTimeout(resolve, 500))
+        result = childRun?.output
+      } else {
+        throw new ChildWorkflowStartedException(runId, stepId, childRunId)
       }
     } else {
       result = await rpcService.rpcWithWire(rpcName, data, {

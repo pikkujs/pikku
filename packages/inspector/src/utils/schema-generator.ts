@@ -1,5 +1,8 @@
 import * as ts from 'typescript'
+import { performance } from 'perf_hooks'
+import { createHash } from 'crypto'
 import { dirname, join, resolve } from 'path'
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { createGenerator, RootlessError } from 'ts-json-schema-generator'
 import { tsImport } from 'tsx/esm/api'
 import * as z from 'zod'
@@ -315,6 +318,7 @@ export async function generateAllSchemas(
     tsconfig: string
     schemasFromTypes?: string[]
     schema?: { additionalProperties?: boolean }
+    cacheDir?: string
   },
   state: InspectorState
 ): Promise<Record<string, JSONValue>> {
@@ -330,17 +334,67 @@ export async function generateAllSchemas(
     requiredTypes
   )
 
-  const tsSchemas = generateTSSchemas(
-    logger,
-    config.tsconfig,
-    customTypesContent,
-    state.functions.typesMap,
-    state.functions.meta,
-    state.http.meta,
-    config.schemasFromTypes,
-    config.schema?.additionalProperties,
-    state.schemaLookup
-  )
+  // Build cache key from inputs that affect TS schema output
+  const cacheDir = config.cacheDir ?? join(state.rootDir, '.pikku', 'schemas')
+  const cacheFile = join(cacheDir, 'pikku.cache.json')
+  const cacheKey = createHash('sha256')
+    .update(customTypesContent)
+    .update(JSON.stringify(config.schemasFromTypes ?? []))
+    .update(JSON.stringify(config.schema ?? {}))
+    .update(JSON.stringify(Object.keys(state.functions.meta).sort()))
+    .digest('hex')
+
+  // Try to load from cache
+  let tsSchemas: Record<string, JSONValue> | null = null
+  if (existsSync(cacheFile)) {
+    try {
+      const cached = JSON.parse(readFileSync(cacheFile, 'utf-8'))
+      if (cached.key === cacheKey) {
+        tsSchemas = cached.schemas
+        logger.debug(
+          `Loaded ${Object.keys(tsSchemas!).length} schemas from cache`
+        )
+      }
+    } catch {
+      // Cache is corrupt — regenerate
+    }
+  }
+
+  // Generate if cache miss
+  if (!tsSchemas) {
+    const startTs = performance.now()
+    tsSchemas = generateTSSchemas(
+      logger,
+      config.tsconfig,
+      customTypesContent,
+      state.functions.typesMap,
+      state.functions.meta,
+      state.http.meta,
+      config.schemasFromTypes,
+      config.schema?.additionalProperties,
+      state.schemaLookup
+    )
+
+    logger.debug(
+      `generateTSSchemas took ${(performance.now() - startTs).toFixed(0)}ms for ${Object.keys(tsSchemas).length} schemas`
+    )
+
+    // Write cache
+    try {
+      if (!existsSync(cacheDir)) {
+        mkdirSync(cacheDir, { recursive: true })
+      }
+      writeFileSync(
+        cacheFile,
+        JSON.stringify({ key: cacheKey, schemas: tsSchemas })
+      )
+      logger.debug(
+        `Cached ${Object.keys(tsSchemas).length} schemas to ${cacheFile}`
+      )
+    } catch {
+      // Non-fatal — cache write failure shouldn't break the build
+    }
+  }
 
   return { ...tsSchemas, ...zodSchemas }
 }

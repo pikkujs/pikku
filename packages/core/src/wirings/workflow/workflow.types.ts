@@ -40,6 +40,7 @@ export interface WorkflowRunWire {
   type: string
   id?: string
   parentRunId?: string
+  parentStepId?: string
 }
 
 export interface WorkflowServiceConfig {

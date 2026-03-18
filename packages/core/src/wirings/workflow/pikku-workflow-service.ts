@@ -26,6 +26,7 @@ import {
 import type { WorkflowService } from '../../services/workflow-service.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
 import { RPCNotFoundError } from '../rpc/rpc-runner.js'
+import { ChildWorkflowStartedException } from './graph/graph-runner.js'
 
 /**
  * Exception thrown when workflow needs to pause for async step
@@ -110,6 +111,10 @@ const WORKFLOW_END_STATES: ReadonlySet<string> = new Set([
  */
 export abstract class PikkuWorkflowService implements WorkflowService {
   private inlineRuns = new Set<string>()
+
+  protected get logger() {
+    return getSingletonServices()?.logger
+  }
 
   constructor() {}
 
@@ -596,6 +601,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         )
 
         await this.updateRunStatus(runId, 'completed', result)
+        await this.onChildWorkflowCompleted(run, result)
       } catch (error: any) {
         if (error instanceof WorkflowAsyncException) {
           throw error
@@ -624,10 +630,35 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           stack: error.stack,
           code: error.code,
         })
+        await this.onChildWorkflowFailed(run, error)
 
         throw error
       }
     })
+  }
+
+  private async onChildWorkflowCompleted(
+    childRun: WorkflowRun,
+    result: any
+  ): Promise<void> {
+    const { parentRunId, parentStepId } = childRun.wire ?? {}
+    if (!parentRunId || !parentStepId) return
+
+    this.logger?.debug(`Child workflow ${childRun.id} completed, updating parent step ${parentStepId}`)
+    await this.setStepResult(parentStepId, result)
+    await this.resumeWorkflow(parentRunId)
+  }
+
+  private async onChildWorkflowFailed(
+    childRun: WorkflowRun,
+    error: Error
+  ): Promise<void> {
+    const { parentRunId, parentStepId } = childRun.wire ?? {}
+    if (!parentRunId || !parentStepId) return
+
+    this.logger?.debug(`Child workflow ${childRun.id} failed, updating parent step ${parentStepId}`)
+    await this.setStepError(parentStepId, error)
+    await this.resumeWorkflow(parentRunId)
   }
 
   private async runVersionMismatchFallback(
@@ -675,9 +706,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       // Get step state
       let stepState = await this.getStepState(runId, stepName)
 
-      // Idempotency - if already succeeded, resume orchestrator and return
+      // Idempotency - if already succeeded, nothing to do
       if (stepState.status === 'succeeded') {
-        await this.resumeWorkflow(runId)
         return
       }
 
@@ -691,8 +721,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         stepState = await this.createRetryAttempt(stepState.stepId, 'running')
       }
 
-      if (stepState.status === 'pending') {
-        // Mark pending step as running before execution
+      if (stepState.status === 'pending' || stepState.status === 'scheduled') {
         await this.setStepRunning(stepState.stepId)
       }
 
@@ -734,6 +763,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         // Resume orchestrator to continue workflow
         await this.resumeWorkflow(runId)
       } catch (error: any) {
+        if (error instanceof ChildWorkflowStartedException) {
+          this.logger?.debug(`Workflow step '${stepName}': child workflow ${error.childRunId} started, waiting for completion`)
+          return
+        }
+
         if (error instanceof RPCNotFoundError) {
           await this.setStepError(stepState.stepId, error)
           await this.updateRunStatus(runId, 'suspended', undefined, {

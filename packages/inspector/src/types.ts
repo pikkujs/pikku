@@ -218,6 +218,7 @@ export type InspectorOptions = Partial<{
     tsconfig: string
     schemasFromTypes?: string[]
     schema?: { additionalProperties?: boolean }
+    cacheDir?: string
   }
   openAPI: {
     additionalInfo: OpenAPISpecInfo
