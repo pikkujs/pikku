@@ -284,23 +284,15 @@ export const inspect = async (
     resolveLatestVersions(state, logger)
 
     if (options.schemaConfig) {
-      if (
-        options.previousSchemas &&
-        Object.keys(options.previousSchemas).length > 0
-      ) {
-        state.schemas = options.previousSchemas
-        logger.debug('Reusing previous schemas (no regeneration needed)')
-      } else {
-        const startSchemas = performance.now()
-        state.schemas = await generateAllSchemas(
-          logger,
-          options.schemaConfig,
-          state
-        )
-        logger.debug(
-          `generateAllSchemas took ${(performance.now() - startSchemas).toFixed(0)}ms`
-        )
-      }
+      const startSchemas = performance.now()
+      state.schemas = await generateAllSchemas(
+        logger,
+        options.schemaConfig,
+        state
+      )
+      logger.debug(
+        `generateAllSchemas took ${(performance.now() - startSchemas).toFixed(0)}ms`
+      )
       computeContractHashes(
         state.schemas,
         state.functions.typesMap,

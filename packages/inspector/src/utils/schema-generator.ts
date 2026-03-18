@@ -67,6 +67,10 @@ function primitiveTypeToSchema(typeStr: string): JSONValue | null {
 let cachedSchemaProgram: ts.Program | undefined
 let cachedParsedConfig: ts.ParsedCommandLine | undefined
 let cachedTsconfigPath: string | undefined
+let cachedCustomTypesContent: string | undefined
+let cachedTSSchemas: Record<string, JSONValue> | undefined
+let cachedZodSchemas: Record<string, JSONValue> | undefined
+let cachedZodFuncKeys: string | undefined
 
 function createProgramWithVirtualFile(
   tsconfig: string,
@@ -319,17 +323,31 @@ export async function generateAllSchemas(
   },
   state: InspectorState
 ): Promise<Record<string, JSONValue>> {
-  const zodSchemas = await generateZodSchemas(
-    logger,
-    state.schemaLookup,
-    state.functions.typesMap
-  )
+  const funcKeys = Object.keys(state.functions.meta).sort().join(',')
+  let zodSchemas: Record<string, JSONValue>
+  if (cachedZodSchemas && cachedZodFuncKeys === funcKeys) {
+    logger.debug('Reusing cached Zod schemas (function meta unchanged)')
+    zodSchemas = cachedZodSchemas
+  } else {
+    zodSchemas = await generateZodSchemas(
+      logger,
+      state.schemaLookup,
+      state.functions.typesMap
+    )
+    cachedZodFuncKeys = funcKeys
+    cachedZodSchemas = zodSchemas
+  }
 
   const requiredTypes = new Set<string>()
   const customTypesContent = generateCustomTypes(
     state.functions.typesMap,
     requiredTypes
   )
+
+  if (cachedTSSchemas && cachedCustomTypesContent === customTypesContent) {
+    logger.debug('Reusing cached TS schemas (types unchanged)')
+    return { ...cachedTSSchemas, ...zodSchemas }
+  }
 
   const tsSchemas = generateTSSchemas(
     logger,
@@ -342,6 +360,9 @@ export async function generateAllSchemas(
     config.schema?.additionalProperties,
     state.schemaLookup
   )
+
+  cachedCustomTypesContent = customTypesContent
+  cachedTSSchemas = tsSchemas
 
   return { ...tsSchemas, ...zodSchemas }
 }

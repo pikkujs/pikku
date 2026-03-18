@@ -226,7 +226,6 @@ export type InspectorOptions = Partial<{
   manifest: VersionManifest
   modelConfig: InspectorModelConfig
   oldProgram: ts.Program | undefined
-  previousSchemas: Record<string, any>
 }>
 
 export interface InspectorLogger {
