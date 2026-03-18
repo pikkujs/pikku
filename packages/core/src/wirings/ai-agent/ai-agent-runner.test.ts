@@ -5,6 +5,7 @@ import { resetPikkuState, pikkuState } from '../../pikku-state.js'
 import { runAIAgent } from './ai-agent-runner.js'
 import type { CoreAIAgent, PikkuAIMiddlewareHooks } from './ai-agent.types.js'
 import type { AIAgentStepResult } from '../../services/ai-agent-runner-service.js'
+import { AIProviderNotConfiguredError } from '../../errors/errors.js'
 
 beforeEach(() => {
   resetPikkuState()
@@ -42,6 +43,34 @@ const makeStepResult = (
 })
 
 describe('runAIAgent', () => {
+  test('throws AIProviderNotConfiguredError when aiAgentRunner is missing', async () => {
+    addTestAgent('no-provider-agent')
+
+    const mockServices = {
+      logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+      aiRunState: {
+        createRun: async () => 'run-no-provider',
+        updateRun: async () => {},
+      },
+    } as any
+
+    pikkuState(null, 'package', 'singletonServices', mockServices)
+
+    await assert.rejects(
+      () =>
+        runAIAgent(
+          'no-provider-agent',
+          { message: 'hello', threadId: 't', resourceId: 'r' },
+          {}
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof AIProviderNotConfiguredError)
+        assert.match((error as Error).message, /AI provider/)
+        return true
+      }
+    )
+  })
+
   test('marks run as failed when runner throws', async () => {
     addTestAgent('failing-agent')
 
