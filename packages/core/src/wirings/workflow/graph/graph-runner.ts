@@ -1,8 +1,19 @@
 import type { PikkuWorkflowService } from '../pikku-workflow-service.js'
 import type { GraphWireState, PikkuGraphWire } from './workflow-graph.types.js'
-import { pikkuState } from '../../../pikku-state.js'
+import { pikkuState, getSingletonServices } from '../../../pikku-state.js'
 import type { WorkflowRuntimeMeta, WorkflowRunWire } from '../workflow.types.js'
 import { RPCNotFoundError } from '../../rpc/rpc-runner.js'
+
+export class ChildWorkflowStartedException extends Error {
+  name = 'ChildWorkflowStartedException'
+  constructor(
+    public parentRunId: string,
+    public stepId: string,
+    public childRunId: string
+  ) {
+    super(`Child workflow started: ${childRunId}`)
+  }
+}
 
 function buildTemplateRegex(nodeId: string): RegExp | null {
   if (!nodeId.includes('${')) return null
@@ -442,9 +453,44 @@ export async function executeGraphStep(
   }
 
   try {
-    const result = await rpcService.rpcWithWire(rpcName, data, {
-      graph: graphWire,
-    })
+    let result: any
+
+    const subWorkflowMeta = pikkuState(null, 'workflows', 'meta')[rpcName]
+    if (subWorkflowMeta) {
+      const childWire: WorkflowRunWire = {
+        type: 'workflow',
+        id: rpcName,
+        parentRunId: runId,
+        parentStepId: stepId,
+      }
+      const shouldInline =
+        subWorkflowMeta.inline || !getSingletonServices()?.queueService
+      const { runId: childRunId } = await workflowService.startWorkflow(
+        rpcName,
+        data,
+        childWire,
+        rpcService,
+        { inline: shouldInline }
+      )
+      await workflowService.setStepChildRunId(stepId, childRunId)
+
+      if (shouldInline) {
+        const childRun = await workflowService.getRun(childRunId)
+        if (childRun?.status === 'failed') {
+          throw new Error(childRun.error?.message || 'Sub-workflow failed')
+        }
+        if (childRun?.status === 'cancelled') {
+          throw new Error('Sub-workflow was cancelled')
+        }
+        result = childRun?.output
+      } else {
+        throw new ChildWorkflowStartedException(runId, stepId, childRunId)
+      }
+    } else {
+      result = await rpcService.rpcWithWire(rpcName, data, {
+        graph: graphWire,
+      })
+    }
 
     if (wireState.branchKey) {
       await workflowService.setBranchTaken(stepId, wireState.branchKey)
