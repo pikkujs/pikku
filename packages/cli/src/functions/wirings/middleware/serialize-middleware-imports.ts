@@ -57,11 +57,42 @@ export const serializeMiddlewareImports = (
       )
     : new Map()
 
+  // Collect direct (non-factory) side-effect imports
+  const directImports = new Set<string>()
+  const collectDirectImports = (groupMap: Map<string, MiddlewareGroupMeta>) => {
+    for (const [, groupMeta] of groupMap.entries()) {
+      if (!groupMeta.isFactory) {
+        const filePath = getFileImportRelativePath(
+          outputPath,
+          groupMeta.sourceFile,
+          packageMappings
+        )
+        directImports.add(filePath)
+      }
+    }
+  }
+
+  collectDirectImports(httpState.routeMiddleware)
+  collectDirectImports(middlewareState.tagMiddleware)
+  if (fullState) {
+    collectDirectImports(fullState.channelMiddleware.tagMiddleware)
+  }
+
   const allFactories = new Map([
     ...httpFactories,
     ...tagFactories,
     ...channelMiddlewareFactories,
   ])
+
+  // Add direct side-effect imports (non-factory addHTTPMiddleware / addMiddleware calls)
+  if (directImports.size > 0) {
+    serializedImports.push(
+      '/* Side-effect imports for direct middleware registration calls */'
+    )
+    for (const filePath of directImports) {
+      serializedImports.push(`import '${filePath}'`)
+    }
+  }
 
   if (allFactories.size > 0) {
     serializedImports.push(

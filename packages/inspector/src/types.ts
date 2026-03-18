@@ -225,6 +225,8 @@ export type InspectorOptions = Partial<{
   tags: string[]
   manifest: VersionManifest
   modelConfig: InspectorModelConfig
+  oldProgram: ts.Program
+  previousSchemas: Record<string, any>
 }>
 
 export interface InspectorLogger {
@@ -420,4 +422,5 @@ export interface InspectorState {
   openAPISpec: Record<string, any> | null
   diagnostics: InspectorDiagnostic[]
   addonFunctions: Record<string, FunctionsMeta> // namespace -> addon's function metadata
+  program: ts.Program | null // Retained for incremental re-inspection
 }

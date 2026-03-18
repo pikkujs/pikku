@@ -38,13 +38,15 @@ function renameTempDefinitions(
   }
 }
 
-function isInsidePermissionFactory(node: ts.Node): boolean {
+function isInsidePermissionContainer(node: ts.Node): boolean {
   let current = node.parent
   while (current) {
     if (
       ts.isCallExpression(current) &&
       ts.isIdentifier(current.expression) &&
-      current.expression.text === 'pikkuPermissionFactory'
+      (current.expression.text === 'pikkuPermissionFactory' ||
+        current.expression.text === 'addPermission' ||
+        current.expression.text === 'addHTTPPermission')
     ) {
       return true
     }
@@ -69,7 +71,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
   // Handle pikkuPermission(...) - individual permission function definition
   if (expression.text === 'pikkuPermission') {
     // Skip if nested inside pikkuPermissionFactory — the factory handler extracts services itself
-    if (isInsidePermissionFactory(node)) return
+    if (isInsidePermissionContainer(node)) return
 
     const arg = args[0]
     if (!arg) return
@@ -156,7 +158,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
   }
 
   if (expression.text === 'pikkuAuth') {
-    if (isInsidePermissionFactory(node)) return
+    if (isInsidePermissionContainer(node)) return
 
     const arg = args[0]
     if (!arg) return
@@ -373,12 +375,9 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       state.rootDir
     )
 
-    if (permissionNames.length === 0) {
-      logger.warn(`• addPermission('${tag}', ...) has empty permissions array`)
-      return
+    if (permissionNames.length > 0) {
+      renameTempDefinitions(state, permissionNames, 'tag', tag)
     }
-
-    renameTempDefinitions(state, permissionNames, 'tag', tag)
 
     const allServices = new Set<string>()
     for (const permissionName of permissionNames) {
@@ -479,14 +478,9 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       state.rootDir
     )
 
-    if (permissionNames.length === 0) {
-      logger.warn(
-        `• addHTTPPermission('${pattern}', ...) has empty permissions array`
-      )
-      return
+    if (permissionNames.length > 0) {
+      renameTempDefinitions(state, permissionNames, 'http', pattern)
     }
-
-    renameTempDefinitions(state, permissionNames, 'http', pattern)
 
     const allServices = new Set<string>()
     for (const permissionName of permissionNames) {

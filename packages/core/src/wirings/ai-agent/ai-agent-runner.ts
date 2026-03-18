@@ -31,6 +31,7 @@ import {
 import { checkForApprovals, appendStepMessages } from './ai-agent-stream.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { resolveModelConfig } from './ai-agent-model-config.js'
+import { AIProviderNotConfiguredError } from '../../errors/errors.js'
 import { randomUUID } from 'crypto'
 
 export async function runAIAgent(
@@ -367,7 +368,7 @@ export async function resumeAIAgentSync(
   const memoryConfig = agent.memory
   const agentRunner = singletonServices.aiAgentRunner
   if (!agentRunner) {
-    throw new Error('AIAgentRunnerService not available')
+    throw new AIProviderNotConfiguredError()
   }
 
   const approvedIds = new Set(

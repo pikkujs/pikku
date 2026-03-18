@@ -372,3 +372,38 @@ addError(MissingSchemaError, {
   message:
     'A required schema was not found. Ensure schema generation has been run.',
 })
+
+/**
+ * An AI provider has not been configured. Set up an AI provider (e.g. OpenAI, Anthropic) to use agent features.
+ * @group Error
+ */
+export class AIProviderNotConfiguredError extends PikkuError {
+  constructor() {
+    super(
+      'No AI provider configured. Please set up an AI provider (e.g. OpenAI, Anthropic) and provide a valid API key to use this agent.'
+    )
+  }
+}
+addError(AIProviderNotConfiguredError, {
+  status: 503,
+  message:
+    'No AI provider configured. Please set up an AI provider (e.g. OpenAI, Anthropic) and provide a valid API key to use this agent.',
+})
+
+/**
+ * The AI provider API key is missing or invalid.
+ * @group Error
+ */
+export class AIProviderAuthError extends PikkuError {
+  constructor(message?: string) {
+    super(
+      message ||
+        'AI provider API key is missing or invalid. Please check your API key configuration.'
+    )
+  }
+}
+addError(AIProviderAuthError, {
+  status: 401,
+  message:
+    'AI provider API key is missing or invalid. Please check your API key configuration.',
+})
