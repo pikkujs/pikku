@@ -228,7 +228,7 @@ export const inspect = async (
     routeFiles,
     compilerOptions,
     undefined, // host
-    options.oldProgram as ts.Program | undefined // reuse structure from previous program
+    options.oldProgram
   )
   logger.debug(
     `Created program in ${(performance.now() - startProgram).toFixed(0)}ms (${routeFiles.length} files${options.oldProgram ? ', incremental' : ''})`

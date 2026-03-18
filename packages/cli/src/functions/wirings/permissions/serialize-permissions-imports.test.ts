@@ -190,7 +190,7 @@ describe('serializePermissionsImports', () => {
     )
   })
 
-  test('should skip non-factory permission groups', () => {
+  test('should generate side-effect imports for non-factory permissions', () => {
     const nonFactoryMeta: PermissionGroupMeta = {
       exportName: 'directPermissions',
       sourceFile: '/src/permissions/direct.ts',
