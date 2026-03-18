@@ -63,24 +63,34 @@ function primitiveTypeToSchema(typeStr: string): JSONValue | null {
   return null
 }
 
+// Cached state for schema program reuse across inspect() calls
+let cachedSchemaProgram: ts.Program | undefined
+let cachedParsedConfig: ts.ParsedCommandLine | undefined
+let cachedTsconfigPath: string | undefined
+
 function createProgramWithVirtualFile(
   tsconfig: string,
   virtualFilePath: string,
   virtualFileContent: string
 ): ts.Program {
   const configPath = resolve(tsconfig)
-  const configFile = ts.readConfigFile(configPath, ts.sys.readFile)
-  const basePath = dirname(configPath)
-  const parsedConfig = ts.parseJsonConfigFileContent(
-    configFile.config,
-    ts.sys,
-    basePath
-  )
+
+  // Cache the parsed tsconfig — it doesn't change between runs
+  if (!cachedParsedConfig || cachedTsconfigPath !== configPath) {
+    const configFile = ts.readConfigFile(configPath, ts.sys.readFile)
+    const basePath = dirname(configPath)
+    cachedParsedConfig = ts.parseJsonConfigFileContent(
+      configFile.config,
+      ts.sys,
+      basePath
+    )
+    cachedTsconfigPath = configPath
+  }
 
   const resolvedVirtualPath = resolve(virtualFilePath)
-  const fileNames = [...parsedConfig.fileNames, resolvedVirtualPath]
+  const fileNames = [...cachedParsedConfig.fileNames, resolvedVirtualPath]
 
-  const defaultHost = ts.createCompilerHost(parsedConfig.options)
+  const defaultHost = ts.createCompilerHost(cachedParsedConfig.options)
   const customHost: ts.CompilerHost = {
     ...defaultHost,
     getSourceFile(
@@ -113,7 +123,14 @@ function createProgramWithVirtualFile(
     },
   }
 
-  return ts.createProgram(fileNames, parsedConfig.options, customHost)
+  const program = ts.createProgram(
+    fileNames,
+    cachedParsedConfig.options,
+    customHost,
+    cachedSchemaProgram // reuse previous program for incremental compilation
+  )
+  cachedSchemaProgram = program
+  return program
 }
 
 function generateTSSchemas(

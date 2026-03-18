@@ -596,5 +596,6 @@ export function deserializeInspectorState(
     openAPISpec: data.openAPISpec || null,
     diagnostics: data.diagnostics || [],
     addonFunctions: data.addonFunctions || {},
+    program: null,
   }
 }

@@ -204,6 +204,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     openAPISpec: null,
     diagnostics: [],
     addonFunctions: {},
+    program: null,
   }
 }
 
@@ -212,8 +213,7 @@ export const inspect = async (
   routeFiles: string[],
   options: InspectorOptions = {}
 ): Promise<InspectorState> => {
-  const startProgram = performance.now()
-  const program = ts.createProgram(routeFiles, {
+  const compilerOptions: ts.CompilerOptions = {
     target: ts.ScriptTarget.ESNext,
     module: ts.ModuleKind.Node16,
     skipLibCheck: true,
@@ -222,9 +222,16 @@ export const inspect = async (
     types: [],
     allowJs: false,
     checkJs: false,
-  })
+  }
+  const startProgram = performance.now()
+  const program = ts.createProgram(
+    routeFiles,
+    compilerOptions,
+    undefined, // host
+    options.oldProgram as ts.Program | undefined // reuse structure from previous program
+  )
   logger.debug(
-    `Created program in ${(performance.now() - startProgram).toFixed(2)}ms`
+    `Created program in ${(performance.now() - startProgram).toFixed(0)}ms (${routeFiles.length} files${options.oldProgram ? ', incremental' : ''})`
   )
 
   const startChecker = performance.now()
@@ -256,7 +263,7 @@ export const inspect = async (
     )
   }
   logger.debug(
-    `Visit setup phase completed in ${(performance.now() - startSetup).toFixed(2)}ms`
+    `Visit setup phase completed in ${(performance.now() - startSetup).toFixed(0)}ms`
   )
 
   // Load addon function metadata so wirings can reference addon functions
@@ -271,17 +278,29 @@ export const inspect = async (
       )
     }
     logger.debug(
-      `Visit routes phase completed in ${(performance.now() - startRoutes).toFixed(2)}ms`
+      `Visit routes phase completed in ${(performance.now() - startRoutes).toFixed(0)}ms`
     )
 
     resolveLatestVersions(state, logger)
 
     if (options.schemaConfig) {
-      state.schemas = await generateAllSchemas(
-        logger,
-        options.schemaConfig,
-        state
-      )
+      if (
+        options.previousSchemas &&
+        Object.keys(options.previousSchemas).length > 0
+      ) {
+        state.schemas = options.previousSchemas
+        logger.debug('Reusing previous schemas (no regeneration needed)')
+      } else {
+        const startSchemas = performance.now()
+        state.schemas = await generateAllSchemas(
+          logger,
+          options.schemaConfig,
+          state
+        )
+        logger.debug(
+          `generateAllSchemas took ${(performance.now() - startSchemas).toFixed(0)}ms`
+        )
+      }
       computeContractHashes(
         state.schemas,
         state.functions.typesMap,
@@ -342,6 +361,8 @@ export const inspect = async (
     validateSecretOverrides(logger, state)
     validateVariableOverrides(logger, state)
   }
+
+  state.program = program
 
   return state
 }

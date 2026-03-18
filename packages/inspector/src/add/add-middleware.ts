@@ -274,13 +274,10 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
       state.rootDir
     )
 
-    if (refs.length === 0) {
-      logger.warn(`• addMiddleware('${tag}', ...) has empty middleware array`)
-      return
-    }
-
     const definitionIds = refs.map((r) => r.definitionId)
-    renameTempDefinitions(state, definitionIds, 'tag', tag)
+    if (definitionIds.length > 0) {
+      renameTempDefinitions(state, definitionIds, 'tag', tag)
+    }
 
     const sourceFile = node.getSourceFile().fileName
     const instanceIds: string[] = []
@@ -384,15 +381,10 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
       state.rootDir
     )
 
-    if (refs.length === 0) {
-      logger.warn(
-        `• addHTTPMiddleware('${pattern}', ...) has empty middleware array`
-      )
-      return
-    }
-
     const definitionIds = refs.map((r) => r.definitionId)
-    renameTempDefinitions(state, definitionIds, 'http', pattern)
+    if (definitionIds.length > 0) {
+      renameTempDefinitions(state, definitionIds, 'http', pattern)
+    }
 
     const sourceFile = node.getSourceFile().fileName
     const instanceIds: string[] = []
