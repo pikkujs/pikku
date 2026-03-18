@@ -1,5 +1,29 @@
 ## 0.12.0
 
+## 0.12.3
+
+### Patch Changes
+
+- e3142ad: Fix OPTIONS method comparison to use uppercase, matching the Fetch API Request.method convention. Previously the CORS preflight handler was dead code.
+- 87433f0: Replace full SQS event logging with message count to prevent sensitive data leaking into CloudWatch logs.
+- Updated dependencies [e412b4d]
+- Updated dependencies [53dc8c8]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [b973d44]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [8b9b2e9]
+  - @pikku/core@0.12.9
+
 ## 0.12.2
 
 ### Patch Changes

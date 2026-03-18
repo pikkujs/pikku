@@ -1,5 +1,29 @@
 ## 0.12.0
 
+## 0.12.3
+
+### Patch Changes
+
+- e3142ad: Add path traversal protection to the reaper file upload endpoint. Upload paths are now validated to stay within the configured upload directory.
+- 87433f0: Stop calling removeAllListeners('SIGINT') which destructively removes third-party signal handlers.
+- Updated dependencies [e412b4d]
+- Updated dependencies [53dc8c8]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [b973d44]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [8b9b2e9]
+  - @pikku/core@0.12.9
+
 ## 0.12.2
 
 ### Patch Changes

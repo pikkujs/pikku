@@ -1,6 +1,6 @@
 {
   "name": "@pikku/uws",
-  "version": "0.12.3",
+  "version": "0.12.4",
   "description": "The pikku uws server",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
@@ -18,7 +18,7 @@
     "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.3"
+    "@pikku/core": "^0.12.9"
   },
   "dependencies": {
     "@pikku/uws-handler": "^0.12.2",
@@ -27,7 +27,7 @@
     "uWebSockets.js": "uNetworking/uWebSockets.js#v20.58.0"
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.3",
+    "@pikku/core": "^0.12.9",
     "typescript": "^5.9.3"
   },
   "engines": {

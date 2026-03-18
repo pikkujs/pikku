@@ -1,5 +1,45 @@
 ## 0.12.0
 
+## 0.12.8
+
+### Patch Changes
+
+- e412b4d: Optimize CLI codegen performance: 12x faster `pikku all`
+
+  - Reuse schemas across re-inspections (skip redundant `ts-json-schema-generator` runs)
+  - Cache TS schemas to disk (`.pikku/schema-cache.json`) for cross-run reuse
+  - Pass `oldProgram` to `ts.createProgram` for incremental TS compilation
+  - Cache parsed tsconfig in schema generator between runs
+  - Auto-include direct `addPermission`/`addHTTPMiddleware` in bootstrap via side-effect imports
+  - Skip `pikkuAuth()` errors when nested inside `addPermission`/`addHTTPPermission`
+
+- b973d44: Add `inline` property to workflow function definitions. When `inline: true` is set on a workflow, it always executes inline without dispatching to the queue service, even when a queue service is available. This is useful for workflows that should run synchronously within the parent process (e.g. scaffolding/setup steps that produce local files).
+
+  The flag flows from the function definition through the inspector, into the serialized workflow graph, and is checked at runtime by the workflow service.
+
+- Updated dependencies [e412b4d]
+- Updated dependencies [5866b66]
+- Updated dependencies [53dc8c8]
+- Updated dependencies [e412b4d]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [e3142ad]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [0a1cc51]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [b973d44]
+- Updated dependencies [8b9b2e9]
+- Updated dependencies [8b9b2e9]
+  - @pikku/core@0.12.9
+  - @pikku/inspector@0.12.4
+  - @pikku/openapi-parser@0.12.4
+
 ## 0.12.7
 
 ### Patch Changes

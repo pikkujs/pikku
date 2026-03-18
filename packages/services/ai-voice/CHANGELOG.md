@@ -1,10 +1,10 @@
-# @pikku/gateway-slack
+# @pikku/ai-voice
 
 ## 0.12.1
 
 ### Patch Changes
 
-- 87433f0: Make signingSecret required in SlackGatewayAdapterOptions to prevent accepting unverified webhook payloads.
+- a2ee6d0: Restrict audio URL fetching to HTTP(S) only and enforce a 50MB size limit to prevent SSRF and memory exhaustion.
 - Updated dependencies [e412b4d]
 - Updated dependencies [53dc8c8]
 - Updated dependencies [0a1cc51]
@@ -22,9 +22,3 @@
 - Updated dependencies [8b9b2e9]
 - Updated dependencies [8b9b2e9]
   - @pikku/core@0.12.9
-
-## 0.12.0
-
-### Minor Changes
-
-- Initial release of Slack gateway adapter for Pikku

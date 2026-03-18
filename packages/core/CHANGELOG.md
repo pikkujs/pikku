@@ -1,5 +1,29 @@
 ## 0.12.4
 
+## 0.12.9
+
+### Patch Changes
+
+- e412b4d: Replace raw Error throws in AI agent runner/stream/prepare with typed PikkuError subclasses. `AIProviderNotConfiguredError` (503) replaces "AIAgentRunnerService not available" with a user-friendly message. `AIProviderAuthError` (401) available for API key validation errors.
+- 53dc8c8: Fix toWebRequest to respect x-forwarded-proto and x-forwarded-host headers behind reverse proxies. Previously always used http:// which broke OAuth callback URLs behind TLS-terminating proxies like Fly.io.
+- 0a1cc51: Add secure defaults for cookie authentication: httpOnly, secure, sameSite 'lax', and path '/'. User-provided options override these defaults.
+- 0a1cc51: Prevent internal error details from leaking to clients. Stack traces via exposeErrors are now blocked in production. SSE and WebSocket error handlers use registered error responses instead of raw error messages. Secret key names and route paths are no longer included in error messages.
+- 0a1cc51: Cap form-urlencoded parameters at 256 to prevent abuse via unbounded parameter parsing.
+- 0a1cc51: Add path traversal protection to LocalContent file operations. Asset keys are now validated to stay within the configured upload directory.
+- 0a1cc51: Use private Symbol for global pikku state key to prevent external code from accessing framework internals via Symbol.for().
+- 0a1cc51: Filter out **proto**, constructor, and prototype keys during request data merging to prevent prototype pollution.
+- 0a1cc51: Improve LocalContent URL signing with proper signedAt/expiresAt parameters. When an optional JWTService is provided, URLs include a cryptographic signature for verification.
+- 0a1cc51: Fix timeout middleware to use Promise.race instead of throwing inside setTimeout, which caused uncatchable exceptions that crashed the process.
+- 0a1cc51: Use constant-time comparison for static bearer token authentication to prevent timing side-channel attacks.
+- 8b9b2e9: Fix child workflow completion in queued execution mode. When a sub-workflow completes, the parent step is now marked as succeeded and the parent orchestrator resumes automatically via `onChildWorkflowCompleted`. Adds `parentStepId` to `WorkflowRunWire` to track the parent step without querying. Retains advisory locks in PgKyselyWorkflowService for concurrency safety. Fixes pgboss `registerQueues` to accept an optional logger parameter.
+- 8b9b2e9: Add debug-level logging to workflow service for step scheduling, execution, and orchestration to aid troubleshooting.
+- b973d44: Add `inline` property to workflow function definitions. When `inline: true` is set on a workflow, it always executes inline without dispatching to the queue service, even when a queue service is available. This is useful for workflows that should run synchronously within the parent process (e.g. scaffolding/setup steps that produce local files).
+
+  The flag flows from the function definition through the inspector, into the serialized workflow graph, and is checked at runtime by the workflow service.
+
+- 8b9b2e9: Strip undefined values from workflow step data before dispatching to the queue service, preventing postgres UNDEFINED_VALUE errors.
+- 8b9b2e9: Support sub-workflow invocation in graph-based workflow steps. When a step's rpcName refers to a registered workflow instead of an RPC function, `executeGraphStep` now starts it as a child workflow and polls for completion. Respects the `inline` meta flag on the sub-workflow.
+
 ## 0.12.8
 
 ### Patch Changes
