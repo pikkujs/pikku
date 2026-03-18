@@ -498,6 +498,9 @@ export async function executeGraphStep(
 
     return result
   } catch (error) {
+    if (error instanceof ChildWorkflowStartedException) {
+      throw error
+    }
     if (error instanceof RPCNotFoundError) {
       await workflowService.updateRunStatus(runId, 'suspended', undefined, {
         message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
@@ -587,9 +590,37 @@ async function executeGraphNodeInline(
   }
 
   try {
-    const result = await rpcService.rpcWithWire(rpcName, input, {
-      graph: graphWire,
-    })
+    let result: any
+
+    const subWorkflowMeta = pikkuState(null, 'workflows', 'meta')[rpcName]
+    if (subWorkflowMeta) {
+      const childWire: WorkflowRunWire = {
+        type: 'workflow',
+        id: rpcName,
+        parentRunId: runId,
+        parentStepId: stepState.stepId,
+      }
+      const { runId: childRunId } = await workflowService.startWorkflow(
+        rpcName,
+        input,
+        childWire,
+        rpcService,
+        { inline: true }
+      )
+      await workflowService.setStepChildRunId(stepState.stepId, childRunId)
+      const childRun = await workflowService.getRun(childRunId)
+      if (childRun?.status === 'failed') {
+        throw new Error(childRun.error?.message || 'Sub-workflow failed')
+      }
+      if (childRun?.status === 'cancelled') {
+        throw new Error('Sub-workflow was cancelled')
+      }
+      result = childRun?.output
+    } else {
+      result = await rpcService.rpcWithWire(rpcName, input, {
+        graph: graphWire,
+      })
+    }
 
     if (wireState.branchKey) {
       await workflowService.setBranchTaken(

@@ -498,16 +498,22 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
     if (shouldInline) {
       this.inlineRuns.add(runId)
-      this.runWorkflowJob(runId, rpcService)
-        .catch((err) => {
+      try {
+        await this.runWorkflowJob(runId, rpcService)
+      } catch (error: any) {
+        if (
+          error.name !== 'WorkflowAsyncException' &&
+          error.name !== 'WorkflowCancelledException' &&
+          error.name !== 'WorkflowSuspendedException'
+        ) {
           getSingletonServices()!.logger.error(
             `Workflow ${name} (run ${runId}) failed:`,
-            err
+            error
           )
-        })
-        .finally(() => {
-          this.inlineRuns.delete(runId)
-        })
+        }
+      } finally {
+        this.inlineRuns.delete(runId)
+      }
     } else {
       await this.resumeWorkflow(runId)
     }
@@ -567,6 +573,18 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
     if (workflowMeta?.source === 'graph') {
       await continueGraph(this, runId, run.workflow)
+      const updatedRun = await this.getRun(runId)
+      if (updatedRun?.status === 'completed') {
+        await this.onChildWorkflowCompleted(updatedRun, updatedRun.output)
+      } else if (
+        updatedRun?.status === 'failed' ||
+        updatedRun?.status === 'cancelled'
+      ) {
+        await this.onChildWorkflowFailed(
+          updatedRun,
+          new Error(updatedRun.error?.message || 'Child workflow failed')
+        )
+      }
       return
     }
 
@@ -613,6 +631,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
             stack: '',
             code: 'WORKFLOW_CANCELLED',
           })
+          await this.onChildWorkflowFailed(run, error)
           throw error
         }
 
