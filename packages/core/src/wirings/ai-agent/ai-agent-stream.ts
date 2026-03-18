@@ -10,6 +10,7 @@ import type {
   AIAgentMemoryConfig,
 } from './ai-agent.types.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
+import { AIProviderNotConfiguredError } from '../../errors/errors.js'
 import {
   combineChannelMiddleware,
   wrapChannelWithMiddleware,
@@ -748,7 +749,7 @@ export async function resumeAIAgent(
   const memoryConfig = agent.memory
   const agentRunner = singletonServices.aiAgentRunner
   if (!agentRunner) {
-    throw new Error('AIAgentRunnerService not available in singletonServices')
+    throw new AIProviderNotConfiguredError()
   }
 
   if (!input.approved) {

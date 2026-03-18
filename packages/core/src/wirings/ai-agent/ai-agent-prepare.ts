@@ -11,6 +11,7 @@ import type {
 } from './ai-agent.types.js'
 import type { AIAgentRunnerParams } from '../../services/ai-agent-runner-service.js'
 import { PikkuError } from '../../errors/error-handler.js'
+import { AIProviderNotConfiguredError } from '../../errors/errors.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { createMiddlewareSessionWireProps } from '../../services/user-session-service.js'
 import type { SessionService } from '../../services/user-session-service.js'
@@ -520,7 +521,7 @@ export async function prepareAgentRun(
 
   const agentRunner = singletonServices.aiAgentRunner
   if (!agentRunner) {
-    throw new Error('AIAgentRunnerService not available in singletonServices')
+    throw new AIProviderNotConfiguredError()
   }
 
   if (agent.dynamicWorkflows && singletonServices.workflowService) {

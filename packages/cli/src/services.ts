@@ -306,10 +306,15 @@ export const createSingletonServices: CreateSingletonServices<
         ? ((await loadManifest(join(config.rootDir, 'versions.pikku.json'))) ??
           undefined)
         : undefined
+      const oldProgram = unfilteredState?.program ?? undefined
+      const previousSchemas = unfilteredState?.schemas ?? undefined
+      const inspectStart = Date.now()
       unfilteredState = await inspect(logger, wiringFiles, {
         setupOnly,
         rootDir,
         isAddon: !!config.addon,
+        oldProgram,
+        previousSchemas,
         types: {
           configFileType: config.configFile,
           userSessionType: config.userSessionType,
@@ -338,6 +343,8 @@ export const createSingletonServices: CreateSingletonServices<
               }
             : undefined,
       })
+
+      logger.debug(`Inspector took ${Date.now() - inspectStart}ms`)
 
       if (
         'diagnostics' in unfilteredState &&

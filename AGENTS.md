@@ -213,6 +213,31 @@ Only add new comments when absolutely necessary to explain:
 
 Avoid comments that simply restate what the code does. Instead, focus on making the code itself more readable.
 
+### Function Type Signatures
+
+Pikku function wrappers (`pikkuFunc`, `pikkuSessionlessFunc`, `pikkuWorkflowFunc`, `pikkuWorkflowComplexFunc`) support **either** generics **or** `input`/`output` schema properties — never both. When using `input` and `output` schemas (e.g. Zod), do NOT pass type generics. When using generics, do NOT pass `input`/`output`. Mixing them causes type conflicts and `as any` casts.
+
+```typescript
+// Correct — schema-based (no generics)
+export const myFunc = pikkuFunc({
+  input: MyInput,
+  output: MyOutput,
+  func: async (services, data) => { ... }
+})
+
+// Correct — generic-based (no input/output)
+export const myFunc = pikkuFunc<MyIn, MyOut>({
+  func: async (services, data) => { ... }
+})
+
+// WRONG — do not mix
+export const myFunc = pikkuFunc<MyIn, MyOut>({
+  input: MyInput as any,  // ← never do this
+  output: MyOutput as any,
+  func: async (services, data) => { ... }
+})
+```
+
 ### Environment Variables
 
 **DO NOT use `process.env` inside pikku functions.** Use the `variables` service instead (`services.variables.get('VAR_NAME')`). `process.env` access belongs in server bootstrap code (e.g. `start.ts`, `server.ts`), not in business logic functions.
