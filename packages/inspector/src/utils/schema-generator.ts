@@ -85,6 +85,7 @@ function createProgramWithVirtualFile(
       basePath
     )
     cachedTsconfigPath = configPath
+    cachedSchemaProgram = undefined
   }
 
   const resolvedVirtualPath = resolve(virtualFilePath)
