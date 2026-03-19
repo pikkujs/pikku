@@ -6,7 +6,7 @@ export const todoAskAgent = pikkuAIAgent({
   description: 'Manages a todo list with ask-mode workflow access',
   instructions:
     'You help users manage their todos. You can list all todos, get details of a specific todo, add new todos, and delete todos.',
-  model: 'openai/gpt-4o',
+  model: 'openai/o4-mini',
   tools: [
     addon('todos:listTodos'),
     addon('todos:getTodo'),

@@ -10,7 +10,7 @@ export const ultimateAgent = pikkuAIAgent({
     'You have access to todo management, email, and a rich set of graph utility tools (sleep, math, string transforms, array operations, data manipulation). ' +
     'When asked to create a workflow, design it with clear node names and proper data wiring between steps. ' +
     'Always explain the workflow structure before saving it.',
-  model: 'openai/gpt-4o',
+  model: 'openai/o4-mini',
   tools: [
     addon('todos:listTodos'),
     addon('todos:getTodo'),
