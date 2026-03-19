@@ -144,11 +144,12 @@ export function buildDynamicWorkflowInstructions(
 
     '### Process\n' +
       '1. Check if a suitable workflow exists: `listAgentWorkflows`\n' +
-      '2. If not, plan the graph: identify steps, dependencies, parallel paths, and failure modes\n' +
-      '3. Create and validate: `createAgentWorkflow` — if validation fails, fix the errors and retry\n' +
-      '4. Present the workflow to the user and get approval\n' +
-      '5. Activate: `saveAgentWorkflow`\n' +
-      '6. Run: `executeAgentWorkflow`\n',
+      '2. If the request is too vague to build a reliable workflow, ask the user to be more specific. For example, if a user says "make a workflow that does stuff with my data" — ask them what steps they need and what data flows between them.\n' +
+      '3. Plan the graph: identify steps, dependencies, parallel paths, and failure modes\n' +
+      '4. Create and validate: `createAgentWorkflow` — if validation fails, fix the errors and retry\n' +
+      '5. Present the workflow to the user and get approval\n' +
+      '6. Activate: `saveAgentWorkflow`\n' +
+      '7. Run: `executeAgentWorkflow`\n',
 
     '### Available Tools:\n' + toolSchemaLines.join('\n') + '\n',
 
