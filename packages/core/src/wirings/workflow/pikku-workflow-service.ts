@@ -1223,7 +1223,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     })
   }
 
-  private createWorkflowWire(
+  public createWorkflowWire(
     name: string,
     runId: string,
     rpcService: any

@@ -1,4 +1,7 @@
-import type { PikkuWorkflowService } from '../pikku-workflow-service.js'
+import {
+  type PikkuWorkflowService,
+  WorkflowAsyncException,
+} from '../pikku-workflow-service.js'
 import type { GraphWireState, PikkuGraphWire } from './workflow-graph.types.js'
 import { pikkuState, getSingletonServices } from '../../../pikku-state.js'
 import type { WorkflowRuntimeMeta, WorkflowRunWire } from '../workflow.types.js'
@@ -489,6 +492,11 @@ export async function executeGraphStep(
     } else {
       result = await rpcService.rpcWithWire(rpcName, data, {
         graph: graphWire,
+        workflow: workflowService.createWorkflowWire(
+          graphName,
+          runId,
+          rpcService
+        ),
       })
     }
 
@@ -498,6 +506,9 @@ export async function executeGraphStep(
 
     return result
   } catch (error) {
+    if (error instanceof WorkflowAsyncException) {
+      throw error
+    }
     if (error instanceof ChildWorkflowStartedException) {
       throw error
     }
@@ -619,6 +630,11 @@ async function executeGraphNodeInline(
     } else {
       result = await rpcService.rpcWithWire(rpcName, input, {
         graph: graphWire,
+        workflow: workflowService.createWorkflowWire(
+          graphName,
+          runId,
+          rpcService
+        ),
       })
     }
 
@@ -631,6 +647,9 @@ async function executeGraphNodeInline(
 
     await workflowService.setStepResult(stepState.stepId, result)
   } catch (error) {
+    if (error instanceof WorkflowAsyncException) {
+      throw error
+    }
     if (error instanceof RPCNotFoundError) {
       await workflowService.setStepError(stepState.stepId, error as Error)
       await workflowService.updateRunStatus(runId, 'suspended', undefined, {
@@ -855,6 +874,9 @@ export async function runWorkflowGraph(
           entryNodes
         )
       } catch (error) {
+        if (error instanceof WorkflowAsyncException) {
+          return
+        }
         await workflowService.updateRunStatus(runId, 'failed', undefined, {
           message: (error as Error).message,
           stack: (error as Error).stack || '',
