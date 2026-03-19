@@ -33,6 +33,67 @@ function formatSchemaType(schema: any, depth = 0): string {
   return schema.type || 'any'
 }
 
+function resolveToolMetaForWorkflow(toolName: string): {
+  fnMeta: any
+  inputSchema: any
+  outputSchema: any
+  schemas: Map<string, any>
+} | null {
+  const resolved = toolName.includes(':') ? resolveNamespace(toolName) : null
+  let fnMeta: any
+  let schemas: Map<string, any>
+
+  if (resolved) {
+    fnMeta = pikkuState(resolved.package, 'function', 'meta')[resolved.function]
+    schemas = pikkuState(resolved.package, 'misc', 'schemas')
+  } else {
+    const rpcMeta = pikkuState(null, 'rpc', 'meta')
+    const pikkuFuncId = rpcMeta[toolName]
+    if (!pikkuFuncId) return null
+    fnMeta = pikkuState(null, 'function', 'meta')[pikkuFuncId]
+    schemas = pikkuState(null, 'misc', 'schemas')
+  }
+
+  if (!fnMeta) return null
+
+  const inputSchema = fnMeta.inputSchemaName
+    ? schemas.get(fnMeta.inputSchemaName)
+    : null
+  const outputSchema = fnMeta.outputSchemaName
+    ? schemas.get(fnMeta.outputSchemaName)
+    : null
+
+  return { fnMeta, inputSchema, outputSchema, schemas }
+}
+
+function buildDetailedToolSchemas(toolNames: string[]): string {
+  const lines: string[] = []
+  for (const toolName of toolNames) {
+    const meta = resolveToolMetaForWorkflow(toolName)
+    if (!meta) continue
+    const { inputSchema, outputSchema } = meta
+
+    const inputProps = inputSchema?.properties
+      ? Object.entries(inputSchema.properties)
+          .map(
+            ([k, v]: [string, any]) =>
+              `${k}${inputSchema.required?.includes(k) ? '' : '?'}: ${formatSchemaType(v)}`
+          )
+          .join(', ')
+      : ''
+    const outputPaths = outputSchema ? collectOutputPaths(outputSchema) : []
+
+    lines.push(
+      `**${toolName}**\n` +
+        `  input: {${inputProps}}\n` +
+        (outputPaths.length > 0
+          ? `  output paths: ${outputPaths.join(', ')}`
+          : `  output: void`)
+    )
+  }
+  return lines.join('\n')
+}
+
 function collectOutputPaths(schema: any, prefix = ''): string[] {
   if (!schema?.properties) return []
   const paths: string[] = []
@@ -74,59 +135,23 @@ export function buildDynamicWorkflowInstructions(
         'Do NOT create workflows automatically — always propose and get user approval first.\n' +
         'For one-off tasks, just use the tools directly.\n\n'
 
-  const toolSchemaLines: string[] = []
+  const toolSummaryLines: string[] = []
 
   for (const toolName of tools) {
-    let fnMeta: any
-    let schemas: Map<string, any>
+    const meta = resolveToolMetaForWorkflow(toolName)
+    if (!meta) continue
+    const { fnMeta, inputSchema, outputSchema } = meta
 
-    const resolved = toolName.includes(':') ? resolveNamespace(toolName) : null
-
-    if (resolved) {
-      fnMeta = pikkuState(resolved.package, 'function', 'meta')[
-        resolved.function
-      ]
-      schemas = pikkuState(resolved.package, 'misc', 'schemas')
-    } else {
-      const rpcMeta = pikkuState(null, 'rpc', 'meta')
-      const pikkuFuncId = rpcMeta[toolName]
-      if (!pikkuFuncId) continue
-      fnMeta = pikkuState(null, 'function', 'meta')[pikkuFuncId]
-      schemas = pikkuState(null, 'misc', 'schemas')
-    }
-
-    if (!fnMeta) continue
-
-    const inputSchema = fnMeta.inputSchemaName
-      ? schemas.get(fnMeta.inputSchemaName)
-      : null
-    const outputSchema = fnMeta.outputSchemaName
-      ? schemas.get(fnMeta.outputSchemaName)
-      : null
-
-    const toolDescription = fnMeta.description || fnMeta.title || ''
-    const inputProps = inputSchema?.properties
-      ? Object.entries(inputSchema.properties)
-          .map(
-            ([k, v]: [string, any]) =>
-              `${k}${inputSchema.required?.includes(k) ? '' : '?'}: ${formatSchemaType(v)}`
-          )
-          .join(', ')
+    const desc = fnMeta.description || fnMeta.title || ''
+    const inputFields = inputSchema?.properties
+      ? Object.keys(inputSchema.properties).join(', ')
       : ''
-    const outputProps = outputSchema?.properties
-      ? Object.entries(outputSchema.properties)
-          .map(([k, v]: [string, any]) => `${k}: ${formatSchemaType(v)}`)
-          .join(', ')
-      : 'any'
+    const outputFields = outputSchema?.properties
+      ? Object.keys(outputSchema.properties).join(', ')
+      : ''
 
-    const outputPaths = outputSchema ? collectOutputPaths(outputSchema) : []
-    const outputPathsStr =
-      outputPaths.length > 0
-        ? `\n  output paths: ${outputPaths.join(', ')}`
-        : ''
-
-    toolSchemaLines.push(
-      `- \`${toolName}\` — ${toolDescription || 'no description'}\n  input: {${inputProps}}\n  output: {${outputProps}}${outputPathsStr}`
+    toolSummaryLines.push(
+      `| \`${toolName}\` | ${desc || '-'} | ${inputFields || '-'} | ${outputFields || '-'} |`
     )
   }
 
@@ -151,7 +176,12 @@ export function buildDynamicWorkflowInstructions(
       '6. Activate: `saveAgentWorkflow`\n' +
       '7. Run: `executeAgentWorkflow`\n',
 
-    '### Available Tools:\n' + toolSchemaLines.join('\n') + '\n',
+    '### Available Tools\n' +
+      '| Tool | Description | Input fields | Output fields |\n' +
+      '|------|-------------|-------------|---------------|\n' +
+      toolSummaryLines.join('\n') +
+      '\n\n' +
+      'Full schemas (input types, output paths) are returned by `createAgentWorkflow` after validation.\n',
 
     '### Graph Format Reference\n\n' +
       '**Node:** `{ rpcName, input?, next?, onError? }`\n\n' +
@@ -261,11 +291,21 @@ export function buildWorkflowTools(
           }
         }
 
+        const usedTools = [
+          ...new Set(
+            Object.values(nodes)
+              .map((n: any) => n.rpcName)
+              .filter(Boolean)
+          ),
+        ]
+        const toolSchemas = buildDetailedToolSchemas(usedTools)
+
         const validationErrors = validateWorkflowWiring(nodes, toolNames)
         if (validationErrors.length > 0) {
           return {
             error: 'Workflow validation failed',
             errors: validationErrors,
+            toolSchemas,
           }
         }
 
@@ -309,7 +349,8 @@ export function buildWorkflowTools(
           graphHash,
           entryNodes: entryNodeIds,
           nodeCount: Object.keys(nodes).length,
-          message: `Workflow '${fullName}' validated and saved as draft. Present this to the user and call saveAgentWorkflow to activate it.`,
+          toolSchemas,
+          message: `Workflow '${fullName}' validated and saved as draft. Check the toolSchemas to verify your $ref paths match the output paths. Then present this to the user and call saveAgentWorkflow to activate it.`,
         }
       },
     })
