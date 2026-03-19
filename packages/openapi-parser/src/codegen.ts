@@ -246,8 +246,6 @@ function generateFunctionFile(
   if (hasInput) funcConfig.push(`  input: ${inputName},`)
   if (parsed.responseSchema) {
     funcConfig.push(`  output: ${outputName},`)
-  } else {
-    funcConfig.push('  output: z.void(),')
   }
 
   if (errorClasses.length > 0) {
