@@ -46,4 +46,7 @@ Feature: Dynamic Workflows via Todo Agent (API)
       | structured | Build a workflow: step 1 - create a todo from the trigger's title, step 2 - wait 20 seconds, step 3 - mark the todo as completed.                       |
       | casual     | Make me a workflow that adds a todo by name, waits 20 seconds, and then marks it done.                                                                  |
       | minimal    | Workflow: add todo from input title, sleep 20s, complete it.                                                                                            |
-      | vague      | I want a workflow that creates a task, pauses a bit, then finishes it.                                                                                  |
+
+  Scenario: Vague request should ask for clarification
+    When I send the agent "todoAgent" the message "I want a workflow that does stuff with my todos."
+    Then the agent response should not contain "createAgentWorkflow"
