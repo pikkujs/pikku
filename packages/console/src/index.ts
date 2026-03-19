@@ -44,6 +44,7 @@ export {
   usePikkuRPC,
   getServerUrl,
   setServerUrl,
+  discoverServerUrl,
 } from './context/PikkuRpcProvider'
 export { PikkuMetaProvider, usePikkuMeta } from './context/PikkuMetaContext'
 
