@@ -332,7 +332,7 @@ async function generateZodSchemas(
           continue
         }
 
-        const schema = z.toJSONSchema(zodSchema, {
+        const schema = z.toJSONSchema(zodSchema as z.ZodType, {
           unrepresentable: 'any',
           override: ({ zodSchema, jsonSchema }) => {
             if ((zodSchema as any)._zod?.def?.type === 'date') {
@@ -353,7 +353,9 @@ async function generateZodSchemas(
         }
 
         schemas[schemaName] = schema
-        const { node: tsType } = zodToTs(zodSchema, { auxiliaryTypeStore })
+        const { node: tsType } = zodToTs(zodSchema as z.ZodType, {
+          auxiliaryTypeStore,
+        })
 
         const typeText = printer.printNode(
           ts.EmitHint.Unspecified,
