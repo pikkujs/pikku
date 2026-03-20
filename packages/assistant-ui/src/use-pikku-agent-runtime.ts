@@ -351,23 +351,47 @@ function createPikkuStreamingAdapter(
         }
       }
 
-      const response = await fetch(`${opts.api}/${opts.agentName}/stream`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...opts.headers },
-        body: JSON.stringify({
-          agentName: opts.agentName,
-          message: messageText,
-          threadId: opts.threadId,
-          resourceId: opts.resourceId,
-          model: opts.model,
-          temperature: opts.temperature,
-        }),
-        signal: abortSignal,
-        credentials: opts.credentials,
-      })
+      let response: Response
+      try {
+        response = await fetch(`${opts.api}/${opts.agentName}/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...opts.headers },
+          body: JSON.stringify({
+            agentName: opts.agentName,
+            message: messageText,
+            threadId: opts.threadId,
+            resourceId: opts.resourceId,
+            model: opts.model,
+            temperature: opts.temperature,
+          }),
+          signal: abortSignal,
+          credentials: opts.credentials,
+        })
+      } catch (e: any) {
+        const msg = e?.message || 'Unknown error'
+        let errorText = 'Failed to connect to the agent.'
+        if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('CORS')) {
+          errorText = 'Unable to reach the agent server. The deployment may be down or the URL may be incorrect.'
+        } else if (msg.includes('abort')) {
+          return
+        }
+        yield { content: [{ type: 'text' as const, text: `⚠️ ${errorText}` }] }
+        return
+      }
 
       if (!response.ok || !response.body) {
-        throw new Error(`Agent stream failed: ${response.status}`)
+        let errorText = `Request failed (${response.status}).`
+        if (response.status === 401 || response.status === 403) {
+          errorText = 'Authentication error.'
+        } else if (response.status === 404) {
+          errorText = 'Agent not found — the agent may not be configured for this project.'
+        } else if (response.status === 502 || response.status === 503) {
+          errorText = 'The agent server is currently unavailable. Try again in a moment.'
+        } else if (response.status === 429) {
+          errorText = 'Rate limited — too many requests. Please wait a moment.'
+        }
+        yield { content: [{ type: 'text' as const, text: `⚠️ ${errorText}` }] }
+        return
       }
 
       const text = { value: '' }
