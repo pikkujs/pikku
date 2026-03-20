@@ -50,3 +50,4 @@ Feature: Dynamic Workflows via Todo Agent (API)
   Scenario: Vague request should ask for clarification
     When I send the agent "todoAgent" the message "I want a workflow that does stuff with my todos."
     Then the agent response should not contain "createAgentWorkflow"
+    And the agent response should contain "?"
