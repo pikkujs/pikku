@@ -5122,7 +5122,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/assistant-ui@workspace:*, @pikku/assistant-ui@workspace:packages/assistant-ui":
+"@pikku/assistant-ui@npm:^0.12.1, @pikku/assistant-ui@workspace:packages/assistant-ui":
   version: 0.0.0-use.local
   resolution: "@pikku/assistant-ui@workspace:packages/assistant-ui"
   dependencies:
@@ -5248,10 +5248,10 @@ __metadata:
     "@mantine/notifications": "npm:^8.3.8"
     "@mantine/spotlight": "npm:^8.3.8"
     "@pikku/addon-console": "workspace:*"
-    "@pikku/assistant-ui": "workspace:*"
+    "@pikku/assistant-ui": "npm:^0.12.1"
     "@pikku/cli": "workspace:*"
-    "@pikku/core": "workspace:*"
-    "@pikku/fetch": "workspace:*"
+    "@pikku/core": "npm:^0.12.5"
+    "@pikku/fetch": "npm:^0.12.0"
     "@pikku/websocket": "workspace:*"
     "@rjsf/core": "npm:^6.3.1"
     "@rjsf/mantine": "npm:^6.3.1"
@@ -5289,17 +5289,10 @@ __metadata:
     remark-gfm: "npm:^4.0.1"
     typescript: "npm:^5"
     vite: "npm:^6"
-  peerDependencies:
-    react: ^19
-    react-dom: ^19
-    react-router-dom: ^7
-  peerDependenciesMeta:
-    react-router-dom:
-      optional: true
   languageName: unknown
   linkType: soft
 
-"@pikku/core@npm:*, @pikku/core@npm:^0.12.0, @pikku/core@npm:^0.12.1, @pikku/core@npm:^0.12.2, @pikku/core@npm:^0.12.3, @pikku/core@npm:^0.12.9, @pikku/core@workspace:*, @pikku/core@workspace:packages/core":
+"@pikku/core@npm:*, @pikku/core@npm:^0.12.0, @pikku/core@npm:^0.12.1, @pikku/core@npm:^0.12.2, @pikku/core@npm:^0.12.3, @pikku/core@npm:^0.12.5, @pikku/core@npm:^0.12.9, @pikku/core@workspace:*, @pikku/core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@pikku/core@workspace:packages/core"
   dependencies:
@@ -5429,7 +5422,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/fetch@npm:^0.12.0, @pikku/fetch@npm:^0.12.1, @pikku/fetch@workspace:*, @pikku/fetch@workspace:packages/client-fetch":
+"@pikku/fetch@npm:^0.12.0, @pikku/fetch@npm:^0.12.1, @pikku/fetch@workspace:packages/client-fetch":
   version: 0.0.0-use.local
   resolution: "@pikku/fetch@workspace:packages/client-fetch"
   dependencies:
