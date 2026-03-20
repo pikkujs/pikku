@@ -210,10 +210,14 @@ async function installDependencies(
     if (packageManager === 'yarn') {
       installArgs.push('--no-immutable')
     }
-    spawnSync(packageManager, installArgs, {
+    const installResult = spawnSync(packageManager, installArgs, {
       cwd: targetPath,
       stdio: 'inherit',
     })
+    if (installResult.status !== 0) {
+      console.log(chalk.red('❌ Failed to install dependencies'))
+      process.exit(1)
+    }
 
     if (yarnLink) {
       if (packageManager === 'yarn') {
@@ -237,10 +241,14 @@ async function installDependencies(
     }
 
     console.log(chalk.blue('🦎 Running pikku...'))
-    spawnSync(packageManager, ['pikku', '--silent'], {
+    const pikkuResult = spawnSync(packageManager, ['pikku', '--silent'], {
       cwd: targetPath,
       stdio: 'inherit',
     })
+    if (pikkuResult.status !== 0) {
+      console.log(chalk.red('❌ Failed to run pikku'))
+      process.exit(1)
+    }
 
     if (template === 'cli') {
       console.log(
