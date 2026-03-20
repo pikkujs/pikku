@@ -1,4 +1,5 @@
 import * as ts from 'typescript'
+import { statSync } from 'fs'
 import { dirname, join, resolve } from 'path'
 import { createGenerator, RootlessError } from 'ts-json-schema-generator'
 import { tsImport } from 'tsx/esm/api'
@@ -236,12 +237,48 @@ function generateTSSchemas(
   return schemas
 }
 
+// Cache for Zod schema results across inspect() calls within the same process
+let cachedZodSchemas: Record<string, JSONValue> | undefined
+let cachedZodTypesMap: Map<string, string> | undefined
+let cachedZodSchemaKey: string | undefined
+
+function computeSchemaLookupKey(schemaLookup: Map<string, SchemaRef>): string {
+  const entries: string[] = []
+  for (const [name, ref] of schemaLookup.entries()) {
+    // Include mtime so watch mode invalidates when files change
+    let mtime = ''
+    try {
+      mtime = String(statSync(ref.sourceFile).mtimeMs)
+    } catch {
+      // File may not exist yet
+    }
+    entries.push(`${name}:${ref.sourceFile}:${ref.variableName}:${mtime}`)
+  }
+  return entries.sort().join('\n')
+}
+
 async function generateZodSchemas(
   logger: InspectorLogger,
   schemaLookup: Map<string, SchemaRef>,
   typesMap: TypesMap
 ): Promise<Record<string, JSONValue>> {
+  // Check cache — if schemaLookup entries haven't changed, reuse previous results
+  const schemaKey = computeSchemaLookupKey(schemaLookup)
+  if (
+    cachedZodSchemas &&
+    cachedZodTypesMap &&
+    cachedZodSchemaKey === schemaKey
+  ) {
+    logger.debug('Reusing cached Zod schemas (schemaLookup unchanged)')
+    // Re-apply the cached typesMap entries
+    for (const [name, typeText] of cachedZodTypesMap.entries()) {
+      typesMap.addCustomType(name, typeText, [])
+    }
+    return cachedZodSchemas
+  }
+
   const schemas: Record<string, JSONValue> = {}
+  const zodTypesMapEntries = new Map<string, string>()
   const auxiliaryTypeStore = createAuxiliaryTypeStore()
   const printer = ts.createPrinter()
   const fakeSourceFile = ts.createSourceFile(
@@ -252,6 +289,11 @@ async function generateZodSchemas(
     ts.ScriptKind.TS
   )
 
+  // Group schemas by source file to batch imports
+  const schemasByFile = new Map<
+    string,
+    Array<{ schemaName: string; ref: SchemaRef }>
+  >()
   for (const [schemaName, ref] of schemaLookup.entries()) {
     if (ref.vendor && ref.vendor !== 'zod') {
       throw new Error(
@@ -260,54 +302,80 @@ async function generateZodSchemas(
           `Please use Zod or contribute support for ${ref.vendor}.`
       )
     }
-
-    try {
-      const module = await tsImport(ref.sourceFile, import.meta.url)
-      const zodSchema = module[ref.variableName]
-      if (!zodSchema) {
-        logger.warn(
-          `Could not find exported schema '${ref.variableName}' in ${ref.sourceFile} for ${schemaName}. Available exports: ${Object.keys(module).join(', ')}`
-        )
-        continue
-      }
-
-      const schema = z.toJSONSchema(zodSchema, {
-        unrepresentable: 'any',
-        override: ({ zodSchema, jsonSchema }) => {
-          if ((zodSchema as any)._zod?.def?.type === 'date') {
-            ;(jsonSchema as any).type = 'string'
-            ;(jsonSchema as any).format = 'date-time'
-          }
-        },
-      }) as any
-
-      if (schema.required && schema.properties) {
-        schema.required = schema.required.filter((fieldName: string) => {
-          const prop = schema.properties[fieldName]
-          return prop && prop.default === undefined
-        })
-        if (schema.required.length === 0) {
-          delete schema.required
-        }
-      }
-
-      schemas[schemaName] = schema
-      const { node: tsType } = zodToTs(zodSchema, { auxiliaryTypeStore })
-
-      const typeText = printer.printNode(
-        ts.EmitHint.Unspecified,
-        tsType,
-        fakeSourceFile
-      )
-
-      typesMap.addCustomType(schemaName, typeText, [])
-      logger.debug(`• Generated schema from Zod: ${schemaName}`)
-    } catch (e) {
-      logger.warn(
-        `Could not convert Zod schema '${schemaName}': ${e instanceof Error ? e.message : e}`
-      )
+    const entries = schemasByFile.get(ref.sourceFile)
+    if (entries) {
+      entries.push({ schemaName, ref })
+    } else {
+      schemasByFile.set(ref.sourceFile, [{ schemaName, ref }])
     }
   }
+
+  // Import each unique source file once and process all schemas from it
+  for (const [sourceFile, entries] of schemasByFile.entries()) {
+    let module: Record<string, unknown>
+    try {
+      module = await tsImport(sourceFile, import.meta.url)
+    } catch (e) {
+      logger.warn(
+        `Could not import ${sourceFile}: ${e instanceof Error ? e.message : e}`
+      )
+      continue
+    }
+
+    for (const { schemaName, ref } of entries) {
+      try {
+        const zodSchema = module[ref.variableName]
+        if (!zodSchema) {
+          logger.warn(
+            `Could not find exported schema '${ref.variableName}' in ${ref.sourceFile} for ${schemaName}. Available exports: ${Object.keys(module).join(', ')}`
+          )
+          continue
+        }
+
+        const schema = z.toJSONSchema(zodSchema, {
+          unrepresentable: 'any',
+          override: ({ zodSchema, jsonSchema }) => {
+            if ((zodSchema as any)._zod?.def?.type === 'date') {
+              ;(jsonSchema as any).type = 'string'
+              ;(jsonSchema as any).format = 'date-time'
+            }
+          },
+        }) as any
+
+        if (schema.required && schema.properties) {
+          schema.required = schema.required.filter((fieldName: string) => {
+            const prop = schema.properties[fieldName]
+            return prop && prop.default === undefined
+          })
+          if (schema.required.length === 0) {
+            delete schema.required
+          }
+        }
+
+        schemas[schemaName] = schema
+        const { node: tsType } = zodToTs(zodSchema, { auxiliaryTypeStore })
+
+        const typeText = printer.printNode(
+          ts.EmitHint.Unspecified,
+          tsType,
+          fakeSourceFile
+        )
+
+        typesMap.addCustomType(schemaName, typeText, [])
+        zodTypesMapEntries.set(schemaName, typeText)
+        logger.debug(`• Generated schema from Zod: ${schemaName}`)
+      } catch (e) {
+        logger.warn(
+          `Could not convert Zod schema '${schemaName}': ${e instanceof Error ? e.message : e}`
+        )
+      }
+    }
+  }
+
+  // Cache results for subsequent inspect() calls
+  cachedZodSchemas = schemas
+  cachedZodTypesMap = zodTypesMapEntries
+  cachedZodSchemaKey = schemaKey
 
   return schemas
 }
