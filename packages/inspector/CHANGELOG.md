@@ -1,5 +1,15 @@
 ## 0.12.0
 
+## 0.12.5
+
+### Patch Changes
+
+- 65eccc6: Cache Zod schema generation between re-inspection passes and batch imports by source file. Schemas are cached using a fingerprint of schemaLookup entries + file mtimes, so reinspections skip Zod generation entirely when schemas haven't changed. Source file imports are grouped so each file is imported once instead of per-schema. Reduces `pikku all` from ~5 minutes to ~13 seconds on projects with many Zod schemas.
+- 0f59432: Add per-user credential system with CredentialService, OAuth2 route handlers, and KyselyCredentialService with envelope encryption
+- Updated dependencies [0f59432]
+- Updated dependencies [52b64d1]
+  - @pikku/core@0.12.10
+
 ## 0.12.4
 
 ### Patch Changes

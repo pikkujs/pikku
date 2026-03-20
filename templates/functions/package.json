@@ -5,7 +5,7 @@
   "dependencies": {
     "@auth/core": "^0.37.0",
     "@pikku/auth-js": "^0.12.3",
-    "@pikku/core": "^0.12.9",
+    "@pikku/core": "^0.12.10",
     "@pikku/schema-cfworker": "^0.12.2",
     "@pikku/templates-function-addon": "workspace:*",
     "eventsource": "^4.1.0",

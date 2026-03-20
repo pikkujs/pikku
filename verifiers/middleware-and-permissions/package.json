@@ -14,7 +14,7 @@
     "test": "pikku && tsc && npx tsx src/start.ts"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.9",
+    "@pikku/core": "^0.12.10",
     "@pikku/templates-function-addon": "workspace:*"
   },
   "devDependencies": {

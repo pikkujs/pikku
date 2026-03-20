@@ -1,5 +1,11 @@
 # @pikku/openapi-parser
 
+## 0.12.5
+
+### Patch Changes
+
+- 8552e18: Don't generate `output: z.void()` for operations without response schemas — omit the field instead
+
 ## 0.12.4
 
 ### Patch Changes
