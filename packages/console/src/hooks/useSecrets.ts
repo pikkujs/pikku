@@ -7,7 +7,7 @@ export function useSecretValue(secretId: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: ['secret-value', secretId],
     queryFn: async () => {
-      return await rpc.invoke('getSecret', { secretId: secretId! })
+      return await rpc.invoke('console:getSecret', { secretId: secretId! })
     },
     enabled: !!secretId && enabled,
   })
@@ -19,7 +19,7 @@ export function useSetSecret() {
 
   return useMutation({
     mutationFn: ({ secretId, value }: { secretId: string; value: unknown }) =>
-      rpc.invoke('setSecret', { secretId, value }),
+      rpc.invoke('console:setSecret', { secretId, value }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: ['secret-value', variables.secretId],
