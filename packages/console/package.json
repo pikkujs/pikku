@@ -1,6 +1,6 @@
 {
   "name": "@pikku/console",
-  "version": "0.12.10",
+  "version": "0.12.11",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -37,8 +37,8 @@
     "@mantine/hooks": "^8.3.8",
     "@mantine/notifications": "^8.3.8",
     "@mantine/spotlight": "^8.3.8",
-    "@pikku/assistant-ui": "^0.12.1",
-    "@pikku/core": "^0.12.5",
+    "@pikku/assistant-ui": "^0.12.2",
+    "@pikku/core": "^0.12.10",
     "@pikku/fetch": "^0.12.0",
     "@rjsf/core": "^6.3.1",
     "@rjsf/mantine": "^6.3.1",

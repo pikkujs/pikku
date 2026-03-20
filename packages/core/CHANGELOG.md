@@ -1,5 +1,12 @@
 ## 0.12.4
 
+## 0.12.10
+
+### Patch Changes
+
+- 0f59432: Add per-user credential system with CredentialService, OAuth2 route handlers, and KyselyCredentialService with envelope encryption
+- 52b64d1: Provide workflow wire to graph nodes for sleep/suspend support. Graph nodes now receive a workflow wire alongside the graph wire, enabling tools like `graph:sleep` to work in graph execution context. Improves dynamic workflow system instructions with output path documentation, nested path examples, and design principles for AI agents.
+
 ## 0.12.9
 
 ### Patch Changes

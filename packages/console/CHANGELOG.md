@@ -1,5 +1,18 @@
 ## 0.12.0
 
+## 0.12.11
+
+### Patch Changes
+
+- f94afcc: Fix console hook RPC names to match scaffolded function names. Update pikku.config.json to use scaffold entries for console and workflow instead of addons config.
+- 57a27ec: Fix secrets and variables RPC calls to use console: prefix
+- 9da8d0f: Publish @pikku/console as a source-only package for consumers to build with their own Vite config. Adds customizable branding via VITE_CONSOLE_TITLE and VITE_CONSOLE_LOGO env vars.
+- Updated dependencies [cc4a8e0]
+- Updated dependencies [0f59432]
+- Updated dependencies [52b64d1]
+  - @pikku/assistant-ui@0.12.2
+  - @pikku/core@0.12.10
+
 ## 0.12.10
 
 ### Patch Changes

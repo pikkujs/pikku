@@ -1,5 +1,11 @@
 # @pikku/assistant-ui
 
+## 0.12.2
+
+### Patch Changes
+
+- cc4a8e0: Show friendly error messages in agent chat instead of silently failing with a loading spinner
+
 ## 0.12.1
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 ## 0.12.0
 
+## 0.12.6
+
+### Patch Changes
+
+- 0f59432: Add per-user credential system with CredentialService, OAuth2 route handlers, and KyselyCredentialService with envelope encryption
+- Updated dependencies [0f59432]
+- Updated dependencies [52b64d1]
+  - @pikku/core@0.12.10
+
 ## 0.12.5
 
 ### Patch Changes

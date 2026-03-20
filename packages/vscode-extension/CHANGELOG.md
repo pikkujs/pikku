@@ -1,5 +1,15 @@
 # pikku-vscode
 
+## 0.1.11
+
+### Patch Changes
+
+- Updated dependencies [65eccc6]
+- Updated dependencies [0f59432]
+- Updated dependencies [52b64d1]
+  - @pikku/inspector@0.12.5
+  - @pikku/core@0.12.10
+
 ## 0.1.10
 
 ### Patch Changes
