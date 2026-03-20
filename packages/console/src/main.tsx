@@ -1,5 +1,12 @@
 import '@/styles'
 
+// Set favicon dynamically to handle non-root base paths
+const favicon = import.meta.env.VITE_CONSOLE_FAVICON || '/pikku-console-logo.png'
+const link = document.createElement('link')
+link.rel = 'icon'
+link.href = import.meta.env.BASE_URL + favicon.replace(/^\//, '')
+document.head.appendChild(link)
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
@@ -12,7 +19,7 @@ import { App } from './App'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '') || undefined}>
       <ConsoleRouterProvider value={reactRouterAdapter}>
         <QueryClientProvider>
           <ThemeProvider locale="en">

@@ -8,6 +8,7 @@ import {
   NavLink,
   Divider,
   ActionIcon,
+  UnstyledButton,
 } from '@mantine/core'
 import { useLocalStorage } from '@mantine/hooks'
 import {
@@ -109,17 +110,20 @@ export interface SidebarBranding {
   homeHref: string
 }
 
+const consoleLogo = (import.meta.env.VITE_CONSOLE_LOGO || 'pikku-console-logo.png').replace(/^\//, '')
+
 const DEFAULT_BRANDING: SidebarBranding = {
   logo: (
     <img
-      src="/pikku-console-logo.png"
-      alt="Pikku Console"
+      src={import.meta.env.BASE_URL + consoleLogo}
+      alt={import.meta.env.VITE_CONSOLE_TITLE || 'Pikku Console'}
       width={28}
       height={28}
+      style={import.meta.env.VITE_CONSOLE_LOGO_INVERT === 'true' ? { filter: 'brightness(0) invert(1)' } : undefined}
     />
   ),
-  title: 'Pikku Console',
-  tooltipLabel: 'Pikku Console Alpha',
+  title: import.meta.env.VITE_CONSOLE_TITLE || 'Pikku Console',
+  tooltipLabel: import.meta.env.VITE_CONSOLE_TITLE || 'Pikku Console Alpha',
   homeHref: '/',
 }
 
@@ -280,63 +284,46 @@ export const Sidebar: React.FunctionComponent<SidebarProps> = ({
 
       <Box style={{ flexShrink: 0 }}>
         <Divider mx="sm" />
-        <Box px={6} py={4}>
-          {collapsed ? (
-            <Stack gap={2} align="center">
-              <Tooltip label="Refresh metadata" position="right">
-                <ActionIcon
-                  variant="subtle"
-                  size="md"
-                  color="gray"
-                  loading={metaLoading}
-                  onClick={() => refresh()}
-                >
-                  <RefreshCw size={16} />
-                </ActionIcon>
-              </Tooltip>
-              <Tooltip label="Expand sidebar" position="right">
-                <ActionIcon
-                  variant="subtle"
-                  size="md"
-                  color="gray"
-                  onClick={() => setCollapsed(false)}
-                >
-                  <PanelLeftOpen size={16} />
-                </ActionIcon>
-              </Tooltip>
-            </Stack>
-          ) : (
-            <Box
+        <Stack gap={2} px={6} py={4}>
+          <Tooltip label="Refresh metadata" position="right" disabled={!collapsed}>
+            <UnstyledButton
+              onClick={() => refresh()}
+              disabled={metaLoading}
+              px={collapsed ? 0 : 10}
+              py={8}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
+                justifyContent: collapsed ? 'center' : 'flex-start',
+                gap: 10,
+                borderRadius: 6,
+                color: 'var(--mantine-color-dimmed)',
+                opacity: metaLoading ? 0.5 : 1,
               }}
             >
-              <Tooltip label="Refresh metadata">
-                <ActionIcon
-                  variant="subtle"
-                  size="sm"
-                  color="gray"
-                  loading={metaLoading}
-                  onClick={() => refresh()}
-                >
-                  <RefreshCw size={16} />
-                </ActionIcon>
-              </Tooltip>
-              <Tooltip label="Collapse sidebar">
-                <ActionIcon
-                  variant="subtle"
-                  size="sm"
-                  color="gray"
-                  onClick={() => setCollapsed(true)}
-                >
-                  <PanelLeftClose size={16} />
-                </ActionIcon>
-              </Tooltip>
-            </Box>
-          )}
-        </Box>
+              <RefreshCw size={18} style={metaLoading ? { animation: 'spin 1s linear infinite' } : undefined} />
+              {!collapsed && <Text size="sm">Refresh</Text>}
+            </UnstyledButton>
+          </Tooltip>
+          <Tooltip label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} position="right" disabled={!collapsed}>
+            <UnstyledButton
+              onClick={() => setCollapsed(!collapsed)}
+              px={collapsed ? 0 : 10}
+              py={8}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: collapsed ? 'center' : 'flex-start',
+                gap: 10,
+                borderRadius: 6,
+                color: 'var(--mantine-color-dimmed)',
+              }}
+            >
+              {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+              {!collapsed && <Text size="sm">Collapse</Text>}
+            </UnstyledButton>
+          </Tooltip>
+        </Stack>
       </Box>
     </Box>
   )
