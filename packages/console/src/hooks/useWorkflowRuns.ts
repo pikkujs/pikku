@@ -101,7 +101,7 @@ export function useStartWorkflowRun() {
     }: {
       workflowName: string
       input?: any
-    }) => rpc.invoke('startWorkflowRun', { workflowName, input: input || {} }),
+    }) => rpc.startWorkflow(workflowName as never, input as never),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workflow-runs'] })
     },

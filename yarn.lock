@@ -5028,7 +5028,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@pikku/addon-console@workspace:*, @pikku/addon-console@workspace:packages/addon/pikku-console":
+"@pikku/addon-console@npm:^0.12.5, @pikku/addon-console@workspace:*, @pikku/addon-console@workspace:packages/addon/pikku-console":
   version: 0.0.0-use.local
   resolution: "@pikku/addon-console@workspace:packages/addon/pikku-console"
   dependencies:
@@ -5261,12 +5261,12 @@ __metadata:
     "@mantine/hooks": "npm:^8.3.8"
     "@mantine/notifications": "npm:^8.3.8"
     "@mantine/spotlight": "npm:^8.3.8"
-    "@pikku/addon-console": "workspace:*"
+    "@pikku/addon-console": "npm:^0.12.5"
     "@pikku/assistant-ui": "npm:^0.12.1"
-    "@pikku/cli": "workspace:*"
+    "@pikku/cli": "npm:^0.12.8"
     "@pikku/core": "npm:^0.12.5"
     "@pikku/fetch": "npm:^0.12.0"
-    "@pikku/websocket": "workspace:*"
+    "@pikku/websocket": "npm:^0.12.1"
     "@rjsf/core": "npm:^6.3.1"
     "@rjsf/mantine": "npm:^6.3.1"
     "@rjsf/utils": "npm:^6.3.1"
@@ -6323,7 +6323,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/websocket@npm:^0.12.1, @pikku/websocket@workspace:*, @pikku/websocket@workspace:packages/client-websocket":
+"@pikku/websocket@npm:^0.12.1, @pikku/websocket@workspace:packages/client-websocket":
   version: 0.0.0-use.local
   resolution: "@pikku/websocket@workspace:packages/client-websocket"
   dependencies:

@@ -10,7 +10,9 @@ export function useVariableValue(
   return useQuery({
     queryKey: ['variable-value', variableId],
     queryFn: async () => {
-      return await rpc.invoke('console:getVariable', { variableId: variableId! })
+      return await rpc.invoke('pikkuConsoleGetVariable', {
+        variableId: variableId!,
+      })
     },
     enabled: !!variableId && enabled,
   })
@@ -27,7 +29,7 @@ export function useSetVariable() {
     }: {
       variableId: string
       value: unknown
-    }) => rpc.invoke('console:setVariable', { variableId, value }),
+    }) => rpc.invoke('pikkuConsoleSetVariable', { variableId, value }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: ['variable-value', variables.variableId],

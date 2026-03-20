@@ -11,10 +11,9 @@
   },
   "scaffold": {
     "pikkuDir": "src",
-    "rpc": "no-auth"
-  },
-  "addons": {
-    "console": { "package": "@pikku/addon-console", "forceInclude": true }
+    "rpc": "no-auth",
+    "console": "no-auth",
+    "workflow": "no-auth"
   },
   "verboseMeta": true
 }
