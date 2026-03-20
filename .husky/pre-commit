@@ -1,1 +1,2 @@
+yarn install --immutable
 npx lint-staged
