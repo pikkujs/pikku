@@ -1,6 +1,7 @@
 import {
   type PikkuWorkflowService,
   WorkflowAsyncException,
+  WorkflowSuspendedException,
 } from '../pikku-workflow-service.js'
 import type { GraphWireState, PikkuGraphWire } from './workflow-graph.types.js'
 import { pikkuState, getSingletonServices } from '../../../pikku-state.js'
@@ -506,7 +507,10 @@ export async function executeGraphStep(
 
     return result
   } catch (error) {
-    if (error instanceof WorkflowAsyncException) {
+    if (
+      error instanceof WorkflowAsyncException ||
+      error instanceof WorkflowSuspendedException
+    ) {
       throw error
     }
     if (error instanceof ChildWorkflowStartedException) {
@@ -647,7 +651,10 @@ async function executeGraphNodeInline(
 
     await workflowService.setStepResult(stepState.stepId, result)
   } catch (error) {
-    if (error instanceof WorkflowAsyncException) {
+    if (
+      error instanceof WorkflowAsyncException ||
+      error instanceof WorkflowSuspendedException
+    ) {
       throw error
     }
     if (error instanceof RPCNotFoundError) {
@@ -874,7 +881,10 @@ export async function runWorkflowGraph(
           entryNodes
         )
       } catch (error) {
-        if (error instanceof WorkflowAsyncException) {
+        if (
+          error instanceof WorkflowAsyncException ||
+          error instanceof WorkflowSuspendedException
+        ) {
           return
         }
         await workflowService.updateRunStatus(runId, 'failed', undefined, {
