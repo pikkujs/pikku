@@ -102,7 +102,7 @@ jobs:
       - name: Generate pikku files for e2e hmac-signer
         run: cd e2e/packages/hmac-signer && npx pikku all
       - name: Generate pikku files for e2e project
-        run: cd e2e && npx pikku all && npx pikku all
+        run: cd e2e && npx pikku all
       - name: Install Playwright
         run: npx playwright install --with-deps chromium
       - name: Run e2e tests
