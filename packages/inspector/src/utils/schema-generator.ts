@@ -214,7 +214,20 @@ function generateTSSchemas(
       return
     }
     try {
-      schemas[schema] = generator.createSchema(schema) as JSONValue
+      const generated = generator.createSchema(schema) as any
+      // Remove properties with empty schemas (unknown/any types) — they can't be validated
+      if (generated?.properties) {
+        for (const [key, value] of Object.entries(generated.properties)) {
+          if (typeof value === 'object' && value !== null && Object.keys(value).length === 0) {
+            delete generated.properties[key]
+          }
+        }
+        if (generated.required) {
+          generated.required = generated.required.filter((r: string) => r in generated.properties)
+          if (generated.required.length === 0) delete generated.required
+        }
+      }
+      schemas[schema] = generated as JSONValue
     } catch (e) {
       if (e instanceof RootlessError) {
         const customType = typesMap.customTypes.get(schema)
@@ -280,6 +293,15 @@ async function generateZodSchemas(
           }
         },
       }) as any
+
+      if (schema.properties) {
+        // Remove properties with empty schemas (unknown/any types) — they can't be validated
+        for (const [key, value] of Object.entries(schema.properties)) {
+          if (typeof value === 'object' && value !== null && Object.keys(value).length === 0) {
+            delete schema.properties[key]
+          }
+        }
+      }
 
       if (schema.required && schema.properties) {
         schema.required = schema.required.filter((fieldName: string) => {
