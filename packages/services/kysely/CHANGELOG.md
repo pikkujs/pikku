@@ -1,5 +1,11 @@
 ## 0.12.0
 
+## 0.12.7
+
+### Patch Changes
+
+- c485aab: Fix CamelCasePlugin mismatch: convert all table types, query references, and result property accesses from snake_case to camelCase to match Kysely CamelCasePlugin runtime behavior
+
 ## 0.12.6
 
 ### Patch Changes
