@@ -1166,6 +1166,14 @@ async function continueAfterToolResult(
   ).tools
 
   const resolved = resolveModelConfig(resolvedName, agent)
+  console.log(
+    '[DEBUG resume] resolvedName:',
+    resolvedName,
+    'agent.model:',
+    agent.model,
+    'resolved.model:',
+    resolved.model
+  )
   const maxSteps = resolved.maxSteps ?? 10
 
   const runnerParams: AIAgentRunnerParams = {
