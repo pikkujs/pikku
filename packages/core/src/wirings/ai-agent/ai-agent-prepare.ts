@@ -11,6 +11,7 @@ import type {
 } from './ai-agent.types.js'
 import type { AIAgentRunnerParams } from '../../services/ai-agent-runner-service.js'
 import { PikkuError } from '../../errors/error-handler.js'
+import { checkAuthPermissions } from '../../permissions.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { createMiddlewareSessionWireProps } from '../../services/user-session-service.js'
@@ -148,6 +149,13 @@ export type StreamContext = {
 export const resolveAgent = (
   agentName: string
 ): { agent: CoreAIAgent; packageName: string | null; resolvedName: string } => {
+  if (!agentName) {
+    console.error(
+      '[resolveAgent] agentName is undefined/null! Stack:',
+      new Error().stack
+    )
+    throw new Error('resolveAgent called with undefined agentName')
+  }
   const mainAgent = pikkuState(null, 'agent', 'agents').get(agentName)
   if (mainAgent) {
     return { agent: mainAgent, packageName: null, resolvedName: agentName }
@@ -185,6 +193,16 @@ export async function buildInstructions(
   let instructions = Array.isArray(rawInstructions)
     ? rawInstructions.join('\n')
     : rawInstructions
+
+  if (meta?.tools?.length) {
+    instructions +=
+      '\n\nTool usage rules:\n' +
+      '- Act immediately with the information given. Do NOT ask clarifying questions unless a required field is truly missing.\n' +
+      '- Only use fields defined in your tool schemas. Never mention or ask for fields that do not exist.\n' +
+      '- Never fill optional fields with placeholder or zero values. Omit them entirely unless the user provides a real value.\n' +
+      '- Never stuff unrelated information into the wrong field.\n' +
+      '- Keep responses concise.'
+  }
 
   if (meta?.agents?.length) {
     instructions +=
@@ -279,6 +297,11 @@ export async function buildToolDefs(
   const meta = pikkuState(packageName, 'agent', 'agentsMeta')[agentName]
   if (!meta) return { tools, missingRpcs }
 
+  // Get session for permission filtering
+  const session = params.sessionService
+    ? await params.sessionService.get()
+    : null
+
   const metaTools = meta.tools
   const metaAgents = meta.agents
 
@@ -313,6 +336,17 @@ export async function buildToolDefs(
       if (!fnMeta) {
         missingRpcs.push(toolName)
         continue
+      }
+
+      // Filter out tools the user doesn't have auth for
+      if (session && fnMeta.permissions?.length) {
+        const allowed = await checkAuthPermissions(
+          fnMeta.permissions,
+          session,
+          singletonServices,
+          resolvedPkg
+        )
+        if (!allowed) continue
       }
 
       const inputSchemaName = fnMeta?.inputSchemaName
@@ -391,6 +425,16 @@ export async function buildToolDefs(
           `Sub-agent '${subAgentName}' not found in agent registry`
         )
         continue
+      }
+
+      // Filter out sub-agents the user doesn't have auth for
+      if (session && subMeta.permissions?.length) {
+        const allowed = await checkAuthPermissions(
+          subMeta.permissions,
+          session,
+          singletonServices
+        )
+        if (!allowed) continue
       }
 
       tools.push({

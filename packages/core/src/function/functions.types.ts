@@ -257,6 +257,7 @@ export const pikkuAuth = <
     if (!session) return false
     return fn(services, session as Session)
   }
+  ;(wrapper as any).__pikkuAuth = true
   return wrapper as any
 }
 
