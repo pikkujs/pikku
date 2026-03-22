@@ -20,19 +20,19 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
     const { workflowName, status, limit = 50, offset = 0 } = options ?? {}
 
     let query = this.db
-      .selectFrom('workflow_runs')
+      .selectFrom('workflowRuns')
       .select([
-        'workflow_run_id',
+        'workflowRunId',
         'workflow',
         'status',
         'input',
         'output',
         'error',
         'inline',
-        'graph_hash',
+        'graphHash',
         'wire',
-        'created_at',
-        'updated_at',
+        'createdAt',
+        'updatedAt',
       ])
 
     if (workflowName) {
@@ -44,7 +44,7 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
     }
 
     const result = await query
-      .orderBy('created_at', 'desc')
+      .orderBy('createdAt', 'desc')
       .limit(limit)
       .offset(offset)
       .execute()
@@ -54,21 +54,21 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
 
   async getRun(id: string): Promise<WorkflowRun | null> {
     const row = await this.db
-      .selectFrom('workflow_runs')
+      .selectFrom('workflowRuns')
       .select([
-        'workflow_run_id',
+        'workflowRunId',
         'workflow',
         'status',
         'input',
         'output',
         'error',
         'inline',
-        'graph_hash',
+        'graphHash',
         'wire',
-        'created_at',
-        'updated_at',
+        'createdAt',
+        'updatedAt',
       ])
-      .where('workflow_run_id', '=', id)
+      .where('workflowRunId', '=', id)
       .executeTakeFirst()
 
     if (!row) return null
@@ -81,50 +81,50 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
     Array<StepState & { stepName: string; rpcName?: string; data?: any }>
   > {
     const result = await this.db
-      .selectFrom('workflow_step as s')
+      .selectFrom('workflowStep as s')
       .select([
-        's.workflow_step_id',
-        's.step_name',
-        's.rpc_name',
+        's.workflowStepId',
+        's.stepName',
+        's.rpcName',
         's.data',
         's.status',
         's.result',
         's.error',
-        's.child_run_id',
+        's.childRunId',
         's.retries',
-        's.retry_delay',
-        's.created_at',
-        's.updated_at',
+        's.retryDelay',
+        's.createdAt',
+        's.updatedAt',
       ])
       .select((eb) =>
         eb
-          .selectFrom('workflow_step_history')
+          .selectFrom('workflowStepHistory')
           .select(eb.fn.countAll<number>().as('cnt'))
           .whereRef(
-            'workflow_step_history.workflow_step_id',
+            'workflowStepHistory.workflowStepId',
             '=',
-            's.workflow_step_id'
+            's.workflowStepId'
           )
-          .as('attempt_count')
+          .as('attemptCount')
       )
-      .where('s.workflow_run_id', '=', runId)
-      .orderBy('s.created_at', 'asc')
+      .where('s.workflowRunId', '=', runId)
+      .orderBy('s.createdAt', 'asc')
       .execute()
 
     return result.map((row) => ({
-      stepId: row.workflow_step_id,
-      stepName: row.step_name,
-      rpcName: row.rpc_name ?? undefined,
+      stepId: row.workflowStepId,
+      stepName: row.stepName,
+      rpcName: row.rpcName ?? undefined,
       data: parseJson(row.data),
       status: row.status as StepState['status'],
       result: parseJson(row.result),
       error: parseJson(row.error),
-      childRunId: row.child_run_id ?? undefined,
-      attemptCount: Number(row.attempt_count || 1),
+      childRunId: row.childRunId ?? undefined,
+      attemptCount: Number(row.attemptCount || 1),
       retries: row.retries != null ? Number(row.retries) : undefined,
-      retryDelay: row.retry_delay ?? undefined,
-      createdAt: new Date(row.created_at as unknown as string),
-      updatedAt: new Date(row.updated_at as unknown as string),
+      retryDelay: row.retryDelay ?? undefined,
+      createdAt: new Date(row.createdAt as unknown as string),
+      updatedAt: new Date(row.updatedAt as unknown as string),
     }))
   }
 
@@ -132,57 +132,57 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
     runId: string
   ): Promise<Array<StepState & { stepName: string }>> {
     const result = await this.db
-      .selectFrom('workflow_step as s')
+      .selectFrom('workflowStep as s')
       .innerJoin(
-        'workflow_step_history as h',
-        'h.workflow_step_id',
-        's.workflow_step_id'
+        'workflowStepHistory as h',
+        'h.workflowStepId',
+        's.workflowStepId'
       )
       .select([
-        's.workflow_step_id',
-        's.step_name',
+        's.workflowStepId',
+        's.stepName',
         's.retries',
-        's.retry_delay',
+        's.retryDelay',
         'h.status',
         'h.result',
         'h.error',
-        'h.created_at',
-        'h.running_at',
-        'h.scheduled_at',
-        'h.succeeded_at',
-        'h.failed_at',
+        'h.createdAt',
+        'h.runningAt',
+        'h.scheduledAt',
+        'h.succeededAt',
+        'h.failedAt',
       ])
-      .where('s.workflow_run_id', '=', runId)
-      .orderBy('h.created_at', 'asc')
+      .where('s.workflowRunId', '=', runId)
+      .orderBy('h.createdAt', 'asc')
       .execute()
 
     let attemptCounters: Record<string, number> = {}
     return result.map((row) => {
-      const stepId = row.workflow_step_id
+      const stepId = row.workflowStepId
       attemptCounters[stepId] = (attemptCounters[stepId] ?? 0) + 1
 
       return {
         stepId,
-        stepName: row.step_name,
+        stepName: row.stepName,
         status: row.status as StepState['status'],
         result: parseJson(row.result),
         error: parseJson(row.error),
         attemptCount: attemptCounters[stepId]!,
         retries: row.retries != null ? Number(row.retries) : undefined,
-        retryDelay: row.retry_delay ?? undefined,
-        createdAt: new Date(row.created_at as unknown as string),
-        updatedAt: new Date(row.created_at as unknown as string),
-        runningAt: row.running_at
-          ? new Date(row.running_at as unknown as string)
+        retryDelay: row.retryDelay ?? undefined,
+        createdAt: new Date(row.createdAt as unknown as string),
+        updatedAt: new Date(row.createdAt as unknown as string),
+        runningAt: row.runningAt
+          ? new Date(row.runningAt as unknown as string)
           : undefined,
-        scheduledAt: row.scheduled_at
-          ? new Date(row.scheduled_at as unknown as string)
+        scheduledAt: row.scheduledAt
+          ? new Date(row.scheduledAt as unknown as string)
           : undefined,
-        succeededAt: row.succeeded_at
-          ? new Date(row.succeeded_at as unknown as string)
+        succeededAt: row.succeededAt
+          ? new Date(row.succeededAt as unknown as string)
           : undefined,
-        failedAt: row.failed_at
-          ? new Date(row.failed_at as unknown as string)
+        failedAt: row.failedAt
+          ? new Date(row.failedAt as unknown as string)
           : undefined,
       }
     })
@@ -190,7 +190,7 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
 
   async getDistinctWorkflowNames(): Promise<string[]> {
     const result = await this.db
-      .selectFrom('workflow_runs')
+      .selectFrom('workflowRuns')
       .select('workflow')
       .distinct()
       .orderBy('workflow')
@@ -204,10 +204,10 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
     graphHash: string
   ): Promise<{ graph: any; source: string } | null> {
     const row = await this.db
-      .selectFrom('workflow_versions')
+      .selectFrom('workflowVersions')
       .select(['graph', 'source'])
-      .where('workflow_name', '=', name)
-      .where('graph_hash', '=', graphHash)
+      .where('workflowName', '=', name)
+      .where('graphHash', '=', graphHash)
       .executeTakeFirst()
 
     if (!row) return null
@@ -221,25 +221,25 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
     agentName?: string
   ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>> {
     let query = this.db
-      .selectFrom('workflow_versions')
-      .select(['workflow_name', 'graph_hash', 'graph'])
+      .selectFrom('workflowVersions')
+      .select(['workflowName', 'graphHash', 'graph'])
       .where('source', '=', 'ai-agent')
       .where('status', '=', 'active')
     if (agentName) {
-      query = query.where('workflow_name', 'like', `ai:${agentName}:%`)
+      query = query.where('workflowName', 'like', `ai:${agentName}:%`)
     }
     const rows = await query.execute()
     return rows.map((row) => ({
-      workflowName: row.workflow_name,
-      graphHash: row.graph_hash,
+      workflowName: row.workflowName,
+      graphHash: row.graphHash,
       graph: parseJson(row.graph),
     }))
   }
 
   async deleteRun(id: string): Promise<boolean> {
     const result = await this.db
-      .deleteFrom('workflow_runs')
-      .where('workflow_run_id', '=', id)
+      .deleteFrom('workflowRuns')
+      .where('workflowRunId', '=', id)
       .executeTakeFirst()
 
     return BigInt(result.numDeletedRows) > 0n
@@ -247,17 +247,17 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
 
   private mapRunRow(row: any): WorkflowRun {
     return {
-      id: row.workflow_run_id as string,
+      id: row.workflowRunId as string,
       workflow: row.workflow as string,
       status: row.status as WorkflowStatus,
       input: parseJson(row.input),
       output: parseJson(row.output),
       error: parseJson(row.error),
       inline: row.inline as boolean | undefined,
-      graphHash: row.graph_hash as string | undefined,
+      graphHash: row.graphHash as string | undefined,
       wire: parseJson(row.wire) ?? { type: 'unknown' },
-      createdAt: new Date(row.created_at as string),
-      updatedAt: new Date(row.updated_at as string),
+      createdAt: new Date(row.createdAt as string),
+      updatedAt: new Date(row.updatedAt as string),
     }
   }
 }

@@ -19,14 +19,14 @@ export class KyselyAgentRunService implements AgentRunService {
     const { agentName, limit = 50, offset = 0 } = options ?? {}
 
     let query = this.db
-      .selectFrom('ai_threads as t')
+      .selectFrom('aiThreads as t')
       .select([
         't.id',
-        't.resource_id',
+        't.resourceId',
         't.title',
         't.metadata',
-        't.created_at',
-        't.updated_at',
+        't.createdAt',
+        't.updatedAt',
       ])
 
     if (agentName) {
@@ -34,15 +34,15 @@ export class KyselyAgentRunService implements AgentRunService {
         't.id',
         'in',
         this.db
-          .selectFrom('ai_run')
-          .select('thread_id')
-          .where('agent_name', '=', agentName)
+          .selectFrom('aiRun')
+          .select('threadId')
+          .where('agentName', '=', agentName)
           .distinct()
       )
     }
 
     const result = await query
-      .orderBy('t.updated_at', 'desc')
+      .orderBy('t.updatedAt', 'desc')
       .limit(limit)
       .offset(offset)
       .execute()
@@ -52,14 +52,14 @@ export class KyselyAgentRunService implements AgentRunService {
 
   async getThread(threadId: string): Promise<AIThread | null> {
     const row = await this.db
-      .selectFrom('ai_threads')
+      .selectFrom('aiThreads')
       .select([
         'id',
-        'resource_id',
+        'resourceId',
         'title',
         'metadata',
-        'created_at',
-        'updated_at',
+        'createdAt',
+        'updatedAt',
       ])
       .where('id', '=', threadId)
       .executeTakeFirst()
@@ -71,22 +71,22 @@ export class KyselyAgentRunService implements AgentRunService {
   async getThreadMessages(threadId: string): Promise<AIMessage[]> {
     const [msgResult, tcResult] = await Promise.all([
       this.db
-        .selectFrom('ai_message')
-        .select(['id', 'role', 'content', 'created_at'])
-        .where('thread_id', '=', threadId)
-        .orderBy('created_at', 'asc')
+        .selectFrom('aiMessage')
+        .select(['id', 'role', 'content', 'createdAt'])
+        .where('threadId', '=', threadId)
+        .orderBy('createdAt', 'asc')
         .execute(),
       this.db
-        .selectFrom('ai_tool_call')
-        .select(['id', 'message_id', 'tool_name', 'args', 'result'])
-        .where('thread_id', '=', threadId)
-        .orderBy('created_at', 'asc')
+        .selectFrom('aiToolCall')
+        .select(['id', 'messageId', 'toolName', 'args', 'result'])
+        .where('threadId', '=', threadId)
+        .orderBy('createdAt', 'asc')
         .execute(),
     ])
 
     const tcByMessage = new Map<string, (typeof tcResult)[number][]>()
     for (const tc of tcResult) {
-      const msgId = tc.message_id
+      const msgId = tc.messageId
       if (!tcByMessage.has(msgId)) tcByMessage.set(msgId, [])
       tcByMessage.get(msgId)!.push(tc)
     }
@@ -97,14 +97,14 @@ export class KyselyAgentRunService implements AgentRunService {
         id: row.id,
         role: row.role as AIMessage['role'],
         content: row.content ?? undefined,
-        createdAt: new Date(row.created_at as unknown as string),
+        createdAt: new Date(row.createdAt as unknown as string),
       }
 
       const tcs = tcByMessage.get(msg.id)
       if (tcs?.length) {
         msg.toolCalls = tcs.map((tc) => ({
           id: tc.id,
-          name: tc.tool_name,
+          name: tc.toolName,
           args: parseJson(tc.args) as Record<string, unknown>,
         }))
 
@@ -116,7 +116,7 @@ export class KyselyAgentRunService implements AgentRunService {
             role: 'tool',
             toolResults: completed.map((tc) => ({
               id: tc.id,
-              name: tc.tool_name,
+              name: tc.toolName,
               result: tc.result!,
             })),
             createdAt: msg.createdAt,
@@ -133,24 +133,24 @@ export class KyselyAgentRunService implements AgentRunService {
 
   async getThreadRuns(threadId: string): Promise<AgentRunRow[]> {
     const result = await this.db
-      .selectFrom('ai_run')
+      .selectFrom('aiRun')
       .select([
-        'run_id',
-        'agent_name',
-        'thread_id',
-        'resource_id',
+        'runId',
+        'agentName',
+        'threadId',
+        'resourceId',
         'status',
-        'error_message',
-        'suspend_reason',
-        'missing_rpcs',
-        'usage_input_tokens',
-        'usage_output_tokens',
-        'usage_model',
-        'created_at',
-        'updated_at',
+        'errorMessage',
+        'suspendReason',
+        'missingRpcs',
+        'usageInputTokens',
+        'usageOutputTokens',
+        'usageModel',
+        'createdAt',
+        'updatedAt',
       ])
-      .where('thread_id', '=', threadId)
-      .orderBy('created_at', 'desc')
+      .where('threadId', '=', threadId)
+      .orderBy('createdAt', 'desc')
       .execute()
 
     return result.map((row) => this.mapRunRow(row))
@@ -158,7 +158,7 @@ export class KyselyAgentRunService implements AgentRunService {
 
   async deleteThread(threadId: string): Promise<boolean> {
     const result = await this.db
-      .deleteFrom('ai_threads')
+      .deleteFrom('aiThreads')
       .where('id', '=', threadId)
       .executeTakeFirst()
 
@@ -167,41 +167,41 @@ export class KyselyAgentRunService implements AgentRunService {
 
   async getDistinctAgentNames(): Promise<string[]> {
     const result = await this.db
-      .selectFrom('ai_run')
-      .select('agent_name')
+      .selectFrom('aiRun')
+      .select('agentName')
       .distinct()
-      .orderBy('agent_name')
+      .orderBy('agentName')
       .execute()
 
-    return result.map((row) => row.agent_name)
+    return result.map((row) => row.agentName)
   }
 
   private mapThreadRow(row: any): AIThread {
     return {
       id: row.id as string,
-      resourceId: row.resource_id as string,
+      resourceId: row.resourceId as string,
       title: (row.title as string) ?? undefined,
       metadata: parseJson(row.metadata),
-      createdAt: new Date(row.created_at as string),
-      updatedAt: new Date(row.updated_at as string),
+      createdAt: new Date(row.createdAt as string),
+      updatedAt: new Date(row.updatedAt as string),
     }
   }
 
   private mapRunRow(row: any): AgentRunRow {
     return {
-      runId: row.run_id as string,
-      agentName: row.agent_name as string,
-      threadId: row.thread_id as string,
-      resourceId: row.resource_id as string,
+      runId: row.runId as string,
+      agentName: row.agentName as string,
+      threadId: row.threadId as string,
+      resourceId: row.resourceId as string,
       status: row.status as string,
-      errorMessage: (row.error_message as string) ?? undefined,
-      suspendReason: (row.suspend_reason as string) ?? undefined,
-      missingRpcs: parseJson(row.missing_rpcs),
-      usageInputTokens: Number(row.usage_input_tokens),
-      usageOutputTokens: Number(row.usage_output_tokens),
-      usageModel: row.usage_model as string,
-      createdAt: new Date(row.created_at as string),
-      updatedAt: new Date(row.updated_at as string),
+      errorMessage: (row.errorMessage as string) ?? undefined,
+      suspendReason: (row.suspendReason as string) ?? undefined,
+      missingRpcs: parseJson(row.missingRpcs),
+      usageInputTokens: Number(row.usageInputTokens),
+      usageOutputTokens: Number(row.usageOutputTokens),
+      usageModel: row.usageModel as string,
+      createdAt: new Date(row.createdAt as string),
+      updatedAt: new Date(row.updatedAt as string),
     }
   }
 }

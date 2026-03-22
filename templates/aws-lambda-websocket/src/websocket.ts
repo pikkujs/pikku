@@ -9,7 +9,7 @@ import {
 } from '@pikku/lambda/websocket'
 
 import type { ChannelStore } from '@pikku/core/channel'
-import { LocalVariablesService } from '@pikku/core/services'
+import { LocalVariablesService, ConsoleLogger } from '@pikku/core/services'
 import type {
   Config,
   SingletonServices,
@@ -19,13 +19,11 @@ import {
   createSingletonServices,
 } from '../../functions/src/services.js'
 import {
+  PikkuKysely,
   PgKyselyChannelStore,
   PgKyselyEventHubStore,
 } from '@pikku/kysely-postgres'
 import type { KyselyPikkuDB } from '@pikku/kysely-postgres'
-import { Kysely } from 'kysely'
-import { PostgresJSDialect } from 'kysely-postgres-js'
-import postgres from 'postgres'
 
 let state:
   | {
@@ -38,25 +36,27 @@ let state:
 const getParams = async (event: APIGatewayEvent) => {
   if (!state) {
     const config = await createConfig()
+    const logger = new ConsoleLogger()
     const variables = new LocalVariablesService()
+
     const singletonServices = await createSingletonServices(config, {
+      logger,
       variables,
     })
+
     const databaseUrl =
       (await variables.get('DATABASE_URL')) ||
       'postgresql://localhost:5432/pikku'
 
-    const sql = postgres(databaseUrl)
-    const db = new Kysely<KyselyPikkuDB>({
-      dialect: new PostgresJSDialect({ postgres: sql }),
-    })
-    const channelStore = new PgKyselyChannelStore(db)
-    const eventHubStore = new PgKyselyEventHubStore(db)
+    const pikkuKysely = new PikkuKysely<KyselyPikkuDB>(logger, databaseUrl)
+    await pikkuKysely.init()
+    const channelStore = new PgKyselyChannelStore(pikkuKysely.kysely)
+    const eventHubStore = new PgKyselyEventHubStore(pikkuKysely.kysely)
 
     await channelStore.init()
     await eventHubStore.init()
     singletonServices.eventHub = new LambdaEventHubService(
-      singletonServices.logger,
+      logger,
       event,
       channelStore,
       eventHubStore

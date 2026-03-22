@@ -83,32 +83,32 @@ export class KyselyDeploymentService implements DeploymentService {
 
     await this.db.transaction().execute(async (trx) => {
       await trx
-        .insertInto('pikku_deployments')
+        .insertInto('pikkuDeployments')
         .values({
-          deployment_id: config.deploymentId,
+          deploymentId: config.deploymentId,
           endpoint: config.endpoint,
-          last_heartbeat: new Date(),
+          lastHeartbeat: new Date(),
         })
         .onConflict((oc) =>
-          oc.column('deployment_id').doUpdateSet({
+          oc.column('deploymentId').doUpdateSet({
             endpoint: config.endpoint,
-            last_heartbeat: new Date(),
+            lastHeartbeat: new Date(),
           })
         )
         .execute()
 
       await trx
-        .deleteFrom('pikku_deployment_functions')
-        .where('deployment_id', '=', config.deploymentId)
+        .deleteFrom('pikkuDeploymentFunctions')
+        .where('deploymentId', '=', config.deploymentId)
         .execute()
 
       if (functions.length > 0) {
         await trx
-          .insertInto('pikku_deployment_functions')
+          .insertInto('pikkuDeploymentFunctions')
           .values(
             functions.map((fn) => ({
-              deployment_id: config.deploymentId,
-              function_name: fn,
+              deploymentId: config.deploymentId,
+              functionName: fn,
             }))
           )
           .execute()
@@ -129,8 +129,8 @@ export class KyselyDeploymentService implements DeploymentService {
 
     if (this.deploymentConfig) {
       await this.db
-        .deleteFrom('pikku_deployments')
-        .where('deployment_id', '=', this.deploymentConfig.deploymentId)
+        .deleteFrom('pikkuDeployments')
+        .where('deploymentId', '=', this.deploymentConfig.deploymentId)
         .execute()
     }
   }
@@ -140,20 +140,20 @@ export class KyselyDeploymentService implements DeploymentService {
     const cutoff = new Date(Date.now() - ttlMs)
 
     const result = await this.db
-      .selectFrom('pikku_deployments as d')
+      .selectFrom('pikkuDeployments as d')
       .innerJoin(
-        'pikku_deployment_functions as f',
-        'f.deployment_id',
-        'd.deployment_id'
+        'pikkuDeploymentFunctions as f',
+        'f.deploymentId',
+        'd.deploymentId'
       )
-      .select(['d.deployment_id', 'd.endpoint'])
-      .where('f.function_name', '=', name)
-      .where('d.last_heartbeat', '>', cutoff)
-      .orderBy('d.last_heartbeat', 'desc')
+      .select(['d.deploymentId', 'd.endpoint'])
+      .where('f.functionName', '=', name)
+      .where('d.lastHeartbeat', '>', cutoff)
+      .orderBy('d.lastHeartbeat', 'desc')
       .execute()
 
     return result.map((row) => ({
-      deploymentId: row.deployment_id,
+      deploymentId: row.deploymentId,
       endpoint: row.endpoint,
     }))
   }
@@ -176,9 +176,9 @@ export class KyselyDeploymentService implements DeploymentService {
 
     try {
       await this.db
-        .updateTable('pikku_deployments')
-        .set({ last_heartbeat: new Date() })
-        .where('deployment_id', '=', this.deploymentConfig.deploymentId)
+        .updateTable('pikkuDeployments')
+        .set({ lastHeartbeat: new Date() })
+        .where('deploymentId', '=', this.deploymentConfig.deploymentId)
         .execute()
     } catch {
       // Heartbeat failed, will retry on next interval

@@ -6,21 +6,21 @@ import type {
 } from '@pikku/core/workflow'
 
 export interface ChannelsTable {
-  channel_id: string
-  channel_name: string
-  created_at: Generated<Date>
-  opening_data: string
-  user_session: string | null
-  last_wire: Generated<Date>
+  channelId: string
+  channelName: string
+  createdAt: Generated<Date>
+  openingData: string
+  userSession: string | null
+  lastWire: Generated<Date>
 }
 
 export interface ChannelSubscriptionsTable {
-  channel_id: string
+  channelId: string
   topic: string
 }
 
 export interface WorkflowRunsTable {
-  workflow_run_id: Generated<string>
+  workflowRunId: Generated<string>
   workflow: string
   status: WorkflowStatus
   input: string
@@ -28,169 +28,169 @@ export interface WorkflowRunsTable {
   error: string | null
   state: Generated<string>
   inline: Generated<boolean>
-  graph_hash: string | null
+  graphHash: string | null
   wire: string | null
-  created_at: Generated<Date>
-  updated_at: Generated<Date>
+  createdAt: Generated<Date>
+  updatedAt: Generated<Date>
 }
 
 export interface WorkflowStepTable {
-  workflow_step_id: Generated<string>
-  workflow_run_id: string
-  step_name: string
-  rpc_name: string | null
+  workflowStepId: Generated<string>
+  workflowRunId: string
+  stepName: string
+  rpcName: string | null
   data: string | null
   status: Generated<StepStatus>
   result: string | null
   error: string | null
-  child_run_id: string | null
-  branch_taken: string | null
+  childRunId: string | null
+  branchTaken: string | null
   retries: number | null
-  retry_delay: string | null
-  created_at: Generated<Date>
-  updated_at: Generated<Date>
+  retryDelay: string | null
+  createdAt: Generated<Date>
+  updatedAt: Generated<Date>
 }
 
 export interface WorkflowStepHistoryTable {
-  history_id: Generated<string>
-  workflow_step_id: string
+  historyId: Generated<string>
+  workflowStepId: string
   status: StepStatus
   result: string | null
   error: string | null
-  created_at: Generated<Date>
-  running_at: Date | null
-  scheduled_at: Date | null
-  succeeded_at: Date | null
-  failed_at: Date | null
+  createdAt: Generated<Date>
+  runningAt: Date | null
+  scheduledAt: Date | null
+  succeededAt: Date | null
+  failedAt: Date | null
 }
 
 export interface WorkflowVersionsTable {
-  workflow_name: string
-  graph_hash: string
+  workflowName: string
+  graphHash: string
   graph: string
   source: string
   status: Generated<WorkflowVersionStatus>
-  created_at: Generated<Date>
+  createdAt: Generated<Date>
 }
 
 export interface AIThreadsTable {
   id: string
-  resource_id: string
+  resourceId: string
   title: string | null
   metadata: string | null
-  created_at: Generated<Date>
-  updated_at: Generated<Date>
+  createdAt: Generated<Date>
+  updatedAt: Generated<Date>
 }
 
 export interface AIMessageTable {
   id: string
-  thread_id: string
+  threadId: string
   role: 'system' | 'user' | 'assistant' | 'tool'
   content: string | null
-  created_at: Generated<Date>
+  createdAt: Generated<Date>
 }
 
 export interface AIToolCallTable {
   id: string
-  thread_id: string
-  message_id: string
-  run_id: string | null
-  tool_name: string
+  threadId: string
+  messageId: string
+  runId: string | null
+  toolName: string
   args: string
   result: string | null
-  approval_status: 'approved' | 'denied' | 'pending' | null
-  approval_type: 'agent-call' | 'tool-call' | null
-  agent_run_id: string | null
-  display_tool_name: string | null
-  display_args: string | null
-  created_at: Generated<Date>
+  approvalStatus: 'approved' | 'denied' | 'pending' | null
+  approvalType: 'agent-call' | 'tool-call' | null
+  agentRunId: string | null
+  displayToolName: string | null
+  displayArgs: string | null
+  createdAt: Generated<Date>
 }
 
 export interface AIWorkingMemoryTable {
   id: string
   scope: string
   data: string
-  updated_at: Generated<Date>
+  updatedAt: Generated<Date>
 }
 
 export interface AIRunTable {
-  run_id: Generated<string>
-  agent_name: string
-  thread_id: string
-  resource_id: string
+  runId: Generated<string>
+  agentName: string
+  threadId: string
+  resourceId: string
   status: Generated<'running' | 'suspended' | 'completed' | 'failed'>
-  error_message: string | null
-  suspend_reason: 'approval' | 'rpc-missing' | null
-  missing_rpcs: string | null
-  usage_input_tokens: Generated<number>
-  usage_output_tokens: Generated<number>
-  usage_model: Generated<string>
-  created_at: Generated<Date>
-  updated_at: Generated<Date>
+  errorMessage: string | null
+  suspendReason: 'approval' | 'rpc-missing' | null
+  missingRpcs: string | null
+  usageInputTokens: Generated<number>
+  usageOutputTokens: Generated<number>
+  usageModel: Generated<string>
+  createdAt: Generated<Date>
+  updatedAt: Generated<Date>
 }
 
 export interface PikkuDeploymentsTable {
-  deployment_id: string
+  deploymentId: string
   endpoint: string
-  last_heartbeat: Generated<Date>
-  created_at: Generated<Date>
+  lastHeartbeat: Generated<Date>
+  createdAt: Generated<Date>
 }
 
 export interface PikkuDeploymentFunctionsTable {
-  deployment_id: string
-  function_name: string
+  deploymentId: string
+  functionName: string
 }
 
 export interface SecretsTable {
   key: string
   ciphertext: string
-  wrapped_dek: string
-  key_version: number
-  created_at: Generated<Date>
-  updated_at: Generated<Date>
+  wrappedDek: string
+  keyVersion: number
+  createdAt: Generated<Date>
+  updatedAt: Generated<Date>
 }
 
 export interface SecretsAuditTable {
   id: string
-  secret_key: string
+  secretKey: string
   action: string
-  performed_at: Generated<Date>
+  performedAt: Generated<Date>
 }
 
 export interface CredentialsTable {
   name: string
-  user_id: string | null
+  userId: string | null
   ciphertext: string
-  wrapped_dek: string
-  key_version: number
-  created_at: Generated<Date>
-  updated_at: Generated<Date>
+  wrappedDek: string
+  keyVersion: number
+  createdAt: Generated<Date>
+  updatedAt: Generated<Date>
 }
 
 export interface CredentialsAuditTable {
   id: string
-  credential_name: string
-  user_id: string | null
+  credentialName: string
+  userId: string | null
   action: string
-  performed_at: Generated<Date>
+  performedAt: Generated<Date>
 }
 
 export interface KyselyPikkuDB {
   channels: ChannelsTable
-  channel_subscriptions: ChannelSubscriptionsTable
-  workflow_runs: WorkflowRunsTable
-  workflow_step: WorkflowStepTable
-  workflow_step_history: WorkflowStepHistoryTable
-  workflow_versions: WorkflowVersionsTable
-  ai_threads: AIThreadsTable
-  ai_message: AIMessageTable
-  ai_tool_call: AIToolCallTable
-  ai_working_memory: AIWorkingMemoryTable
-  ai_run: AIRunTable
-  pikku_deployments: PikkuDeploymentsTable
-  pikku_deployment_functions: PikkuDeploymentFunctionsTable
+  channelSubscriptions: ChannelSubscriptionsTable
+  workflowRuns: WorkflowRunsTable
+  workflowStep: WorkflowStepTable
+  workflowStepHistory: WorkflowStepHistoryTable
+  workflowVersions: WorkflowVersionsTable
+  aiThreads: AIThreadsTable
+  aiMessage: AIMessageTable
+  aiToolCall: AIToolCallTable
+  aiWorkingMemory: AIWorkingMemoryTable
+  aiRun: AIRunTable
+  pikkuDeployments: PikkuDeploymentsTable
+  pikkuDeploymentFunctions: PikkuDeploymentFunctionsTable
   secrets: SecretsTable
-  secrets_audit: SecretsAuditTable
+  secretsAudit: SecretsAuditTable
   credentials: CredentialsTable
-  credentials_audit: CredentialsAuditTable
+  credentialsAudit: CredentialsAuditTable
 }

@@ -77,12 +77,12 @@ export class KyselySecretService implements SecretService {
     if (action === 'read' && !this.auditReads) return
 
     await this.db
-      .insertInto('secrets_audit')
+      .insertInto('secretsAudit')
       .values({
         id: crypto.randomUUID(),
-        secret_key: secretKey,
+        secretKey: secretKey,
         action,
-        performed_at: new Date().toISOString() as any,
+        performedAt: new Date().toISOString() as unknown as Date,
       })
       .execute()
   }
@@ -96,17 +96,17 @@ export class KyselySecretService implements SecretService {
   async getSecret(key: string): Promise<string> {
     const row = await this.db
       .selectFrom('secrets')
-      .select(['ciphertext', 'wrapped_dek', 'key_version'])
+      .select(['ciphertext', 'wrappedDek', 'keyVersion'])
       .where('key', '=', key)
       .executeTakeFirst()
 
     if (!row) throw new Error('Requested secret not found')
 
-    const kek = this.getKEK(row.key_version)
+    const kek = this.getKEK(row.keyVersion)
     const result = await envelopeDecrypt<string>(
       kek,
       row.ciphertext,
-      row.wrapped_dek
+      row.wrappedDek
     )
     await this.logAudit(key, 'read')
     return result
@@ -139,17 +139,17 @@ export class KyselySecretService implements SecretService {
       .values({
         key,
         ciphertext,
-        wrapped_dek: wrappedDEK,
-        key_version: this.keyVersion,
-        created_at: now as any,
-        updated_at: now as any,
+        wrappedDek: wrappedDEK,
+        keyVersion: this.keyVersion,
+        createdAt: now as unknown as Date,
+        updatedAt: now as unknown as Date,
       })
       .onConflict((oc) =>
         oc.column('key').doUpdateSet({
           ciphertext,
-          wrapped_dek: wrappedDEK,
-          key_version: this.keyVersion,
-          updated_at: now as any,
+          wrappedDek: wrappedDEK,
+          keyVersion: this.keyVersion,
+          updatedAt: now as unknown as Date,
         })
       )
       .execute()
@@ -169,22 +169,22 @@ export class KyselySecretService implements SecretService {
 
     const rows = await this.db
       .selectFrom('secrets')
-      .select(['key', 'wrapped_dek'])
-      .where('key_version', '<', this.keyVersion)
+      .select(['key', 'wrappedDek'])
+      .where('keyVersion', '<', this.keyVersion)
       .execute()
 
     for (const row of rows) {
       const newWrappedDEK = await envelopeRewrap(
         this.previousKey,
         this.key,
-        row.wrapped_dek
+        row.wrappedDek
       )
       await this.db
         .updateTable('secrets')
         .set({
-          wrapped_dek: newWrappedDEK,
-          key_version: this.keyVersion,
-          updated_at: new Date().toISOString() as any,
+          wrappedDek: newWrappedDEK,
+          keyVersion: this.keyVersion,
+          updatedAt: new Date().toISOString() as unknown as Date,
         })
         .where('key', '=', row.key)
         .execute()
