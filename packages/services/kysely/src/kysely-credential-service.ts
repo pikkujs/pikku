@@ -84,13 +84,13 @@ export class KyselyCredentialService implements CredentialService {
     if (action === 'read' && !this.auditReads) return
 
     await this.db
-      .insertInto('credentials_audit')
+      .insertInto('credentialsAudit')
       .values({
         id: crypto.randomUUID(),
-        credential_name: name,
-        user_id: userId ?? null,
+        credentialName: name,
+        userId: userId ?? null,
         action,
-        performed_at: new Date().toISOString() as any,
+        performedAt: new Date().toISOString() as unknown as Date,
       })
       .execute()
   }
@@ -103,25 +103,25 @@ export class KyselyCredentialService implements CredentialService {
 
   private whereUserId(qb: any, userId?: string) {
     return userId
-      ? qb.where('user_id', '=', userId)
-      : qb.where('user_id', 'is', null)
+      ? qb.where('userId', '=', userId)
+      : qb.where('userId', 'is', null)
   }
 
   async get<T = unknown>(name: string, userId?: string): Promise<T | null> {
     let qb = this.db
       .selectFrom('credentials')
-      .select(['ciphertext', 'wrapped_dek', 'key_version'])
+      .select(['ciphertext', 'wrappedDek', 'keyVersion'])
       .where('name', '=', name)
     qb = this.whereUserId(qb, userId)
 
     const row = await qb.executeTakeFirst()
     if (!row) return null
 
-    const kek = this.getKEK(row.key_version)
+    const kek = this.getKEK(row.keyVersion)
     const plaintext = await envelopeDecrypt<string>(
       kek,
       row.ciphertext,
-      row.wrapped_dek
+      row.wrappedDek
     )
     await this.logAudit(name, userId, 'read')
 
@@ -146,9 +146,9 @@ export class KyselyCredentialService implements CredentialService {
         .updateTable('credentials')
         .set({
           ciphertext,
-          wrapped_dek: wrappedDEK,
-          key_version: this.keyVersion,
-          updated_at: now as any,
+          wrappedDek: wrappedDEK,
+          keyVersion: this.keyVersion,
+          updatedAt: now as unknown as Date,
         })
         .where('name', '=', name)
       qb = this.whereUserId(qb, userId)
@@ -158,12 +158,12 @@ export class KyselyCredentialService implements CredentialService {
         .insertInto('credentials')
         .values({
           name,
-          user_id: userId ?? null,
+          userId: userId ?? null,
           ciphertext,
-          wrapped_dek: wrappedDEK,
-          key_version: this.keyVersion,
-          created_at: now as any,
-          updated_at: now as any,
+          wrappedDek: wrappedDEK,
+          keyVersion: this.keyVersion,
+          createdAt: now as unknown as Date,
+          updatedAt: now as unknown as Date,
         })
         .execute()
     }
@@ -193,17 +193,17 @@ export class KyselyCredentialService implements CredentialService {
   async getAll(userId: string): Promise<Record<string, unknown>> {
     const rows = await this.db
       .selectFrom('credentials')
-      .select(['name', 'ciphertext', 'wrapped_dek', 'key_version'])
-      .where('user_id', '=', userId)
+      .select(['name', 'ciphertext', 'wrappedDek', 'keyVersion'])
+      .where('userId', '=', userId)
       .execute()
 
     const result: Record<string, unknown> = {}
     for (const row of rows) {
-      const kek = this.getKEK(row.key_version)
+      const kek = this.getKEK(row.keyVersion)
       const plaintext = await envelopeDecrypt<string>(
         kek,
         row.ciphertext,
-        row.wrapped_dek
+        row.wrappedDek
       )
       try {
         result[row.name] = JSON.parse(plaintext)
@@ -223,28 +223,28 @@ export class KyselyCredentialService implements CredentialService {
 
     const rows = await this.db
       .selectFrom('credentials')
-      .select(['name', 'user_id', 'wrapped_dek'])
-      .where('key_version', '<', this.keyVersion)
+      .select(['name', 'userId', 'wrappedDek'])
+      .where('keyVersion', '<', this.keyVersion)
       .execute()
 
     for (const row of rows) {
       const newWrappedDEK = await envelopeRewrap(
         this.previousKey,
         this.key,
-        row.wrapped_dek
+        row.wrappedDek
       )
       let qb = this.db
         .updateTable('credentials')
         .set({
-          wrapped_dek: newWrappedDEK,
-          key_version: this.keyVersion,
-          updated_at: new Date().toISOString() as any,
+          wrappedDek: newWrappedDEK,
+          keyVersion: this.keyVersion,
+          updatedAt: new Date().toISOString() as unknown as Date,
         })
         .where('name', '=', row.name)
-      qb = this.whereUserId(qb, row.user_id ?? undefined)
+      qb = this.whereUserId(qb, row.userId ?? undefined)
       await qb.execute()
 
-      await this.logAudit(row.name, row.user_id ?? undefined, 'rotate')
+      await this.logAudit(row.name, row.userId ?? undefined, 'rotate')
     }
 
     return rows.length

@@ -1,6 +1,6 @@
 import { describe, test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
-import { Kysely, SqliteDialect } from 'kysely'
+import { CamelCasePlugin, Kysely, SqliteDialect } from 'kysely'
 import { SerializePlugin } from 'kysely-plugin-serialize'
 import Database from 'better-sqlite3'
 import { PostgresJSDialect } from 'kysely-postgres-js'
@@ -23,7 +23,7 @@ function createSqliteDb(): Kysely<KyselyPikkuDB> {
     dialect: new SqliteDialect({
       database: new Database(':memory:'),
     }),
-    plugins: [new SerializePlugin()],
+    plugins: [new CamelCasePlugin(), new SerializePlugin()],
   })
 }
 
@@ -33,6 +33,7 @@ function createPostgresDb(): Kysely<KyselyPikkuDB> | null {
 
   return new Kysely<KyselyPikkuDB>({
     dialect: new PostgresJSDialect({ postgres: postgres(url) }),
+    plugins: [new CamelCasePlugin()],
   })
 }
 
@@ -126,10 +127,10 @@ function registerTests(
       await service.deleteSecret('audit-test')
 
       const logs = await getDb()
-        .selectFrom('secrets_audit')
-        .select(['secret_key', 'action'])
-        .where('secret_key', '=', 'audit-test')
-        .orderBy('performed_at', 'asc')
+        .selectFrom('secretsAudit')
+        .select(['secretKey', 'action'])
+        .where('secretKey', '=', 'audit-test')
+        .orderBy('performedAt', 'asc')
         .execute()
 
       assert.equal(logs.length, 3)
@@ -149,9 +150,9 @@ function registerTests(
       await service.getSecret('no-read-audit')
 
       const logs = await getDb()
-        .selectFrom('secrets_audit')
+        .selectFrom('secretsAudit')
         .select(['action'])
-        .where('secret_key', '=', 'no-read-audit')
+        .where('secretKey', '=', 'no-read-audit')
         .execute()
 
       assert.equal(logs.length, 1)
@@ -174,15 +175,15 @@ function registerTests(
       await service.delete('audit-cred', 'user-1')
 
       const logs = await getDb()
-        .selectFrom('credentials_audit')
-        .select(['credential_name', 'user_id', 'action'])
-        .where('credential_name', '=', 'audit-cred')
-        .orderBy('performed_at', 'asc')
+        .selectFrom('credentialsAudit')
+        .select(['credentialName', 'userId', 'action'])
+        .where('credentialName', '=', 'audit-cred')
+        .orderBy('performedAt', 'asc')
         .execute()
 
       assert.equal(logs.length, 3)
       assert.equal(logs[0]!.action, 'write')
-      assert.equal(logs[0]!.user_id, 'user-1')
+      assert.equal(logs[0]!.userId, 'user-1')
       assert.equal(logs[1]!.action, 'read')
       assert.equal(logs[2]!.action, 'delete')
     })
@@ -198,14 +199,14 @@ function registerTests(
       await service.get('global-cred')
 
       const logs = await getDb()
-        .selectFrom('credentials_audit')
-        .select(['credential_name', 'user_id', 'action'])
-        .where('credential_name', '=', 'global-cred')
+        .selectFrom('credentialsAudit')
+        .select(['credentialName', 'userId', 'action'])
+        .where('credentialName', '=', 'global-cred')
         .execute()
 
       assert.equal(logs.length, 2)
-      assert.equal(logs[0]!.user_id, null)
-      assert.equal(logs[1]!.user_id, null)
+      assert.equal(logs[0]!.userId, null)
+      assert.equal(logs[1]!.userId, null)
     })
   })
 }

@@ -1,13 +1,10 @@
 import { PikkuExpressServer } from '@pikku/express'
-import { LocalSecretService } from '@pikku/core/services'
-import { PgKyselyAIStorageService } from '@pikku/kysely-postgres'
+import { LocalSecretService, ConsoleLogger } from '@pikku/core/services'
+import { PikkuKysely, PgKyselyAIStorageService } from '@pikku/kysely-postgres'
 import type { KyselyPikkuDB } from '@pikku/kysely-postgres'
 import { VercelAIAgentRunner } from '@pikku/ai-vercel'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'
-import { Kysely } from 'kysely'
-import { PostgresJSDialect } from 'kysely-postgres-js'
-import postgres from 'postgres'
 import {
   createConfig,
   createSingletonServices,
@@ -17,15 +14,14 @@ import '../../functions/.pikku/pikku-bootstrap.gen.js'
 async function main(): Promise<void> {
   try {
     const config = await createConfig()
+    const logger = new ConsoleLogger()
 
-    const sql = postgres(
+    const pikkuKysely = new PikkuKysely<KyselyPikkuDB>(logger,
       process.env.DATABASE_URL ||
         'postgres://postgres:password@localhost:5432/pikku_ai'
     )
-    const db = new Kysely<KyselyPikkuDB>({
-      dialect: new PostgresJSDialect({ postgres: sql }),
-    })
-    const pgAiStorage = new PgKyselyAIStorageService(db)
+    await pikkuKysely.init()
+    const pgAiStorage = new PgKyselyAIStorageService(pikkuKysely.kysely)
     await pgAiStorage.init()
 
     const secrets = new LocalSecretService()
@@ -49,6 +45,7 @@ async function main(): Promise<void> {
     }
 
     const singletonServices = await createSingletonServices(config, {
+      logger,
       aiStorage: pgAiStorage,
       aiRunState: pgAiStorage,
       aiAgentRunner: new VercelAIAgentRunner(providers),
@@ -65,7 +62,7 @@ async function main(): Promise<void> {
     process.on('SIGTERM', async () => {
       singletonServices.logger.info('Shutting down...')
       await pgAiStorage.close()
-      await sql.end()
+      await pikkuKysely.close()
       process.exit(0)
     })
   } catch (e: any) {

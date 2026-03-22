@@ -183,14 +183,14 @@ export class KyselyAIStorageService
     const now = new Date()
 
     await this.db
-      .insertInto('ai_threads')
+      .insertInto('aiThreads')
       .values({
         id,
-        resource_id: resourceId,
+        resourceId: resourceId,
         title: options?.title ?? null,
         metadata: JSON.stringify(options?.metadata ?? null),
-        created_at: now,
-        updated_at: now,
+        createdAt: now,
+        updatedAt: now,
       })
       .execute()
 
@@ -206,14 +206,14 @@ export class KyselyAIStorageService
 
   async getThread(threadId: string): Promise<AIThread> {
     const row = await this.db
-      .selectFrom('ai_threads')
+      .selectFrom('aiThreads')
       .select([
         'id',
-        'resource_id',
+        'resourceId',
         'title',
         'metadata',
-        'created_at',
-        'updated_at',
+        'createdAt',
+        'updatedAt',
       ])
       .where('id', '=', threadId)
       .executeTakeFirst()
@@ -224,41 +224,41 @@ export class KyselyAIStorageService
 
     return {
       id: row.id,
-      resourceId: row.resource_id,
+      resourceId: row.resourceId,
       title: row.title ?? undefined,
       metadata: parseJson(row.metadata),
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at),
+      createdAt: new Date(row.createdAt),
+      updatedAt: new Date(row.updatedAt),
     }
   }
 
   async getThreads(resourceId: string): Promise<AIThread[]> {
     const result = await this.db
-      .selectFrom('ai_threads')
+      .selectFrom('aiThreads')
       .select([
         'id',
-        'resource_id',
+        'resourceId',
         'title',
         'metadata',
-        'created_at',
-        'updated_at',
+        'createdAt',
+        'updatedAt',
       ])
-      .where('resource_id', '=', resourceId)
-      .orderBy('updated_at', 'desc')
+      .where('resourceId', '=', resourceId)
+      .orderBy('updatedAt', 'desc')
       .execute()
 
     return result.map((row) => ({
       id: row.id,
-      resourceId: row.resource_id,
+      resourceId: row.resourceId,
       title: row.title ?? undefined,
       metadata: parseJson(row.metadata),
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at),
+      createdAt: new Date(row.createdAt),
+      updatedAt: new Date(row.updatedAt),
     }))
   }
 
   async deleteThread(threadId: string): Promise<void> {
-    await this.db.deleteFrom('ai_threads').where('id', '=', threadId).execute()
+    await this.db.deleteFrom('aiThreads').where('id', '=', threadId).execute()
   }
 
   async getMessages(
@@ -266,44 +266,44 @@ export class KyselyAIStorageService
     options?: { lastN?: number; cursor?: string }
   ): Promise<AIMessage[]> {
     let msgQuery = this.db
-      .selectFrom('ai_message')
-      .select(['id', 'role', 'content', 'created_at'])
-      .where('thread_id', '=', threadId)
+      .selectFrom('aiMessage')
+      .select(['id', 'role', 'content', 'createdAt'])
+      .where('threadId', '=', threadId)
 
     if (options?.cursor) {
       const cursorRow = await this.db
-        .selectFrom('ai_message')
-        .select('created_at')
+        .selectFrom('aiMessage')
+        .select('createdAt')
         .where('id', '=', options.cursor)
         .executeTakeFirst()
 
       if (cursorRow) {
-        msgQuery = msgQuery.where('created_at', '<', cursorRow.created_at)
+        msgQuery = msgQuery.where('createdAt', '<', cursorRow.createdAt)
       }
     }
 
     let msgResult
     if (options?.cursor || options?.lastN) {
       const innerResult = await msgQuery
-        .orderBy('created_at', 'desc')
+        .orderBy('createdAt', 'desc')
         .limit(options?.lastN ?? 50)
         .execute()
       innerResult.reverse()
       msgResult = innerResult
     } else {
-      msgResult = await msgQuery.orderBy('created_at', 'asc').execute()
+      msgResult = await msgQuery.orderBy('createdAt', 'asc').execute()
     }
 
     const tcResult = await this.db
-      .selectFrom('ai_tool_call')
-      .select(['id', 'message_id', 'tool_name', 'args', 'result'])
-      .where('thread_id', '=', threadId)
-      .orderBy('created_at', 'asc')
+      .selectFrom('aiToolCall')
+      .select(['id', 'messageId', 'toolName', 'args', 'result'])
+      .where('threadId', '=', threadId)
+      .orderBy('createdAt', 'asc')
       .execute()
 
     const tcByMessage = new Map<string, (typeof tcResult)[number][]>()
     for (const tc of tcResult) {
-      const msgId = tc.message_id
+      const msgId = tc.messageId
       if (!tcByMessage.has(msgId)) tcByMessage.set(msgId, [])
       tcByMessage.get(msgId)!.push(tc)
     }
@@ -328,14 +328,14 @@ export class KyselyAIStorageService
         id: row.id,
         role: row.role as AIMessage['role'],
         content: parsedContent,
-        createdAt: new Date(row.created_at),
+        createdAt: new Date(row.createdAt),
       }
 
       const tcs = tcByMessage.get(msg.id)
       if (tcs?.length) {
         msg.toolCalls = tcs.map((tc) => ({
           id: tc.id,
-          name: tc.tool_name,
+          name: tc.toolName,
           args: parseJson(tc.args) as Record<string, unknown>,
         }))
 
@@ -347,7 +347,7 @@ export class KyselyAIStorageService
             role: 'tool',
             toolResults: completed.map((tc) => ({
               id: tc.id,
-              name: tc.tool_name,
+              name: tc.toolName,
               result: tc.result!,
             })),
             createdAt: msg.createdAt,
@@ -370,14 +370,14 @@ export class KyselyAIStorageService
 
     if (nonToolMessages.length > 0) {
       await this.db
-        .insertInto('ai_message')
+        .insertInto('aiMessage')
         .values(
           nonToolMessages.map((msg) => ({
             id: msg.id,
-            thread_id: threadId,
+            threadId: threadId,
             role: msg.role,
             content: msg.content != null ? JSON.stringify(msg.content) : null,
-            created_at: msg.createdAt ?? new Date(),
+            createdAt: msg.createdAt ?? new Date(),
           }))
         )
         .execute()
@@ -388,13 +388,13 @@ export class KyselyAIStorageService
     )
     if (toolCalls.length > 0) {
       await this.db
-        .insertInto('ai_tool_call')
+        .insertInto('aiToolCall')
         .values(
           toolCalls.map((tc) => ({
             id: tc.id,
-            thread_id: threadId,
-            message_id: tc.messageId,
-            tool_name: tc.name,
+            threadId: threadId,
+            messageId: tc.messageId,
+            toolName: tc.name,
             args: JSON.stringify(tc.args),
           }))
         )
@@ -405,7 +405,7 @@ export class KyselyAIStorageService
       if (!toolMsg.toolResults) continue
       for (const tr of toolMsg.toolResults) {
         await this.db
-          .updateTable('ai_tool_call')
+          .updateTable('aiToolCall')
           .set({ result: tr.result })
           .where('id', '=', tr.id)
           .execute()
@@ -413,8 +413,8 @@ export class KyselyAIStorageService
     }
 
     await this.db
-      .updateTable('ai_threads')
-      .set({ updated_at: new Date() })
+      .updateTable('aiThreads')
+      .set({ updatedAt: new Date() })
       .where('id', '=', threadId)
       .execute()
   }
@@ -424,7 +424,7 @@ export class KyselyAIStorageService
     scope: 'resource' | 'thread'
   ): Promise<Record<string, unknown> | null> {
     const row = await this.db
-      .selectFrom('ai_working_memory')
+      .selectFrom('aiWorkingMemory')
       .select('data')
       .where('id', '=', id)
       .where('scope', '=', scope)
@@ -440,17 +440,17 @@ export class KyselyAIStorageService
     data: Record<string, unknown>
   ): Promise<void> {
     await this.db
-      .insertInto('ai_working_memory')
+      .insertInto('aiWorkingMemory')
       .values({
         id,
         scope,
         data: JSON.stringify(data),
-        updated_at: new Date(),
+        updatedAt: new Date(),
       })
       .onConflict((oc) =>
         oc.columns(['id', 'scope']).doUpdateSet({
           data: JSON.stringify(data),
-          updated_at: new Date(),
+          updatedAt: new Date(),
         })
       )
       .execute()
@@ -460,21 +460,21 @@ export class KyselyAIStorageService
     const runId = crypto.randomUUID()
 
     await this.db
-      .insertInto('ai_run')
+      .insertInto('aiRun')
       .values({
-        run_id: runId,
-        agent_name: run.agentName,
-        thread_id: run.threadId,
-        resource_id: run.resourceId,
+        runId: runId,
+        agentName: run.agentName,
+        threadId: run.threadId,
+        resourceId: run.resourceId,
         status: run.status,
-        error_message: run.errorMessage ?? null,
-        suspend_reason: run.suspendReason ?? null,
-        missing_rpcs: run.missingRpcs ? JSON.stringify(run.missingRpcs) : null,
-        usage_input_tokens: run.usage.inputTokens,
-        usage_output_tokens: run.usage.outputTokens,
-        usage_model: run.usage.model,
-        created_at: run.createdAt,
-        updated_at: run.updatedAt,
+        errorMessage: run.errorMessage ?? null,
+        suspendReason: run.suspendReason ?? null,
+        missingRpcs: run.missingRpcs ? JSON.stringify(run.missingRpcs) : null,
+        usageInputTokens: run.usage.inputTokens,
+        usageOutputTokens: run.usage.outputTokens,
+        usageModel: run.usage.model,
+        createdAt: run.createdAt,
+        updatedAt: run.updatedAt,
       })
       .execute()
 
@@ -489,45 +489,45 @@ export class KyselyAIStorageService
     runId: string,
     updates: Partial<AgentRunState>
   ): Promise<void> {
-    const setValues: Record<string, any> = { updated_at: new Date() }
+    const setValues: Record<string, unknown> = { updatedAt: new Date() }
 
     if (updates.status !== undefined) {
       setValues.status = updates.status
     }
     if (updates.errorMessage !== undefined) {
-      setValues.error_message = updates.errorMessage
+      setValues.errorMessage = updates.errorMessage
     }
     if (updates.suspendReason !== undefined) {
-      setValues.suspend_reason = updates.suspendReason
+      setValues.suspendReason = updates.suspendReason
     }
     if (updates.missingRpcs !== undefined) {
-      setValues.missing_rpcs = JSON.stringify(updates.missingRpcs)
+      setValues.missingRpcs = JSON.stringify(updates.missingRpcs)
     }
     if (updates.usage !== undefined) {
-      setValues.usage_input_tokens = updates.usage.inputTokens
-      setValues.usage_output_tokens = updates.usage.outputTokens
-      setValues.usage_model = updates.usage.model
+      setValues.usageInputTokens = updates.usage.inputTokens
+      setValues.usageOutputTokens = updates.usage.outputTokens
+      setValues.usageModel = updates.usage.model
     }
 
     await this.db
-      .updateTable('ai_run')
+      .updateTable('aiRun')
       .set(setValues)
-      .where('run_id', '=', runId)
+      .where('runId', '=', runId)
       .execute()
 
     if (updates.pendingApprovals !== undefined) {
       await this.db
-        .updateTable('ai_tool_call')
+        .updateTable('aiToolCall')
         .set({
-          approval_status: null,
-          run_id: null,
-          approval_type: null,
-          agent_run_id: null,
-          display_tool_name: null,
-          display_args: null,
+          approvalStatus: null,
+          runId: null,
+          approvalType: null,
+          agentRunId: null,
+          displayToolName: null,
+          displayArgs: null,
         })
-        .where('run_id', '=', runId)
-        .where('approval_status', 'is not', null)
+        .where('runId', '=', runId)
+        .where('approvalStatus', 'is not', null)
         .execute()
 
       if (updates.pendingApprovals.length) {
@@ -538,40 +538,40 @@ export class KyselyAIStorageService
 
   async getRun(runId: string): Promise<AgentRunState | null> {
     const row = await this.db
-      .selectFrom('ai_run')
+      .selectFrom('aiRun')
       .select([
-        'run_id',
-        'agent_name',
-        'thread_id',
-        'resource_id',
+        'runId',
+        'agentName',
+        'threadId',
+        'resourceId',
         'status',
-        'error_message',
-        'suspend_reason',
-        'missing_rpcs',
-        'usage_input_tokens',
-        'usage_output_tokens',
-        'usage_model',
-        'created_at',
-        'updated_at',
+        'errorMessage',
+        'suspendReason',
+        'missingRpcs',
+        'usageInputTokens',
+        'usageOutputTokens',
+        'usageModel',
+        'createdAt',
+        'updatedAt',
       ])
-      .where('run_id', '=', runId)
+      .where('runId', '=', runId)
       .executeTakeFirst()
 
     if (!row) return null
 
     const approvals = await this.db
-      .selectFrom('ai_tool_call')
+      .selectFrom('aiToolCall')
       .select([
         'id',
-        'tool_name',
+        'toolName',
         'args',
-        'approval_type',
-        'agent_run_id',
-        'display_tool_name',
-        'display_args',
+        'approvalType',
+        'agentRunId',
+        'displayToolName',
+        'displayArgs',
       ])
-      .where('run_id', '=', runId)
-      .where('approval_status', '=', 'pending')
+      .where('runId', '=', runId)
+      .where('approvalStatus', '=', 'pending')
       .execute()
 
     return this.mapRunRow(row, approvals)
@@ -579,41 +579,41 @@ export class KyselyAIStorageService
 
   async getRunsByThread(threadId: string): Promise<AgentRunState[]> {
     const result = await this.db
-      .selectFrom('ai_run')
+      .selectFrom('aiRun')
       .select([
-        'run_id',
-        'agent_name',
-        'thread_id',
-        'resource_id',
+        'runId',
+        'agentName',
+        'threadId',
+        'resourceId',
         'status',
-        'error_message',
-        'suspend_reason',
-        'missing_rpcs',
-        'usage_input_tokens',
-        'usage_output_tokens',
-        'usage_model',
-        'created_at',
-        'updated_at',
+        'errorMessage',
+        'suspendReason',
+        'missingRpcs',
+        'usageInputTokens',
+        'usageOutputTokens',
+        'usageModel',
+        'createdAt',
+        'updatedAt',
       ])
-      .where('thread_id', '=', threadId)
-      .orderBy('created_at', 'desc')
+      .where('threadId', '=', threadId)
+      .orderBy('createdAt', 'desc')
       .execute()
 
     const runs: AgentRunState[] = []
     for (const row of result) {
       const approvals = await this.db
-        .selectFrom('ai_tool_call')
+        .selectFrom('aiToolCall')
         .select([
           'id',
-          'tool_name',
+          'toolName',
           'args',
-          'approval_type',
-          'agent_run_id',
-          'display_tool_name',
-          'display_args',
+          'approvalType',
+          'agentRunId',
+          'displayToolName',
+          'displayArgs',
         ])
-        .where('run_id', '=', row.run_id)
-        .where('approval_status', '=', 'pending')
+        .where('runId', '=', row.runId)
+        .where('approvalStatus', '=', 'pending')
         .execute()
       runs.push(this.mapRunRow(row, approvals))
     }
@@ -627,24 +627,24 @@ export class KyselyAIStorageService
     for (const a of approvals) {
       if (a.type === 'agent-call') {
         await this.db
-          .updateTable('ai_tool_call')
+          .updateTable('aiToolCall')
           .set({
-            approval_status: 'pending',
-            run_id: runId,
-            approval_type: 'agent-call',
-            agent_run_id: a.agentRunId,
-            display_tool_name: a.displayToolName,
-            display_args: JSON.stringify(a.displayArgs),
+            approvalStatus: 'pending',
+            runId: runId,
+            approvalType: 'agent-call',
+            agentRunId: a.agentRunId,
+            displayToolName: a.displayToolName,
+            displayArgs: JSON.stringify(a.displayArgs),
           })
           .where('id', '=', a.toolCallId)
           .execute()
       } else {
         await this.db
-          .updateTable('ai_tool_call')
+          .updateTable('aiToolCall')
           .set({
-            approval_status: 'pending',
-            run_id: runId,
-            approval_type: 'tool-call',
+            approvalStatus: 'pending',
+            runId: runId,
+            approvalType: 'tool-call',
           })
           .where('id', '=', a.toolCallId)
           .execute()
@@ -655,42 +655,42 @@ export class KyselyAIStorageService
   private mapRunRow(row: any, approvalRows?: any[]): AgentRunState {
     const pendingApprovals = approvalRows?.length
       ? approvalRows.map((a: any) => {
-          if (a.approval_type === 'agent-call') {
+          if (a.approvalType === 'agent-call') {
             return {
               type: 'agent-call' as const,
               toolCallId: a.id as string,
-              agentName: a.tool_name as string,
-              agentRunId: a.agent_run_id as string,
-              displayToolName: a.display_tool_name as string,
-              displayArgs: parseJson(a.display_args) as unknown,
+              agentName: a.toolName as string,
+              agentRunId: a.agentRunId as string,
+              displayToolName: a.displayToolName as string,
+              displayArgs: parseJson(a.displayArgs) as unknown,
             }
           }
           return {
             type: 'tool-call' as const,
             toolCallId: a.id as string,
-            toolName: a.tool_name as string,
+            toolName: a.toolName as string,
             args: parseJson(a.args) as unknown,
           }
         })
       : undefined
 
     return {
-      runId: row.run_id as string,
-      agentName: row.agent_name as string,
-      threadId: row.thread_id as string,
-      resourceId: row.resource_id as string,
+      runId: row.runId as string,
+      agentName: row.agentName as string,
+      threadId: row.threadId as string,
+      resourceId: row.resourceId as string,
       status: row.status as AgentRunState['status'],
-      errorMessage: row.error_message ?? undefined,
-      suspendReason: row.suspend_reason as AgentRunState['suspendReason'],
-      missingRpcs: parseJson(row.missing_rpcs),
+      errorMessage: row.errorMessage ?? undefined,
+      suspendReason: row.suspendReason as AgentRunState['suspendReason'],
+      missingRpcs: parseJson(row.missingRpcs),
       pendingApprovals,
       usage: {
-        inputTokens: Number(row.usage_input_tokens),
-        outputTokens: Number(row.usage_output_tokens),
-        model: row.usage_model as string,
+        inputTokens: Number(row.usageInputTokens),
+        outputTokens: Number(row.usageOutputTokens),
+        model: row.usageModel as string,
       },
-      createdAt: new Date(row.created_at as string),
-      updatedAt: new Date(row.updated_at as string),
+      createdAt: new Date(row.createdAt as string),
+      updatedAt: new Date(row.updatedAt as string),
     }
   }
 
@@ -699,41 +699,41 @@ export class KyselyAIStorageService
     approval: NonNullable<AgentRunState['pendingApprovals']>[number]
   } | null> {
     const tc = await this.db
-      .selectFrom('ai_tool_call')
+      .selectFrom('aiToolCall')
       .select([
         'id',
-        'tool_name',
+        'toolName',
         'args',
-        'run_id',
-        'approval_type',
-        'agent_run_id',
-        'display_tool_name',
-        'display_args',
+        'runId',
+        'approvalType',
+        'agentRunId',
+        'displayToolName',
+        'displayArgs',
       ])
       .where('id', '=', toolCallId)
-      .where('approval_status', '=', 'pending')
+      .where('approvalStatus', '=', 'pending')
       .executeTakeFirst()
 
-    if (!tc || !tc.run_id) return null
+    if (!tc || !tc.runId) return null
 
-    const run = await this.getRun(tc.run_id)
+    const run = await this.getRun(tc.runId)
     if (!run) return null
 
     let approval: NonNullable<AgentRunState['pendingApprovals']>[number]
-    if (tc.approval_type === 'agent-call') {
+    if (tc.approvalType === 'agent-call') {
       approval = {
         type: 'agent-call',
         toolCallId: tc.id,
-        agentName: tc.tool_name,
-        agentRunId: tc.agent_run_id!,
-        displayToolName: tc.display_tool_name!,
-        displayArgs: parseJson(tc.display_args) as unknown,
+        agentName: tc.toolName,
+        agentRunId: tc.agentRunId!,
+        displayToolName: tc.displayToolName!,
+        displayArgs: parseJson(tc.displayArgs) as unknown,
       }
     } else {
       approval = {
         type: 'tool-call',
         toolCallId: tc.id,
-        toolName: tc.tool_name,
+        toolName: tc.toolName,
         args: parseJson(tc.args) as unknown,
       }
     }
@@ -746,8 +746,8 @@ export class KyselyAIStorageService
     status: 'approved' | 'denied'
   ): Promise<void> {
     await this.db
-      .updateTable('ai_tool_call')
-      .set({ approval_status: status })
+      .updateTable('aiToolCall')
+      .set({ approvalStatus: status })
       .where('id', '=', toolCallId)
       .execute()
   }

@@ -1,9 +1,7 @@
 import { PikkuExpressServer } from '@pikku/express'
-import { PgKyselyDeploymentService } from '@pikku/kysely-postgres'
+import { PikkuKysely, PgKyselyDeploymentService } from '@pikku/kysely-postgres'
 import type { KyselyPikkuDB } from '@pikku/kysely-postgres'
-import { Kysely } from 'kysely'
-import { PostgresJSDialect } from 'kysely-postgres-js'
-import postgres from 'postgres'
+import { ConsoleLogger } from '@pikku/core/services'
 import {
   createConfig,
   createSingletonServices,
@@ -16,22 +14,22 @@ const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID || `server-${PORT}`
 async function main(): Promise<void> {
   try {
     const config = await createConfig()
+    const logger = new ConsoleLogger()
 
-    const sql = postgres(
+    const pikkuKysely = new PikkuKysely<KyselyPikkuDB>(logger,
       process.env.DATABASE_URL ||
         'postgres://postgres:password@localhost:5432/pikku_remote_rpc'
     )
-    const db = new Kysely<KyselyPikkuDB>({
-      dialect: new PostgresJSDialect({ postgres: sql }),
-    })
+    await pikkuKysely.init()
     const deploymentService = new PgKyselyDeploymentService(
       { heartbeatInterval: 5000, heartbeatTtl: 15000 },
-      db
+      pikkuKysely.kysely
     )
 
     await deploymentService.init()
 
     const singletonServices = await createSingletonServices(config, {
+      logger,
       deploymentService,
     })
 
@@ -55,7 +53,7 @@ async function main(): Promise<void> {
     process.on('SIGTERM', async () => {
       singletonServices.logger.info('Shutting down...')
       await deploymentService.stop()
-      await sql.end()
+      await pikkuKysely.close()
       process.exit(0)
     })
   } catch (e: any) {

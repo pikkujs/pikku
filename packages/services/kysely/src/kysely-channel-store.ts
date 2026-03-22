@@ -57,9 +57,9 @@ export class KyselyChannelStore extends ChannelStore {
     await this.db
       .insertInto('channels')
       .values({
-        channel_id: channelId,
-        channel_name: channelName,
-        opening_data: JSON.stringify(openingData || {}),
+        channelId: channelId,
+        channelName: channelName,
+        openingData: JSON.stringify(openingData || {}),
       })
       .execute()
   }
@@ -71,7 +71,7 @@ export class KyselyChannelStore extends ChannelStore {
 
     await this.db
       .deleteFrom('channels')
-      .where('channel_id', 'in', channelIds)
+      .where('channelId', 'in', channelIds)
       .execute()
   }
 
@@ -81,8 +81,8 @@ export class KyselyChannelStore extends ChannelStore {
   ): Promise<void> {
     await this.db
       .updateTable('channels')
-      .set({ user_session: session ? JSON.stringify(session) : null })
-      .where('channel_id', '=', channelId)
+      .set({ userSession: session ? JSON.stringify(session) : null })
+      .where('channelId', '=', channelId)
       .execute()
   }
 
@@ -91,8 +91,8 @@ export class KyselyChannelStore extends ChannelStore {
   ): Promise<Channel & { session: CoreUserSession }> {
     const row = await this.db
       .selectFrom('channels')
-      .select(['channel_id', 'channel_name', 'opening_data', 'user_session'])
-      .where('channel_id', '=', channelId)
+      .select(['channelId', 'channelName', 'openingData', 'userSession'])
+      .where('channelId', '=', channelId)
       .executeTakeFirst()
 
     if (!row) {
@@ -100,10 +100,10 @@ export class KyselyChannelStore extends ChannelStore {
     }
 
     return {
-      channelId: row.channel_id,
-      channelName: row.channel_name,
-      openingData: parseJson(row.opening_data) ?? {},
-      session: (parseJson(row.user_session) ?? {}) as CoreUserSession,
+      channelId: row.channelId,
+      channelName: row.channelName,
+      openingData: parseJson(row.openingData) ?? {},
+      session: (parseJson(row.userSession) ?? {}) as CoreUserSession,
     }
   }
 
