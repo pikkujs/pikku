@@ -1,5 +1,6 @@
 import type {
   CoreServices,
+  CoreUserSession,
   PikkuWiringTypes,
   PermissionMetadata,
   PikkuWire,
@@ -324,4 +325,73 @@ export const runPermissions = async (
     services.logger.debug('Permission denied - combined permissions')
     throw new ForbiddenError('Permission denied')
   }
+}
+
+/**
+ * Checks whether a session passes the auth checks (pikkuAuth only) for a
+ * given function/agent. Skips pikkuPermission checks since those require
+ * request data which isn't available at filter time.
+ *
+ * @param funcPermissions - The PermissionMetadata[] from function or agent metadata
+ * @param session - The user's session
+ * @param services - Singleton services
+ * @param packageName - Optional package namespace
+ * @returns true if the session passes all auth checks (or no auth checks exist)
+ */
+export const checkAuthPermissions = async (
+  funcPermissions: PermissionMetadata[] | undefined,
+  session: CoreUserSession,
+  services: CoreServices,
+  packageName: string | null = null
+): Promise<boolean> => {
+  if (!funcPermissions?.length) return true
+
+  const allPermissions = combinePermissions(
+    'agent',
+    `authcheck:${Math.random()}`,
+    {
+      funcInheritedPermissions: funcPermissions,
+      packageName,
+    }
+  )
+
+  if (allPermissions.length === 0) return true
+
+  const wire = { session } as unknown as PikkuWire<
+    any,
+    never,
+    any,
+    never,
+    never,
+    never
+  >
+
+  // Extract only pikkuAuth permissions (marked with __pikkuAuth)
+  const authPerms: CorePikkuPermission[] = []
+  for (const permission of allPermissions) {
+    if (typeof permission === 'function') {
+      if ((permission as any).__pikkuAuth) {
+        authPerms.push(permission)
+      }
+    } else if (permission && typeof permission === 'object') {
+      for (const funcs of Object.values(permission)) {
+        const arr = Array.isArray(funcs) ? funcs : [funcs]
+        for (const fn of arr) {
+          if (typeof fn === 'function' && (fn as any).__pikkuAuth) {
+            authPerms.push(fn)
+          }
+        }
+      }
+    }
+  }
+
+  // No auth permissions = allowed (only data-dependent permissions exist)
+  if (authPerms.length === 0) return true
+
+  // All auth permissions must pass
+  for (const perm of authPerms) {
+    const result = await perm(services, null, wire)
+    if (result) return true
+  }
+  return false
 }
