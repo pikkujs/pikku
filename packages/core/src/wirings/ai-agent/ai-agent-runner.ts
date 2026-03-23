@@ -420,10 +420,17 @@ export async function resumeAIAgentSync(
           `Tool "${pending.toolName}" not found in agent definition`
         )
       }
-      const toolArgs =
+      const rawArgs =
         typeof pending.args === 'string'
           ? JSON.parse(pending.args)
           : pending.args
+      // Strip null values — LLMs send null for optional fields but Zod expects undefined
+      const toolArgs: Record<string, any> = {}
+      if (rawArgs && typeof rawArgs === 'object' && !Array.isArray(rawArgs)) {
+        for (const [k, v] of Object.entries(rawArgs)) {
+          if (v !== null) toolArgs[k] = v
+        }
+      }
       try {
         const toolResult = await matchingTool.execute(toolArgs)
         resultStr =

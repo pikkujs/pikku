@@ -18,16 +18,44 @@ function cleanSchema(schema: any): any {
   if (!schema || typeof schema !== 'object') return schema
   const { $schema, ...rest } = schema
   if (rest.type === 'object' && rest.properties) {
-    rest.required = Object.keys(rest.properties)
+    const originalRequired = new Set(rest.required ?? [])
     rest.additionalProperties = false
     for (const key of Object.keys(rest.properties)) {
       rest.properties[key] = cleanSchema(rest.properties[key])
+      // OpenAI strict mode requires all properties in `required`.
+      // For optional fields, make them nullable so the model can send null
+      // instead of inventing placeholder values.
+      if (!originalRequired.has(key)) {
+        const prop = rest.properties[key]
+        if (prop.type && !Array.isArray(prop.type)) {
+          prop.type = [prop.type, 'null']
+        } else if (!prop.type && !prop.anyOf && !prop.oneOf) {
+          prop.anyOf = [{ ...prop }, { type: 'null' }]
+        }
+      }
     }
+    rest.required = Object.keys(rest.properties)
   }
   if (rest.type === 'array' && rest.items) {
     rest.items = cleanSchema(rest.items)
   }
   return rest
+}
+
+/**
+ * Strip null values from tool call input.
+ * LLMs send null for optional fields when the schema uses nullable types,
+ * but Zod .optional() expects undefined, not null.
+ */
+function stripNulls(obj: any): any {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj
+  const result: any = {}
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== null) {
+      result[key] = value
+    }
+  }
+  return result
 }
 
 export class VercelAIAgentRunner implements AIAgentRunnerService {
@@ -38,6 +66,11 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
   }
 
   private parseModel(model: string): { provider: string; modelName: string } {
+    if (!model) {
+      throw new Error(
+        'Model is required but was not provided. This may be a resume call missing the model parameter.'
+      )
+    }
     const slashIndex = model.indexOf('/')
     if (slashIndex === -1) {
       throw new Error(
@@ -76,7 +109,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
             : aiTool({
                 description: t.description,
                 inputSchema: jsonSchema(cleaned),
-                execute: async (input: any) => t.execute(input),
+                execute: async (input: any) => t.execute(stripNulls(input)),
               }),
         ]
       })
