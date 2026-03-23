@@ -1,5 +1,13 @@
 ## 0.12.0
 
+## 0.12.9
+
+### Patch Changes
+
+- 4e52200: Add \_\_raw CLI channel handler for server-side arg parsing. Enables WebSocket CLI clients to send raw args without needing client-side command metadata.
+- Updated dependencies [4e52200]
+  - @pikku/core@0.12.11
+
 ## 0.12.8
 
 ### Patch Changes
