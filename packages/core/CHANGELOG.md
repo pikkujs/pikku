@@ -1,5 +1,11 @@
 ## 0.12.4
 
+## 0.12.11
+
+### Patch Changes
+
+- 4e52200: Add \_\_raw CLI channel handler for server-side arg parsing. Enables WebSocket CLI clients to send raw args without needing client-side command metadata.
+
 ## 0.12.10
 
 ### Patch Changes
