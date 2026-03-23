@@ -108,7 +108,7 @@ fi
 # resolve from the monorepo's node_modules while the test-app installs its own
 # copy, causing TypeScript to see two incompatible versions (TS2345).
 log_info "Deduplicating portal-conflicting packages..."
-for pkg in kysely; do
+for pkg in kysely fastify fastify-plugin; do
     if [ -d "node_modules/$pkg" ] && [ -d "$PROJECT_ROOT/node_modules/$pkg" ]; then
         rm -rf "node_modules/$pkg"
         ln -s "$(cd "$PROJECT_ROOT/node_modules/$pkg" && pwd)" "node_modules/$pkg"

@@ -203,8 +203,8 @@ if $RUN_CLI_TESTS; then
     echo "Running CLI tests..."
     echo "Testing local CLI..."
     $PKG_MANAGER run test:cli:local
-    # echo "Testing remote CLI..."
-    # $PKG_MANAGER run test:cli:remote
+    echo "Testing raw remote CLI..."
+    $PKG_MANAGER run test:cli:raw
 fi
 
 # -------- RUN WORKFLOWS TESTS IF REQUESTED --------

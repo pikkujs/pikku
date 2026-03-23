@@ -93,6 +93,7 @@ export function serializeChannelCLI(
 import { wireChannel } from '${channelTypesPath}'
 import { pikkuMiddleware${hasAddonFuncs ? ', addon' : ''}, pikkuSessionlessFunc } from '${functionTypesPath}'
 import { generateCommandHelp } from '@pikku/core/cli'
+import { handleRawCLI } from '@pikku/core/cli/channel'
 import { pikkuState } from '@pikku/core/internal'
 ${imports}
 
@@ -129,6 +130,17 @@ export const cliHelp = pikkuSessionlessFunc<{ args?: string[] }, { help: string 
   },
 })
 
+export const cliRaw = pikkuSessionlessFunc<{ args: string[] }, { help?: string; result?: unknown; error?: string }>({
+  auth: false,
+  func: async (services, data: { args: string[] }) => {
+    return handleRawCLI({
+      programName: '${programName}',
+      args: data.args,
+      singletonServices: services as any,
+    })
+  },
+})
+
 wireChannel({
   name: '${finalChannelName}',
   route: '${finalChannelRoute}',
@@ -137,6 +149,10 @@ wireChannel({
     command: {
       '__help': {
         func: cliHelp,
+        middleware: [cliCloseOnComplete],
+      },
+      '__raw': {
+        func: cliRaw,
         middleware: [cliCloseOnComplete],
       },
 ${Object.entries(commandMap)
