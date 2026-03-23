@@ -5357,7 +5357,7 @@ __metadata:
     "@types/node": "npm:^22"
     ai: "npm:^6.0.105"
     better-sqlite3: "npm:^11.0.0"
-    ioredis: "npm:^5.10.0"
+    ioredis: "npm:^5.10.1"
     kysely: "npm:^0.28.12"
     kysely-plugin-serialize: "npm:^0.6.0"
     kysely-postgres-js: "npm:^3.0.0"
@@ -5646,7 +5646,7 @@ __metadata:
   resolution: "@pikku/queue-bullmq@workspace:packages/services/queue-bullmq"
   dependencies:
     bullmq: "npm:^5.70.1"
-    ioredis: "npm:^5.10.0"
+    ioredis: "npm:^5.10.1"
     typescript: "npm:^5.9"
   peerDependencies:
     "@pikku/core": ^0.12.2
@@ -5683,7 +5683,7 @@ __metadata:
   resolution: "@pikku/redis@workspace:packages/services/redis"
   dependencies:
     "@types/ioredis-mock": "npm:^8"
-    ioredis: "npm:^5.10.0"
+    ioredis: "npm:^5.10.1"
     ioredis-mock: "npm:^8.13.1"
     typescript: "npm:^5.9"
   peerDependencies:
@@ -6071,7 +6071,7 @@ __metadata:
     "@pikku/redis": "npm:^0.12.4"
     "@pikku/schema-cfworker": "npm:^0.12.2"
     "@types/node": "npm:^24"
-    ioredis: "npm:^5.10.0"
+    ioredis: "npm:^5.10.1"
     pino-pretty: "npm:^13.1.3"
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.21.0"
@@ -15395,9 +15395,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ioredis@npm:^5.10.0":
-  version: 5.10.0
-  resolution: "ioredis@npm:5.10.0"
+"ioredis@npm:^5.10.1":
+  version: 5.10.1
+  resolution: "ioredis@npm:5.10.1"
   dependencies:
     "@ioredis/commands": "npm:1.5.1"
     cluster-key-slot: "npm:^1.1.0"
@@ -15408,7 +15408,7 @@ __metadata:
     redis-errors: "npm:^1.2.0"
     redis-parser: "npm:^3.0.0"
     standard-as-callback: "npm:^2.1.0"
-  checksum: 10/f0e7c51ca16b2e55f2e42142885bba1e29e48062054b8231cb86173f3cf40f8b5e88842171d19d080049fc187a271c2b98cd01d91a23a4a49ada525d68ba2f51
+  checksum: 10/a85786fc17e7180ac342219ebef5c138b82d056c44c00470a1827f7a4b2499041fa13f253b337aeca2ab6681a2bf52b622ca541e9c9a993d81f1b1e6f21ab59a
   languageName: node
   linkType: hard
 
