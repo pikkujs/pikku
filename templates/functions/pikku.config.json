@@ -20,7 +20,14 @@
   },
   "cli": {
     "entrypoints": {
-      "todo-cli": "client/cli-local.gen.ts"
+      "todo-cli": [
+        "client/cli-local.gen.ts",
+        {
+          "type": "channel",
+          "wirePath": "src/wirings/cli-channel.gen.ts",
+          "path": "client/cli-client.gen.ts"
+        }
+      ]
     }
   }
 }

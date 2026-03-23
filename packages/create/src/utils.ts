@@ -283,6 +283,7 @@ const FILE_FEATURE_MAPPING = {
 const CLIENT_FEATURE_MAPPING = {
   'agent-http.ts': ['http'],
   'agent-sse.ts': ['sse'],
+  'cli-raw.ts': ['cli'],
   'http-fetch.ts': ['http'],
   'http-sse.ts': ['sse'],
   'rpc.ts': ['addon'],

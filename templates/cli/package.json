@@ -14,6 +14,7 @@
     "dev:server": "tsx watch src/server.ts",
     "test": "bash ../functions/run-tests.sh --cli",
     "test:cli:local": "npx tsx client/cli-local.gen.ts list",
+    "test:cli:raw": "npx tsx client/cli-raw.ts list",
     "ncu": "npx npm-check-updates",
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'"
   },
