@@ -106,12 +106,11 @@ export async function parseOpenAPISpec(filePath: string): Promise<ParsedSpec> {
   const securitySchemes = extractSecuritySchemes(doc)
   const tagDescriptions = extractTagDescriptions(doc)
 
-  // Extract component schemas
+  // Extract component schemas (OpenAPI 3.x: components.schemas, Swagger 2.x: definitions)
   const componentSchemas: Record<string, OpenAPISchema> = {}
-  if (doc.components?.schemas) {
-    for (const [name, schema] of Object.entries(doc.components.schemas)) {
-      componentSchemas[name] = schema as OpenAPISchema
-    }
+  const rawSchemas = doc.components?.schemas ?? doc.definitions ?? {}
+  for (const [name, schema] of Object.entries(rawSchemas)) {
+    componentSchemas[name] = schema as OpenAPISchema
   }
 
   // Extract operations (skip deprecated)
@@ -132,7 +131,9 @@ export async function parseOpenAPISpec(filePath: string): Promise<ParsedSpec> {
 
         const allParams: any[] = [...sharedParams, ...(op.parameters ?? [])]
 
-        const body = op.requestBody
+        // OpenAPI 3.x: op.requestBody, Swagger 2.x: parameters[].in === 'body'
+        const body3 = op.requestBody
+        const body2 = allParams.find((p: any) => p.in === 'body')
 
         operations.push({
           operationId: op.operationId,
@@ -145,8 +146,8 @@ export async function parseOpenAPISpec(filePath: string): Promise<ParsedSpec> {
           queryParams: extractParams(allParams, 'query'),
           headerParams: extractParams(allParams, 'header'),
           requestBody: extractRequestBody(op),
-          requestBodyDescription: body?.description,
-          requestBodyRequired: body?.required,
+          requestBodyDescription: body3?.description ?? body2?.description,
+          requestBodyRequired: body3?.required ?? body2?.required,
           responseSchema: extractResponseSchema(op),
           responseDescription: extractResponseDescription(op),
           errorResponses: extractErrorResponses(op),
@@ -266,20 +267,25 @@ function extractParams(
 }
 
 function extractRequestBody(op: any): OpenAPISchema | undefined {
+  // OpenAPI 3.x: op.requestBody.content['application/json'].schema
   const body = op.requestBody
-  if (!body) return undefined
+  if (body) {
+    const content = body.content
+    if (content) {
+      const jsonContent = content['application/json']
+      if (jsonContent?.schema) return jsonContent.schema as OpenAPISchema
 
-  const content = body.content
-  if (!content) return undefined
+      const firstKey = Object.keys(content)[0]
+      if (firstKey && content[firstKey]?.schema) {
+        return content[firstKey].schema as OpenAPISchema
+      }
+    }
+  }
 
-  // Prefer JSON
-  const jsonContent = content['application/json']
-  if (jsonContent?.schema) return jsonContent.schema as OpenAPISchema
-
-  // Fallback to first content type
-  const firstKey = Object.keys(content)[0]
-  if (firstKey && content[firstKey]?.schema) {
-    return content[firstKey].schema as OpenAPISchema
+  // Swagger 2.x: parameters[].in === 'body' → schema
+  if (op.parameters) {
+    const bodyParam = op.parameters.find((p: any) => p.in === 'body')
+    if (bodyParam?.schema) return bodyParam.schema as OpenAPISchema
   }
 
   return undefined
@@ -304,24 +310,30 @@ function extractResponseSchema(op: any): OpenAPISchema | undefined {
     const resp = responses[code]
     if (!resp) continue
 
+    // OpenAPI 3.x: resp.content['application/json'].schema
     const content = resp.content
-    if (!content) continue
+    if (content) {
+      const jsonContent = content['application/json']
+      if (jsonContent?.schema) return jsonContent.schema as OpenAPISchema
 
-    const jsonContent = content['application/json']
-    if (jsonContent?.schema) return jsonContent.schema as OpenAPISchema
-
-    const firstKey = Object.keys(content)[0]
-    if (firstKey && content[firstKey]?.schema) {
-      return content[firstKey].schema as OpenAPISchema
+      const firstKey = Object.keys(content)[0]
+      if (firstKey && content[firstKey]?.schema) {
+        return content[firstKey].schema as OpenAPISchema
+      }
     }
+
+    // Swagger 2.x: resp.schema directly
+    if (resp.schema) return resp.schema as OpenAPISchema
   }
 
   // Fallback: any 2xx
   for (const [code, resp] of Object.entries(responses) as [string, any][]) {
-    if (code.startsWith('2') && resp.content) {
+    if (!code.startsWith('2')) continue
+    if (resp.content) {
       const jsonContent = resp.content['application/json']
       if (jsonContent?.schema) return jsonContent.schema as OpenAPISchema
     }
+    if (resp.schema) return resp.schema as OpenAPISchema
   }
 
   return undefined

@@ -211,7 +211,10 @@ function generateFunctionFile(
   // Determine error imports needed
   const errorClasses = getErrorClassesForResponses(parsed.errorResponses)
 
-  lines.push("import { z } from 'zod'")
+  const needsZod = hasInput || !!parsed.responseSchema
+  if (needsZod) {
+    lines.push("import { z } from 'zod'")
+  }
   lines.push("import { pikkuSessionlessFunc } from '#pikku'")
 
   if (errorClasses.length > 0) {
@@ -301,10 +304,7 @@ function buildInputSchema(
         if (propSchema.readOnly) continue
         const isOptional = !requiredSet.has(key)
         const zodCode = schemaToZod(propSchema, ctx, { optional: isOptional })
-        const withDesc = propSchema.description
-          ? `${zodCode}.describe(${JSON.stringify(propSchema.description)})`
-          : zodCode
-        props.push(`  ${safeKey(key)}: ${withDesc},`)
+        props.push(`  ${safeKey(key)}: ${zodCode},`)
       }
     } else {
       const bodyZod = schemaToZod(parsed.requestBody, ctx)
