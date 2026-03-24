@@ -43,6 +43,7 @@ export function addWireAddon(
   let mcp: boolean | undefined
   let secretOverrides: Record<string, string> | undefined
   let variableOverrides: Record<string, string> | undefined
+  let credentialOverrides: Record<string, string> | undefined
 
   for (const prop of firstArg.properties) {
     if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue
@@ -70,6 +71,11 @@ export function addWireAddon(
       ts.isObjectLiteralExpression(prop.initializer)
     ) {
       variableOverrides = parseStringRecord(prop.initializer)
+    } else if (
+      key === 'credentialOverrides' &&
+      ts.isObjectLiteralExpression(prop.initializer)
+    ) {
+      credentialOverrides = parseStringRecord(prop.initializer)
     }
   }
 
@@ -82,6 +88,7 @@ export function addWireAddon(
     mcp,
     secretOverrides,
     variableOverrides,
+    credentialOverrides,
   })
   state.rpc.usedAddons.add(name)
   state.rpc.wireAddonFiles.add(node.getSourceFile().fileName)

@@ -9,6 +9,7 @@ export type WireAddonConfig = {
   tags?: string[]
   secretOverrides?: Record<string, string>
   variableOverrides?: Record<string, string>
+  credentialOverrides?: Record<string, string>
 }
 
 export const wireAddon = (config: WireAddonConfig): void => {

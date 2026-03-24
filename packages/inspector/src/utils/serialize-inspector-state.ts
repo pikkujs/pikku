@@ -156,6 +156,7 @@ export interface SerializableInspectorState {
           rpcEndpoint?: string
           secretOverrides?: Record<string, string>
           variableOverrides?: Record<string, string>
+          credentialOverrides?: Record<string, string>
         },
       ]
     >

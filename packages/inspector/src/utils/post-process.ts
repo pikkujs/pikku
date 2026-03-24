@@ -247,6 +247,32 @@ export function validateSecretOverrides(
   }
 }
 
+export function validateCredentialOverrides(
+  logger: InspectorLogger,
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+): void {
+  const { wireAddonDeclarations } = state.rpc
+  if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) return
+
+  const credentialNames = new Set(
+    state.credentials?.definitions.map((d) => d.name) ?? []
+  )
+
+  for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
+    if (!addonDecl.credentialOverrides) continue
+
+    for (const credentialKey of Object.keys(addonDecl.credentialOverrides)) {
+      if (!credentialNames.has(credentialKey)) {
+        const availableCredentials = Array.from(credentialNames)
+        logger.critical(
+          ErrorCode.INVALID_VALUE,
+          `Credential override '${credentialKey}' in addon '${namespace}' (${addonDecl.package}) does not exist. Available credentials: ${availableCredentials.join(', ') || 'none'}`
+        )
+      }
+    }
+  }
+}
+
 export function validateVariableOverrides(
   logger: InspectorLogger,
   state: InspectorState | Omit<InspectorState, 'typesLookup'>

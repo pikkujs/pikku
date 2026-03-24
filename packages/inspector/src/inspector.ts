@@ -15,6 +15,7 @@ import {
   validateAgentOverrides,
   validateSecretOverrides,
   validateVariableOverrides,
+  validateCredentialOverrides,
   computeResolvedIOTypes,
   computeMiddlewareGroupsMeta,
   computePermissionsGroupsMeta,
@@ -356,6 +357,7 @@ export const inspect = async (
     validateAgentOverrides(logger, state, options.modelConfig)
     validateSecretOverrides(logger, state)
     validateVariableOverrides(logger, state)
+    validateCredentialOverrides(logger, state)
   }
 
   state.program = program

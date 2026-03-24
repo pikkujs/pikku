@@ -354,6 +354,7 @@ export interface InspectorState {
         mcp?: boolean
         secretOverrides?: Record<string, string>
         variableOverrides?: Record<string, string>
+        credentialOverrides?: Record<string, string>
       }
     >
     wireAddonFiles: Set<string>
