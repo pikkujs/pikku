@@ -1,5 +1,13 @@
 ## 0.12.0
 
+## 0.12.6
+
+### Patch Changes
+
+- 84f01ad: Add credentialOverrides to wireAddon for remapping credential names, fix credential services template to pass variables argument.
+- Updated dependencies [84f01ad]
+  - @pikku/core@0.12.12
+
 ## 0.12.5
 
 ### Patch Changes

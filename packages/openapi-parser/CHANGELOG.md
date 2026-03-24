@@ -1,5 +1,11 @@
 # @pikku/openapi-parser
 
+## 0.12.8
+
+### Patch Changes
+
+- 94ceecd: Fix duplicate property error in generated code when body and path/query/header params share the same name. Skips the body property with a warning.
+
 ## 0.12.7
 
 ### Patch Changes
