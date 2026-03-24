@@ -297,12 +297,24 @@ function buildInputSchema(
 
   if (parsed.requestBody) {
     if (parsed.requestBody.properties) {
+      const paramNames = new Set([
+        ...parsed.pathParams.map((p) => p.name),
+        ...parsed.queryParams.map((p) => p.name),
+        ...parsed.headerParams.map((p) => p.name),
+      ])
       const requiredSet = new Set(parsed.requestBody.required ?? [])
       for (const [key, propSchema] of Object.entries(
         parsed.requestBody.properties
       )) {
         // Skip readOnly properties from input
         if (propSchema.readOnly) continue
+        // Skip body properties that collide with path/query/header params
+        if (paramNames.has(key)) {
+          console.warn(
+            `[openapi] Skipping body property '${key}' — collides with path/query/header param`
+          )
+          continue
+        }
         const isOptional = !requiredSet.has(key)
         const zodCode = schemaToZod(propSchema, ctx, { optional: isOptional })
         props.push(`  ${safeKey(key)}: ${zodCode},`)
