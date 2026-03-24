@@ -1,5 +1,11 @@
 ## 0.12.0
 
+## 0.12.13
+
+### Patch Changes
+
+- a31dc64: Fix pikkuAddonWireServices to wrap variables and secrets with TypedVariablesService and TypedSecretService, matching the same pattern as pikkuAddonServices.
+
 ## 0.12.12
 
 ### Patch Changes
