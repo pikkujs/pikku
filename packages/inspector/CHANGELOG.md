@@ -1,5 +1,13 @@
 ## 0.12.0
 
+## 0.12.7
+
+### Patch Changes
+
+- 2ce0733: Fix credential services template variable passing, duplicate body/path param collision, and add credentialOverrides to wireAddon.
+- Updated dependencies [2ce0733]
+  - @pikku/core@0.12.13
+
 ## 0.12.6
 
 ### Patch Changes
