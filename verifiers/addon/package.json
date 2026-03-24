@@ -12,7 +12,7 @@
     "@pikku/templates-function-addon": "workspace:*"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.9",
+    "@pikku/cli": "^0.12.10",
     "@types/node": "^24",
     "typescript": "^5.9"
   },

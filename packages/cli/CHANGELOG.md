@@ -1,5 +1,13 @@
 ## 0.12.0
 
+## 0.12.10
+
+### Patch Changes
+
+- 5dd1996: Fix credentials command crash when state.credentials is undefined, and add --credential flag to `pikku new addon` for per-user credential wiring (apikey, bearer, oauth2).
+- Updated dependencies [5dd1996]
+  - @pikku/openapi-parser@0.12.7
+
 ## 0.12.9
 
 ### Patch Changes
