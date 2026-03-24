@@ -70,7 +70,6 @@ export type PikkuWorkflowConfigWithSchema<
   version?: number
   remote?: boolean
   mcp?: boolean
-  readonly?: boolean
   approvalRequired?: boolean
   approvalDescription?: InputSchema extends StandardSchemaV1 ? PikkuApprovalDescription<InferSchemaOutput<InputSchema>> : never
   func: PikkuFunctionWorkflow<

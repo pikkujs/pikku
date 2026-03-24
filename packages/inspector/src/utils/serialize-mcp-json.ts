@@ -100,12 +100,19 @@ export const serializeMCPJson = (
     const parameters = loadSchema(inputType)
     const returns = loadSchema(outputType)
 
+    // MCP tool annotations from riskLevel/idempotent
+    const annotations: Record<string, boolean> = {}
+    if (functionMeta.riskLevel === 'read') annotations.readOnlyHint = true
+    if (functionMeta.riskLevel === 'destructive') annotations.destructiveHint = true
+    if (functionMeta.idempotent) annotations.idempotentHint = true
+
     tools.push({
       name,
       description: endpointMeta.description,
       ...(parameters && { parameters }),
       ...(returns && { returns }),
       ...(endpointMeta.streaming && { streaming: true }),
+      ...(Object.keys(annotations).length > 0 && { annotations }),
     })
   }
 

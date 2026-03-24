@@ -274,7 +274,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
       }
     }
 
-    if ((session as any)?.readonly && !funcMeta.readonly) {
+    if ((session as any)?.readonly && funcMeta.riskLevel !== 'read') {
       throw new ReadonlySessionError()
     }
 

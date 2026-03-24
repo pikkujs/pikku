@@ -355,6 +355,8 @@ export type PikkuFunctionConfigWithSchema<
   expose?: boolean
   mcp?: boolean
   internal?: boolean
+  riskLevel?: 'read' | 'write' | 'destructive'
+  idempotent?: boolean
   approvalRequired?: boolean
   approvalDescription?: InputSchema extends StandardSchemaV1 ? PikkuApprovalDescription<InferSchemaOutput<InputSchema>> : never
   func: PikkuFunction<

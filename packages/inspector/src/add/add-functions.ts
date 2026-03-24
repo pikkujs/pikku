@@ -338,7 +338,8 @@ export const addFunctions: AddWiring = (
   let expose: boolean | undefined
   let remote: boolean | undefined
   let mcp: boolean | undefined
-  let readonly_: boolean | undefined
+  let riskLevel: 'read' | 'write' | 'destructive' | undefined
+  let idempotent: boolean | undefined
   let approvalRequired: boolean | undefined
   let approvalDescription: string | undefined
   let version: number | undefined
@@ -421,7 +422,8 @@ export const addFunctions: AddWiring = (
     expose = getPropertyValue(firstArg, 'expose') as boolean | undefined
     remote = getPropertyValue(firstArg, 'remote') as boolean | undefined
     mcp = getPropertyValue(firstArg, 'mcp') as boolean | undefined
-    readonly_ = getPropertyValue(firstArg, 'readonly') as boolean | undefined
+    riskLevel = getPropertyValue(firstArg, 'riskLevel') as 'read' | 'write' | 'destructive' | undefined
+    idempotent = getPropertyValue(firstArg, 'idempotent') as boolean | undefined
     approvalRequired = getPropertyValue(firstArg, 'approvalRequired') as
       | boolean
       | undefined
@@ -782,7 +784,8 @@ export const addFunctions: AddWiring = (
     expose: expose || undefined,
     remote: remote || undefined,
     mcp: mcpEnabled || undefined,
-    readonly: readonly_ || undefined,
+    riskLevel: riskLevel || undefined,
+    idempotent: idempotent || undefined,
     approvalRequired: approvalRequired || undefined,
     approvalDescription: approvalDescription || undefined,
     version,

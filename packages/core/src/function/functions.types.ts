@@ -290,7 +290,10 @@ export type CorePikkuFunctionConfig<
   expose?: boolean
   remote?: boolean
   mcp?: boolean
-  readonly?: boolean
+  /** Risk level of the operation — used for MCP tools, OpenAPI docs, and agent filtering */
+  riskLevel?: 'read' | 'write' | 'destructive'
+  /** Whether the operation is idempotent (safe to retry) */
+  idempotent?: boolean
   approvalRequired?: boolean
   approvalDescription?: any
   func: PikkuFunction
