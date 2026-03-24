@@ -203,43 +203,43 @@ jobs:
       - name: Run e2e tests
         run: yarn test:e2e --force-exit
 
-  # e2e-ai:
-  #   name: E2E AI
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 10
-  #   needs: [e2e, verifiers, templates]
-  #   steps:
-  #     - name: Check out repository code
-  #       uses: actions/checkout@v4
-  #     - run: corepack enable
-  #       shell: bash
-  #     - uses: actions/setup-node@v4
-  #       with:
-  #         node-version: 24
-  #         cache: yarn
-  #     - name: Download built packages
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: built-packages
-  #         path: packages
-  #     - run: yarn install
-  #     - name: Generate pikku files for e2e addons
-  #       run: |
-  #         cd packages/addon/pikku-console && npx pikku all
-  #         cd ../../..
-  #         cd packages/addon/pikku-graph && npx pikku all
-  #         cd ../../..
-  #         cd e2e/packages/todos && npx pikku all
-  #         cd ../../..
-  #         cd e2e/packages/emails && npx pikku all
-  #     - name: Generate pikku files for e2e project
-  #       run: cd e2e && npx pikku all
-  #     - name: Install Playwright
-  #       run: npx playwright install --with-deps chromium
-  #     - name: Run AI e2e tests
-  #       run: yarn test:e2e:ai
-  #       env:
-  #         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  e2e-ai:
+    name: E2E AI
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [e2e, verifiers, templates]
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - run: corepack enable
+        shell: bash
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+      - name: Download built packages
+        uses: actions/download-artifact@v4
+        with:
+          name: built-packages
+          path: packages
+      - run: yarn install
+      - name: Generate pikku files for e2e addons
+        run: |
+          cd packages/addon/pikku-console && npx pikku all
+          cd ../../..
+          cd packages/addon/pikku-graph && npx pikku all
+          cd ../../..
+          cd e2e/packages/todos && npx pikku all
+          cd ../../..
+          cd e2e/packages/emails && npx pikku all
+      - name: Generate pikku files for e2e project
+        run: cd e2e && npx pikku all
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Run AI e2e tests
+        run: yarn test:e2e:ai
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
   # bun-templates:
   #   name: Bun Templates
