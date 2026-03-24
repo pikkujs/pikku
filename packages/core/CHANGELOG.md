@@ -1,5 +1,11 @@
 ## 0.12.4
 
+## 0.12.12
+
+### Patch Changes
+
+- 84f01ad: Add credentialOverrides to wireAddon for remapping credential names, fix credential services template to pass variables argument.
+
 ## 0.12.11
 
 ### Patch Changes
