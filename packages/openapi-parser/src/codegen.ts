@@ -32,6 +32,7 @@ interface AddonVars {
 interface CodegenFlags {
   oauth: boolean
   secret: boolean
+  credential?: 'apikey' | 'bearer' | 'oauth2'
   mcp?: boolean
 }
 
@@ -386,7 +387,9 @@ function generateServiceFile(
   // Always import all error classes used in the switch statement
   const allErrorClasses = new Set<string>(Object.values(STATUS_TO_ERROR))
 
-  if (flags.oauth) {
+  if (flags.credential && flags.credential !== 'oauth2') {
+    // Per-user credential: no special imports needed, creds passed via constructor
+  } else if (flags.oauth || flags.credential === 'oauth2') {
     lines.push("import { OAuth2Client } from '@pikku/core/oauth2'")
     lines.push(
       "import type { TypedSecretService } from '#pikku/secrets/pikku-secrets.gen.js'"
@@ -458,7 +461,17 @@ function generateServiceFile(
   lines.push(`export class ${pascalName}Service {`)
   lines.push('  private baseUrl: string')
 
-  if (flags.oauth) {
+  if (flags.credential && flags.credential !== 'oauth2') {
+    const credField = flags.credential === 'bearer' ? 'token' : 'apiKey'
+    lines.push('')
+    lines.push(
+      `  constructor(private creds: { ${credField}: string }, variables: TypedVariablesService) {`
+    )
+    lines.push(
+      `    this.baseUrl = variables.get('${screamingName}_BASE_URL') as string`
+    )
+    lines.push('  }')
+  } else if (flags.oauth || flags.credential === 'oauth2') {
     lines.push('  private oauth: OAuth2Client')
     lines.push('')
     lines.push(
@@ -548,7 +561,30 @@ function generateServiceFile(
   lines.push('    }')
   lines.push('')
 
-  if (flags.oauth) {
+  if (flags.credential && flags.credential !== 'oauth2') {
+    // Per-user credential: use creds from wire.getCredentials()
+    if (flags.credential === 'bearer') {
+      lines.push('    headers.Authorization = `Bearer ${this.creds.token}`')
+    } else {
+      // apikey: check spec for custom header name
+      const apiKeyScheme = Object.values(spec.securitySchemes).find(
+        (s) => s.type === 'apiKey'
+      )
+      if (apiKeyScheme?.name && apiKeyScheme?.in === 'header') {
+        lines.push(
+          `    headers[${JSON.stringify(apiKeyScheme.name)}] = this.creds.apiKey`
+        )
+      } else {
+        lines.push('    headers.Authorization = `Bearer ${this.creds.apiKey}`')
+      }
+    }
+    lines.push('')
+    lines.push('    const response = await fetch(url.toString(), {')
+    lines.push('      method,')
+    lines.push('      headers,')
+    lines.push('      body: body ? JSON.stringify(body) : undefined,')
+    lines.push('    })')
+  } else if (flags.oauth || flags.credential === 'oauth2') {
     lines.push(
       '    const response = await this.oauth.request(url.toString(), {'
     )

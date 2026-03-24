@@ -14,7 +14,7 @@ export const pikkuCredentials = pikkuSessionlessFunc<void, void>({
 
     const state = await getInspectorState()
 
-    if (state.credentials.definitions.length === 0) {
+    if (!state.credentials || state.credentials.definitions.length === 0) {
       return
     }
 
