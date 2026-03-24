@@ -288,6 +288,10 @@ wireCLI({
                 'Include OAuth2 credential wiring and OAuth2Client-based API service',
               default: false,
             },
+            credential: {
+              description:
+                'Include per-user credential wiring (apikey, bearer, or oauth2)',
+            },
             test: {
               description: 'Include test harness (default: true)',
               default: true,

@@ -37,7 +37,12 @@ interface AddonVars {
 
 function getAddonFiles(
   vars: AddonVars,
-  flags: { secret: boolean; variable: boolean; oauth: boolean }
+  flags: {
+    secret: boolean
+    variable: boolean
+    oauth: boolean
+    credential?: 'apikey' | 'bearer' | 'oauth2'
+  }
 ): Record<string, string> {
   const {
     name,
@@ -163,7 +168,27 @@ ${description}
 `
 
   // src/services.ts
-  if (flags.oauth) {
+  if (flags.credential && flags.credential !== 'oauth2') {
+    // Per-user credential: use createWireServices with wire.getCredentials()
+    const credField = flags.credential === 'bearer' ? 'token' : 'apiKey'
+    files['src/services.ts'] =
+      `import { ${pascalName}Service } from './${name}-api.service.js'
+import { pikkuAddonWireServices } from '#pikku'
+
+export const createWireServices = pikkuAddonWireServices(
+  async (_services, wire) => {
+    const credentials = wire.getCredentials()
+    const cred = credentials['${camelName}'] as { ${credField}: string } | undefined
+    if (!cred?.${credField}) {
+      throw new Error('Missing ${camelName} credential')
+    }
+    const ${camelName} = new ${pascalName}Service(cred)
+
+    return { ${camelName} }
+  }
+)
+`
+  } else if (flags.oauth || flags.credential === 'oauth2') {
     files['src/services.ts'] =
       `import { ${pascalName}Service } from './${name}-api.service.js'
 import { pikkuAddonServices } from '#pikku'
@@ -210,7 +235,62 @@ export const createSingletonServices = pikkuAddonServices(async (
   }
 
   // src/{name}-api.service.ts
-  if (flags.oauth) {
+  if (flags.credential && flags.credential !== 'oauth2') {
+    const credField = flags.credential === 'bearer' ? 'token' : 'apiKey'
+    const credType = `{ ${credField}: string }`
+    const authHeader =
+      flags.credential === 'bearer'
+        ? `\`Bearer \${this.creds.token}\``
+        : `this.creds.apiKey`
+    const authLine =
+      flags.credential === 'bearer'
+        ? `'Authorization': ${authHeader},`
+        : `'Authorization': \`Bearer \${this.creds.apiKey}\`,`
+    files[`src/${name}-api.service.ts`] =
+      `const BASE_URL = 'https://api.example.com/v1'
+
+export interface RequestOptions {
+  body?: unknown
+  qs?: Record<string, string | number | boolean | undefined>
+}
+
+export class ${pascalName}Service {
+  constructor(private creds: ${credType}) {}
+
+  async request<T>(
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
+    endpoint: string,
+    options?: RequestOptions
+  ): Promise<T> {
+    const url = new URL(endpoint, BASE_URL)
+
+    if (options?.qs) {
+      for (const [key, value] of Object.entries(options.qs)) {
+        if (value !== undefined) {
+          url.searchParams.set(key, String(value))
+        }
+      }
+    }
+
+    const response = await fetch(url.toString(), {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ${authLine}
+      },
+      body: options?.body ? JSON.stringify(options.body) : undefined,
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(\`${displayName} API error (\${response.status}): \${errorText}\`)
+    }
+
+    return response.json() as Promise<T>
+  }
+}
+`
+  } else if (flags.oauth) {
     files[`src/${name}-api.service.ts`] =
       `import { OAuth2Client } from '@pikku/core/oauth2'
 import type { TypedSecretService } from '#pikku/secrets/pikku-secrets.gen.js'
@@ -401,8 +481,40 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
 export interface Services extends CoreServices<SingletonServices> {}
 `
 
-  // Conditional: secret file
-  if (flags.oauth) {
+  // Conditional: credential / secret file
+  if (flags.credential === 'apikey') {
+    files[`src/${name}.credential.ts`] = `import { z } from 'zod'
+import { wireCredential } from '@pikku/core/credential'
+
+export const ${camelName}CredentialSchema = z.object({
+  apiKey: z.string().describe('${displayName} API key'),
+})
+
+wireCredential({
+  name: '${camelName}',
+  displayName: '${displayName}',
+  description: '${description}',
+  type: 'wire',
+  schema: ${camelName}CredentialSchema,
+})
+`
+  } else if (flags.credential === 'bearer') {
+    files[`src/${name}.credential.ts`] = `import { z } from 'zod'
+import { wireCredential } from '@pikku/core/credential'
+
+export const ${camelName}CredentialSchema = z.object({
+  token: z.string().describe('${displayName} bearer token'),
+})
+
+wireCredential({
+  name: '${camelName}',
+  displayName: '${displayName}',
+  description: '${description}',
+  type: 'wire',
+  schema: ${camelName}CredentialSchema,
+})
+`
+  } else if (flags.oauth || flags.credential === 'oauth2') {
     files[`src/${name}.credential.ts`] = `import { z } from 'zod'
 import { wireCredential } from '@pikku/core/credential'
 import { wireSecret } from '@pikku/core/secret'
@@ -682,6 +794,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
     secret?: boolean
     variable?: boolean
     oauth?: boolean
+    credential?: string
     test?: boolean
     openapi?: string
     mcp?: boolean
@@ -699,6 +812,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       secret = false,
       variable = false,
       oauth = false,
+      credential,
       test = true,
       openapi,
       mcp = false,
@@ -735,19 +849,38 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       category,
     }
 
-    // oauth implies secret
+    // Validate credential type if provided
+    const credentialType = credential as
+      | 'apikey'
+      | 'bearer'
+      | 'oauth2'
+      | undefined
+    if (
+      credentialType &&
+      !['apikey', 'bearer', 'oauth2'].includes(credentialType)
+    ) {
+      logger.error(
+        `Invalid credential type "${credential}": must be one of apikey, bearer, oauth2`
+      )
+      process.exit(1)
+    }
+
+    // oauth implies secret (unless credential flag is used); credential oauth2 implies oauth
+    const effectiveOAuth = oauth || credentialType === 'oauth2'
     const addonFiles = getAddonFiles(vars, {
-      secret: secret || oauth,
+      secret: (secret || effectiveOAuth) && !credentialType,
       variable,
-      oauth,
+      oauth: effectiveOAuth,
+      credential: credentialType,
     })
 
     // If openapi spec provided, generate typed files and merge over scaffold
     if (openapi) {
       const spec = await parseOpenAPISpec(openapi)
       const openapiFiles = generateAddonFromOpenAPI(spec, vars, {
-        oauth,
-        secret: secret || oauth,
+        oauth: effectiveOAuth,
+        secret: (secret || effectiveOAuth) && !credentialType,
+        credential: credentialType,
         mcp,
       })
       Object.assign(addonFiles, openapiFiles)
