@@ -1,5 +1,11 @@
 # @pikku/openapi-parser
 
+## 0.12.9
+
+### Patch Changes
+
+- 2ce0733: Fix credential services template variable passing, duplicate body/path param collision, and add credentialOverrides to wireAddon.
+
 ## 0.12.8
 
 ### Patch Changes

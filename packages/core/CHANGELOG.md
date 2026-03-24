@@ -1,5 +1,11 @@
 ## 0.12.4
 
+## 0.12.13
+
+### Patch Changes
+
+- 2ce0733: Fix credential services template variable passing, duplicate body/path param collision, and add credentialOverrides to wireAddon.
+
 ## 0.12.12
 
 ### Patch Changes
