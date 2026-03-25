@@ -52,6 +52,10 @@ export class TypedCredentialService<TMap = Record<string, unknown>>
     return this.credentials.getAll(userId)
   }
 
+  async getUsersWithCredential(name: string): Promise<string[]> {
+    return this.credentials.getUsersWithCredential(name)
+  }
+
   async getAllStatus(userId?: string): Promise<CredentialStatusInfo[]> {
     const results: CredentialStatusInfo[] = []
 

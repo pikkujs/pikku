@@ -38,4 +38,15 @@ export class LocalCredentialService implements CredentialService {
     }
     return result
   }
+
+  async getUsersWithCredential(name: string): Promise<string[]> {
+    const suffix = `:${name}`
+    const users: string[] = []
+    for (const key of this.store.keys()) {
+      if (key.endsWith(suffix)) {
+        users.push(key.slice(0, -suffix.length))
+      }
+    }
+    return users
+  }
 }

@@ -41,4 +41,11 @@ export interface CredentialService {
    * @returns A record of credential name to value.
    */
   getAll(userId: string): Promise<Record<string, unknown>>
+
+  /**
+   * Lists all user IDs that have a specific credential configured.
+   * @param name - The credential name.
+   * @returns Array of user IDs.
+   */
+  getUsersWithCredential(name: string): Promise<string[]>
 }

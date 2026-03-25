@@ -16,6 +16,7 @@ import {
   Loader,
   SegmentedControl,
   Alert,
+  Table,
 } from '@mantine/core'
 import {
   KeyRound,
@@ -265,15 +266,21 @@ const CredentialDrawer: React.FunctionComponent<{
 
       <Divider />
 
-      {credential.isOAuth2 ? (
-        <OAuthSection credential={credential} />
-      ) : (
-        <ApiKeySection credential={credential} />
+      {credential.type === 'singleton' && (
+        <>
+          {credential.isOAuth2 ? (
+            <OAuthSection credential={credential} />
+          ) : (
+            <ApiKeySection credential={credential} />
+          )}
+          <Divider />
+          <DeleteSection credential={credential} onClose={onClose} />
+        </>
       )}
 
-      <Divider />
-
-      <DeleteSection credential={credential} onClose={onClose} />
+      {credential.type === 'wire' && (
+        <PerUserSection credential={credential} />
+      )}
     </Stack>
   )
 }
@@ -506,6 +513,113 @@ const OAuthSection: React.FunctionComponent<{
         >
           Connect {credential.displayName}
         </Button>
+      )}
+    </Stack>
+  )
+}
+
+const PerUserSection: React.FunctionComponent<{
+  credential: CredentialItem
+}> = ({ credential }) => {
+  const rpc = usePikkuRPC()
+  const queryClient = useQueryClient()
+
+  const { data: userIds, isLoading } = useQuery({
+    queryKey: ['credential-users', credential.name],
+    queryFn: async () => {
+      try {
+        const result = await (rpc as any).invoke('console:credentialUsers', {
+          name: credential.name,
+        })
+        return result.userIds as string[]
+      } catch {
+        return []
+      }
+    },
+  })
+
+  const revokeMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      await (rpc as any).invoke('console:credentialDelete', {
+        name: credential.name,
+        userId,
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['credential-users', credential.name],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ['credential-status', credential.name],
+      })
+    },
+  })
+
+  if (isLoading) {
+    return <Loader size="xs" />
+  }
+
+  const users = userIds || []
+
+  return (
+    <Stack gap="xs">
+      <Group justify="space-between">
+        <Text size="sm" fw={500}>
+          User Credentials
+        </Text>
+        <Badge size="xs" variant="light">
+          {users.length} connected
+        </Badge>
+      </Group>
+
+      {users.length === 0 ? (
+        <Text size="xs" c="dimmed">
+          No users have configured this credential yet.
+        </Text>
+      ) : (
+        <Table highlightOnHover>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th style={{ fontSize: 12 }}>User ID</Table.Th>
+              <Table.Th style={{ fontSize: 12 }}>Status</Table.Th>
+              <Table.Th style={{ fontSize: 12, width: 70 }} />
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {users.map((userId) => (
+              <Table.Tr key={userId}>
+                <Table.Td>
+                  <Text size="xs" ff="monospace">
+                    {userId}
+                  </Text>
+                </Table.Td>
+                <Table.Td>
+                  <Group gap={4}>
+                    <Circle
+                      size={6}
+                      fill="var(--mantine-color-teal-6)"
+                      color="var(--mantine-color-teal-6)"
+                    />
+                    <Text size="xs" c="teal.6">
+                      Connected
+                    </Text>
+                  </Group>
+                </Table.Td>
+                <Table.Td>
+                  <Button
+                    size="compact-xs"
+                    variant="subtle"
+                    color="red"
+                    onClick={() => revokeMutation.mutate(userId)}
+                    loading={revokeMutation.isPending}
+                  >
+                    Revoke
+                  </Button>
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
       )}
     </Stack>
   )
