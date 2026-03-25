@@ -13,6 +13,10 @@ import { pikkuState } from '../../pikku-state.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
 import type { SessionService } from '../../services/user-session-service.js'
 import { createMiddlewareSessionWireProps } from '../../services/user-session-service.js'
+import {
+  PikkuCredentialWireService,
+  createMiddlewareCredentialWireProps,
+} from '../../services/credential-wire-service.js'
 
 const getChannelMeta = (channelName: string) => {
   return pikkuState(null, 'channel', 'meta')[channelName]
@@ -73,6 +77,7 @@ export const processMessageHandlers = (
 ) => {
   const logger = services.logger
   const requiresSession = channelConfig.auth !== false
+  const credentialWire = new PikkuCredentialWireService()
 
   const processMessage = async (
     data: JSONValue,
@@ -156,9 +161,11 @@ export const processMessageHandlers = (
       coerceDataFromSchema: true,
       tags: channelConfig.tags,
       sessionService: userSession,
+      credentialWireService: credentialWire,
       wire: {
         channel: channelHandler.getChannel(),
         ...(userSession && createMiddlewareSessionWireProps(userSession)),
+        ...createMiddlewareCredentialWireProps(credentialWire),
       },
       packageName,
     })

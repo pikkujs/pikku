@@ -28,8 +28,10 @@ import { parseVersionedId } from '../version.js'
 import type { SessionService } from '../services/user-session-service.js'
 import { createFunctionSessionWireProps } from '../services/user-session-service.js'
 import { ForbiddenError, ReadonlySessionError } from '../errors/errors.js'
-import type { PikkuCredentialWireService } from '../services/credential-wire-service.js'
-import { createWireServicesCredentialWireProps } from '../services/credential-wire-service.js'
+import {
+  PikkuCredentialWireService,
+  createWireServicesCredentialWireProps,
+} from '../services/credential-wire-service.js'
 import { rpcService } from '../wirings/rpc/rpc-runner.js'
 import { closeWireServices } from '../utils.js'
 
@@ -316,12 +318,12 @@ export const runPikkuFunc = async <In = any, Out = any>(
       })
     }
 
-    if (credentialWireService) {
-      Object.assign(
-        resolvedWire,
-        createWireServicesCredentialWireProps(credentialWireService)
-      )
-    }
+    const resolvedCredentialWireService =
+      credentialWireService ?? new PikkuCredentialWireService()
+    Object.assign(
+      resolvedWire,
+      createWireServicesCredentialWireProps(resolvedCredentialWireService)
+    )
 
     const wireServices = await resolvedCreateWireServices?.(
       resolvedSingletonServices,

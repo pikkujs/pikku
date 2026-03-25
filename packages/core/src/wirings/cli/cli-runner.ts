@@ -27,6 +27,10 @@ import {
   PikkuSessionService,
   createMiddlewareSessionWireProps,
 } from '../../services/user-session-service.js'
+import {
+  PikkuCredentialWireService,
+  createMiddlewareCredentialWireProps,
+} from '../../services/credential-wire-service.js'
 import { LocalVariablesService } from '../../services/local-variables.js'
 import { generateCommandHelp, parseCLIArguments } from './command-parser.js'
 
@@ -341,6 +345,7 @@ export async function runCLICommand({
   }
 
   const userSession = new PikkuSessionService<CoreUserSession>()
+  const credentialWire = new PikkuCredentialWireService()
 
   const wire: PikkuWire = {
     cli: {
@@ -350,6 +355,7 @@ export async function runCLICommand({
       channel,
     },
     ...createMiddlewareSessionWireProps(userSession),
+    ...createMiddlewareCredentialWireProps(credentialWire),
   }
 
   try {
@@ -366,6 +372,7 @@ export async function runCLICommand({
       tags: programData?.tags,
       wire,
       sessionService: userSession,
+      credentialWireService: credentialWire,
       packageName: currentCommand.packageName,
     })
 

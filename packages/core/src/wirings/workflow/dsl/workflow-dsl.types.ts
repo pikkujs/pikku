@@ -306,6 +306,8 @@ export interface PikkuWorkflowWire {
   name: string
   /** The current run ID */
   runId: string
+  /** Pikku user ID propagated from the originating request for credential resolution */
+  pikkuUserId?: string
   /** Get the current workflow run */
   getRun: () => Promise<WorkflowRun>
 

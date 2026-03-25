@@ -273,6 +273,8 @@ export type PikkuWire<
   getSession: () => Promise<UserSession> | UserSession | undefined
   /** Whether the session was modified during this run */
   hasSessionChanged: () => boolean
+  /** The resolved user identity for credential lookups */
+  pikkuUserId: string
   /** Set a credential value (available in middleware) */
   setCredential: (name: string, value: unknown) => void
   /** Get all resolved credentials (only available in pikkuWireServices) */

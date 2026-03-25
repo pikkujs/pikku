@@ -41,6 +41,8 @@ export interface WorkflowRunWire {
   id?: string
   parentRunId?: string
   parentStepId?: string
+  /** Pikku user ID propagated from the originating request for credential resolution */
+  pikkuUserId?: string
 }
 
 export interface WorkflowServiceConfig {

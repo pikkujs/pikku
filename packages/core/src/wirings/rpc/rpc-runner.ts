@@ -239,6 +239,7 @@ export class ContextAwareRPCService {
       type: this.wire.wireType ?? 'unknown',
       id: this.wire.wireId,
       ...(parentRunId ? { parentRunId } : {}),
+      ...(this.wire.pikkuUserId ? { pikkuUserId: this.wire.pikkuUserId } : {}),
     }
     return this.services.workflowService.startWorkflow(
       workflowName,
@@ -306,9 +307,14 @@ export class ContextAwareRPCService {
         approvals: { toolCallId: string; approved: boolean }[],
         expectedAgentName?: string
       ) => {
-        const result = await resumeAIAgentSync(runId, approvals, {
-          sessionService: this.options.sessionService,
-        }, expectedAgentName)
+        const result = await resumeAIAgentSync(
+          runId,
+          approvals,
+          {
+            sessionService: this.options.sessionService,
+          },
+          expectedAgentName
+        )
         return {
           runId: result.runId,
           result: result.object ?? result.text,

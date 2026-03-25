@@ -96,6 +96,8 @@ export interface QueueJob<T = any, R = any> {
   result?: R
   waitForCompletion?: (ttl?: number) => Promise<R>
   metadata?: () => Promise<QueueJobMetadata> | QueueJobMetadata
+  /** Pikku user ID propagated from the job producer */
+  pikkuUserId?: string
 }
 
 /**
@@ -109,6 +111,8 @@ export interface JobOptions {
   removeOnComplete?: number
   removeOnFail?: number
   jobId?: string
+  /** Pikku user ID to propagate to the queue worker for credential resolution */
+  pikkuUserId?: string
 }
 
 /**
@@ -180,6 +184,8 @@ export interface PikkuQueue {
   queueName: string
   /** The current job ID */
   jobId: string
+  /** Pikku user ID propagated from the job producer for credential resolution */
+  pikkuUserId?: string
   /** Update job progress (0-100 or custom value) */
   updateProgress: (progress: number | string | object) => Promise<void>
   /** Fail the current job with optional reason */

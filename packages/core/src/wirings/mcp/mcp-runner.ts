@@ -29,6 +29,10 @@ import {
   PikkuSessionService,
   createMiddlewareSessionWireProps,
 } from '../../services/user-session-service.js'
+import {
+  PikkuCredentialWireService,
+  createMiddlewareCredentialWireProps,
+} from '../../services/credential-wire-service.js'
 
 export class MCPError extends Error {
   constructor(public readonly error: JsonRpcErrorResponse) {
@@ -218,9 +222,11 @@ async function runMCPPikkuFunc(
     singletonServices.logger.debug(`Running MCP ${type}: ${name}`)
 
     const mcpSessionService = new PikkuSessionService()
+    const credentialWire = new PikkuCredentialWireService()
     const wire: PikkuWire = {
       mcp: mcpWire,
       ...createMiddlewareSessionWireProps(mcpSessionService),
+      ...createMiddlewareCredentialWireProps(credentialWire),
     }
 
     let meta: any
@@ -258,6 +264,7 @@ async function runMCPPikkuFunc(
         tags: mcp?.tags,
         wire,
         sessionService: mcpSessionService,
+        credentialWireService: credentialWire,
         packageName: resolvedPackageName,
       }
     )
