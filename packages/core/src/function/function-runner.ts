@@ -228,6 +228,21 @@ export const runPikkuFunc = async <In = any, Out = any>(
         )
       : wire
 
+  // Set up credential wire service early so middleware can use setCredential.
+  // Skip if already set up (e.g. addon functions reuse the parent wire).
+  if (!resolvedWire.getCredentials) {
+    const resolvedCredentialWireService =
+      credentialWireService ??
+      new PikkuCredentialWireService(
+        resolvedSingletonServices.credentialService,
+        resolvedWire
+      )
+    Object.assign(
+      resolvedWire,
+      createWireServicesCredentialWireProps(resolvedCredentialWireService)
+    )
+  }
+
   // Convert tags to PermissionMetadata and merge with inheritedPermissions
   let mergedInheritedPermissions: PermissionMetadata[]
   if (tags && tags.length > 0) {
@@ -317,17 +332,6 @@ export const runPikkuFunc = async <In = any, Out = any>(
         packageName,
       })
     }
-
-    const resolvedCredentialWireService =
-      credentialWireService ??
-      new PikkuCredentialWireService(
-        resolvedSingletonServices.credentialService,
-        resolvedWire
-      )
-    Object.assign(
-      resolvedWire,
-      createWireServicesCredentialWireProps(resolvedCredentialWireService)
-    )
 
     const wireServices = await resolvedCreateWireServices?.(
       resolvedSingletonServices,

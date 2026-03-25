@@ -3,7 +3,7 @@ import { HmacSignerService } from './hmac-signer.service.js'
 
 export const createWireServices = pikkuAddonWireServices(
   async (_services, wire) => {
-    const credentials = wire.getCredentials()
+    const credentials = await wire.getCredentials()
     const hmacCred = credentials['hmac-key'] as
       | { secretKey: string }
       | undefined
