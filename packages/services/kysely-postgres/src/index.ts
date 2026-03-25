@@ -8,6 +8,8 @@ export { PgKyselyEventHubStore } from './pg-kysely-eventhub-store.js'
 export { PgKyselySecretService } from './pg-kysely-secret-service.js'
 export { PikkuKysely } from './pikku-kysely.js'
 
+export { KyselyCredentialService } from '@pikku/kysely'
+export type { KyselyCredentialServiceConfig } from '@pikku/kysely'
 export type { KyselyPikkuDB } from '@pikku/kysely'
 export type { KyselySecretServiceConfig } from '@pikku/kysely'
 export type { WorkflowRunService } from '@pikku/core/workflow'
