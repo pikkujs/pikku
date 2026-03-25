@@ -319,7 +319,11 @@ export const runPikkuFunc = async <In = any, Out = any>(
     }
 
     const resolvedCredentialWireService =
-      credentialWireService ?? new PikkuCredentialWireService()
+      credentialWireService ??
+      new PikkuCredentialWireService(
+        resolvedSingletonServices.credentialService,
+        resolvedWire
+      )
     Object.assign(
       resolvedWire,
       createWireServicesCredentialWireProps(resolvedCredentialWireService)

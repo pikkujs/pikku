@@ -12,11 +12,6 @@ import {
   pikkuState,
 } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
-import {
-  PikkuCredentialWireService,
-  createMiddlewareCredentialWireProps,
-} from '../../services/credential-wire-service.js'
-
 /**
  * Error class for queue processor not found
  */
@@ -151,14 +146,11 @@ export async function runQueueJob({
     },
   }
 
-  const credentialWire = new PikkuCredentialWireService()
-
   try {
     logger.info(`Processing job ${job.id} in queue ${job.queueName}`)
 
     const wire: PikkuWire = {
       queue,
-      ...createMiddlewareCredentialWireProps(credentialWire),
     }
 
     // Execute the pikku function with the job data
@@ -175,7 +167,6 @@ export async function runQueueJob({
         wireMiddleware: queueWorker.middleware,
         tags: queueWorker.tags,
         wire,
-        credentialWireService: credentialWire,
       }
     )
 

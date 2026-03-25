@@ -277,8 +277,10 @@ export type PikkuWire<
   pikkuUserId: string
   /** Set a credential value (available in middleware) */
   setCredential: (name: string, value: unknown) => void
-  /** Get all resolved credentials (only available in pikkuWireServices) */
-  getCredentials: () => Record<string, unknown>
+  /** Get all resolved credentials — lazy-loads from CredentialService on first call, sync thereafter */
+  getCredentials: () =>
+    | Record<string, unknown>
+    | Promise<Record<string, unknown>>
 }>
 
 /**

@@ -177,7 +177,7 @@ import { pikkuAddonWireServices } from '#pikku'
 
 export const createWireServices = pikkuAddonWireServices(
   async ({ variables }, wire) => {
-    const credentials = wire.getCredentials()
+    const credentials = await wire.getCredentials()
     const cred = credentials['${camelName}'] as { ${credField}: string } | undefined
     if (!cred?.${credField}) {
       throw new Error('Missing ${camelName} credential')
