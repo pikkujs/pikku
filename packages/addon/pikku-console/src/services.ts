@@ -18,6 +18,7 @@ export const createSingletonServices = pikkuAddonServices(
       aiStorage,
       aiRunState,
       deploymentService,
+      credentialService,
     }
   ) => {
     const pikkuMetaPath = pikkuState(null, 'package', 'metaDir') ?? ''
@@ -49,6 +50,7 @@ export const createSingletonServices = pikkuAddonServices(
       deploymentService,
       aiAgentRunner,
       schedulerService,
+      credentialService,
     }
   }
 )
