@@ -103,7 +103,7 @@ export const pikkuAddonServices = <T extends Record<string, any>, ExistingServic
 export const pikkuAddonWireServices = <ExistingServices extends Omit<Partial<SingletonServices>, 'variables' | 'secrets'> & AddonBaseServices>(
   func: (services: ExistingServices, wire: any) => Promise<Record<string, any>>
 ) => {
-  return ((services: SingletonServices, wire: any) => {
+  return ((services: any, wire: any) => {
     const typedVariables = new TypedVariablesService(services.variables)
     const typedSecrets = new TypedSecretService(services.secrets)
     return func({ ...services, variables: typedVariables, secrets: typedSecrets } as ExistingServices, wire)
