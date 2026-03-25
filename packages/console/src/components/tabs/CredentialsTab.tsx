@@ -457,6 +457,12 @@ const OAuthSection: React.FunctionComponent<{
         OAuth2 Connection
       </Text>
 
+      {connectMutation.isError && (
+        <Alert color="red" variant="light" icon={<AlertTriangle size={14} />}>
+          {(connectMutation.error as Error).message}
+        </Alert>
+      )}
+
       {status?.connected ? (
         <>
           <Group gap="xs">

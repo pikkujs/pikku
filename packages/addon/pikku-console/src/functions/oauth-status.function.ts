@@ -18,12 +18,17 @@ export const oauthStatus = pikkuSessionlessFunc<
     { credentialName }
   ) => {
     const secretsMeta = await wiringService.readSecretsMeta()
+    const credentialsMeta = await wiringService.readCredentialsMeta()
 
-    const credential = secretsMeta[credentialName]
+    const credential =
+      secretsMeta[credentialName] ?? credentialsMeta[credentialName]
     if (!credential) {
-      const available = Object.keys(secretsMeta).filter(
-        (name) => secretsMeta[name].oauth2
-      )
+      const available = [
+        ...Object.keys(secretsMeta).filter((name) => secretsMeta[name].oauth2),
+        ...Object.keys(credentialsMeta).filter(
+          (name) => credentialsMeta[name].oauth2
+        ),
+      ]
       throw new Error(
         `Credential '${credentialName}' not found. Available: ${available.join(', ') || 'none'}`
       )

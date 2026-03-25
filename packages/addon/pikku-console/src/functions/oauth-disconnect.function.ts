@@ -12,8 +12,10 @@ export const oauthDisconnect = pikkuSessionlessFunc<{
     { credentialName }
   ) => {
     const secretsMeta = await wiringService.readSecretsMeta()
+    const credentialsMeta = await wiringService.readCredentialsMeta()
 
-    const credential = secretsMeta[credentialName]
+    const credential =
+      secretsMeta[credentialName] ?? credentialsMeta[credentialName]
     if (!credential) {
       throw new Error(`Credential '${credentialName}' not found`)
     }

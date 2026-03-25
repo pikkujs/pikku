@@ -11,8 +11,10 @@ export const oauthRefreshToken = pikkuSessionlessFunc<
   expose: true,
   func: async ({ logger, wiringService, secrets }, { credentialName }) => {
     const secretsMeta = await wiringService.readSecretsMeta()
+    const credentialsMeta = await wiringService.readCredentialsMeta()
 
-    const credential = secretsMeta[credentialName]
+    const credential =
+      secretsMeta[credentialName] ?? credentialsMeta[credentialName]
     if (!credential) {
       throw new Error(`Credential '${credentialName}' not found`)
     }
