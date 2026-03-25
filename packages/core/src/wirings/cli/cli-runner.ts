@@ -191,7 +191,7 @@ function registerCLICommands(
       }
     }
 
-    addFunction(funcName, unwrapFunc(command))
+    addFunction(funcName, unwrapFunc(command), currentMeta?.packageName)
 
     // Register renderer if provided
     if (typeof command === 'object' && command.render) {
