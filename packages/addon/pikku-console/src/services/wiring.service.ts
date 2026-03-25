@@ -17,6 +17,7 @@ import type {
   TriggerSourceMeta as CoreTriggerSourceMeta,
 } from '@pikku/core/trigger'
 import type { SecretDefinitionsMeta } from '@pikku/core/secret'
+import type { CredentialDefinitionsMeta } from '@pikku/core/credential'
 import type { VariableDefinitionsMeta } from '@pikku/core/variable'
 
 export type MiddlewareMeta =
@@ -270,6 +271,7 @@ export interface PikkuMetaState {
   permissionsGroupsMeta: PermissionsGroupsMeta
   agentsMeta: AgentsMeta
   secretsMeta: SecretDefinitionsMeta
+  credentialsMeta: CredentialDefinitionsMeta
   variablesMeta: VariableDefinitionsMeta
   modelAliases: string[]
 }
@@ -372,6 +374,7 @@ export class WiringService {
   private functionsMetaCache: FunctionsMeta | null = null
   private servicesMetaCache: ServicesMetaRecord | null = null
   private secretsMetaCache: SecretDefinitionsMeta | null = null
+  private credentialsMetaCache: CredentialDefinitionsMeta | null = null
   private variablesMetaCache: VariableDefinitionsMeta | null = null
   private middlewareGroupsMetaCache: MiddlewareGroupsMeta | null = null
   private permissionsGroupsMetaCache: PermissionsGroupsMeta | null = null
@@ -393,6 +396,7 @@ export class WiringService {
     this.functionsMetaCache = null
     this.servicesMetaCache = null
     this.secretsMetaCache = null
+    this.credentialsMetaCache = null
     this.variablesMetaCache = null
     this.middlewareGroupsMetaCache = null
     this.permissionsGroupsMetaCache = null
@@ -717,6 +721,7 @@ export class WiringService {
       permissionsGroupsMeta,
       agentsMeta,
       secretsMeta,
+      credentialsMeta,
       variablesMeta,
     ] = await Promise.all([
       this.readFunctionsMeta(),
@@ -734,6 +739,7 @@ export class WiringService {
       this.readPermissionsGroupsMeta(),
       this.readAgentMeta(),
       this.readSecretsMeta(),
+      this.readCredentialsMeta(),
       this.readVariablesMeta(),
     ])
 
@@ -979,6 +985,7 @@ export class WiringService {
       permissionsGroupsMeta,
       agentsMeta,
       secretsMeta,
+      credentialsMeta,
       variablesMeta,
       modelAliases,
       functionUsedBy,
@@ -1035,6 +1042,26 @@ export class WiringService {
     } catch {
       this.secretsMetaCache = {}
       return this.secretsMetaCache
+    }
+  }
+
+  async readCredentialsMeta(): Promise<CredentialDefinitionsMeta> {
+    if (this.credentialsMetaCache) {
+      return this.credentialsMetaCache
+    }
+
+    const metaPath = join(
+      this.pikkuMetaPath,
+      'credentials',
+      'pikku-credentials-meta.gen.json'
+    )
+    try {
+      const content = await readFile(metaPath, 'utf-8')
+      this.credentialsMetaCache = JSON.parse(content)
+      return this.credentialsMetaCache!
+    } catch {
+      this.credentialsMetaCache = {}
+      return this.credentialsMetaCache
     }
   }
 

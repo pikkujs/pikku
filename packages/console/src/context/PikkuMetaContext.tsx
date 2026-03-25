@@ -12,7 +12,9 @@ import type { FlattenedRPCMap } from '@/pikku/rpc-map.gen.d'
 type AllMeta = FlattenedRPCMap['console:getAllMeta']['output']
 type MetaCounts = AllMeta['counts']
 type FunctionUsedBy = AllMeta['functionUsedBy'][string]
-type PikkuMetaState = Omit<AllMeta, 'counts' | 'functionUsedBy'>
+type PikkuMetaState = Omit<AllMeta, 'counts' | 'functionUsedBy'> & {
+  credentialsMeta: Record<string, any>
+}
 
 interface PikkuMetaContextType {
   meta: PikkuMetaState
@@ -57,6 +59,7 @@ const EMPTY_META: PikkuMetaState = {
   permissionsGroupsMeta: { definitions: {}, httpGroups: {}, tagGroups: {} },
   agentsMeta: {},
   secretsMeta: {},
+  credentialsMeta: {},
   variablesMeta: {},
   modelAliases: [],
 }
@@ -112,6 +115,7 @@ export const PikkuMetaProvider: React.FunctionComponent<{
         permissionsGroupsMeta: allMeta.permissionsGroupsMeta,
         agentsMeta: allMeta.agentsMeta,
         secretsMeta: allMeta.secretsMeta,
+        credentialsMeta: (allMeta as any).credentialsMeta ?? {},
         variablesMeta: allMeta.variablesMeta,
         modelAliases: allMeta.modelAliases ?? [],
       })
