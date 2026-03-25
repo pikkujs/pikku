@@ -143,6 +143,51 @@ Feature: Credential Service API
     When I sign "hello world" without credentials
     Then the sign request should fail with "Missing hmac-key credential"
 
+  # --- Lazy credential loading (via session userId, no x-credentials header) ---
+
+  Scenario: Lazy-load credentials for authenticated user
+    When I set credential "hmac-key" for user "lazy-user" with value:
+      """
+      { "secretKey": "lazy-secret-123" }
+      """
+    And I sign "hello lazy" as user "lazy-user"
+    Then the signature should not be empty
+    When I verify "hello lazy" with the signature as user "lazy-user"
+    Then the verification should be valid
+
+  Scenario: Lazy-load returns different credentials per user
+    When I set credential "hmac-key" for user "user-a" with value:
+      """
+      { "secretKey": "secret-a" }
+      """
+    And I set credential "hmac-key" for user "user-b" with value:
+      """
+      { "secretKey": "secret-b" }
+      """
+    And I sign "same message" as user "user-a"
+    And I save the signature as "sig-a"
+    And I sign "same message" as user "user-b"
+    Then the signature should differ from "sig-a"
+
+  Scenario: Lazy-load fails gracefully without credentials
+    When I sign "hello" as user "no-creds-user"
+    Then the sign request should fail with "Missing hmac-key credential"
+
+  Scenario: Lazy-load cross-verify fails between users
+    When I set credential "hmac-key" for user "user-x" with value:
+      """
+      { "secretKey": "secret-x" }
+      """
+    And I set credential "hmac-key" for user "user-y" with value:
+      """
+      { "secretKey": "secret-y" }
+      """
+    And I sign "cross-verify test" as user "user-x"
+    When I verify "cross-verify test" with the signature as user "user-y"
+    Then the verification should be invalid
+
+  # --- Explicit header loading ---
+
   Scenario: Different signing keys produce different signatures
     When I set credential "hmac-key" with value:
       """

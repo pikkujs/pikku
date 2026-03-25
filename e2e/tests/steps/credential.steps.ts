@@ -142,6 +142,40 @@ Then(
 
 // --- HMAC signing addon steps (full wire credential flow) ---
 
+// --- Lazy-loading steps (via session userId, no x-credentials header) ---
+
+When(
+  'I sign {string} as user {string}',
+  async function (message: string, userId: string) {
+    const res = await httpPost(
+      '/api/hmac/sign',
+      { message },
+      { 'x-user-id': userId }
+    )
+    if (res.status >= 400) {
+      state.lastError = res.body.message
+      state.lastSignature = undefined
+    } else {
+      state.lastSignature = res.body.signature
+      state.lastError = undefined
+    }
+  }
+)
+
+When(
+  'I verify {string} with the signature as user {string}',
+  async function (message: string, userId: string) {
+    const res = await httpPost(
+      '/api/hmac/verify',
+      { message, signature: state.lastSignature! },
+      { 'x-user-id': userId }
+    )
+    state.lastVerification = res.body.valid
+  }
+)
+
+// --- Explicit header loading steps ---
+
 When(
   'I sign {string} with credential {string}',
   async function (message: string, credentialName: string) {
