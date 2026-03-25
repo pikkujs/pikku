@@ -48,4 +48,10 @@ export interface CredentialService {
    * @returns Array of user IDs.
    */
   getUsersWithCredential(name: string): Promise<string[]>
+
+  /**
+   * Lists all unique user IDs that have any credential configured.
+   * @returns Array of user IDs.
+   */
+  getAllUsers(): Promise<string[]>
 }

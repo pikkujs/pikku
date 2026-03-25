@@ -49,4 +49,15 @@ export class LocalCredentialService implements CredentialService {
     }
     return users
   }
+
+  async getAllUsers(): Promise<string[]> {
+    const users = new Set<string>()
+    for (const key of this.store.keys()) {
+      const colonIndex = key.indexOf(':')
+      if (colonIndex > 0) {
+        users.add(key.slice(0, colonIndex))
+      }
+    }
+    return [...users]
+  }
 }

@@ -227,6 +227,17 @@ export class KyselyCredentialService implements CredentialService {
     return rows.map((row) => row.userId!).filter(Boolean)
   }
 
+  async getAllUsers(): Promise<string[]> {
+    const rows = await this.db
+      .selectFrom('credentials')
+      .select('userId')
+      .distinct()
+      .where('userId', 'is not', null)
+      .execute()
+
+    return rows.map((row) => row.userId!).filter(Boolean)
+  }
+
   async rotateKEK(): Promise<number> {
     if (!this.previousKey) {
       throw new Error('No previousKey configured — nothing to rotate from')

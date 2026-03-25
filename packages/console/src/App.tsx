@@ -13,6 +13,7 @@ import { AgentsPage } from '@/pages/AgentsPage'
 import { AgentPlaygroundPage } from '@/pages/AgentPlaygroundPage'
 import { OAuthCallbackPage } from '@/pages/OAuthCallbackPage'
 import { PackagesPage } from '@/pages/PackagesPage'
+import { UsersPage } from '@/pages/UsersPage'
 import { RenderWorkflowPage } from '@/pages/RenderWorkflowPage'
 
 export const App: React.FunctionComponent = () => {
@@ -37,6 +38,7 @@ export const App: React.FunctionComponent = () => {
         <Route path="/jobs" element={<JobsPage />} />
         <Route path="/runtime" element={<RuntimePage />} />
         <Route path="/config" element={<ConfigPage />} />
+        <Route path="/users" element={<UsersPage />} />
         <Route path="/addons" element={<PackagesPage />} />
         <Route path="*" element={<NotFoundTitle />} />
       </Route>

@@ -19,6 +19,7 @@ import {
   Clock,
   Server,
   KeyRound,
+  Settings,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
@@ -86,8 +87,14 @@ export const DEFAULT_NAV_SECTIONS: NavSection[] = [
       {
         label: 'Config',
         href: '/config',
-        icon: KeyRound,
+        icon: Settings,
         matchPrefix: '/config',
+      },
+      {
+        label: 'Credentials',
+        href: '/users',
+        icon: KeyRound,
+        matchPrefix: '/users',
       },
     ],
   },

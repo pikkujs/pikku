@@ -6,11 +6,9 @@ import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
 import { TabbedPageHeader } from '@/components/layout/TabbedPageHeader'
 import { SecretsTab } from '@/components/tabs/SecretsTab'
 import { VariablesTab } from '@/components/tabs/VariablesTab'
-import { CredentialsTab } from '@/components/tabs/CredentialsTab'
 
 const TABS = [
   { value: 'secrets', label: 'Secrets' },
-  { value: 'credentials', label: 'Credentials' },
   { value: 'variables', label: 'Variables' },
 ]
 
@@ -37,13 +35,7 @@ export const ConfigPage: React.FunctionComponent = () => {
         }
         emptyPanelMessage="Select an item to view its details"
       >
-        {tab === 'credentials' ? (
-          <CredentialsTab />
-        ) : tab === 'variables' ? (
-          <VariablesTab />
-        ) : (
-          <SecretsTab />
-        )}
+        {tab === 'variables' ? <VariablesTab /> : <SecretsTab />}
       </ResizablePanelLayout>
     </PanelProvider>
   )
