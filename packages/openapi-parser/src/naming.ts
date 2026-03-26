@@ -27,11 +27,22 @@ export function singularize(word: string): string {
     return word.slice(0, -3) + 'y'
   }
   // -shes, -ches, -xes, -zes, -sses → drop "es"
-  if (lower.endsWith('shes') || lower.endsWith('ches') || lower.endsWith('xes') || lower.endsWith('zes') || lower.endsWith('sses')) {
+  if (
+    lower.endsWith('shes') ||
+    lower.endsWith('ches') ||
+    lower.endsWith('xes') ||
+    lower.endsWith('zes') ||
+    lower.endsWith('sses')
+  ) {
     return word.slice(0, -2)
   }
   // General: drop trailing "s" (covers courses→course, products→product, etc.)
-  if (lower.endsWith('s') && !lower.endsWith('ss') && !lower.endsWith('us') && lower.length > 2) {
+  if (
+    lower.endsWith('s') &&
+    !lower.endsWith('ss') &&
+    !lower.endsWith('us') &&
+    lower.length > 2
+  ) {
     return word.slice(0, -1)
   }
   return word
@@ -84,11 +95,13 @@ export function detectCommonPrefix(paths: string[]): string {
 /** Convert operationId to camelCase function name */
 function fromOperationId(operationId: string): string {
   // operationId might be snake_case, camelCase, PascalCase, or kebab-case
-  return toCamelCase(
-    operationId
-      .replace(/[^a-zA-Z0-9_-]/g, '_')
-      .replace(/_+/g, '_')
-      .replace(/^_|_$/g, '')
+  return (
+    toCamelCase(
+      operationId
+        .replace(/[^a-zA-Z0-9_-]/g, '_')
+        .replace(/[-_]+/g, '_')
+        .replace(/^_|_$/g, '')
+    ) || 'unnamed'
   )
 }
 
@@ -163,10 +176,7 @@ function deriveNameFromPath(
     cleanPath = '/' + cleanPath.slice(commonPrefix.length)
   }
 
-  const segments = cleanPath
-    .replace(/^\//, '')
-    .split('/')
-    .filter(Boolean)
+  const segments = cleanPath.replace(/^\//, '').split('/').filter(Boolean)
 
   const methodLower = method.toLowerCase()
   const prefix = METHOD_PREFIXES[methodLower] || methodLower
