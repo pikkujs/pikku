@@ -9,11 +9,13 @@ import {
   Box,
   Center,
   Code,
+  Button,
+  Alert,
 } from '@mantine/core'
-import { KeyRound, Link2, Circle } from 'lucide-react'
+import { KeyRound, Link2, Circle, AlertTriangle } from 'lucide-react'
 import { usePikkuMeta } from '@/context/PikkuMetaContext'
 import { usePikkuRPC } from '@/context/PikkuRpcProvider'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 interface CredentialMeta {
   name: string
@@ -29,16 +31,18 @@ export const CredentialsOverviewTab: React.FunctionComponent = () => {
 
   const credentials = useMemo(() => {
     const creds = (meta as any).credentialsMeta ?? {}
-    return Object.entries(creds).map(
-      ([name, data]: [string, any]) =>
-        ({
-          name,
-          displayName: data.displayName || name,
-          description: data.description,
-          type: data.type || 'singleton',
-          isOAuth2: !!data.oauth2,
-        }) as CredentialMeta
-    )
+    return Object.entries(creds)
+      .filter(([, data]: [string, any]) => (data.type || 'singleton') === 'singleton')
+      .map(
+        ([name, data]: [string, any]) =>
+          ({
+            name,
+            displayName: data.displayName || name,
+            description: data.description,
+            type: 'singleton',
+            isOAuth2: !!data.oauth2,
+          }) as CredentialMeta
+      )
   }, [meta])
 
   const { data: globalStatus } = useQuery({
@@ -58,25 +62,6 @@ export const CredentialsOverviewTab: React.FunctionComponent = () => {
     enabled: credentials.length > 0,
   })
 
-  const { data: usersData } = useQuery({
-    queryKey: ['credential-list-users'],
-    queryFn: async () => {
-      try {
-        const result = await (rpc as any).invoke(
-          'console:credentialListUsers',
-          null
-        )
-        return (result.users ?? []) as Array<{
-          userId: string
-          credentials: Record<string, boolean>
-        }>
-      } catch {
-        return []
-      }
-    },
-    enabled: credentials.some((c) => c.type === 'wire'),
-  })
-
   if (credentials.length === 0) {
     return (
       <Center h={300}>
@@ -93,91 +78,148 @@ export const CredentialsOverviewTab: React.FunctionComponent = () => {
     )
   }
 
-  const getUserCount = (credName: string) => {
-    if (!usersData) return 0
-    return usersData.filter((u) => u.credentials[credName]).length
-  }
-
   return (
     <Box p="md">
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
-        {credentials.map((cred) => {
-          const isGlobal = cred.type === 'singleton'
-          const isConnected = isGlobal
-            ? globalStatus?.[cred.name] === true
-            : false
-          const connectedUsers = isGlobal ? null : getUserCount(cred.name)
-          const totalUsers = isGlobal ? null : (usersData?.length ?? 0)
-
-          return (
-            <Card key={cred.name} shadow="xs" padding="lg" radius="md" withBorder>
-              <Stack gap="xs">
-                <Group justify="space-between">
-                  <Text fw={600} size="sm">
-                    {cred.displayName}
-                  </Text>
-                  {cred.isOAuth2 ? (
-                    <Link2 size={16} color="var(--mantine-color-dimmed)" />
-                  ) : (
-                    <KeyRound size={16} color="var(--mantine-color-dimmed)" />
-                  )}
-                </Group>
-
-                {cred.description && (
-                  <Text size="xs" c="dimmed" lineClamp={2}>
-                    {cred.description}
-                  </Text>
-                )}
-
-                <Group gap="xs">
-                  <Badge
-                    size="xs"
-                    variant="light"
-                    color={cred.isOAuth2 ? 'violet' : 'blue'}
-                  >
-                    {cred.isOAuth2 ? 'OAuth2' : 'API Key'}
-                  </Badge>
-                  <Badge
-                    size="xs"
-                    variant="light"
-                    color={isGlobal ? 'gray' : 'blue'}
-                  >
-                    {isGlobal ? 'Global' : 'Per-user'}
-                  </Badge>
-                </Group>
-
-                <Group gap={6} mt={4}>
-                  {isGlobal ? (
-                    isConnected ? (
-                      <>
-                        <Circle
-                          size={8}
-                          fill="var(--mantine-color-teal-6)"
-                          color="var(--mantine-color-teal-6)"
-                        />
-                        <Text size="xs" c="teal.6">
-                          Connected
-                        </Text>
-                      </>
-                    ) : (
-                      <>
-                        <Circle size={8} color="var(--mantine-color-gray-5)" />
-                        <Text size="xs" c="dimmed">
-                          Not connected
-                        </Text>
-                      </>
-                    )
-                  ) : (
-                    <Text size="xs" c="dimmed">
-                      {connectedUsers} / {totalUsers} users connected
-                    </Text>
-                  )}
-                </Group>
-              </Stack>
-            </Card>
-          )
-        })}
+        {credentials.map((cred) => (
+          <CredentialCard
+            key={cred.name}
+            credential={cred}
+            isConnected={globalStatus?.[cred.name] === true}
+          />
+        ))}
       </SimpleGrid>
     </Box>
+  )
+}
+
+const CredentialCard: React.FunctionComponent<{
+  credential: CredentialMeta
+  isConnected: boolean
+}> = ({ credential, isConnected }) => {
+  const rpc = usePikkuRPC()
+  const queryClient = useQueryClient()
+
+  const connectMutation = useMutation({
+    mutationFn: async () => {
+      const result = await (rpc as any).invoke('console:oauthConnect', {
+        credentialName: credential.name,
+      })
+      window.open(result.authUrl, 'oauth-connect', 'width=600,height=700')
+    },
+  })
+
+  const disconnectMutation = useMutation({
+    mutationFn: async () => {
+      await (rpc as any).invoke('console:oauthDisconnect', {
+        credentialName: credential.name,
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['credential-global-status'],
+      })
+      queryClient.invalidateQueries({ queryKey: ['oauth-status'] })
+    },
+  })
+
+  return (
+    <Card shadow="xs" padding="lg" radius="md" withBorder>
+      <Stack gap="xs">
+        <Group justify="space-between">
+          <Text fw={600} size="sm">
+            {credential.displayName}
+          </Text>
+          {credential.isOAuth2 ? (
+            <Link2 size={16} color="var(--mantine-color-dimmed)" />
+          ) : (
+            <KeyRound size={16} color="var(--mantine-color-dimmed)" />
+          )}
+        </Group>
+
+        {credential.description && (
+          <Text size="xs" c="dimmed" lineClamp={2}>
+            {credential.description}
+          </Text>
+        )}
+
+        <Badge
+          size="xs"
+          variant="light"
+          color={credential.isOAuth2 ? 'violet' : 'blue'}
+        >
+          {credential.isOAuth2 ? 'OAuth2' : 'API Key'}
+        </Badge>
+
+        <Group gap={6} mt={4}>
+          {isConnected ? (
+            <>
+              <Circle
+                size={8}
+                fill="var(--mantine-color-teal-6)"
+                color="var(--mantine-color-teal-6)"
+              />
+              <Text size="xs" c="teal.6">
+                Connected
+              </Text>
+            </>
+          ) : (
+            <>
+              <Circle size={8} color="var(--mantine-color-gray-5)" />
+              <Text size="xs" c="dimmed">
+                Not connected
+              </Text>
+            </>
+          )}
+        </Group>
+
+        {credential.isOAuth2 && (
+          <Box mt={4}>
+            {isConnected ? (
+              <Group gap="xs">
+                <Button
+                  size="compact-xs"
+                  variant="light"
+                  onClick={() => connectMutation.mutate()}
+                  loading={connectMutation.isPending}
+                >
+                  Reconnect
+                </Button>
+                <Button
+                  size="compact-xs"
+                  variant="light"
+                  color="red"
+                  onClick={() => disconnectMutation.mutate()}
+                  loading={disconnectMutation.isPending}
+                >
+                  Disconnect
+                </Button>
+              </Group>
+            ) : (
+              <Button
+                size="compact-xs"
+                onClick={() => connectMutation.mutate()}
+                loading={connectMutation.isPending}
+                leftSection={<Link2 size={12} />}
+              >
+                Connect
+              </Button>
+            )}
+          </Box>
+        )}
+
+        {connectMutation.isError && (
+          <Alert
+            color="red"
+            variant="light"
+            icon={<AlertTriangle size={14} />}
+          >
+            {String(
+              (connectMutation.error as any)?.message || connectMutation.error
+            )}
+          </Alert>
+        )}
+      </Stack>
+    </Card>
   )
 }

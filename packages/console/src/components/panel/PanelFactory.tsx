@@ -47,6 +47,7 @@ import {
   SecretConfiguration,
   VariableConfiguration,
 } from '../project/panels/SecretVariablePanels'
+import { CredentialUserPanel } from '../project/panels/CredentialUserPanel'
 
 interface PanelChild {
   id: string
@@ -531,6 +532,22 @@ export const createPanelChildren = (panelData: PanelData): PanelChild[] => {
             <Box px="md">
               <VariableConfiguration
                 variableId={panelData.id}
+                metadata={panelData.metadata}
+              />
+            </Box>
+          ),
+        },
+      ]
+
+    case 'credentialUser':
+      return [
+        {
+          id: 'configuration',
+          title: 'Credentials',
+          content: (
+            <Box px="md">
+              <CredentialUserPanel
+                userId={panelData.id}
                 metadata={panelData.metadata}
               />
             </Box>

@@ -69,7 +69,10 @@ export const createSingletonServices = pikkuServices(
         PgKyselyWorkflowService,
         PgKyselyWorkflowRunService,
       } = await import('@pikku/kysely-postgres')
-      const pikkuKysely = new PikkuKysely<KyselyPikkuDB>(logger, process.env.DATABASE_URL!)
+      const pikkuKysely = new PikkuKysely<KyselyPikkuDB>(
+        logger,
+        process.env.DATABASE_URL!
+      )
       await pikkuKysely.init()
       aiStorage = new PgKyselyAIStorageService(pikkuKysely.kysely)
       await aiStorage.init()
@@ -98,7 +101,7 @@ export const createSingletonServices = pikkuServices(
       workflowService = new MySQLKyselyWorkflowService(db)
       await workflowService.init()
       workflowRunService = new MySQLKyselyWorkflowRunService(db)
-    // } else if (backend === 'redis') {
+      // } else if (backend === 'redis') {
       // const { default: Redis } = await import('ioredis')
       // const { RedisAgentRunService, RedisAIStorageService, RedisWorkflowService, RedisWorkflowRunService } = await import('@pikku/redis')
       // const { default: Database } = await import('better-sqlite3')
@@ -123,6 +126,11 @@ export const createSingletonServices = pikkuServices(
     await secrets.setSecretJSON('MOCK_OAUTH_APP', {
       clientId: 'mock-client-id',
       clientSecret: 'mock-client-secret',
+    })
+
+    await secrets.setSecretJSON('SLACK_OAUTH_APP', {
+      clientId: '00512a03116f14d0000000003',
+      clientSecret: 'K005p2Yl6t9kDmAppyq0vsKlxcW1Y7I',
     })
 
     return {

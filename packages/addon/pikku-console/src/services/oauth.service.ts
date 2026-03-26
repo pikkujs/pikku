@@ -5,6 +5,7 @@ export interface PendingOAuthFlow {
   oauth2: OAuth2CredentialConfig
   secretId: string
   callbackUrl: string
+  userId?: string
   createdAt: number
 }
 

@@ -25,12 +25,14 @@ export const oauthExchangeTokens = pikkuSessionlessFunc<
     const tokens = await oauth2Client.exchangeCode(code, flow.callbackUrl)
 
     if (credentialService) {
-      await credentialService.set(flow.credentialName, tokens)
+      await credentialService.set(flow.credentialName, tokens, flow.userId)
     } else {
       await secrets.setSecretJSON(flow.oauth2.tokenSecretId, tokens)
     }
 
-    logger.info(`Tokens stored for '${flow.credentialName}'`)
+    logger.info(
+      `Tokens stored for '${flow.credentialName}'${flow.userId ? ` (user: ${flow.userId})` : ''}`
+    )
 
     return { credentialName: flow.credentialName }
   },

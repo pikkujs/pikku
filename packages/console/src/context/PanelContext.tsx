@@ -18,6 +18,7 @@ export type PanelType =
   | 'agent'
   | 'secret'
   | 'variable'
+  | 'credentialUser'
 
 export interface PanelData {
   type: PanelType
@@ -58,6 +59,7 @@ interface PanelContextType {
   openAgent: (agentId: string, metadata?: any) => void
   openSecret: (secretId: string, metadata?: any) => void
   openVariable: (variableId: string, metadata?: any) => void
+  openCredentialUser: (userId: string, metadata?: any) => void
   navigateInPanel: (
     type: PanelType,
     id: string,
@@ -241,6 +243,13 @@ export const PanelProvider: React.FunctionComponent<PanelProviderProps> = ({
     [openPanelGeneric]
   )
 
+  const openCredentialUser = useCallback(
+    (userId: string, metadata?: any) => {
+      openPanelGeneric('credentialUser', userId, `User: ${userId}`, metadata)
+    },
+    [openPanelGeneric]
+  )
+
   const navigateInPanel = useCallback(
     (type: PanelType, id: string, title: string, metadata?: any) => {
       setPanels((prev) => {
@@ -364,6 +373,7 @@ export const PanelProvider: React.FunctionComponent<PanelProviderProps> = ({
         openAgent,
         openSecret,
         openVariable,
+        openCredentialUser,
         navigateInPanel,
         goBack,
         goBackTo,

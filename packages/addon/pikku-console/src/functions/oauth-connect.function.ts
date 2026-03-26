@@ -3,7 +3,7 @@ import { OAuth2Client } from '@pikku/core/oauth2'
 import { randomUUID } from 'crypto'
 
 export const oauthConnect = pikkuSessionlessFunc<
-  { credentialName: string; callbackUrl?: string },
+  { credentialName: string; callbackUrl?: string; userId?: string },
   { authUrl: string }
 >({
   title: 'OAuth Connect',
@@ -12,7 +12,7 @@ export const oauthConnect = pikkuSessionlessFunc<
   expose: true,
   func: async (
     { logger, wiringService, secrets, oauthService },
-    { credentialName, callbackUrl }
+    { credentialName, callbackUrl, userId }
   ) => {
     const secretsMeta = await wiringService.readSecretsMeta()
     const credentialsMeta = await wiringService.readCredentialsMeta()
@@ -40,9 +40,18 @@ export const oauthConnect = pikkuSessionlessFunc<
     const resolvedCallbackUrl =
       callbackUrl || 'http://localhost:7070/oauth/callback'
 
+    const appSecretId =
+      (credential.oauth2 as any).appCredentialSecretId ?? credential.secretId
+    const hasSecret = await secrets.hasSecret(appSecretId)
+    if (!hasSecret) {
+      throw new Error(
+        `OAuth2 app credentials not configured. Set the secret "${appSecretId}" in Config > Secrets with your clientId and clientSecret.`
+      )
+    }
+
     const oauth2Client = new OAuth2Client(
       credential.oauth2,
-      credential.secretId,
+      appSecretId,
       secrets
     )
 
@@ -55,8 +64,9 @@ export const oauthConnect = pikkuSessionlessFunc<
     oauthService.addPendingFlow(state, {
       credentialName,
       oauth2: credential.oauth2,
-      secretId: credential.secretId,
+      secretId: appSecretId,
       callbackUrl: resolvedCallbackUrl,
+      userId,
       createdAt: Date.now(),
     })
 
