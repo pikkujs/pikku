@@ -457,12 +457,6 @@ const OAuthSection: React.FunctionComponent<{
         OAuth2 Connection
       </Text>
 
-      {connectMutation.isError && (
-        <Alert color="red" variant="light" icon={<AlertTriangle size={14} />}>
-          {(connectMutation.error as Error).message}
-        </Alert>
-      )}
-
       {status?.connected ? (
         <>
           <Group gap="xs">
@@ -512,13 +506,27 @@ const OAuthSection: React.FunctionComponent<{
           </Group>
         </>
       ) : (
-        <Button
-          onClick={() => connectMutation.mutate()}
-          loading={connectMutation.isPending}
-          leftSection={<Link2 size={14} />}
-        >
-          Connect {credential.displayName}
-        </Button>
+        <>
+          <Button
+            onClick={() => connectMutation.mutate()}
+            loading={connectMutation.isPending}
+            leftSection={<Link2 size={14} />}
+          >
+            Connect {credential.displayName}
+          </Button>
+          {connectMutation.isError && (
+            <Alert
+              color="red"
+              variant="light"
+              icon={<AlertTriangle size={14} />}
+            >
+              {String(
+                (connectMutation.error as any)?.message ||
+                  connectMutation.error
+              )}
+            </Alert>
+          )}
+        </>
       )}
     </Stack>
   )

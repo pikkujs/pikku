@@ -5086,6 +5086,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/addon-oauth-api@workspace:e2e/packages/oauth-api":
+  version: 0.0.0-use.local
+  resolution: "@pikku/addon-oauth-api@workspace:e2e/packages/oauth-api"
+  dependencies:
+    "@pikku/cli": "npm:*"
+    "@pikku/core": "npm:*"
+    typescript: "npm:^5.9.3"
+    zod: "npm:^4"
+  peerDependencies:
+    "@pikku/core": "*"
+    zod: ^4
+  languageName: unknown
+  linkType: soft
+
 "@pikku/addon-todos@workspace:e2e/packages/todos":
   version: 0.0.0-use.local
   resolution: "@pikku/addon-todos@workspace:e2e/packages/todos"

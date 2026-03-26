@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": ["src", "types"],
+  "outDir": "./.pikku",
+  "addon": true,
+  "node": {
+    "displayName": "OAuth API",
+    "description": "Simple API gated by per-user OAuth credentials",
+    "categories": ["Auth"]
+  }
+}

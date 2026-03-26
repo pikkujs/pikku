@@ -29,6 +29,8 @@ interface CredentialState {
   lastVerification: boolean | undefined
   lastError: string | undefined
   savedSignatures: Record<string, string>
+  lastOAuthApiStatus: number | undefined
+  lastOAuthApiBody: any | undefined
 }
 
 const state: CredentialState = {
@@ -36,6 +38,8 @@ const state: CredentialState = {
   lastVerification: undefined,
   lastError: undefined,
   savedSignatures: {},
+  lastOAuthApiStatus: undefined,
+  lastOAuthApiBody: undefined,
 }
 
 // --- Basic CRUD steps ---
@@ -258,3 +262,30 @@ Then(
     expect(state.lastSignature).not.toBe(savedSig)
   }
 )
+
+// --- OAuth API addon steps ---
+
+When(
+  'I call the OAuth API profile as user {string}',
+  async function (userId: string) {
+    const res = await fetch(`${config.apiUrl}/api/oauth/profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+      body: JSON.stringify({}),
+    })
+    state.lastOAuthApiStatus = res.status
+    state.lastOAuthApiBody = await res.json()
+  }
+)
+
+Then(
+  'the OAuth API response status should be {int}',
+  async function (expectedStatus: number) {
+    expect(state.lastOAuthApiStatus).toBe(expectedStatus)
+  }
+)
+
+Then('the OAuth API profile should be authenticated', async function () {
+  expect(state.lastOAuthApiBody.authenticated).toBe(true)
+  expect(state.lastOAuthApiBody.token).toBeTruthy()
+})

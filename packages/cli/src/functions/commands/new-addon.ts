@@ -169,7 +169,7 @@ ${description}
 
   // src/services.ts
   if (flags.credential && flags.credential !== 'oauth2') {
-    // Per-user credential: use createWireServices with wire.getCredentials()
+    // Per-user credential: use createWireServices with wire.getCredential()
     const credField = flags.credential === 'bearer' ? 'token' : 'apiKey'
     files['src/services.ts'] =
       `import { ${pascalName}Service } from './${name}-api.service.js'
@@ -177,8 +177,7 @@ import { pikkuAddonWireServices } from '#pikku'
 
 export const createWireServices = pikkuAddonWireServices(
   async ({ variables }, wire) => {
-    const credentials = await wire.getCredentials()
-    const cred = credentials['${camelName}'] as { ${credField}: string } | undefined
+    const cred = await wire.getCredential<{ ${credField}: string }>('${camelName}')
     if (!cred?.${credField}) {
       throw new Error('Missing ${camelName} credential')
     }

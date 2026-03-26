@@ -16,6 +16,11 @@ export class PikkuCredentialWireService {
     this.credentials[name] = value
   }
 
+  get<T = unknown>(name: string): T | null | Promise<T | null> {
+    if (this.loaded) return (this.credentials[name] as T) ?? null
+    return this.lazyLoad().then(() => (this.credentials[name] as T) ?? null)
+  }
+
   getAll(): Record<string, unknown> | Promise<Record<string, unknown>> {
     if (this.loaded) return this.credentials
     return this.lazyLoad().then(() => this.credentials)
@@ -74,6 +79,7 @@ export function createWireServicesCredentialWireProps(
   return {
     setCredential: (name: string, value: unknown) =>
       credentialWire.set(name, value),
+    getCredential: <T = unknown>(name: string) => credentialWire.get<T>(name),
     getCredentials: () =>
       allowedNames
         ? credentialWire.getScoped(allowedNames)

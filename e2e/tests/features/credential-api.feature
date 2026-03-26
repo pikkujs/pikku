@@ -186,6 +186,29 @@ Feature: Credential Service API
     When I verify "cross-verify test" with the signature as user "user-y"
     Then the verification should be invalid
 
+  # --- OAuth API addon (per-user OAuth credential gating) ---
+
+  Scenario: OAuth API returns 403 without credentials
+    When I call the OAuth API profile as user "no-creds-user"
+    Then the OAuth API response status should be 403
+
+  Scenario: OAuth API returns 200 after OAuth connect
+    Given the mock OAuth server is running
+    When user "oauth-alice" initiates OAuth connect for "user-oauth"
+    And the OAuth callback is completed for "user-oauth"
+    And I call the OAuth API profile as user "oauth-alice"
+    Then the OAuth API response status should be 200
+    And the OAuth API profile should be authenticated
+
+  Scenario: OAuth API per-user isolation - one connected, one not
+    Given the mock OAuth server is running
+    When user "connected-user" initiates OAuth connect for "user-oauth"
+    And the OAuth callback is completed for "user-oauth"
+    When I call the OAuth API profile as user "connected-user"
+    Then the OAuth API response status should be 200
+    When I call the OAuth API profile as user "disconnected-user"
+    Then the OAuth API response status should be 403
+
   # --- Explicit header loading ---
 
   Scenario: Different signing keys produce different signatures

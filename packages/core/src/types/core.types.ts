@@ -277,6 +277,8 @@ export type PikkuWire<
   pikkuUserId: string
   /** Set a credential value (available in middleware) */
   setCredential: (name: string, value: unknown) => void
+  /** Get a single credential by name — lazy-loads from CredentialService on first call, sync thereafter */
+  getCredential: <T = unknown>(name: string) => T | null | Promise<T | null>
   /** Get all resolved credentials — lazy-loads from CredentialService on first call, sync thereafter */
   getCredentials: () =>
     | Record<string, unknown>

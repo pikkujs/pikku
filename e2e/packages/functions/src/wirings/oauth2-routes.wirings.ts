@@ -18,6 +18,18 @@ const oauth2 = createOAuth2Handler({
         appCredentialSecretId: 'MOCK_OAUTH_APP',
       },
     },
+    'user-oauth': {
+      name: 'user-oauth',
+      displayName: 'User OAuth',
+      type: 'wire',
+      oauth2: {
+        tokenSecretId: 'USER_OAUTH_TOKENS',
+        authorizationUrl: `${mockProviderUrl}/authorize`,
+        tokenUrl: `${mockProviderUrl}/token`,
+        scopes: ['read', 'write'],
+        appCredentialSecretId: 'MOCK_OAUTH_APP',
+      },
+    },
   },
 })
 

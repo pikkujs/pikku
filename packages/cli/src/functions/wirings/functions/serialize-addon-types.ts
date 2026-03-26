@@ -11,7 +11,7 @@ export const serializeAddonTypes = (
  * Addon package types for pikkuAddonConfig and pikkuAddonServices
  */
 
-import type { CreateConfig } from '@pikku/core'
+import type { CreateConfig, PikkuWire } from '@pikku/core'
 ${singletonServicesTypeImport}
 ${configTypeImport}
 ${requiredServicesTypeImport}
@@ -101,9 +101,9 @@ export const pikkuAddonServices = <T extends Record<string, any>, ExistingServic
  * \`\`\`
  */
 export const pikkuAddonWireServices = <ExistingServices extends Omit<Partial<SingletonServices>, 'variables' | 'secrets'> & AddonBaseServices>(
-  func: (services: ExistingServices, wire: any) => Promise<Record<string, any>>
+  func: (services: ExistingServices, wire: PikkuWire) => Promise<Record<string, any>>
 ) => {
-  return ((services: any, wire: any) => {
+  return ((services: any, wire: PikkuWire) => {
     const typedVariables = new TypedVariablesService(services.variables)
     const typedSecrets = new TypedSecretService(services.secrets)
     return func({ ...services, variables: typedVariables, secrets: typedSecrets } as ExistingServices, wire)
