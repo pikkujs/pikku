@@ -209,6 +209,19 @@ Feature: Credential Service API
     When I call the OAuth API profile as user "disconnected-user"
     Then the OAuth API response status should be 403
 
+  # --- Workflow credential propagation ---
+
+  Scenario: Workflow step accesses user credentials via pikkuUserId
+    Given the mock OAuth server is running
+    When user "wf-user" initiates OAuth connect for "user-oauth"
+    And the OAuth callback is completed for "user-oauth"
+    When I run the credential workflow as user "wf-user"
+    Then the credential workflow should return an authenticated profile
+
+  Scenario: Workflow step fails without user credentials
+    When I run the credential workflow as user "wf-no-creds"
+    Then the workflow should fail with "missing_credential"
+
   # --- Explicit header loading ---
 
   Scenario: Different signing keys produce different signatures

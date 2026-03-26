@@ -31,6 +31,7 @@ interface CredentialState {
   savedSignatures: Record<string, string>
   lastOAuthApiStatus: number | undefined
   lastOAuthApiBody: any | undefined
+  lastWorkflowResult: any | undefined
 }
 
 const state: CredentialState = {
@@ -40,6 +41,7 @@ const state: CredentialState = {
   savedSignatures: {},
   lastOAuthApiStatus: undefined,
   lastOAuthApiBody: undefined,
+  lastWorkflowResult: undefined,
 }
 
 // --- Basic CRUD steps ---
@@ -289,3 +291,41 @@ Then('the OAuth API profile should be authenticated', async function () {
   expect(state.lastOAuthApiBody.authenticated).toBe(true)
   expect(state.lastOAuthApiBody.token).toBeTruthy()
 })
+
+// --- Workflow credential propagation steps ---
+
+When(
+  'I run the credential workflow as user {string}',
+  async function (userId: string) {
+    const res = await fetch(`${config.apiUrl}/workflow/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+      body: JSON.stringify({
+        workflowName: 'credentialWorkflow',
+      }),
+    })
+    state.lastWorkflowResult = await res.json()
+  }
+)
+
+Then(
+  'the credential workflow should return an authenticated profile',
+  async function () {
+    expect(state.lastWorkflowResult).toBeTruthy()
+    expect(state.lastWorkflowResult.error).toBeUndefined()
+    expect(state.lastWorkflowResult.authenticated).toBe(true)
+    expect(state.lastWorkflowResult.token).toBeTruthy()
+  }
+)
+
+Then(
+  'the workflow should fail with {string}',
+  async function (expectedError: string) {
+    expect(state.lastWorkflowResult).toBeTruthy()
+    const hasError =
+      state.lastWorkflowResult.status === 'failed' ||
+      state.lastWorkflowResult.error ||
+      JSON.stringify(state.lastWorkflowResult).includes(expectedError)
+    expect(hasError).toBeTruthy()
+  }
+)
