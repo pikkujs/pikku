@@ -5,13 +5,21 @@ export interface PackageFactoryInfo {
   variable: string
 }
 
+export interface CredentialMetaForPackage {
+  name: string
+  displayName: string
+  type: 'singleton' | 'wire'
+  oauth2?: boolean
+}
+
 export const serializePackageFactories = (
   outputPath: string,
   packageName: string,
   configFactory: PackageFactoryInfo | undefined,
   singletonServicesFactory: PackageFactoryInfo | undefined,
   wireServicesFactory: PackageFactoryInfo | undefined,
-  packageMappings: Record<string, string> = {}
+  packageMappings: Record<string, string> = {},
+  credentialsMeta?: Record<string, CredentialMetaForPackage>
 ) => {
   const imports: string[] = [
     `import { pikkuState } from '@pikku/core/internal'`,
@@ -60,10 +68,15 @@ export const serializePackageFactories = (
     return null
   }
 
+  const credentialsLine =
+    credentialsMeta && Object.keys(credentialsMeta).length > 0
+      ? `\npikkuState('${packageName}', 'package', 'credentialsMeta', ${JSON.stringify(credentialsMeta)})\n`
+      : ''
+
   return `${imports.join('\n')}
 
 pikkuState('${packageName}', 'package', 'factories', {
 ${factoryEntries.join('\n')}
 })
-`
+${credentialsLine}`
 }

@@ -96,6 +96,49 @@ export class ToolCredentialRequired extends PikkuError {
   }
 }
 
+export interface AddonCredentialRequirement {
+  credentialName: string
+  displayName: string
+  addonNamespace: string
+  type: 'wire'
+  oauth2: boolean
+}
+
+/**
+ * Given a list of tool names (e.g. ["oauth-api:getProfile"]),
+ * returns the wire OAuth credentials required by their addons.
+ */
+export function getAddonCredentialRequirements(
+  toolNames: string[]
+): AddonCredentialRequirement[] {
+  const requirements = new Map<string, AddonCredentialRequirement>()
+
+  for (const toolName of toolNames) {
+    if (!toolName.includes(':')) continue
+    const resolved = resolveNamespace(toolName)
+    if (!resolved) continue
+
+    const credsMeta = pikkuState(resolved.package, 'package', 'credentialsMeta')
+    if (!credsMeta) continue
+
+    for (const [name, meta] of Object.entries(
+      credsMeta as Record<string, any>
+    )) {
+      if (meta.type === 'wire' && meta.oauth2 && !requirements.has(name)) {
+        requirements.set(name, {
+          credentialName: name,
+          displayName: meta.displayName ?? name,
+          addonNamespace: toolName.split(':')[0],
+          type: 'wire',
+          oauth2: true,
+        })
+      }
+    }
+  }
+
+  return [...requirements.values()]
+}
+
 export type StreamContext = {
   channel: AIStreamChannel
   options?: StreamAIAgentOptions
@@ -332,14 +375,7 @@ export async function buildToolDefs(
             wire,
             { sessionService: params.sessionService }
           )
-          try {
-            return await rpcService.rpc(toolName, toolInput)
-          } catch (err: any) {
-            if (err?.payload?.error === 'missing_credential') {
-              return { ...err.payload, __credentialRequired: true }
-            }
-            throw err
-          }
+          return rpcService.rpc(toolName, toolInput)
         },
       })
     }
@@ -513,11 +549,8 @@ export async function buildToolDefs(
           result = await originalExecute(args)
         } catch (err: any) {
           execError = err
-          if (err?.payload?.error === 'missing_credential') {
-            result = { ...err.payload, __credentialRequired: true }
-          } else {
-            result = err instanceof Error ? err.message : String(err)
-          }
+          if (err?.payload?.error === 'missing_credential') throw err
+          result = err instanceof Error ? err.message : String(err)
         }
         const durationMs = Date.now() - startTime
 

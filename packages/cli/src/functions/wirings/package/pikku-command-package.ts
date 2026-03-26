@@ -34,6 +34,27 @@ export const pikkuPackage = pikkuSessionlessFunc<void, boolean | undefined>({
       wireServicesFactory,
     } = filesAndMethods
 
+    // Build credential metadata for this addon package
+    const credentialsMeta: Record<
+      string,
+      {
+        name: string
+        displayName: string
+        type: 'singleton' | 'wire'
+        oauth2?: boolean
+      }
+    > = {}
+    if (state.credentials?.definitions) {
+      for (const def of state.credentials.definitions) {
+        credentialsMeta[def.name] = {
+          name: def.name,
+          displayName: def.displayName ?? def.name,
+          type: def.type ?? 'singleton',
+          oauth2: !!def.oauth2,
+        }
+      }
+    }
+
     const content = serializePackageFactories(
       packageFile,
       addonName,
@@ -55,7 +76,8 @@ export const pikkuPackage = pikkuSessionlessFunc<void, boolean | undefined>({
             variable: wireServicesFactory.variable,
           }
         : undefined,
-      packageMappings
+      packageMappings,
+      Object.keys(credentialsMeta).length > 0 ? credentialsMeta : undefined
     )
 
     if (!content) {

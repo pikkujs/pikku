@@ -184,5 +184,10 @@ export interface PikkuPackageState {
     singletonServices: CoreSingletonServices | null
     /** Absolute path to this package's .pikku directory */
     metaDir: string | null
+    /** Credential metadata for this addon package */
+    credentialsMeta: Record<
+      string,
+      { name: string; displayName: string; type: string; oauth2?: boolean }
+    > | null
   }
 }
