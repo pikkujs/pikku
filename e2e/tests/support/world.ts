@@ -45,8 +45,13 @@ export class AgentWorld extends World {
     await this.page.goto(
       `${config.consoleUrl}/agents/playground?id=${agentName}&threadId=${this.threadId}`
     )
-    // Wait for the chat input to be ready
-    await this.page.getByPlaceholder('Message...').waitFor({ state: 'visible' })
+    // Wait for either the chat input or a credential prompt to be ready
+    await Promise.race([
+      this.page.getByPlaceholder('Message...').waitFor({ state: 'visible' }),
+      this.page
+        .getByText('Connect your accounts')
+        .waitFor({ state: 'visible' }),
+    ])
   }
 
   /**
