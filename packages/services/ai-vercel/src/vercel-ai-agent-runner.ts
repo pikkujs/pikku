@@ -65,19 +65,32 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
     return Object.fromEntries(
       params.tools.map((t) => {
         const cleaned = cleanSchema(t.inputSchema)
+        if (t.needsApproval) {
+          return [
+            t.name,
+            aiTool({
+              description: t.description,
+              inputSchema: jsonSchema(cleaned),
+              needsApproval: true,
+            }),
+          ]
+        }
         return [
           t.name,
-          t.needsApproval
-            ? aiTool({
-                description: t.description,
-                inputSchema: jsonSchema(cleaned),
-                needsApproval: true,
-              })
-            : aiTool({
-                description: t.description,
-                inputSchema: jsonSchema(cleaned),
-                execute: async (input: any) => t.execute(input),
-              }),
+          aiTool({
+            description: t.description,
+            inputSchema: jsonSchema(cleaned),
+            execute: async (input: any) => {
+              try {
+                return await t.execute(input)
+              } catch (err: any) {
+                if (err?.payload?.error === 'missing_credential') {
+                  return { __credentialRequired: true, ...err.payload }
+                }
+                throw err
+              }
+            },
+          }),
         ]
       })
     )
