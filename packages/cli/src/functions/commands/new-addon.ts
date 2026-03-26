@@ -13,7 +13,7 @@ import {
 } from '@pikku/openapi-parser'
 
 function toCamelCase(str: string): string {
-  return str.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+  return str.replace(/-([a-z0-9])/g, (_, c) => c.toUpperCase())
 }
 
 function toPascalCase(str: string): string {
@@ -23,6 +23,69 @@ function toPascalCase(str: string): string {
 
 function toScreamingSnake(str: string): string {
   return str.replace(/-/g, '_').toUpperCase()
+}
+
+const TLD_SEGMENTS = new Set([
+  'com',
+  'io',
+  'org',
+  'net',
+  'co',
+  'dev',
+  'app',
+  'us',
+  'uk',
+  'eu',
+  'de',
+  'fr',
+  'nl',
+  'ch',
+  'ca',
+  'au',
+  'gov',
+  'edu',
+  'local',
+  'cloud',
+  'ai',
+  'fm',
+  'tv',
+  'me',
+  'cc',
+  'info',
+  'biz',
+  'xyz',
+  'tech',
+  'space',
+  'online',
+  'site',
+  'store',
+  'ac',
+  'int',
+  'mil',
+  'ninja',
+  'guru',
+])
+
+function sanitizeAddonName(raw: string): string {
+  const dotParts = raw.toLowerCase().split('.')
+  const kept: string[] = []
+  for (const part of dotParts) {
+    const clean = part.replace(/^-|-$/g, '')
+    if (TLD_SEGMENTS.has(clean)) continue
+    const hyphenIdx = part.indexOf('-')
+    if (hyphenIdx > 0 && TLD_SEGMENTS.has(part.slice(0, hyphenIdx))) {
+      kept.push(part.slice(hyphenIdx + 1))
+      continue
+    }
+    kept.push(part)
+  }
+  let name = kept
+    .join('-')
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+  if (name && /^[0-9]/.test(name)) name = `x${name}`
+  return name || raw
 }
 
 interface AddonVars {
@@ -817,6 +880,8 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       mcp = false,
     }
   ) => {
+    name = sanitizeAddonName(name)
+
     if (!/^[a-z][a-z0-9_-]*$/.test(name)) {
       logger.error(
         `Invalid addon name "${name}": must start with a lowercase letter and contain only lowercase alphanumerics, hyphens, and underscores`

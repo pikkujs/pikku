@@ -193,7 +193,11 @@ function generateFunctionFile(
     const tag = parsed.tags[0]
     const tagDesc = spec.tagDescriptions[tag]
     if (tagDesc) {
-      lines.push(`// ${tag} — ${tagDesc}`)
+      const cleanDesc = tagDesc
+        .replace(/\r?\n/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+      lines.push(`// ${tag} — ${cleanDesc}`)
       lines.push('')
     }
   }
@@ -341,7 +345,8 @@ function formatParamProp(
   const zodCode = schemaToZod(param.schema, ctx, { optional: !param.required })
 
   let descParts: string[] = []
-  if (param.description) descParts.push(param.description)
+  if (param.description)
+    descParts.push(param.description.replace(/\*\//g, '* /'))
   if (param.example !== undefined)
     descParts.push(`Example: ${JSON.stringify(param.example)}`)
 
@@ -393,7 +398,8 @@ function generateServiceFile(
   vars: AddonVars,
   flags: CodegenFlags
 ): string {
-  const { name, pascalName, screamingName, displayName } = vars
+  const { name, pascalName, screamingName } = vars
+  const displayName = vars.displayName.replace(/'/g, '')
   const lines: string[] = []
 
   // Always import all error classes used in the switch statement
@@ -666,7 +672,8 @@ function generateServiceFile(
 }
 
 function generateVariableFile(spec: ParsedSpec, vars: AddonVars): string {
-  const { camelName, screamingName, displayName } = vars
+  const { camelName, screamingName } = vars
+  const displayName = vars.displayName.replace(/'/g, '')
   const serverUrls = spec.serverUrls.length > 0 ? spec.serverUrls : []
   const defaultUrl = serverUrls[0]
 
@@ -677,10 +684,16 @@ function generateVariableFile(spec: ParsedSpec, vars: AddonVars): string {
 
   const schemaVarName = `${camelName}BaseUrlSchema`
 
-  const urlsLiteral = serverUrls.map((u) => JSON.stringify(u)).join(', ')
-  lines.push(
-    `export const ${schemaVarName} = z.enum([${urlsLiteral}]).default(${JSON.stringify(defaultUrl)})`
-  )
+  if (serverUrls.length > 0) {
+    const urlsLiteral = serverUrls.map((u) => JSON.stringify(u)).join(', ')
+    lines.push(
+      `export const ${schemaVarName} = z.enum([${urlsLiteral}]).default(${JSON.stringify(defaultUrl)})`
+    )
+  } else {
+    lines.push(
+      `export const ${schemaVarName} = z.string().describe('Base URL for the ${displayName} API')`
+    )
+  }
 
   lines.push('')
   lines.push(`wireVariable({`)

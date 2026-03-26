@@ -16,8 +16,8 @@ export interface OpenAPISchema {
   default?: unknown
   minimum?: number
   maximum?: number
-  exclusiveMinimum?: number
-  exclusiveMaximum?: number
+  exclusiveMinimum?: number | boolean
+  exclusiveMaximum?: number | boolean
   minLength?: number
   maxLength?: number
   pattern?: string
@@ -76,14 +76,33 @@ export function schemaToZod(
     code += '.optional()'
   }
 
-  // Default
+  // Default — validate type compatibility and coerce mismatches
   if (schema.default !== undefined) {
-    code += `.default(${JSON.stringify(schema.default)})`
+    let defaultValue = schema.default
+    if (defaultValue === null && !schema.nullable) {
+      // skip null defaults unless nullable
+    } else if (schema.type === 'array' && !Array.isArray(defaultValue)) {
+      // skip type-mismatched defaults
+    } else if (schema.type === 'boolean' && typeof defaultValue === 'string') {
+      defaultValue = defaultValue === 'true'
+      code += `.default(${JSON.stringify(defaultValue)})`
+    } else if (
+      (schema.type === 'number' || schema.type === 'integer') &&
+      typeof defaultValue === 'string'
+    ) {
+      const parsed = Number(defaultValue)
+      if (!isNaN(parsed)) code += `.default(${JSON.stringify(parsed)})`
+    } else if (schema.type === 'string' && typeof defaultValue === 'number') {
+      code += `.default(${JSON.stringify(String(defaultValue))})`
+    } else {
+      code += `.default(${JSON.stringify(defaultValue)})`
+    }
   }
 
-  // Description
+  // Description — sanitize */ to prevent breaking JSDoc comments downstream
   if (schema.description) {
-    code += `.describe(${JSON.stringify(schema.description)})`
+    const safeDesc = schema.description.replace(/\*\//g, '* /')
+    code += `.describe(${JSON.stringify(safeDesc)})`
   }
 
   return code
@@ -165,17 +184,22 @@ function handleString(schema: OpenAPISchema): string {
 }
 
 function handleEnum(values: unknown[]): string {
-  // Single value — use z.literal
-  if (values.length === 1) {
-    return `z.literal(${JSON.stringify(values[0])})`
+  const primitives = values.filter(
+    (v) =>
+      v === null ||
+      typeof v === 'string' ||
+      typeof v === 'number' ||
+      typeof v === 'boolean'
+  )
+  if (primitives.length === 0) return 'z.unknown()'
+  if (primitives.length === 1) {
+    return `z.literal(${JSON.stringify(primitives[0])})`
   }
-  // If all values are strings, use z.enum
-  if (values.every((v) => typeof v === 'string')) {
-    const enumValues = values.map((v) => JSON.stringify(v)).join(', ')
+  if (primitives.every((v) => typeof v === 'string')) {
+    const enumValues = primitives.map((v) => JSON.stringify(v)).join(', ')
     return `z.enum([${enumValues}])`
   }
-  // Mixed types — use z.union of z.literal
-  const literals = values
+  const literals = primitives
     .map((v) => `z.literal(${JSON.stringify(v)})`)
     .join(', ')
   return `z.union([${literals}])`
@@ -285,7 +309,10 @@ function applyRefinements(code: string, schema: OpenAPISchema): string {
   let result = code
 
   // String refinements
-  if (schema.type === 'string' || (!schema.type && !schema.format)) {
+  if (
+    (schema.type === 'string' || (!schema.type && !schema.format)) &&
+    !schema.enum
+  ) {
     if (schema.minLength !== undefined) {
       result += `.min(${schema.minLength})`
     }
@@ -298,17 +325,27 @@ function applyRefinements(code: string, schema: OpenAPISchema): string {
   }
 
   // Number refinements
-  if (schema.type === 'number' || schema.type === 'integer') {
+  if ((schema.type === 'number' || schema.type === 'integer') && !schema.enum) {
+    const exMinIsBoolean = typeof schema.exclusiveMinimum === 'boolean'
+    const exMaxIsBoolean = typeof schema.exclusiveMaximum === 'boolean'
     if (schema.minimum !== undefined) {
-      result += `.min(${schema.minimum})`
+      if (exMinIsBoolean && schema.exclusiveMinimum) {
+        result += `.gt(${schema.minimum})`
+      } else {
+        result += `.min(${schema.minimum})`
+      }
     }
     if (schema.maximum !== undefined) {
-      result += `.max(${schema.maximum})`
+      if (exMaxIsBoolean && schema.exclusiveMaximum) {
+        result += `.lt(${schema.maximum})`
+      } else {
+        result += `.max(${schema.maximum})`
+      }
     }
-    if (schema.exclusiveMinimum !== undefined) {
+    if (!exMinIsBoolean && schema.exclusiveMinimum !== undefined) {
       result += `.gt(${schema.exclusiveMinimum})`
     }
-    if (schema.exclusiveMaximum !== undefined) {
+    if (!exMaxIsBoolean && schema.exclusiveMaximum !== undefined) {
       result += `.lt(${schema.exclusiveMaximum})`
     }
   }
@@ -338,8 +375,34 @@ function safeKey(key: string): string {
  * Generate the Zod variable name for a component schema.
  * e.g. "PaginatedResponse" → "PaginatedResponseSchema"
  */
+const RESERVED_TYPE_NAMES = new Set([
+  'object',
+  'string',
+  'number',
+  'boolean',
+  'symbol',
+  'undefined',
+  'null',
+  'void',
+  'never',
+  'any',
+  'unknown',
+  'bigint',
+  'function',
+  'class',
+  'enum',
+  'interface',
+  'type',
+  'import',
+  'export',
+])
+
 export function sanitizeTypeName(name: string): string {
-  return name.replace(/[^a-zA-Z0-9_$]/g, '')
+  const cleaned = name.replace(/[^a-zA-Z0-9_$]/g, '')
+  if (RESERVED_TYPE_NAMES.has(cleaned.toLowerCase())) {
+    return `${cleaned}Type`
+  }
+  return cleaned
 }
 
 export function schemaVarName(name: string): string {
