@@ -8,3 +8,11 @@ Feature: AI Agent with OAuth Credential Gating
     Given I open the "oauthApiAgent" playground
     Then I should see "Connect your accounts" on the page
     And I should see "User OAuth" on the page
+
+  Scenario: Agent playground shows chat after credential is connected
+    Given I set credential "user-oauth" with value:
+      """
+      { "accessToken": "e2e-test-token" }
+      """
+    And I open the "oauthApiAgent" playground
+    Then I should not see "Connect your accounts" in the chat
