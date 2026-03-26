@@ -57,8 +57,24 @@ const ToolCallDisplay: React.FunctionComponent<{
   addResult?: (result: unknown) => void
 }> = ({ toolCallId, toolName, args, result, status, addResult }) => {
   const [opened, setOpened] = useState(false)
-  const { handleApproval } = usePikkuApproval()
-  const isApproval = status.type === 'requires-action'
+  const { handleApproval, pendingApprovals } = usePikkuApproval()
+
+  // Detect credential request from tool result
+  const credentialPayload = (() => {
+    if (!result) return null
+    const r = typeof result === 'string' ? (() => { try { return JSON.parse(result) } catch { return null } })() : result
+    return r && typeof r === 'object' && (r as any).__credentialRequired ? r as {
+      credentialName: string
+      credentialType: 'oauth2' | 'apikey'
+      connectUrl?: string
+    } : null
+  })()
+
+  const pendingCredential = pendingApprovals.find(
+    (p) => p.toolCallId === toolCallId && p.type === 'credential-request'
+  )
+  const isCredentialRequest = !!credentialPayload || !!pendingCredential
+  const isApproval = status.type === 'requires-action' && !isCredentialRequest
   const approvalReason = (args as any)?.__approvalReason
   const displayArgs = { ...args }
   delete (displayArgs as any).__approvalReason
@@ -138,16 +154,37 @@ const ToolCallDisplay: React.FunctionComponent<{
     )
   }
 
-  if (status.type === 'missing-credential') {
-    const payload = status.payload
+  if (isCredentialRequest && !responded) {
+    const cred = credentialPayload ?? pendingCredential
     const serverUrl = getServerUrl()
+    const rawConnectUrl = cred?.connectUrl
+    const connectUrl = rawConnectUrl?.startsWith('/')
+      ? `${serverUrl}${rawConnectUrl}`
+      : rawConnectUrl
+
     const handleConnect = () => {
-      const connectUrl = payload.connectUrl?.startsWith('/')
-        ? `${serverUrl}${payload.connectUrl}`
-        : payload.connectUrl
-      if (connectUrl) {
-        window.open(connectUrl, 'oauth-connect', 'width=600,height=700')
+      if (cred?.credentialType === 'oauth2' && connectUrl) {
+        const popup = window.open(connectUrl, 'oauth-connect', 'width=600,height=700')
+        // Poll for popup close, then resume
+        const timer = setInterval(() => {
+          if (!popup || popup.closed) {
+            clearInterval(timer)
+            setResponded('approved')
+            handleApproval(toolCallId, true)
+            addResult?.({ approved: true })
+          }
+        }, 500)
+      } else {
+        setResponded('approved')
+        handleApproval(toolCallId, true)
+        addResult?.({ approved: true })
       }
+    }
+
+    const handleIgnore = () => {
+      setResponded('denied')
+      handleApproval(toolCallId, false)
+      addResult?.({ approved: false })
     }
 
     return (
@@ -168,23 +205,36 @@ const ToolCallDisplay: React.FunctionComponent<{
           </PikkuBadge>
         </Group>
         <Text size="sm" mb="xs">
-          This action requires the <strong>{payload.credentialName}</strong>{' '}
+          This action requires the <strong>{cred?.credentialName ?? 'OAuth'}</strong>{' '}
           credential to be connected.
         </Text>
-        {payload.credentialType === 'oauth2' && payload.connectUrl && (
-          <Button
-            size="xs"
-            variant="light"
-            onClick={handleConnect}
-          >
-            Connect {payload.credentialName}
+        <Group gap="xs">
+          <Button size="xs" variant="light" onClick={handleConnect}>
+            Connect {cred?.credentialName ?? 'OAuth'}
           </Button>
-        )}
-        {payload.credentialType === 'apikey' && (
-          <Text size="xs" c="dimmed">
-            Configure this API key in the Credentials page.
+          <Button size="xs" color="gray" variant="light" onClick={handleIgnore}>
+            Ignore
+          </Button>
+        </Group>
+      </Paper>
+    )
+  }
+
+  if (isCredentialRequest && responded) {
+    return (
+      <Paper withBorder radius="sm" p="sm" my={4}>
+        <Group gap="xs">
+          <Wrench size={14} color="var(--mantine-color-orange-6)" />
+          <Text size="xs" fw={600}>
+            {toolName}
           </Text>
-        )}
+          <PikkuBadge
+            type="label"
+            color={responded === 'approved' ? 'green' : 'gray'}
+          >
+            {responded === 'approved' ? 'connected' : 'ignored'}
+          </PikkuBadge>
+        </Group>
       </Paper>
     )
   }

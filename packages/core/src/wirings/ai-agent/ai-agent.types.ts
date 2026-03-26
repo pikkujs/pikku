@@ -264,6 +264,18 @@ export type AIStreamEvent =
       session?: string
     }
   | {
+      type: 'credential-request'
+      toolCallId: string
+      toolName: string
+      args: unknown
+      credentialName: string
+      credentialType: 'oauth2' | 'apikey'
+      connectUrl?: string
+      runId: string
+      agent?: string
+      session?: string
+    }
+  | {
       type: 'usage'
       tokens: { input: number; output: number }
       model: string
@@ -310,6 +322,15 @@ export type PendingApproval =
       displayToolName: string
       displayArgs: unknown
     }
+  | {
+      type: 'credential-request'
+      toolCallId: string
+      toolName: string
+      args: unknown
+      credentialName: string
+      credentialType: 'oauth2' | 'apikey'
+      connectUrl?: string
+    }
 
 export interface AgentRunState {
   runId: string
@@ -318,7 +339,7 @@ export interface AgentRunState {
   resourceId: string
   status: 'running' | 'suspended' | 'completed' | 'failed'
   errorMessage?: string
-  suspendReason?: 'approval' | 'rpc-missing'
+  suspendReason?: 'approval' | 'credential' | 'rpc-missing'
   missingRpcs?: string[]
   pendingApprovals?: PendingApproval[]
   usage: { inputTokens: number; outputTokens: number; model: string }

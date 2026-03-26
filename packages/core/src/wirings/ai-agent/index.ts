@@ -10,6 +10,7 @@ export {
   type RunAIAgentParams,
   type StreamAIAgentOptions,
   ToolApprovalRequired,
+  ToolCredentialRequired,
 } from './ai-agent-prepare.js'
 export {
   addAIAgent,

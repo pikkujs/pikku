@@ -23,6 +23,8 @@ export interface PikkuAgentChatProps extends PikkuAgentRuntimeOptions {
    */
   hideToolCalls?: boolean | string[]
   dark?: boolean
+  /** Max width of the chat content area. Defaults to 768. Set to 'none' for full width. */
+  maxWidth?: number | 'none'
 }
 
 interface ChatColors {
@@ -590,7 +592,7 @@ const PikkuComposer: FunctionComponent<{ disabled?: boolean }> = ({
 }
 
 export function PikkuAgentChat(props: PikkuAgentChatProps) {
-  const { emptyMessage, hideToolCalls, dark, ...runtimeOptions } = props
+  const { emptyMessage, hideToolCalls, dark, maxWidth = 768, ...runtimeOptions } = props
   const { runtime, isAwaitingApproval, pendingApprovals, handleApproval } =
     usePikkuAgentRuntime(runtimeOptions)
 
@@ -626,7 +628,7 @@ export function PikkuAgentChat(props: PikkuAgentChatProps) {
           >
             <div
               style={{
-                maxWidth: 768,
+                maxWidth: maxWidth === 'none' ? undefined : maxWidth,
                 margin: '0 auto',
                 padding: 16,
                 display: 'flex',
@@ -660,7 +662,7 @@ export function PikkuAgentChat(props: PikkuAgentChatProps) {
               />
             </div>
           </ThreadPrimitive.Viewport>
-          <div style={{ maxWidth: 768, margin: '0 auto', width: '100%', padding: '0 16px' }}>
+          <div style={{ maxWidth: maxWidth === 'none' ? undefined : maxWidth, margin: '0 auto', width: '100%', padding: '0 16px' }}>
             <PikkuComposer disabled={isAwaitingApproval} />
           </div>
         </ThreadPrimitive.Root>

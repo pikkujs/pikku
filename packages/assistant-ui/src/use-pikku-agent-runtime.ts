@@ -31,6 +31,10 @@ export interface PendingApproval {
   args: unknown
   reason?: string
   runId: string
+  type?: 'approval-request' | 'credential-request'
+  credentialName?: string
+  credentialType?: 'oauth2' | 'apikey'
+  connectUrl?: string
 }
 
 export interface PikkuApprovalContextValue {
@@ -143,6 +147,19 @@ async function processStream(
           args: event.args,
           reason: event.reason,
           runId: event.runId,
+          type: 'approval-request',
+        })
+        break
+      case 'credential-request':
+        pendingApprovals.push({
+          toolCallId: event.toolCallId,
+          toolName: event.toolName,
+          args: event.args,
+          runId: event.runId,
+          type: 'credential-request',
+          credentialName: event.credentialName,
+          credentialType: event.credentialType,
+          connectUrl: event.connectUrl,
         })
         break
       case 'error':

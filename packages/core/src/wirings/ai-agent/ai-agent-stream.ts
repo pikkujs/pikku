@@ -36,6 +36,7 @@ import {
   buildToolDefs,
   createScopedChannel,
   ToolApprovalRequired,
+  ToolCredentialRequired,
   type RunAIAgentParams,
   type StreamAIAgentOptions,
   type StreamContext,
@@ -236,6 +237,7 @@ type StepLoopParams = {
 type StepLoopResult =
   | { outcome: 'done' }
   | { outcome: 'approval'; approvals: ToolApprovalRequired[] }
+  | { outcome: 'credential'; credentialRequests: ToolCredentialRequired[] }
 
 async function runStreamStepLoop(
   params: StepLoopParams
@@ -308,6 +310,13 @@ async function runStreamStepLoop(
         }
       }
       return { outcome: 'approval', approvals: approvalsNeeded }
+    }
+
+    const credentialRequests = checkForCredentialRequests(stepResult, runId)
+    if (credentialRequests.length > 0) {
+      // Append step messages so the tool result is preserved for resume
+      appendStepMessages(runnerParams, stepResult)
+      return { outcome: 'credential', credentialRequests }
     }
 
     appendStepMessages(runnerParams, stepResult)
@@ -384,6 +393,40 @@ export function checkForApprovals(
     }
   }
   return approvals
+}
+
+export function checkForCredentialRequests(
+  stepResult: AIAgentStepResult,
+  runId: string
+): ToolCredentialRequired[] {
+  const requests: ToolCredentialRequired[] = []
+  for (const tr of stepResult.toolResults) {
+    if (
+      tr.result &&
+      typeof tr.result === 'object' &&
+      '__credentialRequired' in (tr.result as object)
+    ) {
+      const r = tr.result as {
+        credentialName: string
+        credentialType: 'oauth2' | 'apikey'
+        connectUrl?: string
+      }
+      const tc = stepResult.toolCalls.find(
+        (t) => t.toolCallId === tr.toolCallId
+      )
+      requests.push(
+        new ToolCredentialRequired(
+          tr.toolCallId,
+          tc?.toolName ?? 'unknown',
+          tc?.args ?? {},
+          r.credentialName,
+          r.credentialType,
+          r.connectUrl
+        )
+      )
+    }
+  }
+  return requests
 }
 
 export function appendStepMessages(
@@ -467,6 +510,40 @@ function handleApprovals(
       }
       channel.send(approvalEvent as any)
     }
+    channel.send({ type: 'done' })
+    channel.close()
+  })()
+}
+
+function handleCredentialRequests(
+  requests: ToolCredentialRequired[],
+  runId: string,
+  channel: AIStreamChannel,
+  aiRunState: AIRunStateService,
+  persistingChannel: PersistingChannel
+): Promise<void> {
+  return (async () => {
+    await persistingChannel.flush()
+
+    const pendingApprovals = requests.map((req) => ({
+      type: 'credential-request' as const,
+      toolCallId: req.toolCallId,
+      toolName: req.toolName,
+      args: req.args,
+      credentialName: req.credentialName,
+      credentialType: req.credentialType,
+      connectUrl: req.connectUrl,
+    }))
+
+    await aiRunState.updateRun(runId, {
+      status: 'suspended',
+      suspendReason: 'credential',
+      pendingApprovals,
+    })
+
+    // Don't send credential-request SSE events — the tool result with
+    // __credentialRequired was already streamed. The frontend detects it
+    // from the tool result and shows Connect/Ignore buttons.
     channel.send({ type: 'done' })
     channel.close()
   })()
@@ -665,6 +742,17 @@ export async function streamAIAgent(
       return persistingChannel.fullText
     }
 
+    if (loopResult.outcome === 'credential') {
+      await handleCredentialRequests(
+        loopResult.credentialRequests,
+        runId,
+        channel,
+        aiRunState,
+        persistingChannel
+      )
+      return persistingChannel.fullText
+    }
+
     await postStreamCleanup(
       persistingChannel,
       aiMiddlewares,
@@ -769,7 +857,8 @@ export async function resumeAIAgent(
             {
               id: input.toolCallId,
               name:
-                pending.type === 'tool-call'
+                pending.type === 'tool-call' ||
+                pending.type === 'credential-request'
                   ? pending.toolName
                   : pending.agentName,
               result: denialResult,
@@ -931,17 +1020,6 @@ export async function resumeAIAgent(
       result: toolResult,
       ...(isError ? { isError: true } : {}),
     })
-
-    // Stop the agent run when a credential is missing — tool-result already sent, don't resume LLM
-    if (
-      isError &&
-      typeof toolResult === 'object' &&
-      (toolResult as any)?.error === 'missing_credential'
-    ) {
-      channel.send({ type: 'done' })
-      channel.close()
-      return
-    }
   }
 
   // Check remaining pending approvals after processing this one
@@ -1118,6 +1196,17 @@ async function continueAfterToolResult(
     if (loopResult.outcome === 'approval') {
       await handleApprovals(
         loopResult.approvals,
+        run.runId,
+        channel,
+        aiRunState,
+        persistingChannel
+      )
+      return
+    }
+
+    if (loopResult.outcome === 'credential') {
+      await handleCredentialRequests(
+        loopResult.credentialRequests,
         run.runId,
         channel,
         aiRunState,

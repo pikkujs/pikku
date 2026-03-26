@@ -70,6 +70,32 @@ export class ToolApprovalRequired extends PikkuError {
   }
 }
 
+export class ToolCredentialRequired extends PikkuError {
+  public readonly toolCallId: string
+  public readonly toolName: string
+  public readonly args: unknown
+  public readonly credentialName: string
+  public readonly credentialType: 'oauth2' | 'apikey'
+  public readonly connectUrl?: string
+
+  constructor(
+    toolCallId: string,
+    toolName: string,
+    args: unknown,
+    credentialName: string,
+    credentialType: 'oauth2' | 'apikey',
+    connectUrl?: string
+  ) {
+    super(`Tool '${toolName}' requires credential '${credentialName}'`)
+    this.toolCallId = toolCallId
+    this.toolName = toolName
+    this.args = args
+    this.credentialName = credentialName
+    this.credentialType = credentialType
+    this.connectUrl = connectUrl
+  }
+}
+
 export type StreamContext = {
   channel: AIStreamChannel
   options?: StreamAIAgentOptions
@@ -310,7 +336,7 @@ export async function buildToolDefs(
             return await rpcService.rpc(toolName, toolInput)
           } catch (err: any) {
             if (err?.payload?.error === 'missing_credential') {
-              return err.payload
+              return { ...err.payload, __credentialRequired: true }
             }
             throw err
           }
@@ -488,7 +514,7 @@ export async function buildToolDefs(
         } catch (err: any) {
           execError = err
           if (err?.payload?.error === 'missing_credential') {
-            result = err.payload
+            result = { ...err.payload, __credentialRequired: true }
           } else {
             result = err instanceof Error ? err.message : String(err)
           }
