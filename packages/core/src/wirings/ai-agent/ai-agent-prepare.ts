@@ -306,7 +306,14 @@ export async function buildToolDefs(
             wire,
             { sessionService: params.sessionService }
           )
-          return rpcService.rpc(toolName, toolInput)
+          try {
+            return await rpcService.rpc(toolName, toolInput)
+          } catch (err: any) {
+            if (err?.payload?.error === 'missing_credential') {
+              return err.payload
+            }
+            throw err
+          }
         },
       })
     }
@@ -478,9 +485,13 @@ export async function buildToolDefs(
         let execError: unknown
         try {
           result = await originalExecute(args)
-        } catch (err) {
+        } catch (err: any) {
           execError = err
-          result = err instanceof Error ? err.message : String(err)
+          if (err?.payload?.error === 'missing_credential') {
+            result = err.payload
+          } else {
+            result = err instanceof Error ? err.message : String(err)
+          }
         }
         const durationMs = Date.now() - startTime
 

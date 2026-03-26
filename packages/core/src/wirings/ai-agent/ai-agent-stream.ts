@@ -931,6 +931,17 @@ export async function resumeAIAgent(
       result: toolResult,
       ...(isError ? { isError: true } : {}),
     })
+
+    // Stop the agent run when a credential is missing — tool-result already sent, don't resume LLM
+    if (
+      isError &&
+      typeof toolResult === 'object' &&
+      (toolResult as any)?.error === 'missing_credential'
+    ) {
+      channel.send({ type: 'done' })
+      channel.close()
+      return
+    }
   }
 
   // Check remaining pending approvals after processing this one
