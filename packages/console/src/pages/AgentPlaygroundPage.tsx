@@ -1,7 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useSearchParams, useNavigate } from '@/router'
-import { Center, Loader, Text, SegmentedControl } from '@mantine/core'
-import { Bot } from 'lucide-react'
+import {
+  Center,
+  Loader,
+  Text,
+  SegmentedControl,
+  Stack,
+  Paper,
+  Group,
+  Button,
+} from '@mantine/core'
+import { Bot, KeyRound, Link2 } from 'lucide-react'
 import { usePikkuMeta } from '@/context/PikkuMetaContext'
 import { PanelProvider, usePanelContext } from '@/context/PanelContext'
 import {
@@ -13,6 +22,76 @@ import { RunsPanel } from '@/components/layout/RunsPanel'
 import { DetailPageHeader } from '@/components/layout/DetailPageHeader'
 import { AgentChat } from '@/components/project/AgentChat'
 import { useDeleteAgentThread } from '@/hooks/useAgentRuns'
+import { useAgentCredentials } from '@/hooks/useAgentCredentials'
+import { getServerUrl } from '@/context/PikkuRpcProvider'
+
+const CredentialPrompt: React.FunctionComponent<{
+  requirements: Array<{
+    credentialName: string
+    displayName: string
+    addonNamespace: string
+    connected: boolean
+  }>
+  onRefresh: () => void
+}> = ({ requirements, onRefresh }) => {
+  const serverUrl = getServerUrl()
+  const missing = requirements.filter((r) => !r.connected)
+
+  const handleConnect = (credentialName: string) => {
+    const connectUrl = `${serverUrl}/credentials/${credentialName}/connect`
+    const popup = window.open(connectUrl, 'oauth-connect', 'width=600,height=700')
+    const timer = setInterval(() => {
+      if (!popup || popup.closed) {
+        clearInterval(timer)
+        onRefresh()
+      }
+    }, 500)
+  }
+
+  return (
+    <Center h="100%" p="xl">
+      <Paper withBorder radius="md" p="xl" maw={480} w="100%">
+        <Stack gap="md" align="center">
+          <KeyRound size={32} color="var(--mantine-color-orange-6)" />
+          <Text fw={600} size="lg" ta="center">
+            Connect your accounts
+          </Text>
+          <Text size="sm" c="dimmed" ta="center">
+            This agent requires the following credentials to be connected before
+            you can start chatting.
+          </Text>
+          <Stack gap="xs" w="100%">
+            {missing.map((req) => (
+              <Group
+                key={req.credentialName}
+                justify="space-between"
+                p="sm"
+                style={{
+                  border: '1px solid var(--mantine-color-default-border)',
+                  borderRadius: 'var(--mantine-radius-sm)',
+                }}
+              >
+                <Group gap="xs">
+                  <Link2 size={16} color="var(--mantine-color-dimmed)" />
+                  <Text size="sm" fw={500}>
+                    {req.displayName}
+                  </Text>
+                </Group>
+                <Button
+                  size="xs"
+                  variant="light"
+                  onClick={() => handleConnect(req.credentialName)}
+                >
+                  Connect
+                </Button>
+              </Group>
+            ))}
+          </Stack>
+        </Stack>
+      </Paper>
+    </Center>
+  )
+}
 
 const AgentPlaygroundInner: React.FunctionComponent<{
   agentId: string
@@ -25,6 +104,12 @@ const AgentPlaygroundInner: React.FunctionComponent<{
     useAgentPlayground()
   const deleteThread = useDeleteAgentThread()
   const [streaming, setStreaming] = useState(false)
+  const {
+    requirements,
+    allConnected,
+    loading: credLoading,
+    refetch: refetchCreds,
+  } = useAgentCredentials(agentId)
 
   useEffect(() => {
     if (agentData) {
@@ -88,7 +173,14 @@ const AgentPlaygroundInner: React.FunctionComponent<{
       runsPanelVisible
       emptyPanelMessage="Agent configuration"
     >
-      <AgentChat key={`${threadId}-${streaming}`} streaming={streaming} />
+      {!credLoading && !allConnected ? (
+        <CredentialPrompt
+          requirements={requirements}
+          onRefresh={refetchCreds}
+        />
+      ) : (
+        <AgentChat key={`${threadId}-${streaming}`} streaming={streaming} />
+      )}
     </ThreePaneLayout>
   )
 }
