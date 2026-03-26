@@ -13,6 +13,7 @@ export type {
   PikkuApprovalContextValue,
   PikkuToolStatusType,
   PikkuToolStatus,
+  MissingCredentialPayload,
 } from './use-pikku-agent-runtime.js'
 export { PikkuAgentChat } from './pikku-agent-chat.js'
 export type { PikkuAgentChatProps } from './pikku-agent-chat.js'

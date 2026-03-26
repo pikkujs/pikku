@@ -30,6 +30,7 @@ import {
   usePikkuApproval,
   resolvePikkuToolStatus,
   type PikkuToolStatus,
+  type MissingCredentialPayload,
 } from '@pikku/assistant-ui'
 import {
   Send,
@@ -133,6 +134,57 @@ const ToolCallDisplay: React.FunctionComponent<{
             {responded}
           </PikkuBadge>
         </Group>
+      </Paper>
+    )
+  }
+
+  if (status.type === 'missing-credential') {
+    const payload = status.payload
+    const serverUrl = getServerUrl()
+    const handleConnect = () => {
+      const connectUrl = payload.connectUrl?.startsWith('/')
+        ? `${serverUrl}${payload.connectUrl}`
+        : payload.connectUrl
+      if (connectUrl) {
+        window.open(connectUrl, 'oauth-connect', 'width=600,height=700')
+      }
+    }
+
+    return (
+      <Paper
+        withBorder
+        radius="sm"
+        p="sm"
+        my={4}
+        bg="var(--mantine-color-orange-light)"
+      >
+        <Group gap="xs" mb="xs">
+          <Wrench size={14} color="var(--mantine-color-orange-6)" />
+          <Text size="xs" fw={600}>
+            {toolName}
+          </Text>
+          <PikkuBadge type="label" color="orange">
+            credential required
+          </PikkuBadge>
+        </Group>
+        <Text size="sm" mb="xs">
+          This action requires the <strong>{payload.credentialName}</strong>{' '}
+          credential to be connected.
+        </Text>
+        {payload.credentialType === 'oauth2' && payload.connectUrl && (
+          <Button
+            size="xs"
+            variant="light"
+            onClick={handleConnect}
+          >
+            Connect {payload.credentialName}
+          </Button>
+        )}
+        {payload.credentialType === 'apikey' && (
+          <Text size="xs" c="dimmed">
+            Configure this API key in the Credentials page.
+          </Text>
+        )}
       </Paper>
     )
   }

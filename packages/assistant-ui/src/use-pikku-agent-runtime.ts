@@ -174,8 +174,37 @@ export type PikkuToolStatusType =
   | 'completed'
   | 'denied'
   | 'error'
+  | 'missing-credential'
 
-export type PikkuToolStatus = { type: PikkuToolStatusType }
+export type MissingCredentialPayload = {
+  error: 'missing_credential'
+  credentialName: string
+  credentialType: 'oauth2' | 'apikey'
+  connectUrl?: string
+}
+
+export type PikkuToolStatus =
+  | { type: Exclude<PikkuToolStatusType, 'missing-credential'> }
+  | { type: 'missing-credential'; payload: MissingCredentialPayload }
+
+function isMissingCredentialResult(
+  result: unknown
+): MissingCredentialPayload | null {
+  if (
+    typeof result === 'object' &&
+    result &&
+    (result as any).error === 'missing_credential'
+  ) {
+    return result as MissingCredentialPayload
+  }
+  if (typeof result === 'string') {
+    try {
+      const parsed = JSON.parse(result)
+      if (parsed?.error === 'missing_credential') return parsed
+    } catch {}
+  }
+  return null
+}
 
 export function resolvePikkuToolStatus(
   status: { type: string },
@@ -184,6 +213,8 @@ export function resolvePikkuToolStatus(
   if (status.type === 'running') return { type: 'running' }
   if (status.type === 'requires-action') return { type: 'requires-action' }
   if (isDeniedResult(result)) return { type: 'denied' }
+  const missingCred = isMissingCredentialResult(result)
+  if (missingCred) return { type: 'missing-credential', payload: missingCred }
   if (typeof result === 'string' && result.startsWith('Error:'))
     return { type: 'error' }
   return { type: 'completed' }
@@ -370,8 +401,13 @@ function createPikkuStreamingAdapter(
       } catch (e: any) {
         const msg = e?.message || 'Unknown error'
         let errorText = 'Failed to connect to the agent.'
-        if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('CORS')) {
-          errorText = 'Unable to reach the agent server. The deployment may be down or the URL may be incorrect.'
+        if (
+          msg.includes('Failed to fetch') ||
+          msg.includes('NetworkError') ||
+          msg.includes('CORS')
+        ) {
+          errorText =
+            'Unable to reach the agent server. The deployment may be down or the URL may be incorrect.'
         } else if (msg.includes('abort')) {
           return
         }
@@ -384,9 +420,11 @@ function createPikkuStreamingAdapter(
         if (response.status === 401 || response.status === 403) {
           errorText = 'Authentication error.'
         } else if (response.status === 404) {
-          errorText = 'Agent not found — the agent may not be configured for this project.'
+          errorText =
+            'Agent not found — the agent may not be configured for this project.'
         } else if (response.status === 502 || response.status === 503) {
-          errorText = 'The agent server is currently unavailable. Try again in a moment.'
+          errorText =
+            'The agent server is currently unavailable. Try again in a moment.'
         } else if (response.status === 429) {
           errorText = 'Rate limited — too many requests. Please wait a moment.'
         }

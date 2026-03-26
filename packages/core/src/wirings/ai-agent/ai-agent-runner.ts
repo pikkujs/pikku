@@ -430,8 +430,12 @@ export async function resumeAIAgentSync(
           typeof toolResult === 'string'
             ? toolResult
             : JSON.stringify(toolResult)
-      } catch (err) {
-        resultStr = `Error: ${err instanceof Error ? err.message : String(err)}`
+      } catch (err: any) {
+        if (err?.payload?.error === 'missing_credential') {
+          resultStr = JSON.stringify(err.payload)
+        } else {
+          resultStr = `Error: ${err instanceof Error ? err.message : String(err)}`
+        }
       }
     } else {
       continue

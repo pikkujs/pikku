@@ -42,6 +42,8 @@ interface ChatColors {
   successColor: string
   errorBg: string
   errorColor: string
+  warningBg: string
+  warningColor: string
 }
 
 const lightColors: ChatColors = {
@@ -61,6 +63,8 @@ const lightColors: ChatColors = {
   successColor: '#2e7d32',
   errorBg: '#ffebee',
   errorColor: '#c62828',
+  warningBg: '#fff3e0',
+  warningColor: '#e65100',
 }
 
 const darkColors: ChatColors = {
@@ -80,6 +84,8 @@ const darkColors: ChatColors = {
   successColor: '#00e68a',
   errorBg: 'rgba(220, 38, 38, 0.1)',
   errorColor: '#f87171',
+  warningBg: 'rgba(245, 158, 11, 0.1)',
+  warningColor: '#fbbf24',
 }
 
 const ColorsContext = createContext<ChatColors>(lightColors)
@@ -282,6 +288,19 @@ const ToolCallDisplay: FunctionComponent<{
             }}
           >
             error
+          </span>
+        )}
+        {status.type === 'missing-credential' && (
+          <span
+            style={{
+              fontSize: 11,
+              padding: '1px 5px',
+              borderRadius: 3,
+              background: colors.warningBg,
+              color: colors.warningColor,
+            }}
+          >
+            credential required
           </span>
         )}
         {status.type === 'denied' && (

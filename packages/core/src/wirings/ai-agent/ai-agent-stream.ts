@@ -896,8 +896,12 @@ export async function resumeAIAgent(
     let isError = false
     try {
       toolResult = await matchingTool.execute(toolArgs)
-    } catch (execErr) {
-      toolResult = `Error: ${execErr instanceof Error ? execErr.message : String(execErr)}`
+    } catch (execErr: any) {
+      if (execErr?.payload?.error === 'missing_credential') {
+        toolResult = execErr.payload
+      } else {
+        toolResult = `Error: ${execErr instanceof Error ? execErr.message : String(execErr)}`
+      }
       isError = true
     }
 
