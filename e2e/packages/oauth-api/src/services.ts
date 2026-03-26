@@ -1,5 +1,5 @@
 import { pikkuAddonWireServices } from '#pikku'
-import { ForbiddenError } from '@pikku/core/errors'
+import { MissingCredentialError } from '@pikku/core/errors'
 import { OAuthApiClient } from './oauth-api-client.js'
 
 export const createWireServices = pikkuAddonWireServices(
@@ -8,7 +8,11 @@ export const createWireServices = pikkuAddonWireServices(
       'user-oauth'
     )
     if (!cred?.accessToken) {
-      throw new ForbiddenError('Missing user-oauth credential')
+      throw new MissingCredentialError(
+        'user-oauth',
+        'oauth2',
+        '/credentials/user-oauth/connect'
+      )
     }
     return {
       oauthApiClient: new OAuthApiClient(cred.accessToken),

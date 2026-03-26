@@ -77,6 +77,38 @@ addError(ForbiddenError, {
 })
 
 /**
+ * A required credential is missing. The payload contains metadata
+ * about the credential so the client can initiate a connect flow.
+ * @group Error
+ */
+export class MissingCredentialError extends PikkuError {
+  public payload: {
+    error: 'missing_credential'
+    credentialName: string
+    credentialType: 'oauth2' | 'apikey'
+    connectUrl?: string
+  }
+
+  constructor(
+    credentialName: string,
+    credentialType: 'oauth2' | 'apikey',
+    connectUrl?: string
+  ) {
+    super(`Missing credential: ${credentialName}`)
+    this.payload = {
+      error: 'missing_credential',
+      credentialName,
+      credentialType,
+      connectUrl,
+    }
+  }
+}
+addError(MissingCredentialError, {
+  status: 403,
+  message: 'A required credential is not configured.',
+})
+
+/**
  * The session is readonly and cannot access a non-readonly function.
  * @group Error
  */
