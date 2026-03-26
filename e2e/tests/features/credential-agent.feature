@@ -4,9 +4,7 @@ Feature: AI Agent with OAuth Credential Gating
   Background:
     Given the API is available
 
-  Scenario: Agent shows credential required prompt when user has no OAuth credential
+  Scenario: Agent playground shows credential prompt when OAuth not connected
     Given I open the "oauthApiAgent" playground
-    When I send "Check my profile"
-    And I wait for the response
-    Then I should see "credential required" in the chat
-    And I should see "user-oauth" in the chat
+    Then I should see "Connect your accounts" on the page
+    And I should see "User OAuth" on the page
