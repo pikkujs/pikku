@@ -5297,7 +5297,7 @@ __metadata:
     allotment: "npm:^1.20.2"
     chroma-js: "npm:^3.1.2"
     clsx: "npm:^2.1.1"
-    cronstrue: "npm:^3.12.0"
+    cronstrue: "npm:^3.14.0"
     dayjs: "npm:^1.11.19"
     elkjs: "npm:^0.11.0"
     lodash: "npm:^4.17.21"
@@ -12519,12 +12519,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cronstrue@npm:^3.12.0":
-  version: 3.12.0
-  resolution: "cronstrue@npm:3.12.0"
+"cronstrue@npm:^3.14.0":
+  version: 3.14.0
+  resolution: "cronstrue@npm:3.14.0"
   bin:
     cronstrue: bin/cli.js
-  checksum: 10/23dba1540ebc1c46ba251bf616f5ea019c24b704b16c6759f29fc917218f76f5e2841a65f4a5d3c5b789d5aede027b77ce70502c4762e614ac6340d4fb301881
+  checksum: 10/56dcb136fc9fb68b81ab5b318e9c2531cdd0d7b96738710d24b2cbcf242a588b94dd114ec0182b4738e22de0de684d2d0a1b075f38afcdc978f83eb28943dce4
   languageName: node
   linkType: hard
 
