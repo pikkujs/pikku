@@ -1,9 +1,9 @@
 ---
-"@pikku/core": minor
-"@pikku/cli": minor
-"@pikku/assistant-ui": minor
-"@pikku/console": minor
-"@pikku/addon-console": minor
+"@pikku/core": patch
+"@pikku/cli": patch
+"@pikku/assistant-ui": patch
+"@pikku/console": patch
+"@pikku/addon-console": patch
 "@pikku/ai-vercel": patch
 "@pikku/kysely": patch
 ---
