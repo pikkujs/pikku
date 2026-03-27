@@ -71,7 +71,7 @@ export const createSingletonServices = pikkuServices(
       } = await import('@pikku/kysely-postgres')
       const pikkuKysely = new PikkuKysely<KyselyPikkuDB>(
         logger,
-        process.env.DATABASE_URL!
+        variables.get('DATABASE_URL')!
       )
       await pikkuKysely.init()
       aiStorage = new PgKyselyAIStorageService(pikkuKysely.kysely)
@@ -91,7 +91,7 @@ export const createSingletonServices = pikkuServices(
       } = await import('@pikku/kysely-mysql')
       const db = new Kysely<KyselyPikkuDB>({
         dialect: new MysqlDialect({
-          pool: createPool(process.env.DATABASE_URL!) as any,
+          pool: createPool(variables.get('DATABASE_URL')!) as any,
         }),
         plugins: [new CamelCasePlugin()],
       })
