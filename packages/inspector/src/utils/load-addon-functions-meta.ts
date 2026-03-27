@@ -45,6 +45,45 @@ export async function loadAddonFunctionsMeta(
           }
         }
       }
+      // Load addon secrets meta
+      try {
+        const secretsMetaPath = require.resolve(
+          `${decl.package}/.pikku/secrets/pikku-secrets-meta.gen.json`
+        )
+        const secretsRaw = await readFile(secretsMetaPath, 'utf-8')
+        const secretsMeta = JSON.parse(secretsRaw)
+        for (const [key, def] of Object.entries<any>(secretsMeta)) {
+          const existing = state.secrets.definitions.find(
+            (d: any) => d.name === key
+          )
+          if (!existing) {
+            state.secrets.definitions.push(def)
+            logger.debug(`Loaded addon secret '${key}' from ${decl.package}`)
+          }
+        }
+      } catch {
+        // No secrets meta — that's fine
+      }
+
+      // Load addon variables meta
+      try {
+        const variablesMetaPath = require.resolve(
+          `${decl.package}/.pikku/variables/pikku-variables-meta.gen.json`
+        )
+        const variablesRaw = await readFile(variablesMetaPath, 'utf-8')
+        const variablesMeta = JSON.parse(variablesRaw)
+        for (const [key, def] of Object.entries<any>(variablesMeta)) {
+          const existing = state.variables.definitions.find(
+            (d: any) => d.name === key
+          )
+          if (!existing) {
+            state.variables.definitions.push(def)
+            logger.debug(`Loaded addon variable '${key}' from ${decl.package}`)
+          }
+        }
+      } catch {
+        // No variables meta — that's fine
+      }
     } catch (error: any) {
       logger.warn(
         `Failed to load addon function metadata for '${namespace}' (${decl.package}): ${error.message}`
