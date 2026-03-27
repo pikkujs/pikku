@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cli",
-  "version": "0.12.14",
+  "version": "0.12.15",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
   "imports": {
@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.1",
-    "@pikku/core": "^0.12.13",
+    "@pikku/core": "^0.12.14",
     "@pikku/inspector": "^0.12.7",
     "@pikku/openapi-parser": "^0.12.9",
     "@types/cookie": "^1.0.0",
