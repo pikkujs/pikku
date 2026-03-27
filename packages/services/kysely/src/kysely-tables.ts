@@ -120,7 +120,7 @@ export interface AIRunTable {
   resourceId: string
   status: Generated<'running' | 'suspended' | 'completed' | 'failed'>
   errorMessage: string | null
-  suspendReason: 'approval' | 'rpc-missing' | null
+  suspendReason: 'approval' | 'credential' | 'rpc-missing' | null
   missingRpcs: string | null
   usageInputTokens: Generated<number>
   usageOutputTokens: Generated<number>
