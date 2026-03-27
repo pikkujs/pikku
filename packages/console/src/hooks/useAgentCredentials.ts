@@ -20,13 +20,9 @@ export function useAgentCredentials(agentName?: string) {
   const query = useQuery({
     queryKey: ['agent-credentials', agentName],
     queryFn: async (): Promise<AgentCredentialCheckResult> => {
-      try {
-        return await (rpc as any).invoke('console:agentCredentialCheck', {
-          agentName,
-        })
-      } catch {
-        return { requirements: [], allConnected: true }
-      }
+      return await (rpc as any).invoke('console:agentCredentialCheck', {
+        agentName,
+      })
     },
     enabled: !!agentName,
   })
@@ -41,6 +37,8 @@ export function useAgentCredentials(agentName?: string) {
     requirements: query.data?.requirements ?? [],
     allConnected: query.data?.allConnected ?? true,
     loading: query.isLoading,
+    error: query.error,
+    isError: query.isError,
     refetch,
   }
 }

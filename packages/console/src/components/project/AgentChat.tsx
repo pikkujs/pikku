@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import {
   Stack,
   Box,
@@ -79,6 +79,16 @@ const ToolCallDisplay: React.FunctionComponent<{
   const displayArgs = { ...args }
   delete (displayArgs as any).__approvalReason
   const [responded, setResponded] = useState<'approved' | 'denied' | null>(null)
+  const oauthTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (oauthTimerRef.current) {
+        clearInterval(oauthTimerRef.current)
+        oauthTimerRef.current = null
+      }
+    }
+  }, [])
 
   const handleApprove = () => {
     setResponded('approved')
@@ -165,10 +175,10 @@ const ToolCallDisplay: React.FunctionComponent<{
     const handleConnect = () => {
       if (cred?.credentialType === 'oauth2' && connectUrl) {
         const popup = window.open(connectUrl, 'oauth-connect', 'width=600,height=700')
-        // Poll for popup close, then resume
-        const timer = setInterval(() => {
+        oauthTimerRef.current = setInterval(() => {
           if (!popup || popup.closed) {
-            clearInterval(timer)
+            clearInterval(oauthTimerRef.current!)
+            oauthTimerRef.current = null
             setResponded('approved')
             handleApproval(toolCallId, true)
             addResult?.({ approved: true })

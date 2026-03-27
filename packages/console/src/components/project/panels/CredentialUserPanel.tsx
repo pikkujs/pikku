@@ -46,7 +46,10 @@ export const CredentialUserPanel: React.FunctionComponent<{
         credentialName: credName,
         userId,
       })
-      window.open(result.authUrl, 'oauth-connect', 'width=600,height=700')
+      const popup = window.open(result.authUrl, 'oauth-connect', 'width=600,height=700')
+      if (!popup) {
+        window.location.href = result.authUrl
+      }
     },
   })
 

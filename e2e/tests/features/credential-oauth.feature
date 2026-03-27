@@ -1,4 +1,4 @@
-@credential
+@credential-oauth
 Feature: OAuth2 Credential Flow
 
   Background:

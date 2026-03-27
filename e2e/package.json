@@ -23,7 +23,7 @@
     "test:dynamic-workflows": "cucumber-js --config tests/cucumber.mjs --tags @dynamic-workflows",
     "test:dynamic-workflows-ui": "cucumber-js --config tests/cucumber.mjs --tags @dynamic-workflows-ui",
     "test:credential": "cucumber-js --config tests/cucumber.mjs --tags @credential",
-    "test:credential-oauth": "cucumber-js --config tests/cucumber.mjs --tags @credential",
+    "test:credential-oauth": "cucumber-js --config tests/cucumber.mjs --tags @credential-oauth",
     "test:credential-agent": "cucumber-js --config tests/cucumber.mjs --tags @credential-agent",
     "test:dynamic-workflow-modes": "cucumber-js --config tests/cucumber.mjs --tags @dynamic-workflow-modes",
     "tsc": "tsc --noEmit"
