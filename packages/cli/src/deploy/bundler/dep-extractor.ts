@@ -208,14 +208,14 @@ export async function extractDependencies(
 }
 
 /**
- * Generates a minimal package.json content object for a worker bundle.
+ * Generates a minimal package.json content object for a unit bundle.
  */
 export function generateMinimalPackageJson(
-  workerName: string,
+  unitName: string,
   dependencies: Record<string, string>
 ): Record<string, unknown> {
   return {
-    name: workerName,
+    name: unitName,
     private: true,
     type: 'module',
     main: 'bundle.js',

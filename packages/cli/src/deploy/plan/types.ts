@@ -1,12 +1,9 @@
 export type ChangeAction = 'create' | 'update' | 'delete' | 'drain'
 
 export type ResourceType =
-  | 'worker'
+  | 'unit'
   | 'queue'
-  | 'd1'
-  | 'r2'
-  | 'cron-trigger'
-  | 'container'
+  | 'scheduled-task'
   | 'secret'
   | 'variable'
 

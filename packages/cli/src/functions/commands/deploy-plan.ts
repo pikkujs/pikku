@@ -1,5 +1,7 @@
+import { basename } from 'node:path'
+
 import { pikkuVoidFunc } from '#pikku'
-import { analyzeProject } from '../../deploy/analyzer/index.js'
+import { analyzeDeployment } from '../../deploy/analyzer/index.js'
 import { generatePlan } from '../../deploy/plan/index.js'
 import { formatPlan } from '../../deploy/plan/formatter.js'
 import type { DeployProvider } from '../../deploy/plan/provider.js'
@@ -11,12 +13,9 @@ function createEmptyProvider(): DeployProvider {
     async getCurrentState() {
       // TODO: Load provider from config and get real state
       return {
-        workers: [],
+        units: [],
         queues: [],
-        d1Databases: [],
-        r2Buckets: [],
-        cronTriggers: [],
-        containers: [],
+        scheduledTasks: [],
         secrets: [],
         variables: {},
       }
@@ -31,14 +30,14 @@ function createEmptyProvider(): DeployProvider {
 }
 
 export const deployPlan = pikkuVoidFunc({
-  func: async ({ logger, config }) => {
-    const projectDir = process.cwd()
-
+  func: async ({ logger, config, getInspectorState }) => {
     logger.info('Analyzing project...')
-    const manifest = await analyzeProject(projectDir)
+    const inspectorState = await getInspectorState(true)
+    const projectId = basename(config.rootDir)
+    const manifest = analyzeDeployment(inspectorState, { projectId })
 
     logger.info(
-      `Found ${manifest.workers.length} workers, ${manifest.queues.length} queues, ${manifest.cronTriggers.length} cron triggers`
+      `Found ${manifest.units.length} units, ${manifest.queues.length} queues, ${manifest.scheduledTasks.length} scheduled tasks`
     )
 
     const provider = createEmptyProvider()

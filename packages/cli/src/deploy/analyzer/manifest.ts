@@ -1,132 +1,129 @@
 /**
- * DeploymentManifest types.
+ * Provider-agnostic deployment manifest types.
  *
- * These describe the desired-state output of the project analyzer.
- * The plan/apply engine diffs a manifest against Cloudflare's current state
- * to produce a deployment plan.
+ * These types describe WHAT needs to be deployed (roles, capabilities,
+ * routes, queues, etc.) without referencing HOW or WHERE.
+ * A separate provider adapter maps these to concrete infrastructure.
  */
 
-// ---------------------------------------------------------------------------
-// Worker roles
-// ---------------------------------------------------------------------------
-
-export type WorkerRole =
+/** What kind of compute a deployment unit needs */
+export type DeploymentUnitRole =
   | 'http'
+  | 'rpc'
   | 'mcp'
   | 'queue-consumer'
-  | 'cron'
+  | 'scheduled'
   | 'agent'
-  | 'remote'
-  | 'workflow-step'
+  | 'channel'
   | 'workflow-orchestrator'
+  | 'workflow-step'
 
-// ---------------------------------------------------------------------------
-// Bindings (Cloudflare Worker bindings)
-// ---------------------------------------------------------------------------
+/** Abstract infrastructure capability */
+export type ServiceCapability =
+  | 'database'
+  | 'object-storage'
+  | 'queue'
+  | 'kv'
+  | 'ai-model'
+  | 'ai-storage'
+  | 'scheduler'
+  | 'workflow-state'
+  | 'credential-store'
 
-export type Binding =
-  | D1Binding
-  | R2Binding
-  | QueueBinding
-  | ServiceBinding
-  | SecretBinding
-  | VariableBinding
-
-export interface D1Binding {
-  type: 'd1'
-  name: string
-  databaseName: string
+export interface ServiceRequirement {
+  capability: ServiceCapability
+  /** Original service name from code (e.g. 'kysely', 'contentService') */
+  sourceServiceName: string
 }
 
-export interface R2Binding {
-  type: 'r2'
-  name: string
-  bucketName: string
+export interface HttpRouteInfo {
+  method: string
+  route: string
+  pikkuFuncId: string
 }
 
-export interface QueueBinding {
-  type: 'queue'
+export interface DeploymentUnit {
   name: string
-  queueName: string
-}
-
-export interface ServiceBinding {
-  type: 'service'
-  name: string
-  service: string
-}
-
-export interface SecretBinding {
-  type: 'secret'
-  name: string
-  secretName: string
-}
-
-export interface VariableBinding {
-  type: 'variable'
-  name: string
-  value: string
-}
-
-// ---------------------------------------------------------------------------
-// Resource specs
-// ---------------------------------------------------------------------------
-
-export interface WorkerSpec {
-  name: string
-  role: WorkerRole
-  entryPoint: string
-  routes: string[]
-  bindings: Binding[]
+  role: DeploymentUnitRole
   functionIds: string[]
+  services: ServiceRequirement[]
+  /** Other unit names this unit depends on / calls */
+  dependsOn: string[]
+  httpRoutes: HttpRouteInfo[]
+  tags: string[]
 }
 
-export interface QueueSpec {
+export interface QueueDefinition {
   name: string
-  consumerWorker: string
+  consumerUnit: string
+  consumerFunctionId: string
 }
 
-export interface D1Spec {
-  name: string
-  migrationsDir: string | null
-}
-
-export interface R2Spec {
-  name: string
-}
-
-export interface CronTriggerSpec {
+export interface ScheduledTaskDefinition {
   name: string
   schedule: string
-  workerName: string
+  unitName: string
   functionId: string
 }
 
-export interface ContainerSpec {
+export interface ChannelDefinition {
   name: string
+  route: string
+  unitName: string
   functionIds: string[]
-  dockerfile: string | null
 }
 
-export interface ChannelSpec {
+export interface AgentDefinition {
   name: string
-  functionId: string
+  unitName: string
+  toolFunctionIds: string[]
+  subAgentNames: string[]
+  model: string
 }
 
-// ---------------------------------------------------------------------------
-// Top-level manifest
-// ---------------------------------------------------------------------------
+export interface MCPEndpointDefinition {
+  unitName: string
+  toolFunctionIds: string[]
+  resourceFunctionIds: string[]
+  promptFunctionIds: string[]
+}
+
+export interface WorkflowStepDefinition {
+  name: string
+  inline: boolean
+  functionId?: string
+  unitName?: string
+}
+
+export interface WorkflowDefinition {
+  name: string
+  pikkuFuncId: string
+  orchestratorUnit: string
+  steps: WorkflowStepDefinition[]
+}
+
+export interface SecretDeclaration {
+  secretId: string
+  displayName: string
+  description?: string
+}
+
+export interface VariableDeclaration {
+  variableId: string
+  displayName: string
+  description?: string
+}
 
 export interface DeploymentManifest {
   projectId: string
-  version: string
-  workers: WorkerSpec[]
-  queues: QueueSpec[]
-  d1Databases: D1Spec[]
-  r2Buckets: R2Spec[]
-  cronTriggers: CronTriggerSpec[]
-  channels: ChannelSpec[]
-  secrets: string[]
-  variables: Record<string, string>
-  containers: ContainerSpec[]
+  manifestVersion: 1
+  units: DeploymentUnit[]
+  queues: QueueDefinition[]
+  scheduledTasks: ScheduledTaskDefinition[]
+  channels: ChannelDefinition[]
+  agents: AgentDefinition[]
+  mcpEndpoints: MCPEndpointDefinition[]
+  workflows: WorkflowDefinition[]
+  secrets: SecretDeclaration[]
+  variables: VariableDeclaration[]
 }

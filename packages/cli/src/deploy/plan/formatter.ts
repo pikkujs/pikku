@@ -20,6 +20,14 @@ const ACTION_DISPLAY: Record<
   drain: { symbol: '\u23F3', color: ANSI.yellow, label: 'drain' },
 }
 
+const RESOURCE_LABELS: Record<string, string> = {
+  unit: 'Unit',
+  queue: 'Queue',
+  'scheduled-task': 'Scheduled Task',
+  secret: 'Secret',
+  variable: 'Variable',
+}
+
 function padRight(str: string, len: number): string {
   return str + ' '.repeat(Math.max(0, len - str.length))
 }
@@ -27,8 +35,8 @@ function padRight(str: string, len: number): string {
 function formatChange(change: PlanChange): string {
   const display = ACTION_DISPLAY[change.action]
   const typeLabel = padRight(
-    change.resourceType.charAt(0).toUpperCase() + change.resourceType.slice(1),
-    14
+    RESOURCE_LABELS[change.resourceType] ?? change.resourceType,
+    16
   )
   const nameLabel = padRight(change.name, 28)
   return `  ${display.color}${display.symbol} ${padRight(display.label, 8)}${ANSI.reset} ${typeLabel} ${ANSI.bold}${nameLabel}${ANSI.reset} ${ANSI.dim}${change.reason}${ANSI.reset}`
@@ -97,9 +105,8 @@ export function formatPlanPlain(plan: DeploymentPlan): string {
     for (const change of group) {
       const display = ACTION_DISPLAY[change.action]
       const typeLabel = padRight(
-        change.resourceType.charAt(0).toUpperCase() +
-          change.resourceType.slice(1),
-        14
+        RESOURCE_LABELS[change.resourceType] ?? change.resourceType,
+        16
       )
       const nameLabel = padRight(change.name, 28)
       lines.push(

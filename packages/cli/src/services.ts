@@ -181,7 +181,13 @@ export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
     logger.logLogo()
   }
 
-  const cliConfig = await getPikkuCLIConfig(logger, data.configFile, [], true)
+  const cliConfig = await getPikkuCLIConfig(
+    logger,
+    data.configFile,
+    [],
+    true,
+    data.outDir
+  )
 
   // Load inspector state from file if stateInput is provided
   let preloadedInspectorState: Omit<InspectorState, 'typesLookup'> | undefined =

@@ -1,21 +1,20 @@
-export { analyzeProject } from './analyzer.js'
+export { analyzeDeployment } from './analyzer.js'
 export type { AnalyzerOptions } from './analyzer.js'
 
 export type {
   DeploymentManifest,
-  WorkerSpec,
-  WorkerRole,
-  QueueSpec,
-  D1Spec,
-  R2Spec,
-  CronTriggerSpec,
-  ContainerSpec,
-  ChannelSpec,
-  Binding,
-  D1Binding,
-  R2Binding,
-  QueueBinding,
-  ServiceBinding,
-  SecretBinding,
-  VariableBinding,
+  DeploymentUnit,
+  DeploymentUnitRole,
+  ServiceCapability,
+  ServiceRequirement,
+  HttpRouteInfo,
+  QueueDefinition,
+  ScheduledTaskDefinition,
+  ChannelDefinition,
+  AgentDefinition,
+  MCPEndpointDefinition,
+  WorkflowStepDefinition,
+  WorkflowDefinition,
+  SecretDeclaration,
+  VariableDeclaration,
 } from './manifest.js'

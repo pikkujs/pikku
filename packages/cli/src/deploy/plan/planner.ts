@@ -9,24 +9,24 @@ function arraysEqual(a: string[], b: string[]): boolean {
   return sorted1.every((v, i) => v === sorted2[i])
 }
 
-function diffWorkers(
+function diffUnits(
   manifest: DeploymentManifest,
   current: CurrentState,
   drainInfo: Map<string, number>
 ): PlanChange[] {
   const changes: PlanChange[] = []
-  const currentByName = new Map(current.workers.map((w) => [w.name, w]))
-  const desiredByName = new Map(manifest.workers.map((w) => [w.name, w]))
+  const currentByName = new Map(current.units.map((u) => [u.name, u]))
+  const desiredByName = new Map(manifest.units.map((u) => [u.name, u]))
 
   // Create or update
-  for (const desired of manifest.workers) {
+  for (const desired of manifest.units) {
     const existing = currentByName.get(desired.name)
     if (!existing) {
       changes.push({
         action: 'create',
-        resourceType: 'worker',
+        resourceType: 'unit',
         name: desired.name,
-        reason: 'new function',
+        reason: 'new unit',
         details: { role: desired.role, functionIds: desired.functionIds },
       })
     } else if (
@@ -35,7 +35,7 @@ function diffWorkers(
     ) {
       changes.push({
         action: 'update',
-        resourceType: 'worker',
+        resourceType: 'unit',
         name: desired.name,
         reason: 'code changed',
         details: { role: desired.role, functionIds: desired.functionIds },
@@ -44,13 +44,13 @@ function diffWorkers(
   }
 
   // Delete or drain
-  for (const existing of current.workers) {
+  for (const existing of current.units) {
     if (!desiredByName.has(existing.name)) {
       const pending = drainInfo.get(existing.name) ?? 0
       if (pending > 0) {
         changes.push({
           action: 'drain',
-          resourceType: 'worker',
+          resourceType: 'unit',
           name: existing.name,
           reason: `removed, ${pending} pending workflows`,
           details: { pendingCount: pending },
@@ -58,7 +58,7 @@ function diffWorkers(
       } else {
         changes.push({
           action: 'delete',
-          resourceType: 'worker',
+          resourceType: 'unit',
           name: existing.name,
           reason: 'removed, no active workflows',
         })
@@ -70,7 +70,7 @@ function diffWorkers(
 }
 
 function diffSimpleResources(
-  resourceType: 'queue' | 'd1' | 'r2' | 'container',
+  resourceType: 'queue',
   desired: Array<{ name: string }>,
   current: Array<{ name: string }>
 ): PlanChange[] {
@@ -103,43 +103,41 @@ function diffSimpleResources(
   return changes
 }
 
-function diffCronTriggers(
-  desired: DeploymentManifest['cronTriggers'],
-  current: CurrentState['cronTriggers']
+function diffScheduledTasks(
+  desired: DeploymentManifest['scheduledTasks'],
+  current: CurrentState['scheduledTasks']
 ): PlanChange[] {
   const changes: PlanChange[] = []
-  const currentByWorker = new Map(current.map((c) => [c.workerName, c.cron]))
-  const desiredByWorker = new Map(
-    desired.map((c) => [c.workerName, c.schedule])
-  )
+  const currentByUnit = new Map(current.map((t) => [t.unitName, t.schedule]))
+  const desiredByUnit = new Map(desired.map((t) => [t.unitName, t.schedule]))
 
   for (const d of desired) {
-    const existingCron = currentByWorker.get(d.workerName)
-    if (existingCron === undefined) {
+    const existingSchedule = currentByUnit.get(d.unitName)
+    if (existingSchedule === undefined) {
       changes.push({
         action: 'create',
-        resourceType: 'cron-trigger',
+        resourceType: 'scheduled-task',
         name: d.name,
-        reason: 'new cron',
-        details: { schedule: d.schedule, workerName: d.workerName },
+        reason: 'new scheduled task',
+        details: { schedule: d.schedule, unitName: d.unitName },
       })
-    } else if (existingCron !== d.schedule) {
+    } else if (existingSchedule !== d.schedule) {
       changes.push({
         action: 'update',
-        resourceType: 'cron-trigger',
+        resourceType: 'scheduled-task',
         name: d.name,
         reason: 'schedule changed',
-        details: { oldSchedule: existingCron, newSchedule: d.schedule },
+        details: { oldSchedule: existingSchedule, newSchedule: d.schedule },
       })
     }
   }
 
   for (const c of current) {
-    if (!desiredByWorker.has(c.workerName)) {
+    if (!desiredByUnit.has(c.unitName)) {
       changes.push({
         action: 'delete',
-        resourceType: 'cron-trigger',
-        name: c.workerName,
+        resourceType: 'scheduled-task',
+        name: c.unitName,
         reason: 'removed',
       })
     }
@@ -221,14 +219,11 @@ function countUnchanged(
   changes: PlanChange[]
 ): number {
   const totalDesired =
-    manifest.workers.length +
+    manifest.units.length +
     manifest.queues.length +
-    manifest.d1Databases.length +
-    manifest.r2Buckets.length +
-    manifest.cronTriggers.length +
-    manifest.containers.length +
+    manifest.scheduledTasks.length +
     manifest.secrets.length +
-    Object.keys(manifest.variables).length
+    manifest.variables.length
 
   // Rough count: total desired minus those that appear in changes
   const createOrUpdate = changes.filter(
@@ -242,13 +237,13 @@ export async function generatePlan(
   currentState: CurrentState,
   provider: DeployProvider
 ): Promise<DeploymentPlan> {
-  // Check drain status for workers being removed
-  const removedWorkerNames = currentState.workers
-    .filter((w) => !manifest.workers.some((mw) => mw.name === w.name))
-    .map((w) => w.name)
+  // Check drain status for units being removed
+  const removedUnitNames = currentState.units
+    .filter((u) => !manifest.units.some((mu) => mu.name === u.name))
+    .map((u) => u.name)
 
   const drainInfo = new Map<string, number>()
-  for (const name of removedWorkerNames) {
+  for (const name of removedUnitNames) {
     const { active, pendingCount } = await provider.hasActiveWork(name)
     if (active) {
       drainInfo.set(name, pendingCount)
@@ -256,22 +251,19 @@ export async function generatePlan(
   }
 
   const changes: PlanChange[] = [
-    ...diffWorkers(manifest, currentState, drainInfo),
+    ...diffUnits(manifest, currentState, drainInfo),
     ...diffSimpleResources('queue', manifest.queues, currentState.queues),
-    ...diffSimpleResources(
-      'd1',
-      manifest.d1Databases,
-      currentState.d1Databases
+    ...diffScheduledTasks(manifest.scheduledTasks, currentState.scheduledTasks),
+    ...diffSecrets(
+      manifest.secrets.map((s) => s.secretId),
+      currentState.secrets
     ),
-    ...diffSimpleResources('r2', manifest.r2Buckets, currentState.r2Buckets),
-    ...diffSimpleResources(
-      'container',
-      manifest.containers,
-      currentState.containers
+    ...diffVariables(
+      Object.fromEntries(
+        manifest.variables.map((v) => [v.variableId, v.displayName])
+      ),
+      currentState.variables
     ),
-    ...diffCronTriggers(manifest.cronTriggers, currentState.cronTriggers),
-    ...diffSecrets(manifest.secrets, currentState.secrets),
-    ...diffVariables(manifest.variables, currentState.variables),
   ]
 
   const summary = {

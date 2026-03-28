@@ -66,6 +66,11 @@ wireCLI({
     stateInput: {
       description: 'Load inspector state from JSON file (skips inspection)',
     },
+    outDir: {
+      description:
+        'Override output directory (default: from pikku.config.json)',
+      short: 'o',
+    },
   },
   commands: {
     all: pikkuCLICommand({

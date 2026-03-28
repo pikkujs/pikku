@@ -5,12 +5,12 @@
 
 export type {
   DeploymentManifest,
-  WorkerSpec,
-  WorkerRole,
+  DeploymentUnit,
+  DeploymentUnitRole,
 } from '../analyzer/manifest.js'
 
 export interface BundleResult {
-  workerName: string
+  unitName: string
   bundlePath: string
   packageJsonPath: string
   metafilePath: string
@@ -19,7 +19,7 @@ export interface BundleResult {
 }
 
 export interface BundleError {
-  workerName: string
+  unitName: string
   error: string
 }
 

@@ -15,11 +15,8 @@ interface ApplyOptions {
 /** Execution order for resource creation */
 const CREATE_ORDER: Array<PlanChange['resourceType']> = [
   'queue',
-  'd1',
-  'r2',
-  'worker',
-  'cron-trigger',
-  'container',
+  'unit',
+  'scheduled-task',
   'secret',
   'variable',
 ]
@@ -48,7 +45,7 @@ export async function applyPlan(
   const drains = plan.changes.filter((c) => c.action === 'drain')
   const deletes = plan.changes.filter((c) => c.action === 'delete')
 
-  // Execute in order: create → update → secrets/variables → drain → delete
+  // Execute in order: create -> update -> secrets/variables -> drain -> delete
   const ordered = [
     ...sortByOrder(creates, CREATE_ORDER),
     ...sortByOrder(updates, CREATE_ORDER),

@@ -2,17 +2,13 @@ import type { DeploymentManifest } from '../analyzer/manifest.js'
 import type { PlanChange } from './types.js'
 
 export interface CurrentState {
-  workers: Array<{
+  units: Array<{
     name: string
     functionIds: string[]
     role: string
-    scriptHash?: string
   }>
   queues: Array<{ name: string }>
-  d1Databases: Array<{ name: string; id: string }>
-  r2Buckets: Array<{ name: string }>
-  cronTriggers: Array<{ workerName: string; cron: string }>
-  containers: Array<{ name: string }>
+  scheduledTasks: Array<{ unitName: string; schedule: string }>
   secrets: string[]
   variables: Record<string, string>
 }

@@ -1,5 +1,7 @@
+import { basename } from 'node:path'
+
 import { pikkuVoidFunc } from '#pikku'
-import { analyzeProject } from '../../deploy/analyzer/index.js'
+import { analyzeDeployment } from '../../deploy/analyzer/index.js'
 
 const ANSI = {
   green: '\x1b[32m',
@@ -12,11 +14,12 @@ const ANSI = {
 
 const ROLE_COLORS: Record<string, string> = {
   http: ANSI.blue,
+  rpc: ANSI.green,
   mcp: '\x1b[35m', // magenta
   'queue-consumer': '\x1b[36m', // cyan
-  cron: '\x1b[35m', // violet
+  scheduled: '\x1b[35m', // violet
   agent: '\x1b[33m', // orange
-  remote: ANSI.dim,
+  channel: ANSI.dim,
   'workflow-step': '\x1b[34m',
   'workflow-orchestrator': '\x1b[34m',
 }
@@ -26,29 +29,29 @@ function padRight(str: string, len: number): string {
 }
 
 export const deployInfo = pikkuVoidFunc({
-  func: async ({ logger }) => {
-    const projectDir = process.cwd()
-
+  func: async ({ logger, config, getInspectorState }) => {
     logger.info('Analyzing project...')
-    const manifest = await analyzeProject(projectDir)
+    const inspectorState = await getInspectorState(true)
+    const projectId = basename(config.rootDir)
+    const manifest = analyzeDeployment(inspectorState, { projectId })
 
     console.log('')
     console.log(`${ANSI.bold}Project:${ANSI.reset} ${manifest.projectId}`)
     console.log('')
 
-    // Workers
-    console.log(
-      `${ANSI.bold}Workers (${manifest.workers.length}):${ANSI.reset}`
-    )
-    for (const w of manifest.workers) {
-      const color = ROLE_COLORS[w.role] ?? ANSI.dim
-      const fns = w.functionIds.join(', ')
+    // Units
+    console.log(`${ANSI.bold}Units (${manifest.units.length}):${ANSI.reset}`)
+    for (const u of manifest.units) {
+      const color = ROLE_COLORS[u.role] ?? ANSI.dim
+      const fns = u.functionIds.join(', ')
       console.log(
-        `  ${color}${padRight(w.role, 22)}${ANSI.reset} ${ANSI.bold}${padRight(w.name, 30)}${ANSI.reset} ${ANSI.dim}[${fns}]${ANSI.reset}`
+        `  ${color}${padRight(u.role, 22)}${ANSI.reset} ${ANSI.bold}${padRight(u.name, 30)}${ANSI.reset} ${ANSI.dim}[${fns}]${ANSI.reset}`
       )
-      if (w.routes.length > 0) {
-        for (const route of w.routes) {
-          console.log(`    ${ANSI.dim}→ ${route}${ANSI.reset}`)
+      if (u.httpRoutes.length > 0) {
+        for (const route of u.httpRoutes) {
+          console.log(
+            `    ${ANSI.dim}${route.method} ${route.route}${ANSI.reset}`
+          )
         }
       }
     }
@@ -61,43 +64,48 @@ export const deployInfo = pikkuVoidFunc({
       )
       for (const q of manifest.queues) {
         console.log(
-          `  ${padRight(q.name, 30)} ${ANSI.dim}→ ${q.consumerWorker}${ANSI.reset}`
+          `  ${padRight(q.name, 30)} ${ANSI.dim}-> ${q.consumerUnit}${ANSI.reset}`
         )
       }
     }
 
-    // Cron triggers
-    if (manifest.cronTriggers.length > 0) {
+    // Scheduled tasks
+    if (manifest.scheduledTasks.length > 0) {
       console.log('')
       console.log(
-        `${ANSI.bold}Cron Triggers (${manifest.cronTriggers.length}):${ANSI.reset}`
+        `${ANSI.bold}Scheduled Tasks (${manifest.scheduledTasks.length}):${ANSI.reset}`
       )
-      for (const c of manifest.cronTriggers) {
+      for (const t of manifest.scheduledTasks) {
         console.log(
-          `  ${padRight(c.name, 30)} ${ANSI.dim}${c.schedule} → ${c.workerName}${ANSI.reset}`
+          `  ${padRight(t.name, 30)} ${ANSI.dim}${t.schedule} -> ${t.unitName}${ANSI.reset}`
         )
       }
     }
 
-    // D1
-    if (manifest.d1Databases.length > 0) {
+    // Channels
+    if (manifest.channels.length > 0) {
       console.log('')
       console.log(
-        `${ANSI.bold}D1 Databases (${manifest.d1Databases.length}):${ANSI.reset}`
+        `${ANSI.bold}Channels (${manifest.channels.length}):${ANSI.reset}`
       )
-      for (const d of manifest.d1Databases) {
-        console.log(`  ${d.name}`)
+      for (const c of manifest.channels) {
+        console.log(
+          `  ${padRight(c.name, 30)} ${ANSI.dim}${c.route} -> ${c.unitName}${ANSI.reset}`
+        )
       }
     }
 
-    // R2
-    if (manifest.r2Buckets.length > 0) {
+    // Agents
+    if (manifest.agents.length > 0) {
       console.log('')
       console.log(
-        `${ANSI.bold}R2 Buckets (${manifest.r2Buckets.length}):${ANSI.reset}`
+        `${ANSI.bold}Agents (${manifest.agents.length}):${ANSI.reset}`
       )
-      for (const r of manifest.r2Buckets) {
-        console.log(`  ${r.name}`)
+      for (const a of manifest.agents) {
+        const tools = a.toolFunctionIds.join(', ')
+        console.log(
+          `  ${padRight(a.name, 30)} ${ANSI.dim}[${tools}]${ANSI.reset}`
+        )
       }
     }
 
@@ -108,17 +116,20 @@ export const deployInfo = pikkuVoidFunc({
         `${ANSI.bold}Required Secrets (${manifest.secrets.length}):${ANSI.reset}`
       )
       for (const s of manifest.secrets) {
-        console.log(`  ${ANSI.yellow}${s}${ANSI.reset}`)
+        console.log(`  ${ANSI.yellow}${s.secretId}${ANSI.reset}`)
       }
     }
 
     // Variables
-    const varKeys = Object.keys(manifest.variables)
-    if (varKeys.length > 0) {
+    if (manifest.variables.length > 0) {
       console.log('')
-      console.log(`${ANSI.bold}Variables (${varKeys.length}):${ANSI.reset}`)
-      for (const [key, value] of Object.entries(manifest.variables)) {
-        console.log(`  ${key}=${ANSI.dim}${value}${ANSI.reset}`)
+      console.log(
+        `${ANSI.bold}Variables (${manifest.variables.length}):${ANSI.reset}`
+      )
+      for (const v of manifest.variables) {
+        console.log(
+          `  ${v.variableId}${ANSI.dim} (${v.displayName})${ANSI.reset}`
+        )
       }
     }
 
