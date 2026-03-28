@@ -53,6 +53,9 @@ export { setSecret, deleteSecret, listSecrets } from './secrets.js'
 // Cron Triggers
 export { setCronTriggers, getCronTriggers } from './cron.js'
 
+// Entry point generation
+export { generateEntryFiles, generateEntrySource } from './entry-generator.js'
+
 // Containers
 export {
   deployContainer,

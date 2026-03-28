@@ -8,7 +8,23 @@
 import { writeFile, mkdir } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 
-import type { WorkerRole, WorkerSpec } from './types.js'
+type WorkerRole =
+  | 'http'
+  | 'mcp'
+  | 'queue-consumer'
+  | 'cron'
+  | 'agent'
+  | 'remote'
+  | 'workflow-step'
+  | 'workflow-orchestrator'
+
+interface WorkerSpec {
+  name: string
+  role: WorkerRole
+  entryPoint: string
+  routes: string[]
+  functionIds: string[]
+}
 
 /**
  * Maps a worker role to its handler factory import and invocation.

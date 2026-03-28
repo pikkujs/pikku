@@ -1,5 +1,4 @@
 export { bundleWorkers } from './bundler.js'
-export { generateEntryFiles, generateEntrySource } from './entry-generator.js'
 export {
   extractDependencies,
   extractExternalPackages,

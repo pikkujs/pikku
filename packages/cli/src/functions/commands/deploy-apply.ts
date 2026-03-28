@@ -80,11 +80,18 @@ export const deployApply = pikkuVoidFunc({
       `Found ${manifest.workers.length} workers, ${manifest.queues.length} queues, ${manifest.cronTriggers.length} cron triggers`
     )
 
-    // Step 2: Bundle
+    // Step 2: Generate entry points + Bundle
+    // TODO: Load provider-specific entry generator based on --provider flag
+    // For now, stub entry files (real implementation comes from @pikku/deploy-cloudflare)
     logger.info('Bundling workers...')
+    const entryFiles = new Map<string, string>()
+    for (const w of manifest.workers) {
+      entryFiles.set(w.name, w.entryPoint)
+    }
     const { results: bundled, errors: bundleErrors } = await bundleWorkers(
       projectDir,
-      manifest
+      manifest,
+      entryFiles
     )
     logger.info(
       `Bundled ${bundled.length} workers${bundleErrors.length > 0 ? ` (${bundleErrors.length} failed)` : ''}`
