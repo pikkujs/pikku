@@ -1,40 +1,45 @@
 /**
- * Generates TypeScript entry point files for each worker.
+ * Generates Cloudflare Worker entry point files for each deployment unit.
  *
- * Each entry point imports only the functions that belong to that worker,
- * then creates and exports the appropriate handler based on the worker's role.
+ * Each entry point:
+ * 1. Imports the filtered bootstrap from the unit's .pikku/ directory
+ * 2. Imports the appropriate Cloudflare handler factory based on the unit's role
+ * 3. Exports the handler as the default export
  */
 
 import { writeFile, mkdir } from 'node:fs/promises'
-import { join, dirname } from 'node:path'
+import { join, dirname, relative } from 'node:path'
 
-type WorkerRole =
+export type DeploymentUnitRole =
   | 'http'
+  | 'rpc'
   | 'mcp'
   | 'queue-consumer'
-  | 'cron'
+  | 'scheduled'
   | 'agent'
-  | 'remote'
-  | 'workflow-step'
+  | 'channel'
   | 'workflow-orchestrator'
+  | 'workflow-step'
 
-interface WorkerSpec {
+export interface EntryGeneratorUnit {
   name: string
-  role: WorkerRole
-  entryPoint: string
-  routes: string[]
-  functionIds: string[]
+  role: DeploymentUnitRole
+  /** Path to the unit's .pikku directory (from per-unit codegen) */
+  pikkuDir: string
 }
 
 /**
- * Maps a worker role to its handler factory import and invocation.
+ * Maps a deployment unit role to its Cloudflare handler import/export.
  */
-function getHandlerCode(role: WorkerRole): {
+function getHandlerCode(role: DeploymentUnitRole): {
   importStatement: string
   exportStatement: string
 } {
   switch (role) {
     case 'http':
+    case 'agent':
+    case 'rpc':
+    case 'workflow-orchestrator':
       return {
         importStatement: `import { createCloudflareWorkerHandler } from '@pikku/cloudflare'`,
         exportStatement: `export default createCloudflareWorkerHandler()`,
@@ -45,82 +50,74 @@ function getHandlerCode(role: WorkerRole): {
         exportStatement: `export default createCloudflareMCPHandler()`,
       }
     case 'queue-consumer':
-      return {
-        importStatement: `import { createCloudflareQueueHandler } from '@pikku/cloudflare'`,
-        exportStatement: `export default createCloudflareQueueHandler()`,
-      }
-    case 'cron':
-      return {
-        importStatement: `import { createCloudflareCronHandler } from '@pikku/cloudflare'`,
-        exportStatement: `export default createCloudflareCronHandler()`,
-      }
-    case 'agent':
-      return {
-        importStatement: `import { createCloudflareWorkerHandler } from '@pikku/cloudflare'`,
-        exportStatement: `export default createCloudflareWorkerHandler()`,
-      }
-    case 'remote':
-      return {
-        importStatement: `import { createCloudflareServiceBindingHandler } from '@pikku/cloudflare'`,
-        exportStatement: `export default createCloudflareServiceBindingHandler()`,
-      }
     case 'workflow-step':
       return {
         importStatement: `import { createCloudflareQueueHandler } from '@pikku/cloudflare'`,
         exportStatement: `export default createCloudflareQueueHandler()`,
       }
-    case 'workflow-orchestrator':
+    case 'scheduled':
       return {
-        importStatement: `import { createCloudflareWorkerHandler } from '@pikku/cloudflare'`,
-        exportStatement: `export default createCloudflareWorkerHandler()`,
+        importStatement: `import { createCloudflareCronHandler } from '@pikku/cloudflare'`,
+        exportStatement: `export default createCloudflareCronHandler()`,
+      }
+    case 'channel':
+      return {
+        importStatement: `import { createCloudflareWebSocketHandler } from '@pikku/cloudflare'`,
+        exportStatement: `export default createCloudflareWebSocketHandler()`,
       }
   }
 }
 
 /**
- * Generates a TypeScript entry point file for a given worker.
- *
- * The entry file:
- * 1. Imports the bootstrap file (which registers the function with Pikku)
- * 2. Imports the handler factory for the worker's role
- * 3. Exports the handler as the default export
+ * Generates entry source for a single unit.
+ * The bootstrap import path is relative from the entry file to the unit's .pikku/ dir.
  */
-export function generateEntrySource(worker: WorkerSpec): string {
-  const { importStatement, exportStatement } = getHandlerCode(worker.role)
+export function generateEntrySource(
+  unit: EntryGeneratorUnit,
+  entryFilePath: string
+): string {
+  const { importStatement, exportStatement } = getHandlerCode(unit.role)
+  const entryDir = dirname(entryFilePath)
+  const bootstrapRelative = relative(
+    entryDir,
+    join(unit.pikkuDir, 'pikku-bootstrap.gen.js')
+  )
+  // Ensure it starts with ./ for a relative import
+  const bootstrapPath = bootstrapRelative.startsWith('.')
+    ? bootstrapRelative
+    : `./${bootstrapRelative}`
 
-  const lines: string[] = [
-    `// Generated entry for worker "${worker.name}" (role: ${worker.role})`,
-    `// DO NOT EDIT — this file is regenerated on each build`,
+  return [
+    `// Generated Cloudflare Worker entry for "${unit.name}" (${unit.role})`,
     ``,
     importStatement,
-    `import '${worker.entryPoint}' // registers function(s): ${worker.functionIds.join(', ')}`,
+    `import '${bootstrapPath}'`,
     ``,
     exportStatement,
     ``,
-  ]
-
-  return lines.join('\n')
+  ].join('\n')
 }
 
 /**
- * Writes entry point files for all workers to the output directory.
+ * Generates Cloudflare Worker entry point files for all deployment units.
  *
- * Returns a map of worker name to entry file path.
+ * @param units - Units with their .pikku directories from per-unit codegen
+ * @param outputDir - Directory to write entry files into
+ * @returns Map of unit name → entry file path
  */
-export async function generateEntryFiles(
-  workers: WorkerSpec[],
+export async function generateCloudflareEntryFiles(
+  units: EntryGeneratorUnit[],
   outputDir: string
 ): Promise<Map<string, string>> {
   const entries = new Map<string, string>()
 
-  for (const worker of workers) {
-    const entryPath = join(outputDir, worker.name, 'entry.ts')
-    const source = generateEntrySource(worker)
+  for (const unit of units) {
+    const entryPath = join(outputDir, unit.name, 'entry.ts')
+    const source = generateEntrySource(unit, entryPath)
 
     await mkdir(dirname(entryPath), { recursive: true })
     await writeFile(entryPath, source, 'utf-8')
-
-    entries.set(worker.name, entryPath)
+    entries.set(unit.name, entryPath)
   }
 
   return entries

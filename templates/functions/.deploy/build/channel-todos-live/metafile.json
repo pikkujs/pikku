@@ -1,0 +1,3783 @@
+{
+  "inputs": {
+    ".deploy/units/channel-todos-live/.pikku/agent/pikku-agent-wirings-meta.gen.json": {
+      "bytes": 22,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/agent/pikku-agent-wirings-meta.gen.ts": {
+      "bytes": 319,
+      "imports": [
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/agent/pikku-agent-wirings-meta.gen.json",
+          "kind": "import-statement",
+          "original": "./pikku-agent-wirings-meta.gen.json",
+          "with": {
+            "type": "json"
+          }
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/units/channel-todos-live/.pikku/rpc/pikku-rpc-wirings-meta.internal.gen.json": {
+      "bytes": 1044,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/rpc/pikku-rpc-wirings-meta.internal.gen.ts": {
+      "bytes": 262,
+      "imports": [
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/rpc/pikku-rpc-wirings-meta.internal.gen.json",
+          "kind": "import-statement",
+          "original": "./pikku-rpc-wirings-meta.internal.gen.json",
+          "with": {
+            "type": "json"
+          }
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/units/channel-todos-live/.pikku/http/pikku-http-wirings-meta.gen.json": {
+      "bytes": 104,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/http/pikku-http-wirings-meta.gen.ts": {
+      "bytes": 304,
+      "imports": [
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/http/pikku-http-wirings-meta.gen.json",
+          "kind": "import-statement",
+          "original": "./pikku-http-wirings-meta.gen.json",
+          "with": {
+            "type": "json"
+          }
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/units/channel-todos-live/.pikku/scheduler/pikku-schedulers-wirings-meta.gen.json": {
+      "bytes": 2,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/scheduler/pikku-schedulers-wirings-meta.gen.ts": {
+      "bytes": 322,
+      "imports": [
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/scheduler",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/scheduler/pikku-schedulers-wirings-meta.gen.json",
+          "kind": "import-statement",
+          "original": "./pikku-schedulers-wirings-meta.gen.json",
+          "with": {
+            "type": "json"
+          }
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/units/channel-todos-live/.pikku/function/pikku-functions-meta.gen.json": {
+      "bytes": 18569,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/function/pikku-functions-meta.gen.ts": {
+      "bytes": 296,
+      "imports": [
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/function/pikku-functions-meta.gen.json",
+          "kind": "import-statement",
+          "original": "./pikku-functions-meta.gen.json",
+          "with": {
+            "type": "json"
+          }
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/units/channel-todos-live/.pikku/queue/pikku-queue-workers-wirings-meta.gen.json": {
+      "bytes": 2,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/queue/pikku-queue-workers-wirings-meta.gen.ts": {
+      "bytes": 313,
+      "imports": [
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/queue",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/queue/pikku-queue-workers-wirings-meta.gen.json",
+          "kind": "import-statement",
+          "original": "./pikku-queue-workers-wirings-meta.gen.json",
+          "with": {
+            "type": "json"
+          }
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/units/channel-todos-live/.pikku/channel/pikku-channels-meta.gen.json": {
+      "bytes": 711,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/channel/pikku-channels-meta.gen.ts": {
+      "bytes": 300,
+      "imports": [
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/channel/pikku-channels-meta.gen.json",
+          "kind": "import-statement",
+          "original": "./pikku-channels-meta.gen.json",
+          "with": {
+            "type": "json"
+          }
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/units/channel-todos-live/.pikku/mcp/pikku-mcp-wirings-meta.gen.json": {
+      "bytes": 65,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/mcp/pikku-mcp-wirings-meta.gen.ts": {
+      "bytes": 502,
+      "imports": [
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/mcp/pikku-mcp-wirings-meta.gen.json",
+          "kind": "import-statement",
+          "original": "./pikku-mcp-wirings-meta.gen.json",
+          "with": {
+            "type": "json"
+          }
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/units/channel-todos-live/.pikku/cli/pikku-cli-wirings-meta.gen.json": {
+      "bytes": 39,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/cli/pikku-cli-wirings-meta.gen.ts": {
+      "bytes": 280,
+      "imports": [
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/cli",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/cli/pikku-cli-wirings-meta.gen.json",
+          "kind": "import-statement",
+          "original": "./pikku-cli-wirings-meta.gen.json",
+          "with": {
+            "type": "json"
+          }
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/types/core.types.js": {
+      "bytes": 1481,
+      "imports": [],
+      "format": "esm"
+    },
+    "../../packages/core/dist/function/functions.types.js": {
+      "bytes": 2280,
+      "imports": [],
+      "format": "esm"
+    },
+    "../../packages/core/dist/pikku-state.js": {
+      "bytes": 4756,
+      "imports": [],
+      "format": "esm"
+    },
+    "../../packages/core/dist/utils.js": {
+      "bytes": 3648,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "./pikku-state.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/middleware-runner.js": {
+      "bytes": 6918,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "./pikku-state.js"
+        },
+        {
+          "path": "../../packages/core/dist/utils.js",
+          "kind": "import-statement",
+          "original": "./utils.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/channel/channel-middleware-runner.js": {
+      "bytes": 2888,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "../../pikku-state.js"
+        },
+        {
+          "path": "../../packages/core/dist/utils.js",
+          "kind": "import-statement",
+          "original": "../../utils.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/errors/error-handler.js": {
+      "bytes": 1415,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "../pikku-state.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/errors/errors.js": {
+      "bytes": 12742,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/errors/error-handler.js",
+          "kind": "import-statement",
+          "original": "./error-handler.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/permissions.js": {
+      "bytes": 9362,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "./pikku-state.js"
+        },
+        {
+          "path": "../../packages/core/dist/errors/errors.js",
+          "kind": "import-statement",
+          "original": "./errors/errors.js"
+        },
+        {
+          "path": "../../packages/core/dist/utils.js",
+          "kind": "import-statement",
+          "original": "./utils.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/schema.js": {
+      "bytes": 4619,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/errors/errors.js",
+          "kind": "import-statement",
+          "original": "./errors/errors.js"
+        },
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "./pikku-state.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/version.js": {
+      "bytes": 665,
+      "imports": [],
+      "format": "esm"
+    },
+    "../../packages/core/dist/services/user-session-service.js": {
+      "bytes": 1867,
+      "imports": [],
+      "format": "esm"
+    },
+    "../../packages/core/dist/services/pikku-user-id.js": {
+      "bytes": 654,
+      "imports": [],
+      "format": "esm"
+    },
+    "../../packages/core/dist/services/credential-wire-service.js": {
+      "bytes": 2377,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/services/pikku-user-id.js",
+          "kind": "import-statement",
+          "original": "./pikku-user-id.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/crypto-utils.js": {
+      "bytes": 5133,
+      "imports": [],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/ai-agent/ai-agent-memory.js": {
+      "bytes": 7925,
+      "imports": [
+        {
+          "path": "crypto",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/ai-agent/ai-agent-model-config.js": {
+      "bytes": 1198,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "../../pikku-state.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/ai-agent/ai-agent-stream.js": {
+      "bytes": 32384,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "../../pikku-state.js"
+        },
+        {
+          "path": "../../packages/core/dist/errors/errors.js",
+          "kind": "import-statement",
+          "original": "../../errors/errors.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/channel/channel-middleware-runner.js",
+          "kind": "import-statement",
+          "original": "../channel/channel-middleware-runner.js"
+        },
+        {
+          "path": "crypto",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "../../packages/core/dist/wirings/ai-agent/ai-agent-memory.js",
+          "kind": "import-statement",
+          "original": "./ai-agent-memory.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/ai-agent/ai-agent-prepare.js",
+          "kind": "import-statement",
+          "original": "./ai-agent-prepare.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/ai-agent/ai-agent-model-config.js",
+          "kind": "import-statement",
+          "original": "./ai-agent-model-config.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/utils/hash.js": {
+      "bytes": 651,
+      "imports": [
+        {
+          "path": "crypto",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/time-utils.js": {
+      "bytes": 2684,
+      "imports": [],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/workflow/pikku-workflow-service.js": {
+      "bytes": 34628,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/function/function-runner.js",
+          "kind": "import-statement",
+          "original": "../../function/function-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "../../pikku-state.js"
+        },
+        {
+          "path": "../../packages/core/dist/time-utils.js",
+          "kind": "import-statement",
+          "original": "../../time-utils.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/workflow/graph/graph-runner.js",
+          "kind": "import-statement",
+          "original": "./graph/graph-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/errors/error-handler.js",
+          "kind": "import-statement",
+          "original": "../../errors/error-handler.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/rpc/rpc-runner.js",
+          "kind": "import-statement",
+          "original": "../rpc/rpc-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/workflow/graph/graph-runner.js",
+          "kind": "import-statement",
+          "original": "./graph/graph-runner.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/workflow/graph/graph-runner.js": {
+      "bytes": 24728,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/wirings/workflow/pikku-workflow-service.js",
+          "kind": "import-statement",
+          "original": "../pikku-workflow-service.js"
+        },
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "../../../pikku-state.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/rpc/rpc-runner.js",
+          "kind": "import-statement",
+          "original": "../../rpc/rpc-runner.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/workflow/graph/graph-validation.js": {
+      "bytes": 7579,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "../../../pikku-state.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/rpc/rpc-runner.js",
+          "kind": "import-statement",
+          "original": "../../rpc/rpc-runner.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/ai-agent/agent-dynamic-workflow.js": {
+      "bytes": 24038,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "../../pikku-state.js"
+        },
+        {
+          "path": "../../packages/core/dist/utils/hash.js",
+          "kind": "import-statement",
+          "original": "../../utils/hash.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/workflow/graph/graph-runner.js",
+          "kind": "import-statement",
+          "original": "../workflow/graph/graph-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/rpc/rpc-runner.js",
+          "kind": "import-statement",
+          "original": "../rpc/rpc-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/services/user-session-service.js",
+          "kind": "import-statement",
+          "original": "../../services/user-session-service.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/workflow/graph/graph-validation.js",
+          "kind": "import-statement",
+          "original": "../workflow/graph/graph-validation.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/ai-agent/ai-agent-prepare.js": {
+      "bytes": 21460,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/errors/error-handler.js",
+          "kind": "import-statement",
+          "original": "../../errors/error-handler.js"
+        },
+        {
+          "path": "../../packages/core/dist/errors/errors.js",
+          "kind": "import-statement",
+          "original": "../../errors/errors.js"
+        },
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "../../pikku-state.js"
+        },
+        {
+          "path": "../../packages/core/dist/services/user-session-service.js",
+          "kind": "import-statement",
+          "original": "../../services/user-session-service.js"
+        },
+        {
+          "path": "crypto",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "../../packages/core/dist/wirings/ai-agent/ai-agent-stream.js",
+          "kind": "import-statement",
+          "original": "./ai-agent-stream.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/ai-agent/ai-agent-runner.js",
+          "kind": "import-statement",
+          "original": "./ai-agent-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/rpc/rpc-runner.js",
+          "kind": "import-statement",
+          "original": "../../wirings/rpc/rpc-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/ai-agent/agent-dynamic-workflow.js",
+          "kind": "import-statement",
+          "original": "./agent-dynamic-workflow.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/ai-agent/ai-agent-memory.js",
+          "kind": "import-statement",
+          "original": "./ai-agent-memory.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/ai-agent/ai-agent-model-config.js",
+          "kind": "import-statement",
+          "original": "./ai-agent-model-config.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/ai-agent/ai-agent-runner.js": {
+      "bytes": 23949,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/wirings/ai-agent/ai-agent-memory.js",
+          "kind": "import-statement",
+          "original": "./ai-agent-memory.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/ai-agent/ai-agent-prepare.js",
+          "kind": "import-statement",
+          "original": "./ai-agent-prepare.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/ai-agent/ai-agent-stream.js",
+          "kind": "import-statement",
+          "original": "./ai-agent-stream.js"
+        },
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "../../pikku-state.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/ai-agent/ai-agent-model-config.js",
+          "kind": "import-statement",
+          "original": "./ai-agent-model-config.js"
+        },
+        {
+          "path": "../../packages/core/dist/errors/errors.js",
+          "kind": "import-statement",
+          "original": "../../errors/errors.js"
+        },
+        {
+          "path": "crypto",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/rpc/rpc-runner.js": {
+      "bytes": 12923,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/function/function-runner.js",
+          "kind": "import-statement",
+          "original": "../../function/function-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "../../pikku-state.js"
+        },
+        {
+          "path": "../../packages/core/dist/errors/errors.js",
+          "kind": "import-statement",
+          "original": "../../errors/errors.js"
+        },
+        {
+          "path": "../../packages/core/dist/errors/error-handler.js",
+          "kind": "import-statement",
+          "original": "../../errors/error-handler.js"
+        },
+        {
+          "path": "../../packages/core/dist/version.js",
+          "kind": "import-statement",
+          "original": "../../version.js"
+        },
+        {
+          "path": "../../packages/core/dist/crypto-utils.js",
+          "kind": "import-statement",
+          "original": "../../crypto-utils.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/ai-agent/ai-agent-runner.js",
+          "kind": "import-statement",
+          "original": "../ai-agent/ai-agent-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/ai-agent/ai-agent-stream.js",
+          "kind": "import-statement",
+          "original": "../ai-agent/ai-agent-stream.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/function/function-runner.js": {
+      "bytes": 11427,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/middleware-runner.js",
+          "kind": "import-statement",
+          "original": "../middleware-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/channel/channel-middleware-runner.js",
+          "kind": "import-statement",
+          "original": "../wirings/channel/channel-middleware-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/permissions.js",
+          "kind": "import-statement",
+          "original": "../permissions.js"
+        },
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "../pikku-state.js"
+        },
+        {
+          "path": "../../packages/core/dist/schema.js",
+          "kind": "import-statement",
+          "original": "../schema.js"
+        },
+        {
+          "path": "../../packages/core/dist/version.js",
+          "kind": "import-statement",
+          "original": "../version.js"
+        },
+        {
+          "path": "../../packages/core/dist/services/user-session-service.js",
+          "kind": "import-statement",
+          "original": "../services/user-session-service.js"
+        },
+        {
+          "path": "../../packages/core/dist/errors/errors.js",
+          "kind": "import-statement",
+          "original": "../errors/errors.js"
+        },
+        {
+          "path": "../../packages/core/dist/services/credential-wire-service.js",
+          "kind": "import-statement",
+          "original": "../services/credential-wire-service.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/rpc/rpc-runner.js",
+          "kind": "import-statement",
+          "original": "../wirings/rpc/rpc-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/utils.js",
+          "kind": "import-statement",
+          "original": "../utils.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/function/index.js": {
+      "bytes": 73,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/function/function-runner.js",
+          "kind": "import-statement",
+          "original": "./function-runner.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/pikku-request.js": {
+      "bytes": 489,
+      "imports": [],
+      "format": "esm"
+    },
+    "../../packages/core/dist/services/local-variables.js": {
+      "bytes": 738,
+      "imports": [],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/cli/command-parser.js": {
+      "bytes": 14598,
+      "imports": [],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/cli/cli-runner.js": {
+      "bytes": 14395,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/errors/errors.js",
+          "kind": "import-statement",
+          "original": "../../errors/errors.js"
+        },
+        {
+          "path": "../../packages/core/dist/function/function-runner.js",
+          "kind": "import-statement",
+          "original": "../../function/function-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "../../pikku-state.js"
+        },
+        {
+          "path": "../../packages/core/dist/services/user-session-service.js",
+          "kind": "import-statement",
+          "original": "../../services/user-session-service.js"
+        },
+        {
+          "path": "../../packages/core/dist/services/local-variables.js",
+          "kind": "import-statement",
+          "original": "../../services/local-variables.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/cli/command-parser.js",
+          "kind": "import-statement",
+          "original": "./command-parser.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/env.js": {
+      "bytes": 73,
+      "imports": [],
+      "format": "esm"
+    },
+    "../../packages/core/dist/handle-error.js": {
+      "bytes": 2162,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/env.js",
+          "kind": "import-statement",
+          "original": "./env.js"
+        },
+        {
+          "path": "../../packages/core/dist/errors/error-handler.js",
+          "kind": "import-statement",
+          "original": "./errors/error-handler.js"
+        },
+        {
+          "path": "../../packages/core/dist/errors/errors.js",
+          "kind": "import-statement",
+          "original": "./errors/errors.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/http/pikku-fetch-http-response.js": {
+      "bytes": 3590,
+      "imports": [
+        {
+          "path": "cookie",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/http/pikku-fetch-http-request.js": {
+      "bytes": 5465,
+      "imports": [
+        {
+          "path": "picoquery",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "cookie",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "../../packages/core/dist/errors/errors.js",
+          "kind": "import-statement",
+          "original": "../../errors/errors.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/http/web-request.js": {
+      "bytes": 3270,
+      "imports": [],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/http/routers/path-to-regex.js": {
+      "bytes": 3850,
+      "imports": [
+        {
+          "path": "path-to-regexp",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "../../../pikku-state.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/http/routers/http-router.js": {
+      "bytes": 107,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/wirings/http/routers/path-to-regex.js",
+          "kind": "import-statement",
+          "original": "./path-to-regex.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/http/http-runner.js": {
+      "bytes": 17870,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/errors/errors.js",
+          "kind": "import-statement",
+          "original": "../../errors/errors.js"
+        },
+        {
+          "path": "../../packages/core/dist/utils.js",
+          "kind": "import-statement",
+          "original": "../../utils.js"
+        },
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "../../pikku-state.js"
+        },
+        {
+          "path": "../../packages/core/dist/services/user-session-service.js",
+          "kind": "import-statement",
+          "original": "../../services/user-session-service.js"
+        },
+        {
+          "path": "../../packages/core/dist/errors/error-handler.js",
+          "kind": "import-statement",
+          "original": "../../errors/error-handler.js"
+        },
+        {
+          "path": "../../packages/core/dist/handle-error.js",
+          "kind": "import-statement",
+          "original": "../../handle-error.js"
+        },
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "../../pikku-state.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/http/pikku-fetch-http-response.js",
+          "kind": "import-statement",
+          "original": "./pikku-fetch-http-response.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/http/pikku-fetch-http-request.js",
+          "kind": "import-statement",
+          "original": "./pikku-fetch-http-request.js"
+        },
+        {
+          "path": "../../packages/core/dist/function/function-runner.js",
+          "kind": "import-statement",
+          "original": "../../function/function-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/http/web-request.js",
+          "kind": "import-statement",
+          "original": "./web-request.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/http/routers/http-router.js",
+          "kind": "import-statement",
+          "original": "./routers/http-router.js"
+        },
+        {
+          "path": "../../packages/core/dist/schema.js",
+          "kind": "import-statement",
+          "original": "../../schema.js"
+        },
+        {
+          "path": "../../packages/core/dist/middleware-runner.js",
+          "kind": "import-statement",
+          "original": "../../middleware-runner.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/mcp/mcp-runner.js": {
+      "bytes": 7934,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/errors/error-handler.js",
+          "kind": "import-statement",
+          "original": "../../errors/error-handler.js"
+        },
+        {
+          "path": "../../packages/core/dist/utils.js",
+          "kind": "import-statement",
+          "original": "../../utils.js"
+        },
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "../../pikku-state.js"
+        },
+        {
+          "path": "../../packages/core/dist/function/function-runner.js",
+          "kind": "import-statement",
+          "original": "../../function/function-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/rpc/rpc-runner.js",
+          "kind": "import-statement",
+          "original": "../rpc/rpc-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/errors/errors.js",
+          "kind": "import-statement",
+          "original": "../../errors/errors.js"
+        },
+        {
+          "path": "../../packages/core/dist/services/user-session-service.js",
+          "kind": "import-statement",
+          "original": "../../services/user-session-service.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/queue/queue-runner.js": {
+      "bytes": 4957,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/errors/error-handler.js",
+          "kind": "import-statement",
+          "original": "../../errors/error-handler.js"
+        },
+        {
+          "path": "../../packages/core/dist/errors/errors.js",
+          "kind": "import-statement",
+          "original": "../../errors/errors.js"
+        },
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "../../pikku-state.js"
+        },
+        {
+          "path": "../../packages/core/dist/function/function-runner.js",
+          "kind": "import-statement",
+          "original": "../../function/function-runner.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/scheduler/scheduler-runner.js": {
+      "bytes": 3439,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/errors/error-handler.js",
+          "kind": "import-statement",
+          "original": "../../errors/error-handler.js"
+        },
+        {
+          "path": "../../packages/core/dist/errors/errors.js",
+          "kind": "import-statement",
+          "original": "../../errors/errors.js"
+        },
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "../../pikku-state.js"
+        },
+        {
+          "path": "../../packages/core/dist/function/function-runner.js",
+          "kind": "import-statement",
+          "original": "../../function/function-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/services/user-session-service.js",
+          "kind": "import-statement",
+          "original": "../../services/user-session-service.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/workflow/graph/graph-node.js": {
+      "bytes": 1771,
+      "imports": [],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/workflow/workflow-helpers.js": {
+      "bytes": 1211,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/wirings/workflow/pikku-workflow-service.js",
+          "kind": "import-statement",
+          "original": "./pikku-workflow-service.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/wirings/rpc/wire-addon.js": {
+      "bytes": 291,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "../../pikku-state.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "../../packages/core/dist/services/scheduler-service.js": {
+      "bytes": 348,
+      "imports": [],
+      "format": "esm"
+    },
+    "../../packages/core/dist/index.js": {
+      "bytes": 1597,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/types/core.types.js",
+          "kind": "import-statement",
+          "original": "./types/core.types.js"
+        },
+        {
+          "path": "../../packages/core/dist/function/functions.types.js",
+          "kind": "import-statement",
+          "original": "./function/functions.types.js"
+        },
+        {
+          "path": "../../packages/core/dist/function/index.js",
+          "kind": "import-statement",
+          "original": "./function/index.js"
+        },
+        {
+          "path": "../../packages/core/dist/pikku-request.js",
+          "kind": "import-statement",
+          "original": "./pikku-request.js"
+        },
+        {
+          "path": "../../packages/core/dist/time-utils.js",
+          "kind": "import-statement",
+          "original": "./time-utils.js"
+        },
+        {
+          "path": "../../packages/core/dist/version.js",
+          "kind": "import-statement",
+          "original": "./version.js"
+        },
+        {
+          "path": "../../packages/core/dist/function/function-runner.js",
+          "kind": "import-statement",
+          "original": "./function/function-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/cli/cli-runner.js",
+          "kind": "import-statement",
+          "original": "./wirings/cli/cli-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/http/http-runner.js",
+          "kind": "import-statement",
+          "original": "./wirings/http/http-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/mcp/mcp-runner.js",
+          "kind": "import-statement",
+          "original": "./wirings/mcp/mcp-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/queue/queue-runner.js",
+          "kind": "import-statement",
+          "original": "./wirings/queue/queue-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/scheduler/scheduler-runner.js",
+          "kind": "import-statement",
+          "original": "./wirings/scheduler/scheduler-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/errors/errors.js",
+          "kind": "import-statement",
+          "original": "./errors/errors.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/workflow/graph/graph-node.js",
+          "kind": "import-statement",
+          "original": "./wirings/workflow/graph/graph-node.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/workflow/workflow-helpers.js",
+          "kind": "import-statement",
+          "original": "./wirings/workflow/workflow-helpers.js"
+        },
+        {
+          "path": "../../packages/core/dist/wirings/rpc/wire-addon.js",
+          "kind": "import-statement",
+          "original": "./wirings/rpc/wire-addon.js"
+        },
+        {
+          "path": "../../packages/core/dist/middleware-runner.js",
+          "kind": "import-statement",
+          "original": "./middleware-runner.js"
+        },
+        {
+          "path": "../../packages/core/dist/permissions.js",
+          "kind": "import-statement",
+          "original": "./permissions.js"
+        },
+        {
+          "path": "../../packages/core/dist/utils.js",
+          "kind": "import-statement",
+          "original": "./utils.js"
+        },
+        {
+          "path": "../../packages/core/dist/pikku-state.js",
+          "kind": "import-statement",
+          "original": "./pikku-state.js"
+        },
+        {
+          "path": "../../packages/core/dist/services/scheduler-service.js",
+          "kind": "import-statement",
+          "original": "./services/scheduler-service.js"
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/function/pikku-function-types.gen.ts": {
+      "bytes": 24238,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/index.js",
+          "kind": "import-statement",
+          "original": "@pikku/core"
+        },
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "../../packages/core/dist/index.js",
+          "kind": "import-statement",
+          "original": "@pikku/core"
+        },
+        {
+          "path": "@pikku/core/errors",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/function",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "../../packages/core/dist/index.js",
+          "kind": "import-statement",
+          "original": "@pikku/core"
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/http/pikku-http-types.gen.ts": {
+      "bytes": 5370,
+      "imports": [
+        {
+          "path": "@pikku/core/http",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/channel/pikku-channel-types.gen.ts": {
+      "bytes": 6914,
+      "imports": [
+        {
+          "path": "@pikku/core/channel",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/http",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/trigger/pikku-trigger-types.gen.ts": {
+      "bytes": 5380,
+      "imports": [
+        {
+          "path": "@pikku/core/trigger",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/scheduler/pikku-scheduler-types.gen.ts": {
+      "bytes": 892,
+      "imports": [
+        {
+          "path": "@pikku/core/scheduler",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/queue/pikku-queue-types.gen.ts": {
+      "bytes": 870,
+      "imports": [
+        {
+          "path": "@pikku/core/queue",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/mcp/pikku-mcp-types.gen.ts": {
+      "bytes": 6817,
+      "imports": [
+        {
+          "path": "@pikku/core/mcp",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/cli/pikku-cli-types.gen.ts": {
+      "bytes": 4448,
+      "imports": [
+        {
+          "path": "@pikku/core/cli",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/console/pikku-node-types.gen.ts": {
+      "bytes": 224,
+      "imports": [],
+      "format": "esm"
+    },
+    ".pikku/secrets/pikku-secret-types.gen.ts": {
+      "bytes": 203,
+      "imports": [
+        {
+          "path": "@pikku/core/secret",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/pikku-types.gen.ts": {
+      "bytes": 900,
+      "imports": [
+        {
+          "path": ".pikku/function/pikku-function-types.gen.ts",
+          "kind": "import-statement",
+          "original": "./function/pikku-function-types.gen.js"
+        },
+        {
+          "path": ".pikku/http/pikku-http-types.gen.ts",
+          "kind": "import-statement",
+          "original": "./http/pikku-http-types.gen.js"
+        },
+        {
+          "path": ".pikku/channel/pikku-channel-types.gen.ts",
+          "kind": "import-statement",
+          "original": "./channel/pikku-channel-types.gen.js"
+        },
+        {
+          "path": ".pikku/trigger/pikku-trigger-types.gen.ts",
+          "kind": "import-statement",
+          "original": "./trigger/pikku-trigger-types.gen.js"
+        },
+        {
+          "path": ".pikku/scheduler/pikku-scheduler-types.gen.ts",
+          "kind": "import-statement",
+          "original": "./scheduler/pikku-scheduler-types.gen.js"
+        },
+        {
+          "path": ".pikku/queue/pikku-queue-types.gen.ts",
+          "kind": "import-statement",
+          "original": "./queue/pikku-queue-types.gen.js"
+        },
+        {
+          "path": ".pikku/mcp/pikku-mcp-types.gen.ts",
+          "kind": "import-statement",
+          "original": "./mcp/pikku-mcp-types.gen.js"
+        },
+        {
+          "path": ".pikku/cli/pikku-cli-types.gen.ts",
+          "kind": "import-statement",
+          "original": "./cli/pikku-cli-types.gen.js"
+        },
+        {
+          "path": ".pikku/console/pikku-node-types.gen.ts",
+          "kind": "import-statement",
+          "original": "./console/pikku-node-types.gen.js"
+        },
+        {
+          "path": ".pikku/secrets/pikku-secret-types.gen.ts",
+          "kind": "import-statement",
+          "original": "./secrets/pikku-secret-types.gen.js"
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/agent/pikku-agent-types.gen.ts": {
+      "bytes": 2762,
+      "imports": [
+        {
+          "path": "@pikku/core/ai-agent",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/ai-agent",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "src/middleware.ts": {
+      "bytes": 1180,
+      "imports": [
+        {
+          "path": "@pikku/auth-js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": ".pikku/pikku-types.gen.ts",
+          "kind": "import-statement",
+          "original": "../.pikku/pikku-types.gen.js"
+        },
+        {
+          "path": ".pikku/agent/pikku-agent-types.gen.ts",
+          "kind": "import-statement",
+          "original": "../.pikku/agent/pikku-agent-types.gen.js"
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/units/channel-todos-live/.pikku/middleware/pikku-middleware.gen.ts": {
+      "bytes": 218,
+      "imports": [
+        {
+          "path": "src/middleware.ts",
+          "kind": "import-statement",
+          "original": "../../../../../src/middleware.js"
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/units/channel-todos-live/.pikku/agent/pikku-agent-wirings.gen.ts": {
+      "bytes": 57,
+      "imports": [],
+      "format": "esm"
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ListTodosInput.schema.json": {
+      "bytes": 345,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ListTodosOutput.schema.json": {
+      "bytes": 694,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoInput.schema.json": {
+      "bytes": 183,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoOutput.schema.json": {
+      "bytes": 661,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoInput.schema.json": {
+      "bytes": 493,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoOutput.schema.json": {
+      "bytes": 633,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/UpdateTodoInput.schema.json": {
+      "bytes": 424,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/UpdateTodoOutput.schema.json": {
+      "bytes": 700,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/DeleteTodoInput.schema.json": {
+      "bytes": 183,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/DeleteTodoOutput.schema.json": {
+      "bytes": 170,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CompleteTodoInput.schema.json": {
+      "bytes": 183,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CompleteTodoOutput.schema.json": {
+      "bytes": 700,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/OnConnectInput.schema.json": {
+      "bytes": 199,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SubscribeInput.schema.json": {
+      "bytes": 280,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SubscribeOutput.schema.json": {
+      "bytes": 210,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/UnsubscribeInput.schema.json": {
+      "bytes": 284,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/UnsubscribeOutput.schema.json": {
+      "bytes": 214,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoToolInput.schema.json": {
+      "bytes": 493,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/MCPToolResponse.schema.json": {
+      "bytes": 545,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoResourceInput.schema.json": {
+      "bytes": 171,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/MCPResourceResponse.schema.json": {
+      "bytes": 294,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PlanDayPromptInput.schema.json": {
+      "bytes": 230,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/MCPPromptResponse.schema.json": {
+      "bytes": 643,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PrioritizePromptInput.schema.json": {
+      "bytes": 366,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessReminderInput.schema.json": {
+      "bytes": 203,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessReminderOutput.schema.json": {
+      "bytes": 212,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GreetInput.schema.json": {
+      "bytes": 204,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GreetOutput.schema.json": {
+      "bytes": 267,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/RemoteGreetInput.schema.json": {
+      "bytes": 204,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/RemoteGreetOutput.schema.json": {
+      "bytes": 267,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessTodosProgressInput.schema.json": {
+      "bytes": 119,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessTodosProgressOutput.schema.json": {
+      "bytes": 286,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TodoStreamInput.schema.json": {
+      "bytes": 230,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TodoStreamOutput.schema.json": {
+      "bytes": 736,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TestEventTriggerInput.schema.json": {
+      "bytes": 185,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TestEventTriggerOutput.schema.json": {
+      "bytes": 181,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/OnTestEventInput.schema.json": {
+      "bytes": 169,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/OnTestEventOutput.schema.json": {
+      "bytes": 169,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendNotificationInput.schema.json": {
+      "bytes": 272,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendNotificationOutput.schema.json": {
+      "bytes": 228,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ScheduleReminderInput.schema.json": {
+      "bytes": 255,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ScheduleReminderOutput.schema.json": {
+      "bytes": 220,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateAndNotifyWorkflowInput.schema.json": {
+      "bytes": 312,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateAndNotifyWorkflowOutput.schema.json": {
+      "bytes": 761,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/FetchOverdueTodosInput.schema.json": {
+      "bytes": 157,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/FetchOverdueTodosOutput.schema.json": {
+      "bytes": 742,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendOverdueSummaryInput.schema.json": {
+      "bytes": 756,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendOverdueSummaryOutput.schema.json": {
+      "bytes": 214,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliHelpInput.schema.json": {
+      "bytes": 180,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliHelpOutput.schema.json": {
+      "bytes": 175,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliRawInput.schema.json": {
+      "bytes": 200,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliRawOutput.schema.json": {
+      "bytes": 193,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GraphStartTodoReviewWorkflowFetchOverdueOutput.schema.json": {
+      "bytes": 177,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/RpcCallerInput.schema.json": {
+      "bytes": 191,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/HttpOptionsRpcRpcNameInput.schema.json": {
+      "bytes": 181,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/WorkflowStartCreateAndNotifyWorkflowOutput.schema.json": {
+      "bytes": 177,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/WorkflowStatusCreateAndNotifyWorkflowInput.schema.json": {
+      "bytes": 177,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/WorkflowStatusCreateAndNotifyWorkflowOutput.schema.json": {
+      "bytes": 1145,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentCallerInput.schema.json": {
+      "bytes": 307,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentStreamCallerInput.schema.json": {
+      "bytes": 307,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentApproveCallerInput.schema.json": {
+      "bytes": 428,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentResumeCallerInput.schema.json": {
+      "bytes": 304,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TodoAssistantOutput.schema.json": {
+      "bytes": 690,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoToolOutput.schema.json": {
+      "bytes": 247,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoResourceOutput.schema.json": {
+      "bytes": 230,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PlanDayPromptOutput.schema.json": {
+      "bytes": 389,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PrioritizePromptOutput.schema.json": {
+      "bytes": 389,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/schemas/register.gen.ts": {
+      "bytes": 10944,
+      "imports": [
+        {
+          "path": "@pikku/core/schema",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ListTodosInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/ListTodosInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ListTodosOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/ListTodosOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/GetTodoInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/GetTodoOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/CreateTodoInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/CreateTodoOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/UpdateTodoInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/UpdateTodoInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/UpdateTodoOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/UpdateTodoOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/DeleteTodoInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/DeleteTodoInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/DeleteTodoOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/DeleteTodoOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CompleteTodoInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/CompleteTodoInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CompleteTodoOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/CompleteTodoOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/OnConnectInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/OnConnectInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SubscribeInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/SubscribeInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SubscribeOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/SubscribeOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/UnsubscribeInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/UnsubscribeInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/UnsubscribeOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/UnsubscribeOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoToolInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/CreateTodoToolInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/MCPToolResponse.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/MCPToolResponse.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoResourceInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/GetTodoResourceInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/MCPResourceResponse.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/MCPResourceResponse.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PlanDayPromptInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/PlanDayPromptInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/MCPPromptResponse.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/MCPPromptResponse.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PrioritizePromptInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/PrioritizePromptInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessReminderInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/ProcessReminderInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessReminderOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/ProcessReminderOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GreetInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/GreetInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GreetOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/GreetOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/RemoteGreetInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/RemoteGreetInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/RemoteGreetOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/RemoteGreetOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessTodosProgressInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/ProcessTodosProgressInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessTodosProgressOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/ProcessTodosProgressOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TodoStreamInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/TodoStreamInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TodoStreamOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/TodoStreamOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TestEventTriggerInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/TestEventTriggerInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TestEventTriggerOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/TestEventTriggerOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/OnTestEventInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/OnTestEventInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/OnTestEventOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/OnTestEventOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendNotificationInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/SendNotificationInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendNotificationOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/SendNotificationOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ScheduleReminderInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/ScheduleReminderInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ScheduleReminderOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/ScheduleReminderOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateAndNotifyWorkflowInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/CreateAndNotifyWorkflowInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateAndNotifyWorkflowOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/CreateAndNotifyWorkflowOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/FetchOverdueTodosInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/FetchOverdueTodosInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/FetchOverdueTodosOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/FetchOverdueTodosOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendOverdueSummaryInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/SendOverdueSummaryInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendOverdueSummaryOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/SendOverdueSummaryOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliHelpInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/CliHelpInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliHelpOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/CliHelpOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliRawInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/CliRawInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliRawOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/CliRawOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GraphStartTodoReviewWorkflowFetchOverdueOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/GraphStartTodoReviewWorkflowFetchOverdueOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/RpcCallerInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/RpcCallerInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/HttpOptionsRpcRpcNameInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/HttpOptionsRpcRpcNameInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/WorkflowStartCreateAndNotifyWorkflowOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/WorkflowStartCreateAndNotifyWorkflowOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/WorkflowStatusCreateAndNotifyWorkflowInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/WorkflowStatusCreateAndNotifyWorkflowInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/WorkflowStatusCreateAndNotifyWorkflowOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/WorkflowStatusCreateAndNotifyWorkflowOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentCallerInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/AgentCallerInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentStreamCallerInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/AgentStreamCallerInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentApproveCallerInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/AgentApproveCallerInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentResumeCallerInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/AgentResumeCallerInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TodoAssistantOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/TodoAssistantOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoToolOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/CreateTodoToolOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoResourceOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/GetTodoResourceOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PlanDayPromptOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/PlanDayPromptOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PrioritizePromptOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/PrioritizePromptOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/units/channel-todos-live/.pikku/http/pikku-http-wirings.gen.ts": {
+      "bytes": 103,
+      "imports": [],
+      "format": "esm"
+    },
+    ".deploy/units/channel-todos-live/.pikku/scheduler/pikku-schedulers-wirings.gen.ts": {
+      "bytes": 112,
+      "imports": [],
+      "format": "esm"
+    },
+    "src/schemas.ts": {
+      "bytes": 4428,
+      "imports": [
+        {
+          "path": "zod",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "src/functions/todos.functions.ts": {
+      "bytes": 3636,
+      "imports": [
+        {
+          "path": ".pikku/pikku-types.gen.ts",
+          "kind": "import-statement",
+          "original": "../../.pikku/pikku-types.gen.js"
+        },
+        {
+          "path": "src/schemas.ts",
+          "kind": "import-statement",
+          "original": "../schemas.js"
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/workflow/pikku-workflow-types.gen.ts": {
+      "bytes": 8264,
+      "imports": [
+        {
+          "path": "@pikku/core/workflow",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/workflow",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/workflow",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/workflow",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/errors",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "src/functions/workflow.functions.ts": {
+      "bytes": 3684,
+      "imports": [
+        {
+          "path": ".pikku/pikku-types.gen.ts",
+          "kind": "import-statement",
+          "original": "../../.pikku/pikku-types.gen.js"
+        },
+        {
+          "path": ".pikku/workflow/pikku-workflow-types.gen.ts",
+          "kind": "import-statement",
+          "original": "../../.pikku/workflow/pikku-workflow-types.gen.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "src/functions/remote-rpc.functions.ts": {
+      "bytes": 902,
+      "imports": [
+        {
+          "path": ".pikku/pikku-types.gen.ts",
+          "kind": "import-statement",
+          "original": "../../.pikku/pikku-types.gen.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "src/functions/trigger.functions.ts": {
+      "bytes": 1256,
+      "imports": [
+        {
+          "path": ".pikku/pikku-types.gen.ts",
+          "kind": "import-statement",
+          "original": "../../.pikku/pikku-types.gen.js"
+        },
+        {
+          "path": "src/schemas.ts",
+          "kind": "import-statement",
+          "original": "../schemas.js"
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/units/channel-todos-live/.pikku/function/pikku-functions.gen.ts": {
+      "bytes": 1495,
+      "imports": [
+        {
+          "path": "../../packages/core/dist/index.js",
+          "kind": "import-statement",
+          "original": "@pikku/core"
+        },
+        {
+          "path": "src/functions/todos.functions.ts",
+          "kind": "import-statement",
+          "original": "../../../../../src/functions/todos.functions.js"
+        },
+        {
+          "path": "src/functions/todos.functions.ts",
+          "kind": "import-statement",
+          "original": "../../../../../src/functions/todos.functions.js"
+        },
+        {
+          "path": "src/functions/todos.functions.ts",
+          "kind": "import-statement",
+          "original": "../../../../../src/functions/todos.functions.js"
+        },
+        {
+          "path": "src/functions/workflow.functions.ts",
+          "kind": "import-statement",
+          "original": "../../../../../src/functions/workflow.functions.js"
+        },
+        {
+          "path": "src/functions/todos.functions.ts",
+          "kind": "import-statement",
+          "original": "../../../../../src/functions/todos.functions.js"
+        },
+        {
+          "path": "src/functions/remote-rpc.functions.ts",
+          "kind": "import-statement",
+          "original": "../../../../../src/functions/remote-rpc.functions.js"
+        },
+        {
+          "path": "src/functions/todos.functions.ts",
+          "kind": "import-statement",
+          "original": "../../../../../src/functions/todos.functions.js"
+        },
+        {
+          "path": "src/functions/trigger.functions.ts",
+          "kind": "import-statement",
+          "original": "../../../../../src/functions/trigger.functions.js"
+        },
+        {
+          "path": "src/functions/workflow.functions.ts",
+          "kind": "import-statement",
+          "original": "../../../../../src/functions/workflow.functions.js"
+        },
+        {
+          "path": "src/functions/workflow.functions.ts",
+          "kind": "import-statement",
+          "original": "../../../../../src/functions/workflow.functions.js"
+        },
+        {
+          "path": "src/functions/workflow.functions.ts",
+          "kind": "import-statement",
+          "original": "../../../../../src/functions/workflow.functions.js"
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/units/channel-todos-live/.pikku/workflow/meta/createAndNotifyWorkflow.gen.json": {
+      "bytes": 3619,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/workflow/meta/todoReviewWorkflow.gen.json": {
+      "bytes": 834,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/units/channel-todos-live/.pikku/workflow/pikku-workflow-wirings-meta.gen.ts": {
+      "bytes": 600,
+      "imports": [
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/workflow/meta/createAndNotifyWorkflow.gen.json",
+          "kind": "import-statement",
+          "original": "./meta/createAndNotifyWorkflow.gen.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/workflow/meta/todoReviewWorkflow.gen.json",
+          "kind": "import-statement",
+          "original": "./meta/todoReviewWorkflow.gen.json",
+          "with": {
+            "type": "json"
+          }
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/units/channel-todos-live/.pikku/workflow/pikku-workflow-wirings.gen.ts": {
+      "bytes": 389,
+      "imports": [
+        {
+          "path": "@pikku/core/workflow",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/workflow/pikku-workflow-wirings-meta.gen.ts",
+          "kind": "import-statement",
+          "original": "./pikku-workflow-wirings-meta.gen.js"
+        },
+        {
+          "path": "src/functions/workflow.functions.ts",
+          "kind": "import-statement",
+          "original": "../../../../../src/functions/workflow.functions.js"
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/units/channel-todos-live/.pikku/queue/pikku-queue-workers-wirings.gen.ts": {
+      "bytes": 110,
+      "imports": [],
+      "format": "esm"
+    },
+    "src/functions/channel.functions.ts": {
+      "bytes": 1773,
+      "imports": [
+        {
+          "path": ".pikku/pikku-types.gen.ts",
+          "kind": "import-statement",
+          "original": "../../.pikku/pikku-types.gen.js"
+        },
+        {
+          "path": "src/schemas.ts",
+          "kind": "import-statement",
+          "original": "../schemas.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "src/wirings/channel.wiring.ts": {
+      "bytes": 689,
+      "imports": [
+        {
+          "path": ".pikku/pikku-types.gen.ts",
+          "kind": "import-statement",
+          "original": "../../.pikku/pikku-types.gen.js"
+        },
+        {
+          "path": "src/functions/channel.functions.ts",
+          "kind": "import-statement",
+          "original": "../functions/channel.functions.js"
+        },
+        {
+          "path": "src/functions/todos.functions.ts",
+          "kind": "import-statement",
+          "original": "../functions/todos.functions.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "src/wirings/cli-channel.gen.ts": {
+      "bytes": 2835,
+      "imports": [
+        {
+          "path": ".pikku/channel/pikku-channel-types.gen.ts",
+          "kind": "import-statement",
+          "original": "../../.pikku/channel/pikku-channel-types.gen.js"
+        },
+        {
+          "path": ".pikku/function/pikku-function-types.gen.ts",
+          "kind": "import-statement",
+          "original": "../../.pikku/function/pikku-function-types.gen.js"
+        },
+        {
+          "path": "@pikku/core/cli",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/cli/channel",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "src/functions/todos.functions.ts",
+          "kind": "import-statement",
+          "original": "../functions/todos.functions.js"
+        },
+        {
+          "path": "src/functions/todos.functions.ts",
+          "kind": "import-statement",
+          "original": "../functions/todos.functions.js"
+        },
+        {
+          "path": "src/functions/todos.functions.ts",
+          "kind": "import-statement",
+          "original": "../functions/todos.functions.js"
+        },
+        {
+          "path": "src/functions/todos.functions.ts",
+          "kind": "import-statement",
+          "original": "../functions/todos.functions.js"
+        },
+        {
+          "path": "src/functions/todos.functions.ts",
+          "kind": "import-statement",
+          "original": "../functions/todos.functions.js"
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/units/channel-todos-live/.pikku/channel/pikku-channels.gen.ts": {
+      "bytes": 214,
+      "imports": [
+        {
+          "path": "src/wirings/channel.wiring.ts",
+          "kind": "import-statement",
+          "original": "../../../../../src/wirings/channel.wiring.js"
+        },
+        {
+          "path": "src/wirings/cli-channel.gen.ts",
+          "kind": "import-statement",
+          "original": "../../../../../src/wirings/cli-channel.gen.js"
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/units/channel-todos-live/.pikku/mcp/pikku-mcp-wirings.gen.ts": {
+      "bytes": 110,
+      "imports": [],
+      "format": "esm"
+    },
+    ".deploy/units/channel-todos-live/.pikku/cli/pikku-cli-wirings.gen.ts": {
+      "bytes": 102,
+      "imports": [],
+      "format": "esm"
+    },
+    ".deploy/units/channel-todos-live/.pikku/pikku-bootstrap.gen.ts": {
+      "bytes": 1281,
+      "imports": [
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/agent/pikku-agent-wirings-meta.gen.ts",
+          "kind": "import-statement",
+          "original": "./agent/pikku-agent-wirings-meta.gen.js"
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/rpc/pikku-rpc-wirings-meta.internal.gen.ts",
+          "kind": "import-statement",
+          "original": "./rpc/pikku-rpc-wirings-meta.internal.gen.js"
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/http/pikku-http-wirings-meta.gen.ts",
+          "kind": "import-statement",
+          "original": "./http/pikku-http-wirings-meta.gen.js"
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/scheduler/pikku-schedulers-wirings-meta.gen.ts",
+          "kind": "import-statement",
+          "original": "./scheduler/pikku-schedulers-wirings-meta.gen.js"
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/function/pikku-functions-meta.gen.ts",
+          "kind": "import-statement",
+          "original": "./function/pikku-functions-meta.gen.js"
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/queue/pikku-queue-workers-wirings-meta.gen.ts",
+          "kind": "import-statement",
+          "original": "./queue/pikku-queue-workers-wirings-meta.gen.js"
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/channel/pikku-channels-meta.gen.ts",
+          "kind": "import-statement",
+          "original": "./channel/pikku-channels-meta.gen.js"
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/mcp/pikku-mcp-wirings-meta.gen.ts",
+          "kind": "import-statement",
+          "original": "./mcp/pikku-mcp-wirings-meta.gen.js"
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/cli/pikku-cli-wirings-meta.gen.ts",
+          "kind": "import-statement",
+          "original": "./cli/pikku-cli-wirings-meta.gen.js"
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/middleware/pikku-middleware.gen.ts",
+          "kind": "import-statement",
+          "original": "./middleware/pikku-middleware.gen.js"
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/agent/pikku-agent-wirings.gen.ts",
+          "kind": "import-statement",
+          "original": "./agent/pikku-agent-wirings.gen.js"
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/schemas/register.gen.ts",
+          "kind": "import-statement",
+          "original": "./schemas/register.gen.js"
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/http/pikku-http-wirings.gen.ts",
+          "kind": "import-statement",
+          "original": "./http/pikku-http-wirings.gen.js"
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/scheduler/pikku-schedulers-wirings.gen.ts",
+          "kind": "import-statement",
+          "original": "./scheduler/pikku-schedulers-wirings.gen.js"
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/function/pikku-functions.gen.ts",
+          "kind": "import-statement",
+          "original": "./function/pikku-functions.gen.js"
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/workflow/pikku-workflow-wirings.gen.ts",
+          "kind": "import-statement",
+          "original": "./workflow/pikku-workflow-wirings.gen.js"
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/queue/pikku-queue-workers-wirings.gen.ts",
+          "kind": "import-statement",
+          "original": "./queue/pikku-queue-workers-wirings.gen.js"
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/channel/pikku-channels.gen.ts",
+          "kind": "import-statement",
+          "original": "./channel/pikku-channels.gen.js"
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/mcp/pikku-mcp-wirings.gen.ts",
+          "kind": "import-statement",
+          "original": "./mcp/pikku-mcp-wirings.gen.js"
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/cli/pikku-cli-wirings.gen.ts",
+          "kind": "import-statement",
+          "original": "./cli/pikku-cli-wirings.gen.js"
+        },
+        {
+          "path": "url",
+          "kind": "dynamic-import",
+          "external": true
+        },
+        {
+          "path": "path",
+          "kind": "dynamic-import",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/entries/channel-todos-live/entry.ts": {
+      "bytes": 244,
+      "imports": [
+        {
+          "path": "@pikku/cloudflare",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": ".deploy/units/channel-todos-live/.pikku/pikku-bootstrap.gen.ts",
+          "kind": "import-statement",
+          "original": "../../units/channel-todos-live/.pikku/pikku-bootstrap.gen.js"
+        }
+      ],
+      "format": "esm"
+    }
+  },
+  "outputs": {
+    ".deploy/build/channel-todos-live/bundle.js": {
+      "imports": [
+        {
+          "path": "@pikku/cloudflare",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/auth-js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "crypto",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "crypto",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "crypto",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "crypto",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "crypto",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "cookie",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "picoquery",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "cookie",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "path-to-regexp",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/http",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/channel",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/trigger",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/scheduler",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/queue",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/mcp",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/cli",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/secret",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/ai-agent",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/schema",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "zod",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/workflow",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/workflow",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/workflow",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/workflow",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/workflow",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/cli",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/cli/channel",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "url",
+          "kind": "dynamic-import",
+          "external": true
+        },
+        {
+          "path": "path",
+          "kind": "dynamic-import",
+          "external": true
+        }
+      ],
+      "exports": [
+        "default"
+      ],
+      "entryPoint": ".deploy/entries/channel-todos-live/entry.ts",
+      "inputs": {
+        ".deploy/entries/channel-todos-live/entry.ts": {
+          "bytesInOutput": 126
+        },
+        ".deploy/units/channel-todos-live/.pikku/pikku-bootstrap.gen.ts": {
+          "bytesInOutput": 297
+        },
+        ".deploy/units/channel-todos-live/.pikku/agent/pikku-agent-wirings-meta.gen.ts": {
+          "bytesInOutput": 141
+        },
+        ".deploy/units/channel-todos-live/.pikku/agent/pikku-agent-wirings-meta.gen.json": {
+          "bytesInOutput": 65
+        },
+        ".deploy/units/channel-todos-live/.pikku/rpc/pikku-rpc-wirings-meta.internal.gen.ts": {
+          "bytesInOutput": 145
+        },
+        ".deploy/units/channel-todos-live/.pikku/rpc/pikku-rpc-wirings-meta.internal.gen.json": {
+          "bytesInOutput": 1036
+        },
+        ".deploy/units/channel-todos-live/.pikku/http/pikku-http-wirings-meta.gen.ts": {
+          "bytesInOutput": 138
+        },
+        ".deploy/units/channel-todos-live/.pikku/http/pikku-http-wirings-meta.gen.json": {
+          "bytesInOutput": 134
+        },
+        ".deploy/units/channel-todos-live/.pikku/scheduler/pikku-schedulers-wirings-meta.gen.ts": {
+          "bytesInOutput": 149
+        },
+        ".deploy/units/channel-todos-live/.pikku/scheduler/pikku-schedulers-wirings-meta.gen.json": {
+          "bytesInOutput": 52
+        },
+        ".deploy/units/channel-todos-live/.pikku/function/pikku-functions-meta.gen.ts": {
+          "bytesInOutput": 139
+        },
+        ".deploy/units/channel-todos-live/.pikku/function/pikku-functions-meta.gen.json": {
+          "bytesInOutput": 17594
+        },
+        ".deploy/units/channel-todos-live/.pikku/queue/pikku-queue-workers-wirings-meta.gen.ts": {
+          "bytesInOutput": 148
+        },
+        ".deploy/units/channel-todos-live/.pikku/queue/pikku-queue-workers-wirings-meta.gen.json": {
+          "bytesInOutput": 55
+        },
+        ".deploy/units/channel-todos-live/.pikku/channel/pikku-channels-meta.gen.ts": {
+          "bytesInOutput": 137
+        },
+        ".deploy/units/channel-todos-live/.pikku/channel/pikku-channels-meta.gen.json": {
+          "bytesInOutput": 707
+        },
+        ".deploy/units/channel-todos-live/.pikku/mcp/pikku-mcp-wirings-meta.gen.ts": {
+          "bytesInOutput": 333
+        },
+        ".deploy/units/channel-todos-live/.pikku/mcp/pikku-mcp-wirings-meta.gen.json": {
+          "bytesInOutput": 102
+        },
+        ".deploy/units/channel-todos-live/.pikku/cli/pikku-cli-wirings-meta.gen.ts": {
+          "bytesInOutput": 136
+        },
+        ".deploy/units/channel-todos-live/.pikku/cli/pikku-cli-wirings-meta.gen.json": {
+          "bytesInOutput": 78
+        },
+        "src/middleware.ts": {
+          "bytesInOutput": 865
+        },
+        "../../packages/core/dist/index.js": {
+          "bytesInOutput": 0
+        },
+        "../../packages/core/dist/pikku-state.js": {
+          "bytesInOutput": 3279
+        },
+        "../../packages/core/dist/utils.js": {
+          "bytesInOutput": 1112
+        },
+        "../../packages/core/dist/middleware-runner.js": {
+          "bytesInOutput": 2215
+        },
+        "../../packages/core/dist/wirings/channel/channel-middleware-runner.js": {
+          "bytesInOutput": 2073
+        },
+        "../../packages/core/dist/errors/error-handler.js": {
+          "bytesInOutput": 385
+        },
+        "../../packages/core/dist/errors/errors.js": {
+          "bytesInOutput": 8215
+        },
+        "../../packages/core/dist/permissions.js": {
+          "bytesInOutput": 3913
+        },
+        "../../packages/core/dist/schema.js": {
+          "bytesInOutput": 1735
+        },
+        "../../packages/core/dist/version.js": {
+          "bytesInOutput": 431
+        },
+        "../../packages/core/dist/services/user-session-service.js": {
+          "bytesInOutput": 234
+        },
+        "../../packages/core/dist/services/pikku-user-id.js": {
+          "bytesInOutput": 376
+        },
+        "../../packages/core/dist/services/credential-wire-service.js": {
+          "bytesInOutput": 1867
+        },
+        "../../packages/core/dist/crypto-utils.js": {
+          "bytesInOutput": 1489
+        },
+        "../../packages/core/dist/wirings/ai-agent/ai-agent-memory.js": {
+          "bytesInOutput": 6807
+        },
+        "../../packages/core/dist/wirings/ai-agent/ai-agent-prepare.js": {
+          "bytesInOutput": 15797
+        },
+        "../../packages/core/dist/wirings/ai-agent/ai-agent-stream.js": {
+          "bytesInOutput": 26039
+        },
+        "../../packages/core/dist/wirings/ai-agent/ai-agent-model-config.js": {
+          "bytesInOutput": 1002
+        },
+        "../../packages/core/dist/utils/hash.js": {
+          "bytesInOutput": 586
+        },
+        "../../packages/core/dist/time-utils.js": {
+          "bytesInOutput": 156
+        },
+        "../../packages/core/dist/wirings/workflow/pikku-workflow-service.js": {
+          "bytesInOutput": 950
+        },
+        "../../packages/core/dist/wirings/workflow/graph/graph-runner.js": {
+          "bytesInOutput": 15348
+        },
+        "../../packages/core/dist/wirings/workflow/graph/graph-validation.js": {
+          "bytesInOutput": 5769
+        },
+        "../../packages/core/dist/wirings/ai-agent/agent-dynamic-workflow.js": {
+          "bytesInOutput": 19501
+        },
+        "../../packages/core/dist/wirings/ai-agent/ai-agent-runner.js": {
+          "bytesInOutput": 19172
+        },
+        "../../packages/core/dist/wirings/rpc/rpc-runner.js": {
+          "bytesInOutput": 9859
+        },
+        "../../packages/core/dist/function/function-runner.js": {
+          "bytesInOutput": 6938
+        },
+        "../../packages/core/dist/function/index.js": {
+          "bytesInOutput": 0
+        },
+        "../../packages/core/dist/wirings/http/pikku-fetch-http-response.js": {
+          "bytesInOutput": 55
+        },
+        "../../packages/core/dist/wirings/http/pikku-fetch-http-request.js": {
+          "bytesInOutput": 96
+        },
+        "../../packages/core/dist/wirings/http/routers/path-to-regex.js": {
+          "bytesInOutput": 2746
+        },
+        "../../packages/core/dist/wirings/http/routers/http-router.js": {
+          "bytesInOutput": 42
+        },
+        ".pikku/function/pikku-function-types.gen.ts": {
+          "bytesInOutput": 280
+        },
+        ".pikku/pikku-types.gen.ts": {
+          "bytesInOutput": 0
+        },
+        ".pikku/http/pikku-http-types.gen.ts": {
+          "bytesInOutput": 349
+        },
+        ".pikku/channel/pikku-channel-types.gen.ts": {
+          "bytesInOutput": 604
+        },
+        ".pikku/trigger/pikku-trigger-types.gen.ts": {
+          "bytesInOutput": 276
+        },
+        ".pikku/scheduler/pikku-scheduler-types.gen.ts": {
+          "bytesInOutput": 76
+        },
+        ".pikku/queue/pikku-queue-types.gen.ts": {
+          "bytesInOutput": 76
+        },
+        ".pikku/mcp/pikku-mcp-types.gen.ts": {
+          "bytesInOutput": 114
+        },
+        ".pikku/cli/pikku-cli-types.gen.ts": {
+          "bytesInOutput": 102
+        },
+        ".pikku/secrets/pikku-secret-types.gen.ts": {
+          "bytesInOutput": 49
+        },
+        ".pikku/agent/pikku-agent-types.gen.ts": {
+          "bytesInOutput": 208
+        },
+        ".deploy/units/channel-todos-live/.pikku/middleware/pikku-middleware.gen.ts": {
+          "bytesInOutput": 22
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/register.gen.ts": {
+          "bytesInOutput": 4832
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ListTodosInput.schema.json": {
+          "bytesInOutput": 527
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ListTodosOutput.schema.json": {
+          "bytesInOutput": 896
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoInput.schema.json": {
+          "bytesInOutput": 349
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoOutput.schema.json": {
+          "bytesInOutput": 855
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoInput.schema.json": {
+          "bytesInOutput": 682
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoOutput.schema.json": {
+          "bytesInOutput": 836
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/UpdateTodoInput.schema.json": {
+          "bytesInOutput": 611
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/UpdateTodoOutput.schema.json": {
+          "bytesInOutput": 908
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/DeleteTodoInput.schema.json": {
+          "bytesInOutput": 361
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/DeleteTodoOutput.schema.json": {
+          "bytesInOutput": 352
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CompleteTodoInput.schema.json": {
+          "bytesInOutput": 369
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CompleteTodoOutput.schema.json": {
+          "bytesInOutput": 916
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/OnConnectInput.schema.json": {
+          "bytesInOutput": 373
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SubscribeInput.schema.json": {
+          "bytesInOutput": 457
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SubscribeOutput.schema.json": {
+          "bytesInOutput": 390
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/UnsubscribeInput.schema.json": {
+          "bytesInOutput": 469
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/UnsubscribeOutput.schema.json": {
+          "bytesInOutput": 402
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoToolInput.schema.json": {
+          "bytesInOutput": 698
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/MCPToolResponse.schema.json": {
+          "bytesInOutput": 735
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoResourceInput.schema.json": {
+          "bytesInOutput": 369
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/MCPResourceResponse.schema.json": {
+          "bytesInOutput": 493
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PlanDayPromptInput.schema.json": {
+          "bytesInOutput": 423
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/MCPPromptResponse.schema.json": {
+          "bytesInOutput": 842
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PrioritizePromptInput.schema.json": {
+          "bytesInOutput": 577
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessReminderInput.schema.json": {
+          "bytesInOutput": 403
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessReminderOutput.schema.json": {
+          "bytesInOutput": 416
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GreetInput.schema.json": {
+          "bytesInOutput": 363
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GreetOutput.schema.json": {
+          "bytesInOutput": 433
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/RemoteGreetInput.schema.json": {
+          "bytesInOutput": 387
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/RemoteGreetOutput.schema.json": {
+          "bytesInOutput": 457
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessTodosProgressInput.schema.json": {
+          "bytesInOutput": 335
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessTodosProgressOutput.schema.json": {
+          "bytesInOutput": 514
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TodoStreamInput.schema.json": {
+          "bytesInOutput": 411
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TodoStreamOutput.schema.json": {
+          "bytesInOutput": 944
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TestEventTriggerInput.schema.json": {
+          "bytesInOutput": 387
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TestEventTriggerOutput.schema.json": {
+          "bytesInOutput": 387
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/OnTestEventInput.schema.json": {
+          "bytesInOutput": 351
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/OnTestEventOutput.schema.json": {
+          "bytesInOutput": 355
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendNotificationInput.schema.json": {
+          "bytesInOutput": 479
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendNotificationOutput.schema.json": {
+          "bytesInOutput": 436
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ScheduleReminderInput.schema.json": {
+          "bytesInOutput": 461
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ScheduleReminderOutput.schema.json": {
+          "bytesInOutput": 428
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateAndNotifyWorkflowInput.schema.json": {
+          "bytesInOutput": 549
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateAndNotifyWorkflowOutput.schema.json": {
+          "bytesInOutput": 1020
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/FetchOverdueTodosInput.schema.json": {
+          "bytesInOutput": 363
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/FetchOverdueTodosOutput.schema.json": {
+          "bytesInOutput": 978
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendOverdueSummaryInput.schema.json": {
+          "bytesInOutput": 992
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendOverdueSummaryOutput.schema.json": {
+          "bytesInOutput": 430
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliHelpInput.schema.json": {
+          "bytesInOutput": 347
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliHelpOutput.schema.json": {
+          "bytesInOutput": 345
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliRawInput.schema.json": {
+          "bytesInOutput": 363
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliRawOutput.schema.json": {
+          "bytesInOutput": 360
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GraphStartTodoReviewWorkflowFetchOverdueOutput.schema.json": {
+          "bytesInOutput": 479
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/RpcCallerInput.schema.json": {
+          "bytesInOutput": 365
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/HttpOptionsRpcRpcNameInput.schema.json": {
+          "bytesInOutput": 403
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/WorkflowStartCreateAndNotifyWorkflowOutput.schema.json": {
+          "bytesInOutput": 463
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/WorkflowStatusCreateAndNotifyWorkflowInput.schema.json": {
+          "bytesInOutput": 463
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/WorkflowStatusCreateAndNotifyWorkflowOutput.schema.json": {
+          "bytesInOutput": 1473
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentCallerInput.schema.json": {
+          "bytesInOutput": 495
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentStreamCallerInput.schema.json": {
+          "bytesInOutput": 519
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentApproveCallerInput.schema.json": {
+          "bytesInOutput": 647
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentResumeCallerInput.schema.json": {
+          "bytesInOutput": 516
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TodoAssistantOutput.schema.json": {
+          "bytesInOutput": 907
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoToolOutput.schema.json": {
+          "bytesInOutput": 448
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoResourceOutput.schema.json": {
+          "bytesInOutput": 435
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PlanDayPromptOutput.schema.json": {
+          "bytesInOutput": 590
+        },
+        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PrioritizePromptOutput.schema.json": {
+          "bytesInOutput": 602
+        },
+        "src/schemas.ts": {
+          "bytesInOutput": 3698
+        },
+        "src/functions/todos.functions.ts": {
+          "bytesInOutput": 2975
+        },
+        ".pikku/workflow/pikku-workflow-types.gen.ts": {
+          "bytesInOutput": 472
+        },
+        "src/functions/workflow.functions.ts": {
+          "bytesInOutput": 2490
+        },
+        "src/functions/remote-rpc.functions.ts": {
+          "bytesInOutput": 607
+        },
+        "src/functions/trigger.functions.ts": {
+          "bytesInOutput": 778
+        },
+        ".deploy/units/channel-todos-live/.pikku/function/pikku-functions.gen.ts": {
+          "bytesInOutput": 471
+        },
+        ".deploy/units/channel-todos-live/.pikku/workflow/pikku-workflow-wirings.gen.ts": {
+          "bytesInOutput": 117
+        },
+        ".deploy/units/channel-todos-live/.pikku/workflow/pikku-workflow-wirings-meta.gen.ts": {
+          "bytesInOutput": 269
+        },
+        ".deploy/units/channel-todos-live/.pikku/workflow/meta/createAndNotifyWorkflow.gen.json": {
+          "bytesInOutput": 3449
+        },
+        ".deploy/units/channel-todos-live/.pikku/workflow/meta/todoReviewWorkflow.gen.json": {
+          "bytesInOutput": 819
+        },
+        "src/functions/channel.functions.ts": {
+          "bytesInOutput": 1206
+        },
+        "src/wirings/channel.wiring.ts": {
+          "bytesInOutput": 417
+        },
+        "src/wirings/cli-channel.gen.ts": {
+          "bytesInOutput": 1921
+        }
+      },
+      "bytes": 256228
+    }
+  }
+}

@@ -57,7 +57,14 @@ export { setCronTriggers, getCronTriggers } from './cron.js'
 export { CloudflareDeployProvider } from './provider.js'
 
 // Entry point generation
-export { generateEntryFiles, generateEntrySource } from './entry-generator.js'
+export {
+  generateCloudflareEntryFiles,
+  generateEntrySource,
+} from './entry-generator.js'
+export type {
+  EntryGeneratorUnit,
+  DeploymentUnitRole,
+} from './entry-generator.js'
 
 // Containers
 export {
