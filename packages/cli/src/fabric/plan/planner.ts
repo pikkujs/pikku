@@ -230,7 +230,6 @@ function countUnchanged(
     manifest.secrets.length +
     Object.keys(manifest.variables).length
 
-  const changedNames = new Set(changes.map((c) => c.name))
   // Rough count: total desired minus those that appear in changes
   const createOrUpdate = changes.filter(
     (c) => c.action === 'create' || c.action === 'update'
