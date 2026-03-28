@@ -316,6 +316,11 @@ export function filterInspectorState(
       delete filteredState.channels.meta[name]
     } else {
       // Add all functions referenced by this channel
+      if ('pikkuFuncId' in channelMeta && channelMeta.pikkuFuncId) {
+        filteredState.serviceAggregation.usedFunctions.add(
+          channelMeta.pikkuFuncId as string
+        )
+      }
       if (channelMeta.connect?.pikkuFuncId) {
         filteredState.serviceAggregation.usedFunctions.add(
           channelMeta.connect.pikkuFuncId
