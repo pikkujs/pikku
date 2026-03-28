@@ -28,7 +28,7 @@
       "format": "esm"
     },
     ".deploy/units/channel-todos-live/.pikku/function/pikku-functions-meta.gen.json": {
-      "bytes": 18569,
+      "bytes": 3127,
       "imports": [],
       "format": "esm",
       "with": {
@@ -1354,22 +1354,6 @@
         "type": "json"
       }
     },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoInput.schema.json": {
-      "bytes": 183,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoOutput.schema.json": {
-      "bytes": 661,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
     ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoInput.schema.json": {
       "bytes": 493,
       "imports": [],
@@ -1380,38 +1364,6 @@
     },
     ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoOutput.schema.json": {
       "bytes": 633,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/UpdateTodoInput.schema.json": {
-      "bytes": 424,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/UpdateTodoOutput.schema.json": {
-      "bytes": 700,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/DeleteTodoInput.schema.json": {
-      "bytes": 183,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/DeleteTodoOutput.schema.json": {
-      "bytes": 170,
       "imports": [],
       "format": "esm",
       "with": {
@@ -1474,408 +1426,8 @@
         "type": "json"
       }
     },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoToolInput.schema.json": {
-      "bytes": 493,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/MCPToolResponse.schema.json": {
-      "bytes": 545,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoResourceInput.schema.json": {
-      "bytes": 171,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/MCPResourceResponse.schema.json": {
-      "bytes": 294,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PlanDayPromptInput.schema.json": {
-      "bytes": 230,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/MCPPromptResponse.schema.json": {
-      "bytes": 643,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PrioritizePromptInput.schema.json": {
-      "bytes": 366,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessReminderInput.schema.json": {
-      "bytes": 203,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessReminderOutput.schema.json": {
-      "bytes": 212,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GreetInput.schema.json": {
-      "bytes": 204,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GreetOutput.schema.json": {
-      "bytes": 267,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/RemoteGreetInput.schema.json": {
-      "bytes": 204,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/RemoteGreetOutput.schema.json": {
-      "bytes": 267,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessTodosProgressInput.schema.json": {
-      "bytes": 119,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessTodosProgressOutput.schema.json": {
-      "bytes": 286,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TodoStreamInput.schema.json": {
-      "bytes": 230,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TodoStreamOutput.schema.json": {
-      "bytes": 736,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TestEventTriggerInput.schema.json": {
-      "bytes": 185,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TestEventTriggerOutput.schema.json": {
-      "bytes": 181,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/OnTestEventInput.schema.json": {
-      "bytes": 169,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/OnTestEventOutput.schema.json": {
-      "bytes": 169,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendNotificationInput.schema.json": {
-      "bytes": 272,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendNotificationOutput.schema.json": {
-      "bytes": 228,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ScheduleReminderInput.schema.json": {
-      "bytes": 255,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ScheduleReminderOutput.schema.json": {
-      "bytes": 220,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateAndNotifyWorkflowInput.schema.json": {
-      "bytes": 312,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateAndNotifyWorkflowOutput.schema.json": {
-      "bytes": 761,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/FetchOverdueTodosInput.schema.json": {
-      "bytes": 157,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/FetchOverdueTodosOutput.schema.json": {
-      "bytes": 742,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendOverdueSummaryInput.schema.json": {
-      "bytes": 756,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendOverdueSummaryOutput.schema.json": {
-      "bytes": 214,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliHelpInput.schema.json": {
-      "bytes": 180,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliHelpOutput.schema.json": {
-      "bytes": 175,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliRawInput.schema.json": {
-      "bytes": 200,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliRawOutput.schema.json": {
-      "bytes": 193,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GraphStartTodoReviewWorkflowFetchOverdueOutput.schema.json": {
-      "bytes": 177,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/RpcCallerInput.schema.json": {
-      "bytes": 191,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/HttpOptionsRpcRpcNameInput.schema.json": {
-      "bytes": 181,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/WorkflowStartCreateAndNotifyWorkflowOutput.schema.json": {
-      "bytes": 177,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/WorkflowStatusCreateAndNotifyWorkflowInput.schema.json": {
-      "bytes": 177,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/WorkflowStatusCreateAndNotifyWorkflowOutput.schema.json": {
-      "bytes": 1145,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentCallerInput.schema.json": {
-      "bytes": 307,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentStreamCallerInput.schema.json": {
-      "bytes": 307,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentApproveCallerInput.schema.json": {
-      "bytes": 428,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentResumeCallerInput.schema.json": {
-      "bytes": 304,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TodoAssistantOutput.schema.json": {
-      "bytes": 690,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoToolOutput.schema.json": {
-      "bytes": 247,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoResourceOutput.schema.json": {
-      "bytes": 230,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PlanDayPromptOutput.schema.json": {
-      "bytes": 389,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PrioritizePromptOutput.schema.json": {
-      "bytes": 389,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
     ".deploy/units/channel-todos-live/.pikku/schemas/register.gen.ts": {
-      "bytes": 10944,
+      "bytes": 1700,
       "imports": [
         {
           "path": "@pikku/core/schema",
@@ -1899,22 +1451,6 @@
           }
         },
         {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/GetTodoInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/GetTodoOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
           "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoInput.schema.json",
           "kind": "import-statement",
           "original": "./schemas/CreateTodoInput.schema.json",
@@ -1926,38 +1462,6 @@
           "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoOutput.schema.json",
           "kind": "import-statement",
           "original": "./schemas/CreateTodoOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/UpdateTodoInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/UpdateTodoInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/UpdateTodoOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/UpdateTodoOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/DeleteTodoInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/DeleteTodoInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/DeleteTodoOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/DeleteTodoOutput.schema.json",
           "with": {
             "type": "json"
           }
@@ -2014,406 +1518,6 @@
           "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/UnsubscribeOutput.schema.json",
           "kind": "import-statement",
           "original": "./schemas/UnsubscribeOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoToolInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/CreateTodoToolInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/MCPToolResponse.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/MCPToolResponse.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoResourceInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/GetTodoResourceInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/MCPResourceResponse.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/MCPResourceResponse.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PlanDayPromptInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/PlanDayPromptInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/MCPPromptResponse.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/MCPPromptResponse.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PrioritizePromptInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/PrioritizePromptInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessReminderInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/ProcessReminderInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessReminderOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/ProcessReminderOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GreetInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/GreetInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GreetOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/GreetOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/RemoteGreetInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/RemoteGreetInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/RemoteGreetOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/RemoteGreetOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessTodosProgressInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/ProcessTodosProgressInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessTodosProgressOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/ProcessTodosProgressOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TodoStreamInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/TodoStreamInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TodoStreamOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/TodoStreamOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TestEventTriggerInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/TestEventTriggerInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TestEventTriggerOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/TestEventTriggerOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/OnTestEventInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/OnTestEventInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/OnTestEventOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/OnTestEventOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendNotificationInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/SendNotificationInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendNotificationOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/SendNotificationOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ScheduleReminderInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/ScheduleReminderInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ScheduleReminderOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/ScheduleReminderOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateAndNotifyWorkflowInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/CreateAndNotifyWorkflowInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateAndNotifyWorkflowOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/CreateAndNotifyWorkflowOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/FetchOverdueTodosInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/FetchOverdueTodosInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/FetchOverdueTodosOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/FetchOverdueTodosOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendOverdueSummaryInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/SendOverdueSummaryInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendOverdueSummaryOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/SendOverdueSummaryOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliHelpInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/CliHelpInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliHelpOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/CliHelpOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliRawInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/CliRawInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliRawOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/CliRawOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GraphStartTodoReviewWorkflowFetchOverdueOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/GraphStartTodoReviewWorkflowFetchOverdueOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/RpcCallerInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/RpcCallerInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/HttpOptionsRpcRpcNameInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/HttpOptionsRpcRpcNameInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/WorkflowStartCreateAndNotifyWorkflowOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/WorkflowStartCreateAndNotifyWorkflowOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/WorkflowStatusCreateAndNotifyWorkflowInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/WorkflowStatusCreateAndNotifyWorkflowInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/WorkflowStatusCreateAndNotifyWorkflowOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/WorkflowStatusCreateAndNotifyWorkflowOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentCallerInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/AgentCallerInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentStreamCallerInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/AgentStreamCallerInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentApproveCallerInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/AgentApproveCallerInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentResumeCallerInput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/AgentResumeCallerInput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TodoAssistantOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/TodoAssistantOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoToolOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/CreateTodoToolOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoResourceOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/GetTodoResourceOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PlanDayPromptOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/PlanDayPromptOutput.schema.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PrioritizePromptOutput.schema.json",
-          "kind": "import-statement",
-          "original": "./schemas/PrioritizePromptOutput.schema.json",
           "with": {
             "type": "json"
           }
@@ -2588,70 +1692,6 @@
       ],
       "format": "esm"
     },
-    ".deploy/units/channel-todos-live/.pikku/workflow/meta/createAndNotifyWorkflow.gen.json": {
-      "bytes": 3619,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/workflow/meta/todoReviewWorkflow.gen.json": {
-      "bytes": 834,
-      "imports": [],
-      "format": "esm",
-      "with": {
-        "type": "json"
-      }
-    },
-    ".deploy/units/channel-todos-live/.pikku/workflow/pikku-workflow-wirings-meta.gen.ts": {
-      "bytes": 600,
-      "imports": [
-        {
-          "path": "@pikku/core/internal",
-          "kind": "import-statement",
-          "external": true
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/workflow/meta/createAndNotifyWorkflow.gen.json",
-          "kind": "import-statement",
-          "original": "./meta/createAndNotifyWorkflow.gen.json",
-          "with": {
-            "type": "json"
-          }
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/workflow/meta/todoReviewWorkflow.gen.json",
-          "kind": "import-statement",
-          "original": "./meta/todoReviewWorkflow.gen.json",
-          "with": {
-            "type": "json"
-          }
-        }
-      ],
-      "format": "esm"
-    },
-    ".deploy/units/channel-todos-live/.pikku/workflow/pikku-workflow-wirings.gen.ts": {
-      "bytes": 389,
-      "imports": [
-        {
-          "path": "@pikku/core/workflow",
-          "kind": "import-statement",
-          "external": true
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/workflow/pikku-workflow-wirings-meta.gen.ts",
-          "kind": "import-statement",
-          "original": "./pikku-workflow-wirings-meta.gen.js"
-        },
-        {
-          "path": "src/functions/workflow.functions.ts",
-          "kind": "import-statement",
-          "original": "../../../../../src/functions/workflow.functions.js"
-        }
-      ],
-      "format": "esm"
-    },
     "src/functions/channel.functions.ts": {
       "bytes": 1773,
       "imports": [
@@ -2762,7 +1802,7 @@
       "format": "esm"
     },
     ".deploy/units/channel-todos-live/.pikku/pikku-bootstrap.gen.ts": {
-      "bytes": 709,
+      "bytes": 659,
       "imports": [
         {
           "path": "@pikku/core/internal",
@@ -2798,11 +1838,6 @@
           "path": ".deploy/units/channel-todos-live/.pikku/function/pikku-functions.gen.ts",
           "kind": "import-statement",
           "original": "./function/pikku-functions.gen.js"
-        },
-        {
-          "path": ".deploy/units/channel-todos-live/.pikku/workflow/pikku-workflow-wirings.gen.ts",
-          "kind": "import-statement",
-          "original": "./workflow/pikku-workflow-wirings.gen.js"
         },
         {
           "path": ".deploy/units/channel-todos-live/.pikku/channel/pikku-channels.gen.ts",
@@ -2998,16 +2033,6 @@
           "external": true
         },
         {
-          "path": "@pikku/core/workflow",
-          "kind": "import-statement",
-          "external": true
-        },
-        {
-          "path": "@pikku/core/internal",
-          "kind": "import-statement",
-          "external": true
-        },
-        {
           "path": "@pikku/core/cli",
           "kind": "import-statement",
           "external": true
@@ -3054,7 +2079,7 @@
           "bytesInOutput": 139
         },
         ".deploy/units/channel-todos-live/.pikku/function/pikku-functions-meta.gen.json": {
-          "bytesInOutput": 17594
+          "bytesInOutput": 2982
         },
         ".deploy/units/channel-todos-live/.pikku/channel/pikku-channels-meta.gen.ts": {
           "bytesInOutput": 137
@@ -3198,7 +2223,7 @@
           "bytesInOutput": 22
         },
         ".deploy/units/channel-todos-live/.pikku/schemas/register.gen.ts": {
-          "bytesInOutput": 4832
+          "bytesInOutput": 742
         },
         ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ListTodosInput.schema.json": {
           "bytesInOutput": 527
@@ -3206,29 +2231,11 @@
         ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ListTodosOutput.schema.json": {
           "bytesInOutput": 896
         },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoInput.schema.json": {
-          "bytesInOutput": 349
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoOutput.schema.json": {
-          "bytesInOutput": 855
-        },
         ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoInput.schema.json": {
           "bytesInOutput": 682
         },
         ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoOutput.schema.json": {
           "bytesInOutput": 836
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/UpdateTodoInput.schema.json": {
-          "bytesInOutput": 611
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/UpdateTodoOutput.schema.json": {
-          "bytesInOutput": 908
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/DeleteTodoInput.schema.json": {
-          "bytesInOutput": 361
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/DeleteTodoOutput.schema.json": {
-          "bytesInOutput": 352
         },
         ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CompleteTodoInput.schema.json": {
           "bytesInOutput": 369
@@ -3251,156 +2258,6 @@
         ".deploy/units/channel-todos-live/.pikku/schemas/schemas/UnsubscribeOutput.schema.json": {
           "bytesInOutput": 402
         },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoToolInput.schema.json": {
-          "bytesInOutput": 698
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/MCPToolResponse.schema.json": {
-          "bytesInOutput": 735
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoResourceInput.schema.json": {
-          "bytesInOutput": 369
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/MCPResourceResponse.schema.json": {
-          "bytesInOutput": 493
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PlanDayPromptInput.schema.json": {
-          "bytesInOutput": 423
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/MCPPromptResponse.schema.json": {
-          "bytesInOutput": 842
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PrioritizePromptInput.schema.json": {
-          "bytesInOutput": 577
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessReminderInput.schema.json": {
-          "bytesInOutput": 403
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessReminderOutput.schema.json": {
-          "bytesInOutput": 416
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GreetInput.schema.json": {
-          "bytesInOutput": 363
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GreetOutput.schema.json": {
-          "bytesInOutput": 433
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/RemoteGreetInput.schema.json": {
-          "bytesInOutput": 387
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/RemoteGreetOutput.schema.json": {
-          "bytesInOutput": 457
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessTodosProgressInput.schema.json": {
-          "bytesInOutput": 335
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ProcessTodosProgressOutput.schema.json": {
-          "bytesInOutput": 514
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TodoStreamInput.schema.json": {
-          "bytesInOutput": 411
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TodoStreamOutput.schema.json": {
-          "bytesInOutput": 944
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TestEventTriggerInput.schema.json": {
-          "bytesInOutput": 387
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TestEventTriggerOutput.schema.json": {
-          "bytesInOutput": 387
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/OnTestEventInput.schema.json": {
-          "bytesInOutput": 351
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/OnTestEventOutput.schema.json": {
-          "bytesInOutput": 355
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendNotificationInput.schema.json": {
-          "bytesInOutput": 479
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendNotificationOutput.schema.json": {
-          "bytesInOutput": 436
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ScheduleReminderInput.schema.json": {
-          "bytesInOutput": 461
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/ScheduleReminderOutput.schema.json": {
-          "bytesInOutput": 428
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateAndNotifyWorkflowInput.schema.json": {
-          "bytesInOutput": 549
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateAndNotifyWorkflowOutput.schema.json": {
-          "bytesInOutput": 1020
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/FetchOverdueTodosInput.schema.json": {
-          "bytesInOutput": 363
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/FetchOverdueTodosOutput.schema.json": {
-          "bytesInOutput": 978
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendOverdueSummaryInput.schema.json": {
-          "bytesInOutput": 992
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/SendOverdueSummaryOutput.schema.json": {
-          "bytesInOutput": 430
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliHelpInput.schema.json": {
-          "bytesInOutput": 347
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliHelpOutput.schema.json": {
-          "bytesInOutput": 345
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliRawInput.schema.json": {
-          "bytesInOutput": 363
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CliRawOutput.schema.json": {
-          "bytesInOutput": 360
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GraphStartTodoReviewWorkflowFetchOverdueOutput.schema.json": {
-          "bytesInOutput": 479
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/RpcCallerInput.schema.json": {
-          "bytesInOutput": 365
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/HttpOptionsRpcRpcNameInput.schema.json": {
-          "bytesInOutput": 403
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/WorkflowStartCreateAndNotifyWorkflowOutput.schema.json": {
-          "bytesInOutput": 463
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/WorkflowStatusCreateAndNotifyWorkflowInput.schema.json": {
-          "bytesInOutput": 463
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/WorkflowStatusCreateAndNotifyWorkflowOutput.schema.json": {
-          "bytesInOutput": 1473
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentCallerInput.schema.json": {
-          "bytesInOutput": 495
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentStreamCallerInput.schema.json": {
-          "bytesInOutput": 519
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentApproveCallerInput.schema.json": {
-          "bytesInOutput": 647
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/AgentResumeCallerInput.schema.json": {
-          "bytesInOutput": 516
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/TodoAssistantOutput.schema.json": {
-          "bytesInOutput": 907
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/CreateTodoToolOutput.schema.json": {
-          "bytesInOutput": 448
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/GetTodoResourceOutput.schema.json": {
-          "bytesInOutput": 435
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PlanDayPromptOutput.schema.json": {
-          "bytesInOutput": 590
-        },
-        ".deploy/units/channel-todos-live/.pikku/schemas/schemas/PrioritizePromptOutput.schema.json": {
-          "bytesInOutput": 602
-        },
         "src/schemas.ts": {
           "bytesInOutput": 3698
         },
@@ -3422,18 +2279,6 @@
         ".deploy/units/channel-todos-live/.pikku/function/pikku-functions.gen.ts": {
           "bytesInOutput": 471
         },
-        ".deploy/units/channel-todos-live/.pikku/workflow/pikku-workflow-wirings.gen.ts": {
-          "bytesInOutput": 117
-        },
-        ".deploy/units/channel-todos-live/.pikku/workflow/pikku-workflow-wirings-meta.gen.ts": {
-          "bytesInOutput": 267
-        },
-        ".deploy/units/channel-todos-live/.pikku/workflow/meta/createAndNotifyWorkflow.gen.json": {
-          "bytesInOutput": 3449
-        },
-        ".deploy/units/channel-todos-live/.pikku/workflow/meta/todoReviewWorkflow.gen.json": {
-          "bytesInOutput": 819
-        },
         "src/functions/channel.functions.ts": {
           "bytesInOutput": 1206
         },
@@ -3444,7 +2289,7 @@
           "bytesInOutput": 1919
         }
       },
-      "bytes": 253098
+      "bytes": 193916
     }
   }
 }

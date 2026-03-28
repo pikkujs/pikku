@@ -315,10 +315,34 @@ export function filterInspectorState(
     if (!matches) {
       delete filteredState.channels.meta[name]
     } else {
-      if (channelMeta.pikkuFuncId) {
+      // Add all functions referenced by this channel
+      if (channelMeta.connect?.pikkuFuncId) {
         filteredState.serviceAggregation.usedFunctions.add(
-          channelMeta.pikkuFuncId
+          channelMeta.connect.pikkuFuncId
         )
+      }
+      if (channelMeta.disconnect?.pikkuFuncId) {
+        filteredState.serviceAggregation.usedFunctions.add(
+          channelMeta.disconnect.pikkuFuncId
+        )
+      }
+      if (channelMeta.message?.pikkuFuncId) {
+        filteredState.serviceAggregation.usedFunctions.add(
+          channelMeta.message.pikkuFuncId
+        )
+      }
+      if (channelMeta.messageWirings) {
+        for (const groupKey of Object.keys(channelMeta.messageWirings)) {
+          const commands = channelMeta.messageWirings[groupKey]
+          for (const cmdKey of Object.keys(commands)) {
+            const wiring = commands[cmdKey]
+            if (wiring.pikkuFuncId) {
+              filteredState.serviceAggregation.usedFunctions.add(
+                wiring.pikkuFuncId
+              )
+            }
+          }
+        }
       }
       extractWireNames(channelMeta.middleware).forEach((name: string) =>
         filteredState.serviceAggregation.usedMiddleware.add(name)
@@ -639,6 +663,34 @@ export function filterInspectorState(
       }
     }
 
+    // Prune channels whose functions were filtered out
+    for (const name of Object.keys(filteredState.channels.meta)) {
+      const channelMeta = filteredState.channels.meta[name]
+      // Check if any of the channel's functions are in the used set
+      const channelFuncIds: string[] = []
+      if (channelMeta.connect?.pikkuFuncId)
+        channelFuncIds.push(channelMeta.connect.pikkuFuncId)
+      if (channelMeta.disconnect?.pikkuFuncId)
+        channelFuncIds.push(channelMeta.disconnect.pikkuFuncId)
+      if (channelMeta.message?.pikkuFuncId)
+        channelFuncIds.push(channelMeta.message.pikkuFuncId)
+      if (channelMeta.messageWirings) {
+        for (const groupKey of Object.keys(channelMeta.messageWirings)) {
+          const commands = channelMeta.messageWirings[groupKey]
+          for (const cmdKey of Object.keys(commands)) {
+            const wiring = commands[cmdKey]
+            if (wiring.pikkuFuncId) channelFuncIds.push(wiring.pikkuFuncId)
+          }
+        }
+      }
+      const hasUsedFunc = channelFuncIds.some((id) =>
+        filteredState.serviceAggregation.usedFunctions.has(id)
+      )
+      if (channelFuncIds.length > 0 && !hasUsedFunc) {
+        delete filteredState.channels.meta[name]
+      }
+    }
+
     // Prune workflow graphs whose orchestrator function was filtered out
     for (const name of Object.keys(filteredState.workflows.graphMeta)) {
       const workflowMeta = filteredState.workflows.meta[name]
@@ -652,6 +704,16 @@ export function filterInspectorState(
         delete filteredState.workflows.meta[name]
       }
     }
+  }
+
+  // Recompute requiredSchemas based on pruned functions.meta
+  if (filteredState.serviceAggregation.usedFunctions.size > 0) {
+    const prunedSchemas = new Set<string>()
+    for (const funcMeta of Object.values(filteredState.functions.meta)) {
+      if (funcMeta.inputs?.[0]) prunedSchemas.add(funcMeta.inputs[0])
+      if (funcMeta.outputs?.[0]) prunedSchemas.add(funcMeta.outputs[0])
+    }
+    filteredState.requiredSchemas = prunedSchemas
   }
 
   // Recalculate requiredServices based on filtered functions/middleware/permissions
