@@ -1,7 +1,7 @@
 {
   "inputs": {
     ".deploy/units/greet/.pikku/rpc/pikku-rpc-wirings-meta.internal.gen.json": {
-      "bytes": 1044,
+      "bytes": 22,
       "imports": [],
       "format": "esm",
       "with": {
@@ -838,7 +838,7 @@
           "bytesInOutput": 129
         },
         ".deploy/units/greet/.pikku/rpc/pikku-rpc-wirings-meta.internal.gen.json": {
-          "bytesInOutput": 1036
+          "bytesInOutput": 72
         },
         ".deploy/units/greet/.pikku/http/pikku-http-wirings-meta.gen.ts": {
           "bytesInOutput": 138
@@ -940,7 +940,7 @@
           "bytesInOutput": 81
         }
       },
-      "bytes": 22060
+      "bytes": 21096
     }
   }
 }

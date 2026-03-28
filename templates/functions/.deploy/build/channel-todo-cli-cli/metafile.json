@@ -1,7 +1,7 @@
 {
   "inputs": {
     ".deploy/units/channel-todo-cli-cli/.pikku/rpc/pikku-rpc-wirings-meta.internal.gen.json": {
-      "bytes": 1044,
+      "bytes": 194,
       "imports": [],
       "format": "esm",
       "with": {
@@ -1216,7 +1216,7 @@
           "bytesInOutput": 129
         },
         ".deploy/units/channel-todo-cli-cli/.pikku/rpc/pikku-rpc-wirings-meta.internal.gen.json": {
-          "bytesInOutput": 1036
+          "bytesInOutput": 232
         },
         ".deploy/units/channel-todo-cli-cli/.pikku/http/pikku-http-wirings-meta.gen.ts": {
           "bytesInOutput": 138
@@ -1369,7 +1369,7 @@
           "bytesInOutput": 1893
         }
       },
-      "bytes": 40148
+      "bytes": 39344
     }
   }
 }

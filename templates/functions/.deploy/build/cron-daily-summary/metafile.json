@@ -1,7 +1,7 @@
 {
   "inputs": {
     ".deploy/units/cron-daily-summary/.pikku/rpc/pikku-rpc-wirings-meta.internal.gen.json": {
-      "bytes": 1044,
+      "bytes": 36,
       "imports": [],
       "format": "esm",
       "with": {
@@ -575,7 +575,7 @@
           "bytesInOutput": 129
         },
         ".deploy/units/cron-daily-summary/.pikku/rpc/pikku-rpc-wirings-meta.internal.gen.json": {
-          "bytesInOutput": 1036
+          "bytesInOutput": 86
         },
         ".deploy/units/cron-daily-summary/.pikku/scheduler/pikku-schedulers-wirings-meta.gen.ts": {
           "bytesInOutput": 149
@@ -635,7 +635,7 @@
           "bytesInOutput": 258
         }
       },
-      "bytes": 7727
+      "bytes": 6777
     }
   }
 }

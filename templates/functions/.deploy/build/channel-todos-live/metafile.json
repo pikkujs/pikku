@@ -1,7 +1,7 @@
 {
   "inputs": {
     ".deploy/units/channel-todos-live/.pikku/rpc/pikku-rpc-wirings-meta.internal.gen.json": {
-      "bytes": 1044,
+      "bytes": 154,
       "imports": [],
       "format": "esm",
       "with": {
@@ -895,7 +895,7 @@
           "bytesInOutput": 129
         },
         ".deploy/units/channel-todos-live/.pikku/rpc/pikku-rpc-wirings-meta.internal.gen.json": {
-          "bytesInOutput": 1036
+          "bytesInOutput": 196
         },
         ".deploy/units/channel-todos-live/.pikku/function/pikku-functions-meta.gen.ts": {
           "bytesInOutput": 139
@@ -1003,7 +1003,7 @@
           "bytesInOutput": 1893
         }
       },
-      "bytes": 29218
+      "bytes": 28378
     }
   }
 }

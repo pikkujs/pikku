@@ -1,7 +1,7 @@
 {
   "inputs": {
     ".deploy/units/queue-todo-reminders/.pikku/rpc/pikku-rpc-wirings-meta.internal.gen.json": {
-      "bytes": 1044,
+      "bytes": 42,
       "imports": [],
       "format": "esm",
       "with": {
@@ -639,7 +639,7 @@
           "bytesInOutput": 129
         },
         ".deploy/units/queue-todo-reminders/.pikku/rpc/pikku-rpc-wirings-meta.internal.gen.json": {
-          "bytesInOutput": 1036
+          "bytesInOutput": 92
         },
         ".deploy/units/queue-todo-reminders/.pikku/function/pikku-functions-meta.gen.ts": {
           "bytesInOutput": 139
@@ -711,7 +711,7 @@
           "bytesInOutput": 72
         }
       },
-      "bytes": 12941
+      "bytes": 11997
     }
   }
 }

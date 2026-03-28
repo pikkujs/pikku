@@ -5,7 +5,7 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
 export const pikkuRPC = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config, getInspectorState }) => {
-    const { rpc } = await getInspectorState()
+    const { rpc, functions } = await getInspectorState()
     const {
       rpcInternalWiringMetaFile,
       rpcInternalWiringMetaJsonFile,
@@ -13,11 +13,19 @@ export const pikkuRPC = pikkuSessionlessFunc<void, boolean>({
       schema,
     } = config
 
-    if (rpc.internalFiles.size > 0) {
+    // Filter internal RPC meta to only include functions in the filtered meta
+    const filteredInternalMeta: Record<string, string> = {}
+    for (const [key, value] of Object.entries(rpc.internalMeta)) {
+      if (key in functions.meta) {
+        filteredInternalMeta[key] = value
+      }
+    }
+
+    if (Object.keys(filteredInternalMeta).length > 0) {
       await writeFileInDir(
         logger,
         rpcInternalWiringMetaJsonFile,
-        JSON.stringify(rpc.internalMeta, null, 2)
+        JSON.stringify(filteredInternalMeta, null, 2)
       )
 
       const jsonImportPath = getFileImportRelativePath(
