@@ -26,8 +26,9 @@ function diffUnits(
         action: 'create',
         resourceType: 'unit',
         name: desired.name,
-        reason: 'new unit',
-        details: { role: desired.role, functionIds: desired.functionIds },
+        role: desired.role,
+        reason: 'new function',
+        details: { functionIds: desired.functionIds },
       })
     } else if (
       !arraysEqual(existing.functionIds, desired.functionIds) ||
@@ -37,8 +38,9 @@ function diffUnits(
         action: 'update',
         resourceType: 'unit',
         name: desired.name,
+        role: desired.role,
         reason: 'code changed',
-        details: { role: desired.role, functionIds: desired.functionIds },
+        details: { functionIds: desired.functionIds },
       })
     }
   }

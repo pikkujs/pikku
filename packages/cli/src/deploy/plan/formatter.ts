@@ -20,8 +20,19 @@ const ACTION_DISPLAY: Record<
   drain: { symbol: '\u23F3', color: ANSI.yellow, label: 'drain' },
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  http: 'HTTP',
+  rpc: 'RPC',
+  mcp: 'MCP',
+  'queue-consumer': 'Queue Consumer',
+  scheduled: 'Cron',
+  agent: 'Agent',
+  channel: 'Channel',
+  'workflow-orchestrator': 'Workflow',
+  'workflow-step': 'Workflow Step',
+}
+
 const RESOURCE_LABELS: Record<string, string> = {
-  unit: 'Unit',
   queue: 'Queue',
   'scheduled-task': 'Scheduled Task',
   secret: 'Secret',
@@ -32,12 +43,16 @@ function padRight(str: string, len: number): string {
   return str + ' '.repeat(Math.max(0, len - str.length))
 }
 
+function getResourceLabel(change: PlanChange): string {
+  if (change.resourceType === 'unit' && change.role) {
+    return ROLE_LABELS[change.role] ?? change.role
+  }
+  return RESOURCE_LABELS[change.resourceType] ?? change.resourceType
+}
+
 function formatChange(change: PlanChange): string {
   const display = ACTION_DISPLAY[change.action]
-  const typeLabel = padRight(
-    RESOURCE_LABELS[change.resourceType] ?? change.resourceType,
-    16
-  )
+  const typeLabel = padRight(getResourceLabel(change), 16)
   const nameLabel = padRight(change.name, 28)
   return `  ${display.color}${display.symbol} ${padRight(display.label, 8)}${ANSI.reset} ${typeLabel} ${ANSI.bold}${nameLabel}${ANSI.reset} ${ANSI.dim}${change.reason}${ANSI.reset}`
 }
@@ -104,10 +119,7 @@ export function formatPlanPlain(plan: DeploymentPlan): string {
     const group = plan.changes.filter((c) => c.action === action)
     for (const change of group) {
       const display = ACTION_DISPLAY[change.action]
-      const typeLabel = padRight(
-        RESOURCE_LABELS[change.resourceType] ?? change.resourceType,
-        16
-      )
+      const typeLabel = padRight(getResourceLabel(change), 16)
       const nameLabel = padRight(change.name, 28)
       lines.push(
         `  ${display.symbol} ${padRight(display.label, 8)} ${typeLabel} ${nameLabel} ${change.reason}`

@@ -12,6 +12,8 @@ export interface PlanChange {
   resourceType: ResourceType
   name: string
   reason: string
+  /** For units, the deployment role (http, agent, mcp, etc.) */
+  role?: string
   details?: Record<string, unknown>
 }
 
