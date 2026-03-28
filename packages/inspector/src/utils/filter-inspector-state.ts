@@ -631,6 +631,29 @@ export function filterInspectorState(
     }
   }
 
+  // Prune functions.meta to only include used functions
+  if (filteredState.serviceAggregation.usedFunctions.size > 0) {
+    for (const funcId of Object.keys(filteredState.functions.meta)) {
+      if (!filteredState.serviceAggregation.usedFunctions.has(funcId)) {
+        delete filteredState.functions.meta[funcId]
+      }
+    }
+
+    // Prune workflow graphs whose orchestrator function was filtered out
+    for (const name of Object.keys(filteredState.workflows.graphMeta)) {
+      const workflowMeta = filteredState.workflows.meta[name]
+      if (
+        workflowMeta?.pikkuFuncId &&
+        !filteredState.serviceAggregation.usedFunctions.has(
+          workflowMeta.pikkuFuncId
+        )
+      ) {
+        delete filteredState.workflows.graphMeta[name]
+        delete filteredState.workflows.meta[name]
+      }
+    }
+  }
+
   // Recalculate requiredServices based on filtered functions/middleware/permissions
   // Need to cast to InspectorState temporarily for aggregateRequiredServices
   const stateForAggregation = filteredState as InspectorState
