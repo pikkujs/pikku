@@ -20,6 +20,10 @@ export const pikkuHTTP = pikkuSessionlessFunc<void, boolean | undefined>({
     } = config
     const { http } = visitState
 
+    if (http.files.size === 0 || Object.keys(http.meta).length === 0) {
+      return undefined
+    }
+
     await writeFileInDir(
       logger,
       httpWiringsFile,

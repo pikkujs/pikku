@@ -21,12 +21,18 @@ export const pikkuAIAgent = pikkuSessionlessFunc<void, boolean | undefined>({
       addonName,
     } = config
 
-    const lines: string[] = []
-    const hasAgents = (agents.files as Map<string, unknown>).size > 0
+    const agentFiles = agents.files as Map<
+      string,
+      { path: string; exportedName: string }
+    >
 
-    if (hasAgents) {
-      lines.push(`import { addAIAgent } from '@pikku/core/ai-agent'`)
+    if (agentFiles.size === 0 || Object.keys(agents.agentsMeta).length === 0) {
+      return undefined
     }
+
+    const lines: string[] = []
+
+    lines.push(`import { addAIAgent } from '@pikku/core/ai-agent'`)
 
     const metaImportPath = getFileImportRelativePath(
       agentWiringsFile,
@@ -37,10 +43,6 @@ export const pikkuAIAgent = pikkuSessionlessFunc<void, boolean | undefined>({
       lines.push(`import '${metaImportPath}'`)
     }
 
-    const agentFiles = agents.files as Map<
-      string,
-      { path: string; exportedName: string }
-    >
     const sortedAgents = Array.from(agentFiles.entries()).sort((a, b) =>
       a[0].localeCompare(b[0])
     )

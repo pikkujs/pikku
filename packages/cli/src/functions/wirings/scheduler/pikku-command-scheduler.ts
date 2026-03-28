@@ -24,6 +24,13 @@ export const pikkuScheduler = pikkuSessionlessFunc<void, boolean | undefined>({
     } = config
     const { scheduledTasks } = visitState
 
+    if (
+      scheduledTasks.files.size === 0 ||
+      Object.keys(scheduledTasks.meta).length === 0
+    ) {
+      return undefined
+    }
+
     const fullMeta = serializeSchedulerMeta(scheduledTasks.meta)
 
     // Write minimal JSON (runtime-only fields)

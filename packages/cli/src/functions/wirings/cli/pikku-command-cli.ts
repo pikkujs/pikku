@@ -20,6 +20,10 @@ export const pikkuCLI = pikkuSessionlessFunc<void, boolean | undefined>({
     } = config
     const { cli } = visitState
 
+    if (cli.files.size === 0 || Object.keys(cli.meta).length === 0) {
+      return undefined
+    }
+
     // Generate CLI wirings file
     await writeFileInDir(
       logger,
