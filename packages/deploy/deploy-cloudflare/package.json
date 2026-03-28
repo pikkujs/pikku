@@ -1,0 +1,14 @@
+{
+  "name": "@pikku/deploy-cloudflare",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "main": "src/index.ts",
+  "scripts": {
+    "tsc": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.9"
+  }
+}
