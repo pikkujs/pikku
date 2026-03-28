@@ -208,9 +208,13 @@ export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
     }
   }
 
+  // Destructure outDir from data so the resolved path from cliConfig is
+  // preserved (getPikkuCLIConfig already resolves relative --outDir to
+  // an absolute path and recomputes all derived *File/*Dir paths).
+  const { outDir: _rawOutDir, ...dataWithoutOutDir } = data
   return {
     ...cliConfig,
-    ...data,
+    ...dataWithoutOutDir,
     tags: cliConfig.tags,
     filters: parseCLIFilters(data),
     preloadedInspectorState,
@@ -282,8 +286,10 @@ export const createSingletonServices: CreateSingletonServices<
       return initialState
     }
 
-    // Get or refresh the unfiltered state
-    if (!unfilteredState || refresh) {
+    // Get or refresh the unfiltered state.
+    // When a preloaded state was provided via --stateInput, skip re-inspection
+    // because the preloaded state is already the complete unfiltered state.
+    if (!unfilteredState || (refresh && !preloadedInspectorState)) {
       // Run inspector WITHOUT filters to get full state
       const wiringFiles = (
         await Promise.all(
