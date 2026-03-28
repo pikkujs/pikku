@@ -18,29 +18,46 @@ import type {
   Binding,
 } from './manifest.js'
 
-import {
-  functionsMetaVerboseSchema,
-  httpWiringsMetaSchema,
-  queueWorkersMetaSchema,
-  schedulersMetaSchema,
-  agentsMetaSchema,
-  mcpMetaSchema,
-  channelsMetaSchema,
-  workflowMetaSchema,
-  secretsMetaSchema,
-  variablesMetaSchema,
-  type FunctionsMetaVerbose,
-  type HttpWiringsMeta,
-  type QueueWorkersMeta,
-  type SchedulersMeta,
-  type AgentsMeta,
-  type McpMeta,
-  type ChannelsMeta,
-  type ChannelMeta,
-  type WorkflowMeta,
-  type SecretsMeta,
-  type VariablesMeta,
-} from './schemas.js'
+import type { FunctionsMeta } from '@pikku/core'
+import type {
+  ChannelsMeta,
+  ChannelMeta,
+} from '@pikku/core/wirings/channel/channel.types.js'
+import type { ScheduledTasksMeta } from '@pikku/core/wirings/scheduler/scheduler.types.js'
+import type {
+  MCPToolMeta,
+  MCPResourceMeta,
+  MCPPromptMeta,
+} from '@pikku/core/wirings/mcp/mcp.types.js'
+import type { AIAgentMeta } from '@pikku/core/wirings/ai-agent/ai-agent.types.js'
+import type { SecretDefinitionsMeta } from '@pikku/core/wirings/secret/secret.types.js'
+import type { VariableDefinitionsMeta } from '@pikku/core/wirings/variable/variable.types.js'
+import type { CommonWireMeta } from '@pikku/core'
+
+// HTTP wirings: { [method]: { [route]: CommonWireMeta & { route, method, params? } } }
+type HttpRouteMeta = CommonWireMeta & {
+  route: string
+  method: string
+  params?: string[]
+}
+type HttpWiringsMeta = Record<string, Record<string, HttpRouteMeta>>
+
+// Queue workers: { [queueName]: CommonWireMeta & { name? } }
+type QueueWorkersMeta = Record<string, CommonWireMeta & { name?: string }>
+
+// Workflow meta from individual JSON files
+interface WorkflowNodeMeta {
+  nodeId: string
+  label?: string
+  flow: string
+  rpcName?: string
+  [key: string]: unknown
+}
+interface WorkflowMeta {
+  pikkuFuncId: string
+  name: string
+  nodes: Record<string, WorkflowNodeMeta>
+}
 
 // ---------------------------------------------------------------------------
 // File reading helpers
@@ -55,16 +72,12 @@ async function fileExists(path: string): Promise<boolean> {
   }
 }
 
-async function readJsonFile<T>(
-  path: string,
-  parse: (data: unknown) => T
-): Promise<T | null> {
+async function readJsonFile<T>(path: string): Promise<T | null> {
   if (!(await fileExists(path))) {
     return null
   }
   const raw = await readFile(path, 'utf-8')
-  const json: unknown = JSON.parse(raw)
-  return parse(json)
+  return JSON.parse(raw) as T
 }
 
 // ---------------------------------------------------------------------------
@@ -72,16 +85,20 @@ async function readJsonFile<T>(
 // ---------------------------------------------------------------------------
 
 interface ProjectMetadata {
-  functions: FunctionsMetaVerbose
+  functions: FunctionsMeta
   http: HttpWiringsMeta
   queueWorkers: QueueWorkersMeta
-  schedulers: SchedulersMeta
-  agents: AgentsMeta
-  mcp: McpMeta
+  schedulers: ScheduledTasksMeta
+  agents: { agentsMeta: AIAgentMeta }
+  mcp: {
+    toolsMeta: MCPToolMeta
+    resourcesMeta: MCPResourceMeta
+    promptsMeta: MCPPromptMeta
+  }
   channels: ChannelsMeta
   workflows: WorkflowMeta[]
-  secrets: SecretsMeta
-  variables: VariablesMeta
+  secrets: SecretDefinitionsMeta
+  variables: VariableDefinitionsMeta
 }
 
 async function loadWorkflows(pikkuDir: string): Promise<WorkflowMeta[]> {
@@ -98,9 +115,7 @@ async function loadWorkflows(pikkuDir: string): Promise<WorkflowMeta[]> {
 
   const results: WorkflowMeta[] = []
   for (const file of metaFiles) {
-    const meta = await readJsonFile(join(workflowMetaDir, file), (data) =>
-      workflowMetaSchema.parse(data)
-    )
+    const meta = await readJsonFile<WorkflowMeta>(join(workflowMetaDir, file))
     if (meta) {
       results.push(meta)
     }
@@ -121,53 +136,37 @@ async function loadProjectMetadata(pikkuDir: string): Promise<ProjectMetadata> {
     secrets,
     variables,
   ] = await Promise.all([
-    readJsonFile(
-      join(pikkuDir, 'function', 'pikku-functions-meta-verbose.gen.json'),
-      (data) => functionsMetaVerboseSchema.parse(data)
+    readJsonFile<FunctionsMeta>(
+      join(pikkuDir, 'function', 'pikku-functions-meta-verbose.gen.json')
     ).then((r) => r ?? {}),
-    readJsonFile(
-      join(pikkuDir, 'http', 'pikku-http-wirings-meta.gen.json'),
-      (data) => httpWiringsMetaSchema.parse(data)
-    ).then(
-      (r) =>
-        r ?? {
-          get: {},
-          post: {},
-          put: {},
-          delete: {},
-          head: {},
-          patch: {},
-          options: {},
-        }
-    ),
-    readJsonFile(
-      join(pikkuDir, 'queue', 'pikku-queue-workers-wirings-meta.gen.json'),
-      (data) => queueWorkersMetaSchema.parse(data)
+    readJsonFile<HttpWiringsMeta>(
+      join(pikkuDir, 'http', 'pikku-http-wirings-meta.gen.json')
     ).then((r) => r ?? {}),
-    readJsonFile(
-      join(pikkuDir, 'scheduler', 'pikku-schedulers-wirings-meta.gen.json'),
-      (data) => schedulersMetaSchema.parse(data)
+    readJsonFile<QueueWorkersMeta>(
+      join(pikkuDir, 'queue', 'pikku-queue-workers-wirings-meta.gen.json')
     ).then((r) => r ?? {}),
-    readJsonFile(
-      join(pikkuDir, 'agent', 'pikku-agent-wirings-meta.gen.json'),
-      (data) => agentsMetaSchema.parse(data)
+    readJsonFile<ScheduledTasksMeta>(
+      join(pikkuDir, 'scheduler', 'pikku-schedulers-wirings-meta.gen.json')
+    ).then((r) => r ?? {}),
+    readJsonFile<{ agentsMeta: AIAgentMeta }>(
+      join(pikkuDir, 'agent', 'pikku-agent-wirings-meta.gen.json')
     ).then((r) => r ?? { agentsMeta: {} }),
-    readJsonFile(
-      join(pikkuDir, 'mcp', 'pikku-mcp-wirings-meta.gen.json'),
-      (data) => mcpMetaSchema.parse(data)
-    ).then((r) => r ?? { toolsMeta: {}, resourcesMeta: {}, promptsMeta: {} }),
-    readJsonFile(
-      join(pikkuDir, 'channel', 'pikku-channels-meta.gen.json'),
-      (data) => channelsMetaSchema.parse(data)
+    readJsonFile<{
+      toolsMeta: MCPToolMeta
+      resourcesMeta: MCPResourceMeta
+      promptsMeta: MCPPromptMeta
+    }>(join(pikkuDir, 'mcp', 'pikku-mcp-wirings-meta.gen.json')).then(
+      (r) => r ?? { toolsMeta: {}, resourcesMeta: {}, promptsMeta: {} }
+    ),
+    readJsonFile<ChannelsMeta>(
+      join(pikkuDir, 'channel', 'pikku-channels-meta.gen.json')
     ).then((r) => r ?? {}),
     loadWorkflows(pikkuDir),
-    readJsonFile(
-      join(pikkuDir, 'secrets', 'pikku-secrets-meta.gen.json'),
-      (data) => secretsMetaSchema.parse(data)
+    readJsonFile<SecretDefinitionsMeta>(
+      join(pikkuDir, 'secrets', 'pikku-secrets-meta.gen.json')
     ).then((r) => r ?? {}),
-    readJsonFile(
-      join(pikkuDir, 'variables', 'pikku-variables-meta.gen.json'),
-      (data) => variablesMetaSchema.parse(data)
+    readJsonFile<VariableDefinitionsMeta>(
+      join(pikkuDir, 'variables', 'pikku-variables-meta.gen.json')
     ).then((r) => r ?? {}),
   ])
 
@@ -279,7 +278,7 @@ function buildWorkers(meta: ProjectMetadata): WorkerSpec[] {
 
   // Also include functions explicitly marked with tool: true
   for (const [funcId, funcMeta] of Object.entries(meta.functions)) {
-    if (funcMeta.tool && !claimed.has(funcId) && !mcpToolIds.includes(funcId)) {
+    if (funcMeta.mcp && !claimed.has(funcId) && !mcpToolIds.includes(funcId)) {
       mcpToolIds.push(funcId)
     }
   }
@@ -320,8 +319,9 @@ function buildWorkers(meta: ProjectMetadata): WorkerSpec[] {
     // Bundle agent tools
     if (agentMeta.tools) {
       for (const tool of agentMeta.tools) {
-        if (!claimed.has(tool.pikkuFuncId)) {
-          agentFuncIds.push(tool.pikkuFuncId)
+        const toolId = typeof tool === 'string' ? tool : tool.pikkuFuncId
+        if (!claimed.has(toolId)) {
+          agentFuncIds.push(toolId)
         }
       }
     }
