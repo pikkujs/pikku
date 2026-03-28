@@ -91,7 +91,6 @@ async function bundleWorker(
 
   return {
     workerName: worker.name,
-    role: worker.role,
     bundlePath,
     packageJsonPath,
     metafilePath,
@@ -140,7 +139,6 @@ export async function bundleWorkers(
     if (!entryPath) {
       errors.push({
         workerName: worker.name,
-        role: worker.role,
         error: `No entry point generated for worker "${worker.name}"`,
       })
       continue
@@ -160,7 +158,6 @@ export async function bundleWorkers(
       const message = err instanceof Error ? err.message : String(err)
       errors.push({
         workerName: worker.name,
-        role: worker.role,
         error: message,
       })
     }

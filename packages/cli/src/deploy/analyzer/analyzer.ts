@@ -7,7 +7,7 @@
  */
 
 import { readFile, readdir, access } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, basename } from 'node:path'
 
 import type {
   DeploymentManifest,
@@ -600,8 +600,8 @@ function detectR2Buckets(workers: WorkerSpec[]): { name: string }[] {
 // ---------------------------------------------------------------------------
 
 export interface AnalyzerOptions {
-  projectId: string
-  version: string
+  projectId?: string
+  version?: string
 }
 
 /**
@@ -613,7 +613,7 @@ export interface AnalyzerOptions {
  */
 export async function analyzeProject(
   projectDir: string,
-  options: AnalyzerOptions
+  options?: AnalyzerOptions
 ): Promise<DeploymentManifest> {
   const pikkuDir = join(projectDir, '.pikku')
 
@@ -643,8 +643,8 @@ export async function analyzeProject(
   }
 
   return {
-    projectId: options.projectId,
-    version: options.version,
+    projectId: options?.projectId ?? basename(projectDir),
+    version: options?.version ?? '0',
     workers,
     queues,
     d1Databases,

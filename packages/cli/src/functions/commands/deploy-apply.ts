@@ -82,18 +82,17 @@ export const deployApply = pikkuVoidFunc({
 
     // Step 2: Bundle
     logger.info('Bundling workers...')
-    const bundles = await bundleWorkers(projectDir, manifest)
-    const successful = bundles.filter((b) => 'bundlePath' in b)
-    const failed = bundles.filter((b) => 'error' in b)
+    const { results: bundled, errors: bundleErrors } = await bundleWorkers(
+      projectDir,
+      manifest
+    )
     logger.info(
-      `Bundled ${successful.length} workers${failed.length > 0 ? ` (${failed.length} failed)` : ''}`
+      `Bundled ${bundled.length} workers${bundleErrors.length > 0 ? ` (${bundleErrors.length} failed)` : ''}`
     )
 
-    if (failed.length > 0) {
-      for (const f of failed) {
-        if ('error' in f) {
-          logger.error(`  Failed: ${f.workerName} — ${f.error}`)
-        }
+    if (bundleErrors.length > 0) {
+      for (const f of bundleErrors) {
+        logger.error(`  Failed: ${f.workerName} — ${f.error}`)
       }
     }
 

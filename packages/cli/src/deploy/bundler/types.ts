@@ -1,76 +1,16 @@
 /**
- * Types for the Pikku Fabric esbuild bundling pipeline.
- *
- * These types mirror the architecture doc's DeploymentManifest / WorkerSpec
- * but are scoped to what the bundler needs to operate.
+ * Types for the Pikku esbuild bundling pipeline.
+ * Imports DeploymentManifest from the analyzer — single source of truth.
  */
 
-export type WorkerRole =
-  | 'http'
-  | 'mcp'
-  | 'queue-consumer'
-  | 'cron'
-  | 'agent'
-  | 'remote'
-  | 'workflow-step'
-
-export interface Binding {
-  type: string
-  name: string
-  [key: string]: unknown
-}
-
-export interface WorkerSpec {
-  name: string
-  role: WorkerRole
-  entryPoint: string
-  routes: string[]
-  bindings: Binding[]
-  bundleMetafile: string
-  functionIds: string[]
-}
-
-export interface QueueSpec {
-  name: string
-  consumerWorker: string
-}
-
-export interface D1Spec {
-  name: string
-  migrationsDir?: string
-}
-
-export interface R2Spec {
-  name: string
-}
-
-export interface CronTriggerSpec {
-  schedule: string
-  workerName: string
-}
-
-export interface ContainerSpec {
-  name: string
-  dockerfile: string
-  functionIds: string[]
-}
-
-export interface DeploymentManifest {
-  projectId: string
-  version: string
-  workers: WorkerSpec[]
-  queues: QueueSpec[]
-  d1Databases: D1Spec[]
-  r2Buckets: R2Spec[]
-  cronTriggers: CronTriggerSpec[]
-  secrets: string[]
-  variables: Record<string, string>
-  containers: ContainerSpec[]
-}
+export type {
+  DeploymentManifest,
+  WorkerSpec,
+  WorkerRole,
+} from '../analyzer/manifest.js'
 
 export interface BundleResult {
   workerName: string
-  role: WorkerRole
   bundlePath: string
   packageJsonPath: string
   metafilePath: string
@@ -80,7 +20,6 @@ export interface BundleResult {
 
 export interface BundleError {
   workerName: string
-  role: WorkerRole
   error: string
 }
 
