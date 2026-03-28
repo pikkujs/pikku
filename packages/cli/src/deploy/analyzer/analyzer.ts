@@ -36,6 +36,7 @@ import {
   type AgentsMeta,
   type McpMeta,
   type ChannelsMeta,
+  type ChannelMeta,
   type WorkflowMeta,
   type SecretsMeta,
   type VariablesMeta,
@@ -558,13 +559,33 @@ function buildCronTriggers(meta: ProjectMetadata): CronTriggerSpec[] {
 // Channel builder
 // ---------------------------------------------------------------------------
 
+/**
+ * Collects all pikkuFuncIds referenced in a channel's messageWirings.
+ */
+function collectChannelFunctionIds(channelMeta: ChannelMeta): string[] {
+  const ids: string[] = []
+  const commands = channelMeta.messageWirings?.command
+  if (commands) {
+    for (const wiring of Object.values(commands)) {
+      if (wiring.pikkuFuncId) {
+        ids.push(wiring.pikkuFuncId)
+      }
+    }
+  }
+  return ids
+}
+
 function buildChannels(meta: ProjectMetadata): ChannelSpec[] {
   const channels: ChannelSpec[] = []
 
   for (const [channelName, channelMeta] of Object.entries(meta.channels)) {
+    // Channels don't have a single pikkuFuncId; they reference functions
+    // through messageWirings.command entries. Use the first one as primary,
+    // or fall back to the channel name.
+    const funcIds = collectChannelFunctionIds(channelMeta)
     channels.push({
-      name: channelName,
-      functionId: channelMeta.pikkuFuncId ?? channelName,
+      name: channelMeta.name ?? channelName,
+      functionId: funcIds[0] ?? channelName,
     })
   }
 
