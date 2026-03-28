@@ -11,15 +11,15 @@ export const serializeFunctionImports = (
 ) => {
   const serializedImports: string[] = [
     `/* Import and register functions used by RPCs */`,
-    `import { addFunction } from '@pikku/core'`,
+    `import { addFunction } from '@pikku/core/function'`,
   ]
 
   const serializedRegistrations: string[] = []
 
-  // Sort by function name for consistent output
-  const sortedEntries = Array.from(functionsMap.entries()).sort((a, b) =>
-    a[0].localeCompare(b[0])
-  )
+  // Sort by function name for consistent output, only include functions in meta
+  const sortedEntries = Array.from(functionsMap.entries())
+    .filter(([name]) => name in functionsMeta)
+    .sort((a, b) => a[0].localeCompare(b[0]))
 
   // Third argument to addFunction is the package name (null for main package)
   const packageArg = addonName ? `, '${addonName}'` : ''
