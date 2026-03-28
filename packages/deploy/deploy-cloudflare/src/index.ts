@@ -53,6 +53,9 @@ export { setSecret, deleteSecret, listSecrets } from './secrets.js'
 // Cron Triggers
 export { setCronTriggers, getCronTriggers } from './cron.js'
 
+// Deploy provider
+export { CloudflareDeployProvider } from './provider.js'
+
 // Entry point generation
 export { generateEntryFiles, generateEntrySource } from './entry-generator.js'
 
