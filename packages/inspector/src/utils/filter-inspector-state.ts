@@ -291,12 +291,28 @@ export function filterInspectorState(
     }
   }
 
-  // Repopulate http.files if any routes remain
-  const hasHttpRoutes = Object.values(
-    filteredState.http.meta as Record<string, any>
-  ).some((routes) => Object.keys(routes).length > 0)
-  if (hasHttpRoutes) {
-    filteredState.http.files = new Set(state.http.files)
+  // Repopulate http.files with only files that have surviving routes
+  for (const method of Object.keys(filteredState.http.meta)) {
+    const routes = (
+      filteredState.http.meta as Record<
+        string,
+        Record<string, { sourceFile?: string }>
+      >
+    )[method]
+    for (const routeMeta of Object.values(routes)) {
+      if (routeMeta.sourceFile) {
+        filteredState.http.files.add(routeMeta.sourceFile)
+      }
+    }
+  }
+  // Fallback: if no sourceFile info available but routes exist, include all files
+  if (filteredState.http.files.size === 0) {
+    const hasHttpRoutes = Object.values(
+      filteredState.http.meta as Record<string, Record<string, unknown>>
+    ).some((routes) => Object.keys(routes).length > 0)
+    if (hasHttpRoutes) {
+      filteredState.http.files = new Set(state.http.files)
+    }
   }
 
   // Filter channels

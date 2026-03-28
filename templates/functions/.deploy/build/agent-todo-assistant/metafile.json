@@ -28,7 +28,7 @@
       "format": "esm"
     },
     ".deploy/units/agent-todo-assistant/.pikku/http/pikku-http-wirings-meta.gen.json": {
-      "bytes": 600,
+      "bytes": 798,
       "imports": [],
       "format": "esm",
       "with": {
@@ -421,102 +421,6 @@
       ],
       "format": "esm"
     },
-    "pikku/agent.wiring.gen.ts": {
-      "bytes": 2233,
-      "imports": [
-        {
-          "path": ".pikku/pikku-types.gen.ts",
-          "kind": "import-statement",
-          "original": "../.pikku/pikku-types.gen.js"
-        }
-      ],
-      "format": "esm"
-    },
-    ".pikku/workflow/pikku-workflow-types.gen.ts": {
-      "bytes": 8264,
-      "imports": [
-        {
-          "path": "@pikku/core/workflow",
-          "kind": "import-statement",
-          "external": true
-        },
-        {
-          "path": "@pikku/core/workflow",
-          "kind": "import-statement",
-          "external": true
-        },
-        {
-          "path": "@pikku/core/workflow",
-          "kind": "import-statement",
-          "external": true
-        },
-        {
-          "path": "@pikku/core/workflow",
-          "kind": "import-statement",
-          "external": true
-        },
-        {
-          "path": "@pikku/core/errors",
-          "kind": "import-statement",
-          "external": true
-        }
-      ],
-      "format": "esm"
-    },
-    "src/wirings/graph.wiring.ts": {
-      "bytes": 273,
-      "imports": [
-        {
-          "path": ".pikku/workflow/pikku-workflow-types.gen.ts",
-          "kind": "import-statement",
-          "original": "../../.pikku/workflow/pikku-workflow-types.gen.js"
-        },
-        {
-          "path": ".pikku/pikku-types.gen.ts",
-          "kind": "import-statement",
-          "original": "../../.pikku/pikku-types.gen.js"
-        }
-      ],
-      "format": "esm"
-    },
-    "src/functions/remote-rpc.functions.ts": {
-      "bytes": 902,
-      "imports": [
-        {
-          "path": ".pikku/pikku-types.gen.ts",
-          "kind": "import-statement",
-          "original": "../../.pikku/pikku-types.gen.js"
-        }
-      ],
-      "format": "esm"
-    },
-    "src/wirings/remote-rpc.wiring.ts": {
-      "bytes": 310,
-      "imports": [
-        {
-          "path": ".pikku/pikku-types.gen.ts",
-          "kind": "import-statement",
-          "original": "../../.pikku/pikku-types.gen.js"
-        },
-        {
-          "path": "src/functions/remote-rpc.functions.ts",
-          "kind": "import-statement",
-          "original": "../functions/remote-rpc.functions.js"
-        }
-      ],
-      "format": "esm"
-    },
-    "src/wirings/rpc.wiring.ts": {
-      "bytes": 1026,
-      "imports": [
-        {
-          "path": ".pikku/pikku-types.gen.ts",
-          "kind": "import-statement",
-          "original": "../../.pikku/pikku-types.gen.js"
-        }
-      ],
-      "format": "esm"
-    },
     "src/schemas.ts": {
       "bytes": 4428,
       "imports": [
@@ -524,38 +428,6 @@
           "path": "zod",
           "kind": "import-statement",
           "external": true
-        }
-      ],
-      "format": "esm"
-    },
-    "src/functions/sse.functions.ts": {
-      "bytes": 2077,
-      "imports": [
-        {
-          "path": ".pikku/pikku-types.gen.ts",
-          "kind": "import-statement",
-          "original": "../../.pikku/pikku-types.gen.js"
-        },
-        {
-          "path": "src/schemas.ts",
-          "kind": "import-statement",
-          "original": "../schemas.js"
-        }
-      ],
-      "format": "esm"
-    },
-    "src/wirings/sse.wiring.ts": {
-      "bytes": 407,
-      "imports": [
-        {
-          "path": ".pikku/pikku-types.gen.ts",
-          "kind": "import-statement",
-          "original": "../../.pikku/pikku-types.gen.js"
-        },
-        {
-          "path": "src/functions/sse.functions.ts",
-          "kind": "import-statement",
-          "original": "../functions/sse.functions.js"
         }
       ],
       "format": "esm"
@@ -592,59 +464,13 @@
       ],
       "format": "esm"
     },
-    "src/wirings/workflow.wiring.ts": {
-      "bytes": 564,
-      "imports": [
-        {
-          "path": ".pikku/pikku-types.gen.ts",
-          "kind": "import-statement",
-          "original": "../../.pikku/pikku-types.gen.js"
-        },
-        {
-          "path": ".pikku/workflow/pikku-workflow-types.gen.ts",
-          "kind": "import-statement",
-          "original": "../../.pikku/workflow/pikku-workflow-types.gen.js"
-        }
-      ],
-      "format": "esm"
-    },
     ".deploy/units/agent-todo-assistant/.pikku/http/pikku-http-wirings.gen.ts": {
-      "bytes": 467,
+      "bytes": 153,
       "imports": [
-        {
-          "path": "pikku/agent.wiring.gen.ts",
-          "kind": "import-statement",
-          "original": "../../../../../pikku/agent.wiring.gen.js"
-        },
-        {
-          "path": "src/wirings/graph.wiring.ts",
-          "kind": "import-statement",
-          "original": "../../../../../src/wirings/graph.wiring.js"
-        },
-        {
-          "path": "src/wirings/remote-rpc.wiring.ts",
-          "kind": "import-statement",
-          "original": "../../../../../src/wirings/remote-rpc.wiring.js"
-        },
-        {
-          "path": "src/wirings/rpc.wiring.ts",
-          "kind": "import-statement",
-          "original": "../../../../../src/wirings/rpc.wiring.js"
-        },
-        {
-          "path": "src/wirings/sse.wiring.ts",
-          "kind": "import-statement",
-          "original": "../../../../../src/wirings/sse.wiring.js"
-        },
         {
           "path": "src/wirings/todos.http.ts",
           "kind": "import-statement",
           "original": "../../../../../src/wirings/todos.http.js"
-        },
-        {
-          "path": "src/wirings/workflow.wiring.ts",
-          "kind": "import-statement",
-          "original": "../../../../../src/wirings/workflow.wiring.js"
         }
       ],
       "format": "esm"
@@ -910,26 +736,6 @@
           "external": true
         },
         {
-          "path": "@pikku/core/workflow",
-          "kind": "import-statement",
-          "external": true
-        },
-        {
-          "path": "@pikku/core/workflow",
-          "kind": "import-statement",
-          "external": true
-        },
-        {
-          "path": "@pikku/core/workflow",
-          "kind": "import-statement",
-          "external": true
-        },
-        {
-          "path": "@pikku/core/workflow",
-          "kind": "import-statement",
-          "external": true
-        },
-        {
           "path": "zod",
           "kind": "import-statement",
           "external": true
@@ -971,7 +777,7 @@
           "bytesInOutput": 138
         },
         ".deploy/units/agent-todo-assistant/.pikku/http/pikku-http-wirings-meta.gen.json": {
-          "bytesInOutput": 602
+          "bytesInOutput": 796
         },
         ".deploy/units/agent-todo-assistant/.pikku/function/pikku-functions-meta.gen.ts": {
           "bytesInOutput": 139
@@ -989,13 +795,13 @@
           "bytesInOutput": 863
         },
         ".pikku/function/pikku-function-types.gen.ts": {
-          "bytesInOutput": 471
+          "bytesInOutput": 387
         },
         ".pikku/pikku-types.gen.ts": {
           "bytesInOutput": 0
         },
         ".pikku/http/pikku-http-types.gen.ts": {
-          "bytesInOutput": 574
+          "bytesInOutput": 510
         },
         ".pikku/channel/pikku-channel-types.gen.ts": {
           "bytesInOutput": 239
@@ -1039,41 +845,14 @@
         ".deploy/units/agent-todo-assistant/.pikku/schemas/schemas/CreateTodoOutput.schema.json": {
           "bytesInOutput": 836
         },
-        "pikku/agent.wiring.gen.ts": {
-          "bytesInOutput": 1625
-        },
-        ".pikku/workflow/pikku-workflow-types.gen.ts": {
-          "bytesInOutput": 742
-        },
-        "src/wirings/graph.wiring.ts": {
-          "bytesInOutput": 134
-        },
-        "src/functions/remote-rpc.functions.ts": {
-          "bytesInOutput": 607
-        },
-        "src/wirings/remote-rpc.wiring.ts": {
-          "bytesInOutput": 175
-        },
-        "src/wirings/rpc.wiring.ts": {
-          "bytesInOutput": 384
-        },
         "src/schemas.ts": {
           "bytesInOutput": 3698
-        },
-        "src/functions/sse.functions.ts": {
-          "bytesInOutput": 1622
-        },
-        "src/wirings/sse.wiring.ts": {
-          "bytesInOutput": 265
         },
         "src/functions/todos.functions.ts": {
           "bytesInOutput": 2975
         },
         "src/wirings/todos.http.ts": {
           "bytesInOutput": 585
-        },
-        "src/wirings/workflow.wiring.ts": {
-          "bytesInOutput": 387
         },
         ".deploy/units/agent-todo-assistant/.pikku/function/pikku-functions.gen.ts": {
           "bytesInOutput": 128
@@ -1085,7 +864,7 @@
           "bytesInOutput": 523
         }
       },
-      "bytes": 30548
+      "bytes": 24334
     }
   }
 }
