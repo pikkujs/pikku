@@ -53,6 +53,11 @@ function getHandlerCode(role: WorkerRole): {
         importStatement: `import { createCloudflareQueueHandler } from '@pikku/cloudflare'`,
         exportStatement: `export default createCloudflareQueueHandler()`,
       }
+    case 'workflow-orchestrator':
+      return {
+        importStatement: `import { createCloudflareWorkerHandler } from '@pikku/cloudflare'`,
+        exportStatement: `export default createCloudflareWorkerHandler()`,
+      }
   }
 }
 
