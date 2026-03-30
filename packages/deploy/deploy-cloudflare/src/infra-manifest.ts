@@ -134,7 +134,8 @@ export function generateInfraManifest(
     name: t.name,
   }))
 
-  // Durable objects (channels need WebSocket hibernation, workflows need state)
+  // Durable objects (channels need WebSocket hibernation)
+  // Workflow state is managed via D1, not Durable Objects.
   const durableObjects: CloudflareInfraManifest['resources']['durableObjects'] =
     []
 
@@ -144,19 +145,6 @@ export function generateInfraManifest(
       className: 'WebSocketHibernationServer',
       binding: 'WEBSOCKET_HIBERNATION_SERVER',
     })
-  }
-
-  for (const unit of manifest.units) {
-    if (
-      unit.role === 'workflow-orchestrator' &&
-      unit.services.some((s) => s.capability === 'workflow-state')
-    ) {
-      durableObjects.push({
-        worker: unit.name,
-        className: 'WorkflowState',
-        binding: 'WORKFLOW_STATE',
-      })
-    }
   }
 
   // Per-unit binding summary

@@ -55,7 +55,15 @@ export function generateWranglerToml(
     lines.push('[[d1_databases]]')
     lines.push(`binding = "DB"`)
     lines.push(`database_name = "${projectId}-db"`)
-    lines.push(`database_id = "" # Set after creation or via --local`)
+    lines.push(`database_id = "pikku"`)
+  }
+
+  if (capabilities.has('workflow-state')) {
+    lines.push('')
+    lines.push('[[d1_databases]]')
+    lines.push(`binding = "WORKFLOW_DB"`)
+    lines.push(`database_name = "${projectId}-workflow-db"`)
+    lines.push(`database_id = "pikku"`)
   }
 
   if (capabilities.has('object-storage')) {
@@ -63,6 +71,17 @@ export function generateWranglerToml(
     lines.push('[[r2_buckets]]')
     lines.push(`binding = "STORAGE"`)
     lines.push(`bucket_name = "${projectId}-storage"`)
+  }
+
+  if (capabilities.has('ai-model') || capabilities.has('ai-storage')) {
+    // AI services share the main DB for storage
+    if (!capabilities.has('database')) {
+      lines.push('')
+      lines.push('[[d1_databases]]')
+      lines.push(`binding = "DB"`)
+      lines.push(`database_name = "${projectId}-db"`)
+      lines.push(`database_id = "pikku"`)
+    }
   }
 
   if (capabilities.has('kv')) {
@@ -148,18 +167,8 @@ function addRoleSpecificConfig(
     }
 
     case 'workflow-orchestrator': {
-      // Orchestrators may need durable objects for workflow state
-      const capabilities = new Set(unit.services.map((s) => s.capability))
-      if (capabilities.has('workflow-state')) {
-        lines.push('')
-        lines.push('[[durable_objects.bindings]]')
-        lines.push(`name = "WORKFLOW_STATE"`)
-        lines.push(`class_name = "WorkflowState"`)
-        lines.push('')
-        lines.push('[[migrations]]')
-        lines.push(`tag = "v1"`)
-        lines.push(`new_classes = ["WorkflowState"]`)
-      }
+      // Workflow state is managed via D1 (CloudflareWorkflowService),
+      // not Durable Objects. D1 binding is added via capability check above.
       break
     }
   }
