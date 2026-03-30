@@ -19,6 +19,8 @@ import type {
 export type RunScheduledTasksParams = {
   name: string
   session?: CoreUserSession
+  /** Pre-resolved trace ID */
+  traceId?: string
 }
 
 export const wireScheduler = <
@@ -69,9 +71,15 @@ class ScheduledTaskSkippedError extends PikkuError {
 export async function runScheduledTask({
   name,
   session,
+  traceId,
 }: RunScheduledTasksParams): Promise<void> {
   const singletonServices = getSingletonServices()
   const createWireServices = getCreateWireServices()
+  const resolvedTraceId = traceId ?? `cron-${name}-${Date.now()}`
+  const scopedLogger =
+    singletonServices.logger.scope?.(resolvedTraceId) ??
+    singletonServices.logger
+  const scopedServices = { ...singletonServices, logger: scopedLogger }
   const task = pikkuState(null, 'scheduler', 'tasks').get(name)
   const meta = pikkuState(null, 'scheduler', 'meta')[name]
 
@@ -103,12 +111,12 @@ export async function runScheduledTask({
   }
 
   try {
-    singletonServices.logger.info(
+    scopedLogger.info(
       `Running schedule task: ${name} | schedule: ${task.schedule}`
     )
 
     await runPikkuFunc('scheduler', meta.name, meta.pikkuFuncId, {
-      singletonServices,
+      singletonServices: scopedServices,
       createWireServices,
       auth: false,
       data: () => undefined,
@@ -122,7 +130,7 @@ export async function runScheduledTask({
   } catch (e: any) {
     const errorResponse = getErrorResponse(e)
     if (errorResponse != null) {
-      singletonServices.logger.error(e)
+      scopedLogger.error(e)
     }
     throw e
   }

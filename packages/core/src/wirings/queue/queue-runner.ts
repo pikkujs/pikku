@@ -105,13 +105,20 @@ export async function removeQueueWorker(name: string): Promise<void> {
 export async function runQueueJob({
   job,
   updateProgress,
+  traceId,
 }: {
   job: QueueJob
   updateProgress?: (progress: number | string | object) => Promise<void>
+  /** Pre-resolved trace ID (e.g. from queue message metadata) */
+  traceId?: string
 }): Promise<void> {
   const singletonServices = getSingletonServices()
   const createWireServices = getCreateWireServices()
-  const logger = singletonServices.logger
+  const resolvedTraceId = traceId ?? `q-${job.id}`
+  const logger =
+    singletonServices.logger.scope?.(resolvedTraceId) ??
+    singletonServices.logger
+  const scopedServices = { ...singletonServices, logger }
 
   const meta = pikkuState(null, 'queue', 'meta')
   const processorMeta = meta[job.queueName]
@@ -160,7 +167,7 @@ export async function runQueueJob({
       job.queueName,
       processorMeta.pikkuFuncId,
       {
-        singletonServices,
+        singletonServices: scopedServices,
         createWireServices,
         auth: false,
         data: () => job.data,

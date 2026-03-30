@@ -172,11 +172,18 @@ export class CloudflareProviderAdapter {
    * Uses the standard worker handler factory.
    */
   private generateGatewayEntry(ctx: EntryGenerationContext): string {
+    // Build the service binding map from dependsOn
+    const bindingEntries = ctx.unit.dependsOn.map((dep) => {
+      const bindingName = toWorkerBinding(dep)
+      return `    '${fromKebab(dep)}': '${bindingName}'`
+    })
+    const bindingsMap = `{\n${bindingEntries.join(',\n')}\n  }`
+
     const lines: string[] = [
       `// Generated entry for "${ctx.unit.name}" (${ctx.unit.role})`,
       `import { createCloudflareWorkerHandler } from '@pikku/cloudflare'`,
       `import type { CloudflareEnv } from '@pikku/cloudflare'`,
-      `import { CloudflareQueueService, CloudflareWorkflowService, CloudflareAIStorageService, CloudflareAgentRunService, CloudflareAIRunStateService } from '@pikku/cloudflare'`,
+      `import { CloudflareQueueService, CloudflareWorkflowService, CloudflareAIStorageService, CloudflareAgentRunService, CloudflareAIRunStateService, CloudflareDeploymentService } from '@pikku/cloudflare'`,
       `import type { D1Database } from '@cloudflare/workers-types'`,
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
@@ -186,7 +193,7 @@ export class CloudflareProviderAdapter {
       `import { requiredSingletonServices } from './.pikku/pikku-services.gen.js'`,
       `import '${ctx.bootstrapPath}'`,
       ``,
-      ...this.generatePlatformServicesBlock(ctx),
+      ...this.generateGatewayPlatformServicesBlock(ctx, bindingsMap),
       ``,
       `export default createCloudflareWorkerHandler({ createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices })`,
       ``,
@@ -228,6 +235,49 @@ export class CloudflareProviderAdapter {
     ]
   }
 
+  /**
+   * Platform services for gateway units — includes CloudflareDeploymentService
+   * for dispatching RPC calls to function workers via service bindings.
+   */
+  private generateGatewayPlatformServicesBlock(
+    ctx: EntryGenerationContext,
+    bindingsMap: string
+  ): string[] {
+    return [
+      `const createPlatformServices = async (env: CloudflareEnv): Promise<${ctx.servicesType}> => {`,
+      `  const services: ${ctx.servicesType} = {}`,
+      `  const logger = new JsonConsoleLogger()`,
+      `  services.logger = logger`,
+      `  services.schema = new CFWorkerSchemaService(logger)`,
+      `  if (requiredSingletonServices.queueService) {`,
+      `    services.queueService = new CloudflareQueueService(env)`,
+      `  }`,
+      `  if (requiredSingletonServices.workflowService && env.WORKFLOW_DB) {`,
+      `    const workflowService = new CloudflareWorkflowService(env.WORKFLOW_DB as D1Database)`,
+      `    await workflowService.init()`,
+      `    services.workflowService = workflowService`,
+      `  }`,
+      `  if (requiredSingletonServices.aiStorage && env.DB) {`,
+      `    const db = env.DB as D1Database`,
+      `    const aiStorage = new CloudflareAIStorageService(db)`,
+      `    await aiStorage.init()`,
+      `    services.aiStorage = aiStorage`,
+      `    services.agentRunService = new CloudflareAgentRunService(db)`,
+      `    const aiRunState = new CloudflareAIRunStateService(db)`,
+      `    await aiRunState.init()`,
+      `    services.aiRunState = aiRunState`,
+      `  }`,
+      `  services.deploymentService = new CloudflareDeploymentService(`,
+      `    env,`,
+      `    services.jwt,`,
+      `    services.secrets,`,
+      `    ${bindingsMap}`,
+      `  )`,
+      `  return services`,
+      `}`,
+    ]
+  }
+
   generateUnitConfigs(
     unit: DeploymentUnit,
     manifest: DeploymentManifest,
@@ -245,4 +295,14 @@ export class CloudflareProviderAdapter {
     const infra = generateInfraManifest(manifest)
     return JSON.stringify(infra, null, 2)
   }
+}
+
+/** Convert kebab-case unit name to SCREAMING_SNAKE_CASE binding name */
+function toWorkerBinding(name: string): string {
+  return name.replace(/-/g, '_').toUpperCase()
+}
+
+/** Convert kebab-case to camelCase (for function name lookup) */
+function fromKebab(str: string): string {
+  return str.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
 }
