@@ -494,6 +494,7 @@ export const fetchData = async <In, Out>(
     bubbleErrors = false,
     exposeErrors = false,
     generateRequestId,
+    traceId: externalTraceId,
   }: RunHTTPWiringOptions = {}
 ): Promise<Out | void> => {
   const singletonServices = getSingletonServices()
@@ -504,11 +505,20 @@ export const fetchData = async <In, Out>(
   // Combine the request and response into one wire object
   const pikkuRequest =
     request instanceof Request ? new PikkuFetchHTTPRequest(request) : request
-  let requestId: string | null = null
-  try {
-    requestId = pikkuRequest.header('x-request-id')
-  } catch {}
+
+  // Resolve traceId: external (e.g. CF-Ray) > x-request-id header > generated
+  let requestId: string | null = externalTraceId ?? null
+  if (!requestId) {
+    try {
+      requestId = pikkuRequest.header('x-request-id')
+    } catch {}
+  }
   requestId = requestId || generateRequestId?.() || createWeakUID()
+
+  // Create scoped services with traceId-aware logger
+  const scopedLogger =
+    singletonServices.logger.scope?.(requestId) ?? singletonServices.logger
+  const scopedServices = { ...singletonServices, logger: scopedLogger }
   const http = createHTTPWire(pikkuRequest, response)
   const apiType = http!.request!.method()
   const apiRoute = http!.request!.path()
@@ -531,7 +541,7 @@ export const fetchData = async <In, Out>(
         response.status(204).json(undefined as any)
         return
       }
-      singletonServices.logger.info({
+      scopedLogger.info({
         message: 'Route not found',
         apiRoute,
         apiType,
@@ -542,7 +552,7 @@ export const fetchData = async <In, Out>(
     // Execute the matched route along with its middleware and session management
     ;({ result, wireServices } = await executeRoute(
       {
-        singletonServices,
+        singletonServices: scopedServices,
         createWireServices,
         skipUserSession,
         requestId,
@@ -556,7 +566,7 @@ export const fetchData = async <In, Out>(
   } catch (e: any) {
     if (matchedRoute?.route.sse) {
       // For SSE routes, send error through the stream since the response is already in stream mode
-      singletonServices.logger.error(e instanceof Error ? e.message : e)
+      scopedLogger.error(e instanceof Error ? e.message : e)
       try {
         const errorResponse = getErrorResponse(e)
         response.arrayBuffer(
@@ -567,7 +577,7 @@ export const fetchData = async <In, Out>(
         )
         response.arrayBuffer(JSON.stringify({ type: 'done' }))
       } catch (streamErr: any) {
-        singletonServices.logger.error(
+        scopedLogger.error(
           `SSE error while sending error payload: ${streamErr instanceof Error ? streamErr.message : String(streamErr)}`
         )
       }
@@ -577,7 +587,7 @@ export const fetchData = async <In, Out>(
         e,
         http,
         requestId,
-        singletonServices.logger,
+        scopedLogger,
         logWarningsForStatusCodes,
         respondWith404,
         bubbleErrors,

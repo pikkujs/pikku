@@ -20,6 +20,9 @@ export const runFetch = async (
     return websocketHibernationServer.fetch(request as any)
   }
 
-  const response = await fetch(request)
+  // Use CF-Ray as traceId when available, otherwise core generates one
+  const traceId = request.headers.get('cf-ray') ?? undefined
+
+  const response = await fetch(request, { traceId })
   return response
 }

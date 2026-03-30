@@ -2,97 +2,165 @@ import type { Logger } from './logger.js'
 import { LogLevel } from './logger.js'
 
 /**
- * A logger implementation that logs messages to the console.
+ * Text-mode console logger.
+ * Output: `INFO: message` or `[traceId] INFO: message`
  */
 export class ConsoleLogger implements Logger {
-  /**
-   * The current logging level.
-   */
   private level: LogLevel = LogLevel.info
+  private prefix: string
 
-  /**
-   * Sets the logging level.
-   * @param level - The logging level to set.
-   */
+  constructor(traceId?: string) {
+    this.prefix = traceId ? `[${traceId}]` : ''
+  }
+
   setLevel(level: LogLevel): void {
     this.level = level
   }
 
-  /**
-   * Logs a trace message.
-   * @param message - The message to log.
-   * @param meta - Additional metadata to log.
-   */
-  trace?(message: string, ...meta: any[]): void {
+  scope(traceId: string): Logger {
+    const scoped = new ConsoleLogger(traceId)
+    scoped.level = this.level
+    return scoped
+  }
+
+  trace(message: string, ...meta: any[]): void {
     if (this.level <= LogLevel.trace) {
-      console.trace('TRACE:', message, ...meta)
+      console.trace(this.prefix, 'TRACE:', message, ...meta)
     }
   }
 
-  /**
-   * Logs a debug message.
-   * @param message - The message to log.
-   * @param meta - Additional metadata to log.
-   */
   debug(message: string, ...meta: any[]): void {
     if (this.level <= LogLevel.debug) {
-      console.debug('DEBUG:', message, ...meta)
+      console.debug(this.prefix, 'DEBUG:', message, ...meta)
     }
   }
 
-  /**
-   * Logs an informational message.
-   * @param messageOrObj - The message or object to log.
-   * @param meta - Additional metadata to log.
-   */
   info(messageOrObj: string | Record<string, any>, ...meta: any[]): void {
     if (this.level <= LogLevel.info) {
-      console.info('INFO:', messageOrObj, ...meta)
+      console.info(this.prefix, 'INFO:', messageOrObj, ...meta)
     }
   }
 
-  /**
-   * Logs a warning message.
-   * @param messageOrObj - The message or object to log.
-   * @param meta - Additional metadata to log.
-   */
   warn(messageOrObj: string | Record<string, any>, ...meta: any[]): void {
     if (this.level <= LogLevel.warn) {
-      console.warn('WARN:', messageOrObj, ...meta)
+      console.warn(this.prefix, 'WARN:', messageOrObj, ...meta)
     }
   }
 
-  /**
-   * Logs an error message.
-   * @param messageOrObj - The message, object, or error to log.
-   * @param meta - Additional metadata to log.
-   */
   error(
     messageOrObj: string | Record<string, any> | Error,
     ...meta: any[]
   ): void {
     if (this.level <= LogLevel.error) {
       console.error(
+        this.prefix,
         'ERROR:',
         messageOrObj instanceof Error ? messageOrObj.message : messageOrObj,
         ...meta
       )
       if (messageOrObj instanceof Error) {
-        console.error('STACK:', messageOrObj.stack)
+        console.error(this.prefix, 'STACK:', messageOrObj.stack)
       }
     }
   }
 
-  /**
-   * Logs a message at a specified level.
-   * @param level - The logging level.
-   * @param message - The message to log.
-   * @param meta - Additional metadata to log.
-   */
   log(level: string, message: string, ...meta: any[]): void {
     const logLevel = LogLevel[level as keyof typeof LogLevel]
     if (this.level <= logLevel) {
-      console.log(`${level.toUpperCase()}:`, message, ...meta)
+      console.log(this.prefix, `${level.toUpperCase()}:`, message, ...meta)
     }
+  }
+}
+
+/**
+ * JSON-mode console logger.
+ * Output: `{"level":"info","message":"...","traceId":"..."}`
+ * CF Workers Logs auto-indexes JSON keys for filtering.
+ */
+export class JsonConsoleLogger implements Logger {
+  private level: LogLevel = LogLevel.info
+  private traceId: string | undefined
+
+  constructor(traceId?: string) {
+    this.traceId = traceId
+  }
+
+  setLevel(level: LogLevel): void {
+    this.level = level
+  }
+
+  scope(traceId: string): Logger {
+    const scoped = new JsonConsoleLogger(traceId)
+    scoped.level = this.level
+    return scoped
+  }
+
+  trace(message: string, ...meta: any[]): void {
+    if (this.level <= LogLevel.trace) {
+      this.emit(console.debug, 'trace', message, meta)
+    }
+  }
+
+  debug(message: string, ...meta: any[]): void {
+    if (this.level <= LogLevel.debug) {
+      this.emit(console.debug, 'debug', message, meta)
+    }
+  }
+
+  info(messageOrObj: string | Record<string, any>, ...meta: any[]): void {
+    if (this.level <= LogLevel.info) {
+      this.emit(console.info, 'info', messageOrObj, meta)
+    }
+  }
+
+  warn(messageOrObj: string | Record<string, any>, ...meta: any[]): void {
+    if (this.level <= LogLevel.warn) {
+      this.emit(console.warn, 'warn', messageOrObj, meta)
+    }
+  }
+
+  error(
+    messageOrObj: string | Record<string, any> | Error,
+    ...meta: any[]
+  ): void {
+    if (this.level <= LogLevel.error) {
+      if (messageOrObj instanceof Error) {
+        this.emit(console.error, 'error', messageOrObj.message, meta)
+        console.error(
+          JSON.stringify({
+            level: 'error',
+            message: 'stack',
+            stack: messageOrObj.stack,
+            ...(this.traceId ? { traceId: this.traceId } : {}),
+          })
+        )
+      } else {
+        this.emit(console.error, 'error', messageOrObj, meta)
+      }
+    }
+  }
+
+  log(level: string, message: string, ...meta: any[]): void {
+    const logLevel = LogLevel[level as keyof typeof LogLevel]
+    if (this.level <= logLevel) {
+      this.emit(console.log, level, message, meta)
+    }
+  }
+
+  private emit(
+    fn: (...args: any[]) => void,
+    level: string,
+    messageOrObj: string | Record<string, any>,
+    meta: any[]
+  ): void {
+    const entry: Record<string, unknown> = { level }
+    if (this.traceId) entry.traceId = this.traceId
+    if (typeof messageOrObj === 'string') {
+      entry.message = messageOrObj
+    } else {
+      Object.assign(entry, messageOrObj)
+    }
+    if (meta.length > 0) entry.meta = meta
+    fn(JSON.stringify(entry))
   }
 }
