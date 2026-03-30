@@ -77,15 +77,14 @@ function collectFilterNames(
 
   switch (unit.role) {
     case 'agent': {
-      // Include the agent name so agent metadata is preserved
       const agentDef = manifest.agents.find((a) => a.unitName === unit.name)
       if (agentDef) {
         names.add(agentDef.name)
+        for (const id of agentDef.toolFunctionIds) names.add(id)
       }
       break
     }
     case 'mcp': {
-      // Include MCP endpoint tool/resource/prompt names
       for (const mcp of manifest.mcpEndpoints) {
         if (mcp.unitName === unit.name) {
           for (const id of mcp.toolFunctionIds) names.add(id)
@@ -96,35 +95,22 @@ function collectFilterNames(
       break
     }
     case 'channel': {
-      // Include the channel name so channel metadata is preserved
       const channelDef = manifest.channels.find((c) => c.unitName === unit.name)
       if (channelDef) {
         names.add(channelDef.name)
+        for (const id of channelDef.functionIds) names.add(id)
       }
       break
     }
-    case 'queue-consumer': {
-      // Include the queue name (metadata key) and consumer function ID
-      const queueDef = manifest.queues.find((q) => q.consumerUnit === unit.name)
-      if (queueDef) {
-        names.add(queueDef.name)
-        names.add(queueDef.consumerFunctionId)
-      }
-      break
-    }
-    case 'scheduled': {
-      // Include the scheduled task name (metadata key) and function ID
-      const schedDef = manifest.scheduledTasks.find(
-        (s) => s.unitName === unit.name
-      )
-      if (schedDef) {
-        names.add(schedDef.name)
-        names.add(schedDef.functionId)
+    case 'function': {
+      // For function units, include queue/scheduler names from handlers
+      for (const handler of unit.handlers) {
+        if (handler.type === 'queue') names.add(handler.queueName)
+        if (handler.type === 'scheduled') names.add(handler.taskName)
       }
       break
     }
     default:
-      // http, rpc, workflow-orchestrator, workflow-step: function IDs suffice
       break
   }
 

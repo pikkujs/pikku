@@ -7,12 +7,21 @@
  * it and provisions everything in order.
  */
 
+type DeploymentHandler =
+  | {
+      type: 'fetch'
+      routes: Array<{ method: string; route: string; pikkuFuncId: string }>
+    }
+  | { type: 'queue'; queueName: string }
+  | { type: 'scheduled'; schedule: string; taskName: string }
+
 interface DeploymentUnit {
   name: string
   role: string
   functionIds: string[]
   services: Array<{ capability: string; sourceServiceName: string }>
-  httpRoutes: Array<{ method: string; route: string }>
+  dependsOn: string[]
+  handlers: DeploymentHandler[]
   tags: string[]
 }
 
@@ -69,6 +78,7 @@ export interface CloudflareUnitManifest {
   role: string
   bindings: string[]
   routes: Array<{ method: string; route: string }>
+  handlerTypes: string[]
 }
 
 export function generateInfraManifest(
@@ -127,24 +137,32 @@ export function generateInfraManifest(
     })
   }
 
-  // Cron triggers
-  const cronTriggers = manifest.scheduledTasks.map((t) => ({
-    worker: t.unitName,
-    schedule: t.schedule,
-    name: t.name,
-  }))
+  // Cron triggers — derived from unit handlers, not top-level scheduledTasks
+  const cronTriggers: CloudflareInfraManifest['resources']['cronTriggers'] = []
+  for (const unit of manifest.units) {
+    for (const handler of unit.handlers) {
+      if (handler.type === 'scheduled') {
+        cronTriggers.push({
+          worker: unit.name,
+          schedule: handler.schedule,
+          name: handler.taskName,
+        })
+      }
+    }
+  }
 
-  // Durable objects (channels need WebSocket hibernation)
-  // Workflow state is managed via D1, not Durable Objects.
+  // Durable objects (channel units need WebSocket hibernation)
   const durableObjects: CloudflareInfraManifest['resources']['durableObjects'] =
     []
 
-  for (const channel of manifest.channels) {
-    durableObjects.push({
-      worker: channel.unitName,
-      className: 'WebSocketHibernationServer',
-      binding: 'WEBSOCKET_HIBERNATION_SERVER',
-    })
+  for (const unit of manifest.units) {
+    if (unit.role === 'channel') {
+      durableObjects.push({
+        worker: unit.name,
+        className: 'WebSocketHibernationServer',
+        binding: 'WEBSOCKET_HIBERNATION_SERVER',
+      })
+    }
   }
 
   // Per-unit binding summary
@@ -167,13 +185,29 @@ export function generateInfraManifest(
     }
     if (capabilities.has('ai-model')) bindings.push('ai:AI')
 
+    // Add service bindings for dependsOn targets
+    for (const dep of unit.dependsOn) {
+      bindings.push(`service:${dep}`)
+    }
+
+    // Extract HTTP routes from fetch handlers
+    const routes: Array<{ method: string; route: string }> = []
+    for (const handler of unit.handlers) {
+      if (handler.type === 'fetch') {
+        for (const r of handler.routes) {
+          routes.push({ method: r.method, route: r.route })
+        }
+      }
+    }
+
+    // Collect handler types for this unit
+    const handlerTypes = [...new Set(unit.handlers.map((h) => h.type))]
+
     units[unit.name] = {
       role: unit.role,
       bindings,
-      routes: unit.httpRoutes.map((r) => ({
-        method: r.method,
-        route: r.route,
-      })),
+      routes,
+      handlerTypes,
     }
   }
 

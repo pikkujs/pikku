@@ -1,0 +1,758 @@
+{
+  "inputs": {
+    ".pikku/function/pikku-function-types.gen.ts": {
+      "bytes": 24343,
+      "imports": [
+        {
+          "path": "@pikku/core/function",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/middleware",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/errors",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/function",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/rpc",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/http/pikku-http-types.gen.ts": {
+      "bytes": 5370,
+      "imports": [
+        {
+          "path": "@pikku/core/http",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/channel/pikku-channel-types.gen.ts": {
+      "bytes": 6914,
+      "imports": [
+        {
+          "path": "@pikku/core/channel",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/http",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/trigger/pikku-trigger-types.gen.ts": {
+      "bytes": 5380,
+      "imports": [
+        {
+          "path": "@pikku/core/trigger",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/scheduler/pikku-scheduler-types.gen.ts": {
+      "bytes": 892,
+      "imports": [
+        {
+          "path": "@pikku/core/scheduler",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/queue/pikku-queue-types.gen.ts": {
+      "bytes": 870,
+      "imports": [
+        {
+          "path": "@pikku/core/queue",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/mcp/pikku-mcp-types.gen.ts": {
+      "bytes": 6817,
+      "imports": [
+        {
+          "path": "@pikku/core/mcp",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/cli/pikku-cli-types.gen.ts": {
+      "bytes": 4448,
+      "imports": [
+        {
+          "path": "@pikku/core/cli",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/console/pikku-node-types.gen.ts": {
+      "bytes": 224,
+      "imports": [],
+      "format": "esm"
+    },
+    ".pikku/secrets/pikku-secret-types.gen.ts": {
+      "bytes": 203,
+      "imports": [
+        {
+          "path": "@pikku/core/secret",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/pikku-types.gen.ts": {
+      "bytes": 900,
+      "imports": [
+        {
+          "path": ".pikku/function/pikku-function-types.gen.ts",
+          "kind": "import-statement",
+          "original": "./function/pikku-function-types.gen.js"
+        },
+        {
+          "path": ".pikku/http/pikku-http-types.gen.ts",
+          "kind": "import-statement",
+          "original": "./http/pikku-http-types.gen.js"
+        },
+        {
+          "path": ".pikku/channel/pikku-channel-types.gen.ts",
+          "kind": "import-statement",
+          "original": "./channel/pikku-channel-types.gen.js"
+        },
+        {
+          "path": ".pikku/trigger/pikku-trigger-types.gen.ts",
+          "kind": "import-statement",
+          "original": "./trigger/pikku-trigger-types.gen.js"
+        },
+        {
+          "path": ".pikku/scheduler/pikku-scheduler-types.gen.ts",
+          "kind": "import-statement",
+          "original": "./scheduler/pikku-scheduler-types.gen.js"
+        },
+        {
+          "path": ".pikku/queue/pikku-queue-types.gen.ts",
+          "kind": "import-statement",
+          "original": "./queue/pikku-queue-types.gen.js"
+        },
+        {
+          "path": ".pikku/mcp/pikku-mcp-types.gen.ts",
+          "kind": "import-statement",
+          "original": "./mcp/pikku-mcp-types.gen.js"
+        },
+        {
+          "path": ".pikku/cli/pikku-cli-types.gen.ts",
+          "kind": "import-statement",
+          "original": "./cli/pikku-cli-types.gen.js"
+        },
+        {
+          "path": ".pikku/console/pikku-node-types.gen.ts",
+          "kind": "import-statement",
+          "original": "./console/pikku-node-types.gen.js"
+        },
+        {
+          "path": ".pikku/secrets/pikku-secret-types.gen.ts",
+          "kind": "import-statement",
+          "original": "./secrets/pikku-secret-types.gen.js"
+        }
+      ],
+      "format": "esm"
+    },
+    "src/services/store.service.ts": {
+      "bytes": 3609,
+      "imports": [],
+      "format": "esm"
+    },
+    "src/services.ts": {
+      "bytes": 1610,
+      "imports": [
+        {
+          "path": "@pikku/core/services",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/schema-cfworker",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": ".pikku/pikku-types.gen.ts",
+          "kind": "import-statement",
+          "original": "../.pikku/pikku-types.gen.js"
+        },
+        {
+          "path": "src/services/store.service.ts",
+          "kind": "import-statement",
+          "original": "./services/store.service.js"
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/pikku-services.gen.ts": {
+      "bytes": 1402,
+      "imports": [],
+      "format": "esm"
+    },
+    ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/http/pikku-http-wirings-meta.gen.json": {
+      "bytes": 520,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/http/pikku-http-wirings-meta.gen.ts": {
+      "bytes": 304,
+      "imports": [
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/http/pikku-http-wirings-meta.gen.json",
+          "kind": "import-statement",
+          "original": "./pikku-http-wirings-meta.gen.json",
+          "with": {
+            "type": "json"
+          }
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/function/pikku-functions-meta.gen.json": {
+      "bytes": 571,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/function/pikku-functions-meta.gen.ts": {
+      "bytes": 296,
+      "imports": [
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/function/pikku-functions-meta.gen.json",
+          "kind": "import-statement",
+          "original": "./pikku-functions-meta.gen.json",
+          "with": {
+            "type": "json"
+          }
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/agent/pikku-agent-types.gen.ts": {
+      "bytes": 2762,
+      "imports": [
+        {
+          "path": "@pikku/core/ai-agent",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/ai-agent",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "src/middleware.ts": {
+      "bytes": 1180,
+      "imports": [
+        {
+          "path": "@pikku/auth-js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": ".pikku/pikku-types.gen.ts",
+          "kind": "import-statement",
+          "original": "../.pikku/pikku-types.gen.js"
+        },
+        {
+          "path": ".pikku/agent/pikku-agent-types.gen.ts",
+          "kind": "import-statement",
+          "original": "../.pikku/agent/pikku-agent-types.gen.js"
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/middleware/pikku-middleware.gen.ts": {
+      "bytes": 218,
+      "imports": [
+        {
+          "path": "src/middleware.ts",
+          "kind": "import-statement",
+          "original": "../../../../../src/middleware.js"
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/schemas/schemas/WorkflowStatusCreateAndNotifyWorkflowInput.schema.json": {
+      "bytes": 177,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/schemas/schemas/WorkflowStatusCreateAndNotifyWorkflowOutput.schema.json": {
+      "bytes": 1145,
+      "imports": [],
+      "format": "esm",
+      "with": {
+        "type": "json"
+      }
+    },
+    ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/schemas/register.gen.ts": {
+      "bytes": 609,
+      "imports": [
+        {
+          "path": "@pikku/core/schema",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/schemas/schemas/WorkflowStatusCreateAndNotifyWorkflowInput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/WorkflowStatusCreateAndNotifyWorkflowInput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        },
+        {
+          "path": ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/schemas/schemas/WorkflowStatusCreateAndNotifyWorkflowOutput.schema.json",
+          "kind": "import-statement",
+          "original": "./schemas/WorkflowStatusCreateAndNotifyWorkflowOutput.schema.json",
+          "with": {
+            "type": "json"
+          }
+        }
+      ],
+      "format": "esm"
+    },
+    ".pikku/workflow/pikku-workflow-types.gen.ts": {
+      "bytes": 8264,
+      "imports": [
+        {
+          "path": "@pikku/core/workflow",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/workflow",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/workflow",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/workflow",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/errors",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    "src/wirings/workflow.wiring.ts": {
+      "bytes": 564,
+      "imports": [
+        {
+          "path": ".pikku/pikku-types.gen.ts",
+          "kind": "import-statement",
+          "original": "../../.pikku/pikku-types.gen.js"
+        },
+        {
+          "path": ".pikku/workflow/pikku-workflow-types.gen.ts",
+          "kind": "import-statement",
+          "original": "../../.pikku/workflow/pikku-workflow-types.gen.js"
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/http/pikku-http-wirings.gen.ts": {
+      "bytes": 158,
+      "imports": [
+        {
+          "path": "src/wirings/workflow.wiring.ts",
+          "kind": "import-statement",
+          "original": "../../../../../src/wirings/workflow.wiring.js"
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/function/pikku-functions.gen.ts": {
+      "bytes": 156,
+      "imports": [
+        {
+          "path": "@pikku/core/function",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/pikku-bootstrap.gen.ts": {
+      "bytes": 317,
+      "imports": [
+        {
+          "path": ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/http/pikku-http-wirings-meta.gen.ts",
+          "kind": "import-statement",
+          "original": "./http/pikku-http-wirings-meta.gen.js"
+        },
+        {
+          "path": ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/function/pikku-functions-meta.gen.ts",
+          "kind": "import-statement",
+          "original": "./function/pikku-functions-meta.gen.js"
+        },
+        {
+          "path": ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/middleware/pikku-middleware.gen.ts",
+          "kind": "import-statement",
+          "original": "./middleware/pikku-middleware.gen.js"
+        },
+        {
+          "path": ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/schemas/register.gen.ts",
+          "kind": "import-statement",
+          "original": "./schemas/register.gen.js"
+        },
+        {
+          "path": ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/http/pikku-http-wirings.gen.ts",
+          "kind": "import-statement",
+          "original": "./http/pikku-http-wirings.gen.js"
+        },
+        {
+          "path": ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/function/pikku-functions.gen.ts",
+          "kind": "import-statement",
+          "original": "./function/pikku-functions.gen.js"
+        }
+      ],
+      "format": "esm"
+    },
+    ".deploy/cloudflare/workflow-status:create-and-notify-workflow/entry.ts": {
+      "bytes": 2068,
+      "imports": [
+        {
+          "path": "@pikku/cloudflare",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/cloudflare",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/schema-cfworker",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/services",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "src/services.ts",
+          "kind": "import-statement",
+          "original": "../../../src/services.js"
+        },
+        {
+          "path": "src/services.ts",
+          "kind": "import-statement",
+          "original": "../../../src/services.js"
+        },
+        {
+          "path": ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/pikku-services.gen.ts",
+          "kind": "import-statement",
+          "original": "./.pikku/pikku-services.gen.js"
+        },
+        {
+          "path": ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/pikku-bootstrap.gen.ts",
+          "kind": "import-statement",
+          "original": "./.pikku/pikku-bootstrap.gen.js"
+        }
+      ],
+      "format": "esm"
+    }
+  },
+  "outputs": {
+    ".deploy/cloudflare/workflow-status:create-and-notify-workflow/bundle.js.map": {
+      "imports": [],
+      "exports": [],
+      "inputs": {},
+      "bytes": 93062
+    },
+    ".deploy/cloudflare/workflow-status:create-and-notify-workflow/bundle.js": {
+      "imports": [
+        {
+          "path": "@pikku/cloudflare",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/cloudflare",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/schema-cfworker",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/services",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/services",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/schema-cfworker",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/function",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/middleware",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/rpc",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/http",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/channel",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/trigger",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/scheduler",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/queue",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/mcp",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/cli",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/secret",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/internal",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/auth-js",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/ai-agent",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/schema",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/workflow",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/workflow",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/workflow",
+          "kind": "import-statement",
+          "external": true
+        },
+        {
+          "path": "@pikku/core/workflow",
+          "kind": "import-statement",
+          "external": true
+        }
+      ],
+      "exports": [
+        "default"
+      ],
+      "entryPoint": ".deploy/cloudflare/workflow-status:create-and-notify-workflow/entry.ts",
+      "inputs": {
+        ".deploy/cloudflare/workflow-status:create-and-notify-workflow/entry.ts": {
+          "bytesInOutput": 1479
+        },
+        "src/services.ts": {
+          "bytesInOutput": 1329
+        },
+        ".pikku/function/pikku-function-types.gen.ts": {
+          "bytesInOutput": 772
+        },
+        ".pikku/pikku-types.gen.ts": {
+          "bytesInOutput": 0
+        },
+        ".pikku/http/pikku-http-types.gen.ts": {
+          "bytesInOutput": 413
+        },
+        ".pikku/channel/pikku-channel-types.gen.ts": {
+          "bytesInOutput": 239
+        },
+        ".pikku/trigger/pikku-trigger-types.gen.ts": {
+          "bytesInOutput": 114
+        },
+        ".pikku/scheduler/pikku-scheduler-types.gen.ts": {
+          "bytesInOutput": 76
+        },
+        ".pikku/queue/pikku-queue-types.gen.ts": {
+          "bytesInOutput": 76
+        },
+        ".pikku/mcp/pikku-mcp-types.gen.ts": {
+          "bytesInOutput": 114
+        },
+        ".pikku/cli/pikku-cli-types.gen.ts": {
+          "bytesInOutput": 102
+        },
+        ".pikku/secrets/pikku-secret-types.gen.ts": {
+          "bytesInOutput": 49
+        },
+        "src/services/store.service.ts": {
+          "bytesInOutput": 3002
+        },
+        ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/pikku-services.gen.ts": {
+          "bytesInOutput": 500
+        },
+        ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/http/pikku-http-wirings-meta.gen.ts": {
+          "bytesInOutput": 122
+        },
+        ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/http/pikku-http-wirings-meta.gen.json": {
+          "bytesInOutput": 534
+        },
+        ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/function/pikku-functions-meta.gen.ts": {
+          "bytesInOutput": 139
+        },
+        ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/function/pikku-functions-meta.gen.json": {
+          "bytesInOutput": 592
+        },
+        "src/middleware.ts": {
+          "bytesInOutput": 863
+        },
+        ".pikku/agent/pikku-agent-types.gen.ts": {
+          "bytesInOutput": 207
+        },
+        ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/middleware/pikku-middleware.gen.ts": {
+          "bytesInOutput": 22
+        },
+        ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/schemas/register.gen.ts": {
+          "bytesInOutput": 282
+        },
+        ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/schemas/schemas/WorkflowStatusCreateAndNotifyWorkflowInput.schema.json": {
+          "bytesInOutput": 463
+        },
+        ".deploy/cloudflare/workflow-status:create-and-notify-workflow/.pikku/schemas/schemas/WorkflowStatusCreateAndNotifyWorkflowOutput.schema.json": {
+          "bytesInOutput": 1473
+        },
+        ".pikku/workflow/pikku-workflow-types.gen.ts": {
+          "bytesInOutput": 647
+        },
+        "src/wirings/workflow.wiring.ts": {
+          "bytesInOutput": 387
+        }
+      },
+      "bytes": 16370
+    }
+  }
+}

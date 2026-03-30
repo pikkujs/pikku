@@ -13,15 +13,12 @@ const ANSI = {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  http: ANSI.blue,
-  rpc: ANSI.green,
+  function: ANSI.blue,
   mcp: '\x1b[35m', // magenta
-  'queue-consumer': '\x1b[36m', // cyan
-  scheduled: '\x1b[35m', // violet
   agent: '\x1b[33m', // orange
   channel: ANSI.dim,
   'workflow-step': '\x1b[34m',
-  'workflow-orchestrator': '\x1b[34m',
+  workflow: '\x1b[34m',
 }
 
 function padRight(str: string, len: number): string {
@@ -47,11 +44,17 @@ export const deployInfo = pikkuVoidFunc({
       console.log(
         `  ${color}${padRight(u.role, 22)}${ANSI.reset} ${ANSI.bold}${padRight(u.name, 30)}${ANSI.reset} ${ANSI.dim}[${fns}]${ANSI.reset}`
       )
-      if (u.httpRoutes.length > 0) {
-        for (const route of u.httpRoutes) {
-          console.log(
-            `    ${ANSI.dim}${route.method} ${route.route}${ANSI.reset}`
-          )
+      for (const handler of u.handlers) {
+        if (handler.type === 'fetch' && handler.routes.length > 0) {
+          for (const route of handler.routes) {
+            console.log(
+              `    ${ANSI.dim}${route.method} ${route.route}${ANSI.reset}`
+            )
+          }
+        } else if (handler.type === 'queue') {
+          console.log(`    ${ANSI.dim}queue: ${handler.queueName}${ANSI.reset}`)
+        } else if (handler.type === 'scheduled') {
+          console.log(`    ${ANSI.dim}cron: ${handler.schedule}${ANSI.reset}`)
         }
       }
     }

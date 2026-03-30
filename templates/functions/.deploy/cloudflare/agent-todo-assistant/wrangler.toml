@@ -1,0 +1,24 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "functions-agent-todo-assistant"
+main = "bundle.js"
+compatibility_date = "2024-12-18"
+compatibility_flags = ["nodejs_compat_v2"]
+
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "functions-db"
+database_id = "pikku"
+
+[ai]
+binding = "AI"
+
+[[services]]
+binding = "LIST_TODOS"
+service = "functions-list-todos"
+
+[[services]]
+binding = "CREATE_TODO"
+service = "functions-create-todo"

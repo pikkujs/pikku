@@ -13,11 +13,11 @@ export type CloudflareEnv = Record<string, unknown>
 export interface ServiceFactories {
   createConfig: (
     variables: LocalVariablesService,
-    ...args: any[]
-  ) => Promise<any>
+    ...args: unknown[]
+  ) => Promise<unknown>
   createSingletonServices: (
-    config: any,
-    existingServices?: Partial<any>
+    config: unknown,
+    existingServices?: Partial<Record<string, unknown>>
   ) => Promise<CoreSingletonServices>
   /**
    * Optional callback to create platform services from CF env bindings.
@@ -52,6 +52,95 @@ async function setupServices(
     ...platformServices,
   })
   return cachedServices
+}
+
+/**
+ * Handles processing a queue batch message.
+ */
+async function processQueueBatch(batch: {
+  messages: Array<{ id: string; body: unknown }>
+}): Promise<void> {
+  for (const message of batch.messages) {
+    const body =
+      typeof message.body === 'string'
+        ? JSON.parse(message.body)
+        : (message.body as Record<string, unknown>)
+    const queueName = (body.queueName as string) ?? 'unknown'
+    const job: QueueJob = {
+      queueName,
+      data: body.data ?? body,
+      id: message.id,
+      status: async () => 'active' as QueueJobStatus,
+      metadata: () => ({
+        processedAt: new Date(),
+        attemptsMade: 0,
+        maxAttempts: undefined,
+        result: undefined,
+        progress: 0,
+        createdAt: new Date(),
+        completedAt: undefined,
+        failedAt: undefined,
+        error: undefined,
+      }),
+      waitForCompletion: async () => {
+        throw new Error('CF Queues do not support waitForCompletion')
+      },
+    }
+    await runQueueJob({ job })
+  }
+}
+
+/**
+ * Creates a combined ExportedHandler based on which handler types the unit needs.
+ *
+ * Instead of one handler factory per role, a unit declares which handlers it needs
+ * (fetch, queue, scheduled) and this function builds a single default export
+ * that includes all of them.
+ */
+export function createCloudflareHandler(
+  factories: ServiceFactories,
+  handlerTypes: string[]
+) {
+  const result: Record<string, unknown> = {}
+
+  if (handlerTypes.includes('fetch')) {
+    result.fetch = async (request: Request, env: CloudflareEnv) => {
+      await setupServices(env, factories)
+      return runFetch(request)
+    }
+  }
+
+  if (handlerTypes.includes('queue')) {
+    result.queue = async (
+      batch: { messages: Array<{ id: string; body: unknown }> },
+      env: CloudflareEnv
+    ) => {
+      await setupServices(env, factories)
+      await processQueueBatch(batch)
+    }
+  }
+
+  if (handlerTypes.includes('scheduled')) {
+    result.scheduled = async (
+      controller: ScheduledController,
+      env: CloudflareEnv
+    ) => {
+      await setupServices(env, factories)
+      await runScheduled(controller)
+    }
+  }
+
+  // If no fetch handler was requested, add a health check endpoint
+  if (!handlerTypes.includes('fetch')) {
+    const activeHandlers = handlerTypes.join(', ')
+    result.fetch = async () => {
+      return new Response(`Worker active (handlers: ${activeHandlers})`, {
+        status: 200,
+      })
+    }
+  }
+
+  return result
 }
 
 /**
@@ -96,34 +185,7 @@ export function createCloudflareQueueHandler(factories: ServiceFactories) {
       env: CloudflareEnv
     ) {
       await setupServices(env, factories)
-      for (const message of batch.messages) {
-        const body =
-          typeof message.body === 'string'
-            ? JSON.parse(message.body)
-            : (message.body as Record<string, unknown>)
-        const queueName = (body.queueName as string) ?? 'unknown'
-        const job: QueueJob = {
-          queueName,
-          data: body.data ?? body,
-          id: message.id,
-          status: async () => 'active' as QueueJobStatus,
-          metadata: () => ({
-            processedAt: new Date(),
-            attemptsMade: 0,
-            maxAttempts: undefined,
-            result: undefined,
-            progress: 0,
-            createdAt: new Date(),
-            completedAt: undefined,
-            failedAt: undefined,
-            error: undefined,
-          }),
-          waitForCompletion: async () => {
-            throw new Error('CF Queues do not support waitForCompletion')
-          },
-        }
-        await runQueueJob({ job })
-      }
+      await processQueueBatch(batch)
     },
   }
 }
@@ -154,11 +216,14 @@ export class PikkuWebSocketHibernationServer extends CloudflareWebSocketHibernat
       )
     }
     const singletonServices = await setupServices(this.env, wsFactories)
-    ;(singletonServices as any).eventHub = new CloudflareEventHubService(
+    const servicesWithEventHub = singletonServices as CoreSingletonServices & {
+      eventHub: CloudflareEventHubService
+    }
+    servicesWithEventHub.eventHub = new CloudflareEventHubService(
       singletonServices.logger,
       this.ctx
     )
-    return { singletonServices }
+    return { singletonServices: servicesWithEventHub }
   }
 }
 

@@ -247,6 +247,7 @@ export const deployApply = pikkuVoidFunc({
     const lockfileSrc = await findLockfile(projectDir)
     for (const unit of manifest.units) {
       const unitDir = join(providerDir, unit.name)
+      await mkdir(unitDir, { recursive: true })
       const configs = provider.generateUnitConfigs(unit, manifest, projectId)
       for (const [filename, content] of configs) {
         await writeFile(join(unitDir, filename), content, 'utf-8')

@@ -9,10 +9,20 @@
  * but these files ensure every unit is also deployable via wrangler.
  */
 
+type DeploymentHandler =
+  | {
+      type: 'fetch'
+      routes: Array<{ method: string; route: string; pikkuFuncId: string }>
+    }
+  | { type: 'queue'; queueName: string }
+  | { type: 'scheduled'; schedule: string; taskName: string }
+
 interface DeploymentUnit {
   name: string
   role: string
   services: Array<{ capability: string; sourceServiceName: string }>
+  dependsOn: string[]
+  handlers: DeploymentHandler[]
 }
 
 interface DeploymentManifest {
@@ -107,8 +117,18 @@ export function generateWranglerToml(
     }
   }
 
-  // Role-specific sections
-  addRoleSpecificConfig(lines, unit, manifest, projectId)
+  // Handler-driven sections (replaces role-specific config)
+  addHandlerConfig(lines, unit, projectId)
+
+  // Service bindings for gateway units that depend on other workers
+  if (unit.dependsOn.length > 0) {
+    for (const dep of unit.dependsOn) {
+      lines.push('')
+      lines.push('[[services]]')
+      lines.push(`binding = "${toScreamingSnake(dep)}"`)
+      lines.push(`service = "${projectId}-${dep}"`)
+    }
+  }
 
   // Secrets as vars placeholder
   const secrets = manifest.secrets
@@ -124,53 +144,52 @@ export function generateWranglerToml(
   return lines.join('\n')
 }
 
-function addRoleSpecificConfig(
+/**
+ * Adds wrangler config sections driven by the unit's handlers array.
+ *
+ * - scheduled handler → [triggers] crons
+ * - queue handler → [[queues.consumers]]
+ * - channel role → durable object bindings
+ */
+function addHandlerConfig(
   lines: string[],
   unit: DeploymentUnit,
-  manifest: DeploymentManifest,
   projectId: string
 ): void {
-  switch (unit.role) {
-    case 'queue-consumer':
-    case 'workflow-step': {
-      const queue = manifest.queues.find((q) => q.consumerUnit === unit.name)
-      if (queue) {
-        lines.push('')
-        lines.push('[[queues.consumers]]')
-        lines.push(`queue = "${projectId}-${queue.name}"`)
-        lines.push(`max_batch_size = 10`)
-        lines.push(`max_batch_timeout = 5`)
-      }
-      break
+  // Collect cron schedules from scheduled handlers
+  const schedules: string[] = []
+  for (const handler of unit.handlers) {
+    if (handler.type === 'scheduled') {
+      schedules.push(handler.schedule)
     }
+  }
+  if (schedules.length > 0) {
+    lines.push('')
+    lines.push('[triggers]')
+    lines.push(`crons = [${schedules.map((s) => `"${s}"`).join(', ')}]`)
+  }
 
-    case 'scheduled': {
-      const task = manifest.scheduledTasks.find((t) => t.unitName === unit.name)
-      if (task) {
-        lines.push('')
-        lines.push('[triggers]')
-        lines.push(`crons = ["${task.schedule}"]`)
-      }
-      break
-    }
-
-    case 'channel': {
+  // Queue consumer bindings from queue handlers
+  for (const handler of unit.handlers) {
+    if (handler.type === 'queue') {
       lines.push('')
-      lines.push('[[durable_objects.bindings]]')
-      lines.push(`name = "WEBSOCKET_HIBERNATION_SERVER"`)
-      lines.push(`class_name = "WebSocketHibernationServer"`)
-      lines.push('')
-      lines.push('[[migrations]]')
-      lines.push(`tag = "v1"`)
-      lines.push(`new_classes = ["WebSocketHibernationServer"]`)
-      break
+      lines.push('[[queues.consumers]]')
+      lines.push(`queue = "${projectId}-${handler.queueName}"`)
+      lines.push(`max_batch_size = 10`)
+      lines.push(`max_batch_timeout = 5`)
     }
+  }
 
-    case 'workflow-orchestrator': {
-      // Workflow state is managed via D1 (CloudflareWorkflowService),
-      // not Durable Objects. D1 binding is added via capability check above.
-      break
-    }
+  // Channel gateway needs durable object bindings
+  if (unit.role === 'channel') {
+    lines.push('')
+    lines.push('[[durable_objects.bindings]]')
+    lines.push(`name = "WEBSOCKET_HIBERNATION_SERVER"`)
+    lines.push(`class_name = "WebSocketHibernationServer"`)
+    lines.push('')
+    lines.push('[[migrations]]')
+    lines.push(`tag = "v1"`)
+    lines.push(`new_classes = ["WebSocketHibernationServer"]`)
   }
 }
 

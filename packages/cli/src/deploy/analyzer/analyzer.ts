@@ -1,8 +1,10 @@
 /**
  * Provider-agnostic deployment analyzer.
  *
- * Pure synchronous transformation: InspectorState -> DeploymentManifest.
- * No I/O, no dynamic imports, no provider references.
+ * Core principle: one function = one deployment unit.
+ * Each function gets its own unit with all its triggers (HTTP, queue, cron).
+ * Gateways (MCP, agents, channels) dispatch to function units via RPC.
+ * Workflow orchestrators dispatch to step units via queue or RPC (inline).
  */
 
 import type { InspectorState, SerializedWorkflowGraph } from '@pikku/inspector'
@@ -13,7 +15,7 @@ import type { HTTPWiringsMeta } from '@pikku/core/http'
 import type {
   DeploymentManifest,
   DeploymentUnit,
-  DeploymentUnitRole,
+  DeploymentHandler,
   ServiceRequirement,
   ServiceCapability,
   HttpRouteInfo,
@@ -36,15 +38,10 @@ export interface AnalyzerOptions {
   projectId: string
 }
 
-/**
- * Analyzes an InspectorState and produces a provider-agnostic DeploymentManifest.
- * This is a pure, synchronous transformation with no side effects.
- */
 export function analyzeDeployment(
   state: InspectorState,
   options: AnalyzerOptions
 ): DeploymentManifest {
-  const claimed = new Set<string>()
   const units: DeploymentUnit[] = []
   const queues: QueueDefinition[] = []
   const scheduledTasks: ScheduledTaskDefinition[] = []
@@ -56,68 +53,93 @@ export function analyzeDeployment(
   const functionsMeta = state.functions.meta
   const httpMeta = state.http.meta
 
-  // ----- Priority 1: expose: true -> individual http unit per function -----
+  // ── Step 1: Create function units ──────────────────────────────────
+  // Each function gets one unit. Collect all its triggers.
+
   for (const [funcId, funcMeta] of entries(functionsMeta)) {
-    if (!funcMeta.expose) continue
+    const handlers: DeploymentHandler[] = []
+
+    // HTTP routes for this function
     const routes = collectHttpRoutes(httpMeta, funcId)
-    units.push(
-      makeUnit({
-        name: toKebab(funcId),
-        role: 'http',
-        functionIds: [funcId],
-        funcMeta,
-        httpRoutes: routes,
-        tags: funcMeta.tags,
-      })
-    )
-    claimed.add(funcId)
+    if (routes.length > 0) {
+      handlers.push({ type: 'fetch', routes })
+    }
+
+    // Queue consumer for this function
+    for (const [queueName, queueMeta] of entries(state.queueWorkers.meta)) {
+      if (queueMeta.pikkuFuncId === funcId) {
+        handlers.push({ type: 'queue', queueName: queueMeta.name ?? queueName })
+        queues.push({
+          name: queueMeta.name ?? queueName,
+          consumerUnit: toKebab(funcId),
+          consumerFunctionId: funcId,
+        })
+      }
+    }
+
+    // Scheduled task for this function
+    for (const [_schedName, schedMeta] of entries(state.scheduledTasks.meta)) {
+      if (schedMeta.pikkuFuncId === funcId) {
+        handlers.push({
+          type: 'scheduled',
+          schedule: schedMeta.schedule,
+          taskName: schedMeta.name,
+        })
+        scheduledTasks.push({
+          name: schedMeta.name,
+          schedule: schedMeta.schedule,
+          unitName: toKebab(funcId),
+          functionId: funcId,
+        })
+      }
+    }
+
+    // If function has no direct triggers but is exposed or has RPC,
+    // it still needs a fetch handler for RPC access
+    if (handlers.length === 0 && (funcMeta.expose || funcMeta.remote)) {
+      handlers.push({ type: 'fetch', routes: [] })
+    }
+
+    // Skip functions with no triggers (they'll be accessed via gateways)
+    // unless they're explicitly exposed/remote
+    if (handlers.length === 0) {
+      continue
+    }
+
+    units.push({
+      name: toKebab(funcId),
+      role: 'function',
+      functionIds: [funcId],
+      services: collectServicesForFunction(funcMeta),
+      dependsOn: [],
+      handlers,
+      tags: funcMeta.tags ?? [],
+    })
   }
 
-  // ----- Priority 2: remote: true -> individual rpc unit per function -----
-  for (const [funcId, funcMeta] of entries(functionsMeta)) {
-    if (!funcMeta.remote || claimed.has(funcId)) continue
-    units.push(
-      makeUnit({
-        name: toKebab(funcId),
-        role: 'rpc',
-        functionIds: [funcId],
-        funcMeta,
-        tags: funcMeta.tags,
-      })
-    )
-    claimed.add(funcId)
-  }
-
-  // ----- Priority 3: Agents -> one agent unit per agent -----
+  // ── Step 2: Agent gateways ─────────────────────────────────────────
   for (const [agentName, agentMeta] of entries(state.agents.agentsMeta)) {
-    const toolIds = (agentMeta.tools ?? []).filter((id) => !claimed.has(id))
+    const toolIds = agentMeta.tools ?? []
     const subAgentNames = agentMeta.agents ?? []
-    const allFuncIds = [...toolIds]
-
-    const mergedServices = mergeServicesForIds(allFuncIds, functionsMeta)
     const unitName = `agent-${toKebab(agentName)}`
 
-    // Agents always need AI model + storage + run state for the agent runtime
-    if (!mergedServices.some((s) => s.capability === 'ai-model')) {
-      mergedServices.push({
-        capability: 'ai-model',
-        sourceServiceName: 'aiAgentRunner',
-      })
-    }
-    if (!mergedServices.some((s) => s.capability === 'ai-storage')) {
-      mergedServices.push({
-        capability: 'ai-storage',
-        sourceServiceName: 'aiStorage',
-      })
-    }
+    // Agent gateway depends on its tool function units
+    const toolUnitNames = toolIds.map((id) => toKebab(id))
+    const subAgentUnitNames = subAgentNames.map((sa) => `agent-${toKebab(sa)}`)
+
+    // Agent needs AI services
+    const agentServices: ServiceRequirement[] = [
+      { capability: 'ai-model', sourceServiceName: 'aiAgentRunner' },
+      { capability: 'ai-storage', sourceServiceName: 'aiStorage' },
+    ]
 
     units.push({
       name: unitName,
       role: 'agent',
-      functionIds: allFuncIds,
-      services: mergedServices,
-      dependsOn: subAgentNames.map((sa) => `agent-${toKebab(sa)}`),
-      httpRoutes: [],
+      functionIds: [], // No function code bundled
+      services: agentServices,
+      dependsOn: [...toolUnitNames, ...subAgentUnitNames],
+      handlers: [{ type: 'fetch', routes: [] }],
       tags: agentMeta.tags ?? [],
     })
 
@@ -128,26 +150,23 @@ export function analyzeDeployment(
       subAgentNames,
       model: agentMeta.model,
     })
-
-    for (const id of allFuncIds) claimed.add(id)
   }
 
-  // ----- Priority 4: MCP -> single mcp unit -----
-  const mcpToolIds = values(state.mcpEndpoints.toolsMeta)
-    .map((t) => t.pikkuFuncId)
-    .filter((id) => !claimed.has(id))
-  const mcpResourceIds = values(state.mcpEndpoints.resourcesMeta)
-    .map((r) => r.pikkuFuncId)
-    .filter((id) => !claimed.has(id))
-  const mcpPromptIds = values(state.mcpEndpoints.promptsMeta)
-    .map((p) => p.pikkuFuncId)
-    .filter((id) => !claimed.has(id))
+  // ── Step 3: MCP gateway ────────────────────────────────────────────
+  const mcpToolIds = values(state.mcpEndpoints.toolsMeta).map(
+    (t) => t.pikkuFuncId
+  )
+  const mcpResourceIds = values(state.mcpEndpoints.resourcesMeta).map(
+    (r) => r.pikkuFuncId
+  )
+  const mcpPromptIds = values(state.mcpEndpoints.promptsMeta).map(
+    (p) => p.pikkuFuncId
+  )
 
-  // Also include functions explicitly marked mcp: true that aren't yet claimed
+  // Include functions explicitly marked mcp: true
   for (const [funcId, funcMeta] of entries(functionsMeta)) {
     if (
       funcMeta.mcp &&
-      !claimed.has(funcId) &&
       !mcpToolIds.includes(funcId) &&
       !mcpResourceIds.includes(funcId) &&
       !mcpPromptIds.includes(funcId)
@@ -159,17 +178,16 @@ export function analyzeDeployment(
   const allMcpIds = [...mcpToolIds, ...mcpResourceIds, ...mcpPromptIds]
   if (allMcpIds.length > 0) {
     const unitName = 'mcp-server'
-    const mergedServices = mergeServicesForIds(allMcpIds, functionsMeta)
-    const allTags = collectTags(allMcpIds, functionsMeta)
+    const mcpFuncUnitNames = allMcpIds.map((id) => toKebab(id))
 
     units.push({
       name: unitName,
       role: 'mcp',
-      functionIds: allMcpIds,
-      services: mergedServices,
-      dependsOn: [],
-      httpRoutes: [],
-      tags: allTags,
+      functionIds: [], // No function code bundled
+      services: [],
+      dependsOn: mcpFuncUnitNames,
+      handlers: [{ type: 'fetch', routes: [] }],
+      tags: collectTags(allMcpIds, functionsMeta),
     })
 
     mcpEndpoints.push({
@@ -178,27 +196,23 @@ export function analyzeDeployment(
       resourceFunctionIds: mcpResourceIds,
       promptFunctionIds: mcpPromptIds,
     })
-
-    for (const id of allMcpIds) claimed.add(id)
   }
 
-  // ----- Priority 5: Channels -> one channel unit per channel -----
+  // ── Step 4: Channel gateways ───────────────────────────────────────
   for (const [channelName, channelMeta] of entries(state.channels.meta)) {
-    const funcIds = collectChannelFunctionIds(channelMeta).filter(
-      (id) => !claimed.has(id)
-    )
+    const funcIds = collectChannelFunctionIds(channelMeta)
     if (funcIds.length === 0) continue
 
     const unitName = `channel-${toKebab(channelName)}`
-    const mergedServices = mergeServicesForIds(funcIds, functionsMeta)
+    const funcUnitNames = funcIds.map((id) => toKebab(id))
 
     units.push({
       name: unitName,
       role: 'channel',
-      functionIds: funcIds,
-      services: mergedServices,
-      dependsOn: [],
-      httpRoutes: [],
+      functionIds: [], // No function code bundled
+      services: [],
+      dependsOn: funcUnitNames,
+      handlers: [{ type: 'fetch', routes: [] }],
       tags: channelMeta.tags ?? [],
     })
 
@@ -208,82 +222,46 @@ export function analyzeDeployment(
       unitName,
       functionIds: funcIds,
     })
-
-    for (const id of funcIds) claimed.add(id)
   }
 
-  // ----- Priority 6: Queue workers -> one queue-consumer unit per queue -----
-  for (const [queueName, queueMeta] of entries(state.queueWorkers.meta)) {
-    const funcId = queueMeta.pikkuFuncId
-    if (claimed.has(funcId)) continue
+  // ── Step 5: Workflows ──────────────────────────────────────────────
+  buildWorkflows(state.workflows.graphMeta, functionsMeta, units, workflows)
 
-    const funcMeta = functionsMeta[funcId]
-    const unitName = `queue-${toKebab(queueName)}`
+  // ── Step 6: Ensure function units exist for gateway dependencies ───
+  // Gateways depend on function units. If a function is only used via
+  // a gateway (not directly wired to HTTP/queue/cron), it still needs
+  // a unit with a fetch handler for RPC access.
+  const existingUnitNames = new Set(units.map((u) => u.name))
 
-    units.push(
-      makeUnit({
-        name: unitName,
-        role: 'queue-consumer',
-        functionIds: [funcId],
-        funcMeta,
-        tags: funcMeta?.tags,
-      })
-    )
-
-    queues.push({
-      name: queueMeta.name ?? queueName,
-      consumerUnit: unitName,
-      consumerFunctionId: funcId,
-    })
-
-    claimed.add(funcId)
+  for (const unit of [...units]) {
+    for (const dep of unit.dependsOn) {
+      if (!existingUnitNames.has(dep)) {
+        // Find the function ID for this dependency
+        const funcId = fromKebab(dep)
+        const funcMeta = functionsMeta[funcId]
+        if (funcMeta) {
+          units.push({
+            name: dep,
+            role: 'function',
+            functionIds: [funcId],
+            services: collectServicesForFunction(funcMeta),
+            dependsOn: [],
+            handlers: [{ type: 'fetch', routes: [] }],
+            tags: funcMeta.tags ?? [],
+          })
+          existingUnitNames.add(dep)
+        }
+      }
+    }
   }
 
-  // ----- Priority 7: Schedulers -> one scheduled unit per task -----
-  for (const [schedName, schedMeta] of entries(state.scheduledTasks.meta)) {
-    const funcId = schedMeta.pikkuFuncId
-    if (claimed.has(funcId)) continue
-
-    const funcMeta = functionsMeta[funcId]
-    const unitName = `cron-${toKebab(schedName)}`
-
-    units.push(
-      makeUnit({
-        name: unitName,
-        role: 'scheduled',
-        functionIds: [funcId],
-        funcMeta,
-        tags: funcMeta?.tags,
-      })
-    )
-
-    scheduledTasks.push({
-      name: schedMeta.name,
-      schedule: schedMeta.schedule,
-      unitName,
-      functionId: funcId,
-    })
-
-    claimed.add(funcId)
-  }
-
-  // ----- Priority 8 & 9: Workflows -----
-  buildWorkflows(
-    state.workflows.graphMeta,
-    functionsMeta,
-    claimed,
-    units,
-    workflows
-  )
-
-  // ----- Secrets -----
+  // ── Secrets & Variables ────────────────────────────────────────────
   const secrets: SecretDeclaration[] = state.secrets.definitions.map((s) => ({
     secretId: s.secretId,
     displayName: s.displayName,
     description: s.description,
   }))
 
-  // ----- Variables -----
   const variables: VariableDeclaration[] = state.variables.definitions.map(
     (v) => ({
       variableId: v.variableId,
@@ -314,112 +292,47 @@ export function analyzeDeployment(
 function buildWorkflows(
   graphMeta: Record<string, SerializedWorkflowGraph>,
   functionsMeta: Record<string, FunctionMeta>,
-  claimed: Set<string>,
   units: DeploymentUnit[],
   workflows: WorkflowDefinition[]
 ): void {
   for (const [_wfName, graph] of entries(graphMeta)) {
-    const orchestratorFuncIds: string[] = []
     const steps: WorkflowStepDefinition[] = []
-
-    // If the workflow's own pikkuFuncId isn't claimed, reserve it for the orchestrator
-    if (!claimed.has(graph.pikkuFuncId)) {
-      orchestratorFuncIds.push(graph.pikkuFuncId)
-    }
+    const stepUnitNames: string[] = []
 
     for (const [nodeId, node] of Object.entries(graph.nodes)) {
-      // Flow control nodes (branch, sleep, return, etc.) don't map to deployable steps
-      if ('flow' in node) {
-        continue
-      }
+      if ('flow' in node) continue
+      if (!('rpcName' in node)) continue
 
-      // FunctionNode — has rpcName
-      if ('rpcName' in node) {
-        const isAsync = node.options?.async === true
-        const isInline = !isAsync && graph.inline === true
+      const stepUnitName = toKebab(node.rpcName)
+      const isAsync = node.options?.async === true
+      const isInline = !isAsync && graph.inline === true
 
-        if (isInline) {
-          // Inline step: bundled with orchestrator
-          if (!claimed.has(node.rpcName)) {
-            orchestratorFuncIds.push(node.rpcName)
-          }
-          steps.push({
-            name: node.stepName ?? nodeId,
-            inline: true,
-            functionId: node.rpcName,
-          })
-        } else {
-          // Non-inline step: gets its own workflow-step unit
-          if (!claimed.has(node.rpcName)) {
-            const stepUnitName = `wf-step-${toKebab(node.rpcName)}`
-            const stepFuncMeta = functionsMeta[node.rpcName]
+      steps.push({
+        name: node.stepName ?? nodeId,
+        inline: isInline,
+        functionId: node.rpcName,
+        unitName: stepUnitName,
+      })
 
-            const stepUnit = makeUnit({
-              name: stepUnitName,
-              role: 'workflow-step',
-              functionIds: [node.rpcName],
-              funcMeta: stepFuncMeta,
-              tags: stepFuncMeta?.tags,
-            })
-
-            // Workflow steps need queue access to report completion back to orchestrator
-            if (!stepUnit.services.some((s) => s.capability === 'queue')) {
-              stepUnit.services.push({
-                capability: 'queue',
-                sourceServiceName: 'queueService',
-              })
-            }
-
-            units.push(stepUnit)
-            claimed.add(node.rpcName)
-
-            steps.push({
-              name: node.stepName ?? nodeId,
-              inline: false,
-              functionId: node.rpcName,
-              unitName: stepUnitName,
-            })
-          }
-        }
-      }
+      stepUnitNames.push(stepUnitName)
     }
 
-    // Build orchestrator unit
+    // Build orchestrator unit — no function code, just orchestration
     const orchUnitName = `wf-${toKebab(graph.name)}`
-    const orchServices = mergeServicesForIds(orchestratorFuncIds, functionsMeta)
-    const orchTags = collectTags(orchestratorFuncIds, functionsMeta)
-
-    // Add workflow-state capability since orchestrators need it
-    if (!orchServices.some((s) => s.capability === 'workflow-state')) {
-      orchServices.push({
-        capability: 'workflow-state',
-        sourceServiceName: 'workflowService',
-      })
-    }
-
-    // Add queue capability since orchestrators use queues for step dispatch
-    if (!orchServices.some((s) => s.capability === 'queue')) {
-      orchServices.push({
-        capability: 'queue',
-        sourceServiceName: 'queueService',
-      })
-    }
-
-    const stepUnitNames = steps
-      .filter((s) => !s.inline && s.unitName)
-      .map((s) => s.unitName!)
+    const orchServices: ServiceRequirement[] = [
+      { capability: 'workflow-state', sourceServiceName: 'workflowService' },
+      { capability: 'queue', sourceServiceName: 'queueService' },
+    ]
 
     units.push({
       name: orchUnitName,
-      role: 'workflow-orchestrator',
-      functionIds: orchestratorFuncIds,
+      role: 'workflow',
+      functionIds: [], // No function code bundled
       services: orchServices,
       dependsOn: stepUnitNames,
-      httpRoutes: [],
-      tags: orchTags,
+      handlers: [{ type: 'fetch', routes: [] }],
+      tags: [],
     })
-
-    for (const id of orchestratorFuncIds) claimed.add(id)
 
     workflows.push({
       name: graph.name,
@@ -477,25 +390,6 @@ function collectServicesForFunction(
   }
 
   return requirements
-}
-
-function mergeServicesForIds(
-  funcIds: string[],
-  functionsMeta: Record<string, FunctionMeta>
-): ServiceRequirement[] {
-  const seen = new Set<ServiceCapability>()
-  const result: ServiceRequirement[] = []
-
-  for (const id of funcIds) {
-    for (const req of collectServicesForFunction(functionsMeta[id])) {
-      if (!seen.has(req.capability)) {
-        result.push(req)
-        seen.add(req.capability)
-      }
-    }
-  }
-
-  return result
 }
 
 // ---------------------------------------------------------------------------
@@ -560,38 +454,18 @@ function collectChannelFunctionIds(channelMeta: ChannelMeta): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// Unit factory
-// ---------------------------------------------------------------------------
-
-function makeUnit(params: {
-  name: string
-  role: DeploymentUnitRole
-  functionIds: string[]
-  funcMeta: FunctionMeta | undefined
-  httpRoutes?: HttpRouteInfo[]
-  tags?: string[]
-}): DeploymentUnit {
-  return {
-    name: params.name,
-    role: params.role,
-    functionIds: params.functionIds,
-    services: collectServicesForFunction(params.funcMeta),
-    dependsOn: [],
-    httpRoutes: params.httpRoutes ?? [],
-    tags: params.tags ?? [],
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Naming helpers
 // ---------------------------------------------------------------------------
 
-/** Converts camelCase / PascalCase to kebab-case */
 function toKebab(str: string): string {
   return str
     .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
     .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2')
     .toLowerCase()
+}
+
+function fromKebab(str: string): string {
+  return str.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
 }
 
 // ---------------------------------------------------------------------------

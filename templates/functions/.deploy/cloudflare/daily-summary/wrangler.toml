@@ -1,0 +1,11 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "functions-daily-summary"
+main = "bundle.js"
+compatibility_date = "2024-12-18"
+compatibility_flags = ["nodejs_compat_v2"]
+
+[observability]
+enabled = true
+
+[triggers]
+crons = ["0 9 * * *"]

@@ -2,7 +2,7 @@
  * Cloudflare provider adapter for the Pikku deploy pipeline.
  *
  * Handles all Cloudflare-specific concerns:
- * - Entry file generation (handler factories, platform services)
+ * - Entry file generation (combined handler exports based on unit.handlers)
  * - wrangler.toml generation
  * - infra.json generation
  */
@@ -10,12 +10,21 @@
 import { generateWranglerToml } from './wrangler-toml.js'
 import { generateInfraManifest } from './infra-manifest.js'
 
+type DeploymentHandler =
+  | {
+      type: 'fetch'
+      routes: Array<{ method: string; route: string; pikkuFuncId: string }>
+    }
+  | { type: 'queue'; queueName: string }
+  | { type: 'scheduled'; schedule: string; taskName: string }
+
 interface DeploymentUnit {
   name: string
   role: string
   functionIds: string[]
   services: Array<{ capability: string; sourceServiceName: string }>
-  httpRoutes: Array<{ method: string; route: string }>
+  dependsOn: string[]
+  handlers: DeploymentHandler[]
   tags: string[]
 }
 
@@ -61,25 +70,15 @@ interface EntryGenerationContext {
   servicesType: string
 }
 
-function getHandlerName(role: string): string {
-  switch (role) {
-    case 'http':
-    case 'agent':
-    case 'rpc':
-    case 'workflow-orchestrator':
-      return 'createCloudflareWorkerHandler'
-    case 'mcp':
-      return 'createCloudflareMCPHandler'
-    case 'queue-consumer':
-    case 'workflow-step':
-      return 'createCloudflareQueueHandler'
-    case 'scheduled':
-      return 'createCloudflareCronHandler'
-    case 'channel':
-      return 'createCloudflareWebSocketHandler'
-    default:
-      return 'createCloudflareWorkerHandler'
+/**
+ * Extracts the unique handler types from a unit's handlers array.
+ */
+function getHandlerTypes(unit: DeploymentUnit): string[] {
+  const types = new Set<string>()
+  for (const handler of unit.handlers) {
+    types.add(handler.type)
   }
+  return [...types]
 }
 
 export class CloudflareProviderAdapter {
@@ -87,11 +86,35 @@ export class CloudflareProviderAdapter {
   readonly deployDirName = 'cloudflare'
 
   generateEntrySource(ctx: EntryGenerationContext): string {
-    const handlerName = getHandlerName(ctx.unit.role)
+    const { unit } = ctx
 
-    return [
+    // Gateway units use their own dedicated handler factories
+    if (unit.role === 'channel') {
+      return this.generateChannelGatewayEntry(ctx)
+    }
+    if (
+      unit.role === 'mcp' ||
+      unit.role === 'agent' ||
+      unit.role === 'workflow'
+    ) {
+      return this.generateGatewayEntry(ctx)
+    }
+
+    // Function and workflow-step units use the combined handler
+    return this.generateCombinedHandlerEntry(ctx)
+  }
+
+  /**
+   * Generates entry source for function/workflow-step units.
+   * Produces a combined export object with fetch/queue/scheduled handlers
+   * based on the unit's handlers array.
+   */
+  private generateCombinedHandlerEntry(ctx: EntryGenerationContext): string {
+    const handlerTypes = getHandlerTypes(ctx.unit)
+
+    const lines: string[] = [
       `// Generated entry for "${ctx.unit.name}" (${ctx.unit.role})`,
-      `import { ${handlerName} } from '@pikku/cloudflare'`,
+      `import { createCloudflareHandler } from '@pikku/cloudflare'`,
       `import type { CloudflareEnv } from '@pikku/cloudflare'`,
       `import { CloudflareQueueService, CloudflareWorkflowService, CloudflareAIStorageService, CloudflareAgentRunService, CloudflareAIRunStateService } from '@pikku/cloudflare'`,
       `import type { D1Database } from '@cloudflare/workers-types'`,
@@ -103,6 +126,80 @@ export class CloudflareProviderAdapter {
       `import { requiredSingletonServices } from './.pikku/pikku-services.gen.js'`,
       `import '${ctx.bootstrapPath}'`,
       ``,
+      ...this.generatePlatformServicesBlock(ctx),
+      ``,
+      `export default createCloudflareHandler(`,
+      `  { createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices },`,
+      `  ${JSON.stringify(handlerTypes)}`,
+      `)`,
+      ``,
+    ]
+
+    return lines.join('\n')
+  }
+
+  /**
+   * Generates entry source for channel units.
+   * Uses the WebSocket handler factory and exports the DO class.
+   */
+  private generateChannelGatewayEntry(ctx: EntryGenerationContext): string {
+    const lines: string[] = [
+      `// Generated entry for "${ctx.unit.name}" (${ctx.unit.role})`,
+      `import { createCloudflareWebSocketHandler } from '@pikku/cloudflare'`,
+      `import type { CloudflareEnv } from '@pikku/cloudflare'`,
+      `import { CloudflareQueueService, CloudflareWorkflowService, CloudflareAIStorageService, CloudflareAgentRunService, CloudflareAIRunStateService } from '@pikku/cloudflare'`,
+      `import type { D1Database } from '@cloudflare/workers-types'`,
+      `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
+      `import { ConsoleLogger } from '@pikku/core/services'`,
+      ctx.configImport,
+      ctx.servicesImport,
+      ctx.singletonServicesImport,
+      `import { requiredSingletonServices } from './.pikku/pikku-services.gen.js'`,
+      `import '${ctx.bootstrapPath}'`,
+      ``,
+      ...this.generatePlatformServicesBlock(ctx),
+      ``,
+      `export { PikkuWebSocketHibernationServer as WebSocketHibernationServer } from '@pikku/cloudflare'`,
+      `export default createCloudflareWebSocketHandler({ createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices })`,
+      ``,
+    ]
+
+    return lines.join('\n')
+  }
+
+  /**
+   * Generates entry source for mcp, agent, and workflow units.
+   * Uses the standard worker handler factory.
+   */
+  private generateGatewayEntry(ctx: EntryGenerationContext): string {
+    const lines: string[] = [
+      `// Generated entry for "${ctx.unit.name}" (${ctx.unit.role})`,
+      `import { createCloudflareWorkerHandler } from '@pikku/cloudflare'`,
+      `import type { CloudflareEnv } from '@pikku/cloudflare'`,
+      `import { CloudflareQueueService, CloudflareWorkflowService, CloudflareAIStorageService, CloudflareAgentRunService, CloudflareAIRunStateService } from '@pikku/cloudflare'`,
+      `import type { D1Database } from '@cloudflare/workers-types'`,
+      `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
+      `import { ConsoleLogger } from '@pikku/core/services'`,
+      ctx.configImport,
+      ctx.servicesImport,
+      ctx.singletonServicesImport,
+      `import { requiredSingletonServices } from './.pikku/pikku-services.gen.js'`,
+      `import '${ctx.bootstrapPath}'`,
+      ``,
+      ...this.generatePlatformServicesBlock(ctx),
+      ``,
+      `export default createCloudflareWorkerHandler({ createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices })`,
+      ``,
+    ]
+
+    return lines.join('\n')
+  }
+
+  /**
+   * Generates the createPlatformServices function block shared by all entry types.
+   */
+  private generatePlatformServicesBlock(ctx: EntryGenerationContext): string[] {
+    return [
       `const createPlatformServices = async (env: CloudflareEnv): Promise<${ctx.servicesType}> => {`,
       `  const services: ${ctx.servicesType} = {}`,
       `  const logger = new ConsoleLogger()`,
@@ -128,17 +225,7 @@ export class CloudflareProviderAdapter {
       `  }`,
       `  return services`,
       `}`,
-      ``,
-      ...(ctx.unit.role === 'channel'
-        ? [
-            `export { PikkuWebSocketHibernationServer as WebSocketHibernationServer } from '@pikku/cloudflare'`,
-            `export default ${handlerName}({ createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices })`,
-          ]
-        : [
-            `export default ${handlerName}({ createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices })`,
-          ]),
-      ``,
-    ].join('\n')
+    ]
   }
 
   generateUnitConfigs(

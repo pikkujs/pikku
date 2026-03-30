@@ -3,7 +3,7 @@
  *
  * Each entry point:
  * 1. Imports the filtered bootstrap from the unit's .pikku/ directory
- * 2. Imports the appropriate Cloudflare handler factory based on the unit's role
+ * 2. Imports the appropriate Cloudflare handler based on the unit's role and handlers
  * 3. Exports the handler as the default export
  */
 
@@ -11,59 +11,64 @@ import { writeFile, mkdir } from 'node:fs/promises'
 import { join, dirname, relative } from 'node:path'
 
 export type DeploymentUnitRole =
-  | 'http'
-  | 'rpc'
+  | 'function'
   | 'mcp'
-  | 'queue-consumer'
-  | 'scheduled'
   | 'agent'
   | 'channel'
-  | 'workflow-orchestrator'
+  | 'workflow'
   | 'workflow-step'
+
+type DeploymentHandler =
+  | {
+      type: 'fetch'
+      routes: Array<{ method: string; route: string; pikkuFuncId: string }>
+    }
+  | { type: 'queue'; queueName: string }
+  | { type: 'scheduled'; schedule: string; taskName: string }
 
 export interface EntryGeneratorUnit {
   name: string
   role: DeploymentUnitRole
+  handlers: DeploymentHandler[]
   /** Path to the unit's .pikku directory (from per-unit codegen) */
   pikkuDir: string
 }
 
 /**
- * Maps a deployment unit role to its Cloudflare handler import/export.
+ * Maps a deployment unit to its Cloudflare handler import/export.
+ * Function and workflow-step units use the combined handler.
+ * Gateway units use their dedicated handler factories.
  */
-function getHandlerCode(role: DeploymentUnitRole): {
+function getHandlerCode(unit: EntryGeneratorUnit): {
   importStatement: string
   exportStatement: string
+  extraExports: string[]
 } {
-  switch (role) {
-    case 'http':
+  switch (unit.role) {
+    case 'function':
+    case 'workflow-step': {
+      const handlerTypes = [...new Set(unit.handlers.map((h) => h.type))]
+      return {
+        importStatement: `import { createCloudflareHandler } from '@pikku/cloudflare'`,
+        exportStatement: `export default createCloudflareHandler(${JSON.stringify(handlerTypes)})`,
+        extraExports: [],
+      }
+    }
+    case 'mcp':
     case 'agent':
-    case 'rpc':
-    case 'workflow-orchestrator':
+    case 'workflow':
       return {
         importStatement: `import { createCloudflareWorkerHandler } from '@pikku/cloudflare'`,
         exportStatement: `export default createCloudflareWorkerHandler()`,
-      }
-    case 'mcp':
-      return {
-        importStatement: `import { createCloudflareMCPHandler } from '@pikku/cloudflare'`,
-        exportStatement: `export default createCloudflareMCPHandler()`,
-      }
-    case 'queue-consumer':
-    case 'workflow-step':
-      return {
-        importStatement: `import { createCloudflareQueueHandler } from '@pikku/cloudflare'`,
-        exportStatement: `export default createCloudflareQueueHandler()`,
-      }
-    case 'scheduled':
-      return {
-        importStatement: `import { createCloudflareCronHandler } from '@pikku/cloudflare'`,
-        exportStatement: `export default createCloudflareCronHandler()`,
+        extraExports: [],
       }
     case 'channel':
       return {
         importStatement: `import { createCloudflareWebSocketHandler } from '@pikku/cloudflare'`,
         exportStatement: `export default createCloudflareWebSocketHandler()`,
+        extraExports: [
+          `export { PikkuWebSocketHibernationServer as WebSocketHibernationServer } from '@pikku/cloudflare'`,
+        ],
       }
   }
 }
@@ -76,7 +81,8 @@ export function generateEntrySource(
   unit: EntryGeneratorUnit,
   entryFilePath: string
 ): string {
-  const { importStatement, exportStatement } = getHandlerCode(unit.role)
+  const { importStatement, exportStatement, extraExports } =
+    getHandlerCode(unit)
   const entryDir = dirname(entryFilePath)
   const bootstrapRelative = relative(
     entryDir,
@@ -87,15 +93,18 @@ export function generateEntrySource(
     ? bootstrapRelative
     : `./${bootstrapRelative}`
 
-  return [
+  const lines = [
     `// Generated Cloudflare Worker entry for "${unit.name}" (${unit.role})`,
     ``,
     importStatement,
     `import '${bootstrapPath}'`,
     ``,
+    ...extraExports,
     exportStatement,
     ``,
-  ].join('\n')
+  ]
+
+  return lines.join('\n')
 }
 
 /**
@@ -103,7 +112,7 @@ export function generateEntrySource(
  *
  * @param units - Units with their .pikku directories from per-unit codegen
  * @param outputDir - Directory to write entry files into
- * @returns Map of unit name → entry file path
+ * @returns Map of unit name -> entry file path
  */
 export async function generateCloudflareEntryFiles(
   units: EntryGeneratorUnit[],

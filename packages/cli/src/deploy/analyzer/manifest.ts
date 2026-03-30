@@ -1,22 +1,25 @@
 /**
  * Provider-agnostic deployment manifest types.
  *
- * These types describe WHAT needs to be deployed (roles, capabilities,
- * routes, queues, etc.) without referencing HOW or WHERE.
- * A separate provider adapter maps these to concrete infrastructure.
+ * Core principle: one function = one deployment unit.
+ * Gateways (MCP, agents, channels, workflow orchestrators)
+ * don't bundle function code — they dispatch via RPC.
  */
 
-/** What kind of compute a deployment unit needs */
+/** What kind of deployment entry */
 export type DeploymentUnitRole =
-  | 'http'
-  | 'rpc'
+  | 'function'
   | 'mcp'
-  | 'queue-consumer'
-  | 'scheduled'
   | 'agent'
   | 'channel'
-  | 'workflow-orchestrator'
+  | 'workflow'
   | 'workflow-step'
+
+/** What handlers a unit needs to export */
+export type DeploymentHandler =
+  | { type: 'fetch'; routes: HttpRouteInfo[] }
+  | { type: 'queue'; queueName: string }
+  | { type: 'scheduled'; schedule: string; taskName: string }
 
 /** Abstract infrastructure capability */
 export type ServiceCapability =
@@ -45,11 +48,13 @@ export interface HttpRouteInfo {
 export interface DeploymentUnit {
   name: string
   role: DeploymentUnitRole
+  /** Functions bundled in this unit (for function/workflow-step units) */
   functionIds: string[]
   services: ServiceRequirement[]
-  /** Other unit names this unit depends on / calls */
+  /** Other unit names this unit calls via RPC / service bindings */
   dependsOn: string[]
-  httpRoutes: HttpRouteInfo[]
+  /** What runtime handlers this unit needs to export */
+  handlers: DeploymentHandler[]
   tags: string[]
 }
 
