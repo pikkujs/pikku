@@ -1,5 +1,5 @@
 import { basename, join, dirname, relative } from 'node:path'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, writeFile, copyFile, access } from 'node:fs/promises'
 
 import { pikkuVoidFunc } from '#pikku'
 import { analyzeDeployment } from '../../deploy/analyzer/index.js'
@@ -8,45 +8,92 @@ import { bundleUnits } from '../../deploy/bundler/index.js'
 import { generatePlan } from '../../deploy/plan/index.js'
 import { applyPlan } from '../../deploy/plan/executor.js'
 import { formatPlan } from '../../deploy/plan/formatter.js'
+import { CloudflareProviderAdapter } from '@pikku/deploy-cloudflare'
+import type {
+  ProviderAdapter,
+  EntryGenerationContext,
+} from '../../deploy/provider-adapter.js'
 import type { DeployProvider } from '../../deploy/plan/provider.js'
 import type { PlanChange } from '../../deploy/plan/types.js'
-import type { DeploymentUnitRole } from '../../deploy/analyzer/manifest.js'
+import type { InspectorState } from '@pikku/inspector'
 
-function getCloudflareHandler(role: DeploymentUnitRole): {
-  importStatement: string
-  exportStatement: string
-} {
-  switch (role) {
-    case 'http':
-    case 'agent':
-    case 'rpc':
-    case 'workflow-orchestrator':
-      return {
-        importStatement: `import { createCloudflareWorkerHandler } from '@pikku/cloudflare'`,
-        exportStatement: `export default createCloudflareWorkerHandler()`,
-      }
-    case 'mcp':
-      return {
-        importStatement: `import { createCloudflareMCPHandler } from '@pikku/cloudflare'`,
-        exportStatement: `export default createCloudflareMCPHandler()`,
-      }
-    case 'queue-consumer':
-    case 'workflow-step':
-      return {
-        importStatement: `import { createCloudflareQueueHandler } from '@pikku/cloudflare'`,
-        exportStatement: `export default createCloudflareQueueHandler()`,
-      }
-    case 'scheduled':
-      return {
-        importStatement: `import { createCloudflareCronHandler } from '@pikku/cloudflare'`,
-        exportStatement: `export default createCloudflareCronHandler()`,
-      }
-    case 'channel':
-      return {
-        importStatement: `import { createCloudflareWebSocketHandler } from '@pikku/cloudflare'`,
-        exportStatement: `export default createCloudflareWebSocketHandler()`,
-      }
+async function findLockfile(startDir: string): Promise<string | null> {
+  let dir = startDir
+  while (true) {
+    const candidate = join(dir, 'yarn.lock')
+    try {
+      await access(candidate)
+      return candidate
+    } catch {
+      const parent = dirname(dir)
+      if (parent === dir) return null
+      dir = parent
+    }
   }
+}
+
+function toRelativeImport(fromDir: string, toFile: string): string {
+  let rel = relative(fromDir, toFile).replace(/\\/g, '/')
+  if (!rel.startsWith('.')) rel = `./${rel}`
+  return rel.replace(/\.ts$/, '.js')
+}
+
+function getEntryContext(
+  unitDir: string,
+  pikkuDir: string,
+  unit: EntryGenerationContext['unit'],
+  inspectorState: InspectorState
+): EntryGenerationContext {
+  const bootstrapRelative = relative(
+    unitDir,
+    join(pikkuDir, 'pikku-bootstrap.gen.js')
+  )
+  const bootstrapPath =
+    bootstrapRelative.startsWith('./') || bootstrapRelative.startsWith('../')
+      ? bootstrapRelative
+      : `./${bootstrapRelative}`
+
+  const {
+    pikkuConfigFactory,
+    singletonServicesFactory,
+    singletonServicesType,
+  } = inspectorState.filesAndMethods
+
+  if (!pikkuConfigFactory || !singletonServicesFactory) {
+    throw new Error(
+      'Cannot generate deploy entries: createConfig and createSingletonServices must be defined in your project'
+    )
+  }
+
+  const configRelative = toRelativeImport(unitDir, pikkuConfigFactory.file)
+  const servicesRelative = toRelativeImport(
+    unitDir,
+    singletonServicesFactory.file
+  )
+
+  const singletonServicesImport = singletonServicesType
+    ? `import type { ${singletonServicesType.type} } from '${toRelativeImport(unitDir, singletonServicesType.typePath)}'`
+    : ''
+  const servicesType = singletonServicesType
+    ? `Partial<${singletonServicesType.type}>`
+    : 'Record<string, unknown>'
+
+  return {
+    unit,
+    unitDir,
+    bootstrapPath,
+    configImport: `import { ${pikkuConfigFactory.variable} } from '${configRelative}'`,
+    configVar: pikkuConfigFactory.variable,
+    servicesImport: `import { ${singletonServicesFactory.variable} } from '${servicesRelative}'`,
+    servicesVar: singletonServicesFactory.variable,
+    singletonServicesImport,
+    servicesType,
+  }
+}
+
+function resolveProvider(_providerName?: string): ProviderAdapter {
+  // TODO: resolve from --provider flag or config
+  return new CloudflareProviderAdapter()
 }
 
 const ANSI = {
@@ -62,7 +109,6 @@ const ANSI = {
 function createEmptyProvider(): DeployProvider {
   return {
     async getCurrentState() {
-      // TODO: Load provider from config and get real state
       return {
         units: [],
         queues: [],
@@ -72,8 +118,6 @@ function createEmptyProvider(): DeployProvider {
       }
     },
     async applyChange(_change, _manifest) {
-      // TODO: Delegate to provider package (e.g. @pikku/deploy-cloudflare)
-      // For now, this is a stub
       await new Promise((r) => setTimeout(r, 100))
     },
     async hasActiveWork() {
@@ -112,6 +156,8 @@ export const deployApply = pikkuVoidFunc({
   func: async ({ logger, config, getInspectorState }) => {
     const projectDir = config.rootDir
     const deployDir = join(projectDir, '.deploy')
+    const provider = resolveProvider()
+    const providerDir = join(deployDir, provider.deployDirName)
 
     // Step 1: Analyze
     logger.info('Analyzing project...')
@@ -134,7 +180,7 @@ export const deployApply = pikkuVoidFunc({
         projectDir,
         manifest,
         inspectorState,
-        deployDir,
+        deployDir: providerDir,
         onProgress: (unitName, status, error) => {
           if (status === 'start') {
             logger.info(`  Codegen: ${unitName}...`)
@@ -159,34 +205,17 @@ export const deployApply = pikkuVoidFunc({
     // Step 3: Generate entry points + Bundle
     logger.info('Generating entry points and bundling...')
     const entryFiles = new Map<string, string>()
-    const entriesDir = join(deployDir, 'entries')
 
     for (const unit of manifest.units) {
       const pikkuDir = unitPikkuDirs.get(unit.name)
       if (!pikkuDir) continue
 
-      const entryPath = join(entriesDir, unit.name, 'entry.ts')
-      const entryDir = dirname(entryPath)
-      await mkdir(entryDir, { recursive: true })
+      const unitDir = join(providerDir, unit.name)
+      const entryPath = join(unitDir, 'entry.ts')
+      await mkdir(unitDir, { recursive: true })
 
-      const bootstrapRelative = relative(
-        entryDir,
-        join(pikkuDir, 'pikku-bootstrap.gen.js')
-      )
-      const bootstrapPath = bootstrapRelative.startsWith('.')
-        ? bootstrapRelative
-        : `./${bootstrapRelative}`
-
-      // TODO: Load handler from --provider flag. Hardcoded to Cloudflare for now.
-      const handler = getCloudflareHandler(unit.role)
-      const source = [
-        `// Generated entry for "${unit.name}" (${unit.role})`,
-        handler.importStatement,
-        `import '${bootstrapPath}'`,
-        ``,
-        handler.exportStatement,
-        ``,
-      ].join('\n')
+      const ctx = getEntryContext(unitDir, pikkuDir, unit, inspectorState)
+      const source = provider.generateEntrySource(ctx)
 
       await writeFile(entryPath, source, 'utf-8')
       entryFiles.set(unit.name, entryPath)
@@ -195,7 +224,8 @@ export const deployApply = pikkuVoidFunc({
     const { results: bundled, errors: bundleErrors } = await bundleUnits(
       projectDir,
       manifest,
-      entryFiles
+      entryFiles,
+      providerDir
     )
     logger.info(
       `Bundled ${bundled.length} units${bundleErrors.length > 0 ? ` (${bundleErrors.length} failed)` : ''}`
@@ -207,11 +237,33 @@ export const deployApply = pikkuVoidFunc({
       }
     }
 
+    // Step 3b: Generate provider configs + infra manifest + lockfile
+    const infraContent = provider.generateInfraManifest(manifest)
+    if (infraContent) {
+      await writeFile(join(providerDir, 'infra.json'), infraContent, 'utf-8')
+      logger.info('Generated infrastructure manifest')
+    }
+
+    const lockfileSrc = await findLockfile(projectDir)
+    for (const unit of manifest.units) {
+      const unitDir = join(providerDir, unit.name)
+      const configs = provider.generateUnitConfigs(unit, manifest, projectId)
+      for (const [filename, content] of configs) {
+        await writeFile(join(unitDir, filename), content, 'utf-8')
+      }
+      if (lockfileSrc) {
+        await copyFile(lockfileSrc, join(unitDir, 'yarn.lock'))
+      }
+    }
+    logger.info(`Generated ${manifest.units.length} provider config files`)
+
     // Step 4: Plan
     logger.info('Planning deployment...')
-    const provider = createEmptyProvider()
-    const currentState = await provider.getCurrentState(manifest.projectId)
-    const plan = await generatePlan(manifest, currentState, provider)
+    const deployProvider = createEmptyProvider()
+    const currentState = await deployProvider.getCurrentState(
+      manifest.projectId
+    )
+    const plan = await generatePlan(manifest, currentState, deployProvider)
 
     console.log('')
     console.log(formatPlan(plan))
@@ -224,7 +276,7 @@ export const deployApply = pikkuVoidFunc({
 
     // Step 5: Apply
     logger.info('Applying...')
-    const result = await applyPlan(plan, manifest, provider, {
+    const result = await applyPlan(plan, manifest, deployProvider, {
       onProgress: logProgress,
     })
 

@@ -66,3 +66,4 @@ export type {
   CredentialMetaInfo,
 } from './typed-credential-service.js'
 export type { VariableStatus, VariableMeta } from './typed-variables-service.js'
+export type { MetaService } from './meta-service.js'

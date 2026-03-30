@@ -64,7 +64,7 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     target: 'es2022',
     outfile: bundlePath,
     minify: false,
-    sourcemap: false,
+    sourcemap: true,
     logLevel: 'warning',
     // Ensure we handle TypeScript entry points
     loader: { '.ts': 'ts' },

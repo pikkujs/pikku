@@ -145,8 +145,7 @@ export async function generatePerUnitCodegen(
 ): Promise<PerUnitCodegenResult> {
   const { projectDir, manifest, inspectorState, onProgress } = options
 
-  const deployDir = options.deployDir ?? join(projectDir, '.deploy')
-  const unitsDir = join(deployDir, 'units')
+  const baseDir = options.deployDir ?? join(projectDir, '.deploy')
   const pikkuBin = options.pikkuBin ?? resolvePikkuBin()
 
   const unitPikkuDirs = new Map<string, string>()
@@ -160,10 +159,6 @@ export async function generatePerUnitCodegen(
     // Serialize and write the inspector state once
     const serialized = serializeInspectorState(inspectorState)
     await writeFile(stateFilePath, JSON.stringify(serialized), 'utf-8')
-
-    // Clean the units directory to avoid stale artifacts
-    await rm(unitsDir, { recursive: true, force: true })
-    await mkdir(unitsDir, { recursive: true })
 
     // Generate codegen for each unit
     for (const unit of manifest.units) {
@@ -179,7 +174,7 @@ export async function generatePerUnitCodegen(
 
       onProgress?.(unit.name, 'start')
 
-      const unitDir = join(unitsDir, unit.name)
+      const unitDir = join(baseDir, unit.name)
       const unitPikkuDir = join(unitDir, '.pikku')
       await mkdir(unitDir, { recursive: true })
 

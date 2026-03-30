@@ -1,5 +1,5 @@
 import { pikkuAddonServices } from '#pikku'
-import { pikkuState } from '@pikku/core/internal'
+import { LocalMetaService } from '@pikku/core/services/local-meta'
 import { WiringService } from './services/wiring.service.js'
 import { AddonService } from './services/addon.service.js'
 import { SchemaService } from './services/schema.service.js'
@@ -11,6 +11,7 @@ export const createSingletonServices = pikkuAddonServices(
     _config,
     {
       variables,
+      metaService: existingMetaService,
       aiAgentRunner,
       schedulerService,
       agentRunService,
@@ -21,21 +22,26 @@ export const createSingletonServices = pikkuAddonServices(
       credentialService,
     }
   ) => {
-    const pikkuMetaPath = pikkuState(null, 'package', 'metaDir') ?? ''
+    const metaService = existingMetaService ?? new LocalMetaService()
     const registryUrl =
       (await variables.get('REGISTRY_URL')) ?? 'https://pikku-registry.fly.dev'
 
-    const wiringService = new WiringService(pikkuMetaPath)
-    const schemaService = new SchemaService(pikkuMetaPath)
+    const wiringService = new WiringService(metaService)
+    const schemaService = new SchemaService(metaService)
     const addonService = new AddonService(registryUrl)
     await addonService.init()
     const oauthService = new OAuthService()
-    const fileWatcherService = new FileWatcherService(
-      pikkuMetaPath,
-      wiringService,
-      schemaService
-    )
-    fileWatcherService.start()
+
+    // FileWatcher only works on Node.js (needs filesystem + fs.watch)
+    let fileWatcherService: FileWatcherService | undefined
+    if (metaService instanceof LocalMetaService) {
+      fileWatcherService = new FileWatcherService(
+        metaService.basePath,
+        wiringService,
+        schemaService
+      )
+      fileWatcherService.start()
+    }
 
     return {
       wiringService,

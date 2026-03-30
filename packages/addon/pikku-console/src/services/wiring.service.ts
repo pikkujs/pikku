@@ -1,6 +1,5 @@
-import { readFile, readdir } from 'fs/promises'
-import { join } from 'path'
 import { pikkuState } from '@pikku/core/internal'
+import type { MetaService } from '@pikku/core/services'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
 import type { ChannelsMeta } from '@pikku/core/channel'
 import type { ScheduledTasksMeta } from '@pikku/core/scheduler'
@@ -380,7 +379,7 @@ export class WiringService {
   private permissionsGroupsMetaCache: PermissionsGroupsMeta | null = null
   private agentsMetaCache: AgentsMeta | null = null
 
-  constructor(private pikkuMetaPath: string) {}
+  constructor(private metaService: MetaService) {}
 
   clearCache(): void {
     this.httpMetaCache = null
@@ -407,21 +406,11 @@ export class WiringService {
     dir: string,
     baseName: string
   ): Promise<string | null> {
-    const verbosePath = join(
-      this.pikkuMetaPath,
-      dir,
-      `${baseName}-verbose.gen.json`
+    const verbose = await this.metaService.readFile(
+      `${dir}/${baseName}-verbose.gen.json`
     )
-    try {
-      return await readFile(verbosePath, 'utf-8')
-    } catch {
-      const minimalPath = join(this.pikkuMetaPath, dir, `${baseName}.gen.json`)
-      try {
-        return await readFile(minimalPath, 'utf-8')
-      } catch {
-        return null
-      }
-    }
+    if (verbose) return verbose
+    return this.metaService.readFile(`${dir}/${baseName}.gen.json`)
   }
 
   /**
@@ -549,20 +538,14 @@ export class WiringService {
       return this.rpcMetaCache
     }
 
-    const metaPath = join(
-      this.pikkuMetaPath,
-      'rpc',
-      'pikku-rpc-wirings-meta.gen.json'
-    )
     try {
-      const content = await readFile(metaPath, 'utf-8')
-      this.rpcMetaCache = JSON.parse(content)
+      const content = await this.metaService.readFile(
+        'rpc/pikku-rpc-wirings-meta.gen.json'
+      )
+      this.rpcMetaCache = content ? JSON.parse(content) : {}
       return this.rpcMetaCache!
     } catch (error) {
-      console.error(
-        `Error reading RPC wirings metadata from ${metaPath}:`,
-        error
-      )
+      console.error('Error reading RPC wirings metadata:', error)
       this.rpcMetaCache = {}
       return this.rpcMetaCache
     }
@@ -576,9 +559,8 @@ export class WiringService {
       return this.workflowMetaCache
     }
 
-    const metaDir = join(this.pikkuMetaPath, 'workflow', 'meta')
     try {
-      const files = await readdir(metaDir)
+      const files = await this.metaService.readDir('workflow/meta')
       const jsonFiles = files.filter((f) => f.endsWith('.gen.json'))
       const verboseFiles = jsonFiles.filter((f) => f.includes('-verbose'))
       const minimalFiles = jsonFiles.filter((f) => !f.includes('-verbose'))
@@ -595,20 +577,20 @@ export class WiringService {
       const result: WorkflowsMeta = {}
       await Promise.all(
         filesToRead.map(async (file) => {
-          const filePath = join(metaDir, file)
-          const content = await readFile(filePath, 'utf-8')
-          const meta = JSON.parse(content)
-          result[meta.name] = meta
+          const content = await this.metaService.readFile(
+            `workflow/meta/${file}`
+          )
+          if (content) {
+            const meta = JSON.parse(content)
+            result[meta.name] = meta
+          }
         })
       )
 
       this.workflowMetaCache = result
       return this.workflowMetaCache
     } catch (error) {
-      console.error(
-        `Error reading Workflow wirings metadata from ${metaDir}:`,
-        error
-      )
+      console.error('Error reading Workflow wirings metadata:', error)
       this.workflowMetaCache = {}
       return this.workflowMetaCache
     }
@@ -998,28 +980,25 @@ export class WiringService {
       return this.servicesMetaCache
     }
 
-    const servicesDir = join(this.pikkuMetaPath, 'services')
     try {
-      const files = await readdir(servicesDir)
+      const files = await this.metaService.readDir('services')
       const jsonFiles = files.filter((f) => f.endsWith('.gen.json'))
 
       const result: ServicesMetaRecord = {}
       await Promise.all(
         jsonFiles.map(async (file) => {
-          const filePath = join(servicesDir, file)
-          const content = await readFile(filePath, 'utf-8')
-          const meta: ServiceMeta = JSON.parse(content)
-          result[meta.name] = meta
+          const content = await this.metaService.readFile(`services/${file}`)
+          if (content) {
+            const meta: ServiceMeta = JSON.parse(content)
+            result[meta.name] = meta
+          }
         })
       )
 
       this.servicesMetaCache = result
       return this.servicesMetaCache
     } catch (error) {
-      console.error(
-        `Error reading Services metadata from ${servicesDir}:`,
-        error
-      )
+      console.error('Error reading Services metadata:', error)
       this.servicesMetaCache = {}
       return this.servicesMetaCache
     }
@@ -1030,19 +1009,11 @@ export class WiringService {
       return this.secretsMetaCache
     }
 
-    const metaPath = join(
-      this.pikkuMetaPath,
-      'secrets',
-      'pikku-secrets-meta.gen.json'
+    const content = await this.metaService.readFile(
+      'secrets/pikku-secrets-meta.gen.json'
     )
-    try {
-      const content = await readFile(metaPath, 'utf-8')
-      this.secretsMetaCache = JSON.parse(content)
-      return this.secretsMetaCache!
-    } catch {
-      this.secretsMetaCache = {}
-      return this.secretsMetaCache
-    }
+    this.secretsMetaCache = content ? JSON.parse(content) : {}
+    return this.secretsMetaCache!
   }
 
   async readCredentialsMeta(): Promise<CredentialDefinitionsMeta> {
@@ -1050,19 +1021,11 @@ export class WiringService {
       return this.credentialsMetaCache
     }
 
-    const metaPath = join(
-      this.pikkuMetaPath,
-      'credentials',
-      'pikku-credentials-meta.gen.json'
+    const content = await this.metaService.readFile(
+      'credentials/pikku-credentials-meta.gen.json'
     )
-    try {
-      const content = await readFile(metaPath, 'utf-8')
-      this.credentialsMetaCache = JSON.parse(content)
-      return this.credentialsMetaCache!
-    } catch {
-      this.credentialsMetaCache = {}
-      return this.credentialsMetaCache
-    }
+    this.credentialsMetaCache = content ? JSON.parse(content) : {}
+    return this.credentialsMetaCache!
   }
 
   async readVariablesMeta(): Promise<VariableDefinitionsMeta> {
@@ -1070,19 +1033,11 @@ export class WiringService {
       return this.variablesMetaCache
     }
 
-    const metaPath = join(
-      this.pikkuMetaPath,
-      'variables',
-      'pikku-variables-meta.gen.json'
+    const content = await this.metaService.readFile(
+      'variables/pikku-variables-meta.gen.json'
     )
-    try {
-      const content = await readFile(metaPath, 'utf-8')
-      this.variablesMetaCache = JSON.parse(content)
-      return this.variablesMetaCache!
-    } catch {
-      this.variablesMetaCache = {}
-      return this.variablesMetaCache
-    }
+    this.variablesMetaCache = content ? JSON.parse(content) : {}
+    return this.variablesMetaCache!
   }
 
   generateChannelSnippets(

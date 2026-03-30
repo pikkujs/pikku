@@ -1,7 +1,6 @@
 import { pikkuSessionlessFunc } from '#pikku'
 import { pikkuState } from '@pikku/core/internal'
-import { readFile } from 'fs/promises'
-import { join } from 'path'
+import { LocalMetaService } from '@pikku/core/services/local-meta'
 
 export interface InstalledAddon {
   namespace: string
@@ -18,11 +17,13 @@ async function readPackageIcon(
   try {
     const metaDir = pikkuState(packageName, 'package', 'metaDir')
     if (!metaDir) return undefined
-    const content = await readFile(
-      join(metaDir, 'console', 'pikku-addon-meta.gen.json'),
-      'utf-8'
+    const metaService = new LocalMetaService(metaDir)
+    const content = await metaService.readFile(
+      'console/pikku-addon-meta.gen.json'
     )
-    return JSON.parse(content)?.package?.icon ?? undefined
+    return content
+      ? (JSON.parse(content)?.package?.icon ?? undefined)
+      : undefined
   } catch {
     return undefined
   }

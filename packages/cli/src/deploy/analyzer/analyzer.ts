@@ -97,6 +97,20 @@ export function analyzeDeployment(
     const mergedServices = mergeServicesForIds(allFuncIds, functionsMeta)
     const unitName = `agent-${toKebab(agentName)}`
 
+    // Agents always need AI model + storage + run state for the agent runtime
+    if (!mergedServices.some((s) => s.capability === 'ai-model')) {
+      mergedServices.push({
+        capability: 'ai-model',
+        sourceServiceName: 'aiAgentRunner',
+      })
+    }
+    if (!mergedServices.some((s) => s.capability === 'ai-storage')) {
+      mergedServices.push({
+        capability: 'ai-storage',
+        sourceServiceName: 'aiStorage',
+      })
+    }
+
     units.push({
       name: unitName,
       role: 'agent',
@@ -340,15 +354,23 @@ function buildWorkflows(
             const stepUnitName = `wf-step-${toKebab(node.rpcName)}`
             const stepFuncMeta = functionsMeta[node.rpcName]
 
-            units.push(
-              makeUnit({
-                name: stepUnitName,
-                role: 'workflow-step',
-                functionIds: [node.rpcName],
-                funcMeta: stepFuncMeta,
-                tags: stepFuncMeta?.tags,
+            const stepUnit = makeUnit({
+              name: stepUnitName,
+              role: 'workflow-step',
+              functionIds: [node.rpcName],
+              funcMeta: stepFuncMeta,
+              tags: stepFuncMeta?.tags,
+            })
+
+            // Workflow steps need queue access to report completion back to orchestrator
+            if (!stepUnit.services.some((s) => s.capability === 'queue')) {
+              stepUnit.services.push({
+                capability: 'queue',
+                sourceServiceName: 'queueService',
               })
-            )
+            }
+
+            units.push(stepUnit)
             claimed.add(node.rpcName)
 
             steps.push({

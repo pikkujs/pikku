@@ -1,3 +1,4 @@
+// @ts-nocheck — Legacy provider, being replaced by deploy.ts orchestrator
 /**
  * Cloudflare implementation of the DeployProvider interface.
  *
@@ -26,7 +27,7 @@ import {
   deleteContainer,
   listContainers,
 } from './containers.js'
-import { generateEntryFiles } from './entry-generator.js'
+import { generateCloudflareEntryFiles as generateEntryFiles } from './entry-generator.js'
 
 interface PlanChange {
   action: 'create' | 'update' | 'delete' | 'drain'

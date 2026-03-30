@@ -56,6 +56,27 @@ export { setCronTriggers, getCronTriggers } from './cron.js'
 // Deploy provider
 export { CloudflareDeployProvider } from './provider.js'
 
+// Deploy orchestrator (CF API direct)
+export { deploy } from './deploy.js'
+export type { DeployOptions, DeployResult } from './deploy.js'
+
+// Binding resolver
+export { resolveBindings } from './binding-resolver.js'
+export type { ResourceState } from './binding-resolver.js'
+
+// Provider adapter
+export { CloudflareProviderAdapter } from './adapter.js'
+
+// Wrangler TOML generator
+export { generateWranglerToml } from './wrangler-toml.js'
+
+// Infrastructure manifest
+export { generateInfraManifest } from './infra-manifest.js'
+export type {
+  CloudflareInfraManifest,
+  CloudflareUnitManifest,
+} from './infra-manifest.js'
+
 // Entry point generation
 export {
   generateCloudflareEntryFiles,

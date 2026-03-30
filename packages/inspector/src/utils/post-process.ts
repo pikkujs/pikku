@@ -221,6 +221,28 @@ export function aggregateRequiredServices(
       }
     })
   }
+
+  // 6. Implicit platform services required by wiring types
+  // Workflows need workflowService + workflowRunService + schedulerService + queueService
+  if (Object.keys(state.workflows.graphMeta).length > 0) {
+    requiredServices.add('workflowService')
+    requiredServices.add('workflowRunService')
+    requiredServices.add('schedulerService')
+    requiredServices.add('queueService')
+  }
+
+  // AI agents need aiStorage + aiRunState + agentRunService + aiAgentRunner
+  if (Object.keys(state.agents.agentsMeta).length > 0) {
+    requiredServices.add('aiStorage')
+    requiredServices.add('aiRunState')
+    requiredServices.add('agentRunService')
+    requiredServices.add('aiAgentRunner')
+  }
+
+  // Channels need eventHub for pub/sub
+  if (Object.keys(state.channels.meta).length > 0) {
+    requiredServices.add('eventHub')
+  }
 }
 
 export function validateSecretOverrides(
