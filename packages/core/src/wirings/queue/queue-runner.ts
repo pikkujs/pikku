@@ -58,9 +58,10 @@ export const wireQueueWorker = <
   const meta = pikkuState(null, 'queue', 'meta')
   const processorMeta = meta[queueWorker.name]
   if (!processorMeta) {
-    throw new PikkuMissingMetaError(
-      `Missing generated metadata for queue worker '${queueWorker.name}'`
+    console.warn(
+      `[pikku] Skipping queue worker '${queueWorker.name}' — metadata not found. Consider moving this wiring to its own file.`
     )
+    return
   }
 
   // Register the function with pikku

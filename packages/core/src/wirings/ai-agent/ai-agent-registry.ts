@@ -1,7 +1,6 @@
 import type { CoreAIAgent, AgentRunState } from './ai-agent.types.js'
 import { pikkuState } from '../../pikku-state.js'
 import type { AIRunStateService } from '../../services/ai-run-state-service.js'
-import { PikkuMissingMetaError } from '../../errors/errors.js'
 
 export const addAIAgent = (
   agentName: string,
@@ -11,9 +10,10 @@ export const addAIAgent = (
   const agentsMeta = pikkuState(packageName, 'agent', 'agentsMeta')
   const agentMeta = agentsMeta[agentName]
   if (!agentMeta) {
-    throw new PikkuMissingMetaError(
-      `Missing generated metadata for AI agent '${agentName}'`
+    console.warn(
+      `[pikku] Skipping AI agent '${agentName}' — metadata not found. Consider moving this wiring to its own file.`
     )
+    return
   }
   const agents = pikkuState(packageName, 'agent', 'agents')
   if (agents.has(agentName)) {

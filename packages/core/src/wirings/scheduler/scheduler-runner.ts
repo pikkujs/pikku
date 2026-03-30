@@ -1,7 +1,6 @@
 import type { PikkuWire, CoreUserSession } from '../../types/core.types.js'
 import type { CoreScheduledTask } from './scheduler.types.js'
 import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
-import { PikkuMissingMetaError } from '../../errors/errors.js'
 import {
   getSingletonServices,
   getCreateWireServices,
@@ -32,9 +31,10 @@ export const wireScheduler = <
   const meta = pikkuState(null, 'scheduler', 'meta')
   const taskMeta = meta[scheduledTask.name]
   if (!taskMeta) {
-    throw new PikkuMissingMetaError(
-      `Missing generated metadata for scheduled task '${scheduledTask.name}'`
+    console.warn(
+      `[pikku] Skipping scheduled task '${scheduledTask.name}' — metadata not found. Consider moving this wiring to its own file.`
     )
+    return
   }
   addFunction(taskMeta.pikkuFuncId, {
     func: scheduledTask.func.func,

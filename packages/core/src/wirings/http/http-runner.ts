@@ -21,7 +21,7 @@ import type {
   PikkuWire,
   PikkuWiringTypes,
 } from '../../types/core.types.js'
-import { NotFoundError, PikkuMissingMetaError } from '../../errors/errors.js'
+import { NotFoundError } from '../../errors/errors.js'
 import {
   closeWireServices,
   createWeakUID,
@@ -180,9 +180,14 @@ export const wireHTTP = <
   const httpMeta = pikkuState(null, 'http', 'meta')
   const routeMeta = httpMeta[httpWiring.method][httpWiring.route]
   if (!routeMeta) {
-    throw new PikkuMissingMetaError(
-      `Missing generated metadata for HTTP route '${httpWiring.method.toUpperCase()} ${httpWiring.route}'`
+    // In deploy units with filtered metadata, wiring files may include
+    // routes for functions not in this unit. This happens when multiple
+    // wirings share a file — split them into separate files for better
+    // tree-shaking.
+    console.warn(
+      `[pikku] Skipping HTTP route '${httpWiring.method.toUpperCase()} ${httpWiring.route}' — metadata not found. Consider moving this wiring to its own file.`
     )
+    return
   }
   if (httpWiring.func) {
     addFunction(routeMeta.pikkuFuncId, httpWiring.func)
