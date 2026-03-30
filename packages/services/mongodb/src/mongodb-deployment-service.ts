@@ -2,7 +2,6 @@ import type {
   DeploymentService,
   DeploymentServiceConfig,
   DeploymentConfig,
-  DeploymentInfo,
 } from '@pikku/core/services'
 import { getAllFunctionNames } from '@pikku/core/function'
 import type { Db, Collection } from 'mongodb'
@@ -82,21 +81,31 @@ export class MongoDBDeploymentService implements DeploymentService {
     }
   }
 
-  async findFunction(name: string): Promise<DeploymentInfo[]> {
+  async invoke(
+    funcName: string,
+    data: unknown,
+    _session?: unknown
+  ): Promise<unknown> {
     const cutoff = new Date(Date.now() - this.heartbeatTtl)
-
-    const result = await this.deployments
-      .find({
-        functions: name,
-        lastHeartbeat: { $gt: cutoff },
-      })
-      .sort({ lastHeartbeat: -1 })
-      .toArray()
-
-    return result.map((row) => ({
-      deploymentId: row._id,
-      endpoint: row.endpoint,
-    }))
+    const result = await this.deployments.findOne(
+      { functions: funcName, lastHeartbeat: { $gt: cutoff } },
+      { sort: { lastHeartbeat: -1 } }
+    )
+    if (!result) {
+      throw new Error(`No deployment found for function '${funcName}'`)
+    }
+    const url = `${result.endpoint}/rpc/${encodeURIComponent(funcName)}`
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data }),
+    })
+    if (!response.ok) {
+      throw new Error(
+        `Remote RPC call to '${funcName}' failed: ${response.status}`
+      )
+    }
+    return response.json()
   }
 
   private async sendHeartbeat(): Promise<void> {

@@ -2,7 +2,6 @@ import type {
   DeploymentService,
   DeploymentServiceConfig,
   DeploymentConfig,
-  DeploymentInfo,
 } from '@pikku/core/services'
 import { getAllFunctionNames } from '@pikku/core/function'
 import { Redis, type RedisOptions } from 'ioredis'
@@ -100,36 +99,42 @@ export class RedisDeploymentService implements DeploymentService {
     }
   }
 
-  async findFunction(name: string): Promise<DeploymentInfo[]> {
-    const indexKey = this.functionsIndexKey(name)
+  async invoke(
+    funcName: string,
+    data: unknown,
+    _session?: unknown
+  ): Promise<unknown> {
+    const indexKey = this.functionsIndexKey(funcName)
     const now = Date.now()
 
-    const pipeline = this.redis.pipeline()
-    pipeline.zremrangebyscore(indexKey, '-inf', now)
-    pipeline.zrangebyscore(indexKey, now, '+inf')
-    const pipelineResults = await pipeline.exec()
+    await this.redis.zremrangebyscore(indexKey, '-inf', now)
+    const deploymentIds = await this.redis.zrangebyscore(indexKey, now, '+inf')
 
-    const deploymentIds = (pipelineResults?.[1]?.[1] as string[]) ?? []
-
-    if (deploymentIds.length === 0) {
-      return []
-    }
-
-    const results: DeploymentInfo[] = []
-
+    let endpoint: string | null = null
     for (const deploymentId of deploymentIds) {
-      const endpoint = await this.redis.hget(
+      endpoint = await this.redis.hget(
         this.deploymentKey(deploymentId),
         'endpoint'
       )
-      if (endpoint) {
-        results.push({ deploymentId, endpoint })
-      } else {
-        await this.redis.zrem(indexKey, deploymentId)
-      }
+      if (endpoint) break
     }
 
-    return results
+    if (!endpoint) {
+      throw new Error(`No deployment found for function '${funcName}'`)
+    }
+
+    const url = `${endpoint}/rpc/${encodeURIComponent(funcName)}`
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data }),
+    })
+    if (!response.ok) {
+      throw new Error(
+        `Remote RPC call to '${funcName}' failed: ${response.status}`
+      )
+    }
+    return response.json()
   }
 
   private async sendHeartbeat(): Promise<void> {

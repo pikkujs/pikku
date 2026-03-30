@@ -18,5 +18,16 @@ export interface DeploymentService {
   init(): Promise<void>
   start(config: DeploymentConfig): Promise<void>
   stop(): Promise<void>
-  findFunction(name: string): Promise<DeploymentInfo[]>
+  /**
+   * Dispatch a remote RPC call to a function.
+   * The deployment service owns the full transport:
+   * - Resolving the target (endpoint, service binding, etc.)
+   * - Session propagation (JWT signing, headers)
+   * - The actual network call
+   *
+   * @param funcName - The function to invoke
+   * @param data - Input data for the function
+   * @param session - User session to propagate (optional)
+   */
+  invoke(funcName: string, data: unknown, session?: unknown): Promise<unknown>
 }

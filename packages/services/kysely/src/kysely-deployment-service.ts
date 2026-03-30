@@ -2,7 +2,6 @@ import type {
   DeploymentService,
   DeploymentServiceConfig,
   DeploymentConfig,
-  DeploymentInfo,
 } from '@pikku/core/services'
 import { getAllFunctionNames } from '@pikku/core/function'
 import type { Kysely } from 'kysely'
@@ -135,7 +134,11 @@ export class KyselyDeploymentService implements DeploymentService {
     }
   }
 
-  async findFunction(name: string): Promise<DeploymentInfo[]> {
+  async invoke(
+    funcName: string,
+    data: unknown,
+    _session?: unknown
+  ): Promise<unknown> {
     const ttlMs = this.heartbeatTtl
     const cutoff = new Date(Date.now() - ttlMs)
 
@@ -147,15 +150,31 @@ export class KyselyDeploymentService implements DeploymentService {
         'd.deploymentId'
       )
       .select(['d.deploymentId', 'd.endpoint'])
-      .where('f.functionName', '=', name)
+      .where('f.functionName', '=', funcName)
       .where('d.lastHeartbeat', '>', cutoff)
       .orderBy('d.lastHeartbeat', 'desc')
+      .limit(1)
       .execute()
 
-    return result.map((row) => ({
-      deploymentId: row.deploymentId,
-      endpoint: row.endpoint,
-    }))
+    if (result.length === 0) {
+      throw new Error(`No deployment found for function '${funcName}'`)
+    }
+
+    const endpoint = result[0].endpoint
+    const url = `${endpoint}/rpc/${encodeURIComponent(funcName)}`
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data }),
+    })
+
+    if (!response.ok) {
+      throw new Error(
+        `Remote RPC call to '${funcName}' failed: ${response.status}`
+      )
+    }
+
+    return response.json()
   }
 
   private async createIndexSafe(builder: {

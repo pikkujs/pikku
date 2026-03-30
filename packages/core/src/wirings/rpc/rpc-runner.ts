@@ -7,7 +7,6 @@ import { ForbiddenError } from '../../errors/errors.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
 import type { PikkuRPC, ResolvedFunction } from './rpc-types.js'
 import { parseVersionedId } from '../../version.js'
-import { encryptJSON } from '../../crypto-utils.js'
 
 export class RPCNotFoundError extends PikkuError {
   public readonly rpcName: string
@@ -123,18 +122,33 @@ export class ContextAwareRPCService {
       return this.invokeAddonFunction<In, Out>(funcName, data, updatedWire)
     }
 
-    // Main package function
-    return runPikkuFunc<In, Out>(
-      'rpc',
-      funcName,
-      getPikkuFunctionName(funcName),
-      {
-        auth: this.options.requiresAuth,
-        singletonServices: this.services,
-        data: () => data,
-        wire: updatedWire,
+    // Try local first, fall back to deployment service (e.g. CF service binding)
+    try {
+      return runPikkuFunc<In, Out>(
+        'rpc',
+        funcName,
+        getPikkuFunctionName(funcName),
+        {
+          auth: this.options.requiresAuth,
+          singletonServices: this.services,
+          data: () => data,
+          wire: updatedWire,
+        }
+      )
+    } catch (e) {
+      if (e instanceof RPCNotFoundError && this.services.deploymentService) {
+        const session =
+          this.wire.getSession && typeof this.wire.getSession === 'function'
+            ? await this.wire.getSession()
+            : (this.wire as any).session
+        return this.services.deploymentService.invoke(
+          funcName,
+          data,
+          session
+        ) as Promise<Out>
       }
-    )
+      throw e
+    }
   }
 
   /**
@@ -332,94 +346,23 @@ export class ContextAwareRPCService {
     funcName: string,
     data: In
   ): Promise<Out> {
-    let endpoint: string | undefined
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-
-    const colonIndex = funcName.indexOf(':')
-    if (colonIndex !== -1) {
-      const namespace = funcName.substring(0, colonIndex)
-      const addons = pikkuState(null, 'addons', 'packages')
-      const pkgConfig = addons.get(namespace)
-      endpoint = pkgConfig?.rpcEndpoint
-    }
-
-    if (!endpoint && this.services.deploymentService) {
-      const deployments =
-        await this.services.deploymentService.findFunction(funcName)
-      if (deployments.length > 0) {
-        endpoint = deployments[0].endpoint
-      }
-    }
-
-    if (!endpoint) {
+    if (!this.services.deploymentService) {
       throw new Error(
-        `No endpoint configured for remote RPC: ${funcName}. ` +
-          `Configure rpcEndpoint in addons config or set up a DeploymentService.`
+        `No DeploymentService configured for remote RPC: ${funcName}. ` +
+          `Set up a DeploymentService to enable remote function calls.`
       )
     }
 
-    let secret: string | undefined
-    if (this.services.secrets) {
-      try {
-        secret = await this.services.secrets.getSecret('PIKKU_REMOTE_SECRET')
-      } catch {}
-    }
-    if (secret) {
-      if (!this.services.jwt) {
-        throw new Error(
-          'PIKKU_REMOTE_SECRET is set but JWT service is not available'
-        )
-      }
-      const session =
-        this.wire.getSession && typeof this.wire.getSession === 'function'
-          ? await this.wire.getSession()
-          : (this.wire as any).session
-      const sessionEnc = session
-        ? await encryptJSON(secret, { session })
-        : undefined
-      const token = await this.services.jwt.encode(
-        { value: 5, unit: 'minute' },
-        {
-          aud: 'pikku-remote',
-          fn: funcName,
-          iat: Date.now(),
-          session: sessionEnc,
-        }
-      )
-      headers.Authorization = `Bearer ${token}`
-    }
+    const session =
+      this.wire.getSession && typeof this.wire.getSession === 'function'
+        ? await this.wire.getSession()
+        : (this.wire as any).session
 
-    const url = `${endpoint}/rpc/${encodeURIComponent(funcName)}`
-    const timeoutMs = 30_000
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ data }),
-      signal: AbortSignal.timeout(timeoutMs),
-    })
-
-    if (!response.ok) {
-      let errorBody: string
-      try {
-        errorBody = JSON.stringify(await response.json())
-      } catch {
-        errorBody = await response.text()
-      }
-      throw new Error(
-        `Remote RPC call failed: ${response.status} ${response.statusText}. ${errorBody}`
-      )
-    }
-
-    try {
-      return (await response.json()) as Out
-    } catch {
-      const text = await response.text()
-      throw new Error(
-        `Remote RPC call returned non-JSON response: ${response.status} ${response.statusText}. ${text}`
-      )
-    }
+    return this.services.deploymentService.invoke(
+      funcName,
+      data,
+      session
+    ) as Promise<Out>
   }
 }
 
