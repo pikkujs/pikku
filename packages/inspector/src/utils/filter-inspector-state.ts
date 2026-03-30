@@ -712,15 +712,20 @@ export function filterInspectorState(
       }
     }
 
-    // Prune workflow graphs whose orchestrator function was filtered out
+    // Prune workflow graphs whose function was filtered out
     for (const name of Object.keys(filteredState.workflows.graphMeta)) {
+      const graphMeta = filteredState.workflows.graphMeta[name]
       const workflowMeta = filteredState.workflows.meta[name]
+      // Check both graphMeta.pikkuFuncId and meta.pikkuFuncId
+      const pikkuFuncId = graphMeta?.pikkuFuncId ?? workflowMeta?.pikkuFuncId
       if (
-        workflowMeta?.pikkuFuncId &&
-        !filteredState.serviceAggregation.usedFunctions.has(
-          workflowMeta.pikkuFuncId
-        )
+        pikkuFuncId &&
+        !filteredState.serviceAggregation.usedFunctions.has(pikkuFuncId)
       ) {
+        delete filteredState.workflows.graphMeta[name]
+        delete filteredState.workflows.meta[name]
+      } else if (!pikkuFuncId) {
+        // No function ID found — prune it
         delete filteredState.workflows.graphMeta[name]
         delete filteredState.workflows.meta[name]
       }
