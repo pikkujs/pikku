@@ -72,6 +72,9 @@ export function createCloudflareWorkerHandler(factories: ServiceFactories) {
  */
 export function createCloudflareCronHandler(factories: ServiceFactories) {
   return {
+    async fetch() {
+      return new Response('Cron worker active', { status: 200 })
+    },
     async scheduled(controller: ScheduledController, env: CloudflareEnv) {
       await setupServices(env, factories)
       await runScheduled(controller)
@@ -85,6 +88,9 @@ export function createCloudflareCronHandler(factories: ServiceFactories) {
  */
 export function createCloudflareQueueHandler(factories: ServiceFactories) {
   return {
+    async fetch() {
+      return new Response('Queue consumer active', { status: 200 })
+    },
     async queue(
       batch: { messages: Array<{ id: string; body: unknown }> },
       env: CloudflareEnv
