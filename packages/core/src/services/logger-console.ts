@@ -23,27 +23,39 @@ export class ConsoleLogger implements Logger {
     return scoped
   }
 
+  private log_(
+    fn: (...args: unknown[]) => void,
+    label: string,
+    ...args: unknown[]
+  ): void {
+    if (this.prefix) {
+      fn(this.prefix, label, ...args)
+    } else {
+      fn(label, ...args)
+    }
+  }
+
   trace(message: string, ...meta: any[]): void {
     if (this.level <= LogLevel.trace) {
-      console.trace(this.prefix, 'TRACE:', message, ...meta)
+      this.log_(console.trace, 'TRACE:', message, ...meta)
     }
   }
 
   debug(message: string, ...meta: any[]): void {
     if (this.level <= LogLevel.debug) {
-      console.debug(this.prefix, 'DEBUG:', message, ...meta)
+      this.log_(console.debug, 'DEBUG:', message, ...meta)
     }
   }
 
   info(messageOrObj: string | Record<string, any>, ...meta: any[]): void {
     if (this.level <= LogLevel.info) {
-      console.info(this.prefix, 'INFO:', messageOrObj, ...meta)
+      this.log_(console.info, 'INFO:', messageOrObj, ...meta)
     }
   }
 
   warn(messageOrObj: string | Record<string, any>, ...meta: any[]): void {
     if (this.level <= LogLevel.warn) {
-      console.warn(this.prefix, 'WARN:', messageOrObj, ...meta)
+      this.log_(console.warn, 'WARN:', messageOrObj, ...meta)
     }
   }
 
@@ -52,14 +64,14 @@ export class ConsoleLogger implements Logger {
     ...meta: any[]
   ): void {
     if (this.level <= LogLevel.error) {
-      console.error(
-        this.prefix,
+      this.log_(
+        console.error,
         'ERROR:',
         messageOrObj instanceof Error ? messageOrObj.message : messageOrObj,
         ...meta
       )
       if (messageOrObj instanceof Error) {
-        console.error(this.prefix, 'STACK:', messageOrObj.stack)
+        this.log_(console.error, 'STACK:', messageOrObj.stack)
       }
     }
   }
@@ -67,7 +79,7 @@ export class ConsoleLogger implements Logger {
   log(level: string, message: string, ...meta: any[]): void {
     const logLevel = LogLevel[level as keyof typeof LogLevel]
     if (this.level <= logLevel) {
-      console.log(this.prefix, `${level.toUpperCase()}:`, message, ...meta)
+      this.log_(console.log, `${level.toUpperCase()}:`, message, ...meta)
     }
   }
 }

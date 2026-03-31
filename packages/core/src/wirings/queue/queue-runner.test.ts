@@ -72,7 +72,7 @@ describe('wireQueueWorker', () => {
     assert.equal(registrations.get('test-queue'), mockWorker)
   })
 
-  test('should throw error when processor metadata not found', () => {
+  test('should skip when queue worker metadata not found', () => {
     const mockWorker: CoreQueueWorker = {
       name: 'missing-meta-queue',
       func: {
@@ -81,16 +81,10 @@ describe('wireQueueWorker', () => {
       },
     }
 
-    assert.throws(
-      () => wireQueueWorker(mockWorker),
-      (error: any) => {
-        assert(
-          error.message.includes('Missing generated metadata for queue worker')
-        )
-        assert(error.message.includes('missing-meta-queue'))
-        return true
-      }
-    )
+    wireQueueWorker(mockWorker)
+
+    const registrations = pikkuState(null, 'queue', 'registrations')
+    assert.equal(registrations.has('missing-meta-queue'), false)
   })
 
   test('should wire worker with middleware and tags', () => {
