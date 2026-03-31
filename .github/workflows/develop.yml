@@ -39,13 +39,6 @@ jobs:
         run: yarn build:addons
       - name: Regenerate schemas after bootstrap
         run: yarn pikku
-      - name: Run tests
-        run: yarn test:coverage
-      - name: Generate and type-check console
-        run: cd packages/console && yarn generate && yarn tsc --noEmit
-      - name: Build console
-        run: yarn build:console
-
       - name: Build function-addon template
         run: cd templates/function-addon && yarn pikku && yarn build
       - name: Generate pikku files for verifiers
@@ -54,6 +47,12 @@ jobs:
         run: yarn build:verifiers
       - name: Build templates
         run: yarn build:templates
+      - name: Run tests
+        run: yarn test:coverage
+      - name: Generate and type-check console
+        run: cd packages/console && yarn generate && yarn tsc --noEmit
+      - name: Build console
+        run: yarn build:console
 
       - name: Save build output (for later jobs)
         uses: actions/upload-artifact@v4
