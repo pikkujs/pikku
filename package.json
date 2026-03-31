@@ -79,8 +79,7 @@
     "typescript": "~5.8.0"
   },
   "resolutions": {
-    "esbuild": "0.27.2",
-    "cli-table3/string-width": "4.2.3"
+    "esbuild": "0.27.2"
   },
   "engines": {
     "node": ">=20"
