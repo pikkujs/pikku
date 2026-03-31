@@ -27,6 +27,12 @@ export const pikkuAIAgent = pikkuSessionlessFunc<void, boolean | undefined>({
     >
 
     if (agentFiles.size === 0 || Object.keys(agents.agentsMeta).length === 0) {
+      // Still need to generate an empty agent map for the types import
+      await writeFileInDir(
+        logger,
+        agentMapDeclarationFile,
+        `export type AgentMap = {}\n`
+      )
       return undefined
     }
 
