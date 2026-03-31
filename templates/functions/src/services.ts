@@ -9,6 +9,7 @@ import {
   pikkuServices,
   pikkuWireServices,
 } from '../.pikku/pikku-types.gen.js'
+import { PikkuMetaService } from '../.pikku/pikku-meta-service.gen.js'
 import { TodoStore } from './services/store.service.js'
 
 export const createConfig = pikkuConfig(async () => {
@@ -45,6 +46,7 @@ export const createSingletonServices = pikkuServices(
       queueService: existingServices?.queueService,
       schedulerService: existingServices?.schedulerService,
       deploymentService: existingServices?.deploymentService,
+      metaService: existingServices?.metaService ?? new PikkuMetaService(),
     }
   }
 )

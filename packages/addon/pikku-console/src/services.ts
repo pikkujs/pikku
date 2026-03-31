@@ -1,4 +1,5 @@
 import { pikkuAddonServices } from '#pikku'
+import type { MetaService } from '@pikku/core/services'
 import { LocalMetaService } from '@pikku/core/services/local-meta'
 import { WiringService } from './services/wiring.service.js'
 import { AddonService } from './services/addon.service.js'
@@ -22,7 +23,12 @@ export const createSingletonServices = pikkuAddonServices(
       credentialService,
     }
   ) => {
-    const metaService = existingMetaService ?? new LocalMetaService()
+    if (!existingMetaService) {
+      throw new Error(
+        'metaService is required for the console addon. Set it in your createSingletonServices using PikkuMetaService from #pikku/pikku-meta-service.gen.js'
+      )
+    }
+    const metaService = existingMetaService
     const registryUrl =
       (await variables.get('REGISTRY_URL')) ?? 'https://pikku-registry.fly.dev'
 
