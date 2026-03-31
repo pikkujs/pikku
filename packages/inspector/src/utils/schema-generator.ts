@@ -60,6 +60,10 @@ function primitiveTypeToSchema(typeStr: string): JSONValue | null {
     return { type: 'null' }
   }
 
+  if (normalized === 'any' || normalized === 'unknown') {
+    return {}
+  }
+
   return null
 }
 
@@ -145,7 +149,8 @@ function generateTSSchemas(
   httpWiringsMeta: HTTPWiringsMeta,
   additionalTypes?: string[],
   additionalProperties: boolean = false,
-  schemaLookup?: Map<string, SchemaRef>
+  schemaLookup?: Map<string, SchemaRef>,
+  generatedZodSchemas?: Record<string, JSONValue>
 ): Record<string, JSONValue> {
   const schemasSet = new Set(typesMap.customTypes.keys())
   for (const { inputs, outputs } of Object.values(functionMeta)) {
@@ -182,9 +187,11 @@ function generateTSSchemas(
     }
   }
 
-  // Skip ts-json-schema-generator if all schemas are already covered by Zod/primitives
+  // Skip ts-json-schema-generator if all schemas are already covered by Zod/primitives.
+  // Use generatedZodSchemas (actually converted) rather than schemaLookup (all attempted)
+  // so that failed Zod conversions fall through to TS schema generation.
   const uncoveredSchemas = [...schemasSet].filter(
-    (s) => !PRIMITIVE_TYPES.has(s) && !schemaLookup?.has(s)
+    (s) => !PRIMITIVE_TYPES.has(s) && !generatedZodSchemas?.[s]
   )
   if (uncoveredSchemas.length === 0) {
     return {}
@@ -221,7 +228,7 @@ function generateTSSchemas(
     if (PRIMITIVE_TYPES.has(schema)) {
       return
     }
-    if (schemaLookup?.has(schema)) {
+    if (generatedZodSchemas?.[schema]) {
       return
     }
     try {
@@ -491,7 +498,8 @@ export async function generateAllSchemas(
     state.http.meta,
     config.schemasFromTypes,
     config.schema?.additionalProperties,
-    state.schemaLookup
+    state.schemaLookup,
+    zodSchemas
   )
 
   cachedCustomTypesContent = customTypesContent
