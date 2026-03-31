@@ -181,10 +181,11 @@ export async function buildInstructions(
   packageName: string | null
 ): Promise<string> {
   const meta = pikkuState(packageName, 'agent', 'agentsMeta')[agentName]
-  const rawInstructions = meta?.instructions ?? ''
-  let instructions = Array.isArray(rawInstructions)
-    ? rawInstructions.join('\n')
-    : rawInstructions
+  const parts: string[] = []
+  if (meta?.role) parts.push(meta.role)
+  if (meta?.personality) parts.push(meta.personality)
+  if (meta?.goal) parts.push(meta.goal)
+  let instructions = parts.join('\n\n')
 
   if (meta?.agents?.length) {
     instructions +=

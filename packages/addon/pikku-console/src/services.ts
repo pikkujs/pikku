@@ -2,6 +2,9 @@ import { pikkuAddonServices } from '#pikku'
 import { WiringService } from './services/wiring.service.js'
 import { AddonService } from './services/addon.service.js'
 import { OAuthService } from './services/oauth.service.js'
+import { CodeEditService } from './services/code-edit.service.js'
+import { pikkuState } from '@pikku/core/internal'
+import { dirname } from 'node:path'
 
 export const createSingletonServices = pikkuAddonServices(
   async (
@@ -33,6 +36,11 @@ export const createSingletonServices = pikkuAddonServices(
     await addonService.init()
     const oauthService = new OAuthService()
 
+    const metaDir = pikkuState(null, 'package', 'metaDir') ?? ''
+    const codeEditService = metaDir
+      ? new CodeEditService(dirname(metaDir))
+      : null
+
     return {
       metaService,
       wiringService,
@@ -46,6 +54,7 @@ export const createSingletonServices = pikkuAddonServices(
       aiAgentRunner,
       schedulerService,
       credentialService,
+      codeEditService,
     }
   }
 )

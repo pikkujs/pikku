@@ -258,10 +258,11 @@ export const addAIAgent: AddWiring = (
 
     const modelValue = getPropertyValue(obj, 'model') as string | null
 
-    const instructionsValue = getPropertyValue(obj, 'instructions') as
+    const roleValue = getPropertyValue(obj, 'role') as string | null
+    const personalityValue = getPropertyValue(obj, 'personality') as
       | string
-      | string[]
       | null
+    const goalValue = getPropertyValue(obj, 'goal') as string | null
 
     const maxStepsValue = getPropertyValue(obj, 'maxSteps') as number | null
     const temperatureValue = getPropertyValue(obj, 'temperature') as
@@ -447,10 +448,14 @@ export const addAIAgent: AddWiring = (
     state.agents.agentsMeta[agentKey] = {
       name: nameValue,
       description,
-      instructions: instructionsValue || '',
+      role: roleValue || undefined,
+      personality: personalityValue || undefined,
+      goal: goalValue || '',
       model: modelValue || '',
       summary,
       errors,
+      sourceFile: node.getSourceFile().fileName,
+      exportedName: exportedName || undefined,
       ...(maxStepsValue !== null && { maxSteps: maxStepsValue }),
       ...(temperatureValue !== null && { temperature: temperatureValue }),
       ...(toolChoiceValue !== null && {
