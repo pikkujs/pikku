@@ -79,7 +79,6 @@ export async function runScheduledTask({
   const scopedLogger =
     singletonServices.logger.scope?.(resolvedTraceId) ??
     singletonServices.logger
-  const scopedServices = { ...singletonServices, logger: scopedLogger }
   const task = pikkuState(null, 'scheduler', 'tasks').get(name)
   const meta = pikkuState(null, 'scheduler', 'meta')[name]
 
@@ -116,7 +115,7 @@ export async function runScheduledTask({
     )
 
     await runPikkuFunc('scheduler', meta.name, meta.pikkuFuncId, {
-      singletonServices: scopedServices,
+      singletonServices,
       createWireServices,
       auth: false,
       data: () => undefined,

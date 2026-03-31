@@ -515,10 +515,10 @@ export const fetchData = async <In, Out>(
   }
   requestId = requestId || generateRequestId?.() || createWeakUID()
 
-  // Create scoped services with traceId-aware logger
+  // Scoped logger for HTTP runner internal logging (error handling, route matching)
+  // Functions/middleware receive singletonServices.logger directly for compatibility
   const scopedLogger =
     singletonServices.logger.scope?.(requestId) ?? singletonServices.logger
-  const scopedServices = { ...singletonServices, logger: scopedLogger }
   const http = createHTTPWire(pikkuRequest, response)
   const apiType = http!.request!.method()
   const apiRoute = http!.request!.path()
@@ -552,7 +552,7 @@ export const fetchData = async <In, Out>(
     // Execute the matched route along with its middleware and session management
     ;({ result, wireServices } = await executeRoute(
       {
-        singletonServices: scopedServices,
+        singletonServices,
         createWireServices,
         skipUserSession,
         requestId,

@@ -118,7 +118,6 @@ export async function runQueueJob({
   const logger =
     singletonServices.logger.scope?.(resolvedTraceId) ??
     singletonServices.logger
-  const scopedServices = { ...singletonServices, logger }
 
   const meta = pikkuState(null, 'queue', 'meta')
   const processorMeta = meta[job.queueName]
@@ -167,7 +166,7 @@ export async function runQueueJob({
       job.queueName,
       processorMeta.pikkuFuncId,
       {
-        singletonServices: scopedServices,
+        singletonServices,
         createWireServices,
         auth: false,
         data: () => job.data,
