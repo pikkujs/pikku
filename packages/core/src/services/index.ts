@@ -67,3 +67,21 @@ export type {
 } from './typed-credential-service.js'
 export type { VariableStatus, VariableMeta } from './typed-variables-service.js'
 export type { MetaService } from './meta-service.js'
+export type {
+  MCPMeta,
+  RPCMetaRecord,
+  ServiceMeta,
+  ServicesMetaRecord,
+  MiddlewareDefinitionMeta,
+  MiddlewareInstanceMeta,
+  GroupMeta,
+  MiddlewareGroupsMeta,
+  PermissionDefinitionMeta,
+  PermissionsGroupsMeta,
+  FunctionsMeta,
+  FunctionMeta,
+  MiddlewareMeta,
+  PermissionMeta,
+  AgentsMeta,
+  AgentMeta,
+} from './meta-service.js'

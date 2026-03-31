@@ -1,6 +1,5 @@
 import { watch, type FSWatcher } from 'fs'
-import type { WiringService } from './wiring.service.js'
-import type { SchemaService } from './schema.service.js'
+import type { MetaService } from '@pikku/core/services'
 
 export class FileWatcherService {
   private watcher: FSWatcher | null = null
@@ -8,8 +7,7 @@ export class FileWatcherService {
 
   constructor(
     private pikkuMetaPath: string,
-    private wiringService: WiringService,
-    private schemaService: SchemaService
+    private metaService: MetaService
   ) {}
 
   start(): void {
@@ -21,8 +19,7 @@ export class FileWatcherService {
         if (this.debounceTimer) clearTimeout(this.debounceTimer)
         this.debounceTimer = setTimeout(() => {
           console.log(`[watch] Metadata changed, clearing caches...`)
-          this.wiringService.clearCache()
-          this.schemaService.clearCache()
+          this.metaService.clearCache()
         }, 300)
       }
     )

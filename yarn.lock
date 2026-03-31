@@ -4683,6 +4683,7 @@ __metadata:
     "@standard-schema/spec": "npm:^1.1.0"
     "@types/node": "npm:^24.11.0"
     cookie: "npm:^1.1.1"
+    json-schema: "npm:^0.4.0"
     path-to-regexp: "npm:^8.3.0"
     picoquery: "npm:^2.5.0"
     tsx: "npm:^4.21.0"

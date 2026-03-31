@@ -13,12 +13,12 @@ export const credentialListUsers = pikkuSessionlessFunc<
   description:
     'Lists all users and their credential status for each declared credential.',
   expose: true,
-  func: async ({ credentialService, wiringService }) => {
+  func: async ({ credentialService, metaService }) => {
     if (!credentialService) {
       return { users: [] }
     }
 
-    const credentialsMeta = await wiringService.readCredentialsMeta()
+    const credentialsMeta = await metaService.getCredentialsMeta()
     const credentialNames = Object.keys(credentialsMeta)
     const allUserIds = await credentialService.getAllUsers()
 

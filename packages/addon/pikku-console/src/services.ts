@@ -3,7 +3,6 @@ import type { MetaService } from '@pikku/core/services'
 import { LocalMetaService } from '@pikku/core/services/local-meta'
 import { WiringService } from './services/wiring.service.js'
 import { AddonService } from './services/addon.service.js'
-import { SchemaService } from './services/schema.service.js'
 import { OAuthService } from './services/oauth.service.js'
 import { FileWatcherService } from './services/file-watcher.service.js'
 
@@ -33,7 +32,6 @@ export const createSingletonServices = pikkuAddonServices(
       (await variables.get('REGISTRY_URL')) ?? 'https://pikku-registry.fly.dev'
 
     const wiringService = new WiringService(metaService)
-    const schemaService = new SchemaService(metaService)
     const addonService = new AddonService(registryUrl)
     await addonService.init()
     const oauthService = new OAuthService()
@@ -43,8 +41,7 @@ export const createSingletonServices = pikkuAddonServices(
     if (metaService instanceof LocalMetaService) {
       fileWatcherService = new FileWatcherService(
         metaService.basePath,
-        wiringService,
-        schemaService
+        metaService
       )
       fileWatcherService.start()
     }
@@ -52,7 +49,6 @@ export const createSingletonServices = pikkuAddonServices(
     return {
       wiringService,
       addonService,
-      schemaService,
       oauthService,
       fileWatcherService,
       workflowRunService,
