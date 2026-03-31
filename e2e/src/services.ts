@@ -5,6 +5,7 @@ import {
   LocalCredentialService,
 } from '@pikku/core/services'
 import { pikkuServices } from '#pikku/pikku-types.gen.js'
+import { PikkuMetaService } from '#pikku/pikku-meta-service.gen.js'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import { VercelAIAgentRunner } from '@pikku/ai-vercel'
 import { JoseJWTService } from '@pikku/jose'
@@ -141,6 +142,7 @@ export const createSingletonServices = pikkuServices(
       jwt,
       schema,
       logger,
+      metaService: new PikkuMetaService(),
       aiStorage,
       aiRunState: aiStorage,
       agentRunService,
