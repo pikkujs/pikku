@@ -33,7 +33,6 @@
     "@pikku/kysely": "workspace:*",
     "@vitest/runner": "^2.1.9",
     "@vitest/snapshot": "^2.1.9",
-    "kysely": "^0.28.0",
     "typescript": "^5.9.3",
     "vitest": "^2.1.9"
   },
