@@ -1,21 +1,21 @@
 import { basename, join, dirname, relative } from 'node:path'
-import { mkdir, writeFile, copyFile, access } from 'node:fs/promises'
+import { mkdir, writeFile, readFile, copyFile, access } from 'node:fs/promises'
 
 import { pikkuVoidFunc } from '#pikku'
 import { analyzeDeployment } from '../../deploy/analyzer/index.js'
 import { generatePerUnitCodegen } from '../../deploy/codegen/index.js'
 import { bundleUnits } from '../../deploy/bundler/index.js'
-import { generatePlan } from '../../deploy/plan/index.js'
-import { applyPlan } from '../../deploy/plan/executor.js'
-import { formatPlan } from '../../deploy/plan/formatter.js'
-import { CloudflareProviderAdapter } from '@pikku/deploy-cloudflare'
+import {
+  CloudflareProviderAdapter,
+  deploy as cfDeploy,
+} from '@pikku/deploy-cloudflare'
 import type {
   ProviderAdapter,
   EntryGenerationContext,
 } from '../../deploy/provider-adapter.js'
-import type { DeployProvider } from '../../deploy/plan/provider.js'
 import type { PlanChange } from '../../deploy/plan/types.js'
 import type { InspectorState } from '@pikku/inspector'
+import type { CloudflareInfraManifest } from '@pikku/deploy-cloudflare'
 
 async function findLockfile(startDir: string): Promise<string | null> {
   let dir = startDir
@@ -104,26 +104,6 @@ const ANSI = {
   dim: '\x1b[2m',
   bold: '\x1b[1m',
   reset: '\x1b[0m',
-}
-
-function createEmptyProvider(): DeployProvider {
-  return {
-    async getCurrentState() {
-      return {
-        units: [],
-        queues: [],
-        scheduledTasks: [],
-        secrets: [],
-        variables: {},
-      }
-    },
-    async applyChange(_change, _manifest) {
-      await new Promise((r) => setTimeout(r, 100))
-    },
-    async hasActiveWork() {
-      return { active: false, pendingCount: 0 }
-    },
-  }
 }
 
 function logProgress(
@@ -258,35 +238,51 @@ export const deployApply = pikkuVoidFunc({
     }
     logger.info(`Generated ${manifest.units.length} provider config files`)
 
-    // Step 4: Plan
-    logger.info('Planning deployment...')
-    const deployProvider = createEmptyProvider()
-    const currentState = await deployProvider.getCurrentState(
-      manifest.projectId
-    )
-    const plan = await generatePlan(manifest, currentState, deployProvider)
+    // Step 4: Deploy to Cloudflare via API
+    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID
+    const apiToken = process.env.CLOUDFLARE_API_TOKEN
 
-    console.log('')
-    console.log(formatPlan(plan))
-    console.log('')
-
-    if (plan.changes.length === 0) {
-      logger.info('Nothing to deploy.')
+    if (!accountId || !apiToken) {
+      logger.error(
+        'Missing CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN environment variables.'
+      )
       return
     }
 
-    // Step 5: Apply
-    logger.info('Applying...')
-    const result = await applyPlan(plan, manifest, deployProvider, {
-      onProgress: logProgress,
+    const infraJson = JSON.parse(
+      await readFile(join(providerDir, 'infra.json'), 'utf-8')
+    ) as CloudflareInfraManifest
+
+    logger.info('Deploying to Cloudflare...')
+    const result = await cfDeploy({
+      accountId,
+      apiToken,
+      buildDir: providerDir,
+      manifest: infraJson,
+      onProgress: (step, detail) => {
+        logProgress(
+          {
+            action: 'create',
+            resourceType: step as any,
+            name: detail,
+            reason: '',
+          },
+          'done'
+        )
+      },
     })
 
     console.log('')
     if (result.success) {
       logger.info(`${ANSI.green}${ANSI.bold}Deployment complete.${ANSI.reset}`)
+      logger.info(
+        `  ${result.workersDeployed.length} workers deployed, ${result.resourcesCreated.length} resources created`
+      )
     } else {
-      const errors = result.applied.filter((r) => r.status === 'error')
-      logger.error(`Deployment finished with ${errors.length} error(s).`)
+      logger.error(`Deployment finished with ${result.errors.length} error(s):`)
+      for (const e of result.errors) {
+        logger.error(`  ${e.step}: ${e.error}`)
+      }
     }
   },
 })

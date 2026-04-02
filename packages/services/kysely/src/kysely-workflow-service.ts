@@ -150,8 +150,8 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         status: 'running',
         input: JSON.stringify(input),
         inline,
-        graphHash: graphHash,
-        wire: JSON.stringify(wire),
+        graphHash: graphHash ?? null,
+        wire: wire ? JSON.stringify(wire) : null,
       })
       .execute()
 
@@ -625,9 +625,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         source,
         status: status ?? 'active',
       })
-      .onConflict((oc) =>
-        oc.columns(['workflowName', 'graphHash']).doNothing()
-      )
+      .onConflict((oc) => oc.columns(['workflowName', 'graphHash']).doNothing())
       .execute()
   }
 
