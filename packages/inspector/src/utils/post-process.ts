@@ -12,6 +12,7 @@ import type {
   PermissionMetadata,
 } from '@pikku/core'
 import { extractTypeKeys } from './type-utils.js'
+import { collectInvokedRPCs } from '../add/add-workflow.js'
 import { ErrorCode } from '../error-codes.js'
 
 /**
@@ -427,34 +428,34 @@ export function injectExposedRoutes(
       }
     }
 
-    // Step worker queues for non-inline steps
+    // Step worker queues for non-inline steps — collect ALL RPC steps recursively
     if (wfMeta.inline !== true) {
-      for (const step of wfMeta.steps) {
-        if (step.type === 'rpc' && step.rpcName) {
-          const stepQueueName = `wf-step-${step.rpcName}`
-          const stepFuncId = `pikkuWorkflowWorker:${step.rpcName}`
-          if (!state.queueWorkers.meta[stepQueueName]) {
-            state.queueWorkers.meta[stepQueueName] = {
+      const rpcs = new Set<string>()
+      collectInvokedRPCs(wfMeta.steps, rpcs)
+      for (const rpcName of rpcs) {
+        const stepQueueName = `wf-step-${rpcName}`
+        const stepFuncId = `pikkuWorkflowWorker:${rpcName}`
+        if (!state.queueWorkers.meta[stepQueueName]) {
+          state.queueWorkers.meta[stepQueueName] = {
+            pikkuFuncId: stepFuncId,
+            name: stepQueueName,
+          }
+          if (!state.functions.meta[stepFuncId]) {
+            state.functions.meta[stepFuncId] = {
               pikkuFuncId: stepFuncId,
-              name: stepQueueName,
+              functionType: 'helper',
+              sessionless: true,
+              name: stepFuncId,
+              inputSchemaName: null,
+              outputSchemaName: null,
+              inputs: ['WorkflowStepInput'],
+              outputs: [],
             }
-            if (!state.functions.meta[stepFuncId]) {
-              state.functions.meta[stepFuncId] = {
-                pikkuFuncId: stepFuncId,
-                functionType: 'helper',
-                sessionless: true,
-                name: stepFuncId,
-                inputSchemaName: null,
-                outputSchemaName: null,
-                inputs: ['WorkflowStepInput'],
-                outputs: [],
-              }
-            }
-            if (!state.resolvedIOTypes[stepFuncId]) {
-              state.resolvedIOTypes[stepFuncId] = {
-                inputType: 'WorkflowStepInput',
-                outputType: 'null',
-              }
+          }
+          if (!state.resolvedIOTypes[stepFuncId]) {
+            state.resolvedIOTypes[stepFuncId] = {
+              inputType: 'WorkflowStepInput',
+              outputType: 'null',
             }
           }
         }
