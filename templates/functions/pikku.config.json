@@ -15,9 +15,6 @@
     "mcpJsonFile": ".pikku/mcp/mcp.gen.json"
   },
   "forceRequiredServices": ["todoStore"],
-  "scaffold": {
-    "agent": "no-auth"
-  },
   "cli": {
     "entrypoints": {
       "todo-cli": [

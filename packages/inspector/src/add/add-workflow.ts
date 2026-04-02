@@ -210,6 +210,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   let description: string | undefined
   let errors: string[] | undefined
   let inline: boolean | undefined
+  let expose: boolean | undefined
 
   if (ts.isObjectLiteralExpression(firstArg)) {
     const metadata = getCommonWireMetaData(
@@ -228,6 +229,8 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     if (inlineProp === true) {
       inline = true
     }
+
+    expose = getPropertyValue(firstArg, 'expose') as boolean | undefined
   }
 
   // Validate that we got a valid function
@@ -334,6 +337,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     errors,
     tags,
     inline,
+    expose,
   }
 
   // Workflow functions require platform services that aren't visible
