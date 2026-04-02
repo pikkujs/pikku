@@ -228,6 +228,7 @@ export type WorkflowsMeta = Record<
     context?: WorkflowContext
     dsl?: boolean
     inline?: boolean
+    expose?: boolean
   }
 >
 

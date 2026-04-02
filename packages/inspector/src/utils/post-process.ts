@@ -261,6 +261,143 @@ export function aggregateRequiredServices(
   }
 }
 
+/**
+ * Inject auto-generated HTTP routes for exposed RPCs, workflows, and agents.
+ * Adds routes to state.http.meta and synthetic function metadata so the
+ * full codegen pipeline (types, schemas, HTTP map) works without generated files.
+ */
+export function injectExposedRoutes(
+  state: InspectorState,
+  options?: { globalHTTPPrefix?: string }
+): void {
+  const prefix = options?.globalHTTPPrefix ?? ''
+
+  const addRoute = (
+    method: string,
+    route: string,
+    pikkuFuncId: string,
+    inputType: string,
+    outputType: string,
+    extra?: { sse?: boolean; params?: string[] }
+  ) => {
+    if (!state.http.meta[method]) {
+      state.http.meta[method] = {}
+    }
+    state.http.meta[method][route] = {
+      pikkuFuncId,
+      route,
+      method,
+      tags: ['pikku:public'],
+      ...(extra?.sse && { sse: true }),
+      ...(extra?.params && { params: extra.params }),
+    }
+
+    // Add synthetic function metadata if it doesn't exist
+    if (!state.functions.meta[pikkuFuncId]) {
+      state.functions.meta[pikkuFuncId] = {
+        pikkuFuncId,
+        functionType: 'helper',
+        sessionless: true,
+        name: route,
+        inputSchemaName: null,
+        outputSchemaName: null,
+        inputs: inputType !== 'null' ? [inputType] : [],
+        outputs: outputType !== 'null' ? [outputType] : [],
+      }
+    }
+
+    // Add resolvedIOTypes so the HTTP map generator doesn't fail
+    if (!state.resolvedIOTypes[pikkuFuncId]) {
+      state.resolvedIOTypes[pikkuFuncId] = { inputType, outputType }
+    }
+  }
+
+  // Exposed RPC functions: POST /rpc/{funcName}
+  // These reuse the existing function's metadata — no synthetic function needed
+  for (const [funcName, pikkuFuncId] of Object.entries(state.rpc.exposedMeta)) {
+    const funcMeta = state.functions.meta[pikkuFuncId]
+    const resolved = state.resolvedIOTypes[pikkuFuncId]
+    if (!funcMeta || !resolved) continue
+
+    if (!state.http.meta['post']) state.http.meta['post'] = {}
+    state.http.meta['post'][`${prefix}/rpc/${funcName}`] = {
+      pikkuFuncId,
+      route: `${prefix}/rpc/${funcName}`,
+      method: 'post',
+      tags: ['pikku:public'],
+    }
+  }
+
+  // Exposed workflows: start/run/status
+  for (const [name, meta] of Object.entries(state.workflows.meta)) {
+    if (!meta.expose) continue
+
+    // Resolve input/output types from the workflow function
+    const wfFuncId = meta.pikkuFuncId
+    const wfResolved = state.resolvedIOTypes[wfFuncId]
+    const inputType = wfResolved?.inputType ?? 'null'
+    const outputType = wfResolved?.outputType ?? 'null'
+
+    addRoute(
+      'post',
+      `${prefix}/workflow/${name}/start`,
+      `workflowStart:${name}`,
+      inputType,
+      'null' // returns { runId: string } — handled by core
+    )
+    addRoute(
+      'post',
+      `${prefix}/workflow/${name}/run`,
+      `workflow:${name}`,
+      inputType,
+      outputType
+    )
+    addRoute(
+      'get',
+      `${prefix}/workflow/${name}/status/:runId`,
+      `workflowStatus:${name}`,
+      'null',
+      'null',
+      { params: ['runId'] }
+    )
+  }
+
+  // Agents: run/stream/approve/resume (per agent)
+  for (const [agentName] of Object.entries(state.agents.agentsMeta)) {
+    addRoute(
+      'post',
+      `${prefix}/rpc/agent/${agentName}`,
+      `agentRun:${agentName}`,
+      'null',
+      'null'
+    )
+    addRoute(
+      'post',
+      `${prefix}/rpc/agent/${agentName}/stream`,
+      `agentStream:${agentName}`,
+      'null',
+      'null',
+      { sse: true }
+    )
+    addRoute(
+      'post',
+      `${prefix}/rpc/agent/${agentName}/approve/:runId`,
+      `agentApprove:${agentName}`,
+      'null',
+      'null',
+      { params: ['runId'] }
+    )
+    addRoute(
+      'post',
+      `${prefix}/rpc/agent/${agentName}/resume/:runId`,
+      `agentResume:${agentName}`,
+      'null',
+      'null',
+      { sse: true, params: ['runId'] }
+    )
+  }
+}
+
 export function validateSecretOverrides(
   logger: InspectorLogger,
   state: InspectorState | Omit<InspectorState, 'typesLookup'>
