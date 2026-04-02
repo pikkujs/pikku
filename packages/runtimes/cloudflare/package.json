@@ -20,7 +20,8 @@
     ".": "./dist/index.js"
   },
   "dependencies": {
-    "kysely-d1": "^0.4.0"
+    "kysely-d1": "^0.4.0",
+    "kysely-plugin-serialize": "^0.8.2"
   },
   "peerDependencies": {
     "@pikku/core": "^0.12.9",
