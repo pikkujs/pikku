@@ -189,5 +189,7 @@ export interface PikkuPackageState {
       string,
       { name: string; displayName: string; type: string; oauth2?: boolean }
     > | null
+    /** Services this addon needs from the parent project */
+    requiredParentServices: string[] | null
   }
 }

@@ -72,7 +72,8 @@ export const visitSetup = (
     node,
     checker,
     state.singletonServicesFactories,
-    'CreateSingletonServices'
+    'CreateSingletonServices',
+    state
   )
 
   addFileWithFactory(

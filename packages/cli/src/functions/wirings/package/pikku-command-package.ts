@@ -77,7 +77,8 @@ export const pikkuPackage = pikkuSessionlessFunc<void, boolean | undefined>({
           }
         : undefined,
       packageMappings,
-      Object.keys(credentialsMeta).length > 0 ? credentialsMeta : undefined
+      Object.keys(credentialsMeta).length > 0 ? credentialsMeta : undefined,
+      state.addonRequiredParentServices
     )
 
     if (!content) {

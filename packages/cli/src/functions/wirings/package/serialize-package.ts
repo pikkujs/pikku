@@ -19,7 +19,8 @@ export const serializePackageFactories = (
   singletonServicesFactory: PackageFactoryInfo | undefined,
   wireServicesFactory: PackageFactoryInfo | undefined,
   packageMappings: Record<string, string> = {},
-  credentialsMeta?: Record<string, CredentialMetaForPackage>
+  credentialsMeta?: Record<string, CredentialMetaForPackage>,
+  requiredParentServices?: string[]
 ) => {
   const imports: string[] = [
     `import { pikkuState } from '@pikku/core/internal'`,
@@ -73,10 +74,15 @@ export const serializePackageFactories = (
       ? `\npikkuState('${packageName}', 'package', 'credentialsMeta', ${JSON.stringify(credentialsMeta)})\n`
       : ''
 
+  const requiredParentServicesLine =
+    requiredParentServices && requiredParentServices.length > 0
+      ? `\npikkuState('${packageName}', 'package', 'requiredParentServices', ${JSON.stringify(requiredParentServices)})\n`
+      : ''
+
   return `${imports.join('\n')}
 
 pikkuState('${packageName}', 'package', 'factories', {
 ${factoryEntries.join('\n')}
 })
-${credentialsLine}`
+${credentialsLine}${requiredParentServicesLine}`
 }

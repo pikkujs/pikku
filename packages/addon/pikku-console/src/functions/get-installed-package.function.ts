@@ -1,6 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku'
 import { pikkuState } from '@pikku/core/internal'
-import { LocalMetaService } from '@pikku/core/services/local-meta'
 
 import type { AddonPackageInfo } from '../services/addon.service.js'
 
@@ -13,11 +12,9 @@ export const getAddonInstalledPackage = pikkuSessionlessFunc<
     'Returns the full details of a locally installed addon by reading from pikkuState and .pikku files',
   expose: true,
   auth: false,
-  func: async (_services, { packageName }) => {
+  func: async ({ metaService }, { packageName }) => {
     const metaDir = pikkuState(packageName, 'package', 'metaDir')
     if (!metaDir) return null
-
-    const metaService = new LocalMetaService(metaDir)
 
     const functions = pikkuState(packageName, 'function', 'meta') ?? {}
     const agentsMeta = pikkuState(packageName, 'agent', 'agentsMeta')
@@ -68,10 +65,9 @@ export const getAddonInstalledPackage = pikkuSessionlessFunc<
       package?: { icon?: string; displayName?: string; description?: string }
     }>('console/pikku-addon-meta.gen.json')
 
-    // README and package.json are in the parent directory
-    const parentService = new LocalMetaService(metaDir + '/..')
-    const readme = await parentService.readFile('README.md')
-    const pkgJsonContent = await parentService.readFile('package.json')
+    // README and package.json are in the parent directory (one level up from .pikku)
+    const readme = await metaService.readFile('../README.md')
+    const pkgJsonContent = await metaService.readFile('../package.json')
     const pkgJson: {
       version?: string
       author?: string | { name: string }

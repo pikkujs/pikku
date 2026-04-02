@@ -3,14 +3,15 @@
  *
  * For each deployment unit in a DeploymentManifest, this module:
  * 1. Takes a pre-generated entry point (provided by the deploy provider)
- * 2. Runs esbuild with bundle:true, platform:browser, packages:external
- * 3. Parses the metafile to extract external dependencies
- * 4. Generates a minimal package.json with exact versions
- * 5. Writes all artifacts to `<outputDir>/<unit-name>/`
+ * 2. Runs esbuild with bundle:true, npm packages external
+ * 3. Stubs Node.js-only gen files that aren't needed by this unit
+ * 4. Parses the metafile to extract external dependencies
+ * 5. Generates a minimal package.json with exact versions
+ * 6. Writes all artifacts to `<outputDir>/<unit-name>/`
  */
 
-import { build } from 'esbuild'
-import { writeFile, mkdir, stat } from 'node:fs/promises'
+import { build, type Plugin } from 'esbuild'
+import { writeFile, mkdir, stat, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import {
@@ -24,6 +25,65 @@ import type {
   BundleError,
   BundleOutput,
 } from './types.js'
+
+/**
+ * Mapping of service name -> gen file pattern that should be stubbed
+ * when the service is not required by a deployment unit.
+ */
+const SERVICE_GEN_FILE_MAP: Record<string, RegExp> = {
+  metaService: /pikku-meta-service\.gen/,
+}
+
+/**
+ * Read the per-unit pikku-services.gen.ts and return the set of gen file
+ * patterns that should be stubbed (because their service is not required).
+ */
+async function getDeadGenFilePatterns(
+  unitOutputDir: string
+): Promise<RegExp[]> {
+  const patterns: RegExp[] = []
+  try {
+    const servicesPath = join(unitOutputDir, '.pikku', 'pikku-services.gen.ts')
+    const content = await readFile(servicesPath, 'utf-8')
+    const match = content.match(
+      /export const requiredSingletonServices = \{([^}]+)\}/
+    )
+    if (match) {
+      for (const line of match[1].split('\n')) {
+        const kv = line.match(/'([^']+)':\s*false/)
+        if (kv && SERVICE_GEN_FILE_MAP[kv[1]]) {
+          patterns.push(SERVICE_GEN_FILE_MAP[kv[1]])
+        }
+      }
+    }
+  } catch {
+    // No services gen — no stubs needed
+  }
+  return patterns
+}
+
+/**
+ * esbuild plugin that stubs gen files for services not needed by this unit.
+ * This prevents Node.js-only modules (e.g. LocalMetaService which uses fs)
+ * from being pulled into serverless worker bundles via dynamic imports.
+ */
+function createDeadModuleStubPlugin(patterns: RegExp[]): Plugin {
+  return {
+    name: 'pikku-dead-module-stub',
+    setup(build) {
+      if (patterns.length === 0) return
+      const combined = new RegExp(patterns.map((p) => p.source).join('|'))
+      build.onResolve({ filter: combined }, (args) => ({
+        path: args.path,
+        namespace: 'pikku-stub',
+      }))
+      build.onLoad({ filter: /.*/, namespace: 'pikku-stub' }, () => ({
+        contents: 'export {}',
+        loader: 'js',
+      }))
+    },
+  }
+}
 
 const BUNDLE_FILENAME = 'bundle.js'
 const METAFILE_FILENAME = 'metafile.json'
@@ -53,11 +113,16 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
   const metafilePath = join(unitOutputDir, METAFILE_FILENAME)
   const packageJsonPath = join(unitOutputDir, PACKAGE_JSON_FILENAME)
 
-  // Run esbuild
+  // Determine which gen files to stub based on per-unit service requirements
+  const deadPatterns = await getDeadGenFilePatterns(unitOutputDir)
+
+  // Run esbuild — bundle user code, keep npm packages external.
+  // The stub plugin replaces gen files for unused services with empty
+  // modules, preventing Node.js-only code from entering the bundle.
   const result = await build({
     entryPoints: [entryPath],
     bundle: true,
-    platform: 'browser',
+    platform: 'node',
     format: 'esm',
     packages: 'external',
     metafile: true,
@@ -66,8 +131,8 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     minify: false,
     sourcemap: true,
     logLevel: 'warning',
-    // Ensure we handle TypeScript entry points
     loader: { '.ts': 'ts' },
+    plugins: [createDeadModuleStubPlugin(deadPatterns)],
   })
 
   // Write metafile

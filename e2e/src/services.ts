@@ -5,16 +5,15 @@ import {
   LocalCredentialService,
 } from '@pikku/core/services'
 import { pikkuServices } from '#pikku/pikku-types.gen.js'
-import { PikkuMetaService } from '#pikku/pikku-meta-service.gen.js'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import { VercelAIAgentRunner } from '@pikku/ai-vercel'
 import { JoseJWTService } from '@pikku/jose'
 import { createOpenAI } from '@ai-sdk/openai'
 import type { KyselyPikkuDB } from '@pikku/kysely'
-import { RedisWorkflowService } from '@pikku/redis'
+import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
 
 export const createSingletonServices = pikkuServices(
-  async (config, { variables, secrets }) => {
+  async (config, { variables, secrets, metaService }) => {
     const logger = new ConsoleLogger()
 
     if (config.logLevel) {
@@ -27,6 +26,13 @@ export const createSingletonServices = pikkuServices(
 
     if (!secrets) {
       secrets = new LocalSecretService(variables)
+    }
+
+    if (requiredSingletonServices.metaService && metaService === undefined) {
+      const { PikkuMetaService } = await import(
+        '../.pikku/pikku-meta-service.gen.js'
+      )
+      metaService = new PikkuMetaService()
     }
 
     const schema = new CFWorkerSchemaService(logger)
@@ -142,7 +148,7 @@ export const createSingletonServices = pikkuServices(
       jwt,
       schema,
       logger,
-      metaService: new PikkuMetaService(),
+      metaService,
       aiStorage,
       aiRunState: aiStorage,
       agentRunService,

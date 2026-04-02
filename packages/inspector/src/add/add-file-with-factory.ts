@@ -57,12 +57,7 @@ export const addFileWithFactory = (
           })
           methods.set(fileName, variables)
 
-          // Extract singleton services for CreateWireServices factories
-          if (
-            expectedTypeName === 'CreateWireServices' &&
-            state &&
-            callExpression.arguments.length > 0
-          ) {
+          if (state && callExpression.arguments.length > 0) {
             const firstArg = callExpression.arguments[0]
             let functionNode:
               | ts.ArrowFunction
@@ -75,9 +70,33 @@ export const addFileWithFactory = (
               functionNode = firstArg
             }
 
-            if (functionNode) {
+            // Extract singleton services for CreateWireServices factories
+            if (expectedTypeName === 'CreateWireServices' && functionNode) {
               const servicesMeta = extractServicesFromFunction(functionNode)
               state.wireServicesMeta.set(variableName, servicesMeta.services)
+            }
+
+            // Extract existing services an addon needs from the parent
+            // (second parameter of pikkuAddonServices callback)
+            if (
+              wrapperFunctionName === 'pikkuAddonServices' &&
+              functionNode &&
+              functionNode.parameters.length >= 2
+            ) {
+              const secondParam = functionNode.parameters[1]
+              if (secondParam && ts.isObjectBindingPattern(secondParam.name)) {
+                for (const elem of secondParam.name.elements) {
+                  const name =
+                    elem.propertyName && ts.isIdentifier(elem.propertyName)
+                      ? elem.propertyName.text
+                      : ts.isIdentifier(elem.name)
+                        ? elem.name.text
+                        : undefined
+                  if (name) {
+                    state.addonRequiredParentServices.push(name)
+                  }
+                }
+              }
             }
           }
 
