@@ -379,9 +379,19 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * Resume a paused workflow by triggering the orchestrator
    * @param runId - Run ID
    */
-  public async resumeWorkflow(runId: string): Promise<void> {
+  public async resumeWorkflow(
+    runId: string,
+    workflowName?: string
+  ): Promise<void> {
     const queueService = this.verifyQueueService()
-    await queueService.add(this.getConfig().orchestratorQueueName, { runId })
+    let resolvedName = workflowName
+    if (!resolvedName && this.getConfig().uniqueQueueNames) {
+      const run = await this.getRun(runId)
+      resolvedName = run?.workflow
+    }
+    await queueService.add(this.getOrchestratorQueueName(resolvedName), {
+      runId,
+    })
   }
 
   public async queueStepWorker(
@@ -392,7 +402,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   ): Promise<void> {
     const queueService = this.verifyQueueService()
     await queueService.add(
-      this.getConfig().stepWorkerQueueName,
+      this.getStepWorkerQueueName(rpcName),
       JSON.parse(
         JSON.stringify({
           runId,
@@ -424,11 +434,17 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    */
   protected async scheduleOrchestratorRetry(
     runId: string,
-    retryDelay?: number | string
+    retryDelay?: number | string,
+    workflowName?: string
   ): Promise<void> {
     const queueService = this.verifyQueueService()
+    let resolvedName = workflowName
+    if (!resolvedName && this.getConfig().uniqueQueueNames) {
+      const run = await this.getRun(runId)
+      resolvedName = run?.workflow
+    }
     await queueService.add(
-      this.getConfig().orchestratorQueueName,
+      this.getOrchestratorQueueName(resolvedName),
       { runId },
       retryDelay ? { delay: getDurationInMilliseconds(retryDelay) } : undefined
     )
@@ -963,7 +979,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       const retryDelay = stepOptions?.retryDelay
 
       await getSingletonServices()!.queueService!.add(
-        this.getConfig().stepWorkerQueueName,
+        this.getStepWorkerQueueName(rpcName),
         JSON.parse(
           JSON.stringify({
             runId,
@@ -1337,11 +1353,36 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     return {
       retries: workflow?.retries ?? 0,
       retryDelay: workflow?.retryDelay ?? 0,
+      uniqueQueueNames: workflow?.uniqueQueueNames ?? false,
       orchestratorQueueName:
         workflow?.orchestratorQueueName ?? 'pikku-workflow-orchestrator',
       stepWorkerQueueName:
         workflow?.stepWorkerQueueName ?? 'pikku-workflow-step-worker',
       sleeperRPCName: workflow?.sleeperRPCName ?? 'pikkuWorkflowSleeper',
     }
+  }
+
+  /**
+   * Get the orchestrator queue name for a specific workflow.
+   * With uniqueQueueNames, each workflow gets its own queue.
+   */
+  protected getOrchestratorQueueName(workflowName?: string): string {
+    const config = this.getConfig()
+    if (config.uniqueQueueNames && workflowName) {
+      return `wf-orchestrator-${workflowName}`
+    }
+    return config.orchestratorQueueName
+  }
+
+  /**
+   * Get the step worker queue name for a specific function.
+   * With uniqueQueueNames, each step function gets its own queue.
+   */
+  protected getStepWorkerQueueName(rpcName?: string): string {
+    const config = this.getConfig()
+    if (config.uniqueQueueNames && rpcName) {
+      return `wf-step-${rpcName}`
+    }
+    return config.stepWorkerQueueName
   }
 }
