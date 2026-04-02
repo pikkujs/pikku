@@ -169,13 +169,17 @@ export async function parseOpenAPISpec(filePath: string): Promise<ParsedSpec> {
   }
 }
 
-/** Recursively resolve $ref pointers in-place */
-function resolveRefs(node: any, root: any): any {
+/** Recursively resolve $ref pointers in-place, with cycle detection */
+function resolveRefs(node: any, root: any, visited?: Set<any>): any {
   if (node === null || typeof node !== 'object') return node
+
+  const seen = visited ?? new Set<any>()
+  if (seen.has(node)) return node
+  seen.add(node)
 
   if (Array.isArray(node)) {
     for (let i = 0; i < node.length; i++) {
-      node[i] = resolveRefs(node[i], root)
+      node[i] = resolveRefs(node[i], root, seen)
     }
     return node
   }
@@ -186,14 +190,15 @@ function resolveRefs(node: any, root: any): any {
       // Merge any sibling properties (like description overrides)
       const { $ref, ...siblings } = node
       const result = { ...resolved, ...siblings }
-      // Don't recurse infinitely — mark as resolved
+      // Don't recurse into the merged result — it shares structure with
+      // the original resolved object and may be circular
       return result
     }
     return node
   }
 
   for (const key of Object.keys(node)) {
-    node[key] = resolveRefs(node[key], root)
+    node[key] = resolveRefs(node[key], root, seen)
   }
 
   return node
@@ -435,10 +440,18 @@ export function computeContractHash(spec: ParsedSpec): string {
     serverUrls: spec.serverUrls,
   }
 
-  return createHash('sha256')
-    .update(JSON.stringify(contract))
-    .digest('hex')
-    .slice(0, 16)
+  // Use a cycle-safe JSON serializer since resolved $ref schemas
+  // can contain circular object references
+  const seen = new WeakSet()
+  const json = JSON.stringify(contract, (_key, value) => {
+    if (typeof value === 'object' && value !== null) {
+      if (seen.has(value)) return '[Circular]'
+      seen.add(value)
+    }
+    return value
+  })
+
+  return createHash('sha256').update(json).digest('hex').slice(0, 16)
 }
 
 function extractTagDescriptions(doc: any): Record<string, string> {
