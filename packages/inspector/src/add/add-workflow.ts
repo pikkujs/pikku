@@ -46,7 +46,7 @@ function hasInlineSteps(steps: WorkflowStepMeta[]): boolean {
 /**
  * Recursively collect all RPC names from workflow steps
  */
-function collectInvokedRPCs(
+export function collectInvokedRPCs(
   steps: WorkflowStepMeta[],
   rpcs: Set<string>
 ): void {
