@@ -1446,27 +1446,14 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    */
   protected getOrchestratorQueueName(workflowName?: string): string {
     if (workflowName) {
-      const uniqueName = `wf-orchestrator-${toKebab(workflowName)}`
-      const queueMeta = pikkuState(null, 'queue', 'meta')
-      if (queueMeta[uniqueName]) {
-        return uniqueName
-      }
+      return `wf-orchestrator-${toKebab(workflowName)}`
     }
     return this.getConfig().orchestratorQueueName
   }
 
-  /**
-   * Get the step worker queue name for a specific function.
-   * Checks queue meta for a per-step queue first (e.g. wf-step-{rpcName}),
-   * falls back to the shared step worker queue.
-   */
   protected getStepWorkerQueueName(rpcName?: string): string {
     if (rpcName) {
-      const uniqueName = `wf-step-${toKebab(rpcName)}`
-      const queueMeta = pikkuState(null, 'queue', 'meta')
-      if (queueMeta[uniqueName]) {
-        return uniqueName
-      }
+      return `wf-step-${toKebab(rpcName)}`
     }
     return this.getConfig().stepWorkerQueueName
   }
