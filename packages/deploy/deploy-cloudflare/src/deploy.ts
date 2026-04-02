@@ -390,11 +390,23 @@ async function wireConsumersAndTriggers(
         try {
           await createConsumer(client, queueId, consumerWorkerName)
           log('wiring', `Queue "${queue.name}" → "${consumerWorkerName}"`)
-        } catch (err) {
-          result.errors.push({
-            step: `queue-consumer:${queue.name}`,
-            error: err instanceof Error ? err.message : String(err),
-          })
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err)
+          // Ignore "already has a consumer" (idempotent) and
+          // "worker not found" (consumer worker not deployed yet)
+          if (msg.includes('already has a consumer')) {
+            log('wiring', `Queue "${queue.name}" consumer already exists`)
+          } else if (msg.includes('not exist') || msg.includes('not found')) {
+            log(
+              'wiring',
+              `Queue "${queue.name}" consumer worker not deployed — skipping`
+            )
+          } else {
+            result.errors.push({
+              step: `queue-consumer:${queue.name}`,
+              error: msg,
+            })
+          }
         }
       })()
     )

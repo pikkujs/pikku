@@ -470,5 +470,21 @@ export const addAIAgent: AddWiring = (
       aiMiddleware,
       permissions,
     }
+
+    // AI agent functions require platform services that aren't visible
+    // through parameter destructuring
+    const funcMeta = state.functions.meta[agentKey]
+    if (funcMeta?.services) {
+      for (const svc of [
+        'aiStorage',
+        'aiRunState',
+        'agentRunService',
+        'aiAgentRunner',
+      ]) {
+        if (!funcMeta.services.services.includes(svc)) {
+          funcMeta.services.services.push(svc)
+        }
+      }
+    }
   }
 }

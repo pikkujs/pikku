@@ -110,6 +110,21 @@ function collectFilterNames(
       }
       break
     }
+    case 'workflow': {
+      // Workflow orchestrators need the workflow function itself and
+      // the step function IDs (for graph metadata / dispatching)
+      const wfDef = manifest.workflows.find(
+        (w) => w.orchestratorUnit === unit.name
+      )
+      if (wfDef) {
+        names.add(wfDef.pikkuFuncId)
+        names.add(wfDef.name)
+        for (const step of wfDef.steps) {
+          if (step.functionId) names.add(step.functionId)
+        }
+      }
+      break
+    }
     default:
       break
   }

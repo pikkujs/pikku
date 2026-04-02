@@ -335,4 +335,20 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     tags,
     inline,
   }
+
+  // Workflow functions require platform services that aren't visible
+  // through parameter destructuring (they're accessed via workflow.do/sleep)
+  const funcMeta = state.functions.meta[pikkuFuncId]
+  if (funcMeta?.services) {
+    for (const svc of [
+      'workflowService',
+      'workflowRunService',
+      'schedulerService',
+      'queueService',
+    ]) {
+      if (!funcMeta.services.services.includes(svc)) {
+        funcMeta.services.services.push(svc)
+      }
+    }
+  }
 }
