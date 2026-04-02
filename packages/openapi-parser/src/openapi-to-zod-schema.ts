@@ -40,15 +40,30 @@ export interface ZodCodegenContext {
   usedRefs: Set<string>
   /** Indent level for readability */
   indent: number
+  /** Track schemas currently being processed to detect cycles */
+  seen: Set<OpenAPISchema>
+  /**
+   * Map from resolved schema object identity to its component name.
+   * After $ref resolution, many references lose their $ref string and
+   * become the same JS object as the component schema. This map lets
+   * schemaToZod detect those resolved references by identity.
+   */
+  schemaIdentityMap: Map<object, string>
+  /** Current nesting depth for preventing excessively deep types */
+  depth: number
 }
 
 export function createContext(
-  schemaRefs?: Map<string, string>
+  schemaRefs?: Map<string, string>,
+  schemaIdentityMap?: Map<object, string>
 ): ZodCodegenContext {
   return {
     schemaRefs: schemaRefs ?? new Map(),
     usedRefs: new Set(),
     indent: 0,
+    seen: new Set(),
+    schemaIdentityMap: schemaIdentityMap ?? new Map(),
+    depth: 0,
   }
 }
 
@@ -61,6 +76,17 @@ export function schemaToZod(
   ctx: ZodCodegenContext,
   opts: { optional?: boolean } = {}
 ): string {
+  // Bug 5: Depth limit to prevent TS2589 "excessively deep" type errors
+  if (ctx.depth > 10) {
+    let code = 'z.any()'
+    if (schema.nullable) code += '.nullable()'
+    if (opts.optional) code += '.optional()'
+    if (schema.description) {
+      const safeDesc = schema.description.replace(/\*\//g, '* /')
+      code += `.describe(${JSON.stringify(safeDesc)})`
+    }
+    return code
+  }
   let code = schemaToZodBase(schema, ctx)
 
   // Refinements
@@ -79,10 +105,52 @@ export function schemaToZod(
   // Default — validate type compatibility and coerce mismatches
   if (schema.default !== undefined) {
     let defaultValue = schema.default
-    if (defaultValue === null && !schema.nullable) {
+    if (schema.enum && schema.enum.length > 0) {
+      // For enum schemas, the default must exactly match one of the enum values.
+      // Don't apply type coercion — the Zod schema uses the original enum types
+      // (e.g. z.literal(1) not z.literal("1")), so coercing would cause TS2769.
+      const enumValues = new Set(
+        schema.enum.map((v: unknown) => JSON.stringify(v))
+      )
+      if (enumValues.has(JSON.stringify(defaultValue))) {
+        code += `.default(${JSON.stringify(defaultValue)})`
+      }
+      // else: default not in enum — skip it entirely
+    } else if (defaultValue === null && !schema.nullable) {
       // skip null defaults unless nullable
+    } else if (schema.type === 'object' && typeof defaultValue === 'string') {
+      // skip string defaults on object types (often a stray description)
+    } else if (
+      schema.properties &&
+      typeof defaultValue === 'object' &&
+      defaultValue !== null &&
+      !Array.isArray(defaultValue)
+    ) {
+      // For object schemas with properties, validate default keys match schema properties.
+      // Extra keys in the default cause TS2769 because z.object() rejects unknown keys.
+      const schemaKeys = new Set(Object.keys(schema.properties))
+      const defaultKeys = Object.keys(defaultValue as Record<string, unknown>)
+      const hasExtraKeys = defaultKeys.some((k) => !schemaKeys.has(k))
+      if (!hasExtraKeys) {
+        code += `.default(${JSON.stringify(defaultValue)})`
+      }
+      // else: default has keys not in schema — skip it
+    } else if (
+      schema.type === 'string' &&
+      typeof defaultValue === 'object' &&
+      defaultValue !== null
+    ) {
+      // skip object/array defaults on string types
+    } else if (
+      (!schema.type || schema.type === 'object') &&
+      schema.properties &&
+      typeof defaultValue === 'string'
+    ) {
+      // skip string defaults on implicit object types (has properties but no explicit type)
     } else if (schema.type === 'array' && !Array.isArray(defaultValue)) {
-      // skip type-mismatched defaults
+      // skip type-mismatched defaults (non-array default on array type)
+    } else if (schema.type !== 'array' && Array.isArray(defaultValue)) {
+      // skip array defaults on non-array types
     } else if (schema.type === 'boolean' && typeof defaultValue === 'string') {
       defaultValue = defaultValue === 'true'
       code += `.default(${JSON.stringify(defaultValue)})`
@@ -94,6 +162,15 @@ export function schemaToZod(
       if (!isNaN(parsed)) code += `.default(${JSON.stringify(parsed)})`
     } else if (schema.type === 'string' && typeof defaultValue === 'number') {
       code += `.default(${JSON.stringify(String(defaultValue))})`
+    } else if (schema.type === 'string' && typeof defaultValue === 'boolean') {
+      code += `.default(${JSON.stringify(String(defaultValue))})`
+    } else if (schema.type === 'boolean' && typeof defaultValue !== 'boolean') {
+      code += `.default(${defaultValue === 'true' || defaultValue === 1})`
+    } else if (
+      (schema.type === 'number' || schema.type === 'integer') &&
+      typeof defaultValue === 'boolean'
+    ) {
+      code += `.default(${defaultValue ? 1 : 0})`
     } else {
       code += `.default(${JSON.stringify(defaultValue)})`
     }
@@ -112,7 +189,25 @@ function schemaToZodBase(
   schema: OpenAPISchema,
   ctx: ZodCodegenContext
 ): string {
-  // Handle $ref
+  // Cycle detection: if we've already started processing this exact schema
+  // object, return z.any() to break infinite recursion
+  if (ctx.seen.has(schema)) {
+    return 'z.any()'
+  }
+  ctx.seen.add(schema)
+
+  try {
+    return schemaToZodBaseInner(schema, ctx)
+  } finally {
+    ctx.seen.delete(schema)
+  }
+}
+
+function schemaToZodBaseInner(
+  schema: OpenAPISchema,
+  ctx: ZodCodegenContext
+): string {
+  // Handle $ref (surviving after resolution)
   if (schema.$ref) {
     const refName = schema.$ref.split('/').pop()!
     const zodName = ctx.schemaRefs.get(refName)
@@ -122,6 +217,19 @@ function schemaToZodBase(
     }
     // Unknown ref — fallback to z.unknown()
     return 'z.unknown()'
+  }
+
+  // Handle resolved $ref by object identity: if this schema object IS a
+  // known component schema, reference the variable instead of inlining.
+  if (ctx.schemaIdentityMap.size > 0) {
+    const identityName = ctx.schemaIdentityMap.get(schema as object)
+    if (identityName) {
+      const zodName = ctx.schemaRefs.get(identityName)
+      if (zodName) {
+        ctx.usedRefs.add(identityName)
+        return zodName
+      }
+    }
   }
 
   // Handle allOf — merge into single object
@@ -160,6 +268,15 @@ function schemaToZodBase(
       // No type specified but has properties — treat as object
       if (schema.properties) {
         return handleObject(schema, ctx)
+      }
+      // Bug 4: Infer number type when minimum/maximum present but no type
+      if (
+        schema.minimum !== undefined ||
+        schema.maximum !== undefined ||
+        schema.exclusiveMinimum !== undefined ||
+        schema.exclusiveMaximum !== undefined
+      ) {
+        return 'z.number()'
       }
       return 'z.unknown()'
   }
@@ -206,8 +323,9 @@ function handleEnum(values: unknown[]): string {
 }
 
 function handleArray(schema: OpenAPISchema, ctx: ZodCodegenContext): string {
+  const innerCtx = { ...ctx, depth: ctx.depth + 1 }
   const itemsZod = schema.items
-    ? schemaToZodBase(schema.items, ctx)
+    ? schemaToZodBase(schema.items, innerCtx)
     : 'z.unknown()'
   return `z.array(${itemsZod})`
 }
@@ -229,7 +347,11 @@ function handleObject(schema: OpenAPISchema, ctx: ZodCodegenContext): string {
     return 'z.record(z.string(), z.unknown())'
   }
 
-  const inner: ZodCodegenContext = { ...ctx, indent: ctx.indent + 1 }
+  const inner: ZodCodegenContext = {
+    ...ctx,
+    indent: ctx.indent + 1,
+    depth: ctx.depth + 1,
+  }
   const pad = indent(inner)
   const closePad = indent(ctx)
   const requiredSet = new Set(schema.required ?? [])
@@ -245,18 +367,30 @@ function handleObject(schema: OpenAPISchema, ctx: ZodCodegenContext): string {
 }
 
 function handleAllOf(schemas: OpenAPISchema[], ctx: ZodCodegenContext): string {
+  // Helper to check if a sub-schema is a reference (by $ref or identity map)
+  function getRefName(sub: OpenAPISchema): string | undefined {
+    if (sub.$ref) {
+      return sub.$ref.split('/').pop()!
+    }
+    if (ctx.schemaIdentityMap.size > 0) {
+      const identityName = ctx.schemaIdentityMap.get(sub as object)
+      if (identityName && ctx.schemaRefs.has(identityName)) {
+        return identityName
+      }
+    }
+    return undefined
+  }
+
   // Collect all properties from all schemas
   const mergedProps: Record<string, OpenAPISchema> = {}
   const mergedRequired: string[] = []
 
   for (const sub of schemas) {
-    if (sub.$ref) {
-      const refName = sub.$ref.split('/').pop()!
+    const refName = getRefName(sub)
+    if (refName) {
       const zodName = ctx.schemaRefs.get(refName)
       if (zodName) {
         ctx.usedRefs.add(refName)
-        // If it's a pure ref in an allOf, we'd need to merge/extend
-        // For simplicity, if we have refs mixed with objects, use .merge()
       }
     }
     if (sub.properties) {
@@ -268,14 +402,14 @@ function handleAllOf(schemas: OpenAPISchema[], ctx: ZodCodegenContext): string {
   }
 
   // If we have only refs, use .merge()
-  const refSchemas = schemas.filter((s) => s.$ref)
+  const refSchemas = schemas.filter((s) => getRefName(s) !== undefined)
   const objSchemas = schemas.filter(
-    (s) => !s.$ref && (s.properties || s.type === 'object')
+    (s) => getRefName(s) === undefined && (s.properties || s.type === 'object')
   )
 
   if (refSchemas.length > 0 && objSchemas.length === 0) {
     const parts = refSchemas.map((s) => {
-      const refName = s.$ref!.split('/').pop()!
+      const refName = getRefName(s)!
       ctx.usedRefs.add(refName)
       return ctx.schemaRefs.get(refName) || 'z.object({})'
     })
@@ -306,13 +440,26 @@ function handleUnion(schemas: OpenAPISchema[], ctx: ZodCodegenContext): string {
 }
 
 function applyRefinements(code: string, schema: OpenAPISchema): string {
+  // Don't apply refinements to types that don't support .min()/.max()/.regex() etc.
+  // This includes z.any(), z.unknown(), z.union(...), z.literal(...), z.enum(...),
+  // z.lazy(...), z.record(...), and schema references (variable names without z. prefix).
+  if (
+    code === 'z.any()' ||
+    code === 'z.unknown()' ||
+    code.startsWith('z.union(') ||
+    code.startsWith('z.literal(') ||
+    code.startsWith('z.enum(') ||
+    code.startsWith('z.lazy(') ||
+    code.startsWith('z.record(') ||
+    // Schema variable references (e.g. FooSchema) — no z. prefix
+    (!code.startsWith('z.') && /^[a-zA-Z_$]/.test(code))
+  ) {
+    return code
+  }
   let result = code
 
-  // String refinements
-  if (
-    (schema.type === 'string' || (!schema.type && !schema.format)) &&
-    !schema.enum
-  ) {
+  // String refinements — only apply to explicit string types
+  if (schema.type === 'string' && !schema.enum) {
     if (schema.minLength !== undefined) {
       result += `.min(${schema.minLength})`
     }
@@ -324,8 +471,17 @@ function applyRefinements(code: string, schema: OpenAPISchema): string {
     }
   }
 
-  // Number refinements
-  if ((schema.type === 'number' || schema.type === 'integer') && !schema.enum) {
+  // Number refinements — also apply when no type but min/max present (inferred number)
+  const isNumberType =
+    schema.type === 'number' ||
+    schema.type === 'integer' ||
+    (!schema.type &&
+      !schema.properties &&
+      (schema.minimum !== undefined ||
+        schema.maximum !== undefined ||
+        schema.exclusiveMinimum !== undefined ||
+        schema.exclusiveMaximum !== undefined))
+  if (isNumberType && !schema.enum) {
     const exMinIsBoolean = typeof schema.exclusiveMinimum === 'boolean'
     const exMaxIsBoolean = typeof schema.exclusiveMaximum === 'boolean'
     if (schema.minimum !== undefined) {
@@ -398,7 +554,13 @@ const RESERVED_TYPE_NAMES = new Set([
 ])
 
 export function sanitizeTypeName(name: string): string {
-  const cleaned = name.replace(/[^a-zA-Z0-9_$]/g, '')
+  // Strip numeric separator patterns (e.g. 1_000 → 1000)
+  let cleaned = name.replace(/(\d)_(\d)/g, '$1$2')
+  cleaned = cleaned.replace(/[^a-zA-Z0-9_$]/g, '')
+  // Prefix with 'n' if starts with a digit
+  if (/^[0-9]/.test(cleaned)) {
+    cleaned = 'n' + cleaned
+  }
   if (RESERVED_TYPE_NAMES.has(cleaned.toLowerCase())) {
     return `${cleaned}Type`
   }

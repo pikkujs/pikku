@@ -88,6 +88,175 @@ function getErrorClassesForResponses(
   return classes
 }
 
+/**
+ * Collect all component schema names directly referenced by an operation's
+ * params, request body, and response schema.
+ */
+function collectOperationSchemaRefs(
+  parsed: ParsedOperation,
+  componentNames: Set<string>,
+  schemaIdentityMap: Map<object, string>
+): Set<string> {
+  const refs = new Set<string>()
+  const allSchemas: any[] = []
+
+  // Gather all schema objects from this operation
+  for (const p of [
+    ...parsed.pathParams,
+    ...parsed.queryParams,
+    ...parsed.headerParams,
+  ]) {
+    if (p.schema) allSchemas.push(p.schema)
+  }
+  if (parsed.requestBody) allSchemas.push(parsed.requestBody)
+  if (parsed.responseSchema) allSchemas.push(parsed.responseSchema)
+
+  for (const schema of allSchemas) {
+    // Check if the schema itself IS a component schema (by object identity).
+    // collectSchemaRefs skips the root identity check, so we must do it here.
+    if (schema && typeof schema === 'object') {
+      const identityName = schemaIdentityMap.get(schema)
+      if (identityName && componentNames.has(identityName)) {
+        refs.add(identityName)
+      }
+    }
+    for (const ref of collectSchemaRefs(
+      schema,
+      componentNames,
+      schemaIdentityMap
+    )) {
+      refs.add(ref)
+    }
+  }
+  return refs
+}
+
+/**
+ * Compute the transitive closure of schema dependencies.
+ * Given a set of schema names, expand it to include all schemas they depend on.
+ */
+function transitiveClosure(
+  schemaNames: Set<string>,
+  allSchemas: Record<string, any>,
+  componentNames: Set<string>,
+  schemaIdentityMap: Map<object, string>
+): Set<string> {
+  const result = new Set<string>()
+  const queue = [...schemaNames]
+  while (queue.length > 0) {
+    const name = queue.pop()!
+    if (result.has(name)) continue
+    if (!allSchemas[name]) continue
+    result.add(name)
+    const deps = collectSchemaRefs(
+      allSchemas[name],
+      componentNames,
+      schemaIdentityMap
+    )
+    for (const dep of deps) {
+      if (!result.has(dep)) queue.push(dep)
+    }
+  }
+  return result
+}
+
+interface SchemaPartition {
+  /** Schemas referenced by 2+ operations — go in the shared types file */
+  shared: Set<string>
+  /** Map from schema name to the single operation index that uses it */
+  single: Map<string, number>
+  /** Schemas not referenced by any operation (directly or transitively) */
+  unused: Set<string>
+}
+
+/**
+ * Partition component schemas into shared, single-use, and unused buckets.
+ *
+ * Algorithm:
+ * 1. For each operation, collect its directly referenced component schemas
+ * 2. Expand each operation's refs to include transitive deps
+ * 3. Count how many operations reference each schema (via transitive closure)
+ * 4. Schemas with 2+ operations → shared, 1 operation → single, 0 → unused
+ * 5. Single-use schemas whose transitive deps include shared schemas still go
+ *    into single-use (the function file will import those shared deps)
+ */
+function partitionSchemas(
+  spec: ParsedSpec,
+  schemaIdentityMap: Map<object, string>
+): SchemaPartition {
+  const componentNames = new Set(Object.keys(spec.componentSchemas))
+
+  // Step 1: Direct refs per operation
+  const opDirectRefs: Set<string>[] = spec.operations.map((op) =>
+    collectOperationSchemaRefs(op, componentNames, schemaIdentityMap)
+  )
+
+  // Step 2: Transitive refs per operation
+  const opTransitiveRefs: Set<string>[] = opDirectRefs.map((directRefs) =>
+    transitiveClosure(
+      directRefs,
+      spec.componentSchemas,
+      componentNames,
+      schemaIdentityMap
+    )
+  )
+
+  // Step 3: Count how many operations reference each schema
+  const refCount = new Map<string, Set<number>>()
+  for (let i = 0; i < opTransitiveRefs.length; i++) {
+    for (const name of opTransitiveRefs[i]) {
+      if (!refCount.has(name)) refCount.set(name, new Set())
+      refCount.get(name)!.add(i)
+    }
+  }
+
+  // Step 4: Partition
+  const shared = new Set<string>()
+  const single = new Map<string, number>()
+  const unused = new Set<string>()
+
+  for (const name of componentNames) {
+    const ops = refCount.get(name)
+    if (!ops || ops.size === 0) {
+      unused.add(name)
+    } else if (ops.size === 1) {
+      single.set(name, [...ops][0])
+    } else {
+      shared.add(name)
+    }
+  }
+
+  // Step 5: If a single-use schema transitively depends on another single-use
+  // schema from a DIFFERENT operation, promote both to shared.
+  // This handles chains like: OpA → SchemaX → SchemaY ← OpB
+  // Also: single-use schemas that depend on other single-use schemas from the
+  // same operation stay single-use (they'll be inlined together).
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const [name, opIdx] of [...single]) {
+      const deps = collectSchemaRefs(
+        spec.componentSchemas[name],
+        componentNames,
+        schemaIdentityMap
+      )
+      for (const dep of deps) {
+        if (single.has(dep) && single.get(dep) !== opIdx) {
+          // Dep is single-use but for a different operation — promote both
+          shared.add(dep)
+          single.delete(dep)
+          shared.add(name)
+          single.delete(name)
+          changed = true
+          break
+        }
+      }
+    }
+  }
+
+  return { shared, single, unused }
+}
+
 export function generateAddonFromOpenAPI(
   spec: ParsedSpec,
   vars: AddonVars,
@@ -101,7 +270,50 @@ export function generateAddonFromOpenAPI(
   for (const schemaName of Object.keys(spec.componentSchemas)) {
     schemaRefs.set(schemaName, schemaVarName(schemaName))
   }
-  const ctx = createContext(schemaRefs)
+
+  // Build an identity map from resolved schema objects to their component names.
+  // After $ref resolution, many references become the same JS object as the
+  // component schema (or a spread-copy). This map lets the codegen detect those
+  // resolved references by object identity instead of relying on $ref strings.
+  const schemaIdentityMap = new Map<object, string>()
+  for (const [schemaName, schema] of Object.entries(spec.componentSchemas)) {
+    if (schema && typeof schema === 'object') {
+      schemaIdentityMap.set(schema, schemaName)
+    }
+  }
+
+  // Partition schemas: shared (2+ ops), single-use (1 op), unused (0 ops)
+  const partition = partitionSchemas(spec, schemaIdentityMap)
+
+  // Build the set of schemas that go in the shared types file:
+  // shared schemas + their transitive dependencies
+  const componentNames = new Set(Object.keys(spec.componentSchemas))
+  const sharedWithDeps = transitiveClosure(
+    partition.shared,
+    spec.componentSchemas,
+    componentNames,
+    schemaIdentityMap
+  )
+  // Any transitive dep of a shared schema that was single-use gets promoted to shared
+  for (const name of sharedWithDeps) {
+    partition.single.delete(name)
+  }
+
+  // Build a reduced componentSchemas for the types file (only shared schemas)
+  const sharedComponentSchemas: Record<string, any> = {}
+  for (const schemaName of sharedWithDeps) {
+    if (spec.componentSchemas[schemaName]) {
+      sharedComponentSchemas[schemaName] = spec.componentSchemas[schemaName]
+    }
+  }
+
+  // schemaRefs for shared types file context — only shared schemas
+  const sharedSchemaRefs = new Map<string, string>()
+  for (const schemaName of sharedWithDeps) {
+    sharedSchemaRefs.set(schemaName, schemaVarName(schemaName))
+  }
+
+  const ctx = createContext(sharedSchemaRefs, schemaIdentityMap)
 
   // Generate operation names
   const paths = spec.operations.map((op) => op.path)
@@ -120,21 +332,52 @@ export function generateAddonFromOpenAPI(
     namedOps.map((named, i) => ({ named, parsed: spec.operations[i] }))
 
   // Generate types file with shared schemas (only if there are any)
-  if (Object.keys(spec.componentSchemas).length > 0) {
-    files[`src/${name}.types.ts`] = generateTypesFile(spec, ctx)
+  if (Object.keys(sharedComponentSchemas).length > 0) {
+    files[`src/${name}.types.ts`] = generateTypesFile(
+      { ...spec, componentSchemas: sharedComponentSchemas },
+      ctx,
+      schemaIdentityMap
+    )
+  }
+
+  // Collect single-use schemas per operation index
+  const singleSchemasPerOp = new Map<number, Set<string>>()
+  for (const [schemaName, opIdx] of partition.single) {
+    if (!singleSchemasPerOp.has(opIdx)) singleSchemasPerOp.set(opIdx, new Set())
+    singleSchemasPerOp.get(opIdx)!.add(schemaName)
+  }
+  // Expand single-use schemas to include their transitive deps that are also single-use
+  for (const [_opIdx, schemas] of singleSchemasPerOp) {
+    const expanded = transitiveClosure(
+      schemas,
+      spec.componentSchemas,
+      componentNames,
+      schemaIdentityMap
+    )
+    // Only keep schemas that are NOT in the shared set
+    for (const s of expanded) {
+      if (!sharedWithDeps.has(s) && !partition.unused.has(s)) {
+        schemas.add(s)
+      }
+    }
   }
 
   // Generate function files
   const functionExports: string[] = []
-  for (const { named, parsed } of opPairs) {
-    const funcCtx = createContext(schemaRefs)
+  for (let i = 0; i < opPairs.length; i++) {
+    const { named, parsed } = opPairs[i]
+    const funcCtx = createContext(schemaRefs, schemaIdentityMap)
+    const inlineSchemas = singleSchemasPerOp.get(i) ?? new Set<string>()
     const funcCode = generateFunctionFile(
       named,
       parsed,
       vars,
       funcCtx,
       spec,
-      flags
+      flags,
+      inlineSchemas,
+      sharedWithDeps,
+      schemaIdentityMap
     )
     files[`src/functions/${named.functionName}.function.ts`] = funcCode
     functionExports.push(named.functionName)
@@ -157,20 +400,191 @@ export function generateAddonFromOpenAPI(
   return files
 }
 
-function generateTypesFile(spec: ParsedSpec, ctx: ZodCodegenContext): string {
+/**
+ * Collect all component schema names referenced (directly or via properties/items/allOf/oneOf/anyOf)
+ * by a given OpenAPI schema object.
+ *
+ * After $ref resolution, most $ref strings are gone and replaced by the resolved
+ * object (often the same JS identity as the component schema). We detect
+ * dependencies both by surviving $ref strings AND by object identity via
+ * schemaIdentityMap.
+ */
+function collectSchemaRefs(
+  schema: any,
+  componentNames: Set<string>,
+  schemaIdentityMap: Map<object, string>
+): Set<string> {
+  const refs = new Set<string>()
+  const visited = new Set<any>()
+
+  function walk(node: any, isRoot: boolean) {
+    if (!node || typeof node !== 'object' || visited.has(node)) return
+    visited.add(node)
+
+    // Check surviving $ref strings
+    if (node.$ref) {
+      const refName = node.$ref.split('/').pop()!
+      if (componentNames.has(refName)) refs.add(refName)
+    }
+
+    // Check if this node IS a known component schema (resolved $ref by identity).
+    // Skip this check for the root node (the schema we're analyzing),
+    // otherwise we'd match the schema against itself and return early,
+    // missing its internal dependencies.
+    if (!isRoot) {
+      const identityName = schemaIdentityMap.get(node)
+      if (identityName && componentNames.has(identityName)) {
+        refs.add(identityName)
+        // Don't walk into the component schema's internals — those are
+        // handled when that schema is processed as a top-level entry.
+        return
+      }
+    }
+
+    if (node.properties) {
+      for (const prop of Object.values(node.properties)) walk(prop, false)
+    }
+    if (node.items) walk(node.items, false)
+    if (node.allOf) for (const s of node.allOf) walk(s, false)
+    if (node.oneOf) for (const s of node.oneOf) walk(s, false)
+    if (node.anyOf) for (const s of node.anyOf) walk(s, false)
+    if (
+      node.additionalProperties &&
+      typeof node.additionalProperties === 'object'
+    ) {
+      walk(node.additionalProperties, false)
+    }
+  }
+
+  walk(schema, true)
+  return refs
+}
+
+/**
+ * Topologically sort component schemas so that dependencies come before dependents.
+ * Schemas involved in cycles are placed in arbitrary order (cycles are handled via z.lazy).
+ */
+function topoSortSchemas(
+  schemas: Record<string, any>,
+  schemaIdentityMap: Map<object, string>
+): { sorted: string[]; cyclicEdges: Set<string> } {
+  const names = new Set(Object.keys(schemas))
+  const deps = new Map<string, Set<string>>()
+
+  const selfRefs = new Set<string>()
+  for (const [name, schema] of Object.entries(schemas)) {
+    const refNames = collectSchemaRefs(schema, names, schemaIdentityMap)
+    if (refNames.has(name)) {
+      selfRefs.add(name) // track self-referential schemas
+    }
+    refNames.delete(name) // remove self-refs from dependency graph
+    deps.set(name, refNames)
+  }
+
+  const sorted: string[] = []
+  const visited = new Set<string>()
+  const inStack = new Set<string>()
+  const cyclicEdges = new Set<string>() // "child" schemas that are referenced before declaration
+
+  function visit(name: string) {
+    if (visited.has(name)) return
+    if (inStack.has(name)) {
+      // This is a cycle — mark this name as needing z.lazy()
+      cyclicEdges.add(name)
+      return
+    }
+    inStack.add(name)
+    const children = deps.get(name) ?? new Set()
+    for (const child of children) {
+      if (names.has(child)) visit(child)
+    }
+    inStack.delete(name)
+    visited.add(name)
+    sorted.push(name)
+  }
+
+  for (const name of names) {
+    visit(name)
+  }
+
+  // Self-referential schemas also need z.lazy() forward declarations
+  for (const name of selfRefs) {
+    cyclicEdges.add(name)
+  }
+  return { sorted, cyclicEdges }
+}
+
+function generateTypesFile(
+  spec: ParsedSpec,
+  ctx: ZodCodegenContext,
+  schemaIdentityMap: Map<object, string>
+): string {
   const lines: string[] = []
   lines.push("import { z } from 'zod'")
   lines.push('')
   lines.push(`// Shared schemas from ${spec.info.title} v${spec.info.version}`)
   lines.push('')
 
-  for (const [name, schema] of Object.entries(spec.componentSchemas)) {
-    const varName = schemaVarName(name)
+  const { sorted, cyclicEdges } = topoSortSchemas(
+    spec.componentSchemas,
+    schemaIdentityMap
+  )
+
+  // Track emitted variable names and type names to deduplicate collisions
+  // (e.g. two OpenAPI components that sanitize to the same JS identifier)
+  const emittedVarNames = new Set<string>()
+  const emittedTypeNames = new Set<string>()
+
+  function deduplicateName(baseName: string, usedSet: Set<string>): string {
+    if (!usedSet.has(baseName)) {
+      usedSet.add(baseName)
+      return baseName
+    }
+    let counter = 2
+    while (usedSet.has(`${baseName}_${counter}`)) {
+      counter++
+    }
+    const deduped = `${baseName}_${counter}`
+    usedSet.add(deduped)
+    return deduped
+  }
+
+  // For schemas that participate in cycles, emit a z.lazy() forward declaration
+  // before any schemas are defined, so forward references work.
+  if (cyclicEdges.size > 0) {
+    lines.push('// Forward declarations for circular references')
+    for (const name of cyclicEdges) {
+      const varName = deduplicateName(schemaVarName(name), emittedVarNames)
+      const typeName = deduplicateName(sanitizeTypeName(name), emittedTypeNames)
+      lines.push(
+        `export const ${varName}: z.ZodType<any> = z.lazy(() => _${varName})`
+      )
+      lines.push(`export type ${typeName} = z.infer<typeof ${varName}>`)
+      lines.push('')
+    }
+  }
+
+  // Emit schemas in topological order
+  for (const name of sorted) {
+    const schema = spec.componentSchemas[name]
+    const varName = deduplicateName(schemaVarName(name), emittedVarNames)
+    const typeName = deduplicateName(sanitizeTypeName(name), emittedTypeNames)
+    // Temporarily remove the current schema from the identity map so that
+    // schemaToZod doesn't short-circuit to referencing the variable we're
+    // currently defining (which would produce `const XSchema = XSchema`).
+    ctx.schemaIdentityMap.delete(schema)
     const zodCode = schemaToZod(schema, ctx)
-    lines.push(`export const ${varName} = ${zodCode}`)
-    lines.push(
-      `export type ${sanitizeTypeName(name)} = z.infer<typeof ${varName}>`
-    )
+    // Restore it for subsequent schemas that may reference this one.
+    ctx.schemaIdentityMap.set(schema, name)
+
+    if (cyclicEdges.has(name)) {
+      // The public variable was already declared above via z.lazy();
+      // emit the real implementation with an underscore prefix.
+      lines.push(`const _${varName} = ${zodCode}`)
+    } else {
+      lines.push(`export const ${varName} = ${zodCode}`)
+      lines.push(`export type ${typeName} = z.infer<typeof ${varName}>`)
+    }
     lines.push('')
   }
 
@@ -183,10 +597,44 @@ function generateFunctionFile(
   vars: AddonVars,
   ctx: ZodCodegenContext,
   spec: ParsedSpec,
-  flags: CodegenFlags
+  flags: CodegenFlags,
+  inlineSchemas: Set<string> = new Set(),
+  sharedSchemas: Set<string> = new Set(),
+  schemaIdentityMap: Map<object, string> = new Map()
 ): string {
   const lines: string[] = []
-  const { camelName } = vars
+  const { camelName, name } = vars
+
+  const hasInput =
+    parsed.pathParams.length > 0 ||
+    parsed.queryParams.length > 0 ||
+    parsed.headerParams.length > 0 ||
+    parsed.requestBody
+
+  const pascalName =
+    named.functionName.charAt(0).toUpperCase() + named.functionName.slice(1)
+  const inputName = `${pascalName}Input`
+  const outputName = `${pascalName}Output`
+
+  // Pre-generate Zod code to discover which schema refs are used
+  let inputCode: string | undefined
+  let outputCode: string | undefined
+  if (hasInput) {
+    inputCode = buildInputSchema(parsed, ctx)
+  }
+  if (parsed.responseSchema) {
+    outputCode = buildOutputSchema(parsed.responseSchema, ctx)
+  }
+
+  // Bug 2: If generated Zod code is too large (> 500 lines), TypeScript
+  // can't infer the type (TS7056). Replace with z.any() to stay compilable.
+  const LINE_LIMIT = 500
+  if (inputCode && inputCode.split('\n').length > LINE_LIMIT) {
+    inputCode = 'z.any()'
+  }
+  if (outputCode && outputCode.split('\n').length > LINE_LIMIT) {
+    outputCode = 'z.any()'
+  }
 
   // Tag description as file header
   if (parsed.tags.length > 0) {
@@ -202,21 +650,10 @@ function generateFunctionFile(
     }
   }
 
-  const hasInput =
-    parsed.pathParams.length > 0 ||
-    parsed.queryParams.length > 0 ||
-    parsed.headerParams.length > 0 ||
-    parsed.requestBody
-
-  const pascalName =
-    named.functionName.charAt(0).toUpperCase() + named.functionName.slice(1)
-  const inputName = `${pascalName}Input`
-  const outputName = `${pascalName}Output`
-
   // Determine error imports needed
   const errorClasses = getErrorClassesForResponses(parsed.errorResponses)
 
-  const needsZod = hasInput || !!parsed.responseSchema
+  const needsZod = hasInput || !!parsed.responseSchema || inlineSchemas.size > 0
   if (needsZod) {
     lines.push("import { z } from 'zod'")
   }
@@ -228,18 +665,142 @@ function generateFunctionFile(
     )
   }
 
+  // Import referenced component schemas from the types file.
+  // Only import schemas that are in the shared set (not inlined ones).
+  // In addition to the refs tracked through usedRefs, scan the generated Zod
+  // code for schema variable names that may have been missed (e.g. when
+  // a $ref survived resolution in a nested path not covered by usedRefs).
+  if (Object.keys(spec.componentSchemas).length > 0) {
+    const allGeneratedCode = [inputCode, outputCode].filter(Boolean).join('\n')
+    for (const [refName, varName] of ctx.schemaRefs) {
+      if (!ctx.usedRefs.has(refName) && allGeneratedCode.includes(varName)) {
+        ctx.usedRefs.add(refName)
+      }
+    }
+
+    const schemaImports = [
+      ...new Set(
+        [...ctx.usedRefs]
+          .filter((refName) => sharedSchemas.has(refName)) // only import shared schemas
+          .map((refName) => ctx.schemaRefs.get(refName))
+          .filter(Boolean)
+      ),
+    ].sort()
+    if (schemaImports.length > 0) {
+      lines.push(
+        `import { ${schemaImports.join(', ')} } from '../${name}.types.js'`
+      )
+    }
+  }
+
   lines.push('')
 
+  // Emit inline (single-use) schema definitions before input/output
+  if (inlineSchemas.size > 0) {
+    // Build a mini component schemas map for just the inline schemas
+    const inlineComponentSchemas: Record<string, any> = {}
+    for (const schemaName of inlineSchemas) {
+      if (spec.componentSchemas[schemaName]) {
+        inlineComponentSchemas[schemaName] = spec.componentSchemas[schemaName]
+      }
+    }
+
+    if (Object.keys(inlineComponentSchemas).length > 0) {
+      // Create a context that knows about both shared (for imports) and inline schemas
+      const inlineCtx = createContext(ctx.schemaRefs, schemaIdentityMap)
+
+      const { sorted, cyclicEdges } = topoSortSchemas(
+        inlineComponentSchemas,
+        schemaIdentityMap
+      )
+
+      // Bug 4: Pre-generate all Zod code and detect forward references.
+      // The topological sort may miss dependencies when $ref resolution
+      // replaces references with copies (breaking object identity).
+      // Scan generated code for variable names that appear before their
+      // declaration and promote those to z.lazy() forward declarations.
+      const inlineSorted = sorted.filter((s) => inlineSchemas.has(s))
+      const generatedCode = new Map<string, string>()
+      for (const sName of inlineSorted) {
+        const schema = spec.componentSchemas[sName]
+        inlineCtx.schemaIdentityMap.delete(schema)
+        const zodCode = schemaToZod(schema, inlineCtx)
+        inlineCtx.schemaIdentityMap.set(schema, sName)
+        generatedCode.set(sName, zodCode)
+      }
+
+      // Build a map of variable names to schema names for inline schemas
+      const inlineVarToName = new Map<string, string>()
+      for (const sName of inlineSorted) {
+        inlineVarToName.set(schemaVarName(sName), sName)
+      }
+
+      // Detect forward references and self-references: for each schema in order,
+      // check if its generated code references a variable that appears later in
+      // the sorted list OR references its own variable (self-referential schema).
+      const forwardRefs = new Set<string>(cyclicEdges)
+      const emittedSoFar = new Set<string>()
+      for (const sName of inlineSorted) {
+        const code = generatedCode.get(sName)!
+        const ownVarN = schemaVarName(sName)
+        // Self-reference: schema uses its own variable name in its definition
+        if (code.includes(ownVarN)) {
+          forwardRefs.add(sName)
+        }
+        for (const [varN, refName] of inlineVarToName) {
+          if (
+            refName !== sName &&
+            !emittedSoFar.has(refName) &&
+            code.includes(varN)
+          ) {
+            // This schema references another inline schema not yet emitted
+            forwardRefs.add(refName)
+          }
+        }
+        emittedSoFar.add(sName)
+      }
+
+      const emittedVarNames = new Set<string>()
+      const emittedTypeNames = new Set<string>()
+
+      // Forward declarations for cycles and forward references within inline schemas
+      if (forwardRefs.size > 0) {
+        lines.push('// Forward declarations for circular references')
+        for (const sName of forwardRefs) {
+          if (!inlineSchemas.has(sName)) continue
+          const varN = schemaVarName(sName)
+          const typeN = sanitizeTypeName(sName)
+          emittedVarNames.add(varN)
+          emittedTypeNames.add(typeN)
+          lines.push(`const ${varN}: z.ZodType<any> = z.lazy(() => _${varN})`)
+          lines.push('')
+        }
+      }
+
+      for (const sName of inlineSorted) {
+        const varN = schemaVarName(sName)
+        emittedVarNames.add(varN)
+
+        const zodCode = generatedCode.get(sName)!
+
+        if (forwardRefs.has(sName)) {
+          lines.push(`const _${varN} = ${zodCode}`)
+        } else {
+          lines.push(`const ${varN} = ${zodCode}`)
+        }
+        lines.push('')
+      }
+    }
+  }
+
   // Build Input schema (exported for pikku schema discovery)
-  if (hasInput) {
-    const inputCode = buildInputSchema(parsed, ctx)
+  if (hasInput && inputCode) {
     lines.push(`export const ${inputName} = ${inputCode}`)
     lines.push('')
   }
 
   // Build Output schema (exported for pikku schema discovery)
-  if (parsed.responseSchema) {
-    const outputCode = buildOutputSchema(parsed.responseSchema, ctx)
+  if (parsed.responseSchema && outputCode) {
     lines.push(`export const ${outputName} = ${outputCode}`)
     lines.push('')
   }
@@ -264,12 +825,16 @@ function generateFunctionFile(
     funcConfig.push('  mcp: true,')
   }
 
-  const funcParams = hasInput ? `{ ${camelName} }, data` : `{ ${camelName} }`
+  // Bug 3: Avoid duplicate identifier when camelName is 'data' (TS2300)
+  const inputParamName = camelName === 'data' ? 'inputData' : 'data'
+  const funcParams = hasInput
+    ? `{ ${camelName} }, ${inputParamName}`
+    : `{ ${camelName} }`
 
   const returnCast = parsed.responseSchema ? ' as any' : ''
   funcConfig.push(
     `  func: async (${funcParams}) => {`,
-    `    return ${camelName}.call(${JSON.stringify(method)}, ${JSON.stringify(parsed.path)}${hasInput ? ', data' : ''})${returnCast}`,
+    `    return ${camelName}.call(${JSON.stringify(method)}, ${JSON.stringify(parsed.path)}${hasInput ? `, ${inputParamName}` : ''})${returnCast}`,
     '  },'
   )
 
@@ -286,39 +851,58 @@ function buildInputSchema(
   ctx: ZodCodegenContext
 ): string {
   const props: string[] = []
+  // Track which parameter names have been emitted to prevent duplicates.
+  // When shared path-level params and operation-level params overlap
+  // (e.g. both define "Version"), the later (operation-level) one wins.
+  const emittedNames = new Set<string>()
 
-  for (const param of parsed.pathParams) {
-    props.push(formatParamProp(param, ctx))
+  // Deduplicate params: operation-level params override shared path-level
+  // params with the same name. Build deduplicated lists per category.
+  function deduplicateParams(params: typeof parsed.pathParams) {
+    const seen = new Map<string, (typeof params)[0]>()
+    for (const param of params) {
+      seen.set(param.name, param) // last wins (operation-level comes after shared)
+    }
+    return [...seen.values()]
   }
 
-  for (const param of parsed.queryParams) {
-    props.push(formatParamProp(param, ctx))
+  for (const param of deduplicateParams(parsed.pathParams)) {
+    if (!emittedNames.has(param.name)) {
+      emittedNames.add(param.name)
+      props.push(formatParamProp(param, ctx))
+    }
   }
 
-  for (const param of parsed.headerParams) {
-    props.push(formatParamProp(param, ctx))
+  for (const param of deduplicateParams(parsed.queryParams)) {
+    if (!emittedNames.has(param.name)) {
+      emittedNames.add(param.name)
+      props.push(formatParamProp(param, ctx))
+    }
+  }
+
+  for (const param of deduplicateParams(parsed.headerParams)) {
+    if (!emittedNames.has(param.name)) {
+      emittedNames.add(param.name)
+      props.push(formatParamProp(param, ctx))
+    }
   }
 
   if (parsed.requestBody) {
     if (parsed.requestBody.properties) {
-      const paramNames = new Set([
-        ...parsed.pathParams.map((p) => p.name),
-        ...parsed.queryParams.map((p) => p.name),
-        ...parsed.headerParams.map((p) => p.name),
-      ])
       const requiredSet = new Set(parsed.requestBody.required ?? [])
       for (const [key, propSchema] of Object.entries(
         parsed.requestBody.properties
       )) {
         // Skip readOnly properties from input
         if (propSchema.readOnly) continue
-        // Skip body properties that collide with path/query/header params
-        if (paramNames.has(key)) {
+        // Skip body properties that collide with already-emitted params
+        if (emittedNames.has(key)) {
           console.warn(
             `[openapi] Skipping body property '${key}' — collides with path/query/header param`
           )
           continue
         }
+        emittedNames.add(key)
         const isOptional = !requiredSet.has(key)
         const zodCode = schemaToZod(propSchema, ctx, { optional: isOptional })
         props.push(`  ${safeKey(key)}: ${zodCode},`)
@@ -359,19 +943,26 @@ function formatParamProp(
 }
 
 function buildOutputSchema(schema: any, ctx: ZodCodegenContext): string {
-  // For output schemas, filter out writeOnly properties
+  // For output schemas, filter out writeOnly properties.
+  // Only create a filtered copy if there are actually writeOnly properties,
+  // to preserve object identity for schema identity map matching.
   if (schema.properties) {
-    const filteredProps: Record<string, any> = {}
-    for (const [key, propSchema] of Object.entries(schema.properties) as [
-      string,
-      any,
-    ][]) {
-      if (!propSchema.writeOnly) {
-        filteredProps[key] = propSchema
+    const hasWriteOnly = Object.values(schema.properties).some(
+      (p: any) => p.writeOnly
+    )
+    if (hasWriteOnly) {
+      const filteredProps: Record<string, any> = {}
+      for (const [key, propSchema] of Object.entries(schema.properties) as [
+        string,
+        any,
+      ][]) {
+        if (!propSchema.writeOnly) {
+          filteredProps[key] = propSchema
+        }
       }
+      const filteredSchema = { ...schema, properties: filteredProps }
+      return schemaToZod(filteredSchema, ctx)
     }
-    const filteredSchema = { ...schema, properties: filteredProps }
-    return schemaToZod(filteredSchema, ctx)
   }
   return schemaToZod(schema, ctx)
 }
