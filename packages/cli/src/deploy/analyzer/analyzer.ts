@@ -94,6 +94,21 @@ export function analyzeDeployment(
       }
     }
 
+    // Skip synthetic functions — their routes are absorbed into gateway units
+    if (
+      funcId.startsWith('agentRun:') ||
+      funcId.startsWith('agentStream:') ||
+      funcId.startsWith('agentApprove:') ||
+      funcId.startsWith('agentResume:') ||
+      funcId.startsWith('workflowStart:') ||
+      funcId.startsWith('workflow:') ||
+      funcId.startsWith('workflowStatus:') ||
+      funcId.startsWith('pikkuWorkflowWorker:') ||
+      funcId.startsWith('pikkuWorkflowOrchestrator:')
+    ) {
+      continue
+    }
+
     // If function has no direct triggers but is exposed or has RPC,
     // it still needs a fetch handler for RPC access
     if (handlers.length === 0 && (funcMeta.expose || funcMeta.remote)) {

@@ -10,6 +10,9 @@ import {
   pikkuState,
 } from '../../pikku-state.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
+
+const toKebab = (s: string) =>
+  s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
 import type { PikkuWire, SerializedError } from '../../types/core.types.js'
 import type { QueueService } from '../queue/queue.types.js'
 import type {
@@ -1399,7 +1402,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    */
   protected getOrchestratorQueueName(workflowName?: string): string {
     if (workflowName) {
-      const uniqueName = `wf-orchestrator-${workflowName}`
+      const uniqueName = `wf-orchestrator-${toKebab(workflowName)}`
       const queueMeta = pikkuState(null, 'queue', 'meta')
       if (queueMeta[uniqueName]) {
         return uniqueName
@@ -1415,7 +1418,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    */
   protected getStepWorkerQueueName(rpcName?: string): string {
     if (rpcName) {
-      const uniqueName = `wf-step-${rpcName}`
+      const uniqueName = `wf-step-${toKebab(rpcName)}`
       const queueMeta = pikkuState(null, 'queue', 'meta')
       if (queueMeta[uniqueName]) {
         return uniqueName
