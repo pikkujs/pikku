@@ -4,7 +4,7 @@
  * Uses kysely-d1 dialect to run existing Kysely SQL against D1's SQLite.
  */
 
-import { Kysely } from 'kysely'
+import { CamelCasePlugin, Kysely } from 'kysely'
 import { D1Dialect } from 'kysely-d1'
 import type { D1Database } from '@cloudflare/workers-types'
 import type { KyselyPikkuDB } from '@pikku/kysely'
@@ -21,6 +21,7 @@ import {
 export function createD1Kysely(d1Database: D1Database): Kysely<KyselyPikkuDB> {
   return new Kysely<KyselyPikkuDB>({
     dialect: new D1Dialect({ database: d1Database }),
+    plugins: [new CamelCasePlugin()],
   })
 }
 

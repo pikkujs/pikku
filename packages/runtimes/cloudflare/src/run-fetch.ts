@@ -23,6 +23,6 @@ export const runFetch = async (
   // Use CF-Ray as traceId when available, otherwise core generates one
   const traceId = request.headers.get('cf-ray') ?? undefined
 
-  const response = await fetch(request, { traceId })
+  const response = await fetch(request, { traceId, exposeErrors: true })
   return response
 }
