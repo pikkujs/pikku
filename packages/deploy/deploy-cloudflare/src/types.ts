@@ -59,6 +59,8 @@ export type WorkerBinding =
   | WorkerBindingSecretText
   | WorkerBindingPlainText
   | WorkerBindingSecretsStore
+  | WorkerBindingAI
+  | WorkerBindingKVNamespace
 
 export interface WorkerBindingD1 {
   type: 'd1'
@@ -101,6 +103,17 @@ export interface WorkerBindingSecretsStore {
   type: 'secrets_store'
   name: string
   store_id: string
+}
+
+export interface WorkerBindingAI {
+  type: 'ai'
+  name: string
+}
+
+export interface WorkerBindingKVNamespace {
+  type: 'kv_namespace'
+  name: string
+  namespace_id: string
 }
 
 /** Route pattern to attach to a Worker. */

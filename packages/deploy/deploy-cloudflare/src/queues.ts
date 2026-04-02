@@ -64,18 +64,23 @@ export async function createConsumer(
   workerName: string,
   settings: QueueConsumerSettings = {}
 ): Promise<QueueConsumer> {
+  const body: Record<string, unknown> = {
+    type: 'worker',
+    script_name: workerName,
+    settings: {
+      batch_size: settings.batch_size ?? 10,
+      max_retries: settings.max_retries ?? 3,
+      max_wait_time_ms: settings.max_wait_time_ms ?? 5000,
+    },
+  }
+  if (settings.max_concurrency !== undefined) {
+    ;(body.settings as Record<string, unknown>).max_concurrency =
+      settings.max_concurrency
+  }
   return client.request<QueueConsumer>(
     'POST',
     `/queues/${encodeURIComponent(queueId)}/consumers`,
-    {
-      script_name: workerName,
-      settings: {
-        batch_size: settings.batch_size ?? 10,
-        max_retries: settings.max_retries ?? 3,
-        max_wait_time_ms: settings.max_wait_time_ms ?? 5000,
-        max_concurrency: settings.max_concurrency,
-      },
-    }
+    body
   )
 }
 

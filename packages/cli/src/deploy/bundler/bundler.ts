@@ -116,7 +116,8 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
   // Determine which gen files to stub based on per-unit service requirements
   const deadPatterns = await getDeadGenFilePatterns(unitOutputDir)
 
-  // Run esbuild — bundle user code, keep npm packages external.
+  // Run esbuild — inline everything into a self-contained bundle.
+  // Only Node built-ins are kept external (CF Workers provides them).
   // The stub plugin replaces gen files for unused services with empty
   // modules, preventing Node.js-only code from entering the bundle.
   const result = await build({
@@ -124,7 +125,6 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     bundle: true,
     platform: 'node',
     format: 'esm',
-    packages: 'external',
     metafile: true,
     target: 'es2022',
     outfile: bundlePath,
@@ -132,6 +132,7 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     sourcemap: true,
     logLevel: 'warning',
     loader: { '.ts': 'ts' },
+    external: ['node:*', 'crypto', 'cloudflare:*'],
     plugins: [createDeadModuleStubPlugin(deadPatterns)],
   })
 

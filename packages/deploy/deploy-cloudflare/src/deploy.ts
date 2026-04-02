@@ -1,52 +1,34 @@
 /**
  * Cloudflare deploy orchestrator.
  *
- * Deploys a full DeploymentManifest to Cloudflare using the API directly
- * (not wrangler). This is the fast path — all resource creation and worker
- * uploads happen in parallel.
+ * Deploys a full project to Cloudflare using the API directly (not wrangler).
+ * Reads the infra.json manifest and bundled workers from the build directory.
  *
  * Flow:
- * 1. Create shared resources (D1, R2, Queues) in parallel
- * 2. Upload all worker scripts with bindings in parallel
- * 3. Wire queue consumers and cron triggers in parallel
+ * 1. Create shared resources (D1, R2, Queues) — idempotent, parallel
+ * 2. Upload workers without service bindings first (parallel)
+ * 3. Upload workers with service bindings (parallel, deps already exist)
+ * 4. Wire queue consumers and cron triggers
+ * 5. Enable workers.dev routes
  */
 
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import { CloudflareClient } from './client.js'
-import { createWorker, updateWorker, getWorker } from './workers.js'
+import { createWorker } from './workers.js'
 import { createQueue, listQueues, createConsumer } from './queues.js'
 import { createDatabase, listDatabases } from './d1.js'
 import { createBucket, listBuckets } from './r2.js'
 import { setCronTriggers } from './cron.js'
-import { resolveBindings } from './binding-resolver.js'
-import type { ResourceState } from './binding-resolver.js'
+import type { CloudflareInfraManifest } from './infra-manifest.js'
 import type { WorkerBinding } from './types.js'
-
-interface DeploymentManifest {
-  projectId: string
-  units: Array<{
-    name: string
-    role: string
-    services: Array<{ capability: string; sourceServiceName: string }>
-  }>
-  queues: Array<{ name: string; consumerUnit: string }>
-  scheduledTasks: Array<{
-    name: string
-    schedule: string
-    unitName: string
-  }>
-  secrets: Array<{ secretId: string }>
-  variables: Array<{ variableId: string }>
-}
 
 export interface DeployOptions {
   accountId: string
   apiToken: string
-  projectId: string
   buildDir: string
-  manifest: DeploymentManifest
+  manifest: CloudflareInfraManifest
   onProgress?: (step: string, detail: string) => void
 }
 
@@ -57,11 +39,31 @@ export interface DeployResult {
   errors: Array<{ step: string; error: string }>
 }
 
+/** Tracks created resource IDs for binding resolution */
+interface ResourceIds {
+  d1: Map<string, string> // binding name -> database UUID
+  queues: Map<string, string> // queue name -> queue ID
+  r2: Map<string, string> // binding name -> bucket name
+  kv: Map<string, string> // binding name -> namespace ID
+}
+
+/**
+ * Sanitize a unit name into a valid CF Worker name.
+ * CF requires: lowercase, alphanumeric, dashes only.
+ */
+function toWorkerName(projectId: string, unitName: string): string {
+  return `${projectId}-${unitName}`
+    .replace(/[/:]/g, '-')
+    .replace(/--+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase()
+}
+
 export async function deploy(options: DeployOptions): Promise<DeployResult> {
-  const { accountId, apiToken, projectId, buildDir, manifest, onProgress } =
-    options
+  const { accountId, apiToken, buildDir, manifest, onProgress } = options
   const client = new CloudflareClient({ accountId, apiToken })
   const log = onProgress ?? (() => {})
+  const projectId = manifest.projectId
 
   const result: DeployResult = {
     success: true,
@@ -70,38 +72,43 @@ export async function deploy(options: DeployOptions): Promise<DeployResult> {
     errors: [],
   }
 
+  const resourceIds: ResourceIds = {
+    d1: new Map(),
+    queues: new Map(),
+    r2: new Map(),
+    kv: new Map(),
+  }
+
   // Step 1: Create shared resources in parallel
   log('resources', 'Creating shared resources...')
-  const resources = await createSharedResources(
-    client,
-    projectId,
-    manifest,
-    result,
-    log
-  )
+  await createSharedResources(client, manifest, resourceIds, result, log)
 
-  // Step 2: Upload all worker scripts in parallel
+  // Step 2+3: Upload workers — dependency-free first, then those with service bindings
   log('workers', 'Uploading workers...')
-  await uploadWorkers(
+  await uploadWorkersInOrder(
     client,
     projectId,
     buildDir,
     manifest,
-    resources,
+    resourceIds,
     result,
     log
   )
 
-  // Step 3: Wire consumers and cron triggers in parallel
+  // Step 4: Wire consumers and cron triggers
   log('wiring', 'Wiring consumers and triggers...')
   await wireConsumersAndTriggers(
     client,
     projectId,
     manifest,
-    resources,
+    resourceIds,
     result,
     log
   )
+
+  // Step 5: Enable workers.dev routes
+  log('routes', 'Enabling workers.dev routes...')
+  await enableWorkersDevRoutes(client, projectId, manifest, result, log)
 
   result.success = result.errors.length === 0
   return result
@@ -109,49 +116,31 @@ export async function deploy(options: DeployOptions): Promise<DeployResult> {
 
 async function createSharedResources(
   client: CloudflareClient,
-  projectId: string,
-  manifest: DeploymentManifest,
+  manifest: CloudflareInfraManifest,
+  resourceIds: ResourceIds,
   result: DeployResult,
   log: (step: string, detail: string) => void
-): Promise<ResourceState> {
-  const resources: ResourceState = {
-    d1DatabaseId: null,
-    d1DatabaseName: `${projectId}-db`,
-    r2BucketName: `${projectId}-storage`,
-    kvNamespaceId: null,
-    queueNames: new Map(),
-  }
-
-  const needsDatabase = manifest.units.some((u) =>
-    u.services.some((s) => s.capability === 'database')
-  )
-  const needsStorage = manifest.units.some((u) =>
-    u.services.some((s) => s.capability === 'object-storage')
-  )
-
+): Promise<void> {
   const tasks: Array<Promise<void>> = []
 
-  // D1 database
-  if (needsDatabase) {
+  for (const db of manifest.resources.d1) {
     tasks.push(
       (async () => {
         try {
           const existing = await listDatabases(client)
-          const found = existing.find(
-            (d) => d.name === resources.d1DatabaseName
-          )
+          const found = existing.find((d) => d.name === db.name)
           if (found) {
-            resources.d1DatabaseId = found.uuid
-            log('resources', `D1 "${resources.d1DatabaseName}" already exists`)
+            resourceIds.d1.set(db.binding, found.uuid)
+            log('resources', `D1 "${db.name}" exists`)
           } else {
-            const db = await createDatabase(client, resources.d1DatabaseName)
-            resources.d1DatabaseId = db.uuid
-            result.resourcesCreated.push(`d1:${resources.d1DatabaseName}`)
-            log('resources', `Created D1 "${resources.d1DatabaseName}"`)
+            const created = await createDatabase(client, db.name)
+            resourceIds.d1.set(db.binding, created.uuid)
+            result.resourcesCreated.push(`d1:${db.name}`)
+            log('resources', `Created D1 "${db.name}"`)
           }
         } catch (err) {
           result.errors.push({
-            step: 'd1-create',
+            step: `d1:${db.name}`,
             error: err instanceof Error ? err.message : String(err),
           })
         }
@@ -159,23 +148,24 @@ async function createSharedResources(
     )
   }
 
-  // R2 bucket
-  if (needsStorage) {
+  for (const bucket of manifest.resources.r2) {
     tasks.push(
       (async () => {
         try {
           const existing = await listBuckets(client)
-          const found = existing.find((b) => b.name === resources.r2BucketName)
+          const found = existing.find((b) => b.name === bucket.name)
           if (found) {
-            log('resources', `R2 "${resources.r2BucketName}" already exists`)
+            resourceIds.r2.set(bucket.binding, bucket.name)
+            log('resources', `R2 "${bucket.name}" exists`)
           } else {
-            await createBucket(client, resources.r2BucketName)
-            result.resourcesCreated.push(`r2:${resources.r2BucketName}`)
-            log('resources', `Created R2 "${resources.r2BucketName}"`)
+            await createBucket(client, bucket.name)
+            resourceIds.r2.set(bucket.binding, bucket.name)
+            result.resourcesCreated.push(`r2:${bucket.name}`)
+            log('resources', `Created R2 "${bucket.name}"`)
           }
         } catch (err) {
           result.errors.push({
-            step: 'r2-create',
+            step: `r2:${bucket.name}`,
             error: err instanceof Error ? err.message : String(err),
           })
         }
@@ -183,26 +173,24 @@ async function createSharedResources(
     )
   }
 
-  // Queues
-  for (const queue of manifest.queues) {
-    const queueName = `${projectId}-${queue.name}`
+  for (const queue of manifest.resources.queues) {
     tasks.push(
       (async () => {
         try {
           const existing = await listQueues(client)
-          const found = existing.find((q) => q.queue_name === queueName)
+          const found = existing.find((q) => q.queue_name === queue.name)
           if (found) {
-            resources.queueNames.set(queue.name, queueName)
-            log('resources', `Queue "${queueName}" already exists`)
+            resourceIds.queues.set(queue.name, found.queue_id)
+            log('resources', `Queue "${queue.name}" exists`)
           } else {
-            await createQueue(client, queueName)
-            resources.queueNames.set(queue.name, queueName)
-            result.resourcesCreated.push(`queue:${queueName}`)
-            log('resources', `Created queue "${queueName}"`)
+            const created = await createQueue(client, queue.name)
+            resourceIds.queues.set(queue.name, created.queue_id)
+            result.resourcesCreated.push(`queue:${queue.name}`)
+            log('resources', `Created queue "${queue.name}"`)
           }
         } catch (err) {
           result.errors.push({
-            step: `queue-create:${queueName}`,
+            step: `queue:${queue.name}`,
             error: err instanceof Error ? err.message : String(err),
           })
         }
@@ -211,42 +199,168 @@ async function createSharedResources(
   }
 
   await Promise.all(tasks)
-  return resources
 }
 
-async function uploadWorkers(
+function resolveUnitBindings(
+  bindings: string[],
+  resourceIds: ResourceIds,
+  projectId: string
+): WorkerBinding[] {
+  const resolved: WorkerBinding[] = []
+
+  for (const binding of bindings) {
+    const colonIdx = binding.indexOf(':')
+    if (colonIdx === -1) continue
+    const type = binding.slice(0, colonIdx)
+    const name = binding.slice(colonIdx + 1)
+
+    switch (type) {
+      case 'd1': {
+        const dbId = resourceIds.d1.get(name)
+        if (dbId) {
+          resolved.push({ type: 'd1', name, id: dbId })
+        }
+        break
+      }
+      case 'r2': {
+        const bucketName = resourceIds.r2.get(name)
+        if (bucketName) {
+          resolved.push({ type: 'r2_bucket', name, bucket_name: bucketName })
+        }
+        break
+      }
+      case 'queue': {
+        const queueFullName = `${projectId}-${name}`
+        resolved.push({
+          type: 'queue',
+          name: name.toUpperCase().replace(/-/g, '_'),
+          queue_name: queueFullName,
+        })
+        break
+      }
+      case 'service': {
+        const workerName = toWorkerName(projectId, name)
+        resolved.push({
+          type: 'service',
+          name: name.toUpperCase().replace(/-/g, '_'),
+          service: workerName,
+        })
+        break
+      }
+      case 'ai': {
+        resolved.push({ type: 'ai', name })
+        break
+      }
+      case 'kv': {
+        const nsId = resourceIds.kv.get(name)
+        if (nsId) {
+          resolved.push({ type: 'kv_namespace', name, namespace_id: nsId })
+        }
+        break
+      }
+    }
+  }
+
+  return resolved
+}
+
+/**
+ * Upload workers in dependency order using topological sort.
+ * Workers without service bindings go first, then each layer of
+ * dependencies is deployed before the workers that depend on them.
+ */
+async function uploadWorkersInOrder(
   client: CloudflareClient,
   projectId: string,
   buildDir: string,
-  manifest: DeploymentManifest,
-  resources: ResourceState,
+  manifest: CloudflareInfraManifest,
+  resourceIds: ResourceIds,
   result: DeployResult,
   log: (step: string, detail: string) => void
 ): Promise<void> {
-  const tasks = manifest.units.map(async (unit) => {
-    const workerName = `${projectId}-${unit.name}`
-    const bundlePath = join(buildDir, unit.name, 'bundle.js')
+  // Build dependency graph: unit -> set of service binding targets
+  const deps = new Map<string, Set<string>>()
+  for (const [unitName, unitManifest] of Object.entries(manifest.units)) {
+    const serviceDeps = new Set<string>()
+    for (const b of unitManifest.bindings) {
+      if (b.startsWith('service:')) {
+        serviceDeps.add(b.slice('service:'.length))
+      }
+    }
+    deps.set(unitName, serviceDeps)
+  }
+
+  // Topological sort into layers
+  const deployed = new Set<string>()
+  const remaining = new Set(deps.keys())
+  let phase = 1
+
+  while (remaining.size > 0) {
+    // Find units whose deps are all deployed (or have no deps)
+    const ready: Array<[string, (typeof manifest.units)[string]]> = []
+    for (const unitName of remaining) {
+      const unitDeps = deps.get(unitName)!
+      const allDepsReady = [...unitDeps].every(
+        (d) => deployed.has(d) || !remaining.has(d)
+      )
+      if (allDepsReady) {
+        ready.push([unitName, manifest.units[unitName]])
+      }
+    }
+
+    if (ready.length === 0) {
+      // Circular dependency — deploy remaining anyway
+      for (const unitName of remaining) {
+        ready.push([unitName, manifest.units[unitName]])
+      }
+    }
+
+    log('workers', `Phase ${phase}: ${ready.length} workers...`)
+    await deployWorkerBatch(
+      client,
+      projectId,
+      buildDir,
+      ready,
+      resourceIds,
+      result,
+      log
+    )
+
+    for (const [unitName] of ready) {
+      deployed.add(unitName)
+      remaining.delete(unitName)
+    }
+    phase++
+  }
+}
+
+async function deployWorkerBatch(
+  client: CloudflareClient,
+  projectId: string,
+  buildDir: string,
+  units: Array<[string, { bindings: string[]; role: string }]>,
+  resourceIds: ResourceIds,
+  result: DeployResult,
+  log: (step: string, detail: string) => void
+): Promise<void> {
+  const tasks = units.map(async ([unitName, unitManifest]) => {
+    const workerName = toWorkerName(projectId, unitName)
+    const bundlePath = join(buildDir, unitName, 'bundle.js')
 
     try {
       const script = await readFile(bundlePath, 'utf-8')
-      const bindings: WorkerBinding[] = resolveBindings(
-        unit,
-        manifest.queues,
-        resources
+      const bindings = resolveUnitBindings(
+        unitManifest.bindings,
+        resourceIds,
+        projectId
       )
 
-      const existing = await getWorker(client, workerName)
-      if (existing) {
-        await updateWorker(client, workerName, script, bindings)
-        log('workers', `Updated "${workerName}"`)
-      } else {
-        await createWorker(client, workerName, script, bindings)
-        log('workers', `Created "${workerName}"`)
-      }
+      await createWorker(client, workerName, script, bindings)
       result.workersDeployed.push(workerName)
+      log('workers', `Deployed "${workerName}"`)
     } catch (err) {
       result.errors.push({
-        step: `worker-upload:${workerName}`,
+        step: `worker:${workerName}`,
         error: err instanceof Error ? err.message : String(err),
       })
     }
@@ -258,30 +372,27 @@ async function uploadWorkers(
 async function wireConsumersAndTriggers(
   client: CloudflareClient,
   projectId: string,
-  manifest: DeploymentManifest,
-  resources: ResourceState,
+  manifest: CloudflareInfraManifest,
+  resourceIds: ResourceIds,
   result: DeployResult,
   log: (step: string, detail: string) => void
 ): Promise<void> {
   const tasks: Array<Promise<void>> = []
 
   // Wire queue consumers
-  for (const queue of manifest.queues) {
-    const queueName = resources.queueNames.get(queue.name)
-    if (!queueName) continue
+  for (const queue of manifest.resources.queues) {
+    const queueId = resourceIds.queues.get(queue.name)
+    if (!queueId || !queue.consumer) continue
 
-    const consumerWorkerName = `${projectId}-${queue.consumerUnit}`
+    const consumerWorkerName = toWorkerName(projectId, queue.consumer)
     tasks.push(
       (async () => {
         try {
-          await createConsumer(client, queueName, consumerWorkerName)
-          log(
-            'wiring',
-            `Bound consumer "${consumerWorkerName}" to queue "${queueName}"`
-          )
+          await createConsumer(client, queueId, consumerWorkerName)
+          log('wiring', `Queue "${queue.name}" → "${consumerWorkerName}"`)
         } catch (err) {
           result.errors.push({
-            step: `queue-consumer:${queueName}`,
+            step: `queue-consumer:${queue.name}`,
             error: err instanceof Error ? err.message : String(err),
           })
         }
@@ -290,16 +401,16 @@ async function wireConsumersAndTriggers(
   }
 
   // Set cron triggers
-  for (const task of manifest.scheduledTasks) {
-    const workerName = `${projectId}-${task.unitName}`
+  for (const cron of manifest.resources.cronTriggers) {
+    const workerName = toWorkerName(projectId, cron.worker)
     tasks.push(
       (async () => {
         try {
-          await setCronTriggers(client, workerName, [{ cron: task.schedule }])
-          log('wiring', `Set cron "${task.schedule}" on "${workerName}"`)
+          await setCronTriggers(client, workerName, [{ cron: cron.schedule }])
+          log('wiring', `Cron "${cron.schedule}" → "${workerName}"`)
         } catch (err) {
           result.errors.push({
-            step: `cron-trigger:${workerName}`,
+            step: `cron:${workerName}`,
             error: err instanceof Error ? err.message : String(err),
           })
         }
@@ -308,4 +419,33 @@ async function wireConsumersAndTriggers(
   }
 
   await Promise.all(tasks)
+}
+
+async function enableWorkersDevRoutes(
+  client: CloudflareClient,
+  projectId: string,
+  manifest: CloudflareInfraManifest,
+  result: DeployResult,
+  log: (step: string, detail: string) => void
+): Promise<void> {
+  const tasks = Object.keys(manifest.units).map(async (unitName) => {
+    const workerName = toWorkerName(projectId, unitName)
+    // Workers with names > 54 chars can't have previews enabled
+    const enablePreviews = workerName.length <= 54
+    try {
+      await client.request(
+        'POST',
+        `/workers/scripts/${encodeURIComponent(workerName)}/subdomain`,
+        { enabled: true, previews_enabled: enablePreviews }
+      )
+    } catch {
+      // Non-fatal — only affects workers.dev route, not service bindings
+    }
+  })
+
+  await Promise.all(tasks)
+  log(
+    'routes',
+    `Enabled workers.dev for ${Object.keys(manifest.units).length} workers`
+  )
 }
