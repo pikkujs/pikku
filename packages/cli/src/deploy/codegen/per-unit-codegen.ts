@@ -117,7 +117,8 @@ function collectFilterNames(
     }
     case 'workflow': {
       // Workflow orchestrators need the workflow function itself,
-      // the step function IDs, and the synthetic HTTP route functions
+      // the step function IDs, synthetic HTTP route functions,
+      // and queue worker names (wf-orchestrator-*, wf-step-*)
       const wfDef = manifest.workflows.find(
         (w) => w.orchestratorUnit === unit.name
       )
@@ -128,8 +129,15 @@ function collectFilterNames(
         names.add(`workflowStart:${wfDef.name}`)
         names.add(`workflow:${wfDef.name}`)
         names.add(`workflowStatus:${wfDef.name}`)
+        // Queue names for orchestrator and step workers
+        const toKebab = (s: string) =>
+          s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
+        names.add(`wf-orchestrator-${toKebab(wfDef.name)}`)
         for (const step of wfDef.steps) {
-          if (step.functionId) names.add(step.functionId)
+          if (step.functionId) {
+            names.add(step.functionId)
+            names.add(`wf-step-${toKebab(step.functionId)}`)
+          }
         }
       }
       break

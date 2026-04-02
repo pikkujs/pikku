@@ -57,6 +57,21 @@ export function analyzeDeployment(
   // Each function gets one unit. Collect all its triggers.
 
   for (const [funcId, funcMeta] of entries(functionsMeta)) {
+    // Skip synthetic functions — their routes/queues are handled by gateway units
+    if (
+      funcId.startsWith('agentRun:') ||
+      funcId.startsWith('agentStream:') ||
+      funcId.startsWith('agentApprove:') ||
+      funcId.startsWith('agentResume:') ||
+      funcId.startsWith('workflowStart:') ||
+      funcId.startsWith('workflow:') ||
+      funcId.startsWith('workflowStatus:') ||
+      funcId.startsWith('pikkuWorkflowWorker:') ||
+      funcId.startsWith('pikkuWorkflowOrchestrator:')
+    ) {
+      continue
+    }
+
     const handlers: DeploymentHandler[] = []
 
     // HTTP routes for this function
@@ -92,21 +107,6 @@ export function analyzeDeployment(
           functionId: funcId,
         })
       }
-    }
-
-    // Skip synthetic functions — their routes are absorbed into gateway units
-    if (
-      funcId.startsWith('agentRun:') ||
-      funcId.startsWith('agentStream:') ||
-      funcId.startsWith('agentApprove:') ||
-      funcId.startsWith('agentResume:') ||
-      funcId.startsWith('workflowStart:') ||
-      funcId.startsWith('workflow:') ||
-      funcId.startsWith('workflowStatus:') ||
-      funcId.startsWith('pikkuWorkflowWorker:') ||
-      funcId.startsWith('pikkuWorkflowOrchestrator:')
-    ) {
-      continue
     }
 
     // If function has no direct triggers but is exposed or has RPC,
@@ -258,6 +258,52 @@ export function analyzeDeployment(
     units,
     workflows
   )
+
+  // ── Step 5b: Assign workflow queue consumers to orchestrator units ──
+  // Synthetic queue workers (pikkuWorkflowWorker:*, pikkuWorkflowOrchestrator:*)
+  // are consumed by the orchestrator, not by separate workers.
+  for (const [queueName, queueMeta] of entries(state.queueWorkers.meta)) {
+    const funcId = queueMeta.pikkuFuncId
+    // Skip if already assigned (user-defined queue workers)
+    if (queues.some((q) => q.name === (queueMeta.name ?? queueName))) continue
+
+    if (
+      funcId.startsWith('pikkuWorkflowOrchestrator:') ||
+      funcId.startsWith('pikkuWorkflowWorker:')
+    ) {
+      // Find the orchestrator unit for this workflow
+      const wfName = funcId.includes(':') ? funcId.split(':')[1] : funcId
+      const orchUnit = units.find(
+        (u) => u.role === 'workflow' && u.name === `wf-${toKebab(wfName)}`
+      )
+      // For step workers, find any orchestrator that has this step
+      let consumerUnitName = orchUnit?.name
+      if (!consumerUnitName) {
+        const wfDef = workflows.find((w) =>
+          w.steps.some((s) => s.functionId === wfName)
+        )
+        consumerUnitName =
+          wfDef?.orchestratorUnit ??
+          units.find((u) => u.role === 'workflow')?.name ??
+          'unknown'
+      }
+
+      queues.push({
+        name: queueMeta.name ?? queueName,
+        consumerUnit: consumerUnitName,
+        consumerFunctionId: funcId,
+      })
+
+      // Add queue handler to the orchestrator unit
+      const unit = units.find((u) => u.name === consumerUnitName)
+      if (unit) {
+        unit.handlers.push({
+          type: 'queue',
+          queueName: queueMeta.name ?? queueName,
+        })
+      }
+    }
+  }
 
   // ── Step 6: Ensure function units exist for gateway dependencies ───
   // Gateways depend on function units. If a function is only used via
