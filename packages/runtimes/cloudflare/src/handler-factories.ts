@@ -4,6 +4,7 @@ import type { ScheduledController } from '@cloudflare/workers-types'
 import { runFetch } from './run-fetch.js'
 import { runScheduled } from './run-scheduled.js'
 import { runQueueJob } from '@pikku/core/queue'
+import { pikkuState } from '@pikku/core/internal'
 import type { QueueJob, QueueJobStatus } from '@pikku/core/queue'
 import { CloudflareWebSocketHibernationServer } from './cloudflare-hibernation-websocket-server.js'
 import { CloudflareEventHubService } from './cloudflare-eventhub-service.js'
@@ -58,6 +59,7 @@ async function setupServices(
  * Handles processing a queue batch message.
  */
 async function processQueueBatch(batch: {
+  queue?: string
   messages: Array<{ id: string; body: unknown }>
 }): Promise<void> {
   for (const message of batch.messages) {
@@ -65,7 +67,15 @@ async function processQueueBatch(batch: {
       typeof message.body === 'string'
         ? JSON.parse(message.body)
         : (message.body as Record<string, unknown>)
-    const queueName = (body.queueName as string) ?? 'unknown'
+    // Use batch.queue (CF provides the queue name) or fall back to body.queueName.
+    // CF queue names may have a project prefix (e.g. "functions-wf-step-create-todo")
+    // but the queue meta uses unprefixed names. Try both.
+    const rawQueueName = batch.queue ?? (body.queueName as string) ?? 'unknown'
+    const queueMeta = pikkuState(null, 'queue', 'meta')
+    const queueName = queueMeta[rawQueueName]
+      ? rawQueueName
+      : (Object.keys(queueMeta).find((k) => rawQueueName.endsWith(k)) ??
+        rawQueueName)
     const job: QueueJob = {
       queueName,
       data: body.data ?? body,

@@ -92,12 +92,12 @@ export class CloudflareProviderAdapter {
     if (unit.role === 'channel') {
       return this.generateChannelGatewayEntry(ctx)
     }
-    if (
-      unit.role === 'mcp' ||
-      unit.role === 'agent' ||
-      unit.role === 'workflow'
-    ) {
+    if (unit.role === 'mcp' || unit.role === 'agent') {
       return this.generateGatewayEntry(ctx)
+    }
+    // Workflow orchestrators need both fetch (HTTP routes) and queue (step dispatch)
+    if (unit.role === 'workflow') {
+      return this.generateGatewayEntry(ctx, true)
     }
 
     // Function and workflow-step units use the combined handler
@@ -171,7 +171,10 @@ export class CloudflareProviderAdapter {
    * Generates entry source for mcp, agent, and workflow units.
    * Uses the standard worker handler factory.
    */
-  private generateGatewayEntry(ctx: EntryGenerationContext): string {
+  private generateGatewayEntry(
+    ctx: EntryGenerationContext,
+    includeQueueHandler = false
+  ): string {
     // Build the service binding map from dependsOn
     const bindingEntries = ctx.unit.dependsOn.map((dep) => {
       const bindingName = toWorkerBinding(dep)
@@ -179,9 +182,20 @@ export class CloudflareProviderAdapter {
     })
     const bindingsMap = `{\n${bindingEntries.join(',\n')}\n  }`
 
+    // Workflow orchestrators need the combined handler (fetch + queue)
+    const handlerImport = includeQueueHandler
+      ? `import { createCloudflareHandler } from '@pikku/cloudflare'`
+      : `import { createCloudflareWorkerHandler } from '@pikku/cloudflare'`
+
+    const handlerTypes = includeQueueHandler ? `["fetch", "queue"]` : ''
+
+    const exportLine = includeQueueHandler
+      ? `export default createCloudflareHandler(\n  { createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices },\n  ${handlerTypes}\n)`
+      : `export default createCloudflareWorkerHandler({ createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices })`
+
     const lines: string[] = [
       `// Generated entry for "${ctx.unit.name}" (${ctx.unit.role})`,
-      `import { createCloudflareWorkerHandler } from '@pikku/cloudflare'`,
+      handlerImport,
       `import type { CloudflareEnv } from '@pikku/cloudflare'`,
       `import { CloudflareQueueService, CloudflareWorkflowService, CloudflareAIStorageService, CloudflareAgentRunService, CloudflareAIRunStateService, CloudflareDeploymentService } from '@pikku/cloudflare'`,
       `import type { D1Database } from '@cloudflare/workers-types'`,
@@ -195,7 +209,7 @@ export class CloudflareProviderAdapter {
       ``,
       ...this.generateGatewayPlatformServicesBlock(ctx, bindingsMap),
       ``,
-      `export default createCloudflareWorkerHandler({ createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices })`,
+      exportLine,
       ``,
     ]
 
