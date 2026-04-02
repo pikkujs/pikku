@@ -43,14 +43,7 @@ export interface PikkuCLICoreOutputFiles {
   // RPC Exposed
   rpcMapDeclarationFile: string
 
-  // Remote RPC workers (auto-derived)
-  remoteRpcWorkersFile: string
-
-  // Feature-generated files (derived from scaffold.pikkuDir when enabled)
-  publicRpcFile: string
-  publicAgentFile: string
   consoleFunctionsFile: string
-  workflowWorkersFile: string
 
   // Triggers
   triggersTypesFile: string
@@ -243,10 +236,7 @@ export type PikkuCLIInput = {
     middlewareDir?: string
     permissionDir?: string
     pikkuDir?: string
-    rpc?: PikkuScaffoldFeature
     console?: PikkuScaffoldFeature
-    agent?: PikkuScaffoldFeature
-    workflow?: PikkuScaffoldFeature
   }
 
   forceRequiredServices?: string[]
@@ -372,10 +362,7 @@ export type PikkuCLIConfig = {
     middlewareDir?: string
     permissionDir?: string
     pikkuDir?: string
-    rpc?: PikkuScaffoldFeature
     console?: PikkuScaffoldFeature
-    agent?: PikkuScaffoldFeature
-    workflow?: PikkuScaffoldFeature
   }
 
   forceRequiredServices?: string[]

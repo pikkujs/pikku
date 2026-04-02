@@ -244,36 +244,14 @@ const _getPikkuCLIConfig = async (
       )
     }
 
-    // Remote RPC workers file (auto-derived)
-    if (!result.remoteRpcWorkersFile) {
-      result.remoteRpcWorkersFile = join(
-        rpcDir,
-        'pikku-remote-rpc-workers.gen.ts'
-      )
-    }
-
-    // Derive feature file paths from scaffold.pikkuDir when enabled
-    if (
-      result.scaffold?.rpc ||
-      result.scaffold?.agent ||
-      result.scaffold?.console ||
-      result.scaffold?.workflow
-    ) {
+    // Derive console functions file path from scaffold.pikkuDir when enabled
+    if (result.scaffold?.console) {
       const pikkuDir = result.scaffold.pikkuDir ?? 'pikku'
       const resolvedPikkuDir = isAbsolute(pikkuDir)
         ? pikkuDir
         : join(result.rootDir, pikkuDir)
-      if (result.scaffold.rpc && !result.publicRpcFile) {
-        result.publicRpcFile = join(resolvedPikkuDir, 'rpc.wiring.gen.ts')
-      }
-      if (result.scaffold.agent && !result.publicAgentFile) {
-        result.publicAgentFile = join(resolvedPikkuDir, 'agent.wiring.gen.ts')
-      }
-      if (result.scaffold.console && !result.consoleFunctionsFile) {
+      if (!result.consoleFunctionsFile) {
         result.consoleFunctionsFile = join(resolvedPikkuDir, 'console.gen.ts')
-      }
-      if (result.scaffold.workflow && !result.workflowWorkersFile) {
-        result.workflowWorkersFile = join(resolvedPikkuDir, 'workflows.gen.ts')
       }
     }
 
