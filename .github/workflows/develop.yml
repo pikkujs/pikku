@@ -106,6 +106,21 @@ jobs:
         run: cd e2e/packages/oauth-api && npx pikku all
       - name: Generate pikku files for e2e project
         run: cd e2e && npx pikku all
+      - name: Regenerate pikku files (second pass resolves cross-package type imports)
+        run: |
+          cd packages/addon/pikku-console && npx pikku all
+          cd ../../..
+          cd packages/addon/pikku-graph && npx pikku all
+          cd ../../..
+          cd e2e/packages/todos && npx pikku all
+          cd ../../..
+          cd e2e/packages/emails && npx pikku all
+          cd ../../..
+          cd e2e/packages/hmac-signer && npx pikku all
+          cd ../../..
+          cd e2e/packages/oauth-api && npx pikku all
+          cd ../../..
+          cd e2e && npx pikku all
       - name: Install Playwright
         run: npx playwright install --with-deps chromium
       - name: Run e2e tests

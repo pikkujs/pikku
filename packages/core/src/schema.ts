@@ -100,6 +100,7 @@ export const coerceTopLevelDataFromSchema = (
   packageName: string | null = null
 ) => {
   const schema = pikkuState(packageName, 'misc', 'schemas').get(schemaName)
+  if (!schema?.properties) return
   for (const key in schema.properties) {
     const property = schema.properties[key]
     if (typeof property === 'boolean') {

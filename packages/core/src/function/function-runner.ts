@@ -333,11 +333,12 @@ export const runPikkuFunc = async <In = any, Out = any>(
       })
     }
 
-    const wireServices = await resolvedCreateWireServices?.(
-      resolvedSingletonServices,
-      resolvedWire
-    )
+    let wireServices: Record<string, unknown> | undefined
     try {
+      wireServices = (await resolvedCreateWireServices?.(
+        resolvedSingletonServices,
+        resolvedWire
+      )) as Record<string, unknown> | undefined
       const services =
         wireServices && Object.keys(wireServices).length > 0
           ? { ...resolvedSingletonServices, ...wireServices }
