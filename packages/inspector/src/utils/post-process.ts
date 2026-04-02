@@ -243,6 +243,11 @@ export function aggregateRequiredServices(
   if (Object.keys(state.channels.meta).length > 0) {
     requiredServices.add('eventHub')
   }
+
+  // 7. Services that addons need from the parent project
+  for (const service of state.addonRequiredParentServices ?? []) {
+    requiredServices.add(service)
+  }
 }
 
 export function validateSecretOverrides(

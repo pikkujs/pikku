@@ -1,6 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku'
 import { pikkuState } from '@pikku/core/internal'
-import { LocalMetaService } from '@pikku/core/services/local-meta'
 
 export interface InstalledAddon {
   namespace: string
@@ -12,12 +11,12 @@ export interface InstalledAddon {
 }
 
 async function readPackageIcon(
+  metaService: { readFile: (path: string) => Promise<string | null> },
   packageName: string
 ): Promise<string | undefined> {
   try {
     const metaDir = pikkuState(packageName, 'package', 'metaDir')
     if (!metaDir) return undefined
-    const metaService = new LocalMetaService(metaDir)
     const content = await metaService.readFile(
       'console/pikku-addon-meta.gen.json'
     )
@@ -34,13 +33,13 @@ export const getInstalledAddons = pikkuSessionlessFunc<null, InstalledAddon[]>({
   description: 'Returns locally wired addons from pikkuState',
   expose: true,
   auth: false,
-  func: async () => {
+  func: async ({ metaService }) => {
     const addonsMap = pikkuState(null, 'addons', 'packages')
     const result: InstalledAddon[] = []
     for (const [namespace, config] of addonsMap) {
       const functions = pikkuState(config.package, 'function', 'meta')
       const agents = pikkuState(config.package, 'agent', 'agentsMeta')
-      const icon = await readPackageIcon(config.package)
+      const icon = await readPackageIcon(metaService, config.package)
       result.push({
         namespace,
         packageName: config.package,

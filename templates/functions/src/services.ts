@@ -9,8 +9,8 @@ import {
   pikkuServices,
   pikkuWireServices,
 } from '../.pikku/pikku-types.gen.js'
-import { PikkuMetaService } from '../.pikku/pikku-meta-service.gen.js'
 import { TodoStore } from './services/store.service.js'
+import { requiredSingletonServices } from '../.pikku/pikku-services.gen.js'
 
 export const createConfig = pikkuConfig(async () => {
   return {
@@ -31,6 +31,16 @@ export const createSingletonServices = pikkuServices(
     const schema = new CFWorkerSchemaService(logger)
     const secrets = new LocalSecretService(variables)
 
+    let metaService = existingServices?.metaService
+    if (requiredSingletonServices.metaService) {
+      if (!metaService) {
+        const { PikkuMetaService } = await import(
+          '../.pikku/pikku-meta-service.gen.js'
+        )
+        metaService = new PikkuMetaService()
+      }
+    }
+
     return {
       config,
       logger,
@@ -46,7 +56,7 @@ export const createSingletonServices = pikkuServices(
       queueService: existingServices?.queueService,
       schedulerService: existingServices?.schedulerService,
       deploymentService: existingServices?.deploymentService,
-      metaService: existingServices?.metaService ?? new PikkuMetaService(),
+      metaService,
     }
   }
 )

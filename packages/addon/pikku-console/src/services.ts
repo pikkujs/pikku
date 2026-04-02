@@ -1,10 +1,7 @@
 import { pikkuAddonServices } from '#pikku'
-import type { MetaService } from '@pikku/core/services'
-import { LocalMetaService } from '@pikku/core/services/local-meta'
 import { WiringService } from './services/wiring.service.js'
 import { AddonService } from './services/addon.service.js'
 import { OAuthService } from './services/oauth.service.js'
-import { FileWatcherService } from './services/file-watcher.service.js'
 
 export const createSingletonServices = pikkuAddonServices(
   async (
@@ -36,22 +33,11 @@ export const createSingletonServices = pikkuAddonServices(
     await addonService.init()
     const oauthService = new OAuthService()
 
-    // FileWatcher only works on Node.js (needs filesystem + fs.watch)
-    let fileWatcherService: FileWatcherService | undefined
-    if (metaService instanceof LocalMetaService) {
-      fileWatcherService = new FileWatcherService(
-        metaService.basePath,
-        metaService
-      )
-      fileWatcherService.start()
-    }
-
     return {
       metaService,
       wiringService,
       addonService,
       oauthService,
-      fileWatcherService,
       workflowRunService,
       agentRunService,
       aiStorage,
