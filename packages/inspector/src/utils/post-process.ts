@@ -446,7 +446,8 @@ export function injectExposedRoutes(
       }
     }
 
-    // Step worker queues for non-inline steps — collect ALL RPC steps recursively
+    // Step worker queues for non-inline steps — collect ALL RPC steps recursively.
+    // The consumer is the orchestrator worker (has D1 + service bindings to step functions).
     if (wfMeta.inline !== true) {
       const rpcs = new Set<string>()
       collectInvokedRPCs(wfMeta.steps, rpcs)
