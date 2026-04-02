@@ -259,48 +259,64 @@ export function analyzeDeployment(
     workflows
   )
 
-  // ── Step 5b: Assign workflow queue consumers to orchestrator units ──
-  // Synthetic queue workers (pikkuWorkflowWorker:*, pikkuWorkflowOrchestrator:*)
-  // are consumed by the orchestrator, not by separate workers.
+  // ── Step 5b: Assign workflow queue consumers ──
+  // Orchestrator queue → orchestrator unit (resumes workflow after step completion)
+  // Step queues → function worker (runs the function, updates D1, re-queues orchestrator)
   for (const [queueName, queueMeta] of entries(state.queueWorkers.meta)) {
     const funcId = queueMeta.pikkuFuncId
-    // Skip if already assigned (user-defined queue workers)
     if (queues.some((q) => q.name === (queueMeta.name ?? queueName))) continue
 
-    if (
-      funcId.startsWith('pikkuWorkflowOrchestrator:') ||
-      funcId.startsWith('pikkuWorkflowWorker:')
-    ) {
-      // Find the orchestrator unit for this workflow
-      const wfName = funcId.includes(':') ? funcId.split(':')[1] : funcId
-      const orchUnit = units.find(
-        (u) => u.role === 'workflow' && u.name === `wf-${toKebab(wfName)}`
-      )
-      // For step workers, find any orchestrator that has this step
-      let consumerUnitName = orchUnit?.name
-      if (!consumerUnitName) {
-        const wfDef = workflows.find((w) =>
-          w.steps.some((s) => s.functionId === wfName)
-        )
-        consumerUnitName =
-          wfDef?.orchestratorUnit ??
-          units.find((u) => u.role === 'workflow')?.name ??
-          'unknown'
-      }
+    if (funcId.startsWith('pikkuWorkflowOrchestrator:')) {
+      const wfName = funcId.split(':')[1]
+      const orchUnitName = `wf-${toKebab(wfName)}`
+      const orchUnit = units.find((u) => u.name === orchUnitName)
 
       queues.push({
         name: queueMeta.name ?? queueName,
-        consumerUnit: consumerUnitName,
+        consumerUnit: orchUnitName,
         consumerFunctionId: funcId,
       })
-
-      // Add queue handler to the orchestrator unit
-      const unit = units.find((u) => u.name === consumerUnitName)
-      if (unit) {
-        unit.handlers.push({
+      if (orchUnit) {
+        orchUnit.handlers.push({
           type: 'queue',
           queueName: queueMeta.name ?? queueName,
         })
+      }
+    } else if (funcId.startsWith('pikkuWorkflowWorker:')) {
+      // Step queue → consumed by the function worker that has the step function.
+      // The function worker runs the function, updates D1 step state,
+      // and queues a message to the orchestrator to continue.
+      const rpcName = funcId.split(':')[1]
+      const funcUnitName = toKebab(rpcName)
+      const funcUnit = units.find((u) => u.name === funcUnitName)
+
+      queues.push({
+        name: queueMeta.name ?? queueName,
+        consumerUnit: funcUnitName,
+        consumerFunctionId: funcId,
+      })
+      if (funcUnit) {
+        funcUnit.handlers.push({
+          type: 'queue',
+          queueName: queueMeta.name ?? queueName,
+        })
+        // Step workers need D1 for step state and orchestrator queue for resuming
+        const hasD1 = funcUnit.services.some(
+          (s) => s.capability === 'workflow-state'
+        )
+        if (!hasD1) {
+          funcUnit.services.push({
+            capability: 'workflow-state',
+            sourceServiceName: 'workflowService',
+          })
+        }
+        const hasQueue = funcUnit.services.some((s) => s.capability === 'queue')
+        if (!hasQueue) {
+          funcUnit.services.push({
+            capability: 'queue',
+            sourceServiceName: 'queueService',
+          })
+        }
       }
     }
   }
