@@ -148,13 +148,24 @@ export function analyzeDeployment(
       { capability: 'ai-storage', sourceServiceName: 'aiStorage' },
     ]
 
+    // Collect HTTP routes for the agent's synthetic functions
+    const agentRoutes = [
+      ...collectHttpRoutes(httpMeta, `agentRun:${agentName}`),
+      ...collectHttpRoutes(httpMeta, `agentStream:${agentName}`),
+      ...collectHttpRoutes(httpMeta, `agentApprove:${agentName}`),
+      ...collectHttpRoutes(httpMeta, `agentResume:${agentName}`),
+    ]
+
     units.push({
       name: unitName,
       role: 'agent',
       functionIds: [], // No function code bundled
       services: agentServices,
       dependsOn: [...toolUnitNames, ...subAgentUnitNames],
-      handlers: [{ type: 'fetch', routes: [] }],
+      handlers:
+        agentRoutes.length > 0
+          ? [{ type: 'fetch', routes: agentRoutes }]
+          : [{ type: 'fetch', routes: [] }],
       tags: agentMeta.tags ?? [],
     })
 
@@ -240,7 +251,13 @@ export function analyzeDeployment(
   }
 
   // ── Step 5: Workflows ──────────────────────────────────────────────
-  buildWorkflows(state.workflows.graphMeta, functionsMeta, units, workflows)
+  buildWorkflows(
+    state.workflows.graphMeta,
+    functionsMeta,
+    httpMeta,
+    units,
+    workflows
+  )
 
   // ── Step 6: Ensure function units exist for gateway dependencies ───
   // Gateways depend on function units. If a function is only used via
@@ -307,6 +324,7 @@ export function analyzeDeployment(
 function buildWorkflows(
   graphMeta: Record<string, SerializedWorkflowGraph>,
   functionsMeta: Record<string, FunctionMeta>,
+  httpMeta: HTTPWiringsMeta,
   units: DeploymentUnit[],
   workflows: WorkflowDefinition[]
 ): void {
@@ -339,13 +357,23 @@ function buildWorkflows(
       { capability: 'queue', sourceServiceName: 'queueService' },
     ]
 
+    // Collect HTTP routes for the workflow's synthetic functions
+    const wfRoutes = [
+      ...collectHttpRoutes(httpMeta, `workflowStart:${graph.name}`),
+      ...collectHttpRoutes(httpMeta, `workflow:${graph.name}`),
+      ...collectHttpRoutes(httpMeta, `workflowStatus:${graph.name}`),
+    ]
+
     units.push({
       name: orchUnitName,
       role: 'workflow',
       functionIds: [], // No function code bundled
       services: orchServices,
       dependsOn: stepUnitNames,
-      handlers: [{ type: 'fetch', routes: [] }],
+      handlers:
+        wfRoutes.length > 0
+          ? [{ type: 'fetch', routes: wfRoutes }]
+          : [{ type: 'fetch', routes: [] }],
       tags: [],
     })
 

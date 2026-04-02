@@ -5,6 +5,12 @@ import {
   pikkuWorkflowSleeperFunc,
 } from './workflow-queue-workers.js'
 import {
+  workflowStart as coreWorkflowStart,
+  workflow as coreWorkflow,
+  workflowStatus as coreWorkflowStatus,
+} from './workflow-helpers.js'
+import { wireHTTP } from '../http/http-runner.js'
+import {
   getSingletonServices,
   getCreateWireServices,
   pikkuState,
@@ -151,6 +157,43 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       addFunction('pikkuWorkflowSleeper', {
         func: pikkuWorkflowSleeperFunc,
       })
+    }
+
+    // Auto-register workflow HTTP route handler functions.
+    // Call wireHTTP for each synthetic route so the runtime HTTP router
+    // has both the route pattern and the function handler registered.
+    const httpMeta = pikkuState(null, 'http', 'meta')
+    for (const [method, routes] of Object.entries(httpMeta)) {
+      for (const [route, routeMeta] of Object.entries(routes)) {
+        const funcId = routeMeta.pikkuFuncId
+        if (functions.has(funcId)) continue
+
+        if (funcId.startsWith('workflowStart:')) {
+          const wfName = funcId.slice('workflowStart:'.length)
+          wireHTTP({
+            method: method as any,
+            route,
+            auth: false,
+            func: coreWorkflowStart(wfName) as any,
+          })
+        } else if (funcId.startsWith('workflowStatus:')) {
+          const wfName = funcId.slice('workflowStatus:'.length)
+          wireHTTP({
+            method: method as any,
+            route,
+            auth: false,
+            func: coreWorkflowStatus(wfName) as any,
+          })
+        } else if (funcId.startsWith('workflow:')) {
+          const wfName = funcId.slice('workflow:'.length)
+          wireHTTP({
+            method: method as any,
+            route,
+            auth: false,
+            func: coreWorkflow(wfName) as any,
+          })
+        }
+      }
     }
   }
 
