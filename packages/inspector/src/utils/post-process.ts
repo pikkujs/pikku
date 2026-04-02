@@ -401,6 +401,9 @@ export function injectExposedRoutes(
   // Inject workflow queue workers.
   // Each workflow orchestrator gets its own queue: wf-orchestrator-{name}
   // Each non-inline step function gets its own queue: wf-step-{rpcName}
+  // Queue names must be lowercase with dashes (CF requirement).
+  const toKebab = (s: string) =>
+    s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
   const workflowEntries = Object.entries(state.workflows.meta)
   if (workflowEntries.length > 0) {
     // Register input types so the queue map generator can produce typed maps
@@ -418,7 +421,7 @@ export function injectExposedRoutes(
 
   for (const [name, wfMeta] of workflowEntries) {
     // Orchestrator queue for this workflow
-    const orchQueueName = `wf-orchestrator-${name}`
+    const orchQueueName = `wf-orchestrator-${toKebab(name)}`
     const orchFuncId = `pikkuWorkflowOrchestrator:${name}`
     state.queueWorkers.meta[orchQueueName] = {
       pikkuFuncId: orchFuncId,
@@ -448,7 +451,7 @@ export function injectExposedRoutes(
       const rpcs = new Set<string>()
       collectInvokedRPCs(wfMeta.steps, rpcs)
       for (const rpcName of rpcs) {
-        const stepQueueName = `wf-step-${rpcName}`
+        const stepQueueName = `wf-step-${toKebab(rpcName)}`
         const stepFuncId = `pikkuWorkflowWorker:${rpcName}`
         if (!state.queueWorkers.meta[stepQueueName]) {
           state.queueWorkers.meta[stepQueueName] = {
