@@ -417,13 +417,13 @@ export function injectExposedRoutes(
         name: orchFuncId,
         inputSchemaName: null,
         outputSchemaName: null,
-        inputs: ['PikkuWorkflowOrchestratorInput'],
+        inputs: [],
         outputs: [],
       }
     }
     if (!state.resolvedIOTypes[orchFuncId]) {
       state.resolvedIOTypes[orchFuncId] = {
-        inputType: 'PikkuWorkflowOrchestratorInput',
+        inputType: 'null',
         outputType: 'null',
       }
     }
@@ -448,13 +448,13 @@ export function injectExposedRoutes(
               name: stepFuncId,
               inputSchemaName: null,
               outputSchemaName: null,
-              inputs: ['WorkflowStepInput'],
+              inputs: [],
               outputs: [],
             }
           }
           if (!state.resolvedIOTypes[stepFuncId]) {
             state.resolvedIOTypes[stepFuncId] = {
-              inputType: 'WorkflowStepInput',
+              inputType: 'null',
               outputType: 'null',
             }
           }
