@@ -28,6 +28,18 @@ export {
   graphStart,
 } from './workflow-helpers.js'
 
+// Queue worker functions (registered by codegen, executed at runtime)
+export {
+  pikkuWorkflowWorkerFunc,
+  pikkuWorkflowOrchestratorFunc,
+  pikkuWorkflowSleeperFunc,
+} from './workflow-queue-workers.js'
+export type {
+  WorkflowStepInput as WorkflowStepQueueInput,
+  PikkuWorkflowOrchestratorInput,
+  PikkuWorkflowSleeperInput,
+} from './workflow-queue-workers.js'
+
 // Re-export all types from workflow.types
 export type {
   WorkflowService,

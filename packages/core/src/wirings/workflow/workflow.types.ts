@@ -48,6 +48,9 @@ export interface WorkflowRunWire {
 export interface WorkflowServiceConfig {
   retries: number
   retryDelay: number
+  /** When true, each workflow/step gets its own queue name (e.g. wf-{name}-orchestrator, step-{rpcName}).
+   *  When false or undefined, uses shared queue names. */
+  uniqueQueueNames?: boolean
   orchestratorQueueName: string
   stepWorkerQueueName: string
   sleeperRPCName: string

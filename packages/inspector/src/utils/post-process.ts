@@ -396,6 +396,71 @@ export function injectExposedRoutes(
       { sse: true, params: ['runId'] }
     )
   }
+
+  // Inject workflow queue workers.
+  // Each workflow orchestrator gets its own queue: wf-{name}-orchestrator
+  // Each non-inline step function gets its own queue: step-{rpcName}
+  for (const [name, wfMeta] of Object.entries(state.workflows.meta)) {
+    // Orchestrator queue for this workflow
+    const orchQueueName = `wf-orchestrator-${name}`
+    const orchFuncId = `pikkuWorkflowOrchestrator:${name}`
+    state.queueWorkers.meta[orchQueueName] = {
+      pikkuFuncId: orchFuncId,
+      name: orchQueueName,
+    }
+    if (!state.functions.meta[orchFuncId]) {
+      state.functions.meta[orchFuncId] = {
+        pikkuFuncId: orchFuncId,
+        functionType: 'helper',
+        sessionless: true,
+        name: orchFuncId,
+        inputSchemaName: null,
+        outputSchemaName: null,
+        inputs: ['PikkuWorkflowOrchestratorInput'],
+        outputs: [],
+      }
+    }
+    if (!state.resolvedIOTypes[orchFuncId]) {
+      state.resolvedIOTypes[orchFuncId] = {
+        inputType: 'PikkuWorkflowOrchestratorInput',
+        outputType: 'null',
+      }
+    }
+
+    // Step worker queues for non-inline steps
+    if (wfMeta.inline !== true) {
+      for (const step of wfMeta.steps) {
+        if (step.type === 'rpc' && step.rpcName) {
+          const stepQueueName = `wf-step-${step.rpcName}`
+          const stepFuncId = `pikkuWorkflowWorker:${step.rpcName}`
+          if (!state.queueWorkers.meta[stepQueueName]) {
+            state.queueWorkers.meta[stepQueueName] = {
+              pikkuFuncId: stepFuncId,
+              name: stepQueueName,
+            }
+            if (!state.functions.meta[stepFuncId]) {
+              state.functions.meta[stepFuncId] = {
+                pikkuFuncId: stepFuncId,
+                functionType: 'helper',
+                sessionless: true,
+                name: stepFuncId,
+                inputSchemaName: null,
+                outputSchemaName: null,
+                inputs: ['WorkflowStepInput'],
+                outputs: [],
+              }
+            }
+            if (!state.resolvedIOTypes[stepFuncId]) {
+              state.resolvedIOTypes[stepFuncId] = {
+                inputType: 'WorkflowStepInput',
+                outputType: 'null',
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 export function validateSecretOverrides(
