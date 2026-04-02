@@ -224,17 +224,32 @@ export class ContextAwareRPCService {
       return this.invokeAddonFunction<In, Out>(rpcName, data, mergedWire)
     }
 
-    return runPikkuFunc<In, Out>(
-      'rpc',
-      rpcName,
-      getPikkuFunctionName(rpcName),
-      {
-        auth: this.options.requiresAuth,
-        singletonServices: this.services,
-        data: () => data,
-        wire: mergedWire,
+    try {
+      return await runPikkuFunc<In, Out>(
+        'rpc',
+        rpcName,
+        getPikkuFunctionName(rpcName),
+        {
+          auth: this.options.requiresAuth,
+          singletonServices: this.services,
+          data: () => data,
+          wire: mergedWire,
+        }
+      )
+    } catch (e) {
+      if (e instanceof RPCNotFoundError && this.services.deploymentService) {
+        const session =
+          this.wire.getSession && typeof this.wire.getSession === 'function'
+            ? await this.wire.getSession()
+            : (this.wire as any).session
+        return this.services.deploymentService.invoke(
+          rpcName,
+          data,
+          session
+        ) as Promise<Out>
       }
-    )
+      throw e
+    }
   }
 
   public async startWorkflow<In = any>(
