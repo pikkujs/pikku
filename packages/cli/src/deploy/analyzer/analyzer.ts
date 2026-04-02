@@ -259,68 +259,6 @@ export function analyzeDeployment(
     workflows
   )
 
-  // ── Step 5b: Assign workflow queue consumers ──
-  // Orchestrator queue → orchestrator unit (resumes workflow after step completion)
-  // Step queues → function worker (runs the function, updates D1, re-queues orchestrator)
-  for (const [queueName, queueMeta] of entries(state.queueWorkers.meta)) {
-    const funcId = queueMeta.pikkuFuncId
-    if (queues.some((q) => q.name === (queueMeta.name ?? queueName))) continue
-
-    if (funcId.startsWith('pikkuWorkflowOrchestrator:')) {
-      const wfName = funcId.split(':')[1]
-      const orchUnitName = `wf-${toKebab(wfName)}`
-      const orchUnit = units.find((u) => u.name === orchUnitName)
-
-      queues.push({
-        name: queueMeta.name ?? queueName,
-        consumerUnit: orchUnitName,
-        consumerFunctionId: funcId,
-      })
-      if (orchUnit) {
-        orchUnit.handlers.push({
-          type: 'queue',
-          queueName: queueMeta.name ?? queueName,
-        })
-      }
-    } else if (funcId.startsWith('pikkuWorkflowWorker:')) {
-      // Step queue → consumed by the function worker that has the step function.
-      // The function worker runs the function, updates D1 step state,
-      // and queues a message to the orchestrator to continue.
-      const rpcName = funcId.split(':')[1]
-      const funcUnitName = toKebab(rpcName)
-      const funcUnit = units.find((u) => u.name === funcUnitName)
-
-      queues.push({
-        name: queueMeta.name ?? queueName,
-        consumerUnit: funcUnitName,
-        consumerFunctionId: funcId,
-      })
-      if (funcUnit) {
-        funcUnit.handlers.push({
-          type: 'queue',
-          queueName: queueMeta.name ?? queueName,
-        })
-        // Step workers need D1 for step state and orchestrator queue for resuming
-        const hasD1 = funcUnit.services.some(
-          (s) => s.capability === 'workflow-state'
-        )
-        if (!hasD1) {
-          funcUnit.services.push({
-            capability: 'workflow-state',
-            sourceServiceName: 'workflowService',
-          })
-        }
-        const hasQueue = funcUnit.services.some((s) => s.capability === 'queue')
-        if (!hasQueue) {
-          funcUnit.services.push({
-            capability: 'queue',
-            sourceServiceName: 'queueService',
-          })
-        }
-      }
-    }
-  }
-
   // ── Step 6: Ensure function units exist for gateway dependencies ───
   // Gateways depend on function units. If a function is only used via
   // a gateway (not directly wired to HTTP/queue/cron), it still needs
@@ -344,6 +282,62 @@ export function analyzeDeployment(
             tags: funcMeta.tags ?? [],
           })
           existingUnitNames.add(dep)
+        }
+      }
+    }
+  }
+
+  // ── Step 7: Assign workflow queue consumers ──
+  // Runs after step 6 so all function units exist.
+  // Orchestrator queue → orchestrator unit
+  // Step queues → function worker (runs function, updates D1, re-queues orchestrator)
+  for (const [queueName, queueMeta] of entries(state.queueWorkers.meta)) {
+    const funcId = queueMeta.pikkuFuncId
+    if (queues.some((q) => q.name === (queueMeta.name ?? queueName))) continue
+
+    if (funcId.startsWith('pikkuWorkflowOrchestrator:')) {
+      const wfName = funcId.split(':')[1]
+      const orchUnitName = `wf-${toKebab(wfName)}`
+      const orchUnit = units.find((u) => u.name === orchUnitName)
+
+      queues.push({
+        name: queueMeta.name ?? queueName,
+        consumerUnit: orchUnitName,
+        consumerFunctionId: funcId,
+      })
+      if (orchUnit) {
+        orchUnit.handlers.push({
+          type: 'queue',
+          queueName: queueMeta.name ?? queueName,
+        })
+      }
+    } else if (funcId.startsWith('pikkuWorkflowWorker:')) {
+      const rpcName = funcId.split(':')[1]
+      const funcUnitName = toKebab(rpcName)
+      const funcUnit = units.find((u) => u.name === funcUnitName)
+
+      queues.push({
+        name: queueMeta.name ?? queueName,
+        consumerUnit: funcUnitName,
+        consumerFunctionId: funcId,
+      })
+      if (funcUnit) {
+        funcUnit.handlers.push({
+          type: 'queue',
+          queueName: queueMeta.name ?? queueName,
+        })
+        // Step workers need D1 for step state and orchestrator queue for resuming
+        if (!funcUnit.services.some((s) => s.capability === 'workflow-state')) {
+          funcUnit.services.push({
+            capability: 'workflow-state',
+            sourceServiceName: 'workflowService',
+          })
+        }
+        if (!funcUnit.services.some((s) => s.capability === 'queue')) {
+          funcUnit.services.push({
+            capability: 'queue',
+            sourceServiceName: 'queueService',
+          })
         }
       }
     }

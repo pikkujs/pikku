@@ -466,6 +466,12 @@ export function filterInspectorState(
         filteredState.serviceAggregation.usedFunctions.add(
           workerMeta.pikkuFuncId
         )
+        const colonIdx = workerMeta.pikkuFuncId.indexOf(':')
+        if (colonIdx !== -1) {
+          filteredState.serviceAggregation.usedFunctions.add(
+            workerMeta.pikkuFuncId.slice(colonIdx + 1)
+          )
+        }
       }
       extractWireNames(workerMeta.middleware).forEach((name: string) =>
         filteredState.serviceAggregation.usedMiddleware.add(name)
