@@ -9,6 +9,7 @@ import {
   CloudflareProviderAdapter,
   deploy as cfDeploy,
 } from '@pikku/deploy-cloudflare'
+import { ServerlessProviderAdapter } from '@pikku/deploy-serverless'
 import type {
   ProviderAdapter,
   EntryGenerationContext,
@@ -92,8 +93,16 @@ function getEntryContext(
 }
 
 function resolveProvider(_providerName?: string): ProviderAdapter {
-  // TODO: resolve from --provider flag or config
-  return new CloudflareProviderAdapter()
+  const name =
+    _providerName ?? process.env.PIKKU_DEPLOY_PROVIDER ?? 'cloudflare'
+  switch (name) {
+    case 'cloudflare':
+      return new CloudflareProviderAdapter()
+    case 'serverless':
+      return new ServerlessProviderAdapter()
+    default:
+      throw new Error(`Unknown deploy provider: ${name}`)
+  }
 }
 
 const ANSI = {
@@ -201,11 +210,13 @@ export const deployApply = pikkuVoidFunc({
       entryFiles.set(unit.name, entryPath)
     }
 
+    const providerExternals = provider.getExternals?.()
     const { results: bundled, errors: bundleErrors } = await bundleUnits(
       projectDir,
       manifest,
       entryFiles,
-      providerDir
+      providerDir,
+      providerExternals
     )
     logger.info(
       `Bundled ${bundled.length} units${bundleErrors.length > 0 ? ` (${bundleErrors.length} failed)` : ''}`
@@ -224,6 +235,15 @@ export const deployApply = pikkuVoidFunc({
       logger.info('Generated infrastructure manifest')
     }
 
+    // Generate provider-level configs (e.g. serverless.yml)
+    if (provider.generateProviderConfigs) {
+      const providerConfigs = provider.generateProviderConfigs(manifest)
+      for (const [filename, content] of providerConfigs) {
+        await writeFile(join(providerDir, filename), content, 'utf-8')
+        logger.info(`Generated ${filename}`)
+      }
+    }
+
     const lockfileSrc = await findLockfile(projectDir)
     for (const unit of manifest.units) {
       const unitDir = join(providerDir, unit.name)
@@ -238,51 +258,76 @@ export const deployApply = pikkuVoidFunc({
     }
     logger.info(`Generated ${manifest.units.length} provider config files`)
 
-    // Step 4: Deploy to Cloudflare via API
-    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID
-    const apiToken = process.env.CLOUDFLARE_API_TOKEN
+    // Step 4: Deploy (provider-specific)
+    if (provider.name === 'cloudflare') {
+      const accountId = process.env.CLOUDFLARE_ACCOUNT_ID
+      const apiToken = process.env.CLOUDFLARE_API_TOKEN
 
-    if (!accountId || !apiToken) {
-      logger.error(
-        'Missing CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN environment variables.'
-      )
-      return
-    }
-
-    const infraJson = JSON.parse(
-      await readFile(join(providerDir, 'infra.json'), 'utf-8')
-    ) as CloudflareInfraManifest
-
-    logger.info('Deploying to Cloudflare...')
-    const result = await cfDeploy({
-      accountId,
-      apiToken,
-      buildDir: providerDir,
-      manifest: infraJson,
-      onProgress: (step, detail) => {
-        logProgress(
-          {
-            action: 'create',
-            resourceType: step as any,
-            name: detail,
-            reason: '',
-          },
-          'done'
+      if (!accountId || !apiToken) {
+        logger.error(
+          'Missing CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN environment variables.'
         )
-      },
-    })
+        return
+      }
 
-    console.log('')
-    if (result.success) {
-      logger.info(`${ANSI.green}${ANSI.bold}Deployment complete.${ANSI.reset}`)
+      const infraJson = JSON.parse(
+        await readFile(join(providerDir, 'infra.json'), 'utf-8')
+      ) as CloudflareInfraManifest
+
+      logger.info('Deploying to Cloudflare...')
+      const result = await cfDeploy({
+        accountId,
+        apiToken,
+        buildDir: providerDir,
+        manifest: infraJson,
+        onProgress: (step, detail) => {
+          logProgress(
+            {
+              action: 'create',
+              resourceType: step as any,
+              name: detail,
+              reason: '',
+            },
+            'done'
+          )
+        },
+      })
+
+      console.log('')
+      if (result.success) {
+        logger.info(
+          `${ANSI.green}${ANSI.bold}Deployment complete.${ANSI.reset}`
+        )
+        logger.info(
+          `  ${result.workersDeployed.length} workers deployed, ${result.resourcesCreated.length} resources created`
+        )
+      } else {
+        logger.error(
+          `Deployment finished with ${result.errors.length} error(s):`
+        )
+        for (const e of result.errors) {
+          logger.error(`  ${e.step}: ${e.error}`)
+        }
+      }
+    } else if (provider.name === 'serverless') {
+      logger.info(`${ANSI.green}${ANSI.bold}Build complete.${ANSI.reset}`)
       logger.info(
-        `  ${result.workersDeployed.length} workers deployed, ${result.resourcesCreated.length} resources created`
+        `  ${bundled.length} functions bundled to ${ANSI.bold}${providerDir}${ANSI.reset}`
+      )
+      logger.info('')
+      logger.info('To run locally:')
+      logger.info(
+        `  ${ANSI.bold}cd ${providerDir} && npx serverless offline start${ANSI.reset}`
+      )
+      logger.info('')
+      logger.info('To deploy to AWS:')
+      logger.info(
+        `  ${ANSI.bold}cd ${providerDir} && npx serverless deploy${ANSI.reset}`
       )
     } else {
-      logger.error(`Deployment finished with ${result.errors.length} error(s):`)
-      for (const e of result.errors) {
-        logger.error(`  ${e.step}: ${e.error}`)
-      }
+      logger.info(
+        `${ANSI.green}${ANSI.bold}Build complete.${ANSI.reset} ${bundled.length} functions bundled.`
+      )
     }
   },
 })

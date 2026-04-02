@@ -94,6 +94,7 @@ interface BundleUnitOptions {
   entryPath: string
   unitOutputDir: string
   projectDir: string
+  externals?: string[]
 }
 
 /**
@@ -105,7 +106,7 @@ interface BundleUnitOptions {
  * - package.json: Minimal manifest with only the external deps this unit needs
  */
 async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
-  const { unit, entryPath, unitOutputDir, projectDir } = options
+  const { unit, entryPath, unitOutputDir, projectDir, externals } = options
 
   await mkdir(unitOutputDir, { recursive: true })
 
@@ -132,7 +133,7 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     sourcemap: true,
     logLevel: 'warning',
     loader: { '.ts': 'ts' },
-    external: ['node:*', 'crypto', 'cloudflare:*'],
+    external: externals ?? ['node:*', 'crypto', 'cloudflare:*'],
     plugins: [createDeadModuleStubPlugin(deadPatterns)],
   })
 
@@ -177,7 +178,8 @@ export async function bundleUnits(
   projectDir: string,
   manifest: DeploymentManifest,
   entryFiles: Map<string, string>,
-  outputDir?: string
+  outputDir?: string,
+  externals?: string[]
 ): Promise<BundleOutput> {
   const buildDir = outputDir ?? join(projectDir, '.deploy', 'build')
   const results: BundleResult[] = []
@@ -205,6 +207,7 @@ export async function bundleUnits(
         entryPath,
         unitOutputDir,
         projectDir,
+        externals,
       })
       results.push(result)
     } catch (err) {

@@ -59,4 +59,16 @@ export interface ProviderAdapter {
    * Returns file content, or null if not applicable.
    */
   generateInfraManifest(manifest: DeploymentManifest): string | null
+
+  /**
+   * External modules for esbuild bundling.
+   * Defaults to ['node:*', 'crypto', 'cloudflare:*'] if not provided.
+   */
+  getExternals?(): string[]
+
+  /**
+   * Generate additional provider-level config files (e.g. serverless.yml).
+   * Returns a map of filename → content to write into the deploy directory.
+   */
+  generateProviderConfigs?(manifest: DeploymentManifest): Map<string, string>
 }
