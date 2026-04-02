@@ -384,12 +384,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     workflowName?: string
   ): Promise<void> {
     const queueService = this.verifyQueueService()
-    let resolvedName = workflowName
-    if (!resolvedName && this.getConfig().uniqueQueueNames) {
+    if (!workflowName) {
       const run = await this.getRun(runId)
-      resolvedName = run?.workflow
+      workflowName = run?.workflow
     }
-    await queueService.add(this.getOrchestratorQueueName(resolvedName), {
+    await queueService.add(this.getOrchestratorQueueName(workflowName), {
       runId,
     })
   }
@@ -438,13 +437,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     workflowName?: string
   ): Promise<void> {
     const queueService = this.verifyQueueService()
-    let resolvedName = workflowName
-    if (!resolvedName && this.getConfig().uniqueQueueNames) {
+    if (!workflowName) {
       const run = await this.getRun(runId)
-      resolvedName = run?.workflow
+      workflowName = run?.workflow
     }
     await queueService.add(
-      this.getOrchestratorQueueName(resolvedName),
+      this.getOrchestratorQueueName(workflowName),
       { runId },
       retryDelay ? { delay: getDurationInMilliseconds(retryDelay) } : undefined
     )
@@ -1353,7 +1351,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     return {
       retries: workflow?.retries ?? 0,
       retryDelay: workflow?.retryDelay ?? 0,
-      uniqueQueueNames: workflow?.uniqueQueueNames ?? false,
       orchestratorQueueName:
         workflow?.orchestratorQueueName ?? 'pikku-workflow-orchestrator',
       stepWorkerQueueName:
@@ -1364,25 +1361,33 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
   /**
    * Get the orchestrator queue name for a specific workflow.
-   * With uniqueQueueNames, each workflow gets its own queue.
+   * Checks queue meta for a per-workflow queue first (e.g. wf-orchestrator-{name}),
+   * falls back to the shared orchestrator queue.
    */
   protected getOrchestratorQueueName(workflowName?: string): string {
-    const config = this.getConfig()
-    if (config.uniqueQueueNames && workflowName) {
-      return `wf-orchestrator-${workflowName}`
+    if (workflowName) {
+      const uniqueName = `wf-orchestrator-${workflowName}`
+      const queueMeta = pikkuState(null, 'queue', 'meta')
+      if (queueMeta[uniqueName]) {
+        return uniqueName
+      }
     }
-    return config.orchestratorQueueName
+    return this.getConfig().orchestratorQueueName
   }
 
   /**
    * Get the step worker queue name for a specific function.
-   * With uniqueQueueNames, each step function gets its own queue.
+   * Checks queue meta for a per-step queue first (e.g. wf-step-{rpcName}),
+   * falls back to the shared step worker queue.
    */
   protected getStepWorkerQueueName(rpcName?: string): string {
-    const config = this.getConfig()
-    if (config.uniqueQueueNames && rpcName) {
-      return `wf-step-${rpcName}`
+    if (rpcName) {
+      const uniqueName = `wf-step-${rpcName}`
+      const queueMeta = pikkuState(null, 'queue', 'meta')
+      if (queueMeta[uniqueName]) {
+        return uniqueName
+      }
     }
-    return config.stepWorkerQueueName
+    return this.getConfig().stepWorkerQueueName
   }
 }
