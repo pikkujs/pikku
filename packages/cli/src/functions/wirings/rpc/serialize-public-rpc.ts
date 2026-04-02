@@ -1,55 +1,54 @@
+import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+
 /**
- * Generate public RPC HTTP endpoint
+ * Generate per-function HTTP routes for exposed RPC functions.
+ * Each function with `expose: true` gets `POST /rpc/{funcName}`.
  */
 export const serializePublicRPC = (
+  outputPath: string,
   pathToPikkuTypes: string,
-  requireAuth: boolean = true,
+  exposedFunctions: Record<
+    string,
+    { path: string; exportedName: string; pikkuFuncId: string }
+  >,
+  packageMappings: Record<string, string>,
   globalHTTPPrefix: string = ''
-) => {
-  const authFlag = requireAuth ? 'true' : 'false'
-  return `/**
- * Auto-generated public RPC HTTP endpoint
- * Do not edit manually - regenerate with 'npx pikku'
- */
-import { pikkuSessionlessFunc, defineHTTPRoutes, wireHTTPRoutes } from '${pathToPikkuTypes}'
+): string | null => {
+  const entries = Object.entries(exposedFunctions)
+  if (entries.length === 0) return null
 
-export const rpcCaller = pikkuSessionlessFunc<
-  { rpcName: string; data?: unknown },
-  unknown
->({
-  auth: ${authFlag},
-  func: async (_services, { rpcName, data }, { rpc }) => {
-    return await rpc.exposed(rpcName, data)
-  },
-})
+  const imports = new Set<string>()
+  imports.add(
+    `import { defineHTTPRoutes, wireHTTPRoutes } from '${pathToPikkuTypes}'`
+  )
 
-export const workflowCaller = pikkuSessionlessFunc<
-  { workflowName: string; input?: unknown },
-  { runId: string }
->({
-  auth: ${authFlag},
-  func: async (_services, { workflowName, input }, { rpc }) => {
-    return await (rpc.startWorkflow as Function)(workflowName, input || {})
-  },
-})
+  const routeEntries: string[] = []
 
-export const rpcRoutes = defineHTTPRoutes({
-  auth: ${authFlag},
+  for (const [funcName, info] of entries) {
+    const importPath = getFileImportRelativePath(
+      outputPath,
+      info.path,
+      packageMappings
+    )
+    imports.add(`import { ${info.exportedName} } from '${importPath}'`)
+
+    routeEntries.push(`    '${funcName}': {
+      route: '${globalHTTPPrefix}/rpc/${funcName}',
+      method: 'post',
+      func: ${info.exportedName},
+    },`)
+  }
+
+  return `${[...imports].join('\n')}
+
+export const exposedRpcRoutes = defineHTTPRoutes({
+  auth: false,
   tags: ['pikku:public'],
   routes: {
-    rpc: {
-      route: '${globalHTTPPrefix}/rpc/:rpcName',
-      method: 'post',
-      func: rpcCaller,
-    },
-    workflow: {
-      route: '${globalHTTPPrefix}/rpc/workflow/:workflowName',
-      method: 'post',
-      func: workflowCaller,
-    },
+${routeEntries.join('\n')}
   },
 })
 
-wireHTTPRoutes({ routes: { rpc: rpcRoutes } })
+wireHTTPRoutes({ routes: { rpc: exposedRpcRoutes } })
 `
 }
