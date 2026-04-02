@@ -478,6 +478,24 @@ export function injectExposedRoutes(
             }
           }
         }
+
+        // Step functions need workflowService + queueService for
+        // D1 step state management and orchestrator queue resuming
+        const stepFuncMeta = state.functions.meta[rpcName]
+        if (stepFuncMeta) {
+          if (!stepFuncMeta.services) {
+            stepFuncMeta.services = { optimized: false, services: [] }
+          }
+          for (const svc of [
+            'workflowService',
+            'workflowRunService',
+            'queueService',
+          ]) {
+            if (!stepFuncMeta.services.services.includes(svc)) {
+              stepFuncMeta.services.services.push(svc)
+            }
+          }
+        }
       }
     }
   }
