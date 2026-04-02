@@ -3,17 +3,10 @@ import { pikkuVoidFunc } from '#pikku'
 
 const scaffoldFiles = (config: any): { file: string; generator: string }[] => {
   const files: { file: string; generator: string }[] = []
-  if (config.scaffold?.rpc && config.publicRpcFile)
-    files.push({ file: config.publicRpcFile, generator: 'pikkuPublicRPC' })
   if (config.scaffold?.console && config.consoleFunctionsFile)
     files.push({
       file: config.consoleFunctionsFile,
       generator: 'pikkuConsoleFunctions',
-    })
-  if (config.scaffold?.agent && config.publicAgentFile)
-    files.push({
-      file: config.publicAgentFile,
-      generator: 'pikkuPublicAgent',
     })
   return files
 }
@@ -99,12 +92,8 @@ export const all = pikkuVoidFunc({
     const agents = await rpc.invoke('pikkuAIAgent', null)
     if (agents) {
       allImports.push(config.agentWiringMetaFile, config.agentWiringsFile)
-      if (config.scaffold?.agent) {
-        await rpc.invoke('pikkuPublicAgent', null)
-      }
     }
 
-    await rpc.invoke('pikkuPublicRPC', null)
     await rpc.invoke('pikkuConsoleFunctions', null)
     await rpc.invoke('pikkuNodeTypes', null)
     await rpc.invoke('pikkuSecretDefinitionTypes', null)
@@ -133,12 +122,7 @@ export const all = pikkuVoidFunc({
 
     const workflows = await rpc.invoke('pikkuWorkflow', null)
 
-    let remoteRPC = false
-    if (!config.addon) {
-      remoteRPC = await rpc.invoke('pikkuRemoteRPC', null)
-    }
-
-    if (workflows || remoteRPC) {
+    if (workflows) {
       await getInspectorState(true)
       await rpc.invoke('pikkuSchemas', null)
     }
