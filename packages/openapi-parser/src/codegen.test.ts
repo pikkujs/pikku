@@ -519,3 +519,264 @@ describe('MCP flag', () => {
     assert.ok(funcFile.includes('mcp: true'), 'should include mcp flag')
   })
 })
+
+// ---------------------------------------------------------------------------
+// camelCase flag
+// ---------------------------------------------------------------------------
+describe('camelCase flag', () => {
+  test('converts snake_case param names to camelCase in function input schema', () => {
+    const spec = makeSpec({
+      operations: [
+        makeOp({
+          operationId: 'getRepo',
+          method: 'get',
+          path: '/repos/{repo_slug}',
+          pathParams: [
+            { name: 'repo_slug', required: true, schema: { type: 'string' } },
+          ],
+          queryParams: [
+            { name: 'page_size', required: false, schema: { type: 'number' } },
+          ],
+        }),
+      ],
+    })
+
+    const files = generateAddonFromOpenAPI(spec, makeVars(), {
+      oauth: false,
+      secret: false,
+      camelCase: true,
+    })
+    const funcFile = files['src/functions/getRepo.function.ts']
+    assert.ok(funcFile, 'function file should exist')
+    // Should use camelCase names
+    assert.ok(
+      funcFile.includes('repoSlug:'),
+      'should convert repo_slug to repoSlug'
+    )
+    assert.ok(
+      funcFile.includes('pageSize:'),
+      'should convert page_size to pageSize'
+    )
+    // Should NOT have original snake_case names in the schema
+    assert.ok(!funcFile.includes('repo_slug:'), 'should not contain repo_slug')
+    assert.ok(!funcFile.includes('page_size:'), 'should not contain page_size')
+  })
+
+  test('converts snake_case object property names to camelCase in response schema', () => {
+    const responseSchema = {
+      type: 'object' as const,
+      properties: {
+        created_at: { type: 'string' as const },
+        display_name: { type: 'string' as const },
+        id: { type: 'string' as const },
+      },
+    }
+
+    const spec = makeSpec({
+      operations: [
+        makeOp({
+          operationId: 'getUser',
+          method: 'get',
+          path: '/users/{id}',
+          pathParams: [
+            { name: 'id', required: true, schema: { type: 'string' } },
+          ],
+          responseSchema,
+        }),
+      ],
+    })
+
+    const files = generateAddonFromOpenAPI(spec, makeVars(), {
+      oauth: false,
+      secret: false,
+      camelCase: true,
+    })
+    const funcFile = files['src/functions/getUser.function.ts']
+    assert.ok(funcFile, 'function file should exist')
+    // Output schema should use camelCase
+    assert.ok(
+      funcFile.includes('createdAt:'),
+      'should convert created_at to createdAt'
+    )
+    assert.ok(
+      funcFile.includes('displayName:'),
+      'should convert display_name to displayName'
+    )
+    // Should still have 'id' (no conversion needed)
+    assert.ok(funcFile.includes('id:'), 'should keep id as-is')
+  })
+
+  test('converts snake_case body property names to camelCase in input schema', () => {
+    const requestBody = {
+      type: 'object' as const,
+      properties: {
+        first_name: { type: 'string' as const },
+        last_name: { type: 'string' as const },
+      },
+      required: ['first_name'],
+    }
+
+    const spec = makeSpec({
+      operations: [
+        makeOp({
+          operationId: 'createUser',
+          method: 'post',
+          path: '/users',
+          requestBody,
+        }),
+      ],
+    })
+
+    const files = generateAddonFromOpenAPI(spec, makeVars(), {
+      oauth: false,
+      secret: false,
+      camelCase: true,
+    })
+    const funcFile = files['src/functions/createUser.function.ts']
+    assert.ok(funcFile, 'function file should exist')
+    assert.ok(
+      funcFile.includes('firstName:'),
+      'should convert first_name to firstName'
+    )
+    assert.ok(
+      funcFile.includes('lastName:'),
+      'should convert last_name to lastName'
+    )
+  })
+
+  test('generates _toSnakeCase and _toCamelCase helpers in service file', () => {
+    const spec = makeSpec({
+      operations: [makeOp({ operationId: 'listItems' })],
+    })
+
+    const files = generateAddonFromOpenAPI(spec, makeVars(), {
+      oauth: false,
+      secret: false,
+      camelCase: true,
+    })
+    const serviceFile = files['src/test-api-api.service.ts']
+    assert.ok(serviceFile, 'service file should exist')
+    assert.ok(
+      serviceFile.includes('_toSnakeCase'),
+      'should contain _toSnakeCase helper'
+    )
+    assert.ok(
+      serviceFile.includes('_toCamelCase'),
+      'should contain _toCamelCase helper'
+    )
+    assert.ok(
+      serviceFile.includes('rawData'),
+      'should use rawData for snake_case converted input'
+    )
+  })
+
+  test('does not convert names when camelCase flag is off', () => {
+    const spec = makeSpec({
+      operations: [
+        makeOp({
+          operationId: 'getRepo',
+          method: 'get',
+          path: '/repos/{repo_slug}',
+          pathParams: [
+            { name: 'repo_slug', required: true, schema: { type: 'string' } },
+          ],
+        }),
+      ],
+    })
+
+    const files = generateAddonFromOpenAPI(spec, makeVars(), {
+      oauth: false,
+      secret: false,
+      camelCase: false,
+    })
+    const funcFile = files['src/functions/getRepo.function.ts']
+    assert.ok(funcFile, 'function file should exist')
+    // Should keep original snake_case names
+    assert.ok(funcFile.includes('repo_slug:'), 'should keep repo_slug as-is')
+    assert.ok(!funcFile.includes('repoSlug:'), 'should not convert to repoSlug')
+  })
+
+  test('converts snake_case in shared component schemas', () => {
+    const itemSchema = {
+      type: 'object' as const,
+      properties: {
+        item_name: { type: 'string' as const },
+        created_at: { type: 'string' as const },
+      },
+    }
+
+    const spec = makeSpec({
+      componentSchemas: {
+        Item: itemSchema,
+      },
+      operations: [
+        makeOp({
+          method: 'get',
+          path: '/items',
+          operationId: 'listItems',
+          responseSchema: { type: 'array' as const, items: itemSchema },
+        }),
+        makeOp({
+          method: 'get',
+          path: '/items/{id}',
+          operationId: 'getItem',
+          pathParams: [
+            { name: 'id', required: true, schema: { type: 'string' } },
+          ],
+          responseSchema: itemSchema,
+        }),
+      ],
+    })
+
+    const files = generateAddonFromOpenAPI(spec, makeVars(), {
+      oauth: false,
+      secret: false,
+      camelCase: true,
+    })
+    const typesFile = files['src/test-api.types.ts']
+    assert.ok(typesFile, 'types file should exist')
+    assert.ok(
+      typesFile.includes('itemName:'),
+      'should convert item_name to itemName in shared schema'
+    )
+    assert.ok(
+      typesFile.includes('createdAt:'),
+      'should convert created_at to createdAt in shared schema'
+    )
+  })
+
+  test('ROUTES map keeps original snake_case names for HTTP requests', () => {
+    const spec = makeSpec({
+      operations: [
+        makeOp({
+          operationId: 'getRepo',
+          method: 'get',
+          path: '/repos/{repo_slug}',
+          pathParams: [
+            { name: 'repo_slug', required: true, schema: { type: 'string' } },
+          ],
+          queryParams: [
+            { name: 'page_size', required: false, schema: { type: 'number' } },
+          ],
+        }),
+      ],
+    })
+
+    const files = generateAddonFromOpenAPI(spec, makeVars(), {
+      oauth: false,
+      secret: false,
+      camelCase: true,
+    })
+    const serviceFile = files['src/test-api-api.service.ts']
+    assert.ok(serviceFile, 'service file should exist')
+    // ROUTES should use original names for HTTP path interpolation
+    assert.ok(
+      serviceFile.includes('"repo_slug"'),
+      'ROUTES should keep repo_slug for path params'
+    )
+    assert.ok(
+      serviceFile.includes('"page_size"'),
+      'ROUTES should keep page_size for query params'
+    )
+  })
+})

@@ -12,6 +12,7 @@ import {
   schemaVarName,
   sanitizeTypeName,
   createContext,
+  snakeToCamel,
   type ZodCodegenContext,
 } from './zod-codegen.js'
 import {
@@ -34,6 +35,7 @@ interface CodegenFlags {
   secret: boolean
   credential?: 'apikey' | 'bearer' | 'oauth2'
   mcp?: boolean
+  camelCase?: boolean
 }
 
 function safeKey(key: string): string {
@@ -313,7 +315,9 @@ export function generateAddonFromOpenAPI(
     sharedSchemaRefs.set(schemaName, schemaVarName(schemaName))
   }
 
-  const ctx = createContext(sharedSchemaRefs, schemaIdentityMap)
+  const ctx = createContext(sharedSchemaRefs, schemaIdentityMap, {
+    camelCase: flags.camelCase,
+  })
 
   // Generate operation names
   const paths = spec.operations.map((op) => op.path)
@@ -366,7 +370,9 @@ export function generateAddonFromOpenAPI(
   const functionExports: string[] = []
   for (let i = 0; i < opPairs.length; i++) {
     const { named, parsed } = opPairs[i]
-    const funcCtx = createContext(schemaRefs, schemaIdentityMap)
+    const funcCtx = createContext(schemaRefs, schemaIdentityMap, {
+      camelCase: flags.camelCase,
+    })
     const inlineSchemas = singleSchemasPerOp.get(i) ?? new Set<string>()
     const funcCode = generateFunctionFile(
       named,
@@ -707,7 +713,9 @@ function generateFunctionFile(
 
     if (Object.keys(inlineComponentSchemas).length > 0) {
       // Create a context that knows about both shared (for imports) and inline schemas
-      const inlineCtx = createContext(ctx.schemaRefs, schemaIdentityMap)
+      const inlineCtx = createContext(ctx.schemaRefs, schemaIdentityMap, {
+        camelCase: flags.camelCase,
+      })
 
       const { sorted, cyclicEdges } = topoSortSchemas(
         inlineComponentSchemas,
@@ -866,24 +874,26 @@ function buildInputSchema(
     return [...seen.values()]
   }
 
+  const useCamel = !!ctx.camelCase
+
   for (const param of deduplicateParams(parsed.pathParams)) {
     if (!emittedNames.has(param.name)) {
       emittedNames.add(param.name)
-      props.push(formatParamProp(param, ctx))
+      props.push(formatParamProp(param, ctx, useCamel))
     }
   }
 
   for (const param of deduplicateParams(parsed.queryParams)) {
     if (!emittedNames.has(param.name)) {
       emittedNames.add(param.name)
-      props.push(formatParamProp(param, ctx))
+      props.push(formatParamProp(param, ctx, useCamel))
     }
   }
 
   for (const param of deduplicateParams(parsed.headerParams)) {
     if (!emittedNames.has(param.name)) {
       emittedNames.add(param.name)
-      props.push(formatParamProp(param, ctx))
+      props.push(formatParamProp(param, ctx, useCamel))
     }
   }
 
@@ -905,7 +915,8 @@ function buildInputSchema(
         emittedNames.add(key)
         const isOptional = !requiredSet.has(key)
         const zodCode = schemaToZod(propSchema, ctx, { optional: isOptional })
-        props.push(`  ${safeKey(key)}: ${zodCode},`)
+        const outputKey = useCamel ? snakeToCamel(key) : key
+        props.push(`  ${safeKey(outputKey)}: ${zodCode},`)
       }
     } else {
       const bodyZod = schemaToZod(parsed.requestBody, ctx)
@@ -924,7 +935,8 @@ function formatParamProp(
     description?: string
     example?: unknown
   },
-  ctx: ZodCodegenContext
+  ctx: ZodCodegenContext,
+  camelCase = false
 ): string {
   const zodCode = schemaToZod(param.schema, ctx, { optional: !param.required })
 
@@ -939,7 +951,8 @@ function formatParamProp(
       ? `${zodCode}.describe(${JSON.stringify(descParts.join('. '))})`
       : zodCode
 
-  return `  ${safeKey(param.name)}: ${desc},`
+  const outputKey = camelCase ? snakeToCamel(param.name) : param.name
+  return `  ${safeKey(outputKey)}: ${desc},`
 }
 
 function buildOutputSchema(schema: any, ctx: ZodCodegenContext): string {
@@ -1066,6 +1079,29 @@ function generateServiceFile(
   )
   lines.push('')
 
+  if (flags.camelCase) {
+    lines.push(
+      'function _toSnakeCase(data: Record<string, unknown>): Record<string, unknown> {'
+    )
+    lines.push('  return Object.fromEntries(')
+    lines.push(
+      '    Object.entries(data).map(([k, v]) => [k.replace(/[A-Z]/g, c => `_${c.toLowerCase()}`), v])'
+    )
+    lines.push('  )')
+    lines.push('}')
+    lines.push('')
+    lines.push(
+      'function _toCamelCase(data: Record<string, unknown>): Record<string, unknown> {'
+    )
+    lines.push('  return Object.fromEntries(')
+    lines.push(
+      '    Object.entries(data).map(([k, v]) => [k.replace(/[-_]+(.)/g, (_, c) => c.toUpperCase()), v])'
+    )
+    lines.push('  )')
+    lines.push('}')
+    lines.push('')
+  }
+
   // Class declaration
   lines.push(`export class ${pascalName}Service {`)
   lines.push('  private baseUrl: string')
@@ -1121,6 +1157,9 @@ function generateServiceFile(
   lines.push('    path: string,')
   lines.push('    data?: Record<string, unknown>')
   lines.push('  ): Promise<T> {')
+  if (flags.camelCase) {
+    lines.push('    const rawData = data ? _toSnakeCase(data) : data')
+  }
   lines.push('    const route = ROUTES[`${method} ${path}`]')
   lines.push('    let endpoint = path')
   lines.push('    let body: Record<string, unknown> | undefined')
@@ -1129,25 +1168,27 @@ function generateServiceFile(
   lines.push("      'Content-Type': 'application/json',")
   lines.push('    }')
   lines.push('')
-  lines.push('    if (data && route) {')
+  // When camelCase flag is on, use rawData (snake_case converted) for route matching
+  const dataVar = flags.camelCase ? 'rawData' : 'data'
+  lines.push(`    if (${dataVar} && route) {`)
   lines.push('      // Interpolate path params')
   lines.push('      for (const param of route.path) {')
-  lines.push('        if (data[param] !== undefined) {')
+  lines.push(`        if (${dataVar}[param] !== undefined) {`)
   lines.push(
-    '          endpoint = endpoint.replace(`{${param}}`, String(data[param]))'
+    `          endpoint = endpoint.replace(\`{\${param}}\`, String(${dataVar}[param]))`
   )
   lines.push('        }')
   lines.push('      }')
   lines.push('      // Extract query params')
   lines.push('      for (const param of route.query) {')
-  lines.push('        if (data[param] !== undefined) {')
-  lines.push('          query[param] = String(data[param])')
+  lines.push(`        if (${dataVar}[param] !== undefined) {`)
+  lines.push(`          query[param] = String(${dataVar}[param])`)
   lines.push('        }')
   lines.push('      }')
   lines.push('      // Extract header params')
   lines.push('      for (const param of route.headers) {')
-  lines.push('        if (data[param] !== undefined) {')
-  lines.push('          headers[param] = String(data[param])')
+  lines.push(`        if (${dataVar}[param] !== undefined) {`)
+  lines.push(`          headers[param] = String(${dataVar}[param])`)
   lines.push('        }')
   lines.push('      }')
   lines.push('      // Everything else goes into body')
@@ -1156,7 +1197,7 @@ function generateServiceFile(
   )
   lines.push('      const remaining = Object.fromEntries(')
   lines.push(
-    '        Object.entries(data).filter(([k]) => !pathQueryHeaders.has(k))'
+    `        Object.entries(${dataVar}).filter(([k]) => !pathQueryHeaders.has(k))`
   )
   lines.push('      )')
   lines.push('      if (Object.keys(remaining).length > 0) {')
@@ -1253,7 +1294,14 @@ function generateServiceFile(
   lines.push('')
   lines.push('    const text = await response.text()')
   lines.push('    if (!text) return {} as T')
-  lines.push('    return JSON.parse(text) as T')
+  if (flags.camelCase) {
+    lines.push('    const result = JSON.parse(text)')
+    lines.push(
+      '    return (typeof result === "object" && result !== null && !Array.isArray(result) ? _toCamelCase(result) : result) as T'
+    )
+  } else {
+    lines.push('    return JSON.parse(text) as T')
+  }
   lines.push('  }')
 
   lines.push('}')

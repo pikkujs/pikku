@@ -860,6 +860,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
     test?: boolean
     openapi?: string
     mcp?: boolean
+    camelCase?: boolean
   },
   void
 >({
@@ -878,6 +879,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       test = true,
       openapi,
       mcp = false,
+      camelCase = false,
     }
   ) => {
     name = sanitizeAddonName(name)
@@ -946,6 +948,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
         secret: (secret || effectiveOAuth) && !credentialType,
         credential: credentialType,
         mcp,
+        camelCase,
       })
       Object.assign(addonFiles, openapiFiles)
 
@@ -957,6 +960,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       config.addon.openapi = {
         version: spec.info.version,
         hash: computeContractHash(spec),
+        ...(camelCase ? { camelCase: true } : {}),
       }
       addonFiles['pikku.config.json'] = JSON.stringify(config, null, 2)
     }

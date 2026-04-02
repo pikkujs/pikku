@@ -8,9 +8,7 @@ export {
   type SecuritySchemeInfo,
 } from './parse-openapi.js'
 
-export {
-  generateAddonFromOpenAPI,
-} from './codegen.js'
+export { generateAddonFromOpenAPI } from './codegen.js'
 
 export {
   generateOperationNames,
@@ -25,4 +23,5 @@ export {
   schemaToZod,
   schemaVarName,
   sanitizeTypeName,
+  snakeToCamel,
 } from './openapi-to-zod-schema.js'
