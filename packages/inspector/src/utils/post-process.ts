@@ -399,9 +399,24 @@ export function injectExposedRoutes(
   }
 
   // Inject workflow queue workers.
-  // Each workflow orchestrator gets its own queue: wf-{name}-orchestrator
-  // Each non-inline step function gets its own queue: step-{rpcName}
-  for (const [name, wfMeta] of Object.entries(state.workflows.meta)) {
+  // Each workflow orchestrator gets its own queue: wf-orchestrator-{name}
+  // Each non-inline step function gets its own queue: wf-step-{rpcName}
+  const workflowEntries = Object.entries(state.workflows.meta)
+  if (workflowEntries.length > 0) {
+    // Register input types so the queue map generator can produce typed maps
+    state.functions.typesMap.addCustomType(
+      'WorkflowStepInput',
+      '{ runId: string; stepName: string; rpcName: string; data: any; }',
+      []
+    )
+    state.functions.typesMap.addCustomType(
+      'PikkuWorkflowOrchestratorInput',
+      '{ runId: string; }',
+      []
+    )
+  }
+
+  for (const [name, wfMeta] of workflowEntries) {
     // Orchestrator queue for this workflow
     const orchQueueName = `wf-orchestrator-${name}`
     const orchFuncId = `pikkuWorkflowOrchestrator:${name}`
@@ -417,13 +432,13 @@ export function injectExposedRoutes(
         name: orchFuncId,
         inputSchemaName: null,
         outputSchemaName: null,
-        inputs: [],
+        inputs: ['PikkuWorkflowOrchestratorInput'],
         outputs: [],
       }
     }
     if (!state.resolvedIOTypes[orchFuncId]) {
       state.resolvedIOTypes[orchFuncId] = {
-        inputType: 'null',
+        inputType: 'PikkuWorkflowOrchestratorInput',
         outputType: 'null',
       }
     }
@@ -448,13 +463,13 @@ export function injectExposedRoutes(
               name: stepFuncId,
               inputSchemaName: null,
               outputSchemaName: null,
-              inputs: [],
+              inputs: ['WorkflowStepInput'],
               outputs: [],
             }
           }
           if (!state.resolvedIOTypes[stepFuncId]) {
             state.resolvedIOTypes[stepFuncId] = {
-              inputType: 'null',
+              inputType: 'WorkflowStepInput',
               outputType: 'null',
             }
           }

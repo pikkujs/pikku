@@ -1,4 +1,9 @@
-import { runPikkuFunc } from '../../function/function-runner.js'
+import { runPikkuFunc, addFunction } from '../../function/function-runner.js'
+import {
+  pikkuWorkflowWorkerFunc,
+  pikkuWorkflowOrchestratorFunc,
+  pikkuWorkflowSleeperFunc,
+} from './workflow-queue-workers.js'
 import {
   getSingletonServices,
   getCreateWireServices,
@@ -116,7 +121,35 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     return getSingletonServices()?.logger
   }
 
-  constructor() {}
+  constructor() {
+    // Auto-register workflow queue worker functions.
+    // Scans the queue meta for workflow queues (wf-orchestrator-*, wf-step-*)
+    // and registers the corresponding handler functions.
+    // Queue meta is populated by bootstrap imports before services are created.
+    const queueMeta = pikkuState(null, 'queue', 'meta')
+    const functions = pikkuState(null, 'function', 'functions')
+
+    for (const [queueName, meta] of Object.entries(queueMeta)) {
+      if (functions.has(meta.pikkuFuncId)) continue
+
+      if (queueName.startsWith('wf-orchestrator-')) {
+        addFunction(meta.pikkuFuncId, {
+          func: pikkuWorkflowOrchestratorFunc,
+        })
+      } else if (queueName.startsWith('wf-step-')) {
+        addFunction(meta.pikkuFuncId, {
+          func: pikkuWorkflowWorkerFunc,
+        })
+      }
+    }
+
+    // Register sleeper
+    if (!functions.has('pikkuWorkflowSleeper')) {
+      addFunction('pikkuWorkflowSleeper', {
+        func: pikkuWorkflowSleeperFunc,
+      })
+    }
+  }
 
   /**
    * Check if a run is executing inline (without queues)
