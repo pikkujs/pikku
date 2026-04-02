@@ -29,21 +29,13 @@ export const pikkuWorkflow = pikkuSessionlessFunc<void, boolean | undefined>({
     const { workflows, functions: functionState } = visitState
     const { typesMap } = functionState
 
-    const allWorkflowNames = Object.keys(workflows.graphMeta)
-    // Check if any of the filtered functions are actually workflow functions
-    const workflowFuncIds = new Set(
-      allWorkflowNames
-        .map((name) => {
-          const meta = workflows.meta[name]
-          return meta?.pikkuFuncId
-        })
-        .filter(Boolean)
-    )
-    const hasRelevantWorkflows =
-      allWorkflowNames.length > 0 &&
-      Object.keys(functionState.meta).some((funcId) =>
-        workflowFuncIds.has(funcId)
-      )
+    const allWorkflowNames = [
+      ...new Set([
+        ...Object.keys(workflows.graphMeta),
+        ...Object.keys(workflows.meta),
+      ]),
+    ]
+    const hasRelevantWorkflows = allWorkflowNames.length > 0
     const hasWorkflows = hasRelevantWorkflows
 
     if (hasWorkflows) {

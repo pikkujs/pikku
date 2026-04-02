@@ -280,6 +280,14 @@ export function filterInspectorState(
           filteredState.serviceAggregation.usedFunctions.add(
             routeMeta.pikkuFuncId
           )
+          // For synthetic workflow/agent routes, also add the base name
+          // so the workflow/agent definition survives pruning
+          const colonIdx = routeMeta.pikkuFuncId.indexOf(':')
+          if (colonIdx !== -1) {
+            filteredState.serviceAggregation.usedFunctions.add(
+              routeMeta.pikkuFuncId.slice(colonIdx + 1)
+            )
+          }
         }
         extractWireNames(routeMeta.middleware).forEach((name: string) =>
           filteredState.serviceAggregation.usedMiddleware.add(name)
