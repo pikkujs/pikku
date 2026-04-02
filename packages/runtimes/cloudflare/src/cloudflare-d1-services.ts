@@ -5,6 +5,7 @@
  */
 
 import { CamelCasePlugin, Kysely } from 'kysely'
+import { SerializePlugin } from 'kysely-plugin-serialize'
 import { D1Dialect } from 'kysely-d1'
 import type { D1Database } from '@cloudflare/workers-types'
 import type { KyselyPikkuDB } from '@pikku/kysely'
@@ -21,7 +22,7 @@ import {
 export function createD1Kysely(d1Database: D1Database): Kysely<KyselyPikkuDB> {
   return new Kysely<KyselyPikkuDB>({
     dialect: new D1Dialect({ database: d1Database }),
-    plugins: [new CamelCasePlugin()],
+    plugins: [new CamelCasePlugin(), new SerializePlugin()],
   })
 }
 

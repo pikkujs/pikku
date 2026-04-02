@@ -10,6 +10,7 @@ import {
   workflowStatus as coreWorkflowStatus,
 } from './workflow-helpers.js'
 import { wireHTTP } from '../http/http-runner.js'
+import { wireQueueWorker } from '../queue/queue-runner.js'
 import {
   getSingletonServices,
   getCreateWireServices,
@@ -142,13 +143,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       if (functions.has(meta.pikkuFuncId)) continue
 
       if (queueName.startsWith('wf-orchestrator-')) {
-        addFunction(meta.pikkuFuncId, {
-          func: pikkuWorkflowOrchestratorFunc,
-        })
+        const func = { func: pikkuWorkflowOrchestratorFunc }
+        addFunction(meta.pikkuFuncId, func)
+        wireQueueWorker({ name: queueName, func } as any)
       } else if (queueName.startsWith('wf-step-')) {
-        addFunction(meta.pikkuFuncId, {
-          func: pikkuWorkflowWorkerFunc,
-        })
+        const func = { func: pikkuWorkflowWorkerFunc }
+        addFunction(meta.pikkuFuncId, func)
+        wireQueueWorker({ name: queueName, func } as any)
       }
     }
 
