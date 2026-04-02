@@ -313,6 +313,11 @@ wireCLI({
                 'Add mcp: true to generated functions (expose as MCP tools)',
               default: false,
             },
+            camelCase: {
+              description:
+                'Convert snake_case property names to camelCase in generated Zod schemas',
+              default: false,
+            },
           },
         }),
       },

@@ -51,11 +51,14 @@ export interface ZodCodegenContext {
   schemaIdentityMap: Map<object, string>
   /** Current nesting depth for preventing excessively deep types */
   depth: number
+  /** When true, convert snake_case property keys to camelCase in z.object() */
+  camelCase?: boolean
 }
 
 export function createContext(
   schemaRefs?: Map<string, string>,
-  schemaIdentityMap?: Map<object, string>
+  schemaIdentityMap?: Map<object, string>,
+  opts?: { camelCase?: boolean }
 ): ZodCodegenContext {
   return {
     schemaRefs: schemaRefs ?? new Map(),
@@ -64,7 +67,13 @@ export function createContext(
     seen: new Set(),
     schemaIdentityMap: schemaIdentityMap ?? new Map(),
     depth: 0,
+    camelCase: opts?.camelCase,
   }
+}
+
+/** Convert a snake_case or kebab-case string to camelCase */
+export function snakeToCamel(s: string): string {
+  return s.replace(/[-_]+(.)/g, (_, c) => c.toUpperCase())
 }
 
 /**
@@ -360,7 +369,8 @@ function handleObject(schema: OpenAPISchema, ctx: ZodCodegenContext): string {
   for (const [key, propSchema] of Object.entries(schema.properties)) {
     const isOptional = !requiredSet.has(key)
     const propZod = schemaToZod(propSchema, inner, { optional: isOptional })
-    entries.push(`${pad}${safeKey(key)}: ${propZod},`)
+    const outputKey = ctx.camelCase ? snakeToCamel(key) : key
+    entries.push(`${pad}${safeKey(outputKey)}: ${propZod},`)
   }
 
   return `z.object({\n${entries.join('\n')}\n${closePad}})`
