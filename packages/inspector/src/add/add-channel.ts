@@ -94,8 +94,8 @@ function getHandlerNameFromExpression(
 
   // Handle call expressions
   if (ts.isCallExpression(expr)) {
-    // Handle addon('namespace:funcName') calls
-    if (ts.isIdentifier(expr.expression) && expr.expression.text === 'addon') {
+    // Handle func('name') or addon('namespace:funcName') calls
+    if (ts.isIdentifier(expr.expression) && expr.expression.text === 'func') {
       const [firstArg] = expr.arguments
       if (firstArg && ts.isStringLiteral(firstArg)) {
         return firstArg.text

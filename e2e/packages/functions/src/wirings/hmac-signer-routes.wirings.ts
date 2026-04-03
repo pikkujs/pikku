@@ -10,12 +10,12 @@ export const hmacRoutes = defineHTTPRoutes({
     sign: {
       route: '/api/hmac/sign',
       method: 'post',
-      func: addon('hmac-signer:signData'),
+      func: func('hmac-signer:signData'),
     },
     verify: {
       route: '/api/hmac/verify',
       method: 'post',
-      func: addon('hmac-signer:verifySignature'),
+      func: func('hmac-signer:verifySignature'),
     },
   },
 })

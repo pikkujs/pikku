@@ -116,26 +116,23 @@ export const AgentEditor: React.FunctionComponent<AgentEditorProps> = ({
   const modelOptions = Array.from(new Set([...modelAliases, ...(model ? [model] : [])]))
 
   const allFunctions = meta.functions ?? []
-  const localOptions = allFunctions
-    .filter((f: any) => f.functionType === 'user')
-    .map((f: any) => ({
-      value: f.pikkuFuncId as string,
-      label: f.pikkuFuncId as string,
-      group: 'Local',
+  const groups: Record<string, string[]> = {}
+  for (const f of allFunctions) {
+    if ((f as any).functionType !== 'user') continue
+    const id = (f as any).pikkuFuncId as string
+    if (!groups['Local']) groups['Local'] = []
+    groups['Local'].push(id)
+  }
+  for (const f of addonFunctions ?? []) {
+    if (!groups[f.namespace]) groups[f.namespace] = []
+    groups[f.namespace].push(f.funcId)
+  }
+  const toolOptions = Object.entries(groups)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([group, items]) => ({
+      group,
+      items: items.sort(),
     }))
-  const addonOptions = (addonFunctions ?? []).map((f) => ({
-    value: f.funcId,
-    label: f.funcId,
-    group: f.namespace,
-  }))
-  const seen = new Set<string>()
-  const toolOptions = [...addonOptions, ...localOptions]
-    .filter((o) => {
-      if (seen.has(o.value)) return false
-      seen.add(o.value)
-      return true
-    })
-    .sort((a, b) => a.label.localeCompare(b.label))
 
   return (
     <Stack gap="md">
@@ -175,9 +172,10 @@ export const AgentEditor: React.FunctionComponent<AgentEditorProps> = ({
         clearable
         size="xs"
       />
-      <Group grow gap="xs">
+      <Group grow gap="xs" wrap="wrap">
         <NumberInput
           label="Max Steps"
+          style={{ minWidth: 100 }}
           value={maxSteps}
           onChange={(v) => setMaxSteps(typeof v === 'number' ? v : '')}
           min={1}
@@ -186,6 +184,7 @@ export const AgentEditor: React.FunctionComponent<AgentEditorProps> = ({
         />
         <NumberInput
           label="Temperature"
+          style={{ minWidth: 100 }}
           value={temperature}
           onChange={(v) => setTemperature(typeof v === 'number' ? v : '')}
           min={0}
@@ -196,6 +195,7 @@ export const AgentEditor: React.FunctionComponent<AgentEditorProps> = ({
         />
         <Select
           label="Tool Choice"
+          style={{ minWidth: 120 }}
           data={['auto', 'required', 'none']}
           value={toolChoice}
           onChange={setToolChoice}

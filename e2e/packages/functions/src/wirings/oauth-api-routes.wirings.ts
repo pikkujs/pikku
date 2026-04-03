@@ -10,7 +10,7 @@ export const oauthApiRoutes = defineHTTPRoutes({
     getProfile: {
       route: '/api/oauth/profile',
       method: 'post',
-      func: addon('oauth-api:getProfile'),
+      func: func('oauth-api:getProfile'),
     },
   },
 })
