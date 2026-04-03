@@ -499,9 +499,17 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     rpcService: any,
     options?: { inline?: boolean; startNode?: string }
   ): Promise<{ runId: string }> {
-    // Check meta to determine workflow type
+    // Check static meta first, then fall back to dynamic workflows in DB
     const meta = pikkuState(null, 'workflows', 'meta')
-    const workflowMeta = meta[name]
+    let workflowMeta = meta[name]
+
+    if (!workflowMeta) {
+      const dynamicWorkflows = await this.getAIGeneratedWorkflows()
+      const match = dynamicWorkflows.find((w) => w.workflowName === name)
+      if (match?.graph) {
+        workflowMeta = match.graph
+      }
+    }
 
     if (!workflowMeta) {
       throw new WorkflowNotFoundError(name)
@@ -519,7 +527,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         rpcService,
         shouldInline,
         options?.startNode,
-        wire
+        wire,
+        workflowMeta
       )
     }
 

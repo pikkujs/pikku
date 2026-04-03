@@ -798,9 +798,10 @@ export async function runWorkflowGraph(
   rpcService?: any,
   inline?: boolean,
   startNode?: string,
-  wire?: WorkflowRunWire
+  wire?: WorkflowRunWire,
+  overrideMeta?: WorkflowRuntimeMeta
 ): Promise<{ runId: string }> {
-  const meta = getWorkflowMeta(graphName)
+  const meta = overrideMeta ?? getWorkflowMeta(graphName)
   if (!meta?.nodes) {
     throw new Error(`Workflow graph '${graphName}' not found`)
   }
