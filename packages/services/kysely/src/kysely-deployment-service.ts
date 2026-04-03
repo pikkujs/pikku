@@ -161,7 +161,7 @@ export class KyselyDeploymentService implements DeploymentService {
     }
 
     const endpoint = result[0].endpoint
-    const url = `${endpoint}/rpc/${encodeURIComponent(funcName)}`
+    const url = `${endpoint}/remote/rpc/${encodeURIComponent(funcName)}`
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -82,11 +82,14 @@ export class CloudflareDeploymentService implements DeploymentService {
       headers.Authorization = `Bearer ${token}`
     }
 
-    const request = new Request(`http://internal/__pikku/rpc`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ funcName, data }),
-    })
+    const request = new Request(
+      `http://internal/remote/rpc/${encodeURIComponent(funcName)}`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
+      }
+    )
 
     const response = await binding.fetch(request)
 

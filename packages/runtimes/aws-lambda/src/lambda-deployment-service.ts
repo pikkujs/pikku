@@ -72,23 +72,24 @@ export class LambdaDeploymentService implements DeploymentService {
     }
 
     // Build a synthetic API Gateway event for the target Lambda
+    const rpcPath = `/remote/rpc/${encodeURIComponent(funcName)}`
     const apiGatewayEvent = {
       httpMethod: 'POST',
-      path: '/__pikku/rpc',
+      path: rpcPath,
       headers,
-      body: JSON.stringify({ funcName, data }),
+      body: JSON.stringify(data),
       isBase64Encoded: false,
       queryStringParameters: null,
       pathParameters: null,
       stageVariables: null,
       requestContext: {
         httpMethod: 'POST',
-        path: '/__pikku/rpc',
+        path: rpcPath,
         stage: 'prod',
         requestId: crypto.randomUUID(),
         identity: {},
       },
-      resource: '/__pikku/rpc',
+      resource: rpcPath,
     }
 
     const response = await this.client.send(

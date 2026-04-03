@@ -252,7 +252,7 @@ describe('pikkuRemoteAuthMiddleware', () => {
               http: {
                 request: createMockRequest(
                   { authorization: 'Bearer valid-token' },
-                  '/rpc/otherFunc'
+                  '/remote/rpc/otherFunc'
                 ),
               },
             } as any,
@@ -273,7 +273,7 @@ describe('pikkuRemoteAuthMiddleware', () => {
           http: {
             request: createMockRequest(
               { authorization: 'Bearer valid-token' },
-              '/rpc/myFunc'
+              '/remote/rpc/myFunc'
             ),
           },
         } as any,
@@ -295,7 +295,7 @@ describe('pikkuRemoteAuthMiddleware', () => {
           http: {
             request: createMockRequest(
               { authorization: 'Bearer valid-token' },
-              '/rpc/anyFunc'
+              '/remote/rpc/anyFunc'
             ),
           },
         } as any,
@@ -339,7 +339,7 @@ describe('pikkuRemoteAuthMiddleware', () => {
           http: {
             request: createMockRequest(
               { authorization: 'Bearer valid-token' },
-              '/rpc/my%20func'
+              '/remote/rpc/my%20func'
             ),
           },
         } as any,
