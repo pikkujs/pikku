@@ -124,7 +124,7 @@ export class ContextAwareRPCService {
 
     // Try local first, fall back to deployment service (e.g. CF service binding)
     try {
-      return runPikkuFunc<In, Out>(
+      return await runPikkuFunc<In, Out>(
         'rpc',
         funcName,
         getPikkuFunctionName(funcName),
@@ -144,7 +144,8 @@ export class ContextAwareRPCService {
         return this.services.deploymentService.invoke(
           funcName,
           data,
-          session
+          session,
+          this.wire.traceId
         ) as Promise<Out>
       }
       throw e

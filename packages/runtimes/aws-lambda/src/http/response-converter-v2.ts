@@ -3,8 +3,14 @@ import type { APIGatewayProxyStructuredResultV2 } from 'aws-lambda'
 export const responseToLambdaV2Result = async (
   response: Response
 ): Promise<APIGatewayProxyStructuredResultV2> => {
+  // Extract Set-Cookie headers as cookies array (v2 format)
+  const cookies: string[] = response.headers.getSetCookie
+    ? response.headers.getSetCookie()
+    : []
+
   const headers: Record<string, string> = {}
   response.headers.forEach((value, key) => {
+    if (key.toLowerCase() === 'set-cookie' && cookies.length > 0) return
     headers[key.toLowerCase()] = value
   })
 
@@ -23,14 +29,6 @@ export const responseToLambdaV2Result = async (
   } else {
     body = buffer.toString('utf-8')
   }
-
-  // Extract Set-Cookie headers as cookies array (v2 format)
-  const cookies: string[] = []
-  response.headers.forEach((value, key) => {
-    if (key.toLowerCase() === 'set-cookie') {
-      cookies.push(value)
-    }
-  })
 
   return {
     statusCode: response.status,

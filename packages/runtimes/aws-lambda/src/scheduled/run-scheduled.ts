@@ -12,12 +12,19 @@ import { runScheduledTask, getScheduledTasks } from '@pikku/core/scheduler'
 export const runLambdaScheduled = async (
   _event: ScheduledEvent
 ): Promise<void> => {
-  const traceId = `cron-${crypto.randomUUID()}`
   const scheduledTasks = getScheduledTasks()
 
   // Run all scheduled tasks registered in this unit.
   // Typically one task per unit, but iterate all to be safe.
   for (const [name] of scheduledTasks) {
-    await runScheduledTask({ name, traceId })
+    const traceId = `cron-${crypto.randomUUID()}`
+    try {
+      await runScheduledTask({ name, traceId })
+    } catch (err) {
+      console.error(
+        `Scheduled task '${name}' (traceId: ${traceId}) failed:`,
+        err
+      )
+    }
   }
 }

@@ -251,6 +251,8 @@ export type PikkuWire<
 > = Partial<{
   wireType: PikkuWiringTypes
   wireId: string
+  /** Trace ID for distributed tracing — propagated across remote RPC calls via x-trace-id header */
+  traceId: string
   http: PikkuHTTP<In>
   mcp: PikkuMCP<MCPTools>
   rpc: TypedRPC

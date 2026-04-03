@@ -24,7 +24,7 @@ const PROJECTS = [
 ]
 
 const emptyProvider = {
-  async getCurrentState() {
+  async getCurrentState(_name: string) {
     return {
       workers: [],
       queues: [],

@@ -1,4 +1,3 @@
-// @ts-nocheck — Legacy provider, being replaced by deploy.ts orchestrator
 /**
  * Cloudflare implementation of the DeployProvider interface.
  *
@@ -18,10 +17,9 @@ import {
   deleteQueue,
   createConsumer,
 } from './queues.js'
-import { listDatabases, createDatabase, executeQuery } from './d1.js'
+import { listDatabases, createDatabase } from './d1.js'
 import { listBuckets, createBucket, deleteBucket } from './r2.js'
-import { listSecrets, setSecret, deleteSecret } from './secrets.js'
-import { setCronTriggers, getCronTriggers } from './cron.js'
+import { setCronTriggers } from './cron.js'
 import {
   deployContainer,
   deleteContainer,
@@ -133,8 +131,8 @@ export class CloudflareDeployProvider {
           })
         }
       }
-    } catch {
-      /* account may not have workers yet */
+    } catch (err) {
+      console.error('listWorkers failed in getCurrentState:', err)
     }
 
     // Fetch queues
@@ -145,8 +143,8 @@ export class CloudflareDeployProvider {
           queues.push({ name: q.queue_name })
         }
       }
-    } catch {
-      /* no queues */
+    } catch (err) {
+      console.error('listQueues failed in getCurrentState:', err)
     }
 
     // Fetch D1
@@ -157,8 +155,8 @@ export class CloudflareDeployProvider {
           d1Databases.push({ name: d.name, id: d.uuid })
         }
       }
-    } catch {
-      /* no D1 */
+    } catch (err) {
+      console.error('listDatabases failed in getCurrentState:', err)
     }
 
     // Fetch R2
@@ -169,8 +167,8 @@ export class CloudflareDeployProvider {
           r2Buckets.push({ name: b.name })
         }
       }
-    } catch {
-      /* no R2 */
+    } catch (err) {
+      console.error('listBuckets failed in getCurrentState:', err)
     }
 
     // Fetch containers
@@ -181,8 +179,8 @@ export class CloudflareDeployProvider {
           containers.push({ name: c.name })
         }
       }
-    } catch {
-      /* no containers */
+    } catch (err) {
+      console.error('listContainers failed in getCurrentState:', err)
     }
 
     return {

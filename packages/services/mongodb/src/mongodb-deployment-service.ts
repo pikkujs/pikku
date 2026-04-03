@@ -101,7 +101,7 @@ export class MongoDBDeploymentService extends AbstractDeploymentService {
     const url = `${result.endpoint}/remote/rpc/${encodeURIComponent(funcName)}`
     const response = await fetch(url, {
       method: 'POST',
-      headers,
+      headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify(data),
     })
     if (!response.ok) {

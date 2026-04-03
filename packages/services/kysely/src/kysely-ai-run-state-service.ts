@@ -109,7 +109,7 @@ export class KyselyAIRunStateService implements AIRunStateService {
 
   async resolveApproval(
     toolCallId: string,
-    _status: 'approved' | 'denied'
+    status: 'approved' | 'denied'
   ): Promise<void> {
     const rows = await this.db
       .selectFrom('aiRun')
@@ -123,13 +123,17 @@ export class KyselyAIRunStateService implements AIRunStateService {
         : []
       const filtered = approvals.filter((a) => a.toolCallId !== toolCallId)
       if (filtered.length !== approvals.length) {
+        const updates: Record<string, unknown> = {
+          pendingApprovals:
+            filtered.length > 0 ? JSON.stringify(filtered) : null,
+          updatedAt: sql`CURRENT_TIMESTAMP`,
+        }
+        if (filtered.length === 0) {
+          updates.status = status
+        }
         await this.db
           .updateTable('aiRun')
-          .set({
-            pendingApprovals:
-              filtered.length > 0 ? JSON.stringify(filtered) : null,
-            updatedAt: sql`CURRENT_TIMESTAMP`,
-          } as any)
+          .set(updates as any)
           .where('runId', '=', row.runId)
           .execute()
         return

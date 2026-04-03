@@ -31,8 +31,11 @@ export async function setCronTriggers(
  */
 function normalizeCron(cron: string): string {
   const parts = cron.split(' ')
-  if (parts.length === 5 && parts[4] === '0') {
-    parts[4] = '7'
+  if (parts.length === 5) {
+    parts[4] = parts[4]
+      .split(',')
+      .map((token) => token.replace(/^0(?=$|[\/\-])/, '7'))
+      .join(',')
   }
   return parts.join(' ')
 }

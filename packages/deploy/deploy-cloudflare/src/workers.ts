@@ -164,12 +164,14 @@ async function setWorkerRoutes(
     if (!route.zone_id) {
       continue
     }
-    // Note: route creation uses the zone-level endpoint, not account-level.
-    // This goes through the client's requestRaw to hit the correct URL path.
-    await client.request<unknown>('POST', `/workers/routes`, {
-      pattern: route.pattern,
-      script: _name,
-    })
+    await client.request<unknown>(
+      'POST',
+      `/zones/${route.zone_id}/workers/routes`,
+      {
+        pattern: route.pattern,
+        script: _name,
+      }
+    )
   }
 }
 

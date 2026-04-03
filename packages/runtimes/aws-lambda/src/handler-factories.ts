@@ -128,31 +128,37 @@ export function createLambdaWebSocketHandler(
   factories: LambdaServiceFactories
 ) {
   // Import dynamically to avoid pulling in websocket deps for non-channel units
+  const getChannelStore = () => {
+    if (!cachedServices) {
+      throw new Error('Services not initialized for WebSocket handler')
+    }
+    const channelStore = (cachedServices as Record<string, unknown>)
+      .channelStore as import('@pikku/core/channel').ChannelStore | undefined
+    if (!channelStore) {
+      throw new Error(
+        'channelStore not found in singleton services. Ensure it is configured for channel units.'
+      )
+    }
+    return channelStore
+  }
+
   return {
     async connect(event: APIGatewayEvent) {
       await setupServices(factories)
       const { connectWebsocket } = await import('./websocket/index.js')
-      // channelStore is expected to be in singleton services
-      const services = cachedServices!
-      const channelStore = (services as unknown as Record<string, unknown>)
-        .channelStore as import('@pikku/core/channel').ChannelStore
-      return connectWebsocket(event, { channelStore })
+      return connectWebsocket(event, { channelStore: getChannelStore() })
     },
     async disconnect(event: APIGatewayEvent) {
       await setupServices(factories)
       const { disconnectWebsocket } = await import('./websocket/index.js')
-      const services = cachedServices!
-      const channelStore = (services as unknown as Record<string, unknown>)
-        .channelStore as import('@pikku/core/channel').ChannelStore
-      return disconnectWebsocket(event, { channelStore })
+      return disconnectWebsocket(event, { channelStore: getChannelStore() })
     },
     async default(event: APIGatewayEvent) {
       await setupServices(factories)
       const { processWebsocketMessage } = await import('./websocket/index.js')
-      const services = cachedServices!
-      const channelStore = (services as unknown as Record<string, unknown>)
-        .channelStore as import('@pikku/core/channel').ChannelStore
-      return processWebsocketMessage(event, { channelStore })
+      return processWebsocketMessage(event, {
+        channelStore: getChannelStore(),
+      })
     },
   }
 }

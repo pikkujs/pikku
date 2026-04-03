@@ -19,9 +19,18 @@ export const lambdaV2EventToRequest = (
 
   const method = event.requestContext?.http?.method || 'GET'
 
+  const headers: Record<string, string> = {}
+  if (event.headers) {
+    for (const [key, value] of Object.entries(event.headers)) {
+      if (value != null) {
+        headers[key] = value
+      }
+    }
+  }
+
   return new Request(url.toString(), {
     method,
-    headers: event.headers as HeadersInit,
+    headers,
     body: ['GET', 'HEAD'].includes(method.toUpperCase()) ? undefined : body,
   })
 }

@@ -352,7 +352,7 @@ export class AzureProviderAdapter {
     bindingsMap: string
   ): string[] {
     return [
-      `const createPlatformServices = async (): Promise<${ctx.servicesType}> => {`,
+      `const createPlatformServices = async (existingServices?: Record<string, unknown>): Promise<${ctx.servicesType}> => {`,
       `  const services: ${ctx.servicesType} = {}`,
       `  const logger = new JsonConsoleLogger()`,
       `  services.logger = logger`,
@@ -360,8 +360,8 @@ export class AzureProviderAdapter {
       `    services.queueService = new AzureQueueService()`,
       `  }`,
       `  services.deploymentService = new AzureDeploymentService(`,
-      `    services.jwt,`,
-      `    services.secrets,`,
+      `    existingServices?.jwt as any,`,
+      `    existingServices?.secrets as any,`,
       `    ${bindingsMap}`,
       `  )`,
       `  return services`,

@@ -86,7 +86,7 @@ export abstract class AbstractDeploymentService implements DeploymentService {
         {
           aud: 'pikku-remote',
           fn: funcName,
-          iat: Date.now(),
+          iat: Math.floor(Date.now() / 1000),
           session: sessionEnc,
         }
       )
