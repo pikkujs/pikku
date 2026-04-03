@@ -7,11 +7,12 @@ import {
   Button,
   Group,
   Alert,
-  TagsInput,
+  MultiSelect,
   Code,
 } from '@mantine/core'
 import { Save, X, AlertTriangle, CheckCircle } from 'lucide-react'
 import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
+import { useTagOptions } from '@/hooks/useTags'
 import {
   useFunctionSource,
   useUpdateFunctionConfig,
@@ -37,6 +38,7 @@ export const FunctionEditor: React.FunctionComponent<FunctionEditorProps> = ({
     true
   )
   const updateConfig = useUpdateFunctionConfig()
+  const tagOptions = useTagOptions()
   const updateBody = useUpdateFunctionBody()
 
   const [title, setTitle] = useState('')
@@ -163,11 +165,15 @@ export const FunctionEditor: React.FunctionComponent<FunctionEditorProps> = ({
         onChange={(e) => setSummary(e.currentTarget.value)}
         size="xs"
       />
-      <TagsInput
+      <MultiSelect
         label="Tags"
+        data={tagOptions}
         value={tags}
         onChange={setTags}
+        searchable
+        clearable
         size="xs"
+        placeholder="Search tags..."
       />
 
       <SectionLabel>Flags</SectionLabel>

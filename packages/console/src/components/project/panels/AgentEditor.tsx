@@ -13,6 +13,7 @@ import {
 import { Save, X, AlertTriangle, CheckCircle } from 'lucide-react'
 import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
 import { useAgentSource, useUpdateAgentConfig } from '@/hooks/useCodeEdit'
+import { useTagOptions } from '@/hooks/useTags'
 import { useAddonFunctions } from '@/hooks/useAddonFunctions'
 import { usePikkuMeta } from '@/context/PikkuMetaContext'
 
@@ -39,6 +40,7 @@ export const AgentEditor: React.FunctionComponent<AgentEditorProps> = ({
   const updateAgent = useUpdateAgentConfig()
   const { meta } = usePikkuMeta()
   const { data: addonFunctions } = useAddonFunctions()
+  const tagOptions = useTagOptions()
   const modelAliases = meta.modelAliases ?? []
 
   const [description, setDescription] = useState('')
@@ -50,6 +52,7 @@ export const AgentEditor: React.FunctionComponent<AgentEditorProps> = ({
   const [temperature, setTemperature] = useState<number | ''>('')
   const [toolChoice, setToolChoice] = useState<string | null>(null)
   const [tools, setTools] = useState<string[]>([])
+  const [tags, setTags] = useState<string[]>([])
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   useEffect(() => {
@@ -64,6 +67,7 @@ export const AgentEditor: React.FunctionComponent<AgentEditorProps> = ({
       setTemperature(typeof c.temperature === 'number' ? c.temperature : '')
       setToolChoice((c.toolChoice as string) || null)
       setTools((metadata?.tools as string[]) || [])
+      setTags((metadata?.tags as string[]) || [])
     }
   }, [source])
 
@@ -91,6 +95,10 @@ export const AgentEditor: React.FunctionComponent<AgentEditorProps> = ({
     const origTools = (metadata?.tools as string[]) || []
     if (JSON.stringify(tools) !== JSON.stringify(origTools))
       changes.tools = tools.length > 0 ? tools : null
+
+    const origTags = (metadata?.tags as string[]) || []
+    if (JSON.stringify(tags) !== JSON.stringify(origTags))
+      changes.tags = tags.length > 0 ? tags : null
 
     if (Object.keys(changes).length === 0) {
       onClose()
@@ -213,6 +221,17 @@ export const AgentEditor: React.FunctionComponent<AgentEditorProps> = ({
         clearable
         size="xs"
         placeholder="Search functions..."
+      />
+
+      <MultiSelect
+        label="Tags"
+        data={tagOptions}
+        value={tags}
+        onChange={setTags}
+        searchable
+        clearable
+        size="xs"
+        placeholder="Search tags..."
       />
 
       <SectionLabel>Role</SectionLabel>

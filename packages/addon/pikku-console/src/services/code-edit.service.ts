@@ -26,6 +26,7 @@ export interface AgentConfigChanges {
   temperature?: number | null
   toolChoice?: 'auto' | 'required' | 'none' | null
   tools?: string[] | null
+  tags?: string[] | null
 }
 
 interface PropertyLocation {
