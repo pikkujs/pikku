@@ -33,13 +33,19 @@ export interface DeploymentService {
    * @param data - Input data for the function
    * @param session - User session to propagate (optional)
    */
-  invoke(funcName: string, data: unknown, session?: unknown): Promise<unknown>
+  invoke(
+    funcName: string,
+    data: unknown,
+    session?: unknown,
+    traceId?: string
+  ): Promise<unknown>
 }
 
 /**
  * Abstract base class for deployment services that dispatch remote RPC
- * calls via HTTP. Handles JWT signing and session propagation so
- * implementations only need to resolve the target URL and send the request.
+ * calls via HTTP. Handles JWT signing, session propagation, and traceId
+ * forwarding so implementations only need to resolve the target URL
+ * and send the request.
  */
 export abstract class AbstractDeploymentService implements DeploymentService {
   constructor(
@@ -54,22 +60,25 @@ export abstract class AbstractDeploymentService implements DeploymentService {
   async invoke(
     funcName: string,
     data: unknown,
-    session?: unknown
+    session?: unknown,
+    traceId?: string
   ): Promise<unknown> {
-    const headers = await this.buildRemoteHeaders(funcName, session)
+    const headers = await this.buildRemoteHeaders(funcName, session, traceId)
     return this.dispatch(funcName, data, headers)
   }
 
   /**
-   * Build Authorization headers with JWT-signed session for
+   * Build headers with JWT-signed session and traceId for
    * pikkuRemoteAuthMiddleware on the receiving end.
    */
   protected async buildRemoteHeaders(
     funcName: string,
-    session?: unknown
+    session?: unknown,
+    traceId?: string
   ): Promise<Record<string, string>> {
     const headers: Record<string, string> = {
       'content-type': 'application/json',
+      ...(traceId && { 'x-request-id': traceId }),
     }
 
     let secret: string | undefined

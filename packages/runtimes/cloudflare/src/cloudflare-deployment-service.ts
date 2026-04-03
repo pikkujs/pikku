@@ -39,7 +39,8 @@ export class CloudflareDeploymentService implements DeploymentService {
   async invoke(
     funcName: string,
     data: unknown,
-    session?: unknown
+    session?: unknown,
+    traceId?: string
   ): Promise<unknown> {
     const bindingName = this.bindings.get(funcName)
     if (!bindingName) {
@@ -58,6 +59,7 @@ export class CloudflareDeploymentService implements DeploymentService {
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      ...(traceId && { 'x-request-id': traceId }),
     }
 
     // Sign session as JWT for pikkuRemoteAuthMiddleware
