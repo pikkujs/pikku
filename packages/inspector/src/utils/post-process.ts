@@ -279,7 +279,20 @@ export function injectExposedRoutes(
     pikkuFuncId: string,
     inputType: string,
     outputType: string,
-    extra?: { sse?: boolean; params?: string[] }
+    extra?: {
+      sse?: boolean
+      params?: string[]
+      /** Framework function source for codegen (e.g. factory call) */
+      syntheticSource?: {
+        /** Package to import from (e.g. '@pikku/core/workflow') */
+        importPath: string
+        /** Factory function name (e.g. 'workflowStart') */
+        factoryName: string
+        /** Arg to pass to factory (e.g. workflow name) */
+        factoryArg?: string
+      }
+      syntheticAuth?: boolean
+    }
   ) => {
     if (!state.http.meta[method]) {
       state.http.meta[method] = {}
@@ -291,6 +304,11 @@ export function injectExposedRoutes(
       tags: ['pikku:public'],
       ...(extra?.sse && { sse: true }),
       ...(extra?.params && { params: extra.params }),
+      ...(extra?.syntheticSource && {
+        synthetic: true,
+        syntheticSource: extra.syntheticSource,
+        syntheticAuth: extra.syntheticAuth ?? true,
+      }),
     }
 
     // Add synthetic function metadata if it doesn't exist
@@ -376,14 +394,30 @@ export function injectExposedRoutes(
       `${prefix}/workflow/${name}/start`,
       `workflowStart:${name}`,
       inputType,
-      'null' // returns { runId: string } — handled by core
+      'null', // returns { runId: string } — handled by core
+      {
+        syntheticSource: {
+          importPath: '@pikku/core/workflow',
+          factoryName: 'workflowStart',
+          factoryArg: name,
+        },
+        syntheticAuth: !meta.sessionless,
+      }
     )
     addRoute(
       'post',
       `${prefix}/workflow/${name}/run`,
       `workflow:${name}`,
       inputType,
-      outputType
+      outputType,
+      {
+        syntheticSource: {
+          importPath: '@pikku/core/workflow',
+          factoryName: 'workflow',
+          factoryArg: name,
+        },
+        syntheticAuth: !meta.sessionless,
+      }
     )
     addRoute(
       'get',
@@ -391,7 +425,15 @@ export function injectExposedRoutes(
       `workflowStatus:${name}`,
       'null',
       'null',
-      { params: ['runId'] }
+      {
+        params: ['runId'],
+        syntheticSource: {
+          importPath: '@pikku/core/workflow',
+          factoryName: 'workflowStatus',
+          factoryArg: name,
+        },
+        syntheticAuth: false,
+      }
     )
   }
 
