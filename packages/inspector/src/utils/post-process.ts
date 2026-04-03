@@ -401,7 +401,7 @@ export function injectExposedRoutes(
           factoryName: 'workflowStart',
           factoryArg: name,
         },
-        syntheticAuth: !meta.sessionless,
+        syntheticAuth: !(state.functions.meta[wfFuncId]?.sessionless ?? true),
       }
     )
     addRoute(
@@ -416,7 +416,7 @@ export function injectExposedRoutes(
           factoryName: 'workflow',
           factoryArg: name,
         },
-        syntheticAuth: !meta.sessionless,
+        syntheticAuth: !(state.functions.meta[wfFuncId]?.sessionless ?? true),
       }
     )
     addRoute(

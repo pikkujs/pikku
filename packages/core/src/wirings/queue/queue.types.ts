@@ -154,6 +154,12 @@ export type QueueWorkersMeta = Record<
   CommonWireMeta & {
     name: string
     config?: PikkuWorkerConfig
+    /** Set by inspector post-process for framework-provided queue workers */
+    synthetic?: boolean
+    syntheticSource?: {
+      importPath: string
+      funcName: string
+    }
   }
 >
 
