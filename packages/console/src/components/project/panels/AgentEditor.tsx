@@ -4,6 +4,7 @@ import {
   TextInput,
   Textarea,
   Select,
+  MultiSelect,
   NumberInput,
   Button,
   Group,
@@ -46,6 +47,7 @@ export const AgentEditor: React.FunctionComponent<AgentEditorProps> = ({
   const [maxSteps, setMaxSteps] = useState<number | ''>('')
   const [temperature, setTemperature] = useState<number | ''>('')
   const [toolChoice, setToolChoice] = useState<string | null>(null)
+  const [tools, setTools] = useState<string[]>([])
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   useEffect(() => {
@@ -59,6 +61,7 @@ export const AgentEditor: React.FunctionComponent<AgentEditorProps> = ({
       setMaxSteps(typeof c.maxSteps === 'number' ? c.maxSteps : '')
       setTemperature(typeof c.temperature === 'number' ? c.temperature : '')
       setToolChoice((c.toolChoice as string) || null)
+      setTools((metadata?.tools as string[]) || [])
     }
   }, [source])
 
@@ -83,6 +86,10 @@ export const AgentEditor: React.FunctionComponent<AgentEditorProps> = ({
     if (toolChoice !== (original.toolChoice || null))
       changes.toolChoice = toolChoice || null
 
+    const origTools = (metadata?.tools as string[]) || []
+    if (JSON.stringify(tools) !== JSON.stringify(origTools))
+      changes.tools = tools.length > 0 ? tools : null
+
     if (Object.keys(changes).length === 0) {
       onClose()
       return
@@ -105,6 +112,15 @@ export const AgentEditor: React.FunctionComponent<AgentEditorProps> = ({
   }
 
   const modelOptions = Array.from(new Set([...modelAliases, ...(model ? [model] : [])]))
+
+  const allFunctions = meta.functions ?? []
+  const toolOptions = allFunctions
+    .filter((f: any) => f.functionType === 'user')
+    .map((f: any) => {
+      const id = f.pikkuFuncId as string
+      return { value: id, label: id }
+    })
+    .sort((a: any, b: any) => a.label.localeCompare(b.label))
 
   return (
     <Stack gap="md">
@@ -172,6 +188,17 @@ export const AgentEditor: React.FunctionComponent<AgentEditorProps> = ({
           size="xs"
         />
       </Group>
+
+      <MultiSelect
+        label="Tools"
+        data={toolOptions}
+        value={tools}
+        onChange={setTools}
+        searchable
+        clearable
+        size="xs"
+        placeholder="Search functions..."
+      />
 
       <SectionLabel>Role</SectionLabel>
       <Textarea

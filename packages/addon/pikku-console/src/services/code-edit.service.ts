@@ -25,6 +25,7 @@ export interface AgentConfigChanges {
   maxSteps?: number | null
   temperature?: number | null
   toolChoice?: 'auto' | 'required' | 'none' | null
+  tools?: string[] | null
 }
 
 interface PropertyLocation {
@@ -290,14 +291,19 @@ export class CodeEditService {
 
       const existing = callInfo.properties.find((p) => p.name === key)
 
+      const serialized =
+        key === 'tools' && Array.isArray(value)
+          ? this.serializeToolsArray(value)
+          : this.serializeValue(value)
+
       if (value === null || value === undefined) {
         if (existing) {
           removals.push(existing)
         }
       } else if (existing) {
-        updates.push({ prop: existing, newValue: this.serializeValue(value) })
+        updates.push({ prop: existing, newValue: serialized })
       } else {
-        additions.push({ name: key, value: this.serializeValue(value) })
+        additions.push({ name: key, value: serialized })
       }
     }
 
@@ -375,6 +381,12 @@ export class CodeEditService {
       }
     }
     return '  '
+  }
+
+  private serializeToolsArray(tools: string[]): string {
+    if (tools.length === 0) return '[]'
+    const items = tools.map((t) => (t.includes(':') ? `addon('${t}')` : t))
+    return `[${items.join(', ')}]`
   }
 
   private serializeValue(value: unknown): string {
