@@ -331,6 +331,7 @@ export function injectExposedRoutes(
         sourceFile: funcFile.path,
         exportedName: funcFile.exportedName,
         synthetic: true,
+        syntheticAuth: !funcMeta.sessionless,
       }),
     }
   }
@@ -339,8 +340,10 @@ export function injectExposedRoutes(
   // Internal-only routes with pikkuRemoteAuthMiddleware for session resumption.
   // Used by deployment services (CF service bindings, Lambda Invoke, Kysely, Redis)
   // to dispatch cross-service RPC calls.
+  // Generated for functions with remote: true OR expose: true (exposed functions
+  // are also callable remotely in multi-server deployments).
   for (const [pikkuFuncId, funcMeta] of Object.entries(state.functions.meta)) {
-    if (!funcMeta.remote) continue
+    if (!funcMeta.remote && !funcMeta.expose) continue
 
     const funcFile = state.functions.files.get(pikkuFuncId)
     const funcName = funcMeta.name ?? pikkuFuncId
