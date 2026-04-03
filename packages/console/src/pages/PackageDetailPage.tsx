@@ -338,6 +338,27 @@ export const PackageDetailPage: React.FunctionComponent<{
     },
   })
 
+  const installOpenapiMutation = useMutation({
+    mutationFn: async ({
+      name,
+      swaggerUrl,
+      credential,
+    }: {
+      name: string
+      swaggerUrl: string
+      credential?: 'apikey' | 'bearer' | 'oauth2'
+    }) =>
+      (rpc as any).invoke('console:installOpenapiAddon', {
+        name,
+        swaggerUrl,
+        credential,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['installed-addons'] })
+      queryClient.invalidateQueries({ queryKey: ['allMeta'] })
+    },
+  })
+
   const { data: apiDetail } = useQuery({
     queryKey: ['openapi-detail', id],
     queryFn: async () => {
@@ -557,16 +578,23 @@ export const PackageDetailPage: React.FunctionComponent<{
               <Button
                 size="xs"
                 leftSection={<Download size={13} />}
-                loading={installMutation.isPending}
+                loading={installOpenapiMutation.isPending}
                 onClick={() => {
-                  const namespace = api.name
+                  const addonName = api.name
                     .replace(/[^a-zA-Z0-9-]/g, '-')
                     .replace(/-+/g, '-')
                     .replace(/^-|-$/g, '')
-                  installMutation.mutate({
-                    packageName: `@pikku/addon-${namespace}`,
-                    namespace,
-                    version: api.version,
+                  const credential = api.securitySchemes?.includes('oauth2')
+                    ? 'oauth2' as const
+                    : api.securitySchemes?.includes('bearer')
+                      ? 'bearer' as const
+                      : api.securitySchemes?.includes('apiKey')
+                        ? 'apikey' as const
+                        : undefined
+                  installOpenapiMutation.mutate({
+                    name: addonName,
+                    swaggerUrl: api.swaggerUrl,
+                    credential,
                   })
                 }}
               >
@@ -574,14 +602,14 @@ export const PackageDetailPage: React.FunctionComponent<{
               </Button>
             </Group>
 
-            {installMutation.isSuccess && (
+            {installOpenapiMutation.isSuccess && (
               <Alert color="green" icon={<Check size={16} />}>
                 Addon generated and installed successfully!
               </Alert>
             )}
-            {installMutation.error && (
+            {installOpenapiMutation.error && (
               <Alert color="red">
-                {(installMutation.error as Error).message}
+                {(installOpenapiMutation.error as Error).message}
               </Alert>
             )}
           </Stack>
