@@ -26,6 +26,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@azure/functions": "4.11.2"
+    "@azure/functions": "4.11.2",
+    "@azure/storage-queue": "^12.29.0"
   }
 }
