@@ -500,6 +500,11 @@ export function injectExposedRoutes(
     state.queueWorkers.meta[orchQueueName] = {
       pikkuFuncId: orchFuncId,
       name: orchQueueName,
+      synthetic: true,
+      syntheticSource: {
+        importPath: '@pikku/core/workflow',
+        funcName: 'pikkuWorkflowOrchestratorFunc',
+      },
     }
     if (!state.functions.meta[orchFuncId]) {
       state.functions.meta[orchFuncId] = {
@@ -532,6 +537,11 @@ export function injectExposedRoutes(
           state.queueWorkers.meta[stepQueueName] = {
             pikkuFuncId: stepFuncId,
             name: stepQueueName,
+            synthetic: true,
+            syntheticSource: {
+              importPath: '@pikku/core/workflow',
+              funcName: 'pikkuWorkflowWorkerFunc',
+            },
           }
           if (!state.functions.meta[stepFuncId]) {
             state.functions.meta[stepFuncId] = {
