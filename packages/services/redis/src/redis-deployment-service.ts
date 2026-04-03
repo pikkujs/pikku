@@ -1,12 +1,13 @@
+import { AbstractDeploymentService } from '@pikku/core/services'
 import type {
-  DeploymentService,
   DeploymentServiceConfig,
   DeploymentConfig,
 } from '@pikku/core/services'
+import type { JWTService, SecretService } from '@pikku/core/services'
 import { getAllFunctionNames } from '@pikku/core/function'
 import { Redis, type RedisOptions } from 'ioredis'
 
-export class RedisDeploymentService implements DeploymentService {
+export class RedisDeploymentService extends AbstractDeploymentService {
   private redis: Redis
   private keyPrefix: string
   private ownsConnection: boolean
@@ -18,8 +19,11 @@ export class RedisDeploymentService implements DeploymentService {
   constructor(
     config: DeploymentServiceConfig,
     connectionOrConfig: Redis | RedisOptions | string,
-    keyPrefix = 'pikku'
+    keyPrefix = 'pikku',
+    jwt?: JWTService,
+    secrets?: SecretService
   ) {
+    super(jwt, secrets)
     this.heartbeatInterval = config.heartbeatInterval ?? 10000
     this.heartbeatTtl = config.heartbeatTtl ?? 30000
     this.keyPrefix = keyPrefix
@@ -99,10 +103,10 @@ export class RedisDeploymentService implements DeploymentService {
     }
   }
 
-  async invoke(
+  protected async dispatch(
     funcName: string,
     data: unknown,
-    _session?: unknown
+    headers: Record<string, string>
   ): Promise<unknown> {
     const indexKey = this.functionsIndexKey(funcName)
     const now = Date.now()
@@ -126,8 +130,8 @@ export class RedisDeploymentService implements DeploymentService {
     const url = `${endpoint}/remote/rpc/${encodeURIComponent(funcName)}`
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data }),
+      headers,
+      body: JSON.stringify(data),
     })
     if (!response.ok) {
       throw new Error(

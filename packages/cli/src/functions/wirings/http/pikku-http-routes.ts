@@ -86,7 +86,9 @@ function serializeSyntheticRoutes(
   lines.push('')
 
   for (const { routeMeta, isRemote } of syntheticRoutes) {
-    const auth = isRemote ? true : (routeMeta.syntheticAuth ?? true)
+    // Remote routes use auth: false — pikkuRemoteAuthMiddleware handles
+    // JWT verification and session restoration before the function runs
+    const auth = isRemote ? false : (routeMeta.syntheticAuth ?? true)
     let funcExpr: string
 
     if (routeMeta.syntheticSource) {

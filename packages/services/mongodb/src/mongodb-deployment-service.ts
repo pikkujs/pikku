@@ -1,8 +1,9 @@
+import { AbstractDeploymentService } from '@pikku/core/services'
 import type {
-  DeploymentService,
   DeploymentServiceConfig,
   DeploymentConfig,
 } from '@pikku/core/services'
+import type { JWTService, SecretService } from '@pikku/core/services'
 import { getAllFunctionNames } from '@pikku/core/function'
 import type { Db, Collection } from 'mongodb'
 
@@ -14,7 +15,7 @@ interface DeploymentDoc {
   functions: string[]
 }
 
-export class MongoDBDeploymentService implements DeploymentService {
+export class MongoDBDeploymentService extends AbstractDeploymentService {
   private initialized = false
   private heartbeatTimer?: ReturnType<typeof setInterval>
   private deploymentConfig?: DeploymentConfig
@@ -24,8 +25,11 @@ export class MongoDBDeploymentService implements DeploymentService {
 
   constructor(
     config: DeploymentServiceConfig,
-    private db: Db
+    private db: Db,
+    jwt?: JWTService,
+    secrets?: SecretService
   ) {
+    super(jwt, secrets)
     this.heartbeatInterval = config.heartbeatInterval ?? 10000
     this.heartbeatTtl = config.heartbeatTtl ?? 30000
   }
@@ -81,10 +85,10 @@ export class MongoDBDeploymentService implements DeploymentService {
     }
   }
 
-  async invoke(
+  protected async dispatch(
     funcName: string,
     data: unknown,
-    _session?: unknown
+    headers: Record<string, string>
   ): Promise<unknown> {
     const cutoff = new Date(Date.now() - this.heartbeatTtl)
     const result = await this.deployments.findOne(
@@ -97,8 +101,8 @@ export class MongoDBDeploymentService implements DeploymentService {
     const url = `${result.endpoint}/remote/rpc/${encodeURIComponent(funcName)}`
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data }),
+      headers,
+      body: JSON.stringify(data),
     })
     if (!response.ok) {
       throw new Error(
