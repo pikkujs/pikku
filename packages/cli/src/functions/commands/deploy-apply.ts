@@ -10,6 +10,7 @@ import {
   deploy as cfDeploy,
 } from '@pikku/deploy-cloudflare'
 import { ServerlessProviderAdapter } from '@pikku/deploy-serverless'
+import { AzureProviderAdapter } from '@pikku/deploy-azure'
 import type {
   ProviderAdapter,
   EntryGenerationContext,
@@ -100,6 +101,8 @@ function resolveProvider(_providerName?: string): ProviderAdapter {
       return new CloudflareProviderAdapter()
     case 'serverless':
       return new ServerlessProviderAdapter()
+    case 'azure':
+      return new AzureProviderAdapter()
     default:
       throw new Error(`Unknown deploy provider: ${name}`)
   }
@@ -323,6 +326,19 @@ export const deployApply = pikkuVoidFunc({
       logger.info('To deploy to AWS:')
       logger.info(
         `  ${ANSI.bold}cd ${providerDir} && npx serverless deploy${ANSI.reset}`
+      )
+    } else if (provider.name === 'azure') {
+      logger.info(`${ANSI.green}${ANSI.bold}Build complete.${ANSI.reset}`)
+      logger.info(
+        `  ${bundled.length} functions bundled to ${ANSI.bold}${providerDir}${ANSI.reset}`
+      )
+      logger.info('')
+      logger.info('To run locally:')
+      logger.info(`  ${ANSI.bold}cd ${providerDir} && func start${ANSI.reset}`)
+      logger.info('')
+      logger.info('To deploy to Azure:')
+      logger.info(
+        `  ${ANSI.bold}cd ${providerDir} && func azure functionapp publish <app-name>${ANSI.reset}`
       )
     } else {
       logger.info(

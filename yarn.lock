@@ -4975,6 +4975,7 @@ __metadata:
   dependencies:
     "@openapi-contrib/json-schema-to-openapi-schema": "npm:^4.3.1"
     "@pikku/core": "npm:^0.12.14"
+    "@pikku/deploy-azure": "workspace:*"
     "@pikku/deploy-cloudflare": "workspace:*"
     "@pikku/deploy-serverless": "workspace:*"
     "@pikku/inspector": "npm:^0.12.7"
@@ -5088,6 +5089,14 @@ __metadata:
     path-to-regexp: "npm:^8.3.0"
     picoquery: "npm:^2.5.0"
     tsx: "npm:^4.21.0"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/deploy-azure@workspace:*, @pikku/deploy-azure@workspace:packages/deploy/deploy-azure":
+  version: 0.0.0-use.local
+  resolution: "@pikku/deploy-azure@workspace:packages/deploy/deploy-azure"
+  dependencies:
     typescript: "npm:^5.9"
   languageName: unknown
   linkType: soft
