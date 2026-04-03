@@ -83,7 +83,7 @@ function serializeSyntheticRoutes(
       if (isRemote) {
         lines.push(`  middleware: [pikkuRemoteAuthMiddleware],`)
       }
-      lines.push(`  func: ${routeMeta.exportedName},`)
+      lines.push(`  func: ${routeMeta.exportedName} as any,`)
       lines.push(`})`)
     }
   }
