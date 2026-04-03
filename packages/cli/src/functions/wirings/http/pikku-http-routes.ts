@@ -76,10 +76,11 @@ function serializeSyntheticRoutes(
         continue
       }
       const isRemote = routeMeta.tags?.includes('pikku:remote')
+      const auth = isRemote ? true : (routeMeta.syntheticAuth ?? true)
       lines.push(`wireHTTP({`)
       lines.push(`  route: '${routeMeta.route}',`)
       lines.push(`  method: '${routeMeta.method}',`)
-      lines.push(`  auth: false,`)
+      lines.push(`  auth: ${auth},`)
       if (isRemote) {
         lines.push(`  middleware: [pikkuRemoteAuthMiddleware],`)
       }
