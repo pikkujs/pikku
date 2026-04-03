@@ -28,10 +28,11 @@ import {
   Terminal,
   Cpu,
   BookOpen,
+  ArrowUp,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { usePikkuRPC } from '@/context/PikkuRpcProvider'
 import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
 import { DetailPageHeader } from '@/components/layout/DetailPageHeader'
@@ -286,18 +287,55 @@ export const PackageDetailPage: React.FunctionComponent<{
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = React.useState<string | null>(null)
 
-  const { data: installedAddons } = useQuery<Array<{ packageName: string }>>({
+  const { data: installedAddons } = useQuery<
+    Array<{ packageName: string; namespace: string }>
+  >({
     queryKey: ['installed-addons'],
     queryFn: async () => {
       const result = await rpc.invoke('console:getInstalledAddons', null)
-      return (result ?? []) as Array<{ packageName: string }>
+      return (result ?? []) as Array<{
+        packageName: string
+        namespace: string
+      }>
     },
     staleTime: 60 * 1000,
   })
 
-  const isInstalled =
-    source === 'installed' ||
-    (installedAddons ?? []).some((a) => a.packageName === id)
+  const installedAddon = (installedAddons ?? []).find(
+    (a) => a.packageName === id
+  )
+  const isInstalled = source === 'installed' || !!installedAddon
+
+  const { data: installedPkg } = useQuery<PackageRegistryEntry | null>({
+    queryKey: ['addon', 'installed', id],
+    queryFn: async () => {
+      return (await rpc.invoke('console:getAddonInstalledPackage', {
+        packageName: id,
+      })) as PackageRegistryEntry | null
+    },
+    enabled: isInstalled && source === 'community',
+  })
+
+  const installMutation = useMutation({
+    mutationFn: async ({
+      packageName,
+      namespace,
+      version,
+    }: {
+      packageName: string
+      namespace: string
+      version?: string
+    }) =>
+      (rpc as any).invoke('console:installAddon', {
+        packageName,
+        namespace,
+        version,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['installed-addons'] })
+      queryClient.invalidateQueries({ queryKey: ['allMeta'] })
+    },
+  })
 
   const { data: pkg, isLoading } = useQuery<PackageRegistryEntry | null>({
     queryKey: ['addon', source, id],
@@ -462,25 +500,70 @@ export const PackageDetailPage: React.FunctionComponent<{
                     </Anchor>
                   )}
                 </Group>
-                {isInstalled ? (
-                  <Button
-                    size="xs"
-                    variant="light"
-                    color="green"
-                    leftSection={<Check size={13} />}
-                    disabled
-                  >
-                    Installed
-                  </Button>
-                ) : (
-                  <Button
-                    size="xs"
-                    leftSection={<Download size={13} />}
-                    onClick={() => alert('Not yet implemented')}
-                  >
-                    Install
-                  </Button>
-                )}
+                {(() => {
+                  const communityVersion = pkg.version
+                  const installedVersion = installedPkg?.version
+                  const needsUpdate =
+                    isInstalled &&
+                    installedVersion &&
+                    communityVersion &&
+                    installedVersion !== communityVersion
+
+                  if (needsUpdate) {
+                    return (
+                      <Button
+                        size="xs"
+                        color="yellow"
+                        leftSection={<ArrowUp size={13} />}
+                        loading={installMutation.isPending}
+                        onClick={() =>
+                          installMutation.mutate({
+                            packageName: pkg.name,
+                            namespace:
+                              installedAddon?.namespace ??
+                              pkg.name
+                                .replace('@pikku/addon-', '')
+                                .replace(/^@.*\//, ''),
+                            version: communityVersion,
+                          })
+                        }
+                      >
+                        Update to {communityVersion}
+                      </Button>
+                    )
+                  }
+                  if (isInstalled) {
+                    return (
+                      <Button
+                        size="xs"
+                        variant="light"
+                        color="green"
+                        leftSection={<Check size={13} />}
+                        disabled
+                      >
+                        Installed
+                      </Button>
+                    )
+                  }
+                  return (
+                    <Button
+                      size="xs"
+                      leftSection={<Download size={13} />}
+                      loading={installMutation.isPending}
+                      onClick={() =>
+                        installMutation.mutate({
+                          packageName: pkg.name,
+                          namespace: pkg.name
+                            .replace('@pikku/addon-', '')
+                            .replace(/^@.*\//, ''),
+                          version: communityVersion,
+                        })
+                      }
+                    >
+                      Install
+                    </Button>
+                  )
+                })()}
               </Group>
               {pkg.description && (
                 <Text size="sm" c="dimmed">
