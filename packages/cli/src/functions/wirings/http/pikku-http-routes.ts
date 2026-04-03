@@ -86,6 +86,37 @@ function serializeSyntheticRoutes(
     lines.push(`})`)
   }
 
+  // Generic RPC catch-all for addon namespaced calls
+  // Only generated when the meta includes the /rpc/:rpcName route
+  for (const methodRoutes of Object.values(meta)) {
+    for (const routeMeta of Object.values(methodRoutes)) {
+      if (
+        routeMeta.route?.endsWith('/rpc/:rpcName') &&
+        routeMeta.method === 'post'
+      ) {
+        lines.push(`wireHTTP({`)
+        lines.push(`  route: '${routeMeta.route}',`)
+        lines.push(`  method: 'post',`)
+        lines.push(`  auth: false,`)
+        lines.push(
+          `  func: { func: async (_services: any, { rpcName, data }: any, { rpc }: any) => rpc.exposed(rpcName, data) } as any,`
+        )
+        lines.push(`})`)
+      }
+      if (
+        routeMeta.route?.endsWith('/rpc/:rpcName') &&
+        routeMeta.method === 'options'
+      ) {
+        lines.push(`wireHTTP({`)
+        lines.push(`  route: '${routeMeta.route}',`)
+        lines.push(`  method: 'options',`)
+        lines.push(`  auth: false,`)
+        lines.push(`  func: { func: async () => void 0 } as any,`)
+        lines.push(`})`)
+      }
+    }
+  }
+
   return lines.join('\n')
 }
 
