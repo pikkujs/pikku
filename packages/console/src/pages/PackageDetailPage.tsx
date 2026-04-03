@@ -1,5 +1,6 @@
 import React from 'react'
 import {
+  Alert,
   Anchor,
   Badge,
   Box,
@@ -280,7 +281,7 @@ const McpTab: React.FunctionComponent<{ mcp: McpMeta }> = ({ mcp }) => {
 
 export const PackageDetailPage: React.FunctionComponent<{
   id: string
-  source: 'installed' | 'community'
+  source: 'installed' | 'community' | 'api'
   onBack: () => void
 }> = ({ id, source, onBack }) => {
   const rpc = usePikkuRPC()
@@ -337,6 +338,28 @@ export const PackageDetailPage: React.FunctionComponent<{
     },
   })
 
+  const { data: apiDetail } = useQuery({
+    queryKey: ['openapi-detail', id],
+    queryFn: async () => {
+      // Check cached openapi queries first
+      const cached = queryClient.getQueriesData<{
+        apis: any[]
+        total: number
+      }>({ queryKey: ['openapis'] })
+      for (const [, data] of cached) {
+        const match = data?.apis?.find((a: any) => a.name === id)
+        if (match) return match
+      }
+      // Fallback: fetch from registry
+      const result = await (rpc as any).invoke('console:getOpenapis', {
+        limit: 2600,
+        offset: 0,
+      })
+      return result.apis?.find((a: any) => a.name === id) ?? null
+    },
+    enabled: source === 'api',
+  })
+
   const { data: pkg, isLoading } = useQuery<PackageRegistryEntry | null>({
     queryKey: ['addon', source, id],
     queryFn: async () => {
@@ -354,7 +377,218 @@ export const PackageDetailPage: React.FunctionComponent<{
       }
       return result
     },
+    enabled: source !== 'api',
   })
+
+  if (source === 'api') {
+    const api = apiDetail
+    if (!api) {
+      return (
+        <Center h="100vh">
+          <Loader />
+        </Center>
+      )
+    }
+    return (
+      <ResizablePanelLayout
+        header={
+          <DetailPageHeader
+            icon={Globe}
+            category="APIs"
+            categoryPath="/addons"
+            docsHref="https://pikku.dev/docs/external-packages"
+          />
+        }
+        hidePanel
+      >
+        <Box p="xl">
+          <Stack gap="lg">
+            <Group gap="md">
+              {api.logo && (
+                <img
+                  src={api.logo}
+                  width={48}
+                  height={48}
+                  alt={api.title}
+                  style={{ objectFit: 'contain', borderRadius: 6 }}
+                />
+              )}
+              <div>
+                <Group gap="xs">
+                  <Text size="xl" fw={700}>
+                    {api.title || api.name}
+                  </Text>
+                  <Badge size="sm" variant="light" color="gray">
+                    {api.openapiVer}
+                  </Badge>
+                  <Badge size="sm" variant="light">
+                    v{api.version}
+                  </Badge>
+                </Group>
+                <Text size="sm" c="dimmed">
+                  {api.provider}
+                  {api.service ? ` / ${api.service}` : ''}
+                </Text>
+              </div>
+            </Group>
+
+            {api.description && (
+              <Text size="sm">{api.description}</Text>
+            )}
+
+            {(api.categories?.length > 0 || api.tags?.length > 0) && (
+              <Group gap={6}>
+                {api.categories?.map((c: string) => (
+                  <Badge key={c} size="xs" variant="light" color="blue">
+                    {c}
+                  </Badge>
+                ))}
+                {api.tags?.map((t: string) => (
+                  <Badge key={t} size="xs" variant="dot">
+                    {t}
+                  </Badge>
+                ))}
+              </Group>
+            )}
+
+            {api.totalOperations > 0 && (
+              <Box>
+                <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb={4}>
+                  Operations ({api.totalOperations})
+                </Text>
+                <Group gap={6}>
+                  {api.opsGet > 0 && (
+                    <Badge size="xs" color="blue">
+                      GET {api.opsGet}
+                    </Badge>
+                  )}
+                  {api.opsPost > 0 && (
+                    <Badge size="xs" color="green">
+                      POST {api.opsPost}
+                    </Badge>
+                  )}
+                  {api.opsPut > 0 && (
+                    <Badge size="xs" color="yellow">
+                      PUT {api.opsPut}
+                    </Badge>
+                  )}
+                  {api.opsPatch > 0 && (
+                    <Badge size="xs" color="orange">
+                      PATCH {api.opsPatch}
+                    </Badge>
+                  )}
+                  {api.opsDelete > 0 && (
+                    <Badge size="xs" color="red">
+                      DELETE {api.opsDelete}
+                    </Badge>
+                  )}
+                </Group>
+              </Box>
+            )}
+
+            {api.servers?.length > 0 && (
+              <Box>
+                <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb={4}>
+                  Servers
+                </Text>
+                {api.servers.map((s: string) => (
+                  <Code key={s} block style={{ fontSize: '12px' }}>
+                    {s}
+                  </Code>
+                ))}
+              </Box>
+            )}
+
+            {api.securitySchemes?.length > 0 && (
+              <Box>
+                <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb={4}>
+                  Authentication
+                </Text>
+                <Group gap={6}>
+                  {api.securitySchemes.map((s: string) => (
+                    <Badge key={s} size="xs" variant="outline" color="gray">
+                      {s}
+                    </Badge>
+                  ))}
+                </Group>
+              </Box>
+            )}
+
+            {api.contentTypes?.length > 0 && (
+              <Box>
+                <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb={4}>
+                  Content Types
+                </Text>
+                <Group gap={6}>
+                  {api.contentTypes.map((c: string) => (
+                    <Badge key={c} size="xs" variant="outline" color="gray">
+                      {c}
+                    </Badge>
+                  ))}
+                </Group>
+              </Box>
+            )}
+
+            <Group gap="xs">
+              {api.swaggerUrl && (
+                <Button
+                  size="xs"
+                  variant="light"
+                  component="a"
+                  href={api.swaggerUrl}
+                  target="_blank"
+                  leftSection={<BookOpen size={13} />}
+                >
+                  OpenAPI JSON
+                </Button>
+              )}
+              {api.swaggerYamlUrl && (
+                <Button
+                  size="xs"
+                  variant="light"
+                  component="a"
+                  href={api.swaggerYamlUrl}
+                  target="_blank"
+                  leftSection={<BookOpen size={13} />}
+                >
+                  OpenAPI YAML
+                </Button>
+              )}
+              <Button
+                size="xs"
+                leftSection={<Download size={13} />}
+                loading={installMutation.isPending}
+                onClick={() => {
+                  const namespace = api.name
+                    .replace(/[^a-zA-Z0-9-]/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-|-$/g, '')
+                  installMutation.mutate({
+                    packageName: `@pikku/addon-${namespace}`,
+                    namespace,
+                    version: api.version,
+                  })
+                }}
+              >
+                Generate & Install Addon
+              </Button>
+            </Group>
+
+            {installMutation.isSuccess && (
+              <Alert color="green" icon={<Check size={16} />}>
+                Addon generated and installed successfully!
+              </Alert>
+            )}
+            {installMutation.error && (
+              <Alert color="red">
+                {(installMutation.error as Error).message}
+              </Alert>
+            )}
+          </Stack>
+        </Box>
+      </ResizablePanelLayout>
+    )
+  }
 
   if (isLoading) {
     return (
