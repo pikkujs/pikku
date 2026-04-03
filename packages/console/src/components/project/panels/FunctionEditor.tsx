@@ -11,6 +11,8 @@ import {
   Code,
 } from '@mantine/core'
 import { Save, X, AlertTriangle, CheckCircle } from 'lucide-react'
+import CodeMirror from '@uiw/react-codemirror'
+import { javascript } from '@codemirror/lang-javascript'
 import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
 import { useTagOptions } from '@/hooks/useTags'
 import {
@@ -213,14 +215,21 @@ export const FunctionEditor: React.FunctionComponent<FunctionEditorProps> = ({
       {source?.body != null && (
         <>
           <SectionLabel>Function Body</SectionLabel>
-          <Textarea
+          <CodeMirror
             value={body}
-            onChange={(e) => setBody(e.currentTarget.value)}
-            autosize
-            minRows={6}
-            maxRows={20}
-            styles={{
-              input: { fontFamily: 'monospace', fontSize: '13px' },
+            onChange={setBody}
+            extensions={[javascript({ typescript: true })]}
+            theme="dark"
+            basicSetup={{
+              lineNumbers: true,
+              foldGutter: false,
+              highlightActiveLine: true,
+            }}
+            style={{
+              fontSize: '13px',
+              border: '1px solid var(--mantine-color-dark-4)',
+              borderRadius: '4px',
+              overflow: 'hidden',
             }}
           />
         </>
