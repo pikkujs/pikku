@@ -17,43 +17,59 @@ function serializeSyntheticRoutes(
   packageMappings: Record<string, string>
 ): string {
   const lines: string[] = []
-  const imports = new Map<string, Set<string>>()
+  // User file imports: Map<filePath, Set<exportedName>>
+  const userImports = new Map<string, Set<string>>()
+  // Framework imports: Map<packagePath, Set<factoryName>>
+  const frameworkImports = new Map<string, Set<string>>()
   let needsWireHTTP = false
   let needsRemoteMiddleware = false
 
+  // Collect all synthetic routes
+  const syntheticRoutes: Array<{ routeMeta: any; isRemote: boolean }> = []
+
   for (const methodRoutes of Object.values(meta)) {
     for (const routeMeta of Object.values(methodRoutes)) {
-      if (
-        !routeMeta.synthetic ||
-        !routeMeta.sourceFile ||
-        !routeMeta.exportedName
-      ) {
-        continue
-      }
+      if (!routeMeta.synthetic) continue
+
+      // Must have either user source or framework source
+      const hasUserSource = routeMeta.sourceFile && routeMeta.exportedName
+      const hasFrameworkSource = routeMeta.syntheticSource
+      if (!hasUserSource && !hasFrameworkSource) continue
+
       needsWireHTTP = true
       const isRemote = routeMeta.tags?.includes('pikku:remote')
       if (isRemote) {
         needsRemoteMiddleware = true
       }
 
-      const filePath = getFileImportRelativePath(
-        httpWiringsFile,
-        routeMeta.sourceFile,
-        packageMappings
-      )
-      if (!imports.has(filePath)) {
-        imports.set(filePath, new Set())
+      if (hasUserSource) {
+        const filePath = getFileImportRelativePath(
+          httpWiringsFile,
+          routeMeta.sourceFile,
+          packageMappings
+        )
+        if (!userImports.has(filePath)) {
+          userImports.set(filePath, new Set())
+        }
+        userImports.get(filePath)!.add(routeMeta.exportedName)
       }
-      imports.get(filePath)!.add(routeMeta.exportedName)
+
+      if (hasFrameworkSource) {
+        const src = routeMeta.syntheticSource
+        if (!frameworkImports.has(src.importPath)) {
+          frameworkImports.set(src.importPath, new Set())
+        }
+        frameworkImports.get(src.importPath)!.add(src.factoryName)
+      }
+
+      syntheticRoutes.push({ routeMeta, isRemote })
     }
   }
 
   if (!needsWireHTTP) return ''
 
   lines.push('')
-  lines.push(
-    '/* Auto-generated wireHTTP calls for exposed/remote RPC routes */'
-  )
+  lines.push('/* Auto-generated wireHTTP calls for synthetic routes */')
   lines.push("import { wireHTTP } from '@pikku/core/http'")
   if (needsRemoteMiddleware) {
     lines.push(
@@ -61,32 +77,36 @@ function serializeSyntheticRoutes(
     )
   }
 
-  for (const [filePath, names] of imports) {
+  for (const [filePath, names] of userImports) {
     lines.push(`import { ${[...names].join(', ')} } from '${filePath}'`)
+  }
+  for (const [pkgPath, names] of frameworkImports) {
+    lines.push(`import { ${[...names].join(', ')} } from '${pkgPath}'`)
   }
   lines.push('')
 
-  for (const methodRoutes of Object.values(meta)) {
-    for (const routeMeta of Object.values(methodRoutes)) {
-      if (
-        !routeMeta.synthetic ||
-        !routeMeta.sourceFile ||
-        !routeMeta.exportedName
-      ) {
-        continue
-      }
-      const isRemote = routeMeta.tags?.includes('pikku:remote')
-      const auth = isRemote ? true : (routeMeta.syntheticAuth ?? true)
-      lines.push(`wireHTTP({`)
-      lines.push(`  route: '${routeMeta.route}',`)
-      lines.push(`  method: '${routeMeta.method}',`)
-      lines.push(`  auth: ${auth},`)
-      if (isRemote) {
-        lines.push(`  middleware: [pikkuRemoteAuthMiddleware],`)
-      }
-      lines.push(`  func: ${routeMeta.exportedName} as any,`)
-      lines.push(`})`)
+  for (const { routeMeta, isRemote } of syntheticRoutes) {
+    const auth = isRemote ? true : (routeMeta.syntheticAuth ?? true)
+    let funcExpr: string
+
+    if (routeMeta.syntheticSource) {
+      const src = routeMeta.syntheticSource
+      funcExpr = src.factoryArg
+        ? `${src.factoryName}('${src.factoryArg}') as any`
+        : `${src.factoryName} as any`
+    } else {
+      funcExpr = `${routeMeta.exportedName} as any`
     }
+
+    lines.push(`wireHTTP({`)
+    lines.push(`  route: '${routeMeta.route}',`)
+    lines.push(`  method: '${routeMeta.method}',`)
+    lines.push(`  auth: ${auth},`)
+    if (isRemote) {
+      lines.push(`  middleware: [pikkuRemoteAuthMiddleware],`)
+    }
+    lines.push(`  func: ${funcExpr},`)
+    lines.push(`})`)
   }
 
   return lines.join('\n')
