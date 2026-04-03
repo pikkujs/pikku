@@ -313,20 +313,18 @@ export class CodeEditService {
     }
 
     for (const prop of removals) {
-      // Remove the property including trailing comma and whitespace
       let removeEnd = prop.propEnd
       const afterProp = content.slice(removeEnd, removeEnd + 20)
-      const commaMatch = afterProp.match(/^\s*,\s*/)
+      const commaMatch = afterProp.match(/^\s*,/)
       if (commaMatch) {
         removeEnd += commaMatch[0].length
       }
-      // Also remove leading newline if present
       let removeStart = prop.propStart
       const beforeProp = content.slice(
-        Math.max(0, removeStart - 20),
+        Math.max(0, removeStart - 100),
         removeStart
       )
-      const nlMatch = beforeProp.match(/\n\s*$/)
+      const nlMatch = beforeProp.match(/\n[ \t]*$/)
       if (nlMatch) {
         removeStart -= nlMatch[0].length
       }
@@ -334,25 +332,19 @@ export class CodeEditService {
     }
 
     if (additions.length > 0) {
-      // Insert before the closing brace of the object literal
-      const objEnd = callInfo.objectLiteral.getEnd() - 1 // before }
-      const beforeClose = content.slice(Math.max(0, objEnd - 50), objEnd)
-
-      // Detect indentation from existing properties
+      const objEnd = callInfo.objectLiteral.getEnd() - 1
       const indent = this.detectIndent(content, callInfo)
       const newProps = additions
         .map(({ name, value }) => `${indent}${name}: ${value},`)
         .join('\n')
 
-      const needsComma = callInfo.properties.length > 0
       const lastProp = callInfo.properties[callInfo.properties.length - 1]
       const hasTrailingComma = lastProp
         ? /,\s*$/.test(content.slice(lastProp.propEnd, objEnd).trim() || ',')
         : false
 
       let insertion = ''
-      if (needsComma && !hasTrailingComma && lastProp) {
-        // Add comma after last property, then new properties
+      if (lastProp && !hasTrailingComma) {
         insertion = `,\n${newProps}\n`
       } else {
         insertion = `\n${newProps}\n`
@@ -361,7 +353,6 @@ export class CodeEditService {
       edits.push({ start: objEnd, end: objEnd, replacement: insertion })
     }
 
-    // Sort edits by position descending to apply from end to start
     edits.sort((a, b) => b.start - a.start)
 
     let result = content
