@@ -199,6 +199,9 @@ ${GRAPH_FORMAT}
 - Always include "path" when using $ref
 - Node IDs should be descriptive camelCase names
 - Must have at least 2 nodes
+- Use static values for fields that are known at design time (e.g. "greeting": "Hello")
+- Only use $ref for data that flows from the trigger input or a previous node's output
+- Every $ref path must match an actual field in the trigger input or node output schema
 
 ## Task
 Generate a workflow graph JSON for:
