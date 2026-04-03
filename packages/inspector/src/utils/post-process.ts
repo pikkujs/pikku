@@ -336,6 +336,57 @@ export function injectExposedRoutes(
     }
   }
 
+  // Generic RPC catch-all: POST /rpc/:rpcName
+  // Handles addon namespaced calls (e.g. console:getWorkflowRuns) and any
+  // exposed function that doesn't have an individual route. Uses rpc.exposed()
+  // at runtime which resolves namespaces and checks the expose flag.
+  const hasExposedFunctions =
+    Object.keys(state.rpc.exposedMeta).length > 0 ||
+    Object.values(state.addonFunctions || {}).some((meta) =>
+      Object.values(meta).some((f) => f.expose)
+    )
+  if (hasExposedFunctions) {
+    if (!state.http.meta['post']) state.http.meta['post'] = {}
+    state.http.meta['post'][`${prefix}/rpc/:rpcName`] = {
+      pikkuFuncId: 'http:post:/rpc/:rpcName',
+      route: `${prefix}/rpc/:rpcName`,
+      method: 'post',
+      tags: ['pikku:public'],
+      params: ['rpcName'],
+    }
+    if (!state.http.meta['options']) state.http.meta['options'] = {}
+    state.http.meta['options'][`${prefix}/rpc/:rpcName`] = {
+      pikkuFuncId: 'http:options:/rpc/:rpcName',
+      route: `${prefix}/rpc/:rpcName`,
+      method: 'options',
+    }
+    // Add synthetic function metadata for the RPC caller
+    if (!state.functions.meta['http:post:/rpc/:rpcName']) {
+      state.functions.meta['http:post:/rpc/:rpcName'] = {
+        pikkuFuncId: 'http:post:/rpc/:rpcName',
+        functionType: 'helper',
+        sessionless: true,
+        name: '/rpc/:rpcName',
+        inputSchemaName: null,
+        outputSchemaName: null,
+        inputs: [],
+        outputs: [],
+      }
+    }
+    if (!state.functions.meta['http:options:/rpc/:rpcName']) {
+      state.functions.meta['http:options:/rpc/:rpcName'] = {
+        pikkuFuncId: 'http:options:/rpc/:rpcName',
+        functionType: 'helper',
+        sessionless: true,
+        name: '/rpc/:rpcName',
+        inputSchemaName: null,
+        outputSchemaName: null,
+        inputs: [],
+        outputs: [],
+      }
+    }
+  }
+
   // Remote RPC functions: POST /remote/rpc/{funcName}
   // Internal-only routes with pikkuRemoteAuthMiddleware for session resumption.
   // Used by deployment services (CF service bindings, Lambda Invoke, Kysely, Redis)
