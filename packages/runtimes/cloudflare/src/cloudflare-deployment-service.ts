@@ -75,7 +75,6 @@ export class CloudflareDeploymentService implements DeploymentService {
         {
           aud: 'pikku-remote',
           fn: funcName,
-          iat: Date.now(),
           session: sessionEnc,
         }
       )

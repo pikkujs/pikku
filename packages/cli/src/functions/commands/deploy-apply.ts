@@ -93,6 +93,29 @@ function getEntryContext(
   }
 }
 
+function sanitizeProjectId(raw: string): string {
+  return (
+    raw
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '') || 'pikku-project'
+  )
+}
+
+async function resolveProjectId(projectDir: string): Promise<string> {
+  try {
+    const pkg = JSON.parse(
+      await readFile(join(projectDir, 'package.json'), 'utf-8')
+    )
+    if (pkg.name) {
+      const name = pkg.name.replace(/^@[^/]+\//, '')
+      return sanitizeProjectId(name)
+    }
+  } catch {}
+  return sanitizeProjectId(basename(projectDir))
+}
+
 function resolveProvider(_providerName?: string): ProviderAdapter {
   const name =
     _providerName ?? process.env.PIKKU_DEPLOY_PROVIDER ?? 'cloudflare'
@@ -154,7 +177,7 @@ export const deployApply = pikkuVoidFunc({
     // Step 1: Analyze
     logger.info('Analyzing project...')
     const inspectorState = await getInspectorState(true)
-    const projectId = basename(projectDir)
+    const projectId = await resolveProjectId(projectDir)
     const manifest = analyzeDeployment(inspectorState, { projectId })
     logger.info(
       `Found ${manifest.units.length} units, ${manifest.queues.length} queues, ${manifest.scheduledTasks.length} scheduled tasks`

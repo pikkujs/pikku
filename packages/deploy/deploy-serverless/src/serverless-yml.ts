@@ -204,8 +204,8 @@ function buildEvents(
     // Convert Pikku route params (:id) to API Gateway format ({id})
     const path = route.route.replace(/:(\w+)/g, '{$1}')
     events.push(`- httpApi:`)
-    events.push(`          method: ${method}`)
-    events.push(`          path: ${path}`)
+    events.push(`    method: ${method}`)
+    events.push(`    path: ${path}`)
   }
 
   // If unit has fetch handler but no explicit routes, add a catch-all
@@ -219,17 +219,17 @@ function buildEvents(
       unit.role === 'workflow')
   ) {
     events.push(`- httpApi:`)
-    events.push(`          method: ANY`)
-    events.push(`          path: /__pikku/${unitName}/{proxy+}`)
+    events.push(`    method: ANY`)
+    events.push(`    path: /__pikku/${unitName}/{proxy+}`)
   }
 
   // SQS queue consumers
   for (const queue of manifest.resources.sqsQueues) {
     if (queue.consumerUnit === unitName) {
       events.push(`- sqs:`)
-      events.push(`          arn: !GetAtt ${queue.logicalName}Queue.Arn`)
-      events.push(`          batchSize: 10`)
-      events.push(`          functionResponseType: ReportBatchItemFailures`)
+      events.push(`    arn: !GetAtt ${queue.logicalName}Queue.Arn`)
+      events.push(`    batchSize: 10`)
+      events.push(`    functionResponseType: ReportBatchItemFailures`)
     }
   }
 
@@ -237,8 +237,8 @@ function buildEvents(
   for (const rule of manifest.resources.eventBridgeRules) {
     if (rule.unit === unitName) {
       events.push(`- schedule:`)
-      events.push(`          rate: cron(${toAwsCron(rule.schedule)})`)
-      events.push(`          name: ${manifest.projectId}-${rule.name}`)
+      events.push(`    rate: cron(${toAwsCron(rule.schedule)})`)
+      events.push(`    name: ${manifest.projectId}-${rule.name}`)
     }
   }
 

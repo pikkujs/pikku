@@ -9,7 +9,7 @@ import type { PikkuHTTP } from './wirings/http/http.types.js'
  *
  * @param {any} e - The error that occurred
  * @param {PikkuHTTP | undefined} http - HTTP wire object
- * @param {string} trackerId - Unique ID for tracking this error
+ * @param {string} traceId - Unique ID for tracking this error
  * @param {Logger} logger - Logger service
  * @param {number[]} logWarningsForStatusCodes - HTTP status codes to log as warnings
  * @param {boolean} respondWith404 - Whether to respond with 404 for NotFoundError
@@ -18,7 +18,7 @@ import type { PikkuHTTP } from './wirings/http/http.types.js'
 export const handleHTTPError = (
   e: any,
   http: PikkuHTTP | undefined,
-  trackerId: string | undefined,
+  traceId: string | undefined,
   logger: Logger,
   logWarningsForStatusCodes: number[],
   respondWith404: boolean,
@@ -38,13 +38,13 @@ export const handleHTTPError = (
     http?.response?.json({
       message: errorResponse.message,
       payload: (e as any).payload,
-      traceId: trackerId,
+      errorId: traceId,
     })
 
     // Log certain status codes as warnings
     if (logWarningsForStatusCodes.includes(errorResponse.status)) {
-      if (trackerId) {
-        logger.warn(`Warning id: ${trackerId}`)
+      if (traceId) {
+        logger.warn(`Warning id: ${traceId}`)
       }
       logger.warn(e instanceof Error ? e.message : e)
     }
@@ -53,9 +53,9 @@ export const handleHTTPError = (
     logger.error(e instanceof Error ? e.message : e)
     http?.response?.status(500)
 
-    if (trackerId) {
-      logger.warn(`Error id: ${trackerId}`)
-      const errorBody: Record<string, unknown> = { errorId: trackerId }
+    if (traceId) {
+      logger.warn(`Error id: ${traceId}`)
+      const errorBody: Record<string, unknown> = { errorId: traceId }
       if (exposeErrors && !isProduction() && e instanceof Error) {
         errorBody.message = e.message
         errorBody.stack = e.stack

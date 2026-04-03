@@ -149,7 +149,6 @@ function generateTSSchemas(
   httpWiringsMeta: HTTPWiringsMeta,
   additionalTypes?: string[],
   additionalProperties: boolean = false,
-  schemaLookup?: Map<string, SchemaRef>,
   generatedZodSchemas?: Record<string, JSONValue>
 ): Record<string, JSONValue> {
   const schemasSet = new Set(typesMap.customTypes.keys())
@@ -332,7 +331,6 @@ function processZodSchema(
     }
   }
 
-  schemas[schemaName] = schema
   const { node: tsType } = zodToTs(zodSchema, { auxiliaryTypeStore })
 
   const typeText = printer.printNode(
@@ -342,6 +340,7 @@ function processZodSchema(
   )
 
   typesMap.addCustomType(schemaName, typeText, [])
+  schemas[schemaName] = schema
   logger.debug(`• Generated schema from Zod: ${schemaName}`)
 }
 
@@ -498,7 +497,6 @@ export async function generateAllSchemas(
     state.http.meta,
     config.schemasFromTypes,
     config.schema?.additionalProperties,
-    state.schemaLookup,
     zodSchemas
   )
 

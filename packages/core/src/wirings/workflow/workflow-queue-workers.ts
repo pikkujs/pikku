@@ -35,7 +35,12 @@ export async function pikkuWorkflowWorkerFunc(
   { rpc }: { rpc: PikkuRPC }
 ): Promise<void> {
   const services = getSingletonServices()
-  await services!.workflowService!.executeWorkflowStep(
+  if (!services?.workflowService) {
+    throw new Error(
+      `Workflow service not initialized: cannot execute workflow step for runId ${runId}, stepName ${stepName}`
+    )
+  }
+  await services.workflowService.executeWorkflowStep(
     runId,
     stepName,
     rpcName,
@@ -54,7 +59,12 @@ export async function pikkuWorkflowOrchestratorFunc(
   { rpc }: { rpc: PikkuRPC }
 ): Promise<void> {
   const services = getSingletonServices()
-  await services!.workflowService!.orchestrateWorkflow(runId, rpc)
+  if (!services?.workflowService) {
+    throw new Error(
+      `Workflow service not initialized: cannot orchestrate workflow for runId ${runId}`
+    )
+  }
+  await services.workflowService.orchestrateWorkflow(runId, rpc)
 }
 
 /**
@@ -66,5 +76,10 @@ export async function pikkuWorkflowSleeperFunc(
   { runId, stepId }: PikkuWorkflowSleeperInput
 ): Promise<void> {
   const services = getSingletonServices()
-  await services!.workflowService!.executeWorkflowSleepCompleted(runId, stepId)
+  if (!services?.workflowService) {
+    throw new Error(
+      `Workflow service not initialized: cannot execute workflow sleep completed for runId ${runId}, stepId ${stepId}`
+    )
+  }
+  await services.workflowService.executeWorkflowSleepCompleted(runId, stepId)
 }

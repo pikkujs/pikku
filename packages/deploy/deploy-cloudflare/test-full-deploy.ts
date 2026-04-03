@@ -137,7 +137,7 @@ async function main() {
   // Step 5: Plan
   console.log(`\n${ANSI.bold}Step 5: Deployment plan${ANSI.reset}`)
   const emptyProvider = {
-    async getCurrentState() {
+    async getCurrentState(_name: string) {
       return {
         workers: [],
         queues: [],

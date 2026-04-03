@@ -14,6 +14,10 @@ export const runFetchV2 = async (
 
   if (request.method === 'OPTIONS') {
     response.header(
+      'Access-Control-Allow-Origin',
+      request.headers.get('origin') || '*'
+    )
+    response.header(
       'Access-Control-Allow-Headers',
       'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'
     )
@@ -27,8 +31,11 @@ export const runFetchV2 = async (
 
   try {
     await fetchData(request, response)
-  } catch {
-    // Error should have already been handled by fetch
+  } catch (err) {
+    console.error('fetchData error:', err)
+    response.status(500)
+    response.header('content-type', 'application/json')
+    response.json({ error: 'Internal Server Error' })
   }
 
   return responseToLambdaV2Result(response.toResponse())

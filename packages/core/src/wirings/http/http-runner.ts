@@ -376,6 +376,7 @@ const executeRoute = async (
   }
 
   const wire: PikkuWire = {
+    traceId: requestId,
     http,
     channel,
     session: userSession.get() as CoreUserSession | undefined,

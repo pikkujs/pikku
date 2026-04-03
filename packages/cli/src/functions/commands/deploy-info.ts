@@ -1,4 +1,5 @@
-import { basename } from 'node:path'
+import { basename, join } from 'node:path'
+import { readFile } from 'node:fs/promises'
 
 import { pikkuVoidFunc } from '#pikku'
 import { analyzeDeployment } from '../../deploy/analyzer/index.js'
@@ -15,7 +16,7 @@ const ANSI = {
 const ROLE_COLORS: Record<string, string> = {
   function: ANSI.blue,
   mcp: '\x1b[35m', // magenta
-  agent: '\x1b[33m', // orange
+  agent: '\x1b[33m', // yellow
   channel: ANSI.dim,
   'workflow-step': '\x1b[34m',
   workflow: '\x1b[34m',
@@ -25,11 +26,34 @@ function padRight(str: string, len: number): string {
   return str + ' '.repeat(Math.max(0, len - str.length))
 }
 
+function sanitizeProjectId(raw: string): string {
+  return (
+    raw
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '') || 'pikku-project'
+  )
+}
+
+async function resolveProjectId(projectDir: string): Promise<string> {
+  try {
+    const pkg = JSON.parse(
+      await readFile(join(projectDir, 'package.json'), 'utf-8')
+    )
+    if (pkg.name) {
+      const name = pkg.name.replace(/^@[^/]+\//, '')
+      return sanitizeProjectId(name)
+    }
+  } catch {}
+  return sanitizeProjectId(basename(projectDir))
+}
+
 export const deployInfo = pikkuVoidFunc({
   func: async ({ logger, config, getInspectorState }) => {
     logger.info('Analyzing project...')
     const inspectorState = await getInspectorState(true)
-    const projectId = basename(config.rootDir)
+    const projectId = await resolveProjectId(config.rootDir)
     const manifest = analyzeDeployment(inspectorState, { projectId })
 
     console.log('')

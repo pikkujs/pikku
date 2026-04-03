@@ -35,12 +35,13 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
 
     const outDir = dirname(config.bootstrapFile)
     const metaServiceFile = join(outDir, 'pikku-meta-service.gen.ts')
+    const escapedOutDir = outDir.replace(/\\/g, '/')
     const metaServiceContent = [
       `import { LocalMetaService } from '@pikku/core/services/local-meta'`,
       ``,
       `export class PikkuMetaService extends LocalMetaService {`,
       `  constructor() {`,
-      `    super('${outDir}')`,
+      `    super('${escapedOutDir}')`,
       `  }`,
       `}`,
       ``,

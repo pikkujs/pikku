@@ -16,7 +16,12 @@ export class AzureQueueService implements QueueService {
   private queueClients = new Map<string, QueueClient>()
 
   constructor(connectionString?: string) {
-    const connStr = connectionString ?? process.env.AzureWebJobsStorage ?? ''
+    const connStr = connectionString ?? process.env.AzureWebJobsStorage
+    if (!connStr) {
+      throw new Error(
+        'Azure Queue connection string not provided; supply connectionString or set AzureWebJobsStorage'
+      )
+    }
     this.queueServiceClient = QueueServiceClient.fromConnectionString(connStr)
   }
 

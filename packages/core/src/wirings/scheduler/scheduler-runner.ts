@@ -98,6 +98,7 @@ export async function runScheduledTask({
 
   // Create the scheduled task wire object
   const wire: PikkuWire = {
+    traceId: resolvedTraceId,
     scheduledTask: {
       name,
       schedule: task.schedule,
