@@ -205,6 +205,16 @@ export const all = pikkuVoidFunc({
 
     await rpc.invoke('pikkuNodesMeta', null)
 
+    // Generate fetch/RPC client wrappers when clientFiles are configured,
+    // even if the project has no HTTP routes (e.g. console backend after
+    // RPC routes were internalized). Always generate the HTTP map too
+    // since the fetch wrapper imports from it.
+    if (config.clientFiles?.fetchFile || config.clientFiles?.rpcWiringsFile) {
+      await rpc.invoke('pikkuHTTPMap', null)
+      await rpc.invoke('pikkuFetch', null)
+      await rpc.invoke('pikkuRPCClient', null)
+    }
+
     if (
       config.clientFiles?.nextBackendFile ||
       config.clientFiles?.nextHTTPFile
