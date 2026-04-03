@@ -1,14 +1,15 @@
+import { AbstractDeploymentService } from '@pikku/core/services'
 import type {
-  DeploymentService,
   DeploymentServiceConfig,
   DeploymentConfig,
 } from '@pikku/core/services'
+import type { JWTService, SecretService } from '@pikku/core/services'
 import { getAllFunctionNames } from '@pikku/core/function'
 import type { Kysely } from 'kysely'
 import { sql } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 
-export class KyselyDeploymentService implements DeploymentService {
+export class KyselyDeploymentService extends AbstractDeploymentService {
   private initialized = false
   private heartbeatTimer?: ReturnType<typeof setInterval>
   private deploymentConfig?: DeploymentConfig
@@ -17,8 +18,11 @@ export class KyselyDeploymentService implements DeploymentService {
 
   constructor(
     config: DeploymentServiceConfig,
-    protected db: Kysely<KyselyPikkuDB>
+    protected db: Kysely<KyselyPikkuDB>,
+    jwt?: JWTService,
+    secrets?: SecretService
   ) {
+    super(jwt, secrets)
     this.heartbeatInterval = config.heartbeatInterval ?? 10000
     this.heartbeatTtl = config.heartbeatTtl ?? 30000
   }
@@ -134,10 +138,10 @@ export class KyselyDeploymentService implements DeploymentService {
     }
   }
 
-  async invoke(
+  protected async dispatch(
     funcName: string,
     data: unknown,
-    _session?: unknown
+    headers: Record<string, string>
   ): Promise<unknown> {
     const ttlMs = this.heartbeatTtl
     const cutoff = new Date(Date.now() - ttlMs)
@@ -164,8 +168,8 @@ export class KyselyDeploymentService implements DeploymentService {
     const url = `${endpoint}/remote/rpc/${encodeURIComponent(funcName)}`
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data }),
+      headers,
+      body: JSON.stringify(data),
     })
 
     if (!response.ok) {
