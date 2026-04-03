@@ -144,7 +144,6 @@ function serializeSyntheticRoutes(
           `  func: { func: async (_s: any, data: any, { rpc }: any) => rpc.agent.approve(data.runId, data.approvals, '${name}') } as any })`
         )
       } else if (funcId?.startsWith('agentResume:')) {
-        const name = funcId.slice('agentResume:'.length)
         lines.push(
           `wireHTTP({ route: '${routeMeta.route}', method: '${routeMeta.method}', auth: false,`
         )
