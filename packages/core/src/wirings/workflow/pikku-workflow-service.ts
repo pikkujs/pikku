@@ -190,6 +190,35 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         }
       }
     }
+
+    // Auto-register agent HTTP route handler functions.
+    // Agent routes (agentRun:, agentStream:, agentApprove:, agentResume:)
+    // are injected into http.meta by post-process. We wire them here with
+    // inline handlers that delegate to rpc.exposed() which the RPC runner
+    // resolves to the appropriate agent handler.
+    for (const [method, routes] of Object.entries(httpMeta)) {
+      for (const [route, routeMeta] of Object.entries(routes)) {
+        const funcId = routeMeta.pikkuFuncId
+        if (functions.has(funcId)) continue
+
+        if (
+          funcId.startsWith('agentRun:') ||
+          funcId.startsWith('agentStream:') ||
+          funcId.startsWith('agentApprove:') ||
+          funcId.startsWith('agentResume:')
+        ) {
+          wireHTTP({
+            method: method as any,
+            route,
+            auth: false,
+            func: {
+              func: async (_services: any, data: any, { rpc }: any) =>
+                rpc.exposed(funcId, data),
+            } as any,
+          })
+        }
+      }
+    }
   }
 
   /**
