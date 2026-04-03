@@ -132,7 +132,7 @@ export function createLambdaWebSocketHandler(
     if (!cachedServices) {
       throw new Error('Services not initialized for WebSocket handler')
     }
-    const channelStore = (cachedServices as Record<string, unknown>)
+    const channelStore = (cachedServices as unknown as Record<string, unknown>)
       .channelStore as import('@pikku/core/channel').ChannelStore | undefined
     if (!channelStore) {
       throw new Error(
