@@ -91,7 +91,7 @@ describe('handleHTTPError', () => {
     assert.deepStrictEqual(http._state.jsonBody, {
       message: 'The server cannot find the requested resource.',
       payload: undefined,
-      traceId: 'tracker-1',
+      errorId: 'tracker-1',
     })
   })
 
@@ -112,7 +112,7 @@ describe('handleHTTPError', () => {
 
     assert.strictEqual(http._state.statusCode, 400)
     assert.ok(http._state.jsonBody.message.includes('client error'))
-    assert.strictEqual(http._state.jsonBody.traceId, 'tracker-2')
+    assert.strictEqual(http._state.jsonBody.errorId, 'tracker-2')
   })
 
   test('should set status 403 for ForbiddenError', () => {

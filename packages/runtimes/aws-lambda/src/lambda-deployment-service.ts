@@ -35,7 +35,8 @@ export class LambdaDeploymentService implements DeploymentService {
   async invoke(
     funcName: string,
     data: unknown,
-    session?: unknown
+    session?: unknown,
+    traceId?: string
   ): Promise<unknown> {
     const lambdaFunctionName = this.bindings.get(funcName)
     if (!lambdaFunctionName) {
@@ -47,6 +48,7 @@ export class LambdaDeploymentService implements DeploymentService {
 
     const headers: Record<string, string> = {
       'content-type': 'application/json',
+      ...(traceId && { 'x-request-id': traceId }),
     }
 
     // Sign session as JWT for pikkuRemoteAuthMiddleware

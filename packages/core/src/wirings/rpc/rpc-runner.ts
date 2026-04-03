@@ -246,7 +246,8 @@ export class ContextAwareRPCService {
         return this.services.deploymentService.invoke(
           rpcName,
           data,
-          session
+          session,
+          this.wire.traceId
         ) as Promise<Out>
       }
       throw e
@@ -377,7 +378,8 @@ export class ContextAwareRPCService {
     return this.services.deploymentService.invoke(
       funcName,
       data,
-      session
+      session,
+      this.wire.traceId
     ) as Promise<Out>
   }
 }
