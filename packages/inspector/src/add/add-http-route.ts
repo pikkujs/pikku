@@ -325,6 +325,11 @@ export function registerHTTPRoute({
     logger
   )
 
+  // Don't overwrite synthetic routes injected by post-process
+  if (state.http.meta[method]?.[fullRoute]?.synthetic) {
+    return
+  }
+
   // Record route
   state.http.files.add(sourceFile.fileName)
   state.http.meta[method][fullRoute] = {
