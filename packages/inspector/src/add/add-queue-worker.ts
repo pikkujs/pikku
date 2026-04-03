@@ -67,7 +67,11 @@ export const addQueueWorker: AddWiring = (logger, node, checker, state) => {
     }
 
     const packageName = ts.isIdentifier(funcInitializer)
-      ? resolveAddonName(funcInitializer, checker, state.rpc.wireAddonDeclarations)
+      ? resolveAddonName(
+          funcInitializer,
+          checker,
+          state.rpc.wireAddonDeclarations
+        )
       : null
 
     if (!name) {
@@ -75,6 +79,15 @@ export const addQueueWorker: AddWiring = (logger, node, checker, state) => {
         ErrorCode.MISSING_QUEUE_NAME,
         `No 'name' provided for queue processor function '${pikkuFuncId}'.`
       )
+      return
+    }
+
+    // Don't overwrite synthetic queue workers injected by post-process
+    // (e.g. workflow orchestrators/step workers). On subsequent codegen
+    // passes the generated wiring file is picked up via transitive imports
+    // and the inspector would otherwise replace the correct pikkuFuncId
+    // with a context-based "queue:..." id that has no resolvedIOTypes entry.
+    if (state.queueWorkers.meta[name]?.synthetic) {
       return
     }
 
