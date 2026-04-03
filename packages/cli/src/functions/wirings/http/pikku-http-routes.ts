@@ -117,8 +117,8 @@ function serializeSyntheticRoutes(
         lines.push(`})`)
       }
 
-      // Agent routes — delegate to rpc.invoke() which the RPC runner
-      // resolves to the appropriate agent handler
+      // Agent routes — delegate to rpc.invoke() which tries local lookup
+      // first (finding the registered agent handler), then addon namespace
       const funcId = routeMeta.pikkuFuncId
       if (
         funcId?.startsWith('agentRun:') ||

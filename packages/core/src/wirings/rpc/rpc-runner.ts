@@ -117,12 +117,7 @@ export class ContextAwareRPCService {
         : undefined,
     }
 
-    // Check if it's a namespaced function call (e.g., 'stripe:createCharge')
-    if (funcName.includes(':')) {
-      return this.invokeAddonFunction<In, Out>(funcName, data, updatedWire)
-    }
-
-    // Try local first, fall back to deployment service (e.g. CF service binding)
+    // Try local first, then namespaced addon, then deployment service fallback
     try {
       return await runPikkuFunc<In, Out>(
         'rpc',
@@ -136,17 +131,32 @@ export class ContextAwareRPCService {
         }
       )
     } catch (e) {
-      if (e instanceof RPCNotFoundError && this.services.deploymentService) {
-        const session =
-          this.wire.getSession && typeof this.wire.getSession === 'function'
-            ? await this.wire.getSession()
-            : (this.wire as any).session
-        return this.services.deploymentService.invoke(
-          funcName,
-          data,
-          session,
-          this.wire.traceId
-        ) as Promise<Out>
+      if (e instanceof RPCNotFoundError) {
+        // Try namespaced addon function (e.g. 'stripe:createCharge')
+        if (funcName.includes(':')) {
+          try {
+            return await this.invokeAddonFunction<In, Out>(
+              funcName,
+              data,
+              updatedWire
+            )
+          } catch (addonErr) {
+            if (!(addonErr instanceof RPCNotFoundError)) throw addonErr
+          }
+        }
+        // Fall back to deployment service (e.g. CF service binding, Lambda Invoke)
+        if (this.services.deploymentService) {
+          const session =
+            this.wire.getSession && typeof this.wire.getSession === 'function'
+              ? await this.wire.getSession()
+              : (this.wire as any).session
+          return this.services.deploymentService.invoke(
+            funcName,
+            data,
+            session,
+            this.wire.traceId
+          ) as Promise<Out>
+        }
       }
       throw e
     }
