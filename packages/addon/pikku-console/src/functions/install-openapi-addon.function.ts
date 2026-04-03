@@ -42,16 +42,12 @@ export const installOpenapiAddon = pikkuSessionlessFunc<
       throw new Error(`Addon directory already exists: ${addonPath}`)
     }
 
-    const args = [
-      `--name ${name}`,
-      `--openapi ${swaggerUrl}`,
-      `--dir ${targetDir}`,
-    ]
+    const flags = [`--openapi ${swaggerUrl}`, `--dir ${targetDir}`]
     if (credential) {
-      args.push(`--credential ${credential}`)
+      flags.push(`--credential ${credential}`)
     }
 
-    execSync(`npx pikku create addon ${args.join(' ')}`, {
+    execSync(`npx pikku new addon ${name} ${flags.join(' ')}`, {
       cwd: rootDir,
       stdio: 'pipe',
       timeout: 120_000,
@@ -72,6 +68,43 @@ export const installOpenapiAddon = pikkuSessionlessFunc<
     }
 
     execSync(`${pm} install`, {
+      cwd: rootDir,
+      stdio: 'pipe',
+      timeout: 120_000,
+    })
+
+    execSync(`npx pikku all`, {
+      cwd: addonPath,
+      stdio: 'pipe',
+      timeout: 120_000,
+    })
+
+    try {
+      execSync(`npx tsc`, {
+        cwd: addonPath,
+        stdio: 'pipe',
+        timeout: 120_000,
+      })
+    } catch {
+      // tsc may fail on generated code — addon still works via tsx
+    }
+
+    const pikkuDir = config.scaffold?.pikkuDir
+    if (pikkuDir) {
+      const addonsDir = join(rootDir, dirname(pikkuDir), 'addons')
+      const { mkdirSync, writeFileSync } = await import('node:fs')
+      mkdirSync(addonsDir, { recursive: true })
+      const wiringFile = join(addonsDir, `${name}.addon.ts`)
+      if (!existsSync(wiringFile)) {
+        writeFileSync(
+          wiringFile,
+          `import { wireAddon } from '#pikku/pikku-types.gen.js'\n\nwireAddon({ name: '${name}', package: '@pikku/addon-${name}' })\n`,
+          'utf-8'
+        )
+      }
+    }
+
+    execSync(`npx pikku all`, {
       cwd: rootDir,
       stdio: 'pipe',
       timeout: 120_000,

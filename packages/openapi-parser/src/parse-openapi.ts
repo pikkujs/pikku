@@ -67,11 +67,27 @@ export interface ParsedParam {
  * Read and parse an OpenAPI spec from a file path.
  * Supports both YAML (.yaml, .yml) and JSON (.json) files.
  */
-export async function parseOpenAPISpec(filePath: string): Promise<ParsedSpec> {
-  const content = await readFile(filePath, 'utf-8')
+export async function parseOpenAPISpec(
+  filePathOrUrl: string
+): Promise<ParsedSpec> {
+  let content: string
+  if (
+    filePathOrUrl.startsWith('https://') ||
+    filePathOrUrl.startsWith('http://')
+  ) {
+    const response = await fetch(filePathOrUrl)
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch OpenAPI spec from ${filePathOrUrl}: ${response.status}`
+      )
+    }
+    content = await response.text()
+  } else {
+    content = await readFile(filePathOrUrl, 'utf-8')
+  }
 
   let doc: any
-  if (filePath.endsWith('.json')) {
+  if (filePathOrUrl.endsWith('.json')) {
     doc = JSON.parse(content)
   } else {
     doc = parseYAML(content)

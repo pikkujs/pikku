@@ -580,10 +580,13 @@ export const PackageDetailPage: React.FunctionComponent<{
                 leftSection={<Download size={13} />}
                 loading={installOpenapiMutation.isPending}
                 onClick={() => {
-                  const addonName = api.name
+                  let addonName = api.name
                     .replace(/[^a-zA-Z0-9-]/g, '-')
                     .replace(/-+/g, '-')
                     .replace(/^-|-$/g, '')
+                  if (/^[0-9]/.test(addonName)) {
+                    addonName = `x${addonName}`
+                  }
                   const credential = api.securitySchemes?.includes('oauth2')
                     ? 'oauth2' as const
                     : api.securitySchemes?.includes('bearer')
