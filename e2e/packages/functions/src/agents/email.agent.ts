@@ -6,7 +6,7 @@ export const emailAgent = pikkuAIAgent({
   description: 'Sends and lists emails',
   goal: 'You help users send and view emails.',
   model: 'openai/o4-mini',
-  tools: [func('agentCaller')],
+  tools: [func('agentCaller'), func('emails:sendEmail'), func('doubleValue')],
   maxSteps: 5,
   toolChoice: 'auto',
 })

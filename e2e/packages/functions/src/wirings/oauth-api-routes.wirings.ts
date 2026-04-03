@@ -1,7 +1,7 @@
 import {
   defineHTTPRoutes,
   wireHTTPRoutes,
-  addon,
+  func,
 } from '#pikku/pikku-types.gen.js'
 
 export const oauthApiRoutes = defineHTTPRoutes({
