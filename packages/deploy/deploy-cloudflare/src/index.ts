@@ -1,17 +1,8 @@
 /**
- * @pikku/addon-cloudflare — Cloudflare API adapter for Pikku Fabric.
+ * @pikku/deploy-cloudflare — Cloudflare API adapter for Pikku.
  *
  * Provides typed wrappers around the Cloudflare REST API for managing
- * Workers, Queues, D1, R2, Secrets, Cron Triggers, and Containers.
- *
- * @example
- * ```ts
- * import { CloudflareClient } from '@pikku/addon-cloudflare'
- * import { createWorker, listWorkers } from '@pikku/addon-cloudflare'
- *
- * const client = new CloudflareClient({ accountId: '...', apiToken: '...' })
- * const workers = await listWorkers(client)
- * ```
+ * Workers, Queues, D1, R2, Secrets, and Cron Triggers.
  */
 
 // Client
@@ -53,16 +44,9 @@ export { setSecret, deleteSecret, listSecrets } from './secrets.js'
 // Cron Triggers
 export { setCronTriggers, getCronTriggers } from './cron.js'
 
-// Deploy provider
-export { CloudflareDeployProvider } from './provider.js'
-
 // Deploy orchestrator (CF API direct)
 export { deploy } from './deploy.js'
 export type { DeployOptions, DeployResult } from './deploy.js'
-
-// Binding resolver
-export { resolveBindings } from './binding-resolver.js'
-export type { ResourceState } from './binding-resolver.js'
 
 // Provider adapter
 export { CloudflareProviderAdapter } from './adapter.js'
@@ -76,24 +60,6 @@ export type {
   CloudflareInfraManifest,
   CloudflareUnitManifest,
 } from './infra-manifest.js'
-
-// Entry point generation
-export {
-  generateCloudflareEntryFiles,
-  generateEntrySource,
-} from './entry-generator.js'
-export type {
-  EntryGeneratorUnit,
-  DeploymentUnitRole,
-} from './entry-generator.js'
-
-// Containers
-export {
-  deployContainer,
-  deleteContainer,
-  listContainers,
-  getContainer,
-} from './containers.js'
 
 // Types
 export type {
@@ -120,6 +86,4 @@ export type {
   R2BucketMetadata,
   WorkerSecretEntry,
   CronTrigger,
-  ContainerDeployConfig,
-  ContainerMetadata,
 } from './types.js'

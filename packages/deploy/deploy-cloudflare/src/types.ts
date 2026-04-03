@@ -218,25 +218,6 @@ export interface CronTrigger {
 // ---------------------------------------------------------------------------
 // Containers (beta)
 // ---------------------------------------------------------------------------
-
-/** Configuration for deploying a Cloudflare Container. */
-export interface ContainerDeployConfig {
-  name: string
-  image: string
-  environment_variables?: Record<string, string>
-}
-
-/** Metadata returned for a deployed container. */
-export interface ContainerMetadata {
-  id: string
-  name: string
-  image: string
-  status: string
-  created_on: string
-  modified_on: string
-}
-
-// ---------------------------------------------------------------------------
 // Client options
 // ---------------------------------------------------------------------------
 
