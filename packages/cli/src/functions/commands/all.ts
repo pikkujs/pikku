@@ -205,13 +205,6 @@ export const all = pikkuVoidFunc({
 
     await rpc.invoke('pikkuNodesMeta', null)
 
-    // Generate fetch/RPC client wrappers when clientFiles are configured
-    // (covers addons like console that have clientFiles but skip the !addon block)
-    if (config.clientFiles?.fetchFile || config.clientFiles?.rpcWiringsFile) {
-      await rpc.invoke('pikkuFetch', null)
-      await rpc.invoke('pikkuRPCClient', null)
-    }
-
     if (
       config.clientFiles?.nextBackendFile ||
       config.clientFiles?.nextHTTPFile
