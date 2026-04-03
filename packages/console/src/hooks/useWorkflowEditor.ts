@@ -19,28 +19,25 @@ export function useCreateWorkflow() {
   })
 }
 
-export function useGenerateWorkflowBody() {
+export function useGenerateWorkflowGraph() {
   const rpc = usePikkuRPC()
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async ({
-      sourceFile,
-      exportedName,
       prompt,
+      workflowName,
     }: {
-      sourceFile: string
-      exportedName: string
       prompt: string
+      workflowName: string
     }) =>
-      (rpc as any).invoke('console:generateWorkflowBody', {
-        sourceFile,
-        exportedName,
+      (rpc as any).invoke('console:generateWorkflowGraph', {
         prompt,
+        workflowName,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allMeta'] })
-      queryClient.invalidateQueries({ queryKey: ['function-source'] })
+      queryClient.invalidateQueries({ queryKey: ['ai-workflows'] })
     },
   })
 }

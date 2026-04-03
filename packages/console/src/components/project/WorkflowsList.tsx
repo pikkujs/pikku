@@ -3,15 +3,24 @@ import {
   Text,
   Badge,
   Button,
-  Modal,
+  Drawer,
   Stack,
   TextInput,
   Textarea,
   Alert,
 } from '@mantine/core'
 import { useNavigate } from '@/router'
-import { GitBranch, Plus, CheckCircle } from 'lucide-react'
-import { useCreateWorkflow } from '@/hooks/useWorkflowEditor'
+import {
+  GitBranch,
+  Plus,
+  CheckCircle,
+  Sparkles,
+  AlertTriangle,
+} from 'lucide-react'
+import {
+  useCreateWorkflow,
+  useGenerateWorkflowGraph,
+} from '@/hooks/useWorkflowEditor'
 import { TableListPage } from '@/components/layout/TableListPage'
 import { PikkuBadge } from '@/components/ui/PikkuBadge'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
@@ -68,8 +77,10 @@ export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
   const [createOpen, setCreateOpen] = useState(false)
   const [newName, setNewName] = useState('')
   const [newDescription, setNewDescription] = useState('')
+  const [aiPrompt, setAiPrompt] = useState('')
+  const [success, setSuccess] = useState<string | null>(null)
   const navigate = useNavigate()
-  const createWorkflow = useCreateWorkflow()
+  const generateGraph = useGenerateWorkflowGraph()
 
   const sortedWorkflows = useMemo(() => {
     const all: Workflow[] = workflows ? Object.values(workflows) : []
@@ -103,27 +114,44 @@ export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
     return sortedWorkflows
   }, [sortedWorkflows, filter])
 
-  const handleCreate = async () => {
-    if (!newName.trim()) return
+  const handleGenerate = async () => {
+    if (!newName.trim() || !aiPrompt.trim()) return
+    setSuccess(null)
     try {
-      const result = await createWorkflow.mutateAsync({
-        name: newName.trim(),
-        description: newDescription.trim() || undefined,
+      const result = await generateGraph.mutateAsync({
+        prompt: aiPrompt.trim(),
+        workflowName: newName.trim(),
       })
-      setCreateOpen(false)
-      setNewName('')
-      setNewDescription('')
-      navigate(`/workflow?id=${encodeURIComponent(newName.trim())}`)
+      const tokens = `${result.inputTokens} in / ${result.outputTokens} out`
+      const cost = result.costUsd ? ` · $${result.costUsd.toFixed(4)}` : ''
+      setSuccess(`${result.message} (${tokens}${cost})`)
+      setTimeout(() => {
+        setCreateOpen(false)
+        setNewName('')
+        setNewDescription('')
+        setAiPrompt('')
+        setSuccess(null)
+        navigate(
+          `/workflow?id=${encodeURIComponent(result.workflowName)}`
+        )
+      }, 1500)
     } catch {}
   }
 
   return (
     <>
-      <Modal
+      <Drawer
         opened={createOpen}
         onClose={() => setCreateOpen(false)}
         title="New Workflow"
-        size="sm"
+        position="right"
+        size="md"
+        styles={{
+          content: { backgroundColor: 'var(--mantine-color-dark-7)', height: '100%' },
+          header: { backgroundColor: 'var(--mantine-color-dark-7)' },
+          body: { height: 'calc(100% - 60px)' },
+          inner: { height: '100%' },
+        }}
       >
         <Stack gap="sm">
           <TextInput
@@ -142,21 +170,38 @@ export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
             size="xs"
             minRows={2}
           />
-          {createWorkflow.error && (
-            <Alert color="red">
-              {(createWorkflow.error as Error).message}
+          <Textarea
+            label="AI Prompt"
+            placeholder="Describe the workflow steps, e.g. 'Fetch the user's todos, filter overdue ones, send a reminder email for each'"
+            value={aiPrompt}
+            onChange={(e) => setAiPrompt(e.currentTarget.value)}
+            size="xs"
+            minRows={4}
+            maxRows={10}
+            autosize
+          />
+          {success && (
+            <Alert color="green" icon={<CheckCircle size={16} />}>
+              {success}
+            </Alert>
+          )}
+          {generateGraph.error && (
+            <Alert color="red" icon={<AlertTriangle size={16} />}>
+              {(generateGraph.error as Error).message}
             </Alert>
           )}
           <Button
-            onClick={handleCreate}
-            loading={createWorkflow.isPending}
+            onClick={handleGenerate}
+            loading={generateGraph.isPending}
+            disabled={!newName.trim() || !aiPrompt.trim()}
+            leftSection={<Sparkles size={14} />}
             size="xs"
             fullWidth
           >
-            Create Workflow
+            Generate Workflow
           </Button>
         </Stack>
-      </Modal>
+      </Drawer>
     <TableListPage
       title="Workflows"
       icon={GitBranch}

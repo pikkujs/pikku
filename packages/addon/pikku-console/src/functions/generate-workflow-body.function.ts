@@ -1,9 +1,10 @@
 import { pikkuSessionlessFunc } from '#pikku'
-import { readFile, readdir } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
-import { execFileSync, execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { pikkuState } from '@pikku/core/internal'
-import type { WiringService, FunctionMeta } from '../services/wiring.service.js'
+import type { FunctionMeta } from '../services/wiring.service.js'
 
 async function loadSchemas(metaDir: string): Promise<Record<string, any>> {
   const schemasDir = join(metaDir, 'schemas/schemas')
@@ -26,7 +27,11 @@ function buildFunctionContext(
   functions: FunctionMeta[],
   schemas: Record<string, any>
 ): string {
-  const lines: string[] = ['## Available Functions\n']
+  const lines: string[] = [
+    '## Available Functions\n',
+    '| Function | Description | Input fields | Output fields |',
+    '|----------|-------------|-------------|---------------|',
+  ]
 
   for (const fn of functions) {
     if ((fn as any).functionType !== 'user') continue
@@ -39,227 +44,227 @@ function buildFunctionContext(
       ? schemas[fn.outputSchemaName]
       : null
 
-    let entry = `### ${fn.pikkuFuncId}`
-    if ((fn as any).description) entry += `\n${(fn as any).description}`
-    if (inputSchema) entry += `\nInput: ${JSON.stringify(inputSchema, null, 2)}`
-    if (outputSchema)
-      entry += `\nOutput: ${JSON.stringify(outputSchema, null, 2)}`
-    lines.push(entry + '\n')
+    const desc = (fn as any).description || '-'
+    const inputFields = inputSchema?.properties
+      ? Object.entries(inputSchema.properties)
+          .map(([k, v]: [string, any]) => `${k}: ${v.type || 'any'}`)
+          .join(', ')
+      : '-'
+    const outputFields = outputSchema?.properties
+      ? Object.entries(outputSchema.properties)
+          .map(([k, v]: [string, any]) => `${k}: ${v.type || 'any'}`)
+          .join(', ')
+      : '-'
+
+    lines.push(
+      `| \`${fn.pikkuFuncId}\` | ${desc} | ${inputFields} | ${outputFields} |`
+    )
   }
 
   return lines.join('\n')
 }
 
-const DSL_EXAMPLES = `## Workflow DSL Syntax
+const GRAPH_FORMAT = `## Graph Format
 
-Use \`await workflow.do(stepName, functionName, inputObject)\` to call functions.
-Store results in variables to reference outputs in later steps.
-The function signature is: \`async ({}, data, { workflow }) => { ... }\`
+The graph is a JSON object where keys are node IDs and values are node configs.
+
+**Node:** \`{ rpcName, input?, next?, onError? }\`
+
+**Data wiring (input field values):**
+- \`{"$ref": "trigger", "path": "fieldName"}\` — extract field from workflow trigger input
+- \`{"$ref": "nodeId", "path": "fieldName"}\` — extract field from a previous node's output
+- Static values passed directly: \`{"count": 10}\`
+
+**Flow control (next):**
+- \`"next": "b"\` — sequential
+- \`"next": ["b", "c"]\` — parallel fan-out
+- Omit \`next\` for terminal nodes. Entry nodes are auto-detected.
+
+**Error handling:**
+- \`"onError": "handler"\` — route to error handler on failure
 
 ### Example: Sequential
-\`\`\`typescript
-async ({}, data, { workflow }) => {
-  const doubled = await workflow.do('Double value', 'doubleValue', {
-    value: data.value,
-  })
-  const formatted = await workflow.do('Format message', 'formatMessage', {
-    greeting: 'Hello',
-    name: data.name,
-  })
-  return {
-    result: doubled.result,
-    message: formatted.message,
-  }
+\`\`\`json
+{
+  "double": { "rpcName": "doubleValue", "input": { "value": { "$ref": "trigger", "path": "value" } }, "next": "format" },
+  "format": { "rpcName": "formatMessage", "input": { "greeting": "Hello", "name": { "$ref": "trigger", "path": "name" } }, "next": "notify" },
+  "notify": { "rpcName": "sendNotification", "input": { "to": { "$ref": "trigger", "path": "name" }, "body": { "$ref": "format", "path": "message" } } }
 }
 \`\`\`
 
-### Example: Branching
-\`\`\`typescript
-async ({}, data, { workflow }) => {
-  if (data.score >= 70) {
-    const msg = await workflow.do('Premium', 'formatMessage', {
-      greeting: 'Congratulations',
-      name: data.name,
-    })
-    return { path: 'premium', message: msg.message }
-  }
-  const msg = await workflow.do('Standard', 'formatMessage', {
-    greeting: 'Thank you',
-    name: data.name,
-  })
-  return { path: 'standard', message: msg.message }
-}
-\`\`\`
-
-### Example: With retries
-\`\`\`typescript
-async ({}, data, { workflow }) => {
-  const result = await workflow.do('Fetch data', 'fetchData', {
-    id: data.id,
-  }, { retries: 3, retryDelay: '2s' })
-  return { data: result }
+### Example: Parallel
+\`\`\`json
+{
+  "fetchA": { "rpcName": "getA", "input": {}, "next": "combine" },
+  "fetchB": { "rpcName": "getB", "input": {}, "next": "combine" },
+  "combine": { "rpcName": "merge", "input": { "a": { "$ref": "fetchA", "path": "data" }, "b": { "$ref": "fetchB", "path": "data" } } }
 }
 \`\`\`
 `
 
-function buildPrompt(functionContext: string, userPrompt: string): string {
-  return `You are generating a Pikku workflow function body.
-
-${functionContext}
-
-${DSL_EXAMPLES}
-
-## Rules
-- Use ONLY functions listed above in workflow.do() calls
-- For addon functions, use the full namespaced name (e.g. 'todos:listTodos', 'emails:sendEmail')
-- The step name (first arg) should be a human-readable description
-- The function name (second arg) must exactly match a function name from the list
-- Pass input as an object matching the function's input schema
-- Store return values in variables to use in later steps
-- Return an object at the end
-
-## Task
-Generate ONLY the async function body for this workflow:
-
-${userPrompt}
-
-Respond with ONLY the code starting with \`async ({}, data, { workflow }) => {\`. No markdown fences. No explanation.`
+interface ClaudeResult {
+  text: string
+  inputTokens: number
+  outputTokens: number
+  costUsd: number
 }
 
-function buildFixPrompt(code: string, errors: string): string {
-  return `Fix the following TypeScript errors in this Pikku workflow function body.
-
-## Current Code
-\`\`\`typescript
-${code}
-\`\`\`
-
-## TypeScript Errors
-${errors}
-
-Respond with ONLY the fixed code starting with \`async ({}, data, { workflow }) => {\`. No markdown fences. No explanation.`
-}
-
-function extractCode(text: string): string {
-  let code = text.trim()
-  const fenceMatch = code.match(/```(?:typescript|ts)?\s*\n?([\s\S]*?)```/)
-  if (fenceMatch) {
-    code = fenceMatch[1]!.trim()
-  }
-  if (!code.startsWith('async')) {
-    const asyncMatch = code.match(/(async\s*\([^)]*\)\s*=>[\s\S]*)/)
-    if (asyncMatch) {
-      code = asyncMatch[1]!.trim()
-    }
-  }
-  return code
-}
-
-function callClaude(prompt: string): string {
-  return execFileSync('claude', ['-p', prompt, '--model', 'haiku'], {
-    timeout: 60_000,
-    stdio: ['pipe', 'pipe', 'pipe'],
-  }).toString()
-}
-
-function tryTsc(rootDir: string): string | null {
-  try {
-    execSync('npx tsc --noEmit', {
-      cwd: rootDir,
-      stdio: ['pipe', 'pipe', 'pipe'],
+function callClaude(prompt: string): ClaudeResult {
+  const raw = execFileSync(
+    'claude',
+    ['-p', prompt, '--model', 'haiku', '--output-format', 'json'],
+    {
       timeout: 60_000,
-    })
-    return null
-  } catch (e: any) {
-    return e.stderr?.toString() || e.stdout?.toString() || e.message
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }
+  ).toString()
+  const json = JSON.parse(raw)
+  return {
+    text: json.result ?? '',
+    inputTokens: json.usage?.input_tokens ?? 0,
+    outputTokens: json.usage?.output_tokens ?? 0,
+    costUsd: json.total_cost_usd ?? 0,
   }
 }
 
-export const generateWorkflowBody = pikkuSessionlessFunc<
-  { sourceFile: string; exportedName: string; prompt: string },
-  { success: boolean; message: string; attempts: number }
+function extractJson(text: string): Record<string, any> | null {
+  let clean = text.trim()
+  const fenceMatch = clean.match(/```(?:json)?\s*\n?([\s\S]*?)```/)
+  if (fenceMatch) {
+    clean = fenceMatch[1]!.trim()
+  }
+  const jsonMatch = clean.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) return null
+  try {
+    return JSON.parse(jsonMatch[0])
+  } catch {
+    return null
+  }
+}
+
+function computeEntryNodeIds(nodes: Record<string, any>): string[] {
+  const referenced = new Set<string>()
+  for (const node of Object.values(nodes)) {
+    if (typeof node.next === 'string') {
+      referenced.add(node.next)
+    } else if (Array.isArray(node.next)) {
+      node.next.forEach((n: string) => referenced.add(n))
+    } else if (typeof node.next === 'object' && node.next) {
+      Object.values(node.next).forEach((n: any) => referenced.add(n))
+    }
+    if (node.onError) referenced.add(node.onError)
+  }
+  return Object.keys(nodes).filter((id) => !referenced.has(id))
+}
+
+function hashString(str: string): string {
+  return createHash('sha256').update(str).digest('hex').slice(0, 12)
+}
+
+export const generateWorkflowGraph = pikkuSessionlessFunc<
+  { prompt: string; workflowName: string },
+  {
+    success: boolean
+    message: string
+    workflowName: string
+    inputTokens: number
+    outputTokens: number
+    costUsd: number
+  }
 >({
-  title: 'Generate Workflow Body',
+  title: 'Generate Workflow Graph',
   description:
-    'Uses AI to generate a workflow function body from a natural language prompt.',
+    'Uses AI to generate a workflow graph, validates it, and stores it via workflowService.',
   expose: true,
   auth: false,
-  func: async (
-    { codeEditService, wiringService },
-    { sourceFile, exportedName, prompt }
-  ) => {
-    if (!codeEditService) {
-      throw new Error('Only available in local development mode')
-    }
-
+  func: async ({ wiringService }, { prompt, workflowName }) => {
     const metaDir = pikkuState(null, 'package', 'metaDir') ?? ''
     if (!metaDir) {
       throw new Error('Only available in local development mode')
     }
-    const rootDir = dirname(metaDir)
 
     const allFunctions = Object.values(await wiringService.readFunctionsMeta())
     const schemas = await loadSchemas(metaDir)
     const functionContext = buildFunctionContext(allFunctions, schemas)
 
-    const maxAttempts = 3
-    let lastCode = ''
-    let lastError = ''
+    const fullPrompt = `You are generating a Pikku workflow graph.
 
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      let text: string
-      try {
-        if (attempt === 1) {
-          text = callClaude(buildPrompt(functionContext, prompt))
-        } else {
-          text = callClaude(buildFixPrompt(lastCode, lastError))
-        }
-      } catch (e: any) {
-        throw new Error(`AI generation failed: ${e.message}`)
-      }
+${functionContext}
 
-      const code = extractCode(text)
-      if (!code.startsWith('async')) {
-        if (attempt === maxAttempts) {
-          throw new Error('AI did not return valid workflow code after retries')
-        }
-        lastCode = code
-        lastError = 'Code must start with async ({}, data, { workflow }) => {'
-        continue
-      }
+${GRAPH_FORMAT}
 
-      lastCode = code
-      await codeEditService.updateFunctionBody(sourceFile, exportedName, code)
+## Rules
+- Use ONLY functions listed above as rpcName values
+- For addon functions, use the full namespaced name (e.g. 'todos:listTodos')
+- Always include "path" when using $ref
+- Node IDs should be descriptive camelCase names
+- Must have at least 2 nodes
 
-      execSync('npx pikku all', {
-        cwd: rootDir,
-        stdio: 'pipe',
-        timeout: 60_000,
-      })
+## Task
+Generate a workflow graph JSON for:
 
-      const tscErrors = tryTsc(rootDir)
-      if (!tscErrors) {
-        return {
-          success: true,
-          message: `Workflow generated successfully`,
-          attempts: attempt,
-        }
-      }
+${prompt}
 
-      lastError = tscErrors
-      if (attempt === maxAttempts) {
-        return {
-          success: true,
-          message: `Workflow generated but has TypeScript errors (${attempt} attempts)`,
-          attempts: attempt,
-        }
-      }
+Respond with ONLY the JSON object. No markdown fences. No explanation.`
+
+    let result: ClaudeResult
+    try {
+      result = callClaude(fullPrompt)
+    } catch (e: any) {
+      throw new Error(`AI generation failed: ${e.message}`)
     }
 
+    const nodes = extractJson(result.text)
+    if (!nodes) {
+      throw new Error('AI did not return valid JSON')
+    }
+
+    if (Object.keys(nodes).length < 2) {
+      throw new Error(
+        'Workflow must have at least 2 nodes. Use a tool call directly for single operations.'
+      )
+    }
+
+    const entryNodeIds = computeEntryNodeIds(nodes)
+    if (entryNodeIds.length === 0) {
+      throw new Error(
+        'No entry nodes found — every node is referenced by another, creating a cycle.'
+      )
+    }
+
+    const fullName = `console:${workflowName}`
+    const graphHash = hashString(JSON.stringify({ nodes, entryNodeIds }))
+
+    const graph = {
+      name: fullName,
+      pikkuFuncId: fullName,
+      source: 'ai-agent',
+      description: prompt,
+      nodes,
+      entryNodeIds,
+      graphHash,
+    }
+
+    const singletonServices = pikkuState(null, 'package', 'singletonServices')
+    if (!singletonServices?.workflowService) {
+      throw new Error('Workflow service not available')
+    }
+
+    await singletonServices.workflowService.upsertWorkflowVersion(
+      fullName,
+      graphHash,
+      graph,
+      'ai-agent',
+      'active'
+    )
+
     return {
-      success: false,
-      message: 'Failed to generate workflow',
-      attempts: maxAttempts,
+      success: true,
+      message: `Workflow '${fullName}' generated and saved`,
+      workflowName: fullName,
+      inputTokens: result.inputTokens,
+      outputTokens: result.outputTokens,
+      costUsd: result.costUsd,
     }
   },
 })

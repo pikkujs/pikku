@@ -45,13 +45,11 @@ export const createWorkflow = pikkuSessionlessFunc<
       ? `\n  description: '${description.replace(/'/g, "\\'")}',`
       : ''
 
-    const content = `import { pikkuWorkflowFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
+    const content = `import { pikkuWorkflowGraph } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
-export const ${name} = pikkuWorkflowFunc({${desc}
-  func: async ({}, data, { workflow }) => {
-    // TODO: implement workflow
-    return {}
-  },
+export const ${name} = pikkuWorkflowGraph({${desc}
+  nodes: {},
+  config: {},
 })
 `
     await writeFile(filePath, content, 'utf-8')
