@@ -1,4 +1,16 @@
-import { runPikkuFunc } from '../../function/function-runner.js'
+import { runPikkuFunc, addFunction } from '../../function/function-runner.js'
+import {
+  pikkuWorkflowWorkerFunc,
+  pikkuWorkflowOrchestratorFunc,
+  pikkuWorkflowSleeperFunc,
+} from './workflow-queue-workers.js'
+import {
+  workflowStart as coreWorkflowStart,
+  workflow as coreWorkflow,
+  workflowStatus as coreWorkflowStatus,
+} from './workflow-helpers.js'
+import { wireHTTP } from '../http/http-runner.js'
+import { wireQueueWorker } from '../queue/queue-runner.js'
 import {
   getSingletonServices,
   getCreateWireServices,
@@ -120,11 +132,64 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   constructor() {
-    // All workflow registration (HTTP routes, queue workers, sleeper) is now
-    // handled by the codegen pipeline. The inspector post-process injects
-    // synthetic entries into http.meta and queueWorkers.meta, and the codegen
-    // generates the corresponding wireHTTP()/wireQueueWorker()/addFunction()
-    // calls in the generated wiring files.
+    // Auto-register workflow queue worker functions.
+    const queueMeta = pikkuState(null, 'queue', 'meta')
+    const functions = pikkuState(null, 'function', 'functions')
+
+    for (const [queueName, meta] of Object.entries(queueMeta)) {
+      if (functions.has(meta.pikkuFuncId)) continue
+
+      if (queueName.startsWith('wf-orchestrator-')) {
+        const func = { func: pikkuWorkflowOrchestratorFunc }
+        addFunction(meta.pikkuFuncId, func)
+        wireQueueWorker({ name: queueName, func } as any)
+      } else if (queueName.startsWith('wf-step-')) {
+        const func = { func: pikkuWorkflowWorkerFunc }
+        addFunction(meta.pikkuFuncId, func)
+        wireQueueWorker({ name: queueName, func } as any)
+      }
+    }
+
+    if (!functions.has('pikkuWorkflowSleeper')) {
+      addFunction('pikkuWorkflowSleeper', {
+        func: pikkuWorkflowSleeperFunc,
+      })
+    }
+
+    // Auto-register workflow HTTP route handler functions.
+    const httpMeta = pikkuState(null, 'http', 'meta')
+    for (const [method, routes] of Object.entries(httpMeta)) {
+      for (const [route, routeMeta] of Object.entries(routes)) {
+        const funcId = routeMeta.pikkuFuncId
+        if (functions.has(funcId)) continue
+
+        if (funcId.startsWith('workflowStart:')) {
+          const wfName = funcId.slice('workflowStart:'.length)
+          wireHTTP({
+            method: method as any,
+            route,
+            auth: false,
+            func: coreWorkflowStart(wfName) as any,
+          })
+        } else if (funcId.startsWith('workflowStatus:')) {
+          const wfName = funcId.slice('workflowStatus:'.length)
+          wireHTTP({
+            method: method as any,
+            route,
+            auth: false,
+            func: coreWorkflowStatus(wfName) as any,
+          })
+        } else if (funcId.startsWith('workflow:')) {
+          const wfName = funcId.slice('workflow:'.length)
+          wireHTTP({
+            method: method as any,
+            route,
+            auth: false,
+            func: coreWorkflow(wfName) as any,
+          })
+        }
+      }
+    }
   }
 
   /**

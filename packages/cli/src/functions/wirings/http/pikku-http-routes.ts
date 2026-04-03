@@ -17,50 +17,37 @@ function serializeSyntheticRoutes(
   packageMappings: Record<string, string>
 ): string {
   const lines: string[] = []
-  // User file imports: Map<filePath, Set<exportedName>>
-  const userImports = new Map<string, Set<string>>()
-  // Framework imports: Map<packagePath, Set<factoryName>>
-  const frameworkImports = new Map<string, Set<string>>()
+  const imports = new Map<string, Set<string>>()
   let needsWireHTTP = false
   let needsRemoteMiddleware = false
 
-  // Collect all synthetic routes
+  // Collect synthetic routes that have user source files
   const syntheticRoutes: Array<{ routeMeta: any; isRemote: boolean }> = []
 
   for (const methodRoutes of Object.values(meta)) {
     for (const routeMeta of Object.values(methodRoutes)) {
-      if (!routeMeta.synthetic) continue
-
-      // Must have either user source or framework source
-      const hasUserSource = routeMeta.sourceFile && routeMeta.exportedName
-      const hasFrameworkSource = routeMeta.syntheticSource
-      if (!hasUserSource && !hasFrameworkSource) continue
-
+      if (
+        !routeMeta.synthetic ||
+        !routeMeta.sourceFile ||
+        !routeMeta.exportedName
+      ) {
+        continue
+      }
       needsWireHTTP = true
       const isRemote = routeMeta.tags?.includes('pikku:remote')
       if (isRemote) {
         needsRemoteMiddleware = true
       }
 
-      if (hasUserSource) {
-        const filePath = getFileImportRelativePath(
-          httpWiringsFile,
-          routeMeta.sourceFile,
-          packageMappings
-        )
-        if (!userImports.has(filePath)) {
-          userImports.set(filePath, new Set())
-        }
-        userImports.get(filePath)!.add(routeMeta.exportedName)
+      const filePath = getFileImportRelativePath(
+        httpWiringsFile,
+        routeMeta.sourceFile,
+        packageMappings
+      )
+      if (!imports.has(filePath)) {
+        imports.set(filePath, new Set())
       }
-
-      if (hasFrameworkSource) {
-        const src = routeMeta.syntheticSource
-        if (!frameworkImports.has(src.importPath)) {
-          frameworkImports.set(src.importPath, new Set())
-        }
-        frameworkImports.get(src.importPath)!.add(src.factoryName)
-      }
+      imports.get(filePath)!.add(routeMeta.exportedName)
 
       syntheticRoutes.push({ routeMeta, isRemote })
     }
@@ -69,7 +56,9 @@ function serializeSyntheticRoutes(
   if (!needsWireHTTP) return ''
 
   lines.push('')
-  lines.push('/* Auto-generated wireHTTP calls for synthetic routes */')
+  lines.push(
+    '/* Auto-generated wireHTTP calls for exposed/remote RPC routes */'
+  )
   lines.push("import { wireHTTP } from '@pikku/core/http'")
   if (needsRemoteMiddleware) {
     lines.push(
@@ -77,11 +66,8 @@ function serializeSyntheticRoutes(
     )
   }
 
-  for (const [filePath, names] of userImports) {
+  for (const [filePath, names] of imports) {
     lines.push(`import { ${[...names].join(', ')} } from '${filePath}'`)
-  }
-  for (const [pkgPath, names] of frameworkImports) {
-    lines.push(`import { ${[...names].join(', ')} } from '${pkgPath}'`)
   }
   lines.push('')
 
@@ -89,17 +75,6 @@ function serializeSyntheticRoutes(
     // Remote routes use auth: false — pikkuRemoteAuthMiddleware handles
     // JWT verification and session restoration before the function runs
     const auth = isRemote ? false : (routeMeta.syntheticAuth ?? true)
-    let funcExpr: string
-
-    if (routeMeta.syntheticSource) {
-      const src = routeMeta.syntheticSource
-      funcExpr = src.factoryArg
-        ? `${src.factoryName}('${src.factoryArg}') as any`
-        : `${src.factoryName} as any`
-    } else {
-      funcExpr = `${routeMeta.exportedName} as any`
-    }
-
     lines.push(`wireHTTP({`)
     lines.push(`  route: '${routeMeta.route}',`)
     lines.push(`  method: '${routeMeta.method}',`)
@@ -107,7 +82,7 @@ function serializeSyntheticRoutes(
     if (isRemote) {
       lines.push(`  middleware: [pikkuRemoteAuthMiddleware],`)
     }
-    lines.push(`  func: ${funcExpr},`)
+    lines.push(`  func: ${routeMeta.exportedName} as any,`)
     lines.push(`})`)
   }
 
