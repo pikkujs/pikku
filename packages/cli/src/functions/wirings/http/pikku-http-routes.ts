@@ -86,10 +86,12 @@ function serializeSyntheticRoutes(
     lines.push(`})`)
   }
 
-  // Generic RPC catch-all for addon namespaced calls
-  // Only generated when the meta includes the /rpc/:rpcName route
+  // Auto-wire synthetic routes that need inline runtime handlers.
+  // These routes are in the meta (from post-process) but have no user source
+  // file — the handler is generated inline.
   for (const methodRoutes of Object.values(meta)) {
     for (const routeMeta of Object.values(methodRoutes)) {
+      // Generic RPC catch-all for addon namespaced calls
       if (
         routeMeta.route?.endsWith('/rpc/:rpcName') &&
         routeMeta.method === 'post'
@@ -112,6 +114,25 @@ function serializeSyntheticRoutes(
         lines.push(`  method: 'options',`)
         lines.push(`  auth: false,`)
         lines.push(`  func: { func: async () => void 0 } as any,`)
+        lines.push(`})`)
+      }
+
+      // Agent routes — delegate to rpc.invoke() which the RPC runner
+      // resolves to the appropriate agent handler
+      const funcId = routeMeta.pikkuFuncId
+      if (
+        funcId?.startsWith('agentRun:') ||
+        funcId?.startsWith('agentStream:') ||
+        funcId?.startsWith('agentApprove:') ||
+        funcId?.startsWith('agentResume:')
+      ) {
+        lines.push(`wireHTTP({`)
+        lines.push(`  route: '${routeMeta.route}',`)
+        lines.push(`  method: '${routeMeta.method}',`)
+        lines.push(`  auth: false,`)
+        lines.push(
+          `  func: { func: async (_services: any, data: any, { rpc }: any) => rpc.invoke('${funcId}', data) } as any,`
+        )
         lines.push(`})`)
       }
     }
