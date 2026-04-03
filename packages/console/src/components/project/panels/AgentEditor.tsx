@@ -13,6 +13,7 @@ import {
 import { Save, X, AlertTriangle, CheckCircle } from 'lucide-react'
 import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
 import { useAgentSource, useUpdateAgentConfig } from '@/hooks/useCodeEdit'
+import { useAddonFunctions } from '@/hooks/useAddonFunctions'
 import { usePikkuMeta } from '@/context/PikkuMetaContext'
 
 interface AgentEditorProps {
@@ -37,6 +38,7 @@ export const AgentEditor: React.FunctionComponent<AgentEditorProps> = ({
   )
   const updateAgent = useUpdateAgentConfig()
   const { meta } = usePikkuMeta()
+  const { data: addonFunctions } = useAddonFunctions()
   const modelAliases = meta.modelAliases ?? []
 
   const [description, setDescription] = useState('')
@@ -114,13 +116,26 @@ export const AgentEditor: React.FunctionComponent<AgentEditorProps> = ({
   const modelOptions = Array.from(new Set([...modelAliases, ...(model ? [model] : [])]))
 
   const allFunctions = meta.functions ?? []
-  const toolOptions = allFunctions
+  const localOptions = allFunctions
     .filter((f: any) => f.functionType === 'user')
-    .map((f: any) => {
-      const id = f.pikkuFuncId as string
-      return { value: id, label: id }
+    .map((f: any) => ({
+      value: f.pikkuFuncId as string,
+      label: f.pikkuFuncId as string,
+      group: 'Local',
+    }))
+  const addonOptions = (addonFunctions ?? []).map((f) => ({
+    value: f.funcId,
+    label: f.funcId,
+    group: f.namespace,
+  }))
+  const seen = new Set<string>()
+  const toolOptions = [...addonOptions, ...localOptions]
+    .filter((o) => {
+      if (seen.has(o.value)) return false
+      seen.add(o.value)
+      return true
     })
-    .sort((a: any, b: any) => a.label.localeCompare(b.label))
+    .sort((a, b) => a.label.localeCompare(b.label))
 
   return (
     <Stack gap="md">
