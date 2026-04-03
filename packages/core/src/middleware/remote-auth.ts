@@ -42,8 +42,10 @@ export const pikkuRemoteAuthMiddleware = pikkuMiddleware(
       throw new UnauthorizedError()
     }
 
-    if (payload?.fn && http.request.path().startsWith('/rpc/')) {
-      const fn = decodeURIComponent(http.request.path().slice('/rpc/'.length))
+    if (payload?.fn && http.request.path().startsWith('/remote/rpc/')) {
+      const fn = decodeURIComponent(
+        http.request.path().slice('/remote/rpc/'.length)
+      )
       if (fn && payload.fn !== fn) {
         throw new UnauthorizedError()
       }
