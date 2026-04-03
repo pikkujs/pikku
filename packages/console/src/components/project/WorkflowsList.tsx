@@ -1,7 +1,17 @@
 import React, { useState, useMemo } from 'react'
-import { Text, Badge } from '@mantine/core'
+import {
+  Text,
+  Badge,
+  Button,
+  Modal,
+  Stack,
+  TextInput,
+  Textarea,
+  Alert,
+} from '@mantine/core'
 import { useNavigate } from '@/router'
-import { GitBranch } from 'lucide-react'
+import { GitBranch, Plus, CheckCircle } from 'lucide-react'
+import { useCreateWorkflow } from '@/hooks/useWorkflowEditor'
 import { TableListPage } from '@/components/layout/TableListPage'
 import { PikkuBadge } from '@/components/ui/PikkuBadge'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
@@ -55,7 +65,11 @@ export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
   aiWorkflows,
 }) => {
   const [filter, setFilter] = useState<FilterValue>('all')
+  const [createOpen, setCreateOpen] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newDescription, setNewDescription] = useState('')
   const navigate = useNavigate()
+  const createWorkflow = useCreateWorkflow()
 
   const sortedWorkflows = useMemo(() => {
     const all: Workflow[] = workflows ? Object.values(workflows) : []
@@ -89,7 +103,60 @@ export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
     return sortedWorkflows
   }, [sortedWorkflows, filter])
 
+  const handleCreate = async () => {
+    if (!newName.trim()) return
+    try {
+      const result = await createWorkflow.mutateAsync({
+        name: newName.trim(),
+        description: newDescription.trim() || undefined,
+      })
+      setCreateOpen(false)
+      setNewName('')
+      setNewDescription('')
+      navigate(`/workflow?id=${encodeURIComponent(newName.trim())}`)
+    } catch {}
+  }
+
   return (
+    <>
+      <Modal
+        opened={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="New Workflow"
+        size="sm"
+      >
+        <Stack gap="sm">
+          <TextInput
+            label="Name"
+            placeholder="myWorkflow"
+            value={newName}
+            onChange={(e) => setNewName(e.currentTarget.value)}
+            size="xs"
+            description="camelCase, e.g. processOrder"
+          />
+          <Textarea
+            label="Description"
+            placeholder="What does this workflow do?"
+            value={newDescription}
+            onChange={(e) => setNewDescription(e.currentTarget.value)}
+            size="xs"
+            minRows={2}
+          />
+          {createWorkflow.error && (
+            <Alert color="red">
+              {(createWorkflow.error as Error).message}
+            </Alert>
+          )}
+          <Button
+            onClick={handleCreate}
+            loading={createWorkflow.isPending}
+            size="xs"
+            fullWidth
+          >
+            Create Workflow
+          </Button>
+        </Stack>
+      </Modal>
     <TableListPage
       title="Workflows"
       icon={GitBranch}
@@ -105,6 +172,16 @@ export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
         false
       }
       emptyMessage="No workflows found."
+      headerRight={
+        <Button
+          size="xs"
+          leftSection={<Plus size={14} />}
+          onClick={() => setCreateOpen(true)}
+        >
+          New Workflow
+        </Button>
+      }
     />
+    </>
   )
 }

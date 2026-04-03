@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   Stack,
   Text,
@@ -8,8 +8,13 @@ import {
   Box,
   Code,
   Anchor,
+  Textarea,
+  Button,
+  Alert,
 } from '@mantine/core'
-import { GitBranch } from 'lucide-react'
+import { GitBranch, Sparkles, AlertTriangle, CheckCircle } from 'lucide-react'
+import { useGenerateWorkflowBody } from '@/hooks/useWorkflowEditor'
+import { useFunctionSource } from '@/hooks/useCodeEdit'
 import { useLink } from '@/router'
 import { useWorkflowContext } from '@/context/WorkflowContext'
 import { useWorkflowRunContextSafe } from '@/context/WorkflowRunContext'
@@ -129,6 +134,74 @@ const WorkflowWiring: React.FunctionComponent<{ wiredTo: WiredTo }> = ({
   )
 }
 
+const WorkflowAIGenerate: React.FunctionComponent<{
+  workflowId: string
+  sourceFile?: string
+  exportedName?: string
+}> = ({ workflowId, sourceFile, exportedName }) => {
+  const [prompt, setPrompt] = useState('')
+  const [success, setSuccess] = useState<string | null>(null)
+  const generateBody = useGenerateWorkflowBody()
+
+  if (!sourceFile || !exportedName) return null
+
+  const handleGenerate = async () => {
+    if (!prompt.trim()) return
+    setSuccess(null)
+    try {
+      const result = await generateBody.mutateAsync({
+        sourceFile,
+        exportedName,
+        prompt: prompt.trim(),
+      })
+      setSuccess(
+        `${result.message} (${result.attempts} attempt${result.attempts > 1 ? 's' : ''})`
+      )
+    } catch {}
+  }
+
+  return (
+    <Box>
+      <SectionLabel>Generate with AI</SectionLabel>
+      <Stack gap="xs">
+        <Textarea
+          placeholder="Describe what this workflow should do..."
+          value={prompt}
+          onChange={(e) => setPrompt(e.currentTarget.value)}
+          minRows={3}
+          maxRows={8}
+          autosize
+          size="xs"
+        />
+        <Button
+          size="xs"
+          leftSection={<Sparkles size={14} />}
+          onClick={handleGenerate}
+          loading={generateBody.isPending}
+          disabled={!prompt.trim()}
+        >
+          Generate
+        </Button>
+        {success && (
+          <Alert
+            color="green"
+            icon={<CheckCircle size={16} />}
+            withCloseButton
+            onClose={() => setSuccess(null)}
+          >
+            {success}
+          </Alert>
+        )}
+        {generateBody.error && (
+          <Alert color="red" icon={<AlertTriangle size={16} />}>
+            {(generateBody.error as Error).message}
+          </Alert>
+        )}
+      </Stack>
+    </Box>
+  )
+}
+
 export const WorkflowConfiguration: React.FunctionComponent<
   WorkflowPanelProps
 > = ({ workflowId }) => {
@@ -161,6 +234,12 @@ export const WorkflowConfiguration: React.FunctionComponent<
         middleware={middleware}
         permissions={permissions}
         tags={tags}
+      />
+
+      <WorkflowAIGenerate
+        workflowId={workflowId}
+        sourceFile={(workflow as any)?.sourceFile}
+        exportedName={(workflow as any)?.exportedName}
       />
     </Stack>
   )
