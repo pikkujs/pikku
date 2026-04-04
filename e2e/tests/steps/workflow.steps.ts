@@ -221,7 +221,7 @@ When(
     const res = await fetch(`${config.apiUrl}/rpc/${rpcName}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: { runId: state.lastRunId } }),
+      body: JSON.stringify({ runId: state.lastRunId }),
     })
     state.consoleResponse = await res.json()
   }

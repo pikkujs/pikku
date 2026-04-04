@@ -13,7 +13,7 @@ When(
     const res = await fetch(`${config.apiUrl}/rpc/console:getWorkflowRuns`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: { workflowName, limit: 1 } }),
+      body: JSON.stringify({ workflowName, limit: 1 }),
     })
     const runs = await res.json()
     expect(Array.isArray(runs) && runs.length > 0, 'No runs found').toBeTruthy()
