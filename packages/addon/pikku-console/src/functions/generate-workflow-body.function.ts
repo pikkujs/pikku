@@ -4,6 +4,10 @@ import { join, dirname } from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { pikkuState } from '@pikku/core/internal'
+import {
+  validateWorkflowWiring,
+  computeEntryNodeIds as computeEntryNodeIdsFromCore,
+} from '@pikku/core/workflow'
 import type { FunctionMeta } from '../services/wiring.service.js'
 
 async function loadSchemas(metaDir: string): Promise<Record<string, any>> {
@@ -142,21 +146,6 @@ function extractJson(text: string): Record<string, any> | null {
   }
 }
 
-function computeEntryNodeIds(nodes: Record<string, any>): string[] {
-  const referenced = new Set<string>()
-  for (const node of Object.values(nodes)) {
-    if (typeof node.next === 'string') {
-      referenced.add(node.next)
-    } else if (Array.isArray(node.next)) {
-      node.next.forEach((n: string) => referenced.add(n))
-    } else if (typeof node.next === 'object' && node.next) {
-      Object.values(node.next).forEach((n: any) => referenced.add(n))
-    }
-    if (node.onError) referenced.add(node.onError)
-  }
-  return Object.keys(nodes).filter((id) => !referenced.has(id))
-}
-
 function hashString(str: string): string {
   return createHash('sha256').update(str).digest('hex').slice(0, 12)
 }
@@ -228,7 +217,15 @@ Respond with ONLY the JSON object. No markdown fences. No explanation.`
       )
     }
 
-    const entryNodeIds = computeEntryNodeIds(nodes)
+    const toolNames = allFunctions.map((f) => f.pikkuFuncId)
+    const validationErrors = validateWorkflowWiring(nodes, toolNames)
+    if (validationErrors.length > 0) {
+      throw new Error(
+        `Workflow validation failed:\n${validationErrors.join('\n')}`
+      )
+    }
+
+    const entryNodeIds = computeEntryNodeIdsFromCore(nodes)
     if (entryNodeIds.length === 0) {
       throw new Error(
         'No entry nodes found — every node is referenced by another, creating a cycle.'
