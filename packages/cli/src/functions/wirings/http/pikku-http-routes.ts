@@ -130,7 +130,7 @@ function serializeSyntheticRoutes(
         )
       } else if (funcId === 'agentStream:*') {
         lines.push(
-          `wireHTTP({ route: '${routeMeta.route}', method: '${routeMeta.method}', auth: false, sse: true,`
+          `wireHTTP({ route: '${routeMeta.route}', method: '${routeMeta.method}', auth: false,`
         )
         lines.push(
           `  func: { func: async (_s: any, data: any, { rpc }: any) => { const { agentName, ...rest } = data; return rpc.agent.stream(agentName, rest) } } as any })`
@@ -144,7 +144,7 @@ function serializeSyntheticRoutes(
         )
       } else if (funcId === 'agentResume:*') {
         lines.push(
-          `wireHTTP({ route: '${routeMeta.route}', method: '${routeMeta.method}', auth: false, sse: true,`
+          `wireHTTP({ route: '${routeMeta.route}', method: '${routeMeta.method}', auth: false,`
         )
         lines.push(
           `  func: { func: async (_s: any, data: any, { rpc }: any) => { const { agentName, runId, ...rest } = data; return rpc.agent.resume(runId, rest) } } as any })`
@@ -160,7 +160,7 @@ function serializeSyntheticRoutes(
       } else if (funcId?.startsWith('agentStream:')) {
         const name = funcId.slice('agentStream:'.length)
         lines.push(
-          `wireHTTP({ route: '${routeMeta.route}', method: '${routeMeta.method}', auth: false, sse: true,`
+          `wireHTTP({ route: '${routeMeta.route}', method: '${routeMeta.method}', auth: false,`
         )
         lines.push(
           `  func: { func: async (_s: any, data: any, { rpc }: any) => rpc.agent.stream('${name}', data) } as any })`
@@ -175,7 +175,7 @@ function serializeSyntheticRoutes(
         )
       } else if (funcId?.startsWith('agentResume:')) {
         lines.push(
-          `wireHTTP({ route: '${routeMeta.route}', method: '${routeMeta.method}', auth: false, sse: true,`
+          `wireHTTP({ route: '${routeMeta.route}', method: '${routeMeta.method}', auth: false,`
         )
         lines.push(
           `  func: { func: async (_s: any, data: any, { rpc }: any) => rpc.agent.resume(data.runId, data) } as any })`
