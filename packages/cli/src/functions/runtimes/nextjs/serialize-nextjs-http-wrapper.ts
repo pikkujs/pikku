@@ -178,7 +178,7 @@ export const pikku = (options?: CorePikkuFetchOptions) => {
     rpcName: Name,
     data: FlattenedRPCMap[Name]['input']
   ): Promise<FlattenedRPCMap[Name]['output']> => {
-    return dynamicActionRequest('${globalHTTPPrefix}/rpc/:rpcName' as any, 'POST' as any, { rpcName, ...(data ?? {}) }) as unknown as FlattenedRPCMap[Name]['output']
+    return dynamicActionRequest('${globalHTTPPrefix}/rpc/:rpcName' as any, 'POST' as any, { rpcName, ...(data != null && typeof data === 'object' ? data : {}) }) as unknown as FlattenedRPCMap[Name]['output']
   }
 
   /**
@@ -194,7 +194,7 @@ export const pikku = (options?: CorePikkuFetchOptions) => {
     rpcName: Name,
     data: FlattenedRPCMap[Name]['input']
   ): Promise<FlattenedRPCMap[Name]['output']> => {
-    return staticActionRequest('${globalHTTPPrefix}/rpc/:rpcName' as any, 'POST' as any, { rpcName, ...(data ?? {}) }) as unknown as FlattenedRPCMap[Name]['output']
+    return staticActionRequest('${globalHTTPPrefix}/rpc/:rpcName' as any, 'POST' as any, { rpcName, ...(data != null && typeof data === 'object' ? data : {}) }) as unknown as FlattenedRPCMap[Name]['output']
   }
 
   return {
