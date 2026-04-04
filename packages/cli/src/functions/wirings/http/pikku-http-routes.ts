@@ -101,7 +101,7 @@ function serializeSyntheticRoutes(
         lines.push(`  method: 'post',`)
         lines.push(`  auth: false,`)
         lines.push(
-          `  func: { func: async (_services: any, { rpcName, data }: any, { rpc }: any) => rpc.exposed(rpcName, data) } as any,`
+          `  func: { func: async (_services: any, data: any, { rpc }: any) => { const { rpcName, ...rest } = data; return rpc.exposed(rpcName ?? '', rest) } } as any,`
         )
         lines.push(`})`)
       }
@@ -117,9 +117,39 @@ function serializeSyntheticRoutes(
         lines.push(`})`)
       }
 
-      // Agent routes — call rpc.agent methods directly
+      // Agent routes — call rpc.agent methods directly.
+      // Per-agent routes (agentRun:todoAssistant) hardcode the name.
+      // Catch-all routes (agentRun:*) extract agentName from URL params merged into data.
       const funcId = routeMeta.pikkuFuncId
-      if (funcId?.startsWith('agentRun:')) {
+      if (funcId === 'agentRun:*') {
+        lines.push(
+          `wireHTTP({ route: '${routeMeta.route}', method: '${routeMeta.method}', auth: false,`
+        )
+        lines.push(
+          `  func: { func: async (_s: any, data: any, { rpc }: any) => { const { agentName, ...rest } = data; return rpc.agent.run(agentName, rest) } } as any })`
+        )
+      } else if (funcId === 'agentStream:*') {
+        lines.push(
+          `wireHTTP({ route: '${routeMeta.route}', method: '${routeMeta.method}', auth: false, sse: true,`
+        )
+        lines.push(
+          `  func: { func: async (_s: any, data: any, { rpc }: any) => { const { agentName, ...rest } = data; return rpc.agent.stream(agentName, rest) } } as any })`
+        )
+      } else if (funcId === 'agentApprove:*') {
+        lines.push(
+          `wireHTTP({ route: '${routeMeta.route}', method: '${routeMeta.method}', auth: false,`
+        )
+        lines.push(
+          `  func: { func: async (_s: any, data: any, { rpc }: any) => { const { agentName, runId, ...rest } = data; return rpc.agent.approve(runId, rest.approvals, agentName) } } as any })`
+        )
+      } else if (funcId === 'agentResume:*') {
+        lines.push(
+          `wireHTTP({ route: '${routeMeta.route}', method: '${routeMeta.method}', auth: false, sse: true,`
+        )
+        lines.push(
+          `  func: { func: async (_s: any, data: any, { rpc }: any) => { const { agentName, runId, ...rest } = data; return rpc.agent.resume(runId, rest) } } as any })`
+        )
+      } else if (funcId?.startsWith('agentRun:')) {
         const name = funcId.slice('agentRun:'.length)
         lines.push(
           `wireHTTP({ route: '${routeMeta.route}', method: '${routeMeta.method}', auth: false,`
@@ -130,7 +160,7 @@ function serializeSyntheticRoutes(
       } else if (funcId?.startsWith('agentStream:')) {
         const name = funcId.slice('agentStream:'.length)
         lines.push(
-          `wireHTTP({ route: '${routeMeta.route}', method: '${routeMeta.method}', auth: false,`
+          `wireHTTP({ route: '${routeMeta.route}', method: '${routeMeta.method}', auth: false, sse: true,`
         )
         lines.push(
           `  func: { func: async (_s: any, data: any, { rpc }: any) => rpc.agent.stream('${name}', data) } as any })`
@@ -145,7 +175,7 @@ function serializeSyntheticRoutes(
         )
       } else if (funcId?.startsWith('agentResume:')) {
         lines.push(
-          `wireHTTP({ route: '${routeMeta.route}', method: '${routeMeta.method}', auth: false,`
+          `wireHTTP({ route: '${routeMeta.route}', method: '${routeMeta.method}', auth: false, sse: true,`
         )
         lines.push(
           `  func: { func: async (_s: any, data: any, { rpc }: any) => rpc.agent.resume(data.runId, data) } as any })`

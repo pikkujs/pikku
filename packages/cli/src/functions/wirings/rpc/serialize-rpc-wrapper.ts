@@ -59,7 +59,7 @@ export class PikkuRPC {
      * @returns A promise that resolves with the function's return value
      */
     invoke: RPCInvoke = async (rpcName, data) => {
-       return await this.pikkuFetch.post(\`${globalHTTPPrefix}/rpc/\${String(rpcName)}\` as never, { rpcName: String(rpcName), data }) as any
+       return await this.pikkuFetch.post(\`${globalHTTPPrefix}/rpc/\${String(rpcName)}\` as never, data ?? null) as any
     }
 
     /**
@@ -71,7 +71,7 @@ export class PikkuRPC {
      * @returns A promise that resolves with the new run ID
      */
     startWorkflow: TypedStartWorkflow = async (workflowName, input) => {
-        return await this.pikkuFetch.post(\`${globalHTTPPrefix}/rpc/workflow/\${String(workflowName)}\` as never, { workflowName: String(workflowName), input }) as any
+        return await this.pikkuFetch.post(\`${globalHTTPPrefix}/rpc/workflow/\${String(workflowName)}\` as never, input ?? null) as any
     }
 
     /**

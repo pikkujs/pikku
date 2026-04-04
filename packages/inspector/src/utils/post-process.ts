@@ -481,6 +481,46 @@ export function injectExposedRoutes(
     )
   }
 
+  // Agent catch-all routes for runtime routing (monolith and serverless).
+  // The per-agent routes above are used by the deploy analyzer to generate
+  // serverless config (one Lambda per agent). These catch-alls are used by
+  // the runtime router to handle any agent by name.
+  const hasAgents = Object.keys(state.agents.agentsMeta).length > 0
+  if (hasAgents) {
+    addRoute(
+      'post',
+      `${prefix}/rpc/agent/:agentName`,
+      'agentRun:*',
+      'null',
+      'null',
+      { params: ['agentName'] }
+    )
+    addRoute(
+      'post',
+      `${prefix}/rpc/agent/:agentName/stream`,
+      'agentStream:*',
+      'null',
+      'null',
+      { sse: true, params: ['agentName'] }
+    )
+    addRoute(
+      'post',
+      `${prefix}/rpc/agent/:agentName/approve/:runId`,
+      'agentApprove:*',
+      'null',
+      'null',
+      { params: ['agentName', 'runId'] }
+    )
+    addRoute(
+      'post',
+      `${prefix}/rpc/agent/:agentName/resume/:runId`,
+      'agentResume:*',
+      'null',
+      'null',
+      { sse: true, params: ['agentName', 'runId'] }
+    )
+  }
+
   // Inject workflow queue workers.
   // Each workflow orchestrator gets its own queue: wf-orchestrator-{name}
   // Each non-inline step function gets its own queue: wf-step-{rpcName}
