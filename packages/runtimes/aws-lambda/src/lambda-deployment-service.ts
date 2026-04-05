@@ -73,7 +73,7 @@ export class LambdaDeploymentService implements DeploymentService {
       headers.authorization = `Bearer ${token}`
     }
 
-    // Build a synthetic API Gateway event for the target Lambda
+    // Build an API Gateway v2 event for the target Lambda
     const rpcPath = `/remote/rpc/${encodeURIComponent(funcName)}`
     const apiGatewayEvent = {
       httpMethod: 'POST',
