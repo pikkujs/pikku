@@ -1,12 +1,7 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { PikkuKysely, PgKyselyDeploymentService } from '@pikku/kysely-postgres'
 import type { KyselyPikkuDB } from '@pikku/kysely-postgres'
-import {
-  ConsoleLogger,
-  LocalSecretService,
-  LocalVariablesService,
-} from '@pikku/core/services'
-import { JoseJWTService } from '@pikku/jose'
+import { ConsoleLogger } from '@pikku/core/services'
 import {
   createConfig,
   createSingletonServices,
@@ -27,31 +22,15 @@ async function main(): Promise<void> {
         'postgres://postgres:password@localhost:5432/pikku_remote_rpc'
     )
     await pikkuKysely.init()
-    const variables = new LocalVariablesService({
-      PIKKU_REMOTE_SECRET: 'dev-remote-secret-at-least-32-characters-long',
-    })
-    const secrets = new LocalSecretService(variables)
-    const jwt = new JoseJWTService(async () => [
-      {
-        id: 'remote-key',
-        value: 'dev-remote-secret-at-least-32-characters-long',
-      },
-    ])
-    await jwt.init()
-
     const deploymentService = new PgKyselyDeploymentService(
       { heartbeatInterval: 5000, heartbeatTtl: 15000 },
-      pikkuKysely.kysely,
-      jwt,
-      secrets
+      pikkuKysely.kysely
     )
 
     await deploymentService.init()
 
     const singletonServices = await createSingletonServices(config, {
       logger,
-      secrets,
-      jwt,
       deploymentService,
     })
 

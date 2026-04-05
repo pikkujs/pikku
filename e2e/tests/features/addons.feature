@@ -1,4 +1,4 @@
-@addons @console @flaky
+@addons @console
 Feature: Addons Page
 
   Background:

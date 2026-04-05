@@ -9,15 +9,12 @@ const RETRY_INTERVAL = 2000
 const start = Date.now()
 
 async function testWorkflowStart() {
-  const result = await pikkuFetch.post(
-    '/workflow/createAndNotifyWorkflow/start',
-    {
-      userId: 'user1',
-      title: 'Workflow test todo start/status',
-      priority: 'high',
-      dueDate: '2025-12-31',
-    }
-  )
+  const result = await pikkuFetch.post('/workflow/create-todo', {
+    userId: 'user1',
+    title: 'Workflow test todo start/status',
+    priority: 'high',
+    dueDate: '2025-12-31',
+  })
   if (!result.runId) {
     throw new Error('workflowStart: missing runId')
   }
@@ -26,10 +23,7 @@ async function testWorkflowStart() {
 }
 
 async function testWorkflowStatus(runId: string) {
-  const result = await pikkuFetch.get(
-    '/workflow/createAndNotifyWorkflow/status/:runId',
-    { runId }
-  )
+  const result = await pikkuFetch.get('/workflow/status/:runId', { runId })
   if (!result.id || !result.status) {
     throw new Error('workflowStatus: missing id or status')
   }
@@ -40,15 +34,12 @@ async function testWorkflowStatus(runId: string) {
 }
 
 async function testWorkflowRun() {
-  const result = await pikkuFetch.post(
-    '/workflow/createAndNotifyWorkflow/run',
-    {
-      userId: 'user2',
-      title: 'Workflow test todo inline',
-      priority: 'high',
-      dueDate: '2025-12-31',
-    }
-  )
+  const result = await pikkuFetch.post('/workflow/run-todo', {
+    userId: 'user2',
+    title: 'Workflow test todo inline',
+    priority: 'high',
+    dueDate: '2025-12-31',
+  })
   console.log('  workflow (run-to-completion) returned:', result)
 }
 
