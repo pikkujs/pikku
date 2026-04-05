@@ -57,7 +57,7 @@ export function analyzeDeployment(
   // Each function gets one unit. Collect all its triggers.
 
   for (const [funcId, funcMeta] of entries(functionsMeta)) {
-    // Skip synthetic functions — their routes/queues are handled by gateway units
+    // Skip platform functions — their routes/queues are handled by gateway units
     if (
       funcId.startsWith('agentRun:') ||
       funcId.startsWith('agentStream:') ||
@@ -148,7 +148,7 @@ export function analyzeDeployment(
       { capability: 'ai-storage', sourceServiceName: 'aiStorage' },
     ]
 
-    // Collect HTTP routes for the agent's synthetic functions
+    // Collect HTTP routes for the agent's functions
     const agentRoutes = [
       ...collectHttpRoutes(httpMeta, `agentRun:${agentName}`),
       ...collectHttpRoutes(httpMeta, `agentStream:${agentName}`),
@@ -414,7 +414,7 @@ function buildWorkflows(
       { capability: 'queue', sourceServiceName: 'queueService' },
     ]
 
-    // Collect HTTP routes for the workflow's synthetic functions
+    // Collect HTTP routes for the workflow's functions
     const wfRoutes = [
       ...collectHttpRoutes(httpMeta, `workflowStart:${graph.name}`),
       ...collectHttpRoutes(httpMeta, `workflow:${graph.name}`),

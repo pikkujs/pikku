@@ -80,7 +80,7 @@ function collectFilterNames(
       const agentDef = manifest.agents.find((a) => a.unitName === unit.name)
       if (agentDef) {
         names.add(agentDef.name)
-        // Synthetic HTTP route functions
+        // HTTP route functions
         names.add(`agentRun:${agentDef.name}`)
         names.add(`agentStream:${agentDef.name}`)
         names.add(`agentApprove:${agentDef.name}`)
@@ -117,7 +117,7 @@ function collectFilterNames(
     }
     case 'workflow': {
       // Workflow orchestrators need the workflow function itself,
-      // the step function IDs, synthetic HTTP route functions,
+      // the step function IDs, HTTP route functions,
       // and queue worker names (wf-orchestrator-*, wf-step-*)
       const wfDef = manifest.workflows.find(
         (w) => w.orchestratorUnit === unit.name
@@ -125,7 +125,7 @@ function collectFilterNames(
       if (wfDef) {
         names.add(wfDef.pikkuFuncId)
         names.add(wfDef.name)
-        // Synthetic HTTP route functions
+        // HTTP route functions
         names.add(`workflowStart:${wfDef.name}`)
         names.add(`workflow:${wfDef.name}`)
         names.add(`workflowStatus:${wfDef.name}`)

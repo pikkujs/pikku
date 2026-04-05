@@ -280,7 +280,7 @@ export function filterInspectorState(
           filteredState.serviceAggregation.usedFunctions.add(
             routeMeta.pikkuFuncId
           )
-          // For synthetic workflow/agent routes, also add the base name
+          // For workflow/agent routes, also add the base name
           // so the workflow/agent definition survives pruning
           const colonIdx = routeMeta.pikkuFuncId.indexOf(':')
           if (colonIdx !== -1) {
