@@ -18,23 +18,23 @@ function assertWorkflowService(workflowService: unknown): asserts workflowServic
 }
 
 export const workflowStarter = pikkuSessionlessFunc<
-  { workflowName: string; data?: unknown },
+  { workflowName: string; [key: string]: unknown },
   { runId: string }
 >({
   auth: ${authFlag},
-  func: async (_services, { workflowName, data }, { rpc }) => {
-    return await rpc.startWorkflow(workflowName as any, data ?? {})
+  func: async (_services, { workflowName, ...data }, { rpc }) => {
+    return await rpc.startWorkflow(workflowName as any, data)
   },
 })
 
 export const workflowRunner = pikkuSessionlessFunc<
-  { workflowName: string; data?: unknown },
+  { workflowName: string; [key: string]: unknown },
   unknown
 >({
   auth: ${authFlag},
-  func: async ({ workflowService }, { workflowName, data }, { rpc }) => {
+  func: async ({ workflowService }, { workflowName, ...data }, { rpc }) => {
     assertWorkflowService(workflowService)
-    return await workflowService.runToCompletion(workflowName, data ?? {}, rpc)
+    return await workflowService.runToCompletion(workflowName, data, rpc)
   },
 })
 
@@ -57,12 +57,12 @@ export const workflowStatusChecker = pikkuSessionlessFunc<
 })
 
 export const graphStarter = pikkuSessionlessFunc<
-  { workflowName: string; nodeId: string; data?: unknown },
+  { workflowName: string; nodeId: string; [key: string]: unknown },
   { runId: string }
 >({
   auth: ${authFlag},
-  func: async (_services, { workflowName, nodeId, data }, { rpc }) => {
-    return await rpc.startWorkflow(workflowName as any, data ?? {}, { startNode: nodeId })
+  func: async (_services, { workflowName, nodeId, ...data }, { rpc }) => {
+    return await rpc.startWorkflow(workflowName as any, data, { startNode: nodeId })
   },
 })
 
