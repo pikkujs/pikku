@@ -50,7 +50,6 @@ export interface PikkuCLICoreOutputFiles {
   publicRpcFile: string
   publicAgentFile: string
   consoleFunctionsFile: string
-  workflowWorkersFile: string
   workflowRoutesFile: string
 
   // Triggers

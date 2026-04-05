@@ -256,12 +256,6 @@ const _getPikkuCLIConfig = async (
         'rpc-remote.gen.ts'
       )
     }
-    if (!result.workflowWorkersFile) {
-      result.workflowWorkersFile = join(
-        resolvedScaffoldDir,
-        'workflow-workers.gen.ts'
-      )
-    }
     if (!result.workflowRoutesFile) {
       result.workflowRoutesFile = join(
         resolvedScaffoldDir,

@@ -134,17 +134,15 @@ export const all = pikkuVoidFunc({
     const workflows = await rpc.invoke('pikkuWorkflow', null)
 
     let remoteRPC = false
-    let workflowWorkers = false
     let workflowRoutes = false
     if (!config.addon) {
       remoteRPC = await rpc.invoke('pikkuRemoteRPC', null)
       if (workflows) {
-        workflowWorkers = await rpc.invoke('pikkuWorkflowWorkers', null)
         workflowRoutes = await rpc.invoke('pikkuWorkflowRoutes', null)
       }
     }
 
-    if (workflows || remoteRPC || workflowWorkers || workflowRoutes) {
+    if (workflows || remoteRPC || workflowRoutes) {
       await getInspectorState(true)
       await rpc.invoke('pikkuSchemas', null)
     }

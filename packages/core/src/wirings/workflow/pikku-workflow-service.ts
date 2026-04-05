@@ -126,10 +126,22 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   constructor() {
-    // Auto-register workflow queue worker functions.
     const queueMeta = pikkuState(null, 'queue', 'meta')
     const functions = pikkuState(null, 'function', 'functions')
 
+    // Register shared queue workers for monolith deployments
+    if (!functions.has('pikkuWorkflowOrchestrator')) {
+      const func = { func: pikkuWorkflowOrchestratorFunc }
+      addFunction('pikkuWorkflowOrchestrator', func)
+      wireQueueWorker({ name: 'pikku-workflow-orchestrator', func } as any)
+    }
+    if (!functions.has('pikkuWorkflowStepWorker')) {
+      const func = { func: pikkuWorkflowWorkerFunc }
+      addFunction('pikkuWorkflowStepWorker', func)
+      wireQueueWorker({ name: 'pikku-workflow-step-worker', func } as any)
+    }
+
+    // Register per-workflow queue workers for serverless deployments
     for (const [queueName, meta] of Object.entries(queueMeta)) {
       if (functions.has(meta.pikkuFuncId)) continue
 
@@ -149,9 +161,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         func: pikkuWorkflowSleeperFunc,
       })
     }
-
-    // Workflow and agent HTTP routes are handled by scaffold-generated
-    // catch-all wiring files.
   }
 
   /**
