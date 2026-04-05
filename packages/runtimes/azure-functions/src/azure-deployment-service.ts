@@ -74,7 +74,7 @@ export class AzureDeploymentService implements DeploymentService {
     const response = await fetch(url, {
       method: 'POST',
       headers,
-      body: JSON.stringify(data),
+      body: JSON.stringify({ data }),
     })
 
     if (!response.ok) {

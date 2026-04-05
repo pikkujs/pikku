@@ -109,7 +109,13 @@ export class RedisDeploymentService implements DeploymentService {
     session?: unknown,
     traceId?: string
   ): Promise<unknown> {
-    const headers = await buildRemoteHeaders(this.jwt, this.secrets, funcName, session, traceId)
+    const headers = await buildRemoteHeaders(
+      this.jwt,
+      this.secrets,
+      funcName,
+      session,
+      traceId
+    )
     const indexKey = this.functionsIndexKey(funcName)
     const now = Date.now()
 
@@ -133,7 +139,7 @@ export class RedisDeploymentService implements DeploymentService {
     const response = await fetch(url, {
       method: 'POST',
       headers,
-      body: JSON.stringify(data),
+      body: JSON.stringify({ data }),
     })
     if (!response.ok) {
       throw new Error(
