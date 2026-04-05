@@ -1,6 +1,12 @@
 import { PikkuExpressServer } from '@pikku/express'
 import { RedisDeploymentService } from '@pikku/redis'
 import {
+  ConsoleLogger,
+  LocalSecretService,
+  LocalVariablesService,
+} from '@pikku/core/services'
+import { JoseJWTService } from '@pikku/jose'
+import {
   createConfig,
   createSingletonServices,
 } from '../../functions/src/services.js'
@@ -13,15 +19,32 @@ async function main(): Promise<void> {
   try {
     const config = await createConfig()
 
+    const variables = new LocalVariablesService({
+      PIKKU_REMOTE_SECRET: 'dev-remote-secret-at-least-32-characters-long',
+    })
+    const secrets = new LocalSecretService(variables)
+    const jwt = new JoseJWTService(async () => [
+      {
+        id: 'remote-key',
+        value: 'dev-remote-secret-at-least-32-characters-long',
+      },
+    ])
+    await jwt.init()
+
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379'
     const deploymentService = new RedisDeploymentService(
       { heartbeatInterval: 5000, heartbeatTtl: 15000 },
-      redisUrl
+      redisUrl,
+      'pikku',
+      jwt,
+      secrets
     )
 
     await deploymentService.init()
 
     const singletonServices = await createSingletonServices(config, {
+      secrets,
+      jwt,
       deploymentService,
     })
 
