@@ -71,20 +71,39 @@ function resolvePikkuBin(): string {
  */
 function collectFilterNames(
   unit: DeploymentUnit,
-  manifest: DeploymentManifest
+  manifest: DeploymentManifest,
+  inspectorState: InspectorState
 ): string[] {
   const names = new Set<string>(unit.functionIds)
+
+  // Include catch-all scaffold routes based on unit contents
+  const functionsMeta = inspectorState.functions.meta
+  const hasExposed = unit.functionIds.some((id) => functionsMeta[id]?.expose)
+  const hasRemote = unit.functionIds.some((id) => functionsMeta[id]?.remote)
+
+  if (hasExposed) {
+    // Include the RPC catch-all route so exposed functions are HTTP-accessible
+    names.add('/rpc/:rpcName')
+    names.add('http:post:/rpc/:rpcName')
+  }
+  if (hasRemote) {
+    // Include the remote RPC route for cross-service dispatch
+    names.add('/remote/rpc/:rpcName')
+    names.add('http:post:/remote/rpc/:rpcName')
+  }
 
   switch (unit.role) {
     case 'agent': {
       const agentDef = manifest.agents.find((a) => a.unitName === unit.name)
       if (agentDef) {
         names.add(agentDef.name)
-        // HTTP route functions
-        names.add(`agentRun:${agentDef.name}`)
-        names.add(`agentStream:${agentDef.name}`)
-        names.add(`agentApprove:${agentDef.name}`)
-        names.add(`agentResume:${agentDef.name}`)
+        // Include agent catch-all routes
+        names.add('agentCaller')
+        names.add('agentStreamCaller')
+        names.add('agentApproveCaller')
+        names.add('agentResumeCaller')
+        // Include RPC catch-all for agent tool dispatch
+        names.add('/rpc/:rpcName')
         for (const id of agentDef.toolFunctionIds) names.add(id)
       }
       break
@@ -116,19 +135,21 @@ function collectFilterNames(
       break
     }
     case 'workflow': {
-      // Workflow orchestrators need the workflow function itself,
-      // the step function IDs, HTTP route functions,
-      // and queue worker names (wf-orchestrator-*, wf-step-*)
       const wfDef = manifest.workflows.find(
         (w) => w.orchestratorUnit === unit.name
       )
       if (wfDef) {
         names.add(wfDef.pikkuFuncId)
         names.add(wfDef.name)
-        // HTTP route functions
-        names.add(`workflowStart:${wfDef.name}`)
-        names.add(`workflow:${wfDef.name}`)
-        names.add(`workflowStatus:${wfDef.name}`)
+        // Include workflow catch-all routes
+        names.add('/workflow/:workflowName/start')
+        names.add('/workflow/:workflowName/run')
+        names.add('/workflow/:workflowName/status/:runId')
+        names.add('/workflow/:workflowName/graph/:nodeId')
+        names.add('http:post:/workflow/:workflowName/start')
+        names.add('http:post:/workflow/:workflowName/run')
+        names.add('http:get:/workflow/:workflowName/status/:runId')
+        names.add('http:post:/workflow/:workflowName/graph/:nodeId')
         // Queue names for orchestrator and step workers
         const toKebab = (s: string) =>
           s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
@@ -180,7 +201,7 @@ export async function generatePerUnitCodegen(
 
     // Generate codegen for each unit
     for (const unit of manifest.units) {
-      const filterNames = collectFilterNames(unit, manifest)
+      const filterNames = collectFilterNames(unit, manifest, inspectorState)
 
       if (filterNames.length === 0) {
         errors.push({

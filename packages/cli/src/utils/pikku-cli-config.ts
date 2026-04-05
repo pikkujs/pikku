@@ -103,6 +103,13 @@ const _getPikkuCLIConfig = async (
       }
     }
 
+    // Override outDir if provided via CLI flag (must happen before derived paths)
+    if (outDirOverride) {
+      result.outDir = isAbsolute(outDirOverride)
+        ? outDirOverride
+        : resolve(result.rootDir, outDirOverride)
+    }
+
     // Create transport/event directories
     const functionDir = join(result.outDir, 'function')
     const httpDir = join(result.outDir, 'http')
@@ -235,13 +242,6 @@ const _getPikkuCLIConfig = async (
         rpcDir,
         'pikku-rpc-wirings-map.gen.d.ts'
       )
-    }
-
-    // Override outDir if provided via CLI flag
-    if (outDirOverride) {
-      result.outDir = isAbsolute(outDirOverride)
-        ? outDirOverride
-        : resolve(result.rootDir, outDirOverride)
     }
 
     // Scaffold directory for auto-generated wiring files

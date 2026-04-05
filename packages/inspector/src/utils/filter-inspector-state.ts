@@ -201,6 +201,11 @@ export function filterInspectorState(
       usedMiddleware: new Set<string>(),
       usedPermissions: new Set<string>(),
     },
+    functions: {
+      ...state.functions,
+      meta: JSON.parse(JSON.stringify(state.functions.meta)), // Deep clone to avoid mutating original
+      files: new Map(state.functions.files),
+    },
     http: {
       ...state.http,
       meta: JSON.parse(JSON.stringify(state.http.meta)), // Deep clone metadata
@@ -239,6 +244,14 @@ export function filterInspectorState(
       ...state.agents,
       agentsMeta: JSON.parse(JSON.stringify(state.agents?.agentsMeta ?? {})),
       files: new Map(),
+    },
+    rpc: {
+      ...state.rpc,
+      internalMeta: { ...state.rpc.internalMeta }, // Clone to avoid mutating original
+      internalFiles: new Map(state.rpc.internalFiles),
+      exposedMeta: { ...state.rpc.exposedMeta },
+      exposedFiles: new Map(state.rpc.exposedFiles),
+      invokedFunctions: new Set(state.rpc.invokedFunctions),
     },
     cli: {
       ...state.cli,
@@ -675,6 +688,30 @@ export function filterInspectorState(
     filteredState.cli.files = new Set(state.cli.files)
   }
 
+  // Direct function filtering: functions that match the names/tags/directories
+  // filters should be included even if no wiring (HTTP, scheduler, etc.) references them.
+  // This ensures standalone RPC-callable functions survive filtering.
+  for (const funcId of Object.keys(filteredState.functions.meta)) {
+    const funcMeta = filteredState.functions.meta[funcId]
+    const funcFile = filteredState.functions.files.get(funcId)
+    const filePath = funcFile?.path
+
+    const matches = matchesFilters(
+      filters,
+      {
+        type: 'rpc' as PikkuWiringTypes,
+        name: funcId,
+        tags: funcMeta.tags,
+        filePath,
+      },
+      logger
+    )
+
+    if (matches) {
+      filteredState.serviceAggregation.usedFunctions.add(funcId)
+    }
+  }
+
   // Post-filter version expansion: include all versions of matched functions
   const includedBaseNames = new Set<string>()
   for (const funcId of filteredState.serviceAggregation.usedFunctions) {
@@ -690,11 +727,12 @@ export function filterInspectorState(
     }
   }
 
-  // Prune functions.meta to only include used functions
+  // Prune functions.meta and functions.files to only include used functions
   if (filteredState.serviceAggregation.usedFunctions.size > 0) {
     for (const funcId of Object.keys(filteredState.functions.meta)) {
       if (!filteredState.serviceAggregation.usedFunctions.has(funcId)) {
         delete filteredState.functions.meta[funcId]
+        filteredState.functions.files.delete(funcId)
       }
     }
 
@@ -748,12 +786,37 @@ export function filterInspectorState(
         delete filteredState.workflows.meta[name]
       }
     }
+
+    // Prune RPC meta to only include entries whose target function survived
+    const survivingFuncIds = new Set(Object.keys(filteredState.functions.meta))
+    for (const key of Object.keys(filteredState.rpc.internalMeta)) {
+      const targetFuncId = filteredState.rpc.internalMeta[key]
+      if (!survivingFuncIds.has(targetFuncId) && !survivingFuncIds.has(key)) {
+        delete filteredState.rpc.internalMeta[key]
+        filteredState.rpc.internalFiles.delete(key)
+      }
+    }
+    for (const key of Object.keys(filteredState.rpc.exposedMeta)) {
+      const targetFuncId = filteredState.rpc.exposedMeta[key]
+      if (!survivingFuncIds.has(targetFuncId) && !survivingFuncIds.has(key)) {
+        delete filteredState.rpc.exposedMeta[key]
+        filteredState.rpc.exposedFiles.delete(key)
+      }
+    }
+    // Prune invokedFunctions to match surviving functions
+    for (const funcId of filteredState.rpc.invokedFunctions) {
+      if (!survivingFuncIds.has(funcId)) {
+        filteredState.rpc.invokedFunctions.delete(funcId)
+      }
+    }
   }
 
   // Recompute requiredSchemas based on pruned functions.meta
   if (filteredState.serviceAggregation.usedFunctions.size > 0) {
     const prunedSchemas = new Set<string>()
-    for (const funcMeta of Object.values(filteredState.functions.meta)) {
+    for (const funcMeta of Object.values(
+      filteredState.functions.meta
+    ) as Array<{ inputs?: string[]; outputs?: string[] }>) {
       if (funcMeta.inputs?.[0]) prunedSchemas.add(funcMeta.inputs[0])
       if (funcMeta.outputs?.[0]) prunedSchemas.add(funcMeta.outputs[0])
     }

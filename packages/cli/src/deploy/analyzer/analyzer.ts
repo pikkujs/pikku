@@ -72,6 +72,17 @@ export function analyzeDeployment(
       continue
     }
 
+    // Skip scaffold catch-all functions — they're bundled into units that need them
+    if (
+      funcId.startsWith('http:') ||
+      funcId === 'agentCaller' ||
+      funcId === 'agentStreamCaller' ||
+      funcId === 'agentApproveCaller' ||
+      funcId === 'agentResumeCaller'
+    ) {
+      continue
+    }
+
     const handlers: DeploymentHandler[] = []
 
     // HTTP routes for this function
@@ -109,10 +120,40 @@ export function analyzeDeployment(
       }
     }
 
-    // If function has no direct triggers but is exposed or has RPC,
-    // it still needs a fetch handler for RPC access
-    if (handlers.length === 0 && (funcMeta.expose || funcMeta.remote)) {
-      handlers.push({ type: 'fetch', routes: [] })
+    // Exposed/remote functions get concrete routes via the catch-all
+    if (funcMeta.expose) {
+      const funcName = funcMeta.name ?? funcId
+      const rpcRoute = {
+        method: 'post',
+        route: `/rpc/${funcName}`,
+        pikkuFuncId: funcId,
+      }
+      const fetchHandler = handlers.find(
+        (h): h is Extract<DeploymentHandler, { type: 'fetch' }> =>
+          h.type === 'fetch'
+      )
+      if (fetchHandler) {
+        fetchHandler.routes.push(rpcRoute)
+      } else {
+        handlers.push({ type: 'fetch', routes: [rpcRoute] })
+      }
+    }
+    if (funcMeta.remote) {
+      const funcName = funcMeta.name ?? funcId
+      const remoteRoute = {
+        method: 'post',
+        route: `/remote/rpc/${funcName}`,
+        pikkuFuncId: funcId,
+      }
+      const fetchHandler = handlers.find(
+        (h): h is Extract<DeploymentHandler, { type: 'fetch' }> =>
+          h.type === 'fetch'
+      )
+      if (fetchHandler) {
+        fetchHandler.routes.push(remoteRoute)
+      } else {
+        handlers.push({ type: 'fetch', routes: [remoteRoute] })
+      }
     }
 
     // Skip functions with no triggers (they'll be accessed via gateways)
@@ -148,24 +189,37 @@ export function analyzeDeployment(
       { capability: 'ai-storage', sourceServiceName: 'aiStorage' },
     ]
 
-    // Collect HTTP routes for the agent's functions
+    // Concrete routes for this agent via catch-all
     const agentRoutes = [
-      ...collectHttpRoutes(httpMeta, `agentRun:${agentName}`),
-      ...collectHttpRoutes(httpMeta, `agentStream:${agentName}`),
-      ...collectHttpRoutes(httpMeta, `agentApprove:${agentName}`),
-      ...collectHttpRoutes(httpMeta, `agentResume:${agentName}`),
+      {
+        method: 'post',
+        route: `/rpc/agent/${agentName}`,
+        pikkuFuncId: `agentRun:${agentName}`,
+      },
+      {
+        method: 'post',
+        route: `/rpc/agent/${agentName}/stream`,
+        pikkuFuncId: `agentStream:${agentName}`,
+      },
+      {
+        method: 'post',
+        route: `/rpc/agent/${agentName}/approve`,
+        pikkuFuncId: `agentApprove:${agentName}`,
+      },
+      {
+        method: 'post',
+        route: `/rpc/agent/${agentName}/resume`,
+        pikkuFuncId: `agentResume:${agentName}`,
+      },
     ]
 
     units.push({
       name: unitName,
       role: 'agent',
-      functionIds: [], // No function code bundled
+      functionIds: [],
       services: agentServices,
       dependsOn: [...toolUnitNames, ...subAgentUnitNames],
-      handlers:
-        agentRoutes.length > 0
-          ? [{ type: 'fetch', routes: agentRoutes }]
-          : [{ type: 'fetch', routes: [] }],
+      handlers: [{ type: 'fetch', routes: agentRoutes }],
       tags: agentMeta.tags ?? [],
     })
 
@@ -414,23 +468,37 @@ function buildWorkflows(
       { capability: 'queue', sourceServiceName: 'queueService' },
     ]
 
-    // Collect HTTP routes for the workflow's functions
+    // Concrete routes for this workflow via catch-all
     const wfRoutes = [
-      ...collectHttpRoutes(httpMeta, `workflowStart:${graph.name}`),
-      ...collectHttpRoutes(httpMeta, `workflow:${graph.name}`),
-      ...collectHttpRoutes(httpMeta, `workflowStatus:${graph.name}`),
+      {
+        method: 'post',
+        route: `/workflow/${graph.name}/start`,
+        pikkuFuncId: `workflowStart:${graph.name}`,
+      },
+      {
+        method: 'post',
+        route: `/workflow/${graph.name}/run`,
+        pikkuFuncId: `workflow:${graph.name}`,
+      },
+      {
+        method: 'get',
+        route: `/workflow/${graph.name}/status/:runId`,
+        pikkuFuncId: `workflowStatus:${graph.name}`,
+      },
+      {
+        method: 'post',
+        route: `/workflow/${graph.name}/graph/:nodeId`,
+        pikkuFuncId: `graphStart:${graph.name}`,
+      },
     ]
 
     units.push({
       name: orchUnitName,
       role: 'workflow',
-      functionIds: [], // No function code bundled
+      functionIds: [],
       services: orchServices,
       dependsOn: stepUnitNames,
-      handlers:
-        wfRoutes.length > 0
-          ? [{ type: 'fetch', routes: wfRoutes }]
-          : [{ type: 'fetch', routes: [] }],
+      handlers: [{ type: 'fetch', routes: wfRoutes }],
       tags: [],
     })
 
