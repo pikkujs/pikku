@@ -2057,7 +2057,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@azure/storage-queue@npm:^12.29.0":
+"@azure/storage-queue@npm:^12.25.0":
   version: 12.29.0
   resolution: "@azure/storage-queue@npm:12.29.0"
   dependencies:
@@ -5101,7 +5101,7 @@ __metadata:
   resolution: "@pikku/azure-functions@workspace:packages/runtimes/azure-functions"
   dependencies:
     "@azure/functions": "npm:4.11.2"
-    "@azure/storage-queue": "npm:^12.29.0"
+    "@azure/storage-queue": "npm:^12.25.0"
     typescript: "npm:^5.9.3"
   peerDependencies:
     "@pikku/core": ^0.12.1
