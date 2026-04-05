@@ -727,7 +727,11 @@ export function filterInspectorState(
     }
 
     // Prune workflow graphs whose function was filtered out
-    for (const name of Object.keys(filteredState.workflows.graphMeta)) {
+    const workflowKeys = new Set([
+      ...Object.keys(filteredState.workflows.graphMeta),
+      ...Object.keys(filteredState.workflows.meta),
+    ])
+    for (const name of workflowKeys) {
       const graphMeta = filteredState.workflows.graphMeta[name]
       const workflowMeta = filteredState.workflows.meta[name]
       // Check both graphMeta.pikkuFuncId and meta.pikkuFuncId

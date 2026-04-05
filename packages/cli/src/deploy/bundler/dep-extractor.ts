@@ -173,6 +173,7 @@ function resolveVersion(
   if (fromDevDeps) return fromDevDeps
 
   // Last resort: use wildcard (will get latest on install)
+  console.warn(`Could not resolve version for package '${packageName}', defaulting to '*'`)
   return '*'
 }
 

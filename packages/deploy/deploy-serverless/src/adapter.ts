@@ -223,7 +223,7 @@ export class ServerlessProviderAdapter {
     // Build the function binding map from dependsOn
     const bindingEntries = ctx.unit.dependsOn.map((dep) => {
       const envKey = `LAMBDA_FUNC_${toScreamingSnake(dep)}`
-      return `    '${fromKebab(dep)}': process.env.${envKey} || ''`
+      return `    ${JSON.stringify(fromKebab(dep))}: process.env.${envKey} || ''`
     })
     const bindingsMap = `{\n${bindingEntries.join(',\n')}\n  }`
 

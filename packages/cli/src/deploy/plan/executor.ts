@@ -25,8 +25,13 @@ function sortByOrder(
   changes: PlanChange[],
   order: Array<PlanChange['resourceType']>
 ): PlanChange[] {
+  const fallback = order.length
   return [...changes].sort(
-    (a, b) => order.indexOf(a.resourceType) - order.indexOf(b.resourceType)
+    (a, b) => {
+      const ai = order.indexOf(a.resourceType)
+      const bi = order.indexOf(b.resourceType)
+      return (ai === -1 ? fallback : ai) - (bi === -1 ? fallback : bi)
+    }
   )
 }
 

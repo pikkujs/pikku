@@ -63,10 +63,16 @@ async function processQueueBatch(batch: {
   messages: Array<{ id: string; body: unknown }>
 }): Promise<void> {
   for (const message of batch.messages) {
-    const body =
-      typeof message.body === 'string'
-        ? JSON.parse(message.body)
-        : (message.body as Record<string, unknown>)
+    let body: Record<string, unknown>
+    try {
+      body =
+        typeof message.body === 'string'
+          ? JSON.parse(message.body)
+          : (message.body as Record<string, unknown>)
+    } catch {
+      console.error('CF Queue: failed to parse message body', message.id)
+      continue
+    }
     // Use batch.queue (CF provides the queue name) or fall back to body.queueName.
     // CF queue names may have a project prefix (e.g. "functions-wf-step-create-todo")
     // but the queue meta uses unprefixed names. Try both.
@@ -74,8 +80,9 @@ async function processQueueBatch(batch: {
     const queueMeta = pikkuState(null, 'queue', 'meta')
     const queueName = queueMeta[rawQueueName]
       ? rawQueueName
-      : (Object.keys(queueMeta).find((k) => rawQueueName.endsWith(k)) ??
-        rawQueueName)
+      : (Object.keys(queueMeta)
+          .filter((k) => rawQueueName.endsWith(k))
+          .sort((a, b) => b.length - a.length)[0] ?? rawQueueName)
     const job: QueueJob = {
       queueName,
       data: body.data ?? body,
@@ -253,9 +260,19 @@ export function createCloudflareWebSocketHandler(factories: ServiceFactories) {
   return {
     async fetch(request: Request, env: CloudflareEnv) {
       await setupServices(env, factories)
-      const durableObject = env.WEBSOCKET_HIBERNATION_SERVER as {
-        idFromName: (name: string) => { toString: () => string }
-        get: (id: unknown) => { fetch: (req: Request) => Promise<Response> }
+      const durableObject = env.WEBSOCKET_HIBERNATION_SERVER as
+        | {
+            idFromName: (name: string) => { toString: () => string }
+            get: (id: unknown) => {
+              fetch: (req: Request) => Promise<Response>
+            }
+          }
+        | undefined
+      if (!durableObject) {
+        return new Response(
+          'WEBSOCKET_HIBERNATION_SERVER Durable Object binding not found in env',
+          { status: 503 }
+        )
       }
       const id = durableObject.idFromName('default')
       const stub = durableObject.get(id)

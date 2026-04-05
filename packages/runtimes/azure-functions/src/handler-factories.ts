@@ -92,8 +92,8 @@ export function createAzureHandler(
       const response = new PikkuFetchHTTPResponse()
       try {
         await fetchData(webRequest, response)
-      } catch {
-        // Error should have already been handled by fetch
+      } catch (err) {
+        console.error('Azure HTTP handler: fetchData error', err)
       }
 
       const fetchResponse = response.toResponse()

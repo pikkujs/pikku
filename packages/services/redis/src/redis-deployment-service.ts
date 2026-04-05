@@ -1,4 +1,4 @@
-import { AbstractDeploymentService } from '@pikku/core/services'
+import { AbstractHTTPDeploymentService } from '@pikku/core/services'
 import type {
   DeploymentServiceConfig,
   DeploymentConfig,
@@ -7,7 +7,7 @@ import type { JWTService, SecretService } from '@pikku/core/services'
 import { getAllFunctionNames } from '@pikku/core/function'
 import { Redis, type RedisOptions } from 'ioredis'
 
-export class RedisDeploymentService extends AbstractDeploymentService {
+export class RedisDeploymentService extends AbstractHTTPDeploymentService {
   private redis: Redis
   private keyPrefix: string
   private ownsConnection: boolean

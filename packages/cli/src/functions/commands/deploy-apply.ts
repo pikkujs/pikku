@@ -112,7 +112,11 @@ async function resolveProjectId(projectDir: string): Promise<string> {
       const name = pkg.name.replace(/^@[^/]+\//, '')
       return sanitizeProjectId(name)
     }
-  } catch {}
+  } catch (e: any) {
+    if (e?.code !== 'ENOENT') {
+      console.warn(`Warning: failed to read package.json: ${e?.message ?? e}`)
+    }
+  }
   return sanitizeProjectId(basename(projectDir))
 }
 

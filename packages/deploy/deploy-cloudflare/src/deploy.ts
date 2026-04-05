@@ -121,14 +121,26 @@ async function createSharedResources(
   result: DeployResult,
   log: (step: string, detail: string) => void
 ): Promise<void> {
+  const [existingDatabases, existingBuckets, existingQueues] =
+    await Promise.all([
+      manifest.resources.d1.length > 0
+        ? listDatabases(client)
+        : Promise.resolve([]),
+      manifest.resources.r2.length > 0
+        ? listBuckets(client)
+        : Promise.resolve([]),
+      manifest.resources.queues.length > 0
+        ? listQueues(client)
+        : Promise.resolve([]),
+    ])
+
   const tasks: Array<Promise<void>> = []
 
   for (const db of manifest.resources.d1) {
     tasks.push(
       (async () => {
         try {
-          const existing = await listDatabases(client)
-          const found = existing.find((d) => d.name === db.name)
+          const found = existingDatabases.find((d) => d.name === db.name)
           if (found) {
             resourceIds.d1.set(db.binding, found.uuid)
             log('resources', `D1 "${db.name}" exists`)
@@ -152,8 +164,7 @@ async function createSharedResources(
     tasks.push(
       (async () => {
         try {
-          const existing = await listBuckets(client)
-          const found = existing.find((b) => b.name === bucket.name)
+          const found = existingBuckets.find((b) => b.name === bucket.name)
           if (found) {
             resourceIds.r2.set(bucket.binding, bucket.name)
             log('resources', `R2 "${bucket.name}" exists`)
@@ -177,8 +188,7 @@ async function createSharedResources(
     tasks.push(
       (async () => {
         try {
-          const existing = await listQueues(client)
-          const found = existing.find((q) => q.queue_name === queue.name)
+          const found = existingQueues.find((q) => q.queue_name === queue.name)
           if (found) {
             resourceIds.queues.set(queue.name, found.queue_id)
             log('resources', `Queue "${queue.name}" exists`)
@@ -309,7 +319,7 @@ async function uploadWorkersInOrder(
     }
 
     if (ready.length === 0) {
-      // Circular dependency — deploy remaining anyway
+      log('workers', `Circular dependency detected among: ${[...remaining].join(', ')}`)
       for (const unitName of remaining) {
         ready.push([unitName, manifest.units[unitName]])
       }

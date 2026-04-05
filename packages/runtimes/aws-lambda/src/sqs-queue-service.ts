@@ -33,7 +33,7 @@ export class SQSQueueService implements QueueService {
       pikkuUserId: options?.pikkuUserId,
     }
 
-    await this.client.send(
+    const result = await this.client.send(
       new SendMessageCommand({
         QueueUrl: queueUrl,
         MessageBody: JSON.stringify(message),
@@ -43,7 +43,7 @@ export class SQSQueueService implements QueueService {
       })
     )
 
-    return messageId
+    return result.MessageId ?? messageId
   }
 
   async getJob<T, R>(

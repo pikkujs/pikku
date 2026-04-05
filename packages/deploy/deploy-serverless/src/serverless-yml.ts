@@ -407,6 +407,12 @@ function toScreamingSnake(name: string): string {
  * If day-of-week is not *, set day-of-month to ?. Otherwise set day-of-week to ?.
  * AWS requires exactly one of day-of-month or day-of-week to be ?.
  */
+function convertDowToAws(dow: string): string {
+  // Convert Unix cron day-of-week (0-6, 0=Sun) to AWS EventBridge (1-7, 1=Sun)
+  // Preserve symbolic names (SUN, MON, etc.) and special tokens (*, ?, L, W)
+  return dow.replace(/\b\d\b/g, (match) => String(Number(match) + 1))
+}
+
 function toAwsCron(schedule: string): string {
   const parts = schedule.trim().split(/\s+/)
   if (parts.length >= 6) return schedule // Already AWS format
@@ -415,7 +421,8 @@ function toAwsCron(schedule: string): string {
     const [minute, hour, dom, month, dow] = parts
     if (dow !== '*') {
       // Day-of-week is set, so day-of-month must be ?
-      return `${minute} ${hour} ? ${month} ${dow} *`
+      const awsDow = convertDowToAws(dow)
+      return `${minute} ${hour} ? ${month} ${awsDow} *`
     }
     // Day-of-week is *, replace with ?
     return `${minute} ${hour} ${dom} ${month} ? *`

@@ -106,6 +106,13 @@ export class CloudflareDeploymentService implements DeploymentService {
       )
     }
 
-    return response.json()
+    try {
+      return await response.json()
+    } catch {
+      const text = await response.text()
+      throw new Error(
+        `Remote RPC call to '${funcName}' returned non-JSON response: ${text}`
+      )
+    }
   }
 }

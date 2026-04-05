@@ -1,4 +1,4 @@
-import { AbstractDeploymentService } from '@pikku/core/services'
+import { AbstractHTTPDeploymentService } from '@pikku/core/services'
 import type {
   DeploymentServiceConfig,
   DeploymentConfig,
@@ -15,7 +15,7 @@ interface DeploymentDoc {
   functions: string[]
 }
 
-export class MongoDBDeploymentService extends AbstractDeploymentService {
+export class MongoDBDeploymentService extends AbstractHTTPDeploymentService {
   private initialized = false
   private heartbeatTimer?: ReturnType<typeof setInterval>
   private deploymentConfig?: DeploymentConfig

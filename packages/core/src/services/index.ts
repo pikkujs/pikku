@@ -44,7 +44,7 @@ export type {
   DeploymentInfo,
   DeploymentServiceConfig,
 } from './deployment-service.js'
-export { AbstractDeploymentService } from './deployment-service.js'
+export { AbstractHTTPDeploymentService } from './abstract-http-deployment-service.js'
 export type { AIStorageService } from './ai-storage-service.js'
 export type {
   AIAgentRunnerParams,

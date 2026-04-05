@@ -118,9 +118,14 @@ export class KyselyAIRunStateService implements AIRunStateService {
       .execute()
 
     for (const row of rows) {
-      const approvals: PendingApproval[] = row.pendingApprovals
-        ? JSON.parse(row.pendingApprovals as string)
-        : []
+      let approvals: PendingApproval[] = []
+      if (row.pendingApprovals) {
+        try {
+          approvals = JSON.parse(row.pendingApprovals as string)
+        } catch {
+          console.warn(`Failed to parse pendingApprovals for run ${row.runId}, treating as empty`)
+        }
+      }
       const filtered = approvals.filter((a) => a.toolCallId !== toolCallId)
       if (filtered.length !== approvals.length) {
         const updates: Record<string, unknown> = {
@@ -151,9 +156,14 @@ export class KyselyAIRunStateService implements AIRunStateService {
       .execute()
 
     for (const row of rows) {
-      const approvals: PendingApproval[] = (row as any).pendingApprovals
-        ? JSON.parse((row as any).pendingApprovals)
-        : []
+      let approvals: PendingApproval[] = []
+      if ((row as any).pendingApprovals) {
+        try {
+          approvals = JSON.parse((row as any).pendingApprovals)
+        } catch {
+          console.warn(`Failed to parse pendingApprovals for run ${row.runId}, treating as empty`)
+        }
+      }
       const approval = approvals.find((a) => a.toolCallId === toolCallId)
       if (approval) {
         return { run: this.toRunState(row), approval }

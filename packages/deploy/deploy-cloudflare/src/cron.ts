@@ -34,7 +34,13 @@ function normalizeCron(cron: string): string {
   if (parts.length === 5) {
     parts[4] = parts[4]
       .split(',')
-      .map((token) => token.replace(/^0(?=$|[\/\-])/, '7'))
+      .map((token) => {
+        const rangeMatch = token.match(/^0-(\d+)$/)
+        if (rangeMatch) {
+          return `1-${parseInt(rangeMatch[1], 10) + 1}`
+        }
+        return token.replace(/^0$/, '7')
+      })
       .join(',')
   }
   return parts.join(' ')

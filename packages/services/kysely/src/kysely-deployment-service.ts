@@ -1,4 +1,4 @@
-import { AbstractDeploymentService } from '@pikku/core/services'
+import { AbstractHTTPDeploymentService } from '@pikku/core/services'
 import type {
   DeploymentServiceConfig,
   DeploymentConfig,
@@ -9,7 +9,7 @@ import type { Kysely } from 'kysely'
 import { sql } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 
-export class KyselyDeploymentService extends AbstractDeploymentService {
+export class KyselyDeploymentService extends AbstractHTTPDeploymentService {
   private initialized = false
   private heartbeatTimer?: ReturnType<typeof setInterval>
   private deploymentConfig?: DeploymentConfig

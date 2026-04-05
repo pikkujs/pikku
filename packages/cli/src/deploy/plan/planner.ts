@@ -139,7 +139,7 @@ function diffScheduledTasks(
       changes.push({
         action: 'delete',
         resourceType: 'scheduled-task',
-        name: c.unitName,
+        name: c.name ?? c.unitName,
         reason: 'removed',
       })
     }

@@ -50,7 +50,12 @@ export const getAddonInstalledPackage = pikkuSessionlessFunc<
 
     // Read all schemas from the schemas directory
     const schemas: Record<string, unknown> = {}
-    const schemaFiles = await metaService.readDir('schemas/schemas')
+    let schemaFiles: string[] = []
+    try {
+      schemaFiles = (await metaService.readDir('schemas/schemas')) || []
+    } catch {
+      // fallback to empty array
+    }
     for (const file of schemaFiles) {
       if (file.endsWith('.schema.json')) {
         const name = file.replace('.schema.json', '')
@@ -68,13 +73,20 @@ export const getAddonInstalledPackage = pikkuSessionlessFunc<
     // README and package.json are in the parent directory (one level up from .pikku)
     const readme = await metaService.readFile('../README.md')
     const pkgJsonContent = await metaService.readFile('../package.json')
-    const pkgJson: {
+    let pkgJson: {
       version?: string
       author?: string | { name: string }
       repository?: string | { url: string }
       license?: string
       keywords?: string[]
-    } = pkgJsonContent ? JSON.parse(pkgJsonContent) : {}
+    } = {}
+    if (pkgJsonContent) {
+      try {
+        pkgJson = JSON.parse(pkgJsonContent)
+      } catch {
+        // fallback to empty object
+      }
+    }
 
     const id = packageName.replace(/^@/, '').replace(/\//g, '-').toLowerCase()
     const author =

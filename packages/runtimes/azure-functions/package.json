@@ -27,6 +27,6 @@
   },
   "dependencies": {
     "@azure/functions": "4.11.2",
-    "@azure/storage-queue": "^12.29.0"
+    "@azure/storage-queue": "^12.25.0"
   }
 }

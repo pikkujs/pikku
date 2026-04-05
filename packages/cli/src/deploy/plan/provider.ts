@@ -8,7 +8,7 @@ export interface CurrentState {
     role: string
   }>
   queues: Array<{ name: string }>
-  scheduledTasks: Array<{ unitName: string; schedule: string }>
+  scheduledTasks: Array<{ unitName: string; schedule: string; name?: string }>
   secrets: string[]
   variables: Record<string, string>
 }

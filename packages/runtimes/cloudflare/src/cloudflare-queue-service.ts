@@ -22,7 +22,12 @@ export class CloudflareQueueService implements QueueService {
   ): Promise<string> {
     const bindingName = toScreamingSnake(queueName)
     const queue = this.env[bindingName] as
-      | { send: (message: unknown) => Promise<void> }
+      | {
+          send: (
+            message: unknown,
+            options?: { delaySeconds?: number }
+          ) => Promise<void>
+        }
       | undefined
 
     if (!queue) {
@@ -38,10 +43,13 @@ export class CloudflareQueueService implements QueueService {
       queueName,
       data,
       pikkuUserId: options?.pikkuUserId,
-      delay: options?.delay,
     }
 
-    await queue.send(message)
+    await queue.send(message, {
+      delaySeconds: options?.delay
+        ? Math.ceil(options.delay / 1000)
+        : undefined,
+    })
     return messageId
   }
 

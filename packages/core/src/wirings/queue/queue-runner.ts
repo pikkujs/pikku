@@ -157,7 +157,7 @@ export async function runQueueJob({
     logger.info(`Processing job ${job.id} in queue ${job.queueName}`)
 
     const wire: PikkuWire = {
-      traceId: `queue-${job.id}`,
+      traceId: resolvedTraceId,
       queue,
     }
 

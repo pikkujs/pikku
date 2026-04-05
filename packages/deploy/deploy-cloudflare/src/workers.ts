@@ -19,9 +19,10 @@ export async function createWorker(
   name: string,
   script: string,
   bindings: WorkerBinding[] = [],
-  routes: WorkerRoute[] = []
+  routes: WorkerRoute[] = [],
+  compatibilityDate?: string
 ): Promise<WorkerMetadata> {
-  const metadata = buildWorkerMetadataPayload(bindings)
+  const metadata = buildWorkerMetadataPayload(bindings, compatibilityDate)
   const result = await uploadWorkerScript(client, name, script, metadata)
 
   if (routes.length > 0) {
@@ -47,9 +48,10 @@ export async function updateWorker(
   client: CloudflareClient,
   name: string,
   script: string,
-  bindings: WorkerBinding[] = []
+  bindings: WorkerBinding[] = [],
+  compatibilityDate?: string
 ): Promise<WorkerMetadata> {
-  const metadata = buildWorkerMetadataPayload(bindings)
+  const metadata = buildWorkerMetadataPayload(bindings, compatibilityDate)
   return uploadWorkerScript(client, name, script, metadata)
 }
 
@@ -117,12 +119,13 @@ interface WorkerMetadataPayload {
 }
 
 function buildWorkerMetadataPayload(
-  bindings: WorkerBinding[]
+  bindings: WorkerBinding[],
+  compatibilityDate: string = '2024-01-01'
 ): WorkerMetadataPayload {
   return {
     main_module: 'worker.js',
     bindings,
-    compatibility_date: new Date().toISOString().split('T')[0],
+    compatibility_date: compatibilityDate,
     compatibility_flags: ['nodejs_compat'],
   }
 }

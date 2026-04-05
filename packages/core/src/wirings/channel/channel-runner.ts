@@ -42,8 +42,6 @@ export const wireChannel = <
     return
   }
 
-  pikkuState(null, 'channel', 'channels').set(channel.name, channel as any)
-
   // Register onConnect function if provided
   if (channel.onConnect && channelMeta.connect) {
     addFunction(channelMeta.connect.pikkuFuncId, channel.onConnect as any)
