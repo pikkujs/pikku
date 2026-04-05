@@ -117,7 +117,21 @@ export class ContextAwareRPCService {
         : undefined,
     }
 
-    // Try local first, then namespaced addon, then deployment service fallback
+    // Check addon namespace first (e.g. 'stripe:createCharge')
+    if (funcName.includes(':')) {
+      try {
+        return await this.invokeAddonFunction<In, Out>(
+          funcName,
+          data,
+          updatedWire
+        )
+      } catch (addonErr) {
+        if (!(addonErr instanceof RPCNotFoundError)) throw addonErr
+        // Not an addon — fall through to local lookup
+      }
+    }
+
+    // Try local function, then fall back to deployment service (remote)
     try {
       return await runPikkuFunc<In, Out>(
         'rpc',
@@ -132,18 +146,6 @@ export class ContextAwareRPCService {
       )
     } catch (e) {
       if (e instanceof RPCNotFoundError) {
-        // Try namespaced addon function (e.g. 'stripe:createCharge')
-        if (funcName.includes(':')) {
-          try {
-            return await this.invokeAddonFunction<In, Out>(
-              funcName,
-              data,
-              updatedWire
-            )
-          } catch (addonErr) {
-            if (!(addonErr instanceof RPCNotFoundError)) throw addonErr
-          }
-        }
         // Fall back to deployment service (e.g. CF service binding, Lambda Invoke)
         if (this.services.deploymentService) {
           const session =
