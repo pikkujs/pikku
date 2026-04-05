@@ -176,7 +176,7 @@ When(
       const res = await fetch(`${config.apiUrl}/workflow/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: { runId: state.lastRunId } }),
+        body: JSON.stringify({ runId: state.lastRunId }),
       })
       const body = await res.json()
 
