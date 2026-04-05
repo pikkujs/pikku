@@ -1,4 +1,4 @@
-@workflow-ui @console @flaky
+@workflow-ui @console
 Feature: Workflow Console UI
 
   Background:

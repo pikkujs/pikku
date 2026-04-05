@@ -320,19 +320,12 @@ export function injectExposedRoutes(
     const resolved = state.resolvedIOTypes[pikkuFuncId]
     if (!funcMeta || !resolved) continue
 
-    const funcFile = state.functions.files.get(pikkuFuncId)
     if (!state.http.meta['post']) state.http.meta['post'] = {}
     state.http.meta['post'][`${prefix}/rpc/${funcName}`] = {
       pikkuFuncId,
       route: `${prefix}/rpc/${funcName}`,
       method: 'post',
       tags: ['pikku:public'],
-      ...(funcFile && {
-        sourceFile: funcFile.path,
-        exportedName: funcFile.exportedName,
-        synthetic: true,
-        syntheticAuth: !funcMeta.sessionless,
-      }),
     }
   }
 
@@ -396,7 +389,6 @@ export function injectExposedRoutes(
   for (const [pikkuFuncId, funcMeta] of Object.entries(state.functions.meta)) {
     if (!funcMeta.remote && !funcMeta.expose) continue
 
-    const funcFile = state.functions.files.get(pikkuFuncId)
     const funcName = funcMeta.name ?? pikkuFuncId
     if (!state.http.meta['post']) state.http.meta['post'] = {}
     state.http.meta['post'][`${prefix}/remote/rpc/${funcName}`] = {
@@ -404,11 +396,6 @@ export function injectExposedRoutes(
       route: `${prefix}/remote/rpc/${funcName}`,
       method: 'post',
       tags: ['pikku:remote'],
-      ...(funcFile && {
-        sourceFile: funcFile.path,
-        exportedName: funcFile.exportedName,
-        synthetic: true,
-      }),
     }
   }
 

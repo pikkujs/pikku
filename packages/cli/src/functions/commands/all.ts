@@ -3,10 +3,17 @@ import { pikkuVoidFunc } from '#pikku'
 
 const scaffoldFiles = (config: any): { file: string; generator: string }[] => {
   const files: { file: string; generator: string }[] = []
+  if (config.scaffold?.rpc && config.publicRpcFile)
+    files.push({ file: config.publicRpcFile, generator: 'pikkuPublicRPC' })
   if (config.scaffold?.console && config.consoleFunctionsFile)
     files.push({
       file: config.consoleFunctionsFile,
       generator: 'pikkuConsoleFunctions',
+    })
+  if (config.scaffold?.agent && config.publicAgentFile)
+    files.push({
+      file: config.publicAgentFile,
+      generator: 'pikkuPublicAgent',
     })
   return files
 }
@@ -92,8 +99,13 @@ export const all = pikkuVoidFunc({
     const agents = await rpc.invoke('pikkuAIAgent', null)
     if (agents) {
       allImports.push(config.agentWiringMetaFile, config.agentWiringsFile)
+      if (config.scaffold?.agent) {
+        await rpc.invoke('pikkuPublicAgent', null)
+      }
     }
 
+    await rpc.invoke('pikkuPublicRPC', null)
+    await rpc.invoke('pikkuRPCClient', null)
     await rpc.invoke('pikkuConsoleFunctions', null)
     await rpc.invoke('pikkuNodeTypes', null)
     await rpc.invoke('pikkuSecretDefinitionTypes', null)
@@ -122,7 +134,12 @@ export const all = pikkuVoidFunc({
 
     const workflows = await rpc.invoke('pikkuWorkflow', null)
 
-    if (workflows) {
+    let remoteRPC = false
+    if (!config.addon) {
+      remoteRPC = await rpc.invoke('pikkuRemoteRPC', null)
+    }
+
+    if (workflows || remoteRPC) {
       await getInspectorState(true)
       await rpc.invoke('pikkuSchemas', null)
     }
@@ -132,7 +149,6 @@ export const all = pikkuVoidFunc({
       if (http) {
         await rpc.invoke('pikkuHTTPMap', null)
         await rpc.invoke('pikkuFetch', null)
-        await rpc.invoke('pikkuRPCClient', null)
         allImports.push(config.httpWiringMetaFile, config.httpWiringsFile)
       }
 
@@ -204,16 +220,6 @@ export const all = pikkuVoidFunc({
     }
 
     await rpc.invoke('pikkuNodesMeta', null)
-
-    // Generate fetch/RPC client wrappers when clientFiles are configured,
-    // even if the project has no HTTP routes (e.g. console backend after
-    // RPC routes were internalized). Always generate the HTTP map too
-    // since the fetch wrapper imports from it.
-    if (config.clientFiles?.fetchFile || config.clientFiles?.rpcWiringsFile) {
-      await rpc.invoke('pikkuHTTPMap', null)
-      await rpc.invoke('pikkuFetch', null)
-      await rpc.invoke('pikkuRPCClient', null)
-    }
 
     if (
       config.clientFiles?.nextBackendFile ||

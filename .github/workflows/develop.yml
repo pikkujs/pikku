@@ -248,7 +248,7 @@ jobs:
             workflows-pg-boss,
             remote-rpc-pg,
             remote-rpc-redis,
-            # ai-postgres,  # Temporarily disabled — agent sub-streaming needs fix
+            ai-postgres,
           ]
         package-manager: [yarn]
     steps:

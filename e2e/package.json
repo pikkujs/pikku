@@ -12,7 +12,7 @@
   "scripts": {
     "start": "tsx bin/start.ts",
     "dev": "tsx --watch bin/start.ts",
-    "test": "cucumber-js --config tests/cucumber.mjs --tags 'not @ai and not @skip and not @flaky'",
+    "test": "cucumber-js --config tests/cucumber.mjs --tags 'not @ai and not @skip'",
     "test:ai": "cucumber-js --config tests/cucumber.mjs --tags '@ai and not @skip'",
     "test:all": "cucumber-js --config tests/cucumber.mjs",
     "test:todo": "cucumber-js --config tests/cucumber.mjs --tags @todo",
@@ -57,7 +57,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@cucumber/cucumber": "^12.7.0",
+    "@cucumber/cucumber": "^11.0.0",
     "@pikku/cli": "workspace:*",
     "@playwright/test": "^1.50.0",
     "@types/better-sqlite3": "^7.0.0",
