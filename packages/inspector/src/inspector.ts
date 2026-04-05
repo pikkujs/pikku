@@ -11,7 +11,6 @@ import { getFilesAndMethods } from './utils/get-files-and-methods.js'
 import { findCommonAncestor } from './utils/find-root-dir.js'
 import {
   aggregateRequiredServices,
-  injectExposedRoutes,
   validateAgentModels,
   validateAgentOverrides,
   validateSecretOverrides,
@@ -333,7 +332,6 @@ export const inspect = async (
 
   if (!options.setupOnly) {
     const startAggregate = performance.now()
-    injectExposedRoutes(state)
     aggregateRequiredServices(state)
     logger.debug(
       `Aggregate required services completed in ${(performance.now() - startAggregate).toFixed(2)}ms`
