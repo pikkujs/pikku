@@ -1,5 +1,6 @@
-import { AbstractHTTPDeploymentService } from '@pikku/core/services'
+import { buildRemoteHeaders } from '@pikku/core/remote'
 import type {
+  DeploymentService,
   DeploymentServiceConfig,
   DeploymentConfig,
 } from '@pikku/core/services'
@@ -9,7 +10,7 @@ import type { Kysely } from 'kysely'
 import { sql } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 
-export class KyselyDeploymentService extends AbstractHTTPDeploymentService {
+export class KyselyDeploymentService implements DeploymentService {
   private initialized = false
   private heartbeatTimer?: ReturnType<typeof setInterval>
   private deploymentConfig?: DeploymentConfig
@@ -19,10 +20,9 @@ export class KyselyDeploymentService extends AbstractHTTPDeploymentService {
   constructor(
     config: DeploymentServiceConfig,
     protected db: Kysely<KyselyPikkuDB>,
-    jwt?: JWTService,
-    secrets?: SecretService
+    private jwt?: JWTService,
+    private secrets?: SecretService
   ) {
-    super(jwt, secrets)
     this.heartbeatInterval = config.heartbeatInterval ?? 10000
     this.heartbeatTtl = config.heartbeatTtl ?? 30000
   }
@@ -138,11 +138,13 @@ export class KyselyDeploymentService extends AbstractHTTPDeploymentService {
     }
   }
 
-  protected async dispatch(
+  async invoke(
     funcName: string,
     data: unknown,
-    headers: Record<string, string>
+    session?: unknown,
+    traceId?: string
   ): Promise<unknown> {
+    const headers = await buildRemoteHeaders(this.jwt, this.secrets, funcName, session, traceId)
     const ttlMs = this.heartbeatTtl
     const cutoff = new Date(Date.now() - ttlMs)
 

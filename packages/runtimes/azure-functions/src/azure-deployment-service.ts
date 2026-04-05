@@ -32,7 +32,8 @@ export class AzureDeploymentService implements DeploymentService {
   async invoke(
     funcName: string,
     data: unknown,
-    session?: unknown
+    session?: unknown,
+    traceId?: string
   ): Promise<unknown> {
     const functionUrl = this.bindings.get(funcName)
     if (!functionUrl) {
@@ -44,6 +45,7 @@ export class AzureDeploymentService implements DeploymentService {
 
     const headers: Record<string, string> = {
       'content-type': 'application/json',
+      ...(traceId && { 'x-request-id': traceId }),
     }
 
     // Sign session as JWT for pikkuRemoteAuthMiddleware

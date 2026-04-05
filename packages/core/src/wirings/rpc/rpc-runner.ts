@@ -178,10 +178,7 @@ export class ContextAwareRPCService {
     // Resolve namespace to package name
     const resolved = resolveNamespace(namespacedFunction)
     if (!resolved) {
-      throw new Error(
-        `Unknown namespace in function reference: ${namespacedFunction}. ` +
-          `Make sure the package is registered in addons config.`
-      )
+      throw new RPCNotFoundError(namespacedFunction)
     }
 
     // Get the function meta from the addon package
@@ -189,10 +186,7 @@ export class ContextAwareRPCService {
     const addonFunctionMeta = pikkuState(resolved.package, 'function', 'meta')
     const funcMeta = addonFunctionMeta[resolved.function]
     if (!funcMeta) {
-      throw new Error(
-        `Function '${resolved.function}' not found in package '${resolved.package}'. ` +
-          `Available functions: ${Object.keys(addonFunctionMeta).join(', ') || '(none)'}`
-      )
+      throw new RPCNotFoundError(namespacedFunction)
     }
     const funcName = funcMeta.pikkuFuncId || resolved.function
 

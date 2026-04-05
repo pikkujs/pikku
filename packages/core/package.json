@@ -25,6 +25,7 @@
     "./channel/local": "./dist/wirings/channel/local/index.js",
     "./channel/serverless": "./dist/wirings/channel/serverless/index.js",
     "./http": "./dist/wirings/http/index.js",
+    "./remote": "./dist/remote.js",
     "./queue": "./dist/wirings/queue/index.js",
     "./scheduler": "./dist/wirings/scheduler/index.js",
     "./trigger": "./dist/wirings/trigger/index.js",

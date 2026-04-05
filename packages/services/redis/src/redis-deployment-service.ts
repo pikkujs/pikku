@@ -1,5 +1,6 @@
-import { AbstractHTTPDeploymentService } from '@pikku/core/services'
+import { buildRemoteHeaders } from '@pikku/core/remote'
 import type {
+  DeploymentService,
   DeploymentServiceConfig,
   DeploymentConfig,
 } from '@pikku/core/services'
@@ -7,7 +8,7 @@ import type { JWTService, SecretService } from '@pikku/core/services'
 import { getAllFunctionNames } from '@pikku/core/function'
 import { Redis, type RedisOptions } from 'ioredis'
 
-export class RedisDeploymentService extends AbstractHTTPDeploymentService {
+export class RedisDeploymentService implements DeploymentService {
   private redis: Redis
   private keyPrefix: string
   private ownsConnection: boolean
@@ -20,10 +21,9 @@ export class RedisDeploymentService extends AbstractHTTPDeploymentService {
     config: DeploymentServiceConfig,
     connectionOrConfig: Redis | RedisOptions | string,
     keyPrefix = 'pikku',
-    jwt?: JWTService,
-    secrets?: SecretService
+    private jwt?: JWTService,
+    private secrets?: SecretService
   ) {
-    super(jwt, secrets)
     this.heartbeatInterval = config.heartbeatInterval ?? 10000
     this.heartbeatTtl = config.heartbeatTtl ?? 30000
     this.keyPrefix = keyPrefix
@@ -103,11 +103,13 @@ export class RedisDeploymentService extends AbstractHTTPDeploymentService {
     }
   }
 
-  protected async dispatch(
+  async invoke(
     funcName: string,
     data: unknown,
-    headers: Record<string, string>
+    session?: unknown,
+    traceId?: string
   ): Promise<unknown> {
+    const headers = await buildRemoteHeaders(this.jwt, this.secrets, funcName, session, traceId)
     const indexKey = this.functionsIndexKey(funcName)
     const now = Date.now()
 

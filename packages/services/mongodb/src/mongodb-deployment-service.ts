@@ -1,5 +1,6 @@
-import { AbstractHTTPDeploymentService } from '@pikku/core/services'
+import { buildRemoteHeaders } from '@pikku/core/remote'
 import type {
+  DeploymentService,
   DeploymentServiceConfig,
   DeploymentConfig,
 } from '@pikku/core/services'
@@ -15,7 +16,7 @@ interface DeploymentDoc {
   functions: string[]
 }
 
-export class MongoDBDeploymentService extends AbstractHTTPDeploymentService {
+export class MongoDBDeploymentService implements DeploymentService {
   private initialized = false
   private heartbeatTimer?: ReturnType<typeof setInterval>
   private deploymentConfig?: DeploymentConfig
@@ -26,10 +27,9 @@ export class MongoDBDeploymentService extends AbstractHTTPDeploymentService {
   constructor(
     config: DeploymentServiceConfig,
     private db: Db,
-    jwt?: JWTService,
-    secrets?: SecretService
+    private jwt?: JWTService,
+    private secrets?: SecretService
   ) {
-    super(jwt, secrets)
     this.heartbeatInterval = config.heartbeatInterval ?? 10000
     this.heartbeatTtl = config.heartbeatTtl ?? 30000
   }
@@ -85,11 +85,13 @@ export class MongoDBDeploymentService extends AbstractHTTPDeploymentService {
     }
   }
 
-  protected async dispatch(
+  async invoke(
     funcName: string,
     data: unknown,
-    headers: Record<string, string>
+    session?: unknown,
+    traceId?: string
   ): Promise<unknown> {
+    const headers = await buildRemoteHeaders(this.jwt, this.secrets, funcName, session, traceId)
     const cutoff = new Date(Date.now() - this.heartbeatTtl)
     const result = await this.deployments.findOne(
       { functions: funcName, lastHeartbeat: { $gt: cutoff } },
