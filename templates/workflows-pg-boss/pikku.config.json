@@ -1,6 +1,6 @@
 {
   "extends": "../functions/pikku.config.json",
   "scaffold": {
-    "workflow": "auth"
+    "workflow": "no-auth"
   }
 }

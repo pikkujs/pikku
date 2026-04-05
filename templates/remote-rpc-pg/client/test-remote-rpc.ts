@@ -2,7 +2,7 @@ async function waitForServer(port: number, timeoutMs = 15000): Promise<void> {
   const start = Date.now()
   while (Date.now() - start < timeoutMs) {
     try {
-      await fetch(`http://localhost:${port}/remote-greet`, {
+      await fetch(`http://localhost:${port}/rpc/remoteGreet`, {
         method: 'OPTIONS',
       })
       return
@@ -17,16 +17,16 @@ async function testRemoteRpc(
   fromPort: number,
   expectOtherPort: number
 ): Promise<void> {
-  const res = await fetch(`http://localhost:${fromPort}/remote-greet`, {
+  const res = await fetch(`http://localhost:${fromPort}/rpc/remoteGreet`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: 'Test', greeting: 'Hi' }),
+    body: JSON.stringify({ data: { name: 'Test', greeting: 'Hi' } }),
   })
 
   if (!res.ok) {
     const body = await res.text()
     throw new Error(
-      `POST /remote-greet on ${fromPort} failed: ${res.status} ${body}`
+      `POST /rpc/remoteGreet on ${fromPort} failed: ${res.status} ${body}`
     )
   }
 
@@ -57,14 +57,14 @@ async function main(): Promise<void> {
   await Promise.all([waitForServer(3001), waitForServer(3002)])
   console.log('Both servers ready.\n')
 
-  console.log('Test 1: Call /remote-greet on port 3001')
+  console.log('Test 1: Call /rpc/remoteGreet on port 3001')
   console.log(
     '  remoteGreet -> rpc.remote("greet") -> DeploymentService lookup -> HTTP /rpc/greet'
   )
   await testRemoteRpc(3001, 3002)
   console.log('  PASSED\n')
 
-  console.log('Test 2: Call /remote-greet on port 3002')
+  console.log('Test 2: Call /rpc/remoteGreet on port 3002')
   console.log(
     '  remoteGreet -> rpc.remote("greet") -> DeploymentService lookup -> HTTP /rpc/greet'
   )
