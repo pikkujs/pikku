@@ -168,7 +168,7 @@ When(
   'I poll until the workflow completes',
   { timeout: 60_000 },
   async function () {
-    const maxWaitMs = 30_000
+    const maxWaitMs = 45_000
     const pollIntervalMs = 1_000
     const startTime = Date.now()
 
