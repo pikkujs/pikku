@@ -302,7 +302,10 @@ export const createSingletonServices: CreateSingletonServices<
         )
       ).flat()
 
-      const scaffoldFiles = [config.consoleFunctionsFile]
+      const scaffoldFiles = [
+        config.consoleFunctionsFile,
+        config.remoteRpcWorkersFile,
+      ]
       for (const file of scaffoldFiles) {
         if (file && !wiringFiles.includes(file) && existsSync(file)) {
           wiringFiles.push(file)
