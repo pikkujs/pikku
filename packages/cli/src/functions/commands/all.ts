@@ -105,7 +105,6 @@ export const all = pikkuVoidFunc({
     }
 
     await rpc.invoke('pikkuPublicRPC', null)
-    await rpc.invoke('pikkuRPCClient', null)
     await rpc.invoke('pikkuConsoleFunctions', null)
     await rpc.invoke('pikkuNodeTypes', null)
     await rpc.invoke('pikkuSecretDefinitionTypes', null)
@@ -149,6 +148,7 @@ export const all = pikkuVoidFunc({
       if (http) {
         await rpc.invoke('pikkuHTTPMap', null)
         await rpc.invoke('pikkuFetch', null)
+        await rpc.invoke('pikkuRPCClient', null)
         allImports.push(config.httpWiringMetaFile, config.httpWiringsFile)
       }
 
