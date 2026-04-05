@@ -17,10 +17,7 @@ import {
   Sparkles,
   AlertTriangle,
 } from 'lucide-react'
-import {
-  useCreateWorkflow,
-  useGenerateWorkflowGraph,
-} from '@/hooks/useWorkflowEditor'
+import { useGenerateWorkflowGraph } from '@/hooks/useWorkflowEditor'
 import { TableListPage } from '@/components/layout/TableListPage'
 import { PikkuBadge } from '@/components/ui/PikkuBadge'
 import type { WorkflowsMeta } from '@pikku/core/workflow'

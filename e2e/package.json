@@ -33,6 +33,7 @@
   "dependencies": {
     "@ai-sdk/openai": "^3.0.37",
     "@pikku/addon-console": "workspace:*",
+    "@pikku/addon-dynamic-workflows": "workspace:*",
     "@pikku/addon-graph": "workspace:*",
     "@pikku/addon-hmac-signer": "workspace:*",
     "@pikku/ai-vercel": "workspace:*",

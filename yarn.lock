@@ -5095,6 +5095,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/addon-dynamic-workflows@workspace:*, @pikku/addon-dynamic-workflows@workspace:packages/addon/pikku-dynamic-workflows":
+  version: 0.0.0-use.local
+  resolution: "@pikku/addon-dynamic-workflows@workspace:packages/addon/pikku-dynamic-workflows"
+  dependencies:
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
+    tslib: "npm:^2.8.1"
+    typescript: "npm:~5.8.0"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/addon-emails@workspace:e2e/packages/emails":
   version: 0.0.0-use.local
   resolution: "@pikku/addon-emails@workspace:e2e/packages/emails"
@@ -5456,6 +5467,7 @@ __metadata:
     "@ai-sdk/openai": "npm:^3.0.37"
     "@cucumber/cucumber": "npm:^11.0.0"
     "@pikku/addon-console": "workspace:*"
+    "@pikku/addon-dynamic-workflows": "workspace:*"
     "@pikku/addon-graph": "workspace:*"
     "@pikku/addon-hmac-signer": "workspace:*"
     "@pikku/ai-vercel": "workspace:*"
