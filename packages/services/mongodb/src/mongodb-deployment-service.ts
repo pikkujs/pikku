@@ -91,7 +91,13 @@ export class MongoDBDeploymentService implements DeploymentService {
     session?: unknown,
     traceId?: string
   ): Promise<unknown> {
-    const headers = await buildRemoteHeaders(this.jwt, this.secrets, funcName, session, traceId)
+    const headers = await buildRemoteHeaders(
+      this.jwt,
+      this.secrets,
+      funcName,
+      session,
+      traceId
+    )
     const cutoff = new Date(Date.now() - this.heartbeatTtl)
     const result = await this.deployments.findOne(
       { functions: funcName, lastHeartbeat: { $gt: cutoff } },
@@ -104,7 +110,7 @@ export class MongoDBDeploymentService implements DeploymentService {
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ data }),
     })
     if (!response.ok) {
       throw new Error(

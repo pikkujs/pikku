@@ -79,7 +79,7 @@ export class LambdaDeploymentService implements DeploymentService {
       httpMethod: 'POST',
       path: rpcPath,
       headers,
-      body: JSON.stringify(data),
+      body: JSON.stringify({ data }),
       isBase64Encoded: false,
       queryStringParameters: null,
       pathParameters: null,

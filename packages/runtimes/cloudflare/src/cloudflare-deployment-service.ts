@@ -88,7 +88,7 @@ export class CloudflareDeploymentService implements DeploymentService {
       {
         method: 'POST',
         headers,
-        body: JSON.stringify(data),
+        body: JSON.stringify({ data }),
       }
     )
 

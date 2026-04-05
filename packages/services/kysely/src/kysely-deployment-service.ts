@@ -144,7 +144,13 @@ export class KyselyDeploymentService implements DeploymentService {
     session?: unknown,
     traceId?: string
   ): Promise<unknown> {
-    const headers = await buildRemoteHeaders(this.jwt, this.secrets, funcName, session, traceId)
+    const headers = await buildRemoteHeaders(
+      this.jwt,
+      this.secrets,
+      funcName,
+      session,
+      traceId
+    )
     const ttlMs = this.heartbeatTtl
     const cutoff = new Date(Date.now() - ttlMs)
 
@@ -174,7 +180,7 @@ export class KyselyDeploymentService implements DeploymentService {
         'content-type': 'application/json',
         ...headers,
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ data }),
     })
 
     if (!response.ok) {
