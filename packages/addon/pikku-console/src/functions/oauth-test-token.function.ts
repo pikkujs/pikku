@@ -9,9 +9,9 @@ export const oauthTestToken = pikkuSessionlessFunc<
   description:
     'Given a credentialName, validates the credential exists and is OAuth2, then attempts to retrieve a valid access token via the OAuth2Client. Returns whether the token is valid or an error message.',
   expose: true,
-  func: async ({ wiringService, secrets }, { credentialName }) => {
-    const secretsMeta = await wiringService.readSecretsMeta()
-    const credentialsMeta = await wiringService.readCredentialsMeta()
+  func: async ({ metaService, secrets }, { credentialName }) => {
+    const secretsMeta = await metaService.getSecretsMeta()
+    const credentialsMeta = await metaService.getCredentialsMeta()
 
     const credential =
       secretsMeta[credentialName] ?? credentialsMeta[credentialName]

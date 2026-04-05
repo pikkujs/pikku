@@ -16,6 +16,10 @@ export const pikkuChannels = pikkuVoidFunc({
     } = config
     const { channels } = visitState
 
+    if (channels.files.size === 0 || Object.keys(channels.meta).length === 0) {
+      return
+    }
+
     await writeFileInDir(
       logger,
       channelsWiringFile,

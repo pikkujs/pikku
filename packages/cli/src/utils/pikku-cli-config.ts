@@ -17,13 +17,15 @@ export const getPikkuCLIConfig = async (
   logger: CLILogger,
   configFile: string | undefined = undefined,
   requiredFields: Array<keyof PikkuCLIConfig>,
-  exitProcess: boolean = false
+  exitProcess: boolean = false,
+  outDirOverride?: string
 ): Promise<PikkuCLIConfig> => {
   const config = await _getPikkuCLIConfig(
     logger,
     configFile,
     requiredFields,
-    exitProcess
+    exitProcess,
+    outDirOverride
   )
   return config
 }
@@ -32,7 +34,8 @@ const _getPikkuCLIConfig = async (
   logger: CLILogger,
   configFile: string | undefined = undefined,
   requiredFields: Array<keyof PikkuCLIConfig>,
-  exitProcess: boolean = false
+  exitProcess: boolean = false,
+  outDirOverride?: string
 ): Promise<PikkuCLIConfig> => {
   if (!configFile) {
     let execDirectory = process.cwd()
@@ -232,6 +235,13 @@ const _getPikkuCLIConfig = async (
         rpcDir,
         'pikku-rpc-wirings-map.gen.d.ts'
       )
+    }
+
+    // Override outDir if provided via CLI flag
+    if (outDirOverride) {
+      result.outDir = isAbsolute(outDirOverride)
+        ? outDirOverride
+        : resolve(result.rootDir, outDirOverride)
     }
 
     // Remote RPC workers file (auto-derived)
@@ -551,7 +561,9 @@ const _getPikkuCLIConfig = async (
       )
     }
 
-    result.globalHTTPPrefix = result.globalHTTPPrefix ? result.globalHTTPPrefix.replace(/\/+$/, '') : ''
+    result.globalHTTPPrefix = result.globalHTTPPrefix
+      ? result.globalHTTPPrefix.replace(/\/+$/, '')
+      : ''
 
     if (requiredFields.length > 0) {
       validateCLIConfig(result, requiredFields)

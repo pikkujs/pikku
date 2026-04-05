@@ -1,0 +1,241 @@
+/**
+ * Per-unit filtered codegen for the deploy pipeline.
+ *
+ * For each deployment unit, runs `pikku all` with --names and --outDir
+ * flags to produce a separate .pikku/ directory containing only the
+ * registrations needed by that unit.
+ *
+ * Uses --stateInput to avoid re-inspecting the codebase for each unit.
+ */
+
+import { execFile } from 'node:child_process'
+import { writeFile, mkdir, rm } from 'node:fs/promises'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
+import { randomBytes } from 'node:crypto'
+import { promisify } from 'node:util'
+
+import type { InspectorState } from '@pikku/inspector'
+import { serializeInspectorState } from '@pikku/inspector'
+import type {
+  DeploymentManifest,
+  DeploymentUnit,
+} from '../analyzer/manifest.js'
+
+const execFileAsync = promisify(execFile)
+
+export interface PerUnitCodegenOptions {
+  /** Root directory of the project (where pikku.config.json lives) */
+  projectDir: string
+  /** The deployment manifest with all units */
+  manifest: DeploymentManifest
+  /** The full (unfiltered) inspector state */
+  inspectorState: InspectorState
+  /** Base output directory for deploy artifacts (defaults to <projectDir>/.deploy) */
+  deployDir?: string
+  /** Path to pikku binary (auto-resolved if not provided) */
+  pikkuBin?: string
+  /** Called for each unit as it starts/completes */
+  onProgress?: (
+    unitName: string,
+    status: 'start' | 'done' | 'error',
+    error?: string
+  ) => void
+}
+
+export interface PerUnitCodegenResult {
+  /** Map of unit name -> path to the unit's .pikku directory */
+  unitPikkuDirs: Map<string, string>
+  /** Units that failed codegen */
+  errors: Array<{ unitName: string; error: string }>
+}
+
+/**
+ * Resolve the pikku CLI binary path.
+ *
+ * Since deploy-apply runs inside the pikku process, we can find the binary
+ * by looking at process.argv[1] (the script being executed).
+ */
+function resolvePikkuBin(): string {
+  return process.argv[1]
+}
+
+/**
+ * Collect the full set of filter names for a deployment unit.
+ *
+ * The --names filter matches against different identifier types depending
+ * on the metadata being filtered (function names, agent names, channel
+ * names, etc.).  For a unit to get its complete metadata, we need to
+ * include both the function IDs and any wiring-level names (e.g. agent
+ * names, channel names) that reference those functions.
+ */
+function collectFilterNames(
+  unit: DeploymentUnit,
+  manifest: DeploymentManifest
+): string[] {
+  const names = new Set<string>(unit.functionIds)
+
+  switch (unit.role) {
+    case 'agent': {
+      const agentDef = manifest.agents.find((a) => a.unitName === unit.name)
+      if (agentDef) {
+        names.add(agentDef.name)
+        // HTTP route functions
+        names.add(`agentRun:${agentDef.name}`)
+        names.add(`agentStream:${agentDef.name}`)
+        names.add(`agentApprove:${agentDef.name}`)
+        names.add(`agentResume:${agentDef.name}`)
+        for (const id of agentDef.toolFunctionIds) names.add(id)
+      }
+      break
+    }
+    case 'mcp': {
+      for (const mcp of manifest.mcpEndpoints) {
+        if (mcp.unitName === unit.name) {
+          for (const id of mcp.toolFunctionIds) names.add(id)
+          for (const id of mcp.resourceFunctionIds) names.add(id)
+          for (const id of mcp.promptFunctionIds) names.add(id)
+        }
+      }
+      break
+    }
+    case 'channel': {
+      const channelDef = manifest.channels.find((c) => c.unitName === unit.name)
+      if (channelDef) {
+        names.add(channelDef.name)
+        for (const id of channelDef.functionIds) names.add(id)
+      }
+      break
+    }
+    case 'function': {
+      // For function units, include queue/scheduler names from handlers
+      for (const handler of unit.handlers) {
+        if (handler.type === 'queue') names.add(handler.queueName)
+        if (handler.type === 'scheduled') names.add(handler.taskName)
+      }
+      break
+    }
+    case 'workflow': {
+      // Workflow orchestrators need the workflow function itself,
+      // the step function IDs, HTTP route functions,
+      // and queue worker names (wf-orchestrator-*, wf-step-*)
+      const wfDef = manifest.workflows.find(
+        (w) => w.orchestratorUnit === unit.name
+      )
+      if (wfDef) {
+        names.add(wfDef.pikkuFuncId)
+        names.add(wfDef.name)
+        // HTTP route functions
+        names.add(`workflowStart:${wfDef.name}`)
+        names.add(`workflow:${wfDef.name}`)
+        names.add(`workflowStatus:${wfDef.name}`)
+        // Queue names for orchestrator and step workers
+        const toKebab = (s: string) =>
+          s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
+        names.add(`wf-orchestrator-${toKebab(wfDef.name)}`)
+        for (const step of wfDef.steps) {
+          if (step.functionId) {
+            names.add(step.functionId)
+            names.add(`wf-step-${toKebab(step.functionId)}`)
+          }
+        }
+      }
+      break
+    }
+    default:
+      break
+  }
+
+  return [...names]
+}
+
+/**
+ * Runs filtered codegen for each deployment unit.
+ *
+ * For each unit:
+ * 1. Calls `pikku all --stateInput=<state-file> --names=<func-ids> --outDir=<unit-dir/.pikku> --silent`
+ * 2. This produces pikku-bootstrap.gen.ts (and all other codegen) filtered to only that unit's functions
+ *
+ * The inspector state is saved once to a temp file and reused across all units.
+ */
+export async function generatePerUnitCodegen(
+  options: PerUnitCodegenOptions
+): Promise<PerUnitCodegenResult> {
+  const { projectDir, manifest, inspectorState, onProgress } = options
+
+  const baseDir = options.deployDir ?? join(projectDir, '.deploy')
+  const pikkuBin = options.pikkuBin ?? resolvePikkuBin()
+
+  const unitPikkuDirs = new Map<string, string>()
+  const errors: Array<{ unitName: string; error: string }> = []
+
+  // Create a temp file for the serialized inspector state
+  const stateFileName = `pikku-state-${randomBytes(8).toString('hex')}.json`
+  const stateFilePath = join(tmpdir(), stateFileName)
+
+  try {
+    // Serialize and write the inspector state once
+    const serialized = serializeInspectorState(inspectorState)
+    await writeFile(stateFilePath, JSON.stringify(serialized), 'utf-8')
+
+    // Generate codegen for each unit
+    for (const unit of manifest.units) {
+      const filterNames = collectFilterNames(unit, manifest)
+
+      if (filterNames.length === 0) {
+        errors.push({
+          unitName: unit.name,
+          error: 'Unit has no function IDs — skipping codegen',
+        })
+        continue
+      }
+
+      onProgress?.(unit.name, 'start')
+
+      const unitDir = join(baseDir, unit.name)
+      const unitPikkuDir = join(unitDir, '.pikku')
+      await mkdir(unitDir, { recursive: true })
+
+      const namesArg = filterNames.join(',')
+
+      try {
+        await execFileAsync(
+          process.execPath, // node binary
+          [
+            pikkuBin,
+            'all',
+            `--stateInput=${stateFilePath}`,
+            `--names=${namesArg}`,
+            `--outDir=${unitPikkuDir}`,
+            '--silent',
+          ],
+          {
+            cwd: projectDir,
+            timeout: 60_000,
+            env: {
+              ...process.env,
+              // Prevent recursive deploy or watch behavior
+              PIKKU_DEPLOY_CODEGEN: '1',
+            },
+          }
+        )
+
+        unitPikkuDirs.set(unit.name, unitPikkuDir)
+        onProgress?.(unit.name, 'done')
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        errors.push({ unitName: unit.name, error: message })
+        onProgress?.(unit.name, 'error', message)
+      }
+    }
+  } finally {
+    // Clean up the temp state file
+    try {
+      await rm(stateFilePath, { force: true })
+    } catch {
+      // Ignore cleanup errors
+    }
+  }
+
+  return { unitPikkuDirs, errors }
+}

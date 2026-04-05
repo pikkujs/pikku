@@ -20,6 +20,10 @@ export const pikkuChannels = pikkuSessionlessFunc<void, boolean | undefined>({
     } = config
     const { channels } = visitState
 
+    if (channels.files.size === 0 || Object.keys(channels.meta).length === 0) {
+      return undefined
+    }
+
     await writeFileInDir(
       logger,
       channelsWiringFile,

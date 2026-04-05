@@ -20,15 +20,20 @@
     ".": "./dist/index.js",
     "./http": "./dist/http/index.js",
     "./websocket": "./dist/websocket/index.js",
-    "./queue": "./dist/queue/index.js"
+    "./queue": "./dist/queue/index.js",
+    "./scheduled": "./dist/scheduled/index.js"
   },
   "peerDependencies": {
     "@aws-sdk/client-apigatewaymanagementapi": "^3.713.0",
+    "@aws-sdk/client-lambda": "^3.713.0",
+    "@aws-sdk/client-sqs": "^3.713.0",
     "@pikku/core": "^0.12.9",
     "@types/aws-lambda": "^8.10.161"
   },
   "devDependencies": {
     "@aws-sdk/client-apigatewaymanagementapi": "^3.1000.0",
+    "@aws-sdk/client-lambda": "^3.1000.0",
+    "@aws-sdk/client-sqs": "^3.1000.0",
     "@types/aws-lambda": "^8.10.161",
     "typescript": "^5.9.3"
   },

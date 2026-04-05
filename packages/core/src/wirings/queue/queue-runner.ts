@@ -58,9 +58,10 @@ export const wireQueueWorker = <
   const meta = pikkuState(null, 'queue', 'meta')
   const processorMeta = meta[queueWorker.name]
   if (!processorMeta) {
-    throw new PikkuMissingMetaError(
-      `Missing generated metadata for queue worker '${queueWorker.name}'`
+    console.warn(
+      `[pikku] Skipping queue worker '${queueWorker.name}' — metadata not found. Consider moving this wiring to its own file.`
     )
+    return
   }
 
   // Register the function with pikku
@@ -104,13 +105,19 @@ export async function removeQueueWorker(name: string): Promise<void> {
 export async function runQueueJob({
   job,
   updateProgress,
+  traceId,
 }: {
   job: QueueJob
   updateProgress?: (progress: number | string | object) => Promise<void>
+  /** Pre-resolved trace ID (e.g. from queue message metadata) */
+  traceId?: string
 }): Promise<void> {
   const singletonServices = getSingletonServices()
   const createWireServices = getCreateWireServices()
-  const logger = singletonServices.logger
+  const resolvedTraceId = traceId ?? `q-${job.id}`
+  const logger =
+    singletonServices.logger.scope?.(resolvedTraceId) ??
+    singletonServices.logger
 
   const meta = pikkuState(null, 'queue', 'meta')
   const processorMeta = meta[job.queueName]
@@ -150,6 +157,7 @@ export async function runQueueJob({
     logger.info(`Processing job ${job.id} in queue ${job.queueName}`)
 
     const wire: PikkuWire = {
+      traceId: resolvedTraceId,
       queue,
     }
 

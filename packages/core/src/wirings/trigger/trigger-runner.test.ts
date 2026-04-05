@@ -7,7 +7,6 @@ import {
   getTriggerMeta,
 } from './trigger-runner.js'
 import { resetPikkuState, pikkuState } from '../../pikku-state.js'
-import { PikkuMissingMetaError } from '../../errors/errors.js'
 
 beforeEach(() => {
   resetPikkuState()
@@ -24,11 +23,11 @@ describe('wireTrigger', () => {
     assert.ok(triggers.has('myTrigger'))
   })
 
-  test('should throw PikkuMissingMetaError when meta is missing', () => {
-    assert.throws(
-      () => wireTrigger({ name: 'noMeta', func: async () => {} } as any),
-      (err: any) => err instanceof PikkuMissingMetaError
-    )
+  test('should skip when trigger metadata not found', () => {
+    wireTrigger({ name: 'noMeta', func: async () => {} } as any)
+
+    const triggers = getRegisteredTriggers()
+    assert.ok(!triggers.has('noMeta'))
   })
 })
 
@@ -43,11 +42,11 @@ describe('wireTriggerSource', () => {
     assert.ok(sources.has('mySource'))
   })
 
-  test('should throw PikkuMissingMetaError when source meta is missing', () => {
-    assert.throws(
-      () => wireTriggerSource({ name: 'noMeta', func: async () => {} } as any),
-      (err: any) => err instanceof PikkuMissingMetaError
-    )
+  test('should skip when trigger source metadata not found', () => {
+    wireTriggerSource({ name: 'noMeta', func: async () => {} } as any)
+
+    const sources = pikkuState(null, 'trigger', 'triggerSources')
+    assert.ok(!sources.has('noMeta'))
   })
 
   test('should throw when trigger source already exists', () => {

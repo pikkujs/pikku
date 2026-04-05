@@ -1,3 +1,7 @@
 export * from './http/index.js'
 export * from './websocket/index.js'
 export * from './queue/index.js'
+export * from './scheduled/index.js'
+export * from './handler-factories.js'
+export { SQSQueueService } from './sqs-queue-service.js'
+export { LambdaDeploymentService } from './lambda-deployment-service.js'

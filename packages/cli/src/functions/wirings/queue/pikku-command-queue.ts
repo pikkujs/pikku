@@ -24,6 +24,13 @@ export const pikkuQueue = pikkuSessionlessFunc<void, boolean | undefined>({
     } = config
     const { queueWorkers } = visitState
 
+    if (
+      queueWorkers.files.size === 0 ||
+      Object.keys(queueWorkers.meta).length === 0
+    ) {
+      return undefined
+    }
+
     const fullMeta = serializeQueueMeta(queueWorkers.meta)
 
     // Write minimal JSON file (runtime-only fields)

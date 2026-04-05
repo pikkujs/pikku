@@ -6,7 +6,6 @@ import { serializeWorkflowTypes } from './serialize-workflow-types.js'
 import { serializeWorkflowRegistration } from './serialize-workflow-registration.js'
 import { serializeWorkflowMap } from './serialize-workflow-map.js'
 import { serializeWorkflowMeta } from './serialize-workflow-meta.js'
-import { serializeWorkflowWorkers } from './serialize-workflow-workers.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import {
   stripVerboseFields,
@@ -24,15 +23,20 @@ export const pikkuWorkflow = pikkuSessionlessFunc<void, boolean | undefined>({
       workflowMapDeclarationFile,
       workflowTypesFile,
       functionTypesFile,
-      typesDeclarationFile,
       packageMappings,
       schema,
     } = config
     const { workflows, functions: functionState } = visitState
     const { typesMap } = functionState
 
-    const allWorkflowNames = Object.keys(workflows.graphMeta)
-    const hasWorkflows = allWorkflowNames.length > 0
+    const allWorkflowNames = [
+      ...new Set([
+        ...Object.keys(workflows.graphMeta),
+        ...Object.keys(workflows.meta),
+      ]),
+    ]
+    const hasRelevantWorkflows = allWorkflowNames.length > 0
+    const hasWorkflows = hasRelevantWorkflows
 
     if (hasWorkflows) {
       const hasWorkflowState =
@@ -147,19 +151,6 @@ export const pikkuWorkflow = pikkuSessionlessFunc<void, boolean | undefined>({
         workflows.graphMeta
       )
     )
-
-    if (config.scaffold?.workflow) {
-      const pathToPikkuTypes = getFileImportRelativePath(
-        config.workflowWorkersFile,
-        typesDeclarationFile,
-        packageMappings
-      )
-      await writeFileInDir(
-        logger,
-        config.workflowWorkersFile,
-        serializeWorkflowWorkers(pathToPikkuTypes)
-      )
-    }
 
     return hasWorkflows
   },

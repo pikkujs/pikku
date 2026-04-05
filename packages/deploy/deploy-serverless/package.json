@@ -1,0 +1,14 @@
+{
+  "name": "@pikku/deploy-serverless",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -b",
+    "tsc": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9"
+  }
+}

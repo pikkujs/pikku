@@ -280,6 +280,14 @@ export function filterInspectorState(
           filteredState.serviceAggregation.usedFunctions.add(
             routeMeta.pikkuFuncId
           )
+          // For workflow/agent routes, also add the base name
+          // so the workflow/agent definition survives pruning
+          const colonIdx = routeMeta.pikkuFuncId.indexOf(':')
+          if (colonIdx !== -1) {
+            filteredState.serviceAggregation.usedFunctions.add(
+              routeMeta.pikkuFuncId.slice(colonIdx + 1)
+            )
+          }
         }
         extractWireNames(routeMeta.middleware).forEach((name: string) =>
           filteredState.serviceAggregation.usedMiddleware.add(name)
@@ -291,12 +299,28 @@ export function filterInspectorState(
     }
   }
 
-  // Repopulate http.files if any routes remain
-  const hasHttpRoutes = Object.values(
-    filteredState.http.meta as Record<string, any>
-  ).some((routes) => Object.keys(routes).length > 0)
-  if (hasHttpRoutes) {
-    filteredState.http.files = new Set(state.http.files)
+  // Repopulate http.files with only files that have surviving routes
+  for (const method of Object.keys(filteredState.http.meta)) {
+    const routes = (
+      filteredState.http.meta as Record<
+        string,
+        Record<string, { sourceFile?: string }>
+      >
+    )[method]
+    for (const routeMeta of Object.values(routes)) {
+      if (routeMeta.sourceFile) {
+        filteredState.http.files.add(routeMeta.sourceFile)
+      }
+    }
+  }
+  // Fallback: if no sourceFile info available but routes exist, include all files
+  if (filteredState.http.files.size === 0) {
+    const hasHttpRoutes = Object.values(
+      filteredState.http.meta as Record<string, Record<string, unknown>>
+    ).some((routes) => Object.keys(routes).length > 0)
+    if (hasHttpRoutes) {
+      filteredState.http.files = new Set(state.http.files)
+    }
   }
 
   // Filter channels
@@ -315,10 +339,39 @@ export function filterInspectorState(
     if (!matches) {
       delete filteredState.channels.meta[name]
     } else {
-      if (channelMeta.pikkuFuncId) {
+      // Add all functions referenced by this channel
+      if ('pikkuFuncId' in channelMeta && channelMeta.pikkuFuncId) {
         filteredState.serviceAggregation.usedFunctions.add(
-          channelMeta.pikkuFuncId
+          channelMeta.pikkuFuncId as string
         )
+      }
+      if (channelMeta.connect?.pikkuFuncId) {
+        filteredState.serviceAggregation.usedFunctions.add(
+          channelMeta.connect.pikkuFuncId
+        )
+      }
+      if (channelMeta.disconnect?.pikkuFuncId) {
+        filteredState.serviceAggregation.usedFunctions.add(
+          channelMeta.disconnect.pikkuFuncId
+        )
+      }
+      if (channelMeta.message?.pikkuFuncId) {
+        filteredState.serviceAggregation.usedFunctions.add(
+          channelMeta.message.pikkuFuncId
+        )
+      }
+      if (channelMeta.messageWirings) {
+        for (const groupKey of Object.keys(channelMeta.messageWirings)) {
+          const commands = channelMeta.messageWirings[groupKey]
+          for (const cmdKey of Object.keys(commands)) {
+            const wiring = commands[cmdKey]
+            if (wiring.pikkuFuncId) {
+              filteredState.serviceAggregation.usedFunctions.add(
+                wiring.pikkuFuncId
+              )
+            }
+          }
+        }
       }
       extractWireNames(channelMeta.middleware).forEach((name: string) =>
         filteredState.serviceAggregation.usedMiddleware.add(name)
@@ -413,6 +466,12 @@ export function filterInspectorState(
         filteredState.serviceAggregation.usedFunctions.add(
           workerMeta.pikkuFuncId
         )
+        const colonIdx = workerMeta.pikkuFuncId.indexOf(':')
+        if (colonIdx !== -1) {
+          filteredState.serviceAggregation.usedFunctions.add(
+            workerMeta.pikkuFuncId.slice(colonIdx + 1)
+          )
+        }
       }
       extractWireNames(workerMeta.middleware).forEach((name: string) =>
         filteredState.serviceAggregation.usedMiddleware.add(name)
@@ -629,6 +688,76 @@ export function filterInspectorState(
         filteredState.serviceAggregation.usedFunctions.add(funcId)
       }
     }
+  }
+
+  // Prune functions.meta to only include used functions
+  if (filteredState.serviceAggregation.usedFunctions.size > 0) {
+    for (const funcId of Object.keys(filteredState.functions.meta)) {
+      if (!filteredState.serviceAggregation.usedFunctions.has(funcId)) {
+        delete filteredState.functions.meta[funcId]
+      }
+    }
+
+    // Prune channels whose functions were filtered out
+    for (const name of Object.keys(filteredState.channels.meta)) {
+      const channelMeta = filteredState.channels.meta[name]
+      // Check if any of the channel's functions are in the used set
+      const channelFuncIds: string[] = []
+      if (channelMeta.connect?.pikkuFuncId)
+        channelFuncIds.push(channelMeta.connect.pikkuFuncId)
+      if (channelMeta.disconnect?.pikkuFuncId)
+        channelFuncIds.push(channelMeta.disconnect.pikkuFuncId)
+      if (channelMeta.message?.pikkuFuncId)
+        channelFuncIds.push(channelMeta.message.pikkuFuncId)
+      if (channelMeta.messageWirings) {
+        for (const groupKey of Object.keys(channelMeta.messageWirings)) {
+          const commands = channelMeta.messageWirings[groupKey]
+          for (const cmdKey of Object.keys(commands)) {
+            const wiring = commands[cmdKey]
+            if (wiring.pikkuFuncId) channelFuncIds.push(wiring.pikkuFuncId)
+          }
+        }
+      }
+      const hasUsedFunc = channelFuncIds.some((id) =>
+        filteredState.serviceAggregation.usedFunctions.has(id)
+      )
+      if (channelFuncIds.length > 0 && !hasUsedFunc) {
+        delete filteredState.channels.meta[name]
+      }
+    }
+
+    // Prune workflow graphs whose function was filtered out
+    const workflowKeys = new Set([
+      ...Object.keys(filteredState.workflows.graphMeta),
+      ...Object.keys(filteredState.workflows.meta),
+    ])
+    for (const name of workflowKeys) {
+      const graphMeta = filteredState.workflows.graphMeta[name]
+      const workflowMeta = filteredState.workflows.meta[name]
+      // Check both graphMeta.pikkuFuncId and meta.pikkuFuncId
+      const pikkuFuncId = graphMeta?.pikkuFuncId ?? workflowMeta?.pikkuFuncId
+      if (
+        pikkuFuncId &&
+        !filteredState.serviceAggregation.usedFunctions.has(pikkuFuncId)
+      ) {
+        delete filteredState.workflows.graphMeta[name]
+        delete filteredState.workflows.meta[name]
+      } else if (!pikkuFuncId) {
+        // No function ID found — prune it
+        delete filteredState.workflows.graphMeta[name]
+        delete filteredState.workflows.meta[name]
+      }
+    }
+  }
+
+  // Recompute requiredSchemas based on pruned functions.meta
+  if (filteredState.serviceAggregation.usedFunctions.size > 0) {
+    const prunedSchemas = new Set<string>()
+    for (const funcMeta of Object.values(filteredState.functions.meta)) {
+      if (funcMeta.inputs?.[0]) prunedSchemas.add(funcMeta.inputs[0])
+      if (funcMeta.outputs?.[0]) prunedSchemas.add(funcMeta.outputs[0])
+    }
+    filteredState.requiredSchemas = prunedSchemas
   }
 
   // Recalculate requiredServices based on filtered functions/middleware/permissions

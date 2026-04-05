@@ -20,11 +20,7 @@ import {
 } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { resolveNamespace } from '../rpc/rpc-runner.js'
-import {
-  BadRequestError,
-  NotFoundError,
-  PikkuMissingMetaError,
-} from '../../errors/errors.js'
+import { BadRequestError, NotFoundError } from '../../errors/errors.js'
 import {
   PikkuSessionService,
   createMiddlewareSessionWireProps,
@@ -57,9 +53,10 @@ export const wireMCPResource = <
   const resourcesMeta = pikkuState(null, 'mcp', 'resourcesMeta')
   const mcpResourceMeta = resourcesMeta[mcpResource.uri]
   if (!mcpResourceMeta) {
-    throw new PikkuMissingMetaError(
-      `Missing generated metadata for MCP resource '${mcpResource.uri}'`
+    console.warn(
+      `[pikku] Skipping MCP resource '${mcpResource.uri}' — metadata not found. Consider moving this wiring to its own file.`
     )
+    return
   }
   addFunction(mcpResourceMeta.pikkuFuncId, mcpResource.func as any)
   const resources = pikkuState(null, 'mcp', 'resources')
@@ -79,9 +76,10 @@ export const wireMCPPrompt = <
   const promptsMeta = pikkuState(null, 'mcp', 'promptsMeta')
   const mcpPromptMeta = promptsMeta[mcpPrompt.name]
   if (!mcpPromptMeta) {
-    throw new PikkuMissingMetaError(
-      `Missing generated metadata for MCP prompt '${mcpPrompt.name}'`
+    console.warn(
+      `[pikku] Skipping MCP prompt '${mcpPrompt.name}' — metadata not found. Consider moving this wiring to its own file.`
     )
+    return
   }
   addFunction(mcpPromptMeta.pikkuFuncId, mcpPrompt.func as any)
   const prompts = pikkuState(null, 'mcp', 'prompts')

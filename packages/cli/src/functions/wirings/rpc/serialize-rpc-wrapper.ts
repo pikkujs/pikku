@@ -1,4 +1,7 @@
-export const serializeRPCWrapper = (rpcMapPath: string, globalHTTPPrefix: string = '') => {
+export const serializeRPCWrapper = (
+  rpcMapPath: string,
+  globalHTTPPrefix: string = ''
+) => {
   return `
 import { PikkuFetch } from "./pikku-fetch.gen.js"
 import type { RPCInvoke, TypedAgentRun, TypedStartWorkflow } from '${rpcMapPath}'

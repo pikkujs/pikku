@@ -1,9 +1,10 @@
+import { buildRemoteHeaders } from '@pikku/core/remote'
 import type {
   DeploymentService,
   DeploymentServiceConfig,
   DeploymentConfig,
-  DeploymentInfo,
 } from '@pikku/core/services'
+import type { JWTService, SecretService } from '@pikku/core/services'
 import { getAllFunctionNames } from '@pikku/core/function'
 import type { Db, Collection } from 'mongodb'
 
@@ -25,7 +26,9 @@ export class MongoDBDeploymentService implements DeploymentService {
 
   constructor(
     config: DeploymentServiceConfig,
-    private db: Db
+    private db: Db,
+    private jwt?: JWTService,
+    private secrets?: SecretService
   ) {
     this.heartbeatInterval = config.heartbeatInterval ?? 10000
     this.heartbeatTtl = config.heartbeatTtl ?? 30000
@@ -82,21 +85,39 @@ export class MongoDBDeploymentService implements DeploymentService {
     }
   }
 
-  async findFunction(name: string): Promise<DeploymentInfo[]> {
+  async invoke(
+    funcName: string,
+    data: unknown,
+    session?: unknown,
+    traceId?: string
+  ): Promise<unknown> {
+    const headers = await buildRemoteHeaders(
+      this.jwt,
+      this.secrets,
+      funcName,
+      session,
+      traceId
+    )
     const cutoff = new Date(Date.now() - this.heartbeatTtl)
-
-    const result = await this.deployments
-      .find({
-        functions: name,
-        lastHeartbeat: { $gt: cutoff },
-      })
-      .sort({ lastHeartbeat: -1 })
-      .toArray()
-
-    return result.map((row) => ({
-      deploymentId: row._id,
-      endpoint: row.endpoint,
-    }))
+    const result = await this.deployments.findOne(
+      { functions: funcName, lastHeartbeat: { $gt: cutoff } },
+      { sort: { lastHeartbeat: -1 } }
+    )
+    if (!result) {
+      throw new Error(`No deployment found for function '${funcName}'`)
+    }
+    const url = `${result.endpoint}/remote/rpc/${encodeURIComponent(funcName)}`
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({ data }),
+    })
+    if (!response.ok) {
+      throw new Error(
+        `Remote RPC call to '${funcName}' failed: ${response.status}`
+      )
+    }
+    return response.json()
   }
 
   private async sendHeartbeat(): Promise<void> {

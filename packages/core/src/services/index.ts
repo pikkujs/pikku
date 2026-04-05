@@ -19,7 +19,7 @@ export { TypedVariablesService } from './typed-variables-service.js'
 export { LocalSecretService } from './local-secrets.js'
 export { LocalCredentialService } from './local-credential-service.js'
 export { LocalVariablesService } from './local-variables.js'
-export { ConsoleLogger } from './logger-console.js'
+export { ConsoleLogger, JsonConsoleLogger } from './logger-console.js'
 export { InMemoryWorkflowService } from './in-memory-workflow-service.js'
 export { InMemoryTriggerService } from './in-memory-trigger-service.js'
 export { InMemoryAIRunStateService } from './in-memory-ai-run-state-service.js'
@@ -66,3 +66,22 @@ export type {
   CredentialMetaInfo,
 } from './typed-credential-service.js'
 export type { VariableStatus, VariableMeta } from './typed-variables-service.js'
+export type { MetaService } from './meta-service.js'
+export type {
+  MCPMeta,
+  RPCMetaRecord,
+  ServiceMeta,
+  ServicesMetaRecord,
+  MiddlewareDefinitionMeta,
+  MiddlewareInstanceMeta,
+  GroupMeta,
+  MiddlewareGroupsMeta,
+  PermissionDefinitionMeta,
+  PermissionsGroupsMeta,
+  FunctionsMeta,
+  FunctionMeta,
+  MiddlewareMeta,
+  PermissionMeta,
+  AgentsMeta,
+  AgentMeta,
+} from './meta-service.js'

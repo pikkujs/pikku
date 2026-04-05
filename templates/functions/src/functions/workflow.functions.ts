@@ -46,53 +46,56 @@ export const scheduleReminder = pikkuSessionlessFunc<
 export const createAndNotifyWorkflow = pikkuWorkflowFunc<
   { userId: string; title: string; priority: Priority; dueDate?: string },
   { todo: Todo; notificationSent: boolean; reminderScheduled: boolean }
->(async ({}, data, { workflow }) => {
-  let notificationSent = false
-  let reminderScheduled = false
-  let notifResult: { sent: boolean; notificationId: string } | undefined
-  let reminderResult: { scheduled: boolean; jobId: string } | undefined
+>({
+  expose: true,
+  func: async ({}, data, { workflow }) => {
+    let notificationSent = false
+    let reminderScheduled = false
+    let notifResult: { sent: boolean; notificationId: string } | undefined
+    let reminderResult: { scheduled: boolean; jobId: string } | undefined
 
-  const createResult = await workflow.do('Create todo', 'createTodo', {
-    userId: data.userId,
-    title: data.title,
-    priority: data.priority,
-    dueDate: data.dueDate,
-    tags: [],
-  })
-  const todo = createResult.todo
+    const createResult = await workflow.do('Create todo', 'createTodo', {
+      userId: data.userId,
+      title: data.title,
+      priority: data.priority,
+      dueDate: data.dueDate,
+      tags: [],
+    })
+    const todo = createResult.todo
 
-  if (data.priority === 'high') {
-    await workflow.sleep('Wait before notification', '1s')
-    notifResult = await workflow.do(
-      'Send high priority notification',
-      'sendNotification',
-      {
-        userId: data.userId,
-        message: `High priority todo created: ${data.title}`,
-        type: 'push',
-      }
-    )
-    notificationSent = notifResult!.sent
-  }
+    if (data.priority === 'high') {
+      await workflow.sleep('Wait before notification', '1s')
+      notifResult = await workflow.do(
+        'Send high priority notification',
+        'sendNotification',
+        {
+          userId: data.userId,
+          message: `High priority todo created: ${data.title}`,
+          type: 'push',
+        }
+      )
+      notificationSent = notifResult!.sent
+    }
 
-  if (data.dueDate) {
-    reminderResult = await workflow.do(
-      'Schedule reminder',
-      'scheduleReminder',
-      {
-        todoId: todo.id,
-        userId: data.userId,
-        remindAt: data.dueDate,
-      }
-    )
-    reminderScheduled = reminderResult!.scheduled
-  }
+    if (data.dueDate) {
+      reminderResult = await workflow.do(
+        'Schedule reminder',
+        'scheduleReminder',
+        {
+          todoId: todo.id,
+          userId: data.userId,
+          remindAt: data.dueDate,
+        }
+      )
+      reminderScheduled = reminderResult!.scheduled
+    }
 
-  return {
-    todo,
-    notificationSent,
-    reminderScheduled,
-  }
+    return {
+      todo,
+      notificationSent,
+      reminderScheduled,
+    }
+  },
 })
 
 /**

@@ -12,6 +12,10 @@ export const pikkuRemoteAuthMiddleware = pikkuMiddleware(
     try {
       secret = await secrets.getSecret('PIKKU_REMOTE_SECRET')
     } catch {
+      // If this is a remote route, the secret MUST be configured
+      if (http.request.path().startsWith('/remote/rpc/')) {
+        throw new UnauthorizedError()
+      }
       return next()
     }
     if (!jwt) {
@@ -42,8 +46,10 @@ export const pikkuRemoteAuthMiddleware = pikkuMiddleware(
       throw new UnauthorizedError()
     }
 
-    if (payload?.fn && http.request.path().startsWith('/rpc/')) {
-      const fn = decodeURIComponent(http.request.path().slice('/rpc/'.length))
+    if (payload?.fn && http.request.path().startsWith('/remote/rpc/')) {
+      const fn = decodeURIComponent(
+        http.request.path().slice('/remote/rpc/'.length)
+      )
       if (fn && payload.fn !== fn) {
         throw new UnauthorizedError()
       }

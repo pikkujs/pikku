@@ -85,6 +85,14 @@ export const pikkuMCP = pikkuSessionlessFunc<void, boolean | undefined>({
       schema,
     } = config
 
+    const hasMcpContent =
+      Object.keys(mcpEndpoints.toolsMeta).length > 0 ||
+      Object.keys(mcpEndpoints.resourcesMeta).length > 0 ||
+      Object.keys(mcpEndpoints.promptsMeta).length > 0
+    if (mcpEndpoints.files.size === 0 || !hasMcpContent) {
+      return undefined
+    }
+
     await writeFileInDir(
       logger,
       mcpWiringsFile,

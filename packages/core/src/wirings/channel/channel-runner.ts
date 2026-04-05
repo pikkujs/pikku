@@ -1,4 +1,4 @@
-import { NotFoundError, PikkuMissingMetaError } from '../../errors/errors.js'
+import { NotFoundError } from '../../errors/errors.js'
 import { addFunction } from '../../function/function-runner.js'
 import type { CorePikkuPermission } from '../../function/functions.types.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
@@ -36,12 +36,11 @@ export const wireChannel = <
   const channelsMeta = pikkuState(null, 'channel', 'meta')
   const channelMeta = channelsMeta[channel.name]
   if (!channelMeta) {
-    throw new PikkuMissingMetaError(
-      `Missing generated metadata for channel '${channel.name}'`
+    console.warn(
+      `[pikku] Skipping channel '${channel.name}' — metadata not found. Consider moving this wiring to its own file.`
     )
+    return
   }
-
-  pikkuState(null, 'channel', 'channels').set(channel.name, channel as any)
 
   // Register onConnect function if provided
   if (channel.onConnect && channelMeta.connect) {

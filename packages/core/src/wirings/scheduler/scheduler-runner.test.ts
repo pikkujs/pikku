@@ -50,7 +50,7 @@ describe('wireScheduler', () => {
     assert.equal(tasks.get('test-task'), mockTask)
   })
 
-  test('should throw error when task metadata not found', () => {
+  test('should skip when scheduled task metadata not found', () => {
     const mockTask: CoreScheduledTask = {
       name: 'missing-meta-task',
       schedule: '0 0 * * *',
@@ -60,16 +60,10 @@ describe('wireScheduler', () => {
       },
     }
 
-    assert.throws(
-      () => wireScheduler(mockTask),
-      (error: any) => {
-        assert.equal(
-          error.message,
-          "Missing generated metadata for scheduled task 'missing-meta-task'"
-        )
-        return true
-      }
-    )
+    wireScheduler(mockTask)
+
+    const tasks = pikkuState(null, 'scheduler', 'tasks')
+    assert.equal(tasks.has('missing-meta-task'), false)
   })
 
   test('should throw error when scheduled task already exists', () => {

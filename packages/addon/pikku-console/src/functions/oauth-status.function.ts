@@ -14,11 +14,11 @@ export const oauthStatus = pikkuSessionlessFunc<
     'Given a credentialName, reads secrets metadata from wiringService, validates the credential exists and is OAuth2, then attempts to read the stored token from credential service (or secrets as fallback). Returns connection status data including whether a refresh token exists and expiration status.',
   expose: true,
   func: async (
-    { logger, wiringService, secrets, credentialService },
+    { logger, metaService, secrets, credentialService },
     { credentialName }
   ) => {
-    const secretsMeta = await wiringService.readSecretsMeta()
-    const credentialsMeta = await wiringService.readCredentialsMeta()
+    const secretsMeta = await metaService.getSecretsMeta()
+    const credentialsMeta = await metaService.getCredentialsMeta()
 
     const credential =
       secretsMeta[credentialName] ?? credentialsMeta[credentialName]

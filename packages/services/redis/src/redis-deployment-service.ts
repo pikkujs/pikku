@@ -1,9 +1,10 @@
+import { buildRemoteHeaders } from '@pikku/core/remote'
 import type {
   DeploymentService,
   DeploymentServiceConfig,
   DeploymentConfig,
-  DeploymentInfo,
 } from '@pikku/core/services'
+import type { JWTService, SecretService } from '@pikku/core/services'
 import { getAllFunctionNames } from '@pikku/core/function'
 import { Redis, type RedisOptions } from 'ioredis'
 
@@ -19,7 +20,9 @@ export class RedisDeploymentService implements DeploymentService {
   constructor(
     config: DeploymentServiceConfig,
     connectionOrConfig: Redis | RedisOptions | string,
-    keyPrefix = 'pikku'
+    keyPrefix = 'pikku',
+    private jwt?: JWTService,
+    private secrets?: SecretService
   ) {
     this.heartbeatInterval = config.heartbeatInterval ?? 10000
     this.heartbeatTtl = config.heartbeatTtl ?? 30000
@@ -100,36 +103,50 @@ export class RedisDeploymentService implements DeploymentService {
     }
   }
 
-  async findFunction(name: string): Promise<DeploymentInfo[]> {
-    const indexKey = this.functionsIndexKey(name)
+  async invoke(
+    funcName: string,
+    data: unknown,
+    session?: unknown,
+    traceId?: string
+  ): Promise<unknown> {
+    const headers = await buildRemoteHeaders(
+      this.jwt,
+      this.secrets,
+      funcName,
+      session,
+      traceId
+    )
+    const indexKey = this.functionsIndexKey(funcName)
     const now = Date.now()
 
-    const pipeline = this.redis.pipeline()
-    pipeline.zremrangebyscore(indexKey, '-inf', now)
-    pipeline.zrangebyscore(indexKey, now, '+inf')
-    const pipelineResults = await pipeline.exec()
+    await this.redis.zremrangebyscore(indexKey, '-inf', now)
+    const deploymentIds = await this.redis.zrangebyscore(indexKey, now, '+inf')
 
-    const deploymentIds = (pipelineResults?.[1]?.[1] as string[]) ?? []
-
-    if (deploymentIds.length === 0) {
-      return []
-    }
-
-    const results: DeploymentInfo[] = []
-
+    let endpoint: string | null = null
     for (const deploymentId of deploymentIds) {
-      const endpoint = await this.redis.hget(
+      endpoint = await this.redis.hget(
         this.deploymentKey(deploymentId),
         'endpoint'
       )
-      if (endpoint) {
-        results.push({ deploymentId, endpoint })
-      } else {
-        await this.redis.zrem(indexKey, deploymentId)
-      }
+      if (endpoint) break
     }
 
-    return results
+    if (!endpoint) {
+      throw new Error(`No deployment found for function '${funcName}'`)
+    }
+
+    const url = `${endpoint}/remote/rpc/${encodeURIComponent(funcName)}`
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ data }),
+    })
+    if (!response.ok) {
+      throw new Error(
+        `Remote RPC call to '${funcName}' failed: ${response.status}`
+      )
+    }
+    return response.json()
   }
 
   private async sendHeartbeat(): Promise<void> {

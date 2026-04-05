@@ -30,7 +30,7 @@
     "@aws-sdk/s3-request-presigner": "^3.1000.0",
     "@types/aws-lambda": "^8.10.161",
     "@types/node": "^24",
-    "esbuild": "0.27.3",
+    "esbuild": "~0.27.0",
     "serverless": "^4.33.0",
     "serverless-offline": "^14.5.0",
     "serverless-offline-sqs": "^8.0.0",

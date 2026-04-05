@@ -1,7 +1,6 @@
 import type { PikkuWire, CoreUserSession } from '../../types/core.types.js'
 import type { CoreScheduledTask } from './scheduler.types.js'
 import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
-import { PikkuMissingMetaError } from '../../errors/errors.js'
 import {
   getSingletonServices,
   getCreateWireServices,
@@ -20,6 +19,8 @@ import type {
 export type RunScheduledTasksParams = {
   name: string
   session?: CoreUserSession
+  /** Pre-resolved trace ID */
+  traceId?: string
 }
 
 export const wireScheduler = <
@@ -32,9 +33,10 @@ export const wireScheduler = <
   const meta = pikkuState(null, 'scheduler', 'meta')
   const taskMeta = meta[scheduledTask.name]
   if (!taskMeta) {
-    throw new PikkuMissingMetaError(
-      `Missing generated metadata for scheduled task '${scheduledTask.name}'`
+    console.warn(
+      `[pikku] Skipping scheduled task '${scheduledTask.name}' — metadata not found. Consider moving this wiring to its own file.`
     )
+    return
   }
   addFunction(taskMeta.pikkuFuncId, {
     func: scheduledTask.func.func,
@@ -69,9 +71,14 @@ class ScheduledTaskSkippedError extends PikkuError {
 export async function runScheduledTask({
   name,
   session,
+  traceId,
 }: RunScheduledTasksParams): Promise<void> {
   const singletonServices = getSingletonServices()
   const createWireServices = getCreateWireServices()
+  const resolvedTraceId = traceId ?? `cron-${name}-${Date.now()}`
+  const scopedLogger =
+    singletonServices.logger.scope?.(resolvedTraceId) ??
+    singletonServices.logger
   const task = pikkuState(null, 'scheduler', 'tasks').get(name)
   const meta = pikkuState(null, 'scheduler', 'meta')[name]
 
@@ -91,6 +98,7 @@ export async function runScheduledTask({
 
   // Create the scheduled task wire object
   const wire: PikkuWire = {
+    traceId: resolvedTraceId,
     scheduledTask: {
       name,
       schedule: task.schedule,
@@ -103,7 +111,7 @@ export async function runScheduledTask({
   }
 
   try {
-    singletonServices.logger.info(
+    scopedLogger.info(
       `Running schedule task: ${name} | schedule: ${task.schedule}`
     )
 
@@ -122,7 +130,7 @@ export async function runScheduledTask({
   } catch (e: any) {
     const errorResponse = getErrorResponse(e)
     if (errorResponse != null) {
-      singletonServices.logger.error(e)
+      scopedLogger.error(e)
     }
     throw e
   }

@@ -16,7 +16,8 @@ async function main(): Promise<void> {
     const config = await createConfig()
     const logger = new ConsoleLogger()
 
-    const pikkuKysely = new PikkuKysely<KyselyPikkuDB>(logger,
+    const pikkuKysely = new PikkuKysely<KyselyPikkuDB>(
+      logger,
       process.env.DATABASE_URL ||
         'postgres://postgres:password@localhost:5432/pikku_remote_rpc'
     )
