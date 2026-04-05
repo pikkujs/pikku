@@ -6,6 +6,7 @@ import { config } from '../support/types.js'
 interface WorkflowState {
   lastResponse: any
   lastRunId: string | undefined
+  lastWorkflowName: string | undefined
   lastStatus: string | undefined
   consoleResponse: any
 }
@@ -13,6 +14,7 @@ interface WorkflowState {
 const state: WorkflowState = {
   lastResponse: undefined,
   lastRunId: undefined,
+  lastWorkflowName: undefined,
   lastStatus: undefined,
   consoleResponse: undefined,
 }
@@ -59,10 +61,11 @@ When(
       typeof tableOrDoc === 'string'
         ? JSON.parse(tableOrDoc)
         : parseInput(tableOrDoc)
-    const res = await fetch(`${config.apiUrl}/workflow/run`, {
+    state.lastWorkflowName = workflowName
+    const res = await fetch(`${config.apiUrl}/workflow/${workflowName}/run`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ workflowName, data: input }),
+      body: JSON.stringify(input),
     })
     state.lastResponse = await res.json().catch(() => null)
     state.lastStatus = res.ok ? 'completed' : undefined
@@ -97,10 +100,11 @@ When(
       typeof tableOrDoc === 'string'
         ? JSON.parse(tableOrDoc)
         : parseInput(tableOrDoc)
-    const res = await fetch(`${config.apiUrl}/workflow/start`, {
+    state.lastWorkflowName = workflowName
+    const res = await fetch(`${config.apiUrl}/workflow/${workflowName}/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ workflowName, data: input }),
+      body: JSON.stringify(input),
     })
     state.lastResponse = await res.json()
     if (state.lastResponse?.runId) {
@@ -117,6 +121,7 @@ When(
       typeof tableOrDoc === 'string'
         ? JSON.parse(tableOrDoc)
         : parseInput(tableOrDoc)
+    state.lastWorkflowName = graphName
     const res = await fetch(`${config.apiUrl}/workflow/${graphName}/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -173,11 +178,9 @@ When(
     const startTime = Date.now()
 
     while (Date.now() - startTime < maxWaitMs) {
-      const res = await fetch(`${config.apiUrl}/workflow/status`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ runId: state.lastRunId }),
-      })
+      const res = await fetch(
+        `${config.apiUrl}/workflow/${state.lastWorkflowName}/status/${state.lastRunId}`
+      )
       const body = await res.json()
 
       if (

@@ -62,9 +62,26 @@ export interface ProviderAdapter {
 
   /**
    * External modules for esbuild bundling.
-   * Defaults to ['node:*', 'crypto', 'cloudflare:*'] if not provided.
+   * Defaults to ['node:*'] if not provided.
    */
   getExternals?(): string[]
+
+  /**
+   * Module aliases for esbuild bundling (e.g. { crypto: 'node:crypto' }).
+   * Used to remap bare imports to platform-compatible paths.
+   */
+  getAliases?(): Record<string, string>
+
+  /**
+   * esbuild define map for compile-time constants (e.g. { 'process.env.NODE_ENV': '"production"' }).
+   */
+  getDefine?(): Record<string, string>
+
+  /**
+   * esbuild platform target. Defaults to 'node'.
+   * Cloudflare Workers should use 'neutral'.
+   */
+  getPlatform?(): 'node' | 'neutral' | 'browser'
 
   /**
    * Generate additional provider-level config files (e.g. serverless.yml).

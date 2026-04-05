@@ -15,6 +15,12 @@ addError(PikkuMissingMetaError, {
   message: 'Required metadata is missing',
 })
 
+export class MissingServiceError extends PikkuError {}
+addError(MissingServiceError, {
+  status: 500,
+  message: 'A required service is not configured',
+})
+
 /**
  * The server cannot or will not process the request due to client error (e.g., malformed request syntax).
  * @group Error

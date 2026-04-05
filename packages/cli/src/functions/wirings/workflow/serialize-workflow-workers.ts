@@ -3,9 +3,15 @@
  */
 export const serializeWorkflowWorkers = (pathToPikkuTypes: string) => {
   return `/**
- * Workflow queue workers for orchestration
+ * Workflow queue workers
+ * Do not edit manually - regenerate with 'npx pikku'
  */
 import { pikkuSessionlessFunc, wireQueueWorker } from '${pathToPikkuTypes}'
+import { MissingServiceError } from '@pikku/core/errors'
+
+function assertWorkflowService(workflowService: unknown): asserts workflowService {
+  if (!workflowService) throw new MissingServiceError('workflowService is required')
+}
 
 export type WorkflowStepInput = {
   runId: string
@@ -16,32 +22,27 @@ export type WorkflowStepInput = {
 
 export const pikkuWorkflowWorker = pikkuSessionlessFunc<WorkflowStepInput, void>({
   func: async ({ workflowService }, { runId, stepName, rpcName, data }, { rpc }) => {
-    await workflowService!.executeWorkflowStep(runId, stepName, rpcName, data, rpc)
+    assertWorkflowService(workflowService)
+    await workflowService.executeWorkflowStep(runId, stepName, rpcName, data, rpc)
   }
 })
 
 export const pikkuWorkflowOrchestrator = pikkuSessionlessFunc<{ runId: string }, void>({
   func: async ({ workflowService }, { runId }, { rpc }) => {
-    await workflowService!.orchestrateWorkflow(runId, rpc)
+    assertWorkflowService(workflowService)
+    await workflowService.orchestrateWorkflow(runId, rpc)
   }
 })
 
 export const pikkuWorkflowSleeper = pikkuSessionlessFunc<{ runId: string, stepId: string }, void>({
   func: async ({ workflowService }, { runId, stepId }) => {
-    await workflowService!.executeWorkflowSleepCompleted(runId, stepId)
-  },
-  remote: true,
-})
-
-export const pikkuRemoteInternalRPC = pikkuSessionlessFunc<{ rpcName: string, data?: any }, any>({
-  func: async (_services, { rpcName, data }, { rpc }) => {
-    return await (rpc.invoke as any)(rpcName, data)
+    assertWorkflowService(workflowService)
+    await workflowService.executeWorkflowSleepCompleted(runId, stepId)
   },
   remote: true,
 })
 
 wireQueueWorker({ name: 'pikku-workflow-step-worker', func: pikkuWorkflowWorker })
 wireQueueWorker({ name: 'pikku-workflow-orchestrator', func: pikkuWorkflowOrchestrator })
-wireQueueWorker({ name: 'pikku-remote-internal-rpc', func: pikkuRemoteInternalRPC })
 `
 }

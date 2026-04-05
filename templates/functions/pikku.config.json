@@ -16,7 +16,9 @@
   },
   "forceRequiredServices": ["todoStore"],
   "scaffold": {
-    "agent": "no-auth"
+    "rpc": "no-auth",
+    "agent": "no-auth",
+    "workflow": "no-auth"
   },
   "cli": {
     "entrypoints": {

@@ -95,6 +95,9 @@ interface BundleUnitOptions {
   unitOutputDir: string
   projectDir: string
   externals?: string[]
+  aliases?: Record<string, string>
+  define?: Record<string, string>
+  platform?: 'node' | 'neutral' | 'browser'
 }
 
 /**
@@ -106,7 +109,16 @@ interface BundleUnitOptions {
  * - package.json: Minimal manifest with only the external deps this unit needs
  */
 async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
-  const { unit, entryPath, unitOutputDir, projectDir, externals } = options
+  const {
+    unit,
+    entryPath,
+    unitOutputDir,
+    projectDir,
+    externals,
+    aliases,
+    define,
+    platform,
+  } = options
 
   await mkdir(unitOutputDir, { recursive: true })
 
@@ -124,7 +136,7 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
   const result = await build({
     entryPoints: [entryPath],
     bundle: true,
-    platform: 'node',
+    platform: platform ?? 'node',
     format: 'esm',
     metafile: true,
     target: 'es2022',
@@ -133,7 +145,9 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     sourcemap: true,
     logLevel: 'warning',
     loader: { '.ts': 'ts' },
-    external: externals ?? ['node:*', 'crypto', 'cloudflare:*'],
+    external: externals ?? ['node:*'],
+    alias: aliases,
+    define,
     plugins: [createDeadModuleStubPlugin(deadPatterns)],
   })
 
@@ -179,7 +193,12 @@ export async function bundleUnits(
   manifest: DeploymentManifest,
   entryFiles: Map<string, string>,
   outputDir?: string,
-  externals?: string[]
+  options?: {
+    externals?: string[]
+    aliases?: Record<string, string>
+    define?: Record<string, string>
+    platform?: 'node' | 'neutral' | 'browser'
+  }
 ): Promise<BundleOutput> {
   const buildDir = outputDir ?? join(projectDir, '.deploy', 'build')
   const results: BundleResult[] = []
@@ -207,7 +226,7 @@ export async function bundleUnits(
         entryPath,
         unitOutputDir,
         projectDir,
-        externals,
+        ...options,
       })
       results.push(result)
     } catch (err) {

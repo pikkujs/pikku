@@ -240,13 +240,17 @@ export const deployApply = pikkuVoidFunc({
       entryFiles.set(unit.name, entryPath)
     }
 
-    const providerExternals = provider.getExternals?.()
     const { results: bundled, errors: bundleErrors } = await bundleUnits(
       projectDir,
       manifest,
       entryFiles,
       providerDir,
-      providerExternals
+      {
+        externals: provider.getExternals?.(),
+        aliases: provider.getAliases?.(),
+        define: provider.getDefine?.(),
+        platform: provider.getPlatform?.(),
+      }
     )
     logger.info(
       `Bundled ${bundled.length} units${bundleErrors.length > 0 ? ` (${bundleErrors.length} failed)` : ''}`

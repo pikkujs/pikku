@@ -1,6 +1,24 @@
 import type { CloudflareApiResponse, CloudflareClientOptions } from './types.js'
 
 const DEFAULT_BASE_URL = 'https://api.cloudflare.com/client/v4'
+const MAX_RETRIES = 3
+const RETRY_DELAY_MS = 1000
+
+function isRetryable(error: unknown): boolean {
+  if (error instanceof CloudflareApiError) {
+    return error.status >= 500 || error.status === 429
+  }
+  const msg = error instanceof Error ? error.message : String(error)
+  return (
+    msg.includes('fetch failed') ||
+    msg.includes('ECONNRESET') ||
+    msg.includes('ETIMEDOUT')
+  )
+}
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms))
+}
 
 /**
  * Error thrown when the Cloudflare API returns a non-success response.
@@ -66,37 +84,7 @@ export class CloudflareClient {
       init.body = JSON.stringify(body)
     }
 
-    const response = await fetch(url, init)
-    const text = await response.text()
-
-    // Some CF endpoints return 204 No Content on success (e.g. DELETE).
-    if (response.status === 204 || text.length === 0) {
-      return undefined as T
-    }
-
-    let parsed: CloudflareApiResponse<T>
-    try {
-      parsed = JSON.parse(text) as CloudflareApiResponse<T>
-    } catch {
-      throw new CloudflareApiError(
-        `Unexpected response from Cloudflare API (${response.status}): ${text.slice(0, 200)}`,
-        response.status,
-        [{ code: response.status, message: text.slice(0, 200) }]
-      )
-    }
-
-    if (!parsed.success) {
-      const messages = parsed.errors
-        .map((e) => `[${e.code}] ${e.message}`)
-        .join('; ')
-      throw new CloudflareApiError(
-        `Cloudflare API error: ${messages}`,
-        response.status,
-        parsed.errors
-      )
-    }
-
-    return parsed.result
+    return this.fetchWithRetry<T>(url, init)
   }
 
   /**
@@ -126,35 +114,50 @@ export class CloudflareClient {
       ...headers,
     }
 
-    const response = await fetch(url, { method, headers: mergedHeaders, body })
-    const text = await response.text()
+    return this.fetchWithRetry<T>(url, { method, headers: mergedHeaders, body })
+  }
 
-    if (response.status === 204 || text.length === 0) {
-      return undefined as T
+  private async fetchWithRetry<T>(url: string, init: RequestInit): Promise<T> {
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const response = await fetch(url, init)
+        const text = await response.text()
+
+        if (response.status === 204 || text.length === 0) {
+          return undefined as T
+        }
+
+        let parsed: CloudflareApiResponse<T>
+        try {
+          parsed = JSON.parse(text) as CloudflareApiResponse<T>
+        } catch {
+          throw new CloudflareApiError(
+            `Unexpected response from Cloudflare API (${response.status}): ${text.slice(0, 200)}`,
+            response.status,
+            [{ code: response.status, message: text.slice(0, 200) }]
+          )
+        }
+
+        if (!parsed.success) {
+          const messages = parsed.errors
+            .map((e) => `[${e.code}] ${e.message}`)
+            .join('; ')
+          throw new CloudflareApiError(
+            `Cloudflare API error: ${messages}`,
+            response.status,
+            parsed.errors
+          )
+        }
+
+        return parsed.result
+      } catch (error) {
+        if (attempt < MAX_RETRIES && isRetryable(error)) {
+          await sleep(RETRY_DELAY_MS * (attempt + 1))
+          continue
+        }
+        throw error
+      }
     }
-
-    let parsed: CloudflareApiResponse<T>
-    try {
-      parsed = JSON.parse(text) as CloudflareApiResponse<T>
-    } catch {
-      throw new CloudflareApiError(
-        `Unexpected response from Cloudflare API (${response.status}): ${text.slice(0, 200)}`,
-        response.status,
-        [{ code: response.status, message: text.slice(0, 200) }]
-      )
-    }
-
-    if (!parsed.success) {
-      const messages = parsed.errors
-        .map((e) => `[${e.code}] ${e.message}`)
-        .join('; ')
-      throw new CloudflareApiError(
-        `Cloudflare API error: ${messages}`,
-        response.status,
-        parsed.errors
-      )
-    }
-
-    return parsed.result
+    throw new Error('Unreachable')
   }
 }

@@ -20,14 +20,6 @@ export {
   type PikkuWorkflowGraphResult,
 } from './graph/wire-workflow-graph.js'
 
-// Workflow helpers (runtime factories for HTTP handlers)
-export {
-  workflow,
-  workflowStart,
-  workflowStatus,
-  graphStart,
-} from './workflow-helpers.js'
-
 // Queue worker functions (registered by codegen, executed at runtime)
 export {
   pikkuWorkflowWorkerFunc,

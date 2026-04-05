@@ -309,6 +309,21 @@ export class CloudflareProviderAdapter {
     const infra = generateInfraManifest(manifest)
     return JSON.stringify(infra, null, 2)
   }
+
+  getExternals(): string[] {
+    return ['node:*', 'cloudflare:*']
+  }
+
+  getAliases(): Record<string, string> {
+    return { crypto: 'node:crypto' }
+  }
+
+  getDefine(): Record<string, string> {
+    return {
+      'process.versions.electron': 'undefined',
+      'process.versions.node': '"22.0.0"',
+    }
+  }
 }
 
 /** Convert kebab-case unit name to SCREAMING_SNAKE_CASE binding name */

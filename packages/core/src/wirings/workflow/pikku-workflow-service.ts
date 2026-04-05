@@ -150,10 +150,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       })
     }
 
-    // Workflow HTTP routes are handled by scaffold-generated wiring files
-    // (workflow.wiring.ts, graph.wiring.ts) that call wireHTTP with
-    // workflowStart/workflow/workflowStatus from workflow-helpers.
-    // Agent routes are handled by scaffold-generated agent.wiring.ts.
+    // Workflow and agent HTTP routes are handled by scaffold-generated
+    // catch-all wiring files.
   }
 
   /**

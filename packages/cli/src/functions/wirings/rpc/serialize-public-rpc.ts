@@ -11,9 +11,9 @@ export const serializePublicRPC = (
  * Auto-generated public RPC HTTP endpoint
  * Do not edit manually - regenerate with 'npx pikku'
  */
-import { pikkuSessionlessFunc, defineHTTPRoutes, wireHTTPRoutes } from '${pathToPikkuTypes}'
+import { pikkuSessionlessFunc, wireHTTP } from '${pathToPikkuTypes}'
 
-export const rpcCaller = pikkuSessionlessFunc<
+const rpcCaller = pikkuSessionlessFunc<
   { rpcName: string; data?: unknown },
   unknown
 >({
@@ -23,33 +23,11 @@ export const rpcCaller = pikkuSessionlessFunc<
   },
 })
 
-export const workflowCaller = pikkuSessionlessFunc<
-  { workflowName: string; input?: unknown },
-  { runId: string }
->({
+wireHTTP({
+  route: '${globalHTTPPrefix}/rpc/:rpcName',
+  method: 'post',
   auth: ${authFlag},
-  func: async (_services, { workflowName, input }, { rpc }) => {
-    return await (rpc.startWorkflow as Function)(workflowName, input || {})
-  },
+  func: rpcCaller,
 })
-
-export const rpcRoutes = defineHTTPRoutes({
-  auth: ${authFlag},
-  tags: ['pikku:public'],
-  routes: {
-    rpc: {
-      route: '${globalHTTPPrefix}/rpc/:rpcName',
-      method: 'post',
-      func: rpcCaller,
-    },
-    workflow: {
-      route: '${globalHTTPPrefix}/rpc/workflow/:workflowName',
-      method: 'post',
-      func: workflowCaller,
-    },
-  },
-})
-
-wireHTTPRoutes({ routes: { rpc: rpcRoutes } })
 `
 }

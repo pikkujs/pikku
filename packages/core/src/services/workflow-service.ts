@@ -40,6 +40,12 @@ export interface WorkflowService {
     rpcService: any,
     options?: { inline?: boolean; startNode?: string }
   ): Promise<{ runId: string }>
+  runToCompletion<I>(
+    name: string,
+    input: I,
+    rpcService: any,
+    options?: { pollIntervalMs?: number; wire?: WorkflowRunWire }
+  ): Promise<unknown>
   runWorkflowJob(runId: string, rpcService: any): Promise<void>
   orchestrateWorkflow(runId: string, rpcService: any): Promise<void>
   executeWorkflowSleepCompleted(runId: string, stepId: string): Promise<void>

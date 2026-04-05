@@ -4,12 +4,6 @@ export const serializeWorkflowTypes = (
   workflowMapImportPath: string
 ) => {
   return `import { WorkflowCancelledException } from '@pikku/core/workflow'
-import {
-  workflow as coreWorkflow,
-  workflowStart as coreWorkflowStart,
-  workflowStatus as coreWorkflowStatus,
-  graphStart as coreGraphStart,
-} from '@pikku/core/workflow'
 import { template } from '@pikku/core/workflow'
 import {
   pikkuWorkflowGraph as corePikkuWorkflowGraph,
@@ -21,7 +15,7 @@ import type { PikkuWorkflowWire, WorkflowStepOptions } from '@pikku/core/workflo
 export { WorkflowCancelledException }
 import type { PikkuFunctionSessionless, PikkuFunctionConfig } from '${functionTypesImportPath}'
 import type { FlattenedRPCMap } from '${rpcMapImportPath}'
-import type { WorkflowMap, GraphsMap } from '${workflowMapImportPath}'
+import type { WorkflowMap } from '${workflowMapImportPath}'
 
 export { template }
 
@@ -173,46 +167,5 @@ export function pikkuWorkflowGraph<
   return corePikkuWorkflowGraph(config as any)
 }
 
-export const workflow = <Name extends keyof WorkflowMap>(
-  workflowName: Name,
-  options?: { pollIntervalMs?: number }
-) => {
-  return coreWorkflow<WorkflowMap>(workflowName as string & keyof WorkflowMap, options) as PikkuFunctionConfig<
-    WorkflowMap[Name]['input'],
-    WorkflowMap[Name]['output'],
-    'session' | 'rpc'
-  >
-}
-
-export const workflowStart = <Name extends keyof WorkflowMap>(
-  workflowName: Name
-) => {
-  return coreWorkflowStart<WorkflowMap>(workflowName as string & keyof WorkflowMap) as PikkuFunctionConfig<
-    WorkflowMap[Name]['input'],
-    { runId: string },
-    'session' | 'rpc'
-  >
-}
-
-export const workflowStatus = <Name extends keyof WorkflowMap>(
-  _workflowName: Name
-) => {
-  return coreWorkflowStatus<WorkflowMap>(_workflowName as string & keyof WorkflowMap) as PikkuFunctionConfig<
-    { runId: string },
-    { id: string; status: 'running' | 'completed' | 'failed' | 'cancelled'; output?: WorkflowMap[Name]['output']; error?: { message?: string } },
-    'session' | 'rpc'
-  >
-}
-
-export const graphStart = <Name extends keyof GraphsMap, Node extends string & keyof GraphsMap[Name]>(
-  graphName: Name,
-  startNode: Node
-) => {
-  return coreGraphStart<GraphsMap>(graphName as string & keyof GraphsMap, startNode as string) as PikkuFunctionConfig<
-    GraphsMap[Name][Node] extends { input: infer I } ? I : never,
-    { runId: string },
-    'session' | 'rpc'
-  >
-}
 `
 }
