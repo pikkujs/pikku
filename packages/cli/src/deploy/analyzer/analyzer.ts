@@ -265,7 +265,8 @@ export function analyzeDeployment(
   // a unit with a fetch handler for RPC access.
   const existingUnitNames = new Set(units.map((u) => u.name))
 
-  for (const unit of [...units]) {
+  const unitsSnapshot = Array.from(units)
+  for (const unit of unitsSnapshot) {
     for (const dep of unit.dependsOn) {
       if (!existingUnitNames.has(dep)) {
         // Find the function ID for this dependency
