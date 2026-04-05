@@ -196,7 +196,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         workflowStepId: stepId,
         workflowRunId: runId,
         stepName: stepName,
-        rpcName: rpcName,
+        rpcName: rpcName ?? null,
         data: data != null ? JSON.stringify(data) : null,
         status: 'pending',
         retries: stepOptions?.retries ?? null,
@@ -360,7 +360,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
   }
 
   async setStepResult(stepId: string, result: any): Promise<void> {
-    const resultJson = JSON.stringify(result)
+    const resultJson = JSON.stringify(result) ?? null
 
     await this.db
       .updateTable('workflowStep')
