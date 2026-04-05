@@ -11,6 +11,7 @@ import { JoseJWTService } from '@pikku/jose'
 import { createOpenAI } from '@ai-sdk/openai'
 import type { KyselyPikkuDB } from '@pikku/kysely'
 import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
+import { PikkuMetaService } from '../.pikku/pikku-meta-service.gen.js'
 
 export const createSingletonServices = pikkuServices(
   async (config, { variables, secrets, metaService }) => {
@@ -29,9 +30,6 @@ export const createSingletonServices = pikkuServices(
     }
 
     if (requiredSingletonServices.metaService && metaService === undefined) {
-      const { PikkuMetaService } = await import(
-        '../.pikku/pikku-meta-service.gen.js'
-      )
       metaService = new PikkuMetaService()
     }
 

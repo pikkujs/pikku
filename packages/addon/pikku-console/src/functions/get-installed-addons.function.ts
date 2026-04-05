@@ -1,5 +1,6 @@
 import { pikkuSessionlessFunc } from '#pikku'
 import { pikkuState } from '@pikku/core/internal'
+import type { MetaService } from '@pikku/core/services'
 
 export interface InstalledAddon {
   namespace: string
@@ -11,7 +12,7 @@ export interface InstalledAddon {
 }
 
 async function readPackageIcon(
-  metaService: { readFile: (path: string) => Promise<string | null> },
+  metaService: MetaService,
   packageName: string
 ): Promise<string | undefined> {
   try {
