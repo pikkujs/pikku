@@ -13,7 +13,7 @@ export const serializePublicRPC = (
  */
 import { pikkuSessionlessFunc, wireHTTP } from '${pathToPikkuTypes}'
 
-const rpcCaller = pikkuSessionlessFunc<
+export const rpcCaller = pikkuSessionlessFunc<
   { rpcName: string; data?: unknown },
   unknown
 >({

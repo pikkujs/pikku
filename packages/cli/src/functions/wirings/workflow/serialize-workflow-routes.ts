@@ -17,7 +17,7 @@ function assertWorkflowService(workflowService: unknown): asserts workflowServic
   if (!workflowService) throw new MissingServiceError('workflowService is required')
 }
 
-const workflowStarter = pikkuSessionlessFunc<
+export const workflowStarter = pikkuSessionlessFunc<
   { workflowName: string; data?: unknown },
   { runId: string }
 >({
@@ -27,7 +27,7 @@ const workflowStarter = pikkuSessionlessFunc<
   },
 })
 
-const workflowRunner = pikkuSessionlessFunc<
+export const workflowRunner = pikkuSessionlessFunc<
   { workflowName: string; data?: unknown },
   unknown
 >({
@@ -38,7 +38,7 @@ const workflowRunner = pikkuSessionlessFunc<
   },
 })
 
-const workflowStatusChecker = pikkuSessionlessFunc<
+export const workflowStatusChecker = pikkuSessionlessFunc<
   { workflowName: string; runId: string },
   { id: string; status: string; output?: unknown; error?: { message?: string } }
 >({
@@ -56,7 +56,7 @@ const workflowStatusChecker = pikkuSessionlessFunc<
   },
 })
 
-const graphStarter = pikkuSessionlessFunc<
+export const graphStarter = pikkuSessionlessFunc<
   { workflowName: string; nodeId: string; data?: unknown },
   { runId: string }
 >({

@@ -9,7 +9,7 @@ export const serializeRemoteRPC = (pathToPikkuTypes: string) => {
 import { pikkuSessionlessFunc, wireHTTP } from '${pathToPikkuTypes}'
 import { pikkuRemoteAuthMiddleware } from '@pikku/core/middleware'
 
-const remoteRPCHandler = pikkuSessionlessFunc<
+export const remoteRPCHandler = pikkuSessionlessFunc<
   { rpcName: string, data?: unknown },
   unknown
 >({
