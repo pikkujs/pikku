@@ -655,7 +655,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           throw new Error(run.error?.message || 'Workflow failed')
         }
         if (run.status === 'cancelled') {
-          throw new Error('Workflow was cancelled')
+          throw new WorkflowCancelledException()
         }
         return run.output
       }
