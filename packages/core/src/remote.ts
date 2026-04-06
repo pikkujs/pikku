@@ -37,7 +37,8 @@ export async function buildRemoteHeaders(
         fn: funcName,
         iat: Math.floor(Date.now() / 1000),
         session: sessionEnc,
-      }
+      },
+      'remote'
     )
     headers.authorization = `Bearer ${token}`
   }
