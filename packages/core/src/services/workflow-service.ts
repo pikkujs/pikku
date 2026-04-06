@@ -2,6 +2,7 @@ import type { SerializedError } from '../types/core.types.js'
 import type {
   WorkflowRun,
   WorkflowRunWire,
+  WorkflowRunStatus,
   StepState,
   WorkflowStatus,
   WorkflowVersionStatus,
@@ -21,6 +22,7 @@ export interface WorkflowService {
     wire: WorkflowRunWire
   ): Promise<string>
   getRun(id: string): Promise<WorkflowRun | null>
+  getRunStatus(id: string): Promise<WorkflowRunStatus | null>
   getRunHistory(runId: string): Promise<Array<StepState & { stepName: string }>>
   updateRunStatus(
     id: string,
@@ -40,6 +42,12 @@ export interface WorkflowService {
     rpcService: any,
     options?: { inline?: boolean; startNode?: string }
   ): Promise<{ runId: string }>
+  runToCompletion<I>(
+    name: string,
+    input: I,
+    rpcService: any,
+    options?: { pollIntervalMs?: number; wire?: WorkflowRunWire }
+  ): Promise<unknown>
   runWorkflowJob(runId: string, rpcService: any): Promise<void>
   orchestrateWorkflow(runId: string, rpcService: any): Promise<void>
   executeWorkflowSleepCompleted(runId: string, stepId: string): Promise<void>

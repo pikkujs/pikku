@@ -1,16 +1,27 @@
-import { runPikkuFunc } from '../../function/function-runner.js'
+import { runPikkuFunc, addFunction } from '../../function/function-runner.js'
+import {
+  pikkuWorkflowWorkerFunc,
+  pikkuWorkflowOrchestratorFunc,
+  pikkuWorkflowSleeperFunc,
+} from './workflow-queue-workers.js'
+import { wireQueueWorker } from '../queue/queue-runner.js'
 import {
   getSingletonServices,
   getCreateWireServices,
   pikkuState,
 } from '../../pikku-state.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
+
+const toKebab = (s: string) =>
+  s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
 import type { PikkuWire, SerializedError } from '../../types/core.types.js'
 import type { QueueService } from '../queue/queue.types.js'
 import type {
   PikkuWorkflowWire,
   StepState,
+  StepStatus,
   WorkflowRun,
+  WorkflowRunStatus,
   WorkflowRunWire,
   WorkflowStatus,
   WorkflowVersionStatus,
@@ -116,7 +127,43 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     return getSingletonServices()?.logger
   }
 
-  constructor() {}
+  constructor() {
+    const queueMeta = pikkuState(null, 'queue', 'meta')
+    const functions = pikkuState(null, 'function', 'functions')
+
+    // Register shared queue workers for monolith deployments
+    if (!functions.has('pikkuWorkflowOrchestrator')) {
+      const func = { func: pikkuWorkflowOrchestratorFunc }
+      addFunction('pikkuWorkflowOrchestrator', func)
+      wireQueueWorker({ name: 'pikku-workflow-orchestrator', func } as any)
+    }
+    if (!functions.has('pikkuWorkflowStepWorker')) {
+      const func = { func: pikkuWorkflowWorkerFunc }
+      addFunction('pikkuWorkflowStepWorker', func)
+      wireQueueWorker({ name: 'pikku-workflow-step-worker', func } as any)
+    }
+
+    // Register per-workflow queue workers for serverless deployments
+    for (const [queueName, meta] of Object.entries(queueMeta)) {
+      if (functions.has(meta.pikkuFuncId)) continue
+
+      if (queueName.startsWith('wf-orchestrator-')) {
+        const func = { func: pikkuWorkflowOrchestratorFunc }
+        addFunction(meta.pikkuFuncId, func)
+        wireQueueWorker({ name: queueName, func } as any)
+      } else if (queueName.startsWith('wf-step-')) {
+        const func = { func: pikkuWorkflowWorkerFunc }
+        addFunction(meta.pikkuFuncId, func)
+        wireQueueWorker({ name: queueName, func } as any)
+      }
+    }
+
+    if (!functions.has('pikkuWorkflowSleeper')) {
+      addFunction('pikkuWorkflowSleeper', {
+        func: pikkuWorkflowSleeperFunc,
+      })
+    }
+  }
 
   /**
    * Check if a run is executing inline (without queues)
@@ -161,6 +208,55 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * @returns Workflow run or null if not found
    */
   abstract getRun(id: string): Promise<WorkflowRun | null>
+
+  /**
+   * Get minimal workflow run status with step summaries.
+   * Used by the public API — the console addon provides the full verbose view.
+   */
+  async getRunStatus(id: string): Promise<WorkflowRunStatus | null> {
+    const run = await this.getRun(id)
+    if (!run) return null
+
+    const history = await this.getRunHistory(id)
+    const terminalStatuses = new Set(['completed', 'failed', 'cancelled'])
+
+    // Build step summaries from history (latest attempt per step)
+    const stepMap = new Map<
+      string,
+      { status: StepStatus; startedAt?: Date; completedAt?: Date }
+    >()
+    for (const step of history) {
+      const existing = stepMap.get(step.stepName)
+      if (!existing || step.updatedAt > existing.completedAt!) {
+        stepMap.set(step.stepName, {
+          status: step.status,
+          startedAt: step.runningAt ?? step.createdAt,
+          completedAt: step.succeededAt ?? step.failedAt,
+        })
+      }
+    }
+
+    const steps = [...stepMap.entries()].map(([name, s]) => ({
+      name,
+      status: s.status,
+      duration:
+        s.startedAt && s.completedAt
+          ? s.completedAt.getTime() - s.startedAt.getTime()
+          : undefined,
+    }))
+
+    return {
+      id: run.id,
+      status: run.status,
+      startedAt: run.createdAt,
+      completedAt: terminalStatuses.has(run.status) ? run.updatedAt : undefined,
+      steps,
+      output: run.status === 'completed' ? run.output : undefined,
+      error: run.error
+        ? { message: run.error.message ?? 'Unknown error' }
+        : undefined,
+    }
+  }
 
   /**
    * Get workflow run history (all step attempts in chronological order)
@@ -379,9 +475,18 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * Resume a paused workflow by triggering the orchestrator
    * @param runId - Run ID
    */
-  public async resumeWorkflow(runId: string): Promise<void> {
+  public async resumeWorkflow(
+    runId: string,
+    workflowName?: string
+  ): Promise<void> {
     const queueService = this.verifyQueueService()
-    await queueService.add(this.getConfig().orchestratorQueueName, { runId })
+    if (!workflowName) {
+      const run = await this.getRun(runId)
+      workflowName = run?.workflow
+    }
+    await queueService.add(this.getOrchestratorQueueName(workflowName), {
+      runId,
+    })
   }
 
   public async queueStepWorker(
@@ -392,7 +497,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   ): Promise<void> {
     const queueService = this.verifyQueueService()
     await queueService.add(
-      this.getConfig().stepWorkerQueueName,
+      this.getStepWorkerQueueName(rpcName),
       JSON.parse(
         JSON.stringify({
           runId,
@@ -424,11 +529,16 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    */
   protected async scheduleOrchestratorRetry(
     runId: string,
-    retryDelay?: number | string
+    retryDelay?: number | string,
+    workflowName?: string
   ): Promise<void> {
     const queueService = this.verifyQueueService()
+    if (!workflowName) {
+      const run = await this.getRun(runId)
+      workflowName = run?.workflow
+    }
     await queueService.add(
-      this.getConfig().orchestratorQueueName,
+      this.getOrchestratorQueueName(workflowName),
       { runId },
       retryDelay ? { delay: getDurationInMilliseconds(retryDelay) } : undefined
     )
@@ -545,7 +655,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           throw new Error(run.error?.message || 'Workflow failed')
         }
         if (run.status === 'cancelled') {
-          throw new Error('Workflow was cancelled')
+          throw new WorkflowCancelledException(runId)
         }
         return run.output
       }
@@ -963,7 +1073,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       const retryDelay = stepOptions?.retryDelay
 
       await getSingletonServices()!.queueService!.add(
-        this.getConfig().stepWorkerQueueName,
+        this.getStepWorkerQueueName(rpcName),
         JSON.parse(
           JSON.stringify({
             runId,
@@ -1343,5 +1453,24 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         workflow?.stepWorkerQueueName ?? 'pikku-workflow-step-worker',
       sleeperRPCName: workflow?.sleeperRPCName ?? 'pikkuWorkflowSleeper',
     }
+  }
+
+  /**
+   * Get the orchestrator queue name for a specific workflow.
+   * Checks queue meta for a per-workflow queue first (e.g. wf-orchestrator-{name}),
+   * falls back to the shared orchestrator queue.
+   */
+  protected getOrchestratorQueueName(workflowName?: string): string {
+    if (workflowName) {
+      return `wf-orchestrator-${toKebab(workflowName)}`
+    }
+    return this.getConfig().orchestratorQueueName
+  }
+
+  protected getStepWorkerQueueName(rpcName?: string): string {
+    if (rpcName) {
+      return `wf-step-${toKebab(rpcName)}`
+    }
+    return this.getConfig().stepWorkerQueueName
   }
 }

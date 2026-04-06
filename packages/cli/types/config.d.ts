@@ -50,7 +50,7 @@ export interface PikkuCLICoreOutputFiles {
   publicRpcFile: string
   publicAgentFile: string
   consoleFunctionsFile: string
-  workflowWorkersFile: string
+  workflowRoutesFile: string
 
   // Triggers
   triggersTypesFile: string
@@ -267,6 +267,11 @@ export type PikkuCLIInput = {
 
   globalHTTPPrefix?: string
 
+  deploy?: {
+    providers: Record<string, string>
+    defaultProvider?: string
+  }
+
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles
 
@@ -395,6 +400,11 @@ export type PikkuCLIConfig = {
   addonMetaJsonFile?: string
 
   globalHTTPPrefix?: string
+
+  deploy?: {
+    providers: Record<string, string>
+    defaultProvider?: string
+  }
 
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles

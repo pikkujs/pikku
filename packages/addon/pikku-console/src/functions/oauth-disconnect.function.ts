@@ -8,11 +8,11 @@ export const oauthDisconnect = pikkuSessionlessFunc<{
     'Given a credentialName, reads secrets metadata from wiringService, validates the credential exists and is OAuth2, then deletes the stored tokens from credential service (or secrets as fallback).',
   expose: true,
   func: async (
-    { logger, wiringService, secrets, credentialService },
+    { logger, metaService, secrets, credentialService },
     { credentialName }
   ) => {
-    const secretsMeta = await wiringService.readSecretsMeta()
-    const credentialsMeta = await wiringService.readCredentialsMeta()
+    const secretsMeta = await metaService.getSecretsMeta()
+    const credentialsMeta = await metaService.getCredentialsMeta()
 
     const credential =
       secretsMeta[credentialName] ?? credentialsMeta[credentialName]

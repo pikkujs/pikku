@@ -30,6 +30,9 @@ import {
   enableAgent,
   enableWorkflow,
 } from './functions/commands/enable.js'
+import { deployPlan } from './functions/commands/deploy-plan.js'
+import { deployApply } from './functions/commands/deploy-apply.js'
+import { deployInfo } from './functions/commands/deploy-info.js'
 // import { clientCLIRenderer } from './services.js'
 
 wireCLI({
@@ -62,6 +65,11 @@ wireCLI({
     },
     stateInput: {
       description: 'Load inspector state from JSON file (skips inspection)',
+    },
+    outDir: {
+      description:
+        'Override output directory (default: from pikku.config.json)',
+      short: 'o',
     },
   },
   commands: {
@@ -330,6 +338,46 @@ wireCLI({
           func: pikkuVersionsUpdate,
           description:
             'Update the version manifest with current contract hashes',
+        }),
+      },
+    },
+    deploy: {
+      description: 'Deploy Pikku project to cloud infrastructure',
+      subcommands: {
+        plan: pikkuCLICommand({
+          func: deployPlan,
+          description:
+            'Show deployment plan (what will be created, updated, deleted)',
+          options: {
+            provider: {
+              description: 'Deployment provider (cloudflare, aws)',
+              default: 'cloudflare',
+              short: 'p',
+            },
+          },
+        }),
+        apply: pikkuCLICommand({
+          func: deployApply,
+          description: 'Execute the deployment plan',
+          options: {
+            provider: {
+              description: 'Deployment provider (cloudflare, aws)',
+              default: 'cloudflare',
+              short: 'p',
+            },
+          },
+        }),
+        info: pikkuCLICommand({
+          func: deployInfo,
+          description:
+            'Show project deployment info (workers, queues, crons, secrets)',
+          options: {
+            provider: {
+              description: 'Deployment provider (cloudflare, aws)',
+              default: 'cloudflare',
+              short: 'p',
+            },
+          },
         }),
       },
     },

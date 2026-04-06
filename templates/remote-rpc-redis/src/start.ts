@@ -6,6 +6,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const serverScript = resolve(__dirname, 'server.ts')
 const PORTS = [3001, 3002]
 
+if (!process.env.PIKKU_REMOTE_SECRET) {
+  process.env.PIKKU_REMOTE_SECRET = 'dev-remote-secret'
+}
+
 function spawnServer(port: number): ChildProcess {
   const child = spawn('tsx', [serverScript], {
     env: { ...process.env, PORT: String(port) },

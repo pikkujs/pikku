@@ -1,4 +1,4 @@
-import { NotFoundError, PikkuMissingMetaError } from '../../errors/errors.js'
+import { NotFoundError } from '../../errors/errors.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import type {
@@ -66,9 +66,10 @@ export const wireCLI = <
   const cliMeta = pikkuState(null, 'cli', 'meta') || {}
 
   if (!cliMeta.programs?.[cli.program]) {
-    throw new PikkuMissingMetaError(
-      `CLI metadata not found for program '${cli.program}'`
+    console.warn(
+      `[pikku] Skipping CLI program '${cli.program}' — metadata not found. Consider moving this wiring to its own file.`
     )
+    return
   }
 
   // Get existing programs state and add this program

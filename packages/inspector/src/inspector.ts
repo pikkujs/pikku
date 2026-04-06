@@ -59,6 +59,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     singletonServicesFactories: new Map(),
     wireServicesFactories: new Map(),
     wireServicesMeta: new Map(),
+    addonRequiredParentServices: [],
     configFactories: new Map(),
     filesAndMethods: {},
     filesAndMethodsErrors: new Map(),

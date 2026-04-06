@@ -46,7 +46,7 @@ function hasInlineSteps(steps: WorkflowStepMeta[]): boolean {
 /**
  * Recursively collect all RPC names from workflow steps
  */
-function collectInvokedRPCs(
+export function collectInvokedRPCs(
   steps: WorkflowStepMeta[],
   rpcs: Set<string>
 ): void {
@@ -210,6 +210,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   let description: string | undefined
   let errors: string[] | undefined
   let inline: boolean | undefined
+  let expose: boolean | undefined
 
   if (ts.isObjectLiteralExpression(firstArg)) {
     const metadata = getCommonWireMetaData(
@@ -228,6 +229,8 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     if (inlineProp === true) {
       inline = true
     }
+
+    expose = getPropertyValue(firstArg, 'expose') as boolean | undefined
   }
 
   // Validate that we got a valid function
@@ -334,5 +337,22 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     errors,
     tags,
     inline,
+    expose,
+  }
+
+  // Workflow functions require platform services that aren't visible
+  // through parameter destructuring (they're accessed via workflow.do/sleep)
+  const funcMeta = state.functions.meta[pikkuFuncId]
+  if (funcMeta?.services) {
+    for (const svc of [
+      'workflowService',
+      'workflowRunService',
+      'schedulerService',
+      'queueService',
+    ]) {
+      if (!funcMeta.services.services.includes(svc)) {
+        funcMeta.services.services.push(svc)
+      }
+    }
   }
 }

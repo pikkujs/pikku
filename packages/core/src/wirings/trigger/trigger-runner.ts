@@ -21,9 +21,10 @@ export const wireTrigger = (trigger: CoreTrigger) => {
   const meta = pikkuState(null, 'trigger', 'meta')
   const triggerMeta = meta[trigger.name]
   if (!triggerMeta) {
-    throw new PikkuMissingMetaError(
-      `Missing generated metadata for trigger '${trigger.name}'`
+    console.warn(
+      `[pikku] Skipping trigger '${trigger.name}' — metadata not found. Consider moving this wiring to its own file.`
     )
+    return
   }
 
   addFunction(triggerMeta.pikkuFuncId, trigger.func as any)
@@ -43,9 +44,10 @@ export const wireTriggerSource = <TInput = unknown, TOutput = unknown>(
   const sourceMeta = pikkuState(null, 'trigger', 'sourceMeta')
   const triggerSourceMeta = sourceMeta[source.name]
   if (!triggerSourceMeta) {
-    throw new PikkuMissingMetaError(
-      `Missing generated metadata for trigger source '${source.name}'`
+    console.warn(
+      `[pikku] Skipping trigger source '${source.name}' — metadata not found. Consider moving this wiring to its own file.`
     )
+    return
   }
 
   const triggerSources = pikkuState(null, 'trigger', 'triggerSources')

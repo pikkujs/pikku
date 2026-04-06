@@ -27,9 +27,11 @@ export const serializeFunctionTypes = (
  * Core function, middleware, and permission types for all wirings
  */
 
-import { CorePikkuFunctionConfig, CorePikkuAuth, CorePikkuAuthConfig, CorePikkuPermission, CorePikkuMiddleware, CorePermissionGroup, addMiddleware as addMiddlewareCore, addPermission as addPermissionCore, PikkuWire, PickRequired } from '@pikku/core'
+import type { CorePikkuMiddleware, CorePermissionGroup, PikkuWire, PickRequired } from '@pikku/core'
+import type { CorePikkuFunctionConfig, CorePikkuAuth, CorePikkuAuthConfig, CorePikkuPermission } from '@pikku/core/function'
+import { pikkuAuth as pikkuAuthCore } from '@pikku/core/function'
+import { addMiddleware as addMiddlewareCore, addPermission as addPermissionCore } from '@pikku/core/middleware'
 import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/internal'
-import { pikkuAuth as pikkuAuthCore } from '@pikku/core'
 import { PikkuError } from '@pikku/core/errors'
 import type { NodeType } from '@pikku/core/node'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
@@ -704,7 +706,7 @@ export const addPermission = <In = unknown>(tag: string, permissions: CorePermis
   addPermissionCore(tag, permissions as any, ${packageNameValue})
 }
 
-export { wireAddon } from '@pikku/core'
-export type { WireAddonConfig } from '@pikku/core'
+export { wireAddon } from '@pikku/core/rpc'
+export type { WireAddonConfig } from '@pikku/core/rpc'
 `
 }

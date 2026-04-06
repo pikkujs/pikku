@@ -205,7 +205,11 @@ export function registerHTTPRoute({
   }
 
   const packageName = ts.isIdentifier(funcInitializer)
-    ? resolveAddonName(funcInitializer, checker, state.rpc.wireAddonDeclarations)
+    ? resolveAddonName(
+        funcInitializer,
+        checker,
+        state.rpc.wireAddonDeclarations
+      )
     : null
 
   ensureFunctionMetadata(
@@ -327,6 +331,7 @@ export function registerHTTPRoute({
     pikkuFuncId: funcName,
     ...(packageName && { packageName }),
     route: fullRoute,
+    sourceFile: sourceFile.fileName,
     method: method as HTTPMethod,
     params: params.length > 0 ? params : undefined,
     query: query.length > 0 ? query : undefined,

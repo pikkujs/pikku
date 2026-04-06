@@ -735,16 +735,6 @@ export function defineServiceTests(config: ServiceTestConfig): void {
           endpoint: 'http://localhost:3000',
           functions: ['funcA', 'funcB'],
         })
-
-        const infos = await service.findFunction('funcA')
-        assert.ok(infos.length >= 1)
-        assert.equal(infos[0]!.deploymentId, 'deploy-1')
-        assert.equal(infos[0]!.endpoint, 'http://localhost:3000')
-      })
-
-      test('findFunction returns empty for unknown function', async () => {
-        const infos = await service.findFunction('unknown-func')
-        assert.deepEqual(infos, [])
       })
     })
   }

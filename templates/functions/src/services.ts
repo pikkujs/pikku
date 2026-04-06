@@ -4,18 +4,21 @@ import {
   LocalVariablesService,
 } from '@pikku/core/services'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
+import { JoseJWTService } from '@pikku/jose'
 import {
   pikkuConfig,
   pikkuServices,
   pikkuWireServices,
 } from '../.pikku/pikku-types.gen.js'
 import { TodoStore } from './services/store.service.js'
+import { requiredSingletonServices } from '../.pikku/pikku-services.gen.js'
 
 export const createConfig = pikkuConfig(async () => {
   return {
     awsRegion: 'us-east-1',
     secrets: {
-      AUTH_SECRET: 'AUTH_SECRET',
+      auth: 'AUTH_SECRET',
+      remote: 'PIKKU_REMOTE_SECRET',
     },
   }
 })
@@ -30,12 +33,36 @@ export const createSingletonServices = pikkuServices(
     const schema = new CFWorkerSchemaService(logger)
     const secrets = new LocalSecretService(variables)
 
+    let metaService = existingServices?.metaService
+    if (requiredSingletonServices.metaService) {
+      if (!metaService) {
+        const { PikkuMetaService } = await import(
+          '../.pikku/pikku-meta-service.gen.js'
+        )
+        metaService = new PikkuMetaService()
+      }
+    }
+
+    const jwt = new JoseJWTService(async () => {
+      const keys: Array<{ id: string; value: string }> = []
+      for (const [id, secretName] of Object.entries(config.secrets ?? {})) {
+        try {
+          keys.push({
+            id,
+            value: await secrets.getSecret(secretName as string),
+          })
+        } catch {}
+      }
+      return keys
+    })
+
     return {
       config,
       logger,
       variables,
       schema,
       secrets,
+      jwt,
       todoStore: existingServices?.todoStore || new TodoStore(),
       aiStorage: existingServices?.aiStorage,
       aiAgentRunner: existingServices?.aiAgentRunner,
@@ -45,6 +72,7 @@ export const createSingletonServices = pikkuServices(
       queueService: existingServices?.queueService,
       schedulerService: existingServices?.schedulerService,
       deploymentService: existingServices?.deploymentService,
+      metaService,
     }
   }
 )

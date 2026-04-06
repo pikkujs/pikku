@@ -84,6 +84,26 @@ export async function loadAddonFunctionsMeta(
       } catch {
         // No variables meta — that's fine
       }
+      // Load addon required parent services from pikku-services.gen
+      try {
+        const servicesGenPath = require.resolve(
+          `${decl.package}/.pikku/pikku-services.gen.js`
+        )
+        const servicesModule = await import(servicesGenPath)
+        if (
+          servicesModule.requiredParentServices &&
+          Array.isArray(servicesModule.requiredParentServices)
+        ) {
+          for (const service of servicesModule.requiredParentServices) {
+            state.addonRequiredParentServices.push(service)
+          }
+          logger.debug(
+            `Loaded ${servicesModule.requiredParentServices.length} required parent services for '${namespace}' from ${decl.package}`
+          )
+        }
+      } catch {
+        // No services gen — addon may not have requiredParentServices
+      }
     } catch (error: any) {
       logger.warn(
         `Failed to load addon function metadata for '${namespace}' (${decl.package}): ${error.message}`

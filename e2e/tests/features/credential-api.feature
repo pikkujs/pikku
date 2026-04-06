@@ -220,7 +220,7 @@ Feature: Credential Service API
 
   Scenario: Workflow step fails without user credentials
     When I run the credential workflow as user "wf-no-creds"
-    Then the workflow should fail with "missing_credential"
+    Then the workflow should fail with "Missing credential"
 
   # --- Explicit header loading ---
 

@@ -34,6 +34,7 @@ import type { AgentRunService } from '../wirings/ai-agent/ai-agent.types.js'
 import type { PikkuAIMiddlewareHooks } from '../wirings/ai-agent/ai-agent.types.js'
 import type { WorkflowRunService } from '../wirings/workflow/workflow.types.js'
 import type { CredentialService } from '../services/credential-service.js'
+import type { MetaService } from '../services/meta-service.js'
 
 export type PikkuWiringTypes =
   | 'http'
@@ -230,6 +231,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   workflowRunService?: WorkflowRunService
   /** Credential service for dynamic/managed credentials (OAuth tokens, per-user API keys) */
   credentialService?: CredentialService
+  /** Meta service for reading .pikku metadata files (filesystem on Node, R2/KV on CF) */
+  metaService?: MetaService
 }
 
 /**
@@ -248,6 +251,8 @@ export type PikkuWire<
 > = Partial<{
   wireType: PikkuWiringTypes
   wireId: string
+  /** Trace ID for distributed tracing — propagated across remote RPC calls via x-trace-id header */
+  traceId: string
   http: PikkuHTTP<In>
   mcp: PikkuMCP<MCPTools>
   rpc: TypedRPC

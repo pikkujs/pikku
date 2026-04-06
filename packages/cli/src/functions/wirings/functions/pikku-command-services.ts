@@ -10,7 +10,8 @@ export const serializeServicesMap = (
   requiredServices: Set<string>,
   forceRequiredServices: string[] = [],
   servicesImport: string,
-  wireServicesImport: string
+  wireServicesImport: string,
+  addonRequiredParentServices: string[] = []
 ): string => {
   // Use pre-aggregated services from inspector state
   // This includes services from:
@@ -94,6 +95,13 @@ export const serializeServicesMap = (
       ? `export type RequiredWireServices = Pick<Services, ${requiredWireServiceNames.map((key) => `'${key}'`).join(' | ')}> & Partial<Omit<Services, ${requiredWireServiceNames.map((key) => `'${key}'`).join(' | ')}>>`
       : 'export type RequiredWireServices = Partial<Services>',
     '',
+    ...(addonRequiredParentServices.length > 0
+      ? [
+          '// Services this addon needs from the parent project',
+          `export const requiredParentServices = ${JSON.stringify(addonRequiredParentServices)} as const`,
+          '',
+        ]
+      : []),
   ].join('\n')
 
   return code
@@ -127,7 +135,8 @@ export const pikkuServices = pikkuSessionlessFunc<void, void>({
       visitState.serviceAggregation.requiredServices,
       config.forceRequiredServices,
       servicesImport,
-      wireServicesImport
+      wireServicesImport,
+      config.addonName ? visitState.addonRequiredParentServices : []
     )
     await writeFileInDir(logger, config.servicesFile, servicesCode)
   },

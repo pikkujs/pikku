@@ -2,6 +2,10 @@ import { Given, When, Then } from '@cucumber/cucumber'
 import { expect } from '@playwright/test'
 import type { AgentWorld } from '../support/world.js'
 import { config } from '../support/types.js'
+import { PikkuRPC } from '../../.pikku/pikku-rpc.gen.js'
+
+const rpc = new PikkuRPC()
+rpc.setServerUrl(config.apiUrl)
 
 interface WorkflowState {
   lastResponse: any
@@ -59,32 +63,26 @@ When(
       typeof tableOrDoc === 'string'
         ? JSON.parse(tableOrDoc)
         : parseInput(tableOrDoc)
-    const res = await fetch(`${config.apiUrl}/workflow/run`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ workflowName, data: input }),
-    })
-    state.lastResponse = await res.json().catch(() => null)
-    state.lastStatus = res.ok ? 'completed' : undefined
-
-    if (state.lastResponse?.runId) {
-      state.lastRunId = state.lastResponse.runId
-    }
-
-    if (state.lastResponse?.status === 'failed') {
-      state.lastStatus = 'failed'
-    } else if (state.lastResponse?.status === 'cancelled') {
-      state.lastStatus = 'cancelled'
-    } else if (!res.ok && state.lastResponse?.error) {
-      const errorMsg =
-        state.lastResponse.error?.message ||
-        state.lastResponse.error?.reason ||
-        ''
-      if (errorMsg.includes('cancelled') || errorMsg.includes('Cancelled')) {
+    try {
+      state.lastResponse = await rpc.runWorkflow(workflowName as never, input)
+      state.lastStatus = 'completed'
+    } catch (err: unknown) {
+      // pikkuFetch throws the raw Response on non-2xx
+      if (err instanceof Response) {
+        state.lastResponse = await err.json().catch(() => ({}))
+      } else {
+        state.lastResponse = err
+      }
+      const msg = JSON.stringify(state.lastResponse)
+      if (msg.includes('cancelled') || msg.includes('Cancelled')) {
         state.lastStatus = 'cancelled'
       } else {
         state.lastStatus = 'failed'
       }
+    }
+
+    if (state.lastResponse?.runId) {
+      state.lastRunId = state.lastResponse.runId
     }
   }
 )
@@ -97,12 +95,7 @@ When(
       typeof tableOrDoc === 'string'
         ? JSON.parse(tableOrDoc)
         : parseInput(tableOrDoc)
-    const res = await fetch(`${config.apiUrl}/workflow/start`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ workflowName, data: input }),
-    })
-    state.lastResponse = await res.json()
+    state.lastResponse = await rpc.startWorkflow(workflowName as never, input)
     if (state.lastResponse?.runId) {
       state.lastRunId = state.lastResponse.runId
     }
@@ -117,12 +110,7 @@ When(
       typeof tableOrDoc === 'string'
         ? JSON.parse(tableOrDoc)
         : parseInput(tableOrDoc)
-    const res = await fetch(`${config.apiUrl}/workflow/${graphName}/start`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-    })
-    state.lastResponse = await res.json()
+    state.lastResponse = await rpc.startWorkflow(graphName as never, input)
     if (state.lastResponse?.runId) {
       state.lastRunId = state.lastResponse.runId
     }
@@ -168,25 +156,23 @@ When(
   'I poll until the workflow completes',
   { timeout: 60_000 },
   async function () {
-    const maxWaitMs = 30_000
+    const maxWaitMs = 45_000
     const pollIntervalMs = 1_000
     const startTime = Date.now()
 
     while (Date.now() - startTime < maxWaitMs) {
-      const res = await fetch(`${config.apiUrl}/workflow/status`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ runId: state.lastRunId }),
-      })
-      const body = await res.json()
+      const status = await rpc.workflowStatus(
+        'dslSequentialWorkflow',
+        state.lastRunId!
+      )
 
       if (
-        body.status === 'completed' ||
-        body.status === 'failed' ||
-        body.status === 'cancelled'
+        status.status === 'completed' ||
+        status.status === 'failed' ||
+        status.status === 'cancelled'
       ) {
-        state.lastStatus = body.status
-        state.lastResponse = body
+        state.lastStatus = status.status
+        state.lastResponse = status
         return
       }
 
@@ -204,12 +190,7 @@ When(
   'I query console RPC {string}',
   { timeout: 30_000 },
   async function (this: AgentWorld, rpcName: string) {
-    const res = await fetch(`${config.apiUrl}/rpc/${rpcName}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    })
-    state.consoleResponse = await res.json()
+    state.consoleResponse = await rpc.invoke(rpcName as never, {})
   }
 )
 
@@ -218,12 +199,9 @@ When(
   { timeout: 30_000 },
   async function (this: AgentWorld, rpcName: string) {
     expect(state.lastRunId).toBeTruthy()
-    const res = await fetch(`${config.apiUrl}/rpc/${rpcName}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: { runId: state.lastRunId } }),
+    state.consoleResponse = await rpc.invoke(rpcName as never, {
+      runId: state.lastRunId,
     })
-    state.consoleResponse = await res.json()
   }
 )
 

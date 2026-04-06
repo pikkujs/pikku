@@ -11,11 +11,11 @@ export const oauthConnect = pikkuSessionlessFunc<
     'Given a credentialName and optional callbackUrl, reads secrets metadata from wiringService, validates the credential exists and is OAuth2, creates an OAuth2Client, generates a random state UUID, builds the authorization URL, stores the pending flow in oauthService, and returns the authUrl. Defaults callbackUrl to http://localhost:7070/oauth/callback.',
   expose: true,
   func: async (
-    { logger, wiringService, secrets, oauthService },
+    { logger, metaService, secrets, oauthService },
     { credentialName, callbackUrl, userId }
   ) => {
-    const secretsMeta = await wiringService.readSecretsMeta()
-    const credentialsMeta = await wiringService.readCredentialsMeta()
+    const secretsMeta = await metaService.getSecretsMeta()
+    const credentialsMeta = await metaService.getCredentialsMeta()
 
     const credential =
       secretsMeta[credentialName] ?? credentialsMeta[credentialName]

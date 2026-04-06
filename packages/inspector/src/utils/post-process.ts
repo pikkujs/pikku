@@ -221,6 +221,44 @@ export function aggregateRequiredServices(
       }
     })
   }
+
+  // 6. Implicit platform services required by wiring types
+  // Workflows need workflowService + workflowRunService + schedulerService + queueService.
+  // Check workflow definitions, graph meta, AND helper functions (workflowStart:*, etc.)
+  // that wrap workflow operations but don't destructure the services.
+  const hasWorkflows =
+    Object.keys(state.workflows.graphMeta).length > 0 ||
+    Object.keys(state.workflows.meta).length > 0 ||
+    Object.keys(state.functions.meta).some(
+      (id) =>
+        id.startsWith('workflowStart:') ||
+        id.startsWith('workflowStatus:') ||
+        id.startsWith('workflow:')
+    )
+  if (hasWorkflows) {
+    requiredServices.add('workflowService')
+    requiredServices.add('workflowRunService')
+    requiredServices.add('schedulerService')
+    requiredServices.add('queueService')
+  }
+
+  // AI agents need aiStorage + aiRunState + agentRunService + aiAgentRunner
+  if (Object.keys(state.agents.agentsMeta).length > 0) {
+    requiredServices.add('aiStorage')
+    requiredServices.add('aiRunState')
+    requiredServices.add('agentRunService')
+    requiredServices.add('aiAgentRunner')
+  }
+
+  // Channels need eventHub for pub/sub
+  if (Object.keys(state.channels.meta).length > 0) {
+    requiredServices.add('eventHub')
+  }
+
+  // 7. Services that addons need from the parent project
+  for (const service of state.addonRequiredParentServices ?? []) {
+    requiredServices.add(service)
+  }
 }
 
 export function validateSecretOverrides(

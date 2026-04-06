@@ -14,7 +14,7 @@ import { KyselyWorkflowService } from './kysely-workflow-service.js'
 import { KyselyWorkflowRunService } from './kysely-workflow-run-service.js'
 import { KyselyDeploymentService } from './kysely-deployment-service.js'
 import { KyselyAIStorageService } from './kysely-ai-storage-service.js'
-import { KyselyAgentRunService } from './kysely-agent-run-service.js'
+import { KyselyAgentRunService } from './kysely-ai-agent-run-service.js'
 import { KyselySecretService } from './kysely-secret-service.js'
 import { KyselyCredentialService } from './kysely-credential-service.js'
 

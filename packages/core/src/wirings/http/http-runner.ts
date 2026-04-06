@@ -21,7 +21,7 @@ import type {
   PikkuWire,
   PikkuWiringTypes,
 } from '../../types/core.types.js'
-import { NotFoundError, PikkuMissingMetaError } from '../../errors/errors.js'
+import { NotFoundError } from '../../errors/errors.js'
 import {
   closeWireServices,
   createWeakUID,
@@ -180,9 +180,14 @@ export const wireHTTP = <
   const httpMeta = pikkuState(null, 'http', 'meta')
   const routeMeta = httpMeta[httpWiring.method][httpWiring.route]
   if (!routeMeta) {
-    throw new PikkuMissingMetaError(
-      `Missing generated metadata for HTTP route '${httpWiring.method.toUpperCase()} ${httpWiring.route}'`
+    // In deploy units with filtered metadata, wiring files may include
+    // routes for functions not in this unit. This happens when multiple
+    // wirings share a file — split them into separate files for better
+    // tree-shaking.
+    console.warn(
+      `[pikku] Skipping HTTP route '${httpWiring.method.toUpperCase()} ${httpWiring.route}' — metadata not found. Consider moving this wiring to its own file.`
     )
+    return
   }
   if (httpWiring.func) {
     addFunction(routeMeta.pikkuFuncId, httpWiring.func)
@@ -371,6 +376,7 @@ const executeRoute = async (
   }
 
   const wire: PikkuWire = {
+    traceId: requestId,
     http,
     channel,
     session: userSession.get() as CoreUserSession | undefined,
@@ -489,6 +495,7 @@ export const fetchData = async <In, Out>(
     bubbleErrors = false,
     exposeErrors = false,
     generateRequestId,
+    traceId: externalTraceId,
   }: RunHTTPWiringOptions = {}
 ): Promise<Out | void> => {
   const singletonServices = getSingletonServices()
@@ -499,11 +506,20 @@ export const fetchData = async <In, Out>(
   // Combine the request and response into one wire object
   const pikkuRequest =
     request instanceof Request ? new PikkuFetchHTTPRequest(request) : request
-  let requestId: string | null = null
-  try {
-    requestId = pikkuRequest.header('x-request-id')
-  } catch {}
+
+  // Resolve traceId: external (e.g. CF-Ray) > x-request-id header > generated
+  let requestId: string | null = externalTraceId ?? null
+  if (!requestId) {
+    try {
+      requestId = pikkuRequest.header('x-request-id')
+    } catch {}
+  }
   requestId = requestId || generateRequestId?.() || createWeakUID()
+
+  // Scoped logger for HTTP runner internal logging (error handling, route matching)
+  // Functions/middleware receive singletonServices.logger directly for compatibility
+  const scopedLogger =
+    singletonServices.logger.scope?.(requestId) ?? singletonServices.logger
   const http = createHTTPWire(pikkuRequest, response)
   const apiType = http!.request!.method()
   const apiRoute = http!.request!.path()
@@ -526,7 +542,7 @@ export const fetchData = async <In, Out>(
         response.status(204).json(undefined as any)
         return
       }
-      singletonServices.logger.info({
+      scopedLogger.info({
         message: 'Route not found',
         apiRoute,
         apiType,
@@ -551,7 +567,7 @@ export const fetchData = async <In, Out>(
   } catch (e: any) {
     if (matchedRoute?.route.sse) {
       // For SSE routes, send error through the stream since the response is already in stream mode
-      singletonServices.logger.error(e instanceof Error ? e.message : e)
+      scopedLogger.error(e instanceof Error ? e.message : e)
       try {
         const errorResponse = getErrorResponse(e)
         response.arrayBuffer(
@@ -562,7 +578,7 @@ export const fetchData = async <In, Out>(
         )
         response.arrayBuffer(JSON.stringify({ type: 'done' }))
       } catch (streamErr: any) {
-        singletonServices.logger.error(
+        scopedLogger.error(
           `SSE error while sending error payload: ${streamErr instanceof Error ? streamErr.message : String(streamErr)}`
         )
       }
@@ -572,7 +588,7 @@ export const fetchData = async <In, Out>(
         e,
         http,
         requestId,
-        singletonServices.logger,
+        scopedLogger,
         logWarningsForStatusCodes,
         respondWith404,
         bubbleErrors,

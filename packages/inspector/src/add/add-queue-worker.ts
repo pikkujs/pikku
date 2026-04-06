@@ -67,7 +67,11 @@ export const addQueueWorker: AddWiring = (logger, node, checker, state) => {
     }
 
     const packageName = ts.isIdentifier(funcInitializer)
-      ? resolveAddonName(funcInitializer, checker, state.rpc.wireAddonDeclarations)
+      ? resolveAddonName(
+          funcInitializer,
+          checker,
+          state.rpc.wireAddonDeclarations
+        )
       : null
 
     if (!name) {

@@ -369,15 +369,16 @@ describe('CLI Runner', () => {
       assert.strictEqual(programs['my-cli'].middleware[0], middleware)
     })
 
-    test('should throw error when CLI metadata not found', () => {
+    test('should skip when CLI metadata not found', () => {
       pikkuState(null, 'cli', 'meta', { programs: {}, renderers: {} })
 
-      assert.throws(() => {
-        wireCLI({
-          program: 'nonexistent',
-          commands: {},
-        })
-      }, /CLI metadata not found for program 'nonexistent'/)
+      wireCLI({
+        program: 'nonexistent',
+        commands: {},
+      })
+
+      const programs = pikkuState(null, 'cli', 'programs')
+      assert.strictEqual(programs['nonexistent'], undefined)
     })
   })
 

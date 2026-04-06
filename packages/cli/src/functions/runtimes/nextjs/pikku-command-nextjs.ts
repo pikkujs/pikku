@@ -54,10 +54,16 @@ export const pikkuNext = pikkuSessionlessFunc<void, void>({
         throw new Error('Required types not found')
       }
 
-      const pikkuConfigImport = `import { ${pikkuConfigFactory.variable} as createConfig } from '${getFileImportRelativePath(nextBackendFile, pikkuConfigFactory.file, packageMappings)}'`
-      const singletonServicesImport = `import { ${singletonServicesFactory.variable} as createSingletonServices } from '${getFileImportRelativePath(nextBackendFile, singletonServicesFactory.file, packageMappings)}'`
+      const configAlias =
+        pikkuConfigFactory.variable === 'createConfig' ? '' : ' as createConfig'
+      const servicesAlias =
+        singletonServicesFactory.variable === 'createSingletonServices'
+          ? ''
+          : ' as createSingletonServices'
+      const pikkuConfigImport = `import { ${pikkuConfigFactory.variable}${configAlias} } from '${getFileImportRelativePath(nextBackendFile, pikkuConfigFactory.file, packageMappings)}'`
+      const singletonServicesImport = `import { ${singletonServicesFactory.variable}${servicesAlias} } from '${getFileImportRelativePath(nextBackendFile, singletonServicesFactory.file, packageMappings)}'`
       const wireServicesImport = wireServicesFactory
-        ? `import { ${wireServicesFactory.variable} as createWireServices } from '${getFileImportRelativePath(nextBackendFile, wireServicesFactory.file, packageMappings)}'`
+        ? `import { ${wireServicesFactory.variable}${wireServicesFactory.variable === 'createWireServices' ? '' : ' as createWireServices'} } from '${getFileImportRelativePath(nextBackendFile, wireServicesFactory.file, packageMappings)}'`
         : ''
 
       const bootstrapPath = getFileImportRelativePath(

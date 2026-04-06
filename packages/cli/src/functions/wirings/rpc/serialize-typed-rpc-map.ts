@@ -104,6 +104,16 @@ export type TypedStartWorkflow = <Name extends keyof WorkflowMap>(
   options?: { startNode?: string }
 ) => Promise<{ runId: string }>
 
+export type TypedRunWorkflow = <Name extends keyof WorkflowMap>(
+  name: Name,
+  input: WorkflowMap[Name]['input']
+) => Promise<WorkflowMap[Name]['output']>
+
+export type TypedWorkflowStatus = (
+  workflowName: string,
+  runId: string
+) => Promise<{ id: string; status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'; output?: unknown; error?: { message?: string } }>
+
 type TypedAgentRun = [keyof FlattenedAgentMap] extends [never]
   ? (name: string, input: AIAgentInput) => Promise<any>
   : <Name extends keyof FlattenedAgentMap>(

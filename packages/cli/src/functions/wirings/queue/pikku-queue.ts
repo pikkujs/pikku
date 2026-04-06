@@ -20,6 +20,13 @@ export const pikkuQueue = pikkuSessionlessFunc<void, boolean>({
     } = config
     const { queueWorkers } = visitState
 
+    if (
+      queueWorkers.files.size === 0 ||
+      Object.keys(queueWorkers.meta).length === 0
+    ) {
+      return false
+    }
+
     // Write JSON file
     await writeFileInDir(
       logger,

@@ -306,6 +306,7 @@ export interface InspectorState {
   singletonServicesFactories: PathToNameAndType
   wireServicesFactories: PathToNameAndType
   wireServicesMeta: Map<string, string[]> // variable name -> singleton services consumed
+  addonRequiredParentServices: string[] // services an addon needs from the parent (extracted from pikkuAddonServices 2nd param)
   configFactories: PathToNameAndType
   filesAndMethods: InspectorFilesAndMethods
   filesAndMethodsErrors: Map<string, PathToNameAndType>

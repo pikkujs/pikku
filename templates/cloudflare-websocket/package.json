@@ -22,6 +22,6 @@
     "@types/node": "^24",
     "@types/ws": "^8",
     "typescript": "^5.9.3",
-    "wrangler": "^4.69.0"
+    "wrangler": "^4.78.0"
   }
 }

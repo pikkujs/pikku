@@ -1,14 +1,13 @@
 import { Given, When, Then } from '@cucumber/cucumber'
 import { expect } from '@playwright/test'
 import { config } from '../support/types.js'
+import { PikkuRPC } from '../../.pikku/pikku-rpc.gen.js'
+
+const pikkuRPC = new PikkuRPC()
+pikkuRPC.setServerUrl(config.apiUrl)
 
 async function rpc(name: string, data: Record<string, unknown> = {}) {
-  const res = await fetch(`${config.apiUrl}/rpc/${name}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ data }),
-  })
-  return res.json()
+  return pikkuRPC.invoke(name as never, data as never)
 }
 
 async function httpPost(
@@ -297,13 +296,14 @@ Then('the OAuth API profile should be authenticated', async function () {
 When(
   'I run the credential workflow as user {string}',
   async function (userId: string) {
-    const res = await fetch(`${config.apiUrl}/workflow/run`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-      body: JSON.stringify({
-        workflowName: 'credentialWorkflow',
-      }),
-    })
+    const res = await fetch(
+      `${config.apiUrl}/workflow/credentialWorkflow/run`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+        body: JSON.stringify({ data: {} }),
+      }
+    )
     state.lastWorkflowResult = await res.json()
   }
 )

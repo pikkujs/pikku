@@ -1,9 +1,10 @@
+import { buildRemoteHeaders } from '@pikku/core/remote'
 import type {
   DeploymentService,
   DeploymentServiceConfig,
   DeploymentConfig,
-  DeploymentInfo,
 } from '@pikku/core/services'
+import type { JWTService, SecretService } from '@pikku/core/services'
 import { getAllFunctionNames } from '@pikku/core/function'
 import type { Kysely } from 'kysely'
 import { sql } from 'kysely'
@@ -18,7 +19,9 @@ export class KyselyDeploymentService implements DeploymentService {
 
   constructor(
     config: DeploymentServiceConfig,
-    protected db: Kysely<KyselyPikkuDB>
+    protected db: Kysely<KyselyPikkuDB>,
+    private jwt?: JWTService,
+    private secrets?: SecretService
   ) {
     this.heartbeatInterval = config.heartbeatInterval ?? 10000
     this.heartbeatTtl = config.heartbeatTtl ?? 30000
@@ -135,7 +138,19 @@ export class KyselyDeploymentService implements DeploymentService {
     }
   }
 
-  async findFunction(name: string): Promise<DeploymentInfo[]> {
+  async invoke(
+    funcName: string,
+    data: unknown,
+    session?: unknown,
+    traceId?: string
+  ): Promise<unknown> {
+    const headers = await buildRemoteHeaders(
+      this.jwt,
+      this.secrets,
+      funcName,
+      session,
+      traceId
+    )
     const ttlMs = this.heartbeatTtl
     const cutoff = new Date(Date.now() - ttlMs)
 
@@ -147,15 +162,34 @@ export class KyselyDeploymentService implements DeploymentService {
         'd.deploymentId'
       )
       .select(['d.deploymentId', 'd.endpoint'])
-      .where('f.functionName', '=', name)
+      .where('f.functionName', '=', funcName)
       .where('d.lastHeartbeat', '>', cutoff)
       .orderBy('d.lastHeartbeat', 'desc')
+      .limit(1)
       .execute()
 
-    return result.map((row) => ({
-      deploymentId: row.deploymentId,
-      endpoint: row.endpoint,
-    }))
+    if (result.length === 0) {
+      throw new Error(`No deployment found for function '${funcName}'`)
+    }
+
+    const endpoint = result[0].endpoint
+    const url = `${endpoint}/remote/rpc/${encodeURIComponent(funcName)}`
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify({ data }),
+    })
+
+    if (!response.ok) {
+      throw new Error(
+        `Remote RPC call to '${funcName}' failed: ${response.status}`
+      )
+    }
+
+    return response.json()
   }
 
   private async createIndexSafe(builder: {

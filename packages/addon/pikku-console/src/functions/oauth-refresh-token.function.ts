@@ -9,9 +9,9 @@ export const oauthRefreshToken = pikkuSessionlessFunc<
   description:
     'Given a credentialName, validates the credential exists and is OAuth2, then uses the OAuth2Client to force a token refresh using the stored refresh token. Returns success or an error message.',
   expose: true,
-  func: async ({ logger, wiringService, secrets }, { credentialName }) => {
-    const secretsMeta = await wiringService.readSecretsMeta()
-    const credentialsMeta = await wiringService.readCredentialsMeta()
+  func: async ({ logger, metaService, secrets }, { credentialName }) => {
+    const secretsMeta = await metaService.getSecretsMeta()
+    const credentialsMeta = await metaService.getCredentialsMeta()
 
     const credential =
       secretsMeta[credentialName] ?? credentialsMeta[credentialName]

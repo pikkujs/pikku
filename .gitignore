@@ -19,6 +19,7 @@ dist
 my-app
 .pikku
 .deploy
+console-app
 cli.schema.json
 .playwright-mcp
 

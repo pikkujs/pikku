@@ -105,7 +105,6 @@ export const all = pikkuVoidFunc({
     }
 
     await rpc.invoke('pikkuPublicRPC', null)
-    await rpc.invoke('pikkuRPCClient', null)
     await rpc.invoke('pikkuConsoleFunctions', null)
     await rpc.invoke('pikkuNodeTypes', null)
     await rpc.invoke('pikkuSecretDefinitionTypes', null)
@@ -135,11 +134,15 @@ export const all = pikkuVoidFunc({
     const workflows = await rpc.invoke('pikkuWorkflow', null)
 
     let remoteRPC = false
+    let workflowRoutes = false
     if (!config.addon) {
       remoteRPC = await rpc.invoke('pikkuRemoteRPC', null)
+      if (workflows) {
+        workflowRoutes = await rpc.invoke('pikkuWorkflowRoutes', null)
+      }
     }
 
-    if (workflows || remoteRPC) {
+    if (workflows || remoteRPC || workflowRoutes) {
       await getInspectorState(true)
       await rpc.invoke('pikkuSchemas', null)
     }
@@ -149,6 +152,7 @@ export const all = pikkuVoidFunc({
       if (http) {
         await rpc.invoke('pikkuHTTPMap', null)
         await rpc.invoke('pikkuFetch', null)
+        await rpc.invoke('pikkuRPCClient', null)
         allImports.push(config.httpWiringMetaFile, config.httpWiringsFile)
       }
 

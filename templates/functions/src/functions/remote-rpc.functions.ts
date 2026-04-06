@@ -24,6 +24,7 @@ export const remoteGreet = pikkuSessionlessFunc<
   { name: string; greeting?: string },
   { message: string; timestamp: number; serverPort: number }
 >({
+  expose: true,
   func: async ({ logger }, data, { rpc }) => {
     logger.info(`Calling greet via rpc.remote()`)
     return await rpc.remote('greet', data)

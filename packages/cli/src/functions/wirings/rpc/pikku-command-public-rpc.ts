@@ -15,7 +15,11 @@ export const pikkuPublicRPC = pikkuSessionlessFunc<void, boolean>({
       await writeFileInDir(
         logger,
         config.publicRpcFile,
-        serializePublicRPC(pathToPikkuTypes, config.scaffold.rpc === 'auth', config.globalHTTPPrefix || '')
+        serializePublicRPC(
+          pathToPikkuTypes,
+          config.scaffold.rpc === 'auth',
+          config.globalHTTPPrefix || ''
+        )
       )
       return true
     }

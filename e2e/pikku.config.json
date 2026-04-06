@@ -16,6 +16,10 @@
   "console": {
     "functionsPath": "packages/functions/src/wirings/console.functions.gen.ts"
   },
+  "clientFiles": {
+    "fetchFile": ".pikku/pikku-fetch.gen.ts",
+    "rpcWiringsFile": ".pikku/pikku-rpc.gen.ts"
+  },
   "schema": {
     "supportsImportAttributes": true
   },

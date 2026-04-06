@@ -37,6 +37,8 @@ export type RunHTTPWiringOptions = Partial<{
   bubbleErrors: boolean
   exposeErrors: boolean
   generateRequestId: () => string
+  /** Pre-resolved trace ID (e.g. CF-Ray). Falls back to x-request-id header or generated ID. */
+  traceId: string
 }>
 
 /**

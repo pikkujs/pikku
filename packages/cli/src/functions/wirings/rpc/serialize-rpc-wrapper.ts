@@ -1,7 +1,11 @@
-export const serializeRPCWrapper = (rpcMapPath: string, globalHTTPPrefix: string = '') => {
+export const serializeRPCWrapper = (
+  rpcMapPath: string,
+  globalHTTPPrefix: string = ''
+) => {
   return `
 import { PikkuFetch } from "./pikku-fetch.gen.js"
-import type { RPCInvoke, TypedAgentRun, TypedStartWorkflow } from '${rpcMapPath}'
+import type { RPCInvoke, TypedAgentRun, TypedStartWorkflow, TypedRunWorkflow, TypedWorkflowStatus } from '${rpcMapPath}'
+import type { WorkflowRunStatus } from '@pikku/core/workflow'
 
 /**
  * PikkuRPC provides a type-safe client for making Remote Procedure Calls (RPC)
@@ -64,14 +68,38 @@ export class PikkuRPC {
 
     /**
      * Starts a workflow by name with the given input.
-     * Posts to \\\`/rpc/workflow/:workflowName\\\`.
+     * Posts to \\\`/workflow/:workflowName/start\\\`.
      *
      * @param workflowName - The registered workflow name
      * @param input - The workflow input data
      * @returns A promise that resolves with the new run ID
      */
     startWorkflow: TypedStartWorkflow = async (workflowName, input) => {
-        return await this.pikkuFetch.post(\`${globalHTTPPrefix}/rpc/workflow/\${String(workflowName)}\` as never, { workflowName: String(workflowName), input }) as any
+        return await this.pikkuFetch.post(\`${globalHTTPPrefix}/workflow/\${String(workflowName)}/start\` as never, { data: input }) as any
+    }
+
+    /**
+     * Runs a workflow to completion and returns the output.
+     * Posts to \\\`/workflow/:workflowName/run\\\`.
+     *
+     * @param workflowName - The registered workflow name
+     * @param input - The workflow input data
+     * @returns A promise that resolves with the workflow output
+     */
+    runWorkflow: TypedRunWorkflow = async (workflowName, input) => {
+        return await this.pikkuFetch.post(\`${globalHTTPPrefix}/workflow/\${String(workflowName)}/run\` as never, { data: input }) as any
+    }
+
+    /**
+     * Gets the current status of a workflow run.
+     * GET \\\`/workflow/:workflowName/status/:runId\\\`.
+     *
+     * @param workflowName - The registered workflow name
+     * @param runId - The workflow run ID
+     * @returns A promise with the minimal run status
+     */
+    workflowStatus: TypedWorkflowStatus = async (workflowName, runId) => {
+        return await this.pikkuFetch.get(\`${globalHTTPPrefix}/workflow/\${String(workflowName)}/status/\${runId}\` as never) as unknown as WorkflowRunStatus
     }
 
     /**

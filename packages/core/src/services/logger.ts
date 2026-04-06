@@ -54,4 +54,10 @@ export interface Logger {
    * @param level - The logging level to set.
    */
   setLevel(level: LogLevel): void
+
+  /**
+   * Creates a scoped logger with a traceId included in every log entry.
+   * Used per-request to correlate logs across function calls.
+   */
+  scope?(traceId: string): Logger
 }

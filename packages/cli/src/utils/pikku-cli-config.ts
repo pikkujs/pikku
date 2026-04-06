@@ -17,13 +17,15 @@ export const getPikkuCLIConfig = async (
   logger: CLILogger,
   configFile: string | undefined = undefined,
   requiredFields: Array<keyof PikkuCLIConfig>,
-  exitProcess: boolean = false
+  exitProcess: boolean = false,
+  outDirOverride?: string
 ): Promise<PikkuCLIConfig> => {
   const config = await _getPikkuCLIConfig(
     logger,
     configFile,
     requiredFields,
-    exitProcess
+    exitProcess,
+    outDirOverride
   )
   return config
 }
@@ -32,7 +34,8 @@ const _getPikkuCLIConfig = async (
   logger: CLILogger,
   configFile: string | undefined = undefined,
   requiredFields: Array<keyof PikkuCLIConfig>,
-  exitProcess: boolean = false
+  exitProcess: boolean = false,
+  outDirOverride?: string
 ): Promise<PikkuCLIConfig> => {
   if (!configFile) {
     let execDirectory = process.cwd()
@@ -98,6 +101,13 @@ const _getPikkuCLIConfig = async (
           ...config.schema,
         },
       }
+    }
+
+    // Override outDir if provided via CLI flag (must happen before derived paths)
+    if (outDirOverride) {
+      result.outDir = isAbsolute(outDirOverride)
+        ? outDirOverride
+        : resolve(result.rootDir, outDirOverride)
     }
 
     // Create transport/event directories
@@ -234,37 +244,32 @@ const _getPikkuCLIConfig = async (
       )
     }
 
-    // Remote RPC workers file (auto-derived)
+    // Scaffold directory for auto-generated wiring files
+    const scaffoldDir = result.scaffold?.pikkuDir ?? 'src/scaffold'
+    const resolvedScaffoldDir = isAbsolute(scaffoldDir)
+      ? scaffoldDir
+      : join(result.rootDir, scaffoldDir)
+
     if (!result.remoteRpcWorkersFile) {
       result.remoteRpcWorkersFile = join(
-        rpcDir,
-        'pikku-remote-rpc-workers.gen.ts'
+        resolvedScaffoldDir,
+        'rpc-remote.gen.ts'
       )
     }
-
-    // Derive feature file paths from scaffold.pikkuDir when enabled
-    if (
-      result.scaffold?.rpc ||
-      result.scaffold?.agent ||
-      result.scaffold?.console ||
-      result.scaffold?.workflow
-    ) {
-      const pikkuDir = result.scaffold.pikkuDir ?? 'pikku'
-      const resolvedPikkuDir = isAbsolute(pikkuDir)
-        ? pikkuDir
-        : join(result.rootDir, pikkuDir)
-      if (result.scaffold.rpc && !result.publicRpcFile) {
-        result.publicRpcFile = join(resolvedPikkuDir, 'rpc.wiring.gen.ts')
-      }
-      if (result.scaffold.agent && !result.publicAgentFile) {
-        result.publicAgentFile = join(resolvedPikkuDir, 'agent.wiring.gen.ts')
-      }
-      if (result.scaffold.console && !result.consoleFunctionsFile) {
-        result.consoleFunctionsFile = join(resolvedPikkuDir, 'console.gen.ts')
-      }
-      if (result.scaffold.workflow && !result.workflowWorkersFile) {
-        result.workflowWorkersFile = join(resolvedPikkuDir, 'workflows.gen.ts')
-      }
+    if (!result.workflowRoutesFile) {
+      result.workflowRoutesFile = join(
+        resolvedScaffoldDir,
+        'workflow-routes.gen.ts'
+      )
+    }
+    if (result.scaffold?.rpc && !result.publicRpcFile) {
+      result.publicRpcFile = join(resolvedScaffoldDir, 'rpc-public.gen.ts')
+    }
+    if (result.scaffold?.agent && !result.publicAgentFile) {
+      result.publicAgentFile = join(resolvedScaffoldDir, 'agent.gen.ts')
+    }
+    if (result.scaffold?.console && !result.consoleFunctionsFile) {
+      result.consoleFunctionsFile = join(resolvedScaffoldDir, 'console.gen.ts')
     }
 
     const triggerDir = join(result.outDir, 'trigger')
@@ -551,7 +556,9 @@ const _getPikkuCLIConfig = async (
       )
     }
 
-    result.globalHTTPPrefix = result.globalHTTPPrefix ? result.globalHTTPPrefix.replace(/\/+$/, '') : ''
+    result.globalHTTPPrefix = result.globalHTTPPrefix
+      ? result.globalHTTPPrefix.replace(/\/+$/, '')
+      : ''
 
     if (requiredFields.length > 0) {
       validateCLIConfig(result, requiredFields)
