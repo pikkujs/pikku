@@ -20,6 +20,7 @@ async function main(): Promise<void> {
     const deploymentService = new RedisDeploymentService(
       { heartbeatInterval: 5000, heartbeatTtl: 15000 },
       redisUrl,
+      'pikku',
       singletonServices.jwt,
       singletonServices.secrets
     )
