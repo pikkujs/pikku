@@ -47,7 +47,10 @@ export const createSingletonServices = pikkuServices(
       const keys: Array<{ id: string; value: string }> = []
       for (const [id, secretName] of Object.entries(config.secrets ?? {})) {
         try {
-          keys.push({ id, value: await secrets.getSecret(secretName) })
+          keys.push({
+            id,
+            value: await secrets.getSecret(secretName as string),
+          })
         } catch {}
       }
       return keys
