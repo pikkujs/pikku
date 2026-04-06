@@ -22,21 +22,30 @@ async function main(): Promise<void> {
         'postgres://postgres:password@localhost:5432/pikku_remote_rpc'
     )
     await pikkuKysely.init()
+
+    // Create singleton services first to get jwt + secrets
+    const singletonServices = await createSingletonServices(config, {
+      logger,
+    })
+
     const deploymentService = new PgKyselyDeploymentService(
       { heartbeatInterval: 5000, heartbeatTtl: 15000 },
-      pikkuKysely.kysely
+      pikkuKysely.kysely,
+      singletonServices.jwt,
+      singletonServices.secrets
     )
 
     await deploymentService.init()
 
-    const singletonServices = await createSingletonServices(config, {
-      logger,
+    // Re-create with deploymentService included
+    const services = await createSingletonServices(config, {
+      ...singletonServices,
       deploymentService,
     })
 
     const appServer = new PikkuExpressServer(
       { ...config, port: PORT, hostname: 'localhost' },
-      singletonServices.logger
+      services.logger
     )
     appServer.enableExitOnSigInt()
     await appServer.init()
@@ -47,18 +56,17 @@ async function main(): Promise<void> {
       endpoint: `http://localhost:${PORT}`,
     })
 
-    singletonServices.logger.info(
-      `Deployment registered: ${DEPLOYMENT_ID} (postgres)`
-    )
+    services.logger.info(`Deployment registered: ${DEPLOYMENT_ID} (postgres)`)
 
     process.on('SIGTERM', async () => {
-      singletonServices.logger.info('Shutting down...')
+      services.logger.info('Shutting down...')
       await deploymentService.stop()
       await pikkuKysely.close()
       process.exit(0)
     })
-  } catch (e: any) {
-    console.error(e.toString())
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.toString() : String(e)
+    console.error(msg)
     process.exit(1)
   }
 }
