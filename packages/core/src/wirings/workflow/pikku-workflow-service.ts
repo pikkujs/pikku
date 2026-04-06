@@ -19,7 +19,9 @@ import type { QueueService } from '../queue/queue.types.js'
 import type {
   PikkuWorkflowWire,
   StepState,
+  StepStatus,
   WorkflowRun,
+  WorkflowRunStatus,
   WorkflowRunWire,
   WorkflowStatus,
   WorkflowVersionStatus,
@@ -206,6 +208,55 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * @returns Workflow run or null if not found
    */
   abstract getRun(id: string): Promise<WorkflowRun | null>
+
+  /**
+   * Get minimal workflow run status with step summaries.
+   * Used by the public API — the console addon provides the full verbose view.
+   */
+  async getRunStatus(id: string): Promise<WorkflowRunStatus | null> {
+    const run = await this.getRun(id)
+    if (!run) return null
+
+    const history = await this.getRunHistory(id)
+    const terminalStatuses = new Set(['completed', 'failed', 'cancelled'])
+
+    // Build step summaries from history (latest attempt per step)
+    const stepMap = new Map<
+      string,
+      { status: StepStatus; startedAt?: Date; completedAt?: Date }
+    >()
+    for (const step of history) {
+      const existing = stepMap.get(step.stepName)
+      if (!existing || step.updatedAt > existing.completedAt!) {
+        stepMap.set(step.stepName, {
+          status: step.status,
+          startedAt: step.runningAt ?? step.createdAt,
+          completedAt: step.succeededAt ?? step.failedAt,
+        })
+      }
+    }
+
+    const steps = [...stepMap.entries()].map(([name, s]) => ({
+      name,
+      status: s.status,
+      duration:
+        s.startedAt && s.completedAt
+          ? s.completedAt.getTime() - s.startedAt.getTime()
+          : undefined,
+    }))
+
+    return {
+      id: run.id,
+      status: run.status,
+      startedAt: run.createdAt,
+      completedAt: terminalStatuses.has(run.status) ? run.updatedAt : undefined,
+      steps,
+      output: run.status === 'completed' ? run.output : undefined,
+      error: run.error
+        ? { message: run.error.message ?? 'Unknown error' }
+        : undefined,
+    }
+  }
 
   /**
    * Get workflow run history (all step attempts in chronological order)

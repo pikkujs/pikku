@@ -141,6 +141,20 @@ export interface StepState {
   failedAt?: Date
 }
 
+export interface WorkflowRunStatus {
+  id: string
+  status: WorkflowStatus
+  startedAt: Date
+  completedAt?: Date
+  steps: Array<{
+    name: string
+    status: StepStatus
+    duration?: number
+  }>
+  output?: unknown
+  error?: { message: string }
+}
+
 export interface WorkflowRunService {
   listRuns(options?: {
     workflowName?: string

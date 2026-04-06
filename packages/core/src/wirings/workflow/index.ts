@@ -41,6 +41,7 @@ export type {
   WorkflowVersionStatus,
   StepStatus,
   WorkflowRun,
+  WorkflowRunStatus,
   StepState,
   WorkflowRunService,
   CoreWorkflow,
