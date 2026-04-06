@@ -88,4 +88,19 @@ export interface ProviderAdapter {
    * Returns a map of filename → content to write into the deploy directory.
    */
   generateProviderConfigs?(manifest: DeploymentManifest): Map<string, string>
+
+  /**
+   * Deploy the built artifacts to the provider.
+   * Optional — if not implemented, the CLI just outputs the build directory.
+   */
+  deploy?(options: {
+    buildDir: string
+    logger: { info(msg: string): void; error(msg: string): void }
+    onProgress?: (step: string, detail: string) => void
+  }): Promise<{
+    success: boolean
+    workersDeployed?: Array<{ name: string }>
+    resourcesCreated?: Array<{ type: string; name: string }>
+    errors: Array<{ step: string; error: string }>
+  }>
 }

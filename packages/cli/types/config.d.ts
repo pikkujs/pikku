@@ -267,6 +267,11 @@ export type PikkuCLIInput = {
 
   globalHTTPPrefix?: string
 
+  deploy?: {
+    providers: Record<string, string>
+    defaultProvider?: string
+  }
+
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles
 
@@ -395,6 +400,11 @@ export type PikkuCLIConfig = {
   addonMetaJsonFile?: string
 
   globalHTTPPrefix?: string
+
+  deploy?: {
+    providers: Record<string, string>
+    defaultProvider?: string
+  }
 
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles

@@ -5121,9 +5121,6 @@ __metadata:
   dependencies:
     "@openapi-contrib/json-schema-to-openapi-schema": "npm:^4.3.1"
     "@pikku/core": "npm:^0.12.14"
-    "@pikku/deploy-azure": "workspace:*"
-    "@pikku/deploy-cloudflare": "workspace:*"
-    "@pikku/deploy-serverless": "workspace:*"
     "@pikku/inspector": "npm:^0.12.7"
     "@pikku/openapi-parser": "npm:^0.12.9"
     "@types/cookie": "npm:^1.0.0"
@@ -5239,7 +5236,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/deploy-azure@workspace:*, @pikku/deploy-azure@workspace:packages/deploy/deploy-azure":
+"@pikku/deploy-azure@workspace:packages/deploy/deploy-azure":
   version: 0.0.0-use.local
   resolution: "@pikku/deploy-azure@workspace:packages/deploy/deploy-azure"
   dependencies:
@@ -5247,7 +5244,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/deploy-cloudflare@workspace:*, @pikku/deploy-cloudflare@workspace:packages/deploy/deploy-cloudflare":
+"@pikku/deploy-cloudflare@workspace:packages/deploy/deploy-cloudflare":
   version: 0.0.0-use.local
   resolution: "@pikku/deploy-cloudflare@workspace:packages/deploy/deploy-cloudflare"
   dependencies:
@@ -5255,7 +5252,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/deploy-serverless@workspace:*, @pikku/deploy-serverless@workspace:packages/deploy/deploy-serverless":
+"@pikku/deploy-serverless@workspace:packages/deploy/deploy-serverless":
   version: 0.0.0-use.local
   resolution: "@pikku/deploy-serverless@workspace:packages/deploy/deploy-serverless"
   dependencies:
