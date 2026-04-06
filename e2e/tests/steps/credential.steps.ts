@@ -7,7 +7,7 @@ const pikkuRPC = new PikkuRPC()
 pikkuRPC.setServerUrl(config.apiUrl)
 
 async function rpc(name: string, data: Record<string, unknown> = {}) {
-  return pikkuRPC.invoke(name as never, data)
+  return pikkuRPC.invoke(name as never, data as never)
 }
 
 async function httpPost(

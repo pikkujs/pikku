@@ -691,7 +691,15 @@ export function filterInspectorState(
   // Direct function filtering: functions that match the names/tags/directories
   // filters should be included even if no wiring (HTTP, scheduler, etc.) references them.
   // This ensures standalone RPC-callable functions survive filtering.
+  // Only run when function-level filters are active — httpRoutes/httpMethods work
+  // through the HTTP wiring pass which already adds the right functions.
+  const hasFunctionLevelFilters =
+    (filters.names && filters.names.length > 0) ||
+    (filters.tags && filters.tags.length > 0) ||
+    (filters.directories && filters.directories.length > 0)
+
   for (const funcId of Object.keys(filteredState.functions.meta)) {
+    if (!hasFunctionLevelFilters) break
     const funcMeta = filteredState.functions.meta[funcId]
     const funcFile = filteredState.functions.files.get(funcId)
     const filePath = funcFile?.path
