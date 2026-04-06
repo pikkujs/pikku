@@ -12,7 +12,9 @@ export const pikkuRemoteAuthMiddleware = pikkuMiddleware(
     try {
       secret = await secrets.getSecret('PIKKU_REMOTE_SECRET')
     } catch {
-      // No secret configured — skip auth (dev mode)
+      if (http.request.path().startsWith('/remote/rpc/')) {
+        throw new UnauthorizedError()
+      }
       return next()
     }
     if (!jwt) {

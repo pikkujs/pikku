@@ -5416,7 +5416,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/jose@npm:^0.12.1, @pikku/jose@npm:^0.12.3, @pikku/jose@workspace:*, @pikku/jose@workspace:packages/services/jose":
+"@pikku/jose@npm:^0.12.1, @pikku/jose@npm:^0.12.3, @pikku/jose@workspace:*, @pikku/jose@workspace:^, @pikku/jose@workspace:packages/services/jose":
   version: 0.0.0-use.local
   resolution: "@pikku/jose@workspace:packages/services/jose"
   dependencies:
@@ -5913,6 +5913,7 @@ __metadata:
     "@pikku/cli": "npm:^0.12.15"
     "@pikku/core": "npm:^0.12.14"
     "@pikku/fetch": "npm:^0.12.1"
+    "@pikku/jose": "workspace:^"
     "@pikku/schema-cfworker": "npm:^0.12.2"
     "@pikku/templates-function-addon": "workspace:*"
     "@pikku/websocket": "npm:^0.12.1"

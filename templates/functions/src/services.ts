@@ -4,6 +4,7 @@ import {
   LocalVariablesService,
 } from '@pikku/core/services'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
+import { JoseJWTService } from '@pikku/jose'
 import {
   pikkuConfig,
   pikkuServices,
@@ -41,12 +42,15 @@ export const createSingletonServices = pikkuServices(
       }
     }
 
+    const jwt = new JoseJWTService()
+
     return {
       config,
       logger,
       variables,
       schema,
       secrets,
+      jwt,
       todoStore: existingServices?.todoStore || new TodoStore(),
       aiStorage: existingServices?.aiStorage,
       aiAgentRunner: existingServices?.aiAgentRunner,
