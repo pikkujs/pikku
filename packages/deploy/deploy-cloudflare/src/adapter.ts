@@ -85,6 +85,27 @@ export class CloudflareProviderAdapter {
   readonly name = 'cloudflare'
   readonly deployDirName = 'cloudflare'
 
+  /**
+   * Determine which @pikku/cloudflare imports the unit needs based on its
+   * service capabilities. Prevents pulling in kysely/workflow/AI code for
+   * units that don't use those services.
+   */
+  private resolvePlatformImports(
+    unit: DeploymentUnit,
+    extraImports: string[] = []
+  ): { cfImports: string[]; needsD1: boolean; needsQueue: boolean; needsWorkflow: boolean; needsAI: boolean } {
+    const needsQueue = unit.services.some((s) => s.capability === 'queue')
+    const needsWorkflow = unit.services.some((s) => s.capability === 'workflow-state')
+    const needsAI = unit.services.some((s) => s.capability === 'ai-storage' || s.capability === 'ai-model')
+
+    const cfImports = [...extraImports]
+    if (needsQueue) cfImports.push('CloudflareQueueService')
+    if (needsWorkflow) cfImports.push('CloudflareWorkflowService')
+    if (needsAI) cfImports.push('CloudflareAIStorageService', 'CloudflareAgentRunService', 'CloudflareAIRunStateService')
+
+    return { cfImports, needsD1: needsWorkflow || needsAI, needsQueue, needsWorkflow, needsAI }
+  }
+
   generateEntrySource(ctx: EntryGenerationContext): string {
     const { unit } = ctx
 
@@ -111,22 +132,28 @@ export class CloudflareProviderAdapter {
    */
   private generateCombinedHandlerEntry(ctx: EntryGenerationContext): string {
     const handlerTypes = getHandlerTypes(ctx.unit)
+    const platform = this.resolvePlatformImports(ctx.unit, ['createCloudflareHandler'])
 
     const lines: string[] = [
       `// Generated entry for "${ctx.unit.name}" (${ctx.unit.role})`,
-      `import { createCloudflareHandler } from '@pikku/cloudflare'`,
-      `import type { CloudflareEnv } from '@pikku/cloudflare'`,
-      `import { CloudflareQueueService, CloudflareWorkflowService, CloudflareAIStorageService, CloudflareAgentRunService, CloudflareAIRunStateService } from '@pikku/cloudflare'`,
-      `import type { D1Database } from '@cloudflare/workers-types'`,
+      `import { createCloudflareHandler } from '@pikku/cloudflare/handler'`,
+      `import type { CloudflareEnv } from '@pikku/cloudflare/handler'`,
+      ...(platform.needsQueue ? [`import { CloudflareQueueService } from '@pikku/cloudflare/queue'`] : []),
+      ...(platform.needsD1 ? [
+        `import { ${[
+          ...(platform.needsWorkflow ? ['CloudflareWorkflowService'] : []),
+          ...(platform.needsAI ? ['CloudflareAIStorageService', 'CloudflareAgentRunService', 'CloudflareAIRunStateService'] : []),
+        ].join(', ')} } from '@pikku/cloudflare/d1'`,
+        `import type { D1Database } from '@cloudflare/workers-types'`,
+      ] : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
-      `import { requiredSingletonServices } from './.pikku/pikku-services.gen.js'`,
       `import '${ctx.bootstrapPath}'`,
       ``,
-      ...this.generatePlatformServicesBlock(ctx),
+      ...this.generatePlatformServicesBlock(ctx, platform),
       ``,
       `export default createCloudflareHandler(`,
       `  { createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices },`,
@@ -143,23 +170,30 @@ export class CloudflareProviderAdapter {
    * Uses the WebSocket handler factory and exports the DO class.
    */
   private generateChannelGatewayEntry(ctx: EntryGenerationContext): string {
+    const platform = this.resolvePlatformImports(ctx.unit, ['createCloudflareWebSocketHandler'])
+
     const lines: string[] = [
       `// Generated entry for "${ctx.unit.name}" (${ctx.unit.role})`,
-      `import { createCloudflareWebSocketHandler } from '@pikku/cloudflare'`,
-      `import type { CloudflareEnv } from '@pikku/cloudflare'`,
-      `import { CloudflareQueueService, CloudflareWorkflowService, CloudflareAIStorageService, CloudflareAgentRunService, CloudflareAIRunStateService } from '@pikku/cloudflare'`,
-      `import type { D1Database } from '@cloudflare/workers-types'`,
+      `import { createCloudflareWebSocketHandler } from '@pikku/cloudflare/handler'`,
+      `import type { CloudflareEnv } from '@pikku/cloudflare/handler'`,
+      ...(platform.needsQueue ? [`import { CloudflareQueueService } from '@pikku/cloudflare/queue'`] : []),
+      ...(platform.needsD1 ? [
+        `import { ${[
+          ...(platform.needsWorkflow ? ['CloudflareWorkflowService'] : []),
+          ...(platform.needsAI ? ['CloudflareAIStorageService', 'CloudflareAgentRunService', 'CloudflareAIRunStateService'] : []),
+        ].join(', ')} } from '@pikku/cloudflare/d1'`,
+        `import type { D1Database } from '@cloudflare/workers-types'`,
+      ] : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
-      `import { requiredSingletonServices } from './.pikku/pikku-services.gen.js'`,
       `import '${ctx.bootstrapPath}'`,
       ``,
-      ...this.generatePlatformServicesBlock(ctx),
+      ...this.generatePlatformServicesBlock(ctx, platform),
       ``,
-      `export { PikkuWebSocketHibernationServer as WebSocketHibernationServer } from '@pikku/cloudflare'`,
+      `export { PikkuWebSocketHibernationServer as WebSocketHibernationServer } from '@pikku/cloudflare/websocket'`,
       `export default createCloudflareWebSocketHandler({ createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices })`,
       ``,
     ]
@@ -182,10 +216,8 @@ export class CloudflareProviderAdapter {
     })
     const bindingsMap = `{\n${bindingEntries.join(',\n')}\n  }`
 
-    // Workflow orchestrators need the combined handler (fetch + queue)
-    const handlerImport = includeQueueHandler
-      ? `import { createCloudflareHandler } from '@pikku/cloudflare'`
-      : `import { createCloudflareWorkerHandler } from '@pikku/cloudflare'`
+    const handlerName = includeQueueHandler ? 'createCloudflareHandler' : 'createCloudflareWorkerHandler'
+    const platform = this.resolvePlatformImports(ctx.unit, [handlerName, 'CloudflareDeploymentService'])
 
     const handlerTypes = includeQueueHandler ? `["fetch", "queue"]` : ''
 
@@ -193,21 +225,31 @@ export class CloudflareProviderAdapter {
       ? `export default createCloudflareHandler(\n  { createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices },\n  ${handlerTypes}\n)`
       : `export default createCloudflareWorkerHandler({ createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices })`
 
+    const handlerImport = includeQueueHandler
+      ? `import { createCloudflareHandler } from '@pikku/cloudflare/handler'`
+      : `import { createCloudflareWorkerHandler } from '@pikku/cloudflare/handler'`
+
     const lines: string[] = [
       `// Generated entry for "${ctx.unit.name}" (${ctx.unit.role})`,
       handlerImport,
-      `import type { CloudflareEnv } from '@pikku/cloudflare'`,
-      `import { CloudflareQueueService, CloudflareWorkflowService, CloudflareAIStorageService, CloudflareAgentRunService, CloudflareAIRunStateService, CloudflareDeploymentService } from '@pikku/cloudflare'`,
-      `import type { D1Database } from '@cloudflare/workers-types'`,
+      `import type { CloudflareEnv } from '@pikku/cloudflare/handler'`,
+      `import { CloudflareDeploymentService } from '@pikku/cloudflare/deployment'`,
+      ...(platform.needsQueue ? [`import { CloudflareQueueService } from '@pikku/cloudflare/queue'`] : []),
+      ...(platform.needsD1 ? [
+        `import { ${[
+          ...(platform.needsWorkflow ? ['CloudflareWorkflowService'] : []),
+          ...(platform.needsAI ? ['CloudflareAIStorageService', 'CloudflareAgentRunService', 'CloudflareAIRunStateService'] : []),
+        ].join(', ')} } from '@pikku/cloudflare/d1'`,
+        `import type { D1Database } from '@cloudflare/workers-types'`,
+      ] : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
-      `import { requiredSingletonServices } from './.pikku/pikku-services.gen.js'`,
       `import '${ctx.bootstrapPath}'`,
       ``,
-      ...this.generateGatewayPlatformServicesBlock(ctx, bindingsMap),
+      ...this.generateGatewayPlatformServicesBlock(ctx, platform, bindingsMap),
       ``,
       exportLine,
       ``,
@@ -219,34 +261,45 @@ export class CloudflareProviderAdapter {
   /**
    * Generates the createPlatformServices function block shared by all entry types.
    */
-  private generatePlatformServicesBlock(ctx: EntryGenerationContext): string[] {
-    return [
+  private generatePlatformServicesBlock(
+    ctx: EntryGenerationContext,
+    platform: ReturnType<CloudflareProviderAdapter['resolvePlatformImports']>
+  ): string[] {
+    const lines = [
       `const createPlatformServices = async (env: CloudflareEnv): Promise<${ctx.servicesType}> => {`,
       `  const services: ${ctx.servicesType} = {}`,
       `  const logger = new JsonConsoleLogger()`,
       `  services.logger = logger`,
       `  services.schema = new CFWorkerSchemaService(logger)`,
-      `  if (requiredSingletonServices.queueService) {`,
-      `    services.queueService = new CloudflareQueueService(env)`,
-      `  }`,
-      `  if (requiredSingletonServices.workflowService && env.WORKFLOW_DB) {`,
-      `    const workflowService = new CloudflareWorkflowService(env.WORKFLOW_DB as D1Database)`,
-      `    await workflowService.init()`,
-      `    services.workflowService = workflowService`,
-      `  }`,
-      `  if (requiredSingletonServices.aiStorage && env.DB) {`,
-      `    const db = env.DB as D1Database`,
-      `    const aiStorage = new CloudflareAIStorageService(db)`,
-      `    await aiStorage.init()`,
-      `    services.aiStorage = aiStorage`,
-      `    services.agentRunService = new CloudflareAgentRunService(db)`,
-      `    const aiRunState = new CloudflareAIRunStateService(db)`,
-      `    await aiRunState.init()`,
-      `    services.aiRunState = aiRunState`,
-      `  }`,
-      `  return services`,
-      `}`,
     ]
+    if (platform.needsQueue) {
+      lines.push(`  services.queueService = new CloudflareQueueService(env)`)
+    }
+    if (platform.needsWorkflow) {
+      lines.push(
+        `  if (env.WORKFLOW_DB) {`,
+        `    const workflowService = new CloudflareWorkflowService(env.WORKFLOW_DB as D1Database)`,
+        `    await workflowService.init()`,
+        `    services.workflowService = workflowService`,
+        `  }`,
+      )
+    }
+    if (platform.needsAI) {
+      lines.push(
+        `  if (env.DB) {`,
+        `    const db = env.DB as D1Database`,
+        `    const aiStorage = new CloudflareAIStorageService(db)`,
+        `    await aiStorage.init()`,
+        `    services.aiStorage = aiStorage`,
+        `    services.agentRunService = new CloudflareAgentRunService(db)`,
+        `    const aiRunState = new CloudflareAIRunStateService(db)`,
+        `    await aiRunState.init()`,
+        `    services.aiRunState = aiRunState`,
+        `  }`,
+      )
+    }
+    lines.push(`  return services`, `}`)
+    return lines
   }
 
   /**
@@ -255,32 +308,43 @@ export class CloudflareProviderAdapter {
    */
   private generateGatewayPlatformServicesBlock(
     ctx: EntryGenerationContext,
+    platform: ReturnType<CloudflareProviderAdapter['resolvePlatformImports']>,
     bindingsMap: string
   ): string[] {
-    return [
+    const lines = [
       `const createPlatformServices = async (env: CloudflareEnv): Promise<${ctx.servicesType}> => {`,
       `  const services: ${ctx.servicesType} = {}`,
       `  const logger = new JsonConsoleLogger()`,
       `  services.logger = logger`,
       `  services.schema = new CFWorkerSchemaService(logger)`,
-      `  if (requiredSingletonServices.queueService) {`,
-      `    services.queueService = new CloudflareQueueService(env)`,
-      `  }`,
-      `  if (requiredSingletonServices.workflowService && env.WORKFLOW_DB) {`,
-      `    const workflowService = new CloudflareWorkflowService(env.WORKFLOW_DB as D1Database)`,
-      `    await workflowService.init()`,
-      `    services.workflowService = workflowService`,
-      `  }`,
-      `  if (requiredSingletonServices.aiStorage && env.DB) {`,
-      `    const db = env.DB as D1Database`,
-      `    const aiStorage = new CloudflareAIStorageService(db)`,
-      `    await aiStorage.init()`,
-      `    services.aiStorage = aiStorage`,
-      `    services.agentRunService = new CloudflareAgentRunService(db)`,
-      `    const aiRunState = new CloudflareAIRunStateService(db)`,
-      `    await aiRunState.init()`,
-      `    services.aiRunState = aiRunState`,
-      `  }`,
+    ]
+    if (platform.needsQueue) {
+      lines.push(`  services.queueService = new CloudflareQueueService(env)`)
+    }
+    if (platform.needsWorkflow) {
+      lines.push(
+        `  if (env.WORKFLOW_DB) {`,
+        `    const workflowService = new CloudflareWorkflowService(env.WORKFLOW_DB as D1Database)`,
+        `    await workflowService.init()`,
+        `    services.workflowService = workflowService`,
+        `  }`,
+      )
+    }
+    if (platform.needsAI) {
+      lines.push(
+        `  if (env.DB) {`,
+        `    const db = env.DB as D1Database`,
+        `    const aiStorage = new CloudflareAIStorageService(db)`,
+        `    await aiStorage.init()`,
+        `    services.aiStorage = aiStorage`,
+        `    services.agentRunService = new CloudflareAgentRunService(db)`,
+        `    const aiRunState = new CloudflareAIRunStateService(db)`,
+        `    await aiRunState.init()`,
+        `    services.aiRunState = aiRunState`,
+        `  }`,
+      )
+    }
+    lines.push(
       `  services.deploymentService = new CloudflareDeploymentService(`,
       `    env,`,
       `    services.jwt,`,
@@ -289,7 +353,8 @@ export class CloudflareProviderAdapter {
       `  )`,
       `  return services`,
       `}`,
-    ]
+    )
+    return lines
   }
 
   generateUnitConfigs(
