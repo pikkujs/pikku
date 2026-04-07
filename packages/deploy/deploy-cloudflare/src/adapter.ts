@@ -457,6 +457,17 @@ export class CloudflareProviderAdapter {
         'server-proxy/wrangler.toml',
         this.generateProxyWranglerToml(serverUnits, manifest)
       )
+      configs.set(
+        'server-proxy/package.json',
+        JSON.stringify({
+          name: `${manifest.projectId}-server-proxy`,
+          private: true,
+          type: 'module',
+          dependencies: {
+            '@cloudflare/containers': '^0.0.1',
+          },
+        }, null, 2)
+      )
     }
 
     return configs
@@ -492,7 +503,7 @@ export class CloudflareProviderAdapter {
 
     return [
       `// Generated proxy Worker — routes traffic to CF Container`,
-      `import { Container, getRandom } from "@cloudflare/containers"`,
+      `import { Container, getContainer } from "@cloudflare/containers"`,
       ``,
       `class PikkuServer extends Container {`,
       `  defaultPort = 8080`,
@@ -507,13 +518,13 @@ export class CloudflareProviderAdapter {
       ``,
       `export default {`,
       `  async fetch(request: Request, env: Env) {`,
-      `    const container = await getRandom(env.PIKKU_SERVER, 1)`,
+      `    const container = getContainer(env.PIKKU_SERVER)`,
       `    return container.fetch(request)`,
       `  },`,
       ...(serverQueueNames.length > 0
         ? [
             `  async queue(batch: MessageBatch, env: Env) {`,
-            `    const container = await getRandom(env.PIKKU_SERVER, 1)`,
+            `    const container = getContainer(env.PIKKU_SERVER)`,
             `    await container.fetch(new Request("http://internal/__pikku/queue", {`,
             `      method: "POST",`,
             `      headers: { "Content-Type": "application/json" },`,
@@ -525,7 +536,7 @@ export class CloudflareProviderAdapter {
       ...(serverCrons.length > 0
         ? [
             `  async scheduled(controller: ScheduledController, env: Env) {`,
-            `    const container = await getRandom(env.PIKKU_SERVER, 1)`,
+            `    const container = getContainer(env.PIKKU_SERVER)`,
             `    await container.fetch(new Request("http://internal/__pikku/scheduled", {`,
             `      method: "POST",`,
             `      headers: { "Content-Type": "application/json" },`,
