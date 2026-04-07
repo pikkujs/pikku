@@ -45,7 +45,9 @@ export const createSingletonServices = pikkuServices(
     const jwt = new JoseJWTService(async () => [
       {
         id: 'default',
-        value: (await secrets.get('AUTH_SECRET')) || 'dev-secret-change-me',
+        value: await secrets
+          .getSecret('AUTH_SECRET')
+          .catch(() => 'dev-secret-change-me'),
       },
     ])
 
