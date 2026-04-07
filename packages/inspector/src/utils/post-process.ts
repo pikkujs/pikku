@@ -242,6 +242,42 @@ export function aggregateRequiredServices(
     requiredServices.add('queueService')
   }
 
+  // 6b. Inject synthetic queue workers for workflow graph steps.
+  // Each workflow gets an orchestrator queue and per-step queues.
+  // Without these, the PikkuWorkflowService constructor can't find
+  // per-workflow queue entries and falls back to shared queue names.
+  for (const [, graph] of Object.entries(state.workflows.graphMeta)) {
+    if (!graph.nodes || !graph.name) continue
+
+    const toKebab = (s: string) =>
+      s
+        .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+        .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2')
+        .toLowerCase()
+
+    // Orchestrator queue
+    const orchQueueName = `wf-orchestrator-${toKebab(graph.name)}`
+    if (!state.queueWorkers.meta[orchQueueName]) {
+      state.queueWorkers.meta[orchQueueName] = {
+        name: orchQueueName,
+        pikkuFuncId: `pikkuWorkflowOrchestrator:${graph.name}`,
+      }
+    }
+
+    // Per-step queues
+    for (const node of Object.values(graph.nodes)) {
+      if (!('rpcName' in node) || !node.rpcName) continue
+      const rpcName = node.rpcName as string
+      const stepQueueName = `wf-step-${toKebab(rpcName)}`
+      if (!state.queueWorkers.meta[stepQueueName]) {
+        state.queueWorkers.meta[stepQueueName] = {
+          name: stepQueueName,
+          pikkuFuncId: `pikkuWorkflowWorker:${rpcName}`,
+        }
+      }
+    }
+  }
+
   // AI agents need aiStorage + aiRunState + agentRunService + aiAgentRunner
   if (Object.keys(state.agents.agentsMeta).length > 0) {
     requiredServices.add('aiStorage')
