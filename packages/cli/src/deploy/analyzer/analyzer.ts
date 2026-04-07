@@ -36,12 +36,37 @@ import type {
 
 export interface AnalyzerOptions {
   projectId: string
+  /** Services that can't run serverless — functions using them get target: 'server' */
+  serverlessIncompatible?: string[]
+}
+
+/**
+ * Determine deploy target for a function based on its explicit flag
+ * and service compatibility.
+ */
+function resolveDeployTarget(
+  funcMeta: FunctionMeta,
+  serverlessIncompatible: Set<string>
+): 'serverless' | 'server' {
+  // Explicit flag takes priority
+  if (funcMeta.deploy === 'serverless') return 'serverless'
+  if (funcMeta.deploy === 'server') return 'server'
+
+  // Auto: check if any service is serverless-incompatible
+  if (funcMeta.services?.services) {
+    for (const svc of funcMeta.services.services) {
+      if (serverlessIncompatible.has(svc)) return 'server'
+    }
+  }
+
+  return 'serverless'
 }
 
 export function analyzeDeployment(
   state: InspectorState,
   options: AnalyzerOptions
 ): DeploymentManifest {
+  const serverlessIncompatible = new Set(options.serverlessIncompatible ?? [])
   const units: DeploymentUnit[] = []
   const queues: QueueDefinition[] = []
   const scheduledTasks: ScheduledTaskDefinition[] = []
@@ -165,6 +190,7 @@ export function analyzeDeployment(
     units.push({
       name: toKebab(funcId),
       role: 'function',
+      target: resolveDeployTarget(funcMeta, serverlessIncompatible),
       functionIds: [funcId],
       services: collectServicesForFunction(funcMeta),
       dependsOn: [],
@@ -216,6 +242,7 @@ export function analyzeDeployment(
     units.push({
       name: unitName,
       role: 'agent',
+      target: 'serverless',
       functionIds: [],
       services: agentServices,
       dependsOn: [...toolUnitNames, ...subAgentUnitNames],
@@ -263,6 +290,7 @@ export function analyzeDeployment(
     units.push({
       name: unitName,
       role: 'mcp',
+      target: 'serverless',
       functionIds: [], // No function code bundled
       services: [],
       dependsOn: mcpFuncUnitNames,
@@ -289,6 +317,7 @@ export function analyzeDeployment(
     units.push({
       name: unitName,
       role: 'channel',
+      target: 'serverless',
       functionIds: [], // No function code bundled
       services: [],
       dependsOn: funcUnitNames,
@@ -331,6 +360,7 @@ export function analyzeDeployment(
           units.push({
             name: dep,
             role: 'function',
+            target: resolveDeployTarget(funcMeta, serverlessIncompatible),
             functionIds: [funcId],
             services: collectServicesForFunction(funcMeta),
             dependsOn: [],
@@ -480,6 +510,7 @@ function buildWorkflows(
     units.push({
       name: orchUnitName,
       role: 'workflow',
+      target: 'serverless',
       functionIds: [],
       services: orchServices,
       dependsOn: stepUnitNames,

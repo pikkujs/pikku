@@ -45,6 +45,7 @@ export async function runBuildPipeline(options: {
   projectId: string
   provider: ProviderAdapter
   inspectorState: InspectorState
+  serverlessIncompatible?: string[]
   getEntryContext: (
     unitDir: string,
     pikkuDir: string,
@@ -66,7 +67,10 @@ export async function runBuildPipeline(options: {
   const providerDir = join(deployDir, provider.deployDirName)
 
   // Step 1: Analyze
-  const manifest = analyzeDeployment(inspectorState, { projectId })
+  const manifest = analyzeDeployment(inspectorState, {
+    projectId,
+    serverlessIncompatible: options.serverlessIncompatible,
+  })
   logger.info(
     `Found ${manifest.units.length} units, ${manifest.queues.length} queues, ${manifest.scheduledTasks.length} scheduled tasks`
   )

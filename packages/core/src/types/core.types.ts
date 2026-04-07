@@ -109,6 +109,7 @@ export type FunctionRuntimeMeta = {
   remote?: boolean
   mcp?: boolean
   readonly?: boolean
+  deploy?: 'serverless' | 'server' | 'auto'
   sessionless?: boolean
   version?: number
   approvalRequired?: boolean
