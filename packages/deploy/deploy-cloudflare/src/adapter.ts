@@ -381,7 +381,7 @@ export class CloudflareProviderAdapter {
       `import '${ctx.bootstrapPath}'`,
       ``,
       `const logger = new ConsoleLogger()`,
-      `const port = parseInt(process.env.PORT || '3000', 10)`,
+      `const port = parseInt(process.env.PORT || '8080', 10)`,
       `const hostname = process.env.HOST || '0.0.0.0'`,
       ``,
       `async function main() {`,
@@ -400,6 +400,7 @@ export class CloudflareProviderAdapter {
       `  await schedulerService.start()`,
       `  await server.start()`,
       `  await server.enableExitOnSigInt()`,
+      `  logger.info('Server container ready on port ' + port)`,
       `}`,
       ``,
       `main().catch((err) => {`,
@@ -421,7 +422,7 @@ export class CloudflareProviderAdapter {
       `COPY package.json .`,
       `RUN npm install --production 2>/dev/null || true`,
       `ENV NODE_ENV=production`,
-      `EXPOSE 3000`,
+      `EXPOSE 8080`,
       `CMD ["node", "bundle.js"]`,
     ].join('\n')
   }
@@ -442,13 +443,169 @@ export class CloudflareProviderAdapter {
     return configs
   }
 
+  generateProviderConfigs(manifest: DeploymentManifest): Map<string, string> {
+    const configs = new Map<string, string>()
+    const serverUnits = manifest.units.filter((u) => u.target === 'server')
+
+    if (serverUnits.length > 0) {
+      // Generate proxy Worker that routes to the container
+      configs.set(
+        'server-proxy/entry.ts',
+        this.generateProxyWorkerEntry(serverUnits, manifest)
+      )
+      configs.set(
+        'server-proxy/wrangler.toml',
+        this.generateProxyWranglerToml(serverUnits, manifest)
+      )
+    }
+
+    return configs
+  }
+
+  /**
+   * Proxy Worker entry: extends Container, forwards HTTP/queue/cron to it.
+   */
+  private generateProxyWorkerEntry(
+    serverUnits: DeploymentUnit[],
+    manifest: DeploymentManifest
+  ): string {
+    // Collect all routes from server units
+    const serverRoutes: Array<{ method: string; route: string }> = []
+    for (const unit of serverUnits) {
+      for (const handler of unit.handlers) {
+        if (handler.type === 'fetch') {
+          for (const route of handler.routes) {
+            serverRoutes.push({ method: route.method, route: route.route })
+          }
+        }
+      }
+    }
+
+    // Collect queue names consumed by server units
+    const serverQueueNames = manifest.queues
+      .filter((q) => serverUnits.some((u) => u.name === q.consumerUnit))
+      .map((q) => q.name)
+
+    // Collect cron schedules for server units
+    const serverCrons = manifest.scheduledTasks
+      .filter((t) => serverUnits.some((u) => u.name === t.unitName))
+
+    return [
+      `// Generated proxy Worker — routes traffic to CF Container`,
+      `import { Container, getRandom } from "@cloudflare/containers"`,
+      ``,
+      `class PikkuServer extends Container {`,
+      `  defaultPort = 8080`,
+      `  sleepAfter = "2h"`,
+      `}`,
+      ``,
+      `interface Env {`,
+      `  PIKKU_SERVER: DurableObjectNamespace<PikkuServer>`,
+      `}`,
+      ``,
+      `export { PikkuServer }`,
+      ``,
+      `export default {`,
+      `  async fetch(request: Request, env: Env) {`,
+      `    const container = await getRandom(env.PIKKU_SERVER, 1)`,
+      `    return container.fetch(request)`,
+      `  },`,
+      ...(serverQueueNames.length > 0
+        ? [
+            `  async queue(batch: MessageBatch, env: Env) {`,
+            `    const container = await getRandom(env.PIKKU_SERVER, 1)`,
+            `    await container.fetch(new Request("http://internal/__pikku/queue", {`,
+            `      method: "POST",`,
+            `      headers: { "Content-Type": "application/json" },`,
+            `      body: JSON.stringify({ queue: batch.queue, messages: batch.messages.map(m => ({ id: m.id, body: m.body })) }),`,
+            `    }))`,
+            `  },`,
+          ]
+        : []),
+      ...(serverCrons.length > 0
+        ? [
+            `  async scheduled(controller: ScheduledController, env: Env) {`,
+            `    const container = await getRandom(env.PIKKU_SERVER, 1)`,
+            `    await container.fetch(new Request("http://internal/__pikku/scheduled", {`,
+            `      method: "POST",`,
+            `      headers: { "Content-Type": "application/json" },`,
+            `      body: JSON.stringify({ cron: controller.cron, scheduledTime: controller.scheduledTime }),`,
+            `    }))`,
+            `  },`,
+          ]
+        : []),
+      `}`,
+      ``,
+    ].join('\n')
+  }
+
+  /**
+   * Proxy Worker wrangler.toml with container binding + queue consumers + crons.
+   */
+  private generateProxyWranglerToml(
+    serverUnits: DeploymentUnit[],
+    manifest: DeploymentManifest
+  ): string {
+    const projectId = manifest.projectId
+    const lines: string[] = [
+      `name = "${projectId}-server-proxy"`,
+      `main = "entry.ts"`,
+      `compatibility_date = "2024-12-18"`,
+      `compatibility_flags = ["nodejs_compat_v2"]`,
+      ``,
+      `[observability]`,
+      `enabled = true`,
+      ``,
+      `[[containers]]`,
+      `class_name = "PikkuServer"`,
+      `image = "../server/Dockerfile"`,
+      `max_instances = 3`,
+      ``,
+      `[[durable_objects.bindings]]`,
+      `class_name = "PikkuServer"`,
+      `name = "PIKKU_SERVER"`,
+      ``,
+      `[[migrations]]`,
+      `new_sqlite_classes = ["PikkuServer"]`,
+      `tag = "v1"`,
+    ]
+
+    // Queue consumers for server functions
+    const serverQueueNames = manifest.queues
+      .filter((q) => serverUnits.some((u) => u.name === q.consumerUnit))
+
+    for (const queue of serverQueueNames) {
+      lines.push(
+        ``,
+        `[[queues.consumers]]`,
+        `queue = "${projectId}-${queue.name}"`,
+        `max_batch_size = 10`,
+        `max_batch_timeout = 5`,
+      )
+    }
+
+    // Cron triggers for server functions
+    const serverCrons = manifest.scheduledTasks
+      .filter((t) => serverUnits.some((u) => u.name === t.unitName))
+
+    if (serverCrons.length > 0) {
+      lines.push(``, `[triggers]`, `crons = [`)
+      for (const cron of serverCrons) {
+        lines.push(`  "${cron.schedule}",`)
+      }
+      lines.push(`]`)
+    }
+
+    return lines.join('\n')
+  }
+
   generateInfraManifest(manifest: DeploymentManifest): string | null {
     const infra = generateInfraManifest(manifest)
     return JSON.stringify(infra, null, 2)
   }
 
   getExternals(): string[] {
-    return ['node:*', 'cloudflare:*']
+    return ['node:*', 'cloudflare:*', 'uWebSockets.js']
   }
 
   getAliases(): Record<string, string> {

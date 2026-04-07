@@ -256,6 +256,72 @@ check('all units are serverless Workers (no Dockerfile)', () => {
 })
 
 // ---------------------------------------------------------------------------
+// Server fallback tests — re-run with serverlessIncompatible config
+// ---------------------------------------------------------------------------
+
+console.log('\nRunning server fallback tests (with serverlessIncompatible)...')
+
+// Add serverlessIncompatible to the template's pikku.config.json
+const configPath = join(FUNCTIONS_TEMPLATE, 'pikku.config.json')
+const originalConfig = readText(configPath)
+const config = JSON.parse(originalConfig)
+config.deploy = { ...config.deploy, serverlessIncompatible: ['todoStore'] }
+execSync('rm -rf .deploy', { cwd: FUNCTIONS_TEMPLATE, stdio: 'pipe' })
+
+import { writeFileSync } from 'fs'
+writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8')
+
+try {
+  execSync('yarn pikku deploy plan', {
+    cwd: FUNCTIONS_TEMPLATE,
+    stdio: 'pipe',
+    timeout: 300_000,
+    env: { ...process.env, PIKKU_DEPLOY_PROVIDER: 'cloudflare' },
+  })
+
+  check('server unit generated when serverlessIncompatible matches', () => {
+    if (!existsSync(join(DEPLOY_DIR, 'server'))) {
+      throw new Error('server/ directory should exist')
+    }
+    if (!existsSync(join(DEPLOY_DIR, 'server', 'bundle.js'))) {
+      throw new Error('server/bundle.js should exist')
+    }
+  })
+
+  check('server unit has Dockerfile', () => {
+    if (!existsSync(join(DEPLOY_DIR, 'server', 'Dockerfile'))) {
+      throw new Error('server/Dockerfile should exist')
+    }
+  })
+
+  check('server unit entry uses PikkuUWSServer', () => {
+    const entry = readText(join(DEPLOY_DIR, 'server', 'entry.ts'))
+    if (!entry.includes('PikkuUWSServer')) {
+      throw new Error('Server entry should use PikkuUWSServer')
+    }
+  })
+
+  check('proxy Worker generated', () => {
+    if (!existsSync(join(DEPLOY_DIR, 'server-proxy'))) {
+      throw new Error('server-proxy/ directory should exist')
+    }
+  })
+
+  check('greet still serverless (not using todoStore)', () => {
+    // greet doesn't use todoStore, so it should still be a serverless Worker
+    if (!existsSync(join(DEPLOY_DIR, 'greet', 'bundle.js'))) {
+      throw new Error('greet should still be bundled as serverless Worker')
+    }
+    if (existsSync(join(DEPLOY_DIR, 'greet', 'Dockerfile'))) {
+      throw new Error('greet should NOT have a Dockerfile')
+    }
+  })
+} finally {
+  // Restore original config
+  writeFileSync(configPath, originalConfig, 'utf-8')
+}
+
+// ---------------------------------------------------------------------------
 // Results
 // ---------------------------------------------------------------------------
 
