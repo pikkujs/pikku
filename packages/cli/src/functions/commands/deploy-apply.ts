@@ -112,6 +112,7 @@ export async function resolveProvider(
     cloudflare: '@pikku/deploy-cloudflare',
     serverless: '@pikku/deploy-serverless',
     azure: '@pikku/deploy-azure',
+    standalone: '@pikku/deploy-standalone',
   }
 
   const packageName = providers[name]
