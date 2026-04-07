@@ -12,6 +12,7 @@
 
 import { build, type Plugin } from 'esbuild'
 import { writeFile, mkdir, stat, readFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
 import {
@@ -60,6 +61,60 @@ async function getDeadGenFilePatterns(
     // No services gen — no stubs needed
   }
   return patterns
+}
+
+/**
+ * esbuild plugin that resolves @pikku/* packages by walking up the
+ * directory tree to find the monorepo root and locating workspace packages.
+ * Needed for server/standalone entries that import @pikku/uws-server etc.
+ * which aren't direct dependencies of the project.
+ */
+function createPikkuResolverPlugin(projectDir: string): Plugin {
+  const workspaceMap: Record<string, string[]> = {
+    '@pikku/uws-server': ['packages/runtimes/uws-server'],
+    '@pikku/uws-handler': ['packages/runtimes/uws-handler'],
+    '@pikku/schedule': ['packages/schedule'],
+  }
+
+  let resolvedPaths: Record<string, string> | null = null
+
+  function resolveWorkspacePaths(): Record<string, string> {
+    if (resolvedPaths) return resolvedPaths
+    resolvedPaths = {}
+    let dir = projectDir
+    for (let i = 0; i < 10; i++) {
+      for (const [pkg, candidates] of Object.entries(workspaceMap)) {
+        for (const candidate of candidates) {
+          const fullPath = join(dir, candidate)
+          if (existsSync(join(fullPath, 'package.json'))) {
+            resolvedPaths[pkg] = fullPath
+          }
+        }
+      }
+      const parent = join(dir, '..')
+      if (parent === dir) break
+      dir = parent
+    }
+    return resolvedPaths
+  }
+
+  return {
+    name: 'pikku-package-resolver',
+    setup(build) {
+      build.onResolve({ filter: /^@pikku\// }, (args) => {
+        const paths = resolveWorkspacePaths()
+        const pkgName = args.path.match(/^@pikku\/[^/]+/)?.[0]
+        if (pkgName && paths[pkgName]) {
+          const subpath = args.path.slice(pkgName.length)
+          const resolved = subpath
+            ? join(paths[pkgName], 'src', subpath)
+            : join(paths[pkgName], 'src', 'index.ts')
+          return { path: resolved }
+        }
+        return undefined
+      })
+    },
+  }
 }
 
 /**
@@ -148,7 +203,10 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     external: externals ?? ['node:*'],
     alias: aliases,
     define,
-    plugins: [createDeadModuleStubPlugin(deadPatterns)],
+    plugins: [
+      createPikkuResolverPlugin(projectDir),
+      createDeadModuleStubPlugin(deadPatterns),
+    ],
   })
 
   // Write metafile

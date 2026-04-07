@@ -204,7 +204,9 @@ export async function runBuildPipeline(options: {
   if (provider.generateProviderConfigs) {
     const providerConfigs = provider.generateProviderConfigs(manifest)
     for (const [filename, content] of providerConfigs) {
-      await writeFile(join(providerDir, filename), content, 'utf-8')
+      const filePath = join(providerDir, filename)
+      await mkdir(join(filePath, '..'), { recursive: true })
+      await writeFile(filePath, content, 'utf-8')
     }
   }
 
