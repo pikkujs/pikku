@@ -71,122 +71,184 @@ export async function runBuildPipeline(options: {
     projectId,
     serverlessIncompatible: options.serverlessIncompatible,
   })
-  const serverlessUnits = manifest.units.filter((u) => u.target === 'serverless')
-  const serverUnits = manifest.units.filter((u) => u.target === 'server')
 
-  logger.info(
-    `Found ${manifest.units.length} units (${serverlessUnits.length} serverless, ${serverUnits.length} server), ${manifest.queues.length} queues, ${manifest.scheduledTasks.length} scheduled tasks`
-  )
+  let bundled: BundleResult[] = []
+  let bundleErrors: Array<{ unitName: string; error: string }> = []
+  let codegenErrors: Array<{ unitName: string; error: string }> = []
 
-  if (manifest.units.length === 0) {
-    return {
-      manifest,
-      providerDir,
-      projectId,
-      bundled: [],
-      bundleErrors: [],
-      codegenErrors: [],
-    }
-  }
+  if (provider.singleUnit) {
+    // Single-unit mode: bundle everything into one unit, use project's .pikku/ directly
+    logger.info('Building standalone bundle...')
 
-  // Step 2: Per-unit filtered codegen (serverless units only)
-  // Server units share a single codegen pass (step 2b).
-  const serverlessManifest = { ...manifest, units: serverlessUnits }
-  logger.info('Generating per-unit codegen...')
-  const { unitPikkuDirs, errors: codegenErrors } = await generatePerUnitCodegen(
-    {
-      projectDir,
-      manifest: serverlessManifest,
-      inspectorState,
-      deployDir: providerDir,
-      onProgress: (unitName, status, error) => {
-        if (status === 'start') {
-          logger.info(`  Codegen: ${unitName}...`)
-        } else if (status === 'done') {
-          logger.info(`  Codegen: ${unitName} done`)
-        } else if (status === 'error') {
-          logger.error(`  Codegen: ${unitName} failed — ${error}`)
-        }
-      },
-    }
-  )
-
-  // Step 2b: Server units — single codegen pass with all server function IDs
-  if (serverUnits.length > 0) {
-    const serverUnitName = 'server'
-
-    // Create a merged server unit with all server function IDs
-    const mergedServerUnit: DeploymentManifest['units'][0] = {
-      name: serverUnitName,
+    const unitName = projectId
+    const singleUnit: DeploymentManifest['units'][0] = {
+      name: unitName,
       role: 'function',
-      target: 'server',
-      functionIds: serverUnits.flatMap((u) => u.functionIds),
+      target: 'serverless',
+      functionIds: Object.keys(inspectorState.functions.meta),
       services: [],
       dependsOn: [],
-      handlers: serverUnits.flatMap((u) => u.handlers),
+      handlers: [],
       tags: [],
     }
+    manifest.units = [singleUnit]
 
-    // Run per-unit codegen for the merged server unit (tree-shakes to only server functions)
-    const serverManifest = { ...manifest, units: [mergedServerUnit] }
-    const { unitPikkuDirs: serverPikkuDirs, errors: serverCodegenErrors } =
-      await generatePerUnitCodegen({
+    const unitDir = join(providerDir, unitName)
+    const pikkuDir = join(projectDir, '.pikku')
+    await mkdir(unitDir, { recursive: true })
+
+    const ctx = getEntryContext(unitDir, pikkuDir, singleUnit, inspectorState)
+    const source = provider.generateEntrySource(ctx as never)
+
+    const entryPath = join(unitDir, 'entry.ts')
+    await writeFile(entryPath, source, 'utf-8')
+
+    const entryFiles = new Map<string, string>()
+    entryFiles.set(unitName, entryPath)
+
+    const bundleResult = await bundleUnits(
+      projectDir,
+      manifest,
+      entryFiles,
+      providerDir,
+      {
+        externals: provider.getExternals?.(),
+        aliases: provider.getAliases?.(),
+        define: provider.getDefine?.(),
+        platform: provider.getPlatform?.(),
+        format: provider.getFormat?.(),
+      }
+    )
+    bundled = bundleResult.results
+    bundleErrors = bundleResult.errors
+
+    logger.info(
+      `Bundled standalone${bundleErrors.length > 0 ? ` (${bundleErrors.length} errors)` : ''}`
+    )
+  } else {
+    // Multi-unit mode: per-function decomposition
+    const serverlessUnits = manifest.units.filter((u) => u.target === 'serverless')
+    const serverUnits = manifest.units.filter((u) => u.target === 'server')
+
+    logger.info(
+      `Found ${manifest.units.length} units (${serverlessUnits.length} serverless, ${serverUnits.length} server), ${manifest.queues.length} queues, ${manifest.scheduledTasks.length} scheduled tasks`
+    )
+
+    if (manifest.units.length === 0) {
+      return {
+        manifest,
+        providerDir,
+        projectId,
+        bundled: [],
+        bundleErrors: [],
+        codegenErrors: [],
+      }
+    }
+
+    // Step 2: Per-unit filtered codegen (serverless units only)
+    // Server units share a single codegen pass (step 2b).
+    const serverlessManifest = { ...manifest, units: serverlessUnits }
+    logger.info('Generating per-unit codegen...')
+    const { unitPikkuDirs, errors: serverlessCodegenErrors } = await generatePerUnitCodegen(
+      {
         projectDir,
-        manifest: serverManifest,
+        manifest: serverlessManifest,
         inspectorState,
         deployDir: providerDir,
         onProgress: (unitName, status, error) => {
-          if (status === 'start') logger.info(`  Codegen: ${unitName}...`)
-          else if (status === 'done') logger.info(`  Codegen: ${unitName} done`)
-          else if (status === 'error') logger.error(`  Codegen: ${unitName} failed — ${error}`)
+          if (status === 'start') {
+            logger.info(`  Codegen: ${unitName}...`)
+          } else if (status === 'done') {
+            logger.info(`  Codegen: ${unitName} done`)
+          } else if (status === 'error') {
+            logger.error(`  Codegen: ${unitName} failed — ${error}`)
+          }
         },
-      })
+      }
+    )
+    codegenErrors = serverlessCodegenErrors
 
-    for (const [k, v] of serverPikkuDirs) unitPikkuDirs.set(k, v)
-    codegenErrors.push(...serverCodegenErrors)
+    // Step 2b: Server units — single codegen pass with all server function IDs
+    if (serverUnits.length > 0) {
+      const serverUnitName = 'server'
 
-    // Replace individual server units with the merged one in the manifest
-    manifest.units = [...serverlessUnits, mergedServerUnit]
+      // Create a merged server unit with all server function IDs
+      const mergedServerUnit: DeploymentManifest['units'][0] = {
+        name: serverUnitName,
+        role: 'function',
+        target: 'server',
+        functionIds: serverUnits.flatMap((u) => u.functionIds),
+        services: [],
+        dependsOn: [],
+        handlers: serverUnits.flatMap((u) => u.handlers),
+        tags: [],
+      }
 
-    logger.info(`  Server container: ${serverUnits.length} functions merged into one unit`)
-  }
+      // Run per-unit codegen for the merged server unit (tree-shakes to only server functions)
+      const serverManifest = { ...manifest, units: [mergedServerUnit] }
+      const { unitPikkuDirs: serverPikkuDirs, errors: serverCodegenErrors } =
+        await generatePerUnitCodegen({
+          projectDir,
+          manifest: serverManifest,
+          inspectorState,
+          deployDir: providerDir,
+          onProgress: (unitName, status, error) => {
+            if (status === 'start') logger.info(`  Codegen: ${unitName}...`)
+            else if (status === 'done') logger.info(`  Codegen: ${unitName} done`)
+            else if (status === 'error') logger.error(`  Codegen: ${unitName} failed — ${error}`)
+          },
+        })
 
-  logger.info(`Codegen complete: ${unitPikkuDirs.size} units`)
+      for (const [k, v] of serverPikkuDirs) unitPikkuDirs.set(k, v)
+      codegenErrors.push(...serverCodegenErrors)
 
-  // Step 3: Generate entry points + Bundle
-  logger.info('Bundling...')
-  const entryFiles = new Map<string, string>()
+      // Replace individual server units with the merged one in the manifest
+      manifest.units = [...serverlessUnits, mergedServerUnit]
 
-  for (const unit of manifest.units) {
-    const pikkuDir = unitPikkuDirs.get(unit.name)
-    if (!pikkuDir) continue
-
-    const unitDir = join(providerDir, unit.name)
-    const entryPath = join(unitDir, 'entry.ts')
-    await mkdir(unitDir, { recursive: true })
-
-    const ctx = getEntryContext(unitDir, pikkuDir, unit, inspectorState)
-    const source = provider.generateEntrySource(ctx as never)
-
-    await writeFile(entryPath, source, 'utf-8')
-    entryFiles.set(unit.name, entryPath)
-  }
-
-  const { results: bundled, errors: bundleErrors } = await bundleUnits(
-    projectDir,
-    manifest,
-    entryFiles,
-    providerDir,
-    {
-      externals: provider.getExternals?.(),
-      aliases: provider.getAliases?.(),
-      define: provider.getDefine?.(),
-      platform: provider.getPlatform?.(),
+      logger.info(`  Server container: ${serverUnits.length} functions merged into one unit`)
     }
-  )
-  logger.info(
-    `Bundled ${bundled.length} units${bundleErrors.length > 0 ? ` (${bundleErrors.length} failed)` : ''}`
-  )
+
+    logger.info(`Codegen complete: ${unitPikkuDirs.size} units`)
+
+    // Step 3: Generate entry points + Bundle
+    logger.info('Bundling...')
+    const entryFiles = new Map<string, string>()
+
+    for (const unit of manifest.units) {
+      const pikkuDir = unitPikkuDirs.get(unit.name)
+      if (!pikkuDir) continue
+
+      const unitDir = join(providerDir, unit.name)
+      const entryPath = join(unitDir, 'entry.ts')
+      await mkdir(unitDir, { recursive: true })
+
+      const ctx = getEntryContext(unitDir, pikkuDir, unit, inspectorState)
+      const source = provider.generateEntrySource(ctx as never)
+
+      await writeFile(entryPath, source, 'utf-8')
+      entryFiles.set(unit.name, entryPath)
+    }
+
+    const bundleResult = await bundleUnits(
+      projectDir,
+      manifest,
+      entryFiles,
+      providerDir,
+      {
+        externals: provider.getExternals?.(),
+        aliases: provider.getAliases?.(),
+        define: provider.getDefine?.(),
+        platform: provider.getPlatform?.(),
+        format: provider.getFormat?.(),
+      }
+    )
+    bundled = bundleResult.results
+    bundleErrors = bundleResult.errors
+
+    logger.info(
+      `Bundled ${bundled.length} units${bundleErrors.length > 0 ? ` (${bundleErrors.length} failed)` : ''}`
+    )
+  }
 
   if (bundleErrors.length > 0) {
     for (const f of bundleErrors) {
