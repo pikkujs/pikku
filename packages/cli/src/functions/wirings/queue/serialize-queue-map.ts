@@ -80,9 +80,10 @@ function generateQueues(
   for (const [queueName, { pikkuFuncId }] of Object.entries(queueWorkersMeta)) {
     const resolved = resolvedIOTypes[pikkuFuncId]
     if (!resolved) {
-      throw new Error(
-        `Function ${pikkuFuncId} not found in resolvedIOTypes. Please check your configuration.`
-      )
+      // Synthetic workflow queue workers (pikkuWorkflowWorker:*, pikkuWorkflowOrchestrator:*)
+      // don't have resolved types — use null for their queue map entries
+      queuesObj[queueName] = { inputType: 'null', outputType: 'null' }
+      continue
     }
     requiredTypes.add(resolved.inputType)
     requiredTypes.add(resolved.outputType)

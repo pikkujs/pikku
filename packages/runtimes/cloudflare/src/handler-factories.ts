@@ -123,7 +123,7 @@ export function createCloudflareHandler(
   if (handlerTypes.includes('fetch')) {
     result.fetch = async (request: Request, env: CloudflareEnv) => {
       await setupServices(env, factories)
-      return runFetch(request)
+      return runFetch(request, undefined, { exposeErrors: true })
     }
   }
 
