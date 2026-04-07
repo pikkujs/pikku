@@ -130,31 +130,59 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   constructor() {
     const queueMeta = pikkuState(null, 'queue', 'meta')
     const functions = pikkuState(null, 'function', 'functions')
+    const functionsMeta = pikkuState(null, 'function', 'meta')
+
+    // Minimal meta for internal workflow functions (satisfies FunctionMeta)
+    const mkMeta = (funcId: string) => ({
+      pikkuFuncId: funcId,
+      sessionless: true,
+      functionType: 'helper' as const,
+      inputSchemaName: null,
+      outputSchemaName: null,
+    })
+
+    const registerWorkflowFunc = (
+      funcId: string,
+      func: { func: unknown },
+      queueName: string
+    ) => {
+      if (functions.has(funcId)) return
+      addFunction(funcId, func as never)
+      wireQueueWorker({ name: queueName, func } as never)
+      // Register function meta so runPikkuFunc can find it
+      if (!functionsMeta[funcId]) {
+        functionsMeta[funcId] = mkMeta(funcId)
+      }
+    }
 
     // Register shared queue workers for monolith deployments
-    if (!functions.has('pikkuWorkflowOrchestrator')) {
-      const func = { func: pikkuWorkflowOrchestratorFunc }
-      addFunction('pikkuWorkflowOrchestrator', func)
-      wireQueueWorker({ name: 'pikku-workflow-orchestrator', func } as any)
-    }
-    if (!functions.has('pikkuWorkflowStepWorker')) {
-      const func = { func: pikkuWorkflowWorkerFunc }
-      addFunction('pikkuWorkflowStepWorker', func)
-      wireQueueWorker({ name: 'pikku-workflow-step-worker', func } as any)
-    }
+    registerWorkflowFunc(
+      'pikkuWorkflowOrchestrator',
+      { func: pikkuWorkflowOrchestratorFunc },
+      'pikku-workflow-orchestrator'
+    )
+    registerWorkflowFunc(
+      'pikkuWorkflowStepWorker',
+      { func: pikkuWorkflowWorkerFunc },
+      'pikku-workflow-step-worker'
+    )
 
     // Register per-workflow queue workers for serverless deployments
     for (const [queueName, meta] of Object.entries(queueMeta)) {
       if (functions.has(meta.pikkuFuncId)) continue
 
       if (queueName.startsWith('wf-orchestrator-')) {
-        const func = { func: pikkuWorkflowOrchestratorFunc }
-        addFunction(meta.pikkuFuncId, func)
-        wireQueueWorker({ name: queueName, func } as any)
+        registerWorkflowFunc(
+          meta.pikkuFuncId,
+          { func: pikkuWorkflowOrchestratorFunc },
+          queueName
+        )
       } else if (queueName.startsWith('wf-step-')) {
-        const func = { func: pikkuWorkflowWorkerFunc }
-        addFunction(meta.pikkuFuncId, func)
-        wireQueueWorker({ name: queueName, func } as any)
+        registerWorkflowFunc(
+          meta.pikkuFuncId,
+          { func: pikkuWorkflowWorkerFunc },
+          queueName
+        )
       }
     }
 
