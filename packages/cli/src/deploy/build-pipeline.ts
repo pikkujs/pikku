@@ -71,8 +71,11 @@ export async function runBuildPipeline(options: {
     projectId,
     serverlessIncompatible: options.serverlessIncompatible,
   })
+  const serverlessUnits = manifest.units.filter((u) => u.target === 'serverless')
+  const serverUnits = manifest.units.filter((u) => u.target === 'server')
+
   logger.info(
-    `Found ${manifest.units.length} units, ${manifest.queues.length} queues, ${manifest.scheduledTasks.length} scheduled tasks`
+    `Found ${manifest.units.length} units (${serverlessUnits.length} serverless, ${serverUnits.length} server), ${manifest.queues.length} queues, ${manifest.scheduledTasks.length} scheduled tasks`
   )
 
   if (manifest.units.length === 0) {
@@ -86,12 +89,14 @@ export async function runBuildPipeline(options: {
     }
   }
 
-  // Step 2: Per-unit filtered codegen
+  // Step 2: Per-unit filtered codegen (serverless units only)
+  // Server units share a single codegen pass (step 2b).
+  const serverlessManifest = { ...manifest, units: serverlessUnits }
   logger.info('Generating per-unit codegen...')
   const { unitPikkuDirs, errors: codegenErrors } = await generatePerUnitCodegen(
     {
       projectDir,
-      manifest,
+      manifest: serverlessManifest,
       inspectorState,
       deployDir: providerDir,
       onProgress: (unitName, status, error) => {
@@ -105,6 +110,46 @@ export async function runBuildPipeline(options: {
       },
     }
   )
+
+  // Step 2b: Server units — single codegen pass with all server function IDs
+  if (serverUnits.length > 0) {
+    const serverUnitName = 'server'
+
+    // Create a merged server unit with all server function IDs
+    const mergedServerUnit: DeploymentManifest['units'][0] = {
+      name: serverUnitName,
+      role: 'function',
+      target: 'server',
+      functionIds: serverUnits.flatMap((u) => u.functionIds),
+      services: [],
+      dependsOn: [],
+      handlers: serverUnits.flatMap((u) => u.handlers),
+      tags: [],
+    }
+
+    // Run per-unit codegen for the merged server unit (tree-shakes to only server functions)
+    const serverManifest = { ...manifest, units: [mergedServerUnit] }
+    const { unitPikkuDirs: serverPikkuDirs, errors: serverCodegenErrors } =
+      await generatePerUnitCodegen({
+        projectDir,
+        manifest: serverManifest,
+        inspectorState,
+        deployDir: providerDir,
+        onProgress: (unitName, status, error) => {
+          if (status === 'start') logger.info(`  Codegen: ${unitName}...`)
+          else if (status === 'done') logger.info(`  Codegen: ${unitName} done`)
+          else if (status === 'error') logger.error(`  Codegen: ${unitName} failed — ${error}`)
+        },
+      })
+
+    for (const [k, v] of serverPikkuDirs) unitPikkuDirs.set(k, v)
+    codegenErrors.push(...serverCodegenErrors)
+
+    // Replace individual server units with the merged one in the manifest
+    manifest.units = [...serverlessUnits, mergedServerUnit]
+
+    logger.info(`  Server container: ${serverUnits.length} functions merged into one unit`)
+  }
 
   logger.info(`Codegen complete: ${unitPikkuDirs.size} units`)
 

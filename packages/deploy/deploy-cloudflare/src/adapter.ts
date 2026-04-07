@@ -21,6 +21,7 @@ type DeploymentHandler =
 interface DeploymentUnit {
   name: string
   role: string
+  target: 'serverless' | 'server'
   functionIds: string[]
   services: Array<{ capability: string; sourceServiceName: string }>
   dependsOn: string[]
@@ -108,6 +109,11 @@ export class CloudflareProviderAdapter {
 
   generateEntrySource(ctx: EntryGenerationContext): string {
     const { unit } = ctx
+
+    // Server-target units get a uWS entry (container deployment)
+    if (unit.target === 'server') {
+      return this.generateServerEntry(ctx)
+    }
 
     // Gateway units use their own dedicated handler factories
     if (unit.role === 'channel') {
@@ -357,12 +363,78 @@ export class CloudflareProviderAdapter {
     return lines
   }
 
+  /**
+   * Generates entry for server-target units (CF Container).
+   * Uses PikkuUWSServer — same pattern as standalone adapter.
+   */
+  private generateServerEntry(ctx: EntryGenerationContext): string {
+    return [
+      `// Generated server entry for "${ctx.unit.name}" (container)`,
+      `import { stopSingletonServices } from '@pikku/core'`,
+      `import { ConsoleLogger } from '@pikku/core/services'`,
+      `import { InMemorySchedulerService } from '@pikku/schedule'`,
+      `import { PikkuUWSServer } from '@pikku/uws-server'`,
+      ``,
+      ctx.configImport,
+      ctx.servicesImport,
+      ctx.singletonServicesImport,
+      `import '${ctx.bootstrapPath}'`,
+      ``,
+      `const logger = new ConsoleLogger()`,
+      `const port = parseInt(process.env.PORT || '3000', 10)`,
+      `const hostname = process.env.HOST || '0.0.0.0'`,
+      ``,
+      `async function main() {`,
+      `  const config = await ${ctx.configVar}()`,
+      `  const schedulerService = new InMemorySchedulerService()`,
+      `  const singletonServices = await ${ctx.servicesVar}(config, {`,
+      `    logger,`,
+      `    schedulerService,`,
+      `  })`,
+      ``,
+      `  const server = new PikkuUWSServer(`,
+      `    { ...config, port, hostname },`,
+      `    logger,`,
+      `  )`,
+      `  await server.init({ respondWith404: true })`,
+      `  await schedulerService.start()`,
+      `  await server.start()`,
+      `  await server.enableExitOnSigInt()`,
+      `}`,
+      ``,
+      `main().catch((err) => {`,
+      `  logger.error('Fatal: ' + err.message)`,
+      `  process.exit(1)`,
+      `})`,
+      ``,
+    ].join('\n')
+  }
+
+  /**
+   * Generates a Dockerfile for server-target units.
+   */
+  private generateDockerfile(): string {
+    return [
+      `FROM node:22-slim`,
+      `WORKDIR /app`,
+      `COPY bundle.js .`,
+      `COPY package.json .`,
+      `RUN npm install --production 2>/dev/null || true`,
+      `ENV NODE_ENV=production`,
+      `EXPOSE 3000`,
+      `CMD ["node", "bundle.js"]`,
+    ].join('\n')
+  }
+
   generateUnitConfigs(
     unit: DeploymentUnit,
     manifest: DeploymentManifest,
     projectId: string
   ): Map<string, string> {
     const configs = new Map<string, string>()
+    if (unit.target === 'server') {
+      configs.set('Dockerfile', this.generateDockerfile())
+    }
     configs.set(
       'wrangler.toml',
       generateWranglerToml(unit, manifest, projectId)
