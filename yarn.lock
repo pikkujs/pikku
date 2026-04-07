@@ -6138,6 +6138,33 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/verifiers-deploy-azure@workspace:verifiers/deploy-azure":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-deploy-azure@workspace:verifiers/deploy-azure"
+  dependencies:
+    "@types/node": "npm:^24"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/verifiers-deploy-cloudflare@workspace:verifiers/deploy-cloudflare":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-deploy-cloudflare@workspace:verifiers/deploy-cloudflare"
+  dependencies:
+    "@types/node": "npm:^24"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/verifiers-deploy-serverless@workspace:verifiers/deploy-serverless":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-deploy-serverless@workspace:verifiers/deploy-serverless"
+  dependencies:
+    "@types/node": "npm:^24"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/verifiers-functions@workspace:verifiers/functions":
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-functions@workspace:verifiers/functions"
