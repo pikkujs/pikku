@@ -17,7 +17,13 @@
     "prepublishOnly": "yarn build"
   },
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./handler": "./dist/handler-factories.js",
+    "./queue": "./dist/cloudflare-queue-service.js",
+    "./d1": "./dist/cloudflare-d1-services.js",
+    "./deployment": "./dist/cloudflare-deployment-service.js",
+    "./websocket": "./dist/cloudflare-hibernation-websocket-server.js",
+    "./eventhub": "./dist/cloudflare-eventhub-service.js"
   },
   "dependencies": {
     "kysely-d1": "^0.4.0",
