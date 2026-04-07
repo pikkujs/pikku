@@ -2,12 +2,6 @@ import { basename, join, relative } from 'node:path'
 import { readFile } from 'node:fs/promises'
 
 import { pikkuVoidFunc } from '#pikku'
-import {
-  CloudflareProviderAdapter,
-  deploy as cfDeploy,
-} from '@pikku/deploy-cloudflare'
-import { ServerlessProviderAdapter } from '@pikku/deploy-serverless'
-import { AzureProviderAdapter } from '@pikku/deploy-azure'
 import type {
   ProviderAdapter,
   EntryGenerationContext,
@@ -104,24 +98,22 @@ async function resolveProjectId(projectDir: string): Promise<string> {
   return sanitizeProjectId(basename(projectDir))
 }
 
-export function resolveProvider(_providerName?: string): ProviderAdapter {
+export async function resolveProvider(
+  _providerName?: string
+): Promise<ProviderAdapter> {
   const name =
-    _providerName ??
-    process.env.PIKKU_DEPLOY_PROVIDER ??
-    config?.deploy?.defaultProvider ??
-    'cloudflare'
+    _providerName ?? process.env.PIKKU_DEPLOY_PROVIDER ?? 'cloudflare'
 
-  const providers = config?.deploy?.providers ?? {
+  const packageMap: Record<string, string> = {
     cloudflare: '@pikku/deploy-cloudflare',
     serverless: '@pikku/deploy-serverless',
     azure: '@pikku/deploy-azure',
-    standalone: '@pikku/deploy-standalone',
   }
 
-  const packageName = providers[name]
+  const packageName = packageMap[name]
   if (!packageName) {
     throw new Error(
-      `Unknown deploy provider: '${name}'. Available: ${Object.keys(providers).join(', ')}`
+      `Unknown deploy provider: '${name}'. Available: ${Object.keys(packageMap).join(', ')}`
     )
   }
 
@@ -130,11 +122,17 @@ export function resolveProvider(_providerName?: string): ProviderAdapter {
     if (typeof mod.createAdapter === 'function') {
       return mod.createAdapter()
     }
+    const AdapterClass = Object.values(mod).find(
+      (v: any) => typeof v === 'function' && v.prototype
+    ) as (new () => ProviderAdapter) | undefined
+    if (AdapterClass) {
+      return new AdapterClass()
+    }
     throw new Error(
-      `Deploy provider '${packageName}' does not export createAdapter()`
+      `Deploy provider '${packageName}' does not export createAdapter() or a provider class`
     )
   } catch (e: unknown) {
-    const err = e as { code?: string; message?: string }
+    const err = e as { code?: string }
     if (
       err?.code === 'ERR_MODULE_NOT_FOUND' ||
       err?.code === 'MODULE_NOT_FOUND'
@@ -171,7 +169,7 @@ export const deployApply = pikkuVoidFunc({
     const projectDir = config.rootDir
     const inspectorState = await getInspectorState(true)
     const projectId = await resolveProjectId(projectDir)
-    const provider = resolveProvider()
+    const provider = await resolveProvider()
 
     // Build pipeline: analyze → codegen → bundle → configs
     const result = await runBuildPipeline({
@@ -208,6 +206,7 @@ export const deployApply = pikkuVoidFunc({
       ) as CloudflareInfraManifest
 
       logger.info('Deploying to Cloudflare...')
+      const { deploy: cfDeploy } = await import('@pikku/deploy-cloudflare')
       const deployResult = await cfDeploy({
         accountId,
         apiToken,

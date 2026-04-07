@@ -18,6 +18,7 @@ export interface FunctionConfigChanges {
 export interface AgentConfigChanges {
   name?: string
   description?: string | null
+  instructions?: string | null
   role?: string | null
   personality?: string | null
   goal?: string | null
