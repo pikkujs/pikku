@@ -3,6 +3,9 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "pikku": "echo 'No pikku config needed for deploy verifier'",
+    "tsc": "echo 'No tsc needed for deploy verifier'",
+    "build": "echo 'No build needed for deploy verifier'",
     "test": "npx tsx test-deploy.ts"
   },
   "devDependencies": {
