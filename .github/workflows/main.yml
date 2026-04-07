@@ -63,6 +63,9 @@ jobs:
             variables,
             functions,
             hmr,
+            deploy-cloudflare,
+            deploy-serverless,
+            deploy-azure,
           ]
     steps:
       - name: Check out repository code
