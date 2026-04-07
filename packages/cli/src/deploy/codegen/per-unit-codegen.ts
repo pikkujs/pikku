@@ -82,12 +82,14 @@ function collectFilterNames(
   const hasRemote = unit.functionIds.some((id) => functionsMeta[id]?.remote)
 
   if (hasExposed) {
-    // Include the RPC catch-all route so exposed functions are HTTP-accessible
+    // Include the RPC catch-all scaffold function + route
+    names.add('rpcCaller')
     names.add('/rpc/:rpcName')
     names.add('http:post:/rpc/:rpcName')
   }
   if (hasRemote) {
-    // Include the remote RPC route for cross-service dispatch
+    // Include the remote RPC scaffold function + route
+    names.add('remoteRPCHandler')
     names.add('/remote/rpc/:rpcName')
     names.add('http:post:/remote/rpc/:rpcName')
   }
@@ -141,14 +143,21 @@ function collectFilterNames(
       if (wfDef) {
         names.add(wfDef.pikkuFuncId)
         names.add(wfDef.name)
-        // Include workflow catch-all routes
+        // Include workflow scaffold functions + catch-all routes
+        names.add('workflowStarter')
+        names.add('workflowRunner')
+        names.add('workflowStatusChecker')
+        names.add('workflowStatusStream')
+        names.add('graphStarter')
         names.add('/workflow/:workflowName/start')
         names.add('/workflow/:workflowName/run')
         names.add('/workflow/:workflowName/status/:runId')
+        names.add('/workflow/:workflowName/status/:runId/stream')
         names.add('/workflow/:workflowName/graph/:nodeId')
         names.add('http:post:/workflow/:workflowName/start')
         names.add('http:post:/workflow/:workflowName/run')
         names.add('http:get:/workflow/:workflowName/status/:runId')
+        names.add('http:get:/workflow/:workflowName/status/:runId/stream')
         names.add('http:post:/workflow/:workflowName/graph/:nodeId')
         // Queue names for orchestrator and step workers
         const toKebab = (s: string) =>

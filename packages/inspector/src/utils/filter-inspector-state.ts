@@ -191,6 +191,9 @@ export function filterInspectorState(
     return state
   }
 
+  // Snapshot the original workflow graph meta before filtering prunes it
+  const originalGraphMeta = { ...((state as InspectorState).workflows?.graphMeta ?? {}) }
+
   // Create a shallow copy with new Maps/Sets to avoid mutating the original
   const filteredState = {
     ...state,
@@ -210,6 +213,11 @@ export function filterInspectorState(
       ...state.http,
       meta: JSON.parse(JSON.stringify(state.http.meta)), // Deep clone metadata
       files: new Set<string>(), // Will be repopulated with filtered files
+    },
+    workflows: {
+      ...state.workflows,
+      graphMeta: JSON.parse(JSON.stringify(state.workflows?.graphMeta ?? {})),
+      meta: JSON.parse(JSON.stringify(state.workflows?.meta ?? {})),
     },
     channels: {
       ...state.channels,
@@ -829,6 +837,25 @@ export function filterInspectorState(
       if (funcMeta.outputs?.[0]) prunedSchemas.add(funcMeta.outputs[0])
     }
     filteredState.requiredSchemas = prunedSchemas
+  }
+
+  // If any surviving function is a non-inline workflow step, the unit needs
+  // workflowService + queueService even though the function doesn't use them.
+  // Check the ORIGINAL graph meta (before filtering pruned it).
+  const survivingFuncIds = new Set(Object.keys(filteredState.functions.meta))
+  // Use the snapshot taken before filtering
+  for (const graph of Object.values(originalGraphMeta)) {
+    if (!graph.nodes) continue
+    for (const node of Object.values(graph.nodes)) {
+      if (!('rpcName' in node) || !node.rpcName) continue
+      const rpcName = node.rpcName as string
+      if (!survivingFuncIds.has(rpcName)) continue
+      const isInline = (node as { options?: { async?: boolean } }).options?.async !== true && graph.inline === true
+      if (!isInline) {
+        filteredState.serviceAggregation.requiredServices.add('workflowService')
+        filteredState.serviceAggregation.requiredServices.add('queueService')
+      }
+    }
   }
 
   // Recalculate requiredServices based on filtered functions/middleware/permissions

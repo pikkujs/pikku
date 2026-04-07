@@ -310,7 +310,8 @@ export function analyzeDeployment(
     functionsMeta,
     httpMeta,
     units,
-    workflows
+    workflows,
+    queues
   )
 
   // ── Step 6: Ensure function units exist for gateway dependencies ───
@@ -342,58 +343,34 @@ export function analyzeDeployment(
     }
   }
 
-  // ── Step 7: Assign workflow queue consumers ──
-  // Runs after step 6 so all function units exist.
-  // Orchestrator queue → orchestrator unit
-  // Step queues → function worker (runs function, updates D1, re-queues orchestrator)
-  for (const [queueName, queueMeta] of entries(state.queueWorkers.meta)) {
-    const funcId = queueMeta.pikkuFuncId
-    if (queues.some((q) => q.name === (queueMeta.name ?? queueName))) continue
+  // ── Step 7: Wire queues to their consumer units ──
+  // All queues (user-defined + workflow-generated) now have consumerUnit set.
+  // Wire the queue handler onto the unit and add workflow services if needed.
+  for (const queue of queues) {
+    const unit = units.find((u) => u.name === queue.consumerUnit)
+    if (!unit) continue
 
-    if (funcId.startsWith('pikkuWorkflowOrchestrator:')) {
-      const wfName = funcId.split(':')[1]
-      const orchUnitName = `wf-${toKebab(wfName)}`
-      const orchUnit = units.find((u) => u.name === orchUnitName)
+    // Add queue handler if not already present
+    const hasQueueHandler = unit.handlers.some(
+      (h) => h.type === 'queue' && h.queueName === queue.name
+    )
+    if (!hasQueueHandler) {
+      unit.handlers.push({ type: 'queue', queueName: queue.name })
+    }
 
-      queues.push({
-        name: queueMeta.name ?? queueName,
-        consumerUnit: orchUnitName,
-        consumerFunctionId: funcId,
-      })
-      if (orchUnit) {
-        orchUnit.handlers.push({
-          type: 'queue',
-          queueName: queueMeta.name ?? queueName,
+    // Workflow step workers need D1 for step state + queue for re-queuing orchestrator
+    if (queue.consumerFunctionId.startsWith('pikkuWorkflowWorker:')) {
+      if (!unit.services.some((s) => s.capability === 'workflow-state')) {
+        unit.services.push({
+          capability: 'workflow-state',
+          sourceServiceName: 'workflowService',
         })
       }
-    } else if (funcId.startsWith('pikkuWorkflowWorker:')) {
-      const rpcName = funcId.split(':')[1]
-      const funcUnitName = toKebab(rpcName)
-      const funcUnit = units.find((u) => u.name === funcUnitName)
-
-      queues.push({
-        name: queueMeta.name ?? queueName,
-        consumerUnit: funcUnitName,
-        consumerFunctionId: funcId,
-      })
-      if (funcUnit) {
-        funcUnit.handlers.push({
-          type: 'queue',
-          queueName: queueMeta.name ?? queueName,
+      if (!unit.services.some((s) => s.capability === 'queue')) {
+        unit.services.push({
+          capability: 'queue',
+          sourceServiceName: 'queueService',
         })
-        // Step workers need D1 for step state and orchestrator queue for resuming
-        if (!funcUnit.services.some((s) => s.capability === 'workflow-state')) {
-          funcUnit.services.push({
-            capability: 'workflow-state',
-            sourceServiceName: 'workflowService',
-          })
-        }
-        if (!funcUnit.services.some((s) => s.capability === 'queue')) {
-          funcUnit.services.push({
-            capability: 'queue',
-            sourceServiceName: 'queueService',
-          })
-        }
       }
     }
   }
@@ -434,10 +411,11 @@ export function analyzeDeployment(
 
 function buildWorkflows(
   graphMeta: Record<string, SerializedWorkflowGraph>,
-  functionsMeta: Record<string, FunctionMeta>,
-  httpMeta: HTTPWiringsMeta,
+  _functionsMeta: Record<string, FunctionMeta>,
+  _httpMeta: HTTPWiringsMeta,
   units: DeploymentUnit[],
-  workflows: WorkflowDefinition[]
+  workflows: WorkflowDefinition[],
+  queues: QueueDefinition[]
 ): void {
   for (const [_wfName, graph] of entries(graphMeta)) {
     const steps: WorkflowStepDefinition[] = []
@@ -492,15 +470,42 @@ function buildWorkflows(
       },
     ]
 
+    // Orchestrator queue — the orchestrator consumes from this
+    const orchQueueName = `wf-orchestrator-${toKebab(graph.name)}`
+    const orchHandlers: DeploymentHandler[] = [
+      { type: 'fetch', routes: wfRoutes },
+      { type: 'queue', queueName: orchQueueName },
+    ]
+
     units.push({
       name: orchUnitName,
       role: 'workflow',
       functionIds: [],
       services: orchServices,
       dependsOn: stepUnitNames,
-      handlers: [{ type: 'fetch', routes: wfRoutes }],
+      handlers: orchHandlers,
       tags: [],
     })
+
+    queues.push({
+      name: orchQueueName,
+      consumerUnit: orchUnitName,
+      consumerFunctionId: `pikkuWorkflowOrchestrator:${graph.name}`,
+    })
+
+    // Per-step queues — each step function worker consumes its own queue.
+    // The step units may not exist yet (created in step 6), so we just
+    // create queue definitions here. Step 7 wires them to units.
+    for (const step of steps) {
+      if (step.inline || !step.functionId) continue
+      const stepQueueName = `wf-step-${toKebab(step.functionId)}`
+
+      queues.push({
+        name: stepQueueName,
+        consumerUnit: toKebab(step.functionId),
+        consumerFunctionId: `pikkuWorkflowWorker:${step.functionId}`,
+      })
+    }
 
     workflows.push({
       name: graph.name,
