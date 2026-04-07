@@ -1,0 +1,12 @@
+{
+  "name": "@pikku/verifiers-deploy-azure",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "npx tsx test-deploy.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "typescript": "^5.9"
+  }
+}
