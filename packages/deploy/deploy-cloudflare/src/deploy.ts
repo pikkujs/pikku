@@ -289,8 +289,13 @@ async function uploadWorkersInOrder(
   log: (step: string, detail: string) => void
 ): Promise<void> {
   // Build dependency graph: unit -> set of service binding targets
+  // Skip server-target units — they're deployed as containers, not Workers
   const deps = new Map<string, Set<string>>()
   for (const [unitName, unitManifest] of Object.entries(manifest.units)) {
+    if (unitManifest.target === 'server') {
+      log('workers', `Skipping ${unitName} (server container — deploy via wrangler)`)
+      continue
+    }
     const serviceDeps = new Set<string>()
     for (const b of unitManifest.bindings) {
       if (b.startsWith('service:')) {
@@ -422,8 +427,10 @@ async function wireConsumersAndTriggers(
     )
   }
 
-  // Set cron triggers
+  // Set cron triggers (skip server-target units — their crons go through the proxy)
   for (const cron of manifest.resources.cronTriggers) {
+    const unitManifest = manifest.units[cron.worker]
+    if (unitManifest?.target === 'server') continue
     const workerName = toWorkerName(projectId, cron.worker)
     tasks.push(
       (async () => {

@@ -18,6 +18,7 @@ type DeploymentHandler =
 interface DeploymentUnit {
   name: string
   role: string
+  target: 'serverless' | 'server'
   functionIds: string[]
   services: Array<{ capability: string; sourceServiceName: string }>
   dependsOn: string[]
@@ -76,6 +77,7 @@ export interface CloudflareInfraManifest {
 
 export interface CloudflareUnitManifest {
   role: string
+  target: 'serverless' | 'server'
   bindings: string[]
   routes: Array<{ method: string; route: string }>
   handlerTypes: string[]
@@ -205,6 +207,7 @@ export function generateInfraManifest(
 
     units[unit.name] = {
       role: unit.role,
+      target: unit.target,
       bindings,
       routes,
       handlerTypes,
