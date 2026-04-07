@@ -67,11 +67,27 @@ export interface ParsedParam {
  * Read and parse an OpenAPI spec from a file path.
  * Supports both YAML (.yaml, .yml) and JSON (.json) files.
  */
-export async function parseOpenAPISpec(filePath: string): Promise<ParsedSpec> {
-  const content = await readFile(filePath, 'utf-8')
+export async function parseOpenAPISpec(
+  filePathOrUrl: string
+): Promise<ParsedSpec> {
+  let content: string
+  if (
+    filePathOrUrl.startsWith('https://') ||
+    filePathOrUrl.startsWith('http://')
+  ) {
+    const response = await fetch(filePathOrUrl)
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch OpenAPI spec from ${filePathOrUrl}: ${response.status}`
+      )
+    }
+    content = await response.text()
+  } else {
+    content = await readFile(filePathOrUrl, 'utf-8')
+  }
 
   let doc: any
-  if (filePath.endsWith('.json')) {
+  if (filePathOrUrl.endsWith('.json')) {
     doc = JSON.parse(content)
   } else {
     doc = parseYAML(content)
@@ -169,17 +185,13 @@ export async function parseOpenAPISpec(filePath: string): Promise<ParsedSpec> {
   }
 }
 
-/** Recursively resolve $ref pointers in-place, with cycle detection */
-function resolveRefs(node: any, root: any, visited?: Set<any>): any {
+/** Recursively resolve $ref pointers in-place */
+function resolveRefs(node: any, root: any): any {
   if (node === null || typeof node !== 'object') return node
-
-  const seen = visited ?? new Set<any>()
-  if (seen.has(node)) return node
-  seen.add(node)
 
   if (Array.isArray(node)) {
     for (let i = 0; i < node.length; i++) {
-      node[i] = resolveRefs(node[i], root, seen)
+      node[i] = resolveRefs(node[i], root)
     }
     return node
   }
@@ -190,15 +202,14 @@ function resolveRefs(node: any, root: any, visited?: Set<any>): any {
       // Merge any sibling properties (like description overrides)
       const { $ref, ...siblings } = node
       const result = { ...resolved, ...siblings }
-      // Don't recurse into the merged result — it shares structure with
-      // the original resolved object and may be circular
+      // Don't recurse infinitely — mark as resolved
       return result
     }
     return node
   }
 
   for (const key of Object.keys(node)) {
-    node[key] = resolveRefs(node[key], root, seen)
+    node[key] = resolveRefs(node[key], root)
   }
 
   return node
@@ -440,18 +451,10 @@ export function computeContractHash(spec: ParsedSpec): string {
     serverUrls: spec.serverUrls,
   }
 
-  // Use a cycle-safe JSON serializer since resolved $ref schemas
-  // can contain circular object references
-  const seen = new WeakSet()
-  const json = JSON.stringify(contract, (_key, value) => {
-    if (typeof value === 'object' && value !== null) {
-      if (seen.has(value)) return '[Circular]'
-      seen.add(value)
-    }
-    return value
-  })
-
-  return createHash('sha256').update(json).digest('hex').slice(0, 16)
+  return createHash('sha256')
+    .update(JSON.stringify(contract))
+    .digest('hex')
+    .slice(0, 16)
 }
 
 function extractTagDescriptions(doc: any): Record<string, string> {

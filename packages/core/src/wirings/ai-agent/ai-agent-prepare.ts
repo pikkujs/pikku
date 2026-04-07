@@ -23,10 +23,6 @@ import {
   ContextAwareRPCService,
 } from '../../wirings/rpc/rpc-runner.js'
 import {
-  buildDynamicWorkflowInstructions,
-  buildWorkflowTools,
-} from './agent-dynamic-workflow.js'
-import {
   resolveMemoryServices,
   loadContextMessages,
   trimMessages,
@@ -181,10 +177,11 @@ export async function buildInstructions(
   packageName: string | null
 ): Promise<string> {
   const meta = pikkuState(packageName, 'agent', 'agentsMeta')[agentName]
-  const rawInstructions = meta?.instructions ?? ''
-  let instructions = Array.isArray(rawInstructions)
-    ? rawInstructions.join('\n')
-    : rawInstructions
+  const parts: string[] = []
+  if (meta?.role) parts.push(meta.role)
+  if (meta?.personality) parts.push(meta.personality)
+  if (meta?.goal) parts.push(meta.goal)
+  let instructions = parts.join('\n\n')
 
   if (meta?.agents?.length) {
     instructions +=
@@ -192,13 +189,6 @@ export async function buildInstructions(
       'Use the same session name to continue a previous conversation with that agent. ' +
       'Use a new session name for a new independent task. ' +
       'When a request involves multiple actions for the same domain, combine them into a single sub-agent call rather than making separate calls.'
-  }
-
-  if (meta?.dynamicWorkflows && meta.tools?.length) {
-    instructions += buildDynamicWorkflowInstructions(
-      meta.tools,
-      meta.dynamicWorkflows
-    )
   }
 
   return instructions
@@ -507,18 +497,6 @@ export async function buildToolDefs(
     }
   }
 
-  if (meta.dynamicWorkflows) {
-    const workflowTools = buildWorkflowTools(
-      agentName,
-      packageName,
-      meta.tools ?? [],
-      meta.dynamicWorkflows,
-      streamContext,
-      params.sessionService
-    )
-    tools.push(...workflowTools)
-  }
-
   const hasToolHooks = aiMiddlewares?.some(
     (mw) => mw.beforeToolCall || mw.afterToolCall
   )
@@ -592,19 +570,6 @@ export async function prepareAgentRun(
   const agentRunner = singletonServices.aiAgentRunner
   if (!agentRunner) {
     throw new AIProviderNotConfiguredError()
-  }
-
-  if (agent.dynamicWorkflows && singletonServices.workflowService) {
-    const persisted =
-      await singletonServices.workflowService.getAIGeneratedWorkflows(
-        resolvedName
-      )
-    const allMeta = pikkuState(null, 'workflows', 'meta')
-    for (const wf of persisted) {
-      if (!allMeta[wf.workflowName]) {
-        allMeta[wf.workflowName] = wf.graph
-      }
-    }
   }
 
   const { storage } = resolveMemoryServices(agent, singletonServices)

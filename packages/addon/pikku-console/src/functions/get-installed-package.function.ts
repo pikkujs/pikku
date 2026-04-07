@@ -13,8 +13,8 @@ export const getAddonInstalledPackage = pikkuSessionlessFunc<
   expose: true,
   auth: false,
   func: async ({ metaService }, { packageName }) => {
-    const metaDir = pikkuState(packageName, 'package', 'metaDir')
-    if (!metaDir) return null
+    const factories = pikkuState(packageName, 'package', 'factories')
+    if (!factories) return null
 
     const functions = pikkuState(packageName, 'function', 'meta') ?? {}
     const agentsMeta = pikkuState(packageName, 'agent', 'agentsMeta')

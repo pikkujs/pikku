@@ -12,6 +12,35 @@ import {
 } from '../../pikku-state.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
 
+const resolveWorkflowMeta = (
+  name: string
+): { meta: any; packageName: string | null; resolvedName: string } | null => {
+  const rootMeta = pikkuState(null, 'workflows', 'meta')
+  if (rootMeta[name]) {
+    return { meta: rootMeta[name], packageName: null, resolvedName: name }
+  }
+
+  const colonIndex = name.indexOf(':')
+  if (colonIndex !== -1) {
+    const namespace = name.substring(0, colonIndex)
+    const localName = name.substring(colonIndex + 1)
+    const addons = pikkuState(null, 'addons', 'packages')
+    const pkgConfig = addons?.get(namespace)
+    if (pkgConfig) {
+      const addonMeta = pikkuState(pkgConfig.package, 'workflows', 'meta')
+      if (addonMeta?.[localName]) {
+        return {
+          meta: addonMeta[localName],
+          packageName: pkgConfig.package,
+          resolvedName: localName,
+        }
+      }
+    }
+  }
+
+  return null
+}
+
 const toKebab = (s: string) =>
   s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
 import type { PikkuWire, SerializedError } from '../../types/core.types.js'
@@ -128,7 +157,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   constructor() {
-    const queueMeta = pikkuState(null, 'queue', 'meta')
     const functions = pikkuState(null, 'function', 'functions')
     const functionsMeta = pikkuState(null, 'function', 'meta')
 
@@ -167,22 +195,31 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       'pikku-workflow-step-worker'
     )
 
-    // Register per-workflow queue workers for serverless deployments
-    for (const [queueName, meta] of Object.entries(queueMeta)) {
-      if (functions.has(meta.pikkuFuncId)) continue
+    // Register per-workflow queue workers (root + addon packages)
+    const registerQueueWorkers = (queueMeta: Record<string, any>) => {
+      for (const [queueName, meta] of Object.entries(queueMeta)) {
+        if (functions.has(meta.pikkuFuncId)) continue
+        if (queueName.startsWith('wf-orchestrator-')) {
+          const func = { func: pikkuWorkflowOrchestratorFunc }
+          addFunction(meta.pikkuFuncId, func)
+          wireQueueWorker({ name: queueName, func } as any)
+        } else if (queueName.startsWith('wf-step-')) {
+          const func = { func: pikkuWorkflowWorkerFunc }
+          addFunction(meta.pikkuFuncId, func)
+          wireQueueWorker({ name: queueName, func } as any)
+        }
+      }
+    }
 
-      if (queueName.startsWith('wf-orchestrator-')) {
-        registerWorkflowFunc(
-          meta.pikkuFuncId,
-          { func: pikkuWorkflowOrchestratorFunc },
-          queueName
-        )
-      } else if (queueName.startsWith('wf-step-')) {
-        registerWorkflowFunc(
-          meta.pikkuFuncId,
-          { func: pikkuWorkflowWorkerFunc },
-          queueName
-        )
+    registerQueueWorkers(pikkuState(null, 'queue', 'meta'))
+
+    const addons = pikkuState(null, 'addons', 'packages')
+    if (addons) {
+      for (const [, addon] of addons) {
+        const addonQueueMeta = pikkuState(addon.package, 'queue', 'meta')
+        if (addonQueueMeta) {
+          registerQueueWorkers(addonQueueMeta)
+        }
       }
     }
 
@@ -585,15 +622,27 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     rpcService: any,
     options?: { inline?: boolean; startNode?: string }
   ): Promise<{ runId: string }> {
-    // Check meta to determine workflow type
-    const meta = pikkuState(null, 'workflows', 'meta')
-    const workflowMeta = meta[name]
+    // Resolve workflow from static meta (root or addon namespace), then dynamic DB
+    const resolved = resolveWorkflowMeta(name)
+    let workflowMeta = resolved?.meta
+    const packageName = resolved?.packageName ?? null
+
+    if (!workflowMeta) {
+      const dynamicWorkflows = await this.getAIGeneratedWorkflows()
+      const match = dynamicWorkflows.find((w) => w.workflowName === name)
+      if (match?.graph) {
+        workflowMeta = match.graph
+      }
+    }
 
     if (!workflowMeta) {
       throw new WorkflowNotFoundError(name)
     }
 
-    if (workflowMeta.source === 'graph' || workflowMeta.source === 'ai-agent') {
+    if (
+      workflowMeta.source === 'graph' ||
+      workflowMeta.source === 'dynamic-workflow'
+    ) {
       const shouldInline =
         options?.inline ||
         workflowMeta.inline ||
@@ -605,13 +654,14 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         rpcService,
         shouldInline,
         options?.startNode,
-        wire
+        wire,
+        workflowMeta
       )
     }
 
     // DSL workflow - check registration exists
-    const registrations = pikkuState(null, 'workflows', 'registrations')
-    const workflow = registrations.get(name)
+    const registrations = pikkuState(packageName, 'workflows', 'registrations')
+    const workflow = registrations.get(resolved?.resolvedName ?? name)
 
     if (!workflow) {
       throw new WorkflowNotFoundError(name)
@@ -683,7 +733,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           throw new Error(run.error?.message || 'Workflow failed')
         }
         if (run.status === 'cancelled') {
-          throw new WorkflowCancelledException(runId)
+          throw new Error('Workflow was cancelled')
         }
         return run.output
       }
@@ -697,8 +747,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       throw new WorkflowRunNotFoundError(runId)
     }
 
-    const meta = pikkuState(null, 'workflows', 'meta')
-    const workflowMeta = meta[run.workflow]
+    const resolved = resolveWorkflowMeta(run.workflow)
+    const workflowMeta = resolved?.meta
+    const pkgName = resolved?.packageName ?? null
 
     if (
       run.graphHash &&
@@ -709,7 +760,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       return
     }
 
-    if (workflowMeta?.source === 'graph') {
+    if (
+      workflowMeta?.source === 'graph' ||
+      workflowMeta?.source === 'dynamic-workflow'
+    ) {
       await continueGraph(this, runId, run.workflow)
       const updatedRun = await this.getRun(runId)
       if (updatedRun?.status === 'completed') {
@@ -726,17 +780,44 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       return
     }
 
-    const registrations = pikkuState(null, 'workflows', 'registrations')
-    const workflow = registrations.get(run.workflow)
+    if (!workflowMeta) {
+      const dynamicWorkflows = await this.getAIGeneratedWorkflows()
+      const match = dynamicWorkflows.find(
+        (w) => w.workflowName === run.workflow
+      )
+      if (match?.graph) {
+        await continueGraph(this, runId, run.workflow, match.graph)
+        const updatedRun = await this.getRun(runId)
+        if (updatedRun?.status === 'completed') {
+          await this.onChildWorkflowCompleted(updatedRun, updatedRun.output)
+        } else if (
+          updatedRun?.status === 'failed' ||
+          updatedRun?.status === 'cancelled'
+        ) {
+          await this.onChildWorkflowFailed(
+            updatedRun,
+            new Error(updatedRun.error?.message || 'Child workflow failed')
+          )
+        }
+        return
+      }
+    }
+
+    const registrations = pikkuState(pkgName, 'workflows', 'registrations')
+    const workflow = registrations.get(resolved?.resolvedName ?? run.workflow)
     if (!workflow) {
       throw new WorkflowNotFoundError(run.workflow)
     }
 
     await this.withRunLock(runId, async () => {
+      const addonNs = run.workflow.includes(':')
+        ? run.workflow.substring(0, run.workflow.indexOf(':'))
+        : null
       const workflowWire = this.createWorkflowWire(
         run.workflow,
         runId,
-        rpcService
+        rpcService,
+        addonNs
       )
       workflowWire.pikkuUserId = run.wire?.pikkuUserId
       const wire: PikkuWire = {
@@ -755,6 +836,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
             wire,
             createWireServices: getCreateWireServices(),
             data: () => run.input,
+            packageName: pkgName ?? undefined,
           }
         )
 
@@ -901,7 +983,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
         const isGraphWorkflow =
           workflowMeta?.source === 'graph' ||
-          workflowMeta?.source === 'ai-agent'
+          workflowMeta?.source === 'dynamic-workflow'
         if (
           isGraphWorkflow &&
           workflowMeta?.nodes &&
@@ -1412,7 +1494,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   public createWorkflowWire(
     name: string,
     runId: string,
-    rpcService: any
+    rpcService: any,
+    addonNamespace?: string | null
   ): PikkuWorkflowWire {
     const workflowWire: PikkuWorkflowWire = {
       name,
@@ -1428,10 +1511,14 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       ) => {
         this.verifyStepName(stepName)
         if (typeof rpcNameOrFn === 'string') {
+          const resolvedRpcName =
+            addonNamespace && !rpcNameOrFn.includes(':')
+              ? `${addonNamespace}:${rpcNameOrFn}`
+              : rpcNameOrFn
           return await this.rpcStep(
             runId,
             stepName,
-            rpcNameOrFn,
+            resolvedRpcName,
             dataOrOptions,
             rpcService,
             options
@@ -1490,14 +1577,22 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    */
   protected getOrchestratorQueueName(workflowName?: string): string {
     if (workflowName) {
-      return `wf-orchestrator-${toKebab(workflowName)}`
+      const perWorkflow = `wf-orchestrator-${toKebab(workflowName)}`
+      const registrations = pikkuState(null, 'queue', 'registrations')
+      if (registrations.has(perWorkflow)) {
+        return perWorkflow
+      }
     }
     return this.getConfig().orchestratorQueueName
   }
 
   protected getStepWorkerQueueName(rpcName?: string): string {
     if (rpcName) {
-      return `wf-step-${toKebab(rpcName)}`
+      const perStep = `wf-step-${toKebab(rpcName)}`
+      const registrations = pikkuState(null, 'queue', 'registrations')
+      if (registrations.has(perStep)) {
+        return perStep
+      }
     }
     return this.getConfig().stepWorkerQueueName
   }

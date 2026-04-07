@@ -5,9 +5,7 @@
  * registration, host.json, and local.settings.json.
  */
 
-import { AzureProviderAdapter } from './adapter.js'
-export { AzureProviderAdapter }
-export const createAdapter = () => new AzureProviderAdapter()
+export { AzureProviderAdapter } from './adapter.js'
 export { generateInfraManifest } from './infra-manifest.js'
 export { generateHostJson, generateLocalSettings } from './host-json.js'
 export type {

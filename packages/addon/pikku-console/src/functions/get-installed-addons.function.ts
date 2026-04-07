@@ -16,8 +16,8 @@ async function readPackageIcon(
   packageName: string
 ): Promise<string | undefined> {
   try {
-    const metaDir = pikkuState(packageName, 'package', 'metaDir')
-    if (!metaDir) return undefined
+    const factories = pikkuState(packageName, 'package', 'factories')
+    if (!factories) return undefined
     const content = await metaService.readFile(
       'console/pikku-addon-meta.gen.json'
     )

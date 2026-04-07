@@ -9,8 +9,8 @@ export const getAIWorkflows = pikkuSessionlessFunc<
     'Returns workflow definitions created by AI agents from the workflow store. Optionally filters by agent name.',
   expose: true,
   auth: false,
-  func: async ({ workflowRunService }, input) => {
-    if (!workflowRunService) throw new Error('workflowRunService is not available')
-    return await workflowRunService.getAIGeneratedWorkflows(input?.agentName)
+  func: async ({ workflowService }, input) => {
+    if (!workflowService) throw new Error('workflowService is not available')
+    return await workflowService.getAIGeneratedWorkflows(input?.agentName)
   },
 })

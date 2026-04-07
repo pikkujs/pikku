@@ -196,7 +196,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         workflowStepId: stepId,
         workflowRunId: runId,
         stepName: stepName,
-        rpcName: rpcName ?? null,
+        rpcName: rpcName,
         data: data != null ? JSON.stringify(data) : null,
         status: 'pending',
         retries: stepOptions?.retries ?? null,
@@ -360,7 +360,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
   }
 
   async setStepResult(stepId: string, result: any): Promise<void> {
-    const resultJson = JSON.stringify(result) ?? null
+    const resultJson = JSON.stringify(result)
 
     await this.db
       .updateTable('workflowStep')
@@ -652,7 +652,20 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
   async getAIGeneratedWorkflows(
     agentName?: string
   ): Promise<Array<{ workflowName: string; graphHash: string; graph: any }>> {
-    return this.runService.getAIGeneratedWorkflows(agentName)
+    let query = this.db
+      .selectFrom('workflowVersions')
+      .select(['workflowName', 'graphHash', 'graph'])
+      .where('source', '=', 'dynamic-workflow')
+      .where('status', '=', 'active')
+    if (agentName) {
+      query = query.where('workflowName', 'like', `ai:${agentName}:%`)
+    }
+    const rows = await query.execute()
+    return rows.map((row) => ({
+      workflowName: row.workflowName,
+      graphHash: row.graphHash,
+      graph: typeof row.graph === 'string' ? JSON.parse(row.graph) : row.graph,
+    }))
   }
 
   async close(): Promise<void> {}

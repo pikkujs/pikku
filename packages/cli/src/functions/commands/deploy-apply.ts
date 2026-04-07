@@ -2,11 +2,19 @@ import { basename, join, relative } from 'node:path'
 import { readFile } from 'node:fs/promises'
 
 import { pikkuVoidFunc } from '#pikku'
+import {
+  CloudflareProviderAdapter,
+  deploy as cfDeploy,
+} from '@pikku/deploy-cloudflare'
+import { ServerlessProviderAdapter } from '@pikku/deploy-serverless'
+import { AzureProviderAdapter } from '@pikku/deploy-azure'
 import type {
   ProviderAdapter,
   EntryGenerationContext,
 } from '../../deploy/provider-adapter.js'
+import type { PlanChange } from '../../deploy/plan/types.js'
 import type { InspectorState } from '@pikku/inspector'
+import type { CloudflareInfraManifest } from '@pikku/deploy-cloudflare'
 import { runBuildPipeline } from '../../deploy/build-pipeline.js'
 
 function toRelativeImport(fromDir: string, toFile: string): string {
@@ -96,14 +104,9 @@ async function resolveProjectId(projectDir: string): Promise<string> {
   return sanitizeProjectId(basename(projectDir))
 }
 
-export async function resolveProvider(
-  config?: {
-    deploy?: { providers: Record<string, string>; defaultProvider?: string }
-  },
-  providerName?: string
-): Promise<ProviderAdapter> {
+export function resolveProvider(_providerName?: string): ProviderAdapter {
   const name =
-    providerName ??
+    _providerName ??
     process.env.PIKKU_DEPLOY_PROVIDER ??
     config?.deploy?.defaultProvider ??
     'cloudflare'
@@ -151,15 +154,27 @@ const ANSI = {
   reset: '\x1b[0m',
 }
 
+function logProgress(
+  change: PlanChange,
+  _status: 'start' | 'done' | 'error',
+  error?: string
+) {
+  if (_status === 'done') {
+    process.stdout.write(` ${ANSI.green}done${ANSI.reset}\n`)
+  } else if (_status === 'error') {
+    process.stdout.write(` ${ANSI.red}error: ${error}${ANSI.reset}\n`)
+  }
+}
+
 export const deployApply = pikkuVoidFunc({
   func: async ({ logger, config, getInspectorState }) => {
     const projectDir = config.rootDir
     const inspectorState = await getInspectorState(true)
     const projectId = await resolveProjectId(projectDir)
-    const provider = await resolveProvider(config)
+    const provider = resolveProvider()
 
     // Build pipeline: analyze → codegen → bundle → configs
-    const buildResult = await runBuildPipeline({
+    const result = await runBuildPipeline({
       projectDir,
       projectId,
       provider,
@@ -169,21 +184,45 @@ export const deployApply = pikkuVoidFunc({
       logger,
     })
 
-    if (buildResult.manifest.units.length === 0) {
+    if (result.manifest.units.length === 0) {
       logger.info('No deployment units found. Nothing to deploy.')
       return
     }
 
-    const { providerDir, bundled } = buildResult
+    const { providerDir, bundled } = result
 
-    // Deploy via provider's deploy function
-    if (typeof provider.deploy === 'function') {
-      logger.info(`Deploying via ${provider.name}...`)
-      const deployResult = await provider.deploy({
+    // Deploy (provider-specific)
+    if (provider.name === 'cloudflare') {
+      const accountId = process.env.CLOUDFLARE_ACCOUNT_ID
+      const apiToken = process.env.CLOUDFLARE_API_TOKEN
+
+      if (!accountId || !apiToken) {
+        logger.error(
+          'Missing CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN environment variables.'
+        )
+        return
+      }
+
+      const infraJson = JSON.parse(
+        await readFile(join(providerDir, 'infra.json'), 'utf-8')
+      ) as CloudflareInfraManifest
+
+      logger.info('Deploying to Cloudflare...')
+      const deployResult = await cfDeploy({
+        accountId,
+        apiToken,
         buildDir: providerDir,
-        logger,
-        onProgress: (_step: string, _detail: string) => {
-          process.stdout.write(` ${ANSI.green}done${ANSI.reset}\n`)
+        manifest: infraJson,
+        onProgress: (step, detail) => {
+          logProgress(
+            {
+              action: 'create',
+              resourceType: step as PlanChange['resourceType'],
+              name: detail,
+              reason: '',
+            },
+            'done'
+          )
         },
       })
 
@@ -193,7 +232,7 @@ export const deployApply = pikkuVoidFunc({
           `${ANSI.green}${ANSI.bold}Deployment complete.${ANSI.reset}`
         )
         logger.info(
-          `  ${deployResult.workersDeployed?.length ?? 0} units deployed, ${deployResult.resourcesCreated?.length ?? 0} resources created`
+          `  ${deployResult.workersDeployed.length} workers deployed, ${deployResult.resourcesCreated.length} resources created`
         )
       } else {
         logger.error(
@@ -208,6 +247,13 @@ export const deployApply = pikkuVoidFunc({
       logger.info(
         `  ${bundled.length} functions bundled to ${ANSI.bold}${providerDir}${ANSI.reset}`
       )
+      if (provider.name === 'serverless') {
+        logger.info(`\nTo deploy: cd ${providerDir} && npx serverless deploy`)
+      } else if (provider.name === 'azure') {
+        logger.info(
+          `\nTo deploy: cd ${providerDir} && func azure functionapp publish <app-name>`
+        )
+      }
     }
   },
 })

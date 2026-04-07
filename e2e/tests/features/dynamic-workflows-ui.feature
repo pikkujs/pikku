@@ -1,60 +1,34 @@
-@dynamic-workflows-ui @console @ai
-Feature: Dynamic Workflows via Todo Agent (Console UI)
-  The todo-agent has dynamicWorkflows enabled, allowing it to create,
-  save, and execute workflows through the Console agent playground.
+@dynamic-workflows-ui @console
+Feature: Dynamic Workflows Addon (Console UI)
 
-  Scenario: Create, save, list and execute a workflow via chat
-    Given I open the "todoAgent" playground
-    When I send "Use createAgentWorkflow to create a workflow called 'add-and-list' with two nodes: first node calls todos:addTodo with input title 'Workflow task', second node calls todos:listTodos. The first node should flow to the second. Then save it using saveAgentWorkflow."
-    Then I should see an approval request
-    When I approve all pending requests
-    And I wait for the response
-    Then I should see "add-and-list" in the chat
-    And I should see "saveAgentWorkflow" in the chat
+  Background:
+    Given the API is available
 
-    When I send "Use listAgentWorkflows to show my workflows"
-    And I wait for the response
-    Then I should see "add-and-list" in the chat
+  Scenario: Dynamic workflows addon is visible on the addons page
+    When I navigate to the addons page
+    Then I should see addon "dynamic-workflows" with package "@pikku/addon-dynamic-workflows"
 
-    When I send "Use executeAgentWorkflow to run the 'add-and-list' workflow"
-    Then I should see an approval request
-    When I approve all pending requests
-    And I wait for the response
-    Then I should not see "error" in the chat
+  Scenario: New Workflow page renders with form elements
+    When I navigate to the new workflow page
+    Then I should see the workflow prompt textarea
+    And I should see the generate workflow button
+    And I should see the function filter select
 
-  Scenario: AI-created workflow appears on the Workflows page
-    Given I open the "ultimateAgent" playground
-    When I send "Create a workflow called 'add-sleep-list' with three nodes: first 'add' calls todos:addTodo with title from trigger's title, then 'wait' calls graph:sleep for 1 second, then 'list' calls todos:listTodos. Chain them add → wait → list. Save it."
-    Then I should see an approval request
-    When I approve all pending requests
-    And I wait for the response
-    Then I should see "saveAgentWorkflow" in the chat
-    When I open the workflows page
-    Then I should see "add-sleep-list" on the page
-    And I should see "AI Agent" on the page
+  Scenario: New Workflow button on workflows page navigates to new page
+    When I navigate to the workflows page
+    And I click the new workflow button
+    Then I should be on the new workflow page
 
-  @skip
-  Scenario: Creative complex workflow using all available tools
-    Given I open the "ultimateAgent" playground
-    When I send "Create a workflow called 'kitchen-sink' that showcases EVERY advanced workflow feature. Requirements: 1) It MUST have parallel branches (next as an array to fan out into concurrent paths). 2) It MUST have conditional branching (next as an object like {\"true\": \"nodeA\", \"false\": \"nodeB\"}). 3) It MUST have an onError handler on at least one node. 4) It MUST use at least 8 different tools including todos, emails, sleep, math, and stringTransform. 5) It MUST wire data between nodes using $ref. 6) It must have at least 10 nodes total. Be creative — this is a stress test. Save it when ready."
-    Then I should see an approval request
-    When I approve all pending requests
-    And I wait for the response
-    Then I should see "saveAgentWorkflow" in the chat
-    When I open the workflows page
-    Then I should see "kitchen-sink" on the page
-    And I should see "AI Agent" on the page
-
-  Scenario: Natural language workflow creation and execution via chat
-    Given I open the "todoAgent" playground
-    When I send "Create a workflow that adds a todo from the trigger's title, then lists all todos. Save it when ready."
-    Then I should see an approval request
-    When I approve all pending requests
-    And I wait for the response
-    Then I should see "workflow" in the chat
-
-    When I send "Run that workflow with the title 'UI test item'."
-    Then I should see an approval request
-    When I approve all pending requests
-    And I wait for the response
-    Then I should not see "error" in the chat
+  @ai
+  Scenario: Generate complex 15-node workflow from UI, view it, and run it
+    When I navigate to the new workflow page
+    And I enter the workflow prompt "The trigger input is {score: number, email: string, name: string}. Build a 15-node workflow: (1) doubleValue the score. (2) In PARALLEL: branch A categorizes the doubled result, branch B doubles the doubled result again, branch C greets the name with editableFunc. (3) After branch A: formatMessage using category as greeting and name from trigger. (4) After branch B: categorize the re-doubled result. (5) After branch C: formatMessage using the editableFunc greeting as greeting and name from trigger. (6) After step 3 and step 5 both finish: sendNotification to email with step 3's message as subject and step 5's message as body. (7) After step 4: formatMessage using that category as greeting and name Summary. (8) After step 6 and step 7: sendNotification to email with step 7's message as subject and Final report as body. Use exactly 15 nodes."
+    And I click the generate workflow button
+    Then I should see the generation timeline
+    And the generation should complete with success
+    When I click the view workflow button
+    Then I should see the workflow graph canvas
+    When I run the workflow from the console with:
+      | score | email            | name     |
+      | 25    | test@example.com | Pipeline |
+    Then the workflow run should show as completed

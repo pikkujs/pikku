@@ -136,7 +136,7 @@ const NewWorkflowRunForm: React.FunctionComponent<{ workflowId: string }> = ({
   const { workflow } = useWorkflowContext()
 
   const triggerSchema = useMemo(() => {
-    if (workflow?.source !== 'ai-agent' || !workflow?.nodes) return null
+    if (workflow?.source !== 'dynamic-workflow' || !workflow?.nodes) return null
     const fields = new Set<string>()
     for (const node of Object.values(workflow.nodes as Record<string, any>)) {
       if (!node.input) continue
@@ -158,7 +158,7 @@ const NewWorkflowRunForm: React.FunctionComponent<{ workflowId: string }> = ({
 
   const inputFuncId = useMemo(() => {
     if (triggerSchema) return null
-    if (workflow?.source === 'graph' || workflow?.source === 'ai-agent') {
+    if (workflow?.source === 'graph' || workflow?.source === 'dynamic-workflow') {
       const entryNodeId = workflow.entryNodeIds?.[0]
       const entryNode = entryNodeId ? workflow.nodes?.[entryNodeId] : null
       return entryNode?.rpcName ?? null

@@ -3,6 +3,7 @@ import {
   LocalSecretService,
   LocalVariablesService,
   LocalCredentialService,
+  InMemoryQueueService,
 } from '@pikku/core/services'
 import { pikkuServices } from '#pikku/pikku-types.gen.js'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
@@ -153,6 +154,7 @@ export const createSingletonServices = pikkuServices(
       aiAgentRunner,
       workflowService,
       workflowRunService,
+      queueService: new InMemoryQueueService(),
     }
   }
 )

@@ -149,8 +149,8 @@ After(
     }
     const headed = process.env.HEADED === '1' || process.env.HEADED === 'true'
     if (headed) {
-      console.log('[headed] Pausing for 30 seconds before closing browser...')
-      await new Promise((r) => setTimeout(r, 30_000))
+      console.log('[headed] Pausing for 3 seconds before closing browser...')
+      await new Promise((r) => setTimeout(r, 3_000))
     }
     await this.closeBrowser()
   }

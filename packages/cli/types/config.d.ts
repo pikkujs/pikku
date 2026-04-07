@@ -51,6 +51,8 @@ export interface PikkuCLICoreOutputFiles {
   publicAgentFile: string
   consoleFunctionsFile: string
   workflowRoutesFile: string
+  dynamicWorkflowsFile: string
+  dynamicAgentsFile: string
 
   // Triggers
   triggersTypesFile: string
@@ -247,6 +249,8 @@ export type PikkuCLIInput = {
     console?: PikkuScaffoldFeature
     agent?: PikkuScaffoldFeature
     workflow?: PikkuScaffoldFeature
+    dynamicWorkflows?: PikkuScaffoldFeature
+    dynamicAgents?: PikkuScaffoldFeature
   }
 
   forceRequiredServices?: string[]
@@ -270,7 +274,6 @@ export type PikkuCLIInput = {
   deploy?: {
     providers: Record<string, string>
     defaultProvider?: string
-    /** Services that can't run in serverless (functions using them get routed to server) */
     serverlessIncompatible?: string[]
   }
 

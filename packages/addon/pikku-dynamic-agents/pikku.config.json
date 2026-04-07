@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": ["src", "types"],
+  "outDir": "./.pikku",
+  "verboseMeta": true,
+  "addon": {
+    "displayName": "Pikku Dynamic Agents",
+    "description": "Generate AI agents from natural language prompts",
+    "categories": ["AI"],
+    "icon": "./pikku-dynamic-agents.svg"
+  }
+}

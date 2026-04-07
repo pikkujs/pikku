@@ -1,6 +1,14 @@
-import React, { useContext, useMemo } from 'react'
-import { Stack, Text, Box, Group, Select, NumberInput } from '@mantine/core'
-import { Bot } from 'lucide-react'
+import React, { useContext, useMemo, useState } from 'react'
+import {
+  Stack,
+  Text,
+  Box,
+  Group,
+  Select,
+  NumberInput,
+  ActionIcon,
+} from '@mantine/core'
+import { Bot, Pencil } from 'lucide-react'
 import { PikkuBadge } from '@/components/ui/PikkuBadge'
 import { CommonDetails } from '@/components/project/panels/shared/CommonDetails'
 import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
@@ -9,6 +17,7 @@ import { SchemaSection } from '@/components/project/panels/shared/SchemaSection'
 import { usePanelContext } from '@/context/PanelContext'
 import { AgentPlaygroundContext } from '@/context/AgentPlaygroundContext'
 import { usePikkuMeta } from '@/context/PikkuMetaContext'
+import { AgentEditor } from '@/components/project/panels/AgentEditor'
 
 interface AgentPanelProps {
   wireId: string
@@ -23,12 +32,27 @@ export const AgentConfiguration: React.FunctionComponent<AgentPanelProps> = ({
   const playgroundCtx = useContext(AgentPlaygroundContext)
   const { meta } = usePikkuMeta()
   const modelAliases = meta.modelAliases ?? []
+  const [editing, setEditing] = useState(false)
+
+  const canEdit = !!metadata?.sourceFile && !!metadata?.exportedName
 
   const modelOptions = useMemo(() => {
     const aliases = new Set(modelAliases)
     if (metadata?.model) aliases.add(metadata.model)
     return Array.from(aliases) as string[]
   }, [modelAliases, metadata?.model])
+
+  if (editing && canEdit) {
+    return (
+      <AgentEditor
+        wireId={wireId}
+        sourceFile={metadata.sourceFile}
+        exportedName={metadata.exportedName}
+        metadata={metadata}
+        onClose={() => setEditing(false)}
+      />
+    )
+  }
 
   const middleware = metadata?.middleware || []
   const channelMiddleware = metadata?.channelMiddleware || []
@@ -41,13 +65,25 @@ export const AgentConfiguration: React.FunctionComponent<AgentPanelProps> = ({
   return (
     <Stack gap="lg">
       <Box>
-        <Group gap="xs">
-          <Bot size={20} />
-          <Text size="lg" ff="monospace" fw={600}>
-            {metadata?.name || wireId}
-          </Text>
-          {metadata?.model && (
-            <PikkuBadge type="dynamic" badge="model" value={metadata.model} />
+        <Group gap="xs" justify="space-between">
+          <Group gap="xs">
+            <Bot size={20} />
+            <Text size="lg" ff="monospace" fw={600}>
+              {metadata?.name || wireId}
+            </Text>
+            {metadata?.model && (
+              <PikkuBadge type="dynamic" badge="model" value={metadata.model} />
+            )}
+          </Group>
+          {canEdit && (
+            <ActionIcon
+              variant="subtle"
+              size="sm"
+              onClick={() => setEditing(true)}
+              title="Edit agent"
+            >
+              <Pencil size={14} />
+            </ActionIcon>
           )}
         </Group>
         {metadata?.summary && (
@@ -118,13 +154,29 @@ export const AgentConfiguration: React.FunctionComponent<AgentPanelProps> = ({
         permissions={permissions}
         tags={metadata?.tags}
       >
-        {metadata?.instructions && (
+        {metadata?.role && (
           <Box>
-            <SectionLabel>Instructions</SectionLabel>
+            <SectionLabel>Role</SectionLabel>
             <Text size="md" style={{ whiteSpace: 'pre-wrap' }}>
-              {metadata.instructions.length > 500
-                ? `${metadata.instructions.slice(0, 500)}...`
-                : metadata.instructions}
+              {metadata.role}
+            </Text>
+          </Box>
+        )}
+
+        {metadata?.personality && (
+          <Box>
+            <SectionLabel>Personality</SectionLabel>
+            <Text size="md" style={{ whiteSpace: 'pre-wrap' }}>
+              {metadata.personality}
+            </Text>
+          </Box>
+        )}
+
+        {metadata?.goal && (
+          <Box>
+            <SectionLabel>Goal</SectionLabel>
+            <Text size="md" style={{ whiteSpace: 'pre-wrap' }}>
+              {metadata.goal}
             </Text>
           </Box>
         )}

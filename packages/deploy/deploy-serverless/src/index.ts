@@ -6,9 +6,7 @@
  */
 
 // Provider adapter
-import { ServerlessProviderAdapter } from './adapter.js'
-export { ServerlessProviderAdapter }
-export const createAdapter = () => new ServerlessProviderAdapter()
+export { ServerlessProviderAdapter } from './adapter.js'
 
 // serverless.yml generator
 export { generateServerlessYml } from './serverless-yml.js'

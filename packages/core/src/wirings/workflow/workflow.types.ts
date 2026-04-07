@@ -257,7 +257,7 @@ export interface WorkflowRuntimeMeta {
   /** Pikku function name (for execution) */
   pikkuFuncId: string
   /** Source type: 'dsl' (serializable), 'complex' (has inline steps), 'graph' */
-  source: 'dsl' | 'complex' | 'graph' | 'ai-agent'
+  source: 'dsl' | 'complex' | 'graph' | 'dynamic-workflow'
   /** Optional description */
   description?: string
   /** Tags for organization */

@@ -349,29 +349,30 @@ function processCommand(
       if (
         ts.isCallExpression(prop.initializer) &&
         ts.isIdentifier(prop.initializer.expression) &&
-        prop.initializer.expression.text === 'addon'
+        prop.initializer.expression.text === 'func'
       ) {
         const [firstArg] = prop.initializer.arguments
         if (!firstArg || !ts.isStringLiteral(firstArg)) {
-          throw new Error(
-            `addon() call requires a string literal argument in the form "namespace:funcName"`
-          )
+          throw new Error(`func() call requires a string literal argument`)
         }
         pikkuFuncId = firstArg.text
-        const addonNamespace = pikkuFuncId.split(':')[0]
-        if (!addonNamespace || !pikkuFuncId.includes(':')) {
-          throw new Error(
-            `Malformed addon function ID "${pikkuFuncId}": expected "namespace:funcName" format`
-          )
-        }
-        if (!inspectorState.rpc.wireAddonDeclarations.has(addonNamespace)) {
-          throw new Error(
-            `Unknown addon namespace "${addonNamespace}" in "${pikkuFuncId}": no matching wireAddonDeclarations entry found`
-          )
+        const addonNamespace = pikkuFuncId.includes(':')
+          ? pikkuFuncId.split(':')[0]
+          : null
+        if (addonNamespace) {
+          if (!inspectorState.rpc.wireAddonDeclarations.has(addonNamespace)) {
+            throw new Error(
+              `Unknown addon namespace "${addonNamespace}" in "${pikkuFuncId}": no matching wireAddonDeclarations entry found`
+            )
+          }
         }
         meta.pikkuFuncId = pikkuFuncId
-        meta.packageName =
-          inspectorState.rpc.wireAddonDeclarations.get(addonNamespace)!.package
+        if (addonNamespace) {
+          meta.packageName =
+            inspectorState.rpc.wireAddonDeclarations.get(
+              addonNamespace
+            )!.package
+        }
       } else {
         pikkuFuncId = extractFunctionName(
           prop.initializer,

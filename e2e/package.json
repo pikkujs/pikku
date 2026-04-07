@@ -26,11 +26,17 @@
     "test:credential-oauth": "cucumber-js --config tests/cucumber.mjs --tags @credential-oauth",
     "test:credential-agent": "cucumber-js --config tests/cucumber.mjs --tags @credential-agent",
     "test:dynamic-workflow-modes": "cucumber-js --config tests/cucumber.mjs --tags @dynamic-workflow-modes",
+    "test:dynamic-agents": "cucumber-js --config tests/cucumber.mjs --tags @dynamic-agents",
+    "test:dynamic-agents-ui": "cucumber-js --config tests/cucumber.mjs --tags @dynamic-agents-ui",
+    "test:code-editor": "cucumber-js --config tests/cucumber.mjs --tags '@code-editor and not @console'",
+    "test:code-editor-ui": "cucumber-js --config tests/cucumber.mjs --tags '@code-editor and @console'",
     "tsc": "tsc --noEmit"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.37",
     "@pikku/addon-console": "workspace:*",
+    "@pikku/addon-dynamic-agents": "workspace:*",
+    "@pikku/addon-dynamic-workflows": "workspace:*",
     "@pikku/addon-graph": "workspace:*",
     "@pikku/addon-hmac-signer": "workspace:*",
     "@pikku/ai-vercel": "workspace:*",

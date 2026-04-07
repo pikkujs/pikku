@@ -132,6 +132,8 @@ export type FunctionMeta = FunctionRuntimeMeta &
       middleware: MiddlewareMetadata[]
       permissions: PermissionMetadata[]
       isDirectFunction: boolean
+      sourceFile: string
+      exportedName: string
     } & CommonWireMeta
   >
 

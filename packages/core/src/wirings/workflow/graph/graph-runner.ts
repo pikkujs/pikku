@@ -116,8 +116,22 @@ function isTemplate(value: unknown): value is TemplateValue {
 }
 
 function getWorkflowMeta(name: string): WorkflowRuntimeMeta | undefined {
-  const meta = pikkuState(null, 'workflows', 'meta')
-  return meta[name]
+  const rootMeta = pikkuState(null, 'workflows', 'meta')
+  if (rootMeta[name]) return rootMeta[name]
+
+  const colonIndex = name.indexOf(':')
+  if (colonIndex !== -1) {
+    const namespace = name.substring(0, colonIndex)
+    const localName = name.substring(colonIndex + 1)
+    const addons = pikkuState(null, 'addons', 'packages')
+    const pkgConfig = addons?.get(namespace)
+    if (pkgConfig) {
+      const addonMeta = pikkuState(pkgConfig.package, 'workflows', 'meta')
+      if (addonMeta?.[localName]) return addonMeta[localName]
+    }
+  }
+
+  return undefined
 }
 
 function resolveNextFromConfig(next: unknown, branchKey?: string): string[] {
@@ -798,9 +812,10 @@ export async function runWorkflowGraph(
   rpcService?: any,
   inline?: boolean,
   startNode?: string,
-  wire?: WorkflowRunWire
+  wire?: WorkflowRunWire,
+  overrideMeta?: WorkflowRuntimeMeta
 ): Promise<{ runId: string }> {
-  const meta = getWorkflowMeta(graphName)
+  const meta = overrideMeta ?? getWorkflowMeta(graphName)
   if (!meta?.nodes) {
     throw new Error(`Workflow graph '${graphName}' not found`)
   }
