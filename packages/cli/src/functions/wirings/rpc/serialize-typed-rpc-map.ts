@@ -162,8 +162,8 @@ export type FlattenedRPCMap = RPCMap
 
   // TypeScript utility to flatten namespaced RPC maps
   const utilityTypes = `
-// Utility type to prefix keys with namespace
-type PrefixKeys<T, Prefix extends string> = {
+// Utility type to prefix keys with namespace (skips 'any' to prevent type poisoning)
+type PrefixKeys<T, Prefix extends string> = unknown extends T ? {} : {
   [K in keyof T as \`\${Prefix}:\${string & K}\`]: T[K]
 }
 

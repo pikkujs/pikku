@@ -18,7 +18,8 @@ export function serializeChannelCLI(
   globalHTTPPrefix: string = ''
 ): string {
   const finalChannelName = channelName || `${programName}-cli`
-  const finalChannelRoute = channelRoute || `${globalHTTPPrefix}/cli/${programName}`
+  const finalChannelRoute =
+    channelRoute || `${globalHTTPPrefix}/cli/${programName}`
   // Flatten all commands into a single routing map
   const commandMap: Record<string, { pikkuFuncId: string; isAddon?: boolean }> =
     {}
@@ -91,7 +92,7 @@ export function serializeChannelCLI(
  * WebSocket channel backend for '${programName}' CLI commands
  */
 import { wireChannel } from '${channelTypesPath}'
-import { pikkuMiddleware${hasAddonFuncs ? ', addon' : ''}, pikkuSessionlessFunc } from '${functionTypesPath}'
+import { pikkuMiddleware${hasAddonFuncs ? ', func' : ''}, pikkuSessionlessFunc } from '${functionTypesPath}'
 import { generateCommandHelp } from '@pikku/core/cli'
 import { handleRawCLI } from '@pikku/core/cli/channel'
 import { pikkuState } from '@pikku/core/internal'
@@ -158,7 +159,7 @@ wireChannel({
 ${Object.entries(commandMap)
   .map(([commandKey, { pikkuFuncId, isAddon }]) => {
     const funcRef = isAddon
-      ? `addon('${pikkuFuncId}')`
+      ? `func('${pikkuFuncId}')`
       : (functionFiles.get(pikkuFuncId)?.exportedName ?? pikkuFuncId)
     return `      '${commandKey}': {
         func: ${funcRef},

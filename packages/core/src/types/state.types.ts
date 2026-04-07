@@ -182,8 +182,6 @@ export interface PikkuPackageState {
     } | null
     /** Cached singleton services for this package */
     singletonServices: CoreSingletonServices | null
-    /** Absolute path to this package's .pikku directory */
-    metaDir: string | null
     /** Credential metadata for this addon package */
     credentialsMeta: Record<
       string,

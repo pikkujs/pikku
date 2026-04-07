@@ -29,6 +29,8 @@ const VERBOSE_FIELDS = new Set([
   'isDirectFunction',
   'services',
   'wires',
+  'sourceFile',
+  'exportedName',
 ])
 
 /**

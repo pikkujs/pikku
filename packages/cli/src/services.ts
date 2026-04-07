@@ -304,6 +304,7 @@ export const createSingletonServices: CreateSingletonServices<
 
       const scaffoldFiles = [
         config.consoleFunctionsFile,
+        config.dynamicWorkflowsFile,
         config.remoteRpcWorkersFile,
         config.workflowRoutesFile,
       ]

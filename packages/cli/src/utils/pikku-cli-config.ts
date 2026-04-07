@@ -271,6 +271,18 @@ const _getPikkuCLIConfig = async (
     if (result.scaffold?.console && !result.consoleFunctionsFile) {
       result.consoleFunctionsFile = join(resolvedScaffoldDir, 'console.gen.ts')
     }
+    if (result.scaffold?.dynamicWorkflows && !result.dynamicWorkflowsFile) {
+      result.dynamicWorkflowsFile = join(
+        resolvedScaffoldDir,
+        'dynamic-workflows.gen.ts'
+      )
+    }
+    if (result.scaffold?.dynamicAgents && !result.dynamicAgentsFile) {
+      result.dynamicAgentsFile = join(
+        resolvedScaffoldDir,
+        'dynamic-agents.gen.ts'
+      )
+    }
 
     const triggerDir = join(result.outDir, 'trigger')
     if (!result.triggersTypesFile) {

@@ -195,7 +195,9 @@ export type CoreAIAgent<
   description: string
   summary?: string
   errors?: string[]
-  instructions: string | string[]
+  role?: string
+  personality?: string
+  goal: string
   model: string
   temperature?: number
   tools?: unknown[]
@@ -204,7 +206,6 @@ export type CoreAIAgent<
   memory?: AIAgentMemoryConfig
   maxSteps?: number
   toolChoice?: 'auto' | 'required' | 'none'
-  dynamicWorkflows?: 'read' | 'always' | 'ask'
   input?: unknown
   output?: unknown
   tags?: string[]
@@ -398,6 +399,7 @@ export type AIAgentMeta = Record<
     channelMiddleware?: MiddlewareMetadata[]
     aiMiddleware?: MiddlewareMetadata[]
     permissions?: PermissionMetadata[]
-    dynamicWorkflows?: 'read' | 'always' | 'ask'
+    sourceFile?: string
+    exportedName?: string
   }
 >

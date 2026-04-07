@@ -12,30 +12,22 @@ const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID || `server-${PORT}`
 async function main(): Promise<void> {
   try {
     const config = await createConfig()
+
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379'
-
-    // Create singleton services first to get jwt + secrets
-    const singletonServices = await createSingletonServices(config, {})
-
     const deploymentService = new RedisDeploymentService(
       { heartbeatInterval: 5000, heartbeatTtl: 15000 },
-      redisUrl,
-      'pikku',
-      singletonServices.jwt,
-      singletonServices.secrets
+      redisUrl
     )
 
     await deploymentService.init()
 
-    // Re-create with deploymentService included
-    const services = await createSingletonServices(config, {
-      ...singletonServices,
+    const singletonServices = await createSingletonServices(config, {
       deploymentService,
     })
 
     const appServer = new PikkuExpressServer(
       { ...config, port: PORT, hostname: 'localhost' },
-      services.logger
+      singletonServices.logger
     )
     appServer.enableExitOnSigInt()
     await appServer.init()
@@ -46,16 +38,17 @@ async function main(): Promise<void> {
       endpoint: `http://localhost:${PORT}`,
     })
 
-    services.logger.info(`Deployment registered: ${DEPLOYMENT_ID} (redis)`)
+    singletonServices.logger.info(
+      `Deployment registered: ${DEPLOYMENT_ID} (redis)`
+    )
 
     process.on('SIGTERM', async () => {
-      services.logger.info('Shutting down...')
+      singletonServices.logger.info('Shutting down...')
       await deploymentService.stop()
       process.exit(0)
     })
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.toString() : String(e)
-    console.error(msg)
+  } catch (e: any) {
+    console.error(e.toString())
     process.exit(1)
   }
 }

@@ -17,11 +17,11 @@ export class JoseJWTService implements JWTService {
   private secrets: Record<string, Uint8Array> = {}
 
   /**
-   * @param getKeys - A function that retrieves an array of signing keys.
+   * @param getSecrets - A function that retrieves an array of secrets.
    * @param logger - An optional logger for logging information.
    */
   constructor(
-    private getKeys: () => Promise<Array<{ id: string; value: string }>>,
+    private getSecrets: () => Promise<Array<{ id: string; value: string }>>,
     private logger?: Logger
   ) {}
 
@@ -29,17 +29,19 @@ export class JoseJWTService implements JWTService {
    * Initializes the service by retrieving and setting the secrets.
    */
   public async init() {
-    const keys = await this.getKeys()
-    this.secrets = keys.reduceRight(
-      (result, key) => {
-        const secretKey = new TextEncoder().encode(key.value)
-        this.currentSecret = { id: key.id, key: secretKey }
-        result[key.id] = secretKey
+    const secrets = await this.getSecrets()
+    this.secrets = secrets.reduceRight(
+      (result, secret) => {
+        const secretKey = new TextEncoder().encode(secret.value)
+        this.currentSecret = { id: secret.id, key: secretKey }
+        result[secret.id] = secretKey
         return result
       },
       {} as Record<string, Uint8Array>
     )
-    this.logger?.info(`Retrieved ${Object.keys(this.secrets).length} JWT keys`)
+    this.logger?.info(
+      `Retrieved ${Object.keys(this.secrets).length} JWT secrets`
+    )
   }
 
   /**
@@ -50,30 +52,18 @@ export class JoseJWTService implements JWTService {
    */
   public async encode<T>(
     expiresIn: RelativeTimeInput,
-    payload: T,
-    keyId?: string
+    payload: T
   ): Promise<string> {
     if (!this.currentSecret) {
       await this.init()
     }
-
-    let key: Uint8Array
-    let kid: string
-    if (keyId && this.secrets[keyId]) {
-      key = this.secrets[keyId]
-      kid = keyId
-    } else if (keyId) {
-      throw new Error(`JWT key not found: ${keyId}`)
-    } else {
-      key = this.currentSecret!.key
-      kid = this.currentSecret!.id
-    }
-
     return await new jose.SignJWT(payload as any)
-      .setProtectedHeader({ alg: 'HS256', kid })
+      .setProtectedHeader({ alg: 'HS256', kid: this.currentSecret!.id })
       .setIssuedAt()
+      // .setIssuer('urn:example:issuer')
+      // .setAudience('urn:example:audience')
       .setExpirationTime(getRelativeTimeOffsetFromNow(expiresIn))
-      .sign(key)
+      .sign(this.currentSecret!.key)
   }
 
   /**

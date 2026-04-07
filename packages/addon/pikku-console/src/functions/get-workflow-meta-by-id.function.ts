@@ -10,13 +10,13 @@ export const getWorkflowMetaById = pikkuSessionlessFunc<
     'Given a workflowId string, reads all workflow metadata from wiringService and returns the matching workflow meta object. Falls back to the workflow store for AI-agent generated workflows. Returns null if no workflow matches the given ID.',
   expose: true,
   auth: false,
-  func: async ({ metaService, workflowRunService }, input) => {
+  func: async ({ metaService, workflowService }, input) => {
     const workflowsMeta = await metaService.getWorkflowMeta()
     const workflow = workflowsMeta[input.workflowId]
     if (workflow) return workflow
 
-    if (workflowRunService) {
-      const aiWorkflows = await workflowRunService.getAIGeneratedWorkflows()
+    if (workflowService) {
+      const aiWorkflows = await workflowService.getAIGeneratedWorkflows()
       const match = aiWorkflows.find((w) => w.workflowName === input.workflowId)
       if (match) {
         return {

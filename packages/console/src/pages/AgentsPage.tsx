@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect } from 'react'
 import { useSearchParams, useNavigate } from '@/router'
-import { Text, Center, Loader } from '@mantine/core'
-import { Bot } from 'lucide-react'
+import { Text, Center, Loader, Button } from '@mantine/core'
+import { Bot, Plus } from 'lucide-react'
 import { usePikkuMeta } from '@/context/PikkuMetaContext'
 import { PanelProvider, usePanelContext } from '@/context/PanelContext'
 import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
@@ -101,6 +101,15 @@ const AgentsList: React.FunctionComponent = () => {
       }
       emptyMessage="No agents found."
       loading={loading}
+      headerRight={
+        <Button
+          size="xs"
+          leftSection={<Plus size={14} />}
+          onClick={() => navigate('/agents/new')}
+        >
+          New Agent
+        </Button>
+      }
     />
   )
 }

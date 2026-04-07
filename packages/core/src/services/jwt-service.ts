@@ -8,13 +8,11 @@ export interface JWTService {
    * Encodes a payload into a JWT.
    * @param expiresIn - The expiration time of the token.
    * @param payload - The payload to encode.
-   * @param keyId - Optional key ID to sign with (uses default key if omitted).
    * @returns A promise that resolves to the encoded JWT.
    */
   encode: <T extends any>(
     expiresIn: RelativeTimeInput,
-    payload: T,
-    keyId?: string
+    payload: T
   ) => Promise<string>
 
   /**

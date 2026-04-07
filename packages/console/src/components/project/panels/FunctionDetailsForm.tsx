@@ -1,11 +1,21 @@
-import React from 'react'
-import { Stack, Text, Box, Code, Group, Loader, Center } from '@mantine/core'
-import { FunctionSquare } from 'lucide-react'
+import React, { useState } from 'react'
+import {
+  Stack,
+  Text,
+  Box,
+  Code,
+  Group,
+  Loader,
+  Center,
+  ActionIcon,
+} from '@mantine/core'
+import { FunctionSquare, Pencil } from 'lucide-react'
 import { useFunctionMeta, useSchema } from '@/hooks/useWirings'
 import { SchemaViewer } from '@/components/ui/SchemaViewer'
 import { PikkuBadge } from '@/components/ui/PikkuBadge'
 import { funcWrapperDefs } from '@/components/ui/badge-defs'
 import { CommonDetails } from '@/components/project/panels/shared/CommonDetails'
+import { FunctionEditor } from '@/components/project/panels/FunctionEditor'
 
 interface FunctionDetailsFormProps {
   functionName: string
@@ -17,12 +27,26 @@ export const FunctionConfiguration: React.FunctionComponent<
 > = ({ functionName, metadata: passedMetadata }) => {
   const { data: fetchedMeta, isLoading } = useFunctionMeta(functionName)
   const meta = passedMetadata || fetchedMeta || {}
+  const [editing, setEditing] = useState(false)
 
   if (isLoading && !passedMetadata) {
     return (
       <Center py="xl">
         <Loader size="sm" />
       </Center>
+    )
+  }
+
+  const canEdit = !!meta.sourceFile && !!meta.exportedName
+
+  if (editing && canEdit) {
+    return (
+      <FunctionEditor
+        functionName={functionName}
+        sourceFile={meta.sourceFile}
+        exportedName={meta.exportedName}
+        onClose={() => setEditing(false)}
+      />
     )
   }
 
@@ -35,11 +59,23 @@ export const FunctionConfiguration: React.FunctionComponent<
   return (
     <Stack gap="lg">
       <Box>
-        <Group gap="xs">
-          <FunctionSquare size={20} />
-          <Text size="lg" ff="monospace" fw={600}>
-            {functionName}
-          </Text>
+        <Group gap="xs" justify="space-between">
+          <Group gap="xs">
+            <FunctionSquare size={20} />
+            <Text size="lg" ff="monospace" fw={600}>
+              {functionName}
+            </Text>
+          </Group>
+          {canEdit && (
+            <ActionIcon
+              variant="subtle"
+              size="sm"
+              onClick={() => setEditing(true)}
+              title="Edit function"
+            >
+              <Pencil size={14} />
+            </ActionIcon>
+          )}
         </Group>
         {meta.summary && (
           <Text size="sm" c="dimmed" mt={4}>

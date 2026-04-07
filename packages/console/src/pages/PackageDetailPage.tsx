@@ -1,5 +1,6 @@
 import React from 'react'
 import {
+  Alert,
   Anchor,
   Badge,
   Box,
@@ -28,10 +29,11 @@ import {
   Terminal,
   Cpu,
   BookOpen,
+  ArrowUp,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { usePikkuRPC } from '@/context/PikkuRpcProvider'
 import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
 import { DetailPageHeader } from '@/components/layout/DetailPageHeader'
@@ -279,25 +281,105 @@ const McpTab: React.FunctionComponent<{ mcp: McpMeta }> = ({ mcp }) => {
 
 export const PackageDetailPage: React.FunctionComponent<{
   id: string
-  source: 'installed' | 'community'
+  source: 'installed' | 'community' | 'api'
   onBack: () => void
 }> = ({ id, source, onBack }) => {
   const rpc = usePikkuRPC()
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = React.useState<string | null>(null)
 
-  const { data: installedAddons } = useQuery<Array<{ packageName: string }>>({
+  const { data: installedAddons } = useQuery<
+    Array<{ packageName: string; namespace: string }>
+  >({
     queryKey: ['installed-addons'],
     queryFn: async () => {
       const result = await rpc.invoke('console:getInstalledAddons', null)
-      return (result ?? []) as Array<{ packageName: string }>
+      return (result ?? []) as Array<{
+        packageName: string
+        namespace: string
+      }>
     },
     staleTime: 60 * 1000,
   })
 
-  const isInstalled =
-    source === 'installed' ||
-    (installedAddons ?? []).some((a) => a.packageName === id)
+  const installedAddon = (installedAddons ?? []).find(
+    (a) => a.packageName === id
+  )
+  const isInstalled = source === 'installed' || !!installedAddon
+
+  const { data: installedPkg } = useQuery<PackageRegistryEntry | null>({
+    queryKey: ['addon', 'installed', id],
+    queryFn: async () => {
+      return (await rpc.invoke('console:getAddonInstalledPackage', {
+        packageName: id,
+      })) as PackageRegistryEntry | null
+    },
+    enabled: isInstalled && source === 'community',
+  })
+
+  const installMutation = useMutation({
+    mutationFn: async ({
+      packageName,
+      namespace,
+      version,
+    }: {
+      packageName: string
+      namespace: string
+      version?: string
+    }) =>
+      (rpc as any).invoke('console:installAddon', {
+        packageName,
+        namespace,
+        version,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['installed-addons'] })
+      queryClient.invalidateQueries({ queryKey: ['allMeta'] })
+    },
+  })
+
+  const installOpenapiMutation = useMutation({
+    mutationFn: async ({
+      name,
+      swaggerUrl,
+      credential,
+    }: {
+      name: string
+      swaggerUrl: string
+      credential?: 'apikey' | 'bearer' | 'oauth2'
+    }) =>
+      (rpc as any).invoke('console:installOpenapiAddon', {
+        name,
+        swaggerUrl,
+        credential,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['installed-addons'] })
+      queryClient.invalidateQueries({ queryKey: ['allMeta'] })
+    },
+  })
+
+  const { data: apiDetail } = useQuery({
+    queryKey: ['openapi-detail', id],
+    queryFn: async () => {
+      // Check cached openapi queries first
+      const cached = queryClient.getQueriesData<{
+        apis: any[]
+        total: number
+      }>({ queryKey: ['openapis'] })
+      for (const [, data] of cached) {
+        const match = data?.apis?.find((a: any) => a.name === id)
+        if (match) return match
+      }
+      // Fallback: fetch from registry
+      const result = await (rpc as any).invoke('console:getOpenapis', {
+        limit: 2600,
+        offset: 0,
+      })
+      return result.apis?.find((a: any) => a.name === id) ?? null
+    },
+    enabled: source === 'api',
+  })
 
   const { data: pkg, isLoading } = useQuery<PackageRegistryEntry | null>({
     queryKey: ['addon', source, id],
@@ -316,7 +398,228 @@ export const PackageDetailPage: React.FunctionComponent<{
       }
       return result
     },
+    enabled: source !== 'api',
   })
+
+  if (source === 'api') {
+    const api = apiDetail
+    if (!api) {
+      return (
+        <Center h="100vh">
+          <Loader />
+        </Center>
+      )
+    }
+    return (
+      <ResizablePanelLayout
+        header={
+          <DetailPageHeader
+            icon={Globe}
+            category="APIs"
+            categoryPath="/addons"
+            docsHref="https://pikku.dev/docs/external-packages"
+          />
+        }
+        hidePanel
+      >
+        <Box p="xl">
+          <Stack gap="lg">
+            <Group gap="md">
+              {api.logo && (
+                <img
+                  src={api.logo}
+                  width={48}
+                  height={48}
+                  alt={api.title}
+                  style={{ objectFit: 'contain', borderRadius: 6 }}
+                />
+              )}
+              <div>
+                <Group gap="xs">
+                  <Text size="xl" fw={700}>
+                    {api.title || api.name}
+                  </Text>
+                  <Badge size="sm" variant="light" color="gray">
+                    {api.openapiVer}
+                  </Badge>
+                  <Badge size="sm" variant="light">
+                    v{api.version}
+                  </Badge>
+                </Group>
+                <Text size="sm" c="dimmed">
+                  {api.provider}
+                  {api.service ? ` / ${api.service}` : ''}
+                </Text>
+              </div>
+            </Group>
+
+            {api.description && (
+              <Text size="sm">{api.description}</Text>
+            )}
+
+            {(api.categories?.length > 0 || api.tags?.length > 0) && (
+              <Group gap={6}>
+                {api.categories?.map((c: string) => (
+                  <Badge key={c} size="xs" variant="light" color="blue">
+                    {c}
+                  </Badge>
+                ))}
+                {api.tags?.map((t: string) => (
+                  <Badge key={t} size="xs" variant="dot">
+                    {t}
+                  </Badge>
+                ))}
+              </Group>
+            )}
+
+            {api.totalOperations > 0 && (
+              <Box>
+                <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb={4}>
+                  Operations ({api.totalOperations})
+                </Text>
+                <Group gap={6}>
+                  {api.opsGet > 0 && (
+                    <Badge size="xs" color="blue">
+                      GET {api.opsGet}
+                    </Badge>
+                  )}
+                  {api.opsPost > 0 && (
+                    <Badge size="xs" color="green">
+                      POST {api.opsPost}
+                    </Badge>
+                  )}
+                  {api.opsPut > 0 && (
+                    <Badge size="xs" color="yellow">
+                      PUT {api.opsPut}
+                    </Badge>
+                  )}
+                  {api.opsPatch > 0 && (
+                    <Badge size="xs" color="orange">
+                      PATCH {api.opsPatch}
+                    </Badge>
+                  )}
+                  {api.opsDelete > 0 && (
+                    <Badge size="xs" color="red">
+                      DELETE {api.opsDelete}
+                    </Badge>
+                  )}
+                </Group>
+              </Box>
+            )}
+
+            {api.servers?.length > 0 && (
+              <Box>
+                <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb={4}>
+                  Servers
+                </Text>
+                {api.servers.map((s: string) => (
+                  <Code key={s} block style={{ fontSize: '12px' }}>
+                    {s}
+                  </Code>
+                ))}
+              </Box>
+            )}
+
+            {api.securitySchemes?.length > 0 && (
+              <Box>
+                <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb={4}>
+                  Authentication
+                </Text>
+                <Group gap={6}>
+                  {api.securitySchemes.map((s: string) => (
+                    <Badge key={s} size="xs" variant="outline" color="gray">
+                      {s}
+                    </Badge>
+                  ))}
+                </Group>
+              </Box>
+            )}
+
+            {api.contentTypes?.length > 0 && (
+              <Box>
+                <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb={4}>
+                  Content Types
+                </Text>
+                <Group gap={6}>
+                  {api.contentTypes.map((c: string) => (
+                    <Badge key={c} size="xs" variant="outline" color="gray">
+                      {c}
+                    </Badge>
+                  ))}
+                </Group>
+              </Box>
+            )}
+
+            <Group gap="xs">
+              {api.swaggerUrl && (
+                <Button
+                  size="xs"
+                  variant="light"
+                  component="a"
+                  href={api.swaggerUrl}
+                  target="_blank"
+                  leftSection={<BookOpen size={13} />}
+                >
+                  OpenAPI JSON
+                </Button>
+              )}
+              {api.swaggerYamlUrl && (
+                <Button
+                  size="xs"
+                  variant="light"
+                  component="a"
+                  href={api.swaggerYamlUrl}
+                  target="_blank"
+                  leftSection={<BookOpen size={13} />}
+                >
+                  OpenAPI YAML
+                </Button>
+              )}
+              <Button
+                size="xs"
+                leftSection={<Download size={13} />}
+                loading={installOpenapiMutation.isPending}
+                onClick={() => {
+                  let addonName = api.name
+                    .replace(/[^a-zA-Z0-9-]/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-|-$/g, '')
+                  if (/^[0-9]/.test(addonName)) {
+                    addonName = `x${addonName}`
+                  }
+                  const credential = api.securitySchemes?.includes('oauth2')
+                    ? 'oauth2' as const
+                    : api.securitySchemes?.includes('bearer')
+                      ? 'bearer' as const
+                      : api.securitySchemes?.includes('apiKey')
+                        ? 'apikey' as const
+                        : undefined
+                  installOpenapiMutation.mutate({
+                    name: addonName,
+                    swaggerUrl: api.swaggerUrl,
+                    credential,
+                  })
+                }}
+              >
+                Generate & Install Addon
+              </Button>
+            </Group>
+
+            {installOpenapiMutation.isSuccess && (
+              <Alert color="green" icon={<Check size={16} />}>
+                Addon generated and installed successfully!
+              </Alert>
+            )}
+            {installOpenapiMutation.error && (
+              <Alert color="red">
+                {(installOpenapiMutation.error as Error).message}
+              </Alert>
+            )}
+          </Stack>
+        </Box>
+      </ResizablePanelLayout>
+    )
+  }
 
   if (isLoading) {
     return (
@@ -462,25 +765,70 @@ export const PackageDetailPage: React.FunctionComponent<{
                     </Anchor>
                   )}
                 </Group>
-                {isInstalled ? (
-                  <Button
-                    size="xs"
-                    variant="light"
-                    color="green"
-                    leftSection={<Check size={13} />}
-                    disabled
-                  >
-                    Installed
-                  </Button>
-                ) : (
-                  <Button
-                    size="xs"
-                    leftSection={<Download size={13} />}
-                    onClick={() => alert('Not yet implemented')}
-                  >
-                    Install
-                  </Button>
-                )}
+                {(() => {
+                  const communityVersion = pkg.version
+                  const installedVersion = installedPkg?.version
+                  const needsUpdate =
+                    isInstalled &&
+                    installedVersion &&
+                    communityVersion &&
+                    installedVersion !== communityVersion
+
+                  if (needsUpdate) {
+                    return (
+                      <Button
+                        size="xs"
+                        color="yellow"
+                        leftSection={<ArrowUp size={13} />}
+                        loading={installMutation.isPending}
+                        onClick={() =>
+                          installMutation.mutate({
+                            packageName: pkg.name,
+                            namespace:
+                              installedAddon?.namespace ??
+                              pkg.name
+                                .replace('@pikku/addon-', '')
+                                .replace(/^@.*\//, ''),
+                            version: communityVersion,
+                          })
+                        }
+                      >
+                        Update to {communityVersion}
+                      </Button>
+                    )
+                  }
+                  if (isInstalled) {
+                    return (
+                      <Button
+                        size="xs"
+                        variant="light"
+                        color="green"
+                        leftSection={<Check size={13} />}
+                        disabled
+                      >
+                        Installed
+                      </Button>
+                    )
+                  }
+                  return (
+                    <Button
+                      size="xs"
+                      leftSection={<Download size={13} />}
+                      loading={installMutation.isPending}
+                      onClick={() =>
+                        installMutation.mutate({
+                          packageName: pkg.name,
+                          namespace: pkg.name
+                            .replace('@pikku/addon-', '')
+                            .replace(/^@.*\//, ''),
+                          version: communityVersion,
+                        })
+                      }
+                    >
+                      Install
+                    </Button>
+                  )
+                })()}
               </Group>
               {pkg.description && (
                 <Text size="sm" c="dimmed">

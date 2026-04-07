@@ -156,7 +156,6 @@ const createEmptyPackageState = (): PikkuPackageState => ({
   package: {
     factories: null,
     singletonServices: null,
-    metaDir: null,
     credentialsMeta: null,
     requiredParentServices: null,
   },
@@ -187,10 +186,6 @@ export const resetPikkuState = () => {
 
 if (!getAllPackageStates().has('__main__')) {
   resetPikkuState()
-}
-
-export const getPikkuMetaDir = (packageName?: string | null): string | null => {
-  return pikkuState(packageName ?? null, 'package', 'metaDir')
 }
 
 export const getSingletonServices = (): CoreSingletonServices => {

@@ -629,45 +629,6 @@ export class CloudflareProviderAdapter {
       'process.versions.node': '"22.0.0"',
     }
   }
-
-  async deploy(options: {
-    buildDir: string
-    logger: { info(msg: string): void; error(msg: string): void }
-    onProgress?: (step: string, detail: string) => void
-  }) {
-    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID
-    const apiToken = process.env.CLOUDFLARE_API_TOKEN
-
-    if (!accountId || !apiToken) {
-      return {
-        success: false,
-        errors: [
-          {
-            step: 'auth',
-            error:
-              'Missing CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN environment variables.',
-          },
-        ],
-      }
-    }
-
-    const { readFile } = await import('node:fs/promises')
-    const { join } = await import('node:path')
-    const { deploy } = await import('./deploy.js')
-
-    const infraJson = JSON.parse(
-      await readFile(join(options.buildDir, 'infra.json'), 'utf-8')
-    )
-
-    return deploy({
-      accountId,
-      apiToken,
-      buildDir: options.buildDir,
-      manifest: infraJson,
-      dispatchNamespace: process.env.CF_DISPATCH_NAMESPACE,
-      onProgress: options.onProgress,
-    })
-  }
 }
 
 /** Convert kebab-case unit name to SCREAMING_SNAKE_CASE binding name */
