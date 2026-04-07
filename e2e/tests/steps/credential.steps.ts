@@ -297,14 +297,24 @@ Then('the OAuth API profile should be authenticated', async function () {
 When(
   'I run the credential workflow as user {string}',
   async function (userId: string) {
-    const res = await fetch(`${config.apiUrl}/workflow/run`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-      body: JSON.stringify({
-        workflowName: 'credentialWorkflow',
-      }),
-    })
-    state.lastWorkflowResult = await res.json()
+    const res = await fetch(
+      `${config.apiUrl}/workflow/credentialWorkflow/run`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
+        body: JSON.stringify({ data: {} }),
+      }
+    )
+    if (res.ok) {
+      state.lastWorkflowResult = await res.json()
+    } else {
+      const text = await res.text()
+      try {
+        state.lastWorkflowResult = JSON.parse(text)
+      } catch {
+        state.lastWorkflowResult = { error: text, status: 'failed' }
+      }
+    }
   }
 )
 

@@ -67,11 +67,27 @@ When(
       state.lastResponse = await rpc.runWorkflow(workflowName as never, input)
       state.lastStatus = 'completed'
     } catch (err: unknown) {
-      state.lastResponse = err
-      state.lastStatus = 'failed'
-      const msg = err instanceof Error ? err.message : JSON.stringify(err)
+      let msg = ''
+      if (err instanceof Response) {
+        try {
+          const body = await err.json()
+          state.lastResponse = body
+          msg = body.message || JSON.stringify(body)
+        } catch {
+          state.lastResponse = err
+          msg = ''
+        }
+      } else if (err instanceof Error) {
+        state.lastResponse = err
+        msg = err.message
+      } else {
+        state.lastResponse = err
+        msg = JSON.stringify(err)
+      }
       if (msg.includes('cancelled') || msg.includes('Cancelled')) {
         state.lastStatus = 'cancelled'
+      } else {
+        state.lastStatus = 'failed'
       }
     }
 

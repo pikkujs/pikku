@@ -200,13 +200,17 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       for (const [queueName, meta] of Object.entries(queueMeta)) {
         if (functions.has(meta.pikkuFuncId)) continue
         if (queueName.startsWith('wf-orchestrator-')) {
-          const func = { func: pikkuWorkflowOrchestratorFunc }
-          addFunction(meta.pikkuFuncId, func)
-          wireQueueWorker({ name: queueName, func } as any)
+          registerWorkflowFunc(
+            meta.pikkuFuncId,
+            { func: pikkuWorkflowOrchestratorFunc },
+            queueName
+          )
         } else if (queueName.startsWith('wf-step-')) {
-          const func = { func: pikkuWorkflowWorkerFunc }
-          addFunction(meta.pikkuFuncId, func)
-          wireQueueWorker({ name: queueName, func } as any)
+          registerWorkflowFunc(
+            meta.pikkuFuncId,
+            { func: pikkuWorkflowWorkerFunc },
+            queueName
+          )
         }
       }
     }
