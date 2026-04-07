@@ -140,6 +140,66 @@ function createDeadModuleStubPlugin(patterns: RegExp[]): Plugin {
   }
 }
 
+/**
+ * esbuild plugin that resolves @pikku/* packages by walking up the
+ * directory tree to find the monorepo root and locating workspace packages.
+ * This allows the standalone adapter to import @pikku/uws-server etc.
+ * without requiring the user to add them to their package.json.
+ */
+function createPikkuResolverPlugin(projectDir: string): Plugin {
+  // Known workspace package locations (package name → workspace path)
+  const workspaceMap: Record<string, string[]> = {
+    '@pikku/uws-server': ['packages/runtimes/uws-server'],
+    '@pikku/uws-handler': ['packages/runtimes/uws-handler'],
+    '@pikku/schedule': ['packages/schedule'],
+    '@pikku/express-server': ['packages/runtimes/express-server'],
+    '@pikku/express-middleware': ['packages/runtimes/express-middleware'],
+  }
+
+  let resolvedPaths: Record<string, string> | null = null
+
+  function resolveWorkspacePaths(): Record<string, string> {
+    if (resolvedPaths) return resolvedPaths
+    resolvedPaths = {}
+
+    // Walk up from projectDir to find the monorepo root (has packages/ dir)
+    let dir = projectDir
+    for (let i = 0; i < 10; i++) {
+      for (const [pkg, candidates] of Object.entries(workspaceMap)) {
+        for (const candidate of candidates) {
+          const fullPath = join(dir, candidate)
+          if (existsSync(join(fullPath, 'package.json'))) {
+            resolvedPaths[pkg] = fullPath
+          }
+        }
+      }
+      const parent = join(dir, '..')
+      if (parent === dir) break
+      dir = parent
+    }
+    return resolvedPaths
+  }
+
+  return {
+    name: 'pikku-package-resolver',
+    setup(build) {
+      build.onResolve({ filter: /^@pikku\// }, (args) => {
+        const paths = resolveWorkspacePaths()
+        // Match exact package name or subpath import
+        const pkgName = args.path.match(/^@pikku\/[^/]+/)?.[0]
+        if (pkgName && paths[pkgName]) {
+          const subpath = args.path.slice(pkgName.length)
+          const resolved = subpath
+            ? join(paths[pkgName], 'src', subpath)
+            : join(paths[pkgName], 'src', 'index.ts')
+          return { path: resolved }
+        }
+        return undefined
+      })
+    },
+  }
+}
+
 const BUNDLE_FILENAME = 'bundle.js'
 const METAFILE_FILENAME = 'metafile.json'
 const PACKAGE_JSON_FILENAME = 'package.json'
@@ -153,6 +213,7 @@ interface BundleUnitOptions {
   aliases?: Record<string, string>
   define?: Record<string, string>
   platform?: 'node' | 'neutral' | 'browser'
+  format?: 'esm' | 'cjs'
 }
 
 /**
@@ -173,6 +234,7 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     aliases,
     define,
     platform,
+    format,
   } = options
 
   await mkdir(unitOutputDir, { recursive: true })
@@ -188,11 +250,24 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
   // Only Node built-ins are kept external (CF Workers provides them).
   // The stub plugin replaces gen files for unused services with empty
   // modules, preventing Node.js-only code from entering the bundle.
+  // Resolve node_modules paths up the directory tree for workspace packages
+  const nodePaths: string[] = []
+  let dir = projectDir
+  while (true) {
+    const nm = join(dir, 'node_modules')
+    nodePaths.push(nm)
+    const parent = join(dir, '..')
+    if (parent === dir) break
+    dir = parent
+  }
+
   const result = await build({
     entryPoints: [entryPath],
     bundle: true,
+    absWorkingDir: projectDir,
+    nodePaths,
     platform: platform ?? 'node',
-    format: 'esm',
+    format: format ?? 'esm',
     metafile: true,
     target: 'es2022',
     outfile: bundlePath,
@@ -256,6 +331,7 @@ export async function bundleUnits(
     aliases?: Record<string, string>
     define?: Record<string, string>
     platform?: 'node' | 'neutral' | 'browser'
+    format?: 'esm' | 'cjs'
   }
 ): Promise<BundleOutput> {
   const buildDir = outputDir ?? join(projectDir, '.deploy', 'build')

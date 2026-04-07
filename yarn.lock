@@ -5260,6 +5260,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/deploy-standalone@workspace:packages/deploy/deploy-standalone":
+  version: 0.0.0-use.local
+  resolution: "@pikku/deploy-standalone@workspace:packages/deploy/deploy-standalone"
+  dependencies:
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/e2e-functions@workspace:e2e/packages/functions":
   version: 0.0.0-use.local
   resolution: "@pikku/e2e-functions@workspace:e2e/packages/functions"

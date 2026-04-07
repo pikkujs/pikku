@@ -46,6 +46,22 @@ export function parsePackageName(specifier: string): string | null {
     return null
   }
 
+  // Skip Node.js builtins (node:fs, crypto, etc.)
+  if (specifier.startsWith('node:')) {
+    return null
+  }
+  const builtins = new Set([
+    'assert', 'buffer', 'child_process', 'cluster', 'console', 'constants',
+    'crypto', 'dgram', 'dns', 'domain', 'events', 'fs', 'http', 'http2',
+    'https', 'inspector', 'module', 'net', 'os', 'path', 'perf_hooks',
+    'process', 'punycode', 'querystring', 'readline', 'repl', 'stream',
+    'string_decoder', 'sys', 'timers', 'tls', 'tty', 'url', 'util',
+    'v8', 'vm', 'wasi', 'worker_threads', 'zlib',
+  ])
+  if (builtins.has(specifier.split('/')[0])) {
+    return null
+  }
+
   // Scoped package: @scope/pkg or @scope/pkg/sub
   if (specifier.startsWith('@')) {
     const parts = specifier.split('/')
@@ -68,17 +84,36 @@ interface ProjectDeps {
 async function readProjectDependencies(
   projectDir: string
 ): Promise<ProjectDeps> {
-  const pkgJsonPath = join(projectDir, 'package.json')
-  const content = await readFile(pkgJsonPath, 'utf-8')
-  const pkg = JSON.parse(content) as {
-    dependencies?: Record<string, string>
-    devDependencies?: Record<string, string>
+  const dependencies: Record<string, string> = {}
+  const devDependencies: Record<string, string> = {}
+
+  // Walk up the directory tree to find all package.json files
+  // (handles monorepo setups where deps are in the root package.json)
+  let dir = projectDir
+  for (let i = 0; i < 10; i++) {
+    try {
+      const pkgJsonPath = join(dir, 'package.json')
+      const content = await readFile(pkgJsonPath, 'utf-8')
+      const pkg = JSON.parse(content) as {
+        dependencies?: Record<string, string>
+        devDependencies?: Record<string, string>
+      }
+      // Don't overwrite — closest package.json wins
+      for (const [k, v] of Object.entries(pkg.dependencies ?? {})) {
+        if (!(k in dependencies)) dependencies[k] = v
+      }
+      for (const [k, v] of Object.entries(pkg.devDependencies ?? {})) {
+        if (!(k in devDependencies)) devDependencies[k] = v
+      }
+    } catch {
+      // No package.json at this level
+    }
+    const parent = join(dir, '..')
+    if (parent === dir) break
+    dir = parent
   }
 
-  return {
-    dependencies: pkg.dependencies ?? {},
-    devDependencies: pkg.devDependencies ?? {},
-  }
+  return { dependencies, devDependencies }
 }
 
 /**

@@ -39,6 +39,13 @@ export interface ProviderAdapter {
   readonly deployDirName: string
 
   /**
+   * When true, skips per-unit decomposition and bundles everything
+   * into a single unit using the project's full .pikku/ directory.
+   * Used by standalone adapter.
+   */
+  readonly singleUnit?: boolean
+
+  /**
    * Generate the entry file source for a deployment unit.
    * Called once per unit.
    */
@@ -82,6 +89,12 @@ export interface ProviderAdapter {
    * Cloudflare Workers should use 'neutral'.
    */
   getPlatform?(): 'node' | 'neutral' | 'browser'
+
+  /**
+   * esbuild output format. Defaults to 'esm'.
+   * pkg requires 'cjs' for standalone binaries.
+   */
+  getFormat?(): 'esm' | 'cjs'
 
   /**
    * Generate additional provider-level config files (e.g. serverless.yml).
