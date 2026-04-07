@@ -48,6 +48,8 @@ export interface HttpRouteInfo {
 export interface DeploymentUnit {
   name: string
   role: DeploymentUnitRole
+  /** Deploy target: serverless (CF Worker / Lambda) or server (container) */
+  target: 'serverless' | 'server'
   /** Functions bundled in this unit (for function/workflow-step units) */
   functionIds: string[]
   services: ServiceRequirement[]

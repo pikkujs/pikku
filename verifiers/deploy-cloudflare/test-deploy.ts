@@ -234,6 +234,27 @@ check('create-todo unit has wf-step-create-todo queue meta', () => {
   assert.ok('wf-step-create-todo' in meta, 'Should have wf-step-create-todo queue')
 })
 
+// --- Deploy target ---
+
+check('no server container generated (no serverlessIncompatible configured)', () => {
+  // With no serverlessIncompatible config, all units should be serverless Workers.
+  // No "server" or "server-proxy" directory should exist.
+  if (existsSync(join(DEPLOY_DIR, 'server'))) {
+    throw new Error('server/ directory should not exist when no serverlessIncompatible is configured')
+  }
+  if (existsSync(join(DEPLOY_DIR, 'server-proxy'))) {
+    throw new Error('server-proxy/ directory should not exist')
+  }
+})
+
+check('all units are serverless Workers (no Dockerfile)', () => {
+  for (const unit of unitDirs) {
+    if (existsSync(join(DEPLOY_DIR, unit, 'Dockerfile'))) {
+      throw new Error(`${unit} has a Dockerfile — should be a serverless Worker`)
+    }
+  }
+})
+
 // ---------------------------------------------------------------------------
 // Results
 // ---------------------------------------------------------------------------

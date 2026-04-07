@@ -63,6 +63,7 @@ export const deployPlan = pikkuVoidFunc({
       projectId,
       provider,
       inspectorState,
+      serverlessIncompatible: config.deploy?.serverlessIncompatible,
       getEntryContext,
       logger,
     })
