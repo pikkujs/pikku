@@ -99,21 +99,28 @@ async function resolveProjectId(projectDir: string): Promise<string> {
 }
 
 export async function resolveProvider(
-  _providerName?: string
+  config?: {
+    deploy?: { providers: Record<string, string>; defaultProvider?: string }
+  },
+  providerName?: string
 ): Promise<ProviderAdapter> {
   const name =
-    _providerName ?? process.env.PIKKU_DEPLOY_PROVIDER ?? 'cloudflare'
+    providerName ??
+    process.env.PIKKU_DEPLOY_PROVIDER ??
+    config?.deploy?.defaultProvider ??
+    'cloudflare'
 
-  const packageMap: Record<string, string> = {
+  const providers = config?.deploy?.providers ?? {
     cloudflare: '@pikku/deploy-cloudflare',
     serverless: '@pikku/deploy-serverless',
     azure: '@pikku/deploy-azure',
+    standalone: '@pikku/deploy-standalone',
   }
 
-  const packageName = packageMap[name]
+  const packageName = providers[name]
   if (!packageName) {
     throw new Error(
-      `Unknown deploy provider: '${name}'. Available: ${Object.keys(packageMap).join(', ')}`
+      `Unknown deploy provider: '${name}'. Available: ${Object.keys(providers).join(', ')}`
     )
   }
 
@@ -122,17 +129,11 @@ export async function resolveProvider(
     if (typeof mod.createAdapter === 'function') {
       return mod.createAdapter()
     }
-    const AdapterClass = Object.values(mod).find(
-      (v: any) => typeof v === 'function' && v.prototype
-    ) as (new () => ProviderAdapter) | undefined
-    if (AdapterClass) {
-      return new AdapterClass()
-    }
     throw new Error(
-      `Deploy provider '${packageName}' does not export createAdapter() or a provider class`
+      `Deploy provider '${packageName}' does not export createAdapter()`
     )
   } catch (e: unknown) {
-    const err = e as { code?: string }
+    const err = e as { code?: string; message?: string }
     if (
       err?.code === 'ERR_MODULE_NOT_FOUND' ||
       err?.code === 'MODULE_NOT_FOUND'
@@ -169,7 +170,7 @@ export const deployApply = pikkuVoidFunc({
     const projectDir = config.rootDir
     const inspectorState = await getInspectorState(true)
     const projectId = await resolveProjectId(projectDir)
-    const provider = await resolveProvider()
+    const provider = await resolveProvider(config)
 
     // Build pipeline: analyze → codegen → bundle → configs
     const result = await runBuildPipeline({

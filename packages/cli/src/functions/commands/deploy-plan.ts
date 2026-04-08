@@ -56,7 +56,7 @@ export const deployPlan = pikkuVoidFunc({
     const projectDir = config.rootDir
     const inspectorState = await getInspectorState(true)
     const projectId = await resolveProjectId(projectDir)
-    const provider = await resolveProvider()
+    const provider = await resolveProvider(config)
 
     const result = await runBuildPipeline({
       projectDir,
