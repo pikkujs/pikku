@@ -17,7 +17,8 @@ export const createConfig = pikkuConfig(async () => {
   return {
     awsRegion: 'us-east-1',
     secrets: {
-      AUTH_SECRET: 'AUTH_SECRET',
+      auth: 'AUTH_SECRET',
+      remote: 'PIKKU_REMOTE_SECRET',
     },
   }
 })
@@ -42,14 +43,18 @@ export const createSingletonServices = pikkuServices(
       }
     }
 
-    const jwt = new JoseJWTService(async () => [
-      {
-        id: 'default',
-        value: await secrets
-          .getSecret('AUTH_SECRET')
-          .catch(() => 'dev-secret-change-me'),
-      },
-    ])
+    const jwt = new JoseJWTService(async () => {
+      const keys: Array<{ id: string; value: string }> = []
+      for (const [id, secretName] of Object.entries(config.secrets ?? {})) {
+        try {
+          keys.push({
+            id,
+            value: await secrets.getSecret(secretName as string),
+          })
+        } catch {}
+      }
+      return keys
+    })
 
     return {
       config,
