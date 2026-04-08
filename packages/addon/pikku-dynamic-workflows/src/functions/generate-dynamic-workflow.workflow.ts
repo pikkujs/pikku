@@ -118,7 +118,7 @@ export const generateDynamicWorkflow = pikkuWorkflowComplexFunc<
     return {
       success: false,
       workflowName: '',
-      summary: summarised.summary,
+      description: summarised.summary,
       graph: null,
       inputTokens: totalInputTokens,
       outputTokens: totalOutputTokens,
