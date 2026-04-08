@@ -169,6 +169,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       outputSchemaName: null,
     })
 
+    const queueMeta = pikkuState(null, 'queue', 'meta')
+
     const registerWorkflowFunc = (
       funcId: string,
       func: { func: unknown },
@@ -176,8 +178,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     ) => {
       if (functions.has(funcId)) return
       addFunction(funcId, func as never)
+      if (!queueMeta[queueName]) {
+        queueMeta[queueName] = { pikkuFuncId: funcId, name: queueName }
+      }
       wireQueueWorker({ name: queueName, func } as never)
-      // Register function meta so runPikkuFunc can find it
       if (!functionsMeta[funcId]) {
         functionsMeta[funcId] = mkMeta(funcId)
       }
