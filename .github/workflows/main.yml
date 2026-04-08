@@ -66,6 +66,7 @@ jobs:
             deploy-cloudflare,
             deploy-serverless,
             deploy-azure,
+            deploy-standalone,
           ]
     steps:
       - name: Check out repository code

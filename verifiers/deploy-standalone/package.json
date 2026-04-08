@@ -1,5 +1,5 @@
 {
-  "name": "@pikku/verifiers-deploy-cloudflare",
+  "name": "@pikku/verifiers-deploy-standalone",
   "type": "module",
   "private": true,
   "scripts": {

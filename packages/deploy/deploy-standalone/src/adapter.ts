@@ -1,6 +1,3 @@
-import { mkdirSync, writeFileSync } from 'node:fs'
-import { join as pathJoin } from 'node:path'
-import { tmpdir } from 'node:os'
 
 /**
  * Standalone provider adapter for the Pikku deploy pipeline.
@@ -90,15 +87,15 @@ export class StandaloneProviderAdapter {
   generateEntrySource(ctx: EntryGenerationContext): string {
     return [
       `// Generated standalone entry — all functions in one process`,
-      `const { stopSingletonServices } = require('@pikku/core')`,
-      `const { ConsoleLogger } = require('@pikku/core/services')`,
-      `const { InMemorySchedulerService } = require('@pikku/schedule')`,
-      `const { PikkuUWSServer } = require('@pikku/uws-server')`,
+      `import { stopSingletonServices } from '@pikku/core'`,
+      `import { ConsoleLogger } from '@pikku/core/services'`,
+      `import { InMemorySchedulerService } from '@pikku/schedule'`,
+      `import { PikkuUWSServer } from '@pikku/uws'`,
       ``,
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
-      `require('${ctx.bootstrapPath}')`,
+      `import '${ctx.bootstrapPath}'`,
       ``,
       `const logger = new ConsoleLogger()`,
       `const port = parseInt(process.env.PORT || '3000', 10)`,
@@ -148,41 +145,21 @@ export class StandaloneProviderAdapter {
    * a shim that loads from ./modules/ relative to the executable.
    */
   getExternals(): string[] {
-    return ['node:*']
-  }
-
-  /**
-   * Alias uWebSockets.js to a shim that loads from ./modules/ at runtime.
-   * The shim is written to a temp dir so esbuild can inline it.
-   */
-  getAliases(): Record<string, string> {
-    const shimDir = pathJoin(tmpdir(), 'pikku-standalone-shims')
-    mkdirSync(shimDir, { recursive: true })
-
-    const shimPath = pathJoin(shimDir, 'uws-shim.js')
-    writeFileSync(
-      shimPath,
-      [
-        `// Shim: load uWebSockets.js from ./modules/ relative to the binary`,
-        `const path = require('path');`,
-        `const execDir = typeof process.pkg !== 'undefined'`,
-        `  ? path.dirname(process.execPath)`,
-        `  : path.resolve(__dirname);`,
-        `module.exports = require(path.join(execDir, 'modules', 'uWebSockets.js', 'uws.js'));`,
-      ].join('\n'),
-      'utf-8'
-    )
-
-    return { 'uWebSockets.js': shimPath }
+    // Node builtins (both node: prefix and bare) + native modules.
+    // Bare builtins needed because CJS deps like `cron` use require('child_process').
+    return [
+      'node:*',
+      'child_process', 'crypto', 'fs', 'http', 'https', 'net', 'os',
+      'path', 'stream', 'url', 'util', 'zlib', 'events', 'buffer',
+      'querystring', 'tls', 'dns', 'dgram', 'cluster', 'worker_threads',
+      'uWebSockets.js',
+    ]
   }
 
   getPlatform(): 'node' {
     return 'node'
   }
 
-  getFormat(): 'cjs' {
-    return 'cjs'
-  }
 
   async deploy(options: {
     buildDir: string

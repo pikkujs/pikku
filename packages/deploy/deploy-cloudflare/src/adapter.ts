@@ -373,7 +373,7 @@ export class CloudflareProviderAdapter {
       `import { stopSingletonServices } from '@pikku/core'`,
       `import { ConsoleLogger } from '@pikku/core/services'`,
       `import { InMemorySchedulerService } from '@pikku/schedule'`,
-      `import { PikkuUWSServer } from '@pikku/uws-server'`,
+      `import { PikkuUWSServer } from '@pikku/uws'`,
       ``,
       ctx.configImport,
       ctx.servicesImport,

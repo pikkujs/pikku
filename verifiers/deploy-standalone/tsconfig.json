@@ -1,0 +1,11 @@
+{
+  "extends": "../../packages/tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "module": "Node18",
+    "outDir": "dist",
+    "target": "esnext"
+  },
+  "include": ["*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

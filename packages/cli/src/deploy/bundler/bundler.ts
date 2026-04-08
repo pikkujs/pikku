@@ -146,13 +146,22 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     dir = parent
   }
 
+  // For ESM + node platform, CJS deps may use require() for builtins.
+  // esbuild wraps these as __require() which fails at runtime in ESM.
+  // The banner shims require via createRequire so CJS builtins resolve.
+  const resolvedFormat = format ?? 'esm'
+  const banner = resolvedFormat === 'esm' && (platform ?? 'node') === 'node'
+    ? { js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);` }
+    : undefined
+
   const result = await build({
     entryPoints: [entryPath],
     bundle: true,
     absWorkingDir: projectDir,
     nodePaths,
     platform: platform ?? 'node',
-    format: format ?? 'esm',
+    format: resolvedFormat,
+    banner,
     metafile: true,
     target: 'es2022',
     outfile: bundlePath,
