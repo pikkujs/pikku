@@ -16,6 +16,7 @@ export const generateDynamicAgent = pikkuWorkflowComplexFunc<
   {
     success: boolean
     agentName: string
+    description: string
     filePath: string
     config: any
     inputTokens: number
@@ -26,12 +27,18 @@ export const generateDynamicAgent = pikkuWorkflowComplexFunc<
   description: 'Generates an AI agent from a natural language prompt',
   expose: true,
   func: async ({}, data, { workflow }) => {
+    const summarised = await workflow.do(
+      'Summarise prompt',
+      'aiSummarisePrompt',
+      { prompt: data.prompt }
+    )
+    let totalInputTokens = summarised.inputTokens || 0
+    let totalOutputTokens = summarised.outputTokens || 0
+    let totalCostUsd = summarised.costUsd || 0
+
     const tools = await workflow.do('List tools', 'listAvailableTools', null)
 
     let selectedNames: string[]
-    let totalInputTokens = 0
-    let totalOutputTokens = 0
-    let totalCostUsd = 0
 
     if (data.toolFilter && data.toolFilter.length > 0) {
       selectedNames = data.toolFilter
@@ -41,9 +48,9 @@ export const generateDynamicAgent = pikkuWorkflowComplexFunc<
         functions: tools.summaries,
       })
       selectedNames = selected.names
-      totalInputTokens = selected.inputTokens || 0
-      totalOutputTokens = selected.outputTokens || 0
-      totalCostUsd = selected.costUsd || 0
+      totalInputTokens += selected.inputTokens || 0
+      totalOutputTokens += selected.outputTokens || 0
+      totalCostUsd += selected.costUsd || 0
     }
 
     const middleware = await workflow.do(
@@ -79,6 +86,10 @@ export const generateDynamicAgent = pikkuWorkflowComplexFunc<
       totalOutputTokens += design.outputTokens || 0
       totalCostUsd += design.costUsd || 0
 
+      if (design.config) {
+        design.config.description = summarised.summary
+      }
+
       const validation = await workflow.do(
         'Validate config',
         'validateAgentConfig',
@@ -109,6 +120,7 @@ export const generateDynamicAgent = pikkuWorkflowComplexFunc<
         return {
           success: true,
           agentName: agentName!,
+          description: summarised.summary,
           filePath: written.filePath,
           config: design.config,
           inputTokens: totalInputTokens,
@@ -123,6 +135,7 @@ export const generateDynamicAgent = pikkuWorkflowComplexFunc<
     return {
       success: false,
       agentName: '',
+      description: summarised.summary,
       filePath: '',
       config: null,
       inputTokens: totalInputTokens,

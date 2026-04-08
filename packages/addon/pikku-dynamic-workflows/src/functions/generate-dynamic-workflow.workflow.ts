@@ -5,6 +5,7 @@ export const generateDynamicWorkflow = pikkuWorkflowComplexFunc<
   {
     success: boolean
     workflowName: string
+    description: string
     graph: any
     inputTokens: number
     outputTokens: number
@@ -14,6 +15,15 @@ export const generateDynamicWorkflow = pikkuWorkflowComplexFunc<
   description: 'Generates a dynamic workflow from a natural language prompt',
   expose: true,
   func: async ({}, data, { workflow }) => {
+    const summarised = await workflow.do(
+      'Summarise prompt',
+      'aiSummarisePrompt',
+      { prompt: data.prompt }
+    )
+    let totalInputTokens = summarised.inputTokens || 0
+    let totalOutputTokens = summarised.outputTokens || 0
+    let totalCostUsd = summarised.costUsd || 0
+
     const functions = await workflow.do(
       'List functions',
       'listDynamicFunctions',
@@ -21,9 +31,6 @@ export const generateDynamicWorkflow = pikkuWorkflowComplexFunc<
     )
 
     let selectedNames: string[]
-    let totalInputTokens = 0
-    let totalOutputTokens = 0
-    let totalCostUsd = 0
 
     if (data.functionFilter && data.functionFilter.length > 0) {
       selectedNames = data.functionFilter
@@ -37,9 +44,9 @@ export const generateDynamicWorkflow = pikkuWorkflowComplexFunc<
         }
       )
       selectedNames = selected.names
-      totalInputTokens = selected.inputTokens || 0
-      totalOutputTokens = selected.outputTokens || 0
-      totalCostUsd = selected.costUsd || 0
+      totalInputTokens += selected.inputTokens || 0
+      totalOutputTokens += selected.outputTokens || 0
+      totalCostUsd += selected.costUsd || 0
     }
 
     const schemas = await workflow.do('Get schemas', 'getFunctionSchemas', {
@@ -91,13 +98,14 @@ export const generateDynamicWorkflow = pikkuWorkflowComplexFunc<
           {
             name: workflowName,
             nodes: graph.nodes,
-            workflowDescription: data.prompt,
+            workflowDescription: summarised.summary,
             entryNodeIds: validation.entryNodeIds,
           }
         )
         return {
           success: true,
           workflowName: stored.workflowName,
+          description: summarised.summary,
           graph: graph.nodes,
           inputTokens: totalInputTokens,
           outputTokens: totalOutputTokens,
@@ -110,6 +118,7 @@ export const generateDynamicWorkflow = pikkuWorkflowComplexFunc<
     return {
       success: false,
       workflowName: '',
+      summary: summarised.summary,
       graph: null,
       inputTokens: totalInputTokens,
       outputTokens: totalOutputTokens,

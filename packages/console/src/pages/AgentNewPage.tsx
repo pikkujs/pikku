@@ -1,29 +1,22 @@
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
+import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import {
   Stack,
   Textarea,
   TextInput,
   Button,
-  Alert,
   Group,
   Text,
   Box,
   MultiSelect,
   Switch,
 } from '@mantine/core'
-import {
-  Sparkles,
-  ArrowLeft,
-  CheckCircle,
-  AlertTriangle,
-  RotateCcw,
-} from 'lucide-react'
+import { Sparkles, ArrowLeft } from 'lucide-react'
 import { useNavigate } from '@/router'
 import { useGenerateAgent } from '@/hooks/useAgentEditor'
 import { useWorkflowRun, useWorkflowRunSteps } from '@/hooks/useWorkflowRuns'
 import { useAddonFunctions } from '@/hooks/useAddonFunctions'
 import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { GenerationTimeline } from '@/components/workflow/GenerationTimeline'
+import { GenerationScreen } from '@/components/workflow/GenerationScreen'
 
 type Status = 'idle' | 'generating' | 'success' | 'failed'
 
@@ -52,7 +45,6 @@ export const AgentNewPage: React.FunctionComponent = () => {
   const [status, setStatus] = useState<Status>('idle')
   const [runId, setRunId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const progressRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
 
   const generateAgent = useGenerateAgent()
@@ -162,9 +154,6 @@ export const AgentNewPage: React.FunctionComponent = () => {
         allowSubAgents,
       })
       setRunId(result.runId)
-      setTimeout(() => {
-        progressRef.current?.scrollIntoView({ behavior: 'smooth' })
-      }, 100)
     } catch (e: unknown) {
       setStatus('failed')
       setError(
@@ -191,10 +180,36 @@ export const AgentNewPage: React.FunctionComponent = () => {
     [status, prompt, handleGenerate]
   )
 
-  const isGenerating = status === 'generating'
   const agentName = run?.output?.agentName as string | undefined
   const toolHint =
     selectedFunctions.length > 0 ? getToolCountHint(expandedFunctionCount) : null
+
+  if (status !== 'idle') {
+    return (
+      <GenerationScreen
+        type="agent"
+        prompt={prompt}
+        status={status}
+        steps={steps ?? []}
+        resultName={agentName}
+        description={run?.output?.description as string | undefined}
+        error={error}
+        onViewResult={() =>
+          navigate(`/agents?id=${encodeURIComponent(agentName ?? '')}`)
+        }
+        onRetry={handleRetry}
+        onCreateAnother={() => {
+          setStatus('idle')
+          setRunId(null)
+          setPrompt('')
+          setName('')
+          setSelectedFunctions([])
+          setAllowSubAgents(false)
+        }}
+        onCancel={handleRetry}
+      />
+    )
+  }
 
   return (
     <Box style={{ maxWidth: 720, margin: '0 auto' }} py="xl" px="md">
@@ -221,7 +236,6 @@ export const AgentNewPage: React.FunctionComponent = () => {
           value={name}
           onChange={(e) => setName(e.currentTarget.value)}
           size="sm"
-          readOnly={isGenerating}
         />
 
         <Textarea
@@ -234,8 +248,6 @@ export const AgentNewPage: React.FunctionComponent = () => {
           maxRows={12}
           autosize
           size="md"
-          readOnly={isGenerating}
-          styles={isGenerating ? { input: { opacity: 0.7 } } : undefined}
         />
 
         <Stack gap="xs">
@@ -248,7 +260,6 @@ export const AgentNewPage: React.FunctionComponent = () => {
             clearable
             size="xs"
             placeholder="All functions — select to limit"
-            disabled={isGenerating}
           />
           {toolHint && (
             <Text size="xs" c={toolHint.color}>
@@ -262,7 +273,6 @@ export const AgentNewPage: React.FunctionComponent = () => {
           description="The agent can delegate tasks to other existing agents"
           checked={allowSubAgents}
           onChange={(e) => setAllowSubAgents(e.currentTarget.checked)}
-          disabled={isGenerating}
         />
 
         <Group justify="flex-end">
@@ -274,82 +284,12 @@ export const AgentNewPage: React.FunctionComponent = () => {
         <Button
           size="lg"
           fullWidth
-          leftSection={
-            status === 'failed' ? (
-              <RotateCcw size={18} />
-            ) : (
-              <Sparkles size={18} />
-            )
-          }
-          onClick={status === 'failed' ? handleRetry : handleGenerate}
-          loading={isGenerating}
-          disabled={!prompt.trim() && status !== 'failed'}
-          loaderProps={{ type: 'dots' }}
+          leftSection={<Sparkles size={18} />}
+          onClick={handleGenerate}
+          disabled={!prompt.trim()}
         >
-          {status === 'failed'
-            ? 'Edit & Retry'
-            : isGenerating
-              ? 'Generating...'
-              : 'Generate Agent'}
+          Generate Agent
         </Button>
-
-        {((steps && steps.length > 0) || isGenerating) && (
-          <div ref={progressRef}>
-            <GenerationTimeline steps={steps ?? []} />
-          </div>
-        )}
-
-        {status === 'success' && agentName && (
-          <Alert
-            color="teal"
-            variant="light"
-            icon={<CheckCircle size={16} />}
-            title="Agent created"
-          >
-            <Stack gap="xs">
-              <Text size="sm">
-                Agent <strong>{agentName}</strong> generated successfully.
-              </Text>
-              <Group gap="sm">
-                <Button
-                  size="xs"
-                  onClick={() =>
-                    navigate(
-                      `/agents?id=${encodeURIComponent(agentName)}`
-                    )
-                  }
-                >
-                  View Agent
-                </Button>
-                <Button
-                  size="xs"
-                  variant="subtle"
-                  onClick={() => {
-                    setStatus('idle')
-                    setRunId(null)
-                    setPrompt('')
-                    setName('')
-                    setSelectedFunctions([])
-                    setAllowSubAgents(false)
-                  }}
-                >
-                  Create Another
-                </Button>
-              </Group>
-            </Stack>
-          </Alert>
-        )}
-
-        {status === 'failed' && error && (
-          <Alert
-            color="red"
-            variant="light"
-            icon={<AlertTriangle size={16} />}
-            title="Generation failed"
-          >
-            <Text size="sm">{error}</Text>
-          </Alert>
-        )}
       </Stack>
     </Box>
   )

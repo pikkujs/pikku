@@ -1,3 +1,4 @@
+export { aiSummarisePrompt } from './functions/ai-summarise-prompt.function.js'
 export { listAvailableTools } from './functions/list-available-tools.function.js'
 export { listAvailableMiddleware } from './functions/list-available-middleware.function.js'
 export { getToolSchemas } from './functions/get-tool-schemas.function.js'

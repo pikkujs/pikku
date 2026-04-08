@@ -4,14 +4,25 @@ import { Check, X, Loader2, Circle } from 'lucide-react'
 import type { WorkflowStepData } from '@/hooks/useWorkflowRuns'
 
 const STEP_LABELS: Record<string, string> = {
+  'Summarise prompt': 'Understanding your request',
   'List functions': 'Listing available functions',
+  'List tools': 'Listing available tools',
   'Select functions': 'Selecting relevant functions',
+  'Select tools': 'Selecting relevant tools',
+  'List middleware': 'Checking available middleware',
   'Get schemas': 'Loading function schemas',
   'Generate graph (attempt 1)': 'Generating workflow graph',
   'Generate graph (attempt 2)': 'Retrying graph generation',
   'Generate graph (attempt 3)': 'Final graph generation attempt',
+  'Design agent (attempt 1)': 'Designing agent configuration',
+  'Design agent (attempt 2)': 'Retrying agent design',
+  'Design agent (attempt 3)': 'Final agent design attempt',
   'Validate graph': 'Validating graph',
+  'Validate config': 'Validating agent configuration',
+  'Name workflow': 'Naming your workflow',
+  'Name agent': 'Naming your agent',
   'Store workflow': 'Storing workflow',
+  'Write file': 'Writing agent file',
 }
 
 const statusColor = (status: string) => {

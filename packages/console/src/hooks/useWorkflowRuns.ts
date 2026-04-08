@@ -21,6 +21,7 @@ export interface WorkflowStepData {
   startedAt?: string
   completedAt?: string
   duration?: number
+  result?: unknown
   error?: { message: string }
 }
 

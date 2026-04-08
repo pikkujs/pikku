@@ -1,3 +1,4 @@
+export { aiSummarisePrompt } from './functions/ai-summarise-prompt.function.js'
 export { listDynamicFunctions } from './functions/list-dynamic-functions.function.js'
 export { getFunctionSchemas } from './functions/get-function-schemas.function.js'
 export { aiSelectFunctions } from './functions/ai-select-functions.function.js'

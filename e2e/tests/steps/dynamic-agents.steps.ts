@@ -279,8 +279,10 @@ Then(
   'I should see the agent generation timeline',
   { timeout: 60_000 },
   async function (this: AgentWorld) {
-    const timeline = this.page.locator('[class*="Timeline"]')
-    await expect(timeline.first()).toBeVisible({ timeout: 30_000 })
+    const step = this.page.getByText(
+      /understanding your request|listing available/i
+    )
+    await expect(step.first()).toBeVisible({ timeout: 30_000 })
   }
 )
 
