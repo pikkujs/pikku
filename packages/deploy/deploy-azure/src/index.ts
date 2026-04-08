@@ -16,3 +16,5 @@ export type {
   AzureTimerResource,
   AzureWebPubSubResource,
 } from './types.js'
+
+export { createAdapter } from './adapter.js'

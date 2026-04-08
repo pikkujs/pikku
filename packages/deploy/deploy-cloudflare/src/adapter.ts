@@ -94,17 +94,38 @@ export class CloudflareProviderAdapter {
   private resolvePlatformImports(
     unit: DeploymentUnit,
     extraImports: string[] = []
-  ): { cfImports: string[]; needsD1: boolean; needsQueue: boolean; needsWorkflow: boolean; needsAI: boolean } {
+  ): {
+    cfImports: string[]
+    needsD1: boolean
+    needsQueue: boolean
+    needsWorkflow: boolean
+    needsAI: boolean
+  } {
     const needsQueue = unit.services.some((s) => s.capability === 'queue')
-    const needsWorkflow = unit.services.some((s) => s.capability === 'workflow-state')
-    const needsAI = unit.services.some((s) => s.capability === 'ai-storage' || s.capability === 'ai-model')
+    const needsWorkflow = unit.services.some(
+      (s) => s.capability === 'workflow-state'
+    )
+    const needsAI = unit.services.some(
+      (s) => s.capability === 'ai-storage' || s.capability === 'ai-model'
+    )
 
     const cfImports = [...extraImports]
     if (needsQueue) cfImports.push('CloudflareQueueService')
     if (needsWorkflow) cfImports.push('CloudflareWorkflowService')
-    if (needsAI) cfImports.push('CloudflareAIStorageService', 'CloudflareAgentRunService', 'CloudflareAIRunStateService')
+    if (needsAI)
+      cfImports.push(
+        'CloudflareAIStorageService',
+        'CloudflareAgentRunService',
+        'CloudflareAIRunStateService'
+      )
 
-    return { cfImports, needsD1: needsWorkflow || needsAI, needsQueue, needsWorkflow, needsAI }
+    return {
+      cfImports,
+      needsD1: needsWorkflow || needsAI,
+      needsQueue,
+      needsWorkflow,
+      needsAI,
+    }
   }
 
   generateEntrySource(ctx: EntryGenerationContext): string {
@@ -138,20 +159,32 @@ export class CloudflareProviderAdapter {
    */
   private generateCombinedHandlerEntry(ctx: EntryGenerationContext): string {
     const handlerTypes = getHandlerTypes(ctx.unit)
-    const platform = this.resolvePlatformImports(ctx.unit, ['createCloudflareHandler'])
+    const platform = this.resolvePlatformImports(ctx.unit, [
+      'createCloudflareHandler',
+    ])
 
     const lines: string[] = [
       `// Generated entry for "${ctx.unit.name}" (${ctx.unit.role})`,
       `import { createCloudflareHandler } from '@pikku/cloudflare/handler'`,
       `import type { CloudflareEnv } from '@pikku/cloudflare/handler'`,
-      ...(platform.needsQueue ? [`import { CloudflareQueueService } from '@pikku/cloudflare/queue'`] : []),
-      ...(platform.needsD1 ? [
-        `import { ${[
-          ...(platform.needsWorkflow ? ['CloudflareWorkflowService'] : []),
-          ...(platform.needsAI ? ['CloudflareAIStorageService', 'CloudflareAgentRunService', 'CloudflareAIRunStateService'] : []),
-        ].join(', ')} } from '@pikku/cloudflare/d1'`,
-        `import type { D1Database } from '@cloudflare/workers-types'`,
-      ] : []),
+      ...(platform.needsQueue
+        ? [`import { CloudflareQueueService } from '@pikku/cloudflare/queue'`]
+        : []),
+      ...(platform.needsD1
+        ? [
+            `import { ${[
+              ...(platform.needsWorkflow ? ['CloudflareWorkflowService'] : []),
+              ...(platform.needsAI
+                ? [
+                    'CloudflareAIStorageService',
+                    'CloudflareAgentRunService',
+                    'CloudflareAIRunStateService',
+                  ]
+                : []),
+            ].join(', ')} } from '@pikku/cloudflare/d1'`,
+            `import type { D1Database } from '@cloudflare/workers-types'`,
+          ]
+        : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
       ctx.configImport,
@@ -176,20 +209,32 @@ export class CloudflareProviderAdapter {
    * Uses the WebSocket handler factory and exports the DO class.
    */
   private generateChannelGatewayEntry(ctx: EntryGenerationContext): string {
-    const platform = this.resolvePlatformImports(ctx.unit, ['createCloudflareWebSocketHandler'])
+    const platform = this.resolvePlatformImports(ctx.unit, [
+      'createCloudflareWebSocketHandler',
+    ])
 
     const lines: string[] = [
       `// Generated entry for "${ctx.unit.name}" (${ctx.unit.role})`,
       `import { createCloudflareWebSocketHandler } from '@pikku/cloudflare/handler'`,
       `import type { CloudflareEnv } from '@pikku/cloudflare/handler'`,
-      ...(platform.needsQueue ? [`import { CloudflareQueueService } from '@pikku/cloudflare/queue'`] : []),
-      ...(platform.needsD1 ? [
-        `import { ${[
-          ...(platform.needsWorkflow ? ['CloudflareWorkflowService'] : []),
-          ...(platform.needsAI ? ['CloudflareAIStorageService', 'CloudflareAgentRunService', 'CloudflareAIRunStateService'] : []),
-        ].join(', ')} } from '@pikku/cloudflare/d1'`,
-        `import type { D1Database } from '@cloudflare/workers-types'`,
-      ] : []),
+      ...(platform.needsQueue
+        ? [`import { CloudflareQueueService } from '@pikku/cloudflare/queue'`]
+        : []),
+      ...(platform.needsD1
+        ? [
+            `import { ${[
+              ...(platform.needsWorkflow ? ['CloudflareWorkflowService'] : []),
+              ...(platform.needsAI
+                ? [
+                    'CloudflareAIStorageService',
+                    'CloudflareAgentRunService',
+                    'CloudflareAIRunStateService',
+                  ]
+                : []),
+            ].join(', ')} } from '@pikku/cloudflare/d1'`,
+            `import type { D1Database } from '@cloudflare/workers-types'`,
+          ]
+        : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
       ctx.configImport,
@@ -222,8 +267,13 @@ export class CloudflareProviderAdapter {
     })
     const bindingsMap = `{\n${bindingEntries.join(',\n')}\n  }`
 
-    const handlerName = includeQueueHandler ? 'createCloudflareHandler' : 'createCloudflareWorkerHandler'
-    const platform = this.resolvePlatformImports(ctx.unit, [handlerName, 'CloudflareDeploymentService'])
+    const handlerName = includeQueueHandler
+      ? 'createCloudflareHandler'
+      : 'createCloudflareWorkerHandler'
+    const platform = this.resolvePlatformImports(ctx.unit, [
+      handlerName,
+      'CloudflareDeploymentService',
+    ])
 
     const handlerTypes = includeQueueHandler ? `["fetch", "queue"]` : ''
 
@@ -240,14 +290,24 @@ export class CloudflareProviderAdapter {
       handlerImport,
       `import type { CloudflareEnv } from '@pikku/cloudflare/handler'`,
       `import { CloudflareDeploymentService } from '@pikku/cloudflare/deployment'`,
-      ...(platform.needsQueue ? [`import { CloudflareQueueService } from '@pikku/cloudflare/queue'`] : []),
-      ...(platform.needsD1 ? [
-        `import { ${[
-          ...(platform.needsWorkflow ? ['CloudflareWorkflowService'] : []),
-          ...(platform.needsAI ? ['CloudflareAIStorageService', 'CloudflareAgentRunService', 'CloudflareAIRunStateService'] : []),
-        ].join(', ')} } from '@pikku/cloudflare/d1'`,
-        `import type { D1Database } from '@cloudflare/workers-types'`,
-      ] : []),
+      ...(platform.needsQueue
+        ? [`import { CloudflareQueueService } from '@pikku/cloudflare/queue'`]
+        : []),
+      ...(platform.needsD1
+        ? [
+            `import { ${[
+              ...(platform.needsWorkflow ? ['CloudflareWorkflowService'] : []),
+              ...(platform.needsAI
+                ? [
+                    'CloudflareAIStorageService',
+                    'CloudflareAgentRunService',
+                    'CloudflareAIRunStateService',
+                  ]
+                : []),
+            ].join(', ')} } from '@pikku/cloudflare/d1'`,
+            `import type { D1Database } from '@cloudflare/workers-types'`,
+          ]
+        : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
       ctx.configImport,
@@ -287,7 +347,7 @@ export class CloudflareProviderAdapter {
         `    const workflowService = new CloudflareWorkflowService(env.WORKFLOW_DB as D1Database)`,
         `    await workflowService.init()`,
         `    services.workflowService = workflowService`,
-        `  }`,
+        `  }`
       )
     }
     if (platform.needsAI) {
@@ -301,7 +361,7 @@ export class CloudflareProviderAdapter {
         `    const aiRunState = new CloudflareAIRunStateService(db)`,
         `    await aiRunState.init()`,
         `    services.aiRunState = aiRunState`,
-        `  }`,
+        `  }`
       )
     }
     lines.push(`  return services`, `}`)
@@ -333,7 +393,7 @@ export class CloudflareProviderAdapter {
         `    const workflowService = new CloudflareWorkflowService(env.WORKFLOW_DB as D1Database)`,
         `    await workflowService.init()`,
         `    services.workflowService = workflowService`,
-        `  }`,
+        `  }`
       )
     }
     if (platform.needsAI) {
@@ -347,7 +407,7 @@ export class CloudflareProviderAdapter {
         `    const aiRunState = new CloudflareAIRunStateService(db)`,
         `    await aiRunState.init()`,
         `    services.aiRunState = aiRunState`,
-        `  }`,
+        `  }`
       )
     }
     lines.push(
@@ -358,7 +418,7 @@ export class CloudflareProviderAdapter {
       `    ${bindingsMap}`,
       `  )`,
       `  return services`,
-      `}`,
+      `}`
     )
     return lines
   }
@@ -459,14 +519,18 @@ export class CloudflareProviderAdapter {
       )
       configs.set(
         'server-proxy/package.json',
-        JSON.stringify({
-          name: `${manifest.projectId}-server-proxy`,
-          private: true,
-          type: 'module',
-          dependencies: {
-            '@cloudflare/containers': '^0.0.1',
+        JSON.stringify(
+          {
+            name: `${manifest.projectId}-server-proxy`,
+            private: true,
+            type: 'module',
+            dependencies: {
+              '@cloudflare/containers': '^0.0.1',
+            },
           },
-        }, null, 2)
+          null,
+          2
+        )
       )
     }
 
@@ -498,8 +562,9 @@ export class CloudflareProviderAdapter {
       .map((q) => q.name)
 
     // Collect cron schedules for server units
-    const serverCrons = manifest.scheduledTasks
-      .filter((t) => serverUnits.some((u) => u.name === t.unitName))
+    const serverCrons = manifest.scheduledTasks.filter((t) =>
+      serverUnits.some((u) => u.name === t.unitName)
+    )
 
     return [
       `// Generated proxy Worker — routes traffic to CF Container`,
@@ -582,8 +647,9 @@ export class CloudflareProviderAdapter {
     ]
 
     // Queue consumers for server functions
-    const serverQueueNames = manifest.queues
-      .filter((q) => serverUnits.some((u) => u.name === q.consumerUnit))
+    const serverQueueNames = manifest.queues.filter((q) =>
+      serverUnits.some((u) => u.name === q.consumerUnit)
+    )
 
     for (const queue of serverQueueNames) {
       lines.push(
@@ -591,13 +657,14 @@ export class CloudflareProviderAdapter {
         `[[queues.consumers]]`,
         `queue = "${projectId}-${queue.name}"`,
         `max_batch_size = 10`,
-        `max_batch_timeout = 5`,
+        `max_batch_timeout = 5`
       )
     }
 
     // Cron triggers for server functions
-    const serverCrons = manifest.scheduledTasks
-      .filter((t) => serverUnits.some((u) => u.name === t.unitName))
+    const serverCrons = manifest.scheduledTasks.filter((t) =>
+      serverUnits.some((u) => u.name === t.unitName)
+    )
 
     if (serverCrons.length > 0) {
       lines.push(``, `[triggers]`, `crons = [`)
@@ -640,3 +707,5 @@ function toWorkerBinding(name: string): string {
 function fromKebab(str: string): string {
   return str.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
 }
+
+export const createAdapter = () => new CloudflareProviderAdapter()

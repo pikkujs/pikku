@@ -23,3 +23,5 @@ export type {
   EventBridgeRuleResource,
   WebSocketApiResource,
 } from './types.js'
+
+export { createAdapter } from './adapter.js'

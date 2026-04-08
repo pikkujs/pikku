@@ -87,3 +87,5 @@ export type {
   WorkerSecretEntry,
   CronTrigger,
 } from './types.js'
+
+export { createAdapter } from './adapter.js'

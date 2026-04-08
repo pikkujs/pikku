@@ -426,3 +426,5 @@ function toAzureCron(schedule: string): string {
   }
   return schedule
 }
+
+export const createAdapter = () => new AzureProviderAdapter()
