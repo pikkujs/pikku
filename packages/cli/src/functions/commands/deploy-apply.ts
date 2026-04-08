@@ -124,20 +124,19 @@ export async function resolveProvider(
     )
   }
 
+  const adapterExportName =
+    name.charAt(0).toUpperCase() + name.slice(1) + 'ProviderAdapter'
+
   try {
     const mod = await import(packageName)
     if (typeof mod.createAdapter === 'function') {
       return mod.createAdapter()
     }
-    const AdapterClass = Object.values(mod).find(
-      (v: any) =>
-        typeof v === 'function' && v.prototype && 'deployDirName' in v.prototype
-    ) as (new () => ProviderAdapter) | undefined
-    if (AdapterClass) {
-      return new AdapterClass()
+    if (typeof mod[adapterExportName] === 'function') {
+      return new mod[adapterExportName]()
     }
     throw new Error(
-      `Deploy provider '${packageName}' does not export createAdapter() or a provider class`
+      `Deploy provider '${packageName}' does not export createAdapter() or ${adapterExportName}`
     )
   } catch (e: unknown) {
     const err = e as { code?: string; message?: string }
