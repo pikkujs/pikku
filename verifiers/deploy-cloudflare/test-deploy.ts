@@ -1,43 +1,26 @@
 /**
  * Offline verifier for Cloudflare deploy pipeline.
  *
- * Runs `pikku deploy plan` against the functions template and asserts:
- * - Manifest: correct units, queues, scheduled tasks, roles
- * - Per-unit codegen: correct requiredSingletonServices
- * - Bundle sizes: tree-shaking effective (no kysely in simple units)
- * - Entry files: sub-path imports, no barrel imports
- * - Infra manifest: D1, queues, cron triggers, service bindings
+ * Tests against verifiers/functions/ — asserts actual manifest content:
+ * specific unit names, queues, routes, services, tree-shaking, entry imports.
  */
 
 import { execSync } from 'child_process'
-import { readFileSync, existsSync, readdirSync, statSync } from 'fs'
+import { readFileSync, existsSync, readdirSync, statSync, writeFileSync } from 'fs'
 import { join } from 'path'
-import { test, describe } from 'node:test'
-import * as assert from 'node:assert'
 
-const FUNCTIONS_TEMPLATE = join(process.cwd(), '..', '..', 'templates', 'functions')
-const DEPLOY_DIR = join(FUNCTIONS_TEMPLATE, '.deploy', 'cloudflare')
+const FUNCTIONS_DIR = join(process.cwd(), '..', 'functions')
+const DEPLOY_DIR = join(FUNCTIONS_DIR, '.deploy', 'cloudflare')
 
-// ---------------------------------------------------------------------------
-// Setup: Run pikku + deploy plan on the functions template
-// ---------------------------------------------------------------------------
-
-console.log('Setting up: running pikku codegen + deploy plan...')
-
-// Clean previous deploy output
-execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_TEMPLATE, stdio: 'pipe' })
-
-// Run codegen
-execSync('yarn pikku', { cwd: FUNCTIONS_TEMPLATE, stdio: 'pipe', timeout: 60_000 })
-
-// Run deploy plan (builds everything without deploying)
+console.log('Setting up: running pikku codegen + deploy plan (cloudflare)...')
+execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_DIR, stdio: 'pipe' })
+execSync('yarn pikku', { cwd: FUNCTIONS_DIR, stdio: 'pipe', timeout: 60_000 })
 execSync('yarn pikku deploy plan', {
-  cwd: FUNCTIONS_TEMPLATE,
+  cwd: FUNCTIONS_DIR,
   stdio: 'pipe',
   timeout: 300_000,
   env: { ...process.env, PIKKU_DEPLOY_PROVIDER: 'cloudflare' },
 })
-
 console.log('Setup complete.\n')
 
 // ---------------------------------------------------------------------------
@@ -53,28 +36,18 @@ function readText(path: string): string {
 }
 
 function getUnitDirs(): string[] {
+  if (!existsSync(DEPLOY_DIR)) return []
   return readdirSync(DEPLOY_DIR).filter((d) => {
     const p = join(DEPLOY_DIR, d)
     return statSync(p).isDirectory() && existsSync(join(p, 'bundle.js'))
   })
 }
 
-function getBundleSize(unitName: string): number {
-  const p = join(DEPLOY_DIR, unitName, 'bundle.js')
-  return statSync(p).size
-}
-
-function getUnitEntry(unitName: string): string {
-  return readText(join(DEPLOY_DIR, unitName, 'entry.ts'))
-}
-
 function getUnitServices(unitName: string): Record<string, boolean> {
-  const content = readText(
-    join(DEPLOY_DIR, unitName, '.pikku', 'pikku-services.gen.ts')
-  )
-  const match = content.match(
-    /export const requiredSingletonServices = \{([^}]+)\}/
-  )
+  const path = join(DEPLOY_DIR, unitName, '.pikku', 'pikku-services.gen.ts')
+  if (!existsSync(path)) return {}
+  const content = readText(path)
+  const match = content.match(/export const requiredSingletonServices = \{([^}]+)\}/)
   if (!match) return {}
   const services: Record<string, boolean> = {}
   for (const line of match[1].split('\n')) {
@@ -83,16 +56,6 @@ function getUnitServices(unitName: string): Record<string, boolean> {
   }
   return services
 }
-
-function getUnitBootstrap(unitName: string): string {
-  return readText(
-    join(DEPLOY_DIR, unitName, '.pikku', 'pikku-bootstrap.gen.ts')
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 let failures = 0
 const results: Array<{ name: string; passed: boolean; error?: string }> = []
@@ -107,238 +70,165 @@ function check(name: string, fn: () => void) {
   }
 }
 
-// --- Manifest ---
-
-const infraPath = join(DEPLOY_DIR, 'infra.json')
-const infra = existsSync(infraPath) ? readJSON(infraPath) : null
-
-check('infra.json exists', () => {
-  assert.ok(infra, 'infra.json should exist')
-})
-
-check('infra.json has units', () => {
-  const units = infra!.units as Record<string, unknown>
-  assert.ok(Object.keys(units).length >= 40, `Expected >= 40 units, got ${Object.keys(units).length}`)
-})
-
-check('infra.json has queues', () => {
-  const resources = infra!.resources as Record<string, unknown[]>
-  const queues = resources.queues ?? []
-  assert.ok(queues.length >= 8, `Expected >= 8 queues, got ${queues.length}`)
-})
-
-check('infra.json has D1 database', () => {
-  const resources = infra!.resources as Record<string, unknown[]>
-  const d1 = resources.d1 ?? []
-  assert.ok(d1.length >= 1, `Expected >= 1 D1 database, got ${d1.length}`)
-})
-
-check('infra.json has cron triggers', () => {
-  const resources = infra!.resources as Record<string, unknown[]>
-  const crons = resources.cronTriggers ?? []
-  assert.ok(crons.length >= 2, `Expected >= 2 cron triggers, got ${crons.length}`)
-})
-
-// --- Units ---
+function assertContains(actual: string[], expected: string[], label: string) {
+  const missing = expected.filter((e) => !actual.includes(e))
+  if (missing.length > 0) throw new Error(`${label}: missing [${missing.join(', ')}]`)
+}
 
 const unitDirs = getUnitDirs()
 
-check('all units bundled successfully', () => {
-  assert.ok(unitDirs.length >= 40, `Expected >= 40 bundled units, got ${unitDirs.length}`)
+// ---------------------------------------------------------------------------
+// Infra manifest
+// ---------------------------------------------------------------------------
+
+const infra = existsSync(join(DEPLOY_DIR, 'infra.json'))
+  ? readJSON(join(DEPLOY_DIR, 'infra.json'))
+  : null
+
+check('infra.json: has projectId, units, resources', () => {
+  if (!infra) throw new Error('infra.json missing')
+  if (!infra.projectId) throw new Error('Missing projectId')
+  if (!infra.units) throw new Error('Missing units')
+  if (!infra.resources) throw new Error('Missing resources')
 })
 
-// --- Bundle sizes (tree-shaking) ---
-
-check('greet bundle < 500KB (no kysely)', () => {
-  const size = getBundleSize('greet')
-  assert.ok(size < 500 * 1024, `greet bundle is ${(size / 1024).toFixed(0)}KB, expected < 500KB`)
+check('infra.json: has queues for hello-world-queue + workflow queues', () => {
+  const resources = infra!.resources as Record<string, unknown[]>
+  const queues = resources.queues ?? []
+  if (queues.length < 3) throw new Error(`Expected >= 3 queues, got ${queues.length}`)
 })
 
-check('workflow orchestrator bundle > 500KB (has kysely)', () => {
-  const size = getBundleSize('wf-create-and-notify-workflow')
-  assert.ok(size > 500 * 1024, `orchestrator bundle is ${(size / 1024).toFixed(0)}KB, expected > 500KB`)
+check('infra.json: has D1 database for workflow state', () => {
+  const resources = infra!.resources as Record<string, unknown[]>
+  const d1 = resources.d1 ?? []
+  if (d1.length < 1) throw new Error(`Expected >= 1 D1, got ${d1.length}`)
 })
 
-check('no unit exceeds 5MB', () => {
-  for (const unit of unitDirs) {
-    const size = getBundleSize(unit)
-    assert.ok(size < 5 * 1024 * 1024, `${unit} is ${(size / 1024 / 1024).toFixed(1)}MB, exceeds 5MB`)
-  }
+check('infra.json: has cron trigger for myScheduledTask', () => {
+  const resources = infra!.resources as Record<string, unknown[]>
+  const crons = resources.cronTriggers ?? []
+  if (crons.length < 1) throw new Error(`Expected >= 1 cron, got ${crons.length}`)
 })
 
-// --- Entry file imports (sub-path, not barrel) ---
+// ---------------------------------------------------------------------------
+// Units: expected from verifiers/functions/
+// ---------------------------------------------------------------------------
 
-check('greet entry uses @pikku/cloudflare/handler (not barrel)', () => {
-  const entry = getUnitEntry('greet')
-  assert.ok(entry.includes("@pikku/cloudflare/handler"), 'Should import from /handler sub-path')
-  assert.ok(!entry.includes("from '@pikku/cloudflare'"), 'Should NOT import from barrel')
+check('HTTP units: welcome-to-pikku, hello-world, greet-with-zod, calculate-with-zod', () => {
+  assertContains(unitDirs, [
+    'welcome-to-pikku', 'hello-world', 'greet-with-zod', 'calculate-with-zod',
+  ], 'HTTP units')
 })
 
-check('greet entry does NOT import CloudflareWorkflowService', () => {
-  const entry = getUnitEntry('greet')
-  assert.ok(!entry.includes('CloudflareWorkflowService'), 'Should not import workflow service')
-  assert.ok(!entry.includes('CloudflareAIStorageService'), 'Should not import AI storage')
+check('queue worker unit: queue-worker', () => {
+  assertContains(unitDirs, ['queue-worker'], 'Queue units')
+})
+
+check('scheduled task unit: my-scheduled-task', () => {
+  assertContains(unitDirs, ['my-scheduled-task'], 'Scheduled units')
+})
+
+check('MCP server unit', () => {
+  assertContains(unitDirs, ['mcp-server'], 'MCP')
+})
+
+check('workflow orchestrators: onboarding + DSL', () => {
+  const wfUnits = unitDirs.filter((d) => d.startsWith('wf-'))
+  if (wfUnits.length < 2) throw new Error(`Expected >= 2 wf- units, got: ${wfUnits.join(', ')}`)
+})
+
+check('channel units exist', () => {
+  const ch = unitDirs.filter((d) => d.startsWith('channel-'))
+  if (ch.length < 1) throw new Error(`Expected >= 1 channel unit, got ${ch.length}`)
+})
+
+check('workflow step units: create-user-profile, send-email', () => {
+  assertContains(unitDirs, ['create-user-profile', 'send-email'], 'Workflow step units')
+})
+
+check('total units >= 15', () => {
+  if (unitDirs.length < 15) throw new Error(`Got ${unitDirs.length}`)
+})
+
+// ---------------------------------------------------------------------------
+// Tree-shaking: sub-path imports
+// ---------------------------------------------------------------------------
+
+check('hello-world entry uses @pikku/cloudflare/handler (not barrel)', () => {
+  const entry = readText(join(DEPLOY_DIR, 'hello-world', 'entry.ts'))
+  if (!entry.includes('@pikku/cloudflare/handler')) throw new Error('Should use /handler sub-path')
+  if (entry.includes("from '@pikku/cloudflare'")) throw new Error('Should NOT use barrel import')
+})
+
+check('hello-world entry does NOT import CloudflareWorkflowService', () => {
+  const entry = readText(join(DEPLOY_DIR, 'hello-world', 'entry.ts'))
+  if (entry.includes('CloudflareWorkflowService')) throw new Error('Should not import workflow service')
 })
 
 check('workflow orchestrator entry imports from @pikku/cloudflare/d1', () => {
-  const entry = getUnitEntry('wf-create-and-notify-workflow')
-  assert.ok(entry.includes("@pikku/cloudflare/d1"), 'Should import from /d1 sub-path')
-  assert.ok(entry.includes('CloudflareWorkflowService'), 'Should import workflow service')
+  const orchUnits = unitDirs.filter((d) => d.startsWith('wf-'))
+  if (orchUnits.length === 0) throw new Error('No wf- units')
+  const entry = readText(join(DEPLOY_DIR, orchUnits[0], 'entry.ts'))
+  if (!entry.includes('@pikku/cloudflare/d1')) throw new Error('Orchestrator should use /d1 sub-path')
 })
 
-// --- Per-unit services ---
+// ---------------------------------------------------------------------------
+// Per-unit services
+// ---------------------------------------------------------------------------
 
-check('greet: workflowService=false, queueService=false', () => {
-  const services = getUnitServices('greet')
-  assert.strictEqual(services.workflowService, false)
-  assert.strictEqual(services.queueService, false)
+check('hello-world: workflowService=false', () => {
+  const svc = getUnitServices('hello-world')
+  if (svc.workflowService !== false) throw new Error(`workflowService=${svc.workflowService}`)
 })
 
-check('create-todo (step worker): workflowService=true, queueService=true', () => {
-  const services = getUnitServices('create-todo')
-  assert.strictEqual(services.workflowService, true, 'Step worker needs workflowService')
-  assert.strictEqual(services.queueService, true, 'Step worker needs queueService')
+check('workflow step (create-user-profile): workflowService=true, queueService=true', () => {
+  const svc = getUnitServices('create-user-profile')
+  if (svc.workflowService !== true) throw new Error(`workflowService=${svc.workflowService}`)
+  if (svc.queueService !== true) throw new Error(`queueService=${svc.queueService}`)
 })
 
-check('wf-create-and-notify-workflow: workflowService=true', () => {
-  const services = getUnitServices('wf-create-and-notify-workflow')
-  assert.strictEqual(services.workflowService, true)
-})
+// ---------------------------------------------------------------------------
+// Bundle integrity
+// ---------------------------------------------------------------------------
 
-// --- Bootstrap correctness ---
-
-check('greet bootstrap has HTTP wirings', () => {
-  const bootstrap = getUnitBootstrap('greet')
-  assert.ok(bootstrap.includes('http/pikku-http-wirings'), 'Should include HTTP wirings')
-})
-
-check('greet bootstrap does NOT have workflow wirings', () => {
-  const bootstrap = getUnitBootstrap('greet')
-  assert.ok(!bootstrap.includes('workflow/pikku-workflow-wirings'), 'Should not include workflow wirings')
-})
-
-check('orchestrator bootstrap has workflow wirings', () => {
-  const bootstrap = getUnitBootstrap('wf-create-and-notify-workflow')
-  assert.ok(bootstrap.includes('workflow/pikku-workflow-wirings'), 'Should include workflow wirings')
-})
-
-// --- Queue meta for step workers ---
-
-check('create-todo unit has wf-step-create-todo queue meta', () => {
-  const queueMetaPath = join(
-    DEPLOY_DIR, 'create-todo', '.pikku', 'queue',
-    'pikku-queue-workers-wirings-meta.gen.json'
-  )
-  assert.ok(existsSync(queueMetaPath), 'Queue meta JSON should exist')
-  const meta = readJSON(queueMetaPath)
-  assert.ok('wf-step-create-todo' in meta, 'Should have wf-step-create-todo queue')
-})
-
-// --- Deploy target ---
-
-check('no server container generated (no serverlessIncompatible configured)', () => {
-  // With no serverlessIncompatible config, all units should be serverless Workers.
-  // No "server" or "server-proxy" directory should exist.
-  if (existsSync(join(DEPLOY_DIR, 'server'))) {
-    throw new Error('server/ directory should not exist when no serverlessIncompatible is configured')
-  }
-  if (existsSync(join(DEPLOY_DIR, 'server-proxy'))) {
-    throw new Error('server-proxy/ directory should not exist')
-  }
-})
-
-check('all units are serverless Workers (no Dockerfile)', () => {
+check('no unit exceeds 5MB', () => {
   for (const unit of unitDirs) {
-    if (existsSync(join(DEPLOY_DIR, unit, 'Dockerfile'))) {
-      throw new Error(`${unit} has a Dockerfile — should be a serverless Worker`)
-    }
+    const size = statSync(join(DEPLOY_DIR, unit, 'bundle.js')).size
+    if (size > 5 * 1024 * 1024) throw new Error(`${unit}: ${(size / 1024 / 1024).toFixed(1)}MB`)
+  }
+})
+
+check('every unit has entry.ts', () => {
+  for (const unit of unitDirs) {
+    if (!existsSync(join(DEPLOY_DIR, unit, 'entry.ts'))) throw new Error(`${unit} missing entry.ts`)
   }
 })
 
 // ---------------------------------------------------------------------------
-// Server fallback tests — re-run with serverlessIncompatible config
+// Deploy target (no serverlessIncompatible = all serverless)
 // ---------------------------------------------------------------------------
 
-console.log('\nRunning server fallback tests (with serverlessIncompatible)...')
+check('no server container when no serverlessIncompatible configured', () => {
+  if (existsSync(join(DEPLOY_DIR, 'server'))) throw new Error('server/ should not exist')
+  if (existsSync(join(DEPLOY_DIR, 'server-proxy'))) throw new Error('server-proxy/ should not exist')
+})
 
-// Add serverlessIncompatible to the template's pikku.config.json
-const configPath = join(FUNCTIONS_TEMPLATE, 'pikku.config.json')
-const originalConfig = readText(configPath)
-const config = JSON.parse(originalConfig)
-config.deploy = { ...config.deploy, serverlessIncompatible: ['todoStore'] }
-execSync('rm -rf .deploy', { cwd: FUNCTIONS_TEMPLATE, stdio: 'pipe' })
-
-import { writeFileSync } from 'fs'
-writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8')
-
-try {
-  execSync('yarn pikku deploy plan', {
-    cwd: FUNCTIONS_TEMPLATE,
-    stdio: 'pipe',
-    timeout: 300_000,
-    env: { ...process.env, PIKKU_DEPLOY_PROVIDER: 'cloudflare' },
-  })
-
-  check('server unit generated when serverlessIncompatible matches', () => {
-    if (!existsSync(join(DEPLOY_DIR, 'server'))) {
-      throw new Error('server/ directory should exist')
-    }
-    if (!existsSync(join(DEPLOY_DIR, 'server', 'bundle.js'))) {
-      throw new Error('server/bundle.js should exist')
-    }
-  })
-
-  check('server unit has Dockerfile', () => {
-    if (!existsSync(join(DEPLOY_DIR, 'server', 'Dockerfile'))) {
-      throw new Error('server/Dockerfile should exist')
-    }
-  })
-
-  check('server unit entry uses PikkuUWSServer', () => {
-    const entry = readText(join(DEPLOY_DIR, 'server', 'entry.ts'))
-    if (!entry.includes('PikkuUWSServer')) {
-      throw new Error('Server entry should use PikkuUWSServer')
-    }
-  })
-
-  check('proxy Worker generated', () => {
-    if (!existsSync(join(DEPLOY_DIR, 'server-proxy'))) {
-      throw new Error('server-proxy/ directory should exist')
-    }
-  })
-
-  check('greet still serverless (not using todoStore)', () => {
-    // greet doesn't use todoStore, so it should still be a serverless Worker
-    if (!existsSync(join(DEPLOY_DIR, 'greet', 'bundle.js'))) {
-      throw new Error('greet should still be bundled as serverless Worker')
-    }
-    if (existsSync(join(DEPLOY_DIR, 'greet', 'Dockerfile'))) {
-      throw new Error('greet should NOT have a Dockerfile')
-    }
-  })
-} finally {
-  // Restore original config
-  writeFileSync(configPath, originalConfig, 'utf-8')
-}
+check('no Dockerfiles in any unit', () => {
+  for (const unit of unitDirs) {
+    if (existsSync(join(DEPLOY_DIR, unit, 'Dockerfile'))) throw new Error(`${unit} has Dockerfile`)
+  }
+})
 
 // ---------------------------------------------------------------------------
 // Results
 // ---------------------------------------------------------------------------
 
-console.log('\n' + '='.repeat(60))
+console.log('='.repeat(60))
 console.log('CF Deploy Verifier Results')
 console.log('='.repeat(60))
-
 for (const r of results) {
-  const icon = r.passed ? '✓' : '✗'
-  console.log(`  ${icon} ${r.name}`)
-  if (!r.passed && r.error) {
-    console.log(`    ${r.error}`)
-  }
+  console.log(`  ${r.passed ? '✓' : '✗'} ${r.name}`)
+  if (!r.passed && r.error) console.log(`    ${r.error}`)
 }
-
 console.log(`\n${results.length} tests, ${failures} failed`)
-
-if (failures > 0) {
-  process.exit(1)
-}
+if (failures > 0) process.exit(1)

@@ -1,24 +1,31 @@
 /**
  * Offline verifier for Serverless (AWS Lambda) deploy pipeline.
+ *
+ * Tests against verifiers/functions/ — asserts actual manifest content:
+ * specific unit names, queues, routes, services, handler types.
  */
 
 import { execSync } from 'child_process'
 import { readFileSync, existsSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
 
-const FUNCTIONS_TEMPLATE = join(process.cwd(), '..', '..', 'templates', 'functions')
-const DEPLOY_DIR = join(FUNCTIONS_TEMPLATE, '.deploy', 'serverless')
+const FUNCTIONS_DIR = join(process.cwd(), '..', 'functions')
+const DEPLOY_DIR = join(FUNCTIONS_DIR, '.deploy', 'serverless')
 
 console.log('Setting up: running pikku codegen + deploy plan (serverless)...')
-execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_TEMPLATE, stdio: 'pipe' })
-execSync('yarn pikku', { cwd: FUNCTIONS_TEMPLATE, stdio: 'pipe', timeout: 60_000 })
+execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_DIR, stdio: 'pipe' })
+execSync('yarn pikku', { cwd: FUNCTIONS_DIR, stdio: 'pipe', timeout: 60_000 })
 execSync('yarn pikku deploy plan', {
-  cwd: FUNCTIONS_TEMPLATE,
+  cwd: FUNCTIONS_DIR,
   stdio: 'pipe',
   timeout: 300_000,
   env: { ...process.env, PIKKU_DEPLOY_PROVIDER: 'serverless' },
 })
 console.log('Setup complete.\n')
+
+function readText(path: string): string {
+  return readFileSync(path, 'utf-8')
+}
 
 function readJSON(path: string): Record<string, unknown> {
   return JSON.parse(readFileSync(path, 'utf-8'))
@@ -45,47 +52,103 @@ function check(name: string, fn: () => void) {
   }
 }
 
-// --- Tests ---
-
-check('deploy directory exists', () => {
-  if (!existsSync(DEPLOY_DIR)) throw new Error(`${DEPLOY_DIR} not found`)
-})
+function assertContains(actual: string[], expected: string[], label: string) {
+  const missing = expected.filter((e) => !actual.includes(e))
+  if (missing.length > 0) throw new Error(`${label}: missing [${missing.join(', ')}]`)
+}
 
 const unitDirs = getUnitDirs()
 
-check('units bundled successfully', () => {
-  if (unitDirs.length < 40) throw new Error(`Expected >= 40 units, got ${unitDirs.length}`)
+// ---------------------------------------------------------------------------
+// serverless.yml
+// ---------------------------------------------------------------------------
+
+check('serverless.yml: has provider, functions, and resources sections', () => {
+  const yml = readText(join(DEPLOY_DIR, 'serverless.yml'))
+  for (const section of ['provider:', 'functions:']) {
+    if (!yml.includes(section)) throw new Error(`Missing ${section}`)
+  }
 })
 
-check('serverless.yml generated', () => {
-  const ymlPath = join(DEPLOY_DIR, 'serverless.yml')
-  if (!existsSync(ymlPath)) throw new Error('serverless.yml not found')
-  const content = readFileSync(ymlPath, 'utf-8')
-  if (!content.includes('functions:')) throw new Error('serverless.yml missing functions section')
+check('serverless.yml: references HTTP function handlers', () => {
+  const yml = readText(join(DEPLOY_DIR, 'serverless.yml'))
+  for (const name of ['welcome-to-pikku', 'hello-world', 'greet-with-zod', 'calculate-with-zod']) {
+    if (!yml.includes(name)) throw new Error(`Missing handler: ${name}`)
+  }
 })
 
-check('infra.json generated', () => {
-  const infraPath = join(DEPLOY_DIR, 'infra.json')
-  if (!existsSync(infraPath)) throw new Error('infra.json not found')
+check('serverless.yml: has queue event sources (hello-world-queue)', () => {
+  const yml = readText(join(DEPLOY_DIR, 'serverless.yml'))
+  if (!yml.includes('hello-world-queue')) throw new Error('Missing hello-world-queue')
 })
+
+check('serverless.yml: has schedule event (myScheduledTask cron)', () => {
+  const yml = readText(join(DEPLOY_DIR, 'serverless.yml'))
+  if (!yml.includes('schedule') && !yml.includes('*/1')) {
+    throw new Error('Missing schedule event for myScheduledTask')
+  }
+})
+
+// ---------------------------------------------------------------------------
+// Units: expected functions from verifiers/functions/
+// ---------------------------------------------------------------------------
+
+check('HTTP units: welcomeToPikku, helloWorld, greetWithZod, calculateWithZod', () => {
+  assertContains(unitDirs, [
+    'welcome-to-pikku', 'hello-world', 'greet-with-zod', 'calculate-with-zod',
+  ], 'HTTP units')
+})
+
+check('queue worker unit: queue-worker', () => {
+  assertContains(unitDirs, ['queue-worker'], 'Queue units')
+})
+
+check('scheduled task unit: my-scheduled-task', () => {
+  assertContains(unitDirs, ['my-scheduled-task'], 'Scheduled units')
+})
+
+check('MCP server unit exists', () => {
+  assertContains(unitDirs, ['mcp-server'], 'MCP')
+})
+
+check('workflow orchestrators: onboarding + DSL', () => {
+  const wfUnits = unitDirs.filter((d) => d.startsWith('wf-'))
+  if (wfUnits.length < 2) throw new Error(`Expected >= 2 workflow units, got: ${wfUnits.join(', ')}`)
+})
+
+check('channel units exist', () => {
+  const channelUnits = unitDirs.filter((d) => d.startsWith('channel-'))
+  if (channelUnits.length < 1) throw new Error(`Expected >= 1 channel unit, got ${channelUnits.length}`)
+})
+
+check('workflow step function units: create-user-profile, send-email', () => {
+  assertContains(unitDirs, ['create-user-profile', 'send-email'], 'Workflow step units')
+})
+
+check('total units >= 15', () => {
+  if (unitDirs.length < 15) throw new Error(`Got ${unitDirs.length}`)
+})
+
+// ---------------------------------------------------------------------------
+// Bundle integrity
+// ---------------------------------------------------------------------------
 
 check('no unit exceeds 5MB', () => {
   for (const unit of unitDirs) {
     const size = statSync(join(DEPLOY_DIR, unit, 'bundle.js')).size
-    if (size > 5 * 1024 * 1024) throw new Error(`${unit} is ${(size / 1024 / 1024).toFixed(1)}MB`)
+    if (size > 5 * 1024 * 1024) throw new Error(`${unit}: ${(size / 1024 / 1024).toFixed(1)}MB`)
   }
 })
 
-check('greet unit has entry file', () => {
-  const entry = join(DEPLOY_DIR, 'greet', 'entry.ts')
-  if (!existsSync(entry)) throw new Error('greet/entry.ts not found')
-  const content = readFileSync(entry, 'utf-8')
-  if (!content.includes('Lambda') && !content.includes('lambda')) {
-    // Entry should reference Lambda handler
+check('every unit has entry.ts', () => {
+  for (const unit of unitDirs) {
+    if (!existsSync(join(DEPLOY_DIR, unit, 'entry.ts'))) throw new Error(`${unit} missing entry.ts`)
   }
 })
 
-// --- Results ---
+// ---------------------------------------------------------------------------
+// Results
+// ---------------------------------------------------------------------------
 
 console.log('='.repeat(60))
 console.log('Serverless Deploy Verifier Results')

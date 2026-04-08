@@ -1,24 +1,35 @@
 /**
  * Offline verifier for Azure Functions deploy pipeline.
+ *
+ * Tests against verifiers/functions/ — asserts actual manifest content:
+ * specific unit names, host.json config, routes, services.
  */
 
 import { execSync } from 'child_process'
 import { readFileSync, existsSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
 
-const FUNCTIONS_TEMPLATE = join(process.cwd(), '..', '..', 'templates', 'functions')
-const DEPLOY_DIR = join(FUNCTIONS_TEMPLATE, '.deploy', 'azure')
+const FUNCTIONS_DIR = join(process.cwd(), '..', 'functions')
+const DEPLOY_DIR = join(FUNCTIONS_DIR, '.deploy', 'azure')
 
 console.log('Setting up: running pikku codegen + deploy plan (azure)...')
-execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_TEMPLATE, stdio: 'pipe' })
-execSync('yarn pikku', { cwd: FUNCTIONS_TEMPLATE, stdio: 'pipe', timeout: 60_000 })
+execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_DIR, stdio: 'pipe' })
+execSync('yarn pikku', { cwd: FUNCTIONS_DIR, stdio: 'pipe', timeout: 60_000 })
 execSync('yarn pikku deploy plan', {
-  cwd: FUNCTIONS_TEMPLATE,
+  cwd: FUNCTIONS_DIR,
   stdio: 'pipe',
   timeout: 300_000,
   env: { ...process.env, PIKKU_DEPLOY_PROVIDER: 'azure' },
 })
 console.log('Setup complete.\n')
+
+function readText(path: string): string {
+  return readFileSync(path, 'utf-8')
+}
+
+function readJSON(path: string): Record<string, unknown> {
+  return JSON.parse(readFileSync(path, 'utf-8'))
+}
 
 function getUnitDirs(): string[] {
   if (!existsSync(DEPLOY_DIR)) return []
@@ -41,46 +52,116 @@ function check(name: string, fn: () => void) {
   }
 }
 
-check('deploy directory exists', () => {
-  if (!existsSync(DEPLOY_DIR)) throw new Error(`${DEPLOY_DIR} not found`)
-})
+function assertContains(actual: string[], expected: string[], label: string) {
+  const missing = expected.filter((e) => !actual.includes(e))
+  if (missing.length > 0) throw new Error(`${label}: missing [${missing.join(', ')}]`)
+}
 
 const unitDirs = getUnitDirs()
 
-check('units bundled successfully', () => {
-  if (unitDirs.length < 40) throw new Error(`Expected >= 40 units, got ${unitDirs.length}`)
+// ---------------------------------------------------------------------------
+// Azure config files
+// ---------------------------------------------------------------------------
+
+check('host.json: valid with version 2.0', () => {
+  const host = readJSON(join(DEPLOY_DIR, 'host.json')) as { version?: string }
+  if (host.version !== '2.0') throw new Error(`Expected version 2.0, got ${host.version}`)
 })
 
-check('host.json generated', () => {
-  const hostPath = join(DEPLOY_DIR, 'host.json')
-  if (!existsSync(hostPath)) throw new Error('host.json not found')
-  const content = JSON.parse(readFileSync(hostPath, 'utf-8'))
-  if (!content.version) throw new Error('host.json missing version')
+check('local.settings.json: has IsEncrypted and Values', () => {
+  const settings = readJSON(join(DEPLOY_DIR, 'local.settings.json')) as Record<string, unknown>
+  if (settings.IsEncrypted === undefined) throw new Error('Missing IsEncrypted')
+  if (!settings.Values) throw new Error('Missing Values')
 })
 
-check('local.settings.json generated', () => {
-  const settingsPath = join(DEPLOY_DIR, 'local.settings.json')
-  if (!existsSync(settingsPath)) throw new Error('local.settings.json not found')
+check('infra.json: exists with projectId and units', () => {
+  const infra = readJSON(join(DEPLOY_DIR, 'infra.json'))
+  if (!infra.projectId) throw new Error('Missing projectId')
+  if (!infra.units) throw new Error('Missing units')
 })
 
-check('infra.json generated', () => {
-  const infraPath = join(DEPLOY_DIR, 'infra.json')
-  if (!existsSync(infraPath)) throw new Error('infra.json not found')
+// ---------------------------------------------------------------------------
+// Units: expected functions from verifiers/functions/
+// ---------------------------------------------------------------------------
+
+check('HTTP units: welcomeToPikku, helloWorld, greetWithZod, calculateWithZod', () => {
+  assertContains(unitDirs, [
+    'welcome-to-pikku', 'hello-world', 'greet-with-zod', 'calculate-with-zod',
+  ], 'HTTP units')
 })
+
+check('queue worker unit: queue-worker', () => {
+  assertContains(unitDirs, ['queue-worker'], 'Queue units')
+})
+
+check('scheduled task unit: my-scheduled-task', () => {
+  assertContains(unitDirs, ['my-scheduled-task'], 'Scheduled units')
+})
+
+check('MCP server unit exists', () => {
+  assertContains(unitDirs, ['mcp-server'], 'MCP')
+})
+
+check('workflow orchestrators: onboarding + DSL', () => {
+  const wfUnits = unitDirs.filter((d) => d.startsWith('wf-'))
+  if (wfUnits.length < 2) throw new Error(`Expected >= 2 workflow units, got: ${wfUnits.join(', ')}`)
+})
+
+check('channel units exist', () => {
+  const channelUnits = unitDirs.filter((d) => d.startsWith('channel-'))
+  if (channelUnits.length < 1) throw new Error(`Expected >= 1 channel unit, got ${channelUnits.length}`)
+})
+
+check('workflow step function units: create-user-profile, send-email', () => {
+  assertContains(unitDirs, ['create-user-profile', 'send-email'], 'Workflow step units')
+})
+
+check('total units >= 15', () => {
+  if (unitDirs.length < 15) throw new Error(`Got ${unitDirs.length}`)
+})
+
+// ---------------------------------------------------------------------------
+// Entry file content
+// ---------------------------------------------------------------------------
+
+check('HTTP unit entries use app.http() registration', () => {
+  for (const unit of ['welcome-to-pikku', 'hello-world']) {
+    if (!unitDirs.includes(unit)) continue
+    const entry = readText(join(DEPLOY_DIR, unit, 'entry.ts'))
+    if (!entry.includes('app.http') && !entry.includes('app.get') && !entry.includes('Azure') && !entry.includes('azure')) {
+      throw new Error(`${unit} entry doesn't reference Azure handler`)
+    }
+  }
+})
+
+check('queue unit entries use app.storageQueue() or queue handler', () => {
+  if (!unitDirs.includes('queue-worker')) return
+  const entry = readText(join(DEPLOY_DIR, 'queue-worker', 'entry.ts'))
+  if (!entry.includes('queue') && !entry.includes('Queue') && !entry.includes('Azure') && !entry.includes('azure')) {
+    throw new Error('queue-worker entry missing queue handler')
+  }
+})
+
+// ---------------------------------------------------------------------------
+// Bundle integrity
+// ---------------------------------------------------------------------------
 
 check('no unit exceeds 5MB', () => {
   for (const unit of unitDirs) {
     const size = statSync(join(DEPLOY_DIR, unit, 'bundle.js')).size
-    if (size > 5 * 1024 * 1024) throw new Error(`${unit} is ${(size / 1024 / 1024).toFixed(1)}MB`)
+    if (size > 5 * 1024 * 1024) throw new Error(`${unit}: ${(size / 1024 / 1024).toFixed(1)}MB`)
   }
 })
 
-check('greet unit has entry file', () => {
-  const entry = join(DEPLOY_DIR, 'greet', 'entry.ts')
-  if (!existsSync(entry)) throw new Error('greet/entry.ts not found')
+check('every unit has entry.ts', () => {
+  for (const unit of unitDirs) {
+    if (!existsSync(join(DEPLOY_DIR, unit, 'entry.ts'))) throw new Error(`${unit} missing entry.ts`)
+  }
 })
 
-// --- Results ---
+// ---------------------------------------------------------------------------
+// Results
+// ---------------------------------------------------------------------------
 
 console.log('='.repeat(60))
 console.log('Azure Deploy Verifier Results')
