@@ -6162,6 +6162,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-deploy-azure@workspace:verifiers/deploy-azure"
   dependencies:
+    "@pikku/cli": "npm:^0.12.15"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
   languageName: unknown
@@ -6171,6 +6172,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-deploy-cloudflare@workspace:verifiers/deploy-cloudflare"
   dependencies:
+    "@pikku/cli": "npm:^0.12.15"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
   languageName: unknown
@@ -6180,6 +6182,17 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-deploy-serverless@workspace:verifiers/deploy-serverless"
   dependencies:
+    "@pikku/cli": "npm:^0.12.15"
+    "@types/node": "npm:^24"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/verifiers-deploy-standalone@workspace:verifiers/deploy-standalone":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-deploy-standalone@workspace:verifiers/deploy-standalone"
+  dependencies:
+    "@pikku/cli": "npm:^0.12.15"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
   languageName: unknown
