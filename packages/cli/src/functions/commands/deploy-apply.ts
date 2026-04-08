@@ -130,7 +130,8 @@ export async function resolveProvider(
       return mod.createAdapter()
     }
     const AdapterClass = Object.values(mod).find(
-      (v: any) => typeof v === 'function' && v.prototype
+      (v: any) =>
+        typeof v === 'function' && v.prototype && 'deployDirName' in v.prototype
     ) as (new () => ProviderAdapter) | undefined
     if (AdapterClass) {
       return new AdapterClass()
