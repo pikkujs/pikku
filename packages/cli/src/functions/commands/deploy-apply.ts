@@ -129,8 +129,14 @@ export async function resolveProvider(
     if (typeof mod.createAdapter === 'function') {
       return mod.createAdapter()
     }
+    const AdapterClass = Object.values(mod).find(
+      (v: any) => typeof v === 'function' && v.prototype
+    ) as (new () => ProviderAdapter) | undefined
+    if (AdapterClass) {
+      return new AdapterClass()
+    }
     throw new Error(
-      `Deploy provider '${packageName}' does not export createAdapter()`
+      `Deploy provider '${packageName}' does not export createAdapter() or a provider class`
     )
   } catch (e: unknown) {
     const err = e as { code?: string; message?: string }
