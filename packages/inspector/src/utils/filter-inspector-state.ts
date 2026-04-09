@@ -192,7 +192,9 @@ export function filterInspectorState(
   }
 
   // Snapshot the original workflow graph meta before filtering prunes it
-  const originalGraphMeta = { ...((state as InspectorState).workflows?.graphMeta ?? {}) }
+  const originalGraphMeta = {
+    ...((state as InspectorState).workflows?.graphMeta ?? {}),
+  }
 
   // Create a shallow copy with new Maps/Sets to avoid mutating the original
   const filteredState = {
@@ -699,7 +701,15 @@ export function filterInspectorState(
   // Direct function filtering: functions that match the names/tags/directories
   // filters should be included even if no wiring (HTTP, scheduler, etc.) references them.
   // This ensures standalone RPC-callable functions survive filtering.
+  // Only run when function-level filters are active — httpRoutes/httpMethods work
+  // through the HTTP wiring pass which already adds the right functions.
+  const hasFunctionLevelFilters =
+    (filters.names && filters.names.length > 0) ||
+    (filters.tags && filters.tags.length > 0) ||
+    (filters.directories && filters.directories.length > 0)
+
   for (const funcId of Object.keys(filteredState.functions.meta)) {
+    if (!hasFunctionLevelFilters) break
     const funcMeta = filteredState.functions.meta[funcId]
     const funcFile = filteredState.functions.files.get(funcId)
     const filePath = funcFile?.path
@@ -842,7 +852,9 @@ export function filterInspectorState(
       if (!('rpcName' in node) || !node.rpcName) continue
       const rpcName = node.rpcName as string
       if (!survivingFuncIds.has(rpcName)) continue
-      const isInline = (node as { options?: { async?: boolean } }).options?.async !== true && graph.inline === true
+      const isInline =
+        (node as { options?: { async?: boolean } }).options?.async !== true &&
+        graph.inline === true
       if (!isInline) {
         filteredState.serviceAggregation.requiredServices.add('workflowService')
         filteredState.serviceAggregation.requiredServices.add('queueService')
