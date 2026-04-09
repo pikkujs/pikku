@@ -277,10 +277,10 @@ const _getPikkuCLIConfig = async (
         'dynamic-workflows.gen.ts'
       )
     }
-    if (result.scaffold?.dynamicAgents && !result.dynamicAgentsFile) {
-      result.dynamicAgentsFile = join(
+    if (result.scaffold?.codeAssistant && !result.codeAssistantFile) {
+      result.codeAssistantFile = join(
         resolvedScaffoldDir,
-        'dynamic-agents.gen.ts'
+        'code-assistant.gen.ts'
       )
     }
 

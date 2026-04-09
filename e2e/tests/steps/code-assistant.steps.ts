@@ -59,7 +59,7 @@ function parseInput(table: any): Record<string, any> {
 }
 
 When('I list available agent tools', async function (this: AgentWorld) {
-  const result = await rpcCall('dynamic-agents:listAvailableTools')
+  const result = await rpcCall('code-assistant:listAvailableTools')
   state.toolList = result.summaries
 })
 
@@ -95,7 +95,7 @@ When(
   async function (this: AgentWorld, table: any) {
     const rows = table.rawTable || table.raw()
     const names = rows.slice(1).map((r: string[]) => r[0])
-    const result = await rpcCall('dynamic-agents:getToolSchemas', { names })
+    const result = await rpcCall('code-assistant:getToolSchemas', { names })
     state.schemaDetails = result.details
   }
 )
@@ -108,7 +108,7 @@ Then(
 )
 
 When('I list available agent middleware', async function (this: AgentWorld) {
-  const result = await rpcCall('dynamic-agents:listAvailableMiddleware')
+  const result = await rpcCall('code-assistant:listAvailableMiddleware')
   state.middlewareList = result.aiMiddleware
 })
 
@@ -125,7 +125,7 @@ When(
   async function (this: AgentWorld, docString: string) {
     const input = JSON.parse(docString)
     state.validationResult = await rpcCall(
-      'dynamic-agents:validateAgentConfig',
+      'code-assistant:validateAgentConfig',
       input
     )
   }
@@ -160,7 +160,7 @@ When(
       : undefined
 
     const startRes = await fetch(
-      `${config.apiUrl}/workflow/dynamic-agents:generateDynamicAgent/start`,
+      `${config.apiUrl}/workflow/code-assistant:generateDynamicAgent/start`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -174,7 +174,7 @@ When(
     const deadline = Date.now() + 90_000
     while (Date.now() < deadline) {
       const statusRes = await fetch(
-        `${config.apiUrl}/workflow/dynamic-agents:generateDynamicAgent/status/${state.generatedRunId}`
+        `${config.apiUrl}/workflow/code-assistant:generateDynamicAgent/status/${state.generatedRunId}`
       )
       const status = await statusRes.json()
       if (status.status === 'completed') {

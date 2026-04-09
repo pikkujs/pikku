@@ -32,6 +32,6 @@
     "agent": "no-auth",
     "workflow": "no-auth",
     "dynamicWorkflows": "no-auth",
-    "dynamicAgents": "no-auth"
+    "codeAssistant": "no-auth"
   }
 }

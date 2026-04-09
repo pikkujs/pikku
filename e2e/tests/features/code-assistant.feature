@@ -1,4 +1,4 @@
-@dynamic-agents
+@code-assistant
 Feature: Dynamic Agents Addon (API)
 
   Background:

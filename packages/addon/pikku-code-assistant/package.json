@@ -1,5 +1,5 @@
 {
-  "name": "@pikku/addon-dynamic-agents",
+  "name": "@pikku/code-assistant",
   "version": "0.0.1",
   "type": "module",
   "imports": {

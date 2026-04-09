@@ -17,7 +17,7 @@ export function useGenerateAgent() {
       functionFilter?: string[]
       allowSubAgents?: boolean
     }) =>
-      (rpc as any).startWorkflow('dynamic-agents:generateDynamicAgent', {
+      (rpc as any).startWorkflow('code-assistant:generateDynamicAgent', {
         prompt,
         name: agentName,
         functionFilter: functionFilter?.length ? functionFilter : undefined,

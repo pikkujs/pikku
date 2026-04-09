@@ -2,22 +2,22 @@ import { pikkuSessionlessFunc } from '#pikku'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
-import { serializeDynamicAgents } from './serialize-dynamic-agents.js'
+import { serializeCodeAssistant } from './serialize-code-assistant.js'
 
-export const pikkuDynamicAgents = pikkuSessionlessFunc<void, boolean>({
+export const pikkuCodeAssistant = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config }) => {
-    if (config.scaffold?.dynamicAgents) {
+    if (config.scaffold?.codeAssistant) {
       const pathToPikkuTypes = getFileImportRelativePath(
-        config.dynamicAgentsFile,
+        config.codeAssistantFile,
         config.typesDeclarationFile,
         config.packageMappings
       )
       await writeFileInDir(
         logger,
-        config.dynamicAgentsFile,
-        serializeDynamicAgents(
+        config.codeAssistantFile,
+        serializeCodeAssistant(
           pathToPikkuTypes,
-          config.scaffold.dynamicAgents === 'auth'
+          config.scaffold.codeAssistant === 'auth'
         )
       )
       return true
@@ -26,8 +26,8 @@ export const pikkuDynamicAgents = pikkuSessionlessFunc<void, boolean>({
   },
   middleware: [
     logCommandInfoAndTime({
-      commandStart: 'Generating Dynamic Agents wiring',
-      commandEnd: 'Generated Dynamic Agents wiring',
+      commandStart: 'Generating Code Assistant wiring',
+      commandEnd: 'Generated Code Assistant wiring',
     }),
   ],
 })

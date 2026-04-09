@@ -1,4 +1,4 @@
-@dynamic-agents-ui @console
+@code-assistant-ui @console
 Feature: Dynamic Agents Addon (Console UI)
 
   Background:
@@ -6,7 +6,7 @@ Feature: Dynamic Agents Addon (Console UI)
 
   Scenario: Dynamic agents addon is visible on the addons page
     When I navigate to the addons page
-    Then I should see addon "dynamic-agents" with package "@pikku/addon-dynamic-agents"
+    Then I should see addon "code-assistant" with package "@pikku/code-assistant"
 
   Scenario: New Agent page renders with form elements
     When I navigate to the new agent page

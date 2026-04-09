@@ -5,9 +5,9 @@
   "outDir": "./.pikku",
   "verboseMeta": true,
   "addon": {
-    "displayName": "Pikku Dynamic Agents",
-    "description": "Generate AI agents from natural language prompts",
+    "displayName": "Pikku Code Assistant",
+    "description": "AI-powered code generation for agents and functions",
     "categories": ["AI"],
-    "icon": "./pikku-dynamic-agents.svg"
+    "icon": "./pikku-code-assistant.svg"
   }
 }
