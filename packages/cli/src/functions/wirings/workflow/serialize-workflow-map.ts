@@ -9,6 +9,11 @@ import type { FunctionsMeta } from '@pikku/core'
 import { parseVersionedId } from '@pikku/core'
 import type { Logger } from '@pikku/core/services'
 
+type WireAddonDeclarations = Map<
+  string,
+  { package: string; rpcEndpoint?: string }
+>
+
 export const serializeWorkflowMap = (
   logger: Logger,
   relativeToPath: string,
@@ -16,7 +21,8 @@ export const serializeWorkflowMap = (
   typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
   workflowsMeta: WorkflowsMeta,
-  graphMeta: SerializedWorkflowGraphs
+  graphMeta: SerializedWorkflowGraphs,
+  wireAddonDeclarations?: WireAddonDeclarations
 ) => {
   const requiredTypes = new Set<string>()
 
@@ -55,12 +61,16 @@ export const serializeWorkflowMap = (
     .filter((line) => !line.startsWith('import '))
     .join('\n')
 
+  const addonImports = generateAddonWorkflowImports(wireAddonDeclarations)
+  const mergedWorkflowMap = generateMergedWorkflowMap(wireAddonDeclarations)
+
   return `/**
  * Workflow type map with input/output types for each workflow
  */
 
 ${serializedImportMap}
 ${serializedCustomTypesDeclarationsOnly}
+${addonImports}
 
 interface WorkflowHandler<I, O> {
     input: I;
@@ -74,15 +84,16 @@ interface GraphNodeHandler<I> {
 ${serializedWorkflows}
 
 ${serializedGraphs}
+${mergedWorkflowMap}
 
-export type WorkflowClient<Name extends keyof WorkflowMap> = {
-  start: (input: WorkflowMap[Name]['input']) => Promise<{ runId: string }>;
-  getRun: <output extends keyof WorkflowMap[Name]>(runId: string) => Promise<WorkflowMap[Name][output]>;
+export type WorkflowClient<Name extends keyof FlattenedWorkflowMap> = {
+  start: (input: FlattenedWorkflowMap[Name]['input']) => Promise<{ runId: string }>;
+  getRun: <output extends keyof FlattenedWorkflowMap[Name]>(runId: string) => Promise<FlattenedWorkflowMap[Name][output]>;
   cancelRun: (runId: string) => Promise<boolean>;
 }
 
 export type TypedWorkflowClients = {
-  [Name in keyof WorkflowMap]: WorkflowClient<Name>;
+  [Name in keyof FlattenedWorkflowMap]: WorkflowClient<Name>;
 }
 `
 }
@@ -187,4 +198,49 @@ function generateGraphs(
   graphsStr += '};'
 
   return graphsStr
+}
+
+function toPascalCase(str: string): string {
+  return str
+    .split(/[-_]/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join('')
+}
+
+function generateAddonWorkflowImports(
+  wireAddonDeclarations: WireAddonDeclarations | undefined
+): string {
+  if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) {
+    return ''
+  }
+
+  let imports = '\n// Addon package Workflow maps\n'
+  for (const [namespace, decl] of wireAddonDeclarations.entries()) {
+    imports += `import type { WorkflowMap as ${toPascalCase(namespace)}WorkflowMap } from '${decl.package}/.pikku/workflow/pikku-workflow-map.gen.d.js'\n`
+  }
+  return imports
+}
+
+function generateMergedWorkflowMap(
+  wireAddonDeclarations: WireAddonDeclarations | undefined
+): string {
+  if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) {
+    return `
+export type FlattenedWorkflowMap = WorkflowMap
+`
+  }
+
+  return `
+type PrefixWorkflowKeys<T, Prefix extends string> = unknown extends T ? {} : {
+  [K in keyof T as \`\${Prefix}:\${string & K}\`]: T[K]
+}
+
+export type FlattenedWorkflowMap =
+  WorkflowMap${Array.from(wireAddonDeclarations.keys())
+    .map(
+      (namespace) =>
+        ` & PrefixWorkflowKeys<${toPascalCase(namespace)}WorkflowMap, '${namespace}'>`
+    )
+    .join('')}
+`
 }

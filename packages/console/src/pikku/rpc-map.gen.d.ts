@@ -67,7 +67,7 @@ export type RPCRemote = <Name extends keyof FlattenedRPCMap>(
   data: FlattenedRPCMap[Name]['input']
 ) => Promise<FlattenedRPCMap[Name]['output']>
 
-import type { WorkflowMap } from '../../backend/.pikku/workflow/pikku-workflow-map.gen.d.js'
+import type { FlattenedWorkflowMap } from '../../backend/.pikku/workflow/pikku-workflow-map.gen.d.js'
 
 import type { AgentMap } from '../../backend/.pikku/agent/pikku-agent-map.gen.d.js'
 
@@ -89,16 +89,16 @@ interface AIAgentInput {
   resourceId: string
 }
 
-export type TypedStartWorkflow = <Name extends keyof WorkflowMap>(
+export type TypedStartWorkflow = <Name extends keyof FlattenedWorkflowMap>(
   name: Name,
-  input: WorkflowMap[Name]['input'],
+  input: FlattenedWorkflowMap[Name]['input'],
   options?: { startNode?: string }
 ) => Promise<{ runId: string }>
 
-export type TypedRunWorkflow = <Name extends keyof WorkflowMap>(
+export type TypedRunWorkflow = <Name extends keyof FlattenedWorkflowMap>(
   name: Name,
-  input: WorkflowMap[Name]['input']
-) => Promise<WorkflowMap[Name]['output']>
+  input: FlattenedWorkflowMap[Name]['input']
+) => Promise<FlattenedWorkflowMap[Name]['output']>
 
 export type TypedWorkflowStatus = (
   workflowName: string,

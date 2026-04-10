@@ -148,7 +148,8 @@ export const pikkuWorkflow = pikkuSessionlessFunc<void, boolean | undefined>({
         typesMap,
         functionState.meta,
         workflows.meta,
-        workflows.graphMeta
+        workflows.graphMeta,
+        visitState.rpc?.wireAddonDeclarations
       )
     )
 
