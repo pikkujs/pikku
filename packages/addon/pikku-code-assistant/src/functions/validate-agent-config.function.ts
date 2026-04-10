@@ -20,7 +20,6 @@ export const validateAgentConfig = pikkuSessionlessFunc<
   },
   { valid: boolean; errors: string[] }
 >({
-  expose: true,
   description: 'Validates an agent configuration for structural correctness',
   func: async ({}, { config, availableToolNames }) => {
     const errors: string[] = []

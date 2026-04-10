@@ -26,7 +26,6 @@ export const listAvailableTools = pikkuSessionlessFunc<
   null,
   { summaries: { name: string; description: string }[] }
 >({
-  expose: true,
   description: 'Lists all registered functions available as agent tools',
   func: async () => {
     const summaries: { name: string; description: string }[] = []

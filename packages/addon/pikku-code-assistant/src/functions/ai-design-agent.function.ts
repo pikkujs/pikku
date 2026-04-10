@@ -29,7 +29,6 @@ export const aiDesignAgent = pikkuSessionlessFunc<
     costUsd: number
   }
 >({
-  expose: true,
   description:
     'Uses AI to design an agent configuration from a prompt and tool schemas',
   func: async ({}, { prompt, schemas, availableMiddleware, previousError }) => {

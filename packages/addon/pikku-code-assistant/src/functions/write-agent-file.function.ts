@@ -32,7 +32,6 @@ export const writeAgentFile = pikkuSessionlessFunc<
   },
   { filePath: string; content: string }
 >({
-  expose: true,
   description: 'Generates and writes an AI agent source file',
   func: async ({}, { name, exportName, config }) => {
     const singletonServices = getSingletonServices() as any

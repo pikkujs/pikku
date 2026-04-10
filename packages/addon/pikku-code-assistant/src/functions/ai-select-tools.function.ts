@@ -13,7 +13,6 @@ export const aiSelectTools = pikkuSessionlessFunc<
     costUsd: number
   }
 >({
-  expose: true,
   description: 'Uses AI to select the most relevant tools for an agent prompt',
   func: async ({}, { prompt, functions }) => {
     const functionList = functions

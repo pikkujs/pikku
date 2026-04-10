@@ -9,7 +9,6 @@ export const getToolSchemas = pikkuSessionlessFunc<
   { names: string[] },
   { details: string }
 >({
-  expose: true,
   description: 'Resolves input/output JSON schemas for the given tool names',
   func: async ({}, { names }) => {
     const lines: string[] = []

@@ -23,7 +23,6 @@ export const listAvailableMiddleware = pikkuSessionlessFunc<
     }[]
   }
 >({
-  expose: true,
   description: 'Lists known AI middleware options for agent configuration',
   func: async () => {
     return { aiMiddleware: KNOWN_AI_MIDDLEWARE }
