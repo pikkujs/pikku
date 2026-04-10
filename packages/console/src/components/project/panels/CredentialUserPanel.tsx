@@ -28,7 +28,7 @@ export const CredentialUserPanel: React.FunctionComponent<{
 
   const revokeMutation = useMutation({
     mutationFn: async (credName: string) => {
-      await (rpc as any).invoke('console:credentialDelete', {
+      await rpc.invoke('console:credentialDelete', {
         name: credName,
         userId,
       })
@@ -42,7 +42,7 @@ export const CredentialUserPanel: React.FunctionComponent<{
 
   const connectMutation = useMutation({
     mutationFn: async (credName: string) => {
-      const result = await (rpc as any).invoke('console:oauthConnect', {
+      const result = await rpc.invoke('console:oauthConnect', {
         credentialName: credName,
         userId,
       })

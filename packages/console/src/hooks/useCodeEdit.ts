@@ -11,7 +11,7 @@ export function useFunctionSource(
   return useQuery({
     queryKey: ['function-source', sourceFile, exportedName],
     queryFn: async () => {
-      return await (rpc as any).invoke('console:readFunctionSource', {
+      return await rpc.invoke('console:readFunctionSource', {
         sourceFile: sourceFile!,
         exportedName: exportedName!,
       })
@@ -34,7 +34,7 @@ export function useUpdateFunctionConfig() {
       exportedName: string
       changes: Record<string, unknown>
     }) =>
-      (rpc as any).invoke('console:updateFunctionConfig', {
+      rpc.invoke('console:updateFunctionConfig', {
         sourceFile,
         exportedName,
         changes,
@@ -57,7 +57,7 @@ export function useFunctionBody(
   return useQuery({
     queryKey: ['function-body', sourceFile, exportedName],
     queryFn: async () => {
-      return await (rpc as any).invoke('console:readFunctionBody', {
+      return await rpc.invoke('console:readFunctionBody', {
         sourceFile: sourceFile!,
         exportedName: exportedName!,
       })
@@ -80,7 +80,7 @@ export function useUpdateFunctionBody() {
       exportedName: string
       body: string
     }) =>
-      (rpc as any).invoke('console:updateFunctionBody', {
+      rpc.invoke('console:updateFunctionBody', {
         sourceFile,
         exportedName,
         body,
@@ -104,7 +104,7 @@ export function useAgentSource(
   return useQuery({
     queryKey: ['agent-source', sourceFile, exportedName],
     queryFn: async () => {
-      return await (rpc as any).invoke('console:readAgentSource', {
+      return await rpc.invoke('console:readAgentSource', {
         sourceFile: sourceFile!,
         exportedName: exportedName!,
       })
@@ -127,7 +127,7 @@ export function useUpdateAgentConfig() {
       exportedName: string
       changes: Record<string, unknown>
     }) =>
-      (rpc as any).invoke('console:updateAgentConfig', {
+      rpc.invoke('console:updateAgentConfig', {
         sourceFile,
         exportedName,
         changes,

@@ -53,7 +53,7 @@ export const CredentialUsersTab: React.FunctionComponent = () => {
   const { data: usersData, isLoading: usersLoading } = useQuery({
     queryKey: ['credential-list-users'],
     queryFn: async () => {
-      const result = await (rpc as any).invoke(
+      const result = await rpc.invoke(
         'console:credentialListUsers',
         null
       )

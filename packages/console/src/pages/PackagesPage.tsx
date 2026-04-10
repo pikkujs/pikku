@@ -315,7 +315,7 @@ const ApisList: React.FunctionComponent<{
   const { data, isLoading } = useQuery({
     queryKey: ['openapis', search],
     queryFn: async () => {
-      const result = await (rpc as any).invoke('console:getOpenapis', {
+      const result = await rpc.invoke('console:getOpenapis', {
         limit: 100,
         offset: 0,
         search: search || undefined,

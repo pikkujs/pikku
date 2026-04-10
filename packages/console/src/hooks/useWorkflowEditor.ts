@@ -15,7 +15,7 @@ export function useGenerateWorkflowGraph() {
       workflowName?: string
       functionFilter?: string[]
     }) =>
-      (rpc as any).startWorkflow('dynamic-workflows:generateDynamicWorkflow', {
+      rpc.startWorkflow('dynamic-workflows:generateDynamicWorkflow', {
         prompt,
         name: workflowName,
         functionFilter: functionFilter?.length ? functionFilter : undefined,

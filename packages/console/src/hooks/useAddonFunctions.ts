@@ -7,7 +7,7 @@ export function useAddonFunctions() {
   return useQuery({
     queryKey: ['addon-functions'],
     queryFn: async () => {
-      const addons = await (rpc as any).invoke(
+      const addons = await rpc.invoke(
         'console:getInstalledAddons',
         null
       )
@@ -18,7 +18,7 @@ export function useAddonFunctions() {
           .filter((a: any) => a.namespace !== 'console')
           .map(async (addon: any) => {
             try {
-              const pkg = await (rpc as any).invoke(
+              const pkg = await rpc.invoke(
                 'console:getAddonInstalledPackage',
                 { packageName: addon.packageName }
               )

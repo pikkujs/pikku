@@ -13,7 +13,9 @@
     "pikkuDir": "src",
     "rpc": "no-auth",
     "console": "no-auth",
-    "workflow": "no-auth"
+    "workflow": "no-auth",
+    "codeAssistant": "no-auth",
+    "dynamicWorkflows": "no-auth"
   },
   "verboseMeta": true
 }

@@ -20,7 +20,7 @@ export function useAgentCredentials(agentName?: string) {
   const query = useQuery({
     queryKey: ['agent-credentials', agentName],
     queryFn: async (): Promise<AgentCredentialCheckResult> => {
-      return await (rpc as any).invoke('console:agentCredentialCheck', {
+      return await rpc.invoke('console:agentCredentialCheck', {
         agentName,
       })
     },

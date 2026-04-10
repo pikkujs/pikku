@@ -327,7 +327,7 @@ export const PackageDetailPage: React.FunctionComponent<{
       namespace: string
       version?: string
     }) =>
-      (rpc as any).invoke('code-assistant:installAddon', {
+      rpc.invoke('code-assistant:installAddon', {
         packageName,
         namespace,
         version,
@@ -348,7 +348,7 @@ export const PackageDetailPage: React.FunctionComponent<{
       swaggerUrl: string
       credential?: 'apikey' | 'bearer' | 'oauth2'
     }) =>
-      (rpc as any).invoke('code-assistant:installOpenapiAddon', {
+      rpc.invoke('code-assistant:installOpenapiAddon', {
         name,
         swaggerUrl,
         credential,
@@ -372,7 +372,7 @@ export const PackageDetailPage: React.FunctionComponent<{
         if (match) return match
       }
       // Fallback: fetch from registry
-      const result = await (rpc as any).invoke('console:getOpenapis', {
+      const result = await rpc.invoke('console:getOpenapis', {
         limit: 2600,
         offset: 0,
       })

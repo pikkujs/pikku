@@ -51,7 +51,7 @@ export const CredentialsOverviewTab: React.FunctionComponent = () => {
       const singletons = credentials.filter((c) => c.type === 'singleton')
       if (singletons.length === 0) return {}
       try {
-        const result = await (rpc as any).invoke('console:credentialStatus', {
+        const result = await rpc.invoke('console:credentialStatus', {
           names: singletons.map((c) => c.name),
         })
         return (result.statuses ?? {}) as Record<string, boolean>
@@ -102,7 +102,7 @@ const CredentialCard: React.FunctionComponent<{
 
   const connectMutation = useMutation({
     mutationFn: async () => {
-      const result = await (rpc as any).invoke('console:oauthConnect', {
+      const result = await rpc.invoke('console:oauthConnect', {
         credentialName: credential.name,
       })
       window.open(result.authUrl, 'oauth-connect', 'width=600,height=700')
@@ -111,7 +111,7 @@ const CredentialCard: React.FunctionComponent<{
 
   const disconnectMutation = useMutation({
     mutationFn: async () => {
-      await (rpc as any).invoke('console:oauthDisconnect', {
+      await rpc.invoke('console:oauthDisconnect', {
         credentialName: credential.name,
       })
     },
