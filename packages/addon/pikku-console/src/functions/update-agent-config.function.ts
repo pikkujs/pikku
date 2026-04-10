@@ -1,3 +1,4 @@
+import { MissingServiceError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
 import type { AgentConfigChanges } from '../services/code-edit.service.js'
 
@@ -16,7 +17,7 @@ export const updateAgentConfig = pikkuSessionlessFunc<
   auth: false,
   func: async ({ codeEditService }, { sourceFile, exportedName, changes }) => {
     if (!codeEditService) {
-      throw new Error(
+      throw new MissingServiceError(
         'Code editing is only available in local development mode'
       )
     }

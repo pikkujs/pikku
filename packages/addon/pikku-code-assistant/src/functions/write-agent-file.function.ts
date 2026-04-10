@@ -1,3 +1,4 @@
+import { MissingServiceError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
 import { writeFile, mkdir } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
@@ -38,7 +39,7 @@ export const writeAgentFile = pikkuSessionlessFunc<
     const metaService = singletonServices?.metaService
     const metaBasePath = metaService?.basePath as string | undefined
     if (!metaBasePath) {
-      throw new Error('Write is only available in local development mode')
+      throw new MissingServiceError('Write is only available in local development mode')
     }
     const rootDir = dirname(metaBasePath)
 

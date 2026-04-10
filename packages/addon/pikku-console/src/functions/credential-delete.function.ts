@@ -1,3 +1,4 @@
+import { MissingServiceError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
 
 export const credentialDelete = pikkuSessionlessFunc<
@@ -9,7 +10,7 @@ export const credentialDelete = pikkuSessionlessFunc<
   expose: true,
   func: async ({ credentialService }, { name, userId }) => {
     if (!credentialService) {
-      throw new Error('CredentialService is not configured')
+      throw new MissingServiceError('CredentialService is not configured')
     }
     await credentialService.delete(name, userId)
     return { success: true }

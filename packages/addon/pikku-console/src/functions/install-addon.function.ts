@@ -1,3 +1,4 @@
+import { MissingServiceError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
@@ -20,7 +21,7 @@ export const installAddon = pikkuSessionlessFunc<
   func: async ({ metaService }, { packageName, namespace, version }) => {
     const metaBasePath = (metaService as any)?.basePath as string | undefined
     if (!metaBasePath) {
-      throw new Error('Install is only available in local development mode')
+      throw new MissingServiceError('Install is only available in local development mode')
     }
     const rootDir = dirname(metaBasePath)
 

@@ -1,3 +1,4 @@
+import { MissingServiceError } from '@pikku/core/errors'
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '#pikku'
 
@@ -24,7 +25,7 @@ export const jwtSign = pikkuSessionlessFunc({
   output: JwtSignOutput,
   func: async ({ jwt }, { payload, expiresIn }) => {
     if (!jwt) {
-      throw new Error('JWT service is required')
+      throw new MissingServiceError('JWT service is required')
     }
     const token = await jwt.encode(expiresIn, payload)
     return { token }
@@ -46,7 +47,7 @@ export const jwtDecode = pikkuSessionlessFunc({
   output: JwtDecodeOutput,
   func: async ({ jwt }, { token }) => {
     if (!jwt) {
-      throw new Error('JWT service is required')
+      throw new MissingServiceError('JWT service is required')
     }
     const payload = await jwt.decode(token)
     return { payload }

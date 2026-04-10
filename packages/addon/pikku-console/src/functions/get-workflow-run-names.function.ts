@@ -1,3 +1,4 @@
+import { MissingServiceError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
 
 export const getWorkflowRunNames = pikkuSessionlessFunc<null, string[]>({
@@ -7,7 +8,7 @@ export const getWorkflowRunNames = pikkuSessionlessFunc<null, string[]>({
   expose: true,
   auth: false,
   func: async ({ workflowRunService }) => {
-    if (!workflowRunService) throw new Error('workflowRunService is not available')
+    if (!workflowRunService) throw new MissingServiceError('workflowRunService is not available')
     return await workflowRunService.getDistinctWorkflowNames()
   },
 })
