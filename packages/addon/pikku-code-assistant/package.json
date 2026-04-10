@@ -10,6 +10,7 @@
     "#pikku/*": "./.pikku/*"
   },
   "exports": {
+    ".": "./dist/.pikku/pikku-bootstrap.gen.js",
     "./.pikku/*": "./dist/.pikku/*"
   },
   "files": [
