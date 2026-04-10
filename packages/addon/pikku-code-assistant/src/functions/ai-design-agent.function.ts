@@ -75,19 +75,7 @@ Return ONLY the JSON object, no explanation.`
     const config = extractJson(result.text) as any
 
     if (!config) {
-      return {
-        config: {
-          instructions: '',
-          description: '',
-          model: 'openai/o4-mini',
-          tools: [],
-          maxSteps: 10,
-          toolChoice: 'auto' as const,
-        },
-        inputTokens: result.inputTokens,
-        outputTokens: result.outputTokens,
-        costUsd: result.costUsd,
-      }
+      throw new Error('Failed to parse agent config from AI response')
     }
 
     return {
