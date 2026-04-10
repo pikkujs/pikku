@@ -20,7 +20,7 @@ export function useGenerateAgent() {
       rpc.startWorkflow('code-assistant:generateDynamicAgent', {
         prompt,
         name: agentName,
-        functionFilter: functionFilter?.length ? functionFilter : undefined,
+        toolFilter: functionFilter?.length ? functionFilter : undefined,
         allowSubAgents,
       }),
     onSuccess: () => {
