@@ -1,5 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku'
-import { callClaude, extractJsonArray } from '../utils/claude.js'
+import { callClaude, extractJsonArray } from '@pikku/addon-dynamic-workflows'
 
 export const aiSelectTools = pikkuSessionlessFunc<
   {

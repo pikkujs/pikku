@@ -1,6 +1,6 @@
 import { pikkuSessionlessFunc } from '#pikku'
 import { pikkuState } from '@pikku/core/internal'
-import { callClaude, extractJsonArray } from '../utils/claude.js'
+import { callClaude, extractJsonArray } from '@pikku/addon-dynamic-workflows'
 
 function nameExists(name: string): boolean {
   const rootMeta = pikkuState(null, 'agent', 'agentsMeta')

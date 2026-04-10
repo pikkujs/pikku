@@ -5351,6 +5351,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/code-assistant@workspace:packages/addon/pikku-code-assistant"
   dependencies:
+    "@pikku/addon-dynamic-workflows": "workspace:*"
     "@pikku/cli": "workspace:*"
     "@pikku/core": "workspace:*"
     tslib: "npm:^2.8.1"

@@ -3,7 +3,7 @@ import {
   resolveToolMeta,
   formatSchemaType,
   collectOutputPaths,
-} from '../utils/resolve-tool-meta.js'
+} from '@pikku/addon-dynamic-workflows'
 
 export const getToolSchemas = pikkuSessionlessFunc<
   { names: string[] },

@@ -1,5 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku'
-import { callClaude } from '../utils/claude.js'
+import { callClaude } from '@pikku/addon-dynamic-workflows'
 
 export const aiSummarisePrompt = pikkuSessionlessFunc<
   { prompt: string },
