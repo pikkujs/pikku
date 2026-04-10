@@ -1,5 +1,5 @@
 import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
-import { func } from '#pikku/pikku-types.gen.js'
+import { ref } from '#pikku/pikku-types.gen.js'
 
 export const taskMaster = pikkuAIAgent({
   name: 'task-master',
@@ -18,9 +18,9 @@ You have access to three tools:
 Always be helpful and conversational. When users ask to manage their todos, use the appropriate tools to fulfill their requests. Provide clear feedback about what actions you've taken and show the results to the user. If a user wants to complete a todo but hasn't listed them first, offer to list their todos so they can identify which one to complete.`,
   model: 'openai/o4-mini',
   tools: [
-    func('todos:listTodos'),
-    func('todos:addTodo'),
-    func('todos:completeTodo'),
+    ref('todos:listTodos'),
+    ref('todos:addTodo'),
+    ref('todos:completeTodo'),
   ],
   maxSteps: 8,
   tags: ['todos', 'task-management', 'productivity', 'personal-assistant'],

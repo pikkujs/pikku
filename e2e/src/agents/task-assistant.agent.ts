@@ -1,5 +1,5 @@
 import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
-import { func } from '#pikku/pikku-types.gen.js'
+import { ref } from '#pikku/pikku-types.gen.js'
 
 export const taskAssistant = pikkuAIAgent({
   name: 'task-assistant',
@@ -24,9 +24,9 @@ When interacting with users:
 Be conversational and helpful, guiding users through task management naturally.`,
   model: 'openai/o4-mini',
   tools: [
-    func('todos:listTodos'),
-    func('todos:addTodo'),
-    func('todos:completeTodo'),
+    ref('todos:listTodos'),
+    ref('todos:addTodo'),
+    ref('todos:completeTodo'),
   ],
   maxSteps: 5,
   tags: ['productivity', 'task-management', 'todos'],

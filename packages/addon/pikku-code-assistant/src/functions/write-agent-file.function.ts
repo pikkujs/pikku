@@ -44,13 +44,13 @@ export const writeAgentFile = pikkuSessionlessFunc<
     const rootDir = dirname(metaBasePath)
 
     const kebabName = toKebabCase(name)
-    const toolLines = config.tools.map((t) => `    func('${t}'),`).join('\n')
+    const toolLines = config.tools.map((t) => `    ref('${t}'),`).join('\n')
 
     const lines: string[] = []
     lines.push(
       `import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'`
     )
-    lines.push(`import { func } from '#pikku/pikku-types.gen.js'`)
+    lines.push(`import { ref } from '#pikku/pikku-types.gen.js'`)
     lines.push('')
     lines.push(`export const ${exportName} = pikkuAIAgent({`)
     lines.push(`  name: '${kebabName}',`)

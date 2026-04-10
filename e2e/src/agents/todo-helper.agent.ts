@@ -1,5 +1,5 @@
 import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
-import { func } from '#pikku/pikku-types.gen.js'
+import { ref } from '#pikku/pikku-types.gen.js'
 
 export const todoHelper = pikkuAIAgent({
   name: 'todo-helper',
@@ -23,9 +23,9 @@ Behavior guidelines:
 - Help users stay organized and motivated with their tasks`,
   model: 'openai/gpt-4o-mini',
   tools: [
-    func('todos:listTodos'),
-    func('todos:addTodo'),
-    func('todos:completeTodo'),
+    ref('todos:listTodos'),
+    ref('todos:addTodo'),
+    ref('todos:completeTodo'),
   ],
   maxSteps: 8,
   tags: ['productivity', 'todos', 'task-management'],

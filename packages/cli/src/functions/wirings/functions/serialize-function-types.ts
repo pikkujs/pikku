@@ -546,13 +546,13 @@ export const pikkuVoidFunc = (
  * @example
  * \`\`\`typescript
  * // Use in agent tools
- * tools: [func('todos:listTodos'), func('myLocalFunc')]
+ * tools: [ref('todos:listTodos'), ref('myLocalFunc')]
  *
  * // Use in HTTP wiring
- * wireHTTP({ route: '/greet', method: 'post', func: func('greet') })
+ * wireHTTP({ route: '/greet', method: 'post', func: ref('greet') })
  * \`\`\`
  */
-export const func = <Name extends keyof FlattenedRPCMap>(
+export const ref = <Name extends keyof FlattenedRPCMap>(
   rpcName: Name
 ): PikkuFunctionConfig<
   FlattenedRPCMap[Name]['input'],

@@ -3,7 +3,7 @@ export const serializeConsoleFunctions = (
   _pathToAgentTypes: string,
   globalHTTPPrefix: string = ''
 ) => {
-  return `import { pikkuSessionlessFunc, defineHTTPRoutes, wireHTTPRoutes, func, wireAddon } from '${pathToPikkuTypes}'
+  return `import { pikkuSessionlessFunc, defineHTTPRoutes, wireHTTPRoutes, ref, wireAddon } from '${pathToPikkuTypes}'
 
 export const pikkuConsoleSetSecret = pikkuSessionlessFunc<{
   secretId: string
@@ -96,7 +96,7 @@ export const consoleRoutes = defineHTTPRoutes({
       route: '/workflow-run/:runId/stream',
       method: 'get',
       sse: true,
-      func: func('console:streamWorkflowRun'),
+      func: ref('console:streamWorkflowRun'),
     },
   },
 })

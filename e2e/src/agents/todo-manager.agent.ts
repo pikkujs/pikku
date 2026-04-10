@@ -1,5 +1,5 @@
 import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
-import { func } from '#pikku/pikku-types.gen.js'
+import { ref } from '#pikku/pikku-types.gen.js'
 
 export const todoManager = pikkuAIAgent({
   name: 'todo-manager',
@@ -22,9 +22,9 @@ Best practices:
 - Help users stay organized by suggesting when they might want to review their task list`,
   model: 'openai/o4-mini',
   tools: [
-    func('todos:listTodos'),
-    func('todos:addTodo'),
-    func('todos:completeTodo'),
+    ref('todos:listTodos'),
+    ref('todos:addTodo'),
+    ref('todos:completeTodo'),
   ],
   maxSteps: 7,
   tags: ['productivity', 'todos', 'task-management'],

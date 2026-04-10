@@ -387,7 +387,7 @@ export class CodeEditService {
 
   private serializeToolsArray(tools: string[]): string {
     if (tools.length === 0) return '[]'
-    const items = tools.map((t) => `func('${t}')`)
+    const items = tools.map((t) => `ref('${t}')`)
     return `[${items.join(', ')}]`
   }
 

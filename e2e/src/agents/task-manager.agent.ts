@@ -1,5 +1,5 @@
 import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
-import { func } from '#pikku/pikku-types.gen.js'
+import { ref } from '#pikku/pikku-types.gen.js'
 
 export const taskManager = pikkuAIAgent({
   name: 'task-manager',
@@ -26,10 +26,10 @@ When helping users:
 - Be conversational and helpful in explaining what you're doing`,
   model: 'openai/o4-mini',
   tools: [
-    func('todos:listTodos'),
-    func('todos:getTodo'),
-    func('todos:addTodo'),
-    func('todos:completeTodo'),
+    ref('todos:listTodos'),
+    ref('todos:getTodo'),
+    ref('todos:addTodo'),
+    ref('todos:completeTodo'),
   ],
   maxSteps: 10,
   tags: ['todo-management', 'task-tracking', 'productivity'],

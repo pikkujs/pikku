@@ -92,7 +92,7 @@ export function serializeChannelCLI(
  * WebSocket channel backend for '${programName}' CLI commands
  */
 import { wireChannel } from '${channelTypesPath}'
-import { pikkuMiddleware${hasAddonFuncs ? ', func' : ''}, pikkuSessionlessFunc } from '${functionTypesPath}'
+import { pikkuMiddleware${hasAddonFuncs ? ', ref' : ''}, pikkuSessionlessFunc } from '${functionTypesPath}'
 import { generateCommandHelp } from '@pikku/core/cli'
 import { handleRawCLI } from '@pikku/core/cli/channel'
 import { pikkuState } from '@pikku/core/internal'
@@ -159,7 +159,7 @@ wireChannel({
 ${Object.entries(commandMap)
   .map(([commandKey, { pikkuFuncId, isAddon }]) => {
     const funcRef = isAddon
-      ? `func('${pikkuFuncId}')`
+      ? `ref('${pikkuFuncId}')`
       : (functionFiles.get(pikkuFuncId)?.exportedName ?? pikkuFuncId)
     return `      '${commandKey}': {
         func: ${funcRef},
