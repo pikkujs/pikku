@@ -32,6 +32,19 @@ import { checkForApprovals, appendStepMessages } from './ai-agent-stream.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { resolveModelConfig } from './ai-agent-model-config.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
+
+function stripNulls(obj: unknown): unknown {
+  if (obj === null) return undefined
+  if (Array.isArray(obj)) return obj.map(stripNulls)
+  if (typeof obj !== 'object') return obj
+  const result: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+    if (value !== null) {
+      result[key] = stripNulls(value)
+    }
+  }
+  return result
+}
 import { randomUUID } from 'crypto'
 
 export async function runAIAgent(
@@ -424,13 +437,8 @@ export async function resumeAIAgentSync(
         typeof pending.args === 'string'
           ? JSON.parse(pending.args)
           : pending.args
-      // Strip null values — LLMs send null for optional fields but Zod expects undefined
-      const toolArgs: Record<string, any> = {}
-      if (rawArgs && typeof rawArgs === 'object' && !Array.isArray(rawArgs)) {
-        for (const [k, v] of Object.entries(rawArgs)) {
-          if (v !== null) toolArgs[k] = v
-        }
-      }
+      // Strip null values recursively — LLMs send null for optional fields but Zod expects undefined
+      const toolArgs = stripNulls(rawArgs) ?? {}
       try {
         const toolResult = await matchingTool.execute(toolArgs)
         resultStr =
