@@ -1,4 +1,4 @@
-import { MissingServiceError } from '@pikku/core/errors'
+import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
 
 export const readFunctionBody = pikkuSessionlessFunc<
@@ -12,9 +12,7 @@ export const readFunctionBody = pikkuSessionlessFunc<
   auth: false,
   func: async ({ codeEditService }, { sourceFile, exportedName }) => {
     if (!codeEditService) {
-      throw new MissingServiceError(
-        'Code editing is only available in local development mode'
-      )
+      throw new LocalEnvironmentOnlyError('Only available in local development mode')
     }
     const body = await codeEditService.readFunctionBody(
       sourceFile,

@@ -1,4 +1,4 @@
-import { MissingServiceError } from '@pikku/core/errors'
+import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
 import type { FunctionConfigChanges } from '../services/code-edit.service.js'
 
@@ -17,9 +17,7 @@ export const updateFunctionConfig = pikkuSessionlessFunc<
   auth: false,
   func: async ({ codeEditService }, { sourceFile, exportedName, changes }) => {
     if (!codeEditService) {
-      throw new MissingServiceError(
-        'Code editing is only available in local development mode'
-      )
+      throw new LocalEnvironmentOnlyError('Only available in local development mode')
     }
     await codeEditService.updateFunctionConfig(
       sourceFile,

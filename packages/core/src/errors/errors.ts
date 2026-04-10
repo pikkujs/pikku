@@ -21,6 +21,12 @@ addError(MissingServiceError, {
   message: 'A required service is not configured',
 })
 
+export class LocalEnvironmentOnlyError extends PikkuError {}
+addError(LocalEnvironmentOnlyError, {
+  status: 403,
+  message: 'This operation is only available in local development mode',
+})
+
 /**
  * The server cannot or will not process the request due to client error (e.g., malformed request syntax).
  * @group Error
