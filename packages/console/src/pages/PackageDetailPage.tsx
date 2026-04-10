@@ -327,7 +327,7 @@ export const PackageDetailPage: React.FunctionComponent<{
       namespace: string
       version?: string
     }) =>
-      (rpc as any).invoke('console:installAddon', {
+      (rpc as any).invoke('code-assistant:installAddon', {
         packageName,
         namespace,
         version,
@@ -348,7 +348,7 @@ export const PackageDetailPage: React.FunctionComponent<{
       swaggerUrl: string
       credential?: 'apikey' | 'bearer' | 'oauth2'
     }) =>
-      (rpc as any).invoke('console:installOpenapiAddon', {
+      (rpc as any).invoke('code-assistant:installOpenapiAddon', {
         name,
         swaggerUrl,
         credential,
