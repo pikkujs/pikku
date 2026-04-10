@@ -36,9 +36,7 @@ export const createSingletonServices = pikkuAddonServices(
     await addonService.init()
     const oauthService = new OAuthService()
 
-    const metaBasePath = (existingMetaService as any)?.basePath as
-      | string
-      | undefined
+    const metaBasePath = existingMetaService?.basePath
     const codeEditService = metaBasePath
       ? new CodeEditService(dirname(metaBasePath))
       : null

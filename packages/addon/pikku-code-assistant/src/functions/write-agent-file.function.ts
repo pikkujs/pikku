@@ -34,7 +34,7 @@ export const writeAgentFile = pikkuSessionlessFunc<
 >({
   description: 'Generates and writes an AI agent source file',
   func: async ({ metaService }, { name, exportName, config }) => {
-    const metaBasePath = (metaService as any)?.basePath as string | undefined
+    const metaBasePath = metaService?.basePath
     if (!metaBasePath) {
       throw new LocalEnvironmentOnlyError('Only available in local development mode')
     }

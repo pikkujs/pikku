@@ -30,7 +30,7 @@ export const installAddon = pikkuSessionlessFunc<
       throw new Error(`Invalid version: ${version}`)
     }
 
-    const metaBasePath = (metaService as any)?.basePath as string | undefined
+    const metaBasePath = metaService?.basePath
     if (!metaBasePath) {
       throw new LocalEnvironmentOnlyError('Only available in local development mode')
     }

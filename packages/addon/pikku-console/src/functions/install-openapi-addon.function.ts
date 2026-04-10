@@ -28,7 +28,7 @@ export const installOpenapiAddon = pikkuSessionlessFunc<
       throw new Error(`Invalid swagger URL: ${swaggerUrl}`)
     }
 
-    const metaBasePath = (metaService as any)?.basePath as string | undefined
+    const metaBasePath = metaService?.basePath
     if (!metaBasePath) {
       throw new LocalEnvironmentOnlyError('Only available in local development mode')
     }
