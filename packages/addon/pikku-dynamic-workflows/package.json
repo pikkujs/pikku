@@ -20,7 +20,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "pikku all && tsc && cp .pikku/rpc/*.d.ts dist/.pikku/rpc/ && cp .pikku/agent/*.d.ts dist/.pikku/agent/ 2>/dev/null; true",
+    "build": "pikku all && tsc && cp .pikku/rpc/*.d.ts dist/.pikku/rpc/ && cp .pikku/agent/*.d.ts dist/.pikku/agent/ && cp .pikku/workflow/*.d.ts dist/.pikku/workflow/ 2>/dev/null; true",
     "pikku": "pikku all",
     "test": "tsc --noEmit"
   },
