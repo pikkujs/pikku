@@ -1,6 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku'
 import { createHash } from 'node:crypto'
-import { getSingletonServices } from '@pikku/core'
 
 export const storeDynamicWorkflow = pikkuSessionlessFunc<
   {
@@ -12,7 +11,7 @@ export const storeDynamicWorkflow = pikkuSessionlessFunc<
   { workflowName: string; graphHash: string }
 >({
   description: 'Hashes and stores a validated workflow graph',
-  func: async ({}, { name, nodes, workflowDescription, entryNodeIds }) => {
+  func: async ({ workflowService }, { name, nodes, workflowDescription, entryNodeIds }) => {
     const workflowName = name
     const canonical = JSON.stringify(
       { nodes, entryNodeIds },
@@ -33,9 +32,8 @@ export const storeDynamicWorkflow = pikkuSessionlessFunc<
       graphHash,
     }
 
-    const singletonServices = getSingletonServices() as any
-    if (singletonServices?.workflowService) {
-      await singletonServices.workflowService.upsertWorkflowVersion(
+    if (workflowService) {
+      await workflowService.upsertWorkflowVersion(
         workflowName,
         graphHash,
         graph,

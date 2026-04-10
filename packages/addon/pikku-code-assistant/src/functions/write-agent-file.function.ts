@@ -2,7 +2,6 @@ import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
 import { writeFile, mkdir } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
-import { getSingletonServices } from '@pikku/core'
 
 function toKebabCase(str: string): string {
   return str
@@ -34,10 +33,8 @@ export const writeAgentFile = pikkuSessionlessFunc<
   { filePath: string; content: string }
 >({
   description: 'Generates and writes an AI agent source file',
-  func: async ({}, { name, exportName, config }) => {
-    const singletonServices = getSingletonServices() as any
-    const metaService = singletonServices?.metaService
-    const metaBasePath = metaService?.basePath as string | undefined
+  func: async ({ metaService }, { name, exportName, config }) => {
+    const metaBasePath = (metaService as any)?.basePath as string | undefined
     if (!metaBasePath) {
       throw new LocalEnvironmentOnlyError('Only available in local development mode')
     }
