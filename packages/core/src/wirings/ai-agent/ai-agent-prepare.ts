@@ -339,7 +339,8 @@ export async function buildToolDefs(
       }
 
       // Filter out tools the user doesn't have auth for
-      if (session && fnMeta.permissions?.length) {
+      if (fnMeta.permissions?.length) {
+        if (!session) continue
         const allowed = await checkAuthPermissions(
           fnMeta.permissions,
           session,
@@ -428,7 +429,8 @@ export async function buildToolDefs(
       }
 
       // Filter out sub-agents the user doesn't have auth for
-      if (session && subMeta.permissions?.length) {
+      if (subMeta.permissions?.length) {
+        if (!session) continue
         const allowed = await checkAuthPermissions(
           subMeta.permissions,
           session,
