@@ -11,13 +11,17 @@
   },
   "exports": {
     ".": "./dist/.pikku/pikku-bootstrap.gen.js",
-    "./.pikku/*": "./dist/.pikku/*"
+    "./.pikku/*": "./dist/.pikku/*",
+    "./.pikku/pikku-metadata.gen.json": "./.pikku/pikku-metadata.gen.json",
+    "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js": {
+      "types": "./dist/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
+    }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "pikku all && tsc",
+    "build": "pikku all && tsc && cp .pikku/rpc/*.d.ts dist/.pikku/rpc/ && cp .pikku/agent/*.d.ts dist/.pikku/agent/ 2>/dev/null; true",
     "pikku": "pikku all",
     "test": "tsc --noEmit"
   },
