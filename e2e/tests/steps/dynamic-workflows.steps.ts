@@ -4,34 +4,15 @@ import type { AgentWorld } from '../support/world.js'
 import { config } from '../support/types.js'
 
 interface DynamicWorkflowState {
-  functionList: { name: string; description: string }[]
-  schemaDetails: string
-  validationResult: { valid: boolean; errors: string[]; entryNodeIds: string[] }
   generatedWorkflowName: string | null
   generatedRunId: string | null
   runResult: any
 }
 
 const state: DynamicWorkflowState = {
-  functionList: [],
-  schemaDetails: '',
-  validationResult: { valid: false, errors: [], entryNodeIds: [] },
   generatedWorkflowName: null,
   generatedRunId: null,
   runResult: undefined,
-}
-
-async function rpcCall(name: string, data: any = {}): Promise<any> {
-  const res = await fetch(`${config.apiUrl}/rpc/${name}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ data }),
-  })
-  if (!res.ok) {
-    const body = await res.text()
-    throw new Error(`RPC ${name} failed (${res.status}): ${body}`)
-  }
-  return res.json()
 }
 
 function parseInput(table: any): Record<string, any> {
@@ -49,92 +30,6 @@ function parseInput(table: any): Record<string, any> {
   }
   return result
 }
-
-// --- List / Schema / Validate steps ---
-
-When('I list dynamic functions', async function (this: AgentWorld) {
-  const result = await rpcCall('dynamic-workflows:listDynamicFunctions')
-  state.functionList = result.summaries
-})
-
-Then('the function list should not be empty', function () {
-  expect(state.functionList.length).toBeGreaterThan(0)
-})
-
-Then('the function list should not contain internal functions', function () {
-  const internalPrefixes = [
-    'pikkuWorkflow',
-    'pikkuRemote',
-    'pikkuConsole',
-    'http:',
-    'graphStart:',
-  ]
-  for (const fn of state.functionList) {
-    for (const prefix of internalPrefixes) {
-      expect(fn.name.startsWith(prefix)).toBe(false)
-    }
-  }
-})
-
-Then(
-  'the function list should contain {string}',
-  function (this: AgentWorld, name: string) {
-    const found = state.functionList.some((f) => f.name === name)
-    expect(found).toBe(true)
-  }
-)
-
-When(
-  'I get schemas for functions:',
-  async function (this: AgentWorld, table: any) {
-    const rows = table.rawTable || table.raw()
-    const names = rows.slice(1).map((r: string[]) => r[0])
-    const result = await rpcCall('dynamic-workflows:getFunctionSchemas', {
-      names,
-    })
-    state.schemaDetails = result.details
-  }
-)
-
-Then(
-  'the schema details should contain {string}',
-  function (this: AgentWorld, expected: string) {
-    expect(state.schemaDetails).toContain(expected)
-  }
-)
-
-When(
-  'I validate the workflow graph:',
-  async function (this: AgentWorld, docString: string) {
-    const input = JSON.parse(docString)
-    state.validationResult = await rpcCall(
-      'dynamic-workflows:validateDynamicWorkflow',
-      input
-    )
-  }
-)
-
-Then('the validation should pass', function () {
-  expect(state.validationResult.valid).toBe(true)
-})
-
-Then('the validation should fail', function () {
-  expect(state.validationResult.valid).toBe(false)
-})
-
-Then(
-  'the entry nodes should include {string}',
-  function (this: AgentWorld, nodeId: string) {
-    expect(state.validationResult.entryNodeIds).toContain(nodeId)
-  }
-)
-
-Then(
-  'the validation errors should mention {string}',
-  function (this: AgentWorld, expected: string) {
-    expect(state.validationResult.errors.join(' ')).toContain(expected)
-  }
-)
 
 // --- Generate workflow (AI) steps ---
 

@@ -11,7 +11,6 @@ export const storeDynamicWorkflow = pikkuSessionlessFunc<
   },
   { workflowName: string; graphHash: string }
 >({
-  expose: true,
   description: 'Hashes and stores a validated workflow graph',
   func: async ({}, { name, nodes, workflowDescription, entryNodeIds }) => {
     const workflowName = name

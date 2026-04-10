@@ -10,7 +10,6 @@ export const aiSummarisePrompt = pikkuSessionlessFunc<
     costUsd: number
   }
 >({
-  expose: true,
   description:
     'Summarises a natural language prompt into a concise 1-2 sentence description',
   func: async ({}, { prompt }) => {

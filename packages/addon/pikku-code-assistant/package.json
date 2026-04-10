@@ -10,10 +10,6 @@
     "#pikku/*": "./.pikku/*"
   },
   "exports": {
-    ".": {
-      "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
-    },
     "./.pikku/*": "./dist/.pikku/*"
   },
   "files": [

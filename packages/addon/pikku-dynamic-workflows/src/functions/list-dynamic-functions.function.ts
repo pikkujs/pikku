@@ -22,7 +22,6 @@ export const listDynamicFunctions = pikkuSessionlessFunc<
   null,
   { summaries: { name: string; description: string }[] }
 >({
-  expose: true,
   description:
     'Lists all registered functions available for workflow generation',
   func: async () => {

@@ -220,7 +220,6 @@ export const validateDynamicWorkflow = pikkuSessionlessFunc<
   { nodes: Record<string, any>; functionNames: string[] },
   { valid: boolean; errors: string[]; entryNodeIds: string[] }
 >({
-  expose: true,
   description:
     'Validates a workflow graph for structural correctness and input schema compliance',
   func: async ({}, { nodes, functionNames }) => {

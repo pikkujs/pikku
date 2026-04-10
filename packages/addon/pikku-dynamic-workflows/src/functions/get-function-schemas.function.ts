@@ -9,7 +9,6 @@ export const getFunctionSchemas = pikkuSessionlessFunc<
   { names: string[] },
   { details: string }
 >({
-  expose: true,
   description:
     'Resolves input/output JSON schemas for the given function names',
   func: async ({}, { names }) => {
