@@ -29,7 +29,17 @@ function cleanSchema(schema: any): any {
         const prop = rest.properties[key]
         if (prop.type && !Array.isArray(prop.type)) {
           prop.type = [prop.type, 'null']
-        } else if (!prop.type && !prop.anyOf && !prop.oneOf) {
+        } else if (Array.isArray(prop.type)) {
+          if (!prop.type.includes('null')) prop.type.push('null')
+        } else if (prop.anyOf) {
+          if (!prop.anyOf.some((s: Record<string, unknown>) => s.type === 'null')) {
+            prop.anyOf.push({ type: 'null' })
+          }
+        } else if (prop.oneOf) {
+          if (!prop.oneOf.some((s: Record<string, unknown>) => s.type === 'null')) {
+            prop.oneOf.push({ type: 'null' })
+          }
+        } else if (!prop.type) {
           prop.anyOf = [{ ...prop }, { type: 'null' }]
         }
       }
@@ -48,11 +58,13 @@ function cleanSchema(schema: any): any {
  * but Zod .optional() expects undefined, not null.
  */
 function stripNulls(obj: any): any {
-  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj
+  if (obj === null) return undefined
+  if (Array.isArray(obj)) return obj.map(stripNulls)
+  if (typeof obj !== 'object') return obj
   const result: any = {}
   for (const [key, value] of Object.entries(obj)) {
     if (value !== null) {
-      result[key] = value
+      result[key] = stripNulls(value)
     }
   }
   return result
