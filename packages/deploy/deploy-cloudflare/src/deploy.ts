@@ -29,6 +29,8 @@ export interface DeployOptions {
   apiToken: string
   buildDir: string
   manifest: CloudflareInfraManifest
+  /** Workers for Platforms dispatch namespace. When set, workers are deployed into this namespace. */
+  dispatchNamespace?: string
   onProgress?: (step: string, detail: string) => void
 }
 
@@ -60,7 +62,7 @@ function toWorkerName(projectId: string, unitName: string): string {
 }
 
 export async function deploy(options: DeployOptions): Promise<DeployResult> {
-  const { accountId, apiToken, buildDir, manifest, onProgress } = options
+  const { accountId, apiToken, buildDir, manifest, dispatchNamespace, onProgress } = options
   const client = new CloudflareClient({ accountId, apiToken })
   const log = onProgress ?? (() => {})
   const projectId = manifest.projectId
@@ -379,7 +381,7 @@ async function deployWorkerBatch(
         projectId
       )
 
-      await createWorker(client, workerName, script, bindings)
+      await createWorker(client, workerName, script, bindings, [], undefined, dispatchNamespace)
       result.workersDeployed.push(workerName)
       log('workers', `Deployed "${workerName}"`)
     } catch (err) {

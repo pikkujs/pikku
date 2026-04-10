@@ -20,10 +20,11 @@ export async function createWorker(
   script: string,
   bindings: WorkerBinding[] = [],
   routes: WorkerRoute[] = [],
-  compatibilityDate?: string
+  compatibilityDate?: string,
+  dispatchNamespace?: string
 ): Promise<WorkerMetadata> {
   const metadata = buildWorkerMetadataPayload(bindings, compatibilityDate)
-  const result = await uploadWorkerScript(client, name, script, metadata)
+  const result = await uploadWorkerScript(client, name, script, metadata, dispatchNamespace)
 
   if (routes.length > 0) {
     await setWorkerRoutes(client, name, routes)
@@ -49,10 +50,11 @@ export async function updateWorker(
   name: string,
   script: string,
   bindings: WorkerBinding[] = [],
-  compatibilityDate?: string
+  compatibilityDate?: string,
+  dispatchNamespace?: string
 ): Promise<WorkerMetadata> {
   const metadata = buildWorkerMetadataPayload(bindings, compatibilityDate)
-  return uploadWorkerScript(client, name, script, metadata)
+  return uploadWorkerScript(client, name, script, metadata, dispatchNamespace)
 }
 
 /**
@@ -63,12 +65,13 @@ export async function updateWorker(
  */
 export async function deleteWorker(
   client: CloudflareClient,
-  name: string
+  name: string,
+  dispatchNamespace?: string
 ): Promise<void> {
-  await client.request<void>(
-    'DELETE',
-    `/workers/scripts/${encodeURIComponent(name)}`
-  )
+  const path = dispatchNamespace
+    ? `/workers/dispatch/namespaces/${encodeURIComponent(dispatchNamespace)}/scripts/${encodeURIComponent(name)}`
+    : `/workers/scripts/${encodeURIComponent(name)}`
+  await client.request<void>('DELETE', path)
 }
 
 /**
@@ -134,7 +137,8 @@ async function uploadWorkerScript(
   client: CloudflareClient,
   name: string,
   script: string,
-  metadata: WorkerMetadataPayload
+  metadata: WorkerMetadataPayload,
+  dispatchNamespace?: string
 ): Promise<WorkerMetadata> {
   // Cloudflare's Worker upload API expects a multipart form with:
   //   - "metadata" part: JSON with bindings, main_module, compat settings
@@ -150,9 +154,13 @@ async function uploadWorkerScript(
     'worker.js'
   )
 
+  const path = dispatchNamespace
+    ? `/workers/dispatch/namespaces/${encodeURIComponent(dispatchNamespace)}/scripts/${encodeURIComponent(name)}`
+    : `/workers/scripts/${encodeURIComponent(name)}`
+
   return client.requestRaw<WorkerMetadata>(
     'PUT',
-    `/workers/scripts/${encodeURIComponent(name)}`,
+    path,
     formData
   )
 }

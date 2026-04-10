@@ -664,6 +664,7 @@ export class CloudflareProviderAdapter {
       apiToken,
       buildDir: options.buildDir,
       manifest: infraJson,
+      dispatchNamespace: process.env.CF_DISPATCH_NAMESPACE,
       onProgress: options.onProgress,
     })
   }
