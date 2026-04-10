@@ -2,8 +2,8 @@ import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
 import { readFile } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
-import { execSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 
 export const installOpenapiAddon = pikkuSessionlessFunc<
   {
@@ -19,6 +19,15 @@ export const installOpenapiAddon = pikkuSessionlessFunc<
   expose: true,
   auth: false,
   func: async ({ metaService }, { name, swaggerUrl, credential }) => {
+    if (!/^[a-z0-9-]+$/.test(name)) {
+      throw new Error(`Invalid addon name: ${name}`)
+    }
+    try {
+      new URL(swaggerUrl)
+    } catch {
+      throw new Error(`Invalid swagger URL: ${swaggerUrl}`)
+    }
+
     const metaBasePath = (metaService as any)?.basePath as string | undefined
     if (!metaBasePath) {
       throw new LocalEnvironmentOnlyError('Only available in local development mode')
@@ -42,12 +51,12 @@ export const installOpenapiAddon = pikkuSessionlessFunc<
       throw new Error(`Addon directory already exists: ${addonPath}`)
     }
 
-    const flags = [`--openapi ${swaggerUrl}`, `--dir ${targetDir}`]
+    const pikkuArgs = ['pikku', 'new', 'addon', name, '--openapi', swaggerUrl, '--dir', targetDir]
     if (credential) {
-      flags.push(`--credential ${credential}`)
+      pikkuArgs.push('--credential', credential)
     }
 
-    execSync(`npx pikku new addon ${name} ${flags.join(' ')}`, {
+    execFileSync('npx', pikkuArgs, {
       cwd: rootDir,
       stdio: 'pipe',
       timeout: 120_000,
@@ -67,20 +76,20 @@ export const installOpenapiAddon = pikkuSessionlessFunc<
       }
     }
 
-    execSync(`${pm} install`, {
+    execFileSync(pm, ['install'], {
       cwd: rootDir,
       stdio: 'pipe',
       timeout: 120_000,
     })
 
-    execSync(`npx pikku all`, {
+    execFileSync('npx', ['pikku', 'all'], {
       cwd: addonPath,
       stdio: 'pipe',
       timeout: 120_000,
     })
 
     try {
-      execSync(`npx tsc`, {
+      execFileSync('npx', ['tsc'], {
         cwd: addonPath,
         stdio: 'pipe',
         timeout: 120_000,
@@ -92,7 +101,6 @@ export const installOpenapiAddon = pikkuSessionlessFunc<
     const pikkuDir = config.scaffold?.pikkuDir
     if (pikkuDir) {
       const addonsDir = join(rootDir, dirname(pikkuDir), 'addons')
-      const { mkdirSync, writeFileSync } = await import('node:fs')
       mkdirSync(addonsDir, { recursive: true })
       const wiringFile = join(addonsDir, `${name}.addon.ts`)
       if (!existsSync(wiringFile)) {
@@ -104,7 +112,7 @@ export const installOpenapiAddon = pikkuSessionlessFunc<
       }
     }
 
-    execSync(`npx pikku all`, {
+    execFileSync('npx', ['pikku', 'all'], {
       cwd: rootDir,
       stdio: 'pipe',
       timeout: 120_000,

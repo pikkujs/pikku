@@ -177,8 +177,13 @@ export class CodeEditService {
   }
 
   private resolvePath(sourceFile: string): string {
-    if (sourceFile.startsWith('/')) return sourceFile
-    return resolve(this.rootDir, sourceFile)
+    const resolved = sourceFile.startsWith('/')
+      ? sourceFile
+      : resolve(this.rootDir, sourceFile)
+    if (!resolved.startsWith(this.rootDir)) {
+      throw new Error(`Path traversal not allowed: ${sourceFile}`)
+    }
+    return resolved
   }
 
   private findPikkuCall(content: string, exportedName: string): PikkuCallInfo {

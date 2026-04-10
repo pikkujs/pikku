@@ -349,11 +349,11 @@ function processCommand(
       if (
         ts.isCallExpression(prop.initializer) &&
         ts.isIdentifier(prop.initializer.expression) &&
-        prop.initializer.expression.text === 'func'
+        prop.initializer.expression.text === 'ref'
       ) {
         const [firstArg] = prop.initializer.arguments
         if (!firstArg || !ts.isStringLiteral(firstArg)) {
-          throw new Error(`func() call requires a string literal argument`)
+          throw new Error(`ref() call requires a string literal argument`)
         }
         pikkuFuncId = firstArg.text
         const addonNamespace = pikkuFuncId.includes(':')

@@ -63,7 +63,7 @@ function resolveToolReferences(
         }
       }
 
-      if (calleeName === 'func') {
+      if (calleeName === 'ref') {
         const [firstArg] = element.arguments
         if (firstArg && ts.isStringLiteral(firstArg)) {
           resolved.push(firstArg.text)

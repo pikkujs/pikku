@@ -2,7 +2,7 @@ import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 
 export const installAddon = pikkuSessionlessFunc<
@@ -19,6 +19,17 @@ export const installAddon = pikkuSessionlessFunc<
   expose: true,
   auth: false,
   func: async ({ metaService }, { packageName, namespace, version }) => {
+    const validPkg = /^(@[a-z0-9-]+\/)?[a-z0-9._-]+$/
+    if (!validPkg.test(packageName)) {
+      throw new Error(`Invalid package name: ${packageName}`)
+    }
+    if (!/^[a-z0-9-]+$/.test(namespace)) {
+      throw new Error(`Invalid namespace: ${namespace}`)
+    }
+    if (version && !/^[a-z0-9._^~><=|-]+$/i.test(version)) {
+      throw new Error(`Invalid version: ${version}`)
+    }
+
     const metaBasePath = (metaService as any)?.basePath as string | undefined
     if (!metaBasePath) {
       throw new LocalEnvironmentOnlyError('Only available in local development mode')
@@ -60,14 +71,14 @@ export const installAddon = pikkuSessionlessFunc<
       }
     }
 
-    const installCmd: Record<string, string> = {
-      yarn: `yarn add ${pkg}`,
-      npm: `npm install ${pkg}`,
-      pnpm: `pnpm add ${pkg}`,
-      bun: `bun add ${pkg}`,
+    const installArgs: Record<string, string[]> = {
+      yarn: ['add', pkg],
+      npm: ['install', pkg],
+      pnpm: ['add', pkg],
+      bun: ['add', pkg],
     }
 
-    execSync(installCmd[pm]!, { cwd: rootDir, stdio: 'pipe' })
+    execFileSync(pm, installArgs[pm]!, { cwd: rootDir, stdio: 'pipe' })
 
     const typesImport = config.scaffold?.pikkuDir
       ? `../${config.scaffold.pikkuDir.split('/').pop()}/pikku-types.gen.js`
