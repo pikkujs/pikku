@@ -15,8 +15,6 @@ import { OAuthCallbackPage } from '@/pages/OAuthCallbackPage'
 import { PackagesPage } from '@/pages/PackagesPage'
 import { UsersPage } from '@/pages/UsersPage'
 import { RenderWorkflowPage } from '@/pages/RenderWorkflowPage'
-import { WorkflowNewPage } from '@/pages/WorkflowNewPage'
-import { AgentNewPage } from '@/pages/AgentNewPage'
 
 export const App: React.FunctionComponent = () => {
   return (
@@ -34,9 +32,7 @@ export const App: React.FunctionComponent = () => {
         <Route path="/overview" element={<OverviewPage />} />
         <Route path="/functions" element={<FunctionsPage />} />
         <Route path="/workflow" element={<WorkflowsPage />} />
-        <Route path="/workflow/new" element={<WorkflowNewPage />} />
         <Route path="/agents" element={<AgentsPage />} />
-        <Route path="/agents/new" element={<AgentNewPage />} />
         <Route path="/agents/playground" element={<AgentPlaygroundPage />} />
         <Route path="/apis" element={<ApisPage />} />
         <Route path="/jobs" element={<JobsPage />} />

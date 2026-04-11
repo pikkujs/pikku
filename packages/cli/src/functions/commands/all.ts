@@ -10,16 +10,6 @@ const scaffoldFiles = (config: any): { file: string; generator: string }[] => {
       file: config.consoleFunctionsFile,
       generator: 'pikkuConsoleFunctions',
     })
-  if (config.scaffold?.dynamicWorkflows && config.dynamicWorkflowsFile)
-    files.push({
-      file: config.dynamicWorkflowsFile,
-      generator: 'pikkuDynamicWorkflows',
-    })
-  if (config.scaffold?.codeAssistant && config.codeAssistantFile)
-    files.push({
-      file: config.codeAssistantFile,
-      generator: 'pikkuCodeAssistant',
-    })
   if (config.scaffold?.agent && config.publicAgentFile)
     files.push({
       file: config.publicAgentFile,
@@ -116,8 +106,6 @@ export const all = pikkuVoidFunc({
 
     await rpc.invoke('pikkuPublicRPC', null)
     await rpc.invoke('pikkuConsoleFunctions', null)
-    await rpc.invoke('pikkuDynamicWorkflows', null)
-    await rpc.invoke('pikkuCodeAssistant', null)
     await rpc.invoke('pikkuNodeTypes', null)
     await rpc.invoke('pikkuSecretDefinitionTypes', null)
     await rpc.invoke('pikkuSecrets', null)

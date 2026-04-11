@@ -5106,17 +5106,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/addon-dynamic-workflows@workspace:*, @pikku/addon-dynamic-workflows@workspace:packages/addon/pikku-dynamic-workflows":
-  version: 0.0.0-use.local
-  resolution: "@pikku/addon-dynamic-workflows@workspace:packages/addon/pikku-dynamic-workflows"
-  dependencies:
-    "@pikku/cli": "workspace:*"
-    "@pikku/core": "workspace:*"
-    tslib: "npm:^2.8.1"
-    typescript: "npm:~5.8.0"
-  languageName: unknown
-  linkType: soft
-
 "@pikku/addon-emails@workspace:e2e/packages/emails":
   version: 0.0.0-use.local
   resolution: "@pikku/addon-emails@workspace:e2e/packages/emails"
@@ -5347,18 +5336,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/code-assistant@workspace:*, @pikku/code-assistant@workspace:packages/addon/pikku-code-assistant":
-  version: 0.0.0-use.local
-  resolution: "@pikku/code-assistant@workspace:packages/addon/pikku-code-assistant"
-  dependencies:
-    "@pikku/addon-dynamic-workflows": "workspace:*"
-    "@pikku/cli": "workspace:*"
-    "@pikku/core": "workspace:*"
-    tslib: "npm:^2.8.1"
-    typescript: "npm:~5.8.0"
-  languageName: unknown
-  linkType: soft
-
 "@pikku/console@workspace:packages/console":
   version: 0.0.0-use.local
   resolution: "@pikku/console@workspace:packages/console"
@@ -5373,10 +5350,8 @@ __metadata:
     "@mantine/notifications": "npm:^8.3.8"
     "@mantine/spotlight": "npm:^8.3.8"
     "@pikku/addon-console": "npm:^0.12.6"
-    "@pikku/addon-dynamic-workflows": "workspace:*"
     "@pikku/assistant-ui": "npm:^0.12.3"
     "@pikku/cli": "npm:^0.12.15"
-    "@pikku/code-assistant": "workspace:*"
     "@pikku/core": "npm:^0.12.14"
     "@pikku/fetch": "npm:^0.12.0"
     "@pikku/websocket": "npm:^0.12.1"
@@ -5487,12 +5462,10 @@ __metadata:
     "@ai-sdk/openai": "npm:^3.0.37"
     "@cucumber/cucumber": "npm:^11.0.0"
     "@pikku/addon-console": "workspace:*"
-    "@pikku/addon-dynamic-workflows": "workspace:*"
     "@pikku/addon-graph": "workspace:*"
     "@pikku/addon-hmac-signer": "workspace:*"
     "@pikku/ai-vercel": "workspace:*"
     "@pikku/cli": "workspace:*"
-    "@pikku/code-assistant": "workspace:*"
     "@pikku/core": "workspace:*"
     "@pikku/jose": "workspace:*"
     "@pikku/kysely": "workspace:*"

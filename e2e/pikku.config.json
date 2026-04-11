@@ -30,8 +30,6 @@
     "rpc": "no-auth",
     "console": "no-auth",
     "agent": "no-auth",
-    "workflow": "no-auth",
-    "dynamicWorkflows": "no-auth",
-    "codeAssistant": "no-auth"
+    "workflow": "no-auth"
   }
 }

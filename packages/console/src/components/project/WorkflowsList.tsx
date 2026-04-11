@@ -105,15 +105,7 @@ export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
         false
       }
       emptyMessage="No workflows found."
-      headerRight={
-        <Button
-          size="xs"
-          leftSection={<Plus size={14} />}
-          onClick={() => navigate('/workflow/new')}
-        >
-          New Workflow
-        </Button>
-      }
+      headerRight={null}
     />
   )
 }

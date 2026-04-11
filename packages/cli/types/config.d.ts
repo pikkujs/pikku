@@ -51,8 +51,6 @@ export interface PikkuCLICoreOutputFiles {
   publicAgentFile: string
   consoleFunctionsFile: string
   workflowRoutesFile: string
-  dynamicWorkflowsFile: string
-  codeAssistantFile: string
 
   // Triggers
   triggersTypesFile: string
@@ -249,8 +247,6 @@ export type PikkuCLIInput = {
     console?: PikkuScaffoldFeature
     agent?: PikkuScaffoldFeature
     workflow?: PikkuScaffoldFeature
-    dynamicWorkflows?: PikkuScaffoldFeature
-    codeAssistant?: PikkuScaffoldFeature
   }
 
   forceRequiredServices?: string[]

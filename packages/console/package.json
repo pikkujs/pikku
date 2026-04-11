@@ -71,9 +71,7 @@
   "devDependencies": {
     "@mantine/colors-generator": "^8.3.8",
     "@pikku/addon-console": "^0.12.6",
-    "@pikku/addon-dynamic-workflows": "workspace:*",
     "@pikku/cli": "^0.12.15",
-    "@pikku/code-assistant": "workspace:*",
     "@pikku/websocket": "^0.12.1",
     "@types/chroma-js": "^3",
     "@types/lodash": "^4",
