@@ -29,8 +29,6 @@ export interface DeployOptions {
   apiToken: string
   buildDir: string
   manifest: CloudflareInfraManifest
-  /** Workers for Platforms dispatch namespace. When set, workers are deployed into this namespace. */
-  dispatchNamespace?: string
   onProgress?: (step: string, detail: string) => void
 }
 
@@ -62,7 +60,7 @@ function toWorkerName(projectId: string, unitName: string): string {
 }
 
 export async function deploy(options: DeployOptions): Promise<DeployResult> {
-  const { accountId, apiToken, buildDir, manifest, dispatchNamespace, onProgress } = options
+  const { accountId, apiToken, buildDir, manifest, onProgress } = options
   const client = new CloudflareClient({ accountId, apiToken })
   const log = onProgress ?? (() => {})
   const projectId = manifest.projectId
@@ -111,15 +109,6 @@ export async function deploy(options: DeployOptions): Promise<DeployResult> {
   // Step 5: Enable workers.dev routes
   log('routes', 'Enabling workers.dev routes...')
   await enableWorkersDevRoutes(client, projectId, manifest, result, log)
-
-  // Step 6: Deploy server container via wrangler (if any server units exist)
-  const hasServerUnits = Object.values(manifest.units).some(
-    (u) => u.target === 'server'
-  )
-  if (hasServerUnits) {
-    log('container', 'Deploying server container via wrangler...')
-    await deployServerContainer(buildDir, result, log)
-  }
 
   result.success = result.errors.length === 0
   return result
@@ -300,13 +289,8 @@ async function uploadWorkersInOrder(
   log: (step: string, detail: string) => void
 ): Promise<void> {
   // Build dependency graph: unit -> set of service binding targets
-  // Skip server-target units — they're deployed as containers, not Workers
   const deps = new Map<string, Set<string>>()
   for (const [unitName, unitManifest] of Object.entries(manifest.units)) {
-    if (unitManifest.target === 'server') {
-      log('workers', `Skipping ${unitName} (server container — deploy via wrangler)`)
-      continue
-    }
     const serviceDeps = new Set<string>()
     for (const b of unitManifest.bindings) {
       if (b.startsWith('service:')) {
@@ -335,7 +319,10 @@ async function uploadWorkersInOrder(
     }
 
     if (ready.length === 0) {
-      log('workers', `Circular dependency detected among: ${[...remaining].join(', ')}`)
+      log(
+        'workers',
+        `Circular dependency detected among: ${[...remaining].join(', ')}`
+      )
       for (const unitName of remaining) {
         ready.push([unitName, manifest.units[unitName]])
       }
@@ -381,7 +368,7 @@ async function deployWorkerBatch(
         projectId
       )
 
-      await createWorker(client, workerName, script, bindings, [], undefined, dispatchNamespace)
+      await createWorker(client, workerName, script, bindings)
       result.workersDeployed.push(workerName)
       log('workers', `Deployed "${workerName}"`)
     } catch (err) {
@@ -438,10 +425,8 @@ async function wireConsumersAndTriggers(
     )
   }
 
-  // Set cron triggers (skip server-target units — their crons go through the proxy)
+  // Set cron triggers
   for (const cron of manifest.resources.cronTriggers) {
-    const unitManifest = manifest.units[cron.worker]
-    if (unitManifest?.target === 'server') continue
     const workerName = toWorkerName(projectId, cron.worker)
     tasks.push(
       (async () => {
@@ -488,71 +473,4 @@ async function enableWorkersDevRoutes(
     'routes',
     `Enabled workers.dev for ${Object.keys(manifest.units).length} workers`
   )
-}
-
-/**
- * Deploy the server container + proxy Worker via wrangler.
- * CF Containers can't be deployed via REST API — they require `wrangler deploy`
- * to build the Docker image and push it to CF's container registry.
- */
-async function deployServerContainer(
-  buildDir: string,
-  result: DeployResult,
-  log: (step: string, detail: string) => void
-): Promise<void> {
-  const { join } = await import('node:path')
-  const { existsSync } = await import('node:fs')
-  const { execSync } = await import('node:child_process')
-
-  const proxyDir = join(buildDir, 'server-proxy')
-  if (!existsSync(proxyDir)) {
-    log('container', 'No server-proxy directory found — skipping container deploy')
-    return
-  }
-
-  if (!existsSync(join(proxyDir, 'wrangler.toml'))) {
-    result.errors.push({
-      step: 'container',
-      error: 'server-proxy/wrangler.toml not found',
-    })
-    return
-  }
-
-  try {
-    // Install @cloudflare/containers dependency
-    log('container', 'Installing container dependencies...')
-    execSync('npm install --production', {
-      cwd: proxyDir,
-      timeout: 60_000,
-      stdio: 'pipe',
-    })
-
-    log('container', 'Running wrangler deploy for server container...')
-    const output = execSync('npx wrangler deploy', {
-      cwd: proxyDir,
-      timeout: 300_000,
-      env: {
-        ...process.env,
-        CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
-        CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
-        // Support Podman/Docker alternative
-        ...(process.env.WRANGLER_DOCKER_BIN
-          ? { WRANGLER_DOCKER_BIN: process.env.WRANGLER_DOCKER_BIN }
-          : {}),
-        // Disable buildkit provenance (not supported by Podman)
-        DOCKER_BUILDKIT: process.env.DOCKER_BUILDKIT ?? '0',
-      },
-      stdio: 'pipe',
-    })
-    log('container', `Container deployed: ${output.toString().trim().split('\n').pop()}`)
-    result.resourcesCreated.push('container:server')
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    // Extract useful error from wrangler output
-    const stderr = (err as { stderr?: Buffer })?.stderr?.toString() ?? ''
-    result.errors.push({
-      step: 'container',
-      error: stderr || message,
-    })
-  }
 }

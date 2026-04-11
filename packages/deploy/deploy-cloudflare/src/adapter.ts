@@ -10,7 +10,7 @@
 import { generateWranglerToml } from './wrangler-toml.js'
 import { generateInfraManifest } from './infra-manifest.js'
 
-type DeploymentHandler =
+export type DeploymentHandler =
   | {
       type: 'fetch'
       routes: Array<{ method: string; route: string; pikkuFuncId: string }>
@@ -18,7 +18,7 @@ type DeploymentHandler =
   | { type: 'queue'; queueName: string }
   | { type: 'scheduled'; schedule: string; taskName: string }
 
-interface DeploymentUnit {
+export interface DeploymentUnit {
   name: string
   role: string
   target: 'serverless' | 'server'
@@ -29,7 +29,7 @@ interface DeploymentUnit {
   tags: string[]
 }
 
-interface DeploymentManifest {
+export interface DeploymentManifest {
   projectId: string
   units: DeploymentUnit[]
   queues: Array<{
@@ -59,7 +59,7 @@ interface DeploymentManifest {
   }>
 }
 
-interface EntryGenerationContext {
+export interface EntryGenerationContext {
   unit: DeploymentUnit
   unitDir: string
   bootstrapPath: string
@@ -94,26 +94,42 @@ export class CloudflareProviderAdapter {
   private resolvePlatformImports(
     unit: DeploymentUnit,
     extraImports: string[] = []
-  ): { cfImports: string[]; needsD1: boolean; needsQueue: boolean; needsWorkflow: boolean; needsAI: boolean } {
+  ): {
+    cfImports: string[]
+    needsD1: boolean
+    needsQueue: boolean
+    needsWorkflow: boolean
+    needsAI: boolean
+  } {
     const needsQueue = unit.services.some((s) => s.capability === 'queue')
-    const needsWorkflow = unit.services.some((s) => s.capability === 'workflow-state')
-    const needsAI = unit.services.some((s) => s.capability === 'ai-storage' || s.capability === 'ai-model')
+    const needsWorkflow = unit.services.some(
+      (s) => s.capability === 'workflow-state'
+    )
+    const needsAI = unit.services.some(
+      (s) => s.capability === 'ai-storage' || s.capability === 'ai-model'
+    )
 
     const cfImports = [...extraImports]
     if (needsQueue) cfImports.push('CloudflareQueueService')
     if (needsWorkflow) cfImports.push('CloudflareWorkflowService')
-    if (needsAI) cfImports.push('CloudflareAIStorageService', 'CloudflareAgentRunService', 'CloudflareAIRunStateService')
+    if (needsAI)
+      cfImports.push(
+        'CloudflareAIStorageService',
+        'CloudflareAgentRunService',
+        'CloudflareAIRunStateService'
+      )
 
-    return { cfImports, needsD1: needsWorkflow || needsAI, needsQueue, needsWorkflow, needsAI }
+    return {
+      cfImports,
+      needsD1: needsWorkflow || needsAI,
+      needsQueue,
+      needsWorkflow,
+      needsAI,
+    }
   }
 
   generateEntrySource(ctx: EntryGenerationContext): string {
     const { unit } = ctx
-
-    // Server-target units get a uWS entry (container deployment)
-    if (unit.target === 'server') {
-      return this.generateServerEntry(ctx)
-    }
 
     // Gateway units use their own dedicated handler factories
     if (unit.role === 'channel') {
@@ -138,20 +154,32 @@ export class CloudflareProviderAdapter {
    */
   private generateCombinedHandlerEntry(ctx: EntryGenerationContext): string {
     const handlerTypes = getHandlerTypes(ctx.unit)
-    const platform = this.resolvePlatformImports(ctx.unit, ['createCloudflareHandler'])
+    const platform = this.resolvePlatformImports(ctx.unit, [
+      'createCloudflareHandler',
+    ])
 
     const lines: string[] = [
       `// Generated entry for "${ctx.unit.name}" (${ctx.unit.role})`,
       `import { createCloudflareHandler } from '@pikku/cloudflare/handler'`,
       `import type { CloudflareEnv } from '@pikku/cloudflare/handler'`,
-      ...(platform.needsQueue ? [`import { CloudflareQueueService } from '@pikku/cloudflare/queue'`] : []),
-      ...(platform.needsD1 ? [
-        `import { ${[
-          ...(platform.needsWorkflow ? ['CloudflareWorkflowService'] : []),
-          ...(platform.needsAI ? ['CloudflareAIStorageService', 'CloudflareAgentRunService', 'CloudflareAIRunStateService'] : []),
-        ].join(', ')} } from '@pikku/cloudflare/d1'`,
-        `import type { D1Database } from '@cloudflare/workers-types'`,
-      ] : []),
+      ...(platform.needsQueue
+        ? [`import { CloudflareQueueService } from '@pikku/cloudflare/queue'`]
+        : []),
+      ...(platform.needsD1
+        ? [
+            `import { ${[
+              ...(platform.needsWorkflow ? ['CloudflareWorkflowService'] : []),
+              ...(platform.needsAI
+                ? [
+                    'CloudflareAIStorageService',
+                    'CloudflareAgentRunService',
+                    'CloudflareAIRunStateService',
+                  ]
+                : []),
+            ].join(', ')} } from '@pikku/cloudflare/d1'`,
+            `import type { D1Database } from '@cloudflare/workers-types'`,
+          ]
+        : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
       ctx.configImport,
@@ -176,20 +204,32 @@ export class CloudflareProviderAdapter {
    * Uses the WebSocket handler factory and exports the DO class.
    */
   private generateChannelGatewayEntry(ctx: EntryGenerationContext): string {
-    const platform = this.resolvePlatformImports(ctx.unit, ['createCloudflareWebSocketHandler'])
+    const platform = this.resolvePlatformImports(ctx.unit, [
+      'createCloudflareWebSocketHandler',
+    ])
 
     const lines: string[] = [
       `// Generated entry for "${ctx.unit.name}" (${ctx.unit.role})`,
       `import { createCloudflareWebSocketHandler } from '@pikku/cloudflare/handler'`,
       `import type { CloudflareEnv } from '@pikku/cloudflare/handler'`,
-      ...(platform.needsQueue ? [`import { CloudflareQueueService } from '@pikku/cloudflare/queue'`] : []),
-      ...(platform.needsD1 ? [
-        `import { ${[
-          ...(platform.needsWorkflow ? ['CloudflareWorkflowService'] : []),
-          ...(platform.needsAI ? ['CloudflareAIStorageService', 'CloudflareAgentRunService', 'CloudflareAIRunStateService'] : []),
-        ].join(', ')} } from '@pikku/cloudflare/d1'`,
-        `import type { D1Database } from '@cloudflare/workers-types'`,
-      ] : []),
+      ...(platform.needsQueue
+        ? [`import { CloudflareQueueService } from '@pikku/cloudflare/queue'`]
+        : []),
+      ...(platform.needsD1
+        ? [
+            `import { ${[
+              ...(platform.needsWorkflow ? ['CloudflareWorkflowService'] : []),
+              ...(platform.needsAI
+                ? [
+                    'CloudflareAIStorageService',
+                    'CloudflareAgentRunService',
+                    'CloudflareAIRunStateService',
+                  ]
+                : []),
+            ].join(', ')} } from '@pikku/cloudflare/d1'`,
+            `import type { D1Database } from '@cloudflare/workers-types'`,
+          ]
+        : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
       ctx.configImport,
@@ -222,8 +262,13 @@ export class CloudflareProviderAdapter {
     })
     const bindingsMap = `{\n${bindingEntries.join(',\n')}\n  }`
 
-    const handlerName = includeQueueHandler ? 'createCloudflareHandler' : 'createCloudflareWorkerHandler'
-    const platform = this.resolvePlatformImports(ctx.unit, [handlerName, 'CloudflareDeploymentService'])
+    const handlerName = includeQueueHandler
+      ? 'createCloudflareHandler'
+      : 'createCloudflareWorkerHandler'
+    const platform = this.resolvePlatformImports(ctx.unit, [
+      handlerName,
+      'CloudflareDeploymentService',
+    ])
 
     const handlerTypes = includeQueueHandler ? `["fetch", "queue"]` : ''
 
@@ -240,14 +285,24 @@ export class CloudflareProviderAdapter {
       handlerImport,
       `import type { CloudflareEnv } from '@pikku/cloudflare/handler'`,
       `import { CloudflareDeploymentService } from '@pikku/cloudflare/deployment'`,
-      ...(platform.needsQueue ? [`import { CloudflareQueueService } from '@pikku/cloudflare/queue'`] : []),
-      ...(platform.needsD1 ? [
-        `import { ${[
-          ...(platform.needsWorkflow ? ['CloudflareWorkflowService'] : []),
-          ...(platform.needsAI ? ['CloudflareAIStorageService', 'CloudflareAgentRunService', 'CloudflareAIRunStateService'] : []),
-        ].join(', ')} } from '@pikku/cloudflare/d1'`,
-        `import type { D1Database } from '@cloudflare/workers-types'`,
-      ] : []),
+      ...(platform.needsQueue
+        ? [`import { CloudflareQueueService } from '@pikku/cloudflare/queue'`]
+        : []),
+      ...(platform.needsD1
+        ? [
+            `import { ${[
+              ...(platform.needsWorkflow ? ['CloudflareWorkflowService'] : []),
+              ...(platform.needsAI
+                ? [
+                    'CloudflareAIStorageService',
+                    'CloudflareAgentRunService',
+                    'CloudflareAIRunStateService',
+                  ]
+                : []),
+            ].join(', ')} } from '@pikku/cloudflare/d1'`,
+            `import type { D1Database } from '@cloudflare/workers-types'`,
+          ]
+        : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
       ctx.configImport,
@@ -287,7 +342,7 @@ export class CloudflareProviderAdapter {
         `    const workflowService = new CloudflareWorkflowService(env.WORKFLOW_DB as D1Database)`,
         `    await workflowService.init()`,
         `    services.workflowService = workflowService`,
-        `  }`,
+        `  }`
       )
     }
     if (platform.needsAI) {
@@ -301,7 +356,7 @@ export class CloudflareProviderAdapter {
         `    const aiRunState = new CloudflareAIRunStateService(db)`,
         `    await aiRunState.init()`,
         `    services.aiRunState = aiRunState`,
-        `  }`,
+        `  }`
       )
     }
     lines.push(`  return services`, `}`)
@@ -333,7 +388,7 @@ export class CloudflareProviderAdapter {
         `    const workflowService = new CloudflareWorkflowService(env.WORKFLOW_DB as D1Database)`,
         `    await workflowService.init()`,
         `    services.workflowService = workflowService`,
-        `  }`,
+        `  }`
       )
     }
     if (platform.needsAI) {
@@ -347,7 +402,7 @@ export class CloudflareProviderAdapter {
         `    const aiRunState = new CloudflareAIRunStateService(db)`,
         `    await aiRunState.init()`,
         `    services.aiRunState = aiRunState`,
-        `  }`,
+        `  }`
       )
     }
     lines.push(
@@ -358,73 +413,9 @@ export class CloudflareProviderAdapter {
       `    ${bindingsMap}`,
       `  )`,
       `  return services`,
-      `}`,
+      `}`
     )
     return lines
-  }
-
-  /**
-   * Generates entry for server-target units (CF Container).
-   * Uses PikkuUWSServer — same pattern as standalone adapter.
-   */
-  private generateServerEntry(ctx: EntryGenerationContext): string {
-    return [
-      `// Generated server entry for "${ctx.unit.name}" (container)`,
-      `import { stopSingletonServices } from '@pikku/core'`,
-      `import { ConsoleLogger } from '@pikku/core/services'`,
-      `import { InMemorySchedulerService } from '@pikku/schedule'`,
-      `import { PikkuUWSServer } from '@pikku/uws'`,
-      ``,
-      ctx.configImport,
-      ctx.servicesImport,
-      ctx.singletonServicesImport,
-      `import '${ctx.bootstrapPath}'`,
-      ``,
-      `const logger = new ConsoleLogger()`,
-      `const port = parseInt(process.env.PORT || '8080', 10)`,
-      `const hostname = process.env.HOST || '0.0.0.0'`,
-      ``,
-      `async function main() {`,
-      `  const config = await ${ctx.configVar}()`,
-      `  const schedulerService = new InMemorySchedulerService()`,
-      `  const singletonServices = await ${ctx.servicesVar}(config, {`,
-      `    logger,`,
-      `    schedulerService,`,
-      `  })`,
-      ``,
-      `  const server = new PikkuUWSServer(`,
-      `    { ...config, port, hostname },`,
-      `    logger,`,
-      `  )`,
-      `  await server.init({ respondWith404: true })`,
-      `  await schedulerService.start()`,
-      `  await server.start()`,
-      `  await server.enableExitOnSigInt()`,
-      `  logger.info('Server container ready on port ' + port)`,
-      `}`,
-      ``,
-      `main().catch((err) => {`,
-      `  logger.error('Fatal: ' + err.message)`,
-      `  process.exit(1)`,
-      `})`,
-      ``,
-    ].join('\n')
-  }
-
-  /**
-   * Generates a Dockerfile for server-target units.
-   */
-  private generateDockerfile(): string {
-    return [
-      `FROM node:22-slim`,
-      `WORKDIR /app`,
-      `COPY bundle.js .`,
-      `COPY package.json .`,
-      `RUN npm install --production 2>/dev/null || true`,
-      `ENV NODE_ENV=production`,
-      `EXPOSE 8080`,
-      `CMD ["node", "bundle.js"]`,
-    ].join('\n')
   }
 
   generateUnitConfigs(
@@ -433,9 +424,6 @@ export class CloudflareProviderAdapter {
     projectId: string
   ): Map<string, string> {
     const configs = new Map<string, string>()
-    if (unit.target === 'server') {
-      configs.set('Dockerfile', this.generateDockerfile())
-    }
     configs.set(
       'wrangler.toml',
       generateWranglerToml(unit, manifest, projectId)
@@ -443,171 +431,8 @@ export class CloudflareProviderAdapter {
     return configs
   }
 
-  generateProviderConfigs(manifest: DeploymentManifest): Map<string, string> {
-    const configs = new Map<string, string>()
-    const serverUnits = manifest.units.filter((u) => u.target === 'server')
-
-    if (serverUnits.length > 0) {
-      // Generate proxy Worker that routes to the container
-      configs.set(
-        'server-proxy/entry.ts',
-        this.generateProxyWorkerEntry(serverUnits, manifest)
-      )
-      configs.set(
-        'server-proxy/wrangler.toml',
-        this.generateProxyWranglerToml(serverUnits, manifest)
-      )
-      configs.set(
-        'server-proxy/package.json',
-        JSON.stringify({
-          name: `${manifest.projectId}-server-proxy`,
-          private: true,
-          type: 'module',
-          dependencies: {
-            '@cloudflare/containers': '^0.0.1',
-          },
-        }, null, 2)
-      )
-    }
-
-    return configs
-  }
-
-  /**
-   * Proxy Worker entry: extends Container, forwards HTTP/queue/cron to it.
-   */
-  private generateProxyWorkerEntry(
-    serverUnits: DeploymentUnit[],
-    manifest: DeploymentManifest
-  ): string {
-    // Collect all routes from server units
-    const serverRoutes: Array<{ method: string; route: string }> = []
-    for (const unit of serverUnits) {
-      for (const handler of unit.handlers) {
-        if (handler.type === 'fetch') {
-          for (const route of handler.routes) {
-            serverRoutes.push({ method: route.method, route: route.route })
-          }
-        }
-      }
-    }
-
-    // Collect queue names consumed by server units
-    const serverQueueNames = manifest.queues
-      .filter((q) => serverUnits.some((u) => u.name === q.consumerUnit))
-      .map((q) => q.name)
-
-    // Collect cron schedules for server units
-    const serverCrons = manifest.scheduledTasks
-      .filter((t) => serverUnits.some((u) => u.name === t.unitName))
-
-    return [
-      `// Generated proxy Worker — routes traffic to CF Container`,
-      `import { Container, getContainer } from "@cloudflare/containers"`,
-      ``,
-      `class PikkuServer extends Container {`,
-      `  defaultPort = 8080`,
-      `  sleepAfter = "2h"`,
-      `}`,
-      ``,
-      `interface Env {`,
-      `  PIKKU_SERVER: DurableObjectNamespace<PikkuServer>`,
-      `}`,
-      ``,
-      `export { PikkuServer }`,
-      ``,
-      `export default {`,
-      `  async fetch(request: Request, env: Env) {`,
-      `    const container = getContainer(env.PIKKU_SERVER)`,
-      `    return container.fetch(request)`,
-      `  },`,
-      ...(serverQueueNames.length > 0
-        ? [
-            `  async queue(batch: MessageBatch, env: Env) {`,
-            `    const container = getContainer(env.PIKKU_SERVER)`,
-            `    await container.fetch(new Request("http://internal/__pikku/queue", {`,
-            `      method: "POST",`,
-            `      headers: { "Content-Type": "application/json" },`,
-            `      body: JSON.stringify({ queue: batch.queue, messages: batch.messages.map(m => ({ id: m.id, body: m.body })) }),`,
-            `    }))`,
-            `  },`,
-          ]
-        : []),
-      ...(serverCrons.length > 0
-        ? [
-            `  async scheduled(controller: ScheduledController, env: Env) {`,
-            `    const container = getContainer(env.PIKKU_SERVER)`,
-            `    await container.fetch(new Request("http://internal/__pikku/scheduled", {`,
-            `      method: "POST",`,
-            `      headers: { "Content-Type": "application/json" },`,
-            `      body: JSON.stringify({ cron: controller.cron, scheduledTime: controller.scheduledTime }),`,
-            `    }))`,
-            `  },`,
-          ]
-        : []),
-      `}`,
-      ``,
-    ].join('\n')
-  }
-
-  /**
-   * Proxy Worker wrangler.toml with container binding + queue consumers + crons.
-   */
-  private generateProxyWranglerToml(
-    serverUnits: DeploymentUnit[],
-    manifest: DeploymentManifest
-  ): string {
-    const projectId = manifest.projectId
-    const lines: string[] = [
-      `name = "${projectId}-server-proxy"`,
-      `main = "entry.ts"`,
-      `compatibility_date = "2024-12-18"`,
-      `compatibility_flags = ["nodejs_compat_v2"]`,
-      ``,
-      `[observability]`,
-      `enabled = true`,
-      ``,
-      `[[containers]]`,
-      `class_name = "PikkuServer"`,
-      `image = "../server/Dockerfile"`,
-      `max_instances = 3`,
-      ``,
-      `[[durable_objects.bindings]]`,
-      `class_name = "PikkuServer"`,
-      `name = "PIKKU_SERVER"`,
-      ``,
-      `[[migrations]]`,
-      `new_sqlite_classes = ["PikkuServer"]`,
-      `tag = "v1"`,
-    ]
-
-    // Queue consumers for server functions
-    const serverQueueNames = manifest.queues
-      .filter((q) => serverUnits.some((u) => u.name === q.consumerUnit))
-
-    for (const queue of serverQueueNames) {
-      lines.push(
-        ``,
-        `[[queues.consumers]]`,
-        `queue = "${projectId}-${queue.name}"`,
-        `max_batch_size = 10`,
-        `max_batch_timeout = 5`,
-      )
-    }
-
-    // Cron triggers for server functions
-    const serverCrons = manifest.scheduledTasks
-      .filter((t) => serverUnits.some((u) => u.name === t.unitName))
-
-    if (serverCrons.length > 0) {
-      lines.push(``, `[triggers]`, `crons = [`)
-      for (const cron of serverCrons) {
-        lines.push(`  "${cron.schedule}",`)
-      }
-      lines.push(`]`)
-    }
-
-    return lines.join('\n')
+  generateProviderConfigs(_manifest: DeploymentManifest): Map<string, string> {
+    return new Map()
   }
 
   generateInfraManifest(manifest: DeploymentManifest): string | null {
@@ -659,12 +484,28 @@ export class CloudflareProviderAdapter {
       await readFile(join(options.buildDir, 'infra.json'), 'utf-8')
     )
 
+    // Error if any server-target units exist — container deploy requires Fabric
+    const serverUnits = Object.entries(infraJson.units || {}).filter(
+      ([_, u]) => (u as Record<string, unknown>).target === 'server'
+    )
+    if (serverUnits.length > 0) {
+      const names = serverUnits.map(([name]) => name).join(', ')
+      return {
+        success: false,
+        errors: [
+          {
+            step: 'validation',
+            error: `Project contains server-target functions (${names}) which require a container runtime. Server deploy is available via Pikku Fabric (https://pikku.dev/fabric).`,
+          },
+        ],
+      }
+    }
+
     return deploy({
       accountId,
       apiToken,
       buildDir: options.buildDir,
       manifest: infraJson,
-      dispatchNamespace: process.env.CF_DISPATCH_NAMESPACE,
       onProgress: options.onProgress,
     })
   }
