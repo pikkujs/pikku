@@ -370,6 +370,11 @@ wireCLI({
               default: 'cloudflare',
               short: 'p',
             },
+            'from-plan': {
+              description:
+                'Skip build pipeline, deploy from existing plan output',
+              default: false,
+            },
           },
         }),
         info: pikkuCLICommand({

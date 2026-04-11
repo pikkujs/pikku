@@ -1,7 +1,7 @@
 import { basename, join, relative } from 'node:path'
 import { readFile } from 'node:fs/promises'
 
-import { pikkuVoidFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku'
 import type {
   ProviderAdapter,
   EntryGenerationContext,
@@ -151,14 +151,91 @@ const ANSI = {
   reset: '\x1b[0m',
 }
 
-export const deployApply = pikkuVoidFunc({
-  func: async ({ logger, config, getInspectorState }) => {
+async function writeResultFile(result: Record<string, unknown>): Promise<void> {
+  const resultFile = process.env.PIKKU_RESULT_FILE
+  if (resultFile) {
+    const { writeFile } = await import('node:fs/promises')
+    await writeFile(resultFile, JSON.stringify(result, null, 2), 'utf-8')
+  }
+}
+
+async function runDeploy(
+  provider: ProviderAdapter,
+  providerDir: string,
+  logger: { info(msg: string): void; error(msg: string): void }
+): Promise<void> {
+  if (typeof provider.deploy !== 'function') {
+    logger.error(`Provider '${provider.name}' does not support deploy.`)
+    await writeResultFile({
+      success: false,
+      errors: [{ step: 'provider', error: 'No deploy support' }],
+    })
+    process.exit(1)
+  }
+
+  logger.info(`Deploying via ${provider.name}...`)
+  const deployResult = await provider.deploy({
+    buildDir: providerDir,
+    logger,
+    onProgress: (_step: string, _detail: string) => {
+      process.stdout.write(` ${ANSI.green}done${ANSI.reset}\n`)
+    },
+  })
+
+  await writeResultFile(deployResult)
+
+  console.log('')
+  if (deployResult.success) {
+    logger.info(`${ANSI.green}${ANSI.bold}Deployment complete.${ANSI.reset}`)
+    logger.info(
+      `  ${deployResult.workersDeployed?.length ?? 0} units deployed, ${deployResult.resourcesCreated?.length ?? 0} resources created`
+    )
+  } else {
+    logger.error(
+      `Deployment finished with ${deployResult.errors.length} error(s):`
+    )
+    for (const e of deployResult.errors) {
+      logger.error(`  ${e.step}: ${e.error}`)
+    }
+  }
+}
+
+export const deployApply = pikkuSessionlessFunc<
+  { 'from-plan'?: boolean; provider?: string },
+  void
+>({
+  func: async ({ logger, config, getInspectorState }, data) => {
     const projectDir = config.rootDir
+    const provider = await resolveProvider(config, data?.provider)
+    const fromPlan = data?.['from-plan'] ?? false
+
+    if (fromPlan) {
+      // Skip build pipeline — deploy from existing plan output
+      const { join } = await import('node:path')
+      const { existsSync } = await import('node:fs')
+
+      const providerDir = join(projectDir, '.deploy', provider.deployDirName)
+      const infraPath = join(providerDir, 'infra.json')
+
+      if (!existsSync(infraPath)) {
+        logger.error(
+          `No plan found at ${providerDir}. Run 'pikku deploy plan' first.`
+        )
+        await writeResultFile({
+          success: false,
+          errors: [{ step: 'plan', error: 'No plan found' }],
+        })
+        process.exit(1)
+      }
+
+      await runDeploy(provider, providerDir, logger)
+      return
+    }
+
+    // Full build + deploy pipeline
     const inspectorState = await getInspectorState(true)
     const projectId = await resolveProjectId(projectDir)
-    const provider = await resolveProvider(config)
 
-    // Build pipeline: analyze → codegen → bundle → configs
     const buildResult = await runBuildPipeline({
       projectDir,
       projectId,
@@ -171,43 +248,29 @@ export const deployApply = pikkuVoidFunc({
 
     if (buildResult.manifest.units.length === 0) {
       logger.info('No deployment units found. Nothing to deploy.')
+      await writeResultFile({
+        success: true,
+        workersDeployed: [],
+        resourcesCreated: [],
+        errors: [],
+      })
       return
     }
 
     const { providerDir, bundled } = buildResult
 
-    // Deploy via provider's deploy function
     if (typeof provider.deploy === 'function') {
-      logger.info(`Deploying via ${provider.name}...`)
-      const deployResult = await provider.deploy({
-        buildDir: providerDir,
-        logger,
-        onProgress: (_step: string, _detail: string) => {
-          process.stdout.write(` ${ANSI.green}done${ANSI.reset}\n`)
-        },
-      })
-
-      console.log('')
-      if (deployResult.success) {
-        logger.info(
-          `${ANSI.green}${ANSI.bold}Deployment complete.${ANSI.reset}`
-        )
-        logger.info(
-          `  ${deployResult.workersDeployed?.length ?? 0} units deployed, ${deployResult.resourcesCreated?.length ?? 0} resources created`
-        )
-      } else {
-        logger.error(
-          `Deployment finished with ${deployResult.errors.length} error(s):`
-        )
-        for (const e of deployResult.errors) {
-          logger.error(`  ${e.step}: ${e.error}`)
-        }
-      }
+      await runDeploy(provider, providerDir, logger)
     } else {
       logger.info(`${ANSI.green}${ANSI.bold}Build complete.${ANSI.reset}`)
       logger.info(
         `  ${bundled.length} functions bundled to ${ANSI.bold}${providerDir}${ANSI.reset}`
       )
+      await writeResultFile({
+        success: true,
+        buildOnly: true,
+        unitCount: bundled.length,
+      })
     }
   },
 })

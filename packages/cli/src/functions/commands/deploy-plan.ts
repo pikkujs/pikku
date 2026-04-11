@@ -102,5 +102,27 @@ export const deployPlan = pikkuVoidFunc({
       `${result.bundled.length} workers bundled (${formatBytes(totalSize)} total)`
     )
     logger.info(`Output: ${result.providerDir}`)
+
+    // Write result file if PIKKU_RESULT_FILE is set (used by Fabric build pipeline)
+    const resultFile = process.env.PIKKU_RESULT_FILE
+    if (resultFile) {
+      const { writeFile } = await import('node:fs/promises')
+      await writeFile(
+        resultFile,
+        JSON.stringify(
+          {
+            success: result.bundleErrors.length === 0,
+            providerDir: result.providerDir,
+            unitCount: result.bundled.length,
+            totalSizeBytes: totalSize,
+            errors: result.bundleErrors,
+            manifest: result.manifest,
+          },
+          null,
+          2
+        ),
+        'utf-8'
+      )
+    }
   },
 })
