@@ -42,9 +42,7 @@ export type RPCMap = {
 
 
 // Addon package RPC maps
-import type { RPCMap as CodeAssistantRPCMap } from '@pikku/code-assistant/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'
 import type { RPCMap as ConsoleRPCMap } from '@pikku/addon-console/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'
-import type { RPCMap as DynamicWorkflowsRPCMap } from '@pikku/addon-dynamic-workflows/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'
 
 
 // Utility type to prefix keys with namespace (skips 'any' to prevent type poisoning)
@@ -54,7 +52,7 @@ type PrefixKeys<T, Prefix extends string> = unknown extends T ? {} : {
 
 // Merge all RPC maps with namespace prefixes
 export type FlattenedRPCMap =
-  RPCMap & PrefixKeys<CodeAssistantRPCMap, 'code-assistant'> & PrefixKeys<ConsoleRPCMap, 'console'> & PrefixKeys<DynamicWorkflowsRPCMap, 'dynamic-workflows'>
+  RPCMap & PrefixKeys<ConsoleRPCMap, 'console'>
 
 
 export type RPCInvoke = <Name extends keyof FlattenedRPCMap>(
@@ -72,13 +70,11 @@ import type { FlattenedWorkflowMap } from '../../backend/.pikku/workflow/pikku-w
 import type { AgentMap } from '../../backend/.pikku/agent/pikku-agent-map.gen.d.js'
 
 // Addon package Agent maps
-import type { AgentMap as CodeAssistantAgentMap } from '@pikku/code-assistant/.pikku/agent/pikku-agent-map.gen.d.js'
 import type { AgentMap as ConsoleAgentMap } from '@pikku/addon-console/.pikku/agent/pikku-agent-map.gen.d.js'
-import type { AgentMap as DynamicWorkflowsAgentMap } from '@pikku/addon-dynamic-workflows/.pikku/agent/pikku-agent-map.gen.d.js'
 
 
 type FlattenedAgentMap =
-  AgentMap & PrefixKeys<CodeAssistantAgentMap, 'code-assistant'> & PrefixKeys<ConsoleAgentMap, 'console'> & PrefixKeys<DynamicWorkflowsAgentMap, 'dynamic-workflows'>
+  AgentMap & PrefixKeys<ConsoleAgentMap, 'console'>
 
 
 import type { PikkuRPC } from '@pikku/core/rpc'
