@@ -94,7 +94,8 @@ export async function deploy(options: DeployOptions): Promise<DeployResult> {
     manifest,
     resourceIds,
     result,
-    log
+    log,
+    dispatchNamespace
   )
 
   // Step 4: Wire consumers and cron triggers
@@ -297,7 +298,8 @@ async function uploadWorkersInOrder(
   manifest: CloudflareInfraManifest,
   resourceIds: ResourceIds,
   result: DeployResult,
-  log: (step: string, detail: string) => void
+  log: (step: string, detail: string) => void,
+  dispatchNamespace?: string
 ): Promise<void> {
   // Build dependency graph: unit -> set of service binding targets
   // Skip server-target units — they're deployed as containers, not Workers
@@ -349,7 +351,8 @@ async function uploadWorkersInOrder(
       ready,
       resourceIds,
       result,
-      log
+      log,
+      dispatchNamespace
     )
 
     for (const [unitName] of ready) {
@@ -367,7 +370,8 @@ async function deployWorkerBatch(
   units: Array<[string, { bindings: string[]; role: string }]>,
   resourceIds: ResourceIds,
   result: DeployResult,
-  log: (step: string, detail: string) => void
+  log: (step: string, detail: string) => void,
+  dispatchNamespace?: string
 ): Promise<void> {
   const tasks = units.map(async ([unitName, unitManifest]) => {
     const workerName = toWorkerName(projectId, unitName)
