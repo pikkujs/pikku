@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo } from 'react'
 
-import { pikku } from '@/pikku/http'
+import { pikku } from '../pikku/http'
 
 const STORAGE_KEY = 'pikku-server-url'
 const DEFAULT_SERVER_URL = 'http://localhost:4002'

@@ -6,12 +6,12 @@ import React, {
   useMemo,
   useEffect,
 } from 'react'
-import { useSearchParams } from '@/router'
+import { useSearchParams } from '../router'
 import {
   useWorkflowRun,
   useWorkflowRunSteps,
   useWorkflowVersion,
-} from '@/hooks/useWorkflowRuns'
+} from '../hooks/useWorkflowRuns'
 
 interface WorkflowRunContextType {
   selectedRunId: string | null

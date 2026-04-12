@@ -1,7 +1,7 @@
 import React from 'react'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { usePanelContext } from '@/context/PanelContext'
+import { PikkuBadge } from '../../ui/PikkuBadge'
+import { usePikkuMeta } from '../../../context/PikkuMetaContext'
+import { usePanelContext } from '../../../context/PanelContext'
 
 interface LinkedBadgeProps {
   item: any

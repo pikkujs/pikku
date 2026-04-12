@@ -1,11 +1,11 @@
 import React, { Suspense, useMemo } from 'react'
 import { Text, Center, Loader, Group } from '@mantine/core'
 import { Terminal } from 'lucide-react'
-import { useSearchParams, useNavigate } from '@/router'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { CliPageClient } from '@/components/pages/CliPageClient'
-import { TableListPage } from '@/components/layout/TableListPage'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { useSearchParams, useNavigate } from '../../router'
+import { usePikkuMeta } from '../../context/PikkuMetaContext'
+import { CliPageClient } from '../pages/CliPageClient'
+import { TableListPage } from '../layout/TableListPage'
+import { PikkuBadge } from '../ui/PikkuBadge'
 
 interface CliProgramEntry {
   wireId: string

@@ -10,21 +10,21 @@ import {
   Anchor,
 } from '@mantine/core'
 import { GitBranch } from 'lucide-react'
-import { useLink } from '@/router'
-import { useWorkflowContext } from '@/context/WorkflowContext'
-import { useWorkflowRunContextSafe } from '@/context/WorkflowRunContext'
-import { usePanelContext } from '@/context/PanelContext'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { wiringTypeColor } from '@/components/ui/badge-defs'
-import { CommonDetails } from '@/components/project/panels/shared/CommonDetails'
-import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
-import { EmptyState } from '@/components/project/panels/shared/EmptyState'
+import { useLink } from '../../../router'
+import { useWorkflowContext } from '../../../context/WorkflowContext'
+import { useWorkflowRunContextSafe } from '../../../context/WorkflowRunContext'
+import { usePanelContext } from '../../../context/PanelContext'
+import { PikkuBadge } from '../../ui/PikkuBadge'
+import { wiringTypeColor } from '../../ui/badge-defs'
+import { CommonDetails } from './shared/CommonDetails'
+import { SectionLabel } from './shared/SectionLabel'
+import { EmptyState } from './shared/EmptyState'
 
 const TYPE_HREF: Record<string, string> = {
   http: '/apis?tab=http',
-  channel: '/apis?tab=channels',
+  channel: '/apis/channels',
   mcp: '/apis?tab=mcp',
-  cli: '/apis?tab=cli',
+  cli: '/apis/cli',
   rpc: '/apis?tab=http',
   scheduler: '/jobs?tab=schedulers',
   queue: '/jobs?tab=queues',

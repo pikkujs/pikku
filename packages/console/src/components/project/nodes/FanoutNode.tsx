@@ -2,8 +2,8 @@ import React from 'react'
 import type { Node, NodeProps } from 'reactflow'
 import { FlowNode } from './FlowNode'
 import { Repeat } from 'lucide-react'
-import { usePanelContext } from '@/context/PanelContext'
-import { useWorkflowContextSafe } from '@/context/WorkflowContext'
+import { usePanelContext } from '../../../context/PanelContext'
+import { useWorkflowContextSafe } from '../../../context/WorkflowContext'
 
 interface FanoutNodeData {
   colorKey: string

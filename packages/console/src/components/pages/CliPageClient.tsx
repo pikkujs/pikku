@@ -1,14 +1,14 @@
 import React, { useState, useMemo, useCallback } from 'react'
-import { useSearchParams, useNavigate } from '@/router'
+import { useSearchParams, useNavigate } from '../../router'
 import { Box, Center, Text } from '@mantine/core'
 import { Terminal } from 'lucide-react'
 import type { CLIMeta } from '@pikku/core/cli'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { PanelProvider } from '@/context/PanelContext'
-import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '@/components/layout/DetailPageHeader'
-import { CliCommandTree } from '@/components/cli/CliCommandTree'
-import { CliHelpView } from '@/components/cli/CliHelpView'
+import { usePikkuMeta } from '../../context/PikkuMetaContext'
+import { PanelProvider } from '../../context/PanelContext'
+import { ResizablePanelLayout } from '../layout/ResizablePanelLayout'
+import { DetailPageHeader } from '../layout/DetailPageHeader'
+import { CliCommandTree } from '../cli/CliCommandTree'
+import { CliHelpView } from '../cli/CliHelpView'
 
 export const CliPageClient: React.FunctionComponent = () => {
   const [searchParams] = useSearchParams()
@@ -54,7 +54,7 @@ export const CliPageClient: React.FunctionComponent = () => {
   const handleProgramSwitch = useCallback(
     (name: string) => {
       setCommandPath([])
-      navigate(`/apis?tab=cli&id=${encodeURIComponent(name)}`)
+      navigate(`/apis/cli?id=${encodeURIComponent(name)}`)
     },
     [navigate]
   )
@@ -74,7 +74,7 @@ export const CliPageClient: React.FunctionComponent = () => {
           <DetailPageHeader
             icon={Terminal}
             category="CLI"
-            categoryPath="/apis?tab=cli"
+            categoryPath="/apis/cli"
             currentItem={programId}
             items={allPrograms}
             onItemSelect={handleProgramSwitch}

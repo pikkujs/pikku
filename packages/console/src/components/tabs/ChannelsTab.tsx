@@ -1,11 +1,11 @@
 import React, { Suspense, useMemo } from 'react'
 import { Text, Center, Loader } from '@mantine/core'
 import { Radio } from 'lucide-react'
-import { useSearchParams, useNavigate } from '@/router'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { ChannelPageClient } from '@/components/pages/ChannelPageClient'
-import { TableListPage } from '@/components/layout/TableListPage'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { useSearchParams, useNavigate } from '../../router'
+import { usePikkuMeta } from '../../context/PikkuMetaContext'
+import { ChannelPageClient } from '../pages/ChannelPageClient'
+import { TableListPage } from '../layout/TableListPage'
+import { PikkuBadge } from '../ui/PikkuBadge'
 
 interface ChannelEntry {
   name: string

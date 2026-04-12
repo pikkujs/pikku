@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { Box, Text, Group, Stack, UnstyledButton } from '@mantine/core'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { schemaTypeColor } from '@/components/ui/badge-defs'
+import { PikkuBadge } from './PikkuBadge'
+import { schemaTypeColor } from './badge-defs'
 
 interface SchemaViewerProps {
   schema: any

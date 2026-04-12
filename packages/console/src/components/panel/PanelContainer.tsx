@@ -9,7 +9,7 @@ import {
   UnstyledButton,
 } from '@mantine/core'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { usePanelContext } from '@/context/PanelContext'
+import { usePanelContext } from '../../context/PanelContext'
 import { createPanelChildren } from './PanelFactory'
 
 interface PanelContainerProps {

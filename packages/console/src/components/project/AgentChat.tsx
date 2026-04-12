@@ -43,9 +43,9 @@ import {
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { useAgentPlayground } from '@/context/AgentPlaygroundContext'
-import { getServerUrl } from '@/context/PikkuRpcProvider'
+import { PikkuBadge } from '../ui/PikkuBadge'
+import { useAgentPlayground } from '../../context/AgentPlaygroundContext'
+import { getServerUrl } from '../../context/PikkuRpcProvider'
 
 const ToolCallDisplay: React.FunctionComponent<{
   toolCallId: string

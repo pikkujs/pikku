@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react'
 import { KeyRound } from 'lucide-react'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { PanelProvider } from '@/context/PanelContext'
-import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '@/components/layout/DetailPageHeader'
-import { ProjectSecrets } from '@/components/project/ProjectSecrets'
+import { usePikkuMeta } from '../context/PikkuMetaContext'
+import { PanelProvider } from '../context/PanelContext'
+import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { DetailPageHeader } from '../components/layout/DetailPageHeader'
+import { ProjectSecrets } from '../components/project/ProjectSecrets'
 
 const SecretsPageContent: React.FunctionComponent = () => {
   const { meta, loading } = usePikkuMeta()

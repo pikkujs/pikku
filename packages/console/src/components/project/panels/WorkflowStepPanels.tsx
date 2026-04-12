@@ -8,13 +8,13 @@ import {
   Loader,
   Card,
 } from '@mantine/core'
-import { useWorkflowNode, useWorkflowContext } from '@/context/WorkflowContext'
-import { useOutputSchema } from '@/hooks/useWirings'
-import { SchemaViewer } from '@/components/ui/SchemaViewer'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { workflowInputTypeDefs } from '@/components/ui/badge-defs'
-import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
-import { EmptyState } from '@/components/project/panels/shared/EmptyState'
+import { useWorkflowNode, useWorkflowContext } from '../../../context/WorkflowContext'
+import { useOutputSchema } from '../../../hooks/useWirings'
+import { SchemaViewer } from '../../ui/SchemaViewer'
+import { PikkuBadge } from '../../ui/PikkuBadge'
+import { workflowInputTypeDefs } from '../../ui/badge-defs'
+import { SectionLabel } from './shared/SectionLabel'
+import { EmptyState } from './shared/EmptyState'
 
 interface WorkflowStepPanelProps {
   stepId: string

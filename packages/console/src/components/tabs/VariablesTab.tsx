@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { ProjectVariables } from '@/components/project/ProjectVariables'
+import { usePikkuMeta } from '../../context/PikkuMetaContext'
+import { ProjectVariables } from '../project/ProjectVariables'
 
 export const VariablesTab: React.FunctionComponent = () => {
   const { meta, loading } = usePikkuMeta()

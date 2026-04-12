@@ -1,14 +1,14 @@
 import React, { Suspense } from 'react'
 import { Center, Loader } from '@mantine/core'
 import { Globe } from 'lucide-react'
-import { useSearchParams } from '@/router'
-import { PanelProvider } from '@/context/PanelContext'
-import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
-import { TabbedPageHeader } from '@/components/layout/TabbedPageHeader'
-import { HttpTab } from '@/components/tabs/HttpTab'
-import { ChannelsTab } from '@/components/tabs/ChannelsTab'
-import { McpTab } from '@/components/tabs/McpTab'
-import { CliTab } from '@/components/tabs/CliTab'
+import { useSearchParams } from '../router'
+import { PanelProvider } from '../context/PanelContext'
+import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { TabbedPageHeader } from '../components/layout/TabbedPageHeader'
+import { HttpTab } from '../components/tabs/HttpTab'
+import { ChannelsTab } from '../components/tabs/ChannelsTab'
+import { McpTab } from '../components/tabs/McpTab'
+import { CliTab } from '../components/tabs/CliTab'
 
 const TABS = [
   { value: 'http', label: 'HTTP' },
@@ -52,7 +52,7 @@ const ApisPageInner: React.FunctionComponent = () => {
           />
         }
         showTabs={false}
-        emptyPanelMessage="Select an item to view its details"
+        hidePanel
       >
         {renderTab()}
       </ResizablePanelLayout>

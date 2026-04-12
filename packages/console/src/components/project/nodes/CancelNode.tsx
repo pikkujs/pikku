@@ -2,7 +2,7 @@ import React from 'react'
 import type { Node, NodeProps } from 'reactflow'
 import { FlowNode } from './FlowNode'
 import { XCircle } from 'lucide-react'
-import { usePanelContext } from '@/context/PanelContext'
+import { usePanelContext } from '../../../context/PanelContext'
 
 interface CancelNodeData {
   colorKey: string

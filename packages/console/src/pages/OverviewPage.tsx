@@ -1,5 +1,5 @@
 import React from 'react'
-import { useLink } from '@/router'
+import { useLink } from '../router'
 import {
   Box,
   Container,
@@ -22,7 +22,7 @@ import {
   Clock,
   ListOrdered,
 } from 'lucide-react'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
+import { usePikkuMeta } from '../context/PikkuMetaContext'
 
 interface StatCardProps {
   label: string

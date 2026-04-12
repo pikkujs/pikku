@@ -3,7 +3,7 @@ import { Allotment } from 'allotment'
 import { Box, ActionIcon, Tooltip } from '@mantine/core'
 import { PanelLeftOpen, PanelRightOpen } from 'lucide-react'
 import { PanelContainer } from '../panel/PanelContainer'
-import { usePanelContext } from '@/context/PanelContext'
+import { usePanelContext } from '../../context/PanelContext'
 
 const CollapsedSidebar: React.FunctionComponent<{
   side: 'left' | 'right'

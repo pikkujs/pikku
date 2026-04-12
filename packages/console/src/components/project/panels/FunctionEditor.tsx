@@ -13,13 +13,13 @@ import {
 import { Save, X, AlertTriangle, CheckCircle } from 'lucide-react'
 import CodeMirror from '@uiw/react-codemirror'
 import { javascript } from '@codemirror/lang-javascript'
-import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
-import { useTagOptions } from '@/hooks/useTags'
+import { SectionLabel } from './shared/SectionLabel'
+import { useTagOptions } from '../../../hooks/useTags'
 import {
   useFunctionSource,
   useUpdateFunctionConfig,
   useUpdateFunctionBody,
-} from '@/hooks/useCodeEdit'
+} from '../../../hooks/useCodeEdit'
 
 interface FunctionEditorProps {
   functionName: string

@@ -1,14 +1,14 @@
 import React, { Suspense, useMemo } from 'react'
 import { Text, Center, Loader } from '@mantine/core'
 import { Radio } from 'lucide-react'
-import { useSearchParams, useNavigate } from '@/router'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { ChannelPageClient } from '@/components/pages/ChannelPageClient'
-import { PanelProvider } from '@/context/PanelContext'
-import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '@/components/layout/DetailPageHeader'
-import { TableListPage } from '@/components/layout/TableListPage'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { useSearchParams, useNavigate } from '../router'
+import { usePikkuMeta } from '../context/PikkuMetaContext'
+import { ChannelPageClient } from '../components/pages/ChannelPageClient'
+import { PanelProvider } from '../context/PanelContext'
+import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { DetailPageHeader } from '../components/layout/DetailPageHeader'
+import { TableListPage } from '../components/layout/TableListPage'
+import { PikkuBadge } from '../components/ui/PikkuBadge'
 
 interface ChannelEntry {
   name: string

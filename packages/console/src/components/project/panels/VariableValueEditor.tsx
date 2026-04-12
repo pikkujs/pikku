@@ -13,10 +13,10 @@ import {
   ActionIcon,
 } from '@mantine/core'
 import { Save, AlertTriangle, CheckCircle, Eye, Pencil } from 'lucide-react'
-import { useVariableValue, useSetVariable } from '@/hooks/useVariables'
-import { useSchema } from '@/hooks/useWirings'
-import { SchemaForm } from '@/components/ui/SchemaForm'
-import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
+import { useVariableValue, useSetVariable } from '../../../hooks/useVariables'
+import { useSchema } from '../../../hooks/useWirings'
+import { SchemaForm } from '../../ui/SchemaForm'
+import { SectionLabel } from './shared/SectionLabel'
 
 interface VariableValueEditorProps {
   variableId: string | undefined

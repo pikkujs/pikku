@@ -2,7 +2,7 @@ import React from 'react'
 import { Box, Group, Paper, Stack, Text, useMantineTheme } from '@mantine/core'
 import { Handle, Position } from 'reactflow'
 import { Lock, LockOpen, Shield, Layers } from 'lucide-react'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { PikkuBadge } from '../../ui/PikkuBadge'
 
 interface OutputHandle {
   id: string

@@ -10,10 +10,10 @@ import {
   Loader,
 } from '@mantine/core'
 import { Search } from 'lucide-react'
-import { Tree } from '@/components/ui/Tree'
-import { CategoryRow } from '@/components/project/tree/CategoryRow'
-import { PanelProvider } from '@/context/PanelContext'
-import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
+import { Tree } from '../ui/Tree'
+import { CategoryRow } from '../project/tree/CategoryRow'
+import { PanelProvider } from '../../context/PanelContext'
+import { ResizablePanelLayout } from './ResizablePanelLayout'
 
 interface TreeNode {
   id: string

@@ -1,9 +1,9 @@
 import React from 'react'
 import { Text, Box, Group, Divider, Table, Anchor } from '@mantine/core'
-import { useLink } from '@/router'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { LinkedBadge } from '@/components/project/panels/LinkedBadge'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { useLink } from '../../../../router'
+import { usePikkuMeta } from '../../../../context/PikkuMetaContext'
+import { LinkedBadge } from '../LinkedBadge'
+import { PikkuBadge } from '../../../ui/PikkuBadge'
 import { SectionLabel } from './SectionLabel'
 import { FunctionLink } from './FunctionLink'
 import { SchemaSection } from './SchemaSection'
@@ -34,9 +34,9 @@ interface CommonDetailsProps {
 
 const TYPE_HREF: Record<string, string> = {
   http: '/apis?tab=http',
-  channel: '/apis?tab=channels',
+  channel: '/apis/channels',
   mcp: '/apis?tab=mcp',
-  cli: '/apis?tab=cli',
+  cli: '/apis/cli',
   rpc: '/apis?tab=http',
   scheduler: '/jobs?tab=schedulers',
   queue: '/jobs?tab=queues',

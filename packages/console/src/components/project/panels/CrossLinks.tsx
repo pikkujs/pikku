@@ -1,15 +1,15 @@
 import React from 'react'
 import { Stack, Text, Box, Group, Anchor } from '@mantine/core'
-import { useLink } from '@/router'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { wiringTypeColor } from '@/components/ui/badge-defs'
+import { useLink } from '../../../router'
+import { usePikkuMeta } from '../../../context/PikkuMetaContext'
+import { PikkuBadge } from '../../ui/PikkuBadge'
+import { wiringTypeColor } from '../../ui/badge-defs'
 
 const TYPE_HREF: Record<string, string> = {
   http: '/apis?tab=http',
-  channel: '/apis?tab=channels',
+  channel: '/apis/channels',
   mcp: '/apis?tab=mcp',
-  cli: '/apis?tab=cli',
+  cli: '/apis/cli',
   rpc: '/apis?tab=http',
   scheduler: '/jobs?tab=schedulers',
   queue: '/jobs?tab=queues',

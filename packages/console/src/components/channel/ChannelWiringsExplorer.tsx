@@ -1,7 +1,7 @@
 import React from 'react'
 import { Accordion, Group, Text, Stack, Badge, Box } from '@mantine/core'
-import { FunctionLink } from '@/components/project/panels/shared/FunctionLink'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { FunctionLink } from '../project/panels/shared/FunctionLink'
+import { PikkuBadge } from '../ui/PikkuBadge'
 import type { ChannelSelection } from './ChannelNavTree'
 
 interface ChannelWiringsExplorerProps {

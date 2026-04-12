@@ -1,7 +1,7 @@
 import React from 'react'
 import { Group, Stack, Text, ActionIcon } from '@mantine/core'
 import { Workflow } from 'lucide-react'
-import { usePanelContext } from '@/context/PanelContext'
+import { usePanelContext } from '../../../context/PanelContext'
 import styles from './Row.module.css'
 
 interface CliRowProps {

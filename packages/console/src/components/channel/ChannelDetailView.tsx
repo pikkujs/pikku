@@ -1,11 +1,11 @@
 import React, { useMemo } from 'react'
 import { Stack, Text, Group, Divider, Code } from '@mantine/core'
 import type { ChannelMeta } from '@pikku/core/channel'
-import { FunctionLink } from '@/components/project/panels/shared/FunctionLink'
-import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
-import { CommonDetails } from '@/components/project/panels/shared/CommonDetails'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { useChannelSnippets } from '@/hooks/useWirings'
+import { FunctionLink } from '../project/panels/shared/FunctionLink'
+import { SectionLabel } from '../project/panels/shared/SectionLabel'
+import { CommonDetails } from '../project/panels/shared/CommonDetails'
+import { PikkuBadge } from '../ui/PikkuBadge'
+import { useChannelSnippets } from '../../hooks/useWirings'
 import type { ChannelSelection } from './ChannelNavTree'
 
 interface ChannelDetailViewProps {

@@ -1,7 +1,7 @@
 import React from 'react'
 import { Box, Loader, Text } from '@mantine/core'
-import { useSchema } from '@/hooks/useWirings'
-import { SchemaViewer } from '@/components/ui/SchemaViewer'
+import { useSchema } from '../../../../hooks/useWirings'
+import { SchemaViewer } from '../../../ui/SchemaViewer'
 import { SectionLabel } from './SectionLabel'
 
 export const SchemaSection: React.FunctionComponent<{

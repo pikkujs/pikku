@@ -11,7 +11,7 @@ import {
   flagDefs,
   dynamicDefs,
   type EnumBadgeDef,
-} from '@/components/ui/badge-defs'
+} from './badge-defs'
 
 const ICON_SIZES: Record<string, number> = {
   xs: 8,

@@ -1,14 +1,14 @@
 import React, { useMemo, useState } from 'react'
-import { useSearchParams } from '@/router'
+import { useSearchParams } from '../router'
 import { PackageDetailPage } from './PackageDetailPage'
 import { Group, Text, ThemeIcon, Badge, Box, Loader, Center } from '@mantine/core'
 import { Package, Globe } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { usePikkuRPC } from '@/context/PikkuRpcProvider'
-import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
-import { TabbedPageHeader } from '@/components/layout/TabbedPageHeader'
-import { TableListPage } from '@/components/layout/TableListPage'
-import { PanelProvider } from '@/context/PanelContext'
+import { usePikkuRPC } from '../context/PikkuRpcProvider'
+import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { TabbedPageHeader } from '../components/layout/TabbedPageHeader'
+import { TableListPage } from '../components/layout/TableListPage'
+import { PanelProvider } from '../context/PanelContext'
 
 export interface PackageMeta {
   id: string

@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react'
 import { Text } from '@mantine/core'
 import { Zap } from 'lucide-react'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { usePanelContext } from '@/context/PanelContext'
-import { TableListPage } from '@/components/layout/TableListPage'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { usePikkuMeta } from '../../context/PikkuMetaContext'
+import { usePanelContext } from '../../context/PanelContext'
+import { TableListPage } from '../layout/TableListPage'
+import { PikkuBadge } from '../ui/PikkuBadge'
 
 interface TriggerPair {
   name: string

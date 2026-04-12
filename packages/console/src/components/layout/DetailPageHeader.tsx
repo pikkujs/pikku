@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { useLink } from '@/router'
+import { useLink } from '../../router'
 import {
   Group,
   Text,

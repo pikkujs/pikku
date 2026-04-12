@@ -1,4 +1,4 @@
-import { useLocation, useLink } from '@/router'
+import { useLocation, useLink } from '../../router'
 import {
   Stack,
   Box,
@@ -27,7 +27,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { spotlight } from '@mantine/spotlight'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
+import { usePikkuMeta } from '../../context/PikkuMetaContext'
 
 export interface NavItem {
   label: string

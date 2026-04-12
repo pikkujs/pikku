@@ -27,8 +27,8 @@ import {
   Trash2,
   RefreshCw,
 } from 'lucide-react'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { usePikkuRPC } from '@/context/PikkuRpcProvider'
+import { usePikkuMeta } from '../../context/PikkuMetaContext'
+import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 interface CredentialItem {

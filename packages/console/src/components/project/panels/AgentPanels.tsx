@@ -9,15 +9,15 @@ import {
   ActionIcon,
 } from '@mantine/core'
 import { Bot, Pencil } from 'lucide-react'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { CommonDetails } from '@/components/project/panels/shared/CommonDetails'
-import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
-import { LinkedBadge } from '@/components/project/panels/LinkedBadge'
-import { SchemaSection } from '@/components/project/panels/shared/SchemaSection'
-import { usePanelContext } from '@/context/PanelContext'
-import { AgentPlaygroundContext } from '@/context/AgentPlaygroundContext'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { AgentEditor } from '@/components/project/panels/AgentEditor'
+import { PikkuBadge } from '../../ui/PikkuBadge'
+import { CommonDetails } from './shared/CommonDetails'
+import { SectionLabel } from './shared/SectionLabel'
+import { LinkedBadge } from './LinkedBadge'
+import { SchemaSection } from './shared/SchemaSection'
+import { usePanelContext } from '../../../context/PanelContext'
+import { AgentPlaygroundContext } from '../../../context/AgentPlaygroundContext'
+import { usePikkuMeta } from '../../../context/PikkuMetaContext'
+import { AgentEditor } from './AgentEditor'
 
 interface AgentPanelProps {
   wireId: string

@@ -11,13 +11,13 @@ import {
   Zap,
 } from 'lucide-react'
 import cronstrue from 'cronstrue'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { CommonDetails } from '@/components/project/panels/shared/CommonDetails'
-import { FunctionLink } from '@/components/project/panels/shared/FunctionLink'
-import { LinkedBadge } from '@/components/project/panels/LinkedBadge'
-import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
-import { SchemaSection } from '@/components/project/panels/shared/SchemaSection'
-import { usePanelContext } from '@/context/PanelContext'
+import { PikkuBadge } from '../../ui/PikkuBadge'
+import { CommonDetails } from './shared/CommonDetails'
+import { FunctionLink } from './shared/FunctionLink'
+import { LinkedBadge } from './LinkedBadge'
+import { SectionLabel } from './shared/SectionLabel'
+import { SchemaSection } from './shared/SchemaSection'
+import { usePanelContext } from '../../../context/PanelContext'
 
 interface WiringPanelProps {
   wireId: string

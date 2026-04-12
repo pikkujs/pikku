@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react'
 import { Text } from '@mantine/core'
 import { Settings2 } from 'lucide-react'
-import { usePanelContext } from '@/context/PanelContext'
-import { TableListPage } from '@/components/layout/TableListPage'
+import { usePanelContext } from '../../context/PanelContext'
+import { TableListPage } from '../layout/TableListPage'
 
 export interface VariableMeta {
   name: string

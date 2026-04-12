@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { useNavigate } from '@/router'
+import { useNavigate } from '../../router'
 import type { SpotlightActionData } from '@mantine/spotlight'
 import { Spotlight, spotlight } from '@mantine/spotlight'
 import {
@@ -13,7 +13,7 @@ import {
   ListOrdered,
   Bot,
 } from 'lucide-react'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
+import { usePikkuMeta } from '../../context/PikkuMetaContext'
 
 const TYPE_CONFIG: Record<
   string,
@@ -22,9 +22,9 @@ const TYPE_CONFIG: Record<
   function: { icon: FunctionSquare, color: 'blue', href: '/functions' },
   workflow: { icon: GitBranch, color: 'violet', href: '/workflow' },
   http: { icon: Globe, color: 'green', href: '/apis?tab=http' },
-  channel: { icon: Radio, color: 'cyan', href: '/apis?tab=channels' },
+  channel: { icon: Radio, color: 'cyan', href: '/apis/channels' },
   mcp: { icon: Cpu, color: 'orange', href: '/apis?tab=mcp' },
-  cli: { icon: Terminal, color: 'teal', href: '/apis?tab=cli' },
+  cli: { icon: Terminal, color: 'teal', href: '/apis/cli' },
   scheduler: { icon: Clock, color: 'yellow', href: '/jobs?tab=schedulers' },
   queue: { icon: ListOrdered, color: 'pink', href: '/jobs?tab=queues' },
   agent: { icon: Bot, color: 'grape', href: '/agents' },
@@ -77,7 +77,7 @@ export const SpotlightSearch: React.FunctionComponent = () => {
           label: channelName,
           description: 'Channel',
           leftSection: <Radio size={16} />,
-          onClick: () => navigate('/apis?tab=channels'),
+          onClick: () => navigate('/apis/channels'),
         })
       }
     }
@@ -103,7 +103,7 @@ export const SpotlightSearch: React.FunctionComponent = () => {
               label: `${program.wireId} ${fullPath}`,
               description: `CLI → ${cmdData.pikkuFuncId}`,
               leftSection: <Terminal size={16} />,
-              onClick: () => navigate('/apis?tab=cli'),
+              onClick: () => navigate('/apis/cli'),
             })
           }
           if (cmdData.subcommands) walkCommands(cmdData.subcommands, fullPath)

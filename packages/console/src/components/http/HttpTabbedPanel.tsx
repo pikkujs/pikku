@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react'
 import { Tabs, Stack, SimpleGrid, Box } from '@mantine/core'
-import { HttpConfiguration } from '@/components/project/panels/WiringPanels'
-import { SchemaSection } from '@/components/project/panels/shared/SchemaSection'
-import { CopyableCode } from '@/components/ui/CopyableCode'
+import { HttpConfiguration } from '../project/panels/WiringPanels'
+import { SchemaSection } from '../project/panels/shared/SchemaSection'
+import { CopyableCode } from '../ui/CopyableCode'
 import {
   generateCurlSnippet,
   generateFetchSnippet,

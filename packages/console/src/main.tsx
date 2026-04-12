@@ -1,4 +1,4 @@
-import '@/styles'
+import './styles'
 
 // Set favicon dynamically to handle non-root base paths
 const favicon = import.meta.env.VITE_CONSOLE_FAVICON || '/pikku-console-logo.png'
@@ -10,11 +10,11 @@ document.head.appendChild(link)
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
-import { QueryClientProvider } from '@/context/QueryClientProvider'
-import { ThemeProvider } from '@/context/ThemeProvider'
-import { PikkuHTTPProvider, PikkuRPCProvider } from '@/context/PikkuRpcProvider'
-import { ConsoleRouterProvider } from '@/router'
-import { reactRouterAdapter } from '@/adapters/react-router'
+import { QueryClientProvider } from './context/QueryClientProvider'
+import { ThemeProvider } from './context/ThemeProvider'
+import { PikkuHTTPProvider, PikkuRPCProvider } from './context/PikkuRpcProvider'
+import { ConsoleRouterProvider } from './router'
+import { reactRouterAdapter } from './adapters/react-router'
 import { App } from './App'
 
 createRoot(document.getElementById('root')!).render(

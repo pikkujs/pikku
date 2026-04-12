@@ -10,9 +10,9 @@ import {
 } from '@mantine/core'
 import { Paintbrush } from 'lucide-react'
 import type { CLIMeta, CLICommandMeta } from '@pikku/core/cli'
-import { FunctionLink } from '@/components/project/panels/shared/FunctionLink'
-import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { FunctionLink } from '../project/panels/shared/FunctionLink'
+import { SectionLabel } from '../project/panels/shared/SectionLabel'
+import { PikkuBadge } from '../ui/PikkuBadge'
 import { CliHelpText } from './CliHelpText'
 
 interface RendererMeta {

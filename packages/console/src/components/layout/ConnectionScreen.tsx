@@ -10,7 +10,7 @@ import {
   Alert,
 } from '@mantine/core'
 import { AlertTriangle } from 'lucide-react'
-import { getServerUrl, setServerUrl } from '@/context/PikkuRpcProvider'
+import { getServerUrl, setServerUrl } from '../../context/PikkuRpcProvider'
 
 function getErrorGuidance(error: string, url: string): { title: string; hint: string } {
   const lower = error.toLowerCase()

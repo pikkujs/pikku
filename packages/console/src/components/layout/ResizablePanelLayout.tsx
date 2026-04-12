@@ -2,7 +2,7 @@ import React from 'react'
 import { Allotment } from 'allotment'
 import { Box } from '@mantine/core'
 import { PanelContainer } from '../panel/PanelContainer'
-import { usePanelContext } from '@/context/PanelContext'
+import { usePanelContext } from '../../context/PanelContext'
 
 interface ResizablePanelLayoutProps {
   children: React.ReactNode
@@ -35,12 +35,13 @@ export const ResizablePanelLayout: React.FunctionComponent<
           key={showPanel ? 'with-panel' : 'no-panel'}
           defaultSizes={[840, 400]}
         >
-          <Allotment.Pane maxSize={showPanel ? 1024 : undefined}>
+          <Allotment.Pane>
             <Box style={{ height: '100%', overflow: 'auto' }}>{children}</Box>
           </Allotment.Pane>
           <Allotment.Pane
             visible={showPanel}
             minSize={minSize}
+            maxSize={500}
             preferredSize={400}
           >
             <Box style={{ height: '100%', overflow: 'auto' }}>

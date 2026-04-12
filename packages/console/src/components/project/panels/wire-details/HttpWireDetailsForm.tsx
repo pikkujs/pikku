@@ -9,7 +9,7 @@ import {
   Title,
 } from '@mantine/core'
 import type { PikkuWiringTypes } from '@pikku/core'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { PikkuBadge } from '../../../ui/PikkuBadge'
 
 interface HttpWireDetailsFormProps {
   wireType: PikkuWiringTypes

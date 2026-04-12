@@ -1,9 +1,9 @@
 import React from 'react'
 import type { Node, NodeProps } from 'reactflow'
-import { useFunctionMeta } from '@/hooks/useWirings'
-import { FunctionIcon } from '@/components/ui/icons/FunctionIcon'
-import { usePanelContext } from '@/context/PanelContext'
-import { useWorkflowContextSafe } from '@/context/WorkflowContext'
+import { useFunctionMeta } from '../../../hooks/useWirings'
+import { FunctionIcon } from '../../ui/icons/FunctionIcon'
+import { usePanelContext } from '../../../context/PanelContext'
+import { useWorkflowContextSafe } from '../../../context/WorkflowContext'
 import { FlowNode } from './FlowNode'
 
 interface FunctionNodeData {

@@ -1,11 +1,11 @@
 import React, { useMemo } from 'react'
 import { Text, Group } from '@mantine/core'
 import { FunctionSquare } from 'lucide-react'
-import { usePanelContext } from '@/context/PanelContext'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { TableListPage } from '@/components/layout/TableListPage'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { funcWrapperDefs } from '@/components/ui/badge-defs'
+import { usePanelContext } from '../../context/PanelContext'
+import { usePikkuMeta } from '../../context/PikkuMetaContext'
+import { TableListPage } from '../layout/TableListPage'
+import { PikkuBadge } from '../ui/PikkuBadge'
+import { funcWrapperDefs } from '../ui/badge-defs'
 
 interface ProjectFunctionsProps {
   functions: any[]
@@ -95,7 +95,7 @@ export const ProjectFunctions: React.FunctionComponent<
       {
         key: 'wirings',
         header: 'WIRINGS',
-        width: 90,
+        width: 130,
         render: (func: any) => {
           const funcId = func.pikkuFuncName || func.pikkuFuncId
           const usedBy = functionUsedBy.get(funcId)

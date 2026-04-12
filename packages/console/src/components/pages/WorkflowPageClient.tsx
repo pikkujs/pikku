@@ -1,11 +1,11 @@
 import React, { useMemo } from 'react'
-import { useSearchParams, useNavigate } from '@/router'
+import { useSearchParams, useNavigate } from '../../router'
 import { useQuery } from '@tanstack/react-query'
-import { PanelProvider } from '@/context/PanelContext'
-import { WorkflowRunProvider } from '@/context/WorkflowRunContext'
-import { usePikkuRPC } from '@/context/PikkuRpcProvider'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { WorkflowCanvas } from '@/components/project/WorkflowCanvas'
+import { PanelProvider } from '../../context/PanelContext'
+import { WorkflowRunProvider } from '../../context/WorkflowRunContext'
+import { usePikkuRPC } from '../../context/PikkuRpcProvider'
+import { usePikkuMeta } from '../../context/PikkuMetaContext'
+import { WorkflowCanvas } from '../project/WorkflowCanvas'
 import { Center, Loader, Box, Text } from '@mantine/core'
 
 export const WorkflowPageClient: React.FunctionComponent = () => {

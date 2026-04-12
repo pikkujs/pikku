@@ -10,14 +10,14 @@ import ReactFlow, {
 } from 'reactflow'
 import { Box } from '@mantine/core'
 import { Radio } from 'lucide-react'
-import { FunctionNode } from '@/components/project/nodes/FunctionNode'
-import { ChannelEntryNode } from '@/components/project/nodes/ChannelEntryNode'
-import { ChannelRouterNode } from '@/components/project/nodes/ChannelRouterNode'
-import { createChannelFlow } from '@/hooks/useChannelFlow'
-import { useElkLayout } from '@/hooks/useElkLayout'
+import { FunctionNode } from './nodes/FunctionNode'
+import { ChannelEntryNode } from './nodes/ChannelEntryNode'
+import { ChannelRouterNode } from './nodes/ChannelRouterNode'
+import { createChannelFlow } from '../../hooks/useChannelFlow'
+import { useElkLayout } from '../../hooks/useElkLayout'
 import { ElkEdge } from './edges/ElkEdge'
 import { ResizablePanelLayout } from '../layout/ResizablePanelLayout'
-import { DetailPageHeader } from '@/components/layout/DetailPageHeader'
+import { DetailPageHeader } from '../layout/DetailPageHeader'
 import 'reactflow/dist/style.css'
 import type { ChannelMeta } from '@pikku/core/channel'
 
@@ -101,7 +101,7 @@ export const ChannelCanvas: React.FunctionComponent<ChannelCanvasProps> = ({
           icon={Radio}
           category="Channels"
           docsHref="https://pikku.dev/docs/wiring/channels"
-          categoryPath="/apis?tab=channels"
+          categoryPath="/apis/channels"
           currentItem={channelName}
           items={items}
           onItemSelect={onItemSelect}

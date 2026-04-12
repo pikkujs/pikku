@@ -1,7 +1,7 @@
 import React from 'react'
 import { Text, Badge, Group, Stack, Box, Button, Alert } from '@mantine/core'
 import { Trash2, AlertTriangle, KeyRound, Link2 } from 'lucide-react'
-import { usePikkuRPC } from '@/context/PikkuRpcProvider'
+import { usePikkuRPC } from '../../../context/PikkuRpcProvider'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 interface CredentialMeta {

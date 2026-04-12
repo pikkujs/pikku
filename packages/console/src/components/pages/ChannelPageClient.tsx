@@ -1,18 +1,18 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
-import { useSearchParams, useNavigate } from '@/router'
+import { useSearchParams, useNavigate } from '../../router'
 import { Box, Center, Text } from '@mantine/core'
 import { Radio } from 'lucide-react'
-import { PanelProvider } from '@/context/PanelContext'
-import { usePanelContext } from '@/context/PanelContext'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { useFunctionMeta } from '@/hooks/useWirings'
-import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '@/components/layout/DetailPageHeader'
+import { PanelProvider } from '../../context/PanelContext'
+import { usePanelContext } from '../../context/PanelContext'
+import { usePikkuMeta } from '../../context/PikkuMetaContext'
+import { useFunctionMeta } from '../../hooks/useWirings'
+import { ResizablePanelLayout } from '../layout/ResizablePanelLayout'
+import { DetailPageHeader } from '../layout/DetailPageHeader'
 import {
   ChannelNavTree,
   type ChannelSelection,
-} from '@/components/channel/ChannelNavTree'
-import { ChannelDetailView } from '@/components/channel/ChannelDetailView'
+} from '../channel/ChannelNavTree'
+import { ChannelDetailView } from '../channel/ChannelDetailView'
 import type { ChannelMeta } from '@pikku/core/channel'
 
 const getSelectedFuncId = (
@@ -54,7 +54,7 @@ const ChannelPageInner: React.FunctionComponent<{
   const handleChannelSwitch = useCallback(
     (name: string) => {
       setSelected(null)
-      navigate(`/apis?tab=channels&id=${encodeURIComponent(name)}`)
+      navigate(`/apis?tab=channels?id=${encodeURIComponent(name)}`)
     },
     [navigate]
   )

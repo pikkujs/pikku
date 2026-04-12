@@ -10,12 +10,12 @@ import {
   ActionIcon,
 } from '@mantine/core'
 import { FunctionSquare, Pencil } from 'lucide-react'
-import { useFunctionMeta, useSchema } from '@/hooks/useWirings'
-import { SchemaViewer } from '@/components/ui/SchemaViewer'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { funcWrapperDefs } from '@/components/ui/badge-defs'
-import { CommonDetails } from '@/components/project/panels/shared/CommonDetails'
-import { FunctionEditor } from '@/components/project/panels/FunctionEditor'
+import { useFunctionMeta, useSchema } from '../../../hooks/useWirings'
+import { SchemaViewer } from '../../ui/SchemaViewer'
+import { PikkuBadge } from '../../ui/PikkuBadge'
+import { funcWrapperDefs } from '../../ui/badge-defs'
+import { CommonDetails } from './shared/CommonDetails'
+import { FunctionEditor } from './FunctionEditor'
 
 interface FunctionDetailsFormProps {
   functionName: string

@@ -1,12 +1,12 @@
 import React from 'react'
 import { Clock } from 'lucide-react'
-import { useSearchParams } from '@/router'
-import { PanelProvider } from '@/context/PanelContext'
-import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
-import { TabbedPageHeader } from '@/components/layout/TabbedPageHeader'
-import { SchedulersTab } from '@/components/tabs/SchedulersTab'
-import { QueuesTab } from '@/components/tabs/QueuesTab'
-import { TriggersTab } from '@/components/tabs/TriggersTab'
+import { useSearchParams } from '../router'
+import { PanelProvider } from '../context/PanelContext'
+import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { TabbedPageHeader } from '../components/layout/TabbedPageHeader'
+import { SchedulersTab } from '../components/tabs/SchedulersTab'
+import { QueuesTab } from '../components/tabs/QueuesTab'
+import { TriggersTab } from '../components/tabs/TriggersTab'
 
 const TABS = [
   { value: 'schedulers', label: 'Schedulers' },

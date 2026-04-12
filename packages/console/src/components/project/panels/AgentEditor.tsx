@@ -11,11 +11,11 @@ import {
   Alert,
 } from '@mantine/core'
 import { Save, X, AlertTriangle, CheckCircle } from 'lucide-react'
-import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
-import { useAgentSource, useUpdateAgentConfig } from '@/hooks/useCodeEdit'
-import { useTagOptions } from '@/hooks/useTags'
-import { useAddonFunctions } from '@/hooks/useAddonFunctions'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
+import { SectionLabel } from './shared/SectionLabel'
+import { useAgentSource, useUpdateAgentConfig } from '../../../hooks/useCodeEdit'
+import { useTagOptions } from '../../../hooks/useTags'
+import { useAddonFunctions } from '../../../hooks/useAddonFunctions'
+import { usePikkuMeta } from '../../../context/PikkuMetaContext'
 
 interface AgentEditorProps {
   wireId: string
