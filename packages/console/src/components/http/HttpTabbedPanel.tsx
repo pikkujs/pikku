@@ -4,6 +4,7 @@ import { HttpConfiguration } from '../project/panels/WiringPanels'
 import { SchemaSection } from '../project/panels/shared/SchemaSection'
 import { SectionLabel } from '../project/panels/shared/SectionLabel'
 import { CopyableCode } from '../ui/CopyableCode'
+import { useFunctionMeta, useSchema } from '../../hooks/useWirings'
 import {
   generateCurlSnippet,
   generateFetchSnippet,
@@ -19,20 +20,25 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
   wireId,
   metadata,
 }) => {
-  const curlSnippet = useMemo(() => generateCurlSnippet(metadata), [metadata])
+  const { data: funcMeta } = useFunctionMeta(metadata?.pikkuFuncId || '')
+  const inputSchemaName = funcMeta?.inputSchemaName
+  const outputSchemaName = funcMeta?.outputSchemaName
+  const { data: inputSchema } = useSchema(inputSchemaName)
+
+  const curlSnippet = useMemo(
+    () => generateCurlSnippet(metadata, inputSchema),
+    [metadata, inputSchema]
+  )
   const fetchSnippet = useMemo(
-    () => generateFetchSnippet(metadata),
-    [metadata]
+    () => generateFetchSnippet(metadata, inputSchema),
+    [metadata, inputSchema]
   )
   const pikkuSnippet = useMemo(
-    () => generatePikkuFetchSnippet(metadata),
-    [metadata]
+    () => generatePikkuFetchSnippet(metadata, inputSchema),
+    [metadata, inputSchema]
   )
 
-  const hasSchemas =
-    metadata?.inputSchemaName ||
-    metadata?.outputSchemaName ||
-    metadata?.headersSchemaName
+  const hasSchemas = inputSchemaName || outputSchemaName
 
   return (
     <Stack gap="lg" p="md">
@@ -42,25 +48,19 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
         <>
           <Divider />
           <SimpleGrid cols={2} spacing="lg">
-            {metadata?.inputSchemaName && (
+            {inputSchemaName && (
               <SchemaSection
                 label="Input Schema"
-                schemaName={metadata.inputSchemaName}
+                schemaName={inputSchemaName}
               />
             )}
-            {metadata?.outputSchemaName && (
+            {outputSchemaName && (
               <SchemaSection
                 label="Output Schema"
-                schemaName={metadata.outputSchemaName}
+                schemaName={outputSchemaName}
               />
             )}
           </SimpleGrid>
-          {metadata?.headersSchemaName && (
-            <SchemaSection
-              label="Headers Schema"
-              schemaName={metadata.headersSchemaName}
-            />
-          )}
         </>
       )}
 
