@@ -9,35 +9,154 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
   build:
-    uses: ./.github/workflows/build.yml
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: ./.github/actions/setup
+        with:
+          download-build: 'false'
+      - uses: ./.github/actions/build
 
   e2e:
+    name: E2E Standard
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: build
-    uses: ./.github/workflows/e2e.yml
+    steps:
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/e2e-codegen
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Run e2e tests
+        run: yarn test:e2e --force-exit
 
   # e2e-ai:
+  #   name: E2E AI
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 10
   #   needs: [e2e, verifiers, templates]
-  #   uses: ./.github/workflows/e2e-ai.yml
-  #   secrets:
-  #     OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  #   steps:
+  #     - uses: ./.github/actions/setup
+  #     - uses: ./.github/actions/e2e-codegen
+  #     - name: Install Playwright
+  #       run: npx playwright install --with-deps chromium
+  #     - name: Run AI e2e tests
+  #       run: yarn test:e2e:ai
+  #       env:
+  #         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
   verifiers:
+    name: Verifiers (${{ matrix.verifier }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: build
-    uses: ./.github/workflows/verifiers.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        verifier:
+          [
+            addon,
+            gateway,
+            middleware-and-permissions,
+            treeshaking,
+            types,
+            secrets,
+            workflows,
+            variables,
+            functions,
+            hmr,
+            deploy-cloudflare,
+            deploy-serverless,
+            deploy-azure,
+            deploy-standalone,
+          ]
+    steps:
+      - uses: ./.github/actions/setup
+      - run: cd verifiers/${{ matrix.verifier }} && yarn test
 
   templates:
+    name: Templates (${{ matrix.version }}, ${{ matrix.template }}, ${{ matrix.package-manager }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: build
-    uses: ./.github/workflows/templates.yml
-    secrets:
+    services:
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: pikku_workspace_starter
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [24]
+        template:
+          [
+            express,
+            express-middleware,
+            fastify,
+            fastify-plugin,
+            uws,
+            ws,
+            aws-lambda,
+            aws-lambda-websocket,
+            cloudflare-workers,
+            cloudflare-websocket,
+            nextjs,
+            mcp-server,
+            cli,
+            pg-boss,
+            bullmq,
+            workflows-bullmq,
+            workflows-pg-boss,
+            remote-rpc-pg,
+            remote-rpc-redis,
+            ai-postgres,
+          ]
+        package-manager: [yarn]
+    steps:
+      - uses: ./.github/actions/setup
+        with:
+          node-version: ${{ matrix.version }}
+      - name: Test template
+        timeout-minutes: 2
+        run: ./scripts/test-template.sh ${{ matrix.template }} ${{ github.ref_name }}
+    env:
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+      DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_workspace_starter
+      REDIS_URL: redis://localhost:6379
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      SLS_TELEMETRY_DISABLED: 1
+      SLS_NOTIFICATIONS_MODE: off
 
   release:
+    name: Release
+    runs-on: ubuntu-latest
     needs: [verifiers, templates, e2e]
-    uses: ./.github/workflows/release.yml
-    secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - uses: ./.github/actions/setup
+      - name: Create Release Pull Request
+        uses: changesets/action@v1
+        with:
+          version: node .github/changeset-version.cjs
+          publish: yarn release
+          createGithubReleases: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          HUSKY: '0'
 
   sync-templates-stackblitz:
     name: Sync Templates
