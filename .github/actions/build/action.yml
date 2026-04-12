@@ -1,0 +1,63 @@
+name: Build
+description: Build all packages, run tests, generate pikku files, and upload build artifact
+
+runs:
+  using: composite
+  steps:
+    - name: Check formatting
+      shell: bash
+      run: yarn prettier
+    - name: Lint
+      shell: bash
+      run: yarn lint
+    - name: Build packages
+      shell: bash
+      run: yarn build:packages
+    - name: Generate pikku files
+      shell: bash
+      run: yarn pikku
+    - name: Build addons
+      shell: bash
+      run: yarn build:addons
+    - name: Regenerate schemas after bootstrap
+      shell: bash
+      run: yarn pikku
+    - name: Build function-addon template
+      shell: bash
+      run: cd templates/function-addon && yarn pikku && yarn build
+    - name: Generate pikku files for verifiers
+      shell: bash
+      run: yarn workspaces foreach -A --include 'verifiers/**' run pikku
+    - name: Build verifiers
+      shell: bash
+      run: yarn build:verifiers
+    - name: Build templates
+      shell: bash
+      run: yarn build:templates
+    - name: Run tests
+      shell: bash
+      run: yarn test:coverage
+    - name: Generate and type-check console
+      shell: bash
+      run: cd packages/console && yarn generate && yarn tsc --noEmit
+    - name: Build console
+      shell: bash
+      run: yarn build:console
+
+    - name: Save build output (for later jobs)
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-output
+        path: |
+          packages/**/dist
+          packages/**/bin
+          templates/**/.pikku
+          templates/**/dist
+          verifiers/**/.pikku
+          verifiers/**/dist
+        include-hidden-files: true
+        retention-days: 1
+
+    - name: Coveralls GitHub Action
+      uses: coverallsapp/github-action@v2.3.4
+      continue-on-error: true

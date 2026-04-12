@@ -1,4 +1,4 @@
-name: Main
+name: CI
 
 on:
   push:
@@ -15,62 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-      - run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
         with:
-          node-version: 24
-          cache: yarn
-      - run: yarn install
-      # - name: Check changesets
-      #   if: github.event_name == 'pull_request'
-      #   run: bash scripts/check-changesets.sh origin/main
-      - name: Check formatting
-        run: yarn prettier
-      - name: Lint
-        run: yarn lint
-      - name: Build packages
-        run: yarn build:packages
-      - name: Generate pikku files
-        run: yarn pikku
-      - name: Build addons
-        run: yarn build:addons
-      - name: Regenerate schemas after bootstrap
-        run: yarn pikku
-      - name: Build function-addon template
-        run: cd templates/function-addon && yarn pikku && yarn build
-      - name: Generate pikku files for verifiers
-        run: yarn workspaces foreach -A --include 'verifiers/**' run pikku
-      - name: Build verifiers
-        run: yarn build:verifiers
-      - name: Build templates
-        run: yarn build:templates
-      - name: Run tests
-        run: yarn test:coverage
-      - name: Generate and type-check console
-        run: cd packages/console && yarn generate && yarn tsc --noEmit
-      - name: Build console
-        run: yarn build:console
-
-      - name: Save build output (for later jobs)
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-output
-          path: |
-            packages/**/dist
-            packages/**/bin
-            templates/**/.pikku
-            templates/**/dist
-            verifiers/**/.pikku
-            verifiers/**/dist
-          include-hidden-files: true
-          retention-days: 1
-
-      - name: Coveralls GitHub Action
-        uses: coverallsapp/github-action@v2.3.4
-        continue-on-error: true
+          download-build: 'false'
+      - uses: ./.github/actions/build
 
   e2e:
     name: E2E Standard
@@ -78,49 +27,9 @@ jobs:
     timeout-minutes: 10
     needs: build
     steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-      - run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: yarn
-      - name: Download build output
-        uses: actions/download-artifact@v4
-        with:
-          name: build-output
-      - run: yarn install
-      - name: Generate pikku files for e2e addons
-        run: |
-          cd packages/addon/pikku-console && npx pikku all
-          cd ../../..
-          cd packages/addon/pikku-graph && npx pikku all
-          cd ../../..
-          cd e2e/packages/todos && npx pikku all
-          cd ../../..
-          cd e2e/packages/emails && npx pikku all
-      - name: Generate pikku files for e2e hmac-signer
-        run: cd e2e/packages/hmac-signer && npx pikku all
-      - name: Generate pikku files for e2e oauth-api
-        run: cd e2e/packages/oauth-api && npx pikku all
-      - name: Generate pikku files for e2e project
-        run: cd e2e && npx pikku all
-      - name: Regenerate pikku files (second pass resolves cross-package type imports)
-        run: |
-          cd packages/addon/pikku-console && npx pikku all
-          cd ../../..
-          cd packages/addon/pikku-graph && npx pikku all
-          cd ../../..
-          cd e2e/packages/todos && npx pikku all
-          cd ../../..
-          cd e2e/packages/emails && npx pikku all
-          cd ../../..
-          cd e2e/packages/hmac-signer && npx pikku all
-          cd ../../..
-          cd e2e/packages/oauth-api && npx pikku all
-          cd ../../..
-          cd e2e && npx pikku all
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/e2e-codegen
       - name: Install Playwright
         run: npx playwright install --with-deps chromium
       - name: Run e2e tests
@@ -132,30 +41,9 @@ jobs:
   #   timeout-minutes: 10
   #   needs: [e2e, verifiers, templates]
   #   steps:
-  #     - name: Check out repository code
-  #       uses: actions/checkout@v4
-  #     - run: corepack enable
-  #       shell: bash
-  #     - uses: actions/setup-node@v4
-  #       with:
-  #         node-version: 24
-  #         cache: yarn
-  #     - name: Download build output
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: build-output
-  #     - run: yarn install
-  #     - name: Generate pikku files for e2e addons
-  #       run: |
-  #         cd packages/addon/pikku-console && npx pikku all
-  #         cd ../../..
-  #         cd packages/addon/pikku-graph && npx pikku all
-  #         cd ../../..
-  #         cd e2e/packages/todos && npx pikku all
-  #         cd ../../..
-  #         cd e2e/packages/emails && npx pikku all
-  #     - name: Generate pikku files for e2e project
-  #       run: cd e2e && npx pikku all
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/setup
+  #     - uses: ./.github/actions/e2e-codegen
   #     - name: Install Playwright
   #       run: npx playwright install --with-deps chromium
   #     - name: Run AI e2e tests
@@ -164,7 +52,7 @@ jobs:
   #         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
   verifiers:
-    name: Verifiers
+    name: Verifiers (${{ matrix.verifier }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: build
@@ -189,23 +77,12 @@ jobs:
             deploy-standalone,
           ]
     steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-      - run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: yarn
-      - name: Download build output
-        uses: actions/download-artifact@v4
-        with:
-          name: build-output
-      - run: yarn install
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
       - run: cd verifiers/${{ matrix.verifier }} && yarn test
 
   templates:
-    name: Templates
+    name: Templates (${{ matrix.version }}, ${{ matrix.template }}, ${{ matrix.package-manager }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: build
@@ -256,19 +133,10 @@ jobs:
           ]
         package-manager: [yarn]
     steps:
-      - name: Check out repository code
-        uses: actions/checkout@v4
-      - run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.version }}
-          cache: yarn
-      - name: Download build output
-        uses: actions/download-artifact@v4
-        with:
-          name: build-output
-      - run: yarn install
       - name: Test template
         timeout-minutes: 2
         run: ./scripts/test-template.sh ${{ matrix.template }} ${{ github.ref_name }}
@@ -279,3 +147,14 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       SLS_TELEMETRY_DISABLED: 1
       SLS_NOTIFICATIONS_MODE: off
+
+  release-dry-run:
+    name: Release (dry run)
+    runs-on: ubuntu-latest
+    needs: [verifiers, templates, e2e]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - run: npx changeset status
