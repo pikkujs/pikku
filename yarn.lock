@@ -5561,7 +5561,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/fetch@npm:^0.12.0, @pikku/fetch@npm:^0.12.1, @pikku/fetch@workspace:packages/client-fetch":
+"@pikku/fetch@npm:^0.12.0, @pikku/fetch@npm:^0.12.1, @pikku/fetch@workspace:*, @pikku/fetch@workspace:packages/client-fetch":
   version: 0.0.0-use.local
   resolution: "@pikku/fetch@workspace:packages/client-fetch"
   dependencies:
@@ -6313,8 +6313,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-addon@workspace:verifiers/addon"
   dependencies:
-    "@pikku/cli": "npm:^0.12.15"
-    "@pikku/core": "npm:^0.12.14"
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
     "@pikku/templates-function-addon": "workspace:*"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
@@ -6325,7 +6325,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-deploy-azure@workspace:verifiers/deploy-azure"
   dependencies:
-    "@pikku/cli": "npm:^0.12.15"
+    "@pikku/cli": "workspace:*"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
   languageName: unknown
@@ -6335,7 +6335,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-deploy-cloudflare@workspace:verifiers/deploy-cloudflare"
   dependencies:
-    "@pikku/cli": "npm:^0.12.15"
+    "@pikku/cli": "workspace:*"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
   languageName: unknown
@@ -6345,7 +6345,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-deploy-serverless@workspace:verifiers/deploy-serverless"
   dependencies:
-    "@pikku/cli": "npm:^0.12.15"
+    "@pikku/cli": "workspace:*"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
   languageName: unknown
@@ -6355,7 +6355,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-deploy-standalone@workspace:verifiers/deploy-standalone"
   dependencies:
-    "@pikku/cli": "npm:^0.12.15"
+    "@pikku/cli": "workspace:*"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
   languageName: unknown
@@ -6365,13 +6365,13 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-functions@workspace:verifiers/functions"
   dependencies:
-    "@pikku/cli": "npm:^0.12.15"
-    "@pikku/core": "npm:^0.12.14"
-    "@pikku/fetch": "npm:^0.12.1"
-    "@pikku/jose": "npm:^0.12.3"
-    "@pikku/schema-cfworker": "npm:^0.12.2"
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
+    "@pikku/fetch": "workspace:*"
+    "@pikku/jose": "workspace:*"
+    "@pikku/schema-cfworker": "workspace:*"
     "@pikku/templates-function-addon": "workspace:*"
-    "@pikku/websocket": "npm:^0.12.1"
+    "@pikku/websocket": "workspace:*"
     "@types/node": "npm:^24"
     "@types/ws": "npm:^8"
     concurrently: "npm:^9.2.1"
@@ -6387,8 +6387,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-gateway@workspace:verifiers/gateway"
   dependencies:
-    "@pikku/cli": "npm:^0.12.15"
-    "@pikku/core": "npm:^0.12.14"
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
   languageName: unknown
@@ -6398,9 +6398,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-hmr@workspace:verifiers/hmr"
   dependencies:
-    "@pikku/cli": "npm:^0.12.15"
-    "@pikku/core": "npm:^0.12.14"
-    "@pikku/schema-cfworker": "npm:^0.12.2"
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
+    "@pikku/schema-cfworker": "workspace:*"
     "@types/node": "npm:^24"
     tsx: "npm:^4.21.0"
     typescript: "npm:^5.9"
@@ -6411,8 +6411,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-middleware-and-permissions@workspace:verifiers/middleware-and-permissions"
   dependencies:
-    "@pikku/cli": "npm:^0.12.15"
-    "@pikku/core": "npm:^0.12.14"
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
     "@pikku/templates-function-addon": "workspace:*"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
@@ -6437,8 +6437,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-treeshaking@workspace:verifiers/treeshaking"
   dependencies:
-    "@pikku/cli": "npm:^0.12.15"
-    "@pikku/core": "npm:^0.12.14"
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
     "@pikku/templates-function-addon": "workspace:*"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
@@ -6450,7 +6450,7 @@ __metadata:
   resolution: "@pikku/verifiers-types@workspace:verifiers/types"
   dependencies:
     "@pikku/cli": "workspace:*"
-    "@pikku/core": "npm:^0.12.14"
+    "@pikku/core": "workspace:*"
     "@pikku/templates-function-addon": "workspace:*"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
@@ -6491,7 +6491,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/websocket@npm:^0.12.1, @pikku/websocket@workspace:packages/client-websocket":
+"@pikku/websocket@npm:^0.12.1, @pikku/websocket@workspace:*, @pikku/websocket@workspace:packages/client-websocket":
   version: 0.0.0-use.local
   resolution: "@pikku/websocket@workspace:packages/client-websocket"
   dependencies:
