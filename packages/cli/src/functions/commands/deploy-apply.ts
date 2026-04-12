@@ -173,13 +173,29 @@ async function runDeploy(
   }
 
   logger.info(`Deploying via ${provider.name}...`)
-  const deployResult = await provider.deploy({
-    buildDir: providerDir,
-    logger,
-    onProgress: (_step: string, _detail: string) => {
-      process.stdout.write(` ${ANSI.green}done${ANSI.reset}\n`)
-    },
-  })
+
+  let deployResult: {
+    success: boolean
+    workersDeployed?: unknown[]
+    resourcesCreated?: unknown[]
+    errors: Array<{ step: string; error: string }>
+  }
+
+  try {
+    deployResult = await provider.deploy({
+      buildDir: providerDir,
+      logger,
+      onProgress: (_step: string, _detail: string) => {
+        process.stdout.write(` ${ANSI.green}done${ANSI.reset}\n`)
+      },
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    deployResult = {
+      success: false,
+      errors: [{ step: 'deploy', error: message }],
+    }
+  }
 
   await writeResultFile(resultFile, deployResult)
 
