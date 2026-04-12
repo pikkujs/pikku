@@ -1,14 +1,12 @@
 import { basename, join, relative } from 'node:path'
 import { readFile } from 'node:fs/promises'
 
-import { pikkuVoidFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku'
 import type {
   ProviderAdapter,
   EntryGenerationContext,
 } from '../../deploy/provider-adapter.js'
-import type { PlanChange } from '../../deploy/plan/types.js'
 import type { InspectorState } from '@pikku/inspector'
-import type { CloudflareInfraManifest } from '@pikku/deploy-cloudflare'
 import { runBuildPipeline } from '../../deploy/build-pipeline.js'
 
 function toRelativeImport(fromDir: string, toFile: string): string {
@@ -104,11 +102,7 @@ export async function resolveProvider(
   },
   providerName?: string
 ): Promise<ProviderAdapter> {
-  const name =
-    providerName ??
-    process.env.PIKKU_DEPLOY_PROVIDER ??
-    config?.deploy?.defaultProvider ??
-    'cloudflare'
+  const name = providerName ?? config?.deploy?.defaultProvider ?? 'cloudflare'
 
   const providers = config?.deploy?.providers ?? {
     cloudflare: '@pikku/deploy-cloudflare',
@@ -159,27 +153,112 @@ const ANSI = {
   reset: '\x1b[0m',
 }
 
-function logProgress(
-  change: PlanChange,
-  _status: 'start' | 'done' | 'error',
-  error?: string
-) {
-  if (_status === 'done') {
-    process.stdout.write(` ${ANSI.green}done${ANSI.reset}\n`)
-  } else if (_status === 'error') {
-    process.stdout.write(` ${ANSI.red}error: ${error}${ANSI.reset}\n`)
+async function writeResultFile(
+  resultFile: string | undefined,
+  result: Record<string, unknown>
+): Promise<void> {
+  if (resultFile) {
+    const { writeFile } = await import('node:fs/promises')
+    await writeFile(resultFile, JSON.stringify(result, null, 2), 'utf-8')
   }
 }
 
-export const deployApply = pikkuVoidFunc({
-  func: async ({ logger, config, getInspectorState }) => {
+async function runDeploy(
+  provider: ProviderAdapter,
+  providerDir: string,
+  logger: { info(msg: string): void; error(msg: string): void },
+  resultFile?: string
+): Promise<void> {
+  if (typeof provider.deploy !== 'function') {
+    logger.error(`Provider '${provider.name}' does not support deploy.`)
+    await writeResultFile(resultFile, {
+      success: false,
+      errors: [{ step: 'provider', error: 'No deploy support' }],
+    })
+    process.exit(1)
+  }
+
+  logger.info(`Deploying via ${provider.name}...`)
+
+  let deployResult: {
+    success: boolean
+    workersDeployed?: unknown[]
+    resourcesCreated?: unknown[]
+    errors: Array<{ step: string; error: string }>
+  }
+
+  try {
+    deployResult = await provider.deploy({
+      buildDir: providerDir,
+      logger,
+      onProgress: (_step: string, _detail: string) => {
+        process.stdout.write(` ${ANSI.green}done${ANSI.reset}\n`)
+      },
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    deployResult = {
+      success: false,
+      errors: [{ step: 'deploy', error: message }],
+    }
+  }
+
+  await writeResultFile(resultFile, deployResult)
+
+  console.log('')
+  if (deployResult.success) {
+    logger.info(`${ANSI.green}${ANSI.bold}Deployment complete.${ANSI.reset}`)
+    logger.info(
+      `  ${deployResult.workersDeployed?.length ?? 0} units deployed, ${deployResult.resourcesCreated?.length ?? 0} resources created`
+    )
+  } else {
+    logger.error(
+      `Deployment finished with ${deployResult.errors.length} error(s):`
+    )
+    for (const e of deployResult.errors) {
+      logger.error(`  ${e.step}: ${e.error}`)
+    }
+  }
+}
+
+export const deployApply = pikkuSessionlessFunc<
+  { fromPlan?: boolean; provider?: string; resultFile?: string },
+  void
+>({
+  func: async ({ logger, config, getInspectorState }, data) => {
     const projectDir = config.rootDir
+    const provider = await resolveProvider(config, data?.provider)
+    const fromPlan = data?.fromPlan ?? false
+    const resultFile = data?.resultFile
+
+    if (fromPlan) {
+      // Skip build pipeline — deploy from existing plan output
+      const { join } = await import('node:path')
+      const { existsSync } = await import('node:fs')
+
+      const providerDir = join(projectDir, '.deploy', provider.deployDirName)
+      const infraPath = join(providerDir, 'infra.json')
+
+      if (!existsSync(infraPath)) {
+        logger.error(
+          `No plan found at ${providerDir}. Run 'pikku deploy plan' first.`
+        )
+        await writeResultFile(resultFile, {
+          success: false,
+          errors: [{ step: 'plan', error: 'No plan found' }],
+        })
+        process.exit(1)
+      }
+
+      await runDeploy(provider, providerDir, logger, resultFile)
+      return
+    }
+
+    // Full build + deploy pipeline
     const inspectorState = await getInspectorState(true)
     const projectId = await resolveProjectId(projectDir)
-    const provider = await resolveProvider(config)
 
-    // Build pipeline: analyze → codegen → bundle → configs
-    const result = await runBuildPipeline({
+    const buildResult = await runBuildPipeline({
       projectDir,
       projectId,
       provider,
@@ -189,77 +268,31 @@ export const deployApply = pikkuVoidFunc({
       logger,
     })
 
-    if (result.manifest.units.length === 0) {
+    if (buildResult.manifest.units.length === 0) {
       logger.info('No deployment units found. Nothing to deploy.')
+      await writeResultFile(resultFile, {
+        success: true,
+        workersDeployed: [],
+        resourcesCreated: [],
+        errors: [],
+      })
       return
     }
 
-    const { providerDir, bundled } = result
+    const { providerDir, bundled } = buildResult
 
-    // Deploy (provider-specific)
-    if (provider.name === 'cloudflare') {
-      const accountId = process.env.CLOUDFLARE_ACCOUNT_ID
-      const apiToken = process.env.CLOUDFLARE_API_TOKEN
-
-      if (!accountId || !apiToken) {
-        logger.error(
-          'Missing CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN environment variables.'
-        )
-        return
-      }
-
-      const infraJson = JSON.parse(
-        await readFile(join(providerDir, 'infra.json'), 'utf-8')
-      ) as CloudflareInfraManifest
-
-      logger.info('Deploying to Cloudflare...')
-      const { deploy: cfDeploy } = await import('@pikku/deploy-cloudflare')
-      const deployResult = await cfDeploy({
-        accountId,
-        apiToken,
-        buildDir: providerDir,
-        manifest: infraJson,
-        onProgress: (step, detail) => {
-          logProgress(
-            {
-              action: 'create',
-              resourceType: step as PlanChange['resourceType'],
-              name: detail,
-              reason: '',
-            },
-            'done'
-          )
-        },
-      })
-
-      console.log('')
-      if (deployResult.success) {
-        logger.info(
-          `${ANSI.green}${ANSI.bold}Deployment complete.${ANSI.reset}`
-        )
-        logger.info(
-          `  ${deployResult.workersDeployed.length} workers deployed, ${deployResult.resourcesCreated.length} resources created`
-        )
-      } else {
-        logger.error(
-          `Deployment finished with ${deployResult.errors.length} error(s):`
-        )
-        for (const e of deployResult.errors) {
-          logger.error(`  ${e.step}: ${e.error}`)
-        }
-      }
+    if (typeof provider.deploy === 'function') {
+      await runDeploy(provider, providerDir, logger, resultFile)
     } else {
       logger.info(`${ANSI.green}${ANSI.bold}Build complete.${ANSI.reset}`)
       logger.info(
         `  ${bundled.length} functions bundled to ${ANSI.bold}${providerDir}${ANSI.reset}`
       )
-      if (provider.name === 'serverless') {
-        logger.info(`\nTo deploy: cd ${providerDir} && npx serverless deploy`)
-      } else if (provider.name === 'azure') {
-        logger.info(
-          `\nTo deploy: cd ${providerDir} && func azure functionapp publish <app-name>`
-        )
-      }
+      await writeResultFile(resultFile, {
+        success: true,
+        buildOnly: true,
+        unitCount: bundled.length,
+      })
     }
   },
 })
