@@ -170,7 +170,7 @@ wireCLI({
           func: enableRpc,
           description: 'Enable public RPC endpoint',
           options: {
-            'no-auth': {
+            noAuth: {
               description: 'Disable auth requirement',
               default: false,
             },
@@ -180,7 +180,7 @@ wireCLI({
           func: enableConsole,
           description: 'Enable console functions',
           options: {
-            'no-auth': {
+            noAuth: {
               description: 'Disable auth requirement',
               default: false,
             },
@@ -190,7 +190,7 @@ wireCLI({
           func: enableAgent,
           description: 'Enable public agent endpoints',
           options: {
-            'no-auth': {
+            noAuth: {
               description: 'Disable auth requirement',
               default: false,
             },
@@ -200,7 +200,7 @@ wireCLI({
           func: enableWorkflow,
           description: 'Enable workflow workers',
           options: {
-            'no-auth': {
+            noAuth: {
               description: 'Disable auth requirement',
               default: false,
             },

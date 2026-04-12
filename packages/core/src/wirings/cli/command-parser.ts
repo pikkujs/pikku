@@ -6,6 +6,11 @@ import type {
   CLIOption,
 } from './cli.types.js'
 
+/** Convert kebab-case to camelCase: "from-plan" → "fromPlan" */
+function toCamelCase(str: string): string {
+  return str.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+}
+
 /**
  * Result of parsing CLI arguments
  */
@@ -117,11 +122,11 @@ export function parseCLIArguments(
     const arg = args[currentIndex]
 
     if (arg.startsWith('--')) {
-      // Long option
+      // Long option (--from-plan → fromPlan)
       const equalIndex = arg.indexOf('=')
       if (equalIndex > 0) {
         // --option=value format
-        const key = arg.slice(2, equalIndex)
+        const key = toCamelCase(arg.slice(2, equalIndex))
         const optionDef = availableOptions[key]
 
         // Unknown options are allowed for forward compatibility
@@ -129,7 +134,7 @@ export function parseCLIArguments(
         optionArgs[key] = parseOptionValue(value, optionDef)
       } else {
         // --option value format
-        const key = arg.slice(2)
+        const key = toCamelCase(arg.slice(2))
         const optionDef = availableOptions[key]
 
         // Unknown options are allowed for forward compatibility
