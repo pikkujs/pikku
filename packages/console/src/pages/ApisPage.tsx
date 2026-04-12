@@ -1,9 +1,8 @@
 import React, { Suspense } from 'react'
-import { Center, Loader } from '@mantine/core'
+import { Center, Loader, Box } from '@mantine/core'
 import { Globe } from 'lucide-react'
 import { useSearchParams } from '../router'
 import { PanelProvider } from '../context/PanelContext'
-import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { TabbedPageHeader } from '../components/layout/TabbedPageHeader'
 import { HttpTab } from '../components/tabs/HttpTab'
 import { ChannelsTab } from '../components/tabs/ChannelsTab'
@@ -40,22 +39,19 @@ const ApisPageInner: React.FunctionComponent = () => {
 
   return (
     <PanelProvider>
-      <ResizablePanelLayout
-        header={
-          <TabbedPageHeader
-            icon={Globe}
-            category="APIs"
-            docsHref="https://pikku.dev/docs/wiring/http"
-            tabs={TABS}
-            activeTab={tab}
-            onTabChange={handleTabChange}
-          />
-        }
-        showTabs={false}
-        hidePanel
-      >
-        {renderTab()}
-      </ResizablePanelLayout>
+      <Box style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+        <TabbedPageHeader
+          icon={Globe}
+          category="APIs"
+          docsHref="https://pikku.dev/docs/wiring/http"
+          tabs={TABS}
+          activeTab={tab}
+          onTabChange={handleTabChange}
+        />
+        <Box style={{ flex: 1, minHeight: 0 }}>
+          {renderTab()}
+        </Box>
+      </Box>
     </PanelProvider>
   )
 }
