@@ -1,0 +1,45 @@
+name: Verifiers
+
+on:
+  workflow_call:
+
+jobs:
+  verifiers:
+    name: Verifiers (${{ matrix.verifier }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        verifier:
+          [
+            addon,
+            gateway,
+            middleware-and-permissions,
+            treeshaking,
+            types,
+            secrets,
+            workflows,
+            variables,
+            functions,
+            hmr,
+            deploy-cloudflare,
+            deploy-serverless,
+            deploy-azure,
+            deploy-standalone,
+          ]
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - run: corepack enable
+        shell: bash
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+      - name: Download build output
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+      - run: yarn install
+      - run: cd verifiers/${{ matrix.verifier }} && yarn test

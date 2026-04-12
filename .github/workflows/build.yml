@@ -1,0 +1,64 @@
+name: Build
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - run: corepack enable
+        shell: bash
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+      - run: yarn install
+      - name: Check formatting
+        run: yarn prettier
+      - name: Lint
+        run: yarn lint
+      - name: Build packages
+        run: yarn build:packages
+      - name: Generate pikku files
+        run: yarn pikku
+      - name: Build addons
+        run: yarn build:addons
+      - name: Regenerate schemas after bootstrap
+        run: yarn pikku
+      - name: Build function-addon template
+        run: cd templates/function-addon && yarn pikku && yarn build
+      - name: Generate pikku files for verifiers
+        run: yarn workspaces foreach -A --include 'verifiers/**' run pikku
+      - name: Build verifiers
+        run: yarn build:verifiers
+      - name: Build templates
+        run: yarn build:templates
+      - name: Run tests
+        run: yarn test:coverage
+      - name: Generate and type-check console
+        run: cd packages/console && yarn generate && yarn tsc --noEmit
+      - name: Build console
+        run: yarn build:console
+
+      - name: Save build output (for later jobs)
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: |
+            packages/**/dist
+            packages/**/bin
+            templates/**/.pikku
+            templates/**/dist
+            verifiers/**/.pikku
+            verifiers/**/dist
+          include-hidden-files: true
+          retention-days: 1
+
+      - name: Coveralls GitHub Action
+        uses: coverallsapp/github-action@v2.3.4
+        continue-on-error: true

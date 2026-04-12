@@ -1,0 +1,85 @@
+name: Templates
+
+on:
+  workflow_call:
+    secrets:
+      SERVERLESS_ACCESS_KEY:
+        required: false
+      OPENAI_API_KEY:
+        required: false
+
+jobs:
+  templates:
+    name: Templates (${{ matrix.version }}, ${{ matrix.template }}, ${{ matrix.package-manager }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: pikku_workspace_starter
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [24]
+        template:
+          [
+            express,
+            express-middleware,
+            fastify,
+            fastify-plugin,
+            uws,
+            ws,
+            aws-lambda,
+            aws-lambda-websocket,
+            cloudflare-workers,
+            cloudflare-websocket,
+            nextjs,
+            mcp-server,
+            cli,
+            pg-boss,
+            bullmq,
+            workflows-bullmq,
+            workflows-pg-boss,
+            remote-rpc-pg,
+            remote-rpc-redis,
+            ai-postgres,
+          ]
+        package-manager: [yarn]
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - run: corepack enable
+        shell: bash
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.version }}
+          cache: yarn
+      - name: Download build output
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+      - run: yarn install
+      - name: Test template
+        timeout-minutes: 2
+        run: ./scripts/test-template.sh ${{ matrix.template }} ${{ github.ref_name }}
+    env:
+      SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
+      DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_workspace_starter
+      REDIS_URL: redis://localhost:6379
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      SLS_TELEMETRY_DISABLED: 1
+      SLS_NOTIFICATIONS_MODE: off
