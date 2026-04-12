@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  workflow_call:
+    inputs:
+      dry-run:
+        description: 'Run in dry-run mode (no publish, no PR)'
+        type: boolean
+        default: false
+    secrets:
+      GITHUB_TOKEN:
+        required: true
+      NPM_TOKEN:
+        required: false
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - run: corepack enable
+        shell: bash
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+      - name: Download build output
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+      - run: yarn install
+
+      - name: Dry run — check changesets
+        if: ${{ inputs.dry-run }}
+        run: npx changeset status
+
+      - name: Create Release Pull Request
+        if: ${{ !inputs.dry-run }}
+        uses: changesets/action@v1
+        with:
+          version: node .github/changeset-version.cjs
+          publish: yarn release
+          createGithubReleases: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          HUSKY: '0'

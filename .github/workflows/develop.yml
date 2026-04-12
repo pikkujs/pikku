@@ -33,3 +33,11 @@ jobs:
     secrets:
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+  release-dry-run:
+    needs: [verifiers, templates, e2e]
+    uses: ./.github/workflows/release.yml
+    with:
+      dry-run: true
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
