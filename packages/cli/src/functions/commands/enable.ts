@@ -18,7 +18,7 @@ async function enableFeature(
   config: { configDir: string },
   data: any
 ) {
-  const noAuth = data?.['no-auth'] ?? false
+  const noAuth = data?.noAuth ?? false
   const configPath = join(config.configDir, 'pikku.config.json')
   const raw = await readFile(configPath, 'utf-8')
   const json = JSON.parse(raw)
