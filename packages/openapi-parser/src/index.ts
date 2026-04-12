@@ -23,4 +23,5 @@ export {
   schemaToZod,
   schemaVarName,
   sanitizeTypeName,
+  snakeToCamel,
 } from './openapi-to-zod-schema.js'
