@@ -128,31 +128,25 @@ export const CommonDetails: React.FunctionComponent<CommonDetailsProps> = ({
 
       <FunctionLink pikkuFuncId={pikkuFuncId} label={functionLinkLabel} />
 
-      {services !== undefined && (
+      {services && services.length > 0 && (
         <Box>
           <SectionLabel>Services</SectionLabel>
-          {services.length > 0 ? (
-            <Group gap={6}>
-              {services.map((svc: string) => (
-                <PikkuBadge
-                  key={svc}
-                  type="dynamic"
-                  badge="service"
-                  value={svc}
-                />
-              ))}
-            </Group>
-          ) : (
-            <Text size="sm" c="dimmed">
-              None
-            </Text>
-          )}
+          <Group gap={6}>
+            {services.map((svc: string) => (
+              <PikkuBadge
+                key={svc}
+                type="dynamic"
+                badge="service"
+                value={svc}
+              />
+            ))}
+          </Group>
         </Box>
       )}
 
-      <Box>
-        <SectionLabel>Wires</SectionLabel>
-        {wires && wires.wires.length > 0 ? (
+      {wires && wires.wires.length > 0 && (
+        <Box>
+          <SectionLabel>Wires</SectionLabel>
           <Group gap={6}>
             {wires.wires.some((w) => SESSION_WIRES.has(w)) && (
               <PikkuBadge type="flag" flag="session" />
@@ -163,78 +157,50 @@ export const CommonDetails: React.FunctionComponent<CommonDetailsProps> = ({
                 <PikkuBadge key={w} type="dynamic" badge="wire" value={w} />
               ))}
           </Group>
-        ) : (
-          <Text size="sm" c="dimmed">
-            None
-          </Text>
-        )}
-      </Box>
+        </Box>
+      )}
 
-      {middleware !== undefined && (
+      {middleware && middleware.length > 0 && (
         <Box>
           <SectionLabel>Middleware</SectionLabel>
-          {middleware.length > 0 ? (
-            <Group gap={6}>
-              {middleware.map((mw: any, i: number) => (
-                <LinkedBadge key={i} item={mw} kind="middleware" />
-              ))}
-            </Group>
-          ) : (
-            <Text size="sm" c="dimmed">
-              None
-            </Text>
-          )}
+          <Group gap={6}>
+            {middleware.map((mw: any, i: number) => (
+              <LinkedBadge key={i} item={mw} kind="middleware" />
+            ))}
+          </Group>
         </Box>
       )}
 
-      {permissions !== undefined && (
+      {permissions && permissions.length > 0 && (
         <Box>
           <SectionLabel>Permissions</SectionLabel>
-          {permissions.length > 0 ? (
-            <Group gap={6}>
-              {permissions.map((perm: any, i: number) => (
-                <LinkedBadge key={i} item={perm} kind="permission" />
-              ))}
-            </Group>
-          ) : (
-            <Text size="sm" c="dimmed">
-              None
-            </Text>
-          )}
+          <Group gap={6}>
+            {permissions.map((perm: any, i: number) => (
+              <LinkedBadge key={i} item={perm} kind="permission" />
+            ))}
+          </Group>
         </Box>
       )}
 
-      {tags !== undefined && (
+      {tags && tags.length > 0 && (
         <Box>
           <SectionLabel>Tags</SectionLabel>
-          {tags.length > 0 ? (
-            <Group gap={6}>
-              {tags.map((tag: string, i: number) => (
-                <PikkuBadge key={i} type="dynamic" badge="tag" value={tag} />
-              ))}
-            </Group>
-          ) : (
-            <Text size="sm" c="dimmed">
-              None
-            </Text>
-          )}
+          <Group gap={6}>
+            {tags.map((tag: string, i: number) => (
+              <PikkuBadge key={i} type="dynamic" badge="tag" value={tag} />
+            ))}
+          </Group>
         </Box>
       )}
 
-      {errors !== undefined && (
+      {errors && errors.length > 0 && (
         <Box>
           <SectionLabel>Errors</SectionLabel>
-          {errors.length > 0 ? (
-            <Group gap={6}>
-              {errors.map((err: string, i: number) => (
-                <PikkuBadge key={i} type="dynamic" badge="error" value={err} />
-              ))}
-            </Group>
-          ) : (
-            <Text size="sm" c="dimmed">
-              None
-            </Text>
-          )}
+          <Group gap={6}>
+            {errors.map((err: string, i: number) => (
+              <PikkuBadge key={i} type="dynamic" badge="error" value={err} />
+            ))}
+          </Group>
         </Box>
       )}
 
