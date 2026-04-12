@@ -6,7 +6,9 @@
  */
 
 // Provider adapter
-export { ServerlessProviderAdapter } from './adapter.js'
+import { ServerlessProviderAdapter } from './adapter.js'
+export { ServerlessProviderAdapter }
+export const createAdapter = () => new ServerlessProviderAdapter()
 
 // serverless.yml generator
 export { generateServerlessYml } from './serverless-yml.js'
@@ -23,5 +25,3 @@ export type {
   EventBridgeRuleResource,
   WebSocketApiResource,
 } from './types.js'
-
-export { createAdapter } from './adapter.js'

@@ -354,5 +354,3 @@ function toScreamingSnake(name: string): string {
 function fromKebab(str: string): string {
   return str.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
 }
-
-export const createAdapter = () => new ServerlessProviderAdapter()

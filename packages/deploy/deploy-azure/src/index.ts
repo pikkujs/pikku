@@ -5,7 +5,9 @@
  * registration, host.json, and local.settings.json.
  */
 
-export { AzureProviderAdapter } from './adapter.js'
+import { AzureProviderAdapter } from './adapter.js'
+export { AzureProviderAdapter }
+export const createAdapter = () => new AzureProviderAdapter()
 export { generateInfraManifest } from './infra-manifest.js'
 export { generateHostJson, generateLocalSettings } from './host-json.js'
 export type {
@@ -16,5 +18,3 @@ export type {
   AzureTimerResource,
   AzureWebPubSubResource,
 } from './types.js'
-
-export { createAdapter } from './adapter.js'
