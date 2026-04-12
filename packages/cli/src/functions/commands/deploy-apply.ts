@@ -102,11 +102,7 @@ export async function resolveProvider(
   },
   providerName?: string
 ): Promise<ProviderAdapter> {
-  const name =
-    providerName ??
-    process.env.PIKKU_DEPLOY_PROVIDER ??
-    config?.deploy?.defaultProvider ??
-    'cloudflare'
+  const name = providerName ?? config?.deploy?.defaultProvider ?? 'cloudflare'
 
   const providers = config?.deploy?.providers ?? {
     cloudflare: '@pikku/deploy-cloudflare',
@@ -151,8 +147,10 @@ const ANSI = {
   reset: '\x1b[0m',
 }
 
-async function writeResultFile(result: Record<string, unknown>): Promise<void> {
-  const resultFile = process.env.PIKKU_RESULT_FILE
+async function writeResultFile(
+  resultFile: string | undefined,
+  result: Record<string, unknown>
+): Promise<void> {
   if (resultFile) {
     const { writeFile } = await import('node:fs/promises')
     await writeFile(resultFile, JSON.stringify(result, null, 2), 'utf-8')
@@ -162,11 +160,12 @@ async function writeResultFile(result: Record<string, unknown>): Promise<void> {
 async function runDeploy(
   provider: ProviderAdapter,
   providerDir: string,
-  logger: { info(msg: string): void; error(msg: string): void }
+  logger: { info(msg: string): void; error(msg: string): void },
+  resultFile?: string
 ): Promise<void> {
   if (typeof provider.deploy !== 'function') {
     logger.error(`Provider '${provider.name}' does not support deploy.`)
-    await writeResultFile({
+    await writeResultFile(resultFile, {
       success: false,
       errors: [{ step: 'provider', error: 'No deploy support' }],
     })
@@ -182,7 +181,7 @@ async function runDeploy(
     },
   })
 
-  await writeResultFile(deployResult)
+  await writeResultFile(resultFile, deployResult)
 
   console.log('')
   if (deployResult.success) {
@@ -201,13 +200,14 @@ async function runDeploy(
 }
 
 export const deployApply = pikkuSessionlessFunc<
-  { 'from-plan'?: boolean; provider?: string },
+  { fromPlan?: boolean; provider?: string; resultFile?: string },
   void
 >({
   func: async ({ logger, config, getInspectorState }, data) => {
     const projectDir = config.rootDir
     const provider = await resolveProvider(config, data?.provider)
-    const fromPlan = data?.['from-plan'] ?? false
+    const fromPlan = data?.fromPlan ?? false
+    const resultFile = data?.resultFile
 
     if (fromPlan) {
       // Skip build pipeline — deploy from existing plan output
@@ -221,14 +221,14 @@ export const deployApply = pikkuSessionlessFunc<
         logger.error(
           `No plan found at ${providerDir}. Run 'pikku deploy plan' first.`
         )
-        await writeResultFile({
+        await writeResultFile(resultFile, {
           success: false,
           errors: [{ step: 'plan', error: 'No plan found' }],
         })
         process.exit(1)
       }
 
-      await runDeploy(provider, providerDir, logger)
+      await runDeploy(provider, providerDir, logger, resultFile)
       return
     }
 
@@ -248,7 +248,7 @@ export const deployApply = pikkuSessionlessFunc<
 
     if (buildResult.manifest.units.length === 0) {
       logger.info('No deployment units found. Nothing to deploy.')
-      await writeResultFile({
+      await writeResultFile(resultFile, {
         success: true,
         workersDeployed: [],
         resourcesCreated: [],
@@ -260,13 +260,13 @@ export const deployApply = pikkuSessionlessFunc<
     const { providerDir, bundled } = buildResult
 
     if (typeof provider.deploy === 'function') {
-      await runDeploy(provider, providerDir, logger)
+      await runDeploy(provider, providerDir, logger, resultFile)
     } else {
       logger.info(`${ANSI.green}${ANSI.bold}Build complete.${ANSI.reset}`)
       logger.info(
         `  ${bundled.length} functions bundled to ${ANSI.bold}${providerDir}${ANSI.reset}`
       )
-      await writeResultFile({
+      await writeResultFile(resultFile, {
         success: true,
         buildOnly: true,
         unitCount: bundled.length,

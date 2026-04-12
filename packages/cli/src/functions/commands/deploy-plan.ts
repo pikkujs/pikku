@@ -1,7 +1,7 @@
 import { basename, join } from 'node:path'
 import { readFile } from 'node:fs/promises'
 
-import { pikkuVoidFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '#pikku'
 import { generatePlan } from '../../deploy/plan/index.js'
 import { formatPlan } from '../../deploy/plan/formatter.js'
 import { runBuildPipeline } from '../../deploy/build-pipeline.js'
@@ -51,12 +51,15 @@ function createEmptyProvider(): DeployProvider {
   }
 }
 
-export const deployPlan = pikkuVoidFunc({
-  func: async ({ logger, config, getInspectorState }) => {
+export const deployPlan = pikkuSessionlessFunc<
+  { resultFile?: string; provider?: string },
+  void
+>({
+  func: async ({ logger, config, getInspectorState }, data) => {
     const projectDir = config.rootDir
     const inspectorState = await getInspectorState(true)
     const projectId = await resolveProjectId(projectDir)
-    const provider = await resolveProvider(config)
+    const provider = await resolveProvider(config, data?.provider)
 
     const result = await runBuildPipeline({
       projectDir,
@@ -103,8 +106,8 @@ export const deployPlan = pikkuVoidFunc({
     )
     logger.info(`Output: ${result.providerDir}`)
 
-    // Write result file if PIKKU_RESULT_FILE is set (used by Fabric build pipeline)
-    const resultFile = process.env.PIKKU_RESULT_FILE
+    // Write result file if --result-file is set (used by Fabric build pipeline)
+    const resultFile = data?.resultFile
     if (resultFile) {
       const { writeFile } = await import('node:fs/promises')
       await writeFile(

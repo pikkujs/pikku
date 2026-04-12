@@ -170,7 +170,7 @@ wireCLI({
           func: enableRpc,
           description: 'Enable public RPC endpoint',
           options: {
-            'no-auth': {
+            noAuth: {
               description: 'Disable auth requirement',
               default: false,
             },
@@ -180,7 +180,7 @@ wireCLI({
           func: enableConsole,
           description: 'Enable console functions',
           options: {
-            'no-auth': {
+            noAuth: {
               description: 'Disable auth requirement',
               default: false,
             },
@@ -190,7 +190,7 @@ wireCLI({
           func: enableAgent,
           description: 'Enable public agent endpoints',
           options: {
-            'no-auth': {
+            noAuth: {
               description: 'Disable auth requirement',
               default: false,
             },
@@ -200,7 +200,7 @@ wireCLI({
           func: enableWorkflow,
           description: 'Enable workflow workers',
           options: {
-            'no-auth': {
+            noAuth: {
               description: 'Disable auth requirement',
               default: false,
             },
@@ -359,6 +359,10 @@ wireCLI({
               default: 'cloudflare',
               short: 'p',
             },
+            resultFile: {
+              description:
+                'Write structured JSON plan result to this file path',
+            },
           },
         }),
         apply: pikkuCLICommand({
@@ -370,10 +374,14 @@ wireCLI({
               default: 'cloudflare',
               short: 'p',
             },
-            'from-plan': {
+            fromPlan: {
               description:
                 'Skip build pipeline, deploy from existing plan output',
               default: false,
+            },
+            resultFile: {
+              description:
+                'Write structured JSON deploy result to this file path',
             },
           },
         }),
