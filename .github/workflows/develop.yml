@@ -154,6 +154,10 @@ jobs:
           cd e2e/packages/todos && npx pikku all
           cd ../../..
           cd e2e/packages/emails && npx pikku all
+      - name: Generate pikku files for e2e hmac-signer
+        run: cd e2e/packages/hmac-signer && npx pikku all
+      - name: Generate pikku files for e2e oauth-api
+        run: cd e2e/packages/oauth-api && npx pikku all
       - name: Generate pikku files for e2e project
         run: cd e2e && npx pikku all
       - name: Install Playwright
