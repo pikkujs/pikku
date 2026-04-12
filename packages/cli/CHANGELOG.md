@@ -1,5 +1,37 @@
 ## 0.12.0
 
+## 0.12.16
+
+### Patch Changes
+
+- 624097e: Add deploy pipeline with provider-agnostic architecture
+
+  - Add MetaService with explicit typed API, absorb WiringService reads
+  - Add deployment service, traceId propagation, scoped logger
+  - Rewrite analyzer: one function = one worker, gateways dispatch via RPC
+  - Add Cloudflare deploy provider with plan/apply commands
+  - Add per-unit filtered codegen for deploy pipeline
+  - Skip missing metadata in wiring registration for deploy units
+  - Fix schema coercion crash when schema has no properties
+  - Fix E2E codegen: double-pass resolves cross-package Zod type imports
+
+- 7ab3243: Add server-fallback deployment target for functions that can't run serverless.
+
+  Functions can declare `deploy: 'serverless' | 'server' | 'auto'`. With `serverlessIncompatible` config, the analyzer auto-routes functions using incompatible services to a container.
+
+  Server functions are merged into a single tree-shaken unit with a PikkuUWSServer entry, Dockerfile, and CF Container proxy Worker.
+
+  Also adds sub-path exports to @pikku/cloudflare for tree-shaking (greet bundle 1.6MB → 444KB) and deploy verifiers for cloudflare, serverless, and azure providers.
+
+- Updated dependencies [9e8605f]
+- Updated dependencies [624097e]
+- Updated dependencies [02fca80]
+- Updated dependencies [7ab3243]
+  - @pikku/deploy-cloudflare@0.0.2
+  - @pikku/core@0.12.15
+  - @pikku/inspector@0.12.8
+  - @pikku/openapi-parser@0.12.10
+
 ## 0.12.15
 
 ### Patch Changes
