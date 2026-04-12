@@ -15,11 +15,8 @@ const DEPLOY_DIR = join(FUNCTIONS_DIR, '.deploy', 'cloudflare')
 console.log('Setting up: running pikku codegen + deploy plan (cloudflare)...')
 execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_DIR, stdio: 'pipe' })
 execSync('yarn pikku', { cwd: FUNCTIONS_DIR, stdio: 'pipe', timeout: 60_000 })
-execSync('yarn pikku deploy plan', {
-  cwd: FUNCTIONS_DIR,
-  stdio: 'pipe',
-  timeout: 300_000,
-  env: { ...process.env, PIKKU_DEPLOY_PROVIDER: 'cloudflare' },
+execSync('yarn pikku deploy plan --provider cloudflare', {
+  cwd: FUNCTIONS_DIR, stdio: 'pipe', timeout: 300_000,
 })
 console.log('Setup complete.\n')
 
