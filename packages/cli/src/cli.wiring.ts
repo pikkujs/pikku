@@ -359,6 +359,10 @@ wireCLI({
               default: 'cloudflare',
               short: 'p',
             },
+            resultFile: {
+              description:
+                'Write structured JSON plan result to this file path',
+            },
           },
         }),
         apply: pikkuCLICommand({
@@ -369,6 +373,15 @@ wireCLI({
               description: 'Deployment provider (cloudflare, aws)',
               default: 'cloudflare',
               short: 'p',
+            },
+            fromPlan: {
+              description:
+                'Skip build pipeline, deploy from existing plan output',
+              default: false,
+            },
+            resultFile: {
+              description:
+                'Write structured JSON deploy result to this file path',
             },
           },
         }),

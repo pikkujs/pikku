@@ -51,6 +51,12 @@ export type { DeployOptions, DeployResult } from './deploy.js'
 // Provider adapter
 import { CloudflareProviderAdapter } from './adapter.js'
 export { CloudflareProviderAdapter }
+export type {
+  DeploymentUnit,
+  DeploymentManifest,
+  DeploymentHandler,
+  EntryGenerationContext,
+} from './adapter.js'
 export const createAdapter = () => new CloudflareProviderAdapter()
 
 // Wrangler TOML generator
