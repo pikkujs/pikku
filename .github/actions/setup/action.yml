@@ -1,5 +1,5 @@
 name: Setup
-description: Checkout, setup Node, download build output, and install dependencies
+description: Setup Node, download build output, and install dependencies. Must run after actions/checkout.
 
 inputs:
   node-version:
@@ -12,8 +12,6 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Check out repository code
-      uses: actions/checkout@v4
     - run: corepack enable
       shell: bash
     - uses: actions/setup-node@v4
