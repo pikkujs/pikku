@@ -154,5 +154,7 @@ jobs:
     needs: [verifiers, templates, e2e]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: ./.github/actions/setup
       - run: npx changeset status
