@@ -223,7 +223,7 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
     let query = this.db
       .selectFrom('workflowVersions')
       .select(['workflowName', 'graphHash', 'graph'])
-      .where('source', '=', 'ai-agent')
+      .where('source', '=', 'dynamic-workflow')
       .where('status', '=', 'active')
     if (agentName) {
       query = query.where('workflowName', 'like', `ai:${agentName}:%`)

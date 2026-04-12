@@ -1,6 +1,30 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { usePikkuRPC } from '@/context/PikkuRpcProvider'
 
+export interface WorkflowRunData {
+  runId: string
+  workflow: string
+  status: string
+  input?: unknown
+  output?: Record<string, unknown>
+  error?: { message: string }
+  startedAt?: string
+  completedAt?: string
+  graphHash?: string
+}
+
+export interface WorkflowStepData {
+  stepId: string
+  stepName: string
+  rpcName?: string
+  status: string
+  startedAt?: string
+  completedAt?: string
+  duration?: number
+  result?: unknown
+  error?: { message: string }
+}
+
 export function useWorkflowRuns(workflowName?: string, status?: string) {
   const rpc = usePikkuRPC()
 
@@ -26,15 +50,16 @@ export function useWorkflowRuns(workflowName?: string, status?: string) {
 export function useWorkflowRun(runId: string | null) {
   const rpc = usePikkuRPC()
 
-  return useQuery({
+  return useQuery<WorkflowRunData | null>({
     queryKey: ['workflow-run', runId],
     queryFn: async () => {
-      return await rpc.invoke('console:getWorkflowRun', { runId: runId! })
+      return (await rpc.invoke('console:getWorkflowRun', {
+        runId: runId!,
+      })) as unknown as WorkflowRunData
     },
     enabled: !!runId,
     refetchInterval: (query) => {
-      const data = query.state.data as any | undefined
-      return data?.status === 'running' ? 1000 : false
+      return query.state.data?.status === 'running' ? 3000 : false
     },
   })
 }
@@ -42,18 +67,19 @@ export function useWorkflowRun(runId: string | null) {
 export function useWorkflowRunSteps(runId: string | null) {
   const rpc = usePikkuRPC()
 
-  return useQuery({
+  return useQuery<WorkflowStepData[]>({
     queryKey: ['workflow-run-steps', runId],
     queryFn: async () => {
-      return await rpc.invoke('console:getWorkflowRunSteps', { runId: runId! })
+      return (await rpc.invoke('console:getWorkflowRunSteps', {
+        runId: runId!,
+      })) as WorkflowStepData[]
     },
     enabled: !!runId,
     refetchInterval: (query) => {
-      const data = query.state.data as any[] | undefined
-      const hasActiveStep = data?.some(
-        (s: any) => s.status === 'running' || s.status === 'pending'
+      const hasActiveStep = query.state.data?.some(
+        (s) => s.status === 'running' || s.status === 'pending'
       )
-      return hasActiveStep ? 2000 : false
+      return hasActiveStep ? 3000 : false
     },
   })
 }

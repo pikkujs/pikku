@@ -84,7 +84,7 @@ export type RPCRemote = <Name extends keyof FlattenedRPCMap>(
   data: FlattenedRPCMap[Name]['input']
 ) => Promise<FlattenedRPCMap[Name]['output']>
 
-${workflowMapPath ? `import type { WorkflowMap } from '${workflowMapPath}'` : `type WorkflowMap = {}`}
+${workflowMapPath ? `import type { FlattenedWorkflowMap } from '${workflowMapPath}'` : `type FlattenedWorkflowMap = {}`}
 
 ${agentMapPath ? `import type { AgentMap } from '${agentMapPath}'` : `type AgentMap = {}`}
 ${generateAddonAgentImports(wireAddonDeclarations)}
@@ -98,16 +98,16 @@ interface AIAgentInput {
   resourceId: string
 }
 
-export type TypedStartWorkflow = <Name extends keyof WorkflowMap>(
+export type TypedStartWorkflow = <Name extends keyof FlattenedWorkflowMap>(
   name: Name,
-  input: WorkflowMap[Name]['input'],
+  input: FlattenedWorkflowMap[Name]['input'],
   options?: { startNode?: string }
 ) => Promise<{ runId: string }>
 
-export type TypedRunWorkflow = <Name extends keyof WorkflowMap>(
+export type TypedRunWorkflow = <Name extends keyof FlattenedWorkflowMap>(
   name: Name,
-  input: WorkflowMap[Name]['input']
-) => Promise<WorkflowMap[Name]['output']>
+  input: FlattenedWorkflowMap[Name]['input']
+) => Promise<FlattenedWorkflowMap[Name]['output']>
 
 export type TypedWorkflowStatus = (
   workflowName: string,
@@ -162,8 +162,8 @@ export type FlattenedRPCMap = RPCMap
 
   // TypeScript utility to flatten namespaced RPC maps
   const utilityTypes = `
-// Utility type to prefix keys with namespace
-type PrefixKeys<T, Prefix extends string> = {
+// Utility type to prefix keys with namespace (skips 'any' to prevent type poisoning)
+type PrefixKeys<T, Prefix extends string> = unknown extends T ? {} : {
   [K in keyof T as \`\${Prefix}:\${string & K}\`]: T[K]
 }
 

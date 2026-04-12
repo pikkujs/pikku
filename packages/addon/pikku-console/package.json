@@ -9,10 +9,7 @@
     }
   },
   "exports": {
-    ".": {
-      "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
-    },
+    ".": "./dist/.pikku/pikku-bootstrap.gen.js",
     "./.pikku/*": "./dist/.pikku/*",
     "./.pikku/pikku-metadata.gen.json": "./dist/.pikku/pikku-metadata.gen.json",
     "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js": {
@@ -23,7 +20,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "pikku all && tsc && cp .pikku/rpc/*.d.ts dist/.pikku/rpc/ && cp .pikku/agent/*.d.ts dist/.pikku/agent/ 2>/dev/null; true",
+    "build": "pikku all && tsc && cp .pikku/rpc/*.d.ts dist/.pikku/rpc/ && cp .pikku/agent/*.d.ts dist/.pikku/agent/ && cp .pikku/workflow/*.d.ts dist/.pikku/workflow/ 2>/dev/null; true",
     "pikku": "pikku all",
     "pretest": "pikku all",
     "test": "tsc --noEmit",

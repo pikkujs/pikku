@@ -8,6 +8,7 @@ import type { MetaService } from '@pikku/core/services'
 import type { WiringService } from '../src/services/wiring.service.js'
 import type { AddonService } from '../src/services/addon.service.js'
 import type { OAuthService } from '../src/services/oauth.service.js'
+import type { CodeEditService } from '../src/services/code-edit.service.js'
 
 export interface Config extends CoreConfig {}
 
@@ -18,6 +19,7 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   wiringService: WiringService
   addonService: AddonService
   oauthService: OAuthService
+  codeEditService: CodeEditService | null
 }
 
 export interface Services extends CoreServices<SingletonServices> {}

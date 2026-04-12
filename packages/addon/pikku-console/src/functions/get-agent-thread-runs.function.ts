@@ -1,3 +1,4 @@
+import { MissingServiceError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
 
 export const getAgentThreadRuns = pikkuSessionlessFunc<
@@ -10,7 +11,7 @@ export const getAgentThreadRuns = pikkuSessionlessFunc<
   expose: true,
   auth: false,
   func: async ({ agentRunService }, input) => {
-    if (!agentRunService) throw new Error('agentRunService is not available')
+    if (!agentRunService) throw new MissingServiceError('agentRunService is not available')
     return await agentRunService.getThreadRuns(input.threadId)
   },
 })

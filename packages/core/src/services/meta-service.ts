@@ -117,6 +117,8 @@ export interface PermissionsGroupsMeta {
  * Cloudflare uses an R2/KV implementation.
  */
 export interface MetaService {
+  /** Base path for local filesystem implementations. Undefined for remote/non-local implementations. */
+  readonly basePath?: string
   /** Read a file's content by relative path. Returns null if not found. */
   readFile(relativePath: string): Promise<string | null>
   /** List files in a directory by relative path. Returns empty array if not found. */

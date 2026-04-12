@@ -27,8 +27,8 @@ export function addRPCInvocations(
   if (ts.isCallExpression(node)) {
     const { expression, arguments: args } = node
 
-    // Check for addon('namespace:function') calls
-    if (ts.isIdentifier(expression) && expression.text === 'addon') {
+    // Check for ref('name') calls
+    if (ts.isIdentifier(expression) && expression.text === 'ref') {
       const [firstArg] = args
       if (firstArg && ts.isStringLiteral(firstArg)) {
         const functionRef = firstArg.text

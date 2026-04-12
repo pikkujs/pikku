@@ -536,27 +536,23 @@ export const pikkuVoidFunc = (
 }
 
 /**
- * Creates a wrapper function for addon package functions that are exposed via RPC.
- * This allows you to wire addon functions to any wiring type (HTTP, queue, etc.)
- * without type compatibility issues.
+ * References a registered function by name for use in any wiring.
+ * Works for both local and addon functions — resolves via RPC at runtime.
  *
- * @template Name - The RPC method name (must be a key in FlattenedRPCMap)
- * @param rpcName - The name of the RPC method to invoke
- * @returns A Pikku function that proxies calls to the addon RPC method
+ * @template Name - The function name (must be a key in FlattenedRPCMap)
+ * @param rpcName - The name of the function to reference
+ * @returns A Pikku function config that proxies calls via RPC
  *
  * @example
  * \`\`\`typescript
- * // Wire an addon function via HTTP
- * wireHTTP({
- *   auth: false,
- *   method: 'get',
- *   route: '/addon/hello',
- *   func: addon('ext:hello'),
- *   tags: ['addon'],
- * })
+ * // Use in agent tools
+ * tools: [ref('todos:listTodos'), ref('myLocalFunc')]
+ *
+ * // Use in HTTP wiring
+ * wireHTTP({ route: '/greet', method: 'post', func: ref('greet') })
  * \`\`\`
  */
-export const addon = <Name extends keyof FlattenedRPCMap>(
+export const ref = <Name extends keyof FlattenedRPCMap>(
   rpcName: Name
 ): PikkuFunctionConfig<
   FlattenedRPCMap[Name]['input'],

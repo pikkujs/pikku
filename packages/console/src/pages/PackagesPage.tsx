@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react'
 import { useSearchParams } from '@/router'
 import { PackageDetailPage } from './PackageDetailPage'
-import { Group, Text, ThemeIcon, Badge, Box } from '@mantine/core'
-import { Package } from 'lucide-react'
+import { Group, Text, ThemeIcon, Badge, Box, Loader, Center } from '@mantine/core'
+import { Package, Globe } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { usePikkuRPC } from '@/context/PikkuRpcProvider'
 import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
@@ -241,13 +241,123 @@ const CommunityList: React.FunctionComponent<{
   )
 }
 
+interface OpenApiEntry {
+  name: string
+  version: string
+  provider: string
+  service: string | null
+  title: string
+  description: string
+  openapiVer: string
+  swaggerUrl: string
+  logo?: string
+}
+
+const API_COLUMNS = [
+  {
+    key: 'api',
+    header: 'API',
+    render: (item: OpenApiEntry) => (
+      <Group gap="sm" wrap="nowrap">
+        {item.logo ? (
+          <img
+            src={item.logo}
+            width={28}
+            height={28}
+            alt={item.title}
+            style={{ objectFit: 'contain', display: 'block', borderRadius: 4 }}
+          />
+        ) : (
+          <ThemeIcon size={28} radius="sm" variant="light" color="gray">
+            <Globe size={16} />
+          </ThemeIcon>
+        )}
+        <div>
+          <Group gap="xs" wrap="nowrap">
+            <Text fw={500} size="sm">
+              {item.title || item.name}
+            </Text>
+            <Badge size="xs" variant="light" color="gray">
+              {item.openapiVer}
+            </Badge>
+          </Group>
+          {item.description && (
+            <Text size="xs" c="dimmed" truncate style={{ maxWidth: 400 }}>
+              {item.description}
+            </Text>
+          )}
+        </div>
+      </Group>
+    ),
+  },
+  {
+    key: 'provider',
+    header: 'PROVIDER',
+    render: (item: OpenApiEntry) => (
+      <Text size="sm">{item.provider}</Text>
+    ),
+  },
+  {
+    key: 'operations',
+    header: 'OPS',
+    render: (item: any) => (
+      <Text size="sm">{item.totalOperations ?? '-'}</Text>
+    ),
+  },
+]
+
+const ApisList: React.FunctionComponent<{
+  onSelect: (id: string, source: 'installed' | 'community' | 'api') => void
+}> = ({ onSelect }) => {
+  const rpc = usePikkuRPC()
+  const [search, setSearch] = useState('')
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['openapis', search],
+    queryFn: async () => {
+      const result = await rpc.invoke('console:getOpenapis', {
+        limit: 100,
+        offset: 0,
+        search: search || undefined,
+      })
+      return result as { apis: OpenApiEntry[]; total: number }
+    },
+    staleTime: 60 * 1000,
+    retry: false,
+  })
+
+  return (
+    <TableListPage
+      title={`APIs (${data?.total ?? '...'})`}
+      icon={Globe}
+      docsHref="https://pikku.dev/docs/external-packages"
+      data={data?.apis ?? []}
+      columns={API_COLUMNS}
+      getKey={(item) => item.name}
+      onRowClick={(item) => onSelect(item.name, 'api' as any)}
+      searchPlaceholder="Search APIs..."
+      searchFilter={(item, q) =>
+        item.title?.toLowerCase().includes(q) ||
+        item.name?.toLowerCase().includes(q) ||
+        item.provider?.toLowerCase().includes(q) ||
+        item.description?.toLowerCase().includes(q) ||
+        false
+      }
+      emptyTitle="No APIs Found"
+      emptyDescription="Could not fetch APIs from the registry."
+      loading={isLoading}
+    />
+  )
+}
+
 const ADDON_TABS = [
   { value: 'installed', label: 'Installed' },
   { value: 'community', label: 'Community' },
+  { value: 'apis', label: 'APIs' },
 ]
 
 const PackagesList: React.FunctionComponent<{
-  onSelect: (id: string, source: 'installed' | 'community') => void
+  onSelect: (id: string, source: 'installed' | 'community' | 'api') => void
 }> = ({ onSelect }) => {
   const [tab, setTab] = useState<string>('installed')
 
@@ -267,6 +377,8 @@ const PackagesList: React.FunctionComponent<{
     >
       {tab === 'installed' ? (
         <InstalledList onSelect={onSelect} />
+      ) : tab === 'apis' ? (
+        <ApisList onSelect={onSelect} />
       ) : (
         <CommunityList onSelect={onSelect} />
       )}
@@ -280,6 +392,7 @@ const PackagesPageContent: React.FunctionComponent = () => {
   const source = (searchParams.get('source') ?? 'community') as
     | 'installed'
     | 'community'
+    | 'api'
 
   if (selectedId) {
     return (

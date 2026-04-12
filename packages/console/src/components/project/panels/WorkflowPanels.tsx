@@ -162,6 +162,7 @@ export const WorkflowConfiguration: React.FunctionComponent<
         permissions={permissions}
         tags={tags}
       />
+
     </Stack>
   )
 }

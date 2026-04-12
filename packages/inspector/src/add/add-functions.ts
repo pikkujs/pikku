@@ -794,6 +794,8 @@ export const addFunctions: AddWiring = (
     middleware,
     permissions,
     isDirectFunction,
+    sourceFile: node.getSourceFile().fileName,
+    exportedName: exportedName || undefined,
   }
 
   // Populate node metadata if node config is present

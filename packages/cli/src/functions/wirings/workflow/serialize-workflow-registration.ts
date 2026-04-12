@@ -7,7 +7,7 @@ export const serializeWorkflowRegistration = (
   workflowFiles: Map<string, { path: string; exportedName: string }>,
   _graphFiles: Map<string, { path: string; exportedName: string }>,
   packageMappings: Record<string, string>,
-  _packageName?: string
+  packageName?: string
 ) => {
   const lines: string[] = []
   const hasWorkflows = workflowNames.length > 0
@@ -35,8 +35,9 @@ export const serializeWorkflowRegistration = (
 
   lines.push('')
 
+  const packageArg = packageName ? `, '${packageName}'` : ''
   for (const [pikkuFuncId, { exportedName }] of sortedWorkflows) {
-    lines.push(`addWorkflow('${pikkuFuncId}', ${exportedName})`)
+    lines.push(`addWorkflow('${pikkuFuncId}', ${exportedName}${packageArg})`)
   }
 
   if (hasWorkflows) {

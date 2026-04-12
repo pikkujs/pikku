@@ -271,7 +271,6 @@ const _getPikkuCLIConfig = async (
     if (result.scaffold?.console && !result.consoleFunctionsFile) {
       result.consoleFunctionsFile = join(resolvedScaffoldDir, 'console.gen.ts')
     }
-
     const triggerDir = join(result.outDir, 'trigger')
     if (!result.triggersTypesFile) {
       result.triggersTypesFile = join(triggerDir, 'pikku-trigger-types.gen.ts')

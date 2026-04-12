@@ -67,13 +67,23 @@ When(
       state.lastResponse = await rpc.runWorkflow(workflowName as never, input)
       state.lastStatus = 'completed'
     } catch (err: unknown) {
-      // pikkuFetch throws the raw Response on non-2xx
+      let msg = ''
       if (err instanceof Response) {
-        state.lastResponse = await err.json().catch(() => ({}))
+        try {
+          const body = await err.json()
+          state.lastResponse = body
+          msg = body.message || JSON.stringify(body)
+        } catch {
+          state.lastResponse = err
+          msg = ''
+        }
+      } else if (err instanceof Error) {
+        state.lastResponse = err
+        msg = err.message
       } else {
         state.lastResponse = err
+        msg = JSON.stringify(err)
       }
-      const msg = JSON.stringify(state.lastResponse)
       if (msg.includes('cancelled') || msg.includes('Cancelled')) {
         state.lastStatus = 'cancelled'
       } else {
@@ -83,6 +93,11 @@ When(
 
     if (state.lastResponse?.runId) {
       state.lastRunId = state.lastResponse.runId
+    }
+    if (state.lastResponse?.status === 'failed') {
+      state.lastStatus = 'failed'
+    } else if (state.lastResponse?.status === 'cancelled') {
+      state.lastStatus = 'cancelled'
     }
   }
 )

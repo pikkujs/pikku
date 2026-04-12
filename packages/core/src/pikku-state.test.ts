@@ -7,7 +7,6 @@ import {
   getAllPackageStates,
   getSingletonServices,
   getCreateWireServices,
-  getPikkuMetaDir,
   addPackageServiceFactories,
 } from './pikku-state.js'
 
@@ -173,31 +172,6 @@ describe('getCreateWireServices', () => {
 
     const result = getCreateWireServices()
     assert.strictEqual(result, mockCreateWire)
-  })
-})
-
-describe('getPikkuMetaDir', () => {
-  test('should return null by default', () => {
-    const result = getPikkuMetaDir()
-    assert.strictEqual(result, null)
-  })
-
-  test('should return metaDir when set', () => {
-    pikkuState(null, 'package', 'metaDir', '/some/path' as any)
-    const result = getPikkuMetaDir()
-    assert.strictEqual(result, '/some/path')
-  })
-
-  test('should return metaDir for specific package', () => {
-    pikkuState('@test/pkg', 'package', 'metaDir', '/addon/path' as any)
-    const result = getPikkuMetaDir('@test/pkg')
-    assert.strictEqual(result, '/addon/path')
-  })
-
-  test('should treat null packageName as main', () => {
-    pikkuState(null, 'package', 'metaDir', '/main/path' as any)
-    const result = getPikkuMetaDir(null)
-    assert.strictEqual(result, '/main/path')
   })
 })
 

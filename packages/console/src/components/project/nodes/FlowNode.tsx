@@ -91,8 +91,8 @@ const getHighlightIconColor = (
   theme: any
 ): string | null => {
   if (!highlightType) return null
-  if (highlightType === 'focused') return theme.colors.primary[5]
-  return theme.colors.referencedNode[5]
+  if (highlightType === 'focused') return theme.colors?.primary?.[5] ?? theme.colors?.blue?.[5] ?? '#228be6'
+  return theme.colors?.referencedNode?.[5] ?? theme.colors?.violet?.[5] ?? '#7950f2'
 }
 
 export const FlowNode: React.FunctionComponent<FlowNodeProps> = ({

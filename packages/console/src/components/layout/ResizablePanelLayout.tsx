@@ -18,7 +18,7 @@ export const ResizablePanelLayout: React.FunctionComponent<
 > = ({
   children,
   header,
-  minSize = 200,
+  minSize = 400,
   emptyPanelMessage,
   showTabs = false,
   hidePanel = false,

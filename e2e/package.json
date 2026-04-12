@@ -20,12 +20,11 @@
     "test:workflow": "cucumber-js --config tests/cucumber.mjs --tags @workflow",
     "test:addons": "cucumber-js --config tests/cucumber.mjs --tags @addons",
     "test:workflow-ui": "cucumber-js --config tests/cucumber.mjs --tags @workflow-ui",
-    "test:dynamic-workflows": "cucumber-js --config tests/cucumber.mjs --tags @dynamic-workflows",
-    "test:dynamic-workflows-ui": "cucumber-js --config tests/cucumber.mjs --tags @dynamic-workflows-ui",
     "test:credential": "cucumber-js --config tests/cucumber.mjs --tags @credential",
     "test:credential-oauth": "cucumber-js --config tests/cucumber.mjs --tags @credential-oauth",
     "test:credential-agent": "cucumber-js --config tests/cucumber.mjs --tags @credential-agent",
-    "test:dynamic-workflow-modes": "cucumber-js --config tests/cucumber.mjs --tags @dynamic-workflow-modes",
+    "test:code-editor": "cucumber-js --config tests/cucumber.mjs --tags '@code-editor and not @console'",
+    "test:code-editor-ui": "cucumber-js --config tests/cucumber.mjs --tags '@code-editor and @console'",
     "tsc": "tsc --noEmit"
   },
   "dependencies": {

@@ -148,7 +148,7 @@ const CredentialCard: React.FunctionComponent<{
     queryKey: ['credential-status', credential.name],
     queryFn: async () => {
       try {
-        const result = await (rpc as any).invoke(
+        const result = await rpc.invoke(
           'console:credentialStatus',
           { names: [credential.name] }
         )
@@ -297,7 +297,7 @@ const ApiKeySection: React.FunctionComponent<{
     queryKey: ['credential-value', credential.name],
     queryFn: async () => {
       try {
-        const result = await (rpc as any).invoke('console:credentialGet', {
+        const result = await rpc.invoke('console:credentialGet', {
           name: credential.name,
         })
         return result.value
@@ -315,7 +315,7 @@ const ApiKeySection: React.FunctionComponent<{
       } catch {
         parsed = { apiKey: newValue }
       }
-      await (rpc as any).invoke('console:credentialSet', {
+      await rpc.invoke('console:credentialSet', {
         name: credential.name,
         value: parsed,
       })
@@ -413,7 +413,7 @@ const OAuthSection: React.FunctionComponent<{
     queryKey: ['oauth-status', credential.name],
     queryFn: async () => {
       try {
-        return await (rpc as any).invoke('console:oauthStatus', {
+        return await rpc.invoke('console:oauthStatus', {
           credentialName: credential.name,
         })
       } catch {
@@ -424,7 +424,7 @@ const OAuthSection: React.FunctionComponent<{
 
   const connectMutation = useMutation({
     mutationFn: async () => {
-      const result = await (rpc as any).invoke('console:oauthConnect', {
+      const result = await rpc.invoke('console:oauthConnect', {
         credentialName: credential.name,
       })
       window.open(result.authUrl, 'oauth-connect', 'width=600,height=700')
@@ -433,7 +433,7 @@ const OAuthSection: React.FunctionComponent<{
 
   const disconnectMutation = useMutation({
     mutationFn: async () => {
-      await (rpc as any).invoke('console:oauthDisconnect', {
+      await rpc.invoke('console:oauthDisconnect', {
         credentialName: credential.name,
       })
     },
@@ -542,7 +542,7 @@ const PerUserSection: React.FunctionComponent<{
     queryKey: ['credential-users', credential.name],
     queryFn: async () => {
       try {
-        const result = await (rpc as any).invoke('console:credentialUsers', {
+        const result = await rpc.invoke('console:credentialUsers', {
           name: credential.name,
         })
         return result.userIds as string[]
@@ -554,7 +554,7 @@ const PerUserSection: React.FunctionComponent<{
 
   const revokeMutation = useMutation({
     mutationFn: async (userId: string) => {
-      await (rpc as any).invoke('console:credentialDelete', {
+      await rpc.invoke('console:credentialDelete', {
         name: credential.name,
         userId,
       })
@@ -648,7 +648,7 @@ const DeleteSection: React.FunctionComponent<{
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      await (rpc as any).invoke('console:credentialDelete', {
+      await rpc.invoke('console:credentialDelete', {
         name: credential.name,
       })
     },

@@ -270,7 +270,6 @@ export type PikkuCLIInput = {
   deploy?: {
     providers: Record<string, string>
     defaultProvider?: string
-    /** Services that can't run in serverless (functions using them get routed to server) */
     serverlessIncompatible?: string[]
   }
 

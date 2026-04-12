@@ -1,3 +1,4 @@
+import { MissingServiceError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
 
 export const credentialStatus = pikkuSessionlessFunc<
@@ -10,7 +11,7 @@ export const credentialStatus = pikkuSessionlessFunc<
   expose: true,
   func: async ({ credentialService }, { names, userId }) => {
     if (!credentialService) {
-      throw new Error('CredentialService is not configured')
+      throw new MissingServiceError('CredentialService is not configured')
     }
     const statuses: Record<string, boolean> = {}
     for (const name of names) {

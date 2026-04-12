@@ -52,6 +52,7 @@ export const TableListPage = <T,>({
   emptyDescription,
   loading = false,
   description,
+  headerRight,
 }: TableListPageProps<T>) => {
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -100,6 +101,9 @@ export const TableListPage = <T,>({
         py="sm"
         style={{
           borderBottom: '1px solid var(--mantine-color-default-border)',
+          display: 'flex',
+          gap: 8,
+          alignItems: 'center',
         }}
       >
         <TextInput
@@ -107,7 +111,9 @@ export const TableListPage = <T,>({
           leftSection={<Search size={16} />}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          style={{ flex: 1 }}
         />
+        {headerRight}
       </Box>
       {filtered.length === 0 ? (
         <Box p="xl">

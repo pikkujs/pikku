@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect } from 'react'
 import { useSearchParams, useNavigate } from '@/router'
-import { Text, Center, Loader } from '@mantine/core'
+import { Text, Center, Loader, Button } from '@mantine/core'
 import { Bot } from 'lucide-react'
 import { usePikkuMeta } from '@/context/PikkuMetaContext'
 import { PanelProvider, usePanelContext } from '@/context/PanelContext'
@@ -101,6 +101,7 @@ const AgentsList: React.FunctionComponent = () => {
       }
       emptyMessage="No agents found."
       loading={loading}
+      headerRight={null}
     />
   )
 }

@@ -1,5 +1,5 @@
 import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'
-import { addon } from '#pikku/pikku-types.gen.js'
+import { ref } from '#pikku/pikku-types.gen.js'
 
 export const oauthApiAgent = pikkuAIAgent({
   name: 'oauth-api-agent',
@@ -7,7 +7,7 @@ export const oauthApiAgent = pikkuAIAgent({
   instructions:
     'You help users check their OAuth profile. Use the getProfile tool to fetch their authenticated profile.',
   model: 'openai/o4-mini',
-  tools: [addon('oauth-api:getProfile')],
+  tools: [ref('oauth-api:getProfile')],
   maxSteps: 3,
   toolChoice: 'auto',
 })

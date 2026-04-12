@@ -192,7 +192,9 @@ export function filterInspectorState(
   }
 
   // Snapshot the original workflow graph meta before filtering prunes it
-  const originalGraphMeta = { ...((state as InspectorState).workflows?.graphMeta ?? {}) }
+  const originalGraphMeta = {
+    ...((state as InspectorState).workflows?.graphMeta ?? {}),
+  }
 
   // Create a shallow copy with new Maps/Sets to avoid mutating the original
   const filteredState = {
@@ -850,7 +852,9 @@ export function filterInspectorState(
       if (!('rpcName' in node) || !node.rpcName) continue
       const rpcName = node.rpcName as string
       if (!survivingFuncIds.has(rpcName)) continue
-      const isInline = (node as { options?: { async?: boolean } }).options?.async !== true && graph.inline === true
+      const isInline =
+        (node as { options?: { async?: boolean } }).options?.async !== true &&
+        graph.inline === true
       if (!isInline) {
         filteredState.serviceAggregation.requiredServices.add('workflowService')
         filteredState.serviceAggregation.requiredServices.add('queueService')

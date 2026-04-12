@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react'
-import { Text, Badge } from '@mantine/core'
+import { Text, Badge, Button } from '@mantine/core'
 import { useNavigate } from '@/router'
-import { GitBranch } from 'lucide-react'
+import { GitBranch, Plus } from 'lucide-react'
 import { TableListPage } from '@/components/layout/TableListPage'
 import { PikkuBadge } from '@/components/ui/PikkuBadge'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
 
-type FilterValue = 'all' | 'dsl' | 'graph' | 'ai-agent'
+type FilterValue = 'all' | 'dsl' | 'graph' | 'dynamic-workflow'
 type Workflow = WorkflowsMeta[string] & {
   nodes?: Record<string, unknown>
   source?: string
@@ -19,9 +19,9 @@ const COLUMNS = [
     render: (w: Workflow) => (
       <Text fw={500}>
         {w.name}
-        {w.source === 'ai-agent' && (
+        {w.source === 'dynamic-workflow' && (
           <Badge size="xs" variant="light" color="violet" ml={8}>
-            AI Agent
+            Dynamic
           </Badge>
         )}
       </Text>
@@ -68,7 +68,7 @@ export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
             name: ai.workflowName,
             pikkuFuncId: ai.workflowName,
             steps: [],
-            source: 'ai-agent',
+            source: 'dynamic-workflow',
             nodes: ai.graph?.nodes,
           })
         }
@@ -82,10 +82,10 @@ export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
     if (filter === 'dsl') return sortedWorkflows.filter((w) => w.dsl === true)
     if (filter === 'graph')
       return sortedWorkflows.filter(
-        (w) => w.dsl !== true && w.source !== 'ai-agent'
+        (w) => w.dsl !== true && w.source !== 'dynamic-workflow'
       )
-    if (filter === 'ai-agent')
-      return sortedWorkflows.filter((w) => w.source === 'ai-agent')
+    if (filter === 'dynamic-workflow')
+      return sortedWorkflows.filter((w) => w.source === 'dynamic-workflow')
     return sortedWorkflows
   }, [sortedWorkflows, filter])
 
@@ -105,6 +105,7 @@ export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
         false
       }
       emptyMessage="No workflows found."
+      headerRight={null}
     />
   )
 }
