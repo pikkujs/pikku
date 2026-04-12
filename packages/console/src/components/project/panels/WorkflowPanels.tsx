@@ -6,9 +6,9 @@ import {
   Table,
   Card,
   Box,
-  Code,
   Anchor,
 } from '@mantine/core'
+import { CodeHighlight } from '@mantine/code-highlight'
 import { GitBranch } from 'lucide-react'
 import { useLink } from '../../../router'
 import { useWorkflowContext } from '../../../context/WorkflowContext'
@@ -542,7 +542,7 @@ export const WorkflowRunOverview: React.FunctionComponent<
           <SectionLabel>Input</SectionLabel>
           <Card withBorder radius="md" padding={0}>
             <Card.Section p="md">
-              <Code block>{JSON.stringify(runData.input, null, 2)}</Code>
+              <CodeHighlight code={JSON.stringify(runData.input, null, 2)} language="json" />
             </Card.Section>
           </Card>
         </Stack>
@@ -553,7 +553,7 @@ export const WorkflowRunOverview: React.FunctionComponent<
           <SectionLabel>Output</SectionLabel>
           <Card withBorder radius="md" padding={0}>
             <Card.Section p="md">
-              <Code block>{JSON.stringify(runData.output, null, 2)}</Code>
+              <CodeHighlight code={JSON.stringify(runData.output, null, 2)} language="json" />
             </Card.Section>
           </Card>
         </Stack>

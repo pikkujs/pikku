@@ -4444,17 +4444,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mantine/code-highlight@npm:^9.0.1":
-  version: 9.0.1
-  resolution: "@mantine/code-highlight@npm:9.0.1"
+"@mantine/code-highlight@npm:^8.3.8":
+  version: 8.3.18
+  resolution: "@mantine/code-highlight@npm:8.3.18"
   dependencies:
     clsx: "npm:^2.1.1"
   peerDependencies:
-    "@mantine/core": 9.0.1
-    "@mantine/hooks": 9.0.1
-    react: ^19.2.0
-    react-dom: ^19.2.0
-  checksum: 10/0993457f719a49d8732fa47cee3bb555c8a725715667efcea04b01bb0f71e82abae309fae6bd325e8b2198bd639969213141d13cd76d793adcfa33f57c5e043d
+    "@mantine/core": 8.3.18
+    "@mantine/hooks": 8.3.18
+    react: ^18.x || ^19.x
+    react-dom: ^18.x || ^19.x
+  checksum: 10/4b508d85ed081bfb27158683b6773bef0bcd1a3ff2917c47fa4aeea0e83d548e987022de8ae0d474d76a20176b890a95483aee4fea67e53d847f32d7ff5ff0c5
   languageName: node
   linkType: hard
 
@@ -5354,7 +5354,7 @@ __metadata:
   dependencies:
     "@codemirror/lang-javascript": "npm:^6.2.5"
     "@emotion/react": "npm:^11.14.0"
-    "@mantine/code-highlight": "npm:^9.0.1"
+    "@mantine/code-highlight": "npm:^8.3.8"
     "@mantine/colors-generator": "npm:^8.3.8"
     "@mantine/core": "npm:^8.3.8"
     "@mantine/dates": "npm:^8.3.8"
@@ -5388,6 +5388,7 @@ __metadata:
     cronstrue: "npm:^3.12.0"
     dayjs: "npm:^1.11.19"
     elkjs: "npm:^0.11.0"
+    highlight.js: "npm:^11.11.1"
     lodash: "npm:^4.17.21"
     lucide-react: "npm:^0.554.0"
     mantine-datatable: "npm:^8.3.8"
@@ -15589,6 +15590,13 @@ __metadata:
   version: 5.0.0
   resolution: "help-me@npm:5.0.0"
   checksum: 10/5f99bd91dae93d02867175c3856c561d7e3a24f16999b08f5fc79689044b938d7ed58457f4d8c8744c01403e6e0470b7896baa344d112b2355842fd935a75d69
+  languageName: node
+  linkType: hard
+
+"highlight.js@npm:^11.11.1":
+  version: 11.11.1
+  resolution: "highlight.js@npm:11.11.1"
+  checksum: 10/205272f12f2c8ab1760452a75c58b043b11129cf3a5d2a9c0c90d43993580d0f5c385a73a4b8aba197eef20c0ec37d64000e6b35c4ed5991324f4c2dc78f4e43
   languageName: node
   linkType: hard
 

@@ -4,6 +4,8 @@
   "private": true,
   "dependencies": {
     "@auth/core": "^0.37.0",
+    "@pikku/addon-console": "workspace:*",
+    "@pikku/addon-graph": "workspace:*",
     "@pikku/auth-js": "^0.12.3",
     "@pikku/core": "^0.12.15",
     "@pikku/jose": "workspace:^",

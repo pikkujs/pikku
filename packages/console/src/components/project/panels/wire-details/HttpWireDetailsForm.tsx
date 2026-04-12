@@ -5,9 +5,9 @@ import {
   Textarea,
   Box,
   Tabs,
-  Code,
   Title,
 } from '@mantine/core'
+import { CodeHighlight } from '@mantine/code-highlight'
 import type { PikkuWiringTypes } from '@pikku/core'
 import { PikkuBadge } from '../../../ui/PikkuBadge'
 
@@ -94,7 +94,7 @@ export const HttpWireDetailsForm: React.FunctionComponent<
         </Tabs.Panel>
 
         <Tabs.Panel value="meta" pt="md" px="md">
-          <Code block>{JSON.stringify(metadata, null, 2)}</Code>
+          <CodeHighlight code={JSON.stringify(metadata, null, 2)} language="json" />
         </Tabs.Panel>
       </Tabs>
     </Box>

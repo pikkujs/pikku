@@ -1,6 +1,9 @@
 {
   "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
-  "srcDirectories": ["./src", "./types"],
+  "srcDirectories": [
+    "./src",
+    "./types"
+  ],
   "outDir": "./.pikku",
   "tsconfig": "./tsconfig.json",
   "schema": {
@@ -14,11 +17,15 @@
     "queueWiringsFile": ".pikku/pikku-queue.gen.ts",
     "mcpJsonFile": ".pikku/mcp/mcp.gen.json"
   },
-  "forceRequiredServices": ["todoStore"],
+  "forceRequiredServices": [
+    "todoStore"
+  ],
   "scaffold": {
     "rpc": "no-auth",
     "agent": "no-auth",
-    "workflow": "no-auth"
+    "workflow": "no-auth",
+    "console": "no-auth",
+    "pikkuDir": "pikku"
   },
   "cli": {
     "entrypoints": {

@@ -16,6 +16,11 @@ import { PikkuHTTPProvider, PikkuRPCProvider } from './context/PikkuRpcProvider'
 import { ConsoleRouterProvider } from './router'
 import { reactRouterAdapter } from './adapters/react-router'
 import { App } from './App'
+import { CodeHighlightAdapterProvider, createHighlightJsAdapter } from '@mantine/code-highlight'
+import hljs from 'highlight.js'
+import 'highlight.js/styles/github-dark.css'
+
+const highlightJsAdapter = createHighlightJsAdapter(hljs)
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -23,11 +28,13 @@ createRoot(document.getElementById('root')!).render(
       <ConsoleRouterProvider value={reactRouterAdapter}>
         <QueryClientProvider>
           <ThemeProvider locale="en">
-            <PikkuHTTPProvider>
-              <PikkuRPCProvider>
-                <App />
-              </PikkuRPCProvider>
-            </PikkuHTTPProvider>
+            <CodeHighlightAdapterProvider adapter={highlightJsAdapter}>
+              <PikkuHTTPProvider>
+                <PikkuRPCProvider>
+                  <App />
+                </PikkuRPCProvider>
+              </PikkuHTTPProvider>
+            </CodeHighlightAdapterProvider>
           </ThemeProvider>
         </QueryClientProvider>
       </ConsoleRouterProvider>

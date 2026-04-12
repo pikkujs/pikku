@@ -4,11 +4,11 @@ import {
   Text,
   Group,
   Card,
-  Code,
   Table,
   Timeline,
   Box,
 } from '@mantine/core'
+import { CodeHighlight } from '@mantine/code-highlight'
 import { Clock, AlertTriangle, CheckCircle, Play } from 'lucide-react'
 import { useWorkflowRunContextSafe } from '../../../context/WorkflowRunContext'
 import { PikkuBadge } from '../../ui/PikkuBadge'
@@ -172,7 +172,7 @@ export const WorkflowStepInputData: React.FunctionComponent<
       <Card withBorder radius="md" padding={0}>
         <Card.Section p="md">
           {step?.data ? (
-            <Code block>{JSON.stringify(step.data, null, 2)}</Code>
+            <CodeHighlight code={JSON.stringify(step.data, null, 2)} language="json" />
           ) : (
             <EmptyState />
           )}
@@ -195,7 +195,7 @@ export const WorkflowStepOutputData: React.FunctionComponent<
       <Card withBorder radius="md" padding={0}>
         <Card.Section p="md">
           {step?.result ? (
-            <Code block>{JSON.stringify(step.result, null, 2)}</Code>
+            <CodeHighlight code={JSON.stringify(step.result, null, 2)} language="json" />
           ) : (
             <EmptyState />
           )}
@@ -260,7 +260,7 @@ export const WorkflowStepError: React.FunctionComponent<StepRunPanelProps> = ({
           <SectionLabel>Stack Trace</SectionLabel>
           <Card withBorder radius="md" padding={0}>
             <Card.Section p="md">
-              <Code block>{step.error.stack}</Code>
+              <CodeHighlight code={step.error.stack} language="text" />
             </Card.Section>
           </Card>
         </Stack>

@@ -32,7 +32,7 @@
   "dependencies": {
     "@codemirror/lang-javascript": "^6.2.5",
     "@emotion/react": "^11.14.0",
-    "@mantine/code-highlight": "^9.0.1",
+    "@mantine/code-highlight": "^8.3.8",
     "@mantine/core": "^8.3.8",
     "@mantine/dates": "^8.3.8",
     "@mantine/dropzone": "^8.3.8",
@@ -56,6 +56,7 @@
     "cronstrue": "^3.12.0",
     "dayjs": "^1.11.19",
     "elkjs": "^0.11.0",
+    "highlight.js": "^11.11.1",
     "lodash": "^4.17.21",
     "lucide-react": "^0.554.0",
     "mantine-datatable": "^8.3.8",

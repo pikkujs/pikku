@@ -3,12 +3,12 @@ import {
   Stack,
   Text,
   Box,
-  Code,
   Group,
   Loader,
   Center,
   ActionIcon,
 } from '@mantine/core'
+import { CodeHighlight } from '@mantine/code-highlight'
 import { FunctionSquare, Pencil } from 'lucide-react'
 import { useFunctionMeta, useSchema } from '../../../hooks/useWirings'
 import { SchemaViewer } from '../../ui/SchemaViewer'
@@ -122,7 +122,7 @@ export const FunctionCode: React.FunctionComponent<
   }
 })`
 
-  return <Code block>{exampleCode}</Code>
+  return <CodeHighlight code={exampleCode} language="typescript" />
 }
 
 export const FunctionInput: React.FunctionComponent<

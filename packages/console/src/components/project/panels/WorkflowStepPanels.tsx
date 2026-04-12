@@ -8,6 +8,7 @@ import {
   Loader,
   Card,
 } from '@mantine/core'
+import { CodeHighlight } from '@mantine/code-highlight'
 import { useWorkflowNode, useWorkflowContext } from '../../../context/WorkflowContext'
 import { useOutputSchema } from '../../../hooks/useWirings'
 import { SchemaViewer } from '../../ui/SchemaViewer'
@@ -159,7 +160,7 @@ const parseInputValue = (value: any): ParsedInputValue => {
   if (typeof value === 'object') {
     return {
       type: '$static',
-      displayValue: <Code block>{JSON.stringify(value, null, 2)}</Code>,
+      displayValue: <CodeHighlight code={JSON.stringify(value, null, 2)} language="json" />,
     }
   }
 
@@ -185,7 +186,7 @@ export const WorkflowStepConfiguration: React.FunctionComponent<
       <Card withBorder radius="md" padding={0}>
         <Card.Section p="md">
           {node?.options ? (
-            <Code block>{JSON.stringify(node.options, null, 2)}</Code>
+            <CodeHighlight code={JSON.stringify(node.options, null, 2)} language="json" />
           ) : (
             <EmptyState />
           )}
