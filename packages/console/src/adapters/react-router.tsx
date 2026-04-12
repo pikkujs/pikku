@@ -4,7 +4,7 @@ import {
   useNavigate as useRRNavigate,
   useLocation as useRRLocation,
   useSearchParams as useRRSearchParams,
-} from 'react-router-dom'
+} from 'react-router'
 import type { ConsoleRouter, LinkProps } from '../router'
 
 const Link = forwardRef<HTMLAnchorElement, LinkProps>(

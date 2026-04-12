@@ -22,9 +22,9 @@ const TYPE_CONFIG: Record<
   function: { icon: FunctionSquare, color: 'blue', href: '/functions' },
   workflow: { icon: GitBranch, color: 'violet', href: '/workflow' },
   http: { icon: Globe, color: 'green', href: '/apis?tab=http' },
-  channel: { icon: Radio, color: 'cyan', href: '/apis/channels' },
+  channel: { icon: Radio, color: 'cyan', href: '/apis?tab=channels' },
   mcp: { icon: Cpu, color: 'orange', href: '/apis?tab=mcp' },
-  cli: { icon: Terminal, color: 'teal', href: '/apis/cli' },
+  cli: { icon: Terminal, color: 'teal', href: '/apis?tab=cli' },
   scheduler: { icon: Clock, color: 'yellow', href: '/jobs?tab=schedulers' },
   queue: { icon: ListOrdered, color: 'pink', href: '/jobs?tab=queues' },
   agent: { icon: Bot, color: 'grape', href: '/agents' },
@@ -77,7 +77,7 @@ export const SpotlightSearch: React.FunctionComponent = () => {
           label: channelName,
           description: 'Channel',
           leftSection: <Radio size={16} />,
-          onClick: () => navigate('/apis/channels'),
+          onClick: () => navigate('/apis?tab=channels'),
         })
       }
     }
@@ -103,7 +103,7 @@ export const SpotlightSearch: React.FunctionComponent = () => {
               label: `${program.wireId} ${fullPath}`,
               description: `CLI → ${cmdData.pikkuFuncId}`,
               leftSection: <Terminal size={16} />,
-              onClick: () => navigate('/apis/cli'),
+              onClick: () => navigate('/apis?tab=cli'),
             })
           }
           if (cmdData.subcommands) walkCommands(cmdData.subcommands, fullPath)

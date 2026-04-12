@@ -97,7 +97,7 @@ const ChannelsList: React.FunctionComponent = () => {
           columns={COLUMNS}
           getKey={(ch) => ch.name}
           onRowClick={(ch) =>
-            navigate(`/apis/channels?id=${encodeURIComponent(ch.name)}`)
+            navigate(`/apis?tab=channels&id=${encodeURIComponent(ch.name)}`)
           }
           searchPlaceholder="Search channels..."
           searchFilter={(ch, q) =>

@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
-import { Stack, Text, Group, Divider, Code } from '@mantine/core'
+import { Stack, Text, Group, Divider } from '@mantine/core'
+import { CodeHighlight } from '@mantine/code-highlight'
 import type { ChannelMeta } from '@pikku/core/channel'
 import { FunctionLink } from '../project/panels/shared/FunctionLink'
 import { SectionLabel } from '../project/panels/shared/SectionLabel'
@@ -132,7 +133,7 @@ export const ChannelDetailView: React.FunctionComponent<
         <>
           <Divider />
           <SectionLabel>Client Usage</SectionLabel>
-          <Code block>{snippet}</Code>
+          <CodeHighlight code={snippet} language="typescript" />
         </>
       )}
     </Stack>

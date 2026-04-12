@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react'
-import { Tabs, Stack, SimpleGrid, Box } from '@mantine/core'
+import { Stack, SimpleGrid, Box, Divider } from '@mantine/core'
 import { HttpConfiguration } from '../project/panels/WiringPanels'
 import { SchemaSection } from '../project/panels/shared/SchemaSection'
+import { SectionLabel } from '../project/panels/shared/SectionLabel'
 import { CopyableCode } from '../ui/CopyableCode'
 import {
   generateCurlSnippet,
@@ -27,56 +28,51 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
     () => generatePikkuFetchSnippet(metadata),
     [metadata]
   )
-  const rawJson = useMemo(
-    () => JSON.stringify(metadata, null, 2),
-    [metadata]
-  )
+
+  const hasSchemas =
+    metadata?.inputSchemaName ||
+    metadata?.outputSchemaName ||
+    metadata?.headersSchemaName
 
   return (
-    <Tabs defaultValue="configuration">
-      <Tabs.List grow>
-        <Tabs.Tab value="configuration">Configuration</Tabs.Tab>
-        <Tabs.Tab value="schemas">Schemas</Tabs.Tab>
-        <Tabs.Tab value="usage">Usage</Tabs.Tab>
-        <Tabs.Tab value="raw">Raw</Tabs.Tab>
-      </Tabs.List>
+    <Stack gap="lg" p="md">
+      <HttpConfiguration wireId={wireId} metadata={metadata} />
 
-      <Tabs.Panel value="configuration" pt="md" px="md">
-        <HttpConfiguration wireId={wireId} metadata={metadata} />
-      </Tabs.Panel>
-
-      <Tabs.Panel value="schemas" pt="md" px="md">
-        <SimpleGrid cols={2} spacing="lg">
-          <SchemaSection
-            label="Input Schema"
-            schemaName={metadata?.inputSchemaName}
-          />
-          <SchemaSection
-            label="Output Schema"
-            schemaName={metadata?.outputSchemaName}
-          />
-        </SimpleGrid>
-        {metadata?.headersSchemaName && (
-          <Box mt="lg">
+      {hasSchemas && (
+        <>
+          <Divider />
+          <SimpleGrid cols={2} spacing="lg">
+            {metadata?.inputSchemaName && (
+              <SchemaSection
+                label="Input Schema"
+                schemaName={metadata.inputSchemaName}
+              />
+            )}
+            {metadata?.outputSchemaName && (
+              <SchemaSection
+                label="Output Schema"
+                schemaName={metadata.outputSchemaName}
+              />
+            )}
+          </SimpleGrid>
+          {metadata?.headersSchemaName && (
             <SchemaSection
               label="Headers Schema"
               schemaName={metadata.headersSchemaName}
             />
-          </Box>
-        )}
-      </Tabs.Panel>
+          )}
+        </>
+      )}
 
-      <Tabs.Panel value="usage" pt="md" px="md">
-        <Stack gap="md">
-          <CopyableCode label="curl" code={curlSnippet} />
-          <CopyableCode label="fetch" code={fetchSnippet} />
-          <CopyableCode label="pikku-fetch" code={pikkuSnippet} />
+      <Divider />
+      <Box>
+        <SectionLabel>Client Usage</SectionLabel>
+        <Stack gap="md" mt="xs">
+          <CopyableCode label="pikku-fetch" code={pikkuSnippet} language="typescript" />
+          <CopyableCode label="fetch" code={fetchSnippet} language="typescript" />
+          <CopyableCode label="curl" code={curlSnippet} language="bash" />
         </Stack>
-      </Tabs.Panel>
-
-      <Tabs.Panel value="raw" pt="md" px="md">
-        <CopyableCode code={rawJson} />
-      </Tabs.Panel>
-    </Tabs>
+      </Box>
+    </Stack>
   )
 }

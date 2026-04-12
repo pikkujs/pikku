@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react'
-import { useSearchParams, useNavigate } from '../../router'
+import React, { useState, useEffect } from 'react'
+import { useSearchParams } from '../../router'
 import { Box, Center, Text } from '@mantine/core'
 import { Radio } from 'lucide-react'
 import { PanelProvider } from '../../context/PanelContext'
@@ -35,9 +35,7 @@ const getSelectedFuncId = (
 const ChannelPageInner: React.FunctionComponent<{
   channelName: string
   channelMeta: ChannelMeta
-  channelItems: { name: string; description?: string }[]
-}> = ({ channelName, channelMeta, channelItems }) => {
-  const navigate = useNavigate()
+}> = ({ channelName, channelMeta }) => {
   const { openFunction } = usePanelContext()
 
   const [selected, setSelected] = useState<ChannelSelection>(null)
@@ -51,14 +49,6 @@ const ChannelPageInner: React.FunctionComponent<{
     }
   }, [pikkuFuncId, funcMeta, openFunction])
 
-  const handleChannelSwitch = useCallback(
-    (name: string) => {
-      setSelected(null)
-      navigate(`/apis?tab=channels?id=${encodeURIComponent(name)}`)
-    },
-    [navigate]
-  )
-
   return (
     <ResizablePanelLayout
       header={
@@ -67,8 +57,6 @@ const ChannelPageInner: React.FunctionComponent<{
           category="Channels"
           categoryPath="/apis?tab=channels"
           currentItem={channelName}
-          items={channelItems}
-          onItemSelect={handleChannelSwitch}
           docsHref="https://pikku.dev/docs/wiring/channels"
         />
       }
@@ -107,16 +95,6 @@ export const ChannelPageClient: React.FunctionComponent = () => {
 
   const channelMeta = meta.channelsMeta?.[channelName]
 
-  const channelItems = useMemo(() => {
-    if (!meta.channelsMeta) return []
-    return Object.entries(meta.channelsMeta).map(
-      ([name, ch]: [string, any]) => ({
-        name,
-        description: ch.route,
-      })
-    )
-  }, [meta.channelsMeta])
-
   if (!channelMeta) {
     return (
       <Center h="100vh">
@@ -130,7 +108,6 @@ export const ChannelPageClient: React.FunctionComponent = () => {
       <ChannelPageInner
         channelName={channelName}
         channelMeta={channelMeta}
-        channelItems={channelItems}
       />
     </PanelProvider>
   )

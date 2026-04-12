@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import { useSearchParams, useNavigate } from '../../router'
-import { Box, Center, Text } from '@mantine/core'
+import { Box, Center, Text, Group, UnstyledButton } from '@mantine/core'
 import { Terminal } from 'lucide-react'
 import type { CLIMeta } from '@pikku/core/cli'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
@@ -23,15 +23,6 @@ export const CliPageClient: React.FunctionComponent = () => {
     [meta.cliMeta, programId]
   )
 
-  const allPrograms = useMemo(
-    () =>
-      (meta.cliMeta || []).map((p: any) => ({
-        name: p.wireId,
-        description: p.description,
-      })),
-    [meta.cliMeta]
-  )
-
   const cliMeta = useMemo((): CLIMeta => {
     if (!program) return { programs: {}, renderers: {} }
     return {
@@ -51,13 +42,23 @@ export const CliPageClient: React.FunctionComponent = () => {
     setCommandPath(path)
   }, [])
 
-  const handleProgramSwitch = useCallback(
-    (name: string) => {
-      setCommandPath([])
-      navigate(`/apis/cli?id=${encodeURIComponent(name)}`)
-    },
-    [navigate]
-  )
+  const commandBreadcrumb = useMemo(() => {
+    if (commandPath.length === 0) return null
+    return (
+      <Group gap={4}>
+        {commandPath.map((part, i) => (
+          <React.Fragment key={i}>
+            <Text size="md" c="dimmed">/</Text>
+            <UnstyledButton onClick={() => handleNavigate(commandPath.slice(0, i + 1))}>
+              <Text size="md" fw={i === commandPath.length - 1 ? 500 : 400} c={i === commandPath.length - 1 ? undefined : 'dimmed'}>
+                {part}
+              </Text>
+            </UnstyledButton>
+          </React.Fragment>
+        ))}
+      </Group>
+    )
+  }, [commandPath, handleNavigate])
 
   if (!program) {
     return (
@@ -74,11 +75,10 @@ export const CliPageClient: React.FunctionComponent = () => {
           <DetailPageHeader
             icon={Terminal}
             category="CLI"
-            categoryPath="/apis/cli"
+            categoryPath="/apis?tab=cli"
             currentItem={programId}
-            items={allPrograms}
-            onItemSelect={handleProgramSwitch}
             docsHref="https://pikku.dev/docs/wiring/cli"
+            subtitle={commandBreadcrumb}
           />
         }
         hidePanel

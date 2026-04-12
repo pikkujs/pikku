@@ -96,6 +96,17 @@ export const DetailPageHeader: React.FunctionComponent<
         </Text>
       )}
 
+      {currentItem && !items && (
+        <>
+          <Text size="md" c="dimmed">
+            /
+          </Text>
+          <Text size="md" fw={500}>
+            {currentItem}
+          </Text>
+        </>
+      )}
+
       {currentItem && items && onItemSelect && (
         <>
           <Text size="md" c="dimmed">

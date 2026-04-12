@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { Routes, Route, Navigate, Outlet } from 'react-router'
 import { AppLayout } from './components/layout/AppLayout'
 import { NotFoundTitle } from './components/NotFoundTitle'
 

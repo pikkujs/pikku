@@ -7,9 +7,9 @@ import { wiringTypeColor } from '../../ui/badge-defs'
 
 const TYPE_HREF: Record<string, string> = {
   http: '/apis?tab=http',
-  channel: '/apis/channels',
+  channel: '/apis?tab=channels',
   mcp: '/apis?tab=mcp',
-  cli: '/apis/cli',
+  cli: '/apis?tab=cli',
   rpc: '/apis?tab=http',
   scheduler: '/jobs?tab=schedulers',
   queue: '/jobs?tab=queues',

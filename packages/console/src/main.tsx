@@ -9,7 +9,7 @@ document.head.appendChild(link)
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
+import { BrowserRouter } from 'react-router'
 import { QueryClientProvider } from './context/QueryClientProvider'
 import { ThemeProvider } from './context/ThemeProvider'
 import { PikkuHTTPProvider, PikkuRPCProvider } from './context/PikkuRpcProvider'

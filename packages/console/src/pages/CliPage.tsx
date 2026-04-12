@@ -95,7 +95,7 @@ const CliList: React.FunctionComponent = () => {
           columns={COLUMNS}
           getKey={(entry) => entry.wireId}
           onRowClick={(entry) =>
-            navigate(`/apis/cli?id=${encodeURIComponent(entry.wireId)}`)
+            navigate(`/apis?tab=cli&id=${encodeURIComponent(entry.wireId)}`)
           }
           searchPlaceholder="Search CLI programs..."
           searchFilter={(entry, q) =>
