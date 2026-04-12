@@ -15,9 +15,8 @@ const DEPLOY_DIR = join(FUNCTIONS_DIR, '.deploy', 'serverless')
 console.log('Setting up: running pikku codegen + deploy plan (serverless)...')
 execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_DIR, stdio: 'pipe' })
 execSync('yarn pikku', { cwd: FUNCTIONS_DIR, stdio: 'pipe', timeout: 60_000 })
-execSync('yarn pikku deploy plan', {
+execSync('yarn pikku deploy plan --provider serverless', {
   cwd: FUNCTIONS_DIR, stdio: 'pipe', timeout: 300_000,
-  env: { ...process.env, PIKKU_DEPLOY_PROVIDER: 'serverless' },
 })
 console.log('Setup complete.\n')
 

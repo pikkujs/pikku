@@ -15,9 +15,8 @@ const DEPLOY_DIR = join(FUNCTIONS_DIR, '.deploy', 'azure')
 console.log('Setting up: running pikku codegen + deploy plan (azure)...')
 execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_DIR, stdio: 'pipe' })
 execSync('yarn pikku', { cwd: FUNCTIONS_DIR, stdio: 'pipe', timeout: 60_000 })
-execSync('yarn pikku deploy plan', {
+execSync('yarn pikku deploy plan --provider azure', {
   cwd: FUNCTIONS_DIR, stdio: 'pipe', timeout: 300_000,
-  env: { ...process.env, PIKKU_DEPLOY_PROVIDER: 'azure' },
 })
 console.log('Setup complete.\n')
 
