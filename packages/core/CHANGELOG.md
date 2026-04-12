@@ -1,5 +1,35 @@
 ## 0.12.4
 
+## 0.12.15
+
+### Patch Changes
+
+- 9e8605f: Add Workers for Platforms dispatch namespace support and AI agent fixes.
+
+  - deploy-cloudflare: Thread dispatchNamespace through deploy pipeline, reads CF_DISPATCH_NAMESPACE env var
+  - core: Fix auth-gated tools visible to unauthenticated sessions (null session now hides permission-gated items)
+  - core: Recursive null stripping in AI agent tool call resume path
+  - ai-vercel: Handle anyOf/oneOf/array types when making optional fields nullable for strict providers
+
+- 624097e: Add deploy pipeline with provider-agnostic architecture
+
+  - Add MetaService with explicit typed API, absorb WiringService reads
+  - Add deployment service, traceId propagation, scoped logger
+  - Rewrite analyzer: one function = one worker, gateways dispatch via RPC
+  - Add Cloudflare deploy provider with plan/apply commands
+  - Add per-unit filtered codegen for deploy pipeline
+  - Skip missing metadata in wiring registration for deploy units
+  - Fix schema coercion crash when schema has no properties
+  - Fix E2E codegen: double-pass resolves cross-package Zod type imports
+
+- 7ab3243: Add server-fallback deployment target for functions that can't run serverless.
+
+  Functions can declare `deploy: 'serverless' | 'server' | 'auto'`. With `serverlessIncompatible` config, the analyzer auto-routes functions using incompatible services to a container.
+
+  Server functions are merged into a single tree-shaken unit with a PikkuUWSServer entry, Dockerfile, and CF Container proxy Worker.
+
+  Also adds sub-path exports to @pikku/cloudflare for tree-shaking (greet bundle 1.6MB → 444KB) and deploy verifiers for cloudflare, serverless, and azure providers.
+
 ## 0.12.14
 
 ### Patch Changes
