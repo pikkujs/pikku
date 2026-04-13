@@ -1,5 +1,12 @@
 ## 0.12.0
 
+## 0.12.17
+
+### Patch Changes
+
+- add5c4e: Remove deploy-azure and deploy-serverless from CLI hard dependencies. Deploy providers are optional and dynamically imported at runtime. Only keep deploy-cloudflare as the default provider.
+- f90daa4: Replace workspace:_ protocol with explicit npm version ranges in all package.json files. Fixes broken publishes where workspace:_ was included literally in the npm registry.
+
 ## 0.12.16
 
 ### Patch Changes
