@@ -5484,7 +5484,7 @@ __metadata:
     kysely: "npm:^0.28.12"
     kysely-plugin-serialize: "npm:^0.6.0"
     kysely-postgres-js: "npm:^3.0.0"
-    mysql2: "npm:^3.18.2"
+    mysql2: "npm:^3.22.0"
     postgres: "npm:^3.4.8"
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.21.0"
@@ -18275,9 +18275,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mysql2@npm:^3.18.2":
-  version: 3.19.1
-  resolution: "mysql2@npm:3.19.1"
+"mysql2@npm:^3.22.0":
+  version: 3.22.0
+  resolution: "mysql2@npm:3.22.0"
   dependencies:
     aws-ssl-profiles: "npm:^1.1.2"
     denque: "npm:^2.1.0"
@@ -18289,7 +18289,7 @@ __metadata:
     sql-escaper: "npm:^1.3.3"
   peerDependencies:
     "@types/node": ">= 8"
-  checksum: 10/fd7f37c46381cc83c8523d0252d15fb925fd8ad6d7c95de01c2b239637d52edc40e0e54894254d675039b088249a3258eb28a6f7ad070e0b123fa076202154dc
+  checksum: 10/fbfa0665624f479eeef9d0a9027157f035f07f2f5e782a32ec8b74af95342d3deb8f22f39817e25476fb86d7f93b194a6a319b82ac3af273e011b7a6208ca14e
   languageName: node
   linkType: hard
 
