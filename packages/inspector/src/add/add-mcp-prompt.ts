@@ -114,6 +114,11 @@ export const addMCPPrompt: AddWiring = (
     const inputSchema = fnMeta.inputs?.[0] || null
     const outputSchema = fnMeta.outputs?.[0] || null
 
+    if (!fnMeta.outputSchemaName) {
+      fnMeta.outputSchemaName = 'MCPPromptResponse'
+      fnMeta.outputs = ['MCPPromptResponse']
+    }
+
     // --- resolve middleware ---
     const middleware = resolveMiddleware(state, obj, tags, checker)
 
