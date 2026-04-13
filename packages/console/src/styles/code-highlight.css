@@ -11,9 +11,15 @@
   font-size: 12px;
 }
 
+.pikku-tab {
+  border: none !important;
+  border-bottom: 2px solid transparent !important;
+}
+
 .pikku-tab[data-active] {
   color: var(--tabs-color) !important;
   font-weight: 600;
+  border-bottom-color: var(--tabs-color) !important;
 }
 
 .pikku-tab:hover {

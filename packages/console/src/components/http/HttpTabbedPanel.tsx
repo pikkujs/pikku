@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react'
 import { Box, Text, Group, Tabs, Badge } from '@mantine/core'
-import { Globe } from 'lucide-react'
 import { useFunctionMeta, useSchema } from '../../hooks/useWirings'
 import { usePanelContext } from '../../context/PanelContext'
 import { SchemaSection } from '../project/panels/shared/SchemaSection'
@@ -124,7 +123,6 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
           background: 'rgba(255,255,255,0.01)',
         }}
       >
-        <Globe size={16} color="#4e5a70" />
         <PikkuBadge type="httpMethod" value={method} />
         <Box style={{ flex: 1 }}>
           <Text size="sm" ff="monospace" fw={600} c="gray.2">

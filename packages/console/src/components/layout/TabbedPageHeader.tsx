@@ -32,15 +32,9 @@ export const TabbedPageHeader: React.FunctionComponent<
         flexShrink: 0,
       }}
     >
-      <Icon size={16} />
-      <Text size="md" fw={500}>
-        {category}
-      </Text>
-
       <Tabs
         value={activeTab}
         onChange={(v) => v && onTabChange(v)}
-        ml="md"
         style={{ alignSelf: 'stretch' }}
         styles={{
           root: { display: 'flex', alignItems: 'stretch' },

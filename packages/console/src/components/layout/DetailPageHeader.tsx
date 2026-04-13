@@ -79,22 +79,17 @@ export const DetailPageHeader: React.FunctionComponent<
         flexShrink: 0,
       }}
     >
-      <Icon size={16} />
       {categoryPath ? (
         <Link to={categoryPath} style={{ textDecoration: 'none' }}>
           <Text size="md" c="dimmed">
             {category}
           </Text>
         </Link>
-      ) : (
-        <Text
-          size="md"
-          fw={currentItem ? 400 : 500}
-          c={currentItem ? 'dimmed' : undefined}
-        >
+      ) : currentItem ? (
+        <Text size="md" c="dimmed">
           {category}
         </Text>
-      )}
+      ) : null}
 
       {currentItem && !items && (
         <>
