@@ -5320,7 +5320,7 @@ __metadata:
   dependencies:
     "@cloudflare/vitest-pool-workers": "npm:^0.12.18"
     "@cloudflare/workers-types": "npm:^4.20260305.0"
-    "@pikku/kysely": "workspace:*"
+    "@pikku/kysely": "npm:^0.12.9"
     "@vitest/runner": "npm:^2.1.9"
     "@vitest/snapshot": "npm:^2.1.9"
     kysely-d1: "npm:^0.4.0"
@@ -5609,8 +5609,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/kysely-mysql@workspace:packages/services/kysely-mysql"
   dependencies:
-    "@pikku/core": "workspace:*"
-    "@pikku/kysely": "workspace:*"
+    "@pikku/core": "npm:^0.12.15"
+    "@pikku/kysely": "npm:^0.12.9"
     kysely: "npm:^0.28.12"
     typescript: "npm:^5.9"
   languageName: unknown
@@ -5641,7 +5641,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/kysely@npm:^0.12.0, @pikku/kysely@npm:^0.12.5, @pikku/kysely@workspace:*, @pikku/kysely@workspace:packages/services/kysely":
+"@pikku/kysely@npm:^0.12.0, @pikku/kysely@npm:^0.12.5, @pikku/kysely@npm:^0.12.9, @pikku/kysely@workspace:*, @pikku/kysely@workspace:packages/services/kysely":
   version: 0.0.0-use.local
   resolution: "@pikku/kysely@workspace:packages/services/kysely"
   dependencies:
@@ -19448,8 +19448,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "pikku-vscode@workspace:packages/vscode-extension"
   dependencies:
-    "@pikku/core": "workspace:*"
-    "@pikku/inspector": "workspace:*"
+    "@pikku/core": "npm:^0.12.15"
+    "@pikku/inspector": "npm:^0.12.8"
     "@types/vscode": "npm:^1.85.0"
     esbuild: "npm:^0.24.0"
     typescript: "npm:^5.9.0"
