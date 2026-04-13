@@ -5,7 +5,7 @@ import { SchemaViewer } from '../../../ui/SchemaViewer'
 import { SectionLabel } from './SectionLabel'
 
 export const SchemaSection: React.FunctionComponent<{
-  label: string
+  label?: string
   schemaName?: string | null
 }> = ({ label, schemaName }) => {
   const { data: schema, isLoading } = useSchema(schemaName)
@@ -14,7 +14,7 @@ export const SchemaSection: React.FunctionComponent<{
 
   return (
     <Box>
-      <SectionLabel>{label}</SectionLabel>
+      {label && <SectionLabel>{label}</SectionLabel>}
       {isLoading ? (
         <Loader size="xs" />
       ) : schema ? (

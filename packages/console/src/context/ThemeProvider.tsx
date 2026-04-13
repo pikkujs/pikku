@@ -58,6 +58,8 @@ const cssVariablesResolver: CSSVariablesResolver = () => ({
     '--app-code-bg': dark[8],
     '--app-meta-label': '#64748b',
     '--app-meta-value': '#e2e8f0',
+    '--app-text': '#94a3b8',
+    '--app-text-muted': '#64748b',
     '--app-section-label': '#4e5a70',
     '--app-row-border': 'rgba(255,255,255,0.06)',
     '--app-tag-bg': 'rgba(6,182,212,0.1)',

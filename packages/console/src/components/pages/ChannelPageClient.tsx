@@ -1,13 +1,8 @@
-import React, { useState, useEffect } from 'react'
-import { useSearchParams } from '../../router'
+import React, { useState, useCallback } from 'react'
+import { useSearchParams, useNavigate } from '../../router'
 import { Box, Center, Text } from '@mantine/core'
-import { Radio } from 'lucide-react'
 import { PanelProvider } from '../../context/PanelContext'
-import { usePanelContext } from '../../context/PanelContext'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
-import { useFunctionMeta } from '../../hooks/useWirings'
-import { ResizablePanelLayout } from '../layout/ResizablePanelLayout'
-import { DetailPageHeader } from '../layout/DetailPageHeader'
 import {
   ChannelNavTree,
   type ChannelSelection,
@@ -15,76 +10,51 @@ import {
 import { ChannelDetailView } from '../channel/ChannelDetailView'
 import type { ChannelMeta } from '@pikku/core/channel'
 
-const getSelectedFuncId = (
-  channel: ChannelMeta,
-  selected: ChannelSelection
-): string | null => {
-  if (!selected) return null
-  if (selected.type === 'handler') {
-    return (
-      channel[selected.handler as 'connect' | 'disconnect' | 'message']
-        ?.pikkuFuncId ?? null
-    )
-  }
-  return (
-    channel.messageWirings?.[selected.category]?.[selected.action]
-      ?.pikkuFuncId ?? null
-  )
-}
-
 const ChannelPageInner: React.FunctionComponent<{
   channelName: string
   channelMeta: ChannelMeta
-}> = ({ channelName, channelMeta }) => {
-  const { openFunction } = usePanelContext()
-
+  allChannelsMeta: Record<string, ChannelMeta>
+}> = ({ channelName, channelMeta, allChannelsMeta }) => {
+  const navigate = useNavigate()
   const [selected, setSelected] = useState<ChannelSelection>(null)
 
-  const pikkuFuncId = getSelectedFuncId(channelMeta, selected)
-  const { data: funcMeta } = useFunctionMeta(pikkuFuncId ?? '')
-
-  useEffect(() => {
-    if (pikkuFuncId && funcMeta) {
-      openFunction(pikkuFuncId, funcMeta)
-    }
-  }, [pikkuFuncId, funcMeta, openFunction])
+  const handleChannelSwitch = useCallback(
+    (name: string) => {
+      setSelected(null)
+      navigate(`/apis?tab=channels&id=${encodeURIComponent(name)}`)
+    },
+    [navigate]
+  )
 
   return (
-    <ResizablePanelLayout
-      header={
-        <DetailPageHeader
-          icon={Radio}
-          category="Channels"
-          categoryPath="/apis?tab=channels"
-          currentItem={channelName}
-          docsHref="https://pikku.dev/docs/wiring/channels"
+    <Box style={{ display: 'flex', height: '100%' }}>
+      <Box
+        style={{
+          width: 280,
+          minWidth: 220,
+          borderRight: '1px solid var(--app-row-border)',
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+        }}
+      >
+        <ChannelNavTree
+          channelName={channelName}
+          channel={channelMeta}
+          allChannelsMeta={allChannelsMeta}
+          selected={selected}
+          onSelect={setSelected}
+          onChannelSwitch={handleChannelSwitch}
         />
-      }
-    >
-      <Box style={{ display: 'flex', height: '100%' }}>
-        <Box
-          style={{
-            width: 260,
-            minWidth: 200,
-            borderRight: '1px solid var(--mantine-color-default-border)',
-            height: '100%',
-          }}
-        >
-          <ChannelNavTree
-            channel={channelMeta}
-            selected={selected}
-            onSelect={setSelected}
-          />
-        </Box>
-        <Box style={{ flex: 1, overflow: 'hidden' }}>
-          <ChannelDetailView
-            channelName={channelName}
-            channel={channelMeta}
-            selected={selected}
-          />
-        </Box>
       </Box>
-    </ResizablePanelLayout>
+      <Box style={{ flex: 1, overflow: 'hidden', minWidth: 0 }}>
+        <ChannelDetailView
+          channelName={channelName}
+          channel={channelMeta}
+          selected={selected}
+        />
+      </Box>
+    </Box>
   )
 }
 
@@ -93,12 +63,15 @@ export const ChannelPageClient: React.FunctionComponent = () => {
   const channelName = searchParams.get('id') || ''
   const { meta } = usePikkuMeta()
 
-  const channelMeta = meta.channelsMeta?.[channelName]
+  const allChannelsMeta = meta.channelsMeta || {}
+  const channelNames = Object.keys(allChannelsMeta)
+  const resolvedName = channelName || channelNames[0] || ''
+  const channelMeta = allChannelsMeta[resolvedName]
 
   if (!channelMeta) {
     return (
-      <Center h="100vh">
-        <Text c="dimmed">Channel &quot;{channelName}&quot; not found.</Text>
+      <Center h="100%">
+        <Text c="dimmed">No channels found.</Text>
       </Center>
     )
   }
@@ -106,8 +79,9 @@ export const ChannelPageClient: React.FunctionComponent = () => {
   return (
     <PanelProvider>
       <ChannelPageInner
-        channelName={channelName}
+        channelName={resolvedName}
         channelMeta={channelMeta}
+        allChannelsMeta={allChannelsMeta}
       />
     </PanelProvider>
   )
