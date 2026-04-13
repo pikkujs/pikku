@@ -95,8 +95,8 @@
     }
   },
   "dependencies": {
-    "@pikku/core": "workspace:*",
-    "@pikku/inspector": "workspace:*"
+    "@pikku/core": "^0.12.15",
+    "@pikku/inspector": "^0.12.8"
   },
   "devDependencies": {
     "@types/vscode": "^1.85.0",

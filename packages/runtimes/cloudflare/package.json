@@ -37,7 +37,7 @@
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.12.18",
     "@cloudflare/workers-types": "^4.20260305.0",
-    "@pikku/kysely": "workspace:*",
+    "@pikku/kysely": "^0.12.9",
     "@vitest/runner": "^2.1.9",
     "@vitest/snapshot": "^2.1.9",
     "typescript": "^5.9.3",
