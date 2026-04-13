@@ -1,10 +1,9 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo } from 'react'
 import { Box, Text, Group, Tabs, Badge } from '@mantine/core'
 import { useFunctionMeta, useSchema } from '../../hooks/useWirings'
 import { usePanelContext } from '../../context/PanelContext'
 import { SchemaSection } from '../project/panels/shared/SchemaSection'
 import { CopyableCode } from '../ui/CopyableCode'
-import { SchemaForm } from '../ui/SchemaForm'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { LinkedBadge } from '../project/panels/LinkedBadge'
 import {
@@ -67,9 +66,6 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
   const inputSchemaName = funcMeta?.inputSchemaName
   const outputSchemaName = funcMeta?.outputSchemaName
   const { data: inputSchema } = useSchema(inputSchemaName)
-  const [tryResult, setTryResult] = useState<any>(null)
-  const [tryError, setTryError] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
 
   const method = (metadata?.method || 'GET').toUpperCase()
   const route = metadata?.route || '/'
@@ -88,26 +84,6 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
     () => generatePikkuFetchSnippet(metadata, inputSchema),
     [metadata, inputSchema]
   )
-
-  const handleTryIt = async (formData: any) => {
-    setSubmitting(true)
-    setTryResult(null)
-    setTryError(null)
-    try {
-      const res = await fetch(`${route}`, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: ['POST', 'PUT', 'PATCH'].includes(method)
-          ? JSON.stringify(formData)
-          : undefined,
-      })
-      setTryResult(await res.json())
-    } catch (e: any) {
-      setTryError(e.message || 'Request failed')
-    } finally {
-      setSubmitting(false)
-    }
-  }
 
   return (
     <Box style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -254,7 +230,7 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
           }}
         >
           <Tabs
-            defaultValue="try-it"
+            defaultValue="pikku-fetch"
             style={{
               flex: 1,
               display: 'flex',
@@ -263,9 +239,6 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
             }}
           >
             <Tabs.List>
-              <Tabs.Tab value="try-it">
-                Try It
-              </Tabs.Tab>
               <Tabs.Tab value="pikku-fetch">
                 pikku-fetch
               </Tabs.Tab>
@@ -276,40 +249,6 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
                 curl
               </Tabs.Tab>
             </Tabs.List>
-            <Tabs.Panel
-              value="try-it"
-              style={{ flex: 1, overflow: 'auto' }}
-              p="sm"
-            >
-              {inputSchema ? (
-                <>
-                  <SchemaForm
-                    schema={inputSchema}
-                    onSubmit={handleTryIt}
-                    submitting={submitting}
-                    submitLabel="Send"
-                  />
-                  {tryResult && (
-                    <Box mt="sm">
-                      <CopyableCode
-                        code={JSON.stringify(tryResult, null, 2)}
-                        language="json"
-                        label="Response"
-                      />
-                    </Box>
-                  )}
-                  {tryError && (
-                    <Text size="sm" c="red" mt="sm">
-                      {tryError}
-                    </Text>
-                  )}
-                </>
-              ) : (
-                <Text size="sm" c="dimmed">
-                  No input schema available
-                </Text>
-              )}
-            </Tabs.Panel>
             <Tabs.Panel
               value="pikku-fetch"
               style={{ flex: 1, overflow: 'auto' }}

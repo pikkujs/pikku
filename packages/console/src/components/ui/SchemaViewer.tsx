@@ -128,10 +128,22 @@ export const SchemaViewer: React.FunctionComponent<SchemaViewerProps> = ({
     )
   }
 
-  const properties = schema.properties || (schema.type ? null : schema)
+  const resolveRef = (ref: string): any => {
+    if (!ref.startsWith('#/definitions/')) return null
+    const name = ref.replace('#/definitions/', '')
+    return schema.definitions?.[name] || null
+  }
+
+  let resolvedSchema = schema
+  if (schema.type === 'array' && schema.items) {
+    const items = schema.items.$ref ? resolveRef(schema.items.$ref) : schema.items
+    if (items) resolvedSchema = items
+  }
+
+  const properties = resolvedSchema.properties || (resolvedSchema.type ? null : resolvedSchema)
   if (!properties) {
     return (
-      <Badge size="sm" variant="light" color={getColor(schema)} tt="none">
+      <Badge size="sm" variant="light" color={getColor(resolvedSchema)} tt="none">
         {getTypeLabel(schema)}
       </Badge>
     )
@@ -175,7 +187,7 @@ export const SchemaViewer: React.FunctionComponent<SchemaViewerProps> = ({
       <Table.Tbody>
         <PropertyRows
           properties={properties}
-          required={schema.required || []}
+          required={resolvedSchema.required || []}
           depth={0}
         />
       </Table.Tbody>

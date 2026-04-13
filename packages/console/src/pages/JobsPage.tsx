@@ -1,8 +1,8 @@
 import React from 'react'
+import { Box } from '@mantine/core'
 import { Clock } from 'lucide-react'
 import { useSearchParams } from '../router'
 import { PanelProvider } from '../context/PanelContext'
-import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { TabbedPageHeader } from '../components/layout/TabbedPageHeader'
 import { SchedulersTab } from '../components/tabs/SchedulersTab'
 import { QueuesTab } from '../components/tabs/QueuesTab'
@@ -35,22 +35,19 @@ export const JobsPage: React.FunctionComponent = () => {
 
   return (
     <PanelProvider>
-      <ResizablePanelLayout
-        header={
-          <TabbedPageHeader
-            icon={Clock}
-            category="Jobs"
-            docsHref="https://pikku.dev/docs/wiring/scheduled-tasks"
-            tabs={TABS}
-            activeTab={tab}
-            onTabChange={handleTabChange}
-          />
-        }
-        showTabs={false}
-        emptyPanelMessage="Select an item to view its details"
-      >
-        {renderTab()}
-      </ResizablePanelLayout>
+      <Box style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+        <TabbedPageHeader
+          icon={Clock}
+          category="Jobs"
+          docsHref="https://pikku.dev/docs/wiring/scheduled-tasks"
+          tabs={TABS}
+          activeTab={tab}
+          onTabChange={handleTabChange}
+        />
+        <Box style={{ flex: 1, minHeight: 0 }}>
+          {renderTab()}
+        </Box>
+      </Box>
     </PanelProvider>
   )
 }
