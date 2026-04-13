@@ -1,5 +1,11 @@
 ## 0.12.0
 
+## 0.12.5
+
+### Patch Changes
+
+- f90daa4: Replace workspace:_ protocol with explicit npm version ranges in all package.json files. Fixes broken publishes where workspace:_ was included literally in the npm registry.
+
 ## 0.12.4
 
 ### Patch Changes
