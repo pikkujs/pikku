@@ -1,0 +1,21 @@
+.mantine-CodeHighlight-codeHighlight {
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.mantine-CodeHighlight-pre {
+  overflow-x: auto !important;
+}
+
+.mantine-CodeHighlight-pre code {
+  font-size: 12px;
+}
+
+.pikku-tab[data-active] {
+  color: var(--tabs-color) !important;
+  font-weight: 600;
+}
+
+.pikku-tab:hover {
+  background-color: transparent !important;
+}

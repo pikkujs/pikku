@@ -61,26 +61,40 @@ export const HttpTab: React.FunctionComponent = () => {
                 <UnstyledButton
                   key={key}
                   onClick={() => setSelected(key)}
-                  px="sm"
-                  py={6}
                   style={{
-                    backgroundColor: isActive
-                      ? 'var(--mantine-color-dark-5)'
-                      : undefined,
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 7,
+                    padding: '7px 12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
                     borderLeft: isActive
-                      ? '2px solid var(--mantine-color-blue-6)'
+                      ? '2px solid #7c3aed'
                       : '2px solid transparent',
+                    backgroundColor: isActive
+                      ? 'rgba(124, 58, 237, 0.06)'
+                      : undefined,
                   }}
                 >
-                  <Box style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <PikkuBadge type="httpMethod" value={route.method?.toUpperCase() || 'GET'} size="xs" />
-                    <Text size="xs" truncate style={{ flex: 1 }}>
+                  <PikkuBadge type="httpMethod" value={route.method?.toUpperCase() || 'GET'} size="xs" />
+                  <Box style={{ flex: 1, minWidth: 0 }}>
+                    <Text
+                      size="xs"
+                      ff="monospace"
+                      truncate
+                      c={isActive ? 'var(--app-meta-value)' : undefined}
+                    >
                       {route.route}
                     </Text>
+                    <Text
+                      size="xs"
+                      ff="monospace"
+                      c={isActive ? 'var(--app-meta-label)' : 'dimmed'}
+                      truncate
+                    >
+                      {route.pikkuFuncId}
+                    </Text>
                   </Box>
-                  <Text size="xs" c="dimmed" truncate>
-                    {route.pikkuFuncId}
-                  </Text>
                 </UnstyledButton>
               )
             })}

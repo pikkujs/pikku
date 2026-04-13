@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
-import { Box, Text, Group, Tabs } from '@mantine/core'
-import { Globe, Link2 } from 'lucide-react'
+import { Box, Text, Group, Tabs, Badge } from '@mantine/core'
+import { Globe } from 'lucide-react'
 import { useFunctionMeta, useSchema } from '../../hooks/useWirings'
 import { usePanelContext } from '../../context/PanelContext'
 import { SchemaSection } from '../project/panels/shared/SchemaSection'
@@ -18,37 +18,40 @@ const MetaRow: React.FunctionComponent<{
   label: string
   children: React.ReactNode
 }> = ({ label, children }) => (
-  <div
+  <Box
     style={{
       display: 'flex',
       alignItems: 'center',
       gap: 12,
       padding: '6px 0',
-      borderBottom: '1px solid rgba(255,255,255,0.06)',
+      borderBottom: '1px solid var(--app-row-border)',
     }}
   >
-    <span style={{ fontSize: 11, color: '#4e5a70', minWidth: 85, flexShrink: 0 }}>
+    <Text
+      size="sm"
+      ff="monospace"
+      c="var(--app-meta-label)"
+      style={{ minWidth: 85, flexShrink: 0 }}
+    >
       {label}
-    </span>
-    <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
-  </div>
+    </Text>
+    <Box style={{ flex: 1, minWidth: 0 }}>{children}</Box>
+  </Box>
 )
 
 const SLabel: React.FunctionComponent<{ children: React.ReactNode }> = ({
   children,
 }) => (
-  <div
-    style={{
-      fontSize: 9,
-      fontWeight: 600,
-      color: '#374151',
-      letterSpacing: '0.1em',
-      textTransform: 'uppercase',
-      padding: '12px 0 6px',
-    }}
+  <Text
+    size="xs"
+    fw={600}
+    ff="monospace"
+    c="var(--app-section-label)"
+    tt="uppercase"
+    style={{ letterSpacing: '0.1em', padding: '12px 0 6px' }}
   >
     {children}
-  </div>
+  </Text>
 )
 
 interface HttpTabbedPanelProps {
@@ -139,7 +142,19 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
             <PikkuBadge type="flag" flag="sse" />
           )}
           {metadata?.tags?.map((tag: string) => (
-            <PikkuBadge key={tag} type="dynamic" badge="tag" value={tag} />
+            <Badge
+              key={tag}
+              size="sm"
+              variant="light"
+              ff="monospace"
+              style={{
+                background: 'var(--app-tag-bg)',
+                border: '1px solid var(--app-tag-border)',
+                color: 'var(--app-tag-color)',
+              }}
+            >
+              {tag}
+            </Badge>
           ))}
         </Group>
       </Box>
@@ -159,19 +174,18 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
 
           {funcId && (
             <MetaRow label="function">
-              <PikkuBadge
-                type="label"
+              <Text
                 size="sm"
-                variant="outline"
-                color="gray"
-                leftSection={<Link2 size={10} />}
+                fw={600}
+                ff="monospace"
+                c="var(--app-meta-value)"
                 style={{ cursor: 'pointer' }}
                 onClick={() =>
                   navigateInPanel('function', funcId, displayName, funcMeta)
                 }
               >
                 {displayName}
-              </PikkuBadge>
+              </Text>
             </MetaRow>
           )}
 
@@ -242,7 +256,7 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
           }}
         >
           <Tabs
-            defaultValue="pikku-fetch"
+            defaultValue="try-it"
             style={{
               flex: 1,
               display: 'flex',
@@ -250,22 +264,54 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
               minHeight: 0,
             }}
           >
-            <Tabs.List
-              style={{
-                flexShrink: 0,
-                borderBottom: '1px solid rgba(255,255,255,0.06)',
-              }}
-            >
-              <Tabs.Tab value="pikku-fetch" style={{ fontSize: 11 }}>
+            <Tabs.List>
+              <Tabs.Tab value="try-it">
+                Try It
+              </Tabs.Tab>
+              <Tabs.Tab value="pikku-fetch">
                 pikku-fetch
               </Tabs.Tab>
-              <Tabs.Tab value="fetch" style={{ fontSize: 11 }}>
+              <Tabs.Tab value="fetch">
                 fetch
               </Tabs.Tab>
-              <Tabs.Tab value="curl" style={{ fontSize: 11 }}>
+              <Tabs.Tab value="curl">
                 curl
               </Tabs.Tab>
             </Tabs.List>
+            <Tabs.Panel
+              value="try-it"
+              style={{ flex: 1, overflow: 'auto' }}
+              p="sm"
+            >
+              {inputSchema ? (
+                <>
+                  <SchemaForm
+                    schema={inputSchema}
+                    onSubmit={handleTryIt}
+                    submitting={submitting}
+                    submitLabel="Send"
+                  />
+                  {tryResult && (
+                    <Box mt="sm">
+                      <CopyableCode
+                        code={JSON.stringify(tryResult, null, 2)}
+                        language="json"
+                        label="Response"
+                      />
+                    </Box>
+                  )}
+                  {tryError && (
+                    <Text size="sm" c="red" mt="sm">
+                      {tryError}
+                    </Text>
+                  )}
+                </>
+              ) : (
+                <Text size="sm" c="dimmed">
+                  No input schema available
+                </Text>
+              )}
+            </Tabs.Panel>
             <Tabs.Panel
               value="pikku-fetch"
               style={{ flex: 1, overflow: 'auto' }}
@@ -288,40 +334,6 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
               <CopyableCode code={curlSnippet} language="bash" />
             </Tabs.Panel>
           </Tabs>
-
-          {inputSchema && (
-            <Box
-              style={{
-                borderTop: '1px solid rgba(255,255,255,0.06)',
-                flexShrink: 0,
-                maxHeight: '45%',
-                overflow: 'auto',
-              }}
-              p="sm"
-            >
-              <SLabel>Try It</SLabel>
-              <SchemaForm
-                schema={inputSchema}
-                onSubmit={handleTryIt}
-                submitting={submitting}
-                submitLabel="Send"
-              />
-              {tryResult && (
-                <Box mt="sm">
-                  <CopyableCode
-                    code={JSON.stringify(tryResult, null, 2)}
-                    language="json"
-                    label="Response"
-                  />
-                </Box>
-              )}
-              {tryError && (
-                <Text size="sm" c="red" mt="sm">
-                  {tryError}
-                </Text>
-              )}
-            </Box>
-          )}
         </Box>
       </Box>
     </Box>

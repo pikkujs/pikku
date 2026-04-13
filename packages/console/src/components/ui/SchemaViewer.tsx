@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
-import { Box, Text, Group, Stack, UnstyledButton } from '@mantine/core'
+import { Box, Text, Table, Badge } from '@mantine/core'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { PikkuBadge } from './PikkuBadge'
 import { schemaTypeColor } from './badge-defs'
 
 interface SchemaViewerProps {
@@ -9,9 +8,7 @@ interface SchemaViewerProps {
 }
 
 const getTypeLabel = (prop: any): string => {
-  if (prop.enum) {
-    return `enum`
-  }
+  if (prop.enum) return 'enum'
   if (prop.type === 'array' && prop.items) {
     const itemType = prop.items.type || 'any'
     return `${itemType}[]`
@@ -28,6 +25,13 @@ const getColor = (prop: any): string => {
   return schemaTypeColor(prop.type)
 }
 
+const getNotes = (prop: any): string | null => {
+  if (prop.enum) return prop.enum.join(' | ')
+  if (prop.description) return prop.description
+  if (prop.format) return prop.format
+  return null
+}
+
 const PropertyRow: React.FunctionComponent<{
   name: string
   prop: any
@@ -42,93 +46,76 @@ const PropertyRow: React.FunctionComponent<{
     prop.items?.properties
   const isExpandable = hasChildren || hasArrayChildren
   const childSchema = hasChildren ? prop : hasArrayChildren ? prop.items : null
+  const notes = getNotes(prop)
 
   return (
-    <Box>
-      <UnstyledButton
+    <>
+      <Table.Tr
         onClick={() => isExpandable && setExpanded(!expanded)}
-        style={{ width: '100%', cursor: isExpandable ? 'pointer' : 'default' }}
+        style={{ cursor: isExpandable ? 'pointer' : 'default' }}
       >
-        <Group
-          gap="xs"
-          py={6}
-          style={{
-            paddingLeft: depth * 20 + 8,
-            paddingRight: 8,
-            borderBottom: '1px solid var(--mantine-color-default-border)',
-          }}
-        >
-          {isExpandable ? (
-            expanded ? (
-              <ChevronDown size={12} />
+        <Table.Td style={{ paddingLeft: depth * 20 + 8 }}>
+          <Box style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {isExpandable ? (
+              expanded ? (
+                <ChevronDown size={12} color="var(--app-meta-label)" />
+              ) : (
+                <ChevronRight size={12} color="var(--app-meta-label)" />
+              )
             ) : (
-              <ChevronRight size={12} />
-            )
-          ) : (
-            <Box w={12} />
-          )}
-          <Text size="sm" ff="monospace" fw={500} style={{ minWidth: 80 }}>
-            {name}
-            {required && (
-              <Text
-                component="span"
-                c="red"
-                fw={700}
-                style={{ verticalAlign: 'top', fontSize: '0.6em' }}
-              >
-                {' '}
-                *
-              </Text>
+              <Box w={12} />
             )}
-          </Text>
-          <PikkuBadge type="label" color={getColor(prop)}>
+            <Text size="sm" ff="monospace" fw={500} c="var(--app-meta-value)">
+              {name}
+              {required && (
+                <Text component="span" c="yellow" fw={700}>
+                  *
+                </Text>
+              )}
+            </Text>
+          </Box>
+        </Table.Td>
+        <Table.Td>
+          <Badge size="sm" variant="light" color={getColor(prop)} tt="none">
             {getTypeLabel(prop)}
-          </PikkuBadge>
-          {prop.enum && (
-            <Text size="xs" c="dimmed" truncate style={{ maxWidth: 200 }}>
-              {prop.enum.join(' | ')}
+          </Badge>
+        </Table.Td>
+        <Table.Td>
+          {notes && (
+            <Text size="xs" c="var(--app-meta-label)">
+              {notes}
             </Text>
           )}
-          {prop.format && (
-            <PikkuBadge type="dynamic" badge="format" value={prop.format} />
-          )}
-          {prop.description && (
-            <Text size="xs" c="dimmed" truncate style={{ flex: 1 }}>
-              {prop.description}
-            </Text>
-          )}
-        </Group>
-      </UnstyledButton>
+        </Table.Td>
+      </Table.Tr>
       {isExpandable && expanded && childSchema?.properties && (
-        <PropertyList
+        <PropertyRows
           properties={childSchema.properties}
           required={childSchema.required || []}
           depth={depth + 1}
         />
       )}
-    </Box>
+    </>
   )
 }
 
-const PropertyList: React.FunctionComponent<{
+const PropertyRows: React.FunctionComponent<{
   properties: Record<string, any>
   required: string[]
   depth: number
-}> = ({ properties, required, depth }) => {
-  return (
-    <Box>
-      {Object.entries(properties).map(([name, prop]) => (
-        <PropertyRow
-          key={name}
-          name={name}
-          prop={prop}
-          required={required.includes(name)}
-          depth={depth}
-        />
-      ))}
-    </Box>
-  )
-}
+}> = ({ properties, required, depth }) => (
+  <>
+    {Object.entries(properties).map(([name, prop]) => (
+      <PropertyRow
+        key={name}
+        name={name}
+        prop={prop}
+        required={required.includes(name)}
+        depth={depth}
+      />
+    ))}
+  </>
+)
 
 export const SchemaViewer: React.FunctionComponent<SchemaViewerProps> = ({
   schema,
@@ -141,40 +128,57 @@ export const SchemaViewer: React.FunctionComponent<SchemaViewerProps> = ({
     )
   }
 
-  if (schema.type === 'object' && schema.properties) {
+  const properties = schema.properties || (schema.type ? null : schema)
+  if (!properties) {
     return (
-      <Stack gap={0}>
-        <PropertyList
-          properties={schema.properties}
-          required={schema.required || []}
-          depth={0}
-        />
-      </Stack>
-    )
-  }
-
-  if (schema.type && !schema.properties) {
-    return (
-      <Group gap="xs">
-        <PikkuBadge type="label" color={getColor(schema)}>
-          {getTypeLabel(schema)}
-        </PikkuBadge>
-        {schema.description && (
-          <Text size="sm" c="dimmed">
-            {schema.description}
-          </Text>
-        )}
-      </Group>
+      <Badge size="sm" variant="light" color={getColor(schema)} tt="none">
+        {getTypeLabel(schema)}
+      </Badge>
     )
   }
 
   return (
-    <Stack gap={0}>
-      <PropertyList
-        properties={schema.properties || schema}
-        required={schema.required || []}
-        depth={0}
-      />
-    </Stack>
+    <Table
+      verticalSpacing={6}
+      horizontalSpacing="sm"
+      layout="fixed"
+      styles={{
+        table: {
+          tableLayout: 'fixed',
+        },
+        th: {
+          color: 'var(--app-section-label)',
+          fontFamily: 'var(--mantine-font-family-monospace)',
+          fontSize: 9,
+          fontWeight: 600,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          borderBottom: '1px solid var(--app-row-border)',
+        },
+        td: {
+          borderBottom: '1px solid var(--app-row-border)',
+        },
+      }}
+    >
+      <colgroup>
+        <col />
+        <col style={{ width: 100 }} />
+        <col />
+      </colgroup>
+      <Table.Thead>
+        <Table.Tr>
+          <Table.Th>Field</Table.Th>
+          <Table.Th>Type</Table.Th>
+          <Table.Th>Notes</Table.Th>
+        </Table.Tr>
+      </Table.Thead>
+      <Table.Tbody>
+        <PropertyRows
+          properties={properties}
+          required={schema.required || []}
+          depth={0}
+        />
+      </Table.Tbody>
+    </Table>
   )
 }

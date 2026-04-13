@@ -1,11 +1,11 @@
 import React from 'react'
-import { Text, Box, Group, Divider, Table, Anchor } from '@mantine/core'
+import { Text, Box, Group, Divider, Table, Anchor, Badge } from '@mantine/core'
 import { useLink } from '../../../../router'
 import { usePikkuMeta } from '../../../../context/PikkuMetaContext'
+import { usePanelContext } from '../../../../context/PanelContext'
+import { useFunctionMeta } from '../../../../hooks/useWirings'
 import { LinkedBadge } from '../LinkedBadge'
 import { PikkuBadge } from '../../../ui/PikkuBadge'
-import { SectionLabel } from './SectionLabel'
-import { FunctionLink } from './FunctionLink'
 import { SchemaSection } from './SchemaSection'
 
 const SESSION_WIRES = new Set([
@@ -45,6 +45,69 @@ const TYPE_HREF: Record<string, string> = {
   agent: '/agents',
 }
 
+const MetaRow: React.FunctionComponent<{
+  label: string
+  children: React.ReactNode
+}> = ({ label, children }) => (
+  <Box
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      padding: '6px 0',
+      borderBottom: '1px solid var(--app-row-border)',
+    }}
+  >
+    <Text
+      size="sm"
+      ff="monospace"
+      c="var(--app-meta-label)"
+      style={{ minWidth: 90, flexShrink: 0 }}
+    >
+      {label}
+    </Text>
+    <Box style={{ flex: 1, minWidth: 0 }}>{children}</Box>
+  </Box>
+)
+
+const SectionHeading: React.FunctionComponent<{
+  children: React.ReactNode
+}> = ({ children }) => (
+  <Text
+    size="xs"
+    fw={600}
+    ff="monospace"
+    c="var(--app-section-label)"
+    tt="uppercase"
+    style={{ letterSpacing: '0.1em', padding: '12px 0 6px' }}
+  >
+    {children}
+  </Text>
+)
+
+const FunctionValue: React.FunctionComponent<{ pikkuFuncId: string }> = ({
+  pikkuFuncId,
+}) => {
+  const { data: funcMeta } = useFunctionMeta(pikkuFuncId)
+  const { navigateInPanel } = usePanelContext()
+  const displayName = funcMeta?.name || pikkuFuncId
+
+  return (
+    <Text
+      size="sm"
+      fw={600}
+      ff="monospace"
+      c="var(--app-meta-value)"
+      style={{ cursor: 'pointer' }}
+      onClick={() =>
+        navigateInPanel('function', pikkuFuncId, displayName, funcMeta)
+      }
+    >
+      {displayName}
+    </Text>
+  )
+}
+
 const WiredToSection: React.FunctionComponent<{ functionName: string }> = ({
   functionName,
 }) => {
@@ -57,14 +120,14 @@ const WiredToSection: React.FunctionComponent<{ functionName: string }> = ({
 
   return (
     <Box>
-      <SectionLabel>Wired To ({allWirings.length})</SectionLabel>
+      <SectionHeading>Wired To ({allWirings.length})</SectionHeading>
       <Table verticalSpacing={4} horizontalSpacing="xs">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th c="dimmed" fw={500} fz="xs">
+            <Table.Th c="var(--app-section-label)" fw={500} fz="xs" ff="monospace">
               Name
             </Table.Th>
-            <Table.Th c="dimmed" fw={500} fz="xs">
+            <Table.Th c="var(--app-section-label)" fw={500} fz="xs" ff="monospace">
               Type
             </Table.Th>
           </Table.Tr>
@@ -110,105 +173,114 @@ export const CommonDetails: React.FunctionComponent<CommonDetailsProps> = ({
   children,
 }) => {
   const hasSchemas = !!(inputSchemaName || outputSchemaName)
+  const filteredWires = wires?.wires.filter((w) => !SESSION_WIRES.has(w)) || []
+  const hasSession = wires?.wires.some((w) => SESSION_WIRES.has(w)) || false
 
   return (
     <>
-      {description !== undefined && (
-        <Box>
-          <SectionLabel>Description</SectionLabel>
-          {description ? (
-            <Text size="md">{description}</Text>
-          ) : (
-            <Text size="md" c="dimmed">
-              No description
-            </Text>
-          )}
-        </Box>
+      {description != null && description !== '' && (
+        <MetaRow label="description">
+          <Text size="sm" c="var(--app-meta-value)">{description}</Text>
+        </MetaRow>
       )}
 
-      <FunctionLink pikkuFuncId={pikkuFuncId} label={functionLinkLabel} />
+      {pikkuFuncId && (
+        <MetaRow label={functionLinkLabel || 'function'}>
+          <FunctionValue pikkuFuncId={pikkuFuncId} />
+        </MetaRow>
+      )}
 
       {services && services.length > 0 && (
-        <Box>
-          <SectionLabel>Services</SectionLabel>
-          <Group gap={6}>
+        <MetaRow label="services">
+          <Group gap={4}>
             {services.map((svc: string) => (
-              <PikkuBadge
+              <Badge
                 key={svc}
-                type="dynamic"
-                badge="service"
-                value={svc}
-              />
+                size="sm"
+                variant="light"
+                style={{
+                  background: 'var(--app-service-bg)',
+                  border: '1px solid var(--app-service-border)',
+                  color: 'var(--app-service-color)',
+                }}
+              >
+                {svc}
+              </Badge>
             ))}
           </Group>
-        </Box>
+        </MetaRow>
       )}
 
       {wires && wires.wires.length > 0 && (
-        <Box>
-          <SectionLabel>Wires</SectionLabel>
-          <Group gap={6}>
-            {wires.wires.some((w) => SESSION_WIRES.has(w)) && (
-              <PikkuBadge type="flag" flag="session" />
-            )}
-            {wires.wires
-              .filter((w) => !SESSION_WIRES.has(w))
-              .map((w: string) => (
-                <PikkuBadge key={w} type="dynamic" badge="wire" value={w} />
-              ))}
+        <MetaRow label="wires">
+          <Group gap={4}>
+            {hasSession && <PikkuBadge type="flag" flag="session" />}
+            {filteredWires.map((w: string) => (
+              <PikkuBadge key={w} type="dynamic" badge="wire" value={w} />
+            ))}
           </Group>
-        </Box>
+        </MetaRow>
       )}
 
       {middleware && middleware.length > 0 && (
-        <Box>
-          <SectionLabel>Middleware</SectionLabel>
-          <Group gap={6}>
+        <MetaRow label="middleware">
+          <Group gap={4}>
             {middleware.map((mw: any, i: number) => (
               <LinkedBadge key={i} item={mw} kind="middleware" />
             ))}
           </Group>
-        </Box>
+        </MetaRow>
       )}
 
       {permissions && permissions.length > 0 && (
-        <Box>
-          <SectionLabel>Permissions</SectionLabel>
-          <Group gap={6}>
+        <MetaRow label="permissions">
+          <Group gap={4}>
             {permissions.map((perm: any, i: number) => (
               <LinkedBadge key={i} item={perm} kind="permission" />
             ))}
           </Group>
-        </Box>
+        </MetaRow>
       )}
 
       {tags && tags.length > 0 && (
-        <Box>
-          <SectionLabel>Tags</SectionLabel>
-          <Group gap={6}>
+        <MetaRow label="tags">
+          <Group gap={4}>
             {tags.map((tag: string, i: number) => (
-              <PikkuBadge key={i} type="dynamic" badge="tag" value={tag} />
+              <Badge
+                key={i}
+                size="sm"
+                variant="light"
+                ff="monospace"
+                style={{
+                  background: 'var(--app-tag-bg)',
+                  border: '1px solid var(--app-tag-border)',
+                  color: 'var(--app-tag-color)',
+                }}
+              >
+                {tag}
+              </Badge>
             ))}
           </Group>
-        </Box>
+        </MetaRow>
       )}
 
       {errors && errors.length > 0 && (
-        <Box>
-          <SectionLabel>Errors</SectionLabel>
-          <Group gap={6}>
+        <MetaRow label="errors">
+          <Group gap={4}>
             {errors.map((err: string, i: number) => (
-              <PikkuBadge key={i} type="dynamic" badge="error" value={err} />
+              <Badge key={i} size="sm" color="red" variant="light">
+                {err}
+              </Badge>
             ))}
           </Group>
-        </Box>
+        </MetaRow>
       )}
 
       {functionName && <WiredToSection functionName={functionName} />}
 
       {hasSchemas && (
         <>
-          <Divider />
+          <Divider mt="sm" />
           <SchemaSection label="Input" schemaName={inputSchemaName} />
           <SchemaSection label="Output" schemaName={outputSchemaName} />
         </>
