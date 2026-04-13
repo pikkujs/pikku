@@ -2,7 +2,6 @@
   "name": "@pikku/deploy-standalone",
   "version": "0.12.0",
   "type": "module",
-  "private": true,
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc -b",
