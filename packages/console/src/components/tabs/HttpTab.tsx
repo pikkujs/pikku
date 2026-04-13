@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Box, Text, TextInput, Stack, UnstyledButton, ScrollArea } from '@mantine/core'
+import { Box, Text, TextInput, Stack, UnstyledButton, ScrollArea, Group } from '@mantine/core'
 import { Search } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { PikkuBadge } from '../ui/PikkuBadge'
@@ -44,8 +44,16 @@ export const HttpTab: React.FunctionComponent = () => {
         }}
       >
         <Box p="xs">
+          <Group justify="space-between" mb={6}>
+            <Text size="xs" fw={600} ff="monospace" c="var(--app-meta-label)">
+              HTTP Routes
+            </Text>
+            <Text size="xs" ff="monospace" c="dimmed">
+              {routes.length} routes
+            </Text>
+          </Group>
           <TextInput
-            placeholder="Search routes..."
+            placeholder="Search..."
             leftSection={<Search size={14} />}
             value={search}
             onChange={(e) => setSearch(e.currentTarget.value)}

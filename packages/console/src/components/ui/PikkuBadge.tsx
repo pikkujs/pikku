@@ -76,8 +76,8 @@ const ColoredIcon: React.FunctionComponent<{
 )
 
 export const PikkuBadge: React.FunctionComponent<PikkuBadgeProps> = (props) => {
-  const { type, ...rest } = props
-  const size = 'md'
+  const { type, size: propSize, ...rest } = props as any
+  const size = propSize || 'md'
   const iconSize = ICON_SIZES[size] || 10
 
   if (type === 'label') {

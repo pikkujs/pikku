@@ -162,7 +162,7 @@ export const SchemaViewer: React.FunctionComponent<SchemaViewerProps> = ({
     >
       <colgroup>
         <col />
-        <col style={{ width: 100 }} />
+        <col style={{ width: 150 }} />
         <col />
       </colgroup>
       <Table.Thead>
