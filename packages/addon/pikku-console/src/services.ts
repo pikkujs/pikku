@@ -2,6 +2,7 @@ import { pikkuAddonServices } from '#pikku'
 import { WiringService } from './services/wiring.service.js'
 import { AddonService } from './services/addon.service.js'
 import { OAuthService } from './services/oauth.service.js'
+import type { CodeEditService } from './services/code-edit.service.js'
 import { dirname } from 'node:path'
 
 export const createSingletonServices = pikkuAddonServices(
@@ -36,9 +37,7 @@ export const createSingletonServices = pikkuAddonServices(
     const oauthService = new OAuthService()
 
     const metaBasePath = existingMetaService?.basePath
-    let codeEditService: InstanceType<
-      typeof import('./services/code-edit.service.js').CodeEditService
-    > | null = null
+    let codeEditService: CodeEditService | null = null
     if (metaBasePath) {
       const codeEditPath = './services/code-edit.service.js'
       const { CodeEditService } = await import(codeEditPath)
