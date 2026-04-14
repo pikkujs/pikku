@@ -18,6 +18,10 @@ function assertWorkflowService(workflowService: unknown): asserts workflowServic
   if (!workflowService) throw new MissingServiceError('workflowService is required')
 }
 
+function assertWorkflowRunService(workflowRunService: unknown): asserts workflowRunService {
+  if (!workflowRunService) throw new MissingServiceError('workflowRunService is required')
+}
+
 export const workflowStarter = pikkuSessionlessFunc<
   { workflowName: string; data?: unknown },
   { runId: string }
@@ -52,48 +56,137 @@ export const workflowStatusChecker = pikkuSessionlessFunc<
   },
 })
 
+/**
+ * Minimal workflow status stream — sends step names and statuses only.
+ * Use this for user-facing frontends where internal details should not be exposed.
+ */
 export const workflowStatusStream = pikkuSessionlessFunc<
   { workflowName: string; runId: string },
-  WorkflowRunStatus
+  unknown
 >({
   auth: ${authFlag},
-  func: async ({ workflowService }, { runId }, { channel }) => {
-    assertWorkflowService(workflowService)
+  func: async ({ workflowRunService }, { runId }, { channel }) => {
+    assertWorkflowRunService(workflowRunService)
+    if (!channel) return
+
     const terminalStatuses = new Set(['completed', 'failed', 'cancelled'])
-    const pollIntervalMs = 1000
-    const maxWaitMs = 300_000
+    let lastHash = ''
 
-    const startTime = Date.now()
-    let lastStatusJson = ''
-
-    while (Date.now() - startTime < maxWaitMs) {
-      const status = await workflowService.getRunStatus(runId)
-      if (!status) throw new Error(\`Run not found: \${runId}\`)
-
-      const statusJson = JSON.stringify(status)
-      if (statusJson !== lastStatusJson) {
-        lastStatusJson = statusJson
-        if (channel) {
-          channel.send(status)
-        }
+    const poll = async () => {
+      const run = await workflowRunService.getRun(runId)
+      if (!run) {
+        channel.close()
+        return false
       }
 
-      if (terminalStatuses.has(status.status)) {
-        if (channel) {
-          channel.close()
-        }
-        return status
+      const steps = await workflowRunService.getRunSteps(runId)
+
+      const hash = JSON.stringify({
+        s: run.status,
+        steps: steps.map((s: { stepName: string; status: string }) => [s.stepName, s.status]),
+      })
+
+      if (hash !== lastHash) {
+        lastHash = hash
+        channel.send({
+          type: 'update',
+          status: run.status,
+          steps: steps.map((s: { stepName: string; status: string }) => ({
+            stepName: s.stepName,
+            status: s.status,
+          })),
+        })
       }
 
-      await new Promise((r) => setTimeout(r, pollIntervalMs))
+      if (terminalStatuses.has(run.status)) {
+        channel.send({ type: 'done' })
+        channel.close()
+        return false
+      }
+      return true
     }
 
-    // Timeout — return last known status
-    const finalStatus = await workflowService.getRunStatus(runId)
-    if (channel) {
-      channel.close()
+    const shouldContinue = await poll()
+    if (!shouldContinue) return
+
+    await new Promise<void>((resolve) => {
+      const interval = setInterval(async () => {
+        const cont = await poll()
+        if (!cont) {
+          clearInterval(interval)
+          resolve()
+        }
+      }, 500)
+    })
+  },
+})
+
+/**
+ * Full workflow status stream — includes output, error, and child run IDs.
+ * Use this for admin consoles and internal tooling.
+ */
+export const workflowStatusStreamFull = pikkuSessionlessFunc<
+  { workflowName: string; runId: string },
+  unknown
+>({
+  auth: ${authFlag},
+  func: async ({ workflowRunService }, { runId }, { channel }) => {
+    assertWorkflowRunService(workflowRunService)
+    if (!channel) return
+
+    const terminalStatuses = new Set(['completed', 'failed', 'cancelled'])
+    let lastHash = ''
+
+    const poll = async () => {
+      const run = await workflowRunService.getRun(runId)
+      if (!run) {
+        channel.close()
+        return false
+      }
+
+      const steps = await workflowRunService.getRunSteps(runId)
+
+      const hash = JSON.stringify({
+        s: run.status,
+        o: run.output,
+        steps: steps.map((s: { stepName: string; status: string }) => [s.stepName, s.status]),
+      })
+
+      if (hash !== lastHash) {
+        lastHash = hash
+        channel.send({
+          type: 'update',
+          status: run.status,
+          output: run.output,
+          error: run.error,
+          steps: steps.map((s: { stepName: string; status: string; childRunId?: string }) => ({
+            stepName: s.stepName,
+            status: s.status,
+            ...(s.childRunId ? { childRunId: s.childRunId } : {}),
+          })),
+        })
+      }
+
+      if (terminalStatuses.has(run.status)) {
+        channel.send({ type: 'done' })
+        channel.close()
+        return false
+      }
+      return true
     }
-    return finalStatus as WorkflowRunStatus
+
+    const shouldContinue = await poll()
+    if (!shouldContinue) return
+
+    await new Promise<void>((resolve) => {
+      const interval = setInterval(async () => {
+        const cont = await poll()
+        if (!cont) {
+          clearInterval(interval)
+          resolve()
+        }
+      }, 500)
+    })
   },
 })
 
@@ -130,6 +223,12 @@ wireHTTPRoutes({
       method: 'get',
       sse: true,
       func: workflowStatusStream,
+    },
+    workflowStatusStreamFull: {
+      route: '/workflow/:workflowName/status/:runId/stream/full',
+      method: 'get',
+      sse: true,
+      func: workflowStatusStreamFull,
     },
     graphStart: {
       route: '/workflow/:workflowName/graph/:nodeId',
