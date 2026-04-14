@@ -282,6 +282,10 @@ Then(
 Then(
   'the last stream event status should be {string}',
   function (expected: string) {
+    console.log(
+      `[DEBUG] Stream events (${state.streamEvents.length}):`,
+      JSON.stringify(state.streamEvents, null, 2)
+    )
     const last = state.streamEvents[state.streamEvents.length - 1]
     expect(last).toBeTruthy()
     expect(last.status).toBe(expected)
