@@ -7,6 +7,7 @@
 import {
   usePikkuQuery,
   usePikkuMutation,
+  usePikkuInfiniteQuery,
 } from '#pikku/pikku-react-query.gen.js'
 
 // --- usePikkuQuery ---
@@ -35,3 +36,17 @@ usePikkuMutation('doesNotExist')
 
 // @ts-expect-error — wrong input type must fail
 mutation.mutate({ wrong: 'field' })
+
+// --- usePikkuInfiniteQuery ---
+
+// Valid: listItems has nextCursor in output
+void usePikkuInfiniteQuery('listItems', { limit: 20 })
+
+// @ts-expect-error — rpcTest output has no nextCursor, must fail
+usePikkuInfiniteQuery('rpcTest', { in: 1 })
+
+// @ts-expect-error — unknown RPC name must fail
+usePikkuInfiniteQuery('doesNotExist', {})
+
+// @ts-expect-error — wrong input type must fail
+usePikkuInfiniteQuery('listItems', { wrong: 'field' })

@@ -53,7 +53,7 @@ export const useWorkflowStatus = (
 `
     : ''
 
-  return `import { useQuery, useMutation, type UseQueryOptions, type UseMutationOptions } from '@tanstack/react-query'
+  return `import { useQuery, useInfiniteQuery, useMutation, type UseQueryOptions, type UseInfiniteQueryOptions, type UseMutationOptions, type InfiniteData } from '@tanstack/react-query'
 import { usePikkuRPC } from '@pikku/react'
 import type { FlattenedRPCMap } from '${rpcMapPath}'${workflowImport}
 
@@ -79,6 +79,30 @@ export const usePikkuMutation = <Name extends keyof FlattenedRPCMap>(
   const rpc = usePikkuRPC<{ invoke: RPCInvoke }>()
   return useMutation<FlattenedRPCMap[Name]['output'], Error, FlattenedRPCMap[Name]['input']>({
     mutationFn: (data) => rpc.invoke(name, data),
+    ...options,
+  })
+}
+
+type PaginatedKeys = {
+  [K in keyof FlattenedRPCMap]: FlattenedRPCMap[K]['output'] extends { nextCursor?: string | null } ? K : never
+}[keyof FlattenedRPCMap]
+
+type InfiniteOpts<Name extends PaginatedKeys> = Omit<
+  UseInfiniteQueryOptions<FlattenedRPCMap[Name]['output'], Error, InfiniteData<FlattenedRPCMap[Name]['output'], string | undefined>, readonly unknown[], string | undefined>,
+  'queryKey' | 'queryFn' | 'getNextPageParam' | 'initialPageParam'
+>
+
+export const usePikkuInfiniteQuery = <Name extends PaginatedKeys>(
+  name: Name,
+  data: Omit<FlattenedRPCMap[Name]['input'], 'nextCursor'>,
+  options?: InfiniteOpts<Name>
+) => {
+  const rpc = usePikkuRPC<{ invoke: RPCInvoke }>()
+  return useInfiniteQuery({
+    queryKey: [name, data] as const,
+    queryFn: ({ pageParam }: { pageParam: string | undefined }) => rpc.invoke(name, { ...data, nextCursor: pageParam } as FlattenedRPCMap[Name]['input']),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage: FlattenedRPCMap[Name]['output']) => (lastPage as { nextCursor?: string }).nextCursor ?? undefined,
     ...options,
   })
 }
