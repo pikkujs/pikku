@@ -1,8 +1,5 @@
 import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
-import { join, dirname } from 'node:path'
-import { existsSync } from 'node:fs'
 
 export const installAddon = pikkuSessionlessFunc<
   {
@@ -18,6 +15,9 @@ export const installAddon = pikkuSessionlessFunc<
   expose: true,
   auth: false,
   func: async ({ metaService }, { packageName, namespace, version }) => {
+    const { readFile, writeFile, mkdir } = await import('node:fs/promises')
+    const { join, dirname } = await import('node:path')
+    const { existsSync } = await import('node:fs')
     const validPkg = /^(@[a-z0-9-]+\/)?[a-z0-9._-]+$/
     if (!validPkg.test(packageName)) {
       throw new Error(`Invalid package name: ${packageName}`)

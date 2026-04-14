@@ -1,5 +1,3 @@
-import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
 import { pikkuSessionlessFunc } from '#pikku'
 import type { FunctionMeta } from '../services/wiring.service.js'
 
@@ -10,12 +8,18 @@ export const getFunctionsMeta = pikkuSessionlessFunc<null, FunctionMeta[]>({
   expose: true,
   auth: false,
   func: async ({ metaService }) => {
+    const { readFile } = await import('node:fs/promises')
+    const { join } = await import('node:path')
     const functionsMeta = await metaService.getFunctionsMeta()
     const functions = Object.values(functionsMeta)
 
     let versions: Record<string, { latest: number }> | null = null
     try {
-      const manifestPath = join(metaService.basePath!, '..', 'versions.pikku.json')
+      const manifestPath = join(
+        metaService.basePath!,
+        '..',
+        'versions.pikku.json'
+      )
       const content = await readFile(manifestPath, 'utf-8')
       const manifest = JSON.parse(content)
       versions = manifest.contracts || null

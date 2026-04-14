@@ -1,8 +1,5 @@
 import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
-import { readFile } from 'node:fs/promises'
-import { join, dirname } from 'node:path'
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 
 export const installOpenapiAddon = pikkuSessionlessFunc<
   {
@@ -18,6 +15,9 @@ export const installOpenapiAddon = pikkuSessionlessFunc<
   expose: true,
   auth: false,
   func: async ({ metaService }, { name, swaggerUrl, credential }) => {
+    const { readFile } = await import('node:fs/promises')
+    const { join, dirname } = await import('node:path')
+    const { existsSync, mkdirSync, writeFileSync } = await import('node:fs')
     if (!/^[a-z0-9-]+$/.test(name)) {
       throw new Error(`Invalid addon name: ${name}`)
     }
