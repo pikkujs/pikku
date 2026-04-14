@@ -1,6 +1,7 @@
 import React from 'react'
 import { Stack, Text, Button } from '@mantine/core'
 import { ExternalLink } from 'lucide-react'
+import classes from '../ui/console.module.css'
 
 interface EmptyStatePlaceholderProps {
   icon: React.ComponentType<{ size?: number; strokeWidth?: number }>
@@ -17,7 +18,7 @@ export const EmptyStatePlaceholder: React.FunctionComponent<
       align="center"
       justify="center"
       gap="md"
-      style={{ flex: 1, height: '100%' }}
+      className={classes.emptyState}
       py="xl"
     >
       <Icon size={48} strokeWidth={1} />

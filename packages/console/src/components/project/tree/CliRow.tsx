@@ -3,6 +3,7 @@ import { Group, Stack, Text, ActionIcon } from '@mantine/core'
 import { Workflow } from 'lucide-react'
 import { usePanelContext } from '../../../context/PanelContext'
 import styles from './Row.module.css'
+import css from '../../ui/console.module.css'
 
 interface CliRowProps {
   name: string
@@ -31,7 +32,7 @@ export const CliRow: React.FunctionComponent<CliRowProps> = ({
       }}
       onClick={() => openCLI(wireId, data)}
     >
-      <Stack gap={0} style={{ flex: 1 }}>
+      <Stack gap={0} className={css.flexGrow}>
         <Text fw={600} size="md">
           {name}
         </Text>

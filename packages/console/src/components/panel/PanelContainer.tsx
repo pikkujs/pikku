@@ -11,6 +11,7 @@ import {
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { usePanelContext } from '../../context/PanelContext'
 import { createPanelChildren } from './PanelFactory'
+import classes from '../ui/console.module.css'
 
 interface PanelContainerProps {
   showTabs?: boolean
@@ -46,7 +47,7 @@ export const PanelContainer: React.FunctionComponent<PanelContainerProps> = ({
   }
 
   return (
-    <Stack gap={0} style={{ height: '100%', overflow: 'hidden' }}>
+    <Stack gap={0} className={`${classes.flexColumn} ${classes.overflowHidden}`}>
       {showTabs && (
         <Box
           style={{
@@ -61,6 +62,7 @@ export const PanelContainer: React.FunctionComponent<PanelContainerProps> = ({
                 wrap="nowrap"
                 px="md"
                 py="xs"
+                className={classes.noShrink}
                 style={{
                   cursor: 'pointer',
                   borderLeft: '1px solid var(--mantine-color-default-border)',
@@ -74,7 +76,6 @@ export const PanelContainer: React.FunctionComponent<PanelContainerProps> = ({
                       ? 'var(--mantine-color-gray-1)'
                       : 'transparent',
                   transition: 'all 0.2s',
-                  flexShrink: 0,
                 }}
                 onClick={() => setActivePanel(panel.id)}
               >
@@ -126,7 +127,7 @@ export const PanelContainer: React.FunctionComponent<PanelContainerProps> = ({
         </Box>
       )}
 
-      <Box py="md" style={{ flex: 1, overflow: 'auto' }}>
+      <Box py="md" className={`${classes.flexGrow} ${classes.overflowAuto}`}>
         <Stack gap="xl">
           {children.map((child) => (
             <Box key={child.id}>{child.content}</Box>

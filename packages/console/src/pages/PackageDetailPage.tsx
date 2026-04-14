@@ -16,6 +16,7 @@ import {
   ThemeIcon,
   TypographyStylesProvider,
 } from '@mantine/core'
+import styles from '../components/ui/console.module.css'
 import {
   Package,
   Code2,
@@ -737,7 +738,7 @@ export const PackageDetailPage: React.FunctionComponent<{
         >
           <Group align="flex-start" gap="md" wrap="nowrap">
             <PackageIcon icon={pkg.icon} name={pkg.displayName} size={48} />
-            <Stack gap={4} style={{ minWidth: 0, flex: 1 }}>
+            <Stack gap={4} className={styles.flexGrow}>
               <Group gap="sm" align="center" justify="space-between">
                 <Group gap="xs" align="center">
                   <Text fw={600} size="lg">

@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react'
-import { Box, Text, TextInput, Stack, UnstyledButton, ScrollArea, Group } from '@mantine/core'
-import { Search } from 'lucide-react'
+import { Box, Text, ScrollArea, Stack, UnstyledButton } from '@mantine/core'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { HttpTabbedPanel } from '../http/HttpTabbedPanel'
+import { SearchInput } from '../ui/SearchInput'
+import { EmptyState } from '../ui/EmptyState'
+import styles from '../ui/console.module.css'
 
 export const HttpTab: React.FunctionComponent = () => {
   const { meta } = usePikkuMeta()
@@ -32,35 +34,16 @@ export const HttpTab: React.FunctionComponent = () => {
   }, [routes, selected])
 
   return (
-    <Box style={{ display: 'flex', height: '100%' }}>
-      <Box
-        style={{
-          width: 280,
-          minWidth: 220,
-          borderRight: '1px solid var(--mantine-color-default-border)',
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100%',
-        }}
-      >
-        <Box p="xs">
-          <Group justify="space-between" mb={6}>
-            <Text size="xs" fw={600} ff="monospace" c="var(--app-meta-label)">
-              HTTP Routes
-            </Text>
-            <Text size="xs" ff="monospace" c="dimmed">
-              {routes.length} routes
-            </Text>
-          </Group>
-          <TextInput
-            placeholder="Search..."
-            leftSection={<Search size={14} />}
-            value={search}
-            onChange={(e) => setSearch(e.currentTarget.value)}
-            size="xs"
-          />
-        </Box>
-        <ScrollArea style={{ flex: 1 }}>
+    <Box className={styles.flexRow}>
+      <Box className={`${styles.listPaneFixed} ${styles.flexColumn}`} style={{ width: 280, minWidth: 220 }}>
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          label="HTTP Routes"
+          count={routes.length}
+          placeholder="Search..."
+        />
+        <ScrollArea className={styles.flexGrow}>
           <Stack gap={0}>
             {filtered.map((route: any) => {
               const key = `${route.method}::${route.route}`
@@ -85,7 +68,7 @@ export const HttpTab: React.FunctionComponent = () => {
                   }}
                 >
                   <PikkuBadge type="httpMethod" value={route.method?.toUpperCase() || 'GET'} size="xs" />
-                  <Box style={{ flex: 1, minWidth: 0 }}>
+                  <Box className={styles.flexGrow}>
                     <Text
                       size="xs"
                       ff="monospace"
@@ -109,16 +92,14 @@ export const HttpTab: React.FunctionComponent = () => {
           </Stack>
         </ScrollArea>
       </Box>
-      <Box style={{ flex: 1, overflow: 'auto' }}>
+      <Box className={`${styles.flexGrow} ${styles.overflowAuto}`}>
         {selectedRoute ? (
           <HttpTabbedPanel
             wireId={`${selectedRoute.method}::${selectedRoute.route}`}
             metadata={selectedRoute}
           />
         ) : (
-          <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-            <Text c="dimmed">Select a route to view its details</Text>
-          </Box>
+          <EmptyState message="Select a route to view its details" />
         )}
       </Box>
     </Box>

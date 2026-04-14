@@ -1,6 +1,7 @@
 import React from 'react'
 import { Group, Text, Tabs, Tooltip, ActionIcon, Box } from '@mantine/core'
 import { ExternalLink } from 'lucide-react'
+import classes from '../ui/console.module.css'
 
 interface Tab {
   value: string
@@ -25,11 +26,11 @@ export const TabbedPageHeader: React.FunctionComponent<
       gap="xs"
       px="md"
       h={50}
+      className={classes.noShrink}
       style={{
         zIndex: 9999,
         borderBottom: '1px solid var(--mantine-color-default-border)',
         backgroundColor: 'var(--mantine-color-body)',
-        flexShrink: 0,
       }}
     >
       <Tabs

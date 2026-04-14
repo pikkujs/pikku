@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react'
-import { Box, Text, TextInput, ScrollArea, Group, Badge, UnstyledButton } from '@mantine/core'
-import { Search, ChevronDown, ChevronRight } from 'lucide-react'
+import { Box, Text, ScrollArea, Badge, UnstyledButton } from '@mantine/core'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import type { ChannelMeta } from '@pikku/core/channel'
+import { SearchInput } from '../ui/SearchInput'
+import styles from '../ui/console.module.css'
 
 export type ChannelSelection =
   | { type: 'handler'; handler: string }
@@ -78,7 +80,7 @@ const ChannelTree: React.FunctionComponent<{
         ) : (
           <ChevronRight size={9} color="var(--app-section-label)" />
         )}
-        <Text size="xs" ff="monospace" style={{ flex: 1 }}>
+        <Text size="xs" ff="monospace" className={styles.flexGrow}>
           {name}
         </Text>
         <Badge size="xs" variant="light" color="cyan" ff="monospace">
@@ -110,11 +112,8 @@ const ChannelTree: React.FunctionComponent<{
                 }}
               >
                 <Box
+                  className={styles.typeDot}
                   style={{
-                    width: 5,
-                    height: 5,
-                    borderRadius: '50%',
-                    flexShrink: 0,
                     background: h === 'connect' ? 'rgba(6,182,212,0.6)' : 'rgba(239,68,68,0.5)',
                   }}
                 />
@@ -184,7 +183,7 @@ const ChannelTree: React.FunctionComponent<{
                           transition: 'all 0.15s',
                         }}
                       >
-                        <Box style={{ flex: 1, minWidth: 0 }}>
+                        <Box className={styles.flexGrow}>
                           <Text
                             size="xs"
                             ff="monospace"
@@ -246,25 +245,15 @@ export const ChannelNavTree: React.FunctionComponent<ChannelNavTreeProps> = ({
   const channelCount = channelEntries.length
 
   return (
-    <Box style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <Box p="xs">
-        <Group justify="space-between" mb={6}>
-          <Text size="xs" fw={600} ff="monospace" c="var(--app-meta-label)">
-            Channels
-          </Text>
-          <Text size="xs" ff="monospace" c="dimmed">
-            {channelCount} {channelCount === 1 ? 'channel' : 'channels'}
-          </Text>
-        </Group>
-        <TextInput
-          placeholder="Search..."
-          leftSection={<Search size={14} />}
-          size="xs"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </Box>
-      <ScrollArea style={{ flex: 1 }}>
+    <Box className={styles.flexColumn}>
+      <SearchInput
+        value={search}
+        onChange={setSearch}
+        label="Channels"
+        count={channelCount}
+        placeholder="Search..."
+      />
+      <ScrollArea className={styles.flexGrow}>
         {channelEntries.map(([name, chMeta]) => (
           <ChannelTree
             key={name}

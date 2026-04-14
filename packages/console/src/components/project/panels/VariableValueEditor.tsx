@@ -16,7 +16,7 @@ import { Save, AlertTriangle, CheckCircle, Eye, Pencil } from 'lucide-react'
 import { useVariableValue, useSetVariable } from '../../../hooks/useVariables'
 import { useSchema } from '../../../hooks/useWirings'
 import { SchemaForm } from '../../ui/SchemaForm'
-import { SectionLabel } from './shared/SectionLabel'
+import { SectionLabel } from '../../ui/SectionLabel'
 
 interface VariableValueEditorProps {
   variableId: string | undefined

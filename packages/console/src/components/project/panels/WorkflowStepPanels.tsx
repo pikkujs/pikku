@@ -14,8 +14,9 @@ import { useOutputSchema } from '../../../hooks/useWirings'
 import { SchemaViewer } from '../../ui/SchemaViewer'
 import { PikkuBadge } from '../../ui/PikkuBadge'
 import { workflowInputTypeDefs } from '../../ui/badge-defs'
-import { SectionLabel } from './shared/SectionLabel'
+import { SectionLabel } from '../../ui/SectionLabel'
 import { EmptyState } from './shared/EmptyState'
+import classes from '../../ui/console.module.css'
 
 interface WorkflowStepPanelProps {
   stepId: string
@@ -39,7 +40,7 @@ const TypeBadge: React.FunctionComponent<{
     <PikkuBadge
       type="workflowInputType"
       value={type}
-      style={{ cursor: isHoverable ? 'pointer' : 'default' }}
+      className={isHoverable ? classes.clickableText : undefined}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     />

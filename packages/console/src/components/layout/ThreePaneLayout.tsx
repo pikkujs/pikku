@@ -4,6 +4,7 @@ import { Box, ActionIcon, Tooltip } from '@mantine/core'
 import { PanelLeftOpen, PanelRightOpen } from 'lucide-react'
 import { PanelContainer } from '../panel/PanelContainer'
 import { usePanelContext } from '../../context/PanelContext'
+import classes from '../ui/console.module.css'
 
 const CollapsedSidebar: React.FunctionComponent<{
   side: 'left' | 'right'
@@ -92,10 +93,11 @@ export const ThreePaneLayout: React.FunctionComponent<ThreePaneLayoutProps> = ({
   )
 
   return (
-    <Box style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+    <Box className={classes.flexColumn} style={{ height: '100vh' }}>
       {header}
       <Box
-        style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row' }}
+        className={classes.flexRow}
+        style={{ flex: 1, minHeight: 0 }}
       >
         {hasLeftPane && leftCollapsed && (
           <CollapsedSidebar
@@ -103,7 +105,7 @@ export const ThreePaneLayout: React.FunctionComponent<ThreePaneLayoutProps> = ({
             onExpand={() => setLeftCollapsed(false)}
           />
         )}
-        <Box style={{ flex: 1, minWidth: 0, height: '100%' }}>
+        <Box className={`${classes.flexGrow} ${classes.flexColumn}`}>
           <Allotment
             key={`${hasLeftPane}-${hasRightPane}`}
             defaultSizes={
@@ -126,9 +128,8 @@ export const ThreePaneLayout: React.FunctionComponent<ThreePaneLayoutProps> = ({
                 maxSize={300}
               >
                 <Box
+                  className={`${classes.flexColumn} ${classes.overflowAuto}`}
                   style={{
-                    height: '100%',
-                    overflow: 'auto',
                     borderRight:
                       '1px solid var(--mantine-color-default-border)',
                   }}
@@ -138,7 +139,7 @@ export const ThreePaneLayout: React.FunctionComponent<ThreePaneLayoutProps> = ({
               </Allotment.Pane>
             )}
             <Allotment.Pane>
-              <Box style={{ height: '100%', overflow: 'auto' }}>{children}</Box>
+              <Box className={`${classes.flexColumn} ${classes.overflowAuto}`}>{children}</Box>
             </Allotment.Pane>
             {hasRightPane && (
               <Allotment.Pane
@@ -147,7 +148,7 @@ export const ThreePaneLayout: React.FunctionComponent<ThreePaneLayoutProps> = ({
                 minSize={200}
                 preferredSize={400}
               >
-                <Box style={{ height: '100%', overflow: 'auto' }}>
+                <Box className={`${classes.flexColumn} ${classes.overflowAuto}`}>
                   <PanelContainer
                     showTabs={showTabs}
                     emptyMessage={emptyPanelMessage}

@@ -1,5 +1,6 @@
 import React from 'react'
 import { Badge, type BadgeProps } from '@mantine/core'
+import css from './console.module.css'
 import {
   httpMethodDefs,
   mcpTypeDefs,
@@ -113,7 +114,7 @@ export const PikkuBadge: React.FunctionComponent<PikkuBadgeProps> = (props) => {
         tt="none"
         variant="light"
         color={def.color || 'gray'}
-        style={{ flexShrink: 0 }}
+        className={css.noShrink}
         leftSection={
           Icon ? (
             <ColoredIcon icon={Icon} size={iconSize} color={def.color} />
@@ -148,7 +149,7 @@ export const PikkuBadge: React.FunctionComponent<PikkuBadgeProps> = (props) => {
         tt="none"
         variant="light"
         color={def.color || 'gray'}
-        style={{ flexShrink: 0 }}
+        className={css.noShrink}
         leftSection={
           Icon ? (
             <ColoredIcon
@@ -179,7 +180,7 @@ export const PikkuBadge: React.FunctionComponent<PikkuBadgeProps> = (props) => {
       tt="none"
       variant="light"
       color={def?.color || 'gray'}
-      style={{ flexShrink: 0 }}
+      className={css.noShrink}
       {...badgeProps}
     >
       {humanize(label)}

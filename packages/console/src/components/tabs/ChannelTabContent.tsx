@@ -9,8 +9,9 @@ import {
 } from '../channel/ChannelNavTree'
 import { ChannelDetailView } from '../channel/ChannelDetailView'
 import type { ChannelMeta } from '@pikku/core/channel'
+import styles from '../ui/console.module.css'
 
-const ChannelPageInner: React.FunctionComponent<{
+const ChannelTabInner: React.FunctionComponent<{
   channelName: string
   channelMeta: ChannelMeta
   allChannelsMeta: Record<string, ChannelMeta>
@@ -27,16 +28,10 @@ const ChannelPageInner: React.FunctionComponent<{
   )
 
   return (
-    <Box style={{ display: 'flex', height: '100%' }}>
+    <Box className={styles.flexRow}>
       <Box
-        style={{
-          width: 280,
-          minWidth: 220,
-          borderRight: '1px solid var(--app-row-border)',
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100%',
-        }}
+        className={`${styles.listPaneFixed} ${styles.flexColumn}`}
+        style={{ width: 280, minWidth: 220 }}
       >
         <ChannelNavTree
           channelName={channelName}
@@ -47,7 +42,7 @@ const ChannelPageInner: React.FunctionComponent<{
           onChannelSwitch={handleChannelSwitch}
         />
       </Box>
-      <Box style={{ flex: 1, overflow: 'hidden', minWidth: 0 }}>
+      <Box className={`${styles.detailPane} ${styles.overflowHidden}`}>
         <ChannelDetailView
           channelName={channelName}
           channel={channelMeta}
@@ -58,7 +53,7 @@ const ChannelPageInner: React.FunctionComponent<{
   )
 }
 
-export const ChannelPageClient: React.FunctionComponent = () => {
+export const ChannelTabContent: React.FunctionComponent = () => {
   const [searchParams] = useSearchParams()
   const channelName = searchParams.get('id') || ''
   const { meta } = usePikkuMeta()
@@ -78,7 +73,7 @@ export const ChannelPageClient: React.FunctionComponent = () => {
 
   return (
     <PanelProvider>
-      <ChannelPageInner
+      <ChannelTabInner
         channelName={resolvedName}
         channelMeta={channelMeta}
         allChannelsMeta={allChannelsMeta}

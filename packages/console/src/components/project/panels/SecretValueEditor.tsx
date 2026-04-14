@@ -16,7 +16,7 @@ import { Save, AlertTriangle, CheckCircle, Eye, Pencil } from 'lucide-react'
 import { useSecretValue, useSetSecret } from '../../../hooks/useSecrets'
 import { useSchema } from '../../../hooks/useWirings'
 import { SchemaForm } from '../../ui/SchemaForm'
-import { SectionLabel } from './shared/SectionLabel'
+import { SectionLabel } from '../../ui/SectionLabel'
 
 const OAUTH2_CLIENT_SCHEMA = {
   type: 'object',

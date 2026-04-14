@@ -8,6 +8,7 @@ import { HttpTab } from '../components/tabs/HttpTab'
 import { ChannelsTab } from '../components/tabs/ChannelsTab'
 import { McpTab } from '../components/tabs/McpTab'
 import { CliTab } from '../components/tabs/CliTab'
+import styles from '../components/ui/console.module.css'
 
 const TABS = [
   { value: 'http', label: 'HTTP' },
@@ -39,7 +40,7 @@ const ApisPageInner: React.FunctionComponent = () => {
 
   return (
     <PanelProvider>
-      <Box style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      <Box className={styles.flexColumn} style={{ height: '100vh' }}>
         <TabbedPageHeader
           icon={Globe}
           category="APIs"
@@ -48,7 +49,7 @@ const ApisPageInner: React.FunctionComponent = () => {
           activeTab={tab}
           onTabChange={handleTabChange}
         />
-        <Box style={{ flex: 1, minHeight: 0 }}>
+        <Box className={styles.flexGrow} style={{ minHeight: 0 }}>
           {renderTab()}
         </Box>
       </Box>

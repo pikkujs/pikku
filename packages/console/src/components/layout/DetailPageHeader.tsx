@@ -13,6 +13,7 @@ import {
   ActionIcon,
 } from '@mantine/core'
 import { Search, ChevronDown, Check, ExternalLink } from 'lucide-react'
+import classes from '../ui/console.module.css'
 
 interface SwitcherItem {
   name: string
@@ -72,11 +73,11 @@ export const DetailPageHeader: React.FunctionComponent<
       gap="xs"
       px="md"
       h={50}
+      className={classes.noShrink}
       style={{
         zIndex: 9999,
         borderBottom: '1px solid var(--mantine-color-default-border)',
         backgroundColor: 'var(--mantine-color-body)',
-        flexShrink: 0,
       }}
     >
       {categoryPath ? (

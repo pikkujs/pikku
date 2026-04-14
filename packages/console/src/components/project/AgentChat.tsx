@@ -46,6 +46,7 @@ import remarkGfm from 'remark-gfm'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { useAgentPlayground } from '../../context/AgentPlaygroundContext'
 import { getServerUrl } from '../../context/PikkuRpcProvider'
+import classes from '../ui/console.module.css'
 
 const ToolCallDisplay: React.FunctionComponent<{
   toolCallId: string
@@ -59,7 +60,6 @@ const ToolCallDisplay: React.FunctionComponent<{
   const [opened, setOpened] = useState(false)
   const { handleApproval, pendingApprovals } = usePikkuApproval()
 
-  // Detect credential request from tool result
   const credentialPayload = (() => {
     if (!result) return null
     const r = typeof result === 'string' ? (() => { try { return JSON.parse(result) } catch { return null } })() : result
@@ -306,7 +306,7 @@ const ToolCallDisplay: React.FunctionComponent<{
 }
 
 const UserMessage: React.FunctionComponent = () => (
-  <Box style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+  <Box className={classes.chatMessageRight}>
     <Box maw="80%">
       <Group gap={6} mb={4}>
         <Text size="xs" c="dimmed">
@@ -334,7 +334,7 @@ const UserMessage: React.FunctionComponent = () => (
 )
 
 const AssistantMessage: React.FunctionComponent = () => (
-  <Box data-testid="assistant-block" style={{ display: 'flex', justifyContent: 'flex-start', width: '100%' }}>
+  <Box data-testid="assistant-block" className={classes.chatMessageLeft}>
     <Box maw="80%">
       <Group gap={6} mb={4}>
         <Bot size={14} color="var(--mantine-color-dimmed)" />
@@ -475,7 +475,7 @@ export const AgentChat: React.FunctionComponent<{
     <AssistantRuntimeProvider runtime={runtime}>
       <Stack
         gap={0}
-        style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+        className={classes.flexColumn}
       >
         <ThreadPrimitive.Root style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
           <ThreadPrimitive.Viewport asChild>

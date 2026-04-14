@@ -6,7 +6,11 @@ import { usePanelContext } from '../../../../context/PanelContext'
 import { useFunctionMeta } from '../../../../hooks/useWirings'
 import { LinkedBadge } from '../LinkedBadge'
 import { PikkuBadge } from '../../../ui/PikkuBadge'
+import { MetaRow } from '../../../ui/MetaRow'
+import { SectionLabel } from '../../../ui/SectionLabel'
+import { TagBadge, ServiceBadge } from '../../../ui/TagBadge'
 import { SchemaSection } from './SchemaSection'
+import classes from '../../../ui/console.module.css'
 
 const SESSION_WIRES = new Set([
   'session',
@@ -45,46 +49,6 @@ const TYPE_HREF: Record<string, string> = {
   agent: '/agents',
 }
 
-const MetaRow: React.FunctionComponent<{
-  label: string
-  children: React.ReactNode
-}> = ({ label, children }) => (
-  <Box
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 12,
-      padding: '6px 0',
-      borderBottom: '1px solid var(--app-row-border)',
-    }}
-  >
-    <Text
-      size="sm"
-      ff="monospace"
-      c="var(--app-meta-label)"
-      style={{ minWidth: 90, flexShrink: 0 }}
-    >
-      {label}
-    </Text>
-    <Box style={{ flex: 1, minWidth: 0 }}>{children}</Box>
-  </Box>
-)
-
-const SectionHeading: React.FunctionComponent<{
-  children: React.ReactNode
-}> = ({ children }) => (
-  <Text
-    size="xs"
-    fw={600}
-    ff="monospace"
-    c="var(--app-section-label)"
-    tt="uppercase"
-    style={{ letterSpacing: '0.1em', padding: '12px 0 6px' }}
-  >
-    {children}
-  </Text>
-)
-
 const FunctionValue: React.FunctionComponent<{ pikkuFuncId: string }> = ({
   pikkuFuncId,
 }) => {
@@ -98,7 +62,7 @@ const FunctionValue: React.FunctionComponent<{ pikkuFuncId: string }> = ({
       fw={600}
       ff="monospace"
       c="var(--app-meta-value)"
-      style={{ cursor: 'pointer' }}
+      className={classes.clickableText}
       onClick={() =>
         navigateInPanel('function', pikkuFuncId, displayName, funcMeta)
       }
@@ -120,7 +84,7 @@ const WiredToSection: React.FunctionComponent<{ functionName: string }> = ({
 
   return (
     <Box>
-      <SectionHeading>Wired To ({allWirings.length})</SectionHeading>
+      <SectionLabel>Wired To ({allWirings.length})</SectionLabel>
       <Table verticalSpacing={4} horizontalSpacing="xs">
         <Table.Thead>
           <Table.Tr>
@@ -179,40 +143,29 @@ export const CommonDetails: React.FunctionComponent<CommonDetailsProps> = ({
   return (
     <>
       {description != null && description !== '' && (
-        <MetaRow label="description">
+        <MetaRow label="description" labelWidth={90}>
           <Text size="sm" c="var(--app-meta-value)">{description}</Text>
         </MetaRow>
       )}
 
       {pikkuFuncId && (
-        <MetaRow label={functionLinkLabel || 'function'}>
+        <MetaRow label={functionLinkLabel || 'function'} labelWidth={90}>
           <FunctionValue pikkuFuncId={pikkuFuncId} />
         </MetaRow>
       )}
 
       {services && services.length > 0 && (
-        <MetaRow label="services">
+        <MetaRow label="services" labelWidth={90}>
           <Group gap={4}>
             {services.map((svc: string) => (
-              <Badge
-                key={svc}
-                size="sm"
-                variant="light"
-                style={{
-                  background: 'var(--app-service-bg)',
-                  border: '1px solid var(--app-service-border)',
-                  color: 'var(--app-service-color)',
-                }}
-              >
-                {svc}
-              </Badge>
+              <ServiceBadge key={svc}>{svc}</ServiceBadge>
             ))}
           </Group>
         </MetaRow>
       )}
 
       {wires && wires.wires.length > 0 && (
-        <MetaRow label="wires">
+        <MetaRow label="wires" labelWidth={90}>
           <Group gap={4}>
             {hasSession && <PikkuBadge type="flag" flag="session" />}
             {filteredWires.map((w: string) => (
@@ -223,7 +176,7 @@ export const CommonDetails: React.FunctionComponent<CommonDetailsProps> = ({
       )}
 
       {middleware && middleware.length > 0 && (
-        <MetaRow label="middleware">
+        <MetaRow label="middleware" labelWidth={90}>
           <Group gap={4}>
             {middleware.map((mw: any, i: number) => (
               <LinkedBadge key={i} item={mw} kind="middleware" />
@@ -233,7 +186,7 @@ export const CommonDetails: React.FunctionComponent<CommonDetailsProps> = ({
       )}
 
       {permissions && permissions.length > 0 && (
-        <MetaRow label="permissions">
+        <MetaRow label="permissions" labelWidth={90}>
           <Group gap={4}>
             {permissions.map((perm: any, i: number) => (
               <LinkedBadge key={i} item={perm} kind="permission" />
@@ -243,29 +196,17 @@ export const CommonDetails: React.FunctionComponent<CommonDetailsProps> = ({
       )}
 
       {tags && tags.length > 0 && (
-        <MetaRow label="tags">
+        <MetaRow label="tags" labelWidth={90}>
           <Group gap={4}>
             {tags.map((tag: string, i: number) => (
-              <Badge
-                key={i}
-                size="sm"
-                variant="light"
-                ff="monospace"
-                style={{
-                  background: 'var(--app-tag-bg)',
-                  border: '1px solid var(--app-tag-border)',
-                  color: 'var(--app-tag-color)',
-                }}
-              >
-                {tag}
-              </Badge>
+              <TagBadge key={i}>{tag}</TagBadge>
             ))}
           </Group>
         </MetaRow>
       )}
 
       {errors && errors.length > 0 && (
-        <MetaRow label="errors">
+        <MetaRow label="errors" labelWidth={90}>
           <Group gap={4}>
             {errors.map((err: string, i: number) => (
               <Badge key={i} size="sm" color="red" variant="light">

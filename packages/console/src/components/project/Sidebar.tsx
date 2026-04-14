@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import { spotlight } from '@mantine/spotlight'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
+import css from '../ui/console.module.css'
 
 export interface NavItem {
   label: string
@@ -283,13 +284,13 @@ export const Sidebar: React.FunctionComponent<SidebarProps> = ({
       </Box>
 
       {footer && (
-        <Box style={{ flexShrink: 0 }} px={6} py={4}>
+        <Box className={css.noShrink} px={6} py={4}>
           <Divider mx="sm" mb={4} />
           {footer}
         </Box>
       )}
 
-      <Box style={{ flexShrink: 0 }}>
+      <Box className={css.noShrink}>
         <Divider mx="sm" />
         <Stack gap={2} px={6} py={4}>
           <Tooltip label="Refresh metadata" position="right" disabled={!collapsed}>

@@ -2,6 +2,7 @@ import React from 'react'
 import { PikkuBadge } from '../../ui/PikkuBadge'
 import { usePikkuMeta } from '../../../context/PikkuMetaContext'
 import { usePanelContext } from '../../../context/PanelContext'
+import classes from '../../ui/console.module.css'
 
 interface LinkedBadgeProps {
   item: any
@@ -27,7 +28,7 @@ export const LinkedBadge: React.FunctionComponent<LinkedBadgeProps> = ({
         badge={kind}
         value={label}
         variant="outline"
-        style={{ cursor: 'pointer' }}
+        className={classes.clickableText}
         onClick={() =>
           navigateInPanel(kind, `${item.type}:${groupKey}`, label, {
             _groupType: item.type,
@@ -46,7 +47,7 @@ export const LinkedBadge: React.FunctionComponent<LinkedBadgeProps> = ({
       type="dynamic"
       badge={kind}
       value={label}
-      style={{ cursor: 'pointer' }}
+      className={classes.clickableText}
       onClick={() =>
         navigateInPanel(kind, item.name, label, { ...defData, _id: item.name })
       }

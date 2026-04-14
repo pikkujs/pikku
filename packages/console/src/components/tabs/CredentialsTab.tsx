@@ -30,6 +30,7 @@ import {
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import styles from '../ui/console.module.css'
 
 interface CredentialItem {
   name: string
@@ -170,7 +171,7 @@ const CredentialCard: React.FunctionComponent<{
       padding="lg"
       radius="md"
       withBorder
-      style={{ cursor: 'pointer' }}
+      className={styles.clickableText}
       onClick={onClick}
     >
       <Stack gap="xs">

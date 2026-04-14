@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react'
 import { Center, Loader } from '@mantine/core'
-import { ChannelPageClient } from '../pages/ChannelPageClient'
+import { ChannelTabContent } from './ChannelTabContent'
 
 export const ChannelsTab: React.FunctionComponent = () => {
   return (
@@ -11,7 +11,7 @@ export const ChannelsTab: React.FunctionComponent = () => {
         </Center>
       }
     >
-      <ChannelPageClient />
+      <ChannelTabContent />
     </Suspense>
   )
 }

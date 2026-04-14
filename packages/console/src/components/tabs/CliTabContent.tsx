@@ -3,20 +3,20 @@ import {
   Box,
   Center,
   Text,
-  TextInput,
   ScrollArea,
   UnstyledButton,
   Badge,
-  Group,
   CopyButton,
   ActionIcon,
   Tooltip,
 } from '@mantine/core'
-import { Search, ChevronDown, ChevronRight, Copy, Check } from 'lucide-react'
+import { ChevronDown, ChevronRight, Copy, Check } from 'lucide-react'
 import type { CLIMeta } from '@pikku/core/cli'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { PanelProvider } from '../../context/PanelContext'
 import { CliHelpText } from '../cli/CliHelpText'
+import { SearchInput } from '../ui/SearchInput'
+import classes from '../ui/console.module.css'
 
 const countCommands = (commands: Record<string, any>): number => {
   let count = 0
@@ -94,35 +94,15 @@ const CliPageInner: React.FunctionComponent<{
   const programCount = programs.length
 
   return (
-    <Box style={{ display: 'flex', height: '100%' }}>
-      {/* Sidebar */}
-      <Box
-        style={{
-          width: 280,
-          minWidth: 220,
-          borderRight: '1px solid var(--app-row-border)',
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100%',
-        }}
-      >
-        <Box p="xs">
-          <Group justify="space-between" mb={6}>
-            <Text size="xs" fw={600} ff="monospace" c="var(--app-meta-label)">
-              CLI
-            </Text>
-            <Text size="xs" ff="monospace" c="dimmed">
-              {programCount} {programCount === 1 ? 'program' : 'programs'}
-            </Text>
-          </Group>
-          <TextInput
-            placeholder="Search commands..."
-            leftSection={<Search size={14} />}
-            value={search}
-            onChange={(e) => setSearch(e.currentTarget.value)}
-            size="xs"
-          />
-        </Box>
+    <Box className={classes.flexRow}>
+      <Box className={classes.listPaneFixed} style={{ width: 280, minWidth: 220 }}>
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search commands..."
+          label="CLI"
+          count={programCount}
+        />
         <ScrollArea style={{ flex: 1 }}>
           {programs.map((prog) => {
             const isActive = prog.wireId === activeProgramId
@@ -192,31 +172,16 @@ const CliPageInner: React.FunctionComponent<{
                       <UnstyledButton
                         key={cmdName}
                         onClick={() => selectCommand(prog.wireId, cmdName)}
+                        className={classes.listItem}
+                        data-active={cmdActive}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
                           gap: 7,
                           padding: '5px 12px 5px 24px',
-                          borderLeft: cmdActive
-                            ? '2px solid #7c3aed'
-                            : '2px solid transparent',
-                          background: cmdActive
-                            ? 'rgba(124,58,237,0.06)'
-                            : undefined,
-                          width: '100%',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s',
                         }}
                       >
-                        <Box
-                          style={{
-                            width: 5,
-                            height: 5,
-                            borderRadius: '50%',
-                            background: 'rgba(124,58,237,0.4)',
-                            flexShrink: 0,
-                          }}
-                        />
+                        <Box className={classes.typeDot} style={{ background: 'rgba(124,58,237,0.4)' }} />
                         <Box style={{ flex: 1, minWidth: 0 }}>
                           <Text
                             size="xs"
@@ -256,20 +221,8 @@ const CliPageInner: React.FunctionComponent<{
         </ScrollArea>
       </Box>
 
-      {/* Main: terminal */}
-      <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {/* Header */}
-        <Box
-          style={{
-            padding: '10px 16px',
-            borderBottom: '1px solid var(--app-row-border)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            flexShrink: 0,
-            background: '#0a0c12',
-          }}
-        >
+      <Box className={`${classes.detailPane} ${classes.flexColumn}`} style={{ overflow: 'hidden' }}>
+        <Box className={classes.gridHeader} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Text size="xs" ff="monospace" c="var(--app-text-muted)" style={{ flex: 1 }}>
             <Text component="span" c="violet" ff="monospace">$</Text>{' '}
             <Text component="span" c="var(--app-text)" ff="monospace">
@@ -298,12 +251,11 @@ const CliPageInner: React.FunctionComponent<{
           </CopyButton>
         </Box>
 
-        {/* Terminal output */}
         <Box
           id="cli-terminal"
+          className={classes.overflowAuto}
           style={{
             flex: 1,
-            overflow: 'auto',
             padding: '20px 24px',
             lineHeight: 1.9,
             fontSize: 11,
@@ -327,7 +279,7 @@ const CliPageInner: React.FunctionComponent<{
   )
 }
 
-export const CliPageClient: React.FunctionComponent = () => {
+export const CliTabContent: React.FunctionComponent = () => {
   const { meta } = usePikkuMeta()
   const programs = meta.cliMeta || []
 

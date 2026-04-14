@@ -1,56 +1,20 @@
 import React, { useMemo } from 'react'
-import { Box, Text, Group, Tabs, Badge } from '@mantine/core'
+import { Box, Text, Group, Tabs } from '@mantine/core'
 import { useFunctionMeta, useSchema } from '../../hooks/useWirings'
 import { usePanelContext } from '../../context/PanelContext'
 import { SchemaSection } from '../project/panels/shared/SchemaSection'
 import { CopyableCode } from '../ui/CopyableCode'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { LinkedBadge } from '../project/panels/LinkedBadge'
+import { MetaRow } from '../ui/MetaRow'
+import { SectionLabel } from '../ui/SectionLabel'
+import { TagBadge } from '../ui/TagBadge'
+import classes from '../ui/console.module.css'
 import {
   generateCurlSnippet,
   generateFetchSnippet,
   generatePikkuFetchSnippet,
 } from './httpSnippets'
-
-const MetaRow: React.FunctionComponent<{
-  label: string
-  children: React.ReactNode
-}> = ({ label, children }) => (
-  <Box
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 12,
-      padding: '6px 0',
-      borderBottom: '1px solid var(--app-row-border)',
-    }}
-  >
-    <Text
-      size="sm"
-      ff="monospace"
-      c="var(--app-meta-label)"
-      style={{ minWidth: 85, flexShrink: 0 }}
-    >
-      {label}
-    </Text>
-    <Box style={{ flex: 1, minWidth: 0 }}>{children}</Box>
-  </Box>
-)
-
-const SLabel: React.FunctionComponent<{ children: React.ReactNode }> = ({
-  children,
-}) => (
-  <Text
-    size="xs"
-    fw={600}
-    ff="monospace"
-    c="var(--app-section-label)"
-    tt="uppercase"
-    style={{ letterSpacing: '0.1em', padding: '12px 0 6px' }}
-  >
-    {children}
-  </Text>
-)
 
 interface HttpTabbedPanelProps {
   wireId: string
@@ -86,21 +50,13 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
   )
 
   return (
-    <Box style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {/* Header bar */}
+    <Box className={classes.flexColumn}>
       <Box
-        style={{
-          padding: '10px 16px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          flexShrink: 0,
-          background: 'rgba(255,255,255,0.01)',
-        }}
+        className={`${classes.detailHeader} ${classes.noShrink}`}
+        style={{ background: 'rgba(255,255,255,0.01)' }}
       >
         <PikkuBadge type="httpMethod" value={method} />
-        <Box style={{ flex: 1 }}>
+        <Box className={classes.flexGrow}>
           <Text size="sm" ff="monospace" fw={600} c="gray.2">
             {route}
           </Text>
@@ -116,35 +72,14 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
             <PikkuBadge type="flag" flag="sse" />
           )}
           {metadata?.tags?.map((tag: string) => (
-            <Badge
-              key={tag}
-              size="sm"
-              variant="light"
-              ff="monospace"
-              style={{
-                background: 'var(--app-tag-bg)',
-                border: '1px solid var(--app-tag-border)',
-                color: 'var(--app-tag-color)',
-              }}
-            >
-              {tag}
-            </Badge>
+            <TagBadge key={tag}>{tag}</TagBadge>
           ))}
         </Group>
       </Box>
 
-      {/* Body: detail left + code right */}
-      <Box style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        {/* Left: metadata + schema */}
-        <Box
-          style={{
-            flex: 1,
-            overflow: 'auto',
-            borderRight: '1px solid rgba(255,255,255,0.06)',
-            padding: 16,
-          }}
-        >
-          <SLabel>Handler</SLabel>
+      <Box className={classes.flexRow}>
+        <Box className={classes.splitLeft}>
+          <SectionLabel>Handler</SectionLabel>
 
           {funcId && (
             <MetaRow label="function">
@@ -153,7 +88,7 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
                 fw={600}
                 ff="monospace"
                 c="var(--app-meta-value)"
-                style={{ cursor: 'pointer' }}
+                className={classes.clickableText}
                 onClick={() =>
                   navigateInPanel('function', funcId, displayName, funcMeta)
                 }
@@ -206,37 +141,24 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
 
           {inputSchemaName && (
             <>
-              <SLabel>Input Schema</SLabel>
+              <SectionLabel>Input Schema</SectionLabel>
               <SchemaSection schemaName={inputSchemaName} />
             </>
           )}
 
           {outputSchemaName && (
             <>
-              <SLabel>Output Schema</SLabel>
+              <SectionLabel>Output Schema</SectionLabel>
               <SchemaSection schemaName={outputSchemaName} />
             </>
           )}
         </Box>
 
-        {/* Right: code tabs + try it */}
-        <Box
-          style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            minWidth: 0,
-          }}
-        >
+        <Box className={`${classes.flexGrow} ${classes.flexColumn} ${classes.overflowHidden}`}>
           <Tabs
             defaultValue="pikku-fetch"
-            style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              minHeight: 0,
-            }}
+            className={classes.flexColumn}
+            style={{ minHeight: 0 }}
           >
             <Tabs.List>
               <Tabs.Tab value="pikku-fetch">
@@ -251,21 +173,21 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
             </Tabs.List>
             <Tabs.Panel
               value="pikku-fetch"
-              style={{ flex: 1, overflow: 'auto' }}
+              className={`${classes.flexGrow} ${classes.overflowAuto}`}
               p="sm"
             >
               <CopyableCode code={pikkuSnippet} language="typescript" />
             </Tabs.Panel>
             <Tabs.Panel
               value="fetch"
-              style={{ flex: 1, overflow: 'auto' }}
+              className={`${classes.flexGrow} ${classes.overflowAuto}`}
               p="sm"
             >
               <CopyableCode code={fetchSnippet} language="typescript" />
             </Tabs.Panel>
             <Tabs.Panel
               value="curl"
-              style={{ flex: 1, overflow: 'auto' }}
+              className={`${classes.flexGrow} ${classes.overflowAuto}`}
               p="sm"
             >
               <CopyableCode code={curlSnippet} language="bash" />

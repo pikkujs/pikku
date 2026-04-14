@@ -1,6 +1,7 @@
 import React from 'react'
 import { Group, Stack, Text, ActionIcon } from '@mantine/core'
 import { ChevronRight, ChevronDown } from 'lucide-react'
+import css from '../../ui/console.module.css'
 
 interface CategoryRowProps {
   name: string
@@ -33,7 +34,7 @@ export const CategoryRow: React.FunctionComponent<CategoryRowProps> = ({
       ) : (
         <div style={{ width: 22 }} />
       )}
-      <Stack gap={0} style={{ flex: 1 }}>
+      <Stack gap={0} className={css.flexGrow}>
         <Group gap="xs">
           <Text fw={600} size="md">
             {name}

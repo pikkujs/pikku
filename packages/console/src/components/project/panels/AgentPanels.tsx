@@ -11,13 +11,14 @@ import {
 import { Bot, Pencil } from 'lucide-react'
 import { PikkuBadge } from '../../ui/PikkuBadge'
 import { CommonDetails } from './shared/CommonDetails'
-import { SectionLabel } from './shared/SectionLabel'
+import { SectionLabel } from '../../ui/SectionLabel'
 import { LinkedBadge } from './LinkedBadge'
 import { SchemaSection } from './shared/SchemaSection'
 import { usePanelContext } from '../../../context/PanelContext'
 import { AgentPlaygroundContext } from '../../../context/AgentPlaygroundContext'
 import { usePikkuMeta } from '../../../context/PikkuMetaContext'
 import { AgentEditor } from './AgentEditor'
+import classes from '../../ui/console.module.css'
 
 interface AgentPanelProps {
   wireId: string
@@ -191,7 +192,7 @@ export const AgentConfiguration: React.FunctionComponent<AgentPanelProps> = ({
                   type="dynamic"
                   badge="tool"
                   value={tool}
-                  style={{ cursor: 'pointer' }}
+                  className={classes.clickableText}
                   onClick={() => navigateInPanel('function', tool, tool)}
                 />
               ))}
@@ -209,7 +210,7 @@ export const AgentConfiguration: React.FunctionComponent<AgentPanelProps> = ({
                   type="dynamic"
                   badge="agent"
                   value={agent}
-                  style={{ cursor: 'pointer' }}
+                  className={classes.clickableText}
                   onClick={() => navigateInPanel('agent', agent, agent)}
                 />
               ))}

@@ -224,3 +224,32 @@
   border-radius: 50%;
   flex-shrink: 0;
 }
+
+/* ── Canvas drawer ── */
+
+.drawerButton {
+  border-bottom: 1px solid var(--mantine-color-default-border);
+  width: 100%;
+  transition: background-color 0.15s;
+}
+
+.drawerIconBox {
+  color: var(--mantine-color-blue-6);
+}
+
+.centeredLoader {
+  display: flex;
+  justify-content: center;
+}
+
+.chatMessageRight {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.chatMessageLeft {
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+}

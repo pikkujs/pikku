@@ -15,9 +15,10 @@ import { PikkuBadge } from '../../ui/PikkuBadge'
 import { CommonDetails } from './shared/CommonDetails'
 import { FunctionLink } from './shared/FunctionLink'
 import { LinkedBadge } from './LinkedBadge'
-import { SectionLabel } from './shared/SectionLabel'
+import { SectionLabel } from '../../ui/SectionLabel'
 import { SchemaSection } from './shared/SchemaSection'
 import { usePanelContext } from '../../../context/PanelContext'
+import classes from '../../ui/console.module.css'
 
 interface WiringPanelProps {
   wireId: string
@@ -209,11 +210,7 @@ export const ChannelConfiguration: React.FunctionComponent<
                         type="dynamic"
                         badge="actions"
                         value={actionName}
-                        style={{
-                          cursor: actionData?.pikkuFuncId
-                            ? 'pointer'
-                            : undefined,
-                        }}
+                        className={actionData?.pikkuFuncId ? classes.clickableText : undefined}
                         onClick={
                           actionData?.pikkuFuncId
                             ? () =>
@@ -467,7 +464,7 @@ const CliCommandTree: React.FunctionComponent<{
                 size="sm"
                 variant="outline"
                 color="gray"
-                style={{ cursor: 'pointer' }}
+                className={classes.clickableText}
                 onClick={() =>
                   navigateInPanel(
                     'function',

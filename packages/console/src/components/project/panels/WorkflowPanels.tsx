@@ -16,9 +16,10 @@ import { useWorkflowRunContextSafe } from '../../../context/WorkflowRunContext'
 import { usePanelContext } from '../../../context/PanelContext'
 import { PikkuBadge } from '../../ui/PikkuBadge'
 import { wiringTypeColor } from '../../ui/badge-defs'
+import { SectionLabel } from '../../ui/SectionLabel'
 import { CommonDetails } from './shared/CommonDetails'
-import { SectionLabel } from './shared/SectionLabel'
 import { EmptyState } from './shared/EmptyState'
+import classes from '../../ui/console.module.css'
 
 const TYPE_HREF: Record<string, string> = {
   http: '/apis?tab=http',
@@ -80,7 +81,7 @@ const WorkflowWiring: React.FunctionComponent<{ wiredTo: WiredTo }> = ({
       {wiredTo.transports.length > 0 && (
         <Box>
           <SectionLabel>Wired To</SectionLabel>
-          <Group gap={4} style={{ flexWrap: 'wrap' }}>
+          <Group gap={4} wrap="wrap">
             {wiredTo.transports.map((t) => (
               <Anchor
                 key={t.id}
@@ -92,7 +93,7 @@ const WorkflowWiring: React.FunctionComponent<{ wiredTo: WiredTo }> = ({
                   type="label"
                   size="sm"
                   color={wiringTypeColor(t.type)}
-                  style={{ cursor: 'pointer' }}
+                  className={classes.clickableText}
                 >
                   {t.name}
                 </PikkuBadge>
@@ -104,7 +105,7 @@ const WorkflowWiring: React.FunctionComponent<{ wiredTo: WiredTo }> = ({
       {wiredTo.jobs.length > 0 && (
         <Box>
           <SectionLabel>Jobs</SectionLabel>
-          <Group gap={4} style={{ flexWrap: 'wrap' }}>
+          <Group gap={4} wrap="wrap">
             {wiredTo.jobs.map((j) => (
               <Anchor
                 key={j.id}
@@ -116,7 +117,7 @@ const WorkflowWiring: React.FunctionComponent<{ wiredTo: WiredTo }> = ({
                   type="label"
                   size="sm"
                   color={wiringTypeColor(j.type)}
-                  style={{ cursor: 'pointer' }}
+                  className={classes.clickableText}
                 >
                   {j.name}
                 </PikkuBadge>
@@ -277,7 +278,7 @@ const WorkflowRunNodes: React.FunctionComponent<WorkflowPanelProps> = ({
                 return (
                   <Table.Tr
                     key={nodeId}
-                    style={{ cursor: 'pointer' }}
+                    className={classes.clickableText}
                     onMouseEnter={() => setFocusedNode(nodeId)}
                     onMouseLeave={() => setFocusedNode(null)}
                     onClick={() => openWorkflowStep(nodeId, node.flow || 'rpc')}

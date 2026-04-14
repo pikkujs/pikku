@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react'
 import { Center, Loader } from '@mantine/core'
-import { CliPageClient } from '../pages/CliPageClient'
+import { CliTabContent } from './CliTabContent'
 
 export const CliTab: React.FunctionComponent = () => {
   return (
@@ -11,7 +11,7 @@ export const CliTab: React.FunctionComponent = () => {
         </Center>
       }
     >
-      <CliPageClient />
+      <CliTabContent />
     </Suspense>
   )
 }

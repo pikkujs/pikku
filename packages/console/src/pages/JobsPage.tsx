@@ -7,6 +7,7 @@ import { TabbedPageHeader } from '../components/layout/TabbedPageHeader'
 import { SchedulersTab } from '../components/tabs/SchedulersTab'
 import { QueuesTab } from '../components/tabs/QueuesTab'
 import { TriggersTab } from '../components/tabs/TriggersTab'
+import styles from '../components/ui/console.module.css'
 
 const TABS = [
   { value: 'schedulers', label: 'Schedulers' },
@@ -35,7 +36,7 @@ export const JobsPage: React.FunctionComponent = () => {
 
   return (
     <PanelProvider>
-      <Box style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      <Box className={styles.flexColumn} style={{ height: '100vh' }}>
         <TabbedPageHeader
           icon={Clock}
           category="Jobs"
@@ -44,7 +45,7 @@ export const JobsPage: React.FunctionComponent = () => {
           activeTab={tab}
           onTabChange={handleTabChange}
         />
-        <Box style={{ flex: 1, minHeight: 0 }}>
+        <Box className={styles.flexGrow} style={{ minHeight: 0 }}>
           {renderTab()}
         </Box>
       </Box>

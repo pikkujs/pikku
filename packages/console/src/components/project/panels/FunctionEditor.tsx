@@ -13,7 +13,7 @@ import {
 import { Save, X, AlertTriangle, CheckCircle } from 'lucide-react'
 import CodeMirror from '@uiw/react-codemirror'
 import { javascript } from '@codemirror/lang-javascript'
-import { SectionLabel } from './shared/SectionLabel'
+import { SectionLabel } from '../../ui/SectionLabel'
 import { useTagOptions } from '../../../hooks/useTags'
 import {
   useFunctionSource,

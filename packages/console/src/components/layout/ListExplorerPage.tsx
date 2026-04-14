@@ -10,6 +10,7 @@ import {
   Loader,
 } from '@mantine/core'
 import { Search } from 'lucide-react'
+import classes from '../ui/console.module.css'
 import { Tree } from '../ui/Tree'
 import { CategoryRow } from '../project/tree/CategoryRow'
 import { PanelProvider } from '../../context/PanelContext'
@@ -115,7 +116,7 @@ export const ListExplorerPage: React.FunctionComponent<
         header={header}
         emptyPanelMessage={panelMessage || `Select an item to see its details`}
       >
-        <Stack gap={0} style={{ height: '100%' }}>
+        <Stack gap={0} className={classes.flexColumn}>
           <Box
             px="md"
             py="sm"
@@ -129,7 +130,7 @@ export const ListExplorerPage: React.FunctionComponent<
                 leftSection={<Search size={16} />}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ flex: 1 }}
+                className={classes.flexGrow}
               />
               {filters && filters.length > 0 && onFilterChange && (
                 <SegmentedControl
@@ -141,7 +142,7 @@ export const ListExplorerPage: React.FunctionComponent<
               )}
             </Group>
           </Box>
-          <Box style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+          <Box className={`${classes.flexGrow} ${classes.overflowHidden}`} style={{ position: 'relative' }}>
             {filteredData.length === 0 ? (
               <Box p="xl">
                 <Text c="dimmed" ta="center">
