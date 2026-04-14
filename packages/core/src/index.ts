@@ -22,6 +22,7 @@ export type {
   JSONValue,
   MakeRequired,
   MiddlewareMetadata,
+  MiddlewarePriority,
   PermissionMetadata,
   PickOptional,
   PickRequired,

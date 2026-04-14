@@ -112,6 +112,24 @@ wireHTTP({
   auth: false, // No authentication required for this example
 })
 
+// HTTP endpoint to test middleware priority ordering
+// Middleware registered in wrong order should still execute in priority order
+import { priorityMiddleware } from '../middleware/priority.js'
+
+wireHTTP({
+  method: 'get',
+  route: '/priority-test',
+  middleware: [
+    priorityMiddleware('lowest', 'lowest'),
+    priorityMiddleware('medium', 'medium'),
+    priorityMiddleware('highest', 'highest'),
+    priorityMiddleware('low', 'low'),
+    priorityMiddleware('high', 'high'),
+  ],
+  func: noOpFunction,
+  auth: false,
+})
+
 // ==========================================
 // wireHTTPRoutes - Grouped Route Wiring
 // ==========================================

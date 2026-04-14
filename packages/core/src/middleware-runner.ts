@@ -5,9 +5,33 @@ import type {
   CorePikkuMiddlewareGroup,
   PikkuWiringTypes,
   MiddlewareMetadata,
+  MiddlewarePriority,
 } from './types/core.types.js'
 import { pikkuState } from './pikku-state.js'
 import { freezeDedupe, getTagGroups } from './utils.js'
+
+const PRIORITY_ORDER: Record<MiddlewarePriority, number> = {
+  highest: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+  lowest: 4,
+}
+
+const getMiddlewarePriority = (fn: CorePikkuMiddleware): number => {
+  const priority = (
+    fn as CorePikkuMiddleware & { __priority?: MiddlewarePriority }
+  ).__priority
+  return PRIORITY_ORDER[priority ?? 'medium']
+}
+
+const sortByPriority = (
+  middlewares: CorePikkuMiddleware[]
+): CorePikkuMiddleware[] => {
+  return middlewares.sort(
+    (a, b) => getMiddlewarePriority(a) - getMiddlewarePriority(b)
+  )
+}
 
 /**
  * Runs a chain of middleware functions in sequence before executing the main function.
@@ -32,11 +56,16 @@ export const runMiddleware = async <Middleware extends CorePikkuMiddleware>(
   middlewares: readonly Middleware[],
   main?: () => Promise<unknown>
 ): Promise<unknown> => {
-  // Deduplicate middleware using Set to avoid running the same middleware multiple times
+  // Sort by priority if not already sorted (cached middleware is pre-sorted)
+  const sorted = isSortedByPriority(middlewares)
+    ? middlewares
+    : ([...middlewares].sort(
+        (a, b) => getMiddlewarePriority(a) - getMiddlewarePriority(b)
+      ) as readonly Middleware[])
   let result: any
   const dispatch = async (index: number): Promise<any> => {
-    if (middlewares && index < middlewares.length) {
-      return await middlewares[index]!(services as any, wire, () =>
+    if (sorted && index < sorted.length) {
+      return await sorted[index]!(services as any, wire, () =>
         dispatch(index + 1)
       )
     } else if (main) {
@@ -45,6 +74,20 @@ export const runMiddleware = async <Middleware extends CorePikkuMiddleware>(
   }
   await dispatch(0)
   return result
+}
+
+const isSortedByPriority = (
+  middlewares: readonly CorePikkuMiddleware[]
+): boolean => {
+  for (let i = 1; i < middlewares.length; i++) {
+    if (
+      getMiddlewarePriority(middlewares[i]) <
+      getMiddlewarePriority(middlewares[i - 1])
+    ) {
+      return false
+    }
+  }
+  return true
 }
 
 /**
@@ -231,7 +274,8 @@ export const combineMiddleware = (
     resolved.push(...funcMiddleware)
   }
 
-  // Deduplicate and freeze
+  // Sort by priority, deduplicate, and freeze
+  sortByPriority(resolved)
   middlewareCache[wireType][uid] = freezeDedupe(
     resolved
   ) as readonly CorePikkuMiddleware[]

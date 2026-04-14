@@ -15,6 +15,10 @@ export class UWSPikkuHTTPResponse implements PikkuHTTPResponse {
     private isAborted: () => boolean
   ) {}
 
+  public get statusCode(): number {
+    return this.#statusCode
+  }
+
   public status(code: number): this {
     this.#statusCode = code
     return this

@@ -271,6 +271,7 @@ export interface PikkuHTTPRequest<In = unknown> {
 }
 
 export interface PikkuHTTPResponse<Out = unknown> {
+  readonly statusCode: number
   status(code: number): this
   cookie(name: string, value: string | null, options: SerializeOptions): this
   header(name: string, value: string | string[]): this

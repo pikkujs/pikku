@@ -5,11 +5,16 @@ import type { SerializeOptions } from 'cookie'
 
 export class PikkuDuplexResponse implements PikkuHTTPResponse {
   private aborted = false
+  #statusCode: number = 200
 
   constructor(private duplex: Duplex) {
     this.duplex.on('close', () => {
       this.aborted = true
     })
+  }
+
+  public get statusCode(): number {
+    return this.#statusCode
   }
 
   public redirect(location: string, status?: number): this {
@@ -18,6 +23,7 @@ export class PikkuDuplexResponse implements PikkuHTTPResponse {
 
   // Set the status code for the response
   public status(status: number): this {
+    this.#statusCode = status
     if (!this.aborted) {
       this.duplex.write(`HTTP/1.1 ${status} OK\r\n`)
     }

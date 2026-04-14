@@ -6,7 +6,27 @@ import {
   runMiddleware,
 } from './middleware-runner.js'
 import { resetPikkuState } from './pikku-state.js'
-import type { CorePikkuMiddleware } from './types/core.types.js'
+import type {
+  CorePikkuMiddleware,
+  MiddlewarePriority,
+} from './types/core.types.js'
+import { pikkuMiddleware } from './types/core.types.js'
+
+const withPriority = (
+  name: string,
+  priority: MiddlewarePriority,
+  log: string[]
+): CorePikkuMiddleware => {
+  return pikkuMiddleware({
+    name,
+    priority,
+    func: async (_services, _wire, next) => {
+      log.push(`start:${name}`)
+      await next()
+      log.push(`end:${name}`)
+    },
+  })
+}
 
 beforeEach(() => {
   resetPikkuState()
@@ -329,6 +349,56 @@ describe('combineMiddleware', () => {
     assert.equal(result.length, 1)
     assert.equal(result[0], middleware)
   })
+
+  test('should sort middleware by priority', () => {
+    const log: string[] = []
+    const low = withPriority('low', 'low', log)
+    const highest = withPriority('highest', 'highest', log)
+    const medium = withPriority('medium', 'medium', log)
+
+    const result = combineMiddleware('http', Math.random().toString(), {
+      wireMiddleware: [low, highest, medium],
+    })
+
+    assert.equal(result.length, 3)
+    assert.equal(result[0], highest)
+    assert.equal(result[1], medium)
+    assert.equal(result[2], low)
+  })
+
+  test('should default unprioritized middleware to medium', () => {
+    const log: string[] = []
+    const highest = withPriority('highest', 'highest', log)
+    const lowest = withPriority('lowest', 'lowest', log)
+    const noPriority: CorePikkuMiddleware = async (_services, _wire, next) => {
+      await next()
+    }
+
+    const result = combineMiddleware('http', Math.random().toString(), {
+      wireMiddleware: [lowest, noPriority, highest],
+    })
+
+    assert.equal(result.length, 3)
+    assert.equal(result[0], highest)
+    assert.equal(result[1], noPriority) // defaults to medium
+    assert.equal(result[2], lowest)
+  })
+
+  test('should preserve registration order within same priority', () => {
+    const log: string[] = []
+    const first = withPriority('first', 'medium', log)
+    const second = withPriority('second', 'medium', log)
+    const third = withPriority('third', 'medium', log)
+
+    const result = combineMiddleware('http', Math.random().toString(), {
+      wireMiddleware: [first, second, third],
+    })
+
+    assert.equal(result.length, 3)
+    assert.equal(result[0], first)
+    assert.equal(result[1], second)
+    assert.equal(result[2], third)
+  })
 })
 
 describe('runMiddleware', () => {
@@ -414,5 +484,83 @@ describe('runMiddleware', () => {
     await runMiddleware({} as any, {} as any, [middleware])
 
     assert.deepEqual(executionOrder, ['middleware'])
+  })
+
+  test('should execute middleware in priority order (highest first, lowest last)', async () => {
+    const log: string[] = []
+    const low = withPriority('low', 'low', log)
+    const highest = withPriority('highest', 'highest', log)
+    const medium = withPriority('medium', 'medium', log)
+
+    await runMiddleware(
+      {} as any,
+      {} as any,
+      [low, highest, medium],
+      async () => {
+        log.push('main')
+      }
+    )
+
+    assert.deepEqual(log, [
+      'start:highest',
+      'start:medium',
+      'start:low',
+      'main',
+      'end:low',
+      'end:medium',
+      'end:highest',
+    ])
+  })
+
+  test('should sort unsorted middleware passed directly to runMiddleware', async () => {
+    const log: string[] = []
+    const lowest = withPriority('lowest', 'lowest', log)
+    const highest = withPriority('highest', 'highest', log)
+
+    await runMiddleware({} as any, {} as any, [lowest, highest], async () => {
+      log.push('main')
+    })
+
+    // highest should run first (outermost), lowest last (innermost)
+    assert.deepEqual(log, [
+      'start:highest',
+      'start:lowest',
+      'main',
+      'end:lowest',
+      'end:highest',
+    ])
+  })
+
+  test('should handle all five priority levels in correct order', async () => {
+    const log: string[] = []
+    const lowest = withPriority('lowest', 'lowest', log)
+    const low = withPriority('low', 'low', log)
+    const medium = withPriority('medium', 'medium', log)
+    const high = withPriority('high', 'high', log)
+    const highest = withPriority('highest', 'highest', log)
+
+    // Pass in reverse order to verify sorting
+    await runMiddleware(
+      {} as any,
+      {} as any,
+      [lowest, low, medium, high, highest],
+      async () => {
+        log.push('main')
+      }
+    )
+
+    assert.deepEqual(log, [
+      'start:highest',
+      'start:high',
+      'start:medium',
+      'start:low',
+      'start:lowest',
+      'main',
+      'end:lowest',
+      'end:low',
+      'end:medium',
+      'end:high',
+      'end:highest',
+    ])
   })
 })

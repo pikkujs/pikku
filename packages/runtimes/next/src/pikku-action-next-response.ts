@@ -4,6 +4,7 @@ import { cookies } from 'next/headers.js'
 
 export class PikkuActionNextResponse implements PikkuHTTPResponse {
   private cookieStore: any
+  #statusCode: number = 200
 
   constructor(private dynamic: boolean) {}
 
@@ -13,8 +14,12 @@ export class PikkuActionNextResponse implements PikkuHTTPResponse {
     }
   }
 
+  public get statusCode(): number {
+    return this.#statusCode
+  }
+
   status(code: number): this {
-    // This doesn't matter since SSR expects data
+    this.#statusCode = code
     return this
   }
 

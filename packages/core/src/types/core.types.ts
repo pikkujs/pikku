@@ -306,6 +306,23 @@ export type CorePikkuMiddleware<
 ) => Promise<void>
 
 /**
+ * Priority levels for middleware execution order.
+ * Lower priority runs first (outermost in the onion model).
+ *
+ * - `highest` — Runs first (outermost). Use for telemetry, request tracing.
+ * - `high` — Runs early. Use for CORS, rate limiting.
+ * - `medium` — Default. Use for auth, most user middleware.
+ * - `low` — Runs late. Use for post-auth processing.
+ * - `lowest` — Runs last (innermost, closest to function). Use for inner telemetry.
+ */
+export type MiddlewarePriority =
+  | 'highest'
+  | 'high'
+  | 'medium'
+  | 'low'
+  | 'lowest'
+
+/**
  * Configuration object for creating middleware with metadata
  *
  * @template SingletonServices - The singleton services type
@@ -321,6 +338,8 @@ export type CorePikkuMiddlewareConfig<
   name?: string
   /** Optional description of what the middleware does */
   description?: string
+  /** Execution priority. Lower runs first (outermost). Defaults to 'medium'. */
+  priority?: MiddlewarePriority
 }
 
 /**
@@ -378,7 +397,15 @@ export const pikkuMiddleware = <
     | CorePikkuMiddleware<SingletonServices, UserSession>
     | CorePikkuMiddlewareConfig<SingletonServices, UserSession>
 ): CorePikkuMiddleware<SingletonServices, UserSession> => {
-  return typeof middleware === 'function' ? middleware : middleware.func
+  if (typeof middleware === 'function') return middleware
+  const func = middleware.func as CorePikkuMiddleware<
+    SingletonServices,
+    UserSession
+  > & { __priority?: MiddlewarePriority }
+  if (middleware.priority) {
+    func.__priority = middleware.priority
+  }
+  return func
 }
 
 /**

@@ -20,6 +20,7 @@ import {
   testAgentStreamWiring,
   testAgentRunWiring,
 } from './functions/agent.assert.js'
+import { testPriorityWiring } from './functions/priority.assert.js'
 
 async function main(): Promise<void> {
   try {
@@ -53,6 +54,11 @@ async function main(): Promise<void> {
     console.log('  .pikku/http/pikku-http-wirings-meta.gen.ts')
     console.log('  .pikku/scheduler/pikku-schedulers-wirings-meta.gen.ts')
     console.log('  .pikku/cli/pikku-cli-wirings-meta.gen.ts')
+
+    // Test middleware priority ordering
+    // Middleware registered in wrong order should execute in priority order: highest → high → medium → low → lowest
+    // Verifies both before (highest first) and after (highest last) phases — the onion model
+    const priorityPassed = await testPriorityWiring(singletonServices)
 
     // Test HTTP endpoints
     const httpTest1Passed = await testHTTPWiring(
@@ -463,6 +469,7 @@ async function main(): Promise<void> {
     const rpcPassed = true
 
     const allPassed =
+      priorityPassed &&
       httpTest1Passed &&
       httpTest2Passed &&
       httpRoutesDirectPassed &&
