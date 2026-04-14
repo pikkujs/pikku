@@ -287,6 +287,57 @@ export const scenarios: TestScenario[] = [
       'Addon bootstrap is currently always included when package is a dependency (treeshaking TODO: only include when addon RPC methods are invoked)',
   },
 
+  // Versioned function filters
+  {
+    name: 'Name: analyzeData@v1',
+    filter: '--names=analyzeData@v1',
+    expectedSingletonServices: ['email', 'logger', 'secrets'],
+    expectedWireServices: [],
+    description:
+      'Only v1 version included — uses email (function) + logger/secrets (session creation)',
+  },
+  {
+    name: 'Name: analyzeData (latest)',
+    filter: '--names=analyzeData',
+    expectedSingletonServices: [
+      'analytics',
+      'email',
+      'logger',
+      'secrets',
+      'storage',
+    ],
+    expectedWireServices: [],
+    description:
+      'Latest version (v2) uses analytics + storage, plus email/logger/secrets from session creation',
+  },
+  {
+    name: 'Name: analyzeData*',
+    filter: '--names=analyzeData*',
+    expectedSingletonServices: [
+      'analytics',
+      'email',
+      'logger',
+      'secrets',
+      'storage',
+    ],
+    expectedWireServices: [],
+    description:
+      'All versions combined — v1 uses email, v2 uses analytics + storage',
+  },
+  {
+    name: 'Tag: analyze',
+    filter: '--tags=analyze',
+    expectedSingletonServices: [
+      'analytics',
+      'email',
+      'logger',
+      'secrets',
+      'storage',
+    ],
+    expectedWireServices: [],
+    description: 'Both versioned analyze routes share the "analyze" tag',
+  },
+
   // wireHTTPRoutes group tests
   {
     name: 'HTTP Route Group: /api/grouped/*',

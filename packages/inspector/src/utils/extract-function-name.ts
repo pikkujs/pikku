@@ -1,5 +1,6 @@
 import * as ts from 'typescript'
 import { randomUUID } from 'crypto'
+import { formatVersionedId } from '@pikku/core'
 
 export type ExtractedFunctionName = {
   pikkuFuncId: string
@@ -8,6 +9,7 @@ export type ExtractedFunctionName = {
   exportedName: string | null
   propertyName: string | null
   isHelper: boolean
+  version: number | null
 }
 
 export function makeContextBasedId(
@@ -40,6 +42,7 @@ export function extractFunctionName(
     propertyName: null,
     explicitName: null,
     isHelper: false,
+    version: null,
   }
 
   const workflowHelpers = new Set([
@@ -143,18 +146,7 @@ export function extractFunctionName(
       // Check for object with 'name' property in first argument
       const firstArg = args[0]
       if (firstArg && ts.isObjectLiteralExpression(firstArg)) {
-        for (const prop of firstArg.properties) {
-          if (
-            ts.isPropertyAssignment(prop) &&
-            ts.isIdentifier(prop.name) &&
-            prop.name.text === 'override' &&
-            ts.isStringLiteral(prop.initializer)
-          ) {
-            // Priority 1: Object with override property
-            result.explicitName = prop.initializer.text
-            break
-          }
-        }
+        extractOverrideAndVersion(firstArg, result)
       }
 
       // Special handling for pikkuSessionlessFunc pattern - use the arrow function directly
@@ -367,21 +359,9 @@ export function extractFunctionName(
             ts.isIdentifier(decl.initializer.expression) &&
             decl.initializer.expression.text.startsWith('pikku')
           ) {
-            // Check for object with 'override' property in first argument
             const firstArg = decl.initializer.arguments[0]
             if (firstArg && ts.isObjectLiteralExpression(firstArg)) {
-              for (const prop of firstArg.properties) {
-                if (
-                  ts.isPropertyAssignment(prop) &&
-                  ts.isIdentifier(prop.name) &&
-                  prop.name.text === 'override' &&
-                  ts.isStringLiteral(prop.initializer)
-                ) {
-                  // Priority 1: Object with override property
-                  result.explicitName = prop.initializer.text
-                  break
-                }
-              }
+              extractOverrideAndVersion(firstArg, result)
             }
 
             if (decl.initializer.expression.text.startsWith('pikku')) {
@@ -448,18 +428,7 @@ export function extractFunctionName(
   else if (ts.isCallExpression(callExpr)) {
     const firstArg = callExpr.arguments[0]
     if (firstArg && ts.isObjectLiteralExpression(firstArg)) {
-      for (const prop of firstArg.properties) {
-        if (
-          ts.isPropertyAssignment(prop) &&
-          ts.isIdentifier(prop.name) &&
-          prop.name.text === 'override' &&
-          ts.isStringLiteral(prop.initializer) &&
-          !result.explicitName // Only set if not already set
-        ) {
-          result.explicitName = prop.initializer.text
-          break
-        }
-      }
+      extractOverrideAndVersion(firstArg, result)
     }
   }
 
@@ -472,6 +441,10 @@ export function extractFunctionName(
     result.pikkuFuncId = result.exportedName
   } else {
     result.pikkuFuncId = `__temp_${randomUUID()}`
+  }
+
+  if (result.version !== null) {
+    result.pikkuFuncId = formatVersionedId(result.pikkuFuncId, result.version)
   }
 
   return result
@@ -538,4 +511,30 @@ export function isNamedExport(
   }
 
   return false
+}
+
+function extractOverrideAndVersion(
+  objLiteral: ts.ObjectLiteralExpression,
+  result: ExtractedFunctionName
+): void {
+  for (const prop of objLiteral.properties) {
+    if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name)) {
+      if (
+        prop.name.text === 'override' &&
+        ts.isStringLiteral(prop.initializer) &&
+        !result.explicitName
+      ) {
+        result.explicitName = prop.initializer.text
+      } else if (
+        prop.name.text === 'version' &&
+        ts.isNumericLiteral(prop.initializer) &&
+        result.version === null
+      ) {
+        const parsed = Number(prop.initializer.text)
+        if (Number.isInteger(parsed) && parsed >= 1) {
+          result.version = parsed
+        }
+      }
+    }
+  }
 }

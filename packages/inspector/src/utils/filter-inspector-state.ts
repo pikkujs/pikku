@@ -730,11 +730,15 @@ export function filterInspectorState(
     }
   }
 
-  // Post-filter version expansion: include all versions of matched functions
+  // Post-filter version expansion: when an unversioned base name is matched,
+  // include all its versions. Specific version matches (e.g. analyzeData@v1)
+  // do NOT expand to include other versions.
   const includedBaseNames = new Set<string>()
   for (const funcId of filteredState.serviceAggregation.usedFunctions) {
-    const { baseName } = parseVersionedId(funcId)
-    includedBaseNames.add(baseName)
+    const { baseName, version } = parseVersionedId(funcId)
+    if (version === null) {
+      includedBaseNames.add(baseName)
+    }
   }
   if (includedBaseNames.size > 0) {
     for (const funcId of Object.keys(state.functions.meta)) {
