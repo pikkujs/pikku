@@ -9,7 +9,7 @@ import { WorkflowCanvas } from '../project/WorkflowCanvas'
 import { Center, Loader, Box, Text } from '@mantine/core'
 import styles from '../ui/console.module.css'
 
-export const WorkflowPageClient: React.FunctionComponent = () => {
+export const WorkflowTabContent: React.FunctionComponent = () => {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const workflowId = searchParams.get('id') || ''

@@ -3,7 +3,7 @@ import { useSearchParams } from '../router'
 import { GitBranch } from 'lucide-react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { WorkflowsList } from '../components/project/WorkflowsList'
-import { WorkflowPageClient } from '../components/pages/WorkflowPageClient'
+import { WorkflowTabContent } from '../components/tabs/WorkflowTabContent'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { DetailPageHeader } from '../components/layout/DetailPageHeader'
@@ -17,7 +17,7 @@ function WorkflowPageInner() {
   const { data: aiWorkflows } = useAIWorkflows()
 
   if (workflowId) {
-    return <WorkflowPageClient />
+    return <WorkflowTabContent />
   }
 
   if (loading) {
