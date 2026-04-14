@@ -2,7 +2,6 @@ import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
-import { execFileSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 
 export const installAddon = pikkuSessionlessFunc<
@@ -32,7 +31,9 @@ export const installAddon = pikkuSessionlessFunc<
 
     const metaBasePath = metaService?.basePath
     if (!metaBasePath) {
-      throw new LocalEnvironmentOnlyError('Only available in local development mode')
+      throw new LocalEnvironmentOnlyError(
+        'Only available in local development mode'
+      )
     }
     const rootDir = dirname(metaBasePath)
 
@@ -78,6 +79,8 @@ export const installAddon = pikkuSessionlessFunc<
       bun: ['add', pkg],
     }
 
+    const cp = 'node:child_process'
+    const { execFileSync } = await import(cp)
     execFileSync(pm, installArgs[pm]!, { cwd: rootDir, stdio: 'pipe' })
 
     const typesImport = config.scaffold?.pikkuDir

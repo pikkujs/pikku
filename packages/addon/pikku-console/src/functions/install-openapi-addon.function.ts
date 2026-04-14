@@ -2,7 +2,6 @@ import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
 import { readFile } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
-import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 
 export const installOpenapiAddon = pikkuSessionlessFunc<
@@ -30,8 +29,12 @@ export const installOpenapiAddon = pikkuSessionlessFunc<
 
     const metaBasePath = metaService?.basePath
     if (!metaBasePath) {
-      throw new LocalEnvironmentOnlyError('Only available in local development mode')
+      throw new LocalEnvironmentOnlyError(
+        'Only available in local development mode'
+      )
     }
+    const cp = 'node:child_process'
+    const { execFileSync } = await import(cp)
     const rootDir = dirname(metaBasePath)
 
     const configPath = join(rootDir, 'pikku.config.json')
@@ -51,7 +54,16 @@ export const installOpenapiAddon = pikkuSessionlessFunc<
       throw new Error(`Addon directory already exists: ${addonPath}`)
     }
 
-    const pikkuArgs = ['pikku', 'new', 'addon', name, '--openapi', swaggerUrl, '--dir', targetDir]
+    const pikkuArgs = [
+      'pikku',
+      'new',
+      'addon',
+      name,
+      '--openapi',
+      swaggerUrl,
+      '--dir',
+      targetDir,
+    ]
     if (credential) {
       pikkuArgs.push('--credential', credential)
     }
