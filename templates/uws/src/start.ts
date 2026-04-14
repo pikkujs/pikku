@@ -15,7 +15,7 @@ async function main(): Promise<void> {
     const config = await createConfig()
     const singletonServices = await createSingletonServices(config)
     const appServer = new PikkuUWSServer(
-      { ...config, hostname: 'localhost', port: 4010 },
+      { ...config, hostname: 'localhost', port: 4002 },
       singletonServices.logger
     )
     appServer.enableExitOnSigInt()
