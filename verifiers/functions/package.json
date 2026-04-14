@@ -18,8 +18,11 @@
   "devDependencies": {
     "@pikku/cli": "workspace:*",
     "@pikku/fetch": "workspace:*",
+    "@pikku/react": "workspace:*",
     "@pikku/websocket": "workspace:*",
+    "@tanstack/react-query": "^5",
     "@types/node": "^24",
+    "@types/react": "^19",
     "@types/ws": "^8",
     "concurrently": "^9.2.1",
     "tsx": "^4.21.0",

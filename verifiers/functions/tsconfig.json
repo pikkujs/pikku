@@ -4,6 +4,7 @@
     "noEmit": true,
     "resolveJsonModule": true,
     "module": "node18",
+    "jsx": "react-jsx",
     "types": ["node"]
   },
   "include": ["src/", ".pikku/*", "types/eventhub-topics.d.ts"],

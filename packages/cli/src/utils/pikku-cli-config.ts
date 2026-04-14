@@ -7,6 +7,7 @@ const CLIENT_FILE_KEYS = [
   'fetchFile',
   'websocketFile',
   'rpcWiringsFile',
+  'reactQueryFile',
   'queueWiringsFile',
   'mcpJsonFile',
   'nextBackendFile',
