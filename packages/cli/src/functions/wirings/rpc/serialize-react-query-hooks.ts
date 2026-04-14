@@ -39,13 +39,16 @@ type WorkflowRunStatus = {
 
 export const useWorkflowStatus = (
   workflowName: keyof FlattenedWorkflowMap & string,
-  runId: string,
-  options?: Omit<UseQueryOptions<WorkflowRunStatus, Error>, 'queryKey' | 'queryFn'>
+  runId?: string,
+  options?: Omit<UseQueryOptions<WorkflowRunStatus, Error>, 'queryKey' | 'queryFn' | 'enabled'>
 ) => {
   const rpc = usePikkuRPC<{ workflowStatus: (name: string, runId: string) => Promise<WorkflowRunStatus> }>()
   return useQuery<WorkflowRunStatus, Error>({
     queryKey: ['workflowStatus', workflowName, runId],
-    queryFn: () => rpc.workflowStatus(workflowName, runId),
+    queryFn: () => {
+      if (!runId) throw new Error('runId is required')
+      return rpc.workflowStatus(workflowName, runId)
+    },
     enabled: !!runId,
     ...options,
   })
