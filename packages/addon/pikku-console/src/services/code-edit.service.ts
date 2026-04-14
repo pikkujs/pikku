@@ -1,6 +1,6 @@
 import * as ts from 'typescript'
 import { readFile, writeFile } from 'node:fs/promises'
-import { resolve, dirname } from 'node:path'
+import { resolve } from 'node:path'
 
 export interface FunctionConfigChanges {
   title?: string | null
