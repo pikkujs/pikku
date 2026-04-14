@@ -1,3 +1,5 @@
+import { readFile, readdir } from 'node:fs/promises'
+import { join } from 'node:path'
 import type { JSONSchema7 } from 'json-schema'
 import type { HTTPWiringsMeta } from '../wirings/http/http.types.js'
 import type { ChannelsMeta } from '../wirings/channel/channel.types.js'
@@ -182,8 +184,6 @@ export class LocalMetaService implements MetaService {
 
   async readFile(relativePath: string): Promise<string | null> {
     try {
-      const { readFile } = await import('node:fs/promises')
-      const { join } = await import('node:path')
       return await readFile(join(this.basePath, relativePath), 'utf-8')
     } catch {
       return null
@@ -192,8 +192,6 @@ export class LocalMetaService implements MetaService {
 
   async readDir(relativePath: string): Promise<string[]> {
     try {
-      const { readdir } = await import('node:fs/promises')
-      const { join } = await import('node:path')
       return await readdir(join(this.basePath, relativePath))
     } catch {
       return []
