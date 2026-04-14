@@ -118,3 +118,13 @@ Feature: Workflow API
     Then I should receive a run ID
     When I poll until the workflow completes
     Then the workflow status should be "completed"
+
+  # SSE Status Stream
+  Scenario: Workflow status stream delivers events until completion
+    When I start the "dslSequentialWorkflow" workflow with:
+      | value | name   |
+      | 5     | Stream |
+    Then I should receive a run ID
+    When I stream the workflow status for "dslSequentialWorkflow"
+    Then the stream should have received at least 1 event
+    And the last stream event status should be "completed"

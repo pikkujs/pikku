@@ -12,6 +12,7 @@ interface WorkflowState {
   lastRunId: string | undefined
   lastStatus: string | undefined
   consoleResponse: any
+  streamEvents: any[]
 }
 
 const state: WorkflowState = {
@@ -19,6 +20,7 @@ const state: WorkflowState = {
   lastRunId: undefined,
   lastStatus: undefined,
   consoleResponse: undefined,
+  streamEvents: [],
 }
 
 function parseInput(table: any, docString?: string): Record<string, any> {
@@ -245,3 +247,43 @@ Then('the console response should contain workflow names', function () {
 Then('the console delete response should be successful', function () {
   expect(state.consoleResponse).toBeTruthy()
 })
+
+When(
+  'I stream the workflow status for {string}',
+  { timeout: 60_000 },
+  async function (this: AgentWorld, workflowName: string) {
+    expect(state.lastRunId).toBeTruthy()
+    state.streamEvents = []
+
+    const url = `${config.apiUrl}/workflow/${workflowName}/status/${state.lastRunId}/stream`
+    const res = await fetch(url, {
+      headers: { Accept: 'text/event-stream' },
+    })
+    expect(res.ok).toBeTruthy()
+
+    const text = await res.text()
+    for (const line of text.split('\n')) {
+      if (line.startsWith('data: ')) {
+        try {
+          state.streamEvents.push(JSON.parse(line.slice(6)))
+        } catch {}
+      }
+    }
+  }
+)
+
+Then(
+  'the stream should have received at least {int} event(s)',
+  function (min: number) {
+    expect(state.streamEvents.length).toBeGreaterThanOrEqual(min)
+  }
+)
+
+Then(
+  'the last stream event status should be {string}',
+  function (expected: string) {
+    const last = state.streamEvents[state.streamEvents.length - 1]
+    expect(last).toBeTruthy()
+    expect(last.status).toBe(expected)
+  }
+)
