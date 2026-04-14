@@ -6,6 +6,7 @@ import {
   saveData,
 } from './internal.functions.js'
 import { testAddon } from './addon.functions.js'
+import { analyzeDataV1, analyzeData } from './versioned.functions.js'
 import { logRequest, trackAnalytics, rateLimiter } from './middleware.js'
 import {
   canSendEmail,
@@ -55,6 +56,21 @@ wireHTTP({
   route: '/api/addon/test',
   tags: ['addon'],
   func: testAddon,
+})
+
+// Versioned functions
+wireHTTP({
+  method: 'post',
+  route: '/api/analyze/v1',
+  tags: ['analyze'],
+  func: analyzeDataV1,
+})
+
+wireHTTP({
+  method: 'post',
+  route: '/api/analyze/latest',
+  tags: ['analyze'],
+  func: analyzeData,
 })
 
 // Grouped routes via wireHTTPRoutes
