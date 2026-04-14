@@ -12,6 +12,10 @@ export class ExpressPikkuHTTPResponse implements PikkuHTTPResponse {
 
   constructor(private res: ExpressResponse) {}
 
+  public get statusCode(): number {
+    return this.#statusCode
+  }
+
   public status(code: number): this {
     this.#statusCode = code
     return this

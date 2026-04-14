@@ -45,7 +45,7 @@ export const telemetryOuter = pikkuMiddlewareFactory<{
           ...(errorMessage ? { errorMessage } : {}),
           ...(wire.http
             ? {
-                httpStatus: wire.http.response?.status,
+                httpStatus: wire.http.response?.statusCode,
                 httpMethod: wire.http.request?.method(),
                 httpPath: wire.http.request?.path(),
               }

@@ -70,7 +70,11 @@ export class PikkuMockRequest implements PikkuHTTPRequest {
 }
 
 export class PikkuMockResponse implements PikkuHTTPResponse {
-  public _status: number | undefined
+  public _status: number = 200
+
+  public get statusCode(): number {
+    return this._status
+  }
 
   status(code: number): this {
     this._status = code
