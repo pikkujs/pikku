@@ -5,47 +5,11 @@ import { usePanelContext } from '../../context/PanelContext'
 import { useFunctionMeta, useSchema, useChannelSnippets } from '../../hooks/useWirings'
 import { SchemaSection } from '../project/panels/shared/SchemaSection'
 import { CopyableCode } from '../ui/CopyableCode'
+import { MetaRow } from '../ui/MetaRow'
+import { SectionLabel } from '../ui/SectionLabel'
+import { TagBadge, ServiceBadge } from '../ui/TagBadge'
+import classes from '../ui/console.module.css'
 import type { ChannelSelection } from './ChannelNavTree'
-
-const MetaRow: React.FunctionComponent<{
-  label: string
-  children: React.ReactNode
-}> = ({ label, children }) => (
-  <Box
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 12,
-      padding: '6px 0',
-      borderBottom: '1px solid var(--app-row-border)',
-    }}
-  >
-    <Text
-      size="sm"
-      ff="monospace"
-      c="var(--app-meta-label)"
-      style={{ minWidth: 85, flexShrink: 0 }}
-    >
-      {label}
-    </Text>
-    <Box style={{ flex: 1, minWidth: 0 }}>{children}</Box>
-  </Box>
-)
-
-const SLabel: React.FunctionComponent<{ children: React.ReactNode }> = ({
-  children,
-}) => (
-  <Text
-    size="xs"
-    fw={600}
-    ff="monospace"
-    c="var(--app-section-label)"
-    tt="uppercase"
-    style={{ letterSpacing: '0.1em', padding: '12px 0 6px' }}
-  >
-    {children}
-  </Text>
-)
 
 const getSelectedMeta = (
   channel: ChannelMeta,
@@ -114,20 +78,10 @@ export const ChannelDetailView: React.FunctionComponent<ChannelDetailViewProps> 
   const typeBadge = getTypeBadge(selected)
 
   return (
-    <Box style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <Box className={classes.flexColumn}>
       {/* Header */}
-      <Box
-        style={{
-          padding: '10px 16px',
-          borderBottom: '1px solid var(--app-row-border)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          flexShrink: 0,
-          background: 'rgba(255,255,255,0.01)',
-        }}
-      >
-        <Box style={{ flex: 1 }}>
+      <Box className={classes.detailHeader} style={{ padding: '10px 16px', background: 'rgba(255,255,255,0.01)' }}>
+        <Box className={classes.flexGrow}>
           <Text size="xs" ff="monospace" c="var(--app-section-label)">
             {breadcrumb}
           </Text>
@@ -143,52 +97,25 @@ export const ChannelDetailView: React.FunctionComponent<ChannelDetailViewProps> 
           )}
         </Box>
         <Group gap={6}>
-          <Badge
-            size="sm"
-            variant="light"
-            color="cyan"
-          >
+          <Badge size="sm" variant="light" color="cyan">
             Channel
           </Badge>
           {selected?.type === 'action' && (
-            <Badge
-              size="sm"
-              variant="light"
-              color="violet"
-            >
+            <Badge size="sm" variant="light" color="violet">
               {selected.category}
             </Badge>
           )}
           {channel.tags?.map((tag: string) => (
-            <Badge
-              key={tag}
-              size="sm"
-              variant="light"
-              ff="monospace"
-              style={{
-                background: 'var(--app-tag-bg)',
-                border: '1px solid var(--app-tag-border)',
-                color: 'var(--app-tag-color)',
-              }}
-            >
-              {tag}
-            </Badge>
+            <TagBadge key={tag}>{tag}</TagBadge>
           ))}
         </Group>
       </Box>
 
       {/* Body: detail left + code right */}
-      <Box style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      <Box className={classes.flexRow} style={{ flex: 1, minHeight: 0 }}>
         {/* Left: metadata + schema */}
-        <Box
-          style={{
-            flex: 1,
-            overflow: 'auto',
-            borderRight: '1px solid var(--app-row-border)',
-            padding: 16,
-          }}
-        >
-          <SLabel>Handler</SLabel>
+        <Box className={classes.splitLeft}>
+          <SectionLabel>Handler</SectionLabel>
 
           {funcId && (
             <MetaRow label="function">
@@ -197,7 +124,7 @@ export const ChannelDetailView: React.FunctionComponent<ChannelDetailViewProps> 
                 fw={600}
                 ff="monospace"
                 c="var(--app-meta-value)"
-                style={{ cursor: 'pointer' }}
+                className={classes.clickableText}
                 onClick={() => navigateInPanel('function', funcId, displayName || funcId, funcMeta)}
               >
                 {displayName}
@@ -249,18 +176,7 @@ export const ChannelDetailView: React.FunctionComponent<ChannelDetailViewProps> 
             <MetaRow label="services">
               <Group gap={4}>
                 {funcMeta.services.map((svc: string) => (
-                  <Badge
-                    key={svc}
-                    size="sm"
-                    variant="light"
-                    style={{
-                      background: 'var(--app-service-bg)',
-                      border: '1px solid var(--app-service-border)',
-                      color: 'var(--app-service-color)',
-                    }}
-                  >
-                    {svc}
-                  </Badge>
+                  <ServiceBadge key={svc}>{svc}</ServiceBadge>
                 ))}
               </Group>
             </MetaRow>
@@ -282,19 +198,7 @@ export const ChannelDetailView: React.FunctionComponent<ChannelDetailViewProps> 
             <MetaRow label="tags">
               <Group gap={4}>
                 {channel.tags.map((tag: string, i: number) => (
-                  <Badge
-                    key={i}
-                    size="sm"
-                    variant="light"
-                    ff="monospace"
-                    style={{
-                      background: 'var(--app-tag-bg)',
-                      border: '1px solid var(--app-tag-border)',
-                      color: 'var(--app-tag-color)',
-                    }}
-                  >
-                    {tag}
-                  </Badge>
+                  <TagBadge key={i}>{tag}</TagBadge>
                 ))}
               </Group>
             </MetaRow>
@@ -302,29 +206,21 @@ export const ChannelDetailView: React.FunctionComponent<ChannelDetailViewProps> 
 
           {inputSchemaName && (
             <>
-              <SLabel>Input</SLabel>
+              <SectionLabel>Input</SectionLabel>
               <SchemaSection schemaName={inputSchemaName} />
             </>
           )}
 
           {outputSchemaName && (
             <>
-              <SLabel>Output</SLabel>
+              <SectionLabel>Output</SectionLabel>
               <SchemaSection schemaName={outputSchemaName} />
             </>
           )}
         </Box>
 
         {/* Right: code tabs */}
-        <Box
-          style={{
-            flex: 1,
-            minWidth: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
-        >
+        <Box className={classes.flexGrow} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <Tabs
             defaultValue="pikku-ws"
             style={{
@@ -341,7 +237,8 @@ export const ChannelDetailView: React.FunctionComponent<ChannelDetailViewProps> 
             </Tabs.List>
             <Tabs.Panel
               value="pikku-ws"
-              style={{ flex: 1, overflow: 'auto' }}
+              className={classes.overflowAuto}
+              style={{ flex: 1 }}
               p="sm"
             >
               {snippet ? (
@@ -354,7 +251,8 @@ export const ChannelDetailView: React.FunctionComponent<ChannelDetailViewProps> 
             </Tabs.Panel>
             <Tabs.Panel
               value="raw-ws"
-              style={{ flex: 1, overflow: 'auto' }}
+              className={classes.overflowAuto}
+              style={{ flex: 1 }}
               p="sm"
             >
               <CopyableCode
@@ -364,7 +262,8 @@ export const ChannelDetailView: React.FunctionComponent<ChannelDetailViewProps> 
             </Tabs.Panel>
             <Tabs.Panel
               value="cli"
-              style={{ flex: 1, overflow: 'auto' }}
+              className={classes.overflowAuto}
+              style={{ flex: 1 }}
               p="sm"
             >
               <Text size="sm" c="dimmed">

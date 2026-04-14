@@ -1,0 +1,226 @@
+/* ── Layout primitives ── */
+
+.flexColumn {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.flexRow {
+  display: flex;
+  height: 100%;
+}
+
+.flexGrow {
+  flex: 1;
+  min-width: 0;
+}
+
+.overflowAuto {
+  overflow: auto;
+}
+
+.overflowHidden {
+  overflow: hidden;
+}
+
+.noShrink {
+  flex-shrink: 0;
+}
+
+/* ── List-Detail layout ── */
+
+.listDetailContainer {
+  display: flex;
+  height: 100%;
+}
+
+.listPane {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--app-row-border);
+}
+
+.listPaneFlex {
+  composes: listPane;
+  flex: 1;
+}
+
+.listPaneFixed {
+  composes: listPane;
+}
+
+.detailPane {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ── Grid header (column headings row) ── */
+
+.gridHeader {
+  padding: 7px 16px;
+  border-bottom: 1px solid var(--app-row-border);
+  background: #0a0c12;
+  flex-shrink: 0;
+}
+
+.gridHeaderLabel {
+  letter-spacing: 0.1em;
+  font-size: 9px;
+}
+
+/* ── List item (selectable row) ── */
+
+.listItem {
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-left: 2px solid transparent;
+}
+
+.listItem[data-active='true'] {
+  border-left-color: #7c3aed;
+  background: rgba(124, 58, 237, 0.05);
+}
+
+.listItemPadded {
+  composes: listItem;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  align-items: center;
+}
+
+/* ── Detail panel ── */
+
+.detailHeader {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--app-row-border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.detailBody {
+  flex: 1;
+  padding: 16px;
+}
+
+/* ── Meta row (label: value) ── */
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--app-row-border);
+}
+
+.metaRowLabel {
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.metaRowContent {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Section label ── */
+
+.sectionLabel {
+  letter-spacing: 0.1em;
+  padding: 12px 0 6px;
+}
+
+/* ── Empty state (centered placeholder) ── */
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* ── Badge variants ── */
+
+.tagBadge {
+  background: var(--app-tag-bg);
+  border: 1px solid var(--app-tag-border);
+  color: var(--app-tag-color);
+}
+
+.serviceBadge {
+  background: var(--app-service-bg);
+  border: 1px solid var(--app-service-border);
+  color: var(--app-service-color);
+}
+
+/* ── Clickable text ── */
+
+.clickableText {
+  cursor: pointer;
+}
+
+/* ── Split panel (two-column detail) ── */
+
+.splitLeft {
+  flex: 1;
+  overflow: auto;
+  border-right: 1px solid var(--app-row-border);
+  padding: 16px;
+}
+
+.splitRight {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 16px;
+}
+
+/* ── Surface card ── */
+
+.surfaceCard {
+  background: var(--app-surface);
+  border: 1px solid var(--app-row-border);
+  border-radius: 8px;
+}
+
+/* ── Code-like input box ── */
+
+.codeInputBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--app-input-bg);
+  border: 1px solid var(--app-row-border);
+  border-radius: 6px;
+  padding: 7px 10px;
+}
+
+/* ── Subtle separator line ── */
+
+.separator {
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* ── Group label row (type header in lists) ── */
+
+.groupLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px 4px;
+}
+
+/* ── Type dot indicator ── */
+
+.typeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}

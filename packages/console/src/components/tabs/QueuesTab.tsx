@@ -2,80 +2,22 @@ import React, { useMemo, useState } from 'react'
 import {
   Box,
   Text,
-  TextInput,
   ScrollArea,
-  UnstyledButton,
-  Group,
-  Badge,
 } from '@mantine/core'
-import { Search } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
 import { useFunctionMeta } from '../../hooks/useWirings'
+import { MetaRow } from '../ui/MetaRow'
+import { SectionLabel } from '../ui/SectionLabel'
+import { ValText } from '../ui/ValText'
+import { ListDetailLayout } from '../ui/ListDetailLayout'
+import { GridHeader } from '../ui/GridHeader'
+import { ListItem } from '../ui/ListItem'
+import { SearchInput } from '../ui/SearchInput'
+import { DetailHeader } from '../ui/DetailHeader'
+import classes from '../ui/console.module.css'
 
-const MetaRow: React.FunctionComponent<{
-  label: string
-  children: React.ReactNode
-}> = ({ label, children }) => (
-  <Box
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 8,
-      padding: '4px 0',
-      borderBottom: '1px solid var(--app-row-border)',
-      fontSize: 11,
-    }}
-  >
-    <Text
-      size="xs"
-      ff="monospace"
-      c="var(--app-meta-label)"
-      style={{ minWidth: 130, flexShrink: 0, fontSize: 10 }}
-    >
-      {label}
-    </Text>
-    <Box style={{ flex: 1, minWidth: 0 }}>{children}</Box>
-  </Box>
-)
-
-const SLabel: React.FunctionComponent<{ children: React.ReactNode }> = ({
-  children,
-}) => (
-  <Text
-    size="xs"
-    fw={600}
-    ff="monospace"
-    c="var(--app-section-label)"
-    tt="uppercase"
-    style={{ letterSpacing: '0.1em', padding: '12px 0 6px' }}
-  >
-    {children}
-  </Text>
-)
-
-const ValText: React.FunctionComponent<{
-  value: any
-  fallback?: string
-  isBoolean?: boolean
-}> = ({ value, fallback = '—', isBoolean }) => {
-  const display = value != null && value !== '' ? String(value) : fallback
-  const isDim = display === fallback
-
-  if (isBoolean && !isDim) {
-    return (
-      <Text size="xs" ff="monospace" c={value ? '#86efac' : 'var(--app-text-muted)'}>
-        {String(value)}
-      </Text>
-    )
-  }
-
-  return (
-    <Text size="xs" ff="monospace" c={isDim ? 'var(--app-text-muted)' : 'var(--app-text)'}>
-      {display}
-    </Text>
-  )
-}
+const GRID_COLUMNS = '1fr 120px'
 
 const QueueDetail: React.FunctionComponent<{ item: any }> = ({ item }) => {
   const { navigateInPanel } = usePanelContext()
@@ -85,38 +27,21 @@ const QueueDetail: React.FunctionComponent<{ item: any }> = ({ item }) => {
   const config = item?.workerConfig || {}
 
   return (
-    <Box style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
-      <Box
-        style={{
-          padding: '14px 16px',
-          borderBottom: '1px solid var(--app-row-border)',
-          flexShrink: 0,
-        }}
-      >
-        <Text
-          size="sm"
-          fw={600}
-          ff="monospace"
-          c="var(--app-meta-value)"
-          mb={4}
-          truncate
-        >
-          {item.wireId || item.name}
-        </Text>
-        <Badge size="sm" variant="light" color="cyan">
-          Queue
-        </Badge>
-      </Box>
-      <Box p="md" style={{ flex: 1 }}>
-        <SLabel>Handler</SLabel>
+    <Box className={classes.flexColumn} style={{ overflow: 'auto' }}>
+      <DetailHeader
+        title={item.wireId || item.name}
+        badge={{ label: 'Queue', color: 'cyan' }}
+      />
+      <Box p="md" className={classes.flexGrow}>
+        <SectionLabel>Handler</SectionLabel>
         {funcId && (
-          <MetaRow label="function">
+          <MetaRow label="function" labelWidth={130}>
             <Text
               size="sm"
               fw={600}
               ff="monospace"
               c="var(--app-meta-value)"
-              style={{ cursor: 'pointer' }}
+              className={classes.clickableText}
               onClick={() =>
                 navigateInPanel('function', funcId, displayName || funcId, funcMeta)
               }
@@ -125,43 +50,43 @@ const QueueDetail: React.FunctionComponent<{ item: any }> = ({ item }) => {
             </Text>
           </MetaRow>
         )}
-        <MetaRow label="name">
+        <MetaRow label="name" labelWidth={130}>
           <ValText value={item.wireId || item.name} />
         </MetaRow>
-        <MetaRow label="autorun">
+        <MetaRow label="autorun" labelWidth={130}>
           <ValText value={config.autorun ?? true} isBoolean />
         </MetaRow>
 
-        <SLabel>Processing</SLabel>
-        <MetaRow label="batchSize">
+        <SectionLabel>Processing</SectionLabel>
+        <MetaRow label="batchSize" labelWidth={130}>
           <ValText value={config.batchSize} />
         </MetaRow>
-        <MetaRow label="prefetch">
+        <MetaRow label="prefetch" labelWidth={130}>
           <ValText value={config.prefetch} />
         </MetaRow>
-        <MetaRow label="pollInterval">
+        <MetaRow label="pollInterval" labelWidth={130}>
           <ValText value={config.pollInterval} />
         </MetaRow>
 
-        <SLabel>Timeouts</SLabel>
-        <MetaRow label="visibilityTimeout">
+        <SectionLabel>Timeouts</SectionLabel>
+        <MetaRow label="visibilityTimeout" labelWidth={130}>
           <ValText value={config.visibilityTimeout ? `${config.visibilityTimeout}s` : null} />
         </MetaRow>
-        <MetaRow label="lockDuration">
+        <MetaRow label="lockDuration" labelWidth={130}>
           <ValText value={config.lockDuration ? `${config.lockDuration}ms` : null} />
         </MetaRow>
-        <MetaRow label="drainDelay">
+        <MetaRow label="drainDelay" labelWidth={130}>
           <ValText value={config.drainDelay ? `${config.drainDelay}s` : null} />
         </MetaRow>
-        <MetaRow label="maxStalledCount">
+        <MetaRow label="maxStalledCount" labelWidth={130}>
           <ValText value={config.maxStalledCount} />
         </MetaRow>
 
-        <SLabel>Retention</SLabel>
-        <MetaRow label="removeOnComplete">
+        <SectionLabel>Retention</SectionLabel>
+        <MetaRow label="removeOnComplete" labelWidth={130}>
           <ValText value={config.removeOnComplete} />
         </MetaRow>
-        <MetaRow label="removeOnFail">
+        <MetaRow label="removeOnFail" labelWidth={130}>
           <ValText value={config.removeOnFail} />
         </MetaRow>
       </Box>
@@ -198,93 +123,52 @@ export const QueuesTab: React.FunctionComponent = () => {
     return items.find((i: any) => i.name === selected) || null
   }, [items, selected])
 
-  return (
-    <Box style={{ display: 'flex', height: '100%' }}>
-      {/* List */}
-      <Box
-        style={{
-          flex: 1,
-          borderRight: '1px solid var(--app-row-border)',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        <Box p="xs">
-          <TextInput
-            placeholder="Search queue workers..."
-            leftSection={<Search size={14} />}
-            value={search}
-            onChange={(e) => setSearch(e.currentTarget.value)}
-            size="xs"
-          />
-        </Box>
-        <Box
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 120px',
-            padding: '7px 16px',
-            borderBottom: '1px solid var(--app-row-border)',
-            background: '#0a0c12',
-            flexShrink: 0,
-          }}
-        >
-          <Text size="xs" fw={600} ff="monospace" c="var(--app-section-label)" tt="uppercase" style={{ letterSpacing: '0.1em', fontSize: 9 }}>
-            Name
-          </Text>
-          <Text size="xs" fw={600} ff="monospace" c="var(--app-section-label)" tt="uppercase" style={{ letterSpacing: '0.1em', fontSize: 9 }}>
-            Batch size
-          </Text>
-        </Box>
-        <ScrollArea style={{ flex: 1 }}>
-          {filtered.map((item: any) => {
-            const isActive = selected === item.name
-            const batchSize = item.workerConfig?.batchSize
-            return (
-              <UnstyledButton
-                key={item.name}
-                onClick={() => setSelected(item.name)}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 120px',
-                  padding: '10px 16px',
-                  borderBottom: '1px solid rgba(255,255,255,0.04)',
-                  borderLeft: isActive ? '2px solid #7c3aed' : '2px solid transparent',
-                  background: isActive ? 'rgba(124,58,237,0.05)' : undefined,
-                  width: '100%',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                  alignItems: 'center',
-                }}
-              >
-                <Box>
-                  <Text size="xs" ff="monospace" c={isActive ? 'var(--app-meta-value)' : 'var(--app-text)'} truncate>
-                    {item.wireId || item.name}
-                  </Text>
-                  <Text size="xs" ff="monospace" c="var(--app-text-muted)" truncate style={{ fontSize: 9 }}>
-                    {item.pikkuFuncId}
-                  </Text>
-                </Box>
-                <Text size="xs" ff="monospace" c="var(--app-meta-label)">
-                  {batchSize ?? '—'}
+  const list = (
+    <>
+      <SearchInput
+        value={search}
+        onChange={setSearch}
+        placeholder="Search queue workers..."
+      />
+      <GridHeader
+        columns={[{ label: 'Name' }, { label: 'Batch size' }]}
+        gridTemplateColumns={GRID_COLUMNS}
+      />
+      <ScrollArea className={classes.flexGrow}>
+        {filtered.map((item: any) => {
+          const isActive = selected === item.name
+          const batchSize = item.workerConfig?.batchSize
+          return (
+            <ListItem
+              key={item.name}
+              active={isActive}
+              onClick={() => setSelected(item.name)}
+              gridTemplateColumns={GRID_COLUMNS}
+            >
+              <Box>
+                <Text size="xs" ff="monospace" c={isActive ? 'var(--app-meta-value)' : 'var(--app-text)'} truncate>
+                  {item.wireId || item.name}
                 </Text>
-              </UnstyledButton>
-            )
-          })}
-        </ScrollArea>
-      </Box>
+                <Text size="xs" ff="monospace" c="var(--app-text-muted)" truncate style={{ fontSize: 9 }}>
+                  {item.pikkuFuncId}
+                </Text>
+              </Box>
+              <Text size="xs" ff="monospace" c="var(--app-meta-label)">
+                {batchSize ?? '—'}
+              </Text>
+            </ListItem>
+          )
+        })}
+      </ScrollArea>
+    </>
+  )
 
-      {/* Detail */}
-      <Box style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-        {selectedItem ? (
-          <QueueDetail item={selectedItem} />
-        ) : (
-          <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-            <Text c="dimmed" ff="monospace" size="sm">
-              Select a queue worker
-            </Text>
-          </Box>
-        )}
-      </Box>
-    </Box>
+  return (
+    <ListDetailLayout
+      list={list}
+      detail={selectedItem ? <QueueDetail item={selectedItem} /> : null}
+      hasSelection={!!selectedItem}
+      emptyMessage="Select a queue worker"
+    />
   )
 }

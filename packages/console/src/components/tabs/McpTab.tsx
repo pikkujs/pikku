@@ -2,19 +2,21 @@ import React, { useMemo, useState } from 'react'
 import {
   Box,
   Text,
-  TextInput,
   ScrollArea,
-  UnstyledButton,
-  Group,
   Badge,
-  Tabs,
 } from '@mantine/core'
-import { Search } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
-import { useFunctionMeta, useSchema } from '../../hooks/useWirings'
+import { useFunctionMeta } from '../../hooks/useWirings'
 import { SchemaSection } from '../project/panels/shared/SchemaSection'
 import { CopyableCode } from '../ui/CopyableCode'
+import { MetaRow } from '../ui/MetaRow'
+import { SectionLabel } from '../ui/SectionLabel'
+import { ListDetailLayout } from '../ui/ListDetailLayout'
+import { SearchInput } from '../ui/SearchInput'
+import { EmptyState } from '../ui/EmptyState'
+import { ListItem } from '../ui/ListItem'
+import classes from '../ui/console.module.css'
 
 const TYPE_DOTS: Record<string, string> = {
   tool: 'rgba(245,158,11,0.7)',
@@ -28,46 +30,6 @@ const TYPE_BADGE_COLORS: Record<string, string> = {
   prompt: 'violet',
 }
 
-const MetaRow: React.FunctionComponent<{
-  label: string
-  children: React.ReactNode
-}> = ({ label, children }) => (
-  <Box
-    style={{
-      display: 'flex',
-      alignItems: 'flex-start',
-      gap: 12,
-      padding: '6px 0',
-      borderBottom: '1px solid var(--app-row-border)',
-    }}
-  >
-    <Text
-      size="sm"
-      ff="monospace"
-      c="var(--app-meta-label)"
-      style={{ minWidth: 85, flexShrink: 0, paddingTop: 1 }}
-    >
-      {label}
-    </Text>
-    <Box style={{ flex: 1, minWidth: 0 }}>{children}</Box>
-  </Box>
-)
-
-const SLabel: React.FunctionComponent<{ children: React.ReactNode }> = ({
-  children,
-}) => (
-  <Text
-    size="xs"
-    fw={600}
-    ff="monospace"
-    c="var(--app-section-label)"
-    tt="uppercase"
-    style={{ letterSpacing: '0.1em', padding: '12px 0 6px' }}
-  >
-    {children}
-  </Text>
-)
-
 const McpDetailPanel: React.FunctionComponent<{ item: any }> = ({ item }) => {
   const { navigateInPanel } = usePanelContext()
   const funcId = item?.pikkuFuncId
@@ -78,20 +40,10 @@ const McpDetailPanel: React.FunctionComponent<{ item: any }> = ({ item }) => {
   const method = item?.method || 'tool'
 
   return (
-    <Box style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <Box className={classes.flexColumn}>
       {/* Header */}
-      <Box
-        style={{
-          padding: '10px 16px',
-          borderBottom: '1px solid var(--app-row-border)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          flexShrink: 0,
-          background: 'rgba(255,255,255,0.01)',
-        }}
-      >
-        <Box style={{ flex: 1 }}>
+      <Box className={classes.detailHeader} style={{ padding: '10px 16px', background: 'rgba(255,255,255,0.01)' }}>
+        <Box className={classes.flexGrow}>
           <Text size="sm" fw={600} ff="monospace" c="var(--app-meta-value)">
             {item.name || item.wireId || 'unnamed'}
           </Text>
@@ -107,17 +59,10 @@ const McpDetailPanel: React.FunctionComponent<{ item: any }> = ({ item }) => {
       </Box>
 
       {/* Body: detail left + config right */}
-      <Box style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      <Box className={classes.flexRow} style={{ flex: 1, minHeight: 0 }}>
         {/* Left: metadata + schema */}
-        <Box
-          style={{
-            flex: 1,
-            overflow: 'auto',
-            borderRight: '1px solid var(--app-row-border)',
-            padding: 16,
-          }}
-        >
-          <SLabel>{method}</SLabel>
+        <Box className={classes.splitLeft}>
+          <SectionLabel>{method}</SectionLabel>
 
           <MetaRow label="name">
             <Text size="sm" ff="monospace" c="var(--app-meta-value)">
@@ -132,7 +77,7 @@ const McpDetailPanel: React.FunctionComponent<{ item: any }> = ({ item }) => {
                 fw={600}
                 ff="monospace"
                 c="var(--app-meta-value)"
-                style={{ cursor: 'pointer' }}
+                className={classes.clickableText}
                 onClick={() =>
                   navigateInPanel('function', funcId, displayName || funcId, funcMeta)
                 }
@@ -143,8 +88,8 @@ const McpDetailPanel: React.FunctionComponent<{ item: any }> = ({ item }) => {
           )}
 
           {item.description && (
-            <MetaRow label="description">
-              <Text size="sm" c="var(--app-text)" style={{ lineHeight: 1.6 }}>
+            <MetaRow label="description" align="flex-start">
+              <Text size="sm" c="var(--app-text)" lh={1.6}>
                 {item.description}
               </Text>
             </MetaRow>
@@ -152,32 +97,25 @@ const McpDetailPanel: React.FunctionComponent<{ item: any }> = ({ item }) => {
 
           {inputSchemaName && (
             <>
-              <SLabel>Input Schema</SLabel>
+              <SectionLabel>Input Schema</SectionLabel>
               <SchemaSection schemaName={inputSchemaName} />
             </>
           )}
 
           {outputSchemaName && (
             <>
-              <SLabel>Output Schema</SLabel>
+              <SectionLabel>Output Schema</SectionLabel>
               <SchemaSection schemaName={outputSchemaName} />
             </>
           )}
         </Box>
 
         {/* Right: MCP client config */}
-        <Box
-          style={{
-            flex: 1,
-            minWidth: 0,
-            overflow: 'auto',
-            padding: 16,
-          }}
-        >
+        <Box className={classes.splitRight}>
           <Text size="xs" fw={600} ff="monospace" c="var(--app-meta-label)" mb={4}>
             Connect your MCP client
           </Text>
-          <Text size="xs" c="var(--app-text-muted)" mb="md" style={{ lineHeight: 1.6 }}>
+          <Text size="xs" c="var(--app-text-muted)" mb="md" lh={1.6}>
             All tools, resources, and prompts are available once connected.
           </Text>
 
@@ -209,34 +147,16 @@ const McpDetailPanel: React.FunctionComponent<{ item: any }> = ({ item }) => {
             />
           </Box>
 
-          <Box
-            mt="md"
-            p="sm"
-            style={{
-              background: 'var(--app-surface)',
-              border: '1px solid var(--app-row-border)',
-              borderRadius: 8,
-            }}
-          >
+          <Box mt="md" p="sm" className={classes.surfaceCard}>
             <Text size="xs" fw={600} ff="monospace" c="var(--app-section-label)" tt="uppercase" mb={8}>
               SSE endpoint · any client
             </Text>
-            <Box
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                background: 'var(--app-input-bg)',
-                border: '1px solid var(--app-row-border)',
-                borderRadius: 6,
-                padding: '7px 10px',
-              }}
-            >
-              <Text size="xs" ff="monospace" c="var(--app-tag-color)" style={{ flex: 1 }}>
+            <Box className={classes.codeInputBox}>
+              <Text size="xs" ff="monospace" c="var(--app-tag-color)" className={classes.flexGrow}>
                 http://localhost:4002/mcp
               </Text>
             </Box>
-            <Text size="xs" c="var(--app-text-muted)" mt={8} style={{ lineHeight: 1.6 }}>
+            <Text size="xs" c="var(--app-text-muted)" mt={8} lh={1.6}>
               Use this URL directly in any MCP-compatible client that supports SSE transport.
             </Text>
           </Box>
@@ -275,93 +195,48 @@ export const McpTab: React.FunctionComponent = () => {
     return items.find((i: any) => `${i.method}::${i.wireId || i.name}` === selected) || null
   }, [items, selected])
 
-  const itemCount = items.length
-
-  return (
-    <Box style={{ display: 'flex', height: '100%' }}>
-      {/* Sidebar */}
-      <Box
-        style={{
-          width: 280,
-          minWidth: 220,
-          borderRight: '1px solid var(--app-row-border)',
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100%',
-        }}
-      >
-        <Box p="xs">
-          <Group justify="space-between" mb={6}>
-            <Text size="xs" fw={600} ff="monospace" c="var(--app-meta-label)">
-              MCP
-            </Text>
-            <Text size="xs" ff="monospace" c="dimmed">
-              {itemCount} items
-            </Text>
-          </Group>
-          <TextInput
-            placeholder="Search..."
-            leftSection={<Search size={14} />}
-            value={search}
-            onChange={(e) => setSearch(e.currentTarget.value)}
-            size="xs"
-          />
-        </Box>
-        <ScrollArea style={{ flex: 1 }}>
-          {Object.entries(grouped).map(([type, typeItems]) => {
-            if (typeItems.length === 0) return null
-            return (
-              <React.Fragment key={type}>
-                {/* Group label */}
-                <Box
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '8px 12px 4px',
-                  }}
+  const list = (
+    <>
+      <SearchInput
+        value={search}
+        onChange={setSearch}
+        label="MCP"
+        count={items.length}
+      />
+      <ScrollArea className={classes.flexGrow}>
+        {Object.entries(grouped).map(([type, typeItems]) => {
+          if (typeItems.length === 0) return null
+          return (
+            <React.Fragment key={type}>
+              <Box className={classes.groupLabel}>
+                <Text
+                  size="xs"
+                  ff="monospace"
+                  c="var(--app-section-label)"
+                  tt="uppercase"
+                  className={classes.gridHeaderLabel}
                 >
-                  <Text
-                    size="xs"
-                    ff="monospace"
-                    c="var(--app-section-label)"
-                    tt="uppercase"
-                    style={{ letterSpacing: '0.1em', fontSize: 9 }}
-                  >
-                    {type}s
-                  </Text>
-                  <Box style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.04)' }} />
-                </Box>
+                  {type}s
+                </Text>
+                <Box className={classes.separator} />
+              </Box>
 
-                {typeItems.map((item: any) => {
-                  const key = `${item.method}::${item.wireId || item.name}`
-                  const isActive = selected === key
-                  return (
-                    <UnstyledButton
-                      key={key}
-                      onClick={() => setSelected(key)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 7,
-                        padding: '6px 12px',
-                        borderLeft: isActive ? '2px solid #7c3aed' : '2px solid transparent',
-                        background: isActive ? 'rgba(124,58,237,0.06)' : undefined,
-                        width: '100%',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s',
-                      }}
-                    >
+              {typeItems.map((item: any) => {
+                const key = `${item.method}::${item.wireId || item.name}`
+                const isActive = selected === key
+                return (
+                  <ListItem
+                    key={key}
+                    active={isActive}
+                    onClick={() => setSelected(key)}
+                    padding="6px 12px"
+                  >
+                    <Box style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%' }}>
                       <Box
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: '50%',
-                          flexShrink: 0,
-                          background: TYPE_DOTS[item.method || 'tool'],
-                        }}
+                        className={classes.typeDot}
+                        style={{ background: TYPE_DOTS[item.method || 'tool'] }}
                       />
-                      <Box style={{ flex: 1, minWidth: 0 }}>
+                      <Box className={classes.flexGrow}>
                         <Text
                           size="xs"
                           ff="monospace"
@@ -382,27 +257,24 @@ export const McpTab: React.FunctionComponent = () => {
                           </Text>
                         )}
                       </Box>
-                    </UnstyledButton>
-                  )
-                })}
-              </React.Fragment>
-            )
-          })}
-        </ScrollArea>
-      </Box>
+                    </Box>
+                  </ListItem>
+                )
+              })}
+            </React.Fragment>
+          )
+        })}
+      </ScrollArea>
+    </>
+  )
 
-      {/* Main + Right */}
-      <Box style={{ flex: 1, overflow: 'hidden', minWidth: 0 }}>
-        {selectedItem ? (
-          <McpDetailPanel item={selectedItem} />
-        ) : (
-          <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-            <Text c="dimmed" ff="monospace" size="sm">
-              Select a tool, resource, or prompt
-            </Text>
-          </Box>
-        )}
-      </Box>
-    </Box>
+  return (
+    <ListDetailLayout
+      listWidth={280}
+      list={list}
+      detail={selectedItem ? <McpDetailPanel item={selectedItem} /> : null}
+      hasSelection={!!selectedItem}
+      emptyMessage="Select a tool, resource, or prompt"
+    />
   )
 }

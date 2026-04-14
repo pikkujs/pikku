@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react'
 import {
   Box,
   Text,
-  TextInput,
   ScrollArea,
   UnstyledButton,
   Group,
@@ -10,56 +9,24 @@ import {
   Center,
   Loader,
 } from '@mantine/core'
-import { Search } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { PanelProvider } from '../context/PanelContext'
 import { usePanelContext } from '../context/PanelContext'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
-import { useFunctionMeta, useSchema } from '../hooks/useWirings'
-import { CommonDetails } from '../components/project/panels/shared/CommonDetails'
+import { useFunctionMeta } from '../hooks/useWirings'
 import { SchemaSection } from '../components/project/panels/shared/SchemaSection'
 import { funcWrapperDefs } from '../components/ui/badge-defs'
+import { MetaRow } from '../components/ui/MetaRow'
+import { SectionLabel } from '../components/ui/SectionLabel'
+import { ListDetailLayout } from '../components/ui/ListDetailLayout'
+import { GridHeader } from '../components/ui/GridHeader'
+import { ListItem } from '../components/ui/ListItem'
+import { SearchInput } from '../components/ui/SearchInput'
+import { TagBadge, ServiceBadge } from '../components/ui/TagBadge'
+import classes from '../components/ui/console.module.css'
 
-const SLabel: React.FunctionComponent<{ children: React.ReactNode }> = ({
-  children,
-}) => (
-  <Text
-    size="xs"
-    fw={600}
-    ff="monospace"
-    c="var(--app-section-label)"
-    tt="uppercase"
-    style={{ letterSpacing: '0.1em', padding: '12px 0 6px' }}
-  >
-    {children}
-  </Text>
-)
-
-const MetaRow: React.FunctionComponent<{
-  label: string
-  children: React.ReactNode
-}> = ({ label, children }) => (
-  <Box
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 12,
-      padding: '6px 0',
-      borderBottom: '1px solid var(--app-row-border)',
-    }}
-  >
-    <Text
-      size="sm"
-      ff="monospace"
-      c="var(--app-meta-label)"
-      style={{ minWidth: 90, flexShrink: 0 }}
-    >
-      {label}
-    </Text>
-    <Box style={{ flex: 1, minWidth: 0 }}>{children}</Box>
-  </Box>
-)
+const GRID_COLUMNS = '1fr 140px 60px 100px 80px'
 
 const CollapsibleSchema: React.FunctionComponent<{
   label: string
@@ -89,7 +56,7 @@ const CollapsibleSchema: React.FunctionComponent<{
           ff="monospace"
           c="var(--app-section-label)"
           tt="uppercase"
-          style={{ letterSpacing: '0.1em' }}
+          className={classes.gridHeaderLabel}
         >
           {label}
         </Text>
@@ -111,30 +78,14 @@ const FunctionDetail: React.FunctionComponent<{ func: any }> = ({ func }) => {
   const outputSchemaName = func.outputSchemaName
 
   return (
-    <Box
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        overflow: 'auto',
-      }}
-    >
-      <Box
-        style={{
-          padding: '14px 16px',
-          borderBottom: '1px solid var(--app-row-border)',
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: 10,
-        }}
-      >
-        <Box style={{ flex: 1 }}>
+    <Box className={classes.flexColumn} style={{ overflow: 'auto' }}>
+      <Box className={classes.detailHeader}>
+        <Box className={classes.flexGrow}>
           <Text size="sm" fw={600} ff="monospace" c="var(--app-meta-value)" mb={4}>
             {funcId}
           </Text>
           {(func.summary || func.description) && (
-            <Text size="xs" c="var(--app-text-muted)" style={{ lineHeight: 1.5 }}>
+            <Text size="xs" c="var(--app-text-muted)" lh={1.5}>
               {func.summary || func.description}
             </Text>
           )}
@@ -145,11 +96,11 @@ const FunctionDetail: React.FunctionComponent<{ func: any }> = ({ func }) => {
           </Badge>
         )}
       </Box>
-      <Box p="md" style={{ flex: 1 }}>
-        <SLabel>Metadata</SLabel>
+      <Box p="md" className={classes.flexGrow}>
+        <SectionLabel>Metadata</SectionLabel>
 
         {func.exportedName && (
-          <MetaRow label="export">
+          <MetaRow label="export" labelWidth={90}>
             <Text size="xs" ff="monospace" c="var(--app-meta-value)">
               {func.exportedName}
             </Text>
@@ -157,20 +108,20 @@ const FunctionDetail: React.FunctionComponent<{ func: any }> = ({ func }) => {
         )}
 
         {func.sourceFile && (
-          <MetaRow label="source">
+          <MetaRow label="source" labelWidth={90}>
             <Text size="xs" ff="monospace" c="var(--app-text)" truncate>
               {func.sourceFile.replace(/^.*\/src\//, 'src/')}
             </Text>
           </MetaRow>
         )}
 
-        <MetaRow label="sessionless">
+        <MetaRow label="sessionless" labelWidth={90}>
           <Text size="xs" ff="monospace" c={func.sessionless ? '#86efac' : 'var(--app-text-muted)'}>
             {func.sessionless ? 'true' : 'false'}
           </Text>
         </MetaRow>
 
-        <MetaRow label="version">
+        <MetaRow label="version" labelWidth={90}>
           {func.version ? (
             <Group gap={6}>
               <Text size="xs" ff="monospace" c="var(--app-meta-value)">
@@ -189,23 +140,11 @@ const FunctionDetail: React.FunctionComponent<{ func: any }> = ({ func }) => {
           )}
         </MetaRow>
 
-        <MetaRow label="services">
+        <MetaRow label="services" labelWidth={90}>
           {func.services?.services?.length > 0 ? (
             <Group gap={5}>
               {func.services.services.map((svc: string) => (
-                <Badge
-                  key={svc}
-                  size="sm"
-                  variant="light"
-                  tt="none"
-                  style={{
-                    background: 'var(--app-service-bg)',
-                    border: '1px solid var(--app-service-border)',
-                    color: 'var(--app-service-color)',
-                  }}
-                >
-                  {svc}
-                </Badge>
+                <ServiceBadge key={svc}>{svc}</ServiceBadge>
               ))}
             </Group>
           ) : (
@@ -213,23 +152,11 @@ const FunctionDetail: React.FunctionComponent<{ func: any }> = ({ func }) => {
           )}
         </MetaRow>
 
-        <MetaRow label="tags">
+        <MetaRow label="tags" labelWidth={90}>
           {func.tags?.length > 0 ? (
             <Group gap={4}>
               {func.tags.map((tag: string, i: number) => (
-                <Badge
-                  key={i}
-                  size="sm"
-                  variant="light"
-                  ff="monospace"
-                  style={{
-                    background: 'var(--app-tag-bg)',
-                    border: '1px solid var(--app-tag-border)',
-                    color: 'var(--app-tag-color)',
-                  }}
-                >
-                  {tag}
-                </Badge>
+                <TagBadge key={i}>{tag}</TagBadge>
               ))}
             </Group>
           ) : (
@@ -237,7 +164,7 @@ const FunctionDetail: React.FunctionComponent<{ func: any }> = ({ func }) => {
           )}
         </MetaRow>
 
-        <MetaRow label="middleware">
+        <MetaRow label="middleware" labelWidth={90}>
           {func.middleware?.length > 0 ? (
             <Group gap={4}>
               {func.middleware.map((mw: any, i: number) => (
@@ -251,7 +178,7 @@ const FunctionDetail: React.FunctionComponent<{ func: any }> = ({ func }) => {
           )}
         </MetaRow>
 
-        <MetaRow label="permissions">
+        <MetaRow label="permissions" labelWidth={90}>
           {func.permissions?.length > 0 ? (
             <Group gap={4}>
               {func.permissions.map((p: any, i: number) => (
@@ -267,9 +194,9 @@ const FunctionDetail: React.FunctionComponent<{ func: any }> = ({ func }) => {
 
         {allWirings.length > 0 && (
           <>
-            <SLabel>Wired To ({allWirings.length})</SLabel>
+            <SectionLabel>Wired To ({allWirings.length})</SectionLabel>
             {allWirings.map((w: any) => (
-              <MetaRow key={w.id} label={w.type}>
+              <MetaRow key={w.id} label={w.type} labelWidth={90}>
                 <Text size="xs" ff="monospace" c="var(--app-service-color)">
                   {w.name}
                 </Text>
@@ -278,7 +205,7 @@ const FunctionDetail: React.FunctionComponent<{ func: any }> = ({ func }) => {
           </>
         )}
 
-        {(inputSchemaName || outputSchemaName) && <SLabel>Schemas</SLabel>}
+        {(inputSchemaName || outputSchemaName) && <SectionLabel>Schemas</SectionLabel>}
         <CollapsibleSchema label="Input" schemaName={inputSchemaName} />
         <CollapsibleSchema label="Output" schemaName={outputSchemaName} />
       </Box>
@@ -318,163 +245,108 @@ const FunctionsPageInner: React.FunctionComponent<{
     ) || null
   }, [functions, selected])
 
-  return (
-    <Box style={{ display: 'flex', height: '100vh' }}>
-      {/* List */}
-      <Box
-        style={{
-          flex: 1,
-          borderRight: '1px solid var(--app-row-border)',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        <Box p="xs">
-          <TextInput
-            placeholder="Search functions..."
-            leftSection={<Search size={14} />}
-            value={search}
-            onChange={(e) => setSearch(e.currentTarget.value)}
-            size="xs"
-          />
-        </Box>
-        <Box
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 140px 60px 100px 80px',
-            padding: '7px 16px',
-            borderBottom: '1px solid var(--app-row-border)',
-            background: '#0a0c12',
-            flexShrink: 0,
-          }}
-        >
-          {['Name', 'Type', 'Auth', 'Permissions', 'Wirings'].map((h) => (
-            <Text
-              key={h}
-              size="xs"
-              fw={600}
-              ff="monospace"
-              c="var(--app-section-label)"
-              tt="uppercase"
-              style={{
-                letterSpacing: '0.1em',
-                fontSize: 9,
-                textAlign: h === 'Wirings' ? 'right' : undefined,
-              }}
-            >
-              {h}
-            </Text>
-          ))}
-        </Box>
-        <ScrollArea style={{ flex: 1 }}>
-          {filtered.map((func: any) => {
-            const funcId = func.pikkuFuncName || func.pikkuFuncId
-            const isActive = selected === funcId
-            const usedBy = functionUsedBy.get(funcId)
-            const wiringCount = usedBy
-              ? usedBy.transports.length + usedBy.jobs.length
-              : 0
-            const wrapperDef = funcWrapperDefs[func.funcWrapper]
-            const hasAuth = func.sessionless !== true
+  const list = (
+    <>
+      <SearchInput
+        value={search}
+        onChange={setSearch}
+        placeholder="Search functions..."
+      />
+      <GridHeader
+        columns={[
+          { label: 'Name' },
+          { label: 'Type' },
+          { label: 'Auth' },
+          { label: 'Permissions' },
+          { label: 'Wirings', align: 'right' },
+        ]}
+        gridTemplateColumns={GRID_COLUMNS}
+      />
+      <ScrollArea className={classes.flexGrow}>
+        {filtered.map((func: any) => {
+          const funcId = func.pikkuFuncName || func.pikkuFuncId
+          const isActive = selected === funcId
+          const usedBy = functionUsedBy.get(funcId)
+          const wiringCount = usedBy
+            ? usedBy.transports.length + usedBy.jobs.length
+            : 0
+          const wrapperDef = funcWrapperDefs[func.funcWrapper]
+          const hasAuth = func.sessionless !== true
 
-            return (
-              <UnstyledButton
-                key={funcId}
-                onClick={() => setSelected(funcId)}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 140px 60px 100px 80px',
-                  padding: '9px 16px',
-                  borderBottom: '1px solid rgba(255,255,255,0.04)',
-                  borderLeft: isActive
-                    ? '2px solid #7c3aed'
-                    : '2px solid transparent',
-                  background: isActive
-                    ? 'rgba(124,58,237,0.05)'
-                    : undefined,
-                  width: '100%',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                  alignItems: 'center',
-                }}
-              >
-                <Box>
-                  <Text
-                    size="xs"
-                    ff="monospace"
-                    c={isActive ? 'var(--app-meta-value)' : 'var(--app-text)'}
-                    mb={1}
-                  >
-                    {funcId}
-                  </Text>
-                  <Text
-                    size="xs"
-                    ff="monospace"
-                    c="var(--app-text-muted)"
-                    truncate
-                    style={{
-                      fontSize: 9,
-                      maxWidth: 280,
-                      opacity: func.summary || func.description ? 1 : 0.4,
-                    }}
-                  >
-                    {func.summary || func.description || 'No description'}
-                  </Text>
-                </Box>
-                {wrapperDef && (
-                  <Badge size="xs" variant="light" color="gray" tt="none">
-                    {wrapperDef.label}
-                  </Badge>
-                )}
-                <Text size="xs" ff="monospace" c={hasAuth ? '#86efac' : 'var(--app-text-muted)'}>
-                  {hasAuth ? 'Auth' : '—'}
+          return (
+            <ListItem
+              key={funcId}
+              active={isActive}
+              onClick={() => setSelected(funcId)}
+              gridTemplateColumns={GRID_COLUMNS}
+              padding="9px 16px"
+            >
+              <Box>
+                <Text
+                  size="xs"
+                  ff="monospace"
+                  c={isActive ? 'var(--app-meta-value)' : 'var(--app-text)'}
+                  mb={1}
+                >
+                  {funcId}
                 </Text>
                 <Text
                   size="xs"
                   ff="monospace"
                   c="var(--app-text-muted)"
                   truncate
+                  style={{
+                    fontSize: 9,
+                    maxWidth: 280,
+                    opacity: func.summary || func.description ? 1 : 0.4,
+                  }}
                 >
-                  {func.permissions?.length > 0
-                    ? func.permissions.map((p: any) => p.name || p).join(', ')
-                    : '—'}
+                  {func.summary || func.description || 'No description'}
                 </Text>
-                <Text
-                  size="xs"
-                  ff="monospace"
-                  c={wiringCount > 0 ? 'var(--app-service-color)' : 'var(--app-text-muted)'}
-                  ta="right"
-                >
-                  {wiringCount > 0
-                    ? `${wiringCount} ${wiringCount === 1 ? 'wiring' : 'wirings'}`
-                    : '—'}
-                </Text>
-              </UnstyledButton>
-            )
-          })}
-        </ScrollArea>
-      </Box>
+              </Box>
+              {wrapperDef && (
+                <Badge size="xs" variant="light" color="gray" tt="none">
+                  {wrapperDef.label}
+                </Badge>
+              )}
+              <Text size="xs" ff="monospace" c={hasAuth ? '#86efac' : 'var(--app-text-muted)'}>
+                {hasAuth ? 'Auth' : '—'}
+              </Text>
+              <Text
+                size="xs"
+                ff="monospace"
+                c="var(--app-text-muted)"
+                truncate
+              >
+                {func.permissions?.length > 0
+                  ? func.permissions.map((p: any) => p.name || p).join(', ')
+                  : '—'}
+              </Text>
+              <Text
+                size="xs"
+                ff="monospace"
+                c={wiringCount > 0 ? 'var(--app-service-color)' : 'var(--app-text-muted)'}
+                ta="right"
+              >
+                {wiringCount > 0
+                  ? `${wiringCount} ${wiringCount === 1 ? 'wiring' : 'wirings'}`
+                  : '—'}
+              </Text>
+            </ListItem>
+          )
+        })}
+      </ScrollArea>
+    </>
+  )
 
-      {/* Detail */}
-      <Box style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-        {selectedFunc ? (
-          <FunctionDetail func={selectedFunc} />
-        ) : (
-          <Box
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-            }}
-          >
-            <Text c="dimmed" ff="monospace" size="sm">
-              Select a function
-            </Text>
-          </Box>
-        )}
-      </Box>
-    </Box>
+  return (
+    <ListDetailLayout
+      list={list}
+      detail={selectedFunc ? <FunctionDetail func={selectedFunc} /> : null}
+      hasSelection={!!selectedFunc}
+      emptyMessage="Select a function"
+      height="100vh"
+    />
   )
 }
 

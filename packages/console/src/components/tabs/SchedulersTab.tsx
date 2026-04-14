@@ -2,57 +2,24 @@ import React, { useMemo, useState } from 'react'
 import {
   Box,
   Text,
-  TextInput,
   ScrollArea,
-  UnstyledButton,
   Group,
   Badge,
 } from '@mantine/core'
-import { Search } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
 import { useFunctionMeta } from '../../hooks/useWirings'
+import { MetaRow } from '../ui/MetaRow'
+import { SectionLabel } from '../ui/SectionLabel'
+import { ListDetailLayout } from '../ui/ListDetailLayout'
+import { GridHeader } from '../ui/GridHeader'
+import { ListItem } from '../ui/ListItem'
+import { SearchInput } from '../ui/SearchInput'
+import { DetailHeader } from '../ui/DetailHeader'
+import { TagBadge } from '../ui/TagBadge'
+import classes from '../ui/console.module.css'
 
-const MetaRow: React.FunctionComponent<{
-  label: string
-  children: React.ReactNode
-}> = ({ label, children }) => (
-  <Box
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 8,
-      padding: '4px 0',
-      borderBottom: '1px solid var(--app-row-border)',
-      fontSize: 11,
-    }}
-  >
-    <Text
-      size="xs"
-      ff="monospace"
-      c="var(--app-meta-label)"
-      style={{ minWidth: 80, flexShrink: 0 }}
-    >
-      {label}
-    </Text>
-    <Box style={{ flex: 1, minWidth: 0 }}>{children}</Box>
-  </Box>
-)
-
-const SLabel: React.FunctionComponent<{ children: React.ReactNode }> = ({
-  children,
-}) => (
-  <Text
-    size="xs"
-    fw={600}
-    ff="monospace"
-    c="var(--app-section-label)"
-    tt="uppercase"
-    style={{ letterSpacing: '0.1em', padding: '12px 0 6px' }}
-  >
-    {children}
-  </Text>
-)
+const GRID_COLUMNS = '1fr 200px'
 
 const CronBadges: React.FunctionComponent<{ schedule: string }> = ({
   schedule,
@@ -136,23 +103,13 @@ const SchedulerDetail: React.FunctionComponent<{ item: any }> = ({ item }) => {
   const nextRuns = useMemo(() => getNextRuns(schedule, 8), [schedule])
 
   return (
-    <Box style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
-      <Box
-        style={{
-          padding: '14px 16px',
-          borderBottom: '1px solid var(--app-row-border)',
-          flexShrink: 0,
-        }}
-      >
-        <Text size="sm" fw={600} ff="monospace" c="var(--app-meta-value)" mb={4}>
-          {item.wireId || item.name}
-        </Text>
-        <Badge size="sm" variant="light" color="yellow">
-          Scheduler
-        </Badge>
-      </Box>
-      <Box p="md" style={{ flex: 1 }}>
-        <SLabel>Schedule</SLabel>
+    <Box className={classes.flexColumn} style={{ overflow: 'auto' }}>
+      <DetailHeader
+        title={item.wireId || item.name}
+        badge={{ label: 'Scheduler', color: 'yellow' }}
+      />
+      <Box p="md" className={classes.flexGrow}>
+        <SectionLabel>Schedule</SectionLabel>
         <Box
           style={{
             background: '#111827',
@@ -171,15 +128,15 @@ const SchedulerDetail: React.FunctionComponent<{ item: any }> = ({ item }) => {
           cron: {schedule}
         </Text>
 
-        <SLabel>Handler</SLabel>
+        <SectionLabel>Handler</SectionLabel>
         {funcId && (
-          <MetaRow label="function">
+          <MetaRow label="function" labelWidth={80}>
             <Text
               size="sm"
               fw={600}
               ff="monospace"
               c="var(--app-meta-value)"
-              style={{ cursor: 'pointer' }}
+              className={classes.clickableText}
               onClick={() =>
                 navigateInPanel('function', funcId, displayName || funcId, funcMeta)
               }
@@ -188,29 +145,17 @@ const SchedulerDetail: React.FunctionComponent<{ item: any }> = ({ item }) => {
             </Text>
           </MetaRow>
         )}
-        <MetaRow label="timezone">
+        <MetaRow label="timezone" labelWidth={80}>
           <Text size="xs" ff="monospace" c="var(--app-text)">
             UTC
           </Text>
         </MetaRow>
 
         {item.tags && item.tags.length > 0 && (
-          <MetaRow label="tags">
+          <MetaRow label="tags" labelWidth={80}>
             <Group gap={4}>
               {item.tags.map((tag: string, i: number) => (
-                <Badge
-                  key={i}
-                  size="sm"
-                  variant="light"
-                  ff="monospace"
-                  style={{
-                    background: 'var(--app-tag-bg)',
-                    border: '1px solid var(--app-tag-border)',
-                    color: 'var(--app-tag-color)',
-                  }}
-                >
-                  {tag}
-                </Badge>
+                <TagBadge key={i}>{tag}</TagBadge>
               ))}
             </Group>
           </MetaRow>
@@ -218,7 +163,7 @@ const SchedulerDetail: React.FunctionComponent<{ item: any }> = ({ item }) => {
 
         {nextRuns.length > 0 && (
           <>
-            <SLabel>Next Runs</SLabel>
+            <SectionLabel>Next Runs</SectionLabel>
             <Box style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               {nextRuns.map((run, i) => (
                 <Box
@@ -229,11 +174,10 @@ const SchedulerDetail: React.FunctionComponent<{ item: any }> = ({ item }) => {
                     justifyContent: 'space-between',
                     padding: '6px 8px',
                     borderRadius: 5,
-                    background: 'var(--app-surface)',
+                    background: i === 0 ? 'rgba(6,182,212,0.04)' : 'var(--app-surface)',
                     border: i === 0
                       ? '1px solid rgba(6,182,212,0.22)'
                       : '1px solid var(--app-row-border)',
-                    ...(i === 0 && { background: 'rgba(6,182,212,0.04)' }),
                   }}
                 >
                   <Text size="xs" ff="monospace" c="var(--app-meta-label)">
@@ -297,90 +241,49 @@ export const SchedulersTab: React.FunctionComponent = () => {
     return items.find((i: any) => i.name === selected) || null
   }, [items, selected])
 
-  return (
-    <Box style={{ display: 'flex', height: '100%' }}>
-      {/* List */}
-      <Box
-        style={{
-          flex: 1,
-          borderRight: '1px solid var(--app-row-border)',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        <Box p="xs">
-          <TextInput
-            placeholder="Search scheduled tasks..."
-            leftSection={<Search size={14} />}
-            value={search}
-            onChange={(e) => setSearch(e.currentTarget.value)}
-            size="xs"
-          />
-        </Box>
-        <Box
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 200px',
-            padding: '7px 16px',
-            borderBottom: '1px solid var(--app-row-border)',
-            background: '#0a0c12',
-            flexShrink: 0,
-          }}
-        >
-          <Text size="xs" fw={600} ff="monospace" c="var(--app-section-label)" tt="uppercase" style={{ letterSpacing: '0.1em', fontSize: 9 }}>
-            Name
-          </Text>
-          <Text size="xs" fw={600} ff="monospace" c="var(--app-section-label)" tt="uppercase" style={{ letterSpacing: '0.1em', fontSize: 9 }}>
-            Schedule
-          </Text>
-        </Box>
-        <ScrollArea style={{ flex: 1 }}>
-          {filtered.map((item: any) => {
-            const isActive = selected === item.name
-            return (
-              <UnstyledButton
-                key={item.name}
-                onClick={() => setSelected(item.name)}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 200px',
-                  padding: '10px 16px',
-                  borderBottom: '1px solid rgba(255,255,255,0.04)',
-                  borderLeft: isActive ? '2px solid #7c3aed' : '2px solid transparent',
-                  background: isActive ? 'rgba(124,58,237,0.05)' : undefined,
-                  width: '100%',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                  alignItems: 'center',
-                }}
-              >
-                <Box>
-                  <Text size="xs" ff="monospace" c={isActive ? 'var(--app-meta-value)' : 'var(--app-text)'}>
-                    {item.wireId || item.name}
-                  </Text>
-                  <Text size="xs" ff="monospace" c="var(--app-text-muted)" style={{ fontSize: 9 }}>
-                    {item.pikkuFuncId}()
-                  </Text>
-                </Box>
-                {item.schedule && <CronBadges schedule={item.schedule} />}
-              </UnstyledButton>
-            )
-          })}
-        </ScrollArea>
-      </Box>
+  const list = (
+    <>
+      <SearchInput
+        value={search}
+        onChange={setSearch}
+        placeholder="Search scheduled tasks..."
+      />
+      <GridHeader
+        columns={[{ label: 'Name' }, { label: 'Schedule' }]}
+        gridTemplateColumns={GRID_COLUMNS}
+      />
+      <ScrollArea className={classes.flexGrow}>
+        {filtered.map((item: any) => {
+          const isActive = selected === item.name
+          return (
+            <ListItem
+              key={item.name}
+              active={isActive}
+              onClick={() => setSelected(item.name)}
+              gridTemplateColumns={GRID_COLUMNS}
+            >
+              <Box>
+                <Text size="xs" ff="monospace" c={isActive ? 'var(--app-meta-value)' : 'var(--app-text)'}>
+                  {item.wireId || item.name}
+                </Text>
+                <Text size="xs" ff="monospace" c="var(--app-text-muted)" style={{ fontSize: 9 }}>
+                  {item.pikkuFuncId}()
+                </Text>
+              </Box>
+              {item.schedule && <CronBadges schedule={item.schedule} />}
+            </ListItem>
+          )
+        })}
+      </ScrollArea>
+    </>
+  )
 
-      {/* Detail */}
-      <Box style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-        {selectedItem ? (
-          <SchedulerDetail item={selectedItem} />
-        ) : (
-          <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-            <Text c="dimmed" ff="monospace" size="sm">
-              Select a scheduled task
-            </Text>
-          </Box>
-        )}
-      </Box>
-    </Box>
+  return (
+    <ListDetailLayout
+      list={list}
+      detail={selectedItem ? <SchedulerDetail item={selectedItem} /> : null}
+      hasSelection={!!selectedItem}
+      emptyMessage="Select a scheduled task"
+    />
   )
 }
