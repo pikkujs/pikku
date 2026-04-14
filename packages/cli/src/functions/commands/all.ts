@@ -153,6 +153,7 @@ export const all = pikkuVoidFunc({
         await rpc.invoke('pikkuHTTPMap', null)
         await rpc.invoke('pikkuFetch', null)
         await rpc.invoke('pikkuRPCClient', null)
+        await rpc.invoke('pikkuReactQuery', null)
         allImports.push(config.httpWiringMetaFile, config.httpWiringsFile)
       }
 

@@ -11,3 +11,16 @@ export const rpcTest = pikkuSessionlessFunc<{ in: number }>({
   },
   expose: true,
 })
+
+export const listItems = pikkuSessionlessFunc<
+  { limit: number; nextCursor?: string },
+  { items: string[]; nextCursor?: string }
+>({
+  func: async (_services, data) => {
+    return {
+      items: [`item-${data.limit}`],
+      nextCursor: data.nextCursor ? undefined : 'next',
+    }
+  },
+  expose: true,
+})

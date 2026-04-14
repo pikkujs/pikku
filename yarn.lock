@@ -5789,7 +5789,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/react@workspace:packages/frontend/react":
+"@pikku/react@workspace:*, @pikku/react@workspace:packages/frontend/react":
   version: 0.0.0-use.local
   resolution: "@pikku/react@workspace:packages/frontend/react"
   dependencies:
@@ -6367,10 +6367,13 @@ __metadata:
     "@pikku/core": "workspace:*"
     "@pikku/fetch": "workspace:*"
     "@pikku/jose": "workspace:*"
+    "@pikku/react": "workspace:*"
     "@pikku/schema-cfworker": "workspace:*"
     "@pikku/templates-function-addon": "workspace:*"
     "@pikku/websocket": "workspace:*"
+    "@tanstack/react-query": "npm:^5"
     "@types/node": "npm:^24"
+    "@types/react": "npm:^19"
     "@types/ws": "npm:^8"
     concurrently: "npm:^9.2.1"
     eventsource: "npm:^4.1.0"
@@ -10233,6 +10236,24 @@ __metadata:
   version: 5.90.20
   resolution: "@tanstack/query-core@npm:5.90.20"
   checksum: 10/25e38f4382442bc15e0f6cce8d787e9df8d8822c61d3f3e9427e89e01b1e2506f848292e086dae29aeb55f8ce71b097c34221f3c5eda37fb4a688b5ceca5d1b3
+  languageName: node
+  linkType: hard
+
+"@tanstack/query-core@npm:5.99.0":
+  version: 5.99.0
+  resolution: "@tanstack/query-core@npm:5.99.0"
+  checksum: 10/752c38122c772a8c511ffd927e003282a23a3ab6979b066d1d8b100a2061a5448096fce4cfc9e2d93a2ef468ffac5440a6181203b1456d12f6e51f69bcdc1a4d
+  languageName: node
+  linkType: hard
+
+"@tanstack/react-query@npm:^5":
+  version: 5.99.0
+  resolution: "@tanstack/react-query@npm:5.99.0"
+  dependencies:
+    "@tanstack/query-core": "npm:5.99.0"
+  peerDependencies:
+    react: ^18 || ^19
+  checksum: 10/aafbc87fc9c6c01c8ac8229d42ab209273f39f8284a72b8917c5fab39722b949b8dff2cf3b28487b2ebcb286bb08a377a42ed8a56dabe7f1ac4681c5af338401
   languageName: node
   linkType: hard
 

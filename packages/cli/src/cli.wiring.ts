@@ -2,6 +2,7 @@ import { pikkuSchemas } from './functions/wirings/functions/schemas.js'
 import { pikkuFetch } from './functions/runtimes/fetch/index.js'
 import { pikkuWebSocketTyped } from './functions/runtimes/websocket/pikku-command-websocket-typed.js'
 import { pikkuRPCClient } from './functions/wirings/rpc/pikku-command-rpc-client.js'
+import { pikkuReactQuery } from './functions/wirings/rpc/pikku-command-react-query.js'
 import { pikkuQueueService } from './functions/wirings/queue/pikku-command-queue-service.js'
 import { pikkuOpenAPI } from './functions/wirings/http/pikku-command-openapi.js'
 import { pikkuNext } from './functions/runtimes/nextjs/pikku-command-nextjs.js'
@@ -150,6 +151,10 @@ wireCLI({
     rpc: pikkuCLICommand({
       func: pikkuRPCClient,
       description: 'Generate RPC client wrappers',
+    }),
+    'react-query': pikkuCLICommand({
+      func: pikkuReactQuery,
+      description: 'Generate React Query hooks from RPC map',
     }),
     'queue-service': pikkuCLICommand({
       func: pikkuQueueService,

@@ -147,14 +147,3 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       SLS_TELEMETRY_DISABLED: 1
       SLS_NOTIFICATIONS_MODE: off
-
-  release-dry-run:
-    name: Release (dry run)
-    runs-on: ubuntu-latest
-    needs: [verifiers, templates, e2e]
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: ./.github/actions/setup
-      - run: npx changeset status
