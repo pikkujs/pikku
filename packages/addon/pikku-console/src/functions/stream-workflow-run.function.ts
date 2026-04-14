@@ -7,7 +7,8 @@ export const streamWorkflowRun = pikkuSessionlessFunc<{ runId: string }, any>({
   expose: false,
   auth: false,
   func: async ({ workflowRunService }, { runId }, { channel }) => {
-    if (!workflowRunService) throw new MissingServiceError('workflowRunService is not available')
+    if (!workflowRunService)
+      throw new MissingServiceError('workflowRunService is not available')
     if (!channel) return
 
     let lastHash = ''
@@ -30,7 +31,7 @@ export const streamWorkflowRun = pikkuSessionlessFunc<{ runId: string }, any>({
       }
 
       if (['completed', 'failed', 'cancelled'].includes(run.status)) {
-        channel.send({ type: 'done' })
+        channel.send({ type: 'done', status: run.status })
         channel.close()
         return false
       }
