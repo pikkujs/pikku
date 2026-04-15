@@ -267,7 +267,9 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
 
   // Try DSL workflow extraction first
   // Pass the whole CallExpression node so findWorkflowFunction can find the arrow function
-  const result = extractDSLWorkflow(node, checker)
+  const result = extractDSLWorkflow(node, checker, {
+    allowInline: wrapperType === 'regular',
+  })
 
   if (result.status === 'ok' && result.steps) {
     // Extraction succeeded
