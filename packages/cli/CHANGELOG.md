@@ -1,5 +1,16 @@
 ## 0.12.0
 
+## 0.12.18
+
+### Patch Changes
+
+- 33624bd: Add React Query hooks generation from RPC map. New `reactQueryFile` option in `clientFiles` config generates typed `usePikkuQuery`, `usePikkuMutation`, and `usePikkuInfiniteQuery` hooks, plus workflow hooks (`useRunWorkflow`, `useStartWorkflow`, `useWorkflowStatus`). Infinite query is type-constrained to RPCs whose output includes `nextCursor`.
+- c30f82a: Enrich generated workflow status stream with step-level progress. The `/stream` endpoint now sends step names and statuses via `workflowRunService.getRunSteps()`. New `/stream/full` endpoint includes output, error, and childRunId for admin consoles.
+- Updated dependencies [d03f409]
+- Updated dependencies [226e76f]
+  - @pikku/core@0.12.16
+  - @pikku/inspector@0.13.0
+
 ## 0.12.17
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@pikku/e2e",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "description": "Pikku E2E test harness",
   "license": "MIT",
   "private": true,
