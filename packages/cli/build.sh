@@ -39,6 +39,13 @@ while IFS= read -r -d '' f; do
       "$f" > "$tmp" && mv "$tmp" "$f"
 done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
 
+# Patch stale startWorkflow calls in generated scaffold (data arg needs cast with new TypedStartWorkflow)
+for f in src/scaffold/workflow-routes.gen.ts; do
+  [ -f "$f" ] || continue
+  tmp=$(mktemp)
+  sed 's/data ?? {}/\(data ?? {}) as any/g' "$f" > "$tmp" && mv "$tmp" "$f"
+done
+
 # Build TypeScript (may fail if published CLI generates stale types)
 echo "Building TypeScript to dist..."
 yarn tsc -b || true
