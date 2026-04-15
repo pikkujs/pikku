@@ -1,4 +1,4 @@
-import { pikkuMCPToolFunc } from '#pikku'
+import { pikkuMCPToolFunc } from '#pikku/mcp/pikku-mcp-types.gen.js'
 
 export const mcpToolWithDescription = pikkuMCPToolFunc<{ input: string }>({
   description: 'A test MCP tool with a proper description',
