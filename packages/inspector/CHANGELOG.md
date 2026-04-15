@@ -1,5 +1,14 @@
 ## 0.12.0
 
+## 0.12.9
+
+### Patch Changes
+
+- 2ac6468: Fix workflow inspector crash when workflow.do() data object has a 'description' property
+- fbcf5b9: Add version awareness to RPC handler: versioned functions now appear in the exposed RPC type map (e.g. `getData@v1`, `getData@v2`), enabling type-safe `rpc.invoke('getData@v1', data)` calls. Tree-shaking respects specific version filters without pulling in all versions. HTTP wirings correctly resolve versioned function IDs.
+- Updated dependencies [fbcf5b9]
+  - @pikku/core@0.12.16
+
 ## 0.12.8
 
 ### Patch Changes

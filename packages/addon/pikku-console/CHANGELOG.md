@@ -1,5 +1,13 @@
 ## 0.12.0
 
+## 0.12.8
+
+### Patch Changes
+
+- fbcf5b9: Console UX improvements: syntax highlighting for all code blocks, schema-aware client usage snippets for HTTP routes, HTTP tab sidebar layout, CLI/channel breadcrumb cleanup, detail panel max-width constraint
+- Updated dependencies [fbcf5b9]
+  - @pikku/core@0.12.16
+
 ## 0.12.7
 
 ### Patch Changes
