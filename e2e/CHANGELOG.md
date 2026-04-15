@@ -1,5 +1,14 @@
 # @pikku/e2e
 
+## 0.0.16
+
+### Patch Changes
+
+- Updated dependencies [fbcf5b9]
+- Updated dependencies [fbcf5b9]
+  - @pikku/addon-console@0.12.8
+  - @pikku/core@0.12.16
+
 ## 0.0.15
 
 ### Patch Changes

@@ -1,5 +1,18 @@
 ## 0.12.0
 
+## 0.12.18
+
+### Patch Changes
+
+- 615c0e0: Sanitize function IDs with colons and slashes in deploy directory names
+- fbcf5b9: Add React Query hooks generation from RPC map. New `reactQueryFile` option in `clientFiles` config generates typed `usePikkuQuery`, `usePikkuMutation`, and `usePikkuInfiniteQuery` hooks, plus workflow hooks (`useRunWorkflow`, `useStartWorkflow`, `useWorkflowStatus`). Infinite query is type-constrained to RPCs whose output includes `nextCursor`.
+- fbcf5b9: Enrich generated workflow status stream with step-level progress. The `/stream` endpoint now sends step names and statuses via `workflowRunService.getRunSteps()`. New `/stream/full` endpoint includes output, error, and childRunId for admin consoles.
+- Updated dependencies [2ac6468]
+- Updated dependencies [fbcf5b9]
+- Updated dependencies [fbcf5b9]
+  - @pikku/inspector@0.12.9
+  - @pikku/core@0.12.16
+
 ## 0.12.17
 
 ### Patch Changes
