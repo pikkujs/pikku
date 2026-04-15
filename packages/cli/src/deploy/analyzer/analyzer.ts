@@ -661,10 +661,13 @@ function collectChannelFunctionIds(channelMeta: ChannelMeta): string[] {
 // Naming helpers
 // ---------------------------------------------------------------------------
 
-function toKebab(str: string): string {
+export function toKebab(str: string): string {
   return str
     .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
     .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2')
+    .replace(/[:/\\]/g, '-')
+    .replace(/--+/g, '-')
+    .replace(/^-|-$/g, '')
     .toLowerCase()
 }
 
