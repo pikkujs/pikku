@@ -33,6 +33,7 @@ import {
   extractForOfVariable,
   isArrayType,
   getSourceText,
+  extractSourcePath,
 } from './patterns.js'
 import type { ValidationError } from './validation.js'
 import {
@@ -64,25 +65,7 @@ interface ExtractionContext {
 }
 
 /**
- * Extract full source path from an expression (e.g., data.memberEmails)
- */
-function extractSourcePath(expr: ts.Expression): string | null {
-  if (ts.isIdentifier(expr)) {
-    return expr.text
-  }
-
-  if (ts.isPropertyAccessExpression(expr)) {
-    const base = extractSourcePath(expr.expression)
-    if (base) {
-      return `${base}.${expr.name.text}`
-    }
-  }
-
-  return null
-}
-
-/**
- * Result of simple workflow extraction
+ * Result of DSL workflow extraction
  */
 export interface ExtractionResult {
   status: 'ok' | 'error'
@@ -90,11 +73,10 @@ export interface ExtractionResult {
   /** Workflow context (top-level variables) */
   context?: WorkflowContext
   reason?: string
-  simple?: boolean
 }
 
 /**
- * Extract simple workflow metadata from a function declaration
+ * Extract DSL workflow metadata from a function declaration
  */
 export function extractDSLWorkflow(
   funcNode: ts.Node,
@@ -108,7 +90,6 @@ export function extractDSLWorkflow(
       return {
         status: 'error',
         reason: 'Could not find async arrow function in workflow definition',
-        simple: false,
       }
     }
 
@@ -118,7 +99,6 @@ export function extractDSLWorkflow(
       return {
         status: 'error',
         reason: 'Could not determine input parameter name',
-        simple: false,
       }
     }
 
@@ -143,7 +123,6 @@ export function extractDSLWorkflow(
       return {
         status: 'error',
         reason: formatValidationErrors(patternErrors),
-        simple: false,
       }
     }
 
@@ -153,7 +132,6 @@ export function extractDSLWorkflow(
       return {
         status: 'error',
         reason: formatValidationErrors(awaitErrors),
-        simple: false,
       }
     }
 
@@ -165,7 +143,6 @@ export function extractDSLWorkflow(
       return {
         status: 'error',
         reason: formatValidationErrors(context.errors),
-        simple: false,
       }
     }
 
@@ -183,13 +160,11 @@ export function extractDSLWorkflow(
       steps,
       context:
         Object.keys(workflowContext).length > 0 ? workflowContext : undefined,
-      simple: true,
     }
   } catch (error) {
     return {
       status: 'error',
       reason: error instanceof Error ? error.message : String(error),
-      simple: false,
     }
   }
 }
