@@ -28,7 +28,7 @@ export const workflowStarter = pikkuSessionlessFunc<
 >({
   auth: ${authFlag},
   func: async (_services, { workflowName, data }, { rpc }) => {
-    return await rpc.startWorkflow(workflowName as any, data ?? {})
+    return await rpc.startWorkflow(workflowName as any, (data ?? {}) as any)
   },
 })
 
@@ -196,7 +196,7 @@ export const graphStarter = pikkuSessionlessFunc<
 >({
   auth: ${authFlag},
   func: async (_services, { workflowName, nodeId, data }, { rpc }) => {
-    return await rpc.startWorkflow(workflowName as any, data ?? {}, { startNode: nodeId })
+    return await rpc.startWorkflow(workflowName as any, (data ?? {}) as any, { startNode: nodeId })
   },
 })
 
