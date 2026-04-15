@@ -1,7 +1,7 @@
 import * as ts from 'typescript'
 
 /**
- * Validation rules for simple workflows
+ * Validation rules for DSL workflows
  */
 
 export interface ValidationError {
@@ -45,7 +45,7 @@ export function validateNoDisallowedPatterns(
         // Unknown/disallowed statement type
         const nodeType = ts.SyntaxKind[statement.kind]
         errors.push({
-          message: `Statement type '${nodeType}' is not allowed in simple workflows. Allowed: const/let, if/else, switch/case, for..of, return, throw, and workflow calls. If this should be supported, please report the node type: ${nodeType}`,
+          message: `Statement type '${nodeType}' is not allowed in DSL workflows. Allowed: const/let, if/else, switch/case, for..of, return, throw, and workflow calls. If this should be supported, please report the node type: ${nodeType}`,
           node: statement,
         })
       }
@@ -56,7 +56,7 @@ export function validateNoDisallowedPatterns(
     // Disallow while and do-while
     if (ts.isWhileStatement(node) || ts.isDoStatement(node)) {
       errors.push({
-        message: 'while and do-while loops are not allowed in simple workflows',
+        message: 'while and do-while loops are not allowed in DSL workflows',
         node,
       })
       return
@@ -66,7 +66,7 @@ export function validateNoDisallowedPatterns(
     if (ts.isForInStatement(node) || ts.isForStatement(node)) {
       errors.push({
         message:
-          'for and for-in loops are not allowed in simple workflows. Use for-of instead.',
+          'for and for-in loops are not allowed in DSL workflows. Use for-of instead.',
         node,
       })
       return
@@ -89,7 +89,7 @@ export function validateNoDisallowedPatterns(
           ) {
             errors.push({
               message:
-                'Inline workflow.do with function argument is not allowed in simple workflows. Use pikkuWorkflowComplexFunc instead.',
+                'Inline workflow.do with function argument is not allowed in DSL workflows. Use pikkuWorkflowComplexFunc instead.',
               node,
             })
             return

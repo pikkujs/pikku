@@ -155,7 +155,7 @@ function getWorkflowInvocations(
 }
 
 /**
- * Inspector for pikkuWorkflow() and pikkuSimpleWorkflow() calls
+ * Inspector for pikkuWorkflowFunc() and pikkuWorkflowComplexFunc() calls
  * Detects workflow registration and extracts metadata
  */
 export const addWorkflow: AddWiring = (logger, node, checker, state) => {
@@ -171,11 +171,11 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     return
   }
 
-  let wrapperType: 'dsl' | 'regular' | null = null
+  let wrapperType: 'dsl' | 'complex' | null = null
   if (expression.text === 'pikkuWorkflowFunc') {
     wrapperType = 'dsl'
   } else if (expression.text === 'pikkuWorkflowComplexFunc') {
-    wrapperType = 'regular'
+    wrapperType = 'complex'
   } else {
     return
   }
@@ -268,7 +268,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   // Try DSL workflow extraction first
   // Pass the whole CallExpression node so findWorkflowFunction can find the arrow function
   const result = extractDSLWorkflow(node, checker, {
-    allowInline: wrapperType === 'regular',
+    allowInline: wrapperType === 'complex',
   })
 
   if (result.status === 'ok' && result.steps) {
@@ -320,11 +320,10 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   }
 
   /**
-   * For non-dsl workflows or pikkuWorkflowComplexFunc, run basic extraction
-   * to ensure all RPC invocations are tracked for function registration.
-   * This catches RPCs in Promise.all callbacks and other patterns DSL can't extract.
+   * When DSL extraction failed for complex workflows, fall back to basic
+   * extraction to track RPC invocations for function registration.
    */
-  if (!dsl || wrapperType === 'regular') {
+  if (steps.length === 0 && wrapperType === 'complex') {
     getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
   }
 
