@@ -110,7 +110,11 @@ export function extractDescription(
   if (!optionsNode || !ts.isObjectLiteralExpression(optionsNode)) {
     return null
   }
-  return extractPropertyString(optionsNode, 'description', checker)
+  try {
+    return extractPropertyString(optionsNode, 'description', checker)
+  } catch {
+    return null
+  }
 }
 
 /**
