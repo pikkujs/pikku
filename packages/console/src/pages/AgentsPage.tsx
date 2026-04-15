@@ -1,13 +1,13 @@
 import React, { useMemo, useEffect } from 'react'
-import { useSearchParams, useNavigate } from '@/router'
+import { useSearchParams, useNavigate } from '../router'
 import { Text, Center, Loader, Button } from '@mantine/core'
 import { Bot } from 'lucide-react'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { PanelProvider, usePanelContext } from '@/context/PanelContext'
-import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '@/components/layout/DetailPageHeader'
-import { TableListPage } from '@/components/layout/TableListPage'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { usePikkuMeta } from '../context/PikkuMetaContext'
+import { PanelProvider, usePanelContext } from '../context/PanelContext'
+import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { DetailPageHeader } from '../components/layout/DetailPageHeader'
+import { TableListPage } from '../components/layout/TableListPage'
+import { PikkuBadge } from '../components/ui/PikkuBadge'
 
 interface AgentItem {
   name: string

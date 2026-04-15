@@ -1,14 +1,14 @@
 import React, { Suspense } from 'react'
-import { Center, Loader } from '@mantine/core'
+import { Center, Loader, Box } from '@mantine/core'
 import { Globe } from 'lucide-react'
-import { useSearchParams } from '@/router'
-import { PanelProvider } from '@/context/PanelContext'
-import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
-import { TabbedPageHeader } from '@/components/layout/TabbedPageHeader'
-import { HttpTab } from '@/components/tabs/HttpTab'
-import { ChannelsTab } from '@/components/tabs/ChannelsTab'
-import { McpTab } from '@/components/tabs/McpTab'
-import { CliTab } from '@/components/tabs/CliTab'
+import { useSearchParams } from '../router'
+import { PanelProvider } from '../context/PanelContext'
+import { TabbedPageHeader } from '../components/layout/TabbedPageHeader'
+import { HttpTab } from '../components/tabs/HttpTab'
+import { ChannelsTab } from '../components/tabs/ChannelsTab'
+import { McpTab } from '../components/tabs/McpTab'
+import { CliTab } from '../components/tabs/CliTab'
+import styles from '../components/ui/console.module.css'
 
 const TABS = [
   { value: 'http', label: 'HTTP' },
@@ -40,22 +40,19 @@ const ApisPageInner: React.FunctionComponent = () => {
 
   return (
     <PanelProvider>
-      <ResizablePanelLayout
-        header={
-          <TabbedPageHeader
-            icon={Globe}
-            category="APIs"
-            docsHref="https://pikku.dev/docs/wiring/http"
-            tabs={TABS}
-            activeTab={tab}
-            onTabChange={handleTabChange}
-          />
-        }
-        showTabs={false}
-        emptyPanelMessage="Select an item to view its details"
-      >
-        {renderTab()}
-      </ResizablePanelLayout>
+      <Box className={styles.flexColumn} style={{ height: '100vh' }}>
+        <TabbedPageHeader
+          icon={Globe}
+          category="APIs"
+          docsHref="https://pikku.dev/docs/wiring/http"
+          tabs={TABS}
+          activeTab={tab}
+          onTabChange={handleTabChange}
+        />
+        <Box className={styles.flexGrow} style={{ minHeight: 0 }}>
+          {renderTab()}
+        </Box>
+      </Box>
     </PanelProvider>
   )
 }

@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react'
 import { Text, Group } from '@mantine/core'
 import { KeyRound } from 'lucide-react'
-import { usePanelContext } from '@/context/PanelContext'
-import { TableListPage } from '@/components/layout/TableListPage'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { usePanelContext } from '../../context/PanelContext'
+import { TableListPage } from '../layout/TableListPage'
+import { PikkuBadge } from '../ui/PikkuBadge'
 
 export interface SecretMeta {
   name: string

@@ -1,9 +1,6 @@
 import { pikkuState } from '@pikku/core/internal'
 import type { MetaService } from '@pikku/core/services'
-import type {
-  ChannelsMeta,
-  ChannelMeta as CoreChannelMeta,
-} from '@pikku/core/channel'
+import type { ChannelMeta as CoreChannelMeta } from '@pikku/core/channel'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
 import type {
   FunctionsMeta,

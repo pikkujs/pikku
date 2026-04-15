@@ -1,12 +1,12 @@
 import React from 'react'
 import { Server } from 'lucide-react'
-import { useSearchParams } from '@/router'
-import { PanelProvider } from '@/context/PanelContext'
-import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
-import { TabbedPageHeader } from '@/components/layout/TabbedPageHeader'
-import { ServicesTab } from '@/components/tabs/ServicesTab'
-import { MiddlewareTab } from '@/components/tabs/MiddlewareTab'
-import { PermissionsTab } from '@/components/tabs/PermissionsTab'
+import { useSearchParams } from '../router'
+import { PanelProvider } from '../context/PanelContext'
+import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { TabbedPageHeader } from '../components/layout/TabbedPageHeader'
+import { ServicesTab } from '../components/tabs/ServicesTab'
+import { MiddlewareTab } from '../components/tabs/MiddlewareTab'
+import { PermissionsTab } from '../components/tabs/PermissionsTab'
 
 const TABS = [
   { value: 'services', label: 'Services' },

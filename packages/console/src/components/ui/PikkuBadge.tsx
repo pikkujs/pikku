@@ -1,5 +1,6 @@
 import React from 'react'
 import { Badge, type BadgeProps } from '@mantine/core'
+import css from './console.module.css'
 import {
   httpMethodDefs,
   mcpTypeDefs,
@@ -11,7 +12,7 @@ import {
   flagDefs,
   dynamicDefs,
   type EnumBadgeDef,
-} from '@/components/ui/badge-defs'
+} from './badge-defs'
 
 const ICON_SIZES: Record<string, number> = {
   xs: 8,
@@ -76,8 +77,8 @@ const ColoredIcon: React.FunctionComponent<{
 )
 
 export const PikkuBadge: React.FunctionComponent<PikkuBadgeProps> = (props) => {
-  const { type, ...rest } = props
-  const size = 'md'
+  const { type, size: propSize, ...rest } = props as any
+  const size = propSize || 'md'
   const iconSize = ICON_SIZES[size] || 10
 
   if (type === 'label') {
@@ -113,7 +114,7 @@ export const PikkuBadge: React.FunctionComponent<PikkuBadgeProps> = (props) => {
         tt="none"
         variant="light"
         color={def.color || 'gray'}
-        style={{ flexShrink: 0 }}
+        className={css.noShrink}
         leftSection={
           Icon ? (
             <ColoredIcon icon={Icon} size={iconSize} color={def.color} />
@@ -148,7 +149,7 @@ export const PikkuBadge: React.FunctionComponent<PikkuBadgeProps> = (props) => {
         tt="none"
         variant="light"
         color={def.color || 'gray'}
-        style={{ flexShrink: 0 }}
+        className={css.noShrink}
         leftSection={
           Icon ? (
             <ColoredIcon
@@ -179,7 +180,7 @@ export const PikkuBadge: React.FunctionComponent<PikkuBadgeProps> = (props) => {
       tt="none"
       variant="light"
       color={def?.color || 'gray'}
-      style={{ flexShrink: 0 }}
+      className={css.noShrink}
       {...badgeProps}
     >
       {humanize(label)}

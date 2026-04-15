@@ -6,8 +6,8 @@ import React, {
   useEffect,
   useMemo,
 } from 'react'
-import { usePikkuRPC } from '@/context/PikkuRpcProvider'
-import type { FlattenedRPCMap } from '@/pikku/rpc-map.gen.d'
+import { usePikkuRPC } from './PikkuRpcProvider'
+import type { FlattenedRPCMap } from '../pikku/rpc-map.gen.d'
 
 type AllMeta = FlattenedRPCMap['console:getAllMeta']['output']
 type MetaCounts = AllMeta['counts']

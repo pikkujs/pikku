@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useSearchParams, useNavigate } from '@/router'
+import { useSearchParams, useNavigate } from '../router'
 import {
   Center,
   Loader,
@@ -11,19 +11,19 @@ import {
   Button,
 } from '@mantine/core'
 import { Bot, KeyRound, Link2 } from 'lucide-react'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { PanelProvider, usePanelContext } from '@/context/PanelContext'
+import { usePikkuMeta } from '../context/PikkuMetaContext'
+import { PanelProvider, usePanelContext } from '../context/PanelContext'
 import {
   AgentPlaygroundProvider,
   useAgentPlayground,
-} from '@/context/AgentPlaygroundContext'
-import { ThreePaneLayout } from '@/components/layout/ThreePaneLayout'
-import { RunsPanel } from '@/components/layout/RunsPanel'
-import { DetailPageHeader } from '@/components/layout/DetailPageHeader'
-import { AgentChat } from '@/components/project/AgentChat'
-import { useDeleteAgentThread } from '@/hooks/useAgentRuns'
-import { useAgentCredentials } from '@/hooks/useAgentCredentials'
-import { getServerUrl } from '@/context/PikkuRpcProvider'
+} from '../context/AgentPlaygroundContext'
+import { ThreePaneLayout } from '../components/layout/ThreePaneLayout'
+import { RunsPanel } from '../components/layout/RunsPanel'
+import { DetailPageHeader } from '../components/layout/DetailPageHeader'
+import { AgentChat } from '../components/project/AgentChat'
+import { useDeleteAgentThread } from '../hooks/useAgentRuns'
+import { useAgentCredentials } from '../hooks/useAgentCredentials'
+import { getServerUrl } from '../context/PikkuRpcProvider'
 
 const CredentialPrompt: React.FunctionComponent<{
   requirements: Array<{

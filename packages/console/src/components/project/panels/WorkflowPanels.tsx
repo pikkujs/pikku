@@ -6,19 +6,20 @@ import {
   Table,
   Card,
   Box,
-  Code,
   Anchor,
 } from '@mantine/core'
+import { CodeHighlight } from '@mantine/code-highlight'
 import { GitBranch } from 'lucide-react'
-import { useLink } from '@/router'
-import { useWorkflowContext } from '@/context/WorkflowContext'
-import { useWorkflowRunContextSafe } from '@/context/WorkflowRunContext'
-import { usePanelContext } from '@/context/PanelContext'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { wiringTypeColor } from '@/components/ui/badge-defs'
-import { CommonDetails } from '@/components/project/panels/shared/CommonDetails'
-import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
-import { EmptyState } from '@/components/project/panels/shared/EmptyState'
+import { useLink } from '../../../router'
+import { useWorkflowContext } from '../../../context/WorkflowContext'
+import { useWorkflowRunContextSafe } from '../../../context/WorkflowRunContext'
+import { usePanelContext } from '../../../context/PanelContext'
+import { PikkuBadge } from '../../ui/PikkuBadge'
+import { wiringTypeColor } from '../../ui/badge-defs'
+import { SectionLabel } from '../../ui/SectionLabel'
+import { CommonDetails } from './shared/CommonDetails'
+import { EmptyState } from './shared/EmptyState'
+import classes from '../../ui/console.module.css'
 
 const TYPE_HREF: Record<string, string> = {
   http: '/apis?tab=http',
@@ -80,7 +81,7 @@ const WorkflowWiring: React.FunctionComponent<{ wiredTo: WiredTo }> = ({
       {wiredTo.transports.length > 0 && (
         <Box>
           <SectionLabel>Wired To</SectionLabel>
-          <Group gap={4} style={{ flexWrap: 'wrap' }}>
+          <Group gap={4} wrap="wrap">
             {wiredTo.transports.map((t) => (
               <Anchor
                 key={t.id}
@@ -92,7 +93,7 @@ const WorkflowWiring: React.FunctionComponent<{ wiredTo: WiredTo }> = ({
                   type="label"
                   size="sm"
                   color={wiringTypeColor(t.type)}
-                  style={{ cursor: 'pointer' }}
+                  className={classes.clickableText}
                 >
                   {t.name}
                 </PikkuBadge>
@@ -104,7 +105,7 @@ const WorkflowWiring: React.FunctionComponent<{ wiredTo: WiredTo }> = ({
       {wiredTo.jobs.length > 0 && (
         <Box>
           <SectionLabel>Jobs</SectionLabel>
-          <Group gap={4} style={{ flexWrap: 'wrap' }}>
+          <Group gap={4} wrap="wrap">
             {wiredTo.jobs.map((j) => (
               <Anchor
                 key={j.id}
@@ -116,7 +117,7 @@ const WorkflowWiring: React.FunctionComponent<{ wiredTo: WiredTo }> = ({
                   type="label"
                   size="sm"
                   color={wiringTypeColor(j.type)}
-                  style={{ cursor: 'pointer' }}
+                  className={classes.clickableText}
                 >
                   {j.name}
                 </PikkuBadge>
@@ -277,7 +278,7 @@ const WorkflowRunNodes: React.FunctionComponent<WorkflowPanelProps> = ({
                 return (
                   <Table.Tr
                     key={nodeId}
-                    style={{ cursor: 'pointer' }}
+                    className={classes.clickableText}
                     onMouseEnter={() => setFocusedNode(nodeId)}
                     onMouseLeave={() => setFocusedNode(null)}
                     onClick={() => openWorkflowStep(nodeId, node.flow || 'rpc')}
@@ -542,7 +543,7 @@ export const WorkflowRunOverview: React.FunctionComponent<
           <SectionLabel>Input</SectionLabel>
           <Card withBorder radius="md" padding={0}>
             <Card.Section p="md">
-              <Code block>{JSON.stringify(runData.input, null, 2)}</Code>
+              <CodeHighlight code={JSON.stringify(runData.input, null, 2)} language="json" />
             </Card.Section>
           </Card>
         </Stack>
@@ -553,7 +554,7 @@ export const WorkflowRunOverview: React.FunctionComponent<
           <SectionLabel>Output</SectionLabel>
           <Card withBorder radius="md" padding={0}>
             <Card.Section p="md">
-              <Code block>{JSON.stringify(runData.output, null, 2)}</Code>
+              <CodeHighlight code={JSON.stringify(runData.output, null, 2)} language="json" />
             </Card.Section>
           </Card>
         </Stack>

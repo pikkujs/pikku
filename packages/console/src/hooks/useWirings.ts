@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { usePikkuRPC } from '@/context/PikkuRpcProvider'
+import { usePikkuRPC } from '../context/PikkuRpcProvider'
 import { useMemo } from 'react'
 
 export function useChannelSnippets(channelName: string) {

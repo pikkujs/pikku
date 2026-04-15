@@ -4,6 +4,7 @@ import {
   MantineProvider,
   Stepper,
   Container,
+  Tabs,
   type CSSVariablesResolver,
   type MantineColorsTuple,
 } from '@mantine/core'
@@ -55,6 +56,18 @@ const cssVariablesResolver: CSSVariablesResolver = () => ({
     '--app-input-bg': 'rgba(255,255,255,0.02)',
     '--app-surface': dark[8],
     '--app-code-bg': dark[8],
+    '--app-meta-label': '#64748b',
+    '--app-meta-value': '#e2e8f0',
+    '--app-text': '#94a3b8',
+    '--app-text-muted': '#64748b',
+    '--app-section-label': '#4e5a70',
+    '--app-row-border': 'rgba(255,255,255,0.06)',
+    '--app-tag-bg': 'rgba(6,182,212,0.1)',
+    '--app-tag-border': 'rgba(6,182,212,0.25)',
+    '--app-tag-color': '#06b6d4',
+    '--app-service-bg': 'rgba(124,58,237,0.12)',
+    '--app-service-border': 'rgba(124,58,237,0.3)',
+    '--app-service-color': '#a78bfa',
   },
   dark: {
     '--mantine-color-body': dark[9],
@@ -278,15 +291,45 @@ const theme = createTheme({
         },
       },
     },
-    Tabs: {
+    Badge: {
       styles: {
-        tab: {
+        root: {
           fontFamily: 'var(--mantine-font-family-monospace)',
-          fontSize: 12,
-          fontWeight: 600,
+          fontWeight: 500,
+          borderWidth: 0.5,
+          borderStyle: 'solid',
+          borderRadius: rem(4),
         },
       },
     },
+    Tabs: Tabs.extend({
+      defaultProps: {
+        color: 'violet',
+      },
+      classNames: (_theme, props) => ({
+        tab: 'pikku-tab',
+      }),
+      styles: {
+        tab: {
+          fontFamily: 'var(--mantine-font-family-monospace)',
+          fontSize: 13,
+          fontWeight: 500,
+          backgroundColor: 'transparent',
+          borderRadius: 0,
+          padding: '10px 14px',
+          transition: 'all 0.15s',
+          color: '#374151',
+        },
+        list: {
+          borderBottom: '1px solid var(--app-row-border)',
+          background: '#0a0c12',
+          paddingLeft: 14,
+          paddingRight: 14,
+          flexShrink: 0,
+          minHeight: 40,
+        },
+      },
+    }),
     Stepper: Stepper.extend({
       styles: {
         stepIcon: {

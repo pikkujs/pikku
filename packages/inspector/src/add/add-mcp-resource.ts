@@ -131,6 +131,11 @@ export const addMCPResource: AddWiring = (
     const inputSchema = fnMeta.inputs?.[0] || null
     const outputSchema = fnMeta.outputs?.[0] || null
 
+    if (!fnMeta.outputSchemaName) {
+      fnMeta.outputSchemaName = 'MCPResourceResponse'
+      fnMeta.outputs = ['MCPResourceResponse']
+    }
+
     // --- resolve middleware ---
     const middleware = resolveMiddleware(state, obj, tags, checker)
 

@@ -8,13 +8,15 @@ import {
   Loader,
   Card,
 } from '@mantine/core'
-import { useWorkflowNode, useWorkflowContext } from '@/context/WorkflowContext'
-import { useOutputSchema } from '@/hooks/useWirings'
-import { SchemaViewer } from '@/components/ui/SchemaViewer'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { workflowInputTypeDefs } from '@/components/ui/badge-defs'
-import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
-import { EmptyState } from '@/components/project/panels/shared/EmptyState'
+import { CodeHighlight } from '@mantine/code-highlight'
+import { useWorkflowNode, useWorkflowContext } from '../../../context/WorkflowContext'
+import { useOutputSchema } from '../../../hooks/useWirings'
+import { SchemaViewer } from '../../ui/SchemaViewer'
+import { PikkuBadge } from '../../ui/PikkuBadge'
+import { workflowInputTypeDefs } from '../../ui/badge-defs'
+import { SectionLabel } from '../../ui/SectionLabel'
+import { EmptyState } from './shared/EmptyState'
+import classes from '../../ui/console.module.css'
 
 interface WorkflowStepPanelProps {
   stepId: string
@@ -38,7 +40,7 @@ const TypeBadge: React.FunctionComponent<{
     <PikkuBadge
       type="workflowInputType"
       value={type}
-      style={{ cursor: isHoverable ? 'pointer' : 'default' }}
+      className={isHoverable ? classes.clickableText : undefined}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     />
@@ -159,7 +161,7 @@ const parseInputValue = (value: any): ParsedInputValue => {
   if (typeof value === 'object') {
     return {
       type: '$static',
-      displayValue: <Code block>{JSON.stringify(value, null, 2)}</Code>,
+      displayValue: <CodeHighlight code={JSON.stringify(value, null, 2)} language="json" />,
     }
   }
 
@@ -185,7 +187,7 @@ export const WorkflowStepConfiguration: React.FunctionComponent<
       <Card withBorder radius="md" padding={0}>
         <Card.Section p="md">
           {node?.options ? (
-            <Code block>{JSON.stringify(node.options, null, 2)}</Code>
+            <CodeHighlight code={JSON.stringify(node.options, null, 2)} language="json" />
           ) : (
             <EmptyState />
           )}

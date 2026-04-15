@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { useNavigate } from '@/router'
+import { useNavigate } from '../../router'
 import type { SpotlightActionData } from '@mantine/spotlight'
 import { Spotlight, spotlight } from '@mantine/spotlight'
 import {
@@ -13,7 +13,7 @@ import {
   ListOrdered,
   Bot,
 } from 'lucide-react'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
+import { usePikkuMeta } from '../../context/PikkuMetaContext'
 
 const TYPE_CONFIG: Record<
   string,

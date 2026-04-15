@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react'
 import { Text } from '@mantine/core'
 import { Server } from 'lucide-react'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { TableListPage } from '@/components/layout/TableListPage'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { usePikkuMeta } from '../../context/PikkuMetaContext'
+import { TableListPage } from '../layout/TableListPage'
+import { PikkuBadge } from '../ui/PikkuBadge'
 
 interface ServiceItem {
   name: string

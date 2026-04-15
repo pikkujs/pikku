@@ -1,12 +1,12 @@
 import React, { useMemo } from 'react'
 import { Text } from '@mantine/core'
 import { Clock } from 'lucide-react'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { PanelProvider, usePanelContext } from '@/context/PanelContext'
-import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '@/components/layout/DetailPageHeader'
-import { TableListPage } from '@/components/layout/TableListPage'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { usePikkuMeta } from '../context/PikkuMetaContext'
+import { PanelProvider, usePanelContext } from '../context/PanelContext'
+import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { DetailPageHeader } from '../components/layout/DetailPageHeader'
+import { TableListPage } from '../components/layout/TableListPage'
+import { PikkuBadge } from '../components/ui/PikkuBadge'
 
 interface SchedulerItem {
   name: string

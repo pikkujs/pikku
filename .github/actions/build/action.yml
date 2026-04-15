@@ -31,6 +31,9 @@ runs:
     - name: Build verifiers
       shell: bash
       run: yarn build:verifiers
+    - name: Final pikku regeneration before template builds
+      shell: bash
+      run: yarn pikku
     - name: Build templates
       shell: bash
       run: yarn build:templates

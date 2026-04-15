@@ -1,18 +1,18 @@
 import type { Node, Edge } from 'reactflow'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
-import { getBranchNodeConfig } from '@/components/project/nodes/BranchNode'
-import { getFunctionNodeConfig } from '@/components/project/nodes/FunctionNode'
-import { getSleepNodeConfig } from '@/components/project/nodes/SleepNode'
-import { getInlineNodeConfig } from '@/components/project/nodes/InlineNode'
-import { getGenericNodeConfig } from '@/components/project/nodes/GenericNode'
-import { getFanoutNodeConfig } from '@/components/project/nodes/FanoutNode'
-import { getReturnNodeConfig } from '@/components/project/nodes/ReturnNode'
-import { getCancelNodeConfig } from '@/components/project/nodes/CancelNode'
-import { getSwitchNodeConfig } from '@/components/project/nodes/SwitchNode'
-import { getArrayPredicateNodeConfig } from '@/components/project/nodes/ArrayPredicateNode'
-import { getFilterNodeConfig } from '@/components/project/nodes/FilterNode'
-import { getParallelNodeConfig } from '@/components/project/nodes/ParallelNode'
-import { getSetNodeConfig } from '@/components/project/nodes/SetNode'
+import { getBranchNodeConfig } from '../components/project/nodes/BranchNode'
+import { getFunctionNodeConfig } from '../components/project/nodes/FunctionNode'
+import { getSleepNodeConfig } from '../components/project/nodes/SleepNode'
+import { getInlineNodeConfig } from '../components/project/nodes/InlineNode'
+import { getGenericNodeConfig } from '../components/project/nodes/GenericNode'
+import { getFanoutNodeConfig } from '../components/project/nodes/FanoutNode'
+import { getReturnNodeConfig } from '../components/project/nodes/ReturnNode'
+import { getCancelNodeConfig } from '../components/project/nodes/CancelNode'
+import { getSwitchNodeConfig } from '../components/project/nodes/SwitchNode'
+import { getArrayPredicateNodeConfig } from '../components/project/nodes/ArrayPredicateNode'
+import { getFilterNodeConfig } from '../components/project/nodes/FilterNode'
+import { getParallelNodeConfig } from '../components/project/nodes/ParallelNode'
+import { getSetNodeConfig } from '../components/project/nodes/SetNode'
 import {
   getHttpWiringNodeConfig,
   getQueueWiringNodeConfig,
@@ -22,8 +22,8 @@ import {
   getMcpResourceWiringNodeConfig,
   getScheduleWiringNodeConfig,
   getNamedWiringNodeConfig,
-} from '@/components/project/nodes/WiringNode'
-import { getChannelWiringNodeConfig } from '@/components/project/nodes/ChannelWiringNode'
+} from '../components/project/nodes/WiringNode'
+import { getChannelWiringNodeConfig } from '../components/project/nodes/ChannelWiringNode'
 
 interface WiringFlowResult {
   nodes: Node[]

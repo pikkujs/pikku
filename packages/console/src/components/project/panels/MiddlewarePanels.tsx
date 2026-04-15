@@ -1,10 +1,11 @@
 import React from 'react'
 import { Stack, Text, Box, Group, Divider, Table } from '@mantine/core'
 import { Layers } from 'lucide-react'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { usePanelContext } from '@/context/PanelContext'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
+import { usePikkuMeta } from '../../../context/PikkuMetaContext'
+import { usePanelContext } from '../../../context/PanelContext'
+import { PikkuBadge } from '../../ui/PikkuBadge'
+import { SectionLabel } from '../../ui/SectionLabel'
+import classes from '../../ui/console.module.css'
 
 interface MiddlewarePanelProps {
   middlewareId: string
@@ -242,7 +243,7 @@ const GroupPanel: React.FunctionComponent<{
               {resolvedDefs.map(({ defId, def, instance }) => (
                 <Table.Tr
                   key={defId}
-                  style={{ cursor: 'pointer' }}
+                  className={classes.clickableText}
                   onClick={() => openMiddleware(defId, { ...def, _id: defId })}
                 >
                   <Table.Td ff="monospace" fz="sm">

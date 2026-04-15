@@ -4,15 +4,13 @@ import {
   Stack,
   Group,
   Paper,
-  Breadcrumbs,
-  Anchor,
   Divider,
 } from '@mantine/core'
 import { Paintbrush } from 'lucide-react'
 import type { CLIMeta, CLICommandMeta } from '@pikku/core/cli'
-import { FunctionLink } from '@/components/project/panels/shared/FunctionLink'
-import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { FunctionLink } from '../project/panels/shared/FunctionLink'
+import { SectionLabel } from '../project/panels/shared/SectionLabel'
+import { PikkuBadge } from '../ui/PikkuBadge'
 import { CliHelpText } from './CliHelpText'
 
 interface RendererMeta {
@@ -67,29 +65,6 @@ export const CliHelpView: React.FunctionComponent<CliHelpViewProps> = ({
 
   return (
     <Stack gap="md" p="md" style={{ height: '100%', overflow: 'auto' }}>
-      <Breadcrumbs>
-        <Anchor
-          size="sm"
-          onClick={() => onNavigate([])}
-          style={{ cursor: 'pointer' }}
-        >
-          {programId}
-        </Anchor>
-        {commandPath.map((part, i) => (
-          <Anchor
-            key={i}
-            size="sm"
-            onClick={() => onNavigate(commandPath.slice(0, i + 1))}
-            style={{
-              cursor: i === commandPath.length - 1 ? 'default' : 'pointer',
-            }}
-            fw={i === commandPath.length - 1 ? 600 : 400}
-          >
-            {part}
-          </Anchor>
-        ))}
-      </Breadcrumbs>
-
       <Paper
         p="md"
         radius="sm"
@@ -99,7 +74,6 @@ export const CliHelpView: React.FunctionComponent<CliHelpViewProps> = ({
           programId={programId}
           cliMeta={cliMeta}
           commandPath={commandPath}
-          onNavigate={onNavigate}
         />
       </Paper>
 

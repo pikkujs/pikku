@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { usePikkuRPC } from '@/context/PikkuRpcProvider'
+import { usePikkuRPC } from '../context/PikkuRpcProvider'
 
 export function useAddonFunctions() {
   const rpc = usePikkuRPC()
@@ -7,10 +7,7 @@ export function useAddonFunctions() {
   return useQuery({
     queryKey: ['addon-functions'],
     queryFn: async () => {
-      const addons = await rpc.invoke(
-        'console:getInstalledAddons',
-        null
-      )
+      const addons = await rpc.invoke('console:getInstalledAddons', null)
       const results: Array<{ namespace: string; funcId: string }> = []
 
       await Promise.all(
@@ -18,10 +15,9 @@ export function useAddonFunctions() {
           .filter((a: any) => a.namespace !== 'console')
           .map(async (addon: any) => {
             try {
-              const pkg = await rpc.invoke(
-                'console:getAddonInstalledPackage',
-                { packageName: addon.packageName }
-              )
+              const pkg = await rpc.invoke('console:getAddonInstalledPackage', {
+                packageName: addon.packageName,
+              })
               const funcs = pkg?.functions || {}
               for (const funcName of Object.keys(funcs)) {
                 results.push({

@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react'
 import { Text } from '@mantine/core'
 import { Cpu } from 'lucide-react'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { PanelProvider } from '@/context/PanelContext'
-import { usePanelContext } from '@/context/PanelContext'
-import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '@/components/layout/DetailPageHeader'
-import { TableListPage } from '@/components/layout/TableListPage'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { usePikkuMeta } from '../context/PikkuMetaContext'
+import { PanelProvider } from '../context/PanelContext'
+import { usePanelContext } from '../context/PanelContext'
+import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { DetailPageHeader } from '../components/layout/DetailPageHeader'
+import { TableListPage } from '../components/layout/TableListPage'
+import { PikkuBadge } from '../components/ui/PikkuBadge'
 
 const MCP_FILTERS = [
   { value: 'all', label: 'All' },

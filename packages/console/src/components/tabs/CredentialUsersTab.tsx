@@ -1,11 +1,11 @@
 import React, { useMemo } from 'react'
 import { Text, Group, Badge, Stack, Center, Loader, Code } from '@mantine/core'
 import { Users, Check } from 'lucide-react'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { usePikkuRPC } from '@/context/PikkuRpcProvider'
-import { usePanelContext } from '@/context/PanelContext'
+import { usePikkuMeta } from '../../context/PikkuMetaContext'
+import { usePikkuRPC } from '../../context/PikkuRpcProvider'
+import { usePanelContext } from '../../context/PanelContext'
 import { useQuery } from '@tanstack/react-query'
-import { TableListPage } from '@/components/layout/TableListPage'
+import { TableListPage } from '../layout/TableListPage'
 
 interface CredentialMeta {
   name: string

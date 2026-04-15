@@ -1,10 +1,10 @@
 import React from 'react'
 import type { Node, NodeProps } from 'reactflow'
 import { SimpleGrid, Box } from '@mantine/core'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { PikkuBadge } from '../../ui/PikkuBadge'
 import { RotateCw, Timer, Code } from 'lucide-react'
 import { BaseNode } from './BaseNode'
-import { usePanelContext } from '@/context/PanelContext'
+import { usePanelContext } from '../../../context/PanelContext'
 
 interface InlineNodeData {
   icon: React.ComponentType<{ size?: number }>

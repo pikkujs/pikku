@@ -12,10 +12,10 @@ import {
   Loader,
 } from '@mantine/core'
 import { ChevronDown, X } from 'lucide-react'
-import { useWorkflowRuns } from '@/hooks/useWorkflowRuns'
-import { useWorkflowRunContext } from '@/context/WorkflowRunContext'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { statusDefs } from '@/components/ui/badge-defs'
+import { useWorkflowRuns } from '../../hooks/useWorkflowRuns'
+import { useWorkflowRunContext } from '../../context/WorkflowRunContext'
+import { PikkuBadge } from '../ui/PikkuBadge'
+import { statusDefs } from '../ui/badge-defs'
 
 const formatTime = (dateStr: string) => {
   const date = new Date(dateStr)

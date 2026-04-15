@@ -31,6 +31,11 @@ while IFS= read -r -d '' f; do
       -e "s|import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core'|import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/internal'|g" \
       -e "s|import { addPackageServiceFactories } from '@pikku/core'|import { pikkuState } from '@pikku/core/internal'|g" \
       -e "s|addPackageServiceFactories('\([^']*\)', {|pikkuState('\1', 'package', 'factories', {|g" \
+      -e "/metaDir/d" \
+      -e "/^try {$/d" \
+      -e "/^} catch.*{.*}$/d" \
+      -e "/fileURLToPath.*__fileURLToPath/d" \
+      -e "/dirname.*__dirname/d" \
       "$f" > "$tmp" && mv "$tmp" "$f"
 done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
 

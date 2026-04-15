@@ -11,11 +11,11 @@ import {
   Alert,
 } from '@mantine/core'
 import { Save, X, AlertTriangle, CheckCircle } from 'lucide-react'
-import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
-import { useAgentSource, useUpdateAgentConfig } from '@/hooks/useCodeEdit'
-import { useTagOptions } from '@/hooks/useTags'
-import { useAddonFunctions } from '@/hooks/useAddonFunctions'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
+import { SectionLabel } from '../../ui/SectionLabel'
+import { useAgentSource, useUpdateAgentConfig } from '../../../hooks/useCodeEdit'
+import { useTagOptions } from '../../../hooks/useTags'
+import { useAddonFunctions } from '../../../hooks/useAddonFunctions'
+import { usePikkuMeta } from '../../../context/PikkuMetaContext'
 
 interface AgentEditorProps {
   wireId: string
@@ -238,7 +238,7 @@ export const AgentEditor: React.FunctionComponent<AgentEditorProps> = ({
       <Textarea
         value={role}
         onChange={(e) => setRole(e.currentTarget.value)}
-        placeholder="Who the agent is — role, expertise, domain context"
+        placeholder="Who the agent is -- role, expertise, domain context"
         autosize
         minRows={2}
         maxRows={6}
@@ -251,7 +251,7 @@ export const AgentEditor: React.FunctionComponent<AgentEditorProps> = ({
       <Textarea
         value={personality}
         onChange={(e) => setPersonality(e.currentTarget.value)}
-        placeholder="Defines how the agent behaves — tone, style, constraints"
+        placeholder="Defines how the agent behaves -- tone, style, constraints"
         autosize
         minRows={3}
         maxRows={10}

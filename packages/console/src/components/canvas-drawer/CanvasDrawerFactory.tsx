@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import type { CanvasDrawerData } from '@/context/DrawerContext'
+import type { CanvasDrawerData } from '../../context/DrawerContext'
 import { Box, Text, Stack, Group, UnstyledButton, Loader } from '@mantine/core'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { PikkuBadge } from '../ui/PikkuBadge'
 import {
   GitCompare,
   Split,
@@ -26,9 +26,10 @@ import {
   Cable,
   User,
 } from 'lucide-react'
-import { useAddonMeta, useFunctionsMeta } from '@/hooks/useWirings'
-import { usePikkuRPC } from '@/context/PikkuRpcProvider'
+import { useAddonMeta, useFunctionsMeta } from '../../hooks/useWirings'
+import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { Code2 } from 'lucide-react'
+import classes from '../ui/console.module.css'
 
 interface AddonMeta {
   id: string
@@ -253,19 +254,17 @@ const MenuButton: React.FunctionComponent<{
       p="md"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      className={classes.drawerButton}
       style={{
-        borderBottom: '1px solid var(--mantine-color-default-border)',
-        transition: 'background-color 0.15s',
-        width: '100%',
         backgroundColor: hovered ? 'var(--mantine-color-gray-1)' : undefined,
       }}
     >
       <Group gap="md" wrap="nowrap" justify="space-between">
         <Group gap="md" wrap="nowrap">
-          <Box style={{ color: 'var(--mantine-color-blue-6)' }}>
+          <Box className={classes.drawerIconBox}>
             <Icon size={20} />
           </Box>
-          <Box style={{ flex: 1 }}>
+          <Box className={classes.flexGrow}>
             <Text size="sm" fw={500}>
               {title}
             </Text>
@@ -290,10 +289,7 @@ const BackButton: React.FunctionComponent<{
   <UnstyledButton
     onClick={onClick}
     p="md"
-    style={{
-      borderBottom: '1px solid var(--mantine-color-default-border)',
-      width: '100%',
-    }}
+    className={classes.drawerButton}
   >
     <Group gap="xs">
       <ArrowLeft size={16} />
@@ -318,20 +314,18 @@ const NodeItem: React.FunctionComponent<{
       p="md"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      className={classes.drawerButton}
       style={{
-        borderBottom: '1px solid var(--mantine-color-default-border)',
-        transition: 'background-color 0.15s',
-        width: '100%',
         backgroundColor: hovered ? 'var(--mantine-color-gray-1)' : undefined,
       }}
     >
       <Group gap="md" wrap="nowrap">
         {Icon && (
-          <Box style={{ color: 'var(--mantine-color-blue-6)' }}>
+          <Box className={classes.drawerIconBox}>
             <Icon size={20} />
           </Box>
         )}
-        <Box style={{ flex: 1 }}>
+        <Box className={classes.flexGrow}>
           <Text size="sm" fw={500}>
             {name}
           </Text>
@@ -422,7 +416,7 @@ const TransformView: React.FunctionComponent<{
     <Box>
       <BackButton title="Transform" onClick={onBack} />
       {isLoading && (
-        <Box p="xl" style={{ display: 'flex', justifyContent: 'center' }}>
+        <Box p="xl" className={classes.centeredLoader}>
           <Loader size="sm" />
         </Box>
       )}
@@ -471,7 +465,7 @@ const FunctionsView: React.FunctionComponent<{
     <Box>
       <BackButton title="Functions" onClick={onBack} />
       {isLoading && (
-        <Box p="xl" style={{ display: 'flex', justifyContent: 'center' }}>
+        <Box p="xl" className={classes.centeredLoader}>
           <Loader size="sm" />
         </Box>
       )}
@@ -517,17 +511,15 @@ const AddonItem: React.FunctionComponent<{
       p="md"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      className={classes.drawerButton}
       style={{
-        borderBottom: '1px solid var(--mantine-color-default-border)',
-        transition: 'background-color 0.15s',
-        width: '100%',
         backgroundColor: hovered ? 'var(--mantine-color-gray-1)' : undefined,
       }}
     >
       <Group gap="md" wrap="nowrap" justify="space-between">
-        <Group gap="md" wrap="nowrap" style={{ flex: 1 }}>
+        <Group gap="md" wrap="nowrap" className={classes.flexGrow}>
           <AddonIcon id={addon.id} size={20} />
-          <Box style={{ flex: 1 }}>
+          <Box className={classes.flexGrow}>
             <Group gap="xs">
               <Text size="sm" fw={500}>
                 {addon.displayName}
@@ -560,7 +552,7 @@ const AddonsView: React.FunctionComponent<{
     <Box>
       <BackButton title="Addons" onClick={onBack} />
       {isLoading && (
-        <Box p="xl" style={{ display: 'flex', justifyContent: 'center' }}>
+        <Box p="xl" className={classes.centeredLoader}>
           <Loader size="sm" />
         </Box>
       )}
@@ -609,9 +601,7 @@ const AddonDetailView: React.FunctionComponent<{
       />
       <Box
         p="md"
-        style={{
-          borderBottom: '1px solid var(--mantine-color-default-border)',
-        }}
+        className={classes.drawerButton}
       >
         <Text size="xs" c="dimmed">
           {addon.description}
@@ -692,9 +682,7 @@ const AddStepContent: React.FunctionComponent = () => {
     <Box>
       <Box
         p="md"
-        style={{
-          borderBottom: '1px solid var(--mantine-color-default-border)',
-        }}
+        className={classes.drawerButton}
       >
         <Text size="sm" fw={600}>
           Add a node

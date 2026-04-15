@@ -12,6 +12,7 @@ import {
   Button,
 } from '@mantine/core'
 import { Check, Plus, X } from 'lucide-react'
+import classes from '../ui/console.module.css'
 
 const statusColors: Record<string, string> = {
   running: 'blue',
@@ -188,7 +189,7 @@ export const RunsPanel: React.FunctionComponent<RunsPanelProps> = ({
   ]
 
   return (
-    <Stack gap={0} style={{ height: '100%' }}>
+    <Stack gap={0} className={classes.flexColumn}>
       {statusFilters.length > 0 && (
         <Box
           px="sm"
@@ -207,7 +208,7 @@ export const RunsPanel: React.FunctionComponent<RunsPanelProps> = ({
         </Box>
       )}
 
-      <ScrollArea style={{ flex: 1 }}>
+      <ScrollArea className={classes.flexGrow}>
         {onNewClick && (
           <Box
             py="sm"

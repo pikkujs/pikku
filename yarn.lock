@@ -4444,6 +4444,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@mantine/code-highlight@npm:^8.3.8":
+  version: 8.3.18
+  resolution: "@mantine/code-highlight@npm:8.3.18"
+  dependencies:
+    clsx: "npm:^2.1.1"
+  peerDependencies:
+    "@mantine/core": 8.3.18
+    "@mantine/hooks": 8.3.18
+    react: ^18.x || ^19.x
+    react-dom: ^18.x || ^19.x
+  checksum: 10/4b508d85ed081bfb27158683b6773bef0bcd1a3ff2917c47fa4aeea0e83d548e987022de8ae0d474d76a20176b890a95483aee4fea67e53d847f32d7ff5ff0c5
+  languageName: node
+  linkType: hard
+
 "@mantine/colors-generator@npm:^8.3.8":
   version: 8.3.15
   resolution: "@mantine/colors-generator@npm:8.3.15"
@@ -5340,6 +5354,7 @@ __metadata:
   dependencies:
     "@codemirror/lang-javascript": "npm:^6.2.5"
     "@emotion/react": "npm:^11.14.0"
+    "@mantine/code-highlight": "npm:^8.3.8"
     "@mantine/colors-generator": "npm:^8.3.8"
     "@mantine/core": "npm:^8.3.8"
     "@mantine/dates": "npm:^8.3.8"
@@ -5373,6 +5388,7 @@ __metadata:
     cronstrue: "npm:^3.12.0"
     dayjs: "npm:^1.11.19"
     elkjs: "npm:^0.11.0"
+    highlight.js: "npm:^11.11.1"
     lodash: "npm:^4.17.21"
     lucide-react: "npm:^0.554.0"
     mantine-datatable: "npm:^8.3.8"
@@ -5385,7 +5401,7 @@ __metadata:
     react-hook-form: "npm:^7.66.1"
     react-markdown: "npm:^10.1.0"
     react-medium-image-zoom: "npm:^5.4.0"
-    react-router-dom: "npm:^7"
+    react-router: "npm:^7"
     reactflow: "npm:^11.11.4"
     remark-gfm: "npm:^4.0.1"
     typescript: "npm:^5"
@@ -6087,6 +6103,8 @@ __metadata:
   resolution: "@pikku/templates-functions@workspace:templates/functions"
   dependencies:
     "@auth/core": "npm:^0.37.0"
+    "@pikku/addon-console": "workspace:*"
+    "@pikku/addon-graph": "workspace:*"
     "@pikku/auth-js": "npm:^0.12.3"
     "@pikku/cli": "npm:^0.12.17"
     "@pikku/core": "npm:^0.12.15"
@@ -15575,6 +15593,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"highlight.js@npm:^11.11.1":
+  version: 11.11.1
+  resolution: "highlight.js@npm:11.11.1"
+  checksum: 10/205272f12f2c8ab1760452a75c58b043b11129cf3a5d2a9c0c90d43993580d0f5c385a73a4b8aba197eef20c0ec37d64000e6b35c4ed5991324f4c2dc78f4e43
+  languageName: node
+  linkType: hard
+
 "hmac-drbg@npm:^1.0.1":
   version: 1.0.1
   resolution: "hmac-drbg@npm:1.0.1"
@@ -20374,21 +20399,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-router-dom@npm:^7":
-  version: 7.13.0
-  resolution: "react-router-dom@npm:7.13.0"
-  dependencies:
-    react-router: "npm:7.13.0"
-  peerDependencies:
-    react: ">=18"
-    react-dom: ">=18"
-  checksum: 10/7d0f283302710b54a24254aecdfc680832e0f28256a1743f7190e5742ac6072be70c30f731ee9350dcc4ef832d645e701aeef501b9a075da53ce1668d050322c
-  languageName: node
-  linkType: hard
-
-"react-router@npm:7.13.0":
-  version: 7.13.0
-  resolution: "react-router@npm:7.13.0"
+"react-router@npm:^7":
+  version: 7.14.0
+  resolution: "react-router@npm:7.14.0"
   dependencies:
     cookie: "npm:^1.0.1"
     set-cookie-parser: "npm:^2.6.0"
@@ -20398,7 +20411,7 @@ __metadata:
   peerDependenciesMeta:
     react-dom:
       optional: true
-  checksum: 10/8bc0a1eebf37136851ee345e53b137b5a7ec0de10c842861a06810bb54c0a389826734a7454f4afe8731daf39499948ba73657e60a6bd2acb93b3e567fd79127
+  checksum: 10/fcf42b30f580d453b60a40f5a7c9df729992228e34993df361598f7ef912c77b4ef993428962dfc78881170fdd7fc329c4dce7cc3ef17034a63485e4fd33cb62
   languageName: node
   linkType: hard
 

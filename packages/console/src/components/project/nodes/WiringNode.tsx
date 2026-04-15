@@ -12,9 +12,9 @@ import {
   Clock,
   Zap,
 } from 'lucide-react'
-import { usePanelContext } from '@/context/PanelContext'
-import { useWorkflowContextSafe } from '@/context/WorkflowContext'
-import { useWorkflowRunContextSafe } from '@/context/WorkflowRunContext'
+import { usePanelContext } from '../../../context/PanelContext'
+import { useWorkflowContextSafe } from '../../../context/WorkflowContext'
+import { useWorkflowRunContextSafe } from '../../../context/WorkflowRunContext'
 import { useMantineTheme } from '@mantine/core'
 
 type WiringType =

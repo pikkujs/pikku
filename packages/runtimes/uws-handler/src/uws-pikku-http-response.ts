@@ -9,6 +9,7 @@ export class UWSPikkuHTTPResponse implements PikkuHTTPResponse {
   #ended = false
   #streaming = false
   #headersSent = false
+  #pendingChunks: string[] = []
 
   constructor(
     private res: HttpResponse,
@@ -88,13 +89,26 @@ export class UWSPikkuHTTPResponse implements PikkuHTTPResponse {
   }
 
   public close(): void {
-    this.flush()
-    if (!this.#ended && !this.isAborted()) {
+    if (this.#streaming) {
+      if (this.#ended || this.isAborted()) return
       this.#ended = true
+      const chunks = this.#pendingChunks.splice(0)
       this.res.cork(() => {
+        if (!this.#headersSent) {
+          this.#headersSent = true
+          this.res.writeStatus(this.#statusCode.toString())
+          for (const [name, value] of this.#headers) {
+            this.res.writeHeader(name, value)
+          }
+        }
+        for (const chunk of chunks) {
+          this.res.write(chunk)
+        }
         this.res.end()
       })
+      return
     }
+    this.flush()
   }
 
   public setMode(mode: 'stream'): void {
@@ -105,7 +119,15 @@ export class UWSPikkuHTTPResponse implements PikkuHTTPResponse {
 
   #sendStreamChunk(data: string | ArrayBuffer | Buffer): void {
     if (this.#ended || this.isAborted()) return
+    const chunk = typeof data === 'string' ? data : data.toString()
+    this.#pendingChunks.push(`data: ${chunk}\n\n`)
+    this.#drainChunks()
+  }
 
+  #drainChunks(): void {
+    if (this.#ended || this.isAborted() || this.#pendingChunks.length === 0)
+      return
+    const chunks = this.#pendingChunks.splice(0)
     this.res.cork(() => {
       if (!this.#headersSent) {
         this.#headersSent = true
@@ -114,9 +136,9 @@ export class UWSPikkuHTTPResponse implements PikkuHTTPResponse {
           this.res.writeHeader(name, value)
         }
       }
-
-      const chunk = typeof data === 'string' ? data : data.toString()
-      this.res.write(`data: ${chunk}\n\n`)
+      for (const chunk of chunks) {
+        this.res.write(chunk)
+      }
     })
   }
 
