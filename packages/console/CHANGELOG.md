@@ -1,5 +1,14 @@
 ## 0.12.0
 
+## 0.12.13
+
+### Patch Changes
+
+- 48c00b0: Extract shared UI components (MetaRow, SectionLabel, ListDetailLayout, GridHeader, ListItem, DetailHeader, EmptyState, SearchInput, TagBadge, ValText) with CSS module for composability. Rename PageClient components to TabContent and move to tabs/. All shared components exported from package index.
+- 48c00b0: Major console redesign: icon rail sidebar, split-panel layouts for all tabs (Functions, MCP, Schedulers, Triggers, Queues, HTTP, Channels, CLI), theme overhaul with consistent badges/schema tables, tabbed API explorer with code snippets, and streamlined page headers.
+- Updated dependencies [d03f409]
+  - @pikku/core@0.12.16
+
 ## 0.12.12
 
 ### Patch Changes
