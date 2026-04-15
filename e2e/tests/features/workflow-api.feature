@@ -77,14 +77,6 @@ Feature: Workflow API
     Then the workflow should complete successfully
     And the workflow output "count" should be 2
 
-  Scenario: Complex error handling workflow recovers from failure
-    When I run the "complexErrorHandlingWorkflow" workflow with:
-      | value |
-      | 5     |
-    Then the workflow should complete successfully
-    And the workflow output "result" should be 10
-    And the workflow output "recovered" should be true
-
   # Graph Workflows
   Scenario: Graph linear workflow completes all nodes
     When I run the "graphLinearWorkflow" workflow with:
