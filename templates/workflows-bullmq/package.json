@@ -17,7 +17,7 @@
     "@auth/core": "^0.37.0",
     "@pikku/auth-js": "^0.12.3",
     "@pikku/core": "^0.12.16",
-    "@pikku/express": "^0.12.3",
+    "@pikku/express": "^0.12.4",
     "@pikku/queue-bullmq": "^0.12.2",
     "@pikku/redis": "^0.12.4",
     "tslib": "^2.8.1",
@@ -25,7 +25,7 @@
     "typescript": "^5.9"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.18",
+    "@pikku/cli": "^0.12.19",
     "@types/node": "^24"
   }
 }

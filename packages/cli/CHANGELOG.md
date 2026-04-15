@@ -1,5 +1,12 @@
 ## 0.12.0
 
+## 0.12.19
+
+### Patch Changes
+
+- b3a28c9: Convert `pikku all` to run as a workflow with parallelized steps
+- d477ea5: Fix RPCInvoke and RPCRemote types to omit data argument for void/null input functions and require it for object inputs
+
 ## 0.12.18
 
 ### Patch Changes
