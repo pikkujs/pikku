@@ -122,7 +122,7 @@ export function analyzeDeployment(
         handlers.push({ type: 'queue', queueName: queueMeta.name ?? queueName })
         queues.push({
           name: queueMeta.name ?? queueName,
-          consumerUnit: toKebab(funcId),
+          consumerUnit: toSafeKebab(funcId),
           consumerFunctionId: funcId,
         })
       }
@@ -139,7 +139,7 @@ export function analyzeDeployment(
         scheduledTasks.push({
           name: schedMeta.name,
           schedule: schedMeta.schedule,
-          unitName: toKebab(funcId),
+          unitName: toSafeKebab(funcId),
           functionId: funcId,
         })
       }
@@ -188,7 +188,7 @@ export function analyzeDeployment(
     }
 
     units.push({
-      name: toKebab(funcId),
+      name: toSafeKebab(funcId),
       role: 'function',
       target: resolveDeployTarget(funcMeta, serverlessIncompatible),
       functionIds: [funcId],
@@ -203,11 +203,13 @@ export function analyzeDeployment(
   for (const [agentName, agentMeta] of entries(state.agents.agentsMeta)) {
     const toolIds = agentMeta.tools ?? []
     const subAgentNames = agentMeta.agents ?? []
-    const unitName = `agent-${toKebab(agentName)}`
+    const unitName = `agent-${toSafeKebab(agentName)}`
 
     // Agent gateway depends on its tool function units
-    const toolUnitNames = toolIds.map((id) => toKebab(id))
-    const subAgentUnitNames = subAgentNames.map((sa) => `agent-${toKebab(sa)}`)
+    const toolUnitNames = toolIds.map((id) => toSafeKebab(id))
+    const subAgentUnitNames = subAgentNames.map(
+      (sa) => `agent-${toSafeKebab(sa)}`
+    )
 
     // Agent needs AI services
     const agentServices: ServiceRequirement[] = [
@@ -285,7 +287,7 @@ export function analyzeDeployment(
   const allMcpIds = [...mcpToolIds, ...mcpResourceIds, ...mcpPromptIds]
   if (allMcpIds.length > 0) {
     const unitName = 'mcp-server'
-    const mcpFuncUnitNames = allMcpIds.map((id) => toKebab(id))
+    const mcpFuncUnitNames = allMcpIds.map((id) => toSafeKebab(id))
 
     units.push({
       name: unitName,
@@ -311,8 +313,8 @@ export function analyzeDeployment(
     const funcIds = collectChannelFunctionIds(channelMeta)
     if (funcIds.length === 0) continue
 
-    const unitName = `channel-${toKebab(channelName)}`
-    const funcUnitNames = funcIds.map((id) => toKebab(id))
+    const unitName = `channel-${toSafeKebab(channelName)}`
+    const funcUnitNames = funcIds.map((id) => toSafeKebab(id))
 
     units.push({
       name: unitName,
@@ -455,7 +457,7 @@ function buildWorkflows(
       if ('flow' in node) continue
       if (!('rpcName' in node)) continue
 
-      const stepUnitName = toKebab(node.rpcName)
+      const stepUnitName = toSafeKebab(node.rpcName)
       const isAsync = node.options?.async === true
       const isInline = !isAsync && graph.inline === true
 
@@ -470,7 +472,7 @@ function buildWorkflows(
     }
 
     // Build orchestrator unit — no function code, just orchestration
-    const orchUnitName = `wf-${toKebab(graph.name)}`
+    const orchUnitName = `wf-${toSafeKebab(graph.name)}`
     const orchServices: ServiceRequirement[] = [
       { capability: 'workflow-state', sourceServiceName: 'workflowService' },
       { capability: 'queue', sourceServiceName: 'queueService' },
@@ -501,7 +503,7 @@ function buildWorkflows(
     ]
 
     // Orchestrator queue — the orchestrator consumes from this
-    const orchQueueName = `wf-orchestrator-${toKebab(graph.name)}`
+    const orchQueueName = `wf-orchestrator-${toSafeKebab(graph.name)}`
     const orchHandlers: DeploymentHandler[] = [
       { type: 'fetch', routes: wfRoutes },
       { type: 'queue', queueName: orchQueueName },
@@ -529,11 +531,11 @@ function buildWorkflows(
     // create queue definitions here. Step 7 wires them to units.
     for (const step of steps) {
       if (step.inline || !step.functionId) continue
-      const stepQueueName = `wf-step-${toKebab(step.functionId)}`
+      const stepQueueName = `wf-step-${toSafeKebab(step.functionId)}`
 
       queues.push({
         name: stepQueueName,
-        consumerUnit: toKebab(step.functionId),
+        consumerUnit: toSafeKebab(step.functionId),
         consumerFunctionId: `pikkuWorkflowWorker:${step.functionId}`,
       })
     }
@@ -661,7 +663,7 @@ function collectChannelFunctionIds(channelMeta: ChannelMeta): string[] {
 // Naming helpers
 // ---------------------------------------------------------------------------
 
-export function toKebab(str: string): string {
+export function toSafeKebab(str: string): string {
   return str
     .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
     .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2')
