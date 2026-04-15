@@ -127,7 +127,7 @@ export type CoreMCPTool<
 > = {
   name: string
   title?: string
-  description: string
+  description?: string
   summary?: string
   errors?: string[]
   func: PikkuFunctionConfig

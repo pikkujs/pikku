@@ -817,18 +817,16 @@ export const addFunctions: AddWiring = (
 
   if (mcpEnabled) {
     if (!description) {
-      logger.critical(
-        ErrorCode.MISSING_DESCRIPTION,
+      logger.warn(
         `MCP tool '${name}' is missing a description.`
       )
-      return
     }
     state.mcpEndpoints.files.add(node.getSourceFile().fileName)
     state.mcpEndpoints.toolsMeta[name] = {
       pikkuFuncId,
       name,
       title: title || undefined,
-      description,
+      description: description || undefined,
       summary,
       errors,
       tags,
