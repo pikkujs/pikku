@@ -6,40 +6,76 @@ runs:
   steps:
     - name: Check formatting
       shell: bash
-      run: yarn prettier
+      run: |
+        start=$SECONDS
+        yarn prettier
+        echo "::notice::⏱ Check formatting: $((SECONDS - start))s"
     - name: Lint
       shell: bash
-      run: yarn lint
+      run: |
+        start=$SECONDS
+        yarn lint
+        echo "::notice::⏱ Lint: $((SECONDS - start))s"
     - name: Build packages
       shell: bash
-      run: yarn build:packages
+      run: |
+        start=$SECONDS
+        yarn build:packages
+        echo "::notice::⏱ Build packages: $((SECONDS - start))s"
     - name: Generate pikku files
       shell: bash
-      run: yarn pikku
+      run: |
+        start=$SECONDS
+        yarn pikku
+        echo "::notice::⏱ Generate pikku files: $((SECONDS - start))s"
     - name: Build addons
       shell: bash
-      run: yarn build:addons
+      run: |
+        start=$SECONDS
+        yarn build:addons
+        echo "::notice::⏱ Build addons: $((SECONDS - start))s"
     - name: Regenerate schemas after bootstrap
       shell: bash
-      run: yarn pikku
+      run: |
+        start=$SECONDS
+        yarn pikku
+        echo "::notice::⏱ Regenerate schemas: $((SECONDS - start))s"
     - name: Build function-addon template
       shell: bash
-      run: cd templates/function-addon && yarn pikku && yarn build
+      run: |
+        start=$SECONDS
+        cd templates/function-addon && yarn pikku && yarn build
+        echo "::notice::⏱ Build function-addon template: $((SECONDS - start))s"
     - name: Final pikku regeneration before template builds
       shell: bash
-      run: yarn pikku
+      run: |
+        start=$SECONDS
+        yarn pikku
+        echo "::notice::⏱ Final pikku regeneration: $((SECONDS - start))s"
     - name: Build templates
       shell: bash
-      run: yarn build:templates
+      run: |
+        start=$SECONDS
+        yarn build:templates
+        echo "::notice::⏱ Build templates: $((SECONDS - start))s"
     - name: Run tests
       shell: bash
-      run: yarn test:coverage
+      run: |
+        start=$SECONDS
+        yarn test:coverage
+        echo "::notice::⏱ Run tests: $((SECONDS - start))s"
     - name: Generate and type-check console
       shell: bash
-      run: cd packages/console && yarn generate && yarn tsc --noEmit
+      run: |
+        start=$SECONDS
+        cd packages/console && yarn generate && yarn tsc --noEmit
+        echo "::notice::⏱ Console type-check: $((SECONDS - start))s"
     - name: Build console
       shell: bash
-      run: yarn build:console
+      run: |
+        start=$SECONDS
+        yarn build:console
+        echo "::notice::⏱ Build console: $((SECONDS - start))s"
 
     - name: Save build output (for later jobs)
       uses: actions/upload-artifact@v4
