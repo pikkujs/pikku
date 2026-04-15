@@ -6,21 +6,22 @@
 import { pikkuWorkflowComplexFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
 export const complexInlineSwitchWorkflow = pikkuWorkflowComplexFunc<
-  { action: string; payload: unknown },
+  { action: string; email: string },
   { status: string }
 >({
   title: 'Complex Inline Switch',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {
     // Inline step for preprocessing
-    const prepared = await workflow.do('Prepare', async () => {
+    await workflow.do('Prepare', async () => {
       return { action: data.action, ready: true }
     })
 
     switch (data.action) {
       case 'create':
-        await workflow.do('Create record', 'recordCreate', {
-          payload: data.payload,
+        await workflow.do('Create user', 'userCreate', {
+          email: data.email,
+          name: data.action,
         })
         break
       case 'transform':
@@ -30,13 +31,17 @@ export const complexInlineSwitchWorkflow = pikkuWorkflowComplexFunc<
         })
         break
       default:
-        await workflow.do('Default handler', 'defaultHandler', {
-          action: data.action,
+        await workflow.do('Send fallback email', 'emailSend', {
+          to: data.email,
+          subject: 'Fallback',
+          body: 'Unknown action',
         })
     }
 
-    // RPC step after switch
-    await workflow.do('Finalize', 'finalize', { action: data.action })
+    // Inline step after switch
+    await workflow.do('Finalize', async () => {
+      return { done: true }
+    })
 
     return { status: 'done' }
   },

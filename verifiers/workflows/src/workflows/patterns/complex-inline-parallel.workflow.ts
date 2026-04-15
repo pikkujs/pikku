@@ -6,24 +6,24 @@
 import { pikkuWorkflowComplexFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
 export const complexInlineParallelWorkflow = pikkuWorkflowComplexFunc<
-  { items: string[] },
-  { results: unknown[] }
+  { emails: string[] },
+  { count: number }
 >({
   title: 'Complex Inline Parallel',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {
-    // Parallel RPC steps
-    const fetched = await Promise.all(
-      data.items.map(async (item) =>
-        workflow.do(`Fetch ${item}`, 'dataFetch', { name: item })
+    // Parallel RPC steps using a real function
+    const users = await Promise.all(
+      data.emails.map(async (email) =>
+        workflow.do(`Create ${email}`, 'userCreate', { email, name: email })
       )
     )
 
     // Inline step after parallel
     const combined = await workflow.do('Combine results', async () => {
-      return { all: fetched.map((f) => f.name) }
+      return { count: users.length }
     })
 
-    return { results: combined.all }
+    return { count: combined.count }
   },
 })

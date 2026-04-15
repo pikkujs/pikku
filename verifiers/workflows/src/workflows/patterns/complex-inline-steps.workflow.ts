@@ -7,26 +7,28 @@
 import { pikkuWorkflowComplexFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
 export const complexInlineWorkflow = pikkuWorkflowComplexFunc<
-  { name: string; priority: string },
+  { email: string; name: string },
   { result: string }
 >({
   title: 'Complex Inline Steps',
   tags: ['patterns'],
   func: async (_services, data, { workflow }) => {
-    // RPC step
-    const fetched = await workflow.do('Fetch data', 'dataFetch', {
+    const user = await workflow.do('Create user', 'userCreate', {
+      email: data.email,
       name: data.name,
     })
 
     // Inline step — should produce InlineStepMeta
     const processed = await workflow.do('Process locally', async () => {
-      return { value: fetched.name + ' processed' }
+      return { greeting: 'Hello ' + user.id }
     })
 
     // Branch with mixed RPC and inline steps
-    if (data.priority === 'high') {
-      await workflow.do('Priority notify', 'sendNotification', {
-        message: processed.value,
+    if (data.name === 'admin') {
+      await workflow.do('Send welcome', 'emailSend', {
+        to: data.email,
+        subject: 'Welcome',
+        body: processed.greeting,
       })
     } else {
       await workflow.do('Log result', async () => {
@@ -34,6 +36,6 @@ export const complexInlineWorkflow = pikkuWorkflowComplexFunc<
       })
     }
 
-    return { result: processed.value }
+    return { result: processed.greeting }
   },
 })
