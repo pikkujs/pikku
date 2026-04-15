@@ -151,7 +151,7 @@ export function useAIWorkflows() {
   return useQuery({
     queryKey: ['ai-workflows'],
     queryFn: async () => {
-      return await rpc.invoke('console:getAIWorkflows')
+      return await rpc.invoke('console:getAIWorkflows', {})
     },
   })
 }
