@@ -1,5 +1,11 @@
 ## 0.12.0
 
+## 0.12.14
+
+### Patch Changes
+
+- c5c8975: Highlight MCP tools, resources, and prompts missing descriptions
+
 ## 0.12.13
 
 ### Patch Changes
