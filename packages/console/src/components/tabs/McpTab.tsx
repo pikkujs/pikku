@@ -87,12 +87,18 @@ const McpDetailPanel: React.FunctionComponent<{ item: any }> = ({ item }) => {
             </MetaRow>
           )}
 
-          {item.description && (
+          {item.description ? (
             <MetaRow label="description" align="flex-start">
               <Text size="sm" c="var(--app-text)" lh={1.6}>
                 {item.description}
               </Text>
             </MetaRow>
+          ) : (
+            <Box p="xs" mt={4} mb={4} style={{ background: 'rgba(245,158,11,0.08)', borderRadius: 6, border: '1px solid rgba(245,158,11,0.2)' }}>
+              <Text size="xs" c="rgba(245,158,11,0.9)" lh={1.6}>
+                Missing description — MCP clients won't know when to use this {method}.
+              </Text>
+            </Box>
           )}
 
           {inputSchemaName && (
@@ -257,6 +263,11 @@ export const McpTab: React.FunctionComponent = () => {
                           </Text>
                         )}
                       </Box>
+                      {!item.description && (
+                        <Text size="xs" c="rgba(245,158,11,0.8)" title="Missing description">
+                          &#9888;
+                        </Text>
+                      )}
                     </Box>
                   </ListItem>
                 )
