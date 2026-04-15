@@ -65,9 +65,9 @@ check('bundle is ESM (not CJS require)', () => {
 })
 
 // --- Entry content ---
-check('entry: PikkuUWSServer', () => {
+check('entry: PikkuExpressServer', () => {
   const e = readText(join(DEPLOY_DIR, unitName, 'entry.ts'))
-  if (!e.includes('PikkuUWSServer')) throw new Error('Missing PikkuUWSServer')
+  if (!e.includes('PikkuExpressServer')) throw new Error('Missing PikkuExpressServer')
 })
 check('entry: InMemorySchedulerService', () => {
   const e = readText(join(DEPLOY_DIR, unitName, 'entry.ts'))

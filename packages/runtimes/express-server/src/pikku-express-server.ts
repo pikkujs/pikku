@@ -140,6 +140,13 @@ export class PikkuExpressServer {
     })
   }
 
+  public getHttpServer(): Server {
+    if (!this.server) {
+      throw new Error('Server has not been started yet')
+    }
+    return this.server
+  }
+
   public async stop(): Promise<void> {
     if (this.server == null) {
       throw new Error(
