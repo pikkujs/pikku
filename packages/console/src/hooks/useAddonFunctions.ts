@@ -7,7 +7,7 @@ export function useAddonFunctions() {
   return useQuery({
     queryKey: ['addon-functions'],
     queryFn: async () => {
-      const addons = await rpc.invoke('console:getInstalledAddons', null)
+      const addons = await rpc.invoke('console:getInstalledAddons')
       const results: Array<{ namespace: string; funcId: string }> = []
 
       await Promise.all(

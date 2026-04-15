@@ -140,7 +140,7 @@ export function useWorkflowRunNames() {
   return useQuery({
     queryKey: ['workflow-run-names'],
     queryFn: async () => {
-      return await rpc.invoke('console:getWorkflowRunNames', null)
+      return await rpc.invoke('console:getWorkflowRunNames')
     },
   })
 }
@@ -151,7 +151,7 @@ export function useAIWorkflows() {
   return useQuery({
     queryKey: ['ai-workflows'],
     queryFn: async () => {
-      return await rpc.invoke('console:getAIWorkflows', {})
+      return await rpc.invoke('console:getAIWorkflows')
     },
   })
 }
