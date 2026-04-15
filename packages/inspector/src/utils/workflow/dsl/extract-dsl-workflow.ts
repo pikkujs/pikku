@@ -2,6 +2,7 @@ import * as ts from 'typescript'
 import type {
   WorkflowStepMeta,
   RpcStepMeta,
+  InlineStepMeta,
   BranchStepMeta,
   ParallelGroupStepMeta,
   FanoutStepMeta,
@@ -97,7 +98,8 @@ export interface ExtractionResult {
  */
 export function extractDSLWorkflow(
   funcNode: ts.Node,
-  checker: ts.TypeChecker
+  checker: ts.TypeChecker,
+  options?: { allowInline?: boolean }
 ): ExtractionResult {
   try {
     // Find the async arrow function
@@ -134,7 +136,9 @@ export function extractDSLWorkflow(
     }
 
     // Validate no disallowed patterns
-    const patternErrors = validateNoDisallowedPatterns(arrowFunc.body)
+    const patternErrors = validateNoDisallowedPatterns(arrowFunc.body, {
+      allowInline: options?.allowInline,
+    })
     if (patternErrors.length > 0) {
       return {
         status: 'error',
@@ -375,7 +379,9 @@ function extractVariableDeclaration(
   if (ts.isAwaitExpression(init) && ts.isCallExpression(init.expression)) {
     const call = init.expression
     if (isWorkflowDoCall(call, context.checker)) {
-      const step = extractRpcStep(call, context, varName)
+      const step = isInlineDoCall(call)
+        ? extractInlineStep(call, context)
+        : extractRpcStep(call, context, varName)
       if (step) {
         // Track output variable
         const type = context.checker.getTypeAtLocation(decl)
@@ -481,7 +487,9 @@ function extractExpressionStatement(
     const call = expr.expression
 
     if (isWorkflowDoCall(call, context.checker)) {
-      const step = extractRpcStep(call, context, outputVar)
+      const step = isInlineDoCall(call)
+        ? extractInlineStep(call, context)
+        : extractRpcStep(call, context, outputVar)
 
       // Track output variable if this is an assignment
       if (outputVar && step) {
@@ -557,6 +565,49 @@ function extractRpcStep(
     })
     return null
   }
+}
+
+/**
+ * Extract inline step from workflow.do() call with a function argument
+ */
+function extractInlineStep(
+  call: ts.CallExpression,
+  context: ExtractionContext
+): InlineStepMeta | null {
+  const args = call.arguments
+  if (args.length < 2) return null
+
+  try {
+    const stepName = extractStringLiteral(args[0], context.checker)
+    const optionsArg = args.length >= 4 ? args[args.length - 1] : undefined
+    const options =
+      optionsArg && ts.isObjectLiteralExpression(optionsArg)
+        ? extractStepOptions(optionsArg, context)
+        : undefined
+
+    return {
+      type: 'inline',
+      stepName,
+      options,
+    }
+  } catch (error) {
+    context.errors.push({
+      message: `Failed to extract inline step: ${error instanceof Error ? error.message : String(error)}`,
+      node: call,
+    })
+    return null
+  }
+}
+
+/**
+ * Check if the second argument of a workflow.do() call is a function
+ */
+function isInlineDoCall(call: ts.CallExpression): boolean {
+  const secondArg = call.arguments[1]
+  return (
+    !!secondArg &&
+    (ts.isArrowFunction(secondArg) || ts.isFunctionExpression(secondArg))
+  )
 }
 
 /**

@@ -22,7 +22,10 @@ export interface ValidationError {
  * - ThrowStatement (for WorkflowCancelledException)
  * - Block (containers)
  */
-export function validateNoDisallowedPatterns(node: ts.Node): ValidationError[] {
+export function validateNoDisallowedPatterns(
+  node: ts.Node,
+  options?: { allowInline?: boolean }
+): ValidationError[] {
   const errors: ValidationError[] = []
 
   function visitBlock(block: ts.Block) {
@@ -70,7 +73,7 @@ export function validateNoDisallowedPatterns(node: ts.Node): ValidationError[] {
     }
 
     // Check for inline workflow.do
-    if (ts.isCallExpression(node)) {
+    if (!options?.allowInline && ts.isCallExpression(node)) {
       if (ts.isPropertyAccessExpression(node.expression)) {
         const propAccess = node.expression
         if (
@@ -86,7 +89,7 @@ export function validateNoDisallowedPatterns(node: ts.Node): ValidationError[] {
           ) {
             errors.push({
               message:
-                'Inline workflow.do with function argument is not allowed in simple workflows. Use RPC form instead.',
+                'Inline workflow.do with function argument is not allowed in simple workflows. Use pikkuWorkflowComplexFunc instead.',
               node,
             })
             return
