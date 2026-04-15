@@ -294,7 +294,7 @@ export const PackageDetailPage: React.FunctionComponent<{
   >({
     queryKey: ['installed-addons'],
     queryFn: async () => {
-      const result = await rpc.invoke('console:getInstalledAddons', null)
+      const result = await rpc.invoke('console:getInstalledAddons')
       return (result ?? []) as Array<{
         packageName: string
         namespace: string

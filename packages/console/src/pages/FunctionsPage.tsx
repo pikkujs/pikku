@@ -355,7 +355,7 @@ export const FunctionsPage: React.FunctionComponent = () => {
 
   const { data: functions, isLoading } = useQuery({
     queryKey: ['functions-meta'],
-    queryFn: () => rpc.invoke('console:getFunctionsMeta', null),
+    queryFn: () => rpc.invoke('console:getFunctionsMeta'),
   })
 
   if (isLoading || !functions) {

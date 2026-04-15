@@ -157,7 +157,7 @@ const InstalledList: React.FunctionComponent<{
   const { data, isLoading } = useQuery({
     queryKey: ['installed-addons'],
     queryFn: async () => {
-      const result = await rpc.invoke('console:getInstalledAddons', null)
+      const result = await rpc.invoke('console:getInstalledAddons')
       return (result ?? []) as InstalledAddon[]
     },
     staleTime: 60 * 1000,
@@ -195,7 +195,7 @@ const CommunityList: React.FunctionComponent<{
   const { data, isLoading, isError } = useQuery({
     queryKey: ['addons'],
     queryFn: async () => {
-      const result = await rpc.invoke('console:getAddonMeta', null)
+      const result = await rpc.invoke('console:getAddonMeta')
       return ((result as any)?.packages ?? result ?? []) as PackageMeta[]
     },
     staleTime: 60 * 1000,
@@ -205,7 +205,7 @@ const CommunityList: React.FunctionComponent<{
   const { data: installedAddons } = useQuery<Array<{ packageName: string }>>({
     queryKey: ['installed-addons'],
     queryFn: async () => {
-      const result = await rpc.invoke('console:getInstalledAddons', null)
+      const result = await rpc.invoke('console:getInstalledAddons')
       return (result ?? []) as Array<{ packageName: string }>
     },
     staleTime: 60 * 1000,

@@ -25,12 +25,6 @@ runs:
     - name: Build function-addon template
       shell: bash
       run: cd templates/function-addon && yarn pikku && yarn build
-    - name: Generate pikku files for verifiers
-      shell: bash
-      run: yarn workspaces foreach -A --include 'verifiers/**' run pikku
-    - name: Build verifiers
-      shell: bash
-      run: yarn build:verifiers
     - name: Final pikku regeneration before template builds
       shell: bash
       run: yarn pikku
@@ -56,8 +50,6 @@ runs:
           packages/**/bin
           templates/**/.pikku
           templates/**/dist
-          verifiers/**/.pikku
-          verifiers/**/dist
         include-hidden-files: true
         retention-days: 1
 
