@@ -5,16 +5,16 @@ export const bootstrap = pikkuVoidFunc({
   func: async ({ logger, getInspectorState }, _data, { rpc }) => {
     await getInspectorState(false, false, true)
 
-    await rpc.invoke('pikkuFunctionTypes', null)
-    await rpc.invoke('pikkuFunctionTypesSplit', null)
-    await rpc.invoke('pikkuHTTPTypes', null)
-    await rpc.invoke('pikkuChannelTypes', null)
-    await rpc.invoke('pikkuSchedulerTypes', null)
-    await rpc.invoke('pikkuQueueTypes', null)
-    await rpc.invoke('pikkuWorkflow', null)
-    await rpc.invoke('pikkuMCPTypes', null)
-    await rpc.invoke('pikkuAIAgentTypes', null)
-    await rpc.invoke('pikkuCLITypes', null)
+    await rpc.invoke('pikkuFunctionTypes')
+    await rpc.invoke('pikkuFunctionTypesSplit')
+    await rpc.invoke('pikkuHTTPTypes')
+    await rpc.invoke('pikkuChannelTypes')
+    await rpc.invoke('pikkuSchedulerTypes')
+    await rpc.invoke('pikkuQueueTypes')
+    await rpc.invoke('pikkuWorkflow')
+    await rpc.invoke('pikkuMCPTypes')
+    await rpc.invoke('pikkuAIAgentTypes')
+    await rpc.invoke('pikkuCLITypes')
 
     if (logger.hasCriticalErrors()) {
       process.exit(1)
