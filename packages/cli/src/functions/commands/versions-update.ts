@@ -9,9 +9,8 @@ export const pikkuVersionsUpdate = pikkuSessionlessFunc<void, void>({
     const visitState = await getInspectorState()
 
     if (!visitState.manifest.initial) {
-      throw new Error(
-        `Version manifest not found at ${manifestPath}. Run 'pikku versions init' to create one.`
-      )
+      logger.warn(`Run 'pikku versions init' to enable contract versioning.`)
+      return
     }
 
     const immutabilityErrors = visitState.manifest.errors.filter(

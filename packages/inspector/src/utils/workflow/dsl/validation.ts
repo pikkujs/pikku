@@ -132,11 +132,20 @@ export function validateAwaitedCalls(node: ts.Node): ValidationError[] {
         ts.isIdentifier(propAccess.expression) &&
         propAccess.expression.text === 'Promise'
       ) {
-        // console.log('[DEBUG] Found Promise.all, setting insidePromiseAll=true')
-        // Visit children with insidePromiseAll = true
         ts.forEachChild(node, (child) => visit(child, parentIsAwait, true))
         return
       }
+      // .push() on an array — workflow.do() inside is collecting promises
+      if (propAccess.name.text === 'push') {
+        ts.forEachChild(node, (child) => visit(child, parentIsAwait, true))
+        return
+      }
+    }
+
+    // Array literal — workflow.do() inside is collecting promises
+    if (ts.isArrayLiteralExpression(node)) {
+      ts.forEachChild(node, (child) => visit(child, parentIsAwait, true))
+      return
     }
 
     // Now check for workflow calls
