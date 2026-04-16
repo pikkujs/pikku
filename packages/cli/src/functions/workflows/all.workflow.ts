@@ -1,8 +1,15 @@
 import { existsSync } from 'fs'
 import { pikkuWorkflowComplexFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
-const scaffoldFiles = (config: any): { file: string; generator: string }[] => {
-  const files: { file: string; generator: string }[] = []
+type ScaffoldGenerator =
+  | 'pikkuPublicRPC'
+  | 'pikkuConsoleFunctions'
+  | 'pikkuPublicAgent'
+
+const scaffoldFiles = (
+  config: any
+): { file: string; generator: ScaffoldGenerator }[] => {
+  const files: { file: string; generator: ScaffoldGenerator }[] = []
   if (config.scaffold?.rpc && config.publicRpcFile)
     files.push({ file: config.publicRpcFile, generator: 'pikkuPublicRPC' })
   if (config.scaffold?.console && config.consoleFunctionsFile)
@@ -59,7 +66,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     )
     if (missingScaffolds.length > 0) {
       for (const { generator } of missingScaffolds) {
-        await workflow.do(`Scaffold ${generator}`, generator as any, null)
+        await workflow.do(`Scaffold ${generator}`, generator, null)
       }
     }
 
@@ -200,7 +207,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
           workflow.do('HTTP map', 'pikkuHTTPMap', null),
           workflow.do('Fetch', 'pikkuFetch', null),
           workflow.do('RPC client', 'pikkuRPCClient', null),
-          workflow.do('React query', 'pikkuReactQuery' as any, null),
+          workflow.do('React query', 'pikkuReactQuery', null),
         ])
         allImports.push(config.httpWiringMetaFile, config.httpWiringsFile)
       }
@@ -300,11 +307,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       await workflow.do('OpenAPI', 'pikkuOpenAPI', null)
     }
 
-    try {
-      await workflow.do('Versions update', 'pikkuVersionsUpdate', null)
-    } catch {
-      logger.warn(`Run 'pikku versions init' to enable contract versioning.`)
-    }
+    await workflow.do('Versions update', 'pikkuVersionsUpdate', null)
 
     await workflow.do('Bootstrap', 'pikkuBootstrap', { allImports })
     await workflow.do('Summary', 'pikkuSummary', null)
