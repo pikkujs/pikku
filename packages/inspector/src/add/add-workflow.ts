@@ -300,13 +300,32 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
       state.rpc.invokedFunctions.add(rpc)
     }
   } else {
-    // DSL extraction failed — this is a critical error for both dsl and complex workflows
+    // DSL extraction failed
+    if (wrapperType === 'dsl') {
+      // For pikkuWorkflowFunc, this is a critical error
+      // But still track RPC invocations for function registration
+      getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
+      logger.critical(
+        ErrorCode.INVALID_DSL_WORKFLOW,
+        `Workflow '${workflowName}' does not conform to DSL workflow rules:\n${result.reason || 'Unknown error'}`
+      )
+      return
+    } else {
+      // For pikkuWorkflowComplexFunc, fall back to basic extraction
+      logger.debug(
+        `Workflow '${workflowName}' could not be extracted as DSL workflow: ${result.reason || 'Unknown error'}. Falling back to basic extraction.`
+      )
+      dsl = false
+    }
+  }
+
+  /**
+   * For non-dsl workflows or pikkuWorkflowComplexFunc, run basic extraction
+   * to ensure all RPC invocations are tracked for function registration.
+   * This catches RPCs in Promise.all callbacks and other patterns DSL can't extract.
+   */
+  if (!dsl || wrapperType === 'complex') {
     getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
-    logger.critical(
-      ErrorCode.INVALID_DSL_WORKFLOW,
-      `Workflow '${workflowName}' does not conform to DSL workflow rules:\n${result.reason || 'Unknown error'}`
-    )
-    return
   }
 
   state.workflows.meta[workflowName] = {
