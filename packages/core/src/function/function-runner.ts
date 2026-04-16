@@ -32,6 +32,7 @@ import {
   PikkuCredentialWireService,
   createWireServicesCredentialWireProps,
 } from '../services/credential-wire-service.js'
+import { defaultPikkuUserIdResolver } from '../services/pikku-user-id.js'
 import { rpcService } from '../wirings/rpc/rpc-runner.js'
 import { closeWireServices } from '../utils.js'
 
@@ -262,6 +263,35 @@ export const runPikkuFunc = async <In = any, Out = any>(
       resolvedWire.clearSession = () => sessionService.clear()
       resolvedWire.getSession = () => sessionService.get()
       resolvedWire.hasSessionChanged = () => sessionService.sessionChanged
+    }
+
+    const pikkuUserId = defaultPikkuUserIdResolver(resolvedWire)
+    if (pikkuUserId) {
+      resolvedWire.pikkuUserId = pikkuUserId
+    }
+
+    if (
+      !resolvedWire.session &&
+      pikkuUserId &&
+      resolvedSingletonServices.sessionStore
+    ) {
+      const stored = await resolvedSingletonServices.sessionStore.get(
+        pikkuUserId
+      )
+      if (stored) {
+        resolvedWire.session = stored
+      }
+    }
+
+    if (
+      resolvedWire.session &&
+      pikkuUserId &&
+      resolvedSingletonServices.sessionStore
+    ) {
+      await resolvedSingletonServices.sessionStore.set(
+        pikkuUserId,
+        resolvedWire.session as CoreUserSession
+      )
     }
 
     const session = resolvedWire.session

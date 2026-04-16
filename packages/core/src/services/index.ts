@@ -68,6 +68,8 @@ export type {
 } from './typed-credential-service.js'
 export type { VariableStatus, VariableMeta } from './typed-variables-service.js'
 export type { MetaService } from './meta-service.js'
+export type { SessionStore } from './session-store.js'
+export { InMemorySessionStore } from './in-memory-session-store.js'
 export type {
   MCPMeta,
   RPCMetaRecord,

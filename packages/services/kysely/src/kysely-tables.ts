@@ -175,6 +175,13 @@ export interface CredentialsAuditTable {
   performedAt: Generated<Date>
 }
 
+export interface UserSessionsTable {
+  pikkuUserId: string
+  session: string
+  createdAt: Generated<Date>
+  updatedAt: Generated<Date>
+}
+
 export interface KyselyPikkuDB {
   channels: ChannelsTable
   channelSubscriptions: ChannelSubscriptionsTable
@@ -193,4 +200,5 @@ export interface KyselyPikkuDB {
   secretsAudit: SecretsAuditTable
   credentials: CredentialsTable
   credentialsAudit: CredentialsAuditTable
+  pikkuUserSessions: UserSessionsTable
 }
