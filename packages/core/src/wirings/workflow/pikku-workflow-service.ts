@@ -649,6 +649,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
     if (
       workflowMeta.source === 'graph' ||
+      workflowMeta.source === 'complex' ||
       workflowMeta.source === 'dynamic-workflow'
     ) {
       const shouldInline =
