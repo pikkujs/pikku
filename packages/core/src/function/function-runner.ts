@@ -36,6 +36,30 @@ import { defaultPikkuUserIdResolver } from '../services/pikku-user-id.js'
 import { rpcService } from '../wirings/rpc/rpc-runner.js'
 import { closeWireServices } from '../utils.js'
 
+async function resolveSession(
+  wire: PikkuWire,
+  singletonServices: CoreSingletonServices
+): Promise<void> {
+  const pikkuUserId = defaultPikkuUserIdResolver(wire)
+  if (pikkuUserId) {
+    wire.pikkuUserId = pikkuUserId
+  }
+
+  const { sessionStore } = singletonServices
+  if (!sessionStore || !pikkuUserId) return
+
+  if (!wire.session) {
+    const stored = await sessionStore.get(pikkuUserId)
+    if (stored) {
+      wire.session = stored
+    }
+  }
+
+  if (wire.session) {
+    await sessionStore.set(pikkuUserId, wire.session as CoreUserSession)
+  }
+}
+
 /**
  * Get or create singleton services for an addon package.
  * Services are cached in pikkuState to avoid recreation on each call.
@@ -265,34 +289,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
       resolvedWire.hasSessionChanged = () => sessionService.sessionChanged
     }
 
-    const pikkuUserId = defaultPikkuUserIdResolver(resolvedWire)
-    if (pikkuUserId) {
-      resolvedWire.pikkuUserId = pikkuUserId
-    }
-
-    if (
-      !resolvedWire.session &&
-      pikkuUserId &&
-      resolvedSingletonServices.sessionStore
-    ) {
-      const stored = await resolvedSingletonServices.sessionStore.get(
-        pikkuUserId
-      )
-      if (stored) {
-        resolvedWire.session = stored
-      }
-    }
-
-    if (
-      resolvedWire.session &&
-      pikkuUserId &&
-      resolvedSingletonServices.sessionStore
-    ) {
-      await resolvedSingletonServices.sessionStore.set(
-        pikkuUserId,
-        resolvedWire.session as CoreUserSession
-      )
-    }
+    await resolveSession(resolvedWire, resolvedSingletonServices)
 
     const session = resolvedWire.session
 
