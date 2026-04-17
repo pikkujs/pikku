@@ -1,4 +1,3 @@
-import type { CoreUserSession } from '@pikku/core'
 import type { Channel } from '@pikku/core/channel'
 import { ChannelStore } from '@pikku/core/channel'
 import { Redis, type RedisOptions } from 'ioredis'
@@ -95,22 +94,22 @@ export class RedisChannelStore extends ChannelStore {
     await pipeline.exec()
   }
 
-  public async setUserSession(
+  public async setPikkuUserId(
     channelId: string,
-    session: CoreUserSession | null
+    pikkuUserId: string | null
   ): Promise<void> {
     const key = this.channelKey(channelId)
 
-    if (session) {
-      await this.redis.hset(key, 'userSession', JSON.stringify(session))
+    if (pikkuUserId) {
+      await this.redis.hset(key, 'pikkuUserId', pikkuUserId)
     } else {
-      await this.redis.hdel(key, 'userSession')
+      await this.redis.hdel(key, 'pikkuUserId')
     }
   }
 
-  public async getChannelAndSession(
+  public async getChannel(
     channelId: string
-  ): Promise<Channel & { session: CoreUserSession }> {
+  ): Promise<Channel & { pikkuUserId?: string }> {
     const key = this.channelKey(channelId)
     const data = await this.redis.hgetall(key)
 
@@ -122,7 +121,7 @@ export class RedisChannelStore extends ChannelStore {
       channelId: data.channelId!,
       channelName: data.channelName!,
       openingData: data.openingData ? JSON.parse(data.openingData) : {},
-      session: data.userSession ? JSON.parse(data.userSession) : {},
+      pikkuUserId: data.pikkuUserId || undefined,
     }
   }
 

@@ -10,7 +10,7 @@ export interface ChannelsTable {
   channelName: string
   createdAt: Generated<Date>
   openingData: string
-  userSession: string | null
+  pikkuUserId: string | null
   lastWire: Generated<Date>
 }
 

@@ -45,7 +45,7 @@ export const runLocalChannel = async ({
   let closedWireServices = false
 
   let channelHandler: PikkuLocalChannelHandler | undefined
-  const userSession = new PikkuSessionService()
+  const userSession = new PikkuSessionService(singletonServices.sessionStore)
 
   let http: PikkuHTTP | undefined
   if (request) {
@@ -125,7 +125,9 @@ export const runLocalChannel = async ({
             singletonServices.logger.error(`Error handling onConnect: ${e}`)
             const errorResponse = getErrorResponse(e)
             channel.send({
-              error: errorResponse?.message ?? (isProduction() ? 'Internal server error' : e.message),
+              error:
+                errorResponse?.message ??
+                (isProduction() ? 'Internal server error' : e.message),
               ...(!isProduction() && { errorName: e.constructor?.name }),
             })
           }
@@ -148,7 +150,9 @@ export const runLocalChannel = async ({
             singletonServices.logger.error(`Error handling onDisconnect: ${e}`)
             const errorResponse = getErrorResponse(e)
             channel.send({
-              error: errorResponse?.message ?? (isProduction() ? 'Internal server error' : e.message),
+              error:
+                errorResponse?.message ??
+                (isProduction() ? 'Internal server error' : e.message),
               ...(!isProduction() && { errorName: e.constructor?.name }),
             })
           }
@@ -171,7 +175,9 @@ export const runLocalChannel = async ({
           singletonServices.logger.error(e)
           const errorResponse = getErrorResponse(e)
           channel.send({
-            error: errorResponse?.message ?? (isProduction() ? 'Internal server error' : e.message),
+            error:
+              errorResponse?.message ??
+              (isProduction() ? 'Internal server error' : e.message),
             ...(!isProduction() && { errorName: e.constructor?.name }),
           })
           setTimeout(() => channel.close(), 200)

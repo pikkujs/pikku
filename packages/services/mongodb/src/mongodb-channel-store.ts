@@ -1,4 +1,3 @@
-import type { CoreUserSession } from '@pikku/core'
 import type { Channel } from '@pikku/core/channel'
 import { ChannelStore } from '@pikku/core/channel'
 import type { Db, Collection } from 'mongodb'
@@ -8,7 +7,7 @@ interface ChannelDoc {
   channelName: string
   createdAt: Date
   openingData: any
-  userSession: any | null
+  pikkuUserId: string | null
   lastWire: Date
 }
 
@@ -52,7 +51,7 @@ export class MongoDBChannelStore extends ChannelStore {
       _id: channelId,
       channelName,
       openingData: openingData || {},
-      userSession: null,
+      pikkuUserId: null,
       createdAt: new Date(),
       lastWire: new Date(),
     })
@@ -65,19 +64,16 @@ export class MongoDBChannelStore extends ChannelStore {
     await this.subscriptions.deleteMany({ channelId: { $in: channelIds } })
   }
 
-  public async setUserSession(
+  public async setPikkuUserId(
     channelId: string,
-    session: CoreUserSession | null
+    pikkuUserId: string | null
   ): Promise<void> {
-    await this.channels.updateOne(
-      { _id: channelId },
-      { $set: { userSession: session } }
-    )
+    await this.channels.updateOne({ _id: channelId }, { $set: { pikkuUserId } })
   }
 
-  public async getChannelAndSession(
+  public async getChannel(
     channelId: string
-  ): Promise<Channel & { session: CoreUserSession }> {
+  ): Promise<Channel & { pikkuUserId?: string }> {
     const row = await this.channels.findOne({ _id: channelId })
 
     if (!row) {
@@ -88,7 +84,7 @@ export class MongoDBChannelStore extends ChannelStore {
       channelId: row._id,
       channelName: row.channelName,
       openingData: row.openingData ?? {},
-      session: (row.userSession ?? {}) as CoreUserSession,
+      pikkuUserId: row.pikkuUserId ?? undefined,
     }
   }
 

@@ -1,5 +1,3 @@
-import type { CoreUserSession } from '../../types/core.types.js'
-
 export type Channel<ChannelType = unknown, OpeningData = unknown> = {
   channelId: string
   channelName: string
@@ -10,20 +8,19 @@ export type Channel<ChannelType = unknown, OpeningData = unknown> = {
 export abstract class ChannelStore<
   ChannelType = unknown,
   OpeningData = unknown,
-  UserSession extends CoreUserSession = CoreUserSession,
   TypedChannel = Channel<ChannelType, OpeningData>,
 > {
   public abstract addChannel(
     channel: Channel<ChannelType, OpeningData>
   ): Promise<void> | void
   public abstract removeChannels(channelId: string[]): Promise<void> | void
-  public abstract setUserSession(
+  public abstract setPikkuUserId(
     channelId: string,
-    userSession: UserSession | null
+    pikkuUserId: string | null
   ): Promise<void> | void
-  public abstract getChannelAndSession(
+  public abstract getChannel(
     channelId: string
   ):
-    | Promise<TypedChannel & { session: UserSession }>
-    | (TypedChannel & { session: UserSession })
+    | Promise<TypedChannel & { pikkuUserId?: string }>
+    | (TypedChannel & { pikkuUserId?: string })
 }

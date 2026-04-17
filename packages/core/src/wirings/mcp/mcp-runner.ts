@@ -214,7 +214,9 @@ async function runMCPPikkuFunc(
 
     singletonServices.logger.debug(`Running MCP ${type}: ${name}`)
 
-    const mcpSessionService = new PikkuSessionService()
+    const mcpSessionService = new PikkuSessionService(
+      singletonServices.sessionStore
+    )
     const wire: PikkuWire = {
       mcp: mcpWire,
       ...createMiddlewareSessionWireProps(mcpSessionService),

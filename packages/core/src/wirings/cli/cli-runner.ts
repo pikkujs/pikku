@@ -341,7 +341,9 @@ export async function runCLICommand({
     state: 'open',
   }
 
-  const userSession = new PikkuSessionService<CoreUserSession>()
+  const userSession = new PikkuSessionService<CoreUserSession>(
+    singletonServices.sessionStore
+  )
 
   const wire: PikkuWire = {
     cli: {
