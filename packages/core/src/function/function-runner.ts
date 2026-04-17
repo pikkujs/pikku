@@ -53,11 +53,10 @@ async function resolveSession(
     if (stored) {
       wire.session = stored
     }
+    return
   }
 
-  if (wire.session) {
-    await sessionStore.set(pikkuUserId, wire.session as CoreUserSession)
-  }
+  await sessionStore.set(pikkuUserId, wire.session as CoreUserSession)
 }
 
 /**
