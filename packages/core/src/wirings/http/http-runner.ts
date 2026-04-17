@@ -303,10 +303,12 @@ const executeRoute = async (
     coerceDataFromSchema: boolean
   }
 ) => {
-  const userSession = new PikkuSessionService<CoreUserSession>()
   const { params, route, meta } = matchedRoute
   const { singletonServices, createWireServices, skipUserSession, requestId } =
     services
+  const userSession = new PikkuSessionService<CoreUserSession>(
+    singletonServices.sessionStore
+  )
 
   // Attach URL parameters to the request object
   http?.request?.setParams(params)

@@ -23,28 +23,29 @@ export class CloudflareWebsocketStore extends ChannelStore {
     // This is done by the durable object itself
   }
 
-  public async setUserSession(
+  public async setPikkuUserId(
     channelId: string,
-    userSession: any
+    pikkuUserId: string | null
   ): Promise<void> {
     const websocket = this.getWebsocket(channelId)
     const { openingData, channelName } = websocket.deserializeAttachment()
     websocket.serializeAttachment({
       openingData,
       channelName,
-      userSession,
+      pikkuUserId,
     })
   }
 
-  public async getUserSession(channelId: string): Promise<any> {
+  public async getChannel(channelId: string) {
     const websocket = this.getWebsocket(channelId)
-    const { userSession } = websocket.deserializeAttachment()
-    return userSession
-  }
-
-  public async getChannelAndSession(channelId: string) {
-    const websocket = this.getWebsocket(channelId)
-    return websocket.deserializeAttachment()
+    const { channelName, openingData, pikkuUserId } =
+      websocket.deserializeAttachment()
+    return {
+      channelId,
+      channelName,
+      openingData,
+      pikkuUserId: pikkuUserId ?? undefined,
+    }
   }
 
   private getWebsocket(channelId: string) {

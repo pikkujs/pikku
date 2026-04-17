@@ -26,7 +26,10 @@ import type {
 } from './functions.types.js'
 import { parseVersionedId } from '../version.js'
 import type { SessionService } from '../services/user-session-service.js'
-import { createFunctionSessionWireProps } from '../services/user-session-service.js'
+import {
+  PikkuSessionService,
+  createFunctionSessionWireProps,
+} from '../services/user-session-service.js'
 import { ForbiddenError, ReadonlySessionError } from '../errors/errors.js'
 import {
   PikkuCredentialWireService,
@@ -38,11 +41,15 @@ import { closeWireServices } from '../utils.js'
 
 async function resolveSession(
   wire: PikkuWire,
-  singletonServices: CoreSingletonServices
+  singletonServices: CoreSingletonServices,
+  sessionService?: SessionService<CoreUserSession>
 ): Promise<void> {
   const pikkuUserId = defaultPikkuUserIdResolver(wire)
   if (pikkuUserId) {
     wire.pikkuUserId = pikkuUserId
+    if (sessionService instanceof PikkuSessionService) {
+      sessionService.setPikkuUserId(pikkuUserId)
+    }
   }
 
   const { sessionStore } = singletonServices
@@ -52,11 +59,9 @@ async function resolveSession(
     const stored = await sessionStore.get(pikkuUserId)
     if (stored) {
       wire.session = stored
+      sessionService?.setInitial(stored)
     }
-    return
   }
-
-  await sessionStore.set(pikkuUserId, wire.session as CoreUserSession)
 }
 
 /**
@@ -280,6 +285,12 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
   // Helper function to run permissions and execute the function
   const executeFunction = async () => {
+    await resolveSession(
+      resolvedWire,
+      resolvedSingletonServices,
+      sessionService
+    )
+
     if (sessionService) {
       resolvedWire.session = sessionService.freezeInitial()
       resolvedWire.setSession = (s: any) => sessionService.set(s)
@@ -287,8 +298,6 @@ export const runPikkuFunc = async <In = any, Out = any>(
       resolvedWire.getSession = () => sessionService.get()
       resolvedWire.hasSessionChanged = () => sessionService.sessionChanged
     }
-
-    await resolveSession(resolvedWire, resolvedSingletonServices)
 
     const session = resolvedWire.session
 

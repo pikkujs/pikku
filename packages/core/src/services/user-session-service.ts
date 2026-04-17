@@ -1,5 +1,5 @@
-import type { ChannelStore } from '../wirings/channel/channel-store.js'
 import type { CoreUserSession } from '../types/core.types.js'
+import type { SessionStore } from './session-store.js'
 
 export interface SessionService<UserSession extends CoreUserSession> {
   sessionChanged: boolean
@@ -8,7 +8,7 @@ export interface SessionService<UserSession extends CoreUserSession> {
   freezeInitial(): UserSession | undefined
   set(session: UserSession): Promise<void> | void
   clear(): Promise<void> | void
-  get(): Promise<UserSession> | UserSession | undefined
+  get(): UserSession | undefined
 }
 
 export class PikkuSessionService<UserSession extends CoreUserSession>
@@ -17,13 +17,16 @@ export class PikkuSessionService<UserSession extends CoreUserSession>
   public sessionChanged = false
   public initial: UserSession | undefined
   private session: UserSession | undefined
-  constructor(
-    private channelStore?: ChannelStore<unknown, unknown, UserSession>,
-    private channelId?: string
-  ) {
-    if (channelStore && !channelId) {
-      throw new Error('Channel ID is required when using channel store')
-    }
+  private pikkuUserId?: string
+
+  constructor(private sessionStore?: SessionStore<UserSession>) {}
+
+  public setPikkuUserId(id: string) {
+    this.pikkuUserId = id
+  }
+
+  public getPikkuUserId(): string | undefined {
+    return this.pikkuUserId
   }
 
   public setInitial(session: UserSession) {
@@ -37,27 +40,23 @@ export class PikkuSessionService<UserSession extends CoreUserSession>
     return this.initial
   }
 
-  public set(session: UserSession) {
+  public async set(session: UserSession) {
     this.sessionChanged = true
     this.session = session
-    return this.channelStore?.setUserSession(this.channelId!, session)
+    if (this.sessionStore && this.pikkuUserId) {
+      await this.sessionStore.set(this.pikkuUserId, session)
+    }
   }
 
-  public clear() {
+  public async clear() {
     this.sessionChanged = true
     this.session = undefined
-    return this.channelStore?.setUserSession(this.channelId!, null)
+    if (this.sessionStore && this.pikkuUserId) {
+      await this.sessionStore.clear(this.pikkuUserId)
+    }
   }
 
-  public get(): Promise<UserSession> | UserSession | undefined {
-    if (this.channelStore) {
-      const channel = this.channelStore.getChannelAndSession(this.channelId!)
-      if (channel instanceof Promise) {
-        return channel.then(({ session }) => session)
-      } else {
-        return channel.session
-      }
-    }
+  public get(): UserSession | undefined {
     return this.session
   }
 }

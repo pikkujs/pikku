@@ -1,4 +1,3 @@
-import type { CoreUserSession } from '@pikku/core'
 import type { Channel } from '@pikku/core/channel'
 import { ChannelStore } from '@pikku/core/channel'
 import type { Kysely } from 'kysely'
@@ -27,7 +26,7 @@ export class KyselyChannelStore extends ChannelStore {
         col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
       )
       .addColumn('opening_data', 'text', (col) => col.notNull().defaultTo('{}'))
-      .addColumn('user_session', 'text')
+      .addColumn('pikku_user_id', 'text')
       .addColumn('last_wire', 'timestamp', (col) =>
         col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
       )
@@ -75,23 +74,23 @@ export class KyselyChannelStore extends ChannelStore {
       .execute()
   }
 
-  public async setUserSession(
+  public async setPikkuUserId(
     channelId: string,
-    session: CoreUserSession | null
+    pikkuUserId: string | null
   ): Promise<void> {
     await this.db
       .updateTable('channels')
-      .set({ userSession: session ? JSON.stringify(session) : null })
+      .set({ pikkuUserId })
       .where('channelId', '=', channelId)
       .execute()
   }
 
-  public async getChannelAndSession(
+  public async getChannel(
     channelId: string
-  ): Promise<Channel & { session: CoreUserSession }> {
+  ): Promise<Channel & { pikkuUserId?: string }> {
     const row = await this.db
       .selectFrom('channels')
-      .select(['channelId', 'channelName', 'openingData', 'userSession'])
+      .select(['channelId', 'channelName', 'openingData', 'pikkuUserId'])
       .where('channelId', '=', channelId)
       .executeTakeFirst()
 
@@ -103,7 +102,7 @@ export class KyselyChannelStore extends ChannelStore {
       channelId: row.channelId,
       channelName: row.channelName,
       openingData: parseJson(row.openingData) ?? {},
-      session: (parseJson(row.userSession) ?? {}) as CoreUserSession,
+      pikkuUserId: row.pikkuUserId ?? undefined,
     }
   }
 

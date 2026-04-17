@@ -51,32 +51,38 @@ export function defineServiceTests(config: ServiceTestConfig): void {
         store = await factory()
       })
 
-      test('addChannel and getChannelAndSession', async () => {
+      test('addChannel and getChannel', async () => {
         await store.addChannel({
           channelId: 'ch-1',
           channelName: 'test-channel',
           openingData: { foo: 'bar' },
         })
 
-        const result = await store.getChannelAndSession('ch-1')
+        const result = await store.getChannel('ch-1')
         assert.equal(result.channelId, 'ch-1')
         assert.equal(result.channelName, 'test-channel')
         assert.deepEqual(result.openingData, { foo: 'bar' })
-        assert.deepEqual(result.session, {})
+        assert.equal(result.pikkuUserId, undefined)
       })
 
-      test('setUserSession', async () => {
-        const session = { userId: 'user-1' } as any
-        await store.setUserSession('ch-1', session)
+      test('setPikkuUserId', async () => {
+        await store.setPikkuUserId('ch-1', 'user-1')
 
-        const result = await store.getChannelAndSession('ch-1')
-        assert.deepEqual(result.session, session)
+        const result = await store.getChannel('ch-1')
+        assert.equal(result.pikkuUserId, 'user-1')
       })
 
-      test('getChannelAndSession throws for missing channel', async () => {
+      test('setPikkuUserId to null', async () => {
+        await store.setPikkuUserId('ch-1', null)
+
+        const result = await store.getChannel('ch-1')
+        assert.equal(result.pikkuUserId, undefined)
+      })
+
+      test('getChannel throws for missing channel', async () => {
         await assert.rejects(
           async () => {
-            await store.getChannelAndSession('missing')
+            await store.getChannel('missing')
           },
           { message: 'Channel not found: missing' }
         )
@@ -89,7 +95,7 @@ export function defineServiceTests(config: ServiceTestConfig): void {
         })
         await store.removeChannels(['ch-2'])
         await assert.rejects(async () => {
-          await store.getChannelAndSession('ch-2')
+          await store.getChannel('ch-2')
         })
       })
 
