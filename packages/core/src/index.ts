@@ -59,6 +59,13 @@ export {
   pikkuApprovalDescription,
 } from './function/functions.types.js'
 export { addFunction, getAllFunctionNames } from './function/index.js'
+export type {
+  ListInput,
+  ListOutput,
+  Filter,
+  LeafFilter,
+  LeafValue,
+} from './function/list.types.js'
 export { PikkuRequest } from './pikku-request.js'
 export {
   getRelativeTimeOffsetFromNow,
