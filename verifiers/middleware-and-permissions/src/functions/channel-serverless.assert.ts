@@ -12,10 +12,10 @@ import type { ExpectedEvent } from '../assert-combined.js'
  * Simple in-memory channel store for testing
  */
 class TestChannelStore extends ChannelStore {
-  private channels = new Map<string, Channel & { session: any }>()
+  private channels = new Map<string, Channel & { pikkuUserId?: string }>()
 
   async addChannel(channel: Channel): Promise<void> {
-    this.channels.set(channel.channelId, { ...channel, session: null })
+    this.channels.set(channel.channelId, { ...channel })
   }
 
   async removeChannels(channelIds: string[]): Promise<void> {
@@ -24,16 +24,16 @@ class TestChannelStore extends ChannelStore {
     }
   }
 
-  async setUserSession(channelId: string, userSession: any): Promise<void> {
+  async setPikkuUserId(channelId: string, pikkuUserId: string | null): Promise<void> {
     const channel = this.channels.get(channelId)
     if (channel) {
-      channel.session = userSession
+      channel.pikkuUserId = pikkuUserId ?? undefined
     }
   }
 
-  async getChannelAndSession(
+  async getChannel(
     channelId: string
-  ): Promise<Channel & { session: any }> {
+  ): Promise<Channel & { pikkuUserId?: string }> {
     const channel = this.channels.get(channelId)
     if (!channel) {
       throw new Error(`Channel ${channelId} not found`)
