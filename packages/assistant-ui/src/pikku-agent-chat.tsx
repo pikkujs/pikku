@@ -5,6 +5,7 @@ import {
   ThreadPrimitive,
   MessagePrimitive,
   ComposerPrimitive,
+  type ToolCallMessagePartComponent,
 } from '@assistant-ui/react'
 import {
   usePikkuAgentRuntime,
@@ -25,6 +26,17 @@ export interface PikkuAgentChatProps extends PikkuAgentRuntimeOptions {
   dark?: boolean
   /** Max width of the chat content area. Defaults to 768. Set to 'none' for full width. */
   maxWidth?: number | 'none'
+  /**
+   * Per-tool renderers. Map `toolName` → React component to replace the
+   * default expandable tool-call box for that tool. Enables generative-UI
+   * patterns: e.g. register a `renderWidget` tool on the agent and mount
+   * real UI (charts, diffs, cards) inline in the assistant bubble from the
+   * persisted tool-call args.
+   *
+   * Any tool without an entry here falls through to the default renderer
+   * (which still respects `hideToolCalls` and the approval-request UI).
+   */
+  toolComponents?: Record<string, ToolCallMessagePartComponent>
 }
 
 interface ChatColors {
@@ -92,6 +104,9 @@ const darkColors: ChatColors = {
 
 const ColorsContext = createContext<ChatColors>(lightColors)
 const HideToolCallsContext = createContext<boolean | string[] | undefined>(undefined)
+const ToolComponentsContext = createContext<
+  Record<string, ToolCallMessagePartComponent> | undefined
+>(undefined)
 
 function shouldHideToolCall(
   hideToolCalls: boolean | string[] | undefined,
@@ -470,6 +485,7 @@ const UserMessage: FunctionComponent = () => {
 
 const AssistantMessage: FunctionComponent = () => {
   const colors = useContext(ColorsContext)
+  const toolComponents = useContext(ToolComponentsContext)
   return (
     <div
       style={{
@@ -495,6 +511,7 @@ const AssistantMessage: FunctionComponent = () => {
                 <MarkdownText text={text} colors={colors} />
               ),
               tools: {
+                by_name: toolComponents,
                 Fallback: (props) => (
                   <ToolCallDisplay
                     toolCallId={props.toolCallId}
@@ -592,7 +609,7 @@ const PikkuComposer: FunctionComponent<{ disabled?: boolean }> = ({
 }
 
 export function PikkuAgentChat(props: PikkuAgentChatProps) {
-  const { emptyMessage, hideToolCalls, dark, maxWidth = 768, ...runtimeOptions } = props
+  const { emptyMessage, hideToolCalls, dark, maxWidth = 768, toolComponents, ...runtimeOptions } = props
   const { runtime, isAwaitingApproval, pendingApprovals, handleApproval } =
     usePikkuAgentRuntime(runtimeOptions)
 
@@ -602,6 +619,7 @@ export function PikkuAgentChat(props: PikkuAgentChatProps) {
     <ColorsContext.Provider value={colors}>
     <PikkuApprovalContext.Provider value={{ pendingApprovals, handleApproval }}>
     <HideToolCallsContext.Provider value={hideToolCalls}>
+    <ToolComponentsContext.Provider value={toolComponents}>
     <AssistantRuntimeProvider runtime={runtime}>
       <div
         style={{
@@ -668,6 +686,7 @@ export function PikkuAgentChat(props: PikkuAgentChatProps) {
         </ThreadPrimitive.Root>
       </div>
     </AssistantRuntimeProvider>
+    </ToolComponentsContext.Provider>
     </HideToolCallsContext.Provider>
     </PikkuApprovalContext.Provider>
     </ColorsContext.Provider>
