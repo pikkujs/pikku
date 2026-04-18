@@ -339,6 +339,7 @@ export const addFunctions: AddWiring = (
   let remote: boolean | undefined
   let mcp: boolean | undefined
   let readonly_: boolean | undefined
+  let deploy: 'serverless' | 'server' | 'auto' | undefined
   let approvalRequired: boolean | undefined
   let approvalDescription: string | undefined
   let version: number | undefined
@@ -422,6 +423,11 @@ export const addFunctions: AddWiring = (
     remote = getPropertyValue(firstArg, 'remote') as boolean | undefined
     mcp = getPropertyValue(firstArg, 'mcp') as boolean | undefined
     readonly_ = getPropertyValue(firstArg, 'readonly') as boolean | undefined
+    deploy = getPropertyValue(firstArg, 'deploy') as
+      | 'serverless'
+      | 'server'
+      | 'auto'
+      | undefined
     approvalRequired = getPropertyValue(firstArg, 'approvalRequired') as
       | boolean
       | undefined
@@ -783,6 +789,7 @@ export const addFunctions: AddWiring = (
     remote: remote || undefined,
     mcp: mcpEnabled || undefined,
     readonly: readonly_ || undefined,
+    deploy: deploy || undefined,
     approvalRequired: approvalRequired || undefined,
     approvalDescription: approvalDescription || undefined,
     version,
@@ -817,9 +824,7 @@ export const addFunctions: AddWiring = (
 
   if (mcpEnabled) {
     if (!description) {
-      logger.warn(
-        `MCP tool '${name}' is missing a description.`
-      )
+      logger.warn(`MCP tool '${name}' is missing a description.`)
     }
     state.mcpEndpoints.files.add(node.getSourceFile().fileName)
     state.mcpEndpoints.toolsMeta[name] = {
