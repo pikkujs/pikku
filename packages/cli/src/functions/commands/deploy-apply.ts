@@ -218,6 +218,7 @@ async function runDeploy(
     for (const e of deployResult.errors) {
       logger.error(`  ${e.step}: ${e.error}`)
     }
+    process.exit(1)
   }
 }
 

@@ -86,6 +86,14 @@ export interface CloudflareUnitManifest {
 export function generateInfraManifest(
   manifest: DeploymentManifest
 ): CloudflareInfraManifest {
+  const serverUnits = manifest.units.filter((u) => u.target === 'server')
+  if (serverUnits.length > 0) {
+    const names = serverUnits.map((u) => u.name).join(', ')
+    throw new Error(
+      `Project contains server-target functions (${names}) which require a container runtime. Server deploy is available via Pikku Fabric (https://pikku.dev/fabric).`
+    )
+  }
+
   const projectId = manifest.projectId
 
   // Collect unique resource requirements across all units

@@ -30,6 +30,7 @@ export interface DeployOptions {
   buildDir: string
   manifest: CloudflareInfraManifest
   onProgress?: (step: string, detail: string) => void
+  dispatchNamespace?: string
 }
 
 export interface DeployResult {
@@ -60,7 +61,7 @@ function toWorkerName(projectId: string, unitName: string): string {
 }
 
 export async function deploy(options: DeployOptions): Promise<DeployResult> {
-  const { accountId, apiToken, buildDir, manifest, onProgress } = options
+  const { accountId, apiToken, buildDir, manifest, onProgress, dispatchNamespace } = options
   const client = new CloudflareClient({ accountId, apiToken })
   const log = onProgress ?? (() => {})
   const projectId = manifest.projectId
@@ -92,7 +93,8 @@ export async function deploy(options: DeployOptions): Promise<DeployResult> {
     manifest,
     resourceIds,
     result,
-    log
+    log,
+    dispatchNamespace
   )
 
   // Step 4: Wire consumers and cron triggers
@@ -286,7 +288,8 @@ async function uploadWorkersInOrder(
   manifest: CloudflareInfraManifest,
   resourceIds: ResourceIds,
   result: DeployResult,
-  log: (step: string, detail: string) => void
+  log: (step: string, detail: string) => void,
+  dispatchNamespace?: string
 ): Promise<void> {
   // Build dependency graph: unit -> set of service binding targets
   const deps = new Map<string, Set<string>>()
@@ -336,7 +339,8 @@ async function uploadWorkersInOrder(
       ready,
       resourceIds,
       result,
-      log
+      log,
+      dispatchNamespace
     )
 
     for (const [unitName] of ready) {
@@ -354,7 +358,8 @@ async function deployWorkerBatch(
   units: Array<[string, { bindings: string[]; role: string }]>,
   resourceIds: ResourceIds,
   result: DeployResult,
-  log: (step: string, detail: string) => void
+  log: (step: string, detail: string) => void,
+  dispatchNamespace?: string
 ): Promise<void> {
   const tasks = units.map(async ([unitName, unitManifest]) => {
     const workerName = toWorkerName(projectId, unitName)
@@ -368,7 +373,15 @@ async function deployWorkerBatch(
         projectId
       )
 
-      await createWorker(client, workerName, script, bindings)
+      await createWorker(
+        client,
+        workerName,
+        script,
+        bindings,
+        [],
+        undefined,
+        dispatchNamespace
+      )
       result.workersDeployed.push(workerName)
       log('workers', `Deployed "${workerName}"`)
     } catch (err) {
