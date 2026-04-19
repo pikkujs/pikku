@@ -17,8 +17,13 @@ export const pikkuVersionsUpdate = pikkuSessionlessFunc<void, void>({
       (e) => e.code === ErrorCode.FUNCTION_VERSION_MODIFIED
     )
     if (immutabilityErrors.length > 0) {
-      const messages = immutabilityErrors.map((e) => `[${e.code}] ${e.message}`)
-      throw new Error(messages.join('\n'))
+      for (const e of immutabilityErrors) {
+        logger.warn(`[${e.code}] ${e.message}`)
+      }
+      logger.warn(
+        `Contract drift detected — version manifest not updated. Run 'pikku versions check' to inspect, or bump versions via code and re-run.`
+      )
+      return
     }
 
     await saveManifest(manifestPath, visitState.manifest.current!)
