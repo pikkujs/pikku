@@ -1,5 +1,5 @@
 ---
-'@pikku/cli': minor
+'@pikku/cli': patch
 ---
 
 Add `pikku dev` command: an all-in-one local development server that wires
