@@ -1,7 +1,7 @@
 import * as ts from 'typescript'
 
 /**
- * Pattern detection helpers for simple workflow extraction
+ * Pattern detection helpers for DSL workflow extraction
  */
 
 /**
@@ -209,7 +209,7 @@ export function isSequentialFanout(node: ts.ForOfStatement): boolean {
 /**
  * Extract full source path from an expression (e.g., data.memberEmails)
  */
-function extractSourcePath(expr: ts.Expression): string | null {
+export function extractSourcePath(expr: ts.Expression): string | null {
   if (ts.isIdentifier(expr)) {
     return expr.text
   }

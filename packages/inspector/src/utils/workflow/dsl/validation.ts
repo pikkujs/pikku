@@ -1,7 +1,7 @@
 import * as ts from 'typescript'
 
 /**
- * Validation rules for simple workflows
+ * Validation rules for DSL workflows
  */
 
 export interface ValidationError {
@@ -22,7 +22,10 @@ export interface ValidationError {
  * - ThrowStatement (for WorkflowCancelledException)
  * - Block (containers)
  */
-export function validateNoDisallowedPatterns(node: ts.Node): ValidationError[] {
+export function validateNoDisallowedPatterns(
+  node: ts.Node,
+  options?: { allowInline?: boolean }
+): ValidationError[] {
   const errors: ValidationError[] = []
 
   function visitBlock(block: ts.Block) {
@@ -42,7 +45,7 @@ export function validateNoDisallowedPatterns(node: ts.Node): ValidationError[] {
         // Unknown/disallowed statement type
         const nodeType = ts.SyntaxKind[statement.kind]
         errors.push({
-          message: `Statement type '${nodeType}' is not allowed in simple workflows. Allowed: const/let, if/else, switch/case, for..of, return, throw, and workflow calls. If this should be supported, please report the node type: ${nodeType}`,
+          message: `Statement type '${nodeType}' is not allowed in DSL workflows. Allowed: const/let, if/else, switch/case, for..of, return, throw, and workflow calls. If this should be supported, please report the node type: ${nodeType}`,
           node: statement,
         })
       }
@@ -53,7 +56,7 @@ export function validateNoDisallowedPatterns(node: ts.Node): ValidationError[] {
     // Disallow while and do-while
     if (ts.isWhileStatement(node) || ts.isDoStatement(node)) {
       errors.push({
-        message: 'while and do-while loops are not allowed in simple workflows',
+        message: 'while and do-while loops are not allowed in DSL workflows',
         node,
       })
       return
@@ -63,14 +66,14 @@ export function validateNoDisallowedPatterns(node: ts.Node): ValidationError[] {
     if (ts.isForInStatement(node) || ts.isForStatement(node)) {
       errors.push({
         message:
-          'for and for-in loops are not allowed in simple workflows. Use for-of instead.',
+          'for and for-in loops are not allowed in DSL workflows. Use for-of instead.',
         node,
       })
       return
     }
 
     // Check for inline workflow.do
-    if (ts.isCallExpression(node)) {
+    if (!options?.allowInline && ts.isCallExpression(node)) {
       if (ts.isPropertyAccessExpression(node.expression)) {
         const propAccess = node.expression
         if (
@@ -86,7 +89,7 @@ export function validateNoDisallowedPatterns(node: ts.Node): ValidationError[] {
           ) {
             errors.push({
               message:
-                'Inline workflow.do with function argument is not allowed in simple workflows. Use RPC form instead.',
+                'Inline workflow.do with function argument is not allowed in DSL workflows. Use pikkuWorkflowComplexFunc instead.',
               node,
             })
             return
@@ -129,11 +132,20 @@ export function validateAwaitedCalls(node: ts.Node): ValidationError[] {
         ts.isIdentifier(propAccess.expression) &&
         propAccess.expression.text === 'Promise'
       ) {
-        // console.log('[DEBUG] Found Promise.all, setting insidePromiseAll=true')
-        // Visit children with insidePromiseAll = true
         ts.forEachChild(node, (child) => visit(child, parentIsAwait, true))
         return
       }
+      // .push() on an array — workflow.do() inside is collecting promises
+      if (propAccess.name.text === 'push') {
+        ts.forEachChild(node, (child) => visit(child, parentIsAwait, true))
+        return
+      }
+    }
+
+    // Array literal — workflow.do() inside is collecting promises
+    if (ts.isArrayLiteralExpression(node)) {
+      ts.forEachChild(node, (child) => visit(child, parentIsAwait, true))
+      return
     }
 
     // Now check for workflow calls
