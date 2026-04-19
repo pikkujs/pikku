@@ -1,5 +1,16 @@
 ## 0.12.4
 
+## 0.12.18
+
+### Patch Changes
+
+- 311c0c4: Unify session persistence through SessionStore, remove session blob from ChannelStore
+
+  - PikkuSessionService now persists sessions via SessionStore on set()/clear() instead of every function call
+  - ChannelStore no longer stores session data — maps channelId to pikkuUserId only
+  - ChannelStore API: setUserSession/getChannelAndSession replaced with setPikkuUserId/getChannel
+  - Serverless channel runner resolves sessions from SessionStore using pikkuUserId from ChannelStore
+
 ## 0.12.17
 
 ### Patch Changes

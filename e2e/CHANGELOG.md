@@ -1,5 +1,14 @@
 # @pikku/e2e
 
+## 0.0.18
+
+### Patch Changes
+
+- Updated dependencies [311c0c4]
+  - @pikku/core@0.12.18
+  - @pikku/kysely@0.12.10
+  - @pikku/redis@0.12.5
+
 ## 0.0.17
 
 ### Patch Changes
