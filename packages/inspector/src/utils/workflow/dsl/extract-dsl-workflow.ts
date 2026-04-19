@@ -554,7 +554,7 @@ function extractInlineStep(
 
   try {
     const stepName = extractStringLiteral(args[0], context.checker)
-    const optionsArg = args.length >= 4 ? args[args.length - 1] : undefined
+    const optionsArg = args.length >= 3 ? args[args.length - 1] : undefined
     const options =
       optionsArg && ts.isObjectLiteralExpression(optionsArg)
         ? extractStepOptions(optionsArg, context)

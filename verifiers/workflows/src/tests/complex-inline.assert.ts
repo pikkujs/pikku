@@ -22,7 +22,9 @@ async function loadMeta(name: string) {
   for (const f of files) {
     try {
       return JSON.parse(await readFile(f, 'utf-8'))
-    } catch {}
+    } catch (err: any) {
+      if (err?.code !== 'ENOENT') throw err
+    }
   }
   throw new Error(`Meta not found for workflow: ${name}`)
 }
@@ -127,6 +129,11 @@ describe('complex inline workflow extraction', () => {
     const nodes = getNodes(meta)
     const inlineNodes = findNodesByFlow(nodes, 'inline')
 
+    assert.ok(
+      inlineNodes.length > 0,
+      'should have at least one inline node to check'
+    )
+
     for (const node of inlineNodes) {
       assert.equal(
         node.rpcName,
@@ -145,6 +152,11 @@ describe('complex inline workflow extraction', () => {
     const meta = await loadMeta('complexInlineWorkflow')
     const nodes = getNodes(meta)
     const rpcNodes = findRpcNodes(nodes)
+
+    assert.ok(
+      rpcNodes.length > 0,
+      'should have at least one rpc node to check'
+    )
 
     for (const node of rpcNodes) {
       assert.ok(node.rpcName, `rpc node "${node.nodeId}" should have rpcName`)
