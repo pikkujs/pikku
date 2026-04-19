@@ -462,6 +462,7 @@ export class CloudflareProviderAdapter {
   }) {
     const accountId = process.env.CLOUDFLARE_ACCOUNT_ID
     const apiToken = process.env.CLOUDFLARE_API_TOKEN
+    const dispatchNamespace = process.env.CLOUDFLARE_DISPATCH_NAMESPACE
 
     if (!accountId || !apiToken) {
       return {
@@ -507,6 +508,7 @@ export class CloudflareProviderAdapter {
       buildDir: options.buildDir,
       manifest: infraJson,
       onProgress: options.onProgress,
+      dispatchNamespace,
     })
   }
 }
