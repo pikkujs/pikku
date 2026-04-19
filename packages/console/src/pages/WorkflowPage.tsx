@@ -28,6 +28,18 @@ function WorkflowPageInner() {
     )
   }
 
+  const workflows = meta.workflows || {}
+  const hasWorkflows = Object.keys(workflows).length > 0 || (aiWorkflows && aiWorkflows.length > 0)
+
+  if (!hasWorkflows) {
+    return (
+      <WorkflowsList
+        workflows={workflows}
+        aiWorkflows={aiWorkflows as any}
+      />
+    )
+  }
+
   return (
     <PanelProvider>
       <ResizablePanelLayout
@@ -41,7 +53,7 @@ function WorkflowPageInner() {
         hidePanel
       >
         <WorkflowsList
-          workflows={meta.workflows || {}}
+          workflows={workflows}
           aiWorkflows={aiWorkflows as any}
         />
       </ResizablePanelLayout>
