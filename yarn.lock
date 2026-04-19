@@ -5307,9 +5307,12 @@ __metadata:
     "@pikku/deploy-cloudflare": "npm:^0.12.0"
     "@pikku/inspector": "npm:^0.12.9"
     "@pikku/openapi-parser": "npm:^0.12.10"
+    "@pikku/schedule": "npm:^0.12.0"
+    "@pikku/ws": "npm:^0.12.2"
     "@types/cookie": "npm:^1.0.0"
     "@types/json-schema": "npm:^7.0.15"
     "@types/node": "npm:^24.11.0"
+    "@types/ws": "npm:^8"
     chalk: "npm:^5.6.2"
     chokidar: "npm:^4.0.3"
     esbuild: "npm:~0.27.0"
@@ -5320,6 +5323,7 @@ __metadata:
     ts-json-schema-generator: "npm:^2.5.0"
     tsx: "npm:^4.21.0"
     typescript: "npm:^5.9"
+    ws: "npm:^8.18.0"
     yaml: "npm:^2.8.2"
     zod: "npm:^4.3.6"
     zod-to-ts: "npm:^2.0.0"
@@ -5832,7 +5836,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/schedule@npm:^0.12.2, @pikku/schedule@workspace:packages/schedule":
+"@pikku/schedule@npm:^0.12.0, @pikku/schedule@npm:^0.12.2, @pikku/schedule@workspace:packages/schedule":
   version: 0.0.0-use.local
   resolution: "@pikku/schedule@workspace:packages/schedule"
   dependencies:
