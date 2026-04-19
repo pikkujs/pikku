@@ -1,8 +1,7 @@
 {
   "name": "@pikku/deploy-cloudflare",
-  "version": "0.0.1",
+  "version": "0.12.1",
   "type": "module",
-  "private": true,
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc -b",

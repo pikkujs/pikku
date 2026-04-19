@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react'
-import { Box, Stack, TextInput, NavLink, Text, ScrollArea } from '@mantine/core'
-import { Search } from 'lucide-react'
+import { Box, Text, ScrollArea, Badge, UnstyledButton } from '@mantine/core'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import type { ChannelMeta } from '@pikku/core/channel'
+import { SearchInput } from '../ui/SearchInput'
+import styles from '../ui/console.module.css'
 
 export type ChannelSelection =
   | { type: 'handler'; handler: string }
@@ -9,154 +11,268 @@ export type ChannelSelection =
   | null
 
 interface ChannelNavTreeProps {
+  channelName: string
   channel: ChannelMeta
+  allChannelsMeta: Record<string, ChannelMeta>
   selected: ChannelSelection
   onSelect: (item: ChannelSelection) => void
+  onChannelSwitch: (name: string) => void
 }
 
-const HANDLER_KEYS = ['connect', 'disconnect', 'message'] as const
+const HANDLER_KEYS = ['connect', 'disconnect'] as const
 
-export const ChannelNavTree: React.FunctionComponent<ChannelNavTreeProps> = ({
-  channel,
-  selected,
-  onSelect,
-}) => {
-  const [search, setSearch] = useState('')
-
-  const categories = useMemo(
-    () => Object.entries(channel.messageWirings || {}),
-    [channel.messageWirings]
+const ChannelTree: React.FunctionComponent<{
+  name: string
+  channel: ChannelMeta
+  isActive: boolean
+  isExpanded: boolean
+  onToggle: () => void
+  selected: ChannelSelection
+  onSelect: (item: ChannelSelection) => void
+  onChannelSwitch: (name: string) => void
+}> = ({ name, channel, isActive, isExpanded, onToggle, selected, onSelect, onChannelSwitch }) => {
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    () => new Set(Object.keys(channel.messageWirings || {}))
   )
+  const categories = Object.entries(channel.messageWirings || {})
 
-  const query = search.toLowerCase()
-
-  const filteredHandlers = useMemo(() => {
-    if (!query) return HANDLER_KEYS
-    return HANDLER_KEYS.filter((h) => h.toLowerCase().includes(query))
-  }, [query])
-
-  const filteredCategories = useMemo(() => {
-    if (!query) return categories
-    return categories
-      .map(([cat, actions]) => {
-        const catMatches = cat.toLowerCase().includes(query)
-        if (catMatches) return [cat, actions] as const
-        const filtered = Object.entries(actions).filter(([name]) =>
-          name.toLowerCase().includes(query)
-        )
-        if (filtered.length === 0) return null
-        return [cat, Object.fromEntries(filtered)] as const
-      })
-      .filter(Boolean) as [string, Record<string, any>][]
-  }, [categories, query])
+  const toggleCategory = (cat: string) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev)
+      if (next.has(cat)) next.delete(cat)
+      else next.add(cat)
+      return next
+    })
+  }
 
   const isHandlerActive = (h: string) =>
-    selected?.type === 'handler' && selected.handler === h
+    isActive && selected?.type === 'handler' && selected.handler === h
 
   const isActionActive = (cat: string, action: string) =>
-    selected?.type === 'action' &&
-    selected.category === cat &&
-    selected.action === action
-
-  const isCategoryActive = (cat: string) =>
-    selected?.type === 'action' && selected.category === cat
-
-  const hasResults =
-    filteredHandlers.length > 0 || filteredCategories.length > 0
+    isActive && selected?.type === 'action' && selected.category === cat && selected.action === action
 
   return (
-    <Stack gap={0} style={{ height: '100%' }}>
-      <Box
-        px="sm"
-        py="xs"
+    <>
+      <UnstyledButton
+        onClick={() => {
+          if (isActive) {
+            onToggle()
+          } else {
+            if (!isExpanded) onToggle()
+            onChannelSwitch(name)
+          }
+        }}
         style={{
-          borderBottom: '1px solid var(--mantine-color-default-border)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '7px 12px',
+          fontSize: 11,
+          color: isActive ? 'var(--app-meta-value)' : 'var(--app-text)',
+          borderLeft: isActive ? '2px solid rgba(6,182,212,0.4)' : '2px solid transparent',
+          width: '100%',
+          opacity: isActive ? 1 : 0.6,
+          cursor: 'pointer',
         }}
       >
-        <TextInput
-          placeholder="Search handlers..."
-          leftSection={<Search size={14} />}
-          size="xs"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </Box>
-      <ScrollArea style={{ flex: 1 }} px="xs" py="xs">
-        {filteredHandlers.map((h) => {
-          const exists = channel[h] != null
-          return (
-            <NavLink
-              key={h}
-              label={
-                <Text
-                  size="sm"
-                  fw={isHandlerActive(h) ? 600 : 400}
-                  c={exists ? undefined : 'dimmed'}
-                >
-                  {h}
-                </Text>
-              }
-              active={isHandlerActive(h)}
-              disabled={!exists}
-              onClick={() =>
-                exists && onSelect({ type: 'handler', handler: h })
-              }
-              styles={{ root: { borderRadius: 4 } }}
-            />
-          )
-        })}
+        {isExpanded ? (
+          <ChevronDown size={9} color="var(--app-section-label)" />
+        ) : (
+          <ChevronRight size={9} color="var(--app-section-label)" />
+        )}
+        <Text size="xs" ff="monospace" className={styles.flexGrow}>
+          {name}
+        </Text>
+        <Badge size="xs" variant="light" color="cyan" ff="monospace">
+          ws
+        </Badge>
+      </UnstyledButton>
 
-        {filteredCategories.length > 0 && (
-          <NavLink
-            label={
-              <Text size="sm" fw={600}>
-                Message Wirings
-              </Text>
-            }
-            defaultOpened
-            styles={{ root: { borderRadius: 4 } }}
-          >
-            {filteredCategories.map(([category, actions]) => (
-              <NavLink
-                key={category}
-                label={
-                  <Text size="sm" fw={600}>
+      {isExpanded && (
+        <>
+          {HANDLER_KEYS.map((h) => {
+            const exists = channel[h] != null
+            const active = isHandlerActive(h)
+            return (
+              <UnstyledButton
+                key={h}
+                onClick={() => exists && onSelect({ type: 'handler', handler: h })}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '5px 12px 5px 22px',
+                  fontSize: 10,
+                  color: active ? 'var(--app-meta-value)' : exists ? 'var(--app-text)' : 'var(--app-text-muted)',
+                  borderLeft: active ? '2px solid #7c3aed' : '2px solid transparent',
+                  background: active ? 'rgba(124,58,237,0.06)' : undefined,
+                  width: '100%',
+                  cursor: exists ? 'pointer' : 'default',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <Box
+                  className={styles.typeDot}
+                  style={{
+                    background: h === 'connect' ? 'rgba(6,182,212,0.6)' : 'rgba(239,68,68,0.5)',
+                  }}
+                />
+                <Text size="xs" ff="monospace">
+                  {h === 'connect' ? 'onConnect' : 'onDisconnect'}
+                </Text>
+              </UnstyledButton>
+            )
+          })}
+
+          {categories.map(([category, actions]) => {
+            const actionEntries = Object.entries(actions)
+            const isCatExpanded = expandedCategories.has(category)
+
+            return (
+              <React.Fragment key={category}>
+                <UnstyledButton
+                  onClick={() => toggleCategory(category)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '6px 12px 4px 22px',
+                    fontSize: 10,
+                    color: 'var(--app-text)',
+                    width: '100%',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {isCatExpanded ? <ChevronDown size={8} /> : <ChevronRight size={8} />}
+                  <Text size="xs" ff="monospace" c="var(--app-meta-label)">
                     {category}
                   </Text>
-                }
-                defaultOpened
-                opened={isCategoryActive(category) || undefined}
-                styles={{ root: { borderRadius: 4 } }}
-              >
-                {Object.keys(actions).map((action) => (
-                  <NavLink
-                    key={action}
-                    label={
-                      <Text
-                        size="sm"
-                        fw={isActionActive(category, action) ? 600 : 400}
-                      >
-                        {action}
-                      </Text>
-                    }
-                    active={isActionActive(category, action)}
-                    onClick={() =>
-                      onSelect({ type: 'action', category, action })
-                    }
-                    styles={{ root: { borderRadius: 4 } }}
-                  />
-                ))}
-              </NavLink>
-            ))}
-          </NavLink>
-        )}
+                  <Badge
+                    size="xs"
+                    ff="monospace"
+                    tt="none"
+                    style={{
+                      background: 'rgba(124,58,237,0.08)',
+                      border: '0.5px solid rgba(124,58,237,0.18)',
+                      color: '#7c3aed',
+                    }}
+                  >
+                    routing
+                  </Badge>
+                </UnstyledButton>
 
-        {search && !hasResults && (
-          <Text size="sm" c="dimmed" ta="center" py="md">
-            No results match &ldquo;{search}&rdquo;
-          </Text>
-        )}
+                {isCatExpanded &&
+                  actionEntries.map(([action]) => {
+                    const active = isActionActive(category, action)
+                    const actionMeta = actions[action]
+                    const funcName = actionMeta?.pikkuFuncId || action
+                    return (
+                      <UnstyledButton
+                        key={action}
+                        onClick={() => onSelect({ type: 'action', category, action })}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: 7,
+                          padding: '5px 12px 5px 32px',
+                          borderLeft: active ? '2px solid #7c3aed' : '2px solid transparent',
+                          background: active ? 'rgba(124,58,237,0.06)' : undefined,
+                          width: '100%',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        <Box className={styles.flexGrow}>
+                          <Text
+                            size="xs"
+                            ff="monospace"
+                            fw={active ? 600 : 400}
+                            c={active ? 'var(--app-meta-value)' : 'var(--app-text)'}
+                            truncate
+                          >
+                            {action}
+                          </Text>
+                          <Text
+                            size="xs"
+                            ff="monospace"
+                            c={active ? 'var(--app-meta-label)' : 'var(--app-text-muted)'}
+                            truncate
+                            style={{ fontSize: 9 }}
+                          >
+                            {funcName}()
+                          </Text>
+                        </Box>
+                      </UnstyledButton>
+                    )
+                  })}
+              </React.Fragment>
+            )
+          })}
+        </>
+      )}
+    </>
+  )
+}
+
+export const ChannelNavTree: React.FunctionComponent<ChannelNavTreeProps> = ({
+  channelName,
+  channel,
+  allChannelsMeta,
+  selected,
+  onSelect,
+  onChannelSwitch,
+}) => {
+  const [search, setSearch] = useState('')
+  const [expandedChannels, setExpandedChannels] = useState<Set<string>>(
+    () => new Set([channelName])
+  )
+
+  const channelEntries = useMemo(
+    () => Object.entries(allChannelsMeta),
+    [allChannelsMeta]
+  )
+
+  const toggleChannel = (name: string) => {
+    setExpandedChannels((prev) => {
+      const next = new Set(prev)
+      if (next.has(name)) next.delete(name)
+      else next.add(name)
+      return next
+    })
+  }
+
+  const channelCount = channelEntries.length
+
+  return (
+    <Box className={styles.flexColumn}>
+      <SearchInput
+        value={search}
+        onChange={setSearch}
+        label="Channels"
+        count={channelCount}
+        placeholder="Search..."
+      />
+      <ScrollArea className={styles.flexGrow}>
+        {channelEntries.map(([name, chMeta]) => (
+          <ChannelTree
+            key={name}
+            name={name}
+            channel={chMeta as ChannelMeta}
+            isActive={name === channelName}
+            isExpanded={expandedChannels.has(name)}
+            onToggle={() => toggleChannel(name)}
+            selected={selected}
+            onSelect={(sel) => {
+              if (name !== channelName) {
+                onChannelSwitch(name)
+              }
+              onSelect(sel)
+            }}
+            onChannelSwitch={onChannelSwitch}
+          />
+        ))}
       </ScrollArea>
-    </Stack>
+    </Box>
   )
 }

@@ -1,5 +1,64 @@
 ## 0.12.0
 
+## 0.12.19
+
+### Patch Changes
+
+- b3a28c9: Convert `pikku all` to run as a workflow with parallelized steps
+- d477ea5: Fix RPCInvoke and RPCRemote types to omit data argument for void/null input functions and require it for object inputs
+
+## 0.12.18
+
+### Patch Changes
+
+- 615c0e0: Sanitize function IDs with colons and slashes in deploy directory names
+- fbcf5b9: Add React Query hooks generation from RPC map. New `reactQueryFile` option in `clientFiles` config generates typed `usePikkuQuery`, `usePikkuMutation`, and `usePikkuInfiniteQuery` hooks, plus workflow hooks (`useRunWorkflow`, `useStartWorkflow`, `useWorkflowStatus`). Infinite query is type-constrained to RPCs whose output includes `nextCursor`.
+- fbcf5b9: Enrich generated workflow status stream with step-level progress. The `/stream` endpoint now sends step names and statuses via `workflowRunService.getRunSteps()`. New `/stream/full` endpoint includes output, error, and childRunId for admin consoles.
+- Updated dependencies [2ac6468]
+- Updated dependencies [fbcf5b9]
+- Updated dependencies [fbcf5b9]
+  - @pikku/inspector@0.12.9
+  - @pikku/core@0.12.16
+
+## 0.12.17
+
+### Patch Changes
+
+- add5c4e: Remove deploy-azure and deploy-serverless from CLI hard dependencies. Deploy providers are optional and dynamically imported at runtime. Only keep deploy-cloudflare as the default provider.
+- f90daa4: Replace workspace:_ protocol with explicit npm version ranges in all package.json files. Fixes broken publishes where workspace:_ was included literally in the npm registry.
+
+## 0.12.16
+
+### Patch Changes
+
+- 624097e: Add deploy pipeline with provider-agnostic architecture
+
+  - Add MetaService with explicit typed API, absorb WiringService reads
+  - Add deployment service, traceId propagation, scoped logger
+  - Rewrite analyzer: one function = one worker, gateways dispatch via RPC
+  - Add Cloudflare deploy provider with plan/apply commands
+  - Add per-unit filtered codegen for deploy pipeline
+  - Skip missing metadata in wiring registration for deploy units
+  - Fix schema coercion crash when schema has no properties
+  - Fix E2E codegen: double-pass resolves cross-package Zod type imports
+
+- 7ab3243: Add server-fallback deployment target for functions that can't run serverless.
+
+  Functions can declare `deploy: 'serverless' | 'server' | 'auto'`. With `serverlessIncompatible` config, the analyzer auto-routes functions using incompatible services to a container.
+
+  Server functions are merged into a single tree-shaken unit with a PikkuUWSServer entry, Dockerfile, and CF Container proxy Worker.
+
+  Also adds sub-path exports to @pikku/cloudflare for tree-shaking (greet bundle 1.6MB → 444KB) and deploy verifiers for cloudflare, serverless, and azure providers.
+
+- Updated dependencies [9e8605f]
+- Updated dependencies [624097e]
+- Updated dependencies [02fca80]
+- Updated dependencies [7ab3243]
+  - @pikku/deploy-cloudflare@0.12.1
+  - @pikku/core@0.12.15
+  - @pikku/inspector@0.12.8
+  - @pikku/openapi-parser@0.12.10
+
 ## 0.12.15
 
 ### Patch Changes

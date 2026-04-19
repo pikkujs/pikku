@@ -6,8 +6,8 @@ import React, {
   useEffect,
   useMemo,
 } from 'react'
-import { usePikkuRPC } from '@/context/PikkuRpcProvider'
-import type { FlattenedRPCMap } from '@/pikku/rpc-map.gen.d'
+import { usePikkuRPC } from './PikkuRpcProvider'
+import type { FlattenedRPCMap } from '../pikku/rpc-map.gen.d'
 
 type AllMeta = FlattenedRPCMap['console:getAllMeta']['output']
 type MetaCounts = AllMeta['counts']
@@ -95,7 +95,7 @@ export const PikkuMetaProvider: React.FunctionComponent<{
     setLoading(true)
     setError(null)
     try {
-      const allMeta = await rpc.invoke('console:getAllMeta', null)
+      const allMeta = await rpc.invoke('console:getAllMeta')
       setMeta({
         functions: allMeta.functions,
         httpMeta: allMeta.httpMeta,

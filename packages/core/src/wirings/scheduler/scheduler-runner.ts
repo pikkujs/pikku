@@ -82,7 +82,7 @@ export async function runScheduledTask({
   const task = pikkuState(null, 'scheduler', 'tasks').get(name)
   const meta = pikkuState(null, 'scheduler', 'meta')[name]
 
-  const userSession = new PikkuSessionService()
+  const userSession = new PikkuSessionService(singletonServices.sessionStore)
   if (session) {
     userSession.set(session)
   }

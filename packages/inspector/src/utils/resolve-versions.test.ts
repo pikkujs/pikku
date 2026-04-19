@@ -215,6 +215,147 @@ describe('resolveLatestVersions', () => {
     assert.strictEqual(errors.length, 0)
   })
 
+  test('exposedMeta propagates all versions when base name is exposed', () => {
+    const state = makeState({
+      'createUser@v1': {
+        pikkuFuncId: 'createUser@v1',
+        inputSchemaName: null,
+        outputSchemaName: null,
+        version: 1,
+      },
+      createUser: {
+        pikkuFuncId: 'createUser',
+        inputSchemaName: null,
+        outputSchemaName: null,
+      },
+    })
+    state.rpc.exposedMeta['createUser'] = 'createUser'
+    state.rpc.internalFiles.set('createUser@v1', {
+      path: '/src/user.ts',
+      exportedName: 'createUserV1',
+    })
+    const { logger } = makeLogger()
+
+    resolveLatestVersions(state, logger)
+
+    assert.strictEqual(state.rpc.exposedMeta['createUser'], 'createUser@v2')
+    assert.strictEqual(state.rpc.exposedMeta['createUser@v1'], 'createUser@v1')
+    assert.strictEqual(state.rpc.exposedMeta['createUser@v2'], 'createUser@v2')
+  })
+
+  test('exposedFiles propagated for versioned exposed functions', () => {
+    const state = makeState({
+      'createUser@v1': {
+        pikkuFuncId: 'createUser@v1',
+        inputSchemaName: null,
+        outputSchemaName: null,
+        version: 1,
+      },
+      createUser: {
+        pikkuFuncId: 'createUser',
+        inputSchemaName: null,
+        outputSchemaName: null,
+      },
+    })
+    state.rpc.exposedMeta['createUser'] = 'createUser'
+    state.rpc.internalFiles.set('createUser@v1', {
+      path: '/src/user-v1.ts',
+      exportedName: 'createUserV1',
+    })
+    state.rpc.internalFiles.set('createUser', {
+      path: '/src/user.ts',
+      exportedName: 'createUser',
+    })
+    const { logger } = makeLogger()
+
+    resolveLatestVersions(state, logger)
+
+    assert.ok(state.rpc.exposedFiles.has('createUser@v1'))
+    assert.strictEqual(
+      state.rpc.exposedFiles.get('createUser@v1')!.exportedName,
+      'createUserV1'
+    )
+    assert.ok(state.rpc.exposedFiles.has('createUser@v2'))
+  })
+
+  test('exposedMeta unchanged when base name is not exposed', () => {
+    const state = makeState({
+      'createUser@v1': {
+        pikkuFuncId: 'createUser@v1',
+        inputSchemaName: null,
+        outputSchemaName: null,
+        version: 1,
+      },
+      createUser: {
+        pikkuFuncId: 'createUser',
+        inputSchemaName: null,
+        outputSchemaName: null,
+      },
+    })
+    const { logger } = makeLogger()
+
+    resolveLatestVersions(state, logger)
+
+    assert.strictEqual(state.rpc.exposedMeta['createUser@v1'], undefined)
+    assert.strictEqual(state.rpc.exposedMeta['createUser@v2'], undefined)
+  })
+
+  test('exposedMeta propagates when only explicit versions exist', () => {
+    const state = makeState({
+      'createUser@v1': {
+        pikkuFuncId: 'createUser@v1',
+        inputSchemaName: null,
+        outputSchemaName: null,
+        version: 1,
+      },
+      'createUser@v2': {
+        pikkuFuncId: 'createUser@v2',
+        inputSchemaName: null,
+        outputSchemaName: null,
+        version: 2,
+      },
+    })
+    state.rpc.exposedMeta['createUser'] = 'createUser@v1'
+    const { logger } = makeLogger()
+
+    resolveLatestVersions(state, logger)
+
+    assert.strictEqual(state.rpc.exposedMeta['createUser'], 'createUser@v2')
+    assert.strictEqual(state.rpc.exposedMeta['createUser@v1'], 'createUser@v1')
+    assert.strictEqual(state.rpc.exposedMeta['createUser@v2'], 'createUser@v2')
+  })
+
+  test('updates HTTP meta pikkuFuncId when renaming unversioned', () => {
+    const state = makeState({
+      'createUser@v1': {
+        pikkuFuncId: 'createUser@v1',
+        inputSchemaName: null,
+        outputSchemaName: null,
+        version: 1,
+      },
+      createUser: {
+        pikkuFuncId: 'createUser',
+        inputSchemaName: null,
+        outputSchemaName: null,
+      },
+    })
+    ;(state as any).http = {
+      meta: {
+        post: {
+          '/api/users': { pikkuFuncId: 'createUser', route: '/api/users' },
+        },
+      },
+    }
+    const { logger } = makeLogger()
+
+    resolveLatestVersions(state, logger)
+
+    assert.strictEqual(
+      (state as any).http.meta.post['/api/users'].pikkuFuncId,
+      'createUser@v2'
+    )
+  })
+
   test('renames files entries when renaming unversioned to versioned', () => {
     const state = makeState({
       'createUser@v1': {

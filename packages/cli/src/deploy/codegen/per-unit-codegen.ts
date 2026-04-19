@@ -21,6 +21,7 @@ import type {
   DeploymentManifest,
   DeploymentUnit,
 } from '../analyzer/manifest.js'
+import { toSafeKebab } from '../analyzer/analyzer.js'
 
 const execFileAsync = promisify(execFile)
 
@@ -160,13 +161,11 @@ function collectFilterNames(
         names.add('http:get:/workflow/:workflowName/status/:runId/stream')
         names.add('http:post:/workflow/:workflowName/graph/:nodeId')
         // Queue names for orchestrator and step workers
-        const toKebab = (s: string) =>
-          s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
-        names.add(`wf-orchestrator-${toKebab(wfDef.name)}`)
+        names.add(`wf-orchestrator-${toSafeKebab(wfDef.name)}`)
         for (const step of wfDef.steps) {
           if (step.functionId) {
             names.add(step.functionId)
-            names.add(`wf-step-${toKebab(step.functionId)}`)
+            names.add(`wf-step-${toSafeKebab(step.functionId)}`)
           }
         }
       }

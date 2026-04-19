@@ -18,17 +18,17 @@ import {
   CheckCircle,
   ShieldCheck,
 } from 'lucide-react'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
-import { SchemaSection } from '@/components/project/panels/shared/SchemaSection'
-import { SecretValueEditor } from '@/components/project/panels/SecretValueEditor'
-import { VariableValueEditor } from '@/components/project/panels/VariableValueEditor'
+import { PikkuBadge } from '../../ui/PikkuBadge'
+import { SectionLabel } from './shared/SectionLabel'
+import { SchemaSection } from './shared/SchemaSection'
+import { SecretValueEditor } from './SecretValueEditor'
+import { VariableValueEditor } from './VariableValueEditor'
 import {
   useOAuthStatus,
   useOAuthConnect,
   useOAuthDisconnect,
   useOAuthTestToken,
-} from '@/hooks/useSecrets'
+} from '../../../hooks/useSecrets'
 import { useQueryClient } from '@tanstack/react-query'
 
 interface SecretPanelProps {

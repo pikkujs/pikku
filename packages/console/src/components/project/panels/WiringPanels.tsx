@@ -11,13 +11,14 @@ import {
   Zap,
 } from 'lucide-react'
 import cronstrue from 'cronstrue'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { CommonDetails } from '@/components/project/panels/shared/CommonDetails'
-import { FunctionLink } from '@/components/project/panels/shared/FunctionLink'
-import { LinkedBadge } from '@/components/project/panels/LinkedBadge'
-import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
-import { SchemaSection } from '@/components/project/panels/shared/SchemaSection'
-import { usePanelContext } from '@/context/PanelContext'
+import { PikkuBadge } from '../../ui/PikkuBadge'
+import { CommonDetails } from './shared/CommonDetails'
+import { FunctionLink } from './shared/FunctionLink'
+import { LinkedBadge } from './LinkedBadge'
+import { SectionLabel } from '../../ui/SectionLabel'
+import { SchemaSection } from './shared/SchemaSection'
+import { usePanelContext } from '../../../context/PanelContext'
+import classes from '../../ui/console.module.css'
 
 interface WiringPanelProps {
   wireId: string
@@ -209,11 +210,7 @@ export const ChannelConfiguration: React.FunctionComponent<
                         type="dynamic"
                         badge="actions"
                         value={actionName}
-                        style={{
-                          cursor: actionData?.pikkuFuncId
-                            ? 'pointer'
-                            : undefined,
-                        }}
+                        className={actionData?.pikkuFuncId ? classes.clickableText : undefined}
                         onClick={
                           actionData?.pikkuFuncId
                             ? () =>
@@ -467,7 +464,7 @@ const CliCommandTree: React.FunctionComponent<{
                 size="sm"
                 variant="outline"
                 color="gray"
-                style={{ cursor: 'pointer' }}
+                className={classes.clickableText}
                 onClick={() =>
                   navigateInPanel(
                     'function',

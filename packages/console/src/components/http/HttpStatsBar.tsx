@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { Group, Badge } from '@mantine/core'
-import { httpMethodDefs } from '@/components/ui/badge-defs'
+import { httpMethodDefs } from '../ui/badge-defs'
 
 interface HttpStatsBarProps {
   routes: any[]

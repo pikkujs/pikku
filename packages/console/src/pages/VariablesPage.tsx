@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react'
 import { Variable } from 'lucide-react'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { PanelProvider } from '@/context/PanelContext'
-import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '@/components/layout/DetailPageHeader'
-import { ProjectVariables } from '@/components/project/ProjectVariables'
+import { usePikkuMeta } from '../context/PikkuMetaContext'
+import { PanelProvider } from '../context/PanelContext'
+import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { DetailPageHeader } from '../components/layout/DetailPageHeader'
+import { ProjectVariables } from '../components/project/ProjectVariables'
 
 const VariablesPageContent: React.FunctionComponent = () => {
   const { meta, loading } = usePikkuMeta()

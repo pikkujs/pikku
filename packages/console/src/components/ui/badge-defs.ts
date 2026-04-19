@@ -31,13 +31,13 @@ export interface DynamicBadgeDef {
 }
 
 export const httpMethodDefs: Record<string, EnumBadgeDef> = {
-  GET: { color: 'blue', label: 'GET' },
-  POST: { color: 'green', label: 'POST' },
+  GET: { color: 'cyan', label: 'GET' },
+  POST: { color: 'violet', label: 'POST' },
   PUT: { color: 'yellow', label: 'PUT' },
   PATCH: { color: 'orange', label: 'PATCH' },
-  DELETE: { color: 'red', label: 'DELETE' },
+  DELETE: { color: 'red', label: 'DEL' },
   HEAD: { color: 'gray', label: 'HEAD' },
-  OPTIONS: { color: 'grape', label: 'OPTIONS' },
+  OPTIONS: { color: 'gray', label: 'OPTIONS' },
 }
 
 export const mcpTypeDefs: Record<string, EnumBadgeDef> = {

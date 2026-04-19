@@ -1,5 +1,40 @@
 # @pikku/e2e
 
+## 0.0.17
+
+### Patch Changes
+
+- Updated dependencies [854737b]
+  - @pikku/core@0.12.17
+
+## 0.0.16
+
+### Patch Changes
+
+- Updated dependencies [fbcf5b9]
+- Updated dependencies [fbcf5b9]
+  - @pikku/addon-console@0.12.8
+  - @pikku/core@0.12.16
+
+## 0.0.15
+
+### Patch Changes
+
+- Updated dependencies [f90daa4]
+  - @pikku/kysely-mysql@0.12.17
+
+## 0.0.14
+
+### Patch Changes
+
+- Updated dependencies [9e8605f]
+- Updated dependencies [624097e]
+- Updated dependencies [7ab3243]
+  - @pikku/core@0.12.15
+  - @pikku/addon-console@0.12.7
+  - @pikku/kysely@0.12.9
+  - @pikku/kysely-mysql@0.12.16
+
 ## 0.0.13
 
 ### Patch Changes

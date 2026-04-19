@@ -5,8 +5,8 @@ import React, {
   useCallback,
   useEffect,
 } from 'react'
-import { useSearchParams } from '@/router'
-import { useAgentThreads, useAgentThreadMessages } from '@/hooks/useAgentRuns'
+import { useSearchParams } from '../router'
+import { useAgentThreads, useAgentThreadMessages } from '../hooks/useAgentRuns'
 
 export interface AgentThread {
   id: string

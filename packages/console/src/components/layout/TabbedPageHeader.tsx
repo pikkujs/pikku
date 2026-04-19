@@ -1,6 +1,7 @@
 import React from 'react'
-import { Group, Text, SegmentedControl, Tooltip, ActionIcon } from '@mantine/core'
+import { Group, Text, Tabs, Tooltip, ActionIcon, Box } from '@mantine/core'
 import { ExternalLink } from 'lucide-react'
+import classes from '../ui/console.module.css'
 
 interface Tab {
   value: string
@@ -25,25 +26,35 @@ export const TabbedPageHeader: React.FunctionComponent<
       gap="xs"
       px="md"
       h={50}
+      className={classes.noShrink}
       style={{
         zIndex: 9999,
         borderBottom: '1px solid var(--mantine-color-default-border)',
         backgroundColor: 'var(--mantine-color-body)',
-        flexShrink: 0,
       }}
     >
-      <Icon size={16} />
-      <Text size="md" fw={500}>
-        {category}
-      </Text>
-
-      <SegmentedControl
-        size="xs"
-        data={tabs}
+      <Tabs
         value={activeTab}
-        onChange={onTabChange}
-        ml="md"
-      />
+        onChange={(v) => v && onTabChange(v)}
+        style={{ alignSelf: 'stretch' }}
+        styles={{
+          root: { display: 'flex', alignItems: 'stretch' },
+          list: {
+            borderBottom: 'none',
+            background: 'transparent',
+            padding: 0,
+            gap: 0,
+          },
+        }}
+      >
+        <Tabs.List>
+          {tabs.map((tab) => (
+            <Tabs.Tab key={tab.value} value={tab.value}>
+              {tab.label}
+            </Tabs.Tab>
+          ))}
+        </Tabs.List>
+      </Tabs>
 
       <Group ml="auto" gap="sm">
         {rightSection}

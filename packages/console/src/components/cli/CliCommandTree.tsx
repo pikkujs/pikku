@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Box, Stack, TextInput, NavLink, Text, ScrollArea } from '@mantine/core'
 import { Search } from 'lucide-react'
+import css from '../ui/console.module.css'
 
 interface CommandMeta {
   pikkuFuncId?: string
@@ -149,7 +150,7 @@ export const CliCommandTree: React.FunctionComponent<CliCommandTreeProps> = ({
           onChange={(e) => setSearch(e.target.value)}
         />
       </Box>
-      <ScrollArea style={{ flex: 1 }} px="xs" py="xs">
+      <ScrollArea className={css.flexGrow} px="xs" py="xs">
         {filtered.map((cmd) => (
           <CommandNode
             key={cmd.name}

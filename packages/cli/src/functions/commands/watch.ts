@@ -34,7 +34,7 @@ export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
         const handle = async () => {
           try {
             const start = Date.now()
-            await rpc.invoke('all', null)
+            await rpc.invoke('all')
             logger.info({
               message: `✓ Generated in ${Date.now() - start}ms`,
               type: 'timing',

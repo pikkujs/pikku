@@ -1,14 +1,14 @@
 import React, { useMemo, useState } from 'react'
-import { useSearchParams } from '@/router'
+import { useSearchParams } from '../router'
 import { PackageDetailPage } from './PackageDetailPage'
 import { Group, Text, ThemeIcon, Badge, Box, Loader, Center } from '@mantine/core'
 import { Package, Globe } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { usePikkuRPC } from '@/context/PikkuRpcProvider'
-import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
-import { TabbedPageHeader } from '@/components/layout/TabbedPageHeader'
-import { TableListPage } from '@/components/layout/TableListPage'
-import { PanelProvider } from '@/context/PanelContext'
+import { usePikkuRPC } from '../context/PikkuRpcProvider'
+import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { TabbedPageHeader } from '../components/layout/TabbedPageHeader'
+import { TableListPage } from '../components/layout/TableListPage'
+import { PanelProvider } from '../context/PanelContext'
 
 export interface PackageMeta {
   id: string
@@ -157,7 +157,7 @@ const InstalledList: React.FunctionComponent<{
   const { data, isLoading } = useQuery({
     queryKey: ['installed-addons'],
     queryFn: async () => {
-      const result = await rpc.invoke('console:getInstalledAddons', null)
+      const result = await rpc.invoke('console:getInstalledAddons')
       return (result ?? []) as InstalledAddon[]
     },
     staleTime: 60 * 1000,
@@ -195,7 +195,7 @@ const CommunityList: React.FunctionComponent<{
   const { data, isLoading, isError } = useQuery({
     queryKey: ['addons'],
     queryFn: async () => {
-      const result = await rpc.invoke('console:getAddonMeta', null)
+      const result = await rpc.invoke('console:getAddonMeta')
       return ((result as any)?.packages ?? result ?? []) as PackageMeta[]
     },
     staleTime: 60 * 1000,
@@ -205,7 +205,7 @@ const CommunityList: React.FunctionComponent<{
   const { data: installedAddons } = useQuery<Array<{ packageName: string }>>({
     queryKey: ['installed-addons'],
     queryFn: async () => {
-      const result = await rpc.invoke('console:getInstalledAddons', null)
+      const result = await rpc.invoke('console:getInstalledAddons')
       return (result ?? []) as Array<{ packageName: string }>
     },
     staleTime: 60 * 1000,

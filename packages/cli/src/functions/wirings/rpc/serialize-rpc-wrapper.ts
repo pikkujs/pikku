@@ -62,9 +62,9 @@ export class PikkuRPC {
      * @param data - The data to pass to the server function
      * @returns A promise that resolves with the function's return value
      */
-    invoke: RPCInvoke = async (rpcName, data) => {
-       return await this.pikkuFetch.post(\`${globalHTTPPrefix}/rpc/\${String(rpcName)}\` as never, { rpcName: String(rpcName), data }) as any
-    }
+    invoke = ((rpcName: string, data?: unknown) => {
+       return this.pikkuFetch.post(\`${globalHTTPPrefix}/rpc/\${String(rpcName)}\` as never, { rpcName: String(rpcName), data }) as any
+    }) as RPCInvoke
 
     /**
      * Starts a workflow by name with the given input.

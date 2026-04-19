@@ -1,9 +1,9 @@
 import React from 'react'
 import { Box, Group } from '@mantine/core'
 import { Link2 } from 'lucide-react'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { useFunctionMeta } from '@/hooks/useWirings'
-import { usePanelContext } from '@/context/PanelContext'
+import { PikkuBadge } from '../../../ui/PikkuBadge'
+import { useFunctionMeta } from '../../../../hooks/useWirings'
+import { usePanelContext } from '../../../../context/PanelContext'
 import { SectionLabel } from './SectionLabel'
 
 export const FunctionLink: React.FunctionComponent<{

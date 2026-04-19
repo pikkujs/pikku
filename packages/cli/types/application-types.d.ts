@@ -3,6 +3,7 @@ import type {
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
+  WorkflowService,
 } from '@pikku/core'
 import type { CLILogger } from '../src/services/cli-logger.service.js'
 import type { PikkuCLIConfig } from '../types/config.d.ts'
@@ -14,6 +15,7 @@ export interface Config extends CoreConfig<PikkuCLIConfig> {
 }
 
 export interface SingletonServices extends CoreSingletonServices<Config> {
+  workflowService: WorkflowService
   logger: CLILogger
   getInspectorState: (
     refresh?: boolean,

@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react'
 import { Text, Badge, Button } from '@mantine/core'
-import { useNavigate } from '@/router'
+import { useNavigate } from '../../router'
 import { GitBranch, Plus } from 'lucide-react'
-import { TableListPage } from '@/components/layout/TableListPage'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { TableListPage } from '../layout/TableListPage'
+import { PikkuBadge } from '../ui/PikkuBadge'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
 
 type FilterValue = 'all' | 'dsl' | 'graph' | 'dynamic-workflow'

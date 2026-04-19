@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { useLink } from '@/router'
+import { useLink } from '../../router'
 import {
   Group,
   Text,
@@ -13,6 +13,7 @@ import {
   ActionIcon,
 } from '@mantine/core'
 import { Search, ChevronDown, Check, ExternalLink } from 'lucide-react'
+import classes from '../ui/console.module.css'
 
 interface SwitcherItem {
   name: string
@@ -72,28 +73,34 @@ export const DetailPageHeader: React.FunctionComponent<
       gap="xs"
       px="md"
       h={50}
+      className={classes.noShrink}
       style={{
         zIndex: 9999,
         borderBottom: '1px solid var(--mantine-color-default-border)',
         backgroundColor: 'var(--mantine-color-body)',
-        flexShrink: 0,
       }}
     >
-      <Icon size={16} />
       {categoryPath ? (
         <Link to={categoryPath} style={{ textDecoration: 'none' }}>
           <Text size="md" c="dimmed">
             {category}
           </Text>
         </Link>
-      ) : (
-        <Text
-          size="md"
-          fw={currentItem ? 400 : 500}
-          c={currentItem ? 'dimmed' : undefined}
-        >
+      ) : currentItem ? (
+        <Text size="md" c="dimmed">
           {category}
         </Text>
+      ) : null}
+
+      {currentItem && !items && (
+        <>
+          <Text size="md" c="dimmed">
+            /
+          </Text>
+          <Text size="md" fw={500}>
+            {currentItem}
+          </Text>
+        </>
       )}
 
       {currentItem && items && onItemSelect && (

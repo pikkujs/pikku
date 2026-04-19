@@ -1,5 +1,21 @@
 # pikku-vscode
 
+## 0.1.17
+
+### Patch Changes
+
+- f90daa4: Replace workspace:_ protocol with explicit npm version ranges in all package.json files. Fixes broken publishes where workspace:_ was included literally in the npm registry.
+
+## 0.1.16
+
+### Patch Changes
+
+- Updated dependencies [9e8605f]
+- Updated dependencies [624097e]
+- Updated dependencies [7ab3243]
+  - @pikku/core@0.12.15
+  - @pikku/inspector@0.12.8
+
 ## 0.1.15
 
 ### Patch Changes

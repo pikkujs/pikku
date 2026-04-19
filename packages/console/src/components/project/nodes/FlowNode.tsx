@@ -1,7 +1,7 @@
 import React from 'react'
 import { Box, Paper, Text, Stack, useMantineTheme } from '@mantine/core'
 import { Handle, Position } from 'reactflow'
-import { useWorkflowRunContextSafe } from '@/context/WorkflowRunContext'
+import { useWorkflowRunContextSafe } from '../../../context/WorkflowRunContext'
 
 interface OutputHandle {
   id: string

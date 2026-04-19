@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { usePikkuRPC } from '@/context/PikkuRpcProvider'
+import { usePikkuRPC } from '../context/PikkuRpcProvider'
 
 export function useVariableValue(
   variableId: string | undefined,

@@ -1,31 +1,35 @@
 import React, { useMemo } from 'react'
 import { Box } from '@mantine/core'
 import { generateCommandHelp } from '@pikku/core/cli'
-import type { CLIMeta, CLICommandMeta } from '@pikku/core/cli'
+import type { CLIMeta } from '@pikku/core/cli'
 
 interface HelpSegment {
   text: string
-  commandName?: string
+  type?: 'heading' | 'flag' | 'command'
 }
 
-const parseHelpText = (
-  helpText: string,
-  knownCommands: string[]
-): HelpSegment[] => {
+const parseHelpText = (helpText: string): HelpSegment[] => {
   const lines = helpText.split('\n')
   const segments: HelpSegment[] = []
   let inCommandSection = false
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
+    const trimmed = line.trim()
 
-    if (line.trim() === 'Commands:' || line.trim() === 'Subcommands:') {
-      inCommandSection = true
-      segments.push({ text: line + '\n' })
+    if (
+      trimmed === 'Commands:' ||
+      trimmed === 'Subcommands:' ||
+      trimmed === 'Options:' ||
+      line.startsWith('Usage:')
+    ) {
+      inCommandSection =
+        trimmed === 'Commands:' || trimmed === 'Subcommands:'
+      segments.push({ text: line + '\n', type: 'heading' })
       continue
     }
 
-    if (inCommandSection && line.trim() !== '' && !line.startsWith('  ')) {
+    if (inCommandSection && trimmed === '') {
       inCommandSection = false
     }
 
@@ -33,13 +37,20 @@ const parseHelpText = (
       const match = line.match(/^(\s{2})(\S+)(\s.*)?$/)
       if (match) {
         const [, indent, cmdName, rest] = match
-        if (knownCommands.includes(cmdName)) {
-          segments.push({ text: indent })
-          segments.push({ text: cmdName, commandName: cmdName })
-          segments.push({ text: (rest || '') + '\n' })
-          continue
-        }
+        segments.push({ text: indent })
+        segments.push({ text: cmdName, type: 'command' })
+        segments.push({ text: (rest || '') + '\n' })
+        continue
       }
+    }
+
+    const flagMatch = line.match(/^(\s+)(--?\S+(?:,\s*--?\S+)*)(.*)$/)
+    if (flagMatch) {
+      const [, indent, flags, rest] = flagMatch
+      segments.push({ text: indent })
+      segments.push({ text: flags, type: 'flag' })
+      segments.push({ text: rest + '\n' })
+      continue
     }
 
     segments.push({ text: line + (i < lines.length - 1 ? '\n' : '') })
@@ -52,37 +63,16 @@ interface CliHelpTextProps {
   programId: string
   cliMeta: CLIMeta
   commandPath: string[]
-  onNavigate: (commandPath: string[]) => void
 }
 
 export const CliHelpText: React.FunctionComponent<CliHelpTextProps> = ({
   programId,
   cliMeta,
   commandPath,
-  onNavigate,
 }) => {
-  const { segments, knownCommands } = useMemo(() => {
+  const segments = useMemo(() => {
     const helpText = generateCommandHelp(programId, cliMeta, commandPath)
-    const program = cliMeta.programs[programId]
-    if (!program) return { segments: [{ text: helpText }], knownCommands: [] }
-
-    let childCommands: Record<string, CLICommandMeta> | undefined =
-      program.commands
-    for (const part of commandPath) {
-      const cmd: CLICommandMeta | undefined = childCommands?.[part]
-      if (!cmd) {
-        childCommands = undefined
-        break
-      }
-      childCommands = cmd.subcommands
-    }
-
-    const cmds = childCommands ? Object.keys(childCommands) : []
-
-    return {
-      segments: parseHelpText(helpText, cmds),
-      knownCommands: cmds,
-    }
+    return parseHelpText(helpText)
   }, [programId, cliMeta, commandPath])
 
   return (
@@ -98,22 +88,27 @@ export const CliHelpText: React.FunctionComponent<CliHelpTextProps> = ({
       }}
     >
       {segments.map((seg, i) =>
-        seg.commandName ? (
+        seg.type === 'heading' ? (
           <span
             key={i}
-            role="button"
-            tabIndex={0}
-            onClick={() => onNavigate([...commandPath, seg.commandName!])}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter')
-                onNavigate([...commandPath, seg.commandName!])
-            }}
             style={{
-              color: 'var(--mantine-color-blue-6)',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              borderBottom: '1px dashed var(--mantine-color-blue-3)',
+              color: 'var(--mantine-color-yellow-5)',
+              fontWeight: 600,
             }}
+          >
+            {seg.text}
+          </span>
+        ) : seg.type === 'command' ? (
+          <span
+            key={i}
+            style={{ color: 'var(--mantine-color-blue-5)' }}
+          >
+            {seg.text}
+          </span>
+        ) : seg.type === 'flag' ? (
+          <span
+            key={i}
+            style={{ color: 'var(--mantine-color-green-5)' }}
           >
             {seg.text}
           </span>

@@ -19,6 +19,10 @@ export class PikkuFetchHTTPResponse implements PikkuHTTPResponse {
     }
   }
 
+  public get statusCode(): number {
+    return this.#statusCode
+  }
+
   public status(code: number): this {
     this.#statusCode = code
     return this

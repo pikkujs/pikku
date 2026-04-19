@@ -97,7 +97,7 @@ function getWorkflowInvocations(
           const stepNameArg = args[0]
           const secondArg = args[1]
           const optionsArg =
-            args.length >= 3 ? args[args.length - 1] : undefined
+            args.length >= 4 ? args[args.length - 1] : undefined
 
           const stepName = extractStringLiteral(stepNameArg, checker)
           const description =

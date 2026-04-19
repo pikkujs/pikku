@@ -1,11 +1,11 @@
 import React, { useMemo } from 'react'
 import { Text, Group, Badge, Stack, Center, Loader, Code } from '@mantine/core'
 import { Users, Check } from 'lucide-react'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { usePikkuRPC } from '@/context/PikkuRpcProvider'
-import { usePanelContext } from '@/context/PanelContext'
+import { usePikkuMeta } from '../../context/PikkuMetaContext'
+import { usePikkuRPC } from '../../context/PikkuRpcProvider'
+import { usePanelContext } from '../../context/PanelContext'
 import { useQuery } from '@tanstack/react-query'
-import { TableListPage } from '@/components/layout/TableListPage'
+import { TableListPage } from '../layout/TableListPage'
 
 interface CredentialMeta {
   name: string
@@ -53,10 +53,7 @@ export const CredentialUsersTab: React.FunctionComponent = () => {
   const { data: usersData, isLoading: usersLoading } = useQuery({
     queryKey: ['credential-list-users'],
     queryFn: async () => {
-      const result = await rpc.invoke(
-        'console:credentialListUsers',
-        null
-      )
+      const result = await rpc.invoke('console:credentialListUsers')
       return (result.users ?? []) as UserEntry[]
     },
     enabled: perUserCredentials.length > 0,

@@ -35,5 +35,6 @@
     "@pikku/core": "*",
     "typescript": "^5.9.3",
     "zod": "^4"
-  }
+  },
+  "private": true
 }

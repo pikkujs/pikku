@@ -89,7 +89,7 @@ export const runChannelConnect = async ({
     http = createHTTPWire(new PikkuFetchHTTPRequest(request), response)
   }
 
-  const userSession = new PikkuSessionService(channelStore, channelId)
+  const userSession = new PikkuSessionService(singletonServices.sessionStore)
 
   const { channelConfig, openingData, meta } = await openChannel({
     channelId,
@@ -138,6 +138,13 @@ export const runChannelConnect = async ({
         channelMiddlewareMeta: meta.channelMiddleware,
       })
     }
+
+    // Store the pikkuUserId mapping after auth middleware has run
+    const pikkuUserId = userSession.getPikkuUserId()
+    if (pikkuUserId) {
+      await channelStore.setPikkuUserId(channelId, pikkuUserId)
+    }
+
     http?.response?.status(101)
   } catch (e: any) {
     handleHTTPError(
@@ -171,7 +178,7 @@ export const runChannelDisconnect = async ({
   // there's nothing to disconnect, so we can return early.
   let channelData
   try {
-    channelData = await channelStore.getChannelAndSession(channelId)
+    channelData = await channelStore.getChannel(channelId)
   } catch {
     singletonServices.logger.info(
       `Channel ${channelId} not found during disconnect - already cleaned up`
@@ -179,7 +186,7 @@ export const runChannelDisconnect = async ({
     return
   }
 
-  const { openingData, channelName, session } = channelData
+  const { openingData, channelName, pikkuUserId } = channelData
   const { channel, channelConfig, meta } = getVariablesForChannel({
     channelId,
     channelHandlerFactory,
@@ -187,8 +194,15 @@ export const runChannelDisconnect = async ({
     channelName,
   })
 
-  const userSession = new PikkuSessionService(channelStore, channelId)
-  userSession.setInitial(session)
+  const userSession = new PikkuSessionService(singletonServices.sessionStore)
+  if (pikkuUserId) {
+    userSession.setPikkuUserId(pikkuUserId)
+    const session = await singletonServices.sessionStore?.get(pikkuUserId)
+    if (session) {
+      userSession.setInitial(session)
+    }
+  }
+
   const wire: PikkuWire = {
     channel,
     ...createMiddlewareSessionWireProps(userSession),
@@ -237,8 +251,8 @@ export const runChannelMessage = async (
   const singletonServices = getSingletonServices()
   const createWireServices = getCreateWireServices()
   let wireServices: WireServices | undefined
-  const { openingData, channelName, session } =
-    await channelStore.getChannelAndSession(channelId)
+  const { openingData, channelName, pikkuUserId } =
+    await channelStore.getChannel(channelId)
 
   const { channel, channelHandler, channelConfig } = getVariablesForChannel({
     channelId,
@@ -247,8 +261,15 @@ export const runChannelMessage = async (
     channelName,
   })
 
-  const userSession = new PikkuSessionService(channelStore, channelId)
-  userSession.setInitial(session)
+  const userSession = new PikkuSessionService(singletonServices.sessionStore)
+  if (pikkuUserId) {
+    userSession.setPikkuUserId(pikkuUserId)
+    const session = await singletonServices.sessionStore?.get(pikkuUserId)
+    if (session) {
+      userSession.setInitial(session)
+    }
+  }
+
   const wire: PikkuWire = {
     channel,
     ...createMiddlewareSessionWireProps(userSession),

@@ -1,0 +1,410 @@
+{
+  "manifestVersion": 1,
+  "contracts": {
+    "agentApproveCaller": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "f1628b7c",
+          "outputHash": "ef71f08a"
+        }
+      }
+    },
+    "agentCaller": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "4d1eddbc",
+          "outputHash": "9a3af204"
+        }
+      }
+    },
+    "agentResumeCaller": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "f25b50dd",
+          "outputHash": "ee89e454"
+        }
+      }
+    },
+    "agentStreamCaller": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "773d4d52",
+          "outputHash": "641a263e"
+        }
+      }
+    },
+    "cliHelp": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "23419f26",
+          "outputHash": "84b17fc2"
+        }
+      }
+    },
+    "cliRaw": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "e22239e8",
+          "outputHash": "0c5d3e98"
+        }
+      }
+    },
+    "completeTodo": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "0d902b91",
+          "outputHash": "397e2ec1"
+        }
+      }
+    },
+    "createAndNotifyWorkflow": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "4b2aebad",
+          "outputHash": "576e965e"
+        }
+      }
+    },
+    "createTodo": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "b84758d0",
+          "outputHash": "380a6c7a"
+        }
+      }
+    },
+    "createTodoTool": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "6387064f",
+          "outputHash": "0826f5f7"
+        }
+      }
+    },
+    "dailySummary": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "6898c699",
+          "outputHash": "daccc144"
+        }
+      }
+    },
+    "deleteTodo": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "93a06895",
+          "outputHash": "afd26502"
+        }
+      }
+    },
+    "fetchOverdueTodos": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "7affa914",
+          "outputHash": "fc0670b0"
+        }
+      }
+    },
+    "getTodo": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "f5d4fbb3",
+          "outputHash": "52ed2426"
+        }
+      }
+    },
+    "getTodoResource": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "58a0f772",
+          "outputHash": "31dfdc58"
+        }
+      }
+    },
+    "graphStarter": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "70868669",
+          "outputHash": "6f988595"
+        }
+      }
+    },
+    "greet": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "c27ea510",
+          "outputHash": "89ad5e85"
+        }
+      }
+    },
+    "http:get:/workflow-run/:runId/stream": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "e0a18a17",
+          "outputHash": "fc2fd4a0"
+        }
+      }
+    },
+    "listTodos": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "743c6408",
+          "outputHash": "7e54d3a8"
+        }
+      }
+    },
+    "onConnect": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "98d9f00b",
+          "outputHash": "ec9ebad4"
+        }
+      }
+    },
+    "onDisconnect": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "e784dc94",
+          "outputHash": "af0b48e4"
+        }
+      }
+    },
+    "pikkuConsoleGetSecret": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "329251da",
+          "outputHash": "fb675a26"
+        }
+      }
+    },
+    "pikkuConsoleGetVariable": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "ce4b2e06",
+          "outputHash": "f54f1059"
+        }
+      }
+    },
+    "pikkuConsoleHasSecret": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "a67adc7c",
+          "outputHash": "1da66eac"
+        }
+      }
+    },
+    "pikkuConsoleSetSecret": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "a0c8a043",
+          "outputHash": "57702b41"
+        }
+      }
+    },
+    "pikkuConsoleSetVariable": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "d91a4af5",
+          "outputHash": "91fe907b"
+        }
+      }
+    },
+    "planDayPrompt": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "bbef4b62",
+          "outputHash": "a68a7cbb"
+        }
+      }
+    },
+    "prioritizePrompt": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "74758f0e",
+          "outputHash": "dc8c98a3"
+        }
+      }
+    },
+    "processReminder": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "47a055d6",
+          "outputHash": "e8a603ee"
+        }
+      }
+    },
+    "processTodosProgress": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "9c0dba52",
+          "outputHash": "5033c8d9"
+        }
+      }
+    },
+    "remoteGreet": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "9adf6871",
+          "outputHash": "ac274266"
+        }
+      }
+    },
+    "rpcCaller": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "a69cacc4",
+          "outputHash": "629e0b5a"
+        }
+      }
+    },
+    "scheduleReminder": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "3043ad4a",
+          "outputHash": "f74af6d5"
+        }
+      }
+    },
+    "sendNotification": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "1c0ee648",
+          "outputHash": "8bb0f221"
+        }
+      }
+    },
+    "sendOverdueSummary": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "71e52bd6",
+          "outputHash": "1de93779"
+        }
+      }
+    },
+    "subscribe": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "5e800a5e",
+          "outputHash": "ab311ab3"
+        }
+      }
+    },
+    "testEventTrigger": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "8b4e8538",
+          "outputHash": "45e8d04f"
+        }
+      }
+    },
+    "todoStream": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "5d5463b9",
+          "outputHash": "ed92a5a9"
+        }
+      }
+    },
+    "unsubscribe": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "3e9ba389",
+          "outputHash": "0082ba49"
+        }
+      }
+    },
+    "updateTodo": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "e5eb663a",
+          "outputHash": "71ee924e"
+        }
+      }
+    },
+    "weeklyCleanup": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "0c2483de",
+          "outputHash": "3d019654"
+        }
+      }
+    },
+    "workflowRunner": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "3c634245",
+          "outputHash": "316bdb87"
+        }
+      }
+    },
+    "workflowStarter": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "73e8dfbd",
+          "outputHash": "8f2061b7"
+        }
+      }
+    },
+    "workflowStatusChecker": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "458ba7ec",
+          "outputHash": "d2d8634b"
+        }
+      }
+    },
+    "workflowStatusStream": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "c6ee79ff",
+          "outputHash": "abcc7eb7"
+        }
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 import React from 'react'
 import { Group, Chip, SegmentedControl, Stack } from '@mantine/core'
-import { httpMethodDefs } from '@/components/ui/badge-defs'
+import { httpMethodDefs } from '../ui/badge-defs'
 
 interface HttpFilterBarProps {
   availableMethods: string[]

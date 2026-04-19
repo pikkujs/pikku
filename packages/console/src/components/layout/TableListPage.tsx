@@ -10,6 +10,7 @@ import {
 } from '@mantine/core'
 import { Search } from 'lucide-react'
 import { EmptyStatePlaceholder } from './EmptyStatePlaceholder'
+import classes from '../ui/console.module.css'
 
 interface Column<T> {
   key: string
@@ -84,7 +85,7 @@ export const TableListPage = <T,>({
   }
 
   return (
-    <Stack gap={0} style={{ height: '100%' }}>
+    <Stack gap={0} className={classes.flexColumn}>
       {description && (
         <Box
           px="md"
@@ -111,7 +112,7 @@ export const TableListPage = <T,>({
           leftSection={<Search size={16} />}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ flex: 1 }}
+          className={classes.flexGrow}
         />
         {headerRight}
       </Box>
@@ -145,7 +146,8 @@ export const TableListPage = <T,>({
             {filtered.map((item, index) => (
               <Table.Tr
                 key={getKey(item, index)}
-                style={{ cursor: 'pointer', height: '3.75rem' }}
+                className={classes.clickableText}
+                style={{ height: '3.75rem' }}
                 onClick={() => onRowClick(item)}
               >
                 {columns.map((col, i) => (

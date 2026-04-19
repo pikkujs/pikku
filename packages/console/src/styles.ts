@@ -1,6 +1,8 @@
 import '@mantine/core/styles.css'
+import '@mantine/code-highlight/styles.css'
 import '@mantine/spotlight/styles.css'
 import '@mantine/dates/styles.css'
 import 'mantine-datatable/styles.layer.css'
 import 'react-medium-image-zoom/dist/styles.css'
 import 'allotment/dist/style.css'
+import './styles/code-highlight.css'

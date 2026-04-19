@@ -8,9 +8,9 @@ import {
   Group,
   Button,
 } from '@mantine/core'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { PikkuBadge } from '../components/ui/PikkuBadge'
 import { RefreshCw } from 'lucide-react'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
+import { usePikkuMeta } from '../context/PikkuMetaContext'
 
 export const SettingsPage: React.FunctionComponent = () => {
   const { counts, loading, error, refresh } = usePikkuMeta()

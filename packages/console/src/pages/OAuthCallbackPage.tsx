@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Container, Stack, Text, Button, Alert, Loader } from '@mantine/core'
 import { CheckCircle, AlertTriangle, X } from 'lucide-react'
-import { usePikkuRPC } from '@/context/PikkuRpcProvider'
+import { usePikkuRPC } from '../context/PikkuRpcProvider'
 
 export const OAuthCallbackPage: React.FunctionComponent = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>(

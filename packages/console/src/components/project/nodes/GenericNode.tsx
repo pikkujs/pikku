@@ -2,7 +2,7 @@ import React from 'react'
 import type { Node, NodeProps } from 'reactflow'
 import { Code } from 'lucide-react'
 import { BaseNode } from './BaseNode'
-import { usePanelContext } from '@/context/PanelContext'
+import { usePanelContext } from '../../../context/PanelContext'
 
 interface GenericNodeData {
   icon: React.ComponentType<{ size?: number }>

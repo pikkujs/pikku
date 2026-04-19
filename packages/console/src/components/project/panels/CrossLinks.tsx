@@ -1,9 +1,10 @@
 import React from 'react'
 import { Stack, Text, Box, Group, Anchor } from '@mantine/core'
-import { useLink } from '@/router'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { wiringTypeColor } from '@/components/ui/badge-defs'
+import { useLink } from '../../../router'
+import { usePikkuMeta } from '../../../context/PikkuMetaContext'
+import { PikkuBadge } from '../../ui/PikkuBadge'
+import { wiringTypeColor } from '../../ui/badge-defs'
+import classes from '../../ui/console.module.css'
 
 const TYPE_HREF: Record<string, string> = {
   http: '/apis?tab=http',
@@ -38,7 +39,7 @@ export const FunctionCrossLinks: React.FunctionComponent<{
           <Text size="sm" fw={500} mb={4}>
             Wired To
           </Text>
-          <Group gap={4} style={{ flexWrap: 'wrap' }}>
+          <Group gap={4} wrap="wrap">
             {usedBy.transports.map((t: any) => (
               <Anchor
                 key={t.id}
@@ -50,7 +51,7 @@ export const FunctionCrossLinks: React.FunctionComponent<{
                   type="label"
                   size="sm"
                   color={wiringTypeColor(t.type)}
-                  style={{ cursor: 'pointer' }}
+                  className={classes.clickableText}
                 >
                   {t.name}
                 </PikkuBadge>
@@ -64,7 +65,7 @@ export const FunctionCrossLinks: React.FunctionComponent<{
           <Text size="sm" fw={500} mb={4}>
             Jobs
           </Text>
-          <Group gap={4} style={{ flexWrap: 'wrap' }}>
+          <Group gap={4} wrap="wrap">
             {usedBy.jobs.map((j: any) => (
               <Anchor
                 key={j.id}
@@ -76,7 +77,7 @@ export const FunctionCrossLinks: React.FunctionComponent<{
                   type="label"
                   size="sm"
                   color={wiringTypeColor(j.type)}
-                  style={{ cursor: 'pointer' }}
+                  className={classes.clickableText}
                 >
                   {j.name}
                 </PikkuBadge>
@@ -90,7 +91,7 @@ export const FunctionCrossLinks: React.FunctionComponent<{
           <Text size="sm" fw={500} mb={4}>
             Services
           </Text>
-          <Group gap={4} style={{ flexWrap: 'wrap' }}>
+          <Group gap={4} wrap="wrap">
             {services.map((svc) => (
               <Anchor
                 key={svc}
@@ -103,7 +104,7 @@ export const FunctionCrossLinks: React.FunctionComponent<{
                   size="sm"
                   variant="outline"
                   color="gray"
-                  style={{ cursor: 'pointer' }}
+                  className={classes.clickableText}
                 >
                   {svc}
                 </PikkuBadge>
@@ -148,7 +149,7 @@ export const WiringCrossLinks: React.FunctionComponent<{
           <Text size="sm" fw={500} mb={4}>
             Services Used
           </Text>
-          <Group gap={4} style={{ flexWrap: 'wrap' }}>
+          <Group gap={4} wrap="wrap">
             {services.map((svc) => (
               <Anchor
                 key={svc}
@@ -161,7 +162,7 @@ export const WiringCrossLinks: React.FunctionComponent<{
                   size="sm"
                   variant="outline"
                   color="gray"
-                  style={{ cursor: 'pointer' }}
+                  className={classes.clickableText}
                 >
                   {svc}
                 </PikkuBadge>
@@ -175,7 +176,7 @@ export const WiringCrossLinks: React.FunctionComponent<{
           <Text size="sm" fw={500} mb={4}>
             Also Wired To
           </Text>
-          <Group gap={4} style={{ flexWrap: 'wrap' }}>
+          <Group gap={4} wrap="wrap">
             {usedBy.transports.map((t: any) => (
               <Anchor
                 key={t.id}
@@ -187,7 +188,7 @@ export const WiringCrossLinks: React.FunctionComponent<{
                   type="label"
                   size="sm"
                   color={wiringTypeColor(t.type)}
-                  style={{ cursor: 'pointer' }}
+                  className={classes.clickableText}
                 >
                   {t.name}
                 </PikkuBadge>

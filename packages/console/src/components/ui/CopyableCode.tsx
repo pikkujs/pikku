@@ -1,15 +1,17 @@
 import React from 'react'
-import { Box, Code, CopyButton, ActionIcon, Tooltip, Text } from '@mantine/core'
-import { Copy, Check } from 'lucide-react'
+import { Box, Text } from '@mantine/core'
+import { CodeHighlight } from '@mantine/code-highlight'
 
 interface CopyableCodeProps {
   code: string
   label?: string
+  language?: string
 }
 
 export const CopyableCode: React.FunctionComponent<CopyableCodeProps> = ({
   code,
   label,
+  language = 'typescript',
 }) => {
   return (
     <Box>
@@ -18,26 +20,7 @@ export const CopyableCode: React.FunctionComponent<CopyableCodeProps> = ({
           {label}
         </Text>
       )}
-      <Box pos="relative">
-        <Code block style={{ paddingRight: 40 }}>
-          {code}
-        </Code>
-        <CopyButton value={code}>
-          {({ copied, copy }) => (
-            <Tooltip label={copied ? 'Copied' : 'Copy'} position="left">
-              <ActionIcon
-                variant="subtle"
-                color={copied ? 'teal' : 'gray'}
-                onClick={copy}
-                size="sm"
-                style={{ position: 'absolute', top: 8, right: 8 }}
-              >
-                {copied ? <Check size={14} /> : <Copy size={14} />}
-              </ActionIcon>
-            </Tooltip>
-          )}
-        </CopyButton>
-      </Box>
+      <CodeHighlight code={code} language={language} copyLabel="Copy" copiedLabel="Copied" />
     </Box>
   )
 }

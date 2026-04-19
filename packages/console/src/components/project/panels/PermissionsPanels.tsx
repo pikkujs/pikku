@@ -1,10 +1,11 @@
 import React from 'react'
 import { Stack, Text, Box, Group, Divider, Table } from '@mantine/core'
 import { Layers, Shield } from 'lucide-react'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { usePanelContext } from '@/context/PanelContext'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
+import { usePikkuMeta } from '../../../context/PikkuMetaContext'
+import { usePanelContext } from '../../../context/PanelContext'
+import { PikkuBadge } from '../../ui/PikkuBadge'
+import { SectionLabel } from '../../ui/SectionLabel'
+import classes from '../../ui/console.module.css'
 
 interface PermissionPanelProps {
   permissionId: string
@@ -195,7 +196,7 @@ const GroupPanel: React.FunctionComponent<{
               {resolvedDefs.map(({ defId, def }) => (
                 <Table.Tr
                   key={defId}
-                  style={{ cursor: 'pointer' }}
+                  className={classes.clickableText}
                   onClick={() => openPermission(defId, { ...def, _id: defId })}
                 >
                   <Table.Td ff="monospace" fz="sm">

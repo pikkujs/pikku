@@ -16,6 +16,7 @@ import {
   ThemeIcon,
   TypographyStylesProvider,
 } from '@mantine/core'
+import styles from '../components/ui/console.module.css'
 import {
   Package,
   Code2,
@@ -34,12 +35,12 @@ import {
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
-import { usePikkuRPC } from '@/context/PikkuRpcProvider'
-import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '@/components/layout/DetailPageHeader'
-import { ProjectFunctions } from '@/components/project/ProjectFunctions'
-import { ProjectSecrets } from '@/components/project/ProjectSecrets'
-import { ProjectVariables } from '@/components/project/ProjectVariables'
+import { usePikkuRPC } from '../context/PikkuRpcProvider'
+import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { DetailPageHeader } from '../components/layout/DetailPageHeader'
+import { ProjectFunctions } from '../components/project/ProjectFunctions'
+import { ProjectSecrets } from '../components/project/ProjectSecrets'
+import { ProjectVariables } from '../components/project/ProjectVariables'
 import type { FunctionsMeta } from '@pikku/core'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
 import type { ChannelsMeta } from '@pikku/core/channel'
@@ -293,7 +294,7 @@ export const PackageDetailPage: React.FunctionComponent<{
   >({
     queryKey: ['installed-addons'],
     queryFn: async () => {
-      const result = await rpc.invoke('console:getInstalledAddons', null)
+      const result = await rpc.invoke('console:getInstalledAddons')
       return (result ?? []) as Array<{
         packageName: string
         namespace: string
@@ -737,7 +738,7 @@ export const PackageDetailPage: React.FunctionComponent<{
         >
           <Group align="flex-start" gap="md" wrap="nowrap">
             <PackageIcon icon={pkg.icon} name={pkg.displayName} size={48} />
-            <Stack gap={4} style={{ minWidth: 0, flex: 1 }}>
+            <Stack gap={4} className={styles.flexGrow}>
               <Group gap="sm" align="center" justify="space-between">
                 <Group gap="xs" align="center">
                   <Text fw={600} size="lg">

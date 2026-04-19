@@ -1,13 +1,13 @@
 import React, { useMemo } from 'react'
 import { Text, Stack } from '@mantine/core'
 import { Globe } from 'lucide-react'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { PanelProvider } from '@/context/PanelContext'
-import { usePanelContext } from '@/context/PanelContext'
-import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '@/components/layout/DetailPageHeader'
-import { TableListPage } from '@/components/layout/TableListPage'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
+import { usePikkuMeta } from '../context/PikkuMetaContext'
+import { PanelProvider } from '../context/PanelContext'
+import { usePanelContext } from '../context/PanelContext'
+import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { DetailPageHeader } from '../components/layout/DetailPageHeader'
+import { TableListPage } from '../components/layout/TableListPage'
+import { PikkuBadge } from '../components/ui/PikkuBadge'
 
 const HttpTable: React.FunctionComponent<{
   routes: any[]

@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { usePikkuRPC } from '@/context/PikkuRpcProvider'
+import { usePikkuRPC } from '../context/PikkuRpcProvider'
 
 interface AgentCredentialRequirement {
   credentialName: string

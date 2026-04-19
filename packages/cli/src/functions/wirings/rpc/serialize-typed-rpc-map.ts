@@ -75,13 +75,15 @@ ${addonImports}
 ${mergedRPCMap}
 
 export type RPCInvoke = <Name extends keyof FlattenedRPCMap>(
-  name: Name,
-  data: FlattenedRPCMap[Name]['input']
+  ...args: FlattenedRPCMap[Name]['input'] extends void | null
+    ? [name: Name]
+    : [name: Name, data: FlattenedRPCMap[Name]['input']]
 ) => Promise<FlattenedRPCMap[Name]['output']>
 
 export type RPCRemote = <Name extends keyof FlattenedRPCMap>(
-  name: Name,
-  data: FlattenedRPCMap[Name]['input']
+  ...args: FlattenedRPCMap[Name]['input'] extends void | null
+    ? [name: Name]
+    : [name: Name, data: FlattenedRPCMap[Name]['input']]
 ) => Promise<FlattenedRPCMap[Name]['output']>
 
 ${workflowMapPath ? `import type { FlattenedWorkflowMap } from '${workflowMapPath}'` : `type FlattenedWorkflowMap = {}`}

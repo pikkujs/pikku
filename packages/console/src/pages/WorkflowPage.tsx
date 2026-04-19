@@ -1,14 +1,14 @@
 import { Suspense } from 'react'
-import { useSearchParams } from '@/router'
+import { useSearchParams } from '../router'
 import { GitBranch } from 'lucide-react'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { WorkflowsList } from '@/components/project/WorkflowsList'
-import { WorkflowPageClient } from '@/components/pages/WorkflowPageClient'
-import { PanelProvider } from '@/context/PanelContext'
-import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '@/components/layout/DetailPageHeader'
+import { usePikkuMeta } from '../context/PikkuMetaContext'
+import { WorkflowsList } from '../components/project/WorkflowsList'
+import { WorkflowTabContent } from '../components/tabs/WorkflowTabContent'
+import { PanelProvider } from '../context/PanelContext'
+import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { DetailPageHeader } from '../components/layout/DetailPageHeader'
 import { Center, Loader } from '@mantine/core'
-import { useAIWorkflows } from '@/hooks/useWorkflowRuns'
+import { useAIWorkflows } from '../hooks/useWorkflowRuns'
 
 function WorkflowPageInner() {
   const [searchParams] = useSearchParams()
@@ -17,7 +17,7 @@ function WorkflowPageInner() {
   const { data: aiWorkflows } = useAIWorkflows()
 
   if (workflowId) {
-    return <WorkflowPageClient />
+    return <WorkflowTabContent />
   }
 
   if (loading) {

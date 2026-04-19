@@ -91,6 +91,8 @@ export function resolveLatestVersions(
       if (state.rpc.exposedMeta[baseName] === oldId) {
         state.rpc.exposedMeta[baseName] = newId
       }
+
+      updateWiringReferences(state, oldId, newId)
     } else {
       const latest = group.explicit.reduce((a, b) =>
         a.version > b.version ? a : b
@@ -98,8 +100,43 @@ export function resolveLatestVersions(
       state.rpc.internalMeta[baseName] = latest.id
     }
 
+    if (state.rpc.exposedMeta[baseName]) {
+      const latestId = state.rpc.internalMeta[baseName]!
+      state.rpc.exposedMeta[baseName] = latestId
+      for (const entry of group.explicit) {
+        state.rpc.exposedMeta[entry.id] = entry.id
+        const fileEntry = state.rpc.internalFiles.get(entry.id)
+        if (fileEntry) {
+          state.rpc.exposedFiles.set(entry.id, fileEntry)
+        }
+      }
+      if (group.unversioned) {
+        state.rpc.exposedMeta[latestId] = latestId
+        const fileEntry = state.rpc.internalFiles.get(latestId)
+        if (fileEntry) {
+          state.rpc.exposedFiles.set(latestId, fileEntry)
+        }
+      }
+    }
+
     for (const entry of group.explicit) {
       state.rpc.invokedFunctions.add(entry.id)
+    }
+  }
+}
+
+function updateWiringReferences(
+  state: InspectorState,
+  oldId: string,
+  newId: string
+): void {
+  if (state.http) {
+    for (const methods of Object.values(state.http.meta)) {
+      for (const meta of Object.values(methods)) {
+        if (meta.pikkuFuncId === oldId) {
+          meta.pikkuFuncId = newId
+        }
+      }
     }
   }
 }

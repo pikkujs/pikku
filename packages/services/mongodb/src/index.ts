@@ -12,3 +12,4 @@ export type { MongoDBSecretServiceConfig } from './mongodb-secret-service.js'
 
 export type { WorkflowRunService } from '@pikku/core/workflow'
 export type { AgentRunService, AgentRunRow } from '@pikku/core/ai-agent'
+export { MongoDBSessionStore } from './mongodb-session-store.js'

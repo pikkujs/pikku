@@ -19,17 +19,17 @@ describe('PikkuSessionService', () => {
     assert.strictEqual(service.get(), undefined)
   })
 
-  test('should mark sessionChanged when set is called', () => {
+  test('should mark sessionChanged when set is called', async () => {
     const service = new PikkuSessionService()
     assert.strictEqual(service.sessionChanged, false)
-    service.set({ userId: 'user-1' })
+    await service.set({ userId: 'user-1' })
     assert.strictEqual(service.sessionChanged, true)
   })
 
-  test('should clear session', () => {
+  test('should clear session', async () => {
     const service = new PikkuSessionService()
     service.setInitial({ userId: 'user-1' })
-    service.clear()
+    await service.clear()
     assert.strictEqual(service.get(), undefined)
     assert.strictEqual(service.sessionChanged, true)
   })
@@ -41,35 +41,69 @@ describe('PikkuSessionService', () => {
     assert.deepStrictEqual(frozen, { userId: 'user-1' })
   })
 
-  test('should only freeze initial once', () => {
+  test('should only freeze initial once', async () => {
     const service = new PikkuSessionService()
     service.setInitial({ userId: 'user-1' })
     service.freezeInitial()
-    service.set({ userId: 'user-2' })
+    await service.set({ userId: 'user-2' })
     const frozen2 = service.freezeInitial()
     assert.deepStrictEqual(frozen2, { userId: 'user-1' })
   })
 
-  test('should throw when channelStore provided without channelId', () => {
-    assert.throws(() => new PikkuSessionService({} as any), {
-      message: 'Channel ID is required when using channel store',
-    })
-  })
-
-  test('should use channelStore when provided', async () => {
+  test('should persist to sessionStore on set when pikkuUserId is set', async () => {
+    let storedId: string | undefined
     let storedSession: any
     const store = {
-      setUserSession: (id: string, session: any) => {
+      get: async () => undefined,
+      set: async (id: string, session: any) => {
+        storedId = id
         storedSession = session
       },
-      getChannelAndSession: (id: string) => ({ session: { userId: 'stored' } }),
+      clear: async () => {},
     }
-    const service = new PikkuSessionService(store as any, 'ch-1')
-    service.set({ userId: 'new' })
+    const service = new PikkuSessionService(store as any)
+    service.setPikkuUserId('user-123')
+    await service.set({ userId: 'new' })
+    assert.strictEqual(storedId, 'user-123')
     assert.deepStrictEqual(storedSession, { userId: 'new' })
+  })
 
-    const session = service.get()
-    assert.deepStrictEqual(session, { userId: 'stored' })
+  test('should not persist to sessionStore when pikkuUserId is not set', async () => {
+    let setCalled = false
+    const store = {
+      get: async () => undefined,
+      set: async () => {
+        setCalled = true
+      },
+      clear: async () => {},
+    }
+    const service = new PikkuSessionService(store as any)
+    await service.set({ userId: 'new' })
+    assert.strictEqual(setCalled, false)
+  })
+
+  test('should clear from sessionStore when pikkuUserId is set', async () => {
+    let clearedId: string | undefined
+    const store = {
+      get: async () => undefined,
+      set: async () => {},
+      clear: async (id: string) => {
+        clearedId = id
+      },
+    }
+    const service = new PikkuSessionService(store as any)
+    service.setPikkuUserId('user-123')
+    service.setInitial({ userId: 'user-123' })
+    await service.clear()
+    assert.strictEqual(clearedId, 'user-123')
+    assert.strictEqual(service.get(), undefined)
+  })
+
+  test('getPikkuUserId should return set value', () => {
+    const service = new PikkuSessionService()
+    assert.strictEqual(service.getPikkuUserId(), undefined)
+    service.setPikkuUserId('user-456')
+    assert.strictEqual(service.getPikkuUserId(), 'user-456')
   })
 })
 

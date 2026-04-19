@@ -1,5 +1,69 @@
 ## 0.12.4
 
+## 0.12.17
+
+### Patch Changes
+
+- 854737b: Add `ListInput<F, S>` / `ListOutput<Row>` / `Filter<F>` types for list-function primitives.
+
+  A "list function" is any Pikku function that returns a paginated collection. Adopting this shape unlocks a shared vocabulary across MCP tools, AI agents, typed RPC clients, and widget libraries — they all reason about cursor, filter, sort, and search uniformly.
+
+  These are purely structural constraints; no runtime behaviour change. A list function is still a normal `pikkuFunc` whose input extends `ListInput<F, S>` and output extends `ListOutput<Row>`.
+
+  ```ts
+  import { pikkuFunc } from '#pikku'
+  import type { ListInput, ListOutput } from '@pikku/core'
+
+  export const listSessions = pikkuFunc<
+    ListInput<{ status?: SessionStatus[] }, 'user' | 'status' | 'uploaded_at'>,
+    ListOutput<Session>
+  >({
+    func: async ({ kysely }, input) => {
+      /* ... */
+    },
+  })
+  ```
+
+  `Filter<F>` is a recursive AND/OR tree: arrays are AND of children, objects with label keys are OR of children, single-key objects with a field name from `F` are leaf predicates. Leaf operators mirror Prisma's vocabulary (`equals`, `in`, `notIn`, `gt`, `gte`, `lt`, `lte`, `contains`, `startsWith`, `endsWith`, `not`, `mode`).
+
+  Follow-ups (separate PRs): `applyFilter<DB>(qb, filter)` Kysely helper, `usePikkuListQuery` in the CLI's react-query generator, first-class MCP list-tool shape.
+
+## 0.12.16
+
+### Patch Changes
+
+- fbcf5b9: Add middleware priority system, telemetry middleware, and statusCode getter. Middleware now supports named priority levels (highest, high, medium, low, lowest) that control execution order regardless of registration order. Includes telemetryOuter and telemetryInner middleware for observability instrumentation via structured console.log output. PikkuHTTPResponse now exposes a readonly `statusCode` getter across all response implementations.
+
+## 0.12.15
+
+### Patch Changes
+
+- 9e8605f: Add Workers for Platforms dispatch namespace support and AI agent fixes.
+
+  - deploy-cloudflare: Thread dispatchNamespace through deploy pipeline, reads CF_DISPATCH_NAMESPACE env var
+  - core: Fix auth-gated tools visible to unauthenticated sessions (null session now hides permission-gated items)
+  - core: Recursive null stripping in AI agent tool call resume path
+  - ai-vercel: Handle anyOf/oneOf/array types when making optional fields nullable for strict providers
+
+- 624097e: Add deploy pipeline with provider-agnostic architecture
+
+  - Add MetaService with explicit typed API, absorb WiringService reads
+  - Add deployment service, traceId propagation, scoped logger
+  - Rewrite analyzer: one function = one worker, gateways dispatch via RPC
+  - Add Cloudflare deploy provider with plan/apply commands
+  - Add per-unit filtered codegen for deploy pipeline
+  - Skip missing metadata in wiring registration for deploy units
+  - Fix schema coercion crash when schema has no properties
+  - Fix E2E codegen: double-pass resolves cross-package Zod type imports
+
+- 7ab3243: Add server-fallback deployment target for functions that can't run serverless.
+
+  Functions can declare `deploy: 'serverless' | 'server' | 'auto'`. With `serverlessIncompatible` config, the analyzer auto-routes functions using incompatible services to a container.
+
+  Server functions are merged into a single tree-shaken unit with a PikkuUWSServer entry, Dockerfile, and CF Container proxy Worker.
+
+  Also adds sub-path exports to @pikku/cloudflare for tree-shaking (greet bundle 1.6MB → 444KB) and deploy verifiers for cloudflare, serverless, and azure providers.
+
 ## 0.12.14
 
 ### Patch Changes

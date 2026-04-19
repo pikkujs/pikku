@@ -11,6 +11,7 @@ import type { AIRunStateService } from '../services/ai-run-state-service.js'
 import type { SecretService } from '../services/secret-service.js'
 import type { CredentialService } from '../services/credential-service.js'
 import type { AgentRunService } from '../wirings/ai-agent/ai-agent.types.js'
+import type { SessionStore } from '../services/session-store.js'
 
 export interface ServiceTestConfig {
   name: string
@@ -34,6 +35,7 @@ export interface ServiceTestConfig {
       keyVersion?: number
       previousKey?: string
     }) => Promise<CredentialService & { rotateKEK?(): Promise<number> }>
+    sessionStore?: () => Promise<SessionStore>
   }
 }
 
@@ -49,32 +51,38 @@ export function defineServiceTests(config: ServiceTestConfig): void {
         store = await factory()
       })
 
-      test('addChannel and getChannelAndSession', async () => {
+      test('addChannel and getChannel', async () => {
         await store.addChannel({
           channelId: 'ch-1',
           channelName: 'test-channel',
           openingData: { foo: 'bar' },
         })
 
-        const result = await store.getChannelAndSession('ch-1')
+        const result = await store.getChannel('ch-1')
         assert.equal(result.channelId, 'ch-1')
         assert.equal(result.channelName, 'test-channel')
         assert.deepEqual(result.openingData, { foo: 'bar' })
-        assert.deepEqual(result.session, {})
+        assert.equal(result.pikkuUserId, undefined)
       })
 
-      test('setUserSession', async () => {
-        const session = { userId: 'user-1' } as any
-        await store.setUserSession('ch-1', session)
+      test('setPikkuUserId', async () => {
+        await store.setPikkuUserId('ch-1', 'user-1')
 
-        const result = await store.getChannelAndSession('ch-1')
-        assert.deepEqual(result.session, session)
+        const result = await store.getChannel('ch-1')
+        assert.equal(result.pikkuUserId, 'user-1')
       })
 
-      test('getChannelAndSession throws for missing channel', async () => {
+      test('setPikkuUserId to null', async () => {
+        await store.setPikkuUserId('ch-1', null)
+
+        const result = await store.getChannel('ch-1')
+        assert.equal(result.pikkuUserId, undefined)
+      })
+
+      test('getChannel throws for missing channel', async () => {
         await assert.rejects(
           async () => {
-            await store.getChannelAndSession('missing')
+            await store.getChannel('missing')
           },
           { message: 'Channel not found: missing' }
         )
@@ -87,7 +95,7 @@ export function defineServiceTests(config: ServiceTestConfig): void {
         })
         await store.removeChannels(['ch-2'])
         await assert.rejects(async () => {
-          await store.getChannelAndSession('ch-2')
+          await store.getChannel('ch-2')
         })
       })
 
@@ -996,6 +1004,51 @@ export function defineServiceTests(config: ServiceTestConfig): void {
       test('deleteThread returns false for missing', async () => {
         const result = await agentService.deleteThread('missing-thread')
         assert.equal(result, false)
+      })
+    })
+  }
+
+  if (services.sessionStore) {
+    const factory = services.sessionStore
+    describe(`SessionStore [${name}]`, () => {
+      let store: SessionStore
+
+      before(async () => {
+        store = await factory()
+      })
+
+      test('get returns undefined for unknown user', async () => {
+        const result = await store.get('unknown-user')
+        assert.equal(result, undefined)
+      })
+
+      test('set and get round-trip', async () => {
+        const session = { userId: 'user-1', organizationId: 'org-1' } as any
+        await store.set('user-1', session)
+
+        const result = await store.get('user-1')
+        assert.deepEqual(result, session)
+      })
+
+      test('set overwrites previous session', async () => {
+        await store.set('user-2', { userId: 'user-2', role: 'admin' } as any)
+        await store.set('user-2', { userId: 'user-2', role: 'member' } as any)
+
+        const result = await store.get('user-2')
+        assert.deepEqual(result, { userId: 'user-2', role: 'member' })
+      })
+
+      test('clear removes session', async () => {
+        await store.set('user-3', { userId: 'user-3' } as any)
+        assert.ok(await store.get('user-3'))
+
+        await store.clear('user-3')
+        const result = await store.get('user-3')
+        assert.equal(result, undefined)
+      })
+
+      test('clear is no-op for unknown user', async () => {
+        await store.clear('nonexistent')
       })
     })
   }

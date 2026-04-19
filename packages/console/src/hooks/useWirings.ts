@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { usePikkuRPC } from '@/context/PikkuRpcProvider'
+import { usePikkuRPC } from '../context/PikkuRpcProvider'
 import { useMemo } from 'react'
 
 export function useChannelSnippets(channelName: string) {
@@ -19,7 +19,7 @@ export function useFunctionsMeta() {
   return useQuery({
     queryKey: ['functions', 'meta'],
     queryFn: async () => {
-      return await rpc.invoke('console:getFunctionsMeta', null)
+      return await rpc.invoke('console:getFunctionsMeta')
     },
   })
 }
@@ -44,7 +44,7 @@ export function useAddonMeta() {
   return useQuery({
     queryKey: ['addon', 'meta'],
     queryFn: async () => {
-      const x = await rpc.invoke('console:getAddonMeta', null)
+      const x = await rpc.invoke('console:getAddonMeta')
       return x
     },
   })

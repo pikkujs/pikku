@@ -12,6 +12,7 @@ import { MongoDBDeploymentService } from './mongodb-deployment-service.js'
 import { MongoDBAIStorageService } from './mongodb-ai-storage-service.js'
 import { MongoDBAgentRunService } from './mongodb-agent-run-service.js'
 import { MongoDBSecretService } from './mongodb-secret-service.js'
+import { MongoDBSessionStore } from './mongodb-session-store.js'
 
 function registerTests(name: string, getDb: () => Db) {
   defineServiceTests({
@@ -49,6 +50,11 @@ function registerTests(name: string, getDb: () => Db) {
       agentRunService: async () => new MongoDBAgentRunService(getDb()),
       secretService: async (config) => {
         const s = new MongoDBSecretService(getDb(), config)
+        await s.init()
+        return s
+      },
+      sessionStore: async () => {
+        const s = new MongoDBSessionStore(getDb())
         await s.init()
         return s
       },

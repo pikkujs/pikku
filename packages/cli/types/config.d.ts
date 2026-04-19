@@ -189,6 +189,7 @@ export type PikkuCLIInput = {
     fetchFile?: string
     websocketFile?: string
     rpcWiringsFile?: string
+    reactQueryFile?: string
     queueWiringsFile?: string
     mcpJsonFile?: string
     nextBackendFile?: string

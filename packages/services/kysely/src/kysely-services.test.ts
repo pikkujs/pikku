@@ -17,6 +17,7 @@ import { KyselyAIStorageService } from './kysely-ai-storage-service.js'
 import { KyselyAgentRunService } from './kysely-ai-agent-run-service.js'
 import { KyselySecretService } from './kysely-secret-service.js'
 import { KyselyCredentialService } from './kysely-credential-service.js'
+import { KyselySessionStore } from './kysely-session-store.js'
 
 function createSqliteDb(): Kysely<KyselyPikkuDB> {
   return new Kysely<KyselyPikkuDB>({
@@ -106,6 +107,11 @@ function registerTests(
       },
       credentialService: async (config) => {
         const s = new KyselyCredentialService(getDb(), config)
+        await s.init()
+        return s
+      },
+      sessionStore: async () => {
+        const s = new KyselySessionStore(getDb())
         await s.init()
         return s
       },

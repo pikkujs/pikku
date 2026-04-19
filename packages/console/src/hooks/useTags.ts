@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
+import { usePikkuMeta } from '../context/PikkuMetaContext'
 
 export interface TagInfo {
   tag: string

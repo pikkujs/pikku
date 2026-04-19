@@ -341,7 +341,9 @@ export async function runCLICommand({
     state: 'open',
   }
 
-  const userSession = new PikkuSessionService<CoreUserSession>()
+  const userSession = new PikkuSessionService<CoreUserSession>(
+    singletonServices.sessionStore
+  )
 
   const wire: PikkuWire = {
     cli: {
@@ -500,8 +502,9 @@ export async function executeCLI({
       ? await createConfig(new LocalVariablesService(), data)
       : ({} as any)
 
-    // Create services with config
+    // Create services with config and register in global state
     const singletonServices = await createSingletonServices(config)
+    pikkuState(null, 'package', 'singletonServices', singletonServices)
 
     // Execute the command
     await runCLICommand({

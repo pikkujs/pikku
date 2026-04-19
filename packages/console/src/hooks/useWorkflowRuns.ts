@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { usePikkuRPC } from '@/context/PikkuRpcProvider'
+import { usePikkuRPC } from '../context/PikkuRpcProvider'
 
 export interface WorkflowRunData {
   runId: string
@@ -140,7 +140,7 @@ export function useWorkflowRunNames() {
   return useQuery({
     queryKey: ['workflow-run-names'],
     queryFn: async () => {
-      return await rpc.invoke('console:getWorkflowRunNames', null)
+      return await rpc.invoke('console:getWorkflowRunNames')
     },
   })
 }

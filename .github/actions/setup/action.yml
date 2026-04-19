@@ -1,0 +1,27 @@
+name: Setup
+description: Setup Node, download build output, and install dependencies. Must run after actions/checkout.
+
+inputs:
+  node-version:
+    description: Node.js version
+    default: '24'
+  download-build:
+    description: Whether to download build output artifact
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - run: corepack enable
+      shell: bash
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: yarn
+    - name: Download build output
+      if: ${{ inputs.download-build == 'true' }}
+      uses: actions/download-artifact@v4
+      with:
+        name: build-output
+    - run: yarn install
+      shell: bash

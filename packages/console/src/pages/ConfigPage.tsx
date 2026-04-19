@@ -1,11 +1,11 @@
 import React from 'react'
 import { KeyRound } from 'lucide-react'
-import { useSearchParams } from '@/router'
-import { PanelProvider } from '@/context/PanelContext'
-import { ResizablePanelLayout } from '@/components/layout/ResizablePanelLayout'
-import { TabbedPageHeader } from '@/components/layout/TabbedPageHeader'
-import { SecretsTab } from '@/components/tabs/SecretsTab'
-import { VariablesTab } from '@/components/tabs/VariablesTab'
+import { useSearchParams } from '../router'
+import { PanelProvider } from '../context/PanelContext'
+import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { TabbedPageHeader } from '../components/layout/TabbedPageHeader'
+import { SecretsTab } from '../components/tabs/SecretsTab'
+import { VariablesTab } from '../components/tabs/VariablesTab'
 
 const TABS = [
   { value: 'secrets', label: 'Secrets' },

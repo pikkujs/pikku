@@ -3,19 +3,19 @@ import {
   Stack,
   Text,
   Box,
-  Code,
   Group,
   Loader,
   Center,
   ActionIcon,
 } from '@mantine/core'
+import { CodeHighlight } from '@mantine/code-highlight'
 import { FunctionSquare, Pencil } from 'lucide-react'
-import { useFunctionMeta, useSchema } from '@/hooks/useWirings'
-import { SchemaViewer } from '@/components/ui/SchemaViewer'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { funcWrapperDefs } from '@/components/ui/badge-defs'
-import { CommonDetails } from '@/components/project/panels/shared/CommonDetails'
-import { FunctionEditor } from '@/components/project/panels/FunctionEditor'
+import { useFunctionMeta, useSchema } from '../../../hooks/useWirings'
+import { SchemaViewer } from '../../ui/SchemaViewer'
+import { PikkuBadge } from '../../ui/PikkuBadge'
+import { funcWrapperDefs } from '../../ui/badge-defs'
+import { CommonDetails } from './shared/CommonDetails'
+import { FunctionEditor } from './FunctionEditor'
 
 interface FunctionDetailsFormProps {
   functionName: string
@@ -122,7 +122,7 @@ export const FunctionCode: React.FunctionComponent<
   }
 })`
 
-  return <Code block>{exampleCode}</Code>
+  return <CodeHighlight code={exampleCode} language="typescript" />
 }
 
 export const FunctionInput: React.FunctionComponent<

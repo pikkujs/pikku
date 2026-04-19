@@ -1,14 +1,15 @@
 import React, { useMemo } from 'react'
-import { useSearchParams, useNavigate } from '@/router'
+import { useSearchParams, useNavigate } from '../../router'
 import { useQuery } from '@tanstack/react-query'
-import { PanelProvider } from '@/context/PanelContext'
-import { WorkflowRunProvider } from '@/context/WorkflowRunContext'
-import { usePikkuRPC } from '@/context/PikkuRpcProvider'
-import { usePikkuMeta } from '@/context/PikkuMetaContext'
-import { WorkflowCanvas } from '@/components/project/WorkflowCanvas'
+import { PanelProvider } from '../../context/PanelContext'
+import { WorkflowRunProvider } from '../../context/WorkflowRunContext'
+import { usePikkuRPC } from '../../context/PikkuRpcProvider'
+import { usePikkuMeta } from '../../context/PikkuMetaContext'
+import { WorkflowCanvas } from '../project/WorkflowCanvas'
 import { Center, Loader, Box, Text } from '@mantine/core'
+import styles from '../ui/console.module.css'
 
-export const WorkflowPageClient: React.FunctionComponent = () => {
+export const WorkflowTabContent: React.FunctionComponent = () => {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const workflowId = searchParams.get('id') || ''
@@ -52,8 +53,8 @@ export const WorkflowPageClient: React.FunctionComponent = () => {
         currentGraphHash={(workflow as any).graphHash}
         workflowNodes={(workflow as any).nodes}
       >
-        <Box h="100vh" style={{ display: 'flex', flexDirection: 'column' }}>
-          <Box style={{ flex: 1, overflow: 'auto' }}>
+        <Box h="100vh" className={styles.flexColumn}>
+          <Box className={`${styles.flexGrow} ${styles.overflowAuto}`}>
             <WorkflowCanvas
               workflow={workflow}
               items={workflowItems}

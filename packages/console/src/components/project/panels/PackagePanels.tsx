@@ -9,8 +9,8 @@ import {
   Settings2,
   FileJson,
 } from 'lucide-react'
-import { PikkuBadge } from '@/components/ui/PikkuBadge'
-import { SectionLabel } from '@/components/project/panels/shared/SectionLabel'
+import { PikkuBadge } from '../../ui/PikkuBadge'
+import { SectionLabel } from './shared/SectionLabel'
 
 interface PackagePanelProps {
   packageId: string
