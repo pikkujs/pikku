@@ -3,7 +3,7 @@ import { join, resolve } from 'path'
 import { Readable } from 'stream'
 
 import { pikkuSessionlessFunc } from '#pikku'
-import chokidar from 'chokidar'
+import chokidar, { type FSWatcher } from 'chokidar'
 import { pikkuDevReloader } from '@pikku/core/dev'
 import {
   ConsoleLogger,
@@ -13,6 +13,7 @@ import {
   InMemoryAIRunStateService,
 } from '@pikku/core/services'
 import { stopSingletonServices } from '@pikku/core'
+import { pikkuState } from '@pikku/core/internal'
 import {
   fetchData,
   PikkuFetchHTTPResponse,
@@ -135,7 +136,11 @@ export const dev = pikkuSessionlessFunc<
       aiRunStateService: new InMemoryAIRunStateService(),
     }
 
-    await userCreateSingletonServices(userConfig, inMemoryServices)
+    const singletonServices = await userCreateSingletonServices(
+      userConfig,
+      inMemoryServices
+    )
+    pikkuState(null, 'package', 'singletonServices', singletonServices)
 
     compileAllSchemas(logger)
     logRoutes(logger)
@@ -162,12 +167,24 @@ export const dev = pikkuSessionlessFunc<
       })
     })
 
-    process.removeAllListeners('SIGINT').on('SIGINT', async () => {
+    let configWatcher: FSWatcher | undefined
+    let watcher: FSWatcher | undefined
+
+    process.once('SIGINT', async () => {
       logger.info('Stopping dev server...')
-      await stopSingletonServices()
-      wss.close()
-      server.close()
-      process.exit(0)
+      try {
+        await stopSingletonServices()
+        await configWatcher?.close()
+        await watcher?.close()
+        await new Promise<void>((resolve, reject) =>
+          wss.close((err) => (err ? reject(err) : resolve()))
+        )
+        await new Promise<void>((resolve, reject) =>
+          server.close((err) => (err ? reject(err) : resolve()))
+        )
+      } finally {
+        process.exit(0)
+      }
     })
 
     if (enableHmr) {
@@ -178,22 +195,22 @@ export const dev = pikkuSessionlessFunc<
     }
 
     if (enableWatch) {
-      const configWatcher = chokidar.watch(config.srcDirectories, {
+      const genIgnore = /\.gen\.tsx?$/
+
+      configWatcher = chokidar.watch(config.srcDirectories, {
         ignoreInitial: true,
-        ignored: /.*\.gen\.tsx?/,
+        ignored: genIgnore,
       })
 
-      let watcher = new chokidar.FSWatcher({})
-
       const generatorWatcher = () => {
-        watcher.close()
+        watcher?.close()
 
         logger.info(
           `• Watching directories: \n  - ${config.srcDirectories.join('\n  - ')}`
         )
         watcher = chokidar.watch(config.srcDirectories, {
           ignoreInitial: true,
-          ignored: /.*\.gen\.ts/,
+          ignored: genIgnore,
         })
 
         watcher.on('ready', async () => {
@@ -206,8 +223,7 @@ export const dev = pikkuSessionlessFunc<
                 type: 'timing',
               })
             } catch (err) {
-              console.error(err)
-              logger.error('Error running watch')
+              logger.error(`Error running watch: ${err}`)
             }
           }
 
@@ -222,9 +238,9 @@ export const dev = pikkuSessionlessFunc<
             timeout = setTimeout(handle, 10)
           }
 
-          watcher.on('change', deduped)
-          watcher.on('add', deduped)
-          watcher.on('unlink', deduped)
+          watcher?.on('change', deduped)
+          watcher?.on('add', deduped)
+          watcher?.on('unlink', deduped)
         })
       }
 

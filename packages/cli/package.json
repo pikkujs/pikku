@@ -44,14 +44,14 @@
     "ts-json-schema-generator": "^2.5.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9",
+    "ws": "^8.18.0",
     "yaml": "^2.8.2",
     "zod": "^4.3.6",
     "zod-to-ts": "^2.0.0"
   },
   "devDependencies": {
     "@types/node": "^24.11.0",
-    "@types/ws": "^8",
-    "ws": "^8.18.0"
+    "@types/ws": "^8"
   },
   "files": [
     "dist",
