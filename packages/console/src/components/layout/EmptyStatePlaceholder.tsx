@@ -20,6 +20,7 @@ export const EmptyStatePlaceholder: React.FunctionComponent<
       gap="md"
       className={classes.emptyState}
       py="xl"
+      style={{ minHeight: '60vh' }}
     >
       <Icon size={48} strokeWidth={1} />
       <Text size="xl" fw={600}>
