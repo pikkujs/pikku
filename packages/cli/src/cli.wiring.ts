@@ -11,6 +11,7 @@ import { all } from './functions/commands/all.js'
 import { bootstrap } from './functions/commands/bootstrap.js'
 import { watch } from './functions/commands/watch.js'
 import { consoleCommand } from './functions/commands/console.js'
+import { dev } from './functions/commands/dev.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuVersionsCheck } from './functions/commands/versions-check.js'
 import { pikkuVersionsUpdate } from './functions/commands/versions-update.js'
@@ -113,6 +114,26 @@ wireCLI({
         hmr: {
           description: 'Enable hot module reload for registered functions',
           default: false,
+        },
+      },
+    }),
+    dev: pikkuCLICommand({
+      func: dev,
+      description:
+        'Start a local development server with all services wired',
+      options: {
+        port: {
+          description: 'Port for the dev server',
+          default: '3000',
+          short: 'p',
+        },
+        watch: {
+          description: 'Watch for file changes and regenerate',
+          default: true,
+        },
+        hmr: {
+          description: 'Enable hot module reload',
+          default: true,
         },
       },
     }),
