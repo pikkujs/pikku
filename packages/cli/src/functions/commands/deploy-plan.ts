@@ -73,6 +73,26 @@ export const deployPlan = pikkuSessionlessFunc<
 
     if (result.manifest.units.length === 0) {
       logger.info('No deployment units found.')
+      const resultFile = data?.resultFile
+      if (resultFile) {
+        const { writeFile } = await import('node:fs/promises')
+        await writeFile(
+          resultFile,
+          JSON.stringify(
+            {
+              success: true,
+              providerDir: result.providerDir,
+              unitCount: 0,
+              totalSizeBytes: 0,
+              errors: [],
+              manifest: result.manifest,
+            },
+            null,
+            2
+          ),
+          'utf-8'
+        )
+      }
       return
     }
 
