@@ -35,8 +35,8 @@
     "kysely": "^0.28.0"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.12.18",
-    "@cloudflare/workers-types": "^4.20260305.0",
+    "@cloudflare/vitest-pool-workers": "^0.14.7",
+    "@cloudflare/workers-types": "^4.20260420.1",
     "@pikku/kysely": "^0.12.9",
     "@vitest/runner": "^2.1.9",
     "@vitest/snapshot": "^2.1.9",

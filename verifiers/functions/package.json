@@ -12,7 +12,7 @@
     "@pikku/schema-cfworker": "workspace:*",
     "@pikku/templates-function-addon": "workspace:*",
     "eventsource": "^4.1.0",
-    "ws": "^8.19.0",
+    "ws": "^8.20.0",
     "zod": "^4"
   },
   "devDependencies": {

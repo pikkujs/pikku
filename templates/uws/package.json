@@ -12,14 +12,14 @@
     "dev": "tsx --watch src/start.ts"
   },
   "dependencies": {
-    "@auth/core": "^0.37.0",
+    "@auth/core": "^0.41.2",
     "@pikku/auth-js": "^0.12.3",
     "@pikku/core": "^0.12.17",
     "@pikku/uws": "^0.12.4",
     "@pikku/websocket": "^0.12.1",
     "tslib": "^2.8.1",
     "tsx": "^4.21.0",
-    "ws": "^8.19.0"
+    "ws": "^8.20.0"
   },
   "devDependencies": {
     "@types/node": "^24",

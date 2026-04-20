@@ -20,7 +20,7 @@
     "@pikku/core": "^0.12.6"
   },
   "dependencies": {
-    "ioredis": "^5.10.0"
+    "ioredis": "^5.10.1"
   },
   "devDependencies": {
     "@types/ioredis-mock": "^8",

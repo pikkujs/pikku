@@ -39,6 +39,6 @@
     "zod": "^4"
   },
   "dependencies": {
-    "dayjs": "^1.11.19"
+    "dayjs": "^1.11.20"
   }
 }

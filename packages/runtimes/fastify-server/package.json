@@ -25,8 +25,8 @@
     "@pikku/fastify-plugin": "^0.12.2"
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.9",
-    "fastify": "^5.8.2",
+    "@pikku/core": "^0.12.17",
+    "fastify": "^5.8.5",
     "typescript": "^6.0.3"
   },
   "engines": {

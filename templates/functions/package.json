@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@auth/core": "^0.37.0",
+    "@auth/core": "^0.41.2",
     "@pikku/addon-console": "workspace:*",
     "@pikku/addon-graph": "workspace:*",
     "@pikku/auth-js": "^0.12.3",
@@ -12,7 +12,7 @@
     "@pikku/schema-cfworker": "^0.12.2",
     "@pikku/templates-function-addon": "workspace:*",
     "eventsource": "^4.1.0",
-    "ws": "^8.19.0",
+    "ws": "^8.20.0",
     "zod": "^4"
   },
   "devDependencies": {

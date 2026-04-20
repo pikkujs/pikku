@@ -14,13 +14,13 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@auth/core": "^0.37.0",
+    "@auth/core": "^0.41.2",
     "@pikku/auth-js": "^0.12.3",
     "@pikku/core": "^0.12.17",
     "@pikku/fetch": "^0.12.1",
     "@pikku/jose": "^0.12.3",
     "@pikku/next": "^0.12.2",
-    "next": "15.5.12",
+    "next": "15.5.15",
     "react": "^19",
     "react-dom": "^19",
     "tslib": "^2.8.1",
@@ -32,7 +32,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "postcss": "^8",
-    "tailwindcss": "^4.2.1",
+    "tailwindcss": "^4.2.2",
     "typescript": "^6"
   }
 }

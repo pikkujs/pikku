@@ -28,7 +28,7 @@
     "typescript": "^6.0"
   },
   "optionalDependencies": {
-    "ws": "^8.19.0"
+    "ws": "^8.20.0"
   },
   "engines": {
     "node": ">=20"
