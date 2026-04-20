@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cloudflare",
-  "version": "0.12.5",
+  "version": "0.12.6",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",
@@ -30,14 +30,14 @@
     "kysely-plugin-serialize": "^0.8.2"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.15",
-    "@pikku/kysely": "^0.12.9",
+    "@pikku/core": "^0.12.18",
+    "@pikku/kysely": "^0.12.10",
     "kysely": "^0.28.0"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.12.18",
     "@cloudflare/workers-types": "^4.20260305.0",
-    "@pikku/kysely": "^0.12.9",
+    "@pikku/kysely": "^0.12.10",
     "@vitest/runner": "^2.1.9",
     "@vitest/snapshot": "^2.1.9",
     "typescript": "^5.9.3",

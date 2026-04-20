@@ -1,5 +1,23 @@
 ## 0.12.0
 
+## 0.12.10
+
+### Patch Changes
+
+- ba8d6ff: Support inline functions in pikkuWorkflowComplexFunc with full DSL extraction
+- d3ace0e: Inspector now captures the `deploy: 'serverless' | 'server' | 'auto'` option
+  from `pikkuFunc` / `pikkuSessionlessFunc` calls, alongside the other runtime
+  metadata (`expose`, `remote`, `mcp`, `readonly`, `approvalRequired`).
+
+  Previously this field was defined on `FunctionRuntimeMeta` but never read
+  from the user's source, so `deploy: 'server'` was silently dropped. That
+  left downstream consumers — notably `@pikku/cli`'s deployment analyzer,
+  which routes server-targeted functions to a container unit — treating
+  every function as `serverless` regardless of its declared intent.
+
+- Updated dependencies [311c0c4]
+  - @pikku/core@0.12.18
+
 ## 0.12.9
 
 ### Patch Changes

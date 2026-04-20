@@ -1,5 +1,15 @@
 ## 0.12.0
 
+## 0.12.15
+
+### Patch Changes
+
+- 5c98fd1: Show the empty-state placeholder on `AgentsPage` and `WorkflowPage` when the project has no agents or workflows, instead of rendering the panel layout with a blank detail pane. Placeholder also gets a `minHeight` so it renders consistently.
+- Updated dependencies [424c777]
+- Updated dependencies [311c0c4]
+  - @pikku/assistant-ui@0.12.4
+  - @pikku/core@0.12.18
+
 ## 0.12.14
 
 ### Patch Changes
