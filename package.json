@@ -64,20 +64,20 @@
   },
   "packageManager": "yarn@4.10.3",
   "devDependencies": {
-    "0x": "^5.7.0",
-    "@types/autocannon": "^7.12.0",
-    "@types/node": "^20.11.30",
+    "0x": "^6.0.0",
+    "@types/autocannon": "^7.12.7",
+    "@types/node": "^25.6.0",
     "autocannon": "^8.0.0",
     "husky": "^9.1.7",
-    "lint-staged": "^16.0.0",
-    "oxlint": "^1.50.0",
-    "prettier": "3.3.3",
-    "tsx": "^4.19.2",
-    "typedoc": "^0.27.9"
+    "lint-staged": "^16.4.0",
+    "oxlint": "^1.60.0",
+    "prettier": "3.8.3",
+    "tsx": "^4.21.0",
+    "typedoc": "^0.28.19"
   },
   "dependencies": {
-    "@changesets/cli": "^2.27.9",
-    "typescript": "~5.8.0"
+    "@changesets/cli": "^2.31.0",
+    "typescript": "~6.0.3"
   },
   "resolutions": {
     "esbuild": "0.27.2"
