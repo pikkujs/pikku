@@ -21,6 +21,6 @@
     "@slack/web-api": "^7.9.1"
   },
   "devDependencies": {
-    "typescript": "^5.9"
+    "typescript": "^6.0"
   }
 }

@@ -19,7 +19,7 @@
     "@pikku/cli": "^0.12.1",
     "@types/node": "^24.11.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   },
   "dependencies": {
     "@auth/core": "^0.37.0",

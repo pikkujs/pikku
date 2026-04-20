@@ -43,7 +43,7 @@
     "tinyglobby": "^0.2.12",
     "ts-json-schema-generator": "^2.5.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.9",
+    "typescript": "^6.0",
     "ws": "^8.18.0",
     "yaml": "^2.8.2",
     "zod": "^4.3.6",

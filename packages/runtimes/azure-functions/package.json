@@ -20,7 +20,7 @@
     "@pikku/core": "^0.12.1"
   },
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   },
   "engines": {
     "node": ">=18"

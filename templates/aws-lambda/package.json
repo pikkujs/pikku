@@ -35,6 +35,6 @@
     "serverless-offline": "^14.5.0",
     "serverless-offline-sqs": "^8.0.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.9"
+    "typescript": "^6.0"
   }
 }

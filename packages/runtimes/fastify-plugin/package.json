@@ -25,7 +25,7 @@
   "devDependencies": {
     "fastify": "^5.8.2",
     "fastify-plugin": "^5.1.0",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   },
   "dependencies": {
     "cookie": "^1.1.1"

@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.11.0",
-    "typescript": "^5.9"
+    "typescript": "^6.0"
   },
   "engines": {
     "node": ">=18"

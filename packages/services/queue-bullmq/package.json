@@ -21,6 +21,6 @@
     "ioredis": "^5.10.0"
   },
   "devDependencies": {
-    "typescript": "^5.9"
+    "typescript": "^6.0"
   }
 }

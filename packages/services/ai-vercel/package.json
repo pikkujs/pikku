@@ -22,6 +22,6 @@
   },
   "devDependencies": {
     "ai": "^6.0.105",
-    "typescript": "^5.9"
+    "typescript": "^6.0"
   }
 }

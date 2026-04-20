@@ -19,6 +19,6 @@
     "kysely-plugin-serialize": "^0.8.2"
   },
   "devDependencies": {
-    "typescript": "^5.9"
+    "typescript": "^6.0"
   }
 }

@@ -28,7 +28,7 @@
   },
   "devDependencies": {
     "@pikku/core": "^0.12.9",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   },
   "engines": {
     "node": ">=18"

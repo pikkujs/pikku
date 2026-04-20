@@ -23,7 +23,7 @@
     "@types/ws": "^8",
     "concurrently": "^9.2.1",
     "tsx": "^4.21.0",
-    "typescript": "^5.9"
+    "typescript": "^6.0"
   },
   "scripts": {
     "build": "tsc -b",

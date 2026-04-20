@@ -39,7 +39,7 @@
     "path-to-regexp": "^8.3.0",
     "ts-json-schema-generator": "^2.5.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.9",
+    "typescript": "^6.0",
     "zod": "^4.3.6",
     "zod-to-ts": "^2.0.0"
   },
