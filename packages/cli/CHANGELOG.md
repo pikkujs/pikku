@@ -1,5 +1,26 @@
 ## 0.12.0
 
+## 0.12.20
+
+### Patch Changes
+
+- cbefa22: Add `pikku dev` command: an all-in-one local development server that wires
+  an HTTP + WebSocket server with in-memory scheduler, queue, workflow,
+  trigger, and AI run-state services. Supports file watching with
+  regeneration and hot module reload.
+
+  Options:
+
+  - `--port, -p` (default `3000`)
+  - `--watch` (default `true`)
+  - `--hmr` (default `true`)
+
+- Updated dependencies [ba8d6ff]
+- Updated dependencies [d3ace0e]
+- Updated dependencies [311c0c4]
+  - @pikku/inspector@0.12.10
+  - @pikku/core@0.12.18
+
 ## 0.12.19
 
 ### Patch Changes
