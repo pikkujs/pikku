@@ -49,7 +49,7 @@ export class CorePikkuWebsocket {
   }
 
   public sendBinary(data: ArrayBuffer | Uint8Array) {
-    this.ws.send(data)
+    this.ws.send(data instanceof Uint8Array ? new Uint8Array(data) : data)
   }
 
   public onBinaryMessage(callback: (data: ArrayBuffer) => void) {

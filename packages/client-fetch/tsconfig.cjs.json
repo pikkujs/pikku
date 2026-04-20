@@ -4,8 +4,7 @@
     "rootDir": "./src",
     "module": "commonjs",
     "outDir": "dist/cjs",
-    "target": "es2015",
-    "moduleResolution": "node"
+    "target": "es2015"
   },
   "exclude": ["**/*.test.ts", "node_modules", "dist"]
 }

@@ -1,6 +1,10 @@
 import * as ts from 'typescript'
 import { dirname, join, resolve } from 'path'
-import { createGenerator, RootlessError } from 'ts-json-schema-generator'
+import {
+  createGenerator,
+  RootlessError,
+  type Config as TsJsonSchemaGeneratorConfig,
+} from 'ts-json-schema-generator'
 import { register, tsImport } from 'tsx/esm/api'
 import * as z from 'zod'
 import { zodToTs, createAuxiliaryTypeStore } from 'zod-to-ts'
@@ -210,7 +214,8 @@ function generateTSSchemas(
   )
 
   const generator = createGenerator({
-    tsProgram: program,
+    tsProgram:
+      program as unknown as NonNullable<TsJsonSchemaGeneratorConfig['tsProgram']>,
     skipTypeCheck: true,
     topRef: false,
     discriminatorType: 'open-api',
