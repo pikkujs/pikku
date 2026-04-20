@@ -125,6 +125,13 @@ const AgentDetailView: React.FunctionComponent<{ agentId: string }> = ({
 export const AgentsPage: React.FunctionComponent = () => {
   const [searchParams] = useSearchParams()
   const agentId = searchParams.get('id')
+  const { meta, loading } = usePikkuMeta()
+
+  const hasAgents = !loading && meta.agentsMeta && Object.keys(meta.agentsMeta).length > 0
+
+  if (!agentId && !hasAgents) {
+    return <AgentsList />
+  }
 
   return (
     <PanelProvider>
