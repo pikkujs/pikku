@@ -33,21 +33,21 @@ jobs:
       - name: Run e2e tests
         run: yarn test:e2e --force-exit
 
-  # e2e-ai:
-  #   name: E2E AI
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 10
-  #   needs: [e2e, verifiers, templates]
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: ./.github/actions/setup
-  #     - uses: ./.github/actions/e2e-codegen
-  #     - name: Install Playwright
-  #       run: npx playwright install --with-deps chromium
-  #     - name: Run AI e2e tests
-  #       run: yarn test:e2e:ai
-  #       env:
-  #         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  e2e-ai:
+    name: E2E AI
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [e2e, verifiers, templates]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/e2e-codegen
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Run AI e2e tests
+        run: yarn test:e2e:ai
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
   verifiers:
     name: Verifiers (${{ matrix.verifier }})
