@@ -4444,17 +4444,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mantine/code-highlight@npm:^8.3.8":
-  version: 8.3.18
-  resolution: "@mantine/code-highlight@npm:8.3.18"
+"@mantine/code-highlight@npm:^9.0.2":
+  version: 9.0.2
+  resolution: "@mantine/code-highlight@npm:9.0.2"
   dependencies:
     clsx: "npm:^2.1.1"
   peerDependencies:
-    "@mantine/core": 8.3.18
-    "@mantine/hooks": 8.3.18
-    react: ^18.x || ^19.x
-    react-dom: ^18.x || ^19.x
-  checksum: 10/4b508d85ed081bfb27158683b6773bef0bcd1a3ff2917c47fa4aeea0e83d548e987022de8ae0d474d76a20176b890a95483aee4fea67e53d847f32d7ff5ff0c5
+    "@mantine/core": 9.0.2
+    "@mantine/hooks": 9.0.2
+    react: ^19.2.0
+    react-dom: ^19.2.0
+  checksum: 10/4dd371f9f4c19f83fc0c67515d9fedf37ee7f83fb3abb505482a013ecf1aea56ead6a75fddc399800e3a1c6c9d539f7519d8cfc1b5c6a44761021c474323a7d1
   languageName: node
   linkType: hard
 
@@ -5358,7 +5358,7 @@ __metadata:
   dependencies:
     "@codemirror/lang-javascript": "npm:^6.2.5"
     "@emotion/react": "npm:^11.14.0"
-    "@mantine/code-highlight": "npm:^8.3.8"
+    "@mantine/code-highlight": "npm:^9.0.2"
     "@mantine/colors-generator": "npm:^8.3.8"
     "@mantine/core": "npm:^8.3.8"
     "@mantine/dates": "npm:^8.3.8"
