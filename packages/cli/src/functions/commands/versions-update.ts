@@ -9,17 +9,21 @@ export const pikkuVersionsUpdate = pikkuSessionlessFunc<void, void>({
     const visitState = await getInspectorState()
 
     if (!visitState.manifest.initial) {
-      throw new Error(
-        `Version manifest not found at ${manifestPath}. Run 'pikku versions init' to create one.`
-      )
+      logger.warn(`Run 'pikku versions init' to enable contract versioning.`)
+      return
     }
 
     const immutabilityErrors = visitState.manifest.errors.filter(
       (e) => e.code === ErrorCode.FUNCTION_VERSION_MODIFIED
     )
     if (immutabilityErrors.length > 0) {
-      const messages = immutabilityErrors.map((e) => `[${e.code}] ${e.message}`)
-      throw new Error(messages.join('\n'))
+      for (const e of immutabilityErrors) {
+        logger.warn(`[${e.code}] ${e.message}`)
+      }
+      logger.warn(
+        `Contract drift detected — version manifest not updated. Run 'pikku versions check' to inspect, or bump versions via code and re-run.`
+      )
+      return
     }
 
     await saveManifest(manifestPath, visitState.manifest.current!)

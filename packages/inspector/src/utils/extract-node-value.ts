@@ -27,6 +27,11 @@ export function extractStringLiteral(
     return result
   }
 
+  // Unwrap type assertions: `expr as Type` or `<Type>expr`
+  if (ts.isAsExpression(node) || ts.isTypeAssertionExpression(node)) {
+    return extractStringLiteral(node.expression, checker)
+  }
+
   // Try to evaluate constant identifiers
   if (ts.isIdentifier(node)) {
     const symbol = checker.getSymbolAtLocation(node)

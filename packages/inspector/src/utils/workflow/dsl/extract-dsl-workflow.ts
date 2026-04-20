@@ -2,6 +2,7 @@ import * as ts from 'typescript'
 import type {
   WorkflowStepMeta,
   RpcStepMeta,
+  InlineStepMeta,
   BranchStepMeta,
   ParallelGroupStepMeta,
   FanoutStepMeta,
@@ -32,6 +33,7 @@ import {
   extractForOfVariable,
   isArrayType,
   getSourceText,
+  extractSourcePath,
 } from './patterns.js'
 import type { ValidationError } from './validation.js'
 import {
@@ -63,25 +65,7 @@ interface ExtractionContext {
 }
 
 /**
- * Extract full source path from an expression (e.g., data.memberEmails)
- */
-function extractSourcePath(expr: ts.Expression): string | null {
-  if (ts.isIdentifier(expr)) {
-    return expr.text
-  }
-
-  if (ts.isPropertyAccessExpression(expr)) {
-    const base = extractSourcePath(expr.expression)
-    if (base) {
-      return `${base}.${expr.name.text}`
-    }
-  }
-
-  return null
-}
-
-/**
- * Result of simple workflow extraction
+ * Result of DSL workflow extraction
  */
 export interface ExtractionResult {
   status: 'ok' | 'error'
@@ -89,15 +73,15 @@ export interface ExtractionResult {
   /** Workflow context (top-level variables) */
   context?: WorkflowContext
   reason?: string
-  simple?: boolean
 }
 
 /**
- * Extract simple workflow metadata from a function declaration
+ * Extract DSL workflow metadata from a function declaration
  */
 export function extractDSLWorkflow(
   funcNode: ts.Node,
-  checker: ts.TypeChecker
+  checker: ts.TypeChecker,
+  options?: { allowInline?: boolean }
 ): ExtractionResult {
   try {
     // Find the async arrow function
@@ -106,7 +90,6 @@ export function extractDSLWorkflow(
       return {
         status: 'error',
         reason: 'Could not find async arrow function in workflow definition',
-        simple: false,
       }
     }
 
@@ -116,7 +99,6 @@ export function extractDSLWorkflow(
       return {
         status: 'error',
         reason: 'Could not determine input parameter name',
-        simple: false,
       }
     }
 
@@ -134,12 +116,13 @@ export function extractDSLWorkflow(
     }
 
     // Validate no disallowed patterns
-    const patternErrors = validateNoDisallowedPatterns(arrowFunc.body)
+    const patternErrors = validateNoDisallowedPatterns(arrowFunc.body, {
+      allowInline: options?.allowInline,
+    })
     if (patternErrors.length > 0) {
       return {
         status: 'error',
         reason: formatValidationErrors(patternErrors),
-        simple: false,
       }
     }
 
@@ -149,7 +132,6 @@ export function extractDSLWorkflow(
       return {
         status: 'error',
         reason: formatValidationErrors(awaitErrors),
-        simple: false,
       }
     }
 
@@ -161,7 +143,6 @@ export function extractDSLWorkflow(
       return {
         status: 'error',
         reason: formatValidationErrors(context.errors),
-        simple: false,
       }
     }
 
@@ -179,13 +160,11 @@ export function extractDSLWorkflow(
       steps,
       context:
         Object.keys(workflowContext).length > 0 ? workflowContext : undefined,
-      simple: true,
     }
   } catch (error) {
     return {
       status: 'error',
       reason: error instanceof Error ? error.message : String(error),
-      simple: false,
     }
   }
 }
@@ -375,7 +354,9 @@ function extractVariableDeclaration(
   if (ts.isAwaitExpression(init) && ts.isCallExpression(init.expression)) {
     const call = init.expression
     if (isWorkflowDoCall(call, context.checker)) {
-      const step = extractRpcStep(call, context, varName)
+      const step = isInlineDoCall(call)
+        ? extractInlineStep(call, context)
+        : extractRpcStep(call, context, varName)
       if (step) {
         // Track output variable
         const type = context.checker.getTypeAtLocation(decl)
@@ -481,7 +462,9 @@ function extractExpressionStatement(
     const call = expr.expression
 
     if (isWorkflowDoCall(call, context.checker)) {
-      const step = extractRpcStep(call, context, outputVar)
+      const step = isInlineDoCall(call)
+        ? extractInlineStep(call, context)
+        : extractRpcStep(call, context, outputVar)
 
       // Track output variable if this is an assignment
       if (outputVar && step) {
@@ -557,6 +540,49 @@ function extractRpcStep(
     })
     return null
   }
+}
+
+/**
+ * Extract inline step from workflow.do() call with a function argument
+ */
+function extractInlineStep(
+  call: ts.CallExpression,
+  context: ExtractionContext
+): InlineStepMeta | null {
+  const args = call.arguments
+  if (args.length < 2) return null
+
+  try {
+    const stepName = extractStringLiteral(args[0], context.checker)
+    const optionsArg = args.length >= 3 ? args[args.length - 1] : undefined
+    const options =
+      optionsArg && ts.isObjectLiteralExpression(optionsArg)
+        ? extractStepOptions(optionsArg, context)
+        : undefined
+
+    return {
+      type: 'inline',
+      stepName,
+      options,
+    }
+  } catch (error) {
+    context.errors.push({
+      message: `Failed to extract inline step: ${error instanceof Error ? error.message : String(error)}`,
+      node: call,
+    })
+    return null
+  }
+}
+
+/**
+ * Check if the second argument of a workflow.do() call is a function
+ */
+function isInlineDoCall(call: ts.CallExpression): boolean {
+  const secondArg = call.arguments[1]
+  return (
+    !!secondArg &&
+    (ts.isArrowFunction(secondArg) || ts.isFunctionExpression(secondArg))
+  )
 }
 
 /**
