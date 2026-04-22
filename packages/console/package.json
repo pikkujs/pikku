@@ -86,6 +86,6 @@
     "postcss-simple-vars": "^7",
     "react-router": "^7",
     "typescript": "^5",
-    "vite": "^6"
+    "vite": "^8"
   }
 }
