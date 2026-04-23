@@ -65,54 +65,6 @@ function processDiagnostics(
 }
 
 const logger = new CLILogger({ logLogo: false, silent: false })
-const originalConsole = {
-  log: console.log,
-  info: console.info,
-  warn: console.warn,
-  error: console.error,
-  debug: console.debug,
-}
-let consoleRedirectedToLogger = false
-
-const formatConsoleArgs = (args: unknown[]): string => {
-  return args
-    .map((arg) => {
-      if (typeof arg === 'string') return arg
-      if (arg instanceof Error) return arg.stack || arg.message
-      try {
-        return JSON.stringify(arg)
-      } catch {
-        return String(arg)
-      }
-    })
-    .join(' ')
-}
-
-const setJSONConsoleRedirection = (enabled: boolean): void => {
-  if (enabled && !consoleRedirectedToLogger) {
-    ;(console as any).log = (...args: unknown[]) =>
-      logger.info(formatConsoleArgs(args))
-    ;(console as any).info = (...args: unknown[]) =>
-      logger.info(formatConsoleArgs(args))
-    ;(console as any).warn = (...args: unknown[]) =>
-      logger.warn(formatConsoleArgs(args))
-    ;(console as any).error = (...args: unknown[]) =>
-      logger.error(formatConsoleArgs(args))
-    ;(console as any).debug = (...args: unknown[]) =>
-      logger.debug(formatConsoleArgs(args))
-    consoleRedirectedToLogger = true
-    return
-  }
-
-  if (!enabled && consoleRedirectedToLogger) {
-    ;(console as any).log = originalConsole.log
-    ;(console as any).info = originalConsole.info
-    ;(console as any).warn = originalConsole.warn
-    ;(console as any).error = originalConsole.error
-    ;(console as any).debug = originalConsole.debug
-    consoleRedirectedToLogger = false
-  }
-}
 
 /**
  * Parse a comma-separated string or array into an array of trimmed, non-empty strings
@@ -216,7 +168,6 @@ export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
   }
 
   logger.setOutputMode(outputMode)
-  setJSONConsoleRedirection(outputMode === 'json')
 
   if ((data as any).silent) {
     logLevel = LogLevel.critical

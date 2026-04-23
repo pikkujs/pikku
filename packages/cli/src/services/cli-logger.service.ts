@@ -21,6 +21,8 @@ export class CLILogger implements Logger {
   private level: LogLevel = LogLevel.warn // default to warn level
   private criticalErrors: string[] = []
   private outputMode: CLIOutputMode = 'text'
+  private jsonBuffer: Array<Record<string, unknown>> = []
+  private jsonFlushHookRegistered = false
 
   constructor({
     logLogo,
@@ -44,7 +46,13 @@ export class CLILogger implements Logger {
   }
 
   setOutputMode(mode: CLIOutputMode): void {
+    if (mode === 'text') {
+      this.jsonBuffer = []
+    }
     this.outputMode = mode
+    if (mode === 'json') {
+      this.ensureJSONFlushHook()
+    }
   }
 
   getOutputMode(): CLIOutputMode {
@@ -66,6 +74,22 @@ export class CLILogger implements Logger {
     process.stdout.write(`${JSON.stringify(payload)}\n`)
   }
 
+  private ensureJSONFlushHook(): void {
+    if (this.jsonFlushHookRegistered) return
+    this.jsonFlushHookRegistered = true
+    process.once('beforeExit', () => this.flushJSONBuffer())
+    process.once('exit', () => this.flushJSONBuffer())
+  }
+
+  flushJSONBuffer(): void {
+    if (this.outputMode !== 'json' || this.jsonBuffer.length === 0) return
+    const pending = this.jsonBuffer
+    this.jsonBuffer = []
+    for (const payload of pending) {
+      this.writeJSONLine(payload)
+    }
+  }
+
   private emit(
     level: 'debug' | 'info' | 'warn' | 'error' | 'critical',
     message: string,
@@ -74,7 +98,7 @@ export class CLILogger implements Logger {
   ): void {
     const normalizedMessage = this.normalizeMessage(message)
     if (this.outputMode === 'json') {
-      this.writeJSONLine({
+      this.jsonBuffer.push({
         level,
         message: normalizedMessage,
         ...(type ? { type } : {}),

@@ -25,13 +25,18 @@ function captureStdout(run: () => void): string[] {
 }
 
 describe('CLILogger json output mode', () => {
-  test('emits NDJSON for info logs', () => {
+  test('buffers json logs until flush', () => {
     const logger = new CLILogger({ logLogo: false, silent: false })
     logger.setLevel(LogLevel.debug)
     logger.setOutputMode('json')
 
-    const lines = captureStdout(() => {
+    const beforeFlush = captureStdout(() => {
       logger.info({ message: 'Generating types', type: 'timing' })
+    })
+    assert.strictEqual(beforeFlush.length, 0)
+
+    const lines = captureStdout(() => {
+      logger.flushJSONBuffer()
     })
 
     assert.strictEqual(lines.length, 1)
@@ -47,8 +52,9 @@ describe('CLILogger json output mode', () => {
     logger.setLevel(LogLevel.info)
     logger.setOutputMode('json')
 
+    logger.info('\x1b[31mRed Message\x1b[0m')
     const lines = captureStdout(() => {
-      logger.info('\x1b[31mRed Message\x1b[0m')
+      logger.flushJSONBuffer()
     })
 
     const payload = JSON.parse(lines[0]!.trim())
@@ -60,8 +66,9 @@ describe('CLILogger json output mode', () => {
     logger.setLevel(LogLevel.debug)
     logger.setOutputMode('json')
 
+    logger.critical('PKU111' as any, 'Duplicate function name')
     const lines = captureStdout(() => {
-      logger.critical('PKU111' as any, 'Duplicate function name')
+      logger.flushJSONBuffer()
     })
 
     const payload = JSON.parse(lines[0]!.trim())
@@ -69,5 +76,24 @@ describe('CLILogger json output mode', () => {
     assert.strictEqual(payload.code, 'PKU111')
     assert.match(payload.url, /pku111$/)
     assert.match(payload.message, /\[PKU111\]/)
+  })
+
+  test('does not emit flushed json records in text mode', () => {
+    const logger = new CLILogger({ logLogo: false, silent: false })
+    logger.setLevel(LogLevel.info)
+    logger.setOutputMode('json')
+
+    logger.info('Buffered message')
+    logger.setOutputMode('text')
+
+    const lines = captureStdout(() => {
+      logger.flushJSONBuffer()
+    })
+
+    assert.strictEqual(lines.length, 0)
+    const textLines = captureStdout(() => {
+      logger.info('\x1b[31mRed Message\x1b[0m')
+    })
+    assert.strictEqual(textLines.length, 1)
   })
 })
