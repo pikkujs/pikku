@@ -53,6 +53,7 @@ export enum ErrorCode {
 
   // Versioning errors
   DUPLICATE_FUNCTION_VERSION = 'PKU850',
+  DUPLICATE_FUNCTION_NAME = 'PKU851',
 
   // Contract versioning errors
   MANIFEST_MISSING = 'PKU860',
