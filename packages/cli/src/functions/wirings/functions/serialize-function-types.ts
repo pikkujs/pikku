@@ -27,7 +27,7 @@ export const serializeFunctionTypes = (
  * Core function, middleware, and permission types for all wirings
  */
 
-import type { CorePikkuMiddleware, CorePermissionGroup, PikkuWire, PickRequired } from '@pikku/core'
+import type { CorePikkuMiddleware, CorePermissionGroup, ListInput, ListOutput, PikkuWire, PickRequired } from '@pikku/core'
 import type { CorePikkuFunctionConfig, CorePikkuAuth, CorePikkuAuthConfig, CorePikkuPermission } from '@pikku/core/function'
 import { pikkuAuth as pikkuAuthCore } from '@pikku/core/function'
 import { addMiddleware as addMiddlewareCore, addPermission as addPermissionCore } from '@pikku/core/middleware'
@@ -428,6 +428,32 @@ export function pikkuFunc<In, Out = unknown>(
 ): PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
 export function pikkuFunc(func: any) {
   return typeof func === 'function' ? { func } : func
+}
+
+export type PikkuListFunction<
+  F extends Record<string, unknown> = {},
+  Row = unknown,
+  S extends string = never
+> =
+  | PikkuFunction<ListInput<F, S>, ListOutput<Row>, 'session' | 'rpc'>
+  | PikkuFunctionSessionless<
+      ListInput<F, S>,
+      ListOutput<Row>,
+      'session' | 'rpc'
+    >
+
+export const pikkuListFunc = <
+  F extends Record<string, unknown> = {},
+  Row = unknown,
+  S extends string = never
+>(
+  config: PikkuFunctionConfig<
+    ListInput<F, S>,
+    ListOutput<Row>,
+    'session' | 'rpc'
+  >
+): PikkuFunctionConfig<ListInput<F, S>, ListOutput<Row>, 'session' | 'rpc'> => {
+  return pikkuFunc(config)
 }
 
 /**
