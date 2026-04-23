@@ -153,6 +153,7 @@ Pikku uses a CLI tool to generate type-safe clients and server code:
 - Test files follow `*.test.ts` pattern
 - Each package has isolated tests
 - Coverage reports generated with `--experimental-test-coverage`
+- For any issue fix where a verifier would have failed before the change, add or update a verifier test using a TDD/BDD flow so the test is red before the fix and green after it.
 
 ### Testing Templates
 
