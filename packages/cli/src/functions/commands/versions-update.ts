@@ -23,7 +23,9 @@ export const pikkuVersionsUpdate = pikkuSessionlessFunc<void, void>({
       logger.warn(
         `Contract drift detected — version manifest not updated. Run 'pikku versions check' to inspect, or bump versions via code and re-run.`
       )
-      return
+      throw new Error(
+        'Version update failed due to immutable published contract drift.'
+      )
     }
 
     await saveManifest(manifestPath, visitState.manifest.current!)
