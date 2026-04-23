@@ -148,7 +148,6 @@ export async function resolveProvider(
 
 const ANSI = {
   green: '\x1b[32m',
-  red: '\x1b[31m',
   bold: '\x1b[1m',
   reset: '\x1b[0m',
 }
@@ -191,8 +190,8 @@ async function runDeploy(
     deployResult = await provider.deploy({
       buildDir: providerDir,
       logger,
-      onProgress: (_step: string, _detail: string) => {
-        process.stdout.write(` ${ANSI.green}done${ANSI.reset}\n`)
+      onProgress: (step: string, detail: string) => {
+        logger.info(`[${step}] ${detail}`)
       },
     })
   } catch (err) {
@@ -205,7 +204,6 @@ async function runDeploy(
 
   await writeResultFile(resultFile, deployResult)
 
-  console.log('')
   if (deployResult.success) {
     logger.info(`${ANSI.green}${ANSI.bold}Deployment complete.${ANSI.reset}`)
     logger.info(

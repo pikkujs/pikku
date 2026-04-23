@@ -52,6 +52,14 @@ wireCLI({
       default: 'info' as const,
       short: 'l',
     },
+    output: {
+      description: 'Output format: text (default) or json (NDJSON)',
+    },
+    json: {
+      description: 'Alias for --output json',
+      default: false,
+      short: 'j',
+    },
     userSessionType: {
       description:
         'Specify which UserSession type to use (when multiple exist)',
@@ -119,8 +127,7 @@ wireCLI({
     }),
     dev: pikkuCLICommand({
       func: dev,
-      description:
-        'Start a local development server with all services wired',
+      description: 'Start a local development server with all services wired',
       options: {
         port: {
           description: 'Port for the dev server',
