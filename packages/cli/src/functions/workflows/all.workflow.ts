@@ -197,7 +197,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
 
     if (!config.addon) {
       const [http, scheduler, triggers] = await Promise.all([
-        workflow.do('HTTP', 'pikkuHTTP', null),
+        workflow.do('HTTP', 'pikkuCommandHTTP', null),
         workflow.do('Scheduler', 'pikkuScheduler', null),
         workflow.do('Trigger', 'pikkuTrigger', null),
       ])
@@ -244,8 +244,8 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
 
     if (!config.addon) {
       const [queues, channels, gateways, mcp, cli] = await Promise.all([
-        workflow.do('Queue', 'pikkuQueue', null),
-        workflow.do('Channels', 'pikkuChannels', null),
+        workflow.do('Queue', 'pikkuCommandQueue', null),
+        workflow.do('Channels', 'pikkuCommandChannels', null),
         workflow.do('Gateway', 'pikkuGateway', null),
         workflow.do('MCP', 'pikkuMCP', null),
         workflow.do('CLI', 'pikkuCLI', null),
@@ -253,7 +253,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
 
       if (queues) {
         await Promise.all([
-          workflow.do('Queue map', 'pikkuQueueMap', null),
+          workflow.do('Queue map', 'pikkuCommandQueueMap', null),
           workflow.do('Queue service', 'pikkuQueueService', null),
         ])
         allImports.push(
