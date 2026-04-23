@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto'
 import { PikkuWorkflowService } from '../wirings/workflow/pikku-workflow-service.js'
 import type { SerializedError } from '../types/core.types.js'
 import type {
+  WorkflowPlannedStep,
   WorkflowRun,
   WorkflowRunService,
   WorkflowRunWire,
@@ -55,7 +56,11 @@ export class InMemoryWorkflowService
     input: any,
     inline: boolean,
     graphHash: string,
-    wire: WorkflowRunWire
+    wire: WorkflowRunWire,
+    options?: {
+      deterministic?: boolean
+      plannedSteps?: WorkflowPlannedStep[]
+    }
   ): Promise<string> {
     const runId = randomUUID()
     const now = new Date()
@@ -67,6 +72,8 @@ export class InMemoryWorkflowService
       input,
       inline,
       graphHash,
+      deterministic: options?.deterministic,
+      plannedSteps: options?.plannedSteps,
       wire,
       createdAt: now,
       updatedAt: now,

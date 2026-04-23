@@ -1,4 +1,5 @@
 import type {
+  WorkflowPlannedStep,
   WorkflowRun,
   StepState,
   WorkflowStatus,
@@ -16,6 +17,8 @@ interface WorkflowRunDoc {
   state: Record<string, unknown>
   inline: boolean
   graphHash: string | null
+  deterministic?: boolean
+  plannedSteps?: WorkflowPlannedStep[]
   wire: any | null
   createdAt: Date
   updatedAt: Date
@@ -238,6 +241,8 @@ export class MongoDBWorkflowRunService implements WorkflowRunService {
       error: row.error ?? undefined,
       inline: row.inline,
       graphHash: row.graphHash ?? undefined,
+      deterministic: row.deterministic ?? undefined,
+      plannedSteps: row.plannedSteps ?? undefined,
       wire: row.wire ?? { type: 'unknown' },
       createdAt: new Date(row.createdAt),
       updatedAt: new Date(row.updatedAt),

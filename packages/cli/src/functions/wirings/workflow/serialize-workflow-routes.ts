@@ -71,6 +71,7 @@ export const workflowStatusStream = pikkuSessionlessFunc<
 
     const terminalStatuses = new Set(['completed', 'failed', 'cancelled'])
     let lastHash = ''
+    let initSent = false
 
     const poll = async () => {
       const run = await workflowRunService.getRun(runId)
@@ -80,6 +81,26 @@ export const workflowStatusStream = pikkuSessionlessFunc<
       }
 
       const steps = await workflowRunService.getRunSteps(runId)
+
+      if (!initSent && run.deterministic) {
+        const statusByStep = new Map(
+          steps.map((s: { stepName: string; status: string }) => [
+            s.stepName,
+            s.status,
+          ])
+        )
+        channel.send({
+          type: 'init',
+          deterministic: true,
+          steps: (run.plannedSteps ?? []).map(
+            (s: { stepName: string }) => ({
+              stepName: s.stepName,
+              status: statusByStep.get(s.stepName) ?? 'pending',
+            })
+          ),
+        })
+        initSent = true
+      }
 
       const hash = JSON.stringify({
         s: run.status,
@@ -136,6 +157,7 @@ export const workflowStatusStreamFull = pikkuSessionlessFunc<
 
     const terminalStatuses = new Set(['completed', 'failed', 'cancelled'])
     let lastHash = ''
+    let initSent = false
 
     const poll = async () => {
       const run = await workflowRunService.getRun(runId)
@@ -145,6 +167,26 @@ export const workflowStatusStreamFull = pikkuSessionlessFunc<
       }
 
       const steps = await workflowRunService.getRunSteps(runId)
+
+      if (!initSent && run.deterministic) {
+        const statusByStep = new Map(
+          steps.map((s: { stepName: string; status: string }) => [
+            s.stepName,
+            s.status,
+          ])
+        )
+        channel.send({
+          type: 'init',
+          deterministic: true,
+          steps: (run.plannedSteps ?? []).map(
+            (s: { stepName: string }) => ({
+              stepName: s.stepName,
+              status: statusByStep.get(s.stepName) ?? 'pending',
+            })
+          ),
+        })
+        initSent = true
+      }
 
       const hash = JSON.stringify({
         s: run.status,

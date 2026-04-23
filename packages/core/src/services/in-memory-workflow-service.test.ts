@@ -46,6 +46,27 @@ describe('InMemoryWorkflowService', () => {
       const state = await service.getRunState(runId)
       assert.deepStrictEqual(state, {})
     })
+
+    test('should persist deterministic planned steps metadata', async () => {
+      const runId = await service.createRun(
+        'wf',
+        {},
+        true,
+        'h',
+        {} as any,
+        {
+          deterministic: true,
+          plannedSteps: [{ stepName: 'Step 1' }, { stepName: 'Step 2' }],
+        }
+      )
+
+      const run = await service.getRun(runId)
+      assert.strictEqual(run?.deterministic, true)
+      assert.deepStrictEqual(run?.plannedSteps, [
+        { stepName: 'Step 1' },
+        { stepName: 'Step 2' },
+      ])
+    })
   })
 
   describe('getRun', () => {
