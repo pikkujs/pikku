@@ -351,14 +351,31 @@ async function deployWorkerBatch(
   client: CloudflareClient,
   projectId: string,
   buildDir: string,
-  units: Array<[string, { bindings: string[]; role: string }]>,
+  units: Array<
+    [
+      string,
+      {
+        bindings: string[]
+        role: string
+        target: 'serverless' | 'server'
+      },
+    ]
+  >,
   resourceIds: ResourceIds,
   result: DeployResult,
   log: (step: string, detail: string) => void
 ): Promise<void> {
+  const resolveBundlePath = (
+    unitName: string,
+    target: 'serverless' | 'server'
+  ): string =>
+    target === 'server'
+      ? join(buildDir, 'container', 'bundle.js')
+      : join(buildDir, 'units', unitName, 'bundle.js')
+
   const tasks = units.map(async ([unitName, unitManifest]) => {
     const workerName = toWorkerName(projectId, unitName)
-    const bundlePath = join(buildDir, unitName, 'bundle.js')
+    const bundlePath = resolveBundlePath(unitName, unitManifest.target)
 
     try {
       const script = await readFile(bundlePath, 'utf-8')

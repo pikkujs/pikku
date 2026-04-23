@@ -8,6 +8,7 @@ import {
  * Queue worker: Process todo reminder jobs.
  */
 export const processReminder = pikkuSessionlessFunc({
+  deploy: 'server',
   input: ProcessReminderInputSchema,
   output: ProcessReminderOutputSchema,
   func: async ({ logger, todoStore }, { todoId, userId }) => {

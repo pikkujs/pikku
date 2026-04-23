@@ -7,7 +7,7 @@ export interface CurrentState {
     functionIds: string[]
     role: string
     bundleHash?: string
-    externalPackagesHash?: string
+    exactDependenciesHash?: string
   }>
   queues: Array<{ name: string }>
   scheduledTasks: Array<{ unitName: string; schedule: string; name?: string }>

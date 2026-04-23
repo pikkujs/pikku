@@ -36,18 +36,18 @@ function diffUnits(
       (typeof desired.bundleHash === 'string' &&
         typeof existing.bundleHash === 'string' &&
         desired.bundleHash !== existing.bundleHash) ||
-      (typeof desired.externalPackagesHash === 'string' &&
-        typeof existing.externalPackagesHash === 'string' &&
-        desired.externalPackagesHash !== existing.externalPackagesHash)
+      (typeof desired.exactDependenciesHash === 'string' &&
+        typeof existing.exactDependenciesHash === 'string' &&
+        desired.exactDependenciesHash !== existing.exactDependenciesHash)
     ) {
       const bundleChanged =
         typeof desired.bundleHash === 'string' &&
         typeof existing.bundleHash === 'string' &&
         desired.bundleHash !== existing.bundleHash
       const depsChanged =
-        typeof desired.externalPackagesHash === 'string' &&
-        typeof existing.externalPackagesHash === 'string' &&
-        desired.externalPackagesHash !== existing.externalPackagesHash
+        typeof desired.exactDependenciesHash === 'string' &&
+        typeof existing.exactDependenciesHash === 'string' &&
+        desired.exactDependenciesHash !== existing.exactDependenciesHash
 
       changes.push({
         action: 'update',
@@ -64,7 +64,7 @@ function diffUnits(
         details: {
           functionIds: desired.functionIds,
           bundleHash: desired.bundleHash,
-          externalPackagesHash: desired.externalPackagesHash,
+          exactDependenciesHash: desired.exactDependenciesHash,
         },
       })
     }

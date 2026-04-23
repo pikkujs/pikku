@@ -5,7 +5,12 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeRemoteRPC } from './serialize-remote-rpc.js'
 
 export const pikkuRemoteRPC = pikkuSessionlessFunc<void, boolean>({
-  func: async ({ logger, config }) => {
+  func: async ({ logger, config, variables }) => {
+    const deployCodegenFlag = await variables.get('PIKKU_DEPLOY_CODEGEN')
+    if (deployCodegenFlag === '1') {
+      return false
+    }
+
     if (config.remoteRpcWorkersFile) {
       const pathToPikkuTypes = getFileImportRelativePath(
         config.remoteRpcWorkersFile,

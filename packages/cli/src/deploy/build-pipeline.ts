@@ -26,11 +26,17 @@ export interface BuildLogger {
 export interface BuildPipelineResult {
   manifest: DeploymentManifest
   providerDir: string
+  deploymentManifestPath: string
+  infraPath: string | null
   projectId: string
   bundled: BundleResult[]
   bundleErrors: Array<{ unitName: string; error: string }>
   codegenErrors: Array<{ unitName: string; error: string }>
 }
+
+const MERGED_SERVER_UNIT_NAME = 'pikku-server-container'
+const UNITS_DIR_NAME = 'units'
+const CONTAINER_DIR_NAME = 'container'
 
 function attachBundleMetadata(
   manifest: DeploymentManifest,
@@ -43,8 +49,9 @@ function attachBundleMetadata(
     if (!bundle) continue
     unit.bundleHash = bundle.bundleHash
     unit.bundleSizeBytes = bundle.bundleSizeBytes
-    unit.externalPackagesHash = bundle.externalPackagesHash
-    unit.externalPackages = bundle.externalPackages
+    unit.exactDependenciesHash = bundle.exactDependenciesHash
+    unit.exactDependencies = bundle.exactDependencies
+    unit.exactOptionalDependencies = bundle.exactOptionalDependencies
   }
 }
 
@@ -91,6 +98,10 @@ export async function runBuildPipeline(options: {
   let bundled: BundleResult[] = []
   let bundleErrors: Array<{ unitName: string; error: string }> = []
   let codegenErrors: Array<{ unitName: string; error: string }> = []
+  let infraPath: string | null = null
+  const deploymentManifestPath = join(providerDir, 'deployment-manifest.json')
+  const unitsDir = join(providerDir, UNITS_DIR_NAME)
+  const containerDir = join(providerDir, CONTAINER_DIR_NAME)
 
   if (provider.singleUnit) {
     // Single-unit mode: bundle everything into one unit, use project's .pikku/ directly
@@ -157,6 +168,8 @@ export async function runBuildPipeline(options: {
       return {
         manifest,
         providerDir,
+        deploymentManifestPath,
+        infraPath,
         projectId,
         bundled: [],
         bundleErrors: [],
@@ -173,7 +186,7 @@ export async function runBuildPipeline(options: {
         projectDir,
         manifest: serverlessManifest,
         inspectorState,
-        deployDir: providerDir,
+        deployDir: unitsDir,
         onProgress: (unitName, status, error) => {
           if (status === 'start') {
             logger.info(`  Codegen: ${unitName}...`)
@@ -188,7 +201,7 @@ export async function runBuildPipeline(options: {
 
     // Step 2b: Server units — single codegen pass with all server function IDs
     if (serverUnits.length > 0) {
-      const serverUnitName = 'server'
+      const serverUnitName = MERGED_SERVER_UNIT_NAME
 
       // Create a merged server unit with all server function IDs
       const mergedServerUnit: DeploymentManifest['units'][0] = {
@@ -209,7 +222,8 @@ export async function runBuildPipeline(options: {
           projectDir,
           manifest: serverManifest,
           inspectorState,
-          deployDir: providerDir,
+          deployDir: containerDir,
+          resolveUnitDir: () => containerDir,
           onProgress: (unitName, status, error) => {
             if (status === 'start') logger.info(`  Codegen: ${unitName}...`)
             else if (status === 'done')
@@ -240,7 +254,8 @@ export async function runBuildPipeline(options: {
       const pikkuDir = unitPikkuDirs.get(unit.name)
       if (!pikkuDir) continue
 
-      const unitDir = join(providerDir, unit.name)
+      const unitDir =
+        unit.target === 'server' ? containerDir : join(unitsDir, unit.name)
       const entryPath = join(unitDir, 'entry.ts')
       await mkdir(unitDir, { recursive: true })
 
@@ -262,6 +277,8 @@ export async function runBuildPipeline(options: {
         define: provider.getDefine?.(),
         platform: provider.getPlatform?.(),
         format: provider.getFormat?.(),
+        resolveOutputDir: (unit) =>
+          unit.target === 'server' ? containerDir : join(unitsDir, unit.name),
       }
     )
     bundled = bundleResult.results
@@ -280,9 +297,18 @@ export async function runBuildPipeline(options: {
   }
 
   // Step 4: Generate configs + infra manifest
+  await mkdir(providerDir, { recursive: true })
+  await writeFile(
+    deploymentManifestPath,
+    JSON.stringify(manifest, null, 2),
+    'utf-8'
+  )
+  logger.info('Generated deployment manifest')
+
   const infraContent = provider.generateInfraManifest(manifest)
   if (infraContent) {
-    await writeFile(join(providerDir, 'infra.json'), infraContent, 'utf-8')
+    infraPath = join(providerDir, 'infra.json')
+    await writeFile(infraPath, infraContent, 'utf-8')
     logger.info('Generated infrastructure manifest')
   }
 
@@ -297,7 +323,11 @@ export async function runBuildPipeline(options: {
 
   const lockfileSrc = findLockfile(projectDir)
   for (const unit of manifest.units) {
-    const unitDir = join(providerDir, unit.name)
+    const unitDir = provider.singleUnit
+      ? join(providerDir, unit.name)
+      : unit.target === 'server'
+        ? containerDir
+        : join(unitsDir, unit.name)
     await mkdir(unitDir, { recursive: true })
     const configs = provider.generateUnitConfigs(unit, manifest, projectId)
     for (const [filename, content] of configs) {
@@ -312,6 +342,8 @@ export async function runBuildPipeline(options: {
   return {
     manifest,
     providerDir,
+    deploymentManifestPath,
+    infraPath,
     projectId,
     bundled,
     bundleErrors,

@@ -62,10 +62,12 @@ export interface DeploymentUnit {
   bundleHash?: string
   /** Final bundle size in bytes (set by build pipeline) */
   bundleSizeBytes?: number
-  /** SHA-256 of sorted external package map (set by build pipeline) */
-  externalPackagesHash?: string
-  /** External runtime dependencies used by this unit (set by build pipeline) */
-  externalPackages?: Record<string, string>
+  /** SHA-256 of sorted exact dependency map (set by build pipeline) */
+  exactDependenciesHash?: string
+  /** Top-level exact runtime dependency versions for this unit (set by build pipeline) */
+  exactDependencies?: Record<string, string>
+  /** Top-level exact optional runtime dependency versions for this unit (set by build pipeline) */
+  exactOptionalDependencies?: Record<string, string>
 }
 
 export interface QueueDefinition {
