@@ -15,14 +15,14 @@ describe('pikku cli json output verifier', () => {
       repoRoot,
       'packages',
       'cli',
-      '.pikku',
-      'cli',
-      'pikku-cli.gen.ts'
+      'dist',
+      'bin',
+      'pikku.js'
     )
 
     const result = spawnSync(
       'node',
-      ['--import', 'tsx', pikkuCliEntry, 'all', '--output', 'json'],
+      [pikkuCliEntry, 'all', '--output', 'json'],
       {
         cwd: verifierRoot,
         encoding: 'utf-8',
