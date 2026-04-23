@@ -852,7 +852,11 @@ export async function runWorkflowGraph(
     triggerInput,
     inline ?? false,
     meta.graphHash,
-    wire ?? { type: 'unknown' }
+    wire ?? { type: 'unknown' },
+    {
+      deterministic: meta.deterministic,
+      plannedSteps: meta.plannedSteps,
+    }
   )
 
   if (inline) {

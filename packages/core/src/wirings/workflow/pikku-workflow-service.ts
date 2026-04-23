@@ -49,6 +49,7 @@ import type {
   PikkuWorkflowWire,
   StepState,
   StepStatus,
+  WorkflowPlannedStep,
   WorkflowRun,
   WorkflowRunStatus,
   WorkflowRunWire,
@@ -272,7 +273,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     input: any,
     inline: boolean,
     graphHash: string,
-    wire: WorkflowRunWire
+    wire: WorkflowRunWire,
+    options?: {
+      deterministic?: boolean
+      plannedSteps?: WorkflowPlannedStep[]
+    }
   ): Promise<string>
 
   /**
@@ -323,6 +328,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       status: run.status,
       startedAt: run.createdAt,
       completedAt: terminalStatuses.has(run.status) ? run.updatedAt : undefined,
+      deterministic: run.deterministic,
+      plannedSteps: run.plannedSteps,
       steps,
       output: run.status === 'completed' ? run.output : undefined,
       error: run.error
@@ -689,7 +696,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       input,
       shouldInline,
       workflowMeta.graphHash,
-      wire
+      wire,
+      {
+        deterministic: workflowMeta.deterministic,
+        plannedSteps: workflowMeta.plannedSteps,
+      }
     )
 
     if (shouldInline) {

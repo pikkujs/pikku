@@ -1,6 +1,7 @@
 import type { SerializedError } from '@pikku/core'
 import {
   PikkuWorkflowService,
+  type WorkflowPlannedStep,
   type WorkflowRun,
   type WorkflowRunWire,
   type StepState,
@@ -208,7 +209,11 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     input: any,
     inline: boolean,
     graphHash: string,
-    wire: WorkflowRunWire
+    wire: WorkflowRunWire,
+    options?: {
+      deterministic?: boolean
+      plannedSteps?: WorkflowPlannedStep[]
+    }
   ): Promise<string> {
     const id = randomUUID()
     const now = Date.now()
@@ -229,6 +234,10 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       inline ? 'true' : 'false',
       'graphHash',
       graphHash,
+      'deterministic',
+      options?.deterministic ? 'true' : 'false',
+      'plannedSteps',
+      options?.plannedSteps ? JSON.stringify(options.plannedSteps) : '',
       'wire',
       JSON.stringify(wire),
       'createdAt',
@@ -257,6 +266,10 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       error: data.error ? JSON.parse(data.error) : undefined,
       inline: data.inline === 'true' ? true : undefined,
       graphHash: data.graphHash || undefined,
+      deterministic: data.deterministic === 'true' ? true : undefined,
+      plannedSteps: data.plannedSteps
+        ? JSON.parse(data.plannedSteps)
+        : undefined,
       wire: data.wire ? JSON.parse(data.wire) : { type: 'unknown' },
       createdAt: new Date(Number(data.createdAt!)),
       updatedAt: new Date(Number(data.updatedAt!)),

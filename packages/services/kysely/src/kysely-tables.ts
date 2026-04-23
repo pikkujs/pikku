@@ -29,6 +29,8 @@ export interface WorkflowRunsTable {
   state: Generated<string>
   inline: Generated<boolean>
   graphHash: string | null
+  deterministic: Generated<boolean>
+  plannedSteps: string | null
   wire: string | null
   createdAt: Generated<Date>
   updatedAt: Generated<Date>

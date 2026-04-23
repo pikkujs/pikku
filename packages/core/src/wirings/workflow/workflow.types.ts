@@ -53,6 +53,11 @@ export interface WorkflowServiceConfig {
   sleeperRPCName: string
 }
 
+export interface WorkflowPlannedStep {
+  /** Human-readable step label for UI timeline */
+  stepName: string
+}
+
 /**
  * Workflow run status
  */
@@ -99,6 +104,10 @@ export interface WorkflowRun {
   inline?: boolean
   /** Graph hash of the workflow definition at run creation time */
   graphHash?: string
+  /** True when the workflow has a static, pre-computable step timeline */
+  deterministic?: boolean
+  /** Static planned steps snapshot captured at run start */
+  plannedSteps?: WorkflowPlannedStep[]
   /** Wire origin info (how this run was started) */
   wire: WorkflowRunWire
   /** Creation timestamp */
@@ -146,6 +155,8 @@ export interface WorkflowRunStatus {
   status: WorkflowStatus
   startedAt: Date
   completedAt?: Date
+  deterministic?: boolean
+  plannedSteps?: WorkflowPlannedStep[]
   steps: Array<{
     name: string
     status: StepStatus
@@ -270,6 +281,10 @@ export interface WorkflowRuntimeMeta {
   entryNodeIds?: string[]
   /** Hash of graph topology (nodes, edges, input mappings) */
   graphHash?: string
+  /** True when the workflow has a static, pre-computable step timeline */
+  deterministic?: boolean
+  /** Static planned steps metadata for deterministic workflows */
+  plannedSteps?: WorkflowPlannedStep[]
 }
 
 /**

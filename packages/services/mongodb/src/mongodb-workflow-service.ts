@@ -1,6 +1,7 @@
 import type { SerializedError } from '@pikku/core'
 import {
   PikkuWorkflowService,
+  type WorkflowPlannedStep,
   type WorkflowRun,
   type WorkflowRunWire,
   type StepState,
@@ -20,6 +21,8 @@ interface WorkflowRunDoc {
   state: Record<string, unknown>
   inline: boolean
   graphHash: string | null
+  deterministic?: boolean
+  plannedSteps?: WorkflowPlannedStep[]
   wire: any | null
   createdAt: Date
   updatedAt: Date
@@ -112,7 +115,11 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     input: any,
     inline: boolean,
     graphHash: string,
-    wire: WorkflowRunWire
+    wire: WorkflowRunWire,
+    options?: {
+      deterministic?: boolean
+      plannedSteps?: WorkflowPlannedStep[]
+    }
   ): Promise<string> {
     const id = crypto.randomUUID()
     const now = new Date()
@@ -127,6 +134,8 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
       state: {},
       inline,
       graphHash,
+      deterministic: options?.deterministic ?? false,
+      plannedSteps: options?.plannedSteps ?? [],
       wire,
       createdAt: now,
       updatedAt: now,
