@@ -75,13 +75,13 @@ ${addonImports}
 ${mergedRPCMap}
 
 export type RPCInvoke = <Name extends keyof FlattenedRPCMap>(
-  ...args: FlattenedRPCMap[Name]['input'] extends void | null
+  ...args: IsVoidishInput<FlattenedRPCMap[Name]['input']> extends true
     ? [name: Name]
     : [name: Name, data: FlattenedRPCMap[Name]['input']]
 ) => Promise<FlattenedRPCMap[Name]['output']>
 
 export type RPCRemote = <Name extends keyof FlattenedRPCMap>(
-  ...args: FlattenedRPCMap[Name]['input'] extends void | null
+  ...args: IsVoidishInput<FlattenedRPCMap[Name]['input']> extends true
     ? [name: Name]
     : [name: Name, data: FlattenedRPCMap[Name]['input']]
 ) => Promise<FlattenedRPCMap[Name]['output']>
@@ -159,6 +159,13 @@ function generateMergedRPCMap(
     return `
 // No addon packages, use RPCMap directly
 export type FlattenedRPCMap = RPCMap
+
+type IsAny<T> = 0 extends (1 & T) ? true : false
+type IsVoidishInput<T> = IsAny<T> extends true
+  ? false
+  : [T] extends [void | null | undefined]
+    ? true
+    : false
 `
   }
 
@@ -177,6 +184,13 @@ export type FlattenedRPCMap =
         ` & PrefixKeys<${toPascalCase(namespace)}RPCMap, '${namespace}'>`
     )
     .join('')}
+
+type IsAny<T> = 0 extends (1 & T) ? true : false
+type IsVoidishInput<T> = IsAny<T> extends true
+  ? false
+  : [T] extends [void | null | undefined]
+    ? true
+    : false
 `
 
   return utilityTypes
