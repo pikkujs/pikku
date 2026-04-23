@@ -32,15 +32,40 @@ function diffUnits(
       })
     } else if (
       !arraysEqual(existing.functionIds, desired.functionIds) ||
-      existing.role !== desired.role
+      existing.role !== desired.role ||
+      (typeof desired.bundleHash === 'string' &&
+        typeof existing.bundleHash === 'string' &&
+        desired.bundleHash !== existing.bundleHash) ||
+      (typeof desired.externalPackagesHash === 'string' &&
+        typeof existing.externalPackagesHash === 'string' &&
+        desired.externalPackagesHash !== existing.externalPackagesHash)
     ) {
+      const bundleChanged =
+        typeof desired.bundleHash === 'string' &&
+        typeof existing.bundleHash === 'string' &&
+        desired.bundleHash !== existing.bundleHash
+      const depsChanged =
+        typeof desired.externalPackagesHash === 'string' &&
+        typeof existing.externalPackagesHash === 'string' &&
+        desired.externalPackagesHash !== existing.externalPackagesHash
+
       changes.push({
         action: 'update',
         resourceType: 'unit',
         name: desired.name,
         role: desired.role,
-        reason: 'code changed',
-        details: { functionIds: desired.functionIds },
+        reason: bundleChanged
+          ? depsChanged
+            ? 'bundle + dependencies changed'
+            : 'bundle changed'
+          : depsChanged
+            ? 'dependencies changed'
+            : 'code changed',
+        details: {
+          functionIds: desired.functionIds,
+          bundleHash: desired.bundleHash,
+          externalPackagesHash: desired.externalPackagesHash,
+        },
       })
     }
   }

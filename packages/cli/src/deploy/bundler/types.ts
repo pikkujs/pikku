@@ -15,6 +15,8 @@ export interface BundleResult {
   packageJsonPath: string
   metafilePath: string
   bundleSizeBytes: number
+  bundleHash: string
+  externalPackagesHash: string
   externalPackages: Record<string, string>
 }
 

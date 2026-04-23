@@ -32,6 +32,22 @@ export interface BuildPipelineResult {
   codegenErrors: Array<{ unitName: string; error: string }>
 }
 
+function attachBundleMetadata(
+  manifest: DeploymentManifest,
+  bundled: BundleResult[]
+): void {
+  if (bundled.length === 0) return
+  const byUnitName = new Map(bundled.map((b) => [b.unitName, b]))
+  for (const unit of manifest.units) {
+    const bundle = byUnitName.get(unit.name)
+    if (!bundle) continue
+    unit.bundleHash = bundle.bundleHash
+    unit.bundleSizeBytes = bundle.bundleSizeBytes
+    unit.externalPackagesHash = bundle.externalPackagesHash
+    unit.externalPackages = bundle.externalPackages
+  }
+}
+
 function findLockfile(projectDir: string): string | null {
   for (const name of ['yarn.lock', 'package-lock.json', 'pnpm-lock.yaml']) {
     const p = join(projectDir, name)
@@ -121,13 +137,16 @@ export async function runBuildPipeline(options: {
     )
     bundled = bundleResult.results
     bundleErrors = bundleResult.errors
+    attachBundleMetadata(manifest, bundled)
 
     logger.info(
       `Bundled standalone${bundleErrors.length > 0 ? ` (${bundleErrors.length} errors)` : ''}`
     )
   } else {
     // Multi-unit mode: per-function decomposition
-    const serverlessUnits = manifest.units.filter((u) => u.target === 'serverless')
+    const serverlessUnits = manifest.units.filter(
+      (u) => u.target === 'serverless'
+    )
     const serverUnits = manifest.units.filter((u) => u.target === 'server')
 
     logger.info(
@@ -149,8 +168,8 @@ export async function runBuildPipeline(options: {
     // Server units share a single codegen pass (step 2b).
     const serverlessManifest = { ...manifest, units: serverlessUnits }
     logger.info('Generating per-unit codegen...')
-    const { unitPikkuDirs, errors: serverlessCodegenErrors } = await generatePerUnitCodegen(
-      {
+    const { unitPikkuDirs, errors: serverlessCodegenErrors } =
+      await generatePerUnitCodegen({
         projectDir,
         manifest: serverlessManifest,
         inspectorState,
@@ -164,8 +183,7 @@ export async function runBuildPipeline(options: {
             logger.error(`  Codegen: ${unitName} failed — ${error}`)
           }
         },
-      }
-    )
+      })
     codegenErrors = serverlessCodegenErrors
 
     // Step 2b: Server units — single codegen pass with all server function IDs
@@ -194,8 +212,10 @@ export async function runBuildPipeline(options: {
           deployDir: providerDir,
           onProgress: (unitName, status, error) => {
             if (status === 'start') logger.info(`  Codegen: ${unitName}...`)
-            else if (status === 'done') logger.info(`  Codegen: ${unitName} done`)
-            else if (status === 'error') logger.error(`  Codegen: ${unitName} failed — ${error}`)
+            else if (status === 'done')
+              logger.info(`  Codegen: ${unitName} done`)
+            else if (status === 'error')
+              logger.error(`  Codegen: ${unitName} failed — ${error}`)
           },
         })
 
@@ -205,7 +225,9 @@ export async function runBuildPipeline(options: {
       // Replace individual server units with the merged one in the manifest
       manifest.units = [...serverlessUnits, mergedServerUnit]
 
-      logger.info(`  Server container: ${serverUnits.length} functions merged into one unit`)
+      logger.info(
+        `  Server container: ${serverUnits.length} functions merged into one unit`
+      )
     }
 
     logger.info(`Codegen complete: ${unitPikkuDirs.size} units`)
@@ -244,6 +266,7 @@ export async function runBuildPipeline(options: {
     )
     bundled = bundleResult.results
     bundleErrors = bundleResult.errors
+    attachBundleMetadata(manifest, bundled)
 
     logger.info(
       `Bundled ${bundled.length} units${bundleErrors.length > 0 ? ` (${bundleErrors.length} failed)` : ''}`

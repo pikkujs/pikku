@@ -13,6 +13,7 @@
 import { build, type Plugin } from 'esbuild'
 import { writeFile, mkdir, stat, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { createHash } from 'node:crypto'
 
 import {
   extractDependencies,
@@ -150,9 +151,12 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
   // esbuild wraps these as __require() which fails at runtime in ESM.
   // The banner shims require via createRequire so CJS builtins resolve.
   const resolvedFormat = format ?? 'esm'
-  const banner = resolvedFormat === 'esm' && (platform ?? 'node') === 'node'
-    ? { js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);` }
-    : undefined
+  const banner =
+    resolvedFormat === 'esm' && (platform ?? 'node') === 'node'
+      ? {
+          js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);`,
+        }
+      : undefined
 
   const result = await build({
     entryPoints: [entryPath],
@@ -190,6 +194,15 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
 
   // Get bundle size
   const bundleStat = await stat(bundlePath)
+  const bundleContents = await readFile(bundlePath)
+  const bundleHash = createHash('sha256').update(bundleContents).digest('hex')
+  const externalPackagesHash = createHash('sha256')
+    .update(
+      JSON.stringify(
+        Object.entries(dependencies).sort(([a], [b]) => a.localeCompare(b))
+      )
+    )
+    .digest('hex')
 
   return {
     unitName: unit.name,
@@ -197,6 +210,8 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     packageJsonPath,
     metafilePath,
     bundleSizeBytes: bundleStat.size,
+    bundleHash,
+    externalPackagesHash,
     externalPackages: dependencies,
   }
 }
