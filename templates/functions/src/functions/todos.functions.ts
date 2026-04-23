@@ -1,4 +1,7 @@
-import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
+import {
+  pikkuSessionlessFunc,
+  pikkuListFunc,
+} from '../../.pikku/pikku-types.gen.js'
 import {
   ListTodosWithUserInputSchema,
   CreateTodoWithUserInputSchema,
@@ -139,5 +142,27 @@ export const completeTodo = pikkuSessionlessFunc({
     }
 
     return { todo: todo || null, success: !!todo }
+  },
+})
+
+/**
+ * List todos using standard list-function shape (rows + cursor).
+ */
+export const listTodoRows = pikkuListFunc<
+  {
+    userId: string
+    completed: boolean
+    priority: 'low' | 'medium' | 'high'
+  },
+  import('../schemas.js').Todo
+>({
+  func: async ({ todoStore }, data) => {
+    const limit = data.limit ?? 20
+    const todos = todoStore.getTodosByUser('user1').slice(0, limit)
+    return {
+      rows: todos,
+      nextCursor: null,
+      totalCount: todos.length,
+    }
   },
 })

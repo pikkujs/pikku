@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuListFunc, pikkuSessionlessFunc } from '#pikku'
 
 export const rpcTest = pikkuSessionlessFunc<{ in: number }>({
   func: async ({ logger }, data, { rpc }) => {
@@ -12,14 +12,14 @@ export const rpcTest = pikkuSessionlessFunc<{ in: number }>({
   expose: true,
 })
 
-export const listItems = pikkuSessionlessFunc<
-  { limit: number; nextCursor?: string },
-  { items: string[]; nextCursor?: string }
+export const listItems = pikkuListFunc<
+  { category?: string },
+  { id: string; label: string }
 >({
   func: async (_services, data) => {
     return {
-      items: [`item-${data.limit}`],
-      nextCursor: data.nextCursor ? undefined : 'next',
+      rows: [{ id: `item-${data.limit ?? 1}`, label: 'item' }],
+      nextCursor: data.cursor ? null : 'next',
     }
   },
   expose: true,
