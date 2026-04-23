@@ -9,7 +9,7 @@ import {
 import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { extractUsedWires } from '../utils/extract-services.js'
 import type { FunctionServicesMeta } from '@pikku/core'
-import { formatVersionedId } from '@pikku/core'
+import { formatVersionedId, parseVersionedId } from '@pikku/core'
 import {
   getPropertyValue,
   getCommonWireMetaData,
@@ -296,6 +296,20 @@ const resolveExistingFunctionSource = (
     state.rpc.internalFiles.get(pikkuFuncId)?.path ||
     null
   )
+}
+
+const areCompatibleFunctionIds = (
+  existingId: string,
+  incomingId: string
+): boolean => {
+  if (existingId === incomingId) {
+    return true
+  }
+
+  const existingParsed = parseVersionedId(existingId)
+  const incomingParsed = parseVersionedId(incomingId)
+
+  return existingParsed.baseName === incomingParsed.baseName
 }
 
 /**
@@ -759,7 +773,10 @@ export const addFunctions: AddWiring = (
 
   if (exportedName || explicitName) {
     const existingInternal = state.rpc.internalMeta[name]
-    if (existingInternal && existingInternal !== pikkuFuncId) {
+    if (
+      existingInternal &&
+      !areCompatibleFunctionIds(existingInternal, pikkuFuncId)
+    ) {
       const existingSource =
         resolveExistingFunctionSource(state, existingInternal) || 'unknown file'
       logger.critical(
@@ -772,7 +789,10 @@ export const addFunctions: AddWiring = (
 
     if (expose) {
       const existingExposed = state.rpc.exposedMeta[name]
-      if (existingExposed && existingExposed !== pikkuFuncId) {
+      if (
+        existingExposed &&
+        !areCompatibleFunctionIds(existingExposed, pikkuFuncId)
+      ) {
         const existingSource =
           resolveExistingFunctionSource(state, existingExposed) ||
           'unknown file'
