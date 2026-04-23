@@ -45,7 +45,6 @@ export const createTodo = pikkuSessionlessFunc({
   description:
     'Create a new todo item with title, description, priority, dueDate, and tags',
   mcp: true,
-  deploy: 'server',
   input: CreateTodoWithUserInputSchema,
   output: CreateTodoOutputSchema,
   func: async (
