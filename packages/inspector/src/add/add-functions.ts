@@ -1,5 +1,5 @@
 import * as ts from 'typescript'
-import type { AddWiring, SchemaRef } from '../types.js'
+import type { AddWiring, InspectorState, SchemaRef } from '../types.js'
 import { detectSchemaVendorOrError } from '../utils/detect-schema-vendor.js'
 import type { TypesMap } from '../types-map.js'
 import {
@@ -9,7 +9,7 @@ import {
 import { extractFunctionNode } from '../utils/extract-function-node.js'
 import { extractUsedWires } from '../utils/extract-services.js'
 import type { FunctionServicesMeta } from '@pikku/core'
-import { formatVersionedId } from '@pikku/core'
+import { formatVersionedId, parseVersionedId } from '@pikku/core'
 import {
   getPropertyValue,
   getCommonWireMetaData,
@@ -285,6 +285,31 @@ function unwrapPromise(checker: ts.TypeChecker, type: ts.Type): ts.Type {
   }
 
   return type
+}
+
+const resolveExistingFunctionSource = (
+  state: InspectorState,
+  pikkuFuncId: string
+): string | null => {
+  return (
+    state.functions.meta[pikkuFuncId]?.sourceFile ||
+    state.rpc.internalFiles.get(pikkuFuncId)?.path ||
+    null
+  )
+}
+
+const areCompatibleFunctionIds = (
+  existingId: string,
+  incomingId: string
+): boolean => {
+  if (existingId === incomingId) {
+    return true
+  }
+
+  const existingParsed = parseVersionedId(existingId)
+  const incomingParsed = parseVersionedId(incomingId)
+
+  return existingParsed.baseName === incomingParsed.baseName
 }
 
 /**
@@ -731,6 +756,56 @@ export const addFunctions: AddWiring = (
     state.typesLookup.set(pikkuFuncId, inputTypes)
   }
 
+  const sourceFile = node.getSourceFile().fileName
+  const existingFunction = state.functions.meta[pikkuFuncId]
+  if (
+    existingFunction &&
+    existingFunction.sourceFile &&
+    existingFunction.sourceFile !== sourceFile
+  ) {
+    logger.critical(
+      ErrorCode.DUPLICATE_FUNCTION_NAME,
+      `Function name '${name}' is not unique. ` +
+        `'${pikkuFuncId}' is already defined in '${existingFunction.sourceFile}' and cannot be redefined in '${sourceFile}'.`
+    )
+    return
+  }
+
+  if (exportedName || explicitName) {
+    const existingInternal = state.rpc.internalMeta[name]
+    if (
+      existingInternal &&
+      !areCompatibleFunctionIds(existingInternal, pikkuFuncId)
+    ) {
+      const existingSource =
+        resolveExistingFunctionSource(state, existingInternal) || 'unknown file'
+      logger.critical(
+        ErrorCode.DUPLICATE_FUNCTION_NAME,
+        `Function name '${name}' is not unique. ` +
+          `It already points to '${existingInternal}' in '${existingSource}', but '${pikkuFuncId}' in '${sourceFile}' tried to use the same name.`
+      )
+      return
+    }
+
+    if (expose) {
+      const existingExposed = state.rpc.exposedMeta[name]
+      if (
+        existingExposed &&
+        !areCompatibleFunctionIds(existingExposed, pikkuFuncId)
+      ) {
+        const existingSource =
+          resolveExistingFunctionSource(state, existingExposed) ||
+          'unknown file'
+        logger.critical(
+          ErrorCode.DUPLICATE_FUNCTION_NAME,
+          `Exposed function name '${name}' is not unique. ` +
+            `It already points to '${existingExposed}' in '${existingSource}', but '${pikkuFuncId}' in '${sourceFile}' tried to use the same name.`
+        )
+        return
+      }
+    }
+  }
+
   // --- resolve middleware ---
   let middleware = objectNode
     ? resolveMiddleware(state, objectNode, tags, checker)
@@ -801,7 +876,7 @@ export const addFunctions: AddWiring = (
     middleware,
     permissions,
     isDirectFunction,
-    sourceFile: node.getSourceFile().fileName,
+    sourceFile,
     exportedName: exportedName || undefined,
   }
 
