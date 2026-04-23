@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { inspect } from '../inspector.js'
 import { ErrorCode } from '../error-codes.js'
+import type { InspectorLogger } from '../types.js'
 
 describe('addFunctions duplicate name handling', () => {
   test('logs a critical error when function name is duplicated across files', async () => {
@@ -32,15 +33,16 @@ describe('addFunctions duplicate name handling', () => {
       ].join('\n')
     )
 
-    const criticals: Array<{ code: string; message: string }> = []
-    const logger = {
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    const logger: InspectorLogger = {
       debug: () => {},
       info: () => {},
       warn: () => {},
       error: () => {},
-      critical: (code: string, message: string) => {
+      critical: (code: ErrorCode, message: string) => {
         criticals.push({ code, message })
       },
+      hasCriticalErrors: () => criticals.length > 0,
     }
 
     try {
@@ -49,7 +51,7 @@ describe('addFunctions duplicate name handling', () => {
         (entry) => entry.code === ErrorCode.DUPLICATE_FUNCTION_NAME
       )
       assert.ok(nameCollision)
-      assert.match(nameCollision.message, /createUser/)
+      assert.match(nameCollision!.message, /createUser/)
       assert.strictEqual(state.rpc.internalMeta['createUser'], 'createUser')
     } finally {
       await rm(rootDir, { recursive: true, force: true })
@@ -83,15 +85,16 @@ describe('addFunctions duplicate name handling', () => {
       ].join('\n')
     )
 
-    const criticals: Array<{ code: string; message: string }> = []
-    const logger = {
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    const logger: InspectorLogger = {
       debug: () => {},
       info: () => {},
       warn: () => {},
       error: () => {},
-      critical: (code: string, message: string) => {
+      critical: (code: ErrorCode, message: string) => {
         criticals.push({ code, message })
       },
+      hasCriticalErrors: () => criticals.length > 0,
     }
 
     try {
@@ -103,6 +106,62 @@ describe('addFunctions duplicate name handling', () => {
       assert.strictEqual(state.rpc.internalMeta['createUser'], 'createUser@v2')
       assert.ok(state.functions.meta['createUser@v1'])
       assert.ok(state.functions.meta['createUser@v2'])
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test('logs a critical error when exposed function name is duplicated across files', async () => {
+    const rootDir = await mkdtemp(
+      join(tmpdir(), 'pikku-exposed-duplicate-function-')
+    )
+    const fileA = join(rootDir, 'a.ts')
+    const fileB = join(rootDir, 'b.ts')
+
+    await writeFile(
+      fileA,
+      [
+        "import { pikkuFunc } from '@pikku/core'",
+        'export const createUser = pikkuFunc({',
+        '  expose: true,',
+        '  func: async () => ({ ok: true })',
+        '})',
+      ].join('\n')
+    )
+
+    await writeFile(
+      fileB,
+      [
+        "import { pikkuFunc } from '@pikku/core'",
+        'export const createUser = pikkuFunc({',
+        '  expose: true,',
+        '  func: async () => ({ ok: true })',
+        '})',
+      ].join('\n')
+    )
+
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    const logger: InspectorLogger = {
+      debug: () => {},
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      critical: (code: ErrorCode, message: string) => {
+        criticals.push({ code, message })
+      },
+      hasCriticalErrors: () => criticals.length > 0,
+    }
+
+    try {
+      await inspect(logger, [fileA, fileB], { rootDir })
+      const nameCollision = criticals.find(
+        (entry) => entry.code === ErrorCode.DUPLICATE_FUNCTION_NAME
+      )
+      assert.ok(nameCollision)
+      assert.match(
+        nameCollision!.message,
+        /Function name 'createUser' is not unique/
+      )
     } finally {
       await rm(rootDir, { recursive: true, force: true })
     }
