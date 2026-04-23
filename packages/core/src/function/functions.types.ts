@@ -74,15 +74,8 @@ export type CorePikkuFunctionSessionless<
 export type CorePikkuPermission<
   In = any,
   Services extends CoreSingletonServices = CoreServices,
-  Wire extends PikkuWire<
-    In,
-    never,
-    false,
-    CoreUserSession,
-    any,
-    never,
-    never
-  > = PikkuWire<In, never, false, CoreUserSession, never, never, never>,
+  Wire extends PikkuWire<In, never, false, CoreUserSession, any, never, never> =
+    PikkuWire<In, never, false, CoreUserSession, never, never, never>,
 > = (services: Services, data: In, wire: Wire) => Promise<boolean>
 
 /**
@@ -269,11 +262,8 @@ export type CorePikkuFunctionConfig<
   PikkuFunction extends
     | CorePikkuFunction<any, any, any, any, any>
     | CorePikkuFunctionSessionless<any, any, any, any, any>,
-  PikkuPermission extends CorePikkuPermission<
-    any,
-    any,
-    any
-  > = CorePikkuPermission<any>,
+  PikkuPermission extends CorePikkuPermission<any, any, any> =
+    CorePikkuPermission<any>,
   PikkuMiddleware extends CorePikkuMiddleware<any, any> = CorePikkuMiddleware<
     any,
     any
@@ -292,6 +282,7 @@ export type CorePikkuFunctionConfig<
   remote?: boolean
   mcp?: boolean
   readonly?: boolean
+  deploy?: 'serverless' | 'server' | 'auto'
   approvalRequired?: boolean
   approvalDescription?: any
   func: PikkuFunction
