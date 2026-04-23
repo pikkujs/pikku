@@ -29,39 +29,56 @@ describe('pikkuVersionsUpdate', () => {
     assert.match(warnings[0]!, /pikku versions init/)
   })
 
-  test('logs critical on FUNCTION_VERSION_MODIFIED drift and returns', async () => {
+  test('logs critical on FUNCTION_VERSION_MODIFIED drift and exits non-zero', async () => {
     const warnings: string[] = []
     const criticals: Array<{ code: string; message: string }> = []
+    const exits: Array<string | number | null | undefined> = []
+    const originalExit = process.exit
 
-    await (pikkuVersionsUpdate as any).func(
-      {
-        logger: {
-          warn: (msg: string) => warnings.push(msg),
-          critical: (code: string, message: string) =>
-            criticals.push({ code, message }),
-          debug: () => {},
-        },
-        config: { rootDir: '/tmp' },
-        getInspectorState: async () => ({
-          manifest: {
-            initial: { manifestVersion: 1, contracts: {} },
-            current: { manifestVersion: 1, contracts: {} },
-            errors: [
-              {
-                code: ErrorCode.FUNCTION_VERSION_MODIFIED,
-                message: 'published contract changed',
+    process.exit = ((code?: string | number | null | undefined) => {
+      exits.push(code)
+      throw new Error('process.exit called')
+    }) as typeof process.exit
+
+    try {
+      await assert.rejects(
+        () =>
+          (pikkuVersionsUpdate as any).func(
+            {
+              logger: {
+                warn: (msg: string) => warnings.push(msg),
+                critical: (code: string, message: string) =>
+                  criticals.push({ code, message }),
+                hasCriticalErrors: () => criticals.length > 0,
+                debug: () => {},
               },
-            ],
-          },
-        }),
-      },
-      undefined,
-      {}
-    )
+              config: { rootDir: '/tmp' },
+              getInspectorState: async () => ({
+                manifest: {
+                  initial: { manifestVersion: 1, contracts: {} },
+                  current: { manifestVersion: 1, contracts: {} },
+                  errors: [
+                    {
+                      code: ErrorCode.FUNCTION_VERSION_MODIFIED,
+                      message: 'published contract changed',
+                    },
+                  ],
+                },
+              }),
+            },
+            undefined,
+            {}
+          ),
+        /process\.exit called/
+      )
+    } finally {
+      process.exit = originalExit
+    }
 
     assert.equal(warnings.length, 0)
     assert.equal(criticals.length, 1)
     assert.equal(criticals[0]!.code, ErrorCode.FUNCTION_VERSION_MODIFIED)
     assert.equal(criticals[0]!.message, 'published contract changed')
+    assert.deepEqual(exits, [1])
   })
 })

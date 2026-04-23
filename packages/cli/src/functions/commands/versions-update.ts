@@ -20,6 +20,9 @@ export const pikkuVersionsUpdate = pikkuSessionlessFunc<void, void>({
       for (const e of immutabilityErrors) {
         logger.critical(ErrorCode.FUNCTION_VERSION_MODIFIED, e.message)
       }
+      if (logger.hasCriticalErrors()) {
+        process.exit(1)
+      }
       return
     }
 
