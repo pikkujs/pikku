@@ -13,6 +13,4 @@ export const createSingletonServices = pikkuAddonServices(
   async (_config, services) => services
 )
 
-export const createWireServices = pikkuAddonWireServices(
-  async (services) => services
-)
+export const createWireServices = pikkuAddonWireServices(async () => ({}))
