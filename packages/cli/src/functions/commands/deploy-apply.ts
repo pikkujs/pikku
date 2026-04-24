@@ -7,6 +7,7 @@ import type {
   EntryGenerationContext,
 } from '../../deploy/provider-adapter.js'
 import type { InspectorState } from '@pikku/inspector'
+import type { Logger } from '@pikku/core/services'
 import { runBuildPipeline } from '../../deploy/build-pipeline.js'
 
 function toRelativeImport(fromDir: string, toFile: string): string {
@@ -148,7 +149,6 @@ export async function resolveProvider(
 
 const ANSI = {
   green: '\x1b[32m',
-  red: '\x1b[31m',
   bold: '\x1b[1m',
   reset: '\x1b[0m',
 }
@@ -166,7 +166,7 @@ async function writeResultFile(
 async function runDeploy(
   provider: ProviderAdapter,
   providerDir: string,
-  logger: { info(msg: string): void; error(msg: string): void },
+  logger: Logger,
   resultFile?: string
 ): Promise<void> {
   if (typeof provider.deploy !== 'function') {
@@ -191,8 +191,12 @@ async function runDeploy(
     deployResult = await provider.deploy({
       buildDir: providerDir,
       logger,
-      onProgress: (_step: string, _detail: string) => {
-        process.stdout.write(` ${ANSI.green}done${ANSI.reset}\n`)
+      onProgress: (step: string, detail: string) => {
+        logger.info({
+          message: `[${step}] ${detail}`,
+          type: 'progress',
+          data: { progress: { step, detail } },
+        })
       },
     })
   } catch (err) {
@@ -205,7 +209,6 @@ async function runDeploy(
 
   await writeResultFile(resultFile, deployResult)
 
-  console.log('')
   if (deployResult.success) {
     logger.info(`${ANSI.green}${ANSI.bold}Deployment complete.${ANSI.reset}`)
     logger.info(

@@ -154,6 +154,14 @@ export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
   // --silent > --loglevel > --verbose > --info > default (warn)
   let logLevel: LogLevel = LogLevel.warn // default
   let isSilent = false
+  // --output is constrained to 'text' | 'json' by the CLI parser
+  // (choices + default in cli.wiring.ts), so no runtime validation
+  // is needed here. --json is kept as an alias that forces 'json'.
+  const outputMode: 'text' | 'json' = (data as any).json
+    ? 'json'
+    : ((data as any).output as 'text' | 'json')
+
+  logger.setOutputMode(outputMode)
 
   if ((data as any).silent) {
     logLevel = LogLevel.critical
@@ -177,7 +185,7 @@ export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
   logger.setSilent(isSilent)
 
   // Display logo unless in silent mode
-  if (!isSilent) {
+  if (!isSilent && outputMode !== 'json') {
     logger.logLogo()
   }
 

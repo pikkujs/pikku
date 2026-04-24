@@ -34,6 +34,6 @@
     "ncu": "npx npm-check-updates",
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "pikku": "pikku",
-    "test": "pikku && tsc && npx tsx src/start.ts"
+    "test": "pikku && tsc && npx tsx src/start.ts && node --import tsx --test src/tests/cli-json-output.assert.ts"
   }
 }
