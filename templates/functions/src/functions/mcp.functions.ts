@@ -22,6 +22,8 @@ const formatTodo = (todo: Todo): string => {
  * MCP Tool: Create a new todo item.
  */
 export const createTodoTool = pikkuMCPToolFunc({
+  description:
+    'Create a todo item with title, optional details, priority, due date, and tags',
   input: CreateTodoWithUserInputSchema,
   func: async (_services, input, { rpc }) => {
     const result = await rpc.invoke('createTodo', input)

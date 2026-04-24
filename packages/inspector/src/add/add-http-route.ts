@@ -18,6 +18,7 @@ import { resolveHTTPMiddlewareFromObject } from '../utils/middleware.js'
 import { resolveHTTPPermissionsFromObject } from '../utils/permissions.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { ensureFunctionMetadata } from '../utils/ensure-function-metadata.js'
+import { resolveFunctionMeta } from '../utils/resolve-function-meta.js'
 import { ErrorCode } from '../error-codes.js'
 import { validateAuthSessionless } from '../utils/validate-auth-sessionless.js'
 import { detectSchemaVendorOrError } from '../utils/detect-schema-vendor.js'
@@ -204,6 +205,22 @@ export function registerHTTPRoute({
     funcName = makeContextBasedId('http', method, fullRoute)
   }
 
+  let refAddonTarget: string | null = null
+  if (
+    ts.isCallExpression(funcInitializer) &&
+    ts.isIdentifier(funcInitializer.expression) &&
+    funcInitializer.expression.text === 'ref'
+  ) {
+    const [firstArg] = funcInitializer.arguments
+    if (
+      firstArg &&
+      ts.isStringLiteral(firstArg) &&
+      firstArg.text.includes(':')
+    ) {
+      refAddonTarget = firstArg.text
+    }
+  }
+
   const packageName = ts.isIdentifier(funcInitializer)
     ? resolveAddonName(
         funcInitializer,
@@ -211,6 +228,16 @@ export function registerHTTPRoute({
         state.rpc.wireAddonDeclarations
       )
     : null
+
+  if (refAddonTarget) {
+    const targetMeta = resolveFunctionMeta(state, refAddonTarget)
+    if (!targetMeta) {
+      logger.warn(
+        `Skipping route '${fullRoute}': addon function metadata for '${refAddonTarget}' is not available yet.`
+      )
+      return
+    }
+  }
 
   ensureFunctionMetadata(
     state,
@@ -222,7 +249,7 @@ export function registerHTTPRoute({
   )
 
   // Lookup existing function metadata
-  const fnMeta = state.functions.meta[funcName]
+  const fnMeta = resolveFunctionMeta(state, funcName)
   if (!fnMeta) {
     logger.critical(
       ErrorCode.FUNCTION_METADATA_NOT_FOUND,

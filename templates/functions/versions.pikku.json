@@ -393,7 +393,7 @@
       "versions": {
         "1": {
           "inputHash": "458ba7ec",
-          "outputHash": "d2d8634b"
+          "outputHash": "bc4d864f"
         }
       }
     },
@@ -402,7 +402,16 @@
       "versions": {
         "1": {
           "inputHash": "c6ee79ff",
-          "outputHash": "abcc7eb7"
+          "outputHash": "6180f124"
+        }
+      }
+    },
+    "workflowStatusStreamFull": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "2da90ff6",
+          "outputHash": "dcd02549"
         }
       }
     }
