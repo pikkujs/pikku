@@ -7,7 +7,8 @@
  * string from AzureWebJobsStorage.
  */
 
-import { QueueClient, QueueServiceClient } from '@azure/storage-queue'
+import { QueueServiceClient } from '@azure/storage-queue'
+import type { QueueClient } from '@azure/storage-queue'
 import type { QueueService, QueueJob, JobOptions } from '@pikku/core/queue'
 
 export class AzureQueueService implements QueueService {

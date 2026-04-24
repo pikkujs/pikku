@@ -17,8 +17,7 @@ import { PikkuFetchHTTPRequest, PikkuFetchHTTPResponse } from '@pikku/core/http'
 import crypto from 'crypto'
 export abstract class CloudflareWebSocketHibernationServer<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
-> implements DurableObject
-{
+> implements DurableObject {
   private eventHub: CloudflareEventHubService<{}> | undefined
   private channelStore: CloudflareWebsocketStore
 
@@ -52,7 +51,7 @@ export abstract class CloudflareWebSocketHibernationServer<
         response,
         bubbleErrors: true,
       })
-    } catch (e) {
+    } catch {
       server.close(1008, 'Unauthorized')
       return new Response(null, { status: 403 }) as any
     }

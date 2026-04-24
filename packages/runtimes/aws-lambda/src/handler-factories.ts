@@ -7,6 +7,7 @@
 
 import { LocalVariablesService, LocalSecretService } from '@pikku/core/services'
 import type { CoreSingletonServices } from '@pikku/core'
+import type { ChannelStore } from '@pikku/core/channel'
 import { runFetchV2 } from './http/run-fetch-v2.js'
 import { runSQSQueueWorker } from './queue/sqs-worker.js'
 import { runLambdaScheduled } from './scheduled/run-scheduled.js'
@@ -133,7 +134,7 @@ export function createLambdaWebSocketHandler(
       throw new Error('Services not initialized for WebSocket handler')
     }
     const channelStore = (cachedServices as unknown as Record<string, unknown>)
-      .channelStore as import('@pikku/core/channel').ChannelStore | undefined
+      .channelStore as ChannelStore | undefined
     if (!channelStore) {
       throw new Error(
         'channelStore not found in singleton services. Ensure it is configured for channel units.'
