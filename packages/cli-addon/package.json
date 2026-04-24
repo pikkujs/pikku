@@ -23,8 +23,8 @@
   "scripts": {
     "tsc": "tsc",
     "schema": "ts-json-schema-generator -o cli.schema.json --path 'src/utils/pikku-cli-config.ts' --type 'PikkuCLIConfig'",
-    "prebuild": "npx -y @pikku/cli@latest all",
-    "build": "tsc && cp -r .pikku dist/",
+    "prebuild": "npx -y @pikku/cli@latest all && node ./scripts/patch-gen.js",
+    "build": "tsc && cp -r .pikku dist/ && cp -r types dist/",
     "ncu": "npx npm-check-updates -x '/.*glob.*/'",
     "release": "yarn build && npm test",
     "test": "bash run-tests.sh",

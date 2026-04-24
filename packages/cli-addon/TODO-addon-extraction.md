@@ -69,9 +69,26 @@ Separate from the extraction — cli-addon has `pikkuWorkflowComplexFunc` workfl
 
 ## 6. Build flow
 
-- `cli-addon`: `prebuild: npx @pikku/cli@latest all` + `build: tsc && cp -r .pikku dist/` (the `cp` step is needed because tsc doesn't copy pre-existing `.d.ts` files that the consumer needs for cross-package type resolution, e.g. `pikku-rpc-wirings-map.internal.gen.d.ts`).
+- `cli-addon`: `prebuild: npx @pikku/cli@latest all && node scripts/patch-gen.js`, `build: tsc && cp -r .pikku dist/ && cp -r types dist/`.
 - `cli`: same prebuild/build pattern. No sed patches for now.
+- `scripts/patch-gen.js` exists because the published @pikku/cli's codegen doesn't yet emit a `@ts-expect-error` directive on the mismatched `createSingletonServices` factory entry. Once `@pikku/cli` ships the upstream `serialize-package.ts` change (included in this branch), the patch becomes a no-op and the whole script can be deleted.
 - Long-term: once cli's own `pikku` binary is stable, switch cli-addon's prebuild to run against it (self-bootstrap) instead of npx — avoids published-version drift.
+
+### 6b. Duplicate-type detection through yarn-workspace symlinks (CI blocker)
+
+The published `@pikku/cli` inspector, when scanning `cli/`, finds type declarations (`Config`, `SingletonServices`, `Services`, `UserSession`) in **both**:
+- `cli/types/application-types.d.ts` (cli's own)
+- `cli-addon/types/application-types.d.ts` (reached through the symlinked `cli/node_modules/@pikku/cli-addon/`)
+
+Result: `More than one CoreSingletonServices found` — inspector refuses to pick a winner and the `pikku all` workflow fails inside its inspection step. This happens whenever cli-addon's `.pikku/` is freshly generated; it did not happen with the carryover `.pikku/` we inherited from the pre-refactor cli package (because that `.pikku/` predated cli-addon's types/ being a distinct file at all).
+
+Root cause (likely): the inspector's source-file filter at `packages/inspector/src/inspector.ts:255-257` (`sf.fileName.startsWith(rootDir)`) does not account for yarn-workspace symlinks. When TypeScript resolves imports it follows symlinks to realpath, so symlink-resolved addon source files either pass the filter (because they share some path prefix with rootDir within the monorepo) or the deduper runs at a level earlier than the filter.
+
+Fix paths:
+- **Inspector-side (preferred):** exclude `node_modules/**` realpaths, or compare against each workspace's realpath rather than the raw rootDir. Needs to handle both symlinked and installed package layouts.
+- **Codegen-side:** emit package-relative imports (`'@pikku/cli-addon/types/application-types.js'`) in cli-addon's `.pikku/*.gen.ts` files instead of relative paths (`'../../types/application-types.d.js'`). Would sidestep most symlink-resolution ambiguity and also make the dist layout cleaner (no need for `cp -r types dist/`).
+
+**Until one of these ships, `yarn prebuild` on cli will fail the inner `allWorkflow` with duplicate-type errors.** The runtime binary can still be built if cli's `.pikku/` is carried over from a known-good generation (as we had at commit 5e7c2a9d). Green CI is blocked on one of the above upstream fixes.
 
 ## 7. Type errors in services.ts after hydration
 

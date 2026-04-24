@@ -49,6 +49,12 @@ export const serializePackageFactories = (
     imports.push(
       `import { ${singletonServicesFactory.variable} as createSingletonServices } from '${filePath}'`
     )
+    // Addon factories are typed against the addon's own Config/SingletonServices,
+    // while PikkuPackageState['package']['factories'] uses base Core* types.
+    // Runtime behavior is correct; the suppression is scoped to this one line.
+    factoryEntries.push(
+      `  // @ts-expect-error addon factories don't fit base PikkuPackageState factory types`
+    )
     factoryEntries.push(`  createSingletonServices,`)
   }
 
@@ -81,6 +87,8 @@ export const serializePackageFactories = (
 
   return `${imports.join('\n')}
 
+// @ts-expect-error Addon factories are typed against the addon's own Config/SingletonServices,
+// while PikkuPackageState['package']['factories'] uses base Core* types. Runtime behavior is correct.
 pikkuState('${packageName}', 'package', 'factories', {
 ${factoryEntries.join('\n')}
 })
