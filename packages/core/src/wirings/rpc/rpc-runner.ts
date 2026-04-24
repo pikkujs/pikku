@@ -54,17 +54,23 @@ export const resolveNamespace = (
   }
 }
 
-const getPikkuFunctionName = (
+/**
+ * Resolve a bare (non-namespaced) RPC name to its pikkuFuncId, preferring
+ * the caller's addon package when provided. Returns the function name plus
+ * the package scope that resolved it (null = root), so callers can thread
+ * the scope into runPikkuFunc without a second lookup.
+ */
+const resolvePikkuFunction = (
   rpcName: string,
   packageName: string | null = null
-): string => {
-  // For addon-scoped calls, try the caller's package function meta first
-  // (RPC meta only lives in root; addon functions are registered under their package)
+): { pikkuFuncId: string; packageName: string | null } => {
+  // Addon-scoped calls: try the caller's package function meta first.
+  // (RPC meta only lives in root; addon functions are registered under their package.)
   if (packageName) {
     const pkgFunctions = pikkuState(packageName, 'function', 'meta')
     const pkgMeta = pkgFunctions?.[rpcName]
     if (pkgMeta) {
-      return pkgMeta.pikkuFuncId || rpcName
+      return { pikkuFuncId: pkgMeta.pikkuFuncId || rpcName, packageName }
     }
   }
   const rpc = pikkuState(null, 'rpc', 'meta')
@@ -78,7 +84,7 @@ const getPikkuFunctionName = (
   if (!rpcMeta) {
     throw new RPCNotFoundError(rpcName)
   }
-  return rpcMeta
+  return { pikkuFuncId: rpcMeta, packageName: null }
 }
 
 // Context-aware RPC client for use within services
@@ -144,38 +150,22 @@ export class ContextAwareRPCService {
       }
     }
 
-    // Bare name from inside an addon: resolve against the caller's package
-    // before falling back to root. This matches the expectation that an
-    // addon's own RPCs are callable by their local name from within the addon.
-    if (this.packageName && !funcName.includes(':')) {
-      const pkgFunctions = pikkuState(this.packageName, 'function', 'meta')
-      if (pkgFunctions?.[funcName]) {
-        return runPikkuFunc<In, Out>(
-          'rpc',
-          funcName,
-          pkgFunctions[funcName].pikkuFuncId || funcName,
-          {
-            auth: this.options.requiresAuth,
-            singletonServices: this.services,
-            data: () => data,
-            wire: updatedWire,
-            packageName: this.packageName,
-          }
-        )
-      }
-    }
-
-    // Try local function, then fall back to deployment service (remote)
+    // Bare name: resolve via caller's package scope first (if any), then root.
+    // Note: intra-addon bare calls do NOT re-apply the addon's external
+    // addonConfig.auth/tags — those gates are only applied on the external
+    // 'namespace:func' boundary via invokeAddonFunction.
     try {
+      const resolved = resolvePikkuFunction(funcName, this.packageName)
       return await runPikkuFunc<In, Out>(
         'rpc',
         funcName,
-        getPikkuFunctionName(funcName),
+        resolved.pikkuFuncId,
         {
           auth: this.options.requiresAuth,
           singletonServices: this.services,
           data: () => data,
           wire: updatedWire,
+          packageName: resolved.packageName,
         }
       )
     } catch (e) {
@@ -266,17 +256,14 @@ export class ContextAwareRPCService {
     }
 
     try {
-      return await runPikkuFunc<In, Out>(
-        'rpc',
-        rpcName,
-        getPikkuFunctionName(rpcName),
-        {
-          auth: this.options.requiresAuth,
-          singletonServices: this.services,
-          data: () => data,
-          wire: mergedWire,
-        }
-      )
+      const resolved = resolvePikkuFunction(rpcName, this.packageName)
+      return await runPikkuFunc<In, Out>('rpc', rpcName, resolved.pikkuFuncId, {
+        auth: this.options.requiresAuth,
+        singletonServices: this.services,
+        data: () => data,
+        wire: mergedWire,
+        packageName: resolved.packageName,
+      })
     } catch (e) {
       if (e instanceof RPCNotFoundError && this.services.deploymentService) {
         const session =
