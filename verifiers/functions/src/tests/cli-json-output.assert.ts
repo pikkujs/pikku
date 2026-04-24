@@ -38,31 +38,35 @@ describe('pikku cli json output verifier', () => {
 
     assert.ok(lines.length > 0, 'Expected CLI output lines')
 
-    const structuredRecords: Array<Record<string, unknown>> = []
-    for (const line of lines) {
+    const structuredRecords = lines.map((line, index) => {
+      let payload: Record<string, unknown>
       try {
-        const payload = JSON.parse(line) as Record<string, unknown>
-        if (
-          typeof payload.level === 'string' &&
-          typeof payload.message === 'string' &&
-          typeof payload.timestamp === 'string'
-        ) {
-          structuredRecords.push(payload)
-        }
+        payload = JSON.parse(line) as Record<string, unknown>
       } catch {
-        continue
+        assert.fail(`Line ${index + 1} is not valid JSON: ${line}`)
       }
-    }
+
+      assert.equal(
+        typeof payload.level,
+        'string',
+        `Line ${index + 1} missing string "level": ${line}`
+      )
+      assert.equal(
+        typeof payload.message,
+        'string',
+        `Line ${index + 1} missing string "message": ${line}`
+      )
+      assert.equal(
+        typeof payload.timestamp,
+        'string',
+        `Line ${index + 1} missing string "timestamp": ${line}`
+      )
+      return payload
+    })
 
     assert.ok(
       structuredRecords.length > 0,
-      'Expected at least one structured JSON log record with timestamp'
+      'Expected at least one structured JSON log record'
     )
-
-    for (const payload of structuredRecords) {
-      assert.equal(typeof payload.level, 'string')
-      assert.equal(typeof payload.message, 'string')
-      assert.equal(typeof payload.timestamp, 'string')
-    }
   })
 })

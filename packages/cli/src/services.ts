@@ -154,18 +154,12 @@ export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
   // --silent > --loglevel > --verbose > --info > default (warn)
   let logLevel: LogLevel = LogLevel.warn // default
   let isSilent = false
-  let outputMode: 'text' | 'json' = 'text'
-
-  const rawOutput = ((data as any).output || '').toString().toLowerCase()
-  if ((data as any).json || rawOutput === 'json') {
-    outputMode = 'json'
-  } else if (rawOutput === 'text' || rawOutput === '') {
-    outputMode = 'text'
-  } else {
-    logger.warn(
-      `Invalid output mode "${rawOutput}". Valid values: text, json. Using default (text).`
-    )
-  }
+  // --output is constrained to 'text' | 'json' by the CLI parser
+  // (choices + default in cli.wiring.ts), so no runtime validation
+  // is needed here. --json is kept as an alias that forces 'json'.
+  const outputMode: 'text' | 'json' = (data as any).json
+    ? 'json'
+    : ((data as any).output as 'text' | 'json')
 
   logger.setOutputMode(outputMode)
 

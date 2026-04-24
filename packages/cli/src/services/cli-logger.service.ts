@@ -21,7 +21,6 @@ export class CLILogger implements Logger {
   private level: LogLevel = LogLevel.warn // default to warn level
   private criticalErrors: string[] = []
   private outputMode: CLIOutputMode = 'text'
-  private jsonBuffer: Array<Record<string, unknown>> = []
   private jsonFlushHookRegistered = false
 
   constructor({
@@ -46,9 +45,6 @@ export class CLILogger implements Logger {
   }
 
   setOutputMode(mode: CLIOutputMode): void {
-    if (mode === 'text') {
-      this.jsonBuffer = []
-    }
     this.outputMode = mode
     if (mode === 'json') {
       this.ensureJSONFlushHook()
@@ -81,29 +77,28 @@ export class CLILogger implements Logger {
     process.once('exit', () => this.flushJSONBuffer())
   }
 
-  flushJSONBuffer(): void {
-    if (this.outputMode !== 'json' || this.jsonBuffer.length === 0) return
-    const pending = this.jsonBuffer
-    this.jsonBuffer = []
-    for (const payload of pending) {
-      this.writeJSONLine(payload)
-    }
-  }
+  // NDJSON records are written synchronously in `emit` so consumers can
+  // stream output; nothing is buffered. Kept as a no-op because the
+  // beforeExit/exit hooks installed by `ensureJSONFlushHook` still
+  // reference it, and external callers may rely on the signature.
+  flushJSONBuffer(): void {}
 
   private emit(
     level: 'debug' | 'info' | 'warn' | 'error' | 'critical',
     message: string,
     type?: string,
-    code?: ErrorCode
+    code?: ErrorCode,
+    data?: Record<string, unknown>
   ): void {
     const normalizedMessage = this.normalizeMessage(message)
     if (this.outputMode === 'json') {
-      this.jsonBuffer.push({
+      this.writeJSONLine({
         level,
         message: normalizedMessage,
         ...(type ? { type } : {}),
         ...(code ? { code } : {}),
         ...(code ? { url: `${BASE_ERROR_URL}/${code.toLowerCase()}` } : {}),
+        ...(data ? { data } : {}),
         timestamp: new Date().toISOString(),
       })
       return
@@ -133,12 +128,17 @@ export class CLILogger implements Logger {
     console.log(c(normalizedMessage))
   }
 
-  info(message: string | { message: string; type?: string }) {
+  info(
+    message:
+      | string
+      | { message: string; type?: string; data?: Record<string, unknown> }
+  ) {
     if (this.level > LogLevel.info || this.silent) return
 
     const msg = typeof message === 'string' ? message : message.message
     const type = typeof message === 'string' ? undefined : message.type
-    this.emit('info', msg, type)
+    const data = typeof message === 'string' ? undefined : message.data
+    this.emit('info', msg, type, undefined, data)
   }
 
   error(message: string) {
@@ -151,12 +151,17 @@ export class CLILogger implements Logger {
     this.emit('warn', message)
   }
 
-  debug(message: string | { message: string; type?: string }) {
+  debug(
+    message:
+      | string
+      | { message: string; type?: string; data?: Record<string, unknown> }
+  ) {
     if (this.level > LogLevel.debug || this.silent) return
 
     const msg = typeof message === 'string' ? message : message.message
     const type = typeof message === 'string' ? undefined : message.type
-    this.emit('debug', msg, type)
+    const data = typeof message === 'string' ? undefined : message.data
+    this.emit('debug', msg, type, undefined, data)
   }
 
   critical(code: ErrorCode, message: string) {

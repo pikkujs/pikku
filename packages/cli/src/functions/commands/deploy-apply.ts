@@ -7,6 +7,7 @@ import type {
   EntryGenerationContext,
 } from '../../deploy/provider-adapter.js'
 import type { InspectorState } from '@pikku/inspector'
+import type { Logger } from '@pikku/core/services'
 import { runBuildPipeline } from '../../deploy/build-pipeline.js'
 
 function toRelativeImport(fromDir: string, toFile: string): string {
@@ -165,7 +166,7 @@ async function writeResultFile(
 async function runDeploy(
   provider: ProviderAdapter,
   providerDir: string,
-  logger: { info(msg: string): void; error(msg: string): void },
+  logger: Logger,
   resultFile?: string
 ): Promise<void> {
   if (typeof provider.deploy !== 'function') {
@@ -191,7 +192,11 @@ async function runDeploy(
       buildDir: providerDir,
       logger,
       onProgress: (step: string, detail: string) => {
-        logger.info(`[${step}] ${detail}`)
+        logger.info({
+          message: `[${step}] ${detail}`,
+          type: 'progress',
+          data: { progress: { step, detail } },
+        })
       },
     })
   } catch (err) {

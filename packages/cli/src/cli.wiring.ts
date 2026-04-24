@@ -53,7 +53,9 @@ wireCLI({
       short: 'l',
     },
     output: {
-      description: 'Output format: text (default) or json (NDJSON)',
+      description: 'Output format (json emits NDJSON)',
+      choices: ['text', 'json'] as const,
+      default: 'text' as const,
     },
     json: {
       description: 'Alias for --output json',

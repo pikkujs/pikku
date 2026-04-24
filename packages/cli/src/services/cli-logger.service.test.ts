@@ -25,18 +25,13 @@ function captureStdout(run: () => void): string[] {
 }
 
 describe('CLILogger json output mode', () => {
-  test('buffers json logs until flush', () => {
+  test('writes json logs immediately (streaming, no buffering)', () => {
     const logger = new CLILogger({ logLogo: false, silent: false })
     logger.setLevel(LogLevel.debug)
     logger.setOutputMode('json')
 
-    const beforeFlush = captureStdout(() => {
-      logger.info({ message: 'Generating types', type: 'timing' })
-    })
-    assert.strictEqual(beforeFlush.length, 0)
-
     const lines = captureStdout(() => {
-      logger.flushJSONBuffer()
+      logger.info({ message: 'Generating types', type: 'timing' })
     })
 
     assert.strictEqual(lines.length, 1)
@@ -47,14 +42,27 @@ describe('CLILogger json output mode', () => {
     assert.ok(typeof payload.timestamp === 'string')
   })
 
+  test('flushJSONBuffer is a safe no-op (records already written)', () => {
+    const logger = new CLILogger({ logLogo: false, silent: false })
+    logger.setLevel(LogLevel.debug)
+    logger.setOutputMode('json')
+
+    captureStdout(() => {
+      logger.info('first')
+    })
+    const lines = captureStdout(() => {
+      logger.flushJSONBuffer()
+    })
+    assert.strictEqual(lines.length, 0)
+  })
+
   test('strips ANSI escape codes in json mode', () => {
     const logger = new CLILogger({ logLogo: false, silent: false })
     logger.setLevel(LogLevel.info)
     logger.setOutputMode('json')
 
-    logger.info('\x1b[31mRed Message\x1b[0m')
     const lines = captureStdout(() => {
-      logger.flushJSONBuffer()
+      logger.info('\x1b[31mRed Message\x1b[0m')
     })
 
     const payload = JSON.parse(lines[0]!.trim())
@@ -66,9 +74,8 @@ describe('CLILogger json output mode', () => {
     logger.setLevel(LogLevel.debug)
     logger.setOutputMode('json')
 
-    logger.critical('PKU111' as any, 'Duplicate function name')
     const lines = captureStdout(() => {
-      logger.flushJSONBuffer()
+      logger.critical('PKU111' as any, 'Duplicate function name')
     })
 
     const payload = JSON.parse(lines[0]!.trim())
@@ -78,22 +85,40 @@ describe('CLILogger json output mode', () => {
     assert.match(payload.message, /\[PKU111\]/)
   })
 
-  test('does not emit flushed json records in text mode', () => {
+  test('carries structured data payload on info/debug', () => {
+    const logger = new CLILogger({ logLogo: false, silent: false })
+    logger.setLevel(LogLevel.debug)
+    logger.setOutputMode('json')
+
+    const lines = captureStdout(() => {
+      logger.info({
+        message: '[bundler] building worker',
+        type: 'progress',
+        data: { progress: { step: 'bundler', detail: 'building worker' } },
+      })
+    })
+
+    const payload = JSON.parse(lines[0]!.trim())
+    assert.strictEqual(payload.type, 'progress')
+    assert.deepStrictEqual(payload.data, {
+      progress: { step: 'bundler', detail: 'building worker' },
+    })
+  })
+
+  test('switching to text mode stops json emission', () => {
     const logger = new CLILogger({ logLogo: false, silent: false })
     logger.setLevel(LogLevel.info)
     logger.setOutputMode('json')
 
-    logger.info('Buffered message')
     logger.setOutputMode('text')
 
-    const lines = captureStdout(() => {
-      logger.flushJSONBuffer()
-    })
-
-    assert.strictEqual(lines.length, 0)
     const textLines = captureStdout(() => {
       logger.info('\x1b[31mRed Message\x1b[0m')
     })
+    // text mode writes to stdout via console.log, which is a single
+    // chunk with a trailing newline
     assert.strictEqual(textLines.length, 1)
+    // ANSI codes are preserved in text mode (chalk re-adds them)
+    assert.ok(!textLines[0]!.startsWith('{'))
   })
 })
