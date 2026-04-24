@@ -72,6 +72,54 @@ async function resolveSession(
  * @param parentServices - The parent/caller's singleton services (used as base)
  * @returns The package's singleton services
  */
+/**
+ * Find the consumer-defined namespace (from wireAddon) for a given addon package.
+ * Returns null if the package isn't registered as an addon.
+ */
+const findAddonNamespaceForPackage = (packageName: string): string | null => {
+  const addons = pikkuState(null, 'addons', 'packages')
+  if (!addons) return null
+  for (const [namespace, cfg] of addons.entries()) {
+    if (cfg?.package === packageName) return namespace
+  }
+  return null
+}
+
+/**
+ * Wrap a workflow service so that bare workflow names passed from inside an
+ * addon function are auto-prefixed with the addon's consumer-facing namespace.
+ * Without this, `runToCompletion('myWorkflow')` from inside an addon misses
+ * the workflow registered under the addon's package scope and throws
+ * WorkflowNotFoundError — forcing addons to hardcode their consumer-defined
+ * namespace, which couples the addon to its caller.
+ *
+ * Explicit `'ns:name'` and bare names that already exist in root meta are
+ * unaffected; only bare names that would otherwise miss resolution get
+ * prefixed.
+ */
+const wrapWorkflowServiceForPackage = <T extends object>(
+  service: T,
+  packageName: string
+): T => {
+  return new Proxy(service, {
+    get(target, prop, receiver) {
+      if (prop === 'startWorkflow' || prop === 'runToCompletion') {
+        const original = Reflect.get(target, prop, receiver) as Function
+        return function (this: any, name: string, ...rest: any[]) {
+          if (typeof name === 'string' && !name.includes(':')) {
+            const namespace = findAddonNamespaceForPackage(packageName)
+            if (namespace) {
+              name = `${namespace}:${name}`
+            }
+          }
+          return original.call(this, name, ...rest)
+        }
+      }
+      return Reflect.get(target, prop, receiver)
+    },
+  })
+}
+
 const getOrCreatePackageSingletonServices = async (
   packageName: string,
   parentServices: CoreSingletonServices
@@ -100,6 +148,18 @@ const getOrCreatePackageSingletonServices = async (
     config,
     parentServices
   )
+
+  // Wrap workflowService so that bare names used inside the addon's functions
+  // resolve to workflows registered under the addon's package scope.
+  if (
+    packageServices.workflowService &&
+    typeof packageServices.workflowService === 'object'
+  ) {
+    packageServices.workflowService = wrapWorkflowServiceForPackage(
+      packageServices.workflowService as object,
+      packageName
+    ) as typeof packageServices.workflowService
+  }
 
   // Cache the services
   pikkuState(packageName, 'package', 'singletonServices', packageServices)
