@@ -1,3 +1,16 @@
+## 0.12.6
+
+### Patch Changes
+
+- b9ed73e: Add deterministic workflow planned-step metadata support and SSE init stream payload generation.
+  - Persist `deterministic` and `plannedSteps` on workflow runs in core and service adapters.
+  - Expose planned-step metadata on workflow run status responses.
+  - Emit an initial `type: 'init'` SSE event for deterministic workflow streams before incremental updates.
+  - Add CLI tests covering serialized stream route output for init/update/done event behavior.
+
+- Updated dependencies [b9ed73e]
+  - @pikku/core@0.12.19
+
 ## 0.12.0
 
 ## 0.12.5
@@ -5,7 +18,6 @@
 ### Patch Changes
 
 - 311c0c4: Unify session persistence through SessionStore, remove session blob from ChannelStore
-
   - PikkuSessionService now persists sessions via SessionStore on set()/clear() instead of every function call
   - ChannelStore no longer stores session data — maps channelId to pikkuUserId only
   - ChannelStore API: setUserSession/getChannelAndSession replaced with setPikkuUserId/getChannel

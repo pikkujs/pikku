@@ -1,3 +1,16 @@
+## 0.12.11
+
+### Patch Changes
+
+- b9ed73e: Add deterministic workflow planned-step metadata support and SSE init stream payload generation.
+  - Persist `deterministic` and `plannedSteps` on workflow runs in core and service adapters.
+  - Expose planned-step metadata on workflow run status responses.
+  - Emit an initial `type: 'init'` SSE event for deterministic workflow streams before incremental updates.
+  - Add CLI tests covering serialized stream route output for init/update/done event behavior.
+
+- Updated dependencies [b9ed73e]
+  - @pikku/core@0.12.19
+
 ## 0.12.0
 
 ## 0.12.10
@@ -5,7 +18,6 @@
 ### Patch Changes
 
 - 311c0c4: Unify session persistence through SessionStore, remove session blob from ChannelStore
-
   - PikkuSessionService now persists sessions via SessionStore on set()/clear() instead of every function call
   - ChannelStore no longer stores session data — maps channelId to pikkuUserId only
   - ChannelStore API: setUserSession/getChannelAndSession replaced with setPikkuUserId/getChannel
@@ -19,7 +31,6 @@
 ### Patch Changes
 
 - 624097e: Add deploy pipeline with provider-agnostic architecture
-
   - Add MetaService with explicit typed API, absorb WiringService reads
   - Add deployment service, traceId propagation, scoped logger
   - Rewrite analyzer: one function = one worker, gateways dispatch via RPC
@@ -39,7 +50,6 @@
 ### Patch Changes
 
 - f85c234: Add unified credential system with per-user OAuth and AI agent pre-flight checks
-
   - Unified CredentialService with lazy loading per user via pikkuUserId
   - wire.getCredential() for typed single credential lookup
   - MissingCredentialError with structured payload for client-side connect flows
@@ -144,7 +154,6 @@
 - Updated dependencies [62a8725]
 - Updated dependencies [62a8725]
 - Updated dependencies [62a8725]
-
   - @pikku/core@0.12.1
 
 - Updated dependencies

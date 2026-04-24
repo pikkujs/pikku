@@ -1,3 +1,11 @@
+## 0.12.11
+
+### Patch Changes
+
+- 033d172: Log a critical inspector error when multiple functions resolve to the same `pikku` function name, instead of silently allowing routing map collisions. This may cause builds to fail if multiple functions previously resolved to the same `pikku` function name.
+- Updated dependencies [b9ed73e]
+  - @pikku/core@0.12.19
+
 ## 0.12.0
 
 ## 0.12.10
@@ -32,7 +40,6 @@
 ### Patch Changes
 
 - 624097e: Add deploy pipeline with provider-agnostic architecture
-
   - Add MetaService with explicit typed API, absorb WiringService reads
   - Add deployment service, traceId propagation, scoped logger
   - Rewrite analyzer: one function = one worker, gateways dispatch via RPC
@@ -79,7 +86,6 @@
 
 - 5866b66: Add critical error (PKU490) when Zod schemas and wiring calls (wireHTTPRoutes, addPermission, addHTTPMiddleware) coexist in the same file. The CLI uses tsImport to extract Zod schemas at runtime, which executes all top-level code — wiring side-effects crash in this context because pikku state metadata doesn't exist. Schemas and wirings must be in separate files.
 - e412b4d: Optimize CLI codegen performance: 12x faster `pikku all`
-
   - Reuse schemas across re-inspections (skip redundant `ts-json-schema-generator` runs)
   - Cache TS schemas to disk (`.pikku/schema-cache.json`) for cross-run reuse
   - Pass `oldProgram` to `ts.createProgram` for incremental TS compilation
@@ -208,14 +214,12 @@
 - 1967172: Update code generation to support channel middleware enhancements
 
   **Code Generation Updates:**
-
   - Update channel type serialization to include middleware support
   - Improve WebSocket wrapper generation for middleware handling
   - Update CLI channel client generation with better type support
   - Enhance services and schema generation for channel configurations
 
   **Inspector Updates:**
-
   - Improve channel metadata extraction for middleware
   - Better type analysis for channel lifecycle functions
   - Enhanced post-processing for channel configurations
@@ -223,19 +227,16 @@
 - 753481a: Add bootstrap command, performance optimizations, and CLI improvements
 
   **New Features:**
-
   - Add `pikku bootstrap` command for type-only generation (~13.5% faster than `pikku all`)
   - Add configurable `ignoreFiles` option to pikku.config.json with sensible defaults (_.gen.ts, _.test.ts, \*.spec.ts)
   - Export pikkuCLIRender helper from serialize-cli-types.ts with JSDoc documentation
 
   **Performance Improvements:**
-
   - Add aggressive TypeScript compiler options (skipDefaultLibCheck, types: []) - ~37% faster TypeScript setup
   - Add detailed performance timing to inspector phases (--logLevel=debug)
   - Optimize file inspection with ignore patterns - ~10-20% faster overall
 
   **Enhancements:**
-
   - Fix --logLevel flag to properly apply log level to logger
   - Update middleware logging to use structured log format
   - Improve CLI renderers to consistently use destructured logger service
@@ -336,7 +337,6 @@ For complete details, see https://pikku.dev/changelogs/0_10_0.md
 ### Patch Changes
 
 - 44e3ff4: feat: enhance CLI filtering with type and directory filters
-
   - Add --types filter to filter by PikkuEventTypes (http, channel, queue, scheduler, rpc, mcp)
   - Add --directories filter to filter by file paths/directories
   - All filters (tags, types, directories) now work together with AND logic
@@ -347,7 +347,6 @@ For complete details, see https://pikku.dev/changelogs/0_10_0.md
 - 7c592b8: feat: support for required services and improved service configuration
 
   This release includes several enhancements to service management and configuration:
-
   - Added support for required services configuration
   - Improved service discovery and registration
   - Added typed RPC clients for service communication
