@@ -45,10 +45,12 @@ export class CLIError extends Error {
 }
 
 /**
- * Default JSON renderer for CLI output
+ * Default JSON renderer for CLI output. Emits single-line NDJSON so
+ * the output stays machine-parseable when the CLI is run with
+ * `--output json`; pretty-printing here would break NDJSON consumers.
  */
 const defaultJSONRenderer: CorePikkuCLIRender<any> = (_services, data) => {
-  console.log(JSON.stringify(data, null, 2))
+  console.log(JSON.stringify(data))
 }
 
 /**

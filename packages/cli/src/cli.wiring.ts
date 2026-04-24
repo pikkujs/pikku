@@ -35,13 +35,13 @@ import {
 import { deployPlan } from './functions/commands/deploy-plan.js'
 import { deployApply } from './functions/commands/deploy-apply.js'
 import { deployInfo } from './functions/commands/deploy-info.js'
-// import { clientCLIRenderer } from './services.js'
+import { defaultCLIRenderer } from './services.js'
 
 wireCLI({
   program: 'pikku',
   description:
     'Pikku CLI - Code generation tool for type-safe backend development',
-  // render: clientCLIRenderer,
+  render: defaultCLIRenderer,
   options: {
     config: {
       description: 'Path to pikku.config.json file',

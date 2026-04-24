@@ -65,7 +65,10 @@ export const pikkuSummary = pikkuSessionlessFunc<void, void>({
     }
 
     if (!logger.isSilent()) {
-      console.log(summary.format())
+      // Route through the logger so JSON mode emits a single NDJSON
+      // record instead of raw chalk-coloured text written directly to
+      // stdout (which would break NDJSON consumers).
+      logger.info({ message: summary.format(), type: 'summary' })
     }
   },
 })

@@ -375,7 +375,7 @@ async function generateZodSchemas(
   const uniqueSourceFiles = [
     ...new Set([...schemaLookup.values()].map((ref) => ref.sourceFile)),
   ]
-  console.log(
+  logger.info(
     `[TIMING] Zod schemas: ${schemaLookup.size} schemas from ${uniqueSourceFiles.length} files`
   )
 
@@ -384,7 +384,7 @@ async function generateZodSchemas(
     logger,
     uniqueSourceFiles
   )
-  console.log(
+  logger.info(
     `[TIMING] Batch import: ${(performance.now() - importStart).toFixed(0)}ms`
   )
 
@@ -456,7 +456,7 @@ async function generateZodSchemas(
     }
   }
 
-  console.log(
+  logger.info(
     `[TIMING] Process schemas: ${(performance.now() - processStart).toFixed(0)}ms (${Object.keys(schemas).length} generated)`
   )
   return schemas

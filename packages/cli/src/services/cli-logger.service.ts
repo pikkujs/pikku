@@ -59,11 +59,19 @@ export class CLILogger implements Logger {
     return this.silent
   }
 
-  private normalizeMessage(message: string): string {
+  private normalizeMessage(message: unknown): string {
+    const str =
+      typeof message === 'string'
+        ? message
+        : message instanceof Error
+          ? (message.stack ?? message.message)
+          : typeof message === 'object' && message !== null
+            ? JSON.stringify(message)
+            : String(message)
     if (this.outputMode === 'json') {
-      return message.replace(ANSI_ESCAPE_REGEX, '')
+      return str.replace(ANSI_ESCAPE_REGEX, '')
     }
-    return message
+    return str
   }
 
   private writeJSONLine(payload: Record<string, unknown>): void {
@@ -141,14 +149,33 @@ export class CLILogger implements Logger {
     this.emit('info', msg, type, undefined, data)
   }
 
-  error(message: string) {
+  error(
+    message:
+      | string
+      | Error
+      | { message: string; type?: string; data?: Record<string, unknown> }
+  ) {
     if (this.level > LogLevel.error) return
-    this.emit('error', message)
+    if (message instanceof Error) {
+      this.emit('error', message.stack ?? message.message)
+      return
+    }
+    const msg = typeof message === 'string' ? message : message.message
+    const type = typeof message === 'string' ? undefined : message.type
+    const data = typeof message === 'string' ? undefined : message.data
+    this.emit('error', msg, type, undefined, data)
   }
 
-  warn(message: string) {
+  warn(
+    message:
+      | string
+      | { message: string; type?: string; data?: Record<string, unknown> }
+  ) {
     if (this.level > LogLevel.warn) return
-    this.emit('warn', message)
+    const msg = typeof message === 'string' ? message : message.message
+    const type = typeof message === 'string' ? undefined : message.type
+    const data = typeof message === 'string' ? undefined : message.data
+    this.emit('warn', msg, type, undefined, data)
   }
 
   debug(
