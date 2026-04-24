@@ -378,11 +378,16 @@ export const runPikkuFunc = async <In = any, Out = any>(
         wireServices && Object.keys(wireServices).length > 0
           ? { ...resolvedSingletonServices, ...wireServices }
           : resolvedSingletonServices
+      const callerPackageName = packageName
       Object.defineProperty(resolvedWire, 'rpc', {
         get() {
-          const rpc = rpcService.getContextRPCService(services, resolvedWire, {
-            sessionService,
-          })
+          const rpc = rpcService.getContextRPCService(
+            services,
+            resolvedWire,
+            { sessionService },
+            0,
+            callerPackageName
+          )
           Object.defineProperty(resolvedWire, 'rpc', {
             value: rpc,
             writable: true,
