@@ -3,36 +3,17 @@
   "tsconfig": "./tsconfig.json",
   "srcDirectories": ["src", "bin", "types"],
   "ignoreFiles": [
-    "**/serialize-*.ts",
     "**/*.test.ts",
-    "**/*.spec.ts",
     "**/node_modules/**",
     "**/dist/**"
   ],
   "outDir": ".pikku",
-  "packageMappings": {
-    "../inspector/src": "@pikku/inspector"
-  },
-  "schemasFromTypes": ["PikkuCLIConfig"],
-  "clientFiles": {
-    "websocketFile": ".pikku/pikku-websocket.gen.ts"
-  },
-  "supportsImportAttributes": true,
   "schema": {
     "supportsImportAttributes": true
   },
   "cli": {
     "entrypoints": {
-      "pikku": [
-        ".pikku/cli/pikku-cli.gen.ts",
-        {
-          "type": "channel",
-          "wirePath": ".pikku/cli/pikku-cli-channel.ts",
-          "path": ".pikku/cli/pikku-cli-client.gen.ts",
-          "name": "pikku-cli",
-          "route": "/cli/pikku"
-        }
-      ]
+      "pikku": ".pikku/cli/pikku-cli.gen.ts"
     }
   }
 }

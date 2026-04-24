@@ -5299,9 +5299,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/cli@npm:*, @pikku/cli@npm:^0.12.0, @pikku/cli@npm:^0.12.1, @pikku/cli@npm:^0.12.18, @pikku/cli@npm:^0.12.20, @pikku/cli@npm:^0.12.21, @pikku/cli@npm:^0.12.3, @pikku/cli@workspace:*, @pikku/cli@workspace:packages/cli":
+"@pikku/cli-addon@npm:^0.12.21, @pikku/cli-addon@workspace:packages/cli-addon":
   version: 0.0.0-use.local
-  resolution: "@pikku/cli@workspace:packages/cli"
+  resolution: "@pikku/cli-addon@workspace:packages/cli-addon"
   dependencies:
     "@openapi-contrib/json-schema-to-openapi-schema": "npm:^4.3.1"
     "@pikku/core": "npm:^0.12.19"
@@ -5328,6 +5328,17 @@ __metadata:
     yaml: "npm:^2.8.2"
     zod: "npm:^4.3.6"
     zod-to-ts: "npm:^2.0.0"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/cli@npm:*, @pikku/cli@npm:^0.12.0, @pikku/cli@npm:^0.12.1, @pikku/cli@npm:^0.12.18, @pikku/cli@npm:^0.12.20, @pikku/cli@npm:^0.12.21, @pikku/cli@npm:^0.12.3, @pikku/cli@workspace:*, @pikku/cli@workspace:packages/cli":
+  version: 0.0.0-use.local
+  resolution: "@pikku/cli@workspace:packages/cli"
+  dependencies:
+    "@pikku/cli-addon": "npm:^0.12.21"
+    "@pikku/core": "npm:^0.12.19"
+    "@types/node": "npm:^24.11.0"
+    typescript: "npm:^5.9"
   bin:
     pikku: dist/bin/pikku.js
   languageName: unknown

@@ -100,7 +100,13 @@ export const pikkuNewWiring = pikkuSessionlessFunc<
   void
 >({
   func: async ({ logger, config }, { name, type = 'http' }) => {
-    const filePath = scaffoldFilePath(config, 'wirings', name, '.wiring.ts', config.scaffold?.wiringDir)
+    const filePath = scaffoldFilePath(
+      config,
+      'wirings',
+      name,
+      '.wiring.ts',
+      config.scaffold?.wiringDir
+    )
 
     if (existsSync(filePath)) {
       logger.error(`File already exists: ${filePath}`)

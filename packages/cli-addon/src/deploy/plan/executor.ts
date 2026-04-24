@@ -26,13 +26,11 @@ function sortByOrder(
   order: Array<PlanChange['resourceType']>
 ): PlanChange[] {
   const fallback = order.length
-  return [...changes].sort(
-    (a, b) => {
-      const ai = order.indexOf(a.resourceType)
-      const bi = order.indexOf(b.resourceType)
-      return (ai === -1 ? fallback : ai) - (bi === -1 ? fallback : bi)
-    }
-  )
+  return [...changes].sort((a, b) => {
+    const ai = order.indexOf(a.resourceType)
+    const bi = order.indexOf(b.resourceType)
+    return (ai === -1 ? fallback : ai) - (bi === -1 ? fallback : bi)
+  })
 }
 
 export async function applyPlan(

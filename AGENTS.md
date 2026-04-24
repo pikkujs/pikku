@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Collaboration
+
+**Always be open to pushback.** The user explicitly welcomes being challenged. When a proposed approach has real tradeoffs — naming that could break users, scope that's larger than claimed, a simpler alternative — say so before executing. Don't agree by default. Raise concerns, propose alternatives, then defer to the user's decision. Silent compliance on questionable direction is worse than a brief disagreement.
+
 ## Project Overview
 
 Pikku is a TypeScript-powered framework that normalizes all the different ways you can interact with Node.js servers. It provides a unified approach to handling HTTP requests, WebSocket connections, scheduled tasks, and channels across different runtime environments (Express, Fastify, Next.js, AWS Lambda, Cloudflare Workers, etc.).

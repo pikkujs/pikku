@@ -1,23 +1,14 @@
-import type {
-  Config,
-  Services,
-  SingletonServices,
-  UserSession,
-} from '../types/application-types.js'
-import type { CreateConfig } from '@pikku/core'
-import type {
-  CreateWireServices,
-  CreateSingletonServices,
-} from '@pikku/core/internal'
+import type { SingletonServices } from '../types/application-types.js'
 import { pikkuCLIRender } from '@pikku/core/cli'
+import { pikkuConfig, pikkuServices, pikkuWireServices } from '#pikku'
 import {
   LocalVariablesService,
   LocalSecretService,
   LogLevel,
   InMemoryWorkflowService,
 } from '@pikku/core/services'
-import { CLILogger } from './services/cli-logger.service.js'
-import { getPikkuCLIConfig } from './utils/pikku-cli-config.js'
+import { CLILogger } from '@pikku/cli-addon/services/cli-logger.service'
+import { getPikkuCLIConfig } from '@pikku/cli-addon/utils/pikku-cli-config'
 import type {
   InspectorState,
   InspectorDiagnostic,
@@ -34,11 +25,11 @@ import {
 import { glob } from 'tinyglobby'
 import path from 'path'
 import type { PikkuCLIConfig } from '../types/config.js'
-import type { ForwardedLogMessage } from './services/cli-logger-forwarder.service.js'
-import { CLILoggerForwarder } from './services/cli-logger-forwarder.service.js'
+import type { ForwardedLogMessage } from '@pikku/cli-addon/services/cli-logger-forwarder.service'
+import { CLILoggerForwarder } from '@pikku/cli-addon/services/cli-logger-forwarder.service'
 import { existsSync } from 'fs'
 import { readFile, writeFile } from 'fs/promises'
-import { loadManifest } from './utils/contract-versions.js'
+import { loadManifest } from '@pikku/cli-addon/utils/contract-versions'
 import { join } from 'path'
 
 const DIAGNOSTIC_CODE_TO_LINT_KEY: Record<
@@ -146,10 +137,7 @@ export const defaultCLIRenderer = pikkuCLIRender<
 //   }
 // )
 
-export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
-  _variablesService,
-  data
-) => {
+export const createConfig = pikkuConfig(async (_variablesService, data) => {
   // Determine log level based on CLI flags with precedence:
   // --silent > --loglevel > --verbose > --info > default (warn)
   let logLevel: LogLevel = LogLevel.warn // default
@@ -227,16 +215,13 @@ export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
     filters: parseCLIFilters(data),
     preloadedInspectorState,
   }
-}
+})
 
 /**
  * Singleton services factory for the Pikku CLI
  * This function creates the singleton services used by the CLI and is created once on start.
  */
-export const createSingletonServices: CreateSingletonServices<
-  Config,
-  SingletonServices
-> = async (config) => {
+export const createSingletonServices = pikkuServices(async (config) => {
   const {
     rootDir,
     srcDirectories,
@@ -407,18 +392,16 @@ export const createSingletonServices: CreateSingletonServices<
     getInspectorState,
     workflowService,
   }
-}
+})
 
-export const createWireServices: CreateWireServices<
-  SingletonServices,
-  Services,
-  UserSession
-> = async ({ logger }, { cli, channel }) => {
-  const vChannel = cli ? cli.channel : channel
-  if (!vChannel) {
-    throw new Error('No channel provided for CLI services')
+export const createWireServices = pikkuWireServices(
+  async ({ logger }, { cli, channel }) => {
+    const vChannel = cli ? cli.channel : channel
+    if (!vChannel) {
+      throw new Error('No channel provided for CLI services')
+    }
+    return {
+      logger: new CLILoggerForwarder(logger, vChannel),
+    }
   }
-  return {
-    logger: new CLILoggerForwarder(logger, vChannel),
-  }
-}
+)

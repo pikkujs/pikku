@@ -9,7 +9,13 @@ export const pikkuNewPermission = pikkuSessionlessFunc<
   void
 >({
   func: async ({ logger, config }, { name, type = 'simple' }) => {
-    const filePath = scaffoldFilePath(config, 'permissions', name, '.ts', config.scaffold?.permissionDir)
+    const filePath = scaffoldFilePath(
+      config,
+      'permissions',
+      name,
+      '.ts',
+      config.scaffold?.permissionDir
+    )
 
     if (existsSync(filePath)) {
       logger.error(`File already exists: ${filePath}`)

@@ -6,16 +6,26 @@
     "outDir": "dist",
     "target": "esnext",
     "declaration": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "composite": true
   },
-  "include": ["bin/**/*.ts", "src/**/*.ts", ".pikku/**/*.ts"],
+  "include": [
+    "src/**/*.ts",
+    ".pikku/**/*.ts",
+    ".pikku/**/*.json",
+    "types/*.ts",
+    "types/*.d.ts"
+  ],
   "exclude": ["**/*.test.ts", "node_modules"],
   "references": [
     {
       "path": "../core/tsconfig.json"
     },
     {
-      "path": "../cli-addon/tsconfig.json"
+      "path": "../inspector/tsconfig.json"
+    },
+    {
+      "path": "../openapi-to-zod-schema/tsconfig.json"
     }
   ]
 }

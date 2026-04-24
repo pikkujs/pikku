@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": ["src", "types"],
+  "addon": true,
+  "ignoreFiles": [
+    "**/serialize-*.ts",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/node_modules/**",
+    "**/dist/**"
+  ],
+  "outDir": ".pikku",
+  "packageMappings": {
+    "../inspector/src": "@pikku/inspector"
+  },
+  "schemasFromTypes": ["PikkuCLIConfig"],
+  "clientFiles": {
+    "websocketFile": ".pikku/pikku-websocket.gen.ts"
+  },
+  "supportsImportAttributes": true,
+  "schema": {
+    "supportsImportAttributes": true
+  }
+}

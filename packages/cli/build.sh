@@ -12,33 +12,6 @@ echo "Bootstrapping with published @pikku/cli..."
 : "${PIKKU_CLI_VERSION:=latest}"
 npx -y "@pikku/cli@${PIKKU_CLI_VERSION}"
 
-# Patch stale forge references from published CLI (renamed to node/)
-rm -rf .pikku/forge
-if [ -f .pikku/pikku-types.gen.ts ]; then
-  tmp=$(mktemp)
-  sed "s|./forge/pikku-forge-types.gen.js|./node/pikku-node-types.gen.js|g" .pikku/pikku-types.gen.ts > "$tmp" && mv "$tmp" .pikku/pikku-types.gen.ts
-fi
-mkdir -p .pikku/node && echo "export {}" > .pikku/node/pikku-node-types.gen.ts
-
-# Patch legacy field names and stale imports in bootstrapped files
-while IFS= read -r -d '' f; do
-  tmp=$(mktemp)
-  sed -e 's/pikkuFuncName/pikkuFuncId/g' \
-      -e 's/queueName:/name:/g' \
-      -e "s|import { pikkuState, FunctionsMeta } from '@pikku/core'|import { pikkuState } from '@pikku/core/internal'\nimport type { FunctionsMeta } from '@pikku/core'|g" \
-      -e "s|import { pikkuState } from '@pikku/core'|import { pikkuState } from '@pikku/core/internal'|g" \
-      -e "s|import { pikkuState as __pikkuState } from '@pikku/core'|import { pikkuState as __pikkuState } from '@pikku/core/internal'|g" \
-      -e "s|import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core'|import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/internal'|g" \
-      -e "s|import { addPackageServiceFactories } from '@pikku/core'|import { pikkuState } from '@pikku/core/internal'|g" \
-      -e "s|addPackageServiceFactories('\([^']*\)', {|pikkuState('\1', 'package', 'factories', {|g" \
-      -e "/metaDir/d" \
-      -e "/^try {$/d" \
-      -e "/^} catch.*{.*}$/d" \
-      -e "/fileURLToPath.*__fileURLToPath/d" \
-      -e "/dirname.*__dirname/d" \
-      "$f" > "$tmp" && mv "$tmp" "$f"
-done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
-
 # Build TypeScript (may fail if published CLI generates stale types)
 echo "Building TypeScript to dist..."
 tsc -b || true
