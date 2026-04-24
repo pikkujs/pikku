@@ -1,3 +1,13 @@
+## 0.12.19
+
+### Patch Changes
+
+- b9ed73e: Add deterministic workflow planned-step metadata support and SSE init stream payload generation.
+  - Persist `deterministic` and `plannedSteps` on workflow runs in core and service adapters.
+  - Expose planned-step metadata on workflow run status responses.
+  - Emit an initial `type: 'init'` SSE event for deterministic workflow streams before incremental updates.
+  - Add CLI tests covering serialized stream route output for init/update/done event behavior.
+
 ## 0.12.4
 
 ## 0.12.18
@@ -5,7 +15,6 @@
 ### Patch Changes
 
 - 311c0c4: Unify session persistence through SessionStore, remove session blob from ChannelStore
-
   - PikkuSessionService now persists sessions via SessionStore on set()/clear() instead of every function call
   - ChannelStore no longer stores session data — maps channelId to pikkuUserId only
   - ChannelStore API: setUserSession/getChannelAndSession replaced with setPikkuUserId/getChannel
@@ -50,14 +59,12 @@
 ### Patch Changes
 
 - 9e8605f: Add Workers for Platforms dispatch namespace support and AI agent fixes.
-
   - deploy-cloudflare: Thread dispatchNamespace through deploy pipeline, reads CF_DISPATCH_NAMESPACE env var
   - core: Fix auth-gated tools visible to unauthenticated sessions (null session now hides permission-gated items)
   - core: Recursive null stripping in AI agent tool call resume path
   - ai-vercel: Handle anyOf/oneOf/array types when making optional fields nullable for strict providers
 
 - 624097e: Add deploy pipeline with provider-agnostic architecture
-
   - Add MetaService with explicit typed API, absorb WiringService reads
   - Add deployment service, traceId propagation, scoped logger
   - Rewrite analyzer: one function = one worker, gateways dispatch via RPC
@@ -80,7 +87,6 @@
 ### Patch Changes
 
 - f85c234: Add unified credential system with per-user OAuth and AI agent pre-flight checks
-
   - Unified CredentialService with lazy loading per user via pikkuUserId
   - wire.getCredential() for typed single credential lookup
   - MissingCredentialError with structured payload for client-side connect flows
@@ -187,7 +193,6 @@
 - 7d369f3: Fix agent sub-agent tool execution failures: use UUID for sub-agent thread IDs (was exceeding varchar(36) DB column), and synthesize error results for failed tool calls in non-streaming run() to prevent "Tool result is missing" cascading errors.
 - 508a796: Fix MCP server not exposing addon tools: resolve namespaced function IDs in MCP runner, load addon schemas after schema generation, and use resolveFunctionMeta for MCP JSON serialization
 - ffe83af: Add Web Response passthrough support and fix close() flushing
-
   - HTTP runner detects when a function returns a Web `Response` object and applies it directly via `applyWebResponse()`, enabling seamless integration with libraries like Auth.js
   - Add `send()` method to `PikkuHTTPResponse` for setting body without Content-Type headers
   - Add `headers()` method to `PikkuHTTPRequest` for retrieving all headers as a record
@@ -201,7 +206,6 @@
 ### Patch Changes
 
 - cc4c9e9: Add gateway meta-wiring for messaging platforms:
-
   - New `wireGateway()` API with three transport types: webhook, websocket, listener
   - `GatewayAdapter` interface for platform-specific parse/send logic
   - `PikkuGateway` wire object (`wire.gateway`) with senderId, platform, and send()
@@ -218,7 +222,6 @@
 
 - 62a8725: Rename 'external' to 'addon' throughout the codebase. All types, functions, config keys, and CLI options previously named `external` or `External` are now named `addon` or `Addon` (e.g. `ExternalPackageConfig` → `AddonConfig`, `externalPackages` → `addons`, `function-external` → `function-addon`).
 - a3bdb0d: Add AI middleware hooks for per-tool-call lifecycle and post-step observability:
-
   - `beforeToolCall` / `afterToolCall`: per-tool-call hooks for logging, caching, input sanitization, and result transformation
   - `afterStep`: post-step observation hook with full step context (text, toolCalls, toolResults, usage, finishReason)
   - `onError`: error-specific hook for alerting and diagnostics (non-throwing, won't affect error flow)
@@ -317,18 +320,15 @@
 - ea652dc: Refactor channel middleware handling and add lifecycle middleware support
 
   **Breaking Changes:**
-
   - Improved middleware resolution for channel message handlers to properly combine channel-level and message-level middleware
   - Fixed cache key collisions when multiple message handlers use the same function
 
   **New Features:**
-
   - Add `runChannelLifecycleWithMiddleware` helper in `channel-common.ts` for consistent lifecycle function execution
   - Support middleware on `onConnect` and `onDisconnect` lifecycle functions
   - Channel-level middleware now properly applies to all messages in the channel
 
   **Bug Fixes:**
-
   - Fix middleware ordering: channel middleware → message middleware → inherited middleware
   - Fix cache key generation to include routing information (prevents cache collisions)
   - Properly detect wrapper objects vs direct function configs for message handlers
@@ -336,13 +336,11 @@
 - 4349ec5: Add file-based storage implementations for serverless environments
 
   **New Services:**
-
   - Add `FileChannelStore` for file-based channel storage (suitable for AWS Lambda /tmp)
   - Add `FileEventHubStore` for file-based event hub subscriptions
   - Export new services in package.json for use in serverless runtimes
 
   **Bug Fixes:**
-
   - Fix serverless channel runner to handle disconnect gracefully when channel is already cleaned up
   - Fix MCP runner to pass `mcp` service to functions and use correct function type
 
@@ -418,7 +416,6 @@ For complete details, see https://pikku.dev/changelogs/0_10_0.md
   ### Ordered Execution System
 
   Both middleware and permissions now execute in a specific hierarchical order:
-
   1. **Wiring Tags** - Tag-based middleware/permissions from wiring level (e.g., HTTP route tags)
   2. **Wiring Middleware/Permissions** - Direct wiring-level middleware/permissions
   3. **Function Middleware** - Function-level middleware
@@ -483,7 +480,6 @@ For complete details, see https://pikku.dev/changelogs/0_10_0.md
 - 7c592b8: feat: support for required services and improved service configuration
 
   This release includes several enhancements to service management and configuration:
-
   - Added support for required services configuration
   - Improved service discovery and registration
   - Added typed RPC clients for service communication

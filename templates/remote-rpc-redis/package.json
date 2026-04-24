@@ -16,10 +16,10 @@
   "dependencies": {
     "@auth/core": "^0.37.0",
     "@pikku/auth-js": "^0.12.3",
-    "@pikku/core": "^0.12.18",
+    "@pikku/core": "^0.12.19",
     "@pikku/express": "^0.12.5",
     "@pikku/jose": "^0.12.3",
-    "@pikku/redis": "^0.12.5",
+    "@pikku/redis": "^0.12.6",
     "@pikku/schema-cfworker": "^0.12.2",
     "ioredis": "^5.10.0",
     "pino-pretty": "^13.1.3",
@@ -28,7 +28,7 @@
     "typescript": "^5.9"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.20",
+    "@pikku/cli": "^0.12.21",
     "@types/node": "^24"
   }
 }
