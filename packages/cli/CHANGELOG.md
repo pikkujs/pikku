@@ -1,3 +1,27 @@
+## 0.12.21
+
+### Patch Changes
+
+- d3bcadc: Emit `pikkuListFunc` and `PikkuListFunction` in generated `pikku-types.gen.ts` so list-style function typing can be expressed without manually wrapping `ListInput`/`ListOutput`.
+- 360e594: Fix generated `RPCInvoke` and `RPCRemote` typing to use stricter void-input detection.
+
+  The generated helpers now treat only true voidish inputs (`void | null | undefined`) as omittable and avoid misclassifying `any` inputs as voidish, so non-void RPCs keep a required `data` argument.
+
+- d6e1289: Make `pikku versions update` fail when immutable contract drift is detected (`FUNCTION_VERSION_MODIFIED`) instead of exiting successfully.
+
+  This ensures CI can reliably fail on published-version contract modifications and prevents silent success when the manifest is intentionally not updated.
+
+- b9ed73e: Add deterministic workflow planned-step metadata support and SSE init stream payload generation.
+  - Persist `deterministic` and `plannedSteps` on workflow runs in core and service adapters.
+  - Expose planned-step metadata on workflow run status responses.
+  - Emit an initial `type: 'init'` SSE event for deterministic workflow streams before incremental updates.
+  - Add CLI tests covering serialized stream route output for init/update/done event behavior.
+
+- Updated dependencies [033d172]
+- Updated dependencies [b9ed73e]
+  - @pikku/inspector@0.12.11
+  - @pikku/core@0.12.19
+
 ## 0.12.0
 
 ## 0.12.20
@@ -10,7 +34,6 @@
   regeneration and hot module reload.
 
   Options:
-
   - `--port, -p` (default `3000`)
   - `--watch` (default `true`)
   - `--hmr` (default `true`)
@@ -53,7 +76,6 @@
 ### Patch Changes
 
 - 624097e: Add deploy pipeline with provider-agnostic architecture
-
   - Add MetaService with explicit typed API, absorb WiringService reads
   - Add deployment service, traceId propagation, scoped logger
   - Rewrite analyzer: one function = one worker, gateways dispatch via RPC
@@ -85,7 +107,6 @@
 ### Patch Changes
 
 - f85c234: Add unified credential system with per-user OAuth and AI agent pre-flight checks
-
   - Unified CredentialService with lazy loading per user via pikkuUserId
   - wire.getCredential() for typed single credential lookup
   - MissingCredentialError with structured payload for client-side connect flows
@@ -152,7 +173,6 @@
 ### Patch Changes
 
 - e412b4d: Optimize CLI codegen performance: 12x faster `pikku all`
-
   - Reuse schemas across re-inspections (skip redundant `ts-json-schema-generator` runs)
   - Cache TS schemas to disk (`.pikku/schema-cache.json`) for cross-run reuse
   - Pass `oldProgram` to `ts.createProgram` for incremental TS compilation
@@ -265,7 +285,6 @@
 
 - 62a8725: Rename 'external' to 'addon' throughout the codebase. All types, functions, config keys, and CLI options previously named `external` or `External` are now named `addon` or `Addon` (e.g. `ExternalPackageConfig` → `AddonConfig`, `externalPackages` → `addons`, `function-external` → `function-addon`).
 - 588f52f: Add `pikku new addon <name>` CLI subcommand for scaffolding addon packages:
-
   - Generates full addon structure: package.json, pikku.config.json, tsconfig.json, API service, types, and README
   - `--secret` flag generates wireSecret with API key schema
   - `--oauth` flag generates wireOAuth2Credential + OAuth2Client-based API service
@@ -277,7 +296,6 @@
   Also adds `scaffold` config section to pikku.config.json for config-driven default directories across all `new` commands (addonDir, functionDir, wiringDir, middlewareDir, permissionDir).
 
 - ba88295: Add `pikku new` scaffold commands for bootstrapping project files:
-
   - `pikku new function <name> --type func|sessionless|void`
   - `pikku new wiring <name> --type http|channel|scheduler|queue|mcp|cli|trigger`
   - `pikku new middleware <name> --type simple|factory`
@@ -291,7 +309,6 @@
   The version manifest now stores separate `inputHash` and `outputHash` per version entry (backward-compatible — old string-hash manifests still load and validate correctly). `VersionValidateError` gains optional detail fields (`functionKey`, `version`, `previousInputHash`, `currentInputHash`, `previousOutputHash`, `currentOutputHash`, `nextVersion`, `latestVersion`, `expectedNextVersion`) for use by tooling.
 
 - 62a8725: Version management commands are now grouped under `pikku versions <subcommand>`:
-
   - `pikku versions init` — initialise the version manifest (was `pikku init`)
   - `pikku versions check` — validate contracts against the manifest (was `pikku versions-check`)
   - `pikku versions update` — update the manifest with current hashes (newly exposed as a CLI command)
@@ -385,14 +402,12 @@
 - 1967172: Update code generation to support channel middleware enhancements
 
   **Code Generation Updates:**
-
   - Update channel type serialization to include middleware support
   - Improve WebSocket wrapper generation for middleware handling
   - Update CLI channel client generation with better type support
   - Enhance services and schema generation for channel configurations
 
   **Inspector Updates:**
-
   - Improve channel metadata extraction for middleware
   - Better type analysis for channel lifecycle functions
   - Enhanced post-processing for channel configurations
@@ -400,19 +415,16 @@
 - 753481a: Add bootstrap command, performance optimizations, and CLI improvements
 
   **New Features:**
-
   - Add `pikku bootstrap` command for type-only generation (~13.5% faster than `pikku all`)
   - Add configurable `ignoreFiles` option to pikku.config.json with sensible defaults (_.gen.ts, _.test.ts, \*.spec.ts)
   - Export pikkuCLIRender helper from serialize-cli-types.ts with JSDoc documentation
 
   **Performance Improvements:**
-
   - Add aggressive TypeScript compiler options (skipDefaultLibCheck, types: []) - ~37% faster TypeScript setup
   - Add detailed performance timing to inspector phases (--logLevel=debug)
   - Optimize file inspection with ignore patterns - ~10-20% faster overall
 
   **Enhancements:**
-
   - Fix --logLevel flag to properly apply log level to logger
   - Update middleware logging to use structured log format
   - Improve CLI renderers to consistently use destructured logger service
@@ -599,7 +611,6 @@ For complete details, see https://pikku.dev/changelogs/0_10_0.md
 ### Patch Changes
 
 - 9156577: Fix import path generation to handle same-package files and node_modules paths
-
   - When files are in the same package directory, skip packageMappings and use relative paths
   - When import paths include node_modules, strip everything before and including node_modules/ for cleaner imports
   - This prevents issues where files within the same package would incorrectly reference themselves via package names
@@ -618,7 +629,6 @@ For complete details, see https://pikku.dev/changelogs/0_10_0.md
 ### Patch Changes
 
 - 44e3ff4: feat: enhance CLI filtering with type and directory filters
-
   - Add --types filter to filter by PikkuEventTypes (http, channel, queue, scheduler, rpc, mcp)
   - Add --directories filter to filter by file paths/directories
   - All filters (tags, types, directories) now work together with AND logic
@@ -629,7 +639,6 @@ For complete details, see https://pikku.dev/changelogs/0_10_0.md
 - 7c592b8: feat: support for required services and improved service configuration
 
   This release includes several enhancements to service management and configuration:
-
   - Added support for required services configuration
   - Improved service discovery and registration
   - Added typed RPC clients for service communication
