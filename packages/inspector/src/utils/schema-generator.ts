@@ -67,6 +67,31 @@ function primitiveTypeToSchema(typeStr: string): JSONValue | null {
   return null
 }
 
+/**
+ * Rewrites empty object schemas (`{}`) that appear as property values to `true`.
+ * ts-json-schema-generator and z.toJSONSchema both emit `{}` for `unknown`/`any`
+ * fields, but `{}` means "an object with no constraints" to a JSON Schema
+ * validator, which rejects non-object values. `true` is the correct "any value"
+ * schema.
+ */
+function rewriteEmptyPropertySchemasToTrue(
+  schema: JSONValue | undefined
+): void {
+  if (!schema || typeof schema !== 'object') return
+  const props = (schema as any).properties
+  if (!props) return
+  for (const [key, value] of Object.entries(props)) {
+    if (
+      typeof value === 'object' &&
+      value !== null &&
+      !Array.isArray(value) &&
+      Object.keys(value).length === 0
+    ) {
+      props[key] = true
+    }
+  }
+}
+
 // Cached state for schema program reuse across inspect() calls
 let cachedSchemaProgram: ts.Program | undefined
 let cachedParsedConfig: ts.ParsedCommandLine | undefined
@@ -231,7 +256,9 @@ function generateTSSchemas(
       return
     }
     try {
-      schemas[schema] = generator.createSchema(schema) as JSONValue
+      const generated = generator.createSchema(schema) as JSONValue
+      rewriteEmptyPropertySchemasToTrue(generated)
+      schemas[schema] = generated
     } catch (e) {
       if (e instanceof RootlessError) {
         const customType = typesMap.customTypes.get(schema)
@@ -320,6 +347,8 @@ function processZodSchema(
       }
     },
   }) as any
+
+  rewriteEmptyPropertySchemasToTrue(schema)
 
   if (schema.required && schema.properties) {
     schema.required = schema.required.filter((fieldName: string) => {
