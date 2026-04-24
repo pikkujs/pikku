@@ -1,4 +1,4 @@
-import * as ts from 'typescript'
+import type * as ts from 'typescript'
 import { getPropertyValue } from './get-property-value.js'
 import { ErrorCode } from '../error-codes.js'
 import type { InspectorLogger, InspectorState } from '../types.js'

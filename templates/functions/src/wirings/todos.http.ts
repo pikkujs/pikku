@@ -4,6 +4,7 @@ import {
 } from '../../.pikku/pikku-types.gen.js'
 import {
   listTodos,
+  listTodoRows,
   getTodo,
   createTodo,
   updateTodo,
@@ -16,6 +17,7 @@ const todosRoutes = defineHTTPRoutes({
   tags: ['todos'],
   routes: {
     list: { method: 'get', route: '/todos', func: listTodos },
+    listRows: { method: 'get', route: '/todos/rows', func: listTodoRows },
     get: { method: 'get', route: '/todos/:id', func: getTodo },
     create: { method: 'post', route: '/todos', func: createTodo },
     update: { method: 'put', route: '/todos/:id', func: updateTodo },

@@ -571,6 +571,7 @@ export const addFunctions: AddWiring = (
   }
 
   const isMCPToolFunc = expression.text === 'pikkuMCPToolFunc'
+  const isListFunc = expression.text === 'pikkuListFunc'
   const mcpEnabled = mcp || isMCPToolFunc
 
   // Pick the handler: use resolvedFunc when it exists and is a function, otherwise fall back to handlerNode
@@ -643,7 +644,33 @@ export const addFunctions: AddWiring = (
     inputNames = [schemaName]
     state.schemaLookup.set(schemaName, inputSchemaRef)
     state.functions.typesMap.addCustomType(schemaName, 'unknown', [])
-  } else if (genericTypes.length >= 1 && genericTypes[0]) {
+  } else if (isListFunc && genericTypes.length >= 1 && genericTypes[0]) {
+    const inputAliasName = `${capitalizedName}Input`
+    const filterType = genericTypes[0]
+    const filterTypeText = checker.typeToString(
+      filterType,
+      undefined,
+      ts.TypeFormatFlags.NoTruncation
+    )
+    const refs = resolveTypeImports(
+      filterType,
+      state.functions.typesMap,
+      true,
+      checker
+    )
+    state.functions.typesMap.addCustomType(
+      inputAliasName,
+      `{ cursor?: string; limit?: number; sort?: Array<{ column: string; direction: 'asc' | 'desc' }>; filter?: unknown; search?: string; } & ${filterTypeText}`,
+      [...new Set(refs)]
+    )
+    inputNames = [inputAliasName]
+    const secondParam = handler.parameters[1]
+    if (secondParam) {
+      inputTypes = [checker.getTypeAtLocation(secondParam)]
+    } else {
+      inputTypes = [filterType]
+    }
+  } else if (!isListFunc && genericTypes.length >= 1 && genericTypes[0]) {
     // Fall back to extracting from generic type arguments
     const result = getNamesAndTypes(
       checker,
@@ -679,7 +706,27 @@ export const addFunctions: AddWiring = (
     outputNames = [schemaName]
     state.schemaLookup.set(schemaName, outputSchemaRef)
     state.functions.typesMap.addCustomType(schemaName, 'unknown', [])
-  } else if (genericTypes.length >= 2) {
+  } else if (isListFunc && genericTypes.length >= 2 && genericTypes[1]) {
+    const outputAliasName = `${capitalizedName}Output`
+    const rowType = genericTypes[1]
+    const rowTypeText = checker.typeToString(
+      rowType,
+      undefined,
+      ts.TypeFormatFlags.NoTruncation
+    )
+    const refs = resolveTypeImports(
+      rowType,
+      state.functions.typesMap,
+      true,
+      checker
+    )
+    state.functions.typesMap.addCustomType(
+      outputAliasName,
+      `{ rows: Array<${rowTypeText}>; nextCursor: string | null; totalCount?: number; }`,
+      [...new Set(refs)]
+    )
+    outputNames = [outputAliasName]
+  } else if (!isListFunc && genericTypes.length >= 2) {
     outputNames = getNamesAndTypes(
       checker,
       state.functions.typesMap,

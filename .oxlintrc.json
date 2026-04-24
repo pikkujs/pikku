@@ -7,12 +7,12 @@
     "no-accumulating-spread": "warn",
     "node/no-process-env": "warn",
     "import/no-cycle": "warn",
-    "typescript/consistent-type-imports": "warn",
-    "typescript/no-import-type-side-effects": "warn",
+    "typescript/consistent-type-imports": "error",
+    "typescript/no-import-type-side-effects": "error",
     "typescript/prefer-optional-chain": "warn",
-    "unicorn/prefer-array-flat-map": "warn",
-    "unicorn/prefer-includes": "warn",
-    "unicorn/prefer-optional-catch-binding": "warn",
-    "unicorn/throw-new-error": "warn"
+    "unicorn/prefer-array-flat-map": "error",
+    "unicorn/prefer-includes": "error",
+    "unicorn/prefer-optional-catch-binding": "error",
+    "unicorn/throw-new-error": "error"
   }
 }
