@@ -54,7 +54,19 @@ export const resolveNamespace = (
   }
 }
 
-const getPikkuFunctionName = (rpcName: string): string => {
+const getPikkuFunctionName = (
+  rpcName: string,
+  packageName: string | null = null
+): string => {
+  // For addon-scoped calls, try the caller's package function meta first
+  // (RPC meta only lives in root; addon functions are registered under their package)
+  if (packageName) {
+    const pkgFunctions = pikkuState(packageName, 'function', 'meta')
+    const pkgMeta = pkgFunctions?.[rpcName]
+    if (pkgMeta) {
+      return pkgMeta.pikkuFuncId || rpcName
+    }
+  }
   const rpc = pikkuState(null, 'rpc', 'meta')
   let rpcMeta = rpc[rpcName]
   if (!rpcMeta) {
@@ -77,7 +89,8 @@ export class ContextAwareRPCService {
     private options: {
       requiresAuth?: boolean
       sessionService?: SessionService<CoreUserSession>
-    }
+    },
+    private packageName: string | null = null
   ) {}
 
   public async rpcExposed(funcName: string, data: any): Promise<any> {
@@ -128,6 +141,27 @@ export class ContextAwareRPCService {
       } catch (addonErr) {
         if (!(addonErr instanceof RPCNotFoundError)) throw addonErr
         // Not an addon — fall through to local lookup
+      }
+    }
+
+    // Bare name from inside an addon: resolve against the caller's package
+    // before falling back to root. This matches the expectation that an
+    // addon's own RPCs are callable by their local name from within the addon.
+    if (this.packageName && !funcName.includes(':')) {
+      const pkgFunctions = pikkuState(this.packageName, 'function', 'meta')
+      if (pkgFunctions?.[funcName]) {
+        return runPikkuFunc<In, Out>(
+          'rpc',
+          funcName,
+          pkgFunctions[funcName].pikkuFuncId || funcName,
+          {
+            auth: this.options.requiresAuth,
+            singletonServices: this.services,
+            data: () => data,
+            wire: updatedWire,
+            packageName: this.packageName,
+          }
+        )
       }
     }
 
@@ -406,14 +440,20 @@ export class PikkuRPCService<
           sessionService?: SessionService<CoreUserSession>
         }
       | undefined,
-    depth: number = 0
+    depth: number = 0,
+    packageName: string | null = null
   ): TypedRPC {
     const options =
       typeof requiresAuthOrOptions === 'object' &&
       requiresAuthOrOptions !== null
         ? requiresAuthOrOptions
         : { requiresAuth: requiresAuthOrOptions }
-    const serviceRPC = new ContextAwareRPCService(services, wire, options)
+    const serviceRPC = new ContextAwareRPCService(
+      services,
+      wire,
+      options,
+      packageName
+    )
     return {
       depth,
       global: false,
