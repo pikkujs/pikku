@@ -13,6 +13,7 @@
 import { build, type Plugin } from 'esbuild'
 import { writeFile, mkdir, stat, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { createHash } from 'node:crypto'
 
 import {
   extractDependencies,
@@ -88,6 +89,7 @@ function createDeadModuleStubPlugin(patterns: RegExp[]): Plugin {
 const BUNDLE_FILENAME = 'bundle.js'
 const METAFILE_FILENAME = 'metafile.json'
 const PACKAGE_JSON_FILENAME = 'package.json'
+const EXACT_DEPENDENCIES_FILENAME = 'exact-dependencies.json'
 
 interface BundleUnitOptions {
   unit: DeploymentUnit
@@ -127,6 +129,7 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
   const bundlePath = join(unitOutputDir, BUNDLE_FILENAME)
   const metafilePath = join(unitOutputDir, METAFILE_FILENAME)
   const packageJsonPath = join(unitOutputDir, PACKAGE_JSON_FILENAME)
+  const exactDependenciesPath = join(unitOutputDir, EXACT_DEPENDENCIES_FILENAME)
 
   // Determine which gen files to stub based on per-unit service requirements
   const deadPatterns = await getDeadGenFilePatterns(unitOutputDir)
@@ -150,9 +153,12 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
   // esbuild wraps these as __require() which fails at runtime in ESM.
   // The banner shims require via createRequire so CJS builtins resolve.
   const resolvedFormat = format ?? 'esm'
-  const banner = resolvedFormat === 'esm' && (platform ?? 'node') === 'node'
-    ? { js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);` }
-    : undefined
+  const banner =
+    resolvedFormat === 'esm' && (platform ?? 'node') === 'node'
+      ? {
+          js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);`,
+        }
+      : undefined
 
   const result = await build({
     entryPoints: [entryPath],
@@ -180,24 +186,67 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
   await writeFile(metafilePath, metafileJson, 'utf-8')
 
   // Extract dependencies and generate minimal package.json
-  const dependencies = await extractDependencies(result.metafile, projectDir)
-  const packageJson = generateMinimalPackageJson(unit.name, dependencies)
+  const { exactDependencies, exactOptionalDependencies } =
+    await extractDependencies(result.metafile, projectDir)
+  const packageJson = generateMinimalPackageJson(
+    unit.name,
+    exactDependencies,
+    exactOptionalDependencies
+  )
   await writeFile(
     packageJsonPath,
     JSON.stringify(packageJson, null, 2),
     'utf-8'
   )
+  await writeFile(
+    exactDependenciesPath,
+    JSON.stringify(
+      {
+        dependencies: Object.fromEntries(
+          Object.entries(exactDependencies).sort(([a], [b]) =>
+            a.localeCompare(b)
+          )
+        ),
+        optionalDependencies: Object.fromEntries(
+          Object.entries(exactOptionalDependencies).sort(([a], [b]) =>
+            a.localeCompare(b)
+          )
+        ),
+      },
+      null,
+      2
+    ),
+    'utf-8'
+  )
 
   // Get bundle size
   const bundleStat = await stat(bundlePath)
+  const bundleContents = await readFile(bundlePath)
+  const bundleHash = createHash('sha256').update(bundleContents).digest('hex')
+  const exactDependenciesHash = createHash('sha256')
+    .update(
+      JSON.stringify({
+        dependencies: Object.entries(exactDependencies).sort(([a], [b]) =>
+          a.localeCompare(b)
+        ),
+        optionalDependencies: Object.entries(exactOptionalDependencies).sort(
+          ([a], [b]) => a.localeCompare(b)
+        ),
+      })
+    )
+    .digest('hex')
 
   return {
     unitName: unit.name,
     bundlePath,
     packageJsonPath,
+    exactDependenciesPath,
     metafilePath,
     bundleSizeBytes: bundleStat.size,
-    externalPackages: dependencies,
+    bundleHash,
+    exactDependenciesHash,
+    exactDependencies,
+    exactOptionalDependencies,
   }
 }
 
@@ -223,6 +272,7 @@ export async function bundleUnits(
     define?: Record<string, string>
     platform?: 'node' | 'neutral' | 'browser'
     format?: 'esm' | 'cjs'
+    resolveOutputDir?: (unit: DeploymentUnit, baseOutputDir: string) => string
   }
 ): Promise<BundleOutput> {
   const buildDir = outputDir ?? join(projectDir, '.deploy', 'build')
@@ -243,7 +293,9 @@ export async function bundleUnits(
       continue
     }
 
-    const unitOutputDir = join(buildDir, unit.name)
+    const unitOutputDir = options?.resolveOutputDir
+      ? options.resolveOutputDir(unit, buildDir)
+      : join(buildDir, unit.name)
 
     try {
       const result = await bundleUnit({

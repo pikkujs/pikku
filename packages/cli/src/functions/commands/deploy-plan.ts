@@ -119,7 +119,13 @@ export const deployPlan = pikkuSessionlessFunc<
             unitCount: result.bundled.length,
             totalSizeBytes: totalSize,
             errors: result.bundleErrors,
-            manifest: result.manifest,
+            codegenErrors: result.codegenErrors,
+            summary: plan.summary,
+            changeCount: plan.changes.length,
+            artifacts: {
+              deploymentManifestPath: result.deploymentManifestPath,
+              infraPath: result.infraPath,
+            },
           },
           null,
           2

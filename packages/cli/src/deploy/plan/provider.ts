@@ -6,6 +6,8 @@ export interface CurrentState {
     name: string
     functionIds: string[]
     role: string
+    bundleHash?: string
+    exactDependenciesHash?: string
   }>
   queues: Array<{ name: string }>
   scheduledTasks: Array<{ unitName: string; schedule: string; name?: string }>

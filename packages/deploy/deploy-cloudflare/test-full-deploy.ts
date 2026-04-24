@@ -128,7 +128,9 @@ async function main() {
   }
 
   for (const b of bundles) {
-    const deps = Object.keys(b.externalPackages).length
+    const deps =
+      Object.keys(b.exactDependencies).length +
+      Object.keys(b.exactOptionalDependencies).length
     console.log(
       `  ${ANSI.dim}${b.workerName.padEnd(35)} ${formatBytes(b.bundleSizeBytes).padStart(8)}  ${deps} deps${ANSI.reset}`
     )

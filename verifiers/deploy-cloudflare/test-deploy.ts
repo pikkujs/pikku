@@ -8,18 +8,33 @@
 import { execSync } from 'child_process'
 import { readFileSync, existsSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
+import { createHash } from 'crypto'
 
 const FUNCTIONS_DIR = join(process.cwd(), '..', '..', 'templates', 'functions')
+const REPO_ROOT = join(process.cwd(), '..', '..')
+const PIKKU_BIN = join(REPO_ROOT, 'packages', 'cli', 'dist', 'bin', 'pikku.js')
 const DEPLOY_DIR = join(FUNCTIONS_DIR, '.deploy', 'cloudflare')
+const PLAN_RESULT_FILE = join(DEPLOY_DIR, 'plan-result.json')
+const DEPLOYMENT_MANIFEST_FILE = join(DEPLOY_DIR, 'deployment-manifest.json')
+const SERVER_UNIT_NAME = 'pikku-server-container'
+const UNITS_DIR = join(DEPLOY_DIR, 'units')
+const CONTAINER_DIR = join(DEPLOY_DIR, 'container')
 
 console.log('Setting up: running pikku codegen + deploy plan (cloudflare)...')
 execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_DIR, stdio: 'pipe' })
-execSync('yarn pikku', { cwd: FUNCTIONS_DIR, stdio: 'pipe', timeout: 60_000 })
-execSync('yarn pikku deploy plan --provider cloudflare', {
+execSync(`node ${PIKKU_BIN}`, {
   cwd: FUNCTIONS_DIR,
   stdio: 'pipe',
-  timeout: 300_000,
+  timeout: 60_000,
 })
+execSync(
+  `node ${PIKKU_BIN} deploy plan --provider cloudflare --result-file .deploy/cloudflare/plan-result.json`,
+  {
+    cwd: FUNCTIONS_DIR,
+    stdio: 'pipe',
+    timeout: 300_000,
+  }
+)
 console.log('Setup complete.\n')
 
 function readJSON(path: string): Record<string, unknown> {
@@ -28,16 +43,40 @@ function readJSON(path: string): Record<string, unknown> {
 function readText(path: string): string {
   return readFileSync(path, 'utf-8')
 }
+function sha256(input: string): string {
+  return createHash('sha256').update(input).digest('hex')
+}
 function getUnitDirs(): string[] {
-  if (!existsSync(DEPLOY_DIR)) return []
-  return readdirSync(DEPLOY_DIR).filter((d) => {
-    const p = join(DEPLOY_DIR, d)
+  if (!existsSync(UNITS_DIR)) return []
+  const dirs = readdirSync(UNITS_DIR).filter((d) => {
+    const p = join(UNITS_DIR, d)
     return statSync(p).isDirectory() && existsSync(join(p, 'bundle.js'))
   })
+  if (existsSync(join(CONTAINER_DIR, 'bundle.js'))) {
+    dirs.push(SERVER_UNIT_NAME)
+  }
+  return dirs
+}
+function getUnitPath(unitName: string): string {
+  return unitName === SERVER_UNIT_NAME
+    ? CONTAINER_DIR
+    : join(UNITS_DIR, unitName)
 }
 function getUnitServices(unitName: string): Record<string, boolean> {
-  const path = join(DEPLOY_DIR, unitName, '.pikku', 'pikku-services.gen.ts')
-  if (!existsSync(path)) return {}
+  const baseUnitPath = getUnitPath(unitName)
+  const directPath = join(baseUnitPath, '.pikku', 'pikku-services.gen.ts')
+  const nestedPath = join(
+    baseUnitPath,
+    SERVER_UNIT_NAME,
+    '.pikku',
+    'pikku-services.gen.ts'
+  )
+  const path = existsSync(directPath)
+    ? directPath
+    : existsSync(nestedPath)
+      ? nestedPath
+      : ''
+  if (!path) return {}
   const content = readText(path)
   const match = content.match(
     /export const requiredSingletonServices = \{([^}]+)\}/
@@ -72,6 +111,24 @@ const unitDirs = getUnitDirs()
 const infra = existsSync(join(DEPLOY_DIR, 'infra.json'))
   ? readJSON(join(DEPLOY_DIR, 'infra.json'))
   : null
+const planResult = existsSync(PLAN_RESULT_FILE)
+  ? (readJSON(PLAN_RESULT_FILE) as {
+      success?: boolean
+      artifacts?: { deploymentManifestPath?: string }
+    })
+  : null
+const deploymentManifestPath =
+  typeof planResult?.artifacts?.deploymentManifestPath === 'string' &&
+  existsSync(planResult.artifacts.deploymentManifestPath)
+    ? planResult.artifacts.deploymentManifestPath
+    : existsSync(DEPLOYMENT_MANIFEST_FILE)
+      ? DEPLOYMENT_MANIFEST_FILE
+      : null
+const deploymentManifest = deploymentManifestPath
+  ? (readJSON(deploymentManifestPath) as {
+      units?: Array<Record<string, unknown>>
+    })
+  : null
 
 // --- Infra manifest ---
 check('infra.json: has projectId, units, resources', () => {
@@ -80,6 +137,126 @@ check('infra.json: has projectId, units, resources', () => {
   if (!infra.units) throw new Error('Missing units')
   if (!infra.resources) throw new Error('Missing resources')
 })
+check('plan-result.json: success + deployment manifest units', () => {
+  if (!planResult) throw new Error('Missing plan-result.json')
+  if (planResult.success !== true)
+    throw new Error('Plan result is not success=true')
+  const units = deploymentManifest?.units ?? []
+  if (units.length === 0) throw new Error('No manifest units in plan result')
+})
+check(
+  'plan manifest: bundle/exact dependency hashes are present + valid',
+  () => {
+    const units = deploymentManifest?.units ?? []
+    if (units.length === 0) throw new Error('No manifest units to validate')
+
+    for (const u of units) {
+      const unitName = String(u.name ?? '')
+      const bundleHash = String(u.bundleHash ?? '')
+      const exactDependenciesHash = String(u.exactDependenciesHash ?? '')
+      const exactDependencies = (u.exactDependencies ?? {}) as Record<
+        string,
+        string
+      >
+      const exactOptionalDependencies = (u.exactOptionalDependencies ??
+        {}) as Record<string, string>
+      if (!/^[a-f0-9]{64}$/.test(bundleHash)) {
+        throw new Error(`${unitName}: invalid bundleHash`)
+      }
+      if (!/^[a-f0-9]{64}$/.test(exactDependenciesHash)) {
+        throw new Error(`${unitName}: invalid exactDependenciesHash`)
+      }
+
+      const bundleContent = readText(join(getUnitPath(unitName), 'bundle.js'))
+      const actualBundleHash = sha256(bundleContent)
+      if (actualBundleHash !== bundleHash) {
+        throw new Error(`${unitName}: bundleHash mismatch`)
+      }
+
+      const pkg = readJSON(join(getUnitPath(unitName), 'package.json')) as {
+        dependencies?: Record<string, string>
+        optionalDependencies?: Record<string, string>
+      }
+      const deps = pkg.dependencies ?? {}
+      const optionalDeps = pkg.optionalDependencies ?? {}
+      const depsHash = sha256(
+        JSON.stringify({
+          dependencies: Object.entries(deps).sort(([a], [b]) =>
+            a.localeCompare(b)
+          ),
+          optionalDependencies: Object.entries(optionalDeps).sort(([a], [b]) =>
+            a.localeCompare(b)
+          ),
+        })
+      )
+      if (depsHash !== exactDependenciesHash) {
+        throw new Error(`${unitName}: exactDependenciesHash mismatch`)
+      }
+      const expectedDependencies = JSON.stringify(
+        Object.fromEntries(
+          Object.entries(deps).sort(([a], [b]) => a.localeCompare(b))
+        )
+      )
+      const actualDependencies = JSON.stringify(
+        Object.fromEntries(
+          Object.entries(exactDependencies).sort(([a], [b]) =>
+            a.localeCompare(b)
+          )
+        )
+      )
+      if (actualDependencies !== expectedDependencies) {
+        throw new Error(`${unitName}: exactDependencies payload mismatch`)
+      }
+      const expectedOptionalDependencies = JSON.stringify(
+        Object.fromEntries(
+          Object.entries(optionalDeps).sort(([a], [b]) => a.localeCompare(b))
+        )
+      )
+      const actualOptionalDependencies = JSON.stringify(
+        Object.fromEntries(
+          Object.entries(exactOptionalDependencies).sort(([a], [b]) =>
+            a.localeCompare(b)
+          )
+        )
+      )
+      if (actualOptionalDependencies !== expectedOptionalDependencies) {
+        throw new Error(
+          `${unitName}: exactOptionalDependencies payload mismatch`
+        )
+      }
+      const exactDepsFile = readJSON(
+        join(getUnitPath(unitName), 'exact-dependencies.json')
+      ) as {
+        dependencies?: Record<string, string>
+        optionalDependencies?: Record<string, string>
+      }
+      const fileDeps = JSON.stringify(
+        Object.fromEntries(
+          Object.entries(exactDepsFile.dependencies ?? {}).sort(([a], [b]) =>
+            a.localeCompare(b)
+          )
+        )
+      )
+      const fileOptionalDeps = JSON.stringify(
+        Object.fromEntries(
+          Object.entries(exactDepsFile.optionalDependencies ?? {}).sort(
+            ([a], [b]) => a.localeCompare(b)
+          )
+        )
+      )
+      if (fileDeps !== actualDependencies) {
+        throw new Error(
+          `${unitName}: exact-dependencies.json dependencies mismatch`
+        )
+      }
+      if (fileOptionalDeps !== actualOptionalDependencies) {
+        throw new Error(
+          `${unitName}: exact-dependencies.json optionalDependencies mismatch`
+        )
+      }
+    }
+  }
+)
 check('infra.json: has queues (todo-reminders + workflow)', () => {
   const resources = infra!.resources as Record<string, unknown[]>
   if ((resources.queues ?? []).length < 3)
@@ -96,15 +273,11 @@ check('infra.json: has cron triggers', () => {
 })
 
 // --- Units ---
-check('HTTP units: greet, list-todos, create-todo, update-todo', () => {
-  assertContains(
-    unitDirs,
-    ['greet', 'list-todos', 'create-todo', 'update-todo'],
-    'HTTP'
-  )
+check('HTTP units: greet, list-todos, update-todo', () => {
+  assertContains(unitDirs, ['greet', 'list-todos', 'update-todo'], 'HTTP')
 })
-check('queue unit: process-reminder', () => {
-  assertContains(unitDirs, ['process-reminder'], 'Queue')
+check('server unit exists for server-target functions', () => {
+  assertContains(unitDirs, [SERVER_UNIT_NAME], 'Server')
 })
 check('scheduled units: daily-summary, weekly-cleanup', () => {
   assertContains(unitDirs, ['daily-summary', 'weekly-cleanup'], 'Scheduled')
@@ -131,25 +304,40 @@ check(
     )
   }
 )
-check('total units >= 30', () => {
-  if (unitDirs.length < 30) throw new Error(`Got ${unitDirs.length}`)
+check('total units >= 29', () => {
+  if (unitDirs.length < 29) throw new Error(`Got ${unitDirs.length}`)
 })
+check(
+  'plan manifest: server unit includes createTodo + processReminder',
+  () => {
+    const units = deploymentManifest?.units ?? []
+    const serverUnit = units.find((u) => u.name === SERVER_UNIT_NAME)
+    if (!serverUnit) throw new Error('Missing server unit in manifest')
+    const functionIds = (serverUnit.functionIds ?? []) as string[]
+    if (!functionIds.includes('createTodo')) {
+      throw new Error('server unit missing createTodo')
+    }
+    if (!functionIds.includes('processReminder')) {
+      throw new Error('server unit missing processReminder')
+    }
+  }
+)
 
 // --- Tree-shaking ---
 check('greet entry uses @pikku/cloudflare/handler (not barrel)', () => {
-  const entry = readText(join(DEPLOY_DIR, 'greet', 'entry.ts'))
+  const entry = readText(join(getUnitPath('greet'), 'entry.ts'))
   if (!entry.includes('@pikku/cloudflare/handler'))
     throw new Error('Missing /handler')
   if (entry.includes("from '@pikku/cloudflare'")) throw new Error('Uses barrel')
 })
 check('greet entry: no CloudflareWorkflowService', () => {
-  const entry = readText(join(DEPLOY_DIR, 'greet', 'entry.ts'))
+  const entry = readText(join(getUnitPath('greet'), 'entry.ts'))
   if (entry.includes('CloudflareWorkflowService'))
     throw new Error('Should not import workflow')
 })
 check('orchestrator entry uses @pikku/cloudflare/d1', () => {
   const wf = unitDirs.filter((d) => d.startsWith('wf-'))
-  const entry = readText(join(DEPLOY_DIR, wf[0], 'entry.ts'))
+  const entry = readText(join(getUnitPath(wf[0]), 'entry.ts'))
   if (!entry.includes('@pikku/cloudflare/d1')) throw new Error('Missing /d1')
 })
 
@@ -159,41 +347,36 @@ check('orchestrator entry uses @pikku/cloudflare/d1', () => {
 //   const svc = getUnitServices('greet')
 //   if (svc.workflowService !== false) throw new Error(`Got ${svc.workflowService}`)
 // })
-check(
-  'create-todo (step worker): workflowService=true, queueService=true',
-  () => {
-    const svc = getUnitServices('create-todo')
-    if (svc.workflowService !== true)
-      throw new Error(`workflowService=${svc.workflowService}`)
-    if (svc.queueService !== true)
-      throw new Error(`queueService=${svc.queueService}`)
-  }
-)
+check('server unit: queueService=true', () => {
+  const svc = getUnitServices(SERVER_UNIT_NAME)
+  if (svc.queueService !== true)
+    throw new Error(`queueService=${svc.queueService}`)
+})
 
 // --- Bundles ---
 check('no unit exceeds 5MB', () => {
   for (const u of unitDirs) {
-    const s = statSync(join(DEPLOY_DIR, u, 'bundle.js')).size
+    const s = statSync(join(getUnitPath(u), 'bundle.js')).size
     if (s > 5 * 1024 * 1024)
       throw new Error(`${u}: ${(s / 1024 / 1024).toFixed(1)}MB`)
   }
 })
 check('every unit has entry.ts', () => {
   for (const u of unitDirs) {
-    if (!existsSync(join(DEPLOY_DIR, u, 'entry.ts')))
+    if (!existsSync(join(getUnitPath(u), 'entry.ts')))
       throw new Error(`${u} missing entry.ts`)
   }
 })
 
 // --- No server container ---
-check('no server container (no serverlessIncompatible)', () => {
-  if (existsSync(join(DEPLOY_DIR, 'server'))) throw new Error('server/ exists')
-  if (existsSync(join(DEPLOY_DIR, 'server-proxy')))
-    throw new Error('server-proxy/ exists')
+check('server container bundle is emitted', () => {
+  if (!existsSync(join(CONTAINER_DIR, 'bundle.js'))) {
+    throw new Error('server bundle missing')
+  }
 })
 check('no Dockerfiles', () => {
   for (const u of unitDirs) {
-    if (existsSync(join(DEPLOY_DIR, u, 'Dockerfile')))
+    if (existsSync(join(getUnitPath(u), 'Dockerfile')))
       throw new Error(`${u} has Dockerfile`)
   }
 })

@@ -5,7 +5,12 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeConsoleFunctions } from './serialize-console-functions.js'
 
 export const pikkuConsoleFunctions = pikkuSessionlessFunc<void, boolean>({
-  func: async ({ logger, config }) => {
+  func: async ({ logger, config, variables }) => {
+    const deployCodegenFlag = await variables.get('PIKKU_DEPLOY_CODEGEN')
+    if (deployCodegenFlag === '1') {
+      return false
+    }
+
     if (config.scaffold?.console) {
       const pathToPikkuTypes = getFileImportRelativePath(
         config.consoleFunctionsFile,
@@ -20,7 +25,11 @@ export const pikkuConsoleFunctions = pikkuSessionlessFunc<void, boolean>({
       await writeFileInDir(
         logger,
         config.consoleFunctionsFile,
-        serializeConsoleFunctions(pathToPikkuTypes, pathToAgentTypes, config.globalHTTPPrefix || '')
+        serializeConsoleFunctions(
+          pathToPikkuTypes,
+          pathToAgentTypes,
+          config.globalHTTPPrefix || ''
+        )
       )
       return true
     }

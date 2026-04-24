@@ -42,6 +42,8 @@ export interface PerUnitCodegenOptions {
     status: 'start' | 'done' | 'error',
     error?: string
   ) => void
+  /** Resolve unit output directory (defaults to <deployDir>/<unit-name>) */
+  resolveUnitDir?: (unit: DeploymentUnit, baseDeployDir: string) => string
 }
 
 export interface PerUnitCodegenResult {
@@ -221,7 +223,9 @@ export async function generatePerUnitCodegen(
 
       onProgress?.(unit.name, 'start')
 
-      const unitDir = join(baseDir, unit.name)
+      const unitDir = options.resolveUnitDir
+        ? options.resolveUnitDir(unit, baseDir)
+        : join(baseDir, unit.name)
       const unitPikkuDir = join(unitDir, '.pikku')
       await mkdir(unitDir, { recursive: true })
 

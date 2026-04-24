@@ -51,12 +51,57 @@ export function parsePackageName(specifier: string): string | null {
     return null
   }
   const builtins = new Set([
-    'assert', 'buffer', 'child_process', 'cluster', 'console', 'constants',
-    'crypto', 'dgram', 'dns', 'domain', 'events', 'fs', 'http', 'http2',
-    'https', 'inspector', 'module', 'net', 'os', 'path', 'perf_hooks',
-    'process', 'punycode', 'querystring', 'readline', 'repl', 'stream',
-    'string_decoder', 'sys', 'timers', 'tls', 'tty', 'url', 'util',
-    'v8', 'vm', 'wasi', 'worker_threads', 'zlib',
+    'assert',
+    'buffer',
+    'child_process',
+    'cluster',
+    'console',
+    'constants',
+    'crypto',
+    'dgram',
+    'dns',
+    'domain',
+    'events',
+    'fs',
+    'http',
+    'http2',
+    'https',
+    'inspector',
+    'module',
+    'net',
+    'os',
+    'path',
+    'perf_hooks',
+    'process',
+    'punycode',
+    'querystring',
+    'readline',
+    'repl',
+    'stream',
+    'string_decoder',
+    'sys',
+    'timers',
+    'tls',
+    'tty',
+    'url',
+    'util',
+    'v8',
+    'vm',
+    'wasi',
+    'worker_threads',
+    'zlib',
+    'async_hooks',
+    'child_process',
+    'cluster',
+    'diagnostics_channel',
+    'dns/promises',
+    'fs/promises',
+    'readline/promises',
+    'stream/consumers',
+    'stream/promises',
+    'stream/web',
+    'timers/promises',
+    'util/types',
   ])
   if (builtins.has(specifier.split('/')[0])) {
     return null
@@ -75,7 +120,7 @@ export function parsePackageName(specifier: string): string | null {
 
 interface ProjectDeps {
   dependencies: Record<string, string>
-  devDependencies: Record<string, string>
+  optionalDependencies: Record<string, string>
 }
 
 /**
@@ -85,7 +130,7 @@ async function readProjectDependencies(
   projectDir: string
 ): Promise<ProjectDeps> {
   const dependencies: Record<string, string> = {}
-  const devDependencies: Record<string, string> = {}
+  const optionalDependencies: Record<string, string> = {}
 
   // Walk up the directory tree to find all package.json files
   // (handles monorepo setups where deps are in the root package.json)
@@ -96,14 +141,15 @@ async function readProjectDependencies(
       const content = await readFile(pkgJsonPath, 'utf-8')
       const pkg = JSON.parse(content) as {
         dependencies?: Record<string, string>
+        optionalDependencies?: Record<string, string>
         devDependencies?: Record<string, string>
       }
       // Don't overwrite — closest package.json wins
       for (const [k, v] of Object.entries(pkg.dependencies ?? {})) {
         if (!(k in dependencies)) dependencies[k] = v
       }
-      for (const [k, v] of Object.entries(pkg.devDependencies ?? {})) {
-        if (!(k in devDependencies)) devDependencies[k] = v
+      for (const [k, v] of Object.entries(pkg.optionalDependencies ?? {})) {
+        if (!(k in optionalDependencies)) optionalDependencies[k] = v
       }
     } catch {
       // No package.json at this level
@@ -113,7 +159,7 @@ async function readProjectDependencies(
     dir = parent
   }
 
-  return { dependencies, devDependencies }
+  return { dependencies, optionalDependencies }
 }
 
 /**
@@ -191,11 +237,33 @@ function parseYarnLockKeyLine(line: string): string[] {
  * Resolves the exact version for a package, trying yarn.lock first,
  * then falling back to the version range from package.json.
  */
-function resolveVersion(
+async function resolveInstalledPackageVersion(
+  packageName: string,
+  projectDir: string
+): Promise<string | null> {
+  let dir = projectDir
+  while (true) {
+    const pkgPath = join(dir, 'node_modules', packageName, 'package.json')
+    try {
+      const content = await readFile(pkgPath, 'utf-8')
+      const pkg = JSON.parse(content) as { version?: string }
+      if (pkg.version) return pkg.version
+    } catch {
+      // Keep walking up to workspace root
+    }
+    const parent = join(dir, '..')
+    if (parent === dir) break
+    dir = parent
+  }
+  return null
+}
+
+async function resolveVersion(
   packageName: string,
   projectDeps: ProjectDeps,
-  yarnLockVersions: Map<string, string>
-): string {
+  yarnLockVersions: Map<string, string>,
+  projectDir: string
+): Promise<string | null> {
   // Prefer exact version from yarn.lock
   const locked = yarnLockVersions.get(packageName)
   if (locked) return locked
@@ -204,12 +272,16 @@ function resolveVersion(
   const fromDeps = projectDeps.dependencies[packageName]
   if (fromDeps) return fromDeps
 
-  const fromDevDeps = projectDeps.devDependencies[packageName]
-  if (fromDevDeps) return fromDevDeps
+  const fromOptionalDeps = projectDeps.optionalDependencies[packageName]
+  if (fromOptionalDeps) return fromOptionalDeps
 
-  // Last resort: use wildcard (will get latest on install)
-  console.warn(`Could not resolve version for package '${packageName}', defaulting to '*'`)
-  return '*'
+  const installedVersion = await resolveInstalledPackageVersion(
+    packageName,
+    projectDir
+  )
+  if (installedVersion) return installedVersion
+
+  return null
 }
 
 /**
@@ -222,11 +294,14 @@ function resolveVersion(
 export async function extractDependencies(
   metafile: Metafile,
   projectDir: string
-): Promise<Record<string, string>> {
+): Promise<{
+  exactDependencies: Record<string, string>
+  exactOptionalDependencies: Record<string, string>
+}> {
   const externalPackages = extractExternalPackages(metafile)
 
   if (externalPackages.size === 0) {
-    return {}
+    return { exactDependencies: {}, exactOptionalDependencies: {} }
   }
 
   const [projectDeps, yarnLockVersions] = await Promise.all([
@@ -234,13 +309,30 @@ export async function extractDependencies(
     readYarnLockVersions(projectDir),
   ])
 
-  const dependencies: Record<string, string> = {}
+  const exactDependencies: Record<string, string> = {}
+  const exactOptionalDependencies: Record<string, string> = {}
 
   for (const pkg of [...externalPackages].sort()) {
-    dependencies[pkg] = resolveVersion(pkg, projectDeps, yarnLockVersions)
+    const version = await resolveVersion(
+      pkg,
+      projectDeps,
+      yarnLockVersions,
+      projectDir
+    )
+    if (!version) {
+      // Some packages are optional-at-runtime (e.g. ws acceleration addons).
+      // Keep deploy planning deterministic without forcing a hard failure.
+      exactOptionalDependencies[pkg] = '*'
+      continue
+    }
+    if (pkg in projectDeps.optionalDependencies) {
+      exactOptionalDependencies[pkg] = version
+    } else {
+      exactDependencies[pkg] = version
+    }
   }
 
-  return dependencies
+  return { exactDependencies, exactOptionalDependencies }
 }
 
 /**
@@ -248,7 +340,8 @@ export async function extractDependencies(
  */
 export function generateMinimalPackageJson(
   unitName: string,
-  dependencies: Record<string, string>
+  dependencies: Record<string, string>,
+  optionalDependencies: Record<string, string>
 ): Record<string, unknown> {
   return {
     name: unitName,
@@ -256,5 +349,6 @@ export function generateMinimalPackageJson(
     type: 'module',
     main: 'bundle.js',
     dependencies,
+    optionalDependencies,
   }
 }

@@ -13,9 +13,13 @@ export interface BundleResult {
   unitName: string
   bundlePath: string
   packageJsonPath: string
+  exactDependenciesPath: string
   metafilePath: string
   bundleSizeBytes: number
-  externalPackages: Record<string, string>
+  bundleHash: string
+  exactDependenciesHash: string
+  exactDependencies: Record<string, string>
+  exactOptionalDependencies: Record<string, string>
 }
 
 export interface BundleError {

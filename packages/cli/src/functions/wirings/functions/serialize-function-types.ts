@@ -353,10 +353,13 @@ export type PikkuFunctionConfigWithSchema<
   RequiredWires extends keyof PikkuWire = never
 > = {
   name?: string
+  description?: string
   tags?: string[]
   expose?: boolean
   mcp?: boolean
   internal?: boolean
+  remote?: boolean
+  deploy?: 'serverless' | 'server' | 'auto'
   approvalRequired?: boolean
   approvalDescription?: InputSchema extends StandardSchemaV1 ? PikkuApprovalDescription<InferSchemaOutput<InputSchema>> : never
   func: PikkuFunction<
@@ -445,6 +448,7 @@ export type PikkuFunctionSessionlessConfigWithSchema<
   mcp?: boolean
   internal?: boolean
   remote?: boolean
+  deploy?: 'serverless' | 'server' | 'auto'
   approvalRequired?: boolean
   approvalDescription?: InputSchema extends StandardSchemaV1 ? PikkuApprovalDescription<InferSchemaOutput<InputSchema>> : never
   func: PikkuFunctionSessionless<
