@@ -20,7 +20,7 @@
     "prepublishOnly": "yarn build"
   },
   "dependencies": {
-    "@pikku/fetch": "^0.12.0"
+    "@pikku/fetch": "^0.12.1"
   },
   "peerDependencies": {
     "react": "^18 || ^19",

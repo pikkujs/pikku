@@ -20,7 +20,7 @@
     "prepublishOnly": "yarn build"
   },
   "dependencies": {
-    "@assistant-ui/react": "^0.12.12",
+    "@assistant-ui/react": "^0.12.25",
     "react-markdown": "^10.1.0"
   },
   "peerDependencies": {

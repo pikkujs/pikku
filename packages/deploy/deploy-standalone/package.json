@@ -8,7 +8,7 @@
     "tsc": "tsc --noEmit"
   },
   "dependencies": {
-    "@yao-pkg/pkg": "^6.3.0"
+    "@yao-pkg/pkg": "^6.19.0"
   },
   "devDependencies": {
     "typescript": "^5.9"

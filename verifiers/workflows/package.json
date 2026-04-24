@@ -12,15 +12,15 @@
     "@pikku/queue-bullmq": "workspace:*",
     "@pikku/queue-pg-boss": "workspace:*",
     "@pikku/redis": "workspace:*",
-    "kysely": "^0.28.12",
+    "kysely": "^0.28.16",
     "kysely-postgres-js": "^3.0.0",
-    "postgres": "^3.4.8"
+    "postgres": "^3.4.9"
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
     "@pikku/inspector": "workspace:*",
     "@types/node": "^24",
-    "tsx": "^4.20.6",
+    "tsx": "^4.21.0",
     "typescript": "^5.9"
   },
   "scripts": {

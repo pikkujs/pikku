@@ -20,7 +20,7 @@
     "@pikku/core": "^0.12.9"
   },
   "devDependencies": {
-    "@auth/core": "^0.37.0",
+    "@auth/core": "^0.41.2",
     "typescript": "^5.9"
   }
 }

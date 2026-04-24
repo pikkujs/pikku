@@ -31,12 +31,12 @@
     "@pikku/core": "^0.12.3"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.3",
-    "@pikku/core": "^0.12.3",
+    "@pikku/cli": "^0.12.20",
+    "@pikku/core": "^0.12.18",
     "typescript": "^5.9"
   },
   "dependencies": {
-    "playwright": "^1.52.0",
+    "playwright": "^1.59.1",
     "zod": "^4"
   }
 }

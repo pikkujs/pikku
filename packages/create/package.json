@@ -11,16 +11,16 @@
     "prepublishOnly": "yarn build"
   },
   "dependencies": {
-    "@inquirer/prompts": "^7.3.2",
-    "chalk": "^5.4.1",
-    "commander": "^14.0.2",
-    "giget": "^1.2.4",
+    "@inquirer/prompts": "^7.10.1",
+    "chalk": "^5.6.2",
+    "commander": "^14.0.3",
+    "giget": "^1.2.5",
     "nanospinner": "^1.2.2"
   },
   "devDependencies": {
-    "@types/node": "^22.13.1",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
+    "@types/node": "^22.19.17",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   },
   "type": "module"
 }

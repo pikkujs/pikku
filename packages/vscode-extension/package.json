@@ -95,12 +95,12 @@
     }
   },
   "dependencies": {
-    "@pikku/core": "^0.12.15",
-    "@pikku/inspector": "^0.12.8"
+    "@pikku/core": "^0.12.18",
+    "@pikku/inspector": "^0.12.10"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
-    "esbuild": "^0.24.0",
-    "typescript": "^5.9.0"
+    "@types/vscode": "^1.116.0",
+    "esbuild": "^0.28.0",
+    "typescript": "^5.9.3"
   }
 }

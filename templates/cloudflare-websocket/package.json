@@ -12,16 +12,16 @@
     "test": "bash ../functions/run-tests.sh --url http://localhost:8787 --http --websocket"
   },
   "dependencies": {
-    "@auth/core": "^0.37.0",
+    "@auth/core": "^0.41.2",
     "@pikku/auth-js": "^0.12.3",
     "@pikku/cloudflare": "^0.12.6",
     "@pikku/core": "^0.12.18"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260305.0",
+    "@cloudflare/workers-types": "^4.20260424.1",
     "@types/node": "^24",
     "@types/ws": "^8",
     "typescript": "^5.9.3",
-    "wrangler": "^4.78.0"
+    "wrangler": "^4.84.1"
   }
 }
