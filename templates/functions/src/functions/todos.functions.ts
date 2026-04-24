@@ -13,6 +13,7 @@ import {
   TodoListResponseSchema,
   DeleteResponseSchema,
 } from '../schemas.js'
+import type { Todo } from '../schemas.js'
 
 /**
  * List todos for a user with optional filters.
@@ -154,7 +155,7 @@ export const listTodoRows = pikkuListFunc<
     completed: boolean
     priority: 'low' | 'medium' | 'high'
   },
-  import('../schemas.js').Todo
+  Todo
 >({
   func: async ({ todoStore }, data) => {
     const limit = data.limit ?? 20
