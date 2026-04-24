@@ -250,11 +250,19 @@ export const inspect = async (
   const rootDir = options.rootDir || findCommonAncestor(routeFiles)
 
   const startSourceFiles = performance.now()
-  // Filter source files to only include files within the project rootDir
-  // This prevents picking up types from external packages (including workspace symlinks)
+  // Filter source files to only include files within the project rootDir.
+  // Also exclude anything reached through node_modules — in yarn workspace
+  // setups, `rootDir/node_modules/@scope/pkg` symlinks back into a sibling
+  // package whose files would otherwise be picked up and mistaken for project
+  // sources (producing "More than one CoreSingletonServices found" errors
+  // and polluting the RPC map with addon functions as root-scope entries).
   const sourceFiles = program
     .getSourceFiles()
-    .filter((sf) => sf.fileName.startsWith(rootDir))
+    .filter(
+      (sf) =>
+        sf.fileName.startsWith(rootDir) &&
+        !sf.fileName.includes('/node_modules/')
+    )
   logger.debug(
     `Got source files in ${(performance.now() - startSourceFiles).toFixed(2)}ms`
   )
