@@ -31,7 +31,7 @@
     "kysely-codegen": "^0.20.0",
     "kysely-plugin-serialize": "^0.8.2",
     "kysely-postgres-js": "^3.0.0",
-    "postgres": "^3.4.8",
+    "postgres": "^3.4.9",
     "typescript": "^5.9"
   }
 }

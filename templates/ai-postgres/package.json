@@ -24,7 +24,7 @@
     "@pikku/schema-cfworker": "^0.12.2",
     "kysely": "^0.28.12",
     "kysely-postgres-js": "^3.0.0",
-    "postgres": "^3.4.8",
+    "postgres": "^3.4.9",
     "tsx": "^4.21.0",
     "typescript": "^5.9"
   },

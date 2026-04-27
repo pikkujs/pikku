@@ -5504,7 +5504,7 @@ __metadata:
     kysely-plugin-serialize: "npm:^0.6.0"
     kysely-postgres-js: "npm:^3.0.0"
     mysql2: "npm:^3.18.2"
-    postgres: "npm:^3.4.8"
+    postgres: "npm:^3.4.9"
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.21.0"
     typescript: "npm:~5.8.0"
@@ -5645,7 +5645,7 @@ __metadata:
     "@pikku/kysely": "npm:^0.12.5"
     kysely: "npm:^0.28.12"
     kysely-postgres-js: "npm:^3.0.0"
-    postgres: "npm:^3.4.8"
+    postgres: "npm:^3.4.9"
     typescript: "npm:^5.9"
   languageName: unknown
   linkType: soft
@@ -5672,7 +5672,7 @@ __metadata:
     kysely-codegen: "npm:^0.20.0"
     kysely-plugin-serialize: "npm:^0.8.2"
     kysely-postgres-js: "npm:^3.0.0"
-    postgres: "npm:^3.4.8"
+    postgres: "npm:^3.4.9"
     typescript: "npm:^5.9"
   peerDependencies:
     "@pikku/core": ^0.12.19
@@ -5889,7 +5889,7 @@ __metadata:
     "@types/node": "npm:^24"
     kysely: "npm:^0.28.12"
     kysely-postgres-js: "npm:^3.0.0"
-    postgres: "npm:^3.4.8"
+    postgres: "npm:^3.4.9"
     tsx: "npm:^4.21.0"
     typescript: "npm:^5.9"
   languageName: unknown
@@ -5916,7 +5916,7 @@ __metadata:
     esbuild: "npm:~0.27.0"
     kysely: "npm:^0.28.12"
     kysely-postgres-js: "npm:^3.0.0"
-    postgres: "npm:^3.4.8"
+    postgres: "npm:^3.4.9"
     serverless: "npm:^4.33.0"
     serverless-esbuild: "npm:^1.57.0"
     serverless-offline: "npm:^14.5.0"
@@ -6200,7 +6200,7 @@ __metadata:
     kysely: "npm:^0.28.12"
     kysely-postgres-js: "npm:^3.0.0"
     pino-pretty: "npm:^13.1.3"
-    postgres: "npm:^3.4.8"
+    postgres: "npm:^3.4.9"
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.21.0"
     typescript: "npm:^5.9"
@@ -6278,7 +6278,7 @@ __metadata:
     "@types/node": "npm:^24"
     kysely: "npm:^0.28.12"
     kysely-postgres-js: "npm:^3.0.0"
-    postgres: "npm:^3.4.8"
+    postgres: "npm:^3.4.9"
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.21.0"
     typescript: "npm:^5.9"
@@ -6509,7 +6509,7 @@ __metadata:
     "@types/node": "npm:^24"
     kysely: "npm:^0.28.12"
     kysely-postgres-js: "npm:^3.0.0"
-    postgres: "npm:^3.4.8"
+    postgres: "npm:^3.4.9"
     tsx: "npm:^4.20.6"
     typescript: "npm:^5.9"
   languageName: unknown
@@ -19788,10 +19788,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postgres@npm:^3.4.8":
-  version: 3.4.8
-  resolution: "postgres@npm:3.4.8"
-  checksum: 10/65bf20b4ada953926c05a83f3fb454f10f5db0f05bd1fd2d41ddba4ce16d2038b46a973fd04e0331fb43cb5b6028fda272db438e497bc7c947756790f8fadc52
+"postgres@npm:^3.4.9":
+  version: 3.4.9
+  resolution: "postgres@npm:3.4.9"
+  checksum: 10/c6c7e85f5cfb00d455bcfee98e7af2abded43323552295044f00a602431465c9296ef6152d45d4a53bf3a72323ca00e03585b7ba6f8713367e42d1ef34d1fa5d
   languageName: node
   linkType: hard
 
