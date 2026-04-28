@@ -36,9 +36,11 @@ schemas (`yarn pikku meta functions get <id>`) or workflow steps
 Before touching any files, give the user one paragraph stating exactly what
 you'll do. This is the lightweight "plan" — it is chat, not JSON.
 
-> I'll add a `todos` table via a new migration in `sql/`, two `pikkuFunc`s
-> (`createTodo`, `listTodos`) in `packages/functions/src/functions/`, and an
-> HTTP wiring at `packages/functions/src/wirings/todos.http.ts`. No new
+> I'll add a `todos` table via a new migration in `sql/`, and two
+> `pikkuSessionlessFunc`s (`createTodo`, `listTodos` with
+> `readonly: true`) in `packages/functions/src/functions/`. Both
+> `expose: true`, so they'll be reachable via the auto-generated RPC
+> client and React Query hooks — no HTTP wiring needed. No new
 > dependencies. OK to proceed?
 
 Wait for the user to confirm or redirect. They can ask for changes ("use the
@@ -64,23 +66,45 @@ Write the code as a normal human contributor would. Use the project's
 existing conventions (look at neighbour files in `srcDirectories[0]/functions/`
 and `.../wirings/` for style).
 
-Hard rules that always apply:
+### RPC is the default transport
 
-- **`kind` ⇔ `auth` coupling.** If the function is `pikkuFunc` (session-aware),
-  its HTTP wiring needs `auth: true`. `pikkuSessionlessFunc` ⇒ `auth: false`.
-  Mismatching is a hard error (PKU573).
+**Just write the function with `expose: true`** — that's enough to make it
+callable. Pikku auto-generates an RPC client (and React Query hooks if the
+project's `clientFiles.reactQueryFile` is set) from every exposed function.
+You do **not** need an HTTP wiring for callers to reach the function.
+
+Default flow for a feature:
+
+1. Write the function file with `expose: true` (and `readonly: true` for
+   reads).
+2. Run `pikku all` — RPC map, fetch client, and React Query hooks are
+   regenerated. Frontends call `useListTodos()` / `mutation.mutate(...)`
+   without you wiring anything.
+
+Add an HTTP wiring **only when** the feature genuinely needs a specific
+REST shape (third-party callers, webhooks, REST-conventional URLs). Most
+in-app features don't.
+
+### Hard rules that always apply
+
+- **`expose: true`** for any function called from a frontend or another
+  service. Without it the RPC client won't generate hooks for it.
 - **`readonly: true` for queries.** Mark read functions as `readonly: true`
   on the function config. The runner uses this to enforce read-only sessions
-  (a write func called under a readonly session is rejected). Mutations
-  leave `readonly` unset (or `false`).
-- **HTTP method by intent.** Reads → `GET`. Writes → `POST`/`PUT`/`PATCH`/
-  `DELETE` per REST conventions. Match the method to the operation, not the
-  other way around.
+  (a write func called under a readonly session is rejected). The RPC layer
+  also uses it to pick `useQuery` (cacheable) vs `useMutation` for client
+  hooks. Mutations leave `readonly` unset (or `false`).
+- **`kind` ⇔ `auth` coupling for HTTP wirings (when you have one).** If the
+  function is `pikkuFunc` (session-aware), the HTTP wiring needs
+  `auth: true`. `pikkuSessionlessFunc` ⇒ `auth: false`. Mismatching is a
+  hard error (PKU573).
+- **HTTP method by intent (when you wire HTTP).** Reads → `GET`. Writes →
+  `POST`/`PUT`/`PATCH`/`DELETE` per REST conventions.
 - **Workflows.** Prefer `pikkuWorkflowGraph` (DSL) over
   `pikkuWorkflowComplexFunc`. `mode: 'inline'` is sync; `'distributed'` is
   queue-dispatched.
-- **Auth checks belong on the wiring**, not in function bodies. Use the
-  `permissions` field with a `pikkuPermission` factory.
+- **Auth checks belong on the function or wiring**, not in function bodies.
+  Use the `permissions` field with a `pikkuPermission` factory.
 - **Throw typed errors** from `@pikku/core/errors` — `NotFoundError`,
   `ConflictError`, `BadRequestError`. Never bare `Error`.
 - **Migrations are inline SQL files** in the project's migrations dir
@@ -94,13 +118,14 @@ Some patterns vary by project; **read a neighbour file before writing**:
   `CreateTodoOutput`) passed to `input`/`output` on the func config — vs
   generic-typed config. Schema name **must match codegen expectations** (the
   exported const name = the schema name in generated `.gen.json`).
-- **HTTP wiring style**: per-route `wireHTTP({...})` calls, OR a single
-  `defineHTTPRoutes({routes: {...}}) + wireHTTPRoutes(routes)` map. Match
-  what's already in the project — don't introduce a new style.
-- **Imports**: usually `'#pikku'` for `pikkuFunc`/`wireHTTP` etc. Some
-  projects use `@pikku/core` directly. Copy what neighbours do.
+- **Imports**: usually `'#pikku'` for `pikkuFunc` / `pikkuSessionlessFunc`
+  etc. Copy what neighbours do.
 - **Service usage**: e.g. `kysely`, `redis`. Look at how an existing function
   destructures services from its first arg.
+- **HTTP wiring style** (only relevant if you're adding one): per-route
+  `wireHTTP({...})` calls vs a single `defineHTTPRoutes({routes: {...}}) +
+  wireHTTPRoutes(routes)` map. Match what's already in the project; don't
+  introduce a new style.
 
 For shared wiring files (e.g. `todos.http.ts` holding both create and list):
 create the file with imports if it doesn't exist; **append** wire calls and
