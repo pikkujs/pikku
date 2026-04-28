@@ -5,6 +5,7 @@ type ScaffoldGenerator =
   | 'pikkuPublicRPC'
   | 'pikkuConsoleFunctions'
   | 'pikkuPublicAgent'
+  | 'pikkuEventsScaffold'
 
 const scaffoldFiles = (
   config: any
@@ -21,6 +22,11 @@ const scaffoldFiles = (
     files.push({
       file: config.publicAgentFile,
       generator: 'pikkuPublicAgent',
+    })
+  if (config.scaffold?.events && config.eventsChannelFile)
+    files.push({
+      file: config.eventsChannelFile,
+      generator: 'pikkuEventsScaffold',
     })
   return files
 }
@@ -137,6 +143,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await Promise.all([
       workflow.do('Public RPC', 'pikkuPublicRPC', null),
       workflow.do('Console functions', 'pikkuConsoleFunctions', null),
+      workflow.do('Events scaffold', 'pikkuEventsScaffold', null),
       workflow.do('Node types', 'pikkuNodeTypes', null),
       workflow.do(
         'Secret definition types',
@@ -208,6 +215,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
           workflow.do('Fetch', 'pikkuFetch', null),
           workflow.do('RPC client', 'pikkuRPCClient', null),
           workflow.do('React query', 'pikkuReactQuery', null),
+          workflow.do('Realtime client', 'pikkuRealtime', null),
         ])
         allImports.push(config.httpWiringMetaFile, config.httpWiringsFile)
       }
