@@ -73,6 +73,14 @@ export class CorePikkuFetch {
   }
 
   /**
+   * Returns the configured base server URL (without trailing slash), or
+   * undefined if it hasn't been set yet.
+   */
+  public getServerUrl(): string | undefined {
+    return this.options.serverUrl
+  }
+
+  /**
    * Sets the JWT for authorization.
    *
    * @param {string} jwt - The JWT to be used for authorization.
