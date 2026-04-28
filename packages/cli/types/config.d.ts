@@ -51,6 +51,7 @@ export interface PikkuCLICoreOutputFiles {
   publicAgentFile: string
   consoleFunctionsFile: string
   workflowRoutesFile: string
+  eventsChannelFile: string
 
   // Triggers
   triggersTypesFile: string
@@ -190,6 +191,14 @@ export type PikkuCLIInput = {
     websocketFile?: string
     rpcWiringsFile?: string
     reactQueryFile?: string
+    realtimeFile?: string
+    /**
+     * Optional import for the EventHubTopics type so the realtime client is
+     * fully typed. Format: `<path>#<TypeName>` resolved relative to
+     * `realtimeFile`. Example: `../types/eventhub-topics.js#EventHubTopics`.
+     * If unset, the generated client treats topics as `Record<string, unknown>`.
+     */
+    realtimeEventHubTopicsImport?: string
     queueWiringsFile?: string
     mcpJsonFile?: string
     nextBackendFile?: string
@@ -248,6 +257,7 @@ export type PikkuCLIInput = {
     console?: PikkuScaffoldFeature
     agent?: PikkuScaffoldFeature
     workflow?: PikkuScaffoldFeature
+    events?: PikkuScaffoldFeature
   }
 
   forceRequiredServices?: string[]
