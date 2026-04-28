@@ -1,0 +1,20 @@
+{
+  "get": {
+    "/existing": {
+      "pikkuFuncId": "existingFunc",
+      "route": "/existing",
+      "method": "get",
+      "params": [],
+      "middleware": []
+    }
+  },
+  "post": {
+    "/new": {
+      "pikkuFuncId": "newFunc",
+      "route": "/new",
+      "method": "post",
+      "params": [],
+      "middleware": []
+    }
+  }
+}
