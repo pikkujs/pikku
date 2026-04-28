@@ -347,39 +347,36 @@ export type PikkuFunctionConfig<
  * Use this when you want to define input/output schemas using Zod.
  * Types are automatically inferred from the schemas.
  */
+type SchemaInferred<S, Fallback = unknown> = S extends StandardSchemaV1
+  ? InferSchemaOutput<S>
+  : Fallback
+
+/**
+ * Schema-overload variant for pikkuFunc. Derived from CorePikkuFunctionConfig
+ * so adding a field on the core type automatically propagates here.
+ */
 export type PikkuFunctionConfigWithSchema<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined,
   RequiredWires extends keyof PikkuWire = never
-> = {
-  name?: string
-  description?: string
-  tags?: string[]
-  expose?: boolean
-  mcp?: boolean
-  internal?: boolean
-  remote?: boolean
-  readonly?: boolean
-  version?: number
-  deploy?: 'serverless' | 'server' | 'auto'
-  approvalRequired?: boolean
-  approvalDescription?: InputSchema extends StandardSchemaV1 ? PikkuApprovalDescription<InferSchemaOutput<InputSchema>> : never
-  func: PikkuFunction<
-    InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
-    OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
-    RequiredWires
-  > | PikkuFunctionSessionless<
-    InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
-    OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
-    RequiredWires
-  >
-  auth?: boolean
-  permissions?: InputSchema extends StandardSchemaV1 ? CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>> : undefined
-  middleware?: PikkuMiddleware[]
+> = Omit<
+  CorePikkuFunctionConfig<
+    | PikkuFunction<SchemaInferred<InputSchema>, SchemaInferred<OutputSchema>, RequiredWires>
+    | PikkuFunctionSessionless<SchemaInferred<InputSchema>, SchemaInferred<OutputSchema>, RequiredWires>
+  >,
+  'func' | 'input' | 'output' | 'permissions' | 'approvalDescription'
+> & {
+  func:
+    | PikkuFunction<SchemaInferred<InputSchema>, SchemaInferred<OutputSchema>, RequiredWires>
+    | PikkuFunctionSessionless<SchemaInferred<InputSchema>, SchemaInferred<OutputSchema>, RequiredWires>
   input?: InputSchema
   output?: OutputSchema
-  node?: NodeConfig
-  errors?: Array<typeof PikkuError>
+  permissions?: InputSchema extends StandardSchemaV1
+    ? CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>>
+    : undefined
+  approvalDescription?: InputSchema extends StandardSchemaV1
+    ? PikkuApprovalDescription<InferSchemaOutput<InputSchema>>
+    : never
 }
 
 /**
@@ -464,35 +461,33 @@ export const pikkuListFunc = <
 /**
  * Configuration object for sessionless Pikku functions with Zod schema validation.
  */
+/**
+ * Schema-overload variant for pikkuSessionlessFunc. Derived from
+ * CorePikkuFunctionConfig to stay in sync with the generic-typed config.
+ */
 export type PikkuFunctionSessionlessConfigWithSchema<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined,
   RequiredWires extends keyof PikkuWire = never
-> = {
-  name?: string
-  description?: string
-  tags?: string[]
-  expose?: boolean
-  mcp?: boolean
-  internal?: boolean
-  remote?: boolean
-  readonly?: boolean
-  version?: number
-  deploy?: 'serverless' | 'server' | 'auto'
-  approvalRequired?: boolean
-  approvalDescription?: InputSchema extends StandardSchemaV1 ? PikkuApprovalDescription<InferSchemaOutput<InputSchema>> : never
+> = Omit<
+  CorePikkuFunctionConfig<
+    PikkuFunctionSessionless<SchemaInferred<InputSchema>, SchemaInferred<OutputSchema>, RequiredWires>
+  >,
+  'func' | 'input' | 'output' | 'permissions' | 'approvalDescription'
+> & {
   func: PikkuFunctionSessionless<
-    InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
-    OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown,
+    SchemaInferred<InputSchema>,
+    SchemaInferred<OutputSchema>,
     RequiredWires
   >
-  auth?: boolean
-  permissions?: InputSchema extends StandardSchemaV1 ? CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>> : undefined
-  middleware?: PikkuMiddleware[]
   input?: InputSchema
   output?: OutputSchema
-  node?: NodeConfig
-  errors?: Array<typeof PikkuError>
+  permissions?: InputSchema extends StandardSchemaV1
+    ? CorePermissionGroup<PikkuPermission<InferSchemaOutput<InputSchema>>>
+    : undefined
+  approvalDescription?: InputSchema extends StandardSchemaV1
+    ? PikkuApprovalDescription<InferSchemaOutput<InputSchema>>
+    : never
 }
 
 /**
