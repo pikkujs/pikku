@@ -56,6 +56,7 @@ import {
   pikkuMetaWorkflowsGet,
   pikkuMetaWorkflowsList,
   pikkuMetaContext,
+  pikkuMetaClients,
 } from './functions/commands/meta.js'
 import { defaultCLIRenderer } from './services.js'
 
@@ -497,6 +498,11 @@ wireCLI({
           func: pikkuMetaContext,
           description:
             'Bulk project context for planners (functions, wires, middleware, permissions, workflows, capabilities, layout) in one call',
+        }),
+        clients: pikkuCLICommand({
+          func: pikkuMetaClients,
+          description:
+            'Frontend-targeted metadata: exposed RPCs, workflows, channels with their input/output type names and descriptions',
         }),
         functions: {
           description: 'Inspect function metadata',
