@@ -69,11 +69,13 @@ Hard rules that always apply:
 - **`kind` ⇔ `auth` coupling.** If the function is `pikkuFunc` (session-aware),
   its HTTP wiring needs `auth: true`. `pikkuSessionlessFunc` ⇒ `auth: false`.
   Mismatching is a hard error (PKU573).
-- **HTTP method by intent.** Reads (list/get) → `GET`. Writes (create/update/
-  delete) → `POST`/`PUT`/`PATCH`/`DELETE` per REST conventions. The method on
-  the wiring is the source of truth — don't try to set query/mutation flags
-  on the function config (the function-level `readonly` field isn't accepted
-  by `pikkuSessionlessFunc` types).
+- **`readonly: true` for queries.** Mark read functions as `readonly: true`
+  on the function config. The runner uses this to enforce read-only sessions
+  (a write func called under a readonly session is rejected). Mutations
+  leave `readonly` unset (or `false`).
+- **HTTP method by intent.** Reads → `GET`. Writes → `POST`/`PUT`/`PATCH`/
+  `DELETE` per REST conventions. Match the method to the operation, not the
+  other way around.
 - **Workflows.** Prefer `pikkuWorkflowGraph` (DSL) over
   `pikkuWorkflowComplexFunc`. `mode: 'inline'` is sync; `'distributed'` is
   queue-dispatched.
