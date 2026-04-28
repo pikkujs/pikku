@@ -165,9 +165,8 @@ export class PikkuRealtime {
 }
 
 /**
- * SSE alternative: one EventSource per topic. Auto-unsubscribes when you
- * call the returned \`close()\`. Use this in environments where WebSocket
- * is blocked, or when you only need a single-topic stream.
+ * SSE alternative for the realtime topic stream: one EventSource per topic.
+ * Auto-unsubscribes when you call the returned \`close()\`.
  *
  * \`\`\`ts
  * const sub = subscribeToTopicViaSSE('http://localhost:3000', 'todo-created', ({ todo }) => {...})
@@ -181,15 +180,63 @@ export function subscribeToTopicViaSSE<
   topic: K,
   handler: Handler<EventHubTopics[K]>
 ): { close: () => void } {
-  const es = new EventSource(\`\${baseUrl.replace(/\\/$/, '')}/events/\${encodeURIComponent(topic)}\`)
+  return subscribeToSSE(
+    \`\${baseUrl.replace(/\\/$/, '')}/events/\${encodeURIComponent(topic)}\`,
+    handler as Handler<unknown>
+  )
+}
+
+/**
+ * Generic SSE subscription helper. Use this for any \`sse: true\` HTTP route
+ * in your project (workflow-progress streams, agent run streams, anything
+ * the inspector reports as SSE).
+ *
+ * Caller constructs the URL — including path params and query string —
+ * since SSE routes can take arbitrary inputs. The handler receives JSON-
+ * parsed event payloads.
+ *
+ * \`\`\`ts
+ * const sub = subscribeToSSE<{ progress: number }>(
+ *   \`\${apiUrl}/workflow-run/\${runId}/stream\`,
+ *   (event) => setProgress(event.progress)
+ * )
+ * // later: sub.close()
+ * \`\`\`
+ */
+export function subscribeToSSE<T = unknown>(
+  url: string,
+  handler: Handler<T>,
+  onError?: (event: Event) => void
+): { close: () => void } {
+  const es = new EventSource(url)
   es.onmessage = (e: MessageEvent) => {
     try {
-      handler(JSON.parse(e.data) as EventHubTopics[K])
+      handler(JSON.parse(e.data) as T)
     } catch {
       // Ignore malformed events
     }
   }
+  if (onError) es.onerror = onError
   return { close: () => es.close() }
+}
+
+/**
+ * Convenience: open a typed WebSocket against one of the project's
+ * \`wireChannel\` routes. Returns a raw \`WebSocket\` — wrap in
+ * \`PikkuWebSocket<'channel-name'>\` from the generated websocket client
+ * for fully-typed subscribe/send.
+ *
+ * \`\`\`ts
+ * const ws = connectToChannel('ws://localhost:3000/ws/kanban')
+ * const typed = new PikkuWebSocket<'kanban-live'>(ws)
+ * typed.getRoute('command').subscribe('message', (data) => {...})
+ * \`\`\`
+ */
+export function connectToChannel(
+  url: string,
+  protocols?: string | string[]
+): WebSocket {
+  return new WebSocket(url, protocols)
 }
 `
 }
