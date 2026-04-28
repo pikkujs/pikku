@@ -1,0 +1,44 @@
+{
+  "existingFunc": {
+    "pikkuFuncId": "existingFunc",
+    "functionType": "user",
+    "funcWrapper": "pikkuFunc",
+    "sessionless": false,
+    "name": "existingFunc",
+    "inputSchemaName": "ExistingFuncInput",
+    "outputSchemaName": "ExistingFuncOutput",
+    "inputs": ["ExistingFuncInput"],
+    "outputs": ["ExistingFuncOutput"],
+    "contractHash": "deadbeef00000001",
+    "inputHash": "00000001",
+    "outputHash": "00000002"
+  },
+  "modifiedFunc": {
+    "pikkuFuncId": "modifiedFunc",
+    "functionType": "user",
+    "funcWrapper": "pikkuFunc",
+    "sessionless": false,
+    "name": "modifiedFunc",
+    "inputSchemaName": "ModifiedFuncInputV2",
+    "outputSchemaName": "ModifiedFuncOutput",
+    "inputs": ["ModifiedFuncInputV2"],
+    "outputs": ["ModifiedFuncOutput"],
+    "contractHash": "deadbeef00000999",
+    "inputHash": "00000099",
+    "outputHash": "00000004"
+  },
+  "newFunc": {
+    "pikkuFuncId": "newFunc",
+    "functionType": "user",
+    "funcWrapper": "pikkuFunc",
+    "sessionless": false,
+    "name": "newFunc",
+    "inputSchemaName": "NewFuncInput",
+    "outputSchemaName": "NewFuncOutput",
+    "inputs": ["NewFuncInput"],
+    "outputs": ["NewFuncOutput"],
+    "contractHash": "deadbeef00000003",
+    "inputHash": "00000005",
+    "outputHash": "00000006"
+  }
+}

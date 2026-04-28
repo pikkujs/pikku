@@ -75,7 +75,10 @@ export class CLILogger implements Logger {
   }
 
   private writeJSONLine(payload: Record<string, unknown>): void {
-    process.stdout.write(`${JSON.stringify(payload)}\n`)
+    // Logs go to stderr so stdout is reserved for command data output.
+    // This lets consumers pipe `pikku <cmd> --json | jq` or
+    // `pikku meta context --json | pikku plan ingest -` without log noise.
+    process.stderr.write(`${JSON.stringify(payload)}\n`)
   }
 
   private ensureJSONFlushHook(): void {

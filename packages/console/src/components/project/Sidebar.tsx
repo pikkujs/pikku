@@ -25,6 +25,7 @@ import {
   Search,
   Package,
   RefreshCw,
+  GitCompare,
 } from 'lucide-react'
 import { spotlight } from '@mantine/spotlight'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
@@ -62,6 +63,12 @@ export const DEFAULT_NAV_SECTIONS: NavSection[] = [
         href: '/agents',
         icon: Bot,
         matchPrefix: '/agents',
+      },
+      {
+        label: 'Changes',
+        href: '/changes',
+        icon: GitCompare,
+        matchPrefix: '/changes',
       },
     ],
   },

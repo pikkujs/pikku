@@ -26,6 +26,7 @@
     "test:credential-agent": "cucumber-js --config tests/cucumber.mjs --tags @credential-agent",
     "test:code-editor": "cucumber-js --config tests/cucumber.mjs --tags '@code-editor and not @console'",
     "test:code-editor-ui": "cucumber-js --config tests/cucumber.mjs --tags '@code-editor and @console'",
+    "test:changes-console": "cucumber-js --config tests/cucumber.mjs --tags @changes-console",
     "tsc": "tsc --noEmit"
   },
   "dependencies": {

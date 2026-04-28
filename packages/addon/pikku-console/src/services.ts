@@ -3,6 +3,7 @@ import { WiringService } from './services/wiring.service.js'
 import { AddonService } from './services/addon.service.js'
 import { OAuthService } from './services/oauth.service.js'
 import type { CodeEditService } from './services/code-edit.service.js'
+import { StateDiffService } from './services/state-diff.service.js'
 
 export const createSingletonServices = pikkuAddonServices(
   async (
@@ -37,11 +38,14 @@ export const createSingletonServices = pikkuAddonServices(
 
     const metaBasePath = existingMetaService?.basePath
     let codeEditService: CodeEditService | null = null
+    let stateDiffService: StateDiffService | null = null
     if (metaBasePath) {
       const { dirname } = await import('node:path')
       const codeEditPath = './services/code-edit.service.js'
       const { CodeEditService } = await import(codeEditPath)
-      codeEditService = new CodeEditService(dirname(metaBasePath))
+      const projectRoot = dirname(metaBasePath)
+      codeEditService = new CodeEditService(projectRoot)
+      stateDiffService = new StateDiffService(projectRoot)
     }
 
     return {
@@ -59,6 +63,7 @@ export const createSingletonServices = pikkuAddonServices(
       schedulerService,
       credentialService,
       codeEditService,
+      stateDiffService,
     }
   }
 )
