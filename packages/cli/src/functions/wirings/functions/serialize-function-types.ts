@@ -32,7 +32,6 @@ import type { CorePikkuFunctionConfig, CorePikkuAuth, CorePikkuAuthConfig, CoreP
 import { pikkuAuth as pikkuAuthCore } from '@pikku/core/function'
 import { addMiddleware as addMiddlewareCore, addPermission as addPermissionCore } from '@pikku/core/middleware'
 import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/internal'
-import { PikkuError } from '@pikku/core/errors'
 import type { NodeType } from '@pikku/core/node'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
