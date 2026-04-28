@@ -9,6 +9,7 @@ import type { WiringService } from '../src/services/wiring.service.js'
 import type { AddonService } from '../src/services/addon.service.js'
 import type { OAuthService } from '../src/services/oauth.service.js'
 import type { CodeEditService } from '../src/services/code-edit.service.js'
+import type { StateDiffService } from '../src/services/state-diff.service.js'
 
 export interface Config extends CoreConfig {}
 
@@ -20,6 +21,7 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   addonService: AddonService
   oauthService: OAuthService
   codeEditService: CodeEditService | null
+  stateDiffService: StateDiffService | null
 }
 
 export interface Services extends CoreServices<SingletonServices> {}

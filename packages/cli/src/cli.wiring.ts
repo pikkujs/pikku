@@ -35,6 +35,28 @@ import {
 import { deployPlan } from './functions/commands/deploy-plan.js'
 import { deployApply } from './functions/commands/deploy-apply.js'
 import { deployInfo } from './functions/commands/deploy-info.js'
+import {
+  pikkuSkillsInstall,
+  pikkuSkillsList,
+} from './functions/commands/skills.js'
+import {
+  pikkuMetaFunctionsGet,
+  pikkuMetaFunctionsList,
+  pikkuMetaMiddlewareGet,
+  pikkuMetaMiddlewareList,
+  pikkuMetaPermissionsGet,
+  pikkuMetaPermissionsList,
+  pikkuMetaWiresList,
+  pikkuMetaWiresHttp,
+  pikkuMetaWiresScheduler,
+  pikkuMetaWiresQueue,
+  pikkuMetaWiresChannel,
+  pikkuMetaWiresTrigger,
+  pikkuMetaWiresType,
+  pikkuMetaWorkflowsGet,
+  pikkuMetaWorkflowsList,
+  pikkuMetaContext,
+} from './functions/commands/meta.js'
 import { defaultCLIRenderer } from './services.js'
 
 wireCLI({
@@ -432,6 +454,136 @@ wireCLI({
             },
           },
         }),
+      },
+    },
+    skills: {
+      description:
+        'Install bundled agent skills (Claude Code today; Codex/Gemini coming soon)',
+      subcommands: {
+        list: pikkuCLICommand({
+          func: pikkuSkillsList,
+          description:
+            'List skills bundled with @pikku/cli and which are installed',
+        }),
+        install: pikkuCLICommand({
+          func: pikkuSkillsInstall,
+          description: 'Copy bundled skills into the current project',
+          options: {
+            target: {
+              description:
+                'Target agent (claude | codex | gemini). Default: claude',
+              default: 'claude',
+            },
+            only: {
+              description:
+                'Comma-separated list of skill names to install (default: all)',
+            },
+            update: {
+              description: 'Overwrite existing skills if already installed',
+              default: false,
+            },
+          },
+        }),
+      },
+    },
+    meta: {
+      description: 'Inspect project metadata in machine-readable form',
+      subcommands: {
+        context: pikkuCLICommand({
+          func: pikkuMetaContext,
+          description:
+            'Bulk project context for planners (functions, wires, middleware, permissions, workflows, capabilities, layout) in one call',
+        }),
+        functions: {
+          description: 'Inspect function metadata',
+          subcommands: {
+            list: pikkuCLICommand({
+              func: pikkuMetaFunctionsList,
+              description: 'List available functions (lightweight index)',
+            }),
+            get: pikkuCLICommand({
+              func: pikkuMetaFunctionsGet,
+              description: 'Get full metadata for a function id',
+              parameters: '<functionId>',
+            }),
+          },
+        },
+        workflows: {
+          description: 'Inspect workflow metadata',
+          subcommands: {
+            list: pikkuCLICommand({
+              func: pikkuMetaWorkflowsList,
+              description: 'List available workflows (lightweight index)',
+            }),
+            get: pikkuCLICommand({
+              func: pikkuMetaWorkflowsGet,
+              description: 'Get full metadata for a workflow id',
+              parameters: '<workflowId>',
+            }),
+          },
+        },
+        middleware: {
+          description: 'Inspect middleware metadata',
+          subcommands: {
+            list: pikkuCLICommand({
+              func: pikkuMetaMiddlewareList,
+              description: 'List available middleware (lightweight index)',
+            }),
+            get: pikkuCLICommand({
+              func: pikkuMetaMiddlewareGet,
+              description: 'Get full metadata for a middleware id',
+              parameters: '<middlewareId>',
+            }),
+          },
+        },
+        permissions: {
+          description: 'Inspect permission metadata',
+          subcommands: {
+            list: pikkuCLICommand({
+              func: pikkuMetaPermissionsList,
+              description: 'List available permissions (lightweight index)',
+            }),
+            get: pikkuCLICommand({
+              func: pikkuMetaPermissionsGet,
+              description: 'Get full metadata for a permission id',
+              parameters: '<permissionId>',
+            }),
+          },
+        },
+        wires: {
+          description: 'Inspect wire metadata',
+          subcommands: {
+            list: pikkuCLICommand({
+              func: pikkuMetaWiresList,
+              description: 'List available wire types and counts',
+            }),
+            http: pikkuCLICommand({
+              func: pikkuMetaWiresHttp,
+              description: 'List HTTP wire entries',
+            }),
+            scheduler: pikkuCLICommand({
+              func: pikkuMetaWiresScheduler,
+              description: 'List scheduler wire entries',
+            }),
+            queue: pikkuCLICommand({
+              func: pikkuMetaWiresQueue,
+              description: 'List queue wire entries',
+            }),
+            channel: pikkuCLICommand({
+              func: pikkuMetaWiresChannel,
+              description: 'List channel wire entries',
+            }),
+            trigger: pikkuCLICommand({
+              func: pikkuMetaWiresTrigger,
+              description: 'List trigger wire entries',
+            }),
+            get: pikkuCLICommand({
+              func: pikkuMetaWiresType,
+              description: 'Get wire entries for a type',
+              parameters: '<type>',
+            }),
+          },
+        },
       },
     },
     info: pikkuCLICommand({
