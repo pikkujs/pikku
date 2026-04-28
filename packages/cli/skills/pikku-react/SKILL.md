@@ -18,10 +18,12 @@ import {
   createPikku,
   usePikkuFetch,
   usePikkuRPC,
+  usePikkuRealtime,
 } from '@pikku/react'
 ```
 
-That's it. Four exports.
+Five exports. `usePikkuRealtime` is only valid when you wired a
+`PikkuRealtime` class via `createPikku` — see step 3 below.
 
 ## Setup at the app root
 
@@ -41,20 +43,34 @@ createRoot(document.getElementById('root')!).render(
 )
 ```
 
-The two generated classes (`PikkuFetch` and `PikkuRPC`) come from your
-`pikku.config.json`:
+If the project also exposes realtime events (see **pikku-realtime**), pass
+the `PikkuRealtime` class as the third argument and the instance gets a
+`realtime` field too:
 
-| config field                  | generated file                                        |
-|-------------------------------|-------------------------------------------------------|
-| `clientFiles.fetchFile`       | typed HTTP client (`PikkuFetch` class)                |
-| `clientFiles.rpcWiringsFile`  | RPC client (`PikkuRPC` class) calling all exposed fns |
+```tsx
+import { PikkuRealtime } from './pikku/realtime.gen'
 
-If either file isn't being generated, that field is missing from the config
-— add it and re-run `pikku all`.
+const pikku = createPikku(PikkuFetch, PikkuRPC, PikkuRealtime, {
+  serverUrl: import.meta.env.VITE_API_URL ?? 'http://localhost:3000',
+})
+// pikku.fetch / pikku.rpc / pikku.realtime — all share the same fetch
+// (server URL + auth configured once).
+```
+
+The generated classes come from your `pikku.config.json`:
+
+| config field                       | generated file                                         |
+|------------------------------------|--------------------------------------------------------|
+| `clientFiles.fetchFile`            | typed HTTP client (`PikkuFetch` class)                 |
+| `clientFiles.rpcWiringsFile`       | RPC client (`PikkuRPC` class) calling all exposed fns  |
+| `clientFiles.realtimeFile`         | `PikkuRealtime` (websocket events + SSE + channels)    |
+
+If a file isn't being generated, that field is missing from the config —
+add it and re-run `pikku all`.
 
 `createPikku(...)` accepts the same `CorePikkuFetchOptions` as `PikkuFetch`
 plus `serverUrl`. Auth headers, request interceptors, etc. are configured
-on the fetch instance.
+on the fetch instance — RPC and realtime inherit them automatically.
 
 ## Calling an RPC directly (no React Query)
 
@@ -86,6 +102,28 @@ const data = await fetch.get('/some-rest-route', { searchParams: {...} })
 Use this only when the function is wired via HTTP (REST shape) and you
 need a path-style call. For RPC calls, `usePikkuRPC()` is cleaner.
 
+## Realtime subscriptions
+
+If you wired a `PikkuRealtime` class into `createPikku`, use
+`usePikkuRealtime()` to grab the shared instance:
+
+```tsx
+import { usePikkuRealtime } from '@pikku/react'
+import type { PikkuRealtime } from './pikku/realtime.gen'
+
+function TodoList() {
+  const realtime = usePikkuRealtime<PikkuRealtime>()
+  useEffect(() => {
+    return realtime.subscribe('todo-created', ({ todo }) => { /* ... */ })
+  }, [realtime])
+  // ...
+}
+```
+
+The hook throws if no `PikkuRealtime` was wired — that's how you know to
+add it to `createPikku(...)`. Full event-hub setup, publishing, and SSE
+helpers live in **pikku-realtime**.
+
 ## When to reach for what
 
 | Need                                          | Use                       |
@@ -96,6 +134,7 @@ need a path-style call. For RPC calls, `usePikkuRPC()` is cleaner.
 | One-off call from an event handler            | `usePikkuRPC()` direct |
 | Hit a REST endpoint (not RPC)                 | `usePikkuFetch()` |
 | Run a workflow                                | **pikku-workflows-client** |
+| Subscribe to events / SSE / channel           | `usePikkuRealtime()` (see **pikku-realtime**) |
 
 The first three live in your generated `api.gen.ts` (see the
 **pikku-react-query** skill). This skill covers the bottom four rows.

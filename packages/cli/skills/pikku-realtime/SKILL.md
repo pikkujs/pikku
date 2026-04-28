@@ -149,15 +149,47 @@ async function publishEvent<K extends keyof EventHubTopics>(
 await publishEvent(eventHub, 'todo-created', { todo })
 ```
 
-## 5. Subscribe from React
+## 5. Wire it up — share fetch with PikkuRPC
+
+`PikkuRealtime` mirrors `PikkuRPC`: it wraps the same `PikkuFetch`, so
+server URL + auth are configured **once** and shared across HTTP, RPC,
+and realtime transports.
+
+```tsx
+import { createPikku, PikkuProvider } from '@pikku/react'
+import { PikkuFetch }     from './pikku/pikku-fetch.gen'
+import { PikkuRPC }       from './pikku/pikku-rpc.gen'
+import { PikkuRealtime }  from './pikku/realtime.gen'
+
+const pikku = createPikku(
+  PikkuFetch,
+  PikkuRPC,
+  PikkuRealtime, // pass the realtime class as the third arg
+  { serverUrl: import.meta.env.VITE_API_URL ?? 'http://localhost:3000' }
+)
+// pikku.fetch / pikku.rpc / pikku.realtime — all share the same fetch.
+
+createRoot(document.getElementById('root')!).render(
+  <PikkuProvider pikku={pikku}>
+    <App />
+  </PikkuProvider>
+)
+```
+
+Or wire manually:
+
+```ts
+const realtime = new PikkuRealtime()
+realtime.setPikkuFetch(pikku.fetch) // inherits serverUrl + auth
+```
+
+## 6. Subscribe from React
 
 ```tsx
 import { useEffect, useState } from 'react'
-import { PikkuRealtime } from './pikku/realtime.gen'
-
-const realtime = new PikkuRealtime({ url: 'ws://localhost:3000/events' })
 
 function TodoList() {
+  const { realtime } = usePikku() // assuming you expose a hook over your context
   const [todos, setTodos] = useState<Todo[]>([])
 
   useEffect(() => {
@@ -165,44 +197,38 @@ function TodoList() {
       setTodos((prev) => [...prev, todo])
     })
     return off
-  }, [])
+  }, [realtime])
 
   return <ul>{todos.map((t) => <li key={t.id}>{t.title}</li>)}</ul>
 }
 ```
 
-Single-topic SSE:
+Single-topic SSE (auto-cleanup on close):
 
 ```tsx
 useEffect(() => {
-  const sub = subscribeToTopicViaSSE('http://localhost:3000', 'todo-created', ({ todo }) => {
+  const sub = realtime.subscribeToTopic('todo-created', ({ todo }) => {
     setTodos((prev) => [...prev, todo])
   })
   return () => sub.close()
-}, [])
+}, [realtime])
 ```
 
 ## Subscribing to other SSE / WebSocket routes
 
-The realtime client also exposes generic helpers for any project route
-that uses SSE or WebSocket — not just the `/events` ones:
+Same client also handles generic SSE + channel routes — use the path,
+the base URL is inherited from PikkuFetch:
 
 ```ts
-import {
-  subscribeToSSE,
-  connectToChannel,
-} from './pikku/realtime.gen'
-
-// Any sse: true HTTP route. Caller builds the URL (path params + query).
-const sub = subscribeToSSE<{ progress: number }>(
-  `${apiUrl}/workflow-run/${runId}/stream`,
+// Any sse: true HTTP route
+const sub = realtime.subscribeToSSE<{ progress: number }>(
+  `/workflow-run/${runId}/stream`,
   (event) => setProgress(event.progress)
 )
 // later: sub.close()
 
-// Any wireChannel — open a typed websocket. Wrap in PikkuWebSocket
-// (from the generated websocket client) for typed subscribe/send.
-const ws = connectToChannel('ws://localhost:3000/ws/kanban')
+// Any wireChannel — open a raw socket, wrap in PikkuWebSocket for typed I/O
+const ws = realtime.connectToChannel('/ws/kanban')
 const typed = new PikkuWebSocket<'kanban-live'>(ws)
 typed.getRoute('command').subscribe('message', (data) => { /* ... */ })
 ```
