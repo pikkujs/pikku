@@ -1,6 +1,5 @@
-import { createServer, type ServerResponse, type IncomingMessage } from 'http'
+import { createServer } from 'http'
 import { join, resolve } from 'path'
-import { Readable } from 'stream'
 
 import { pikkuSessionlessFunc } from '#pikku'
 import chokidar, { type FSWatcher } from 'chokidar'
@@ -14,92 +13,35 @@ import {
 } from '@pikku/core/services'
 import { stopSingletonServices } from '@pikku/core'
 import { pikkuState } from '@pikku/core/internal'
-import {
-  fetchData,
-  PikkuFetchHTTPResponse,
-  logRoutes,
-} from '@pikku/core/http'
+import { fetchData, PikkuFetchHTTPResponse, logRoutes } from '@pikku/core/http'
 import { compileAllSchemas } from '@pikku/core/schema'
 import { pikkuWebsocketHandler } from '@pikku/ws'
 import { WebSocketServer } from 'ws'
 import { InMemorySchedulerService } from '@pikku/schedule'
 
-function incomingMessageToRequest(req: IncomingMessage): Request {
-  const url = new URL(req.url || '/', 'http://localhost')
-  const method = req.method ? req.method.toUpperCase() : 'GET'
-  const headers = new Headers()
-
-  for (const [key, value] of Object.entries(req.headers)) {
-    if (value) {
-      headers.set(key, Array.isArray(value) ? value.join(', ') : value)
-    }
-  }
-
-  let body: BodyInit | null = null
-  if (method !== 'GET' && method !== 'HEAD') {
-    body = Readable.toWeb(req) as unknown as BodyInit
-  }
-
-  return new Request(url.toString(), {
-    method,
-    headers,
-    body,
-    // @ts-ignore - duplex is needed for streaming body in Node.js
-    duplex: 'half',
-  })
-}
-
-async function writeResponse(
-  nodeRes: ServerResponse,
-  webResponse: Response
-): Promise<void> {
-  const headers: Record<string, string | string[]> = {}
-  webResponse.headers.forEach((value, name) => {
-    const lower = name.toLowerCase()
-    if (lower === 'set-cookie') {
-      const existing = headers[lower]
-      if (Array.isArray(existing)) {
-        existing.push(value)
-      } else {
-        headers[lower] = [value]
-      }
-    } else {
-      headers[lower] = value
-    }
-  })
-
-  nodeRes.writeHead(webResponse.status, headers)
-
-  if (webResponse.body) {
-    const reader = webResponse.body.getReader()
-    try {
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        nodeRes.write(value)
-      }
-    } finally {
-      reader.releaseLock()
-    }
-  }
-
-  nodeRes.end()
-}
+import { ContentServer } from './dev/content-server.js'
+import { incomingMessageToRequest, writeResponse } from './dev/http-bridge.js'
 
 export const dev = pikkuSessionlessFunc<
-  { port?: string; watch?: boolean; hmr?: boolean },
+  { port?: string; watch?: boolean; hmr?: boolean; content?: string },
   void
 >({
   remote: true,
   func: async (
     { logger, config, getInspectorState },
-    { port, watch, hmr },
+    { port, watch, hmr, content },
     { rpc }
   ) => {
     const resolvedPort = parseInt(port || '3000', 10)
     const hostname = 'localhost'
     const enableWatch = watch !== false
     const enableHmr = hmr !== false
+    const contentServer = content
+      ? new ContentServer(resolve(config.rootDir, content))
+      : null
+    if (contentServer) {
+      await contentServer.ensureDir()
+    }
 
     await rpc.invoke('all')
 
@@ -146,6 +88,12 @@ export const dev = pikkuSessionlessFunc<
     logRoutes(logger)
 
     const server = createServer(async (req, res) => {
+      // Local content server (opt-in via --content). Short-circuits for
+      // /reaper/* (PUT) and /content/* (GET); everything else falls through
+      // to pikku routing.
+      if (contentServer && (await contentServer.tryHandle(req, res))) {
+        return
+      }
       const request = incomingMessageToRequest(req)
       const pikkuResponse = new PikkuFetchHTTPResponse()
       await fetchData(request, pikkuResponse, { respondWith404: true })
@@ -160,9 +108,10 @@ export const dev = pikkuSessionlessFunc<
 
     await new Promise<void>((resolve) => {
       server.listen(resolvedPort, hostname, () => {
-        logger.info(
-          `Dev server running at http://${hostname}:${resolvedPort}`
-        )
+        logger.info(`Dev server running at http://${hostname}:${resolvedPort}`)
+        if (contentServer) {
+          logger.info(contentServer.describe(resolvedPort, hostname))
+        }
         resolve()
       })
     })
