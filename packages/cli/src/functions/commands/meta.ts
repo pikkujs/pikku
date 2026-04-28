@@ -402,3 +402,119 @@ export const pikkuMetaContext = pikkuSessionlessFunc<{}, void>({
     })
   },
 })
+
+/**
+ * Frontend-targeted metadata.
+ *
+ * Returns only what a UI agent needs to write client code:
+ *   - RPCs: every exposed function with input/output type names,
+ *     description, readonly flag, tags.
+ *   - Workflows: name, description, mode (inline|distributed), input/output
+ *     types resolved through the workflow's underlying function.
+ *   - Channels: name, route, description, plus the input/output types of
+ *     the connect / disconnect / message handlers and any routed messages.
+ *
+ * Everything else (middleware, permissions, layout, scaffold dirs,
+ * non-exposed functions, http wires) is a backend concern and stays in
+ * `pikku meta context`.
+ */
+export const pikkuMetaClients = pikkuSessionlessFunc<{}, void>({
+  func: async ({ getInspectorState }) => {
+    const state = await getInspectorState()
+    const functionsMeta = (state.functions.meta ?? {}) as Record<string, any>
+
+    const lookupIO = (
+      pikkuFuncId: string | null | undefined
+    ): {
+      input: string | null
+      output: string | null
+      description: string | null
+    } => {
+      if (!pikkuFuncId) return { input: null, output: null, description: null }
+      const m = functionsMeta[pikkuFuncId]
+      return {
+        input: m?.inputSchemaName ?? null,
+        output: m?.outputSchemaName ?? null,
+        description: m?.description ?? null,
+      }
+    }
+
+    const rpcs = Object.entries(functionsMeta)
+      .filter(([_id, m]: [string, any]) => m?.expose === true)
+      .map(([id, m]: [string, any]) => ({
+        name: id,
+        description: m?.description ?? null,
+        readonly: m?.readonly === true,
+        tags: m?.tags ?? [],
+        input: m?.inputSchemaName ?? null,
+        output: m?.outputSchemaName ?? null,
+      }))
+
+    const workflows = Object.entries(state.workflows?.meta ?? {}).map(
+      ([id, wf]: [string, any]) => {
+        const io = lookupIO(wf?.pikkuFuncId ?? id)
+        return {
+          name: id,
+          description: wf?.description ?? io.description,
+          mode: wf?.inline ? 'inline' : 'distributed',
+          input: io.input,
+          output: io.output,
+        }
+      }
+    )
+
+    const channels = Object.entries((state as any).channels?.meta ?? {}).map(
+      ([name, ch]: [string, any]) => {
+        const messageWirings: Record<
+          string,
+          Record<
+            string,
+            {
+              input: string | null
+              output: string | null
+              description: string | null
+            }
+          >
+        > = {}
+        for (const [route, methods] of Object.entries(
+          ch?.messageWirings ?? {}
+        ) as Array<[string, any]>) {
+          messageWirings[route] = {}
+          for (const [method, handler] of Object.entries(
+            methods ?? {}
+          ) as Array<[string, any]>) {
+            messageWirings[route][method] = lookupIO(handler?.pikkuFuncId)
+          }
+        }
+        return {
+          name,
+          route: ch?.route ?? null,
+          description: ch?.description ?? null,
+          connect: ch?.connect?.pikkuFuncId
+            ? lookupIO(ch.connect.pikkuFuncId)
+            : null,
+          disconnect: ch?.disconnect?.pikkuFuncId
+            ? lookupIO(ch.disconnect.pikkuFuncId)
+            : null,
+          message: ch?.message?.pikkuFuncId
+            ? lookupIO(ch.message.pikkuFuncId)
+            : null,
+          messageWirings:
+            Object.keys(messageWirings).length > 0 ? messageWirings : null,
+        }
+      }
+    )
+
+    out({
+      schemaVersion: 'meta-clients.v1',
+      summary: {
+        rpcs: rpcs.length,
+        workflows: workflows.length,
+        channels: channels.length,
+      },
+      rpcs,
+      workflows,
+      channels,
+    })
+  },
+})
