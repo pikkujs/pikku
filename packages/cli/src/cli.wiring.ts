@@ -31,7 +31,9 @@ import {
   enableConsole,
   enableAgent,
   enableWorkflow,
+  enableEvents,
 } from './functions/commands/enable.js'
+import { pikkuRealtime } from './functions/wirings/realtime/pikku-command-realtime.js'
 import { deployPlan } from './functions/commands/deploy-plan.js'
 import { deployApply } from './functions/commands/deploy-apply.js'
 import { deployInfo } from './functions/commands/deploy-info.js'
@@ -213,6 +215,11 @@ wireCLI({
       func: pikkuReactQuery,
       description: 'Generate React Query hooks from RPC map',
     }),
+    realtime: pikkuCLICommand({
+      func: pikkuRealtime,
+      description:
+        'Generate the typed realtime client (PikkuRealtime websocket + SSE helper)',
+    }),
     'queue-service': pikkuCLICommand({
       func: pikkuQueueService,
       description: 'Generate queue service wrapper',
@@ -261,6 +268,17 @@ wireCLI({
         workflow: pikkuCLICommand({
           func: enableWorkflow,
           description: 'Enable workflow workers',
+          options: {
+            noAuth: {
+              description: 'Disable auth requirement',
+              default: false,
+            },
+          },
+        }),
+        events: pikkuCLICommand({
+          func: enableEvents,
+          description:
+            'Enable the realtime events channel + SSE stream (scaffolds events.gen.ts)',
           options: {
             noAuth: {
               description: 'Disable auth requirement',
