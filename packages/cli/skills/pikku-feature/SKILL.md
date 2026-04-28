@@ -69,8 +69,11 @@ Hard rules that always apply:
 - **`kind` ⇔ `auth` coupling.** If the function is `pikkuFunc` (session-aware),
   its HTTP wiring needs `auth: true`. `pikkuSessionlessFunc` ⇒ `auth: false`.
   Mismatching is a hard error (PKU573).
-- **`readonly: true`** marks queries (no side effects, cacheable). For HTTP,
-  readonly funcs typically use GET; mutations use POST/PUT/PATCH/DELETE.
+- **HTTP method by intent.** Reads (list/get) → `GET`. Writes (create/update/
+  delete) → `POST`/`PUT`/`PATCH`/`DELETE` per REST conventions. The method on
+  the wiring is the source of truth — don't try to set query/mutation flags
+  on the function config (the function-level `readonly` field isn't accepted
+  by `pikkuSessionlessFunc` types).
 - **Workflows.** Prefer `pikkuWorkflowGraph` (DSL) over
   `pikkuWorkflowComplexFunc`. `mode: 'inline'` is sync; `'distributed'` is
   queue-dispatched.
@@ -81,22 +84,68 @@ Hard rules that always apply:
 - **Migrations are inline SQL files** in the project's migrations dir
   (typically `sql/`). Use a numbered prefix matching existing files.
 
+### Conventions to copy from neighbours
+
+Some patterns vary by project; **read a neighbour file before writing**:
+
+- **Function shape**: zod schemas as exported `const`s (`CreateTodoInput`,
+  `CreateTodoOutput`) passed to `input`/`output` on the func config — vs
+  generic-typed config. Schema name **must match codegen expectations** (the
+  exported const name = the schema name in generated `.gen.json`).
+- **HTTP wiring style**: per-route `wireHTTP({...})` calls, OR a single
+  `defineHTTPRoutes({routes: {...}}) + wireHTTPRoutes(routes)` map. Match
+  what's already in the project — don't introduce a new style.
+- **Imports**: usually `'#pikku'` for `pikkuFunc`/`wireHTTP` etc. Some
+  projects use `@pikku/core` directly. Copy what neighbours do.
+- **Service usage**: e.g. `kysely`, `redis`. Look at how an existing function
+  destructures services from its first arg.
+
 For shared wiring files (e.g. `todos.http.ts` holding both create and list):
 create the file with imports if it doesn't exist; **append** wire calls and
 add missing imports if it does.
 
 ## Stage 5 — Verify
 
-Both must pass before committing:
+Both must complete cleanly **for your changes** before committing:
 
 ```bash
 yarn pikku all
-yarn tsc
+# Type-check the workspaces you touched:
+cd packages/functions && npx tsc --noEmit
 ```
 
-If either fails, fix the actual issue. **Do not** mask errors with `as any`,
-`@ts-ignore`, or `--no-verify`. If you're stuck, surface the failure to the
-user — don't hand them a broken branch.
+Notes on running `tsc`:
+
+- A root-level `yarn tsc` may be a no-op in monorepos that don't define a
+  `tsc` script in each workspace. Don't trust an exit-zero from the root if
+  no actual checking happened — verify by running `npx tsc --noEmit` in the
+  package(s) you touched.
+
+### Baseline noise — only your errors matter
+
+Many real-world projects ship with pre-existing warnings or errors
+(legacy types, version drift, gen-layer messages). Those are not your
+problem; do not "fix" them.
+
+To distinguish your errors from baseline:
+
+1. **Before implementing** (Stage 4), capture the baseline:
+   ```bash
+   yarn pikku all 2>&1 | tee /tmp/pikku-before.log
+   ```
+2. **After implementing**, compare:
+   ```bash
+   yarn pikku all 2>&1 | tee /tmp/pikku-after.log
+   diff /tmp/pikku-before.log /tmp/pikku-after.log
+   ```
+
+A clean diff means your changes introduced no new issues — even if the
+underlying logs both show pre-existing warnings.
+
+If something genuinely failed because of YOUR change, fix the actual issue.
+**Do not** mask errors with `as any`, `@ts-ignore`, or `--no-verify`. If
+you're stuck, surface the failure to the user — don't hand them a broken
+branch.
 
 ## Stage 6 — Commit
 
