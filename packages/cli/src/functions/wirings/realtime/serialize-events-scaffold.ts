@@ -37,40 +37,51 @@ import {
  * the duplication; pick whichever style your project prefers.
  */
 
-const RealtimeMessageInput = z.union([
-  z.object({ action: z.literal('subscribe'), topic: z.string() }),
-  z.object({ action: z.literal('unsubscribe'), topic: z.string() }),
-])
+const TopicInput = z.object({ topic: z.string() })
 
-const realtimeChannelMessage = pikkuSessionlessFunc({
-  description: 'Auto-generated /events channel subscribe/unsubscribe handler',
-  input: RealtimeMessageInput,
-  func: async ({ eventHub }, data, { channel }) => {
+const realtimeSubscribe = pikkuSessionlessFunc({
+  description: 'Subscribe the current channel to a topic',
+  input: TopicInput,
+  func: async ({ eventHub }, { topic }, { channel }) => {
     if (!eventHub) {
       throw new Error(
-        'Realtime channel needs an eventHub service. Add eventHub to your SingletonServices and instantiate (e.g. LocalEventHubService).'
+        'Realtime channel needs an eventHub service. Add eventHub to your SingletonServices.'
       )
     }
-    if (!channel) {
-      throw new Error('Realtime channel handler invoked without a channel')
-    }
-    if (data.action === 'subscribe') {
-      await eventHub.subscribe(data.topic, channel.channelId)
-    } else if (data.action === 'unsubscribe') {
-      await eventHub.unsubscribe(data.topic, channel.channelId)
-    }
+    if (!channel) throw new Error('Realtime channel invoked without a channel')
+    await eventHub.subscribe(topic, channel.channelId)
   },
 })
 
-const realtimeChannelRoutes = defineChannelRoutes({
-  message: realtimeChannelMessage,
+const realtimeUnsubscribe = pikkuSessionlessFunc({
+  description: 'Unsubscribe the current channel from a topic',
+  input: TopicInput,
+  func: async ({ eventHub }, { topic }, { channel }) => {
+    if (!eventHub) {
+      throw new Error(
+        'Realtime channel needs an eventHub service. Add eventHub to your SingletonServices.'
+      )
+    }
+    if (!channel) throw new Error('Realtime channel invoked without a channel')
+    await eventHub.unsubscribe(topic, channel.channelId)
+  },
+})
+
+// Pikku dispatches by the \`action\` field; client sends
+//   { action: 'subscribe',   topic: 'todo-created' }
+//   { action: 'unsubscribe', topic: 'todo-created' }
+const realtimeRoutes = defineChannelRoutes({
+  subscribe: realtimeSubscribe,
+  unsubscribe: realtimeUnsubscribe,
 })
 
 wireChannel({
   name: 'events',
   route: '/events',
   auth: ${auth},
-  message: realtimeChannelMessage,
+  onMessageWiring: {
+    action: realtimeRoutes,
+  },
   tags: ['realtime'],
 })
 
