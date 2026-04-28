@@ -47,10 +47,15 @@ Wait for the user to confirm or redirect. They can ask for changes ("use the
 existing tasks table" / "make it a queue not http") in normal chat — no
 schema, no JSON, no ceremony.
 
+**Non-interactive runs (auto mode, CI, batch jobs):** state intent in one
+paragraph and proceed without waiting. Surface course corrections promptly
+in the post-implementation report.
+
 ## Stage 3 — Branch off
 
 After confirmation, ensure the working tree is clean and create a feature
-branch off the current main/develop branch:
+branch off the current default branch (whatever `git branch --show-current`
+returns at the start — `main`, `master`, `develop`, all fine):
 
 ```bash
 git status
@@ -121,11 +126,19 @@ Some patterns vary by project; **read a neighbour file before writing**:
 - **Imports**: usually `'#pikku'` for `pikkuFunc` / `pikkuSessionlessFunc`
   etc. Copy what neighbours do.
 - **Service usage**: e.g. `kysely`, `redis`. Look at how an existing function
-  destructures services from its first arg.
-- **HTTP wiring style** (only relevant if you're adding one): per-route
-  `wireHTTP({...})` calls vs a single `defineHTTPRoutes({routes: {...}}) +
-  wireHTTPRoutes(routes)` map. Match what's already in the project; don't
-  introduce a new style.
+  destructures services from its first arg. **Check `application-types.d.ts`**
+  to see whether services like `kysely` are typed (`Kysely<DB>`) or untyped
+  (`Kysely<any>`) — that drives whether you can lean on generated DB types
+  or have to coerce manually.
+- **DB schema namespace**: many projects put tables under a `CREATE SCHEMA`
+  (e.g. `app.todos`). Read the first migration in `sql/` to see the
+  convention; reuse helper functions/triggers (e.g. `update_last_updated_at`)
+  rather than redefining them.
+- **HTTP wiring style** (only relevant if you're adding one). Two common
+  shapes — match what the project already uses:
+  - Per-route `wireHTTP({ method, route, func, auth })`.
+  - Single map: `const routes = defineHTTPRoutes({ auth: false, routes: {
+    fooName: { method: 'post', route: '/foo', func: fooFunc } }}); wireHTTPRoutes(routes)`.
 
 For shared wiring files (e.g. `todos.http.ts` holding both create and list):
 create the file with imports if it doesn't exist; **append** wire calls and
@@ -147,6 +160,16 @@ Notes on running `tsc`:
   `tsc` script in each workspace. Don't trust an exit-zero from the root if
   no actual checking happened — verify by running `npx tsc --noEmit` in the
   package(s) you touched.
+
+### What "fails" means
+
+**Trust the exit code, not the stderr noise.** `yarn pikku all` may print
+warnings, `[PKUxxx]` messages, even `level: critical` log lines, while
+still exiting `0` — those are pre-existing project state, not your
+problem. Same for `meta context --json`: it streams logs to stderr that
+look scary on a clean baseline. The exit code is the source of truth.
+
+If a command exits non-zero, that's a real failure — fix or stop.
 
 ### Baseline noise — only your errors matter
 
