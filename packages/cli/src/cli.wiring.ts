@@ -166,6 +166,10 @@ wireCLI({
           description: 'Enable hot module reload',
           default: true,
         },
+        content: {
+          description:
+            'Enable local content server pointed at this directory. Adds GET /content/<key> for static files and PUT /reaper/<key> for uploads.',
+        },
       },
     }),
     console: pikkuCLICommand({
