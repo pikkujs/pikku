@@ -146,7 +146,7 @@ export function extractFunctionName(
       // Check for object with 'name' property in first argument
       const firstArg = args[0]
       if (firstArg && ts.isObjectLiteralExpression(firstArg)) {
-        extractOverrideAndVersion(firstArg, result)
+        extractVersion(firstArg, result)
       }
 
       // Special handling for pikkuSessionlessFunc pattern - use the arrow function directly
@@ -361,7 +361,7 @@ export function extractFunctionName(
           ) {
             const firstArg = decl.initializer.arguments[0]
             if (firstArg && ts.isObjectLiteralExpression(firstArg)) {
-              extractOverrideAndVersion(firstArg, result)
+              extractVersion(firstArg, result)
             }
 
             if (decl.initializer.expression.text.startsWith('pikku')) {
@@ -424,11 +424,11 @@ export function extractFunctionName(
   ) {
     result.propertyName = parent.name.text
   }
-  // 3) Handle any remaining cases for pikkuFunc({ override: '…', func: … })
+  // 3) Handle any remaining cases — pull `version` from inline config
   else if (ts.isCallExpression(callExpr)) {
     const firstArg = callExpr.arguments[0]
     if (firstArg && ts.isObjectLiteralExpression(firstArg)) {
-      extractOverrideAndVersion(firstArg, result)
+      extractVersion(firstArg, result)
     }
   }
 
@@ -513,27 +513,21 @@ export function isNamedExport(
   return false
 }
 
-function extractOverrideAndVersion(
+function extractVersion(
   objLiteral: ts.ObjectLiteralExpression,
   result: ExtractedFunctionName
 ): void {
   for (const prop of objLiteral.properties) {
-    if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name)) {
-      if (
-        prop.name.text === 'override' &&
-        ts.isStringLiteral(prop.initializer) &&
-        !result.explicitName
-      ) {
-        result.explicitName = prop.initializer.text
-      } else if (
-        prop.name.text === 'version' &&
-        ts.isNumericLiteral(prop.initializer) &&
-        result.version === null
-      ) {
-        const parsed = Number(prop.initializer.text)
-        if (Number.isInteger(parsed) && parsed >= 1) {
-          result.version = parsed
-        }
+    if (
+      ts.isPropertyAssignment(prop) &&
+      ts.isIdentifier(prop.name) &&
+      prop.name.text === 'version' &&
+      ts.isNumericLiteral(prop.initializer) &&
+      result.version === null
+    ) {
+      const parsed = Number(prop.initializer.text)
+      if (Number.isInteger(parsed) && parsed >= 1) {
+        result.version = parsed
       }
     }
   }
