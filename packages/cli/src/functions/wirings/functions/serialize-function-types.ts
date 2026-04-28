@@ -359,6 +359,8 @@ export type PikkuFunctionConfigWithSchema<
   mcp?: boolean
   internal?: boolean
   remote?: boolean
+  readonly?: boolean
+  version?: number
   deploy?: 'serverless' | 'server' | 'auto'
   approvalRequired?: boolean
   approvalDescription?: InputSchema extends StandardSchemaV1 ? PikkuApprovalDescription<InferSchemaOutput<InputSchema>> : never
@@ -474,6 +476,8 @@ export type PikkuFunctionSessionlessConfigWithSchema<
   mcp?: boolean
   internal?: boolean
   remote?: boolean
+  readonly?: boolean
+  version?: number
   deploy?: 'serverless' | 'server' | 'auto'
   approvalRequired?: boolean
   approvalDescription?: InputSchema extends StandardSchemaV1 ? PikkuApprovalDescription<InferSchemaOutput<InputSchema>> : never
