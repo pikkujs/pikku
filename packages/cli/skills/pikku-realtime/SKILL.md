@@ -182,6 +182,34 @@ useEffect(() => {
 }, [])
 ```
 
+## Subscribing to other SSE / WebSocket routes
+
+The realtime client also exposes generic helpers for any project route
+that uses SSE or WebSocket — not just the `/events` ones:
+
+```ts
+import {
+  subscribeToSSE,
+  connectToChannel,
+} from './pikku/realtime.gen'
+
+// Any sse: true HTTP route. Caller builds the URL (path params + query).
+const sub = subscribeToSSE<{ progress: number }>(
+  `${apiUrl}/workflow-run/${runId}/stream`,
+  (event) => setProgress(event.progress)
+)
+// later: sub.close()
+
+// Any wireChannel — open a typed websocket. Wrap in PikkuWebSocket
+// (from the generated websocket client) for typed subscribe/send.
+const ws = connectToChannel('ws://localhost:3000/ws/kanban')
+const typed = new PikkuWebSocket<'kanban-live'>(ws)
+typed.getRoute('command').subscribe('message', (data) => { /* ... */ })
+```
+
+Discover what's available with `pikku meta clients --json` — `channels`
+and any HTTP `sse: true` routes are listed there.
+
 ## When to pick which transport
 
 | Need | Use |
