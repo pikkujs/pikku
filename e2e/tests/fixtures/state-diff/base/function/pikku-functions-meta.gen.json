@@ -1,0 +1,30 @@
+{
+  "existingFunc": {
+    "pikkuFuncId": "existingFunc",
+    "functionType": "user",
+    "funcWrapper": "pikkuFunc",
+    "sessionless": false,
+    "name": "existingFunc",
+    "inputSchemaName": "ExistingFuncInput",
+    "outputSchemaName": "ExistingFuncOutput",
+    "inputs": ["ExistingFuncInput"],
+    "outputs": ["ExistingFuncOutput"],
+    "contractHash": "deadbeef00000001",
+    "inputHash": "00000001",
+    "outputHash": "00000002"
+  },
+  "modifiedFunc": {
+    "pikkuFuncId": "modifiedFunc",
+    "functionType": "user",
+    "funcWrapper": "pikkuFunc",
+    "sessionless": false,
+    "name": "modifiedFunc",
+    "inputSchemaName": "ModifiedFuncInputV1",
+    "outputSchemaName": "ModifiedFuncOutput",
+    "inputs": ["ModifiedFuncInputV1"],
+    "outputs": ["ModifiedFuncOutput"],
+    "contractHash": "deadbeef00000002",
+    "inputHash": "00000003",
+    "outputHash": "00000004"
+  }
+}
