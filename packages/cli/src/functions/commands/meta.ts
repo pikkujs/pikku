@@ -1,8 +1,19 @@
 import { pikkuSessionlessFunc } from '#pikku'
+import type { InspectorState } from '@pikku/inspector'
 
 function out(value: unknown): void {
   console.log(JSON.stringify(value))
 }
+
+// `getInspectorState` already returns `Promise<InspectorState>` per
+// packages/cli/types/application-types.d.ts, but TS infers a wider shape
+// inside generated code. Use this helper everywhere in this file so each
+// call site sees the typed state and field-typo regressions surface
+// immediately when the inspector schema shifts.
+type InspectorStateGetter = () => Promise<InspectorState>
+const typedState = (
+  getInspectorState: InspectorStateGetter
+): Promise<InspectorState> => getInspectorState()
 
 export const pikkuMetaFunctionsList = pikkuSessionlessFunc<{}, void>({
   func: async ({ getInspectorState }) => {
@@ -168,21 +179,19 @@ export const pikkuMetaWiresList = pikkuSessionlessFunc<{}, void>({
 })
 
 async function wiresByType(
-  getInspectorState: () => Promise<any>,
+  getInspectorState: InspectorStateGetter,
   type: string
 ): Promise<Array<Record<string, unknown>>> {
-  const state = await getInspectorState()
+  const state = await typedState(getInspectorState)
   let items: Array<Record<string, unknown>> = []
 
   if (type === 'http') {
     const meta = state.http?.meta ?? {}
-    for (const [route, methods] of Object.entries(
-      meta as Record<string, Record<string, any>>
-    )) {
+    for (const [route, methods] of Object.entries(meta)) {
       for (const [method, m] of Object.entries(methods ?? {})) {
         items.push({
           id: `${method}:${route}`,
-          functionId: (m as any).pikkuFuncId,
+          functionId: m.pikkuFuncId,
           route,
           method,
         })
@@ -190,23 +199,26 @@ async function wiresByType(
     }
   } else if (type === 'scheduler') {
     items = Object.entries(state.scheduledTasks?.meta ?? {}).map(
-      ([functionId, m]: [string, any]) => ({
+      ([functionId, m]) => ({
         id: m?.name ?? functionId,
         functionId,
         cron: m?.schedule ?? null,
       })
     )
   } else if (type === 'queue') {
+    // QueueWorkersMeta is keyed by queue name; the value's `name` mirrors
+    // the key. There's no separate `queueName` field — the prior
+    // `m?.queueName` was always undefined.
     items = Object.entries(state.queueWorkers?.meta ?? {}).map(
-      ([functionId, m]: [string, any]) => ({
-        id: m?.queueName ?? functionId,
-        functionId,
-        queueName: m?.queueName ?? null,
+      ([queueName, m]) => ({
+        id: queueName,
+        functionId: queueName,
+        queueName: m?.name ?? queueName,
       })
     )
   } else if (type === 'channel') {
     items = Object.entries(state.channels?.meta ?? {}).map(
-      ([channelName, m]: [string, any]) => ({
+      ([channelName, m]) => ({
         id: channelName,
         functionId:
           m?.message?.pikkuFuncId ??
@@ -217,11 +229,12 @@ async function wiresByType(
       })
     )
   } else if (type === 'trigger') {
+    // TriggerMeta only carries `name`. There's no `type` field here —
+    // the prior `m?.type` was always undefined.
     items = Object.entries(state.triggers?.meta ?? {}).map(
-      ([functionId, m]: [string, any]) => ({
-        id: m?.name ?? functionId,
-        functionId,
-        eventType: m?.type ?? null,
+      ([triggerKey, m]) => ({
+        id: m?.name ?? triggerKey,
+        functionId: triggerKey,
       })
     )
   } else {
@@ -232,7 +245,7 @@ async function wiresByType(
 
 export const pikkuMetaWiresType = pikkuSessionlessFunc<{ type: string }, void>({
   func: async ({ getInspectorState }, data) => {
-    const items = await wiresByType(getInspectorState as any, data.type)
+    const items = await wiresByType(getInspectorState, data.type)
     out({ type: data.type, items })
   },
 })
@@ -241,7 +254,7 @@ export const pikkuMetaWiresHttp = pikkuSessionlessFunc<{}, void>({
   func: async ({ getInspectorState }) => {
     out({
       type: 'http',
-      items: await wiresByType(getInspectorState as any, 'http'),
+      items: await wiresByType(getInspectorState, 'http'),
     })
   },
 })
@@ -250,7 +263,7 @@ export const pikkuMetaWiresScheduler = pikkuSessionlessFunc<{}, void>({
   func: async ({ getInspectorState }) => {
     out({
       type: 'scheduler',
-      items: await wiresByType(getInspectorState as any, 'scheduler'),
+      items: await wiresByType(getInspectorState, 'scheduler'),
     })
   },
 })
@@ -259,7 +272,7 @@ export const pikkuMetaWiresQueue = pikkuSessionlessFunc<{}, void>({
   func: async ({ getInspectorState }) => {
     out({
       type: 'queue',
-      items: await wiresByType(getInspectorState as any, 'queue'),
+      items: await wiresByType(getInspectorState, 'queue'),
     })
   },
 })
@@ -268,7 +281,7 @@ export const pikkuMetaWiresChannel = pikkuSessionlessFunc<{}, void>({
   func: async ({ getInspectorState }) => {
     out({
       type: 'channel',
-      items: await wiresByType(getInspectorState as any, 'channel'),
+      items: await wiresByType(getInspectorState, 'channel'),
     })
   },
 })
@@ -277,7 +290,7 @@ export const pikkuMetaWiresTrigger = pikkuSessionlessFunc<{}, void>({
   func: async ({ getInspectorState }) => {
     out({
       type: 'trigger',
-      items: await wiresByType(getInspectorState as any, 'trigger'),
+      items: await wiresByType(getInspectorState, 'trigger'),
     })
   },
 })
@@ -338,11 +351,11 @@ export const pikkuMetaContext = pikkuSessionlessFunc<{}, void>({
     )
 
     const wires = {
-      http: await wiresByType(getInspectorState as any, 'http'),
-      scheduler: await wiresByType(getInspectorState as any, 'scheduler'),
-      queue: await wiresByType(getInspectorState as any, 'queue'),
-      channel: await wiresByType(getInspectorState as any, 'channel'),
-      trigger: await wiresByType(getInspectorState as any, 'trigger'),
+      http: await wiresByType(getInspectorState, 'http'),
+      scheduler: await wiresByType(getInspectorState, 'scheduler'),
+      queue: await wiresByType(getInspectorState, 'queue'),
+      channel: await wiresByType(getInspectorState, 'channel'),
+      trigger: await wiresByType(getInspectorState, 'trigger'),
     }
 
     const capabilities = {
@@ -352,8 +365,15 @@ export const pikkuMetaContext = pikkuSessionlessFunc<{}, void>({
       channel: wires.channel.length > 0,
       trigger: wires.trigger.length > 0,
       workflow: workflows.length > 0,
-      mcp: Object.keys((state as any).mcp?.meta ?? {}).length > 0,
-      agent: Object.keys((state as any).agents?.meta ?? {}).length > 0,
+      // Note the real paths: `mcpEndpoints` (not `mcp`) and
+      // `agents.agentsMeta` (not `agents.meta`). The earlier `as any`
+      // versions were silently always 0.
+      mcp:
+        Object.keys(state.mcpEndpoints?.toolsMeta ?? {}).length +
+          Object.keys(state.mcpEndpoints?.resourcesMeta ?? {}).length +
+          Object.keys(state.mcpEndpoints?.promptsMeta ?? {}).length >
+        0,
+      agent: Object.keys(state.agents?.agentsMeta ?? {}).length > 0,
     }
 
     const cfg = config as any
@@ -463,7 +483,7 @@ export const pikkuMetaClients = pikkuSessionlessFunc<{}, void>({
       }
     )
 
-    const channels = Object.entries((state as any).channels?.meta ?? {}).map(
+    const channels = Object.entries(state.channels?.meta ?? {}).map(
       ([name, ch]: [string, any]) => {
         const messageWirings: Record<
           string,

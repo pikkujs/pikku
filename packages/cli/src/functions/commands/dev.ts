@@ -119,8 +119,15 @@ export const dev = pikkuSessionlessFunc<
     let configWatcher: FSWatcher | undefined
     let watcher: FSWatcher | undefined
 
-    process.once('SIGINT', async () => {
-      logger.info('Stopping dev server...')
+    // Cover both interactive Ctrl-C (SIGINT) and supervisor-driven shutdown
+    // (SIGTERM from Docker/systemd/`kill`). Without SIGTERM the dev server
+    // dirty-exits under those — open file streams + chokidar + ws would
+    // leak.
+    let shuttingDown = false
+    const shutdown = async (signal: NodeJS.Signals) => {
+      if (shuttingDown) return
+      shuttingDown = true
+      logger.info(`Stopping dev server (${signal})...`)
       try {
         await stopSingletonServices()
         await configWatcher?.close()
@@ -134,7 +141,9 @@ export const dev = pikkuSessionlessFunc<
       } finally {
         process.exit(0)
       }
-    })
+    }
+    process.once('SIGINT', () => shutdown('SIGINT'))
+    process.once('SIGTERM', () => shutdown('SIGTERM'))
 
     if (enableHmr) {
       await pikkuDevReloader({

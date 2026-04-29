@@ -38,6 +38,19 @@ ${topicsTypeImport}
 
 type Handler<T> = (data: T) => void
 
+/**
+ * Auth/options for SSE subscriptions. Headers can't be set on
+ * EventSource, so auth must travel via cookies or a query parameter.
+ */
+interface SSEOptions {
+  /** Appended as \`?access_token=...\` if set — server must accept it. */
+  accessToken?: string
+  /** Send cookies for cross-origin requests (server must allow it). */
+  withCredentials?: boolean
+  /** Handler for the underlying EventSource error event. */
+  onError?: (event: Event) => void
+}
+
 interface RealtimeOptions {
   /** Auto-reconnect with backoff (default: true) */
   reconnect?: boolean
@@ -93,12 +106,29 @@ export class PikkuRealtime {
     this.pikkuFetch.setServerUrl(serverUrl)
   }
 
-  /** Sets the JWT for auth on transports that send headers (SSE). */
+  /**
+   * Sets the JWT on the underlying PikkuFetch.
+   *
+   * IMPORTANT — the browser \`EventSource\` (and \`WebSocket\`) constructors
+   * cannot set \`Authorization\` headers, so this JWT does NOT travel on
+   * SSE or WebSocket connections automatically. For realtime auth pick
+   * one of:
+   *   - cookie-based session (works because SSE/WS send cookies for the
+   *     fetch's origin),
+   *   - call \`subscribeToSSE(path, handler, { accessToken: jwt })\` so the
+   *     token is appended as a query string param the server can read.
+   * The header still applies to plain HTTP calls made via the same
+   * PikkuFetch.
+   */
   setAuthorizationJWT(jwt: string | null): void {
     this.pikkuFetch.setAuthorizationJWT(jwt)
   }
 
-  /** Sets the API key for auth on transports that send headers (SSE). */
+  /**
+   * Sets the API key on the underlying PikkuFetch. Same caveat as
+   * \`setAuthorizationJWT\` — this header is not carried by SSE or
+   * WebSocket connections.
+   */
   setAPIKey(apiKey: string | null): void {
     this.pikkuFetch.setAPIKey(apiKey)
   }
@@ -142,11 +172,13 @@ export class PikkuRealtime {
    */
   subscribeToTopic<K extends keyof EventHubTopics & string>(
     topic: K,
-    handler: Handler<EventHubTopics[K]>
+    handler: Handler<EventHubTopics[K]>,
+    options: SSEOptions = {}
   ): { close: () => void } {
     return this.subscribeToSSE<EventHubTopics[K]>(
       \`/events/\${encodeURIComponent(topic)}\`,
-      handler
+      handler,
+      options
     )
   }
 
@@ -155,20 +187,34 @@ export class PikkuRealtime {
    * project. Caller supplies the path (with any params/query) — the base
    * URL comes from the wrapped PikkuFetch.
    *
+   * Auth: \`EventSource\` cannot set headers, so the JWT/API key from the
+   * underlying PikkuFetch are NOT sent automatically. Provide one of:
+   *   - \`accessToken\` — appended as \`?access_token=…\` (server must
+   *     accept query-string auth on the route),
+   *   - \`withCredentials: true\` — instructs the browser to send cookies
+   *     for cross-origin SSE (server origin must allow credentials).
+   *
    * \`\`\`ts
    * const sub = realtime.subscribeToSSE<{ progress: number }>(
    *   \`/workflow-run/\${runId}/stream\`,
-   *   (e) => setProgress(e.progress)
+   *   (e) => setProgress(e.progress),
+   *   { withCredentials: true }
    * )
    * \`\`\`
    */
   subscribeToSSE<T = unknown>(
     path: string,
     handler: Handler<T>,
-    onError?: (event: Event) => void
+    options: SSEOptions = {}
   ): { close: () => void } {
-    const url = this.resolveHttpUrl(path)
-    const es = new EventSource(url)
+    let url = this.resolveHttpUrl(path)
+    if (options.accessToken) {
+      const sep = url.includes('?') ? '&' : '?'
+      url += \`\${sep}access_token=\${encodeURIComponent(options.accessToken)}\`
+    }
+    const es = new EventSource(url, {
+      withCredentials: options.withCredentials ?? false,
+    })
     es.onmessage = (e: MessageEvent) => {
       try {
         handler(JSON.parse(e.data) as T)
@@ -176,7 +222,7 @@ export class PikkuRealtime {
         // Ignore malformed events
       }
     }
-    if (onError) es.onerror = onError
+    if (options.onError) es.onerror = options.onError
     return { close: () => es.close() }
   }
 
@@ -276,15 +322,32 @@ export class PikkuRealtime {
 `
 }
 
+// Allow only the characters that legitimately appear in a module
+// specifier: paths, scoped package names, the optional `#TypeName`
+// suffix, and dots. Refusing the rest closes a generated-source
+// injection vector if pikku.config.json comes from an untrusted source.
+const SAFE_SPEC = /^[A-Za-z0-9./_\-#@]+$/
+const SAFE_IDENT = /^[A-Za-z_$][A-Za-z0-9_$]*$/
+
 function buildImportLine(spec: string): string {
+  if (!SAFE_SPEC.test(spec)) {
+    throw new Error(
+      `clientFiles.realtimeEventHubTopicsImport contains unsupported characters: ${JSON.stringify(spec)}. Allowed: letters, digits, ./_-#@`
+    )
+  }
   const hashIdx = spec.lastIndexOf('#')
-  if (hashIdx === -1) {
-    return `import type { EventHubTopics } from '${spec}'`
+  const path = hashIdx === -1 ? spec : spec.slice(0, hashIdx)
+  const typeName = hashIdx === -1 ? 'EventHubTopics' : spec.slice(hashIdx + 1)
+
+  if (!SAFE_IDENT.test(typeName)) {
+    throw new Error(
+      `clientFiles.realtimeEventHubTopicsImport type name is not a valid identifier: ${JSON.stringify(typeName)}`
+    )
   }
-  const path = spec.slice(0, hashIdx)
-  const typeName = spec.slice(hashIdx + 1)
+  // JSON.stringify is safe here because path passed SAFE_SPEC — no
+  // quotes, backticks, or control chars to escape.
   if (typeName === 'EventHubTopics') {
-    return `import type { EventHubTopics } from '${path}'`
+    return `import type { EventHubTopics } from ${JSON.stringify(path)}`
   }
-  return `import type { ${typeName} as EventHubTopics } from '${path}'`
+  return `import type { ${typeName} as EventHubTopics } from ${JSON.stringify(path)}`
 }

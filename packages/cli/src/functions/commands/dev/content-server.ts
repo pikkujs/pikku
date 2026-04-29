@@ -1,7 +1,8 @@
-import { existsSync, createReadStream, statSync } from 'fs'
-import { mkdir, writeFile } from 'fs/promises'
+import { existsSync, createReadStream, createWriteStream, statSync } from 'fs'
+import { mkdir, unlink } from 'fs/promises'
+import { pipeline } from 'stream/promises'
 import type { IncomingMessage, ServerResponse } from 'http'
-import { dirname, extname, normalize, resolve } from 'path'
+import { dirname, extname, isAbsolute, relative, resolve } from 'path'
 
 /**
  * Local content server: companion to the pikku dev runtime.
@@ -12,6 +13,15 @@ import { dirname, extname, normalize, resolve } from 'path'
  * Both paths are resolved with traversal protection. `tryHandle` returns
  * `true` when a content route matched (caller must not continue), `false`
  * otherwise so the caller can fall through to the next handler.
+ *
+ * The reaper endpoint is dev-only — it accepts unauthenticated PUTs so the
+ * generated scaffold + browser console can write back artifacts during a
+ * dev session. To avoid catastrophic mistakes:
+ *   - Uploads stream to disk (no full-buffer in memory).
+ *   - A configurable byte cap (default 50 MiB) terminates oversized
+ *     requests cleanly.
+ *   - The optional `token` is checked via `X-Pikku-Reaper-Token` so
+ *     anyone wiring this through a non-loopback bind has a safety knob.
  */
 
 const MIME_TYPES: Record<string, string> = {
@@ -36,24 +46,30 @@ const MIME_TYPES: Record<string, string> = {
   '.woff2': 'font/woff2',
 }
 
+const DEFAULT_MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+
+export interface ContentServerOptions {
+  /** Cap on a single upload body in bytes. */
+  maxUploadBytes?: number
+  /** If set, PUT /reaper/* requires `X-Pikku-Reaper-Token: <token>`. */
+  token?: string
+}
+
 export class ContentServer {
   private readonly contentDir: string
+  private readonly maxUploadBytes: number
+  private readonly token: string | undefined
 
-  constructor(contentDir: string) {
+  constructor(contentDir: string, options: ContentServerOptions = {}) {
     this.contentDir = resolve(contentDir)
+    this.maxUploadBytes = options.maxUploadBytes ?? DEFAULT_MAX_UPLOAD_BYTES
+    this.token = options.token
   }
 
-  /**
-   * Ensure the content directory exists. Idempotent.
-   */
   async ensureDir(): Promise<void> {
     await mkdir(this.contentDir, { recursive: true })
   }
 
-  /**
-   * Try to handle a request as a content/reaper route. Returns true if the
-   * request matched and the response has been written, false otherwise.
-   */
   async tryHandle(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
     const url = new URL(req.url || '/', 'http://localhost')
     const method = req.method?.toUpperCase() ?? 'GET'
@@ -72,21 +88,26 @@ export class ContentServer {
   }
 
   describe(port: number, hostname: string): string {
+    const auth = this.token ? ' (token required)' : ''
     return [
       `Content server enabled (${this.contentDir}):`,
       `  GET  http://${hostname}:${port}/content/<key>`,
-      `  PUT  http://${hostname}:${port}/reaper/<key>`,
+      `  PUT  http://${hostname}:${port}/reaper/<key>${auth}`,
+      `  Upload cap: ${(this.maxUploadBytes / 1024 / 1024).toFixed(0)} MiB`,
     ].join('\n')
   }
 
+  /**
+   * Resolve `key` against contentDir, refusing anything that escapes via
+   * `..` or absolute paths. Uses `path.relative` so it works on both POSIX
+   * and Windows (path separators differ — a literal `/` prefix check
+   * silently breaks on Windows).
+   */
   private safeTarget(key: string): string | null {
-    const target = resolve(this.contentDir, normalize(key))
-    if (
-      target !== this.contentDir &&
-      !target.startsWith(this.contentDir + '/')
-    ) {
-      return null
-    }
+    const target = resolve(this.contentDir, key)
+    const rel = relative(this.contentDir, target)
+    if (rel === '') return target // exact contentDir = empty key, reject below
+    if (rel.startsWith('..') || isAbsolute(rel)) return null
     return target
   }
 
@@ -95,21 +116,64 @@ export class ContentServer {
     res: ServerResponse,
     key: string
   ): Promise<void> {
+    if (this.token) {
+      const presented = req.headers['x-pikku-reaper-token']
+      if (presented !== this.token) {
+        res.writeHead(401).end('Unauthorized')
+        return
+      }
+    }
+
     const target = this.safeTarget(key)
-    if (!target) {
+    if (!target || !key) {
       res.writeHead(400).end('Invalid path')
       return
     }
+
+    // Cheap pre-flight: refuse upfront when the client declared an
+    // oversized payload (clients with honest content-length).
+    const contentLength = Number(req.headers['content-length'])
+    if (Number.isFinite(contentLength) && contentLength > this.maxUploadBytes) {
+      res.writeHead(413).end('Payload Too Large')
+      return
+    }
+
+    let received = 0
+    let aborted = false
+    const cap = this.maxUploadBytes
+
+    // Backpressure-respecting stream that enforces the byte cap.
+    const limiter = new (await import('stream')).Transform({
+      transform(chunk: Buffer, _enc, cb) {
+        received += chunk.length
+        if (received > cap) {
+          aborted = true
+          cb(new Error('payload-too-large'))
+          return
+        }
+        cb(null, chunk)
+      },
+    })
+
     try {
       await mkdir(dirname(target), { recursive: true })
-      const chunks: Buffer[] = []
-      for await (const chunk of req) {
-        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
-      }
-      await writeFile(target, Buffer.concat(chunks))
+      await pipeline(req, limiter, createWriteStream(target))
       res.writeHead(204).end()
     } catch (err) {
-      res.writeHead(500).end(String(err))
+      // Best-effort cleanup so the disk doesn't accumulate half-written
+      // files when an upload is rejected mid-stream.
+      try {
+        await unlink(target)
+      } catch {
+        // already gone
+      }
+      if (aborted) {
+        res.writeHead(413).end('Payload Too Large')
+      } else {
+        // Don't leak filesystem details to the client.
+        console.error('[content-server] upload failed:', err)
+        res.writeHead(500).end('Upload failed')
+      }
     }
   }
 

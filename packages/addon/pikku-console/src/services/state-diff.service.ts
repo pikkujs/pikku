@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
-import { join, isAbsolute, resolve } from 'node:path'
+import { join, isAbsolute, relative, resolve } from 'node:path'
 
 /**
  * StateDiffService computes a structural diff between two `.pikku/`
@@ -92,8 +92,26 @@ export class StateDiffService {
     return { oursPath, basePath, oursExists, baseExists, categories, summary }
   }
 
+  /**
+   * Resolve a caller-supplied path against the project root. Refuses
+   * absolute paths and any `..`-traversal that escapes `rootDir` — the
+   * console addon may be reachable from a browser, so we don't want a
+   * compromised page reading arbitrary files via this RPC.
+   */
   private resolvePath(p: string): string {
-    return isAbsolute(p) ? p : resolve(this.rootDir, p)
+    if (isAbsolute(p)) {
+      throw new Error(
+        `StateDiffService: absolute paths are not permitted (got ${JSON.stringify(p)})`
+      )
+    }
+    const target = resolve(this.rootDir, p)
+    const rel = relative(this.rootDir, target)
+    if (rel.startsWith('..') || isAbsolute(rel)) {
+      throw new Error(
+        `StateDiffService: path escapes rootDir (got ${JSON.stringify(p)})`
+      )
+    }
+    return target
   }
 
   private async readMeta(path: string): Promise<Record<string, unknown>> {
