@@ -30,7 +30,7 @@ import {
 import { program } from 'commander'
 import { tmpdir } from 'os'
 import { spawnSync } from 'child_process'
-import { unlinkSync, writeFileSync } from 'fs'
+import fs, { unlinkSync, writeFileSync } from 'fs'
 
 const BASE_URL = 'gh:pikkujs/pikku/templates'
 
@@ -158,6 +158,12 @@ const templates = [
     template: 'gateway-whatsapp',
     description: 'A WhatsApp gateway template using Baileys (listener)',
     supports: [],
+  },
+  {
+    template: 'fabric',
+    description:
+      'The opinionated Pikku Fabric starter — backend + SDK + frontend scaffolds + Cucumber e2e',
+    supports: ['http', 'fullstack'],
   },
 ] as const
 
@@ -455,9 +461,56 @@ async function run() {
     await setupRepo(selectedOptions, 'yarn-workspace-starter')
   } else if (template === 'nextjs-full') {
     await setupRepo(selectedOptions, 'nextjs-app-starter')
+  } else if (template === 'fabric') {
+    await setupFabric(selectedOptions)
   } else {
     await setupTemplate(selectedOptions)
   }
+}
+
+const fabricApps = [
+  {
+    id: 'react-vite-mantine',
+    label: 'React + Vite + Mantine (static export)',
+  },
+  {
+    id: 'nextjs-tailwind',
+    label: 'Next.js 15 + Tailwind (SSR)',
+  },
+] as const
+
+async function setupFabric(cliOptions: CliOptions) {
+  // The Fabric starter ships every supported frontend in `apps/`.
+  // We clone it verbatim (via setupRepo) and then delete the apps the
+  // user didn't pick — same flow the e2e runner relies on.
+  const selectedApp = (await select({
+    message: 'Which frontend would you like to start with?',
+    choices: fabricApps.map(({ id, label }) => ({
+      name: label,
+      value: id,
+    })),
+  })) as (typeof fabricApps)[number]['id']
+
+  await setupRepo(cliOptions, 'starter-template')
+
+  const targetPath = path.join(process.cwd(), cliOptions.name)
+  const appsDir = path.join(targetPath, 'apps')
+
+  for (const app of fabricApps) {
+    if (app.id === selectedApp) continue
+    const appPath = path.join(appsDir, app.id)
+    try {
+      fs.rmSync(appPath, { recursive: true, force: true })
+    } catch {
+      // missing dir = nothing to clean
+    }
+  }
+
+  console.log(
+    chalk.green(
+      `\nKept apps/${selectedApp} — other frontend scaffolds removed.`
+    )
+  )
 }
 
 run()
