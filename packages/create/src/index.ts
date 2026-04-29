@@ -468,42 +468,55 @@ async function run() {
   }
 }
 
-const fabricApps = [
-  {
-    id: 'react-vite-mantine',
-    label: 'React + Vite + Mantine (static export)',
-  },
-  {
-    id: 'nextjs-tailwind',
-    label: 'Next.js 15 + Tailwind (SSR)',
-  },
-] as const
+// Pretty labels for apps the starter ships. Anything missing from this map
+// falls back to the directory name in the picker.
+const fabricAppLabels: Record<string, string> = {
+  'react-vite-mantine': 'React + Vite + Mantine (static export)',
+  'nextjs-tailwind': 'Next.js 15 + Tailwind (SSR)',
+}
 
 async function setupFabric(cliOptions: CliOptions) {
-  // The Fabric starter ships every supported frontend in `apps/`.
-  // We clone it verbatim (via setupRepo) and then delete the apps the
-  // user didn't pick — same flow the e2e runner relies on.
-  const selectedApp = (await select({
-    message: 'Which frontend would you like to start with?',
-    choices: fabricApps.map(({ id, label }) => ({
-      name: label,
-      value: id,
-    })),
-  })) as (typeof fabricApps)[number]['id']
-
+  // Clone the starter first so the picker reflects whatever apps the
+  // template *actually* ships — avoids drift between this CLI and the
+  // template repo when new scaffolds are added.
   await setupRepo(cliOptions, 'starter-template')
 
   const targetPath = path.join(process.cwd(), cliOptions.name)
   const appsDir = path.join(targetPath, 'apps')
 
-  for (const app of fabricApps) {
-    if (app.id === selectedApp) continue
-    const appPath = path.join(appsDir, app.id)
-    try {
-      fs.rmSync(appPath, { recursive: true, force: true })
-    } catch {
-      // missing dir = nothing to clean
-    }
+  if (!fs.existsSync(appsDir)) {
+    console.log(
+      chalk.yellow(
+        'No apps/ directory in the cloned template — skipping app picker.'
+      )
+    )
+    return
+  }
+
+  const availableApps = fs
+    .readdirSync(appsDir, { withFileTypes: true })
+    .filter(
+      (d) =>
+        d.isDirectory() &&
+        fs.existsSync(path.join(appsDir, d.name, 'package.json'))
+    )
+    .map((d) => d.name)
+
+  if (availableApps.length === 0) return
+
+  const selectedApp = await select({
+    message: 'Which frontend would you like to start with?',
+    choices: availableApps.map((id) => ({
+      name: fabricAppLabels[id] ?? id,
+      value: id,
+    })),
+  })
+
+  // Safe from path traversal: ids come from a directory listing inside
+  // `appsDir`, never from user input or external config.
+  for (const id of availableApps) {
+    if (id === selectedApp) continue
+    fs.rmSync(path.join(appsDir, id), { recursive: true, force: true })
   }
 
   console.log(
