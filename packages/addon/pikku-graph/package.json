@@ -1,27 +1,26 @@
 {
   "name": "@pikku/addon-graph",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "type": "module",
   "imports": {
-    "#pikku": "./.pikku/pikku-types.gen.ts"
+    "#pikku": {
+      "types": "./.pikku/pikku-types.gen.ts",
+      "import": "./dist/.pikku/pikku-types.gen.js"
+    }
   },
   "exports": {
-    ".": {
-      "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
-    },
-    "./.pikku/*": "./.pikku/*",
-    "./.pikku/pikku-metadata.gen.json": "./.pikku/pikku-metadata.gen.json",
+    ".": "./dist/.pikku/pikku-bootstrap.gen.js",
+    "./.pikku/*": "./dist/.pikku/*",
+    "./.pikku/pikku-metadata.gen.json": "./dist/.pikku/pikku-metadata.gen.json",
     "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js": {
-      "types": "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
+      "types": "./dist/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
     }
   },
   "files": [
-    "dist",
-    ".pikku"
+    "dist"
   ],
   "scripts": {
-    "build": "pikku all && tsc && cp -r .pikku dist/",
+    "build": "pikku all && tsc && cp .pikku/rpc/*.d.ts dist/.pikku/rpc/ 2>/dev/null; cp .pikku/agent/*.d.ts dist/.pikku/agent/ 2>/dev/null; cp .pikku/workflow/*.d.ts dist/.pikku/workflow/ 2>/dev/null; true",
     "pikku": "pikku all",
     "ncu": "npx npm-check-updates",
     "pretest": "pikku all",
