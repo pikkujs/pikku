@@ -98,7 +98,16 @@ export type { QueueService } from './wirings/queue/queue.types.js'
 export type { JWTService } from './services/jwt-service.js'
 export type { SecretService } from './services/secret-service.js'
 export type { VariablesService } from './services/variables-service.js'
-export type { ContentService } from './services/content-service.js'
+export type {
+  ContentService,
+  SignContentKeyArgs,
+  SignURLArgs,
+  GetUploadURLArgs,
+  UploadURLResult,
+  BucketKeyArgs,
+  WriteFileArgs,
+  CopyFileArgs,
+} from './services/content-service.js'
 export type { DeploymentService } from './services/deployment-service.js'
 export type { WorkflowService } from './services/workflow-service.js'
 export type { GatewayService } from './services/gateway-service.js'

@@ -1,81 +1,109 @@
-export interface ContentService {
+/**
+ * Arguments for signing a content key into a time-limited URL.
+ */
+export interface SignContentKeyArgs<TBucket extends string = string> {
+  bucket: TBucket
+  contentKey: string
+  dateLessThan: Date
+  dateGreaterThan?: Date
+}
+
+/**
+ * Arguments for signing an arbitrary URL.
+ */
+export interface SignURLArgs {
+  url: string
+  dateLessThan: Date
+  dateGreaterThan?: Date
+}
+
+/**
+ * Arguments for minting a presigned upload URL.
+ */
+export interface GetUploadURLArgs<TBucket extends string = string> {
+  bucket: TBucket
+  fileKey: string
+  contentType: string
+  size?: number
+}
+
+/**
+ * Result of minting a presigned upload URL.
+ */
+export interface UploadURLResult {
+  uploadUrl: string
+  assetKey: string
+  uploadHeaders?: Record<string, string>
+  uploadMethod?: 'PUT' | 'POST'
+}
+
+/**
+ * Arguments for an operation that targets a single object by key.
+ */
+export interface BucketKeyArgs<TBucket extends string = string> {
+  bucket: TBucket
+  key: string
+}
+
+/**
+ * Arguments for writing a stream to storage.
+ */
+export interface WriteFileArgs<
+  TBucket extends string = string,
+> extends BucketKeyArgs<TBucket> {
+  stream: ReadableStream | NodeJS.ReadableStream
+}
+
+/**
+ * Arguments for copying a local file into storage.
+ */
+export interface CopyFileArgs<
+  TBucket extends string = string,
+> extends BucketKeyArgs<TBucket> {
+  fromAbsolutePath: string
+}
+
+export interface ContentService<TBucket extends string = string> {
   /**
    * Signs a content key to generate a secure, time-limited access URL.
-   * @param contentKey - The key representing the content object.
-   * @param dateLessThan - The expiration time for the signed URL.
-   * @param dateGreaterThan - (Optional) Start time before which access is denied.
    */
-  signContentKey(
-    contentKey: string,
-    dateLessThan: Date,
-    dateGreaterThan?: Date
-  ): Promise<string>
+  signContentKey(args: SignContentKeyArgs<TBucket>): Promise<string>
 
   /**
    * Signs an arbitrary URL to generate a secure, time-limited access URL.
-   * @param url - The full URL that needs signing.
-   * @param dateLessThan - The expiration time for the signed URL.
-   * @param dateGreaterThan - (Optional) Start time before which access is denied.
    */
-  signURL(
-    url: string,
-    dateLessThan: Date,
-    dateGreaterThan?: Date
-  ): Promise<string>
+  signURL(args: SignURLArgs): Promise<string>
 
   /**
    * Generates a signed URL for uploading a file directly to storage.
-   * @param fileKey - The desired key/location of the uploaded file.
-   * @param contentType - The MIME type of the file.
-   * @returns A signed upload URL and the finalized asset key.
+   * Bucket policy (size limits, MIME allowlist) is enforced by the implementation.
    */
-  getUploadURL(
-    fileKey: string,
-    contentType: string
-  ): Promise<{
-    uploadUrl: string
-    assetKey: string
-    uploadHeaders?: Record<string, string>
-    uploadMethod?: 'PUT' | 'POST'
-  }>
+  getUploadURL(args: GetUploadURLArgs<TBucket>): Promise<UploadURLResult>
 
   /**
    * Deletes a file from the storage backend.
-   * @param fileName - The name or key of the file to delete.
-   * @returns A boolean indicating success.
    */
-  deleteFile(fileName: string): Promise<boolean>
+  deleteFile(args: BucketKeyArgs<TBucket>): Promise<boolean>
 
   /**
-   * Uploads a file stream to storage under a specified asset key.
-   * @param assetKey - The key where the file will be saved.
-   * @param stream - A readable stream of the file contents.
-   * @returns A boolean indicating success.
+   * Uploads a file stream to storage under the specified bucket + key.
    */
-  writeFile(
-    assetKey: string,
-    stream: ReadableStream | NodeJS.ReadableStream
-  ): Promise<boolean>
+  writeFile(args: WriteFileArgs<TBucket>): Promise<boolean>
 
   /**
-   * Copies a file from a local absolute path into storage under a new asset key.
-   * @param assetKey - The destination key.
-   * @param fromAbsolutePath - The local absolute file path.
-   * @returns A boolean indicating success.
+   * Copies a file from a local absolute path into storage.
    */
-  copyFile(assetKey: string, fromAbsolutePath: string): Promise<boolean>
+  copyFile(args: CopyFileArgs<TBucket>): Promise<boolean>
 
   /**
    * Reads a file from storage as a readable stream.
-   * @param assetKey - The key of the file to read.
-   * @returns A readable file stream.
    */
-  readFile(assetKey: string): Promise<ReadableStream | NodeJS.ReadableStream>
+  readFile(
+    args: BucketKeyArgs<TBucket>
+  ): Promise<ReadableStream | NodeJS.ReadableStream>
 
   /**
    * Reads an entire file from storage into a Buffer.
-   * @param assetKey - The key of the file to read.
-   * @returns The file contents as a Buffer.
    */
-  readFileAsBuffer(assetKey: string): Promise<Buffer>
+  readFileAsBuffer(args: BucketKeyArgs<TBucket>): Promise<Buffer>
 }

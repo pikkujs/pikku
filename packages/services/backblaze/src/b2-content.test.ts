@@ -17,12 +17,15 @@ const logger = {
 
 describe('B2Content integration', async () => {
   if (!config.applicationKeyId || !config.applicationKey || !config.bucketId) {
-    console.log('Skipping B2 tests: set B2_APPLICATION_KEY_ID, B2_APPLICATION_KEY, B2_BUCKET_ID')
+    console.log(
+      'Skipping B2 tests: set B2_APPLICATION_KEY_ID, B2_APPLICATION_KEY, B2_BUCKET_ID'
+    )
     return
   }
 
   const b2 = new B2Content(config, logger as any)
-  const testFileName = `pikku-test-${Date.now()}.txt`
+  const bucket = 'pikku-test'
+  const testKey = `pikku-test-${Date.now()}.txt`
   const testContent = 'Hello from Pikku B2 integration test!'
 
   test('upload file via writeFile', async () => {
@@ -32,17 +35,17 @@ describe('B2Content integration', async () => {
         controller.close()
       },
     })
-    const result = await b2.writeFile(testFileName, stream)
+    const result = await b2.writeFile({ bucket, key: testKey, stream })
     assert.ok(result, 'writeFile should return true')
   })
 
   test('readFileAsBuffer returns correct content', async () => {
-    const buffer = await b2.readFileAsBuffer(testFileName)
+    const buffer = await b2.readFileAsBuffer({ bucket, key: testKey })
     assert.equal(buffer.toString(), testContent)
   })
 
   test('readFile returns a stream', async () => {
-    const stream = await b2.readFile(testFileName)
+    const stream = await b2.readFile({ bucket, key: testKey })
     const reader = (stream as ReadableStream).getReader()
     const chunks: Uint8Array[] = []
     while (true) {
@@ -55,28 +58,45 @@ describe('B2Content integration', async () => {
   })
 
   test('signContentKey returns a download URL', async () => {
-    const url = await b2.signContentKey(testFileName, new Date())
-    assert.ok(url.includes(testFileName), 'URL should contain the file name')
+    const url = await b2.signContentKey({
+      bucket,
+      contentKey: testKey,
+      dateLessThan: new Date(),
+    })
+    assert.ok(url.includes(testKey), 'URL should contain the file name')
     assert.ok(url.startsWith('https://'), 'URL should be https')
   })
 
   test('getUploadURL returns credentials with POST method', async () => {
-    const info = await b2.getUploadURL('test.txt', 'text/plain')
+    const info = await b2.getUploadURL({
+      bucket,
+      fileKey: 'test.txt',
+      contentType: 'text/plain',
+    })
     assert.ok(info.uploadUrl, 'Should have uploadUrl')
-    assert.equal(info.assetKey, 'test.txt')
+    assert.equal(info.assetKey, `${bucket}/test.txt`)
     assert.equal(info.uploadMethod, 'POST')
     assert.ok(info.uploadHeaders?.Authorization, 'Should have auth header')
-    assert.ok(info.uploadHeaders?.['X-Bz-File-Name'], 'Should have file name header')
-    assert.ok(info.uploadHeaders?.['Content-Type'], 'Should have content type header')
+    assert.ok(
+      info.uploadHeaders?.['X-Bz-File-Name'],
+      'Should have file name header'
+    )
+    assert.ok(
+      info.uploadHeaders?.['Content-Type'],
+      'Should have content type header'
+    )
   })
 
   test('deleteFile removes the file', async () => {
-    const result = await b2.deleteFile(testFileName)
+    const result = await b2.deleteFile({ bucket, key: testKey })
     assert.ok(result, 'deleteFile should return true')
   })
 
   test('deleteFile returns false for non-existent file', async () => {
-    const result = await b2.deleteFile('non-existent-file-12345.txt')
+    const result = await b2.deleteFile({
+      bucket,
+      key: 'non-existent-file-12345.txt',
+    })
     assert.equal(result, false)
   })
 })

@@ -5,12 +5,26 @@ import {
   GetObjectCommand,
 } from '@aws-sdk/client-s3'
 import { getSignedUrl as getS3SignedUrl } from '@aws-sdk/s3-request-presigner'
-import type { ContentService, Logger } from '@pikku/core/services'
+import type {
+  BucketKeyArgs,
+  ContentService,
+  CopyFileArgs,
+  GetUploadURLArgs,
+  Logger,
+  SignContentKeyArgs,
+  SignURLArgs,
+  UploadURLResult,
+  WriteFileArgs,
+} from '@pikku/core/services'
 import { readFile } from 'fs/promises'
 import { getSignedUrl } from '@aws-sdk/cloudfront-signer'
 import type { Readable } from 'stream'
 
 export interface S3ContentConfig {
+  /**
+   * The underlying S3 bucket. Logical (pseudo) buckets passed via the
+   * ContentService API are stored as path prefixes within this bucket.
+   */
   bucketName: string
   region: string
   endpoint?: string
@@ -30,41 +44,38 @@ export class S3Content implements ContentService {
     })
   }
 
-  public async signURL(
-    url: string,
-    dateLessThan: Date,
-    dateGreaterThan?: Date
-  ) {
+  private join(bucket: string, key: string): string {
+    return `${bucket}/${key}`
+  }
+
+  public async signURL(args: SignURLArgs) {
     try {
       return getSignedUrl({
         ...this.signConfig,
-        url,
-        dateLessThan: dateLessThan.toString(),
-        dateGreaterThan: dateGreaterThan?.toString(),
+        url: args.url,
+        dateLessThan: args.dateLessThan.toString(),
+        dateGreaterThan: args.dateGreaterThan?.toString(),
       })
     } catch {
-      this.logger.error(`Error signing url: ${url}`)
-      return url
+      this.logger.error(`Error signing url: ${args.url}`)
+      return args.url
     }
   }
 
-  public async signContentKey(
-    key: string,
-    dateLessThan: Date,
-    dateGreaterThan?: Date
-  ) {
-    return this.signURL(
-      `https://${this.config.bucketName}/${key}`,
-      dateLessThan,
-      dateGreaterThan
-    )
+  public async signContentKey(args: SignContentKeyArgs) {
+    return this.signURL({
+      url: `https://${this.config.bucketName}/${this.join(args.bucket, args.contentKey)}`,
+      dateLessThan: args.dateLessThan,
+      dateGreaterThan: args.dateGreaterThan,
+    })
   }
 
-  public async getUploadURL(Key: string, ContentType: string) {
+  public async getUploadURL(args: GetUploadURLArgs): Promise<UploadURLResult> {
+    const Key = this.join(args.bucket, args.fileKey)
     const command = new PutObjectCommand({
       Bucket: this.config.bucketName,
       Key,
-      ContentType,
+      ContentType: args.contentType,
     })
     return {
       uploadUrl: await getS3SignedUrl(this.s3, command, {
@@ -75,8 +86,9 @@ export class S3Content implements ContentService {
   }
 
   public async readFile(
-    Key: string
+    args: BucketKeyArgs
   ): Promise<ReadableStream | NodeJS.ReadableStream> {
+    const Key = this.join(args.bucket, args.key)
     this.logger.debug(`Getting file, key: ${Key}`)
 
     const response = await this.s3.send(
@@ -93,10 +105,8 @@ export class S3Content implements ContentService {
     return response.Body as NodeJS.ReadableStream
   }
 
-  public async writeFile(
-    Key: string,
-    stream: ReadableStream | NodeJS.ReadableStream
-  ): Promise<boolean> {
+  public async writeFile(args: WriteFileArgs): Promise<boolean> {
+    const Key = this.join(args.bucket, args.key)
     try {
       this.logger.debug(`Writing file, key: ${Key}`)
 
@@ -104,7 +114,7 @@ export class S3Content implements ContentService {
         new PutObjectCommand({
           Bucket: this.config.bucketName,
           Key,
-          Body: stream as Readable, // <- Pass the readable stream directly
+          Body: args.stream as Readable,
         })
       )
 
@@ -115,15 +125,18 @@ export class S3Content implements ContentService {
     }
   }
 
-  public async copyFile(Key: string, fromAbsolutePath: string) {
+  public async copyFile(args: CopyFileArgs) {
+    const Key = this.join(args.bucket, args.key)
     try {
-      this.logger.debug(`Uploading file, key: ${Key} from: ${fromAbsolutePath}`)
+      this.logger.debug(
+        `Uploading file, key: ${Key} from: ${args.fromAbsolutePath}`
+      )
 
       await this.s3.send(
         new PutObjectCommand({
           Bucket: this.config.bucketName,
           Key,
-          Body: await readFile(fromAbsolutePath),
+          Body: await readFile(args.fromAbsolutePath),
         })
       )
       return true
@@ -133,7 +146,8 @@ export class S3Content implements ContentService {
     }
   }
 
-  public async readFileAsBuffer(Key: string): Promise<Buffer> {
+  public async readFileAsBuffer(args: BucketKeyArgs): Promise<Buffer> {
+    const Key = this.join(args.bucket, args.key)
     this.logger.debug(`Getting file as buffer, key: ${Key}`)
 
     const response = await this.s3.send(
@@ -150,7 +164,8 @@ export class S3Content implements ContentService {
     return Buffer.from(await response.Body.transformToByteArray())
   }
 
-  public async deleteFile(Key: string) {
+  public async deleteFile(args: BucketKeyArgs) {
+    const Key = this.join(args.bucket, args.key)
     try {
       this.logger.debug(`Deleting file, key: ${Key}`)
       await this.s3.send(
