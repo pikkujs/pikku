@@ -6,6 +6,10 @@
   "module": "dist/index.js",
   "main": "dist/index.js",
   "type": "module",
+  "sideEffects": [
+    "./dist/handler-factories.js",
+    "./dist/cloudflare-hibernation-websocket-server.js"
+  ],
   "scripts": {
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",
