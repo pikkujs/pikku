@@ -79,14 +79,21 @@ test(
         'workflow-screenshot:renderWorkflowImage',
         {
           workflowData: sampleWorkflow,
-          assetKey: 'test-workflow.png',
+          bucket: 'workflow-screenshots',
+          key: 'test-workflow.png',
         }
       )
 
-      assert.equal(result.assetKey, 'test-workflow.png')
+      assert.equal(result.bucket, 'workflow-screenshots')
+      assert.equal(result.key, 'test-workflow.png')
+      assert.equal(result.assetKey, 'workflow-screenshots/test-workflow.png')
       assert.ok(result.url, 'Should return a signed URL')
 
-      const filePath = join(uploadPath, 'test-workflow.png')
+      const filePath = join(
+        uploadPath,
+        'workflow-screenshots',
+        'test-workflow.png'
+      )
       assert.ok(
         existsSync(filePath),
         `Screenshot file should exist at ${filePath}`

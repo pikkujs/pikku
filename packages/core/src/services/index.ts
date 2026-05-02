@@ -25,7 +25,16 @@ export { InMemoryQueueService } from './in-memory-queue-service.js'
 export { InMemoryTriggerService } from './in-memory-trigger-service.js'
 export { InMemoryAIRunStateService } from './in-memory-ai-run-state-service.js'
 export { LocalGatewayService } from './local-gateway-service.js'
-export type { ContentService } from './content-service.js'
+export type {
+  ContentService,
+  SignContentKeyArgs,
+  SignURLArgs,
+  GetUploadURLArgs,
+  UploadURLResult,
+  BucketKeyArgs,
+  WriteFileArgs,
+  CopyFileArgs,
+} from './content-service.js'
 export type { JWTService } from './jwt-service.js'
 export type { Logger } from './logger.js'
 export type { SecretService } from './secret-service.js'
