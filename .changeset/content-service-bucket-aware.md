@@ -1,8 +1,8 @@
 ---
-'@pikku/core': major
-'@pikku/aws-services': major
-'@pikku/backblaze': major
-'@pikku/addon-workflow-screenshot': major
+'@pikku/core': patch
+'@pikku/aws-services': patch
+'@pikku/backblaze': patch
+'@pikku/addon-workflow-screenshot': patch
 ---
 
 feat(content)!: bucket-aware ContentService with typed object args
