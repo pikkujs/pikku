@@ -40,6 +40,7 @@
     "test:workflows": "npx tsx client/workflow.ts",
     "test:triggers": "npx tsx client/trigger.ts",
     "test:agent-http": "npx tsx client/agent-http.ts",
-    "test:agent-sse": "npx tsx client/agent-sse.ts"
+    "test:agent-sse": "npx tsx client/agent-sse.ts",
+    "test:realtime": "npx tsx client/realtime.ts"
   }
 }

@@ -34,7 +34,9 @@ RUN_MCP_HTTP_TESTS=false
 RUN_CLI_TESTS=false
 RUN_WORKFLOW_TESTS=false
 RUN_AGENT_TESTS=false
+RUN_REALTIME_TESTS=false
 IGNORE_SERVER_READY_CHECK=false
+NO_START=false
 WS_PATH=""
 
 # -------- ARGUMENT PARSING --------
@@ -50,6 +52,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --ignore-server-ready-check)
             IGNORE_SERVER_READY_CHECK=true
+            shift
+            ;;
+        --no-start)
+            NO_START=true
             shift
             ;;
         --url)
@@ -100,6 +106,10 @@ while [[ $# -gt 0 ]]; do
             RUN_AGENT_TESTS=true
             shift
             ;;
+        --realtime)
+            RUN_REALTIME_TESTS=true
+            shift
+            ;;
         *)
             echo "Unknown option: $1"
             exit 1
@@ -119,9 +129,13 @@ export TODO_APP_URL="$HELLO_WORLD_URL_PREFIX"
 export WS_PATH
 
 # -------- START SERVER --------
-echo "Starting server: $SERVER_CMD"
-bash -c "$SERVER_CMD" & SERVER_PID=$!
-trap "kill $SERVER_PID 2>/dev/null || true" EXIT
+if $NO_START; then
+    echo "Skipping server start (--no-start), assuming external server at $HELLO_WORLD_URL_PREFIX"
+else
+    echo "Starting server: $SERVER_CMD"
+    bash -c "$SERVER_CMD" & SERVER_PID=$!
+    trap "kill $SERVER_PID 2>/dev/null || true" EXIT
+fi
 
 # -------- WAIT FOR SERVER TO BE READY --------
 if $IGNORE_SERVER_READY_CHECK; then
@@ -219,6 +233,12 @@ if $RUN_AGENT_TESTS; then
     $PKG_MANAGER run test:agent-http
     echo "Running Agent SSE tests..."
     $PKG_MANAGER run test:agent-sse
+fi
+
+# -------- RUN REALTIME TESTS IF REQUESTED --------
+if $RUN_REALTIME_TESTS; then
+    echo "Running Realtime tests..."
+    $PKG_MANAGER run test:realtime
 fi
 
 echo "✅ All tests completed successfully."
