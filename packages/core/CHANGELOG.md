@@ -1,3 +1,69 @@
+## 0.12.20
+
+### Patch Changes
+
+- 18acebe: feat(core): scope bare `rpc.invoke()` calls to the caller's addon package
+
+  Addon functions calling `rpc.invoke('foo')` (bare, no colon) previously only
+  resolved against root RPC meta and threw `RPCNotFoundError` for the addon's
+  own functions, forcing authors to prefix every call with their consumer-facing
+  namespace (`'cli:foo'`) — which couples the addon to its caller's `wireAddon({ name })`.
+
+  `ContextAwareRPCService` now carries an optional `packageName` passed through
+  from `runPikkuFunc` via `getContextRPCService`. For bare names from inside an
+  addon, resolution first checks the caller's package function meta, then falls
+  back to root. Applies to both `rpc.invoke()` and `rpc.rpcWithWire()`. Explicit
+  namespaced calls (`'stripe:createCharge'`) and root-namespace calls are unchanged.
+
+- 66d1b4f: feat(content)!: bucket-aware ContentService with typed object args
+
+  BREAKING CHANGE: All `ContentService` methods now take object args with a
+  required `bucket` field. The interface is generic over `TBucket extends string`
+  so callers can constrain bucket names to a typed union.
+
+  Migration:
+
+  ```ts
+  // Before
+  content.getUploadURL(fileKey, contentType)
+  content.signContentKey(key, expiresAt)
+  content.writeFile(assetKey, stream)
+  content.readFile(assetKey)
+  content.deleteFile(assetKey)
+
+  // After
+  content.getUploadURL({ bucket, fileKey, contentType })
+  content.signContentKey({ bucket, contentKey, dateLessThan: expiresAt })
+  content.writeFile({ bucket, key, stream })
+  content.readFile({ bucket, key })
+  content.deleteFile({ bucket, key })
+  ```
+
+  - New exported types: `SignContentKeyArgs`, `SignURLArgs`, `GetUploadURLArgs`,
+    `UploadURLResult`, `BucketKeyArgs`, `WriteFileArgs`, `CopyFileArgs`.
+  - `LocalContent` stores objects under `<base>/<bucket>/<key>`.
+  - `S3Content` and `B2Content` treat the logical bucket as a key prefix within
+    the configured underlying storage bucket.
+  - `workflow-screenshot` addon takes `bucket?` / `key?` input; default bucket
+    resolved from `PIKKU_WORKFLOW_SCREENSHOT_BUCKET` variable, no hardcoded
+    fallback.
+
+- 3e35b99: feat(core): scope bare workflow names to the caller's addon package
+
+  Parallel to the RPC scoping fix for addon functions. Addon code calling
+  `services.workflowService.runToCompletion('myWorkflow', ...)` (bare name,
+  no colon) previously missed workflows registered under the addon's package
+  scope and threw `WorkflowNotFoundError`, forcing authors to hard-code
+  the consumer-facing namespace (`'cli:myWorkflow'`) — which couples the
+  addon to its caller's `wireAddon({ name })`.
+
+  `getOrCreatePackageSingletonServices` in the function-runner now wraps
+  the package's `workflowService` with a Proxy that auto-prefixes bare
+  workflow names on `startWorkflow` / `runToCompletion` with the addon's
+  consumer-defined namespace (looked up from `pikkuState(null, 'addons',
+'packages')`). Explicit `'ns:name'` calls and root-namespace workflows
+  are unchanged.
+
 ## 0.12.19
 
 ### Patch Changes

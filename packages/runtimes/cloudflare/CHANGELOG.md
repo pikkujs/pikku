@@ -1,3 +1,32 @@
+## 0.12.7
+
+### Patch Changes
+
+- b1b2681: fix(cloudflare): channel unit bundle was missing the `WebSocketHibernationServer` named re-export
+
+  Two issues blocked Workers-for-Platforms channel deploys:
+  1. The CF deploy adapter generated `entry.ts` with
+     `export { PikkuWebSocketHibernationServer ... } from '@pikku/cloudflare/websocket'`,
+     but `PikkuWebSocketHibernationServer` actually lives in
+     `@pikku/cloudflare/handler` (`/websocket` exports the abstract base
+     `CloudflareWebSocketHibernationServer`). Switched the adapter import to
+     `/handler`.
+  2. With `bundle: true, format: 'esm'`, esbuild tree-shook the named
+     re-export because nothing inside the bundle used it — leaving CF to
+     reject the upload with `10070: Cannot apply new-class migration to
+class 'WebSocketHibernationServer' that is not exported by script`.
+     Added `sideEffects` to `@pikku/cloudflare`'s package.json marking
+     `handler-factories.js` and `cloudflare-hibernation-websocket-server.js`
+     as side-effectful so esbuild preserves the export.
+
+  Together these let `wireChannel(...)` units deploy to a Workers-for-Platforms
+  dispatch namespace with the DO migration accepted.
+
+- Updated dependencies [18acebe]
+- Updated dependencies [66d1b4f]
+- Updated dependencies [3e35b99]
+  - @pikku/core@0.12.20
+
 ## 0.12.0
 
 ## 0.12.6
@@ -5,7 +34,6 @@
 ### Patch Changes
 
 - 311c0c4: Unify session persistence through SessionStore, remove session blob from ChannelStore
-
   - PikkuSessionService now persists sessions via SessionStore on set()/clear() instead of every function call
   - ChannelStore no longer stores session data — maps channelId to pikkuUserId only
   - ChannelStore API: setUserSession/getChannelAndSession replaced with setPikkuUserId/getChannel
@@ -26,7 +54,6 @@
 ### Patch Changes
 
 - 624097e: Add deploy pipeline with provider-agnostic architecture
-
   - Add MetaService with explicit typed API, absorb WiringService reads
   - Add deployment service, traceId propagation, scoped logger
   - Rewrite analyzer: one function = one worker, gateways dispatch via RPC
@@ -125,7 +152,6 @@
 - 730adb6: Update runtime adapters for channel middleware support
 
   **Updates:**
-
   - Update Cloudflare hibernation WebSocket server for middleware changes
   - Update Fastify response convertor for improved channel handling
   - Update MCP server for channel middleware support
