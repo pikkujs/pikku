@@ -14,12 +14,9 @@ import {
 } from '@pikku/core/services'
 import { stopSingletonServices } from '@pikku/core'
 import { pikkuState } from '@pikku/core/internal'
-import {
-  fetchData,
-  PikkuFetchHTTPResponse,
-  logRoutes,
-} from '@pikku/core/http'
+import { fetchData, PikkuFetchHTTPResponse, logRoutes } from '@pikku/core/http'
 import { compileAllSchemas } from '@pikku/core/schema'
+import { LocalEventHubService } from '@pikku/core/channel/local'
 import { pikkuWebsocketHandler } from '@pikku/ws'
 import { WebSocketServer } from 'ws'
 import { InMemorySchedulerService } from '@pikku/schedule'
@@ -134,6 +131,7 @@ export const dev = pikkuSessionlessFunc<
       workflowService: new InMemoryWorkflowService(),
       triggerService: new InMemoryTriggerService(),
       aiRunStateService: new InMemoryAIRunStateService(),
+      eventHub: new LocalEventHubService(),
     }
 
     const singletonServices = await userCreateSingletonServices(
@@ -160,9 +158,7 @@ export const dev = pikkuSessionlessFunc<
 
     await new Promise<void>((resolve) => {
       server.listen(resolvedPort, hostname, () => {
-        logger.info(
-          `Dev server running at http://${hostname}:${resolvedPort}`
-        )
+        logger.info(`Dev server running at http://${hostname}:${resolvedPort}`)
         resolve()
       })
     })
