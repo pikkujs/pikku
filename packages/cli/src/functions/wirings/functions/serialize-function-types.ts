@@ -35,6 +35,7 @@ import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/inte
 import type { NodeType } from '@pikku/core/node'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
+import { PikkuError } from '@pikku/core/errors'
 
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
