@@ -1,7 +1,18 @@
 import { createReadStream, createWriteStream, promises } from 'fs'
 import { mkdir, readFile } from 'fs/promises'
 import { resolve, normalize } from 'path'
-import type { ContentService, JWTService, Logger } from '@pikku/core/services'
+import type {
+  BucketKeyArgs,
+  ContentService,
+  CopyFileArgs,
+  GetUploadURLArgs,
+  JWTService,
+  Logger,
+  SignContentKeyArgs,
+  SignURLArgs,
+  UploadURLResult,
+  WriteFileArgs,
+} from '@pikku/core/services'
 import { pipeline } from 'stream/promises'
 import type { Readable } from 'stream'
 
@@ -20,13 +31,18 @@ export class LocalContent implements ContentService {
     private jwt?: JWTService
   ) {}
 
-  private safePath(assetKey: string): string {
+  private safePath(bucket: string, key: string): string {
     const base = resolve(this.config.localFileUploadPath)
-    const target = resolve(base, normalize(assetKey))
+    const scoped = resolve(base, normalize(bucket))
+    const target = resolve(scoped, normalize(key))
     if (!target.startsWith(base + '/') && target !== base) {
       throw new Error('Invalid asset key')
     }
     return target
+  }
+
+  private joinKey(bucket: string, key: string): string {
+    return `${bucket}/${key}`
   }
 
   public async init() {}
@@ -58,105 +74,105 @@ export class LocalContent implements ContentService {
     return params.toString()
   }
 
-  public async signURL(
-    url: string,
-    dateLessThan: Date,
-    dateGreaterThan?: Date
-  ): Promise<string> {
-    const params = await this.signParams(dateLessThan, dateGreaterThan)
-    return `${url}?${params}`
+  public async signURL(args: SignURLArgs): Promise<string> {
+    const params = await this.signParams(
+      args.dateLessThan,
+      args.dateGreaterThan
+    )
+    return `${args.url}?${params}`
   }
 
-  public async signContentKey(
-    assetKey: string,
-    dateLessThan: Date,
-    dateGreaterThan?: Date
-  ): Promise<string> {
+  public async signContentKey(args: SignContentKeyArgs): Promise<string> {
+    const fullKey = this.joinKey(args.bucket, args.contentKey)
     const base = this.config.server
-      ? `${this.config.server}${this.config.assetUrlPrefix}/${assetKey}`
-      : `${this.config.assetUrlPrefix}/${assetKey}`
-    return this.signURL(base, dateLessThan, dateGreaterThan)
+      ? `${this.config.server}${this.config.assetUrlPrefix}/${fullKey}`
+      : `${this.config.assetUrlPrefix}/${fullKey}`
+    return this.signURL({
+      url: base,
+      dateLessThan: args.dateLessThan,
+      dateGreaterThan: args.dateGreaterThan,
+    })
   }
 
-  public async getUploadURL(assetKey: string) {
-    this.logger.debug(`Going to upload with key: ${assetKey}`)
+  public async getUploadURL(args: GetUploadURLArgs): Promise<UploadURLResult> {
+    const fullKey = this.joinKey(args.bucket, args.fileKey)
+    this.logger.debug(`Going to upload with key: ${fullKey}`)
     return {
-      uploadUrl: `${this.config.uploadUrlPrefix}/${assetKey}`,
-      assetKey,
+      uploadUrl: `${this.config.uploadUrlPrefix}/${fullKey}`,
+      assetKey: fullKey,
     }
   }
 
-  public async writeFile(
-    assetKey: string,
-    stream: ReadableStream | NodeJS.ReadableStream
-  ): Promise<boolean> {
-    this.logger.debug(`Writing file: ${assetKey}`)
+  public async writeFile(args: WriteFileArgs): Promise<boolean> {
+    this.logger.debug(`Writing file: ${args.bucket}/${args.key}`)
 
-    const path = this.safePath(assetKey)
+    const path = this.safePath(args.bucket, args.key)
 
     try {
       await this.createDirectoryForFile(path)
       const fileStream = createWriteStream(path)
-      // Use pipeline to properly manage stream piping and errors
-      await pipeline(stream as Readable, fileStream)
+      await pipeline(args.stream as Readable, fileStream)
       return true
     } catch (e) {
       console.error(e)
-      this.logger.error(`Error writing content ${assetKey}`, e)
+      this.logger.error(`Error writing content ${args.bucket}/${args.key}`, e)
       return false
     }
   }
 
-  public async copyFile(
-    assetKey: string,
-    fromAbsolutePath: string
-  ): Promise<boolean> {
-    this.logger.debug(`Writing file: ${assetKey}`)
+  public async copyFile(args: CopyFileArgs): Promise<boolean> {
+    this.logger.debug(`Writing file: ${args.bucket}/${args.key}`)
     try {
-      const path = this.safePath(assetKey)
+      const path = this.safePath(args.bucket, args.key)
       await this.createDirectoryForFile(path)
-      await promises.copyFile(fromAbsolutePath, path)
+      await promises.copyFile(args.fromAbsolutePath, path)
+      return true
     } catch (e) {
       console.error(e)
-      this.logger.error(`Error inserting content ${assetKey}`, e)
+      this.logger.error(`Error inserting content ${args.bucket}/${args.key}`, e)
     }
     return false
   }
 
   public async readFile(
-    assetKey: string
+    args: BucketKeyArgs
   ): Promise<ReadableStream | NodeJS.ReadableStream> {
-    this.logger.debug(`Getting key: ${assetKey}`)
+    this.logger.debug(`Getting key: ${args.bucket}/${args.key}`)
 
-    const filePath = this.safePath(assetKey)
+    const filePath = this.safePath(args.bucket, args.key)
 
     try {
       const stream = createReadStream(filePath)
-      // Handle early stream errors (like file not found, permission denied, etc.)
       stream.on('error', (err) => {
-        this.logger.error(`Error getting content ${assetKey}`, err)
+        this.logger.error(
+          `Error getting content ${args.bucket}/${args.key}`,
+          err
+        )
       })
 
       return stream
     } catch (e) {
-      this.logger.error(`Error setting up stream for ${assetKey}`, e)
+      this.logger.error(
+        `Error setting up stream for ${args.bucket}/${args.key}`,
+        e
+      )
       throw e
     }
   }
 
-  public async readFileAsBuffer(assetKey: string): Promise<Buffer> {
-    const filePath = this.safePath(assetKey)
-    this.logger.debug(`Reading file as buffer: ${assetKey}`)
+  public async readFileAsBuffer(args: BucketKeyArgs): Promise<Buffer> {
+    const filePath = this.safePath(args.bucket, args.key)
+    this.logger.debug(`Reading file as buffer: ${args.bucket}/${args.key}`)
     return readFile(filePath)
   }
 
-  public async deleteFile(assetKey: string): Promise<boolean> {
-    this.logger.debug(`deleting key: ${assetKey}`)
+  public async deleteFile(args: BucketKeyArgs): Promise<boolean> {
+    this.logger.debug(`deleting key: ${args.bucket}/${args.key}`)
     try {
-      await promises.unlink(this.safePath(assetKey))
+      await promises.unlink(this.safePath(args.bucket, args.key))
       return true
     } catch (e: any) {
-      this.logger.error(`Error deleting content ${assetKey}`, e)
+      this.logger.error(`Error deleting content ${args.bucket}/${args.key}`, e)
     }
     return false
   }
