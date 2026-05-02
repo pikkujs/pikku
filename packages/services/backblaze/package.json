@@ -1,6 +1,6 @@
 {
   "name": "@pikku/backblaze",
-  "version": "0.12.4",
+  "version": "0.12.5",
   "description": "Backblaze B2 content service for Pikku",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
@@ -17,7 +17,7 @@
     ".": "./dist/index.js"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.9"
+    "@pikku/core": "^0.12.20"
   },
   "devDependencies": {
     "typescript": "^5.9"

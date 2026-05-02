@@ -1,3 +1,9 @@
+## 0.12.2
+
+### Patch Changes
+
+- f3f3031: Add `fabric` template — clones `pikkujs/starter-template` verbatim, then prompts for the frontend scaffold to keep (react-vite-mantine static or nextjs-tailwind SSR) and removes the others. Backend (functions + sdk + sql) is always retained.
+
 ## 0.12.0
 
 ## 0.12.1
@@ -41,7 +47,6 @@
 - c6f9bb9: Update WebSocket client and create-pikku for channel middleware
 
   **Updates:**
-
   - Update WebSocket client to handle channel middleware properly
   - Update create-pikku template generation for channel configurations
   - Improve template utilities and tests
