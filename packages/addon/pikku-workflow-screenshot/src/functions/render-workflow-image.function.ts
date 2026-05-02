@@ -17,8 +17,6 @@ export interface RenderWorkflowImageOutput {
   url?: string
 }
 
-const DEFAULT_BUCKET = 'workflow-screenshots'
-
 export const renderWorkflowImage = pikkuSessionlessFunc<
   RenderWorkflowImageInput,
   RenderWorkflowImageOutput
@@ -29,7 +27,7 @@ export const renderWorkflowImage = pikkuSessionlessFunc<
   expose: true,
   auth: false,
   func: async (
-    { screenshotService, content, logger },
+    { screenshotService, content, variables, logger },
     { workflowData, bucket, key, width, height, format }
   ) => {
     const imageBuffer = await screenshotService.renderWorkflowImage(
@@ -38,7 +36,13 @@ export const renderWorkflowImage = pikkuSessionlessFunc<
     )
 
     const resolvedFormat = format || 'png'
-    const resolvedBucket = bucket || DEFAULT_BUCKET
+    const resolvedBucket =
+      bucket || (await variables.get('PIKKU_WORKFLOW_SCREENSHOT_BUCKET'))
+    if (!resolvedBucket) {
+      throw new Error(
+        'Workflow screenshot bucket not configured: pass `bucket` in the input or set the PIKKU_WORKFLOW_SCREENSHOT_BUCKET variable.'
+      )
+    }
     const resolvedKey = key || `${Date.now()}.${resolvedFormat}`
 
     const stream = Readable.from(imageBuffer)
