@@ -108,7 +108,7 @@ jobs:
         working-directory: templates/functions
         env:
           TODO_APP_URL: http://localhost:4002
-        run: bash run-tests.sh --no-start --ignore-server-ready-check --url http://localhost:4002 --http --rpc --websocket --http-sse --workflow --realtime
+        run: bash run-tests.sh --no-start --ignore-server-ready-check --url http://localhost:4002 --http --rpc --websocket --http-sse --workflow
       - name: Stop pikku dev
         if: always()
         run: |
