@@ -239,7 +239,7 @@ export class CloudflareProviderAdapter {
       ``,
       ...this.generatePlatformServicesBlock(ctx, platform),
       ``,
-      `export { PikkuWebSocketHibernationServer as WebSocketHibernationServer } from '@pikku/cloudflare/websocket'`,
+      `export { PikkuWebSocketHibernationServer as WebSocketHibernationServer } from '@pikku/cloudflare/handler'`,
       `export default createCloudflareWebSocketHandler({ createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices })`,
       ``,
     ]
