@@ -3,11 +3,11 @@ import { describe, test } from 'node:test'
 import { LogLevel } from '@pikku/core/services'
 import { CLILogger } from './cli-logger.service.js'
 
-function captureStdout(run: () => void): string[] {
+function captureStream(stream: NodeJS.WriteStream, run: () => void): string[] {
   const lines: string[] = []
-  const originalWrite = process.stdout.write.bind(process.stdout)
+  const originalWrite = stream.write.bind(stream)
 
-  ;(process.stdout.write as unknown as (chunk: unknown) => boolean) = (
+  ;(stream.write as unknown as (chunk: unknown) => boolean) = (
     chunk: unknown
   ) => {
     lines.push(typeof chunk === 'string' ? chunk : String(chunk))
@@ -17,12 +17,15 @@ function captureStdout(run: () => void): string[] {
   try {
     run()
   } finally {
-    ;(process.stdout.write as unknown as typeof process.stdout.write) =
-      originalWrite as typeof process.stdout.write
+    ;(stream.write as unknown as typeof stream.write) =
+      originalWrite as typeof stream.write
   }
 
   return lines
 }
+
+const captureStderr = (run: () => void) => captureStream(process.stderr, run)
+const captureStdout = (run: () => void) => captureStream(process.stdout, run)
 
 describe('CLILogger json output mode', () => {
   test('writes json logs immediately (streaming, no buffering)', () => {
@@ -30,7 +33,7 @@ describe('CLILogger json output mode', () => {
     logger.setLevel(LogLevel.debug)
     logger.setOutputMode('json')
 
-    const lines = captureStdout(() => {
+    const lines = captureStderr(() => {
       logger.info({ message: 'Generating types', type: 'timing' })
     })
 
@@ -47,10 +50,10 @@ describe('CLILogger json output mode', () => {
     logger.setLevel(LogLevel.debug)
     logger.setOutputMode('json')
 
-    captureStdout(() => {
+    captureStderr(() => {
       logger.info('first')
     })
-    const lines = captureStdout(() => {
+    const lines = captureStderr(() => {
       logger.flushJSONBuffer()
     })
     assert.strictEqual(lines.length, 0)
@@ -61,7 +64,7 @@ describe('CLILogger json output mode', () => {
     logger.setLevel(LogLevel.info)
     logger.setOutputMode('json')
 
-    const lines = captureStdout(() => {
+    const lines = captureStderr(() => {
       logger.info('\x1b[31mRed Message\x1b[0m')
     })
 
@@ -74,7 +77,7 @@ describe('CLILogger json output mode', () => {
     logger.setLevel(LogLevel.debug)
     logger.setOutputMode('json')
 
-    const lines = captureStdout(() => {
+    const lines = captureStderr(() => {
       logger.critical('PKU111' as any, 'Duplicate function name')
     })
 
@@ -90,7 +93,7 @@ describe('CLILogger json output mode', () => {
     logger.setLevel(LogLevel.debug)
     logger.setOutputMode('json')
 
-    const lines = captureStdout(() => {
+    const lines = captureStderr(() => {
       logger.info({
         message: '[bundler] building worker',
         type: 'progress',
