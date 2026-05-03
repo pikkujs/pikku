@@ -1,6 +1,7 @@
 import { pikkuFunc } from '#pikku'
 
 export const analyzeDataV1 = pikkuFunc<{ id: string }, void>({
+  override: 'analyzeData',
   version: 1,
   func: async ({ email }, data) => {
     await email.send(data.id, 'analysis', 'v1 result')
