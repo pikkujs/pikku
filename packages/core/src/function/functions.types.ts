@@ -275,6 +275,8 @@ export type CorePikkuFunctionConfig<
   title?: string
   /** Longer-form description of what the function does */
   description?: string
+  /** Explicit logical name override; lets multiple exports share a versioned base */
+  override?: string
   version?: number
   tags?: string[]
   expose?: boolean

@@ -4,6 +4,7 @@ export const getDataV1 = pikkuSessionlessFunc<
   { id: string },
   { id: string; version: number }
 >({
+  override: 'getData',
   version: 1,
   expose: true,
   func: async ({ logger }, data) => {
