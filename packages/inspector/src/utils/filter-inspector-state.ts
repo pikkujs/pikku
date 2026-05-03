@@ -871,6 +871,16 @@ export function filterInspectorState(
     }
   }
 
+  // workflowService internally calls queueService (via queueStepWorker /
+  // queueOrchestrator). Any unit that needs workflowService also needs
+  // queueService for the transitive enqueue calls — covers
+  // workflow-starter, graph-starter, workflow-runner, etc.
+  if (
+    filteredState.serviceAggregation.requiredServices.has('workflowService')
+  ) {
+    filteredState.serviceAggregation.requiredServices.add('queueService')
+  }
+
   // Recalculate requiredServices based on filtered functions/middleware/permissions
   // Need to cast to InspectorState temporarily for aggregateRequiredServices
   const stateForAggregation = filteredState as InspectorState

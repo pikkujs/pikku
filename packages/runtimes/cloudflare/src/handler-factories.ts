@@ -179,6 +179,32 @@ export function createCloudflareHandler(
         )
       }
 
+      // Synthetic queue dispatch: Workers-for-Platforms can't bind a queue
+      // consumer directly to a namespace script (CF API limitation), so an
+      // account-level dispatcher consumes the queue and forwards each batch
+      // here as POST /__pikku/queue. Body: { queue, messages }. Mirrors the
+      // shape CF would normally pass to queue(batch).
+      if (url.pathname === '/__pikku/queue' && request.method === 'POST') {
+        try {
+          const body = (await request.json()) as {
+            queue?: string
+            messages?: Array<{ id: string; body: unknown }>
+          }
+          await processQueueBatch({
+            queue: body.queue,
+            messages: body.messages ?? [],
+          })
+          return new Response('{"ok":true}', {
+            headers: { 'Content-Type': 'application/json' },
+          })
+        } catch (e: unknown) {
+          return new Response(JSON.stringify({ error: (e as Error).message }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        }
+      }
+
       return runFetch(request, undefined, { exposeErrors: true })
     }
   }
