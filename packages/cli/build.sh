@@ -31,6 +31,12 @@ while IFS= read -r -d '' f; do
       -e "s|import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core'|import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/internal'|g" \
       -e "s|import { addPackageServiceFactories } from '@pikku/core'|import { pikkuState } from '@pikku/core/internal'|g" \
       -e "s|addPackageServiceFactories('\([^']*\)', {|pikkuState('\1', 'package', 'factories', {|g" \
+      -e 's|addMiddleware as addMiddlewareCore|addTagMiddleware as addTagMiddlewareCore|g' \
+      -e 's|addPermission as addPermissionCore|addTagPermission as addTagPermissionCore|g' \
+      -e 's|addMiddlewareCore(|addTagMiddlewareCore(|g' \
+      -e 's|addPermissionCore(|addTagPermissionCore(|g' \
+      -e 's|^export const addMiddleware |export const addTagMiddleware |' \
+      -e 's|^export const addPermission |export const addTagPermission |' \
       -e "/metaDir/d" \
       -e "/^try {$/d" \
       -e "/^} catch.*{.*}$/d" \

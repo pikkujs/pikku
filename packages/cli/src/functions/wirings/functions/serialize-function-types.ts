@@ -30,7 +30,12 @@ export const serializeFunctionTypes = (
 import type { CorePikkuMiddleware, CorePermissionGroup, ListInput, ListOutput, PikkuWire, PickRequired } from '@pikku/core'
 import type { CorePikkuFunctionConfig, CorePikkuAuth, CorePikkuAuthConfig, CorePikkuPermission } from '@pikku/core/function'
 import { pikkuAuth as pikkuAuthCore } from '@pikku/core/function'
-import { addMiddleware as addMiddlewareCore, addPermission as addPermissionCore } from '@pikku/core/middleware'
+import {
+  addTagMiddleware as addTagMiddlewareCore,
+  addGlobalMiddleware as addGlobalMiddlewareCore,
+  addTagPermission as addTagPermissionCore,
+  addGlobalPermission as addGlobalPermissionCore,
+} from '@pikku/core/middleware'
 import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/internal'
 import type { NodeType } from '@pikku/core/node'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
@@ -677,57 +682,49 @@ export const pikkuWireServices = (
 }
 
 /**
- * Adds global middleware for a specific tag.
- *
- * This function allows you to register middleware that will be applied to
- * any wiring (HTTP, Channel, Queue, Scheduler, MCP) that includes the matching tag.
- *
- * @param tag - The tag that the middleware should apply to.
- * @param middleware - The middleware array to apply for the specified tag.
- *
- * @throws Error if middleware for the tag already exists.
+ * Tag-scoped middleware. Applies to any wiring that carries the matching tag.
  *
  * @example
- * \`\`\`typescript
- * // Add admin middleware for admin endpoints
- * addMiddleware('admin', [adminMiddleware])
- *
- * // Add authentication middleware for auth endpoints
- * addMiddleware('auth', [authMiddleware])
- *
- * // Add logging middleware for all API endpoints
- * addMiddleware('api', [loggingMiddleware])
- * \`\`\`
+ * addTagMiddleware('admin', [adminMiddleware])
  */
-export const addMiddleware = (tag: string, middleware: PikkuMiddleware[]) => {
-  addMiddlewareCore(tag, middleware as any, ${packageNameValue})
+export const addTagMiddleware = (tag: string, middleware: PikkuMiddleware[]) => {
+  addTagMiddlewareCore(tag, middleware as any, ${packageNameValue})
 }
 
 /**
- * Adds global permissions for a specific tag.
+ * Wire-agnostic global middleware. Runs at the top of every wiring's
+ * middleware chain — before wire-, tag-, and function-level entries.
  *
- * This function allows you to register permissions that will be applied to
- * any wiring (HTTP, Channel, Queue, Scheduler, MCP) that includes the matching tag.
- *
- * @param tag - The tag that the permissions should apply to.
- * @param permissions - The permissions array or object to apply for the specified tag.
- *
- * @throws Error if permissions for the tag already exist.
+ * Resolution order: global -> wire -> tag -> function.
  *
  * @example
- * \`\`\`typescript
- * // Add admin permissions for admin endpoints
- * addPermission('admin', [adminPermission])
- *
- * // Add authentication permissions for auth endpoints
- * addPermission('auth', [authPermission])
- *
- * // Add read permissions for all API endpoints (as object)
- * addPermission('api', { read: readPermission })
- * \`\`\`
+ * addGlobalMiddleware([telemetryMiddleware])
  */
-export const addPermission = <In = unknown>(tag: string, permissions: CorePermissionGroup<PikkuPermission<In>> | PikkuPermission<In>[]) => {
-  addPermissionCore(tag, permissions as any, ${packageNameValue})
+export const addGlobalMiddleware = (middleware: PikkuMiddleware[]) => {
+  addGlobalMiddlewareCore(middleware as any, ${packageNameValue})
+}
+
+/**
+ * Tag-scoped permissions. Applies to any wiring that carries the matching tag.
+ *
+ * @example
+ * addTagPermission('admin', [adminPermission])
+ */
+export const addTagPermission = <In = unknown>(tag: string, permissions: CorePermissionGroup<PikkuPermission<In>> | PikkuPermission<In>[]) => {
+  addTagPermissionCore(tag, permissions as any, ${packageNameValue})
+}
+
+/**
+ * Wire-agnostic global permissions. Runs at the top of every wiring's
+ * permission resolution — before wire-, tag-, and function-level entries.
+ *
+ * Resolution order: global -> wire -> tag -> function.
+ *
+ * @example
+ * addGlobalPermission([signedInUser])
+ */
+export const addGlobalPermission = <In = unknown>(permissions: CorePermissionGroup<PikkuPermission<In>> | PikkuPermission<In>[]) => {
+  addGlobalPermissionCore(permissions as any, ${packageNameValue})
 }
 
 export { wireAddon } from '@pikku/core/rpc'
