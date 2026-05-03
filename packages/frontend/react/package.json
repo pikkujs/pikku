@@ -1,6 +1,6 @@
 {
   "name": "@pikku/react",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "type": "module",
@@ -20,7 +20,7 @@
     "prepublishOnly": "yarn build"
   },
   "dependencies": {
-    "@pikku/fetch": "^0.12.0"
+    "@pikku/fetch": "^0.12.2"
   },
   "peerDependencies": {
     "react": "^18 || ^19",

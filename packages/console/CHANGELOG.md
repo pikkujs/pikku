@@ -1,3 +1,27 @@
+## 0.12.16
+
+### Patch Changes
+
+- 6afdfcb: refactor: rip plan layer, replace with branch-based diff view + new CLI commands
+  - Removes the `AiPlanV1` JSON plan-layer scaffolding (`pikku plan
+ingest/update/validate`, `LocalPlanStoreService`, `/plans` console
+    pages).
+  - Replaces with a `StateDiffService` that diffs two `.pikku/`
+    directories' meta JSONs (typically a worktree at `main` vs. the
+    current branch), exposed via `console:getStateDiff` and a new
+    `/changes` console page with per-category tabs and field-level diff.
+  - New `pikku meta` and `pikku skills` CLI commands.
+  - `cli-logger` json output goes to stderr so command data piping
+    (e.g. `pikku meta --json | jq`) stays clean.
+  - `templates/functions/pikku.config.json` declares `metaService`,
+    `stateDiffService`, and `codeEditService` as
+    `serverlessIncompatible` so they're filtered from serverless bundles.
+
+- Updated dependencies [f72a820]
+- Updated dependencies [d484d0c]
+  - @pikku/fetch@0.12.2
+  - @pikku/core@0.12.21
+
 ## 0.12.0
 
 ## 0.12.15
@@ -30,7 +54,6 @@
 ### Patch Changes
 
 - f85c234: Add unified credential system with per-user OAuth and AI agent pre-flight checks
-
   - Unified CredentialService with lazy loading per user via pikkuUserId
   - wire.getCredential() for typed single credential lookup
   - MissingCredentialError with structured payload for client-side connect flows
