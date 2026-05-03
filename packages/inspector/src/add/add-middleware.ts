@@ -245,7 +245,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     return
   }
 
-  if (expression.text === 'addMiddleware') {
+  if (expression.text === 'addTagMiddleware') {
     const tagArg = args[0]
     const middlewareArrayArg = args[1]
 
@@ -257,13 +257,13 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     }
 
     if (!tag) {
-      logger.warn(`• addMiddleware call without valid tag string`)
+      logger.warn(`• addTagMiddleware call without valid tag string`)
       return
     }
 
     if (!ts.isArrayLiteralExpression(middlewareArrayArg)) {
       logger.error(
-        `• addMiddleware('${tag}', ...) must have a literal array as second argument`
+        `• addTagMiddleware('${tag}', ...) must have a literal array as second argument`
       )
       return
     }
@@ -329,7 +329,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     if (!isFactory && exportedName) {
       logger.warn(
         `• Middleware group '${exportedName}' for tag '${tag}' is not wrapped in a factory function. ` +
-          `For tree-shaking, use: export const ${exportedName} = () => addMiddleware('${tag}', [...])`
+          `For tree-shaking, use: export const ${exportedName} = () => addTagMiddleware('${tag}', [...])`
       )
     }
 

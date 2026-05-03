@@ -123,8 +123,16 @@ export { createGraph } from './wirings/workflow/graph/graph-node.js'
 export { wireAddon } from './wirings/rpc/wire-addon.js'
 export type { WireAddonConfig } from './wirings/rpc/wire-addon.js'
 export type { PikkuPackageState } from './types/state.types.js'
-export { runMiddleware, addMiddleware } from './middleware-runner.js'
-export { addPermission, checkAuthPermissions } from './permissions.js'
+export {
+  runMiddleware,
+  addTagMiddleware,
+  addGlobalMiddleware,
+} from './middleware-runner.js'
+export {
+  addTagPermission,
+  addGlobalPermission,
+  checkAuthPermissions,
+} from './permissions.js'
 export { isSerializable, stopSingletonServices } from './utils.js'
 export { getSingletonServices, getCreateWireServices } from './pikku-state.js'
 export {

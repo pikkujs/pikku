@@ -4,5 +4,9 @@ export { authBearer } from './auth-bearer.js'
 export { pikkuRemoteAuthMiddleware } from './remote-auth.js'
 export { cors } from './cors.js'
 export { telemetryOuter, telemetryInner } from './telemetry.js'
-export { addMiddleware, runMiddleware } from '../middleware-runner.js'
-export { addPermission } from '../permissions.js'
+export {
+  addTagMiddleware,
+  addGlobalMiddleware,
+  runMiddleware,
+} from '../middleware-runner.js'
+export { addTagPermission, addGlobalPermission } from '../permissions.js'

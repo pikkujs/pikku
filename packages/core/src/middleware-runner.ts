@@ -91,45 +91,49 @@ const isSortedByPriority = (
 }
 
 /**
- * Registers global middleware for a specific tag.
+ * Registers tag-scoped middleware. Applies to any wiring (HTTP, Channel,
+ * Queue, Scheduler, MCP, CLI, Workflow, Agent) that carries the matching tag.
  *
- * This function registers middleware at runtime that will be applied to
- * any wiring (HTTP, Channel, Queue, Scheduler, MCP, CLI) that includes the matching tag.
- *
- * For tree-shaking benefits, wrap in a factory function:
- * `export const x = () => addMiddleware('tag', [...])`
- *
- * Accepts an array that can contain:
- * - Direct middleware functions (CorePikkuMiddleware)
- * - Factory middleware functions (CorePikkuMiddlewareFactory)
- *
- * @template PikkuMiddleware The middleware type.
- * @param {string} tag - The tag that the middleware should apply to.
- * @param {CorePikkuMiddlewareGroup} middleware - Array of middleware for this tag.
- *
- * @returns {CorePikkuMiddlewareGroup} The middleware array (for chaining/wrapping).
+ * For tree-shaking, wrap in a factory:
+ * `export const x = () => addTagMiddleware('tag', [...])`
  *
  * @example
- * ```typescript
- * // Recommended: tree-shakeable
- * export const adminMiddleware = () => addMiddleware('admin', [
- *   authMiddleware,
- *   loggingMiddleware({ level: 'info' })
- * ])
- *
- * // Also works: no tree-shaking
- * export const apiMiddleware = addMiddleware('api', [
- *   rateLimitMiddleware
- * ])
- * ```
+ * export const adminMiddleware = () => addTagMiddleware('admin', [authMiddleware])
  */
-export const addMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
+export const addTagMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
   tag: string,
   middleware: CorePikkuMiddlewareGroup,
   packageName: string | null = null
 ): CorePikkuMiddlewareGroup => {
   const tagGroups = pikkuState(packageName, 'middleware', 'tagGroup')
   tagGroups[tag] = middleware
+  return middleware
+}
+
+/**
+ * Registers wire-agnostic global middleware. Runs at the top of every
+ * wiring's middleware chain — before wire-, tag-, and function-level
+ * entries — across HTTP, Channel, Queue, Scheduler, MCP, CLI, Workflow, Agent.
+ *
+ * Resolution order: global → wire → tag → function.
+ *
+ * @example
+ * addGlobalMiddleware([telemetryMiddleware])
+ */
+export const addGlobalMiddleware = <
+  PikkuMiddleware extends CorePikkuMiddleware,
+>(
+  middleware: CorePikkuMiddlewareGroup,
+  packageName: string | null = null
+): CorePikkuMiddlewareGroup => {
+  const state = pikkuState(
+    packageName,
+    'middleware',
+    'global'
+  ) as unknown as CorePikkuMiddlewareGroup
+  ;(state as CorePikkuMiddleware[]).push(
+    ...(middleware as CorePikkuMiddleware[])
+  )
   return middleware
 }
 
@@ -218,7 +222,15 @@ export const combineMiddleware = (
 
   const resolved: CorePikkuMiddleware[] = []
 
-  // 1. Resolve wire inherited middleware (HTTP + tag groups + individual wire middleware)
+  const globals = pikkuState(
+    packageName,
+    'middleware',
+    'global'
+  ) as unknown as CorePikkuMiddleware[]
+  if (globals && globals.length > 0) {
+    resolved.push(...globals)
+  }
+
   if (wireInheritedMiddleware) {
     for (const meta of wireInheritedMiddleware) {
       if (meta.type === 'http') {
