@@ -1592,12 +1592,17 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * Get the orchestrator queue name for a specific workflow.
    * Checks queue meta for a per-workflow queue first (e.g. wf-orchestrator-{name}),
    * falls back to the shared orchestrator queue.
+   *
+   * Reads from `queue.meta` (always populated globally) rather than
+   * `queue.registrations` (only populated for queues this unit consumes).
+   * In a per-unit deploy the orchestrator unit doesn't consume per-step
+   * queues — but it produces to them — so registrations would miss them.
    */
   protected getOrchestratorQueueName(workflowName?: string): string {
     if (workflowName) {
       const perWorkflow = `wf-orchestrator-${toKebab(workflowName)}`
-      const registrations = pikkuState(null, 'queue', 'registrations')
-      if (registrations.has(perWorkflow)) {
+      const meta = pikkuState(null, 'queue', 'meta')
+      if (meta[perWorkflow]) {
         return perWorkflow
       }
     }
@@ -1607,8 +1612,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   protected getStepWorkerQueueName(rpcName?: string): string {
     if (rpcName) {
       const perStep = `wf-step-${toKebab(rpcName)}`
-      const registrations = pikkuState(null, 'queue', 'registrations')
-      if (registrations.has(perStep)) {
+      const meta = pikkuState(null, 'queue', 'meta')
+      if (meta[perStep]) {
         return perStep
       }
     }
