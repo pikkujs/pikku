@@ -179,66 +179,6 @@ export function createCloudflareHandler(
         )
       }
 
-      // Debug endpoint: /__pikku/test-step — test insertStepState + queueStepWorker
-      if (url.pathname === '/__pikku/test-step') {
-        try {
-          const wfService = services.workflowService
-          if (!wfService)
-            return new Response('No workflowService', { status: 500 })
-          const queueService = services.queueService
-          if (!queueService)
-            return new Response('No queueService', { status: 500 })
-
-          // Try insertStepState
-          const testRunId = 'test-' + crypto.randomUUID().slice(0, 8)
-          try {
-            await wfService.createRun(
-              'createAndNotifyWorkflow',
-              { test: true },
-              false,
-              'test',
-              { type: 'debug' }
-            )
-          } catch (e: unknown) {
-            return new Response(
-              JSON.stringify({
-                step: 'createRun',
-                error: (e as Error).message,
-              }),
-              { status: 500 }
-            )
-          }
-
-          // Try queue send
-          try {
-            await queueService.add('wf-step-create-todo', {
-              test: true,
-              runId: testRunId,
-            })
-          } catch (e: unknown) {
-            return new Response(
-              JSON.stringify({
-                step: 'queueSend',
-                error: (e as Error).message,
-              }),
-              { status: 500 }
-            )
-          }
-
-          return new Response(JSON.stringify({ success: true, testRunId }), {
-            headers: { 'Content-Type': 'application/json' },
-          })
-        } catch (e: unknown) {
-          return new Response(
-            JSON.stringify({
-              error: (e as Error).message,
-              stack: (e as Error).stack,
-            }),
-            { status: 500 }
-          )
-        }
-      }
-
       return runFetch(request, undefined, { exposeErrors: true })
     }
   }
