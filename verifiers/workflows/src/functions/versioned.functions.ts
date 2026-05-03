@@ -5,7 +5,6 @@ export const processItemV1 = pikkuSessionlessFunc<
   { itemId: string; result: string; version: number }
 >({
   title: 'Process Item V1',
-  override: 'processItem',
   version: 1,
   func: async ({ logger }, data) => {
     logger.info(`Processing item (v1): ${data.itemId}`)
