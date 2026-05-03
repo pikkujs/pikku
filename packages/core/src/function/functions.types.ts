@@ -271,7 +271,9 @@ export type CorePikkuFunctionConfig<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined,
 > = {
-  /** Optional description of what the function does */
+  /** Short human-readable name (e.g. "Create Todo") */
+  title?: string
+  /** Longer-form description of what the function does */
   description?: string
   version?: number
   tags?: string[]
