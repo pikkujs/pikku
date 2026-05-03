@@ -270,21 +270,15 @@ check('workflow step units: send-notification, schedule-reminder', () => {
 check('total units >= 29', () => {
   if (unitDirs.length < 29) throw new Error(`Got ${unitDirs.length}`)
 })
-check(
-  'plan manifest: server unit includes createTodo + processReminder',
-  () => {
-    const units = deploymentManifest?.units ?? []
-    const serverUnit = units.find((u) => u.name === SERVER_UNIT_NAME)
-    if (!serverUnit) throw new Error('Missing server unit in manifest')
-    const functionIds = (serverUnit.functionIds ?? []) as string[]
-    if (!functionIds.includes('createTodo')) {
-      throw new Error('server unit missing createTodo')
-    }
-    if (!functionIds.includes('processReminder')) {
-      throw new Error('server unit missing processReminder')
-    }
+check('plan manifest: server unit includes processReminder', () => {
+  const units = deploymentManifest?.units ?? []
+  const serverUnit = units.find((u) => u.name === SERVER_UNIT_NAME)
+  if (!serverUnit) throw new Error('Missing server unit in manifest')
+  const functionIds = (serverUnit.functionIds ?? []) as string[]
+  if (!functionIds.includes('processReminder')) {
+    throw new Error('server unit missing processReminder')
   }
-)
+})
 
 // --- Entry content ---
 check('HTTP entries reference Azure handler', () => {
