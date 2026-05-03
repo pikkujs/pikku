@@ -9,7 +9,6 @@ export const installOpenapiAddon = pikkuSessionlessFunc<
   },
   { success: boolean; message: string }
 >({
-  title: 'Install OpenAPI Addon',
   description:
     'Generates an addon from an OpenAPI spec, installs it into the workspace, and wires it up.',
   expose: true,

@@ -5,7 +5,6 @@ export const credentialStatus = pikkuSessionlessFunc<
   { names: string[]; userId?: string },
   { statuses: Record<string, boolean> }
 >({
-  title: 'Credential Status',
   description:
     'Checks which of the given credential names are configured. Optionally scoped to a user.',
   expose: true,

@@ -5,7 +5,6 @@ export const oauthRefreshToken = pikkuSessionlessFunc<
   { credentialName: string },
   { success: boolean; error?: string }
 >({
-  title: 'OAuth Refresh Token',
   description:
     'Given a credentialName, validates the credential exists and is OAuth2, then uses the OAuth2Client to force a token refresh using the stored refresh token. Returns success or an error message.',
   expose: true,
