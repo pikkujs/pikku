@@ -22,7 +22,11 @@
     "todoStore"
   ],
   "deploy": {
-    "serverlessIncompatible": ["metaService", "stateDiffService"]
+    "serverlessIncompatible": [
+      "metaService",
+      "stateDiffService",
+      "codeEditService"
+    ]
   },
   "scaffold": {
     "rpc": "no-auth",
