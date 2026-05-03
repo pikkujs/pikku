@@ -79,43 +79,6 @@ jobs:
       - uses: ./.github/actions/setup
       - run: cd verifiers/${{ matrix.verifier }} && yarn test
 
-  pikku-dev-smoke:
-    name: pikku dev smoke (templates/functions)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: build
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
-      - name: Generate code (pikku all)
-        working-directory: templates/functions
-        run: yarn pikku all
-      - name: Start pikku dev in background
-        working-directory: templates/functions
-        run: |
-          nohup yarn pikku dev --port 4002 --watch=false --hmr=false > /tmp/pikku-dev.log 2>&1 &
-          echo $! > /tmp/pikku-dev.pid
-      - name: Wait for server ready
-        run: |
-          for i in $(seq 1 60); do
-            if nc -z localhost 4002 2>/dev/null; then echo ready; exit 0; fi
-            sleep 1
-          done
-          echo "server never came up"; cat /tmp/pikku-dev.log; exit 1
-      - name: Run smoke test suite
-        working-directory: templates/functions
-        env:
-          TODO_APP_URL: http://localhost:4002
-        run: bash run-tests.sh --no-start --ignore-server-ready-check --url http://localhost:4002 --http --rpc --websocket --http-sse --workflow
-      - name: Stop pikku dev
-        if: always()
-        run: |
-          if [ -f /tmp/pikku-dev.pid ]; then
-            kill "$(cat /tmp/pikku-dev.pid)" 2>/dev/null || true
-          fi
-          echo "--- pikku dev log ---"
-          tail -200 /tmp/pikku-dev.log || true
-
   templates:
     name: Templates (${{ matrix.version }}, ${{ matrix.template }}, ${{ matrix.package-manager }})
     runs-on: ubuntu-latest

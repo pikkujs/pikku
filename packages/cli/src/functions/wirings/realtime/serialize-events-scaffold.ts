@@ -21,6 +21,7 @@ export const serializeEventsScaffold = (authRequired: boolean): string => {
   const auth = authRequired ? 'true' : 'false'
   return `import { z } from 'zod'
 import {
+  pikkuChannelFunc,
   pikkuSessionlessFunc,
   wireChannel,
   wireHTTP,
@@ -39,7 +40,7 @@ import {
 
 const TopicInput = z.object({ topic: z.string() })
 
-const realtimeSubscribe = pikkuSessionlessFunc({
+const realtimeSubscribe = pikkuChannelFunc({
   description: 'Subscribe the current channel to a topic',
   input: TopicInput,
   func: async ({ eventHub }, { topic }, { channel }) => {
@@ -48,12 +49,11 @@ const realtimeSubscribe = pikkuSessionlessFunc({
         'Realtime channel needs an eventHub service. Add eventHub to your SingletonServices.'
       )
     }
-    if (!channel) throw new Error('Realtime channel invoked without a channel')
     await eventHub.subscribe(topic, channel.channelId)
   },
 })
 
-const realtimeUnsubscribe = pikkuSessionlessFunc({
+const realtimeUnsubscribe = pikkuChannelFunc({
   description: 'Unsubscribe the current channel from a topic',
   input: TopicInput,
   func: async ({ eventHub }, { topic }, { channel }) => {
@@ -62,7 +62,6 @@ const realtimeUnsubscribe = pikkuSessionlessFunc({
         'Realtime channel needs an eventHub service. Add eventHub to your SingletonServices.'
       )
     }
-    if (!channel) throw new Error('Realtime channel invoked without a channel')
     await eventHub.unsubscribe(topic, channel.channelId)
   },
 })
