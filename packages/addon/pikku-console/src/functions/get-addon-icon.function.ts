@@ -4,7 +4,6 @@ export const getAddonIcon = pikkuSessionlessFunc<
   { alias: string },
   string | null
 >({
-  title: 'Get Addon Icon',
   description: 'Returns the icon for an addon from its metadata',
   expose: true,
   auth: false,

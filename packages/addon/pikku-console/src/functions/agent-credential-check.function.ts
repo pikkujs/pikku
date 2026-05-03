@@ -12,7 +12,6 @@ export const agentCredentialCheck = pikkuSessionlessFunc<
   { agentName: string; userId?: string },
   { requirements: AgentCredentialRequirement[]; allConnected: boolean }
 >({
-  title: 'Agent Credential Check',
   description:
     'Checks which OAuth credentials an agent needs and whether the user has connected them.',
   expose: true,

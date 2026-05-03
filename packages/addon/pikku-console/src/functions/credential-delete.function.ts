@@ -5,7 +5,6 @@ export const credentialDelete = pikkuSessionlessFunc<
   { name: string; userId?: string },
   { success: boolean }
 >({
-  title: 'Delete Credential',
   description: 'Deletes a credential, optionally scoped to a user.',
   expose: true,
   func: async ({ credentialService }, { name, userId }) => {

@@ -30,7 +30,6 @@ async function readPackageIcon(
 }
 
 export const getInstalledAddons = pikkuSessionlessFunc<null, InstalledAddon[]>({
-  title: 'Get Installed Addons',
   description: 'Returns locally wired addons from pikkuState',
   expose: true,
   auth: false,
