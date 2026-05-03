@@ -2,6 +2,7 @@
 '@pikku/cli': patch
 '@pikku/cloudflare': patch
 '@pikku/deploy-cloudflare': patch
+'@pikku/inspector': patch
 ---
 
 fix(cloudflare,cli): make workflow-starter usable + restore CF Worker compat
