@@ -44,7 +44,6 @@ import {
 const TopicInput = z.object({ topic: z.string() })
 
 const realtimeSubscribe = pikkuChannelFunc({
-  description: 'Subscribe the current channel to a topic',
   input: TopicInput,
   func: async ({ eventHub }, { topic }, { channel }) => {
     if (!eventHub) {
@@ -57,7 +56,6 @@ const realtimeSubscribe = pikkuChannelFunc({
 })
 
 const realtimeUnsubscribe = pikkuChannelFunc({
-  description: 'Unsubscribe the current channel from a topic',
   input: TopicInput,
   func: async ({ eventHub }, { topic }, { channel }) => {
     if (!eventHub) {
