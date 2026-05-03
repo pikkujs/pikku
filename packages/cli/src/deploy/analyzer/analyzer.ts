@@ -468,6 +468,10 @@ function buildWorkflows(
         unitName: stepUnitName,
       })
 
+      // Every step gets its own unit (for log/metric isolation). The
+      // dispatch mechanism differs at runtime: async steps consume a
+      // dedicated queue; inline steps are invoked via CF dispatch
+      // namespace remote-call from the orchestrator.
       stepUnitNames.push(stepUnitName)
     }
 
