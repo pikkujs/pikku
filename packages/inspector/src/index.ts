@@ -9,6 +9,7 @@ export {
 } from './utils/serialize-inspector-state.js'
 export type { SerializableInspectorState } from './utils/serialize-inspector-state.js'
 export { filterInspectorState } from './utils/filter-inspector-state.js'
+export { resolveDeployTarget } from './utils/resolve-deploy-target.js'
 export {
   generateCustomTypes,
   sanitizeTypeName,

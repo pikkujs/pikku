@@ -183,6 +183,15 @@ export type InspectorFilters = {
   directories?: string[]
   httpRoutes?: string[] // HTTP route patterns: "/api/*", "/webhooks/*"
   httpMethods?: string[] // HTTP methods: "GET", "POST", "DELETE", etc.
+  // Keep only functions whose effective deploy target is in this list.
+  // A function's effective target is its explicit `deploy` field, or
+  // 'server' if any of its services are listed in `serverlessIncompatible`,
+  // otherwise 'serverless'.
+  target?: Array<'serverless' | 'server'>
+  // Service names that, when consumed by a function, force its target
+  // to 'server'. Sourced from `pikku.config.json` →
+  // `deploy.serverlessIncompatible`. Used only when `target` is set.
+  serverlessIncompatible?: string[]
 }
 
 export type AddonConfig = {

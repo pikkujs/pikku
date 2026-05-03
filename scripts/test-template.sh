@@ -78,7 +78,7 @@ if ! node ./dist/index.js \
     --name ../../../test-app \
     --install \
     --package-manager yarn \
-    --yarn-link ../pikku; then
+    --yarn-link "$PROJECT_ROOT"; then
     log_error "Failed to create test app from template"
     exit 1
 fi
@@ -90,13 +90,18 @@ log_info "Setting up and testing the app..."
 cd "$TEST_APP_DIR"
 
 # Link packages
-log_info "Linking Pikku packages..."
-if ! yarn link -A ../pikku; then
+# create-pikku already ran `yarn link --all --private ../pikku`, but the
+# postinstall (`pikku all`) ran during the install BEFORE that link applied,
+# so any subsequent `pikku ...` invocation can pick up the npm-published
+# CLI instead of the in-repo one. Re-link here to force the in-repo @pikku/*
+# packages for everything that follows (notably `pikku all --target ...`).
+log_info "Re-linking Pikku packages..."
+if ! yarn link -A "$PROJECT_ROOT"; then
     log_error "Failed to link Pikku packages"
     exit 1
 fi
 
-# Install dependencies
+# Install dependencies (refreshes node_modules with the linked packages)
 log_info "Installing dependencies..."
 if ! yarn install; then
     log_error "Failed to install dependencies"
@@ -114,6 +119,22 @@ for pkg in kysely fastify fastify-plugin; do
         ln -s "$(cd "$PROJECT_ROOT/node_modules/$pkg" && pwd)" "node_modules/$pkg"
     fi
 done
+
+# Serverless-target templates: re-run codegen with --target serverless so
+# server-only functions (e.g. those depending on metaService → node:fs) are
+# pruned from the bundle. metaService is declared serverlessIncompatible in
+# templates/functions/pikku.config.json.
+case "$TEMPLATE_NAME" in
+    aws-lambda|aws-lambda-websocket|cloudflare-workers|cloudflare-websocket|nextjs|nextjs-full)
+        log_info "Regenerating with --target serverless for $TEMPLATE_NAME..."
+        # `yarn pikku all` would treat `all` as a yarn subcommand; use `yarn run`
+        # with `--` to forward args to the script verbatim.
+        if ! yarn run pikku -- all --target serverless; then
+            log_error "pikku all --target serverless failed"
+            exit 1
+        fi
+        ;;
+esac
 
 # Build
 log_info "Building the app..."

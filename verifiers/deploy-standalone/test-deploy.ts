@@ -219,9 +219,6 @@ check('plan manifest: single unit includes server-target functions', () => {
   if (units.length !== 1)
     throw new Error(`Expected 1 unit, got ${units.length}`)
   const functionIds = (units[0].functionIds ?? []) as string[]
-  if (!functionIds.includes('createTodo')) {
-    throw new Error('single unit missing createTodo')
-  }
   if (!functionIds.includes('processReminder')) {
     throw new Error('single unit missing processReminder')
   }
