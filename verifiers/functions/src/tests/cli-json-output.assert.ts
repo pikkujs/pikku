@@ -29,9 +29,11 @@ describe('pikku cli json output verifier', () => {
       }
     )
 
-    assert.equal(result.status, 0, result.stderr || 'CLI run failed')
+    assert.equal(result.status, 0, 'CLI run failed')
 
-    const lines = result.stdout
+    // JSON log records go to stderr so stdout stays clean for command data
+    // output (e.g. `pikku meta context --json | jq`).
+    const lines = result.stderr
       .split('\n')
       .map((line) => line.trim())
       .filter((line) => line.length > 0)
