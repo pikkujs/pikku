@@ -137,6 +137,23 @@ function collectFilterNames(
         if (handler.type === 'queue') names.add(handler.queueName)
         if (handler.type === 'scheduled') names.add(handler.taskName)
       }
+      // Function units with workflow-state capability (workflow-starter,
+      // workflow-runner, workflow-status-checker) call rpc.startWorkflow
+      // and look workflows up by name in the registry. The registry is
+      // populated when the user's `pikkuWorkflowGraph(...)` calls execute
+      // at module load — so the per-unit bootstrap needs the workflow
+      // wirings file. We only pull in the workflow NAME (graph structure
+      // only — nodes reference step functions by string ID), not the step
+      // function bodies; those stay in their own per-step units and are
+      // reached via queue dispatch at runtime.
+      const usesWorkflowState = unit.services.some(
+        (s) => s.capability === 'workflow-state'
+      )
+      if (usesWorkflowState) {
+        for (const wf of manifest.workflows) {
+          names.add(wf.name)
+        }
+      }
       break
     }
     case 'workflow': {
