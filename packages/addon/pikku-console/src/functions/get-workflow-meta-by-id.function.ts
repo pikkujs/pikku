@@ -5,6 +5,7 @@ export const getWorkflowMetaById = pikkuSessionlessFunc<
   { workflowId: string },
   WorkflowsMeta[0] | null
 >({
+  title: 'Get Workflow by ID',
   description:
     'Given a workflowId string, reads all workflow metadata from wiringService and returns the matching workflow meta object. Falls back to the workflow store for AI-agent generated workflows. Returns null if no workflow matches the given ID.',
   expose: true,

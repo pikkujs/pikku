@@ -6,6 +6,7 @@ export const oauthConnect = pikkuSessionlessFunc<
   { credentialName: string; callbackUrl?: string; userId?: string },
   { authUrl: string }
 >({
+  title: 'OAuth Connect',
   description:
     'Given a credentialName and optional callbackUrl, reads secrets metadata from wiringService, validates the credential exists and is OAuth2, creates an OAuth2Client, generates a random state UUID, builds the authorization URL, stores the pending flow in oauthService, and returns the authUrl. Defaults callbackUrl to http://localhost:7070/oauth/callback.',
   expose: true,
