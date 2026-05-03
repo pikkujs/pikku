@@ -111,6 +111,10 @@ wireCLI({
           description: 'Filter functions by name patterns (supports wildcards)',
           short: 'n',
         },
+        target: {
+          description:
+            'Filter functions by deploy target (comma-separated: serverless, server)',
+        },
       },
     }),
     bootstrap: pikkuCLICommand({

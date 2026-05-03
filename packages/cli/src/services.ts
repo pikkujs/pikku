@@ -96,7 +96,10 @@ function parseCommaSeparated(
 /**
  * Parse CLI filter arguments into InspectorFilters format
  */
-function parseCLIFilters(data: any): InspectorFilters {
+function parseCLIFilters(
+  data: any,
+  cliConfig?: { deploy?: { serverlessIncompatible?: string[] } }
+): InspectorFilters {
   const filters: InspectorFilters = {}
 
   if (data.filters) {
@@ -110,6 +113,7 @@ function parseCLIFilters(data: any): InspectorFilters {
   const directories = parseCommaSeparated(data.directories)
   const httpRoutes = parseCommaSeparated(data.httpRoutes)
   const httpMethods = parseCommaSeparated(data.httpMethods)
+  const targetRaw = parseCommaSeparated(data.target)
 
   // Only include non-undefined values in the result
   if (names) filters.names = names
@@ -118,6 +122,19 @@ function parseCLIFilters(data: any): InspectorFilters {
   if (directories) filters.directories = directories
   if (httpRoutes) filters.httpRoutes = httpRoutes
   if (httpMethods) filters.httpMethods = httpMethods
+  if (targetRaw) {
+    const invalid = targetRaw.filter(
+      (t) => t !== 'serverless' && t !== 'server'
+    )
+    if (invalid.length > 0) {
+      throw new Error(
+        `Invalid --target value(s): [${invalid.join(', ')}]. ` +
+          `Allowed: 'serverless', 'server'.`
+      )
+    }
+    filters.target = targetRaw as Array<'serverless' | 'server'>
+    filters.serverlessIncompatible = cliConfig?.deploy?.serverlessIncompatible
+  }
 
   return filters
 }
@@ -224,7 +241,7 @@ export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
     ...cliConfig,
     ...dataWithoutOutDir,
     tags: cliConfig.tags,
-    filters: parseCLIFilters(data),
+    filters: parseCLIFilters(data, cliConfig),
     preloadedInspectorState,
   }
 }

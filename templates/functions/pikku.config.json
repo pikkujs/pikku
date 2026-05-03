@@ -20,6 +20,9 @@
   "forceRequiredServices": [
     "todoStore"
   ],
+  "deploy": {
+    "serverlessIncompatible": ["metaService"]
+  },
   "scaffold": {
     "rpc": "no-auth",
     "agent": "no-auth",

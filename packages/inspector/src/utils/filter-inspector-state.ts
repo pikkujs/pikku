@@ -6,6 +6,7 @@ import type {
 import type { PikkuWiringTypes } from '@pikku/core'
 import { parseVersionedId } from '@pikku/core'
 import { aggregateRequiredServices } from './post-process.js'
+import { resolveDeployTarget } from './resolve-deploy-target.js'
 
 // Module-level Set to track warned groups across multiple filter calls
 const globalWarnedGroups = new Set<string>()
@@ -50,7 +51,10 @@ function matchesFilters(
     groupBasePath?: string
   },
   logger: InspectorLogger,
-  warnedGroups?: Set<string>
+  warnedGroups?: Set<string>,
+  // Set of pikkuFuncIds to keep based on the deploy filter; null when
+  // the deploy filter is inactive.
+  keptByDeploy?: Set<string> | null
 ): boolean {
   // If no filters, allow everything
   if (Object.keys(filters).length === 0) return true
@@ -62,9 +66,16 @@ function matchesFilters(
     (!filters.types || filters.types.length === 0) &&
     (!filters.directories || filters.directories.length === 0) &&
     (!filters.httpRoutes || filters.httpRoutes.length === 0) &&
-    (!filters.httpMethods || filters.httpMethods.length === 0)
+    (!filters.httpMethods || filters.httpMethods.length === 0) &&
+    (!filters.target || filters.target.length === 0)
   ) {
     return true
+  }
+
+  // Deploy-target filter (computed once per filterInspectorState call).
+  if (keptByDeploy && !keptByDeploy.has(meta.name)) {
+    logger.debug(`⒡ Filtered by deploy: ${meta.type}:${meta.name}`)
+    return false
   }
 
   // Check type filter
@@ -186,9 +197,24 @@ export function filterInspectorState(
       (!filters.types || filters.types.length === 0) &&
       (!filters.directories || filters.directories.length === 0) &&
       (!filters.httpRoutes || filters.httpRoutes.length === 0) &&
-      (!filters.httpMethods || filters.httpMethods.length === 0))
+      (!filters.httpMethods || filters.httpMethods.length === 0) &&
+      (!filters.target || filters.target.length === 0))
   ) {
     return state
+  }
+
+  // Precompute kept-function set for the deploy filter (if active).
+  // resolveDeployTarget throws IncompatibleDeployTargetError when an
+  // explicit deploy: 'serverless' clashes with serverlessIncompatible.
+  let keptByDeploy: Set<string> | null = null
+  if (filters.target && filters.target.length > 0) {
+    const allowed = new Set(filters.target)
+    const incompatible = new Set(filters.serverlessIncompatible ?? [])
+    keptByDeploy = new Set<string>()
+    for (const [funcId, funcMeta] of Object.entries(state.functions.meta)) {
+      const target = resolveDeployTarget(funcMeta as any, incompatible, funcId)
+      if (allowed.has(target)) keptByDeploy.add(funcId)
+    }
   }
 
   // Snapshot the original workflow graph meta before filtering prunes it
@@ -292,7 +318,8 @@ export function filterInspectorState(
           groupBasePath: routeMeta.groupBasePath,
         },
         logger,
-        globalWarnedGroups
+        globalWarnedGroups,
+        keptByDeploy
       )
 
       if (!matches) {
@@ -356,7 +383,11 @@ export function filterInspectorState(
         name,
         tags: channelMeta.tags,
       },
-      logger
+      logger,
+
+      undefined,
+
+      keptByDeploy
     )
 
     if (!matches) {
@@ -420,7 +451,11 @@ export function filterInspectorState(
         name,
         tags: triggerMeta.tags,
       },
-      logger
+      logger,
+
+      undefined,
+
+      keptByDeploy
     )
 
     if (!matches) {
@@ -449,7 +484,11 @@ export function filterInspectorState(
         name,
         tags: taskMeta.tags,
       },
-      logger
+      logger,
+
+      undefined,
+
+      keptByDeploy
     )
 
     if (!matches) {
@@ -479,7 +518,11 @@ export function filterInspectorState(
         name,
         tags: workerMeta.tags,
       },
-      logger
+      logger,
+
+      undefined,
+
+      keptByDeploy
     )
 
     if (!matches) {
@@ -517,7 +560,11 @@ export function filterInspectorState(
         name,
         tags: toolMeta.tags,
       },
-      logger
+      logger,
+
+      undefined,
+
+      keptByDeploy
     )
 
     if (!matches) {
@@ -545,7 +592,11 @@ export function filterInspectorState(
         name,
         tags: resourceMeta.tags,
       },
-      logger
+      logger,
+
+      undefined,
+
+      keptByDeploy
     )
 
     if (!matches) {
@@ -575,7 +626,11 @@ export function filterInspectorState(
         name,
         tags: promptMeta.tags,
       },
-      logger
+      logger,
+
+      undefined,
+
+      keptByDeploy
     )
 
     if (!matches) {
@@ -614,7 +669,11 @@ export function filterInspectorState(
         name,
         tags: agentMeta.tags,
       },
-      logger
+      logger,
+
+      undefined,
+
+      keptByDeploy
     )
 
     if (!matches) {
@@ -654,7 +713,11 @@ export function filterInspectorState(
           name: commandName,
           tags: commandMeta.tags,
         },
-        logger
+        logger,
+
+        undefined,
+
+        keptByDeploy
       )
 
       if (!matches) {
@@ -722,7 +785,11 @@ export function filterInspectorState(
         tags: funcMeta.tags,
         filePath,
       },
-      logger
+      logger,
+
+      undefined,
+
+      keptByDeploy
     )
 
     if (matches) {

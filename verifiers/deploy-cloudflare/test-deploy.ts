@@ -307,21 +307,15 @@ check(
 check('total units >= 29', () => {
   if (unitDirs.length < 29) throw new Error(`Got ${unitDirs.length}`)
 })
-check(
-  'plan manifest: server unit includes createTodo + processReminder',
-  () => {
-    const units = deploymentManifest?.units ?? []
-    const serverUnit = units.find((u) => u.name === SERVER_UNIT_NAME)
-    if (!serverUnit) throw new Error('Missing server unit in manifest')
-    const functionIds = (serverUnit.functionIds ?? []) as string[]
-    if (!functionIds.includes('createTodo')) {
-      throw new Error('server unit missing createTodo')
-    }
-    if (!functionIds.includes('processReminder')) {
-      throw new Error('server unit missing processReminder')
-    }
+check('plan manifest: server unit includes processReminder', () => {
+  const units = deploymentManifest?.units ?? []
+  const serverUnit = units.find((u) => u.name === SERVER_UNIT_NAME)
+  if (!serverUnit) throw new Error('Missing server unit in manifest')
+  const functionIds = (serverUnit.functionIds ?? []) as string[]
+  if (!functionIds.includes('processReminder')) {
+    throw new Error('server unit missing processReminder')
   }
-)
+})
 
 // --- Tree-shaking ---
 check('greet entry uses @pikku/cloudflare/handler (not barrel)', () => {
@@ -347,11 +341,6 @@ check('orchestrator entry uses @pikku/cloudflare/d1', () => {
 //   const svc = getUnitServices('greet')
 //   if (svc.workflowService !== false) throw new Error(`Got ${svc.workflowService}`)
 // })
-check('server unit: queueService=true', () => {
-  const svc = getUnitServices(SERVER_UNIT_NAME)
-  if (svc.queueService !== true)
-    throw new Error(`queueService=${svc.queueService}`)
-})
 
 // --- Bundles ---
 check('no unit exceeds 5MB', () => {

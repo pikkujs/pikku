@@ -7,7 +7,11 @@
  * Workflow orchestrators dispatch to step units via queue or RPC (inline).
  */
 
-import type { InspectorState, SerializedWorkflowGraph } from '@pikku/inspector'
+import {
+  resolveDeployTarget,
+  type InspectorState,
+  type SerializedWorkflowGraph,
+} from '@pikku/inspector'
 import type { FunctionMeta } from '@pikku/core'
 import type { ChannelMeta } from '@pikku/core/channel'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
@@ -38,28 +42,6 @@ export interface AnalyzerOptions {
   projectId: string
   /** Services that can't run serverless — functions using them get target: 'server' */
   serverlessIncompatible?: string[]
-}
-
-/**
- * Determine deploy target for a function based on its explicit flag
- * and service compatibility.
- */
-function resolveDeployTarget(
-  funcMeta: FunctionMeta,
-  serverlessIncompatible: Set<string>
-): 'serverless' | 'server' {
-  // Explicit flag takes priority
-  if (funcMeta.deploy === 'serverless') return 'serverless'
-  if (funcMeta.deploy === 'server') return 'server'
-
-  // Auto: check if any service is serverless-incompatible
-  if (funcMeta.services?.services) {
-    for (const svc of funcMeta.services.services) {
-      if (serverlessIncompatible.has(svc)) return 'server'
-    }
-  }
-
-  return 'serverless'
 }
 
 export function analyzeDeployment(
@@ -190,7 +172,7 @@ export function analyzeDeployment(
     units.push({
       name: toSafeKebab(funcId),
       role: 'function',
-      target: resolveDeployTarget(funcMeta, serverlessIncompatible),
+      target: resolveDeployTarget(funcMeta, serverlessIncompatible, funcId),
       functionIds: [funcId],
       services: collectServicesForFunction(funcMeta),
       dependsOn: [],
@@ -362,7 +344,11 @@ export function analyzeDeployment(
           units.push({
             name: dep,
             role: 'function',
-            target: resolveDeployTarget(funcMeta, serverlessIncompatible),
+            target: resolveDeployTarget(
+              funcMeta,
+              serverlessIncompatible,
+              funcId
+            ),
             functionIds: [funcId],
             services: collectServicesForFunction(funcMeta),
             dependsOn: [],
