@@ -26,7 +26,7 @@ const scaffoldFiles = (
 }
 
 export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
-  description: 'Pikku All',
+  title: 'Pikku All',
   func: async ({ logger, config, getInspectorState }, _data, { workflow }) => {
     const allImports: string[] = []
     let typesDeclarationFileExists = true

@@ -2,6 +2,7 @@ import { MissingServiceError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
 
 export const streamWorkflowRun = pikkuSessionlessFunc<{ runId: string }, any>({
+  title: 'Stream Workflow Run',
   description: 'SSE stream of workflow run status and step state changes.',
   expose: false,
   auth: false,

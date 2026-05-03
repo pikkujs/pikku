@@ -9,6 +9,7 @@ export const credentialListUsers = pikkuSessionlessFunc<
   null,
   { users: CredentialUserEntry[] }
 >({
+  title: 'List Credential Users',
   description:
     'Lists all users and their credential status for each declared credential.',
   expose: true,

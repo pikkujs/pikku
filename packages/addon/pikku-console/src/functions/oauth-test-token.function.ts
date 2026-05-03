@@ -5,6 +5,7 @@ export const oauthTestToken = pikkuSessionlessFunc<
   { credentialName: string },
   { valid: boolean; error?: string }
 >({
+  title: 'OAuth Test Token',
   description:
     'Given a credentialName, validates the credential exists and is OAuth2, then attempts to retrieve a valid access token via the OAuth2Client. Returns whether the token is valid or an error message.',
   expose: true,

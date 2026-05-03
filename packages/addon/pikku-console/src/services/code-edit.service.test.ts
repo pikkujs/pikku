@@ -21,6 +21,7 @@ async function readTempFile(name: string): Promise<string> {
 const FUNCTION_SOURCE = `import { pikkuSessionlessFunc } from '@pikku/core'
 
 export const listTodos = pikkuSessionlessFunc<ListInput, ListOutput>({
+  title: 'List Todos',
   description: 'Lists all todos for a user',
   tags: ['todos', 'read'],
   expose: true,

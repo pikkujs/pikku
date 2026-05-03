@@ -19,6 +19,7 @@ export const getOpenapiDetail = pikkuSessionlessFunc<
     updated?: string
   } | null
 >({
+  title: 'Get OpenAPI Detail',
   description:
     'Fetches a single OpenAPI spec detail from the registry by name.',
   expose: true,

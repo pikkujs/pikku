@@ -3,6 +3,7 @@ import { pikkuSessionlessFunc } from '#pikku'
 export const oauthDisconnect = pikkuSessionlessFunc<{
   credentialName: string
 }>({
+  title: 'OAuth Disconnect',
   description:
     'Given a credentialName, reads secrets metadata from wiringService, validates the credential exists and is OAuth2, then deletes the stored tokens from credential service (or secrets as fallback).',
   expose: true,
