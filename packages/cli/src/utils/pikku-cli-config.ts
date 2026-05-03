@@ -6,6 +6,7 @@ import type { CLILogger } from '../services/cli-logger.service.js'
 const CLIENT_FILE_KEYS = [
   'fetchFile',
   'websocketFile',
+  'realtimeFile',
   'rpcWiringsFile',
   'reactQueryFile',
   'queueWiringsFile',

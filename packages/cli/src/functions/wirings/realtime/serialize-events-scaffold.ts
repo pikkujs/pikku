@@ -17,7 +17,10 @@
  * publish-side ergonomics (envelope shape) are documented in the
  * pikku-realtime skill.
  */
-export const serializeEventsScaffold = (authRequired: boolean): string => {
+export const serializeEventsScaffold = (
+  authRequired: boolean,
+  pikkuTypesImportPath: string
+): string => {
   const auth = authRequired ? 'true' : 'false'
   return `import { z } from 'zod'
 import {
@@ -26,7 +29,7 @@ import {
   wireChannel,
   wireHTTP,
   defineChannelRoutes,
-} from '../../.pikku/pikku-types.gen.js'
+} from '${pikkuTypesImportPath}'
 
 /**
  * Topic envelope clients receive: \`{ topic, data }\`. Functions that publish
