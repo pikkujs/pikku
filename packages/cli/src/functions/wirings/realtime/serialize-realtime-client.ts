@@ -169,19 +169,11 @@ export class PikkuRealtime {
     handler: Handler<T>,
     onError?: (err: unknown) => void
   ): { close: () => void } {
-    // We use fetch-streaming instead of native EventSource because
-    // EventSource has no way to send Authorization / X-API-KEY headers.
-    // PikkuFetch already attaches whatever auth was configured via
-    // setAuthorizationJWT / setAPIKey, so the SSE connection inherits
-    // auth from one place — same as RPC requests.
     const controller = new AbortController()
     const closed = { value: false }
 
     const run = async () => {
       try {
-        // PikkuFetch overrides .fetch() with a typed (route: keyof HTTPWiringsMap)
-        // signature; SSE paths are runtime strings, so go through the
-        // untyped parent class.
         const response = await (this.pikkuFetch as CorePikkuFetch).fetch(
           path,
           'GET',
@@ -205,8 +197,6 @@ export class PikkuRealtime {
           if (done) break
           buffer += value
 
-          // SSE messages are delimited by a blank line. Each message can
-          // span multiple \`data:\` lines that get joined with \\n.
           let sep: number
           while ((sep = buffer.indexOf('\\n\\n')) !== -1) {
             const raw = buffer.slice(0, sep)
