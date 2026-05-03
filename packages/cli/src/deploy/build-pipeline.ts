@@ -144,6 +144,7 @@ export async function runBuildPipeline(options: {
         define: provider.getDefine?.(),
         platform: provider.getPlatform?.(),
         format: provider.getFormat?.(),
+        noRequireShim: provider.getNoRequireShim?.(),
       }
     )
     bundled = bundleResult.results
@@ -277,6 +278,7 @@ export async function runBuildPipeline(options: {
         define: provider.getDefine?.(),
         platform: provider.getPlatform?.(),
         format: provider.getFormat?.(),
+        noRequireShim: provider.getNoRequireShim?.(),
         resolveOutputDir: (unit) =>
           unit.target === 'server' ? containerDir : join(unitsDir, unit.name),
       }

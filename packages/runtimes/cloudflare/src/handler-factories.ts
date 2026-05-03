@@ -32,10 +32,23 @@ export interface ServiceFactories {
 
 let cachedServices: CoreSingletonServices | null = null
 
+let cachedEnv: CloudflareEnv | null = null
+
+/**
+ * Returns the Cloudflare `env` that was last passed into the worker handler,
+ * or `null` if called before any request. Lets user `createSingletonServices`
+ * read CF-specific bindings (D1, R2, KV, queue producers, etc.) without
+ * threading `env` through every signature.
+ */
+export function getCloudflareEnv(): CloudflareEnv | null {
+  return cachedEnv
+}
+
 async function setupServices(
   env: CloudflareEnv,
   factories: ServiceFactories
 ): Promise<CoreSingletonServices> {
+  cachedEnv = env
   if (cachedServices) return cachedServices
   const variables = new LocalVariablesService(
     env as Record<string, string | undefined>
@@ -103,12 +116,17 @@ async function processQueueBatch(batch: {
         throw new Error('CF Queues do not support waitForCompletion')
       },
     }
-    console.log(`[QUEUE] Running job: queue=${queueName}, id=${message.id}, data=${JSON.stringify(job.data).slice(0, 200)}`)
+    console.log(
+      `[QUEUE] Running job: queue=${queueName}, id=${message.id}, data=${JSON.stringify(job.data).slice(0, 200)}`
+    )
     try {
       await runQueueJob({ job })
       console.log(`[QUEUE] Job completed: queue=${queueName}, id=${message.id}`)
     } catch (e: unknown) {
-      console.error(`[QUEUE] Job failed: queue=${queueName}, id=${message.id}`, (e as Error).message)
+      console.error(
+        `[QUEUE] Job failed: queue=${queueName}, id=${message.id}`,
+        (e as Error).message
+      )
       throw e
     }
   }
@@ -137,44 +155,87 @@ export function createCloudflareHandler(
         const queueMeta = pikkuState(null, 'queue', 'meta')
         const workflowMeta = pikkuState(null, 'workflows', 'meta')
         const queueRegistrations = pikkuState(null, 'queue', 'registrations')
-        return new Response(JSON.stringify({
-          hasQueueService: !!services.queueService,
-          hasWorkflowService: !!services.workflowService,
-          queueMetaKeys: Object.keys(queueMeta ?? {}),
-          workflowMetaKeys: Object.keys(workflowMeta ?? {}),
-          queueRegistrationKeys: queueRegistrations ? [...queueRegistrations.keys()] : [],
-          envBindings: Object.keys(env).filter(k => k.includes('WF_') || k.includes('QUEUE') || k.includes('WORKFLOW')),
-        }, null, 2), { headers: { 'Content-Type': 'application/json' } })
+        return new Response(
+          JSON.stringify(
+            {
+              hasQueueService: !!services.queueService,
+              hasWorkflowService: !!services.workflowService,
+              queueMetaKeys: Object.keys(queueMeta ?? {}),
+              workflowMetaKeys: Object.keys(workflowMeta ?? {}),
+              queueRegistrationKeys: queueRegistrations
+                ? [...queueRegistrations.keys()]
+                : [],
+              envBindings: Object.keys(env).filter(
+                (k) =>
+                  k.includes('WF_') ||
+                  k.includes('QUEUE') ||
+                  k.includes('WORKFLOW')
+              ),
+            },
+            null,
+            2
+          ),
+          { headers: { 'Content-Type': 'application/json' } }
+        )
       }
 
       // Debug endpoint: /__pikku/test-step — test insertStepState + queueStepWorker
       if (url.pathname === '/__pikku/test-step') {
         try {
           const wfService = services.workflowService
-          if (!wfService) return new Response('No workflowService', { status: 500 })
+          if (!wfService)
+            return new Response('No workflowService', { status: 500 })
           const queueService = services.queueService
-          if (!queueService) return new Response('No queueService', { status: 500 })
+          if (!queueService)
+            return new Response('No queueService', { status: 500 })
 
           // Try insertStepState
           const testRunId = 'test-' + crypto.randomUUID().slice(0, 8)
           try {
-            await wfService.createRun('createAndNotifyWorkflow', { test: true }, false, 'test', { type: 'debug' })
+            await wfService.createRun(
+              'createAndNotifyWorkflow',
+              { test: true },
+              false,
+              'test',
+              { type: 'debug' }
+            )
           } catch (e: unknown) {
-            return new Response(JSON.stringify({ step: 'createRun', error: (e as Error).message }), { status: 500 })
+            return new Response(
+              JSON.stringify({
+                step: 'createRun',
+                error: (e as Error).message,
+              }),
+              { status: 500 }
+            )
           }
 
           // Try queue send
           try {
-            await queueService.add('wf-step-create-todo', { test: true, runId: testRunId })
+            await queueService.add('wf-step-create-todo', {
+              test: true,
+              runId: testRunId,
+            })
           } catch (e: unknown) {
-            return new Response(JSON.stringify({ step: 'queueSend', error: (e as Error).message }), { status: 500 })
+            return new Response(
+              JSON.stringify({
+                step: 'queueSend',
+                error: (e as Error).message,
+              }),
+              { status: 500 }
+            )
           }
 
           return new Response(JSON.stringify({ success: true, testRunId }), {
             headers: { 'Content-Type': 'application/json' },
           })
         } catch (e: unknown) {
-          return new Response(JSON.stringify({ error: (e as Error).message, stack: (e as Error).stack }), { status: 500 })
+          return new Response(
+            JSON.stringify({
+              error: (e as Error).message,
+              stack: (e as Error).stack,
+            }),
+            { status: 500 }
+          )
         }
       }
 
@@ -189,11 +250,17 @@ export function createCloudflareHandler(
     ) => {
       try {
         await setupServices(env, factories)
-        console.log(`[QUEUE] Processing batch from "${batch.queue}", ${batch.messages.length} messages`)
+        console.log(
+          `[QUEUE] Processing batch from "${batch.queue}", ${batch.messages.length} messages`
+        )
         await processQueueBatch(batch)
         console.log(`[QUEUE] Batch processed successfully`)
       } catch (e: unknown) {
-        console.error(`[QUEUE] Error processing batch:`, (e as Error).message, (e as Error).stack)
+        console.error(
+          `[QUEUE] Error processing batch:`,
+          (e as Error).message,
+          (e as Error).stack
+        )
         throw e
       }
     }

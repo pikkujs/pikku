@@ -445,7 +445,60 @@ export class CloudflareProviderAdapter {
   }
 
   getAliases(): Record<string, string> {
-    return { crypto: 'node:crypto' }
+    // Map every node builtin to its `node:`-prefixed form. CF's
+    // nodejs_compat_v2 only resolves prefixed imports.
+    const builtins = [
+      'assert',
+      'async_hooks',
+      'buffer',
+      'child_process',
+      'cluster',
+      'console',
+      'constants',
+      'crypto',
+      'dgram',
+      'dns',
+      'domain',
+      'events',
+      'fs',
+      'http',
+      'http2',
+      'https',
+      'inspector',
+      'module',
+      'net',
+      'os',
+      'path',
+      'perf_hooks',
+      'process',
+      'punycode',
+      'querystring',
+      'readline',
+      'repl',
+      'stream',
+      'string_decoder',
+      'sys',
+      'timers',
+      'tls',
+      'trace_events',
+      'tty',
+      'url',
+      'util',
+      'v8',
+      'vm',
+      'wasi',
+      'worker_threads',
+      'zlib',
+    ]
+    const aliases: Record<string, string> = {}
+    for (const b of builtins) aliases[b] = `node:${b}`
+    return aliases
+  }
+
+  getNoRequireShim(): boolean {
+    // CF Workers don't define `import.meta.url`, so the createRequire shim
+    // crashes at boot. Skip it; nodejs_compat_v2 handles builtins natively.
+    return true
   }
 
   getDefine(): Record<string, string> {

@@ -97,6 +97,12 @@ export interface ProviderAdapter {
   getFormat?(): 'esm' | 'cjs'
 
   /**
+   * Skip the createRequire banner. CF Workers should return true —
+   * `import.meta.url` is undefined there and the banner crashes at boot.
+   */
+  getNoRequireShim?(): boolean
+
+  /**
    * Generate additional provider-level config files (e.g. serverless.yml).
    * Returns a map of filename → content to write into the deploy directory.
    */
