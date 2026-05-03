@@ -1,3 +1,120 @@
+## 0.12.22
+
+### Patch Changes
+
+- 8e81f41: feat(cli): `pikku all --deploy serverless|server` filter
+
+  Adds a deploy-target dimension to `InspectorFilters` so a single `pikku all`
+  invocation can emit a target-scoped set of gen files (bootstrap, services,
+  meta, RPC client, fetch client, websocket, realtime, queue, workflow, MCP).
+  Useful for runtime templates (e.g. cloudflare-workers) that need to exclude
+  server-only functions from their bundle to avoid pulling in node:fs and
+  other Node-only modules.
+
+  A function's effective deploy target is determined by:
+  1. If any of its services is listed in `deploy.serverlessIncompatible`
+     (read from `pikku.config.json`), target is `'server'`.
+     - If the function also explicitly declares `deploy: 'serverless'`,
+       the codegen throws `IncompatibleDeployTargetError` so the
+       mismatch surfaces at build time.
+  2. Otherwise the explicit `deploy: 'serverless' | 'server'` field
+     on the function config wins.
+  3. Default `'serverless'`.
+
+  Example — mark `metaService` as server-only project-wide:
+
+  ```jsonc
+  // pikku.config.json
+  {
+    "deploy": {
+      "serverlessIncompatible": ["metaService"],
+    },
+  }
+  ```
+
+  Then a CF runtime template's package.json can do:
+
+  ```json
+  "pikku": "pikku all --deploy serverless"
+  ```
+
+  …and every gen file will exclude functions that consume `metaService`
+  (e.g. the pikku-console addon's functions), eliminating the node:fs
+  import from the worker bundle.
+
+  The same `resolveDeployTarget` util now backs both the per-unit deploy
+  analyzer and the inspector filter, so behavior stays consistent.
+
+- 6afdfcb: refactor: rip plan layer, replace with branch-based diff view + new CLI commands
+  - Removes the `AiPlanV1` JSON plan-layer scaffolding (`pikku plan
+ingest/update/validate`, `LocalPlanStoreService`, `/plans` console
+    pages).
+  - Replaces with a `StateDiffService` that diffs two `.pikku/`
+    directories' meta JSONs (typically a worktree at `main` vs. the
+    current branch), exposed via `console:getStateDiff` and a new
+    `/changes` console page with per-category tabs and field-level diff.
+  - New `pikku meta` and `pikku skills` CLI commands.
+  - `cli-logger` json output goes to stderr so command data piping
+    (e.g. `pikku meta --json | jq`) stays clean.
+  - `templates/functions/pikku.config.json` declares `metaService`,
+    `stateDiffService`, and `codeEditService` as
+    `serverlessIncompatible` so they're filtered from serverless bundles.
+
+- f72a820: feat: realtime events — `/events` channel, SSE, typed `PikkuRealtime` client
+  - New `pikku realtime` CLI command generates a `PikkuRealtime` client
+    that mirrors `PikkuRPC` and shares the project's `PikkuFetch` for
+    server URL + auth.
+  - `pikku events` scaffold (gated by `scaffold.events` in
+    `pikku.config.json`) emits a `/events` WebSocket channel + a
+    per-topic SSE route that fan out via the `eventHub` service.
+  - React provider exposes `PikkuRealtime` alongside `PikkuRPC`.
+  - `pikku dev` now wires `LocalEventHubService` so realtime works
+    out of the box in local dev.
+  - `subscribeToSSE` uses fetch-streaming (instead of native
+    `EventSource`) so it can send the JWT/API-key headers that
+    `PikkuFetch` already manages.
+
+- d484d0c: refactor(types): reconcile function-config drift between Core and schema variants
+
+  Schema-overload variants (`PikkuFunction{,Sessionless}ConfigWithSchema`)
+  now derive from `CorePikkuFunctionConfig` so future fields auto-propagate.
+  Doc comments clarified: `title` is the short human-readable name (e.g.
+  "Create Todo"); `description` is the longer-form explanation.
+
+- 78488b1: fix(cloudflare,cli): make workflow-starter usable + restore CF Worker compat
+
+  Three fixes that unblock deploying graph-DSL workflows to Cloudflare
+  Workers via Workers-for-Platforms:
+  1. **`workflowStarter` / `graphStarter` scaffold now declares
+     `workflowService`.** Both functions delegate to `rpc.startWorkflow()`,
+     which requires `workflowService` on the services container at runtime.
+     The previous `(_services, ...)` signature hid that requirement, so the
+     analyzer didn't assign `workflow-state` capability to the unit and the
+     generated `entry.ts` left out `CloudflareWorkflowService` — calling
+     `POST /workflow/<name>/start` returned `WorkflowService service not
+available`. Destructuring `{ workflowService }` (and asserting it) lets
+     the static analyzer pick up the capability automatically.
+  2. **`@pikku/cloudflare` re-exports `getCloudflareEnv()`.** Lets user
+     `createSingletonServices` factories read CF bindings (D1, R2, KV, queue
+     producers) without threading `env` through every signature. Returns the
+     env captured by `setupServices` on the most recent request, or `null`
+     pre-request.
+  3. **CF deploy provider opts out of the createRequire banner + aliases
+     every node builtin to its `node:` prefix.** CF Workers don't define
+     `import.meta.url`, so the previous unconditional banner crashed at
+     boot (`The argument 'path' must be a file URL ... Received 'undefined'`
+     at `node:module:34:15`). New `getNoRequireShim()` provider hook returns
+     true for CF; `nodejs_compat_v2` then handles builtins natively as long
+     as imports use the `node:` prefix, which `getAliases()` now ensures for
+     the full builtin list.
+
+- Updated dependencies [8e81f41]
+- Updated dependencies [d484d0c]
+- Updated dependencies [78488b1]
+  - @pikku/inspector@0.12.12
+  - @pikku/core@0.12.21
+  - @pikku/deploy-cloudflare@0.12.3
+
 ## 0.12.21
 
 ### Patch Changes
