@@ -1,4 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku'
+import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeRealtimeClient } from './serialize-realtime-client.js'
@@ -6,6 +7,7 @@ import { serializeRealtimeClient } from './serialize-realtime-client.js'
 export const pikkuRealtime = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config }) => {
     const realtimeFile = config.clientFiles?.realtimeFile
+    const fetchFile = config.clientFiles?.fetchFile
     if (!realtimeFile) {
       logger.debug({
         message:
@@ -14,8 +16,21 @@ export const pikkuRealtime = pikkuSessionlessFunc<void, void>({
       })
       return
     }
+    if (!fetchFile) {
+      logger.debug({
+        message:
+          'Skipping realtime client (clientFiles.fetchFile is required so PikkuRealtime can wrap PikkuFetch).',
+        type: 'skip',
+      })
+      return
+    }
     const topicsImport = config.clientFiles?.realtimeEventHubTopicsImport
-    const content = serializeRealtimeClient(topicsImport)
+    const fetchImportPath = getFileImportRelativePath(
+      realtimeFile,
+      fetchFile,
+      config.packageMappings
+    )
+    const content = serializeRealtimeClient(topicsImport, fetchImportPath)
     await writeFileInDir(logger, realtimeFile, content)
   },
   middleware: [
