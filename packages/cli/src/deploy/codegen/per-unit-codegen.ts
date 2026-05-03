@@ -152,6 +152,18 @@ function collectFilterNames(
       if (usesWorkflowState) {
         for (const wf of manifest.workflows) {
           names.add(wf.name)
+          // Include orchestrator + per-step queue NAMES so queue meta gets
+          // emitted into this unit. The runtime needs these in
+          // `pikkuState('queue', 'meta')` to map a step's rpcName to its
+          // dedicated queue (otherwise it falls back to the shared
+          // 'pikku-workflow-step-worker' queue which doesn't exist in
+          // per-unit deploys). Names only — no function bodies bundled.
+          names.add(`wf-orchestrator-${toSafeKebab(wf.name)}`)
+          for (const step of wf.steps) {
+            if (step.functionId) {
+              names.add(`wf-step-${toSafeKebab(step.functionId)}`)
+            }
+          }
         }
       }
       break
