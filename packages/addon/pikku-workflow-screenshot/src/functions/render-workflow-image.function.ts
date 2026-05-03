@@ -21,7 +21,6 @@ export const renderWorkflowImage = pikkuSessionlessFunc<
   RenderWorkflowImageInput,
   RenderWorkflowImageOutput
 >({
-  title: 'Render Workflow Image',
   description:
     'Renders a workflow diagram as an image using a headless browser and returns the stored asset key.',
   expose: true,

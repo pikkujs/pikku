@@ -18,7 +18,6 @@ export const getOpenapis = pikkuSessionlessFunc<
     nextCursor: number
   }
 >({
-  title: 'Get OpenAPI Specs',
   description: 'Fetches available OpenAPI specs from the registry.',
   expose: true,
   auth: false,

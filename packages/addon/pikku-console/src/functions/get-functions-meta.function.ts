@@ -2,7 +2,6 @@ import { pikkuSessionlessFunc } from '#pikku'
 import type { FunctionMeta } from '../services/wiring.service.js'
 
 export const getFunctionsMeta = pikkuSessionlessFunc<null, FunctionMeta[]>({
-  title: 'Get Functions Metadata',
   description:
     'Reads function metadata from metaService and returns it as a flat array of FunctionMeta objects, enriched with version info from the versions manifest if available.',
   expose: true,

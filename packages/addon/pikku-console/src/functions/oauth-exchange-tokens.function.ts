@@ -5,7 +5,6 @@ export const oauthExchangeTokens = pikkuSessionlessFunc<
   { code: string; state: string },
   { credentialName: string }
 >({
-  title: 'OAuth Exchange Tokens',
   description:
     'Given an authorization code and state string, retrieves the pending OAuth flow from oauthService using the state, creates an OAuth2Client, exchanges the code for tokens, stores the tokens in credential service, and returns the credentialName. Throws if the state is invalid or expired.',
   expose: true,

@@ -9,7 +9,6 @@ export const oauthStatus = pikkuSessionlessFunc<
     isExpired?: boolean
   }
 >({
-  title: 'OAuth Status',
   description:
     'Given a credentialName, reads secrets metadata from wiringService, validates the credential exists and is OAuth2, then attempts to read the stored token from credential service (or secrets as fallback). Returns connection status data including whether a refresh token exists and expiration status.',
   expose: true,
