@@ -7,6 +7,7 @@ export const getAddonInstalledPackage = pikkuSessionlessFunc<
   { packageName: string },
   AddonPackageInfo | null
 >({
+  title: 'Get Installed Addon Package',
   description:
     'Returns the full details of a locally installed addon by reading from pikkuState and .pikku files',
   expose: true,

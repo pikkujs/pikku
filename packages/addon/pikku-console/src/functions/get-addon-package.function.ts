@@ -5,6 +5,7 @@ export const getAddonCommunityPackage = pikkuSessionlessFunc<
   { id: string },
   AddonPackageInfo | null
 >({
+  title: 'Get Community Addon Package',
   description:
     'Returns the full details of a community addon by ID from the registry',
   expose: true,

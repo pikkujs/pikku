@@ -6,6 +6,7 @@ export const getChannelSnippets = pikkuSessionlessFunc<
   { channelName: string },
   ChannelSnippets
 >({
+  title: 'Get Channel Snippets',
   description:
     'Given a channelName, reads channel metadata from metaService, finds the matching channel, and generates code snippets (overview, handlers, actions) for that channel. Returns empty snippets if the channel is not found.',
   expose: true,

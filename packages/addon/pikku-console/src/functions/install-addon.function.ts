@@ -9,6 +9,7 @@ export const installAddon = pikkuSessionlessFunc<
   },
   { success: boolean; message: string }
 >({
+  title: 'Install Addon',
   description:
     'Installs a community addon package and creates the wiring file.',
   expose: true,
