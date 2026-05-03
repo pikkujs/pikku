@@ -27,7 +27,11 @@ export const workflowStarter = pikkuSessionlessFunc<
   { runId: string }
 >({
   auth: ${authFlag},
-  func: async (_services, { workflowName, data }, { rpc }) => {
+  // workflowService is destructured (even though we delegate via rpc) so the
+  // analyzer assigns workflow-state capability to this unit — without it,
+  // rpc.startWorkflow() runs against a container missing workflowService.
+  func: async ({ workflowService }, { workflowName, data }, { rpc }) => {
+    assertWorkflowService(workflowService)
     return await rpc.startWorkflow(workflowName as any, (data ?? {}) as any)
   },
 })
@@ -237,7 +241,10 @@ export const graphStarter = pikkuSessionlessFunc<
   { runId: string }
 >({
   auth: ${authFlag},
-  func: async (_services, { workflowName, nodeId, data }, { rpc }) => {
+  // See workflowStarter — destructure workflowService so the analyzer
+  // assigns workflow-state capability to this unit.
+  func: async ({ workflowService }, { workflowName, nodeId, data }, { rpc }) => {
+    assertWorkflowService(workflowService)
     return await rpc.startWorkflow(workflowName as any, (data ?? {}) as any, { startNode: nodeId })
   },
 })

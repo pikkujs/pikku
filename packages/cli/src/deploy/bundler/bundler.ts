@@ -101,6 +101,7 @@ interface BundleUnitOptions {
   define?: Record<string, string>
   platform?: 'node' | 'neutral' | 'browser'
   format?: 'esm' | 'cjs'
+  noRequireShim?: boolean
 }
 
 /**
@@ -152,11 +153,15 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
   // For ESM + node platform, CJS deps may use require() for builtins.
   // esbuild wraps these as __require() which fails at runtime in ESM.
   // The banner shims require via createRequire so CJS builtins resolve.
+  // Skipped when the provider opts out via `noRequireShim` (e.g. CF Workers
+  // — `import.meta.url` is undefined there, so the shim crashes at boot).
   const resolvedFormat = format ?? 'esm'
   const banner =
-    resolvedFormat === 'esm' && (platform ?? 'node') === 'node'
+    resolvedFormat === 'esm' &&
+    (platform ?? 'node') === 'node' &&
+    !options.noRequireShim
       ? {
-          js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);`,
+          js: `import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);`,
         }
       : undefined
 
@@ -272,6 +277,7 @@ export async function bundleUnits(
     define?: Record<string, string>
     platform?: 'node' | 'neutral' | 'browser'
     format?: 'esm' | 'cjs'
+    noRequireShim?: boolean
     resolveOutputDir?: (unit: DeploymentUnit, baseOutputDir: string) => string
   }
 ): Promise<BundleOutput> {
