@@ -1,6 +1,4 @@
-import { createServer, type ServerResponse, type IncomingMessage } from 'http'
 import { join, resolve } from 'path'
-import { Readable } from 'stream'
 
 import { pikkuSessionlessFunc } from '#pikku'
 import chokidar, { type FSWatcher } from 'chokidar'
@@ -14,74 +12,11 @@ import {
 } from '@pikku/core/services'
 import { stopSingletonServices } from '@pikku/core'
 import { pikkuState } from '@pikku/core/internal'
-import { fetchData, PikkuFetchHTTPResponse, logRoutes } from '@pikku/core/http'
-import { compileAllSchemas } from '@pikku/core/schema'
 import { LocalEventHubService } from '@pikku/core/channel/local'
 import { pikkuWebsocketHandler } from '@pikku/ws'
+import { PikkuNodeHTTPServer } from '@pikku/node-http-server'
 import { WebSocketServer } from 'ws'
 import { InMemorySchedulerService } from '@pikku/schedule'
-
-function incomingMessageToRequest(req: IncomingMessage): Request {
-  const url = new URL(req.url || '/', 'http://localhost')
-  const method = req.method ? req.method.toUpperCase() : 'GET'
-  const headers = new Headers()
-
-  for (const [key, value] of Object.entries(req.headers)) {
-    if (value) {
-      headers.set(key, Array.isArray(value) ? value.join(', ') : value)
-    }
-  }
-
-  let body: BodyInit | null = null
-  if (method !== 'GET' && method !== 'HEAD') {
-    body = Readable.toWeb(req) as unknown as BodyInit
-  }
-
-  return new Request(url.toString(), {
-    method,
-    headers,
-    body,
-    // @ts-ignore - duplex is needed for streaming body in Node.js
-    duplex: 'half',
-  })
-}
-
-async function writeResponse(
-  nodeRes: ServerResponse,
-  webResponse: Response
-): Promise<void> {
-  const headers: Record<string, string | string[]> = {}
-  webResponse.headers.forEach((value, name) => {
-    const lower = name.toLowerCase()
-    if (lower === 'set-cookie') {
-      const existing = headers[lower]
-      if (Array.isArray(existing)) {
-        existing.push(value)
-      } else {
-        headers[lower] = [value]
-      }
-    } else {
-      headers[lower] = value
-    }
-  })
-
-  nodeRes.writeHead(webResponse.status, headers)
-
-  if (webResponse.body) {
-    const reader = webResponse.body.getReader()
-    try {
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        nodeRes.write(value)
-      }
-    } finally {
-      reader.releaseLock()
-    }
-  }
-
-  nodeRes.end()
-}
 
 export const dev = pikkuSessionlessFunc<
   { port?: string; watch?: boolean; hmr?: boolean },
@@ -140,28 +75,20 @@ export const dev = pikkuSessionlessFunc<
     )
     pikkuState(null, 'package', 'singletonServices', singletonServices)
 
-    compileAllSchemas(logger)
-    logRoutes(logger)
-
-    const server = createServer(async (req, res) => {
-      const request = incomingMessageToRequest(req)
-      const pikkuResponse = new PikkuFetchHTTPResponse()
-      await fetchData(request, pikkuResponse, { respondWith404: true })
-      const response = pikkuResponse.toResponse()
-      await writeResponse(res, response)
-    })
-
     const wss = new WebSocketServer({ noServer: true })
-    pikkuWebsocketHandler({ server, wss, logger })
+    const pikkuServer = new PikkuNodeHTTPServer(
+      { ...userConfig, hostname, port: resolvedPort },
+      logger,
+      {
+        configureServer: (httpServer) => {
+          pikkuWebsocketHandler({ server: httpServer, wss, logger })
+        },
+      }
+    )
 
+    await pikkuServer.init()
     await schedulerService.start()
-
-    await new Promise<void>((resolve) => {
-      server.listen(resolvedPort, hostname, () => {
-        logger.info(`Dev server running at http://${hostname}:${resolvedPort}`)
-        resolve()
-      })
-    })
+    await pikkuServer.start()
 
     let configWatcher: FSWatcher | undefined
     let watcher: FSWatcher | undefined
@@ -175,9 +102,7 @@ export const dev = pikkuSessionlessFunc<
         await new Promise<void>((resolve, reject) =>
           wss.close((err) => (err ? reject(err) : resolve()))
         )
-        await new Promise<void>((resolve, reject) =>
-          server.close((err) => (err ? reject(err) : resolve()))
-        )
+        await pikkuServer.stop()
       } finally {
         process.exit(0)
       }

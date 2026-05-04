@@ -16,6 +16,11 @@ import { generatePerUnitCodegen } from './codegen/per-unit-codegen.js'
 import { bundleUnits } from './bundler/index.js'
 import type { BundleResult } from './bundler/index.js'
 import type { ProviderAdapter } from './provider-adapter.js'
+import {
+  generateServerEntrySource,
+  SERVER_DOCKERFILE,
+  SERVER_DOCKERIGNORE,
+} from './server-entry.js'
 
 export interface BuildLogger {
   info(msg: string): void
@@ -249,7 +254,8 @@ export async function runBuildPipeline(options: {
 
     // Step 3: Generate entry points + Bundle
     logger.info('Bundling...')
-    const entryFiles = new Map<string, string>()
+    const serverlessEntryFiles = new Map<string, string>()
+    const serverEntryFiles = new Map<string, string>()
 
     for (const unit of manifest.units) {
       const pikkuDir = unitPikkuDirs.get(unit.name)
@@ -261,30 +267,92 @@ export async function runBuildPipeline(options: {
       await mkdir(unitDir, { recursive: true })
 
       const ctx = getEntryContext(unitDir, pikkuDir, unit, inspectorState)
-      const source = provider.generateEntrySource(ctx as never)
+      const source =
+        unit.target === 'server'
+          ? generateServerEntrySource(ctx as never)
+          : provider.generateEntrySource(ctx as never)
 
       await writeFile(entryPath, source, 'utf-8')
-      entryFiles.set(unit.name, entryPath)
+      if (unit.target === 'server') {
+        serverEntryFiles.set(unit.name, entryPath)
+      } else {
+        serverlessEntryFiles.set(unit.name, entryPath)
+      }
     }
 
-    const bundleResult = await bundleUnits(
-      projectDir,
-      manifest,
-      entryFiles,
-      providerDir,
-      {
-        externals: provider.getExternals?.(),
-        aliases: provider.getAliases?.(),
-        define: provider.getDefine?.(),
-        platform: provider.getPlatform?.(),
-        format: provider.getFormat?.(),
-        noRequireShim: provider.getNoRequireShim?.(),
-        resolveOutputDir: (unit) =>
-          unit.target === 'server' ? containerDir : join(unitsDir, unit.name),
+    const aggregated: BundleResult[] = []
+    const aggregatedErrors: Array<{ unitName: string; error: string }> = []
+
+    if (serverlessEntryFiles.size > 0) {
+      const serverlessManifestForBundle = {
+        ...manifest,
+        units: manifest.units.filter((u) => u.target !== 'server'),
       }
-    )
-    bundled = bundleResult.results
-    bundleErrors = bundleResult.errors
+      const result = await bundleUnits(
+        projectDir,
+        serverlessManifestForBundle,
+        serverlessEntryFiles,
+        providerDir,
+        {
+          externals: provider.getExternals?.(),
+          aliases: provider.getAliases?.(),
+          define: provider.getDefine?.(),
+          platform: provider.getPlatform?.(),
+          format: provider.getFormat?.(),
+          noRequireShim: provider.getNoRequireShim?.(),
+          resolveOutputDir: (unit) => join(unitsDir, unit.name),
+        }
+      )
+      aggregated.push(...result.results)
+      aggregatedErrors.push(...result.errors)
+    }
+
+    if (serverEntryFiles.size > 0) {
+      // Server bundles use `@pikku/node-http-server` (pure JS), so esbuild
+      // can inline everything except node builtins. The bundler still
+      // emits a package.json from the metafile; if a user pulls in a
+      // native module the dep extractor surfaces it and `npm install`
+      // inside the container picks it up.
+      const serverManifestForBundle = {
+        ...manifest,
+        units: manifest.units.filter((u) => u.target === 'server'),
+      }
+      const result = await bundleUnits(
+        projectDir,
+        serverManifestForBundle,
+        serverEntryFiles,
+        providerDir,
+        {
+          externals: ['node:*'],
+          aliases: undefined,
+          define: undefined,
+          platform: 'node',
+          format: 'esm',
+          noRequireShim: false,
+          resolveOutputDir: () => containerDir,
+        }
+      )
+      aggregated.push(...result.results)
+      aggregatedErrors.push(...result.errors)
+
+      // Emit Dockerfile + .dockerignore alongside bundle.js for any
+      // orchestrator that wants to `docker build` the container directly.
+      if (result.results.length > 0) {
+        await writeFile(
+          join(containerDir, 'Dockerfile'),
+          SERVER_DOCKERFILE,
+          'utf-8'
+        )
+        await writeFile(
+          join(containerDir, '.dockerignore'),
+          SERVER_DOCKERIGNORE,
+          'utf-8'
+        )
+      }
+    }
+
+    bundled = aggregated
+    bundleErrors = aggregatedErrors
     attachBundleMetadata(manifest, bundled)
 
     logger.info(
@@ -324,12 +392,17 @@ export async function runBuildPipeline(options: {
   }
 
   const lockfileSrc = findLockfile(projectDir)
+  let configCount = 0
   for (const unit of manifest.units) {
+    // Server units don't take per-unit provider configs (no wrangler.toml,
+    // etc.) — their runtime is the emitted Dockerfile + bundle.js. Skip
+    // both the provider config emit and the lockfile copy; the bundle is
+    // self-contained and the Docker build uses npm install on its own.
+    if (unit.target === 'server') continue
+
     const unitDir = provider.singleUnit
       ? join(providerDir, unit.name)
-      : unit.target === 'server'
-        ? containerDir
-        : join(unitsDir, unit.name)
+      : join(unitsDir, unit.name)
     await mkdir(unitDir, { recursive: true })
     const configs = provider.generateUnitConfigs(unit, manifest, projectId)
     for (const [filename, content] of configs) {
@@ -338,8 +411,9 @@ export async function runBuildPipeline(options: {
     if (lockfileSrc) {
       await copyFile(lockfileSrc, join(unitDir, 'yarn.lock'))
     }
+    configCount++
   }
-  logger.info(`Generated ${manifest.units.length} provider config files`)
+  logger.info(`Generated ${configCount} provider config files`)
 
   return {
     manifest,

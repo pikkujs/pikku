@@ -537,21 +537,17 @@ export class CloudflareProviderAdapter {
       await readFile(join(options.buildDir, 'infra.json'), 'utf-8')
     )
 
-    // Error if any server-target units exist — container deploy requires Fabric
-    const serverUnits = Object.entries(infraJson.units || {}).filter(
-      ([_, u]) => (u as Record<string, unknown>).target === 'server'
-    )
-    if (serverUnits.length > 0) {
-      const names = serverUnits.map(([name]) => name).join(', ')
-      return {
-        success: false,
-        errors: [
-          {
-            step: 'validation',
-            error: `Project contains server-target functions (${names}) which require a container runtime. Server deploy is available via Pikku Fabric (https://pikku.dev/fabric).`,
-          },
-        ],
-      }
+    // Server-target units are emitted as a Node container bundle in
+    // .deploy/cloudflare/container/ (Dockerfile + bundle.js + package.json).
+    // The CF adapter doesn't ship them — that's an orchestrator concern
+    // (Fabric, fly.io, ECS, ...). Skip them here; they're already on disk.
+    const serverUnitNames = Object.entries(infraJson.units || {})
+      .filter(([_, u]) => (u as Record<string, unknown>).target === 'server')
+      .map(([name]) => name)
+    if (serverUnitNames.length > 0) {
+      options.logger.info(
+        `Skipping ${serverUnitNames.length} server-target unit(s) — container artifacts emitted in .deploy/cloudflare/container/ for an orchestrator to pick up: ${serverUnitNames.join(', ')}`
+      )
     }
 
     return deploy({
