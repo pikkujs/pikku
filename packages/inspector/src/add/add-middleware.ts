@@ -352,6 +352,43 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
     return
   }
 
+  if (expression.text === 'addGlobalMiddleware') {
+    const middlewareArrayArg = args[0]
+    if (
+      !middlewareArrayArg ||
+      !ts.isArrayLiteralExpression(middlewareArrayArg)
+    ) {
+      logger.error(
+        `• addGlobalMiddleware(...) must have a literal array as its only argument`
+      )
+      return
+    }
+    const refs = extractMiddlewareRefs(
+      middlewareArrayArg,
+      checker,
+      state.rootDir
+    )
+    const definitionIds = refs.map((r) => r.definitionId)
+    if (definitionIds.length > 0) {
+      renameTempDefinitions(state, definitionIds, 'global', 'middleware')
+    }
+    const sourceFile = node.getSourceFile().fileName
+    for (let i = 0; i < refs.length; i++) {
+      const instanceId = makeContextBasedId('global', 'middleware', String(i))
+      state.middleware.instances[instanceId] = {
+        definitionId: definitionIds[i],
+        sourceFile,
+        position: node.getStart(),
+        isFactoryCall: refs[i].isFactoryCall,
+      }
+    }
+    // Without this, bootstrap codegen's "import every file with a wire-call"
+    // pass skips middleware-only files and the registration never runs.
+    state.http.files.add(sourceFile)
+    logger.debug(`• Found global middleware group with ${refs.length} entries`)
+    return
+  }
+
   if (expression.text === 'addHTTPMiddleware') {
     const patternArg = args[0]
     const middlewareArrayArg = args[1]
@@ -452,6 +489,7 @@ export const addMiddleware: AddWiring = (logger, node, checker, state) => {
       instanceIds,
       isFactory,
     })
+    state.http.files.add(sourceFile)
 
     logger.debug(
       `• Found HTTP route middleware group: ${pattern} -> [${instanceIds.join(', ')}] (${isFactory ? 'factory' : 'direct'})`
