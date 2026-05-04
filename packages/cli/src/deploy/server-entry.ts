@@ -59,11 +59,15 @@ RUN groupadd -r pikku && useradd -r -g pikku -u 1001 pikku
 
 WORKDIR /app
 
+# Pikku bundles user code + first-party deps inline; only externalised deps
+# (typically empty for pure-JS apps) are listed in package.json. We ship no
+# lockfile because the bundle has already pinned everything via the
+# extracted exact-dependencies — \`npm install --omit=dev\` resolves the
+# leftover externals (if any) at build time.
 COPY --chown=pikku:pikku package.json ./
-RUN npm ci --omit=dev --no-audit --no-fund || npm install --omit=dev --no-audit --no-fund
+RUN npm install --omit=dev --no-audit --no-fund
 
 COPY --chown=pikku:pikku bundle.js ./
-COPY --chown=pikku:pikku bundle.js.map ./
 
 USER pikku
 ENV NODE_ENV=production
