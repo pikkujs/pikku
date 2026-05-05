@@ -1,6 +1,6 @@
 import {
   pikkuMiddlewareFactory,
-  addMiddleware,
+  addTagMiddleware,
 } from '../.pikku/pikku-types.gen.js'
 
 /**
@@ -34,4 +34,4 @@ export const tagMiddleware = pikkuMiddlewareFactory(
  * This will apply to all functions with the 'addon' tag
  */
 export const addonTagMiddleware = () =>
-  addMiddleware('addon', [tagMiddleware('addon')])
+  addTagMiddleware('addon', [tagMiddleware('addon')])
