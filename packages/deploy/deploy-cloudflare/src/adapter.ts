@@ -71,6 +71,45 @@ export interface EntryGenerationContext {
   servicesType: string
 }
 
+export type PlatformImports = {
+  cfImports: string[]
+  needsD1: boolean
+  needsQueue: boolean
+  needsWorkflow: boolean
+  needsAI: boolean
+}
+
+/**
+ * Hook for callers (custom deployers, orchestrators) to inject extra services
+ * into the generated `createPlatformServices` block. Each contributor is
+ * called once per entry; lines are emitted before `return services`. Imports
+ * are spliced into the entry's import header.
+ *
+ * Contributors should gate their service wiring on env bindings being present
+ * (`if (env.MY_BINDING) { ... }`) so the same generated entry runs both for
+ * users who declare the bindings and for those who don't.
+ */
+export interface PlatformServiceContributor {
+  /** Identifier — used for diagnostics and dedup if a contributor is passed twice. */
+  name: string
+  /** Module-level import lines this contributor's emitted code depends on. */
+  imports?: string[]
+  /**
+   * Lines emitted inside `createPlatformServices`, before `return services`.
+   * `services` is in scope (typed as `ctx.servicesType`); so is `env` and
+   * `logger`. Return `[]` to opt out for the given context.
+   */
+  emit(args: {
+    ctx: EntryGenerationContext
+    platform: PlatformImports
+    isGateway: boolean
+  }): string[]
+}
+
+export interface CloudflareProviderAdapterOptions {
+  contributors?: PlatformServiceContributor[]
+}
+
 /**
  * Extracts the unique handler types from a unit's handlers array.
  */
@@ -86,6 +125,46 @@ export class CloudflareProviderAdapter {
   readonly name = 'cloudflare'
   readonly deployDirName = 'cloudflare'
 
+  private readonly contributors: PlatformServiceContributor[]
+
+  constructor(options: CloudflareProviderAdapterOptions = {}) {
+    // De-dupe contributors by name (last wins).
+    const byName = new Map<string, PlatformServiceContributor>()
+    for (const c of options.contributors ?? []) {
+      byName.set(c.name, c)
+    }
+    this.contributors = [...byName.values()]
+  }
+
+  /** Collect all contributor imports as a flat, de-duplicated array. */
+  private contributorImports(): string[] {
+    const seen = new Set<string>()
+    const out: string[] = []
+    for (const c of this.contributors) {
+      for (const line of c.imports ?? []) {
+        if (!seen.has(line)) {
+          seen.add(line)
+          out.push(line)
+        }
+      }
+    }
+    return out
+  }
+
+  /** Run every contributor's emit() and concatenate the resulting lines. */
+  private contributorLines(
+    ctx: EntryGenerationContext,
+    platform: PlatformImports,
+    isGateway: boolean
+  ): string[] {
+    const out: string[] = []
+    for (const c of this.contributors) {
+      const lines = c.emit({ ctx, platform, isGateway })
+      if (lines.length > 0) out.push(...lines)
+    }
+    return out
+  }
+
   /**
    * Determine which @pikku/cloudflare imports the unit needs based on its
    * service capabilities. Prevents pulling in kysely/workflow/AI code for
@@ -94,13 +173,7 @@ export class CloudflareProviderAdapter {
   private resolvePlatformImports(
     unit: DeploymentUnit,
     extraImports: string[] = []
-  ): {
-    cfImports: string[]
-    needsD1: boolean
-    needsQueue: boolean
-    needsWorkflow: boolean
-    needsAI: boolean
-  } {
+  ): PlatformImports {
     const needsQueue = unit.services.some((s) => s.capability === 'queue')
     const needsWorkflow = unit.services.some(
       (s) => s.capability === 'workflow-state'
@@ -182,6 +255,7 @@ export class CloudflareProviderAdapter {
         : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
+      ...this.contributorImports(),
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
@@ -232,6 +306,7 @@ export class CloudflareProviderAdapter {
         : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
+      ...this.contributorImports(),
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
@@ -305,6 +380,7 @@ export class CloudflareProviderAdapter {
         : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
+      ...this.contributorImports(),
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
@@ -324,7 +400,7 @@ export class CloudflareProviderAdapter {
    */
   private generatePlatformServicesBlock(
     ctx: EntryGenerationContext,
-    platform: ReturnType<CloudflareProviderAdapter['resolvePlatformImports']>
+    platform: PlatformImports
   ): string[] {
     const lines = [
       `const createPlatformServices = async (env: CloudflareEnv): Promise<${ctx.servicesType}> => {`,
@@ -359,6 +435,7 @@ export class CloudflareProviderAdapter {
         `  }`
       )
     }
+    lines.push(...this.contributorLines(ctx, platform, false))
     lines.push(`  return services`, `}`)
     return lines
   }
@@ -369,7 +446,7 @@ export class CloudflareProviderAdapter {
    */
   private generateGatewayPlatformServicesBlock(
     ctx: EntryGenerationContext,
-    platform: ReturnType<CloudflareProviderAdapter['resolvePlatformImports']>,
+    platform: PlatformImports,
     bindingsMap: string
   ): string[] {
     const lines = [
@@ -411,10 +488,10 @@ export class CloudflareProviderAdapter {
       `    services.jwt,`,
       `    services.secrets,`,
       `    ${bindingsMap}`,
-      `  )`,
-      `  return services`,
-      `}`
+      `  )`
     )
+    lines.push(...this.contributorLines(ctx, platform, true))
+    lines.push(`  return services`, `}`)
     return lines
   }
 
@@ -540,7 +617,7 @@ export class CloudflareProviderAdapter {
     // Server-target units are emitted as a Node container bundle in
     // .deploy/cloudflare/container/ (Dockerfile + bundle.js + package.json).
     // The CF adapter doesn't ship them — that's an orchestrator concern
-    // (Fabric, fly.io, ECS, ...). Skip them here; they're already on disk.
+    // (fly.io, ECS, custom orchestrator, ...). Skip them here; they're already on disk.
     const serverUnitNames = Object.entries(infraJson.units || {})
       .filter(([_, u]) => (u as Record<string, unknown>).target === 'server')
       .map(([name]) => name)
