@@ -9,10 +9,11 @@ export interface PikkuStepWorkerEnv {
 /**
  * Stateless step worker for the DO orchestrator.
  *
- * Runs as a separate CF Worker (or `WorkerEntrypoint`) bound as
- * `STEP_WORKER` from the orchestrator DO. Receives step dispatches via the
- * `run()` RPC, executes the named pikku RPC, and calls back to the
- * originating DO via the `WORKFLOW_DO` namespace.
+ * Runs as a separate CF Worker (or `WorkerEntrypoint`) bound as the
+ * step's per-rpc service binding (e.g. `env['enrich-card']`) from the
+ * orchestrator DO. Receives step dispatches via the `run()` RPC,
+ * executes the named pikku RPC, and calls back to the originating DO
+ * via the `WORKFLOW_DO` namespace.
  *
  * Usage in user code:
  * ```ts

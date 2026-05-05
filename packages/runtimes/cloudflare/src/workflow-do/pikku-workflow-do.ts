@@ -28,16 +28,25 @@ export interface PikkuWorkflowDoOptions {
  * Subclasses must implement `createService()` so they can wire whatever
  * RPC service / singleton-service plumbing their app needs.
  *
- * Wrangler binding example:
+ * Wrangler binding example — one service binding per step rpcName,
+ * keyed by the step's kebab-case binding name (matches the deploy
+ * pipeline's per-step unit naming):
  * ```toml
  * [[durable_objects.bindings]]
  * name = "WORKFLOW_DO"
  * class_name = "MyWorkflowDO"
  *
  * [[services]]
- * binding = "STEP_WORKER"
- * service = "my-step-worker"
+ * binding = "enrich-card"
+ * service = "<deployed-enrich-card-script>"
+ *
+ * [[services]]
+ * binding = "create-card"
+ * service = "<deployed-create-card-script>"
  * ```
+ *
+ * Override `getStepStub(rpcName)` on the service subclass to use a
+ * different lookup (e.g. dispatch-namespace `env.NS.get(scriptName)`).
  */
 export abstract class PikkuWorkflowDO<
   Env extends PikkuWorkflowDoEnv = PikkuWorkflowDoEnv,

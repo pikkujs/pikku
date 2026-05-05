@@ -65,12 +65,17 @@ let service: TestService
 beforeEach(() => {
   storage = new FakeStorage()
   dispatched = []
-  env = {
-    STEP_WORKER: {
-      run: async (d) => {
-        dispatched.push(d)
-      },
+  const stepStub = {
+    run: async (d: PikkuDoStepDispatch) => {
+      dispatched.push(d)
     },
+  }
+  // Per-rpc bindings — keys match `toStepBindingName(rpcName)` for the
+  // rpcNames used in tests below (`rpc.x`, `r`, `rpc.s`).
+  env = {
+    'rpc.x': stepStub,
+    r: stepStub,
+    'rpc.s': stepStub,
   }
   service = new TestService(storage as any, env, RUN_ID)
 })
@@ -253,7 +258,7 @@ describe('PikkuWorkflowDoService — transport hooks', () => {
     } as any)
   })
 
-  test('dispatchStep calls STEP_WORKER.run with dispatch payload', async () => {
+  test('dispatchStep calls per-rpc step stub with dispatch payload', async () => {
     const ok = await (service as any).dispatchStep(
       RUN_ID,
       'stepX',
@@ -280,7 +285,7 @@ describe('PikkuWorkflowDoService — transport hooks', () => {
     assert.equal(dispatched.length, 0)
   })
 
-  test('dispatchStep returns false when STEP_WORKER binding is missing', async () => {
+  test('dispatchStep returns false when per-rpc binding is missing', async () => {
     const noWorker = new TestService(storage as any, {}, RUN_ID)
     const ok = await (noWorker as any).dispatchStep(RUN_ID, 's', 'r', {})
     assert.equal(ok, false)
@@ -321,7 +326,7 @@ describe('PikkuWorkflowDoService — transport hooks', () => {
     assert.deepEqual(pending, { kind: 'orchestrator-retry' })
   })
 
-  test('queueStepWorker dispatches via STEP_WORKER', async () => {
+  test('queueStepWorker dispatches via per-rpc binding', async () => {
     await service.queueStepWorker(RUN_ID, 's', 'rpc.s', { d: 1 })
     assert.equal(dispatched.length, 1)
     assert.equal(dispatched[0]!.stepName, 's')
@@ -331,7 +336,7 @@ describe('PikkuWorkflowDoService — transport hooks', () => {
     const noWorker = new TestService(storage as any, {}, RUN_ID)
     await assert.rejects(
       noWorker.queueStepWorker(RUN_ID, 's', 'r', {}),
-      /STEP_WORKER binding not configured/
+      /No step worker binding for rpcName=r/
     )
   })
 

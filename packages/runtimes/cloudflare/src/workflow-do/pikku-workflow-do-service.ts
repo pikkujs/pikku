@@ -40,10 +40,25 @@ export interface PikkuDoStepDispatch {
   retryDelay?: string | number
 }
 
-export interface PikkuWorkflowDoEnv {
-  /** Service binding to the stateless step worker. */
-  STEP_WORKER?: { run(input: PikkuDoStepDispatch): Promise<void> }
+/**
+ * Step stub contract — anything that exposes `run(dispatch)`. Typically a
+ * `WorkerEntrypoint` service binding or a stub returned by a dispatch
+ * namespace `.get(scriptName)` lookup.
+ */
+export interface PikkuStepStub {
+  run(input: PikkuDoStepDispatch): Promise<void>
 }
+
+/**
+ * Default DO env shape. Per-step service bindings live as direct
+ * properties keyed by the unit's kebab-case binding name (e.g.
+ * `env['enrich-card']`). Override via the generic parameter for stricter
+ * typing in user code.
+ */
+export type PikkuWorkflowDoEnv = Record<string, unknown>
+
+const toStepBindingName = (rpcName: string): string =>
+  rpcName.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
 
 /**
  * Per-run Durable Object–backed `PikkuWorkflowService`.
@@ -55,8 +70,9 @@ export interface PikkuWorkflowDoEnv {
  * 1. Storage methods backed by the DO's own `ctx.storage` instead of SQL.
  * 2. Locks as no-ops — DOs are single-threaded.
  * 3. Transport hooks (`dispatchStep`, `scheduleSleep`, `scheduleResume`,
- *    `scheduleOrchestratorRetry`) that use `setAlarm` and the `STEP_WORKER`
- *    service binding instead of queues.
+ *    `scheduleOrchestratorRetry`) that use `setAlarm` and per-rpc step
+ *    service bindings (resolved via `getStepStub(rpcName)`) instead of
+ *    queues.
  *
  * The DO instance ID is the run ID — one DO per workflow run. All `runId`
  * arguments to methods on this service should match `ctx.id.toString()`;
@@ -456,10 +472,10 @@ export abstract class PikkuWorkflowDoService<
     stepOptions?: WorkflowStepOptions
   ): Promise<boolean> {
     if (this.isInline(runId)) return false
-    const stepWorker = this.env.STEP_WORKER
-    if (!stepWorker) return false
+    const stub = await this.getStepStub(rpcName)
+    if (!stub) return false
 
-    await stepWorker.run({
+    await stub.run({
       runId,
       stepName,
       rpcName,
@@ -468,6 +484,24 @@ export abstract class PikkuWorkflowDoService<
       retryDelay: stepOptions?.retryDelay,
     })
     return true
+  }
+
+  /**
+   * Resolve the step worker stub for a given rpcName. Default looks up
+   * `env[toStepBindingName(rpcName)]` (e.g. `env['enrich-card']`) — the
+   * convention used by the deploy pipeline when emitting per-step service
+   * bindings on the orchestrator unit.
+   *
+   * Override to use a dispatch-namespace lookup or any other resolution
+   * strategy. Returning `null` causes `dispatchStep` to fall through and
+   * the step is skipped — useful for inline-only test envs.
+   */
+  protected async getStepStub(rpcName: string): Promise<PikkuStepStub | null> {
+    const key = toStepBindingName(rpcName)
+    const stub = (this.env as Record<string, unknown>)[key] as
+      | PikkuStepStub
+      | undefined
+    return stub ?? null
   }
 
   protected override async scheduleSleep(
@@ -529,11 +563,13 @@ export abstract class PikkuWorkflowDoService<
   ): Promise<void> {
     // Direct hand-off — same path as dispatchStep. Used by some callers
     // outside the rpcStep flow (e.g. workflow.queue() pattern).
-    const stepWorker = this.env.STEP_WORKER
-    if (!stepWorker) {
-      throw new Error('STEP_WORKER binding not configured')
+    const stub = await this.getStepStub(rpcName)
+    if (!stub) {
+      throw new Error(
+        `No step worker binding for rpcName=${rpcName} (looked up env['${toStepBindingName(rpcName)}'])`
+      )
     }
-    await stepWorker.run({ runId, stepName, rpcName, data })
+    await stub.run({ runId, stepName, rpcName, data })
   }
 
   // ─── Internals ────────────────────────────────────────────────────
