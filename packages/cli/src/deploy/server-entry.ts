@@ -22,7 +22,7 @@ export function generateServerEntrySource(ctx: EntryGenerationContext): string {
     ctx.servicesImport,
     `import '${ctx.bootstrapPath}'`,
     ``,
-    `const PORT = Number(process.env.PORT ?? 4003)`,
+    `const PORT = Number(process.env.PORT ?? 8080)`,
     `const HOST = process.env.HOST ?? '0.0.0.0'`,
     ``,
     `async function main(): Promise<void> {`,
@@ -71,8 +71,8 @@ COPY --chown=pikku:pikku bundle.js ./
 
 USER pikku
 ENV NODE_ENV=production
-ENV PORT=4003
-EXPOSE 4003
+ENV PORT=8080
+EXPOSE 8080
 
 ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["node", "bundle.js"]

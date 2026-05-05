@@ -7,6 +7,8 @@
  * it and provisions everything in order.
  */
 
+import { serverProxyConstants } from './server-proxy-entry.js'
+
 type DeploymentHandler =
   | {
       type: 'fetch'
@@ -169,6 +171,23 @@ export function generateInfraManifest(
 
   // Per-unit binding summary
   const units: Record<string, CloudflareUnitManifest> = {}
+  // Server-target unit routes get *moved* onto the synthesized proxy unit —
+  // the public entrypoint that CF Workers actually serves is the proxy
+  // (a regular Worker bound to a Durable Object that fronts the container).
+  // Strip them off the container unit so an orchestrator doesn't try to
+  // deploy a Worker for it.
+  const serverTargetRoutes: Array<{ method: string; route: string }> = []
+  for (const unit of manifest.units) {
+    if (unit.target !== 'server') continue
+    for (const handler of unit.handlers) {
+      if (handler.type === 'fetch') {
+        for (const r of handler.routes) {
+          serverTargetRoutes.push({ method: r.method, route: r.route })
+        }
+      }
+    }
+  }
+
   for (const unit of manifest.units) {
     const bindings: string[] = []
     const capabilities = new Set(unit.services.map((s) => s.capability))
@@ -192,12 +211,15 @@ export function generateInfraManifest(
       bindings.push(`service:${dep}`)
     }
 
-    // Extract HTTP routes from fetch handlers
+    // Extract HTTP routes from fetch handlers. Server-target units don't
+    // serve traffic directly — their routes live on the proxy.
     const routes: Array<{ method: string; route: string }> = []
-    for (const handler of unit.handlers) {
-      if (handler.type === 'fetch') {
-        for (const r of handler.routes) {
-          routes.push({ method: r.method, route: r.route })
+    if (unit.target !== 'server') {
+      for (const handler of unit.handlers) {
+        if (handler.type === 'fetch') {
+          for (const r of handler.routes) {
+            routes.push({ method: r.method, route: r.route })
+          }
         }
       }
     }
@@ -212,6 +234,28 @@ export function generateInfraManifest(
       routes,
       handlerTypes,
     }
+  }
+
+  // Synthesize the server-proxy unit when there are any server-target units.
+  // This is a regular CF Worker that fronts the container app via a DO; its
+  // routes are the union of all server-target HTTP routes. The orchestrator
+  // uploads it like any other Worker.
+  const hasServerUnits = manifest.units.some((u) => u.target === 'server')
+  if (hasServerUnits) {
+    units[serverProxyConstants.unitName] = {
+      role: 'function',
+      target: 'serverless',
+      bindings: [
+        `durable_object:${serverProxyConstants.binding}@${serverProxyConstants.className}`,
+      ],
+      routes: serverTargetRoutes,
+      handlerTypes: ['fetch'],
+    }
+    durableObjects.push({
+      worker: serverProxyConstants.unitName,
+      className: serverProxyConstants.className,
+      binding: serverProxyConstants.binding,
+    })
   }
 
   return {

@@ -23,6 +23,7 @@
   "exports": {
     ".": "./dist/index.js",
     "./handler": "./dist/handler-factories.js",
+    "./env": "./dist/env.js",
     "./queue": "./dist/cloudflare-queue-service.js",
     "./d1": "./dist/cloudflare-d1-services.js",
     "./deployment": "./dist/cloudflare-deployment-service.js",

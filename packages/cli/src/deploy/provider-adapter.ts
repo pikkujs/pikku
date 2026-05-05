@@ -109,6 +109,18 @@ export interface ProviderAdapter {
   generateProviderConfigs?(manifest: DeploymentManifest): Map<string, string>
 
   /**
+   * Emit any provider-specific artifacts that aren't tied to a single user
+   * unit — e.g. a synthesized proxy Worker that fronts a CF Container.
+   * Called after the infra manifest is written so providers can read it
+   * and key off resources that were provisioned in earlier steps.
+   */
+  emitSideArtifacts?(options: {
+    buildDir: string
+    manifest: DeploymentManifest
+    logger: { info(msg: string): void; error(msg: string): void }
+  }): Promise<void>
+
+  /**
    * Deploy the built artifacts to the provider.
    * Optional — if not implemented, the CLI just outputs the build directory.
    */

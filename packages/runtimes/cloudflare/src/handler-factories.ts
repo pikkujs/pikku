@@ -9,8 +9,13 @@ import { pikkuState } from '@pikku/core/internal'
 import type { QueueJob, QueueJobStatus } from '@pikku/core/queue'
 import { CloudflareWebSocketHibernationServer } from './cloudflare-hibernation-websocket-server.js'
 import { CloudflareEventHubService } from './cloudflare-eventhub-service.js'
+import {
+  type CloudflareEnv,
+  getCloudflareEnv,
+  setCloudflareEnv,
+} from './env.js'
 
-export type CloudflareEnv = Record<string, unknown>
+export { getCloudflareEnv, type CloudflareEnv }
 
 export interface ServiceFactories {
   createConfig: (
@@ -33,23 +38,11 @@ export interface ServiceFactories {
 
 let cachedServices: CoreSingletonServices | null = null
 
-let cachedEnv: CloudflareEnv | null = null
-
-/**
- * Returns the Cloudflare `env` that was last passed into the worker handler,
- * or `null` if called before any request. Lets user `createSingletonServices`
- * read CF-specific bindings (D1, R2, KV, queue producers, etc.) without
- * threading `env` through every signature.
- */
-export function getCloudflareEnv(): CloudflareEnv | null {
-  return cachedEnv
-}
-
 async function setupServices(
   env: CloudflareEnv,
   factories: ServiceFactories
 ): Promise<CoreSingletonServices> {
-  cachedEnv = env
+  setCloudflareEnv(env)
   if (cachedServices) return cachedServices
   const variables = new LocalVariablesService(
     env as Record<string, string | undefined>

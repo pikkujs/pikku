@@ -382,6 +382,14 @@ export async function runBuildPipeline(options: {
     logger.info('Generated infrastructure manifest')
   }
 
+  if (provider.emitSideArtifacts) {
+    await provider.emitSideArtifacts({
+      buildDir: providerDir,
+      manifest,
+      logger,
+    })
+  }
+
   if (provider.generateProviderConfigs) {
     const providerConfigs = provider.generateProviderConfigs(manifest)
     for (const [filename, content] of providerConfigs) {

@@ -9,6 +9,10 @@
 
 import { generateWranglerToml } from './wrangler-toml.js'
 import { generateInfraManifest } from './infra-manifest.js'
+import {
+  generateServerProxyBundle,
+  serverProxyConstants,
+} from './server-proxy-entry.js'
 
 export type DeploymentHandler =
   | {
@@ -583,6 +587,49 @@ export class CloudflareProviderAdapter {
       'process.versions.electron': 'undefined',
       'process.versions.node': '"22.0.0"',
     }
+  }
+
+  /**
+   * Emit the synthesized `pikku-server-proxy` Worker when the project has
+   * any `target: 'server'` units. The proxy fronts the CF Container app
+   * via a Durable Object and forwards every inbound request to it.
+   *
+   * Output: `units/pikku-server-proxy/bundle.js`. Plain ESM JS — CF handles
+   * `cloudflare:workers` natively, so no esbuild step is needed.
+   */
+  async emitSideArtifacts(options: {
+    buildDir: string
+    manifest: DeploymentManifest
+    logger: { info(msg: string): void; error(msg: string): void }
+  }): Promise<void> {
+    const { buildDir, manifest, logger } = options
+    const hasServerUnits = manifest.units.some((u) => u.target === 'server')
+    if (!hasServerUnits) return
+
+    const { mkdir, writeFile } = await import('node:fs/promises')
+    const { join } = await import('node:path')
+
+    const proxyDir = join(buildDir, 'units', serverProxyConstants.unitName)
+    await mkdir(proxyDir, { recursive: true })
+    await writeFile(
+      join(proxyDir, 'bundle.js'),
+      generateServerProxyBundle(),
+      'utf-8'
+    )
+    // Empty package.json so any orchestrator that walks `units/*/package.json`
+    // sees the proxy unit. No deps — `cloudflare:workers` is platform-provided.
+    await writeFile(
+      join(proxyDir, 'package.json'),
+      JSON.stringify(
+        { name: serverProxyConstants.unitName, type: 'module' },
+        null,
+        2
+      ),
+      'utf-8'
+    )
+    logger.info(
+      `Emitted ${serverProxyConstants.unitName} proxy worker → ${proxyDir}`
+    )
   }
 
   async deploy(options: {
