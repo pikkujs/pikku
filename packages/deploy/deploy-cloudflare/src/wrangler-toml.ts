@@ -68,12 +68,15 @@ export function generateWranglerToml(
     lines.push(`database_id = "pikku"`)
   }
 
-  if (capabilities.has('workflow-state')) {
+  // Workflow runs live in a per-run Durable Object, not D1. Only the
+  // workflow orchestrator (`role === 'workflow'`) gets the binding —
+  // step workers reach back via the orchestrator's WORKFLOW_DO namespace
+  // (bound separately when needed for callbacks).
+  if (unit.role === 'workflow' && capabilities.has('workflow-state')) {
     lines.push('')
-    lines.push('[[d1_databases]]')
-    lines.push(`binding = "WORKFLOW_DB"`)
-    lines.push(`database_name = "${projectId}-workflow-db"`)
-    lines.push(`database_id = "pikku"`)
+    lines.push('[[durable_objects.bindings]]')
+    lines.push(`name = "WORKFLOW_DO"`)
+    lines.push(`class_name = "WorkflowOrchestratorDO"`)
   }
 
   if (capabilities.has('object-storage')) {
@@ -190,6 +193,15 @@ function addHandlerConfig(
     lines.push('[[migrations]]')
     lines.push(`tag = "v1"`)
     lines.push(`new_classes = ["WebSocketHibernationServer"]`)
+  }
+
+  // Workflow orchestrator DO is SQLite-backed (uses ctx.storage transactions
+  // for run/step state). SQLite-backed DOs require `new_sqlite_classes`.
+  if (unit.role === 'workflow') {
+    lines.push('')
+    lines.push('[[migrations]]')
+    lines.push(`tag = "v1"`)
+    lines.push(`new_sqlite_classes = ["WorkflowOrchestratorDO"]`)
   }
 }
 

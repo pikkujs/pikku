@@ -38,7 +38,7 @@ export interface ServiceFactories {
 
 let cachedServices: CoreSingletonServices | null = null
 
-async function setupServices(
+export async function setupServices(
   env: CloudflareEnv,
   factories: ServiceFactories
 ): Promise<CoreSingletonServices> {

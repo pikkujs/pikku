@@ -78,7 +78,7 @@ const toStepBindingName = (rpcName: string): string =>
  * arguments to methods on this service should match `ctx.id.toString()`;
  * the service asserts this.
  */
-export abstract class PikkuWorkflowDoService<
+export class PikkuWorkflowDoService<
   Env extends PikkuWorkflowDoEnv = PikkuWorkflowDoEnv,
 > extends PikkuWorkflowService {
   constructor(
