@@ -130,3 +130,6 @@ typings/
 
 # Wrangler local dev cache
 .wrangler/
+
+# Claude Code worktrees
+.claude/worktrees/
