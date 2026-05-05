@@ -44,6 +44,14 @@ export interface PerUnitCodegenOptions {
   ) => void
   /** Resolve unit output directory (defaults to <deployDir>/<unit-name>) */
   resolveUnitDir?: (unit: DeploymentUnit, baseDeployDir: string) => string
+  /**
+   * Whether the deploy pipeline emits per-step workflow queues. When `false`
+   * the per-unit codegen filter does NOT include `wf-orchestrator-*` /
+   * `wf-step-*` queue names — they don't exist in the manifest, and pulling
+   * them through codegen would force the workflow runtime to register queue
+   * meta the provider doesn't actually use. Defaults to `true`.
+   */
+  workflowQueues?: boolean
 }
 
 export interface PerUnitCodegenResult {
@@ -75,7 +83,8 @@ function resolvePikkuBin(): string {
 function collectFilterNames(
   unit: DeploymentUnit,
   manifest: DeploymentManifest,
-  inspectorState: InspectorState
+  inspectorState: InspectorState,
+  workflowQueues: boolean
 ): string[] {
   const names = new Set<string>(unit.functionIds)
 
@@ -158,10 +167,14 @@ function collectFilterNames(
           // dedicated queue (otherwise it falls back to the shared
           // 'pikku-workflow-step-worker' queue which doesn't exist in
           // per-unit deploys). Names only — no function bodies bundled.
-          names.add(`wf-orchestrator-${toSafeKebab(wf.name)}`)
-          for (const step of wf.steps) {
-            if (step.functionId) {
-              names.add(`wf-step-${toSafeKebab(step.functionId)}`)
+          // Skipped when the provider doesn't use workflow queues — its
+          // workflow runtime dispatches steps natively.
+          if (workflowQueues) {
+            names.add(`wf-orchestrator-${toSafeKebab(wf.name)}`)
+            for (const step of wf.steps) {
+              if (step.functionId) {
+                names.add(`wf-step-${toSafeKebab(step.functionId)}`)
+              }
             }
           }
         }
@@ -191,12 +204,17 @@ function collectFilterNames(
         names.add('http:get:/workflow/:workflowName/status/:runId')
         names.add('http:get:/workflow/:workflowName/status/:runId/stream')
         names.add('http:post:/workflow/:workflowName/graph/:nodeId')
-        // Queue names for orchestrator and step workers
-        names.add(`wf-orchestrator-${toSafeKebab(wfDef.name)}`)
+        // Queue names for orchestrator and step workers — only when the
+        // provider's workflow runtime fans out via queues.
+        if (workflowQueues) {
+          names.add(`wf-orchestrator-${toSafeKebab(wfDef.name)}`)
+        }
         for (const step of wfDef.steps) {
           if (step.functionId) {
             names.add(step.functionId)
-            names.add(`wf-step-${toSafeKebab(step.functionId)}`)
+            if (workflowQueues) {
+              names.add(`wf-step-${toSafeKebab(step.functionId)}`)
+            }
           }
         }
       }
@@ -222,6 +240,7 @@ export async function generatePerUnitCodegen(
   options: PerUnitCodegenOptions
 ): Promise<PerUnitCodegenResult> {
   const { projectDir, manifest, inspectorState, onProgress } = options
+  const workflowQueues = options.workflowQueues ?? true
 
   const baseDir = options.deployDir ?? join(projectDir, '.deploy')
   const pikkuBin = options.pikkuBin ?? resolvePikkuBin()
@@ -240,7 +259,12 @@ export async function generatePerUnitCodegen(
 
     // Generate codegen for each unit
     for (const unit of manifest.units) {
-      const filterNames = collectFilterNames(unit, manifest, inspectorState)
+      const filterNames = collectFilterNames(
+        unit,
+        manifest,
+        inspectorState,
+        workflowQueues
+      )
 
       if (filterNames.length === 0) {
         errors.push({

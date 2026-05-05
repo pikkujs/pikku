@@ -42,6 +42,21 @@ export interface AnalyzerOptions {
   projectId: string
   /** Services that can't run serverless — functions using them get target: 'server' */
   serverlessIncompatible?: string[]
+  /**
+   * When `true` (default), the analyzer synthesizes a per-workflow
+   * orchestrator queue + a per-step queue, plus the matching producer
+   * bindings, so providers whose workflow runtime fans out via queues
+   * have everything they need.
+   *
+   * Set to `false` for providers whose workflow runtime dispatches steps
+   * natively (e.g. Cloudflare's DO-backed `CloudflareWorkflowService`).
+   * In that case no `wf-orchestrator-*` / `wf-step-*` queues are added
+   * to `manifest.queues` and the orchestrator unit is emitted with no
+   * `{ type: 'queue' }` handler — only the HTTP routes.
+   *
+   * Queues created via explicit `wireQueue(...)` user code are unaffected.
+   */
+  workflowQueues?: boolean
 }
 
 export function analyzeDeployment(
@@ -49,6 +64,7 @@ export function analyzeDeployment(
   options: AnalyzerOptions
 ): DeploymentManifest {
   const serverlessIncompatible = new Set(options.serverlessIncompatible ?? [])
+  const workflowQueues = options.workflowQueues ?? true
   const units: DeploymentUnit[] = []
   const queues: QueueDefinition[] = []
   const scheduledTasks: ScheduledTaskDefinition[] = []
@@ -324,7 +340,8 @@ export function analyzeDeployment(
     httpMeta,
     units,
     workflows,
-    queues
+    queues,
+    workflowQueues
   )
 
   // ── Step 6: Ensure function units exist for gateway dependencies ───
@@ -433,7 +450,8 @@ function buildWorkflows(
   _httpMeta: HTTPWiringsMeta,
   units: DeploymentUnit[],
   workflows: WorkflowDefinition[],
-  queues: QueueDefinition[]
+  queues: QueueDefinition[],
+  workflowQueues: boolean
 ): void {
   for (const [_wfName, graph] of entries(graphMeta)) {
     const steps: WorkflowStepDefinition[] = []
@@ -465,7 +483,14 @@ function buildWorkflows(
     const orchUnitName = `wf-${toSafeKebab(graph.name)}`
     const orchServices: ServiceRequirement[] = [
       { capability: 'workflow-state', sourceServiceName: 'workflowService' },
-      { capability: 'queue', sourceServiceName: 'queueService' },
+      ...(workflowQueues
+        ? [
+            {
+              capability: 'queue',
+              sourceServiceName: 'queueService',
+            } as ServiceRequirement,
+          ]
+        : []),
     ]
 
     // Concrete routes for this workflow via catch-all
@@ -492,11 +517,14 @@ function buildWorkflows(
       },
     ]
 
-    // Orchestrator queue — the orchestrator consumes from this
+    // Orchestrator queue — the orchestrator consumes from this. Only emitted
+    // when the provider's workflow runtime needs queue dispatch.
     const orchQueueName = `wf-orchestrator-${toSafeKebab(graph.name)}`
     const orchHandlers: DeploymentHandler[] = [
       { type: 'fetch', routes: wfRoutes },
-      { type: 'queue', queueName: orchQueueName },
+      ...(workflowQueues
+        ? [{ type: 'queue', queueName: orchQueueName } as DeploymentHandler]
+        : []),
     ]
 
     units.push({
@@ -510,24 +538,26 @@ function buildWorkflows(
       tags: [],
     })
 
-    queues.push({
-      name: orchQueueName,
-      consumerUnit: orchUnitName,
-      consumerFunctionId: `pikkuWorkflowOrchestrator:${graph.name}`,
-    })
-
-    // Per-step queues — each step function worker consumes its own queue.
-    // The step units may not exist yet (created in step 6), so we just
-    // create queue definitions here. Step 7 wires them to units.
-    for (const step of steps) {
-      if (step.inline || !step.functionId) continue
-      const stepQueueName = `wf-step-${toSafeKebab(step.functionId)}`
-
+    if (workflowQueues) {
       queues.push({
-        name: stepQueueName,
-        consumerUnit: toSafeKebab(step.functionId),
-        consumerFunctionId: `pikkuWorkflowWorker:${step.functionId}`,
+        name: orchQueueName,
+        consumerUnit: orchUnitName,
+        consumerFunctionId: `pikkuWorkflowOrchestrator:${graph.name}`,
       })
+
+      // Per-step queues — each step function worker consumes its own queue.
+      // The step units may not exist yet (created in step 6), so we just
+      // create queue definitions here. Step 7 wires them to units.
+      for (const step of steps) {
+        if (step.inline || !step.functionId) continue
+        const stepQueueName = `wf-step-${toSafeKebab(step.functionId)}`
+
+        queues.push({
+          name: stepQueueName,
+          consumerUnit: toSafeKebab(step.functionId),
+          consumerFunctionId: `pikkuWorkflowWorker:${step.functionId}`,
+        })
+      }
     }
 
     workflows.push({

@@ -128,6 +128,14 @@ function getHandlerTypes(unit: DeploymentUnit): string[] {
 export class CloudflareProviderAdapter {
   readonly name = 'cloudflare'
   readonly deployDirName = 'cloudflare'
+  /**
+   * CF's workflow runtime is `CloudflareWorkflowService`, a Durable-Object-
+   * backed orchestrator that advances steps via direct stub.fetch() calls
+   * — no queue hop required. Opt out of synthesized step queues so the
+   * deploy manifest stays minimal and we don't provision idle CF queues
+   * just to satisfy the legacy queue-dispatch model.
+   */
+  readonly workflowQueues = false
 
   private readonly contributors: PlatformServiceContributor[]
 

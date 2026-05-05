@@ -95,9 +95,11 @@ export async function runBuildPipeline(options: {
   const providerDir = join(deployDir, provider.deployDirName)
 
   // Step 1: Analyze
+  const workflowQueues = provider.workflowQueues ?? true
   const manifest = analyzeDeployment(inspectorState, {
     projectId,
     serverlessIncompatible: options.serverlessIncompatible,
+    workflowQueues,
   })
 
   let bundled: BundleResult[] = []
@@ -193,6 +195,7 @@ export async function runBuildPipeline(options: {
         manifest: serverlessManifest,
         inspectorState,
         deployDir: unitsDir,
+        workflowQueues,
         onProgress: (unitName, status, error) => {
           if (status === 'start') {
             logger.info(`  Codegen: ${unitName}...`)
@@ -230,6 +233,7 @@ export async function runBuildPipeline(options: {
           inspectorState,
           deployDir: containerDir,
           resolveUnitDir: () => containerDir,
+          workflowQueues,
           onProgress: (unitName, status, error) => {
             if (status === 'start') logger.info(`  Codegen: ${unitName}...`)
             else if (status === 'done')
