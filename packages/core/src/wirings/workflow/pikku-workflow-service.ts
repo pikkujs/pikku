@@ -774,9 +774,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     runId: string,
     stepName: string,
     rpcName: string,
-    data: any
+    data: any,
+    stepOptions?: WorkflowStepOptions
   ): Promise<void> {
     const queueService = this.verifyQueueService()
+    const retries = stepOptions?.retries ?? 0
+    const retryDelay = stepOptions?.retryDelay
     await queueService.add(
       this.getStepWorkerQueueName(rpcName),
       JSON.parse(
@@ -786,7 +789,18 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           rpcName,
           data,
         })
-      )
+      ),
+      retries > 0 || retryDelay
+        ? {
+            attempts: retries + 1,
+            backoff:
+              typeof retryDelay === 'number'
+                ? { type: 'fixed', delay: retryDelay }
+                : retryDelay === 'exponential'
+                  ? 'exponential'
+                  : undefined,
+          }
+        : undefined
     )
   }
 

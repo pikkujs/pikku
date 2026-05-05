@@ -526,4 +526,102 @@ describe('graph-runner bugs', () => {
 
     delete metaState['testInlineMetaGraph']
   })
+
+  test('queueGraphNode forwards node retries to queue attempts and backoff', async () => {
+    const ws = new InMemoryWorkflowService()
+    const enqueued: Array<{ queueName: string; data: any; options: any }> = []
+
+    pikkuState(null, 'package', 'singletonServices', {
+      queueService: {
+        add: async (queueName: string, data: any, options: any) => {
+          enqueued.push({ queueName, data, options })
+        },
+      },
+    } as any)
+
+    const meta: WorkflowRuntimeMeta = {
+      name: 'testRetries',
+      pikkuFuncId: 'testRetries',
+      source: 'graph',
+      entryNodeIds: ['a'],
+      graphHash: 'retries-hash',
+      nodes: {
+        a: {
+          nodeId: 'a',
+          rpcName: 'doA',
+          retries: 3,
+          retryDelay: 250,
+        },
+        b: {
+          nodeId: 'b',
+          rpcName: 'doB',
+          retries: 2,
+          retryDelay: 'exponential',
+        },
+        c: {
+          nodeId: 'c',
+          rpcName: 'doC',
+        },
+      },
+    }
+
+    const { runId } = await runWorkflowGraph(
+      ws,
+      'testRetries',
+      {},
+      { rpcWithWire: async () => ({}) },
+      false,
+      undefined,
+      undefined,
+      meta
+    )
+
+    const aJob = enqueued.find((e) => e.data?.stepName === 'a')
+    assert.ok(aJob, 'node a should have been enqueued')
+    assert.equal(aJob!.options?.attempts, 4, 'retries=3 → attempts=4')
+    assert.deepEqual(aJob!.options?.backoff, { type: 'fixed', delay: 250 })
+
+    const stepStateA = await ws.getStepState(runId, 'a')
+    assert.equal(
+      stepStateA.retries,
+      3,
+      'insertStepState should record node retries'
+    )
+    assert.equal(stepStateA.retryDelay, 250)
+
+    enqueued.length = 0
+    await runWorkflowGraph(
+      ws,
+      'testRetries',
+      {},
+      { rpcWithWire: async () => ({}) },
+      false,
+      'b',
+      undefined,
+      meta
+    )
+    const bJob = enqueued.find((e) => e.data?.stepName === 'b')
+    assert.ok(bJob, 'node b should have been enqueued')
+    assert.equal(bJob!.options?.attempts, 3, 'retries=2 → attempts=3')
+    assert.equal(bJob!.options?.backoff, 'exponential')
+
+    enqueued.length = 0
+    await runWorkflowGraph(
+      ws,
+      'testRetries',
+      {},
+      { rpcWithWire: async () => ({}) },
+      false,
+      'c',
+      undefined,
+      meta
+    )
+    const cJob = enqueued.find((e) => e.data?.stepName === 'c')
+    assert.ok(cJob, 'node c should have been enqueued')
+    assert.equal(
+      cJob!.options,
+      undefined,
+      'no retries → no queue options (preserves prior queue defaults)'
+    )
+  })
 })

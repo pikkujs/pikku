@@ -357,6 +357,8 @@ function extractGraphFromNewFormat(
       input: {},
       next: undefined,
       onError: undefined,
+      retries: undefined,
+      retryDelay: undefined,
     }
   }
 
@@ -382,6 +384,8 @@ function extractGraphFromNewFormat(
           nodes[nodeId].next = nodeConfig.next
           nodes[nodeId].onError = nodeConfig.onError
           nodes[nodeId].input = nodeConfig.input
+          nodes[nodeId].retries = nodeConfig.retries
+          nodes[nodeId].retryDelay = nodeConfig.retryDelay
         }
       }
     }
@@ -400,10 +404,14 @@ function extractNodeConfigFromObject(
   next: any
   onError: any
   input: Record<string, any>
+  retries: number | undefined
+  retryDelay: string | number | undefined
 } {
   let next: any = undefined
   let onError: any = undefined
   let input: Record<string, any> = {}
+  let retries: number | undefined = undefined
+  let retryDelay: string | number | undefined = undefined
 
   for (const prop of obj.properties) {
     if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue
@@ -416,10 +424,20 @@ function extractNodeConfigFromObject(
       onError = extractNextConfig(prop.initializer, checker)
     } else if (propName === 'input') {
       input = extractInputMapping(prop.initializer, checker)
+    } else if (propName === 'retries') {
+      if (ts.isNumericLiteral(prop.initializer)) {
+        retries = Number(prop.initializer.text)
+      }
+    } else if (propName === 'retryDelay') {
+      if (ts.isNumericLiteral(prop.initializer)) {
+        retryDelay = Number(prop.initializer.text)
+      } else if (ts.isStringLiteral(prop.initializer)) {
+        retryDelay = prop.initializer.text
+      }
     }
   }
 
-  return { next, onError, input }
+  return { next, onError, input, retries, retryDelay }
 }
 
 /**
