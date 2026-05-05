@@ -94,9 +94,6 @@ export function generateInfraManifest(
   const needsDatabase = manifest.units.some((u) =>
     u.services.some((s) => s.capability === 'database')
   )
-  const needsWorkflowState = manifest.units.some((u) =>
-    u.services.some((s) => s.capability === 'workflow-state')
-  )
   const needsR2 = manifest.units.some((u) =>
     u.services.some((s) => s.capability === 'object-storage')
   )
@@ -104,13 +101,11 @@ export function generateInfraManifest(
     u.services.some((s) => s.capability === 'kv')
   )
 
-  // D1 databases — user data + workflow state (separate DBs)
+  // D1 database for user data. Workflow state is now backed by a per-run
+  // Durable Object (WORKFLOW_DO) — see the Workflow DO binding emit below.
   const d1: CloudflareInfraManifest['resources']['d1'] = []
   if (needsDatabase) {
     d1.push({ name: `${projectId}-db`, binding: 'DB' })
-  }
-  if (needsWorkflowState) {
-    d1.push({ name: `${projectId}-workflow-db`, binding: 'WORKFLOW_DB' })
   }
 
   const r2: CloudflareInfraManifest['resources']['r2'] = needsR2
@@ -159,12 +154,25 @@ export function generateInfraManifest(
   const durableObjects: CloudflareInfraManifest['resources']['durableObjects'] =
     []
 
+  // The workflow orchestrator unit hosts the WorkflowOrchestratorDO class.
+  // There is at most one per project. Consumers cross-script-bind to it by
+  // unit name (resolved to a stage-scoped CF script name by the deployer).
+  const workflowProducerUnit =
+    manifest.units.find((u) => u.role === 'workflow')?.name ?? null
+
   for (const unit of manifest.units) {
     if (unit.role === 'channel') {
       durableObjects.push({
         worker: unit.name,
         className: 'WebSocketHibernationServer',
         binding: 'WEBSOCKET_HIBERNATION_SERVER',
+      })
+    }
+    if (unit.role === 'workflow') {
+      durableObjects.push({
+        worker: unit.name,
+        className: 'WorkflowOrchestratorDO',
+        binding: 'WORKFLOW_DO',
       })
     }
   }
@@ -193,7 +201,21 @@ export function generateInfraManifest(
     const capabilities = new Set(unit.services.map((s) => s.capability))
 
     if (capabilities.has('database')) bindings.push('d1:DB')
-    if (capabilities.has('workflow-state')) bindings.push('d1:WORKFLOW_DB')
+    // Workflow-state binding: the producer (role==='workflow', hosts the DO
+    // class) self-binds; consumers (other units that destructure
+    // workflowService) cross-script-bind to the producer via @unit:<name>.
+    // Cross-script form prevents fabric's deployer from re-declaring the
+    // class on every consumer (CF 10070: "Cannot apply new-class migration
+    // to class … that is not exported by script").
+    if (capabilities.has('workflow-state')) {
+      if (unit.role === 'workflow') {
+        bindings.push('durable_object:WORKFLOW_DO@WorkflowOrchestratorDO')
+      } else if (workflowProducerUnit) {
+        bindings.push(
+          `durable_object:WORKFLOW_DO@WorkflowOrchestratorDO@unit:${workflowProducerUnit}`
+        )
+      }
+    }
     if (capabilities.has('object-storage')) bindings.push('r2:STORAGE')
     if (capabilities.has('kv')) bindings.push('kv:KV')
     if (capabilities.has('queue')) {
