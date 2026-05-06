@@ -1,4 +1,4 @@
-import { join, resolve } from 'path'
+import { resolve } from 'path'
 
 import { pikkuSessionlessFunc } from '#pikku'
 import chokidar, { type FSWatcher } from 'chokidar'
@@ -18,6 +18,7 @@ import { PikkuNodeHTTPServer } from '@pikku/node-http-server'
 import { WebSocketServer } from 'ws'
 import { InMemorySchedulerService } from '@pikku/schedule'
 import { resolveLocalDb, createKysely } from '../db/local-db.js'
+import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
 
 export const dev = pikkuSessionlessFunc<
   { port?: string; watch?: boolean; hmr?: boolean },
@@ -48,11 +49,10 @@ export const dev = pikkuSessionlessFunc<
     }
 
     const pikkuDir = resolve(config.rootDir, config.outDir)
-    const bootstrapPath = join(pikkuDir, 'pikku-bootstrap.gen.js')
-    await import(bootstrapPath)
+    await loadUserBootstrap(pikkuDir)
 
-    const configModule = await import(pikkuConfigFactory.file)
-    const servicesModule = await import(singletonServicesFactory.file)
+    const configModule = await loadUserModule(pikkuConfigFactory.file)
+    const servicesModule = await loadUserModule(singletonServicesFactory.file)
     const userCreateConfig = configModule[pikkuConfigFactory.variable]
     const userCreateSingletonServices =
       servicesModule[singletonServicesFactory.variable]
