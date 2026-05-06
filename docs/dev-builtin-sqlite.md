@@ -114,7 +114,7 @@ is what opts a project in. Defaults:
 - `file`: `.pikku/dev.db`
 - migrations dir: `./db/migrations` (not configurable in v1 — convention)
 - seed file: `./db/seed.sql` (not configurable)
-- migrations tracking table: `pikku_migrations` (not configurable)
+- migrations tracking table: `sql_migrations` (not configurable)
 - codegen output: `./db/schema.d.ts` (not configurable)
 - codegen camelCase: `true` (matches existing `CamelCasePlugin` usage)
 
@@ -158,20 +158,21 @@ explicit.
 ```
 1. open better-sqlite3 against localDb.file
 2. ensure tracking table:
-     CREATE TABLE IF NOT EXISTS pikku_migrations (
+     CREATE TABLE IF NOT EXISTS sql_migrations (
        name       TEXT PRIMARY KEY,
        hash       TEXT NOT NULL,         -- sha256 of the file contents at apply time
        applied_at TEXT NOT NULL DEFAULT (datetime('now'))
      )
 3. drift check (before applying anything):
-     for each row in pikku_migrations:
+     for each row in sql_migrations:
        compute sha256 of db/migrations/<row.name>
        if file missing or hash differs → fail with a DriftError naming the file
                                           and showing recorded vs current hash
 4. apply migrations:
      for each db/migrations/*.sql, sorted:
-       if not in pikku_migrations:
-         split on `;\n`, exec in tx, INSERT (name, hash) — single tx
+       if not in sql_migrations:
+         in a single tx: db.exec(rawBytes), INSERT (name, sha256(rawBytes))
+         (see "Migrator must not normalize SQL" below — no split/trim)
 5. run kysely-codegen against the now-migrated DB → write db/schema.d.ts
      skip if file content unchanged (avoid restart loops via chokidar)
 6. close
@@ -226,7 +227,7 @@ const raw  = fs.readFileSync(path)                        // Buffer, no transfor
 const hash = createHash('sha256').update(raw).digest('hex')
 db.transaction(() => {
   db.exec(raw.toString('utf8'))                           // same bytes, decoded once
-  db.prepare('INSERT INTO pikku_migrations (name, hash) VALUES (?, ?)').run(name, hash)
+  db.prepare('INSERT INTO sql_migrations (name, hash) VALUES (?, ?)').run(name, hash)
 })()
 ```
 
