@@ -276,34 +276,91 @@ previous Kysely alive — don't kill the whole dev server. Print a banner.
 This diverges from "fail fast on initial boot" intentionally: at boot we
 have nothing to fall back to, mid-watch we do.
 
+## Driver choice — `node:sqlite`, not `better-sqlite3`
+
+Pikku already requires Node ≥ 22, and Node 22.5+ ships SQLite as a built-in
+module (`import { DatabaseSync } from 'node:sqlite'`). We use it for both
+the migrator **and** the injected Kysely instance. Three reasons:
+
+- **Zero install / zero native-module dance.** `better-sqlite3` ships a
+  per-platform `.node` binary, can't be bundled by esbuild, and forces
+  consumers to deal with prebuilt-binary download failures. `node:sqlite`
+  is in the runtime — `@pikku/cli` becomes self-contained for SQLite dev.
+- **Bundleable.** `@pikku/cli` is npm-distributed; with `node:sqlite` the
+  CLI bundle has no native dependency. No `peerDependenciesMeta`, no
+  optional peer-dep error path.
+- **Same engine.** It's literally the same SQLite C library (same
+  semantics, same SQL dialect) — switching driver doesn't change behavior.
+
+### Cost: writing a small Kysely dialect
+
+Kysely's upstream `SqliteDialect` is shaped around better-sqlite3's API,
+so to drive Kysely with `node:sqlite` we ship our own dialect. The
+interface is small (`createDriver`, `createQueryCompiler`,
+`createIntrospector`, `createAdapter`) — query compiler/adapter/introspector
+can extend `SqliteQueryCompiler` / `SqliteAdapter` / `SqliteIntrospector`
+unchanged; only the driver and connection shim are new (~150 LOC).
+
+This lives at `packages/kysely-node-sqlite/` (new package, OSS). It's
+generally useful — anyone targeting CF Workers, Bun, or Node ≥ 22.5 who
+wants Kysely-on-SQLite without a native dep benefits.
+
+### Cost: kysely-codegen introspection
+
+`kysely-codegen` uses better-sqlite3 internally for SQLite introspection.
+Two options, picking (b):
+
+(a) Add better-sqlite3 back as a codegen-only optional dep — defeats
+half the point.
+
+(b) **Skip kysely-codegen for SQLite, introspect directly.**
+`PRAGMA table_info(<table>)` + `sqlite_master` is enough to emit a
+typed `DB` interface; ~150 LOC. Built into the cli at
+`packages/cli/src/functions/dev/codegen-sqlite.ts`. Bonus: no separate
+binary install for codegen, faster boot, and we control the type
+mapping (`INTEGER → number`, `TEXT → string`, nullable handling).
+
+The codegen output stays identical in shape to what kysely-codegen would
+produce — same `export interface DB { ... }`, same `Generated<T>`,
+`ColumnType<...>` semantics — so user code that imports `DB` doesn't care.
+
 ## Files / packages
 
 ### New
 
+- `packages/kysely-node-sqlite/` — Kysely dialect over `node:sqlite`.
+  Reuses upstream `SqliteQueryCompiler` / `SqliteAdapter` /
+  `SqliteIntrospector`; only the driver wraps `DatabaseSync`. Published
+  as `@pikku/kysely-node-sqlite`.
 - `packages/cli/src/functions/dev/local-db.ts` — orchestrates the boot
-  sequence above. Imports `better-sqlite3` and `kysely-codegen` lazily so
-  projects that don't opt in don't pay the install cost. (This is the
-  *one* allowed dynamic import — at the top of `local-db.ts`, gated on
-  config presence; the broader "no dynamic imports" rule still applies to
-  function bodies.)
+  sequence above. Imports `node:sqlite` statically (always available on
+  Node ≥ 22.5), and the in-house dialect/codegen modules.
 - `packages/cli/src/functions/dev/migrate-sqlite.ts` — pure migrator (no
-  Kysely dep), takes a `Database` + dir + table name.
-- `packages/cli/src/functions/dev/codegen-sqlite.ts` — wraps
-  `kysely-codegen` programmatic API against an open SQLite file.
+  Kysely dep), takes a `DatabaseSync` + dir + table name. Implements
+  drift check + hash-on-apply per the migrate routine above.
+- `packages/cli/src/functions/dev/codegen-sqlite.ts` — direct schema
+  introspection via `PRAGMA table_info` + `sqlite_master`; emits
+  `db/schema.d.ts` with `DB` interface. No kysely-codegen dependency.
+- `packages/cli/src/functions/commands/db-migrate.ts`,
+  `db-seed.ts`, `db-reset.ts` — thin command wrappers that share the
+  orchestrator.
 
 ### Changed
 
 - `packages/cli/src/functions/commands/dev.ts:130` — extend
   `inMemoryServices` with `kysely?` from `local-db.ts` when configured.
+- `packages/cli/src/cli.wiring.ts` (or wherever commands are registered) —
+  register the `db` command group with `migrate`, `seed`, `reset`.
 - `packages/cli/src/types/config.ts` (or wherever `PikkuConfig` lives) —
   add `dev.localDb` to the schema, validate via Zod.
 
-### Peer-dep / lazy install
+### Removed / not needed
 
-`better-sqlite3` and `kysely-codegen` become **optional peer deps** of
-`@pikku/cli`. If config opts in but they're not installed, error with a
-clear "yarn add -D better-sqlite3 kysely-codegen" message (not a generic
-import failure).
+- No `better-sqlite3` dependency anywhere in the new code path. (User
+  templates can still ship better-sqlite3 if they want; pikku just
+  doesn't depend on it.)
+- No `kysely-codegen` dependency.
+- No `peerDependenciesMeta` optional-peer dance.
 
 ## Template impact
 
