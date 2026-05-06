@@ -7,13 +7,9 @@ import { migrate, type MigrateResult } from './sql-migrator.js'
 import { generateSchemaTypes, type CodegenResult } from './sqlite-codegen.js'
 import { seed as runSeed, type SeedResult } from './seed.js'
 
-export interface LocalDbConfig {
-  driver?: 'sqlite'
-  file?: string
-}
+export type DevDbConfig = true | { file?: string }
 
 export interface ResolvedLocalDb {
-  driver: 'sqlite'
   dbFile: string
   migrationsDir: string
   seedFile: string
@@ -22,17 +18,17 @@ export interface ResolvedLocalDb {
 }
 
 /**
- * Resolve a LocalDbConfig into absolute paths against the project root.
+ * Resolve a DevDbConfig into absolute paths against the project root.
  * All paths apart from `dbFile` are conventional and not configurable.
  */
 export function resolveLocalDb(
-  config: LocalDbConfig | undefined,
+  config: DevDbConfig | undefined,
   rootDir: string
 ): ResolvedLocalDb | null {
   if (!config) return null
+  const file = config === true ? undefined : config.file
   return {
-    driver: config.driver ?? 'sqlite',
-    dbFile: resolveAgainst(rootDir, config.file ?? '.pikku/dev.db'),
+    dbFile: resolveAgainst(rootDir, file ?? '.pikku/dev.db'),
     migrationsDir: resolveAgainst(rootDir, 'db/migrations'),
     seedFile: resolveAgainst(rootDir, 'db/seed.sql'),
     schemaFile: resolveAgainst(rootDir, 'db/schema.d.ts'),
@@ -92,7 +88,7 @@ export function reset(resolved: ResolvedLocalDb, rootDir: string): void {
   const rel = relative(rootDir, resolved.dbFile)
   if (rel.startsWith('..') || isAbsolute(rel)) {
     throw new Error(
-      `pikku db reset refused: resolved DB file (${resolved.dbFile}) is outside the project root (${rootDir}). Override dev.localDb.file or move the file inside the project.`
+      `pikku db reset refused: resolved DB file (${resolved.dbFile}) is outside the project root (${rootDir}). Override dev.db.file or move the file inside the project.`
     )
   }
   if (existsSync(resolved.dbFile)) {

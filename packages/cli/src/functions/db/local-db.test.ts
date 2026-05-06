@@ -51,7 +51,7 @@ test('resolveLocalDb returns null when config is undefined', () => {
 })
 
 test('migrateAndCodegen applies pending migrations and writes schema.d.ts', () => {
-  const resolved = resolveLocalDb({ driver: 'sqlite' }, root)!
+  const resolved = resolveLocalDb(true, root)!
   const { migrate, codegen } = migrateAndCodegen(resolved)
 
   assert.deepEqual(migrate.applied, ['0001-init.sql'])
@@ -80,7 +80,7 @@ test('migrateAndCodegen applies pending migrations and writes schema.d.ts', () =
 })
 
 test('migrateAndCodegen is a no-op on second run', () => {
-  const resolved = resolveLocalDb({ driver: 'sqlite' }, root)!
+  const resolved = resolveLocalDb(true, root)!
   migrateAndCodegen(resolved)
   const second = migrateAndCodegen(resolved)
   assert.deepEqual(second.migrate.applied, [])
@@ -93,7 +93,7 @@ test('migrateAndCodegen is a no-op on second run', () => {
 })
 
 test('migrateAndCodegen throws MigrationDriftError when applied file changes', () => {
-  const resolved = resolveLocalDb({ driver: 'sqlite' }, root)!
+  const resolved = resolveLocalDb(true, root)!
   migrateAndCodegen(resolved)
 
   const migPath = join(root, 'db', 'migrations', '0001-init.sql')
@@ -114,7 +114,7 @@ test('migrateAndCodegen throws MigrationDriftError when applied file changes', (
 })
 
 test('seed applies db/seed.sql once migrate has run', () => {
-  const resolved = resolveLocalDb({ driver: 'sqlite' }, root)!
+  const resolved = resolveLocalDb(true, root)!
   migrateAndCodegen(resolved)
 
   const result = runSeed(resolved)
@@ -133,7 +133,7 @@ test('seed applies db/seed.sql once migrate has run', () => {
 })
 
 test('reset wipes the dev DB so a follow-up migrate replays from scratch', () => {
-  const resolved = resolveLocalDb({ driver: 'sqlite' }, root)!
+  const resolved = resolveLocalDb(true, root)!
   migrateAndCodegen(resolved)
   runSeed(resolved)
 
@@ -155,10 +155,7 @@ test('reset wipes the dev DB so a follow-up migrate replays from scratch', () =>
 
 test('reset refuses when resolved DB lives outside the project root', () => {
   const outside = mkdtempSync(join(tmpdir(), 'pikku-db-outside-'))
-  const resolved = resolveLocalDb(
-    { driver: 'sqlite', file: join(outside, 'evil.db') },
-    root
-  )!
+  const resolved = resolveLocalDb({ file: join(outside, 'evil.db') }, root)!
   assert.throws(() => runReset(resolved, root), /outside the project root/)
   rmSync(outside, { recursive: true, force: true })
 })

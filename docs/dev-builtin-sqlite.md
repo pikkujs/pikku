@@ -49,7 +49,7 @@ We extend that bag with an optional `kysely` entry, gated by config.
 ```
                      pikku dev
                          │
-              read pikku.config.json → dev.localDb
+              read pikku.config.json → dev.db
                          │
             ┌────────────┴────────────┐
             │                         │
@@ -102,15 +102,14 @@ Why mirror Rails:
 ```jsonc
 {
   "dev": {
-    "localDb": {
-      "driver": "sqlite",
-      "file": ".pikku/dev.db"
-    }
+    "db": true              // enable with all defaults
+    // — or —
+    // "db": { "file": ".pikku/dev.db" }
   }
 }
 ```
 
-All fields optional with sensible defaults; the *presence* of `dev.localDb`
+All fields optional with sensible defaults; the *presence* of `dev.db`
 is what opts a project in. Defaults:
 - `file`: `.pikku/dev.db`
 - migrations dir: `./db/migrations` (not configurable in v1 — convention)
@@ -137,13 +136,13 @@ users to remember a second command after `migrate` was the original sin
 the kanban template's `dbmigrate` script suffers from.
 
 `pikku db *` are thin wrappers over the same orchestrator. All three:
-- read `dev.localDb` from config (error if missing)
+- read `dev.db` from config (error if missing)
 - exit nonzero on any failure
 - print human-readable progress (which migration applied, codegen path written)
 
 `pikku db reset` is the only command that touches `dev.db` destructively.
 It refuses to run if `NODE_ENV === 'production'` or if the resolved
-`localDb.file` lives outside the project root (defensive — a misconfigured
+`dev.db.file` lives outside the project root (defensive — a misconfigured
 absolute path shouldn't nuke an arbitrary file).
 
 `pikku dev` deliberately does **not** run migrate or seed. The dev loop
@@ -158,7 +157,7 @@ want fresh data.
 ### `migrate` routine (used by `pikku db migrate` and `pikku db reset`)
 
 ```
-1. open better-sqlite3 against localDb.file
+1. open better-sqlite3 against dev.db.file
 2. ensure tracking table:
      CREATE TABLE IF NOT EXISTS sql_migrations (
        name       TEXT PRIMARY KEY,
@@ -249,13 +248,13 @@ executed SQL. The invariant is "hashed bytes == executed bytes," not
 In `dev.ts`, between schema compile and HTTP server start:
 
 ```
-1. parse config.dev.localDb (if present)
+1. parse config.dev.db (if present)
 2. construct Kysely<DB> against the existing dev.db (no migrate, no codegen)
 3. inMemoryServices.kysely = the Kysely instance
 4. continue existing flow (compileAllSchemas, logRoutes, server.listen)
 ```
 
-If `dev.localDb` is absent, kysely is simply not injected.
+If `dev.db` is absent, kysely is simply not injected.
 
 Migrate, seed, and reset never run from `pikku dev` — they're explicit
 `pikku db *` commands. Re-applying migrations against a live Kysely the
@@ -337,7 +336,7 @@ produce — same `export interface DB { ... }`, same `Generated<T>`,
 - `packages/cli/src/cli.wiring.ts` (or wherever commands are registered) —
   register the `db` command group with `migrate`, `seed`, `reset`.
 - `packages/cli/src/types/config.ts` (or wherever `PikkuConfig` lives) —
-  add `dev.localDb` to the schema, validate via Zod.
+  add `dev.db` to the schema, validate via Zod.
 
 ### Removed / not needed
 
@@ -375,7 +374,7 @@ Net deletion: ~80 LOC + 1 script + 1 generated-by-hand types file.
 
 | Scenario | Behavior |
 |---|---|
-| `dev.localDb` absent | No-op. `inMemoryServices.kysely` undefined. Existing prod path unchanged. |
+| `dev.db` absent | No-op. `inMemoryServices.kysely` undefined. Existing prod path unchanged. |
 | Migration SQL invalid | `pikku db migrate` exits nonzero, prints offending file + statement. |
 | Applied migration edited on disk (drift) | `pikku db migrate` fails with `PKU-DB-DRIFT` naming the file, recorded hash, current hash. Resolve via `pikku db reset` or revert the edit. |
 | Applied migration deleted from disk | Same drift error — treated as "file missing" with the recorded hash for context. |
@@ -391,13 +390,13 @@ Net deletion: ~80 LOC + 1 script + 1 generated-by-hand types file.
 - Aligns with the CF prod target (D1 is SQLite-flavored), so dev dialect
   drift is minimal compared to "Postgres locally → D1 in prod".
 - For users on Postgres in prod: they keep their existing services wiring
-  (don't opt into `dev.localDb`), and pay the manual migrate dance like today.
+  (don't opt into `dev.db`), and pay the manual migrate dance like today.
   A future iteration can add `driver: 'postgres'` with a docker-compose
   spin-up, but that's out of scope for v1.
 
 ## Implementation steps
 
-1. **Config schema** — add `dev.localDb` to `PikkuConfig` Zod schema; add
+1. **Config schema** — add `dev.db` to `PikkuConfig` Zod schema; add
    tests for parse/defaults.
 2. **Migrator** — extract `bin/db-migrate.ts` logic into
    `packages/cli/src/functions/dev/migrate-sqlite.ts` (no `process.exit`,
@@ -412,7 +411,7 @@ Net deletion: ~80 LOC + 1 script + 1 generated-by-hand types file.
    `peerDependenciesMeta` marking them optional; clear error message in
    the orchestrator when missing.
 7. **Verifier coverage** — TDD per house rules: write a verifier that
-   spins up `pikku dev` against a temp project with a `dev.localDb` config,
+   spins up `pikku dev` against a temp project with a `dev.db` config,
    asserts that migrations applied + types file written + boot succeeded.
    Must fail before step 4, pass after.
 8. **Migrate kanban-board-template** — delete `bin/db-migrate.ts`,
@@ -431,12 +430,12 @@ Net deletion: ~80 LOC + 1 script + 1 generated-by-hand types file.
 - **Should seed run on first boot only, or every boot?** Resolved: seed
   is explicit (`pikku db seed` / `pikku db reset`), never automatic.
   `pikku dev` opens the DB read/write but never seeds.
-- **Naming.** `dev.localDb` vs `dev.db` vs top-level `database`? Going
-  with `dev.localDb` because it scopes clearly to dev mode and leaves room
+- **Naming.** `dev.db` vs `dev.db` vs top-level `database`? Going
+  with `dev.db` because it scopes clearly to dev mode and leaves room
   for future `dev.localQueue`, `dev.localRedis`, etc. (an in-memory queue
   is already injected — same pattern.)
 - **Migration format.** SQL files only for v1. Future: a JS/TS migration
   format (up/down) — but that re-opens the "are we writing a migrator"
   question. Skip for now.
-- **Multiple dialects in one project.** Out of scope. One `dev.localDb`
+- **Multiple dialects in one project.** Out of scope. One `dev.db`
   per project.

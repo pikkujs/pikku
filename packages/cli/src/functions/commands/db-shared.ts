@@ -1,9 +1,9 @@
 import { join, resolve } from 'path'
-import type { LocalDbConfig } from '../db/local-db.js'
+import type { DevDbConfig } from '../db/local-db.js'
 
 export interface UserConfigShape {
   dev?: {
-    localDb?: LocalDbConfig
+    db?: DevDbConfig
   }
   [key: string]: unknown
 }

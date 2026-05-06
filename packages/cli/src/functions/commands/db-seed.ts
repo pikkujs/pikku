@@ -12,12 +12,12 @@ export const dbSeed = pikkuSessionlessFunc<{}, void>({
     })
     if (!userConfig) return
 
-    const resolved = resolveLocalDb(userConfig.dev?.localDb, config.rootDir)
+    const resolved = resolveLocalDb(userConfig.dev?.db, config.rootDir)
     if (!resolved) {
       logger.error(
-        'pikku db seed: dev.localDb is not configured in your pikku config.'
+        'pikku db seed: dev.db is not configured in your pikku config.'
       )
-      throw new Error('dev.localDb not configured')
+      throw new Error('dev.db not configured')
     }
 
     const result = seed(resolved)
