@@ -211,6 +211,37 @@ The check runs in `pikku db migrate` AND on every `pikku dev` boot —
 catching drift before the dev server starts is the whole point. There's
 no `--allow-drift` flag; reset is the escape hatch.
 
+### Migrator must not normalize SQL
+
+For drift detection to mean anything, the bytes we **hash** and the bytes
+we **execute** have to be identical. That rules out the split-trim-filter
+loop the legacy `bin/db-migrate.ts` uses today — once you trim or drop
+empty lines, the hash no longer reflects the SQL that actually ran, and
+"the file changed" stops being a reliable signal.
+
+Required shape:
+
+```ts
+const raw  = fs.readFileSync(path)                        // Buffer, no transform
+const hash = createHash('sha256').update(raw).digest('hex')
+db.transaction(() => {
+  db.exec(raw.toString('utf8'))                           // same bytes, decoded once
+  db.prepare('INSERT INTO pikku_migrations (name, hash) VALUES (?, ?)').run(name, hash)
+})()
+```
+
+`better-sqlite3`'s `db.exec()` accepts multi-statement strings, so the
+old split-on-`;\n` loop isn't necessary in the first place. One read,
+one hash, one exec, one insert — all inside a single transaction so a
+mid-statement failure rolls back both the schema change and the tracking
+row.
+
+If a future SQL dialect needs statement-by-statement execution, the
+migrator must hash the **post-split, pre-execution** array (or each
+statement individually) — never the raw file with trim applied to the
+executed SQL. The invariant is "hashed bytes == executed bytes," not
+"hashed file == executed split."
+
 ### `pikku dev` boot sequence
 
 In `dev.ts`, between schema compile and HTTP server start:
