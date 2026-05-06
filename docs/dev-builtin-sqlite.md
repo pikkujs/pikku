@@ -1,8 +1,8 @@
 # `pikku dev` built-in SQLite + migrate + codegen
 
-Make `pikku dev` provide a Kysely-on-SQLite service out of the box, run user
-SQL migrations on start, and regenerate `db.types.ts` against the migrated
-schema — Rails-style "schema just works" for Pikku dev.
+Make `pikku dev` provide a Kysely-on-SQLite service out of the box, with
+Rails-style `pikku db migrate|seed|reset` commands the user runs explicitly
+to apply migrations and regenerate `db/schema.d.ts`.
 
 ## Motivation
 
@@ -20,12 +20,13 @@ Goals:
 - Delete the `createLocalKysely` fallback and the `better-sqlite3`
   `require` from user services.
 - Ship Rails-style `pikku db` subcommands: `migrate`, `seed`, `reset`.
-- `pikku dev` runs `migrate` (only) on boot → `db/schema.d.ts` regenerates →
-  user code runs against a typed Kysely. One command for the common loop.
-- Seed is explicit — `pikku db seed` or `pikku db reset` — never automatic
-  on every dev boot.
-- Fail fast: if migrations or codegen fail, `pikku dev` exits nonzero
-  before user code can observe a half-migrated DB.
+- `pikku dev` opens the existing dev DB and injects a typed Kysely into
+  `inMemoryServices.kysely`. It does **not** migrate, codegen, or seed —
+  those are explicit `pikku db *` commands the user runs when they change
+  migrations or want fresh data.
+- Migrate, seed, and reset are explicit. Re-applying migrations under a
+  running dev server isn't safe (Kysely is already holding a connection,
+  user code may be mid-query), so we don't try.
 
 ## Non-goals
 
@@ -126,7 +127,7 @@ Override paths only land if a user actually asks for them. Convention first.
 pikku db migrate     apply pending migrations, then regenerate db/schema.d.ts
 pikku db seed        exec db/seed.sql (no migrate, no reset)
 pikku db reset       delete dev.db, re-migrate (incl. codegen), re-seed
-pikku dev            runs `db migrate` (migrate + codegen) once at boot, then starts the server
+pikku dev            opens the existing dev.db, injects Kysely, starts the server (no migrate)
 ```
 
 `db migrate` is *one* atomic operation: schema changes and the generated
@@ -135,8 +136,7 @@ command — codegen without a known schema state is meaningless, and forcing
 users to remember a second command after `migrate` was the original sin
 the kanban template's `dbmigrate` script suffers from.
 
-`pikku db *` are thin wrappers over the same orchestrator `pikku dev` uses.
-All three:
+`pikku db *` are thin wrappers over the same orchestrator. All three:
 - read `dev.localDb` from config (error if missing)
 - exit nonzero on any failure
 - print human-readable progress (which migration applied, codegen path written)
@@ -146,14 +146,16 @@ It refuses to run if `NODE_ENV === 'production'` or if the resolved
 `localDb.file` lives outside the project root (defensive — a misconfigured
 absolute path shouldn't nuke an arbitrary file).
 
-`pikku dev` deliberately does **not** run seed. The dev loop is
-"edit code → reload"; surprise data resets in that loop are a footgun.
-Seeding is a deliberate "I want fresh demo data now" action, hence
-explicit.
+`pikku dev` deliberately does **not** run migrate or seed. The dev loop
+is "edit code → reload"; re-applying migrations against a Kysely instance
+the user code is already holding open is unsafe, and surprise data resets
+are a footgun. Migrate and seed are deliberate actions — `pikku db migrate`
+when you add a migration file, `pikku db seed` / `pikku db reset` when you
+want fresh data.
 
 ## Boot sequence
 
-### Shared `migrate` routine (used by `pikku db migrate` and `pikku dev`)
+### `migrate` routine (used by `pikku db migrate` and `pikku db reset`)
 
 ```
 1. open better-sqlite3 against localDb.file
@@ -208,9 +210,8 @@ If this edit was intentional, run `pikku db reset` to rebuild the dev
 database from scratch. Production migrations are immutable.
 ```
 
-The check runs in `pikku db migrate` AND on every `pikku dev` boot —
-catching drift before the dev server starts is the whole point. There's
-no `--allow-drift` flag; reset is the escape hatch.
+The check runs in `pikku db migrate` (and therefore `pikku db reset`).
+There's no `--allow-drift` flag; reset is the escape hatch.
 
 ### Migrator must not normalize SQL
 
@@ -249,32 +250,16 @@ In `dev.ts`, between schema compile and HTTP server start:
 
 ```
 1. parse config.dev.localDb (if present)
-2. run the migrate routine above (steps 1–4)
-3. construct Kysely<DB> with SqliteDialect + CamelCasePlugin
-4. inMemoryServices.kysely = the Kysely instance
-5. continue existing flow (compileAllSchemas, logRoutes, server.listen)
+2. construct Kysely<DB> against the existing dev.db (no migrate, no codegen)
+3. inMemoryServices.kysely = the Kysely instance
+4. continue existing flow (compileAllSchemas, logRoutes, server.listen)
 ```
 
-Each step throws on failure → `pikku dev` exits nonzero. No half-state.
+If `dev.localDb` is absent, kysely is simply not injected.
 
-Seed never runs from `pikku dev`. To populate data, the user runs
-`pikku db seed` (or `pikku db reset` for a clean slate) explicitly.
-
-### Watch integration
-
-Existing chokidar watcher (around `dev.ts` watch logic) gets one new glob:
-- `db/migrations/*.sql` — re-run the migrate routine + reconstruct
-  Kysely + HMR the singleton services. New migrations apply; types
-  regenerate; user code reloads.
-- `db/seed.sql` is **not** watched — seed is explicit (`pikku db seed`),
-  and watching it would silently mutate dev data on file save.
-- `db/schema.d.ts` is **excluded** from the watcher (it's an output, not
-  an input — otherwise codegen writes trigger a reload that triggers codegen).
-
-If a migration is corrupt mid-edit and step 3 fails, log and keep the
-previous Kysely alive — don't kill the whole dev server. Print a banner.
-This diverges from "fail fast on initial boot" intentionally: at boot we
-have nothing to fall back to, mid-watch we do.
+Migrate, seed, and reset never run from `pikku dev` — they're explicit
+`pikku db *` commands. Re-applying migrations against a live Kysely the
+user code is already holding open is unsafe, so we don't try.
 
 ## Driver choice — `node:sqlite`, not `better-sqlite3`
 
@@ -391,15 +376,12 @@ Net deletion: ~80 LOC + 1 script + 1 generated-by-hand types file.
 | Scenario | Behavior |
 |---|---|
 | `dev.localDb` absent | No-op. `inMemoryServices.kysely` undefined. Existing prod path unchanged. |
-| `better-sqlite3` not installed | Boot fails with install hint. |
-| Migration SQL invalid | Boot fails, exits nonzero, prints offending file + statement. |
-| Applied migration edited on disk (drift) | Boot fails with `PKU-DB-DRIFT` naming the file, recorded hash, current hash. Resolve via `pikku db reset` or revert the edit. |
+| Migration SQL invalid | `pikku db migrate` exits nonzero, prints offending file + statement. |
+| Applied migration edited on disk (drift) | `pikku db migrate` fails with `PKU-DB-DRIFT` naming the file, recorded hash, current hash. Resolve via `pikku db reset` or revert the edit. |
 | Applied migration deleted from disk | Same drift error — treated as "file missing" with the recorded hash for context. |
-| `db/seed.sql` invalid | Boot fails (treat seed as fatal — dev should land on a known state). |
-| Codegen fails (e.g. kysely-codegen crash on weird schema) | Boot fails, prints stderr from codegen. |
-| Migration or seed mid-watch fails | Keep prior Kysely, print banner, don't crash dev server. |
-| Codegen output identical to existing | Skip write (no chokidar restart loop). |
-| Multiple `pikku dev` against same `.pikku/dev.db` | Better-sqlite3 file lock surfaces; doc it. Default `.pikku/dev.db` lives under outDir, which is per-project. |
+| `db/seed.sql` invalid | `pikku db seed` / `db reset` exits nonzero, transaction rolls back. |
+| Codegen output identical to existing | Skip write (avoid pointless filesystem churn). |
+| Multiple `pikku dev` against same `.pikku/dev.db` | SQLite file lock surfaces; doc it. Default `.pikku/dev.db` lives under outDir, which is per-project. |
 
 ## Why SQLite specifically
 
@@ -446,10 +428,9 @@ Net deletion: ~80 LOC + 1 script + 1 generated-by-hand types file.
 - **Should `db/schema.d.ts` be checked into git?** Defer to template
   author; pikku doesn't enforce. Default the kanban template to
   *checked in* so PR diffs are reviewable.
-- **Should seed run on first boot only, or every boot?** Going with every
-  boot — users own idempotency via `INSERT OR IGNORE` / upserts, and
-  "every boot" is predictable. A `seed: 'once'` flag could come later if
-  there's demand.
+- **Should seed run on first boot only, or every boot?** Resolved: seed
+  is explicit (`pikku db seed` / `pikku db reset`), never automatic.
+  `pikku dev` opens the DB read/write but never seeds.
 - **Naming.** `dev.localDb` vs `dev.db` vs top-level `database`? Going
   with `dev.localDb` because it scopes clearly to dev mode and leaves room
   for future `dev.localQueue`, `dev.localRedis`, etc. (an in-memory queue

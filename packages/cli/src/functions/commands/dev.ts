@@ -17,6 +17,7 @@ import { pikkuWebsocketHandler } from '@pikku/ws'
 import { PikkuNodeHTTPServer } from '@pikku/node-http-server'
 import { WebSocketServer } from 'ws'
 import { InMemorySchedulerService } from '@pikku/schedule'
+import { resolveLocalDb, createKysely } from '../db/local-db.js'
 
 export const dev = pikkuSessionlessFunc<
   { port?: string; watch?: boolean; hmr?: boolean },
@@ -58,6 +59,12 @@ export const dev = pikkuSessionlessFunc<
 
     const userConfig = await userCreateConfig()
 
+    const resolvedLocalDb = resolveLocalDb(
+      userConfig.dev?.localDb,
+      config.rootDir
+    )
+    const kysely = resolvedLocalDb ? createKysely(resolvedLocalDb) : undefined
+
     const schedulerService = new InMemorySchedulerService()
     const inMemoryServices = {
       logger: new ConsoleLogger(),
@@ -67,6 +74,7 @@ export const dev = pikkuSessionlessFunc<
       triggerService: new InMemoryTriggerService(),
       aiRunStateService: new InMemoryAIRunStateService(),
       eventHub: new LocalEventHubService(),
+      ...(kysely ? { kysely } : {}),
     }
 
     const singletonServices = await userCreateSingletonServices(

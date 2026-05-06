@@ -12,6 +12,9 @@ import { bootstrap } from './functions/commands/bootstrap.js'
 import { watch } from './functions/commands/watch.js'
 import { consoleCommand } from './functions/commands/console.js'
 import { dev } from './functions/commands/dev.js'
+import { dbMigrate } from './functions/commands/db-migrate.js'
+import { dbSeed } from './functions/commands/db-seed.js'
+import { dbReset } from './functions/commands/db-reset.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuVersionsCheck } from './functions/commands/versions-check.js'
 import { pikkuVersionsUpdate } from './functions/commands/versions-update.js'
@@ -199,6 +202,24 @@ wireCLI({
       func: pikkuSchemas,
       description: 'Generate JSON schemas for function input/output types',
     }),
+    db: {
+      description: 'Local development database commands',
+      subcommands: {
+        migrate: pikkuCLICommand({
+          func: dbMigrate,
+          description:
+            'Apply pending SQL migrations and regenerate db/schema.d.ts',
+        }),
+        seed: pikkuCLICommand({
+          func: dbSeed,
+          description: 'Apply db/seed.sql to the dev database',
+        }),
+        reset: pikkuCLICommand({
+          func: dbReset,
+          description: 'Wipe and recreate the dev database (migrate + seed)',
+        }),
+      },
+    },
     fetch: pikkuCLICommand({
       func: pikkuFetch,
       description: 'Generate type-safe HTTP fetch client',
