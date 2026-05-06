@@ -1,0 +1,27 @@
+{
+  "name": "@pikku/kysely-node-sqlite",
+  "version": "0.12.0",
+  "author": "yasser.fadl@gmail.com",
+  "license": "MIT",
+  "module": "dist/src/index.js",
+  "main": "dist/src/index.js",
+  "type": "module",
+  "scripts": {
+    "tsc": "tsc",
+    "ncu": "npx npm-check-updates",
+    "build": "tsc -b",
+    "prepublishOnly": "yarn build"
+  },
+  "engines": {
+    "node": ">=22.10"
+  },
+  "dependencies": {
+    "@pikku/kysely": "^0.12.0",
+    "@pikku/kysely-sqlite": "^0.12.0",
+    "kysely": "^0.28.12"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "typescript": "^5.9"
+  }
+}

@@ -5307,6 +5307,7 @@ __metadata:
     "@pikku/core": "npm:^0.12.19"
     "@pikku/deploy-cloudflare": "npm:^0.12.0"
     "@pikku/inspector": "npm:^0.12.11"
+    "@pikku/kysely-node-sqlite": "npm:^0.12.0"
     "@pikku/node-http-server": "npm:^0.12.0"
     "@pikku/openapi-parser": "npm:^0.12.10"
     "@pikku/schedule": "npm:^0.12.0"
@@ -5638,6 +5639,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/kysely-node-sqlite@npm:^0.12.0, @pikku/kysely-node-sqlite@workspace:packages/services/kysely-node-sqlite":
+  version: 0.0.0-use.local
+  resolution: "@pikku/kysely-node-sqlite@workspace:packages/services/kysely-node-sqlite"
+  dependencies:
+    "@pikku/kysely": "npm:^0.12.0"
+    "@pikku/kysely-sqlite": "npm:^0.12.0"
+    "@types/node": "npm:^22"
+    kysely: "npm:^0.28.12"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/kysely-postgres@npm:^0.12.6, @pikku/kysely-postgres@workspace:*, @pikku/kysely-postgres@workspace:packages/services/kysely-postgres":
   version: 0.0.0-use.local
   resolution: "@pikku/kysely-postgres@workspace:packages/services/kysely-postgres"
@@ -5651,7 +5664,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/kysely-sqlite@workspace:*, @pikku/kysely-sqlite@workspace:packages/services/kysely-sqlite":
+"@pikku/kysely-sqlite@npm:^0.12.0, @pikku/kysely-sqlite@workspace:*, @pikku/kysely-sqlite@workspace:packages/services/kysely-sqlite":
   version: 0.0.0-use.local
   resolution: "@pikku/kysely-sqlite@workspace:packages/services/kysely-sqlite"
   dependencies:
