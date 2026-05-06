@@ -157,16 +157,59 @@ explicit.
 
 ```
 1. open better-sqlite3 against localDb.file
-2. apply migrations:
-     CREATE TABLE IF NOT EXISTS pikku_migrations (name TEXT PRIMARY KEY, applied_at TEXT)
+2. ensure tracking table:
+     CREATE TABLE IF NOT EXISTS pikku_migrations (
+       name       TEXT PRIMARY KEY,
+       hash       TEXT NOT NULL,         -- sha256 of the file contents at apply time
+       applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+     )
+3. drift check (before applying anything):
+     for each row in pikku_migrations:
+       compute sha256 of db/migrations/<row.name>
+       if file missing or hash differs → fail with a DriftError naming the file
+                                          and showing recorded vs current hash
+4. apply migrations:
      for each db/migrations/*.sql, sorted:
-       if not in pikku_migrations: split on `;\n`, exec in tx, insert row
-3. run kysely-codegen against the now-migrated DB → write db/schema.d.ts
+       if not in pikku_migrations:
+         split on `;\n`, exec in tx, INSERT (name, hash) — single tx
+5. run kysely-codegen against the now-migrated DB → write db/schema.d.ts
      skip if file content unchanged (avoid restart loops via chokidar)
-4. close
+6. close
 ```
 
 This is `pikku db migrate`. It does **not** seed.
+
+### Drift detection
+
+Once a migration is applied, its file content is locked. Editing
+`db/migrations/0001-init.sql` after it's been applied to a dev DB is
+almost always a mistake — Rails caught a generation of developers
+out on this. We hash on apply, re-hash on every run, and bail if they
+disagree.
+
+Algorithm: `sha256(fs.readFileSync(path))` — raw bytes, not normalized.
+Whitespace changes count as drift; that's intentional. If the user
+genuinely meant to edit history (e.g. squashing a half-baked migration
+they never shipped), they re-baseline with `pikku db reset` (which wipes
+the DB and the tracking table, then replays from scratch).
+
+The drift error names the offending file and shows recorded vs current
+hash + the diff hint:
+
+```
+[PKU-DB-DRIFT] db/migrations/0002-add-projects.sql
+
+Migration content has changed since it was applied.
+  recorded:  sha256:7a1c…  applied 2026-05-04T10:12:33Z
+  on disk:   sha256:b39e…
+
+If this edit was intentional, run `pikku db reset` to rebuild the dev
+database from scratch. Production migrations are immutable.
+```
+
+The check runs in `pikku db migrate` AND on every `pikku dev` boot —
+catching drift before the dev server starts is the whole point. There's
+no `--allow-drift` flag; reset is the escape hatch.
 
 ### `pikku dev` boot sequence
 
@@ -261,6 +304,8 @@ Net deletion: ~80 LOC + 1 script + 1 generated-by-hand types file.
 | `dev.localDb` absent | No-op. `inMemoryServices.kysely` undefined. Existing prod path unchanged. |
 | `better-sqlite3` not installed | Boot fails with install hint. |
 | Migration SQL invalid | Boot fails, exits nonzero, prints offending file + statement. |
+| Applied migration edited on disk (drift) | Boot fails with `PKU-DB-DRIFT` naming the file, recorded hash, current hash. Resolve via `pikku db reset` or revert the edit. |
+| Applied migration deleted from disk | Same drift error — treated as "file missing" with the recorded hash for context. |
 | `db/seed.sql` invalid | Boot fails (treat seed as fatal — dev should land on a known state). |
 | Codegen fails (e.g. kysely-codegen crash on weird schema) | Boot fails, prints stderr from codegen. |
 | Migration or seed mid-watch fails | Keep prior Kysely, print banner, don't crash dev server. |
