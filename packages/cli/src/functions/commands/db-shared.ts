@@ -1,4 +1,6 @@
+import { existsSync } from 'fs'
 import { join, resolve } from 'path'
+import { tsImport } from 'tsx/esm/api'
 import type { DevDbConfig } from '../db/local-db.js'
 
 export interface UserConfigShape {
@@ -37,10 +39,12 @@ export async function loadUserConfigForDb(
   }
 
   const pikkuDir = resolve(config.rootDir, config.outDir)
-  const bootstrapPath = join(pikkuDir, 'pikku-bootstrap.gen.js')
-  await import(bootstrapPath)
+  const bootstrapTs = join(pikkuDir, 'pikku-bootstrap.gen.ts')
+  const bootstrapJs = join(pikkuDir, 'pikku-bootstrap.gen.js')
+  const bootstrapPath = existsSync(bootstrapTs) ? bootstrapTs : bootstrapJs
+  await tsImport(bootstrapPath, import.meta.url)
 
-  const configModule = await import(pikkuConfigFactory.file)
+  const configModule = await tsImport(pikkuConfigFactory.file, import.meta.url)
   const userCreateConfig = configModule[pikkuConfigFactory.variable]
   return (await userCreateConfig()) as UserConfigShape
 }
