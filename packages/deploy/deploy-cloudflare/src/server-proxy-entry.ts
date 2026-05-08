@@ -38,8 +38,8 @@ export function generateServerProxyBundle(): string {
 import { DurableObject } from 'cloudflare:workers'
 
 const CONTAINER_PORT = ${CONTAINER_PORT}
-const PORT_READY_MAX_TRIES = 25
-const PORT_READY_INTERVAL_MS = 200
+const PORT_READY_MAX_TRIES = 90
+const PORT_READY_INTERVAL_MS = 1000
 
 export class ${PIKKU_CONTAINER_CLASS} extends DurableObject {
   async fetch(request) {
@@ -55,21 +55,21 @@ export class ${PIKKU_CONTAINER_CLASS} extends DurableObject {
     const inUrl = new URL(request.url)
     const fwdUrl = 'http://container' + inUrl.pathname + inUrl.search
 
-    // DIAGNOSTIC PASS — surface every failure mode so we can see what
-    // start() / port.fetch() actually throw on cold boot. Strip back to a
-    // proper retry loop once we know the shapes.
     let startErr = null
-    let fetchErr = null
-    if (!container.running) {
-      try { await container.start() } catch (e) { startErr = e }
-    }
-    let lastErr
+    let lastFetchErr = null
     for (let attempt = 0; attempt < PORT_READY_MAX_TRIES; attempt++) {
+      if (!container.running) {
+        try {
+          await container.start()
+          startErr = null
+        } catch (e) {
+          startErr = e
+        }
+      }
       try {
         return await port.fetch(new Request(fwdUrl, request.clone()))
       } catch (err) {
-        lastErr = err
-        if (!fetchErr) fetchErr = err
+        lastFetchErr = err
         await new Promise((r) => setTimeout(r, PORT_READY_INTERVAL_MS))
       }
     }
@@ -78,9 +78,9 @@ export class ${PIKKU_CONTAINER_CLASS} extends DurableObject {
         msg: 'container did not become ready',
         running: container.running,
         startErr: startErr ? (startErr.message || String(startErr)) : null,
-        firstFetchErr: fetchErr ? (fetchErr.message || String(fetchErr)) : null,
-        lastFetchErr: lastErr ? (lastErr.message || String(lastErr)) : null,
+        lastFetchErr: lastFetchErr ? (lastFetchErr.message || String(lastFetchErr)) : null,
         attempts: PORT_READY_MAX_TRIES,
+        totalWaitMs: PORT_READY_MAX_TRIES * PORT_READY_INTERVAL_MS,
       }),
       { status: 502, headers: { 'content-type': 'application/json' } },
     )
