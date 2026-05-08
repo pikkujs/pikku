@@ -27,6 +27,7 @@ export class KyselyChannelStore extends ChannelStore {
       )
       .addColumn('opening_data', 'text', (col) => col.notNull().defaultTo('{}'))
       .addColumn('pikku_user_id', 'text')
+      .addColumn('session', 'text')
       .addColumn('last_wire', 'timestamp', (col) =>
         col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
       )
@@ -104,6 +105,32 @@ export class KyselyChannelStore extends ChannelStore {
       openingData: parseJson(row.openingData) ?? {},
       pikkuUserId: row.pikkuUserId ?? undefined,
     }
+  }
+
+  public async setSession(channelId: string, session: unknown): Promise<void> {
+    await this.db
+      .updateTable('channels')
+      .set({ session: JSON.stringify(session ?? null) })
+      .where('channelId', '=', channelId)
+      .execute()
+  }
+
+  public async getSession(channelId: string): Promise<unknown | undefined> {
+    const row = await this.db
+      .selectFrom('channels')
+      .select(['session'])
+      .where('channelId', '=', channelId)
+      .executeTakeFirst()
+    if (!row || !row.session) return undefined
+    return parseJson(row.session) ?? undefined
+  }
+
+  public async clearSession(channelId: string): Promise<void> {
+    await this.db
+      .updateTable('channels')
+      .set({ session: null })
+      .where('channelId', '=', channelId)
+      .execute()
   }
 
   public async close(): Promise<void> {}

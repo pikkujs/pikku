@@ -23,4 +23,22 @@ export abstract class ChannelStore<
   ):
     | Promise<TypedChannel & { pikkuUserId?: string }>
     | (TypedChannel & { pikkuUserId?: string })
+
+  /**
+   * Persist a session payload scoped to a single channel (keyed by channelId).
+   *
+   * This is intentionally separate from `SessionStore` (which keys by
+   * `pikkuUserId`). Channels have their own identity and may be
+   * unauthenticated, so user-keyed storage is the wrong scope. Implementations
+   * should store the payload alongside the channel record itself, so it is
+   * cleared when the channel is removed.
+   */
+  public abstract setSession(
+    channelId: string,
+    session: unknown
+  ): Promise<void> | void
+  public abstract getSession(
+    channelId: string
+  ): Promise<unknown | undefined> | unknown | undefined
+  public abstract clearSession(channelId: string): Promise<void> | void
 }

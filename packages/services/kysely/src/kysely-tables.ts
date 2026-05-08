@@ -11,6 +11,8 @@ export interface ChannelsTable {
   createdAt: Generated<Date>
   openingData: string
   pikkuUserId: string | null
+  /** JSON-serialized channel-scoped session payload, keyed by channelId. */
+  session: string | null
   lastWire: Generated<Date>
 }
 

@@ -102,6 +102,36 @@ export function defineServiceTests(config: ServiceTestConfig): void {
       test('removeChannels with empty array is no-op', async () => {
         await store.removeChannels([])
       })
+
+      test('session round-trip — set / get / clear', async () => {
+        await store.addChannel({
+          channelId: 'ch-session',
+          channelName: 'test-channel',
+        })
+
+        // initially undefined
+        const empty = await store.getSession('ch-session')
+        assert.equal(empty, undefined)
+
+        // set + get
+        const payload = { userId: 'u-7', meta: { foo: 1 } }
+        await store.setSession('ch-session', payload)
+        const got = await store.getSession('ch-session')
+        assert.deepEqual(got, payload)
+
+        // overwrite
+        const next = { userId: 'u-8' }
+        await store.setSession('ch-session', next)
+        const got2 = await store.getSession('ch-session')
+        assert.deepEqual(got2, next)
+
+        // clear
+        await store.clearSession('ch-session')
+        const after = await store.getSession('ch-session')
+        assert.equal(after, undefined)
+
+        await store.removeChannels(['ch-session'])
+      })
     })
   }
 

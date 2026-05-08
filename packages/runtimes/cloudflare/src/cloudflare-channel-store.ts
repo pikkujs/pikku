@@ -2,6 +2,13 @@ import type { DurableObjectState, WebSocket } from '@cloudflare/workers-types'
 import type { Channel } from '@pikku/core/channel'
 import { ChannelStore } from '@pikku/core/channel'
 
+interface ChannelAttachment {
+  channelName: string
+  openingData?: unknown
+  pikkuUserId?: string | null
+  session?: unknown
+}
+
 export class CloudflareWebsocketStore extends ChannelStore {
   constructor(private ctx: DurableObjectState) {
     super()
@@ -28,24 +35,41 @@ export class CloudflareWebsocketStore extends ChannelStore {
     pikkuUserId: string | null
   ): Promise<void> {
     const websocket = this.getWebsocket(channelId)
-    const { openingData, channelName } = websocket.deserializeAttachment()
-    websocket.serializeAttachment({
-      openingData,
-      channelName,
-      pikkuUserId,
-    })
+    const attachment = this.readAttachment(websocket)
+    websocket.serializeAttachment({ ...attachment, pikkuUserId })
   }
 
   public async getChannel(channelId: string) {
     const websocket = this.getWebsocket(channelId)
     const { channelName, openingData, pikkuUserId } =
-      websocket.deserializeAttachment()
+      this.readAttachment(websocket)
     return {
       channelId,
       channelName,
       openingData,
       pikkuUserId: pikkuUserId ?? undefined,
     }
+  }
+
+  public async setSession(channelId: string, session: unknown): Promise<void> {
+    const websocket = this.getWebsocket(channelId)
+    const attachment = this.readAttachment(websocket)
+    websocket.serializeAttachment({ ...attachment, session })
+  }
+
+  public async getSession(channelId: string): Promise<unknown | undefined> {
+    const websocket = this.getWebsocket(channelId)
+    return this.readAttachment(websocket).session
+  }
+
+  public async clearSession(channelId: string): Promise<void> {
+    const websocket = this.getWebsocket(channelId)
+    const attachment = this.readAttachment(websocket)
+    websocket.serializeAttachment({ ...attachment, session: undefined })
+  }
+
+  private readAttachment(websocket: WebSocket): ChannelAttachment {
+    return (websocket.deserializeAttachment() ?? {}) as ChannelAttachment
   }
 
   private getWebsocket(channelId: string) {

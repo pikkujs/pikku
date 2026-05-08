@@ -1,4 +1,8 @@
-import type { PikkuWire, WireServices } from '../../../types/core.types.js'
+import type {
+  CoreUserSession,
+  PikkuWire,
+  WireServices,
+} from '../../../types/core.types.js'
 import { closeWireServices } from '../../../utils.js'
 import { processMessageHandlers } from '../channel-handler.js'
 import { openChannel } from '../channel-runner.js'
@@ -12,7 +16,7 @@ import { createHTTPWire } from '../../http/http-runner.js'
 import type { ChannelStore } from '../channel-store.js'
 import { handleHTTPError } from '../../../handle-error.js'
 import {
-  PikkuSessionService,
+  PikkuChannelSessionService,
   createMiddlewareSessionWireProps,
 } from '../../../services/user-session-service.js'
 import {
@@ -24,8 +28,9 @@ import { PikkuFetchHTTPRequest } from '../../http/pikku-fetch-http-request.js'
 import type { PikkuHTTP } from '../../http/http.types.js'
 import { runChannelLifecycleWithMiddleware } from '../channel-common.js'
 
-export interface RunServerlessChannelParams<ChannelData>
-  extends RunChannelParams<ChannelData> {
+export interface RunServerlessChannelParams<
+  ChannelData,
+> extends RunChannelParams<ChannelData> {
   channelStore: ChannelStore
   channelHandlerFactory: PikkuChannelHandlerFactory
   channelObject?: unknown
@@ -89,7 +94,10 @@ export const runChannelConnect = async ({
     http = createHTTPWire(new PikkuFetchHTTPRequest(request), response)
   }
 
-  const userSession = new PikkuSessionService(singletonServices.sessionStore)
+  // Channel-scoped session: writes route through `channelStore` by `channelId`,
+  // not through `sessionStore` by `pikkuUserId`. See PikkuChannelSessionService
+  // for the rationale.
+  const userSession = new PikkuChannelSessionService(channelStore, channelId)
 
   const { channelConfig, openingData, meta } = await openChannel({
     channelId,
@@ -194,13 +202,16 @@ export const runChannelDisconnect = async ({
     channelName,
   })
 
-  const userSession = new PikkuSessionService(singletonServices.sessionStore)
+  const userSession = new PikkuChannelSessionService<CoreUserSession>(
+    channelStore,
+    channelId
+  )
   if (pikkuUserId) {
     userSession.setPikkuUserId(pikkuUserId)
-    const session = await singletonServices.sessionStore?.get(pikkuUserId)
-    if (session) {
-      userSession.setInitial(session)
-    }
+  }
+  const channelSession = await channelStore.getSession(channelId)
+  if (channelSession) {
+    userSession.setInitial(channelSession as CoreUserSession)
   }
 
   const wire: PikkuWire = {
@@ -261,13 +272,16 @@ export const runChannelMessage = async (
     channelName,
   })
 
-  const userSession = new PikkuSessionService(singletonServices.sessionStore)
+  const userSession = new PikkuChannelSessionService<CoreUserSession>(
+    channelStore,
+    channelId
+  )
   if (pikkuUserId) {
     userSession.setPikkuUserId(pikkuUserId)
-    const session = await singletonServices.sessionStore?.get(pikkuUserId)
-    if (session) {
-      userSession.setInitial(session)
-    }
+  }
+  const channelSession = await channelStore.getSession(channelId)
+  if (channelSession) {
+    userSession.setInitial(channelSession as CoreUserSession)
   }
 
   const wire: PikkuWire = {
