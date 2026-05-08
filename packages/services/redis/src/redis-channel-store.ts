@@ -125,6 +125,28 @@ export class RedisChannelStore extends ChannelStore {
     }
   }
 
+  public async setSession(channelId: string, session: unknown): Promise<void> {
+    const key = this.channelKey(channelId)
+    await this.redis.hset(key, 'session', JSON.stringify(session ?? null))
+  }
+
+  public async getSession(channelId: string): Promise<unknown | undefined> {
+    const key = this.channelKey(channelId)
+    const raw = await this.redis.hget(key, 'session')
+    if (!raw) return undefined
+    try {
+      const parsed = JSON.parse(raw)
+      return parsed ?? undefined
+    } catch {
+      return undefined
+    }
+  }
+
+  public async clearSession(channelId: string): Promise<void> {
+    const key = this.channelKey(channelId)
+    await this.redis.hdel(key, 'session')
+  }
+
   /**
    * Close the Redis connection if owned by this store
    */

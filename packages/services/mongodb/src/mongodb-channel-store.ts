@@ -8,6 +8,7 @@ interface ChannelDoc {
   createdAt: Date
   openingData: any
   pikkuUserId: string | null
+  session?: unknown
   lastWire: Date
 }
 
@@ -86,6 +87,25 @@ export class MongoDBChannelStore extends ChannelStore {
       openingData: row.openingData ?? {},
       pikkuUserId: row.pikkuUserId ?? undefined,
     }
+  }
+
+  public async setSession(channelId: string, session: unknown): Promise<void> {
+    await this.channels.updateOne({ _id: channelId }, { $set: { session } })
+  }
+
+  public async getSession(channelId: string): Promise<unknown | undefined> {
+    const row = await this.channels.findOne(
+      { _id: channelId },
+      { projection: { session: 1 } }
+    )
+    return row?.session ?? undefined
+  }
+
+  public async clearSession(channelId: string): Promise<void> {
+    await this.channels.updateOne(
+      { _id: channelId },
+      { $unset: { session: '' } }
+    )
   }
 
   public async close(): Promise<void> {}
