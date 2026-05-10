@@ -4,6 +4,7 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeNextJsBackendWrapper as serializeNextBackendWrapper } from './serialize-nextjs-backend-wrapper.js'
+import { serializeNextJsBackendWorkerRPCWrapper as serializeNextBackendWorkerRPCWrapper } from './serialize-nextjs-backend-worker-rpc-wrapper.js'
 import { serializeNextJsHTTPWrapper as serializeNextHTTPWrapper } from './serialize-nextjs-http-wrapper.js'
 
 export const pikkuNext = pikkuSessionlessFunc<void, void>({
@@ -38,7 +39,37 @@ export const pikkuNext = pikkuSessionlessFunc<void, void>({
       )
     }
 
-    if (nextBackendFile) {
+    const nextBackendTransport =
+      config.clientFiles?.nextBackendTransport ?? 'local'
+    const nextBackendFetcherImport =
+      config.clientFiles?.nextBackendFetcherImport
+
+    if (nextBackendFile && nextBackendTransport === 'worker-rpc') {
+      if (!nextBackendFetcherImport) {
+        throw new Error(
+          "clientFiles.nextBackendFetcherImport is required when nextBackendTransport === 'worker-rpc'"
+        )
+      }
+
+      const routesMapDeclarationPath = getFileImportRelativePath(
+        nextBackendFile,
+        httpMapDeclarationFile,
+        packageMappings
+      )
+      const rpcMapDeclarationPath = getFileImportRelativePath(
+        nextBackendFile,
+        rpcMapDeclarationFile,
+        packageMappings
+      )
+
+      const content = serializeNextBackendWorkerRPCWrapper(
+        routesMapDeclarationPath,
+        rpcMapDeclarationPath,
+        nextBackendFetcherImport,
+        config.globalHTTPPrefix || ''
+      )
+      await writeFileInDir(logger, nextBackendFile, content)
+    } else if (nextBackendFile) {
       checkRequiredTypes(visitState.filesAndMethodsErrors, {
         config: true,
         singletonServicesFactory: true,
