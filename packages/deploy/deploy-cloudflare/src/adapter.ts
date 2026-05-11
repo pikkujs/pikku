@@ -257,6 +257,7 @@ export class CloudflareProviderAdapter {
             `import { ${[
               ...(platform.needsAI
                 ? [
+                    'createD1Kysely',
                     'CloudflareAIStorageService',
                     'CloudflareAgentRunService',
                     'CloudflareAIRunStateService',
@@ -313,6 +314,7 @@ export class CloudflareProviderAdapter {
             `import { ${[
               ...(platform.needsAI
                 ? [
+                    'createD1Kysely',
                     'CloudflareAIStorageService',
                     'CloudflareAgentRunService',
                     'CloudflareAIRunStateService',
@@ -394,6 +396,7 @@ export class CloudflareProviderAdapter {
             `import { ${[
               ...(platform.needsAI
                 ? [
+                    'createD1Kysely',
                     'CloudflareAIStorageService',
                     'CloudflareAgentRunService',
                     'CloudflareAIRunStateService',
@@ -516,11 +519,12 @@ export class CloudflareProviderAdapter {
       lines.push(
         `  if (env.DB) {`,
         `    const db = env.DB as D1Database`,
-        `    const aiStorage = new CloudflareAIStorageService(db)`,
+        `    const kysely = createD1Kysely(db)`,
+        `    const aiStorage = new CloudflareAIStorageService(kysely)`,
         `    await aiStorage.init()`,
         `    services.aiStorage = aiStorage`,
-        `    services.agentRunService = new CloudflareAgentRunService(db)`,
-        `    const aiRunState = new CloudflareAIRunStateService(db)`,
+        `    services.agentRunService = new CloudflareAgentRunService(kysely)`,
+        `    const aiRunState = new CloudflareAIRunStateService(kysely)`,
         `    await aiRunState.init()`,
         `    services.aiRunState = aiRunState`,
         `  }`
@@ -561,11 +565,12 @@ export class CloudflareProviderAdapter {
       lines.push(
         `  if (env.DB) {`,
         `    const db = env.DB as D1Database`,
-        `    const aiStorage = new CloudflareAIStorageService(db)`,
+        `    const kysely = createD1Kysely(db)`,
+        `    const aiStorage = new CloudflareAIStorageService(kysely)`,
         `    await aiStorage.init()`,
         `    services.aiStorage = aiStorage`,
-        `    services.agentRunService = new CloudflareAgentRunService(db)`,
-        `    const aiRunState = new CloudflareAIRunStateService(db)`,
+        `    services.agentRunService = new CloudflareAgentRunService(kysely)`,
+        `    const aiRunState = new CloudflareAIRunStateService(kysely)`,
         `    await aiRunState.init()`,
         `    services.aiRunState = aiRunState`,
         `  }`

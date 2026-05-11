@@ -1,7 +1,10 @@
 /**
- * Cloudflare D1-backed services.
+ * Cloudflare-named Kysely-backed services.
  *
- * Uses kysely-d1 dialect to run existing Kysely SQL against D1's SQLite.
+ * These wrappers no longer assume D1 — they take a pre-built
+ * `Kysely<KyselyPikkuDB>` so the caller picks the dialect (D1, libsql,
+ * Postgres, …). `createD1Kysely` is still exported as a convenience for
+ * users who want the D1-backed instance.
  */
 
 import { CamelCasePlugin, Kysely } from 'kysely'
@@ -18,6 +21,8 @@ import {
 
 /**
  * Creates a Kysely instance backed by a Cloudflare D1 binding.
+ * Convenience for callers that want a D1-backed kysely — services below
+ * accept any `Kysely<KyselyPikkuDB>`, so libsql/Postgres works too.
  */
 export function createD1Kysely(d1Database: D1Database): Kysely<KyselyPikkuDB> {
   return new Kysely<KyselyPikkuDB>({
@@ -27,41 +32,41 @@ export function createD1Kysely(d1Database: D1Database): Kysely<KyselyPikkuDB> {
 }
 
 /**
- * Workflow service backed by Cloudflare D1.
+ * Workflow service backed by a Kysely instance.
  * Auto-creates tables on first init().
  */
 export class CloudflareWorkflowService extends KyselyWorkflowService {
-  constructor(d1Database: D1Database) {
-    super(createD1Kysely(d1Database))
+  constructor(kysely: Kysely<KyselyPikkuDB>) {
+    super(kysely)
   }
 }
 
 /**
- * AI storage service (threads, messages, tool calls) backed by Cloudflare D1.
+ * AI storage service (threads, messages, tool calls).
  * Auto-creates tables on first init().
  */
 export class CloudflareAIStorageService extends KyselyAIStorageService {
-  constructor(d1Database: D1Database) {
-    super(createD1Kysely(d1Database))
+  constructor(kysely: Kysely<KyselyPikkuDB>) {
+    super(kysely)
   }
 }
 
 /**
- * Agent run service (run listing, status tracking) backed by Cloudflare D1.
+ * Agent run service (run listing, status tracking).
  * Auto-creates tables on first init().
  */
 export class CloudflareAgentRunService extends KyselyAgentRunService {
-  constructor(d1Database: D1Database) {
-    super(createD1Kysely(d1Database))
+  constructor(kysely: Kysely<KyselyPikkuDB>) {
+    super(kysely)
   }
 }
 
 /**
- * AI run state service (run lifecycle, approvals) backed by Cloudflare D1.
+ * AI run state service (run lifecycle, approvals).
  * Auto-creates tables on first init().
  */
 export class CloudflareAIRunStateService extends KyselyAIRunStateService {
-  constructor(d1Database: D1Database) {
-    super(createD1Kysely(d1Database))
+  constructor(kysely: Kysely<KyselyPikkuDB>) {
+    super(kysely)
   }
 }
