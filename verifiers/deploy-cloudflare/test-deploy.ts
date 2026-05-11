@@ -257,14 +257,10 @@ check(
     }
   }
 )
-check('infra.json: has queues (todo-reminders + workflow)', () => {
+check('infra.json: has queues (todo-reminders + workflow-dispatch)', () => {
   const resources = infra!.resources as Record<string, unknown[]>
-  if ((resources.queues ?? []).length < 3)
-    throw new Error(`Expected >= 3 queues`)
-})
-check('infra.json: has D1 database', () => {
-  const resources = infra!.resources as Record<string, unknown[]>
-  if ((resources.d1 ?? []).length < 1) throw new Error('Missing D1')
+  if ((resources.queues ?? []).length < 2)
+    throw new Error(`Expected >= 2 queues`)
 })
 check('infra.json: has cron triggers', () => {
   const resources = infra!.resources as Record<string, unknown[]>
@@ -329,10 +325,11 @@ check('greet entry: no CloudflareWorkflowService', () => {
   if (entry.includes('CloudflareWorkflowService'))
     throw new Error('Should not import workflow')
 })
-check('orchestrator entry uses @pikku/cloudflare/d1', () => {
+check('orchestrator entry uses @pikku/cloudflare/workflow-do', () => {
   const wf = unitDirs.filter((d) => d.startsWith('wf-'))
   const entry = readText(join(getUnitPath(wf[0]), 'entry.ts'))
-  if (!entry.includes('@pikku/cloudflare/d1')) throw new Error('Missing /d1')
+  if (!entry.includes('@pikku/cloudflare/workflow-do'))
+    throw new Error('Missing /workflow-do')
 })
 
 // --- Services ---
@@ -350,23 +347,28 @@ check('no unit exceeds 5MB', () => {
       throw new Error(`${u}: ${(s / 1024 / 1024).toFixed(1)}MB`)
   }
 })
-check('every unit has entry.ts', () => {
+check('every worker unit has entry.ts', () => {
   for (const u of unitDirs) {
+    if (u === SERVER_UNIT_NAME || u === 'pikku-server-proxy') continue
     if (!existsSync(join(getUnitPath(u), 'entry.ts')))
       throw new Error(`${u} missing entry.ts`)
   }
 })
 
-// --- No server container ---
+// --- Server container ---
 check('server container bundle is emitted', () => {
   if (!existsSync(join(CONTAINER_DIR, 'bundle.js'))) {
     throw new Error('server bundle missing')
   }
 })
-check('no Dockerfiles', () => {
+check('container has Dockerfile, workers do not', () => {
+  if (!existsSync(join(CONTAINER_DIR, 'Dockerfile'))) {
+    throw new Error('pikku-server-container missing Dockerfile')
+  }
   for (const u of unitDirs) {
+    if (u === SERVER_UNIT_NAME) continue
     if (existsSync(join(getUnitPath(u), 'Dockerfile')))
-      throw new Error(`${u} has Dockerfile`)
+      throw new Error(`worker unit ${u} should not have a Dockerfile`)
   }
 })
 

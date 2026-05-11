@@ -1,7 +1,7 @@
 import {
   wireQueueWorker,
-  addMiddleware,
-  addPermission,
+  addTagMiddleware,
+  addTagPermission,
   pikkuPermission,
 } from '#pikku'
 import { wireMiddleware } from '../middleware/wire.js'
@@ -10,11 +10,11 @@ import { tagMiddleware } from '../middleware/tag.js'
 
 // Tag middleware for queue
 export const queueTagMiddleware = () =>
-  addMiddleware('queue', [tagMiddleware('queue')])
+  addTagMiddleware('queue', [tagMiddleware('queue')])
 
 // Tag permissions for queue
 export const queueTagPermissions = () =>
-  addPermission('queue', {
+  addTagPermission('queue', {
     queuePermission: pikkuPermission(async ({ logger }, _data, { session }) => {
       logger.info({
         type: 'tag-permission',

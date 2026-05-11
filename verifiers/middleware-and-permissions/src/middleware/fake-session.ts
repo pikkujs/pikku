@@ -1,4 +1,4 @@
-import { pikkuMiddleware, addMiddleware } from '#pikku'
+import { pikkuMiddleware, addTagMiddleware } from '#pikku'
 
 /**
  * Session tag middleware that sets a fake session for testing.
@@ -25,4 +25,4 @@ export const fakeSessionMiddleware = pikkuMiddleware(
  * Tag middleware factory for session - applies to all wirings with 'session' tag
  */
 export const sessionTagMiddleware = () =>
-  addMiddleware('session', [fakeSessionMiddleware])
+  addTagMiddleware('session', [fakeSessionMiddleware])

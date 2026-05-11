@@ -7,8 +7,8 @@ import { noOpFunction } from './no-op.function.js'
 import {
   addHTTPMiddleware,
   addHTTPPermission,
-  addMiddleware,
-  addPermission,
+  addTagMiddleware,
+  addTagPermission,
   pikkuMiddleware,
   pikkuPermission,
   wireHTTP,
@@ -27,14 +27,14 @@ import { permissionTagFactory, readTagPermission } from '../permissions/tag.js'
 
 // Global tag middleware - Recommended: Use factory pattern for tree-shaking
 export const apiTagMiddleware = () =>
-  addMiddleware('api', [tagMiddleware('api')])
+  addTagMiddleware('api', [tagMiddleware('api')])
 
 // Global tag permissions - Recommended: Use factory pattern for tree-shaking
 export const apiTagPermissions = () =>
-  addPermission('api', { read: readTagPermission })
+  addTagPermission('api', { read: readTagPermission })
 
 export const adminTagPermissions = () =>
-  addPermission('admin', { admin: permissionTagFactory('admin') })
+  addTagPermission('admin', { admin: permissionTagFactory('admin') })
 
 // Session tag middleware - applies to all wirings with 'session' tag
 export { sessionTagMiddleware } from '../middleware/fake-session.js'

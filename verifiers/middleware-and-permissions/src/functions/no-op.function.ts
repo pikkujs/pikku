@@ -1,11 +1,11 @@
-import { addMiddleware, pikkuVoidFunc } from '#pikku'
+import { addTagMiddleware, pikkuVoidFunc } from '#pikku'
 import { functionMiddleware } from '../middleware/function.js'
 import { tagMiddleware } from '../middleware/tag.js'
 import { functionPermission } from '../permissions/function.js'
 
 // Tag middleware
 export const functionTagMiddleware = () =>
-  addMiddleware('function', [tagMiddleware('function')])
+  addTagMiddleware('function', [tagMiddleware('function')])
 
 export const noOpFunction = pikkuVoidFunc({
   func: async ({ logger }) => {
