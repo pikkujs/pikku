@@ -7,6 +7,8 @@ export { SQLiteKyselyWorkflowRunService } from './sqlite-kysely-workflow-run-ser
 export { SQLiteKyselyChannelStore } from './sqlite-kysely-channel-store.js'
 export { SQLiteKyselyEventHubStore } from './sqlite-kysely-eventhub-store.js'
 export { SQLiteKyselySecretService } from './sqlite-kysely-secret-service.js'
+export { LibsqlWebDialect } from './libsql-web-dialect.js'
+export type { LibsqlWebDialectConfig } from './libsql-web-dialect.js'
 
 export type { KyselyPikkuDB } from '@pikku/kysely'
 export type { KyselySecretServiceConfig } from '@pikku/kysely'
