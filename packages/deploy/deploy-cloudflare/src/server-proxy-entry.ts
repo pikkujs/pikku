@@ -20,7 +20,7 @@
 const SERVER_PROXY_UNIT_NAME = 'pikku-server-proxy'
 const PIKKU_CONTAINER_BINDING = 'PIKKU_CONTAINER'
 const PIKKU_CONTAINER_CLASS = 'PikkuContainer'
-const CONTAINER_PORT = 4003
+const CONTAINER_PORT = 8080
 
 export const serverProxyConstants = {
   unitName: SERVER_PROXY_UNIT_NAME,
