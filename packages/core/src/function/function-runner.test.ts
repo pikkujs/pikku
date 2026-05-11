@@ -1,7 +1,7 @@
 import { describe, test, beforeEach } from 'node:test'
 import * as assert from 'node:assert'
 import { addFunction, runPikkuFunc } from './function-runner.js'
-import { addMiddleware, addPermission } from '../index.js'
+import { addTagMiddleware, addTagPermission } from '../index.js'
 import { resetPikkuState, pikkuState } from '../pikku-state.js'
 import type { CoreServices, CorePikkuMiddleware } from '../types/core.types.js'
 import type { CorePermissionGroup } from './functions.types.js'
@@ -53,8 +53,8 @@ describe('runPikkuFunc - Integration Tests', () => {
       }
     }
 
-    addMiddleware('wiringTag', [createMiddleware('wiringTag')])
-    addMiddleware('funcTag', [createMiddleware('funcTag')])
+    addTagMiddleware('wiringTag', [createMiddleware('wiringTag')])
+    addTagMiddleware('funcTag', [createMiddleware('funcTag')])
 
     // Register function with middleware and tags
     addTestFunction('testFunc', {
@@ -105,8 +105,8 @@ describe('runPikkuFunc - Integration Tests', () => {
       return true
     }
 
-    addPermission('wiringTag', [wiringTagPermission])
-    addPermission('funcTag', [funcTagPermission])
+    addTagPermission('wiringTag', [wiringTagPermission])
+    addTagPermission('funcTag', [funcTagPermission])
 
     // Setup direct permissions
     const wiringPermissions: CorePermissionGroup = {
@@ -159,7 +159,7 @@ describe('runPikkuFunc - Integration Tests', () => {
   test('should throw specific error for wiring tag permission failures', async () => {
     const failingWiringTagPermission = async () => false
 
-    addPermission('wiringTag', [failingWiringTagPermission])
+    addTagPermission('wiringTag', [failingWiringTagPermission])
 
     addTestFunction('testFunc', {
       func: async () => 'success',
@@ -207,7 +207,7 @@ describe('runPikkuFunc - Integration Tests', () => {
   test('should throw specific error for function tag permission failures', async () => {
     const failingFuncTagPermission = async () => false
 
-    addPermission('funcTag', [failingFuncTagPermission])
+    addTagPermission('funcTag', [failingFuncTagPermission])
 
     addTestFunction('testFunc', {
       func: async () => 'success',
@@ -265,7 +265,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     }
 
     // Add same middleware to tag and directly
-    addMiddleware('testTag', [duplicatedMiddleware])
+    addTagMiddleware('testTag', [duplicatedMiddleware])
 
     addTestFunction('testFunc', {
       func: async () => 'success',
@@ -309,7 +309,7 @@ describe('runPikkuFunc - Integration Tests', () => {
       ],
     }
 
-    addPermission('mixedTag', arrayPermission)
+    addTagPermission('mixedTag', arrayPermission)
 
     addTestFunction('testFunc', {
       func: async () => {

@@ -2,7 +2,7 @@ import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert'
 import {
   combineMiddleware,
-  addMiddleware,
+  addTagMiddleware,
   runMiddleware,
 } from './middleware-runner.js'
 import { resetPikkuState } from './pikku-state.js'
@@ -115,8 +115,8 @@ describe('combineMiddleware', () => {
       await next()
     }
 
-    addMiddleware('wiringTag', [wiringTagMiddleware])
-    addMiddleware('funcTag', [funcTagMiddleware])
+    addTagMiddleware('wiringTag', [wiringTagMiddleware])
+    addTagMiddleware('funcTag', [funcTagMiddleware])
 
     const wiringMiddleware: CorePikkuMiddleware = async (
       services,
@@ -157,7 +157,7 @@ describe('combineMiddleware', () => {
       await next()
     }
 
-    addMiddleware('testTag', [taggedMiddleware])
+    addTagMiddleware('testTag', [taggedMiddleware])
 
     const result = combineMiddleware('http', Math.random().toString(), {
       wireInheritedMiddleware: [{ type: 'tag', tag: 'testTag' }],
@@ -176,7 +176,7 @@ describe('combineMiddleware', () => {
       await next()
     }
 
-    addMiddleware('funcTestTag', [taggedMiddleware])
+    addTagMiddleware('funcTestTag', [taggedMiddleware])
 
     const result = combineMiddleware('http', Math.random().toString(), {
       funcInheritedMiddleware: [{ type: 'tag', tag: 'funcTestTag' }],
@@ -194,8 +194,8 @@ describe('combineMiddleware', () => {
       await next()
     }
 
-    addMiddleware('tag1', [middleware1])
-    addMiddleware('tag2', [middleware2])
+    addTagMiddleware('tag1', [middleware1])
+    addTagMiddleware('tag2', [middleware2])
 
     const result = combineMiddleware('http', Math.random().toString(), {
       wireInheritedMiddleware: [
@@ -218,7 +218,7 @@ describe('combineMiddleware', () => {
       await next()
     }
 
-    addMiddleware('billing', [billingMiddleware])
+    addTagMiddleware('billing', [billingMiddleware])
 
     const result = combineMiddleware('http', Math.random().toString(), {
       wireInheritedMiddleware: [{ type: 'tag', tag: 'billing:read' }],
@@ -237,7 +237,7 @@ describe('combineMiddleware', () => {
       await next()
     }
 
-    addMiddleware('billing', [billingMiddleware])
+    addTagMiddleware('billing', [billingMiddleware])
 
     const result = combineMiddleware('http', Math.random().toString(), {
       wireInheritedMiddleware: [{ type: 'tag', tag: 'billing' }],
@@ -263,8 +263,8 @@ describe('combineMiddleware', () => {
       await next()
     }
 
-    addMiddleware('billing', [billingMiddleware])
-    addMiddleware('billing:read', [billingReadMiddleware])
+    addTagMiddleware('billing', [billingMiddleware])
+    addTagMiddleware('billing:read', [billingReadMiddleware])
 
     const result = combineMiddleware('http', Math.random().toString(), {
       wireInheritedMiddleware: [{ type: 'tag', tag: 'billing:read' }],
@@ -298,9 +298,9 @@ describe('combineMiddleware', () => {
       await next()
     }
 
-    addMiddleware('billing', [billingMiddleware])
-    addMiddleware('billing:read', [billingReadMiddleware])
-    addMiddleware('billing:read:admin', [billingReadAdminMiddleware])
+    addTagMiddleware('billing', [billingMiddleware])
+    addTagMiddleware('billing:read', [billingReadMiddleware])
+    addTagMiddleware('billing:read:admin', [billingReadAdminMiddleware])
 
     const result = combineMiddleware('http', Math.random().toString(), {
       wireInheritedMiddleware: [{ type: 'tag', tag: 'billing:read:admin' }],
@@ -321,7 +321,7 @@ describe('combineMiddleware', () => {
       await next()
     }
 
-    addMiddleware('billing', [billingMiddleware])
+    addTagMiddleware('billing', [billingMiddleware])
 
     const result = combineMiddleware('http', Math.random().toString(), {
       funcInheritedMiddleware: [{ type: 'tag', tag: 'billing:write' }],
@@ -336,7 +336,7 @@ describe('combineMiddleware', () => {
       await next()
     }
 
-    addMiddleware('existingTag', [middleware])
+    addTagMiddleware('existingTag', [middleware])
 
     const result = combineMiddleware('http', Math.random().toString(), {
       wireInheritedMiddleware: [
