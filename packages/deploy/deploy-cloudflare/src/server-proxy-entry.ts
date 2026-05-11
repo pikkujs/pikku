@@ -60,7 +60,10 @@ export class ${PIKKU_CONTAINER_CLASS} extends DurableObject {
     for (let attempt = 0; attempt < PORT_READY_MAX_TRIES; attempt++) {
       if (!container.running) {
         try {
-          await container.start()
+          // enableInternet: containers default to no outbound networking,
+          // which breaks anything reaching DBs, third-party APIs, or fabric's
+          // /tenant/enqueue. Always enable — opt-out is a user-level concern.
+          await container.start({ enableInternet: true })
           startErr = null
         } catch (e) {
           startErr = e
