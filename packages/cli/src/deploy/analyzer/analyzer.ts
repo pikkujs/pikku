@@ -410,6 +410,37 @@ export function analyzeDeployment(
     }
   }
 
+  // ── Step 8: Scaffold workflow function units need workflow-state ──
+  // Scaffold endpoints like workflowStarter destructure { workflowService }
+  // and call rpc.startWorkflow / workflowService.runToCompletion. The
+  // function-meta inspector doesn't always surface those destructured
+  // services into funcMeta.services.services, so collectServicesForFunction
+  // returns [] and per-unit codegen omits workflow queue meta — the unit
+  // then falls back to the shared 'pikku-workflow-step-worker' queue name
+  // at runtime. Force the capability for the known scaffold ids so the
+  // queue meta is bundled and the runtime can resolve per-step queues.
+  const SCAFFOLD_WORKFLOW_FUNCS = new Set([
+    'workflowStarter',
+    'workflowRunner',
+    'workflowStatusChecker',
+    'workflowStatusStream',
+    'workflowStatusStreamFull',
+    'graphStarter',
+  ])
+  for (const unit of units) {
+    if (unit.role !== 'function') continue
+    const hasScaffold = unit.functionIds.some((id) =>
+      SCAFFOLD_WORKFLOW_FUNCS.has(id)
+    )
+    if (!hasScaffold) continue
+    if (!unit.services.some((s) => s.capability === 'workflow-state')) {
+      unit.services.push({
+        capability: 'workflow-state',
+        sourceServiceName: 'workflowService',
+      })
+    }
+  }
+
   // ── Secrets & Variables ────────────────────────────────────────────
   const secrets: SecretDeclaration[] = state.secrets.definitions.map((s) => ({
     secretId: s.secretId,

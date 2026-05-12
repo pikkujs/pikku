@@ -5,6 +5,7 @@ import { WorkerEntrypoint } from 'cloudflare:workers'
 import { runFetch } from './run-fetch.js'
 import { runScheduled } from './run-scheduled.js'
 import { runQueueJob } from '@pikku/core/queue'
+import { rpcService } from '@pikku/core/rpc'
 import { pikkuState } from '@pikku/core/internal'
 import type { QueueJob, QueueJobStatus } from '@pikku/core/queue'
 import { CloudflareWebSocketHibernationServer } from './cloudflare-hibernation-websocket-server.js'
@@ -151,6 +152,75 @@ export function createCloudflareHandler(
 
   return class PikkuHandler extends WorkerEntrypoint<CloudflareEnv> {
     async fetch(request: Request): Promise<Response> {
+      // `/__pikku/queue-job` is the fabric WfP queue-delivery route. It
+      // bypasses `includesFetch` so units with no public HTTP surface still
+      // receive queue jobs from the per-stage dispatcher (which can't deliver
+      // via real CF Queues — namespace scripts can't bind as queue consumers).
+      // Body: { queueName, data, jobId, traceId }. Status codes: 204 = ack,
+      // 422 = ack-no-retry (PikkuMissingMetaError, QueueJobDiscardedError),
+      // 503 = retry (other thrown errors). The fabric dispatcher + pg-boss
+      // worker map these onto pg-boss outcomes.
+      const reqUrl = new URL(request.url)
+      if (
+        reqUrl.pathname === '/__pikku/queue-job' &&
+        request.method === 'POST'
+      ) {
+        try {
+          await setupServices(this.env, factories)
+          const body = (await request.json()) as {
+            queueName: string
+            data: unknown
+            jobId?: string
+            traceId?: string
+          }
+          // Direct path — bypass processQueueBatch's `body.data ?? body`
+          // heuristic which mis-unwraps payloads whose envelope already
+          // has a `data` field (e.g. workflow step inputs).
+          const queueMeta = pikkuState(null, 'queue', 'meta')
+          const queueName = queueMeta[body.queueName]
+            ? body.queueName
+            : (Object.keys(queueMeta)
+                .filter((k) => body.queueName.endsWith(k))
+                .sort((a, b) => b.length - a.length)[0] ?? body.queueName)
+          const msgId = body.jobId ?? body.traceId ?? crypto.randomUUID()
+          const job: QueueJob = {
+            queueName,
+            data: body.data,
+            id: msgId,
+            status: async () => 'active' as QueueJobStatus,
+            metadata: () => ({
+              processedAt: new Date(),
+              attemptsMade: 0,
+              maxAttempts: undefined,
+              result: undefined,
+              progress: 0,
+              createdAt: new Date(),
+              completedAt: undefined,
+              failedAt: undefined,
+              error: undefined,
+            }),
+            waitForCompletion: async () => {
+              throw new Error('CF Queues do not support waitForCompletion')
+            },
+          }
+          await runQueueJob({ job })
+          return new Response(null, { status: 204 })
+        } catch (e: unknown) {
+          const errorName = (e as Error)?.name ?? 'Error'
+          const message = (e as Error)?.message ?? String(e)
+          const noRetry =
+            errorName === 'QueueJobDiscardedError' ||
+            errorName === 'PikkuMissingMetaError'
+          return new Response(
+            JSON.stringify({ ok: false, errorName, message }),
+            {
+              status: noRetry ? 422 : 503,
+              headers: { 'content-type': 'application/json' },
+            }
+          )
+        }
+      }
+
       if (includesFetch) {
         const services = await setupServices(this.env, factories)
 
@@ -216,6 +286,22 @@ export function createCloudflareHandler(
       await setupServices(this.env, factories)
       await runScheduled(controller)
     }
+
+    /**
+     * Typed RPC entrypoint for service-binding / dispatch-namespace callers.
+     * Bypasses HTTP routing and `expose:true` gating — invokes the in-process
+     * pikku RPC dispatcher directly so internal functions are reachable
+     * across Worker boundaries. Errors propagate via structured clone.
+     */
+    async runRpc(name: string, args: unknown): Promise<unknown> {
+      const services = await setupServices(this.env, factories)
+      const rpc = rpcService.getContextRPCService(
+        services as any,
+        {},
+        false
+      ) as any
+      return rpc.invoke(name, args)
+    }
   }
 }
 
@@ -231,6 +317,16 @@ export function createCloudflareWorkerHandler(factories: ServiceFactories) {
       await setupServices(this.env, factories)
       return runFetch(request)
     }
+
+    async runRpc(name: string, args: unknown): Promise<unknown> {
+      const services = await setupServices(this.env, factories)
+      const rpc = rpcService.getContextRPCService(
+        services as any,
+        {},
+        false
+      ) as any
+      return rpc.invoke(name, args)
+    }
   }
 }
 
@@ -245,6 +341,15 @@ export function createCloudflareCronHandler(factories: ServiceFactories) {
     async scheduled(controller: ScheduledController): Promise<void> {
       await setupServices(this.env, factories)
       await runScheduled(controller)
+    }
+    async runRpc(name: string, args: unknown): Promise<unknown> {
+      const services = await setupServices(this.env, factories)
+      const rpc = rpcService.getContextRPCService(
+        services as any,
+        {},
+        false
+      ) as any
+      return rpc.invoke(name, args)
     }
   }
 }
@@ -265,6 +370,15 @@ export function createCloudflareQueueHandler(factories: ServiceFactories) {
     }): Promise<void> {
       await setupServices(this.env, factories)
       await processQueueBatch(batch)
+    }
+    async runRpc(name: string, args: unknown): Promise<unknown> {
+      const services = await setupServices(this.env, factories)
+      const rpc = rpcService.getContextRPCService(
+        services as any,
+        {},
+        false
+      ) as any
+      return rpc.invoke(name, args)
     }
   }
 }

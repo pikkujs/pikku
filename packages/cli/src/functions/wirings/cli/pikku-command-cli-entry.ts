@@ -92,7 +92,8 @@ export const pikkuCLIEntry = pikkuSessionlessFunc<void, void>({
             config.functionTypesFile,
             channelName,
             channelRoute,
-            config.globalHTTPPrefix || ''
+            config.globalHTTPPrefix || '',
+            visitState.rpc?.wireAddonDeclarations
           )
 
           await writeFileInDir(logger, channelWireFile, channelCode)

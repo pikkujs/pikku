@@ -479,10 +479,16 @@ function processCommand(
         }
         break
 
-      case 'subcommands':
-        if (ts.isObjectLiteralExpression(prop.initializer)) {
+      case 'subcommands': {
+        let subcommandsNode: ts.Node | undefined = prop.initializer
+        if (ts.isIdentifier(prop.initializer)) {
+          subcommandsNode = resolveIdentifier(prop.initializer, typeChecker, [
+            'defineCLICommands',
+          ])
+        }
+        if (subcommandsNode && ts.isObjectLiteralExpression(subcommandsNode)) {
           meta.subcommands = {}
-          for (const subProp of prop.initializer.properties) {
+          for (const subProp of subcommandsNode.properties) {
             if (!ts.isPropertyAssignment(subProp)) continue
 
             const subName = getPropertyName(subProp)
@@ -507,6 +513,7 @@ function processCommand(
           }
         }
         break
+      }
 
       case 'isDefault':
         if (

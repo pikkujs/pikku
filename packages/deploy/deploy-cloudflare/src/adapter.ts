@@ -112,6 +112,24 @@ export interface PlatformServiceContributor {
 
 export interface CloudflareProviderAdapterOptions {
   contributors?: PlatformServiceContributor[]
+  /**
+   * Override whether the deploy pipeline emits per-step workflow queues.
+   * Defaults to `false` (CF's DO-backed workflow runtime needs no queue
+   * hop). Platforms that replace the workflow runtime with a queue-driven
+   * one (e.g. fabric's libsql workflow service) should set this to `true`
+   * so per-unit codegen bundles the workflow queue meta and step-worker
+   * queue resolution works at runtime.
+   */
+  workflowQueues?: boolean
+  /**
+   * Pass `httpQueueJobs: true` to `createCloudflareHandler` in the generated
+   * entry, exposing `POST /__pikku/queue-job` on every fetch-capable unit.
+   * Off by default — only safe when the consumer worker is reachable solely
+   * via an in-stack trusted dispatcher (e.g. Workers-for-Platforms namespace
+   * scripts that have no public hostname of their own). A non-WfP CF Worker
+   * with a public route MUST leave this off.
+   */
+  httpQueueJobs?: boolean
 }
 
 /**
@@ -131,16 +149,20 @@ export class CloudflareProviderAdapter {
   /**
    * CF's workflow runtime is `PikkuWorkflowDoClient` + `PikkuWorkflowDO`,
    * a Durable-Object-backed orchestrator that advances steps via direct
-   * per-rpc service-binding stubs — no queue hop required. Opt out of
-   * synthesized step queues so the deploy manifest stays minimal and we
-   * don't provision idle CF queues just to satisfy the legacy
-   * queue-dispatch model.
+   * per-rpc service-binding stubs — no queue hop required. Default is
+   * false so the deploy manifest stays minimal and we don't provision idle
+   * CF queues just to satisfy the legacy queue-dispatch model. Platforms
+   * that swap in a queue-driven workflow runtime can flip this via
+   * `CloudflareProviderAdapterOptions.workflowQueues`.
    */
-  readonly workflowQueues = false
+  readonly workflowQueues: boolean
+  readonly httpQueueJobs: boolean
 
   private readonly contributors: PlatformServiceContributor[]
 
   constructor(options: CloudflareProviderAdapterOptions = {}) {
+    this.workflowQueues = options.workflowQueues ?? false
+    this.httpQueueJobs = options.httpQueueJobs ?? false
     // De-dupe contributors by name (last wins).
     const byName = new Map<string, PlatformServiceContributor>()
     for (const c of options.contributors ?? []) {
@@ -285,7 +307,8 @@ export class CloudflareProviderAdapter {
       ``,
       `export default createCloudflareHandler(`,
       `  { createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices },`,
-      `  ${JSON.stringify(handlerTypes)}`,
+      `  ${JSON.stringify(handlerTypes)},`,
+      `  { httpQueueJobs: ${this.httpQueueJobs} }`,
       `)`,
       ``,
     ]
@@ -376,7 +399,7 @@ export class CloudflareProviderAdapter {
     const handlerTypes = includeQueueHandler ? `["fetch", "queue"]` : ''
 
     const exportLine = includeQueueHandler
-      ? `export default createCloudflareHandler(\n  { createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices },\n  ${handlerTypes}\n)`
+      ? `export default createCloudflareHandler(\n  { createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices },\n  ${handlerTypes},\n  { httpQueueJobs: ${this.httpQueueJobs} }\n)`
       : `export default createCloudflareWorkerHandler({ createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices })`
 
     const handlerImport = includeQueueHandler
