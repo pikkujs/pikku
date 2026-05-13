@@ -10,7 +10,7 @@
     "@pikku/core": "^0.12.20",
     "@pikku/jose": "workspace:^",
     "@pikku/schema-cfworker": "^0.12.2",
-    "@pikku/templates-function-addon": "workspace:*",
+    "@pikku/templates-function-addon": "0.0.0",
     "eventsource": "^4.1.0",
     "ws": "^8.19.0",
     "zod": "^4"
