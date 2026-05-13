@@ -22,6 +22,18 @@ runs:
         start=$SECONDS
         yarn build:packages
         echo "::notice::⏱ Build packages: $((SECONDS - start))s"
+    - name: Generate pikku files (fabric-cli)
+      shell: bash
+      run: |
+        start=$SECONDS
+        cd packages/fabric-cli && yarn pikku
+        echo "::notice::⏱ Generate pikku files (fabric-cli): $((SECONDS - start))s"
+    - name: Build fabric-cli
+      shell: bash
+      run: |
+        start=$SECONDS
+        cd packages/fabric-cli && yarn build
+        echo "::notice::⏱ Build fabric-cli: $((SECONDS - start))s"
     - name: Generate pikku files
       shell: bash
       run: |
