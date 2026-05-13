@@ -7,8 +7,7 @@ import { pikkuQueueService } from './functions/wirings/queue/pikku-command-queue
 import { pikkuOpenAPI } from './functions/wirings/http/pikku-command-openapi.js'
 import { pikkuNext } from './functions/runtimes/nextjs/pikku-command-nextjs.js'
 import { pikkuCLICommand, wireCLI } from '../.pikku/cli/pikku-cli-types.gen.js'
-import { wireAddon } from '@pikku/core/rpc'
-import { fabricCommands } from '@pikku/fabric-cli'
+import { fabricCommands } from './fabric/fabric-commands.js'
 import { all } from './functions/commands/all.js'
 import { bootstrap } from './functions/commands/bootstrap.js'
 import { watch } from './functions/commands/watch.js'
@@ -66,8 +65,6 @@ import {
   pikkuMetaClients,
 } from './functions/commands/meta.js'
 import { defaultCLIRenderer } from './services.js'
-
-wireAddon({ name: 'fabric', package: '@pikku/fabric-cli' })
 
 wireCLI({
   program: 'pikku',

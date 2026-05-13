@@ -5306,7 +5306,6 @@ __metadata:
     "@openapi-contrib/json-schema-to-openapi-schema": "npm:^4.3.1"
     "@pikku/core": "npm:^0.12.19"
     "@pikku/deploy-cloudflare": "npm:^0.12.0"
-    "@pikku/fabric-cli": "workspace:*"
     "@pikku/inspector": "npm:^0.12.11"
     "@pikku/kysely-node-sqlite": "npm:^0.12.0"
     "@pikku/node-http-server": "npm:^0.12.0"
@@ -5554,7 +5553,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/fabric-cli@workspace:*, @pikku/fabric-cli@workspace:packages/fabric-cli":
+"@pikku/fabric-cli@workspace:packages/fabric-cli":
   version: 0.0.0-use.local
   resolution: "@pikku/fabric-cli@workspace:packages/fabric-cli"
   dependencies:

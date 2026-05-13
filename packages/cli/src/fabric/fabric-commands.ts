@@ -21,7 +21,7 @@
 import {
   defineCLICommands,
   pikkuCLICommand,
-} from '#pikku/cli/pikku-cli-types.gen.js'
+} from '../../.pikku/cli/pikku-cli-types.gen.js'
 import { FabricLogin } from './functions/login.function.js'
 import { FabricInit } from './functions/init.function.js'
 import { FabricLink } from './functions/link.function.js'

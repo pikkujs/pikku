@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { createInterface } from 'node:readline/promises'
 import { stdin, stdout } from 'node:process'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import {
   findProjectConfig,
   resolveApiContext,
