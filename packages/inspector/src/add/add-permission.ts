@@ -45,7 +45,7 @@ function isInsidePermissionContainer(node: ts.Node): boolean {
       ts.isCallExpression(current) &&
       ts.isIdentifier(current.expression) &&
       (current.expression.text === 'pikkuPermissionFactory' ||
-        current.expression.text === 'addPermission' ||
+        current.expression.text === 'addTagPermission' ||
         current.expression.text === 'addHTTPPermission')
     ) {
       return true
@@ -338,9 +338,9 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
 
   // Handle addPermission('tag', [permission1, permission2])
   // Supports two patterns:
-  // 1. export const x = () => addPermission('tag', [...])  (factory - tree-shakeable)
-  // 2. export const x = addPermission('tag', [...])  (direct - no tree-shaking)
-  if (expression.text === 'addPermission') {
+  // 1. export const x = () => addTagPermission('tag', [...])  (factory - tree-shakeable)
+  // 2. export const x = addTagPermission('tag', [...])  (direct - no tree-shaking)
+  if (expression.text === 'addTagPermission') {
     const tagArg = args[0]
     const permissionsArrayArg = args[1]
 
@@ -353,7 +353,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     }
 
     if (!tag) {
-      logger.warn(`• addPermission call without valid tag string`)
+      logger.warn(`• addTagPermission call without valid tag string`)
       return
     }
 
@@ -363,7 +363,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
       !ts.isObjectLiteralExpression(permissionsArrayArg)
     ) {
       logger.error(
-        `• addPermission('${tag}', ...) must have a literal array or object as second argument`
+        `• addTagPermission('${tag}', ...) must have a literal array or object as second argument`
       )
       return
     }
@@ -416,7 +416,7 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     if (!isFactory && exportedName) {
       logger.warn(
         `• Permission group '${exportedName}' for tag '${tag}' is not wrapped in a factory function. ` +
-          `For tree-shaking, use: export const ${exportedName} = () => addPermission('${tag}', [...])`
+          `For tree-shaking, use: export const ${exportedName} = () => addTagPermission('${tag}', [...])`
       )
     }
 

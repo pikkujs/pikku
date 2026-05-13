@@ -13,7 +13,7 @@ import { pikkuMiddleware, pikkuMiddlewareFactory } from '../types/core.types.js'
  * @example
  * ```typescript
  * import { telemetryOuter } from '@pikku/core/middleware'
- * addMiddleware('myTag', [telemetryOuter()])
+ * addTagMiddleware('myTag', [telemetryOuter()])
  * ```
  */
 export const telemetryOuter = pikkuMiddlewareFactory<{
@@ -70,7 +70,7 @@ export const telemetryOuter = pikkuMiddlewareFactory<{
  * @example
  * ```typescript
  * import { telemetryInner } from '@pikku/core/middleware'
- * addMiddleware('myTag', [telemetryInner()])
+ * addTagMiddleware('myTag', [telemetryInner()])
  * ```
  */
 export const telemetryInner = pikkuMiddlewareFactory<{

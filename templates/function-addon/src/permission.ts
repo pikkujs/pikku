@@ -1,4 +1,4 @@
-import { pikkuPermission, addPermission } from '../.pikku/pikku-types.gen.js'
+import { pikkuPermission, addTagPermission } from '../.pikku/pikku-types.gen.js'
 
 /**
  * Addon package permission that logs permission checks
@@ -30,4 +30,5 @@ export const tagPermission = pikkuPermission(
  * Register 'addon' tag permission
  * This will apply to all functions with the 'addon' tag
  */
-export const addonTagPermission = () => addPermission('addon', [tagPermission])
+export const addonTagPermission = () =>
+  addTagPermission('addon', [tagPermission])

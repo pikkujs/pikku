@@ -1,6 +1,6 @@
 import { describe, test, beforeEach } from 'node:test'
 import * as assert from 'node:assert'
-import { addPermission, runPermissions } from './permissions.js'
+import { addTagPermission, runPermissions } from './permissions.js'
 import { pikkuState, resetPikkuState } from './pikku-state.js'
 import type { CoreServices, CoreUserSession } from './types/core.types.js'
 import type {
@@ -47,11 +47,11 @@ const mockSession: CoreUserSession = {
   userId: 'test-user',
 } as any
 
-describe('addPermission', () => {
+describe('addTagPermission', () => {
   test('should add single permission for a tag', () => {
     const mockPermission = async () => true
 
-    addPermission('testTag', [mockPermission])
+    addTagPermission('testTag', [mockPermission])
 
     const permissions = getPermissionsForTags(['testTag'])
     assert.equal(permissions.length, 1)
@@ -62,7 +62,7 @@ describe('addPermission', () => {
     const mockPermission1 = async () => true
     const mockPermission2 = async () => false
 
-    addPermission('multiTestTag', [mockPermission1, mockPermission2])
+    addTagPermission('multiTestTag', [mockPermission1, mockPermission2])
 
     const permissions = getPermissionsForTags(['multiTestTag'])
     assert.equal(permissions.length, 2)
@@ -75,7 +75,7 @@ describe('addPermission', () => {
       permissions: [async () => true, async () => false],
     }
 
-    addPermission('groupTestTag', mockPermissionGroup)
+    addTagPermission('groupTestTag', mockPermissionGroup)
 
     const permissions = getPermissionsForTags(['groupTestTag'])
     assert.equal(permissions.length, 1)
@@ -85,7 +85,7 @@ describe('addPermission', () => {
   test('should apply parent tag permission to namespaced tag via runPermissions', async () => {
     const billingPermission = async () => true
 
-    addPermission('billing', [billingPermission])
+    addTagPermission('billing', [billingPermission])
 
     await runPermissions('rpc', Math.random().toString(), {
       wireInheritedPermissions: [{ type: 'tag', tag: 'billing:write' }],
@@ -106,8 +106,8 @@ describe('addPermission', () => {
       return true
     }
 
-    addPermission('billing', [billingPermission])
-    addPermission('billing:read', [billingReadPermission])
+    addTagPermission('billing', [billingPermission])
+    addTagPermission('billing:read', [billingReadPermission])
 
     await runPermissions('rpc', Math.random().toString(), {
       wireInheritedPermissions: [{ type: 'tag', tag: 'billing:read' }],
@@ -134,9 +134,9 @@ describe('addPermission', () => {
       return true
     }
 
-    addPermission('billing', [billingPermission])
-    addPermission('billing:read', [billingReadPermission])
-    addPermission('billing:read:admin', [billingReadAdminPermission])
+    addTagPermission('billing', [billingPermission])
+    addTagPermission('billing:read', [billingReadPermission])
+    addTagPermission('billing:read:admin', [billingReadAdminPermission])
 
     await runPermissions('rpc', Math.random().toString(), {
       wireInheritedPermissions: [{ type: 'tag', tag: 'billing:read:admin' }],
@@ -151,7 +151,7 @@ describe('addPermission', () => {
   test('should apply parent tag permission via funcInheritedPermissions', async () => {
     const billingPermission = async () => true
 
-    addPermission('billing', [billingPermission])
+    addTagPermission('billing', [billingPermission])
 
     await runPermissions('rpc', Math.random().toString(), {
       funcInheritedPermissions: [{ type: 'tag', tag: 'billing:delete' }],
@@ -164,11 +164,11 @@ describe('addPermission', () => {
   test('should throw error when tag already exists', () => {
     const mockPermission = async () => true
 
-    addPermission('duplicateTag', [mockPermission])
+    addTagPermission('duplicateTag', [mockPermission])
 
     assert.throws(
       () => {
-        addPermission('duplicateTag', [mockPermission])
+        addTagPermission('duplicateTag', [mockPermission])
       },
       {
         message:
@@ -195,7 +195,7 @@ describe('runPermissions', () => {
       return true
     }
 
-    addPermission('wiringTag', [wiringTagPermission])
+    addTagPermission('wiringTag', [wiringTagPermission])
 
     await runPermissions('rpc', Math.random().toString(), {
       wireInheritedPermissions: [{ type: 'tag', tag: 'wiringTag' }],
@@ -219,8 +219,8 @@ describe('runPermissions', () => {
       return true
     }
 
-    addPermission('wiringTag', [wiringTagPermission])
-    addPermission('funcTag', [funcTagPermission])
+    addTagPermission('wiringTag', [wiringTagPermission])
+    addTagPermission('funcTag', [funcTagPermission])
 
     const wirePermissions: CorePermissionGroup = {
       permissions: [
@@ -258,7 +258,10 @@ describe('runPermissions', () => {
     const failingPermission = async () => false
     const passingPermission = async () => true
 
-    addPermission('atLeastOneTestTag', [failingPermission, passingPermission])
+    addTagPermission('atLeastOneTestTag', [
+      failingPermission,
+      passingPermission,
+    ])
 
     // Should not throw because at least one permission passes
     await runPermissions('rpc', Math.random().toString(), {
@@ -273,7 +276,7 @@ describe('runPermissions', () => {
     const failingPermission1 = async () => false
     const failingPermission2 = async () => false
 
-    addPermission('allFailTestTag', [failingPermission1, failingPermission2])
+    addTagPermission('allFailTestTag', [failingPermission1, failingPermission2])
 
     await assert.rejects(
       runPermissions('rpc', Math.random().toString(), {
@@ -309,7 +312,7 @@ describe('runPermissions', () => {
   test('should throw error when all function tag permissions fail', async () => {
     const failingPermission = async () => false
 
-    addPermission('funcTag', [failingPermission])
+    addTagPermission('funcTag', [failingPermission])
 
     await assert.rejects(
       runPermissions('rpc', Math.random().toString(), {
@@ -350,7 +353,7 @@ describe('runPermissions', () => {
       return false
     }
 
-    addPermission('failingWiringTag', [failingWiringTagPermission])
+    addTagPermission('failingWiringTag', [failingWiringTagPermission])
 
     const wirePermissions: CorePermissionGroup = {
       permissions: [
@@ -377,7 +380,7 @@ describe('runPermissions', () => {
   test('should handle array permissions in tag-based permissions', async () => {
     const arrayPermission = [async () => true, async () => false]
 
-    addPermission('arrayTestTag', arrayPermission)
+    addTagPermission('arrayTestTag', arrayPermission)
 
     // Should not throw because verifyPermissions handles array properly
     await runPermissions('rpc', Math.random().toString(), {
@@ -393,7 +396,7 @@ describe('runPermissions', () => {
       permissions: [async () => true],
     }
 
-    addPermission('objectTestTag', permissionGroup)
+    addTagPermission('objectTestTag', permissionGroup)
 
     // Should not throw because verifyPermissions handles objects properly
     await runPermissions('rpc', Math.random().toString(), {
@@ -418,7 +421,7 @@ describe('runPermissions', () => {
 
     const testData = { test: 'data' }
 
-    addPermission('paramTestTag', [testPermission])
+    addTagPermission('paramTestTag', [testPermission])
 
     await runPermissions('rpc', Math.random().toString(), {
       wireInheritedPermissions: [{ type: 'tag', tag: 'paramTestTag' }],

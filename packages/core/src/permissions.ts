@@ -75,34 +75,16 @@ const getPermissionByName = (name: string): CorePikkuPermission | undefined => {
 }
 
 /**
- * Adds global permissions for a specific tag.
+ * Registers tag-scoped permissions. Applies to any wiring that carries the
+ * matching tag.
  *
- * This function allows you to register permissions that will be applied to
- * any wiring (HTTP, Channel, Queue, Scheduler, MCP) that includes the matching tag.
- *
- * For tree-shaking benefits, wrap in a factory function:
- * `export const x = () => addPermission('tag', [...])`
- *
- * @param {string} tag - The tag that the permissions should apply to.
- * @param {any[]} permissions - The permissions array to apply for the specified tag.
- *
- * @returns {CorePermissionGroup | CorePikkuPermission[]} The permissions (for chaining/wrapping).
+ * For tree-shaking, wrap in a factory:
+ * `export const x = () => addTagPermission('tag', [...])`
  *
  * @example
- * ```typescript
- * // Recommended: tree-shakeable
- * export const adminPermissions = () => addPermission('admin', [
- *   adminPermission,
- *   rolePermission({ role: 'admin' })
- * ])
- *
- * // Also works: no tree-shaking
- * export const apiPermissions = addPermission('api', [
- *   readPermission
- * ])
- * ```
+ * export const adminPermissions = () => addTagPermission('admin', [adminPermission])
  */
-export const addPermission = (
+export const addTagPermission = (
   tag: string,
   permissions: CorePermissionGroup | CorePikkuPermission[],
   packageName: string | null = null
@@ -114,6 +96,32 @@ export const addPermission = (
     )
   }
   tagGroups[tag] = permissions
+  return permissions
+}
+
+/**
+ * Registers wire-agnostic global permissions. Runs at the top of every
+ * wiring's permission resolution — before wire-, tag-, and function-level
+ * entries — across all wire types.
+ *
+ * Resolution order: global → wire → tag → function.
+ *
+ * @example
+ * addGlobalPermission([signedInUser])
+ */
+export const addGlobalPermission = (
+  permissions: CorePermissionGroup | CorePikkuPermission[],
+  packageName: string | null = null
+): CorePermissionGroup | CorePikkuPermission[] => {
+  const state = pikkuState(packageName, 'permissions', 'global') as unknown as (
+    | CorePermissionGroup
+    | CorePikkuPermission
+  )[]
+  if (Array.isArray(permissions)) {
+    state.push(...(permissions as CorePikkuPermission[]))
+  } else {
+    state.push(permissions)
+  }
   return permissions
 }
 
@@ -189,7 +197,15 @@ const combinePermissions = (
 
   const resolved: (CorePermissionGroup | CorePikkuPermission)[] = []
 
-  // 1. Resolve wire inherited permissions (HTTP + tag groups + individual wire permissions)
+  const globals = pikkuState(
+    packageName,
+    'permissions',
+    'global'
+  ) as unknown as (CorePermissionGroup | CorePikkuPermission)[]
+  if (globals && globals.length > 0) {
+    resolved.push(...globals)
+  }
+
   if (wireInheritedPermissions) {
     for (const meta of wireInheritedPermissions) {
       if (meta.type === 'http') {

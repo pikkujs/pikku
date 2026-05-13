@@ -1,7 +1,7 @@
 import {
   wireScheduler,
-  addMiddleware,
-  addPermission,
+  addTagMiddleware,
+  addTagPermission,
   pikkuPermission,
 } from '#pikku'
 import { tagMiddleware } from '../middleware/tag.js'
@@ -10,11 +10,11 @@ import { noOpFunction } from './no-op.function.js'
 
 // Tag middleware for scheduler
 export const schedulerTagMiddleware = () =>
-  addMiddleware('scheduler', [tagMiddleware('scheduler')])
+  addTagMiddleware('scheduler', [tagMiddleware('scheduler')])
 
 // Tag permissions for scheduler
 export const schedulerTagPermissions = () =>
-  addPermission('scheduler', {
+  addTagPermission('scheduler', {
     schedulerPermission: pikkuPermission(
       async ({ logger }, _data, { session }) => {
         logger.info({
