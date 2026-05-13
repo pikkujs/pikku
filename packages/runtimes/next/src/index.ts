@@ -7,3 +7,4 @@
  */
 
 export * from './pikku-next.js'
+export * from './pikku-next-worker-rpc.js'
