@@ -20,6 +20,10 @@
     },
     "./.pikku/*": "./dist/.pikku/*"
   },
+  "files": [
+    "dist",
+    "src"
+  ],
   "scripts": {
     "prebuild": "pikku all",
     "build": "tsc && mkdir -p dist/.pikku/function dist/.pikku/rpc dist/.pikku/agent dist/.pikku/workflow && cp .pikku/function/*.json dist/.pikku/function/ 2>/dev/null; cp .pikku/rpc/*.d.ts dist/.pikku/rpc/ 2>/dev/null; cp .pikku/agent/*.d.ts dist/.pikku/agent/ 2>/dev/null; cp .pikku/workflow/*.d.ts dist/.pikku/workflow/ 2>/dev/null; true",
