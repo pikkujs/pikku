@@ -28,7 +28,7 @@
     "pre-commit": "yarn test && yarn prettier && yarn lint && yarn typedoc",
     "pre-push": "yarn pre-commit",
     "tsc": "yarn workspaces foreach -A -p run tsc",
-    "build:packages": "yarn workspaces foreach -p --topological-dev -A --include 'packages/**' --exclude '@pikku/console' --exclude '@pikku/addon-*' run build",
+    "build:packages": "yarn workspaces foreach -p --topological-dev -A --include 'packages/**' --exclude '@pikku/console' --exclude '@pikku/addon-*' --exclude '@pikku/fabric-cli' run build",
     "build:addons": "yarn workspaces foreach -p --topological-dev -A --include 'packages/addon/**' run build",
     "build:console": "cd packages/console && yarn generate && yarn build && rm -rf ../cli/console-app && cp -r dist ../cli/console-app",
     "build:templates": "yarn workspaces foreach -p -A --include 'templates/**' run build",
