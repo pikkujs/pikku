@@ -1,55 +1,37 @@
 import { DatabaseSync } from 'node:sqlite'
-import { existsSync, mkdirSync, rmSync } from 'node:fs'
-import { resolve, isAbsolute, relative, dirname, join } from 'node:path'
+import { existsSync, rmSync } from 'node:fs'
+import { resolve, isAbsolute, relative } from 'node:path'
 import type { Kysely } from 'kysely'
-import {
-  createNodeSqliteKysely,
-  createCoercionPlugin,
-  type CoercionMap,
-} from '@pikku/kysely-node-sqlite'
+import { createNodeSqliteKysely } from '@pikku/kysely-node-sqlite'
 import { migrate, type MigrateResult } from './sql-migrator.js'
 import { generateSchemaTypes, type CodegenResult } from './sqlite-codegen.js'
-import { generateZodTypes, type ZodCodegenResult } from './zod-codegen.js'
 import { seed as runSeed, type SeedResult } from './seed.js'
 
 export type DevDbConfig = true | { file?: string }
 
 export interface ResolvedLocalDb {
   dbFile: string
-  runtimeDir: string
   migrationsDir: string
   seedFile: string
   schemaFile: string
-  coercionFile: string
-  zodFile: string
   camelCase: boolean
 }
 
 /**
- * Resolve a DevDbConfig into absolute paths.
- * - dbFile lives under runtimeDir (default: <rootDir>/.pikku-runtime)
- * - schema/coercion/zod are generated into outDir/db
- * - migrations and seed are authored source under rootDir/db
+ * Resolve a DevDbConfig into absolute paths against the project root.
+ * All paths apart from `dbFile` are conventional and not configurable.
  */
 export function resolveLocalDb(
   config: DevDbConfig | undefined,
-  rootDir: string,
-  outDir: string,
-  runtimeDir?: string
+  rootDir: string
 ): ResolvedLocalDb | null {
   if (!config) return null
   const file = config === true ? undefined : config.file
-  const resolvedRuntimeDir = runtimeDir ?? join(rootDir, '.pikku-runtime')
   return {
-    dbFile: file
-      ? resolveAgainst(rootDir, file)
-      : join(resolvedRuntimeDir, 'dev.db'),
-    runtimeDir: resolvedRuntimeDir,
+    dbFile: resolveAgainst(rootDir, file ?? '.pikku/dev.db'),
     migrationsDir: resolveAgainst(rootDir, 'db/migrations'),
     seedFile: resolveAgainst(rootDir, 'db/seed.sql'),
-    schemaFile: join(outDir, 'db', 'schema.d.ts'),
-    coercionFile: join(outDir, 'db', 'coercion.gen.ts'),
-    zodFile: join(outDir, 'db', 'zod.gen.ts'),
+    schemaFile: resolveAgainst(rootDir, 'db/schema.d.ts'),
     camelCase: true,
   }
 }
@@ -61,7 +43,6 @@ function resolveAgainst(root: string, p: string): string {
 export interface MigrateAndCodegenOutcome {
   migrate: MigrateResult
   codegen: CodegenResult
-  zod: ZodCodegenResult
 }
 
 /**
@@ -71,21 +52,14 @@ export interface MigrateAndCodegenOutcome {
 export function migrateAndCodegen(
   resolved: ResolvedLocalDb
 ): MigrateAndCodegenOutcome {
-  mkdirSync(dirname(resolved.dbFile), { recursive: true })
   const db = new DatabaseSync(resolved.dbFile)
   try {
     const migrateResult = migrate(db, resolved.migrationsDir)
     const codegenResult = generateSchemaTypes(db, {
       outFile: resolved.schemaFile,
-      coercionFile: resolved.coercionFile,
       camelCase: resolved.camelCase,
-      migrationsDir: resolved.migrationsDir,
     })
-    const zodResult = generateZodTypes({
-      schemaFile: resolved.schemaFile,
-      outFile: resolved.zodFile,
-    })
-    return { migrate: migrateResult, codegen: codegenResult, zod: zodResult }
+    return { migrate: migrateResult, codegen: codegenResult }
   } finally {
     db.close()
   }
@@ -111,10 +85,10 @@ export function reset(resolved: ResolvedLocalDb, rootDir: string): void {
       `pikku db reset refused: NODE_ENV=production. This command only runs in dev.`
     )
   }
-  const rel = relative(resolved.runtimeDir, resolved.dbFile)
+  const rel = relative(rootDir, resolved.dbFile)
   if (rel.startsWith('..') || isAbsolute(rel)) {
     throw new Error(
-      `pikku db reset refused: resolved DB file (${resolved.dbFile}) is outside the runtime directory (${resolved.runtimeDir}). Override dev.db.file or set runtimeDir correctly.`
+      `pikku db reset refused: resolved DB file (${resolved.dbFile}) is outside the project root (${rootDir}). Override dev.db.file or move the file inside the project.`
     )
   }
   if (existsSync(resolved.dbFile)) {
@@ -125,22 +99,10 @@ export function reset(resolved: ResolvedLocalDb, rootDir: string): void {
 /**
  * Construct the user-facing Kysely instance for the dev DB. Used by
  * `pikku dev` to populate inMemoryServices.kysely.
- * Wires the coercion plugin when db/coercion.gen.ts exists.
  */
-export async function createKysely<DB>(
-  resolved: ResolvedLocalDb
-): Promise<Kysely<DB>> {
-  let coercionMap: CoercionMap | undefined
-  try {
-    const mod = await import(resolved.coercionFile)
-    coercionMap = mod.coercionMap as CoercionMap
-  } catch {
-    // coercion.gen.ts not yet generated — run `pikku db migrate` first
-  }
-
+export function createKysely<DB>(resolved: ResolvedLocalDb): Kysely<DB> {
   return createNodeSqliteKysely<DB>({
     filename: resolved.dbFile,
     camelCase: resolved.camelCase,
-    plugins: coercionMap ? [createCoercionPlugin({ map: coercionMap })] : [],
   })
 }

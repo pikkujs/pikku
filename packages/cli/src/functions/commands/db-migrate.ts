@@ -12,12 +12,7 @@ export const dbMigrate = pikkuSessionlessFunc<{}, void>({
     })
     if (!userConfig) return
 
-    const resolved = resolveLocalDb(
-      userConfig.dev?.db,
-      config.rootDir,
-      config.outDir,
-      config.runtimeDir
-    )
+    const resolved = resolveLocalDb(userConfig.dev?.db, config.rootDir)
     if (!resolved) {
       logger.error(
         'pikku db migrate: dev.db is not configured in your pikku config.'
@@ -25,7 +20,7 @@ export const dbMigrate = pikkuSessionlessFunc<{}, void>({
       throw new Error('dev.db not configured')
     }
 
-    const { migrate, codegen, zod } = migrateAndCodegen(resolved)
+    const { migrate, codegen } = migrateAndCodegen(resolved)
 
     if (migrate.applied.length === 0) {
       logger.info(
@@ -40,11 +35,6 @@ export const dbMigrate = pikkuSessionlessFunc<{}, void>({
       codegen.written
         ? `db migrate: regenerated ${codegen.outFile} (${codegen.tables.length} tables)`
         : `db migrate: ${codegen.outFile} unchanged`
-    )
-    logger.info(
-      zod.written
-        ? `db migrate: regenerated ${zod.outFile} (${zod.tables.length} tables)`
-        : `db migrate: ${zod.outFile} unchanged`
     )
   },
 })

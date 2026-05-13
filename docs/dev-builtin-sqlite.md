@@ -16,7 +16,6 @@ Today every template that wants a local DB ships:
 - A `dbmigrate` script users have to remember to run before `pikku dev`.
 
 Goals:
-
 - Delete `bin/db-migrate.ts` from templates.
 - Delete the `createLocalKysely` fallback and the `better-sqlite3`
   `require` from user services.
@@ -89,7 +88,6 @@ db/
 ```
 
 Why mirror Rails:
-
 - Familiar to anyone who's touched Rails / ActiveRecord.
 - `db/` is unambiguous — no debate about `sql/` vs `migrations/` vs `database/`.
 - `seed.sql` slots in cleanly: dev-only, runs after migrations, idempotent
@@ -104,16 +102,15 @@ Why mirror Rails:
 ```jsonc
 {
   "dev": {
-    "db": true, // enable with all defaults
+    "db": true              // enable with all defaults
     // — or —
     // "db": { "file": ".pikku/dev.db" }
-  },
+  }
 }
 ```
 
-All fields optional with sensible defaults; the _presence_ of `dev.db`
+All fields optional with sensible defaults; the *presence* of `dev.db`
 is what opts a project in. Defaults:
-
 - `file`: `.pikku/dev.db`
 - migrations dir: `./db/migrations` (not configurable in v1 — convention)
 - seed file: `./db/seed.sql` (not configurable)
@@ -132,14 +129,13 @@ pikku db reset       delete dev.db, re-migrate (incl. codegen), re-seed
 pikku dev            opens the existing dev.db, injects Kysely, starts the server (no migrate)
 ```
 
-`db migrate` is _one_ atomic operation: schema changes and the generated
+`db migrate` is *one* atomic operation: schema changes and the generated
 `db/schema.d.ts` always match. There is no separate `pikku db codegen`
 command — codegen without a known schema state is meaningless, and forcing
 users to remember a second command after `migrate` was the original sin
 the kanban template's `dbmigrate` script suffers from.
 
 `pikku db *` are thin wrappers over the same orchestrator. All three:
-
 - read `dev.db` from config (error if missing)
 - exit nonzero on any failure
 - print human-readable progress (which migration applied, codegen path written)
@@ -227,14 +223,11 @@ empty lines, the hash no longer reflects the SQL that actually ran, and
 Required shape:
 
 ```ts
-const raw = fs.readFileSync(path) // Buffer, no transform
+const raw  = fs.readFileSync(path)                        // Buffer, no transform
 const hash = createHash('sha256').update(raw).digest('hex')
 db.transaction(() => {
-  db.exec(raw.toString('utf8')) // same bytes, decoded once
-  db.prepare('INSERT INTO sql_migrations (name, hash) VALUES (?, ?)').run(
-    name,
-    hash
-  )
+  db.exec(raw.toString('utf8'))                           // same bytes, decoded once
+  db.prepare('INSERT INTO sql_migrations (name, hash) VALUES (?, ?)').run(name, hash)
 })()
 ```
 
@@ -357,7 +350,6 @@ produce — same `export interface DB { ... }`, same `Generated<T>`,
 
 For any template that wires up a local DB today (e.g. a kanban-style
 template's `packages/functions/`):
-
 - Delete `bin/db-migrate.ts`.
 - Delete `createLocalKysely()` and the `better-sqlite3` require block in
   `src/services.ts`. Replace with:
@@ -380,15 +372,15 @@ Net deletion: ~80 LOC + 1 script + 1 generated-by-hand types file.
 
 ## Failure modes & guarantees
 
-| Scenario                                          | Behavior                                                                                                                                    |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `dev.db` absent                                   | No-op. `inMemoryServices.kysely` undefined. Existing prod path unchanged.                                                                   |
-| Migration SQL invalid                             | `pikku db migrate` exits nonzero, prints offending file + statement.                                                                        |
-| Applied migration edited on disk (drift)          | `pikku db migrate` fails with `PKU-DB-DRIFT` naming the file, recorded hash, current hash. Resolve via `pikku db reset` or revert the edit. |
-| Applied migration deleted from disk               | Same drift error — treated as "file missing" with the recorded hash for context.                                                            |
-| `db/seed.sql` invalid                             | `pikku db seed` / `db reset` exits nonzero, transaction rolls back.                                                                         |
-| Codegen output identical to existing              | Skip write (avoid pointless filesystem churn).                                                                                              |
-| Multiple `pikku dev` against same `.pikku/dev.db` | SQLite file lock surfaces; doc it. Default `.pikku/dev.db` lives under outDir, which is per-project.                                        |
+| Scenario | Behavior |
+|---|---|
+| `dev.db` absent | No-op. `inMemoryServices.kysely` undefined. Existing prod path unchanged. |
+| Migration SQL invalid | `pikku db migrate` exits nonzero, prints offending file + statement. |
+| Applied migration edited on disk (drift) | `pikku db migrate` fails with `PKU-DB-DRIFT` naming the file, recorded hash, current hash. Resolve via `pikku db reset` or revert the edit. |
+| Applied migration deleted from disk | Same drift error — treated as "file missing" with the recorded hash for context. |
+| `db/seed.sql` invalid | `pikku db seed` / `db reset` exits nonzero, transaction rolls back. |
+| Codegen output identical to existing | Skip write (avoid pointless filesystem churn). |
+| Multiple `pikku dev` against same `.pikku/dev.db` | SQLite file lock surfaces; doc it. Default `.pikku/dev.db` lives under outDir, which is per-project. |
 
 ## Why SQLite specifically
 
@@ -434,7 +426,7 @@ Net deletion: ~80 LOC + 1 script + 1 generated-by-hand types file.
 
 - **Should `db/schema.d.ts` be checked into git?** Defer to template
   author; pikku doesn't enforce. Default the kanban template to
-  _checked in_ so PR diffs are reviewable.
+  *checked in* so PR diffs are reviewable.
 - **Should seed run on first boot only, or every boot?** Resolved: seed
   is explicit (`pikku db seed` / `pikku db reset`), never automatic.
   `pikku dev` opens the DB read/write but never seeds.
