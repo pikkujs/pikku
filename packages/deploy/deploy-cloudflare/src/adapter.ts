@@ -9,6 +9,10 @@
 
 import { generateWranglerToml } from './wrangler-toml.js'
 import { generateInfraManifest } from './infra-manifest.js'
+import {
+  generateServerProxyBundle,
+  serverProxyConstants,
+} from './server-proxy-entry.js'
 
 export type DeploymentHandler =
   | {
@@ -71,6 +75,63 @@ export interface EntryGenerationContext {
   servicesType: string
 }
 
+export type PlatformImports = {
+  cfImports: string[]
+  needsD1: boolean
+  needsQueue: boolean
+  needsWorkflow: boolean
+  needsAI: boolean
+}
+
+/**
+ * Hook for callers (custom deployers, orchestrators) to inject extra services
+ * into the generated `createPlatformServices` block. Each contributor is
+ * called once per entry; lines are emitted before `return services`. Imports
+ * are spliced into the entry's import header.
+ *
+ * Contributors should gate their service wiring on env bindings being present
+ * (`if (env.MY_BINDING) { ... }`) so the same generated entry runs both for
+ * users who declare the bindings and for those who don't.
+ */
+export interface PlatformServiceContributor {
+  /** Identifier — used for diagnostics and dedup if a contributor is passed twice. */
+  name: string
+  /** Module-level import lines this contributor's emitted code depends on. */
+  imports?: string[]
+  /**
+   * Lines emitted inside `createPlatformServices`, before `return services`.
+   * `services` is in scope (typed as `ctx.servicesType`); so is `env` and
+   * `logger`. Return `[]` to opt out for the given context.
+   */
+  emit(args: {
+    ctx: EntryGenerationContext
+    platform: PlatformImports
+    isGateway: boolean
+  }): string[]
+}
+
+export interface CloudflareProviderAdapterOptions {
+  contributors?: PlatformServiceContributor[]
+  /**
+   * Override whether the deploy pipeline emits per-step workflow queues.
+   * Defaults to `false` (CF's DO-backed workflow runtime needs no queue
+   * hop). Platforms that replace the workflow runtime with a queue-driven
+   * one (e.g. fabric's libsql workflow service) should set this to `true`
+   * so per-unit codegen bundles the workflow queue meta and step-worker
+   * queue resolution works at runtime.
+   */
+  workflowQueues?: boolean
+  /**
+   * Pass `httpQueueJobs: true` to `createCloudflareHandler` in the generated
+   * entry, exposing `POST /__pikku/queue-job` on every fetch-capable unit.
+   * Off by default — only safe when the consumer worker is reachable solely
+   * via an in-stack trusted dispatcher (e.g. Workers-for-Platforms namespace
+   * scripts that have no public hostname of their own). A non-WfP CF Worker
+   * with a public route MUST leave this off.
+   */
+  httpQueueJobs?: boolean
+}
+
 /**
  * Extracts the unique handler types from a unit's handlers array.
  */
@@ -85,6 +146,59 @@ function getHandlerTypes(unit: DeploymentUnit): string[] {
 export class CloudflareProviderAdapter {
   readonly name = 'cloudflare'
   readonly deployDirName = 'cloudflare'
+  /**
+   * CF's workflow runtime is `PikkuWorkflowDoClient` + `PikkuWorkflowDO`,
+   * a Durable-Object-backed orchestrator that advances steps via direct
+   * per-rpc service-binding stubs — no queue hop required. Default is
+   * false so the deploy manifest stays minimal and we don't provision idle
+   * CF queues just to satisfy the legacy queue-dispatch model. Platforms
+   * that swap in a queue-driven workflow runtime can flip this via
+   * `CloudflareProviderAdapterOptions.workflowQueues`.
+   */
+  readonly workflowQueues: boolean
+  readonly httpQueueJobs: boolean
+
+  private readonly contributors: PlatformServiceContributor[]
+
+  constructor(options: CloudflareProviderAdapterOptions = {}) {
+    this.workflowQueues = options.workflowQueues ?? false
+    this.httpQueueJobs = options.httpQueueJobs ?? false
+    // De-dupe contributors by name (last wins).
+    const byName = new Map<string, PlatformServiceContributor>()
+    for (const c of options.contributors ?? []) {
+      byName.set(c.name, c)
+    }
+    this.contributors = [...byName.values()]
+  }
+
+  /** Collect all contributor imports as a flat, de-duplicated array. */
+  private contributorImports(): string[] {
+    const seen = new Set<string>()
+    const out: string[] = []
+    for (const c of this.contributors) {
+      for (const line of c.imports ?? []) {
+        if (!seen.has(line)) {
+          seen.add(line)
+          out.push(line)
+        }
+      }
+    }
+    return out
+  }
+
+  /** Run every contributor's emit() and concatenate the resulting lines. */
+  private contributorLines(
+    ctx: EntryGenerationContext,
+    platform: PlatformImports,
+    isGateway: boolean
+  ): string[] {
+    const out: string[] = []
+    for (const c of this.contributors) {
+      const lines = c.emit({ ctx, platform, isGateway })
+      if (lines.length > 0) out.push(...lines)
+    }
+    return out
+  }
 
   /**
    * Determine which @pikku/cloudflare imports the unit needs based on its
@@ -94,13 +208,7 @@ export class CloudflareProviderAdapter {
   private resolvePlatformImports(
     unit: DeploymentUnit,
     extraImports: string[] = []
-  ): {
-    cfImports: string[]
-    needsD1: boolean
-    needsQueue: boolean
-    needsWorkflow: boolean
-    needsAI: boolean
-  } {
+  ): PlatformImports {
     const needsQueue = unit.services.some((s) => s.capability === 'queue')
     const needsWorkflow = unit.services.some(
       (s) => s.capability === 'workflow-state'
@@ -111,7 +219,6 @@ export class CloudflareProviderAdapter {
 
     const cfImports = [...extraImports]
     if (needsQueue) cfImports.push('CloudflareQueueService')
-    if (needsWorkflow) cfImports.push('CloudflareWorkflowService')
     if (needsAI)
       cfImports.push(
         'CloudflareAIStorageService',
@@ -121,7 +228,7 @@ export class CloudflareProviderAdapter {
 
     return {
       cfImports,
-      needsD1: needsWorkflow || needsAI,
+      needsD1: needsAI,
       needsQueue,
       needsWorkflow,
       needsAI,
@@ -138,7 +245,9 @@ export class CloudflareProviderAdapter {
     if (unit.role === 'mcp' || unit.role === 'agent') {
       return this.generateGatewayEntry(ctx)
     }
-    // Workflow orchestrators need both fetch (HTTP routes) and queue (step dispatch)
+    // Workflow orchestrators expose fetch (HTTP routes) and a queue handler for
+    // any user-declared queues bound to this unit. Workflow step dispatch goes
+    // through the per-run Durable Object (WORKFLOW_DO), NOT through this queue.
     if (unit.role === 'workflow') {
       return this.generateGatewayEntry(ctx, true)
     }
@@ -168,9 +277,9 @@ export class CloudflareProviderAdapter {
       ...(platform.needsD1
         ? [
             `import { ${[
-              ...(platform.needsWorkflow ? ['CloudflareWorkflowService'] : []),
               ...(platform.needsAI
                 ? [
+                    'createD1Kysely',
                     'CloudflareAIStorageService',
                     'CloudflareAgentRunService',
                     'CloudflareAIRunStateService',
@@ -180,8 +289,15 @@ export class CloudflareProviderAdapter {
             `import type { D1Database } from '@cloudflare/workers-types'`,
           ]
         : []),
+      ...(platform.needsWorkflow
+        ? [
+            `import { PikkuWorkflowDoClient } from '@pikku/cloudflare/workflow-do'`,
+            `import type { DurableObjectNamespace } from '@cloudflare/workers-types'`,
+          ]
+        : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
+      ...this.contributorImports(),
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
@@ -191,7 +307,8 @@ export class CloudflareProviderAdapter {
       ``,
       `export default createCloudflareHandler(`,
       `  { createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices },`,
-      `  ${JSON.stringify(handlerTypes)}`,
+      `  ${JSON.stringify(handlerTypes)},`,
+      `  { httpQueueJobs: ${this.httpQueueJobs} }`,
       `)`,
       ``,
     ]
@@ -218,9 +335,9 @@ export class CloudflareProviderAdapter {
       ...(platform.needsD1
         ? [
             `import { ${[
-              ...(platform.needsWorkflow ? ['CloudflareWorkflowService'] : []),
               ...(platform.needsAI
                 ? [
+                    'createD1Kysely',
                     'CloudflareAIStorageService',
                     'CloudflareAgentRunService',
                     'CloudflareAIRunStateService',
@@ -230,8 +347,15 @@ export class CloudflareProviderAdapter {
             `import type { D1Database } from '@cloudflare/workers-types'`,
           ]
         : []),
+      ...(platform.needsWorkflow
+        ? [
+            `import { PikkuWorkflowDoClient } from '@pikku/cloudflare/workflow-do'`,
+            `import type { DurableObjectNamespace } from '@cloudflare/workers-types'`,
+          ]
+        : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
+      ...this.contributorImports(),
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
@@ -255,6 +379,8 @@ export class CloudflareProviderAdapter {
     ctx: EntryGenerationContext,
     includeQueueHandler = false
   ): string {
+    const isWorkflowRole = ctx.unit.role === 'workflow'
+
     // Build the service binding map from dependsOn
     const bindingEntries = ctx.unit.dependsOn.map((dep) => {
       const bindingName = toWorkerBinding(dep)
@@ -273,11 +399,11 @@ export class CloudflareProviderAdapter {
     const handlerTypes = includeQueueHandler ? `["fetch", "queue"]` : ''
 
     const exportLine = includeQueueHandler
-      ? `export default createCloudflareHandler(\n  { createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices },\n  ${handlerTypes}\n)`
+      ? `export default createCloudflareHandler(\n  { createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices },\n  ${handlerTypes},\n  { httpQueueJobs: ${this.httpQueueJobs} }\n)`
       : `export default createCloudflareWorkerHandler({ createConfig: ${ctx.configVar}, createSingletonServices: ${ctx.servicesVar}, createPlatformServices })`
 
     const handlerImport = includeQueueHandler
-      ? `import { createCloudflareHandler } from '@pikku/cloudflare/handler'`
+      ? `import { createCloudflareHandler${isWorkflowRole ? ', setupServices' : ''} } from '@pikku/cloudflare/handler'`
       : `import { createCloudflareWorkerHandler } from '@pikku/cloudflare/handler'`
 
     const lines: string[] = [
@@ -291,9 +417,9 @@ export class CloudflareProviderAdapter {
       ...(platform.needsD1
         ? [
             `import { ${[
-              ...(platform.needsWorkflow ? ['CloudflareWorkflowService'] : []),
               ...(platform.needsAI
                 ? [
+                    'createD1Kysely',
                     'CloudflareAIStorageService',
                     'CloudflareAgentRunService',
                     'CloudflareAIRunStateService',
@@ -303,8 +429,18 @@ export class CloudflareProviderAdapter {
             `import type { D1Database } from '@cloudflare/workers-types'`,
           ]
         : []),
+      ...(platform.needsWorkflow
+        ? [
+            `import { PikkuWorkflowDoClient${isWorkflowRole ? ', PikkuWorkflowDO, PikkuWorkflowDoService' : ''} } from '@pikku/cloudflare/workflow-do'`,
+            `import type { DurableObjectNamespace${isWorkflowRole ? ', DurableObjectStorage' : ''} } from '@cloudflare/workers-types'`,
+            ...(isWorkflowRole
+              ? [`import type { WorkflowRunWire } from '@pikku/core/workflow'`]
+              : []),
+          ]
+        : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
+      ...this.contributorImports(),
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
@@ -312,6 +448,7 @@ export class CloudflareProviderAdapter {
       ``,
       ...this.generateGatewayPlatformServicesBlock(ctx, platform, bindingsMap),
       ``,
+      ...(isWorkflowRole ? this.generateWorkflowDoClass(ctx) : []),
       exportLine,
       ``,
     ]
@@ -320,11 +457,69 @@ export class CloudflareProviderAdapter {
   }
 
   /**
+   * Emit a `WorkflowOrchestratorDO` class for workflow-role gateway entries.
+   *
+   * The DO is one-per-run and does the actual workflow orchestration —
+   * storing run/step state in `ctx.storage`, dispatching steps to per-rpc
+   * service bindings, and waking on `alarm()` for retries/sleeps.
+   *
+   * Singleton services are initialized on first invocation via the shared
+   * `setupServices` helper and pinned on `globalThis.__PIKKU_SINGLETON_SERVICES__`
+   * so the orchestrator's RPC service is available inside `alarm()`,
+   * which fires without a parent fetch.
+   */
+  private generateWorkflowDoClass(ctx: EntryGenerationContext): string[] {
+    return [
+      `const __pikkuFactories = {`,
+      `  createConfig: ${ctx.configVar},`,
+      `  createSingletonServices: ${ctx.servicesVar},`,
+      `  createPlatformServices,`,
+      `}`,
+      ``,
+      `export class WorkflowOrchestratorDO extends PikkuWorkflowDO<CloudflareEnv> {`,
+      `  protected createService(): PikkuWorkflowDoService<CloudflareEnv> {`,
+      `    return new PikkuWorkflowDoService<CloudflareEnv>(`,
+      `      this.ctx.storage as DurableObjectStorage,`,
+      `      this.env,`,
+      `      this.ctx.id.toString()`,
+      `    )`,
+      `  }`,
+      ``,
+      `  private async ensureSingletons(): Promise<void> {`,
+      `    const slot = globalThis as { __PIKKU_SINGLETON_SERVICES__?: unknown }`,
+      `    if (slot.__PIKKU_SINGLETON_SERVICES__) return`,
+      `    slot.__PIKKU_SINGLETON_SERVICES__ = await setupServices(this.env, __pikkuFactories)`,
+      `  }`,
+      ``,
+      `  // Pin singletons before delegating so the orchestrator's RPC service`,
+      `  // is available across both the fetch path (start) and the alarm path`,
+      `  // (retries/sleeps fire without a parent fetch).`,
+      `  async start(input: {`,
+      `    workflow: string`,
+      `    input: unknown`,
+      `    wire?: WorkflowRunWire`,
+      `    graphHash?: string`,
+      `    inline?: boolean`,
+      `  }): Promise<{ runId: string }> {`,
+      `    await this.ensureSingletons()`,
+      `    return super.start(input)`,
+      `  }`,
+      ``,
+      `  async alarm(): Promise<void> {`,
+      `    await this.ensureSingletons()`,
+      `    return super.alarm()`,
+      `  }`,
+      `}`,
+      ``,
+    ]
+  }
+
+  /**
    * Generates the createPlatformServices function block shared by all entry types.
    */
   private generatePlatformServicesBlock(
     ctx: EntryGenerationContext,
-    platform: ReturnType<CloudflareProviderAdapter['resolvePlatformImports']>
+    platform: PlatformImports
   ): string[] {
     const lines = [
       `const createPlatformServices = async (env: CloudflareEnv): Promise<${ctx.servicesType}> => {`,
@@ -338,10 +533,8 @@ export class CloudflareProviderAdapter {
     }
     if (platform.needsWorkflow) {
       lines.push(
-        `  if (env.WORKFLOW_DB) {`,
-        `    const workflowService = new CloudflareWorkflowService(env.WORKFLOW_DB as D1Database)`,
-        `    await workflowService.init()`,
-        `    services.workflowService = workflowService`,
+        `  if (env.WORKFLOW_DO) {`,
+        `    services.workflowService = new PikkuWorkflowDoClient(env.WORKFLOW_DO as DurableObjectNamespace)`,
         `  }`
       )
     }
@@ -349,16 +542,18 @@ export class CloudflareProviderAdapter {
       lines.push(
         `  if (env.DB) {`,
         `    const db = env.DB as D1Database`,
-        `    const aiStorage = new CloudflareAIStorageService(db)`,
+        `    const kysely = createD1Kysely(db)`,
+        `    const aiStorage = new CloudflareAIStorageService(kysely)`,
         `    await aiStorage.init()`,
         `    services.aiStorage = aiStorage`,
-        `    services.agentRunService = new CloudflareAgentRunService(db)`,
-        `    const aiRunState = new CloudflareAIRunStateService(db)`,
+        `    services.agentRunService = new CloudflareAgentRunService(kysely)`,
+        `    const aiRunState = new CloudflareAIRunStateService(kysely)`,
         `    await aiRunState.init()`,
         `    services.aiRunState = aiRunState`,
         `  }`
       )
     }
+    lines.push(...this.contributorLines(ctx, platform, false))
     lines.push(`  return services`, `}`)
     return lines
   }
@@ -369,7 +564,7 @@ export class CloudflareProviderAdapter {
    */
   private generateGatewayPlatformServicesBlock(
     ctx: EntryGenerationContext,
-    platform: ReturnType<CloudflareProviderAdapter['resolvePlatformImports']>,
+    platform: PlatformImports,
     bindingsMap: string
   ): string[] {
     const lines = [
@@ -384,10 +579,8 @@ export class CloudflareProviderAdapter {
     }
     if (platform.needsWorkflow) {
       lines.push(
-        `  if (env.WORKFLOW_DB) {`,
-        `    const workflowService = new CloudflareWorkflowService(env.WORKFLOW_DB as D1Database)`,
-        `    await workflowService.init()`,
-        `    services.workflowService = workflowService`,
+        `  if (env.WORKFLOW_DO) {`,
+        `    services.workflowService = new PikkuWorkflowDoClient(env.WORKFLOW_DO as DurableObjectNamespace)`,
         `  }`
       )
     }
@@ -395,11 +588,12 @@ export class CloudflareProviderAdapter {
       lines.push(
         `  if (env.DB) {`,
         `    const db = env.DB as D1Database`,
-        `    const aiStorage = new CloudflareAIStorageService(db)`,
+        `    const kysely = createD1Kysely(db)`,
+        `    const aiStorage = new CloudflareAIStorageService(kysely)`,
         `    await aiStorage.init()`,
         `    services.aiStorage = aiStorage`,
-        `    services.agentRunService = new CloudflareAgentRunService(db)`,
-        `    const aiRunState = new CloudflareAIRunStateService(db)`,
+        `    services.agentRunService = new CloudflareAgentRunService(kysely)`,
+        `    const aiRunState = new CloudflareAIRunStateService(kysely)`,
         `    await aiRunState.init()`,
         `    services.aiRunState = aiRunState`,
         `  }`
@@ -411,10 +605,10 @@ export class CloudflareProviderAdapter {
       `    services.jwt,`,
       `    services.secrets,`,
       `    ${bindingsMap}`,
-      `  )`,
-      `  return services`,
-      `}`
+      `  )`
     )
+    lines.push(...this.contributorLines(ctx, platform, true))
+    lines.push(`  return services`, `}`)
     return lines
   }
 
@@ -508,6 +702,49 @@ export class CloudflareProviderAdapter {
     }
   }
 
+  /**
+   * Emit the synthesized `pikku-server-proxy` Worker when the project has
+   * any `target: 'server'` units. The proxy fronts the CF Container app
+   * via a Durable Object and forwards every inbound request to it.
+   *
+   * Output: `units/pikku-server-proxy/bundle.js`. Plain ESM JS — CF handles
+   * `cloudflare:workers` natively, so no esbuild step is needed.
+   */
+  async emitSideArtifacts(options: {
+    buildDir: string
+    manifest: DeploymentManifest
+    logger: { info(msg: string): void; error(msg: string): void }
+  }): Promise<void> {
+    const { buildDir, manifest, logger } = options
+    const hasServerUnits = manifest.units.some((u) => u.target === 'server')
+    if (!hasServerUnits) return
+
+    const { mkdir, writeFile } = await import('node:fs/promises')
+    const { join } = await import('node:path')
+
+    const proxyDir = join(buildDir, 'units', serverProxyConstants.unitName)
+    await mkdir(proxyDir, { recursive: true })
+    await writeFile(
+      join(proxyDir, 'bundle.js'),
+      generateServerProxyBundle(),
+      'utf-8'
+    )
+    // Empty package.json so any orchestrator that walks `units/*/package.json`
+    // sees the proxy unit. No deps — `cloudflare:workers` is platform-provided.
+    await writeFile(
+      join(proxyDir, 'package.json'),
+      JSON.stringify(
+        { name: serverProxyConstants.unitName, type: 'module' },
+        null,
+        2
+      ),
+      'utf-8'
+    )
+    logger.info(
+      `Emitted ${serverProxyConstants.unitName} proxy worker → ${proxyDir}`
+    )
+  }
+
   async deploy(options: {
     buildDir: string
     logger: { info(msg: string): void; error(msg: string): void }
@@ -537,21 +774,17 @@ export class CloudflareProviderAdapter {
       await readFile(join(options.buildDir, 'infra.json'), 'utf-8')
     )
 
-    // Error if any server-target units exist — container deploy requires Fabric
-    const serverUnits = Object.entries(infraJson.units || {}).filter(
-      ([_, u]) => (u as Record<string, unknown>).target === 'server'
-    )
-    if (serverUnits.length > 0) {
-      const names = serverUnits.map(([name]) => name).join(', ')
-      return {
-        success: false,
-        errors: [
-          {
-            step: 'validation',
-            error: `Project contains server-target functions (${names}) which require a container runtime. Server deploy is available via Pikku Fabric (https://pikku.dev/fabric).`,
-          },
-        ],
-      }
+    // Server-target units are emitted as a Node container bundle in
+    // .deploy/cloudflare/container/ (Dockerfile + bundle.js + package.json).
+    // The CF adapter doesn't ship them — that's an orchestrator concern
+    // (fly.io, ECS, custom orchestrator, ...). Skip them here; they're already on disk.
+    const serverUnitNames = Object.entries(infraJson.units || {})
+      .filter(([_, u]) => (u as Record<string, unknown>).target === 'server')
+      .map(([name]) => name)
+    if (serverUnitNames.length > 0) {
+      options.logger.info(
+        `Skipping ${serverUnitNames.length} server-target unit(s) — container artifacts emitted in .deploy/cloudflare/container/ for an orchestrator to pick up: ${serverUnitNames.join(', ')}`
+      )
     }
 
     return deploy({

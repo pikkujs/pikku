@@ -1,15 +1,22 @@
 import { LocalVariablesService, LocalSecretService } from '@pikku/core/services'
 import type { CoreSingletonServices } from '@pikku/core'
 import type { ScheduledController } from '@cloudflare/workers-types'
+import { WorkerEntrypoint } from 'cloudflare:workers'
 import { runFetch } from './run-fetch.js'
 import { runScheduled } from './run-scheduled.js'
 import { runQueueJob } from '@pikku/core/queue'
+import { rpcService } from '@pikku/core/rpc'
 import { pikkuState } from '@pikku/core/internal'
 import type { QueueJob, QueueJobStatus } from '@pikku/core/queue'
 import { CloudflareWebSocketHibernationServer } from './cloudflare-hibernation-websocket-server.js'
 import { CloudflareEventHubService } from './cloudflare-eventhub-service.js'
+import {
+  type CloudflareEnv,
+  getCloudflareEnv,
+  setCloudflareEnv,
+} from './env.js'
 
-export type CloudflareEnv = Record<string, unknown>
+export { getCloudflareEnv, type CloudflareEnv }
 
 export interface ServiceFactories {
   createConfig: (
@@ -32,23 +39,11 @@ export interface ServiceFactories {
 
 let cachedServices: CoreSingletonServices | null = null
 
-let cachedEnv: CloudflareEnv | null = null
-
-/**
- * Returns the Cloudflare `env` that was last passed into the worker handler,
- * or `null` if called before any request. Lets user `createSingletonServices`
- * read CF-specific bindings (D1, R2, KV, queue producers, etc.) without
- * threading `env` through every signature.
- */
-export function getCloudflareEnv(): CloudflareEnv | null {
-  return cachedEnv
-}
-
-async function setupServices(
+export async function setupServices(
   env: CloudflareEnv,
   factories: ServiceFactories
 ): Promise<CoreSingletonServices> {
-  cachedEnv = env
+  setCloudflareEnv(env)
   if (cachedServices) return cachedServices
   const variables = new LocalVariablesService(
     env as Record<string, string | undefined>
@@ -133,63 +128,144 @@ async function processQueueBatch(batch: {
 }
 
 /**
- * Creates a combined ExportedHandler based on which handler types the unit needs.
+ * Creates a WorkerEntrypoint class with the requested handler methods.
  *
- * Instead of one handler factory per role, a unit declares which handlers it needs
- * (fetch, queue, scheduled) and this function builds a single default export
- * that includes all of them.
+ * Methods on a WorkerEntrypoint subclass are exposed via Worker RPC: any
+ * service binding (or dispatch-namespace `env.NS.get(name)`) can call
+ * `.fetch()`, `.queue()`, `.scheduled()` directly. This unblocks queue
+ * fan-out from a per-stage dispatcher to namespace scripts on Workers
+ * for Platforms (CF queue consumers can't bind to namespace scripts
+ * directly, so a dispatcher consumes and forwards via RPC).
+ *
+ * The class is constructed once per Worker instance; CF passes ctx, env
+ * to the constructor. We stash env in module-scope cachedEnv so user
+ * service factories can read it via getCloudflareEnv().
  */
 export function createCloudflareHandler(
   factories: ServiceFactories,
   handlerTypes: string[]
 ) {
-  const result: Record<string, unknown> = {}
+  const includesFetch = handlerTypes.includes('fetch')
+  const includesQueue = handlerTypes.includes('queue')
+  const includesScheduled = handlerTypes.includes('scheduled')
+  const fallbackFetchMessage = `Worker active (handlers: ${handlerTypes.join(', ')})`
 
-  if (handlerTypes.includes('fetch')) {
-    result.fetch = async (request: Request, env: CloudflareEnv) => {
-      const services = await setupServices(env, factories)
-
-      // Debug endpoint: /__pikku/debug
-      const url = new URL(request.url)
-      if (url.pathname === '/__pikku/debug') {
-        const queueMeta = pikkuState(null, 'queue', 'meta')
-        const workflowMeta = pikkuState(null, 'workflows', 'meta')
-        const queueRegistrations = pikkuState(null, 'queue', 'registrations')
-        return new Response(
-          JSON.stringify(
-            {
-              hasQueueService: !!services.queueService,
-              hasWorkflowService: !!services.workflowService,
-              queueMetaKeys: Object.keys(queueMeta ?? {}),
-              workflowMetaKeys: Object.keys(workflowMeta ?? {}),
-              queueRegistrationKeys: queueRegistrations
-                ? [...queueRegistrations.keys()]
-                : [],
-              envBindings: Object.keys(env).filter(
-                (k) =>
-                  k.includes('WF_') ||
-                  k.includes('QUEUE') ||
-                  k.includes('WORKFLOW')
-              ),
+  return class PikkuHandler extends WorkerEntrypoint<CloudflareEnv> {
+    async fetch(request: Request): Promise<Response> {
+      // `/__pikku/queue-job` is the fabric WfP queue-delivery route. It
+      // bypasses `includesFetch` so units with no public HTTP surface still
+      // receive queue jobs from the per-stage dispatcher (which can't deliver
+      // via real CF Queues — namespace scripts can't bind as queue consumers).
+      // Body: { queueName, data, jobId, traceId }. Status codes: 204 = ack,
+      // 422 = ack-no-retry (PikkuMissingMetaError, QueueJobDiscardedError),
+      // 503 = retry (other thrown errors). The fabric dispatcher + pg-boss
+      // worker map these onto pg-boss outcomes.
+      const reqUrl = new URL(request.url)
+      if (
+        reqUrl.pathname === '/__pikku/queue-job' &&
+        request.method === 'POST'
+      ) {
+        try {
+          await setupServices(this.env, factories)
+          const body = (await request.json()) as {
+            queueName: string
+            data: unknown
+            jobId?: string
+            traceId?: string
+          }
+          // Direct path — bypass processQueueBatch's `body.data ?? body`
+          // heuristic which mis-unwraps payloads whose envelope already
+          // has a `data` field (e.g. workflow step inputs).
+          const queueMeta = pikkuState(null, 'queue', 'meta')
+          const queueName = queueMeta[body.queueName]
+            ? body.queueName
+            : (Object.keys(queueMeta)
+                .filter((k) => body.queueName.endsWith(k))
+                .sort((a, b) => b.length - a.length)[0] ?? body.queueName)
+          const msgId = body.jobId ?? body.traceId ?? crypto.randomUUID()
+          const job: QueueJob = {
+            queueName,
+            data: body.data,
+            id: msgId,
+            status: async () => 'active' as QueueJobStatus,
+            metadata: () => ({
+              processedAt: new Date(),
+              attemptsMade: 0,
+              maxAttempts: undefined,
+              result: undefined,
+              progress: 0,
+              createdAt: new Date(),
+              completedAt: undefined,
+              failedAt: undefined,
+              error: undefined,
+            }),
+            waitForCompletion: async () => {
+              throw new Error('CF Queues do not support waitForCompletion')
             },
-            null,
-            2
-          ),
-          { headers: { 'Content-Type': 'application/json' } }
-        )
+          }
+          await runQueueJob({ job })
+          return new Response(null, { status: 204 })
+        } catch (e: unknown) {
+          const errorName = (e as Error)?.name ?? 'Error'
+          const message = (e as Error)?.message ?? String(e)
+          const noRetry =
+            errorName === 'QueueJobDiscardedError' ||
+            errorName === 'PikkuMissingMetaError'
+          return new Response(
+            JSON.stringify({ ok: false, errorName, message }),
+            {
+              status: noRetry ? 422 : 503,
+              headers: { 'content-type': 'application/json' },
+            }
+          )
+        }
       }
 
-      return runFetch(request, undefined, { exposeErrors: true })
-    }
-  }
+      if (includesFetch) {
+        const services = await setupServices(this.env, factories)
 
-  if (handlerTypes.includes('queue')) {
-    result.queue = async (
-      batch: { queue?: string; messages: Array<{ id: string; body: unknown }> },
-      env: CloudflareEnv
-    ) => {
+        const url = new URL(request.url)
+        if (url.pathname === '/__pikku/debug') {
+          const queueMeta = pikkuState(null, 'queue', 'meta')
+          const workflowMeta = pikkuState(null, 'workflows', 'meta')
+          const queueRegistrations = pikkuState(null, 'queue', 'registrations')
+          return new Response(
+            JSON.stringify(
+              {
+                hasQueueService: !!services.queueService,
+                hasWorkflowService: !!services.workflowService,
+                queueMetaKeys: Object.keys(queueMeta ?? {}),
+                workflowMetaKeys: Object.keys(workflowMeta ?? {}),
+                queueRegistrationKeys: queueRegistrations
+                  ? [...queueRegistrations.keys()]
+                  : [],
+                envBindings: Object.keys(this.env).filter(
+                  (k) =>
+                    k.includes('WF_') ||
+                    k.includes('QUEUE') ||
+                    k.includes('WORKFLOW')
+                ),
+              },
+              null,
+              2
+            ),
+            { headers: { 'Content-Type': 'application/json' } }
+          )
+        }
+
+        return runFetch(request, undefined, { exposeErrors: true })
+      }
+      // Health-check fallback for units with no fetch role
+      return new Response(fallbackFetchMessage, { status: 200 })
+    }
+
+    async queue(batch: {
+      queue?: string
+      messages: Array<{ id: string; body: unknown }>
+    }): Promise<void> {
+      if (!includesQueue) return
       try {
-        await setupServices(env, factories)
+        await setupServices(this.env, factories)
         console.log(
           `[QUEUE] Processing batch from "${batch.queue}", ${batch.messages.length} messages`
         )
@@ -204,75 +280,106 @@ export function createCloudflareHandler(
         throw e
       }
     }
-  }
 
-  if (handlerTypes.includes('scheduled')) {
-    result.scheduled = async (
-      controller: ScheduledController,
-      env: CloudflareEnv
-    ) => {
-      await setupServices(env, factories)
+    async scheduled(controller: ScheduledController): Promise<void> {
+      if (!includesScheduled) return
+      await setupServices(this.env, factories)
       await runScheduled(controller)
     }
-  }
 
-  // If no fetch handler was requested, add a health check endpoint
-  if (!handlerTypes.includes('fetch')) {
-    const activeHandlers = handlerTypes.join(', ')
-    result.fetch = async () => {
-      return new Response(`Worker active (handlers: ${activeHandlers})`, {
-        status: 200,
-      })
+    /**
+     * Typed RPC entrypoint for service-binding / dispatch-namespace callers.
+     * Bypasses HTTP routing and `expose:true` gating — invokes the in-process
+     * pikku RPC dispatcher directly so internal functions are reachable
+     * across Worker boundaries. Errors propagate via structured clone.
+     */
+    async runRpc(name: string, args: unknown): Promise<unknown> {
+      const services = await setupServices(this.env, factories)
+      const rpc = rpcService.getContextRPCService(
+        services as any,
+        {},
+        false
+      ) as any
+      return rpc.invoke(name, args)
     }
   }
-
-  return result
 }
 
 /**
- * Creates an ExportedHandler with a fetch() entrypoint for HTTP, agent, RPC,
- * and workflow-orchestrator units.
+ * Creates a WorkerEntrypoint class with a fetch() handler for HTTP, agent,
+ * RPC, and workflow-orchestrator units. WorkerEntrypoint exposes methods
+ * via Worker RPC so service-binding callers (and dispatch-namespace stubs)
+ * can invoke them across Worker boundaries.
  */
 export function createCloudflareWorkerHandler(factories: ServiceFactories) {
-  return {
-    async fetch(request: Request, env: CloudflareEnv) {
-      await setupServices(env, factories)
+  return class PikkuWorker extends WorkerEntrypoint<CloudflareEnv> {
+    async fetch(request: Request): Promise<Response> {
+      await setupServices(this.env, factories)
       return runFetch(request)
-    },
+    }
+
+    async runRpc(name: string, args: unknown): Promise<unknown> {
+      const services = await setupServices(this.env, factories)
+      const rpc = rpcService.getContextRPCService(
+        services as any,
+        {},
+        false
+      ) as any
+      return rpc.invoke(name, args)
+    }
   }
 }
 
 /**
- * Creates an ExportedHandler with a scheduled() entrypoint for cron units.
+ * Creates a WorkerEntrypoint class with a scheduled() handler for cron units.
  */
 export function createCloudflareCronHandler(factories: ServiceFactories) {
-  return {
-    async fetch() {
+  return class PikkuCron extends WorkerEntrypoint<CloudflareEnv> {
+    async fetch(): Promise<Response> {
       return new Response('Cron worker active', { status: 200 })
-    },
-    async scheduled(controller: ScheduledController, env: CloudflareEnv) {
-      await setupServices(env, factories)
+    }
+    async scheduled(controller: ScheduledController): Promise<void> {
+      await setupServices(this.env, factories)
       await runScheduled(controller)
-    },
+    }
+    async runRpc(name: string, args: unknown): Promise<unknown> {
+      const services = await setupServices(this.env, factories)
+      const rpc = rpcService.getContextRPCService(
+        services as any,
+        {},
+        false
+      ) as any
+      return rpc.invoke(name, args)
+    }
   }
 }
 
 /**
- * Creates an ExportedHandler with a queue() entrypoint for queue-consumer
- * and workflow-step units.
+ * Creates a WorkerEntrypoint class with a queue() handler for queue-consumer
+ * and workflow-step units. queue() is RPC-callable, so a dispatcher can do
+ * `env.NS.get(name).queue(batch)` to fan a batch out to a namespace script.
  */
 export function createCloudflareQueueHandler(factories: ServiceFactories) {
-  return {
-    async fetch() {
+  return class PikkuQueue extends WorkerEntrypoint<CloudflareEnv> {
+    async fetch(): Promise<Response> {
       return new Response('Queue consumer active', { status: 200 })
-    },
-    async queue(
-      batch: { messages: Array<{ id: string; body: unknown }> },
-      env: CloudflareEnv
-    ) {
-      await setupServices(env, factories)
+    }
+    async queue(batch: {
+      queue?: string
+      messages: Array<{ id: string; body: unknown }>
+    }): Promise<void> {
+      await setupServices(this.env, factories)
       await processQueueBatch(batch)
-    },
+    }
+    async runRpc(name: string, args: unknown): Promise<unknown> {
+      const services = await setupServices(this.env, factories)
+      const rpc = rpcService.getContextRPCService(
+        services as any,
+        {},
+        false
+      ) as any
+      return rpc.invoke(name, args)
+    }
   }
 }
 
@@ -326,10 +433,10 @@ export class PikkuWebSocketHibernationServer extends CloudflareWebSocketHibernat
  */
 export function createCloudflareWebSocketHandler(factories: ServiceFactories) {
   wsFactories = factories
-  return {
-    async fetch(request: Request, env: CloudflareEnv) {
-      await setupServices(env, factories)
-      const durableObject = env.WEBSOCKET_HIBERNATION_SERVER as
+  return class PikkuWebSocketRouter extends WorkerEntrypoint<CloudflareEnv> {
+    async fetch(request: Request): Promise<Response> {
+      await setupServices(this.env, factories)
+      const durableObject = this.env.WEBSOCKET_HIBERNATION_SERVER as
         | {
             idFromName: (name: string) => { toString: () => string }
             get: (id: unknown) => {
@@ -346,6 +453,6 @@ export function createCloudflareWebSocketHandler(factories: ServiceFactories) {
       const id = durableObject.idFromName('default')
       const stub = durableObject.get(id)
       return stub.fetch(request)
-    },
+    }
   }
 }
