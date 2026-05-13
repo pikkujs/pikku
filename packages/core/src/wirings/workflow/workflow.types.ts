@@ -192,14 +192,77 @@ export interface WorkflowRunService {
 }
 
 /**
+ * Write-only companion to `WorkflowRunService`. An executor (a
+ * `PikkuWorkflowService` subclass) can be given a mirror; every write
+ * the executor makes to its own canonical store is then forwarded here,
+ * so an external read store (e.g. a DB queried by the console UI) stays
+ * in sync with DO/Redis/etc-driven runs.
+ *
+ * Mirror failures are logged but never fail the workflow — the mirror is
+ * an index, not the source of truth.
+ */
+export interface WorkflowRunMirror {
+  createRun(
+    runId: string,
+    workflowName: string,
+    input: any,
+    inline: boolean,
+    graphHash: string,
+    wire: WorkflowRunWire,
+    options?: {
+      deterministic?: boolean
+      plannedSteps?: WorkflowPlannedStep[]
+    }
+  ): Promise<void>
+
+  updateRunStatus(
+    id: string,
+    status: WorkflowStatus,
+    output?: any,
+    error?: SerializedError
+  ): Promise<void>
+
+  insertStepState(
+    runId: string,
+    step: StepState & { stepName: string; rpcName: string | null; data: any }
+  ): Promise<void>
+
+  setStepRunning(stepId: string): Promise<void>
+  setStepScheduled(stepId: string): Promise<void>
+  setStepResult(stepId: string, result: any): Promise<void>
+  setStepChildRunId(stepId: string, childRunId: string): Promise<void>
+  setStepError(stepId: string, error: SerializedError): Promise<void>
+
+  createRetryAttempt(
+    failedStepId: string,
+    newStep: StepState & { stepName: string }
+  ): Promise<void>
+
+  setBranchTaken(stepId: string, branchKey: string): Promise<void>
+
+  updateRunState(runId: string, name: string, value: unknown): Promise<void>
+
+  upsertWorkflowVersion(
+    name: string,
+    graphHash: string,
+    graph: any,
+    source: string,
+    status?: WorkflowVersionStatus
+  ): Promise<void>
+
+  updateWorkflowVersionStatus(
+    name: string,
+    graphHash: string,
+    status: WorkflowVersionStatus
+  ): Promise<void>
+}
+
+/**
  * Core workflow definition
  */
 export type CoreWorkflow<
-  PikkuFunctionConfig extends CorePikkuFunctionConfig<
-    any,
-    any,
-    any
-  > = CorePikkuFunctionConfig<any, any, any>,
+  PikkuFunctionConfig extends CorePikkuFunctionConfig<any, any, any> =
+    CorePikkuFunctionConfig<any, any, any>,
 > = {
   /** Unique workflow name */
   name: string

@@ -51,6 +51,7 @@ import type {
   StepStatus,
   WorkflowPlannedStep,
   WorkflowRun,
+  WorkflowRunMirror,
   WorkflowRunStatus,
   WorkflowRunWire,
   WorkflowStatus,
@@ -157,7 +158,39 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     return getSingletonServices()?.logger
   }
 
-  constructor() {
+  protected mirror?: WorkflowRunMirror
+
+  constructor(
+    options: { wireQueues?: boolean; mirror?: WorkflowRunMirror } = {}
+  ) {
+    const wireQueues = options.wireQueues ?? true
+    this.mirror = options.mirror
+    if (wireQueues) {
+      this.wireQueueWorkers()
+    }
+  }
+
+  private async safeMirror(fn: () => Promise<void>): Promise<void> {
+    if (!this.mirror) return
+    try {
+      await fn()
+    } catch (err: any) {
+      try {
+        this.logger?.warn?.(
+          `[pikku] WorkflowRunMirror write failed: ${err?.message ?? err}`
+        )
+      } catch {
+        // logger unavailable (e.g. singleton services not initialized) — swallow
+      }
+    }
+  }
+
+  /**
+   * Wire the queue-based orchestrator/step/sleeper workers.
+   * Subclasses that orchestrate without queues (e.g. Durable Objects) should
+   * pass `wireQueues: false` to the base constructor and skip this entirely.
+   */
+  protected wireQueueWorkers(): void {
     const functions = pikkuState(null, 'function', 'functions')
     const functionsMeta = pikkuState(null, 'function', 'meta')
 
@@ -268,7 +301,40 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
   }
 
-  abstract createRun(
+  public async createRun(
+    workflowName: string,
+    input: any,
+    inline: boolean,
+    graphHash: string,
+    wire: WorkflowRunWire,
+    options?: {
+      deterministic?: boolean
+      plannedSteps?: WorkflowPlannedStep[]
+    }
+  ): Promise<string> {
+    const runId = await this.createRunImpl(
+      workflowName,
+      input,
+      inline,
+      graphHash,
+      wire,
+      options
+    )
+    await this.safeMirror(() =>
+      this.mirror!.createRun(
+        runId,
+        workflowName,
+        input,
+        inline,
+        graphHash,
+        wire,
+        options
+      )
+    )
+    return runId
+  }
+
+  protected abstract createRunImpl(
     workflowName: string,
     input: any,
     inline: boolean,
@@ -352,7 +418,19 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * @param id - Run ID
    * @param status - New status
    */
-  abstract updateRunStatus(
+  public async updateRunStatus(
+    id: string,
+    status: WorkflowStatus,
+    output?: any,
+    error?: SerializedError
+  ): Promise<void> {
+    await this.updateRunStatusImpl(id, status, output, error)
+    await this.safeMirror(() =>
+      this.mirror!.updateRunStatus(id, status, output, error)
+    )
+  }
+
+  protected abstract updateRunStatusImpl(
     id: string,
     status: WorkflowStatus,
     output?: any,
@@ -369,7 +447,27 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * @param stepOptions - Step options (retries, retryDelay)
    * @returns Step state with generated stepId
    */
-  abstract insertStepState(
+  public async insertStepState(
+    runId: string,
+    stepName: string,
+    rpcName: string | null,
+    data: any,
+    stepOptions?: WorkflowStepOptions
+  ): Promise<StepState> {
+    const step = await this.insertStepStateImpl(
+      runId,
+      stepName,
+      rpcName,
+      data,
+      stepOptions
+    )
+    await this.safeMirror(() =>
+      this.mirror!.insertStepState(runId, { ...step, stepName, rpcName, data })
+    )
+    return step
+  }
+
+  protected abstract insertStepStateImpl(
     runId: string,
     stepName: string,
     rpcName: string | null,
@@ -390,14 +488,24 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * Updates both workflow_step and workflow_step_history
    * @param stepId - Step ID
    */
-  abstract setStepRunning(stepId: string): Promise<void>
+  public async setStepRunning(stepId: string): Promise<void> {
+    await this.setStepRunningImpl(stepId)
+    await this.safeMirror(() => this.mirror!.setStepRunning(stepId))
+  }
+
+  protected abstract setStepRunningImpl(stepId: string): Promise<void>
 
   /**
    * Mark step as scheduled (queued for execution)
    * Updates both workflow_step and workflow_step_history
    * @param stepId - Step ID
    */
-  abstract setStepScheduled(stepId: string): Promise<void>
+  public async setStepScheduled(stepId: string): Promise<void> {
+    await this.setStepScheduledImpl(stepId)
+    await this.safeMirror(() => this.mirror!.setStepScheduled(stepId))
+  }
+
+  protected abstract setStepScheduledImpl(stepId: string): Promise<void>
 
   /**
    * Store step result and mark as succeeded
@@ -405,14 +513,35 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * @param stepId - Step ID
    * @param result - Step result
    */
-  abstract setStepResult(stepId: string, result: any): Promise<void>
+  public async setStepResult(stepId: string, result: any): Promise<void> {
+    await this.setStepResultImpl(stepId, result)
+    await this.safeMirror(() => this.mirror!.setStepResult(stepId, result))
+  }
+
+  protected abstract setStepResultImpl(
+    stepId: string,
+    result: any
+  ): Promise<void>
 
   /**
    * Set the child workflow run ID on a step
    * @param stepId - Step ID
    * @param childRunId - Child workflow run ID
    */
-  abstract setStepChildRunId(stepId: string, childRunId: string): Promise<void>
+  public async setStepChildRunId(
+    stepId: string,
+    childRunId: string
+  ): Promise<void> {
+    await this.setStepChildRunIdImpl(stepId, childRunId)
+    await this.safeMirror(() =>
+      this.mirror!.setStepChildRunId(stepId, childRunId)
+    )
+  }
+
+  protected abstract setStepChildRunIdImpl(
+    stepId: string,
+    childRunId: string
+  ): Promise<void>
 
   /**
    * Store step error and mark as failed
@@ -420,7 +549,20 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * @param stepId - Step ID
    * @param error - Error object
    */
-  abstract setStepError(stepId: string, error: Error): Promise<void>
+  public async setStepError(stepId: string, error: Error): Promise<void> {
+    await this.setStepErrorImpl(stepId, error)
+    const serialized: SerializedError = {
+      message: error.message,
+      stack: error.stack,
+      code: (error as any).code,
+    }
+    await this.safeMirror(() => this.mirror!.setStepError(stepId, serialized))
+  }
+
+  protected abstract setStepErrorImpl(
+    stepId: string,
+    error: Error
+  ): Promise<void>
 
   /**
    * Create a new retry attempt for a failed step
@@ -430,7 +572,22 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * @param failedStepId - Failed step ID to copy from
    * @returns New step state for the retry attempt
    */
-  abstract createRetryAttempt(
+  public async createRetryAttempt(
+    failedStepId: string,
+    status: 'pending' | 'running'
+  ): Promise<StepState> {
+    const newStep = await this.createRetryAttemptImpl(failedStepId, status)
+    const stepName = (newStep as any).stepName ?? ''
+    await this.safeMirror(() =>
+      this.mirror!.createRetryAttempt(failedStepId, {
+        ...newStep,
+        stepName,
+      })
+    )
+    return newStep
+  }
+
+  protected abstract createRetryAttemptImpl(
     failedStepId: string,
     status: 'pending' | 'running'
   ): Promise<StepState>
@@ -503,7 +660,18 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * @param stepId - Step ID
    * @param branchKey - Branch key selected by graph.branch()
    */
-  abstract setBranchTaken(stepId: string, branchKey: string): Promise<void>
+  public async setBranchTaken(
+    stepId: string,
+    branchKey: string
+  ): Promise<void> {
+    await this.setBranchTakenImpl(stepId, branchKey)
+    await this.safeMirror(() => this.mirror!.setBranchTaken(stepId, branchKey))
+  }
+
+  protected abstract setBranchTakenImpl(
+    stepId: string,
+    branchKey: string
+  ): Promise<void>
 
   /**
    * Update a state variable in the workflow run's state
@@ -511,7 +679,16 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * @param name - Variable name
    * @param value - Value to store
    */
-  abstract updateRunState(
+  public async updateRunState(
+    runId: string,
+    name: string,
+    value: unknown
+  ): Promise<void> {
+    await this.updateRunStateImpl(runId, name, value)
+    await this.safeMirror(() => this.mirror!.updateRunState(runId, name, value))
+  }
+
+  protected abstract updateRunStateImpl(
     runId: string,
     name: string,
     value: unknown
@@ -524,7 +701,20 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    */
   abstract getRunState(runId: string): Promise<Record<string, unknown>>
 
-  abstract upsertWorkflowVersion(
+  public async upsertWorkflowVersion(
+    name: string,
+    graphHash: string,
+    graph: any,
+    source: string,
+    status?: WorkflowVersionStatus
+  ): Promise<void> {
+    await this.upsertWorkflowVersionImpl(name, graphHash, graph, source, status)
+    await this.safeMirror(() =>
+      this.mirror!.upsertWorkflowVersion(name, graphHash, graph, source, status)
+    )
+  }
+
+  protected abstract upsertWorkflowVersionImpl(
     name: string,
     graphHash: string,
     graph: any,
@@ -532,7 +722,18 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     status?: WorkflowVersionStatus
   ): Promise<void>
 
-  abstract updateWorkflowVersionStatus(
+  public async updateWorkflowVersionStatus(
+    name: string,
+    graphHash: string,
+    status: WorkflowVersionStatus
+  ): Promise<void> {
+    await this.updateWorkflowVersionStatusImpl(name, graphHash, status)
+    await this.safeMirror(() =>
+      this.mirror!.updateWorkflowVersionStatus(name, graphHash, status)
+    )
+  }
+
+  protected abstract updateWorkflowVersionStatusImpl(
     name: string,
     graphHash: string,
     status: WorkflowVersionStatus
@@ -573,9 +774,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     runId: string,
     stepName: string,
     rpcName: string,
-    data: any
+    data: any,
+    stepOptions?: WorkflowStepOptions
   ): Promise<void> {
     const queueService = this.verifyQueueService()
+    const retries = stepOptions?.retries ?? 0
+    const retryDelay = stepOptions?.retryDelay
     await queueService.add(
       this.getStepWorkerQueueName(rpcName),
       JSON.parse(
@@ -585,7 +789,18 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           rpcName,
           data,
         })
-      )
+      ),
+      retries > 0 || retryDelay
+        ? {
+            attempts: retries + 1,
+            backoff:
+              typeof retryDelay === 'number'
+                ? { type: 'fixed', delay: retryDelay }
+                : retryDelay === 'exponential'
+                  ? 'exponential'
+                  : undefined,
+          }
+        : undefined
     )
   }
 
@@ -622,6 +837,81 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       { runId },
       retryDelay ? { delay: getDurationInMilliseconds(retryDelay) } : undefined
     )
+  }
+
+  /**
+   * Dispatch a workflow step to be executed asynchronously.
+   *
+   * Default implementation enqueues a step worker job via the queue service.
+   * Subclasses with non-queue transports (e.g. Durable Objects) override this
+   * to dispatch via their own mechanism (RPC to a step worker, etc.).
+   *
+   * On return, the workflow is paused via `WorkflowAsyncException` thrown by
+   * the caller; the step transport is responsible for calling back into the
+   * orchestrator (via `resumeWorkflow` or equivalent) when the step completes.
+   *
+   * @returns true if dispatch was async (caller should pause), false to fall
+   *   through to the inline execution path.
+   */
+  protected async dispatchStep(
+    runId: string,
+    stepName: string,
+    rpcName: string,
+    data: unknown,
+    stepOptions?: WorkflowStepOptions
+  ): Promise<boolean> {
+    if (this.isInline(runId) || !getSingletonServices()?.queueService) {
+      return false
+    }
+    const retries = stepOptions?.retries ?? 0
+    const retryDelay = stepOptions?.retryDelay
+    await getSingletonServices()!.queueService!.add(
+      this.getStepWorkerQueueName(rpcName),
+      JSON.parse(
+        JSON.stringify({
+          runId,
+          stepName,
+          rpcName,
+          data,
+        })
+      ),
+      {
+        attempts: retries + 1,
+        backoff:
+          typeof retryDelay === 'number'
+            ? { type: 'fixed', delay: retryDelay }
+            : retryDelay === 'exponential'
+              ? 'exponential'
+              : undefined,
+      }
+    )
+    return true
+  }
+
+  /**
+   * Schedule a workflow sleep wakeup at the given duration.
+   *
+   * Default implementation uses the scheduler service to enqueue a delayed
+   * sleeper RPC. Subclasses with native timer primitives (e.g. Durable Object
+   * alarms) override this to schedule directly without going through queues.
+   *
+   * @returns true if the wakeup was scheduled remotely (caller should pause),
+   *   false to fall through to inline `setTimeout` behavior.
+   */
+  protected async scheduleSleep(
+    runId: string,
+    stepId: string,
+    duration: number | string
+  ): Promise<boolean> {
+    if (this.isInline(runId) || !getSingletonServices()?.schedulerService) {
+      return false
+    }
+    await getSingletonServices()!.schedulerService!.scheduleRPC(
+      duration,
+      this.getConfig().sleeperRPCName,
+      { runId, stepId }
+    )
+    return true
   }
 
   /**
@@ -1194,38 +1484,21 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     // Step is pending - schedule it
     await this.setStepScheduled(stepState.stepId)
 
-    // Enqueue step worker (unless inline mode)
-    if (!this.isInline(runId) && getSingletonServices()!.queueService) {
-      // Map step retry options to queue job options
-      const retries = stepOptions?.retries ?? 0
-      const retryDelay = stepOptions?.retryDelay
-
-      await getSingletonServices()!.queueService!.add(
-        this.getStepWorkerQueueName(rpcName),
-        JSON.parse(
-          JSON.stringify({
-            runId,
-            stepName,
-            rpcName,
-            data,
-          })
-        ),
-        {
-          // attempts includes initial attempt, retries doesn't
-          attempts: retries + 1,
-          // Map retry delay to backoff
-          backoff:
-            typeof retryDelay === 'number'
-              ? { type: 'fixed', delay: retryDelay }
-              : retryDelay === 'exponential'
-                ? 'exponential'
-                : undefined,
-        }
-      )
-      // Pause workflow - step will callback when done
+    // Hand off to subclass-overridable transport. Default behavior enqueues
+    // via the queue service; DO-style subclasses RPC to a step worker.
+    const dispatched = await this.dispatchStep(
+      runId,
+      stepName,
+      rpcName,
+      data,
+      stepOptions
+    )
+    if (dispatched) {
       throw new WorkflowAsyncException(runId, stepName)
-    } else {
-      // Inline or no queue service - execute locally with retry loop
+    }
+
+    {
+      // Inline (no transport available) - execute locally with retry loop
       const retries = stepOptions?.retries ?? 0
       const retryDelay = stepOptions?.retryDelay
       let currentStepState = stepState
@@ -1436,27 +1709,23 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     // Step is pending - schedule it
     await this.setStepScheduled(stepState.stepId)
 
-    // Check if inline mode or no scheduler service
-    if (!this.isInline(runId) && getSingletonServices()!.schedulerService) {
-      // Remote mode - schedule sleep via scheduler service
-      await getSingletonServices()!.schedulerService!.scheduleRPC(
-        duration,
-        this.getConfig().sleeperRPCName,
-        {
-          runId,
-          stepId: stepState.stepId,
-        }
-      )
-      // Pause workflow - sleep will callback when done
+    // Hand off to subclass-overridable transport. Default behavior schedules
+    // a delayed sleeper RPC via the scheduler service; DO-style subclasses
+    // override to use native timer primitives (e.g. setAlarm).
+    const scheduled = await this.scheduleSleep(
+      runId,
+      stepState.stepId,
+      duration
+    )
+    if (scheduled) {
       throw new WorkflowAsyncException(runId, stepName)
-    } else {
-      // Inline mode - use setTimeout with actual duration
-      await new Promise((resolve) =>
-        setTimeout(resolve, getDurationInMilliseconds(duration))
-      )
-      await this.setStepResult(stepState.stepId, null)
-      return
     }
+
+    // Inline mode - use setTimeout with actual duration
+    await new Promise((resolve) =>
+      setTimeout(resolve, getDurationInMilliseconds(duration))
+    )
+    await this.setStepResult(stepState.stepId, null)
   }
 
   private getSuspendStepName(reason: string): string {
@@ -1592,12 +1861,17 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * Get the orchestrator queue name for a specific workflow.
    * Checks queue meta for a per-workflow queue first (e.g. wf-orchestrator-{name}),
    * falls back to the shared orchestrator queue.
+   *
+   * Reads from `queue.meta` (always populated globally) rather than
+   * `queue.registrations` (only populated for queues this unit consumes).
+   * In a per-unit deploy the orchestrator unit doesn't consume per-step
+   * queues — but it produces to them — so registrations would miss them.
    */
   protected getOrchestratorQueueName(workflowName?: string): string {
     if (workflowName) {
       const perWorkflow = `wf-orchestrator-${toKebab(workflowName)}`
-      const registrations = pikkuState(null, 'queue', 'registrations')
-      if (registrations.has(perWorkflow)) {
+      const meta = pikkuState(null, 'queue', 'meta')
+      if (meta[perWorkflow]) {
         return perWorkflow
       }
     }
@@ -1607,8 +1881,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   protected getStepWorkerQueueName(rpcName?: string): string {
     if (rpcName) {
       const perStep = `wf-step-${toKebab(rpcName)}`
-      const registrations = pikkuState(null, 'queue', 'registrations')
-      if (registrations.has(perStep)) {
+      const meta = pikkuState(null, 'queue', 'meta')
+      if (meta[perStep]) {
         return perStep
       }
     }
