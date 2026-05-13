@@ -125,14 +125,14 @@ export class RedisChannelStore extends ChannelStore {
     }
   }
 
-  public async setSession(channelId: string, session: unknown): Promise<void> {
+  public async setState(channelId: string, state: unknown): Promise<void> {
     const key = this.channelKey(channelId)
-    await this.redis.hset(key, 'session', JSON.stringify(session ?? null))
+    await this.redis.hset(key, 'state', JSON.stringify(state ?? null))
   }
 
-  public async getSession(channelId: string): Promise<unknown | undefined> {
+  public async getState(channelId: string): Promise<unknown | undefined> {
     const key = this.channelKey(channelId)
-    const raw = await this.redis.hget(key, 'session')
+    const raw = await this.redis.hget(key, 'state')
     if (!raw) return undefined
     try {
       const parsed = JSON.parse(raw)
@@ -142,9 +142,9 @@ export class RedisChannelStore extends ChannelStore {
     }
   }
 
-  public async clearSession(channelId: string): Promise<void> {
+  public async clearState(channelId: string): Promise<void> {
     const key = this.channelKey(channelId)
-    await this.redis.hdel(key, 'session')
+    await this.redis.hdel(key, 'state')
   }
 
   /**

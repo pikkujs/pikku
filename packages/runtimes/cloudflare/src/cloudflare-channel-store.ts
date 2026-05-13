@@ -6,7 +6,7 @@ interface ChannelAttachment {
   channelName: string
   openingData?: unknown
   pikkuUserId?: string | null
-  session?: unknown
+  state?: unknown
 }
 
 export class CloudflareWebsocketStore extends ChannelStore {
@@ -51,21 +51,21 @@ export class CloudflareWebsocketStore extends ChannelStore {
     }
   }
 
-  public async setSession(channelId: string, session: unknown): Promise<void> {
+  public async setState(channelId: string, state: unknown): Promise<void> {
     const websocket = this.getWebsocket(channelId)
     const attachment = this.readAttachment(websocket)
-    websocket.serializeAttachment({ ...attachment, session })
+    websocket.serializeAttachment({ ...attachment, state })
   }
 
-  public async getSession(channelId: string): Promise<unknown | undefined> {
+  public async getState(channelId: string): Promise<unknown | undefined> {
     const websocket = this.getWebsocket(channelId)
-    return this.readAttachment(websocket).session
+    return this.readAttachment(websocket).state
   }
 
-  public async clearSession(channelId: string): Promise<void> {
+  public async clearState(channelId: string): Promise<void> {
     const websocket = this.getWebsocket(channelId)
     const attachment = this.readAttachment(websocket)
-    websocket.serializeAttachment({ ...attachment, session: undefined })
+    websocket.serializeAttachment({ ...attachment, state: undefined })
   }
 
   private readAttachment(websocket: WebSocket): ChannelAttachment {

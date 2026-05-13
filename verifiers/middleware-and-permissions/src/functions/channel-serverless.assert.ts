@@ -13,6 +13,7 @@ import type { ExpectedEvent } from '../assert-combined.js'
  */
 class TestChannelStore extends ChannelStore {
   private channels = new Map<string, Channel & { pikkuUserId?: string }>()
+  private states = new Map<string, unknown>()
 
   async addChannel(channel: Channel): Promise<void> {
     this.channels.set(channel.channelId, { ...channel })
@@ -21,10 +22,14 @@ class TestChannelStore extends ChannelStore {
   async removeChannels(channelIds: string[]): Promise<void> {
     for (const id of channelIds) {
       this.channels.delete(id)
+      this.states.delete(id)
     }
   }
 
-  async setPikkuUserId(channelId: string, pikkuUserId: string | null): Promise<void> {
+  async setPikkuUserId(
+    channelId: string,
+    pikkuUserId: string | null
+  ): Promise<void> {
     const channel = this.channels.get(channelId)
     if (channel) {
       channel.pikkuUserId = pikkuUserId ?? undefined
@@ -39,6 +44,18 @@ class TestChannelStore extends ChannelStore {
       throw new Error(`Channel ${channelId} not found`)
     }
     return channel
+  }
+
+  async setState(channelId: string, state: unknown): Promise<void> {
+    this.states.set(channelId, state)
+  }
+
+  async getState(channelId: string): Promise<unknown | undefined> {
+    return this.states.get(channelId)
+  }
+
+  async clearState(channelId: string): Promise<void> {
+    this.states.delete(channelId)
   }
 }
 
