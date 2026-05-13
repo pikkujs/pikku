@@ -22,7 +22,7 @@ describe('pikku cli json output verifier', () => {
 
     const result = spawnSync(
       'node',
-      [pikkuCliEntry, 'all', '--output', 'json'],
+      ['--no-warnings', pikkuCliEntry, 'all', '--output', 'json'],
       {
         cwd: verifierRoot,
         encoding: 'utf-8',
