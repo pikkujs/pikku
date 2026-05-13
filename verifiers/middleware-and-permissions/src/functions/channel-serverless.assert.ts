@@ -87,6 +87,7 @@ export async function testChannelWiringServerless(
       ) => {
         let sendCallback: ((message: any) => void) | undefined
 
+        let testState: unknown
         const channel = {
           channelId: id,
           name,
@@ -100,6 +101,13 @@ export async function testChannelWiringServerless(
           sendBinary: () => {},
           close: () => {
             // no-op for tests
+          },
+          setState: (s: unknown) => {
+            testState = s
+          },
+          getState: () => testState as any,
+          clearState: () => {
+            testState = undefined
           },
         }
 

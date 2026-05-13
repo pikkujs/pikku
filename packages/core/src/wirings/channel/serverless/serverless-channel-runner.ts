@@ -116,6 +116,9 @@ export const runChannelConnect = async ({
       channelHandlerFactory,
       channelName: channelConfig.name,
     })
+    channel.setState = (state) => channelStore.setState(channelId, state)
+    channel.getState = () => channelStore.getState(channelId) as any
+    channel.clearState = () => channelStore.clearState(channelId)
 
     const wire: PikkuWire = {
       channel,
@@ -198,6 +201,9 @@ export const runChannelDisconnect = async ({
     openingData,
     channelName,
   })
+  channel.setState = (state) => channelStore.setState(channelId, state)
+  channel.getState = () => channelStore.getState(channelId) as any
+  channel.clearState = () => channelStore.clearState(channelId)
 
   const userSession = new PikkuSessionService<CoreUserSession>(
     singletonServices.sessionStore
@@ -267,6 +273,9 @@ export const runChannelMessage = async (
     openingData,
     channelName,
   })
+  channel.setState = (state) => channelStore.setState(channelId, state)
+  channel.getState = () => channelStore.getState(channelId) as any
+  channel.clearState = () => channelStore.clearState(channelId)
 
   const userSession = new PikkuSessionService<CoreUserSession>(
     singletonServices.sessionStore

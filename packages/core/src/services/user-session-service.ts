@@ -1,5 +1,4 @@
 import type { CoreUserSession } from '../types/core.types.js'
-import type { ChannelStore } from '../wirings/channel/channel-store.js'
 import type { SessionStore } from './session-store.js'
 
 export interface SessionService<UserSession extends CoreUserSession> {
@@ -59,43 +58,6 @@ export class PikkuSessionService<
 
   public get(): UserSession | undefined {
     return this.session
-  }
-}
-
-/**
- * Channel-scoped session service. Routes `set`/`clear` through `ChannelStore`
- * keyed by `channelId` instead of `SessionStore` keyed by `pikkuUserId`.
- *
- * Channels have their own identity and may be unauthenticated, so reusing the
- * user-keyed `SessionStore` is the wrong scope: anonymous channels can't have
- * a session at all, multiple anonymous tabs by the same user collide on
- * `sessionStore[pikkuUserId]`, and channel-scoped state pollutes the user
- * session store.
- *
- * Auth identity (`pikkuUserId`) is independent of channel session payload —
- * this service still inherits `setPikkuUserId`/`getPikkuUserId` from the base
- * class so connect-time auth middleware works unchanged.
- */
-export class PikkuChannelSessionService<
-  UserSession extends CoreUserSession,
-> extends PikkuSessionService<UserSession> {
-  constructor(
-    private channelStore: ChannelStore,
-    private channelId: string
-  ) {
-    super(undefined)
-  }
-
-  public override async set(session: UserSession): Promise<void> {
-    this.sessionChanged = true
-    this.session = session
-    await this.channelStore.setState(this.channelId, session)
-  }
-
-  public override async clear(): Promise<void> {
-    this.sessionChanged = true
-    this.session = undefined
-    await this.channelStore.clearState(this.channelId)
   }
 }
 

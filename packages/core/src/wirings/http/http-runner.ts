@@ -159,12 +159,10 @@ export const wireHTTP = <
   Out,
   Route extends string,
   PikkuFunction extends CorePikkuFunction<In, Out> = CorePikkuFunction<In, Out>,
-  PikkuFunctionSessionless extends CorePikkuFunctionSessionless<
-    In,
-    Out
-  > = CorePikkuFunctionSessionless<In, Out>,
-  PikkuPermissionGroup extends
-    CorePikkuPermission<In> = CorePikkuPermission<In>,
+  PikkuFunctionSessionless extends CorePikkuFunctionSessionless<In, Out> =
+    CorePikkuFunctionSessionless<In, Out>,
+  PikkuPermissionGroup extends CorePikkuPermission<In> =
+    CorePikkuPermission<In>,
   PikkuMiddleware extends CorePikkuMiddleware = CorePikkuMiddleware,
 >(
   httpWiring: CoreHTTPFunctionWiring<
@@ -360,6 +358,7 @@ const executeRoute = async (
     response.setMode('stream')
     response.header('Content-Type', 'text/event-stream')
     response.header('Cache-Control', 'no-cache')
+    let sseState: unknown
     channel = {
       channelId: requestId,
       openingData: await data(),
@@ -374,6 +373,13 @@ const executeRoute = async (
         response.close?.()
       },
       state: 'open',
+      setState: (s) => {
+        sseState = s
+      },
+      getState: () => sseState as any,
+      clearState: () => {
+        sseState = undefined
+      },
     }
   }
 
