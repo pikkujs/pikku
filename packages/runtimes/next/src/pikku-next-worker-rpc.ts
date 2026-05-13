@@ -39,33 +39,12 @@ export class PikkuNextJSWorkerRPC {
     method: unknown,
     data: In
   ): Promise<Out> {
-    if (typeof route !== 'string') {
-      throw new TypeError(
-        `Worker RPC: route must be a string, got ${typeof route}`
-      )
-    }
-    if (typeof method !== 'string') {
-      throw new TypeError(
-        `Worker RPC: method must be a string, got ${typeof method}`
-      )
-    }
-    const req = buildRequest(route, method as HTTPMethod, data)
+    const req = buildRequest(route as string, method as HTTPMethod, data)
     const res = await this.options.fetcher.fetch(req)
     if (!res.ok) {
-      const body = await res.text().catch(() => '')
-      throw new Error(
-        `Worker RPC ${method} ${route} failed: ${res.status}${body ? ` — ${body}` : ''}`
-      )
+      throw new Error(`Worker RPC ${method} ${route} failed: ${res.status}`)
     }
-    let parsed: unknown
-    try {
-      parsed = await res.json()
-    } catch {
-      throw new Error(
-        `Worker RPC ${method} ${route} returned non-JSON response`
-      )
-    }
-    return parsed as Out
+    return (await res.json()) as Out
   }
 
   public async staticActionRequest<In extends Record<string, any>, Out>(

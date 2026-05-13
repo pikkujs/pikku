@@ -127,7 +127,7 @@ export const pikku = (_options?: any) => {
     data: FlattenedRPCMap[Name]['input']
   ): Promise<FlattenedRPCMap[Name]['output']> => {
     return _pikku!.staticActionRequest(
-      '${globalHTTPPrefix}/rpc/:rpcName',
+      '/rpc/:rpcName',
       'POST',
       { rpcName, data: data ?? null }
     ) as Promise<FlattenedRPCMap[Name]['output']>
