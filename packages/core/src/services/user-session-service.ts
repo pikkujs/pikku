@@ -89,13 +89,13 @@ export class PikkuChannelSessionService<
   public override async set(session: UserSession): Promise<void> {
     this.sessionChanged = true
     this.session = session
-    await this.channelStore.setSession(this.channelId, session)
+    await this.channelStore.setState(this.channelId, session)
   }
 
   public override async clear(): Promise<void> {
     this.sessionChanged = true
     this.session = undefined
-    await this.channelStore.clearSession(this.channelId)
+    await this.channelStore.clearState(this.channelId)
   }
 }
 
