@@ -5558,12 +5558,12 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/fabric-cli@workspace:packages/fabric-cli"
   dependencies:
-    "@pikku/cli": "npm:*"
     "@pikku/core": "npm:*"
     "@pikku/fetch": "npm:*"
     typescript: "npm:^5.7.2"
     zod: "npm:^4"
   peerDependencies:
+    "@pikku/cli": "*"
     "@pikku/core": "*"
     zod: ^4
   languageName: unknown
