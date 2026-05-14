@@ -1003,10 +1003,16 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           error.name !== 'WorkflowCancelledException' &&
           error.name !== 'WorkflowSuspendedException'
         ) {
+          await this.updateRunStatus(runId, 'failed', undefined, {
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+          })
           getSingletonServices()!.logger.error(
             `Workflow ${name} (run ${runId}) failed:`,
             error
           )
+          throw error
         }
       } finally {
         this.inlineRuns.delete(runId)

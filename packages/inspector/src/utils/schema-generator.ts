@@ -1,7 +1,7 @@
 import * as ts from 'typescript'
 import { dirname, join, resolve } from 'path'
 import { createGenerator, RootlessError } from 'ts-json-schema-generator'
-import { register, tsImport } from 'tsx/esm/api'
+import { register } from 'tsx/esm/api'
 import * as z from 'zod'
 import { zodToTs, createAuxiliaryTypeStore } from 'zod-to-ts'
 import type { FunctionsMeta, JSONValue } from '@pikku/core'
@@ -273,7 +273,7 @@ async function batchImportWithRegister(
 ): Promise<Map<string, Record<string, any>> | null> {
   if (sourceFiles.length === 0) return new Map()
 
-  let unregister: (() => void) | undefined
+  let unregister: (() => void | Promise<void>) | undefined
   try {
     unregister = register()
 
@@ -297,7 +297,18 @@ async function batchImportWithRegister(
     logger.debug(`tsx register() batch import failed: ${(e as Error).message}`)
     return null
   } finally {
-    unregister?.()
+    await unregister?.()
+  }
+}
+
+async function importWithRegister(
+  sourceFile: string
+): Promise<Record<string, any>> {
+  const unregister = register()
+  try {
+    return await import(sourceFile)
+  } finally {
+    await unregister()
   }
 }
 
@@ -350,6 +361,7 @@ async function generateZodSchemas(
   typesMap: TypesMap
 ): Promise<Record<string, JSONValue>> {
   const schemas: Record<string, JSONValue> = {}
+  const errors: string[] = []
   const auxiliaryTypeStore = createAuxiliaryTypeStore()
   const printer = ts.createPrinter()
   const fakeSourceFile = ts.createSourceFile(
@@ -397,7 +409,7 @@ async function generateZodSchemas(
     if (mod) {
       const zodSchema = mod[ref.variableName]
       if (!zodSchema) {
-        logger.warn(
+        errors.push(
           `Could not find exported schema '${ref.variableName}' in ${ref.sourceFile} for ${schemaName}. Available exports: ${Object.keys(mod).join(', ')}`
         )
         continue
@@ -414,7 +426,7 @@ async function generateZodSchemas(
           logger
         )
       } catch (e) {
-        logger.warn(
+        errors.push(
           `Could not convert Zod schema '${schemaName}': ${e instanceof Error ? e.message : e}`
         )
       }
@@ -423,17 +435,20 @@ async function generateZodSchemas(
     }
   }
 
-  // Fallback: use tsImport for any schemas that batch import couldn't handle
+  // Fallback: use a scoped tsx register/import cycle for any schemas that
+  // batch import couldn't handle. Avoid tsImport() here because its ESM path
+  // can leave loader plumbing alive after failed imports, which prevents the
+  // CLI process from exiting on schema errors.
   if (fallbackSchemas.length > 0) {
     logger.debug(
-      `Falling back to tsImport for ${fallbackSchemas.length} schema(s)`
+      `Falling back to register() import for ${fallbackSchemas.length} schema(s)`
     )
     for (const [schemaName, ref] of fallbackSchemas) {
       try {
-        const module = await tsImport(ref.sourceFile, import.meta.url)
+        const module = await importWithRegister(ref.sourceFile)
         const zodSchema = module[ref.variableName]
         if (!zodSchema) {
-          logger.warn(
+          errors.push(
             `Could not find exported schema '${ref.variableName}' in ${ref.sourceFile} for ${schemaName}. Available exports: ${Object.keys(module).join(', ')}`
           )
           continue
@@ -449,11 +464,20 @@ async function generateZodSchemas(
           logger
         )
       } catch (e) {
-        logger.warn(
+        errors.push(
           `Could not convert Zod schema '${schemaName}': ${e instanceof Error ? e.message : e}`
         )
       }
     }
+  }
+
+  if (errors.length > 0) {
+    for (const message of errors) {
+      logger.error(message)
+    }
+    throw new Error(
+      `Schema generation failed for ${errors.length} schema${errors.length === 1 ? '' : 's'}`
+    )
   }
 
   logger.info(
