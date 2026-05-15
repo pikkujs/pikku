@@ -171,6 +171,10 @@ export class CloudflareProviderAdapter {
     this.contributors = [...byName.values()]
   }
 
+  getPlatform(): 'browser' {
+    return 'browser'
+  }
+
   /** Collect all contributor imports as a flat, de-duplicated array. */
   private contributorImports(): string[] {
     const seen = new Set<string>()
