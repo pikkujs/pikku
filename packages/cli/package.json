@@ -28,6 +28,7 @@
     "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.1",
     "@pikku/core": "^0.12.19",
     "@pikku/deploy-cloudflare": "^0.12.0",
+    "@pikku/fetch": "^0.12.1",
     "@pikku/inspector": "^0.12.11",
     "@pikku/kysely-node-sqlite": "^0.12.0",
     "@pikku/node-http-server": "^0.12.0",
@@ -49,8 +50,7 @@
     "ws": "^8.18.0",
     "yaml": "^2.8.2",
     "zod": "^4.3.6",
-    "zod-to-ts": "^2.0.0",
-    "@pikku/fetch": "^0.12.1"
+    "zod-to-ts": "^2.0.0"
   },
   "devDependencies": {
     "@types/node": "^24.11.0",
