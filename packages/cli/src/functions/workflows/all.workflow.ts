@@ -40,15 +40,15 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     if (!existsSync(config.outDir)) {
       logger.debug(`• .pikku directory not found, running bootstrap first...`)
       await workflow.do('Bootstrap inspect', async () =>
-        getInspectorState(false, false, true)
+        getInspectorState(false, true, true)
+      )
+      await workflow.do(
+        'Bootstrap function types split',
+        'pikkuFunctionTypesSplit',
+        null
       )
       await workflow.do('Bootstrap function types', 'pikkuFunctionTypes', null)
       await Promise.all([
-        workflow.do(
-          'Bootstrap function types split',
-          'pikkuFunctionTypesSplit',
-          null
-        ),
         workflow.do('Bootstrap HTTP types', 'pikkuHTTPTypes', null),
         workflow.do('Bootstrap channel types', 'pikkuChannelTypes', null),
         workflow.do('Bootstrap scheduler types', 'pikkuSchedulerTypes', null),

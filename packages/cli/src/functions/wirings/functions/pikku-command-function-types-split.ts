@@ -7,7 +7,7 @@ import { serializeFunctionTypes } from './serialize-function-types.js'
 
 export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
-    const visitState = await getInspectorState()
+    const visitState = await getInspectorState(false, true)
     const {
       functionTypesFile,
       packageMappings,

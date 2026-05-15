@@ -273,12 +273,32 @@ export function registerHTTPRoute({
 
   const input = fnMeta.inputs?.[0] || null
 
+  const getRouteInputKeys = (): string[] | null => {
+    const targetFuncName = refAddonTarget ?? funcName
+    const inputTypes = state.typesLookup.get(targetFuncName)
+    if (inputTypes && inputTypes.length > 0) {
+      return extractTypeKeys(inputTypes[0])
+    }
+
+    const targetMeta = resolveFunctionMeta(state, targetFuncName)
+    if (targetMeta?.inputSchemaName) {
+      const schema = state.schemas[targetMeta.inputSchemaName] as any
+      const properties = schema?.properties
+      if (properties && typeof properties === 'object') {
+        return Object.keys(properties)
+      }
+    }
+
+    return null
+  }
+
   // Validate that route params and query params exist in function input type
   if (params.length > 0 || query.length > 0) {
-    const inputTypes = state.typesLookup.get(funcName)
-    if (inputTypes && inputTypes.length > 0) {
-      const inputKeys = extractTypeKeys(inputTypes[0])
-
+    const inputKeys = getRouteInputKeys()
+    if (!inputKeys) {
+      // Input shape isn't inspectable at this phase (e.g. addon ref or opaque handler).
+      // Skip param/query validation rather than emitting a false positive.
+    } else {
       // Check path params
       if (params.length > 0) {
         const missingParams = params.filter((p) => !inputKeys.includes(p))
@@ -286,7 +306,7 @@ export function registerHTTPRoute({
           logger.critical(
             ErrorCode.ROUTE_PARAM_MISMATCH,
             `Route '${fullRoute}' has path parameter(s) [${missingParams.join(', ')}] ` +
-              `not found in function '${funcName}' input type. ` +
+              `not found in function '${refAddonTarget ?? funcName}' input type. ` +
               `Input type has: [${inputKeys.join(', ')}]`
           )
           return
@@ -300,7 +320,7 @@ export function registerHTTPRoute({
           logger.critical(
             ErrorCode.ROUTE_QUERY_MISMATCH,
             `Route '${fullRoute}' has query parameter(s) [${missingQuery.join(', ')}] ` +
-              `not found in function '${funcName}' input type. ` +
+              `not found in function '${refAddonTarget ?? funcName}' input type. ` +
               `Input type has: [${inputKeys.join(', ')}]`
           )
           return
