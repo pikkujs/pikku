@@ -4,7 +4,7 @@ import { resolveApiContext } from '../lib/config.js'
 import { getRpc } from '../lib/http.js'
 
 export const FabricMetricsInput = z.object({
-  stage: z.enum(['preview', 'production']),
+  branch: z.string(),
   hours: z.number().optional(),
   function: z.string().optional(),
   json: z.boolean().optional(),
@@ -31,7 +31,7 @@ export const FabricMetrics = pikkuSessionlessFunc({
   description: 'Fetch aggregated request metrics for a stage via fabric-api.',
   input: FabricMetricsInput,
   output: FabricMetricsOutput,
-  func: async (_services, { stage, hours, function: functionName, json }) => {
+  func: async (_services, { branch, hours, function: functionName, json }) => {
     const ctx = await resolveApiContext()
     if (!ctx.token)
       throw new Error('Not logged in. Run `pikku fabric login` first.')
@@ -43,16 +43,19 @@ export const FabricMetrics = pikkuSessionlessFunc({
     const rpc = getRpc({ apiUrl: ctx.apiUrl, token: ctx.token })
     const res = await rpc.invoke('getProjectMetricsByStageKind', {
       projectId: ctx.projectId,
-      kind: stage,
+      branch,
       hours,
       functionName,
     })
 
     if (json) {
-      console.log(JSON.stringify({ stage, metrics: res.metrics }, null, 2))
+      const wireTypes = Object.fromEntries(
+        (res.wireTypes ?? []).map((r: { wireType: string; requests: number }) => [r.wireType, r.requests]),
+      )
+      console.log(JSON.stringify({ branch, metrics: res.metrics, wireTypes }, null, 2))
     } else if (res.metrics.length === 0) {
       console.log(
-        `[fabric] no metrics for ${stage} in the last ${hours ?? 24}h`
+        `[fabric] no metrics for ${branch} in the last ${hours ?? 24}h`
       )
     } else {
       for (const row of res.metrics) console.log(formatRow(row as MetricRow))

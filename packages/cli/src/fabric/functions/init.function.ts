@@ -62,9 +62,7 @@ export const FabricInit = pikkuSessionlessFunc({
     console.log(
       `[fabric] imported ${result.projectSlug} (${result.projectId}) → ${path}`
     )
-    console.log(
-      `[fabric] stages: preview=${result.previewStageId} production=${result.productionStageId}`
-    )
+    console.log(`[fabric] main stage: ${result.mainStageId}`)
     return {
       projectId: result.projectSlug,
       projectSlug: result.projectSlug,

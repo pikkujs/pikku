@@ -15,6 +15,8 @@ export const bootstrap = pikkuVoidFunc({
     await rpc.invoke('pikkuTriggerTypes')
     await rpc.invoke('pikkuMCPTypes')
     await rpc.invoke('pikkuAIAgentTypes')
+    await rpc.invoke('pikkuNodeTypes')
+    await rpc.invoke('pikkuSecretDefinitionTypes')
     await rpc.invoke('pikkuCLITypes')
 
     if (logger.hasCriticalErrors()) {

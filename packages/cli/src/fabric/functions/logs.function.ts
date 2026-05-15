@@ -4,7 +4,7 @@ import { resolveApiContext } from '../lib/config.js'
 import { getRpc } from '../lib/http.js'
 
 export const FabricLogsInput = z.object({
-  stage: z.enum(['preview', 'production']).optional(),
+  branch: z.string().optional(),
   deployment: z.string().optional(),
   level: z.string().optional(),
   since: z.string().optional(),
@@ -40,7 +40,7 @@ export const FabricLogs = pikkuSessionlessFunc({
   description: 'Stream or fetch logs for a stage / deployment via fabric-api.',
   input: FabricLogsInput,
   output: FabricLogsOutput,
-  func: async (_services, { stage, level, json, follow }) => {
+  func: async (_services, { branch, level, json, follow }) => {
     const ctx = await resolveApiContext()
     if (!ctx.token)
       throw new Error('Not logged in. Run `pikku fabric login` first.')
@@ -48,7 +48,7 @@ export const FabricLogs = pikkuSessionlessFunc({
       throw new Error(
         'No fabric project linked. Run `pikku fabric link` first.'
       )
-    if (!stage) throw new Error('Specify --stage preview|production.')
+    if (!branch) throw new Error('Specify --branch <branch-name>.')
 
     const seen = new Set<string>()
     const cursorWindow = 5_000
@@ -58,7 +58,7 @@ export const FabricLogs = pikkuSessionlessFunc({
     const fetchAndPrintNew = async () => {
       const res = await rpc.invoke('getFabricLogsByStageKind', {
         projectId,
-        kind: stage,
+        branch,
         level: level ?? undefined,
       })
       let printed = 0

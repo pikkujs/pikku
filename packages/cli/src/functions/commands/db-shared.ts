@@ -42,5 +42,11 @@ export async function loadUserConfigForDb(
 
   const configModule = await loadUserModule(pikkuConfigFactory.file)
   const userCreateConfig = configModule[pikkuConfigFactory.variable]
+  if (typeof userCreateConfig !== 'function') {
+    logger.error(
+      `Expected '${pikkuConfigFactory.variable}' in '${pikkuConfigFactory.file}' to be a function`
+    )
+    return null
+  }
   return (await userCreateConfig()) as UserConfigShape
 }

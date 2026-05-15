@@ -4,7 +4,7 @@ import { resolveApiContext } from '../lib/config.js'
 import { getRpc } from '../lib/http.js'
 
 export const FabricSecretsListInput = z.object({
-  stage: z.enum(['preview', 'production']),
+  branch: z.string(),
   json: z.boolean().optional(),
 })
 
@@ -15,7 +15,7 @@ export const FabricSecretsList = pikkuSessionlessFunc({
     'List secret names visible to a stage (values never leave the server).',
   input: FabricSecretsListInput,
   output: FabricSecretsListOutput,
-  func: async (_services, { stage, json }) => {
+  func: async (_services, { branch, json }) => {
     const ctx = await resolveApiContext()
     if (!ctx.token)
       throw new Error('Not logged in. Run `pikku fabric login` first.')
@@ -27,12 +27,12 @@ export const FabricSecretsList = pikkuSessionlessFunc({
     const rpc = getRpc({ apiUrl: ctx.apiUrl, token: ctx.token })
     const result = await rpc.invoke('listStageSecrets', {
       projectId: ctx.projectId,
-      kind: stage,
+      branch,
     })
     if (json) {
-      console.log(JSON.stringify({ stage, names: result.names }, null, 2))
+      console.log(JSON.stringify({ branch, names: result.names }, null, 2))
     } else if (result.names.length === 0) {
-      console.log(`[fabric] no secrets set on ${stage}`)
+      console.log(`[fabric] no secrets set on ${branch}`)
     } else {
       for (const name of result.names) console.log(name)
     }

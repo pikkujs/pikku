@@ -4,7 +4,7 @@ import { resolveApiContext } from '../lib/config.js'
 import { getRpc } from '../lib/http.js'
 
 export const FabricTraceInput = z.object({
-  stage: z.enum(['preview', 'production']),
+  branch: z.string(),
   traceId: z.string(),
   json: z.boolean().optional(),
 })
@@ -36,7 +36,7 @@ export const FabricTrace = pikkuSessionlessFunc({
   description: 'Fetch all events for a single trace id across an environment.',
   input: FabricTraceInput,
   output: FabricTraceOutput,
-  func: async (_services, { stage, traceId, json }) => {
+  func: async (_services, { branch, traceId, json }) => {
     const ctx = await resolveApiContext()
     if (!ctx.token)
       throw new Error('Not logged in. Run `pikku fabric login` first.')
@@ -48,16 +48,16 @@ export const FabricTrace = pikkuSessionlessFunc({
     const rpc = getRpc({ apiUrl: ctx.apiUrl, token: ctx.token })
     const res = await rpc.invoke('getTraceByStageKind', {
       projectId: ctx.projectId,
-      kind: stage,
+      branch,
       traceId,
     })
 
     if (json) {
       console.log(
-        JSON.stringify({ stage, traceId, events: res.events }, null, 2)
+        JSON.stringify({ branch, traceId, events: res.events }, null, 2)
       )
     } else if (res.events.length === 0) {
-      console.log(`[fabric] no events for trace ${traceId} on ${stage}`)
+      console.log(`[fabric] no events for trace ${traceId} on ${branch}`)
     } else {
       for (const e of res.events) console.log(formatEvent(e as TraceEvent))
     }

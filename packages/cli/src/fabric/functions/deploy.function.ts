@@ -5,7 +5,8 @@ import { getRpc } from '../lib/http.js'
 import { assertDeploySafety, resolveRef } from '../lib/git.js'
 
 export const FabricDeployInput = z.object({
-  stage: z.enum(['preview', 'production']),
+  /** Branch to deploy. Defaults to the current git branch when omitted. */
+  branch: z.string().optional(),
   ref: z.string().optional(),
   message: z.string().optional(),
   dryRun: z.boolean().optional(),
@@ -20,10 +21,10 @@ export const FabricDeployOutput = z.object({
 })
 
 export const FabricDeploy = pikkuSessionlessFunc({
-  description: 'Build + deploy the current project ref to a stage.',
+  description: 'Build + deploy the current project branch to its stage.',
   input: FabricDeployInput,
   output: FabricDeployOutput,
-  func: async (_services, { stage, ref, dryRun }) => {
+  func: async (_services, { branch, ref, dryRun }) => {
     const ctx = await resolveApiContext()
     if (!ctx.token) {
       throw new Error('Not logged in. Run `pikku fabric login` first.')
@@ -35,17 +36,15 @@ export const FabricDeploy = pikkuSessionlessFunc({
     }
 
     const safety = await assertDeploySafety()
+    const targetBranch = branch ?? safety.branch
     const resolved = ref ? ((await resolveRef(ref)) ?? ref) : safety.headSha
     if (resolved !== safety.headSha) {
-      // Caller asked for a specific ref — make sure it's actually pushed by
-      // confirming we can resolve it. If `git rev-parse` returned null we
-      // pass the raw ref through and let fabric-api reject.
       console.log(`[fabric] deploying ref ${ref} → ${resolved.slice(0, 8)}`)
     }
 
     if (dryRun) {
       console.log(
-        `[fabric] dry-run: would deploy ${ctx.projectId} stage=${stage} ref=${resolved.slice(0, 8)}`
+        `[fabric] dry-run: would deploy ${ctx.projectId} branch=${targetBranch} ref=${resolved.slice(0, 8)}`
       )
       return { deploymentId: '', stageId: '', runId: '', ref: resolved }
     }
@@ -53,13 +52,13 @@ export const FabricDeploy = pikkuSessionlessFunc({
     const rpc = getRpc({ apiUrl: ctx.apiUrl, token: ctx.token })
     const result = await rpc.invoke('deployByStageKind', {
       projectId: ctx.projectId,
-      kind: stage,
+      branch: targetBranch,
       ref: resolved,
       expectedHeadSha: safety.headSha,
     })
 
     console.log(
-      `[fabric] queued ${stage} deploy: deploymentId=${result.deploymentId} ref=${resolved.slice(0, 8)}`
+      `[fabric] queued deploy: branch=${targetBranch} deploymentId=${result.deploymentId} ref=${resolved.slice(0, 8)}`
     )
     return {
       deploymentId: result.deploymentId,
