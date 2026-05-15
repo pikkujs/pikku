@@ -12,6 +12,7 @@ export const bootstrap = pikkuVoidFunc({
     await rpc.invoke('pikkuSchedulerTypes')
     await rpc.invoke('pikkuQueueTypes')
     await rpc.invoke('pikkuWorkflow')
+    await rpc.invoke('pikkuTriggerTypes')
     await rpc.invoke('pikkuMCPTypes')
     await rpc.invoke('pikkuAIAgentTypes')
     await rpc.invoke('pikkuCLITypes')
