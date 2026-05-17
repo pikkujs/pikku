@@ -29,7 +29,7 @@ type PikkuRPCInstance = PikkuInstance['rpc']
 
 const PikkuInstanceContext = createContext<PikkuInstance | null>(null)
 const PikkuHTTPContext = createContext<PikkuHTTP | null>(null)
-const PikkuRPCContext = createContext<PikkuRPCInstance | null>(null)
+export const PikkuRPCContext = createContext<PikkuRPCInstance | null>(null)
 
 export const PikkuHTTPProvider: React.FunctionComponent<{
   children: React.ReactNode

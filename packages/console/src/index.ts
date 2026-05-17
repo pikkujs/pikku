@@ -46,6 +46,7 @@ export {
   getServerUrl,
   setServerUrl,
 } from './context/PikkuRpcProvider'
+export { pikku } from './pikku/http'
 export { PikkuMetaProvider, usePikkuMeta } from './context/PikkuMetaContext'
 export {
   OSSConsoleNavigator,
