@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react'
-import { useSearchParams, useNavigate } from '../../router'
 import { useQuery } from '@tanstack/react-query'
 import { PanelProvider } from '../../context/PanelContext'
 import { WorkflowRunProvider } from '../../context/WorkflowRunContext'
@@ -7,16 +6,15 @@ import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { WorkflowCanvas } from '../project/WorkflowCanvas'
 import { Center, Loader, Box, Text } from '@mantine/core'
+import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
 import styles from '../ui/console.module.css'
 
 export const WorkflowTabContent: React.FunctionComponent = () => {
-  const [searchParams] = useSearchParams()
-  const navigate = useNavigate()
-  const workflowId = searchParams.get('id') || ''
+  const { workflowId, navigateTo } = useConsoleNavigator()
   const rpc = usePikkuRPC()
   const { data: workflow, isLoading } = useQuery({
     queryKey: ['workflow-meta-by-id', workflowId],
-    queryFn: () => rpc.invoke('console:getWorkflowMetaById', { workflowId }),
+    queryFn: () => rpc.invoke('console:getWorkflowMetaById', { workflowId: workflowId! }),
     enabled: !!workflowId,
   })
 
@@ -49,7 +47,7 @@ export const WorkflowTabContent: React.FunctionComponent = () => {
   return (
     <PanelProvider>
       <WorkflowRunProvider
-        workflowName={workflowId}
+        workflowName={workflowId!}
         currentGraphHash={(workflow as any).graphHash}
         workflowNodes={(workflow as any).nodes}
       >
@@ -58,9 +56,7 @@ export const WorkflowTabContent: React.FunctionComponent = () => {
             <WorkflowCanvas
               workflow={workflow}
               items={workflowItems}
-              onItemSelect={(name) =>
-                navigate(`/workflow?id=${encodeURIComponent(name)}`)
-              }
+              onItemSelect={(name) => navigateTo('workflows', name)}
             />
           </Box>
         </Box>

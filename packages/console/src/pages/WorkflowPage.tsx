@@ -1,5 +1,4 @@
-import { Suspense } from 'react'
-import { useSearchParams } from '../router'
+import { Suspense, useContext } from 'react'
 import { GitBranch } from 'lucide-react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { WorkflowsList } from '../components/project/WorkflowsList'
@@ -9,10 +8,14 @@ import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { DetailPageHeader } from '../components/layout/DetailPageHeader'
 import { Center, Loader } from '@mantine/core'
 import { useAIWorkflows } from '../hooks/useWorkflowRuns'
+import {
+  OSSConsoleNavigator,
+  ConsoleNavigatorCtx,
+  useConsoleNavigator,
+} from '../context/ConsoleNavigatorContext'
 
 function WorkflowPageInner() {
-  const [searchParams] = useSearchParams()
-  const workflowId = searchParams.get('id')
+  const { workflowId } = useConsoleNavigator()
   const { meta, loading } = usePikkuMeta()
   const { data: aiWorkflows } = useAIWorkflows()
 
@@ -62,7 +65,8 @@ function WorkflowPageInner() {
 }
 
 export const WorkflowsPage: React.FunctionComponent = () => {
-  return (
+  const existingNavigator = useContext(ConsoleNavigatorCtx)
+  const inner = (
     <Suspense
       fallback={
         <Center h="100vh">
@@ -73,4 +77,8 @@ export const WorkflowsPage: React.FunctionComponent = () => {
       <WorkflowPageInner />
     </Suspense>
   )
+  // Fabric (or any other host) provides its own navigator above this component.
+  // Only wrap with the OSS default when none is present.
+  if (existingNavigator) return inner
+  return <OSSConsoleNavigator>{inner}</OSSConsoleNavigator>
 }
