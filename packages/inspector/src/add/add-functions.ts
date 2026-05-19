@@ -566,7 +566,12 @@ export const addFunctions: AddWiring = (
   }
 
   if (version !== undefined) {
-    const baseName = explicitName || exportedName || pikkuFuncId
+    let baseName = explicitName || exportedName || pikkuFuncId
+    // Strip trailing VN suffix if it matches the version (e.g. getDataV1 + version:1 → getData@v1)
+    const vSuffix = `V${version}`
+    if (baseName.endsWith(vSuffix) && baseName.length > vSuffix.length) {
+      baseName = baseName.slice(0, -vSuffix.length)
+    }
     pikkuFuncId = formatVersionedId(baseName, version)
   }
 

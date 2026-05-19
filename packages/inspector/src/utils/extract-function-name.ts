@@ -444,6 +444,14 @@ export function extractFunctionName(
   }
 
   if (result.version !== null) {
+    // Strip trailing VN suffix if it matches the version (e.g. createCardV1 + version:1 → createCard@v1)
+    const vSuffix = `V${result.version}`
+    if (
+      result.pikkuFuncId.endsWith(vSuffix) &&
+      result.pikkuFuncId.length > vSuffix.length
+    ) {
+      result.pikkuFuncId = result.pikkuFuncId.slice(0, -vSuffix.length)
+    }
     result.pikkuFuncId = formatVersionedId(result.pikkuFuncId, result.version)
   }
 
