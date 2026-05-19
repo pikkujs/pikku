@@ -21,7 +21,7 @@ import classes from '../ui/console.module.css'
 
 type QueueDepths = Record<string, { queued: number; active: number; failed: number }>
 
-const GRID_COLUMNS = '1fr 80px 80px'
+const GRID_COLUMNS = '1fr 70px 70px 70px'
 
 const QueueDetail: React.FunctionComponent<{ item: any }> = ({ item }) => {
   const { navigateInPanel } = usePanelContext()
@@ -142,7 +142,7 @@ export const QueuesTab: React.FunctionComponent = () => {
         placeholder="Search queue workers..."
       />
       <GridHeader
-        columns={[{ label: 'Name' }, { label: 'Queued' }, { label: 'Active' }]}
+        columns={[{ label: 'Name' }, { label: 'Queued' }, { label: 'Active' }, { label: 'Failed' }]}
         gridTemplateColumns={GRID_COLUMNS}
       />
       <ScrollArea className={classes.flexGrow}>
@@ -170,6 +170,9 @@ export const QueuesTab: React.FunctionComponent = () => {
               </Text>
               <Text size="sm" ff="monospace" c={depth?.active ? 'var(--mantine-color-green-5)' : 'var(--app-meta-label)'}>
                 {depth?.active ?? '—'}
+              </Text>
+              <Text size="sm" ff="monospace" c={depth?.failed ? 'var(--mantine-color-red-5)' : 'var(--app-meta-label)'}>
+                {depth?.failed ?? '—'}
               </Text>
             </ListItem>
           )
