@@ -45,7 +45,7 @@ export const ProjectSecrets: React.FunctionComponent<ProjectSecretsProps> = ({
               )}
             </Group>
             {s.description && (
-              <Text size="xs" c="dimmed" truncate>
+              <Text size="sm" c="dimmed" truncate>
                 {s.description}
               </Text>
             )}
@@ -56,7 +56,7 @@ export const ProjectSecrets: React.FunctionComponent<ProjectSecretsProps> = ({
         key: 'secretId',
         header: 'SECRET ID',
         render: (s: SecretMeta) => (
-          <Text size="xs" c="dimmed" ff="monospace">
+          <Text size="sm" c="dimmed" ff="monospace">
             {s.secretId}
           </Text>
         ),

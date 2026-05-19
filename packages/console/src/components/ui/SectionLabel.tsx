@@ -10,7 +10,7 @@ export const SectionLabel: React.FunctionComponent<SectionLabelProps> = ({
   children,
 }) => (
   <Text
-    size="xs"
+    size="sm"
     fw={600}
     ff="monospace"
     c="var(--app-section-label)"

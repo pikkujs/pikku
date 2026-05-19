@@ -48,6 +48,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         null
       )
       await workflow.do('Bootstrap function types', 'pikkuFunctionTypes', null)
+      await workflow.do('Bootstrap addon types', 'pikkuAddonTypes', {
+        bootstrap: true,
+      })
       await Promise.all([
         workflow.do('Bootstrap HTTP types', 'pikkuHTTPTypes', null),
         workflow.do('Bootstrap channel types', 'pikkuChannelTypes', null),
@@ -66,9 +69,11 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         'pikkuSecretDefinitionTypes',
         null
       )
-      await workflow.do('Bootstrap CLI types', 'pikkuCLITypes', null)
+      await workflow.do('Bootstrap CLI types', 'pikkuCLITypes', {
+        bootstrap: true,
+      })
       await workflow.do('Bootstrap re-inspect', async () =>
-        getInspectorState(true)
+        getInspectorState(true, true)
       )
     }
 

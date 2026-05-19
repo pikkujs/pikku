@@ -48,7 +48,7 @@ const McpDetailPanel: React.FunctionComponent<{ item: any }> = ({ item }) => {
             {item.name || item.wireId || 'unnamed'}
           </Text>
           {displayName && (
-            <Text size="xs" ff="monospace" c="var(--app-text-muted)">
+            <Text size="sm" ff="monospace" c="var(--app-text-muted)">
               {displayName}()
             </Text>
           )}
@@ -95,7 +95,7 @@ const McpDetailPanel: React.FunctionComponent<{ item: any }> = ({ item }) => {
             </MetaRow>
           ) : (
             <Box p="xs" mt={4} mb={4} style={{ background: 'rgba(245,158,11,0.08)', borderRadius: 6, border: '1px solid rgba(245,158,11,0.2)' }}>
-              <Text size="xs" c="rgba(245,158,11,0.9)" lh={1.6}>
+              <Text size="sm" c="rgba(245,158,11,0.9)" lh={1.6}>
                 Missing description — MCP clients won't know when to use this {method}.
               </Text>
             </Box>
@@ -118,10 +118,10 @@ const McpDetailPanel: React.FunctionComponent<{ item: any }> = ({ item }) => {
 
         {/* Right: MCP client config */}
         <Box className={classes.splitRight}>
-          <Text size="xs" fw={600} ff="monospace" c="var(--app-meta-label)" mb={4}>
+          <Text size="sm" fw={600} ff="monospace" c="var(--app-meta-label)" mb={4}>
             Connect your MCP client
           </Text>
-          <Text size="xs" c="var(--app-text-muted)" mb="md" lh={1.6}>
+          <Text size="sm" c="var(--app-text-muted)" mb="md" lh={1.6}>
             All tools, resources, and prompts are available once connected.
           </Text>
 
@@ -154,15 +154,15 @@ const McpDetailPanel: React.FunctionComponent<{ item: any }> = ({ item }) => {
           </Box>
 
           <Box mt="md" p="sm" className={classes.surfaceCard}>
-            <Text size="xs" fw={600} ff="monospace" c="var(--app-section-label)" tt="uppercase" mb={8}>
+            <Text size="sm" fw={600} ff="monospace" c="var(--app-section-label)" tt="uppercase" mb={8}>
               SSE endpoint · any client
             </Text>
             <Box className={classes.codeInputBox}>
-              <Text size="xs" ff="monospace" c="var(--app-tag-color)" className={classes.flexGrow}>
+              <Text size="sm" ff="monospace" c="var(--app-tag-color)" className={classes.flexGrow}>
                 http://localhost:4002/mcp
               </Text>
             </Box>
-            <Text size="xs" c="var(--app-text-muted)" mt={8} lh={1.6}>
+            <Text size="sm" c="var(--app-text-muted)" mt={8} lh={1.6}>
               Use this URL directly in any MCP-compatible client that supports SSE transport.
             </Text>
           </Box>
@@ -216,7 +216,7 @@ export const McpTab: React.FunctionComponent = () => {
             <React.Fragment key={type}>
               <Box className={classes.groupLabel}>
                 <Text
-                  size="xs"
+                  size="sm"
                   ff="monospace"
                   c="var(--app-section-label)"
                   tt="uppercase"
@@ -244,7 +244,7 @@ export const McpTab: React.FunctionComponent = () => {
                       />
                       <Box className={classes.flexGrow}>
                         <Text
-                          size="xs"
+                          size="sm"
                           ff="monospace"
                           c={isActive ? 'var(--app-meta-value)' : 'var(--app-text)'}
                           truncate
@@ -253,7 +253,7 @@ export const McpTab: React.FunctionComponent = () => {
                         </Text>
                         {item.pikkuFuncId && (
                           <Text
-                            size="xs"
+                            size="sm"
                             ff="monospace"
                             c={isActive ? 'var(--app-meta-label)' : 'var(--app-text-muted)'}
                             truncate
@@ -264,7 +264,7 @@ export const McpTab: React.FunctionComponent = () => {
                         )}
                       </Box>
                       {!item.description && (
-                        <Text size="xs" c="rgba(245,158,11,0.8)" title="Missing description">
+                        <Text size="sm" c="rgba(245,158,11,0.8)" title="Missing description">
                           &#9888;
                         </Text>
                       )}

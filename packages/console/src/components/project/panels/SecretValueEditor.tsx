@@ -114,7 +114,7 @@ export const SecretValueEditor: React.FunctionComponent<
           variant="light"
           leftSection={<Eye size={16} />}
           onClick={() => setRetrieved(true)}
-          size="xs"
+          size="sm"
         >
           Retrieve secret value
         </Button>
@@ -156,7 +156,7 @@ export const SecretValueEditor: React.FunctionComponent<
                 { label: 'Form', value: 'form' },
                 { label: 'JSON', value: 'json' },
               ]}
-              size="xs"
+              size="sm"
               style={{ width: 'auto' }}
             />
           )}

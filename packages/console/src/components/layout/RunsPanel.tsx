@@ -115,7 +115,7 @@ const RunRow: React.FunctionComponent<{
         <Stack gap={2} style={{ minWidth: 0, flex: 1 }}>
           <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
             <Badge
-              size="xs"
+              size="sm"
               color={statusColors[run.status] || 'gray'}
               variant="filled"
               circle
@@ -126,12 +126,12 @@ const RunRow: React.FunctionComponent<{
               {run.label || run.id.slice(0, 8)}
             </Text>
             {run.wire && (
-              <Badge size="xs" variant="light" color="gray">
+              <Badge size="sm" variant="light" color="gray">
                 {run.wire.type}
               </Badge>
             )}
           </Group>
-          <Text size="xs" c="dimmed" pl={18}>
+          <Text size="sm" c="dimmed" pl={18}>
             {formatDateTime(run.createdAt)}
           </Text>
         </Stack>
@@ -199,7 +199,7 @@ export const RunsPanel: React.FunctionComponent<RunsPanelProps> = ({
           }}
         >
           <SegmentedControl
-            size="xs"
+            size="sm"
             fullWidth
             value={statusFilter}
             onChange={handleStatusChange}

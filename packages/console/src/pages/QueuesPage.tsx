@@ -32,7 +32,7 @@ const QueuesTable: React.FunctionComponent<{
               {item.name}
             </Text>
             {item.handler && (
-              <Text size="xs" c="dimmed" truncate>
+              <Text size="sm" c="dimmed" truncate>
                 {item.handler}
               </Text>
             )}

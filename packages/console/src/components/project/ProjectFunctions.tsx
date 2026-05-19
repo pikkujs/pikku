@@ -43,7 +43,7 @@ export const ProjectFunctions: React.FunctionComponent<
                 {funcId}
               </Text>
               <Text
-                size="xs"
+                size="sm"
                 c="dimmed"
                 truncate
                 style={

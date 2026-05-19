@@ -307,7 +307,7 @@ export const WorkflowStepOutput: React.FunctionComponent<
         <Card withBorder radius="md" padding={0}>
           {schemaLoading ? (
             <Card.Section p="md">
-              <Loader size="xs" />
+              <Loader size="sm" />
             </Card.Section>
           ) : schema?.properties ? (
             <Card.Section>
@@ -366,7 +366,7 @@ export const WorkflowStepOutput: React.FunctionComponent<
             {outputVar ? (
               <Group gap="xs">
                 <Text ff="monospace">{outputVar}</Text>
-                {schemaLoading && <Loader size="xs" />}
+                {schemaLoading && <Loader size="sm" />}
               </Group>
             ) : (
               <EmptyState />
@@ -494,7 +494,7 @@ export const WorkflowStepBranches: React.FunctionComponent<
                       </Text>
                     </Group>
                     {branch.entry && (
-                      <Text size="xs" c="dimmed">
+                      <Text size="sm" c="dimmed">
                         Entry:{' '}
                         <Text span ff="monospace">
                           {branch.entry}
@@ -522,7 +522,7 @@ export const WorkflowStepBranches: React.FunctionComponent<
                       </Text>
                     </Group>
                     {caseItem.entry && (
-                      <Text size="xs" c="dimmed">
+                      <Text size="sm" c="dimmed">
                         Entry:{' '}
                         <Text span ff="monospace">
                           {caseItem.entry}
@@ -544,7 +544,7 @@ export const WorkflowStepBranches: React.FunctionComponent<
                         default
                       </PikkuBadge>
                     </Group>
-                    <Text size="xs" c="dimmed">
+                    <Text size="sm" c="dimmed">
                       Entry:{' '}
                       <Text span ff="monospace">
                         {node.defaultEntry}

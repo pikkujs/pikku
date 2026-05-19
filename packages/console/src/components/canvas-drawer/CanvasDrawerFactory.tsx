@@ -268,7 +268,7 @@ const MenuButton: React.FunctionComponent<{
             <Text size="sm" fw={500}>
               {title}
             </Text>
-            <Text size="xs" c="dimmed">
+            <Text size="sm" c="dimmed">
               {description}
             </Text>
           </Box>
@@ -329,7 +329,7 @@ const NodeItem: React.FunctionComponent<{
           <Text size="sm" fw={500}>
             {name}
           </Text>
-          <Text size="xs" c="dimmed">
+          <Text size="sm" c="dimmed">
             {description}
           </Text>
         </Box>
@@ -390,7 +390,7 @@ const WireView: React.FunctionComponent<{ onBack: () => void }> = ({
       {wireCategories.map(({ key, title }) => (
         <Box key={key}>
           <Box px="md" py="xs" bg="var(--mantine-color-default-hover)">
-            <Text size="xs" fw={600} c="dimmed" tt="uppercase">
+            <Text size="sm" fw={600} c="dimmed" tt="uppercase">
               {title}
             </Text>
           </Box>
@@ -526,7 +526,7 @@ const AddonItem: React.FunctionComponent<{
               </Text>
               <PikkuBadge type="dynamic" badge="functions" value={functionCount} />
             </Group>
-            <Text size="xs" c="dimmed">
+            <Text size="sm" c="dimmed">
               {addon.description}
             </Text>
           </Box>
@@ -603,19 +603,19 @@ const AddonDetailView: React.FunctionComponent<{
         p="md"
         className={classes.drawerButton}
       >
-        <Text size="xs" c="dimmed">
+        <Text size="sm" c="dimmed">
           {addon.description}
         </Text>
         {secrets.length > 0 && (
           <Box mt="sm">
-            <Text size="xs" fw={600} c="dimmed" mb="xs">
+            <Text size="sm" fw={600} c="dimmed" mb="xs">
               Secrets
             </Text>
             <Stack gap="xs">
               {secrets.map((name) => (
                 <Group key={name} gap="xs" wrap="nowrap">
                   <Key size={14} color="var(--mantine-color-default-border)" />
-                  <Text size="xs">{name}</Text>
+                  <Text size="sm">{name}</Text>
                 </Group>
               ))}
             </Stack>

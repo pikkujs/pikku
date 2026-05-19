@@ -95,7 +95,7 @@ export const CredentialUsersTab: React.FunctionComponent = () => {
               row.credentials[cred.name] ? (
                 <Badge
                   key={cred.name}
-                  size="xs"
+                  size="sm"
                   variant="light"
                   color="teal"
                   leftSection={<Check size={10} />}
@@ -105,7 +105,7 @@ export const CredentialUsersTab: React.FunctionComponent = () => {
               ) : (
                 <Badge
                   key={cred.name}
-                  size="xs"
+                  size="sm"
                   variant="light"
                   color="gray"
                 >

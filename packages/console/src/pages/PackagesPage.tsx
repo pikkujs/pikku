@@ -70,17 +70,17 @@ const COMMUNITY_COLUMNS = (installedNames: Set<string>) => [
             <Text fw={500} size="sm">
               {item.displayName || item.name}
             </Text>
-            <Badge size="xs" variant="light" color="gray">
+            <Badge size="sm" variant="light" color="gray">
               v{item.version}
             </Badge>
             {installedNames.has(item.name) && (
-              <Badge size="xs" variant="light" color="green">
+              <Badge size="sm" variant="light" color="green">
                 Installed
               </Badge>
             )}
           </Group>
           {item.description && (
-            <Text size="xs" c="dimmed" truncate style={{ maxWidth: 400 }}>
+            <Text size="sm" c="dimmed" truncate style={{ maxWidth: 400 }}>
               {item.description}
             </Text>
           )}
@@ -116,14 +116,14 @@ const INSTALLED_COLUMNS = () => [
             <Text fw={500} size="sm">
               {item.namespace}
             </Text>
-            <Badge size="xs" variant="light" color="gray">
+            <Badge size="sm" variant="light" color="gray">
               {item.packageName}
             </Badge>
           </Group>
           {(item.tags ?? []).length > 0 && (
             <Group gap={4} mt={2}>
               {item.tags!.map((tag) => (
-                <Badge key={tag} size="xs" variant="dot">
+                <Badge key={tag} size="sm" variant="dot">
                   {tag}
                 </Badge>
               ))}
@@ -277,12 +277,12 @@ const API_COLUMNS = [
             <Text fw={500} size="sm">
               {item.title || item.name}
             </Text>
-            <Badge size="xs" variant="light" color="gray">
+            <Badge size="sm" variant="light" color="gray">
               {item.openapiVer}
             </Badge>
           </Group>
           {item.description && (
-            <Text size="xs" c="dimmed" truncate style={{ maxWidth: 400 }}>
+            <Text size="sm" c="dimmed" truncate style={{ maxWidth: 400 }}>
               {item.description}
             </Text>
           )}

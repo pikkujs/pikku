@@ -82,7 +82,7 @@ export const ChannelDetailView: React.FunctionComponent<ChannelDetailViewProps> 
       {/* Header */}
       <Box className={classes.detailHeader} style={{ padding: '10px 16px', background: 'rgba(255,255,255,0.01)' }}>
         <Box className={classes.flexGrow}>
-          <Text size="xs" ff="monospace" c="var(--app-section-label)">
+          <Text size="sm" ff="monospace" c="var(--app-section-label)">
             {breadcrumb}
           </Text>
           {title && (
@@ -91,7 +91,7 @@ export const ChannelDetailView: React.FunctionComponent<ChannelDetailViewProps> 
             </Text>
           )}
           {displayName && (
-            <Text size="xs" ff="monospace" c="dimmed">
+            <Text size="sm" ff="monospace" c="dimmed">
               {displayName}()
             </Text>
           )}
@@ -159,13 +159,13 @@ export const ChannelDetailView: React.FunctionComponent<ChannelDetailViewProps> 
                   fontSize: 10,
                 }}
               >
-                <Text component="span" c="violet" size="xs" ff="monospace">
+                <Text component="span" c="violet" size="sm" ff="monospace">
                   {selected.category}
                 </Text>
-                <Text component="span" c="dimmed" size="xs" ff="monospace">
+                <Text component="span" c="dimmed" size="sm" ff="monospace">
                   :{' '}
                 </Text>
-                <Text component="span" c="green" size="xs" ff="monospace">
+                <Text component="span" c="green" size="sm" ff="monospace">
                   &quot;{selected.action}&quot;
                 </Text>
               </Box>

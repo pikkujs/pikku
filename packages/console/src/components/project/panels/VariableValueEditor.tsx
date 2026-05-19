@@ -102,7 +102,7 @@ export const VariableValueEditor: React.FunctionComponent<
           variant="light"
           leftSection={<Eye size={16} />}
           onClick={() => setRetrieved(true)}
-          size="xs"
+          size="sm"
         >
           Retrieve variable value
         </Button>
@@ -144,7 +144,7 @@ export const VariableValueEditor: React.FunctionComponent<
                 { label: 'Form', value: 'form' },
                 { label: 'JSON', value: 'json' },
               ]}
-              size="xs"
+              size="sm"
               style={{ width: 'auto' }}
             />
           )}

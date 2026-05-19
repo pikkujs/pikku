@@ -21,12 +21,12 @@ export const SearchInput: React.FunctionComponent<SearchInputProps> = ({
     {(label || count != null) && (
       <Group justify="space-between" mb={6}>
         {label && (
-          <Text size="xs" fw={600} ff="monospace" c="var(--app-meta-label)">
+          <Text size="sm" fw={600} ff="monospace" c="var(--app-meta-label)">
             {label}
           </Text>
         )}
         {count != null && (
-          <Text size="xs" ff="monospace" c="dimmed">
+          <Text size="sm" ff="monospace" c="dimmed">
             {count} items
           </Text>
         )}
@@ -37,7 +37,7 @@ export const SearchInput: React.FunctionComponent<SearchInputProps> = ({
       leftSection={<Search size={14} />}
       value={value}
       onChange={(e) => onChange(e.currentTarget.value)}
-      size="xs"
+      size="sm"
     />
   </Box>
 )

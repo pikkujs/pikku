@@ -150,7 +150,7 @@ export const FunctionEditor: React.FunctionComponent<FunctionEditorProps> = ({
         label="Title"
         value={title}
         onChange={(e) => setTitle(e.currentTarget.value)}
-        size="xs"
+        size="sm"
       />
       <Textarea
         label="Description"
@@ -159,13 +159,13 @@ export const FunctionEditor: React.FunctionComponent<FunctionEditorProps> = ({
         autosize
         minRows={2}
         maxRows={6}
-        size="xs"
+        size="sm"
       />
       <TextInput
         label="Summary"
         value={summary}
         onChange={(e) => setSummary(e.currentTarget.value)}
-        size="xs"
+        size="sm"
       />
       <MultiSelect
         label="Tags"
@@ -174,7 +174,7 @@ export const FunctionEditor: React.FunctionComponent<FunctionEditorProps> = ({
         onChange={setTags}
         searchable
         clearable
-        size="xs"
+        size="sm"
         placeholder="Search tags..."
       />
 
@@ -184,31 +184,31 @@ export const FunctionEditor: React.FunctionComponent<FunctionEditorProps> = ({
           label="expose"
           checked={expose}
           onChange={(e) => setExpose(e.currentTarget.checked)}
-          size="xs"
+          size="sm"
         />
         <Switch
           label="remote"
           checked={remote}
           onChange={(e) => setRemote(e.currentTarget.checked)}
-          size="xs"
+          size="sm"
         />
         <Switch
           label="mcp"
           checked={mcp}
           onChange={(e) => setMcp(e.currentTarget.checked)}
-          size="xs"
+          size="sm"
         />
         <Switch
           label="readonly"
           checked={readonly_}
           onChange={(e) => setReadonly(e.currentTarget.checked)}
-          size="xs"
+          size="sm"
         />
         <Switch
           label="approvalRequired"
           checked={approvalRequired}
           onChange={(e) => setApprovalRequired(e.currentTarget.checked)}
-          size="xs"
+          size="sm"
         />
       </Group>
 
@@ -241,7 +241,7 @@ export const FunctionEditor: React.FunctionComponent<FunctionEditorProps> = ({
           onClick={onClose}
           disabled={isPending}
           leftSection={<X size={14} />}
-          size="xs"
+          size="sm"
         >
           Cancel
         </Button>
@@ -249,7 +249,7 @@ export const FunctionEditor: React.FunctionComponent<FunctionEditorProps> = ({
           onClick={handleSaveConfig}
           loading={isPending}
           leftSection={<Save size={14} />}
-          size="xs"
+          size="sm"
         >
           Save & Rebuild
         </Button>

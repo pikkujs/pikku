@@ -137,7 +137,7 @@ export const ListExplorerPage: React.FunctionComponent<
                   data={filters}
                   value={filterValue || 'all'}
                   onChange={onFilterChange}
-                  size="xs"
+                  size="sm"
                 />
               )}
             </Group>

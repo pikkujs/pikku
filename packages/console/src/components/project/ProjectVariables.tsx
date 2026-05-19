@@ -34,7 +34,7 @@ export const ProjectVariables: React.FunctionComponent<
               {v.displayName}
             </Text>
             {v.description && (
-              <Text size="xs" c="dimmed" truncate>
+              <Text size="sm" c="dimmed" truncate>
                 {v.description}
               </Text>
             )}
@@ -45,7 +45,7 @@ export const ProjectVariables: React.FunctionComponent<
         key: 'variableId',
         header: 'VARIABLE ID',
         render: (v: VariableMeta) => (
-          <Text size="xs" c="dimmed" ff="monospace">
+          <Text size="sm" c="dimmed" ff="monospace">
             {v.variableId}
           </Text>
         ),

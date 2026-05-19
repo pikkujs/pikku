@@ -39,7 +39,7 @@ export const HttpFilterBar: React.FunctionComponent<HttpFilterBarProps> = ({
               <Chip
                 key={method}
                 value={method}
-                size="xs"
+                size="sm"
                 color={def?.color || 'gray'}
                 variant="outline"
               >
@@ -52,7 +52,7 @@ export const HttpFilterBar: React.FunctionComponent<HttpFilterBarProps> = ({
 
       <Group gap="sm">
         <SegmentedControl
-          size="xs"
+          size="sm"
           value={authFilter}
           onChange={onAuthFilterChange}
           data={[
@@ -63,7 +63,7 @@ export const HttpFilterBar: React.FunctionComponent<HttpFilterBarProps> = ({
         />
 
         <Chip
-          size="xs"
+          size="sm"
           checked={sseFilter}
           onChange={onSseFilterChange}
           color="cyan"
@@ -73,7 +73,7 @@ export const HttpFilterBar: React.FunctionComponent<HttpFilterBarProps> = ({
         </Chip>
 
         <Chip
-          size="xs"
+          size="sm"
           checked={permissionedFilter}
           onChange={onPermissionedFilterChange}
           color="red"
@@ -83,7 +83,7 @@ export const HttpFilterBar: React.FunctionComponent<HttpFilterBarProps> = ({
         </Chip>
 
         <SegmentedControl
-          size="xs"
+          size="sm"
           value={sortBy}
           onChange={onSortByChange}
           data={[

@@ -83,7 +83,7 @@ export const PanelContainer: React.FunctionComponent<PanelContainerProps> = ({
                   {panel.title}
                 </Text>
                 <CloseButton
-                  size="xs"
+                  size="sm"
                   onClick={(e) => {
                     e.stopPropagation()
                     closePanel(panel.id)

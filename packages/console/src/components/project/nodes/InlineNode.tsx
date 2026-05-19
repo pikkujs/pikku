@@ -51,7 +51,7 @@ export const InlineNode: React.FunctionComponent<NodeProps<InlineNodeData>> = ({
                 data.workflowRetries > 0 && (
                   <PikkuBadge
                     type="label"
-                    size="xs"
+                    size="sm"
                     pos="absolute"
                     top={-8}
                     right={-8}
@@ -74,7 +74,7 @@ export const InlineNode: React.FunctionComponent<NodeProps<InlineNodeData>> = ({
                 data.workflowRetryDelay > 0 && (
                   <PikkuBadge
                     type="label"
-                    size="xs"
+                    size="sm"
                     pos="absolute"
                     top={-8}
                     right={-8}

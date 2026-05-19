@@ -325,12 +325,12 @@ export const WorkflowStepRetryHistory: React.FunctionComponent<
             >
               <Group gap="xs">
                 <PikkuBadge type="status" value={attempt.status} />
-                <Text size="xs" c="dimmed">
+                <Text size="sm" c="dimmed">
                   {formatTimestamp(attempt.createdAt)}
                 </Text>
               </Group>
               {attempt.error && (
-                <Text size="xs" c="red" mt={4}>
+                <Text size="sm" c="red" mt={4}>
                   {typeof attempt.error.message === 'string'
                     ? attempt.error.message
                     : JSON.stringify(attempt.error.message, null, 2)}

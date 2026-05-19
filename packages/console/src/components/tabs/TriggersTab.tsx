@@ -155,14 +155,14 @@ export const TriggersTab: React.FunctionComponent = () => {
               gridTemplateColumns={GRID_COLUMNS}
             >
               <Text
-                size="xs"
+                size="sm"
                 ff="monospace"
                 c={isActive ? 'var(--app-meta-value)' : 'var(--app-text)'}
               >
                 {pair.name}
               </Text>
               <Badge
-                size="xs"
+                size="sm"
                 ff="monospace"
                 tt="none"
                 style={{
@@ -177,7 +177,7 @@ export const TriggersTab: React.FunctionComponent = () => {
                 {pair.source?.pikkuFuncId || 'Missing'}
               </Badge>
               <Badge
-                size="xs"
+                size="sm"
                 ff="monospace"
                 tt="none"
                 style={{

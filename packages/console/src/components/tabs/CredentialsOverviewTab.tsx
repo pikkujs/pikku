@@ -138,13 +138,13 @@ const CredentialCard: React.FunctionComponent<{
         </Group>
 
         {credential.description && (
-          <Text size="xs" c="dimmed" lineClamp={2}>
+          <Text size="sm" c="dimmed" lineClamp={2}>
             {credential.description}
           </Text>
         )}
 
         <Badge
-          size="xs"
+          size="sm"
           variant="light"
           color={credential.isOAuth2 ? 'violet' : 'blue'}
         >
@@ -159,14 +159,14 @@ const CredentialCard: React.FunctionComponent<{
                 fill="var(--mantine-color-teal-6)"
                 color="var(--mantine-color-teal-6)"
               />
-              <Text size="xs" c="teal.6">
+              <Text size="sm" c="teal.6">
                 Connected
               </Text>
             </>
           ) : (
             <>
               <Circle size={8} color="var(--mantine-color-gray-5)" />
-              <Text size="xs" c="dimmed">
+              <Text size="sm" c="dimmed">
                 Not connected
               </Text>
             </>

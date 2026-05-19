@@ -30,7 +30,7 @@ const CronBadges: React.FunctionComponent<{ schedule: string }> = ({
       {parts.map((part, i) => (
         <Badge
           key={i}
-          size="xs"
+          size="sm"
           ff="monospace"
           tt="none"
           style={{
@@ -64,21 +64,28 @@ const cronToHuman = (cron: string): string => {
   return parts.join(' ')
 }
 
+const parseCronField = (field: string | undefined, fallback: number): number => {
+  if (!field || field === '*') return fallback
+  const n = parseInt(field)
+  return isNaN(n) ? fallback : n
+}
+
 const getNextRuns = (cron: string, count: number): Date[] => {
   const [min, hr, dom, , dow] = cron.split(' ')
   const runs: Date[] = []
-  const d = new Date()
+  const now = new Date()
+  const d = new Date(now)
   d.setSeconds(0)
   d.setMilliseconds(0)
-  d.setMinutes(parseInt(min || '0'))
-  d.setHours(parseInt(hr || '0'))
-  if (d <= new Date()) d.setDate(d.getDate() + 1)
+  d.setMinutes(parseCronField(min, now.getMinutes()))
+  d.setHours(parseCronField(hr, now.getHours()))
+  if (d <= now) d.setDate(d.getDate() + 1)
   let attempts = 0
   while (runs.length < count && attempts < 500) {
     attempts++
     let ok = true
-    if (dow !== '*' && !dow!.split(',').map(Number).includes(d.getDay())) ok = false
-    if (dom !== '*' && d.getDate() !== parseInt(dom || '1')) ok = false
+    if (dow && dow !== '*' && !dow.split(',').map(Number).includes(d.getDay())) ok = false
+    if (dom && dom !== '*' && d.getDate() !== parseInt(dom)) ok = false
     if (ok) runs.push(new Date(d))
     d.setDate(d.getDate() + 1)
   }
@@ -124,7 +131,7 @@ const SchedulerDetail: React.FunctionComponent<{ item: any }> = ({ item }) => {
         >
           {cronToHuman(schedule)}
         </Box>
-        <Text size="xs" ff="monospace" c="var(--app-text-muted)">
+        <Text size="sm" ff="monospace" c="var(--app-text-muted)">
           cron: {schedule}
         </Text>
 
@@ -146,7 +153,7 @@ const SchedulerDetail: React.FunctionComponent<{ item: any }> = ({ item }) => {
           </MetaRow>
         )}
         <MetaRow label="timezone" labelWidth={80}>
-          <Text size="xs" ff="monospace" c="var(--app-text)">
+          <Text size="sm" ff="monospace" c="var(--app-text)">
             UTC
           </Text>
         </MetaRow>
@@ -180,16 +187,16 @@ const SchedulerDetail: React.FunctionComponent<{ item: any }> = ({ item }) => {
                       : '1px solid var(--app-row-border)',
                   }}
                 >
-                  <Text size="xs" ff="monospace" c="var(--app-meta-label)">
+                  <Text size="sm" ff="monospace" c="var(--app-meta-label)">
                     {fmtDate(run)}
                   </Text>
                   <Group gap={6}>
-                    <Text size="xs" ff="monospace" c="var(--app-text)">
+                    <Text size="sm" ff="monospace" c="var(--app-text)">
                       {fmtTime(run)}
                     </Text>
                     {i === 0 && (
                       <Badge
-                        size="xs"
+                        size="sm"
                         ff="monospace"
                         tt="none"
                         style={{
@@ -263,10 +270,10 @@ export const SchedulersTab: React.FunctionComponent = () => {
               gridTemplateColumns={GRID_COLUMNS}
             >
               <Box>
-                <Text size="xs" ff="monospace" c={isActive ? 'var(--app-meta-value)' : 'var(--app-text)'}>
+                <Text size="sm" ff="monospace" c={isActive ? 'var(--app-meta-value)' : 'var(--app-text)'}>
                   {item.wireId || item.name}
                 </Text>
-                <Text size="xs" ff="monospace" c="var(--app-text-muted)" style={{ fontSize: 9 }}>
+                <Text size="sm" ff="monospace" c="var(--app-text-muted)" style={{ fontSize: 9 }}>
                   {item.pikkuFuncId}()
                 </Text>
               </Box>

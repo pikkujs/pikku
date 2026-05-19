@@ -16,7 +16,7 @@ export const CopyableCode: React.FunctionComponent<CopyableCodeProps> = ({
   return (
     <Box>
       {label && (
-        <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb={4}>
+        <Text size="sm" fw={600} c="dimmed" tt="uppercase" mb={4}>
           {label}
         </Text>
       )}

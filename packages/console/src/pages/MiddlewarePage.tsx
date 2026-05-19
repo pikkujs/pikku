@@ -31,7 +31,7 @@ const MiddlewareTable: React.FunctionComponent<{
               {item.name}
             </Text>
             {item.data?.description && (
-              <Text size="xs" c="dimmed" lineClamp={1}>
+              <Text size="sm" c="dimmed" lineClamp={1}>
                 {item.data.description}
               </Text>
             )}

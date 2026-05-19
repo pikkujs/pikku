@@ -82,7 +82,7 @@ const PropertyRow: React.FunctionComponent<{
         </Table.Td>
         <Table.Td>
           {notes && (
-            <Text size="xs" c="var(--app-meta-label)">
+            <Text size="sm" c="var(--app-meta-label)">
               {notes}
             </Text>
           )}

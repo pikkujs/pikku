@@ -20,7 +20,7 @@ const COLUMNS = [
       <Text fw={500}>
         {w.name}
         {w.source === 'dynamic-workflow' && (
-          <Badge size="xs" variant="light" color="violet" ml={8}>
+          <Badge size="sm" variant="light" color="violet" ml={8}>
             Dynamic
           </Badge>
         )}

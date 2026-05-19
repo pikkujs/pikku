@@ -60,7 +60,7 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
           <Text size="sm" ff="monospace" fw={600} c="gray.2">
             {route}
           </Text>
-          <Text size="xs" c="dimmed">
+          <Text size="sm" c="dimmed">
             {displayName}
           </Text>
         </Box>
@@ -100,7 +100,7 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
 
           {metadata?.sse && (
             <MetaRow label="transport">
-              <Text size="xs" c="gray.4">SSE stream</Text>
+              <Text size="sm" c="gray.4">SSE stream</Text>
             </MetaRow>
           )}
 
