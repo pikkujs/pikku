@@ -4,8 +4,10 @@ import {
   Text,
   ScrollArea,
 } from '@mantine/core'
+import { useQuery } from '@tanstack/react-query'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
+import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { useFunctionMeta } from '../../hooks/useWirings'
 import { MetaRow } from '../ui/MetaRow'
 import { SectionLabel } from '../ui/SectionLabel'
@@ -17,7 +19,9 @@ import { SearchInput } from '../ui/SearchInput'
 import { DetailHeader } from '../ui/DetailHeader'
 import classes from '../ui/console.module.css'
 
-const GRID_COLUMNS = '1fr 120px'
+type QueueDepths = Record<string, { queued: number; active: number; failed: number }>
+
+const GRID_COLUMNS = '1fr 80px 80px'
 
 const QueueDetail: React.FunctionComponent<{ item: any }> = ({ item }) => {
   const { navigateInPanel } = usePanelContext()
@@ -96,8 +100,15 @@ const QueueDetail: React.FunctionComponent<{ item: any }> = ({ item }) => {
 
 export const QueuesTab: React.FunctionComponent = () => {
   const { meta } = usePikkuMeta()
+  const rpc = usePikkuRPC()
   const [selected, setSelected] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+
+  const { data: depths } = useQuery<QueueDepths>({
+    queryKey: ['console:getQueueDepths'],
+    queryFn: () => (rpc.invoke as (name: string) => Promise<unknown>)('console:getQueueDepths').then((r) => (r ?? {}) as QueueDepths),
+    refetchInterval: 5000,
+  })
 
   const items = useMemo(() => {
     if (!meta.queueMeta) return []
@@ -131,13 +142,14 @@ export const QueuesTab: React.FunctionComponent = () => {
         placeholder="Search queue workers..."
       />
       <GridHeader
-        columns={[{ label: 'Name' }, { label: 'Batch size' }]}
+        columns={[{ label: 'Name' }, { label: 'Queued' }, { label: 'Active' }]}
         gridTemplateColumns={GRID_COLUMNS}
       />
       <ScrollArea className={classes.flexGrow}>
         {filtered.map((item: any) => {
           const isActive = selected === item.name
-          const batchSize = item.workerConfig?.batchSize
+          const queueName = item.wireId || item.name
+          const depth = depths?.[queueName]
           return (
             <ListItem
               key={item.name}
@@ -147,14 +159,17 @@ export const QueuesTab: React.FunctionComponent = () => {
             >
               <Box>
                 <Text size="sm" ff="monospace" c={isActive ? 'var(--app-meta-value)' : 'var(--app-text)'} truncate>
-                  {item.wireId || item.name}
+                  {queueName}
                 </Text>
                 <Text size="sm" ff="monospace" c="var(--app-text-muted)" truncate style={{ fontSize: 9 }}>
                   {item.pikkuFuncId}
                 </Text>
               </Box>
-              <Text size="sm" ff="monospace" c="var(--app-meta-label)">
-                {batchSize ?? '—'}
+              <Text size="sm" ff="monospace" c={depth?.queued ? 'var(--app-meta-value)' : 'var(--app-meta-label)'}>
+                {depth?.queued ?? '—'}
+              </Text>
+              <Text size="sm" ff="monospace" c={depth?.active ? 'var(--mantine-color-green-5)' : 'var(--app-meta-label)'}>
+                {depth?.active ?? '—'}
               </Text>
             </ListItem>
           )
