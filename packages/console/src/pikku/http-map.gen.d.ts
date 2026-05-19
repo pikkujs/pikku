@@ -5,6 +5,8 @@
  * This provides the structure needed for typescript to be aware of routes and their return types
  */
 
+import type { StreamWorkflowRunInput } from '../../../addon/pikku-console/dist/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.js'
+
 export type PikkuConsoleGetSecretInput = { secretId: string }
 export type PikkuConsoleGetSecretOutput = { exists: boolean; value: unknown }
 export type PikkuConsoleGetVariableInput = { variableId: string }
@@ -27,6 +29,14 @@ export type WorkflowCallerInput = { workflowName: string; input?: unknown }
 export type WorkflowCallerOutput = { runId: string }
 
 // The '& {}' is a workaround for not directly refering to a type since it confuses typescript
+export type StreamWorkflowRunInputParams = Pick<
+  StreamWorkflowRunInput,
+  'runId'
+> & {}
+export type StreamWorkflowRunInputBody = Omit<
+  StreamWorkflowRunInput,
+  'runId'
+> & {}
 export type RpcCallerInputParams = Pick<RpcCallerInput, 'rpcName'> & {}
 export type RpcCallerInputBody = Omit<RpcCallerInput, 'rpcName'> & {}
 export type RemoteRPCHandlerInputParams = Pick<
@@ -52,6 +62,9 @@ interface HTTPWiringHandler<I, O> {
 }
 
 export type HTTPWiringsMap = {
+  readonly '/workflow-run/:runId/stream': {
+    readonly GET: HTTPWiringHandler<StreamWorkflowRunInput, null>
+  }
   readonly '/rpc/:rpcName': {
     readonly POST: HTTPWiringHandler<RpcCallerInput, null>
   }

@@ -13,7 +13,7 @@ import {
   useConsoleNavigator,
 } from '../context/ConsoleNavigatorContext'
 
-function WorkflowPageInner({ extraColumns }: { extraColumns?: WorkflowExtraColumn[] }) {
+function WorkflowPageInner({ extraColumns, headerRight }: { extraColumns?: WorkflowExtraColumn[]; headerRight?: React.ReactNode }) {
   const { workflowId } = useConsoleNavigator()
   const { meta, loading } = usePikkuMeta()
   const { data: aiWorkflows } = useAIWorkflows()
@@ -39,6 +39,7 @@ function WorkflowPageInner({ extraColumns }: { extraColumns?: WorkflowExtraColum
         workflows={workflows}
         aiWorkflows={aiWorkflows as any}
         extraColumns={extraColumns}
+        headerRight={headerRight}
       />
     )
   }
@@ -50,6 +51,7 @@ function WorkflowPageInner({ extraColumns }: { extraColumns?: WorkflowExtraColum
           workflows={workflows}
           aiWorkflows={aiWorkflows as any}
           extraColumns={extraColumns}
+          headerRight={headerRight}
         />
       </ResizablePanelLayout>
     </PanelProvider>
@@ -58,7 +60,8 @@ function WorkflowPageInner({ extraColumns }: { extraColumns?: WorkflowExtraColum
 
 export const WorkflowsPage: React.FunctionComponent<{
   extraColumns?: WorkflowExtraColumn[]
-}> = ({ extraColumns }) => {
+  headerRight?: React.ReactNode
+}> = ({ extraColumns, headerRight }) => {
   const existingNavigator = useContext(ConsoleNavigatorCtx)
   const inner = (
     <Suspense
@@ -68,7 +71,7 @@ export const WorkflowsPage: React.FunctionComponent<{
         </Center>
       }
     >
-      <WorkflowPageInner extraColumns={extraColumns} />
+      <WorkflowPageInner extraColumns={extraColumns} headerRight={headerRight} />
     </Suspense>
   )
   // Fabric (or any other host) provides its own navigator above this component.

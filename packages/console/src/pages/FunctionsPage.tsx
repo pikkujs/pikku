@@ -9,7 +9,9 @@ import {
   Center,
   Loader,
   ActionIcon,
+  Collapse,
 } from '@mantine/core'
+import { ChevronRight } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { PanelProvider } from '../context/PanelContext'
 import { usePanelContext } from '../context/PanelContext'
@@ -228,9 +230,11 @@ const FunctionDetail: React.FunctionComponent<{ func: any; onClose: () => void }
 const FunctionsPageInner: React.FunctionComponent<{
   functions: any[]
   extraColumns?: FunctionExtraColumn[]
-}> = ({ functions, extraColumns = [] }) => {
+  headerRight?: React.ReactNode
+}> = ({ functions, extraColumns = [], headerRight }) => {
   const [selected, setSelected] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const { functionUsedBy } = usePikkuMeta()
   const GRID_COLUMNS = [BASE_GRID_COLUMNS, ...extraColumns.map((c) => c.width)].join(' ')
 
@@ -261,11 +265,16 @@ const FunctionsPageInner: React.FunctionComponent<{
 
   const list = (
     <>
-      <SearchInput
-        value={search}
-        onChange={setSearch}
-        placeholder="Search functions..."
-      />
+      <Group gap="xs" align="center" style={{ paddingRight: 8 }}>
+        <Box style={{ flex: 1 }}>
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search functions..."
+          />
+        </Box>
+        {headerRight}
+      </Group>
       <GridHeader
         columns={[
           { label: 'Name' },
@@ -287,71 +296,114 @@ const FunctionsPageInner: React.FunctionComponent<{
             : 0
           const wrapperDef = funcWrapperDefs[func.funcWrapper]
           const hasAuth = func.sessionless !== true
+          const versions: any[] = func.versions ?? []
+          const hasVersions = versions.length > 1
+          const isExpanded = expanded.has(funcId)
+
+          const toggleExpand = (e: React.MouseEvent) => {
+            e.stopPropagation()
+            setExpanded((prev) => {
+              const next = new Set(prev)
+              next.has(funcId) ? next.delete(funcId) : next.add(funcId)
+              return next
+            })
+          }
 
           return (
-            <ListItem
-              key={funcId}
-              active={isActive}
-              onClick={() => setSelected(funcId)}
-              gridTemplateColumns={GRID_COLUMNS}
-              padding="9px 16px"
-            >
-              <Box>
-                <Text
-                  size="sm"
-                  ff="monospace"
-                  c={isActive ? 'var(--app-meta-value)' : 'var(--app-text)'}
-                  mb={1}
-                >
-                  {funcId}
+            <Box key={funcId}>
+              <ListItem
+                active={isActive}
+                onClick={() => setSelected(funcId)}
+                gridTemplateColumns={GRID_COLUMNS}
+                padding="9px 16px"
+              >
+                <Group gap={4} wrap="nowrap">
+                  {hasVersions ? (
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      size={16}
+                      onClick={toggleExpand}
+                      style={{ flexShrink: 0, transition: 'transform 150ms', transform: isExpanded ? 'rotate(90deg)' : 'none' }}
+                    >
+                      <ChevronRight size={12} />
+                    </ActionIcon>
+                  ) : (
+                    <Box w={16} style={{ flexShrink: 0 }} />
+                  )}
+                  <Box style={{ minWidth: 0 }}>
+                    <Group gap={6} wrap="nowrap">
+                      <Text size="sm" ff="monospace" c={isActive ? 'var(--app-meta-value)' : 'var(--app-text)'} truncate>
+                        {funcId}
+                      </Text>
+                      {func.version != null && (
+                        <Badge size="xs" variant="outline" color="gray" ff="monospace" style={{ flexShrink: 0 }}>
+                          v{func.version}
+                        </Badge>
+                      )}
+                    </Group>
+                    <Text size="sm" ff="monospace" c="var(--app-text-muted)" truncate style={{ fontSize: 9, maxWidth: 280, opacity: func.summary || func.description ? 1 : 0.4 }}>
+                      {func.summary || func.description || 'No description'}
+                    </Text>
+                  </Box>
+                </Group>
+                {wrapperDef ? (
+                  <Badge size="sm" variant="light" color="gray" tt="none">
+                    {wrapperDef.label}
+                  </Badge>
+                ) : <Box />}
+                <Text size="sm" ff="monospace" c={hasAuth ? '#86efac' : 'var(--app-text-muted)'}>
+                  {hasAuth ? 'Auth' : '—'}
                 </Text>
-                <Text
-                  size="sm"
-                  ff="monospace"
-                  c="var(--app-text-muted)"
-                  truncate
-                  style={{
-                    fontSize: 9,
-                    maxWidth: 280,
-                    opacity: func.summary || func.description ? 1 : 0.4,
-                  }}
-                >
-                  {func.summary || func.description || 'No description'}
+                <Text size="sm" ff="monospace" c="var(--app-text-muted)" truncate>
+                  {func.permissions?.length > 0
+                    ? func.permissions.map((p: any) => p.name || p).join(', ')
+                    : '—'}
                 </Text>
-              </Box>
-              {wrapperDef && (
-                <Badge size="sm" variant="light" color="gray" tt="none">
-                  {wrapperDef.label}
-                </Badge>
+                <Text size="sm" ff="monospace" c={wiringCount > 0 ? 'var(--app-service-color)' : 'var(--app-text-muted)'}>
+                  {wiringCount > 0 ? `${wiringCount} ${wiringCount === 1 ? 'wiring' : 'wirings'}` : '—'}
+                </Text>
+                {extraColumns.map((col) => (
+                  <Box key={col.label} style={col.align === 'right' ? { textAlign: 'right' } : undefined}>
+                    {col.render(funcId)}
+                  </Box>
+                ))}
+              </ListItem>
+              {hasVersions && (
+                <Collapse in={isExpanded}>
+                  {versions.map((v: any) => (
+                    <Box
+                      key={v.version}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: GRID_COLUMNS,
+                        padding: '6px 16px 6px 36px',
+                        borderBottom: '1px solid var(--mantine-color-default-border)',
+                        backgroundColor: 'var(--mantine-color-default-hover)',
+                        columnGap: 12,
+                      }}
+                    >
+                      <Group gap={6} wrap="nowrap">
+                        <Badge size="xs" variant="filled" color={v.version === func.version ? 'blue' : 'gray'} ff="monospace" style={{ flexShrink: 0 }}>
+                          v{v.version}
+                        </Badge>
+                        {v.version === func.version && (
+                          <Text size="xs" c="var(--app-text-muted)" ff="monospace">latest</Text>
+                        )}
+                      </Group>
+                      <Text size="xs" ff="monospace" c="var(--app-text-muted)">—</Text>
+                      <Text size="xs" ff="monospace" c="var(--app-text-muted)">—</Text>
+                      <Group gap={8}>
+                        <Text size="xs" ff="monospace" c="var(--app-text-muted)">in: {v.inputHash}</Text>
+                        <Text size="xs" ff="monospace" c="var(--app-text-muted)">out: {v.outputHash}</Text>
+                      </Group>
+                      <Text size="xs" ff="monospace" c="var(--app-text-muted)">—</Text>
+                      {extraColumns.map((col) => <Box key={col.label} />)}
+                    </Box>
+                  ))}
+                </Collapse>
               )}
-              <Text size="sm" ff="monospace" c={hasAuth ? '#86efac' : 'var(--app-text-muted)'}>
-                {hasAuth ? 'Auth' : '—'}
-              </Text>
-              <Text
-                size="sm"
-                ff="monospace"
-                c="var(--app-text-muted)"
-                truncate
-              >
-                {func.permissions?.length > 0
-                  ? func.permissions.map((p: any) => p.name || p).join(', ')
-                  : '—'}
-              </Text>
-              <Text
-                size="sm"
-                ff="monospace"
-                c={wiringCount > 0 ? 'var(--app-service-color)' : 'var(--app-text-muted)'}
-              >
-                {wiringCount > 0
-                  ? `${wiringCount} ${wiringCount === 1 ? 'wiring' : 'wirings'}`
-                  : '—'}
-              </Text>
-              {extraColumns.map((col) => (
-                <Box key={col.label} style={col.align === 'right' ? { textAlign: 'right' } : undefined}>
-                  {col.render(funcId)}
-                </Box>
-              ))}
-            </ListItem>
+            </Box>
           )
         })}
       </ScrollArea>
@@ -372,7 +424,8 @@ const FunctionsPageInner: React.FunctionComponent<{
 
 export const FunctionsPage: React.FunctionComponent<{
   extraColumns?: FunctionExtraColumn[]
-}> = ({ extraColumns }) => {
+  headerRight?: React.ReactNode
+}> = ({ extraColumns, headerRight }) => {
   const rpc = usePikkuRPC()
 
   const { data: functions, isLoading } = useQuery({
@@ -390,7 +443,7 @@ export const FunctionsPage: React.FunctionComponent<{
 
   return (
     <PanelProvider>
-      <FunctionsPageInner functions={functions} extraColumns={extraColumns} />
+      <FunctionsPageInner functions={functions} extraColumns={extraColumns} headerRight={headerRight} />
     </PanelProvider>
   )
 }
