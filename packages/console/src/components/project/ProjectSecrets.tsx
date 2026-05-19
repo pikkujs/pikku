@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
-import { Text, Group } from '@mantine/core'
-import { KeyRound } from 'lucide-react'
+import { Text, Group, Tooltip, ActionIcon } from '@mantine/core'
+import { KeyRound, ExternalLink } from 'lucide-react'
 import { usePanelContext } from '../../context/PanelContext'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
@@ -84,6 +84,21 @@ export const ProjectSecrets: React.FunctionComponent<ProjectSecretsProps> = ({
       }
       emptyMessage="No secrets found."
       loading={loading}
+      headerRight={
+        <Tooltip label="Secrets docs">
+          <ActionIcon
+            component="a"
+            href="https://pikku.dev/docs/core-features/secrets"
+            target="_blank"
+            rel="noopener noreferrer"
+            variant="subtle"
+            color="gray"
+            size="sm"
+          >
+            <ExternalLink size={14} />
+          </ActionIcon>
+        </Tooltip>
+      }
     />
   )
 }
