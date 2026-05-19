@@ -132,6 +132,18 @@ addError(WorkflowRunNotFoundError, {
   message: 'Workflow run not found.',
 })
 
+export class WorkflowRunFailedError extends PikkuError {
+  public payload: { message?: string }
+  constructor(message?: string) {
+    super(`Workflow run failed: ${message ?? 'unknown'}`)
+    this.payload = { message }
+  }
+}
+addError(WorkflowRunFailedError, {
+  status: 422,
+  message: 'Workflow run failed.',
+})
+
 export class WorkflowServiceNotInitialized extends Error {}
 export class WorkflowStepNameNotString extends Error {
   constructor(stepName: any) {
@@ -1045,7 +1057,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       }
       if (WORKFLOW_END_STATES.has(run.status)) {
         if (run.status === 'failed') {
-          throw new Error(run.error?.message || 'Workflow failed')
+          throw new WorkflowRunFailedError(run.error?.message)
         }
         if (run.status === 'cancelled') {
           throw new Error('Workflow was cancelled')

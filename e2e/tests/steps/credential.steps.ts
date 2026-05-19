@@ -335,6 +335,7 @@ Then(
     const hasError =
       state.lastWorkflowResult.status === 'failed' ||
       state.lastWorkflowResult.error ||
+      state.lastWorkflowResult.payload?.error ||
       JSON.stringify(state.lastWorkflowResult).includes(expectedError)
     expect(hasError).toBeTruthy()
   }
