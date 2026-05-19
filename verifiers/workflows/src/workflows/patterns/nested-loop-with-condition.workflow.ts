@@ -4,13 +4,13 @@
 
 import { pikkuWorkflowComplexFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
-export const nestedLoopWithConditionWorkflow = {
+export const nestedLoopWithConditionWorkflow = pikkuWorkflowComplexFunc<
+  { userIds: string[]; maxComments: number },
+  { usersProcessed: number; totalComments: number }
+>({
   title: 'Nested Loop With Condition',
   tags: ['patterns'],
-  func: pikkuWorkflowComplexFunc<
-    { userIds: string[]; maxComments: number },
-    { usersProcessed: number; totalComments: number }
-  >(async (_services, data, { workflow }) => {
+  func: async (_services, data, { workflow }) => {
     let usersProcessed = 0
     let totalComments = 0
 
@@ -54,5 +54,5 @@ export const nestedLoopWithConditionWorkflow = {
     }
 
     return { usersProcessed, totalComments }
-  }),
-}
+  },
+})

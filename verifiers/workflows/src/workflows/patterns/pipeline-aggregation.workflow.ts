@@ -4,18 +4,18 @@
 
 import { pikkuWorkflowComplexFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
-export const pipelineAggregationWorkflow = {
+export const pipelineAggregationWorkflow = pikkuWorkflowComplexFunc<
+  { leadIds: string[] },
+  {
+    totalLeads: number
+    qualifiedLeads: number
+    dealsCreated: number
+    totalValue: number
+  }
+>({
   title: 'Pipeline Aggregation',
   tags: ['patterns'],
-  func: pikkuWorkflowComplexFunc<
-    { leadIds: string[] },
-    {
-      totalLeads: number
-      qualifiedLeads: number
-      dealsCreated: number
-      totalValue: number
-    }
-  >(async (_services, data, { workflow }) => {
+  func: async (_services, data, { workflow }) => {
     // Stage 1: Get all leads in parallel
     const leads = await Promise.all(
       data.leadIds.map(
@@ -66,5 +66,5 @@ export const pipelineAggregationWorkflow = {
       dealsCreated: deals.length,
       totalValue,
     }
-  }),
-}
+  },
+})

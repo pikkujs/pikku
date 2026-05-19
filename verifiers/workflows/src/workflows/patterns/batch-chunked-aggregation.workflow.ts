@@ -8,13 +8,13 @@
 
 import { pikkuWorkflowComplexFunc } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
-export const batchChunkedAggregationWorkflow = {
+export const batchChunkedAggregationWorkflow = pikkuWorkflowComplexFunc<
+  { documentChunks: string[][] },
+  { totalProcessed: number; chunks: number }
+>({
   title: 'Batch Chunked Aggregation',
   tags: ['patterns'],
-  func: pikkuWorkflowComplexFunc<
-    { documentChunks: string[][] },
-    { totalProcessed: number; chunks: number }
-  >(async (_services, data, { workflow }) => {
+  func: async (_services, data, { workflow }) => {
     let totalProcessed = 0
     let chunkIndex = 0
 
@@ -40,5 +40,5 @@ export const batchChunkedAggregationWorkflow = {
     }
 
     return { totalProcessed, chunks: chunkIndex }
-  }),
-}
+  },
+})

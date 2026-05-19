@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+process.removeAllListeners('warning')
+process.on('warning', (w) => {
+  if (w.name === 'ExperimentalWarning' && w.message.includes('SQLite')) return
+  process.stderr.write(`${w.name}: ${w.message}\n`)
+})
 import { existsSync } from 'fs'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { dirname, join } from 'path'
