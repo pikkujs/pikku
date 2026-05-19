@@ -1,11 +1,9 @@
 import { Suspense, useContext } from 'react'
-import { GitBranch } from 'lucide-react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { WorkflowsList } from '../components/project/WorkflowsList'
 import { WorkflowTabContent } from '../components/tabs/WorkflowTabContent'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '../components/layout/DetailPageHeader'
 import { Center, Loader } from '@mantine/core'
 import { useAIWorkflows } from '../hooks/useWorkflowRuns'
 import {
@@ -45,16 +43,7 @@ function WorkflowPageInner() {
 
   return (
     <PanelProvider>
-      <ResizablePanelLayout
-        header={
-          <DetailPageHeader
-            icon={GitBranch}
-            category="Workflows"
-            docsHref="https://pikku.dev/docs/wiring/workflows"
-          />
-        }
-        hidePanel
-      >
+      <ResizablePanelLayout hidePanel>
         <WorkflowsList
           workflows={workflows}
           aiWorkflows={aiWorkflows as any}
