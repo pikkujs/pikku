@@ -18,6 +18,7 @@ import { usePanelContext } from '../../../context/PanelContext'
 import { AgentPlaygroundContext } from '../../../context/AgentPlaygroundContext'
 import { usePikkuMeta } from '../../../context/PikkuMetaContext'
 import { AgentEditor } from './AgentEditor'
+import { useConsoleEditable } from '../../../context/ConsoleEditableContext'
 import classes from '../../ui/console.module.css'
 
 interface AgentPanelProps {
@@ -32,10 +33,11 @@ export const AgentConfiguration: React.FunctionComponent<AgentPanelProps> = ({
   const { navigateInPanel } = usePanelContext()
   const playgroundCtx = useContext(AgentPlaygroundContext)
   const { meta } = usePikkuMeta()
+  const editable = useConsoleEditable()
   const modelAliases = meta.modelAliases ?? []
   const [editing, setEditing] = useState(false)
 
-  const canEdit = !!metadata?.sourceFile && !!metadata?.exportedName
+  const canEdit = editable && !!metadata?.sourceFile && !!metadata?.exportedName
 
   const modelOptions = useMemo(() => {
     const aliases = new Set(modelAliases)

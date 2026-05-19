@@ -36,6 +36,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
+import { useConsoleEditable } from '../context/ConsoleEditableContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { DetailPageHeader } from '../components/layout/DetailPageHeader'
 import { ProjectFunctions } from '../components/project/ProjectFunctions'
@@ -286,6 +287,7 @@ export const PackageDetailPage: React.FunctionComponent<{
   onBack: () => void
 }> = ({ id, source, onBack }) => {
   const rpc = usePikkuRPC()
+  const editable = useConsoleEditable()
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = React.useState<string | null>(null)
 
@@ -576,7 +578,7 @@ export const PackageDetailPage: React.FunctionComponent<{
                   OpenAPI YAML
                 </Button>
               )}
-              <Button
+              {editable && <Button
                 size="xs"
                 leftSection={<Download size={13} />}
                 loading={installOpenapiMutation.isPending}
@@ -603,7 +605,7 @@ export const PackageDetailPage: React.FunctionComponent<{
                 }}
               >
                 Generate & Install Addon
-              </Button>
+              </Button>}
             </Group>
 
             {installOpenapiMutation.isSuccess && (
@@ -766,7 +768,7 @@ export const PackageDetailPage: React.FunctionComponent<{
                     </Anchor>
                   )}
                 </Group>
-                {(() => {
+                {editable && (() => {
                   const communityVersion = pkg.version
                   const installedVersion = installedPkg?.version
                   const needsUpdate =

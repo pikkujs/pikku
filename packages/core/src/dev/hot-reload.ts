@@ -1,6 +1,9 @@
 import { watch, type FSWatcher } from 'node:fs'
 import { stat, readFile } from 'node:fs/promises'
 import { join, resolve, relative } from 'node:path'
+import { pathToFileURL } from 'node:url'
+
+import { register } from 'tsx/esm/api'
 
 import { pikkuState } from '../pikku-state.js'
 import { addFunction } from '../function/function-runner.js'
@@ -54,10 +57,26 @@ const findCompiledFile = async (
 // Use data: URLs to import modules. This bypasses TypeScript loaders
 // (e.g. tsx) that intercept file:// imports and break dynamic ESM loading.
 // Each import gets unique content so there's no module cache to worry about.
+let tsxRegistered = false
+
+const ensureTsxRegistered = () => {
+  if (tsxRegistered) return
+  register()
+  tsxRegistered = true
+}
+
 const reimportModule = async (
-  filePath: string
+  filePath: string,
+  useTsx = false
 ): Promise<Record<string, unknown> | null> => {
   try {
+    if (useTsx) {
+      ensureTsxRegistered()
+      return await import(
+        `${pathToFileURL(resolve(filePath)).href}?t=${Date.now()}`
+      )
+    }
+
     const content = await readFile(resolve(filePath), 'utf-8')
     const dataUrl =
       'data:text/javascript;base64,' + Buffer.from(content).toString('base64')
@@ -98,17 +117,19 @@ export async function pikkuDevReloader(
       srcDir,
       absPikkuDir
     )
-    if (!compiledFile) {
-      logger.warn(
-        `Could not find compiled JS for: ${relative(process.cwd(), changedTsFile)}`
+    const importPath = compiledFile ?? changedTsFile
+    const usedTsxFallback = !compiledFile
+
+    if (usedTsxFallback) {
+      logger.debug(
+        `Hot-reload using tsx fallback for: ${relative(process.cwd(), changedTsFile)}`
       )
-      return
     }
 
-    const mod = await reimportModule(compiledFile)
+    const mod = await reimportModule(importPath, usedTsxFallback)
     if (!mod) {
       logger.error(
-        `Failed to import: ${relative(process.cwd(), compiledFile)} (keeping old code)`
+        `Failed to import: ${relative(process.cwd(), importPath)} (keeping old code)`
       )
       return
     }

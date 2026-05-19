@@ -5,6 +5,7 @@ import { WorkerEntrypoint } from 'cloudflare:workers'
 import { runFetch } from './run-fetch.js'
 import { runScheduled } from './run-scheduled.js'
 import { runQueueJob } from '@pikku/core/queue'
+import { runScheduledTask } from '@pikku/core/scheduler'
 import { rpcService } from '@pikku/core/rpc'
 import { pikkuState } from '@pikku/core/internal'
 import type { QueueJob, QueueJobStatus } from '@pikku/core/queue'
@@ -211,6 +212,34 @@ export function createCloudflareHandler(
           const noRetry =
             errorName === 'QueueJobDiscardedError' ||
             errorName === 'PikkuMissingMetaError'
+          return new Response(
+            JSON.stringify({ ok: false, errorName, message }),
+            {
+              status: noRetry ? 422 : 503,
+              headers: { 'content-type': 'application/json' },
+            }
+          )
+        }
+      }
+
+      // `/__pikku/scheduler-job` is the fabric WfP scheduler-delivery route.
+      // Mirrors `/__pikku/queue-job` for schedule-triggered units that have no
+      // public HTTP surface. Body: { taskName }. Status codes: 204 = ok,
+      // 422 = no-retry, 503 = retry (transient).
+      if (
+        reqUrl.pathname === '/__pikku/scheduler-job' &&
+        request.method === 'POST'
+      ) {
+        try {
+          await setupServices(this.env, factories)
+          const body = (await request.json()) as { taskName: string }
+          const traceId = `cron-${crypto.randomUUID()}`
+          await runScheduledTask({ name: body.taskName, traceId })
+          return new Response(null, { status: 204 })
+        } catch (e: unknown) {
+          const errorName = (e as Error)?.name ?? 'Error'
+          const message = (e as Error)?.message ?? String(e)
+          const noRetry = errorName === 'PikkuMissingMetaError'
           return new Response(
             JSON.stringify({ ok: false, errorName, message }),
             {

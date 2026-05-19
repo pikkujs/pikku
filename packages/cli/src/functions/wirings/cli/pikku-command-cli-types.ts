@@ -5,10 +5,20 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeCLITypes } from './serialize-cli-types.js'
 import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 
-export const pikkuCLITypes = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config, getInspectorState }) => {
+type CLITypesCommandInput = {
+  bootstrap?: boolean
+}
+
+export const pikkuCLITypes = pikkuSessionlessFunc<CLITypesCommandInput, void>({
+  func: async ({ logger, config, getInspectorState }, input) => {
     const { cliTypesFile, functionTypesFile, packageMappings } = config
-    const visitState = await getInspectorState()
+    const bootstrap = input?.bootstrap === true
+    // In bootstrap mode we only need filesAndMethods (userSession/singleton
+    // services types) — skip schema generation. Full mode would dynamic-import
+    // pikku-types.gen.ts, which re-exports the not-yet-written cli-types file.
+    const visitState = bootstrap
+      ? await getInspectorState(false, true, false)
+      : await getInspectorState()
 
     const functionTypesImportPath = getFileImportRelativePath(
       cliTypesFile,

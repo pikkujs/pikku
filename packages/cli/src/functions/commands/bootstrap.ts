@@ -11,13 +11,13 @@ export const bootstrap = pikkuVoidFunc({
     await rpc.invoke('pikkuChannelTypes')
     await rpc.invoke('pikkuSchedulerTypes')
     await rpc.invoke('pikkuQueueTypes')
-    await rpc.invoke('pikkuWorkflow')
+    await rpc.invoke('pikkuWorkflow', { bootstrap: true })
     await rpc.invoke('pikkuTriggerTypes')
     await rpc.invoke('pikkuMCPTypes')
     await rpc.invoke('pikkuAIAgentTypes')
     await rpc.invoke('pikkuNodeTypes')
     await rpc.invoke('pikkuSecretDefinitionTypes')
-    await rpc.invoke('pikkuCLITypes')
+    await rpc.invoke('pikkuCLITypes', { bootstrap: true })
 
     if (logger.hasCriticalErrors()) {
       process.exit(1)

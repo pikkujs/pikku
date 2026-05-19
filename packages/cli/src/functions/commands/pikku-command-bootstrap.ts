@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { pikkuSessionlessFunc } from '#pikku'
 import { getFileImportRelativePath } from '../../utils/file-import-path.js'
@@ -27,14 +28,23 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
 
     const localImportTargets = Array.from(
       new Set([
-        ...(!config.addon && config.rpcInternalWiringMetaFile
+        ...(config.rpcInternalWiringMetaFile &&
+        existsSync(config.rpcInternalWiringMetaFile)
           ? [config.rpcInternalWiringMetaFile]
           : []),
         ...allImports,
       ])
     )
 
-    const localImports = localImportTargets.map(
+    const safeLocalImportTargets = localImportTargets.filter(
+      (to): to is string => {
+        if (typeof to === 'string' && to.length > 0) return true
+        logger.warn(`Skipping invalid bootstrap import path: ${String(to)}`)
+        return false
+      }
+    )
+
+    const localImports = safeLocalImportTargets.map(
       (to) =>
         `import '${getFileImportRelativePath(config.bootstrapFile, to, config.packageMappings)}'`
     )

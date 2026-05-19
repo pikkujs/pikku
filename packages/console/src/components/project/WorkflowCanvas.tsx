@@ -49,6 +49,7 @@ import 'reactflow/dist/style.css'
 import { ThreePaneLayout } from '../layout/ThreePaneLayout'
 import { GenericNode } from './nodes/GenericNode'
 import { ElkEdge } from './edges/ElkEdge'
+import { useConsoleEditable } from '../../context/ConsoleEditableContext'
 
 const wireTypeToWiresKey: Record<string, string> = {
   http: 'http',
@@ -208,6 +209,7 @@ const WorkflowRunsPanel: React.FunctionComponent<{ workflowName: string }> = ({
   const { selectedRunId, setSelectedRunId, setIsCreatingRun } =
     useWorkflowRunContext()
   const { setActivePanel } = usePanelContext()
+  const editable = useConsoleEditable()
   const rpc = usePikkuRPC()
   const { data: runs, isLoading, refetch } = useWorkflowRuns(workflowName)
 
@@ -243,9 +245,9 @@ const WorkflowRunsPanel: React.FunctionComponent<{ workflowName: string }> = ({
       loading={isLoading}
       emptyMessage="No runs found"
       statusFilters={[]}
-      onNewClick={handleNewClick}
-      newButtonLabel="New workflow run"
-      onDelete={handleDelete}
+      onNewClick={editable ? handleNewClick : undefined}
+      newButtonLabel={editable ? "New workflow run" : undefined}
+      onDelete={editable ? handleDelete : undefined}
     />
   )
 }

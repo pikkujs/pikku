@@ -275,6 +275,7 @@ export const createSingletonServices: CreateSingletonServices<
     | InspectorState
     | Omit<InspectorState, 'typesLookup'>
     | undefined = preloadedInspectorState
+  let unfilteredStateIsSetupOnly = false
 
   const getInspectorState = async (
     refresh: boolean = false,
@@ -321,7 +322,14 @@ export const createSingletonServices: CreateSingletonServices<
     // Get or refresh the unfiltered state.
     // When a preloaded state was provided via --stateInput, skip re-inspection
     // because the preloaded state is already the complete unfiltered state.
-    if (!unfilteredState || (refresh && !preloadedInspectorState)) {
+    // Also re-run when the cache holds a setupOnly=true state but a full
+    // inspection (setupOnly=false) is now requested — setupOnly skips
+    // visitRoutes so variables/secrets/etc. are absent from that cache.
+    if (
+      !unfilteredState ||
+      (refresh && !preloadedInspectorState) ||
+      (unfilteredStateIsSetupOnly && !setupOnly && !preloadedInspectorState)
+    ) {
       // Run inspector WITHOUT filters to get full state
       const wiringFiles = (
         await Promise.all(
@@ -353,6 +361,7 @@ export const createSingletonServices: CreateSingletonServices<
         : undefined
       const oldProgram = unfilteredState?.program ?? undefined
       const inspectStart = Date.now()
+      unfilteredStateIsSetupOnly = setupOnly
       unfilteredState = await inspect(logger, wiringFiles, {
         setupOnly,
         rootDir,
