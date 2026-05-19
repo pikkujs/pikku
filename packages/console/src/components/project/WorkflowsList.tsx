@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react'
-import { Text, Badge, Button } from '@mantine/core'
+import { Text, Badge, Tooltip, ActionIcon } from '@mantine/core'
 import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
-import { GitBranch, Plus } from 'lucide-react'
+import { GitBranch, ExternalLink } from 'lucide-react'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
@@ -105,7 +105,21 @@ export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
         false
       }
       emptyMessage="No workflows found."
-      headerRight={null}
+      headerRight={
+        <Tooltip label="Workflows docs">
+          <ActionIcon
+            component="a"
+            href="https://pikku.dev/docs/wiring/workflows"
+            target="_blank"
+            rel="noopener noreferrer"
+            variant="subtle"
+            color="gray"
+            size="sm"
+          >
+            <ExternalLink size={14} />
+          </ActionIcon>
+        </Tooltip>
+      }
     />
   )
 }
