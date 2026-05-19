@@ -4702,6 +4702,14 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@next/swc-darwin-arm64@npm:^16.2.6":
+  version: 16.2.6
+  resolution: "@next/swc-darwin-arm64@npm:16.2.6"
+  checksum: 10/31bd2caeeae9578da4dbab7af83aa75ba8a7e470dc95e6ae91ab5ba223cca758dbbfe0cd52b12e7360a65c1b2ca961f5e529a253632449cff6d4b375b6e02d37
+  conditions: os=darwin & cpu=arm64
+  languageName: node
+  linkType: hard
+
 "@next/swc-darwin-x64@npm:15.5.12":
   version: 15.5.12
   resolution: "@next/swc-darwin-x64@npm:15.5.12"
@@ -6162,6 +6170,7 @@ __metadata:
   resolution: "@pikku/templates-nextjs@workspace:templates/nextjs"
   dependencies:
     "@auth/core": "npm:^0.37.0"
+    "@next/swc-darwin-arm64": "npm:^16.2.6"
     "@pikku/auth-js": "npm:^0.12.3"
     "@pikku/cli": "npm:^0.12.21"
     "@pikku/core": "npm:^0.12.20"

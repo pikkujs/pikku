@@ -28,7 +28,14 @@ import { SearchInput } from '../components/ui/SearchInput'
 import { TagBadge, ServiceBadge } from '../components/ui/TagBadge'
 import classes from '../components/ui/console.module.css'
 
-const GRID_COLUMNS = '240px 140px 60px 100px 80px'
+export interface FunctionExtraColumn {
+  label: string
+  width: string
+  align?: 'right'
+  render: (funcId: string) => React.ReactNode
+}
+
+const BASE_GRID_COLUMNS = '240px 140px 60px 100px 80px'
 
 const CollapsibleSchema: React.FunctionComponent<{
   label: string
@@ -220,10 +227,12 @@ const FunctionDetail: React.FunctionComponent<{ func: any; onClose: () => void }
 
 const FunctionsPageInner: React.FunctionComponent<{
   functions: any[]
-}> = ({ functions }) => {
+  extraColumns?: FunctionExtraColumn[]
+}> = ({ functions, extraColumns = [] }) => {
   const [selected, setSelected] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const { functionUsedBy } = usePikkuMeta()
+  const GRID_COLUMNS = [BASE_GRID_COLUMNS, ...extraColumns.map((c) => c.width)].join(' ')
 
   const filtered = useMemo(() => {
     const userFuncs = functions.filter((func: any) => {
@@ -263,7 +272,8 @@ const FunctionsPageInner: React.FunctionComponent<{
           { label: 'Type' },
           { label: 'Auth' },
           { label: 'Permissions' },
-          { label: 'Wirings', align: 'right' },
+          { label: 'Wirings' },
+          ...extraColumns.map((c) => ({ label: c.label, align: c.align })),
         ]}
         gridTemplateColumns={GRID_COLUMNS}
       />
@@ -331,12 +341,16 @@ const FunctionsPageInner: React.FunctionComponent<{
                 size="sm"
                 ff="monospace"
                 c={wiringCount > 0 ? 'var(--app-service-color)' : 'var(--app-text-muted)'}
-                ta="right"
               >
                 {wiringCount > 0
                   ? `${wiringCount} ${wiringCount === 1 ? 'wiring' : 'wirings'}`
                   : '—'}
               </Text>
+              {extraColumns.map((col) => (
+                <Box key={col.label} style={col.align === 'right' ? { textAlign: 'right' } : undefined}>
+                  {col.render(funcId)}
+                </Box>
+              ))}
             </ListItem>
           )
         })}
@@ -356,7 +370,9 @@ const FunctionsPageInner: React.FunctionComponent<{
   )
 }
 
-export const FunctionsPage: React.FunctionComponent = () => {
+export const FunctionsPage: React.FunctionComponent<{
+  extraColumns?: FunctionExtraColumn[]
+}> = ({ extraColumns }) => {
   const rpc = usePikkuRPC()
 
   const { data: functions, isLoading } = useQuery({
@@ -374,7 +390,7 @@ export const FunctionsPage: React.FunctionComponent = () => {
 
   return (
     <PanelProvider>
-      <FunctionsPageInner functions={functions} />
+      <FunctionsPageInner functions={functions} extraColumns={extraColumns} />
     </PanelProvider>
   )
 }

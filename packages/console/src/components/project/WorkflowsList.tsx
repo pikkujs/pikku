@@ -41,6 +41,12 @@ const COLUMNS = [
   },
 ]
 
+export interface WorkflowExtraColumn {
+  label: string
+  width?: string
+  render: (workflowName: string) => React.ReactNode
+}
+
 interface WorkflowsListProps {
   workflows: WorkflowsMeta
   aiWorkflows?: Array<{
@@ -48,11 +54,13 @@ interface WorkflowsListProps {
     graphHash: string
     graph: any
   }>
+  extraColumns?: WorkflowExtraColumn[]
 }
 
 export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
   workflows,
   aiWorkflows,
+  extraColumns = [],
 }) => {
   const [filter, setFilter] = useState<FilterValue>('all')
   const { navigateTo } = useConsoleNavigator()
@@ -89,13 +97,23 @@ export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
     return sortedWorkflows
   }, [sortedWorkflows, filter])
 
+  const allColumns = [
+    ...COLUMNS,
+    ...extraColumns.map((col) => ({
+      key: col.label,
+      header: col.label.toUpperCase(),
+      width: col.width,
+      render: (w: Workflow) => col.render(w.name),
+    })),
+  ]
+
   return (
     <TableListPage
       title="Workflows"
       icon={GitBranch}
       docsHref="https://pikku.dev/docs/wiring/workflows"
       data={filteredByType}
-      columns={COLUMNS}
+      columns={allColumns}
       getKey={(w) => w.name}
       onRowClick={(w) => navigateTo('workflows', w.name)}
       searchPlaceholder="Search workflows..."
