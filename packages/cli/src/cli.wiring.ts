@@ -519,9 +519,9 @@ wireCLI({
           func: pikkuSkillsInstall,
           description: 'Copy bundled skills into the current project',
           options: {
-            target: {
+            agent: {
               description:
-                'Target agent (claude | codex | gemini). Default: claude',
+                'Target agent (claude | opencode | codex | gemini). Default: claude',
               default: 'claude',
             },
             only: {

@@ -58,10 +58,14 @@ export const pikkuSkillsList = pikkuSessionlessFunc<{ target?: string }, void>({
       .sort()
 
     const installed = new Set<string>()
-    const installDir = join(process.cwd(), '.claude', 'skills')
-    if (existsSync(installDir)) {
-      for (const e of await readdir(installDir, { withFileTypes: true })) {
-        if (e.isDirectory() || e.isSymbolicLink()) installed.add(e.name)
+    for (const dir of [
+      join(process.cwd(), '.claude', 'skills'),
+      join(process.cwd(), '.opencode', 'skills'),
+    ]) {
+      if (existsSync(dir)) {
+        for (const e of await readdir(dir, { withFileTypes: true })) {
+          if (e.isDirectory() || e.isSymbolicLink()) installed.add(e.name)
+        }
       }
     }
 
@@ -72,17 +76,21 @@ export const pikkuSkillsList = pikkuSessionlessFunc<{ target?: string }, void>({
     }
     console.log('')
     console.log('Run `pikku skills install` to copy them into .claude/skills/')
+    console.log(
+      'Run `pikku skills install --agent opencode` to copy them into .opencode/skills/'
+    )
   },
 })
 
 export const pikkuSkillsInstall = pikkuSessionlessFunc<
-  { target?: string; only?: string; update?: boolean },
+  { agent?: string; only?: string; update?: boolean },
   void
 >({
-  func: async ({ logger }, { target = 'claude', only, update = false }) => {
-    if (target !== 'claude') {
+  func: async ({ logger }, { agent = 'claude', only, update = false }) => {
+    const supportedAgents = ['claude', 'opencode']
+    if (!supportedAgents.includes(agent)) {
       logger.error(
-        `Target "${target}" is not yet supported. Only --target claude is implemented. ` +
+        `Agent "${agent}" is not yet supported. Supported: ${supportedAgents.join(', ')}. ` +
           `(codex/gemini will emit AGENTS.md/GEMINI.md from the same source — coming soon.)`
       )
       process.exitCode = 1
@@ -108,7 +116,10 @@ export const pikkuSkillsInstall = pikkuSessionlessFunc<
       return
     }
 
-    const installRoot = join(process.cwd(), '.claude', 'skills')
+    const installRoot =
+      agent === 'opencode'
+        ? join(process.cwd(), '.opencode', 'skills')
+        : join(process.cwd(), '.claude', 'skills')
     await mkdir(installRoot, { recursive: true })
 
     let installed = 0
@@ -124,8 +135,10 @@ export const pikkuSkillsInstall = pikkuSessionlessFunc<
       installed++
     }
 
+    const destLabel =
+      agent === 'opencode' ? '.opencode/skills/' : '.claude/skills/'
     logger.info(
-      `Installed ${installed} skill(s) into .claude/skills/${
+      `Installed ${installed} skill(s) into ${destLabel}${
         skipped > 0
           ? ` (skipped ${skipped} already present — pass --update to overwrite)`
           : ''

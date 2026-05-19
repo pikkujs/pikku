@@ -30,6 +30,7 @@
     "@pikku/deploy-cloudflare": "^0.12.0",
     "@pikku/fetch": "^0.12.1",
     "@pikku/inspector": "^0.12.11",
+    "@pikku/kysely": "^0.12.11",
     "@pikku/kysely-node-sqlite": "^0.12.0",
     "@pikku/node-http-server": "^0.12.0",
     "@pikku/openapi-parser": "^0.12.10",

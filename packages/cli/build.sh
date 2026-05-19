@@ -47,7 +47,7 @@ done < <(find .pikku \( -name '*.ts' -o -name '*.json' \) -print0)
 
 # Build TypeScript (may fail if published CLI generates stale types)
 echo "Building TypeScript to dist..."
-tsc -b || true
+npx tsc -b || true
 
 # Patch stale wireMCPTool import in compiled output (removed in current version)
 if [ -f dist/.pikku/mcp/pikku-mcp-types.gen.js ]; then
