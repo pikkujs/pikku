@@ -2,7 +2,11 @@ import { DatabaseSync } from 'node:sqlite'
 import { existsSync, rmSync } from 'node:fs'
 import { resolve, isAbsolute, relative } from 'node:path'
 import type { Kysely } from 'kysely'
-import { createNodeSqliteKysely } from '@pikku/kysely-node-sqlite'
+import {
+  createNodeSqliteKysely,
+  createCoercionPlugin,
+  type CoercionMap,
+} from '@pikku/kysely-node-sqlite'
 import { migrate, type MigrateResult } from './sql-migrator.js'
 import { generateSchemaTypes, type CodegenResult } from './sqlite-codegen.js'
 import { seed as runSeed, type SeedResult } from './seed.js'
@@ -14,6 +18,7 @@ export interface ResolvedLocalDb {
   migrationsDir: string
   seedFile: string
   schemaFile: string
+  coercionFile: string
   camelCase: boolean
 }
 
@@ -32,6 +37,7 @@ export function resolveLocalDb(
     migrationsDir: resolveAgainst(rootDir, 'db/migrations'),
     seedFile: resolveAgainst(rootDir, 'db/seed.sql'),
     schemaFile: resolveAgainst(rootDir, 'db/schema.d.ts'),
+    coercionFile: resolveAgainst(rootDir, 'db/coercion.gen.ts'),
     camelCase: true,
   }
 }
@@ -57,7 +63,9 @@ export function migrateAndCodegen(
     const migrateResult = migrate(db, resolved.migrationsDir)
     const codegenResult = generateSchemaTypes(db, {
       outFile: resolved.schemaFile,
+      coercionFile: resolved.coercionFile,
       camelCase: resolved.camelCase,
+      migrationsDir: resolved.migrationsDir,
     })
     return { migrate: migrateResult, codegen: codegenResult }
   } finally {
@@ -99,10 +107,22 @@ export function reset(resolved: ResolvedLocalDb, rootDir: string): void {
 /**
  * Construct the user-facing Kysely instance for the dev DB. Used by
  * `pikku dev` to populate inMemoryServices.kysely.
+ * Wires the coercion plugin when db/coercion.gen.ts exists.
  */
-export function createKysely<DB>(resolved: ResolvedLocalDb): Kysely<DB> {
+export async function createKysely<DB>(
+  resolved: ResolvedLocalDb
+): Promise<Kysely<DB>> {
+  let coercionMap: CoercionMap | undefined
+  try {
+    const mod = await import(resolved.coercionFile)
+    coercionMap = mod.coercionMap as CoercionMap
+  } catch {
+    // coercion.gen.ts not yet generated — run `pikku db migrate` first
+  }
+
   return createNodeSqliteKysely<DB>({
     filename: resolved.dbFile,
     camelCase: resolved.camelCase,
+    plugins: coercionMap ? [createCoercionPlugin({ map: coercionMap })] : [],
   })
 }
