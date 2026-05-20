@@ -69,6 +69,38 @@ export const FabricLink = pikkuSessionlessFunc({
       }
     }
 
+    // Ensure GitHub App is installed before importing
+    const ghInstall = await rpc.invoke('checkGithubInstall', {})
+    if (!ghInstall.installed) {
+      if (!ghInstall.installUrl) {
+        throw new Error(
+          'GitHub App is not configured on this fabric deployment.'
+        )
+      }
+      console.log('')
+      console.log('  GitHub App not installed. Connect GitHub to continue:')
+      console.log('')
+      console.log(`    ${ghInstall.installUrl}`)
+      console.log('')
+      console.log('  Waiting for GitHub App installation...')
+      const deadline = Date.now() + GITHUB_POLL_TIMEOUT_MS
+      let installed = false
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, GITHUB_POLL_INTERVAL_MS))
+        const check = await rpc.invoke('checkGithubInstall', {})
+        if (check.installed) {
+          installed = true
+          console.log(`  GitHub connected (${check.accountLogin})`)
+          break
+        }
+      }
+      if (!installed) {
+        throw new Error(
+          'Timed out waiting for GitHub App installation. Run `pikku fabric link` again after installing.'
+        )
+      }
+    }
+
     const project = await rpc.invoke('importProject', { repoUrl: remoteUrl })
 
     await writeProjectConfig(process.cwd(), {
