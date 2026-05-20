@@ -1,5 +1,22 @@
 # @pikku/e2e
 
+## 0.0.21
+
+### Patch Changes
+
+- Updated dependencies [7f146f7]
+- Updated dependencies [8860aff]
+- Updated dependencies [662c61d]
+- Updated dependencies [6afdfcb]
+- Updated dependencies [d484d0c]
+  - @pikku/addon-graph@0.12.2
+  - @pikku/core@0.12.21
+  - @pikku/kysely@0.12.12
+  - @pikku/kysely-mysql@0.12.18
+  - @pikku/redis@0.12.7
+  - @pikku/kysely-sqlite@0.12.5
+  - @pikku/addon-console@0.12.9
+
 ## 0.0.20
 
 ### Patch Changes

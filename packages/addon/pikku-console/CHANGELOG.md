@@ -1,3 +1,26 @@
+## 0.12.9
+
+### Patch Changes
+
+- 6afdfcb: refactor: rip plan layer, replace with branch-based diff view + new CLI commands
+  - Removes the `AiPlanV1` JSON plan-layer scaffolding (`pikku plan
+ingest/update/validate`, `LocalPlanStoreService`, `/plans` console
+    pages).
+  - Replaces with a `StateDiffService` that diffs two `.pikku/`
+    directories' meta JSONs (typically a worktree at `main` vs. the
+    current branch), exposed via `console:getStateDiff` and a new
+    `/changes` console page with per-category tabs and field-level diff.
+  - New `pikku meta` and `pikku skills` CLI commands.
+  - `cli-logger` json output goes to stderr so command data piping
+    (e.g. `pikku meta --json | jq`) stays clean.
+  - `templates/functions/pikku.config.json` declares `metaService`,
+    `stateDiffService`, and `codeEditService` as
+    `serverlessIncompatible` so they're filtered from serverless bundles.
+
+- Updated dependencies [8860aff]
+- Updated dependencies [d484d0c]
+  - @pikku/core@0.12.21
+
 ## 0.12.0
 
 ## 0.12.8
@@ -13,7 +36,6 @@
 ### Patch Changes
 
 - 624097e: Add deploy pipeline with provider-agnostic architecture
-
   - Add MetaService with explicit typed API, absorb WiringService reads
   - Add deployment service, traceId propagation, scoped logger
   - Rewrite analyzer: one function = one worker, gateways dispatch via RPC
@@ -33,7 +55,6 @@
 ### Patch Changes
 
 - f85c234: Add unified credential system with per-user OAuth and AI agent pre-flight checks
-
   - Unified CredentialService with lazy loading per user via pikkuUserId
   - wire.getCredential() for typed single credential lookup
   - MissingCredentialError with structured payload for client-side connect flows
@@ -83,7 +104,6 @@
 ### Patch Changes
 
 - 62a8725: Console UI improvements:
-
   - Add markdown rendering for addon detail pages
   - Add shared `ProjectSecrets` and `ProjectVariables` components to addon detail view
   - Show `Addon Service Not Running` status when an addon RPC endpoint is unreachable

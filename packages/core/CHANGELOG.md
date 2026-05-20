@@ -1,3 +1,25 @@
+## 0.12.21
+
+### Patch Changes
+
+- 8860aff: Channels: separate user session from per-socket channel state
+
+  Channel runners now use the same `SessionStore` (keyed by `pikkuUserId`) as
+  HTTP, so a websocket session is the same user session as the HTTP one.
+  `PikkuChannelSessionService` is removed.
+
+  The previous channel-keyed payload remains on `ChannelStore` but renamed to
+  `state` (`setState`/`getState`/`clearState`), reflecting its real role as
+  per-socket ephemeral state — not auth identity. On Cloudflare this still
+  lives on the WebSocket attachment inside the Durable Object.
+
+- d484d0c: refactor(types): reconcile function-config drift between Core and schema variants
+
+  Schema-overload variants (`PikkuFunction{,Sessionless}ConfigWithSchema`)
+  now derive from `CorePikkuFunctionConfig` so future fields auto-propagate.
+  Doc comments clarified: `title` is the short human-readable name (e.g.
+  "Create Todo"); `description` is the longer-form explanation.
+
 ## 0.12.20
 
 ### Patch Changes

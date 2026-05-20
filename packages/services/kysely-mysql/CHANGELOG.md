@@ -1,5 +1,25 @@
 # @pikku/kysely-mysql
 
+## 0.12.18
+
+### Patch Changes
+
+- 8860aff: Channels: separate user session from per-socket channel state
+
+  Channel runners now use the same `SessionStore` (keyed by `pikkuUserId`) as
+  HTTP, so a websocket session is the same user session as the HTTP one.
+  `PikkuChannelSessionService` is removed.
+
+  The previous channel-keyed payload remains on `ChannelStore` but renamed to
+  `state` (`setState`/`getState`/`clearState`), reflecting its real role as
+  per-socket ephemeral state — not auth identity. On Cloudflare this still
+  lives on the WebSocket attachment inside the Durable Object.
+
+- Updated dependencies [8860aff]
+- Updated dependencies [d484d0c]
+  - @pikku/core@0.12.21
+  - @pikku/kysely@0.12.12
+
 ## 0.12.17
 
 ### Patch Changes
