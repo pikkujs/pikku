@@ -172,10 +172,10 @@ export const ChannelDetailView: React.FunctionComponent<ChannelDetailViewProps> 
             </MetaRow>
           )}
 
-          {funcMeta?.services && funcMeta.services.length > 0 && (
+          {funcMeta?.services && funcMeta.services.services.length > 0 && (
             <MetaRow label="services">
               <Group gap={4}>
-                {funcMeta.services.map((svc: string) => (
+                {funcMeta.services.services.map((svc: string) => (
                   <ServiceBadge key={svc}>{svc}</ServiceBadge>
                 ))}
               </Group>
