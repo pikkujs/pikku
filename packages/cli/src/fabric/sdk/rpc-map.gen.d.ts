@@ -297,6 +297,12 @@ export type GetFabricLogsOutput = {
     traceId?: string | undefined
   }[]
 }
+export type CheckGithubInstallInput = {}
+export type CheckGithubInstallOutput = {
+  installed: boolean
+  installUrl?: string
+  accountLogin?: string
+}
 export type GetGithubInstallationInput = {
   organizationId: string
 }
@@ -1174,6 +1180,10 @@ export type RPCMap = {
   readonly reapplyDeployment: RPCHandler<
     ReapplyDeploymentInput,
     ReapplyDeploymentOutput
+  >
+  readonly checkGithubInstall: RPCHandler<
+    CheckGithubInstallInput,
+    CheckGithubInstallOutput
   >
   readonly getGithubInstallation: RPCHandler<
     GetGithubInstallationInput,
