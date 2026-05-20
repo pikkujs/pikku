@@ -132,7 +132,7 @@ const SchedulerDetail: React.FunctionComponent<{ item: any; history: SchedulerHi
   const { data: funcMeta } = useFunctionMeta(funcId ?? '')
   const displayName = funcMeta?.name || funcId
   const schedule = item?.schedule || ''
-  const nextRuns = useMemo(() => getNextRuns(schedule, 8), [schedule])
+  const nextRuns = useMemo(() => getNextRuns(schedule, 5), [schedule])
   const taskName = item?.wireId || item?.name
   const taskHistory = history[taskName]
 
@@ -199,7 +199,7 @@ const SchedulerDetail: React.FunctionComponent<{ item: any; history: SchedulerHi
           <>
             <SectionLabel>Recent Runs</SectionLabel>
             <Box style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 12 }}>
-              {taskHistory.history.slice(0, 10).map((run, i) => (
+              {taskHistory.history.map((run, i) => (
                 <Box
                   key={i}
                   style={{

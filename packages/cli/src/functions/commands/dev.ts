@@ -163,7 +163,9 @@ export const dev = pikkuSessionlessFunc<
     const userConfig = await userCreateConfig()
 
     const resolvedLocalDb = resolveLocalDb(userConfig.dev?.db, config.rootDir)
-    const kysely = resolvedLocalDb ? createKysely(resolvedLocalDb) : undefined
+    const kysely = resolvedLocalDb
+      ? await createKysely(resolvedLocalDb)
+      : undefined
 
     const schedulerService = new InMemorySchedulerService()
     const aiStorage = kysely
