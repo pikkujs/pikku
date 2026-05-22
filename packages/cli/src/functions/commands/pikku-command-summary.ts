@@ -70,5 +70,9 @@ export const pikkuSummary = pikkuSessionlessFunc<void, void>({
       // stdout (which would break NDJSON consumers).
       logger.info({ message: summary.format(), type: 'summary' })
     }
+
+    if (logger.hasCriticalErrors()) {
+      throw new Error('Pikku inspection failed due to critical diagnostics')
+    }
   },
 })

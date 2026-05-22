@@ -403,9 +403,6 @@ export const createSingletonServices: CreateSingletonServices<
         unfilteredState.diagnostics.length > 0
       ) {
         processDiagnostics(unfilteredState.diagnostics, config.lint)
-        if (logger.hasCriticalErrors()) {
-          throw new Error('Pikku inspection failed due to critical diagnostics')
-        }
       }
 
       if (stateOutput && 'typesLookup' in unfilteredState) {
