@@ -25,20 +25,21 @@ export abstract class ChannelStore<
     | (TypedChannel & { pikkuUserId?: string })
 
   /**
-   * Persist a session payload scoped to a single channel (keyed by channelId).
+   * Persist per-socket scratch state scoped to a single channel (keyed by
+   * channelId). This is intentionally separate from `SessionStore` (which is
+   * keyed by `pikkuUserId` and holds the user session — shared across HTTP
+   * and channel transports).
    *
-   * This is intentionally separate from `SessionStore` (which keys by
-   * `pikkuUserId`). Channels have their own identity and may be
-   * unauthenticated, so user-keyed storage is the wrong scope. Implementations
-   * should store the payload alongside the channel record itself, so it is
-   * cleared when the channel is removed.
+   * Use this for ephemeral, channel-local data: a per-socket subscription
+   * filter, a step in a connection-bound state machine, the last command sent
+   * on this socket, etc. It is cleared when the channel is removed.
    */
-  public abstract setSession(
+  public abstract setState(
     channelId: string,
-    session: unknown
+    state: unknown
   ): Promise<void> | void
-  public abstract getSession(
+  public abstract getState(
     channelId: string
   ): Promise<unknown | undefined> | unknown | undefined
-  public abstract clearSession(channelId: string): Promise<void> | void
+  public abstract clearState(channelId: string): Promise<void> | void
 }

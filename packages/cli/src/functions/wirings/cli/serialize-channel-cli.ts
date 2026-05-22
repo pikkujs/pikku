@@ -1,6 +1,8 @@
 import type { CLIProgramMeta } from '@pikku/core/cli'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
+type WireAddonDeclarations = Map<string, { package: string }>
+
 /**
  * Serializes a wireChannel call from CLI metadata
  * This creates a WebSocket backend for all CLI commands
@@ -15,14 +17,23 @@ export function serializeChannelCLI(
   functionTypesFile: string,
   channelName?: string,
   channelRoute?: string,
-  globalHTTPPrefix: string = ''
+  globalHTTPPrefix: string = '',
+  wireAddonDeclarations?: WireAddonDeclarations
 ): string {
+  const packageToNamespace = new Map<string, string>()
+  if (wireAddonDeclarations) {
+    for (const [namespace, decl] of wireAddonDeclarations.entries()) {
+      packageToNamespace.set(decl.package, namespace)
+    }
+  }
   const finalChannelName = channelName || `${programName}-cli`
   const finalChannelRoute =
     channelRoute || `${globalHTTPPrefix}/cli/${programName}`
   // Flatten all commands into a single routing map
-  const commandMap: Record<string, { pikkuFuncId: string; isAddon?: boolean }> =
-    {}
+  const commandMap: Record<
+    string,
+    { pikkuFuncId: string; isAddon?: boolean; addonNamespace?: string }
+  > = {}
 
   const collectCommands = (
     commands: Record<string, any>,
@@ -33,9 +44,13 @@ export function serializeChannelCLI(
       const commandKey = fullPath.join('.')
 
       if (cmd.pikkuFuncId) {
+        const addonNamespace = cmd.packageName
+          ? packageToNamespace.get(cmd.packageName)
+          : undefined
         commandMap[commandKey] = {
           pikkuFuncId: cmd.pikkuFuncId,
           isAddon: !!cmd.packageName,
+          addonNamespace,
         }
       }
 
@@ -157,9 +172,9 @@ wireChannel({
         middleware: [cliCloseOnComplete],
       },
 ${Object.entries(commandMap)
-  .map(([commandKey, { pikkuFuncId, isAddon }]) => {
+  .map(([commandKey, { pikkuFuncId, isAddon, addonNamespace }]) => {
     const funcRef = isAddon
-      ? `ref('${pikkuFuncId}')`
+      ? `ref('${addonNamespace ? `${addonNamespace}:${pikkuFuncId}` : pikkuFuncId}')`
       : (functionFiles.get(pikkuFuncId)?.exportedName ?? pikkuFuncId)
     return `      '${commandKey}': {
         func: ${funcRef},
