@@ -5306,7 +5306,6 @@ __metadata:
     "@openapi-contrib/json-schema-to-openapi-schema": "npm:^4.3.1"
     "@pikku/core": "npm:^0.12.19"
     "@pikku/deploy-cloudflare": "npm:^0.12.0"
-    "@pikku/fabric-cli": "workspace:*"
     "@pikku/inspector": "npm:^0.12.11"
     "@pikku/kysely-node-sqlite": "npm:^0.12.0"
     "@pikku/node-http-server": "npm:^0.12.0"
@@ -5554,21 +5553,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/fabric-cli@workspace:*, @pikku/fabric-cli@workspace:packages/fabric-cli":
-  version: 0.0.0-use.local
-  resolution: "@pikku/fabric-cli@workspace:packages/fabric-cli"
-  dependencies:
-    "@pikku/core": "npm:*"
-    "@pikku/fetch": "npm:*"
-    typescript: "npm:^5.7.2"
-    zod: "npm:^4"
-  peerDependencies:
-    "@pikku/cli": "*"
-    "@pikku/core": "*"
-    zod: ^4
-  languageName: unknown
-  linkType: soft
-
 "@pikku/fastify-plugin@npm:^0.12.2, @pikku/fastify-plugin@workspace:packages/runtimes/fastify-plugin":
   version: 0.0.0-use.local
   resolution: "@pikku/fastify-plugin@workspace:packages/runtimes/fastify-plugin"
@@ -5598,7 +5582,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/fetch@npm:*, @pikku/fetch@npm:^0.12.0, @pikku/fetch@npm:^0.12.1, @pikku/fetch@workspace:*, @pikku/fetch@workspace:packages/client-fetch":
+"@pikku/fetch@npm:^0.12.0, @pikku/fetch@npm:^0.12.1, @pikku/fetch@workspace:*, @pikku/fetch@workspace:packages/client-fetch":
   version: 0.0.0-use.local
   resolution: "@pikku/fetch@workspace:packages/client-fetch"
   dependencies:
