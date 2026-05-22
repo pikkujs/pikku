@@ -7,8 +7,9 @@
  *   ├── bundle.js            # esbuild bundle (all deps inlined)
  *   ├── config/              # user config (env, secrets, etc.)
  *
- * Uses Express + ws (pure JS) to avoid native addon issues with bundling.
- * Run with `node bundle.js`.
+ * Uses `@pikku/node-http-server` (pure JS, node:http) — same server
+ * `pikku dev` and the container deploy entry use, so all three share
+ * one HTTP path. Run with `node bundle.js`.
  */
 
 type DeploymentHandler =
@@ -50,8 +51,9 @@ export class StandaloneProviderAdapter {
     return [
       `// Generated standalone entry — all functions in one process`,
       `import { ConsoleLogger } from '@pikku/core/services'`,
+      `import { pikkuState } from '@pikku/core/internal'`,
       `import { InMemorySchedulerService } from '@pikku/schedule'`,
-      `import { PikkuExpressServer } from '@pikku/express'`,
+      `import { PikkuNodeHTTPServer } from '@pikku/node-http-server'`,
       `import { pikkuWebsocketHandler } from '@pikku/ws'`,
       `import { WebSocketServer } from 'ws'`,
       ``,
@@ -71,20 +73,22 @@ export class StandaloneProviderAdapter {
       `    logger,`,
       `    schedulerService,`,
       `  })`,
+      `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
       ``,
-      `  const server = new PikkuExpressServer(`,
+      `  const wss = new WebSocketServer({ noServer: true })`,
+      `  const server = new PikkuNodeHTTPServer(`,
       `    { ...config, port, hostname },`,
       `    logger,`,
+      `    {`,
+      `      configureServer: (httpServer) => {`,
+      `        pikkuWebsocketHandler({ server: httpServer, wss, logger })`,
+      `      },`,
+      `    }`,
       `  )`,
-      `  await server.init({ respondWith404: true })`,
+      `  await server.init()`,
       `  await schedulerService.start()`,
+      `  server.enableExitOnSignals()`,
       `  await server.start()`,
-      ``,
-      `  // Attach WebSocket server to the same HTTP server`,
-      `  const wss = new WebSocketServer({ server: server.getHttpServer() })`,
-      `  pikkuWebsocketHandler({ server: server.getHttpServer(), wss, logger })`,
-      ``,
-      `  await server.enableExitOnSigInt()`,
       `}`,
       ``,
       `main().catch((err) => {`,
@@ -144,9 +148,8 @@ export class StandaloneProviderAdapter {
   }) {
     const { buildDir, logger } = options
     const { join, dirname } = await import('node:path')
-    const { readdir, writeFile, copyFile, mkdir } = await import(
-      'node:fs/promises'
-    )
+    const { readdir, writeFile, copyFile, mkdir } =
+      await import('node:fs/promises')
     const { existsSync } = await import('node:fs')
 
     // Find the unit dir with the bundle

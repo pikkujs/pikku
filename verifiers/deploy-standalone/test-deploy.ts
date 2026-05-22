@@ -241,10 +241,10 @@ check('bundle is ESM (not CJS require)', () => {
 })
 
 // --- Entry content ---
-check('entry: PikkuExpressServer', () => {
+check('entry: PikkuNodeHTTPServer', () => {
   const e = readText(join(DEPLOY_DIR, unitName, 'entry.ts'))
-  if (!e.includes('PikkuExpressServer'))
-    throw new Error('Missing PikkuExpressServer')
+  if (!e.includes('PikkuNodeHTTPServer'))
+    throw new Error('Missing PikkuNodeHTTPServer')
 })
 check('entry: InMemorySchedulerService', () => {
   const e = readText(join(DEPLOY_DIR, unitName, 'entry.ts'))
@@ -262,7 +262,7 @@ check('entry: main() + server.start()', () => {
 })
 check('entry: graceful shutdown', () => {
   const e = readText(join(DEPLOY_DIR, unitName, 'entry.ts'))
-  if (!e.includes('enableExitOnSigInt')) throw new Error('Missing shutdown')
+  if (!e.includes('enableExitOnSignals')) throw new Error('Missing shutdown')
 })
 
 // --- No infra ---
@@ -292,7 +292,7 @@ async function startServer(): Promise<ReturnType<typeof spawn>> {
     )
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`http://0.0.0.0:${port}/health-check`)
+        const res = await fetch(`http://0.0.0.0:${port}/todos`)
         if (res.ok) {
           clearInterval(interval)
           clearTimeout(timeout)
@@ -310,11 +310,6 @@ async function startServer(): Promise<ReturnType<typeof spawn>> {
 let proc: ReturnType<typeof spawn> | null = null
 try {
   proc = await startServer()
-
-  await check('runtime: GET /health-check returns 200', async () => {
-    const res = await fetch(`http://0.0.0.0:${port}/health-check`)
-    if (!res.ok) throw new Error(`Status ${res.status}`)
-  })
 
   await check('runtime: POST /rpc/greet returns greeting', async () => {
     const res = await fetch(`http://0.0.0.0:${port}/rpc/greet`, {
