@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { Text, Badge, Button } from '@mantine/core'
-import { useNavigate } from '../../router'
+import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
 import { GitBranch, Plus } from 'lucide-react'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
@@ -55,7 +55,7 @@ export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
   aiWorkflows,
 }) => {
   const [filter, setFilter] = useState<FilterValue>('all')
-  const navigate = useNavigate()
+  const { navigateTo } = useConsoleNavigator()
 
   const sortedWorkflows = useMemo(() => {
     const all: Workflow[] = workflows ? Object.values(workflows) : []
@@ -97,7 +97,7 @@ export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
       data={filteredByType}
       columns={COLUMNS}
       getKey={(w) => w.name}
-      onRowClick={(w) => navigate(`/workflow?id=${encodeURIComponent(w.name)}`)}
+      onRowClick={(w) => navigateTo('workflows', w.name)}
       searchPlaceholder="Search workflows..."
       searchFilter={(w, q) =>
         (w.name?.toLowerCase().includes(q) ||

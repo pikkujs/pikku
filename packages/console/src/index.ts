@@ -40,12 +40,23 @@ export { QueryClientProvider } from './context/QueryClientProvider'
 export {
   PikkuHTTPProvider,
   PikkuRPCProvider,
+  PikkuRPCContext,
   usePikkuHTTP,
   usePikkuRPC,
   getServerUrl,
   setServerUrl,
 } from './context/PikkuRpcProvider'
+export { pikku } from './pikku/http'
 export { PikkuMetaProvider, usePikkuMeta } from './context/PikkuMetaContext'
+export {
+  OSSConsoleNavigator,
+  useConsoleNavigator,
+  ConsoleNavigatorCtx,
+} from './context/ConsoleNavigatorContext'
+export type {
+  ConsoleNavigator,
+  ConsoleSection,
+} from './context/ConsoleNavigatorContext'
 
 // Shared UI Components
 export { MetaRow } from './components/ui/MetaRow'
