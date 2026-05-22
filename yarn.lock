@@ -5294,6 +5294,7 @@ __metadata:
     "@pikku/deploy-cloudflare": "npm:^0.12.0"
     "@pikku/fetch": "npm:^0.12.1"
     "@pikku/inspector": "npm:^0.12.11"
+    "@pikku/kysely": "npm:^0.12.11"
     "@pikku/kysely-node-sqlite": "npm:^0.12.0"
     "@pikku/node-http-server": "npm:^0.12.0"
     "@pikku/openapi-parser": "npm:^0.12.10"
@@ -5663,7 +5664,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/kysely@npm:^0.12.0, @pikku/kysely@npm:^0.12.10, @pikku/kysely@npm:^0.12.5, @pikku/kysely@npm:^0.12.9, @pikku/kysely@workspace:*, @pikku/kysely@workspace:packages/services/kysely":
+"@pikku/kysely@npm:^0.12.0, @pikku/kysely@npm:^0.12.10, @pikku/kysely@npm:^0.12.11, @pikku/kysely@npm:^0.12.5, @pikku/kysely@npm:^0.12.9, @pikku/kysely@workspace:*, @pikku/kysely@workspace:packages/services/kysely":
   version: 0.0.0-use.local
   resolution: "@pikku/kysely@workspace:packages/services/kysely"
   dependencies:
