@@ -75,9 +75,9 @@ export const TableListPage = <T,>({
     return (
       <EmptyStatePlaceholder
         icon={icon}
-        title={emptyTitle || `Configure ${title}`}
+        title={emptyTitle || `No ${title} found`}
         description={
-          emptyDescription ?? `No ${title.toLowerCase()} are configured yet.`
+          emptyDescription ?? `No ${title.toLowerCase()} exist yet.`
         }
         docsHref={docsHref}
       />

@@ -20,6 +20,7 @@ import {
   Server,
   KeyRound,
   Settings,
+  Variable,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
@@ -93,10 +94,16 @@ export const DEFAULT_NAV_SECTIONS: NavSection[] = [
         matchPrefix: '/runtime',
       },
       {
-        label: 'Config',
-        href: '/config',
-        icon: Settings,
-        matchPrefix: '/config',
+        label: 'Secrets',
+        href: '/secrets',
+        icon: KeyRound,
+        matchPrefix: '/secrets',
+      },
+      {
+        label: 'Environment Variables',
+        href: '/variables',
+        icon: Variable,
+        matchPrefix: '/variables',
       },
       {
         label: 'Credentials',

@@ -27,7 +27,12 @@ export const pikkuNext = pikkuSessionlessFunc<void, void>({
 
     const visitState = await getInspectorState()
 
-    if (nextHTTPFile && !fetchFile) {
+    const nextBackendTransport =
+      config.clientFiles?.nextBackendTransport ?? 'local'
+    const nextBackendFetcherImport =
+      config.clientFiles?.nextBackendFetcherImport
+
+    if ((nextHTTPFile || nextBackendTransport === 'http') && !fetchFile) {
       throw new Error(
         'fetchFile is required in pikku config in order for nextJS http wrapper to work'
       )
@@ -39,12 +44,32 @@ export const pikkuNext = pikkuSessionlessFunc<void, void>({
       )
     }
 
-    const nextBackendTransport =
-      config.clientFiles?.nextBackendTransport ?? 'local'
-    const nextBackendFetcherImport =
-      config.clientFiles?.nextBackendFetcherImport
+    if (nextBackendFile && nextBackendTransport === 'http') {
+      const routesMapDeclarationPath = getFileImportRelativePath(
+        nextBackendFile,
+        httpMapDeclarationFile,
+        packageMappings
+      )
+      const rpcMapDeclarationPath = getFileImportRelativePath(
+        nextBackendFile,
+        rpcMapDeclarationFile,
+        packageMappings
+      )
+      const fetchPath = getFileImportRelativePath(
+        nextBackendFile,
+        fetchFile!,
+        packageMappings
+      )
 
-    if (nextBackendFile && nextBackendTransport === 'worker-rpc') {
+      const content = serializeNextHTTPWrapper(
+        routesMapDeclarationPath,
+        rpcMapDeclarationPath,
+        fetchPath,
+        config.globalHTTPPrefix || '',
+        "process.env.PIKKU_DEV_MACHINE_API_BASE ?? 'http://127.0.0.1:4004'"
+      )
+      await writeFileInDir(logger, nextBackendFile, content)
+    } else if (nextBackendFile && nextBackendTransport === 'worker-rpc') {
       if (!nextBackendFetcherImport) {
         throw new Error(
           "clientFiles.nextBackendFetcherImport is required when nextBackendTransport === 'worker-rpc'"

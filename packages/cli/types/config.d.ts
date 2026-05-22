@@ -211,8 +211,11 @@ export type PikkuCLIInput = {
      *   ({ fetch(req): Promise<Response> }). Function code is NOT bundled into
      *   the SSR worker. Pair with `nextBackendFetcherImport` to point at your
      *   resolver module.
+     * - `'http'`: SSR dispatches every call through the generated `PikkuFetch`
+     *   client. Use this when your Next app should call a separately running
+     *   local/server API instead of importing function code in-process.
      */
-    nextBackendTransport?: 'local' | 'worker-rpc'
+    nextBackendTransport?: 'local' | 'worker-rpc' | 'http'
     /**
      * Module that exports a `fetcher: Fetcher` (or default export) used by the
      * worker-RPC variant of the next backend wrapper. Resolved relative to

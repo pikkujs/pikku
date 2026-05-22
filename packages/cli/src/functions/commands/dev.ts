@@ -1,3 +1,4 @@
+import { existsSync } from 'fs'
 import { resolve } from 'path'
 
 import { pikkuSessionlessFunc } from '#pikku'
@@ -10,8 +11,14 @@ import {
   InMemoryTriggerService,
   InMemoryAIRunStateService,
 } from '@pikku/core/services'
+import {
+  KyselyAIStorageService,
+  KyselyAIRunStateService,
+  KyselyAgentRunService,
+} from '@pikku/kysely'
 import { stopSingletonServices } from '@pikku/core'
 import { pikkuState } from '@pikku/core/internal'
+import { LocalMetaService } from '@pikku/core/services/local-meta'
 import { LocalEventHubService } from '@pikku/core/channel/local'
 import { pikkuWebsocketHandler } from '@pikku/ws'
 import { PikkuNodeHTTPServer } from '@pikku/node-http-server'
@@ -34,8 +41,103 @@ export const dev = pikkuSessionlessFunc<
     const hostname = 'localhost'
     const enableWatch = watch !== false
     const enableHmr = hmr !== false
+    const commandSingletonServices = pikkuState(
+      null,
+      'package',
+      'singletonServices'
+    )
+    const commandFunctionMeta = {
+      ...pikkuState(null, 'function', 'meta'),
+    }
+    const commandFunctions = new Map(pikkuState(null, 'function', 'functions'))
+    const commandRPCMeta = {
+      ...pikkuState(null, 'rpc', 'meta'),
+    }
+    const commandWorkflowsMeta = {
+      ...pikkuState(null, 'workflows', 'meta'),
+    }
+    const commandWorkflowRegistrations = new Map(
+      pikkuState(null, 'workflows', 'registrations')
+    )
+    const workflowService = new InMemoryWorkflowService()
+    const pikkuDir = resolve(config.rootDir, config.outDir)
+    const bootstrapExists =
+      existsSync(resolve(pikkuDir, 'pikku-bootstrap.gen.ts')) ||
+      existsSync(resolve(pikkuDir, 'pikku-bootstrap.gen.js'))
+    const runAll = async () => {
+      await workflowService.runToCompletion('allWorkflow', {}, rpc)
+    }
+    const runAllWithCommandState = async () => {
+      const previousSingletonServices = pikkuState(
+        null,
+        'package',
+        'singletonServices'
+      )
+      const previousFunctions = pikkuState(null, 'function', 'functions')
+      const previousFunctionMeta = pikkuState(null, 'function', 'meta')
+      const previousRPCMeta = pikkuState(null, 'rpc', 'meta')
+      const previousWorkflowsMeta = pikkuState(null, 'workflows', 'meta')
+      const previousWorkflowRegistrations = pikkuState(
+        null,
+        'workflows',
+        'registrations'
+      )
+      pikkuState(null, 'package', 'singletonServices', commandSingletonServices)
+      pikkuState(
+        null,
+        'function',
+        'functions',
+        new Map([...previousFunctions.entries(), ...commandFunctions.entries()])
+      )
+      pikkuState(null, 'function', 'meta', {
+        ...previousFunctionMeta,
+        ...commandFunctionMeta,
+      })
+      pikkuState(null, 'rpc', 'meta', {
+        ...previousRPCMeta,
+        ...commandRPCMeta,
+      })
+      pikkuState(null, 'workflows', 'meta', {
+        ...previousWorkflowsMeta,
+        ...commandWorkflowsMeta,
+      })
+      pikkuState(
+        null,
+        'workflows',
+        'registrations',
+        new Map([
+          ...previousWorkflowRegistrations.entries(),
+          ...commandWorkflowRegistrations.entries(),
+        ])
+      )
 
-    await rpc.invoke('all')
+      try {
+        await runAll()
+      } finally {
+        pikkuState(
+          null,
+          'package',
+          'singletonServices',
+          previousSingletonServices
+        )
+        pikkuState(null, 'function', 'functions', previousFunctions)
+        pikkuState(null, 'function', 'meta', previousFunctionMeta)
+        pikkuState(null, 'rpc', 'meta', previousRPCMeta)
+        pikkuState(null, 'workflows', 'meta', previousWorkflowsMeta)
+        pikkuState(
+          null,
+          'workflows',
+          'registrations',
+          previousWorkflowRegistrations
+        )
+      }
+    }
+
+    if (bootstrapExists) {
+      await loadUserBootstrap(pikkuDir)
+    }
+
+    await runAllWithCommandState()
 
     const inspectorState = await getInspectorState(true)
     const { pikkuConfigFactory, singletonServicesFactory } =
@@ -48,8 +150,9 @@ export const dev = pikkuSessionlessFunc<
       return
     }
 
-    const pikkuDir = resolve(config.rootDir, config.outDir)
-    await loadUserBootstrap(pikkuDir)
+    if (!bootstrapExists) {
+      await loadUserBootstrap(pikkuDir)
+    }
 
     const configModule = await loadUserModule(pikkuConfigFactory.file)
     const servicesModule = await loadUserModule(singletonServicesFactory.file)
@@ -63,22 +166,49 @@ export const dev = pikkuSessionlessFunc<
     const kysely = resolvedLocalDb ? createKysely(resolvedLocalDb) : undefined
 
     const schedulerService = new InMemorySchedulerService()
+    const aiStorage = kysely
+      ? new KyselyAIStorageService(kysely as any)
+      : undefined
+    const aiRunState = kysely
+      ? new KyselyAIRunStateService(kysely as any)
+      : new InMemoryAIRunStateService()
+    const agentRunService = kysely
+      ? new KyselyAgentRunService(kysely as any)
+      : undefined
+
+    if (aiStorage) await aiStorage.init()
+    if ('init' in aiRunState && typeof aiRunState.init === 'function') {
+      await aiRunState.init()
+    }
+
+    // InMemoryWorkflowService implements both the workflowService and
+    // workflowRunService surfaces (listRuns/getRun live on it). Expose the
+    // single instance under both names so addons like @pikku/addon-console
+    // can read runs in dev without projects having to wire their own backing
+    // store.
     const inMemoryServices = {
       logger: new ConsoleLogger(),
+      metaService: new LocalMetaService(pikkuDir),
       schedulerService,
       queueService: new InMemoryQueueService(),
-      workflowService: new InMemoryWorkflowService(),
+      workflowService,
+      workflowRunService: workflowService,
       triggerService: new InMemoryTriggerService(),
-      aiRunStateService: new InMemoryAIRunStateService(),
+      aiStorage,
+      aiRunState,
+      agentRunService,
       eventHub: new LocalEventHubService(),
       ...(kysely ? { kysely } : {}),
     }
 
-    const singletonServices = await userCreateSingletonServices(
-      userConfig,
-      inMemoryServices
-    )
-    pikkuState(null, 'package', 'singletonServices', singletonServices)
+    const singletonServices = await userCreateSingletonServices(userConfig, {
+      ...inMemoryServices,
+      getInspectorState,
+    })
+    pikkuState(null, 'package', 'singletonServices', {
+      ...singletonServices,
+      getInspectorState,
+    })
 
     const wss = new WebSocketServer({ noServer: true })
     const pikkuServer = new PikkuNodeHTTPServer(
@@ -143,7 +273,7 @@ export const dev = pikkuSessionlessFunc<
           const handle = async () => {
             try {
               const start = Date.now()
-              await rpc.invoke('all')
+              await runAllWithCommandState()
               logger.info({
                 message: `✓ Generated in ${Date.now() - start}ms`,
                 type: 'timing',

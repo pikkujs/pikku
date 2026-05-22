@@ -8,7 +8,8 @@ import { WorkflowsPage } from './pages/WorkflowPage'
 import { ApisPage } from './pages/ApisPage'
 import { JobsPage } from './pages/JobsPage'
 import { RuntimePage } from './pages/RuntimePage'
-import { ConfigPage } from './pages/ConfigPage'
+import { SecretsPage } from './pages/SecretsPage'
+import { VariablesPage } from './pages/VariablesPage'
 import { AgentsPage } from './pages/AgentsPage'
 import { AgentPlaygroundPage } from './pages/AgentPlaygroundPage'
 import { OAuthCallbackPage } from './pages/OAuthCallbackPage'
@@ -39,7 +40,9 @@ export const App: React.FunctionComponent = () => {
         <Route path="/apis" element={<ApisPage />} />
         <Route path="/jobs" element={<JobsPage />} />
         <Route path="/runtime" element={<RuntimePage />} />
-        <Route path="/config" element={<ConfigPage />} />
+        <Route path="/secrets" element={<SecretsPage />} />
+        <Route path="/variables" element={<VariablesPage />} />
+        <Route path="/config" element={<Navigate to="/secrets" replace />} />
         <Route path="/users" element={<UsersPage />} />
         <Route path="/addons" element={<PackagesPage />} />
         <Route path="*" element={<NotFoundTitle />} />

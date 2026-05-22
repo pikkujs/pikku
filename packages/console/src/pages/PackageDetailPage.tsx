@@ -36,6 +36,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
+import { useConsoleEditable } from '../context/ConsoleEditableContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { DetailPageHeader } from '../components/layout/DetailPageHeader'
 import { ProjectFunctions } from '../components/project/ProjectFunctions'
@@ -182,7 +183,7 @@ const HttpRoutesTab: React.FunctionComponent<{
           {r.route}
         </Text>,
         r.sse ? (
-          <Badge key="s" size="xs" variant="light" color="teal">
+          <Badge key="s" size="sm" variant="light" color="teal">
             SSE
           </Badge>
         ) : null,
@@ -257,7 +258,7 @@ const McpTab: React.FunctionComponent<{ mcp: McpMeta }> = ({ mcp }) => {
       rows={rows.map((r) => [
         <Badge
           key="t"
-          size="xs"
+          size="sm"
           variant="light"
           color={
             r.type === 'Tool'
@@ -286,6 +287,7 @@ export const PackageDetailPage: React.FunctionComponent<{
   onBack: () => void
 }> = ({ id, source, onBack }) => {
   const rpc = usePikkuRPC()
+  const editable = useConsoleEditable()
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = React.useState<string | null>(null)
 
@@ -461,12 +463,12 @@ export const PackageDetailPage: React.FunctionComponent<{
             {(api.categories?.length > 0 || api.tags?.length > 0) && (
               <Group gap={6}>
                 {api.categories?.map((c: string) => (
-                  <Badge key={c} size="xs" variant="light" color="blue">
+                  <Badge key={c} size="sm" variant="light" color="blue">
                     {c}
                   </Badge>
                 ))}
                 {api.tags?.map((t: string) => (
-                  <Badge key={t} size="xs" variant="dot">
+                  <Badge key={t} size="sm" variant="dot">
                     {t}
                   </Badge>
                 ))}
@@ -475,32 +477,32 @@ export const PackageDetailPage: React.FunctionComponent<{
 
             {api.totalOperations > 0 && (
               <Box>
-                <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb={4}>
+                <Text size="sm" fw={600} c="dimmed" tt="uppercase" mb={4}>
                   Operations ({api.totalOperations})
                 </Text>
                 <Group gap={6}>
                   {api.opsGet > 0 && (
-                    <Badge size="xs" color="blue">
+                    <Badge size="sm" color="blue">
                       GET {api.opsGet}
                     </Badge>
                   )}
                   {api.opsPost > 0 && (
-                    <Badge size="xs" color="green">
+                    <Badge size="sm" color="green">
                       POST {api.opsPost}
                     </Badge>
                   )}
                   {api.opsPut > 0 && (
-                    <Badge size="xs" color="yellow">
+                    <Badge size="sm" color="yellow">
                       PUT {api.opsPut}
                     </Badge>
                   )}
                   {api.opsPatch > 0 && (
-                    <Badge size="xs" color="orange">
+                    <Badge size="sm" color="orange">
                       PATCH {api.opsPatch}
                     </Badge>
                   )}
                   {api.opsDelete > 0 && (
-                    <Badge size="xs" color="red">
+                    <Badge size="sm" color="red">
                       DELETE {api.opsDelete}
                     </Badge>
                   )}
@@ -510,7 +512,7 @@ export const PackageDetailPage: React.FunctionComponent<{
 
             {api.servers?.length > 0 && (
               <Box>
-                <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb={4}>
+                <Text size="sm" fw={600} c="dimmed" tt="uppercase" mb={4}>
                   Servers
                 </Text>
                 {api.servers.map((s: string) => (
@@ -523,12 +525,12 @@ export const PackageDetailPage: React.FunctionComponent<{
 
             {api.securitySchemes?.length > 0 && (
               <Box>
-                <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb={4}>
+                <Text size="sm" fw={600} c="dimmed" tt="uppercase" mb={4}>
                   Authentication
                 </Text>
                 <Group gap={6}>
                   {api.securitySchemes.map((s: string) => (
-                    <Badge key={s} size="xs" variant="outline" color="gray">
+                    <Badge key={s} size="sm" variant="outline" color="gray">
                       {s}
                     </Badge>
                   ))}
@@ -538,12 +540,12 @@ export const PackageDetailPage: React.FunctionComponent<{
 
             {api.contentTypes?.length > 0 && (
               <Box>
-                <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb={4}>
+                <Text size="sm" fw={600} c="dimmed" tt="uppercase" mb={4}>
                   Content Types
                 </Text>
                 <Group gap={6}>
                   {api.contentTypes.map((c: string) => (
-                    <Badge key={c} size="xs" variant="outline" color="gray">
+                    <Badge key={c} size="sm" variant="outline" color="gray">
                       {c}
                     </Badge>
                   ))}
@@ -554,7 +556,7 @@ export const PackageDetailPage: React.FunctionComponent<{
             <Group gap="xs">
               {api.swaggerUrl && (
                 <Button
-                  size="xs"
+                  size="sm"
                   variant="light"
                   component="a"
                   href={api.swaggerUrl}
@@ -566,7 +568,7 @@ export const PackageDetailPage: React.FunctionComponent<{
               )}
               {api.swaggerYamlUrl && (
                 <Button
-                  size="xs"
+                  size="sm"
                   variant="light"
                   component="a"
                   href={api.swaggerYamlUrl}
@@ -576,8 +578,8 @@ export const PackageDetailPage: React.FunctionComponent<{
                   OpenAPI YAML
                 </Button>
               )}
-              <Button
-                size="xs"
+              {editable && <Button
+                size="sm"
                 leftSection={<Download size={13} />}
                 loading={installOpenapiMutation.isPending}
                 onClick={() => {
@@ -603,7 +605,7 @@ export const PackageDetailPage: React.FunctionComponent<{
                 }}
               >
                 Generate & Install Addon
-              </Button>
+              </Button>}
             </Group>
 
             {installOpenapiMutation.isSuccess && (
@@ -750,13 +752,13 @@ export const PackageDetailPage: React.FunctionComponent<{
                     </Text>
                   )}
                   {pkg.license && (
-                    <Badge size="xs" variant="outline" color="gray">
+                    <Badge size="sm" variant="outline" color="gray">
                       {pkg.license}
                     </Badge>
                   )}
                   {pkg.repository && (
                     <Anchor
-                      size="xs"
+                      size="sm"
                       href={pkg.repository}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -766,7 +768,7 @@ export const PackageDetailPage: React.FunctionComponent<{
                     </Anchor>
                   )}
                 </Group>
-                {(() => {
+                {editable && (() => {
                   const communityVersion = pkg.version
                   const installedVersion = installedPkg?.version
                   const needsUpdate =
@@ -778,7 +780,7 @@ export const PackageDetailPage: React.FunctionComponent<{
                   if (needsUpdate) {
                     return (
                       <Button
-                        size="xs"
+                        size="sm"
                         color="yellow"
                         leftSection={<ArrowUp size={13} />}
                         loading={installMutation.isPending}
@@ -801,7 +803,7 @@ export const PackageDetailPage: React.FunctionComponent<{
                   if (isInstalled) {
                     return (
                       <Button
-                        size="xs"
+                        size="sm"
                         variant="light"
                         color="green"
                         leftSection={<Check size={13} />}
@@ -813,7 +815,7 @@ export const PackageDetailPage: React.FunctionComponent<{
                   }
                   return (
                     <Button
-                      size="xs"
+                      size="sm"
                       leftSection={<Download size={13} />}
                       loading={installMutation.isPending}
                       onClick={() =>
@@ -839,7 +841,7 @@ export const PackageDetailPage: React.FunctionComponent<{
               {(pkg.tags ?? []).length > 0 && (
                 <Group gap="xs">
                   {pkg.tags.map((tag) => (
-                    <Badge key={tag} size="xs" variant="dot">
+                    <Badge key={tag} size="sm" variant="dot">
                       {tag}
                     </Badge>
                   ))}

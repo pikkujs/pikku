@@ -25,7 +25,7 @@ const HttpTable: React.FunctionComponent<{
             <Text fw={500} truncate>
               {route.route}
             </Text>
-            <Text size="xs" c="dimmed" truncate>
+            <Text size="sm" c="dimmed" truncate>
               {route.pikkuFuncId}
             </Text>
           </>
@@ -68,7 +68,7 @@ const HttpTable: React.FunctionComponent<{
           <Text size="sm" fw={500}>
             See every route at a glance
           </Text>
-          <Text size="xs" c="dimmed">
+          <Text size="sm" c="dimmed">
             Pikku prints your full route table at startup. Every method, route,
             function, and flag — visible in one place.
           </Text>

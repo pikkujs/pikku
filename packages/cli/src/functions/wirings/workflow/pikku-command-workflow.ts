@@ -5,6 +5,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeWorkflowTypes } from './serialize-workflow-types.js'
 import { serializeWorkflowRegistration } from './serialize-workflow-registration.js'
 import { serializeWorkflowMap } from './serialize-workflow-map.js'
+import { serializeWorkflowBootstrapMap } from './serialize-workflow-bootstrap-map.js'
 import { serializeWorkflowMeta } from './serialize-workflow-meta.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import {
@@ -13,9 +14,19 @@ import {
 } from '../../../utils/strip-verbose-meta.js'
 import { join } from 'path'
 
-export const pikkuWorkflow = pikkuSessionlessFunc<void, boolean | undefined>({
-  func: async ({ logger, config, getInspectorState }) => {
-    const visitState = await getInspectorState()
+type WorkflowCommandInput = {
+  bootstrap?: boolean
+}
+
+export const pikkuWorkflow = pikkuSessionlessFunc<
+  WorkflowCommandInput,
+  boolean | undefined
+>({
+  func: async ({ logger, config, getInspectorState }, input) => {
+    const bootstrap = input?.bootstrap === true
+    const visitState = bootstrap
+      ? await getInspectorState(false, true, false)
+      : await getInspectorState()
     const {
       workflowsWiringFile,
       workflowsWiringMetaFile,
@@ -39,10 +50,16 @@ export const pikkuWorkflow = pikkuSessionlessFunc<void, boolean | undefined>({
     const hasWorkflows = hasRelevantWorkflows
 
     if (hasWorkflows) {
-      const hasWorkflowState =
-        visitState.serviceAggregation.allSingletonServices.includes(
-          'workflowService'
-        )
+      const singletonServices =
+        visitState.serviceAggregation.allSingletonServices.length > 0
+          ? visitState.serviceAggregation.allSingletonServices
+          : visitState.typesLookup?.get('SingletonServices')?.[0]
+            ? visitState.typesLookup
+                .get('SingletonServices')![0]
+                .getProperties()
+                .map((symbol) => symbol.getName())
+            : []
+      const hasWorkflowState = singletonServices.includes('workflowService')
       if (!hasWorkflowState) {
         logger.critical(
           ErrorCode.WORKFLOW_ORCHESTRATOR_NOT_CONFIGURED,
@@ -141,16 +158,18 @@ export const pikkuWorkflow = pikkuSessionlessFunc<void, boolean | undefined>({
     await writeFileInDir(
       logger,
       workflowMapDeclarationFile,
-      serializeWorkflowMap(
-        logger,
-        workflowMapDeclarationFile,
-        packageMappings,
-        typesMap,
-        functionState.meta,
-        workflows.meta,
-        workflows.graphMeta,
-        visitState.rpc?.wireAddonDeclarations
-      )
+      bootstrap
+        ? serializeWorkflowBootstrapMap(workflows.meta, workflows.graphMeta)
+        : serializeWorkflowMap(
+            logger,
+            workflowMapDeclarationFile,
+            packageMappings,
+            typesMap,
+            functionState.meta,
+            workflows.meta,
+            workflows.graphMeta,
+            visitState.rpc?.wireAddonDeclarations
+          )
     )
 
     return hasWorkflows

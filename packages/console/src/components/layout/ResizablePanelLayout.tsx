@@ -19,7 +19,7 @@ export const ResizablePanelLayout: React.FunctionComponent<
 > = ({
   children,
   header,
-  minSize = 400,
+  minSize = 267,
   emptyPanelMessage,
   showTabs = false,
   hidePanel = false,
@@ -34,7 +34,7 @@ export const ResizablePanelLayout: React.FunctionComponent<
       <Box className={classes.flexGrow} style={{ minHeight: 0 }}>
         <Allotment
           key={showPanel ? 'with-panel' : 'no-panel'}
-          defaultSizes={[840, 400]}
+          defaultSizes={[840, 267]}
         >
           <Allotment.Pane>
             <Box className={`${classes.flexColumn} ${classes.overflowAuto}`}>{children}</Box>
@@ -43,7 +43,7 @@ export const ResizablePanelLayout: React.FunctionComponent<
             visible={showPanel}
             minSize={minSize}
             maxSize={500}
-            preferredSize={400}
+            preferredSize={267}
           >
             <Box className={`${classes.flexColumn} ${classes.overflowAuto}`}>
               <PanelContainer

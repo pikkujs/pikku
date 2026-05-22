@@ -100,12 +100,12 @@ export const PackageConfiguration: React.FunctionComponent<
                         </Text>
                       </Table.Td>
                       <Table.Td>
-                        <Text size="xs" c="dimmed" ff="monospace">
+                        <Text size="sm" c="dimmed" ff="monospace">
                           {fn.inputSchemaName || '—'}
                         </Text>
                       </Table.Td>
                       <Table.Td>
-                        <Text size="xs" c="dimmed" ff="monospace">
+                        <Text size="sm" c="dimmed" ff="monospace">
                           {fn.outputSchemaName || '—'}
                         </Text>
                       </Table.Td>
@@ -134,7 +134,7 @@ export const PackageConfiguration: React.FunctionComponent<
                 {rpcEntries.map(([key, value]) => (
                   <Group key={key} gap="xs">
                     <Code>{key}</Code>
-                    <Text size="xs" c="dimmed">
+                    <Text size="sm" c="dimmed">
                       →
                     </Text>
                     <Code>{String(value)}</Code>

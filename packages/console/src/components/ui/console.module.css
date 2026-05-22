@@ -63,6 +63,7 @@
   border-bottom: 1px solid var(--app-row-border);
   background: #0a0c12;
   flex-shrink: 0;
+  column-gap: 12px;
 }
 
 .gridHeaderLabel {
@@ -89,6 +90,7 @@
   padding: 10px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   align-items: center;
+  column-gap: 12px;
 }
 
 /* ── Detail panel ── */

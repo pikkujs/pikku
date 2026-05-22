@@ -32,11 +32,15 @@ function cleanSchema(schema: any): any {
         } else if (Array.isArray(prop.type)) {
           if (!prop.type.includes('null')) prop.type.push('null')
         } else if (prop.anyOf) {
-          if (!prop.anyOf.some((s: Record<string, unknown>) => s.type === 'null')) {
+          if (
+            !prop.anyOf.some((s: Record<string, unknown>) => s.type === 'null')
+          ) {
             prop.anyOf.push({ type: 'null' })
           }
         } else if (prop.oneOf) {
-          if (!prop.oneOf.some((s: Record<string, unknown>) => s.type === 'null')) {
+          if (
+            !prop.oneOf.some((s: Record<string, unknown>) => s.type === 'null')
+          ) {
             prop.oneOf.push({ type: 'null' })
           }
         } else if (!prop.type) {
@@ -71,7 +75,10 @@ function stripNulls(obj: any): any {
 }
 
 export class VercelAIAgentRunner implements AIAgentRunnerService {
-  private providers: Record<string, any>
+  /** Public + mutable so deploy-time contributors (e.g. fabric's AI Gateway
+   *  contributor) can replace providers post-construction with ones that
+   *  route through a gateway / inject headers. */
+  public providers: Record<string, any>
 
   constructor(providers: Record<string, any>) {
     this.providers = providers

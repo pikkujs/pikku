@@ -17,6 +17,7 @@ import { useSecretValue, useSetSecret } from '../../../hooks/useSecrets'
 import { useSchema } from '../../../hooks/useWirings'
 import { SchemaForm } from '../../ui/SchemaForm'
 import { SectionLabel } from '../../ui/SectionLabel'
+import { useConsoleEditable } from '../../../context/ConsoleEditableContext'
 
 const OAUTH2_CLIENT_SCHEMA = {
   type: 'object',
@@ -36,6 +37,7 @@ interface SecretValueEditorProps {
 export const SecretValueEditor: React.FunctionComponent<
   SecretValueEditorProps
 > = ({ secretId, schemaName, isOAuth2 }) => {
+  const editable = useConsoleEditable()
   const [retrieved, setRetrieved] = useState(false)
   const [editing, setEditing] = useState(false)
   const [mode, setMode] = useState<string>('form')
@@ -112,7 +114,7 @@ export const SecretValueEditor: React.FunctionComponent<
           variant="light"
           leftSection={<Eye size={16} />}
           onClick={() => setRetrieved(true)}
-          size="xs"
+          size="sm"
         >
           Retrieve secret value
         </Button>
@@ -136,7 +138,7 @@ export const SecretValueEditor: React.FunctionComponent<
       <Group justify="space-between" align="center">
         <SectionLabel>Secret Value</SectionLabel>
         <Group gap="xs" align="center">
-          {!editing && (
+          {!editing && editable && (
             <ActionIcon
               variant="subtle"
               size="sm"
@@ -154,7 +156,7 @@ export const SecretValueEditor: React.FunctionComponent<
                 { label: 'Form', value: 'form' },
                 { label: 'JSON', value: 'json' },
               ]}
-              size="xs"
+              size="sm"
               style={{ width: 'auto' }}
             />
           )}

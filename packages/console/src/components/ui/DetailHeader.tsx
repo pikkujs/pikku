@@ -21,7 +21,7 @@ export const DetailHeader: React.FunctionComponent<DetailHeaderProps> = ({
         {title}
       </Text>
       {subtitle && (
-        <Text size="xs" ff="monospace" c="var(--app-text-muted)">
+        <Text size="sm" ff="monospace" c="var(--app-text-muted)">
           {subtitle}
         </Text>
       )}

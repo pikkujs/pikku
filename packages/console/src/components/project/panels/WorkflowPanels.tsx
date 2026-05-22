@@ -51,7 +51,7 @@ export const WorkflowHeader: React.FunctionComponent<WorkflowPanelProps> = ({
           {workflow?.name || workflowId}
         </Text>
         {workflow?.graphHash && (
-          <Text size="xs" ff="monospace" c="dimmed">
+          <Text size="sm" ff="monospace" c="dimmed">
             #{workflow.graphHash}
           </Text>
         )}
@@ -204,7 +204,7 @@ export const WorkflowNodes: React.FunctionComponent<WorkflowPanelProps> = ({
                         {node.stepName || nodeId}
                       </Text>
                       {node.stepName && node.stepName !== nodeId && (
-                        <Text size="xs" c="dimmed">
+                        <Text size="sm" c="dimmed">
                           {nodeId}
                         </Text>
                       )}
@@ -288,7 +288,7 @@ const WorkflowRunNodes: React.FunctionComponent<WorkflowPanelProps> = ({
                         {node.stepName || nodeId}
                       </Text>
                       {node.stepName && node.stepName !== nodeId && (
-                        <Text size="xs" c="dimmed">
+                        <Text size="sm" c="dimmed">
                           {nodeId}
                         </Text>
                       )}

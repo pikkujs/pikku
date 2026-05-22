@@ -80,10 +80,10 @@ const ChannelTree: React.FunctionComponent<{
         ) : (
           <ChevronRight size={9} color="var(--app-section-label)" />
         )}
-        <Text size="xs" ff="monospace" className={styles.flexGrow}>
+        <Text size="sm" ff="monospace" className={styles.flexGrow}>
           {name}
         </Text>
-        <Badge size="xs" variant="light" color="cyan" ff="monospace">
+        <Badge size="sm" variant="light" color="cyan" ff="monospace">
           ws
         </Badge>
       </UnstyledButton>
@@ -117,7 +117,7 @@ const ChannelTree: React.FunctionComponent<{
                     background: h === 'connect' ? 'rgba(6,182,212,0.6)' : 'rgba(239,68,68,0.5)',
                   }}
                 />
-                <Text size="xs" ff="monospace">
+                <Text size="sm" ff="monospace">
                   {h === 'connect' ? 'onConnect' : 'onDisconnect'}
                 </Text>
               </UnstyledButton>
@@ -145,11 +145,11 @@ const ChannelTree: React.FunctionComponent<{
                   }}
                 >
                   {isCatExpanded ? <ChevronDown size={8} /> : <ChevronRight size={8} />}
-                  <Text size="xs" ff="monospace" c="var(--app-meta-label)">
+                  <Text size="sm" ff="monospace" c="var(--app-meta-label)">
                     {category}
                   </Text>
                   <Badge
-                    size="xs"
+                    size="sm"
                     ff="monospace"
                     tt="none"
                     style={{
@@ -185,7 +185,7 @@ const ChannelTree: React.FunctionComponent<{
                       >
                         <Box className={styles.flexGrow}>
                           <Text
-                            size="xs"
+                            size="sm"
                             ff="monospace"
                             fw={active ? 600 : 400}
                             c={active ? 'var(--app-meta-value)' : 'var(--app-text)'}
@@ -194,7 +194,7 @@ const ChannelTree: React.FunctionComponent<{
                             {action}
                           </Text>
                           <Text
-                            size="xs"
+                            size="sm"
                             ff="monospace"
                             c={active ? 'var(--app-meta-label)' : 'var(--app-text-muted)'}
                             truncate

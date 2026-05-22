@@ -8,6 +8,7 @@ import {
   Badge,
   Center,
   Loader,
+  ActionIcon,
 } from '@mantine/core'
 import { useQuery } from '@tanstack/react-query'
 import { PanelProvider } from '../context/PanelContext'
@@ -15,6 +16,7 @@ import { usePanelContext } from '../context/PanelContext'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { useFunctionMeta } from '../hooks/useWirings'
+import { X } from 'lucide-react'
 import { SchemaSection } from '../components/project/panels/shared/SchemaSection'
 import { funcWrapperDefs } from '../components/ui/badge-defs'
 import { MetaRow } from '../components/ui/MetaRow'
@@ -26,7 +28,14 @@ import { SearchInput } from '../components/ui/SearchInput'
 import { TagBadge, ServiceBadge } from '../components/ui/TagBadge'
 import classes from '../components/ui/console.module.css'
 
-const GRID_COLUMNS = '1fr 140px 60px 100px 80px'
+export interface FunctionExtraColumn {
+  label: string
+  width: string
+  align?: 'right'
+  render: (funcId: string) => React.ReactNode
+}
+
+const BASE_GRID_COLUMNS = '240px 140px 60px 100px 80px'
 
 const CollapsibleSchema: React.FunctionComponent<{
   label: string
@@ -47,11 +56,11 @@ const CollapsibleSchema: React.FunctionComponent<{
           width: '100%',
         }}
       >
-        <Text size="xs" c="var(--app-section-label)" style={{ fontSize: 9 }}>
+        <Text size="sm" c="var(--app-section-label)" style={{ fontSize: 9 }}>
           {open ? '▾' : '▸'}
         </Text>
         <Text
-          size="xs"
+          size="sm"
           fw={600}
           ff="monospace"
           c="var(--app-section-label)"
@@ -60,7 +69,7 @@ const CollapsibleSchema: React.FunctionComponent<{
         >
           {label}
         </Text>
-        <Text size="xs" ff="monospace" c="var(--app-text-muted)">
+        <Text size="sm" ff="monospace" c="var(--app-text-muted)">
           {schemaName}
         </Text>
       </UnstyledButton>
@@ -69,7 +78,7 @@ const CollapsibleSchema: React.FunctionComponent<{
   )
 }
 
-const FunctionDetail: React.FunctionComponent<{ func: any }> = ({ func }) => {
+const FunctionDetail: React.FunctionComponent<{ func: any; onClose: () => void }> = ({ func, onClose }) => {
   const funcId = func.pikkuFuncName || func.pikkuFuncId
   const { functionUsedBy } = usePikkuMeta()
   const usedBy = functionUsedBy.get(funcId)
@@ -85,7 +94,7 @@ const FunctionDetail: React.FunctionComponent<{ func: any }> = ({ func }) => {
             {funcId}
           </Text>
           {(func.summary || func.description) && (
-            <Text size="xs" c="var(--app-text-muted)" lh={1.5}>
+            <Text size="sm" c="var(--app-text-muted)" lh={1.5}>
               {func.summary || func.description}
             </Text>
           )}
@@ -95,13 +104,16 @@ const FunctionDetail: React.FunctionComponent<{ func: any }> = ({ func }) => {
             {funcWrapperDefs[func.funcWrapper].label}
           </Badge>
         )}
+        <ActionIcon variant="subtle" color="gray" size="sm" onClick={onClose}>
+          <X size={14} />
+        </ActionIcon>
       </Box>
       <Box p="md" className={classes.flexGrow}>
         <SectionLabel>Metadata</SectionLabel>
 
         {func.exportedName && (
           <MetaRow label="export" labelWidth={90}>
-            <Text size="xs" ff="monospace" c="var(--app-meta-value)">
+            <Text size="sm" ff="monospace" c="var(--app-meta-value)">
               {func.exportedName}
             </Text>
           </MetaRow>
@@ -109,14 +121,14 @@ const FunctionDetail: React.FunctionComponent<{ func: any }> = ({ func }) => {
 
         {func.sourceFile && (
           <MetaRow label="source" labelWidth={90}>
-            <Text size="xs" ff="monospace" c="var(--app-text)" truncate>
+            <Text size="sm" ff="monospace" c="var(--app-text)" truncate>
               {func.sourceFile.replace(/^.*\/src\//, 'src/')}
             </Text>
           </MetaRow>
         )}
 
         <MetaRow label="sessionless" labelWidth={90}>
-          <Text size="xs" ff="monospace" c={func.sessionless ? '#86efac' : 'var(--app-text-muted)'}>
+          <Text size="sm" ff="monospace" c={func.sessionless ? '#86efac' : 'var(--app-text-muted)'}>
             {func.sessionless ? 'true' : 'false'}
           </Text>
         </MetaRow>
@@ -124,17 +136,17 @@ const FunctionDetail: React.FunctionComponent<{ func: any }> = ({ func }) => {
         <MetaRow label="version" labelWidth={90}>
           {func.version ? (
             <Group gap={6}>
-              <Text size="xs" ff="monospace" c="var(--app-meta-value)">
+              <Text size="sm" ff="monospace" c="var(--app-meta-value)">
                 v{func.version}
               </Text>
               {func.contractHash && (
-                <Text size="xs" ff="monospace" c="var(--app-text-muted)">
+                <Text size="sm" ff="monospace" c="var(--app-text-muted)">
                   ({func.contractHash})
                 </Text>
               )}
             </Group>
           ) : (
-            <Text size="xs" ff="monospace" c="var(--app-text-muted)">
+            <Text size="sm" ff="monospace" c="var(--app-text-muted)">
               not enabled
             </Text>
           )}
@@ -148,7 +160,7 @@ const FunctionDetail: React.FunctionComponent<{ func: any }> = ({ func }) => {
               ))}
             </Group>
           ) : (
-            <Text size="xs" ff="monospace" c="var(--app-text-muted)">—</Text>
+            <Text size="sm" ff="monospace" c="var(--app-text-muted)">—</Text>
           )}
         </MetaRow>
 
@@ -160,7 +172,7 @@ const FunctionDetail: React.FunctionComponent<{ func: any }> = ({ func }) => {
               ))}
             </Group>
           ) : (
-            <Text size="xs" ff="monospace" c="var(--app-text-muted)">—</Text>
+            <Text size="sm" ff="monospace" c="var(--app-text-muted)">—</Text>
           )}
         </MetaRow>
 
@@ -174,7 +186,7 @@ const FunctionDetail: React.FunctionComponent<{ func: any }> = ({ func }) => {
               ))}
             </Group>
           ) : (
-            <Text size="xs" ff="monospace" c="var(--app-text-muted)">—</Text>
+            <Text size="sm" ff="monospace" c="var(--app-text-muted)">—</Text>
           )}
         </MetaRow>
 
@@ -188,7 +200,7 @@ const FunctionDetail: React.FunctionComponent<{ func: any }> = ({ func }) => {
               ))}
             </Group>
           ) : (
-            <Text size="xs" ff="monospace" c="var(--app-text-muted)">—</Text>
+            <Text size="sm" ff="monospace" c="var(--app-text-muted)">—</Text>
           )}
         </MetaRow>
 
@@ -197,7 +209,7 @@ const FunctionDetail: React.FunctionComponent<{ func: any }> = ({ func }) => {
             <SectionLabel>Wired To ({allWirings.length})</SectionLabel>
             {allWirings.map((w: any) => (
               <MetaRow key={w.id} label={w.type} labelWidth={90}>
-                <Text size="xs" ff="monospace" c="var(--app-service-color)">
+                <Text size="sm" ff="monospace" c="var(--app-service-color)">
                   {w.name}
                 </Text>
               </MetaRow>
@@ -215,10 +227,12 @@ const FunctionDetail: React.FunctionComponent<{ func: any }> = ({ func }) => {
 
 const FunctionsPageInner: React.FunctionComponent<{
   functions: any[]
-}> = ({ functions }) => {
+  extraColumns?: FunctionExtraColumn[]
+}> = ({ functions, extraColumns = [] }) => {
   const [selected, setSelected] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const { functionUsedBy } = usePikkuMeta()
+  const GRID_COLUMNS = [BASE_GRID_COLUMNS, ...extraColumns.map((c) => c.width)].join(' ')
 
   const filtered = useMemo(() => {
     const userFuncs = functions.filter((func: any) => {
@@ -258,7 +272,8 @@ const FunctionsPageInner: React.FunctionComponent<{
           { label: 'Type' },
           { label: 'Auth' },
           { label: 'Permissions' },
-          { label: 'Wirings', align: 'right' },
+          { label: 'Wirings' },
+          ...extraColumns.map((c) => ({ label: c.label, align: c.align })),
         ]}
         gridTemplateColumns={GRID_COLUMNS}
       />
@@ -283,7 +298,7 @@ const FunctionsPageInner: React.FunctionComponent<{
             >
               <Box>
                 <Text
-                  size="xs"
+                  size="sm"
                   ff="monospace"
                   c={isActive ? 'var(--app-meta-value)' : 'var(--app-text)'}
                   mb={1}
@@ -291,7 +306,7 @@ const FunctionsPageInner: React.FunctionComponent<{
                   {funcId}
                 </Text>
                 <Text
-                  size="xs"
+                  size="sm"
                   ff="monospace"
                   c="var(--app-text-muted)"
                   truncate
@@ -305,15 +320,15 @@ const FunctionsPageInner: React.FunctionComponent<{
                 </Text>
               </Box>
               {wrapperDef && (
-                <Badge size="xs" variant="light" color="gray" tt="none">
+                <Badge size="sm" variant="light" color="gray" tt="none">
                   {wrapperDef.label}
                 </Badge>
               )}
-              <Text size="xs" ff="monospace" c={hasAuth ? '#86efac' : 'var(--app-text-muted)'}>
+              <Text size="sm" ff="monospace" c={hasAuth ? '#86efac' : 'var(--app-text-muted)'}>
                 {hasAuth ? 'Auth' : '—'}
               </Text>
               <Text
-                size="xs"
+                size="sm"
                 ff="monospace"
                 c="var(--app-text-muted)"
                 truncate
@@ -323,15 +338,19 @@ const FunctionsPageInner: React.FunctionComponent<{
                   : '—'}
               </Text>
               <Text
-                size="xs"
+                size="sm"
                 ff="monospace"
                 c={wiringCount > 0 ? 'var(--app-service-color)' : 'var(--app-text-muted)'}
-                ta="right"
               >
                 {wiringCount > 0
                   ? `${wiringCount} ${wiringCount === 1 ? 'wiring' : 'wirings'}`
                   : '—'}
               </Text>
+              {extraColumns.map((col) => (
+                <Box key={col.label} style={col.align === 'right' ? { textAlign: 'right' } : undefined}>
+                  {col.render(funcId)}
+                </Box>
+              ))}
             </ListItem>
           )
         })}
@@ -342,15 +361,18 @@ const FunctionsPageInner: React.FunctionComponent<{
   return (
     <ListDetailLayout
       list={list}
-      detail={selectedFunc ? <FunctionDetail func={selectedFunc} /> : null}
+      detail={selectedFunc ? <FunctionDetail func={selectedFunc} onClose={() => setSelected(null)} /> : null}
       hasSelection={!!selectedFunc}
+      collapsible
       emptyMessage="Select a function"
       height="100vh"
     />
   )
 }
 
-export const FunctionsPage: React.FunctionComponent = () => {
+export const FunctionsPage: React.FunctionComponent<{
+  extraColumns?: FunctionExtraColumn[]
+}> = ({ extraColumns }) => {
   const rpc = usePikkuRPC()
 
   const { data: functions, isLoading } = useQuery({
@@ -368,7 +390,7 @@ export const FunctionsPage: React.FunctionComponent = () => {
 
   return (
     <PanelProvider>
-      <FunctionsPageInner functions={functions} />
+      <FunctionsPageInner functions={functions} extraColumns={extraColumns} />
     </PanelProvider>
   )
 }

@@ -145,7 +145,7 @@ export const CliCommandTree: React.FunctionComponent<CliCommandTreeProps> = ({
         <TextInput
           placeholder="Search commands..."
           leftSection={<Search size={14} />}
-          size="xs"
+          size="sm"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />

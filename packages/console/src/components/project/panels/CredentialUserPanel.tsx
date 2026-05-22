@@ -91,7 +91,7 @@ export const CredentialUserPanel: React.FunctionComponent<{
                       {cred.displayName}
                     </Text>
                     <Badge
-                      size="xs"
+                      size="sm"
                       variant="light"
                       color={cred.isOAuth2 ? 'violet' : 'blue'}
                     >
@@ -160,7 +160,7 @@ export const CredentialUserPanel: React.FunctionComponent<{
       )}
 
       {connectedCreds.length === 0 && !missingCreds.some((c) => c.isOAuth2) && (
-        <Text size="xs" c="dimmed">
+        <Text size="sm" c="dimmed">
           This user hasn't connected any credentials yet.
         </Text>
       )}

@@ -62,7 +62,7 @@ export const OAuthCallbackPage: React.FunctionComponent = () => {
   }, [])
 
   return (
-    <Container size="xs" py="xl">
+    <Container size="sm" py="xl">
       <Stack align="center" gap="lg">
         {status === 'loading' && (
           <>

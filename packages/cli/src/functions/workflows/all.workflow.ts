@@ -48,21 +48,32 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         null
       )
       await workflow.do('Bootstrap function types', 'pikkuFunctionTypes', null)
+      await workflow.do('Bootstrap addon types', 'pikkuAddonTypes', {
+        bootstrap: true,
+      })
       await Promise.all([
         workflow.do('Bootstrap HTTP types', 'pikkuHTTPTypes', null),
         workflow.do('Bootstrap channel types', 'pikkuChannelTypes', null),
         workflow.do('Bootstrap scheduler types', 'pikkuSchedulerTypes', null),
         workflow.do('Bootstrap queue types', 'pikkuQueueTypes', null),
-        workflow.do('Bootstrap workflow', 'pikkuWorkflow', null),
+        workflow.do('Bootstrap workflow', 'pikkuWorkflow', {
+          bootstrap: true,
+        }),
         workflow.do('Bootstrap Trigger types', 'pikkuTriggerTypes', null),
         workflow.do('Bootstrap MCP types', 'pikkuMCPTypes', null),
         workflow.do('Bootstrap AI agent types', 'pikkuAIAgentTypes', null),
       ])
       await workflow.do('Bootstrap Node types', 'pikkuNodeTypes', null)
-      await workflow.do('Bootstrap Secret definition types', 'pikkuSecretDefinitionTypes', null)
-      await workflow.do('Bootstrap CLI types', 'pikkuCLITypes', null)
+      await workflow.do(
+        'Bootstrap Secret definition types',
+        'pikkuSecretDefinitionTypes',
+        null
+      )
+      await workflow.do('Bootstrap CLI types', 'pikkuCLITypes', {
+        bootstrap: true,
+      })
       await workflow.do('Bootstrap re-inspect', async () =>
-        getInspectorState(true)
+        getInspectorState(true, true)
       )
     }
 

@@ -32,8 +32,9 @@ import { FabricSecretsList } from './functions/secrets-list.function.js'
 import { FabricLogs } from './functions/logs.function.js'
 import { FabricMetrics } from './functions/metrics.function.js'
 import { FabricTrace } from './functions/trace.function.js'
-import { FabricDomainsPlan } from './functions/domains-plan.function.js'
-import { FabricDomainsApply } from './functions/domains-apply.function.js'
+import { FabricDomainsList } from './functions/domains-list.function.js'
+import { FabricDomainsAdd } from './functions/domains-add.function.js'
+import { FabricDomainsRemove } from './functions/domains-remove.function.js'
 
 export const fabricCommands = defineCLICommands({
   login: pikkuCLICommand({
@@ -69,7 +70,8 @@ export const fabricCommands = defineCLICommands({
   link: pikkuCLICommand({
     parameters: '',
     func: FabricLink,
-    description: 'Register the current git repo as a fabric project and queue an initial deploy',
+    description:
+      'Register the current git repo as a fabric project and queue an initial deploy',
     options: {
       apiUrl: {
         description: 'Override the fabric-api URL stored in fabric.config.json',
@@ -166,18 +168,30 @@ export const fabricCommands = defineCLICommands({
       json: { description: 'Machine-readable output', default: false },
     },
   }),
-  domainsPlan: pikkuCLICommand({
+  domainsList: pikkuCLICommand({
     parameters: '',
-    func: FabricDomainsPlan,
-    description: 'Show pending custom-hostname changes for the linked project',
+    func: FabricDomainsList,
+    description: 'List custom domains for the linked project',
     options: {
       apiUrl: { description: 'Override the fabric-api URL for this call' },
     },
   }),
-  domainsApply: pikkuCLICommand({
-    parameters: '',
-    func: FabricDomainsApply,
-    description: 'Apply custom-hostname changes for the linked project',
+  domainsAdd: pikkuCLICommand({
+    parameters: '<hostname>',
+    func: FabricDomainsAdd,
+    description: 'Add a custom domain to the production stage',
+    options: {
+      target: {
+        description: 'Route target: api (Backend API) or app (Frontend App)',
+        default: 'api',
+      },
+      apiUrl: { description: 'Override the fabric-api URL for this call' },
+    },
+  }),
+  domainsRemove: pikkuCLICommand({
+    parameters: '<hostname>',
+    func: FabricDomainsRemove,
+    description: 'Remove a custom domain from the production stage',
     options: {
       apiUrl: { description: 'Override the fabric-api URL for this call' },
     },

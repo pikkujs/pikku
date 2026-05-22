@@ -2,7 +2,8 @@ export const serializeNextJsHTTPWrapper = (
   routesMapPath: string,
   rpcMapPath: string,
   pikkuFetchImport: string,
-  globalHTTPPrefix: string = ''
+  globalHTTPPrefix: string = '',
+  defaultServerUrlExpression?: string
 ) => {
   return `'server-only'
   
@@ -16,6 +17,7 @@ import type { FlattenedRPCMap } from '${rpcMapPath}'
 import { PikkuFetch } from '${pikkuFetchImport}'
 
 let _pikku: PikkuFetch | undefined
+const defaultServerUrl = ${defaultServerUrlExpression ?? 'undefined'}
 
 /**
  * Initializes and returns an instance of PikkuNextJS with helper methods for handling route requests.
@@ -24,7 +26,9 @@ let _pikku: PikkuFetch | undefined
  */
 export const pikku = (options?: CorePikkuFetchOptions) => {
   if (!_pikku) {
-    _pikku = new PikkuFetch(options)
+    _pikku = new PikkuFetch(
+      defaultServerUrl ? { serverUrl: defaultServerUrl, ...options } : options
+    )
   }
 
   const dynamicActionRequest = async <

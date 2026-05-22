@@ -175,7 +175,7 @@ export const DetailPageHeader: React.FunctionComponent<
                           {item.name}
                         </Text>
                         {item.description && (
-                          <Text size="xs" c="dimmed">
+                          <Text size="sm" c="dimmed">
                             {item.description}
                           </Text>
                         )}

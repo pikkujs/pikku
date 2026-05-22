@@ -16,7 +16,7 @@ export const SchemaSection: React.FunctionComponent<{
     <Box>
       {label && <SectionLabel>{label}</SectionLabel>}
       {isLoading ? (
-        <Loader size="xs" />
+        <Loader size="sm" />
       ) : schema ? (
         <SchemaViewer schema={schema} />
       ) : (

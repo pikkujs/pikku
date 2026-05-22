@@ -33,7 +33,7 @@ export const SettingsPage: React.FunctionComponent = () => {
               <Text fw={600}>Metadata</Text>
               <Button
                 variant="light"
-                size="xs"
+                size="sm"
                 leftSection={<RefreshCw size={14} />}
                 loading={loading}
                 onClick={refresh}
@@ -69,7 +69,7 @@ export const SettingsPage: React.FunctionComponent = () => {
               </Text>
               <PikkuBadge type="label">Alpha</PikkuBadge>
             </Group>
-            <Text size="xs" c="dimmed">
+            <Text size="sm" c="dimmed">
               A visual explorer for Pikku project metadata. Browse functions,
               workflows, APIs, jobs, runtime services, and configuration.
             </Text>
@@ -88,7 +88,7 @@ const MetaStat: React.FunctionComponent<{
     <Text size="lg" fw={700}>
       {count}
     </Text>
-    <Text size="xs" c="dimmed">
+    <Text size="sm" c="dimmed">
       {label}
     </Text>
   </Box>

@@ -246,7 +246,7 @@ export const FlowNode: React.FunctionComponent<FlowNodeProps> = ({
             </Text>
           )}
           {subtitle && (
-            <Text size="xs" c="dimmed">
+            <Text size="sm" c="dimmed">
               {subtitle}
             </Text>
           )}

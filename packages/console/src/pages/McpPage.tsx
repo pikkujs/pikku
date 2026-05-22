@@ -39,7 +39,7 @@ const McpTable: React.FunctionComponent<{
               {item.name || item.wireId || 'unnamed'}
             </Text>
             {item.pikkuFuncId && (
-              <Text size="xs" c="dimmed" truncate>
+              <Text size="sm" c="dimmed" truncate>
                 {item.pikkuFuncId}
               </Text>
             )}

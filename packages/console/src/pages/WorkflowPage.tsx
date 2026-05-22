@@ -1,11 +1,10 @@
 import { Suspense, useContext } from 'react'
-import { GitBranch } from 'lucide-react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { WorkflowsList } from '../components/project/WorkflowsList'
+import type { WorkflowExtraColumn } from '../components/project/WorkflowsList'
 import { WorkflowTabContent } from '../components/tabs/WorkflowTabContent'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '../components/layout/DetailPageHeader'
 import { Center, Loader } from '@mantine/core'
 import { useAIWorkflows } from '../hooks/useWorkflowRuns'
 import {
@@ -14,7 +13,7 @@ import {
   useConsoleNavigator,
 } from '../context/ConsoleNavigatorContext'
 
-function WorkflowPageInner() {
+function WorkflowPageInner({ extraColumns }: { extraColumns?: WorkflowExtraColumn[] }) {
   const { workflowId } = useConsoleNavigator()
   const { meta, loading } = usePikkuMeta()
   const { data: aiWorkflows } = useAIWorkflows()
@@ -39,32 +38,27 @@ function WorkflowPageInner() {
       <WorkflowsList
         workflows={workflows}
         aiWorkflows={aiWorkflows as any}
+        extraColumns={extraColumns}
       />
     )
   }
 
   return (
     <PanelProvider>
-      <ResizablePanelLayout
-        header={
-          <DetailPageHeader
-            icon={GitBranch}
-            category="Workflows"
-            docsHref="https://pikku.dev/docs/wiring/workflows"
-          />
-        }
-        hidePanel
-      >
+      <ResizablePanelLayout hidePanel>
         <WorkflowsList
           workflows={workflows}
           aiWorkflows={aiWorkflows as any}
+          extraColumns={extraColumns}
         />
       </ResizablePanelLayout>
     </PanelProvider>
   )
 }
 
-export const WorkflowsPage: React.FunctionComponent = () => {
+export const WorkflowsPage: React.FunctionComponent<{
+  extraColumns?: WorkflowExtraColumn[]
+}> = ({ extraColumns }) => {
   const existingNavigator = useContext(ConsoleNavigatorCtx)
   const inner = (
     <Suspense
@@ -74,7 +68,7 @@ export const WorkflowsPage: React.FunctionComponent = () => {
         </Center>
       }
     >
-      <WorkflowPageInner />
+      <WorkflowPageInner extraColumns={extraColumns} />
     </Suspense>
   )
   // Fabric (or any other host) provides its own navigator above this component.

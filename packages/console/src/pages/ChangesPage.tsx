@@ -53,7 +53,7 @@ const STORAGE_KEY = 'pikku-changes-base-path'
 function StatusPill({ status }: { status: DiffEntry['status'] }) {
   return (
     <Badge
-      size="xs"
+      size="sm"
       color={STATUS_COLOR[status]}
       variant="light"
       style={{ fontFamily: 'monospace', minWidth: 20, textAlign: 'center' }}
@@ -70,7 +70,7 @@ function HttpMethodBadge({ method }: { method: string }) {
   }
   return (
     <Badge
-      size="xs"
+      size="sm"
       color={def.color}
       variant="light"
       style={{ fontFamily: 'monospace', minWidth: 44, textAlign: 'center' }}
@@ -84,7 +84,7 @@ function FuncWrapperBadge({ wrapper }: { wrapper?: string }) {
   if (!wrapper) return null
   const def = funcWrapperDefs[wrapper] ?? { color: 'gray', label: wrapper }
   return (
-    <Badge size="xs" color={def.color} variant="outline">
+    <Badge size="sm" color={def.color} variant="outline">
       {def.label}
     </Badge>
   )
@@ -112,12 +112,12 @@ function PrimaryRow({
           {route}
         </Text>
         {params.length > 0 && (
-          <Text size="xs" c="dimmed" ff="monospace">
+          <Text size="sm" c="dimmed" ff="monospace">
             params: {params.join(', ')}
           </Text>
         )}
         {funcId && (
-          <Text size="xs" c="dimmed" ff="monospace" truncate style={{ maxWidth: 240 }}>
+          <Text size="sm" c="dimmed" ff="monospace" truncate style={{ maxWidth: 240 }}>
             → {funcId}
           </Text>
         )}
@@ -137,12 +137,12 @@ function PrimaryRow({
         </Text>
         <FuncWrapperBadge wrapper={wrapper} />
         {sessionless && (
-          <Badge size="xs" color="gray" variant="light">
+          <Badge size="sm" color="gray" variant="light">
             sessionless
           </Badge>
         )}
         {(inSchema || outSchema) && (
-          <Text size="xs" c="dimmed" ff="monospace" truncate style={{ flex: 1, minWidth: 0 }}>
+          <Text size="sm" c="dimmed" ff="monospace" truncate style={{ flex: 1, minWidth: 0 }}>
             {inSchema ?? '·'} → {outSchema ?? 'void'}
           </Text>
         )}
@@ -161,17 +161,17 @@ function PrimaryRow({
         {entry.id}
       </Text>
       {route && (
-        <Text size="xs" c="dimmed" ff="monospace">
+        <Text size="sm" c="dimmed" ff="monospace">
           {route}
         </Text>
       )}
       {queueName && (
-        <Text size="xs" c="dimmed" ff="monospace">
+        <Text size="sm" c="dimmed" ff="monospace">
           queue: {queueName}
         </Text>
       )}
       {cron && (
-        <Text size="xs" c="dimmed" ff="monospace">
+        <Text size="sm" c="dimmed" ff="monospace">
           cron: {cron}
         </Text>
       )}
@@ -207,7 +207,7 @@ function FieldDiff({
         }}
       >
         <Text
-          size="xs"
+          size="sm"
           c="dimmed"
           fw={600}
           tt="uppercase"
@@ -216,7 +216,7 @@ function FieldDiff({
           field
         </Text>
         <Text
-          size="xs"
+          size="sm"
           c="dimmed"
           fw={600}
           tt="uppercase"
@@ -225,7 +225,7 @@ function FieldDiff({
           base
         </Text>
         <Text
-          size="xs"
+          size="sm"
           c="dimmed"
           fw={600}
           tt="uppercase"
@@ -249,7 +249,7 @@ function FieldDiff({
             }}
           >
             <Text
-              size="xs"
+              size="sm"
               c={equal ? 'dimmed' : 'yellow'}
               ff="monospace"
               style={{ width: 180, padding: '6px 12px' }}
@@ -377,13 +377,13 @@ function DiffSummaryBar({ diff }: { diff: StateDiff }) {
         background: 'var(--mantine-color-dark-8)',
       }}
     >
-      <Text size="xs" c="dimmed">
+      <Text size="sm" c="dimmed">
         {totalChanges} change{totalChanges === 1 ? '' : 's'}
       </Text>
       {totals.added > 0 && (
         <Group gap={4}>
           <StatusPill status="added" />
-          <Text size="xs" c="green.4">
+          <Text size="sm" c="green.4">
             {totals.added} added
           </Text>
         </Group>
@@ -391,7 +391,7 @@ function DiffSummaryBar({ diff }: { diff: StateDiff }) {
       {totals.modified > 0 && (
         <Group gap={4}>
           <StatusPill status="modified" />
-          <Text size="xs" c="yellow.4">
+          <Text size="sm" c="yellow.4">
             {totals.modified} modified
           </Text>
         </Group>
@@ -399,13 +399,13 @@ function DiffSummaryBar({ diff }: { diff: StateDiff }) {
       {totals.removed > 0 && (
         <Group gap={4}>
           <StatusPill status="removed" />
-          <Text size="xs" c="red.4">
+          <Text size="sm" c="red.4">
             {totals.removed} removed
           </Text>
         </Group>
       )}
       <Box style={{ flex: 1 }} />
-      <Text size="xs" c="dimmed" ff="monospace" truncate style={{ maxWidth: 380 }}>
+      <Text size="sm" c="dimmed" ff="monospace" truncate style={{ maxWidth: 380 }}>
         base: {diff.basePath.split('/').slice(-3).join('/')}
       </Text>
     </Group>
@@ -457,17 +457,17 @@ function DiffView({ diff }: { diff: StateDiff }) {
               <Group gap={4}>
                 <Text size="sm">{t.label}</Text>
                 {t.added > 0 && (
-                  <Badge size="xs" color="green" variant="light">
+                  <Badge size="sm" color="green" variant="light">
                     +{t.added}
                   </Badge>
                 )}
                 {t.modified > 0 && (
-                  <Badge size="xs" color="yellow" variant="light">
+                  <Badge size="sm" color="yellow" variant="light">
                     ~{t.modified}
                   </Badge>
                 )}
                 {t.removed > 0 && (
-                  <Badge size="xs" color="red" variant="light">
+                  <Badge size="sm" color="red" variant="light">
                     −{t.removed}
                   </Badge>
                 )}
@@ -532,7 +532,7 @@ export function ChangesPage() {
         <Text size="sm" fw={500} c="white">
           Changes
         </Text>
-        <Text size="xs" c="dimmed">
+        <Text size="sm" c="dimmed">
           ours vs base
         </Text>
       </Group>

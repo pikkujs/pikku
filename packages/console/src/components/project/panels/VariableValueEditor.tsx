@@ -17,6 +17,7 @@ import { useVariableValue, useSetVariable } from '../../../hooks/useVariables'
 import { useSchema } from '../../../hooks/useWirings'
 import { SchemaForm } from '../../ui/SchemaForm'
 import { SectionLabel } from '../../ui/SectionLabel'
+import { useConsoleEditable } from '../../../context/ConsoleEditableContext'
 
 interface VariableValueEditorProps {
   variableId: string | undefined
@@ -26,6 +27,7 @@ interface VariableValueEditorProps {
 export const VariableValueEditor: React.FunctionComponent<
   VariableValueEditorProps
 > = ({ variableId, schemaName }) => {
+  const editable = useConsoleEditable()
   const [retrieved, setRetrieved] = useState(false)
   const [editing, setEditing] = useState(false)
   const [mode, setMode] = useState<string>('form')
@@ -100,7 +102,7 @@ export const VariableValueEditor: React.FunctionComponent<
           variant="light"
           leftSection={<Eye size={16} />}
           onClick={() => setRetrieved(true)}
-          size="xs"
+          size="sm"
         >
           Retrieve variable value
         </Button>
@@ -124,7 +126,7 @@ export const VariableValueEditor: React.FunctionComponent<
       <Group justify="space-between" align="center">
         <SectionLabel>Variable Value</SectionLabel>
         <Group gap="xs" align="center">
-          {!editing && (
+          {!editing && editable && (
             <ActionIcon
               variant="subtle"
               size="sm"
@@ -142,7 +144,7 @@ export const VariableValueEditor: React.FunctionComponent<
                 { label: 'Form', value: 'form' },
                 { label: 'JSON', value: 'json' },
               ]}
-              size="xs"
+              size="sm"
               style={{ width: 'auto' }}
             />
           )}

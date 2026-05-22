@@ -7,6 +7,7 @@ export interface ListDetailLayoutProps {
   detail: React.ReactNode
   emptyMessage?: string
   hasSelection: boolean
+  collapsible?: boolean
   listWidth?: number | string
   height?: string
 }
@@ -16,6 +17,7 @@ export const ListDetailLayout: React.FunctionComponent<ListDetailLayoutProps> = 
   detail,
   emptyMessage = 'Select an item',
   hasSelection,
+  collapsible = false,
   listWidth,
   height,
 }) => (
@@ -26,16 +28,18 @@ export const ListDetailLayout: React.FunctionComponent<ListDetailLayoutProps> = 
     >
       {list}
     </Box>
-    <Box className={classes.detailPane}>
-      {hasSelection ? (
-        detail
-      ) : (
-        <Box className={classes.emptyState}>
-          <Text c="dimmed" ff="monospace" size="sm">
-            {emptyMessage}
-          </Text>
-        </Box>
-      )}
-    </Box>
+    {(!collapsible || hasSelection) && (
+      <Box className={classes.detailPane}>
+        {hasSelection ? (
+          detail
+        ) : (
+          <Box className={classes.emptyState}>
+            <Text c="dimmed" ff="monospace" size="sm">
+              {emptyMessage}
+            </Text>
+          </Box>
+        )}
+      </Box>
+    )}
   </Box>
 )

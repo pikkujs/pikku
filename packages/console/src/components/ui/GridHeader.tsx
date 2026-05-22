@@ -20,7 +20,7 @@ export const GridHeader: React.FunctionComponent<GridHeaderProps> = ({
     {columns.map((col) => (
       <Text
         key={col.label}
-        size="xs"
+        size="sm"
         fw={600}
         ff="monospace"
         c="var(--app-section-label)"

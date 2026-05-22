@@ -58,11 +58,11 @@ export const BaseNode: React.FunctionComponent<BaseNodeProps> = ({
         onClick={data.onClick}
       >
         <Stack gap={4}>
-          <Text size="xs" c="dimmed" lineClamp={2}>
+          <Text size="sm" c="dimmed" lineClamp={2}>
             {data.title}
           </Text>
           {data.description && (
-            <Text size="xs" ff="monospace" fw={500}>
+            <Text size="sm" ff="monospace" fw={500}>
               {data.description}
             </Text>
           )}
@@ -75,7 +75,7 @@ export const BaseNode: React.FunctionComponent<BaseNodeProps> = ({
                   type="dynamic"
                   badge="tag"
                   value={tag}
-                  size="xs"
+                  size="sm"
                   variant="light"
                   color={data.colorKey}
                 />
@@ -99,7 +99,7 @@ export const BaseNode: React.FunctionComponent<BaseNodeProps> = ({
                   data.permissionsCount > 0 && (
                     <Group gap={4}>
                       <Shield size={12} strokeWidth={2} />
-                      <Text size="xs" fw={500}>
+                      <Text size="sm" fw={500}>
                         {data.permissionsCount}
                       </Text>
                     </Group>
@@ -109,7 +109,7 @@ export const BaseNode: React.FunctionComponent<BaseNodeProps> = ({
                   data.middlewareCount > 0 && (
                     <Group gap={4}>
                       <Layers size={12} strokeWidth={2} />
-                      <Text size="xs" fw={500}>
+                      <Text size="sm" fw={500}>
                         {data.middlewareCount}
                       </Text>
                     </Group>
@@ -145,7 +145,7 @@ export const BaseNode: React.FunctionComponent<BaseNodeProps> = ({
                     gap: '8px',
                   }}
                 >
-                  <Text size="xs" c="dimmed" ff="monospace" fw={500}>
+                  <Text size="sm" c="dimmed" ff="monospace" fw={500}>
                     {handle.label || handle.id}
                   </Text>
                   <Handle

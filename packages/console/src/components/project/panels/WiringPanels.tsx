@@ -292,7 +292,7 @@ export const SchedulerConfiguration: React.FunctionComponent<
         <Box>
           <SectionLabel>Schedule</SectionLabel>
           <Text size="sm">{cronstrue.toString(metadata.schedule)}</Text>
-          <Text size="xs" c="dimmed" ff="monospace" mt={2}>
+          <Text size="sm" c="dimmed" ff="monospace" mt={2}>
             {metadata.schedule}
           </Text>
         </Box>
@@ -479,7 +479,7 @@ const CliCommandTree: React.FunctionComponent<{
             )}
           </Group>
           {cmd.description && (
-            <Text size="xs" c="dimmed" mb={4}>
+            <Text size="sm" c="dimmed" mb={4}>
               {cmd.description}
             </Text>
           )}

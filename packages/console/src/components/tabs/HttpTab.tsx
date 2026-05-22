@@ -35,7 +35,7 @@ export const HttpTab: React.FunctionComponent = () => {
 
   return (
     <Box className={styles.flexRow}>
-      <Box className={`${styles.listPaneFixed} ${styles.flexColumn}`} style={{ width: 280, minWidth: 220 }}>
+      <Box className={`${styles.listPaneFixed} ${styles.flexColumn}`} style={{ width: 340, minWidth: 260 }}>
         <SearchInput
           value={search}
           onChange={setSearch}
@@ -67,10 +67,10 @@ export const HttpTab: React.FunctionComponent = () => {
                       : undefined,
                   }}
                 >
-                  <PikkuBadge type="httpMethod" value={route.method?.toUpperCase() || 'GET'} size="xs" />
+                  <PikkuBadge type="httpMethod" value={route.method?.toUpperCase() || 'GET'} size="sm" />
                   <Box className={styles.flexGrow}>
                     <Text
-                      size="xs"
+                      size="sm"
                       ff="monospace"
                       truncate
                       c={isActive ? 'var(--app-meta-value)' : undefined}
@@ -78,7 +78,7 @@ export const HttpTab: React.FunctionComponent = () => {
                       {route.route}
                     </Text>
                     <Text
-                      size="xs"
+                      size="sm"
                       ff="monospace"
                       c={isActive ? 'var(--app-meta-label)' : 'dimmed'}
                       truncate

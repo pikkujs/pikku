@@ -201,7 +201,7 @@ const OAuthConnectionSection: React.FunctionComponent<{
               )}
             </Group>
             {status.expiresAt && (
-              <Text size="xs" c="dimmed">
+              <Text size="sm" c="dimmed">
                 {status.isExpired
                   ? `Token expired at ${new Date(status.expiresAt).toLocaleString()}`
                   : `Token expires at ${new Date(status.expiresAt).toLocaleString()}`}
@@ -255,7 +255,7 @@ const OAuthConnectionSection: React.FunctionComponent<{
             <Button
               variant="light"
               color="green"
-              size="xs"
+              size="sm"
               leftSection={<Link size={14} />}
               loading={connectMutation.isPending}
               onClick={handleConnect}
@@ -266,7 +266,7 @@ const OAuthConnectionSection: React.FunctionComponent<{
             <>
               <Button
                 variant="default"
-                size="xs"
+                size="sm"
                 leftSection={<ShieldCheck size={14} />}
                 loading={testTokenMutation.isPending}
                 onClick={handleTestToken}
@@ -276,7 +276,7 @@ const OAuthConnectionSection: React.FunctionComponent<{
               <Button
                 variant="light"
                 color="red"
-                size="xs"
+                size="sm"
                 leftSection={<Unlink size={14} />}
                 loading={disconnectMutation.isPending}
                 onClick={handleDisconnect}

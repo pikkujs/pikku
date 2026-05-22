@@ -149,11 +149,11 @@ const CliPageInner: React.FunctionComponent<{
                   ) : (
                     <ChevronRight size={9} color="var(--app-section-label)" />
                   )}
-                  <Text size="xs" ff="monospace" style={{ flex: 1 }}>
+                  <Text size="sm" ff="monospace" style={{ flex: 1 }}>
                     {prog.wireId}
                   </Text>
                   <Badge
-                    size="xs"
+                    size="sm"
                     variant="light"
                     color="cyan"
                     ff="monospace"
@@ -184,7 +184,7 @@ const CliPageInner: React.FunctionComponent<{
                         <Box className={classes.typeDot} style={{ background: 'rgba(124,58,237,0.4)' }} />
                         <Box style={{ flex: 1, minWidth: 0 }}>
                           <Text
-                            size="xs"
+                            size="sm"
                             ff="monospace"
                             fw={cmdActive ? 600 : 400}
                             c={
@@ -198,7 +198,7 @@ const CliPageInner: React.FunctionComponent<{
                           </Text>
                           {cmd.description && (
                             <Text
-                              size="xs"
+                              size="sm"
                               ff="monospace"
                               c={
                                 cmdActive
@@ -223,7 +223,7 @@ const CliPageInner: React.FunctionComponent<{
 
       <Box className={`${classes.detailPane} ${classes.flexColumn}`} style={{ overflow: 'hidden' }}>
         <Box className={classes.gridHeader} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Text size="xs" ff="monospace" c="var(--app-text-muted)" style={{ flex: 1 }}>
+          <Text size="sm" ff="monospace" c="var(--app-text-muted)" style={{ flex: 1 }}>
             <Text component="span" c="violet" ff="monospace">$</Text>{' '}
             <Text component="span" c="var(--app-text)" ff="monospace">
               {promptText.slice(2)}
@@ -241,7 +241,7 @@ const CliPageInner: React.FunctionComponent<{
                 <ActionIcon
                   variant="subtle"
                   color={copied ? 'teal' : 'gray'}
-                  size="xs"
+                  size="sm"
                   onClick={copy}
                 >
                   {copied ? <Check size={12} /> : <Copy size={12} />}

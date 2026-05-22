@@ -105,7 +105,7 @@ export const WorkflowRunSelector: React.FunctionComponent<
                 <Text size="sm" ff="monospace" truncate maw={120}>
                   {selectedRun.id.slice(0, 8)}
                 </Text>
-                <Text size="xs" c="dimmed">
+                <Text size="sm" c="dimmed">
                   {formatTime(selectedRun.createdAt)}
                 </Text>
               </>
@@ -127,7 +127,7 @@ export const WorkflowRunSelector: React.FunctionComponent<
             }}
           >
             <SegmentedControl
-              size="xs"
+              size="sm"
               fullWidth
               value={statusFilter}
               onChange={setStatusFilter}
@@ -179,7 +179,7 @@ export const WorkflowRunSelector: React.FunctionComponent<
                         </Text>
                         <PikkuBadge type="status" value={run.status} />
                       </Group>
-                      <Text size="xs" c="dimmed">
+                      <Text size="sm" c="dimmed">
                         {formatTime(run.createdAt)}
                       </Text>
                     </Group>

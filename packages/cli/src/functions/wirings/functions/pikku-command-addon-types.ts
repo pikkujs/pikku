@@ -5,13 +5,19 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeAddonTypes } from './serialize-addon-types.js'
 
-export const pikkuAddonTypes = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config, getInspectorState }) => {
+type AddonTypesCommandInput = {
+  bootstrap?: boolean
+}
+
+export const pikkuAddonTypes = pikkuSessionlessFunc<
+  AddonTypesCommandInput,
+  void
+>({
+  func: async ({ logger, config, getInspectorState }, input) => {
     if (!config.addon) {
       return
     }
 
-    const visitState = await getInspectorState()
     const {
       addonTypesFile,
       packageMappings,
@@ -20,6 +26,14 @@ export const pikkuAddonTypes = pikkuSessionlessFunc<void, void>({
       credentialsFile,
       variablesFile,
     } = config
+
+    const bootstrap = input?.bootstrap === true
+    if (bootstrap) {
+      await writeFileInDir(logger, addonTypesFile, 'export {}\n')
+      return
+    }
+
+    const visitState = await getInspectorState()
 
     checkRequiredTypes(visitState.filesAndMethodsErrors, {
       singletonServicesType: true,

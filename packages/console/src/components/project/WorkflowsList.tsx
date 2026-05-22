@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react'
-import { Text, Badge, Button } from '@mantine/core'
+import { Text, Badge, Tooltip, ActionIcon } from '@mantine/core'
 import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
-import { GitBranch, Plus } from 'lucide-react'
+import { GitBranch, ExternalLink } from 'lucide-react'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
@@ -20,7 +20,7 @@ const COLUMNS = [
       <Text fw={500}>
         {w.name}
         {w.source === 'dynamic-workflow' && (
-          <Badge size="xs" variant="light" color="violet" ml={8}>
+          <Badge size="sm" variant="light" color="violet" ml={8}>
             Dynamic
           </Badge>
         )}
@@ -41,6 +41,12 @@ const COLUMNS = [
   },
 ]
 
+export interface WorkflowExtraColumn {
+  label: string
+  width?: string
+  render: (workflowName: string) => React.ReactNode
+}
+
 interface WorkflowsListProps {
   workflows: WorkflowsMeta
   aiWorkflows?: Array<{
@@ -48,11 +54,13 @@ interface WorkflowsListProps {
     graphHash: string
     graph: any
   }>
+  extraColumns?: WorkflowExtraColumn[]
 }
 
 export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
   workflows,
   aiWorkflows,
+  extraColumns = [],
 }) => {
   const [filter, setFilter] = useState<FilterValue>('all')
   const { navigateTo } = useConsoleNavigator()
@@ -89,13 +97,23 @@ export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
     return sortedWorkflows
   }, [sortedWorkflows, filter])
 
+  const allColumns = [
+    ...COLUMNS,
+    ...extraColumns.map((col) => ({
+      key: col.label,
+      header: col.label.toUpperCase(),
+      width: col.width,
+      render: (w: Workflow) => col.render(w.name),
+    })),
+  ]
+
   return (
     <TableListPage
       title="Workflows"
       icon={GitBranch}
       docsHref="https://pikku.dev/docs/wiring/workflows"
       data={filteredByType}
-      columns={COLUMNS}
+      columns={allColumns}
       getKey={(w) => w.name}
       onRowClick={(w) => navigateTo('workflows', w.name)}
       searchPlaceholder="Search workflows..."
@@ -105,7 +123,21 @@ export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
         false
       }
       emptyMessage="No workflows found."
-      headerRight={null}
+      headerRight={
+        <Tooltip label="Workflows docs">
+          <ActionIcon
+            component="a"
+            href="https://pikku.dev/docs/wiring/workflows"
+            target="_blank"
+            rel="noopener noreferrer"
+            variant="subtle"
+            color="gray"
+            size="sm"
+          >
+            <ExternalLink size={14} />
+          </ActionIcon>
+        </Tooltip>
+      }
     />
   )
 }

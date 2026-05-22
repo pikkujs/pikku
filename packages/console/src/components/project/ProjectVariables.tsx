@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
-import { Text } from '@mantine/core'
-import { Settings2 } from 'lucide-react'
+import { Text, Tooltip, ActionIcon } from '@mantine/core'
+import { Settings2, ExternalLink } from 'lucide-react'
 import { usePanelContext } from '../../context/PanelContext'
 import { TableListPage } from '../layout/TableListPage'
 
@@ -34,7 +34,7 @@ export const ProjectVariables: React.FunctionComponent<
               {v.displayName}
             </Text>
             {v.description && (
-              <Text size="xs" c="dimmed" truncate>
+              <Text size="sm" c="dimmed" truncate>
                 {v.description}
               </Text>
             )}
@@ -45,7 +45,7 @@ export const ProjectVariables: React.FunctionComponent<
         key: 'variableId',
         header: 'VARIABLE ID',
         render: (v: VariableMeta) => (
-          <Text size="xs" c="dimmed" ff="monospace">
+          <Text size="sm" c="dimmed" ff="monospace">
             {v.variableId}
           </Text>
         ),
@@ -56,7 +56,7 @@ export const ProjectVariables: React.FunctionComponent<
 
   return (
     <TableListPage
-      title="Variables"
+      title="Environment Variables"
       icon={Settings2}
       docsHref="https://pikku.dev/docs/core-features/variables"
       data={variables}
@@ -75,6 +75,21 @@ export const ProjectVariables: React.FunctionComponent<
       }
       emptyMessage="No variables found."
       loading={loading}
+      headerRight={
+        <Tooltip label="Environment Variables docs">
+          <ActionIcon
+            component="a"
+            href="https://pikku.dev/docs/core-features/variables"
+            target="_blank"
+            rel="noopener noreferrer"
+            variant="subtle"
+            color="gray"
+            size="sm"
+          >
+            <ExternalLink size={14} />
+          </ActionIcon>
+        </Tooltip>
+      }
     />
   )
 }

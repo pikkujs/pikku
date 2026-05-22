@@ -146,14 +146,14 @@ export const QueuesTab: React.FunctionComponent = () => {
               gridTemplateColumns={GRID_COLUMNS}
             >
               <Box>
-                <Text size="xs" ff="monospace" c={isActive ? 'var(--app-meta-value)' : 'var(--app-text)'} truncate>
+                <Text size="sm" ff="monospace" c={isActive ? 'var(--app-meta-value)' : 'var(--app-text)'} truncate>
                   {item.wireId || item.name}
                 </Text>
-                <Text size="xs" ff="monospace" c="var(--app-text-muted)" truncate style={{ fontSize: 9 }}>
+                <Text size="sm" ff="monospace" c="var(--app-text-muted)" truncate style={{ fontSize: 9 }}>
                   {item.pikkuFuncId}
                 </Text>
               </Box>
-              <Text size="xs" ff="monospace" c="var(--app-meta-label)">
+              <Text size="sm" ff="monospace" c="var(--app-meta-label)">
                 {batchSize ?? '—'}
               </Text>
             </ListItem>

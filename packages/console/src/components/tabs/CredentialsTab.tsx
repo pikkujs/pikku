@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
+import { useConsoleEditable } from '../../context/ConsoleEditableContext'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import styles from '../ui/console.module.css'
 
@@ -98,7 +99,7 @@ export const CredentialsTab: React.FunctionComponent = () => {
     <Box p="md">
       <Group justify="space-between" mb="md">
         <SegmentedControl
-          size="xs"
+          size="sm"
           value={filter}
           onChange={(v) => setFilter(v as FilterValue)}
           data={[
@@ -187,21 +188,21 @@ const CredentialCard: React.FunctionComponent<{
         </Group>
 
         {credential.description && (
-          <Text size="xs" c="dimmed" lineClamp={2}>
+          <Text size="sm" c="dimmed" lineClamp={2}>
             {credential.description}
           </Text>
         )}
 
         <Group gap="xs">
           <Badge
-            size="xs"
+            size="sm"
             variant="light"
             color={credential.isOAuth2 ? 'violet' : 'blue'}
           >
             {credential.isOAuth2 ? 'OAuth2' : 'API Key'}
           </Badge>
           <Badge
-            size="xs"
+            size="sm"
             variant="light"
             color={credential.type === 'wire' ? 'blue' : 'gray'}
           >
@@ -217,14 +218,14 @@ const CredentialCard: React.FunctionComponent<{
                 fill="var(--mantine-color-teal-6)"
                 color="var(--mantine-color-teal-6)"
               />
-              <Text size="xs" c="teal.6">
+              <Text size="sm" c="teal.6">
                 Connected
               </Text>
             </>
           ) : (
             <>
               <Circle size={8} color="var(--mantine-color-gray-5)" />
-              <Text size="xs" c="dimmed">
+              <Text size="sm" c="dimmed">
                 Not connected
               </Text>
             </>
@@ -290,6 +291,7 @@ const ApiKeySection: React.FunctionComponent<{
   credential: CredentialItem
 }> = ({ credential }) => {
   const rpc = usePikkuRPC()
+  const editable = useConsoleEditable()
   const queryClient = useQueryClient()
   const [value, setValue] = useState('')
   const [editing, setEditing] = useState(false)
@@ -334,7 +336,7 @@ const ApiKeySection: React.FunctionComponent<{
   })
 
   if (isLoading) {
-    return <Loader size="xs" />
+    return <Loader size="sm" />
   }
 
   const hasValue = currentValue != null
@@ -351,14 +353,24 @@ const ApiKeySection: React.FunctionComponent<{
             Configured
           </Text>
         </Group>
-        <Button
-          variant="light"
-          size="xs"
-          onClick={() => setEditing(true)}
-        >
-          Replace
-        </Button>
+        {editable && (
+          <Button
+            variant="light"
+            size="sm"
+            onClick={() => setEditing(true)}
+          >
+            Replace
+          </Button>
+        )}
       </Stack>
+    )
+  }
+
+  if (!editable) {
+    return (
+      <Text size="sm" c="dimmed">
+        {hasValue ? 'Credential configured.' : 'No credential set.'}
+      </Text>
     )
   }
 
@@ -375,7 +387,7 @@ const ApiKeySection: React.FunctionComponent<{
       />
       <Group gap="xs">
         <Button
-          size="xs"
+          size="sm"
           onClick={() => saveMutation.mutate(value)}
           loading={saveMutation.isPending}
           disabled={!value.trim()}
@@ -384,7 +396,7 @@ const ApiKeySection: React.FunctionComponent<{
         </Button>
         {editing && (
           <Button
-            size="xs"
+            size="sm"
             variant="subtle"
             onClick={() => {
               setEditing(false)
@@ -449,7 +461,7 @@ const OAuthSection: React.FunctionComponent<{
   })
 
   if (isLoading) {
-    return <Loader size="xs" />
+    return <Loader size="sm" />
   }
 
   return (
@@ -466,19 +478,19 @@ const OAuthSection: React.FunctionComponent<{
               Connected
             </Text>
             {status.isExpired && (
-              <Badge size="xs" color="orange" variant="light">
+              <Badge size="sm" color="orange" variant="light">
                 Expired
               </Badge>
             )}
           </Group>
           {credential.oauth2?.scopes && (
             <Box>
-              <Text size="xs" c="dimmed" mb={4}>
+              <Text size="sm" c="dimmed" mb={4}>
                 Scopes
               </Text>
               <Group gap={4}>
                 {credential.oauth2.scopes.map((scope: string) => (
-                  <Badge key={scope} size="xs" variant="outline">
+                  <Badge key={scope} size="sm" variant="outline">
                     {scope}
                   </Badge>
                 ))}
@@ -487,7 +499,7 @@ const OAuthSection: React.FunctionComponent<{
           )}
           <Group gap="xs" mt="xs">
             <Button
-              size="xs"
+              size="sm"
               variant="light"
               leftSection={<RefreshCw size={12} />}
               onClick={() => connectMutation.mutate()}
@@ -496,7 +508,7 @@ const OAuthSection: React.FunctionComponent<{
               Reconnect
             </Button>
             <Button
-              size="xs"
+              size="sm"
               variant="light"
               color="red"
               onClick={() => disconnectMutation.mutate()}
@@ -571,7 +583,7 @@ const PerUserSection: React.FunctionComponent<{
   })
 
   if (isLoading) {
-    return <Loader size="xs" />
+    return <Loader size="sm" />
   }
 
   const users = userIds || []
@@ -582,13 +594,13 @@ const PerUserSection: React.FunctionComponent<{
         <Text size="sm" fw={500}>
           User Credentials
         </Text>
-        <Badge size="xs" variant="light">
+        <Badge size="sm" variant="light">
           {users.length} connected
         </Badge>
       </Group>
 
       {users.length === 0 ? (
-        <Text size="xs" c="dimmed">
+        <Text size="sm" c="dimmed">
           No users have configured this credential yet.
         </Text>
       ) : (
@@ -604,7 +616,7 @@ const PerUserSection: React.FunctionComponent<{
             {users.map((userId) => (
               <Table.Tr key={userId}>
                 <Table.Td>
-                  <Text size="xs" ff="monospace">
+                  <Text size="sm" ff="monospace">
                     {userId}
                   </Text>
                 </Table.Td>
@@ -615,7 +627,7 @@ const PerUserSection: React.FunctionComponent<{
                       fill="var(--mantine-color-teal-6)"
                       color="var(--mantine-color-teal-6)"
                     />
-                    <Text size="xs" c="teal.6">
+                    <Text size="sm" c="teal.6">
                       Connected
                     </Text>
                   </Group>
@@ -662,7 +674,7 @@ const DeleteSection: React.FunctionComponent<{
 
   return (
     <Button
-      size="xs"
+      size="sm"
       variant="light"
       color="red"
       leftSection={<Trash2 size={12} />}
