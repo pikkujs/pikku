@@ -853,12 +853,17 @@ export function filterInspectorState(
       }
     }
 
-    // Prune workflow graphs whose function was filtered out
+    // Prune workflow graphs whose function was filtered out — UNLESS the
+    // workflow's own name is in the filter (covers pikkuWorkflowGraph,
+    // which doesn't register a function meta, so its pikkuFuncId never
+    // ends up in usedFunctions even when callers explicitly want it).
+    const filterNamesSet = new Set(filters.names ?? [])
     const workflowKeys = new Set([
       ...Object.keys(filteredState.workflows.graphMeta),
       ...Object.keys(filteredState.workflows.meta),
     ])
     for (const name of workflowKeys) {
+      if (filterNamesSet.has(name)) continue
       const graphMeta = filteredState.workflows.graphMeta[name]
       const workflowMeta = filteredState.workflows.meta[name]
       // Check both graphMeta.pikkuFuncId and meta.pikkuFuncId
@@ -931,6 +936,16 @@ export function filterInspectorState(
         filteredState.serviceAggregation.requiredServices.add('queueService')
       }
     }
+  }
+
+  // workflowService internally calls queueService (via queueStepWorker /
+  // queueOrchestrator). Any unit that needs workflowService also needs
+  // queueService for the transitive enqueue calls — covers
+  // workflow-starter, graph-starter, workflow-runner, etc.
+  if (
+    filteredState.serviceAggregation.requiredServices.has('workflowService')
+  ) {
+    filteredState.serviceAggregation.requiredServices.add('queueService')
   }
 
   // Recalculate requiredServices based on filtered functions/middleware/permissions

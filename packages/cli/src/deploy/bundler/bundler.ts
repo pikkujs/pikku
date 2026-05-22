@@ -150,9 +150,13 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     dir = parent
   }
 
-  // For ESM + node platform, CJS deps may use require() for builtins.
-  // esbuild wraps these as __require() which fails at runtime in ESM.
-  // The banner shims require via createRequire so CJS builtins resolve.
+  // For ESM + node platform, CJS deps may use require() / __filename / __dirname
+  // for builtins or to locate native addons (the `bindings` package, used
+  // transitively by `pg` and many others, calls `__filename` directly). esbuild
+  // wraps require() as __require() which fails at runtime in ESM, and leaves
+  // `__filename` / `__dirname` as undefined references. The banner shims all
+  // three via createRequire / fileURLToPath so CJS builtins resolve and native-
+  // addon loaders find their .node files.
   // Skipped when the provider opts out via `noRequireShim` (e.g. CF Workers
   // — `import.meta.url` is undefined there, so the shim crashes at boot).
   const resolvedFormat = format ?? 'esm'
@@ -161,7 +165,7 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     (platform ?? 'node') === 'node' &&
     !options.noRequireShim
       ? {
-          js: `import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);`,
+          js: `import { createRequire as __pikkuCreateRequire } from 'node:module'; import { fileURLToPath as __pikkuFileURLToPath } from 'node:url'; import { dirname as __pikkuDirname } from 'node:path'; const require = __pikkuCreateRequire(import.meta.url); const __filename = __pikkuFileURLToPath(import.meta.url); const __dirname = __pikkuDirname(__filename);`,
         }
       : undefined
 

@@ -46,6 +46,22 @@ export interface ProviderAdapter {
   readonly singleUnit?: boolean
 
   /**
+   * Whether the provider's workflow runtime needs synthesized per-step
+   * dispatch queues. Defaults to `true`.
+   *
+   * - `true` (default): The deploy pipeline synthesizes a `wf-orchestrator-*`
+   *   queue and a `wf-step-*` queue for every workflow step, plus producer
+   *   bindings, so the workflow runtime can fan out via queues.
+   * - `false`: No synthetic workflow queues are emitted into the manifest
+   *   or per-unit codegen. Use this when the provider's workflow runtime
+   *   dispatches steps natively (e.g. Cloudflare's Durable-Object-based
+   *   `CloudflareWorkflowService`, where the orchestrator DO advances
+   *   steps directly without a queue hop). Queues created via explicit
+   *   `wireQueue(...)` user code are unaffected.
+   */
+  readonly workflowQueues?: boolean
+
+  /**
    * Generate the entry file source for a deployment unit.
    * Called once per unit.
    */
@@ -107,6 +123,18 @@ export interface ProviderAdapter {
    * Returns a map of filename → content to write into the deploy directory.
    */
   generateProviderConfigs?(manifest: DeploymentManifest): Map<string, string>
+
+  /**
+   * Emit any provider-specific artifacts that aren't tied to a single user
+   * unit — e.g. a synthesized proxy Worker that fronts a CF Container.
+   * Called after the infra manifest is written so providers can read it
+   * and key off resources that were provisioned in earlier steps.
+   */
+  emitSideArtifacts?(options: {
+    buildDir: string
+    manifest: DeploymentManifest
+    logger: { info(msg: string): void; error(msg: string): void }
+  }): Promise<void>
 
   /**
    * Deploy the built artifacts to the provider.

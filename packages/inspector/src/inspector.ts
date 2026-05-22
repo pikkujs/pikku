@@ -250,8 +250,6 @@ export const inspect = async (
   const rootDir = options.rootDir || findCommonAncestor(routeFiles)
 
   const startSourceFiles = performance.now()
-  // Filter source files to only include files within the project rootDir
-  // This prevents picking up types from external packages (including workspace symlinks)
   const sourceFiles = program
     .getSourceFiles()
     .filter((sf) => sf.fileName.startsWith(rootDir))

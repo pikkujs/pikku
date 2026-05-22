@@ -203,6 +203,22 @@ export type PikkuCLIInput = {
     mcpJsonFile?: string
     nextBackendFile?: string
     nextHTTPFile?: string
+    /**
+     * Transport used by the generated nextBackendFile wrapper.
+     * - `'local'` (default): function code is loaded in-process via bootstrap +
+     *   createSingletonServices. Required for Node/dev runs.
+     * - `'worker-rpc'`: SSR dispatches every call through an injected `Fetcher`
+     *   ({ fetch(req): Promise<Response> }). Function code is NOT bundled into
+     *   the SSR worker. Pair with `nextBackendFetcherImport` to point at your
+     *   resolver module.
+     */
+    nextBackendTransport?: 'local' | 'worker-rpc'
+    /**
+     * Module that exports a `fetcher: Fetcher` (or default export) used by the
+     * worker-RPC variant of the next backend wrapper. Resolved relative to
+     * `nextBackendFile`. Required when `nextBackendTransport === 'worker-rpc'`.
+     */
+    nextBackendFetcherImport?: string
   }
 
   openAPI?: {
