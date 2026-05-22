@@ -53,7 +53,7 @@ describe('pikku-workflow-service inline meta flag', () => {
       },
     })
 
-    const { runId } = await ws.startWorkflow(workflowName, {}, {})
+    const { runId } = await ws.startWorkflow(workflowName, {}, {}, {})
 
     // The run should be created as inline
     const run = await ws.getRun(runId)
