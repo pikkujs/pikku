@@ -39,7 +39,7 @@ export interface FunctionExtraColumn {
 
 const BASE_GRID_COLUMNS = '240px 140px 60px 100px 80px'
 
-const CollapsibleSchema: React.FunctionComponent<{
+const CollapsibleSchema: React.FC<{
   label: string
   schemaName?: string | null
 }> = ({ label, schemaName }) => {
@@ -80,7 +80,7 @@ const CollapsibleSchema: React.FunctionComponent<{
   )
 }
 
-const FunctionDetail: React.FunctionComponent<{ func: any; onClose: () => void }> = ({ func, onClose }) => {
+const FunctionDetail: React.FC<{ func: any; onClose: () => void }> = ({ func, onClose }) => {
   const funcId = func.pikkuFuncName || func.pikkuFuncId
   const { functionUsedBy } = usePikkuMeta()
   const usedBy = functionUsedBy.get(funcId)
@@ -227,7 +227,7 @@ const FunctionDetail: React.FunctionComponent<{ func: any; onClose: () => void }
   )
 }
 
-const FunctionsPageInner: React.FunctionComponent<{
+const FunctionsPageInner: React.FC<{
   functions: any[]
   extraColumns?: FunctionExtraColumn[]
   headerRight?: React.ReactNode
@@ -422,7 +422,7 @@ const FunctionsPageInner: React.FunctionComponent<{
   )
 }
 
-export const FunctionsPage: React.FunctionComponent<{
+export const FunctionsPage: React.FC<{
   extraColumns?: FunctionExtraColumn[]
   headerRight?: React.ReactNode
 }> = ({ extraColumns, headerRight }) => {

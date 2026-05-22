@@ -72,7 +72,7 @@ interface WorkflowRunProviderProps {
   workflowNodes?: Record<string, any>
 }
 
-export const WorkflowRunProvider: React.FunctionComponent<
+export const WorkflowRunProvider: React.FC<
   WorkflowRunProviderProps
 > = ({ children, workflowName, currentGraphHash, workflowNodes }) => {
   const [searchParams, setSearchParams] = useSearchParams()

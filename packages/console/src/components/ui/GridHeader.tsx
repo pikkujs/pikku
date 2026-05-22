@@ -12,7 +12,7 @@ export interface GridHeaderProps {
   gridTemplateColumns: string
 }
 
-export const GridHeader: React.FunctionComponent<GridHeaderProps> = ({
+export const GridHeader: React.FC<GridHeaderProps> = ({
   columns,
   gridTemplateColumns,
 }) => (

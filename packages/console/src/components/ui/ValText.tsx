@@ -7,7 +7,7 @@ export interface ValTextProps {
   isBoolean?: boolean
 }
 
-export const ValText: React.FunctionComponent<ValTextProps> = ({
+export const ValText: React.FC<ValTextProps> = ({
   value,
   fallback = '—',
   isBoolean,

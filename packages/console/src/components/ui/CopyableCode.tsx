@@ -8,7 +8,7 @@ interface CopyableCodeProps {
   language?: string
 }
 
-export const CopyableCode: React.FunctionComponent<CopyableCodeProps> = ({
+export const CopyableCode: React.FC<CopyableCodeProps> = ({
   code,
   label,
   language = 'typescript',

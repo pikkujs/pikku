@@ -10,7 +10,7 @@ export interface ListItemProps {
   padding?: string
 }
 
-export const ListItem: React.FunctionComponent<ListItemProps> = ({
+export const ListItem: React.FC<ListItemProps> = ({
   active,
   onClick,
   gridTemplateColumns,

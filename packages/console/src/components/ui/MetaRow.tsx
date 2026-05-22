@@ -10,7 +10,7 @@ export interface MetaRowProps {
   children: React.ReactNode
 }
 
-export const MetaRow: React.FunctionComponent<MetaRowProps> = ({
+export const MetaRow: React.FC<MetaRowProps> = ({
   label,
   labelWidth = 85,
   align = 'center',

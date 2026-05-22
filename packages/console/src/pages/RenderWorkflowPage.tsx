@@ -64,7 +64,7 @@ const edgeTypes: EdgeTypes = {
   elk: ElkEdge,
 }
 
-const RenderFlow: React.FunctionComponent<{ workflow: any }> = ({
+const RenderFlow: React.FC<{ workflow: any }> = ({
   workflow,
 }) => {
   const { fitView } = useReactFlow()
@@ -123,7 +123,7 @@ const RenderFlow: React.FunctionComponent<{ workflow: any }> = ({
   )
 }
 
-export const RenderWorkflowPage: React.FunctionComponent = () => {
+export const RenderWorkflowPage: React.FC = () => {
   const [workflow, setWorkflow] = useState<any>(null)
 
   useEffect(() => {

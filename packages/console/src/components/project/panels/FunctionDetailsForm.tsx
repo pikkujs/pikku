@@ -22,7 +22,7 @@ interface FunctionDetailsFormProps {
   metadata?: any
 }
 
-export const FunctionConfiguration: React.FunctionComponent<
+export const FunctionConfiguration: React.FC<
   FunctionDetailsFormProps
 > = ({ functionName, metadata: passedMetadata }) => {
   const { data: fetchedMeta, isLoading } = useFunctionMeta(functionName)
@@ -112,7 +112,7 @@ export const FunctionConfiguration: React.FunctionComponent<
   )
 }
 
-export const FunctionCode: React.FunctionComponent<
+export const FunctionCode: React.FC<
   Pick<FunctionDetailsFormProps, 'functionName'>
 > = ({ functionName }) => {
   const exampleCode = `export const ${functionName} = pikkuFunc({
@@ -125,7 +125,7 @@ export const FunctionCode: React.FunctionComponent<
   return <CodeHighlight code={exampleCode} language="typescript" />
 }
 
-export const FunctionInput: React.FunctionComponent<
+export const FunctionInput: React.FC<
   FunctionDetailsFormProps
 > = ({ functionName, metadata = {} }) => {
   const { data: fetchedMeta } = useFunctionMeta(functionName)
@@ -156,7 +156,7 @@ export const FunctionInput: React.FunctionComponent<
   return <SchemaViewer schema={schema} />
 }
 
-export const FunctionOutput: React.FunctionComponent<
+export const FunctionOutput: React.FC<
   FunctionDetailsFormProps
 > = ({ functionName, metadata = {} }) => {
   const { data: fetchedMeta } = useFunctionMeta(functionName)

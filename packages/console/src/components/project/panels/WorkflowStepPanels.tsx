@@ -30,7 +30,7 @@ type InputBadgeType =
   | '$static'
   | '$expression'
 
-const TypeBadge: React.FunctionComponent<{
+const TypeBadge: React.FC<{
   type: InputBadgeType
   isHoverable?: boolean
   onMouseEnter?: () => void
@@ -175,7 +175,7 @@ const parseInputValue = (value: any): ParsedInputValue => {
   }
 }
 
-export const WorkflowStepConfiguration: React.FunctionComponent<
+export const WorkflowStepConfiguration: React.FC<
   WorkflowStepPanelProps
 > = ({ stepId }) => {
   const node = useWorkflowNode(stepId)
@@ -197,7 +197,7 @@ export const WorkflowStepConfiguration: React.FunctionComponent<
   )
 }
 
-export const WorkflowStepInput: React.FunctionComponent<
+export const WorkflowStepInput: React.FC<
   WorkflowStepPanelProps
 > = ({ stepId }) => {
   const node = useWorkflowNode(stepId)
@@ -288,7 +288,7 @@ const renderSchemaType = (schema: any): string => {
   return schema.type || 'unknown'
 }
 
-export const WorkflowStepOutput: React.FunctionComponent<
+export const WorkflowStepOutput: React.FC<
   WorkflowStepPanelProps & { showOutputs?: boolean }
 > = ({ stepId, showOutputs = false }) => {
   const node = useWorkflowNode(stepId)
@@ -451,7 +451,7 @@ export const WorkflowStepOutput: React.FunctionComponent<
   )
 }
 
-export const WorkflowStepBranches: React.FunctionComponent<
+export const WorkflowStepBranches: React.FC<
   WorkflowStepPanelProps
 > = ({ stepId }) => {
   const node = useWorkflowNode(stepId)

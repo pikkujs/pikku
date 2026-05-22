@@ -2,7 +2,7 @@ import React, { Suspense } from 'react'
 import { Center, Loader } from '@mantine/core'
 import { CliTabContent } from './CliTabContent'
 
-export const CliTab: React.FunctionComponent = () => {
+export const CliTab: React.FC = () => {
   return (
     <Suspense
       fallback={

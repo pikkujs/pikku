@@ -9,7 +9,7 @@ interface ActionRowProps {
   handleId: string
 }
 
-const ActionRow: React.FunctionComponent<ActionRowProps> = ({
+const ActionRow: React.FC<ActionRowProps> = ({
   label,
   handleId,
 }) => {
@@ -50,7 +50,7 @@ interface ChannelRouterNodeData {
   actions: string[]
 }
 
-export const ChannelRouterNode: React.FunctionComponent<
+export const ChannelRouterNode: React.FC<
   NodeProps<ChannelRouterNodeData>
 > = ({ data }) => {
   const theme = useMantineTheme()

@@ -37,7 +37,7 @@ interface SchemaFormProps {
   children?: React.ReactNode
 }
 
-export const SchemaForm: React.FunctionComponent<SchemaFormProps> = ({
+export const SchemaForm: React.FC<SchemaFormProps> = ({
   schema,
   uiSchema,
   onSubmit,

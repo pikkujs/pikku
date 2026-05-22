@@ -10,7 +10,7 @@ interface DecisionNodeData {
   actions: string[]
 }
 
-export const DecisionNode: React.FunctionComponent<
+export const DecisionNode: React.FC<
   NodeProps<DecisionNodeData>
 > = ({ data }) => {
   return <BaseNode data={data} hasInput={true} hasOutput={true} width={200} />

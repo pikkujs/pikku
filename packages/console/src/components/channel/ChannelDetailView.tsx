@@ -58,7 +58,7 @@ interface ChannelDetailViewProps {
   selected: ChannelSelection
 }
 
-export const ChannelDetailView: React.FunctionComponent<ChannelDetailViewProps> = ({
+export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
   channelName,
   channel,
   selected,

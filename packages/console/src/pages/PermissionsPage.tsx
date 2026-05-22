@@ -14,7 +14,7 @@ interface PermissionItem {
   data: any
 }
 
-const PermissionsTable: React.FunctionComponent<{
+const PermissionsTable: React.FC<{
   items: PermissionItem[]
   loading?: boolean
 }> = ({ items, loading }) => {
@@ -88,7 +88,7 @@ const PermissionsTable: React.FunctionComponent<{
   )
 }
 
-export const PermissionsPage: React.FunctionComponent = () => {
+export const PermissionsPage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
 
   const items = useMemo((): PermissionItem[] => {

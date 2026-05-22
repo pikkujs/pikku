@@ -25,7 +25,7 @@ import { useDeleteAgentThread } from '../hooks/useAgentRuns'
 import { useAgentCredentials } from '../hooks/useAgentCredentials'
 import { getServerUrl } from '../context/PikkuRpcProvider'
 
-const CredentialPrompt: React.FunctionComponent<{
+const CredentialPrompt: React.FC<{
   requirements: Array<{
     credentialName: string
     displayName: string
@@ -93,7 +93,7 @@ const CredentialPrompt: React.FunctionComponent<{
   )
 }
 
-const AgentPlaygroundInner: React.FunctionComponent<{
+const AgentPlaygroundInner: React.FC<{
   agentId: string
   agentData: any
   agentItems: { name: string; description?: string }[]
@@ -185,7 +185,7 @@ const AgentPlaygroundInner: React.FunctionComponent<{
   )
 }
 
-export const AgentPlaygroundPage: React.FunctionComponent = () => {
+export const AgentPlaygroundPage: React.FC = () => {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const agentId = searchParams.get('id') || ''

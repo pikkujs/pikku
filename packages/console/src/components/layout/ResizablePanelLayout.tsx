@@ -14,7 +14,7 @@ interface ResizablePanelLayoutProps {
   hidePanel?: boolean
 }
 
-export const ResizablePanelLayout: React.FunctionComponent<
+export const ResizablePanelLayout: React.FC<
   ResizablePanelLayoutProps
 > = ({
   children,

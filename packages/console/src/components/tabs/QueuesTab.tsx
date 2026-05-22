@@ -23,7 +23,7 @@ type QueueDepths = Record<string, { queued: number; active: number; failed: numb
 
 const GRID_COLUMNS = '1fr 70px 70px 70px'
 
-const QueueDetail: React.FunctionComponent<{ item: any }> = ({ item }) => {
+const QueueDetail: React.FC<{ item: any }> = ({ item }) => {
   const { navigateInPanel } = usePanelContext()
   const funcId = item?.pikkuFuncId
   const { data: funcMeta } = useFunctionMeta(funcId ?? '')
@@ -98,7 +98,7 @@ const QueueDetail: React.FunctionComponent<{ item: any }> = ({ item }) => {
   )
 }
 
-export const QueuesTab: React.FunctionComponent = () => {
+export const QueuesTab: React.FC = () => {
   const { meta } = usePikkuMeta()
   const rpc = usePikkuRPC()
   const [selected, setSelected] = useState<string | null>(null)

@@ -36,7 +36,7 @@ interface CanvasDrawerProviderProps {
   children: React.ReactNode
 }
 
-export const CanvasDrawerProvider: React.FunctionComponent<
+export const CanvasDrawerProvider: React.FC<
   CanvasDrawerProviderProps
 > = ({ children }) => {
   const [canvasDrawer, setCanvasDrawer] = useState<CanvasDrawer | null>(null)

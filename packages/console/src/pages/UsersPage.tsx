@@ -12,7 +12,7 @@ const TABS = [
   { value: 'users', label: 'Users' },
 ]
 
-export const UsersPage: React.FunctionComponent = () => {
+export const UsersPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = searchParams.get('tab') || 'credentials'
 

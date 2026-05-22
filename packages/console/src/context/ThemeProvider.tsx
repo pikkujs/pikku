@@ -373,7 +373,7 @@ const theme = createTheme({
   },
 })
 
-export const ThemeProvider: React.FunctionComponent<{
+export const ThemeProvider: React.FC<{
   children: React.ReactNode
   locale?: string
 }> = ({ children, locale = 'en' }) => {

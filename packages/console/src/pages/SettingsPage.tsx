@@ -12,7 +12,7 @@ import { PikkuBadge } from '../components/ui/PikkuBadge'
 import { RefreshCw } from 'lucide-react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 
-export const SettingsPage: React.FunctionComponent = () => {
+export const SettingsPage: React.FC = () => {
   const { counts, loading, error, refresh } = usePikkuMeta()
 
   return (
@@ -80,7 +80,7 @@ export const SettingsPage: React.FunctionComponent = () => {
   )
 }
 
-const MetaStat: React.FunctionComponent<{
+const MetaStat: React.FC<{
   label: string
   count: number
 }> = ({ label, count }) => (

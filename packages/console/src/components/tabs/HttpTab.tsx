@@ -7,7 +7,7 @@ import { SearchInput } from '../ui/SearchInput'
 import { EmptyState } from '../ui/EmptyState'
 import styles from '../ui/console.module.css'
 
-export const HttpTab: React.FunctionComponent = () => {
+export const HttpTab: React.FC = () => {
   const { meta } = usePikkuMeta()
   const [selected, setSelected] = useState<string | null>(null)
   const [search, setSearch] = useState('')

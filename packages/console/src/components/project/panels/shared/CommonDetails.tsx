@@ -49,7 +49,7 @@ const TYPE_HREF: Record<string, string> = {
   agent: '/agents',
 }
 
-const FunctionValue: React.FunctionComponent<{ pikkuFuncId: string }> = ({
+const FunctionValue: React.FC<{ pikkuFuncId: string }> = ({
   pikkuFuncId,
 }) => {
   const { data: funcMeta } = useFunctionMeta(pikkuFuncId)
@@ -72,7 +72,7 @@ const FunctionValue: React.FunctionComponent<{ pikkuFuncId: string }> = ({
   )
 }
 
-const WiredToSection: React.FunctionComponent<{ functionName: string }> = ({
+const WiredToSection: React.FC<{ functionName: string }> = ({
   functionName,
 }) => {
   const Link = useLink()
@@ -121,7 +121,7 @@ const WiredToSection: React.FunctionComponent<{ functionName: string }> = ({
   )
 }
 
-export const CommonDetails: React.FunctionComponent<CommonDetailsProps> = ({
+export const CommonDetails: React.FC<CommonDetailsProps> = ({
   description,
   pikkuFuncId,
   functionLinkLabel,

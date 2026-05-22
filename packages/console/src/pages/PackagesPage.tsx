@@ -33,7 +33,7 @@ interface InstalledAddon {
   tags?: string[]
 }
 
-const PackageIcon: React.FunctionComponent<{ icon?: string; name: string }> = ({
+const PackageIcon: React.FC<{ icon?: string; name: string }> = ({
   icon,
   name,
 }) => {
@@ -149,7 +149,7 @@ const INSTALLED_COLUMNS = () => [
   },
 ]
 
-const InstalledList: React.FunctionComponent<{
+const InstalledList: React.FC<{
   onSelect: (id: string, source: 'installed' | 'community') => void
 }> = ({ onSelect }) => {
   const rpc = usePikkuRPC()
@@ -187,7 +187,7 @@ const InstalledList: React.FunctionComponent<{
   )
 }
 
-const CommunityList: React.FunctionComponent<{
+const CommunityList: React.FC<{
   onSelect: (id: string, source: 'installed' | 'community') => void
 }> = ({ onSelect }) => {
   const rpc = usePikkuRPC()
@@ -306,7 +306,7 @@ const API_COLUMNS = [
   },
 ]
 
-const ApisList: React.FunctionComponent<{
+const ApisList: React.FC<{
   onSelect: (id: string, source: 'installed' | 'community' | 'api') => void
 }> = ({ onSelect }) => {
   const rpc = usePikkuRPC()
@@ -356,7 +356,7 @@ const ADDON_TABS = [
   { value: 'apis', label: 'APIs' },
 ]
 
-const PackagesList: React.FunctionComponent<{
+const PackagesList: React.FC<{
   onSelect: (id: string, source: 'installed' | 'community' | 'api') => void
 }> = ({ onSelect }) => {
   const [tab, setTab] = useState<string>('installed')
@@ -386,7 +386,7 @@ const PackagesList: React.FunctionComponent<{
   )
 }
 
-const PackagesPageContent: React.FunctionComponent = () => {
+const PackagesPageContent: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedId = searchParams.get('id')
   const source = (searchParams.get('source') ?? 'community') as
@@ -411,7 +411,7 @@ const PackagesPageContent: React.FunctionComponent = () => {
   )
 }
 
-export const PackagesPage: React.FunctionComponent = () => {
+export const PackagesPage: React.FC = () => {
   return (
     <PanelProvider>
       <PackagesPageContent />

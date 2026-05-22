@@ -73,7 +73,7 @@ const filterTreeNode = (node: TreeNode, query: string): TreeNode | null => {
   return null
 }
 
-export const ListExplorerPage: React.FunctionComponent<
+export const ListExplorerPage: React.FC<
   ListExplorerPageProps
 > = ({
   header,

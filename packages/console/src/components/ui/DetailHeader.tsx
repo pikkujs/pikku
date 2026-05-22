@@ -9,7 +9,7 @@ export interface DetailHeaderProps {
   children?: React.ReactNode
 }
 
-export const DetailHeader: React.FunctionComponent<DetailHeaderProps> = ({
+export const DetailHeader: React.FC<DetailHeaderProps> = ({
   title,
   subtitle,
   badge,

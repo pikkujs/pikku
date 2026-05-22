@@ -23,7 +23,9 @@ const SECTION_PATHS: Record<ConsoleSection, string> = {
 }
 
 /** OSS default — IDs live in the `?id=` query param. */
-export function OSSConsoleNavigator({ children }: { children: ReactNode }) {
+export const OSSConsoleNavigator: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 

@@ -50,7 +50,7 @@ interface CredentialItem {
 
 type FilterValue = 'all' | 'connected' | 'disconnected'
 
-export const CredentialsTab: React.FunctionComponent = () => {
+export const CredentialsTab: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
   const [selectedCredential, setSelectedCredential] =
     useState<CredentialItem | null>(null)
@@ -139,7 +139,7 @@ export const CredentialsTab: React.FunctionComponent = () => {
   )
 }
 
-const CredentialCard: React.FunctionComponent<{
+const CredentialCard: React.FC<{
   credential: CredentialItem
   filter: FilterValue
   onClick: () => void
@@ -236,7 +236,7 @@ const CredentialCard: React.FunctionComponent<{
   )
 }
 
-const CredentialDrawer: React.FunctionComponent<{
+const CredentialDrawer: React.FC<{
   credential: CredentialItem
   onClose: () => void
 }> = ({ credential, onClose }) => {
@@ -287,7 +287,7 @@ const CredentialDrawer: React.FunctionComponent<{
   )
 }
 
-const ApiKeySection: React.FunctionComponent<{
+const ApiKeySection: React.FC<{
   credential: CredentialItem
 }> = ({ credential }) => {
   const rpc = usePikkuRPC()
@@ -416,7 +416,7 @@ const ApiKeySection: React.FunctionComponent<{
   )
 }
 
-const OAuthSection: React.FunctionComponent<{
+const OAuthSection: React.FC<{
   credential: CredentialItem
 }> = ({ credential }) => {
   const rpc = usePikkuRPC()
@@ -545,7 +545,7 @@ const OAuthSection: React.FunctionComponent<{
   )
 }
 
-const PerUserSection: React.FunctionComponent<{
+const PerUserSection: React.FC<{
   credential: CredentialItem
 }> = ({ credential }) => {
   const rpc = usePikkuRPC()
@@ -652,7 +652,7 @@ const PerUserSection: React.FunctionComponent<{
   )
 }
 
-const DeleteSection: React.FunctionComponent<{
+const DeleteSection: React.FC<{
   credential: CredentialItem
   onClose: () => void
 }> = ({ credential, onClose }) => {

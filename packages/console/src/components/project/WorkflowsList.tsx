@@ -58,7 +58,7 @@ interface WorkflowsListProps {
   headerRight?: React.ReactNode
 }
 
-export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
+export const WorkflowsList: React.FC<WorkflowsListProps> = ({
   workflows,
   aiWorkflows,
   extraColumns = [],

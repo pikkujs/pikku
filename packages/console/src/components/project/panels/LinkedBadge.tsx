@@ -9,7 +9,7 @@ interface LinkedBadgeProps {
   kind: 'middleware' | 'permission'
 }
 
-export const LinkedBadge: React.FunctionComponent<LinkedBadgeProps> = ({
+export const LinkedBadge: React.FC<LinkedBadgeProps> = ({
   item,
   kind,
 }) => {

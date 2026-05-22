@@ -25,7 +25,7 @@ interface AgentEditorProps {
   onClose: () => void
 }
 
-export const AgentEditor: React.FunctionComponent<AgentEditorProps> = ({
+export const AgentEditor: React.FC<AgentEditorProps> = ({
   wireId,
   sourceFile,
   exportedName,

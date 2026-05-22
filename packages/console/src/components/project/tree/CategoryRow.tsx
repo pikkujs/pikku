@@ -11,7 +11,7 @@ interface CategoryRowProps {
   onToggle?: () => void
 }
 
-export const CategoryRow: React.FunctionComponent<CategoryRowProps> = ({
+export const CategoryRow: React.FC<CategoryRowProps> = ({
   name,
   childrenCount,
   isCollapsed = false,

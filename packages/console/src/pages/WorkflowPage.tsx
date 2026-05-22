@@ -13,7 +13,10 @@ import {
   useConsoleNavigator,
 } from '../context/ConsoleNavigatorContext'
 
-function WorkflowPageInner({ extraColumns, headerRight }: { extraColumns?: WorkflowExtraColumn[]; headerRight?: React.ReactNode }) {
+const WorkflowPageInner: React.FC<{
+  extraColumns?: WorkflowExtraColumn[]
+  headerRight?: React.ReactNode
+}> = ({ extraColumns, headerRight }) => {
   const { workflowId } = useConsoleNavigator()
   const { meta, loading } = usePikkuMeta()
   const { data: aiWorkflows } = useAIWorkflows()
@@ -58,7 +61,7 @@ function WorkflowPageInner({ extraColumns, headerRight }: { extraColumns?: Workf
   )
 }
 
-export const WorkflowsPage: React.FunctionComponent<{
+export const WorkflowsPage: React.FC<{
   extraColumns?: WorkflowExtraColumn[]
   headerRight?: React.ReactNode
 }> = ({ extraColumns, headerRight }) => {

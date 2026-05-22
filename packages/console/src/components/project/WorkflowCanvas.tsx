@@ -128,7 +128,7 @@ interface WorkflowCanvasProps {
   onItemSelect: (name: string) => void
 }
 
-const WorkflowCanvasFlow: React.FunctionComponent<{
+const WorkflowCanvasFlow: React.FC<{
   workflow: any
   onPaneClick?: () => void
 }> = ({ workflow, onPaneClick }) => {
@@ -192,7 +192,7 @@ const WorkflowCanvasFlow: React.FunctionComponent<{
   )
 }
 
-const WorkflowCanvasInner: React.FunctionComponent<{
+const WorkflowCanvasInner: React.FC<{
   workflow: any
   onPaneClick?: () => void
 }> = (props) => {
@@ -203,7 +203,7 @@ const WorkflowCanvasInner: React.FunctionComponent<{
   )
 }
 
-const WorkflowRunsPanel: React.FunctionComponent<{ workflowName: string }> = ({
+const WorkflowRunsPanel: React.FC<{ workflowName: string }> = ({
   workflowName,
 }) => {
   const { selectedRunId, setSelectedRunId, setIsCreatingRun } =
@@ -252,7 +252,7 @@ const WorkflowRunsPanel: React.FunctionComponent<{ workflowName: string }> = ({
   )
 }
 
-const WorkflowCanvasContent: React.FunctionComponent<WorkflowCanvasProps> = ({
+const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
   workflow,
   items,
   onItemSelect,
@@ -450,7 +450,7 @@ const WorkflowCanvasContent: React.FunctionComponent<WorkflowCanvasProps> = ({
   )
 }
 
-export const WorkflowCanvas: React.FunctionComponent<WorkflowCanvasProps> = (
+export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = (
   props
 ) => {
   return (

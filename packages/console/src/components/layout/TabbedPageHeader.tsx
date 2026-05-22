@@ -18,7 +18,7 @@ interface TabbedPageHeaderProps {
   rightSection?: React.ReactNode
 }
 
-export const TabbedPageHeader: React.FunctionComponent<
+export const TabbedPageHeader: React.FC<
   TabbedPageHeaderProps
 > = ({ icon: Icon, category, docsHref, tabs, activeTab, onTabChange, rightSection }) => {
   return (

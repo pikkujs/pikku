@@ -25,7 +25,7 @@ interface TriggerPair {
   trigger: any | null
 }
 
-const TriggerDetail: React.FunctionComponent<{ item: TriggerPair }> = ({
+const TriggerDetail: React.FC<{ item: TriggerPair }> = ({
   item,
 }) => {
   const { navigateInPanel } = usePanelContext()
@@ -97,7 +97,7 @@ const TriggerDetail: React.FunctionComponent<{ item: TriggerPair }> = ({
   )
 }
 
-export const TriggersTab: React.FunctionComponent = () => {
+export const TriggersTab: React.FC = () => {
   const { meta } = usePikkuMeta()
   const [selected, setSelected] = useState<string | null>(null)
   const [search, setSearch] = useState('')

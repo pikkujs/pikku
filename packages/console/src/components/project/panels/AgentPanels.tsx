@@ -26,7 +26,7 @@ interface AgentPanelProps {
   metadata?: any
 }
 
-export const AgentConfiguration: React.FunctionComponent<AgentPanelProps> = ({
+export const AgentConfiguration: React.FC<AgentPanelProps> = ({
   wireId,
   metadata = {},
 }) => {

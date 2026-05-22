@@ -31,7 +31,7 @@ interface StatCardProps {
   href: string
 }
 
-const StatCard: React.FunctionComponent<StatCardProps> = ({
+const StatCard: React.FC<StatCardProps> = ({
   label,
   count,
   icon: Icon,
@@ -88,7 +88,7 @@ const StatCard: React.FunctionComponent<StatCardProps> = ({
   )
 }
 
-export const OverviewPage: React.FunctionComponent = () => {
+export const OverviewPage: React.FC = () => {
   const { counts, loading } = usePikkuMeta()
 
   if (loading) {

@@ -42,7 +42,7 @@ interface AddonMeta {
   icon?: string
 }
 
-const AddonIcon: React.FunctionComponent<{
+const AddonIcon: React.FC<{
   id: string
   size?: number
 }> = ({ id, size = 20 }) => {
@@ -240,7 +240,7 @@ const wireNodes = {
   ],
 }
 
-const MenuButton: React.FunctionComponent<{
+const MenuButton: React.FC<{
   icon: React.ElementType
   title: string
   description: string
@@ -281,7 +281,7 @@ const MenuButton: React.FunctionComponent<{
   )
 }
 
-const BackButton: React.FunctionComponent<{
+const BackButton: React.FC<{
   title: string
   iconId?: string
   onClick: () => void
@@ -301,7 +301,7 @@ const BackButton: React.FunctionComponent<{
   </UnstyledButton>
 )
 
-const NodeItem: React.FunctionComponent<{
+const NodeItem: React.FC<{
   icon?: React.ElementType
   name: string
   description: string
@@ -338,7 +338,7 @@ const NodeItem: React.FunctionComponent<{
   )
 }
 
-const FlowView: React.FunctionComponent<{ onBack: () => void }> = ({
+const FlowView: React.FC<{ onBack: () => void }> = ({
   onBack,
 }) => (
   <Box>
@@ -356,7 +356,7 @@ const FlowView: React.FunctionComponent<{ onBack: () => void }> = ({
   </Box>
 )
 
-const TriggersView: React.FunctionComponent<{ onBack: () => void }> = ({
+const TriggersView: React.FC<{ onBack: () => void }> = ({
   onBack,
 }) => (
   <Box>
@@ -381,7 +381,7 @@ const wireCategories = [
   { key: 'session', title: 'Session', icon: User },
 ] as const
 
-const WireView: React.FunctionComponent<{ onBack: () => void }> = ({
+const WireView: React.FC<{ onBack: () => void }> = ({
   onBack,
 }) => (
   <Box>
@@ -407,7 +407,7 @@ const WireView: React.FunctionComponent<{ onBack: () => void }> = ({
   </Box>
 )
 
-const TransformView: React.FunctionComponent<{
+const TransformView: React.FC<{
   onBack: () => void
 }> = ({ onBack }) => {
   const { isLoading, isError } = useAddonMeta()
@@ -438,7 +438,7 @@ const TransformView: React.FunctionComponent<{
   )
 }
 
-const FunctionsView: React.FunctionComponent<{
+const FunctionsView: React.FC<{
   onBack: () => void
 }> = ({ onBack }) => {
   const { data: functions, isLoading, isError } = useFunctionsMeta()
@@ -499,7 +499,7 @@ const FunctionsView: React.FunctionComponent<{
   )
 }
 
-const AddonItem: React.FunctionComponent<{
+const AddonItem: React.FC<{
   addon: AddonMeta
   onSelect: () => void
 }> = ({ addon, onSelect }) => {
@@ -537,7 +537,7 @@ const AddonItem: React.FunctionComponent<{
   )
 }
 
-const AddonsView: React.FunctionComponent<{
+const AddonsView: React.FC<{
   onBack: () => void
   onSelectAddon: (addon: AddonMeta) => void
 }> = ({ onBack, onSelectAddon }) => {
@@ -585,7 +585,7 @@ const AddonsView: React.FunctionComponent<{
   )
 }
 
-const AddonDetailView: React.FunctionComponent<{
+const AddonDetailView: React.FC<{
   addon: AddonMeta
   onBack: () => void
 }> = ({ addon, onBack }) => {
@@ -635,7 +635,7 @@ const AddonDetailView: React.FunctionComponent<{
   )
 }
 
-const AddStepContent: React.FunctionComponent = () => {
+const AddStepContent: React.FC = () => {
   const [view, setView] = useState<AddStepView>('main')
 
   if (view === 'functions') {

@@ -1,4 +1,4 @@
-export const FunctionIcon: React.FunctionComponent<{ size?: number }> = ({
+export const FunctionIcon: React.FC<{ size?: number }> = ({
   size = 40,
 }) => {
   return (

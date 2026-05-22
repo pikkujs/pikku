@@ -55,7 +55,7 @@ interface PanelChild {
   content: React.ReactNode
 }
 
-const WorkflowStepTabbedPanel: React.FunctionComponent<{
+const WorkflowStepTabbedPanel: React.FC<{
   stepId: string
   metadata: any
 }> = ({ stepId, metadata }) => {
@@ -128,7 +128,7 @@ const WorkflowStepTabbedPanel: React.FunctionComponent<{
   )
 }
 
-const NewWorkflowRunForm: React.FunctionComponent<{ workflowId: string }> = ({
+const NewWorkflowRunForm: React.FC<{ workflowId: string }> = ({
   workflowId,
 }) => {
   const runContext = useWorkflowRunContextSafe()
@@ -229,7 +229,7 @@ const NewWorkflowRunForm: React.FunctionComponent<{ workflowId: string }> = ({
   )
 }
 
-const WorkflowTabbedPanel: React.FunctionComponent<{ workflowId: string }> = ({
+const WorkflowTabbedPanel: React.FC<{ workflowId: string }> = ({
   workflowId,
 }) => {
   const runContext = useWorkflowRunContextSafe()

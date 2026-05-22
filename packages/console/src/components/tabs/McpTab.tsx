@@ -30,7 +30,7 @@ const TYPE_BADGE_COLORS: Record<string, string> = {
   prompt: 'violet',
 }
 
-const McpDetailPanel: React.FunctionComponent<{ item: any }> = ({ item }) => {
+const McpDetailPanel: React.FC<{ item: any }> = ({ item }) => {
   const { navigateInPanel } = usePanelContext()
   const funcId = item?.pikkuFuncId
   const { data: funcMeta } = useFunctionMeta(funcId ?? '')
@@ -172,7 +172,7 @@ const McpDetailPanel: React.FunctionComponent<{ item: any }> = ({ item }) => {
   )
 }
 
-export const McpTab: React.FunctionComponent = () => {
+export const McpTab: React.FC = () => {
   const { meta } = usePikkuMeta()
   const [selected, setSelected] = useState<string | null>(null)
   const [search, setSearch] = useState('')

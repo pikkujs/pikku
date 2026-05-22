@@ -44,7 +44,7 @@ interface CliHelpViewProps {
   onNavigate: (path: string[]) => void
 }
 
-export const CliHelpView: React.FunctionComponent<CliHelpViewProps> = ({
+export const CliHelpView: React.FC<CliHelpViewProps> = ({
   programId,
   cliMeta,
   cliRenderers,

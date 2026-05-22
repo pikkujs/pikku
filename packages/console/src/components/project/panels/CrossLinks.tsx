@@ -18,7 +18,7 @@ const TYPE_HREF: Record<string, string> = {
   triggerSource: '/jobs?tab=triggers',
 }
 
-export const FunctionCrossLinks: React.FunctionComponent<{
+export const FunctionCrossLinks: React.FC<{
   pikkuFuncId: string
 }> = ({ pikkuFuncId }) => {
   const Link = useLink()
@@ -117,7 +117,7 @@ export const FunctionCrossLinks: React.FunctionComponent<{
   )
 }
 
-export const WiringCrossLinks: React.FunctionComponent<{
+export const WiringCrossLinks: React.FC<{
   pikkuFuncId?: string
 }> = ({ pikkuFuncId }) => {
   const Link = useLink()

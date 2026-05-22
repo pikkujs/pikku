@@ -50,7 +50,7 @@ const STATUS_GLYPH: Record<string, string> = {
 
 const STORAGE_KEY = 'pikku-changes-base-path'
 
-function StatusPill({ status }: { status: DiffEntry['status'] }) {
+const StatusPill: React.FC<{ status: DiffEntry['status'] }> = ({ status }) => {
   return (
     <Badge
       size="sm"
@@ -63,7 +63,7 @@ function StatusPill({ status }: { status: DiffEntry['status'] }) {
   )
 }
 
-function HttpMethodBadge({ method }: { method: string }) {
+const HttpMethodBadge: React.FC<{ method: string }> = ({ method }) => {
   const def = httpMethodDefs[method.toUpperCase()] ?? {
     color: 'gray',
     label: method.toUpperCase(),
@@ -80,7 +80,7 @@ function HttpMethodBadge({ method }: { method: string }) {
   )
 }
 
-function FuncWrapperBadge({ wrapper }: { wrapper?: string }) {
+const FuncWrapperBadge: React.FC<{ wrapper?: string }> = ({ wrapper }) => {
   if (!wrapper) return null
   const def = funcWrapperDefs[wrapper] ?? { color: 'gray', label: wrapper }
   return (
@@ -90,13 +90,10 @@ function FuncWrapperBadge({ wrapper }: { wrapper?: string }) {
   )
 }
 
-function PrimaryRow({
-  entry,
-  category,
-}: {
+const PrimaryRow: React.FC<{
   entry: DiffEntry
   category: string
-}) {
+}> = ({ entry, category }) => {
   // Display priority: ours if present (added/modified/unchanged), otherwise base (removed)
   const data = (entry.ours ?? entry.base ?? {}) as Record<string, unknown>
 
@@ -179,13 +176,10 @@ function PrimaryRow({
   )
 }
 
-function FieldDiff({
-  ours,
-  base,
-}: {
+const FieldDiff: React.FC<{
   ours?: Record<string, unknown>
   base?: Record<string, unknown>
-}) {
+}> = ({ ours, base }) => {
   const allKeys = Array.from(
     new Set([...Object.keys(ours ?? {}), ...Object.keys(base ?? {})])
   ).sort()
@@ -299,7 +293,10 @@ function FieldDiff({
   )
 }
 
-function EntryCard({ entry, category }: { entry: DiffEntry; category: string }) {
+const EntryCard: React.FC<{ entry: DiffEntry; category: string }> = ({
+  entry,
+  category,
+}) => {
   const [expanded, setExpanded] = useState(entry.status === 'modified')
   return (
     <Box
@@ -330,13 +327,10 @@ function EntryCard({ entry, category }: { entry: DiffEntry; category: string }) 
   )
 }
 
-function CategoryPanel({
-  entries,
-  category,
-}: {
+const CategoryPanel: React.FC<{
   entries: DiffEntry[]
   category: string
-}) {
+}> = ({ entries, category }) => {
   const visible = entries.filter((e) => e.status !== 'unchanged')
   if (visible.length === 0) {
     return (
@@ -356,7 +350,7 @@ function CategoryPanel({
   )
 }
 
-function DiffSummaryBar({ diff }: { diff: StateDiff }) {
+const DiffSummaryBar: React.FC<{ diff: StateDiff }> = ({ diff }) => {
   const totals = Object.values(diff.summary).reduce(
     (acc, s) => {
       acc.added += s.added
@@ -412,7 +406,7 @@ function DiffSummaryBar({ diff }: { diff: StateDiff }) {
   )
 }
 
-function DiffView({ diff }: { diff: StateDiff }) {
+const DiffView: React.FC<{ diff: StateDiff }> = ({ diff }) => {
   const tabs = useMemo(() => {
     return Object.entries(diff.categories)
       .map(([key, cat]) => ({
@@ -489,7 +483,7 @@ function DiffView({ diff }: { diff: StateDiff }) {
   )
 }
 
-export function ChangesPage() {
+export const ChangesPage: React.FC = () => {
   const [searchParams] = useSearchParams()
   const queryBase = searchParams.get('base')
   const queryOurs = searchParams.get('ours')

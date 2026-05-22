@@ -12,7 +12,7 @@ interface ProjectFunctionsProps {
   functionUsedBy?: Map<string, any>
 }
 
-export const ProjectFunctions: React.FunctionComponent<
+export const ProjectFunctions: React.FC<
   ProjectFunctionsProps
 > = ({ functions, functionUsedBy: functionUsedByProp }) => {
   const { openFunction } = usePanelContext()

@@ -65,7 +65,7 @@ interface CliHelpTextProps {
   commandPath: string[]
 }
 
-export const CliHelpText: React.FunctionComponent<CliHelpTextProps> = ({
+export const CliHelpText: React.FC<CliHelpTextProps> = ({
   programId,
   cliMeta,
   commandPath,

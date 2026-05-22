@@ -17,7 +17,7 @@ interface HttpWireDetailsFormProps {
   metadata: any
 }
 
-export const HttpWireDetailsForm: React.FunctionComponent<
+export const HttpWireDetailsForm: React.FC<
   HttpWireDetailsFormProps
 > = ({ wireType, wireId, metadata }) => {
   const route = metadata.route || wireId

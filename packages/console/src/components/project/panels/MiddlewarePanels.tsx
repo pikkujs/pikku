@@ -12,7 +12,7 @@ interface MiddlewarePanelProps {
   metadata?: any
 }
 
-const DefinitionPanel: React.FunctionComponent<{ defId: string; def: any }> = ({
+const DefinitionPanel: React.FC<{ defId: string; def: any }> = ({
   defId,
   def,
 }) => {
@@ -175,7 +175,7 @@ const DefinitionPanel: React.FunctionComponent<{ defId: string; def: any }> = ({
   )
 }
 
-const GroupPanel: React.FunctionComponent<{
+const GroupPanel: React.FC<{
   groupType: string
   groupKey: string
 }> = ({ groupType, groupKey }) => {
@@ -269,7 +269,7 @@ const GroupPanel: React.FunctionComponent<{
   )
 }
 
-export const MiddlewareConfiguration: React.FunctionComponent<
+export const MiddlewareConfiguration: React.FC<
   MiddlewarePanelProps
 > = ({ middlewareId, metadata = {} }) => {
   if (metadata._groupType) {

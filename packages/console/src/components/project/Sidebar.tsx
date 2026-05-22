@@ -161,7 +161,7 @@ const EXPANDED_WIDTH = 210
 export const SIDEBAR_COLLAPSED_WIDTH = COLLAPSED_WIDTH
 export const SIDEBAR_EXPANDED_WIDTH = EXPANDED_WIDTH
 
-export const Sidebar: React.FunctionComponent<SidebarProps> = ({
+export const Sidebar: React.FC<SidebarProps> = ({
   sections = DEFAULT_NAV_SECTIONS,
   branding = DEFAULT_BRANDING,
   footer,

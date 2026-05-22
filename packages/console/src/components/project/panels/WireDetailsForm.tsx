@@ -9,7 +9,7 @@ interface WireDetailsFormProps {
   metadata: any
 }
 
-export const WireDetailsForm: React.FunctionComponent<WireDetailsFormProps> = ({
+export const WireDetailsForm: React.FC<WireDetailsFormProps> = ({
   wireType,
   wireId,
   metadata,

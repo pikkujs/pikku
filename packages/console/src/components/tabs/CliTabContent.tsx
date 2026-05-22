@@ -27,7 +27,7 @@ const countCommands = (commands: Record<string, any>): number => {
   return count
 }
 
-const CliPageInner: React.FunctionComponent<{
+const CliPageInner: React.FC<{
   programs: any[]
   cliRenderers: Record<string, any>
 }> = ({ programs, cliRenderers }) => {
@@ -279,7 +279,7 @@ const CliPageInner: React.FunctionComponent<{
   )
 }
 
-export const CliTabContent: React.FunctionComponent = () => {
+export const CliTabContent: React.FC = () => {
   const { meta } = usePikkuMeta()
   const programs = meta.cliMeta || []
 

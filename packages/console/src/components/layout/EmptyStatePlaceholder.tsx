@@ -10,7 +10,7 @@ interface EmptyStatePlaceholderProps {
   docsHref: string
 }
 
-export const EmptyStatePlaceholder: React.FunctionComponent<
+export const EmptyStatePlaceholder: React.FC<
   EmptyStatePlaceholderProps
 > = ({ icon: Icon, title, description, docsHref }) => {
   return (

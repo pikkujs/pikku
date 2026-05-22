@@ -22,7 +22,7 @@ interface AgentItem {
   data: any
 }
 
-const AgentsList: React.FunctionComponent<{ extraColumns?: AgentExtraColumn[]; headerRight?: React.ReactNode }> = ({ extraColumns, headerRight }) => {
+const AgentsList: React.FC<{ extraColumns?: AgentExtraColumn[]; headerRight?: React.ReactNode }> = ({ extraColumns, headerRight }) => {
   const navigate = useNavigate()
   const { meta, loading } = usePikkuMeta()
 
@@ -116,7 +116,7 @@ const AgentsList: React.FunctionComponent<{ extraColumns?: AgentExtraColumn[]; h
   )
 }
 
-const AgentDetailView: React.FunctionComponent<{ agentId: string }> = ({
+const AgentDetailView: React.FC<{ agentId: string }> = ({
   agentId,
 }) => {
   const { meta } = usePikkuMeta()
@@ -132,7 +132,7 @@ const AgentDetailView: React.FunctionComponent<{ agentId: string }> = ({
   return <div />
 }
 
-export const AgentsPage: React.FunctionComponent<{ extraColumns?: AgentExtraColumn[]; headerRight?: React.ReactNode }> = ({ extraColumns, headerRight }) => {
+export const AgentsPage: React.FC<{ extraColumns?: AgentExtraColumn[]; headerRight?: React.ReactNode }> = ({ extraColumns, headerRight }) => {
   const [searchParams] = useSearchParams()
   const agentId = searchParams.get('id')
   const { meta, loading } = usePikkuMeta()

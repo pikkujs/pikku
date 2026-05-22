@@ -25,7 +25,7 @@ interface CredentialMeta {
   isOAuth2: boolean
 }
 
-export const CredentialsOverviewTab: React.FunctionComponent = () => {
+export const CredentialsOverviewTab: React.FC = () => {
   const { meta } = usePikkuMeta()
   const rpc = usePikkuRPC()
 
@@ -93,7 +93,7 @@ export const CredentialsOverviewTab: React.FunctionComponent = () => {
   )
 }
 
-const CredentialCard: React.FunctionComponent<{
+const CredentialCard: React.FC<{
   credential: CredentialMeta
   isConnected: boolean
 }> = ({ credential, isConnected }) => {

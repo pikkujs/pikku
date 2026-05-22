@@ -11,7 +11,7 @@ interface GenericNodeData {
   description?: string
 }
 
-export const GenericNode: React.FunctionComponent<
+export const GenericNode: React.FC<
   NodeProps<GenericNodeData>
 > = ({ data, id }) => {
   const { openWorkflowStep } = usePanelContext()

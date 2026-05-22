@@ -21,7 +21,7 @@ interface HttpTabbedPanelProps {
   metadata: any
 }
 
-export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
+export const HttpTabbedPanel: React.FC<HttpTabbedPanelProps> = ({
   wireId,
   metadata,
 }) => {

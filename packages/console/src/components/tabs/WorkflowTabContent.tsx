@@ -9,7 +9,7 @@ import { Center, Loader, Box, Text } from '@mantine/core'
 import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
 import styles from '../ui/console.module.css'
 
-export const WorkflowTabContent: React.FunctionComponent = () => {
+export const WorkflowTabContent: React.FC = () => {
   const { workflowId, navigateTo } = useConsoleNavigator()
   const rpc = usePikkuRPC()
   const { data: workflow, isLoading } = useQuery({

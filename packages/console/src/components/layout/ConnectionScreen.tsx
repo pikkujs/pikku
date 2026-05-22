@@ -44,7 +44,7 @@ function getErrorGuidance(error: string, url: string): { title: string; hint: st
   }
 }
 
-export const ConnectionScreen: React.FunctionComponent<{ error: string }> = ({
+export const ConnectionScreen: React.FC<{ error: string }> = ({
   error,
 }) => {
   const [url, setUrl] = useState(getServerUrl)

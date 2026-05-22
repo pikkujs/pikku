@@ -17,7 +17,7 @@ interface SchedulerWireDetailsFormProps {
   metadata: any
 }
 
-export const SchedulerWireDetailsForm: React.FunctionComponent<
+export const SchedulerWireDetailsForm: React.FC<
   SchedulerWireDetailsFormProps
 > = ({ wireType, wireId, metadata }) => {
   const taskName = wireId

@@ -21,7 +21,7 @@ interface ChannelNavTreeProps {
 
 const HANDLER_KEYS = ['connect', 'disconnect'] as const
 
-const ChannelTree: React.FunctionComponent<{
+const ChannelTree: React.FC<{
   name: string
   channel: ChannelMeta
   isActive: boolean
@@ -215,7 +215,7 @@ const ChannelTree: React.FunctionComponent<{
   )
 }
 
-export const ChannelNavTree: React.FunctionComponent<ChannelNavTreeProps> = ({
+export const ChannelNavTree: React.FC<ChannelNavTreeProps> = ({
   channelName,
   channel,
   allChannelsMeta,

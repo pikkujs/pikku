@@ -36,7 +36,7 @@ interface SecretPanelProps {
   metadata?: any
 }
 
-export const SecretConfiguration: React.FunctionComponent<SecretPanelProps> = ({
+export const SecretConfiguration: React.FC<SecretPanelProps> = ({
   secretId,
   metadata = {},
 }) => {
@@ -132,7 +132,7 @@ export const SecretConfiguration: React.FunctionComponent<SecretPanelProps> = ({
   )
 }
 
-const OAuthConnectionSection: React.FunctionComponent<{
+const OAuthConnectionSection: React.FC<{
   credentialName: string
 }> = ({ credentialName }) => {
   const queryClient = useQueryClient()
@@ -296,7 +296,7 @@ interface VariablePanelProps {
   metadata?: any
 }
 
-export const VariableConfiguration: React.FunctionComponent<
+export const VariableConfiguration: React.FC<
   VariablePanelProps
 > = ({ variableId, metadata = {} }) => {
   return (

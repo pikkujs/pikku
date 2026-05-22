@@ -18,7 +18,7 @@ import { UsersPage } from './pages/UsersPage'
 import { RenderWorkflowPage } from './pages/RenderWorkflowPage'
 import { ChangesPage } from './pages/ChangesPage'
 
-export const App: React.FunctionComponent = () => {
+export const App: React.FC = () => {
   return (
     <Routes>
       <Route path="/oauth/callback" element={<OAuthCallbackPage />} />

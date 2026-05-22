@@ -10,7 +10,7 @@ interface HandlerRowProps {
   handleId: string
 }
 
-const HandlerRow: React.FunctionComponent<HandlerRowProps> = ({
+const HandlerRow: React.FC<HandlerRowProps> = ({
   label,
   handleId,
 }) => {
@@ -54,7 +54,7 @@ interface ChannelEntryNodeData {
   channelMeta: any
 }
 
-export const ChannelEntryNode: React.FunctionComponent<
+export const ChannelEntryNode: React.FC<
   NodeProps<ChannelEntryNodeData>
 > = ({ data }) => {
   const { openChannel } = usePanelContext()

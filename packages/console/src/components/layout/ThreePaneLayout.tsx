@@ -6,7 +6,7 @@ import { PanelContainer } from '../panel/PanelContainer'
 import { usePanelContext } from '../../context/PanelContext'
 import classes from '../ui/console.module.css'
 
-const CollapsedSidebar: React.FunctionComponent<{
+const CollapsedSidebar: React.FC<{
   side: 'left' | 'right'
   onExpand: () => void
 }> = ({ side, onExpand }) => {
@@ -50,7 +50,7 @@ interface ThreePaneLayoutProps {
   hidePanel?: boolean
 }
 
-export const ThreePaneLayout: React.FunctionComponent<ThreePaneLayoutProps> = ({
+export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
   children,
   header,
   runsPanel,

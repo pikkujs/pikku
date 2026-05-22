@@ -16,7 +16,7 @@ interface QueueWireDetailsFormProps {
   metadata: any
 }
 
-export const QueueWireDetailsForm: React.FunctionComponent<
+export const QueueWireDetailsForm: React.FC<
   QueueWireDetailsFormProps
 > = ({ wireType, wireId, metadata }) => {
   const queueName = wireId

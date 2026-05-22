@@ -18,7 +18,7 @@ interface PanelContainerProps {
   emptyMessage?: string
 }
 
-export const PanelContainer: React.FunctionComponent<PanelContainerProps> = ({
+export const PanelContainer: React.FC<PanelContainerProps> = ({
   showTabs = true,
   emptyMessage,
 }) => {

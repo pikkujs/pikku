@@ -31,7 +31,7 @@ type SchedulerHistory = Record<string, { lastRun: RunEntry | null; history: RunE
 
 const GRID_COLUMNS = '1fr 160px 120px'
 
-const CronBadges: React.FunctionComponent<{ schedule: string }> = ({
+const CronBadges: React.FC<{ schedule: string }> = ({
   schedule,
 }) => {
   const parts = schedule.split(' ')
@@ -126,7 +126,7 @@ const fmtDate = (d: Date): string => {
 const fmtTime = (d: Date): string =>
   `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 
-const SchedulerDetail: React.FunctionComponent<{ item: any; history: SchedulerHistory }> = ({ item, history }) => {
+const SchedulerDetail: React.FC<{ item: any; history: SchedulerHistory }> = ({ item, history }) => {
   const { navigateInPanel } = usePanelContext()
   const funcId = item?.pikkuFuncId
   const { data: funcMeta } = useFunctionMeta(funcId ?? '')
@@ -290,7 +290,7 @@ const SchedulerDetail: React.FunctionComponent<{ item: any; history: SchedulerHi
   )
 }
 
-export const SchedulersTab: React.FunctionComponent = () => {
+export const SchedulersTab: React.FC = () => {
   const { meta } = usePikkuMeta()
   const rpc = usePikkuRPC()
   const [selected, setSelected] = useState<string | null>(null)

@@ -79,7 +79,7 @@ const EMPTY_COUNTS: MetaCounts = {
   variables: 0,
 }
 
-export const PikkuMetaProvider: React.FunctionComponent<{
+export const PikkuMetaProvider: React.FC<{
   children: React.ReactNode
 }> = ({ children }) => {
   const rpc = usePikkuRPC()

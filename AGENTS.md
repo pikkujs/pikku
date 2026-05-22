@@ -242,3 +242,19 @@ export const myFunc = pikkuFunc<MyIn, MyOut>({
 ### Environment Variables
 
 **DO NOT use `process.env` inside pikku functions.** Use the `variables` service instead (`services.variables.get('VAR_NAME')`). `process.env` access belongs in server bootstrap code (e.g. `start.ts`, `server.ts`), not in business logic functions.
+
+### React Components
+
+**One JSX-returning component per `.tsx` file.** When a file would contain a second component, extract it to its own file. This is annoying up front but keeps components discoverable and reusable instead of buried as private helpers inside a page. Non-component exports — `type`/`interface` (e.g. `Props`), hooks, constants, and a Provider's own `createContext` — may stay co-located with the single component they belong to.
+
+**Type components with `React.FC`, never `React.FunctionComponent` or an untyped `function`.** Use the `const` arrow form:
+
+```tsx
+type StatusPillProps = { status: DiffEntry['status'] }
+
+const StatusPill: React.FC<StatusPillProps> = ({ status }) => {
+  return <span>{status}</span>
+}
+```
+
+Props with more than one or two fields get a named `Props` type rather than an inline object type.

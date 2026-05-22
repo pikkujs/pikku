@@ -24,7 +24,7 @@ interface VariableValueEditorProps {
   schemaName: string | undefined
 }
 
-export const VariableValueEditor: React.FunctionComponent<
+export const VariableValueEditor: React.FC<
   VariableValueEditorProps
 > = ({ variableId, schemaName }) => {
   const editable = useConsoleEditable()

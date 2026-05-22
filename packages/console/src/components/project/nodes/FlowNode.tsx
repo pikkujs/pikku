@@ -95,7 +95,7 @@ const getHighlightIconColor = (
   return theme.colors?.referencedNode?.[5] ?? theme.colors?.violet?.[5] ?? '#7950f2'
 }
 
-export const FlowNode: React.FunctionComponent<FlowNodeProps> = ({
+export const FlowNode: React.FC<FlowNodeProps> = ({
   icon: Icon,
   colorKey,
   hasInput = false,

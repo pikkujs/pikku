@@ -13,7 +13,7 @@ interface SetNodeData {
 
 type HighlightType = 'focused' | 'referenced' | null
 
-export const SetNode: React.FunctionComponent<NodeProps<SetNodeData>> = ({
+export const SetNode: React.FC<NodeProps<SetNodeData>> = ({
   data,
   id,
 }) => {

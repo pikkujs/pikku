@@ -32,7 +32,7 @@ const getNotes = (prop: any): string | null => {
   return null
 }
 
-const PropertyRow: React.FunctionComponent<{
+const PropertyRow: React.FC<{
   name: string
   prop: any
   required: boolean
@@ -99,7 +99,7 @@ const PropertyRow: React.FunctionComponent<{
   )
 }
 
-const PropertyRows: React.FunctionComponent<{
+const PropertyRows: React.FC<{
   properties: Record<string, any>
   required: string[]
   depth: number
@@ -117,7 +117,7 @@ const PropertyRows: React.FunctionComponent<{
   </>
 )
 
-export const SchemaViewer: React.FunctionComponent<SchemaViewerProps> = ({
+export const SchemaViewer: React.FC<SchemaViewerProps> = ({
   schema,
 }) => {
   if (!schema || typeof schema !== 'object') {

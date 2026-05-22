@@ -34,7 +34,7 @@ const formatDuration = (start: string | undefined, end: string | undefined) => {
   return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`
 }
 
-export const WorkflowStepExecution: React.FunctionComponent<
+export const WorkflowStepExecution: React.FC<
   StepRunPanelProps
 > = ({ stepId }) => {
   const runContext = useWorkflowRunContextSafe()
@@ -159,7 +159,7 @@ export const WorkflowStepExecution: React.FunctionComponent<
   )
 }
 
-export const WorkflowStepInputData: React.FunctionComponent<
+export const WorkflowStepInputData: React.FC<
   StepRunPanelProps
 > = ({ stepId }) => {
   const runContext = useWorkflowRunContextSafe()
@@ -182,7 +182,7 @@ export const WorkflowStepInputData: React.FunctionComponent<
   )
 }
 
-export const WorkflowStepOutputData: React.FunctionComponent<
+export const WorkflowStepOutputData: React.FC<
   StepRunPanelProps
 > = ({ stepId }) => {
   const runContext = useWorkflowRunContextSafe()
@@ -205,7 +205,7 @@ export const WorkflowStepOutputData: React.FunctionComponent<
   )
 }
 
-export const WorkflowStepError: React.FunctionComponent<StepRunPanelProps> = ({
+export const WorkflowStepError: React.FC<StepRunPanelProps> = ({
   stepId,
 }) => {
   const runContext = useWorkflowRunContextSafe()
@@ -269,7 +269,7 @@ export const WorkflowStepError: React.FunctionComponent<StepRunPanelProps> = ({
   )
 }
 
-export const WorkflowStepRetryHistory: React.FunctionComponent<
+export const WorkflowStepRetryHistory: React.FC<
   StepRunPanelProps
 > = ({ stepId }) => {
   const runContext = useWorkflowRunContextSafe()

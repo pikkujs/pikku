@@ -12,7 +12,7 @@ interface MiddlewareItem {
   data: any
 }
 
-export const MiddlewareTab: React.FunctionComponent = () => {
+export const MiddlewareTab: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
   const { openMiddleware } = usePanelContext()
 

@@ -15,7 +15,7 @@ export interface AppLayoutProps {
   sidebar?: SidebarProps
 }
 
-const AppLayoutInner: React.FunctionComponent<AppLayoutProps> = ({
+const AppLayoutInner: React.FC<AppLayoutProps> = ({
   children,
   sidebar,
 }) => {
@@ -56,7 +56,7 @@ const AppLayoutInner: React.FunctionComponent<AppLayoutProps> = ({
   )
 }
 
-export const AppLayout: React.FunctionComponent<AppLayoutProps> = ({
+export const AppLayout: React.FC<AppLayoutProps> = ({
   children,
   sidebar,
 }) => {

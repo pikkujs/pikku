@@ -33,7 +33,7 @@ interface DetailPageHeaderProps {
   rightSection?: React.ReactNode
 }
 
-export const DetailPageHeader: React.FunctionComponent<
+export const DetailPageHeader: React.FC<
   DetailPageHeaderProps
 > = ({
   icon: Icon,

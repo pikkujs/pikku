@@ -13,7 +13,7 @@ interface FanoutNodeData {
 
 type HighlightType = 'focused' | 'referenced' | null
 
-export const FanoutNode: React.FunctionComponent<NodeProps<FanoutNodeData>> = ({
+export const FanoutNode: React.FC<NodeProps<FanoutNodeData>> = ({
   data,
   id,
 }) => {

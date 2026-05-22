@@ -14,7 +14,7 @@ interface TriggerPair {
   trigger: any | null
 }
 
-const TriggersTable: React.FunctionComponent<{
+const TriggersTable: React.FC<{
   pairs: TriggerPair[]
   loading?: boolean
 }> = ({ pairs, loading }) => {
@@ -98,7 +98,7 @@ const TriggersTable: React.FunctionComponent<{
   )
 }
 
-export const TriggersPage: React.FunctionComponent = () => {
+export const TriggersPage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
 
   const pairs = useMemo((): TriggerPair[] => {

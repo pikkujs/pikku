@@ -14,7 +14,7 @@ interface SwitchNodeData {
 
 type HighlightType = 'focused' | 'referenced' | null
 
-export const SwitchNode: React.FunctionComponent<NodeProps<SwitchNodeData>> = ({
+export const SwitchNode: React.FC<NodeProps<SwitchNodeData>> = ({
   data,
   id,
 }) => {

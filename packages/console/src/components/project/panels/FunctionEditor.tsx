@@ -28,7 +28,7 @@ interface FunctionEditorProps {
   onClose: () => void
 }
 
-export const FunctionEditor: React.FunctionComponent<FunctionEditorProps> = ({
+export const FunctionEditor: React.FC<FunctionEditorProps> = ({
   functionName,
   sourceFile,
   exportedName,

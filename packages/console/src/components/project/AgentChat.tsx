@@ -48,7 +48,7 @@ import { useAgentPlayground } from '../../context/AgentPlaygroundContext'
 import { getServerUrl } from '../../context/PikkuRpcProvider'
 import classes from '../ui/console.module.css'
 
-const ToolCallDisplay: React.FunctionComponent<{
+const ToolCallDisplay: React.FC<{
   toolCallId: string
   toolName: string
   args: Record<string, unknown>
@@ -305,7 +305,7 @@ const ToolCallDisplay: React.FunctionComponent<{
   )
 }
 
-const UserMessage: React.FunctionComponent = () => (
+const UserMessage: React.FC = () => (
   <Box className={classes.chatMessageRight}>
     <Box maw="80%">
       <Group gap={6} mb={4}>
@@ -333,7 +333,7 @@ const UserMessage: React.FunctionComponent = () => (
   </Box>
 )
 
-const AssistantMessage: React.FunctionComponent = () => (
+const AssistantMessage: React.FC = () => (
   <Box data-testid="assistant-block" className={classes.chatMessageLeft}>
     <Box maw="80%">
       <Group gap={6} mb={4}>
@@ -386,7 +386,7 @@ const AssistantMessage: React.FunctionComponent = () => (
   </Box>
 )
 
-const AgentComposer: React.FunctionComponent<{ disabled?: boolean }> = ({
+const AgentComposer: React.FC<{ disabled?: boolean }> = ({
   disabled,
 }) => (
   <Box py="sm" pb="md">
@@ -437,7 +437,7 @@ const AgentComposer: React.FunctionComponent<{ disabled?: boolean }> = ({
   </Box>
 )
 
-export const AgentChat: React.FunctionComponent<{
+export const AgentChat: React.FC<{
   streaming?: boolean
 }> = ({ streaming = false }) => {
   const { agentId, threadId, setThreadId, refetchThreads, dbMessages, model, temperature } =

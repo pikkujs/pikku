@@ -36,7 +36,7 @@ interface WorkflowRunSelectorProps {
   workflowName: string
 }
 
-export const WorkflowRunSelector: React.FunctionComponent<
+export const WorkflowRunSelector: React.FC<
   WorkflowRunSelectorProps
 > = ({ workflowName }) => {
   const [opened, setOpened] = useState(false)

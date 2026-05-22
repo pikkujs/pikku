@@ -95,7 +95,7 @@ interface PackageRegistryEntry {
   schemas: Record<string, unknown>
 }
 
-const PackageIcon: React.FunctionComponent<{
+const PackageIcon: React.FC<{
   icon?: string
   name: string
   size?: number
@@ -121,7 +121,7 @@ const PackageIcon: React.FunctionComponent<{
   )
 }
 
-const ReadOnlyTable: React.FunctionComponent<{
+const ReadOnlyTable: React.FC<{
   headers: string[]
   rows: React.ReactNode[][]
 }> = ({ headers, rows }) => (
@@ -160,7 +160,7 @@ const ReadOnlyTable: React.FunctionComponent<{
   </Table>
 )
 
-const HttpRoutesTab: React.FunctionComponent<{
+const HttpRoutesTab: React.FC<{
   httpRoutes: PackageRegistryEntry['httpRoutes']
 }> = ({ httpRoutes }) => {
   const rows: Array<{ method: string; route: string; sse?: boolean }> = []
@@ -192,7 +192,7 @@ const HttpRoutesTab: React.FunctionComponent<{
   )
 }
 
-const ChannelsTab: React.FunctionComponent<{
+const ChannelsTab: React.FC<{
   channels: PackageRegistryEntry['channels']
 }> = ({ channels }) => (
   <ReadOnlyTable
@@ -208,7 +208,7 @@ const ChannelsTab: React.FunctionComponent<{
   />
 )
 
-const CliTab: React.FunctionComponent<{
+const CliTab: React.FC<{
   cli: PackageRegistryEntry['cli']
 }> = ({ cli }) => {
   const rows: Array<{
@@ -237,7 +237,7 @@ const CliTab: React.FunctionComponent<{
   )
 }
 
-const McpTab: React.FunctionComponent<{ mcp: McpMeta }> = ({ mcp }) => {
+const McpTab: React.FC<{ mcp: McpMeta }> = ({ mcp }) => {
   const rows: Array<{ type: string; name: string; description?: string }> = []
   for (const [name, meta] of Object.entries(mcp.toolsMeta ?? {})) {
     rows.push({ type: 'Tool', name, description: (meta as any).description })
@@ -281,7 +281,7 @@ const McpTab: React.FunctionComponent<{ mcp: McpMeta }> = ({ mcp }) => {
   )
 }
 
-export const PackageDetailPage: React.FunctionComponent<{
+export const PackageDetailPage: React.FC<{
   id: string
   source: 'installed' | 'community' | 'api'
   onBack: () => void

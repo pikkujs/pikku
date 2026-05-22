@@ -20,7 +20,7 @@ interface HandlerRowProps {
   hasTarget: boolean
 }
 
-const HandlerRow: React.FunctionComponent<HandlerRowProps> = ({
+const HandlerRow: React.FC<HandlerRowProps> = ({
   label,
   handleId,
   hasTarget,
@@ -62,7 +62,7 @@ const HandlerRow: React.FunctionComponent<HandlerRowProps> = ({
   )
 }
 
-export const ChannelWiringNode: React.FunctionComponent<
+export const ChannelWiringNode: React.FC<
   NodeProps<ChannelWiringNodeData>
 > = ({ data, id }) => {
   const { openWorkflowStep } = usePanelContext()

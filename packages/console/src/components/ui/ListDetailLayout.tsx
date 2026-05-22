@@ -12,7 +12,7 @@ export interface ListDetailLayoutProps {
   height?: string
 }
 
-export const ListDetailLayout: React.FunctionComponent<ListDetailLayoutProps> = ({
+export const ListDetailLayout: React.FC<ListDetailLayoutProps> = ({
   list,
   detail,
   emptyMessage = 'Select an item',

@@ -16,7 +16,7 @@ const MCP_FILTERS = [
   { value: 'prompt', label: 'Prompts' },
 ]
 
-const McpTable: React.FunctionComponent<{
+const McpTable: React.FC<{
   items: any[]
   loading?: boolean
 }> = ({ items, loading }) => {
@@ -82,7 +82,7 @@ const McpTable: React.FunctionComponent<{
   )
 }
 
-export const McpPage: React.FunctionComponent = () => {
+export const McpPage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
 
   const items = useMemo(() => {

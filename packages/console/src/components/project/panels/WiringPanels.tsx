@@ -25,7 +25,7 @@ interface WiringPanelProps {
   metadata?: any
 }
 
-export const HttpConfiguration: React.FunctionComponent<WiringPanelProps> = ({
+export const HttpConfiguration: React.FC<WiringPanelProps> = ({
   wireId,
   metadata = {},
 }) => {
@@ -96,7 +96,7 @@ export const HttpConfiguration: React.FunctionComponent<WiringPanelProps> = ({
   )
 }
 
-export const ChannelConfiguration: React.FunctionComponent<
+export const ChannelConfiguration: React.FC<
   WiringPanelProps
 > = ({ wireId, metadata = {} }) => {
   const { navigateInPanel } = usePanelContext()
@@ -235,7 +235,7 @@ export const ChannelConfiguration: React.FunctionComponent<
   )
 }
 
-export const RpcConfiguration: React.FunctionComponent<WiringPanelProps> = ({
+export const RpcConfiguration: React.FC<WiringPanelProps> = ({
   wireId,
   metadata = {},
 }) => {
@@ -259,7 +259,7 @@ export const RpcConfiguration: React.FunctionComponent<WiringPanelProps> = ({
   )
 }
 
-export const SchedulerConfiguration: React.FunctionComponent<
+export const SchedulerConfiguration: React.FC<
   WiringPanelProps
 > = ({ wireId, metadata = {} }) => {
   const middleware = metadata?.middleware || []
@@ -317,7 +317,7 @@ export const SchedulerConfiguration: React.FunctionComponent<
   )
 }
 
-export const QueueConfiguration: React.FunctionComponent<WiringPanelProps> = ({
+export const QueueConfiguration: React.FC<WiringPanelProps> = ({
   wireId,
   metadata = {},
 }) => {
@@ -388,7 +388,7 @@ export const QueueConfiguration: React.FunctionComponent<WiringPanelProps> = ({
   )
 }
 
-const CliOptionsTable: React.FunctionComponent<{
+const CliOptionsTable: React.FC<{
   options: Record<string, any>
 }> = ({ options }) => {
   const entries = Object.entries(options)
@@ -439,7 +439,7 @@ const CliOptionsTable: React.FunctionComponent<{
   )
 }
 
-const CliCommandTree: React.FunctionComponent<{
+const CliCommandTree: React.FC<{
   commands: Record<string, any>
   depth?: number
 }> = ({ commands, depth = 0 }) => {
@@ -511,7 +511,7 @@ const CliCommandTree: React.FunctionComponent<{
   )
 }
 
-export const CliConfiguration: React.FunctionComponent<WiringPanelProps> = ({
+export const CliConfiguration: React.FC<WiringPanelProps> = ({
   wireId,
   metadata = {},
 }) => {
@@ -565,7 +565,7 @@ export const CliConfiguration: React.FunctionComponent<WiringPanelProps> = ({
   )
 }
 
-export const McpConfiguration: React.FunctionComponent<WiringPanelProps> = ({
+export const McpConfiguration: React.FC<WiringPanelProps> = ({
   wireId,
   metadata = {},
 }) => {
@@ -656,7 +656,7 @@ export const McpConfiguration: React.FunctionComponent<WiringPanelProps> = ({
   )
 }
 
-export const TriggerConfiguration: React.FunctionComponent<
+export const TriggerConfiguration: React.FC<
   WiringPanelProps
 > = ({ wireId, metadata = {} }) => {
   const middleware = metadata?.middleware || []
@@ -697,7 +697,7 @@ export const TriggerConfiguration: React.FunctionComponent<
   )
 }
 
-export const TriggerSourceConfiguration: React.FunctionComponent<
+export const TriggerSourceConfiguration: React.FC<
   WiringPanelProps
 > = ({ wireId, metadata = {} }) => {
   return (

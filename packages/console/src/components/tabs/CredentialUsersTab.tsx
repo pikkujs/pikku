@@ -27,7 +27,7 @@ interface UserRow {
   isComplete: boolean
 }
 
-export const CredentialUsersTab: React.FunctionComponent = () => {
+export const CredentialUsersTab: React.FC = () => {
   const { meta, loading: metaLoading } = usePikkuMeta()
   const rpc = usePikkuRPC()
   const { openCredentialUser } = usePanelContext()

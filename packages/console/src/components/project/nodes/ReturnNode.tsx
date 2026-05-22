@@ -12,7 +12,7 @@ interface ReturnNodeData {
 
 type HighlightType = 'focused' | 'referenced' | null
 
-export const ReturnNode: React.FunctionComponent<NodeProps<ReturnNodeData>> = ({
+export const ReturnNode: React.FC<NodeProps<ReturnNodeData>> = ({
   data,
   id,
 }) => {

@@ -13,7 +13,7 @@ interface SleepNodeData {
 
 type HighlightType = 'focused' | 'referenced' | null
 
-export const SleepNode: React.FunctionComponent<NodeProps<SleepNodeData>> = ({
+export const SleepNode: React.FC<NodeProps<SleepNodeData>> = ({
   data,
   id,
 }) => {

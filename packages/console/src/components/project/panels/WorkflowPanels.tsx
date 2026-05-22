@@ -38,7 +38,7 @@ interface WorkflowPanelProps {
   workflowId: string
 }
 
-export const WorkflowHeader: React.FunctionComponent<WorkflowPanelProps> = ({
+export const WorkflowHeader: React.FC<WorkflowPanelProps> = ({
   workflowId,
 }) => {
   const { workflow } = useWorkflowContext()
@@ -68,7 +68,7 @@ interface WiredTo {
   jobs: Array<{ type: string; id: string; name: string }>
 }
 
-const WorkflowWiring: React.FunctionComponent<{ wiredTo: WiredTo }> = ({
+const WorkflowWiring: React.FC<{ wiredTo: WiredTo }> = ({
   wiredTo,
 }) => {
   const Link = useLink()
@@ -130,7 +130,7 @@ const WorkflowWiring: React.FunctionComponent<{ wiredTo: WiredTo }> = ({
   )
 }
 
-export const WorkflowConfiguration: React.FunctionComponent<
+export const WorkflowConfiguration: React.FC<
   WorkflowPanelProps
 > = ({ workflowId }) => {
   const { workflow } = useWorkflowContext()
@@ -168,7 +168,7 @@ export const WorkflowConfiguration: React.FunctionComponent<
   )
 }
 
-export const WorkflowNodes: React.FunctionComponent<WorkflowPanelProps> = ({
+export const WorkflowNodes: React.FC<WorkflowPanelProps> = ({
   workflowId,
 }) => {
   const { workflow, setFocusedNode } = useWorkflowContext()
@@ -234,7 +234,7 @@ export const WorkflowNodes: React.FunctionComponent<WorkflowPanelProps> = ({
   )
 }
 
-const WorkflowRunNodes: React.FunctionComponent<WorkflowPanelProps> = ({
+const WorkflowRunNodes: React.FC<WorkflowPanelProps> = ({
   workflowId,
 }) => {
   const { workflow, setFocusedNode } = useWorkflowContext()
@@ -322,7 +322,7 @@ const WorkflowRunNodes: React.FunctionComponent<WorkflowPanelProps> = ({
   )
 }
 
-export const WorkflowState: React.FunctionComponent<WorkflowPanelProps> = ({
+export const WorkflowState: React.FC<WorkflowPanelProps> = ({
   workflowId,
 }) => {
   const { workflow } = useWorkflowContext()
@@ -399,7 +399,7 @@ const formatDuration = (start: string | undefined, end: string | undefined) => {
   return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`
 }
 
-export const WorkflowRunOverview: React.FunctionComponent<
+export const WorkflowRunOverview: React.FC<
   WorkflowPanelProps
 > = ({ workflowId }) => {
   const runContext = useWorkflowRunContextSafe()

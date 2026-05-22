@@ -12,7 +12,7 @@ interface PermissionPanelProps {
   metadata?: any
 }
 
-const DefinitionPanel: React.FunctionComponent<{ defId: string; def: any }> = ({
+const DefinitionPanel: React.FC<{ defId: string; def: any }> = ({
   defId,
   def,
 }) => {
@@ -140,7 +140,7 @@ const DefinitionPanel: React.FunctionComponent<{ defId: string; def: any }> = ({
   )
 }
 
-const GroupPanel: React.FunctionComponent<{
+const GroupPanel: React.FC<{
   groupType: string
   groupKey: string
 }> = ({ groupType, groupKey }) => {
@@ -215,7 +215,7 @@ const GroupPanel: React.FunctionComponent<{
   )
 }
 
-export const PermissionConfiguration: React.FunctionComponent<
+export const PermissionConfiguration: React.FC<
   PermissionPanelProps
 > = ({ permissionId, metadata = {} }) => {
   if (metadata._groupType) {

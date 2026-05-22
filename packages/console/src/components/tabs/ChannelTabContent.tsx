@@ -11,7 +11,7 @@ import { ChannelDetailView } from '../channel/ChannelDetailView'
 import type { ChannelMeta } from '@pikku/core/channel'
 import styles from '../ui/console.module.css'
 
-const ChannelTabInner: React.FunctionComponent<{
+const ChannelTabInner: React.FC<{
   channelName: string
   channelMeta: ChannelMeta
   allChannelsMeta: Record<string, ChannelMeta>
@@ -53,7 +53,7 @@ const ChannelTabInner: React.FunctionComponent<{
   )
 }
 
-export const ChannelTabContent: React.FunctionComponent = () => {
+export const ChannelTabContent: React.FC = () => {
   const [searchParams] = useSearchParams()
   const channelName = searchParams.get('id') || ''
   const { meta } = usePikkuMeta()

@@ -6,7 +6,7 @@ export interface EmptyStateProps {
   message: string
 }
 
-export const EmptyState: React.FunctionComponent<EmptyStateProps> = ({
+export const EmptyState: React.FC<EmptyStateProps> = ({
   message,
 }) => (
   <Box className={classes.emptyState}>
