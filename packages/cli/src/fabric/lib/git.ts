@@ -39,11 +39,17 @@ export async function currentBranch(cwd?: string): Promise<string> {
  * Returns the fetch URL for the given remote, with credentials and .git suffix
  * stripped so it's safe to store server-side or pass to importProject.
  */
-export async function getRemoteUrl(remote = 'origin', cwd?: string): Promise<string> {
+export async function getRemoteUrl(
+  remote = 'origin',
+  cwd?: string
+): Promise<string> {
   const raw = await git(['remote', 'get-url', remote], cwd)
-  return raw
-    .replace(/\.git$/, '')
-    .replace(/^(https?:\/\/)[^@]+@/, '$1')
+  // Convert SSH format (git@github.com:owner/repo.git) to HTTPS
+  const sshMatch = raw.match(/^git@([^:]+):(.+?)(?:\.git)?$/)
+  if (sshMatch) {
+    return `https://${sshMatch[1]}/${sshMatch[2]}`
+  }
+  return raw.replace(/\.git$/, '').replace(/^(https?:\/\/)[^@]+@/, '$1')
 }
 
 export async function headSha(cwd?: string): Promise<string> {

@@ -14,6 +14,9 @@ export const FabricLinkOutput = z.object({
   stageId: z.string(),
 })
 
+const GITHUB_POLL_INTERVAL_MS = 2000
+const GITHUB_POLL_TIMEOUT_MS = 5 * 60 * 1000
+
 export const FabricLink = pikkuSessionlessFunc({
   description:
     'Register the current git repo as a fabric project and queue an initial deploy.',
@@ -30,6 +33,42 @@ export const FabricLink = pikkuSessionlessFunc({
 
     const rpc = getRpc({ apiUrl: ctx.apiUrl, token: ctx.token })
 
+    // Only check GitHub App installation for github.com repos.
+    // Gitea (local dev) and other hosts use shared tokens — no App needed.
+    const isGithub = /github\.com/i.test(remoteUrl)
+    if (isGithub) {
+      const ghInstall = await rpc.invoke('checkGithubInstall', {})
+      if (!ghInstall.installed) {
+        if (!ghInstall.installUrl) {
+          throw new Error(
+            'GitHub App is not configured on this fabric deployment.'
+          )
+        }
+        console.log('')
+        console.log('  GitHub App not installed. Connect GitHub to continue:')
+        console.log('')
+        console.log(`    ${ghInstall.installUrl}`)
+        console.log('')
+        console.log('  Waiting for GitHub App installation...')
+        const deadline = Date.now() + GITHUB_POLL_TIMEOUT_MS
+        let installed = false
+        while (Date.now() < deadline) {
+          await new Promise((r) => setTimeout(r, GITHUB_POLL_INTERVAL_MS))
+          const check = await rpc.invoke('checkGithubInstall', {})
+          if (check.installed) {
+            installed = true
+            console.log(`  GitHub connected (${check.accountLogin})`)
+            break
+          }
+        }
+        if (!installed) {
+          throw new Error(
+            'Timed out waiting for GitHub App installation. Run `pikku fabric link` again after installing.'
+          )
+        }
+      }
+    }
+
     const project = await rpc.invoke('importProject', { repoUrl: remoteUrl })
 
     await writeProjectConfig(process.cwd(), {
@@ -43,7 +82,9 @@ export const FabricLink = pikkuSessionlessFunc({
       branch: safety.branch,
       expectedHeadSha: safety.headSha,
     })
-    console.log(`[fabric] queued deploy: branch=${safety.branch} deploymentId=${deploy.deploymentId}`)
+    console.log(
+      `[fabric] queued deploy: branch=${safety.branch} deploymentId=${deploy.deploymentId}`
+    )
 
     return {
       projectSlug: project.projectSlug,
