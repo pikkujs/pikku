@@ -4,7 +4,7 @@ import { resolveApiContext } from '../lib/config.js'
 import { getRpc } from '../lib/http.js'
 
 export const FabricRollbackInput = z.object({
-  stage: z.literal('production'),
+  branch: z.string(),
   target: z.string().optional(),
   list: z.boolean().optional(),
   dryRun: z.boolean().optional(),

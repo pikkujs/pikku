@@ -7,7 +7,7 @@ import { serializeTriggerTypes } from './serialize-trigger-types.js'
 export const pikkuTriggerTypes = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
     const { triggersTypesFile, packageMappings } = config
-    const visitState = await getInspectorState()
+    const visitState = await getInspectorState(false, true)
 
     const { singletonServicesType } = visitState.filesAndMethods
 

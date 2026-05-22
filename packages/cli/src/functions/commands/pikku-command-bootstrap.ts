@@ -25,7 +25,16 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
         `import '${getFileImportRelativePath(config.bootstrapFile, to, config.packageMappings)}'`
     )
 
-    const localImports = allImports.map(
+    const localImportTargets = Array.from(
+      new Set([
+        ...(!config.addon && config.rpcInternalWiringMetaFile
+          ? [config.rpcInternalWiringMetaFile]
+          : []),
+        ...allImports,
+      ])
+    )
+
+    const localImports = localImportTargets.map(
       (to) =>
         `import '${getFileImportRelativePath(config.bootstrapFile, to, config.packageMappings)}'`
     )

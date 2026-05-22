@@ -40,24 +40,27 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     if (!existsSync(config.outDir)) {
       logger.debug(`• .pikku directory not found, running bootstrap first...`)
       await workflow.do('Bootstrap inspect', async () =>
-        getInspectorState(false, false, true)
+        getInspectorState(false, true, true)
+      )
+      await workflow.do(
+        'Bootstrap function types split',
+        'pikkuFunctionTypesSplit',
+        null
       )
       await workflow.do('Bootstrap function types', 'pikkuFunctionTypes', null)
       await Promise.all([
-        workflow.do(
-          'Bootstrap function types split',
-          'pikkuFunctionTypesSplit',
-          null
-        ),
         workflow.do('Bootstrap HTTP types', 'pikkuHTTPTypes', null),
         workflow.do('Bootstrap channel types', 'pikkuChannelTypes', null),
         workflow.do('Bootstrap scheduler types', 'pikkuSchedulerTypes', null),
         workflow.do('Bootstrap queue types', 'pikkuQueueTypes', null),
         workflow.do('Bootstrap workflow', 'pikkuWorkflow', null),
+        workflow.do('Bootstrap Trigger types', 'pikkuTriggerTypes', null),
         workflow.do('Bootstrap MCP types', 'pikkuMCPTypes', null),
         workflow.do('Bootstrap AI agent types', 'pikkuAIAgentTypes', null),
-        workflow.do('Bootstrap CLI types', 'pikkuCLITypes', null),
       ])
+      await workflow.do('Bootstrap Node types', 'pikkuNodeTypes', null)
+      await workflow.do('Bootstrap Secret definition types', 'pikkuSecretDefinitionTypes', null)
+      await workflow.do('Bootstrap CLI types', 'pikkuCLITypes', null)
       await workflow.do('Bootstrap re-inspect', async () =>
         getInspectorState(true)
       )
@@ -99,11 +102,14 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         workflow.do('Channel types', 'pikkuChannelTypes', null),
         workflow.do('Scheduler types', 'pikkuSchedulerTypes', null),
         workflow.do('Queue types', 'pikkuQueueTypes', null),
-        workflow.do('MCP types', 'pikkuMCPTypes', null),
-        workflow.do('CLI types', 'pikkuCLITypes', null)
+        workflow.do('MCP types', 'pikkuMCPTypes', null)
       )
     }
     await Promise.all(typeGenerators)
+    await workflow.do('Node types', 'pikkuNodeTypes', null)
+    if (!config.addon) {
+      await workflow.do('CLI types', 'pikkuCLITypes', null)
+    }
 
     const [middleware, permissions] = await Promise.all([
       workflow.do('Middleware', 'pikkuMiddleware', null),
@@ -144,7 +150,6 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Public RPC', 'pikkuPublicRPC', null),
       workflow.do('Console functions', 'pikkuConsoleFunctions', null),
       workflow.do('Events scaffold', 'pikkuEventsScaffold', null),
-      workflow.do('Node types', 'pikkuNodeTypes', null),
       workflow.do(
         'Secret definition types',
         'pikkuSecretDefinitionTypes',

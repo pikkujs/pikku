@@ -6,7 +6,7 @@ import { promptSecret } from '../lib/prompt.js'
 
 export const FabricSecretsSetInput = z.object({
   name: z.string(),
-  stage: z.enum(['preview', 'production']),
+  branch: z.string(),
   value: z.string().optional(),
   force: z.boolean().optional(),
 })
@@ -18,7 +18,7 @@ export const FabricSecretsSet = pikkuSessionlessFunc({
     'Set a stage-scoped secret. Encrypted with the stage KEK and stored in the project D1.',
   input: FabricSecretsSetInput,
   output: FabricSecretsSetOutput,
-  func: async (_services, { name, stage, value }) => {
+  func: async (_services, { name, branch, value }) => {
     const ctx = await resolveApiContext()
     if (!ctx.token)
       throw new Error('Not logged in. Run `pikku fabric login` first.')
@@ -33,11 +33,11 @@ export const FabricSecretsSet = pikkuSessionlessFunc({
     const rpc = getRpc({ apiUrl: ctx.apiUrl, token: ctx.token })
     const result = await rpc.invoke('setStageSecret', {
       projectId: ctx.projectId,
-      kind: stage,
+      branch,
       name,
       value: plaintext,
     })
-    console.log(`[fabric] ${name} set on ${stage}.`)
+    console.log(`[fabric] ${name} set on ${branch}.`)
     return result
   },
 })

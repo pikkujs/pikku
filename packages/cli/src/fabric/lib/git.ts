@@ -35,6 +35,17 @@ export async function currentBranch(cwd?: string): Promise<string> {
   return git(['rev-parse', '--abbrev-ref', 'HEAD'], cwd)
 }
 
+/**
+ * Returns the fetch URL for the given remote, with credentials and .git suffix
+ * stripped so it's safe to store server-side or pass to importProject.
+ */
+export async function getRemoteUrl(remote = 'origin', cwd?: string): Promise<string> {
+  const raw = await git(['remote', 'get-url', remote], cwd)
+  return raw
+    .replace(/\.git$/, '')
+    .replace(/^(https?:\/\/)[^@]+@/, '$1')
+}
+
 export async function headSha(cwd?: string): Promise<string> {
   return git(['rev-parse', 'HEAD'], cwd)
 }

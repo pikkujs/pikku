@@ -69,20 +69,15 @@ export const fabricCommands = defineCLICommands({
   link: pikkuCLICommand({
     parameters: '',
     func: FabricLink,
-    description: 'Link the current dir to an existing fabric project',
+    description: 'Register the current git repo as a fabric project and queue an initial deploy',
     options: {
-      project: {
-        description: 'Project slug or name (skip the picker)',
-        short: 'p',
-      },
-      force: { description: 'Replace existing link', default: false },
       apiUrl: {
         description: 'Override the fabric-api URL stored in fabric.config.json',
       },
     },
   }),
   deploy: pikkuCLICommand({
-    parameters: '<stage> [ref]',
+    parameters: '[branch] [ref]',
     func: FabricDeploy,
     description: 'Build + deploy a ref to a stage',
     options: {
@@ -99,7 +94,7 @@ export const fabricCommands = defineCLICommands({
     },
   }),
   rollback: pikkuCLICommand({
-    parameters: '<stage> [target]',
+    parameters: '<branch> [target]',
     func: FabricRollback,
     description: 'Roll live back to a previous deployment artifact',
     options: {
@@ -120,7 +115,7 @@ export const fabricCommands = defineCLICommands({
     func: FabricSecretsSet,
     description: 'Set a stage-scoped secret',
     options: {
-      stage: { description: 'Target stage', short: 's' },
+      branch: { description: 'Target branch', short: 'b' },
       value: { description: 'Secret value (prompted if omitted)' },
       force: { description: 'Overwrite without confirmation', default: false },
     },
@@ -130,7 +125,7 @@ export const fabricCommands = defineCLICommands({
     func: FabricSecretsList,
     description: 'List stage secrets',
     options: {
-      stage: { description: 'Target stage', short: 's' },
+      branch: { description: 'Target branch', short: 'b' },
       json: { description: 'Machine-readable output', default: false },
     },
   }),
@@ -139,7 +134,7 @@ export const fabricCommands = defineCLICommands({
     func: FabricLogs,
     description: 'Stream or fetch logs',
     options: {
-      stage: { description: 'Target stage', short: 's' },
+      branch: { description: 'Target branch', short: 'b' },
       deployment: { description: 'Specific deployment id' },
       level: { description: 'Minimum level (debug/info/warn/error)' },
       since: { description: 'Time window (e.g. 15m, 2h)' },
@@ -156,7 +151,7 @@ export const fabricCommands = defineCLICommands({
     func: FabricMetrics,
     description: 'Show request rate / error rate / latency for a stage',
     options: {
-      stage: { description: 'Target stage', short: 's' },
+      branch: { description: 'Target branch', short: 'b' },
       hours: { description: 'Lookback window in hours (default 24)' },
       function: { description: 'Filter by wire id (e.g. function name)' },
       json: { description: 'Machine-readable output', default: false },
@@ -167,7 +162,7 @@ export const fabricCommands = defineCLICommands({
     func: FabricTrace,
     description: 'Print every event for a single trace across the stage',
     options: {
-      stage: { description: 'Target stage', short: 's' },
+      branch: { description: 'Target branch', short: 'b' },
       json: { description: 'Machine-readable output', default: false },
     },
   }),

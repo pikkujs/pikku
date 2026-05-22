@@ -19,6 +19,10 @@ export const generateBootstrapFile = async (
     commonImports.push(config.middlewareFile)
   }
 
+  if (!config.addon && config.rpcInternalWiringMetaFile) {
+    commonImports.push(config.rpcInternalWiringMetaFile)
+  }
+
   commonImports.push(config.functionsMetaFile, config.functionsFile)
 
   // Add schema if it exists
