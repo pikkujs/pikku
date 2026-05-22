@@ -65,6 +65,10 @@ export interface GraphNodeConfig<NodeIds extends string = string> {
   next?: NextConfig<NodeIds>
   /** Error routing - node(s) to execute on error */
   onError?: NodeIds | NodeIds[]
+  /** Maximum retry attempts allowed (excludes the initial attempt) */
+  retries?: number
+  /** Delay between retries — milliseconds, duration string, or 'exponential' */
+  retryDelay?: string | number
 }
 
 /**

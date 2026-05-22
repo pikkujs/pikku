@@ -45,6 +45,10 @@ export interface GraphNodeDef<
   next?: NextConfig<NodeIds>
   /** Error handling - node(s) to execute on error */
   onError?: NodeIds | NodeIds[]
+  /** Maximum retry attempts allowed (excludes the initial attempt) */
+  retries?: number
+  /** Delay between retries — milliseconds, duration string, or 'exponential' */
+  retryDelay?: string | number
 }
 
 /**
@@ -146,6 +150,8 @@ export function createGraph<RPCMap extends Record<string, RPCHandler>>() {
         input: def?.input as any,
         next: def?.next,
         onError: def?.onError,
+        retries: def?.retries,
+        retryDelay: def?.retryDelay,
       }
     }
 
@@ -172,6 +178,8 @@ type GraphNodeConfigMap<
       ) => TypedRef<ComputeNodeOutputs<FuncMap, RPCMap>[N][P]>
     ) => InputWithRefs<ComputeNodeInputs<FuncMap, RPCMap>[K]>
     onError?: Extract<keyof FuncMap, string> | Extract<keyof FuncMap, string>[]
+    retries?: number
+    retryDelay?: string | number
   }
 }
 
@@ -204,6 +212,8 @@ export function graph<NodeIds extends string = string>(
         ref: (nodeId: NodeIds, path: string) => RefValue
       ) => Record<string, unknown>
       onError?: NodeIds | NodeIds[]
+      retries?: number
+      retryDelay?: string | number
     }
   >
 ): Record<NodeIds, GraphNodeConfig<NodeIds>> {
@@ -215,6 +225,8 @@ export function graph<NodeIds extends string = string>(
       input: def.input as any,
       next: def.next,
       onError: def.onError,
+      retries: def.retries,
+      retryDelay: def.retryDelay,
     }
   }
 

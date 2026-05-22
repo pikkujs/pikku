@@ -204,7 +204,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     )
   }
 
-  async createRun(
+  protected async createRunImpl(
     workflowName: string,
     input: any,
     inline: boolean,
@@ -276,7 +276,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     }
   }
 
-  async updateRunStatus(
+  protected async updateRunStatusImpl(
     id: string,
     status: WorkflowStatus,
     output?: any,
@@ -301,7 +301,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     await this.redis.hmset(key, fields)
   }
 
-  async insertStepState(
+  protected async insertStepStateImpl(
     runId: string,
     stepName: string,
     rpcName: string,
@@ -447,7 +447,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     )
   }
 
-  async setStepRunning(stepId: string): Promise<void> {
+  protected async setStepRunningImpl(stepId: string): Promise<void> {
     // Extract runId and stepName from stepId (format: runId:stepName:timestamp)
     const parts = stepId.split(':')
     const runId = parts[0]!
@@ -483,7 +483,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     )
   }
 
-  async setStepScheduled(stepId: string): Promise<void> {
+  protected async setStepScheduledImpl(stepId: string): Promise<void> {
     // Extract runId and stepName from stepId (format: runId:stepName:timestamp)
     const parts = stepId.split(':')
     const runId = parts[0]!
@@ -519,7 +519,10 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     )
   }
 
-  async setStepChildRunId(stepId: string, childRunId: string): Promise<void> {
+  protected async setStepChildRunIdImpl(
+    stepId: string,
+    childRunId: string
+  ): Promise<void> {
     const parts = stepId.split(':')
     const runId = parts[0]!
     const stepName = parts.slice(1, -1).join(':')
@@ -533,7 +536,10 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     )
   }
 
-  async setStepResult(stepId: string, result: any): Promise<void> {
+  protected async setStepResultImpl(
+    stepId: string,
+    result: any
+  ): Promise<void> {
     // Extract runId and stepName from stepId (format: runId:stepName:timestamp)
     const parts = stepId.split(':')
     const runId = parts[0]!
@@ -574,7 +580,10 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     )
   }
 
-  async setStepError(stepId: string, error: Error): Promise<void> {
+  protected async setStepErrorImpl(
+    stepId: string,
+    error: Error
+  ): Promise<void> {
     // Extract runId and stepName from stepId (format: runId:stepName:timestamp)
     const parts = stepId.split(':')
     const runId = parts[0]!
@@ -682,7 +691,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     )
   }
 
-  async createRetryAttempt(
+  protected async createRetryAttemptImpl(
     stepId: string,
     status: 'pending' | 'running'
   ): Promise<StepState> {
@@ -839,7 +848,10 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     return results
   }
 
-  async setBranchTaken(stepId: string, branchKey: string): Promise<void> {
+  protected async setBranchTakenImpl(
+    stepId: string,
+    branchKey: string
+  ): Promise<void> {
     // Extract runId and stepName from stepId (format: runId:stepName:timestamp)
     const parts = stepId.split(':')
     const runId = parts[0]!
@@ -857,7 +869,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     )
   }
 
-  async updateRunState(
+  protected async updateRunStateImpl(
     runId: string,
     name: string,
     value: unknown
@@ -894,7 +906,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     return `${this.keyPrefix}:version:${name}:${graphHash}`
   }
 
-  async upsertWorkflowVersion(
+  protected async upsertWorkflowVersionImpl(
     name: string,
     graphHash: string,
     graph: any,
@@ -922,7 +934,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     }
   }
 
-  async updateWorkflowVersionStatus(
+  protected async updateWorkflowVersionStatusImpl(
     name: string,
     graphHash: string,
     status: WorkflowVersionStatus

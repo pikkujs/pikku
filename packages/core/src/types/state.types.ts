@@ -138,6 +138,7 @@ export interface PikkuPackageState {
   middleware: {
     tagGroup: Record<string, CorePikkuMiddlewareGroup>
     httpGroup: Record<string, CorePikkuMiddlewareGroup>
+    global: CorePikkuMiddlewareGroup
   }
   channelMiddleware: {
     tagGroup: Record<string, CorePikkuChannelMiddleware[]>
@@ -145,6 +146,7 @@ export interface PikkuPackageState {
   permissions: {
     tagGroup: Record<string, CorePermissionGroup | CorePikkuPermission[]>
     httpGroup: Record<string, CorePermissionGroup | CorePikkuPermission[]>
+    global: (CorePermissionGroup | CorePikkuPermission)[]
   }
   misc: {
     errors: Map<PikkuError, ErrorDetails>

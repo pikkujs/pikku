@@ -51,6 +51,7 @@ export type {
   WorkflowRunStatus,
   StepState,
   WorkflowRunService,
+  WorkflowRunMirror,
   CoreWorkflow,
   PikkuWorkflow,
   ContextVariable,

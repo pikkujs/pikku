@@ -324,12 +324,27 @@ async function queueGraphNode(
   _graphName: string,
   nodeId: string,
   rpcName: string,
-  input: any
+  input: any,
+  nodeConfig?: { retries?: number; retryDelay?: string | number }
 ): Promise<void> {
-  await workflowService.insertStepState(runId, nodeId, rpcName, input, {
-    retries: 0,
-  })
-  await workflowService.queueStepWorker(runId, nodeId, rpcName, input)
+  const stepOptions = {
+    retries: nodeConfig?.retries ?? 0,
+    retryDelay: nodeConfig?.retryDelay,
+  }
+  await workflowService.insertStepState(
+    runId,
+    nodeId,
+    rpcName,
+    input,
+    stepOptions
+  )
+  await workflowService.queueStepWorker(
+    runId,
+    nodeId,
+    rpcName,
+    input,
+    stepOptions
+  )
 }
 
 export async function continueGraph(
@@ -442,7 +457,8 @@ export async function continueGraph(
       graphName,
       nodeId,
       node.rpcName,
-      resolvedInput
+      resolvedInput,
+      node
     )
   }
 }
@@ -553,7 +569,8 @@ export async function executeGraphStep(
               graphName,
               errorNodeId,
               errorNode.rpcName,
-              { error: { message: (error as Error).message } }
+              { error: { message: (error as Error).message } },
+              errorNode
             )
           }
         }
@@ -600,7 +617,7 @@ async function executeGraphNodeInline(
     nodeId,
     rpcName,
     input,
-    { retries: 3 }
+    { retries: node.retries ?? 0, retryDelay: node.retryDelay }
   )
 
   await workflowService.setStepRunning(stepState.stepId)
@@ -677,7 +694,7 @@ async function executeGraphNodeInline(
         message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
         code: 'RPC_NOT_FOUND',
       })
-      return
+      throw new WorkflowSuspendedException(runId, 'RPC_NOT_FOUND')
     }
     await workflowService.setStepError(stepState.stepId, error as Error)
 
@@ -932,7 +949,8 @@ export async function runWorkflowGraph(
         graphName,
         nodeId,
         node.rpcName,
-        resolvedInput
+        resolvedInput,
+        node
       )
     }
     if (inline) {

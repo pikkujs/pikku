@@ -110,7 +110,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     this.initialized = true
   }
 
-  async createRun(
+  protected async createRunImpl(
     workflowName: string,
     input: any,
     inline: boolean,
@@ -148,7 +148,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     return this.runService.getRun(id)
   }
 
-  async updateRunStatus(
+  protected async updateRunStatusImpl(
     id: string,
     status: WorkflowStatus,
     output?: any,
@@ -167,7 +167,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     )
   }
 
-  async insertStepState(
+  protected async insertStepStateImpl(
     runId: string,
     stepName: string,
     rpcName: string | null,
@@ -243,7 +243,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     return this.runService.getRunHistory(runId)
   }
 
-  async setStepRunning(stepId: string): Promise<void> {
+  protected async setStepRunningImpl(stepId: string): Promise<void> {
     await this.steps.updateOne(
       { _id: stepId },
       { $set: { status: 'running', updatedAt: new Date() } }
@@ -263,7 +263,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     }
   }
 
-  async setStepScheduled(stepId: string): Promise<void> {
+  protected async setStepScheduledImpl(stepId: string): Promise<void> {
     await this.steps.updateOne(
       { _id: stepId },
       { $set: { status: 'scheduled', updatedAt: new Date() } }
@@ -313,7 +313,10 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     }
   }
 
-  async setStepChildRunId(stepId: string, childRunId: string): Promise<void> {
+  protected async setStepChildRunIdImpl(
+    stepId: string,
+    childRunId: string
+  ): Promise<void> {
     await this.steps.updateOne(
       { _id: stepId },
       {
@@ -325,7 +328,10 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     )
   }
 
-  async setStepResult(stepId: string, result: any): Promise<void> {
+  protected async setStepResultImpl(
+    stepId: string,
+    result: any
+  ): Promise<void> {
     await this.steps.updateOne(
       { _id: stepId },
       {
@@ -352,7 +358,10 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     }
   }
 
-  async setStepError(stepId: string, error: Error): Promise<void> {
+  protected async setStepErrorImpl(
+    stepId: string,
+    error: Error
+  ): Promise<void> {
     const serializedError: SerializedError = {
       message: error.message,
       stack: error.stack,
@@ -385,7 +394,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     }
   }
 
-  async createRetryAttempt(
+  protected async createRetryAttemptImpl(
     stepId: string,
     status: 'pending' | 'running'
   ): Promise<StepState> {
@@ -512,14 +521,17 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     return results
   }
 
-  async setBranchTaken(stepId: string, branchKey: string): Promise<void> {
+  protected async setBranchTakenImpl(
+    stepId: string,
+    branchKey: string
+  ): Promise<void> {
     await this.steps.updateOne(
       { _id: stepId },
       { $set: { branchTaken: branchKey, updatedAt: new Date() } }
     )
   }
 
-  async updateRunState(
+  protected async updateRunStateImpl(
     runId: string,
     name: string,
     value: unknown
@@ -547,7 +559,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     return row.state ?? {}
   }
 
-  async upsertWorkflowVersion(
+  protected async upsertWorkflowVersionImpl(
     name: string,
     graphHash: string,
     graph: any,
@@ -570,7 +582,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     )
   }
 
-  async updateWorkflowVersionStatus(
+  protected async updateWorkflowVersionStatusImpl(
     name: string,
     graphHash: string,
     status: WorkflowVersionStatus
