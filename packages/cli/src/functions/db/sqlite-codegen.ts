@@ -1,6 +1,7 @@
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { readFileSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import type { DatabaseSync } from 'node:sqlite'
+import type { ColumnKind, CoercionMap } from '@pikku/kysely-node-sqlite'
 
 interface ColumnInfo {
   name: string
@@ -8,12 +9,24 @@ interface ColumnInfo {
   notnull: number
   pk: number
   dflt_value: unknown
+  /** 0=regular, 1=virtual-table hidden, 2=virtual generated, 3=stored generated */
+  hidden: number
 }
 
 interface TableInfo {
   name: string
   columns: ColumnInfo[]
 }
+
+/** Internal annotation: column kind plus an optional TS type string (for @json). */
+interface ColAnnotation {
+  kind: ColumnKind
+  /** TypeScript type string, e.g. `string[]` or `Record<string, number>`. Only set for @json. */
+  tsType?: string
+}
+
+/** Internal annotation map used during codegen. */
+type AnnotationMap = Record<string, Record<string, ColAnnotation>>
 
 const SKIP_TABLES = new Set(['sqlite_sequence', 'sql_migrations'])
 
@@ -64,9 +77,11 @@ function listTables(db: DatabaseSync): TableInfo[] {
   return tableRows
     .filter((t) => !SKIP_TABLES.has(t.name))
     .map((t) => {
-      const columns = db
-        .prepare(`PRAGMA table_info(${escapeIdentifier(t.name)})`)
+      const allColumns = db
+        .prepare(`PRAGMA table_xinfo(${escapeIdentifier(t.name)})`)
         .all() as unknown as ColumnInfo[]
+      // hidden: 0=regular, 2=virtual generated, 3=stored generated — include all; skip 1 (vtab hidden)
+      const columns = allColumns.filter((c) => c.hidden !== 1)
       return { name: t.name, columns }
     })
 }
@@ -75,25 +90,151 @@ function escapeIdentifier(name: string): string {
   return `"${name.replace(/"/g, '""')}"`
 }
 
-function columnTypeExpression(col: ColumnInfo): string {
-  const base = mapType(col.type)
-  // Integer primary keys are auto-assigned by SQLite; treat as Generated.
-  if (col.pk === 1 && mapType(col.type) === 'number') {
-    return `Generated<${base}>`
-  }
-  // Columns with a default value can be omitted on insert.
-  if (col.dflt_value !== null && col.dflt_value !== undefined) {
-    return `Generated<${base}${col.notnull ? '' : ' | null'}>`
-  }
-  return col.notnull ? base : `${base} | null`
+// ─── Annotation parsing ──────────────────────────────────────────────────────
+
+/**
+ * Determine column kind from naming conventions:
+ *   *_at / *_on            → date
+ *   is_* / has_* / can_*   → bool
+ */
+function annotationFromName(colName: string): ColAnnotation | null {
+  if (/_at$|_on$/.test(colName)) return { kind: 'date' }
+  if (/^is_|^has_|^can_/.test(colName)) return { kind: 'bool' }
+  return null
 }
 
-function emitInterface(table: TableInfo, camelCase: boolean): string {
+/**
+ * Parse `-- @bool | @date | @json [TypescriptType]` inline annotations from
+ * migration SQL files. The TypeScript type is optional and only meaningful for
+ * `@json` — it controls the generated TypeScript type (e.g. `string[]`,
+ * `Record<string, number>`).
+ *
+ * Returns an AnnotationMap: { table_name: { col_name: ColAnnotation } }.
+ */
+export function parseAnnotations(migrationsDir: string): AnnotationMap {
+  let files: string[]
+  try {
+    files = readdirSync(migrationsDir)
+      .filter((f) => f.endsWith('.sql'))
+      .sort()
+  } catch {
+    return {}
+  }
+
+  const result: AnnotationMap = {}
+
+  for (const file of files) {
+    const content = readFileSync(join(migrationsDir, file), 'utf8')
+    const createTablePattern =
+      /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?"?(\w+)"?\s*\(([^;]+)\)/gis
+    let tableMatch: RegExpExecArray | null
+    while ((tableMatch = createTablePattern.exec(content)) !== null) {
+      const tableName = tableMatch[1].toLowerCase()
+      const body = tableMatch[2]
+      for (const line of body.split('\n')) {
+        const trimmed = line.trim()
+        if (/^(PRIMARY|UNIQUE|CHECK|FOREIGN|CONSTRAINT)/i.test(trimmed))
+          continue
+        // Match: col_name TYPE ... -- @kind [optional ts type]
+        const annotationMatch = trimmed.match(
+          /^(\w+)\s+\w.*?--\s*@(bool|date|json)(?:\s+(.+?))?$/i
+        )
+        if (annotationMatch) {
+          const colName = annotationMatch[1].toLowerCase()
+          const kind = annotationMatch[2].toLowerCase() as ColumnKind
+          const tsType = annotationMatch[3]?.trim() || undefined
+          if (!result[tableName]) result[tableName] = {}
+          result[tableName][colName] = {
+            kind,
+            tsType: kind === 'json' ? tsType : undefined,
+          }
+        }
+      }
+    }
+  }
+  return result
+}
+
+/**
+ * Merge explicit SQL annotations with naming-convention-based ones.
+ * Explicit annotations take precedence.
+ */
+function buildAnnotationMap(
+  tables: TableInfo[],
+  explicit: AnnotationMap
+): AnnotationMap {
+  const merged: AnnotationMap = {}
+  for (const table of tables) {
+    const explicitCols = explicit[table.name] ?? {}
+    for (const col of table.columns) {
+      const annotation = explicitCols[col.name] ?? annotationFromName(col.name)
+      if (annotation) {
+        if (!merged[table.name]) merged[table.name] = {}
+        merged[table.name][col.name] = annotation
+      }
+    }
+  }
+  return merged
+}
+
+// ─── Type expression ─────────────────────────────────────────────────────────
+
+function columnTypeExpression(
+  col: ColumnInfo,
+  annotation: ColAnnotation | null
+): string {
+  const nullable = !col.notnull && col.pk === 0
+  const hasDefault = col.dflt_value !== null && col.dflt_value !== undefined
+  const isAutoInt = col.pk === 1 && mapType(col.type) === 'number'
+  const isGenerated = col.hidden === 2 || col.hidden === 3
+  const wrap = (inner: string) =>
+    hasDefault || isAutoInt || isGenerated ? `Generated<${inner}>` : inner
+
+  if (annotation?.kind === 'bool') {
+    const base = nullable ? 'boolean | null' : 'boolean'
+    const rw = nullable ? 'boolean | number | null' : 'boolean | number'
+    return wrap(`ColumnType<${base}, ${rw}, ${rw}>`)
+  }
+
+  if (annotation?.kind === 'date') {
+    const base = nullable ? 'Date | null' : 'Date'
+    const rw = nullable ? 'Date | string | null' : 'Date | string'
+    return wrap(`ColumnType<${base}, ${rw}, ${rw}>`)
+  }
+
+  if (annotation?.kind === 'json') {
+    const base = annotation.tsType
+      ? nullable
+        ? `${annotation.tsType} | null`
+        : annotation.tsType
+      : nullable
+        ? 'unknown | null'
+        : 'unknown'
+    return wrap(base)
+  }
+
+  // Default: plain SQL-mapped type
+  const base = mapType(col.type)
+  if (isAutoInt) return `Generated<${base}>`
+  if (hasDefault || isGenerated)
+    return `Generated<${base}${nullable ? ' | null' : ''}>`
+  return nullable ? `${base} | null` : base
+}
+
+// ─── Interface emitter ───────────────────────────────────────────────────────
+
+function emitInterface(
+  table: TableInfo,
+  camelCase: boolean,
+  annotations: AnnotationMap
+): string {
   const ifaceName = snakeToPascal(table.name)
+  const tableCols = annotations[table.name] ?? {}
   const fields = table.columns
     .map((col) => {
       const fieldName = camelCase ? snakeToCamel(col.name) : col.name
-      const type = columnTypeExpression(col)
+      const annotation = tableCols[col.name] ?? null
+      const type = columnTypeExpression(col, annotation)
       const safeName = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(fieldName)
         ? fieldName
         : JSON.stringify(fieldName)
@@ -103,25 +244,33 @@ function emitInterface(table: TableInfo, camelCase: boolean): string {
   return `export interface ${ifaceName} {\n${fields}\n}`
 }
 
+// ─── Public API ──────────────────────────────────────────────────────────────
+
 export interface CodegenOptions {
   outFile: string
+  coercionFile: string
   camelCase?: boolean
+  migrationsDir?: string
 }
 
 export interface CodegenResult {
   outFile: string
+  coercionFile: string
   written: boolean
+  coercionWritten: boolean
   tables: string[]
 }
 
 /**
- * Introspect the open SQLite database and emit a Kysely DB type to outFile.
- * Output shape mirrors kysely-codegen for SQLite: one interface per table,
- * a top-level `DB` interface mapping table names → row types, and
- * `Generated<T>` for autoincrement / default-valued columns.
+ * Introspect the open SQLite database and emit a Kysely DB type to outFile
+ * plus a CoercionMap to coercionFile.
  *
- * Returns `written: false` if the on-disk file already matches — used by
- * the dev watcher to avoid restart loops.
+ * Columns are annotated via:
+ *   1. Naming conventions (_at/_on → date; is_/has_/can_ → bool)
+ *   2. Inline SQL comments: `col_name TYPE ... -- @bool|@date|@json [TsType]`
+ *      For @json, an optional TypeScript type string controls the generated type.
+ *
+ * Returns `written: false` if the on-disk file already matches.
  */
 export function generateSchemaTypes(
   db: DatabaseSync,
@@ -130,7 +279,16 @@ export function generateSchemaTypes(
   const camelCase = options.camelCase ?? true
   const tables = listTables(db)
 
-  const interfaces = tables.map((t) => emitInterface(t, camelCase)).join('\n\n')
+  const explicitAnnotations = options.migrationsDir
+    ? parseAnnotations(options.migrationsDir)
+    : {}
+  const annotations = buildAnnotationMap(tables, explicitAnnotations)
+
+  // ── schema.d.ts ──
+  const interfaces = tables
+    .map((t) => emitInterface(t, camelCase, annotations))
+    .join('\n\n')
+
   const dbEntries = tables
     .map((t) => {
       const tableKey = camelCase ? snakeToCamel(t.name) : t.name
@@ -141,7 +299,7 @@ export function generateSchemaTypes(
     })
     .join('\n')
 
-  const body = [
+  const schemaBody = [
     `// Generated by @pikku/cli — do not edit by hand.`,
     `// Run \`pikku db migrate\` to refresh.`,
     ``,
@@ -159,26 +317,65 @@ export function generateSchemaTypes(
     ``,
   ].join('\n')
 
-  let existing: string | null = null
-  try {
-    existing = readFileSync(options.outFile, 'utf8')
-  } catch {
-    existing = null
-  }
-
-  if (existing === body) {
-    return {
-      outFile: options.outFile,
-      written: false,
-      tables: tables.map((t) => t.name),
+  // ── coercion.gen.ts (runtime map — only kind, not tsType) ──
+  const runtimeMap: CoercionMap = {}
+  for (const [table, cols] of Object.entries(annotations)) {
+    for (const [col, ann] of Object.entries(cols)) {
+      if (!runtimeMap[table]) runtimeMap[table] = {}
+      runtimeMap[table][col] = ann.kind
     }
   }
 
-  mkdirSync(dirname(options.outFile), { recursive: true })
-  writeFileSync(options.outFile, body, 'utf8')
+  const coercionEntries = Object.entries(runtimeMap)
+    .map(([table, cols]) => {
+      const colEntries = Object.entries(cols)
+        .map(([col, kind]) => `    "${col}": "${kind}"`)
+        .join(',\n')
+      return `  "${table}": {\n${colEntries}\n  }`
+    })
+    .join(',\n')
+
+  const coercionBody = [
+    `// Generated by @pikku/cli — do not edit by hand.`,
+    `// Run \`pikku db migrate\` to refresh.`,
+    ``,
+    `export const coercionMap = {`,
+    coercionEntries,
+    `} as const`,
+    ``,
+  ].join('\n')
+
+  // ── write files ──
+  let existingSchema: string | null = null
+  let existingCoercion: string | null = null
+  try {
+    existingSchema = readFileSync(options.outFile, 'utf8')
+  } catch {
+    /* ok */
+  }
+  try {
+    existingCoercion = readFileSync(options.coercionFile, 'utf8')
+  } catch {
+    /* ok */
+  }
+
+  const schemaChanged = existingSchema !== schemaBody
+  const coercionChanged = existingCoercion !== coercionBody
+
+  if (schemaChanged) {
+    mkdirSync(dirname(options.outFile), { recursive: true })
+    writeFileSync(options.outFile, schemaBody, 'utf8')
+  }
+  if (coercionChanged) {
+    mkdirSync(dirname(options.coercionFile), { recursive: true })
+    writeFileSync(options.coercionFile, coercionBody, 'utf8')
+  }
+
   return {
     outFile: options.outFile,
-    written: true,
+    coercionFile: options.coercionFile,
+    written: schemaChanged,
+    coercionWritten: coercionChanged,
     tables: tables.map((t) => t.name),
   }
 }

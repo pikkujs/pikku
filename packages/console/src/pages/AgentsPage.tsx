@@ -1,13 +1,18 @@
 import React, { useMemo, useEffect } from 'react'
 import { useSearchParams, useNavigate } from '../router'
-import { Text, Center, Loader, Button } from '@mantine/core'
+import { Text, Center, Loader } from '@mantine/core'
 import { Bot } from 'lucide-react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '../components/layout/DetailPageHeader'
 import { TableListPage } from '../components/layout/TableListPage'
 import { PikkuBadge } from '../components/ui/PikkuBadge'
+
+export interface AgentExtraColumn {
+  label: string
+  width?: string
+  render: (name: string) => React.ReactNode
+}
 
 interface AgentItem {
   name: string
@@ -17,7 +22,7 @@ interface AgentItem {
   data: any
 }
 
-const AgentsList: React.FunctionComponent = () => {
+const AgentsList: React.FunctionComponent<{ extraColumns?: AgentExtraColumn[]; headerRight?: React.ReactNode }> = ({ extraColumns, headerRight }) => {
   const navigate = useNavigate()
   const { meta, loading } = usePikkuMeta()
 
@@ -71,14 +76,19 @@ const AgentsList: React.FunctionComponent = () => {
       {
         key: 'agents',
         header: 'AGENTS',
-        align: 'right' as const,
         render: (item: AgentItem) =>
           item.agentCount > 0 ? (
             <PikkuBadge type="dynamic" badge="agents" value={item.agentCount} />
           ) : null,
       },
+      ...(extraColumns ?? []).map((col, i) => ({
+        key: `extra-${i}`,
+        header: col.label.toUpperCase(),
+        width: col.width,
+        render: (item: AgentItem) => col.render(item.name),
+      })),
     ],
-    []
+    [extraColumns]
   )
 
   return (
@@ -101,7 +111,7 @@ const AgentsList: React.FunctionComponent = () => {
       }
       emptyMessage="No agents found."
       loading={loading}
-      headerRight={null}
+      headerRight={headerRight ?? null}
     />
   )
 }
@@ -122,7 +132,7 @@ const AgentDetailView: React.FunctionComponent<{ agentId: string }> = ({
   return <div />
 }
 
-export const AgentsPage: React.FunctionComponent = () => {
+export const AgentsPage: React.FunctionComponent<{ extraColumns?: AgentExtraColumn[]; headerRight?: React.ReactNode }> = ({ extraColumns, headerRight }) => {
   const [searchParams] = useSearchParams()
   const agentId = searchParams.get('id')
   const { meta, loading } = usePikkuMeta()
@@ -130,22 +140,13 @@ export const AgentsPage: React.FunctionComponent = () => {
   const hasAgents = !loading && meta.agentsMeta && Object.keys(meta.agentsMeta).length > 0
 
   if (!agentId && !hasAgents) {
-    return <AgentsList />
+    return <AgentsList extraColumns={extraColumns} headerRight={headerRight} />
   }
 
   return (
     <PanelProvider>
-      <ResizablePanelLayout
-        header={
-          <DetailPageHeader
-            icon={Bot}
-            category="Agents"
-            docsHref="https://pikku.dev/docs/wiring/ai-agents"
-          />
-        }
-        hidePanel={!agentId}
-      >
-        {agentId ? <AgentDetailView agentId={agentId} /> : <AgentsList />}
+      <ResizablePanelLayout hidePanel={!agentId}>
+        {agentId ? <AgentDetailView agentId={agentId} /> : <AgentsList extraColumns={extraColumns} headerRight={headerRight} />}
       </ResizablePanelLayout>
     </PanelProvider>
   )

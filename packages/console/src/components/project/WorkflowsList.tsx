@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Text, Badge, Tooltip, ActionIcon } from '@mantine/core'
+import { Text, Badge, Tooltip, ActionIcon, Group } from '@mantine/core'
 import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
 import { GitBranch, ExternalLink } from 'lucide-react'
 import { TableListPage } from '../layout/TableListPage'
@@ -55,12 +55,14 @@ interface WorkflowsListProps {
     graph: any
   }>
   extraColumns?: WorkflowExtraColumn[]
+  headerRight?: React.ReactNode
 }
 
 export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
   workflows,
   aiWorkflows,
   extraColumns = [],
+  headerRight,
 }) => {
   const [filter, setFilter] = useState<FilterValue>('all')
   const { navigateTo } = useConsoleNavigator()
@@ -124,19 +126,22 @@ export const WorkflowsList: React.FunctionComponent<WorkflowsListProps> = ({
       }
       emptyMessage="No workflows found."
       headerRight={
-        <Tooltip label="Workflows docs">
-          <ActionIcon
-            component="a"
-            href="https://pikku.dev/docs/wiring/workflows"
-            target="_blank"
-            rel="noopener noreferrer"
-            variant="subtle"
-            color="gray"
-            size="sm"
-          >
-            <ExternalLink size={14} />
-          </ActionIcon>
-        </Tooltip>
+        <Group gap={4}>
+          {headerRight}
+          <Tooltip label="Workflows docs">
+            <ActionIcon
+              component="a"
+              href="https://pikku.dev/docs/wiring/workflows"
+              target="_blank"
+              rel="noopener noreferrer"
+              variant="subtle"
+              color="gray"
+              size="sm"
+            >
+              <ExternalLink size={14} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
       }
     />
   )
