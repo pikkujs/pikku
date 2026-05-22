@@ -1,4 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku'
+import { getSchema } from '@pikku/core/schema'
 
 function out(value: unknown): void {
   console.log(JSON.stringify(value))
@@ -38,6 +39,29 @@ export const pikkuMetaFunctionsGet = pikkuSessionlessFunc<
       readonly: m.readonly === true,
       input: { name: m.inputSchemaName ?? null, jsonSchema: null },
       output: { name: m.outputSchemaName ?? null, jsonSchema: null },
+    })
+  },
+})
+
+export const pikkuMetaSchemasList = pikkuSessionlessFunc<{}, void>({
+  func: async ({ getInspectorState }) => {
+    const state = await getInspectorState()
+    const schemaNames = Object.keys(state.schemas ?? {}).sort()
+    out({ schemaNames })
+  },
+})
+
+export const pikkuMetaSchemasGet = pikkuSessionlessFunc<
+  { schemaName: string },
+  void
+>({
+  func: async ({ getInspectorState }, data) => {
+    const state = await getInspectorState()
+    const schema = state.schemas?.[data.schemaName] ?? getSchema(data.schemaName)
+    if (!schema) throw new Error(`Schema not found: ${data.schemaName}`)
+    out({
+      schemaName: data.schemaName,
+      jsonSchema: schema,
     })
   },
 })

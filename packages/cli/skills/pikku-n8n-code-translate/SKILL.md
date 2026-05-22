@@ -7,6 +7,16 @@ metadata:
 
 # n8n Code Node → Pikku Function Translator
 
+## Agent Operating Procedure
+
+Use this skill as an execution checklist, not reference material.
+
+1. Discover before editing. Prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
+2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
+3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
+4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
+
 You are translating an n8n **Code node** body into a Pikku `pikkuSessionlessFunc` body. The original JavaScript is preserved verbatim in the JSDoc above the function. Your job: replace the `throw new Error(...)` body with a faithful TypeScript reimplementation, keep the function signature and the JSDoc intact, and only widen the Zod input/output if the original code's data shape demands it.
 
 This is a **narrow, mechanical translation**. Do not "improve" the logic, refactor for style, add error handling, or invent fields. The goal is behavioral parity, not better code.

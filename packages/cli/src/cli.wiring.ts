@@ -48,6 +48,8 @@ import {
 import {
   pikkuMetaFunctionsGet,
   pikkuMetaFunctionsList,
+  pikkuMetaSchemasGet,
+  pikkuMetaSchemasList,
   pikkuMetaMiddlewareGet,
   pikkuMetaMiddlewareList,
   pikkuMetaPermissionsGet,
@@ -550,6 +552,7 @@ wireCLI({
             'Frontend-targeted metadata: exposed RPCs, workflows, channels with their input/output type names and descriptions',
         }),
         functions: {
+          func: pikkuMetaFunctionsList,
           description: 'Inspect function metadata',
           subcommands: {
             list: pikkuCLICommand({
@@ -563,7 +566,23 @@ wireCLI({
             }),
           },
         },
+        schemas: {
+          func: pikkuMetaSchemasList,
+          description: 'Inspect generated JSON schemas',
+          subcommands: {
+            list: pikkuCLICommand({
+              func: pikkuMetaSchemasList,
+              description: 'List generated JSON schema names',
+            }),
+            get: pikkuCLICommand({
+              func: pikkuMetaSchemasGet,
+              description: 'Get one generated JSON schema by name',
+              parameters: '<schemaName>',
+            }),
+          },
+        },
         workflows: {
+          func: pikkuMetaWorkflowsList,
           description: 'Inspect workflow metadata',
           subcommands: {
             list: pikkuCLICommand({
@@ -578,6 +597,7 @@ wireCLI({
           },
         },
         middleware: {
+          func: pikkuMetaMiddlewareList,
           description: 'Inspect middleware metadata',
           subcommands: {
             list: pikkuCLICommand({
@@ -592,6 +612,7 @@ wireCLI({
           },
         },
         permissions: {
+          func: pikkuMetaPermissionsList,
           description: 'Inspect permission metadata',
           subcommands: {
             list: pikkuCLICommand({
@@ -606,6 +627,7 @@ wireCLI({
           },
         },
         wires: {
+          func: pikkuMetaWiresList,
           description: 'Inspect wire metadata',
           subcommands: {
             list: pikkuCLICommand({

@@ -5,6 +5,16 @@ description: 'Build and convert apps for the Pikku Fabric platform. Covers SQLit
 
 # Pikku Fabric
 
+## Agent Operating Procedure
+
+Use this skill as an execution checklist, not reference material.
+
+1. Discover before editing. Prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
+2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
+3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
+4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
+
 Fabric is a serverless deployment platform for Pikku apps. Every Fabric app runs on Cloudflare Workers with a SQLite database (via libSQL/Turso). This skill covers what's unique to Fabric. For general Pikku concepts, function authoring, HTTP wiring, and more, see `pikku-concepts`, `pikku-http`, `pikku-services`, etc.
 
 ## Before you start
@@ -14,6 +24,21 @@ Always run project discovery first:
 ```bash
 yarn pikku meta context --json
 ```
+
+In OpenCode, call the `pikku-meta` tool before grepping or editing a Fabric app.
+
+- Use `section: "context"` for the project map: functions, wires, workflows, capabilities, and source files.
+- Use `section: "clients"` before frontend/RPC work.
+- Use `section: "functions"` to list function ids, then `section: "function", id: "<functionId>"` for one function.
+- Use `section: "schemas"` to list schema names. Only request full JSON Schema bodies with `schemas: ["SchemaName"]` for the specific schemas needed.
+
+Do not load every schema body by default; that wastes context and usually makes the model worse.
+
+For database work in OpenCode:
+
+- Use `pikku-db` for the actual attached Fabric database state: tables, columns, foreign keys, and applied migrations.
+- Use `pikku-meta` `section: "schemas"` for code-level JSON Schema contracts, not database introspection.
+- Do not inspect database credentials or connect to the database directly; Fabric Control already exposes the safe introspection surface.
 
 ## Database: SQLite via libSQL
 

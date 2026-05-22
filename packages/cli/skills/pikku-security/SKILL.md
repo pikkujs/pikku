@@ -7,6 +7,16 @@ DO NOT TRIGGER when: user asks about JWT service setup (use pikku-services) or s
 
 # Pikku Security (Auth, Permissions, Middleware)
 
+## Agent Operating Procedure
+
+Use this skill as an execution checklist, not reference material.
+
+1. Discover before editing. Prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
+2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
+3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
+4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
+
 Pikku provides a layered security model: authentication middleware (who are you?), auth checks (are you logged in?), and permissions (can you do this?). All work across every transport (HTTP, WebSocket, CLI, queue, etc.).
 
 ## Before You Start
