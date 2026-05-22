@@ -105,32 +105,32 @@ export function defineServiceTests(config: ServiceTestConfig): void {
 
       test('session round-trip — set / get / clear', async () => {
         await store.addChannel({
-          channelId: 'ch-session',
+          channelId: 'ch-state',
           channelName: 'test-channel',
         })
 
         // initially undefined
-        const empty = await store.getSession('ch-session')
+        const empty = await store.getState('ch-state')
         assert.equal(empty, undefined)
 
         // set + get
         const payload = { userId: 'u-7', meta: { foo: 1 } }
-        await store.setSession('ch-session', payload)
-        const got = await store.getSession('ch-session')
+        await store.setState('ch-state', payload)
+        const got = await store.getState('ch-state')
         assert.deepEqual(got, payload)
 
         // overwrite
         const next = { userId: 'u-8' }
-        await store.setSession('ch-session', next)
-        const got2 = await store.getSession('ch-session')
+        await store.setState('ch-state', next)
+        const got2 = await store.getState('ch-state')
         assert.deepEqual(got2, next)
 
         // clear
-        await store.clearSession('ch-session')
-        const after = await store.getSession('ch-session')
+        await store.clearState('ch-state')
+        const after = await store.getState('ch-state')
         assert.equal(after, undefined)
 
-        await store.removeChannels(['ch-session'])
+        await store.removeChannels(['ch-state'])
       })
     })
   }

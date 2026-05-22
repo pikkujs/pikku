@@ -157,6 +157,10 @@ export interface PikkuChannel<OpeningData, out Out> {
   close(): Promise<void> | void
   // The current state of the channel
   state: 'initial' | 'open' | 'closed'
+  // Per-socket ephemeral state scoped to this channel connection.
+  setState<T>(state: T): Promise<void> | void
+  getState<T>(): Promise<T | undefined> | T | undefined
+  clearState(): Promise<void> | void
 }
 
 export interface PikkuChannelHandler<OpeningData = unknown, Out = unknown> {

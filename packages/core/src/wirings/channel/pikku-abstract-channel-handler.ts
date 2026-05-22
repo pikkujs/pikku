@@ -7,8 +7,7 @@ import type {
 export abstract class PikkuAbstractChannelHandler<
   OpeningData = unknown,
   Out = unknown,
-> implements PikkuChannelHandler<OpeningData, Out>
-{
+> implements PikkuChannelHandler<OpeningData, Out> {
   protected channel?: PikkuChannel<OpeningData, Out>
 
   constructor(
@@ -23,6 +22,7 @@ export abstract class PikkuAbstractChannelHandler<
 
   public getChannel(): PikkuChannel<OpeningData, Out> {
     if (!this.channel) {
+      let channelState: unknown
       this.channel = {
         channelId: this.channelId,
         openingData: this.openingData,
@@ -30,6 +30,13 @@ export abstract class PikkuAbstractChannelHandler<
         sendBinary: this.sendBinary.bind(this),
         close: this.close.bind(this),
         state: 'initial',
+        setState: (s) => {
+          channelState = s
+        },
+        getState: () => channelState as any,
+        clearState: () => {
+          channelState = undefined
+        },
       }
     }
     return this.channel

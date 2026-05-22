@@ -324,6 +324,7 @@ export async function runCLICommand({
     programData?.renderers[commandId] || programData?.defaultRenderer
 
   // Create a CLI channel for progressive output
+  let cliState: unknown
   const channel: PikkuChannel<unknown, unknown> = {
     channelId: `cli:${program}:${commandId}`,
     openingData: pluckedData,
@@ -341,6 +342,13 @@ export async function runCLICommand({
       }
     },
     state: 'open',
+    setState: (s) => {
+      cliState = s
+    },
+    getState: () => cliState as any,
+    clearState: () => {
+      cliState = undefined
+    },
   }
 
   const userSession = new PikkuSessionService<CoreUserSession>(

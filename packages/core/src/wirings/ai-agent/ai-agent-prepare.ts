@@ -265,6 +265,9 @@ export function createScopedChannel(
         parent.send(event)
       }
     },
+    setState: (s) => parent.setState(s),
+    getState: () => parent.getState(),
+    clearState: () => parent.clearState(),
   }
 }
 

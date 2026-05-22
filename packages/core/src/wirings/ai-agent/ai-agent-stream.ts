@@ -150,6 +150,9 @@ function createPersistingChannel(
       }
       parent.send(event)
     },
+    setState: (s) => parent.setState(s),
+    getState: () => parent.getState(),
+    clearState: () => parent.clearState(),
   }
   return channel
 }

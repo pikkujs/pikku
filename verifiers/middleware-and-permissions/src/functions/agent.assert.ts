@@ -123,6 +123,7 @@ export async function testAgentStreamWiring(
   }
 
   const events: AIStreamEvent[] = []
+  let agentChannelState: unknown
   const channel: AIStreamChannel = {
     channelId: 'test-channel',
     openingData: undefined,
@@ -131,6 +132,13 @@ export async function testAgentStreamWiring(
     sendBinary: () => {},
     send: (event: AIStreamEvent) => {
       events.push(event)
+    },
+    setState: (s) => {
+      agentChannelState = s
+    },
+    getState: () => agentChannelState as any,
+    clearState: () => {
+      agentChannelState = undefined
     },
   }
 
