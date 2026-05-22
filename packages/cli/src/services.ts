@@ -146,9 +146,16 @@ export const defaultCLIRenderer = pikkuCLIRender<
   ForwardedLogMessage,
   SingletonServices
 >(({ logger }, data) => {
-  if (data) {
-    logger[data.level]({ message: data.message, type: data.type })
-  }
+  if (!data) return
+  const validLevels: ReadonlyArray<ForwardedLogMessage['level']> = [
+    'trace',
+    'debug',
+    'info',
+    'warn',
+    'error',
+  ]
+  if (!validLevels.includes(data.level)) return
+  logger[data.level]({ message: data.message, type: data.type })
 })
 
 // /**
