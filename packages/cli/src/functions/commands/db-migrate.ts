@@ -20,7 +20,7 @@ export const dbMigrate = pikkuSessionlessFunc<{}, void>({
       throw new Error('dev.db not configured')
     }
 
-    const { migrate, codegen } = migrateAndCodegen(resolved)
+    const { migrate, codegen, zod } = migrateAndCodegen(resolved)
 
     if (migrate.applied.length === 0) {
       logger.info(
@@ -35,6 +35,11 @@ export const dbMigrate = pikkuSessionlessFunc<{}, void>({
       codegen.written
         ? `db migrate: regenerated ${codegen.outFile} (${codegen.tables.length} tables)`
         : `db migrate: ${codegen.outFile} unchanged`
+    )
+    logger.info(
+      zod.written
+        ? `db migrate: regenerated ${zod.outFile} (${zod.tables.length} tables)`
+        : `db migrate: ${zod.outFile} unchanged`
     )
   },
 })

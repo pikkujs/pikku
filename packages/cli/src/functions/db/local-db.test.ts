@@ -52,11 +52,12 @@ test('resolveLocalDb returns null when config is undefined', () => {
 
 test('migrateAndCodegen applies pending migrations and writes schema.d.ts', () => {
   const resolved = resolveLocalDb(true, root)!
-  const { migrate, codegen } = migrateAndCodegen(resolved)
+  const { migrate, codegen, zod } = migrateAndCodegen(resolved)
 
   assert.deepEqual(migrate.applied, ['0001-init.sql'])
   assert.deepEqual(migrate.skipped, [])
   assert.equal(codegen.written, true)
+  assert.equal(zod.written, true)
   assert.ok(
     codegen.tables.length >= 1,
     'expected at least one table in codegen'
@@ -64,6 +65,10 @@ test('migrateAndCodegen applies pending migrations and writes schema.d.ts', () =
 
   const schema = readFileSync(resolved.schemaFile, 'utf8')
   assert.match(schema, /todos/i)
+  const zodSchema = readFileSync(resolved.zodFile, 'utf8')
+  assert.match(zodSchema, /export const TodosZ = z\.object\(/)
+  assert.match(zodSchema, /export const TodosInsertZ = z\.object\(/)
+  assert.match(zodSchema, /export const TodosPatchZ = TodosZ\.partial\(\)/)
 
   const db = new DatabaseSync(resolved.dbFile)
   try {
@@ -90,6 +95,7 @@ test('migrateAndCodegen is a no-op on second run', () => {
     false,
     'codegen output should be unchanged'
   )
+  assert.equal(second.zod.written, false, 'zod output should be unchanged')
 })
 
 test('migrateAndCodegen throws MigrationDriftError when applied file changes', () => {

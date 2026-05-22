@@ -9,6 +9,7 @@ import {
 } from '@pikku/kysely-node-sqlite'
 import { migrate, type MigrateResult } from './sql-migrator.js'
 import { generateSchemaTypes, type CodegenResult } from './sqlite-codegen.js'
+import { generateZodTypes, type ZodCodegenResult } from './zod-codegen.js'
 import { seed as runSeed, type SeedResult } from './seed.js'
 
 export type DevDbConfig = true | { file?: string }
@@ -19,6 +20,7 @@ export interface ResolvedLocalDb {
   seedFile: string
   schemaFile: string
   coercionFile: string
+  zodFile: string
   camelCase: boolean
 }
 
@@ -38,6 +40,7 @@ export function resolveLocalDb(
     seedFile: resolveAgainst(rootDir, 'db/seed.sql'),
     schemaFile: resolveAgainst(rootDir, 'db/schema.d.ts'),
     coercionFile: resolveAgainst(rootDir, 'db/coercion.gen.ts'),
+    zodFile: resolveAgainst(rootDir, 'db/zod.gen.ts'),
     camelCase: true,
   }
 }
@@ -49,6 +52,7 @@ function resolveAgainst(root: string, p: string): string {
 export interface MigrateAndCodegenOutcome {
   migrate: MigrateResult
   codegen: CodegenResult
+  zod: ZodCodegenResult
 }
 
 /**
@@ -67,7 +71,11 @@ export function migrateAndCodegen(
       camelCase: resolved.camelCase,
       migrationsDir: resolved.migrationsDir,
     })
-    return { migrate: migrateResult, codegen: codegenResult }
+    const zodResult = generateZodTypes({
+      schemaFile: resolved.schemaFile,
+      outFile: resolved.zodFile,
+    })
+    return { migrate: migrateResult, codegen: codegenResult, zod: zodResult }
   } finally {
     db.close()
   }

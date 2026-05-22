@@ -28,7 +28,7 @@ export const dbReset = pikkuSessionlessFunc<{}, void>({
     reset(resolved, config.rootDir)
     logger.info(`db reset: removed ${resolved.dbFile}`)
 
-    const { migrate, codegen } = migrateAndCodegen(resolved)
+    const { migrate, codegen, zod } = migrateAndCodegen(resolved)
     for (const name of migrate.applied) {
       logger.info(`db reset: applied ${name}`)
     }
@@ -36,6 +36,11 @@ export const dbReset = pikkuSessionlessFunc<{}, void>({
       codegen.written
         ? `db reset: regenerated ${codegen.outFile} (${codegen.tables.length} tables)`
         : `db reset: ${codegen.outFile} unchanged`
+    )
+    logger.info(
+      zod.written
+        ? `db reset: regenerated ${zod.outFile} (${zod.tables.length} tables)`
+        : `db reset: ${zod.outFile} unchanged`
     )
 
     const seedResult = seed(resolved)
