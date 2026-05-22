@@ -72,13 +72,13 @@ export const FabricLink = pikkuSessionlessFunc({
     const project = await rpc.invoke('importProject', { repoUrl: remoteUrl })
 
     await writeProjectConfig(process.cwd(), {
-      projectId: project.projectSlug,
+      projectId: project.projectId,
       ...(apiUrlOverride ? { apiUrl: apiUrlOverride } : {}),
     })
     console.log(`[fabric] linked ${project.projectSlug}`)
 
     const deploy = await rpc.invoke('deployByStageKind', {
-      projectId: project.projectSlug,
+      projectId: project.projectId,
       branch: safety.branch,
       expectedHeadSha: safety.headSha,
     })

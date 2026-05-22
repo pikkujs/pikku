@@ -56,7 +56,7 @@ export const FabricInit = pikkuSessionlessFunc({
     })
 
     const path = await writeProjectConfig(process.cwd(), {
-      projectId: result.projectSlug,
+      projectId: result.projectId,
       ...(apiUrlOverride ? { apiUrl: apiUrlOverride } : {}),
     })
     console.log(
@@ -64,7 +64,7 @@ export const FabricInit = pikkuSessionlessFunc({
     )
     console.log(`[fabric] main stage: ${result.mainStageId}`)
     return {
-      projectId: result.projectSlug,
+      projectId: result.projectId,
       projectSlug: result.projectSlug,
       path,
     }
