@@ -19,23 +19,28 @@ See `pikku-concepts` for the core mental model.
 
 ## Function Versioning
 
-Add `version` to function config to maintain backward compatibility:
+When you need to introduce a breaking change, keep the old function as a pinned version and let the new one become the latest.
+
+**The pattern:**
+1. Create a new file `my-function-v1.function.ts` — export a variable with the `V1` suffix
+2. Set `override: 'myFunction'` — this is the contract key the manifest groups under
+3. Set `version: 1` — pins this as version 1 of the contract
+4. The existing `my-function.function.ts` (no `version:` field) automatically becomes the latest version
 
 ```typescript
-// v1 — kept for running workflows and agents
-const getBookV1 = pikkuFunc({
-  title: 'Get Book',
+// my-function-v1.function.ts — old contract, kept for running workflows/agents
+export const getBookV1 = pikkuFunc({
+  override: 'getBook',   // REQUIRED — links this to the 'getBook' contract family
   version: 1,
   input: z.object({ bookId: z.string() }),
   output: z.object({ title: z.string() }),
   func: async ({ db }, { bookId }) => {
-    return await db.getBook(bookId)
+    return db.getBook(bookId)
   },
 })
 
-// v2 — the latest version, called by default
-const getBook = pikkuFunc({
-  title: 'Get Book',
+// my-function.function.ts — latest contract, no version: field
+export const getBook = pikkuFunc({
   input: z.object({
     bookId: z.string(),
     format: z.enum(['full', 'summary']),
@@ -46,12 +51,12 @@ const getBook = pikkuFunc({
     isbn: z.string(),
   }),
   func: async ({ db }, { bookId, format }) => {
-    return await db.getBook(bookId, format)
+    return db.getBook(bookId, format)
   },
 })
 ```
 
-When you add a breaking change (new required fields, removed fields, type changes), bump the version number on the old function and create the new version without a `version` field (it becomes the latest).
+**Why `override` is required:** The manifest groups functions by a shared contract key. Without `override: 'getBook'`, `getBookV1` is stored internally as `getBookV1@v1` (key: `getBookV1`), which is a different contract family from `getBook`. With `override: 'getBook'`, it becomes `getBook@v1` (key: `getBook`), which groups with the unversioned `getBook` — and the unversioned one is automatically promoted to `getBook@v2`.
 
 ## Version Manifest (`versions.pikku.json`)
 
@@ -64,26 +69,26 @@ Pikku tracks contract hashes to detect breaking changes:
     "createTodo": {
       "latest": 1,
       "versions": {
-        "1": "a1b2c3d4e5f6g7h8"
+        "1": { "inputHash": "a1b2c3d4", "outputHash": "e5f6a7b8" }
       }
     },
     "getTodos": {
       "latest": 2,
       "versions": {
-        "1": "i9j0k1l2m3n4o5p6",
-        "2": "q7r8s9t0u1v2w3x4"
+        "1": { "inputHash": "i9j0k1l2", "outputHash": "m3n4o5p6" },
+        "2": { "inputHash": "q7r8s9t0", "outputHash": "u1v2w3x4" }
       }
     }
   }
 }
 ```
 
-Each hash is derived from the function's input and output schemas. If a schema changes without a version bump, `pikku versions check` will fail.
+Each hash is derived from the function's input and output schemas plus the contract key. If a schema changes without a version bump, `pikku versions check` will fail.
 
 ## CLI Commands
 
 ```bash
-npx pikku versions init     # Initialize versioning manifest
+npx pikku versions init     # Initialize versioning manifest (run once)
 npx pikku versions check    # Detect contract changes (use in CI)
 npx pikku versions update   # Update contract hashes after version bump
 ```
@@ -93,7 +98,7 @@ npx pikku versions update   # Update contract hashes after version bump
 1. `pikku versions init` — run once to create `versions.pikku.json`
 2. Develop normally — add/modify functions
 3. `pikku versions check` — CI catches unversioned breaking changes
-4. If intentional: bump `version` on old function, then `pikku versions update`
+4. If intentional: create `my-function-v1.function.ts` with `override` + `version: 1`, then `pikku versions update`
 
 ## CI Integration
 
@@ -114,20 +119,17 @@ jobs:
 ## Complete Example
 
 ```typescript
-// v1 — original contract
+// create-todo-v1.function.ts — v1 locked contract
 export const createTodoV1 = pikkuSessionlessFunc({
-  title: 'Create Todo',
+  override: 'createTodo',  // groups under 'createTodo' contract family
   version: 1,
   input: z.object({ title: z.string() }),
   output: z.object({ id: z.string(), title: z.string() }),
-  func: async ({ todoStore }, { title }) => {
-    return todoStore.add(title)
-  },
+  func: async ({ todoStore }, { title }) => todoStore.add(title),
 })
 
-// v2 — added priority field (breaking: new required input)
+// create-todo.function.ts — v2 (latest), called by default
 export const createTodo = pikkuSessionlessFunc({
-  title: 'Create Todo',
   input: z.object({
     title: z.string(),
     priority: z.enum(['low', 'medium', 'high']),
@@ -137,8 +139,17 @@ export const createTodo = pikkuSessionlessFunc({
     title: z.string(),
     priority: z.string(),
   }),
-  func: async ({ todoStore }, { title, priority }) => {
-    return todoStore.add(title, priority)
-  },
+  func: async ({ todoStore }, { title, priority }) => todoStore.add(title, priority),
 })
+```
+
+Result in manifest:
+```json
+"createTodo": {
+  "latest": 2,
+  "versions": {
+    "1": { "inputHash": "...", "outputHash": "..." },
+    "2": { "inputHash": "...", "outputHash": "..." }
+  }
+}
 ```

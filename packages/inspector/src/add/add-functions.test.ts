@@ -111,6 +111,64 @@ describe('addFunctions duplicate name handling', () => {
     }
   })
 
+  test('strips VN suffix so createUserV1 + version:1 groups with createUser as createUser@v1', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-vn-suffix-'))
+    const fileV1 = join(rootDir, 'create-user-v1.ts')
+    const fileLatest = join(rootDir, 'create-user.ts')
+
+    await writeFile(
+      fileV1,
+      [
+        "import { pikkuFunc } from '@pikku/core'",
+        'export const createUserV1 = pikkuFunc({',
+        '  version: 1,',
+        '  func: async () => ({ ok: true })',
+        '})',
+      ].join('\n')
+    )
+
+    await writeFile(
+      fileLatest,
+      [
+        "import { pikkuFunc } from '@pikku/core'",
+        'export const createUser = pikkuFunc({',
+        '  func: async () => ({ ok: true })',
+        '})',
+      ].join('\n')
+    )
+
+    const logger: InspectorLogger = {
+      debug: () => {},
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      critical: () => {},
+      hasCriticalErrors: () => false,
+    }
+
+    try {
+      const state = await inspect(logger, [fileV1, fileLatest], { rootDir })
+      // V1 suffix stripped: createUserV1 + version:1 → createUser@v1
+      assert.ok(
+        state.functions.meta['createUser@v1'],
+        'createUser@v1 should exist'
+      )
+      assert.strictEqual(state.functions.meta['createUser@v1']!.version, 1)
+      // Unversioned createUser auto-promoted to createUser@v2
+      assert.ok(
+        state.functions.meta['createUser@v2'],
+        'createUser@v2 should exist'
+      )
+      assert.strictEqual(state.functions.meta['createUser@v2']!.version, 2)
+      // No stale createUserV1@v1 entry
+      assert.strictEqual(state.functions.meta['createUserV1@v1'], undefined)
+      // Latest alias points to v2
+      assert.strictEqual(state.rpc.internalMeta['createUser'], 'createUser@v2')
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
   test('logs a critical error when exposed function name is duplicated across files', async () => {
     const rootDir = await mkdtemp(
       join(tmpdir(), 'pikku-exposed-duplicate-function-')
