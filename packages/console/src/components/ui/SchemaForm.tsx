@@ -30,10 +30,12 @@ const buildDefaults = (schema: RJSFSchema): any => {
 interface SchemaFormProps {
   schema: RJSFSchema
   uiSchema?: UiSchema
-  onSubmit: (formData: any) => void
+  onSubmit?: (formData: any) => void
   submitting?: boolean
   submitLabel?: string
   initialData?: any
+  /** Render every field disabled and hide the submit button (display only). */
+  readOnly?: boolean
   children?: React.ReactNode
 }
 
@@ -44,6 +46,7 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
   submitting,
   submitLabel = 'Run',
   initialData,
+  readOnly,
   children,
 }) => {
   const [formData, setFormData] = useState<any>(() => {
@@ -52,10 +55,26 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
   })
 
   const handleSubmit = (data: { formData?: any }) => {
-    onSubmit(data.formData)
+    onSubmit?.(data.formData)
   }
 
   const { $schema: _, ...sanitizedSchema } = schema as any
+
+  // In read-only mode, suppress the default submit button by passing an empty
+  // child (RJSF renders its children in place of the submit button).
+  const submitArea = readOnly
+    ? <></>
+    : (children ?? (
+        <Group justify="flex-end" mt="sm">
+          <Button
+            type="submit"
+            leftSection={<Play size={16} />}
+            loading={submitting}
+          >
+            {submitLabel}
+          </Button>
+        </Group>
+      ))
 
   return (
     <div style={{ ['--rjsf-object-padding' as string]: '0' }}>
@@ -65,21 +84,12 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
         uiSchema={uiSchema}
         validator={validator}
         formData={formData}
-        onChange={(e) => setFormData(e.formData)}
+        readonly={readOnly}
+        onChange={(e) => !readOnly && setFormData(e.formData)}
         onSubmit={handleSubmit}
         onError={() => {}}
       >
-        {children ?? (
-          <Group justify="flex-end" mt="sm">
-            <Button
-              type="submit"
-              leftSection={<Play size={16} />}
-              loading={submitting}
-            >
-              {submitLabel}
-            </Button>
-          </Group>
-        )}
+        {submitArea}
       </Form>
     </div>
   )

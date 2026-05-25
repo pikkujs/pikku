@@ -17,6 +17,8 @@ import { usePanelContext } from '../../../context/PanelContext'
 import { PikkuBadge } from '../../ui/PikkuBadge'
 import { wiringTypeColor } from '../../ui/badge-defs'
 import { SectionLabel } from '../../ui/SectionLabel'
+import { SchemaForm } from '../../ui/SchemaForm'
+import { useWorkflowInputSchema } from '../../../hooks/useWorkflowInputSchema'
 import { CommonDetails } from './shared/CommonDetails'
 import { EmptyState } from './shared/EmptyState'
 import classes from '../../ui/console.module.css'
@@ -399,6 +401,32 @@ const formatDuration = (start: string | undefined, end: string | undefined) => {
   return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`
 }
 
+const RunInput: React.FC<{ input: unknown }> = ({ input }) => {
+  const { schema } = useWorkflowInputSchema()
+
+  return (
+    <Stack gap={6}>
+      <SectionLabel>Input</SectionLabel>
+      <Card withBorder radius="md" padding={0}>
+        <Card.Section p="md">
+          {schema && input && typeof input === 'object' ? (
+            <SchemaForm
+              schema={schema}
+              initialData={input}
+              readOnly
+            />
+          ) : (
+            <CodeHighlight
+              code={JSON.stringify(input, null, 2)}
+              language="json"
+            />
+          )}
+        </Card.Section>
+      </Card>
+    </Stack>
+  )
+}
+
 export const WorkflowRunOverview: React.FC<
   WorkflowPanelProps
 > = ({ workflowId }) => {
@@ -538,16 +566,7 @@ export const WorkflowRunOverview: React.FC<
 
       <WorkflowRunNodes workflowId={workflowId} />
 
-      {runData.input && (
-        <Stack gap={6}>
-          <SectionLabel>Input</SectionLabel>
-          <Card withBorder radius="md" padding={0}>
-            <Card.Section p="md">
-              <CodeHighlight code={JSON.stringify(runData.input, null, 2)} language="json" />
-            </Card.Section>
-          </Card>
-        </Stack>
-      )}
+      {runData.input && <RunInput input={runData.input} />}
 
       {runData.output && (
         <Stack gap={6}>

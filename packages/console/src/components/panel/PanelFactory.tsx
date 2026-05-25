@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react'
+import React, { useCallback } from 'react'
 import { Tabs, Stack, Group, Text, Box, Button, Loader } from '@mantine/core'
 import { GitBranch, Play } from 'lucide-react'
 import { PikkuBadge } from '../ui/PikkuBadge'
@@ -6,8 +6,8 @@ import { SchemaForm } from '../ui/SchemaForm'
 import type { PanelData } from '../../context/PanelContext'
 import { useWorkflowRunContextSafe } from '../../context/WorkflowRunContext'
 import { useStartWorkflowRun } from '../../hooks/useWorkflowRuns'
-import { useWorkflowContext, useWorkflowNode } from '../../context/WorkflowContext'
-import { useFunctionMeta, useSchema } from '../../hooks/useWirings'
+import { useWorkflowNode } from '../../context/WorkflowContext'
+import { useWorkflowInputSchema } from '../../hooks/useWorkflowInputSchema'
 import { FunctionConfiguration } from '../project/panels/FunctionDetailsForm'
 import {
   WorkflowStepConfiguration,
@@ -133,45 +133,7 @@ const NewWorkflowRunForm: React.FC<{ workflowId: string }> = ({
 }) => {
   const runContext = useWorkflowRunContextSafe()
   const startMutation = useStartWorkflowRun()
-  const { workflow } = useWorkflowContext()
-
-  const triggerSchema = useMemo(() => {
-    if (workflow?.source !== 'dynamic-workflow' || !workflow?.nodes) return null
-    const fields = new Set<string>()
-    for (const node of Object.values(workflow.nodes as Record<string, any>)) {
-      if (!node.input) continue
-      for (const val of Object.values(node.input as Record<string, any>)) {
-        if (val && typeof val === 'object' && val.$ref === 'trigger' && val.path) {
-          fields.add(val.path)
-        }
-      }
-    }
-    if (fields.size === 0) return null
-    const properties: Record<string, any> = {}
-    for (const f of fields) properties[f] = { type: 'string' }
-    return {
-      type: 'object' as const,
-      properties,
-      required: [...fields],
-    }
-  }, [workflow])
-
-  const inputFuncId = useMemo(() => {
-    if (triggerSchema) return null
-    if (workflow?.source === 'graph' || workflow?.source === 'dynamic-workflow') {
-      const entryNodeId = workflow.entryNodeIds?.[0]
-      const entryNode = entryNodeId ? workflow.nodes?.[entryNodeId] : null
-      return entryNode?.rpcName ?? null
-    }
-    return workflow?.pikkuFuncId ?? null
-  }, [workflow, triggerSchema])
-
-  const { data: funcMeta, isLoading: funcLoading } = useFunctionMeta(
-    inputFuncId ?? ''
-  )
-  const inputSchemaName = funcMeta?.inputSchemaName
-  const { data: schema, isLoading: schemaLoading } = useSchema(inputSchemaName)
-  const effectiveSchema = triggerSchema ?? schema
+  const { schema: effectiveSchema, isLoading } = useWorkflowInputSchema()
 
   const handleSubmit = useCallback(
     (formData: any) => {
@@ -189,9 +151,6 @@ const NewWorkflowRunForm: React.FC<{ workflowId: string }> = ({
     },
     [workflowId, startMutation, runContext]
   )
-
-  const isLoading =
-    (!!inputFuncId && funcLoading) || (!!inputSchemaName && schemaLoading)
 
   return (
     <Stack gap="md">
