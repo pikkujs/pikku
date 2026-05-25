@@ -305,6 +305,9 @@ export type PikkuCLIInput = {
     serverlessIncompatible?: string[]
   }
 
+  /** Named filter presets keyed by name, used via CLI --filter <name>. */
+  namedFilters?: Record<string, InspectorFilters>
+
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles
 

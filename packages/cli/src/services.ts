@@ -18,11 +18,7 @@ import {
 } from '@pikku/core/services'
 import { CLILogger } from './services/cli-logger.service.js'
 import { getPikkuCLIConfig } from './utils/pikku-cli-config.js'
-import type {
-  InspectorState,
-  InspectorDiagnostic,
-  InspectorFilters,
-} from '@pikku/inspector'
+import type { InspectorState, InspectorDiagnostic } from '@pikku/inspector'
 import {
   inspect,
   serializeInspectorState,
@@ -40,6 +36,7 @@ import { existsSync } from 'fs'
 import { readFile, writeFile } from 'fs/promises'
 import { loadManifest } from './utils/contract-versions.js'
 import { join } from 'path'
+import { parseCLIFilters } from './utils/parse-cli-filters.js'
 
 const DIAGNOSTIC_CODE_TO_LINT_KEY: Record<
   string,
@@ -65,79 +62,6 @@ function processDiagnostics(
 }
 
 const logger = new CLILogger({ logLogo: false, silent: false })
-
-/**
- * Parse a comma-separated string or array into an array of trimmed, non-empty strings
- * Returns undefined if the input is empty/undefined or results in an empty array
- */
-function parseCommaSeparated(
-  value: string | string[] | undefined
-): string[] | undefined {
-  if (!value) return undefined
-
-  // If already an array, flatten and split any comma-separated values
-  if (Array.isArray(value)) {
-    const flattened = value
-      .flatMap((item) => item.split(','))
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0)
-    return flattened.length > 0 ? flattened : undefined
-  }
-
-  // If string, split by comma
-  const parsed = value
-    .split(',')
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0)
-
-  return parsed.length > 0 ? parsed : undefined
-}
-
-/**
- * Parse CLI filter arguments into InspectorFilters format
- */
-function parseCLIFilters(
-  data: any,
-  cliConfig?: { deploy?: { serverlessIncompatible?: string[] } }
-): InspectorFilters {
-  const filters: InspectorFilters = {}
-
-  if (data.filters) {
-    return JSON.parse(data.filters)
-  }
-
-  // Parse each filter type from CLI arguments
-  const names = parseCommaSeparated(data.names)
-  const tags = parseCommaSeparated(data.tags)
-  const types = parseCommaSeparated(data.types)
-  const directories = parseCommaSeparated(data.directories)
-  const httpRoutes = parseCommaSeparated(data.httpRoutes)
-  const httpMethods = parseCommaSeparated(data.httpMethods)
-  const targetRaw = parseCommaSeparated(data.target)
-
-  // Only include non-undefined values in the result
-  if (names) filters.names = names
-  if (tags) filters.tags = tags
-  if (types) filters.types = types
-  if (directories) filters.directories = directories
-  if (httpRoutes) filters.httpRoutes = httpRoutes
-  if (httpMethods) filters.httpMethods = httpMethods
-  if (targetRaw) {
-    const invalid = targetRaw.filter(
-      (t) => t !== 'serverless' && t !== 'server'
-    )
-    if (invalid.length > 0) {
-      throw new Error(
-        `Invalid --target value(s): [${invalid.join(', ')}]. ` +
-          `Allowed: 'serverless', 'server'.`
-      )
-    }
-    filters.target = targetRaw as Array<'serverless' | 'server'>
-    filters.serverlessIncompatible = cliConfig?.deploy?.serverlessIncompatible
-  }
-
-  return filters
-}
 
 /**
  * Default CLI renderer that logs output using the logger

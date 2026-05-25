@@ -120,21 +120,36 @@ function matchesFilters(
     (!filters.directories || filters.directories.length === 0) &&
     (!filters.httpRoutes || filters.httpRoutes.length === 0) &&
     (!filters.httpMethods || filters.httpMethods.length === 0) &&
-    (!filters.target || filters.target.length === 0)
+    (!filters.target || filters.target.length === 0) &&
+    (!filters.excludeNames || filters.excludeNames.length === 0) &&
+    (!filters.excludeTags || filters.excludeTags.length === 0) &&
+    (!filters.excludeTypes || filters.excludeTypes.length === 0) &&
+    (!filters.excludeDirectories || filters.excludeDirectories.length === 0) &&
+    (!filters.excludeHttpRoutes || filters.excludeHttpRoutes.length === 0) &&
+    (!filters.excludeHttpMethods || filters.excludeHttpMethods.length === 0) &&
+    (!filters.excludeTarget || filters.excludeTarget.length === 0)
   ) {
     return true
   }
 
-  // Deploy-target filter (computed once per filterInspectorState call).
+  // Deploy-target include filter (computed once per filterInspectorState call).
   if (keptByDeploy && !keptByDeploy.has(meta.name)) {
-    logger.debug(`⒡ Filtered by deploy: ${meta.type}:${meta.name}`)
+    logger.debug(`⒡ Filtered by deploy include: ${meta.type}:${meta.name}`)
     return false
   }
 
-  // Check type filter
+  // Check type include filter
   if (filters.types && filters.types.length > 0) {
     if (!filters.types.includes(meta.type)) {
-      logger.debug(`⒡ Filtered by type: ${meta.type}:${meta.name}`)
+      logger.debug(`⒡ Filtered by type include: ${meta.type}:${meta.name}`)
+      return false
+    }
+  }
+
+  // Check type exclude filter
+  if (filters.excludeTypes && filters.excludeTypes.length > 0) {
+    if (filters.excludeTypes.includes(meta.type)) {
+      logger.debug(`⒡ Filtered by type exclude: ${meta.type}:${meta.name}`)
       return false
     }
   }
@@ -153,35 +168,55 @@ function matchesFilters(
     }
   }
 
-  // Check tag filter
+  // Check tag include filter
   if (filters.tags && filters.tags.length > 0) {
     if (!meta.tags || !filters.tags.some((tag) => meta.tags!.includes(tag))) {
-      logger.debug(`⒡ Filtered by tags: ${meta.type}:${meta.name}`)
+      logger.debug(`⒡ Filtered by tags include: ${meta.type}:${meta.name}`)
       return false
     }
   }
 
-  // Check name filter (match against both full ID and base name for versioned functions)
+  // Check tag exclude filter
+  if (filters.excludeTags && filters.excludeTags.length > 0) {
+    if (
+      meta.tags &&
+      filters.excludeTags.some((tag) => meta.tags!.includes(tag))
+    ) {
+      logger.debug(`⒡ Filtered by tags exclude: ${meta.type}:${meta.name}`)
+      return false
+    }
+  }
+
+  const { baseName } = parseVersionedId(meta.name)
+  const matchesNamePattern = (pattern: string) =>
+    matchesWildcard(meta.name, pattern) ||
+    (baseName !== meta.name && matchesWildcard(baseName, pattern))
+
+  // Check name include filter (match against both full ID and base name for versioned functions)
   if (filters.names && filters.names.length > 0) {
-    const { baseName } = parseVersionedId(meta.name)
-    const nameMatches = filters.names.some(
-      (pattern) =>
-        matchesWildcard(meta.name, pattern) ||
-        (baseName !== meta.name && matchesWildcard(baseName, pattern))
-    )
+    const nameMatches = filters.names.some(matchesNamePattern)
     if (!nameMatches) {
-      logger.debug(`⒡ Filtered by name: ${meta.type}:${meta.name}`)
+      logger.debug(`⒡ Filtered by name include: ${meta.type}:${meta.name}`)
       return false
     }
   }
 
-  // Check HTTP route filter
+  // Check name exclude filter
+  if (filters.excludeNames && filters.excludeNames.length > 0) {
+    if (filters.excludeNames.some(matchesNamePattern)) {
+      logger.debug(`⒡ Filtered by name exclude: ${meta.type}:${meta.name}`)
+      return false
+    }
+  }
+
+  const matchesRoutePattern = (pattern: string) =>
+    !!meta.httpRoute && matchesWildcard(meta.httpRoute, pattern)
+
+  // Check HTTP route include filter
   if (filters.httpRoutes && filters.httpRoutes.length > 0 && meta.httpRoute) {
-    const routeMatches = filters.httpRoutes.some((pattern) =>
-      matchesWildcard(meta.httpRoute!, pattern)
-    )
+    const routeMatches = filters.httpRoutes.some(matchesRoutePattern)
     if (!routeMatches) {
-      logger.debug(`⒡ Filtered by HTTP route: ${meta.httpRoute}`)
+      logger.debug(`⒡ Filtered by HTTP route include: ${meta.httpRoute}`)
       return false
     }
 
@@ -203,15 +238,40 @@ function matchesFilters(
     }
   }
 
-  // Check HTTP method filter
+  // Check HTTP route exclude filter
+  if (
+    filters.excludeHttpRoutes &&
+    filters.excludeHttpRoutes.length > 0 &&
+    meta.httpRoute
+  ) {
+    if (filters.excludeHttpRoutes.some(matchesRoutePattern)) {
+      logger.debug(`⒡ Filtered by HTTP route exclude: ${meta.httpRoute}`)
+      return false
+    }
+  }
+
+  const normalizedMethod = meta.httpMethod?.toUpperCase()
+
+  // Check HTTP method include filter
   if (
     filters.httpMethods &&
     filters.httpMethods.length > 0 &&
-    meta.httpMethod
+    normalizedMethod
   ) {
-    const normalizedMethod = meta.httpMethod.toUpperCase()
     if (!filters.httpMethods.includes(normalizedMethod)) {
-      logger.debug(`⒡ Filtered by HTTP method: ${meta.httpMethod}`)
+      logger.debug(`⒡ Filtered by HTTP method include: ${meta.httpMethod}`)
+      return false
+    }
+  }
+
+  // Check HTTP method exclude filter
+  if (
+    filters.excludeHttpMethods &&
+    filters.excludeHttpMethods.length > 0 &&
+    normalizedMethod
+  ) {
+    if (filters.excludeHttpMethods.includes(normalizedMethod)) {
+      logger.debug(`⒡ Filtered by HTTP method exclude: ${meta.httpMethod}`)
       return false
     }
   }
@@ -251,7 +311,16 @@ export function filterInspectorState(
       (!filters.directories || filters.directories.length === 0) &&
       (!filters.httpRoutes || filters.httpRoutes.length === 0) &&
       (!filters.httpMethods || filters.httpMethods.length === 0) &&
-      (!filters.target || filters.target.length === 0))
+      (!filters.target || filters.target.length === 0) &&
+      (!filters.excludeNames || filters.excludeNames.length === 0) &&
+      (!filters.excludeTags || filters.excludeTags.length === 0) &&
+      (!filters.excludeTypes || filters.excludeTypes.length === 0) &&
+      (!filters.excludeDirectories ||
+        filters.excludeDirectories.length === 0) &&
+      (!filters.excludeHttpRoutes || filters.excludeHttpRoutes.length === 0) &&
+      (!filters.excludeHttpMethods ||
+        filters.excludeHttpMethods.length === 0) &&
+      (!filters.excludeTarget || filters.excludeTarget.length === 0))
   ) {
     return state
   }
@@ -260,13 +329,21 @@ export function filterInspectorState(
   // resolveDeployTarget throws IncompatibleDeployTargetError when an
   // explicit deploy: 'serverless' clashes with serverlessIncompatible.
   let keptByDeploy: Set<string> | null = null
-  if (filters.target && filters.target.length > 0) {
-    const allowed = new Set(filters.target)
+  if (
+    (filters.target && filters.target.length > 0) ||
+    (filters.excludeTarget && filters.excludeTarget.length > 0)
+  ) {
+    const allowed = filters.target ? new Set(filters.target) : null
+    const excluded = filters.excludeTarget
+      ? new Set(filters.excludeTarget)
+      : null
     const incompatible = new Set(filters.serverlessIncompatible ?? [])
     keptByDeploy = new Set<string>()
     for (const [funcId, funcMeta] of Object.entries(state.functions.meta)) {
       const target = resolveDeployTarget(funcMeta as any, incompatible, funcId)
-      if (allowed.has(target)) keptByDeploy.add(funcId)
+      if (allowed && !allowed.has(target)) continue
+      if (excluded && excluded.has(target)) continue
+      keptByDeploy.add(funcId)
     }
   }
 

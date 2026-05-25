@@ -1486,3 +1486,49 @@ describe('filterInspectorState', () => {
     })
   })
 })
+
+describe('filterInspectorState exclude filters', () => {
+  test('exclude tags removes matching entries after include', () => {
+    const state = createMockInspectorState()
+    const filters: InspectorFilters = {
+      tags: ['api', 'admin'],
+      excludeTags: ['admin'],
+    }
+
+    const result = filterInspectorState(state, filters, mockLogger)
+
+    assert.ok(result.http.meta.get['/api/users'])
+    assert.ok(result.http.meta.post['/api/users'])
+    assert.ok(!result.http.meta.get['/admin/settings'])
+  })
+
+  test('exclude names wins over broad names include', () => {
+    const state = createMockInspectorState()
+    const filters: InspectorFilters = {
+      names: ['*'],
+      excludeNames: ['getAdminSettings'],
+    }
+
+    const result = filterInspectorState(state, filters, mockLogger)
+
+    assert.ok(result.http.meta.get['/api/users'])
+    assert.ok(result.http.meta.post['/api/users'])
+    assert.ok(!result.http.meta.get['/admin/settings'])
+  })
+
+  test('exclude target prunes server target while keeping serverless', () => {
+    const state = createMockInspectorState()
+    ;(state.functions.meta as any).getAdminSettings.deploy = 'server'
+    ;(state.functions.meta as any).createUser.deploy = 'serverless'
+
+    const filters: InspectorFilters = {
+      target: ['server', 'serverless'],
+      excludeTarget: ['server'],
+    }
+
+    const result = filterInspectorState(state, filters, mockLogger)
+
+    assert.ok(result.http.meta.post['/api/users'])
+    assert.ok(!result.http.meta.get['/admin/settings'])
+  })
+})

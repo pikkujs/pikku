@@ -122,8 +122,12 @@ wireCLI({
       description: 'Generate all Pikku files (types, schemas, wirings, etc.)',
       isDefault: true,
       options: {
+        filter: {
+          description:
+            'Named filter(s) from pikku.config.json filters map (comma-separated)',
+        },
         tags: {
-          description: 'Filter functions by tags (comma-separated)',
+          description: 'Include functions by tags (comma-separated)',
           short: 't',
         },
         wires: {
@@ -132,23 +136,46 @@ wireCLI({
         excludeWires: {
           description: 'Exclude direct wirings by category (comma-separated)',
         },
+        excludeTags: {
+          description: 'Exclude functions by tags (comma-separated)',
+        },
         directories: {
-          description: 'Filter functions by directories (comma-separated)',
+          description: 'Include functions by directories (comma-separated)',
           short: 'd',
         },
+        excludeDirectories: {
+          description: 'Exclude functions by directories (comma-separated)',
+        },
         httpMethods: {
-          description: 'Filter HTTP routes by methods (comma-separated)',
+          description: 'Include HTTP routes by methods (comma-separated)',
+        },
+        excludeHttpMethods: {
+          description: 'Exclude HTTP routes by methods (comma-separated)',
         },
         httpRoutes: {
-          description: 'Filter HTTP routes by route patterns (comma-separated)',
+          description:
+            'Include HTTP routes by route patterns (comma-separated)',
+        },
+        excludeHttpRoutes: {
+          description:
+            'Exclude HTTP routes by route patterns (comma-separated)',
         },
         names: {
-          description: 'Filter functions by name patterns (supports wildcards)',
+          description:
+            'Include functions by name patterns (supports wildcards)',
           short: 'n',
+        },
+        excludeNames: {
+          description:
+            'Exclude functions by name patterns (supports wildcards)',
         },
         target: {
           description:
-            'Filter functions by deploy target (comma-separated: serverless, server)',
+            'Include functions by deploy target (comma-separated: serverless, server)',
+        },
+        excludeTarget: {
+          description:
+            'Exclude functions by deploy target (comma-separated: serverless, server)',
         },
       },
     }),

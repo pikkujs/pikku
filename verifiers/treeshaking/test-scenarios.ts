@@ -112,6 +112,20 @@ export const scenarios: TestScenario[] = [
     expectedWireServices: ['userContext', 'userPreferences'],
     description: 'All notification + storage routes',
   },
+  {
+    name: 'Tags: notifications with exclude sms',
+    filter: '--tags=notifications --excludeTags=sms',
+    expectedSingletonServices: ['email', 'logger', 'secrets'],
+    expectedWireServices: ['userContext'],
+    description: 'Notification routes, excluding the SMS-tagged handler',
+  },
+  {
+    name: 'Named Filter: notifications_no_sms',
+    filter: '--filter=notifications_no_sms',
+    expectedSingletonServices: ['email', 'logger', 'secrets'],
+    expectedWireServices: ['userContext'],
+    description: 'Named filter preset resolves include and exclude tag logic',
+  },
 
   // Type filters
   {

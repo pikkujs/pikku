@@ -1,6 +1,26 @@
 {
   "tsconfig": "./tsconfig.json",
-  "srcDirectories": ["src"],
+  "srcDirectories": [
+    "src"
+  ],
   "outDir": ".pikku",
-  "entrypoint": "src/index.ts"
+  "entrypoint": "src/index.ts",
+  "namedFilters": {
+    "notifications_no_sms": {
+      "tags": [
+        "notifications"
+      ],
+      "excludeTags": [
+        "sms"
+      ]
+    },
+    "payments_only": {
+      "tags": [
+        "payments"
+      ],
+      "excludeNames": [
+        "*Email*"
+      ]
+    }
+  }
 }
