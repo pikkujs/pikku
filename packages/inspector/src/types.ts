@@ -179,14 +179,14 @@ export interface InspectorPermissionState {
 export type InspectorFilters = {
   names?: string[] // Wildcard support: "email-*" matches "email-worker", "email-sender"
   tags?: string[]
-  types?: string[]
+  wires?: string[]
   directories?: string[]
   httpRoutes?: string[] // HTTP route patterns: "/api/*", "/webhooks/*"
   httpMethods?: string[] // HTTP methods: "GET", "POST", "DELETE", etc.
 
   excludeNames?: string[]
   excludeTags?: string[]
-  excludeTypes?: string[]
+  excludeWires?: string[]
   excludeDirectories?: string[]
   excludeHttpRoutes?: string[]
   excludeHttpMethods?: string[]
@@ -197,7 +197,6 @@ export type InspectorFilters = {
   // otherwise 'serverless'.
   target?: Array<'serverless' | 'server'>
   excludeTarget?: Array<'serverless' | 'server'>
-
   // Service names that, when consumed by a function, force its target
   // to 'server'. Sourced from `pikku.config.json` →
   // `deploy.serverlessIncompatible`. Used only when deploy filters are set.

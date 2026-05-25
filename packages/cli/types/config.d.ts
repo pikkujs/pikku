@@ -314,7 +314,8 @@ export type PikkuCLIInput = {
 export type PikkuCLIConfig = PikkuCLIInput & {
   configFile?: string
   tags?: string[]
-  types?: string[]
+  wires?: string[]
+  excludeWires?: string[]
 
   userSessionType?: string
   singletonServicesFactoryType?: string

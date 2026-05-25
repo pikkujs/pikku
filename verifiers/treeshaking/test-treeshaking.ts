@@ -11,6 +11,14 @@ const INSPECTOR_STATE_FILE = join(
   'inspector-state.json'
 )
 
+function runPikkuCLI(args: string[]): void {
+  const command = `node ../../packages/cli/dist/bin/pikku.js ${args.join(' ')}`
+  execSync(command, {
+    cwd: process.cwd(),
+    stdio: 'pipe',
+  })
+}
+
 /**
  * Check if addon bootstrap is imported
  */
@@ -146,11 +154,7 @@ function parseGeneratedServices(): {
 function createInspectorState(): void {
   try {
     // Run pikku all to create the inspector state file
-    const command = `yarn pikku all --state-output=${INSPECTOR_STATE_FILE}`
-    execSync(command, {
-      cwd: process.cwd(),
-      stdio: 'pipe', // Suppress output
-    })
+    runPikkuCLI(['all', `--state-output=${INSPECTOR_STATE_FILE}`])
   } catch (error) {
     console.error('❌ Error creating inspector state:', error)
     throw error
@@ -168,14 +172,12 @@ function runPikkuWithFilter(filter: string): {
 } {
   try {
     // Run pikku all with the filter, loading from the cached state
-    const command = filter
-      ? `yarn pikku all --state-input=${INSPECTOR_STATE_FILE} ${filter}`
-      : `yarn pikku all --state-input=${INSPECTOR_STATE_FILE}`
+    const args = ['all', `--state-input=${INSPECTOR_STATE_FILE}`]
+    if (filter) {
+      args.push(...filter.split(' ').filter(Boolean))
+    }
 
-    execSync(command, {
-      cwd: process.cwd(),
-      stdio: 'pipe', // Suppress output
-    })
+    runPikkuCLI(args)
 
     // Parse and return the generated services
     return parseGeneratedServices()

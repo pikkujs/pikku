@@ -3,7 +3,6 @@ import type { InspectorFilters } from '@pikku/inspector'
 export type CLIFilters = InspectorFilters & {
   excludeNames?: string[]
   excludeTags?: string[]
-  excludeTypes?: string[]
   excludeDirectories?: string[]
   excludeHttpRoutes?: string[]
   excludeHttpMethods?: string[]
@@ -62,7 +61,7 @@ export function parseCLIFilters(
 
     append('names', source.names)
     append('tags', source.tags)
-    append('types', source.types)
+    append('wires', source.wires)
     append('directories', source.directories)
     append('httpRoutes', source.httpRoutes)
     append('httpMethods', source.httpMethods)
@@ -70,7 +69,7 @@ export function parseCLIFilters(
 
     append('excludeNames', source.excludeNames)
     append('excludeTags', source.excludeTags)
-    append('excludeTypes', source.excludeTypes)
+    append('excludeWires', source.excludeWires)
     append('excludeDirectories', source.excludeDirectories)
     append('excludeHttpRoutes', source.excludeHttpRoutes)
     append('excludeHttpMethods', source.excludeHttpMethods)
@@ -97,14 +96,14 @@ export function parseCLIFilters(
   mergeFilter({
     names: parseCommaSeparated(data.names),
     tags: parseCommaSeparated(data.tags),
-    types: parseCommaSeparated(data.types),
+    wires: parseCommaSeparated(data.wires),
     directories: parseCommaSeparated(data.directories),
     httpRoutes: parseCommaSeparated(data.httpRoutes),
     httpMethods: parseCommaSeparated(data.httpMethods),
     target: parseCommaSeparated(data.target) as Array<'serverless' | 'server'>,
     excludeNames: parseCommaSeparated(data.excludeNames),
     excludeTags: parseCommaSeparated(data.excludeTags),
-    excludeTypes: parseCommaSeparated(data.excludeTypes),
+    excludeWires: parseCommaSeparated(data.excludeWires),
     excludeDirectories: parseCommaSeparated(data.excludeDirectories),
     excludeHttpRoutes: parseCommaSeparated(data.excludeHttpRoutes),
     excludeHttpMethods: parseCommaSeparated(data.excludeHttpMethods),

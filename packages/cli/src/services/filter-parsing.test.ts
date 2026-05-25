@@ -15,7 +15,7 @@ test('parseCLIFilters merges named filter and CLI includes/excludes', () => {
         api: {
           tags: ['api'],
           names: ['send*'],
-          excludeTypes: ['queue'],
+          excludeWires: ['queue'],
         },
       },
     }
@@ -23,7 +23,7 @@ test('parseCLIFilters merges named filter and CLI includes/excludes', () => {
 
   assert.deepStrictEqual(filters.tags, ['api', 'shared'])
   assert.deepStrictEqual(filters.names, ['send*'])
-  assert.deepStrictEqual(filters.excludeTypes, ['queue'])
+  assert.deepStrictEqual(filters.excludeWires, ['queue'])
   assert.deepStrictEqual(filters.excludeTags, ['internal'])
   assert.deepStrictEqual(filters.excludeNames, ['*deprecated*'])
 })

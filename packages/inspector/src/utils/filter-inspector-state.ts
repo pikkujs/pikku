@@ -116,14 +116,15 @@ function matchesFilters(
   if (
     (!filters.names || filters.names.length === 0) &&
     (!filters.tags || filters.tags.length === 0) &&
-    (!filters.types || filters.types.length === 0) &&
+    (!filters.wires || filters.wires.length === 0) &&
+    (!filters.excludeWires || filters.excludeWires.length === 0) &&
     (!filters.directories || filters.directories.length === 0) &&
     (!filters.httpRoutes || filters.httpRoutes.length === 0) &&
     (!filters.httpMethods || filters.httpMethods.length === 0) &&
     (!filters.target || filters.target.length === 0) &&
     (!filters.excludeNames || filters.excludeNames.length === 0) &&
     (!filters.excludeTags || filters.excludeTags.length === 0) &&
-    (!filters.excludeTypes || filters.excludeTypes.length === 0) &&
+    (!filters.excludeWires || filters.excludeWires.length === 0) &&
     (!filters.excludeDirectories || filters.excludeDirectories.length === 0) &&
     (!filters.excludeHttpRoutes || filters.excludeHttpRoutes.length === 0) &&
     (!filters.excludeHttpMethods || filters.excludeHttpMethods.length === 0) &&
@@ -138,18 +139,18 @@ function matchesFilters(
     return false
   }
 
-  // Check type include filter
-  if (filters.types && filters.types.length > 0) {
-    if (!filters.types.includes(meta.type)) {
-      logger.debug(`⒡ Filtered by type include: ${meta.type}:${meta.name}`)
+  // Check wire include filter
+  if (filters.wires && filters.wires.length > 0) {
+    if (!filters.wires.includes(meta.type)) {
+      logger.debug(`⒡ Filtered by wire include: ${meta.type}:${meta.name}`)
       return false
     }
   }
 
-  // Check type exclude filter
-  if (filters.excludeTypes && filters.excludeTypes.length > 0) {
-    if (filters.excludeTypes.includes(meta.type)) {
-      logger.debug(`⒡ Filtered by type exclude: ${meta.type}:${meta.name}`)
+  // Check wire exclude filter
+  if (filters.excludeWires && filters.excludeWires.length > 0) {
+    if (filters.excludeWires.includes(meta.type)) {
+      logger.debug(`⒡ Filtered by wire exclude: ${meta.type}:${meta.name}`)
       return false
     }
   }
@@ -307,14 +308,15 @@ export function filterInspectorState(
     Object.keys(filters).length === 0 ||
     ((!filters.names || filters.names.length === 0) &&
       (!filters.tags || filters.tags.length === 0) &&
-      (!filters.types || filters.types.length === 0) &&
+      (!filters.wires || filters.wires.length === 0) &&
+      (!filters.excludeWires || filters.excludeWires.length === 0) &&
       (!filters.directories || filters.directories.length === 0) &&
       (!filters.httpRoutes || filters.httpRoutes.length === 0) &&
       (!filters.httpMethods || filters.httpMethods.length === 0) &&
       (!filters.target || filters.target.length === 0) &&
       (!filters.excludeNames || filters.excludeNames.length === 0) &&
       (!filters.excludeTags || filters.excludeTags.length === 0) &&
-      (!filters.excludeTypes || filters.excludeTypes.length === 0) &&
+      (!filters.excludeWires || filters.excludeWires.length === 0) &&
       (!filters.excludeDirectories ||
         filters.excludeDirectories.length === 0) &&
       (!filters.excludeHttpRoutes || filters.excludeHttpRoutes.length === 0) &&

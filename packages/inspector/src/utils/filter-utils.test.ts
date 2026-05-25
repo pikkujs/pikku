@@ -31,7 +31,7 @@ describe('matchesFilters', () => {
     test('should return true when all filter arrays are empty', () => {
       const filters: InspectorFilters = {
         tags: [],
-        types: [],
+        wires: [],
         directories: [],
       }
 
@@ -108,10 +108,10 @@ describe('matchesFilters', () => {
     })
   })
 
-  describe('Type filtering', () => {
-    test('should return true when type matches', () => {
+  describe('Wire filtering', () => {
+    test('should return true when wire matches', () => {
       const filters: InspectorFilters = {
-        types: ['http', 'channel'],
+        wires: ['http', 'channel'],
       }
 
       const result = matchesFilters(
@@ -124,9 +124,9 @@ describe('matchesFilters', () => {
       assert.equal(result, true)
     })
 
-    test('should return false when type does not match', () => {
+    test('should return false when wire does not match', () => {
       const filters: InspectorFilters = {
-        types: ['channel', 'queue'],
+        wires: ['channel', 'queue'],
       }
 
       const result = matchesFilters(
@@ -144,7 +144,7 @@ describe('matchesFilters', () => {
 
       eventTypes.forEach((eventType) => {
         const filters: InspectorFilters = {
-          types: [eventType],
+          wires: [eventType],
         }
 
         const result = matchesFilters(
@@ -154,8 +154,23 @@ describe('matchesFilters', () => {
           mockLogger
         )
 
-        assert.equal(result, true, `Should match for type: ${eventType}`)
+        assert.equal(result, true, `Should match for wire: ${eventType}`)
       })
+    })
+
+    test('should exclude matching wires', () => {
+      const filters: InspectorFilters = {
+        excludeWires: ['queue', 'scheduler'],
+      }
+
+      const result = matchesFilters(
+        filters,
+        { tags: ['test'] },
+        { type: 'queue', name: 'email-worker' },
+        mockLogger
+      )
+
+      assert.equal(result, false)
     })
   })
 
@@ -275,7 +290,7 @@ describe('matchesFilters', () => {
     test('should return true when all filters pass', () => {
       const filters: InspectorFilters = {
         tags: ['api'],
-        types: ['http'],
+        wires: ['http'],
         directories: ['src/api'],
       }
 
@@ -296,7 +311,7 @@ describe('matchesFilters', () => {
     test('should return false when type filter fails (even if others pass)', () => {
       const filters: InspectorFilters = {
         tags: ['api'],
-        types: ['channel'],
+        wires: ['channel'],
         directories: ['src/api'],
       }
 
@@ -317,7 +332,7 @@ describe('matchesFilters', () => {
     test('should return false when directory filter fails (even if others pass)', () => {
       const filters: InspectorFilters = {
         tags: ['api'],
-        types: ['http'],
+        wires: ['http'],
         directories: ['src/internal'],
       }
 
@@ -338,7 +353,7 @@ describe('matchesFilters', () => {
     test('should return false when tag filter fails (even if others pass)', () => {
       const filters: InspectorFilters = {
         tags: ['internal'],
-        types: ['http'],
+        wires: ['http'],
         directories: ['src/api'],
       }
 
@@ -375,7 +390,7 @@ describe('matchesFilters', () => {
 
     test('should handle empty meta name', () => {
       const filters: InspectorFilters = {
-        types: ['channel'],
+        wires: ['channel'],
       }
 
       const result = matchesFilters(
@@ -443,7 +458,7 @@ describe('matchesFilters', () => {
 
     test('should handle multiple matching types', () => {
       const filters: InspectorFilters = {
-        types: ['http', 'channel'],
+        wires: ['http', 'channel'],
       }
 
       const result = matchesFilters(
@@ -724,7 +739,7 @@ describe('matchesFilters', () => {
     test('should return true when all filters including new ones pass', () => {
       const filters: InspectorFilters = {
         tags: ['api'],
-        types: ['http'],
+        wires: ['http'],
         httpRoutes: ['/api/*'],
         httpMethods: ['GET'],
       }

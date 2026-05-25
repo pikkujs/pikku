@@ -127,10 +127,10 @@ export const scenarios: TestScenario[] = [
     description: 'Named filter preset resolves include and exclude tag logic',
   },
 
-  // Type filters
+  // Wire filters
   {
-    name: 'Type: http',
-    filter: '--types=http',
+    name: 'Wire: http',
+    filter: '--wires=http',
     expectedSingletonServices: [
       'analytics',
       'email',
@@ -141,29 +141,19 @@ export const scenarios: TestScenario[] = [
       'storage',
     ],
     expectedWireServices: ['userContext', 'userPreferences'],
-    description: 'All services should be included (all wirings are HTTP)',
+    description: 'Only direct HTTP wirings are selected',
     expectedGeneratedFiles: {
       bootstrap: {
         contains: ['./http/pikku-http-wirings.gen.js'],
-        excludes: [
-          './queue/pikku-queue-workers-wirings.gen.js',
-          './scheduler/pikku-schedulers-wirings.gen.js',
-        ],
       },
       httpWirings: {
         contains: ['../../src/functions/http.wiring.js'],
       },
-      queueWirings: {
-        excludes: ['../../src/background/background.wiring.js'],
-      },
-      schedulerWirings: {
-        excludes: ['../../src/background/background.wiring.js'],
-      },
     },
   },
   {
-    name: 'Exclude Types: queue,scheduler',
-    filter: '--excludeTypes=queue,scheduler',
+    name: 'Exclude Wires: queue,scheduler',
+    filter: '--excludeWires=queue,scheduler',
     expectedSingletonServices: [
       'analytics',
       'email',
@@ -174,70 +164,33 @@ export const scenarios: TestScenario[] = [
       'storage',
     ],
     expectedWireServices: ['userContext', 'userPreferences'],
-    description: 'Exclude background transports while keeping HTTP routes',
-    expectedGeneratedFiles: {
-      bootstrap: {
-        contains: ['./http/pikku-http-wirings.gen.js'],
-        excludes: [
-          './queue/pikku-queue-workers-wirings.gen.js',
-          './scheduler/pikku-schedulers-wirings.gen.js',
-        ],
-      },
-      httpWirings: {
-        contains: ['../../src/functions/http.wiring.js'],
-      },
-      queueWirings: {
-        excludes: ['../../src/background/background.wiring.js'],
-      },
-      schedulerWirings: {
-        excludes: ['../../src/background/background.wiring.js'],
-      },
-    },
+    description:
+      'Exclude direct queue/scheduler wirings when no surviving workflow path requires them',
   },
   {
-    name: 'Type: queue',
-    filter: '--types=queue',
+    name: 'Wire: queue',
+    filter: '--wires=queue',
     expectedSingletonServices: ['email', 'logger', 'notification', 'secrets'],
     expectedWireServices: ['userContext'],
     description: 'Only queue worker services should be included',
     expectedGeneratedFiles: {
       bootstrap: {
         contains: ['./queue/pikku-queue-workers-wirings.gen.js'],
-        excludes: [
-          './http/pikku-http-wirings.gen.js',
-          './scheduler/pikku-schedulers-wirings.gen.js',
-        ],
-      },
-      httpWirings: {
-        excludes: ['../../src/functions/http.wiring.js'],
       },
       queueWirings: {
         contains: ['../../src/background/background.wiring.js'],
       },
-      schedulerWirings: {
-        excludes: ['../../src/background/background.wiring.js'],
-      },
     },
   },
   {
-    name: 'Type: scheduler',
-    filter: '--types=scheduler',
+    name: 'Wire: scheduler',
+    filter: '--wires=scheduler',
     expectedSingletonServices: ['email', 'logger', 'notification', 'secrets'],
     expectedWireServices: [],
     description: 'Only scheduler services should be included',
     expectedGeneratedFiles: {
       bootstrap: {
         contains: ['./scheduler/pikku-schedulers-wirings.gen.js'],
-        excludes: [
-          './http/pikku-http-wirings.gen.js',
-          './queue/pikku-queue-workers-wirings.gen.js',
-        ],
-      },
-      httpWirings: {
-        excludes: ['../../src/functions/http.wiring.js'],
-      },
-      queueWirings: {
-        excludes: ['../../src/background/background.wiring.js'],
       },
       schedulerWirings: {
         contains: ['../../src/background/background.wiring.js'],
@@ -350,7 +303,7 @@ export const scenarios: TestScenario[] = [
   },
   {
     name: 'Combo: payments + http',
-    filter: '--tags=payments --types=http',
+    filter: '--tags=payments --wires=http',
     expectedSingletonServices: [
       'analytics',
       'email',
