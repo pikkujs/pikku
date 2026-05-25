@@ -1,4 +1,4 @@
-import { join, dirname, resolve, isAbsolute } from 'path'
+import { join, dirname, resolve, isAbsolute, parse as parsePath } from 'path'
 import { readdir, readFile } from 'fs/promises'
 import type { PikkuCLIConfig } from '../../types/config.js'
 import type { CLILogger } from '../services/cli-logger.service.js'
@@ -32,6 +32,21 @@ export const getPikkuCLIConfig = async (
   return config
 }
 
+async function findConfigFile(): Promise<string> {
+  let dir = process.cwd()
+  const { root } = parsePath(dir)
+  while (true) {
+    const files = await readdir(dir)
+    const match = files.find((f) => /pikku\.config\.(ts|js|json)$/.test(f))
+    if (match) return join(dir, match)
+    // Stop if we've reached the git repo root or the filesystem root
+    const hasGit = files.includes('.git')
+    if (hasGit || dir === root) break
+    dir = dirname(dir)
+  }
+  throw new Error('Config file pikku.config.json not found')
+}
+
 const _getPikkuCLIConfig = async (
   logger: CLILogger,
   configFile: string | undefined = undefined,
@@ -40,13 +55,7 @@ const _getPikkuCLIConfig = async (
   outDirOverride?: string
 ): Promise<PikkuCLIConfig> => {
   if (!configFile) {
-    let execDirectory = process.cwd()
-    const files = await readdir(execDirectory)
-    const file = files.find((file) => /pikku\.config\.(ts|js|json)$/.test(file))
-    if (!file) {
-      throw new Error('Config file pikku.config.json not found')
-    }
-    configFile = join(execDirectory, file)
+    configFile = await findConfigFile()
   }
 
   try {

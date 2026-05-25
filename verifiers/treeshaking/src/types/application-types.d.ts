@@ -9,6 +9,7 @@ import type { SMSService } from '../services/sms.service.js'
 import type { PaymentService } from '../services/payment.service.js'
 import type { AnalyticsService } from '../services/analytics.service.js'
 import type { StorageService } from '../services/storage.service.js'
+import type { NotificationService } from '../services/notification.service.js'
 import type { UserContextService } from '../services/user-context.service.js'
 import type { UserPreferencesService } from '../services/user-preferences.service.js'
 
@@ -20,6 +21,7 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   payment: PaymentService
   analytics: AnalyticsService
   storage: StorageService
+  notification: NotificationService
 }
 
 export interface Services extends CoreServices<SingletonServices> {

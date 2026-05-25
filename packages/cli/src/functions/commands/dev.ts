@@ -162,7 +162,12 @@ export const dev = pikkuSessionlessFunc<
 
     const userConfig = await userCreateConfig()
 
-    const resolvedLocalDb = resolveLocalDb(userConfig.dev?.db, config.rootDir)
+    const resolvedLocalDb = resolveLocalDb(
+      userConfig.dev?.db,
+      config.rootDir,
+      config.outDir,
+      config.runtimeDir
+    )
     const kysely = resolvedLocalDb
       ? await createKysely(resolvedLocalDb)
       : undefined

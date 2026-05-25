@@ -6,6 +6,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Pikku is a TypeScript-powered framework that normalizes all the different ways you can interact with Node.js servers. It provides a unified approach to handling HTTP requests, WebSocket connections, scheduled tasks, and channels across different runtime environments (Express, Fastify, Next.js, AWS Lambda, Cloudflare Workers, etc.).
 
+## Fabric Console — Build vs Platform Mode
+
+The Fabric Console (`/git/pikku/fabric`) has a top-level mode toggle in the header (top-right area of the screen). The two modes are:
+
+- **`build`** — minimal, beginner-friendly UI (Lovable-style). Focused on development via sandboxes. Default mode.
+- **`platform`** — full-featured UI (Vercel-style). Exposes all platform functionality including stages, branches, deployments, and advanced settings.
+
+### Key implementation details
+
+| Aspect | Detail |
+|--------|--------|
+| Type | `ConsoleMode = 'build' \| 'platform'` |
+| Storage | `localStorage` key `'console-mode'`, default `'build'` |
+| Context | `ConsoleModeProvider` in `apps/console/src/contexts/ConsoleModeProvider.tsx` |
+| Hook | `useConsoleMode()` — returns `{ mode, setMode }` |
+| Toggle UI | `ConsoleHeader` component (`apps/console/src/components/ConsoleHeader.tsx`), `div.modeSwitch` in the header |
+| Mode switch handler | `handleModeSelect(nextMode)` — also navigates to the builder sandbox when switching to `build` |
+
+The mode is **not part of the URL** — the same routes render differently depending on `mode`. Components read `useConsoleMode()` and conditionally show/hide sections. The `ProjectSidebar` is one example: it shows different nav items depending on whether the user is in `build` or `platform` mode.
+
 ## Architecture
 
 ### Core Components

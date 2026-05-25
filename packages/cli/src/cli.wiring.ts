@@ -17,6 +17,7 @@ import { dbMigrate } from './functions/commands/db-migrate.js'
 import { dbSeed } from './functions/commands/db-seed.js'
 import { dbReset } from './functions/commands/db-reset.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
+import { pikkuTestsInit } from './functions/commands/tests-init.js'
 import { pikkuVersionsCheck } from './functions/commands/versions-check.js'
 import { pikkuVersionsUpdate } from './functions/commands/versions-update.js'
 import { pikkuNewFunction } from './functions/commands/new-function.js'
@@ -125,8 +126,11 @@ wireCLI({
           description: 'Filter functions by tags (comma-separated)',
           short: 't',
         },
-        types: {
-          description: 'Filter functions by types (comma-separated)',
+        wires: {
+          description: 'Filter direct wirings by category (comma-separated)',
+        },
+        excludeWires: {
+          description: 'Exclude direct wirings by category (comma-separated)',
         },
         directories: {
           description: 'Filter functions by directories (comma-separated)',
@@ -426,6 +430,21 @@ wireCLI({
               description:
                 'Convert snake_case property names to camelCase in generated Zod schemas',
               default: false,
+            },
+          },
+        }),
+      },
+    },
+    tests: {
+      description: 'Manage function tests',
+      subcommands: {
+        init: pikkuCLICommand({
+          func: pikkuTestsInit,
+          description:
+            'Scaffold the ftest Cucumber harness in your functions package',
+          options: {
+            force: {
+              description: 'Overwrite existing ftest directory',
             },
           },
         }),

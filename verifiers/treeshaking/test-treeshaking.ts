@@ -34,6 +34,31 @@ function hasAddonBootstrap(): boolean {
   }
 }
 
+type GeneratedFileKey =
+  | 'bootstrap'
+  | 'httpWirings'
+  | 'queueWirings'
+  | 'schedulerWirings'
+
+function readGeneratedFile(file: GeneratedFileKey): string {
+  const pathByFile: Record<GeneratedFileKey, string[]> = {
+    bootstrap: ['.pikku', 'pikku-bootstrap.gen.ts'],
+    httpWirings: ['.pikku', 'http', 'pikku-http-wirings.gen.ts'],
+    queueWirings: ['.pikku', 'queue', 'pikku-queue-workers-wirings.gen.ts'],
+    schedulerWirings: [
+      '.pikku',
+      'scheduler',
+      'pikku-schedulers-wirings.gen.ts',
+    ],
+  }
+
+  try {
+    return readFileSync(join(process.cwd(), ...pathByFile[file]), 'utf-8')
+  } catch {
+    return ''
+  }
+}
+
 /**
  * Parse the pikku-services.gen.ts file to extract singleton and wire services
  */
@@ -51,7 +76,20 @@ function parseGeneratedServices(): {
     const content = readFileSync(servicesFilePath, 'utf-8')
 
     // Filter out system services (config, schema, variables, jwt are framework services)
-    const systemServices = new Set(['config', 'schema', 'variables', 'jwt'])
+    const systemServices = new Set([
+      'config',
+      'schema',
+      'variables',
+      'jwt',
+      'workflowService',
+      'workflowRunService',
+      'queueService',
+      'schedulerService',
+      'rpc',
+      'channel',
+      'mcp',
+      'userSession',
+    ])
 
     const singletonServices: string[] = []
     const wireServices: string[] = []
@@ -144,6 +182,43 @@ function runPikkuWithFilter(filter: string): {
   } catch (error) {
     console.error(`Error running pikku with filter "${filter}":`, error)
     throw error
+  }
+}
+
+function assertGeneratedFiles(
+  expected:
+    | Partial<
+        Record<
+          GeneratedFileKey,
+          {
+            contains?: string[]
+            excludes?: string[]
+          }
+        >
+      >
+    | undefined,
+  scenarioName: string
+): void {
+  if (!expected) return
+
+  for (const [file, checks] of Object.entries(expected) as Array<
+    [GeneratedFileKey, NonNullable<(typeof expected)[GeneratedFileKey]>]
+  >) {
+    const content = readGeneratedFile(file)
+
+    for (const needle of checks.contains ?? []) {
+      assert.ok(
+        content.includes(needle),
+        `${file} should include "${needle}" for scenario: ${scenarioName}`
+      )
+    }
+
+    for (const needle of checks.excludes ?? []) {
+      assert.ok(
+        !content.includes(needle),
+        `${file} should exclude "${needle}" for scenario: ${scenarioName}`
+      )
+    }
   }
 }
 
@@ -312,6 +387,8 @@ async function runTests() {
             `Actual:   ${actualServices.hasAddonBootstrap ? 'included' : 'excluded'}`
         )
       }
+
+      assertGeneratedFiles(scenario.expectedGeneratedFiles, scenario.name)
     })
   }
 

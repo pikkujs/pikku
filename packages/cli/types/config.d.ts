@@ -156,6 +156,8 @@ export type PikkuCLIInput = {
   extends?: string
 
   rootDir: string
+  /** Runtime artifacts directory (dev.db, content, tmp). Resolved relative to rootDir. Defaults to <rootDir>/.pikku-runtime. */
+  runtimeDir?: string
   srcDirectories: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>

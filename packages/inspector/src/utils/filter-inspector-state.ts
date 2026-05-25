@@ -36,6 +36,59 @@ function matchesWildcard(value: string, pattern: string): boolean {
   return value === pattern
 }
 
+function collectSourceFiles(
+  value: unknown,
+  sourceFiles = new Set<string>(),
+  seen = new Set<object>()
+): Set<string> {
+  if (typeof value === 'string') {
+    return sourceFiles
+  }
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      collectSourceFiles(entry, sourceFiles, seen)
+    }
+    return sourceFiles
+  }
+
+  if (!value || typeof value !== 'object') {
+    return sourceFiles
+  }
+
+  if (seen.has(value)) {
+    return sourceFiles
+  }
+  seen.add(value)
+
+  if ('sourceFile' in value && typeof value.sourceFile === 'string') {
+    sourceFiles.add(value.sourceFile)
+  }
+
+  for (const nestedValue of Object.values(value)) {
+    collectSourceFiles(nestedValue, sourceFiles, seen)
+  }
+
+  return sourceFiles
+}
+
+function repopulateFileSetFromMeta(
+  meta: unknown,
+  fallbackFiles: Set<string>,
+  hasEntries: boolean
+): Set<string> {
+  const sourceFiles = collectSourceFiles(meta)
+  if (sourceFiles.size > 0) {
+    return sourceFiles
+  }
+
+  if (hasEntries) {
+    return new Set(fallbackFiles)
+  }
+
+  return new Set<string>()
+}
+
 /**
  * Check if metadata matches the given filters
  */
@@ -436,10 +489,11 @@ export function filterInspectorState(
     }
   }
 
-  // Repopulate channels.files if any channels remain
-  if (Object.keys(filteredState.channels.meta).length > 0) {
-    filteredState.channels.files = new Set(state.channels.files)
-  }
+  filteredState.channels.files = repopulateFileSetFromMeta(
+    filteredState.channels.meta,
+    state.channels.files,
+    Object.keys(filteredState.channels.meta).length > 0
+  )
 
   // Filter triggers
   for (const name of Object.keys(filteredState.triggers.meta)) {
@@ -469,10 +523,11 @@ export function filterInspectorState(
     }
   }
 
-  // Repopulate triggers.files if any triggers remain
-  if (Object.keys(filteredState.triggers.meta).length > 0) {
-    filteredState.triggers.files = new Set(state.triggers.files)
-  }
+  filteredState.triggers.files = repopulateFileSetFromMeta(
+    filteredState.triggers.meta,
+    state.triggers.files,
+    Object.keys(filteredState.triggers.meta).length > 0
+  )
 
   // Filter scheduled tasks
   for (const name of Object.keys(filteredState.scheduledTasks.meta)) {
@@ -503,10 +558,11 @@ export function filterInspectorState(
     }
   }
 
-  // Repopulate scheduledTasks.files if any tasks remain
-  if (Object.keys(filteredState.scheduledTasks.meta).length > 0) {
-    filteredState.scheduledTasks.files = new Set(state.scheduledTasks.files)
-  }
+  filteredState.scheduledTasks.files = repopulateFileSetFromMeta(
+    filteredState.scheduledTasks.meta,
+    state.scheduledTasks.files,
+    Object.keys(filteredState.scheduledTasks.meta).length > 0
+  )
 
   // Filter queue workers
   for (const name of Object.keys(filteredState.queueWorkers.meta)) {
@@ -545,10 +601,11 @@ export function filterInspectorState(
     }
   }
 
-  // Repopulate queueWorkers.files if any workers remain
-  if (Object.keys(filteredState.queueWorkers.meta).length > 0) {
-    filteredState.queueWorkers.files = new Set(state.queueWorkers.files)
-  }
+  filteredState.queueWorkers.files = repopulateFileSetFromMeta(
+    filteredState.queueWorkers.meta,
+    state.queueWorkers.files,
+    Object.keys(filteredState.queueWorkers.meta).length > 0
+  )
 
   // Filter MCP tools
   for (const name of Object.keys(filteredState.mcpEndpoints.toolsMeta)) {
@@ -650,14 +707,20 @@ export function filterInspectorState(
     }
   }
 
-  // Repopulate mcpEndpoints.files if any MCP endpoints remain
+  // Repopulate mcpEndpoints.files from surviving endpoint metadata
   const hasMcpEndpoints =
     Object.keys(filteredState.mcpEndpoints.toolsMeta).length > 0 ||
     Object.keys(filteredState.mcpEndpoints.resourcesMeta).length > 0 ||
     Object.keys(filteredState.mcpEndpoints.promptsMeta).length > 0
-  if (hasMcpEndpoints) {
-    filteredState.mcpEndpoints.files = new Set(state.mcpEndpoints.files)
-  }
+  filteredState.mcpEndpoints.files = repopulateFileSetFromMeta(
+    {
+      toolsMeta: filteredState.mcpEndpoints.toolsMeta,
+      resourcesMeta: filteredState.mcpEndpoints.resourcesMeta,
+      promptsMeta: filteredState.mcpEndpoints.promptsMeta,
+    },
+    state.mcpEndpoints.files,
+    hasMcpEndpoints
+  )
 
   // Filter AI agents
   for (const name of Object.keys(filteredState.agents.agentsMeta)) {
@@ -753,13 +816,15 @@ export function filterInspectorState(
     }
   }
 
-  // Repopulate cli.files if any CLI programs or referenced renderers remain
+  // Repopulate cli.files from surviving program/renderer metadata
   const hasCliPrograms = Object.keys(filteredState.cli.meta.programs).length > 0
   const hasCliRenderers =
     Object.keys(filteredState.cli.meta.renderers || {}).length > 0
-  if (hasCliPrograms || hasCliRenderers) {
-    filteredState.cli.files = new Set(state.cli.files)
-  }
+  filteredState.cli.files = repopulateFileSetFromMeta(
+    filteredState.cli.meta,
+    state.cli.files,
+    hasCliPrograms || hasCliRenderers
+  )
 
   // Direct function filtering: functions that match the names/tags/directories
   // filters should be included even if no wiring (HTTP, scheduler, etc.) references them.

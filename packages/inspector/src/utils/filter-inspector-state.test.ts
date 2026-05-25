@@ -147,6 +147,10 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
         ],
       ]),
     },
+    triggers: {
+      meta: {},
+      files: new Set(),
+    },
     channels: {
       meta: {
         'chat-channel': {
@@ -154,15 +158,20 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
           tags: ['realtime', 'public'],
           middleware: [],
           permissions: [],
-        },
+          sourceFile: '/test/project/src/channels/chat.ts',
+        } as any,
         'admin-channel': {
           pikkuFuncId: 'handleAdminMessage',
           tags: ['realtime', 'admin'],
           middleware: [{ type: 'wire', name: 'authMiddleware' }],
           permissions: [],
-        },
+          sourceFile: '/test/project/src/channels/admin.ts',
+        } as any,
       },
-      files: new Set(['/test/project/src/channels/chat.ts']),
+      files: new Set([
+        '/test/project/src/channels/chat.ts',
+        '/test/project/src/channels/admin.ts',
+      ]),
     },
     scheduledTasks: {
       meta: {
@@ -171,15 +180,20 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
           schedule: '0 0 * * *',
           tags: ['cron', 'reports'],
           middleware: [],
-        },
+          sourceFile: '/test/project/src/tasks/reports.ts',
+        } as any,
         'hourly-cleanup': {
           pikkuFuncId: 'hourlyCleanup',
           schedule: '0 * * * *',
           tags: ['cron', 'maintenance'],
           middleware: [],
-        },
+          sourceFile: '/test/project/src/tasks/cleanup.ts',
+        } as any,
       },
-      files: new Set(['/test/project/src/tasks/reports.ts']),
+      files: new Set([
+        '/test/project/src/tasks/reports.ts',
+        '/test/project/src/tasks/cleanup.ts',
+      ]),
     },
     queueWorkers: {
       meta: {
@@ -188,15 +202,20 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
           name: 'email-queue',
           tags: ['queue', 'email'],
           middleware: [],
-        },
+          sourceFile: '/test/project/src/workers/email.ts',
+        } as any,
         'notification-worker': {
           pikkuFuncId: 'sendNotificationWorker',
           name: 'notification-queue',
           tags: ['queue', 'notifications'],
           middleware: [],
-        },
+          sourceFile: '/test/project/src/workers/notification.ts',
+        } as any,
       },
-      files: new Set(['/test/project/src/workers/email.ts']),
+      files: new Set([
+        '/test/project/src/workers/email.ts',
+        '/test/project/src/workers/notification.ts',
+      ]),
     },
     workflows: {
       meta: {},
@@ -221,6 +240,7 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
           tags: ['mcp', 'search'],
           middleware: [],
           permissions: [],
+          sourceFile: '/test/project/src/mcp/search.ts',
         } as any,
         'analyze-tool': {
           name: 'analyze-tool',
@@ -229,6 +249,7 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
           tags: ['mcp', 'analytics'],
           middleware: [],
           permissions: [],
+          sourceFile: '/test/project/src/mcp/analyze.ts',
         } as any,
       },
       resourcesMeta: {
@@ -240,6 +261,7 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
           tags: ['mcp', 'docs'],
           middleware: [],
           permissions: [],
+          sourceFile: '/test/project/src/mcp/docs.ts',
         } as any,
       },
       promptsMeta: {
@@ -250,14 +272,21 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
           tags: ['mcp', 'help'],
           middleware: [],
           permissions: [],
+          sourceFile: '/test/project/src/mcp/help.ts',
         } as any,
       },
-      files: new Set(['/test/project/src/mcp/tools.ts']),
+      files: new Set([
+        '/test/project/src/mcp/search.ts',
+        '/test/project/src/mcp/analyze.ts',
+        '/test/project/src/mcp/docs.ts',
+        '/test/project/src/mcp/help.ts',
+      ]),
     },
     cli: {
       meta: {
         programs: {
           'my-cli': {
+            sourceFile: '/test/project/src/cli/program.ts',
             commands: {
               build: {
                 pikkuFuncId: 'cliCommand',
@@ -265,6 +294,7 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
                 middleware: [],
                 positionals: [],
                 options: {},
+                sourceFile: '/test/project/src/cli/build.ts',
               } as any,
               test: {
                 pikkuFuncId: 'cliTestCommand',
@@ -272,12 +302,17 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
                 middleware: [],
                 positionals: [],
                 options: {},
+                sourceFile: '/test/project/src/cli/test.ts',
               } as any,
             },
-          },
+          } as any,
         },
       },
-      files: new Set(['/test/project/src/cli/commands.ts']),
+      files: new Set([
+        '/test/project/src/cli/program.ts',
+        '/test/project/src/cli/build.ts',
+        '/test/project/src/cli/test.ts',
+      ]),
     },
     middleware: {
       definitions: {},
@@ -513,7 +548,7 @@ describe('filterInspectorState', () => {
       assert.equal(Object.keys(result.channels.meta).length, 2)
     })
 
-    test('should track middleware for filtered channels', () => {
+    test('should repopulate channel files from surviving metadata', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
         types: ['channel'],
@@ -522,10 +557,9 @@ describe('filterInspectorState', () => {
 
       const result = filterInspectorState(state, filters, mockLogger)
 
-      assert.ok(result.serviceAggregation.usedMiddleware.has('authMiddleware'))
-      assert.ok(
-        result.serviceAggregation.usedFunctions.has('handleAdminMessage')
-      )
+      assert.deepEqual(Array.from(result.channels.files).sort(), [
+        '/test/project/src/channels/admin.ts',
+      ])
     })
   })
 
@@ -582,7 +616,7 @@ describe('filterInspectorState', () => {
       assert.ok(result.scheduledTasks.meta['hourly-cleanup'])
     })
 
-    test('should track functions for filtered scheduled tasks', () => {
+    test('should repopulate scheduled task files from surviving metadata', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
         types: ['scheduler'],
@@ -591,7 +625,9 @@ describe('filterInspectorState', () => {
 
       const result = filterInspectorState(state, filters, mockLogger)
 
-      assert.ok(result.serviceAggregation.usedFunctions.has('dailyReport'))
+      assert.deepEqual(Array.from(result.scheduledTasks.files).sort(), [
+        '/test/project/src/tasks/reports.ts',
+      ])
     })
   })
 
@@ -647,7 +683,7 @@ describe('filterInspectorState', () => {
       assert.equal(Object.keys(result.queueWorkers.meta).length, 2)
     })
 
-    test('should track functions for filtered queue workers', () => {
+    test('should repopulate queue worker files from surviving metadata', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
         types: ['queue'],
@@ -656,7 +692,9 @@ describe('filterInspectorState', () => {
 
       const result = filterInspectorState(state, filters, mockLogger)
 
-      assert.ok(result.serviceAggregation.usedFunctions.has('sendEmailWorker'))
+      assert.deepEqual(Array.from(result.queueWorkers.files).sort(), [
+        '/test/project/src/workers/email.ts',
+      ])
     })
   })
 
@@ -716,7 +754,7 @@ describe('filterInspectorState', () => {
       assert.equal(Object.keys(result.mcpEndpoints.promptsMeta).length, 0)
     })
 
-    test('should track functions for filtered MCP endpoints', () => {
+    test('should repopulate MCP files from surviving metadata', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
         types: ['mcp'],
@@ -725,7 +763,9 @@ describe('filterInspectorState', () => {
 
       const result = filterInspectorState(state, filters, mockLogger)
 
-      assert.ok(result.serviceAggregation.usedFunctions.has('mcpSearchTool'))
+      assert.deepEqual(Array.from(result.mcpEndpoints.files).sort(), [
+        '/test/project/src/mcp/search.ts',
+      ])
     })
   })
 
@@ -791,7 +831,7 @@ describe('filterInspectorState', () => {
       assert.equal(Object.keys(result.cli.meta.programs).length, 0)
     })
 
-    test('should track functions for filtered CLI commands', () => {
+    test('should repopulate CLI files from surviving metadata', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
         types: ['cli'],
@@ -800,7 +840,10 @@ describe('filterInspectorState', () => {
 
       const result = filterInspectorState(state, filters, mockLogger)
 
-      assert.ok(result.serviceAggregation.usedFunctions.has('cliCommand'))
+      assert.deepEqual(Array.from(result.cli.files).sort(), [
+        '/test/project/src/cli/build.ts',
+        '/test/project/src/cli/program.ts',
+      ])
     })
   })
 
