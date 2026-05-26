@@ -16,14 +16,16 @@
  * Both routes call `eventHub.subscribe`/`unsubscribe` with the channel id;
  * publish-side ergonomics (envelope shape) are documented in the
  * pikku-realtime skill.
+ *
+ * Uses TypeScript generics (not named Zod schema constants) so schemas and
+ * wiring calls can safely coexist in a single generated file.
  */
 export const serializeEventsScaffold = (
   authRequired: boolean,
   pikkuTypesImportPath: string
 ): string => {
   const auth = authRequired ? 'true' : 'false'
-  return `import { z } from 'zod'
-import {
+  return `import {
   pikkuChannelFunc,
   pikkuSessionlessFunc,
   wireChannel,
@@ -41,36 +43,22 @@ import {
  * the duplication; pick whichever style your project prefers.
  */
 
-const TopicInput = z.object({ topic: z.string() })
-
-const realtimeSubscribe = pikkuChannelFunc({
-  input: TopicInput,
+export const realtimeSubscribe = pikkuChannelFunc<{ topic: string }>({
   func: async ({ eventHub }, { topic }, { channel }) => {
-    if (!eventHub) {
-      throw new Error(
-        'Realtime channel needs an eventHub service. Add eventHub to your SingletonServices.'
-      )
-    }
-    await eventHub.subscribe(topic, channel.channelId)
+    await eventHub?.subscribe(topic, channel.channelId)
   },
 })
 
-const realtimeUnsubscribe = pikkuChannelFunc({
-  input: TopicInput,
+export const realtimeUnsubscribe = pikkuChannelFunc<{ topic: string }>({
   func: async ({ eventHub }, { topic }, { channel }) => {
-    if (!eventHub) {
-      throw new Error(
-        'Realtime channel needs an eventHub service. Add eventHub to your SingletonServices.'
-      )
-    }
-    await eventHub.unsubscribe(topic, channel.channelId)
+    await eventHub?.unsubscribe(topic, channel.channelId)
   },
 })
 
 // Pikku dispatches by the \`action\` field; client sends
 //   { action: 'subscribe',   topic: 'todo-created' }
 //   { action: 'unsubscribe', topic: 'todo-created' }
-const realtimeRoutes = defineChannelRoutes({
+export const realtimeRoutes = defineChannelRoutes({
   subscribe: realtimeSubscribe,
   unsubscribe: realtimeUnsubscribe,
 })
@@ -89,23 +77,13 @@ wireChannel({
  * SSE per-topic stream. One connection = one subscription. The eventHub
  * cleans up automatically when the channel closes (onChannelClosed).
  */
-const RealtimeSseInput = z.object({
-  topic: z.string(),
-})
-
-const realtimeEventStream = pikkuSessionlessFunc({
+export const realtimeEventStream = pikkuSessionlessFunc<{ topic: string }, void>({
   description: 'Auto-generated SSE stream for a single event-hub topic',
-  input: RealtimeSseInput,
   func: async ({ eventHub }, { topic }, { channel }) => {
-    if (!eventHub) {
-      throw new Error(
-        'Realtime SSE needs an eventHub service. Add eventHub to your SingletonServices.'
-      )
-    }
     if (!channel) {
       throw new Error('Realtime SSE handler invoked without a channel')
     }
-    await eventHub.subscribe(topic, channel.channelId)
+    await eventHub?.subscribe(topic, channel.channelId)
     // Function returns; eventHub continues pushing via channel.send until
     // the client disconnects, at which point onChannelClosed unsubscribes.
   },

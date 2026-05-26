@@ -5,6 +5,7 @@ export { PgKyselyAgentRunService } from './pg-kysely-agent-run-service.js'
 export { PgKyselyWorkflowRunService } from './pg-kysely-workflow-run-service.js'
 export { PgKyselyChannelStore } from './pg-kysely-channel-store.js'
 export { PgKyselyEventHubStore } from './pg-kysely-eventhub-store.js'
+export { PgEventHubService } from './pg-eventhub-service.js'
 export { PgKyselySecretService } from './pg-kysely-secret-service.js'
 export { PikkuKysely } from './pikku-kysely.js'
 

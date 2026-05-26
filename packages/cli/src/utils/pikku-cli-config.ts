@@ -267,7 +267,7 @@ const _getPikkuCLIConfig = async (
         'rpc-remote.gen.ts'
       )
     }
-    if (!result.workflowRoutesFile) {
+    if (result.scaffold?.workflow && !result.workflowRoutesFile) {
       result.workflowRoutesFile = join(
         resolvedScaffoldDir,
         'workflow-routes.gen.ts'
@@ -284,6 +284,9 @@ const _getPikkuCLIConfig = async (
     }
     if (result.scaffold?.events && !result.eventsChannelFile) {
       result.eventsChannelFile = join(resolvedScaffoldDir, 'events.gen.ts')
+    }
+    if (result.scaffold?.events && result.clientFiles?.fetchFile && !result.clientFiles.realtimeFile) {
+      result.clientFiles.realtimeFile = join(dirname(result.clientFiles.fetchFile), 'realtime.gen.ts')
     }
     const triggerDir = join(result.outDir, 'trigger')
     if (!result.triggersTypesFile) {
