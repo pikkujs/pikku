@@ -125,45 +125,47 @@ export const TableListPage = <T,>({
           </Text>
         </Box>
       ) : (
-        <Table highlightOnHover withRowBorders>
-          <Table.Thead>
-            <Table.Tr>
-              {columns.map((col, i) => (
-                <Table.Th
-                  key={col.key}
-                  pl={i === 0 ? 'md' : undefined}
-                  pr={i === columns.length - 1 ? 'md' : undefined}
-                  fw={600}
-                  fz="xs"
-                  style={col.width ? { width: col.width } : undefined}
-                >
-                  {col.header}
-                </Table.Th>
-              ))}
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {filtered.map((item, index) => (
-              <Table.Tr
-                key={getKey(item, index)}
-                className={classes.clickableText}
-                style={{ height: '3.75rem' }}
-                onClick={() => onRowClick(item)}
-              >
+        <Box style={{ overflowX: 'auto' }}>
+          <Table highlightOnHover withRowBorders>
+            <Table.Thead>
+              <Table.Tr>
                 {columns.map((col, i) => (
-                  <Table.Td
+                  <Table.Th
                     key={col.key}
                     pl={i === 0 ? 'md' : undefined}
                     pr={i === columns.length - 1 ? 'md' : undefined}
+                    fw={600}
+                    fz="xs"
                     style={col.width ? { width: col.width } : undefined}
                   >
-                    {col.render(item, index)}
-                  </Table.Td>
+                    {col.header}
+                  </Table.Th>
                 ))}
               </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
+            </Table.Thead>
+            <Table.Tbody>
+              {filtered.map((item, index) => (
+                <Table.Tr
+                  key={getKey(item, index)}
+                  className={classes.clickableText}
+                  style={{ height: '3.75rem' }}
+                  onClick={() => onRowClick(item)}
+                >
+                  {columns.map((col, i) => (
+                    <Table.Td
+                      key={col.key}
+                      pl={i === 0 ? 'md' : undefined}
+                      pr={i === columns.length - 1 ? 'md' : undefined}
+                      style={col.width ? { width: col.width } : undefined}
+                    >
+                      {col.render(item, index)}
+                    </Table.Td>
+                  ))}
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </Box>
       )}
     </Stack>
   )

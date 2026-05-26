@@ -1,10 +1,11 @@
-import { createContext, useContext, useState, useMemo, type FunctionComponent } from 'react'
+import { createContext, useContext, useState, useMemo, useEffect, useRef, type FunctionComponent } from 'react'
 import Markdown from 'react-markdown'
 import {
   AssistantRuntimeProvider,
   ThreadPrimitive,
   MessagePrimitive,
   ComposerPrimitive,
+  useComposerRuntime,
   type ToolCallMessagePartComponent,
 } from '@assistant-ui/react'
 import {
@@ -17,6 +18,7 @@ import {
 } from './use-pikku-agent-runtime.js'
 
 export interface PikkuAgentChatProps extends PikkuAgentRuntimeOptions {
+  initialPrompt?: string
   emptyMessage?: string
   /** Hide tool calls from the chat display.
    *  - `true`: hide all non-approval tool calls
@@ -547,6 +549,17 @@ const AssistantMessage: FunctionComponent = () => {
   )
 }
 
+const ComposerPrefill: FunctionComponent<{ text?: string }> = ({ text }) => {
+  const composer = useComposerRuntime()
+  const filled = useRef(false)
+  useEffect(() => {
+    if (filled.current || !text) return
+    filled.current = true
+    if (composer.getState().text === '') composer.setText(text)
+  }, [text, composer])
+  return null
+}
+
 const PikkuComposer: FunctionComponent<{ disabled?: boolean }> = ({
   disabled,
 }) => {
@@ -609,7 +622,7 @@ const PikkuComposer: FunctionComponent<{ disabled?: boolean }> = ({
 }
 
 export function PikkuAgentChat(props: PikkuAgentChatProps) {
-  const { emptyMessage, hideToolCalls, dark, maxWidth = 768, toolComponents, ...runtimeOptions } = props
+  const { emptyMessage, hideToolCalls, dark, maxWidth = 768, toolComponents, initialPrompt, ...runtimeOptions } = props
   const { runtime, isAwaitingApproval, pendingApprovals, handleApproval } =
     usePikkuAgentRuntime(runtimeOptions)
 
@@ -621,6 +634,7 @@ export function PikkuAgentChat(props: PikkuAgentChatProps) {
     <HideToolCallsContext.Provider value={hideToolCalls}>
     <ToolComponentsContext.Provider value={toolComponents}>
     <AssistantRuntimeProvider runtime={runtime}>
+      <ComposerPrefill text={initialPrompt} />
       <div
         style={{
           height: '100%',

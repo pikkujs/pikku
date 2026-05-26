@@ -186,7 +186,7 @@ const WorkflowCanvasFlow: React.FC<{
         noDragClassName="nodrag"
         onPaneClick={onPaneClick}
       >
-        <Background color="#ccc" variant={BackgroundVariant.Dots} size={2} />
+        <Background color="#e0e0e0" variant={BackgroundVariant.Dots} size={1} />
       </ReactFlow>
     </Box>
   )
