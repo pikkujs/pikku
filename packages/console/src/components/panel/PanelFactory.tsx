@@ -195,8 +195,6 @@ const WorkflowTabbedPanel: React.FC<{ workflowId: string }> = ({
   const hasRun = !!runContext?.selectedRunId
   const isCreating = !!runContext?.isCreatingRun
 
-  const showRun = hasRun || isCreating
-  const defaultTab = showRun ? 'run' : 'overview'
   const tabKey = `${isCreating ? 'creating' : ''}${hasRun ? 'with-run' : 'no-run'}`
 
   return (
@@ -204,12 +202,10 @@ const WorkflowTabbedPanel: React.FC<{ workflowId: string }> = ({
       <Box px="md">
         <WorkflowHeader workflowId={workflowId} />
       </Box>
-      <Tabs defaultValue={defaultTab} key={tabKey}>
+      <Tabs defaultValue="overview" key={tabKey}>
         <Tabs.List grow>
           <Tabs.Tab value="overview">Overview</Tabs.Tab>
-          {showRun && (
-            <Tabs.Tab value="run">{isCreating ? 'New Run' : 'Run'}</Tabs.Tab>
-          )}
+          <Tabs.Tab value="run">{hasRun && !isCreating ? 'Run' : 'New Run'}</Tabs.Tab>
         </Tabs.List>
         <Tabs.Panel value="overview" pt="md" px="md">
           <Stack gap="xl">
@@ -218,15 +214,15 @@ const WorkflowTabbedPanel: React.FC<{ workflowId: string }> = ({
             <WorkflowState workflowId={workflowId} />
           </Stack>
         </Tabs.Panel>
-        {showRun && (
-          <Tabs.Panel value="run" pt="md" px="md">
-            {isCreating ? (
-              <NewWorkflowRunForm workflowId={workflowId} />
-            ) : (
-              <WorkflowRunOverview workflowId={workflowId} />
-            )}
-          </Tabs.Panel>
-        )}
+        <Tabs.Panel value="run" pt="md" px="md">
+          {isCreating ? (
+            <NewWorkflowRunForm workflowId={workflowId} />
+          ) : hasRun ? (
+            <WorkflowRunOverview workflowId={workflowId} />
+          ) : (
+            <NewWorkflowRunForm workflowId={workflowId} />
+          )}
+        </Tabs.Panel>
       </Tabs>
     </Stack>
   )

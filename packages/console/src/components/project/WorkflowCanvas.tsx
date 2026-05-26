@@ -9,8 +9,8 @@ import ReactFlow, {
   useReactFlow,
   ReactFlowProvider,
 } from 'reactflow'
-import { Box, Drawer, Group, Text, Alert, Button } from '@mantine/core'
-import { AlertTriangle, GitBranch, History, Play } from 'lucide-react'
+import { Box, Drawer, Group, Text, Alert } from '@mantine/core'
+import { AlertTriangle, GitBranch, History } from 'lucide-react'
 import {
   CanvasDrawerProvider,
   useCanvasDrawerContext,
@@ -308,20 +308,6 @@ const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
         subtitle={
           workflow.source ? (
             <PikkuBadge type="dynamic" badge="source" value={workflow.source} />
-          ) : undefined
-        }
-        rightSection={
-          runContext ? (
-            <Button
-              size="xs"
-              leftSection={<Play size={13} />}
-              onClick={() => {
-                runContext.setSelectedRunId(null)
-                runContext.setIsCreatingRun(true)
-              }}
-            >
-              Run
-            </Button>
           ) : undefined
         }
       />

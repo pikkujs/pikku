@@ -3,8 +3,6 @@ import {
   Stack,
   Box,
   Text,
-  Textarea,
-  ActionIcon,
   ScrollArea,
   Paper,
   Group,
@@ -33,7 +31,7 @@ import {
   type MissingCredentialPayload,
 } from '@pikku/assistant-ui'
 import {
-  Send,
+  ArrowUp,
   ChevronDown,
   ChevronRight,
   Wrench,
@@ -41,6 +39,7 @@ import {
   User,
   ShieldAlert,
 } from 'lucide-react'
+import { ComposerShell, composerStyles } from '../ui/ComposerShell'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { PikkuBadge } from '../ui/PikkuBadge'
@@ -386,53 +385,25 @@ const AssistantMessage: React.FC = () => (
   </Box>
 )
 
-const AgentComposer: React.FC<{ disabled?: boolean }> = ({
-  disabled,
-}) => (
+const AgentComposer: React.FC<{ disabled?: boolean }> = ({ disabled }) => (
   <Box py="sm" pb="md">
     <Container size="md">
-      <ComposerPrimitive.Root>
-        <Paper
-          radius="md"
-          withBorder
-          style={{
-            overflow: 'hidden',
-            ...(disabled
-              ? { opacity: 0.5, pointerEvents: 'none' as const }
-              : {}),
-          }}
-        >
-          <Group gap={0} align="flex-end" wrap="nowrap" px="lg" py={6}>
-            <ComposerPrimitive.Input asChild>
-              <Textarea
-                placeholder={
-                  disabled
-                    ? 'Respond to approval request above...'
-                    : 'Message...'
-                }
-                autosize
-                minRows={2}
-                maxRows={6}
-                variant="unstyled"
-                disabled={disabled}
-                style={{ flex: 1 }}
-                styles={{ input: { padding: '4px 0' } }}
-              />
-            </ComposerPrimitive.Input>
-            <ComposerPrimitive.Send asChild>
-              <ActionIcon
-                variant="filled"
-                size={28}
-                radius="xl"
-                mb={2}
-                disabled={disabled}
-              >
-                <Send size={14} />
-              </ActionIcon>
-            </ComposerPrimitive.Send>
-          </Group>
-        </Paper>
-      </ComposerPrimitive.Root>
+      <ComposerShell
+        component={ComposerPrimitive.Root}
+        input={
+          <ComposerPrimitive.Input
+            className={composerStyles.composerInput}
+            placeholder={disabled ? 'Respond to approval request above...' : 'Message...'}
+            rows={1}
+            disabled={disabled ?? false}
+          />
+        }
+        send={
+          <ComposerPrimitive.Send className={composerStyles.sendButton} disabled={disabled ?? false}>
+            <ArrowUp size={15} />
+          </ComposerPrimitive.Send>
+        }
+      />
     </Container>
   </Box>
 )

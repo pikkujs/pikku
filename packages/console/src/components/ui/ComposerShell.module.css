@@ -1,0 +1,154 @@
+/*
+ * Shared composer (prompt-box) styling. Used by the OpenCode assistant chat
+ * footer and the build-mode new-project prompt. The visual shell lives here;
+ * each caller supplies its own input + send (assistant-ui primitives vs a
+ * plain controlled textarea).
+ */
+.composerRoot {
+  position: relative;
+  z-index: 2;
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background-color: var(--mantine-color-dark-7);
+  border: 1px solid var(--mantine-color-dark-4);
+  border-radius: 24px;
+  padding: 14px 12px 10px;
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--mantine-color-black) 24%, transparent);
+}
+
+.composerInput {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--mantine-color-dark-0);
+  font-size: var(--mantine-font-size-sm);
+  font-family: inherit;
+  resize: none;
+  line-height: 1.5;
+  min-height: 46px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.composerInput::placeholder {
+  color: var(--mantine-color-dark-2);
+}
+
+.composerFooter {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.composerSpacer {
+  flex: 1;
+}
+
+.iconChip,
+.sendButton {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--mantine-color-dark-4);
+  background: var(--mantine-color-dark-6);
+  color: var(--mantine-color-dark-1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+  flex-shrink: 0;
+}
+
+.iconChip:hover:not(:disabled) {
+  background: var(--mantine-color-dark-5);
+  color: var(--mantine-color-white);
+}
+
+.sendButton {
+  border-color: var(--mantine-color-dark-2);
+  background: var(--mantine-color-dark-1);
+  color: var(--mantine-color-dark-8);
+}
+
+.sendButton:hover:not(:disabled) {
+  background: var(--mantine-color-white);
+  color: var(--mantine-color-dark-8);
+}
+
+.sendButton:disabled,
+.iconChip:disabled {
+  opacity: 0.48;
+  cursor: default;
+}
+
+.controlChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 150px;
+  padding: 5px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--mantine-color-dark-1);
+  font-size: 13px;
+  line-height: 1;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.controlChipLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.controlChip:hover:not(:disabled) {
+  background-color: transparent;
+  color: var(--mantine-color-white);
+}
+
+.controlChip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.controlChipIcon {
+  color: var(--mantine-color-dark-2);
+  flex-shrink: 0;
+}
+
+.controlChipChevron {
+  color: var(--mantine-color-dark-2);
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+
+@container (max-width: 360px) {
+  .controlChip {
+    max-width: none;
+    padding-inline: 3px;
+    gap: 3px;
+  }
+
+  .controlChipLabel {
+    display: none;
+  }
+}
+
+/* Spinner shown in the send button while a submit is in flight. */
+.spin {
+  animation: composerSpin 0.7s linear infinite;
+}
+
+@keyframes composerSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}

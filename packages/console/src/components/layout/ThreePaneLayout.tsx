@@ -93,7 +93,7 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
   )
 
   return (
-    <Box className={classes.flexColumn} style={{ height: '100vh' }}>
+    <Box className={classes.flexColumn} style={{ height: '100%' }}>
       {header}
       <Box
         className={classes.flexRow}
