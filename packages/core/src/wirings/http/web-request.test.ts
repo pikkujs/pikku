@@ -270,6 +270,37 @@ describe('applyWebResponse', () => {
     assert.equal(state.statusCode, 204)
   })
 
+  test('merges set-cookie values from getSetCookie and header iteration', async () => {
+    const { res, state } = createMockResponse()
+    const headers = new Headers()
+    headers.append('Set-Cookie', 'authjs.csrf-token=abc; Path=/; HttpOnly')
+    headers.append(
+      'Set-Cookie',
+      'authjs.callback-url=http%3A%2F%2Flocalhost; Path=/; HttpOnly'
+    )
+
+    const webRes = new Response('{"csrfToken":"abc"}', {
+      status: 200,
+      headers,
+    })
+
+    ;(
+      webRes.headers as Headers & {
+        getSetCookie: () => string[]
+      }
+    ).getSetCookie = () => [
+      'authjs.callback-url=http%3A%2F%2Flocalhost; Path=/; HttpOnly',
+    ]
+
+    await applyWebResponse(res, webRes)
+
+    assert.deepEqual(state.headers['set-cookie'], [
+      'authjs.callback-url=http%3A%2F%2Flocalhost; Path=/; HttpOnly',
+      'authjs.csrf-token=abc; Path=/; HttpOnly',
+    ])
+    assert.equal(state.body, '{"csrfToken":"abc"}')
+  })
+
   test('uses res.send when available and skips transport headers', async () => {
     const sent: string[] = []
     const { state } = createMockResponse()
