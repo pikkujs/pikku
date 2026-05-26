@@ -24,7 +24,7 @@ export class InMemoryQueueService implements QueueService {
       pikkuUserId: options?.pikkuUserId,
     }
 
-    const delay = options?.delay ?? 0
+    const delay = options?.delay ?? 100 + Math.floor(Math.random() * 201)
 
     setTimeout(async () => {
       try {
