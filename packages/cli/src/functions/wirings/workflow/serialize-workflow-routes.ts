@@ -26,6 +26,7 @@ export const workflowStarter = pikkuSessionlessFunc<
   { workflowName: string; data?: unknown },
   { runId: string }
 >({
+  tags: ['pikku'],
   auth: ${authFlag},
   // workflowService is destructured (even though we delegate via rpc) so the
   // analyzer assigns workflow-state capability to this unit — without it,
@@ -40,6 +41,7 @@ export const workflowRunner = pikkuSessionlessFunc<
   { workflowName: string; data?: unknown },
   unknown
 >({
+  tags: ['pikku'],
   auth: ${authFlag},
   func: async ({ workflowService }, { workflowName, data }, { rpc }) => {
     assertWorkflowService(workflowService)
@@ -51,6 +53,7 @@ export const workflowStatusChecker = pikkuSessionlessFunc<
   { workflowName: string; runId: string },
   WorkflowRunStatus
 >({
+  tags: ['pikku'],
   auth: ${authFlag},
   func: async ({ workflowService }, { runId }) => {
     assertWorkflowService(workflowService)
@@ -68,6 +71,7 @@ export const workflowStatusStream = pikkuSessionlessFunc<
   { workflowName: string; runId: string },
   unknown
 >({
+  tags: ['pikku'],
   auth: ${authFlag},
   func: async ({ workflowRunService }, { runId }, { channel }) => {
     assertWorkflowRunService(workflowRunService)
@@ -154,6 +158,7 @@ export const workflowStatusStreamFull = pikkuSessionlessFunc<
   { workflowName: string; runId: string },
   unknown
 >({
+  tags: ['pikku'],
   auth: ${authFlag},
   func: async ({ workflowRunService }, { runId }, { channel }) => {
     assertWorkflowRunService(workflowRunService)

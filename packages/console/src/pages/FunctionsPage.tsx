@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react'
-import { Text, Badge } from '@mantine/core'
+import React, { useMemo, useState } from 'react'
+import { Text, Badge, Group, Switch, UnstyledButton } from '@mantine/core'
 import { FunctionSquare } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
@@ -16,24 +16,54 @@ export interface FunctionExtraColumn {
   render: (funcId: string) => React.ReactNode
 }
 
+export interface FunctionTestScenario {
+  featureName: string
+  featureFile?: string
+  scenarioName: string
+  status: 'pass' | 'fail'
+  duration?: string
+  steps: string[]
+}
+
+export interface FunctionTestData {
+  status: 'covered' | 'partial' | 'uncovered' | 'unknown'
+  coveredLines: number
+  totalLines: number
+  ratio: number
+  missedLines?: number[]
+  scenarios: FunctionTestScenario[]
+}
+
+const TEST_STATUS_COLOR: Record<FunctionTestData['status'], string> = {
+  covered: 'green',
+  partial: 'yellow',
+  uncovered: 'red',
+  unknown: 'gray',
+}
+
+function isPikkuFunction(func: any): boolean {
+  return Array.isArray(func.tags) && func.tags.includes('pikku')
+}
+
 const FunctionsList: React.FC<{
   functions: any[]
   extraColumns?: FunctionExtraColumn[]
   headerRight?: React.ReactNode
-}> = ({ functions, extraColumns = [], headerRight }) => {
+  testsByFunction?: Record<string, FunctionTestData>
+}> = ({ functions, extraColumns = [], headerRight, testsByFunction }) => {
   const { openFunction } = usePanelContext()
   const { functionUsedBy } = usePikkuMeta()
-
-  const userFuncs = useMemo(
+  const [showPikkuFunctions, setShowPikkuFunctions] = useState(false)
+  const hasTestsColumn = useMemo(
+    () => !!testsByFunction || functions.some((func: any) => !!func.tests),
+    [functions, testsByFunction]
+  )
+  const visibleFunctions = useMemo(
     () =>
       functions.filter((func: any) => {
-        const id = func.pikkuFuncId
-        return (
-          (!func.functionType || func.functionType === 'user') &&
-          !id?.startsWith('pikku')
-        )
+        return showPikkuFunctions || !isPikkuFunction(func)
       }),
-    [functions]
+    [functions, showPikkuFunctions]
   )
 
   const columns = useMemo(
@@ -41,6 +71,7 @@ const FunctionsList: React.FC<{
       {
         key: 'name',
         header: 'NAME',
+        width: 320,
         render: (func: any) => {
           const funcId = func.pikkuFuncName || func.pikkuFuncId
           return (
@@ -120,6 +151,63 @@ const FunctionsList: React.FC<{
           )
         },
       },
+      ...(hasTestsColumn
+        ? [{
+            key: 'tests',
+            header: 'TESTS',
+            width: 180,
+            render: (func: any) => {
+              const funcId = func.pikkuFuncName || func.pikkuFuncId
+              const tests = func.tests ?? testsByFunction?.[funcId]
+              if (!tests) {
+                return (
+                  <UnstyledButton
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      openFunction(funcId, func)
+                    }}
+                  >
+                    <Badge size="sm" variant="light" color="gray">
+                      unknown
+                    </Badge>
+                  </UnstyledButton>
+                )
+              }
+
+              const status = tests.status as FunctionTestData['status']
+              const ratioLabel = tests.status === 'covered'
+                ? `${tests.coveredLines}/${tests.totalLines}`
+                : tests.status === 'unknown'
+                  ? 'unknown'
+                  : `${Math.round(tests.ratio * 100)}%`
+
+              return (
+                <UnstyledButton
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    openFunction(funcId, { ...func, tests })
+                  }}
+                  style={{ display: 'block', textAlign: 'left' }}
+                >
+                  <Group gap={6} wrap="nowrap">
+                    <Badge
+                      size="sm"
+                      variant="light"
+                      color={TEST_STATUS_COLOR[status]}
+                    >
+                      {ratioLabel}
+                    </Badge>
+                    <Text size="xs" c="dimmed">
+                      {tests.scenarios.length === 0
+                        ? 'No tests'
+                        : `${tests.scenarios.length} linked`}
+                    </Text>
+                  </Group>
+                </UnstyledButton>
+              )
+            },
+          }]
+        : []),
       ...extraColumns.map((col) => ({
         key: col.label,
         header: col.label.toUpperCase(),
@@ -129,7 +217,7 @@ const FunctionsList: React.FC<{
           col.render(func.pikkuFuncName || func.pikkuFuncId),
       })),
     ],
-    [functionUsedBy, extraColumns]
+    [functionUsedBy, extraColumns, hasTestsColumn, openFunction, testsByFunction]
   )
 
   return (
@@ -137,7 +225,7 @@ const FunctionsList: React.FC<{
       title="Functions"
       icon={FunctionSquare}
       docsHref="https://pikku.dev/docs/core-features/functions"
-      data={userFuncs}
+      data={visibleFunctions}
       columns={columns}
       getKey={(func) => func.pikkuFuncName || func.pikkuFuncId}
       onRowClick={(func) =>
@@ -151,7 +239,19 @@ const FunctionsList: React.FC<{
         false
       }
       emptyMessage="No functions found."
-      headerRight={headerRight ?? null}
+      headerRight={
+        <Group gap="sm" wrap="nowrap">
+          <Switch
+            size="sm"
+            label="Show Pikku"
+            checked={showPikkuFunctions}
+            onChange={(event) =>
+              setShowPikkuFunctions(event.currentTarget.checked)
+            }
+          />
+          {headerRight}
+        </Group>
+      }
     />
   )
 }
@@ -159,7 +259,8 @@ const FunctionsList: React.FC<{
 export const FunctionsPage: React.FC<{
   extraColumns?: FunctionExtraColumn[]
   headerRight?: React.ReactNode
-}> = ({ extraColumns, headerRight }) => {
+  testsByFunction?: Record<string, FunctionTestData>
+}> = ({ extraColumns, headerRight, testsByFunction }) => {
   const rpc = usePikkuRPC()
 
   const { data: functions, isLoading } = useQuery({
@@ -177,6 +278,7 @@ export const FunctionsPage: React.FC<{
           functions={functions ?? []}
           extraColumns={extraColumns}
           headerRight={headerRight}
+          testsByFunction={testsByFunction}
         />
       </ResizablePanelLayout>
     </PanelProvider>

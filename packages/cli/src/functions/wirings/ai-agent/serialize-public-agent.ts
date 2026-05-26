@@ -10,6 +10,7 @@ export const agentCaller = pikkuSessionlessFunc<
   { agentName: string; message: string; threadId: string; resourceId: string },
   unknown
 >({
+  tags: ['pikku'],
   auth: ${authFlag},
   func: async (_services, data, { rpc }) => {
     return await rpc.agent.run(data.agentName as any, {
@@ -24,6 +25,7 @@ export const agentStreamCaller = pikkuSessionlessFunc<
   { agentName: string; message: string; threadId: string; resourceId: string },
   void
 >({
+  tags: ['pikku'],
   auth: ${authFlag},
   func: async (_services, data, { rpc }) => {
     await rpc.agent.stream(data.agentName as any, {
@@ -38,6 +40,7 @@ export const agentApproveCaller = pikkuSessionlessFunc<
   { agentName: string; runId: string; approvals: { toolCallId: string; approved: boolean }[] },
   unknown
 >({
+  tags: ['pikku'],
   auth: ${authFlag},
   func: async (_services, { runId, approvals, agentName }, { rpc }) => {
     return await rpc.agent.approve(runId, approvals, agentName)
@@ -48,6 +51,7 @@ export const agentResumeCaller = pikkuSessionlessFunc<
   { agentName: string; runId: string; toolCallId: string; approved: boolean },
   void
 >({
+  tags: ['pikku'],
   auth: ${authFlag},
   func: async (_services, data, { rpc }) => {
     await rpc.agent.resume(data.runId, {

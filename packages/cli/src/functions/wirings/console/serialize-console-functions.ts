@@ -11,6 +11,7 @@ export const pikkuConsoleSetSecret = pikkuSessionlessFunc<{
 }, {
   success: boolean
 }>({
+  tags: ['pikku'],
   description: 'Set the value of a secret',
   expose: true,
   auth: false,
@@ -24,6 +25,7 @@ export const pikkuConsoleGetVariable = pikkuSessionlessFunc<
   { variableId: string },
   { exists: boolean; value: unknown | null }
 >({
+  tags: ['pikku'],
   description: 'Get the current value of a variable',
   expose: true,
   auth: false,
@@ -46,6 +48,7 @@ export const pikkuConsoleSetVariable = pikkuSessionlessFunc<
   { variableId: string; value: unknown },
   { success: boolean }
 >({
+  tags: ['pikku'],
   description: 'Set the value of a variable',
   expose: true,
   auth: false,
@@ -63,6 +66,7 @@ export const pikkuConsoleHasSecret = pikkuSessionlessFunc<
   { secretId: string },
   { exists: boolean }
 >({
+  tags: ['pikku'],
   description: 'Check if a secret exists without reading its value',
   expose: true,
   auth: false,
@@ -76,6 +80,7 @@ export const pikkuConsoleGetSecret = pikkuSessionlessFunc<
   { secretId: string },
   { exists: boolean; value: unknown | null }
 >({
+  tags: ['pikku'],
   description: 'Get the current value of a secret',
   expose: true,
   auth: false,

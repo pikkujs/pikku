@@ -8,7 +8,7 @@ import { useWorkflowRunContextSafe } from '../../context/WorkflowRunContext'
 import { useStartWorkflowRun } from '../../hooks/useWorkflowRuns'
 import { useWorkflowNode } from '../../context/WorkflowContext'
 import { useWorkflowInputSchema } from '../../hooks/useWorkflowInputSchema'
-import { FunctionConfiguration } from '../project/panels/FunctionDetailsForm'
+import { FunctionTabbedPanel } from '../project/panels/FunctionDetailsForm'
 import {
   WorkflowStepConfiguration,
   WorkflowStepInput,
@@ -238,14 +238,12 @@ export const createPanelChildren = (panelData: PanelData): PanelChild[] => {
       return [
         {
           id: 'configuration',
-          title: 'Configuration',
+          title: 'Function',
           content: (
-            <Box px="md">
-              <FunctionConfiguration
-                functionName={panelData.id}
-                metadata={panelData.metadata}
-              />
-            </Box>
+            <FunctionTabbedPanel
+              functionName={panelData.id}
+              metadata={panelData.metadata}
+            />
           ),
         },
       ]

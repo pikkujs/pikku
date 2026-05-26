@@ -13,6 +13,7 @@ export const remoteRPCHandler = pikkuSessionlessFunc<
   { rpcName: string, data?: unknown },
   unknown
 >({
+  tags: ['pikku'],
   func: async (_services, { rpcName, data }, { rpc }) => {
     return await (rpc.invoke as any)(rpcName, data)
   },
