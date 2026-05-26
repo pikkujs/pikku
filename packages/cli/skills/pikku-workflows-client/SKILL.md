@@ -1,6 +1,7 @@
 ---
 name: pikku-workflows-client
 description: 'Run Pikku workflows from a React frontend and track their progress. Covers `useRunWorkflow` (run-and-wait), `useStartWorkflow` (fire-and-poll), and `useWorkflowStatus` (live status). TRIGGER when: a React component needs to invoke or display the status of a Pikku workflow, the user mentions long-running tasks / background jobs / progress UI tied to a workflow, or asks how to start/track a workflow from the client. DO NOT TRIGGER when: the user is wiring the workflow itself (use pikku-workflow) or only making regular RPC calls (use pikku-react-query).'
+installGroups: [core]
 ---
 
 # Pikku Workflows — Client Hooks

@@ -1,6 +1,7 @@
 ---
 name: pikku-realtime
 description: 'Use Pikku''s realtime feature — typed pub/sub events over WebSocket (multi-topic) or SSE (single-topic, auto-cleanup). Covers declaring EventHubTopics, scaffolding the /events channel, the auto-generated `PikkuRealtime` client, and publishing events from a function. TRIGGER when: the user asks for realtime updates, pub/sub, push notifications, server-sent events, websocket events, eventhub, or "live" data on the frontend. DO NOT TRIGGER when: the user wants RPC-style request/response (use pikku-rpc / pikku-react-query) or a custom one-off WebSocket channel (use pikku-websocket).'
+installGroups: [core]
 ---
 
 # Pikku Realtime

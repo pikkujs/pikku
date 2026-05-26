@@ -588,6 +588,16 @@ wireCLI({
               description:
                 'Comma-separated list of skill names to install (default: all)',
             },
+            core: {
+              description:
+                'Install skills whose frontmatter includes installGroups: [core]',
+              default: false,
+            },
+            fabric: {
+              description:
+                'Install skills whose frontmatter includes installGroups: [fabric]',
+              default: false,
+            },
             update: {
               description: 'Overwrite existing skills if already installed',
               default: false,

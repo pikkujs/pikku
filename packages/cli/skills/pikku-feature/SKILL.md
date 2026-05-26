@@ -1,6 +1,7 @@
 ---
 name: pikku-feature
 description: 'Drive create-a-feature work for a Pikku project: discover project context, work on a feature branch, implement + verify + commit, and ask the user to review via the diff. TRIGGER when: the user asks to "create a feature", "build a todo app", "add X to my Pikku project", "wire up a new endpoint", or anything that implies turning a natural-language request into Pikku functions/wirings/migrations. DO NOT TRIGGER when: the user asks for a one-off code edit in an existing function, or asks about Pikku concepts (use pikku-concepts).'
+installGroups: [core]
 allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku all *), Bash(yarn tsc), Bash(git status *), Bash(git diff *), Bash(git switch *), Bash(git checkout *), Bash(git checkout -b *), Bash(git add *), Bash(git commit *), Bash(git log *), Bash(git branch *)
 argument-hint: '<feature description>'
 ---

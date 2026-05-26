@@ -3,6 +3,7 @@ name: pikku-kysely
 description: 'Use when setting up SQL database services with Kysely in a Pikku app. Covers @pikku/kysely (base), @pikku/kysely-postgres, @pikku/kysely-mysql, @pikku/kysely-sqlite — channel stores, workflow services, secret services, AI storage, agent runs, and deployment services.
 TRIGGER when: code uses Kysely, PikkuKysely, KyselyChannelStore, KyselyWorkflowService, KyselySecretService, or user asks about SQL database setup, Postgres/MySQL/SQLite with Pikku.
 DO NOT TRIGGER when: user asks about MongoDB (use pikku-mongodb) or Redis (use pikku-redis).'
+installGroups: [core]
 ---
 
 # Pikku Kysely (SQL Database Services)

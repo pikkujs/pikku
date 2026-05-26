@@ -1,6 +1,7 @@
 ---
 name: pikku-fabric
 description: 'Build and convert apps for the Pikku Fabric platform. Covers SQLite/libSQL database setup with Kysely, fabric project layout, deploy provider config, `fabric.config.json`, and the pikku-verify workflow. TRIGGER when: user is working on a Fabric-hosted Pikku project, converting an app to Fabric format, or asking about Fabric deployment, database, or project conventions. DO NOT TRIGGER when: user is working on a generic (non-Fabric) Pikku deployment — use pikku-deploy-cloudflare, pikku-deploy-fastify, etc. instead.'
+installGroups: [fabric]
 ---
 
 # Pikku Fabric

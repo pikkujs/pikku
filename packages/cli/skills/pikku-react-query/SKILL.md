@@ -1,6 +1,7 @@
 ---
 name: pikku-react-query
 description: 'Use the Pikku auto-generated React Query hooks (`usePikkuQuery`, `usePikkuMutation`, `usePikkuInfiniteQuery`) to call backend RPC functions from a React frontend with full type safety. TRIGGER when: writing React components that need to call a Pikku function, fetch data, mutate data, or paginate; user mentions React Query, useQuery, useMutation, or building a frontend that talks to a Pikku backend. DO NOT TRIGGER when: working on the backend (use pikku-rpc / pikku-feature) or wiring a non-React frontend.'
+installGroups: [core]
 ---
 
 # Pikku React Query Hooks
