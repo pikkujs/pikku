@@ -3,6 +3,7 @@ import { LocalEventHubService } from '@pikku/core/channel/local'
 import type { EventHubService } from '@pikku/core/channel'
 
 const PG_CHANNEL = 'pikku_eventhub'
+const INSTANCE_ID = `${process.pid}-${Date.now()}`
 
 type LocalHub = LocalEventHubService<Record<string, unknown>>
 type ChannelHandler = Parameters<LocalHub['onChannelOpened']>[0]
@@ -31,13 +32,14 @@ export class PgEventHubService<Topics extends Record<string, unknown> = {}>
     // Dedicated single-connection pool — pooled connections can't hold LISTEN state
     this.sql = postgres(this.connectionString, { max: 1 })
     await this.sql.listen(PG_CHANNEL, (raw) => {
-      let parsed: { topic: string; data: unknown }
+      let parsed: { instanceId: string; topic: string; data: unknown }
       try {
         parsed = JSON.parse(raw)
       } catch {
         return
       }
-      // Deliver to local WebSocket clients; null = broadcast to all subscribers
+      // Skip if this NOTIFY originated from this instance — already fanned out locally in publish()
+      if (parsed.instanceId === INSTANCE_ID) return
       this.local.publish(parsed.topic as keyof Topics, null, parsed.data as Topics[keyof Topics])
     })
   }
@@ -64,9 +66,9 @@ export class PgEventHubService<Topics extends Record<string, unknown> = {}>
     // Fan out to local clients immediately — no network round-trip
     this.local.publish(topic, channelId, data, isBinary)
 
-    // Broadcast to all other instances via Postgres NOTIFY
+    // Broadcast to all other instances via Postgres NOTIFY (instanceId prevents self-delivery)
     if (this.sql) {
-      await this.sql.notify(PG_CHANNEL, JSON.stringify({ topic, data }))
+      await this.sql.notify(PG_CHANNEL, JSON.stringify({ instanceId: INSTANCE_ID, topic, data }))
     }
   }
 

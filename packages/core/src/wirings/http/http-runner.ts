@@ -381,6 +381,27 @@ const executeRoute = async (
         sseState = undefined
       },
     }
+
+    // Register the SSE channel with the eventHub (if present) so that
+    // eventHub.publish() can deliver messages to SSE subscribers.
+    // The channel handler wraps the SSE channel to match PikkuChannelHandler.
+    if (singletonServices.eventHub?.onChannelOpened) {
+      const channelRef = channel
+      const channelHandler = {
+        getChannel: () => channelRef,
+        send: (data: unknown, isBinary?: boolean) => {
+          if (isBinary) channelRef.sendBinary(data as any)
+          else channelRef.send(data)
+        },
+        sendBinary: (data: any) => channelRef.sendBinary(data),
+      }
+      singletonServices.eventHub.onChannelOpened(channelHandler)
+      const originalClose = channel.close
+      channel.close = () => {
+        singletonServices.eventHub.onChannelClosed(requestId)
+        originalClose()
+      }
+    }
   }
 
   const wire: PikkuWire = {
@@ -413,7 +434,10 @@ const executeRoute = async (
       packageName: meta.packageName,
     }
   )
-  if (!matchedRoute.route.sse) {
+  if (matchedRoute.route.sse) {
+    // Flush headers after middleware has run so CORS/auth headers are included
+    http?.response?.flushHeaders?.()
+  } else {
     if (result instanceof Response) {
       await applyWebResponse(http!.response!, result)
     } else if (result === undefined || result === null) {

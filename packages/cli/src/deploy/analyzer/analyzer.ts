@@ -251,7 +251,14 @@ export function analyzeDeployment(
     })
 
     agents.push({
-      name: agentMeta.name,
+      // The registry KEY (export name, e.g. `kanbanAgent`), NOT the
+      // human-facing `agentMeta.name` (e.g. `kanban-agent`). Routes,
+      // `addAIAgent(...)`, and the inspector-state name filter all key off
+      // this identifier — per-unit codegen passes it to `--names`, and the
+      // filter matches it against the `agentsMeta` key. Using the human name
+      // here makes the filter prune the agent, so its registration never gets
+      // bundled into the deployed unit ("AI agent not found: <key>").
+      name: agentName,
       unitName,
       toolFunctionIds: toolIds,
       subAgentNames,

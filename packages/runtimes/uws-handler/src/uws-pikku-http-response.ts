@@ -117,6 +117,17 @@ export class UWSPikkuHTTPResponse implements PikkuHTTPResponse {
     }
   }
 
+  public flushHeaders(): void {
+    if (!this.#streaming || this.#headersSent || this.#ended || this.isAborted()) return
+    this.#headersSent = true
+    this.res.cork(() => {
+      this.res.writeStatus(this.#statusCode.toString())
+      for (const [name, value] of this.#headers) {
+        this.res.writeHeader(name, value)
+      }
+    })
+  }
+
   #sendStreamChunk(data: string | ArrayBuffer | Buffer): void {
     if (this.#ended || this.isAborted()) return
     const chunk = typeof data === 'string' ? data : data.toString()

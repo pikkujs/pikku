@@ -290,6 +290,7 @@ export interface PikkuHTTPResponse<Out = unknown> {
   redirect(location: string, status?: number): this
   close?: () => void
   setMode?: (mode: 'stream') => void
+  flushHeaders?: () => void
 }
 
 /**

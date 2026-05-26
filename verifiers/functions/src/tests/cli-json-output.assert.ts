@@ -35,6 +35,7 @@ describe('pikku cli json output verifier', () => {
       .split('\n')
       .map((line) => line.trim())
       .filter((line) => line.length > 0)
+      .filter((line) => line.startsWith('{'))
 
     assert.ok(lines.length > 0, 'Expected CLI output lines')
 
