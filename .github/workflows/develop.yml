@@ -158,6 +158,28 @@ jobs:
       - name: Test template
         timeout-minutes: 2
         run: ./scripts/test-template.sh ${{ matrix.template }} ${{ github.ref_name }}
+        env:
+          TEMPLATE_V8_COVERAGE_DIR: ${{ runner.temp }}/template-coverage/${{ matrix.template }}/raw
+      - name: Generate template coverage report
+        if: always()
+        run: |
+          if find "${{ runner.temp }}/template-coverage/${{ matrix.template }}/raw" -type f -name '*.json' -print -quit >/dev/null 2>&1; then
+            npx --yes c8@11.0.0 report \
+              --temp-directory "${{ runner.temp }}/template-coverage/${{ matrix.template }}/raw" \
+              --reporter=lcov \
+              --report-dir "${{ runner.temp }}/template-coverage/${{ matrix.template }}/report" \
+              --exclude '.pikku/**' \
+              --exclude 'client/**' \
+              --exclude 'src/tests/**'
+          fi
+      - name: Upload template coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          files: ${{ runner.temp }}/template-coverage/${{ matrix.template }}/report/lcov.info
+          flags: templates
+          name: template-${{ matrix.template }}
+        continue-on-error: true
     env:
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
       DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_workspace_starter

@@ -145,7 +145,12 @@ fi
 
 # Run tests
 log_info "Running tests..."
-if ! yarn run test; then
+if [ -n "$TEMPLATE_V8_COVERAGE_DIR" ]; then
+    if ! NODE_V8_COVERAGE="$TEMPLATE_V8_COVERAGE_DIR" yarn run test; then
+        log_error "Tests failed"
+        exit 1
+    fi
+elif ! yarn run test; then
     log_error "Tests failed"
     exit 1
 fi
