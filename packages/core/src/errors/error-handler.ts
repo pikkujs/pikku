@@ -29,8 +29,11 @@ export interface ErrorDetails {
  * @param error - The error to add.
  * @param details - The details of the error.
  */
-export const addError = (error: any, { status, message }: ErrorDetails) => {
-  pikkuState(null, 'misc', 'errors').set(error, { status, message })
+export const addError = (
+  error: any,
+  { status, message, mcpCode }: ErrorDetails
+) => {
+  pikkuState(null, 'misc', 'errors').set(error, { status, message, mcpCode })
 }
 
 /**

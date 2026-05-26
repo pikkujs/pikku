@@ -2,7 +2,13 @@ import { test, describe, beforeEach, afterEach } from 'node:test'
 import * as assert from 'assert'
 import { NotFoundError } from '../../errors/errors.js'
 import type { CorePikkuMiddleware } from '../../types/core.types.js'
-import { wireCLI, runCLICommand, pikkuCLIRender } from './cli-runner.js'
+import {
+  CLIError,
+  executeCLI,
+  wireCLI,
+  runCLICommand,
+  pikkuCLIRender,
+} from './cli-runner.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { addFunction } from '../../function/function-runner.js'
 
@@ -49,7 +55,14 @@ describe('CLI Runner', () => {
         programs: {
           'test-cli': {
             program: 'test-cli',
-            commands: {},
+            commands: {
+              greet: {
+                command: 'greet <name>',
+                pikkuFuncId: 'greetFunc',
+                positionals: [{ name: 'name', required: true }],
+                options: {},
+              },
+            },
             options: {},
           },
         },
@@ -399,6 +412,246 @@ describe('CLI Runner', () => {
 
       await renderer({} as any, { test: 'value' })
       assert.deepStrictEqual(receivedData, { test: 'value' })
+    })
+  })
+
+  describe('executeCLI', () => {
+    test('should require args to be provided', async () => {
+      await assert.rejects(
+        () =>
+          executeCLI({
+            programName: 'test-cli',
+            createSingletonServices: async () => singletonServices,
+          }),
+        /CLI arguments are required/
+      )
+    })
+
+    test('should throw CLIError when the program is missing from cli metadata', async () => {
+      await assert.rejects(
+        () =>
+          executeCLI({
+            programName: 'test-cli',
+            args: [],
+            createSingletonServices: async () => singletonServices,
+          }),
+        /CLI program "test-cli" not found/
+      )
+    })
+
+    test('should print help and return when --help is requested', async () => {
+      const logs: string[] = []
+      const originalLog = console.log
+      console.log = (message?: any) => {
+        logs.push(String(message))
+      }
+
+      pikkuState(null, 'cli', 'meta', {
+        programs: {
+          'test-cli': {
+            program: 'test-cli',
+            description: 'Test CLI',
+            commands: {
+              greet: {
+                command: 'greet <name>',
+                description: 'Greets someone',
+                pikkuFuncId: 'greetFunc',
+                positionals: [{ name: 'name', required: true }],
+                options: {},
+              },
+            },
+            options: {},
+          },
+        },
+        renderers: {},
+      })
+
+      try {
+        await executeCLI({
+          programName: 'test-cli',
+          args: ['--help'],
+          createSingletonServices: async () => singletonServices,
+        })
+      } finally {
+        console.log = originalLog
+      }
+
+      assert.ok(logs[0]?.includes('test-cli'))
+      assert.ok(logs[0]?.includes('greet'))
+    })
+
+    test('should show help and throw CLIError for unknown commands', async () => {
+      const logs: string[] = []
+      const originalLog = console.log
+      console.log = (message?: any) => {
+        logs.push(String(message))
+      }
+
+      pikkuState(null, 'cli', 'meta', {
+        programs: {
+          'test-cli': {
+            program: 'test-cli',
+            commands: {
+              greet: {
+                command: 'greet <name>',
+                description: 'Greets someone',
+                pikkuFuncId: 'greetFunc',
+                positionals: [{ name: 'name', required: true }],
+                options: {},
+              },
+            },
+            options: {},
+          },
+        },
+        renderers: {},
+      })
+
+      try {
+        await assert.rejects(
+          () =>
+            executeCLI({
+              programName: 'test-cli',
+              args: ['unknown'],
+              createSingletonServices: async () => singletonServices,
+            }),
+          (error: any) => {
+            assert.ok(error instanceof CLIError)
+            assert.strictEqual(error.message, 'Unknown command')
+            assert.strictEqual(error.exitCode, 1)
+            return true
+          }
+        )
+      } finally {
+        console.log = originalLog
+      }
+
+      assert.ok(logs[0]?.includes('test-cli'))
+    })
+
+    test('should print parse errors and throw CLIError', async () => {
+      const errors: string[] = []
+      const originalError = console.error
+      console.error = (message?: any) => {
+        errors.push(String(message))
+      }
+
+      pikkuState(null, 'cli', 'meta', {
+        programs: {
+          'test-cli': {
+            program: 'test-cli',
+            commands: {
+              greet: {
+                command: 'greet <name>',
+                pikkuFuncId: 'greetFunc',
+                positionals: [{ name: 'name', required: true }],
+                options: {},
+              },
+            },
+            options: {},
+          },
+        },
+        renderers: {},
+      })
+
+      try {
+        await assert.rejects(
+          () =>
+            executeCLI({
+              programName: 'test-cli',
+              args: ['greet'],
+              createSingletonServices: async () => singletonServices,
+            }),
+          (error: any) => {
+            assert.ok(error instanceof CLIError)
+            assert.ok(error.message.includes('Missing required argument: name'))
+            return true
+          }
+        )
+      } finally {
+        console.error = originalError
+      }
+
+      assert.strictEqual(errors[0], 'Errors:')
+      assert.ok(errors[1]?.includes('Missing required argument: name'))
+    })
+
+    test('should create config and singleton services with parsed data and execute the command', async () => {
+      let receivedConfigData: any
+      let receivedConfig: any
+      let executed = false
+
+      pikkuState(null, 'cli', 'meta', {
+        programs: {
+          'test-cli': {
+            program: 'test-cli',
+            commands: {
+              greet: {
+                command: 'greet <name>',
+                pikkuFuncId: 'greetFunc',
+                positionals: [{ name: 'name', required: true }],
+                options: {
+                  loud: {
+                    description: 'Use loud greeting',
+                    short: 'l',
+                    default: false,
+                  },
+                },
+              },
+            },
+            options: {},
+          },
+        },
+        renderers: {},
+      })
+
+      pikkuState(null, 'cli', 'programs', {
+        'test-cli': {
+          defaultRenderer: undefined,
+          middleware: [],
+          renderers: {},
+        },
+      })
+
+      pikkuState(null, 'function', 'meta', {
+        greetFunc: {
+          pikkuFuncId: 'greetFunc',
+          inputSchemaName: null,
+          outputSchemaName: null,
+          sessionless: true,
+        },
+      })
+
+      addFunction('greetFunc', {
+        func: async () => {
+          executed = true
+          return undefined
+        },
+        auth: false,
+      })
+
+      await executeCLI({
+        programName: 'test-cli',
+        args: ['greet', 'Alice', '--loud'],
+        createConfig: async (_variables, data) => {
+          receivedConfigData = data
+          return { config: true }
+        },
+        createSingletonServices: async (config) => {
+          receivedConfig = config
+          return singletonServices
+        },
+      })
+
+      assert.deepStrictEqual(receivedConfigData, {
+        name: 'Alice',
+        loud: true,
+      })
+      assert.deepStrictEqual(receivedConfig, { config: true })
+      assert.strictEqual(executed, true)
+      assert.strictEqual(
+        pikkuState(null, 'package', 'singletonServices'),
+        singletonServices
+      )
     })
   })
 })

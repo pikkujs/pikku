@@ -154,6 +154,42 @@ describe('toWebRequest', () => {
     assert.equal(text, bodyContent)
   })
 
+  test('reconstructs JSON body from pre-parsed request data when arrayBuffer is empty', async () => {
+    const req = createMockRequest({
+      method: 'post',
+      path: '/json-body',
+      headers: { 'content-type': 'application/json', host: 'localhost' },
+      body: new ArrayBuffer(0),
+    })
+
+    req.json = async () => ({ hello: 'world' })
+
+    const webReq = toWebRequest(req)
+
+    assert.equal(await webReq.text(), '{"hello":"world"}')
+  })
+
+  test('reconstructs form-urlencoded body from pre-parsed request data when arrayBuffer is empty', async () => {
+    const req = createMockRequest({
+      method: 'post',
+      path: '/form-body',
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded',
+        host: 'localhost',
+      },
+      body: new ArrayBuffer(0),
+    })
+
+    req.json = async () => ({ name: 'Alice', role: 'admin' })
+
+    const webReq = toWebRequest(req)
+    const text = await webReq.text()
+
+    assert.ok(
+      text === 'name=Alice&role=admin' || text === 'role=admin&name=Alice'
+    )
+  })
+
   test('GET request has no body', async () => {
     const req = createMockRequest({ method: 'get' })
     const webReq = toWebRequest(req)
@@ -232,5 +268,54 @@ describe('applyWebResponse', () => {
 
     assert.equal(state.body, null)
     assert.equal(state.statusCode, 204)
+  })
+
+  test('uses res.send when available and skips transport headers', async () => {
+    const sent: string[] = []
+    const { state } = createMockResponse()
+    const res: PikkuHTTPResponse = {
+      status(code: number) {
+        state.statusCode = code
+        return res
+      },
+      header(name: string, value: string | string[]) {
+        state.headers[name.toLowerCase()] = value
+        return res
+      },
+      cookie() {
+        return res
+      },
+      json() {
+        return res
+      },
+      arrayBuffer() {
+        throw new Error('arrayBuffer should not be used when send exists')
+      },
+      send(data: string | ArrayBuffer | Buffer) {
+        sent.push(String(data))
+        return res
+      },
+      redirect(location: string, status?: number) {
+        state.redirectUrl = location
+        state.redirectStatus = status ?? 302
+        return res
+      },
+    }
+
+    const webRes = new Response('payload', {
+      status: 200,
+      headers: {
+        'content-length': '7',
+        'transfer-encoding': 'chunked',
+        'x-custom': 'ok',
+      },
+    })
+
+    await applyWebResponse(res, webRes)
+
+    assert.deepEqual(sent, ['payload'])
+    assert.equal(state.headers['x-custom'], 'ok')
+    assert.equal(state.headers['content-length'], undefined)
+    assert.equal(state.headers['transfer-encoding'], undefined)
   })
 })
