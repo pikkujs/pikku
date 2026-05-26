@@ -18,6 +18,7 @@ import { dbSeed } from './functions/commands/db-seed.js'
 import { dbReset } from './functions/commands/db-reset.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuTestsInit } from './functions/commands/tests-init.js'
+import { pikkuTestsCoverage } from './functions/commands/tests-coverage.js'
 import { pikkuVersionsCheck } from './functions/commands/versions-check.js'
 import { pikkuVersionsUpdate } from './functions/commands/versions-update.js'
 import { pikkuNewFunction } from './functions/commands/new-function.js'
@@ -472,6 +473,17 @@ wireCLI({
           options: {
             force: {
               description: 'Overwrite existing ftest directory',
+            },
+          },
+        }),
+        coverage: pikkuCLICommand({
+          func: pikkuTestsCoverage,
+          description:
+            'Run the function-tests suite under c8 and emit function-tests/coverage/function-coverage.json',
+          options: {
+            noRun: {
+              description:
+                'Skip running the suite and only re-analyse an existing coverage-final.json',
             },
           },
         }),

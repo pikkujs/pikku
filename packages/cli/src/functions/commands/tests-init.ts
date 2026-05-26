@@ -22,6 +22,7 @@ function packageJson(): string {
         test: "node --env-file=.env.test node_modules/.bin/cucumber-js --config tests/cucumber.mjs --tags 'not @skip'",
         'test:tag':
           'node --env-file=.env.test node_modules/.bin/cucumber-js --config tests/cucumber.mjs --tags',
+        coverage: 'pikku tests coverage',
         tsc: 'tsc --noEmit',
       },
       dependencies: {
@@ -31,6 +32,7 @@ function packageJson(): string {
       devDependencies: {
         '@cucumber/cucumber': '^11.0.0',
         '@types/node': '^22',
+        c8: '^10.0.0',
         tsx: '^4.21.0',
         typescript: '~5.8.0',
       },
