@@ -83,9 +83,17 @@ export async function applyWebResponse(
 ): Promise<void> {
   res.status(webResponse.status)
 
+  const setCookieValues =
+    typeof (webResponse.headers as Headers & { getSetCookie?: () => string[] }).getSetCookie === 'function'
+      ? (webResponse.headers as Headers & { getSetCookie: () => string[] }).getSetCookie()
+      : []
+
   webResponse.headers.forEach((value, name) => {
     const lower = name.toLowerCase()
     if (SKIP_RESPONSE_HEADERS.has(lower)) {
+      return
+    }
+    if (lower === 'set-cookie') {
       return
     }
     if (lower === 'location') {
@@ -94,6 +102,10 @@ export async function applyWebResponse(
       res.header(name, value)
     }
   })
+
+  if (setCookieValues.length > 0) {
+    res.header('Set-Cookie', setCookieValues)
+  }
 
   const body = await webResponse.text()
   if (body) {
