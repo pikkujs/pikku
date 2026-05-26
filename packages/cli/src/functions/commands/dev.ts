@@ -154,6 +154,8 @@ export const dev = pikkuSessionlessFunc<
       await loadUserBootstrap(pikkuDir)
     }
 
+    workflowService.rewireQueueWorkers()
+
     const configModule = await loadUserModule(pikkuConfigFactory.file)
     const servicesModule = await loadUserModule(singletonServicesFactory.file)
     const userCreateConfig = configModule[pikkuConfigFactory.variable]
@@ -281,6 +283,7 @@ export const dev = pikkuSessionlessFunc<
             try {
               const start = Date.now()
               await runAllWithCommandState()
+              workflowService.rewireQueueWorkers()
               logger.info({
                 message: `✓ Generated in ${Date.now() - start}ms`,
                 type: 'timing',

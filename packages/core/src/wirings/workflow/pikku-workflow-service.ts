@@ -197,6 +197,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
   }
 
+  public rewireQueueWorkers(): void {
+    this.wireQueueWorkers()
+  }
+
   /**
    * Wire the queue-based orchestrator/step/sleeper workers.
    * Subclasses that orchestrate without queues (e.g. Durable Objects) should
