@@ -3,3 +3,7 @@ flags:
     paths:
       - packages/
     carryforward: false
+  verifiers:
+    paths:
+      - verifiers/functions/src/
+    carryforward: false

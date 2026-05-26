@@ -81,6 +81,24 @@ jobs:
       - uses: ./.github/actions/setup
       - run: cd verifiers/${{ matrix.verifier }} && yarn test
 
+  verifier-coverage:
+    name: Verifier Coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Run functions verifier with coverage
+        run: cd verifiers/functions && yarn test:coverage
+      - name: Upload verifier coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: verifiers/functions/coverage/lcov.info
+          flags: verifiers
+          name: verifier-coverage
+        continue-on-error: true
+
   templates:
     name: Templates (${{ matrix.version }}, ${{ matrix.template }}, ${{ matrix.package-manager }})
     runs-on: ubuntu-latest
