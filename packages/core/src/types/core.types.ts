@@ -115,6 +115,7 @@ export type FunctionRuntimeMeta = {
   version?: number
   approvalRequired?: boolean
   approvalDescription?: string
+  implementationHash?: string
   contractHash?: string
   inputHash?: string
   outputHash?: string
@@ -485,8 +486,8 @@ export type CreateSingletonServices<
  */
 export type CreateWireServices<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
-  Services extends
-    CoreServices<SingletonServices> = CoreServices<SingletonServices>,
+  Services extends CoreServices<SingletonServices> =
+    CoreServices<SingletonServices>,
   UserSession extends CoreUserSession = CoreUserSession,
 > = (
   services: SingletonServices,

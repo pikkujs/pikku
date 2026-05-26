@@ -225,3 +225,94 @@ describe('addFunctions duplicate name handling', () => {
     }
   })
 })
+
+describe('addFunctions implementationHash', () => {
+  test('records a stable implementation hash for an inline function', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-function-hash-inline-'))
+    const file = join(rootDir, 'inline.ts')
+
+    await writeFile(
+      file,
+      [
+        "import { pikkuFunc } from '@pikku/core'",
+        'export const createUser = pikkuFunc({',
+        '  expose: true,',
+        '  func: async ({ logger }, input: { name: string }) => {',
+        "    logger.info('create user')",
+        '    return { ok: true, name: input.name }',
+        '  }',
+        '})',
+      ].join('\n')
+    )
+
+    const logger: InspectorLogger = {
+      debug: () => {},
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      critical: () => {},
+      hasCriticalErrors: () => false,
+    }
+
+    try {
+      const first = await inspect(logger, [file], { rootDir })
+      const second = await inspect(logger, [file], { rootDir })
+      const firstHash = first.functions.meta['createUser']?.implementationHash
+      const secondHash = second.functions.meta['createUser']?.implementationHash
+
+      assert.match(firstHash ?? '', /^[0-9a-f]{16}$/)
+      assert.strictEqual(firstHash, secondHash)
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test('changes when a referenced handler implementation changes', async () => {
+    const rootDir = await mkdtemp(
+      join(tmpdir(), 'pikku-function-hash-referenced-')
+    )
+    const file = join(rootDir, 'referenced.ts')
+
+    const writeSource = async (bodyLine: string) => {
+      await writeFile(
+        file,
+        [
+          "import { pikkuFunc } from '@pikku/core'",
+          '',
+          'const handler = async () => {',
+          `  ${bodyLine}`,
+          '  return { ok: true }',
+          '}',
+          '',
+          'export const createUser = pikkuFunc({',
+          '  func: handler,',
+          '})',
+        ].join('\n')
+      )
+    }
+
+    const logger: InspectorLogger = {
+      debug: () => {},
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      critical: () => {},
+      hasCriticalErrors: () => false,
+    }
+
+    try {
+      await writeSource("console.log('first')")
+      const first = await inspect(logger, [file], { rootDir })
+
+      await writeSource("console.log('second')")
+      const second = await inspect(logger, [file], { rootDir })
+
+      assert.notStrictEqual(
+        first.functions.meta['createUser']?.implementationHash,
+        second.functions.meta['createUser']?.implementationHash
+      )
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+})

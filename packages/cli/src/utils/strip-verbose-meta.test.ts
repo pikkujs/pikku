@@ -64,6 +64,24 @@ describe('stripVerboseFields', () => {
       ])
       assert.strictEqual(result.myFunc.description, undefined)
     })
+
+    test('preserves implementationHash in minimal runtime meta', () => {
+      const meta = {
+        myFunc: {
+          pikkuFuncId: 'myFunc',
+          implementationHash: 'abc123def4567890',
+          contractHash: 'fff111eee222dddd',
+          description: 'should be stripped',
+          sourceFile: '/src/functions/my-func.ts',
+        },
+      }
+
+      const result = stripVerboseFields(meta) as any
+      assert.strictEqual(result.myFunc.implementationHash, 'abc123def4567890')
+      assert.strictEqual(result.myFunc.contractHash, 'fff111eee222dddd')
+      assert.strictEqual(result.myFunc.description, undefined)
+      assert.strictEqual(result.myFunc.sourceFile, undefined)
+    })
   })
 
   describe('agent meta (nested under agentsMeta key)', () => {

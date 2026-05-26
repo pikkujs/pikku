@@ -14,6 +14,7 @@ import {
   getPropertyValue,
   getCommonWireMetaData,
 } from '../utils/get-property-value.js'
+import { canonicalJSON, hashString } from '../utils/hash.js'
 import { resolveMiddleware } from '../utils/middleware.js'
 import { resolvePermissions } from '../utils/permissions.js'
 import { extractWireNames } from '../utils/post-process.js'
@@ -310,6 +311,29 @@ const areCompatibleFunctionIds = (
   const incomingParsed = parseVersionedId(incomingId)
 
   return existingParsed.baseName === incomingParsed.baseName
+}
+
+function printNode(node: ts.Node): string {
+  return ts
+    .createPrinter({ removeComments: true })
+    .printNode(ts.EmitHint.Unspecified, node, node.getSourceFile())
+}
+
+function computeImplementationHash(args: {
+  wrapper: string
+  handler: ts.ArrowFunction | ts.FunctionExpression
+  objectNode?: ts.ObjectLiteralExpression
+  isDirectFunction: boolean
+}): string {
+  const { wrapper, handler, objectNode, isDirectFunction } = args
+  return hashString(
+    canonicalJSON({
+      wrapper,
+      isDirectFunction,
+      handler: printNode(handler),
+      config: objectNode ? printNode(objectNode) : null,
+    })
+  )
 }
 
 /**
@@ -899,6 +923,12 @@ export const addFunctions: AddWiring = (
   }
 
   const sessionless = expression.text !== 'pikkuFunc'
+  const implementationHash = computeImplementationHash({
+    wrapper: expression.text,
+    handler,
+    objectNode,
+    isDirectFunction,
+  })
 
   state.functions.meta[pikkuFuncId] = {
     pikkuFuncId,
@@ -919,6 +949,7 @@ export const addFunctions: AddWiring = (
     deploy: deploy || undefined,
     approvalRequired: approvalRequired || undefined,
     approvalDescription: approvalDescription || undefined,
+    implementationHash,
     version,
     title,
     tags: tags || undefined,
