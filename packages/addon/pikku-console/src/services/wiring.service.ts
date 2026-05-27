@@ -304,7 +304,7 @@ async function readOptionalFile(path: string): Promise<string | null> {
 
 async function readOptionalMetaFile(
   metaSource: MetaService | string,
-  relativePath: string,
+  relativePath: string
 ): Promise<string | null> {
   if (
     metaSource &&
@@ -331,7 +331,11 @@ function extractCucumberMessages(html: string): unknown[] {
   if (!match) {
     return []
   }
-  const parsed = parseJsonOrNull(match[1])
+  const rawMessages = match[1]
+  if (!rawMessages) {
+    return []
+  }
+  const parsed = parseJsonOrNull(rawMessages)
   return asArray(parsed)
 }
 
@@ -340,10 +344,13 @@ function durationToMs(duration: unknown): number {
     return 0
   }
 
-  const record = duration as { seconds?: number | string; nanos?: number | string }
+  const record = duration as {
+    seconds?: number | string
+    nanos?: number | string
+  }
   const seconds = Number(record.seconds ?? 0)
   const nanos = Number(record.nanos ?? 0)
-  const totalMs = (seconds * 1000) + (nanos / 1_000_000)
+  const totalMs = seconds * 1000 + nanos / 1_000_000
   return Number.isFinite(totalMs) ? totalMs : 0
 }
 
@@ -352,10 +359,13 @@ function cucumberTimestampToIso(timestamp: unknown): string | null {
     return null
   }
 
-  const record = timestamp as { seconds?: number | string; nanos?: number | string }
+  const record = timestamp as {
+    seconds?: number | string
+    nanos?: number | string
+  }
   const seconds = Number(record.seconds ?? 0)
   const nanos = Number(record.nanos ?? 0)
-  const totalMs = (seconds * 1000) + (nanos / 1_000_000)
+  const totalMs = seconds * 1000 + nanos / 1_000_000
   if (!Number.isFinite(totalMs) || totalMs <= 0) {
     return null
   }
@@ -365,30 +375,47 @@ function cucumberTimestampToIso(timestamp: unknown): string | null {
 
 function expandCalledNames(name: string, rpcMeta: RPCMetaRecord): string[] {
   const withoutVersion = name.replace(/@v\d+$/i, '')
-  return [...new Set([
-    name,
-    rpcMeta[name],
-    withoutVersion !== name ? withoutVersion : undefined,
-    rpcMeta[withoutVersion],
-  ].filter((value): value is string => !!value))]
+  return [
+    ...new Set(
+      [
+        name,
+        rpcMeta[name],
+        withoutVersion !== name ? withoutVersion : undefined,
+        rpcMeta[withoutVersion],
+      ].filter((value): value is string => !!value)
+    ),
+  ]
 }
 
-function uniqueFunctionKeys(func: { pikkuFuncId?: string; name?: string }): string[] {
-  return [...new Set([func.pikkuFuncId, func.name].filter((value): value is string => !!value))]
+function uniqueFunctionKeys(func: {
+  pikkuFuncId?: string
+  name?: string
+}): string[] {
+  return [
+    ...new Set(
+      [func.pikkuFuncId, func.name].filter((value): value is string => !!value)
+    ),
+  ]
 }
 
-function buildScenarioMaps(messages: unknown[], rpcMeta: RPCMetaRecord): {
+function buildScenarioMaps(
+  messages: unknown[],
+  rpcMeta: RPCMetaRecord
+): {
   scenariosByFunction: Map<string, FunctionTestScenario[]>
   generatedAt: string | null
 } {
   const featureNamesByUri = new Map<string, string>()
   const featureDescriptionsByUri = new Map<string, string>()
-  const scenarioByAstId = new Map<string, {
-    featureName: string
-    featureDescription: string
-    scenarioName: string
-    steps: string[]
-  }>()
+  const scenarioByAstId = new Map<
+    string,
+    {
+      featureName: string
+      featureDescription: string
+      scenarioName: string
+      steps: string[]
+    }
+  >()
   const pickleById = new Map<string, Record<string, unknown>>()
   const testCaseById = new Map<string, Record<string, unknown>>()
   const testCaseStartedById = new Map<string, Record<string, unknown>>()
@@ -400,14 +427,20 @@ function buildScenarioMaps(messages: unknown[], rpcMeta: RPCMetaRecord): {
     const gherkinDocument = record.gherkinDocument
     if (gherkinDocument?.uri && gherkinDocument.feature?.name) {
       featureNamesByUri.set(gherkinDocument.uri, gherkinDocument.feature.name)
-      featureDescriptionsByUri.set(gherkinDocument.uri, gherkinDocument.feature.description ?? '')
+      featureDescriptionsByUri.set(
+        gherkinDocument.uri,
+        gherkinDocument.feature.description ?? ''
+      )
     }
 
-    for (const child of asArray<Record<string, any>>(gherkinDocument?.feature?.children)) {
+    for (const child of asArray<Record<string, any>>(
+      gherkinDocument?.feature?.children
+    )) {
       const scenario = child?.scenario
       if (!scenario?.id) continue
-      const steps = asArray<Record<string, any>>(scenario.steps)
-        .map((step) => `${(step.keyword ?? '').trim()} ${step.text ?? ''}`.trim())
+      const steps = asArray<Record<string, any>>(scenario.steps).map((step) =>
+        `${(step.keyword ?? '').trim()} ${step.text ?? ''}`.trim()
+      )
       scenarioByAstId.set(scenario.id, {
         featureName: gherkinDocument?.feature?.name ?? '',
         featureDescription: gherkinDocument?.feature?.description ?? '',
@@ -433,7 +466,8 @@ function buildScenarioMaps(messages: unknown[], rpcMeta: RPCMetaRecord): {
 
     const finished = record.testStepFinished
     if (finished?.testCaseStartedId) {
-      const entries = stepResultsByStartedId.get(finished.testCaseStartedId) ?? []
+      const entries =
+        stepResultsByStartedId.get(finished.testCaseStartedId) ?? []
       entries.push(finished)
       stepResultsByStartedId.set(finished.testCaseStartedId, entries)
     }
@@ -448,25 +482,43 @@ function buildScenarioMaps(messages: unknown[], rpcMeta: RPCMetaRecord): {
 
     const astId = asArray<string>(pickle.astNodeIds)[0]
     const astScenario = astId ? scenarioByAstId.get(astId) : null
-    const steps = astScenario?.steps ?? asArray<Record<string, any>>(pickle.steps).map((step) => step?.text ?? '').filter(Boolean)
+    const steps =
+      astScenario?.steps ??
+      asArray<Record<string, any>>(pickle.steps)
+        .map((step) => step?.text ?? '')
+        .filter(Boolean)
     const featureFile = typeof pickle.uri === 'string' ? pickle.uri : undefined
-    const featureName = astScenario?.featureName || (featureFile ? featureNamesByUri.get(featureFile) : '') || ''
-    const featureDescription = astScenario?.featureDescription || (featureFile ? featureDescriptionsByUri.get(featureFile) : '') || ''
-    const stepResults = (stepResultsByStartedId.get(String(started.id)) ?? []) as CucumberStepFinishedMessage[]
+    const featureName =
+      astScenario?.featureName ||
+      (featureFile ? featureNamesByUri.get(featureFile) : '') ||
+      ''
+    const featureDescription =
+      astScenario?.featureDescription ||
+      (featureFile ? featureDescriptionsByUri.get(featureFile) : '') ||
+      ''
+    const stepResults = (stepResultsByStartedId.get(String(started.id)) ??
+      []) as CucumberStepFinishedMessage[]
     const status: 'pass' | 'fail' = stepResults.some(
-      (entry) => entry?.testStepResult?.status !== 'PASSED' && entry?.testStepResult?.status !== 'SKIPPED',
-    ) ? 'fail' : 'pass'
+      (entry) =>
+        entry?.testStepResult?.status !== 'PASSED' &&
+        entry?.testStepResult?.status !== 'SKIPPED'
+    )
+      ? 'fail'
+      : 'pass'
     const totalDurationMs = stepResults.reduce(
       (sum, entry) => sum + durationToMs(entry?.testStepResult?.duration),
-      0,
+      0
     )
-    const duration = totalDurationMs > 0 ? `${Math.round(totalDurationMs)}ms` : undefined
+    const duration =
+      totalDurationMs > 0 ? `${Math.round(totalDurationMs)}ms` : undefined
 
     const scenarioData: FunctionTestScenario = {
       featureName,
       featureDescription,
       featureFile,
-      scenarioName: String(pickle.name ?? astScenario?.scenarioName ?? 'Scenario'),
+      scenarioName: String(
+        pickle.name ?? astScenario?.scenarioName ?? 'Scenario'
+      ),
       status,
       duration,
       steps,
@@ -494,7 +546,7 @@ function buildScenarioMaps(messages: unknown[], rpcMeta: RPCMetaRecord): {
 async function loadFunctionTests(
   metaSource: MetaService | string,
   functionsMeta: FunctionsMeta,
-  rpcMeta: RPCMetaRecord,
+  rpcMeta: RPCMetaRecord
 ): Promise<Record<string, FunctionTestData>> {
   const coverageCandidates = [
     '../function-tests/coverage/function-coverage.json',
@@ -505,24 +557,40 @@ async function loadFunctionTests(
     'function-tests/tests/reports/cucumber-report.html',
   ]
 
-  const coverageContent = (
-    await Promise.all(coverageCandidates.map((path) => readOptionalMetaFile(metaSource, path)))
-  ).find((content) => typeof content === 'string' && content.length > 0) ?? null
+  const coverageContent =
+    (
+      await Promise.all(
+        coverageCandidates.map((path) => readOptionalMetaFile(metaSource, path))
+      )
+    ).find((content) => typeof content === 'string' && content.length > 0) ??
+    null
 
-  const cucumberHtml = (
-    await Promise.all(cucumberCandidates.map((path) => readOptionalMetaFile(metaSource, path)))
-  ).find((content) => typeof content === 'string' && content.length > 0) ?? null
+  const cucumberHtml =
+    (
+      await Promise.all(
+        cucumberCandidates.map((path) => readOptionalMetaFile(metaSource, path))
+      )
+    ).find((content) => typeof content === 'string' && content.length > 0) ??
+    null
 
-  const coverageJson = coverageContent ? (parseJsonOrNull(coverageContent) as {
-    generatedAt?: string
-    functions?: any[]
-  } | null) : null
+  const coverageJson = coverageContent
+    ? (parseJsonOrNull(coverageContent) as {
+        generatedAt?: string
+        functions?: any[]
+      } | null)
+    : null
   const coverageFunctions = new Map(
-    asArray<Record<string, any>>(coverageJson?.functions).map((func) => [func.name, func]),
+    asArray<Record<string, any>>(coverageJson?.functions).map((func) => [
+      func.name,
+      func,
+    ])
   )
   const { scenariosByFunction, generatedAt: scenarioGeneratedAt } = cucumberHtml
     ? buildScenarioMaps(extractCucumberMessages(cucumberHtml), rpcMeta)
-    : { scenariosByFunction: new Map<string, FunctionTestScenario[]>(), generatedAt: null }
+    : {
+        scenariosByFunction: new Map<string, FunctionTestScenario[]>(),
+        generatedAt: null,
+      }
   const generatedAt = scenarioGeneratedAt ?? coverageJson?.generatedAt ?? null
 
   const testsByFunction: Record<string, FunctionTestData> = {}
@@ -534,7 +602,9 @@ async function loadFunctionTests(
     const coverage = functionKeys
       .map((key) => coverageFunctions.get(key))
       .find((value) => !!value)
-    const scenarios = functionKeys.flatMap((key) => scenariosByFunction.get(key) ?? [])
+    const scenarios = functionKeys.flatMap(
+      (key) => scenariosByFunction.get(key) ?? []
+    )
     if (!coverage && scenarios.length === 0) continue
 
     const testData: FunctionTestData = {
@@ -543,7 +613,9 @@ async function loadFunctionTests(
       coveredLines: Number(coverage?.coveredLines ?? 0),
       totalLines: Number(coverage?.totalLines ?? 0),
       ratio: Number(coverage?.ratio ?? 0),
-      missedLines: asArray<number>(coverage?.missedLines).filter((line) => Number.isFinite(line)),
+      missedLines: asArray<number>(coverage?.missedLines).filter((line) =>
+        Number.isFinite(line)
+      ),
       scenarios,
     }
 
@@ -649,7 +721,7 @@ export class WiringService {
     const testsByFunction = await loadFunctionTests(
       this.metaService,
       functions,
-      rpcMetaRaw,
+      rpcMetaRaw
     )
     for (const func of Object.values(functions)) {
       const funcId = func.pikkuFuncId || func.name
