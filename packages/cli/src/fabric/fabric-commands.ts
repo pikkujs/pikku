@@ -28,7 +28,20 @@ import { FabricLink } from './functions/link.function.js'
 import {
   FabricDeployPlan,
   FabricDeployApply,
+  renderDeployPlan,
+  renderDeployApply,
 } from './functions/deploy.function.js'
+import {
+  FabricDeployList,
+  renderDeployList,
+} from './functions/deploy-list.function.js'
+import {
+  FabricDeployUnits,
+  renderDeployUnits,
+} from './functions/deploy-units.function.js'
+import { FabricStatus, renderStatus } from './functions/status.function.js'
+import { FabricErrors, renderErrors } from './functions/errors.function.js'
+import { FabricDbSchema, renderDbSchema } from './functions/db-schema.function.js'
 import { FabricRollback } from './functions/rollback.function.js'
 import { FabricSecretsSet } from './functions/secrets-set.function.js'
 import { FabricSecretsList } from './functions/secrets-list.function.js'
@@ -84,6 +97,7 @@ export const fabricCommands = defineCLICommands({
     subcommands: {
       plan: pikkuCLICommand({
         func: FabricDeployPlan,
+        render: renderDeployPlan,
         description: 'Resolve the target ref and report what a deploy would do',
         options: {
           branch: { description: 'Target branch to deploy', short: 'b' },
@@ -95,6 +109,7 @@ export const fabricCommands = defineCLICommands({
       }),
       apply: pikkuCLICommand({
         func: FabricDeployApply,
+        render: renderDeployApply,
         description: 'Build + deploy a named branch or production (main)',
         options: {
           branch: { description: 'Target branch to deploy', short: 'b' },
@@ -110,6 +125,22 @@ export const fabricCommands = defineCLICommands({
             description: 'Deploy without the confirmation prompt',
             default: false,
           },
+        },
+      }),
+      list: pikkuCLICommand({
+        func: FabricDeployList,
+        render: renderDeployList,
+        description: 'List recent deployments for a branch',
+        options: {
+          branch: { description: 'Target branch', short: 'b' },
+        },
+      }),
+      units: pikkuCLICommand({
+        func: FabricDeployUnits,
+        render: renderDeployUnits,
+        description: 'List the deployed worker units (topology) for a branch',
+        options: {
+          branch: { description: 'Target branch', short: 'b' },
         },
       }),
     },
@@ -192,6 +223,33 @@ export const fabricCommands = defineCLICommands({
       json: { description: 'Machine-readable output', default: false },
     },
   }),
+  status: pikkuCLICommand({
+    func: FabricStatus,
+    render: renderStatus,
+    description: 'Show the linked project status (active + in-flight deploy)',
+  }),
+  errors: pikkuCLICommand({
+    func: FabricErrors,
+    render: renderErrors,
+    description: 'Show recent error-level events for a branch (with traceIds)',
+    options: {
+      branch: { description: 'Target branch', short: 'b' },
+      function: { description: 'Filter by function name' },
+    },
+  }),
+  db: {
+    description: 'Inspect the stage database',
+    subcommands: {
+      schema: pikkuCLICommand({
+        func: FabricDbSchema,
+        render: renderDbSchema,
+        description: 'Show the live database schema (tables + columns)',
+        options: {
+          branch: { description: 'Target branch', short: 'b' },
+        },
+      }),
+    },
+  },
   domains: {
     description: 'Manage custom domains for the production stage',
     subcommands: {
