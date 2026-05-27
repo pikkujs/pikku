@@ -484,7 +484,8 @@ export async function executeCLI({
       const hasUnknownCommand = parsed.errors.some(
         (error) =>
           error.startsWith('Unknown command:') ||
-          error.startsWith('Command not found:')
+          error.startsWith('Command not found:') ||
+          error.startsWith('Missing subcommand:')
       )
 
       if (hasUnknownCommand) {

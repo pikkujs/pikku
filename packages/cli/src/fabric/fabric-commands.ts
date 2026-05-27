@@ -38,7 +38,6 @@ import { FabricDomainsRemove } from './functions/domains-remove.function.js'
 
 export const fabricCommands = defineCLICommands({
   login: pikkuCLICommand({
-    parameters: '',
     func: FabricLogin,
     description: 'Authenticate against fabric-api',
     options: {
@@ -68,7 +67,6 @@ export const fabricCommands = defineCLICommands({
     },
   }),
   link: pikkuCLICommand({
-    parameters: '',
     func: FabricLink,
     description:
       'Register the current git repo as a fabric project and queue an initial deploy',
@@ -79,10 +77,17 @@ export const fabricCommands = defineCLICommands({
     },
   }),
   deploy: pikkuCLICommand({
-    parameters: '[branch] [ref]',
     func: FabricDeploy,
-    description: 'Build + deploy a ref to a stage',
+    description: 'Deploy a named branch or production (main)',
     options: {
+      branch: {
+        description: 'Target branch to deploy',
+        short: 'b',
+      },
+      production: {
+        description: 'Deploy production (always main)',
+        default: false,
+      },
       message: {
         description: 'Annotation stored on the deployment',
         short: 'm',
@@ -112,27 +117,33 @@ export const fabricCommands = defineCLICommands({
       },
     },
   }),
-  secretsSet: pikkuCLICommand({
-    parameters: '<name>',
-    func: FabricSecretsSet,
-    description: 'Set a stage-scoped secret',
-    options: {
-      branch: { description: 'Target branch', short: 'b' },
-      value: { description: 'Secret value (prompted if omitted)' },
-      force: { description: 'Overwrite without confirmation', default: false },
+  secrets: {
+    description: 'Manage stage-scoped secrets',
+    subcommands: {
+      set: pikkuCLICommand({
+        parameters: '<name>',
+        func: FabricSecretsSet,
+        description: 'Set a stage-scoped secret',
+        options: {
+          branch: { description: 'Target branch', short: 'b' },
+          value: { description: 'Secret value (prompted if omitted)' },
+          force: {
+            description: 'Overwrite without confirmation',
+            default: false,
+          },
+        },
+      }),
+      list: pikkuCLICommand({
+        func: FabricSecretsList,
+        description: 'List stage secrets',
+        options: {
+          branch: { description: 'Target branch', short: 'b' },
+          json: { description: 'Machine-readable output', default: false },
+        },
+      }),
     },
-  }),
-  secretsList: pikkuCLICommand({
-    parameters: '',
-    func: FabricSecretsList,
-    description: 'List stage secrets',
-    options: {
-      branch: { description: 'Target branch', short: 'b' },
-      json: { description: 'Machine-readable output', default: false },
-    },
-  }),
+  },
   logs: pikkuCLICommand({
-    parameters: '',
     func: FabricLogs,
     description: 'Stream or fetch logs',
     options: {
@@ -149,7 +160,6 @@ export const fabricCommands = defineCLICommands({
     },
   }),
   metrics: pikkuCLICommand({
-    parameters: '',
     func: FabricMetrics,
     description: 'Show request rate / error rate / latency for a stage',
     options: {
@@ -168,32 +178,37 @@ export const fabricCommands = defineCLICommands({
       json: { description: 'Machine-readable output', default: false },
     },
   }),
-  domainsList: pikkuCLICommand({
-    parameters: '',
-    func: FabricDomainsList,
-    description: 'List custom domains for the linked project',
-    options: {
-      apiUrl: { description: 'Override the fabric-api URL for this call' },
+  domains: {
+    description: 'Manage custom domains for the production stage',
+    subcommands: {
+      list: pikkuCLICommand({
+        func: FabricDomainsList,
+        description: 'List custom domains for the linked project',
+        options: {
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
+      add: pikkuCLICommand({
+        parameters: '<hostname>',
+        func: FabricDomainsAdd,
+        description: 'Add a custom domain to the production stage',
+        options: {
+          target: {
+            description:
+              'Route target: api (Backend API) or app (Frontend App)',
+            default: 'api',
+          },
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
+      remove: pikkuCLICommand({
+        parameters: '<hostname>',
+        func: FabricDomainsRemove,
+        description: 'Remove a custom domain from the production stage',
+        options: {
+          apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
     },
-  }),
-  domainsAdd: pikkuCLICommand({
-    parameters: '<hostname>',
-    func: FabricDomainsAdd,
-    description: 'Add a custom domain to the production stage',
-    options: {
-      target: {
-        description: 'Route target: api (Backend API) or app (Frontend App)',
-        default: 'api',
-      },
-      apiUrl: { description: 'Override the fabric-api URL for this call' },
-    },
-  }),
-  domainsRemove: pikkuCLICommand({
-    parameters: '<hostname>',
-    func: FabricDomainsRemove,
-    description: 'Remove a custom domain from the production stage',
-    options: {
-      apiUrl: { description: 'Override the fabric-api URL for this call' },
-    },
-  }),
+  },
 })

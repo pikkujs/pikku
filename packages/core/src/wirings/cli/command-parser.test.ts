@@ -172,6 +172,23 @@ describe('Command Parser', () => {
       })
     })
 
+    test('should report missing subcommand for a group node with no func', () => {
+      const result = parseCLIArguments(['user'], 'test-cli', testMeta)
+
+      assert.deepStrictEqual(result.commandPath, ['user'])
+      assert.ok(
+        result.errors.some((error) => error.startsWith('Missing subcommand:')),
+        `expected a "Missing subcommand:" error, got: ${JSON.stringify(result.errors)}`
+      )
+    })
+
+    test('should not flag a runnable command as a missing subcommand', () => {
+      const result = parseCLIArguments(['greet', 'Alice'], 'test-cli', testMeta)
+
+      assert.deepStrictEqual(result.commandPath, ['greet'])
+      assert.strictEqual(result.errors.length, 0)
+    })
+
     test('should parse variadic positionals', () => {
       const result = parseCLIArguments(
         ['files', 'file1.txt', 'file2.txt', 'file3.txt'],

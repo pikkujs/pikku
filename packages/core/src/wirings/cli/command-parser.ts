@@ -111,6 +111,18 @@ export function parseCLIArguments(
     return result
   }
 
+  // A group/parent command — has subcommands but no runnable function of its
+  // own — cannot be executed directly. Surface a routable error so the runner
+  // shows its subcommand help instead of attempting to run a missing function.
+  if (
+    !commandMeta.pikkuFuncId &&
+    commandMeta.subcommands &&
+    Object.keys(commandMeta.subcommands).length > 0
+  ) {
+    result.errors.push(`Missing subcommand: ${result.commandPath.join(' ')}`)
+    return result
+  }
+
   // Collect all available options (global + inherited)
   const availableOptions = collectAvailableOptions(meta, result.commandPath)
 
