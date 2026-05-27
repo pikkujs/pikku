@@ -3,14 +3,10 @@ import type { Logger } from '@pikku/core/services'
 import { LogLevel } from '@pikku/core/services'
 import type { ErrorCode } from '@pikku/inspector'
 
-const logo = `
- ______ _ _     _
-(_____ (_) |   | |
- _____) )| |  _| |  _ _   _
-|  ____/ | |_/ ) |_/ ) | | |
-| |    | |  _ (|  _ (|  _ (| |_| |
-|_|    |_|_| _)_| _)____/
-`
+// Compact one-line wordmark — the old multi-line ASCII art got cropped in
+// short/narrow AI-agent panes. Coloured directly (not via the blue `info`
+// path) so the cyan/bold render correctly.
+const logo = `${chalk.cyan('◇◆')} ${chalk.bold('pikku')} ${chalk.cyan.bold('::')}`
 
 const BASE_ERROR_URL = 'https://pikku.dev/docs/pikku-cli/errors'
 const ANSI_ESCAPE_REGEX = /\x1B\[[0-?]*[ -/]*[@-~]/g
@@ -206,18 +202,7 @@ export class CLILogger implements Logger {
   }
 
   logLogo() {
-    this.primary(logo)
-    // // When running from dist/, __filename is dist/src/services/cli-logger.service.js
-    // // So we need to go up 3 levels: dist/src/services -> dist/src -> dist -> package.json
-    // const packageJson = JSON.parse(
-    //   readFileSync(`${dirname(__filename)}/../../../package.json`, 'utf-8')
-    // )
-    // this.primary(`⚙️  Welcome to the Pikku CLI (v${packageJson.version})\n`)
-  }
-
-  private primary(message: string) {
-    if (!this.silent) {
-      this.emit('info', message)
-    }
+    if (this.silent || this.outputMode === 'json') return
+    console.log(`\n${logo}\n`)
   }
 }
