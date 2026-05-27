@@ -11,6 +11,13 @@ function toCamelCase(str: string): string {
   return str.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
 }
 
+/** Convert camelCase to kebab-case for display: "autoApply" → "auto-apply".
+ *  Flags are stored camelCase (matching the function input field) but shown
+ *  kebab; the parser accepts both forms via toCamelCase. */
+function toKebabCase(str: string): string {
+  return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
+}
+
 /**
  * Result of parsing CLI arguments
  */
@@ -378,7 +385,7 @@ function applyOptionDefaults(
 
     // Check required
     if (def.required && !(name in options)) {
-      result.errors.push(`Missing required option: --${name}`)
+      result.errors.push(`Missing required option: --${toKebabCase(name)}`)
     }
 
     // Validate choices
@@ -388,13 +395,13 @@ function applyOptionDefaults(
         for (const v of value) {
           if (!def.choices.includes(v)) {
             result.errors.push(
-              `Invalid value for --${name}: ${v}. Valid choices: ${def.choices.join(', ')}`
+              `Invalid value for --${toKebabCase(name)}: ${v}. Valid choices: ${def.choices.join(', ')}`
             )
           }
         }
       } else if (!def.choices.includes(value)) {
         result.errors.push(
-          `Invalid value for --${name}: ${value}. Valid choices: ${def.choices.join(', ')}`
+          `Invalid value for --${toKebabCase(name)}: ${value}. Valid choices: ${def.choices.join(', ')}`
         )
       }
     }
@@ -499,7 +506,7 @@ function formatOptions(options: Record<string, CLIOption>, lines: string[]) {
     } else {
       line += '    '
     }
-    line += `--${name}`
+    line += `--${toKebabCase(name)}`
 
     if (opt.default !== undefined && typeof opt.default !== 'boolean') {
       line += ` <value>`

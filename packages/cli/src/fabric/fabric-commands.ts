@@ -106,9 +106,8 @@ export const fabricCommands = defineCLICommands({
             description: 'Annotation stored on the deployment',
             short: 'm',
           },
-          yes: {
-            description: 'Skip confirmation prompts',
-            short: 'y',
+          autoApply: {
+            description: 'Deploy without the confirmation prompt',
             default: false,
           },
         },

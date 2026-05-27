@@ -10,7 +10,7 @@ export const FabricDeployInput = z.object({
   production: z.boolean().optional(),
   ref: z.string().optional(),
   message: z.string().optional(),
-  yes: z.boolean().optional(),
+  autoApply: z.boolean().optional(),
 })
 
 export const FabricDeployValidatedInput = FabricDeployInput.superRefine(
@@ -40,7 +40,7 @@ type DeployInput = z.infer<typeof FabricDeployInput>
  * the real deploy.
  */
 async function runDeploy(
-  { branch, production, ref, yes }: DeployInput,
+  { branch, production, ref, autoApply }: DeployInput,
   { plan }: { plan: boolean }
 ): Promise<z.infer<typeof FabricDeployOutput>> {
   const ctx = await resolveApiContext()
@@ -65,13 +65,13 @@ async function runDeploy(
     return { deploymentId: '', stageId: '', runId: '', ref: resolved }
   }
 
-  // Classic yes/no guard. `--yes` skips it; a non-interactive session has no
-  // human to answer, so we refuse rather than hang.
-  if (!yes) {
+  // Classic yes/no guard. `--auto-apply` skips it; a non-interactive session
+  // has no human to answer, so we refuse rather than hang.
+  if (!autoApply) {
     const target = `${targetBranch} @ ${resolved.slice(0, 8)}`
     if (!process.stdin.isTTY) {
       throw new Error(
-        `Refusing to deploy ${target} without confirmation — re-run with --yes to deploy non-interactively.`
+        `Refusing to deploy ${target} without confirmation — re-run with --auto-apply to deploy non-interactively.`
       )
     }
     const ok = await promptConfirm(`Deploy ${target}?`)
