@@ -126,6 +126,7 @@ interface WorkflowCanvasProps {
   workflow: any
   items: { name: string; description?: string }[]
   onItemSelect: (name: string) => void
+  immersiveDetail?: boolean
 }
 
 const WorkflowCanvasFlow: React.FC<{
@@ -256,6 +257,7 @@ const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
   workflow,
   items,
   onItemSelect,
+  immersiveDetail = false,
 }) => {
   const { canvasDrawer, closeCanvasDrawer } = useCanvasDrawerContext()
   const { panels, activePanel, openWorkflow, setActivePanel } =
@@ -381,9 +383,11 @@ const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
     <>
       <ThreePaneLayout
         header={header}
-        showTabs={false}
+        showTabs={immersiveDetail}
         emptyPanelMessage="Select a node to view its details"
         runsPanel={runsPanel}
+        initialLeftCollapsed={immersiveDetail}
+        initialRightCollapsed={immersiveDetail}
       >
         <Box style={{ height: '100%', position: 'relative' }}>
           <WorkflowCanvasInner

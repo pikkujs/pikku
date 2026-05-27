@@ -389,7 +389,7 @@ export async function buildToolDefs(
       }
 
       tools.push({
-        name: toolName.replaceAll(':', '__'),
+        name: toolName.replaceAll('@', '_').replaceAll(':', '__'),
         description: fnMeta?.description || fnMeta?.title || toolName,
         inputSchema,
         needsApproval: needsApproval || undefined,

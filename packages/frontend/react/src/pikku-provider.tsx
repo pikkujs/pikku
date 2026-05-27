@@ -42,6 +42,50 @@ export const usePikkuRPC = <RPC = any,>(): RPC => {
   return context.rpc as RPC
 }
 
+type AgentRPC = {
+  agent: {
+    run: (agentName: string, input: any) => Promise<any>
+    stream: (agentName: string, input: any) => Promise<any>
+    approve: (agentName: string, input: any) => Promise<any>
+  }
+}
+
+type WorkflowRPC = {
+  startWorkflow: (workflowName: string, input: any) => Promise<any>
+  runWorkflow: (workflowName: string, input: any) => Promise<any>
+  workflowStatus: (workflowName: string, runId: string) => Promise<any>
+}
+
+export const usePikkuAgent = <
+  RPC extends AgentRPC = AgentRPC,
+  Name extends string = string,
+>(
+  agentName: Name,
+) => {
+  const rpc = usePikkuRPC<RPC>()
+
+  return {
+    run: (input: Parameters<RPC['agent']['run']>[1]) => rpc.agent.run(agentName, input),
+    stream: (input: Parameters<RPC['agent']['stream']>[1]) => rpc.agent.stream(agentName, input),
+    approve: (input: Parameters<RPC['agent']['approve']>[1]) => rpc.agent.approve(agentName, input),
+  }
+}
+
+export const usePikkuWorkflow = <
+  RPC extends WorkflowRPC = WorkflowRPC,
+  Name extends string = string,
+>(
+  workflowName: Name,
+) => {
+  const rpc = usePikkuRPC<RPC>()
+
+  return {
+    start: (input: Parameters<RPC['startWorkflow']>[1]) => rpc.startWorkflow(workflowName, input),
+    run: (input: Parameters<RPC['runWorkflow']>[1]) => rpc.runWorkflow(workflowName, input),
+    status: (runId: Parameters<RPC['workflowStatus']>[1]) => rpc.workflowStatus(workflowName, runId),
+  }
+}
+
 /**
  * Returns the realtime client wired by `createPikku(...)`. Throws if the
  * provider wasn't given a realtime instance — pass the `PikkuRealtime`

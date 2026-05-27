@@ -48,6 +48,8 @@ interface ThreePaneLayoutProps {
   emptyPanelMessage?: string
   showTabs?: boolean
   hidePanel?: boolean
+  initialLeftCollapsed?: boolean
+  initialRightCollapsed?: boolean
 }
 
 export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
@@ -58,12 +60,14 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
   emptyPanelMessage,
   showTabs = false,
   hidePanel = false,
+  initialLeftCollapsed = false,
+  initialRightCollapsed = false,
 }) => {
   const { panels } = usePanelContext()
   const alwaysVisible = !showTabs
 
-  const [leftCollapsed, setLeftCollapsed] = useState(false)
-  const [rightCollapsed, setRightCollapsed] = useState(false)
+  const [leftCollapsed, setLeftCollapsed] = useState(initialLeftCollapsed)
+  const [rightCollapsed, setRightCollapsed] = useState(initialRightCollapsed)
 
   const prevRunsPanelVisible = useRef(runsPanelVisible)
   useEffect(() => {

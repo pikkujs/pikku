@@ -70,12 +70,17 @@ export class MongoDBAgentRunService implements AgentRunService {
 
   async listThreads(options?: {
     agentName?: string
+    resourceId?: string
     limit?: number
     offset?: number
   }): Promise<AIThread[]> {
-    const { agentName, limit = 50, offset = 0 } = options ?? {}
+    const { agentName, resourceId, limit = 50, offset = 0 } = options ?? {}
 
     let filter: Record<string, any> = {}
+
+    if (resourceId) {
+      filter.resourceId = resourceId
+    }
 
     if (agentName) {
       const threadIds = await this.runs.distinct('threadId', {

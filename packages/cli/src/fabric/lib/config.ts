@@ -28,13 +28,13 @@ export interface FabricAppConfig {
 }
 
 /**
- * Production branch + optional custom domain. If `domain` is set, fabric
- * expects users to CNAME `<slug>.<domain>` and `api.<domain>` at the
- * matching `*.pikkufabric.app` hostnames. If absent, production lives only
- * on the platform-managed `*.pikkufabric.app` hostnames.
+ * Production custom domain config. Production always maps to `main`; if
+ * `domain` is set, fabric expects users to CNAME `<slug>.<domain>` and
+ * `api.<domain>` at the matching `*.pikkufabric.app` hostnames. If absent,
+ * production lives only on the platform-managed `*.pikkufabric.app`
+ * hostnames.
  */
 export interface FabricProductionConfig {
-  branch?: string
   domain?: string
 }
 

@@ -183,6 +183,15 @@ export const listTasks = pikkuSessionlessFunc({
 
 Add `wireHTTP` only when you need a specific REST shape (webhooks, third-party callers).
 
+### Transport rule
+
+- Always use RPC first.
+- If the function should be callable from the app or other generated clients, prefer `expose: true`.
+- Use `expose: true` for public/generated client access unless the user explicitly wants a private function.
+- Do not add HTTP routes unless the user explicitly asks for HTTP/REST, or the project settings explicitly require HTTP transport.
+- Every new or changed function must have a real description.
+- If function metadata would show `missing description`, the work is not finished yet.
+
 ## Versioning
 
 Functions with `expose: true` are versioned via `versions.pikku.json`. When you change a function's input or output schema, you must bump its version number — otherwise `pikku all` will report a breaking change and callers' generated clients become stale.

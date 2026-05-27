@@ -116,6 +116,10 @@ function collectFilterNames(
         names.add('agentStreamCaller')
         names.add('agentApproveCaller')
         names.add('agentResumeCaller')
+        names.add('getAgentThreads')
+        names.add('getAgentThreadMessages')
+        names.add('getAgentThreadRuns')
+        names.add('deleteAgentThread')
         // Include RPC catch-all for agent tool dispatch
         names.add('/rpc/:rpcName')
         for (const id of agentDef.toolFunctionIds) names.add(id)

@@ -20,6 +20,7 @@ import {
   resolveMemoryServices,
   loadContextMessages,
   trimMessages,
+  getWorkingMemoryMiddleware,
 } from './ai-agent-memory.js'
 import {
   prepareAgentRun,
@@ -46,6 +47,21 @@ function stripNulls(obj: unknown): unknown {
   return result
 }
 import { randomUUID } from 'crypto'
+
+function extractStructuredAssistantOutput(object: unknown): {
+  text: string | null
+  uiSpec: unknown | null
+} {
+  if (!object || typeof object !== 'object') {
+    return { text: null, uiSpec: null }
+  }
+
+  const record = object as Record<string, unknown>
+  return {
+    text: typeof record.text === 'string' ? record.text : null,
+    uiSpec: record.ui ?? null,
+  }
+}
 
 export async function runAIAgent(
   agentName: string,
@@ -96,7 +112,15 @@ export async function runAIAgent(
     }
   }
 
-  const aiMiddlewares: PikkuAIMiddlewareHooks[] = agent.aiMiddleware ?? []
+  const aiMiddlewares: PikkuAIMiddlewareHooks[] = [
+    ...getWorkingMemoryMiddleware(memoryConfig, storage, {
+      threadId,
+      workingMemorySchemaName,
+      logger: singletonServices.logger,
+      schemaService: singletonServices.schema,
+    }),
+    ...(agent.aiMiddleware ?? []),
+  ]
 
   let modifiedMessages = runnerParams.messages
   let modifiedInstructions = runnerParams.instructions
@@ -280,30 +304,16 @@ export async function runAIAgent(
       appendStepMessages(runnerParams, stepResult)
     }
 
-    const finalText = lastStepResult?.text ?? ''
     const finalObject = lastStepResult?.object
+    const structuredOutput = extractStructuredAssistantOutput(finalObject)
+    const finalText = structuredOutput.text ?? lastStepResult?.text ?? ''
 
     const result = {
       text: finalText,
       steps: accumulatedSteps,
     }
 
-    const responseText = await saveMessages(
-      storage,
-      threadId,
-      input.resourceId,
-      memoryConfig,
-      userMessage,
-      result,
-      {
-        workingMemoryJsonSchema,
-        workingMemorySchemaName,
-        logger: singletonServices.logger,
-        schemaService: singletonServices.schema,
-      }
-    )
-
-    let outputText = responseText
+    let outputText = finalText
     let outputMessages = runnerParams.messages
     for (let i = aiMiddlewares.length - 1; i >= 0; i--) {
       const mw = aiMiddlewares[i]
@@ -317,6 +327,25 @@ export async function runAIAgent(
         outputMessages = modResult.messages
       }
     }
+
+    await saveMessages(
+      storage,
+      threadId,
+      input.resourceId,
+      memoryConfig,
+      userMessage,
+      {
+        ...result,
+        text: outputText,
+        uiSpec: structuredOutput.uiSpec,
+      },
+      {
+        workingMemoryJsonSchema,
+        workingMemorySchemaName,
+        logger: singletonServices.logger,
+        schemaService: singletonServices.schema,
+      }
+    )
 
     await aiRunState.updateRun(runId, {
       status: 'completed',
@@ -535,7 +564,15 @@ async function continueAfterToolResultSync(
 
   const instructions = await buildInstructions(resolvedName, packageName)
 
-  const aiMiddlewares: PikkuAIMiddlewareHooks[] = agent.aiMiddleware ?? []
+  const aiMiddlewares: PikkuAIMiddlewareHooks[] = [
+    ...getWorkingMemoryMiddleware(memoryConfig, storage, {
+      threadId: run.threadId,
+      workingMemorySchemaName,
+      logger: singletonServices.logger,
+      schemaService: singletonServices.schema,
+    }),
+    ...(agent.aiMiddleware ?? []),
+  ]
   let modifiedMessages = trimmedMessages
   let modifiedInstructions = instructions
   for (const mw of aiMiddlewares) {
@@ -727,22 +764,7 @@ async function continueAfterToolResultSync(
       steps: accumulatedSteps,
     }
 
-    const responseText = await saveMessages(
-      storage,
-      run.threadId,
-      run.resourceId,
-      memoryConfig,
-      null as any,
-      result,
-      {
-        workingMemoryJsonSchema,
-        workingMemorySchemaName,
-        logger: singletonServices.logger,
-        schemaService: singletonServices.schema,
-      }
-    )
-
-    let outputText = responseText
+    let outputText = finalText
     let outputMessages = runnerParams.messages
     for (let i = aiMiddlewares.length - 1; i >= 0; i--) {
       const mw = aiMiddlewares[i]
@@ -756,6 +778,24 @@ async function continueAfterToolResultSync(
         outputMessages = modResult.messages
       }
     }
+
+    await saveMessages(
+      storage,
+      run.threadId,
+      run.resourceId,
+      memoryConfig,
+      null as any,
+      {
+        ...result,
+        text: outputText,
+      },
+      {
+        workingMemoryJsonSchema,
+        workingMemorySchemaName,
+        logger: singletonServices.logger,
+        schemaService: singletonServices.schema,
+      }
+    )
 
     await aiRunState.updateRun(run.runId, {
       status: 'completed',

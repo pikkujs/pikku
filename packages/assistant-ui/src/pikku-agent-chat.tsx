@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useMemo, useEffect, useRef, type FunctionComponent } from 'react'
+import { createContext, useContext, useState, useMemo, useEffect, useRef, type ComponentType, type FunctionComponent, type ReactNode } from 'react'
 import Markdown from 'react-markdown'
 import {
   AssistantRuntimeProvider,
@@ -39,6 +39,8 @@ export interface PikkuAgentChatProps extends PikkuAgentRuntimeOptions {
    * (which still respects `hideToolCalls` and the approval-request UI).
    */
   toolComponents?: Record<string, ToolCallMessagePartComponent>
+  renderAssistantText?: (text: string) => ReactNode
+  generativeUIComponents?: Record<string, ComponentType<any>>
 }
 
 interface ChatColors {
@@ -108,6 +110,12 @@ const ColorsContext = createContext<ChatColors>(lightColors)
 const HideToolCallsContext = createContext<boolean | string[] | undefined>(undefined)
 const ToolComponentsContext = createContext<
   Record<string, ToolCallMessagePartComponent> | undefined
+>(undefined)
+const GenerativeUIComponentsContext = createContext<
+  Record<string, ComponentType<any>> | undefined
+>(undefined)
+const RenderAssistantTextContext = createContext<
+  ((text: string) => ReactNode) | undefined
 >(undefined)
 
 function shouldHideToolCall(
@@ -488,6 +496,8 @@ const UserMessage: FunctionComponent = () => {
 const AssistantMessage: FunctionComponent = () => {
   const colors = useContext(ColorsContext)
   const toolComponents = useContext(ToolComponentsContext)
+  const generativeUIComponents = useContext(GenerativeUIComponentsContext)
+  const renderAssistantText = useContext(RenderAssistantTextContext)
   return (
     <div
       style={{
@@ -510,7 +520,9 @@ const AssistantMessage: FunctionComponent = () => {
           <MessagePrimitive.Content
             components={{
               Text: ({ text }) => (
-                <MarkdownText text={text} colors={colors} />
+                renderAssistantText
+                  ? <>{renderAssistantText(text)}</>
+                  : <MarkdownText text={text} colors={colors} />
               ),
               tools: {
                 by_name: toolComponents,
@@ -525,6 +537,13 @@ const AssistantMessage: FunctionComponent = () => {
                   />
                 ),
               },
+              ...(generativeUIComponents
+                ? {
+                    generativeUI: {
+                      components: generativeUIComponents,
+                    },
+                  }
+                : {}),
             }}
           />
           <MessagePrimitive.If last>
@@ -564,57 +583,74 @@ const PikkuComposer: FunctionComponent<{ disabled?: boolean }> = ({
   disabled,
 }) => {
   const colors = useContext(ColorsContext)
+
   return (
     <div style={{ padding: '8px 0 16px' }}>
       <ComposerPrimitive.Root>
         <div
           style={{
-            border: `1px solid ${colors.border}`,
-            borderRadius: 12,
-            overflow: 'hidden',
+            position: 'relative',
+            zIndex: 2,
             display: 'flex',
-            alignItems: 'flex-end',
-            padding: '6px 12px',
-            gap: 8,
+            flexDirection: 'column',
+            gap: 10,
+            backgroundColor: colors.assistantBubble,
+            border: `1px solid ${colors.border}`,
+            borderRadius: 24,
+            padding: '14px 12px 10px',
+            boxShadow: darkColors.text === colors.text
+              ? '0 14px 30px rgba(0,0,0,0.24)'
+              : '0 14px 30px rgba(0,0,0,0.08)',
             ...(disabled ? { opacity: 0.5, pointerEvents: 'none' as const } : {}),
           }}
         >
           <ComposerPrimitive.Input
             placeholder={disabled ? 'Respond to approval request above...' : 'Message...'}
-            rows={2}
-            disabled={disabled}
+            rows={1}
+            disabled={disabled ?? false}
             style={{
-              flex: 1,
+              width: '100%',
+              background: 'transparent',
               border: 'none',
               outline: 'none',
-              resize: 'none',
+              color: colors.text,
               fontSize: 14,
               fontFamily: 'inherit',
-              padding: '4px 0',
-              background: colors.inputBg,
-              color: colors.text,
+              resize: 'none',
+              lineHeight: 1.5,
+              overflowY: 'auto',
             }}
           />
-          <ComposerPrimitive.Send
-            disabled={disabled}
+          <div
             style={{
-              width: 28,
-              height: 28,
-              borderRadius: '50%',
-              border: 'none',
-              background: disabled ? colors.textMuted : colors.sendBg,
-              color: colors.sendColor,
-              cursor: disabled ? 'not-allowed' : 'pointer',
+              width: '100%',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              marginBottom: 2,
-              fontSize: 14,
+              gap: 6,
+              minWidth: 0,
+              justifyContent: 'flex-end',
             }}
           >
-            &#9654;
-          </ComposerPrimitive.Send>
+            <ComposerPrimitive.Send
+              disabled={disabled ?? false}
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 999,
+                border: `1px solid ${colors.border}`,
+                background: '#e8e8e8',
+                color: '#111111',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                transition: 'background-color 150ms ease, color 150ms ease, border-color 150ms ease',
+              }}
+            >
+              ↑
+            </ComposerPrimitive.Send>
+          </div>
         </div>
       </ComposerPrimitive.Root>
     </div>
@@ -622,7 +658,17 @@ const PikkuComposer: FunctionComponent<{ disabled?: boolean }> = ({
 }
 
 export function PikkuAgentChat(props: PikkuAgentChatProps) {
-  const { emptyMessage, hideToolCalls, dark, maxWidth = 768, toolComponents, initialPrompt, ...runtimeOptions } = props
+  const {
+    emptyMessage,
+    hideToolCalls,
+    dark,
+    maxWidth = 768,
+    toolComponents,
+    renderAssistantText,
+    generativeUIComponents,
+    initialPrompt,
+    ...runtimeOptions
+  } = props
   const { runtime, isAwaitingApproval, pendingApprovals, handleApproval } =
     usePikkuAgentRuntime(runtimeOptions)
 
@@ -633,6 +679,8 @@ export function PikkuAgentChat(props: PikkuAgentChatProps) {
     <PikkuApprovalContext.Provider value={{ pendingApprovals, handleApproval }}>
     <HideToolCallsContext.Provider value={hideToolCalls}>
     <ToolComponentsContext.Provider value={toolComponents}>
+    <GenerativeUIComponentsContext.Provider value={generativeUIComponents}>
+    <RenderAssistantTextContext.Provider value={renderAssistantText}>
     <AssistantRuntimeProvider runtime={runtime}>
       <ComposerPrefill text={initialPrompt} />
       <div
@@ -700,6 +748,8 @@ export function PikkuAgentChat(props: PikkuAgentChatProps) {
         </ThreadPrimitive.Root>
       </div>
     </AssistantRuntimeProvider>
+    </RenderAssistantTextContext.Provider>
+    </GenerativeUIComponentsContext.Provider>
     </ToolComponentsContext.Provider>
     </HideToolCallsContext.Provider>
     </PikkuApprovalContext.Provider>

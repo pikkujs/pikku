@@ -9,7 +9,9 @@ import { Center, Loader, Box, Text } from '@mantine/core'
 import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
 import styles from '../ui/console.module.css'
 
-export const WorkflowTabContent: React.FC = () => {
+export const WorkflowTabContent: React.FC<{ immersiveDetail?: boolean }> = ({
+  immersiveDetail = false,
+}) => {
   const { workflowId, navigateTo } = useConsoleNavigator()
   const rpc = usePikkuRPC()
   const { data: workflow, isLoading } = useQuery({
@@ -57,6 +59,7 @@ export const WorkflowTabContent: React.FC = () => {
               workflow={workflow}
               items={workflowItems}
               onItemSelect={(name) => navigateTo('workflows', name)}
+              immersiveDetail={immersiveDetail}
             />
           </Box>
         </Box>

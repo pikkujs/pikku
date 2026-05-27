@@ -56,6 +56,13 @@ export async function headSha(cwd?: string): Promise<string> {
   return git(['rev-parse', 'HEAD'], cwd)
 }
 
+export async function localBranchHeadSha(
+  branch: string,
+  cwd?: string
+): Promise<string> {
+  return git(['rev-parse', '--verify', `${branch}^{commit}`], cwd)
+}
+
 export async function isWorkingTreeClean(cwd?: string): Promise<boolean> {
   const out = await git(['status', '--porcelain'], cwd)
   return out.length === 0
@@ -65,6 +72,20 @@ export async function upstreamBranch(cwd?: string): Promise<string | null> {
   try {
     return await git(
       ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'],
+      cwd
+    )
+  } catch {
+    return null
+  }
+}
+
+export async function upstreamForBranch(
+  branch: string,
+  cwd?: string
+): Promise<string | null> {
+  try {
+    return await git(
+      ['rev-parse', '--abbrev-ref', '--symbolic-full-name', `${branch}@{u}`],
       cwd
     )
   } catch {
@@ -148,5 +169,40 @@ export async function assertDeploySafety(
       `Deployment blocked: local HEAD ${head.slice(0, 8)} ≠ remote ${remote.slice(0, 8)} (${upstream}).\nPush or pull before deploying.`
     )
   }
+  return { branch, headSha: head, upstream, remoteSha: remote }
+}
+
+/**
+ * Validate a named branch for deploy without depending on the currently
+ * checked-out branch. This is the Fabric CLI deploy contract: deploy the
+ * target branch, not "whatever branch I happen to be on".
+ */
+export async function assertNamedBranchDeploySafety(
+  branch: string,
+  cwd?: string
+): Promise<DeploySafetyResult> {
+  let head: string
+  try {
+    head = await localBranchHeadSha(branch, cwd)
+  } catch {
+    throw new Error(
+      `Deployment blocked: local branch ${branch} does not exist.\nFetch or create it before deploying.`
+    )
+  }
+
+  const upstream = await upstreamForBranch(branch, cwd)
+  if (!upstream) {
+    throw new Error(
+      `Deployment blocked: branch ${branch} has no upstream.\nPush it (\`git push -u origin ${branch}\`) before deploying.`
+    )
+  }
+
+  const remote = await remoteHeadSha(upstream, cwd)
+  if (head !== remote) {
+    throw new Error(
+      `Deployment blocked: ${branch} ${head.slice(0, 8)} ≠ remote ${remote.slice(0, 8)} (${upstream}).\nPush or pull ${branch} before deploying.`
+    )
+  }
+
   return { branch, headSha: head, upstream, remoteSha: remote }
 }

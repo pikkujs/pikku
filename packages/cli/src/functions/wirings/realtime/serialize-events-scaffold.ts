@@ -70,7 +70,7 @@ wireChannel({
   onMessageWiring: {
     action: realtimeRoutes,
   },
-  tags: ['realtime'],
+  tags: ['pikku:realtime'],
 })
 
 /**
@@ -95,7 +95,7 @@ wireHTTP({
   func: realtimeEventStream,
   auth: ${auth},
   sse: true,
-  tags: ['realtime', 'sse'],
+  tags: ['pikku:realtime', 'sse'],
 })
 `
 }

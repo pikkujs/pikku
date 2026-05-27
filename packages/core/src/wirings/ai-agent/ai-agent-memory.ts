@@ -9,6 +9,7 @@ import type {
 import type { AIStorageService } from '../../services/ai-storage-service.js'
 import type { Logger } from '../../services/logger.js'
 import type { SchemaService } from '../../services/schema-service.js'
+import type { PikkuAIMiddlewareHooks } from './ai-agent.types.js'
 
 export function resolveMemoryServices(
   agent: CoreAIAgent,
@@ -21,6 +22,13 @@ export function resolveMemoryServices(
     ? (singletonServices as any)[memoryConfig.storage]
     : singletonServices.aiStorage
   return { storage }
+}
+
+export function isWorkingMemoryEnabled(
+  memoryConfig: AIAgentMemoryConfig | undefined,
+  storage: AIStorageService | undefined
+): boolean {
+  return !!memoryConfig?.workingMemory && !!storage
 }
 
 export function deepMergeWorkingMemory(
@@ -79,7 +87,9 @@ export function buildWorkingMemoryPrompt(
 
   parts.push(
     'When you learn new information, output a partial JSON update in <working_memory> tags. ' +
-      'Only include changed fields. Set a field to null to delete it.'
+      'Only include durable facts you have actually derived or the user has confirmed. ' +
+      'Do not output templates, placeholders, or narration. ' +
+      'Only include changed fields. Leave unknown fields untouched. Set a field to null to delete it.'
   )
 
   return parts.join('\n\n')
@@ -93,8 +103,15 @@ export async function loadContextMessages(
 ): Promise<AIMessage[]> {
   const contextMessages: AIMessage[] = []
 
-  if (memoryConfig?.workingMemory && storage) {
-    const workingMem = await storage.getWorkingMemory(input.threadId, 'thread')
+  const workingMemoryStorage = isWorkingMemoryEnabled(memoryConfig, storage)
+    ? storage
+    : undefined
+
+  if (workingMemoryStorage) {
+    const workingMem = await workingMemoryStorage.getWorkingMemory(
+      input.threadId,
+      'thread'
+    )
     const prompt = buildWorkingMemoryPrompt(workingMem, workingMemoryJsonSchema)
     contextMessages.push({
       id: `wm-${randomUUID()}`,
@@ -115,6 +132,7 @@ export async function saveMessages(
   userMessage: AIMessage | null | undefined,
   result: {
     text: string
+    uiSpec?: unknown
     steps: {
       toolCalls?: {
         name: string
@@ -130,7 +148,9 @@ export async function saveMessages(
     schemaService?: SchemaService
   }
 ): Promise<string> {
-  let responseText = result.text
+  const responseText = memoryConfig?.workingMemory
+    ? extractWorkingMemory(result.text).cleanedText
+    : result.text
 
   if (storage) {
     const newMessages: AIMessage[] = userMessage ? [userMessage] : []
@@ -161,39 +181,24 @@ export async function saveMessages(
       }
     }
 
+    const assistantContent =
+      result.uiSpec != null
+        ? [
+            ...(responseText
+              ? [{ type: 'text' as const, text: responseText }]
+              : []),
+            { type: 'generative-ui' as const, spec: result.uiSpec },
+          ]
+        : responseText
+
     newMessages.push({
       id: randomUUID(),
       role: 'assistant',
-      content: responseText,
+      content: assistantContent || undefined,
       createdAt: new Date(),
     })
 
     await storage.saveMessages(threadId, newMessages)
-
-    if (memoryConfig?.workingMemory) {
-      const parsed = parseWorkingMemory(responseText)
-      if (parsed) {
-        const existing =
-          (await storage.getWorkingMemory(threadId, 'thread')) ?? {}
-        const merged = deepMergeWorkingMemory(existing, parsed)
-
-        if (options?.schemaService && options?.workingMemorySchemaName) {
-          try {
-            await options.schemaService.validateSchema(
-              options.workingMemorySchemaName,
-              merged
-            )
-          } catch (err) {
-            options.logger?.warn(
-              `Working memory validation failed: ${err instanceof Error ? err.message : String(err)}`
-            )
-          }
-        }
-
-        await storage.saveWorkingMemory(threadId, 'thread', merged)
-        responseText = stripWorkingMemoryTags(responseText)
-      }
-    }
   }
 
   return responseText
@@ -307,4 +312,147 @@ export function parseWorkingMemory(
 
 export function stripWorkingMemoryTags(text: string): string {
   return text.replace(/<working_memory>[\s\S]*?<\/working_memory>/g, '').trim()
+}
+
+export function extractWorkingMemory(text: string): {
+  workingMemory: Record<string, unknown> | null
+  cleanedText: string
+} {
+  const workingMemory = parseWorkingMemory(text)
+  return {
+    workingMemory,
+    cleanedText: workingMemory ? stripWorkingMemoryTags(text) : text,
+  }
+}
+
+function getPendingWorkingMemoryPrefixLength(text: string): number {
+  const prefixes = ['<working_memory>', '</working_memory>']
+  const lastLt = text.lastIndexOf('<')
+  if (lastLt === -1) return 0
+
+  const suffix = text.slice(lastLt)
+  for (const prefix of prefixes) {
+    if (prefix.startsWith(suffix)) {
+      return suffix.length
+    }
+  }
+
+  return 0
+}
+
+export function stripWorkingMemoryForStreaming(text: string): string {
+  let output = ''
+  let cursor = 0
+
+  while (cursor < text.length) {
+    const openIndex = text.indexOf('<working_memory>', cursor)
+    if (openIndex === -1) {
+      const tail = text.slice(cursor)
+      const pendingPrefixLength = getPendingWorkingMemoryPrefixLength(tail)
+      output +=
+        pendingPrefixLength > 0 ? tail.slice(0, -pendingPrefixLength) : tail
+      return output
+    }
+
+    output += text.slice(cursor, openIndex)
+    const closeIndex = text.indexOf('</working_memory>', openIndex)
+    if (closeIndex === -1) {
+      return output
+    }
+
+    cursor = closeIndex + '</working_memory>'.length
+  }
+
+  return output
+}
+
+export function createWorkingMemoryMiddleware(options: {
+  storage?: AIStorageService
+  threadId: string
+  workingMemorySchemaName?: string | null
+  logger?: Logger
+  schemaService?: SchemaService
+}): PikkuAIMiddlewareHooks<{
+  rawText?: string
+  emittedVisibleText?: string
+}> {
+  return {
+    modifyOutputStream: async (_services, { event, state }) => {
+      if (event.type !== 'text-delta') return event
+
+      const rawText = `${state.rawText ?? ''}${event.text}`
+      state.rawText = rawText
+
+      const visibleText = stripWorkingMemoryForStreaming(rawText)
+      const emittedVisibleText = state.emittedVisibleText ?? ''
+
+      if (!visibleText.startsWith(emittedVisibleText)) {
+        state.emittedVisibleText = visibleText
+        return { ...event, text: visibleText }
+      }
+
+      const delta = visibleText.slice(emittedVisibleText.length)
+      state.emittedVisibleText = visibleText
+      if (!delta) return null
+      return { ...event, text: delta }
+    },
+    modifyOutput: async (_services, { text, messages, usage }) => {
+      const { workingMemory, cleanedText } = extractWorkingMemory(text)
+      if (workingMemory && options.storage) {
+        const existing =
+          (await options.storage.getWorkingMemory(
+            options.threadId,
+            'thread'
+          )) ?? {}
+        const merged = deepMergeWorkingMemory(existing, workingMemory)
+
+        if (options.schemaService && options.workingMemorySchemaName) {
+          try {
+            await options.schemaService.validateSchema(
+              options.workingMemorySchemaName,
+              merged
+            )
+          } catch (err) {
+            options.logger?.warn(
+              `Working memory validation failed: ${err instanceof Error ? err.message : String(err)}`
+            )
+          }
+        }
+
+        await options.storage.saveWorkingMemory(
+          options.threadId,
+          'thread',
+          merged
+        )
+      }
+
+      return {
+        text: cleanedText,
+        messages,
+      }
+    },
+  }
+}
+
+export function getWorkingMemoryMiddleware(
+  memoryConfig: AIAgentMemoryConfig | undefined,
+  storage: AIStorageService | undefined,
+  options: {
+    threadId: string
+    workingMemorySchemaName?: string | null
+    logger?: Logger
+    schemaService?: SchemaService
+  }
+): PikkuAIMiddlewareHooks[] {
+  if (!isWorkingMemoryEnabled(memoryConfig, storage)) return []
+
+  return [
+    createWorkingMemoryMiddleware({
+      storage,
+      threadId: options.threadId,
+      workingMemorySchemaName: options.workingMemorySchemaName,
+      logger: options.logger,
+      schemaService: options.schemaService,
+    }),
+  ]
 }

@@ -101,7 +101,11 @@ export function analyzeDeployment(
       funcId === 'agentCaller' ||
       funcId === 'agentStreamCaller' ||
       funcId === 'agentApproveCaller' ||
-      funcId === 'agentResumeCaller'
+      funcId === 'agentResumeCaller' ||
+      funcId === 'getAgentThreads' ||
+      funcId === 'getAgentThreadMessages' ||
+      funcId === 'getAgentThreadRuns' ||
+      funcId === 'deleteAgentThread'
     ) {
       continue
     }
