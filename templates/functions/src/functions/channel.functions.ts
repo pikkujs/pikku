@@ -50,6 +50,11 @@ export const authenticate = pikkuChannelFunc({
       return { authenticated: false }
     }
 
+    if (!setSession) {
+      logger.info(`WebSocket authentication unavailable for ${username}`)
+      return { authenticated: false }
+    }
+
     await setSession({ userId: user.id })
     logger.info(`WebSocket authenticated as ${user.id}`)
     return { authenticated: true, userId: user.id }
