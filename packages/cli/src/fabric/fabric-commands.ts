@@ -25,7 +25,10 @@ import {
 import { FabricLogin } from './functions/login.function.js'
 import { FabricInit } from './functions/init.function.js'
 import { FabricLink } from './functions/link.function.js'
-import { FabricDeploy } from './functions/deploy.function.js'
+import {
+  FabricDeployPlan,
+  FabricDeployApply,
+} from './functions/deploy.function.js'
 import { FabricRollback } from './functions/rollback.function.js'
 import { FabricSecretsSet } from './functions/secrets-set.function.js'
 import { FabricSecretsList } from './functions/secrets-list.function.js'
@@ -76,30 +79,42 @@ export const fabricCommands = defineCLICommands({
       },
     },
   }),
-  deploy: pikkuCLICommand({
-    func: FabricDeploy,
-    description: 'Deploy a named branch or production (main)',
-    options: {
-      branch: {
-        description: 'Target branch to deploy',
-        short: 'b',
-      },
-      production: {
-        description: 'Deploy production (always main)',
-        default: false,
-      },
-      message: {
-        description: 'Annotation stored on the deployment',
-        short: 'm',
-      },
-      dryRun: { description: 'Plan without applying', default: false },
-      yes: {
-        description: 'Skip confirmation prompts',
-        short: 'y',
-        default: false,
-      },
+  deploy: {
+    description: 'Plan and apply deploys for a named branch or production',
+    subcommands: {
+      plan: pikkuCLICommand({
+        func: FabricDeployPlan,
+        description: 'Resolve the target ref and report what a deploy would do',
+        options: {
+          branch: { description: 'Target branch to deploy', short: 'b' },
+          production: {
+            description: 'Plan production (always main)',
+            default: false,
+          },
+        },
+      }),
+      apply: pikkuCLICommand({
+        func: FabricDeployApply,
+        description: 'Build + deploy a named branch or production (main)',
+        options: {
+          branch: { description: 'Target branch to deploy', short: 'b' },
+          production: {
+            description: 'Deploy production (always main)',
+            default: false,
+          },
+          message: {
+            description: 'Annotation stored on the deployment',
+            short: 'm',
+          },
+          yes: {
+            description: 'Skip confirmation prompts',
+            short: 'y',
+            default: false,
+          },
+        },
+      }),
     },
-  }),
+  },
   rollback: pikkuCLICommand({
     parameters: '<branch> [target]',
     func: FabricRollback,
