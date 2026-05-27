@@ -3,6 +3,7 @@ import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getRpc } from '../lib/http.js'
 import { assertNamedBranchDeploySafety, resolveRef } from '../lib/git.js'
+import { promptConfirm } from '../lib/prompt.js'
 
 export const FabricDeployInput = z.object({
   branch: z.string().optional(),
@@ -39,7 +40,7 @@ type DeployInput = z.infer<typeof FabricDeployInput>
  * the real deploy.
  */
 async function runDeploy(
-  { branch, production, ref }: DeployInput,
+  { branch, production, ref, yes }: DeployInput,
   { plan }: { plan: boolean }
 ): Promise<z.infer<typeof FabricDeployOutput>> {
   const ctx = await resolveApiContext()
@@ -62,6 +63,21 @@ async function runDeploy(
       `[fabric] plan: would deploy ${ctx.projectId} branch=${targetBranch} ref=${resolved.slice(0, 8)}`
     )
     return { deploymentId: '', stageId: '', runId: '', ref: resolved }
+  }
+
+  // Classic yes/no guard. `--yes` skips it; a non-interactive session has no
+  // human to answer, so we refuse rather than hang.
+  if (!yes) {
+    const target = `${targetBranch} @ ${resolved.slice(0, 8)}`
+    if (!process.stdin.isTTY) {
+      throw new Error(
+        `Refusing to deploy ${target} without confirmation — re-run with --yes to deploy non-interactively.`
+      )
+    }
+    const ok = await promptConfirm(`Deploy ${target}?`)
+    if (!ok) {
+      throw new Error('Deploy aborted.')
+    }
   }
 
   const rpc = getRpc({ apiUrl: ctx.apiUrl, token: ctx.token })
