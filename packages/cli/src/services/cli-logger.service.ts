@@ -14,7 +14,7 @@ export type CLIOutputMode = 'text' | 'json'
 
 export class CLILogger implements Logger {
   private silent: boolean
-  private level: LogLevel = LogLevel.warn // default to warn level
+  private level: LogLevel = LogLevel.info // default to info level
   private criticalErrors: string[] = []
   private outputMode: CLIOutputMode = 'text'
   private jsonFlushHookRegistered = false

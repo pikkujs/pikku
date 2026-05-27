@@ -99,8 +99,8 @@ export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
   data
 ) => {
   // Determine log level based on CLI flags with precedence:
-  // --silent > --loglevel > --verbose > --info > default (warn)
-  let logLevel: LogLevel = LogLevel.warn // default
+  // --silent > --loglevel > --verbose > --info > default (info)
+  let logLevel: LogLevel = LogLevel.info // default
   let isSilent = false
   // --output is constrained to 'text' | 'json' by the CLI parser
   // (choices + default in cli.wiring.ts), so no runtime validation
