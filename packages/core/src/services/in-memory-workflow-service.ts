@@ -37,6 +37,7 @@ export class InMemoryWorkflowService
   extends PikkuWorkflowService
   implements WorkflowRunService
 {
+  private sleepTimers = new Set<ReturnType<typeof setTimeout>>()
   private runs = new Map<string, WorkflowRun>()
   private steps = new Map<string, StepState>() // keyed by `${runId}:${stepName}`
   private stepData = new Map<string, InternalStepData>() // keyed by stepId
@@ -88,6 +89,26 @@ export class InMemoryWorkflowService
     }
 
     return runId
+  }
+
+  protected override async scheduleSleep(
+    runId: string,
+    stepId: string,
+    duration: number | string
+  ): Promise<boolean> {
+    const delayMs = typeof duration === 'string' ? Number(duration) : duration
+    const timer = setTimeout(async () => {
+      this.sleepTimers.delete(timer)
+      try {
+        await this.executeWorkflowSleepCompleted(runId, stepId)
+      } catch (error: any) {
+        this.logger?.error(
+          `Failed to resume workflow sleep for runId ${runId}: ${error?.message ?? error}`
+        )
+      }
+    }, delayMs)
+    this.sleepTimers.add(timer)
+    return true
   }
 
   async getRun(id: string): Promise<WorkflowRun | null> {
@@ -363,6 +384,10 @@ export class InMemoryWorkflowService
   }
 
   async close(): Promise<void> {
+    for (const timer of this.sleepTimers) {
+      clearTimeout(timer)
+    }
+    this.sleepTimers.clear()
     // Clear all in-memory state
     this.runs.clear()
     this.steps.clear()

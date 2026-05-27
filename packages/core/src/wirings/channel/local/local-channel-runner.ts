@@ -12,6 +12,7 @@ import {
   PikkuSessionService,
   createMiddlewareSessionWireProps,
 } from '../../../services/user-session-service.js'
+import { combineMiddleware, runMiddleware } from '../../../middleware-runner.js'
 import type {
   PikkuHTTP,
   PikkuHTTPRequest,
@@ -21,7 +22,37 @@ import { runChannelLifecycleWithMiddleware } from '../channel-common.js'
 import {
   getSingletonServices,
   getCreateWireServices,
+  pikkuState,
 } from '../../../pikku-state.js'
+
+const runUpgradeMiddleware = async (
+  singletonServices: ReturnType<typeof getSingletonServices>,
+  request: PikkuHTTPRequest,
+  response: PikkuHTTPResponse | undefined,
+  userSession: PikkuSessionService<any>
+) => {
+  const http = createHTTPWire(request, response)
+  const httpGroups = pikkuState(null, 'middleware', 'httpGroup')
+  const wireInheritedMiddleware = httpGroups['*']
+    ? [{ type: 'http' as const, route: '*' }]
+    : undefined
+  const middleware = combineMiddleware('channel', `upgrade:${request.path()}`, {
+    wireInheritedMiddleware,
+  })
+
+  if (middleware.length > 0) {
+    await runMiddleware(
+      singletonServices,
+      {
+        http,
+        ...createMiddlewareSessionWireProps(userSession),
+      },
+      middleware
+    )
+  }
+
+  return http
+}
 
 export const runLocalChannel = async ({
   channelId,
@@ -48,13 +79,18 @@ export const runLocalChannel = async ({
   const userSession = new PikkuSessionService(singletonServices.sessionStore)
 
   let http: PikkuHTTP | undefined
-  if (request) {
-    http = createHTTPWire(request, response)
-    route = http?.request?.path()
-  }
-
   let openingData, channelConfig, meta
   try {
+    if (request) {
+      http = await runUpgradeMiddleware(
+        singletonServices,
+        request,
+        response,
+        userSession
+      )
+      route = request.path()
+    }
+
     ;({ openingData, channelConfig, meta } = await openChannel({
       channelId,
       respondWith404,

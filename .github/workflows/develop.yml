@@ -187,3 +187,33 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       SLS_TELEMETRY_DISABLED: 1
       SLS_NOTIFICATIONS_MODE: off
+
+  template-runtime-targets:
+    name: Template Functions Runtimes (${{ matrix.version }}, ${{ matrix.target }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build
+    services:
+      elasticmq:
+        image: softwaremill/elasticmq-native
+        ports:
+          - 9324:9324
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [24]
+        target: [dev, standalone, serverless, cloudflare]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          node-version: ${{ matrix.version }}
+      - name: Test functions template runtime target
+        timeout-minutes: 5
+        run: cd templates/functions && yarn test:runtime ${{ matrix.target }}
+        env:
+          AWS_ACCESS_KEY_ID: local
+          AWS_SECRET_ACCESS_KEY: local
+          AWS_REGION: us-east-1
+          SLS_TELEMETRY_DISABLED: 1
+          SLS_NOTIFICATIONS_MODE: off

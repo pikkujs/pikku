@@ -9,6 +9,7 @@ import {
  */
 export const processReminder = pikkuSessionlessFunc({
   deploy: 'server',
+  version: 2,
   input: ProcessReminderInputSchema,
   output: ProcessReminderOutputSchema,
   func: async ({ logger, todoStore }, { todoId, userId }) => {

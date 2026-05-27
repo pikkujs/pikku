@@ -1,6 +1,7 @@
 import type { Server } from 'http'
 import type { WebSocket, WebSocketServer } from 'ws'
 import { logChannels } from '@pikku/core/channel'
+import { getSingletonServices } from '@pikku/core/internal'
 import type { PikkuLocalChannelHandler } from '@pikku/core/channel/local'
 import {
   LocalEventHubService,
@@ -70,7 +71,16 @@ export const pikkuWebsocketHandler = ({
     compileAllSchemas(logger)
   }
 
-  const eventHub = new LocalEventHubService()
+  let eventHub: LocalEventHubService
+  try {
+    const singletonServices = getSingletonServices()
+    eventHub =
+      singletonServices.eventHub instanceof LocalEventHubService
+        ? singletonServices.eventHub
+        : new LocalEventHubService()
+  } catch {
+    eventHub = new LocalEventHubService()
+  }
 
   wss.on(
     'connection',

@@ -5245,7 +5245,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/cloudflare@npm:^0.12.7, @pikku/cloudflare@workspace:packages/runtimes/cloudflare":
+"@pikku/cloudflare@npm:^0.12.7, @pikku/cloudflare@workspace:*, @pikku/cloudflare@workspace:packages/runtimes/cloudflare":
   version: 0.0.0-use.local
   resolution: "@pikku/cloudflare@workspace:packages/runtimes/cloudflare"
   dependencies:
@@ -5360,7 +5360,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/deploy-cloudflare@npm:^0.12.0, @pikku/deploy-cloudflare@workspace:packages/deploy/deploy-cloudflare":
+"@pikku/deploy-cloudflare@npm:^0.12.0, @pikku/deploy-cloudflare@workspace:*, @pikku/deploy-cloudflare@workspace:packages/deploy/deploy-cloudflare":
   version: 0.0.0-use.local
   resolution: "@pikku/deploy-cloudflare@workspace:packages/deploy/deploy-cloudflare"
   dependencies:
@@ -5368,7 +5368,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/deploy-serverless@workspace:packages/deploy/deploy-serverless":
+"@pikku/deploy-serverless@workspace:*, @pikku/deploy-serverless@workspace:packages/deploy/deploy-serverless":
   version: 0.0.0-use.local
   resolution: "@pikku/deploy-serverless@workspace:packages/deploy/deploy-serverless"
   dependencies:
@@ -5376,7 +5376,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/deploy-standalone@workspace:packages/deploy/deploy-standalone":
+"@pikku/deploy-standalone@workspace:*, @pikku/deploy-standalone@workspace:packages/deploy/deploy-standalone":
   version: 0.0.0-use.local
   resolution: "@pikku/deploy-standalone@workspace:packages/deploy/deploy-standalone"
   dependencies:
@@ -5616,7 +5616,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/lambda@npm:^0.12.3, @pikku/lambda@workspace:packages/runtimes/aws-lambda":
+"@pikku/lambda@npm:^0.12.3, @pikku/lambda@workspace:*, @pikku/lambda@workspace:packages/runtimes/aws-lambda":
   version: 0.0.0-use.local
   resolution: "@pikku/lambda@workspace:packages/runtimes/aws-lambda"
   dependencies:
@@ -5634,7 +5634,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/modelcontextprotocol@npm:^0.12.1, @pikku/modelcontextprotocol@workspace:packages/runtimes/modelcontextprotocol":
+"@pikku/modelcontextprotocol@npm:^0.12.1, @pikku/modelcontextprotocol@workspace:*, @pikku/modelcontextprotocol@workspace:packages/runtimes/modelcontextprotocol":
   version: 0.0.0-use.local
   resolution: "@pikku/modelcontextprotocol@workspace:packages/runtimes/modelcontextprotocol"
   dependencies:
@@ -5694,7 +5694,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/node-http-server@npm:^0.12.0, @pikku/node-http-server@workspace:packages/runtimes/node-http-server":
+"@pikku/node-http-server@npm:^0.12.0, @pikku/node-http-server@workspace:*, @pikku/node-http-server@workspace:packages/runtimes/node-http-server":
   version: 0.0.0-use.local
   resolution: "@pikku/node-http-server@workspace:packages/runtimes/node-http-server"
   dependencies:
@@ -5783,7 +5783,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/schedule@npm:^0.12.0, @pikku/schedule@npm:^0.12.2, @pikku/schedule@workspace:packages/schedule":
+"@pikku/schedule@npm:^0.12.0, @pikku/schedule@npm:^0.12.2, @pikku/schedule@workspace:*, @pikku/schedule@workspace:packages/schedule":
   version: 0.0.0-use.local
   resolution: "@pikku/schedule@workspace:packages/schedule"
   dependencies:
@@ -6054,13 +6054,22 @@ __metadata:
   resolution: "@pikku/templates-functions@workspace:templates/functions"
   dependencies:
     "@auth/core": "npm:^0.37.0"
+    "@modelcontextprotocol/sdk": "npm:1.27.1"
     "@pikku/addon-console": "workspace:*"
     "@pikku/addon-graph": "workspace:*"
     "@pikku/auth-js": "npm:^0.12.3"
     "@pikku/cli": "npm:^0.12.21"
+    "@pikku/cloudflare": "workspace:*"
     "@pikku/core": "npm:^0.12.20"
+    "@pikku/deploy-cloudflare": "workspace:*"
+    "@pikku/deploy-serverless": "workspace:*"
+    "@pikku/deploy-standalone": "workspace:*"
     "@pikku/fetch": "npm:^0.12.1"
     "@pikku/jose": "workspace:^"
+    "@pikku/lambda": "workspace:*"
+    "@pikku/modelcontextprotocol": "workspace:*"
+    "@pikku/node-http-server": "workspace:*"
+    "@pikku/schedule": "workspace:*"
     "@pikku/schema-cfworker": "npm:^0.12.2"
     "@pikku/templates-function-addon": "workspace:*"
     "@pikku/websocket": "npm:^0.12.1"
@@ -6068,8 +6077,12 @@ __metadata:
     "@types/ws": "npm:^8"
     concurrently: "npm:^9.2.1"
     eventsource: "npm:^4.1.0"
+    serverless: "npm:^4.33.0"
+    serverless-offline: "npm:^14.5.0"
+    serverless-offline-sqs: "npm:^8.0.0"
     tsx: "npm:^4.21.0"
     typescript: "npm:^5.9"
+    wrangler: "npm:^4.78.0"
     ws: "npm:^8.19.0"
     zod: "npm:^4"
   languageName: unknown

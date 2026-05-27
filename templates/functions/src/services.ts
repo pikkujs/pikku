@@ -1,8 +1,11 @@
 import {
   ConsoleLogger,
+  InMemorySessionStore,
+  LocalCredentialService,
   LocalSecretService,
   LocalVariablesService,
 } from '@pikku/core/services'
+import { LocalEventHubService } from '@pikku/core/channel/local'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import { JoseJWTService } from '@pikku/jose'
 import {
@@ -36,9 +39,8 @@ export const createSingletonServices = pikkuServices(
     let metaService = existingServices?.metaService
     if (requiredSingletonServices.metaService) {
       if (!metaService) {
-        const { PikkuMetaService } = await import(
-          '../.pikku/pikku-meta-service.gen.js'
-        )
+        const { PikkuMetaService } =
+          await import('../.pikku/pikku-meta-service.gen.js')
         metaService = new PikkuMetaService()
       }
     }
@@ -67,11 +69,15 @@ export const createSingletonServices = pikkuServices(
       aiStorage: existingServices?.aiStorage,
       aiAgentRunner: existingServices?.aiAgentRunner,
       aiRunState: existingServices?.aiRunState,
-      eventHub: existingServices?.eventHub,
+      eventHub: existingServices?.eventHub || new LocalEventHubService(),
       workflowService: existingServices?.workflowService,
       queueService: existingServices?.queueService,
       schedulerService: existingServices?.schedulerService,
       deploymentService: existingServices?.deploymentService,
+      credentialService:
+        existingServices?.credentialService || new LocalCredentialService(),
+      sessionStore:
+        existingServices?.sessionStore || new InMemorySessionStore(),
       metaService,
     }
   }

@@ -21,7 +21,7 @@ export function generateServerlessYml(
   // Header
   lines.push(`service: ${projectId}`)
   lines.push('')
-  lines.push('frameworkVersion: "3"')
+  lines.push('frameworkVersion: "4"')
   lines.push('')
 
   // Provider

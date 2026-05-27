@@ -4,6 +4,8 @@ import {
   pikkuChannelDisconnectionFunc,
 } from '../../.pikku/pikku-types.gen.js'
 import {
+  ChannelAuthInputSchema,
+  ChannelAuthOutputSchema,
   SubscribeInputSchema,
   SubscribeOutputSchema,
   UnsubscribeInputSchema,
@@ -29,6 +31,30 @@ export const onDisconnect = pikkuChannelDisconnectionFunc(
     logger.info(`WebSocket disconnected: ${channel.channelId}`)
   }
 )
+
+export const authenticate = pikkuChannelFunc({
+  input: ChannelAuthInputSchema,
+  output: ChannelAuthOutputSchema,
+  func: async (
+    { logger, todoStore },
+    { username, password },
+    { setSession }
+  ) => {
+    const user = todoStore.getUserByUsername(username)
+    const valid =
+      (username === 'demo' && password === 'test' && user?.id === 'user1') ||
+      (username === 'admin' && password === 'password' && user?.id === 'user2')
+
+    if (!valid || !user) {
+      logger.info(`WebSocket authentication failed for ${username}`)
+      return { authenticated: false }
+    }
+
+    await setSession({ userId: user.id })
+    logger.info(`WebSocket authenticated as ${user.id}`)
+    return { authenticated: true, userId: user.id }
+  },
+})
 
 /**
  * Subscribe to todo update events via EventHub.

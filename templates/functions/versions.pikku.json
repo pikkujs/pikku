@@ -37,6 +37,15 @@
         }
       }
     },
+    "authenticate": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "c6e8c409",
+          "outputHash": "e171e4f3"
+        }
+      }
+    },
     "cliHelp": {
       "latest": 1,
       "versions": {
@@ -299,10 +308,14 @@
       }
     },
     "processReminder": {
-      "latest": 1,
+      "latest": 2,
       "versions": {
         "1": {
           "inputHash": "47a055d6",
+          "outputHash": "e8a603ee"
+        },
+        "2": {
+          "inputHash": "801d5686",
           "outputHash": "e8a603ee"
         }
       }

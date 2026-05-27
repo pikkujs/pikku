@@ -23,20 +23,40 @@ async function testWorkflowStart() {
   return result.runId
 }
 
+async function waitForWorkflow(runId: string) {
+  const deadline = Date.now() + TIMEOUT
+  while (Date.now() < deadline) {
+    const status = await rpc.workflowStatus('createAndNotifyWorkflow', runId)
+    console.log('  workflow status:', status.status)
+    if (status.status === 'completed') {
+      return status
+    }
+    if (status.status === 'failed' || status.status === 'cancelled') {
+      throw new Error(`workflowStart: ended with status ${status.status}`)
+    }
+    await new Promise((resolve) => setTimeout(resolve, RETRY_INTERVAL))
+  }
+  throw new Error(`workflowStart: timed out waiting for ${runId}`)
+}
+
 async function testWorkflowRun() {
-  const result = await rpc.startWorkflow('createAndNotifyWorkflow', {
+  const result = await rpc.runWorkflow('createAndNotifyWorkflow', {
     userId: 'user2',
     title: 'Workflow test todo inline',
     priority: 'high',
     dueDate: '2025-12-31',
   })
-  console.log('  workflow (start) returned:', result)
+  if (!result.todo?.id) {
+    throw new Error('workflowRun: missing todo result')
+  }
+  console.log('  workflowRun returned:', result)
 }
 
 async function check() {
   try {
     const runId = await testWorkflowStart()
     console.log(`  Got runId: ${runId}`)
+    await waitForWorkflow(runId)
     await testWorkflowRun()
     console.log('✅ All workflow tests passed')
     process.exit(0)
