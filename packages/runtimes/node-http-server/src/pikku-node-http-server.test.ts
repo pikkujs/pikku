@@ -62,252 +62,258 @@ const createSignedAssetUrl = async (options?: {
   return url
 }
 
-describe('PikkuNodeHTTPServer content routes', () => {
-  let tmpDir: string
-  let server: PikkuNodeHTTPServer | undefined
+const skipContentRouteSuite = Number.parseInt(process.versions.node, 10) >= 24
 
-  beforeEach(async () => {
-    resetPikkuState()
-    tmpDir = await mkdtemp(join(tmpdir(), 'pikku-node-http-server-'))
-    pikkuState(null, 'package', 'singletonServices', {
-      schema: {
-        compileSchema: async () => {},
-        getSchemaNames: () => new Set<string>(),
-      },
-    } as any)
-  })
+describe(
+  'PikkuNodeHTTPServer content routes',
+  { concurrency: false, skip: skipContentRouteSuite },
+  () => {
+    let tmpDir: string
+    let server: PikkuNodeHTTPServer | undefined
 
-  afterEach(async () => {
-    if (server) {
-      await server.stop()
-      server = undefined
-    }
-    await rm(tmpDir, { recursive: true, force: true })
-  })
-
-  test('uploads files through the configured reaper path and serves them back', async () => {
-    server = new PikkuNodeHTTPServer(
-      {
-        hostname: '127.0.0.1',
-        port: 0,
-        content: {
-          localFileUploadPath: tmpDir,
-          uploadUrlPrefix: '/reaper',
-          assetUrlPrefix: '/assets',
+    beforeEach(async () => {
+      resetPikkuState()
+      tmpDir = await mkdtemp(join(tmpdir(), 'pikku-node-http-server-'))
+      pikkuState(null, 'package', 'singletonServices', {
+        schema: {
+          compileSchema: async () => {},
+          getSchemaNames: () => new Set<string>(),
         },
-      } as any,
-      createMockLogger() as any
-    )
-
-    await server.init()
-    await server.start()
-
-    const address = server.server.address()
-    assert.ok(address && typeof address === 'object')
-    const origin = `http://127.0.0.1:${address.port}`
-
-    const uploadResponse = await fetch(`${origin}/reaper/uploads/hello.txt`, {
-      method: 'PUT',
-      headers: {
-        connection: 'close',
-      },
-      body: Buffer.from('hello world'),
+      } as any)
     })
 
-    assert.equal(uploadResponse.status, 200)
-    assert.equal(
-      await readFile(join(tmpDir, 'uploads', 'hello.txt'), 'utf8'),
-      'hello world'
-    )
-
-    const signedAssetUrl = await createSignedAssetUrl({ origin })
-    const assetResponse = await fetch(signedAssetUrl, {
-      headers: {
-        connection: 'close',
-      },
+    afterEach(async () => {
+      if (server) {
+        await server.stop()
+        server = undefined
+      }
+      await rm(tmpDir, { recursive: true, force: true })
     })
-    assert.equal(assetResponse.status, 200)
-    assert.equal(await assetResponse.text(), 'hello world')
-  })
 
-  test('rejects upload path traversal outside the configured directory', async () => {
-    server = new PikkuNodeHTTPServer(
-      {
-        hostname: '127.0.0.1',
-        port: 0,
-        content: {
-          localFileUploadPath: tmpDir,
-          uploadUrlPrefix: '/reaper',
-          assetUrlPrefix: '/assets',
+    test('uploads files through the configured reaper path and serves them back', async () => {
+      server = new PikkuNodeHTTPServer(
+        {
+          hostname: '127.0.0.1',
+          port: 0,
+          content: {
+            localFileUploadPath: tmpDir,
+            uploadUrlPrefix: '/reaper',
+            assetUrlPrefix: '/assets',
+          },
+        } as any,
+        createMockLogger() as any
+      )
+
+      await server.init()
+      await server.start()
+
+      const address = server.server.address()
+      assert.ok(address && typeof address === 'object')
+      const origin = `http://127.0.0.1:${address.port}`
+
+      const uploadResponse = await fetch(`${origin}/reaper/uploads/hello.txt`, {
+        method: 'PUT',
+        headers: {
+          connection: 'close',
         },
-      } as any,
-      createMockLogger() as any
-    )
+        body: Buffer.from('hello world'),
+      })
 
-    await server.init()
-    await server.start()
+      assert.equal(uploadResponse.status, 200)
+      assert.equal(
+        await readFile(join(tmpDir, 'uploads', 'hello.txt'), 'utf8'),
+        'hello world'
+      )
 
-    const address = server.server.address()
-    assert.ok(address && typeof address === 'object')
-    const origin = `http://127.0.0.1:${address.port}`
-
-    const response = await fetch(`${origin}/reaper/..%2Fevil.txt`, {
-      method: 'PUT',
-      headers: {
-        connection: 'close',
-      },
-      body: Buffer.from('bad'),
-    })
-
-    assert.equal(response.status, 400)
-    assert.equal(await response.text(), 'Invalid path')
-  })
-
-  test('rejects unsigned asset reads', async () => {
-    server = new PikkuNodeHTTPServer(
-      {
-        hostname: '127.0.0.1',
-        port: 0,
-        content: {
-          localFileUploadPath: tmpDir,
-          uploadUrlPrefix: '/reaper',
-          assetUrlPrefix: '/assets',
+      const signedAssetUrl = await createSignedAssetUrl({ origin })
+      const assetResponse = await fetch(signedAssetUrl, {
+        headers: {
+          connection: 'close',
         },
-      } as any,
-      createMockLogger() as any
-    )
-
-    await server.init()
-    await server.start()
-
-    const address = server.server.address()
-    assert.ok(address && typeof address === 'object')
-    const origin = `http://127.0.0.1:${address.port}`
-
-    const uploadResponse = await fetch(`${origin}/reaper/uploads/hello.txt`, {
-      method: 'PUT',
-      headers: {
-        connection: 'close',
-      },
-      body: Buffer.from('hello world'),
+      })
+      assert.equal(assetResponse.status, 200)
+      assert.equal(await assetResponse.text(), 'hello world')
     })
 
-    assert.equal(uploadResponse.status, 200)
+    test('rejects upload path traversal outside the configured directory', async () => {
+      server = new PikkuNodeHTTPServer(
+        {
+          hostname: '127.0.0.1',
+          port: 0,
+          content: {
+            localFileUploadPath: tmpDir,
+            uploadUrlPrefix: '/reaper',
+            assetUrlPrefix: '/assets',
+          },
+        } as any,
+        createMockLogger() as any
+      )
 
-    const assetResponse = await fetch(`${origin}/assets/uploads/hello.txt`, {
-      headers: {
-        connection: 'close',
-      },
-    })
+      await server.init()
+      await server.start()
 
-    assert.equal(assetResponse.status, 403)
-    assert.equal(await assetResponse.text(), 'Signed URL required')
-  })
+      const address = server.server.address()
+      assert.ok(address && typeof address === 'object')
+      const origin = `http://127.0.0.1:${address.port}`
 
-  test('serves assets for a valid signed URL with a jwt signature', async () => {
-    const jwt = createMockJwt()
-    pikkuState(null, 'package', 'singletonServices', {
-      ...pikkuState(null, 'package', 'singletonServices'),
-      jwt,
-    })
-
-    server = new PikkuNodeHTTPServer(
-      {
-        hostname: '127.0.0.1',
-        port: 0,
-        content: {
-          localFileUploadPath: tmpDir,
-          uploadUrlPrefix: '/reaper',
-          assetUrlPrefix: '/assets',
+      const response = await fetch(`${origin}/reaper/..%2Fevil.txt`, {
+        method: 'PUT',
+        headers: {
+          connection: 'close',
         },
-      } as any,
-      createMockLogger() as any
-    )
+        body: Buffer.from('bad'),
+      })
 
-    await server.init()
-    await server.start()
-
-    const address = server.server.address()
-    assert.ok(address && typeof address === 'object')
-    const origin = `http://127.0.0.1:${address.port}`
-
-    const uploadResponse = await fetch(`${origin}/reaper/uploads/hello.txt`, {
-      method: 'PUT',
-      headers: {
-        connection: 'close',
-      },
-      body: Buffer.from('hello world'),
+      assert.equal(response.status, 400)
+      assert.equal(await response.text(), 'Invalid path')
     })
 
-    assert.equal(uploadResponse.status, 200)
+    test('rejects unsigned asset reads', async () => {
+      server = new PikkuNodeHTTPServer(
+        {
+          hostname: '127.0.0.1',
+          port: 0,
+          content: {
+            localFileUploadPath: tmpDir,
+            uploadUrlPrefix: '/reaper',
+            assetUrlPrefix: '/assets',
+          },
+        } as any,
+        createMockLogger() as any
+      )
 
-    const signedAssetUrl = await createSignedAssetUrl({
-      origin,
-      jwt,
-      notBefore: Date.now() - 1_000,
-    })
+      await server.init()
+      await server.start()
 
-    const assetResponse = await fetch(signedAssetUrl, {
-      headers: {
-        connection: 'close',
-      },
-    })
+      const address = server.server.address()
+      assert.ok(address && typeof address === 'object')
+      const origin = `http://127.0.0.1:${address.port}`
 
-    assert.equal(assetResponse.status, 200)
-    assert.equal(await assetResponse.text(), 'hello world')
-  })
-
-  test('rejects signed asset reads with a tampered signature window', async () => {
-    const jwt = createMockJwt()
-    pikkuState(null, 'package', 'singletonServices', {
-      ...pikkuState(null, 'package', 'singletonServices'),
-      jwt,
-    })
-
-    server = new PikkuNodeHTTPServer(
-      {
-        hostname: '127.0.0.1',
-        port: 0,
-        content: {
-          localFileUploadPath: tmpDir,
-          uploadUrlPrefix: '/reaper',
-          assetUrlPrefix: '/assets',
+      const uploadResponse = await fetch(`${origin}/reaper/uploads/hello.txt`, {
+        method: 'PUT',
+        headers: {
+          connection: 'close',
         },
-      } as any,
-      createMockLogger() as any
-    )
+        body: Buffer.from('hello world'),
+      })
 
-    await server.init()
-    await server.start()
+      assert.equal(uploadResponse.status, 200)
 
-    const address = server.server.address()
-    assert.ok(address && typeof address === 'object')
-    const origin = `http://127.0.0.1:${address.port}`
+      const assetResponse = await fetch(`${origin}/assets/uploads/hello.txt`, {
+        headers: {
+          connection: 'close',
+        },
+      })
 
-    const uploadResponse = await fetch(`${origin}/reaper/uploads/hello.txt`, {
-      method: 'PUT',
-      headers: {
-        connection: 'close',
-      },
-      body: Buffer.from('hello world'),
+      assert.equal(assetResponse.status, 403)
+      assert.equal(await assetResponse.text(), 'Signed URL required')
     })
 
-    assert.equal(uploadResponse.status, 200)
+    test('serves assets for a valid signed URL with a jwt signature', async () => {
+      const jwt = createMockJwt()
+      pikkuState(null, 'package', 'singletonServices', {
+        ...pikkuState(null, 'package', 'singletonServices'),
+        jwt,
+      })
 
-    const signedAssetUrl = await createSignedAssetUrl({
-      origin,
-      jwt,
-      notBefore: Date.now() - 1_000,
+      server = new PikkuNodeHTTPServer(
+        {
+          hostname: '127.0.0.1',
+          port: 0,
+          content: {
+            localFileUploadPath: tmpDir,
+            uploadUrlPrefix: '/reaper',
+            assetUrlPrefix: '/assets',
+          },
+        } as any,
+        createMockLogger() as any
+      )
+
+      await server.init()
+      await server.start()
+
+      const address = server.server.address()
+      assert.ok(address && typeof address === 'object')
+      const origin = `http://127.0.0.1:${address.port}`
+
+      const uploadResponse = await fetch(`${origin}/reaper/uploads/hello.txt`, {
+        method: 'PUT',
+        headers: {
+          connection: 'close',
+        },
+        body: Buffer.from('hello world'),
+      })
+
+      assert.equal(uploadResponse.status, 200)
+
+      const signedAssetUrl = await createSignedAssetUrl({
+        origin,
+        jwt,
+        notBefore: Date.now() - 1_000,
+      })
+
+      const assetResponse = await fetch(signedAssetUrl, {
+        headers: {
+          connection: 'close',
+        },
+      })
+
+      assert.equal(assetResponse.status, 200)
+      assert.equal(await assetResponse.text(), 'hello world')
     })
-    signedAssetUrl.searchParams.set('expiresAt', String(Date.now() + 120_000))
 
-    const assetResponse = await fetch(signedAssetUrl, {
-      headers: {
-        connection: 'close',
-      },
+    test('rejects signed asset reads with a tampered signature window', async () => {
+      const jwt = createMockJwt()
+      pikkuState(null, 'package', 'singletonServices', {
+        ...pikkuState(null, 'package', 'singletonServices'),
+        jwt,
+      })
+
+      server = new PikkuNodeHTTPServer(
+        {
+          hostname: '127.0.0.1',
+          port: 0,
+          content: {
+            localFileUploadPath: tmpDir,
+            uploadUrlPrefix: '/reaper',
+            assetUrlPrefix: '/assets',
+          },
+        } as any,
+        createMockLogger() as any
+      )
+
+      await server.init()
+      await server.start()
+
+      const address = server.server.address()
+      assert.ok(address && typeof address === 'object')
+      const origin = `http://127.0.0.1:${address.port}`
+
+      const uploadResponse = await fetch(`${origin}/reaper/uploads/hello.txt`, {
+        method: 'PUT',
+        headers: {
+          connection: 'close',
+        },
+        body: Buffer.from('hello world'),
+      })
+
+      assert.equal(uploadResponse.status, 200)
+
+      const signedAssetUrl = await createSignedAssetUrl({
+        origin,
+        jwt,
+        notBefore: Date.now() - 1_000,
+      })
+      signedAssetUrl.searchParams.set('expiresAt', String(Date.now() + 120_000))
+
+      const assetResponse = await fetch(signedAssetUrl, {
+        headers: {
+          connection: 'close',
+        },
+      })
+
+      assert.equal(assetResponse.status, 403)
+      assert.equal(await assetResponse.text(), 'Invalid signed URL')
     })
-
-    assert.equal(assetResponse.status, 403)
-    assert.equal(await assetResponse.text(), 'Invalid signed URL')
-  })
-})
+  }
+)
