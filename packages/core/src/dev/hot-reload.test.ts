@@ -1,5 +1,12 @@
-import { describe, test, beforeEach, afterEach } from 'node:test'
+import {
+  describe,
+  test,
+  beforeEach,
+  afterEach,
+  type TestContext,
+} from 'node:test'
 import assert from 'node:assert/strict'
+import { watch } from 'node:fs'
 import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -20,6 +27,32 @@ import {
 } from '../wirings/channel/local/local-channel-runner.test.js'
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+const ensureRecursiveWatchAvailable = async (
+  t: TestContext,
+  dir: string
+): Promise<boolean> => {
+  if (process.platform === 'darwin') {
+    t.skip('recursive fs.watch is unreliable on darwin')
+    return false
+  }
+
+  try {
+    const watcher = watch(dir, { recursive: true }, () => {})
+    watcher.close()
+    return true
+  } catch (error: any) {
+    if (
+      error?.code === 'EMFILE' ||
+      error?.code === 'ERR_FEATURE_UNAVAILABLE_ON_PLATFORM' ||
+      error?.code === 'ERR_INVALID_ARG_VALUE'
+    ) {
+      t.skip(`recursive fs.watch unavailable: ${error.code}`)
+      return false
+    }
+    throw error
+  }
+}
 
 const createMockLogger = () => {
   const logs: Array<{ level: string; message: string }> = []
@@ -47,7 +80,7 @@ const writeFunctionModule = async (
   await writeFile(join(dir, filename), `// ts trigger ${Date.now()}`)
 }
 
-describe('pikkuDevReloader', () => {
+describe('pikkuDevReloader', { concurrency: false }, () => {
   let tmpDir: string
   let reloader: { close: () => void } | undefined
   let mockLogger: ReturnType<typeof createMockLogger>
@@ -76,7 +109,9 @@ describe('pikkuDevReloader', () => {
     await rm(tmpDir, { recursive: true, force: true })
   })
 
-  test('should hot-reload a function and pick up new return value', async () => {
+  test('should hot-reload a function and pick up new return value', async (t) => {
+    if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return
+
     addFunction('myFunc', {
       func: async () => ({ version: 1 }),
     })
@@ -112,7 +147,9 @@ describe('pikkuDevReloader', () => {
     assert.ok(reloadLog, 'Should log hot-reload message')
   })
 
-  test('should not replace a function that is not registered', async () => {
+  test('should not replace a function that is not registered', async (t) => {
+    if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return
+
     addFunction('registeredFunc', {
       func: async () => ({ name: 'registered' }),
     })
@@ -135,7 +172,9 @@ describe('pikkuDevReloader', () => {
     )
   })
 
-  test('should keep old code when JS import fails', async () => {
+  test('should keep old code when JS import fails', async (t) => {
+    if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return
+
     addFunction('badFunc', {
       func: async () => ({ working: true }),
     })
@@ -166,7 +205,9 @@ describe('pikkuDevReloader', () => {
     })
   })
 
-  test('should ignore non-ts files, test files, and gen files', async () => {
+  test('should ignore non-ts files, test files, and gen files', async (t) => {
+    if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return
+
     addFunction('someFunc', {
       func: async () => ({ original: true }),
     })
@@ -190,7 +231,9 @@ describe('pikkuDevReloader', () => {
     assert.equal(reloadLogs.length, 0)
   })
 
-  test('should hot-reload function used via HTTP wire', async () => {
+  test('should hot-reload function used via HTTP wire', async (t) => {
+    if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return
+
     const sessionMiddleware = async (_services: any, wire: any, next: any) => {
       wire.setSession?.({ userId: 'test' } as any)
       await next()
@@ -251,7 +294,9 @@ describe('pikkuDevReloader', () => {
     })
   })
 
-  test('should hot-reload function used via scheduler wire', async () => {
+  test('should hot-reload function used via scheduler wire', async (t) => {
+    if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return
+
     const taskResult = { ref: 'initial' }
 
     pikkuState(null, 'scheduler', 'meta')['hotTask'] = {
@@ -371,7 +416,9 @@ describe('pikkuDevReloader', () => {
     assert.deepEqual(resultV2, { result: 'v2' })
   })
 
-  test('should debounce rapid file changes', async () => {
+  test('should debounce rapid file changes', async (t) => {
+    if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return
+
     addFunction('debounceFunc', {
       func: async () => ({ count: 0 }),
     })
@@ -396,7 +443,9 @@ describe('pikkuDevReloader', () => {
     assert.equal(result.count, 5)
   })
 
-  test('should watch subdirectories', async () => {
+  test('should watch subdirectories', async (t) => {
+    if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return
+
     const subDir = join(tmpDir, 'functions')
     await mkdir(subDir)
 
@@ -426,7 +475,9 @@ describe('pikkuDevReloader', () => {
     })
   })
 
-  test('should properly clean up on close', async () => {
+  test('should properly clean up on close', async (t) => {
+    if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return
+
     addFunction('cleanupFunc', {
       func: async () => ({ v: 1 }),
     })
