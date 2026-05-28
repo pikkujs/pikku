@@ -54,12 +54,8 @@ describe('serializeEventsScaffold', () => {
       false,
       '../../.pikku/pikku-types.gen.js'
     )
-    const matches = out.match(/Realtime channel needs an eventHub service/g)
-    assert.strictEqual(
-      matches?.length,
-      2,
-      'both subscribe and unsubscribe must guard'
-    )
+    assert.match(out, /eventHub\?\.subscribe\(topic, channel\.channelId\)/)
+    assert.match(out, /eventHub\?\.unsubscribe\(topic, channel\.channelId\)/)
   })
 
   test('SSE handler subscribes and lets eventHub fan out', () => {
@@ -67,8 +63,8 @@ describe('serializeEventsScaffold', () => {
       false,
       '../../.pikku/pikku-types.gen.js'
     )
-    assert.match(out, /eventHub\.subscribe\(topic, channel\.channelId\)/)
-    assert.match(out, /Realtime SSE needs an eventHub service/)
+    assert.match(out, /eventHub\?\.subscribe\(topic, channel\.channelId\)/)
+    assert.match(out, /Realtime SSE handler invoked without a channel/)
   })
 
   test('tags include realtime and sse on the right routes', () => {
@@ -76,8 +72,8 @@ describe('serializeEventsScaffold', () => {
       false,
       '../../.pikku/pikku-types.gen.js'
     )
-    assert.match(out, /tags: \['realtime'\]/)
-    assert.match(out, /tags: \['realtime', 'sse'\]/)
+    assert.match(out, /tags: \['pikku:realtime'\]/)
+    assert.match(out, /tags: \['pikku:realtime', 'sse'\]/)
   })
 
   test('imports the generated pikku-types entrypoint', () => {
@@ -97,9 +93,7 @@ describe('serializeEventsScaffold', () => {
       false,
       '../../.pikku/pikku-types.gen.js'
     )
-    assert.match(
-      out,
-      /const TopicInput = z\.object\(\{ topic: z\.string\(\) \}\)/
-    )
+    assert.match(out, /pikkuChannelFunc<\{ topic: string \}>/)
+    assert.match(out, /pikkuSessionlessFunc<\{ topic: string \}, void>/)
   })
 })
