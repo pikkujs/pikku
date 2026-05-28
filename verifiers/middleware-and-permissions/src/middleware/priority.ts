@@ -4,8 +4,8 @@ import type { MiddlewarePriority } from '@pikku/core'
 export const priorityMiddleware = (
   name: string,
   priority: MiddlewarePriority
-) =>
-  pikkuMiddleware({
+) => {
+  const middleware = pikkuMiddleware({
     name: `priority-${name}`,
     priority,
     func: async ({ logger }, _data, next) => {
@@ -15,3 +15,5 @@ export const priorityMiddleware = (
       return result
     },
   })
+  return middleware
+}

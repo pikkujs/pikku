@@ -13,19 +13,23 @@ import { functionMiddleware } from '../middleware/function.js'
 import { functionPermission } from '../permissions/function.js'
 import type { MCPResourceResponse, MCPPromptResponse } from '@pikku/core'
 
+const mcpPermission = pikkuPermission(
+  async ({ logger }, _data, { session }) => {
+    logger.info({
+      type: 'tag-permission',
+      name: 'mcp',
+      sessionExists: !!session,
+    })
+    return false
+  }
+)
+
 export const mcpTagMiddleware = () =>
   addTagMiddleware('mcp', [tagMiddleware('mcp')])
 
 export const mcpTagPermissions = () =>
   addTagPermission('mcp', {
-    mcpPermission: pikkuPermission(async ({ logger }, _data, { session }) => {
-      logger.info({
-        type: 'tag-permission',
-        name: 'mcp',
-        sessionExists: !!session,
-      })
-      return false
-    }),
+    mcpPermission,
   })
 
 export const mcpWirePermission = pikkuPermission(

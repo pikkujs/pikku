@@ -40,12 +40,14 @@ export const adminTagPermissions = () =>
 export { sessionTagMiddleware } from '../middleware/fake-session.js'
 
 // HTTP-specific global middleware - Also works: Direct call (no tree-shaking)
-export const httpMiddleware = addHTTPMiddleware('*', [httpGlobalMiddleware])
+export const httpMiddleware = () =>
+  addHTTPMiddleware('*', [httpGlobalMiddleware])
 
 // HTTP-specific global permissions - Also works: Direct call (no tree-shaking)
-export const httpPermissions = addHTTPPermission('*', {
-  global: httpGlobalPermission,
-})
+export const httpPermissions = () =>
+  addHTTPPermission('*', {
+    global: httpGlobalPermission,
+  })
 
 // Route-pattern middleware - Recommended: Use factory pattern
 export const apiRouteMiddleware = () =>
