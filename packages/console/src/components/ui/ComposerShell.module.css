@@ -5,17 +5,35 @@
  * plain controlled textarea).
  */
 .composerRoot {
+  --composer-surface-bg: var(--app-panel-bg-raised);
+  --composer-surface-border: var(--app-border);
+  --composer-surface-shadow: var(--app-shadow-panel);
+  --composer-input-color: var(--app-text);
+  --composer-placeholder-color: var(--app-text-faint);
+  --composer-icon-border: var(--app-border);
+  --composer-icon-bg: var(--app-panel-bg-soft);
+  --composer-icon-color: var(--app-text-dim);
+  --composer-icon-hover-bg: var(--app-panel-bg-strong);
+  --composer-icon-hover-color: var(--app-text);
+  --composer-send-border: var(--app-blue-border);
+  --composer-send-bg: var(--app-blue);
+  --composer-send-color: var(--app-panel-bg);
+  --composer-send-hover-bg: var(--app-blue-hover);
+  --composer-send-hover-color: var(--app-panel-bg);
+  --composer-control-color: var(--app-text-dim);
+  --composer-control-hover-color: var(--app-text);
+  --composer-control-muted: var(--app-text-faint);
   position: relative;
   z-index: 2;
   container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  background-color: var(--mantine-color-dark-7);
-  border: 1px solid var(--mantine-color-dark-4);
+  background-color: var(--composer-surface-bg);
+  border: 1px solid var(--composer-surface-border);
   border-radius: 24px;
   padding: 14px 12px 10px;
-  box-shadow: 0 14px 30px color-mix(in srgb, var(--mantine-color-black) 24%, transparent);
+  box-shadow: 0 14px 30px var(--composer-surface-shadow);
 }
 
 .composerInput {
@@ -23,7 +41,7 @@
   background: transparent;
   border: none;
   outline: none;
-  color: var(--mantine-color-dark-0);
+  color: var(--composer-input-color);
   font-size: var(--mantine-font-size-sm);
   font-family: inherit;
   resize: none;
@@ -34,7 +52,7 @@
 }
 
 .composerInput::placeholder {
-  color: var(--mantine-color-dark-2);
+  color: var(--composer-placeholder-color);
 }
 
 .composerFooter {
@@ -54,9 +72,9 @@
   width: 30px;
   height: 30px;
   border-radius: 999px;
-  border: 1px solid var(--mantine-color-dark-4);
-  background: var(--mantine-color-dark-6);
-  color: var(--mantine-color-dark-1);
+  border: 1px solid var(--composer-icon-border);
+  background: var(--composer-icon-bg);
+  color: var(--composer-icon-color);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -66,19 +84,19 @@
 }
 
 .iconChip:hover:not(:disabled) {
-  background: var(--mantine-color-dark-5);
-  color: var(--mantine-color-white);
+  background: var(--composer-icon-hover-bg);
+  color: var(--composer-icon-hover-color);
 }
 
 .sendButton {
-  border-color: var(--mantine-color-dark-2);
-  background: var(--mantine-color-dark-1);
-  color: var(--mantine-color-dark-8);
+  border-color: var(--composer-send-border);
+  background: var(--composer-send-bg);
+  color: var(--composer-send-color);
 }
 
 .sendButton:hover:not(:disabled) {
-  background: var(--mantine-color-white);
-  color: var(--mantine-color-dark-8);
+  background: var(--composer-send-hover-bg);
+  color: var(--composer-send-hover-color);
 }
 
 .sendButton:disabled,
@@ -96,7 +114,7 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: var(--mantine-color-dark-1);
+  color: var(--composer-control-color);
   font-size: 13px;
   line-height: 1;
   transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
@@ -111,7 +129,7 @@
 
 .controlChip:hover:not(:disabled) {
   background-color: transparent;
-  color: var(--mantine-color-white);
+  color: var(--composer-control-hover-color);
 }
 
 .controlChip:disabled {
@@ -120,12 +138,12 @@
 }
 
 .controlChipIcon {
-  color: var(--mantine-color-dark-2);
+  color: var(--composer-control-muted);
   flex-shrink: 0;
 }
 
 .controlChipChevron {
-  color: var(--mantine-color-dark-2);
+  color: var(--composer-control-muted);
   margin-left: 2px;
   flex-shrink: 0;
 }

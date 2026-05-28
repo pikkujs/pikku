@@ -310,14 +310,6 @@ export const createSingletonServices: CreateSingletonServices<
             ? { additionalInfo: config.openAPI.additionalInfo }
             : undefined,
         manifest,
-        modelConfig:
-          config.models || config.agentDefaults || config.agentOverrides
-            ? {
-                models: config.models,
-                agentDefaults: config.agentDefaults,
-                agentOverrides: config.agentOverrides,
-              }
-            : undefined,
       })
 
       logger.debug(`Inspector took ${Date.now() - inspectStart}ms`)

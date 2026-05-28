@@ -5,10 +5,10 @@
  */
 import { PikkuRPC } from '../sdk/pikku-rpc.gen.js'
 
-export function getRpc(opts: {
+export function getFabricRPC(opts: {
   apiUrl: string
   token: string | null
-}): PikkuRPC {
+}): any {
   const rpc = new PikkuRPC()
   rpc.setServerUrl(opts.apiUrl)
   rpc.setAuthorizationJWT(opts.token)

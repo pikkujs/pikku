@@ -1,10 +1,10 @@
-import React, { useContext, useMemo, useState } from 'react'
+import React, { useContext, useState } from 'react'
 import {
   Stack,
   Text,
   Box,
   Group,
-  Select,
+  TextInput,
   NumberInput,
   ActionIcon,
 } from '@mantine/core'
@@ -16,7 +16,6 @@ import { LinkedBadge } from './LinkedBadge'
 import { SchemaSection } from './shared/SchemaSection'
 import { usePanelContext } from '../../../context/PanelContext'
 import { AgentPlaygroundContext } from '../../../context/AgentPlaygroundContext'
-import { usePikkuMeta } from '../../../context/PikkuMetaContext'
 import { AgentEditor } from './AgentEditor'
 import { useConsoleEditable } from '../../../context/ConsoleEditableContext'
 import classes from '../../ui/console.module.css'
@@ -32,18 +31,10 @@ export const AgentConfiguration: React.FC<AgentPanelProps> = ({
 }) => {
   const { navigateInPanel } = usePanelContext()
   const playgroundCtx = useContext(AgentPlaygroundContext)
-  const { meta } = usePikkuMeta()
   const editable = useConsoleEditable()
-  const modelAliases = meta.modelAliases ?? []
   const [editing, setEditing] = useState(false)
 
   const canEdit = editable && !!metadata?.sourceFile && !!metadata?.exportedName
-
-  const modelOptions = useMemo(() => {
-    const aliases = new Set(modelAliases)
-    if (metadata?.model) aliases.add(metadata.model)
-    return Array.from(aliases) as string[]
-  }, [modelAliases, metadata?.model])
 
   if (editing && canEdit) {
     return (
@@ -125,17 +116,15 @@ export const AgentConfiguration: React.FC<AgentPanelProps> = ({
         <Box>
           <SectionLabel>Playground Overrides</SectionLabel>
           <Stack gap="xs">
-            {modelOptions.length > 0 && (
-              <Select
-                size="xs"
-                label={`Model${metadata?.model ? ` (default: ${metadata.model})` : ''}`}
-                placeholder={metadata?.model ?? 'default'}
-                data={modelOptions}
-                value={playgroundCtx.model ?? null}
-                onChange={(v) => playgroundCtx.setModel(v ?? undefined)}
-                clearable
-              />
-            )}
+            <TextInput
+              size="xs"
+              label={`Model${metadata?.model ? ` (default: ${metadata.model})` : ''}`}
+              placeholder={metadata?.model ?? 'provider/model'}
+              value={playgroundCtx.model ?? ''}
+              onChange={(e) =>
+                playgroundCtx.setModel(e.currentTarget.value || undefined)
+              }
+            />
             <NumberInput
               size="xs"
               label={`Temperature${metadata?.temperature != null ? ` (default: ${metadata.temperature})` : ''}`}

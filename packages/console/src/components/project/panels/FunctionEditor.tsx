@@ -227,7 +227,7 @@ export const FunctionEditor: React.FC<FunctionEditorProps> = ({
             }}
             style={{
               fontSize: '13px',
-              border: '1px solid var(--mantine-color-dark-4)',
+              border: '1px solid var(--app-border)',
               borderRadius: '4px',
               overflow: 'hidden',
             }}

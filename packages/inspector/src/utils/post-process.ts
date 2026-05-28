@@ -2,7 +2,6 @@ import type {
   InspectorState,
   InspectorLogger,
   InspectorOptions,
-  InspectorModelConfig,
   MiddlewareGroupMeta,
   InspectorDiagnostic,
 } from '../types.js'
@@ -538,11 +537,8 @@ export function computeRequiredSchemas(
 
 export function validateAgentModels(
   logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
-  modelConfig?: InspectorModelConfig
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
 ): void {
-  const aliases = modelConfig?.models ?? {}
-
   for (const [, meta] of Object.entries(state.agents.agentsMeta)) {
     const model = meta.model
     if (!model) {
@@ -552,41 +548,10 @@ export function validateAgentModels(
       )
       continue
     }
-    if (model.includes('/')) continue
-    if (!aliases[model]) {
-      const available = Object.keys(aliases)
+    if (!model.includes('/')) {
       logger.critical(
         ErrorCode.INVALID_MODEL,
-        `AI agent '${meta.name}' uses model alias '${model}' which is not defined in pikku.config.json models. ` +
-          `Available aliases: ${available.join(', ') || 'none'}`
-      )
-    }
-  }
-}
-
-export function validateAgentOverrides(
-  logger: InspectorLogger,
-  state: InspectorState | Omit<InspectorState, 'typesLookup'>,
-  modelConfig?: InspectorModelConfig
-): void {
-  const overrides = modelConfig?.agentOverrides ?? {}
-  const aliases = modelConfig?.models ?? {}
-  const agentNames = new Set(
-    Object.values(state.agents.agentsMeta).map((m) => m.name)
-  )
-
-  for (const [agentName, override] of Object.entries(overrides)) {
-    if (!agentNames.has(agentName)) {
-      logger.warn(`agentOverrides references unknown agent '${agentName}'`)
-    }
-    if (
-      override.model &&
-      !override.model.includes('/') &&
-      !aliases[override.model]
-    ) {
-      logger.critical(
-        ErrorCode.INVALID_MODEL,
-        `agentOverrides['${agentName}'].model uses alias '${override.model}' which is not defined in models.`
+        `AI agent '${meta.name}' uses model '${model}', which must be provider-qualified as '<provider>/<model>' (e.g. 'openai/gpt-4').`
       )
     }
   }

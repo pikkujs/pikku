@@ -1,43 +1,19 @@
-import { pikkuState } from '../../pikku-state.js'
-
+/**
+ * Resolves the effective model/temperature/maxSteps for an agent at runtime.
+ *
+ * Models are declared per-agent using the provider-qualified `provider/model`
+ * form (e.g. `openai/gpt-5-mini`); there is no config-level alias map. This
+ * function remains the single merge point for request-time overrides (see
+ * ai-agent-prepare's `input.model`), so callers stay decoupled from how the
+ * effective config is assembled.
+ */
 export function resolveModelConfig(
-  agentName: string,
+  _agentName: string,
   agent: { model: string; temperature?: number; maxSteps?: number }
 ): { model: string; temperature?: number; maxSteps?: number } {
-  let config: any = {}
-  try {
-    config = pikkuState(null, 'models', 'config') ?? {}
-  } catch {}
-  const models = config.models ?? {}
-  const defaults = config.agentDefaults
-  const agentOverride = config.agentOverrides?.[agentName]
-
-  let rawModel = agentOverride?.model ?? agent.model
-
-  let aliasTemperature: number | undefined
-  let aliasMaxSteps: number | undefined
-  if (!rawModel.includes('/')) {
-    const entry = models[rawModel]
-    if (!entry) throw new Error(`Unknown model alias '${rawModel}'.`)
-    if (typeof entry === 'string') {
-      rawModel = entry
-    } else {
-      rawModel = entry.model
-      aliasTemperature = entry.temperature
-      aliasMaxSteps = entry.maxSteps
-    }
+  return {
+    model: agent.model,
+    temperature: agent.temperature,
+    maxSteps: agent.maxSteps,
   }
-
-  const temperature =
-    agentOverride?.temperature ??
-    aliasTemperature ??
-    defaults?.temperature ??
-    agent.temperature
-  const maxSteps =
-    agentOverride?.maxSteps ??
-    aliasMaxSteps ??
-    defaults?.maxSteps ??
-    agent.maxSteps
-
-  return { model: rawModel, temperature, maxSteps }
 }

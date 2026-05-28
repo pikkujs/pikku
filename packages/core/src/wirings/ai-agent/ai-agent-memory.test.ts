@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import { resetPikkuState } from '../../pikku-state.js'
 import {
   buildWorkingMemoryPrompt,
+  createWorkingMemoryMiddleware,
   deepMergeWorkingMemory,
   loadContextMessages,
   parseWorkingMemory,
@@ -122,22 +123,12 @@ describe('ai-agent-memory', () => {
     assert.deepEqual(messages, [])
   })
 
-  test('saveMessages persists tool calls, validates working memory, and strips tags', async () => {
+  test('saveMessages persists tool calls and strips working memory tags from returned text', async () => {
     const savedMessages: AIMessage[][] = []
-    const savedWorkingMemory: unknown[] = []
-    const warnings: string[] = []
 
     const storage = {
       saveMessages: async (_threadId: string, messages: AIMessage[]) => {
         savedMessages.push(messages)
-      },
-      getWorkingMemory: async () => ({ city: 'Paris', removeMe: 'x' }),
-      saveWorkingMemory: async (
-        threadId: string,
-        scope: string,
-        value: unknown
-      ) => {
-        savedWorkingMemory.push({ threadId, scope, value })
       },
     } as any
 
@@ -148,7 +139,7 @@ describe('ai-agent-memory', () => {
       { workingMemory: true },
       makeMessage({ id: 'user-1' }),
       {
-        text: 'Done <working_memory>{"city":"Berlin","removeMe":null}</working_memory>',
+        text: 'Done <working_memory>{"city":"Berlin"}</working_memory>',
         steps: [
           {
             toolCalls: [
@@ -160,16 +151,6 @@ describe('ai-agent-memory', () => {
             ],
           },
         ],
-      },
-      {
-        workingMemorySchemaName: 'WorkingMemory',
-        workingMemoryJsonSchema: { type: 'object' },
-        schemaService: {
-          validateSchema: async () => {},
-        } as any,
-        logger: {
-          warn: (message: string) => warnings.push(message),
-        } as any,
       }
     )
 
@@ -180,6 +161,50 @@ describe('ai-agent-memory', () => {
     assert.equal(savedMessages[0][1].role, 'assistant')
     assert.equal(savedMessages[0][2].role, 'tool')
     assert.equal(savedMessages[0][3].role, 'assistant')
+  })
+
+  test('saveMessages returns text unchanged when no storage is configured', async () => {
+    const passthrough = await saveMessages(
+      undefined,
+      'thread-1',
+      'resource-1',
+      { workingMemory: true },
+      null,
+      { text: 'plain text', steps: [] }
+    )
+    assert.equal(passthrough, 'plain text')
+  })
+
+  test('createWorkingMemoryMiddleware merges, validates, and persists working memory', async () => {
+    const savedWorkingMemory: unknown[] = []
+    const warnings: string[] = []
+
+    const storage = {
+      getWorkingMemory: async () => ({ city: 'Paris', removeMe: 'x' }),
+      saveWorkingMemory: async (
+        threadId: string,
+        scope: string,
+        value: unknown
+      ) => {
+        savedWorkingMemory.push({ threadId, scope, value })
+      },
+    } as any
+
+    const mw = createWorkingMemoryMiddleware({
+      storage,
+      threadId: 'thread-1',
+      workingMemorySchemaName: 'WorkingMemory',
+      schemaService: { validateSchema: async () => {} } as any,
+      logger: { warn: (message: string) => warnings.push(message) } as any,
+    })
+
+    const result = (await mw.modifyOutput!({} as any, {
+      text: 'Done <working_memory>{"city":"Berlin","removeMe":null}</working_memory>',
+      messages: [],
+      usage: {} as any,
+    })) as { text: string }
+
+    assert.equal(result.text, 'Done')
     assert.deepEqual(savedWorkingMemory, [
       {
         threadId: 'thread-1',
@@ -190,49 +215,38 @@ describe('ai-agent-memory', () => {
     assert.deepEqual(warnings, [])
   })
 
-  test('saveMessages warns on working memory schema failure and returns original text without storage', async () => {
+  test('createWorkingMemoryMiddleware warns and skips persistence on schema failure', async () => {
+    const savedWorkingMemory: unknown[] = []
     const warnings: string[] = []
+
     const storage = {
-      saveMessages: async () => {},
       getWorkingMemory: async () => ({}),
-      saveWorkingMemory: async () => {},
+      saveWorkingMemory: async (...args: unknown[]) => {
+        savedWorkingMemory.push(args)
+      },
     } as any
 
-    const text = await saveMessages(
+    const mw = createWorkingMemoryMiddleware({
       storage,
-      'thread-1',
-      'resource-1',
-      { workingMemory: true },
-      null,
-      {
-        text: '<working_memory>{"city":"Berlin"}</working_memory>',
-        steps: [],
-      },
-      {
-        workingMemorySchemaName: 'WorkingMemory',
-        schemaService: {
-          validateSchema: async () => {
-            throw new Error('bad schema')
-          },
-        } as any,
-        logger: {
-          warn: (message: string) => warnings.push(message),
-        } as any,
-      }
-    )
+      threadId: 'thread-1',
+      workingMemorySchemaName: 'WorkingMemory',
+      schemaService: {
+        validateSchema: async () => {
+          throw new Error('bad schema')
+        },
+      } as any,
+      logger: { warn: (message: string) => warnings.push(message) } as any,
+    })
 
-    assert.equal(text, '')
+    const result = (await mw.modifyOutput!({} as any, {
+      text: '<working_memory>{"city":"Berlin"}</working_memory>',
+      messages: [],
+      usage: {} as any,
+    })) as { text: string }
+
+    assert.equal(result.text, '')
     assert.deepEqual(warnings, ['Working memory validation failed: bad schema'])
-
-    const passthrough = await saveMessages(
-      undefined,
-      'thread-1',
-      'resource-1',
-      { workingMemory: true },
-      null,
-      { text: 'plain text', steps: [] }
-    )
-    assert.equal(passthrough, 'plain text')
+    assert.deepEqual(savedWorkingMemory, [])
   })
 
   test('trimMessages sanitizes orphaned tool messages and keeps first user/system boundary', () => {

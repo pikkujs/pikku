@@ -41,7 +41,6 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
   const { meta } = usePikkuMeta()
   const { data: addonFunctions } = useAddonFunctions()
   const tagOptions = useTagOptions()
-  const modelAliases = meta.modelAliases ?? []
 
   const [description, setDescription] = useState('')
   const [role, setRole] = useState('')
@@ -121,8 +120,6 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
     return null
   }
 
-  const modelOptions = Array.from(new Set([...modelAliases, ...(model ? [model] : [])]))
-
   const allFunctions = meta.functions ?? []
   const groups: Record<string, string[]> = {}
   for (const f of allFunctions) {
@@ -171,13 +168,12 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
         maxRows={4}
         size="xs"
       />
-      <Select
+      <TextInput
         label="Model"
-        data={modelOptions}
-        value={model}
-        onChange={setModel}
-        searchable
-        clearable
+        description="Provider-qualified, e.g. openai/gpt-4o"
+        placeholder="provider/model"
+        value={model ?? ''}
+        onChange={(e) => setModel(e.currentTarget.value || null)}
         size="xs"
       />
       <Group grow gap="xs" wrap="wrap">

@@ -140,12 +140,6 @@ export async function saveMessages(
         result: string
       }[]
     }[]
-  },
-  options?: {
-    workingMemoryJsonSchema?: Record<string, unknown>
-    workingMemorySchemaName?: string | null
-    logger?: Logger
-    schemaService?: SchemaService
   }
 ): Promise<string> {
   const responseText = memoryConfig?.workingMemory
@@ -406,6 +400,7 @@ export function createWorkingMemoryMiddleware(options: {
           )) ?? {}
         const merged = deepMergeWorkingMemory(existing, workingMemory)
 
+        let valid = true
         if (options.schemaService && options.workingMemorySchemaName) {
           try {
             await options.schemaService.validateSchema(
@@ -413,17 +408,22 @@ export function createWorkingMemoryMiddleware(options: {
               merged
             )
           } catch (err) {
+            valid = false
             options.logger?.warn(
               `Working memory validation failed: ${err instanceof Error ? err.message : String(err)}`
             )
           }
         }
 
-        await options.storage.saveWorkingMemory(
-          options.threadId,
-          'thread',
-          merged
-        )
+        // Only persist when the merged value passes schema validation —
+        // saving invalid data would poison subsequent getWorkingMemory reads.
+        if (valid) {
+          await options.storage.saveWorkingMemory(
+            options.threadId,
+            'thread',
+            merged
+          )
+        }
       }
 
       return {

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { resolveApiContext, writeProjectConfig } from '../lib/config.js'
-import { getRpc } from '../lib/http.js'
+import { getFabricRPC } from '../lib/http.js'
 import { assertDeploySafety, getRemoteUrl } from '../lib/git.js'
 
 export const FabricLinkInput = z.object({
@@ -31,7 +31,7 @@ export const FabricLink = pikkuSessionlessFunc({
     const remoteUrl = await getRemoteUrl()
     const safety = await assertDeploySafety()
 
-    const rpc = getRpc({ apiUrl: ctx.apiUrl, token: ctx.token })
+    const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
 
     // Only check GitHub App installation for github.com repos.
     // Gitea (local dev) and other hosts use shared tokens — no App needed.

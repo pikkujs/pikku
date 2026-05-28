@@ -7,9 +7,6 @@
     "supportsImportAttributes": true
   },
   "verboseMeta": true,
-  "models": {
-    "test-model": "test-provider/test-model"
-  },
   "clientFiles": {
     "fetchFile": ".pikku/pikku-fetch.gen.ts",
     "websocketFile": ".pikku/pikku-websocket.gen.ts",

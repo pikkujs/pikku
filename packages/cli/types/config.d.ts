@@ -175,16 +175,6 @@ export type PikkuCLIInput = {
       }
   addonName?: string
 
-  models?: Record<
-    string,
-    string | { model: string; temperature?: number; maxSteps?: number }
-  >
-  agentDefaults?: { temperature?: number; maxSteps?: number }
-  agentOverrides?: Record<
-    string,
-    { model?: string; temperature?: number; maxSteps?: number }
-  >
-
   configDir: string
   tsconfig: string
 

@@ -188,16 +188,16 @@ const FieldDiff: React.FC<{
     <Box
       style={{
         borderRadius: 4,
-        border: '1px solid var(--mantine-color-dark-5)',
-        background: 'var(--mantine-color-dark-8)',
+        border: '1px solid var(--app-border)',
+        background: 'var(--app-panel-bg)',
         overflow: 'hidden',
       }}
     >
       <Group
         gap={0}
         style={{
-          borderBottom: '1px solid var(--mantine-color-dark-5)',
-          background: 'var(--mantine-color-dark-7)',
+          borderBottom: '1px solid var(--app-border)',
+          background: 'var(--app-panel-bg-raised)',
         }}
       >
         <Text
@@ -214,7 +214,7 @@ const FieldDiff: React.FC<{
           c="dimmed"
           fw={600}
           tt="uppercase"
-          style={{ flex: 1, padding: '6px 12px', borderLeft: '1px solid var(--mantine-color-dark-5)' }}
+          style={{ flex: 1, padding: '6px 12px', borderLeft: '1px solid var(--app-border)' }}
         >
           base
         </Text>
@@ -223,7 +223,7 @@ const FieldDiff: React.FC<{
           c="dimmed"
           fw={600}
           tt="uppercase"
-          style={{ flex: 1, padding: '6px 12px', borderLeft: '1px solid var(--mantine-color-dark-5)' }}
+          style={{ flex: 1, padding: '6px 12px', borderLeft: '1px solid var(--app-border)' }}
         >
           ours
         </Text>
@@ -238,8 +238,8 @@ const FieldDiff: React.FC<{
             gap={0}
             wrap="nowrap"
             style={{
-              borderBottom: '1px solid var(--mantine-color-dark-6)',
-              background: equal ? 'transparent' : 'var(--mantine-color-dark-7)',
+              borderBottom: '1px solid var(--app-border)',
+              background: equal ? 'transparent' : 'var(--app-panel-bg-raised)',
             }}
           >
             <Text
@@ -254,7 +254,7 @@ const FieldDiff: React.FC<{
               style={{
                 flex: 1,
                 padding: '6px 12px',
-                borderLeft: '1px solid var(--mantine-color-dark-5)',
+                borderLeft: '1px solid var(--app-border)',
                 background: !equal && b !== undefined ? 'rgba(255, 80, 80, 0.06)' : undefined,
               }}
             >
@@ -262,7 +262,7 @@ const FieldDiff: React.FC<{
                 style={{
                   background: 'transparent',
                   fontSize: 11,
-                  color: b === undefined ? 'var(--mantine-color-dark-3)' : undefined,
+                  color: b === undefined ? 'var(--app-text-faint)' : undefined,
                 }}
               >
                 {b === undefined ? '—' : JSON.stringify(b)}
@@ -272,7 +272,7 @@ const FieldDiff: React.FC<{
               style={{
                 flex: 1,
                 padding: '6px 12px',
-                borderLeft: '1px solid var(--mantine-color-dark-5)',
+                borderLeft: '1px solid var(--app-border)',
                 background: !equal && o !== undefined ? 'rgba(80, 200, 120, 0.06)' : undefined,
               }}
             >
@@ -280,7 +280,7 @@ const FieldDiff: React.FC<{
                 style={{
                   background: 'transparent',
                   fontSize: 11,
-                  color: o === undefined ? 'var(--mantine-color-dark-3)' : undefined,
+                  color: o === undefined ? 'var(--app-text-faint)' : undefined,
                 }}
               >
                 {o === undefined ? '—' : JSON.stringify(o)}
@@ -301,7 +301,7 @@ const EntryCard: React.FC<{ entry: DiffEntry; category: string }> = ({
   return (
     <Box
       style={{
-        borderBottom: '1px solid var(--mantine-color-dark-5)',
+        borderBottom: '1px solid var(--app-border)',
       }}
     >
       <Group
@@ -367,8 +367,8 @@ const DiffSummaryBar: React.FC<{ diff: StateDiff }> = ({ diff }) => {
       px="md"
       py={6}
       style={{
-        borderBottom: '1px solid var(--mantine-color-dark-5)',
-        background: 'var(--mantine-color-dark-8)',
+        borderBottom: '1px solid var(--app-border)',
+        background: 'var(--app-panel-bg)',
       }}
     >
       <Text size="sm" c="dimmed">
@@ -520,10 +520,10 @@ export const ChangesPage: React.FC = () => {
       <Group
         px="md"
         h={48}
-        style={{ borderBottom: '1px solid var(--mantine-color-dark-5)' }}
+        style={{ borderBottom: '1px solid var(--app-border)' }}
       >
         <GitBranch size={16} />
-        <Text size="sm" fw={500} c="white">
+        <Text size="sm" fw={500} c="var(--app-text)">
           Changes
         </Text>
         <Text size="sm" c="dimmed">

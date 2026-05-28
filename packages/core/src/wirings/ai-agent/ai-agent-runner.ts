@@ -81,7 +81,6 @@ export async function runAIAgent(
     runnerParams,
     maxSteps,
     missingRpcs,
-    workingMemoryJsonSchema,
     workingMemorySchemaName,
   } = await prepareAgentRun(agentName, input, params, sessionMap)
 
@@ -252,13 +251,7 @@ export async function runAIAgent(
           input.resourceId,
           memoryConfig,
           userMessage,
-          { text: '', steps: completedStepsForSave },
-          {
-            workingMemoryJsonSchema,
-            workingMemorySchemaName,
-            logger: singletonServices.logger,
-            schemaService: singletonServices.schema,
-          }
+          { text: '', steps: completedStepsForSave }
         )
 
         if (storage) {
@@ -338,12 +331,6 @@ export async function runAIAgent(
         ...result,
         text: outputText,
         uiSpec: structuredOutput.uiSpec,
-      },
-      {
-        workingMemoryJsonSchema,
-        workingMemorySchemaName,
-        logger: singletonServices.logger,
-        schemaService: singletonServices.schema,
       }
     )
 
@@ -703,13 +690,7 @@ async function continueAfterToolResultSync(
             run.resourceId,
             memoryConfig,
             null,
-            { text: '', steps: completedSteps },
-            {
-              workingMemoryJsonSchema,
-              workingMemorySchemaName,
-              logger: singletonServices.logger,
-              schemaService: singletonServices.schema,
-            }
+            { text: '', steps: completedSteps }
           )
         }
 
@@ -788,12 +769,6 @@ async function continueAfterToolResultSync(
       {
         ...result,
         text: outputText,
-      },
-      {
-        workingMemoryJsonSchema,
-        workingMemorySchemaName,
-        logger: singletonServices.logger,
-        schemaService: singletonServices.schema,
       }
     )
 

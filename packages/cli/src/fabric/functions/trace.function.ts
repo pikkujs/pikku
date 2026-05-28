@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { resolveApiContext } from '../lib/config.js'
-import { getRpc } from '../lib/http.js'
+import { getFabricRPC } from '../lib/http.js'
 
 export const FabricTraceInput = z.object({
   branch: z.string(),
@@ -45,7 +45,7 @@ export const FabricTrace = pikkuSessionlessFunc({
         'No fabric project linked. Run `pikku fabric link` first.'
       )
 
-    const rpc = getRpc({ apiUrl: ctx.apiUrl, token: ctx.token })
+    const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
     const res = await rpc.invoke('getTraceByStageKind', {
       projectId: ctx.projectId,
       branch,

@@ -28,7 +28,7 @@ const addTestAgent = (agentName: string) => {
     name: agentName,
     description: 'test agent',
     instructions: 'be helpful',
-    model: 'test-model',
+    model: 'test/test-model',
   }
 
   pikkuState(null, 'agent', 'agentsMeta')[agentName] = {
@@ -38,9 +38,6 @@ const addTestAgent = (agentName: string) => {
     workingMemorySchema: null,
   }
   pikkuState(null, 'agent', 'agents').set(agentName, agent)
-  pikkuState(null, 'models', 'config', {
-    models: { 'test-model': 'test/test-model' },
-  })
 }
 
 const makeStepResult = (
@@ -1212,7 +1209,7 @@ describe('resumeAIAgent', () => {
           args: { env: 'stage' },
         },
       ],
-      usage: { inputTokens: 0, outputTokens: 0, model: 'test-model' },
+      usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -1319,7 +1316,7 @@ describe('resumeAIAgent', () => {
           args: { env: 'prod' },
         },
       ],
-      usage: { inputTokens: 0, outputTokens: 0, model: 'test-model' },
+      usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
       createdAt: new Date(),
       updatedAt: new Date(),
     }

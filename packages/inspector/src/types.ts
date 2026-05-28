@@ -210,19 +210,6 @@ export type AddonConfig = {
   forceInclude?: boolean
 }
 
-export type ModelConfigEntry =
-  | string
-  | { model: string; temperature?: number; maxSteps?: number }
-
-export type InspectorModelConfig = {
-  models?: Record<string, ModelConfigEntry>
-  agentDefaults?: { temperature?: number; maxSteps?: number }
-  agentOverrides?: Record<
-    string,
-    { model?: string; temperature?: number; maxSteps?: number }
-  >
-}
-
 export type InspectorOptions = Partial<{
   setupOnly: boolean
   rootDir: string
@@ -243,7 +230,6 @@ export type InspectorOptions = Partial<{
   }
   tags: string[]
   manifest: VersionManifest
-  modelConfig: InspectorModelConfig
   oldProgram: ts.Program | undefined
 }>
 

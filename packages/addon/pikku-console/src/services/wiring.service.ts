@@ -1,4 +1,3 @@
-import { pikkuState } from '@pikku/core/internal'
 import type { MetaService } from '@pikku/core/services'
 import type { ChannelMeta as CoreChannelMeta } from '@pikku/core/channel'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
@@ -267,7 +266,6 @@ export interface PikkuMetaState {
   secretsMeta: Record<string, unknown>
   credentialsMeta: Record<string, unknown>
   variablesMeta: Record<string, unknown>
-  modelAliases: string[]
 }
 
 export interface AllMeta extends PikkuMetaState {
@@ -889,20 +887,6 @@ export class WiringService {
       countCli(program.commands)
     }
 
-    let modelAliases: string[] = []
-    try {
-      const modelsConfig =
-        pikkuState(null, 'models', 'config') ?? ({} as Record<string, unknown>)
-      modelAliases = Object.keys(
-        ((modelsConfig as Record<string, unknown>).models as Record<
-          string,
-          unknown
-        >) ?? {}
-      )
-    } catch {
-      // models config may not be available
-    }
-
     const counts: MetaCounts = {
       functions: Object.values(functions).length,
       workflows: Object.keys(workflows).length,
@@ -940,7 +924,6 @@ export class WiringService {
       secretsMeta,
       credentialsMeta,
       variablesMeta,
-      modelAliases,
       functionUsedBy,
       counts,
     }

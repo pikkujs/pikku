@@ -26,7 +26,7 @@ const addAgent = (agentName: string, overrides: Partial<CoreAIAgent> = {}) => {
     description: `${agentName} description`,
     goal: `${agentName} goal`,
     instructions: `${agentName} instructions`,
-    model: 'test-model',
+    model: 'test/test-model',
     ...overrides,
   }
 
@@ -37,9 +37,6 @@ const addAgent = (agentName: string, overrides: Partial<CoreAIAgent> = {}) => {
     outputSchema: null,
     workingMemorySchema: null,
   } as any
-  pikkuState(null, 'models', 'config', {
-    models: { 'test-model': 'test/test-model' },
-  } as any)
 }
 
 describe('ai-agent-prepare', () => {
@@ -84,7 +81,7 @@ describe('ai-agent-prepare', () => {
       description: 'addon',
       goal: 'addon goal',
       instructions: 'addon instructions',
-      model: 'test-model',
+      model: 'test/test-model',
     }
 
     pikkuState(null, 'addons', 'packages').set('support', {

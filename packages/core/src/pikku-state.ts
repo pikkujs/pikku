@@ -152,9 +152,6 @@ const createEmptyPackageState = (): PikkuPackageState => ({
     channelMiddleware: {},
     permissions: {},
   },
-  models: {
-    config: null,
-  },
   package: {
     factories: null,
     singletonServices: null,

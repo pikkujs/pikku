@@ -5,7 +5,7 @@ import {
   resolveApiContext,
   writeProjectConfig,
 } from '../lib/config.js'
-import { getRpc } from '../lib/http.js'
+import { getFabricRPC } from '../lib/http.js'
 
 export const FabricInitInput = z.object({
   repo: z.string(),
@@ -48,7 +48,7 @@ export const FabricInit = pikkuSessionlessFunc({
       )
     }
 
-    const rpc = getRpc({ apiUrl: ctx.apiUrl, token: ctx.token })
+    const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
     const result = await rpc.invoke('importProject', {
       repoUrl: repo,
       name,

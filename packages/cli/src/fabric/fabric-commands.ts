@@ -41,7 +41,10 @@ import {
 } from './functions/deploy-units.function.js'
 import { FabricStatus, renderStatus } from './functions/status.function.js'
 import { FabricErrors, renderErrors } from './functions/errors.function.js'
-import { FabricDbSchema, renderDbSchema } from './functions/db-schema.function.js'
+import {
+  FabricDbSchema,
+  renderDbSchema,
+} from './functions/db-schema.function.js'
 import { FabricRollback } from './functions/rollback.function.js'
 import { FabricSecretsSet } from './functions/secrets-set.function.js'
 import { FabricSecretsList } from './functions/secrets-list.function.js'
@@ -51,6 +54,7 @@ import { FabricTrace } from './functions/trace.function.js'
 import { FabricDomainsList } from './functions/domains-list.function.js'
 import { FabricDomainsAdd } from './functions/domains-add.function.js'
 import { FabricDomainsRemove } from './functions/domains-remove.function.js'
+import { FabricLLMKey, renderLLMKey } from './functions/llm-key.function.js'
 
 export const fabricCommands = defineCLICommands({
   login: pikkuCLICommand({
@@ -279,6 +283,30 @@ export const fabricCommands = defineCLICommands({
         description: 'Remove a custom domain from the production stage',
         options: {
           apiUrl: { description: 'Override the fabric-api URL for this call' },
+        },
+      }),
+    },
+  },
+  llm: {
+    description: 'Fabric AI gateway developer key commands',
+    subcommands: {
+      key: pikkuCLICommand({
+        func: FabricLLMKey,
+        render: renderLLMKey,
+        description: 'Mint or reuse a developer-scoped Fabric AI gateway key',
+        options: {
+          shell: {
+            description: 'Print shell export lines',
+            default: false,
+          },
+          env: {
+            description: 'Print .env-style key-value lines',
+            default: false,
+          },
+          json: {
+            description: 'Print machine-readable JSON',
+            default: false,
+          },
         },
       }),
     },

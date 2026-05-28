@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { resolveApiContext } from '../lib/config.js'
-import { getRpc } from '../lib/http.js'
+import { getFabricRPC } from '../lib/http.js'
 import { table, removed, dim } from '../lib/output.js'
 
 export const FabricErrorsInput = z.object({
@@ -28,9 +28,11 @@ export const FabricErrors = pikkuSessionlessFunc({
     if (!ctx.token)
       throw new Error('Not logged in. Run `pikku fabric login` first.')
     if (!ctx.projectId)
-      throw new Error('No fabric project linked. Run `pikku fabric link` first.')
+      throw new Error(
+        'No fabric project linked. Run `pikku fabric link` first.'
+      )
 
-    const rpc = getRpc({ apiUrl: ctx.apiUrl, token: ctx.token })
+    const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
     const { logs } = await rpc.invoke('getFabricLogsByStageKind', {
       projectId: ctx.projectId,
       branch,

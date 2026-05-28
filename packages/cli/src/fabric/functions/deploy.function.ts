@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { resolveApiContext } from '../lib/config.js'
-import { getRpc } from '../lib/http.js'
+import { getFabricRPC } from '../lib/http.js'
 import { assertNamedBranchDeploySafety, resolveRef } from '../lib/git.js'
 import { promptConfirm } from '../lib/prompt.js'
 import { added, changed, dim } from '../lib/output.js'
@@ -65,7 +65,14 @@ async function prepDeploy({ branch, production, ref }: DeployInput) {
   const safety = await assertNamedBranchDeploySafety(targetBranch)
   const resolved = ref ? ((await resolveRef(ref)) ?? ref) : safety.headSha
   const requestedRef = ref && resolved !== safety.headSha ? ref : undefined
-  return { ctx, projectId: ctx.projectId, targetBranch, resolved, requestedRef, safety }
+  return {
+    ctx,
+    projectId: ctx.projectId,
+    targetBranch,
+    resolved,
+    requestedRef,
+    safety,
+  }
 }
 
 export const FabricDeployPlan = pikkuSessionlessFunc({
@@ -102,7 +109,7 @@ export const FabricDeployApply = pikkuSessionlessFunc({
       }
     }
 
-    const rpc = getRpc({ apiUrl: ctx.apiUrl, token: ctx.token })
+    const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
     const result = await rpc.invoke('deployByStageKind', {
       projectId,
       branch: targetBranch,

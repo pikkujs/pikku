@@ -20,7 +20,7 @@ const addTestAgent = (agentName: string) => {
     name: agentName,
     description: 'test agent',
     instructions: 'be helpful',
-    model: 'test-model',
+    model: 'test/test-model',
   }
 
   pikkuState(null, 'agent', 'agentsMeta')[agentName] = {
@@ -30,9 +30,6 @@ const addTestAgent = (agentName: string) => {
     workingMemorySchema: null,
   }
   pikkuState(null, 'agent', 'agents').set(agentName, agent)
-  pikkuState(null, 'models', 'config', {
-    models: { 'test-model': 'test/test-model' },
-  })
 }
 
 const makeStepResult = (
@@ -431,7 +428,7 @@ describe('runAIAgent', () => {
         status: 'suspended',
         suspendReason: 'rpc-missing',
         missingRpcs: ['deployMissing'],
-        usage: { inputTokens: 0, outputTokens: 0, model: 'test-model' },
+        usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
         createdAt: createdRuns[0].createdAt,
         updatedAt: createdRuns[0].updatedAt,
       },
@@ -550,7 +547,7 @@ describe('runAIAgent', () => {
     assert.deepEqual(updates, [
       {
         status: 'completed',
-        usage: { inputTokens: 0, outputTokens: 0, model: 'test-model' },
+        usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
       },
     ])
   })
@@ -644,7 +641,7 @@ describe('runAIAgent', () => {
             args: { env: 'prod' },
           },
         ],
-        usage: { inputTokens: 4, outputTokens: 2, model: 'test-model' },
+        usage: { inputTokens: 4, outputTokens: 2, model: 'test/test-model' },
       },
     ])
     assert.equal(savedMessages.length, 2)
@@ -679,7 +676,7 @@ describe('resumeAIAgentSync', () => {
           threadId: 't',
           resourceId: 'r',
           status: 'completed',
-          usage: { inputTokens: 0, outputTokens: 0, model: 'test-model' },
+          usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
           createdAt: new Date(),
           updatedAt: new Date(),
         }),
@@ -698,7 +695,7 @@ describe('resumeAIAgentSync', () => {
           resourceId: 'r',
           status: 'suspended',
           pendingApprovals: [],
-          usage: { inputTokens: 0, outputTokens: 0, model: 'test-model' },
+          usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
           createdAt: new Date(),
           updatedAt: new Date(),
         }),
@@ -751,7 +748,7 @@ describe('resumeAIAgentSync', () => {
           args: JSON.stringify({ env: 'prod', optional: null }),
         },
       ],
-      usage: { inputTokens: 0, outputTokens: 0, model: 'test-model' },
+      usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -805,7 +802,7 @@ describe('resumeAIAgentSync', () => {
       { status: 'running' },
       {
         status: 'completed',
-        usage: { inputTokens: 5, outputTokens: 3, model: 'test-model' },
+        usage: { inputTokens: 5, outputTokens: 3, model: 'test/test-model' },
       },
     ])
   })
@@ -828,7 +825,7 @@ describe('resumeAIAgentSync', () => {
           args: { env: 'prod' },
         },
       ],
-      usage: { inputTokens: 0, outputTokens: 0, model: 'test-model' },
+      usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -931,7 +928,7 @@ describe('resumeAIAgentSync', () => {
           args: { env: 'prod' },
         },
       ],
-      usage: { inputTokens: 0, outputTokens: 0, model: 'test-model' },
+      usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
       createdAt: new Date(),
       updatedAt: new Date(),
     }
