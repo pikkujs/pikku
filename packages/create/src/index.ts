@@ -10,7 +10,7 @@ const logo = `
 `
 
 import chalk from 'chalk'
-import { input, select, confirm, Separator } from '@inquirer/prompts'
+import { input, select, Separator } from '@inquirer/prompts'
 import path from 'path'
 import { downloadTemplate } from 'giget'
 import { createSpinner } from 'nanospinner'
@@ -33,6 +33,9 @@ import { spawnSync } from 'child_process'
 import fs, { unlinkSync, writeFileSync } from 'fs'
 
 const BASE_URL = 'gh:pikkujs/pikku/templates'
+const DEFAULT_TEMPLATE = 'starter-template'
+const DEFAULT_PROJECT_NAME = 'my-app'
+const DEFAULT_FABRIC_APP = 'react-vite-mantine'
 
 const packageManagers = ['npm', 'yarn', 'pnpm'] as const
 
@@ -118,11 +121,6 @@ const templates = [
     supports: ['http', 'channel', 'scheduled'],
   },
   {
-    template: 'yarn-workspace',
-    description: 'The official yarn workspace',
-    supports: ['http', 'channel', 'scheduled', 'fullstack'],
-  },
-  {
     template: 'cli',
     description: 'A CLI application template',
     supports: ['cli'],
@@ -160,7 +158,7 @@ const templates = [
     supports: [],
   },
   {
-    template: 'fabric',
+    template: 'starter-template',
     description:
       'The opinionated Pikku Fabric starter — backend + SDK + frontend scaffolds + Cucumber e2e',
     supports: ['http', 'fullstack'],
@@ -177,6 +175,8 @@ interface CliOptions {
   packageManager: PackageManager
   yarnLink?: string
   stackblitz?: boolean
+  variations?: boolean
+  frontend?: string
 }
 
 // 🏗 Add CLI Flags with Commander.js
@@ -188,6 +188,8 @@ program
   .option('-p, --package-manager <packageManager>', 'Package manager')
   .option('--yarn-link <link>', 'Yarn link (for local pikku development)')
   .option('--stackblitz', 'Add StackBlitz configuration')
+  .option('--variations', 'Show all template variations')
+  .option('--frontend <frontend>', 'Frontend app to keep for fabric')
   .parse(process.argv)
 
 const cliOptions = program.opts()
@@ -340,7 +342,7 @@ async function setupTemplate(cliOptions: CliOptions) {
   console.log(chalk.bold(`cd ${name}`))
 }
 
-async function setupRepo(cliOptions: CliOptions, repoName: string) {
+async function cloneRepo(cliOptions: CliOptions, repoName: string) {
   const { version, name } = cliOptions
   const targetPath = path.join(process.cwd(), name)
   const versionRef = version ? `#${version}` : ''
@@ -377,6 +379,13 @@ async function setupRepo(cliOptions: CliOptions, repoName: string) {
     process.exit(1)
   }
 
+  return targetPath
+}
+
+async function setupRepo(cliOptions: CliOptions, repoName: string) {
+  const { name } = cliOptions
+  const targetPath = await cloneRepo(cliOptions, repoName)
+
   await installDependencies(targetPath, cliOptions)
 
   console.log(chalk.green('\n✅ Project setup complete!'))
@@ -386,6 +395,8 @@ async function setupRepo(cliOptions: CliOptions, repoName: string) {
 
 async function run() {
   const version = cliOptions.version || 'main'
+  const requestedTemplate =
+    cliOptions.template === 'fabric' ? 'starter-template' : cliOptions.template
 
   console.log(chalk.hex('#a863ee').bold(logo))
   console.log(
@@ -394,58 +405,60 @@ async function run() {
 
   const name =
     cliOptions.name ||
-    (await input({
-      message: 'Project name:',
-      default: cliOptions.name || 'my-app',
-    }))
+    (cliOptions.variations
+      ? await input({
+          message: 'Project name:',
+          default: cliOptions.name || DEFAULT_PROJECT_NAME,
+        })
+      : DEFAULT_PROJECT_NAME)
 
   const template: (typeof templates)[number]['template'] =
-    cliOptions.template ||
-    (await select({
-      message: 'Which template would you like to to use?',
-      choices: templates.map(({ template, description }) => ({
-        name: template,
-        value: template,
-        description,
-      })),
-    }))
+    requestedTemplate ||
+    (cliOptions.variations
+      ? await select({
+          message: 'Which template would you like to to use?',
+          choices: templates.map(({ template, description }) => ({
+            name: template,
+            value: template,
+            description,
+          })),
+        })
+      : DEFAULT_TEMPLATE)
 
   const packageManager =
-    template === 'yarn-workspace'
+    template === 'starter-template'
       ? 'yarn'
       : cliOptions.packageManager ||
-        (await select({
-          message: 'Which package manager do you want to use?',
-          choices: [
-            {
-              name: 'npm',
-              value: 'npm',
-              description: 'npm is the most popular package manager',
-            },
-            {
-              name: 'yarn',
-              value: 'yarn',
-              description: 'yarn is what pikku usually uses',
-            },
-            {
-              name: 'bun',
-              value: 'bun',
-              description: 'bun support is still experimental',
-            },
-            new Separator(),
-            {
-              name: 'pnpm',
-              value: 'pnpm',
-              disabled: '(pnpm is not available)',
-            },
-          ],
-        }))
+        (cliOptions.variations
+          ? await select({
+              message: 'Which package manager do you want to use?',
+              choices: [
+                {
+                  name: 'npm',
+                  value: 'npm',
+                  description: 'npm is the most popular package manager',
+                },
+                {
+                  name: 'yarn',
+                  value: 'yarn',
+                  description: 'yarn is what pikku usually uses',
+                },
+                {
+                  name: 'bun',
+                  value: 'bun',
+                  description: 'bun support is still experimental',
+                },
+                new Separator(),
+                {
+                  name: 'pnpm',
+                  value: 'pnpm',
+                  disabled: '(pnpm is not available)',
+                },
+              ],
+            })
+          : 'npm')
 
-  const install =
-    cliOptions.install ||
-    (await confirm({
-      message: 'Install dependencies?',
-    }))
+  const install = cliOptions.install || !cliOptions.variations
 
   const selectedOptions: CliOptions = {
     name,
@@ -455,13 +468,13 @@ async function run() {
     packageManager,
     yarnLink: cliOptions.yarnLink,
     stackblitz: cliOptions.stackblitz,
+    variations: cliOptions.variations,
+    frontend: cliOptions.frontend,
   }
 
-  if (template === 'yarn-workspace') {
-    await setupRepo(selectedOptions, 'yarn-workspace-starter')
-  } else if (template === 'nextjs-full') {
+  if (template === 'nextjs-full') {
     await setupRepo(selectedOptions, 'nextjs-app-starter')
-  } else if (template === 'fabric') {
+  } else if (template === 'starter-template') {
     await setupFabric(selectedOptions)
   } else {
     await setupTemplate(selectedOptions)
@@ -479,9 +492,7 @@ async function setupFabric(cliOptions: CliOptions) {
   // Clone the starter first so the picker reflects whatever apps the
   // template *actually* ships — avoids drift between this CLI and the
   // template repo when new scaffolds are added.
-  await setupRepo(cliOptions, 'starter-template')
-
-  const targetPath = path.join(process.cwd(), cliOptions.name)
+  const targetPath = await cloneRepo(cliOptions, 'starter-template')
   const appsDir = path.join(targetPath, 'apps')
 
   if (!fs.existsSync(appsDir)) {
@@ -504,13 +515,29 @@ async function setupFabric(cliOptions: CliOptions) {
 
   if (availableApps.length === 0) return
 
-  const selectedApp = await select({
-    message: 'Which frontend would you like to start with?',
-    choices: availableApps.map((id) => ({
-      name: fabricAppLabels[id] ?? id,
-      value: id,
-    })),
-  })
+  if (cliOptions.frontend && !availableApps.includes(cliOptions.frontend)) {
+    console.log(
+      chalk.red(
+        `Unknown frontend "${cliOptions.frontend}". Available options: ${availableApps.join(', ')}`
+      )
+    )
+    process.exit(1)
+  }
+
+  const selectedApp =
+    cliOptions.frontend && availableApps.includes(cliOptions.frontend)
+      ? cliOptions.frontend
+      : cliOptions.variations
+        ? await select({
+            message: 'Which frontend would you like to start with?',
+            choices: availableApps.map((id) => ({
+              name: fabricAppLabels[id] ?? id,
+              value: id,
+            })),
+          })
+        : availableApps.includes(DEFAULT_FABRIC_APP)
+          ? DEFAULT_FABRIC_APP
+          : availableApps[0]
 
   // Safe from path traversal: ids come from a directory listing inside
   // `appsDir`, never from user input or external config.
@@ -524,6 +551,20 @@ async function setupFabric(cliOptions: CliOptions) {
       `\nKept apps/${selectedApp} — other frontend scaffolds removed.`
     )
   )
+
+  await installDependencies(targetPath, cliOptions)
+
+  console.log(chalk.green('\n✅ Project setup complete!'))
+  console.log(`Run the following command to get started:\n`)
+  console.log(chalk.bold(`cd ${cliOptions.name}`))
+
+  if (cliOptions.install) {
+    console.log(chalk.blue('\n🚀 Starting dev server...'))
+    spawnSync('yarn', ['dev'], {
+      cwd: targetPath,
+      stdio: 'inherit',
+    })
+  }
 }
 
 run()
