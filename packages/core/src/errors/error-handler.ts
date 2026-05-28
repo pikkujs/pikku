@@ -33,7 +33,10 @@ export const addError = (
   error: any,
   { status, message, mcpCode }: ErrorDetails
 ) => {
-  pikkuState(null, 'misc', 'errors').set(error, { status, message, mcpCode })
+  pikkuState(null, 'misc', 'errors').set(
+    error,
+    mcpCode === undefined ? { status, message } : { status, message, mcpCode }
+  )
 }
 
 /**

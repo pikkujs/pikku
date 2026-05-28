@@ -77,6 +77,7 @@ describe('getErrorResponse', () => {
     const response = getErrorResponse(error)
     assert.deepStrictEqual(response, {
       status: 400,
+      mcpCode: -32600,
       message:
         'The server cannot or will not process the request due to client error (e.g., malformed request syntax).',
     })
@@ -87,6 +88,7 @@ describe('getErrorResponse', () => {
     const response = getErrorResponse(error)
     assert.deepStrictEqual(response, {
       status: 404,
+      mcpCode: -32601,
       message: 'The server cannot find the requested resource.',
     })
   })
