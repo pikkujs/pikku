@@ -179,3 +179,5 @@ Exact option names depend on the `@pikku/fetch` version — read
 - Don't call `usePikkuRPC()` outside a `<PikkuProvider>` — it throws.
 - Don't write a custom RPC client. The generated one already covers every
   exposed function with full types.
+- Don't hardcode user-facing strings. Every display string goes through an
+  i18n token — see **pikku-i18n** for the setup (it's English-only by default).
