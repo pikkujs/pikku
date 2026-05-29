@@ -84,15 +84,33 @@ if command -v bun >/dev/null 2>&1; then
   echo "Building native CLI binaries..."
   mkdir -p release/binaries
 
-  # Write a static entry point that bun can bundle without dynamic imports
-  cat > dist/bin/pikku-bin.mjs << 'ENTRY'
+  CLI_VERSION=$(node -p "require('./package.json').version")
+
+  # Write a static entry point that bun can bundle without dynamic imports.
+  # Version is baked in as a literal so package.json is not needed at runtime.
+  cat > dist/bin/pikku-bin.mjs << ENTRY
 process.removeAllListeners('warning')
 process.on('warning', (w) => {
   if (w.name === 'ExperimentalWarning' && w.message.includes('SQLite')) return
-  process.stderr.write(`${w.name}: ${w.message}\n`)
+  process.stderr.write(\`\${w.name}: \${w.message}\n\`)
 })
+async function checkForUpdate() {
+  if (process.env.CI || !process.stderr.isTTY) return
+  try {
+    const res = await fetch('https://registry.npmjs.org/@pikku/cli/latest', {
+      signal: AbortSignal.timeout(3000),
+    })
+    if (!res.ok) return
+    const { version: latest } = await res.json()
+    if (latest !== '${CLI_VERSION}') {
+      process.stderr.write(\`\n  Update available  ${CLI_VERSION} → \${latest}\n  brew upgrade pikku  or  npm install -g @pikku/cli\n\n\`)
+    }
+  } catch {}
+}
 import { PikkuCLI } from '../.pikku/cli/pikku-cli.gen.js'
+const updateCheck = checkForUpdate()
 await PikkuCLI(process.argv.slice(2))
+await updateCheck
 process.exit(0)
 ENTRY
 
