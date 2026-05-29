@@ -1,7 +1,0 @@
-src/
-node_modules/
-*.ts
-!dist/**/*.js
-tsconfig.json
-esbuild.js
-.gitignore
