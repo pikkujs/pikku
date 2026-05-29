@@ -167,10 +167,23 @@ export const manageTodos = pikkuFunc({
 ```typescript
 // start.ts
 import { PikkuMCPServer } from '@pikku/modelcontextprotocol'
+import mcpJSON from './.pikku/mcp/mcp.gen.json' with { type: 'json' }
+import './.pikku/pikku-bootstrap.gen.js'
 
-const server = new PikkuMCPServer(config, singletonServices, createWireServices)
+const config = await createConfig()
+const singletonServices = await createSingletonServices(config)
+
+const server = new PikkuMCPServer(
+  {
+    name: 'pikku-mcp-server',
+    version: '1.0.0',
+    mcpJSON,
+    capabilities: { logging: {}, tools: {}, resources: {}, prompts: {} },
+  },
+  singletonServices.logger
+)
 await server.init()
-await server.start()
+await server.connectStdio() // or: await server.connectHTTP({ port: 3000 })
 ```
 
 ## Complete Example

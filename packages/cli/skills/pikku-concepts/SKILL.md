@@ -158,16 +158,10 @@ import '../../functions/.pikku/pikku-bootstrap.gen.js' // Generated — register
 const config = await createConfig()
 const singletonServices = await createSingletonServices(config)
 
-// Pick your runtime:
-const server = new PikkuFastifyServer(
-  config,
-  singletonServices,
-  createWireServices
-)
-// or: new PikkuExpressServer(config, singletonServices, createWireServices)
-// or: pikkuAWSLambdaHandler(singletonServices)
-// or: PikkuCloudflareHandler(singletonServices)
-// or: pikkuNextHandler(singletonServices)
+// Pick your runtime (services come from global state via the bootstrap import):
+const server = new PikkuFastifyServer(config, singletonServices.logger)
+// or: new PikkuExpressServer(config, singletonServices.logger)
+// or: new PikkuUWSServer(config, singletonServices.logger)
 
 await server.init()
 await server.start()

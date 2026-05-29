@@ -218,7 +218,7 @@ wireHTTP({
 
 const getTodos = pikkuFunc({
   title: 'Get Todos',
-  func: async ({ db, channel }, {}) => {
+  func: async ({ db }, {}, { channel }) => {
     const todos = await db.getTodos()
 
     if (channel) {

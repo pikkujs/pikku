@@ -39,16 +39,16 @@ const content = new S3Content(
 )
 ```
 
-**Methods:**
+**Methods** (each takes a single arguments object including the `bucket`):
 
-- `signURL(url: string, dateLessThan: Date, dateGreaterThan?: Date): Promise<string>` — Sign a CloudFront URL
-- `signContentKey(key: string, dateLessThan: Date, dateGreaterThan?: Date): Promise<string>` — Sign a content key
-- `getUploadURL(Key: string, ContentType: string): Promise<{ uploadUrl, assetKey }>` — Get presigned upload URL
-- `readFile(Key: string): Promise<ReadableStream>` — Read file as stream
-- `readFileAsBuffer(Key: string): Promise<Buffer>` — Read file as buffer
-- `writeFile(Key: string, stream: ReadableStream): Promise<boolean>` — Write file from stream
-- `copyFile(Key: string, fromAbsolutePath: string): Promise<boolean>` — Copy local file to S3
-- `deleteFile(Key: string): Promise<boolean>` — Delete file
+- `signURL({ url, dateLessThan, dateGreaterThan? }): Promise<string>` — Sign a CloudFront URL
+- `signContentKey({ bucket, contentKey, dateLessThan, dateGreaterThan? }): Promise<string>` — Sign a content key
+- `getUploadURL({ bucket, fileKey, contentType, size? }): Promise<{ uploadUrl, assetKey, uploadMethod?, uploadHeaders? }>` — Get presigned upload URL
+- `readFile({ bucket, key }): Promise<ReadableStream | NodeJS.ReadableStream>` — Read file as stream
+- `readFileAsBuffer({ bucket, key }): Promise<Buffer>` — Read file as buffer
+- `writeFile({ bucket, key, stream }): Promise<boolean>` — Write file from stream
+- `copyFile({ bucket, key, fromAbsolutePath }): Promise<boolean>` — Copy local file to S3
+- `deleteFile({ bucket, key }): Promise<boolean>` — Delete file
 
 ### `SQSQueueService` (Queue)
 

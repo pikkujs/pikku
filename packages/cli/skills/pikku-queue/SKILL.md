@@ -228,9 +228,9 @@ wireQueueWorker({
 // Enqueue from another function
 export const registerUser = pikkuSessionlessFunc({
   title: 'Register User',
-  func: async ({ db, queue }, { email, name }) => {
+  func: async ({ db, queueService }, { email, name }) => {
     const user = await db.createUser({ email, name })
-    await queue.add('welcome-emails', { userId: user.id })
+    await queueService.add('welcome-emails', { userId: user.id })
     return { user }
   },
 })

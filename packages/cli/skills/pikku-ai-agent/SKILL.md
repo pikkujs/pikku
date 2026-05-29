@@ -38,7 +38,7 @@ import { pikkuAIAgent } from '#pikku'
 pikkuAIAgent({
   name: string,                  // Unique agent identifier
   description: string,           // What the agent does
-  instructions: string | string[],  // System prompt / behavior instructions
+  goal: string,                  // System prompt / behavior instructions
   model: string,                 // LLM model (e.g. 'openai/gpt-4o-mini')
   tools?: PikkuFunc[],           // Pikku functions the agent can call
   agents?: AIAgentConfig[],      // Sub-agents this agent can delegate to
@@ -115,7 +115,7 @@ await streamAIAgent(
 const todoAssistant = pikkuAIAgent({
   name: 'todo-assistant',
   description: 'A helpful assistant that manages todos',
-  instructions:
+  goal:
     'You help users manage their todo lists. Be concise and helpful.',
   model: 'openai/gpt-4o-mini',
   tools: [listTodos, createTodo, completeTodo],
@@ -190,7 +190,7 @@ export const completeTodo = pikkuFunc({
 const todoAssistant = pikkuAIAgent({
   name: 'todo-assistant',
   description: 'A helpful assistant that manages todos',
-  instructions: `You help users manage their todo lists.
+  goal: `You help users manage their todo lists.
     - Be concise and helpful
     - When creating todos, infer priority if not specified
     - When listing todos, summarize the results`,

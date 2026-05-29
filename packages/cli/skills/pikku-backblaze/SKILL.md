@@ -38,16 +38,16 @@ const content = new B2Content(
 )
 ```
 
-**Methods:**
+**Methods** (each takes a single arguments object including the `bucket`):
 
-- `signContentKey(key: string, dateLessThan: Date): Promise<string>` — Sign a content key
-- `signURL(url: string, dateLessThan: Date): Promise<string>` — Sign a URL
-- `getUploadURL(fileKey: string, contentType: string): Promise<{ uploadUrl, assetKey, uploadMethod?, uploadHeaders? }>` — Get upload URL
-- `writeFile(assetKey: string, stream: ReadableStream): Promise<boolean>` — Write file
-- `copyFile(assetKey: string, fromAbsolutePath: string): Promise<boolean>` — Copy local file to B2
-- `readFile(assetKey: string): Promise<ReadableStream>` — Read file as stream
-- `readFileAsBuffer(assetKey: string): Promise<Buffer>` — Read file as buffer
-- `deleteFile(fileName: string): Promise<boolean>` — Delete file
+- `signContentKey({ bucket, contentKey, dateLessThan, dateGreaterThan? }): Promise<string>` — Sign a content key
+- `signURL({ url, dateLessThan, dateGreaterThan? }): Promise<string>` — Sign a URL
+- `getUploadURL({ bucket, fileKey, contentType, size? }): Promise<{ uploadUrl, assetKey, uploadMethod?, uploadHeaders? }>` — Get upload URL
+- `writeFile({ bucket, key, stream }): Promise<boolean>` — Write file
+- `copyFile({ bucket, key, fromAbsolutePath }): Promise<boolean>` — Copy local file to B2
+- `readFile({ bucket, key }): Promise<ReadableStream | NodeJS.ReadableStream>` — Read file as stream
+- `readFileAsBuffer({ bucket, key }): Promise<Buffer>` — Read file as buffer
+- `deleteFile({ bucket, key }): Promise<boolean>` — Delete file
 
 ## Usage Patterns
 

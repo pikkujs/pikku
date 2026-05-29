@@ -260,7 +260,7 @@ import { addon } from '#pikku'
 export const todoAgent = pikkuAIAgent({
   name: 'todo-agent',
   description: 'Manages a todo list',
-  instructions: 'You help users manage their todos.',
+  goal: 'You help users manage their todos.',
   model: 'openai/gpt-4o',
   tools: [
     addon('todos:listTodos'),

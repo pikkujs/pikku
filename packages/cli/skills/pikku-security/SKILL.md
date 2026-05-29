@@ -130,10 +130,10 @@ const logRequest = pikkuMiddleware(async ({ logger }, wire, next) => {
 import { authBearer, authCookie, authAPIKey } from '@pikku/core/middleware'
 
 // JWT bearer token — reads Authorization header
-addHTTPMiddleware([authBearer()])
+addHTTPMiddleware('*', [authBearer()])
 
 // Cookie-based sessions — auto-refreshes JWT
-addHTTPMiddleware([
+addHTTPMiddleware('*', [
   authCookie({
     name: 'session',
     expiresIn: { value: 30, unit: 'day' },
@@ -142,7 +142,7 @@ addHTTPMiddleware([
 ])
 
 // API key — from x-api-key header or ?apiKey= query
-addHTTPMiddleware([authAPIKey({ source: 'all' })])
+addHTTPMiddleware('*', [authAPIKey({ source: 'all' })])
 ```
 
 ### Scoping: Where to Apply
