@@ -463,7 +463,7 @@ wireCLI({
         }),
       },
     },
-    tests: {
+    test: {
       description: 'Manage function tests',
       subcommands: {
         init: pikkuCLICommand({

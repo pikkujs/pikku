@@ -7,10 +7,13 @@
     "#pikku/*": "./.pikku/*"
   },
   "dependencies": {
+    "@cucumber/cucumber": "^11.0.0",
     "@pikku/core": "workspace:*",
+    "@pikku/cucumber": "workspace:*",
     "@pikku/jose": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
     "@pikku/templates-function-addon": "workspace:*",
+    "c8": "^10.0.0",
     "eventsource": "^4.1.0",
     "ws": "^8.19.0",
     "zod": "^4"
@@ -34,7 +37,7 @@
     "ncu": "npx npm-check-updates",
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "pikku": "pikku",
-    "test": "pikku && tsc && npx tsx src/start.ts && node --import tsx --test src/tests/cli-json-output.assert.ts src/functions/trigger/trigger.assert.ts",
+    "test": "pikku && tsc && npx tsx src/start.ts && node --import tsx --test src/tests/cli-json-output.assert.ts src/functions/trigger/trigger.assert.ts && pikku test coverage",
     "test:coverage": "rm -rf coverage && npx --yes c8@11.0.0 --reporter=lcov --report-dir coverage --exclude '.pikku/**' --exclude 'src/tests/**' yarn test"
   }
 }

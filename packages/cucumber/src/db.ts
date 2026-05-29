@@ -26,6 +26,7 @@ export function createDbUtils(options: {
   return {
     buildBaseDb() {
       if (baseDbPath) return baseDbPath
+      if (!options.migrationsDir) return ''
       scratchDir = mkdtempSync(join(tmpdir(), 'function-tests-db-'))
       const base = join(scratchDir, 'base.db')
       const db = new DatabaseSync(base)
@@ -36,7 +37,7 @@ export function createDbUtils(options: {
         for (const file of migrations) {
           db.exec(readFileSync(join(options.migrationsDir, file), 'utf8'))
         }
-        db.exec(readFileSync(options.seedFile, 'utf8'))
+        if (options.seedFile) db.exec(readFileSync(options.seedFile, 'utf8'))
       } finally {
         db.close()
       }
@@ -45,6 +46,7 @@ export function createDbUtils(options: {
     },
 
     freshScenarioDb() {
+      if (!options.migrationsDir) return ''
       if (!baseDbPath || !scratchDir) {
         throw new Error('buildBaseDb() must run before freshScenarioDb()')
       }
