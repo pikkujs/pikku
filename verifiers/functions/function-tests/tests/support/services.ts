@@ -5,7 +5,7 @@ import { createSingletonServices } from '../../../src/services.js'
 export const db = createDbUtils({ migrationsDir: '', seedFile: '' })
 
 export async function createStubServices(
-  _dbFile: string,
+  _dbFile: string | null,
   tracker: StubTracker
 ) {
   const injected = new Proxy({} as Record<string, unknown>, {

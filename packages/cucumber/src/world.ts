@@ -8,7 +8,7 @@ import { StubTracker } from './tracker.js'
 export type Persona = { name: string; session?: Record<string, unknown> }
 export type StubBundle = { services: unknown; kysely?: unknown }
 export type StubServicesFactory = (
-  dbFile: string,
+  dbFile: string | null,
   tracker: StubTracker
 ) => Promise<StubBundle>
 
@@ -16,7 +16,7 @@ export interface IFunctionWorld {
   tracker: StubTracker
   lastResult: unknown
   lastError: Error | undefined
-  init(dbFile: string): Promise<void>
+  init(dbFile: string | null): Promise<void>
   destroy(removeDb: (path: string) => void): Promise<void>
   verify(): void
   readRows(
@@ -59,14 +59,14 @@ export function createFunctionWorld(
     attach: unknown
   }) {
     private _bundle!: StubBundle
-    private _dbFile!: string
+    private _dbFile: string | null = null
     private _personas = new Map<string, Persona>()
     readonly tracker = new StubTracker()
 
     lastResult: unknown = undefined
     lastError: Error | undefined = undefined
 
-    async init(dbFile: string) {
+    async init(dbFile: string | null) {
       this._dbFile = dbFile
       this._bundle = await factory(dbFile, this.tracker)
     }

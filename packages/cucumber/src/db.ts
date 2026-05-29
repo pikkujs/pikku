@@ -10,8 +10,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 export interface DbUtils {
-  buildBaseDb(): string
-  freshScenarioDb(): string
+  buildBaseDb(): string | null
+  freshScenarioDb(): string | null
   removeScenarioDb(path: string): void
   teardownDb(): void
 }
@@ -26,7 +26,7 @@ export function createDbUtils(options: {
   return {
     buildBaseDb() {
       if (baseDbPath) return baseDbPath
-      if (!options.migrationsDir) return ''
+      if (!options.migrationsDir) return null
       scratchDir = mkdtempSync(join(tmpdir(), 'function-tests-db-'))
       const base = join(scratchDir, 'base.db')
       const db = new DatabaseSync(base)
@@ -46,7 +46,7 @@ export function createDbUtils(options: {
     },
 
     freshScenarioDb() {
-      if (!options.migrationsDir) return ''
+      if (!options.migrationsDir) return null
       if (!baseDbPath || !scratchDir) {
         throw new Error('buildBaseDb() must run before freshScenarioDb()')
       }
