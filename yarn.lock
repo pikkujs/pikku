@@ -5534,7 +5534,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/inspector@npm:^0.12.11, @pikku/inspector@npm:^0.12.8, @pikku/inspector@workspace:*, @pikku/inspector@workspace:packages/inspector":
+"@pikku/inspector@npm:^0.12.11, @pikku/inspector@workspace:*, @pikku/inspector@workspace:packages/inspector":
   version: 0.0.0-use.local
   resolution: "@pikku/inspector@workspace:packages/inspector"
   dependencies:
@@ -10941,13 +10941,6 @@ __metadata:
   version: 10.0.0
   resolution: "@types/uuid@npm:10.0.0"
   checksum: 10/e3958f8b0fe551c86c14431f5940c3470127293280830684154b91dc7eb3514aeb79fe3216968833cf79d4d1c67f580f054b5be2cd562bebf4f728913e73e944
-  languageName: node
-  linkType: hard
-
-"@types/vscode@npm:^1.85.0":
-  version: 1.109.0
-  resolution: "@types/vscode@npm:1.109.0"
-  checksum: 10/bf5402ed90b80b4de4817721e50c797dfc07a633677e20ac48b0038b5741918e9b188d7ee248728b73614f5a18070e3ab8b84132a20a8493638cb10b11ad1708
   languageName: node
   linkType: hard
 
@@ -19515,18 +19508,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pikku-vscode@workspace:packages/vscode-extension":
-  version: 0.0.0-use.local
-  resolution: "pikku-vscode@workspace:packages/vscode-extension"
-  dependencies:
-    "@pikku/core": "npm:^0.12.15"
-    "@pikku/inspector": "npm:^0.12.8"
-    "@types/vscode": "npm:^1.85.0"
-    esbuild: "npm:^0.24.0"
-    typescript: "npm:^5.9.0"
-  languageName: unknown
-  linkType: soft
-
 "pikku@workspace:packages/pikku":
   version: 0.0.0-use.local
   resolution: "pikku@workspace:packages/pikku"
@@ -22799,7 +22780,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:^5, typescript@npm:^5.7.2, typescript@npm:^5.7.3, typescript@npm:^5.9, typescript@npm:^5.9.0, typescript@npm:^5.9.3":
+"typescript@npm:^5, typescript@npm:^5.7.2, typescript@npm:^5.7.3, typescript@npm:^5.9, typescript@npm:^5.9.3":
   version: 5.9.3
   resolution: "typescript@npm:5.9.3"
   bin:
@@ -22829,7 +22810,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@npm%3A^5#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.7.2#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.7.3#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.9#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.9.0#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.9.3#optional!builtin<compat/typescript>":
+"typescript@patch:typescript@npm%3A^5#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.7.2#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.7.3#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.9#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.9.3#optional!builtin<compat/typescript>":
   version: 5.9.3
   resolution: "typescript@patch:typescript@npm%3A5.9.3#optional!builtin<compat/typescript>::version=5.9.3&hash=5786d5"
   bin:
