@@ -214,6 +214,14 @@ export type PikkuCLIInput = {
      * `nextBackendFile`. Required when `nextBackendTransport === 'worker-rpc'`.
      */
     nextBackendFetcherImport?: string
+    /**
+     * Emit a TanStack Start server-function shim into this file. The shim
+     * exports `makeApi(): PikkuRPC` — a typed caller over the generated RPC map
+     * for use in Start loaders, actions and components. It reads the API base
+     * URL from `import.meta.env.VITE_API_URL` (throws if unset). Requires
+     * `rpcWiringsFile` (where the `PikkuRPC` class is generated).
+     */
+    startServerFnsFile?: string
   }
 
   openAPI?: {

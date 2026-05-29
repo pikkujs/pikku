@@ -13,6 +13,7 @@ const CLIENT_FILE_KEYS = [
   'mcpJsonFile',
   'nextBackendFile',
   'nextHTTPFile',
+  'startServerFnsFile',
 ] as const
 
 export const getPikkuCLIConfig = async (

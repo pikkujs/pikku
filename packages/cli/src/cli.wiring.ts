@@ -3,6 +3,7 @@ import { pikkuFetch } from './functions/runtimes/fetch/index.js'
 import { pikkuWebSocketTyped } from './functions/runtimes/websocket/pikku-command-websocket-typed.js'
 import { pikkuRPCClient } from './functions/wirings/rpc/pikku-command-rpc-client.js'
 import { pikkuReactQuery } from './functions/wirings/rpc/pikku-command-react-query.js'
+import { pikkuTanStackStart } from './functions/runtimes/tanstack-start/pikku-command-tanstack-start.js'
 import { pikkuQueueService } from './functions/wirings/queue/pikku-command-queue-service.js'
 import { pikkuOpenAPI } from './functions/wirings/http/pikku-command-openapi.js'
 import { pikkuNext } from './functions/runtimes/nextjs/pikku-command-nextjs.js'
@@ -275,6 +276,10 @@ wireCLI({
     'react-query': pikkuCLICommand({
       func: pikkuReactQuery,
       description: 'Generate React Query hooks from RPC map',
+    }),
+    'tanstack-start': pikkuCLICommand({
+      func: pikkuTanStackStart,
+      description: 'Generate the TanStack Start server-function shim (makeApi)',
     }),
     realtime: pikkuCLICommand({
       func: pikkuRealtime,
