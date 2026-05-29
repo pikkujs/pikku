@@ -109,7 +109,10 @@ export class ContextAwareRPCService {
         ]
       }
     } else {
-      functionMeta = pikkuState(null, 'function', 'meta')[funcName]
+      const resolved = resolvePikkuFunction(funcName, this.packageName)
+      functionMeta = pikkuState(resolved.packageName, 'function', 'meta')[
+        resolved.pikkuFuncId
+      ]
     }
     if (!functionMeta) {
       throw new RPCNotFoundError(funcName)

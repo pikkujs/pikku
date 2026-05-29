@@ -244,6 +244,30 @@ describe('ContextAwareRPCService.rpc', () => {
 })
 
 describe('ContextAwareRPCService.rpcExposed', () => {
+  test('resolves unversioned exposed rpc names through latest rpc metadata', async () => {
+    pikkuState(null, 'rpc', 'meta').listCards = 'listCards@v2'
+    registerFunction(
+      'listCards@v2',
+      async (_services, data) => ({ data, version: 2 }),
+      {
+        expose: true,
+      }
+    )
+
+    const service = new ContextAwareRPCService(
+      createServices(),
+      {} as never,
+      {}
+    )
+
+    const result = await service.rpcExposed('listCards', { ok: true })
+
+    assert.deepEqual(result, {
+      data: { ok: true },
+      version: 2,
+    })
+  })
+
   test('throws when the function does not exist', async () => {
     const service = new ContextAwareRPCService(
       createServices(),
@@ -258,6 +282,7 @@ describe('ContextAwareRPCService.rpcExposed', () => {
   })
 
   test('throws ForbiddenError when the function is not exposed', async () => {
+    pikkuState(null, 'rpc', 'meta').hiddenFunc = 'hiddenFunc'
     registerFunction('hiddenFunc', async () => ({ ok: true }), {
       expose: false,
     })
