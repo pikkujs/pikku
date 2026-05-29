@@ -308,8 +308,44 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       }
 
       if (cli) {
-        await workflow.do('CLI entry', 'pikkuCLIEntry', null)
+        const cliChannelGenerated = await workflow.do(
+          'CLI entry',
+          'pikkuCLIEntry',
+          null
+        )
         allImports.push(config.cliWiringMetaFile, config.cliWiringsFile)
+
+        // pikkuCLIEntry can emit a wireChannel() source file for a
+        // CLI-over-channel entrypoint. That file is only discoverable by a
+        // fresh inspection, so re-inspect and regenerate the affected wirings
+        // here — otherwise the channel and its handler functions (cliRaw /
+        // cliHelp) are missed on a clean (single-pass) build and the bootstrap
+        // never registers them.
+        if (cliChannelGenerated) {
+          await workflow.do('Re-inspect after CLI channel', async () =>
+            getInspectorState(true)
+          )
+          const cliChannels = await workflow.do(
+            'Channels after CLI',
+            'pikkuCommandChannels',
+            null
+          )
+          await workflow.do('Functions after CLI', 'pikkuFunctions', null)
+          await workflow.do('Schemas after CLI', 'pikkuSchemas', null)
+          if (cliChannels) {
+            await workflow.do(
+              'Channels map after CLI',
+              'pikkuChannelsMap',
+              null
+            )
+            if (!channels) {
+              allImports.push(
+                config.channelsWiringMetaFile,
+                config.channelsWiringFile
+              )
+            }
+          }
+        }
       }
     }
 
