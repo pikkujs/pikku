@@ -209,6 +209,7 @@ jobs:
           HUSKY: '0'
       - name: Upload CLI native binaries to GitHub Release
         if: steps.changesets.outputs.published == 'true'
+        id: upload-binaries
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -223,6 +224,7 @@ jobs:
             echo "@pikku/cli was not published this run — skipping binary upload"
             exit 0
           fi
+          echo "cli_version=${cli_version}" >> "$GITHUB_OUTPUT"
           tag="@pikku/cli@${cli_version}"
           echo "Uploading binaries for $tag"
           for f in packages/cli/release/binaries/*; do
@@ -230,6 +232,47 @@ jobs:
             echo "  Uploading $(basename $f)"
             gh release upload "$tag" "$f" --clobber
           done
+      - name: Update Homebrew tap
+        if: steps.upload-binaries.outputs.cli_version != ''
+        shell: bash
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          CLI_VERSION="${{ steps.upload-binaries.outputs.cli_version }}"
+          ARM_SHA=$(sha256sum packages/cli/release/binaries/pikku-darwin-arm64 | cut -d' ' -f1)
+          X64_SHA=$(sha256sum packages/cli/release/binaries/pikku-darwin-x64 | cut -d' ' -f1)
+          ENCODED_TAG="%40pikku%2Fcli%40${CLI_VERSION}"
+
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/pikkujs/homebrew-pikku.git" tap
+          cd tap
+
+          mkdir -p Casks
+          cat > Casks/pikku.rb << CASK
+          cask "pikku" do
+            version "${CLI_VERSION}"
+
+            on_arm do
+              url "https://github.com/pikkujs/pikku/releases/download/${ENCODED_TAG}/pikku-darwin-arm64"
+              sha256 "${ARM_SHA}"
+              binary "pikku-darwin-arm64", target: "pikku"
+            end
+            on_intel do
+              url "https://github.com/pikkujs/pikku/releases/download/${ENCODED_TAG}/pikku-darwin-x64"
+              sha256 "${X64_SHA}"
+              binary "pikku-darwin-x64", target: "pikku"
+            end
+
+            name "Pikku"
+            desc "Code generation tool for type-safe backend development"
+            homepage "https://pikku.dev"
+          end
+          CASK
+
+          git config user.email "ci@pikku.dev"
+          git config user.name "Pikku CI"
+          git add Casks/pikku.rb
+          git commit -m "pikku ${CLI_VERSION}"
+          git push
 
   sync-templates-stackblitz:
     name: Sync Templates
