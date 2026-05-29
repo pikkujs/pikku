@@ -9,7 +9,6 @@ import {
   resolveNamespace,
   rpcService,
 } from './rpc-runner.js'
-import { ForbiddenError } from '../../errors/errors.js'
 
 const createLogger = () => ({
   debug: () => {},
@@ -281,7 +280,7 @@ describe('ContextAwareRPCService.rpcExposed', () => {
     )
   })
 
-  test('throws ForbiddenError when the function is not exposed', async () => {
+  test('throws RPCNotFoundError when the function is not exposed', async () => {
     pikkuState(null, 'rpc', 'meta').hiddenFunc = 'hiddenFunc'
     registerFunction('hiddenFunc', async () => ({ ok: true }), {
       expose: false,
@@ -295,7 +294,7 @@ describe('ContextAwareRPCService.rpcExposed', () => {
 
     await assert.rejects(
       () => service.rpcExposed('hiddenFunc', {}),
-      ForbiddenError
+      RPCNotFoundError
     )
   })
 

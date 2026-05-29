@@ -3,7 +3,6 @@ import type { SessionService } from '../../services/user-session-service.js'
 import type { CoreUserSession } from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
-import { ForbiddenError } from '../../errors/errors.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
 import type { PikkuRPC, ResolvedFunction } from './rpc-types.js'
 import { parseVersionedId } from '../../version.js'
@@ -118,7 +117,7 @@ export class ContextAwareRPCService {
       throw new RPCNotFoundError(funcName)
     }
     if (!functionMeta.expose) {
-      throw new ForbiddenError()
+      throw new RPCNotFoundError(funcName)
     }
     return await this.rpc(funcName, data)
   }
