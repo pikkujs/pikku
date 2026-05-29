@@ -297,6 +297,12 @@ export type PikkuCLIInput = {
 
   globalHTTPPrefix?: string
 
+  binary?: {
+    entrypoint: string
+    output: string
+    targets?: string[]
+  }
+
   deploy?: {
     providers: Record<string, string>
     defaultProvider?: string

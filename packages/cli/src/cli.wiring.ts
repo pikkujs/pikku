@@ -41,6 +41,7 @@ import {
   enableEvents,
 } from './functions/commands/enable.js'
 import { pikkuRealtime } from './functions/wirings/realtime/pikku-command-realtime.js'
+import { binary } from './functions/commands/binary.js'
 import { deployPlan } from './functions/commands/deploy-plan.js'
 import { deployApply } from './functions/commands/deploy-apply.js'
 import { deployInfo } from './functions/commands/deploy-info.js'
@@ -518,6 +519,17 @@ wireCLI({
         }),
       },
     },
+    binary: pikkuCLICommand({
+      func: binary,
+      description:
+        'Compile a TypeScript entrypoint to a self-contained native binary using bun build --compile',
+      options: {
+        compileTarget: {
+          description:
+            'Override compilation target (e.g. bun-linux-x64). Defaults to targets in pikku.config.json.',
+        },
+      },
+    }),
     deploy: {
       description: 'Deploy Pikku project to cloud infrastructure',
       subcommands: {

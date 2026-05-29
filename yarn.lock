@@ -6302,6 +6302,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/verifiers-binary@workspace:verifiers/binary":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-binary@workspace:verifiers/binary"
+  dependencies:
+    "@pikku/cli": "workspace:*"
+    "@types/node": "npm:^24"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/verifiers-deploy-azure@workspace:verifiers/deploy-azure":
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-deploy-azure@workspace:verifiers/deploy-azure"
