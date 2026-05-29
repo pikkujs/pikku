@@ -79,4 +79,32 @@ if [ -d "../console/dist" ]; then
   cp -r ../console/dist console-app
 fi
 
+# Build native CLI binaries for all platforms using bun --compile
+if command -v bun >/dev/null 2>&1; then
+  echo "Building native CLI binaries..."
+  mkdir -p release/binaries
+
+  # Write a static entry point that bun can bundle without dynamic imports
+  cat > dist/bin/pikku-bin.mjs << 'ENTRY'
+process.removeAllListeners('warning')
+process.on('warning', (w) => {
+  if (w.name === 'ExperimentalWarning' && w.message.includes('SQLite')) return
+  process.stderr.write(`${w.name}: ${w.message}\n`)
+})
+import { PikkuCLI } from '../.pikku/cli/pikku-cli.gen.js'
+await PikkuCLI(process.argv.slice(2))
+process.exit(0)
+ENTRY
+
+  for target in bun-linux-x64 bun-linux-arm64 bun-darwin-x64 bun-darwin-arm64; do
+    suffix="${target#bun-}"
+    echo "  → $target"
+    bun build --compile "--target=$target" "--outfile=release/binaries/pikku-$suffix" dist/bin/pikku-bin.mjs
+  done
+
+  echo "Native binaries written to release/binaries/"
+else
+  echo "Bun not found — skipping native binary build"
+fi
+
 echo "Build complete! ✓"
