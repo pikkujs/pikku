@@ -22,6 +22,57 @@ Use this skill as an execution checklist, not reference material.
 - Default locale is `en`. Adding a language = drop `i18n/<lang>.json`, import + register it in the config, done. Its content is then served under the `/<lang>` URL prefix; the default locale needs no prefix.
 - Keys are namespaced by area (`auth.login.title`, `board.createCta`). Interpolate with `{{name}}` and pass `t('key', { name })`.
 
+## Type safety — and why deploys block on i18n
+
+Tokens are **typed**, not stringly-typed. Each config augments i18next's
+`CustomTypeOptions` with `resources: { translation: typeof en }` (the block is in
+every config shape below). i18next flattens `typeof en` into a union of dot-path
+keys, so:
+
+- `t('auth.login.titel')` (typo) or `t('auth.removed')` (deleted key) is a **TypeScript error**, not a silent runtime `auth.removed` string.
+- An added locale registered as `de satisfies typeof en` fails to compile if `de.json` is missing keys or has drifted from `en.json`.
+
+This is enforced at deploy: the build pipeline runs each frontend's `tsc`
+(`yarn tsc` / `tsc --noEmit`) **before** building it, and a type error aborts the
+deploy. `vite build` does not type-check on its own, so this gate is the only
+thing standing between a broken/missing token and production. Keep a `"tsc":
+"tsc --noEmit"` script in every frontend's `package.json` so the gate uses it.
+
+The type gate catches *invalid* tokens but not *inlined* strings — a hardcoded
+`<h1>Welcome</h1>` compiles fine. Catching those is best-effort (the builder
+agent is told never to inline) plus the debug mode below.
+
+## i18n debug mode (find inlined strings)
+
+Each config registers an i18next `postProcessor` named `i18nDebug` that, when
+enabled, masks every *translated* string to block glyphs (`█`). The trick: with
+it on, anything still readable on screen is text that **never went through a
+token** — i.e. a hardcoded/inlined string. It's a visual leak detector for
+missing i18n, not a runtime feature, so it ships **off by default**.
+
+```ts
+export function isI18nDebug(): boolean {
+  if (typeof process !== 'undefined' && process.env?.I18N_DEBUG === '1') return true
+  if (typeof window === 'undefined') return false
+  const params = new URLSearchParams(window.location.search)
+  if (params.has('i18n-debug')) return params.get('i18n-debug') !== '0'
+  return window.localStorage?.getItem('i18n-debug') === '1'
+}
+
+const i18nDebugPostProcessor = {
+  type: 'postProcessor' as const,
+  name: 'i18nDebug',
+  process: (value: string) => (isI18nDebug() ? value.replace(/\S/g, '█') : value),
+}
+// register on the instance: `.use(i18nDebugPostProcessor)` and add
+// `postProcess: ['i18nDebug']` to `.init({ ... })`.
+```
+
+- **Client (Vite SPA/SSR):** toggle with `?i18n-debug` in the URL or `localStorage['i18n-debug'] = '1'`.
+- **Server (Next.js server components):** there is no per-request URL toggle — enable for a build with `I18N_DEBUG=1` (the helper only checks the env var server-side).
+
+All the bundled templates already wire this; mirror it when hand-wiring i18n in a new app. (A future e2e check can flip the flag and assert no unmasked text renders.)
+
 ## Config shape (client / SPA)
 
 `src/i18n/config.ts`:
@@ -30,6 +81,17 @@ Use this skill as an execution checklist, not reference material.
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import en from './en.json'
+
+// Typed tokens. i18next flattens this resource type into dot-path keys, so
+// `t('auth.login.title')` is checked and a typo/removed key is a compile error.
+declare module 'i18next' {
+  interface CustomTypeOptions {
+    defaultNS: 'translation'
+    resources: {
+      translation: typeof en
+    }
+  }
+}
 
 export const supportedLocales = ['en'] as const
 export type Locale = (typeof supportedLocales)[number]
@@ -89,6 +151,17 @@ Server components **cannot** call `useTranslation`, and they **must not** import
 import { createInstance } from 'i18next'
 import en from './en.json'
 
+// Typed tokens — same augmentation as the SPA config; `getT()('key')` is
+// checked against en.json's flattened dot-path keys.
+declare module 'i18next' {
+  interface CustomTypeOptions {
+    defaultNS: 'translation'
+    resources: {
+      translation: typeof en
+    }
+  }
+}
+
 export const supportedLocales = ['en'] as const
 export type Locale = (typeof supportedLocales)[number]
 export const defaultLocale: Locale = 'en'
@@ -124,7 +197,7 @@ A `'use client'` component that needs the hook uses the standard `initReactI18ne
 ## Adding a second language
 
 1. `i18n/de.json` mirroring `en.json`'s keys.
-2. In the config: `import de from './de.json'`, add `'de'` to `supportedLocales`, add `de: { translation: de }` to `resources`.
+2. In the config: `import de from './de.json'`, add `'de'` to `supportedLocales`, and register it as `de: { translation: de satisfies typeof en }`. The `satisfies typeof en` makes an incomplete or drifted `de.json` a **compile error** — which is what blocks a deploy on missing i18n (see below).
 3. `detectLocale` already resolves `/de/...`; wire the locale segment into routing so `/de` renders the German tree (the default locale stays prefix-free).
 
 ## What NOT to do
