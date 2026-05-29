@@ -43,6 +43,7 @@
     "test:e2e:ai": "yarn workspace @pikku/e2e test:ai",
     "test": "yarn workspaces foreach -A --exclude '@pikku/templates-*' --exclude '@pikku/verifiers-*' --exclude '@pikku/addon-console' --exclude '@pikku/console' run test",
     "test:coverage": "yarn workspaces foreach -A run test:coverage",
+    "test:bun": "bun test packages/core/src packages/openapi-parser/src packages/openapi-to-zod-schema/src packages/pikku/src packages/runtimes/cloudflare/src packages/schedule/src packages/services/kysely-bun-sqlite/src",
     "lint": "npx --yes oxlint@latest",
     "prettier": "npx --yes prettier . --write --log-level warn",
     "typedoc": "npx --yes typedoc --tsconfig tsconfig.typedoc.json",
@@ -80,7 +81,11 @@
     "typescript": "~6.0.3"
   },
   "resolutions": {
-    "esbuild": "0.27.2"
+    "esbuild": "0.27.2",
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.58.0"
+  },
+  "overrides": {
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.58.0"
   },
   "engines": {
     "node": ">=20"

@@ -1,7 +1,7 @@
 {
-  "name": "@pikku/uws",
-  "version": "0.12.4",
-  "description": "The pikku uws server",
+  "name": "@pikku/bun-server",
+  "version": "0.12.0",
+  "description": "Pikku server adapter for Bun (Bun.serve)",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",
@@ -9,28 +9,20 @@
   "type": "module",
   "scripts": {
     "tsc": "tsc",
-    "ncu": "npx npm-check-updates",
     "build": "tsc -b",
-    "release": "npm run build && npm test",
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",
     "test:coverage": "bash run-tests.sh --coverage",
-    "prepublishOnly": "yarn build"
+    "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
     "@pikku/core": "^0.12.9"
   },
-  "dependencies": {
-    "@pikku/uws-handler": "^0.12.2",
-    "@types/qs": "^6",
-    "qs": "^6.15.0",
-    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.58.0"
-  },
   "devDependencies": {
-    "@pikku/core": "^0.12.9",
+    "@types/bun": "latest",
     "typescript": "^5.9.3"
   },
   "engines": {
-    "node": ">=18"
+    "bun": ">=1.0.0"
   }
 }

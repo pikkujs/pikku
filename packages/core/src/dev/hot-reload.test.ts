@@ -80,6 +80,8 @@ const writeFunctionModule = async (
   await writeFile(join(dir, filename), `// ts trigger ${Date.now()}`)
 }
 
+const isBun = 'bun' in process.versions
+
 describe('pikkuDevReloader', { concurrency: false }, () => {
   let tmpDir: string
   let reloader: { close: () => void } | undefined
@@ -109,43 +111,47 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
     await rm(tmpDir, { recursive: true, force: true })
   })
 
-  test('should hot-reload a function and pick up new return value', async (t) => {
-    if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return
+  test(
+    'should hot-reload a function and pick up new return value',
+    { skip: isBun ? 'tsx esm dynamic reload not supported under bun' : false },
+    async () => {
+      addFunction('myFunc', {
+        func: async () => ({ version: 1 }),
+      })
 
-    addFunction('myFunc', {
-      func: async () => ({ version: 1 }),
-    })
+      await writeFunctionModule(tmpDir, 'myFunc.ts', '{ version: 1 }')
 
-    await writeFunctionModule(tmpDir, 'myFunc.ts', '{ version: 1 }')
+      reloader = await pikkuDevReloader({
+        srcDirectories: [tmpDir],
+        logger: mockLogger,
+        pikkuDir: tmpDir,
+      })
 
-    reloader = await pikkuDevReloader({
-      srcDirectories: [tmpDir],
-      logger: mockLogger,
-      pikkuDir: tmpDir,
-    })
+      const funcBefore = pikkuState(null, 'function', 'functions').get(
+        'myFunc'
+      )!
+      assert.deepEqual(await funcBefore.func({} as any, {}, {} as any), {
+        version: 1,
+      })
 
-    const funcBefore = pikkuState(null, 'function', 'functions').get('myFunc')!
-    assert.deepEqual(await funcBefore.func({} as any, {}, {} as any), {
-      version: 1,
-    })
+      await writeFunctionModule(tmpDir, 'myFunc.ts', '{ version: 2 }')
 
-    await writeFunctionModule(tmpDir, 'myFunc.ts', '{ version: 2 }')
+      await wait(300)
 
-    await wait(300)
+      const funcAfter = pikkuState(null, 'function', 'functions').get('myFunc')!
+      assert.deepEqual(await funcAfter.func({} as any, {}, {} as any), {
+        version: 2,
+      })
 
-    const funcAfter = pikkuState(null, 'function', 'functions').get('myFunc')!
-    assert.deepEqual(await funcAfter.func({} as any, {}, {} as any), {
-      version: 2,
-    })
-
-    const reloadLog = mockLogger
-      .getLogs()
-      .find(
-        (l) =>
-          l.message.includes('Hot-reloaded') && l.message.includes('myFunc')
-      )
-    assert.ok(reloadLog, 'Should log hot-reload message')
-  })
+      const reloadLog = mockLogger
+        .getLogs()
+        .find(
+          (l) =>
+            l.message.includes('Hot-reloaded') && l.message.includes('myFunc')
+        )
+      assert.ok(reloadLog, 'Should log hot-reload message')
+    }
+  )
 
   test('should not replace a function that is not registered', async (t) => {
     if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return
@@ -231,140 +237,150 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
     assert.equal(reloadLogs.length, 0)
   })
 
-  test('should hot-reload function used via HTTP wire', async (t) => {
-    if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return
+  test(
+    'should hot-reload function used via HTTP wire',
+    { skip: isBun ? 'tsx esm dynamic reload not supported under bun' : false },
+    async () => {
+      const sessionMiddleware = async (
+        _services: any,
+        wire: any,
+        next: any
+      ) => {
+        wire.setSession?.({ userId: 'test' } as any)
+        await next()
+      }
 
-    const sessionMiddleware = async (_services: any, wire: any, next: any) => {
-      wire.setSession?.({ userId: 'test' } as any)
-      await next()
-    }
-
-    pikkuState(null, 'function', 'meta', {
-      httpFunc: {
-        pikkuFuncId: 'httpFunc',
-      },
-    } as any)
-    pikkuState(null, 'http', 'meta', {
-      get: {
-        '/hot-test': {
+      pikkuState(null, 'function', 'meta', {
+        httpFunc: {
           pikkuFuncId: 'httpFunc',
-          route: '/hot-test',
-          method: 'get',
         },
-      },
-      post: {},
-      delete: {},
-      patch: {},
-      head: {},
-      put: {},
-      options: {},
-    })
+      } as any)
+      pikkuState(null, 'http', 'meta', {
+        get: {
+          '/hot-test': {
+            pikkuFuncId: 'httpFunc',
+            route: '/hot-test',
+            method: 'get',
+          },
+        },
+        post: {},
+        delete: {},
+        patch: {},
+        head: {},
+        put: {},
+        options: {},
+      })
 
-    addFunction('httpFunc', { func: async () => ({ value: 'old' }) })
+      addFunction('httpFunc', { func: async () => ({ value: 'old' }) })
 
-    wireHTTP({
-      route: '/hot-test',
-      method: 'get',
-      func: {
-        func: async () => ({ value: 'old' }),
-        middleware: [sessionMiddleware],
-      },
-    })
-    httpRouter.initialize()
+      wireHTTP({
+        route: '/hot-test',
+        method: 'get',
+        func: {
+          func: async () => ({ value: 'old' }),
+          middleware: [sessionMiddleware],
+        },
+      })
+      httpRouter.initialize()
 
-    const requestBefore = new PikkuMockRequest('/hot-test', 'get')
-    const responseBefore = await fetch(requestBefore)
-    assert.deepEqual(await responseBefore.json(), { value: 'old' })
+      const requestBefore = new PikkuMockRequest('/hot-test', 'get')
+      const responseBefore = await fetch(requestBefore)
+      assert.deepEqual(await responseBefore.json(), { value: 'old' })
 
-    await writeFunctionModule(tmpDir, 'httpFunc.ts', '{ value: "new" }')
+      await writeFunctionModule(tmpDir, 'httpFunc.ts', '{ value: "new" }')
 
-    reloader = await pikkuDevReloader({
-      srcDirectories: [tmpDir],
-      logger: mockLogger,
-      pikkuDir: tmpDir,
-    })
+      reloader = await pikkuDevReloader({
+        srcDirectories: [tmpDir],
+        logger: mockLogger,
+        pikkuDir: tmpDir,
+      })
 
-    await writeFunctionModule(tmpDir, 'httpFunc.ts', '{ value: "new" }')
+      await writeFunctionModule(tmpDir, 'httpFunc.ts', '{ value: "new" }')
 
-    await wait(300)
+      await wait(300)
 
-    const funcAfter = pikkuState(null, 'function', 'functions').get('httpFunc')!
-    assert.deepEqual(await funcAfter.func({} as any, {}, {} as any), {
-      value: 'new',
-    })
-  })
-
-  test('should hot-reload function used via scheduler wire', async (t) => {
-    if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return
-
-    const taskResult = { ref: 'initial' }
-
-    pikkuState(null, 'scheduler', 'meta')['hotTask'] = {
-      pikkuFuncId: 'hotTask',
-      name: 'hotTask',
-      schedule: '0 0 * * *',
+      const funcAfter = pikkuState(null, 'function', 'functions').get(
+        'httpFunc'
+      )!
+      assert.deepEqual(await funcAfter.func({} as any, {}, {} as any), {
+        value: 'new',
+      })
     }
-    pikkuState(null, 'function', 'meta')['hotTask'] = {
-      pikkuFuncId: 'hotTask',
-      inputSchemaName: null,
-      outputSchemaName: null,
-    }
+  )
 
-    addFunction('hotTask', {
-      func: async () => {
-        taskResult.ref = 'v1'
-      },
-      auth: false,
-    })
+  test(
+    'should hot-reload function used via scheduler wire',
+    { skip: isBun ? 'tsx esm dynamic reload not supported under bun' : false },
+    async () => {
+      const taskResult = { ref: 'initial' }
 
-    wireScheduler({
-      name: 'hotTask',
-      schedule: '0 0 * * *',
-      func: {
+      pikkuState(null, 'scheduler', 'meta')['hotTask'] = {
+        pikkuFuncId: 'hotTask',
+        name: 'hotTask',
+        schedule: '0 0 * * *',
+      }
+      pikkuState(null, 'function', 'meta')['hotTask'] = {
+        pikkuFuncId: 'hotTask',
+        inputSchemaName: null,
+        outputSchemaName: null,
+      }
+
+      addFunction('hotTask', {
         func: async () => {
           taskResult.ref = 'v1'
         },
         auth: false,
-      },
-    })
+      })
 
-    await runScheduledTask({ name: 'hotTask' })
-    assert.equal(taskResult.ref, 'v1')
+      wireScheduler({
+        name: 'hotTask',
+        schedule: '0 0 * * *',
+        func: {
+          func: async () => {
+            taskResult.ref = 'v1'
+          },
+          auth: false,
+        },
+      })
 
-    const jsV1 = `export const hotTask = { func: async () => { }, auth: false };\n`
-    await writeFile(join(tmpDir, 'hotTask.js'), jsV1)
-    await writeFile(join(tmpDir, 'hotTask.ts'), '// initial')
+      await runScheduledTask({ name: 'hotTask' })
+      assert.equal(taskResult.ref, 'v1')
 
-    reloader = await pikkuDevReloader({
-      srcDirectories: [tmpDir],
-      logger: mockLogger,
-      pikkuDir: tmpDir,
-    })
+      const jsV1 = `export const hotTask = { func: async () => { }, auth: false };\n`
+      await writeFile(join(tmpDir, 'hotTask.js'), jsV1)
+      await writeFile(join(tmpDir, 'hotTask.ts'), '// initial')
 
-    // Write updated function via file system and let the watcher pick it up
-    const jsV2 = `export const hotTask = { func: async () => { return { reloaded: true }; }, auth: false };\n`
-    await writeFile(join(tmpDir, 'hotTask.js'), jsV2)
-    await writeFile(join(tmpDir, 'hotTask.ts'), `// trigger ${Date.now()}`)
+      reloader = await pikkuDevReloader({
+        srcDirectories: [tmpDir],
+        logger: mockLogger,
+        pikkuDir: tmpDir,
+      })
 
-    await wait(300)
+      // Write updated function via file system and let the watcher pick it up
+      const jsV2 = `export const hotTask = { func: async () => { return { reloaded: true }; }, auth: false };\n`
+      await writeFile(join(tmpDir, 'hotTask.js'), jsV2)
+      await writeFile(join(tmpDir, 'hotTask.ts'), `// trigger ${Date.now()}`)
 
-    // Verify the function was reloaded via the watcher
-    const reloadLog = mockLogger
-      .getLogs()
-      .find(
-        (l) =>
-          l.message.includes('Hot-reloaded') && l.message.includes('hotTask')
-      )
-    assert.ok(reloadLog, 'Should log hot-reload for hotTask')
+      await wait(300)
 
-    // runScheduledTask uses runPikkuFunc which reads from the functions Map,
-    // so it will pick up the hot-reloaded function (no longer sets taskResult.ref)
-    await runScheduledTask({ name: 'hotTask' })
+      // Verify the function was reloaded via the watcher
+      const reloadLog = mockLogger
+        .getLogs()
+        .find(
+          (l) =>
+            l.message.includes('Hot-reloaded') && l.message.includes('hotTask')
+        )
+      assert.ok(reloadLog, 'Should log hot-reload for hotTask')
 
-    // The reloaded function no longer sets taskResult.ref, so it should
-    // still be 'v1' (proving the old function was replaced)
-    assert.equal(taskResult.ref, 'v1')
-  })
+      // runScheduledTask uses runPikkuFunc which reads from the functions Map,
+      // so it will pick up the hot-reloaded function (no longer sets taskResult.ref)
+      await runScheduledTask({ name: 'hotTask' })
+
+      // The reloaded function no longer sets taskResult.ref, so it should
+      // still be 'v1' (proving the old function was replaced)
+      assert.equal(taskResult.ref, 'v1')
+    }
+  )
 
   test('should hot-reload function used via queue wire', async () => {
     pikkuState(null, 'queue', 'meta')['hot-queue'] = {
@@ -416,64 +432,70 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
     assert.deepEqual(resultV2, { result: 'v2' })
   })
 
-  test('should debounce rapid file changes', async (t) => {
-    if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return
+  test(
+    'should debounce rapid file changes',
+    { skip: isBun ? 'tsx esm dynamic reload not supported under bun' : false },
+    async () => {
+      addFunction('debounceFunc', {
+        func: async () => ({ count: 0 }),
+      })
 
-    addFunction('debounceFunc', {
-      func: async () => ({ count: 0 }),
-    })
+      await writeFunctionModule(tmpDir, 'debounceFunc.ts', '{ count: 0 }')
 
-    await writeFunctionModule(tmpDir, 'debounceFunc.ts', '{ count: 0 }')
+      reloader = await pikkuDevReloader({
+        srcDirectories: [tmpDir],
+        logger: mockLogger,
+        pikkuDir: tmpDir,
+      })
 
-    reloader = await pikkuDevReloader({
-      srcDirectories: [tmpDir],
-      logger: mockLogger,
-      pikkuDir: tmpDir,
-    })
+      for (let i = 1; i <= 5; i++) {
+        await writeFunctionModule(tmpDir, 'debounceFunc.ts', `{ count: ${i} }`)
+        await wait(10)
+      }
 
-    for (let i = 1; i <= 5; i++) {
-      await writeFunctionModule(tmpDir, 'debounceFunc.ts', `{ count: ${i} }`)
-      await wait(10)
+      await wait(300)
+
+      const func = pikkuState(null, 'function', 'functions').get(
+        'debounceFunc'
+      )!
+      const result = await func.func({} as any, {}, {} as any)
+      assert.equal(result.count, 5)
     }
+  )
 
-    await wait(300)
+  test(
+    'should watch subdirectories',
+    { skip: isBun ? 'tsx esm dynamic reload not supported under bun' : false },
+    async () => {
+      const subDir = join(tmpDir, 'functions')
+      await mkdir(subDir)
 
-    const func = pikkuState(null, 'function', 'functions').get('debounceFunc')!
-    const result = await func.func({} as any, {}, {} as any)
-    assert.equal(result.count, 5)
-  })
+      addFunction('subFunc', {
+        func: async () => ({ nested: false }),
+      })
 
-  test('should watch subdirectories', async (t) => {
-    if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return
+      const jsContent = `export const subFunc = { func: async () => ({ nested: false }) };\n`
+      await writeFile(join(subDir, 'subFunc.js'), jsContent)
+      await writeFile(join(subDir, 'subFunc.ts'), '// initial')
 
-    const subDir = join(tmpDir, 'functions')
-    await mkdir(subDir)
+      reloader = await pikkuDevReloader({
+        srcDirectories: [tmpDir],
+        logger: mockLogger,
+        pikkuDir: tmpDir,
+      })
 
-    addFunction('subFunc', {
-      func: async () => ({ nested: false }),
-    })
+      const jsContentNew = `export const subFunc = { func: async () => ({ nested: true }) };\n`
+      await writeFile(join(subDir, 'subFunc.js'), jsContentNew)
+      await writeFile(join(subDir, 'subFunc.ts'), `// trigger ${Date.now()}`)
 
-    const jsContent = `export const subFunc = { func: async () => ({ nested: false }) };\n`
-    await writeFile(join(subDir, 'subFunc.js'), jsContent)
-    await writeFile(join(subDir, 'subFunc.ts'), '// initial')
+      await wait(300)
 
-    reloader = await pikkuDevReloader({
-      srcDirectories: [tmpDir],
-      logger: mockLogger,
-      pikkuDir: tmpDir,
-    })
-
-    const jsContentNew = `export const subFunc = { func: async () => ({ nested: true }) };\n`
-    await writeFile(join(subDir, 'subFunc.js'), jsContentNew)
-    await writeFile(join(subDir, 'subFunc.ts'), `// trigger ${Date.now()}`)
-
-    await wait(300)
-
-    const func = pikkuState(null, 'function', 'functions').get('subFunc')!
-    assert.deepEqual(await func.func({} as any, {}, {} as any), {
-      nested: true,
-    })
-  })
+      const func = pikkuState(null, 'function', 'functions').get('subFunc')!
+      assert.deepEqual(await func.func({} as any, {}, {} as any), {
+        nested: true,
+      })
+    }
+  )
 
   test('should properly clean up on close', async (t) => {
     if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return

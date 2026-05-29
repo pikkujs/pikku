@@ -1,4 +1,6 @@
-import { describe, test, afterEach, mock } from 'node:test'
+import { describe, test, afterEach } from 'node:test'
+
+const mockFn = <T extends (...args: any[]) => any>(fn: T): T => fn
 import * as assert from 'node:assert/strict'
 import { OAuth2Client } from './oauth2-client.js'
 import type { OAuth2Token, OAuth2AppCredential } from './oauth2.types.js'
@@ -95,7 +97,7 @@ describe('OAuth2Client', () => {
         APP_CREDS: defaultAppCredential,
       })
 
-      globalThis.fetch = mock.fn(async () =>
+      globalThis.fetch = mockFn(async () =>
         mockFetchResponse({
           access_token: 'new-access-token',
           refresh_token: 'new-refresh-token',
@@ -142,7 +144,7 @@ describe('OAuth2Client', () => {
         APP_CREDS: defaultAppCredential,
       })
 
-      globalThis.fetch = mock.fn(async () =>
+      globalThis.fetch = mockFn(async () =>
         mockFetchResponse({
           access_token: 'refreshed-token',
           expires_in: 3600,
@@ -184,7 +186,7 @@ describe('OAuth2Client', () => {
         APP_CREDS: defaultAppCredential,
       })
 
-      globalThis.fetch = mock.fn(async () =>
+      globalThis.fetch = mockFn(async () =>
         mockFetchResponse({
           access_token: 'refreshed-due-to-buffer',
           expires_in: 3600,
@@ -216,7 +218,7 @@ describe('OAuth2Client', () => {
 
       let capturedRequest: { url: string; options: RequestInit } | null = null
 
-      globalThis.fetch = mock.fn(
+      globalThis.fetch = mockFn(
         async (url: RequestInfo | URL, options?: RequestInit) => {
           capturedRequest = { url: url.toString(), options: options! }
           return mockFetchResponse({
@@ -260,7 +262,7 @@ describe('OAuth2Client', () => {
       })
 
       let fetchCallCount = 0
-      globalThis.fetch = mock.fn(async () => {
+      globalThis.fetch = mockFn(async () => {
         fetchCallCount++
         return mockFetchResponse({
           access_token: 'new-cached-token',
@@ -294,7 +296,7 @@ describe('OAuth2Client', () => {
         APP_CREDS: defaultAppCredential,
       })
 
-      globalThis.fetch = mock.fn(async () =>
+      globalThis.fetch = mockFn(async () =>
         mockFetchResponse({ error: 'invalid_grant' }, 400, false)
       )
 
@@ -340,7 +342,7 @@ describe('OAuth2Client', () => {
         APP_CREDS: defaultAppCredential,
       })
 
-      globalThis.fetch = mock.fn(async () =>
+      globalThis.fetch = mockFn(async () =>
         mockFetchResponse({
           access_token: 'new-persisted-token',
           refresh_token: 'new-refresh-token',
@@ -375,7 +377,7 @@ describe('OAuth2Client', () => {
       })
 
       let fetchCallCount = 0
-      globalThis.fetch = mock.fn(async () => {
+      globalThis.fetch = mockFn(async () => {
         fetchCallCount++
         // Simulate network delay
         await new Promise((resolve) => setTimeout(resolve, 50))
@@ -418,7 +420,7 @@ describe('OAuth2Client', () => {
       })
 
       // Response doesn't include refresh_token
-      globalThis.fetch = mock.fn(async () =>
+      globalThis.fetch = mockFn(async () =>
         mockFetchResponse({
           access_token: 'new-token',
           expires_in: 3600,
@@ -454,7 +456,7 @@ describe('OAuth2Client', () => {
 
       let capturedHeaders: Record<string, string> | null = null
 
-      globalThis.fetch = mock.fn(
+      globalThis.fetch = mockFn(
         async (_url: RequestInfo | URL, options?: RequestInit) => {
           capturedHeaders = options?.headers as Record<string, string>
           return mockFetchResponse({ data: 'test' })
@@ -483,7 +485,7 @@ describe('OAuth2Client', () => {
       })
 
       let requestCount = 0
-      globalThis.fetch = mock.fn(
+      globalThis.fetch = mockFn(
         async (url: RequestInfo | URL, options?: RequestInit) => {
           requestCount++
           const urlStr = url.toString()
@@ -530,7 +532,7 @@ describe('OAuth2Client', () => {
       })
 
       let apiRequestCount = 0
-      globalThis.fetch = mock.fn(async (url: RequestInfo | URL) => {
+      globalThis.fetch = mockFn(async (url: RequestInfo | URL) => {
         const urlStr = url.toString()
 
         if (urlStr === 'https://example.com/oauth/token') {
@@ -566,7 +568,7 @@ describe('OAuth2Client', () => {
         APP_CREDS: defaultAppCredential,
       })
 
-      globalThis.fetch = mock.fn(async () =>
+      globalThis.fetch = mockFn(async () =>
         mockFetchResponse({ error: 'forbidden' }, 403, false)
       )
 
@@ -590,7 +592,7 @@ describe('OAuth2Client', () => {
 
       let capturedHeaders: Record<string, string> | null = null
 
-      globalThis.fetch = mock.fn(
+      globalThis.fetch = mockFn(
         async (_url: RequestInfo | URL, options?: RequestInit) => {
           capturedHeaders = options?.headers as Record<string, string>
           return mockFetchResponse({ data: 'test' })
@@ -705,7 +707,7 @@ describe('OAuth2Client', () => {
 
       let capturedRequest: { url: string; options: RequestInit } | null = null
 
-      globalThis.fetch = mock.fn(
+      globalThis.fetch = mockFn(
         async (url: RequestInfo | URL, options?: RequestInit) => {
           capturedRequest = { url: url.toString(), options: options! }
           return mockFetchResponse({
@@ -739,7 +741,7 @@ describe('OAuth2Client', () => {
       })
 
       let fetchCallCount = 0
-      globalThis.fetch = mock.fn(async () => {
+      globalThis.fetch = mockFn(async () => {
         fetchCallCount++
         return mockFetchResponse({
           access_token: 'new-token',
@@ -768,7 +770,7 @@ describe('OAuth2Client', () => {
         APP_CREDS: defaultAppCredential,
       })
 
-      globalThis.fetch = mock.fn(async () =>
+      globalThis.fetch = mockFn(async () =>
         mockFetchResponse({ error: 'invalid_code' }, 400, false)
       )
 
@@ -786,7 +788,7 @@ describe('OAuth2Client', () => {
         APP_CREDS: defaultAppCredential,
       })
 
-      globalThis.fetch = mock.fn(async () =>
+      globalThis.fetch = mockFn(async () =>
         mockFetchResponse({
           access_token: 'token-only',
           // No refresh_token, expires_in, or scope
@@ -814,7 +816,7 @@ describe('OAuth2Client', () => {
       })
 
       // Response without access_token
-      globalThis.fetch = mock.fn(async () =>
+      globalThis.fetch = mockFn(async () =>
         mockFetchResponse({
           refresh_token: 'refresh-only',
           expires_in: 3600,
@@ -836,7 +838,7 @@ describe('OAuth2Client', () => {
       })
 
       // Response with non-string access_token
-      globalThis.fetch = mock.fn(async () =>
+      globalThis.fetch = mockFn(async () =>
         mockFetchResponse({
           access_token: 12345, // Number instead of string
           expires_in: 3600,
@@ -866,7 +868,7 @@ describe('OAuth2Client', () => {
       })
 
       // Error response with sensitive info
-      globalThis.fetch = mock.fn(async () =>
+      globalThis.fetch = mockFn(async () =>
         mockFetchResponse(
           {
             error: 'invalid_grant',
@@ -911,7 +913,7 @@ describe('OAuth2Client', () => {
       // Instead, we verify that the signal is being passed
       // by checking that an abort signal is present in the fetch call
       let signalPassed = false
-      globalThis.fetch = mock.fn(
+      globalThis.fetch = mockFn(
         async (_url: RequestInfo | URL, options?: RequestInit) => {
           signalPassed = options?.signal instanceof AbortSignal
           return mockFetchResponse({

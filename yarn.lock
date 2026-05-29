@@ -5207,6 +5207,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/bun-server@npm:^0.12.0, @pikku/bun-server@workspace:*, @pikku/bun-server@workspace:packages/runtimes/bun-server":
+  version: 0.0.0-use.local
+  resolution: "@pikku/bun-server@workspace:packages/runtimes/bun-server"
+  dependencies:
+    "@types/bun": "npm:latest"
+    typescript: "npm:^5.9.3"
+  peerDependencies:
+    "@pikku/core": ^0.12.9
+  languageName: unknown
+  linkType: soft
+
 "@pikku/cli@npm:*, @pikku/cli@npm:^0.12.0, @pikku/cli@npm:^0.12.1, @pikku/cli@npm:^0.12.18, @pikku/cli@npm:^0.12.20, @pikku/cli@npm:^0.12.21, @pikku/cli@workspace:*, @pikku/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@pikku/cli@workspace:packages/cli"
@@ -5331,6 +5342,7 @@ __metadata:
   resolution: "@pikku/core@workspace:packages/core"
   dependencies:
     "@standard-schema/spec": "npm:^1.1.0"
+    "@types/json-schema": "npm:^7.0.15"
     "@types/node": "npm:^24.11.0"
     cookie: "npm:^1.1.1"
     json-schema: "npm:^0.4.0"
@@ -5546,6 +5558,18 @@ __metadata:
     typescript: "npm:^5.9"
   peerDependencies:
     "@pikku/core": ^0.12.9
+  languageName: unknown
+  linkType: soft
+
+"@pikku/kysely-bun-sqlite@workspace:packages/services/kysely-bun-sqlite":
+  version: 0.0.0-use.local
+  resolution: "@pikku/kysely-bun-sqlite@workspace:packages/services/kysely-bun-sqlite"
+  dependencies:
+    "@pikku/kysely": "npm:^0.12.0"
+    "@pikku/kysely-sqlite": "npm:^0.12.0"
+    "@types/bun": "npm:latest"
+    kysely: "npm:^0.28.12"
+    typescript: "npm:^5.9"
   languageName: unknown
   linkType: soft
 
@@ -5911,6 +5935,19 @@ __metadata:
     "@types/node": "npm:^24"
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.21.0"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/templates-bun@workspace:templates/bun":
+  version: 0.0.0-use.local
+  resolution: "@pikku/templates-bun@workspace:templates/bun"
+  dependencies:
+    "@pikku/bun-server": "npm:^0.12.0"
+    "@pikku/core": "npm:^0.12.20"
+    "@pikku/schedule": "npm:^0.12.2"
+    "@types/bun": "npm:latest"
+    tslib: "npm:^2.8.1"
     typescript: "npm:^5.9"
   languageName: unknown
   linkType: soft
@@ -6284,7 +6321,7 @@ __metadata:
     "@types/qs": "npm:^6"
     qs: "npm:^6.15.0"
     typescript: "npm:^5.9.3"
-    uWebSockets.js: "uNetworking/uWebSockets.js#v20.58.0"
+    uWebSockets.js: "github:uNetworking/uWebSockets.js#v20.58.0"
   peerDependencies:
     "@pikku/core": ^0.12.9
   languageName: unknown
@@ -6299,6 +6336,22 @@ __metadata:
     "@pikku/templates-function-addon": "workspace:*"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/verifiers-bun-server@workspace:verifiers/bun-server":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-bun-server@workspace:verifiers/bun-server"
+  dependencies:
+    "@pikku/bun-server": "workspace:*"
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
+    "@pikku/schema-cfworker": "workspace:*"
+    "@types/node": "npm:^24"
+    "@types/ws": "npm:^8"
+    tsx: "npm:^4.21.0"
+    typescript: "npm:^5.9"
+    ws: "npm:^8.19.0"
   languageName: unknown
   linkType: soft
 
@@ -10264,6 +10317,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/bun@npm:latest":
+  version: 1.3.14
+  resolution: "@types/bun@npm:1.3.14"
+  dependencies:
+    bun-types: "npm:1.3.14"
+  checksum: 10/bdd178c546029358db5ce0f3953edcb4effb15f6f138f5cfdafd6c23d2b4662d3c950fcfdf3d31dc9f461056d5d85a01fcdc36a370bbd584fc44f826648b5886
+  languageName: node
+  linkType: hard
+
 "@types/chroma-js@npm:^3":
   version: 3.1.2
   resolution: "@types/chroma-js@npm:3.1.2"
@@ -12332,6 +12394,15 @@ __metadata:
     tslib: "npm:2.8.1"
     uuid: "npm:11.1.0"
   checksum: 10/53d34676b3ffacc7219af000dbe7e261737e840cdaddd4103e47e29547376667d49c78d6b4641e4b4c265eda7faf0f33dd4e20ff0bd3eee96c4dc025b5b321f1
+  languageName: node
+  linkType: hard
+
+"bun-types@npm:1.3.14":
+  version: 1.3.14
+  resolution: "bun-types@npm:1.3.14"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10/8c5d7edf6622c6efbbca210e7efc903385ab5057db6a7b9137d84713b2ec213e52a9269e79fd18a9f48fb6acd5f5ced104d7afb08319c39ff1ebd8abf744ec5c
   languageName: node
   linkType: hard
 
@@ -22788,7 +22859,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uWebSockets.js@uNetworking/uWebSockets.js#v20.58.0":
+"uWebSockets.js@github:uNetworking/uWebSockets.js#v20.58.0":
   version: 20.58.0
   resolution: "uWebSockets.js@https://github.com/uNetworking/uWebSockets.js.git#commit=ba110e817908b56c61d625b02f367b4ec9cfc8ab"
   checksum: 10/25d5885e410fe6f61cff9eb8739d273b70987f0dddc5251104ae2670636db7c00b26b4eda3733002cd1faca492e583acda1733621956f8f9be011d23d61cf839
