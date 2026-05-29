@@ -175,8 +175,8 @@ const createSingletonServices = pikkuServices(async (config) => {
 
 ### Built-in Services
 
-| Service                 | Package              | Purpose                     |
-| ----------------------- | -------------------- | --------------------------- |
+| Service                 | Package                | Purpose                     |
+| ----------------------- | ---------------------- | --------------------------- |
 | `ConsoleLogger`         | `@pikku/core/services` | Console-based logging       |
 | `JoseJWTService`        | `@pikku/jose`          | JWT sign/verify via jose    |
 | `LocalSecretService`    | `@pikku/core/services` | Local development secrets   |

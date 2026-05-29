@@ -259,17 +259,17 @@ expect(result.todos).toHaveLength(3)
 
 ### Service Packages
 
-| Package                  | Provides                           |
-| ------------------------ | ---------------------------------- |
-| `@pikku/jose`            | JWT (sign/verify) via jose library |
-| `@pikku/schema-ajv`      | Schema validation via AJV          |
-| `@pikku/schema-cfworker` | Schema validation for Cloudflare   |
-| `@pikku/pino`            | Structured logging via Pino        |
+| Package                  | Provides                                             |
+| ------------------------ | ---------------------------------------------------- |
+| `@pikku/jose`            | JWT (sign/verify) via jose library                   |
+| `@pikku/schema-ajv`      | Schema validation via AJV                            |
+| `@pikku/schema-cfworker` | Schema validation for Cloudflare                     |
+| `@pikku/pino`            | Structured logging via Pino                          |
 | `@pikku/kysely`          | Type-safe SQL via Kysely (PostgreSQL, SQLite, MySQL) |
-| `@pikku/redis`           | Redis client                       |
-| `@pikku/queue-bullmq`    | Job queues via BullMQ              |
-| `@pikku/queue-pg-boss`   | Job queues via PgBoss              |
-| `@pikku/aws-services`    | AWS SDK (SQS, DynamoDB, etc.)      |
+| `@pikku/redis`           | Redis client                                         |
+| `@pikku/queue-bullmq`    | Job queues via BullMQ                                |
+| `@pikku/queue-pg-boss`   | Job queues via PgBoss                                |
+| `@pikku/aws-services`    | AWS SDK (SQS, DynamoDB, etc.)                        |
 
 ## Key Differences from Traditional Frameworks
 

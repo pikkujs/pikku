@@ -70,11 +70,11 @@ const pikku = createPikku(PikkuFetch, PikkuRPC, PikkuRealtime, {
 
 The generated classes come from your `pikku.config.json`:
 
-| config field                       | generated file                                         |
-|------------------------------------|--------------------------------------------------------|
-| `clientFiles.fetchFile`            | typed HTTP client (`PikkuFetch` class)                 |
-| `clientFiles.rpcWiringsFile`       | RPC client (`PikkuRPC` class) calling all exposed fns  |
-| `clientFiles.realtimeFile`         | `PikkuRealtime` (websocket events + SSE + channels)    |
+| config field                 | generated file                                        |
+| ---------------------------- | ----------------------------------------------------- |
+| `clientFiles.fetchFile`      | typed HTTP client (`PikkuFetch` class)                |
+| `clientFiles.rpcWiringsFile` | RPC client (`PikkuRPC` class) calling all exposed fns |
+| `clientFiles.realtimeFile`   | `PikkuRealtime` (websocket events + SSE + channels)   |
 
 If a file isn't being generated, that field is missing from the config —
 add it and re-run `pikku all`.
@@ -125,7 +125,9 @@ import type { PikkuRealtime } from './pikku/realtime.gen'
 function TodoList() {
   const realtime = usePikkuRealtime<PikkuRealtime>()
   useEffect(() => {
-    return realtime.subscribe('todo-created', ({ todo }) => { /* ... */ })
+    return realtime.subscribe('todo-created', ({ todo }) => {
+      /* ... */
+    })
   }, [realtime])
   // ...
 }
@@ -137,15 +139,15 @@ helpers live in **pikku-realtime**.
 
 ## When to reach for what
 
-| Need                                          | Use                       |
-|-----------------------------------------------|---------------------------|
-| Render data, dedupe + cache                   | **usePikkuQuery** (react-query) |
-| Trigger a write, wait for result              | **usePikkuMutation** (react-query) |
-| Paginate                                      | **usePikkuInfiniteQuery** (react-query) |
-| One-off call from an event handler            | `usePikkuRPC()` direct |
-| Hit a REST endpoint (not RPC)                 | `usePikkuFetch()` |
-| Run a workflow                                | **pikku-workflows-client** |
-| Subscribe to events / SSE / channel           | `usePikkuRealtime()` (see **pikku-realtime**) |
+| Need                                | Use                                           |
+| ----------------------------------- | --------------------------------------------- |
+| Render data, dedupe + cache         | **usePikkuQuery** (react-query)               |
+| Trigger a write, wait for result    | **usePikkuMutation** (react-query)            |
+| Paginate                            | **usePikkuInfiniteQuery** (react-query)       |
+| One-off call from an event handler  | `usePikkuRPC()` direct                        |
+| Hit a REST endpoint (not RPC)       | `usePikkuFetch()`                             |
+| Run a workflow                      | **pikku-workflows-client**                    |
+| Subscribe to events / SSE / channel | `usePikkuRealtime()` (see **pikku-realtime**) |
 
 The first three live in your generated `api.gen.ts` (see the
 **pikku-react-query** skill). This skill covers the bottom four rows.

@@ -31,12 +31,21 @@ yarn add @pikku/ai-voice
 
 ```typescript
 interface STTService {
-  transcribe(audio: Uint8Array, options?: { language?: string; format?: string }): Promise<string>
+  transcribe(
+    audio: Uint8Array,
+    options?: { language?: string; format?: string }
+  ): Promise<string>
 }
 
 interface TTSService {
-  synthesize(text: string, options?: { voice?: string; format?: string }): Promise<Uint8Array>
-  synthesizeStream?(text: string, options?: { voice?: string; format?: string }): AsyncIterable<Uint8Array>
+  synthesize(
+    text: string,
+    options?: { voice?: string; format?: string }
+  ): Promise<Uint8Array>
+  synthesizeStream?(
+    text: string,
+    options?: { voice?: string; format?: string }
+  ): AsyncIterable<Uint8Array>
 }
 ```
 

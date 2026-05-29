@@ -64,10 +64,9 @@ describe('createTodo', () => {
       },
     }
 
-    const result = await createTodo.func(
-      mockServices as any,
-      { title: 'Buy milk' }
-    )
+    const result = await createTodo.func(mockServices as any, {
+      title: 'Buy milk',
+    })
 
     assert.equal(result.title, 'Buy milk')
     assert.equal(result.completed, false)
@@ -92,7 +91,12 @@ beforeEach(() => {
 
 test('should run function with middleware', async () => {
   const mockSingletonServices = {
-    logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+    logger: {
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      debug: () => {},
+    },
   } as any
 
   // Register function metadata
@@ -126,13 +130,18 @@ test('should run function with middleware', async () => {
 ```typescript
 test('middleware runs in order: wiring tags -> wiring -> func tags -> func', async () => {
   const mockSingletonServices = {
-    logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+    logger: {
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      debug: () => {},
+    },
   } as any
 
   const order: string[] = []
 
-  const createMiddleware = (name: string) =>
-    async (services: any, wire: any, next: Function) => {
+  const createMiddleware =
+    (name: string) => async (services: any, wire: any, next: Function) => {
       order.push(name)
       await next()
     }
@@ -148,7 +157,10 @@ test('middleware runs in order: wiring tags -> wiring -> func tags -> func', asy
   }
 
   addFunction('myFunc', {
-    func: async () => { order.push('main'); return 'ok' },
+    func: async () => {
+      order.push('main')
+      return 'ok'
+    },
     middleware: [createMiddleware('funcMiddleware')],
     tags: ['funcTag'],
   })
@@ -178,11 +190,16 @@ test('middleware runs in order: wiring tags -> wiring -> func tags -> func', asy
 ```typescript
 test('should reject when permission fails', async () => {
   const mockSingletonServices = {
-    logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+    logger: {
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      debug: () => {},
+    },
   } as any
 
   addPermission('admin', [
-    async () => false,  // Always deny
+    async () => false, // Always deny
   ])
 
   pikkuState(null, 'function', 'meta')['adminFunc'] = {
@@ -228,12 +245,15 @@ beforeEach(() => {
 
   // Set up singleton services in state
   pikkuState(null, 'package', 'singletonServices', mockSingletonServices)
-  pikkuState(null, 'package', 'factories', { createWireServices: async () => ({}) })
+  pikkuState(null, 'package', 'factories', {
+    createWireServices: async () => ({}),
+  })
 })
 
 test('GET /todos returns todo list', async () => {
   // Register route metadata and function
-  pikkuState(null, 'http', 'meta')['get'] = pikkuState(null, 'http', 'meta')['get'] || {}
+  pikkuState(null, 'http', 'meta')['get'] =
+    pikkuState(null, 'http', 'meta')['get'] || {}
   pikkuState(null, 'http', 'meta')['get']['/todos'] = {
     pikkuFuncId: 'listTodos',
     method: 'get',
@@ -296,7 +316,11 @@ import { createSingletonServices, createWireServices } from './services.js'
 
 const config = {}
 const singletonServices = await createSingletonServices(config)
-const server = new PikkuFastifyServer(config, singletonServices, createWireServices)
+const server = new PikkuFastifyServer(
+  config,
+  singletonServices,
+  createWireServices
+)
 await server.init()
 await server.start()
 ```
@@ -384,10 +408,9 @@ describe('createTodo', () => {
   })
 
   test('creates a todo with the given title', async () => {
-    const result = await createTodo.func(
-      { todoStore } as any,
-      { title: 'Buy milk' }
-    )
+    const result = await createTodo.func({ todoStore } as any, {
+      title: 'Buy milk',
+    })
 
     assert.equal(result.id, '1')
     assert.equal(result.title, 'Buy milk')
@@ -395,7 +418,9 @@ describe('createTodo', () => {
 
   test('increments IDs', async () => {
     await createTodo.func({ todoStore } as any, { title: 'First' })
-    const second = await createTodo.func({ todoStore } as any, { title: 'Second' })
+    const second = await createTodo.func({ todoStore } as any, {
+      title: 'Second',
+    })
 
     assert.equal(second.id, '2')
   })

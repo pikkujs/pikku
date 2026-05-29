@@ -9,7 +9,5 @@
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules"],
-  "references": [
-    { "path": "../core/tsconfig.json" }
-  ]
+  "references": [{ "path": "../core/tsconfig.json" }]
 }

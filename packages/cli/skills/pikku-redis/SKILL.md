@@ -31,15 +31,15 @@ yarn add @pikku/redis
 
 All services accept a Redis connection (ioredis `Redis` instance, `RedisOptions`, or connection string) in their constructor.
 
-| Service | Interface | Purpose |
-|---------|-----------|---------|
-| `RedisChannelStore` | `ChannelStore` | WebSocket channel state persistence |
-| `RedisEventHubStore` | `EventHubStore` | Event hub state persistence |
-| `RedisWorkflowService` | `PikkuWorkflowService` | Workflow definition storage |
-| `RedisWorkflowRunService` | `WorkflowRunService` | Workflow execution tracking |
-| `RedisDeploymentService` | `DeploymentService` | Deployment state management |
-| `RedisAgentRunService` | `AgentRunService` | Agent execution tracking |
-| `RedisSecretService` | `SecretService` | Encrypted secret storage (envelope encryption) |
+| Service                   | Interface              | Purpose                                        |
+| ------------------------- | ---------------------- | ---------------------------------------------- |
+| `RedisChannelStore`       | `ChannelStore`         | WebSocket channel state persistence            |
+| `RedisEventHubStore`      | `EventHubStore`        | Event hub state persistence                    |
+| `RedisWorkflowService`    | `PikkuWorkflowService` | Workflow definition storage                    |
+| `RedisWorkflowRunService` | `WorkflowRunService`   | Workflow execution tracking                    |
+| `RedisDeploymentService`  | `DeploymentService`    | Deployment state management                    |
+| `RedisAgentRunService`    | `AgentRunService`      | Agent execution tracking                       |
+| `RedisSecretService`      | `SecretService`        | Encrypted secret storage (envelope encryption) |
 
 ### Secret Service
 
@@ -65,7 +65,11 @@ await secrets.close(): Promise<void>
 ### Full Setup
 
 ```typescript
-import { RedisChannelStore, RedisWorkflowService, RedisSecretService } from '@pikku/redis'
+import {
+  RedisChannelStore,
+  RedisWorkflowService,
+  RedisSecretService,
+} from '@pikku/redis'
 
 const createSingletonServices = pikkuServices(async (config) => {
   const logger = new PinoLogger()

@@ -96,9 +96,10 @@ export const HttpConfiguration: React.FC<WiringPanelProps> = ({
   )
 }
 
-export const ChannelConfiguration: React.FC<
-  WiringPanelProps
-> = ({ wireId, metadata = {} }) => {
+export const ChannelConfiguration: React.FC<WiringPanelProps> = ({
+  wireId,
+  metadata = {},
+}) => {
   const { navigateInPanel } = usePanelContext()
   const middleware = metadata?.middleware || []
   const permissions = metadata?.permissions || []
@@ -210,7 +211,11 @@ export const ChannelConfiguration: React.FC<
                         type="dynamic"
                         badge="actions"
                         value={actionName}
-                        className={actionData?.pikkuFuncId ? classes.clickableText : undefined}
+                        className={
+                          actionData?.pikkuFuncId
+                            ? classes.clickableText
+                            : undefined
+                        }
                         onClick={
                           actionData?.pikkuFuncId
                             ? () =>
@@ -259,9 +264,10 @@ export const RpcConfiguration: React.FC<WiringPanelProps> = ({
   )
 }
 
-export const SchedulerConfiguration: React.FC<
-  WiringPanelProps
-> = ({ wireId, metadata = {} }) => {
+export const SchedulerConfiguration: React.FC<WiringPanelProps> = ({
+  wireId,
+  metadata = {},
+}) => {
   const middleware = metadata?.middleware || []
   const permissions = metadata?.permissions || []
 
@@ -656,9 +662,10 @@ export const McpConfiguration: React.FC<WiringPanelProps> = ({
   )
 }
 
-export const TriggerConfiguration: React.FC<
-  WiringPanelProps
-> = ({ wireId, metadata = {} }) => {
+export const TriggerConfiguration: React.FC<WiringPanelProps> = ({
+  wireId,
+  metadata = {},
+}) => {
   const middleware = metadata?.middleware || []
   const permissions = metadata?.permissions || []
 
@@ -697,9 +704,10 @@ export const TriggerConfiguration: React.FC<
   )
 }
 
-export const TriggerSourceConfiguration: React.FC<
-  WiringPanelProps
-> = ({ wireId, metadata = {} }) => {
+export const TriggerSourceConfiguration: React.FC<WiringPanelProps> = ({
+  wireId,
+  metadata = {},
+}) => {
   return (
     <Stack gap="lg">
       <Box>

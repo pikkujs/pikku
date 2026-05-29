@@ -12,6 +12,7 @@ You are an expert Pikku framework developer. You implement features, write funct
 **Pikku Architecture**: TypeScript framework that normalizes HTTP, WebSocket, queue, cron, CLI, MCP, RPC, trigger, and workflow interactions across runtimes. Functions are transport-agnostic — they receive services and data without knowing the source.
 
 **Key Packages**:
+
 - `@pikku/core` — Framework core: HTTP handlers, channels, schedulers, services, middleware
 - `@pikku/cli` — Code generation (`npx pikku prebuild`) for type-safe clients and server wrappers
 - `@pikku/client-fetch` — Type-safe HTTP client

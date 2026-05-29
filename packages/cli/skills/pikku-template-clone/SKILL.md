@@ -14,7 +14,7 @@ smallest changes and land them as one focused `chore: post-clone cleanup`
 commit, separate from any feature work.
 
 1. **Replace the template README.** The shipped `README.md` describes the
-   *template*, not the user's project — leaving it in place is misleading.
+   _template_, not the user's project — leaving it in place is misleading.
    Either delete it (`git rm README.md`) or rewrite it with the new project's
    name and purpose. Never ship a clone with the generic template README.
 2. **Keep the lockfile committed.** Templates ship a committed `yarn.lock`; do

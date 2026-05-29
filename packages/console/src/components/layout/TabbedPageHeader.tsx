@@ -18,9 +18,15 @@ interface TabbedPageHeaderProps {
   rightSection?: React.ReactNode
 }
 
-export const TabbedPageHeader: React.FC<
-  TabbedPageHeaderProps
-> = ({ icon: Icon, category, docsHref, tabs, activeTab, onTabChange, rightSection }) => {
+export const TabbedPageHeader: React.FC<TabbedPageHeaderProps> = ({
+  icon: Icon,
+  category,
+  docsHref,
+  tabs,
+  activeTab,
+  onTabChange,
+  rightSection,
+}) => {
   return (
     <Group
       gap="xs"

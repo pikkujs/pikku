@@ -107,6 +107,7 @@ Generate Kysely types after migrations: `yarn db:types` (uses kysely-codegen)
 Without this, `pikku deploy plan --provider cloudflare` uses the OSS adapter which lacks Fabric's workflow service wiring.
 
 The Fabric adapter automatically:
+
 - Injects `SQLiteKyselyWorkflowService` when `DATABASE_URL` is bound
 - Sets up the libSQL workflow queue
 - Wires `workflowQueues: true` for the scaffold
@@ -201,6 +202,7 @@ The `pikku-verify` tool catches this automatically.
 ## After every code change
 
 Always call the `pikku-verify` tool after modifying functions, wirings, or schemas. It runs:
+
 1. `pikku all` — regenerates all codegen, checks version compliance
 2. `tsc --noEmit` — validates TypeScript types
 

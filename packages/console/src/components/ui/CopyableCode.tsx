@@ -20,7 +20,12 @@ export const CopyableCode: React.FC<CopyableCodeProps> = ({
           {label}
         </Text>
       )}
-      <CodeHighlight code={code} language={language} copyLabel="Copy" copiedLabel="Copied" />
+      <CodeHighlight
+        code={code}
+        language={language}
+        copyLabel="Copy"
+        copiedLabel="Copied"
+      />
     </Box>
   )
 }

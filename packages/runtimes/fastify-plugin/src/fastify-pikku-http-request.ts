@@ -3,9 +3,9 @@ import type { FastifyRequest } from 'fastify'
 import type { HTTPMethod, PikkuHTTPRequest, PikkuQuery } from '@pikku/core/http'
 import { UnprocessableContentError } from '@pikku/core/errors'
 
-export class FastifyPikkuHTTPRequest<In = unknown>
-  implements PikkuHTTPRequest<In>
-{
+export class FastifyPikkuHTTPRequest<
+  In = unknown,
+> implements PikkuHTTPRequest<In> {
   #cookies: Partial<Record<string, string>> | undefined
   #params: Partial<Record<string, string | string[]>> = {}
 

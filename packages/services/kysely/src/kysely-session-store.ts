@@ -42,9 +42,7 @@ export class KyselySessionStore implements SessionStore {
       return undefined
     }
 
-    return (parseJson(row.session) ?? undefined) as
-      | CoreUserSession
-      | undefined
+    return (parseJson(row.session) ?? undefined) as CoreUserSession | undefined
   }
 
   async set(pikkuUserId: string, session: CoreUserSession): Promise<void> {

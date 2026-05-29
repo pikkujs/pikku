@@ -103,12 +103,7 @@ export const CredentialUsersTab: React.FC = () => {
                   {cred.displayName}
                 </Badge>
               ) : (
-                <Badge
-                  key={cred.name}
-                  size="sm"
-                  variant="light"
-                  color="gray"
-                >
+                <Badge key={cred.name} size="sm" variant="light" color="gray">
                   {cred.displayName}
                 </Badge>
               )

@@ -41,10 +41,12 @@ await jwt.init()
 ```
 
 **Constructor Parameters:**
+
 - `getSecrets` — Async function returning an array of `{ id, value }` key pairs. First key is used for signing; all keys are tried for verification (supports rotation).
 - `logger` — Optional logger instance.
 
 **Methods:**
+
 - `init(): Promise<void>` — Fetch and cache secrets. Call at startup.
 - `encode<T>(expiresIn: RelativeTimeInput, payload: T): Promise<string>` — Create a signed JWT.
 - `decode<T>(token: string): Promise<T>` — Decode a JWT payload without verification.
@@ -70,8 +72,8 @@ Supply multiple keys. The first is used for signing; all are tried for verificat
 
 ```typescript
 const jwt = new JoseJWTService(async () => [
-  { id: 'key-2', value: NEW_SECRET },   // signs with this
-  { id: 'key-1', value: OLD_SECRET },   // still verifies tokens signed with this
+  { id: 'key-2', value: NEW_SECRET }, // signs with this
+  { id: 'key-1', value: OLD_SECRET }, // still verifies tokens signed with this
 ])
 ```
 

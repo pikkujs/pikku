@@ -11,9 +11,7 @@ type TreeElement =
       filePath?: string
     }
 
-export class WiringsTreeProvider
-  implements vscode.TreeDataProvider<TreeElement>
-{
+export class WiringsTreeProvider implements vscode.TreeDataProvider<TreeElement> {
   private readonly _onDidChangeTreeData = new vscode.EventEmitter<
     TreeElement | undefined
   >()

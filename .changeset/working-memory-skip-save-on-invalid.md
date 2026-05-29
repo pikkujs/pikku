@@ -1,5 +1,5 @@
 ---
-"@pikku/core": patch
+'@pikku/core': patch
 ---
 
 Working memory is no longer persisted when the merged value fails schema

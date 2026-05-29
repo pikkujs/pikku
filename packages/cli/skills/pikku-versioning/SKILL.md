@@ -33,6 +33,7 @@ See `pikku-concepts` for the core mental model.
 When you need to introduce a breaking change, keep the old function as a pinned version and let the new one become the latest.
 
 **The pattern:**
+
 1. Create a new file `my-function-v1.function.ts` — export a variable with the `V1` suffix
 2. Set `override: 'myFunction'` — this is the contract key the manifest groups under
 3. Set `version: 1` — pins this as version 1 of the contract
@@ -41,7 +42,7 @@ When you need to introduce a breaking change, keep the old function as a pinned 
 ```typescript
 // my-function-v1.function.ts — old contract, kept for running workflows/agents
 export const getBookV1 = pikkuFunc({
-  override: 'getBook',   // REQUIRED — links this to the 'getBook' contract family
+  override: 'getBook', // REQUIRED — links this to the 'getBook' contract family
   version: 1,
   input: z.object({ bookId: z.string() }),
   output: z.object({ title: z.string() }),
@@ -132,7 +133,7 @@ jobs:
 ```typescript
 // create-todo-v1.function.ts — v1 locked contract
 export const createTodoV1 = pikkuSessionlessFunc({
-  override: 'createTodo',  // groups under 'createTodo' contract family
+  override: 'createTodo', // groups under 'createTodo' contract family
   version: 1,
   input: z.object({ title: z.string() }),
   output: z.object({ id: z.string(), title: z.string() }),
@@ -150,11 +151,13 @@ export const createTodo = pikkuSessionlessFunc({
     title: z.string(),
     priority: z.string(),
   }),
-  func: async ({ todoStore }, { title, priority }) => todoStore.add(title, priority),
+  func: async ({ todoStore }, { title, priority }) =>
+    todoStore.add(title, priority),
 })
 ```
 
 Result in manifest:
+
 ```json
 "createTodo": {
   "latest": 2,

@@ -64,9 +64,7 @@ const edgeTypes: EdgeTypes = {
   elk: ElkEdge,
 }
 
-const RenderFlow: React.FC<{ workflow: any }> = ({
-  workflow,
-}) => {
+const RenderFlow: React.FC<{ workflow: any }> = ({ workflow }) => {
   const { fitView } = useReactFlow()
 
   const { nodes: flowNodes, edges: initialEdges } = useMemo(() => {
@@ -118,7 +116,11 @@ const RenderFlow: React.FC<{ workflow: any }> = ({
       panOnDrag={false}
       proOptions={{ hideAttribution: true }}
     >
-      <Background color="transparent" variant={BackgroundVariant.Dots} size={0} />
+      <Background
+        color="transparent"
+        variant={BackgroundVariant.Dots}
+        size={0}
+      />
     </ReactFlow>
   )
 }

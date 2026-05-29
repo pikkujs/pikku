@@ -13,10 +13,7 @@ interface SleepNodeData {
 
 type HighlightType = 'focused' | 'referenced' | null
 
-export const SleepNode: React.FC<NodeProps<SleepNodeData>> = ({
-  data,
-  id,
-}) => {
+export const SleepNode: React.FC<NodeProps<SleepNodeData>> = ({ data, id }) => {
   const { openWorkflowStep } = usePanelContext()
   const workflowContext = useWorkflowContextSafe()
 

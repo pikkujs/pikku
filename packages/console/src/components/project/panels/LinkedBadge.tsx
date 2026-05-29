@@ -9,10 +9,7 @@ interface LinkedBadgeProps {
   kind: 'middleware' | 'permission'
 }
 
-export const LinkedBadge: React.FC<LinkedBadgeProps> = ({
-  item,
-  kind,
-}) => {
+export const LinkedBadge: React.FC<LinkedBadgeProps> = ({ item, kind }) => {
   const { meta } = usePikkuMeta()
   const { navigateInPanel } = usePanelContext()
   const metaKey =

@@ -22,7 +22,10 @@ interface AgentItem {
   data: any
 }
 
-const AgentsList: React.FC<{ extraColumns?: AgentExtraColumn[]; headerRight?: React.ReactNode }> = ({ extraColumns, headerRight }) => {
+const AgentsList: React.FC<{
+  extraColumns?: AgentExtraColumn[]
+  headerRight?: React.ReactNode
+}> = ({ extraColumns, headerRight }) => {
   const navigate = useNavigate()
   const { meta, loading } = usePikkuMeta()
 
@@ -116,9 +119,7 @@ const AgentsList: React.FC<{ extraColumns?: AgentExtraColumn[]; headerRight?: Re
   )
 }
 
-const AgentDetailView: React.FC<{ agentId: string }> = ({
-  agentId,
-}) => {
+const AgentDetailView: React.FC<{ agentId: string }> = ({ agentId }) => {
   const { meta } = usePikkuMeta()
   const { openAgent } = usePanelContext()
 
@@ -132,12 +133,16 @@ const AgentDetailView: React.FC<{ agentId: string }> = ({
   return <div />
 }
 
-export const AgentsPage: React.FC<{ extraColumns?: AgentExtraColumn[]; headerRight?: React.ReactNode }> = ({ extraColumns, headerRight }) => {
+export const AgentsPage: React.FC<{
+  extraColumns?: AgentExtraColumn[]
+  headerRight?: React.ReactNode
+}> = ({ extraColumns, headerRight }) => {
   const [searchParams] = useSearchParams()
   const agentId = searchParams.get('id')
   const { meta, loading } = usePikkuMeta()
 
-  const hasAgents = !loading && meta.agentsMeta && Object.keys(meta.agentsMeta).length > 0
+  const hasAgents =
+    !loading && meta.agentsMeta && Object.keys(meta.agentsMeta).length > 0
 
   if (!agentId && !hasAgents) {
     return <AgentsList extraColumns={extraColumns} headerRight={headerRight} />
@@ -146,7 +151,11 @@ export const AgentsPage: React.FC<{ extraColumns?: AgentExtraColumn[]; headerRig
   return (
     <PanelProvider>
       <ResizablePanelLayout hidePanel={!agentId}>
-        {agentId ? <AgentDetailView agentId={agentId} /> : <AgentsList extraColumns={extraColumns} headerRight={headerRight} />}
+        {agentId ? (
+          <AgentDetailView agentId={agentId} />
+        ) : (
+          <AgentsList extraColumns={extraColumns} headerRight={headerRight} />
+        )}
       </ResizablePanelLayout>
     </PanelProvider>
   )

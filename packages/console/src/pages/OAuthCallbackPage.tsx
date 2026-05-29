@@ -32,7 +32,8 @@ export const OAuthCallbackPage: React.FC = () => {
       return
     }
 
-    rpc.invoke('console:oauthExchangeTokens' as any, { code, state })
+    rpc
+      .invoke('console:oauthExchangeTokens' as any, { code, state })
       .then(() => {
         setStatus('success')
         if (window.opener) {

@@ -99,10 +99,7 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
   return (
     <Box className={classes.flexColumn} style={{ height: '100%' }}>
       {header}
-      <Box
-        className={classes.flexRow}
-        style={{ flex: 1, minHeight: 0 }}
-      >
+      <Box className={classes.flexRow} style={{ flex: 1, minHeight: 0 }}>
         {hasLeftPane && leftCollapsed && (
           <CollapsedSidebar
             side="left"
@@ -143,7 +140,9 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
               </Allotment.Pane>
             )}
             <Allotment.Pane>
-              <Box className={`${classes.flexColumn} ${classes.overflowAuto}`}>{children}</Box>
+              <Box className={`${classes.flexColumn} ${classes.overflowAuto}`}>
+                {children}
+              </Box>
             </Allotment.Pane>
             {hasRightPane && (
               <Allotment.Pane
@@ -152,7 +151,9 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
                 minSize={200}
                 preferredSize={400}
               >
-                <Box className={`${classes.flexColumn} ${classes.overflowAuto}`}>
+                <Box
+                  className={`${classes.flexColumn} ${classes.overflowAuto}`}
+                >
                   <PanelContainer
                     showTabs={showTabs}
                     emptyMessage={emptyPanelMessage}

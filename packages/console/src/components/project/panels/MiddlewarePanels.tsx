@@ -269,9 +269,10 @@ const GroupPanel: React.FC<{
   )
 }
 
-export const MiddlewareConfiguration: React.FC<
-  MiddlewarePanelProps
-> = ({ middlewareId, metadata = {} }) => {
+export const MiddlewareConfiguration: React.FC<MiddlewarePanelProps> = ({
+  middlewareId,
+  metadata = {},
+}) => {
   if (metadata._groupType) {
     return (
       <GroupPanel

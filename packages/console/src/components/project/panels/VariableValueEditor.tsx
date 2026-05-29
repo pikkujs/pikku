@@ -24,9 +24,10 @@ interface VariableValueEditorProps {
   schemaName: string | undefined
 }
 
-export const VariableValueEditor: React.FC<
-  VariableValueEditorProps
-> = ({ variableId, schemaName }) => {
+export const VariableValueEditor: React.FC<VariableValueEditorProps> = ({
+  variableId,
+  schemaName,
+}) => {
   const editable = useConsoleEditable()
   const [retrieved, setRetrieved] = useState(false)
   const [editing, setEditing] = useState(false)

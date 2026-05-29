@@ -5,9 +5,7 @@ type TreeElement =
   | { kind: 'tag'; tag: string }
   | { kind: 'function'; funcId: string; tag: string }
 
-export class FunctionsTreeProvider
-  implements vscode.TreeDataProvider<TreeElement>
-{
+export class FunctionsTreeProvider implements vscode.TreeDataProvider<TreeElement> {
   private readonly _onDidChangeTreeData = new vscode.EventEmitter<
     TreeElement | undefined
   >()

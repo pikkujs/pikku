@@ -58,7 +58,9 @@ export class ExpressPikkuHTTPResponse implements PikkuHTTPResponse {
   public arrayBuffer(data: any): this {
     if (this.#streaming) {
       this.#flushHeadersOnce()
-      this.res.write(`data: ${typeof data === 'string' ? data : JSON.stringify(data)}\n\n`)
+      this.res.write(
+        `data: ${typeof data === 'string' ? data : JSON.stringify(data)}\n\n`
+      )
       return this
     }
     this.#body = data

@@ -1,13 +1,5 @@
 import React from 'react'
-import {
-  Stack,
-  Text,
-  Group,
-  Table,
-  Card,
-  Box,
-  Anchor,
-} from '@mantine/core'
+import { Stack, Text, Group, Table, Card, Box, Anchor } from '@mantine/core'
 import { CodeHighlight } from '@mantine/code-highlight'
 import { GitBranch } from 'lucide-react'
 import { useLink } from '../../../router'
@@ -70,9 +62,7 @@ interface WiredTo {
   jobs: Array<{ type: string; id: string; name: string }>
 }
 
-const WorkflowWiring: React.FC<{ wiredTo: WiredTo }> = ({
-  wiredTo,
-}) => {
+const WorkflowWiring: React.FC<{ wiredTo: WiredTo }> = ({ wiredTo }) => {
   const Link = useLink()
   if (wiredTo.transports.length === 0 && wiredTo.jobs.length === 0) {
     return null
@@ -132,9 +122,9 @@ const WorkflowWiring: React.FC<{ wiredTo: WiredTo }> = ({
   )
 }
 
-export const WorkflowConfiguration: React.FC<
-  WorkflowPanelProps
-> = ({ workflowId }) => {
+export const WorkflowConfiguration: React.FC<WorkflowPanelProps> = ({
+  workflowId,
+}) => {
   const { workflow } = useWorkflowContext()
   const middleware = workflow?.middleware || []
   const permissions = workflow?.permissions || []
@@ -165,14 +155,11 @@ export const WorkflowConfiguration: React.FC<
         permissions={permissions}
         tags={tags}
       />
-
     </Stack>
   )
 }
 
-export const WorkflowNodes: React.FC<WorkflowPanelProps> = ({
-  workflowId,
-}) => {
+export const WorkflowNodes: React.FC<WorkflowPanelProps> = ({ workflowId }) => {
   const { workflow, setFocusedNode } = useWorkflowContext()
   const nodes = workflow?.nodes
   const hasNodes = nodes && Object.keys(nodes).length > 0
@@ -236,9 +223,7 @@ export const WorkflowNodes: React.FC<WorkflowPanelProps> = ({
   )
 }
 
-const WorkflowRunNodes: React.FC<WorkflowPanelProps> = ({
-  workflowId,
-}) => {
+const WorkflowRunNodes: React.FC<WorkflowPanelProps> = ({ workflowId }) => {
   const { workflow, setFocusedNode } = useWorkflowContext()
   const runContext = useWorkflowRunContextSafe()
   const { openWorkflowStep } = usePanelContext()
@@ -324,9 +309,7 @@ const WorkflowRunNodes: React.FC<WorkflowPanelProps> = ({
   )
 }
 
-export const WorkflowState: React.FC<WorkflowPanelProps> = ({
-  workflowId,
-}) => {
+export const WorkflowState: React.FC<WorkflowPanelProps> = ({ workflowId }) => {
   const { workflow } = useWorkflowContext()
   const context = workflow?.context
   const hasContext = context && Object.keys(context).length > 0
@@ -410,11 +393,7 @@ const RunInput: React.FC<{ input: unknown }> = ({ input }) => {
       <Card withBorder radius="md" padding={0}>
         <Card.Section p="md">
           {schema && input && typeof input === 'object' ? (
-            <SchemaForm
-              schema={schema}
-              initialData={input}
-              readOnly
-            />
+            <SchemaForm schema={schema} initialData={input} readOnly />
           ) : (
             <CodeHighlight
               code={JSON.stringify(input, null, 2)}
@@ -427,9 +406,9 @@ const RunInput: React.FC<{ input: unknown }> = ({ input }) => {
   )
 }
 
-export const WorkflowRunOverview: React.FC<
-  WorkflowPanelProps
-> = ({ workflowId }) => {
+export const WorkflowRunOverview: React.FC<WorkflowPanelProps> = ({
+  workflowId,
+}) => {
   const runContext = useWorkflowRunContextSafe()
   const runData = runContext?.runData
 
@@ -573,7 +552,10 @@ export const WorkflowRunOverview: React.FC<
           <SectionLabel>Output</SectionLabel>
           <Card withBorder radius="md" padding={0}>
             <Card.Section p="md">
-              <CodeHighlight code={JSON.stringify(runData.output, null, 2)} language="json" />
+              <CodeHighlight
+                code={JSON.stringify(runData.output, null, 2)}
+                language="json"
+              />
             </Card.Section>
           </Card>
         </Stack>

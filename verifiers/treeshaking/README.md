@@ -75,8 +75,8 @@ This project verifies that Pikku's tree-shaking functionality works correctly by
 
 ### Wire Filters
 
-| Filter         | Expected Services                               | Rationale                                                              |
-| -------------- | ----------------------------------------------- | ---------------------------------------------------------------------- |
+| Filter         | Expected Services                               | Rationale                                             |
+| -------------- | ----------------------------------------------- | ----------------------------------------------------- |
 | `--wires=http` | analytics, email, logger, payment, sms, storage | Only direct HTTP wirings are selected + wire services |
 
 ### HTTP Method Filters

@@ -9,7 +9,10 @@ import {
   Card,
 } from '@mantine/core'
 import { CodeHighlight } from '@mantine/code-highlight'
-import { useWorkflowNode, useWorkflowContext } from '../../../context/WorkflowContext'
+import {
+  useWorkflowNode,
+  useWorkflowContext,
+} from '../../../context/WorkflowContext'
 import { useOutputSchema } from '../../../hooks/useWirings'
 import { SchemaViewer } from '../../ui/SchemaViewer'
 import { PikkuBadge } from '../../ui/PikkuBadge'
@@ -161,7 +164,9 @@ const parseInputValue = (value: any): ParsedInputValue => {
   if (typeof value === 'object') {
     return {
       type: '$static',
-      displayValue: <CodeHighlight code={JSON.stringify(value, null, 2)} language="json" />,
+      displayValue: (
+        <CodeHighlight code={JSON.stringify(value, null, 2)} language="json" />
+      ),
     }
   }
 
@@ -175,9 +180,9 @@ const parseInputValue = (value: any): ParsedInputValue => {
   }
 }
 
-export const WorkflowStepConfiguration: React.FC<
-  WorkflowStepPanelProps
-> = ({ stepId }) => {
+export const WorkflowStepConfiguration: React.FC<WorkflowStepPanelProps> = ({
+  stepId,
+}) => {
   const node = useWorkflowNode(stepId)
   const stepType = node?.flow || (node?.rpcName ? 'rpc' : 'unknown')
 
@@ -187,7 +192,10 @@ export const WorkflowStepConfiguration: React.FC<
       <Card withBorder radius="md" padding={0}>
         <Card.Section p="md">
           {node?.options ? (
-            <CodeHighlight code={JSON.stringify(node.options, null, 2)} language="json" />
+            <CodeHighlight
+              code={JSON.stringify(node.options, null, 2)}
+              language="json"
+            />
           ) : (
             <EmptyState />
           )}
@@ -197,9 +205,9 @@ export const WorkflowStepConfiguration: React.FC<
   )
 }
 
-export const WorkflowStepInput: React.FC<
-  WorkflowStepPanelProps
-> = ({ stepId }) => {
+export const WorkflowStepInput: React.FC<WorkflowStepPanelProps> = ({
+  stepId,
+}) => {
   const node = useWorkflowNode(stepId)
   const { findNodeByOutputVar, setReferencedNode } = useWorkflowContext()
   const input = node?.input
@@ -451,9 +459,9 @@ export const WorkflowStepOutput: React.FC<
   )
 }
 
-export const WorkflowStepBranches: React.FC<
-  WorkflowStepPanelProps
-> = ({ stepId }) => {
+export const WorkflowStepBranches: React.FC<WorkflowStepPanelProps> = ({
+  stepId,
+}) => {
   const node = useWorkflowNode(stepId)
   const flowType = node?.flow
 

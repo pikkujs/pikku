@@ -60,14 +60,17 @@ export const usePikkuAgent = <
   RPC extends AgentRPC = AgentRPC,
   Name extends string = string,
 >(
-  agentName: Name,
+  agentName: Name
 ) => {
   const rpc = usePikkuRPC<RPC>()
 
   return {
-    run: (input: Parameters<RPC['agent']['run']>[1]) => rpc.agent.run(agentName, input),
-    stream: (input: Parameters<RPC['agent']['stream']>[1]) => rpc.agent.stream(agentName, input),
-    approve: (input: Parameters<RPC['agent']['approve']>[1]) => rpc.agent.approve(agentName, input),
+    run: (input: Parameters<RPC['agent']['run']>[1]) =>
+      rpc.agent.run(agentName, input),
+    stream: (input: Parameters<RPC['agent']['stream']>[1]) =>
+      rpc.agent.stream(agentName, input),
+    approve: (input: Parameters<RPC['agent']['approve']>[1]) =>
+      rpc.agent.approve(agentName, input),
   }
 }
 
@@ -75,14 +78,17 @@ export const usePikkuWorkflow = <
   RPC extends WorkflowRPC = WorkflowRPC,
   Name extends string = string,
 >(
-  workflowName: Name,
+  workflowName: Name
 ) => {
   const rpc = usePikkuRPC<RPC>()
 
   return {
-    start: (input: Parameters<RPC['startWorkflow']>[1]) => rpc.startWorkflow(workflowName, input),
-    run: (input: Parameters<RPC['runWorkflow']>[1]) => rpc.runWorkflow(workflowName, input),
-    status: (runId: Parameters<RPC['workflowStatus']>[1]) => rpc.workflowStatus(workflowName, runId),
+    start: (input: Parameters<RPC['startWorkflow']>[1]) =>
+      rpc.startWorkflow(workflowName, input),
+    run: (input: Parameters<RPC['runWorkflow']>[1]) =>
+      rpc.runWorkflow(workflowName, input),
+    status: (runId: Parameters<RPC['workflowStatus']>[1]) =>
+      rpc.workflowStatus(workflowName, runId),
   }
 }
 

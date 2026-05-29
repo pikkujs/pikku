@@ -87,15 +87,19 @@ const CliPageInner: React.FC<{
     setCommandPath([cmdName])
   }
 
-  const promptText = commandPath.length > 0
-    ? `$ ${activeProgramId} ${commandPath.join(' ')} --help`
-    : `$ ${activeProgramId} --help`
+  const promptText =
+    commandPath.length > 0
+      ? `$ ${activeProgramId} ${commandPath.join(' ')} --help`
+      : `$ ${activeProgramId} --help`
 
   const programCount = programs.length
 
   return (
     <Box className={classes.flexRow}>
-      <Box className={classes.listPaneFixed} style={{ width: 280, minWidth: 220 }}>
+      <Box
+        className={classes.listPaneFixed}
+        style={{ width: 280, minWidth: 220 }}
+      >
         <SearchInput
           value={search}
           onChange={setSearch}
@@ -125,7 +129,9 @@ const CliPageInner: React.FC<{
               <React.Fragment key={prog.wireId}>
                 <UnstyledButton
                   onClick={() =>
-                    isActive ? toggleProgram(prog.wireId) : selectProgram(prog.wireId)
+                    isActive
+                      ? toggleProgram(prog.wireId)
+                      : selectProgram(prog.wireId)
                   }
                   style={{
                     display: 'flex',
@@ -152,12 +158,7 @@ const CliPageInner: React.FC<{
                   <Text size="sm" ff="monospace" style={{ flex: 1 }}>
                     {prog.wireId}
                   </Text>
-                  <Badge
-                    size="sm"
-                    variant="light"
-                    color="cyan"
-                    ff="monospace"
-                  >
+                  <Badge size="sm" variant="light" color="cyan" ff="monospace">
                     cli
                   </Badge>
                 </UnstyledButton>
@@ -181,7 +182,10 @@ const CliPageInner: React.FC<{
                           padding: '5px 12px 5px 24px',
                         }}
                       >
-                        <Box className={classes.typeDot} style={{ background: 'rgba(124,58,237,0.4)' }} />
+                        <Box
+                          className={classes.typeDot}
+                          style={{ background: 'rgba(124,58,237,0.4)' }}
+                        />
                         <Box style={{ flex: 1, minWidth: 0 }}>
                           <Text
                             size="sm"
@@ -221,10 +225,23 @@ const CliPageInner: React.FC<{
         </ScrollArea>
       </Box>
 
-      <Box className={`${classes.detailPane} ${classes.flexColumn}`} style={{ overflow: 'hidden' }}>
-        <Box className={classes.gridHeader} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Text size="sm" ff="monospace" c="var(--app-text-muted)" style={{ flex: 1 }}>
-            <Text component="span" c="violet" ff="monospace">$</Text>{' '}
+      <Box
+        className={`${classes.detailPane} ${classes.flexColumn}`}
+        style={{ overflow: 'hidden' }}
+      >
+        <Box
+          className={classes.gridHeader}
+          style={{ display: 'flex', alignItems: 'center', gap: 10 }}
+        >
+          <Text
+            size="sm"
+            ff="monospace"
+            c="var(--app-text-muted)"
+            style={{ flex: 1 }}
+          >
+            <Text component="span" c="violet" ff="monospace">
+              $
+            </Text>{' '}
             <Text component="span" c="var(--app-text)" ff="monospace">
               {promptText.slice(2)}
             </Text>

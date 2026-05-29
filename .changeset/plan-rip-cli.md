@@ -7,7 +7,7 @@
 refactor: rip plan layer, replace with branch-based diff view + new CLI commands
 
 - Removes the `AiPlanV1` JSON plan-layer scaffolding (`pikku plan
-  ingest/update/validate`, `LocalPlanStoreService`, `/plans` console
+ingest/update/validate`, `LocalPlanStoreService`, `/plans` console
   pages).
 - Replaces with a `StateDiffService` that diffs two `.pikku/`
   directories' meta JSONs (typically a worktree at `main` vs. the

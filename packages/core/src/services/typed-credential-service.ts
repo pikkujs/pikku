@@ -15,9 +15,9 @@ export type CredentialMetaInfo = {
   oauth2?: boolean
 }
 
-export class TypedCredentialService<TMap = Record<string, unknown>>
-  implements CredentialService
-{
+export class TypedCredentialService<
+  TMap = Record<string, unknown>,
+> implements CredentialService {
   constructor(
     private credentials: CredentialService,
     private credentialsMeta: Record<string, CredentialMetaInfo>

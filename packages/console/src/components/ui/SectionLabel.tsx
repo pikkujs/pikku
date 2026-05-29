@@ -6,9 +6,7 @@ export interface SectionLabelProps {
   children: React.ReactNode
 }
 
-export const SectionLabel: React.FC<SectionLabelProps> = ({
-  children,
-}) => (
+export const SectionLabel: React.FC<SectionLabelProps> = ({ children }) => (
   <Text
     size="sm"
     fw={600}

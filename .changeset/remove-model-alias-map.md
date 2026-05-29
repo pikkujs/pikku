@@ -1,8 +1,8 @@
 ---
-"@pikku/core": major
-"@pikku/inspector": major
-"@pikku/cli": major
-"@pikku/addon-console": major
+'@pikku/core': major
+'@pikku/inspector': major
+'@pikku/cli': major
+'@pikku/addon-console': major
 ---
 
 Remove the config-level model alias map. Agents now declare their model

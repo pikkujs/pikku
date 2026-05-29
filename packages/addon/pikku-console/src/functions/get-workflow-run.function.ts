@@ -11,7 +11,8 @@ export const getWorkflowRun = pikkuSessionlessFunc<
   expose: true,
   auth: false,
   func: async ({ workflowRunService }, input) => {
-    if (!workflowRunService) throw new MissingServiceError('workflowRunService is not available')
+    if (!workflowRunService)
+      throw new MissingServiceError('workflowRunService is not available')
     const run = await workflowRunService.getRun(input.runId)
     if (!run) return null
     const steps = await workflowRunService.getRunSteps(input.runId)

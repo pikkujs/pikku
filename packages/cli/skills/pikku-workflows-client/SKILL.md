@@ -93,9 +93,10 @@ function VideoStatus({ runId }: { runId: string }) {
   })
 
   if (!status) return null
-  if (status.status === 'running')   return <Spinner />
+  if (status.status === 'running') return <Spinner />
   if (status.status === 'completed') return <Result {...status.output} />
-  if (status.status === 'failed')    return <Error message={status.error?.message} />
+  if (status.status === 'failed')
+    return <Error message={status.error?.message} />
   return null
 }
 ```
@@ -117,7 +118,10 @@ function ProcessVideoFlow({ videoId }: { videoId: string }) {
 
   if (!runId) {
     return (
-      <button onClick={() => start.mutate({ videoId })} disabled={start.isPending}>
+      <button
+        onClick={() => start.mutate({ videoId })}
+        disabled={start.isPending}
+      >
         Start
       </button>
     )

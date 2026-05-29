@@ -53,7 +53,11 @@ await respondToSlashCommand(responseUrl, { text: 'Done!' })
 ### OAuth Flow
 
 ```typescript
-import { buildSlackInstallUrl, exchangeSlackOAuthCode, RECOMMENDED_BOT_SCOPES } from '@pikku/gateway-slack'
+import {
+  buildSlackInstallUrl,
+  exchangeSlackOAuthCode,
+  RECOMMENDED_BOT_SCOPES,
+} from '@pikku/gateway-slack'
 
 const installUrl = buildSlackInstallUrl({
   clientId: config.slackClientId,

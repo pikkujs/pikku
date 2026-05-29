@@ -33,7 +33,7 @@ yarn add @pikku/ws ws
 import { PikkuWSServer } from '@pikku/ws'
 
 const wsServer = new PikkuWSServer({
-  server: httpServer,  // Node.js HTTP server
+  server: httpServer, // Node.js HTTP server
   singletonServices,
   createWireServices,
   channelStore,

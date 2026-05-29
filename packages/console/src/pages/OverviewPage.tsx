@@ -39,52 +39,52 @@ const StatCard: React.FC<StatCardProps> = ({
 }) => {
   const Link = useLink()
   return (
-  <Paper
-    component={Link}
-    to={href}
-    p="md"
-    radius="md"
-    withBorder
-    style={{
-      textDecoration: 'none',
-      color: 'inherit',
-      transition: 'box-shadow 150ms ease, transform 150ms ease',
-      cursor: 'pointer',
-    }}
-    onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => {
-      e.currentTarget.style.boxShadow = 'var(--mantine-shadow-md)'
-      e.currentTarget.style.transform = 'translateY(-2px)'
-    }}
-    onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => {
-      e.currentTarget.style.boxShadow = ''
-      e.currentTarget.style.transform = ''
-    }}
-  >
-    <Group gap="md" wrap="nowrap">
-      <Box
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 8,
-          backgroundColor: 'rgba(255,255,255,0.04)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--mantine-color-dimmed)',
-        }}
-      >
-        <Icon size={20} />
-      </Box>
-      <Stack gap={0}>
-        <Text size="xl" fw={700}>
-          {count}
-        </Text>
-        <Text size="sm" c="dimmed">
-          {label}
-        </Text>
-      </Stack>
-    </Group>
-  </Paper>
+    <Paper
+      component={Link}
+      to={href}
+      p="md"
+      radius="md"
+      withBorder
+      style={{
+        textDecoration: 'none',
+        color: 'inherit',
+        transition: 'box-shadow 150ms ease, transform 150ms ease',
+        cursor: 'pointer',
+      }}
+      onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => {
+        e.currentTarget.style.boxShadow = 'var(--mantine-shadow-md)'
+        e.currentTarget.style.transform = 'translateY(-2px)'
+      }}
+      onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => {
+        e.currentTarget.style.boxShadow = ''
+        e.currentTarget.style.transform = ''
+      }}
+    >
+      <Group gap="md" wrap="nowrap">
+        <Box
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 8,
+            backgroundColor: 'rgba(255,255,255,0.04)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--mantine-color-dimmed)',
+          }}
+        >
+          <Icon size={20} />
+        </Box>
+        <Stack gap={0}>
+          <Text size="xl" fw={700}>
+            {count}
+          </Text>
+          <Text size="sm" c="dimmed">
+            {label}
+          </Text>
+        </Stack>
+      </Group>
+    </Paper>
   )
 }
 

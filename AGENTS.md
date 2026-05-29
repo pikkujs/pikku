@@ -15,14 +15,14 @@ The Fabric Console (`/git/pikku/fabric`) has a top-level mode toggle in the head
 
 ### Key implementation details
 
-| Aspect | Detail |
-|--------|--------|
-| Type | `ConsoleMode = 'build' \| 'platform'` |
-| Storage | `localStorage` key `'console-mode'`, default `'build'` |
-| Context | `ConsoleModeProvider` in `apps/console/src/contexts/ConsoleModeProvider.tsx` |
-| Hook | `useConsoleMode()` — returns `{ mode, setMode }` |
-| Toggle UI | `ConsoleHeader` component (`apps/console/src/components/ConsoleHeader.tsx`), `div.modeSwitch` in the header |
-| Mode switch handler | `handleModeSelect(nextMode)` — also navigates to the builder sandbox when switching to `build` |
+| Aspect              | Detail                                                                                                      |
+| ------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Type                | `ConsoleMode = 'build' \| 'platform'`                                                                       |
+| Storage             | `localStorage` key `'console-mode'`, default `'build'`                                                      |
+| Context             | `ConsoleModeProvider` in `apps/console/src/contexts/ConsoleModeProvider.tsx`                                |
+| Hook                | `useConsoleMode()` — returns `{ mode, setMode }`                                                            |
+| Toggle UI           | `ConsoleHeader` component (`apps/console/src/components/ConsoleHeader.tsx`), `div.modeSwitch` in the header |
+| Mode switch handler | `handleModeSelect(nextMode)` — also navigates to the builder sandbox when switching to `build`              |
 
 The mode is **not part of the URL** — the same routes render differently depending on `mode`. Components read `useConsoleMode()` and conditionally show/hide sections. The `ProjectSidebar` is one example: it shows different nav items depending on whether the user is in `build` or `platform` mode.
 

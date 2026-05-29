@@ -15,7 +15,10 @@ import {
   CanvasDrawerProvider,
   useCanvasDrawerContext,
 } from '../../context/DrawerContext'
-import { WorkflowProvider, useWorkflowContext } from '../../context/WorkflowContext'
+import {
+  WorkflowProvider,
+  useWorkflowContext,
+} from '../../context/WorkflowContext'
 import {
   useWorkflowRunContextSafe,
   useWorkflowRunContext,
@@ -247,7 +250,7 @@ const WorkflowRunsPanel: React.FC<{ workflowName: string }> = ({
       emptyMessage="No runs found"
       statusFilters={[]}
       onNewClick={editable ? handleNewClick : undefined}
-      newButtonLabel={editable ? "New workflow run" : undefined}
+      newButtonLabel={editable ? 'New workflow run' : undefined}
       onDelete={editable ? handleDelete : undefined}
     />
   )
@@ -440,9 +443,7 @@ const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
   )
 }
 
-export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = (
-  props
-) => {
+export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = (props) => {
   return (
     <WorkflowProvider workflow={props.workflow}>
       <CanvasDrawerProvider>

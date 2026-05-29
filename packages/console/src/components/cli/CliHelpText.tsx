@@ -23,8 +23,7 @@ const parseHelpText = (helpText: string): HelpSegment[] => {
       trimmed === 'Options:' ||
       line.startsWith('Usage:')
     ) {
-      inCommandSection =
-        trimmed === 'Commands:' || trimmed === 'Subcommands:'
+      inCommandSection = trimmed === 'Commands:' || trimmed === 'Subcommands:'
       segments.push({ text: line + '\n', type: 'heading' })
       continue
     }
@@ -99,17 +98,11 @@ export const CliHelpText: React.FC<CliHelpTextProps> = ({
             {seg.text}
           </span>
         ) : seg.type === 'command' ? (
-          <span
-            key={i}
-            style={{ color: 'var(--mantine-color-blue-5)' }}
-          >
+          <span key={i} style={{ color: 'var(--mantine-color-blue-5)' }}>
             {seg.text}
           </span>
         ) : seg.type === 'flag' ? (
-          <span
-            key={i}
-            style={{ color: 'var(--mantine-color-green-5)' }}
-          >
+          <span key={i} style={{ color: 'var(--mantine-color-green-5)' }}>
             {seg.text}
           </span>
         ) : (

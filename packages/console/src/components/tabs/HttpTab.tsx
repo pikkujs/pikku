@@ -14,7 +14,9 @@ export const HttpTab: React.FC = () => {
 
   const routes = useMemo(() => {
     if (!meta.httpMeta) return []
-    return [...meta.httpMeta].sort((a: any, b: any) => a.route.localeCompare(b.route))
+    return [...meta.httpMeta].sort((a: any, b: any) =>
+      a.route.localeCompare(b.route)
+    )
   }, [meta.httpMeta])
 
   const filtered = useMemo(() => {
@@ -30,12 +32,17 @@ export const HttpTab: React.FC = () => {
 
   const selectedRoute = useMemo(() => {
     if (!selected) return null
-    return routes.find((r: any) => `${r.method}::${r.route}` === selected) || null
+    return (
+      routes.find((r: any) => `${r.method}::${r.route}` === selected) || null
+    )
   }, [routes, selected])
 
   return (
     <Box className={styles.flexRow}>
-      <Box className={`${styles.listPaneFixed} ${styles.flexColumn}`} style={{ width: 340, minWidth: 260 }}>
+      <Box
+        className={`${styles.listPaneFixed} ${styles.flexColumn}`}
+        style={{ width: 340, minWidth: 260 }}
+      >
         <SearchInput
           value={search}
           onChange={setSearch}
@@ -67,7 +74,11 @@ export const HttpTab: React.FC = () => {
                       : undefined,
                   }}
                 >
-                  <PikkuBadge type="httpMethod" value={route.method?.toUpperCase() || 'GET'} size="sm" />
+                  <PikkuBadge
+                    type="httpMethod"
+                    value={route.method?.toUpperCase() || 'GET'}
+                    size="sm"
+                  />
                   <Box className={styles.flexGrow}>
                     <Text
                       size="sm"

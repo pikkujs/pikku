@@ -67,13 +67,11 @@ yarn test
 ## How it works
 
 1. **Server startup** (`src/start.ts`):
-
    - Creates `RedisDeploymentService` connected to Redis
    - Starts Express server with Pikku wiring
    - Registers all functions with DeploymentService via `deploymentService.start()`
 
 2. **Function with `expose: true`** (`src/functions/greet.ts`):
-
    - The `greet` function has `expose: true`, making it callable via `/rpc/greet`
 
 3. **Calling via `rpc.remote()`**:

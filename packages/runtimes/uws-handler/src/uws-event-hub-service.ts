@@ -1,9 +1,9 @@
 import type { EventHubService } from '@pikku/core/channel'
 import type * as uWS from 'uWebSockets.js'
 
-export class UWSEventHubService<Mappings extends Record<string, unknown> = {}>
-  implements EventHubService<Mappings>
-{
+export class UWSEventHubService<
+  Mappings extends Record<string, unknown> = {},
+> implements EventHubService<Mappings> {
   private sockets: Map<string, uWS.WebSocket<unknown>> = new Map()
 
   constructor() {}

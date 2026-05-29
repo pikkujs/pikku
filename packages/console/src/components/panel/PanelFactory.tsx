@@ -205,7 +205,9 @@ const WorkflowTabbedPanel: React.FC<{ workflowId: string }> = ({
       <Tabs defaultValue="overview" key={tabKey}>
         <Tabs.List grow>
           <Tabs.Tab value="overview">Overview</Tabs.Tab>
-          <Tabs.Tab value="run">{hasRun && !isCreating ? 'Run' : 'New Run'}</Tabs.Tab>
+          <Tabs.Tab value="run">
+            {hasRun && !isCreating ? 'Run' : 'New Run'}
+          </Tabs.Tab>
         </Tabs.List>
         <Tabs.Panel value="overview" pt="md" px="md">
           <Stack gap="xl">

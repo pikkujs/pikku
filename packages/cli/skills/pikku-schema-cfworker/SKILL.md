@@ -37,6 +37,7 @@ const schema = new CFWorkerSchemaService(logger: Logger)
 ```
 
 **Methods:**
+
 - `compileSchema(schema: string, value: any): void` — Compile and register a JSON schema
 - `validateSchema(schemaName: string, json: any): void` — Validate data against a compiled schema (throws on failure)
 - `getSchemaNames(): Set<string>` — Get all registered schema names

@@ -12,7 +12,10 @@ const Ctx = createContext<ConsoleNavigator | null>(null)
 
 export function useConsoleNavigator(): ConsoleNavigator {
   const ctx = useContext(Ctx)
-  if (!ctx) throw new Error('useConsoleNavigator must be used within a navigator provider')
+  if (!ctx)
+    throw new Error(
+      'useConsoleNavigator must be used within a navigator provider'
+    )
   return ctx
 }
 
@@ -30,13 +33,15 @@ export const OSSConsoleNavigator: React.FC<{ children: ReactNode }> = ({
   const navigate = useNavigate()
 
   return (
-    <Ctx.Provider value={{
-      workflowId: searchParams.get('id'),
-      navigateTo: (section, id) => {
-        const base = SECTION_PATHS[section]
-        navigate(id ? `${base}?id=${encodeURIComponent(id)}` : base)
-      },
-    }}>
+    <Ctx.Provider
+      value={{
+        workflowId: searchParams.get('id'),
+        navigateTo: (section, id) => {
+          const base = SECTION_PATHS[section]
+          navigate(id ? `${base}?id=${encodeURIComponent(id)}` : base)
+        },
+      }}
+    >
       {children}
     </Ctx.Provider>
   )

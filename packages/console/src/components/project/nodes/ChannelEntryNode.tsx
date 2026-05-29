@@ -10,10 +10,7 @@ interface HandlerRowProps {
   handleId: string
 }
 
-const HandlerRow: React.FC<HandlerRowProps> = ({
-  label,
-  handleId,
-}) => {
+const HandlerRow: React.FC<HandlerRowProps> = ({ label, handleId }) => {
   return (
     <Box
       px="xs"
@@ -54,9 +51,9 @@ interface ChannelEntryNodeData {
   channelMeta: any
 }
 
-export const ChannelEntryNode: React.FC<
-  NodeProps<ChannelEntryNodeData>
-> = ({ data }) => {
+export const ChannelEntryNode: React.FC<NodeProps<ChannelEntryNodeData>> = ({
+  data,
+}) => {
   const { openChannel } = usePanelContext()
   const theme = useMantineTheme()
 

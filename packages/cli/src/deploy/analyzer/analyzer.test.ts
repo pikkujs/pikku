@@ -8,10 +8,7 @@ import type { InspectorState } from '@pikku/inspector'
  * (export name) differs from its human-facing `name`. Only the buckets
  * `analyzeDeployment` dereferences are populated.
  */
-function stateWithAgent(
-  agentKey: string,
-  humanName: string
-): InspectorState {
+function stateWithAgent(agentKey: string, humanName: string): InspectorState {
   return {
     functions: { meta: {} },
     http: { meta: {} },

@@ -156,7 +156,7 @@ Some patterns vary by project; **read a neighbour file before writing**:
   shapes — match what the project already uses:
   - Per-route `wireHTTP({ method, route, func, auth })`.
   - Single map: `const routes = defineHTTPRoutes({ auth: false, routes: {
-    fooName: { method: 'post', route: '/foo', func: fooFunc } }}); wireHTTPRoutes(routes)`.
+fooName: { method: 'post', route: '/foo', func: fooFunc } }}); wireHTTPRoutes(routes)`.
 
 For shared wiring files (e.g. `todos.http.ts` holding both create and list):
 create the file with imports if it doesn't exist; **append** wire calls and
@@ -230,7 +230,7 @@ Tell the user the branch name and how to review. Two options:
   current branch against `main` with pikku-aware structure (added functions,
   new wires, migrations).
 - **PR review:** ask before pushing. Once they confirm, `git push -u origin
-  feature/<slug>` and surface the PR-create URL.
+feature/<slug>` and surface the PR-create URL.
 
 Do not push without explicit confirmation. Do not merge.
 

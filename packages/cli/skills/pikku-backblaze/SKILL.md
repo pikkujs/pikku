@@ -39,6 +39,7 @@ const content = new B2Content(
 ```
 
 **Methods:**
+
 - `signContentKey(key: string, dateLessThan: Date): Promise<string>` — Sign a content key
 - `signURL(url: string, dateLessThan: Date): Promise<string>` — Sign a URL
 - `getUploadURL(fileKey: string, contentType: string): Promise<{ uploadUrl, assetKey, uploadMethod?, uploadHeaders? }>` — Get upload URL

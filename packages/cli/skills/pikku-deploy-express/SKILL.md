@@ -43,6 +43,7 @@ await appServer.start()
 **Constructor:** `new PikkuExpressServer(config, logger)`
 
 **Config extends CoreConfig with:**
+
 - `port: number`
 - `hostname: string`
 - `healthCheckPath?: string`
@@ -50,6 +51,7 @@ await appServer.start()
 - `content?: LocalContentConfig` (for static assets / file uploads)
 
 **Methods:**
+
 - `init(httpOptions?): Promise<void>` — Register middleware and routes
 - `start(): Promise<void>` — Start listening
 - `stop(): Promise<void>` — Graceful shutdown
@@ -71,9 +73,11 @@ import { pikkuExpressMiddleware } from '@pikku/express-middleware'
 import './.pikku/pikku-bootstrap.gen.js'
 
 const app = express()
-app.use(pikkuExpressMiddleware({
-  logger: singletonServices.logger,
-  logRoutes: true,
-  loadSchemas: true,
-}))
+app.use(
+  pikkuExpressMiddleware({
+    logger: singletonServices.logger,
+    logRoutes: true,
+    loadSchemas: true,
+  })
+)
 ```

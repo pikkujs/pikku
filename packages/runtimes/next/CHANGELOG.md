@@ -5,7 +5,6 @@
 ### Patch Changes
 
 - 311c0c4: Unify session persistence through SessionStore, remove session blob from ChannelStore
-
   - PikkuSessionService now persists sessions via SessionStore on set()/clear() instead of every function call
   - ChannelStore no longer stores session data — maps channelId to pikkuUserId only
   - ChannelStore API: setUserSession/getChannelAndSession replaced with setPikkuUserId/getChannel
@@ -19,7 +18,6 @@
 ### Patch Changes
 
 - ffe83af: Add Web Response passthrough support and fix close() flushing
-
   - HTTP runner detects when a function returns a Web `Response` object and applies it directly via `applyWebResponse()`, enabling seamless integration with libraries like Auth.js
   - Add `send()` method to `PikkuHTTPResponse` for setting body without Content-Type headers
   - Add `headers()` method to `PikkuHTTPRequest` for retrieving all headers as a record
@@ -93,7 +91,6 @@
 - 730adb6: Update runtime adapters for channel middleware support
 
   **Updates:**
-
   - Update Cloudflare hibernation WebSocket server for middleware changes
   - Update Fastify response convertor for improved channel handling
   - Update MCP server for channel middleware support

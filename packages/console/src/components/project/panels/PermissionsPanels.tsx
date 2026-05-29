@@ -215,9 +215,10 @@ const GroupPanel: React.FC<{
   )
 }
 
-export const PermissionConfiguration: React.FC<
-  PermissionPanelProps
-> = ({ permissionId, metadata = {} }) => {
+export const PermissionConfiguration: React.FC<PermissionPanelProps> = ({
+  permissionId,
+  metadata = {},
+}) => {
   if (metadata._groupType) {
     return (
       <GroupPanel

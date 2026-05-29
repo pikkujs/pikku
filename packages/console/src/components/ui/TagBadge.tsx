@@ -6,9 +6,7 @@ export interface TagBadgeProps {
   children: React.ReactNode
 }
 
-export const TagBadge: React.FC<TagBadgeProps> = ({
-  children,
-}) => (
+export const TagBadge: React.FC<TagBadgeProps> = ({ children }) => (
   <Badge size="sm" variant="light" ff="monospace" className={classes.tagBadge}>
     {children}
   </Badge>
@@ -18,9 +16,7 @@ export interface ServiceBadgeProps {
   children: React.ReactNode
 }
 
-export const ServiceBadge: React.FC<ServiceBadgeProps> = ({
-  children,
-}) => (
+export const ServiceBadge: React.FC<ServiceBadgeProps> = ({ children }) => (
   <Badge size="sm" variant="light" tt="none" className={classes.serviceBadge}>
     {children}
   </Badge>

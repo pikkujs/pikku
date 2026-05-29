@@ -20,9 +20,9 @@ type ChannelHandler = Parameters<LocalHub['onChannelOpened']>[0]
  * small; for large payloads publish an ID and fetch the full record on
  * the receiving side.
  */
-export class PgEventHubService<Topics extends Record<string, unknown> = {}>
-  implements EventHubService<Topics>
-{
+export class PgEventHubService<
+  Topics extends Record<string, unknown> = {},
+> implements EventHubService<Topics> {
   private local = new LocalEventHubService<Topics>()
   private sql: postgres.Sql | null = null
 
@@ -40,7 +40,11 @@ export class PgEventHubService<Topics extends Record<string, unknown> = {}>
       }
       // Skip if this NOTIFY originated from this instance — already fanned out locally in publish()
       if (parsed.instanceId === INSTANCE_ID) return
-      this.local.publish(parsed.topic as keyof Topics, null, parsed.data as Topics[keyof Topics])
+      this.local.publish(
+        parsed.topic as keyof Topics,
+        null,
+        parsed.data as Topics[keyof Topics]
+      )
     })
   }
 
@@ -68,7 +72,10 @@ export class PgEventHubService<Topics extends Record<string, unknown> = {}>
 
     // Broadcast to all other instances via Postgres NOTIFY (instanceId prevents self-delivery)
     if (this.sql) {
-      await this.sql.notify(PG_CHANNEL, JSON.stringify({ instanceId: INSTANCE_ID, topic, data }))
+      await this.sql.notify(
+        PG_CHANNEL,
+        JSON.stringify({ instanceId: INSTANCE_ID, topic, data })
+      )
     }
   }
 

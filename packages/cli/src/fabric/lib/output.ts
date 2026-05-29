@@ -10,7 +10,8 @@ import chalk from 'chalk'
  */
 type Cell = string | number | null | undefined
 
-const cell = (c: Cell): string => (c === null || c === undefined ? '' : String(c))
+const cell = (c: Cell): string =>
+  c === null || c === undefined ? '' : String(c)
 
 /** Dim, secondary text (hints, empty-state lines, labels). */
 export const dim = (s: string): string => chalk.dim(s)
@@ -24,7 +25,8 @@ export const removed = (s: string): string => chalk.red(s)
 const GOOD = /^(active|healthy|succeeded|success|ready|running|live|ok|added)$/i
 const BUSY =
   /^(deploying|planned|suspended|pending|building|provisioning|queued|in_progress|changed)$/i
-const BAD = /^(failed|error|crashed|unhealthy|dead|removed|cancelled|canceled)$/i
+const BAD =
+  /^(failed|error|crashed|unhealthy|dead|removed|cancelled|canceled)$/i
 
 /** Colour a status token by its meaning (falls back to dim). */
 export function statusColor(status: string): string {
@@ -35,7 +37,8 @@ export function statusColor(status: string): string {
 }
 
 // Strip ANSI so coloured cells still measure/align correctly.
-const visibleLen = (s: string): number => s.replace(/\x1b\[[0-9;]*m/g, '').length
+const visibleLen = (s: string): number =>
+  s.replace(/\x1b\[[0-9;]*m/g, '').length
 
 /** Space-padded aligned columns with a dim header — the default human table. */
 export function table(headers: string[], rows: Cell[][]): string {

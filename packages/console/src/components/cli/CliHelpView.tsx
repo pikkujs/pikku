@@ -1,11 +1,5 @@
 import React, { useMemo } from 'react'
-import {
-  Box,
-  Stack,
-  Group,
-  Paper,
-  Divider,
-} from '@mantine/core'
+import { Box, Stack, Group, Paper, Divider } from '@mantine/core'
 import { Paintbrush } from 'lucide-react'
 import type { CLIMeta, CLICommandMeta } from '@pikku/core/cli'
 import { FunctionLink } from '../project/panels/shared/FunctionLink'

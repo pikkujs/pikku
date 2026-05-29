@@ -55,7 +55,7 @@ Type-safe reference to an addon function — use when wiring to HTTP, agents, et
 ```typescript
 import { addon } from '#pikku'
 
-addon('todos:addTodo')    // Returns a typed function config
+addon('todos:addTodo') // Returns a typed function config
 addon('emails:sendEmail') // Namespace:functionName format
 ```
 

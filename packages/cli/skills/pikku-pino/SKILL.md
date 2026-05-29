@@ -38,9 +38,11 @@ const logger = new PinoLogger()
 No constructor parameters. Creates a Pino logger instance.
 
 **Properties:**
+
 - `pino: pino.Logger` — Access the underlying Pino instance for advanced config.
 
 **Methods:**
+
 - `setLevel(level: LogLevel): void` — Set minimum log level.
 - `info(messageOrObj: string | Record<string, any> | Error): void`
 - `warn(messageOrObj: string | Record<string, any> | Error): void`

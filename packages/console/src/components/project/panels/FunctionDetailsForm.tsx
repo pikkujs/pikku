@@ -28,9 +28,10 @@ interface FunctionDetailsFormProps {
   metadata?: any
 }
 
-export const FunctionConfiguration: React.FC<
-  FunctionDetailsFormProps
-> = ({ functionName, metadata: passedMetadata }) => {
+export const FunctionConfiguration: React.FC<FunctionDetailsFormProps> = ({
+  functionName,
+  metadata: passedMetadata,
+}) => {
   const { data: fetchedMeta, isLoading } = useFunctionMeta(functionName)
   const meta = passedMetadata || fetchedMeta || {}
   const [editing, setEditing] = useState(false)
@@ -196,7 +197,7 @@ function FunctionTestsSection({
   const { data: source, isLoading: isSourceLoading } = useFunctionSource(
     sourceFile,
     exportedName,
-    !!sourceFile && !!exportedName,
+    !!sourceFile && !!exportedName
   )
 
   return (
@@ -322,7 +323,9 @@ function FunctionTestsSection({
             Coverage Gaps
           </Text>
           <Text ff="monospace" size="xs" c="dimmed">
-            {missedLines.length === 0 ? 'clean' : `${missedLines.length} uncovered`}
+            {missedLines.length === 0
+              ? 'clean'
+              : `${missedLines.length} uncovered`}
           </Text>
         </Group>
         {missedLines.length === 0 ? (
@@ -340,7 +343,8 @@ function FunctionTestsSection({
           'body' in source &&
           typeof (source as { body?: unknown }).body === 'string' &&
           'bodyStartLine' in source &&
-          typeof (source as { bodyStartLine?: unknown }).bodyStartLine === 'number' ? (
+          typeof (source as { bodyStartLine?: unknown }).bodyStartLine ===
+            'number' ? (
           <Paper
             withBorder
             radius="lg"
@@ -350,7 +354,9 @@ function FunctionTestsSection({
           >
             <FunctionCoverageCode
               body={(source as { body: string }).body}
-              bodyStartLine={(source as { bodyStartLine: number }).bodyStartLine}
+              bodyStartLine={
+                (source as { bodyStartLine: number }).bodyStartLine
+              }
               missedLines={missedLines}
             />
           </Paper>
@@ -460,7 +466,12 @@ function HighlightedStep({ step }: { step: string }) {
   return (
     <Text ff="monospace" size="sm" c="white" pl={isAnd ? 16 : 0}>
       {keyword && (
-        <Text component="span" inherit c="var(--mantine-color-violet-4)" fw={600}>
+        <Text
+          component="span"
+          inherit
+          c="var(--mantine-color-violet-4)"
+          fw={600}
+        >
           {keyword}
         </Text>
       )}
@@ -482,9 +493,10 @@ export const FunctionCode: React.FC<
   return <CodeHighlight code={exampleCode} language="typescript" />
 }
 
-export const FunctionInput: React.FC<
-  FunctionDetailsFormProps
-> = ({ functionName, metadata = {} }) => {
+export const FunctionInput: React.FC<FunctionDetailsFormProps> = ({
+  functionName,
+  metadata = {},
+}) => {
   const { data: fetchedMeta } = useFunctionMeta(functionName)
   const meta = metadata?.inputSchemaName ? metadata : fetchedMeta || {}
   const inputSchemaName = meta?.inputSchemaName
@@ -513,9 +525,10 @@ export const FunctionInput: React.FC<
   return <SchemaViewer schema={schema} />
 }
 
-export const FunctionOutput: React.FC<
-  FunctionDetailsFormProps
-> = ({ functionName, metadata = {} }) => {
+export const FunctionOutput: React.FC<FunctionDetailsFormProps> = ({
+  functionName,
+  metadata = {},
+}) => {
   const { data: fetchedMeta } = useFunctionMeta(functionName)
   const meta = metadata?.outputSchemaName ? metadata : fetchedMeta || {}
   const outputSchemaName = meta?.outputSchemaName

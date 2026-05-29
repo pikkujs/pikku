@@ -21,7 +21,17 @@ export const ListItem: React.FC<ListItemProps> = ({
     onClick={onClick}
     className={classes.listItemPadded}
     data-active={active}
-    style={gridTemplateColumns ? { display: 'grid', gridTemplateColumns, ...(padding ? { padding } : {}) } : (padding ? { padding } : undefined)}
+    style={
+      gridTemplateColumns
+        ? {
+            display: 'grid',
+            gridTemplateColumns,
+            ...(padding ? { padding } : {}),
+          }
+        : padding
+          ? { padding }
+          : undefined
+    }
   >
     {children}
   </UnstyledButton>

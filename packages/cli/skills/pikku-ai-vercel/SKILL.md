@@ -38,6 +38,7 @@ const runner = new VercelAIAgentRunner(
 ```
 
 **Methods:**
+
 - `stream(params: AIAgentRunnerParams, channel: AIStreamChannel): Promise<AIAgentStepResult>` — Stream AI responses with tool calls
 - `run(params: AIAgentRunnerParams): Promise<AIAgentStepResult>` — Execute a single AI step (non-streaming)
 

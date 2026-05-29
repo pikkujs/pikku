@@ -62,9 +62,10 @@ const HandlerRow: React.FC<HandlerRowProps> = ({
   )
 }
 
-export const ChannelWiringNode: React.FC<
-  NodeProps<ChannelWiringNodeData>
-> = ({ data, id }) => {
+export const ChannelWiringNode: React.FC<NodeProps<ChannelWiringNodeData>> = ({
+  data,
+  id,
+}) => {
   const { openWorkflowStep } = usePanelContext()
   const theme = useMantineTheme()
 

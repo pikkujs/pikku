@@ -1,4 +1,14 @@
-import { createContext, useContext, useState, useMemo, useEffect, useRef, type ComponentType, type FunctionComponent, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useState,
+  useMemo,
+  useEffect,
+  useRef,
+  type ComponentType,
+  type FunctionComponent,
+  type ReactNode,
+} from 'react'
 import Markdown from 'react-markdown'
 import {
   AssistantRuntimeProvider,
@@ -107,7 +117,9 @@ const darkColors: ChatColors = {
 }
 
 const ColorsContext = createContext<ChatColors>(lightColors)
-const HideToolCallsContext = createContext<boolean | string[] | undefined>(undefined)
+const HideToolCallsContext = createContext<boolean | string[] | undefined>(
+  undefined
+)
 const ToolComponentsContext = createContext<
   Record<string, ToolCallMessagePartComponent> | undefined
 >(undefined)
@@ -143,9 +155,7 @@ const ToolCallDisplay: FunctionComponent<{
   const approvalReason = (args as any)?.__approvalReason
   const displayArgs = { ...args }
   delete (displayArgs as any).__approvalReason
-  const [responded, setResponded] = useState<'approved' | 'denied' | null>(
-    null
-  )
+  const [responded, setResponded] = useState<'approved' | 'denied' | null>(null)
 
   // Hide responded approval tool calls
   if (isApproval && responded && shouldHideToolCall(hideToolCalls, toolName)) {
@@ -182,7 +192,9 @@ const ToolCallDisplay: FunctionComponent<{
           Approval required
         </div>
         {approvalReason && (
-          <div style={{ fontSize: 13, marginBottom: 4, color: colors.text }}>{approvalReason}</div>
+          <div style={{ fontSize: 13, marginBottom: 4, color: colors.text }}>
+            {approvalReason}
+          </div>
         )}
         <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 4 }}>
           The agent wants to call <code>{toolName}</code>
@@ -263,8 +275,12 @@ const ToolCallDisplay: FunctionComponent<{
             fontSize: 11,
             padding: '2px 6px',
             borderRadius: 3,
-            background: responded === 'approved' ? colors.successBg : colors.errorBg,
-            color: responded === 'approved' ? colors.successColor : colors.errorColor,
+            background:
+              responded === 'approved' ? colors.successBg : colors.errorBg,
+            color:
+              responded === 'approved'
+                ? colors.successColor
+                : colors.errorColor,
           }}
         >
           {responded}
@@ -302,7 +318,9 @@ const ToolCallDisplay: FunctionComponent<{
           {toolName}
         </span>
         {status.type === 'running' && (
-          <span style={{ fontSize: 11, color: colors.textMuted }}>running...</span>
+          <span style={{ fontSize: 11, color: colors.textMuted }}>
+            running...
+          </span>
         )}
         {status.type === 'error' && (
           <span
@@ -359,7 +377,9 @@ const ToolCallDisplay: FunctionComponent<{
       </button>
       {expanded && (
         <div style={{ marginTop: 8 }}>
-          <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 2 }}>
+          <div
+            style={{ fontSize: 12, color: colors.textMuted, marginBottom: 2 }}
+          >
             Arguments:
           </div>
           <pre
@@ -377,7 +397,12 @@ const ToolCallDisplay: FunctionComponent<{
           {result !== undefined && (
             <>
               <div
-                style={{ fontSize: 12, color: colors.textMuted, marginTop: 8, marginBottom: 2 }}
+                style={{
+                  fontSize: 12,
+                  color: colors.textMuted,
+                  marginTop: 8,
+                  marginBottom: 2,
+                }}
               >
                 Result:
               </div>
@@ -403,49 +428,141 @@ const ToolCallDisplay: FunctionComponent<{
   )
 }
 
-const MarkdownText: FunctionComponent<{ text: string; colors: ChatColors }> = ({ text, colors }) => {
-  const components = useMemo(() => ({
-    p: ({ children }: any) => (
-      <p style={{ margin: '0 0 8px', fontSize: 14, lineHeight: 1.6, color: colors.text }}>{children}</p>
-    ),
-    strong: ({ children }: any) => (
-      <strong style={{ fontWeight: 600, color: colors.text }}>{children}</strong>
-    ),
-    em: ({ children }: any) => (
-      <em style={{ color: colors.text }}>{children}</em>
-    ),
-    ul: ({ children }: any) => (
-      <ul style={{ margin: '4px 0 8px', paddingLeft: 20, fontSize: 14, color: colors.text }}>{children}</ul>
-    ),
-    ol: ({ children }: any) => (
-      <ol style={{ margin: '4px 0 8px', paddingLeft: 20, fontSize: 14, color: colors.text }}>{children}</ol>
-    ),
-    li: ({ children }: any) => (
-      <li style={{ marginBottom: 2, lineHeight: 1.6 }}>{children}</li>
-    ),
-    code: ({ children, className }: any) => {
-      const isBlock = className?.startsWith('language-')
-      if (isBlock) {
-        return (
-          <pre style={{ background: colors.codeBg, padding: 10, borderRadius: 4, overflow: 'auto', margin: '4px 0 8px', fontSize: 12 }}>
-            <code style={{ color: colors.text }}>{children}</code>
-          </pre>
-        )
-      }
-      return (
-        <code style={{ background: colors.codeBg, padding: '1px 4px', borderRadius: 3, fontSize: 13, color: colors.text }}>
+const MarkdownText: FunctionComponent<{ text: string; colors: ChatColors }> = ({
+  text,
+  colors,
+}) => {
+  const components = useMemo(
+    () => ({
+      p: ({ children }: any) => (
+        <p
+          style={{
+            margin: '0 0 8px',
+            fontSize: 14,
+            lineHeight: 1.6,
+            color: colors.text,
+          }}
+        >
           {children}
-        </code>
-      )
-    },
-    pre: ({ children }: any) => <>{children}</>,
-    h1: ({ children }: any) => <h3 style={{ margin: '8px 0 4px', fontSize: 16, fontWeight: 600, color: colors.text }}>{children}</h3>,
-    h2: ({ children }: any) => <h4 style={{ margin: '8px 0 4px', fontSize: 15, fontWeight: 600, color: colors.text }}>{children}</h4>,
-    h3: ({ children }: any) => <h5 style={{ margin: '8px 0 4px', fontSize: 14, fontWeight: 600, color: colors.text }}>{children}</h5>,
-    a: ({ href, children }: any) => (
-      <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: colors.textMuted, textDecoration: 'underline' }}>{children}</a>
-    ),
-  }), [colors])
+        </p>
+      ),
+      strong: ({ children }: any) => (
+        <strong style={{ fontWeight: 600, color: colors.text }}>
+          {children}
+        </strong>
+      ),
+      em: ({ children }: any) => (
+        <em style={{ color: colors.text }}>{children}</em>
+      ),
+      ul: ({ children }: any) => (
+        <ul
+          style={{
+            margin: '4px 0 8px',
+            paddingLeft: 20,
+            fontSize: 14,
+            color: colors.text,
+          }}
+        >
+          {children}
+        </ul>
+      ),
+      ol: ({ children }: any) => (
+        <ol
+          style={{
+            margin: '4px 0 8px',
+            paddingLeft: 20,
+            fontSize: 14,
+            color: colors.text,
+          }}
+        >
+          {children}
+        </ol>
+      ),
+      li: ({ children }: any) => (
+        <li style={{ marginBottom: 2, lineHeight: 1.6 }}>{children}</li>
+      ),
+      code: ({ children, className }: any) => {
+        const isBlock = className?.startsWith('language-')
+        if (isBlock) {
+          return (
+            <pre
+              style={{
+                background: colors.codeBg,
+                padding: 10,
+                borderRadius: 4,
+                overflow: 'auto',
+                margin: '4px 0 8px',
+                fontSize: 12,
+              }}
+            >
+              <code style={{ color: colors.text }}>{children}</code>
+            </pre>
+          )
+        }
+        return (
+          <code
+            style={{
+              background: colors.codeBg,
+              padding: '1px 4px',
+              borderRadius: 3,
+              fontSize: 13,
+              color: colors.text,
+            }}
+          >
+            {children}
+          </code>
+        )
+      },
+      pre: ({ children }: any) => <>{children}</>,
+      h1: ({ children }: any) => (
+        <h3
+          style={{
+            margin: '8px 0 4px',
+            fontSize: 16,
+            fontWeight: 600,
+            color: colors.text,
+          }}
+        >
+          {children}
+        </h3>
+      ),
+      h2: ({ children }: any) => (
+        <h4
+          style={{
+            margin: '8px 0 4px',
+            fontSize: 15,
+            fontWeight: 600,
+            color: colors.text,
+          }}
+        >
+          {children}
+        </h4>
+      ),
+      h3: ({ children }: any) => (
+        <h5
+          style={{
+            margin: '8px 0 4px',
+            fontSize: 14,
+            fontWeight: 600,
+            color: colors.text,
+          }}
+        >
+          {children}
+        </h5>
+      ),
+      a: ({ href, children }: any) => (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: colors.textMuted, textDecoration: 'underline' }}
+        >
+          {children}
+        </a>
+      ),
+    }),
+    [colors]
+  )
 
   return <Markdown components={components}>{text}</Markdown>
 }
@@ -481,7 +598,13 @@ const UserMessage: FunctionComponent = () => {
           <MessagePrimitive.Content
             components={{
               Text: ({ text }) => (
-                <span style={{ fontSize: 14, whiteSpace: 'pre-wrap', color: colors.text }}>
+                <span
+                  style={{
+                    fontSize: 14,
+                    whiteSpace: 'pre-wrap',
+                    color: colors.text,
+                  }}
+                >
                   {text}
                 </span>
               ),
@@ -519,11 +642,12 @@ const AssistantMessage: FunctionComponent = () => {
         >
           <MessagePrimitive.Content
             components={{
-              Text: ({ text }) => (
-                renderAssistantText
-                  ? <>{renderAssistantText(text)}</>
-                  : <MarkdownText text={text} colors={colors} />
-              ),
+              Text: ({ text }) =>
+                renderAssistantText ? (
+                  <>{renderAssistantText(text)}</>
+                ) : (
+                  <MarkdownText text={text} colors={colors} />
+                ),
               tools: {
                 by_name: toolComponents,
                 Fallback: (props) => (
@@ -598,14 +722,19 @@ const PikkuComposer: FunctionComponent<{ disabled?: boolean }> = ({
             border: `1px solid ${colors.border}`,
             borderRadius: 24,
             padding: '14px 12px 10px',
-            boxShadow: darkColors.text === colors.text
-              ? '0 14px 30px rgba(0,0,0,0.24)'
-              : '0 14px 30px rgba(0,0,0,0.08)',
-            ...(disabled ? { opacity: 0.5, pointerEvents: 'none' as const } : {}),
+            boxShadow:
+              darkColors.text === colors.text
+                ? '0 14px 30px rgba(0,0,0,0.24)'
+                : '0 14px 30px rgba(0,0,0,0.08)',
+            ...(disabled
+              ? { opacity: 0.5, pointerEvents: 'none' as const }
+              : {}),
           }}
         >
           <ComposerPrimitive.Input
-            placeholder={disabled ? 'Respond to approval request above...' : 'Message...'}
+            placeholder={
+              disabled ? 'Respond to approval request above...' : 'Message...'
+            }
             rows={1}
             disabled={disabled ?? false}
             style={{
@@ -645,7 +774,8 @@ const PikkuComposer: FunctionComponent<{ disabled?: boolean }> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
-                transition: 'background-color 150ms ease, color 150ms ease, border-color 150ms ease',
+                transition:
+                  'background-color 150ms ease, color 150ms ease, border-color 150ms ease',
               }}
             >
               ↑
@@ -676,83 +806,95 @@ export function PikkuAgentChat(props: PikkuAgentChatProps) {
 
   return (
     <ColorsContext.Provider value={colors}>
-    <PikkuApprovalContext.Provider value={{ pendingApprovals, handleApproval }}>
-    <HideToolCallsContext.Provider value={hideToolCalls}>
-    <ToolComponentsContext.Provider value={toolComponents}>
-    <GenerativeUIComponentsContext.Provider value={generativeUIComponents}>
-    <RenderAssistantTextContext.Provider value={renderAssistantText}>
-    <AssistantRuntimeProvider runtime={runtime}>
-      <ComposerPrefill text={initialPrompt} />
-      <div
-        style={{
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          background: colors.bg,
-        }}
+      <PikkuApprovalContext.Provider
+        value={{ pendingApprovals, handleApproval }}
       >
-        <ThreadPrimitive.Root
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            flex: 1,
-            minHeight: 0,
-          }}
-        >
-          <ThreadPrimitive.Viewport
-            style={{
-              flex: 1,
-              minHeight: 0,
-              overflowY: 'auto',
-            }}
-          >
-            <div
-              style={{
-                maxWidth: maxWidth === 'none' ? undefined : maxWidth,
-                margin: '0 auto',
-                padding: 16,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 16,
-              }}
+        <HideToolCallsContext.Provider value={hideToolCalls}>
+          <ToolComponentsContext.Provider value={toolComponents}>
+            <GenerativeUIComponentsContext.Provider
+              value={generativeUIComponents}
             >
-              <ThreadPrimitive.Empty>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minHeight: 300,
-                    color: colors.textMuted,
-                    textAlign: 'center',
-                    fontSize: 14,
-                  }}
-                >
-                  {emptyMessage ??
-                    (props.threadId
-                      ? 'Send a message to start the conversation.'
-                      : 'Start a new conversation.')}
-                </div>
-              </ThreadPrimitive.Empty>
-              <ThreadPrimitive.Messages
-                components={{
-                  UserMessage,
-                  AssistantMessage,
-                }}
-              />
-            </div>
-          </ThreadPrimitive.Viewport>
-          <div style={{ maxWidth: maxWidth === 'none' ? undefined : maxWidth, margin: '0 auto', width: '100%', padding: '0 16px' }}>
-            <PikkuComposer disabled={isAwaitingApproval} />
-          </div>
-        </ThreadPrimitive.Root>
-      </div>
-    </AssistantRuntimeProvider>
-    </RenderAssistantTextContext.Provider>
-    </GenerativeUIComponentsContext.Provider>
-    </ToolComponentsContext.Provider>
-    </HideToolCallsContext.Provider>
-    </PikkuApprovalContext.Provider>
+              <RenderAssistantTextContext.Provider value={renderAssistantText}>
+                <AssistantRuntimeProvider runtime={runtime}>
+                  <ComposerPrefill text={initialPrompt} />
+                  <div
+                    style={{
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      background: colors.bg,
+                    }}
+                  >
+                    <ThreadPrimitive.Root
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        flex: 1,
+                        minHeight: 0,
+                      }}
+                    >
+                      <ThreadPrimitive.Viewport
+                        style={{
+                          flex: 1,
+                          minHeight: 0,
+                          overflowY: 'auto',
+                        }}
+                      >
+                        <div
+                          style={{
+                            maxWidth:
+                              maxWidth === 'none' ? undefined : maxWidth,
+                            margin: '0 auto',
+                            padding: 16,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 16,
+                          }}
+                        >
+                          <ThreadPrimitive.Empty>
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minHeight: 300,
+                                color: colors.textMuted,
+                                textAlign: 'center',
+                                fontSize: 14,
+                              }}
+                            >
+                              {emptyMessage ??
+                                (props.threadId
+                                  ? 'Send a message to start the conversation.'
+                                  : 'Start a new conversation.')}
+                            </div>
+                          </ThreadPrimitive.Empty>
+                          <ThreadPrimitive.Messages
+                            components={{
+                              UserMessage,
+                              AssistantMessage,
+                            }}
+                          />
+                        </div>
+                      </ThreadPrimitive.Viewport>
+                      <div
+                        style={{
+                          maxWidth: maxWidth === 'none' ? undefined : maxWidth,
+                          margin: '0 auto',
+                          width: '100%',
+                          padding: '0 16px',
+                        }}
+                      >
+                        <PikkuComposer disabled={isAwaitingApproval} />
+                      </div>
+                    </ThreadPrimitive.Root>
+                  </div>
+                </AssistantRuntimeProvider>
+              </RenderAssistantTextContext.Provider>
+            </GenerativeUIComponentsContext.Provider>
+          </ToolComponentsContext.Provider>
+        </HideToolCallsContext.Provider>
+      </PikkuApprovalContext.Provider>
     </ColorsContext.Provider>
   )
 }

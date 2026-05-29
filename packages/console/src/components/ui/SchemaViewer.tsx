@@ -117,9 +117,7 @@ const PropertyRows: React.FC<{
   </>
 )
 
-export const SchemaViewer: React.FC<SchemaViewerProps> = ({
-  schema,
-}) => {
+export const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema }) => {
   if (!schema || typeof schema !== 'object') {
     return (
       <Text c="dimmed" size="sm">
@@ -136,14 +134,22 @@ export const SchemaViewer: React.FC<SchemaViewerProps> = ({
 
   let resolvedSchema = schema
   if (schema.type === 'array' && schema.items) {
-    const items = schema.items.$ref ? resolveRef(schema.items.$ref) : schema.items
+    const items = schema.items.$ref
+      ? resolveRef(schema.items.$ref)
+      : schema.items
     if (items) resolvedSchema = items
   }
 
-  const properties = resolvedSchema.properties || (resolvedSchema.type ? null : resolvedSchema)
+  const properties =
+    resolvedSchema.properties || (resolvedSchema.type ? null : resolvedSchema)
   if (!properties) {
     return (
-      <Badge size="sm" variant="light" color={getColor(resolvedSchema)} tt="none">
+      <Badge
+        size="sm"
+        variant="light"
+        color={getColor(resolvedSchema)}
+        tt="none"
+      >
         {getTypeLabel(schema)}
       </Badge>
     )

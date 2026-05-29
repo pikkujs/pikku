@@ -42,7 +42,13 @@ Response shape:
     "middleware": 0,
     "permissions": 0,
     "workflows": 0,
-    "wires": { "http": 0, "scheduler": 0, "queue": 0, "channel": 0, "trigger": 0 }
+    "wires": {
+      "http": 0,
+      "scheduler": 0,
+      "queue": 0,
+      "channel": 0,
+      "trigger": 0
+    }
   },
   "capabilities": {
     "http": true,
@@ -79,15 +85,41 @@ Response shape:
       "readonly": false
     }
   ],
-  "middleware": [{ "id": "string", "name": "string", "description": "string|null" }],
-  "permissions": [{ "id": "string", "name": "string", "description": "string|null" }],
-  "workflows": [{ "id": "string", "name": "string", "description": "string|null", "mode": "inline|distributed" }],
+  "middleware": [
+    { "id": "string", "name": "string", "description": "string|null" }
+  ],
+  "permissions": [
+    { "id": "string", "name": "string", "description": "string|null" }
+  ],
+  "workflows": [
+    {
+      "id": "string",
+      "name": "string",
+      "description": "string|null",
+      "mode": "inline|distributed"
+    }
+  ],
   "wires": {
-    "http":      [{ "id": "string", "functionId": "string", "route": "string", "method": "string" }],
-    "scheduler": [{ "id": "string", "functionId": "string", "cron": "string|null" }],
-    "queue":     [{ "id": "string", "functionId": "string", "queueName": "string|null" }],
-    "channel":   [{ "id": "string", "functionId": "string|null", "channelName": "string" }],
-    "trigger":   [{ "id": "string", "functionId": "string", "eventType": "string|null" }]
+    "http": [
+      {
+        "id": "string",
+        "functionId": "string",
+        "route": "string",
+        "method": "string"
+      }
+    ],
+    "scheduler": [
+      { "id": "string", "functionId": "string", "cron": "string|null" }
+    ],
+    "queue": [
+      { "id": "string", "functionId": "string", "queueName": "string|null" }
+    ],
+    "channel": [
+      { "id": "string", "functionId": "string|null", "channelName": "string" }
+    ],
+    "trigger": [
+      { "id": "string", "functionId": "string", "eventType": "string|null" }
+    ]
   }
 }
 ```

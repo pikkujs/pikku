@@ -296,9 +296,10 @@ interface VariablePanelProps {
   metadata?: any
 }
 
-export const VariableConfiguration: React.FC<
-  VariablePanelProps
-> = ({ variableId, metadata = {} }) => {
+export const VariableConfiguration: React.FC<VariablePanelProps> = ({
+  variableId,
+  metadata = {},
+}) => {
   return (
     <Stack gap="lg">
       <Box>

@@ -79,7 +79,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease;
   flex-shrink: 0;
 }
 
@@ -117,7 +120,10 @@
   color: var(--composer-control-color);
   font-size: 13px;
   line-height: 1;
-  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
 }
 
 .controlChipLabel {

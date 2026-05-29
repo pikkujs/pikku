@@ -39,7 +39,11 @@ const CredentialPrompt: React.FC<{
 
   const handleConnect = (credentialName: string) => {
     const connectUrl = `${serverUrl}/credentials/${credentialName}/connect`
-    const popup = window.open(connectUrl, 'oauth-connect', 'width=600,height=700')
+    const popup = window.open(
+      connectUrl,
+      'oauth-connect',
+      'width=600,height=700'
+    )
     const timer = setInterval(() => {
       if (!popup || popup.closed) {
         clearInterval(timer)

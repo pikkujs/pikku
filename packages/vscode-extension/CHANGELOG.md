@@ -149,7 +149,6 @@
 ### Patch Changes
 
 - ba88295: Add `pikku new` scaffold commands for bootstrapping project files:
-
   - `pikku new function <name> --type func|sessionless|void`
   - `pikku new wiring <name> --type http|channel|scheduler|queue|mcp|cli|trigger`
   - `pikku new middleware <name> --type simple|factory`

@@ -286,11 +286,7 @@ const BackButton: React.FC<{
   iconId?: string
   onClick: () => void
 }> = ({ title, iconId, onClick }) => (
-  <UnstyledButton
-    onClick={onClick}
-    p="md"
-    className={classes.drawerButton}
-  >
+  <UnstyledButton onClick={onClick} p="md" className={classes.drawerButton}>
     <Group gap="xs">
       <ArrowLeft size={16} />
       {iconId && <AddonIcon id={iconId} size={16} />}
@@ -338,9 +334,7 @@ const NodeItem: React.FC<{
   )
 }
 
-const FlowView: React.FC<{ onBack: () => void }> = ({
-  onBack,
-}) => (
+const FlowView: React.FC<{ onBack: () => void }> = ({ onBack }) => (
   <Box>
     <BackButton title="Flow" onClick={onBack} />
     <Stack gap={0}>
@@ -356,9 +350,7 @@ const FlowView: React.FC<{ onBack: () => void }> = ({
   </Box>
 )
 
-const TriggersView: React.FC<{ onBack: () => void }> = ({
-  onBack,
-}) => (
+const TriggersView: React.FC<{ onBack: () => void }> = ({ onBack }) => (
   <Box>
     <BackButton title="Triggers" onClick={onBack} />
     <Stack gap={0}>
@@ -381,9 +373,7 @@ const wireCategories = [
   { key: 'session', title: 'Session', icon: User },
 ] as const
 
-const WireView: React.FC<{ onBack: () => void }> = ({
-  onBack,
-}) => (
+const WireView: React.FC<{ onBack: () => void }> = ({ onBack }) => (
   <Box>
     <BackButton title="Wire" onClick={onBack} />
     <Stack gap={0}>
@@ -524,7 +514,11 @@ const AddonItem: React.FC<{
               <Text size="sm" fw={500}>
                 {addon.displayName}
               </Text>
-              <PikkuBadge type="dynamic" badge="functions" value={functionCount} />
+              <PikkuBadge
+                type="dynamic"
+                badge="functions"
+                value={functionCount}
+              />
             </Group>
             <Text size="sm" c="dimmed">
               {addon.description}
@@ -599,10 +593,7 @@ const AddonDetailView: React.FC<{
         iconId={addon.id}
         onClick={onBack}
       />
-      <Box
-        p="md"
-        className={classes.drawerButton}
-      >
+      <Box p="md" className={classes.drawerButton}>
         <Text size="sm" c="dimmed">
           {addon.description}
         </Text>
@@ -662,28 +653,20 @@ const AddStepContent: React.FC = () => {
     return (
       <AddonsView
         onBack={() => setView('main')}
-        onSelectAddon={(addon) =>
-          setView({ type: 'addonDetail', addon })
-        }
+        onSelectAddon={(addon) => setView({ type: 'addonDetail', addon })}
       />
     )
   }
 
   if (typeof view === 'object' && view.type === 'addonDetail') {
     return (
-      <AddonDetailView
-        addon={view.addon}
-        onBack={() => setView('addons')}
-      />
+      <AddonDetailView addon={view.addon} onBack={() => setView('addons')} />
     )
   }
 
   return (
     <Box>
-      <Box
-        p="md"
-        className={classes.drawerButton}
-      >
+      <Box p="md" className={classes.drawerButton}>
         <Text size="sm" fw={600}>
           Add a node
         </Text>

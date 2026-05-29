@@ -17,7 +17,14 @@ export const MetaRow: React.FC<MetaRowProps> = ({
   gap,
   children,
 }) => (
-  <Box className={classes.metaRow} style={align !== 'center' || gap ? { alignItems: align, ...(gap ? { gap } : {}) } : undefined}>
+  <Box
+    className={classes.metaRow}
+    style={
+      align !== 'center' || gap
+        ? { alignItems: align, ...(gap ? { gap } : {}) }
+        : undefined
+    }
+  >
     <Text
       size="sm"
       ff="monospace"

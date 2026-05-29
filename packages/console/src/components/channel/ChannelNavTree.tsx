@@ -30,7 +30,16 @@ const ChannelTree: React.FC<{
   selected: ChannelSelection
   onSelect: (item: ChannelSelection) => void
   onChannelSwitch: (name: string) => void
-}> = ({ name, channel, isActive, isExpanded, onToggle, selected, onSelect, onChannelSwitch }) => {
+}> = ({
+  name,
+  channel,
+  isActive,
+  isExpanded,
+  onToggle,
+  selected,
+  onSelect,
+  onChannelSwitch,
+}) => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     () => new Set(Object.keys(channel.messageWirings || {}))
   )
@@ -49,7 +58,10 @@ const ChannelTree: React.FC<{
     isActive && selected?.type === 'handler' && selected.handler === h
 
   const isActionActive = (cat: string, action: string) =>
-    isActive && selected?.type === 'action' && selected.category === cat && selected.action === action
+    isActive &&
+    selected?.type === 'action' &&
+    selected.category === cat &&
+    selected.action === action
 
   return (
     <>
@@ -69,7 +81,9 @@ const ChannelTree: React.FC<{
           padding: '7px 12px',
           fontSize: 11,
           color: isActive ? 'var(--app-meta-value)' : 'var(--app-text)',
-          borderLeft: isActive ? '2px solid rgba(6,182,212,0.4)' : '2px solid transparent',
+          borderLeft: isActive
+            ? '2px solid rgba(6,182,212,0.4)'
+            : '2px solid transparent',
           width: '100%',
           opacity: isActive ? 1 : 0.6,
           cursor: 'pointer',
@@ -96,15 +110,23 @@ const ChannelTree: React.FC<{
             return (
               <UnstyledButton
                 key={h}
-                onClick={() => exists && onSelect({ type: 'handler', handler: h })}
+                onClick={() =>
+                  exists && onSelect({ type: 'handler', handler: h })
+                }
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
                   padding: '5px 12px 5px 22px',
                   fontSize: 10,
-                  color: active ? 'var(--app-meta-value)' : exists ? 'var(--app-text)' : 'var(--app-text-muted)',
-                  borderLeft: active ? '2px solid #7c3aed' : '2px solid transparent',
+                  color: active
+                    ? 'var(--app-meta-value)'
+                    : exists
+                      ? 'var(--app-text)'
+                      : 'var(--app-text-muted)',
+                  borderLeft: active
+                    ? '2px solid #7c3aed'
+                    : '2px solid transparent',
                   background: active ? 'rgba(124,58,237,0.06)' : undefined,
                   width: '100%',
                   cursor: exists ? 'pointer' : 'default',
@@ -114,7 +136,10 @@ const ChannelTree: React.FC<{
                 <Box
                   className={styles.typeDot}
                   style={{
-                    background: h === 'connect' ? 'rgba(6,182,212,0.6)' : 'rgba(239,68,68,0.5)',
+                    background:
+                      h === 'connect'
+                        ? 'rgba(6,182,212,0.6)'
+                        : 'rgba(239,68,68,0.5)',
                   }}
                 />
                 <Text size="sm" ff="monospace">
@@ -144,7 +169,11 @@ const ChannelTree: React.FC<{
                     transition: 'all 0.15s',
                   }}
                 >
-                  {isCatExpanded ? <ChevronDown size={8} /> : <ChevronRight size={8} />}
+                  {isCatExpanded ? (
+                    <ChevronDown size={8} />
+                  ) : (
+                    <ChevronRight size={8} />
+                  )}
                   <Text size="sm" ff="monospace" c="var(--app-meta-label)">
                     {category}
                   </Text>
@@ -170,14 +199,20 @@ const ChannelTree: React.FC<{
                     return (
                       <UnstyledButton
                         key={action}
-                        onClick={() => onSelect({ type: 'action', category, action })}
+                        onClick={() =>
+                          onSelect({ type: 'action', category, action })
+                        }
                         style={{
                           display: 'flex',
                           alignItems: 'flex-start',
                           gap: 7,
                           padding: '5px 12px 5px 32px',
-                          borderLeft: active ? '2px solid #7c3aed' : '2px solid transparent',
-                          background: active ? 'rgba(124,58,237,0.06)' : undefined,
+                          borderLeft: active
+                            ? '2px solid #7c3aed'
+                            : '2px solid transparent',
+                          background: active
+                            ? 'rgba(124,58,237,0.06)'
+                            : undefined,
                           width: '100%',
                           cursor: 'pointer',
                           transition: 'all 0.15s',
@@ -188,7 +223,11 @@ const ChannelTree: React.FC<{
                             size="sm"
                             ff="monospace"
                             fw={active ? 600 : 400}
-                            c={active ? 'var(--app-meta-value)' : 'var(--app-text)'}
+                            c={
+                              active
+                                ? 'var(--app-meta-value)'
+                                : 'var(--app-text)'
+                            }
                             truncate
                           >
                             {action}
@@ -196,7 +235,11 @@ const ChannelTree: React.FC<{
                           <Text
                             size="sm"
                             ff="monospace"
-                            c={active ? 'var(--app-meta-label)' : 'var(--app-text-muted)'}
+                            c={
+                              active
+                                ? 'var(--app-meta-label)'
+                                : 'var(--app-text-muted)'
+                            }
                             truncate
                             style={{ fontSize: 9 }}
                           >

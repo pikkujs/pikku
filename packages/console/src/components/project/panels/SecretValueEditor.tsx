@@ -34,9 +34,11 @@ interface SecretValueEditorProps {
   isOAuth2?: boolean
 }
 
-export const SecretValueEditor: React.FC<
-  SecretValueEditorProps
-> = ({ secretId, schemaName, isOAuth2 }) => {
+export const SecretValueEditor: React.FC<SecretValueEditorProps> = ({
+  secretId,
+  schemaName,
+  isOAuth2,
+}) => {
   const editable = useConsoleEditable()
   const [retrieved, setRetrieved] = useState(false)
   const [editing, setEditing] = useState(false)

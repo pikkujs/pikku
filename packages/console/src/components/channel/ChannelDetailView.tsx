@@ -2,7 +2,11 @@ import React, { useMemo } from 'react'
 import { Box, Text, Group, Badge, Tabs } from '@mantine/core'
 import type { ChannelMeta } from '@pikku/core/channel'
 import { usePanelContext } from '../../context/PanelContext'
-import { useFunctionMeta, useSchema, useChannelSnippets } from '../../hooks/useWirings'
+import {
+  useFunctionMeta,
+  useSchema,
+  useChannelSnippets,
+} from '../../hooks/useWirings'
 import { SchemaSection } from '../project/panels/shared/SchemaSection'
 import { CopyableCode } from '../ui/CopyableCode'
 import { MetaRow } from '../ui/MetaRow'
@@ -11,26 +15,34 @@ import { TagBadge, ServiceBadge } from '../ui/TagBadge'
 import classes from '../ui/console.module.css'
 import type { ChannelSelection } from './ChannelNavTree'
 
-const getSelectedMeta = (
-  channel: ChannelMeta,
-  selected: ChannelSelection
-) => {
+const getSelectedMeta = (channel: ChannelMeta, selected: ChannelSelection) => {
   if (!selected) return null
   if (selected.type === 'handler') {
-    const meta = channel[selected.handler as 'connect' | 'disconnect' | 'message']
+    const meta =
+      channel[selected.handler as 'connect' | 'disconnect' | 'message']
     return meta ? { pikkuFuncId: meta.pikkuFuncId, meta } : null
   }
-  const actionMeta = channel.messageWirings?.[selected.category]?.[selected.action]
-  return actionMeta ? { pikkuFuncId: actionMeta.pikkuFuncId, meta: actionMeta } : null
+  const actionMeta =
+    channel.messageWirings?.[selected.category]?.[selected.action]
+  return actionMeta
+    ? { pikkuFuncId: actionMeta.pikkuFuncId, meta: actionMeta }
+    : null
 }
 
 const getSnippet = (
-  snippets: { overview: string; handlers: Record<string, string>; actions: Record<string, Record<string, string>> } | undefined,
+  snippets:
+    | {
+        overview: string
+        handlers: Record<string, string>
+        actions: Record<string, Record<string, string>>
+      }
+    | undefined,
   selected: ChannelSelection
 ): string | null => {
   if (!snippets) return null
   if (!selected) return snippets.overview || null
-  if (selected.type === 'handler') return snippets.handlers[selected.handler] || null
+  if (selected.type === 'handler')
+    return snippets.handlers[selected.handler] || null
   return snippets.actions?.[selected.category]?.[selected.action] || null
 }
 
@@ -71,7 +83,10 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
   const outputSchemaName = funcMeta?.outputSchemaName
   const { data: snippets } = useChannelSnippets(channelName)
 
-  const snippet = useMemo(() => getSnippet(snippets, selected), [snippets, selected])
+  const snippet = useMemo(
+    () => getSnippet(snippets, selected),
+    [snippets, selected]
+  )
   const displayName = funcMeta?.name || funcId
   const breadcrumb = getBreadcrumb(channelName, selected)
   const title = getTitle(selected)
@@ -80,7 +95,10 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
   return (
     <Box className={classes.flexColumn}>
       {/* Header */}
-      <Box className={classes.detailHeader} style={{ padding: '10px 16px', background: 'rgba(255,255,255,0.01)' }}>
+      <Box
+        className={classes.detailHeader}
+        style={{ padding: '10px 16px', background: 'rgba(255,255,255,0.01)' }}
+      >
         <Box className={classes.flexGrow}>
           <Text size="sm" ff="monospace" c="var(--app-section-label)">
             {breadcrumb}
@@ -125,7 +143,14 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
                 ff="monospace"
                 c="var(--app-meta-value)"
                 className={classes.clickableText}
-                onClick={() => navigateInPanel('function', funcId, displayName || funcId, funcMeta)}
+                onClick={() =>
+                  navigateInPanel(
+                    'function',
+                    funcId,
+                    displayName || funcId,
+                    funcMeta
+                  )
+                }
               >
                 {displayName}
               </Text>
@@ -141,9 +166,11 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
           {selected?.type === 'handler' && (
             <MetaRow label="type">
               <Text size="sm" ff="monospace" c="var(--app-meta-value)">
-                {selected.handler === 'connect' ? 'connect (client → server)' :
-                 selected.handler === 'disconnect' ? 'disconnect (client → server)' :
-                 'receive (server → client)'}
+                {selected.handler === 'connect'
+                  ? 'connect (client → server)'
+                  : selected.handler === 'disconnect'
+                    ? 'disconnect (client → server)'
+                    : 'receive (server → client)'}
               </Text>
             </MetaRow>
           )}
@@ -182,17 +209,18 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
             </MetaRow>
           )}
 
-          {selectedData?.meta?.middleware && selectedData.meta.middleware.length > 0 && (
-            <MetaRow label="middleware">
-              <Group gap={4}>
-                {selectedData.meta.middleware.map((mw: any, i: number) => (
-                  <Badge key={i} size="sm" variant="light" color="gray">
-                    {typeof mw === 'string' ? mw : mw.type || 'middleware'}
-                  </Badge>
-                ))}
-              </Group>
-            </MetaRow>
-          )}
+          {selectedData?.meta?.middleware &&
+            selectedData.meta.middleware.length > 0 && (
+              <MetaRow label="middleware">
+                <Group gap={4}>
+                  {selectedData.meta.middleware.map((mw: any, i: number) => (
+                    <Badge key={i} size="sm" variant="light" color="gray">
+                      {typeof mw === 'string' ? mw : mw.type || 'middleware'}
+                    </Badge>
+                  ))}
+                </Group>
+              </MetaRow>
+            )}
 
           {channel.tags && channel.tags.length > 0 && (
             <MetaRow label="tags">
@@ -220,7 +248,14 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
         </Box>
 
         {/* Right: code tabs */}
-        <Box className={classes.flexGrow} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <Box
+          className={classes.flexGrow}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
           <Tabs
             defaultValue="pikku-ws"
             style={{

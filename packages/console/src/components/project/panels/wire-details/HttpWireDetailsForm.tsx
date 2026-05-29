@@ -17,9 +17,11 @@ interface HttpWireDetailsFormProps {
   metadata: any
 }
 
-export const HttpWireDetailsForm: React.FC<
-  HttpWireDetailsFormProps
-> = ({ wireType, wireId, metadata }) => {
+export const HttpWireDetailsForm: React.FC<HttpWireDetailsFormProps> = ({
+  wireType,
+  wireId,
+  metadata,
+}) => {
   const route = metadata.route || wireId
   const method = metadata.method?.toUpperCase() || 'GET'
   const isPublic = metadata.auth === false
@@ -94,7 +96,10 @@ export const HttpWireDetailsForm: React.FC<
         </Tabs.Panel>
 
         <Tabs.Panel value="meta" pt="md" px="md">
-          <CodeHighlight code={JSON.stringify(metadata, null, 2)} language="json" />
+          <CodeHighlight
+            code={JSON.stringify(metadata, null, 2)}
+            language="json"
+          />
         </Tabs.Panel>
       </Tabs>
     </Box>

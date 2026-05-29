@@ -99,7 +99,11 @@ export function TodoList() {
   if (isLoading) return <p>Loading…</p>
   if (error) return <p>{error.message}</p>
   return (
-    <ul>{data?.todos.map((t) => <li key={t.id}>{t.title}</li>)}</ul>
+    <ul>
+      {data?.todos.map((t) => (
+        <li key={t.id}>{t.title}</li>
+      ))}
+    </ul>
   )
 }
 ```
@@ -120,7 +124,9 @@ export function CreateTodoForm() {
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const title = (e.currentTarget.elements.namedItem('title') as HTMLInputElement).value
+    const title = (
+      e.currentTarget.elements.namedItem('title') as HTMLInputElement
+    ).value
     mutation.mutate({ title })
   }
 

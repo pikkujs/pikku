@@ -118,7 +118,13 @@ export class UWSPikkuHTTPResponse implements PikkuHTTPResponse {
   }
 
   public flushHeaders(): void {
-    if (!this.#streaming || this.#headersSent || this.#ended || this.isAborted()) return
+    if (
+      !this.#streaming ||
+      this.#headersSent ||
+      this.#ended ||
+      this.isAborted()
+    )
+      return
     this.#headersSent = true
     this.res.cork(() => {
       this.res.writeStatus(this.#statusCode.toString())

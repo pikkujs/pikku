@@ -1,7 +1,15 @@
 import React, { useMemo, useState } from 'react'
 import { useSearchParams } from '../router'
 import { PackageDetailPage } from './PackageDetailPage'
-import { Group, Text, ThemeIcon, Badge, Box, Loader, Center } from '@mantine/core'
+import {
+  Group,
+  Text,
+  ThemeIcon,
+  Badge,
+  Box,
+  Loader,
+  Center,
+} from '@mantine/core'
 import { Package, Globe } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
@@ -143,9 +151,7 @@ const INSTALLED_COLUMNS = () => [
   {
     key: 'agents',
     header: 'AGENTS',
-    render: (item: InstalledAddon) => (
-      <Text size="sm">{item.agentCount}</Text>
-    ),
+    render: (item: InstalledAddon) => <Text size="sm">{item.agentCount}</Text>,
   },
 ]
 
@@ -216,7 +222,10 @@ const CommunityList: React.FC<{
     [installedAddons]
   )
 
-  const columns = useMemo(() => COMMUNITY_COLUMNS(installedNames), [installedNames])
+  const columns = useMemo(
+    () => COMMUNITY_COLUMNS(installedNames),
+    [installedNames]
+  )
 
   return (
     <TableListPage
@@ -293,16 +302,12 @@ const API_COLUMNS = [
   {
     key: 'provider',
     header: 'PROVIDER',
-    render: (item: OpenApiEntry) => (
-      <Text size="sm">{item.provider}</Text>
-    ),
+    render: (item: OpenApiEntry) => <Text size="sm">{item.provider}</Text>,
   },
   {
     key: 'operations',
     header: 'OPS',
-    render: (item: any) => (
-      <Text size="sm">{item.totalOperations ?? '-'}</Text>
-    ),
+    render: (item: any) => <Text size="sm">{item.totalOperations ?? '-'}</Text>,
   },
 ]
 

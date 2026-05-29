@@ -32,7 +32,9 @@ export const CredentialsOverviewTab: React.FC = () => {
   const credentials = useMemo(() => {
     const creds = (meta as any).credentialsMeta ?? {}
     return Object.entries(creds)
-      .filter(([, data]: [string, any]) => (data.type || 'singleton') === 'singleton')
+      .filter(
+        ([, data]: [string, any]) => (data.type || 'singleton') === 'singleton'
+      )
       .map(
         ([name, data]: [string, any]) =>
           ({
@@ -209,11 +211,7 @@ const CredentialCard: React.FC<{
         )}
 
         {connectMutation.isError && (
-          <Alert
-            color="red"
-            variant="light"
-            icon={<AlertTriangle size={14} />}
-          >
+          <Alert color="red" variant="light" icon={<AlertTriangle size={14} />}>
             {String(
               (connectMutation.error as any)?.message || connectMutation.error
             )}

@@ -5,10 +5,7 @@ import '../../../.pikku/pikku-bootstrap.gen.js'
 import { InMemoryTriggerService } from '@pikku/core/services'
 import { createConfig, createSingletonServices } from '../../services.js'
 import { clearInvokers, getInvoker } from './trigger.functions.js'
-import {
-  clearInvocations,
-  getInvocations,
-} from './trigger-target.functions.js'
+import { clearInvocations, getInvocations } from './trigger-target.functions.js'
 
 let triggerService: InMemoryTriggerService | null = null
 

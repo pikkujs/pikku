@@ -49,9 +49,14 @@ const myWorkflow = pikkuWorkflowFunc<InputType, OutputType>(
 ```typescript
 // RPC step — execute a Pikku function as a queue job
 // workflow.do(stepName, funcName, data, options?)
-const result = await workflow.do('Create profile', 'createUserProfile', {
-  email: data.email,
-}, { retries: 3, retryDelay: '1s' })
+const result = await workflow.do(
+  'Create profile',
+  'createUserProfile',
+  {
+    email: data.email,
+  },
+  { retries: 3, retryDelay: '1s' }
+)
 
 // Inline step — immediate execution, cached for replay
 // workflow.do(stepName, asyncFn)
@@ -74,15 +79,16 @@ import { pikkuWorkflowGraph } from '#pikku'
 pikkuWorkflowGraph({
   description: 'Onboard a new user',
   nodes: {
-    createProfile: 'createUserProfile',  // nodeName → Pikku function name
+    createProfile: 'createUserProfile', // nodeName → Pikku function name
     sendWelcome: 'sendEmail',
   },
   config: {
     createProfile: {
-      next: ['sendWelcome'],             // Nodes to run after this one (parallel)
+      next: ['sendWelcome'], // Nodes to run after this one (parallel)
     },
     sendWelcome: {
-      input: (ref) => ({                 // Transform input using refs to prior node outputs
+      input: (ref) => ({
+        // Transform input using refs to prior node outputs
         to: ref('createProfile', 'email'),
         subject: 'Welcome!',
       }),

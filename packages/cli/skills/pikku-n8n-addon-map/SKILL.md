@@ -1,6 +1,6 @@
 ---
 name: pikku-n8n-addon-map
-description: "Use when mapping n8n integration stubs (gmailTool, slackTool, googleSheetsTool, plain gmail/slack action nodes, etc.) emitted by @pikku/n8n-import to real `@pikku/addon-*` functions. Triggered when the user points at a `<workflow>.integrations.json` manifest produced by `pikku-n8n-import`, says 'map the n8n integrations', 'wire up the gmail/slack stubs', 'replace these stubs with addon refs', or opens a stub file generated from an n8n integration node (the stub's JSDoc says `STUB — generated from n8n node \"...\" (type \"n8n-nodes-base.<service>...\")`). For n8n **Code** node stubs use `pikku-n8n-code-translate` instead."
+description: 'Use when mapping n8n integration stubs (gmailTool, slackTool, googleSheetsTool, plain gmail/slack action nodes, etc.) emitted by @pikku/n8n-import to real `@pikku/addon-*` functions. Triggered when the user points at a `<workflow>.integrations.json` manifest produced by `pikku-n8n-import`, says ''map the n8n integrations'', ''wire up the gmail/slack stubs'', ''replace these stubs with addon refs'', or opens a stub file generated from an n8n integration node (the stub''s JSDoc says `STUB — generated from n8n node "..." (type "n8n-nodes-base.<service>...")`). For n8n **Code** node stubs use `pikku-n8n-code-translate` instead.'
 metadata:
   version: 1.0.0
 ---
@@ -30,12 +30,14 @@ This skill is **per-stub mechanical**. You do not invent business logic, you do 
      "n8nType": "n8n-nodes-base.gmailTool",
      "n8nName": "Send a message in Gmail",
      "parameters": { "sendTo": "...", "message": "...", "subject": "..." },
-     "credentials": { "gmailOAuth2": { "id": "...", "name": "Personal Gmail" } },
+     "credentials": {
+       "gmailOAuth2": { "id": "...", "name": "Personal Gmail" },
+     },
      "isAgentTool": true,
-     "agentName": "Inbox Assistant"
+     "agentName": "Inbox Assistant",
    }
    ```
-2. **Installed addons** — anything matching `@pikku/addon-*` in the project's `package.json` `dependencies`. The mapping is *only* allowed against installed packages. If the addon for a given n8n type is not installed, surface that — do not silently skip and do not pick a vaguely-named function from another addon.
+2. **Installed addons** — anything matching `@pikku/addon-*` in the project's `package.json` `dependencies`. The mapping is _only_ allowed against installed packages. If the addon for a given n8n type is not installed, surface that — do not silently skip and do not pick a vaguely-named function from another addon.
 
 ## What you actually do, in order
 
@@ -45,13 +47,13 @@ For **each** entry in the manifest:
 
 Map `n8nType` to a `@pikku/addon-*` package by reading its source. Common shapes:
 
-| n8n type prefix                              | typical addon package candidate(s)                   |
-| -------------------------------------------- | ---------------------------------------------------- |
-| `n8n-nodes-base.gmail` / `gmailTool`         | `@pikku/addon-email-gmail`                           |
-| `n8n-nodes-base.slack` / `slackTool`         | `@pikku/addon-chat-slack`                            |
-| `n8n-nodes-base.googleSheets` / `…Tool`      | `@pikku/addon-sheets-google`                         |
-| `n8n-nodes-base.notion` / `notionTool`       | `@pikku/addon-docs-notion`                           |
-| `n8n-nodes-base.telegram` / `telegramTool`   | `@pikku/addon-chat-telegram`                         |
+| n8n type prefix                            | typical addon package candidate(s) |
+| ------------------------------------------ | ---------------------------------- |
+| `n8n-nodes-base.gmail` / `gmailTool`       | `@pikku/addon-email-gmail`         |
+| `n8n-nodes-base.slack` / `slackTool`       | `@pikku/addon-chat-slack`          |
+| `n8n-nodes-base.googleSheets` / `…Tool`    | `@pikku/addon-sheets-google`       |
+| `n8n-nodes-base.notion` / `notionTool`     | `@pikku/addon-docs-notion`         |
+| `n8n-nodes-base.telegram` / `telegramTool` | `@pikku/addon-chat-telegram`       |
 
 **These are guesses, not authoritative.** Always verify by reading the installed addon's `src/functions/**` to confirm the exported function names exist. If you cannot find an installed addon that plausibly covers this n8n type, stop and tell the user — do not pick a wrong addon.
 
@@ -66,6 +68,7 @@ n8n integration nodes use a `(resource, operation)` pair to disambiguate. The ma
 Verify by `grep -h "^export const" <addonPkg>/src/functions/**/*.ts` and matching by name.
 
 Conventions seen in `@pikku/addon-email-gmail` (use as a sanity reference, **not** as a fallback if the addon is something else):
+
 - `getAll` → `<resource>List`
 - `get` → `<resource>Get`
 - `send` → `<resource>Send`
@@ -106,11 +109,12 @@ export const agentGmailtool__sendAMessageInGmail = pikkuSessionlessFunc({
 #### A) `isAgentTool: true` — the stub is consumed by an agent via `ref()`
 
 The agent file references the stub by its export name. The cleanest path is:
+
 1. **Delete the stub file entirely.**
 2. In the agent file (look in the same emitted directory or `src/functions`), update the agent's `tools: [...]` array — replace `ref('agentGmailtool__sendAMessageInGmail')` with `ref('messageSend')` (or whichever addon function name you resolved).
 3. Make sure the addon package is imported wherever pikku scans functions (typically already handled by pikku CLI scanning `node_modules/@pikku/addon-*`).
 
-If you cannot delete the stub safely (e.g. it has multiple consumers, or the user wants to keep a thin wrapper for renaming), leave a *one-line* re-export wrapper instead:
+If you cannot delete the stub safely (e.g. it has multiple consumers, or the user wants to keep a thin wrapper for renaming), leave a _one-line_ re-export wrapper instead:
 
 ```ts
 import { messageSend } from '@pikku/addon-email-gmail'
@@ -131,7 +135,7 @@ But the default is delete + retarget. Wrappers add maintenance burden.
 
 n8n parameters fall into two camps:
 
-- **Hardcoded values** (e.g. `"limit": 20`, `"labelIds": ["INBOX"]`, `"sendTo": "alice@example.com"`) — these were user choices in the n8n UI. Preserve them in the workflow's `input` expression (case B), or, for agent tools (case A), document them in the agent's tool list comment so the user knows what was lost. **Agent tools cannot carry hardcoded params** — the LLM fills the args at call time. If the user *needs* a hardcoded value baked in, they must keep a wrapper function. Surface this trade-off explicitly.
+- **Hardcoded values** (e.g. `"limit": 20`, `"labelIds": ["INBOX"]`, `"sendTo": "alice@example.com"`) — these were user choices in the n8n UI. Preserve them in the workflow's `input` expression (case B), or, for agent tools (case A), document them in the agent's tool list comment so the user knows what was lost. **Agent tools cannot carry hardcoded params** — the LLM fills the args at call time. If the user _needs_ a hardcoded value baked in, they must keep a wrapper function. Surface this trade-off explicitly.
 - **`$fromAI('Name', '', 'string')` placeholders** — these are LLM-filled. They map naturally to addon function input fields the LLM will populate via the `pikkuAIAgent`'s tool-calling. No action needed beyond deleting the placeholder string; the addon's Zod schema becomes the tool schema.
 
 ### Step 5 — credentials
@@ -148,7 +152,7 @@ Each entry's `credentials: { gmailOAuth2: { id, name } }` is the n8n credential 
 - **Do not pick the wrong addon** because the right one isn't installed. Stop and tell the user `npm i @pikku/addon-<x>` is required.
 - **Do not bake per-mapping tables into `@pikku/n8n-import`.** That package is intentionally addon-agnostic. All mapping logic lives here in this skill.
 - **Do not modify the manifest file.** It's an audit artifact. Leave it alone.
-- **Do not chain calls** ("send and then mark as read"). Each manifest entry maps to *one* addon function. If the n8n graph composed multiple steps, the n8n-import already represented that as multiple stubs / multiple workflow nodes.
+- **Do not chain calls** ("send and then mark as read"). Each manifest entry maps to _one_ addon function. If the n8n graph composed multiple steps, the n8n-import already represented that as multiple stubs / multiple workflow nodes.
 - **Do not silently drop hardcoded params.** If the addon function has no place to put a value, surface it in the summary.
 
 ## After you finish

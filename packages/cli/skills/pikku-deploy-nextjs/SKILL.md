@@ -57,6 +57,7 @@ const result = await rpc('calculateTax', { amount: 100, region: 'US' })
 ```
 
 **Dynamic vs Static:**
+
 - `get`, `post`, `del`, `rpc` — access headers/cookies, use in dynamic Server Components
 - `staticGet`, `staticPost`, `staticRPC` — no request context, safe for precompile/ISR
 

@@ -6,9 +6,7 @@ type TreeElement =
   | { kind: 'tag-group'; tag: string }
   | { kind: 'applied'; label: string; filePath?: string }
 
-export class MiddlewareTreeProvider
-  implements vscode.TreeDataProvider<TreeElement>
-{
+export class MiddlewareTreeProvider implements vscode.TreeDataProvider<TreeElement> {
   private readonly _onDidChangeTreeData = new vscode.EventEmitter<
     TreeElement | undefined
   >()

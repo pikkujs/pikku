@@ -19,6 +19,7 @@ Use this skill as an execution checklist, not reference material.
 5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
 Pikku provides SQL database services through four packages:
+
 - `@pikku/kysely` — Base service implementations (database-agnostic)
 - `@pikku/kysely-postgres` — PostgreSQL-specific implementations + `PikkuKysely` connection wrapper
 - `@pikku/kysely-mysql` — MySQL-specific implementations
@@ -65,16 +66,16 @@ const kysely = createSQLiteKysely(database: SqliteDatabase | (() => Promise<Sqli
 
 Each database variant exports these services with a prefix (`Pg`, `MySQL`, `SQLite`, or base `Kysely`):
 
-| Service | Interface | Purpose |
-|---------|-----------|---------|
-| `*ChannelStore` | `ChannelStore` | WebSocket channel state persistence |
-| `*EventHubStore` | `EventHubStore` | Event hub state persistence |
-| `*WorkflowService` | `PikkuWorkflowService` | Workflow definition storage |
-| `*WorkflowRunService` | `WorkflowRunService` | Workflow execution tracking |
-| `*DeploymentService` | `DeploymentService` | Deployment state management |
-| `*AIStorageService` | `AIStorageService, AIRunStateService` | AI conversation/run storage |
-| `*AgentRunService` | `AgentRunService` | Agent execution tracking |
-| `*SecretService` | `SecretService` | Encrypted secret storage (envelope encryption) |
+| Service               | Interface                             | Purpose                                        |
+| --------------------- | ------------------------------------- | ---------------------------------------------- |
+| `*ChannelStore`       | `ChannelStore`                        | WebSocket channel state persistence            |
+| `*EventHubStore`      | `EventHubStore`                       | Event hub state persistence                    |
+| `*WorkflowService`    | `PikkuWorkflowService`                | Workflow definition storage                    |
+| `*WorkflowRunService` | `WorkflowRunService`                  | Workflow execution tracking                    |
+| `*DeploymentService`  | `DeploymentService`                   | Deployment state management                    |
+| `*AIStorageService`   | `AIStorageService, AIRunStateService` | AI conversation/run storage                    |
+| `*AgentRunService`    | `AgentRunService`                     | Agent execution tracking                       |
+| `*SecretService`      | `SecretService`                       | Encrypted secret storage (envelope encryption) |
 
 All services take a `Kysely<KyselyPikkuDB>` instance in their constructor and have an `init()` method that creates tables if needed.
 
@@ -99,7 +100,11 @@ await secrets.rotateKEK() // Re-encrypt all secrets with new KEK
 ### PostgreSQL Setup
 
 ```typescript
-import { PikkuKysely, PgKyselyChannelStore, PgKyselyWorkflowService } from '@pikku/kysely-postgres'
+import {
+  PikkuKysely,
+  PgKyselyChannelStore,
+  PgKyselyWorkflowService,
+} from '@pikku/kysely-postgres'
 
 const createSingletonServices = pikkuServices(async (config) => {
   const logger = new PinoLogger()
@@ -119,7 +124,10 @@ const createSingletonServices = pikkuServices(async (config) => {
 ### SQLite Setup
 
 ```typescript
-import { createSQLiteKysely, SQLiteKyselyChannelStore } from '@pikku/kysely-sqlite'
+import {
+  createSQLiteKysely,
+  SQLiteKyselyChannelStore,
+} from '@pikku/kysely-sqlite'
 import Database from 'better-sqlite3'
 
 const kysely = createSQLiteKysely(new Database('app.db'))

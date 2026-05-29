@@ -128,9 +128,17 @@ export const AgentConfiguration: React.FC<AgentPanelProps> = ({
             <NumberInput
               size="xs"
               label={`Temperature${metadata?.temperature != null ? ` (default: ${metadata.temperature})` : ''}`}
-              placeholder={metadata?.temperature != null ? String(metadata.temperature) : 'default'}
+              placeholder={
+                metadata?.temperature != null
+                  ? String(metadata.temperature)
+                  : 'default'
+              }
               value={playgroundCtx.temperature ?? ''}
-              onChange={(v) => playgroundCtx.setTemperature(typeof v === 'number' ? v : undefined)}
+              onChange={(v) =>
+                playgroundCtx.setTemperature(
+                  typeof v === 'number' ? v : undefined
+                )
+              }
               min={0}
               max={2}
               step={0.1}

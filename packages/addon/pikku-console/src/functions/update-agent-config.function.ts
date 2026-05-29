@@ -17,7 +17,9 @@ export const updateAgentConfig = pikkuSessionlessFunc<
   auth: false,
   func: async ({ codeEditService }, { sourceFile, exportedName, changes }) => {
     if (!codeEditService) {
-      throw new LocalEnvironmentOnlyError('Only available in local development mode')
+      throw new LocalEnvironmentOnlyError(
+        'Only available in local development mode'
+      )
     }
     await codeEditService.updateAgentConfig(sourceFile, exportedName, changes)
     return { success: true }

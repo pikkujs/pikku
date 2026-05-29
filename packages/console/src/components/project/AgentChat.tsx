@@ -61,12 +61,23 @@ const ToolCallDisplay: React.FC<{
 
   const credentialPayload = (() => {
     if (!result) return null
-    const r = typeof result === 'string' ? (() => { try { return JSON.parse(result) } catch { return null } })() : result
-    return r && typeof r === 'object' && (r as any).__credentialRequired ? r as {
-      credentialName: string
-      credentialType: 'oauth2' | 'apikey'
-      connectUrl?: string
-    } : null
+    const r =
+      typeof result === 'string'
+        ? (() => {
+            try {
+              return JSON.parse(result)
+            } catch {
+              return null
+            }
+          })()
+        : result
+    return r && typeof r === 'object' && (r as any).__credentialRequired
+      ? (r as {
+          credentialName: string
+          credentialType: 'oauth2' | 'apikey'
+          connectUrl?: string
+        })
+      : null
   })()
 
   const pendingCredential = pendingApprovals.find(
@@ -173,7 +184,11 @@ const ToolCallDisplay: React.FC<{
 
     const handleConnect = () => {
       if (cred?.credentialType === 'oauth2' && connectUrl) {
-        const popup = window.open(connectUrl, 'oauth-connect', 'width=600,height=700')
+        const popup = window.open(
+          connectUrl,
+          'oauth-connect',
+          'width=600,height=700'
+        )
         oauthTimerRef.current = setInterval(() => {
           if (!popup || popup.closed) {
             clearInterval(oauthTimerRef.current!)
@@ -214,8 +229,9 @@ const ToolCallDisplay: React.FC<{
           </PikkuBadge>
         </Group>
         <Text size="sm" mb="xs">
-          This action requires the <strong>{cred?.credentialName ?? 'OAuth'}</strong>{' '}
-          credential to be connected.
+          This action requires the{' '}
+          <strong>{cred?.credentialName ?? 'OAuth'}</strong> credential to be
+          connected.
         </Text>
         <Group gap="xs">
           <Button size="xs" variant="light" onClick={handleConnect}>
@@ -341,11 +357,7 @@ const AssistantMessage: React.FC = () => (
           Assistant
         </Text>
       </Group>
-      <Paper
-        p="sm"
-        radius="md"
-        bg="var(--mantine-color-default-hover)"
-      >
+      <Paper p="sm" radius="md" bg="var(--mantine-color-default-hover)">
         <MessagePrimitive.Content
           components={{
             Text: ({ text }) => (
@@ -393,13 +405,18 @@ const AgentComposer: React.FC<{ disabled?: boolean }> = ({ disabled }) => (
         input={
           <ComposerPrimitive.Input
             className={composerStyles.composerInput}
-            placeholder={disabled ? 'Respond to approval request above...' : 'Message...'}
+            placeholder={
+              disabled ? 'Respond to approval request above...' : 'Message...'
+            }
             rows={1}
             disabled={disabled ?? false}
           />
         }
         send={
-          <ComposerPrimitive.Send className={composerStyles.sendButton} disabled={disabled ?? false}>
+          <ComposerPrimitive.Send
+            className={composerStyles.sendButton}
+            disabled={disabled ?? false}
+          >
             <ArrowUp size={15} />
           </ComposerPrimitive.Send>
         }
@@ -411,8 +428,15 @@ const AgentComposer: React.FC<{ disabled?: boolean }> = ({ disabled }) => (
 export const AgentChat: React.FC<{
   streaming?: boolean
 }> = ({ streaming = false }) => {
-  const { agentId, threadId, setThreadId, refetchThreads, dbMessages, model, temperature } =
-    useAgentPlayground()
+  const {
+    agentId,
+    threadId,
+    setThreadId,
+    refetchThreads,
+    dbMessages,
+    model,
+    temperature,
+  } = useAgentPlayground()
 
   const onStreamDone = useCallback(() => {
     refetchThreads()
@@ -443,45 +467,49 @@ export const AgentChat: React.FC<{
 
   return (
     <PikkuApprovalContext.Provider value={{ pendingApprovals, handleApproval }}>
-    <AssistantRuntimeProvider runtime={runtime}>
-      <Stack
-        gap={0}
-        className={classes.flexColumn}
-      >
-        <ThreadPrimitive.Root style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-          <ThreadPrimitive.Viewport asChild>
-            <ScrollArea style={{ flex: 1, minHeight: 0 }} type="auto">
-              <Container size="md" p="md" pb="xl">
-                <Stack gap="md">
-                  <ThreadPrimitive.Empty>
-                    <Center style={{ flex: 1, minHeight: 300 }}>
-                      <Stack align="center" gap="xs">
-                        <Bot
-                          size={40}
-                          color="var(--mantine-color-default-border)"
-                        />
-                        <Text c="dimmed" ta="center">
-                          {threadId
-                            ? 'Send a message to start the conversation.'
-                            : 'Start a new conversation.'}
-                        </Text>
-                      </Stack>
-                    </Center>
-                  </ThreadPrimitive.Empty>
-                  <ThreadPrimitive.Messages
-                    components={{
-                      UserMessage,
-                      AssistantMessage,
-                    }}
-                  />
-                </Stack>
-              </Container>
-            </ScrollArea>
-          </ThreadPrimitive.Viewport>
-          <AgentComposer disabled={isAwaitingApproval} />
-        </ThreadPrimitive.Root>
-      </Stack>
-    </AssistantRuntimeProvider>
+      <AssistantRuntimeProvider runtime={runtime}>
+        <Stack gap={0} className={classes.flexColumn}>
+          <ThreadPrimitive.Root
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              flex: 1,
+              minHeight: 0,
+            }}
+          >
+            <ThreadPrimitive.Viewport asChild>
+              <ScrollArea style={{ flex: 1, minHeight: 0 }} type="auto">
+                <Container size="md" p="md" pb="xl">
+                  <Stack gap="md">
+                    <ThreadPrimitive.Empty>
+                      <Center style={{ flex: 1, minHeight: 300 }}>
+                        <Stack align="center" gap="xs">
+                          <Bot
+                            size={40}
+                            color="var(--mantine-color-default-border)"
+                          />
+                          <Text c="dimmed" ta="center">
+                            {threadId
+                              ? 'Send a message to start the conversation.'
+                              : 'Start a new conversation.'}
+                          </Text>
+                        </Stack>
+                      </Center>
+                    </ThreadPrimitive.Empty>
+                    <ThreadPrimitive.Messages
+                      components={{
+                        UserMessage,
+                        AssistantMessage,
+                      }}
+                    />
+                  </Stack>
+                </Container>
+              </ScrollArea>
+            </ThreadPrimitive.Viewport>
+            <AgentComposer disabled={isAwaitingApproval} />
+          </ThreadPrimitive.Root>
+        </Stack>
+      </AssistantRuntimeProvider>
     </PikkuApprovalContext.Provider>
   )
 }

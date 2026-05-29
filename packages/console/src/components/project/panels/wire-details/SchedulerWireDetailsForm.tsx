@@ -78,7 +78,10 @@ export const SchedulerWireDetailsForm: React.FC<
         </Tabs.Panel>
 
         <Tabs.Panel value="meta" pt="md" px="md">
-          <CodeHighlight code={JSON.stringify(metadata, null, 2)} language="json" />
+          <CodeHighlight
+            code={JSON.stringify(metadata, null, 2)}
+            language="json"
+          />
         </Tabs.Panel>
       </Tabs>
     </Box>

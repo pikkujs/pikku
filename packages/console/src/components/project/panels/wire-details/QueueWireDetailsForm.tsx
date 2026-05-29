@@ -16,9 +16,11 @@ interface QueueWireDetailsFormProps {
   metadata: any
 }
 
-export const QueueWireDetailsForm: React.FC<
-  QueueWireDetailsFormProps
-> = ({ wireType, wireId, metadata }) => {
+export const QueueWireDetailsForm: React.FC<QueueWireDetailsFormProps> = ({
+  wireType,
+  wireId,
+  metadata,
+}) => {
   const queueName = wireId
   const concurrency = metadata.concurrency || 1
 
@@ -77,7 +79,10 @@ export const QueueWireDetailsForm: React.FC<
         </Tabs.Panel>
 
         <Tabs.Panel value="meta" pt="md" px="md">
-          <CodeHighlight code={JSON.stringify(metadata, null, 2)} language="json" />
+          <CodeHighlight
+            code={JSON.stringify(metadata, null, 2)}
+            language="json"
+          />
         </Tabs.Panel>
       </Tabs>
     </Box>

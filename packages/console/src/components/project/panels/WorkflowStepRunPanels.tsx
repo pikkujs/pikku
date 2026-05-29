@@ -1,13 +1,5 @@
 import React from 'react'
-import {
-  Stack,
-  Text,
-  Group,
-  Card,
-  Table,
-  Timeline,
-  Box,
-} from '@mantine/core'
+import { Stack, Text, Group, Card, Table, Timeline, Box } from '@mantine/core'
 import { CodeHighlight } from '@mantine/code-highlight'
 import { Clock, AlertTriangle, CheckCircle, Play } from 'lucide-react'
 import { useWorkflowRunContextSafe } from '../../../context/WorkflowRunContext'
@@ -34,9 +26,9 @@ const formatDuration = (start: string | undefined, end: string | undefined) => {
   return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`
 }
 
-export const WorkflowStepExecution: React.FC<
-  StepRunPanelProps
-> = ({ stepId }) => {
+export const WorkflowStepExecution: React.FC<StepRunPanelProps> = ({
+  stepId,
+}) => {
   const runContext = useWorkflowRunContextSafe()
   const stepStates = runContext?.stepStates
   const step = stepStates?.get(stepId)
@@ -159,9 +151,9 @@ export const WorkflowStepExecution: React.FC<
   )
 }
 
-export const WorkflowStepInputData: React.FC<
-  StepRunPanelProps
-> = ({ stepId }) => {
+export const WorkflowStepInputData: React.FC<StepRunPanelProps> = ({
+  stepId,
+}) => {
   const runContext = useWorkflowRunContextSafe()
   const stepStates = runContext?.stepStates
   const step = stepStates?.get(stepId)
@@ -172,7 +164,10 @@ export const WorkflowStepInputData: React.FC<
       <Card withBorder radius="md" padding={0}>
         <Card.Section p="md">
           {step?.data ? (
-            <CodeHighlight code={JSON.stringify(step.data, null, 2)} language="json" />
+            <CodeHighlight
+              code={JSON.stringify(step.data, null, 2)}
+              language="json"
+            />
           ) : (
             <EmptyState />
           )}
@@ -182,9 +177,9 @@ export const WorkflowStepInputData: React.FC<
   )
 }
 
-export const WorkflowStepOutputData: React.FC<
-  StepRunPanelProps
-> = ({ stepId }) => {
+export const WorkflowStepOutputData: React.FC<StepRunPanelProps> = ({
+  stepId,
+}) => {
   const runContext = useWorkflowRunContextSafe()
   const stepStates = runContext?.stepStates
   const step = stepStates?.get(stepId)
@@ -195,7 +190,10 @@ export const WorkflowStepOutputData: React.FC<
       <Card withBorder radius="md" padding={0}>
         <Card.Section p="md">
           {step?.result ? (
-            <CodeHighlight code={JSON.stringify(step.result, null, 2)} language="json" />
+            <CodeHighlight
+              code={JSON.stringify(step.result, null, 2)}
+              language="json"
+            />
           ) : (
             <EmptyState />
           )}
@@ -205,9 +203,7 @@ export const WorkflowStepOutputData: React.FC<
   )
 }
 
-export const WorkflowStepError: React.FC<StepRunPanelProps> = ({
-  stepId,
-}) => {
+export const WorkflowStepError: React.FC<StepRunPanelProps> = ({ stepId }) => {
   const runContext = useWorkflowRunContextSafe()
   const stepStates = runContext?.stepStates
   const step = stepStates?.get(stepId)
@@ -269,9 +265,9 @@ export const WorkflowStepError: React.FC<StepRunPanelProps> = ({
   )
 }
 
-export const WorkflowStepRetryHistory: React.FC<
-  StepRunPanelProps
-> = ({ stepId }) => {
+export const WorkflowStepRetryHistory: React.FC<StepRunPanelProps> = ({
+  stepId,
+}) => {
   const runContext = useWorkflowRunContextSafe()
   const selectedRunId = runContext?.selectedRunId ?? null
   const { data: history } = useWorkflowRunHistory(selectedRunId)

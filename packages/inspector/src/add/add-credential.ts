@@ -2,6 +2,7 @@ import * as ts from 'typescript'
 import {
   getPropertyValue,
   getArrayPropertyValue,
+  assertStringLiteralProperty,
 } from '../utils/get-property-value.js'
 import type { AddWiring } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
@@ -32,6 +33,8 @@ export const addCredential: AddWiring = (
 
   if (ts.isObjectLiteralExpression(firstArg)) {
     const obj = firstArg
+
+    assertStringLiteralProperty(obj, 'name', 'Credential', logger)
 
     const nameValue = getPropertyValue(obj, 'name') as string | null
     const displayNameValue = getPropertyValue(obj, 'displayName') as

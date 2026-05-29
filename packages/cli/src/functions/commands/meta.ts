@@ -57,7 +57,8 @@ export const pikkuMetaSchemasGet = pikkuSessionlessFunc<
 >({
   func: async ({ getInspectorState }, data) => {
     const state = await getInspectorState()
-    const schema = state.schemas?.[data.schemaName] ?? getSchema(data.schemaName)
+    const schema =
+      state.schemas?.[data.schemaName] ?? getSchema(data.schemaName)
     if (!schema) throw new Error(`Schema not found: ${data.schemaName}`)
     out({
       schemaName: data.schemaName,

@@ -152,61 +152,64 @@ const FunctionsList: React.FC<{
         },
       },
       ...(hasTestsColumn
-        ? [{
-            key: 'tests',
-            header: 'TESTS',
-            width: 180,
-            render: (func: any) => {
-              const funcId = func.pikkuFuncName || func.pikkuFuncId
-              const tests = func.tests ?? testsByFunction?.[funcId]
-              if (!tests) {
+        ? [
+            {
+              key: 'tests',
+              header: 'TESTS',
+              width: 180,
+              render: (func: any) => {
+                const funcId = func.pikkuFuncName || func.pikkuFuncId
+                const tests = func.tests ?? testsByFunction?.[funcId]
+                if (!tests) {
+                  return (
+                    <UnstyledButton
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        openFunction(funcId, func)
+                      }}
+                    >
+                      <Badge size="sm" variant="light" color="gray">
+                        unknown
+                      </Badge>
+                    </UnstyledButton>
+                  )
+                }
+
+                const status = tests.status as FunctionTestData['status']
+                const ratioLabel =
+                  tests.status === 'covered'
+                    ? `${tests.coveredLines}/${tests.totalLines}`
+                    : tests.status === 'unknown'
+                      ? 'unknown'
+                      : `${Math.round(tests.ratio * 100)}%`
+
                 return (
                   <UnstyledButton
                     onClick={(event) => {
                       event.stopPropagation()
-                      openFunction(funcId, func)
+                      openFunction(funcId, { ...func, tests })
                     }}
+                    style={{ display: 'block', textAlign: 'left' }}
                   >
-                    <Badge size="sm" variant="light" color="gray">
-                      unknown
-                    </Badge>
+                    <Group gap={6} wrap="nowrap">
+                      <Badge
+                        size="sm"
+                        variant="light"
+                        color={TEST_STATUS_COLOR[status]}
+                      >
+                        {ratioLabel}
+                      </Badge>
+                      <Text size="xs" c="dimmed">
+                        {tests.scenarios.length === 0
+                          ? 'No tests'
+                          : `${tests.scenarios.length} linked`}
+                      </Text>
+                    </Group>
                   </UnstyledButton>
                 )
-              }
-
-              const status = tests.status as FunctionTestData['status']
-              const ratioLabel = tests.status === 'covered'
-                ? `${tests.coveredLines}/${tests.totalLines}`
-                : tests.status === 'unknown'
-                  ? 'unknown'
-                  : `${Math.round(tests.ratio * 100)}%`
-
-              return (
-                <UnstyledButton
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    openFunction(funcId, { ...func, tests })
-                  }}
-                  style={{ display: 'block', textAlign: 'left' }}
-                >
-                  <Group gap={6} wrap="nowrap">
-                    <Badge
-                      size="sm"
-                      variant="light"
-                      color={TEST_STATUS_COLOR[status]}
-                    >
-                      {ratioLabel}
-                    </Badge>
-                    <Text size="xs" c="dimmed">
-                      {tests.scenarios.length === 0
-                        ? 'No tests'
-                        : `${tests.scenarios.length} linked`}
-                    </Text>
-                  </Group>
-                </UnstyledButton>
-              )
+              },
             },
-          }]
+          ]
         : []),
       ...extraColumns.map((col) => ({
         key: col.label,
@@ -217,7 +220,13 @@ const FunctionsList: React.FC<{
           col.render(func.pikkuFuncName || func.pikkuFuncId),
       })),
     ],
-    [functionUsedBy, extraColumns, hasTestsColumn, openFunction, testsByFunction]
+    [
+      functionUsedBy,
+      extraColumns,
+      hasTestsColumn,
+      openFunction,
+      testsByFunction,
+    ]
   )
 
   return (

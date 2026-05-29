@@ -12,7 +12,10 @@ import {
 } from '@mantine/core'
 import { Save, X, AlertTriangle, CheckCircle } from 'lucide-react'
 import { SectionLabel } from '../../ui/SectionLabel'
-import { useAgentSource, useUpdateAgentConfig } from '../../../hooks/useCodeEdit'
+import {
+  useAgentSource,
+  useUpdateAgentConfig,
+} from '../../../hooks/useCodeEdit'
 import { useTagOptions } from '../../../hooks/useTags'
 import { useAddonFunctions } from '../../../hooks/useAddonFunctions'
 import { usePikkuMeta } from '../../../context/PikkuMetaContext'
@@ -76,17 +79,20 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
 
     if (description !== (original.description || ''))
       changes.description = description || null
-    if (role !== (original.role || ''))
-      changes.role = role || null
+    if (role !== (original.role || '')) changes.role = role || null
     if (personality !== (original.personality || ''))
       changes.personality = personality || null
-    if (goal !== (original.goal || ''))
-      changes.goal = goal || null
-    if (model !== (original.model || null))
-      changes.model = model || undefined
-    if (maxSteps !== (typeof original.maxSteps === 'number' ? original.maxSteps : ''))
+    if (goal !== (original.goal || '')) changes.goal = goal || null
+    if (model !== (original.model || null)) changes.model = model || undefined
+    if (
+      maxSteps !==
+      (typeof original.maxSteps === 'number' ? original.maxSteps : '')
+    )
       changes.maxSteps = typeof maxSteps === 'number' ? maxSteps : null
-    if (temperature !== (typeof original.temperature === 'number' ? original.temperature : ''))
+    if (
+      temperature !==
+      (typeof original.temperature === 'number' ? original.temperature : '')
+    )
       changes.temperature = typeof temperature === 'number' ? temperature : null
     if (toolChoice !== (original.toolChoice || null))
       changes.toolChoice = toolChoice || null

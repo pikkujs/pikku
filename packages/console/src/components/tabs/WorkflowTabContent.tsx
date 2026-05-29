@@ -16,7 +16,8 @@ export const WorkflowTabContent: React.FC<{ immersiveDetail?: boolean }> = ({
   const rpc = usePikkuRPC()
   const { data: workflow, isLoading } = useQuery({
     queryKey: ['workflow-meta-by-id', workflowId],
-    queryFn: () => rpc.invoke('console:getWorkflowMetaById', { workflowId: workflowId! }),
+    queryFn: () =>
+      rpc.invoke('console:getWorkflowMetaById', { workflowId: workflowId! }),
     enabled: !!workflowId,
   })
 

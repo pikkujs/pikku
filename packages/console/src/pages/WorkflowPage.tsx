@@ -35,7 +35,8 @@ const WorkflowPageInner: React.FC<{
   }
 
   const workflows = meta.workflows || {}
-  const hasWorkflows = Object.keys(workflows).length > 0 || (aiWorkflows && aiWorkflows.length > 0)
+  const hasWorkflows =
+    Object.keys(workflows).length > 0 || (aiWorkflows && aiWorkflows.length > 0)
 
   if (!hasWorkflows) {
     return (
@@ -75,7 +76,7 @@ export const WorkflowsPage: React.FC<{
           <Loader />
         </Center>
       }
-      >
+    >
       <WorkflowPageInner
         extraColumns={extraColumns}
         headerRight={headerRight}

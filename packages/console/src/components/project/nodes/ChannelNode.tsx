@@ -18,8 +18,6 @@ interface ChannelNodeData {
   messageActions?: string[]
 }
 
-export const ChannelNode: React.FC<
-  NodeProps<ChannelNodeData>
-> = ({ data }) => {
+export const ChannelNode: React.FC<NodeProps<ChannelNodeData>> = ({ data }) => {
   return <BaseNode data={data} hasInput={false} hasOutput={true} width={250} />
 }

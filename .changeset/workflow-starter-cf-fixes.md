@@ -17,7 +17,7 @@ Workers via Workers-for-Platforms:
    analyzer didn't assign `workflow-state` capability to the unit and the
    generated `entry.ts` left out `CloudflareWorkflowService` — calling
    `POST /workflow/<name>/start` returned `WorkflowService service not
-   available`. Destructuring `{ workflowService }` (and asserting it) lets
+available`. Destructuring `{ workflowService }` (and asserting it) lets
    the static analyzer pick up the capability automatically.
 
 2. **`@pikku/cloudflare` re-exports `getCloudflareEnv()`.** Lets user

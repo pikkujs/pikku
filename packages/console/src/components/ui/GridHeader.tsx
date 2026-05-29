@@ -16,7 +16,10 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
   columns,
   gridTemplateColumns,
 }) => (
-  <Box className={classes.gridHeader} style={{ display: 'grid', gridTemplateColumns }}>
+  <Box
+    className={classes.gridHeader}
+    style={{ display: 'grid', gridTemplateColumns }}
+  >
     {columns.map((col) => (
       <Text
         key={col.label}

@@ -16,7 +16,11 @@ import {
 } from '@mantine/core'
 import { GitBranch, GitCompare, ChevronRight, ChevronDown } from 'lucide-react'
 import { useSearchParams } from '../router'
-import { useStateDiff, type DiffEntry, type StateDiff } from '../hooks/useStateDiff'
+import {
+  useStateDiff,
+  type DiffEntry,
+  type StateDiff,
+} from '../hooks/useStateDiff'
 import { httpMethodDefs, funcWrapperDefs } from '../components/ui/badge-defs'
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -105,7 +109,13 @@ const PrimaryRow: React.FC<{
     return (
       <Group gap="sm" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
         <HttpMethodBadge method={method} />
-        <Text size="sm" c="white" ff="monospace" style={{ flex: 1, minWidth: 0 }} truncate>
+        <Text
+          size="sm"
+          c="white"
+          ff="monospace"
+          style={{ flex: 1, minWidth: 0 }}
+          truncate
+        >
           {route}
         </Text>
         {params.length > 0 && (
@@ -114,7 +124,13 @@ const PrimaryRow: React.FC<{
           </Text>
         )}
         {funcId && (
-          <Text size="sm" c="dimmed" ff="monospace" truncate style={{ maxWidth: 240 }}>
+          <Text
+            size="sm"
+            c="dimmed"
+            ff="monospace"
+            truncate
+            style={{ maxWidth: 240 }}
+          >
             → {funcId}
           </Text>
         )}
@@ -125,11 +141,20 @@ const PrimaryRow: React.FC<{
   if (category === 'functions') {
     const wrapper = String(data.funcWrapper ?? '')
     const inSchema = data.inputSchemaName ? String(data.inputSchemaName) : null
-    const outSchema = data.outputSchemaName ? String(data.outputSchemaName) : null
+    const outSchema = data.outputSchemaName
+      ? String(data.outputSchemaName)
+      : null
     const sessionless = data.sessionless === true
     return (
       <Group gap="sm" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
-        <Text size="sm" c="white" ff="monospace" fw={500} style={{ minWidth: 0 }} truncate>
+        <Text
+          size="sm"
+          c="white"
+          ff="monospace"
+          fw={500}
+          style={{ minWidth: 0 }}
+          truncate
+        >
           {entry.id}
         </Text>
         <FuncWrapperBadge wrapper={wrapper} />
@@ -139,7 +164,13 @@ const PrimaryRow: React.FC<{
           </Badge>
         )}
         {(inSchema || outSchema) && (
-          <Text size="sm" c="dimmed" ff="monospace" truncate style={{ flex: 1, minWidth: 0 }}>
+          <Text
+            size="sm"
+            c="dimmed"
+            ff="monospace"
+            truncate
+            style={{ flex: 1, minWidth: 0 }}
+          >
             {inSchema ?? '·'} → {outSchema ?? 'void'}
           </Text>
         )}
@@ -154,7 +185,14 @@ const PrimaryRow: React.FC<{
   const cron = typeof cronValue === 'string' ? cronValue : null
   return (
     <Group gap="sm" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
-      <Text size="sm" c="white" ff="monospace" fw={500} style={{ minWidth: 0 }} truncate>
+      <Text
+        size="sm"
+        c="white"
+        ff="monospace"
+        fw={500}
+        style={{ minWidth: 0 }}
+        truncate
+      >
         {entry.id}
       </Text>
       {route && (
@@ -214,7 +252,11 @@ const FieldDiff: React.FC<{
           c="dimmed"
           fw={600}
           tt="uppercase"
-          style={{ flex: 1, padding: '6px 12px', borderLeft: '1px solid var(--app-border)' }}
+          style={{
+            flex: 1,
+            padding: '6px 12px',
+            borderLeft: '1px solid var(--app-border)',
+          }}
         >
           base
         </Text>
@@ -223,7 +265,11 @@ const FieldDiff: React.FC<{
           c="dimmed"
           fw={600}
           tt="uppercase"
-          style={{ flex: 1, padding: '6px 12px', borderLeft: '1px solid var(--app-border)' }}
+          style={{
+            flex: 1,
+            padding: '6px 12px',
+            borderLeft: '1px solid var(--app-border)',
+          }}
         >
           ours
         </Text>
@@ -255,7 +301,10 @@ const FieldDiff: React.FC<{
                 flex: 1,
                 padding: '6px 12px',
                 borderLeft: '1px solid var(--app-border)',
-                background: !equal && b !== undefined ? 'rgba(255, 80, 80, 0.06)' : undefined,
+                background:
+                  !equal && b !== undefined
+                    ? 'rgba(255, 80, 80, 0.06)'
+                    : undefined,
               }}
             >
               <Code
@@ -273,7 +322,10 @@ const FieldDiff: React.FC<{
                 flex: 1,
                 padding: '6px 12px',
                 borderLeft: '1px solid var(--app-border)',
-                background: !equal && o !== undefined ? 'rgba(80, 200, 120, 0.06)' : undefined,
+                background:
+                  !equal && o !== undefined
+                    ? 'rgba(80, 200, 120, 0.06)'
+                    : undefined,
               }}
             >
               <Code
@@ -399,7 +451,13 @@ const DiffSummaryBar: React.FC<{ diff: StateDiff }> = ({ diff }) => {
         </Group>
       )}
       <Box style={{ flex: 1 }} />
-      <Text size="sm" c="dimmed" ff="monospace" truncate style={{ maxWidth: 380 }}>
+      <Text
+        size="sm"
+        c="dimmed"
+        ff="monospace"
+        truncate
+        style={{ maxWidth: 380 }}
+      >
         base: {diff.basePath.split('/').slice(-3).join('/')}
       </Text>
     </Group>
@@ -420,7 +478,9 @@ const DiffView: React.FC<{ diff: StateDiff }> = ({ diff }) => {
       .filter((t) => t.added + t.removed + t.modified > 0)
   }, [diff])
 
-  const [activeTab, setActiveTab] = useState<string | null>(tabs[0]?.key ?? null)
+  const [activeTab, setActiveTab] = useState<string | null>(
+    tabs[0]?.key ?? null
+  )
 
   useEffect(() => {
     if (!activeTab && tabs[0]) setActiveTab(tabs[0].key)
@@ -437,13 +497,25 @@ const DiffView: React.FC<{ diff: StateDiff }> = ({ diff }) => {
   }
 
   return (
-    <Box style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+    <Box
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        minHeight: 0,
+      }}
+    >
       <DiffSummaryBar diff={diff} />
       <Tabs
         value={activeTab}
         onChange={setActiveTab}
         keepMounted={false}
-        style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
+        }}
       >
         <Tabs.List px="md" pt="sm" style={{ flexShrink: 0 }}>
           {tabs.map((t) => (
@@ -530,7 +602,13 @@ export const ChangesPage: React.FC = () => {
           ours vs base
         </Text>
       </Group>
-      <Group px="md" py="sm" gap="sm" align="flex-end" style={{ flexShrink: 0 }}>
+      <Group
+        px="md"
+        py="sm"
+        gap="sm"
+        align="flex-end"
+        style={{ flexShrink: 0 }}
+      >
         <TextInput
           label="Base .pikku path"
           description="Path to a .pikku/ directory to diff against (e.g. a worktree at main)"
@@ -548,7 +626,14 @@ export const ChangesPage: React.FC = () => {
         </Button>
       </Group>
       <Divider />
-      <Box style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <Box
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         {!activePath && (
           <Center p="xl">
             <Text size="sm" c="dimmed">

@@ -40,6 +40,7 @@ const content = new S3Content(
 ```
 
 **Methods:**
+
 - `signURL(url: string, dateLessThan: Date, dateGreaterThan?: Date): Promise<string>` — Sign a CloudFront URL
 - `signContentKey(key: string, dateLessThan: Date, dateGreaterThan?: Date): Promise<string>` — Sign a content key
 - `getUploadURL(Key: string, ContentType: string): Promise<{ uploadUrl, assetKey }>` — Get presigned upload URL
@@ -60,6 +61,7 @@ const queue = new SQSQueueService(config: SQSQueueServiceConfig)
 Implements `QueueService`. Note: `supportsResults = false` — job status tracking is not supported.
 
 **Methods:**
+
 - `add<T>(queueName: string, data: T, options?: JobOptions): Promise<string>` — Enqueue a message
 
 ### `AWSSecrets` (Secrets Manager)
@@ -71,6 +73,7 @@ const secrets = new AWSSecrets(config: AWSConfig)
 ```
 
 **Methods:**
+
 - `getSecret<R>(SecretId: string): Promise<R>` — Get a secret value
 - `getSecretJSON<R>(SecretId: string): Promise<R>` — Get and parse a JSON secret
 - `hasSecret(SecretId: string): Promise<boolean>` — Check if secret exists

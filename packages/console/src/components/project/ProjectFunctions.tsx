@@ -12,9 +12,10 @@ interface ProjectFunctionsProps {
   functionUsedBy?: Map<string, any>
 }
 
-export const ProjectFunctions: React.FC<
-  ProjectFunctionsProps
-> = ({ functions, functionUsedBy: functionUsedByProp }) => {
+export const ProjectFunctions: React.FC<ProjectFunctionsProps> = ({
+  functions,
+  functionUsedBy: functionUsedByProp,
+}) => {
   const { openFunction } = usePanelContext()
   const { functionUsedBy: functionUsedByMeta } = usePikkuMeta()
   const functionUsedBy = functionUsedByProp ?? functionUsedByMeta

@@ -6,9 +6,7 @@ export interface EmptyStateProps {
   message: string
 }
 
-export const EmptyState: React.FC<EmptyStateProps> = ({
-  message,
-}) => (
+export const EmptyState: React.FC<EmptyStateProps> = ({ message }) => (
   <Box className={classes.emptyState}>
     <Text c="dimmed" ff="monospace" size="sm">
       {message}

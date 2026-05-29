@@ -36,9 +36,10 @@ interface WorkflowProviderProps {
   workflow: any
 }
 
-export const WorkflowProvider: React.FC<
-  WorkflowProviderProps
-> = ({ children, workflow }) => {
+export const WorkflowProvider: React.FC<WorkflowProviderProps> = ({
+  children,
+  workflow,
+}) => {
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null)
   const [referencedNodeId, setReferencedNodeId] = useState<string | null>(null)
 

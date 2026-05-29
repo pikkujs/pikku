@@ -62,19 +62,21 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
 
   // In read-only mode, suppress the default submit button by passing an empty
   // child (RJSF renders its children in place of the submit button).
-  const submitArea = readOnly
-    ? <></>
-    : (children ?? (
-        <Group justify="flex-end" mt="sm">
-          <Button
-            type="submit"
-            leftSection={<Play size={16} />}
-            loading={submitting}
-          >
-            {submitLabel}
-          </Button>
-        </Group>
-      ))
+  const submitArea = readOnly ? (
+    <></>
+  ) : (
+    (children ?? (
+      <Group justify="flex-end" mt="sm">
+        <Button
+          type="submit"
+          leftSection={<Play size={16} />}
+          loading={submitting}
+        >
+          {submitLabel}
+        </Button>
+      </Group>
+    ))
+  )
 
   return (
     <div style={{ ['--rjsf-object-padding' as string]: '0' }}>

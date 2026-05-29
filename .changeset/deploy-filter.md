@@ -29,8 +29,8 @@ Example — mark `metaService` as server-only project-wide:
 // pikku.config.json
 {
   "deploy": {
-    "serverlessIncompatible": ["metaService"]
-  }
+    "serverlessIncompatible": ["metaService"],
+  },
 }
 ```
 

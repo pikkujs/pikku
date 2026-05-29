@@ -59,16 +59,14 @@ export const CredentialsTab: React.FC = () => {
   const credentials = useMemo(() => {
     const credsMeta = (meta as any).credentialsMeta
     if (!credsMeta) return []
-    return Object.entries(credsMeta).map(
-      ([name, data]: [string, any]) => ({
-        name,
-        displayName: data.displayName || name,
-        description: data.description,
-        type: data.type || 'singleton',
-        isOAuth2: !!data.oauth2,
-        oauth2: data.oauth2,
-      })
-    )
+    return Object.entries(credsMeta).map(([name, data]: [string, any]) => ({
+      name,
+      displayName: data.displayName || name,
+      description: data.description,
+      type: data.type || 'singleton',
+      isOAuth2: !!data.oauth2,
+      oauth2: data.oauth2,
+    }))
   }, [meta])
 
   if (loading) {
@@ -150,10 +148,9 @@ const CredentialCard: React.FC<{
     queryKey: ['credential-status', credential.name],
     queryFn: async () => {
       try {
-        const result = await rpc.invoke(
-          'console:credentialStatus',
-          { names: [credential.name] }
-        )
+        const result = await rpc.invoke('console:credentialStatus', {
+          names: [credential.name],
+        })
         return result.statuses[credential.name] ?? false
       } catch {
         return false
@@ -280,9 +277,7 @@ const CredentialDrawer: React.FC<{
         </>
       )}
 
-      {credential.type === 'wire' && (
-        <PerUserSection credential={credential} />
-      )}
+      {credential.type === 'wire' && <PerUserSection credential={credential} />}
     </Stack>
   )
 }
@@ -354,11 +349,7 @@ const ApiKeySection: React.FC<{
           </Text>
         </Group>
         {editable && (
-          <Button
-            variant="light"
-            size="sm"
-            onClick={() => setEditing(true)}
-          >
+          <Button variant="light" size="sm" onClick={() => setEditing(true)}>
             Replace
           </Button>
         )}
@@ -534,8 +525,7 @@ const OAuthSection: React.FC<{
               icon={<AlertTriangle size={14} />}
             >
               {String(
-                (connectMutation.error as any)?.message ||
-                  connectMutation.error
+                (connectMutation.error as any)?.message || connectMutation.error
               )}
             </Alert>
           )}

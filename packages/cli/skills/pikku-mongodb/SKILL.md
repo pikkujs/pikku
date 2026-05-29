@@ -46,16 +46,16 @@ await mongo.close()
 
 ### Available Services
 
-| Service | Interface | Purpose |
-|---------|-----------|---------|
-| `MongoDBChannelStore` | `ChannelStore` | WebSocket channel state persistence |
-| `MongoDBEventHubStore` | `EventHubStore` | Event hub state persistence |
-| `MongoDBWorkflowService` | `PikkuWorkflowService` | Workflow definition storage |
-| `MongoDBWorkflowRunService` | `WorkflowRunService` | Workflow execution tracking |
-| `MongoDBDeploymentService` | `DeploymentService` | Deployment state management |
-| `MongoDBAIStorageService` | `AIStorageService, AIRunStateService` | AI conversation/run storage |
-| `MongoDBAgentRunService` | `AgentRunService` | Agent execution tracking |
-| `MongoDBSecretService` | `SecretService` | Encrypted secret storage (envelope encryption) |
+| Service                     | Interface                             | Purpose                                        |
+| --------------------------- | ------------------------------------- | ---------------------------------------------- |
+| `MongoDBChannelStore`       | `ChannelStore`                        | WebSocket channel state persistence            |
+| `MongoDBEventHubStore`      | `EventHubStore`                       | Event hub state persistence                    |
+| `MongoDBWorkflowService`    | `PikkuWorkflowService`                | Workflow definition storage                    |
+| `MongoDBWorkflowRunService` | `WorkflowRunService`                  | Workflow execution tracking                    |
+| `MongoDBDeploymentService`  | `DeploymentService`                   | Deployment state management                    |
+| `MongoDBAIStorageService`   | `AIStorageService, AIRunStateService` | AI conversation/run storage                    |
+| `MongoDBAgentRunService`    | `AgentRunService`                     | Agent execution tracking                       |
+| `MongoDBSecretService`      | `SecretService`                       | Encrypted secret storage (envelope encryption) |
 
 All services take a `Db` instance in their constructor and have an `init()` method that creates collections/indexes.
 
@@ -80,7 +80,11 @@ await secrets.rotateKEK()
 ### Full Setup
 
 ```typescript
-import { PikkuMongoDB, MongoDBChannelStore, MongoDBWorkflowService } from '@pikku/mongodb'
+import {
+  PikkuMongoDB,
+  MongoDBChannelStore,
+  MongoDBWorkflowService,
+} from '@pikku/mongodb'
 
 const createSingletonServices = pikkuServices(async (config) => {
   const logger = new PinoLogger()

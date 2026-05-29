@@ -14,9 +14,9 @@ export type CredentialMeta = {
   oauth2?: { tokenSecretId: string }
 }
 
-export class TypedSecretService<TMap = Record<string, unknown>>
-  implements SecretService
-{
+export class TypedSecretService<
+  TMap = Record<string, unknown>,
+> implements SecretService {
   constructor(
     private secrets: SecretService,
     private credentialsMeta: Record<string, CredentialMeta>

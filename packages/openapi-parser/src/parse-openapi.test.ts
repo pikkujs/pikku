@@ -166,7 +166,11 @@ describe('parseOpenAPISpec — Swagger 2.0', () => {
         properties: {
           id: { type: 'integer', format: 'int64' },
           name: { type: 'string' },
-          status: { type: 'string', enum: ['available', 'sold'], description: 'pet status' },
+          status: {
+            type: 'string',
+            enum: ['available', 'sold'],
+            description: 'pet status',
+          },
         },
       },
     },
@@ -179,7 +183,12 @@ describe('parseOpenAPISpec — Swagger 2.0', () => {
           operationId: 'listPets',
           summary: 'List all pets',
           parameters: [
-            { in: 'query', name: 'status', type: 'string', description: 'Filter by status' },
+            {
+              in: 'query',
+              name: 'status',
+              type: 'string',
+              description: 'Filter by status',
+            },
           ],
           responses: {
             '200': {
@@ -254,7 +263,9 @@ describe('parseOpenAPISpec — Swagger 2.0', () => {
 
   test('extracts requestBody from body parameter', async () => {
     const spec = await parseOpenAPISpec(specPath)
-    const createPet = spec.operations.find(op => op.operationId === 'createPet')
+    const createPet = spec.operations.find(
+      (op) => op.operationId === 'createPet'
+    )
     assert.ok(createPet?.requestBody)
     assert.equal(createPet.requestBody.type, 'object')
     assert.ok(createPet.requestBody.properties?.name)
@@ -264,25 +275,27 @@ describe('parseOpenAPISpec — Swagger 2.0', () => {
 
   test('extracts responseSchema from Swagger 2.0 response', async () => {
     const spec = await parseOpenAPISpec(specPath)
-    const createPet = spec.operations.find(op => op.operationId === 'createPet')
+    const createPet = spec.operations.find(
+      (op) => op.operationId === 'createPet'
+    )
     assert.ok(createPet?.responseSchema)
     assert.equal(createPet.responseSchema.type, 'object')
 
-    const listPets = spec.operations.find(op => op.operationId === 'listPets')
+    const listPets = spec.operations.find((op) => op.operationId === 'listPets')
     assert.ok(listPets?.responseSchema)
     assert.equal(listPets.responseSchema.type, 'array')
   })
 
   test('extracts query params', async () => {
     const spec = await parseOpenAPISpec(specPath)
-    const listPets = spec.operations.find(op => op.operationId === 'listPets')
+    const listPets = spec.operations.find((op) => op.operationId === 'listPets')
     assert.equal(listPets?.queryParams.length, 1)
     assert.equal(listPets?.queryParams[0].name, 'status')
   })
 
   test('extracts path params', async () => {
     const spec = await parseOpenAPISpec(specPath)
-    const getPet = spec.operations.find(op => op.operationId === 'getPet')
+    const getPet = spec.operations.find((op) => op.operationId === 'getPet')
     assert.equal(getPet?.pathParams.length, 1)
     assert.equal(getPet?.pathParams[0].name, 'petId')
     assert.equal(getPet?.pathParams[0].required, true)
@@ -290,7 +303,9 @@ describe('parseOpenAPISpec — Swagger 2.0', () => {
 
   test('extracts error responses', async () => {
     const spec = await parseOpenAPISpec(specPath)
-    const createPet = spec.operations.find(op => op.operationId === 'createPet')
+    const createPet = spec.operations.find(
+      (op) => op.operationId === 'createPet'
+    )
     assert.equal(createPet?.errorResponses.length, 1)
     assert.equal(createPet?.errorResponses[0].statusCode, 400)
   })

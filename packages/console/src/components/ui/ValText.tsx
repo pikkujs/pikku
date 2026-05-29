@@ -17,14 +17,22 @@ export const ValText: React.FC<ValTextProps> = ({
 
   if (isBoolean && !isDim) {
     return (
-      <Text size="sm" ff="monospace" c={value ? '#86efac' : 'var(--app-text-muted)'}>
+      <Text
+        size="sm"
+        ff="monospace"
+        c={value ? '#86efac' : 'var(--app-text-muted)'}
+      >
         {String(value)}
       </Text>
     )
   }
 
   return (
-    <Text size="sm" ff="monospace" c={isDim ? 'var(--app-text-muted)' : 'var(--app-text)'}>
+    <Text
+      size="sm"
+      ff="monospace"
+      c={isDim ? 'var(--app-text-muted)' : 'var(--app-text)'}
+    >
       {display}
     </Text>
   )
