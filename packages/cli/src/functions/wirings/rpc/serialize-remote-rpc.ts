@@ -6,7 +6,7 @@ export const serializeRemoteRPC = (pathToPikkuTypes: string) => {
  * Auto-generated remote internal RPC queue worker and HTTP endpoint
  * Do not edit manually - regenerate with 'npx pikku'
  */
-import { pikkuSessionlessFunc, wireHTTP } from '${pathToPikkuTypes}'
+import { pikkuSessionlessFunc, wireHTTP, wireQueueWorker } from '${pathToPikkuTypes}'
 import { pikkuRemoteAuthMiddleware } from '@pikku/core/middleware'
 
 export const remoteRPCHandler = pikkuSessionlessFunc<
@@ -18,6 +18,11 @@ export const remoteRPCHandler = pikkuSessionlessFunc<
     return await (rpc.invoke as any)(rpcName, data)
   },
   remote: true,
+})
+
+wireQueueWorker({
+  name: 'pikku-remote-internal-rpc',
+  func: remoteRPCHandler,
 })
 
 wireHTTP({
