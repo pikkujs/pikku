@@ -12,20 +12,16 @@ installGroups: [core]
 
 Use this skill as an execution checklist, not reference material.
 
-1. Discover before editing. Prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
-2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
-3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
-4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
-5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
+**Discovery is mandatory — never grep, glob, or read files to learn project structure.**
+
+1. **Check existing workflows first.** Call `pikku-meta` with `section=workflows` (or run `pikku meta workflows list --json`). If a workflow already covers the need, extend or reuse it rather than creating a new one.
+2. **List available functions.** Call `pikku-meta` with `section=functions` (or run `pikku meta functions list --json`) to see what steps already exist. Compose from existing functions wherever possible.
+3. For anything you may reuse or edit, call `pikku-meta` with `section=workflow` or `section=function` by id to get its full shape and input/output types.
+4. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
+5. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
+6. Validate with `pikku-verify`. If it fails, fix the source cause and rerun — do not paper over generated errors by editing generated files.
 
 Build durable, multi-step workflows with automatic retry, sleep, suspend/resume, and parallel execution. Steps are cached for replay safety.
-
-## Before You Start
-
-```bash
-pikku info functions --verbose   # See existing functions that can be workflow steps
-pikku info tags --verbose        # Understand project organization
-```
 
 See `pikku-concepts` for the core mental model.
 
@@ -34,7 +30,7 @@ See `pikku-concepts` for the core mental model.
 ### `pikkuWorkflowFunc<TInput, TOutput>(fn)`
 
 ```typescript
-import { pikkuWorkflowFunc } from '#pikku'
+import { pikkuWorkflowFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 const myWorkflow = pikkuWorkflowFunc<InputType, OutputType>(
   async (services, data, { workflow }) => {
@@ -74,7 +70,7 @@ await workflow.suspend('Awaiting approval')
 ### `pikkuWorkflowGraph(config)` — DAG Workflows
 
 ```typescript
-import { pikkuWorkflowGraph } from '#pikku'
+import { pikkuWorkflowGraph } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 pikkuWorkflowGraph({
   description: 'Onboard a new user',
@@ -127,6 +123,8 @@ wireHTTP({
 ### Sequential Workflow
 
 ```typescript
+import { pikkuWorkflowFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
+
 const onboardUser = pikkuWorkflowFunc<
   { email: string; userId: string },
   { success: boolean }
@@ -226,6 +224,8 @@ const userOnboarding = pikkuWorkflowGraph({
 
 ```typescript
 // functions/onboarding.workflow.ts
+import { pikkuWorkflowFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
+
 export const onboardUser = pikkuWorkflowFunc<
   { email: string; userId: string; plan: string },
   { success: boolean }
