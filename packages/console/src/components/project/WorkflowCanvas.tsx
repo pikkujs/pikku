@@ -389,8 +389,6 @@ const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
         showTabs={immersiveDetail}
         emptyPanelMessage="Select a node to view its details"
         runsPanel={runsPanel}
-        initialLeftCollapsed={immersiveDetail}
-        initialRightCollapsed={immersiveDetail}
       >
         <Box style={{ height: '100%', position: 'relative' }}>
           <WorkflowCanvasInner
