@@ -14,7 +14,7 @@ registered `satisfies typeof en`) plus the document being told it is `rtl`.
 ## The one idea
 
 Set `dir` **once at the document root** from the active locale, then let the
-browser and Mantine mirror everything — *provided* every custom style is written
+browser and Mantine mirror everything — _provided_ every custom style is written
 **flow-relative** (start/end), never **physical** (left/right). Get those two
 things right and Arabic, Hebrew, Farsi and Urdu all work with zero per-component
 RTL code.
@@ -46,22 +46,22 @@ RTL code.
 
 Use the **inline-axis logical** property; never the physical one:
 
-| Don't (physical)            | Do (flow-relative)                          |
-| --------------------------- | ------------------------------------------- |
-| `margin-left` / `marginLeft`| `margin-inline-start` / `marginInlineStart` |
-| `margin-right`              | `margin-inline-end` / `marginInlineEnd`     |
-| `padding-left/right`        | `padding-inline-start/end`                  |
-| `left: 0` / `right: 0`      | `inset-inline-start: 0` / `inset-inline-end`|
-| `text-align: left/right`    | `text-align: start / end`                   |
-| `border-top-left-radius`    | `border-start-start-radius`                 |
-| `float: left/right`         | `float: inline-start / inline-end`          |
+| Don't (physical)             | Do (flow-relative)                           |
+| ---------------------------- | -------------------------------------------- |
+| `margin-left` / `marginLeft` | `margin-inline-start` / `marginInlineStart`  |
+| `margin-right`               | `margin-inline-end` / `marginInlineEnd`      |
+| `padding-left/right`         | `padding-inline-start/end`                   |
+| `left: 0` / `right: 0`       | `inset-inline-start: 0` / `inset-inline-end` |
+| `text-align: left/right`     | `text-align: start / end`                    |
+| `border-top-left-radius`     | `border-start-start-radius`                  |
+| `float: left/right`          | `float: inline-start / inline-end`           |
 
 In **Mantine**, use the logical style props — they emit the logical CSS above:
 
-| Don't        | Do            |
-| ------------ | ------------- |
-| `ml` / `mr`  | `ms` / `me`   |
-| `pl` / `pr`  | `ps` / `pe`   |
+| Don't       | Do          |
+| ----------- | ----------- |
+| `ml` / `mr` | `ms` / `me` |
+| `pl` / `pr` | `ps` / `pe` |
 
 Mantine's own components already use logical properties internally, so once the
 direction is set they mirror automatically — you only have to be disciplined in
@@ -76,6 +76,7 @@ logical order; let `dir` handle the visual order.
 ## Applying direction at the root
 
 ### Mantine app (e.g. environment-template)
+
 Mantine ships first-class RTL: wrap the tree in `DirectionProvider` and set the
 matching `dir` on `<html>`.
 
@@ -83,14 +84,13 @@ matching `dir` on `<html>`.
 import { DirectionProvider, MantineProvider } from '@mantine/core'
 import i18n, { detectLocale, localeDir } from './i18n/config'
 
-const locale = typeof window !== 'undefined'
-  ? detectLocale(window.location.pathname)
-  : 'en'
+const locale =
+  typeof window !== 'undefined' ? detectLocale(window.location.pathname) : 'en'
 const dir = localeDir(locale)
 
 if (typeof document !== 'undefined') {
   document.documentElement.lang = locale
-  document.documentElement.dir = dir   // Mantine + browser read this
+  document.documentElement.dir = dir // Mantine + browser read this
 }
 
 root.render(
@@ -98,14 +98,16 @@ root.render(
     <MantineProvider theme={theme} defaultColorScheme="dark">
       {/* …app… */}
     </MantineProvider>
-  </DirectionProvider>,
+  </DirectionProvider>
 )
 ```
+
 To flip direction live (a language switcher) call
 `document.documentElement.setAttribute('dir', localeDir(next))` and Mantine's
 `useDirection().setDirection(dir)`; both read the same value.
 
 ### Plain Vite SPA (kanban, test-harness vite-spa)
+
 No Mantine — just put `dir`/`lang` on `<html>` at bootstrap, after the locale is
 detected (the same `detectLocale` the i18n config uses):
 
@@ -116,9 +118,11 @@ const locale = detectLocale(window.location.pathname)
 document.documentElement.lang = locale
 document.documentElement.dir = localeDir(locale)
 ```
+
 Everything below inherits `dir` from `<html>`; logical CSS does the mirroring.
 
 ### Vite SSR (test-harness vite-ssr)
+
 The worker renders the full HTML, so set `lang`/`dir` on the server `<html>`
 from the **URL** locale (the client inherits it on hydration — no flash):
 
@@ -132,17 +136,23 @@ const html = `<!doctype html>
   …
 </html>`
 ```
+
 i18next's active language must match: call `i18n.changeLanguage(locale)` before
 `renderToString` so the SSR'd text and `dir` agree.
 
 ### Next.js app-router (test-harness next-ssr / next-static)
+
 Set it on the `<html>` in `app/layout.tsx`. With locale-prefixed routes the
 segment gives the locale; for a single-locale build it's a constant:
 
 ```tsx
 import { localeDir, defaultLocale } from './i18n/config'
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   const locale = defaultLocale // or the [lang] route segment / params
   return (
     <html lang={locale} dir={localeDir(locale)}>
@@ -151,6 +161,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   )
 }
 ```
+
 For `output: 'export'` with `/ar` prefixes, derive `locale` from the route
 segment so each statically-exported tree carries the right `dir`.
 
@@ -162,8 +173,11 @@ non-directional icon (search, settings, avatar) must **not**. Flip with the
 `:dir()` selector — no JS, no per-locale branching:
 
 ```css
-:dir(rtl) .icon-directional { transform: scaleX(-1); }
+:dir(rtl) .icon-directional {
+  transform: scaleX(-1);
+}
 ```
+
 Or in CSS-in-JS / inline, gate on the resolved direction:
 `transform: localeDir(locale) === 'rtl' ? 'scaleX(-1)' : undefined`.
 Prefer logical icon components if your icon set ships them.
@@ -171,8 +185,8 @@ Prefer logical icon components if your icon set ships them.
 ## Arabic typography niceties
 
 - **Font:** the default Latin stack renders Arabic with the system fallback,
-  which is inconsistent. Add an Arabic-capable family (e.g. *Noto Sans Arabic*,
-  *IBM Plex Sans Arabic*) to `font-family` so both scripts look intentional.
+  which is inconsistent. Add an Arabic-capable family (e.g. _Noto Sans Arabic_,
+  _IBM Plex Sans Arabic_) to `font-family` so both scripts look intentional.
 - **Numerals:** don't hardcode digits. Format numbers/dates with
   `Intl.NumberFormat`/`Intl.DateTimeFormat` (or i18next formatters) given the
   active locale, so Western vs Arabic-Indic digits follow the locale choice.
@@ -187,7 +201,7 @@ Prefer logical icon components if your icon set ships them.
 2. Confirm the `localeDir` helper includes `ar` (it does by default).
 3. Confirm the root sets `dir` from the locale (recipe above).
 4. Sweep the app's styles: replace every `left/right`, `ml/mr`, `text-align:
-   left` with the flow-relative equivalent; revert any manual `row-reverse`.
+left` with the flow-relative equivalent; revert any manual `row-reverse`.
 5. Flip directional icons.
 6. `tsc`, then load the Arabic route and verify the whole layout mirrors —
    sidebar on the right, text right-aligned, arrows pointing the other way.

@@ -396,6 +396,30 @@ function uniqueFunctionKeys(func: {
   ]
 }
 
+/**
+ * Renders a Gherkin step's attached argument (DataTable or DocString) as extra
+ * lines so a step like `When ... with:` keeps its payload. Returns a string with
+ * a leading newline to append to the step text, or '' when there's no argument.
+ * Kept as plain text (not structured) so `steps: string[]` is unchanged.
+ */
+function renderStepArgument(step: Record<string, any>): string {
+  const dataTable = step?.dataTable
+  if (dataTable?.rows) {
+    const lines = asArray<Record<string, any>>(dataTable.rows).map((row) => {
+      const cells = asArray<Record<string, any>>(row.cells).map((cell) =>
+        String(cell?.value ?? '')
+      )
+      return `| ${cells.join(' | ')} |`
+    })
+    if (lines.length) return `\n${lines.join('\n')}`
+  }
+  const docString = step?.docString
+  if (docString && typeof docString.content === 'string') {
+    return `\n"""\n${docString.content}\n"""`
+  }
+  return ''
+}
+
 function buildScenarioMaps(
   messages: unknown[],
   rpcMeta: RPCMetaRecord
@@ -414,6 +438,9 @@ function buildScenarioMaps(
       steps: string[]
     }
   >()
+  // AST step id → keyword (Given/When/Then/And). Lets us recover keywords for
+  // resolved pickle steps, which carry only the substituted text.
+  const stepKeywordByAstId = new Map<string, string>()
   const pickleById = new Map<string, Record<string, unknown>>()
   const testCaseById = new Map<string, Record<string, unknown>>()
   const testCaseStartedById = new Map<string, Record<string, unknown>>()
@@ -436,9 +463,18 @@ function buildScenarioMaps(
     )) {
       const scenario = child?.scenario
       if (!scenario?.id) continue
-      const steps = asArray<Record<string, any>>(scenario.steps).map((step) =>
-        `${(step.keyword ?? '').trim()} ${step.text ?? ''}`.trim()
-      )
+      const steps = asArray<Record<string, any>>(scenario.steps).map((step) => {
+        if (step?.id) {
+          stepKeywordByAstId.set(
+            String(step.id),
+            String(step.keyword ?? '').trim()
+          )
+        }
+        return (
+          `${(step.keyword ?? '').trim()} ${step.text ?? ''}`.trim() +
+          renderStepArgument(step)
+        )
+      })
       scenarioByAstId.set(scenario.id, {
         featureName: gherkinDocument?.feature?.name ?? '',
         featureDescription: gherkinDocument?.feature?.description ?? '',
@@ -480,11 +516,21 @@ function buildScenarioMaps(
 
     const astId = asArray<string>(pickle.astNodeIds)[0]
     const astScenario = astId ? scenarioByAstId.get(astId) : null
+    // Prefer the RESOLVED pickle steps (scenario-outline placeholders already
+    // substituted with the example row's values), recovering the Given/When/Then
+    // keyword from the AST step via astNodeIds. Fall back to the AST steps only
+    // when the pickle carries no steps.
+    const pickleSteps = asArray<Record<string, any>>(pickle.steps)
+      .map((step) => {
+        const keyword = stepKeywordByAstId.get(
+          String(asArray<string>(step?.astNodeIds)[0] ?? '')
+        )
+        const text = `${keyword ?? ''} ${step?.text ?? ''}`.trim()
+        return text + renderStepArgument(step?.argument ?? {})
+      })
+      .filter((text) => text.trim().length > 0)
     const steps =
-      astScenario?.steps ??
-      asArray<Record<string, any>>(pickle.steps)
-        .map((step) => step?.text ?? '')
-        .filter(Boolean)
+      pickleSteps.length > 0 ? pickleSteps : (astScenario?.steps ?? [])
     const featureFile = typeof pickle.uri === 'string' ? pickle.uri : undefined
     const featureName =
       astScenario?.featureName ||
@@ -525,8 +571,9 @@ function buildScenarioMaps(
     const mentionedFunctions = new Set<string>()
     for (const step of steps) {
       const match = step.match(/calls\s+"([^"]+)"/i)
-      if (!match) continue
-      for (const functionName of expandCalledNames(match[1], rpcMeta)) {
+      const calledName = match?.[1]
+      if (!calledName) continue
+      for (const functionName of expandCalledNames(calledName, rpcMeta)) {
         mentionedFunctions.add(functionName)
       }
     }

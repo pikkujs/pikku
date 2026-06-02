@@ -12,7 +12,7 @@ Use this skill as an execution checklist, not reference material.
 
 1. Every user-facing string in a frontend is a token. Never hardcode display text — write `t('some.token')` and put the English copy in `i18n/en.json`. This holds even when the app ships only English; the tokens are the seam a second language slots into later.
 2. One `i18n/<lang>.json` file per language per app, sitting next to the i18n config in a single `i18n/` folder. English (`en`) is the default and is the only locale registered until someone adds another.
-3. Pick the delivery pattern by framework (see below). The token files and config shape are identical across frameworks; only *how the active locale reaches the renderer* differs.
+3. Pick the delivery pattern by framework (see below). The token files and config shape are identical across frameworks; only _how the active locale reaches the renderer_ differs.
 4. Validate with the app's own `tsc` then its `build`. For Next.js, a clean `dev` is not enough — run `build`, because the RSC page-data collection step is where i18n wiring mistakes surface.
 
 ## The rules that don't change
@@ -38,21 +38,22 @@ deploy. `vite build` does not type-check on its own, so this gate is the only
 thing standing between a broken/missing token and production. Keep a `"tsc":
 "tsc --noEmit"` script in every frontend's `package.json` so the gate uses it.
 
-The type gate catches *invalid* tokens but not *inlined* strings — a hardcoded
+The type gate catches _invalid_ tokens but not _inlined_ strings — a hardcoded
 `<h1>Welcome</h1>` compiles fine. Catching those is best-effort (the builder
 agent is told never to inline) plus the debug mode below.
 
 ## i18n debug mode (find inlined strings)
 
 Each config registers an i18next `postProcessor` named `i18nDebug` that, when
-enabled, masks every *translated* string to block glyphs (`█`). The trick: with
+enabled, masks every _translated_ string to block glyphs (`█`). The trick: with
 it on, anything still readable on screen is text that **never went through a
 token** — i.e. a hardcoded/inlined string. It's a visual leak detector for
 missing i18n, not a runtime feature, so it ships **off by default**.
 
 ```ts
 export function isI18nDebug(): boolean {
-  if (typeof process !== 'undefined' && process.env?.I18N_DEBUG === '1') return true
+  if (typeof process !== 'undefined' && process.env?.I18N_DEBUG === '1')
+    return true
   if (typeof window === 'undefined') return false
   const params = new URLSearchParams(window.location.search)
   if (params.has('i18n-debug')) return params.get('i18n-debug') !== '0'
@@ -62,7 +63,8 @@ export function isI18nDebug(): boolean {
 const i18nDebugPostProcessor = {
   type: 'postProcessor' as const,
   name: 'i18nDebug',
-  process: (value: string) => (isI18nDebug() ? value.replace(/\S/g, '█') : value),
+  process: (value: string) =>
+    isI18nDebug() ? value.replace(/\S/g, '█') : value,
 }
 // register on the instance: `.use(i18nDebugPostProcessor)` and add
 // `postProcess: ['i18nDebug']` to `.init({ ... })`.
@@ -109,7 +111,10 @@ export function detectLocale(pathname: string): Locale {
 
 i18n.use(initReactI18next).init({
   resources: { en: { translation: en } },
-  lng: typeof window !== 'undefined' ? detectLocale(window.location.pathname) : defaultLocale,
+  lng:
+    typeof window !== 'undefined'
+      ? detectLocale(window.location.pathname)
+      : defaultLocale,
   fallbackLng: defaultLocale,
   interpolation: { escapeValue: false },
 })
@@ -137,12 +142,15 @@ export const prettyStatus = (s: string) => i18n.t(`status.${s}`)
 ## Per-framework delivery
 
 ### Vite SPA
+
 The config above is the whole story. `import './i18n/config'` in `main.tsx`; `useTranslation` everywhere.
 
 ### Vite SSR (`@cloudflare/vite-plugin` / Worker)
+
 Same config, but `import './i18n/config'` in **both** the worker entry (`worker.tsx`) and the client entry (`client.tsx`) so the global i18next instance is initialised on each side before `<App/>` renders. The locale JSON is bundled into the Worker (a static import, not a fetch — the Worker never has to fetch its own assets). The shared `<App/>` uses `useTranslation` normally.
 
 ### Next.js app-router — server components
+
 Server components **cannot** call `useTranslation`, and they **must not** import `initReactI18next`: it calls React's `createContext`, which throws during RSC page-data collection (`(0 , Y.createContext) is not a function` at build). Use a plain i18next instance and a fixed translator instead.
 
 `app/i18n/config.ts`:
@@ -192,6 +200,7 @@ export default function Page() {
 This works in both `output: 'export'` (static) and dynamic SSR — the static export pre-renders translated HTML at build time.
 
 ### Next.js app-router — client components
+
 A `'use client'` component that needs the hook uses the standard `initReactI18next` instance behind an `I18nextProvider`, kept separate from the server `app/i18n/config.ts`. Most starter pages are server components and never need this.
 
 ## Adding a second language

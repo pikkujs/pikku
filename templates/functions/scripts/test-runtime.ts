@@ -34,7 +34,6 @@ type RouteBinding = {
   port: number
 }
 
-const target = process.argv[2] as RuntimeTarget | undefined
 const validTargets: RuntimeTarget[] = [
   'dev',
   'standalone',
@@ -42,10 +41,16 @@ const validTargets: RuntimeTarget[] = [
   'cloudflare',
 ]
 
-if (!target || !validTargets.includes(target)) {
-  console.error(`Usage: yarn test:runtime <${validTargets.join('|')}>`)
-  process.exit(1)
+function parseTarget(): RuntimeTarget {
+  const value = process.argv[2] as RuntimeTarget | undefined
+  if (!value || !validTargets.includes(value)) {
+    console.error(`Usage: yarn test:runtime <${validTargets.join('|')}>`)
+    process.exit(1)
+  }
+  return value
 }
+
+const target = parseTarget()
 
 const functionsDir = path.resolve(import.meta.dirname, '..')
 const managedProcesses: ManagedProcess[] = []
@@ -154,6 +159,7 @@ async function main() {
     await startCloudflareProxy(runtimeConfig.cloudflare.port)
   }
 
+  await waitForServer(baseUrl)
   await runRuntimeTests(target, baseUrl)
   await shutdownManagedProcesses()
 }
@@ -381,7 +387,7 @@ async function startCloudflareProxy(port: number) {
         body:
           requestMethod === 'GET' || requestMethod === 'HEAD'
             ? undefined
-            : body,
+            : new Uint8Array(body),
       })
 
       response.statusCode = upstreamResponse.status

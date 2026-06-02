@@ -21,7 +21,7 @@ export const pikkuTanStackStart = pikkuSessionlessFunc<void, void>({
 
     if (!rpcWiringsFile) {
       logger.warn(
-        "Skipping TanStack Start shim: startServerFnsFile is set but rpcWiringsFile is not — the shim imports the PikkuRPC class from rpcWiringsFile."
+        'Skipping TanStack Start shim: startServerFnsFile is set but rpcWiringsFile is not — the shim imports the PikkuRPC class from rpcWiringsFile.'
       )
       return
     }
