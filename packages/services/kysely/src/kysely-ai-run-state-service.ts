@@ -123,7 +123,9 @@ export class KyselyAIRunStateService implements AIRunStateService {
         try {
           approvals = JSON.parse(row.pendingApprovals as string)
         } catch {
-          console.warn(`Failed to parse pendingApprovals for run ${row.runId}, treating as empty`)
+          console.warn(
+            `Failed to parse pendingApprovals for run ${row.runId}, treating as empty`
+          )
         }
       }
       const filtered = approvals.filter((a) => a.toolCallId !== toolCallId)
@@ -161,7 +163,9 @@ export class KyselyAIRunStateService implements AIRunStateService {
         try {
           approvals = JSON.parse((row as any).pendingApprovals)
         } catch {
-          console.warn(`Failed to parse pendingApprovals for run ${row.runId}, treating as empty`)
+          console.warn(
+            `Failed to parse pendingApprovals for run ${row.runId}, treating as empty`
+          )
         }
       }
       const approval = approvals.find((a) => a.toolCallId === toolCallId)

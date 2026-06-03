@@ -81,6 +81,9 @@ function convertToSDKMessage(msg: AIMessage): ModelMessage {
         return {
           role: 'assistant',
           content: [
+            ...(msg.reasoningContent
+              ? [{ type: 'reasoning' as const, text: msg.reasoningContent }]
+              : []),
             ...(textContent
               ? [{ type: 'text' as const, text: textContent }]
               : []),

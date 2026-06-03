@@ -13,10 +13,11 @@ export class KyselyAgentRunService implements AgentRunService {
 
   async listThreads(options?: {
     agentName?: string
+    resourceId?: string
     limit?: number
     offset?: number
   }): Promise<AIThread[]> {
-    const { agentName, limit = 50, offset = 0 } = options ?? {}
+    const { agentName, resourceId, limit = 50, offset = 0 } = options ?? {}
 
     let query = this.db
       .selectFrom('aiThreads as t')
@@ -39,6 +40,10 @@ export class KyselyAgentRunService implements AgentRunService {
           .where('agentName', '=', agentName)
           .distinct()
       )
+    }
+
+    if (resourceId) {
+      query = query.where('t.resourceId', '=', resourceId)
     }
 
     const result = await query

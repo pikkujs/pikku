@@ -38,10 +38,11 @@ export class RedisAgentRunService implements AgentRunService {
 
   async listThreads(options?: {
     agentName?: string
+    resourceId?: string
     limit?: number
     offset?: number
   }): Promise<AIThread[]> {
-    const { agentName, limit = 50, offset = 0 } = options ?? {}
+    const { agentName, resourceId, limit = 50, offset = 0 } = options ?? {}
 
     let threadIds: string[]
 
@@ -65,7 +66,9 @@ export class RedisAgentRunService implements AgentRunService {
     const threads: AIThread[] = []
     for (const id of paged) {
       const thread = await this.getThread(id)
-      if (thread) threads.push(thread)
+      if (!thread) continue
+      if (resourceId && thread.resourceId !== resourceId) continue
+      threads.push(thread)
     }
 
     return threads
