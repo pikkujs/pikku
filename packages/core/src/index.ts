@@ -126,10 +126,12 @@ export type { PikkuPackageState } from './types/state.types.js'
 export {
   runMiddleware,
   addTagMiddleware,
+  addTagMiddleware as addMiddleware,
   addGlobalMiddleware,
 } from './middleware-runner.js'
 export {
   addTagPermission,
+  addTagPermission as addPermission,
   addGlobalPermission,
   checkAuthPermissions,
 } from './permissions.js'

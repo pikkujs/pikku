@@ -1,10 +1,18 @@
 import { describe, test, beforeEach } from 'node:test'
 import * as assert from 'node:assert'
-import { addFunction, runPikkuFunc } from './function-runner.js'
+import {
+  addFunction,
+  getAllFunctionNames,
+  getFunctionNames,
+  runPikkuFunc,
+  runPikkuFuncDirectly,
+} from './function-runner.js'
 import { addTagMiddleware, addTagPermission } from '../index.js'
 import { resetPikkuState, pikkuState } from '../pikku-state.js'
 import type { CoreServices, CorePikkuMiddleware } from '../types/core.types.js'
 import type { CorePermissionGroup } from './functions.types.js'
+import { PikkuSessionService } from '../services/user-session-service.js'
+import { ReadonlySessionError } from '../errors/errors.js'
 
 beforeEach(() => {
   resetPikkuState()
@@ -532,5 +540,487 @@ describe('runPikkuFunc - Integration Tests', () => {
       ...mockSingletonServices,
       ...wireServices,
     })
+  })
+
+  test('should resolve versioned function ids to the base function and warn once', async () => {
+    const warnings: string[] = []
+    const singletonServices = {
+      ...mockSingletonServices,
+      logger: {
+        ...mockSingletonServices.logger,
+        warn: (message: string) => {
+          warnings.push(message)
+        },
+      },
+    } as any
+
+    addTestFunction('versionedBase', {
+      func: async () => 'resolved',
+    })
+
+    const result = await runPikkuFunc(
+      'rpc',
+      Math.random().toString(),
+      'versionedBase@v2',
+      {
+        singletonServices,
+        data: () => ({}),
+        auth: false,
+        wire: {},
+      }
+    )
+
+    assert.equal(result, 'resolved')
+    assert.equal(warnings.length, 1)
+    assert.match(
+      warnings[0]!,
+      /Version 'versionedBase@v2' not registered, resolved to 'versionedBase'/
+    )
+  })
+
+  test('should throw when function metadata is missing', async () => {
+    addFunction('metaMissing', {
+      func: async () => 'ok',
+    } as any)
+
+    await assert.rejects(
+      () =>
+        runPikkuFunc('rpc', Math.random().toString(), 'metaMissing', {
+          singletonServices: mockSingletonServices,
+          data: () => ({}),
+          auth: false,
+          wire: {},
+        }),
+      {
+        message: 'Function meta not found: metaMissing',
+      }
+    )
+  })
+
+  test('should throw when function config is missing', async () => {
+    pikkuState(null, 'function', 'meta').missingConfig = {
+      pikkuFuncId: 'missingConfig',
+      sessionless: true,
+      permissions: [],
+    } as any
+
+    await assert.rejects(
+      () =>
+        runPikkuFunc('rpc', Math.random().toString(), 'missingConfig', {
+          singletonServices: mockSingletonServices,
+          data: () => ({}),
+          auth: false,
+          wire: {},
+        }),
+      {
+        message: 'Function not found: missingConfig',
+      }
+    )
+  })
+
+  test('should require a session when sessionless metadata is false', async () => {
+    addTestFunction('sessionRequired', {
+      func: async () => 'ok',
+    })
+    pikkuState(null, 'function', 'meta').sessionRequired.sessionless = false
+
+    await assert.rejects(
+      () =>
+        runPikkuFunc('rpc', Math.random().toString(), 'sessionRequired', {
+          singletonServices: mockSingletonServices,
+          data: () => ({}),
+          auth: true,
+          wire: {},
+        }),
+      {
+        message: 'Authentication required',
+      }
+    )
+  })
+
+  test('should warn when auth is disabled for a session-required function but still enforce session', async () => {
+    const warnings: string[] = []
+    const singletonServices = {
+      ...mockSingletonServices,
+      logger: {
+        ...mockSingletonServices.logger,
+        warn: (message: string) => {
+          warnings.push(message)
+        },
+      },
+    } as any
+
+    addTestFunction('sessionRequired', {
+      func: async () => 'ok',
+      auth: false,
+    })
+    pikkuState(null, 'function', 'meta').sessionRequired.sessionless = false
+
+    await assert.rejects(
+      () =>
+        runPikkuFunc('rpc', Math.random().toString(), 'sessionRequired', {
+          singletonServices,
+          data: () => ({}),
+          auth: false,
+          wire: {},
+        }),
+      {
+        message: 'Authentication required',
+      }
+    )
+
+    assert.equal(warnings.length, 1)
+    assert.match(
+      warnings[0]!,
+      /requires a session but auth was explicitly disabled/
+    )
+  })
+
+  test('should use backward-compatible auth checks when sessionless metadata is absent', async () => {
+    addTestFunction('legacyAuth', {
+      func: async () => 'ok',
+      auth: true,
+    })
+    delete pikkuState(null, 'function', 'meta').legacyAuth.sessionless
+
+    await assert.rejects(
+      () =>
+        runPikkuFunc('rpc', Math.random().toString(), 'legacyAuth', {
+          singletonServices: mockSingletonServices,
+          data: () => ({}),
+          auth: false,
+          wire: {},
+        }),
+      {
+        message: 'Authentication required',
+      }
+    )
+  })
+
+  test('should reject readonly sessions for non-readonly functions', async () => {
+    addTestFunction('readonlyBlocked', {
+      func: async () => 'ok',
+    })
+    pikkuState(null, 'function', 'meta').readonlyBlocked.sessionless = true
+
+    await assert.rejects(
+      () =>
+        runPikkuFunc('rpc', Math.random().toString(), 'readonlyBlocked', {
+          singletonServices: mockSingletonServices,
+          data: () => ({}),
+          auth: false,
+          wire: { session: { readonly: true } as any },
+        }),
+      ReadonlySessionError
+    )
+  })
+
+  test('should set session helpers on the wire when a session service is provided', async () => {
+    const sessionStore = {
+      get: async () => undefined,
+    }
+    const sessionService = new PikkuSessionService(sessionStore as any)
+    const wire: any = {}
+    let receivedWire: any
+
+    addTestFunction('sessionHelpers', {
+      func: async (_services: any, _data: any, innerWire: any) => {
+        receivedWire = innerWire
+        innerWire.setSession({ userId: 'u1' })
+        return innerWire.getSession()
+      },
+    })
+
+    const result = await runPikkuFunc(
+      'rpc',
+      Math.random().toString(),
+      'sessionHelpers',
+      {
+        singletonServices: {
+          ...mockSingletonServices,
+          sessionStore,
+        } as any,
+        data: () => ({}),
+        auth: false,
+        wire,
+        sessionService,
+      }
+    )
+
+    assert.deepEqual(result, { userId: 'u1' })
+    assert.equal(typeof receivedWire.setSession, 'function')
+    assert.equal(typeof receivedWire.clearSession, 'function')
+    assert.equal(typeof receivedWire.getSession, 'function')
+    assert.equal(typeof receivedWire.hasSessionChanged, 'function')
+  })
+
+  test('should load session from sessionStore using pikkuUserId from the wire', async () => {
+    let sessionLookups = 0
+    let receivedSession: any
+
+    addTestFunction('loadStoredSession', {
+      func: async (_services: any, _data: any, wire: any) => {
+        receivedSession = wire.session
+        return 'ok'
+      },
+    })
+
+    await runPikkuFunc('rpc', Math.random().toString(), 'loadStoredSession', {
+      singletonServices: {
+        ...mockSingletonServices,
+        sessionStore: {
+          get: async (userId: string) => {
+            sessionLookups++
+            assert.equal(userId, 'user-1')
+            return { userId, loaded: true }
+          },
+        },
+      } as any,
+      data: () => ({}),
+      auth: false,
+      wire: { pikkuUserId: 'user-1' },
+    })
+
+    assert.equal(sessionLookups, 1)
+    assert.deepEqual(receivedSession, { userId: 'user-1', loaded: true })
+  })
+
+  test('should pass addon-scoped singleton services and wrap bare workflow names', async () => {
+    pikkuState(null, 'addons', 'packages').set('stripe', {
+      package: '@addon/stripe',
+    } as any)
+
+    const workflowCalls: unknown[][] = []
+    let singletonFactoryCalls = 0
+    let configFactoryCalls = 0
+
+    pikkuState('@addon/stripe', 'package', 'factories', {
+      createConfig: async () => {
+        configFactoryCalls++
+        return { name: 'addon-config' }
+      },
+      createSingletonServices: async () => {
+        singletonFactoryCalls++
+        return {
+          logger: mockSingletonServices.logger,
+          workflowService: {
+            startWorkflow: async (...args: unknown[]) => {
+              workflowCalls.push(args)
+              return { runId: 'wf-1' }
+            },
+          },
+        }
+      },
+    } as any)
+
+    addFunction(
+      'addonFunc',
+      {
+        func: async (services: any, _data: any) => {
+          await services.workflowService.startWorkflow('chargeCustomer', {
+            amount: 10,
+          })
+          await services.workflowService.startWorkflow('stripe:alreadyScoped', {
+            amount: 20,
+          })
+          return 'ok'
+        },
+      } as any,
+      '@addon/stripe'
+    )
+    pikkuState('@addon/stripe', 'function', 'meta').addonFunc = {
+      pikkuFuncId: 'addonFunc',
+      sessionless: true,
+      permissions: [],
+    } as any
+
+    await runPikkuFunc('rpc', Math.random().toString(), 'addonFunc', {
+      singletonServices: {
+        ...mockSingletonServices,
+        config: { parent: true },
+        variables: {},
+      } as any,
+      data: () => ({}),
+      auth: false,
+      wire: {},
+      packageName: '@addon/stripe',
+    })
+
+    assert.equal(configFactoryCalls, 1)
+    assert.equal(singletonFactoryCalls, 1)
+    assert.deepEqual(workflowCalls, [
+      ['stripe:chargeCustomer', { amount: 10 }],
+      ['stripe:alreadyScoped', { amount: 20 }],
+    ])
+  })
+
+  test('should reuse cached addon singleton services on subsequent calls', async () => {
+    let singletonFactoryCalls = 0
+    pikkuState('@addon/cache', 'package', 'factories', {
+      createSingletonServices: async () => {
+        singletonFactoryCalls++
+        return {
+          logger: mockSingletonServices.logger,
+        }
+      },
+    } as any)
+
+    addFunction(
+      'cachedFunc',
+      {
+        func: async () => 'ok',
+      } as any,
+      '@addon/cache'
+    )
+    pikkuState('@addon/cache', 'function', 'meta').cachedFunc = {
+      pikkuFuncId: 'cachedFunc',
+      sessionless: true,
+      permissions: [],
+    } as any
+
+    await runPikkuFunc('rpc', '1', 'cachedFunc', {
+      singletonServices: mockSingletonServices,
+      data: () => ({}),
+      auth: false,
+      wire: {},
+      packageName: '@addon/cache',
+    })
+    await runPikkuFunc('rpc', '2', 'cachedFunc', {
+      singletonServices: mockSingletonServices,
+      data: () => ({}),
+      auth: false,
+      wire: {},
+      packageName: '@addon/cache',
+    })
+
+    assert.equal(singletonFactoryCalls, 1)
+  })
+
+  test('should use addon createWireServices instead of the caller createWireServices', async () => {
+    let callerCreateWireServicesUsed = false
+    let addonCreateWireServicesUsed = false
+    let receivedServices: any
+
+    pikkuState('@addon/wires', 'package', 'factories', {
+      createSingletonServices: async () => ({
+        logger: mockSingletonServices.logger,
+      }),
+      createWireServices: async () => {
+        addonCreateWireServicesUsed = true
+        return { addonWire: true }
+      },
+    } as any)
+
+    addFunction(
+      'wireFunc',
+      {
+        func: async (services: any) => {
+          receivedServices = services
+          return 'ok'
+        },
+      } as any,
+      '@addon/wires'
+    )
+    pikkuState('@addon/wires', 'function', 'meta').wireFunc = {
+      pikkuFuncId: 'wireFunc',
+      sessionless: true,
+      permissions: [],
+    } as any
+
+    await runPikkuFunc('rpc', 'wire', 'wireFunc', {
+      singletonServices: mockSingletonServices,
+      createWireServices: async () => {
+        callerCreateWireServicesUsed = true
+        return { callerWire: true }
+      },
+      data: () => ({}),
+      auth: false,
+      wire: {},
+      packageName: '@addon/wires',
+    })
+
+    assert.equal(callerCreateWireServicesUsed, false)
+    assert.equal(addonCreateWireServicesUsed, true)
+    assert.deepEqual(receivedServices, {
+      logger: mockSingletonServices.logger,
+      addonWire: true,
+    })
+  })
+
+  test('should lazily memoize the rpc getter on the wire', async () => {
+    let receivedWire: any
+
+    addTestFunction('rpcGetter', {
+      func: async (_services: any, _data: any, wire: any) => {
+        receivedWire = wire
+        const rpcA = wire.rpc
+        const rpcB = wire.rpc
+        return rpcA === rpcB
+      },
+    })
+
+    const result = await runPikkuFunc('rpc', 'rpc-getter', 'rpcGetter', {
+      singletonServices: mockSingletonServices,
+      data: () => ({}),
+      auth: false,
+      wire: {},
+    })
+
+    assert.equal(result, true)
+    assert.ok(receivedWire.rpc)
+  })
+})
+
+describe('function-runner helpers', () => {
+  test('runPikkuFuncDirectly should pass through the provided wire and session helpers', async () => {
+    let receivedWire: any
+    const sessionService = new PikkuSessionService({
+      get: async () => undefined,
+    } as any)
+
+    addTestFunction('directFunc', {
+      func: async (_services: any, _data: any, wire: any) => {
+        receivedWire = wire
+        return 'ok'
+      },
+    })
+
+    const result = await runPikkuFuncDirectly(
+      'directFunc',
+      mockServices,
+      { traceId: 'trace-1' },
+      { hello: 'world' },
+      sessionService
+    )
+
+    assert.equal(result, 'ok')
+    assert.equal(receivedWire.traceId, 'trace-1')
+    assert.equal(typeof receivedWire.getSession, 'function')
+  })
+
+  test('getFunctionNames and getAllFunctionNames should include addon namespaces', () => {
+    addTestFunction('rootFunc', { func: async () => 'ok' })
+    pikkuState(null, 'addons', 'packages').set('stripe', {
+      package: '@addon/stripe',
+    } as any)
+    addFunction(
+      'addonFunc',
+      {
+        func: async () => 'ok',
+      } as any,
+      '@addon/stripe'
+    )
+    pikkuState('@addon/stripe', 'function', 'meta').addonFunc = {
+      pikkuFuncId: 'addonFunc',
+      sessionless: true,
+      permissions: [],
+    } as any
+
+    assert.deepEqual(getFunctionNames().sort(), ['rootFunc'])
+    assert.deepEqual(getFunctionNames('@addon/stripe').sort(), ['addonFunc'])
+    assert.deepEqual(getAllFunctionNames().sort(), [
+      'rootFunc',
+      'stripe:addonFunc',
+    ])
   })
 })

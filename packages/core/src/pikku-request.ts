@@ -15,7 +15,7 @@ export abstract class PikkuRequest<In = any> {
    * @returns A promise that resolves to an object containing the combined data.
    */
   public async data(): Promise<In> {
-    if (!this.#data) {
+    if (this.#data === undefined) {
       throw new Error('Data not found')
     }
     return this.#data

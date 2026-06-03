@@ -161,11 +161,8 @@ export type QueueWorkersMeta = Record<
  * Core queue processor definition
  */
 export type CoreQueueWorker<
-  PikkuFunctionConfig extends CorePikkuFunctionConfig<
-    any,
-    any,
-    any
-  > = CorePikkuFunctionConfig<any, any, any>,
+  PikkuFunctionConfig extends CorePikkuFunctionConfig<any, any, any> =
+    CorePikkuFunctionConfig<any, any, any>,
 > = {
   name: string
   func: PikkuFunctionConfig

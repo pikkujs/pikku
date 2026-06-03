@@ -23,11 +23,10 @@ import type {
 } from '../../services/ai-agent-runner-service.js'
 
 import {
-  parseWorkingMemory,
-  deepMergeWorkingMemory,
   resolveMemoryServices,
   loadContextMessages,
   trimMessages,
+  getWorkingMemoryMiddleware,
 } from './ai-agent-memory.js'
 import {
   prepareAgentRun,
@@ -58,6 +57,7 @@ function createPersistingChannel(
 ): PersistingChannel {
   let fullText = ''
   let stepText = ''
+  let stepGenerativeUI: unknown | null = null
   let stepToolCalls: AIToolCall[] = []
   let stepToolResults: AIToolResult[] = []
   const totalUsage: {
@@ -72,16 +72,24 @@ function createPersistingChannel(
   const flushStep = async () => {
     if (!storage) return
     const text = stepText
+    const generativeUI = stepGenerativeUI
     const calls = stepToolCalls
     const results = stepToolResults
     stepText = ''
+    stepGenerativeUI = null
     stepToolCalls = []
     stepToolResults = []
-    if (text || calls.length > 0) {
+    if (text || generativeUI != null || calls.length > 0) {
       const assistantMsg: AIMessage = {
         id: randomUUID(),
         role: 'assistant',
-        content: text || undefined,
+        content:
+          generativeUI != null
+            ? [
+                ...(text ? [{ type: 'text' as const, text }] : []),
+                { type: 'generative-ui' as const, spec: generativeUI },
+              ]
+            : text || undefined,
         toolCalls: calls.length > 0 ? calls : undefined,
         createdAt: new Date(),
       }
@@ -137,6 +145,9 @@ function createPersistingChannel(
                   : JSON.stringify(event.result),
             })
             break
+          case 'generative-ui':
+            stepGenerativeUI = event.spec
+            break
           case 'usage':
             totalUsage.inputTokens += event.tokens.input
             totalUsage.outputTokens += event.tokens.output
@@ -161,10 +172,6 @@ async function postStreamCleanup(
   persistingChannel: PersistingChannel,
   aiMiddlewares: PikkuAIMiddlewareHooks[],
   singletonServices: any,
-  storage: AIStorageService | undefined,
-  memoryConfig: any,
-  threadId: string,
-  workingMemorySchemaName: string | null,
   messages: AIMessage[],
   aiRunState: AIRunStateService,
   runId: string
@@ -188,30 +195,6 @@ async function postStreamCleanup(
     }
   }
 
-  if (storage && memoryConfig?.workingMemory && outputText) {
-    const parsed = parseWorkingMemory(outputText)
-    if (parsed) {
-      const existing =
-        (await storage.getWorkingMemory(threadId, 'thread')) ?? {}
-      const merged = deepMergeWorkingMemory(existing, parsed)
-
-      if (singletonServices.schema && workingMemorySchemaName) {
-        try {
-          await singletonServices.schema.validateSchema(
-            workingMemorySchemaName,
-            merged
-          )
-        } catch (err) {
-          singletonServices.logger.warn(
-            `Working memory validation failed: ${err instanceof Error ? err.message : String(err)}`
-          )
-        }
-      }
-
-      await storage.saveWorkingMemory(threadId, 'thread', merged)
-    }
-  }
-
   await aiRunState.updateRun(runId, {
     status: 'completed',
     ...(usage.model
@@ -231,6 +214,7 @@ type StepLoopParams = {
   runnerParams: AIAgentRunnerParams
   maxSteps: number
   agentRunner: AIAgentRunnerService
+  streamChannel: AIStreamChannel
   persistingChannel: PersistingChannel
   channel: AIStreamChannel
   runId: string
@@ -250,7 +234,7 @@ async function runStreamStepLoop(
     runnerParams,
     maxSteps,
     agentRunner,
-    persistingChannel,
+    streamChannel,
     channel,
     runId,
     aiMiddlewares,
@@ -276,7 +260,7 @@ async function runStreamStepLoop(
 
     channel.send({ type: 'step-start', stepNumber: step })
 
-    const stepResult = await agentRunner.stream(runnerParams, persistingChannel)
+    const stepResult = await agentRunner.stream(runnerParams, streamChannel)
 
     for (const mw of aiMiddlewares) {
       if (mw.afterStep) {
@@ -436,10 +420,24 @@ export function appendStepMessages(
   runnerParams: AIAgentRunnerParams,
   stepResult: AIAgentStepResult
 ): void {
+  const structuredOutput =
+    stepResult.object && typeof stepResult.object === 'object'
+      ? (stepResult.object as Record<string, unknown>)
+      : null
+  const assistantContent =
+    structuredOutput?.ui != null
+      ? [
+          ...(stepResult.text
+            ? [{ type: 'text' as const, text: stepResult.text }]
+            : []),
+          { type: 'generative-ui' as const, spec: structuredOutput.ui },
+        ]
+      : stepResult.text || undefined
+
   const assistantMsg: AIMessage = {
     id: randomUUID(),
     role: 'assistant',
-    content: stepResult.text || undefined,
+    content: assistantContent,
     toolCalls:
       stepResult.toolCalls.length > 0
         ? stepResult.toolCalls.map((tc) => ({
@@ -448,6 +446,9 @@ export function appendStepMessages(
             args: tc.args as Record<string, unknown>,
           }))
         : undefined,
+    ...(stepResult.reasoningContent
+      ? { reasoningContent: stepResult.reasoningContent }
+      : {}),
     createdAt: new Date(),
   }
   runnerParams.messages.push(assistantMsg)
@@ -617,7 +618,15 @@ export async function streamAIAgent(
     return ''
   }
 
-  const aiMiddlewares: PikkuAIMiddlewareHooks[] = agent.aiMiddleware ?? []
+  const aiMiddlewares: PikkuAIMiddlewareHooks[] = [
+    ...getWorkingMemoryMiddleware(memoryConfig, storage, {
+      threadId,
+      workingMemorySchemaName,
+      logger: singletonServices.logger,
+      schemaService: singletonServices.schema,
+    }),
+    ...(agent.aiMiddleware ?? []),
+  ]
 
   let modifiedMessages = runnerParams.messages
   let modifiedInstructions = runnerParams.instructions
@@ -683,14 +692,16 @@ export async function streamAIAgent(
     }
   )
 
+  const persistingChannel = createPersistingChannel(channel, storage, threadId)
+
   const wrappedChannel =
     allChannelMiddleware.length > 0
       ? (wrapChannelWithMiddleware(
-          { channel },
+          { channel: persistingChannel },
           singletonServices,
           allChannelMiddleware
         ).channel as AIStreamChannel)
-      : channel
+      : persistingChannel
 
   // In delegate mode (default), suppress parent's text from reaching the client
   // AFTER a sub-agent has been called. If the parent responds directly (no delegation),
@@ -716,18 +727,13 @@ export async function streamAIAgent(
       }
     : wrappedChannel
 
-  const persistingChannel = createPersistingChannel(
-    outputChannel,
-    storage,
-    threadId
-  )
-
   try {
     const loopResult = await runStreamStepLoop({
       agent,
       runnerParams,
       maxSteps,
       agentRunner,
+      streamChannel: outputChannel,
       persistingChannel,
       channel,
       runId,
@@ -760,10 +766,6 @@ export async function streamAIAgent(
       persistingChannel,
       aiMiddlewares,
       singletonServices,
-      storage,
-      memoryConfig,
-      threadId,
-      workingMemorySchemaName,
       runnerParams.messages,
       aiRunState,
       runId
@@ -1093,7 +1095,15 @@ async function continueAfterToolResult(
 
   const instructions = await buildInstructions(resolvedName, packageName)
 
-  const aiMiddlewares: PikkuAIMiddlewareHooks[] = agent.aiMiddleware ?? []
+  const aiMiddlewares: PikkuAIMiddlewareHooks[] = [
+    ...getWorkingMemoryMiddleware(memoryConfig, storage, {
+      threadId: run.threadId,
+      workingMemorySchemaName,
+      logger: singletonServices.logger,
+      schemaService: singletonServices.schema,
+    }),
+    ...(agent.aiMiddleware ?? []),
+  ]
   let modifiedMessages = trimmedMessages
   let modifiedInstructions = instructions
   for (const mw of aiMiddlewares) {
@@ -1140,20 +1150,20 @@ async function continueAfterToolResult(
     }
   )
 
-  const wrappedChannel =
-    allChannelMiddleware.length > 0
-      ? (wrapChannelWithMiddleware(
-          { channel },
-          singletonServices,
-          allChannelMiddleware
-        ).channel as AIStreamChannel)
-      : channel
-
   const persistingChannel = createPersistingChannel(
-    wrappedChannel,
+    channel,
     storage,
     run.threadId
   )
+
+  const wrappedChannel =
+    allChannelMiddleware.length > 0
+      ? (wrapChannelWithMiddleware(
+          { channel: persistingChannel },
+          singletonServices,
+          allChannelMiddleware
+        ).channel as AIStreamChannel)
+      : persistingChannel
 
   const streamContext: StreamContext = { channel, options }
   const resumeTools = (
@@ -1169,14 +1179,6 @@ async function continueAfterToolResult(
   ).tools
 
   const resolved = resolveModelConfig(resolvedName, agent)
-  console.log(
-    '[DEBUG resume] resolvedName:',
-    resolvedName,
-    'agent.model:',
-    agent.model,
-    'resolved.model:',
-    resolved.model
-  )
   const maxSteps = resolved.maxSteps ?? 10
 
   const runnerParams: AIAgentRunnerParams = {
@@ -1198,6 +1200,7 @@ async function continueAfterToolResult(
       runnerParams,
       maxSteps,
       agentRunner,
+      streamChannel: wrappedChannel,
       persistingChannel,
       channel,
       runId: run.runId,
@@ -1230,10 +1233,6 @@ async function continueAfterToolResult(
       persistingChannel,
       aiMiddlewares,
       singletonServices,
-      storage,
-      memoryConfig,
-      run.threadId,
-      workingMemorySchemaName,
       runnerParams.messages,
       aiRunState,
       run.runId

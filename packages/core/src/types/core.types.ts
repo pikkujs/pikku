@@ -9,6 +9,7 @@ import type {
   CorePikkuChannelMiddleware,
   CorePikkuChannelMiddlewareFactory,
 } from '../wirings/channel/channel.types.js'
+import type { EventHubService } from '../wirings/channel/eventhub-service.js'
 import type { PikkuRPC } from '../wirings/rpc/rpc-types.js'
 import type { PikkuMCP } from '../wirings/mcp/mcp.types.js'
 import type { PikkuScheduledTask } from '../wirings/scheduler/scheduler.types.js'
@@ -115,6 +116,7 @@ export type FunctionRuntimeMeta = {
   version?: number
   approvalRequired?: boolean
   approvalDescription?: string
+  implementationHash?: string
   contractHash?: string
   inputHash?: string
   outputHash?: string
@@ -216,6 +218,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   workflowService?: WorkflowService
   /** The queue service */
   queueService?: QueueService
+  /** Event hub for realtime pub/sub across channels */
+  eventHub?: EventHubService<Record<string, any>>
   /** The scheduler service */
   schedulerService?: SchedulerService
   /** The deployment service for service discovery */
@@ -485,8 +489,8 @@ export type CreateSingletonServices<
  */
 export type CreateWireServices<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
-  Services extends
-    CoreServices<SingletonServices> = CoreServices<SingletonServices>,
+  Services extends CoreServices<SingletonServices> =
+    CoreServices<SingletonServices>,
   UserSession extends CoreUserSession = CoreUserSession,
 > = (
   services: SingletonServices,

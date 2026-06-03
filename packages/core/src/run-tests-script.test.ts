@@ -29,6 +29,24 @@ describe('run-tests.sh discovery behavior', () => {
     fs.rmSync(tempDir, { recursive: true, force: true })
   })
 
+  test('returns success in CI when no tests are found', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pikku-core-tests-'))
+    const srcDir = path.join(tempDir, 'src')
+    fs.mkdirSync(srcDir, { recursive: true })
+    fs.copyFileSync(runTestsScriptPath, path.join(tempDir, 'run-tests.sh'))
+
+    const result = spawnSync('bash', ['run-tests.sh'], {
+      cwd: tempDir,
+      encoding: 'utf8',
+      env: { ...process.env, CI: 'true' },
+    })
+
+    assert.equal(result.status, 0)
+    assert.match(result.stdout, /No test files found matching pattern/)
+
+    fs.rmSync(tempDir, { recursive: true, force: true })
+  })
+
   test('returns failure in strict mode when no tests are found', () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pikku-core-tests-'))
     const srcDir = path.join(tempDir, 'src')

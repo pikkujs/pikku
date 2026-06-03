@@ -382,16 +382,28 @@ export async function runCLICommand({
       packageName: currentCommand.packageName,
     })
 
-    // Apply renderer one final time with the final output (if renderer exists)
-    // Skip if result is undefined (void functions handle their own output)
-    if (renderer && result !== undefined) {
-      await Promise.resolve(
-        renderer(
-          singletonServices,
-          result,
-          userSession.get() as CoreUserSession | undefined
+    // Render the final result. `--json` / `--output json` routes the result
+    // through the global JSON renderer, but only for commands that opted into
+    // result-rendering by declaring a `render` — inline-printing commands (no
+    // per-command renderer) keep emitting their own output untouched.
+    // Skip if result is undefined (void functions handle their own output).
+    if (result !== undefined) {
+      const commandRenderer = programData?.renderers[commandId]
+      const jsonMode =
+        (data as any).json === true || (data as any).output === 'json'
+      const finalRenderer: CorePikkuCLIRender<any> | undefined =
+        jsonMode && commandRenderer !== undefined
+          ? defaultJSONRenderer
+          : (commandRenderer ?? programData?.defaultRenderer)
+      if (finalRenderer !== undefined) {
+        await Promise.resolve(
+          finalRenderer(
+            singletonServices,
+            result,
+            userSession.get() as CoreUserSession | undefined
+          )
         )
-      )
+      }
     }
 
     return result
@@ -484,7 +496,8 @@ export async function executeCLI({
       const hasUnknownCommand = parsed.errors.some(
         (error) =>
           error.startsWith('Unknown command:') ||
-          error.startsWith('Command not found:')
+          error.startsWith('Command not found:') ||
+          error.startsWith('Missing subcommand:')
       )
 
       if (hasUnknownCommand) {

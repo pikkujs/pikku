@@ -79,4 +79,45 @@ describe('PikkuFetchHTTPResponse', () => {
     assert.strictEqual(res.status, 301)
     assert.strictEqual(res.headers.get('Location'), '/login')
   })
+
+  test('redirect rejects invalid redirect locations', () => {
+    assert.throws(
+      () => new PikkuFetchHTTPResponse().redirect('login'),
+      /Invalid redirect location/
+    )
+  })
+
+  test('send stores raw body content', async () => {
+    const res = new PikkuFetchHTTPResponse().send('plain-body').toResponse()
+
+    assert.strictEqual(await res.text(), 'plain-body')
+  })
+
+  test('stream mode writes json/text/html/arrayBuffer and close completes the stream', async () => {
+    const res = new PikkuFetchHTTPResponse()
+    res.setMode('stream')
+    res.json({ hello: 'world' })
+    res.text('plain')
+    res.html('<p>html</p>')
+    res.arrayBuffer('bytes')
+    res.close()
+
+    const response = res.toResponse()
+    const text = await response.text()
+
+    assert.ok(text.startsWith(':\n\n'))
+    assert.ok(text.includes('data: {"hello":"world"}\n\n'))
+    assert.ok(text.includes('data: plain\n\n'))
+    assert.ok(text.includes('data: <p>html</p>\n\n'))
+    assert.ok(text.includes('data: bytes\n\n'))
+  })
+
+  test('toResponse preserves the instance status over response init args', () => {
+    const res = new PikkuFetchHTTPResponse()
+      .status(201)
+      .json({ ok: true })
+      .toResponse({ status: 202 })
+
+    assert.strictEqual(res.status, 201)
+  })
 })

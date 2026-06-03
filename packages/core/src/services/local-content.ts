@@ -65,9 +65,20 @@ export class LocalContent implements ContentService {
         1,
         Math.floor((expiresAt - signedAt) / 1000)
       )
+      const payload: {
+        signedAt: number
+        expiresAt: number
+        notBefore?: number
+      } = {
+        signedAt,
+        expiresAt,
+      }
+      if (dateGreaterThan) {
+        payload.notBefore = dateGreaterThan.getTime()
+      }
       const signature = await this.jwt.encode(
         { value: expiresInSeconds, unit: 'second' },
-        { signedAt, expiresAt }
+        payload
       )
       params.set('signature', signature)
     }

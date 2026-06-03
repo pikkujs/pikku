@@ -116,13 +116,8 @@ export type CoreHTTPFunctionWiring<
   In,
   Out,
   R extends string,
-  PikkuFunction extends CorePikkuFunction<
-    In,
-    Out,
-    any,
-    any,
-    any
-  > = CorePikkuFunction<In, Out>,
+  PikkuFunction extends CorePikkuFunction<In, Out, any, any, any> =
+    CorePikkuFunction<In, Out>,
   PikkuFunctionSessionless extends CorePikkuFunctionSessionless<
     In,
     Out,
@@ -130,15 +125,10 @@ export type CoreHTTPFunctionWiring<
     any,
     any
   > = CorePikkuFunctionSessionless<In, Out>,
-  PikkuPermission extends CorePikkuPermission<
-    In,
-    any,
-    any
-  > = CorePikkuPermission<In, any, any>,
-  PikkuMiddleware extends CorePikkuMiddleware<
-    any,
-    any
-  > = CorePikkuMiddleware<any>,
+  PikkuPermission extends CorePikkuPermission<In, any, any> =
+    CorePikkuPermission<In, any, any>,
+  PikkuMiddleware extends CorePikkuMiddleware<any, any> =
+    CorePikkuMiddleware<any>,
 > =
   | (CoreHTTPFunction & {
       route: R
@@ -290,6 +280,7 @@ export interface PikkuHTTPResponse<Out = unknown> {
   redirect(location: string, status?: number): this
   close?: () => void
   setMode?: (mode: 'stream') => void
+  flushHeaders?: () => void
 }
 
 /**
@@ -301,11 +292,8 @@ export type HTTPRouteConfig<
     | CorePikkuFunctionSessionless<any, any, any, any, any> =
     | CorePikkuFunction<any, any, any, any, any>
     | CorePikkuFunctionSessionless<any, any, any, any, any>,
-  PikkuPermission extends CorePikkuPermission<
-    any,
-    any,
-    any
-  > = CorePikkuPermission<any>,
+  PikkuPermission extends CorePikkuPermission<any, any, any> =
+    CorePikkuPermission<any>,
   PikkuMiddleware extends CorePikkuMiddleware<any, any> = CorePikkuMiddleware<
     any,
     any
@@ -331,11 +319,8 @@ export type HTTPRouteConfig<
  * Group-level configuration applied to all routes
  */
 export type HTTPRoutesGroupConfig<
-  PikkuPermission extends CorePikkuPermission<
-    any,
-    any,
-    any
-  > = CorePikkuPermission<any>,
+  PikkuPermission extends CorePikkuPermission<any, any, any> =
+    CorePikkuPermission<any>,
   PikkuMiddleware extends CorePikkuMiddleware<any, any> = CorePikkuMiddleware<
     any,
     any

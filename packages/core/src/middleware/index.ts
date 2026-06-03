@@ -6,7 +6,12 @@ export { cors } from './cors.js'
 export { telemetryOuter, telemetryInner } from './telemetry.js'
 export {
   addTagMiddleware,
+  addTagMiddleware as addMiddleware,
   addGlobalMiddleware,
   runMiddleware,
 } from '../middleware-runner.js'
-export { addTagPermission, addGlobalPermission } from '../permissions.js'
+export {
+  addTagPermission,
+  addTagPermission as addPermission,
+  addGlobalPermission,
+} from '../permissions.js'

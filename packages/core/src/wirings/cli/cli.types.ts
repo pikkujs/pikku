@@ -256,10 +256,8 @@ export interface CoreCLICommand<
   PikkuPermission extends CorePikkuPermission<any, any, any>,
   PikkuMiddleware extends CorePikkuMiddleware,
   Options = any,
-  Subcommands extends Record<
-    string,
-    CoreCLICommandConfig<any, any, any>
-  > = Record<string, CoreCLICommandConfig<any, any, any>>,
+  Subcommands extends Record<string, CoreCLICommandConfig<any, any, any>> =
+    Record<string, CoreCLICommandConfig<any, any, any>>,
 > {
   parameters?: string
   func: PikkuFunctionConfig
@@ -301,10 +299,8 @@ export type CLICommandDefinition<
   PikkuPermission extends CorePikkuPermission<any, any, any>,
   PikkuMiddleware extends CorePikkuMiddleware,
   Options = any,
-  Subcommands extends Record<
-    string,
-    CoreCLICommandConfig<any, any, any>
-  > = Record<string, CoreCLICommandConfig<any, any, any>>,
+  Subcommands extends Record<string, CoreCLICommandConfig<any, any, any>> =
+    Record<string, CoreCLICommandConfig<any, any, any>>,
 > =
   | CoreCLICommand<
       In,

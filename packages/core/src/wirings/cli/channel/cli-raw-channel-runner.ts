@@ -2,7 +2,10 @@ import { pikkuState } from '../../../pikku-state.js'
 import type { CLIMeta } from '../cli.types.js'
 import { parseCLIArguments, generateCommandHelp } from '../command-parser.js'
 import { runCLICommand } from '../cli-runner.js'
-import type { CoreSingletonServices, CreateWireServices } from '../../../types/core.types.js'
+import type {
+  CoreSingletonServices,
+  CreateWireServices,
+} from '../../../types/core.types.js'
 
 /**
  * Handles raw CLI input from a WebSocket channel.
@@ -57,7 +60,9 @@ export async function handleRawCLI({
   }
 
   // Check if the resolved command has a pikkuFuncId (is executable)
-  let current: { pikkuFuncId?: string; subcommands?: Record<string, any> } | undefined = programMeta.commands[parsed.commandPath[0]]
+  let current:
+    | { pikkuFuncId?: string; subcommands?: Record<string, any> }
+    | undefined = programMeta.commands[parsed.commandPath[0]]
   for (let i = 1; i < parsed.commandPath.length; i++) {
     current = current?.subcommands?.[parsed.commandPath[i]]
   }

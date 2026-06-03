@@ -12,9 +12,9 @@ export type VariableMeta = {
   displayName: string
 }
 
-export class TypedVariablesService<TMap = Record<string, unknown>>
-  implements VariablesService
-{
+export class TypedVariablesService<
+  TMap = Record<string, unknown>,
+> implements VariablesService {
   constructor(
     private variables: VariablesService,
     private variablesMeta: Record<string, VariableMeta>

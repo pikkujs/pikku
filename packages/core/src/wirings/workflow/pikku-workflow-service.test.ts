@@ -2,12 +2,29 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
-import { pikkuState } from '../../pikku-state.js'
+import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { addWorkflow } from './dsl/workflow-runner.js'
 import {
   WorkflowSuspendedException,
   type PikkuWorkflowWire,
 } from './pikku-workflow-service.js'
+
+describe('pikku-workflow-service worker registration', () => {
+  test('registers sleeper function metadata', () => {
+    resetPikkuState()
+
+    new InMemoryWorkflowService()
+
+    const functionMeta = pikkuState(null, 'function', 'meta')
+    assert.deepEqual(functionMeta.pikkuWorkflowSleeper, {
+      pikkuFuncId: 'pikkuWorkflowSleeper',
+      sessionless: true,
+      functionType: 'helper',
+      inputSchemaName: null,
+      outputSchemaName: null,
+    })
+  })
+})
 
 describe('pikku-workflow-service inline meta flag', () => {
   test('workflow with inline: true in meta should create inline run and not queue', async () => {

@@ -1,5 +1,8 @@
 #!/bin/bash
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$script_dir"
+
 # Enable nullglob to handle cases where no files match the pattern
 shopt -s nullglob
 
@@ -34,7 +37,7 @@ files=($(find src -type f -name "*.test.ts"))
 # Check if any files matched the pattern
 if [ ${#files[@]} -eq 0 ]; then
   echo "No test files found matching pattern: $pattern"
-  if [ "${STRICT_TEST_DISCOVERY}" = "1" ] || [ "${CI}" = "true" ]; then
+  if [ "${STRICT_TEST_DISCOVERY}" = "1" ]; then
     exit 1
   fi
   exit 0

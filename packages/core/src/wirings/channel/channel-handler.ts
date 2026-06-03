@@ -90,7 +90,7 @@ export const processMessageHandlers = (
         ? `route '${routingProperty}:${routerValue}'`
         : 'the default message route'
       logger.error(
-        `Channel ${channelConfig.name} with id ${channelHandler.getChannel().channelId} requires a session for ${routeMessage}`
+        `Channel ${channelConfig.name} with id ${channelHandler.getChannel().channelId} requires a session for ${routeMessage}. No session is attached to this websocket connection. Ensure auth middleware establishes a session during websocket upgrade, and configure sessionStore when the runtime needs persisted sessions.`
       )
       // TODO: Send error message back breaks typescript, but should be implemented somehow
       channelHandler.getChannel().send(`Unauthorized for ${routeMessage}`)

@@ -1,6 +1,8 @@
 import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert'
 import { InMemoryWorkflowService } from './in-memory-workflow-service.js'
+import { getQueueWorkers } from '../wirings/queue/queue-runner.js'
+import { pikkuState } from '../pikku-state.js'
 
 let service: InMemoryWorkflowService
 
@@ -48,17 +50,10 @@ describe('InMemoryWorkflowService', () => {
     })
 
     test('should persist deterministic planned steps metadata', async () => {
-      const runId = await service.createRun(
-        'wf',
-        {},
-        true,
-        'h',
-        {} as any,
-        {
-          deterministic: true,
-          plannedSteps: [{ stepName: 'Step 1' }, { stepName: 'Step 2' }],
-        }
-      )
+      const runId = await service.createRun('wf', {}, true, 'h', {} as any, {
+        deterministic: true,
+        plannedSteps: [{ stepName: 'Step 1' }, { stepName: 'Step 2' }],
+      })
 
       const run = await service.getRun(runId)
       assert.strictEqual(run?.deterministic, true)
@@ -367,6 +362,33 @@ describe('InMemoryWorkflowService', () => {
     test('should return empty array for non-existent run', async () => {
       const history = await service.getRunHistory('non-existent')
       assert.deepStrictEqual(history, [])
+    })
+  })
+
+  describe('queue worker registration', () => {
+    test('rewireQueueWorkers registers workflow queues added after construction', () => {
+      const stepQueue = 'wf-step-regression-enrich'
+      const orchQueue = 'wf-orchestrator-regression-onboarding'
+
+      const ws = new InMemoryWorkflowService()
+
+      const queueMeta = pikkuState(null, 'queue', 'meta')
+      queueMeta[stepQueue] = {
+        name: stepQueue,
+        pikkuFuncId: 'pikkuWorkflowWorker:regressionEnrich',
+      }
+      queueMeta[orchQueue] = {
+        name: orchQueue,
+        pikkuFuncId: 'pikkuWorkflowOrchestrator:regressionOnboarding',
+      }
+
+      assert.strictEqual(getQueueWorkers().has(stepQueue), false)
+      assert.strictEqual(getQueueWorkers().has(orchQueue), false)
+
+      ws.rewireQueueWorkers()
+
+      assert.strictEqual(getQueueWorkers().has(stepQueue), true)
+      assert.strictEqual(getQueueWorkers().has(orchQueue), true)
     })
   })
 })
