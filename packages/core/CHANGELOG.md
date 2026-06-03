@@ -1,3 +1,9 @@
+## 0.12.22
+
+### Patch Changes
+
+- 265461b: Improve schema identifier sanitization in the CLI and prefer specific runtime error messages in HTTP error responses.
+
 ## 0.12.21
 
 ### Patch Changes

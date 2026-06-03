@@ -1,3 +1,11 @@
+## 0.12.23
+
+### Patch Changes
+
+- 265461b: Improve schema identifier sanitization in the CLI and prefer specific runtime error messages in HTTP error responses.
+- Updated dependencies [265461b]
+  - @pikku/core@0.12.22
+
 ## 0.12.22
 
 ### Patch Changes
