@@ -10,14 +10,21 @@ export interface MetaRowProps {
   children: React.ReactNode
 }
 
-export const MetaRow: React.FunctionComponent<MetaRowProps> = ({
+export const MetaRow: React.FC<MetaRowProps> = ({
   label,
   labelWidth = 85,
   align = 'center',
   gap,
   children,
 }) => (
-  <Box className={classes.metaRow} style={align !== 'center' || gap ? { alignItems: align, ...(gap ? { gap } : {}) } : undefined}>
+  <Box
+    className={classes.metaRow}
+    style={
+      align !== 'center' || gap
+        ? { alignItems: align, ...(gap ? { gap } : {}) }
+        : undefined
+    }
+  >
     <Text
       size="sm"
       ff="monospace"

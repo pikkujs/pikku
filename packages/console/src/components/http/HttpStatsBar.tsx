@@ -6,9 +6,7 @@ interface HttpStatsBarProps {
   routes: any[]
 }
 
-export const HttpStatsBar: React.FunctionComponent<HttpStatsBarProps> = ({
-  routes,
-}) => {
+export const HttpStatsBar: React.FC<HttpStatsBarProps> = ({ routes }) => {
   const counts = useMemo(() => {
     const map: Record<string, number> = {}
     for (const r of routes) {

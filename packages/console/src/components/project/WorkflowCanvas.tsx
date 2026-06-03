@@ -9,13 +9,16 @@ import ReactFlow, {
   useReactFlow,
   ReactFlowProvider,
 } from 'reactflow'
-import { Box, Drawer, Group, Text, Alert, Button } from '@mantine/core'
-import { AlertTriangle, GitBranch, History, Play } from 'lucide-react'
+import { Box, Drawer, Group, Text, Alert } from '@mantine/core'
+import { AlertTriangle, GitBranch, History } from 'lucide-react'
 import {
   CanvasDrawerProvider,
   useCanvasDrawerContext,
 } from '../../context/DrawerContext'
-import { WorkflowProvider, useWorkflowContext } from '../../context/WorkflowContext'
+import {
+  WorkflowProvider,
+  useWorkflowContext,
+} from '../../context/WorkflowContext'
 import {
   useWorkflowRunContextSafe,
   useWorkflowRunContext,
@@ -126,9 +129,10 @@ interface WorkflowCanvasProps {
   workflow: any
   items: { name: string; description?: string }[]
   onItemSelect: (name: string) => void
+  immersiveDetail?: boolean
 }
 
-const WorkflowCanvasFlow: React.FunctionComponent<{
+const WorkflowCanvasFlow: React.FC<{
   workflow: any
   onPaneClick?: () => void
 }> = ({ workflow, onPaneClick }) => {
@@ -186,13 +190,13 @@ const WorkflowCanvasFlow: React.FunctionComponent<{
         noDragClassName="nodrag"
         onPaneClick={onPaneClick}
       >
-        <Background color="#ccc" variant={BackgroundVariant.Dots} size={2} />
+        <Background color="#e0e0e0" variant={BackgroundVariant.Dots} size={1} />
       </ReactFlow>
     </Box>
   )
 }
 
-const WorkflowCanvasInner: React.FunctionComponent<{
+const WorkflowCanvasInner: React.FC<{
   workflow: any
   onPaneClick?: () => void
 }> = (props) => {
@@ -203,7 +207,7 @@ const WorkflowCanvasInner: React.FunctionComponent<{
   )
 }
 
-const WorkflowRunsPanel: React.FunctionComponent<{ workflowName: string }> = ({
+const WorkflowRunsPanel: React.FC<{ workflowName: string }> = ({
   workflowName,
 }) => {
   const { selectedRunId, setSelectedRunId, setIsCreatingRun } =
@@ -246,16 +250,17 @@ const WorkflowRunsPanel: React.FunctionComponent<{ workflowName: string }> = ({
       emptyMessage="No runs found"
       statusFilters={[]}
       onNewClick={editable ? handleNewClick : undefined}
-      newButtonLabel={editable ? "New workflow run" : undefined}
+      newButtonLabel={editable ? 'New workflow run' : undefined}
       onDelete={editable ? handleDelete : undefined}
     />
   )
 }
 
-const WorkflowCanvasContent: React.FunctionComponent<WorkflowCanvasProps> = ({
+const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
   workflow,
   items,
   onItemSelect,
+  immersiveDetail = false,
 }) => {
   const { canvasDrawer, closeCanvasDrawer } = useCanvasDrawerContext()
   const { panels, activePanel, openWorkflow, setActivePanel } =
@@ -308,20 +313,6 @@ const WorkflowCanvasContent: React.FunctionComponent<WorkflowCanvasProps> = ({
         subtitle={
           workflow.source ? (
             <PikkuBadge type="dynamic" badge="source" value={workflow.source} />
-          ) : undefined
-        }
-        rightSection={
-          runContext ? (
-            <Button
-              size="xs"
-              leftSection={<Play size={13} />}
-              onClick={() => {
-                runContext.setSelectedRunId(null)
-                runContext.setIsCreatingRun(true)
-              }}
-            >
-              Run
-            </Button>
           ) : undefined
         }
       />
@@ -395,9 +386,11 @@ const WorkflowCanvasContent: React.FunctionComponent<WorkflowCanvasProps> = ({
     <>
       <ThreePaneLayout
         header={header}
-        showTabs={false}
+        showTabs={immersiveDetail}
         emptyPanelMessage="Select a node to view its details"
         runsPanel={runsPanel}
+        initialLeftCollapsed={immersiveDetail}
+        initialRightCollapsed={immersiveDetail}
       >
         <Box style={{ height: '100%', position: 'relative' }}>
           <WorkflowCanvasInner
@@ -450,9 +443,7 @@ const WorkflowCanvasContent: React.FunctionComponent<WorkflowCanvasProps> = ({
   )
 }
 
-export const WorkflowCanvas: React.FunctionComponent<WorkflowCanvasProps> = (
-  props
-) => {
+export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = (props) => {
   return (
     <WorkflowProvider workflow={props.workflow}>
       <CanvasDrawerProvider>

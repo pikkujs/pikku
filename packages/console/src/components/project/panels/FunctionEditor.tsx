@@ -28,7 +28,7 @@ interface FunctionEditorProps {
   onClose: () => void
 }
 
-export const FunctionEditor: React.FunctionComponent<FunctionEditorProps> = ({
+export const FunctionEditor: React.FC<FunctionEditorProps> = ({
   functionName,
   sourceFile,
   exportedName,
@@ -75,23 +75,18 @@ export const FunctionEditor: React.FunctionComponent<FunctionEditorProps> = ({
     const original = source?.config || {}
     const changes: Record<string, unknown> = {}
 
-    if (title !== (original.title || ''))
-      changes.title = title || null
+    if (title !== (original.title || '')) changes.title = title || null
     if (description !== (original.description || ''))
       changes.description = description || null
-    if (summary !== (original.summary || ''))
-      changes.summary = summary || null
+    if (summary !== (original.summary || '')) changes.summary = summary || null
 
     const origTags = (original.tags as string[]) || []
     if (JSON.stringify(tags) !== JSON.stringify(origTags))
       changes.tags = tags.length > 0 ? tags : null
 
-    if (expose !== (original.expose === true))
-      changes.expose = expose || null
-    if (remote !== (original.remote === true))
-      changes.remote = remote || null
-    if (mcp !== (original.mcp === true))
-      changes.mcp = mcp || null
+    if (expose !== (original.expose === true)) changes.expose = expose || null
+    if (remote !== (original.remote === true)) changes.remote = remote || null
+    if (mcp !== (original.mcp === true)) changes.mcp = mcp || null
     if (readonly_ !== (original.readonly === true))
       changes.readonly = readonly_ || null
     if (approvalRequired !== (original.approvalRequired === true))
@@ -227,7 +222,7 @@ export const FunctionEditor: React.FunctionComponent<FunctionEditorProps> = ({
             }}
             style={{
               fontSize: '13px',
-              border: '1px solid var(--mantine-color-dark-4)',
+              border: '1px solid var(--app-border)',
               borderRadius: '4px',
               overflow: 'hidden',
             }}

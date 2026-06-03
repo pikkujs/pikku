@@ -15,10 +15,7 @@ export interface AppLayoutProps {
   sidebar?: SidebarProps
 }
 
-const AppLayoutInner: React.FunctionComponent<AppLayoutProps> = ({
-  children,
-  sidebar,
-}) => {
+const AppLayoutInner: React.FC<AppLayoutProps> = ({ children, sidebar }) => {
   const { loading, error } = usePikkuMeta()
   const [collapsed] = useLocalStorage({
     key: 'sidebar-collapsed',
@@ -56,10 +53,7 @@ const AppLayoutInner: React.FunctionComponent<AppLayoutProps> = ({
   )
 }
 
-export const AppLayout: React.FunctionComponent<AppLayoutProps> = ({
-  children,
-  sidebar,
-}) => {
+export const AppLayout: React.FC<AppLayoutProps> = ({ children, sidebar }) => {
   return (
     <PikkuMetaProvider>
       <AppLayoutInner sidebar={sidebar}>{children}</AppLayoutInner>

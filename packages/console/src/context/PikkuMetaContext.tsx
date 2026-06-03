@@ -59,7 +59,6 @@ const EMPTY_META: PikkuMetaState = {
   secretsMeta: {},
   credentialsMeta: {},
   variablesMeta: {},
-  modelAliases: [],
 }
 
 const EMPTY_COUNTS: MetaCounts = {
@@ -79,7 +78,7 @@ const EMPTY_COUNTS: MetaCounts = {
   variables: 0,
 }
 
-export const PikkuMetaProvider: React.FunctionComponent<{
+export const PikkuMetaProvider: React.FC<{
   children: React.ReactNode
 }> = ({ children }) => {
   const rpc = usePikkuRPC()
@@ -115,7 +114,6 @@ export const PikkuMetaProvider: React.FunctionComponent<{
         secretsMeta: allMeta.secretsMeta,
         credentialsMeta: allMeta.credentialsMeta ?? {},
         variablesMeta: allMeta.variablesMeta,
-        modelAliases: allMeta.modelAliases ?? [],
       })
       setCounts(allMeta.counts)
       setServerFunctionUsedBy(allMeta.functionUsedBy)

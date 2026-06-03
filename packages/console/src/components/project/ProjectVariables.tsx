@@ -18,9 +18,11 @@ interface ProjectVariablesProps {
   installed?: boolean
 }
 
-export const ProjectVariables: React.FunctionComponent<
-  ProjectVariablesProps
-> = ({ variables, loading, installed = true }) => {
+export const ProjectVariables: React.FC<ProjectVariablesProps> = ({
+  variables,
+  loading,
+  installed = true,
+}) => {
   const { openVariable } = usePanelContext()
 
   const columns = useMemo(

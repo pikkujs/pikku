@@ -12,7 +12,7 @@ interface CliRowProps {
   data: any
 }
 
-export const CliRow: React.FunctionComponent<CliRowProps> = ({
+export const CliRow: React.FC<CliRowProps> = ({
   name,
   functionName,
   wireId,

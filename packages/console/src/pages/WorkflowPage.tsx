@@ -13,13 +13,17 @@ import {
   useConsoleNavigator,
 } from '../context/ConsoleNavigatorContext'
 
-function WorkflowPageInner({ extraColumns, headerRight }: { extraColumns?: WorkflowExtraColumn[]; headerRight?: React.ReactNode }) {
+const WorkflowPageInner: React.FC<{
+  extraColumns?: WorkflowExtraColumn[]
+  headerRight?: React.ReactNode
+  immersiveDetail?: boolean
+}> = ({ extraColumns, headerRight, immersiveDetail = false }) => {
   const { workflowId } = useConsoleNavigator()
   const { meta, loading } = usePikkuMeta()
   const { data: aiWorkflows } = useAIWorkflows()
 
   if (workflowId) {
-    return <WorkflowTabContent />
+    return <WorkflowTabContent immersiveDetail={immersiveDetail} />
   }
 
   if (loading) {
@@ -31,7 +35,8 @@ function WorkflowPageInner({ extraColumns, headerRight }: { extraColumns?: Workf
   }
 
   const workflows = meta.workflows || {}
-  const hasWorkflows = Object.keys(workflows).length > 0 || (aiWorkflows && aiWorkflows.length > 0)
+  const hasWorkflows =
+    Object.keys(workflows).length > 0 || (aiWorkflows && aiWorkflows.length > 0)
 
   if (!hasWorkflows) {
     return (
@@ -58,10 +63,11 @@ function WorkflowPageInner({ extraColumns, headerRight }: { extraColumns?: Workf
   )
 }
 
-export const WorkflowsPage: React.FunctionComponent<{
+export const WorkflowsPage: React.FC<{
   extraColumns?: WorkflowExtraColumn[]
   headerRight?: React.ReactNode
-}> = ({ extraColumns, headerRight }) => {
+  immersiveDetail?: boolean
+}> = ({ extraColumns, headerRight, immersiveDetail = false }) => {
   const existingNavigator = useContext(ConsoleNavigatorCtx)
   const inner = (
     <Suspense
@@ -71,7 +77,11 @@ export const WorkflowsPage: React.FunctionComponent<{
         </Center>
       }
     >
-      <WorkflowPageInner extraColumns={extraColumns} headerRight={headerRight} />
+      <WorkflowPageInner
+        extraColumns={extraColumns}
+        headerRight={headerRight}
+        immersiveDetail={immersiveDetail}
+      />
     </Suspense>
   )
   // Fabric (or any other host) provides its own navigator above this component.

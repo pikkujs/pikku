@@ -16,7 +16,7 @@ interface HttpFilterBarProps {
   onSortByChange: (value: string) => void
 }
 
-export const HttpFilterBar: React.FunctionComponent<HttpFilterBarProps> = ({
+export const HttpFilterBar: React.FC<HttpFilterBarProps> = ({
   availableMethods,
   selectedMethods,
   onMethodsChange,

@@ -1,10 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import {
-  Box,
-  Text,
-  ScrollArea,
-  Badge,
-} from '@mantine/core'
+import { Box, Text, ScrollArea, Badge } from '@mantine/core'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
 import { useFunctionMeta } from '../../hooks/useWirings'
@@ -30,7 +25,7 @@ const TYPE_BADGE_COLORS: Record<string, string> = {
   prompt: 'violet',
 }
 
-const McpDetailPanel: React.FunctionComponent<{ item: any }> = ({ item }) => {
+const McpDetailPanel: React.FC<{ item: any }> = ({ item }) => {
   const { navigateInPanel } = usePanelContext()
   const funcId = item?.pikkuFuncId
   const { data: funcMeta } = useFunctionMeta(funcId ?? '')
@@ -42,7 +37,10 @@ const McpDetailPanel: React.FunctionComponent<{ item: any }> = ({ item }) => {
   return (
     <Box className={classes.flexColumn}>
       {/* Header */}
-      <Box className={classes.detailHeader} style={{ padding: '10px 16px', background: 'rgba(255,255,255,0.01)' }}>
+      <Box
+        className={classes.detailHeader}
+        style={{ padding: '10px 16px', background: 'rgba(255,255,255,0.01)' }}
+      >
         <Box className={classes.flexGrow}>
           <Text size="sm" fw={600} ff="monospace" c="var(--app-meta-value)">
             {item.name || item.wireId || 'unnamed'}
@@ -79,7 +77,12 @@ const McpDetailPanel: React.FunctionComponent<{ item: any }> = ({ item }) => {
                 c="var(--app-meta-value)"
                 className={classes.clickableText}
                 onClick={() =>
-                  navigateInPanel('function', funcId, displayName || funcId, funcMeta)
+                  navigateInPanel(
+                    'function',
+                    funcId,
+                    displayName || funcId,
+                    funcMeta
+                  )
                 }
               >
                 {displayName}
@@ -94,9 +97,19 @@ const McpDetailPanel: React.FunctionComponent<{ item: any }> = ({ item }) => {
               </Text>
             </MetaRow>
           ) : (
-            <Box p="xs" mt={4} mb={4} style={{ background: 'rgba(245,158,11,0.08)', borderRadius: 6, border: '1px solid rgba(245,158,11,0.2)' }}>
+            <Box
+              p="xs"
+              mt={4}
+              mb={4}
+              style={{
+                background: 'rgba(245,158,11,0.08)',
+                borderRadius: 6,
+                border: '1px solid rgba(245,158,11,0.2)',
+              }}
+            >
               <Text size="sm" c="rgba(245,158,11,0.9)" lh={1.6}>
-                Missing description — MCP clients won't know when to use this {method}.
+                Missing description — MCP clients won't know when to use this{' '}
+                {method}.
               </Text>
             </Box>
           )}
@@ -118,7 +131,13 @@ const McpDetailPanel: React.FunctionComponent<{ item: any }> = ({ item }) => {
 
         {/* Right: MCP client config */}
         <Box className={classes.splitRight}>
-          <Text size="sm" fw={600} ff="monospace" c="var(--app-meta-label)" mb={4}>
+          <Text
+            size="sm"
+            fw={600}
+            ff="monospace"
+            c="var(--app-meta-label)"
+            mb={4}
+          >
             Connect your MCP client
           </Text>
           <Text size="sm" c="var(--app-text-muted)" mb="md" lh={1.6}>
@@ -127,43 +146,68 @@ const McpDetailPanel: React.FunctionComponent<{ item: any }> = ({ item }) => {
 
           <CopyableCode
             label="Claude Desktop · claude_desktop_config.json"
-            code={JSON.stringify({
-              mcpServers: {
-                pikku: {
-                  command: 'npx',
-                  args: ['-y', '@pikku/mcp-server', 'http://localhost:4002'],
-                },
-              },
-            }, null, 2)}
-            language="json"
-          />
-
-          <Box mt="md">
-            <CopyableCode
-              label="Cursor · .cursor/mcp.json"
-              code={JSON.stringify({
+            code={JSON.stringify(
+              {
                 mcpServers: {
                   pikku: {
                     command: 'npx',
                     args: ['-y', '@pikku/mcp-server', 'http://localhost:4002'],
                   },
                 },
-              }, null, 2)}
+              },
+              null,
+              2
+            )}
+            language="json"
+          />
+
+          <Box mt="md">
+            <CopyableCode
+              label="Cursor · .cursor/mcp.json"
+              code={JSON.stringify(
+                {
+                  mcpServers: {
+                    pikku: {
+                      command: 'npx',
+                      args: [
+                        '-y',
+                        '@pikku/mcp-server',
+                        'http://localhost:4002',
+                      ],
+                    },
+                  },
+                },
+                null,
+                2
+              )}
               language="json"
             />
           </Box>
 
           <Box mt="md" p="sm" className={classes.surfaceCard}>
-            <Text size="sm" fw={600} ff="monospace" c="var(--app-section-label)" tt="uppercase" mb={8}>
+            <Text
+              size="sm"
+              fw={600}
+              ff="monospace"
+              c="var(--app-section-label)"
+              tt="uppercase"
+              mb={8}
+            >
               SSE endpoint · any client
             </Text>
             <Box className={classes.codeInputBox}>
-              <Text size="sm" ff="monospace" c="var(--app-tag-color)" className={classes.flexGrow}>
+              <Text
+                size="sm"
+                ff="monospace"
+                c="var(--app-tag-color)"
+                className={classes.flexGrow}
+              >
                 http://localhost:4002/mcp
               </Text>
             </Box>
             <Text size="sm" c="var(--app-text-muted)" mt={8} lh={1.6}>
-              Use this URL directly in any MCP-compatible client that supports SSE transport.
+              Use this URL directly in any MCP-compatible client that supports
+              SSE transport.
             </Text>
           </Box>
         </Box>
@@ -172,7 +216,7 @@ const McpDetailPanel: React.FunctionComponent<{ item: any }> = ({ item }) => {
   )
 }
 
-export const McpTab: React.FunctionComponent = () => {
+export const McpTab: React.FC = () => {
   const { meta } = usePikkuMeta()
   const [selected, setSelected] = useState<string | null>(null)
   const [search, setSearch] = useState('')
@@ -189,7 +233,12 @@ export const McpTab: React.FunctionComponent = () => {
     const q = search.toLowerCase()
     for (const item of items) {
       const method = item.method || 'tool'
-      if (q && !item.name?.toLowerCase().includes(q) && !item.pikkuFuncId?.toLowerCase().includes(q)) continue
+      if (
+        q &&
+        !item.name?.toLowerCase().includes(q) &&
+        !item.pikkuFuncId?.toLowerCase().includes(q)
+      )
+        continue
       if (!groups[method]) groups[method] = []
       groups[method].push(item)
     }
@@ -198,7 +247,11 @@ export const McpTab: React.FunctionComponent = () => {
 
   const selectedItem = useMemo(() => {
     if (!selected) return null
-    return items.find((i: any) => `${i.method}::${i.wireId || i.name}` === selected) || null
+    return (
+      items.find(
+        (i: any) => `${i.method}::${i.wireId || i.name}` === selected
+      ) || null
+    )
   }, [items, selected])
 
   const list = (
@@ -237,7 +290,14 @@ export const McpTab: React.FunctionComponent = () => {
                     onClick={() => setSelected(key)}
                     padding="6px 12px"
                   >
-                    <Box style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%' }}>
+                    <Box
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 7,
+                        width: '100%',
+                      }}
+                    >
                       <Box
                         className={classes.typeDot}
                         style={{ background: TYPE_DOTS[item.method || 'tool'] }}
@@ -246,7 +306,11 @@ export const McpTab: React.FunctionComponent = () => {
                         <Text
                           size="sm"
                           ff="monospace"
-                          c={isActive ? 'var(--app-meta-value)' : 'var(--app-text)'}
+                          c={
+                            isActive
+                              ? 'var(--app-meta-value)'
+                              : 'var(--app-text)'
+                          }
                           truncate
                         >
                           {item.name || item.wireId || 'unnamed'}
@@ -255,7 +319,11 @@ export const McpTab: React.FunctionComponent = () => {
                           <Text
                             size="sm"
                             ff="monospace"
-                            c={isActive ? 'var(--app-meta-label)' : 'var(--app-text-muted)'}
+                            c={
+                              isActive
+                                ? 'var(--app-meta-label)'
+                                : 'var(--app-text-muted)'
+                            }
                             truncate
                             style={{ fontSize: 9 }}
                           >
@@ -264,7 +332,11 @@ export const McpTab: React.FunctionComponent = () => {
                         )}
                       </Box>
                       {!item.description && (
-                        <Text size="sm" c="rgba(245,158,11,0.8)" title="Missing description">
+                        <Text
+                          size="sm"
+                          c="rgba(245,158,11,0.8)"
+                          title="Missing description"
+                        >
                           &#9888;
                         </Text>
                       )}

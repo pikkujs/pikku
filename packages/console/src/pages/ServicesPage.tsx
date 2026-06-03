@@ -30,7 +30,7 @@ const COLUMNS = [
   },
 ]
 
-export const ServicesPage: React.FunctionComponent = () => {
+export const ServicesPage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
 
   const services = useMemo((): ServiceItem[] => {

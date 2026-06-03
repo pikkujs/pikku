@@ -80,6 +80,7 @@ export type { TagBadgeProps, ServiceBadgeProps } from './components/ui/TagBadge'
 export { ValText } from './components/ui/ValText'
 export type { ValTextProps } from './components/ui/ValText'
 export { CopyableCode } from './components/ui/CopyableCode'
+export { ComposerShell, composerStyles } from './components/ui/ComposerShell'
 
 // Pages
 export { OverviewPage } from './pages/OverviewPage'

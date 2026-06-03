@@ -65,7 +65,7 @@ interface CommandNodeProps {
   depth: number
 }
 
-const CommandNode: React.FunctionComponent<CommandNodeProps> = ({
+const CommandNode: React.FC<CommandNodeProps> = ({
   command,
   activePath,
   onSelect,
@@ -116,7 +116,7 @@ interface CliCommandTreeProps {
   onSelect: (path: string[]) => void
 }
 
-export const CliCommandTree: React.FunctionComponent<CliCommandTreeProps> = ({
+export const CliCommandTree: React.FC<CliCommandTreeProps> = ({
   program,
   activePath,
   onSelect,

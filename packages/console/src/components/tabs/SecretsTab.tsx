@@ -2,7 +2,7 @@ import React, { useMemo } from 'react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { ProjectSecrets } from '../project/ProjectSecrets'
 
-export const SecretsTab: React.FunctionComponent = () => {
+export const SecretsTab: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
 
   const secrets = useMemo(() => {

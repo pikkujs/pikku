@@ -49,9 +49,7 @@ const TYPE_HREF: Record<string, string> = {
   agent: '/agents',
 }
 
-const FunctionValue: React.FunctionComponent<{ pikkuFuncId: string }> = ({
-  pikkuFuncId,
-}) => {
+const FunctionValue: React.FC<{ pikkuFuncId: string }> = ({ pikkuFuncId }) => {
   const { data: funcMeta } = useFunctionMeta(pikkuFuncId)
   const { navigateInPanel } = usePanelContext()
   const displayName = funcMeta?.name || pikkuFuncId
@@ -72,7 +70,7 @@ const FunctionValue: React.FunctionComponent<{ pikkuFuncId: string }> = ({
   )
 }
 
-const WiredToSection: React.FunctionComponent<{ functionName: string }> = ({
+const WiredToSection: React.FC<{ functionName: string }> = ({
   functionName,
 }) => {
   const Link = useLink()
@@ -88,10 +86,20 @@ const WiredToSection: React.FunctionComponent<{ functionName: string }> = ({
       <Table verticalSpacing={4} horizontalSpacing="xs">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th c="var(--app-section-label)" fw={500} fz="xs" ff="monospace">
+            <Table.Th
+              c="var(--app-section-label)"
+              fw={500}
+              fz="xs"
+              ff="monospace"
+            >
               Name
             </Table.Th>
-            <Table.Th c="var(--app-section-label)" fw={500} fz="xs" ff="monospace">
+            <Table.Th
+              c="var(--app-section-label)"
+              fw={500}
+              fz="xs"
+              ff="monospace"
+            >
               Type
             </Table.Th>
           </Table.Tr>
@@ -121,7 +129,7 @@ const WiredToSection: React.FunctionComponent<{ functionName: string }> = ({
   )
 }
 
-export const CommonDetails: React.FunctionComponent<CommonDetailsProps> = ({
+export const CommonDetails: React.FC<CommonDetailsProps> = ({
   description,
   pikkuFuncId,
   functionLinkLabel,
@@ -144,7 +152,9 @@ export const CommonDetails: React.FunctionComponent<CommonDetailsProps> = ({
     <>
       {description != null && description !== '' && (
         <MetaRow label="description" labelWidth={90}>
-          <Text size="sm" c="var(--app-meta-value)">{description}</Text>
+          <Text size="sm" c="var(--app-meta-value)">
+            {description}
+          </Text>
         </MetaRow>
       )}
 

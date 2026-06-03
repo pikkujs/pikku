@@ -1,7 +1,15 @@
 import React, { useMemo, useState } from 'react'
 import { useSearchParams } from '../router'
 import { PackageDetailPage } from './PackageDetailPage'
-import { Group, Text, ThemeIcon, Badge, Box, Loader, Center } from '@mantine/core'
+import {
+  Group,
+  Text,
+  ThemeIcon,
+  Badge,
+  Box,
+  Loader,
+  Center,
+} from '@mantine/core'
 import { Package, Globe } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
@@ -33,7 +41,7 @@ interface InstalledAddon {
   tags?: string[]
 }
 
-const PackageIcon: React.FunctionComponent<{ icon?: string; name: string }> = ({
+const PackageIcon: React.FC<{ icon?: string; name: string }> = ({
   icon,
   name,
 }) => {
@@ -143,13 +151,11 @@ const INSTALLED_COLUMNS = () => [
   {
     key: 'agents',
     header: 'AGENTS',
-    render: (item: InstalledAddon) => (
-      <Text size="sm">{item.agentCount}</Text>
-    ),
+    render: (item: InstalledAddon) => <Text size="sm">{item.agentCount}</Text>,
   },
 ]
 
-const InstalledList: React.FunctionComponent<{
+const InstalledList: React.FC<{
   onSelect: (id: string, source: 'installed' | 'community') => void
 }> = ({ onSelect }) => {
   const rpc = usePikkuRPC()
@@ -187,7 +193,7 @@ const InstalledList: React.FunctionComponent<{
   )
 }
 
-const CommunityList: React.FunctionComponent<{
+const CommunityList: React.FC<{
   onSelect: (id: string, source: 'installed' | 'community') => void
 }> = ({ onSelect }) => {
   const rpc = usePikkuRPC()
@@ -216,7 +222,10 @@ const CommunityList: React.FunctionComponent<{
     [installedAddons]
   )
 
-  const columns = useMemo(() => COMMUNITY_COLUMNS(installedNames), [installedNames])
+  const columns = useMemo(
+    () => COMMUNITY_COLUMNS(installedNames),
+    [installedNames]
+  )
 
   return (
     <TableListPage
@@ -293,20 +302,16 @@ const API_COLUMNS = [
   {
     key: 'provider',
     header: 'PROVIDER',
-    render: (item: OpenApiEntry) => (
-      <Text size="sm">{item.provider}</Text>
-    ),
+    render: (item: OpenApiEntry) => <Text size="sm">{item.provider}</Text>,
   },
   {
     key: 'operations',
     header: 'OPS',
-    render: (item: any) => (
-      <Text size="sm">{item.totalOperations ?? '-'}</Text>
-    ),
+    render: (item: any) => <Text size="sm">{item.totalOperations ?? '-'}</Text>,
   },
 ]
 
-const ApisList: React.FunctionComponent<{
+const ApisList: React.FC<{
   onSelect: (id: string, source: 'installed' | 'community' | 'api') => void
 }> = ({ onSelect }) => {
   const rpc = usePikkuRPC()
@@ -356,7 +361,7 @@ const ADDON_TABS = [
   { value: 'apis', label: 'APIs' },
 ]
 
-const PackagesList: React.FunctionComponent<{
+const PackagesList: React.FC<{
   onSelect: (id: string, source: 'installed' | 'community' | 'api') => void
 }> = ({ onSelect }) => {
   const [tab, setTab] = useState<string>('installed')
@@ -386,7 +391,7 @@ const PackagesList: React.FunctionComponent<{
   )
 }
 
-const PackagesPageContent: React.FunctionComponent = () => {
+const PackagesPageContent: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedId = searchParams.get('id')
   const source = (searchParams.get('source') ?? 'community') as
@@ -411,7 +416,7 @@ const PackagesPageContent: React.FunctionComponent = () => {
   )
 }
 
-export const PackagesPage: React.FunctionComponent = () => {
+export const PackagesPage: React.FC = () => {
   return (
     <PanelProvider>
       <PackagesPageContent />

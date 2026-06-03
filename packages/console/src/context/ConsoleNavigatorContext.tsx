@@ -12,7 +12,10 @@ const Ctx = createContext<ConsoleNavigator | null>(null)
 
 export function useConsoleNavigator(): ConsoleNavigator {
   const ctx = useContext(Ctx)
-  if (!ctx) throw new Error('useConsoleNavigator must be used within a navigator provider')
+  if (!ctx)
+    throw new Error(
+      'useConsoleNavigator must be used within a navigator provider'
+    )
   return ctx
 }
 
@@ -23,18 +26,22 @@ const SECTION_PATHS: Record<ConsoleSection, string> = {
 }
 
 /** OSS default — IDs live in the `?id=` query param. */
-export function OSSConsoleNavigator({ children }: { children: ReactNode }) {
+export const OSSConsoleNavigator: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 
   return (
-    <Ctx.Provider value={{
-      workflowId: searchParams.get('id'),
-      navigateTo: (section, id) => {
-        const base = SECTION_PATHS[section]
-        navigate(id ? `${base}?id=${encodeURIComponent(id)}` : base)
-      },
-    }}>
+    <Ctx.Provider
+      value={{
+        workflowId: searchParams.get('id'),
+        navigateTo: (section, id) => {
+          const base = SECTION_PATHS[section]
+          navigate(id ? `${base}?id=${encodeURIComponent(id)}` : base)
+        },
+      }}
+    >
       {children}
     </Ctx.Provider>
   )

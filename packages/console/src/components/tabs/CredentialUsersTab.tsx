@@ -27,7 +27,7 @@ interface UserRow {
   isComplete: boolean
 }
 
-export const CredentialUsersTab: React.FunctionComponent = () => {
+export const CredentialUsersTab: React.FC = () => {
   const { meta, loading: metaLoading } = usePikkuMeta()
   const rpc = usePikkuRPC()
   const { openCredentialUser } = usePanelContext()
@@ -103,12 +103,7 @@ export const CredentialUsersTab: React.FunctionComponent = () => {
                   {cred.displayName}
                 </Badge>
               ) : (
-                <Badge
-                  key={cred.name}
-                  size="sm"
-                  variant="light"
-                  color="gray"
-                >
+                <Badge key={cred.name} size="sm" variant="light" color="gray">
                   {cred.displayName}
                 </Badge>
               )

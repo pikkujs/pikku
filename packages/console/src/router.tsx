@@ -1,7 +1,9 @@
 import { createContext, useContext, forwardRef } from 'react'
 
-export interface LinkProps
-  extends Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> {
+export interface LinkProps extends Omit<
+  React.AnchorHTMLAttributes<HTMLAnchorElement>,
+  'href'
+> {
   to: string
   children: React.ReactNode
 }

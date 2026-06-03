@@ -5,6 +5,12 @@
  * This provides the structure needed for typescript to be aware of RPCs and their return types
  */
 
+export type GraphStarterInput = {
+  workflowName: string
+  nodeId: string
+  data?: unknown
+}
+export type GraphStarterOutput = { runId: string }
 export type PikkuConsoleGetSecretInput = { secretId: string }
 export type PikkuConsoleGetSecretOutput = { exists: boolean; value: unknown }
 export type PikkuConsoleGetVariableInput = { variableId: string }
@@ -23,8 +29,15 @@ export type PikkuWorkflowOrchestratorInput = { runId: string }
 export type PikkuWorkflowSleeperInput = { runId: string; stepId: string }
 export type RemoteRPCHandlerInput = { rpcName: string; data?: unknown }
 export type RpcCallerInput = { rpcName: string; data?: unknown }
-export type WorkflowCallerInput = { workflowName: string; input?: unknown }
-export type WorkflowCallerOutput = { runId: string }
+export type WorkflowRunnerInput = { workflowName: string; data?: unknown }
+export type WorkflowStarterInput = { workflowName: string; data?: unknown }
+export type WorkflowStarterOutput = { runId: string }
+export type WorkflowStatusCheckerInput = { workflowName: string; runId: string }
+export type WorkflowStatusStreamFullInput = {
+  workflowName: string
+  runId: string
+}
+export type WorkflowStatusStreamInput = { workflowName: string; runId: string }
 
 interface RPCHandler<I, O> {
   input: I

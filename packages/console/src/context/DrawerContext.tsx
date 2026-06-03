@@ -36,9 +36,9 @@ interface CanvasDrawerProviderProps {
   children: React.ReactNode
 }
 
-export const CanvasDrawerProvider: React.FunctionComponent<
-  CanvasDrawerProviderProps
-> = ({ children }) => {
+export const CanvasDrawerProvider: React.FC<CanvasDrawerProviderProps> = ({
+  children,
+}) => {
   const [canvasDrawer, setCanvasDrawer] = useState<CanvasDrawer | null>(null)
 
   const openAddStep = useCallback((metadata?: any) => {

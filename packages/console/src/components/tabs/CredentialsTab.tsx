@@ -50,7 +50,7 @@ interface CredentialItem {
 
 type FilterValue = 'all' | 'connected' | 'disconnected'
 
-export const CredentialsTab: React.FunctionComponent = () => {
+export const CredentialsTab: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
   const [selectedCredential, setSelectedCredential] =
     useState<CredentialItem | null>(null)
@@ -59,16 +59,14 @@ export const CredentialsTab: React.FunctionComponent = () => {
   const credentials = useMemo(() => {
     const credsMeta = (meta as any).credentialsMeta
     if (!credsMeta) return []
-    return Object.entries(credsMeta).map(
-      ([name, data]: [string, any]) => ({
-        name,
-        displayName: data.displayName || name,
-        description: data.description,
-        type: data.type || 'singleton',
-        isOAuth2: !!data.oauth2,
-        oauth2: data.oauth2,
-      })
-    )
+    return Object.entries(credsMeta).map(([name, data]: [string, any]) => ({
+      name,
+      displayName: data.displayName || name,
+      description: data.description,
+      type: data.type || 'singleton',
+      isOAuth2: !!data.oauth2,
+      oauth2: data.oauth2,
+    }))
   }, [meta])
 
   if (loading) {
@@ -139,7 +137,7 @@ export const CredentialsTab: React.FunctionComponent = () => {
   )
 }
 
-const CredentialCard: React.FunctionComponent<{
+const CredentialCard: React.FC<{
   credential: CredentialItem
   filter: FilterValue
   onClick: () => void
@@ -150,10 +148,9 @@ const CredentialCard: React.FunctionComponent<{
     queryKey: ['credential-status', credential.name],
     queryFn: async () => {
       try {
-        const result = await rpc.invoke(
-          'console:credentialStatus',
-          { names: [credential.name] }
-        )
+        const result = await rpc.invoke('console:credentialStatus', {
+          names: [credential.name],
+        })
         return result.statuses[credential.name] ?? false
       } catch {
         return false
@@ -236,7 +233,7 @@ const CredentialCard: React.FunctionComponent<{
   )
 }
 
-const CredentialDrawer: React.FunctionComponent<{
+const CredentialDrawer: React.FC<{
   credential: CredentialItem
   onClose: () => void
 }> = ({ credential, onClose }) => {
@@ -280,14 +277,12 @@ const CredentialDrawer: React.FunctionComponent<{
         </>
       )}
 
-      {credential.type === 'wire' && (
-        <PerUserSection credential={credential} />
-      )}
+      {credential.type === 'wire' && <PerUserSection credential={credential} />}
     </Stack>
   )
 }
 
-const ApiKeySection: React.FunctionComponent<{
+const ApiKeySection: React.FC<{
   credential: CredentialItem
 }> = ({ credential }) => {
   const rpc = usePikkuRPC()
@@ -354,11 +349,7 @@ const ApiKeySection: React.FunctionComponent<{
           </Text>
         </Group>
         {editable && (
-          <Button
-            variant="light"
-            size="sm"
-            onClick={() => setEditing(true)}
-          >
+          <Button variant="light" size="sm" onClick={() => setEditing(true)}>
             Replace
           </Button>
         )}
@@ -416,7 +407,7 @@ const ApiKeySection: React.FunctionComponent<{
   )
 }
 
-const OAuthSection: React.FunctionComponent<{
+const OAuthSection: React.FC<{
   credential: CredentialItem
 }> = ({ credential }) => {
   const rpc = usePikkuRPC()
@@ -534,8 +525,7 @@ const OAuthSection: React.FunctionComponent<{
               icon={<AlertTriangle size={14} />}
             >
               {String(
-                (connectMutation.error as any)?.message ||
-                  connectMutation.error
+                (connectMutation.error as any)?.message || connectMutation.error
               )}
             </Alert>
           )}
@@ -545,7 +535,7 @@ const OAuthSection: React.FunctionComponent<{
   )
 }
 
-const PerUserSection: React.FunctionComponent<{
+const PerUserSection: React.FC<{
   credential: CredentialItem
 }> = ({ credential }) => {
   const rpc = usePikkuRPC()
@@ -652,7 +642,7 @@ const PerUserSection: React.FunctionComponent<{
   )
 }
 
-const DeleteSection: React.FunctionComponent<{
+const DeleteSection: React.FC<{
   credential: CredentialItem
   onClose: () => void
 }> = ({ credential, onClose }) => {

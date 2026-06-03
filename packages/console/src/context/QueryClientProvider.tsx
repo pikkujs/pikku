@@ -4,7 +4,7 @@ import {
 } from '@tanstack/react-query'
 import { useState } from 'react'
 
-export const QueryClientProvider: React.FunctionComponent<{
+export const QueryClientProvider: React.FC<{
   children: React.ReactNode
 }> = ({ children }) => {
   const [queryClient] = useState(

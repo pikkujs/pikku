@@ -50,7 +50,8 @@ const dark: MantineColorsTuple = [
 
 const cssVariablesResolver: CSSVariablesResolver = () => ({
   variables: {
-    '--app-glass-bg': 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
+    '--app-glass-bg':
+      'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
     '--app-glass-border': 'rgba(255,255,255,0.06)',
     '--app-glass-backdrop': 'blur(8px)',
     '--app-input-bg': 'rgba(255,255,255,0.02)',
@@ -373,7 +374,7 @@ const theme = createTheme({
   },
 })
 
-export const ThemeProvider: React.FunctionComponent<{
+export const ThemeProvider: React.FC<{
   children: React.ReactNode
   locale?: string
 }> = ({ children, locale = 'en' }) => {

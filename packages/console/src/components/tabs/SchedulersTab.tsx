@@ -1,11 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import {
-  Box,
-  Text,
-  ScrollArea,
-  Group,
-  Badge,
-} from '@mantine/core'
+import { Box, Text, ScrollArea, Group, Badge } from '@mantine/core'
 import { useQuery } from '@tanstack/react-query'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
@@ -27,13 +21,14 @@ type RunEntry = {
   durationSeconds: number | null
   error: string | null
 }
-type SchedulerHistory = Record<string, { lastRun: RunEntry | null; history: RunEntry[] }>
+type SchedulerHistory = Record<
+  string,
+  { lastRun: RunEntry | null; history: RunEntry[] }
+>
 
 const GRID_COLUMNS = '1fr 160px 120px'
 
-const CronBadges: React.FunctionComponent<{ schedule: string }> = ({
-  schedule,
-}) => {
+const CronBadges: React.FC<{ schedule: string }> = ({ schedule }) => {
   const parts = schedule.split(' ')
   return (
     <Group gap={3} wrap="nowrap">
@@ -62,7 +57,15 @@ const cronToHuman = (cron: string): string => {
   const parts: string[] = []
 
   if (dow !== '*' && dom === '*') {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    const days = [
+      'Sunday',
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+    ]
     parts.push(`Every ${days[parseInt(dow)] || dow}`)
   } else if (dom !== '*') {
     parts.push(`Day ${dom} of every month`)
@@ -74,7 +77,10 @@ const cronToHuman = (cron: string): string => {
   return parts.join(' ')
 }
 
-const parseCronField = (field: string | undefined, fallback: number): number => {
+const parseCronField = (
+  field: string | undefined,
+  fallback: number
+): number => {
   if (!field || field === '*') return fallback
   const n = parseInt(field)
   return isNaN(n) ? fallback : n
@@ -94,7 +100,8 @@ const getNextRuns = (cron: string, count: number): Date[] => {
   while (runs.length < count && attempts < 500) {
     attempts++
     let ok = true
-    if (dow && dow !== '*' && !dow.split(',').map(Number).includes(d.getDay())) ok = false
+    if (dow && dow !== '*' && !dow.split(',').map(Number).includes(d.getDay()))
+      ok = false
     if (dom && dom !== '*' && d.getDate() !== parseInt(dom)) ok = false
     if (ok) runs.push(new Date(d))
     d.setDate(d.getDate() + 1)
@@ -119,14 +126,30 @@ const fmtDuration = (s: number | null): string => {
 
 const fmtDate = (d: Date): string => {
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ]
   return `${days[d.getDay()]} ${String(d.getDate()).padStart(2, '0')} ${months[d.getMonth()]}`
 }
 
 const fmtTime = (d: Date): string =>
   `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 
-const SchedulerDetail: React.FunctionComponent<{ item: any; history: SchedulerHistory }> = ({ item, history }) => {
+const SchedulerDetail: React.FC<{ item: any; history: SchedulerHistory }> = ({
+  item,
+  history,
+}) => {
   const { navigateInPanel } = usePanelContext()
   const funcId = item?.pikkuFuncId
   const { data: funcMeta } = useFunctionMeta(funcId ?? '')
@@ -172,7 +195,12 @@ const SchedulerDetail: React.FunctionComponent<{ item: any; history: SchedulerHi
               c="var(--app-meta-value)"
               className={classes.clickableText}
               onClick={() =>
-                navigateInPanel('function', funcId, displayName || funcId, funcMeta)
+                navigateInPanel(
+                  'function',
+                  funcId,
+                  displayName || funcId,
+                  funcMeta
+                )
               }
             >
               {displayName}
@@ -198,7 +226,14 @@ const SchedulerDetail: React.FunctionComponent<{ item: any; history: SchedulerHi
         {taskHistory?.history && taskHistory.history.length > 0 && (
           <>
             <SectionLabel>Recent Runs</SectionLabel>
-            <Box style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 12 }}>
+            <Box
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 3,
+                marginBottom: 12,
+              }}
+            >
               {taskHistory.history.map((run, i) => (
                 <Box
                   key={i}
@@ -214,11 +249,24 @@ const SchedulerDetail: React.FunctionComponent<{ item: any; history: SchedulerHi
                   }}
                 >
                   <Box style={{ minWidth: 0 }}>
-                    <Text size="xs" ff="monospace" c={run.status === 'failed' ? 'var(--mantine-color-red-5)' : 'var(--mantine-color-green-5)'}>
+                    <Text
+                      size="xs"
+                      ff="monospace"
+                      c={
+                        run.status === 'failed'
+                          ? 'var(--mantine-color-red-5)'
+                          : 'var(--mantine-color-green-5)'
+                      }
+                    >
                       {run.status}
                     </Text>
                     {run.error && (
-                      <Text size="xs" ff="monospace" c="var(--app-text-muted)" style={{ wordBreak: 'break-word' }}>
+                      <Text
+                        size="xs"
+                        ff="monospace"
+                        c="var(--app-text-muted)"
+                        style={{ wordBreak: 'break-word' }}
+                      >
                         {run.error}
                       </Text>
                     )}
@@ -252,10 +300,12 @@ const SchedulerDetail: React.FunctionComponent<{ item: any; history: SchedulerHi
                     justifyContent: 'space-between',
                     padding: '6px 8px',
                     borderRadius: 5,
-                    background: i === 0 ? 'rgba(6,182,212,0.04)' : 'var(--app-surface)',
-                    border: i === 0
-                      ? '1px solid rgba(6,182,212,0.22)'
-                      : '1px solid var(--app-row-border)',
+                    background:
+                      i === 0 ? 'rgba(6,182,212,0.04)' : 'var(--app-surface)',
+                    border:
+                      i === 0
+                        ? '1px solid rgba(6,182,212,0.22)'
+                        : '1px solid var(--app-row-border)',
                   }}
                 >
                   <Text size="sm" ff="monospace" c="var(--app-meta-label)">
@@ -290,7 +340,7 @@ const SchedulerDetail: React.FunctionComponent<{ item: any; history: SchedulerHi
   )
 }
 
-export const SchedulersTab: React.FunctionComponent = () => {
+export const SchedulersTab: React.FC = () => {
   const { meta } = usePikkuMeta()
   const rpc = usePikkuRPC()
   const [selected, setSelected] = useState<string | null>(null)
@@ -298,16 +348,21 @@ export const SchedulersTab: React.FunctionComponent = () => {
 
   const { data: history = {} } = useQuery<SchedulerHistory>({
     queryKey: ['console:getSchedulerHistory'],
-    queryFn: () => (rpc.invoke as (name: string) => Promise<unknown>)('console:getSchedulerHistory').then((r) => (r ?? {}) as SchedulerHistory),
+    queryFn: () =>
+      (rpc.invoke as (name: string) => Promise<unknown>)(
+        'console:getSchedulerHistory'
+      ).then((r) => (r ?? {}) as SchedulerHistory),
     refetchInterval: 15000,
   })
 
   const items = useMemo(() => {
     if (!meta.schedulerMeta) return []
-    return Object.entries(meta.schedulerMeta).map(([name, data]: [string, any]) => ({
-      name,
-      ...data,
-    }))
+    return Object.entries(meta.schedulerMeta).map(
+      ([name, data]: [string, any]) => ({
+        name,
+        ...data,
+      })
+    )
   }, [meta.schedulerMeta])
 
   const filtered = useMemo(() => {
@@ -334,7 +389,11 @@ export const SchedulersTab: React.FunctionComponent = () => {
         placeholder="Search scheduled tasks..."
       />
       <GridHeader
-        columns={[{ label: 'Name' }, { label: 'Schedule' }, { label: 'Last Run' }]}
+        columns={[
+          { label: 'Name' },
+          { label: 'Schedule' },
+          { label: 'Last Run' },
+        ]}
         gridTemplateColumns={GRID_COLUMNS}
       />
       <ScrollArea className={classes.flexGrow}>
@@ -350,10 +409,19 @@ export const SchedulersTab: React.FunctionComponent = () => {
               gridTemplateColumns={GRID_COLUMNS}
             >
               <Box>
-                <Text size="sm" ff="monospace" c={isActive ? 'var(--app-meta-value)' : 'var(--app-text)'}>
+                <Text
+                  size="sm"
+                  ff="monospace"
+                  c={isActive ? 'var(--app-meta-value)' : 'var(--app-text)'}
+                >
                   {taskName}
                 </Text>
-                <Text size="sm" ff="monospace" c="var(--app-text-muted)" style={{ fontSize: 9 }}>
+                <Text
+                  size="sm"
+                  ff="monospace"
+                  c="var(--app-text-muted)"
+                  style={{ fontSize: 9 }}
+                >
                   {item.pikkuFuncId}()
                 </Text>
               </Box>
@@ -361,7 +429,15 @@ export const SchedulersTab: React.FunctionComponent = () => {
               <Box>
                 {lastRun ? (
                   <>
-                    <Text size="xs" ff="monospace" c={lastRun.status === 'failed' ? 'var(--mantine-color-red-5)' : 'var(--mantine-color-green-5)'}>
+                    <Text
+                      size="xs"
+                      ff="monospace"
+                      c={
+                        lastRun.status === 'failed'
+                          ? 'var(--mantine-color-red-5)'
+                          : 'var(--mantine-color-green-5)'
+                      }
+                    >
                       {lastRun.status}
                     </Text>
                     <Text size="xs" ff="monospace" c="var(--app-text-muted)">
@@ -369,7 +445,9 @@ export const SchedulersTab: React.FunctionComponent = () => {
                     </Text>
                   </>
                 ) : (
-                  <Text size="xs" ff="monospace" c="var(--app-meta-label)">—</Text>
+                  <Text size="xs" ff="monospace" c="var(--app-meta-label)">
+                    —
+                  </Text>
                 )}
               </Box>
             </ListItem>
@@ -382,7 +460,11 @@ export const SchedulersTab: React.FunctionComponent = () => {
   return (
     <ListDetailLayout
       list={list}
-      detail={selectedItem ? <SchedulerDetail item={selectedItem} history={history} /> : null}
+      detail={
+        selectedItem ? (
+          <SchedulerDetail item={selectedItem} history={history} />
+        ) : null
+      }
       hasSelection={!!selectedItem}
       emptyMessage="Select a scheduled task"
     />

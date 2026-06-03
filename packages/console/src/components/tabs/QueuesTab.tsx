@@ -1,9 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import {
-  Box,
-  Text,
-  ScrollArea,
-} from '@mantine/core'
+import { Box, Text, ScrollArea } from '@mantine/core'
 import { useQuery } from '@tanstack/react-query'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
@@ -19,11 +15,14 @@ import { SearchInput } from '../ui/SearchInput'
 import { DetailHeader } from '../ui/DetailHeader'
 import classes from '../ui/console.module.css'
 
-type QueueDepths = Record<string, { queued: number; active: number; failed: number }>
+type QueueDepths = Record<
+  string,
+  { queued: number; active: number; failed: number }
+>
 
 const GRID_COLUMNS = '1fr 70px 70px 70px'
 
-const QueueDetail: React.FunctionComponent<{ item: any }> = ({ item }) => {
+const QueueDetail: React.FC<{ item: any }> = ({ item }) => {
   const { navigateInPanel } = usePanelContext()
   const funcId = item?.pikkuFuncId
   const { data: funcMeta } = useFunctionMeta(funcId ?? '')
@@ -47,7 +46,12 @@ const QueueDetail: React.FunctionComponent<{ item: any }> = ({ item }) => {
               c="var(--app-meta-value)"
               className={classes.clickableText}
               onClick={() =>
-                navigateInPanel('function', funcId, displayName || funcId, funcMeta)
+                navigateInPanel(
+                  'function',
+                  funcId,
+                  displayName || funcId,
+                  funcMeta
+                )
               }
             >
               {displayName}
@@ -74,10 +78,16 @@ const QueueDetail: React.FunctionComponent<{ item: any }> = ({ item }) => {
 
         <SectionLabel>Timeouts</SectionLabel>
         <MetaRow label="visibilityTimeout" labelWidth={130}>
-          <ValText value={config.visibilityTimeout ? `${config.visibilityTimeout}s` : null} />
+          <ValText
+            value={
+              config.visibilityTimeout ? `${config.visibilityTimeout}s` : null
+            }
+          />
         </MetaRow>
         <MetaRow label="lockDuration" labelWidth={130}>
-          <ValText value={config.lockDuration ? `${config.lockDuration}ms` : null} />
+          <ValText
+            value={config.lockDuration ? `${config.lockDuration}ms` : null}
+          />
         </MetaRow>
         <MetaRow label="drainDelay" labelWidth={130}>
           <ValText value={config.drainDelay ? `${config.drainDelay}s` : null} />
@@ -98,7 +108,7 @@ const QueueDetail: React.FunctionComponent<{ item: any }> = ({ item }) => {
   )
 }
 
-export const QueuesTab: React.FunctionComponent = () => {
+export const QueuesTab: React.FC = () => {
   const { meta } = usePikkuMeta()
   const rpc = usePikkuRPC()
   const [selected, setSelected] = useState<string | null>(null)
@@ -106,16 +116,21 @@ export const QueuesTab: React.FunctionComponent = () => {
 
   const { data: depths } = useQuery<QueueDepths>({
     queryKey: ['console:getQueueDepths'],
-    queryFn: () => (rpc.invoke as (name: string) => Promise<unknown>)('console:getQueueDepths').then((r) => (r ?? {}) as QueueDepths),
+    queryFn: () =>
+      (rpc.invoke as (name: string) => Promise<unknown>)(
+        'console:getQueueDepths'
+      ).then((r) => (r ?? {}) as QueueDepths),
     refetchInterval: 5000,
   })
 
   const items = useMemo(() => {
     if (!meta.queueMeta) return []
-    return Object.entries(meta.queueMeta).map(([name, data]: [string, any]) => ({
-      name,
-      ...data,
-    }))
+    return Object.entries(meta.queueMeta).map(
+      ([name, data]: [string, any]) => ({
+        name,
+        ...data,
+      })
+    )
   }, [meta.queueMeta])
 
   const filtered = useMemo(() => {
@@ -142,7 +157,12 @@ export const QueuesTab: React.FunctionComponent = () => {
         placeholder="Search queue workers..."
       />
       <GridHeader
-        columns={[{ label: 'Name' }, { label: 'Queued' }, { label: 'Active' }, { label: 'Failed' }]}
+        columns={[
+          { label: 'Name' },
+          { label: 'Queued' },
+          { label: 'Active' },
+          { label: 'Failed' },
+        ]}
         gridTemplateColumns={GRID_COLUMNS}
       />
       <ScrollArea className={classes.flexGrow}>
@@ -158,20 +178,55 @@ export const QueuesTab: React.FunctionComponent = () => {
               gridTemplateColumns={GRID_COLUMNS}
             >
               <Box>
-                <Text size="sm" ff="monospace" c={isActive ? 'var(--app-meta-value)' : 'var(--app-text)'} truncate>
+                <Text
+                  size="sm"
+                  ff="monospace"
+                  c={isActive ? 'var(--app-meta-value)' : 'var(--app-text)'}
+                  truncate
+                >
                   {queueName}
                 </Text>
-                <Text size="sm" ff="monospace" c="var(--app-text-muted)" truncate style={{ fontSize: 9 }}>
+                <Text
+                  size="sm"
+                  ff="monospace"
+                  c="var(--app-text-muted)"
+                  truncate
+                  style={{ fontSize: 9 }}
+                >
                   {item.pikkuFuncId}
                 </Text>
               </Box>
-              <Text size="sm" ff="monospace" c={depth?.queued ? 'var(--app-meta-value)' : 'var(--app-meta-label)'}>
+              <Text
+                size="sm"
+                ff="monospace"
+                c={
+                  depth?.queued
+                    ? 'var(--app-meta-value)'
+                    : 'var(--app-meta-label)'
+                }
+              >
                 {depth?.queued ?? '—'}
               </Text>
-              <Text size="sm" ff="monospace" c={depth?.active ? 'var(--mantine-color-green-5)' : 'var(--app-meta-label)'}>
+              <Text
+                size="sm"
+                ff="monospace"
+                c={
+                  depth?.active
+                    ? 'var(--mantine-color-green-5)'
+                    : 'var(--app-meta-label)'
+                }
+              >
                 {depth?.active ?? '—'}
               </Text>
-              <Text size="sm" ff="monospace" c={depth?.failed ? 'var(--mantine-color-red-5)' : 'var(--app-meta-label)'}>
+              <Text
+                size="sm"
+                ff="monospace"
+                c={
+                  depth?.failed
+                    ? 'var(--mantine-color-red-5)'
+                    : 'var(--app-meta-label)'
+                }
+              >
                 {depth?.failed ?? '—'}
               </Text>
             </ListItem>

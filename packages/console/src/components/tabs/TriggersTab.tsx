@@ -1,10 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import {
-  Box,
-  Text,
-  ScrollArea,
-  Badge,
-} from '@mantine/core'
+import { Box, Text, ScrollArea, Badge } from '@mantine/core'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
 import { useFunctionMeta } from '../../hooks/useWirings'
@@ -25,9 +20,7 @@ interface TriggerPair {
   trigger: any | null
 }
 
-const TriggerDetail: React.FunctionComponent<{ item: TriggerPair }> = ({
-  item,
-}) => {
+const TriggerDetail: React.FC<{ item: TriggerPair }> = ({ item }) => {
   const { navigateInPanel } = usePanelContext()
   const sourceFuncId = item.source?.pikkuFuncId
   const targetFuncId = item.trigger?.pikkuFuncId
@@ -97,7 +90,7 @@ const TriggerDetail: React.FunctionComponent<{ item: TriggerPair }> = ({
   )
 }
 
-export const TriggersTab: React.FunctionComponent = () => {
+export const TriggersTab: React.FC = () => {
   const { meta } = usePikkuMeta()
   const [selected, setSelected] = useState<string | null>(null)
   const [search, setSearch] = useState('')

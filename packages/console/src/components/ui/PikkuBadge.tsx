@@ -66,7 +66,7 @@ const humanize = (str: string): string =>
         .replace(/[_-]/g, ' ')
         .replace(/\b\w/g, (c) => c.toUpperCase())
 
-const ColoredIcon: React.FunctionComponent<{
+const ColoredIcon: React.FC<{
   icon: React.ComponentType<{ size?: number }>
   size: number
   color: string
@@ -76,7 +76,7 @@ const ColoredIcon: React.FunctionComponent<{
   </span>
 )
 
-export const PikkuBadge: React.FunctionComponent<PikkuBadgeProps> = (props) => {
+export const PikkuBadge: React.FC<PikkuBadgeProps> = (props) => {
   const { type, size: propSize, ...rest } = props as any
   const size = propSize || 'md'
   const iconSize = ICON_SIZES[size] || 10

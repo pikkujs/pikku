@@ -12,15 +12,18 @@ type BorderPosition = 'left' | 'right' | 'top'
 
 type HighlightType = 'focused' | 'referenced' | null
 
+// Workflow run-status colors are exposed as CSS variables so a host theme
+// (e.g. fabric) can override them, while the `var(..., fallback)` keeps the
+// default Mantine palette working without importing any extra stylesheet.
 const runStatusColors: Record<string, string> = {
-  succeeded: 'green.4',
-  failed: 'red.4',
-  running: 'blue.4',
-  scheduled: 'orange.4',
-  pending: 'gray.4',
-  suspended: 'yellow.4',
-  cancelled: 'gray.5',
-  skipped: 'gray.4',
+  succeeded: 'var(--pikku-status-succeeded, var(--mantine-color-green-4))',
+  failed: 'var(--pikku-status-failed, var(--mantine-color-red-4))',
+  running: 'var(--pikku-status-running, var(--mantine-color-blue-4))',
+  scheduled: 'var(--pikku-status-scheduled, var(--mantine-color-orange-4))',
+  pending: 'var(--pikku-status-pending, var(--mantine-color-gray-4))',
+  suspended: 'var(--pikku-status-suspended, var(--mantine-color-yellow-4))',
+  cancelled: 'var(--pikku-status-cancelled, var(--mantine-color-gray-5))',
+  skipped: 'var(--pikku-status-skipped, var(--mantine-color-gray-4))',
 }
 
 interface FlowNodeProps {
@@ -91,11 +94,14 @@ const getHighlightIconColor = (
   theme: any
 ): string | null => {
   if (!highlightType) return null
-  if (highlightType === 'focused') return theme.colors?.primary?.[5] ?? theme.colors?.blue?.[5] ?? '#228be6'
-  return theme.colors?.referencedNode?.[5] ?? theme.colors?.violet?.[5] ?? '#7950f2'
+  if (highlightType === 'focused')
+    return theme.colors?.primary?.[5] ?? theme.colors?.blue?.[5] ?? '#228be6'
+  return (
+    theme.colors?.referencedNode?.[5] ?? theme.colors?.violet?.[5] ?? '#7950f2'
+  )
 }
 
-export const FlowNode: React.FunctionComponent<FlowNodeProps> = ({
+export const FlowNode: React.FC<FlowNodeProps> = ({
   icon: Icon,
   colorKey,
   hasInput = false,
@@ -128,17 +134,13 @@ export const FlowNode: React.FunctionComponent<FlowNodeProps> = ({
       status = 'failed'
     }
     if (!status) return null
-    const colorPath = runStatusColors[status]
-    if (!colorPath) return null
-    const [colorName, shade] = colorPath.split('.')
-    return theme.colors[colorName]?.[Number(shade)] || null
+    return runStatusColors[status] ?? null
   }, [
     runContext?.selectedRunId,
     runContext?.stepStates,
     runContext?.runData?.status,
     nodeId,
     hasInput,
-    theme,
   ])
 
   const iconColor =
@@ -158,7 +160,7 @@ export const FlowNode: React.FunctionComponent<FlowNodeProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
           cursor: onClick ? 'pointer' : 'default',
-          ...(runBgColor ? { backgroundColor: runBgColor } : {}),
+          ...(runBgColor ? { background: runBgColor } : {}),
         }}
         onClick={onClick}
       >

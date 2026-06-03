@@ -25,14 +25,16 @@ interface CredentialMeta {
   isOAuth2: boolean
 }
 
-export const CredentialsOverviewTab: React.FunctionComponent = () => {
+export const CredentialsOverviewTab: React.FC = () => {
   const { meta } = usePikkuMeta()
   const rpc = usePikkuRPC()
 
   const credentials = useMemo(() => {
     const creds = (meta as any).credentialsMeta ?? {}
     return Object.entries(creds)
-      .filter(([, data]: [string, any]) => (data.type || 'singleton') === 'singleton')
+      .filter(
+        ([, data]: [string, any]) => (data.type || 'singleton') === 'singleton'
+      )
       .map(
         ([name, data]: [string, any]) =>
           ({
@@ -93,7 +95,7 @@ export const CredentialsOverviewTab: React.FunctionComponent = () => {
   )
 }
 
-const CredentialCard: React.FunctionComponent<{
+const CredentialCard: React.FC<{
   credential: CredentialMeta
   isConnected: boolean
 }> = ({ credential, isConnected }) => {
@@ -209,11 +211,7 @@ const CredentialCard: React.FunctionComponent<{
         )}
 
         {connectMutation.isError && (
-          <Alert
-            color="red"
-            variant="light"
-            icon={<AlertTriangle size={14} />}
-          >
+          <Alert color="red" variant="light" icon={<AlertTriangle size={14} />}>
             {String(
               (connectMutation.error as any)?.message || connectMutation.error
             )}

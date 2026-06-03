@@ -95,7 +95,7 @@ interface PackageRegistryEntry {
   schemas: Record<string, unknown>
 }
 
-const PackageIcon: React.FunctionComponent<{
+const PackageIcon: React.FC<{
   icon?: string
   name: string
   size?: number
@@ -121,7 +121,7 @@ const PackageIcon: React.FunctionComponent<{
   )
 }
 
-const ReadOnlyTable: React.FunctionComponent<{
+const ReadOnlyTable: React.FC<{
   headers: string[]
   rows: React.ReactNode[][]
 }> = ({ headers, rows }) => (
@@ -160,7 +160,7 @@ const ReadOnlyTable: React.FunctionComponent<{
   </Table>
 )
 
-const HttpRoutesTab: React.FunctionComponent<{
+const HttpRoutesTab: React.FC<{
   httpRoutes: PackageRegistryEntry['httpRoutes']
 }> = ({ httpRoutes }) => {
   const rows: Array<{ method: string; route: string; sse?: boolean }> = []
@@ -192,7 +192,7 @@ const HttpRoutesTab: React.FunctionComponent<{
   )
 }
 
-const ChannelsTab: React.FunctionComponent<{
+const ChannelsTab: React.FC<{
   channels: PackageRegistryEntry['channels']
 }> = ({ channels }) => (
   <ReadOnlyTable
@@ -208,7 +208,7 @@ const ChannelsTab: React.FunctionComponent<{
   />
 )
 
-const CliTab: React.FunctionComponent<{
+const CliTab: React.FC<{
   cli: PackageRegistryEntry['cli']
 }> = ({ cli }) => {
   const rows: Array<{
@@ -237,7 +237,7 @@ const CliTab: React.FunctionComponent<{
   )
 }
 
-const McpTab: React.FunctionComponent<{ mcp: McpMeta }> = ({ mcp }) => {
+const McpTab: React.FC<{ mcp: McpMeta }> = ({ mcp }) => {
   const rows: Array<{ type: string; name: string; description?: string }> = []
   for (const [name, meta] of Object.entries(mcp.toolsMeta ?? {})) {
     rows.push({ type: 'Tool', name, description: (meta as any).description })
@@ -281,7 +281,7 @@ const McpTab: React.FunctionComponent<{ mcp: McpMeta }> = ({ mcp }) => {
   )
 }
 
-export const PackageDetailPage: React.FunctionComponent<{
+export const PackageDetailPage: React.FC<{
   id: string
   source: 'installed' | 'community' | 'api'
   onBack: () => void
@@ -456,9 +456,7 @@ export const PackageDetailPage: React.FunctionComponent<{
               </div>
             </Group>
 
-            {api.description && (
-              <Text size="sm">{api.description}</Text>
-            )}
+            {api.description && <Text size="sm">{api.description}</Text>}
 
             {(api.categories?.length > 0 || api.tags?.length > 0) && (
               <Group gap={6}>
@@ -578,34 +576,36 @@ export const PackageDetailPage: React.FunctionComponent<{
                   OpenAPI YAML
                 </Button>
               )}
-              {editable && <Button
-                size="sm"
-                leftSection={<Download size={13} />}
-                loading={installOpenapiMutation.isPending}
-                onClick={() => {
-                  let addonName = api.name
-                    .replace(/[^a-zA-Z0-9-]/g, '-')
-                    .replace(/-+/g, '-')
-                    .replace(/^-|-$/g, '')
-                  if (/^[0-9]/.test(addonName)) {
-                    addonName = `x${addonName}`
-                  }
-                  const credential = api.securitySchemes?.includes('oauth2')
-                    ? 'oauth2' as const
-                    : api.securitySchemes?.includes('bearer')
-                      ? 'bearer' as const
-                      : api.securitySchemes?.includes('apiKey')
-                        ? 'apikey' as const
-                        : undefined
-                  installOpenapiMutation.mutate({
-                    name: addonName,
-                    swaggerUrl: api.swaggerUrl,
-                    credential,
-                  })
-                }}
-              >
-                Generate & Install Addon
-              </Button>}
+              {editable && (
+                <Button
+                  size="sm"
+                  leftSection={<Download size={13} />}
+                  loading={installOpenapiMutation.isPending}
+                  onClick={() => {
+                    let addonName = api.name
+                      .replace(/[^a-zA-Z0-9-]/g, '-')
+                      .replace(/-+/g, '-')
+                      .replace(/^-|-$/g, '')
+                    if (/^[0-9]/.test(addonName)) {
+                      addonName = `x${addonName}`
+                    }
+                    const credential = api.securitySchemes?.includes('oauth2')
+                      ? ('oauth2' as const)
+                      : api.securitySchemes?.includes('bearer')
+                        ? ('bearer' as const)
+                        : api.securitySchemes?.includes('apiKey')
+                          ? ('apikey' as const)
+                          : undefined
+                    installOpenapiMutation.mutate({
+                      name: addonName,
+                      swaggerUrl: api.swaggerUrl,
+                      credential,
+                    })
+                  }}
+                >
+                  Generate & Install Addon
+                </Button>
+              )}
             </Group>
 
             {installOpenapiMutation.isSuccess && (
@@ -768,70 +768,71 @@ export const PackageDetailPage: React.FunctionComponent<{
                     </Anchor>
                   )}
                 </Group>
-                {editable && (() => {
-                  const communityVersion = pkg.version
-                  const installedVersion = installedPkg?.version
-                  const needsUpdate =
-                    isInstalled &&
-                    installedVersion &&
-                    communityVersion &&
-                    installedVersion !== communityVersion
+                {editable &&
+                  (() => {
+                    const communityVersion = pkg.version
+                    const installedVersion = installedPkg?.version
+                    const needsUpdate =
+                      isInstalled &&
+                      installedVersion &&
+                      communityVersion &&
+                      installedVersion !== communityVersion
 
-                  if (needsUpdate) {
+                    if (needsUpdate) {
+                      return (
+                        <Button
+                          size="sm"
+                          color="yellow"
+                          leftSection={<ArrowUp size={13} />}
+                          loading={installMutation.isPending}
+                          onClick={() =>
+                            installMutation.mutate({
+                              packageName: pkg.name,
+                              namespace:
+                                installedAddon?.namespace ??
+                                pkg.name
+                                  .replace('@pikku/addon-', '')
+                                  .replace(/^@.*\//, ''),
+                              version: communityVersion,
+                            })
+                          }
+                        >
+                          Update to {communityVersion}
+                        </Button>
+                      )
+                    }
+                    if (isInstalled) {
+                      return (
+                        <Button
+                          size="sm"
+                          variant="light"
+                          color="green"
+                          leftSection={<Check size={13} />}
+                          disabled
+                        >
+                          Installed
+                        </Button>
+                      )
+                    }
                     return (
                       <Button
                         size="sm"
-                        color="yellow"
-                        leftSection={<ArrowUp size={13} />}
+                        leftSection={<Download size={13} />}
                         loading={installMutation.isPending}
                         onClick={() =>
                           installMutation.mutate({
                             packageName: pkg.name,
-                            namespace:
-                              installedAddon?.namespace ??
-                              pkg.name
-                                .replace('@pikku/addon-', '')
-                                .replace(/^@.*\//, ''),
+                            namespace: pkg.name
+                              .replace('@pikku/addon-', '')
+                              .replace(/^@.*\//, ''),
                             version: communityVersion,
                           })
                         }
                       >
-                        Update to {communityVersion}
+                        Install
                       </Button>
                     )
-                  }
-                  if (isInstalled) {
-                    return (
-                      <Button
-                        size="sm"
-                        variant="light"
-                        color="green"
-                        leftSection={<Check size={13} />}
-                        disabled
-                      >
-                        Installed
-                      </Button>
-                    )
-                  }
-                  return (
-                    <Button
-                      size="sm"
-                      leftSection={<Download size={13} />}
-                      loading={installMutation.isPending}
-                      onClick={() =>
-                        installMutation.mutate({
-                          packageName: pkg.name,
-                          namespace: pkg.name
-                            .replace('@pikku/addon-', '')
-                            .replace(/^@.*\//, ''),
-                          version: communityVersion,
-                        })
-                      }
-                    >
-                      Install
-                    </Button>
-                  )
-                })()}
+                  })()}
               </Group>
               {pkg.description && (
                 <Text size="sm" c="dimmed">

@@ -59,7 +59,7 @@ const wiringIcons: Record<WiringType, LucideIcon> = {
 
 type HighlightType = 'focused' | 'referenced' | null
 
-export const WiringNode: React.FunctionComponent<NodeProps<WiringNodeData>> = ({
+export const WiringNode: React.FC<NodeProps<WiringNodeData>> = ({
   data,
   id,
 }) => {

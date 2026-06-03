@@ -31,7 +31,7 @@ const PikkuInstanceContext = createContext<PikkuInstance | null>(null)
 const PikkuHTTPContext = createContext<PikkuHTTP | null>(null)
 export const PikkuRPCContext = createContext<PikkuRPCInstance | null>(null)
 
-export const PikkuHTTPProvider: React.FunctionComponent<{
+export const PikkuHTTPProvider: React.FC<{
   children: React.ReactNode
   serverUrl?: string
 }> = ({ children, serverUrl }) => {
@@ -51,7 +51,7 @@ export const PikkuHTTPProvider: React.FunctionComponent<{
   )
 }
 
-export const PikkuRPCProvider: React.FunctionComponent<{
+export const PikkuRPCProvider: React.FC<{
   children: React.ReactNode
 }> = ({ children }) => {
   const pikkuInstance = useContext(PikkuInstanceContext)

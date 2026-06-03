@@ -14,7 +14,7 @@ interface MiddlewareItem {
   data: any
 }
 
-const MiddlewareTable: React.FunctionComponent<{
+const MiddlewareTable: React.FC<{
   items: MiddlewareItem[]
   loading?: boolean
 }> = ({ items, loading }) => {
@@ -88,7 +88,7 @@ const MiddlewareTable: React.FunctionComponent<{
   )
 }
 
-export const MiddlewarePage: React.FunctionComponent = () => {
+export const MiddlewarePage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
 
   const items = useMemo((): MiddlewareItem[] => {
@@ -96,7 +96,6 @@ export const MiddlewarePage: React.FunctionComponent = () => {
     const definitions = meta.middlewareGroupsMeta.definitions || {}
     const result: MiddlewareItem[] = []
     for (const [defId, def] of Object.entries(definitions) as [string, any][]) {
-      if (def.exportedName === null) continue
       result.push({
         id: `middleware::def::${defId}`,
         name: def.name || def.exportedName || defId,

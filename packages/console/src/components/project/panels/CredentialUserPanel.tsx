@@ -10,7 +10,7 @@ interface CredentialMeta {
   isOAuth2: boolean
 }
 
-export const CredentialUserPanel: React.FunctionComponent<{
+export const CredentialUserPanel: React.FC<{
   userId: string
   metadata?: {
     credentials: Record<string, boolean>
@@ -46,7 +46,11 @@ export const CredentialUserPanel: React.FunctionComponent<{
         credentialName: credName,
         userId,
       })
-      const popup = window.open(result.authUrl, 'oauth-connect', 'width=600,height=700')
+      const popup = window.open(
+        result.authUrl,
+        'oauth-connect',
+        'width=600,height=700'
+      )
       if (!popup) {
         window.location.href = result.authUrl
       }

@@ -7,7 +7,7 @@ export interface ValTextProps {
   isBoolean?: boolean
 }
 
-export const ValText: React.FunctionComponent<ValTextProps> = ({
+export const ValText: React.FC<ValTextProps> = ({
   value,
   fallback = '—',
   isBoolean,
@@ -17,14 +17,22 @@ export const ValText: React.FunctionComponent<ValTextProps> = ({
 
   if (isBoolean && !isDim) {
     return (
-      <Text size="sm" ff="monospace" c={value ? '#86efac' : 'var(--app-text-muted)'}>
+      <Text
+        size="sm"
+        ff="monospace"
+        c={value ? '#86efac' : 'var(--app-text-muted)'}
+      >
         {String(value)}
       </Text>
     )
   }
 
   return (
-    <Text size="sm" ff="monospace" c={isDim ? 'var(--app-text-muted)' : 'var(--app-text)'}>
+    <Text
+      size="sm"
+      ff="monospace"
+      c={isDim ? 'var(--app-text-muted)' : 'var(--app-text)'}
+    >
       {display}
     </Text>
   )

@@ -17,7 +17,7 @@ interface InlineNodeData {
   workflowRetryDelay?: number
 }
 
-export const InlineNode: React.FunctionComponent<NodeProps<InlineNodeData>> = ({
+export const InlineNode: React.FC<NodeProps<InlineNodeData>> = ({
   data,
   id,
 }) => {

@@ -6,7 +6,14 @@
  */
 
 import type { StreamWorkflowRunInput } from '../../../addon/pikku-console/dist/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.js'
+import type { WorkflowRunStatus } from '../../../core/dist/wirings/workflow/workflow.types.d.js'
 
+export type GraphStarterInput = {
+  workflowName: string
+  nodeId: string
+  data?: unknown
+}
+export type GraphStarterOutput = { runId: string }
 export type PikkuConsoleGetSecretInput = { secretId: string }
 export type PikkuConsoleGetSecretOutput = { exists: boolean; value: unknown }
 export type PikkuConsoleGetVariableInput = { variableId: string }
@@ -25,8 +32,15 @@ export type PikkuWorkflowOrchestratorInput = { runId: string }
 export type PikkuWorkflowSleeperInput = { runId: string; stepId: string }
 export type RemoteRPCHandlerInput = { rpcName: string; data?: unknown }
 export type RpcCallerInput = { rpcName: string; data?: unknown }
-export type WorkflowCallerInput = { workflowName: string; input?: unknown }
-export type WorkflowCallerOutput = { runId: string }
+export type WorkflowRunnerInput = { workflowName: string; data?: unknown }
+export type WorkflowStarterInput = { workflowName: string; data?: unknown }
+export type WorkflowStarterOutput = { runId: string }
+export type WorkflowStatusCheckerInput = { workflowName: string; runId: string }
+export type WorkflowStatusStreamFullInput = {
+  workflowName: string
+  runId: string
+}
+export type WorkflowStatusStreamInput = { workflowName: string; runId: string }
 
 // The '& {}' is a workaround for not directly refering to a type since it confuses typescript
 export type StreamWorkflowRunInputParams = Pick<
@@ -47,13 +61,53 @@ export type RemoteRPCHandlerInputBody = Omit<
   RemoteRPCHandlerInput,
   'rpcName'
 > & {}
-export type WorkflowCallerInputParams = Pick<
-  WorkflowCallerInput,
+export type WorkflowStarterInputParams = Pick<
+  WorkflowStarterInput,
   'workflowName'
 > & {}
-export type WorkflowCallerInputBody = Omit<
-  WorkflowCallerInput,
+export type WorkflowStarterInputBody = Omit<
+  WorkflowStarterInput,
   'workflowName'
+> & {}
+export type WorkflowRunnerInputParams = Pick<
+  WorkflowRunnerInput,
+  'workflowName'
+> & {}
+export type WorkflowRunnerInputBody = Omit<
+  WorkflowRunnerInput,
+  'workflowName'
+> & {}
+export type WorkflowStatusCheckerInputParams = Pick<
+  WorkflowStatusCheckerInput,
+  'workflowName' | 'runId'
+> & {}
+export type WorkflowStatusCheckerInputBody = Omit<
+  WorkflowStatusCheckerInput,
+  'workflowName' | 'runId'
+> & {}
+export type WorkflowStatusStreamInputParams = Pick<
+  WorkflowStatusStreamInput,
+  'workflowName' | 'runId'
+> & {}
+export type WorkflowStatusStreamInputBody = Omit<
+  WorkflowStatusStreamInput,
+  'workflowName' | 'runId'
+> & {}
+export type WorkflowStatusStreamFullInputParams = Pick<
+  WorkflowStatusStreamFullInput,
+  'workflowName' | 'runId'
+> & {}
+export type WorkflowStatusStreamFullInputBody = Omit<
+  WorkflowStatusStreamFullInput,
+  'workflowName' | 'runId'
+> & {}
+export type GraphStarterInputParams = Pick<
+  GraphStarterInput,
+  'workflowName' | 'nodeId'
+> & {}
+export type GraphStarterInputBody = Omit<
+  GraphStarterInput,
+  'workflowName' | 'nodeId'
 > & {}
 
 interface HTTPWiringHandler<I, O> {
@@ -65,14 +119,35 @@ export type HTTPWiringsMap = {
   readonly '/workflow-run/:runId/stream': {
     readonly GET: HTTPWiringHandler<StreamWorkflowRunInput, null>
   }
+  readonly '/workflow/:workflowName/status/:runId': {
+    readonly GET: HTTPWiringHandler<
+      WorkflowStatusCheckerInput,
+      WorkflowRunStatus
+    >
+  }
+  readonly '/workflow/:workflowName/status/:runId/stream': {
+    readonly GET: HTTPWiringHandler<WorkflowStatusStreamInput, null>
+  }
+  readonly '/workflow/:workflowName/status/:runId/stream/full': {
+    readonly GET: HTTPWiringHandler<WorkflowStatusStreamFullInput, null>
+  }
   readonly '/rpc/:rpcName': {
     readonly POST: HTTPWiringHandler<RpcCallerInput, null>
   }
   readonly '/remote/rpc/:rpcName': {
     readonly POST: HTTPWiringHandler<RemoteRPCHandlerInput, null>
   }
-  readonly '/rpc/workflow/:workflowName': {
-    readonly POST: HTTPWiringHandler<WorkflowCallerInput, WorkflowCallerOutput>
+  readonly '/workflow/:workflowName/start': {
+    readonly POST: HTTPWiringHandler<
+      WorkflowStarterInput,
+      WorkflowStarterOutput
+    >
+  }
+  readonly '/workflow/:workflowName/run': {
+    readonly POST: HTTPWiringHandler<WorkflowRunnerInput, null>
+  }
+  readonly '/workflow/:workflowName/graph/:nodeId': {
+    readonly POST: HTTPWiringHandler<GraphStarterInput, GraphStarterOutput>
   }
 }
 

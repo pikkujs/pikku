@@ -6,7 +6,7 @@ import { useFunctionMeta } from '../../../../hooks/useWirings'
 import { usePanelContext } from '../../../../context/PanelContext'
 import { SectionLabel } from './SectionLabel'
 
-export const FunctionLink: React.FunctionComponent<{
+export const FunctionLink: React.FC<{
   pikkuFuncId?: string
   label?: string
 }> = ({ pikkuFuncId, label }) => {
