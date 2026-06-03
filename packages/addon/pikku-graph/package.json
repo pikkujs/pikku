@@ -20,10 +20,10 @@
     "dist"
   ],
   "scripts": {
-    "build": "pikku all && tsc && (cp .pikku/rpc/*.d.ts dist/.pikku/rpc/ 2>/dev/null || true) && (cp .pikku/agent/*.d.ts dist/.pikku/agent/ 2>/dev/null || true) && (cp .pikku/workflow/*.d.ts dist/.pikku/workflow/ 2>/dev/null || true)",
-    "pikku": "pikku all",
+    "build": "./build.sh",
+    "pikku": "./build.sh pikku",
     "ncu": "npx npm-check-updates",
-    "pretest": "pikku all",
+    "pretest": "./build.sh pikku",
     "test": "tsc --noEmit",
     "prepublishOnly": "yarn build"
   },
@@ -32,7 +32,7 @@
     "zod": "^4"
   },
   "devDependencies": {
-    "@pikku/cli": "*",
+    "@pikku/cli": "^0.12.22",
     "@pikku/core": "*",
     "typescript": "^5.9.3",
     "zod": "^4"

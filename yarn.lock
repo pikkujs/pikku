@@ -5061,7 +5061,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/addon-graph@workspace:packages/addon/pikku-graph"
   dependencies:
-    "@pikku/cli": "npm:*"
+    "@pikku/cli": "npm:^0.12.22"
     "@pikku/core": "npm:*"
     dayjs: "npm:^1.11.19"
     typescript: "npm:^5.9.3"
