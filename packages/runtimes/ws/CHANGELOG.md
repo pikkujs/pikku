@@ -39,7 +39,6 @@
 - Updated dependencies [62a8725]
 - Updated dependencies [62a8725]
 - Updated dependencies [62a8725]
-
   - @pikku/core@0.12.1
 
 - Updated dependencies

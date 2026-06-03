@@ -7,9 +7,6 @@
  * @module @pikku/fetch
  */
 
-export {
-  CorePikkuFetch,
-  CorePikkuFetchOptions,
-  HTTPMethod,
-} from './core-pikku-fetch.js'
+export { CorePikkuFetch } from './core-pikku-fetch.js'
+export type { CorePikkuFetchOptions, HTTPMethod } from './core-pikku-fetch.js'
 export { corePikkuFetch } from './pikku-fetch.js'

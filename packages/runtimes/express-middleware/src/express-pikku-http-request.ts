@@ -3,9 +3,9 @@ import type { Request as ExpressRequest } from 'express'
 import type { HTTPMethod, PikkuHTTPRequest, PikkuQuery } from '@pikku/core/http'
 import { UnprocessableContentError } from '@pikku/core/errors'
 
-export class ExpressPikkuHTTPRequest<In = unknown>
-  implements PikkuHTTPRequest<In>
-{
+export class ExpressPikkuHTTPRequest<
+  In = unknown,
+> implements PikkuHTTPRequest<In> {
   #cookies: Partial<Record<string, string>> | undefined
   #params: Partial<Record<string, string | string[]>> = {}
 

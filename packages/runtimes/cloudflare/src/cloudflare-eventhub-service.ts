@@ -4,8 +4,7 @@ import type { Logger } from '@pikku/core/services'
 
 export class CloudflareEventHubService<
   EventTopics extends Record<string, unknown> = {},
-> implements EventHubService<EventTopics>
-{
+> implements EventHubService<EventTopics> {
   private subscriptions: Map<keyof EventTopics, Set<string>> = new Map()
   private isDirty = false
   private state: 'initial' | 'loading' | 'ready' = 'initial'

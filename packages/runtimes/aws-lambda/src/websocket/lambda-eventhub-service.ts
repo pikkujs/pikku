@@ -8,9 +8,9 @@ import { getApiGatewayManagementApiClient, sendMessages } from './utils.js'
 import type { Logger } from '@pikku/core/services'
 import type { APIGatewayEvent } from 'aws-lambda'
 
-export class LambdaEventHubService<EventTopics extends Record<string, any> = {}>
-  implements EventHubService<EventTopics>
-{
+export class LambdaEventHubService<
+  EventTopics extends Record<string, any> = {},
+> implements EventHubService<EventTopics> {
   private callbackAPI: ApiGatewayManagementApiClient
 
   constructor(

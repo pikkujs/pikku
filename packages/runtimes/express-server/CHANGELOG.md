@@ -5,7 +5,6 @@
 ### Patch Changes
 
 - 5c98fd1: Switch standalone deploy from uWebSockets.js to Express + ws
-
   - Replace PikkuUWSServer with PikkuExpressServer in generated entry
   - Add WebSocket support via ws + pikkuWebsocketHandler
   - Remove pkg binary compilation — ship bundle.js directly
@@ -21,7 +20,6 @@
 ### Patch Changes
 
 - 9104b68: Switch standalone deploy from uWebSockets.js to Express + ws
-
   - Replace PikkuUWSServer with PikkuExpressServer in generated entry
   - Add WebSocket support via ws + pikkuWebsocketHandler
   - Remove pkg binary compilation — ship bundle.js directly
