@@ -186,7 +186,7 @@ export const dev = pikkuSessionlessFunc<
     const userConfig = await userCreateConfig()
 
     const resolvedLocalDb = resolveLocalDb(
-      userConfig.dev?.db,
+      userConfig.dev?.db ?? true,
       config.rootDir,
       config.outDir,
       config.runtimeDir
