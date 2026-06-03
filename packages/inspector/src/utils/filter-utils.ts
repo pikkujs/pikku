@@ -61,7 +61,8 @@ export const matchesFilters = (
   if (
     (!filters.names || filters.names.length === 0) &&
     (!filters.tags || filters.tags.length === 0) &&
-    (!filters.types || filters.types.length === 0) &&
+    (!filters.wires || filters.wires.length === 0) &&
+    (!filters.excludeWires || filters.excludeWires.length === 0) &&
     (!filters.directories || filters.directories.length === 0) &&
     (!filters.httpRoutes || filters.httpRoutes.length === 0) &&
     (!filters.httpMethods || filters.httpMethods.length === 0)
@@ -69,10 +70,18 @@ export const matchesFilters = (
     return true
   }
 
-  // Check type filter
-  if (filters.types && filters.types.length > 0) {
-    if (!filters.types.includes(meta.type)) {
-      logger.debug(`⒡ Filtered by type: ${meta.type}:${meta.name}`)
+  // Check wire include filter
+  if (filters.wires && filters.wires.length > 0) {
+    if (!filters.wires.includes(meta.type)) {
+      logger.debug(`⒡ Filtered by wire include: ${meta.type}:${meta.name}`)
+      return false
+    }
+  }
+
+  // Check wire exclude filter
+  if (filters.excludeWires && filters.excludeWires.length > 0) {
+    if (filters.excludeWires.includes(meta.type)) {
+      logger.debug(`⒡ Filtered by wire exclude: ${meta.type}:${meta.name}`)
       return false
     }
   }

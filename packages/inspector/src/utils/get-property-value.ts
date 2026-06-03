@@ -27,6 +27,44 @@ export const getArrayPropertyValue = (
   return null
 }
 
+/**
+ * Wiring identity fields (`name`, `secretId`, `variableId`, …) are read
+ * STATICALLY from source — a const or variable reference is keyed by its
+ * identifier text, not its runtime value, so the wiring is silently skipped at
+ * runtime (`metadata not found`). If the named property exists but is not an
+ * inline literal, raise a fatal diagnostic so the build fails instead.
+ */
+export const assertStringLiteralProperty = (
+  obj: ts.ObjectLiteralExpression,
+  propertyName: string,
+  wiringType: string,
+  logger?: { critical: (code: ErrorCode, message: string) => void }
+): void => {
+  const property = obj.properties.find(
+    (p) =>
+      ts.isPropertyAssignment(p) &&
+      ts.isIdentifier(p.name) &&
+      p.name.text === propertyName
+  )
+  if (!property || !ts.isPropertyAssignment(property)) {
+    return
+  }
+  const init = property.initializer
+  const isStaticLiteral =
+    ts.isStringLiteral(init) ||
+    ts.isNoSubstitutionTemplateLiteral(init) ||
+    ts.isNumericLiteral(init)
+  if (isStaticLiteral) {
+    return
+  }
+  const errorMsg = `${wiringType} has a non-literal '${propertyName}': \`${init.getText()}\`. Wiring identity fields must be inline string literals — the inspector reads them statically from source, so a const or variable reference is keyed by its identifier text and the wiring is silently skipped at runtime. Inline the literal instead, e.g. ${propertyName}: 'my-wiring-name'.`
+  if (logger) {
+    logger.critical(ErrorCode.NON_LITERAL_WIRE_NAME, errorMsg)
+  } else {
+    console.error(errorMsg)
+  }
+}
+
 export const getPropertyValue = (
   obj: ts.ObjectLiteralExpression,
   propertyName: string
@@ -116,6 +154,8 @@ export const getCommonWireMetaData = (
     description?: string
     errors?: string[]
   } = {}
+
+  assertStringLiteralProperty(obj, 'name', wiringType, logger)
 
   obj.properties.forEach((prop) => {
     if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name)) {

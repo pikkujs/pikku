@@ -73,7 +73,11 @@ export const addSchedule: AddWiring = (
     }
 
     const packageName = ts.isIdentifier(funcInitializer)
-      ? resolveAddonName(funcInitializer, checker, state.rpc.wireAddonDeclarations)
+      ? resolveAddonName(
+          funcInitializer,
+          checker,
+          state.rpc.wireAddonDeclarations
+        )
       : null
 
     if (!nameValue || !scheduleValue) {

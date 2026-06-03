@@ -387,4 +387,112 @@ describe('resolveLatestVersions', () => {
     assert.strictEqual(state.rpc.internalFiles.has('createUser'), false)
     assert.ok(state.rpc.internalFiles.has('createUser@v2'))
   })
+
+  test('rewrites CLI, channel, scheduler, queue and MCP funcId references when an unversioned function gets an implicit version', () => {
+    const state = makeState({
+      'listCards@v1': { pikkuFuncId: 'listCards@v1', version: 1 },
+      listCards: { pikkuFuncId: 'listCards' },
+    })
+    // CLI command (+ nested subcommand) referencing the unversioned function
+    state.cli = {
+      meta: {
+        programs: {
+          kanban: {
+            name: 'kanban',
+            commands: {
+              list: { pikkuFuncId: 'listCards' },
+              cards: {
+                pikkuFuncId: 'listCards',
+                subcommands: { all: { pikkuFuncId: 'listCards' } },
+              },
+            },
+          },
+        },
+        renderers: {},
+      },
+    } as any
+    // Channel slots + action-routed message wiring
+    state.channels = {
+      meta: {
+        cli: {
+          name: 'cli',
+          route: '/cli/kanban',
+          input: null,
+          connect: null,
+          disconnect: null,
+          message: { pikkuFuncId: 'listCards' },
+          messageWirings: {
+            command: { list: { pikkuFuncId: 'listCards' } },
+          },
+        },
+      },
+      files: new Set(),
+    } as any
+    state.scheduledTasks = {
+      meta: {
+        tick: { name: 'tick', schedule: '* * * * *', pikkuFuncId: 'listCards' },
+      },
+      files: new Set(),
+    } as any
+    state.queueWorkers = {
+      meta: { worker: { name: 'worker', pikkuFuncId: 'listCards' } },
+      files: new Set(),
+    } as any
+    state.mcpEndpoints = {
+      resourcesMeta: { res: { pikkuFuncId: 'listCards' } },
+      toolsMeta: { tool: { pikkuFuncId: 'listCards' } },
+      promptsMeta: { prompt: { pikkuFuncId: 'listCards' } },
+      files: new Set(),
+    } as any
+    state.triggers = {
+      meta: { cardCreated: { name: 'cardCreated' } },
+      sourceMeta: {
+        cardCreated: { name: 'cardCreated', pikkuFuncId: 'listCards' },
+      },
+      files: new Set(),
+    } as any
+    const { logger } = makeLogger()
+
+    resolveLatestVersions(state, logger)
+
+    // unversioned listCards becomes the implicit latest (v2)
+    assert.ok(state.functions.meta['listCards@v2'])
+    const program = (state as any).cli.meta.programs.kanban
+    assert.strictEqual(program.commands.list.pikkuFuncId, 'listCards@v2')
+    assert.strictEqual(program.commands.cards.pikkuFuncId, 'listCards@v2')
+    assert.strictEqual(
+      program.commands.cards.subcommands.all.pikkuFuncId,
+      'listCards@v2'
+    )
+    const channel = (state as any).channels.meta.cli
+    assert.strictEqual(channel.message.pikkuFuncId, 'listCards@v2')
+    assert.strictEqual(
+      channel.messageWirings.command.list.pikkuFuncId,
+      'listCards@v2'
+    )
+    assert.strictEqual(
+      (state as any).scheduledTasks.meta.tick.pikkuFuncId,
+      'listCards@v2'
+    )
+    assert.strictEqual(
+      (state as any).queueWorkers.meta.worker.pikkuFuncId,
+      'listCards@v2'
+    )
+    assert.strictEqual(
+      (state as any).mcpEndpoints.resourcesMeta.res.pikkuFuncId,
+      'listCards@v2'
+    )
+    assert.strictEqual(
+      (state as any).mcpEndpoints.toolsMeta.tool.pikkuFuncId,
+      'listCards@v2'
+    )
+    assert.strictEqual(
+      (state as any).mcpEndpoints.promptsMeta.prompt.pikkuFuncId,
+      'listCards@v2'
+    )
+    assert.strictEqual(
+      (state as any).triggers.sourceMeta.cardCreated.pikkuFuncId,
+      'listCards@v2'
+    )
+  })
 })

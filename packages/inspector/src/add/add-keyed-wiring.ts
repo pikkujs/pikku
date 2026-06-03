@@ -1,5 +1,8 @@
 import * as ts from 'typescript'
-import { getPropertyValue } from '../utils/get-property-value.js'
+import {
+  getPropertyValue,
+  assertStringLiteralProperty,
+} from '../utils/get-property-value.js'
 import type { AddWiring, InspectorState } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
 import { detectSchemaVendorOrError } from '../utils/detect-schema-vendor.js'
@@ -38,6 +41,9 @@ export const createAddKeyedWiring = (config: KeyedWiringConfig): AddWiring => {
 
     if (ts.isObjectLiteralExpression(firstArg)) {
       const obj = firstArg
+
+      assertStringLiteralProperty(obj, 'name', config.label, logger)
+      assertStringLiteralProperty(obj, config.idField, config.label, logger)
 
       const nameValue = getPropertyValue(obj, 'name') as string | null
       const displayNameValue = getPropertyValue(obj, 'displayName') as

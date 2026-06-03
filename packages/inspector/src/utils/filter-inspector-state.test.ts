@@ -147,6 +147,10 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
         ],
       ]),
     },
+    triggers: {
+      meta: {},
+      files: new Set(),
+    },
     channels: {
       meta: {
         'chat-channel': {
@@ -154,15 +158,20 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
           tags: ['realtime', 'public'],
           middleware: [],
           permissions: [],
-        },
+          sourceFile: '/test/project/src/channels/chat.ts',
+        } as any,
         'admin-channel': {
           pikkuFuncId: 'handleAdminMessage',
           tags: ['realtime', 'admin'],
           middleware: [{ type: 'wire', name: 'authMiddleware' }],
           permissions: [],
-        },
+          sourceFile: '/test/project/src/channels/admin.ts',
+        } as any,
       },
-      files: new Set(['/test/project/src/channels/chat.ts']),
+      files: new Set([
+        '/test/project/src/channels/chat.ts',
+        '/test/project/src/channels/admin.ts',
+      ]),
     },
     scheduledTasks: {
       meta: {
@@ -171,15 +180,20 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
           schedule: '0 0 * * *',
           tags: ['cron', 'reports'],
           middleware: [],
-        },
+          sourceFile: '/test/project/src/tasks/reports.ts',
+        } as any,
         'hourly-cleanup': {
           pikkuFuncId: 'hourlyCleanup',
           schedule: '0 * * * *',
           tags: ['cron', 'maintenance'],
           middleware: [],
-        },
+          sourceFile: '/test/project/src/tasks/cleanup.ts',
+        } as any,
       },
-      files: new Set(['/test/project/src/tasks/reports.ts']),
+      files: new Set([
+        '/test/project/src/tasks/reports.ts',
+        '/test/project/src/tasks/cleanup.ts',
+      ]),
     },
     queueWorkers: {
       meta: {
@@ -188,15 +202,20 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
           name: 'email-queue',
           tags: ['queue', 'email'],
           middleware: [],
-        },
+          sourceFile: '/test/project/src/workers/email.ts',
+        } as any,
         'notification-worker': {
           pikkuFuncId: 'sendNotificationWorker',
           name: 'notification-queue',
           tags: ['queue', 'notifications'],
           middleware: [],
-        },
+          sourceFile: '/test/project/src/workers/notification.ts',
+        } as any,
       },
-      files: new Set(['/test/project/src/workers/email.ts']),
+      files: new Set([
+        '/test/project/src/workers/email.ts',
+        '/test/project/src/workers/notification.ts',
+      ]),
     },
     workflows: {
       meta: {},
@@ -221,6 +240,7 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
           tags: ['mcp', 'search'],
           middleware: [],
           permissions: [],
+          sourceFile: '/test/project/src/mcp/search.ts',
         } as any,
         'analyze-tool': {
           name: 'analyze-tool',
@@ -229,6 +249,7 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
           tags: ['mcp', 'analytics'],
           middleware: [],
           permissions: [],
+          sourceFile: '/test/project/src/mcp/analyze.ts',
         } as any,
       },
       resourcesMeta: {
@@ -240,6 +261,7 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
           tags: ['mcp', 'docs'],
           middleware: [],
           permissions: [],
+          sourceFile: '/test/project/src/mcp/docs.ts',
         } as any,
       },
       promptsMeta: {
@@ -250,14 +272,21 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
           tags: ['mcp', 'help'],
           middleware: [],
           permissions: [],
+          sourceFile: '/test/project/src/mcp/help.ts',
         } as any,
       },
-      files: new Set(['/test/project/src/mcp/tools.ts']),
+      files: new Set([
+        '/test/project/src/mcp/search.ts',
+        '/test/project/src/mcp/analyze.ts',
+        '/test/project/src/mcp/docs.ts',
+        '/test/project/src/mcp/help.ts',
+      ]),
     },
     cli: {
       meta: {
         programs: {
           'my-cli': {
+            sourceFile: '/test/project/src/cli/program.ts',
             commands: {
               build: {
                 pikkuFuncId: 'cliCommand',
@@ -265,6 +294,7 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
                 middleware: [],
                 positionals: [],
                 options: {},
+                sourceFile: '/test/project/src/cli/build.ts',
               } as any,
               test: {
                 pikkuFuncId: 'cliTestCommand',
@@ -272,12 +302,17 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
                 middleware: [],
                 positionals: [],
                 options: {},
+                sourceFile: '/test/project/src/cli/test.ts',
               } as any,
             },
-          },
+          } as any,
         },
       },
-      files: new Set(['/test/project/src/cli/commands.ts']),
+      files: new Set([
+        '/test/project/src/cli/program.ts',
+        '/test/project/src/cli/build.ts',
+        '/test/project/src/cli/test.ts',
+      ]),
     },
     middleware: {
       definitions: {},
@@ -329,7 +364,7 @@ describe('filterInspectorState', () => {
       const filters: InspectorFilters = {
         names: [],
         tags: [],
-        types: [],
+        wires: [],
         directories: [],
         httpRoutes: [],
         httpMethods: [],
@@ -345,7 +380,7 @@ describe('filterInspectorState', () => {
     test('should filter HTTP routes by type', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['channel'], // Only channels, not HTTP
+        wires: ['channel'], // Only channels, not HTTP
       }
 
       const result = filterInspectorState(state, filters, mockLogger)
@@ -361,7 +396,7 @@ describe('filterInspectorState', () => {
     test('should filter HTTP routes by tags', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['http'],
+        wires: ['http'],
         tags: ['admin'],
       }
 
@@ -403,7 +438,7 @@ describe('filterInspectorState', () => {
     test('should filter HTTP routes by directory', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['http'],
+        wires: ['http'],
         directories: ['src/admin'],
       }
 
@@ -417,7 +452,7 @@ describe('filterInspectorState', () => {
     test('should filter HTTP routes by function name', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['http'],
+        wires: ['http'],
         names: ['getUsers'],
       }
 
@@ -431,7 +466,7 @@ describe('filterInspectorState', () => {
     test('should filter HTTP routes by name wildcard', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['http'],
+        wires: ['http'],
         names: ['get*'],
       }
 
@@ -445,7 +480,7 @@ describe('filterInspectorState', () => {
     test('should track middleware and permissions for filtered HTTP routes', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['http'],
+        wires: ['http'],
         tags: ['admin'],
       }
 
@@ -464,7 +499,7 @@ describe('filterInspectorState', () => {
     test('should filter channels by type', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['channel'],
+        wires: ['channel'],
       }
 
       const result = filterInspectorState(state, filters, mockLogger)
@@ -480,7 +515,7 @@ describe('filterInspectorState', () => {
     test('should filter channels by tags', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['channel'],
+        wires: ['channel'],
         tags: ['admin'],
       }
 
@@ -513,19 +548,18 @@ describe('filterInspectorState', () => {
       assert.equal(Object.keys(result.channels.meta).length, 2)
     })
 
-    test('should track middleware for filtered channels', () => {
+    test('should repopulate channel files from surviving metadata', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['channel'],
+        wires: ['channel'],
         tags: ['admin'],
       }
 
       const result = filterInspectorState(state, filters, mockLogger)
 
-      assert.ok(result.serviceAggregation.usedMiddleware.has('authMiddleware'))
-      assert.ok(
-        result.serviceAggregation.usedFunctions.has('handleAdminMessage')
-      )
+      assert.deepEqual(Array.from(result.channels.files).sort(), [
+        '/test/project/src/channels/admin.ts',
+      ])
     })
   })
 
@@ -533,7 +567,7 @@ describe('filterInspectorState', () => {
     test('should filter scheduled tasks by type', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['scheduler'],
+        wires: ['scheduler'],
       }
 
       const result = filterInspectorState(state, filters, mockLogger)
@@ -548,7 +582,7 @@ describe('filterInspectorState', () => {
     test('should filter scheduled tasks by tags', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['scheduler'],
+        wires: ['scheduler'],
         tags: ['reports'],
       }
 
@@ -582,16 +616,18 @@ describe('filterInspectorState', () => {
       assert.ok(result.scheduledTasks.meta['hourly-cleanup'])
     })
 
-    test('should track functions for filtered scheduled tasks', () => {
+    test('should repopulate scheduled task files from surviving metadata', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['scheduler'],
+        wires: ['scheduler'],
         tags: ['reports'],
       }
 
       const result = filterInspectorState(state, filters, mockLogger)
 
-      assert.ok(result.serviceAggregation.usedFunctions.has('dailyReport'))
+      assert.deepEqual(Array.from(result.scheduledTasks.files).sort(), [
+        '/test/project/src/tasks/reports.ts',
+      ])
     })
   })
 
@@ -599,7 +635,7 @@ describe('filterInspectorState', () => {
     test('should filter queue workers by type', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['queue'],
+        wires: ['queue'],
       }
 
       const result = filterInspectorState(state, filters, mockLogger)
@@ -614,7 +650,7 @@ describe('filterInspectorState', () => {
     test('should filter queue workers by tags', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['queue'],
+        wires: ['queue'],
         tags: ['email'],
       }
 
@@ -647,16 +683,18 @@ describe('filterInspectorState', () => {
       assert.equal(Object.keys(result.queueWorkers.meta).length, 2)
     })
 
-    test('should track functions for filtered queue workers', () => {
+    test('should repopulate queue worker files from surviving metadata', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['queue'],
+        wires: ['queue'],
         tags: ['email'],
       }
 
       const result = filterInspectorState(state, filters, mockLogger)
 
-      assert.ok(result.serviceAggregation.usedFunctions.has('sendEmailWorker'))
+      assert.deepEqual(Array.from(result.queueWorkers.files).sort(), [
+        '/test/project/src/workers/email.ts',
+      ])
     })
   })
 
@@ -664,7 +702,7 @@ describe('filterInspectorState', () => {
     test('should filter MCP tools by type', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['mcp'],
+        wires: ['mcp'],
       }
 
       const result = filterInspectorState(state, filters, mockLogger)
@@ -680,7 +718,7 @@ describe('filterInspectorState', () => {
     test('should filter MCP endpoints by tags', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['mcp'],
+        wires: ['mcp'],
         tags: ['search'],
       }
 
@@ -716,16 +754,18 @@ describe('filterInspectorState', () => {
       assert.equal(Object.keys(result.mcpEndpoints.promptsMeta).length, 0)
     })
 
-    test('should track functions for filtered MCP endpoints', () => {
+    test('should repopulate MCP files from surviving metadata', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['mcp'],
+        wires: ['mcp'],
         tags: ['search'],
       }
 
       const result = filterInspectorState(state, filters, mockLogger)
 
-      assert.ok(result.serviceAggregation.usedFunctions.has('mcpSearchTool'))
+      assert.deepEqual(Array.from(result.mcpEndpoints.files).sort(), [
+        '/test/project/src/mcp/search.ts',
+      ])
     })
   })
 
@@ -733,7 +773,7 @@ describe('filterInspectorState', () => {
     test('should filter CLI commands by type', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['cli'],
+        wires: ['cli'],
       }
 
       const result = filterInspectorState(state, filters, mockLogger)
@@ -750,7 +790,7 @@ describe('filterInspectorState', () => {
     test('should filter CLI commands by tags', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['cli'],
+        wires: ['cli'],
         tags: ['build'],
       }
 
@@ -781,7 +821,7 @@ describe('filterInspectorState', () => {
     test('should remove program if all commands are filtered out', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['cli'],
+        wires: ['cli'],
         tags: ['non-existent'],
       }
 
@@ -791,16 +831,34 @@ describe('filterInspectorState', () => {
       assert.equal(Object.keys(result.cli.meta.programs).length, 0)
     })
 
-    test('should track functions for filtered CLI commands', () => {
+    test('should repopulate CLI files from surviving metadata', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['cli'],
+        wires: ['cli'],
         tags: ['build'],
       }
 
       const result = filterInspectorState(state, filters, mockLogger)
 
-      assert.ok(result.serviceAggregation.usedFunctions.has('cliCommand'))
+      assert.deepEqual(Array.from(result.cli.files).sort(), [
+        '/test/project/src/cli/build.ts',
+        '/test/project/src/cli/program.ts',
+      ])
+    })
+  })
+
+  describe('Wire exclusion', () => {
+    test('should exclude queue and scheduler wires while keeping http', () => {
+      const state = createMockInspectorState()
+      const filters: InspectorFilters = {
+        excludeWires: ['queue', 'scheduler'],
+      }
+
+      const result = filterInspectorState(state, filters, mockLogger)
+
+      assert.equal(Object.keys(result.queueWorkers.meta).length, 0)
+      assert.equal(Object.keys(result.scheduledTasks.meta).length, 0)
+      assert.ok(Object.keys(result.http.meta.get).length > 0)
     })
   })
 
@@ -808,7 +866,7 @@ describe('filterInspectorState', () => {
     test('should filter multiple types at once', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['http', 'channel'],
+        wires: ['http', 'channel'],
       }
 
       const result = filterInspectorState(state, filters, mockLogger)
@@ -841,7 +899,7 @@ describe('filterInspectorState', () => {
     test('should handle complex combined filters', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['http'],
+        wires: ['http'],
         tags: ['api'],
         httpMethods: ['POST'],
       }
@@ -864,7 +922,7 @@ describe('filterInspectorState', () => {
       state.serviceAggregation.usedMiddleware.add('oldMiddleware')
 
       const filters: InspectorFilters = {
-        types: ['http'],
+        wires: ['http'],
         tags: ['admin'],
       }
 
@@ -900,7 +958,7 @@ describe('filterInspectorState', () => {
       const originalChannelCount = Object.keys(state.channels.meta).length
 
       const filters: InspectorFilters = {
-        types: ['http'],
+        wires: ['http'],
       }
 
       filterInspectorState(state, filters, mockLogger)
@@ -916,7 +974,7 @@ describe('filterInspectorState', () => {
     test('should create deep copies of metadata', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
-        types: ['http'],
+        wires: ['http'],
         tags: ['api'],
       }
 
@@ -947,7 +1005,7 @@ describe('filterInspectorState', () => {
       state.queueWorkers.meta = {}
 
       const filters: InspectorFilters = {
-        types: ['http'],
+        wires: ['http'],
       }
 
       const result = filterInspectorState(state, filters, mockLogger)
@@ -1016,7 +1074,7 @@ describe('filterInspectorState', () => {
 
       // FILTER: Apply HTTP type filter
       const filters: InspectorFilters = {
-        types: ['http'],
+        wires: ['http'],
       }
       const result = filterInspectorState(realState, filters, mockLogger)
 
@@ -1043,7 +1101,7 @@ describe('filterInspectorState', () => {
 
     test('should filter channels by type in real data', () => {
       const filters: InspectorFilters = {
-        types: ['channel'],
+        wires: ['channel'],
       }
 
       const result = filterInspectorState(realState, filters, mockLogger)
@@ -1079,7 +1137,7 @@ describe('filterInspectorState', () => {
 
       // FILTER: Apply scheduler type filter
       const filters: InspectorFilters = {
-        types: ['scheduler'],
+        wires: ['scheduler'],
       }
       const result = filterInspectorState(realState, filters, mockLogger)
 
@@ -1120,7 +1178,7 @@ describe('filterInspectorState', () => {
 
       // FILTER: Apply queue type filter
       const filters: InspectorFilters = {
-        types: ['queue'],
+        wires: ['queue'],
       }
       const result = filterInspectorState(realState, filters, mockLogger)
 
@@ -1175,7 +1233,7 @@ describe('filterInspectorState', () => {
 
       // FILTER: Apply MCP type filter
       const filters: InspectorFilters = {
-        types: ['mcp'],
+        wires: ['mcp'],
       }
       const result = filterInspectorState(realState, filters, mockLogger)
 
@@ -1243,7 +1301,7 @@ describe('filterInspectorState', () => {
 
       // FILTER: Apply CLI type filter
       const filters: InspectorFilters = {
-        types: ['cli'],
+        wires: ['cli'],
       }
       const result = filterInspectorState(realState, filters, mockLogger)
 
@@ -1287,7 +1345,7 @@ describe('filterInspectorState', () => {
 
       // FILTER: Apply GET method filter
       const filters: InspectorFilters = {
-        types: ['http'],
+        wires: ['http'],
         httpMethods: ['GET'],
       }
       const result = filterInspectorState(realState, filters, mockLogger)
@@ -1357,7 +1415,7 @@ describe('filterInspectorState', () => {
       const originalChannelCount = Object.keys(realState.channels.meta).length
 
       const filters: InspectorFilters = {
-        types: ['http'],
+        wires: ['http'],
       }
 
       filterInspectorState(realState, filters, mockLogger)
@@ -1374,7 +1432,7 @@ describe('filterInspectorState', () => {
 
     test('should aggregate services correctly with real data', () => {
       const filters: InspectorFilters = {
-        types: ['http'],
+        wires: ['http'],
       }
 
       const result = filterInspectorState(realState, filters, mockLogger)
@@ -1404,7 +1462,7 @@ describe('filterInspectorState', () => {
 
       // FILTER: Apply combined filters (HTTP and channels, GET/POST methods only)
       const filters: InspectorFilters = {
-        types: ['http', 'channel'],
+        wires: ['http', 'channel'],
         httpMethods: ['GET', 'POST'],
       }
       const result = filterInspectorState(realState, filters, mockLogger)
@@ -1441,5 +1499,51 @@ describe('filterInspectorState', () => {
       assert.equal(afterTaskCount, 0, 'Scheduled tasks should be filtered out')
       assert.equal(afterQueueCount, 0, 'Queue workers should be filtered out')
     })
+  })
+})
+
+describe('filterInspectorState exclude filters', () => {
+  test('exclude tags removes matching entries after include', () => {
+    const state = createMockInspectorState()
+    const filters: InspectorFilters = {
+      tags: ['api', 'admin'],
+      excludeTags: ['admin'],
+    }
+
+    const result = filterInspectorState(state, filters, mockLogger)
+
+    assert.ok(result.http.meta.get['/api/users'])
+    assert.ok(result.http.meta.post['/api/users'])
+    assert.ok(!result.http.meta.get['/admin/settings'])
+  })
+
+  test('exclude names wins over broad names include', () => {
+    const state = createMockInspectorState()
+    const filters: InspectorFilters = {
+      names: ['*'],
+      excludeNames: ['getAdminSettings'],
+    }
+
+    const result = filterInspectorState(state, filters, mockLogger)
+
+    assert.ok(result.http.meta.get['/api/users'])
+    assert.ok(result.http.meta.post['/api/users'])
+    assert.ok(!result.http.meta.get['/admin/settings'])
+  })
+
+  test('exclude target prunes server target while keeping serverless', () => {
+    const state = createMockInspectorState()
+    ;(state.functions.meta as any).getAdminSettings.deploy = 'server'
+    ;(state.functions.meta as any).createUser.deploy = 'serverless'
+
+    const filters: InspectorFilters = {
+      target: ['server', 'serverless'],
+      excludeTarget: ['server'],
+    }
+
+    const result = filterInspectorState(state, filters, mockLogger)
+
+    assert.ok(result.http.meta.post['/api/users'])
+    assert.ok(!result.http.meta.get['/admin/settings'])
   })
 })

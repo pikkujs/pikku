@@ -36,6 +36,59 @@ function matchesWildcard(value: string, pattern: string): boolean {
   return value === pattern
 }
 
+function collectSourceFiles(
+  value: unknown,
+  sourceFiles = new Set<string>(),
+  seen = new Set<object>()
+): Set<string> {
+  if (typeof value === 'string') {
+    return sourceFiles
+  }
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      collectSourceFiles(entry, sourceFiles, seen)
+    }
+    return sourceFiles
+  }
+
+  if (!value || typeof value !== 'object') {
+    return sourceFiles
+  }
+
+  if (seen.has(value)) {
+    return sourceFiles
+  }
+  seen.add(value)
+
+  if ('sourceFile' in value && typeof value.sourceFile === 'string') {
+    sourceFiles.add(value.sourceFile)
+  }
+
+  for (const nestedValue of Object.values(value)) {
+    collectSourceFiles(nestedValue, sourceFiles, seen)
+  }
+
+  return sourceFiles
+}
+
+function repopulateFileSetFromMeta(
+  meta: unknown,
+  fallbackFiles: Set<string>,
+  hasEntries: boolean
+): Set<string> {
+  const sourceFiles = collectSourceFiles(meta)
+  if (sourceFiles.size > 0) {
+    return sourceFiles
+  }
+
+  if (hasEntries) {
+    return new Set(fallbackFiles)
+  }
+
+  return new Set<string>()
+}
+
 /**
  * Check if metadata matches the given filters
  */
@@ -63,25 +116,41 @@ function matchesFilters(
   if (
     (!filters.names || filters.names.length === 0) &&
     (!filters.tags || filters.tags.length === 0) &&
-    (!filters.types || filters.types.length === 0) &&
+    (!filters.wires || filters.wires.length === 0) &&
+    (!filters.excludeWires || filters.excludeWires.length === 0) &&
     (!filters.directories || filters.directories.length === 0) &&
     (!filters.httpRoutes || filters.httpRoutes.length === 0) &&
     (!filters.httpMethods || filters.httpMethods.length === 0) &&
-    (!filters.target || filters.target.length === 0)
+    (!filters.target || filters.target.length === 0) &&
+    (!filters.excludeNames || filters.excludeNames.length === 0) &&
+    (!filters.excludeTags || filters.excludeTags.length === 0) &&
+    (!filters.excludeWires || filters.excludeWires.length === 0) &&
+    (!filters.excludeDirectories || filters.excludeDirectories.length === 0) &&
+    (!filters.excludeHttpRoutes || filters.excludeHttpRoutes.length === 0) &&
+    (!filters.excludeHttpMethods || filters.excludeHttpMethods.length === 0) &&
+    (!filters.excludeTarget || filters.excludeTarget.length === 0)
   ) {
     return true
   }
 
-  // Deploy-target filter (computed once per filterInspectorState call).
+  // Deploy-target include filter (computed once per filterInspectorState call).
   if (keptByDeploy && !keptByDeploy.has(meta.name)) {
-    logger.debug(`⒡ Filtered by deploy: ${meta.type}:${meta.name}`)
+    logger.debug(`⒡ Filtered by deploy include: ${meta.type}:${meta.name}`)
     return false
   }
 
-  // Check type filter
-  if (filters.types && filters.types.length > 0) {
-    if (!filters.types.includes(meta.type)) {
-      logger.debug(`⒡ Filtered by type: ${meta.type}:${meta.name}`)
+  // Check wire include filter
+  if (filters.wires && filters.wires.length > 0) {
+    if (!filters.wires.includes(meta.type)) {
+      logger.debug(`⒡ Filtered by wire include: ${meta.type}:${meta.name}`)
+      return false
+    }
+  }
+
+  // Check wire exclude filter
+  if (filters.excludeWires && filters.excludeWires.length > 0) {
+    if (filters.excludeWires.includes(meta.type)) {
+      logger.debug(`⒡ Filtered by wire exclude: ${meta.type}:${meta.name}`)
       return false
     }
   }
@@ -100,35 +169,55 @@ function matchesFilters(
     }
   }
 
-  // Check tag filter
+  // Check tag include filter
   if (filters.tags && filters.tags.length > 0) {
     if (!meta.tags || !filters.tags.some((tag) => meta.tags!.includes(tag))) {
-      logger.debug(`⒡ Filtered by tags: ${meta.type}:${meta.name}`)
+      logger.debug(`⒡ Filtered by tags include: ${meta.type}:${meta.name}`)
       return false
     }
   }
 
-  // Check name filter (match against both full ID and base name for versioned functions)
+  // Check tag exclude filter
+  if (filters.excludeTags && filters.excludeTags.length > 0) {
+    if (
+      meta.tags &&
+      filters.excludeTags.some((tag) => meta.tags!.includes(tag))
+    ) {
+      logger.debug(`⒡ Filtered by tags exclude: ${meta.type}:${meta.name}`)
+      return false
+    }
+  }
+
+  const { baseName } = parseVersionedId(meta.name)
+  const matchesNamePattern = (pattern: string) =>
+    matchesWildcard(meta.name, pattern) ||
+    (baseName !== meta.name && matchesWildcard(baseName, pattern))
+
+  // Check name include filter (match against both full ID and base name for versioned functions)
   if (filters.names && filters.names.length > 0) {
-    const { baseName } = parseVersionedId(meta.name)
-    const nameMatches = filters.names.some(
-      (pattern) =>
-        matchesWildcard(meta.name, pattern) ||
-        (baseName !== meta.name && matchesWildcard(baseName, pattern))
-    )
+    const nameMatches = filters.names.some(matchesNamePattern)
     if (!nameMatches) {
-      logger.debug(`⒡ Filtered by name: ${meta.type}:${meta.name}`)
+      logger.debug(`⒡ Filtered by name include: ${meta.type}:${meta.name}`)
       return false
     }
   }
 
-  // Check HTTP route filter
+  // Check name exclude filter
+  if (filters.excludeNames && filters.excludeNames.length > 0) {
+    if (filters.excludeNames.some(matchesNamePattern)) {
+      logger.debug(`⒡ Filtered by name exclude: ${meta.type}:${meta.name}`)
+      return false
+    }
+  }
+
+  const matchesRoutePattern = (pattern: string) =>
+    !!meta.httpRoute && matchesWildcard(meta.httpRoute, pattern)
+
+  // Check HTTP route include filter
   if (filters.httpRoutes && filters.httpRoutes.length > 0 && meta.httpRoute) {
-    const routeMatches = filters.httpRoutes.some((pattern) =>
-      matchesWildcard(meta.httpRoute!, pattern)
-    )
+    const routeMatches = filters.httpRoutes.some(matchesRoutePattern)
     if (!routeMatches) {
-      logger.debug(`⒡ Filtered by HTTP route: ${meta.httpRoute}`)
+      logger.debug(`⒡ Filtered by HTTP route include: ${meta.httpRoute}`)
       return false
     }
 
@@ -150,15 +239,40 @@ function matchesFilters(
     }
   }
 
-  // Check HTTP method filter
+  // Check HTTP route exclude filter
+  if (
+    filters.excludeHttpRoutes &&
+    filters.excludeHttpRoutes.length > 0 &&
+    meta.httpRoute
+  ) {
+    if (filters.excludeHttpRoutes.some(matchesRoutePattern)) {
+      logger.debug(`⒡ Filtered by HTTP route exclude: ${meta.httpRoute}`)
+      return false
+    }
+  }
+
+  const normalizedMethod = meta.httpMethod?.toUpperCase()
+
+  // Check HTTP method include filter
   if (
     filters.httpMethods &&
     filters.httpMethods.length > 0 &&
-    meta.httpMethod
+    normalizedMethod
   ) {
-    const normalizedMethod = meta.httpMethod.toUpperCase()
     if (!filters.httpMethods.includes(normalizedMethod)) {
-      logger.debug(`⒡ Filtered by HTTP method: ${meta.httpMethod}`)
+      logger.debug(`⒡ Filtered by HTTP method include: ${meta.httpMethod}`)
+      return false
+    }
+  }
+
+  // Check HTTP method exclude filter
+  if (
+    filters.excludeHttpMethods &&
+    filters.excludeHttpMethods.length > 0 &&
+    normalizedMethod
+  ) {
+    if (filters.excludeHttpMethods.includes(normalizedMethod)) {
+      logger.debug(`⒡ Filtered by HTTP method exclude: ${meta.httpMethod}`)
       return false
     }
   }
@@ -194,11 +308,21 @@ export function filterInspectorState(
     Object.keys(filters).length === 0 ||
     ((!filters.names || filters.names.length === 0) &&
       (!filters.tags || filters.tags.length === 0) &&
-      (!filters.types || filters.types.length === 0) &&
+      (!filters.wires || filters.wires.length === 0) &&
+      (!filters.excludeWires || filters.excludeWires.length === 0) &&
       (!filters.directories || filters.directories.length === 0) &&
       (!filters.httpRoutes || filters.httpRoutes.length === 0) &&
       (!filters.httpMethods || filters.httpMethods.length === 0) &&
-      (!filters.target || filters.target.length === 0))
+      (!filters.target || filters.target.length === 0) &&
+      (!filters.excludeNames || filters.excludeNames.length === 0) &&
+      (!filters.excludeTags || filters.excludeTags.length === 0) &&
+      (!filters.excludeWires || filters.excludeWires.length === 0) &&
+      (!filters.excludeDirectories ||
+        filters.excludeDirectories.length === 0) &&
+      (!filters.excludeHttpRoutes || filters.excludeHttpRoutes.length === 0) &&
+      (!filters.excludeHttpMethods ||
+        filters.excludeHttpMethods.length === 0) &&
+      (!filters.excludeTarget || filters.excludeTarget.length === 0))
   ) {
     return state
   }
@@ -207,13 +331,21 @@ export function filterInspectorState(
   // resolveDeployTarget throws IncompatibleDeployTargetError when an
   // explicit deploy: 'serverless' clashes with serverlessIncompatible.
   let keptByDeploy: Set<string> | null = null
-  if (filters.target && filters.target.length > 0) {
-    const allowed = new Set(filters.target)
+  if (
+    (filters.target && filters.target.length > 0) ||
+    (filters.excludeTarget && filters.excludeTarget.length > 0)
+  ) {
+    const allowed = filters.target ? new Set(filters.target) : null
+    const excluded = filters.excludeTarget
+      ? new Set(filters.excludeTarget)
+      : null
     const incompatible = new Set(filters.serverlessIncompatible ?? [])
     keptByDeploy = new Set<string>()
     for (const [funcId, funcMeta] of Object.entries(state.functions.meta)) {
       const target = resolveDeployTarget(funcMeta as any, incompatible, funcId)
-      if (allowed.has(target)) keptByDeploy.add(funcId)
+      if (allowed && !allowed.has(target)) continue
+      if (excluded && excluded.has(target)) continue
+      keptByDeploy.add(funcId)
     }
   }
 
@@ -436,10 +568,11 @@ export function filterInspectorState(
     }
   }
 
-  // Repopulate channels.files if any channels remain
-  if (Object.keys(filteredState.channels.meta).length > 0) {
-    filteredState.channels.files = new Set(state.channels.files)
-  }
+  filteredState.channels.files = repopulateFileSetFromMeta(
+    filteredState.channels.meta,
+    state.channels.files,
+    Object.keys(filteredState.channels.meta).length > 0
+  )
 
   // Filter triggers
   for (const name of Object.keys(filteredState.triggers.meta)) {
@@ -469,10 +602,11 @@ export function filterInspectorState(
     }
   }
 
-  // Repopulate triggers.files if any triggers remain
-  if (Object.keys(filteredState.triggers.meta).length > 0) {
-    filteredState.triggers.files = new Set(state.triggers.files)
-  }
+  filteredState.triggers.files = repopulateFileSetFromMeta(
+    filteredState.triggers.meta,
+    state.triggers.files,
+    Object.keys(filteredState.triggers.meta).length > 0
+  )
 
   // Filter scheduled tasks
   for (const name of Object.keys(filteredState.scheduledTasks.meta)) {
@@ -503,10 +637,11 @@ export function filterInspectorState(
     }
   }
 
-  // Repopulate scheduledTasks.files if any tasks remain
-  if (Object.keys(filteredState.scheduledTasks.meta).length > 0) {
-    filteredState.scheduledTasks.files = new Set(state.scheduledTasks.files)
-  }
+  filteredState.scheduledTasks.files = repopulateFileSetFromMeta(
+    filteredState.scheduledTasks.meta,
+    state.scheduledTasks.files,
+    Object.keys(filteredState.scheduledTasks.meta).length > 0
+  )
 
   // Filter queue workers
   for (const name of Object.keys(filteredState.queueWorkers.meta)) {
@@ -545,10 +680,11 @@ export function filterInspectorState(
     }
   }
 
-  // Repopulate queueWorkers.files if any workers remain
-  if (Object.keys(filteredState.queueWorkers.meta).length > 0) {
-    filteredState.queueWorkers.files = new Set(state.queueWorkers.files)
-  }
+  filteredState.queueWorkers.files = repopulateFileSetFromMeta(
+    filteredState.queueWorkers.meta,
+    state.queueWorkers.files,
+    Object.keys(filteredState.queueWorkers.meta).length > 0
+  )
 
   // Filter MCP tools
   for (const name of Object.keys(filteredState.mcpEndpoints.toolsMeta)) {
@@ -650,14 +786,20 @@ export function filterInspectorState(
     }
   }
 
-  // Repopulate mcpEndpoints.files if any MCP endpoints remain
+  // Repopulate mcpEndpoints.files from surviving endpoint metadata
   const hasMcpEndpoints =
     Object.keys(filteredState.mcpEndpoints.toolsMeta).length > 0 ||
     Object.keys(filteredState.mcpEndpoints.resourcesMeta).length > 0 ||
     Object.keys(filteredState.mcpEndpoints.promptsMeta).length > 0
-  if (hasMcpEndpoints) {
-    filteredState.mcpEndpoints.files = new Set(state.mcpEndpoints.files)
-  }
+  filteredState.mcpEndpoints.files = repopulateFileSetFromMeta(
+    {
+      toolsMeta: filteredState.mcpEndpoints.toolsMeta,
+      resourcesMeta: filteredState.mcpEndpoints.resourcesMeta,
+      promptsMeta: filteredState.mcpEndpoints.promptsMeta,
+    },
+    state.mcpEndpoints.files,
+    hasMcpEndpoints
+  )
 
   // Filter AI agents
   for (const name of Object.keys(filteredState.agents.agentsMeta)) {
@@ -753,13 +895,15 @@ export function filterInspectorState(
     }
   }
 
-  // Repopulate cli.files if any CLI programs or referenced renderers remain
+  // Repopulate cli.files from surviving program/renderer metadata
   const hasCliPrograms = Object.keys(filteredState.cli.meta.programs).length > 0
   const hasCliRenderers =
     Object.keys(filteredState.cli.meta.renderers || {}).length > 0
-  if (hasCliPrograms || hasCliRenderers) {
-    filteredState.cli.files = new Set(state.cli.files)
-  }
+  filteredState.cli.files = repopulateFileSetFromMeta(
+    filteredState.cli.meta,
+    state.cli.files,
+    hasCliPrograms || hasCliRenderers
+  )
 
   // Direct function filtering: functions that match the names/tags/directories
   // filters should be included even if no wiring (HTTP, scheduler, etc.) references them.
