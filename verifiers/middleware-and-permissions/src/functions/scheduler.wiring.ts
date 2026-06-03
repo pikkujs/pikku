@@ -8,6 +8,17 @@ import { tagMiddleware } from '../middleware/tag.js'
 import { wireMiddleware } from '../middleware/wire.js'
 import { noOpFunction } from './no-op.function.js'
 
+const schedulerPermission = pikkuPermission(
+  async ({ logger }, _data, { session }) => {
+    logger.info({
+      type: 'tag-permission',
+      name: 'scheduler',
+      sessionExists: !!session,
+    })
+    return false
+  }
+)
+
 // Tag middleware for scheduler
 export const schedulerTagMiddleware = () =>
   addTagMiddleware('scheduler', [tagMiddleware('scheduler')])
@@ -15,17 +26,7 @@ export const schedulerTagMiddleware = () =>
 // Tag permissions for scheduler
 export const schedulerTagPermissions = () =>
   addTagPermission('scheduler', {
-    schedulerPermission: pikkuPermission(
-      async ({ logger }, _data, { session }) => {
-        logger.info({
-          type: 'tag-permission',
-          name: 'scheduler',
-          sessionExists: !!session,
-        })
-        // Return false to ensure all permissions run
-        return false
-      }
-    ),
+    schedulerPermission,
   })
 
 // Session tag middleware - re-export from shared location

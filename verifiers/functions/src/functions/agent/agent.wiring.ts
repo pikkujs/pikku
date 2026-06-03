@@ -4,7 +4,7 @@ export const agentMinimal = pikkuAIAgent({
   name: 'agent-minimal',
   description: 'Agent with only required fields',
   goal: 'Help users.',
-  model: 'test-model',
+  model: 'test-provider/test-model',
 })
 
 export const agentWithPersonality = pikkuAIAgent({
@@ -13,5 +13,5 @@ export const agentWithPersonality = pikkuAIAgent({
   role: 'Technical support specialist',
   personality: 'Friendly and patient, explains complex topics simply',
   goal: 'Resolve user technical issues efficiently.',
-  model: 'test-model',
+  model: 'test-provider/test-model',
 })

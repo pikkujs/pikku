@@ -153,10 +153,7 @@ describe('complex inline workflow extraction', () => {
     const nodes = getNodes(meta)
     const rpcNodes = findRpcNodes(nodes)
 
-    assert.ok(
-      rpcNodes.length > 0,
-      'should have at least one rpc node to check'
-    )
+    assert.ok(rpcNodes.length > 0, 'should have at least one rpc node to check')
 
     for (const node of rpcNodes) {
       assert.ok(node.rpcName, `rpc node "${node.nodeId}" should have rpcName`)

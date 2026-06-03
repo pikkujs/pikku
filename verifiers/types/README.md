@@ -15,18 +15,18 @@ The type-checks package ensures that:
 
 Constraints are organized by Pikku component type:
 
-- `src/http/` - HTTP wiring type constraints (routes, params, queries, methods)
-- `src/channel/` - Channel wiring type constraints (WebSocket channels)
-- `src/function/` - Core function type constraints (input/output types)
-- `src/mcp/` - MCP (Model Context Protocol) type constraints
-- `src/scheduler/` - Scheduler type constraints
-- `src/queue/` - Queue worker type constraints
-- `src/cli/` - CLI command type constraints
-- `src/valid-functions/` - Minimal valid functions for type generation (do not modify)
+- `type-tests/http/` - HTTP wiring type constraints (routes, params, queries, methods)
+- `type-tests/channel/` - Channel wiring type constraints (WebSocket channels)
+- `type-tests/function/` - Core function type constraints (input/output types)
+- `type-tests/mcp/` - MCP (Model Context Protocol) type constraints
+- `type-tests/scheduler/` - Scheduler type constraints
+- `type-tests/queue/` - Queue worker type constraints
+- `type-tests/cli/` - CLI command type constraints
+- `src/valid-functions/` - Minimal valid functions for Pikku code generation (keep valid)
 
 ## Adding New Constraints
 
-1. Choose the appropriate directory for your constraint (`src/http/`, `src/channel/`, etc.)
+1. Choose the appropriate directory for your constraint (`type-tests/http/`, `type-tests/channel/`, etc.)
 2. Create a new file with a descriptive name (e.g., `route-param-mismatch.ts`)
 3. Import the necessary types from `@pikku/core` and wirings from `../../.pikku/pikku-types.gen.js`
 4. Write code that **should** produce type errors
@@ -36,7 +36,7 @@ Constraints are organized by Pikku component type:
 ### Example
 
 ```typescript
-// src/http/route-param-mismatch.ts
+// type-tests/http/route-param-mismatch.ts
 import { wireHTTP } from '#pikku'
 import type { CorePikkuFunctionSessionless } from '@pikku/core'
 

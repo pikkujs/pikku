@@ -245,6 +245,7 @@ async function main(): Promise<void> {
       'simple',
       {},
       [
+        { name: 'global', type: 'http', phase: 'before' },
         { name: 'onConnect', type: 'lifecycle', phase: 'execute' },
         { name: 'channel-inline', type: 'wire', phase: 'before' },
         { name: 'noOp', type: 'function', phase: 'before' }, // TODO: Should be after 'function' tag
@@ -261,6 +262,7 @@ async function main(): Promise<void> {
       'withMiddleware',
       {},
       [
+        { name: 'global', type: 'http', phase: 'before' },
         { name: 'onConnect', type: 'lifecycle', phase: 'execute' },
         { name: 'channel-inline', type: 'wire', phase: 'before' },
         { name: 'message-middleware', type: 'message', phase: 'before' },
@@ -278,6 +280,7 @@ async function main(): Promise<void> {
       'withWireMiddleware',
       {},
       [
+        { name: 'global', type: 'http', phase: 'before' },
         { name: 'onConnect', type: 'lifecycle', phase: 'execute' },
         { name: 'channel-inline', type: 'wire', phase: 'before' },
         { name: 'channel-test', type: 'wire', phase: 'before' },
@@ -295,6 +298,7 @@ async function main(): Promise<void> {
       'withBoth',
       {},
       [
+        { name: 'global', type: 'http', phase: 'before' },
         { name: 'onConnect', type: 'lifecycle', phase: 'execute' },
         { name: 'channel-inline', type: 'wire', phase: 'before' },
         { name: 'channel-test', type: 'wire', phase: 'before' },
@@ -313,6 +317,7 @@ async function main(): Promise<void> {
       'withChannelSend',
       {},
       [
+        { name: 'global', type: 'http', phase: 'before' },
         { name: 'onConnect', type: 'lifecycle', phase: 'execute' },
         { name: 'channel-inline', type: 'wire', phase: 'before' },
         { name: 'message-middleware', type: 'message', phase: 'before' },

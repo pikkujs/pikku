@@ -4,6 +4,7 @@ import { pikkuTriggerFunc } from '#pikku'
 const invokers = new Map<string, (data: any) => void>()
 
 export const getInvoker = (key: string) => invokers.get(key)
+export const clearInvokers = () => invokers.clear()
 
 export const testEventTrigger = pikkuTriggerFunc<
   { eventName: string },

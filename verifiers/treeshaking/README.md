@@ -73,11 +73,11 @@ This project verifies that Pikku's tree-shaking functionality works correctly by
 | `--tags=email,sms`              | email, logger, sms                              | Both email and SMS routes + wire services               |
 | `--tags=notifications,storage`  | email, logger, sms, storage                     | All notification + storage routes + wire services       |
 
-### Type Filters
+### Wire Filters
 
-| Filter         | Expected Services                               | Rationale                                                              |
-| -------------- | ----------------------------------------------- | ---------------------------------------------------------------------- |
-| `--types=http` | analytics, email, logger, payment, sms, storage | All services should be included (all wirings are HTTP) + wire services |
+| Filter         | Expected Services                               | Rationale                                             |
+| -------------- | ----------------------------------------------- | ----------------------------------------------------- |
+| `--wires=http` | analytics, email, logger, payment, sms, storage | Only direct HTTP wirings are selected + wire services |
 
 ### HTTP Method Filters
 
@@ -106,7 +106,7 @@ This project verifies that Pikku's tree-shaking functionality works correctly by
 | Filter                                    | Expected Services                          | Rationale                                         |
 | ----------------------------------------- | ------------------------------------------ | ------------------------------------------------- |
 | `--tags=notifications --httpMethods=POST` | email, logger, sms                         | Notification routes that are POST + wire services |
-| `--tags=payments --types=http`            | analytics, email, logger, payment, storage | Payment HTTP routes + wire services               |
+| `--tags=payments --wires=http`            | analytics, email, logger, payment, storage | Payment HTTP routes + wire services               |
 
 ### Wildcard Name Filters
 
@@ -190,7 +190,7 @@ Middleware and permission services are also tracked when they're used by filtere
 1. **Type Definitions Always Included** - Infrastructure types (UserSession, SingletonServices, etc.) are always discovered regardless of filters
 2. **Default Services** - Framework services (config, logger, schema, variables) are always included
 3. **Internal Services Excluded** - Framework-managed services (rpc, mcp, channel, userSession) are excluded from the generated map
-4. **OR Logic for Arrays** - Multiple tags/types use OR logic (matches if ANY tag matches)
+4. **OR Logic for Arrays** - Multiple tags/wires use OR logic (matches if ANY value matches)
 5. **Wildcard Support** - Name filters support wildcard patterns (e.g., `email-*`)
 
 ## Troubleshooting

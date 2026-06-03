@@ -1,0 +1,10 @@
+{
+  "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
+  "srcDirectories": [],
+  "outDir": "./.pikku",
+  "tsconfig": "./tsconfig.json",
+  "binary": {
+    "entrypoint": "./fixture.ts",
+    "output": "./dist/fixture-binary"
+  }
+}

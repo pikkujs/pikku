@@ -308,7 +308,11 @@ check('plan manifest: server unit includes processReminder', () => {
   const serverUnit = units.find((u) => u.name === SERVER_UNIT_NAME)
   if (!serverUnit) throw new Error('Missing server unit in manifest')
   const functionIds = (serverUnit.functionIds ?? []) as string[]
-  if (!functionIds.includes('processReminder')) {
+  if (
+    !functionIds.some(
+      (id) => id === 'processReminder' || id.startsWith('processReminder@')
+    )
+  ) {
     throw new Error('server unit missing processReminder')
   }
 })

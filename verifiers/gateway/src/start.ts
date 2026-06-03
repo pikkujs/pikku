@@ -290,7 +290,10 @@ async function main(): Promise<void> {
     const logger = singletonServices.logger as any
     logger.clear()
 
-    await listenerAdapter.simulateMessage({ senderId: 'ctx-user', text: 'context test' })
+    await listenerAdapter.simulateMessage({
+      senderId: 'ctx-user',
+      text: 'context test',
+    })
 
     const logs = logger.getLogs()
     const handlerLog = logs.find(
