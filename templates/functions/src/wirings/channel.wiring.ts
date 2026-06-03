@@ -1,5 +1,6 @@
 import { wireChannel } from '../../.pikku/pikku-types.gen.js'
 import {
+  authenticate,
   onConnect,
   onDisconnect,
   subscribe,
@@ -18,6 +19,10 @@ wireChannel({
   onDisconnect,
   onMessageWiring: {
     action: {
+      auth: {
+        func: authenticate,
+        auth: false,
+      },
       subscribe: {
         func: subscribe,
       },

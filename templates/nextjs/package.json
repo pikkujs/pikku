@@ -9,7 +9,7 @@
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "dev": "next dev",
     "pikku": "pikku",
-    "start": "next build && next start",
+    "start": "next start",
     "test": "bash ../functions/run-tests.sh --url http://localhost:3000/api --http",
     "lint": "next lint"
   },

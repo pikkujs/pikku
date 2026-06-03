@@ -126,6 +126,16 @@ export const UnsubscribeOutputSchema = z.object({
   topic: z.string(),
 })
 
+export const ChannelAuthInputSchema = z.object({
+  username: z.string(),
+  password: z.string(),
+})
+
+export const ChannelAuthOutputSchema = z.object({
+  authenticated: z.boolean(),
+  userId: z.string().optional(),
+})
+
 export const UserIdInputSchema = z.object({
   userId: z
     .string()
@@ -147,6 +157,7 @@ export const PrioritizePromptInputSchema = z.object({
 export const ProcessReminderInputSchema = z.object({
   todoId: z.string(),
   userId: z.string(),
+  remindAt: z.string().optional(),
 })
 
 export const ProcessReminderOutputSchema = z.object({

@@ -14,19 +14,9 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "paths": {
-      "#pikku": [
-        "./.pikku/pikku-types.gen.ts"
-      ]
+      "#pikku": ["./.pikku/pikku-types.gen.ts"]
     }
   },
-  "include": [
-    "src/**/*",
-    "types/**/*",
-    ".pikku/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    ".pikku/**/*.d.ts"
-  ]
+  "include": ["src/**/*", "types/**/*", ".pikku/**/*.ts"],
+  "exclude": ["node_modules", "dist", ".pikku/**/*.d.ts"]
 }
