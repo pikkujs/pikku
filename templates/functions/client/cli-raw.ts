@@ -40,6 +40,8 @@ ws.on('message', (data: WebSocket.Data) => {
   } catch {
     console.log(data.toString())
   }
+
+  ws.close()
 })
 
 ws.on('close', () => {

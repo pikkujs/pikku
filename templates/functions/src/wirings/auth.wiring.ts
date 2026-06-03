@@ -12,7 +12,10 @@ const configFactory: AuthConfigOrFactory = async (services) => {
       Credentials({
         credentials: { username: {}, password: {} },
         authorize: async (credentials) => {
-          if (credentials.username === 'admin' && credentials.password === 'password') {
+          if (
+            credentials.username === 'admin' &&
+            credentials.password === 'password'
+          ) {
             return { id: '1', name: 'Admin', email: 'admin@example.com' }
           }
           return null

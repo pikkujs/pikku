@@ -37,6 +37,15 @@
         }
       }
     },
+    "authenticate": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "c6e8c409",
+          "outputHash": "e171e4f3"
+        }
+      }
+    },
     "cliHelp": {
       "latest": 1,
       "versions": {
@@ -100,6 +109,15 @@
         }
       }
     },
+    "deleteAgentThread": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "3ed36ee5",
+          "outputHash": "a2094cc1"
+        }
+      }
+    },
     "deleteTodo": {
       "latest": 1,
       "versions": {
@@ -115,6 +133,33 @@
         "1": {
           "inputHash": "7affa914",
           "outputHash": "fc0670b0"
+        }
+      }
+    },
+    "getAgentThreadMessages": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "a158e652",
+          "outputHash": "04960780"
+        }
+      }
+    },
+    "getAgentThreadRuns": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "fb544997",
+          "outputHash": "6352aca1"
+        }
+      }
+    },
+    "getAgentThreads": {
+      "latest": 1,
+      "versions": {
+        "1": {
+          "inputHash": "41f5350c",
+          "outputHash": "6598bdff"
         }
       }
     },
@@ -263,10 +308,14 @@
       }
     },
     "processReminder": {
-      "latest": 1,
+      "latest": 2,
       "versions": {
         "1": {
           "inputHash": "47a055d6",
+          "outputHash": "e8a603ee"
+        },
+        "2": {
+          "inputHash": "801d5686",
           "outputHash": "e8a603ee"
         }
       }

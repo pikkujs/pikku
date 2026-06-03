@@ -16,14 +16,27 @@
     "zod": "^4"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "1.27.1",
     "@pikku/cli": "^0.12.21",
+    "@pikku/cloudflare": "workspace:*",
+    "@pikku/deploy-cloudflare": "workspace:*",
+    "@pikku/deploy-serverless": "workspace:*",
+    "@pikku/deploy-standalone": "workspace:*",
     "@pikku/fetch": "^0.12.1",
+    "@pikku/lambda": "workspace:*",
+    "@pikku/modelcontextprotocol": "workspace:*",
+    "@pikku/node-http-server": "workspace:*",
+    "@pikku/schedule": "workspace:*",
     "@pikku/websocket": "^0.12.1",
     "@types/node": "^24",
     "@types/ws": "^8",
     "concurrently": "^9.2.1",
+    "serverless": "^4.33.0",
+    "serverless-offline": "^14.5.0",
+    "serverless-offline-sqs": "^8.0.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.9"
+    "typescript": "^5.9",
+    "wrangler": "^4.78.0"
   },
   "scripts": {
     "build": "tsc -b",
@@ -33,13 +46,19 @@
     "pikku": "pikku",
     "test:http-fetch": "npx tsx client/http-fetch.ts",
     "test:http-sse": "npx tsx client/http-sse.ts",
+    "test:mcp": "npx tsx client/mcp.ts",
+    "test:mcp:http": "npx tsx client/mcp-http.ts",
+    "test:queue": "npx tsx client/queue.ts",
     "test:rpc": "npx tsx client/rpc.ts",
+    "test:runtime-rpc": "npx tsx client/runtime-rpc.ts",
     "test:websocket": "npx tsx client/websocket.ts",
     "test:cli:local": "npx tsx client/cli-local.gen.ts",
     "test:cli:raw": "npx tsx client/cli-raw.ts list",
     "test:workflows": "npx tsx client/workflow.ts",
     "test:triggers": "npx tsx client/trigger.ts",
     "test:agent-http": "npx tsx client/agent-http.ts",
-    "test:agent-sse": "npx tsx client/agent-sse.ts"
+    "test:agent-sse": "npx tsx client/agent-sse.ts",
+    "test:runtime": "npx tsx scripts/test-runtime.ts",
+    "start:mcp:http": "npx tsx scripts/start-mcp-http.ts"
   }
 }
