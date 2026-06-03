@@ -133,3 +133,6 @@ typings/
 
 # Claude Code worktrees
 .claude/worktrees/
+
+# Bun build cache
+*.bun-build

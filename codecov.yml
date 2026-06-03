@@ -1,0 +1,13 @@
+flags:
+  unit:
+    paths:
+      - packages/
+    carryforward: false
+  templates:
+    paths:
+      - packages/
+    carryforward: false
+  verifiers:
+    paths:
+      - verifiers/functions/src/
+    carryforward: false

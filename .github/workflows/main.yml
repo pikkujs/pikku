@@ -22,28 +22,32 @@ jobs:
   e2e:
     name: E2E Standard
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
     timeout-minutes: 10
     needs: build
     steps:
       - uses: actions/checkout@v4
+      - name: Install native build tools
+        run: apt-get update && apt-get install -y build-essential python3
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/e2e-codegen
-      - name: Install Playwright
-        run: npx playwright install --with-deps chromium
       - name: Run e2e tests
         run: yarn test:e2e --force-exit
 
   # e2e-ai:
   #   name: E2E AI
   #   runs-on: ubuntu-latest
+  #   container:
+  #     image: mcr.microsoft.com/playwright:v1.58.2-noble
   #   timeout-minutes: 10
   #   needs: [e2e, verifiers, templates]
   #   steps:
   #     - uses: actions/checkout@v4
+  #     - name: Install native build tools
+  #       run: apt-get update && apt-get install -y build-essential python3
   #     - uses: ./.github/actions/setup
   #     - uses: ./.github/actions/e2e-codegen
-  #     - name: Install Playwright
-  #       run: npx playwright install --with-deps chromium
   #     - name: Run AI e2e tests
   #       run: yarn test:e2e:ai
   #       env:
@@ -60,6 +64,7 @@ jobs:
         verifier:
           [
             addon,
+            binary,
             gateway,
             middleware-and-permissions,
             treeshaking,
@@ -77,6 +82,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
+      - uses: oven-sh/setup-bun@v2
+        if: matrix.verifier == 'binary'
+        with:
+          bun-version: latest
       - run: cd verifiers/${{ matrix.verifier }} && yarn test
 
   templates:
@@ -146,25 +155,128 @@ jobs:
       SLS_TELEMETRY_DISABLED: 1
       SLS_NOTIFICATIONS_MODE: off
 
+  template-runtime-targets:
+    name: Template Functions Runtimes (${{ matrix.version }}, ${{ matrix.target }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build
+    services:
+      elasticmq:
+        image: softwaremill/elasticmq-native
+        ports:
+          - 9324:9324
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [24]
+        target: [dev, standalone]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          node-version: ${{ matrix.version }}
+      - name: Test functions template runtime target
+        timeout-minutes: 5
+        run: cd templates/functions && yarn test:runtime ${{ matrix.target }}
+        env:
+          AWS_ACCESS_KEY_ID: local
+          AWS_SECRET_ACCESS_KEY: local
+          AWS_REGION: us-east-1
+          SLS_TELEMETRY_DISABLED: 1
+          SLS_NOTIFICATIONS_MODE: off
+
   release:
     name: Release
     runs-on: ubuntu-latest
-    needs: [verifiers, templates, e2e]
+    needs: [verifiers, templates, template-runtime-targets, e2e]
+    outputs:
+      published: ${{ steps.changesets.outputs.published }}
+      publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
-      - name: Create Release Pull Request
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Create Release Pull Request or Publish
+        id: changesets
         uses: changesets/action@v1
         with:
           version: node .github/changeset-version.cjs
           publish: yarn release
-          createGithubReleases: false
+          createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           HUSKY: '0'
+      - name: Upload CLI native binaries to GitHub Release
+        if: steps.changesets.outputs.published == 'true'
+        id: upload-binaries
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          published='${{ steps.changesets.outputs.publishedPackages }}'
+          cli_version=$(echo "$published" | node -e "
+            const pkgs = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+            const cli = pkgs.find(p => p.name === '@pikku/cli');
+            if (cli) process.stdout.write(cli.version);
+          ")
+          if [ -z "$cli_version" ]; then
+            echo "@pikku/cli was not published this run — skipping binary upload"
+            exit 0
+          fi
+          echo "cli_version=${cli_version}" >> "$GITHUB_OUTPUT"
+          tag="@pikku/cli@${cli_version}"
+          echo "Uploading binaries for $tag"
+          for f in packages/cli/release/binaries/*; do
+            [ -f "$f" ] || continue
+            echo "  Uploading $(basename $f)"
+            gh release upload "$tag" "$f" --clobber
+          done
+      - name: Update Homebrew tap
+        if: steps.upload-binaries.outputs.cli_version != ''
+        shell: bash
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          CLI_VERSION="${{ steps.upload-binaries.outputs.cli_version }}"
+          ARM_SHA=$(sha256sum packages/cli/release/binaries/pikku-darwin-arm64 | cut -d' ' -f1)
+          X64_SHA=$(sha256sum packages/cli/release/binaries/pikku-darwin-x64 | cut -d' ' -f1)
+          ENCODED_TAG="%40pikku%2Fcli%40${CLI_VERSION}"
+
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/pikkujs/homebrew-pikku.git" tap
+          cd tap
+
+          mkdir -p Casks
+          cat > Casks/pikku.rb << CASK
+          cask "pikku" do
+            version "${CLI_VERSION}"
+
+            on_arm do
+              url "https://github.com/pikkujs/pikku/releases/download/${ENCODED_TAG}/pikku-darwin-arm64"
+              sha256 "${ARM_SHA}"
+              binary "pikku-darwin-arm64", target: "pikku"
+            end
+            on_intel do
+              url "https://github.com/pikkujs/pikku/releases/download/${ENCODED_TAG}/pikku-darwin-x64"
+              sha256 "${X64_SHA}"
+              binary "pikku-darwin-x64", target: "pikku"
+            end
+
+            name "Pikku"
+            desc "Code generation tool for type-safe backend development"
+            homepage "https://pikku.dev"
+          end
+          CASK
+
+          git config user.email "ci@pikku.dev"
+          git config user.name "Pikku CI"
+          git add Casks/pikku.rb
+          git commit -m "pikku ${CLI_VERSION}"
+          git push
 
   sync-templates-stackblitz:
     name: Sync Templates
