@@ -21,8 +21,9 @@ async function makeValidProject(root: string) {
     srcDirectories: ['packages/functions/src'],
     outDir: 'packages/functions/.pikku',
     clientFiles: {
-      rpcMapDeclarationFile: 'packages/sdk/src/pikku/rpc-map.gen.d.ts',
-      reactQueryFile: 'packages/sdk/src/pikku/api.gen.ts',
+      rpcMapDeclarationFile:
+        'packages/functions-sdk/src/pikku/rpc-map.gen.d.ts',
+      reactQueryFile: 'packages/functions-sdk/src/pikku/api.gen.ts',
     },
   })
   await writeJson(join(root, 'package.json'), {
@@ -39,6 +40,9 @@ async function makeValidProject(root: string) {
   await mkdir(join(root, 'packages', 'functions', 'src', 'types'), {
     recursive: true,
   })
+  await mkdir(join(root, 'packages', 'functions', 'tests'), {
+    recursive: true,
+  })
   await writeJson(join(root, 'packages', 'functions', 'package.json'), {
     type: 'module',
   })
@@ -52,7 +56,13 @@ async function makeValidProject(root: string) {
     'export const createConfig = () => ({})\n',
     'utf8'
   )
-  await mkdir(join(root, 'packages', 'sdk', 'src', 'pikku'), {
+  await mkdir(join(root, 'packages', 'functions-sdk', 'src', 'pikku'), {
+    recursive: true,
+  })
+  await mkdir(join(root, 'packages', 'theme'), {
+    recursive: true,
+  })
+  await mkdir(join(root, 'packages', 'components'), {
     recursive: true,
   })
 }
@@ -172,7 +182,8 @@ describe('pikku fabric validate', () => {
         await writeJson(join(tmp, 'pikku.config.json'), {
           outDir: 'packages/functions/.pikku',
           clientFiles: {
-            rpcMapDeclarationFile: 'packages/sdk/src/pikku/rpc-map.gen.d.ts',
+            rpcMapDeclarationFile:
+              'packages/functions-sdk/src/pikku/rpc-map.gen.d.ts',
           },
         })
         const result = await runValidate(tmp)
@@ -192,7 +203,8 @@ describe('pikku fabric validate', () => {
         await writeJson(join(tmp, 'pikku.config.json'), {
           srcDirectories: ['packages/functions/src'],
           clientFiles: {
-            rpcMapDeclarationFile: 'packages/sdk/src/pikku/rpc-map.gen.d.ts',
+            rpcMapDeclarationFile:
+              'packages/functions-sdk/src/pikku/rpc-map.gen.d.ts',
           },
         })
         const result = await runValidate(tmp)
@@ -667,14 +679,17 @@ describe('pikku fabric validate', () => {
       }
     })
 
-    test('missing packages/sdk → info not error', async () => {
+    test('missing packages/functions-sdk → info not error', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await rm(join(tmp, 'packages', 'sdk'), { recursive: true, force: true })
+        await rm(join(tmp, 'packages', 'functions-sdk'), {
+          recursive: true,
+          force: true,
+        })
         const result = await runValidate(tmp)
         assert.strictEqual(result.ok, true)
-        assert.ok(result.findings.some((f) => f.id === 'sdk-missing'))
+        assert.ok(result.findings.some((f) => f.id === 'functions-sdk-missing'))
       } finally {
         await rm(tmp, { recursive: true, force: true })
       }
