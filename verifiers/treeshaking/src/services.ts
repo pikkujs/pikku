@@ -9,6 +9,7 @@ import { SMSService } from './services/sms.service.js'
 import { PaymentService } from './services/payment.service.js'
 import { AnalyticsService } from './services/analytics.service.js'
 import { StorageService } from './services/storage.service.js'
+import { NotificationService } from './services/notification.service.js'
 import { UserContextService } from './services/user-context.service.js'
 import { UserPreferencesService } from './services/user-preferences.service.js'
 
@@ -30,6 +31,7 @@ export const createSingletonServices = pikkuServices(async (_config) => {
     payment: new PaymentService(),
     analytics: new AnalyticsService(),
     storage: new StorageService(),
+    notification: new NotificationService(),
   }
 })
 

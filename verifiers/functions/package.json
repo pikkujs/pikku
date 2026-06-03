@@ -34,6 +34,7 @@
     "ncu": "npx npm-check-updates",
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "pikku": "pikku",
-    "test": "pikku && tsc && npx tsx src/start.ts && node --import tsx --test src/tests/cli-json-output.assert.ts"
+    "test": "pikku && tsc && npx tsx src/start.ts && node --import tsx --test src/tests/cli-json-output.assert.ts src/functions/trigger/trigger.assert.ts",
+    "test:coverage": "rm -rf coverage && npx --yes c8@11.0.0 --reporter=lcov --report-dir coverage --exclude '.pikku/**' --exclude 'src/tests/**' yarn test"
   }
 }

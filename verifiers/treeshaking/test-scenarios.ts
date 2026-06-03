@@ -4,6 +4,15 @@ export interface TestScenario {
   expectedSingletonServices: string[]
   expectedWireServices: string[]
   expectedAddonBootstrap?: boolean
+  expectedGeneratedFiles?: Partial<
+    Record<
+      'bootstrap' | 'httpWirings' | 'queueWirings' | 'schedulerWirings',
+      {
+        contains?: string[]
+        excludes?: string[]
+      }
+    >
+  >
   description: string
 }
 
@@ -16,6 +25,7 @@ export const scenarios: TestScenario[] = [
       'analytics',
       'email',
       'logger',
+      'notification',
       'payment',
       'secrets',
       'sms',
@@ -102,11 +112,25 @@ export const scenarios: TestScenario[] = [
     expectedWireServices: ['userContext', 'userPreferences'],
     description: 'All notification + storage routes',
   },
-
-  // Type filters
   {
-    name: 'Type: http',
-    filter: '--types=http',
+    name: 'Tags: notifications with exclude sms',
+    filter: '--tags=notifications --excludeTags=sms',
+    expectedSingletonServices: ['email', 'logger', 'secrets'],
+    expectedWireServices: ['userContext'],
+    description: 'Notification routes, excluding the SMS-tagged handler',
+  },
+  {
+    name: 'Named Filter: notifications_no_sms',
+    filter: '--filter=notifications_no_sms',
+    expectedSingletonServices: ['email', 'logger', 'secrets'],
+    expectedWireServices: ['userContext'],
+    description: 'Named filter preset resolves include and exclude tag logic',
+  },
+
+  // Wire filters
+  {
+    name: 'Wire: http',
+    filter: '--wires=http',
     expectedSingletonServices: [
       'analytics',
       'email',
@@ -117,7 +141,61 @@ export const scenarios: TestScenario[] = [
       'storage',
     ],
     expectedWireServices: ['userContext', 'userPreferences'],
-    description: 'All services should be included (all wirings are HTTP)',
+    description: 'Only direct HTTP wirings are selected',
+    expectedGeneratedFiles: {
+      bootstrap: {
+        contains: ['./http/pikku-http-wirings.gen.js'],
+      },
+      httpWirings: {
+        contains: ['../../src/functions/http.wiring.js'],
+      },
+    },
+  },
+  {
+    name: 'Exclude Wires: queue,scheduler',
+    filter: '--excludeWires=queue,scheduler',
+    expectedSingletonServices: [
+      'analytics',
+      'email',
+      'logger',
+      'payment',
+      'secrets',
+      'sms',
+      'storage',
+    ],
+    expectedWireServices: ['userContext', 'userPreferences'],
+    description:
+      'Exclude direct queue/scheduler wirings when no surviving workflow path requires them',
+  },
+  {
+    name: 'Wire: queue',
+    filter: '--wires=queue',
+    expectedSingletonServices: ['email', 'logger', 'notification', 'secrets'],
+    expectedWireServices: ['userContext'],
+    description: 'Only queue worker services should be included',
+    expectedGeneratedFiles: {
+      bootstrap: {
+        contains: ['./queue/pikku-queue-workers-wirings.gen.js'],
+      },
+      queueWirings: {
+        contains: ['../../src/background/background.wiring.js'],
+      },
+    },
+  },
+  {
+    name: 'Wire: scheduler',
+    filter: '--wires=scheduler',
+    expectedSingletonServices: ['email', 'logger', 'notification', 'secrets'],
+    expectedWireServices: [],
+    description: 'Only scheduler services should be included',
+    expectedGeneratedFiles: {
+      bootstrap: {
+        contains: ['./scheduler/pikku-schedulers-wirings.gen.js'],
+      },
+      schedulerWirings: {
+        contains: ['../../src/background/background.wiring.js'],
+      },
+    },
   },
 
   // HTTP method filters
@@ -128,6 +206,7 @@ export const scenarios: TestScenario[] = [
       'analytics',
       'email',
       'logger',
+      'notification',
       'payment',
       'secrets',
       'sms',
@@ -139,8 +218,8 @@ export const scenarios: TestScenario[] = [
   {
     name: 'HTTP Method: GET',
     filter: '--httpMethods=GET',
-    expectedSingletonServices: ['email', 'logger', 'secrets'],
-    expectedWireServices: [],
+    expectedSingletonServices: ['email', 'logger', 'notification', 'secrets'],
+    expectedWireServices: ['userContext'],
     description: 'No GET routes exist, only email/logger from session creation',
   },
 
@@ -148,7 +227,13 @@ export const scenarios: TestScenario[] = [
   {
     name: 'HTTP Route: /api/notifications/*',
     filter: '--httpRoutes=/api/notifications/*',
-    expectedSingletonServices: ['email', 'logger', 'secrets', 'sms'],
+    expectedSingletonServices: [
+      'email',
+      'logger',
+      'notification',
+      'secrets',
+      'sms',
+    ],
     expectedWireServices: ['userContext'],
     description: 'Only notification routes',
   },
@@ -159,17 +244,24 @@ export const scenarios: TestScenario[] = [
       'analytics',
       'email',
       'logger',
+      'notification',
       'payment',
       'secrets',
       'storage',
     ],
-    expectedWireServices: ['userPreferences'],
+    expectedWireServices: ['userContext', 'userPreferences'],
     description: 'Only payment routes',
   },
   {
     name: 'HTTP Route: /api/storage/*',
     filter: '--httpRoutes=/api/storage/*',
-    expectedSingletonServices: ['email', 'logger', 'secrets', 'storage'],
+    expectedSingletonServices: [
+      'email',
+      'logger',
+      'notification',
+      'secrets',
+      'storage',
+    ],
     expectedWireServices: ['userContext', 'userPreferences'],
     description: 'Only storage routes',
   },
@@ -182,6 +274,7 @@ export const scenarios: TestScenario[] = [
       'analytics',
       'email',
       'logger',
+      'notification',
       'payment',
       'secrets',
       'sms',
@@ -194,8 +287,8 @@ export const scenarios: TestScenario[] = [
   {
     name: 'Directory: src/nonexistent',
     filter: '--directories=src/nonexistent',
-    expectedSingletonServices: ['email', 'logger', 'secrets'],
-    expectedWireServices: [],
+    expectedSingletonServices: ['email', 'logger', 'notification', 'secrets'],
+    expectedWireServices: ['userContext'],
     description:
       'No wirings in nonexistent directory, only email/logger from session creation',
   },
@@ -210,7 +303,7 @@ export const scenarios: TestScenario[] = [
   },
   {
     name: 'Combo: payments + http',
-    filter: '--tags=payments --types=http',
+    filter: '--tags=payments --wires=http',
     expectedSingletonServices: [
       'analytics',
       'email',
@@ -238,6 +331,7 @@ export const scenarios: TestScenario[] = [
       'analytics',
       'email',
       'logger',
+      'notification',
       'payment',
       'secrets',
       'storage',
@@ -346,6 +440,7 @@ export const scenarios: TestScenario[] = [
       'analytics',
       'email',
       'logger',
+      'notification',
       'payment',
       'secrets',
     ],

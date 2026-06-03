@@ -11,6 +11,14 @@ const INSPECTOR_STATE_FILE = join(
   'inspector-state.json'
 )
 
+function runPikkuCLI(args: string[]): void {
+  const command = `node ../../packages/cli/dist/bin/pikku.js ${args.join(' ')}`
+  execSync(command, {
+    cwd: process.cwd(),
+    stdio: 'pipe',
+  })
+}
+
 /**
  * Check if addon bootstrap is imported
  */
@@ -34,6 +42,31 @@ function hasAddonBootstrap(): boolean {
   }
 }
 
+type GeneratedFileKey =
+  | 'bootstrap'
+  | 'httpWirings'
+  | 'queueWirings'
+  | 'schedulerWirings'
+
+function readGeneratedFile(file: GeneratedFileKey): string {
+  const pathByFile: Record<GeneratedFileKey, string[]> = {
+    bootstrap: ['.pikku', 'pikku-bootstrap.gen.ts'],
+    httpWirings: ['.pikku', 'http', 'pikku-http-wirings.gen.ts'],
+    queueWirings: ['.pikku', 'queue', 'pikku-queue-workers-wirings.gen.ts'],
+    schedulerWirings: [
+      '.pikku',
+      'scheduler',
+      'pikku-schedulers-wirings.gen.ts',
+    ],
+  }
+
+  try {
+    return readFileSync(join(process.cwd(), ...pathByFile[file]), 'utf-8')
+  } catch {
+    return ''
+  }
+}
+
 /**
  * Parse the pikku-services.gen.ts file to extract singleton and wire services
  */
@@ -51,7 +84,20 @@ function parseGeneratedServices(): {
     const content = readFileSync(servicesFilePath, 'utf-8')
 
     // Filter out system services (config, schema, variables, jwt are framework services)
-    const systemServices = new Set(['config', 'schema', 'variables', 'jwt'])
+    const systemServices = new Set([
+      'config',
+      'schema',
+      'variables',
+      'jwt',
+      'workflowService',
+      'workflowRunService',
+      'queueService',
+      'schedulerService',
+      'rpc',
+      'channel',
+      'mcp',
+      'userSession',
+    ])
 
     const singletonServices: string[] = []
     const wireServices: string[] = []
@@ -108,11 +154,7 @@ function parseGeneratedServices(): {
 function createInspectorState(): void {
   try {
     // Run pikku all to create the inspector state file
-    const command = `yarn pikku all --state-output=${INSPECTOR_STATE_FILE}`
-    execSync(command, {
-      cwd: process.cwd(),
-      stdio: 'pipe', // Suppress output
-    })
+    runPikkuCLI(['all', `--state-output=${INSPECTOR_STATE_FILE}`])
   } catch (error) {
     console.error('❌ Error creating inspector state:', error)
     throw error
@@ -130,20 +172,55 @@ function runPikkuWithFilter(filter: string): {
 } {
   try {
     // Run pikku all with the filter, loading from the cached state
-    const command = filter
-      ? `yarn pikku all --state-input=${INSPECTOR_STATE_FILE} ${filter}`
-      : `yarn pikku all --state-input=${INSPECTOR_STATE_FILE}`
+    const args = ['all', `--state-input=${INSPECTOR_STATE_FILE}`]
+    if (filter) {
+      args.push(...filter.split(' ').filter(Boolean))
+    }
 
-    execSync(command, {
-      cwd: process.cwd(),
-      stdio: 'pipe', // Suppress output
-    })
+    runPikkuCLI(args)
 
     // Parse and return the generated services
     return parseGeneratedServices()
   } catch (error) {
     console.error(`Error running pikku with filter "${filter}":`, error)
     throw error
+  }
+}
+
+function assertGeneratedFiles(
+  expected:
+    | Partial<
+        Record<
+          GeneratedFileKey,
+          {
+            contains?: string[]
+            excludes?: string[]
+          }
+        >
+      >
+    | undefined,
+  scenarioName: string
+): void {
+  if (!expected) return
+
+  for (const [file, checks] of Object.entries(expected) as Array<
+    [GeneratedFileKey, NonNullable<(typeof expected)[GeneratedFileKey]>]
+  >) {
+    const content = readGeneratedFile(file)
+
+    for (const needle of checks.contains ?? []) {
+      assert.ok(
+        content.includes(needle),
+        `${file} should include "${needle}" for scenario: ${scenarioName}`
+      )
+    }
+
+    for (const needle of checks.excludes ?? []) {
+      assert.ok(
+        !content.includes(needle),
+        `${file} should exclude "${needle}" for scenario: ${scenarioName}`
+      )
+    }
   }
 }
 
@@ -312,6 +389,8 @@ async function runTests() {
             `Actual:   ${actualServices.hasAddonBootstrap ? 'included' : 'excluded'}`
         )
       }
+
+      assertGeneratedFiles(scenario.expectedGeneratedFiles, scenario.name)
     })
   }
 
