@@ -89,6 +89,10 @@ runs:
         include-hidden-files: true
         retention-days: 1
 
-    - name: Coveralls GitHub Action
-      uses: coverallsapp/github-action@v2.3.4
+    - name: Upload unit coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        directory: packages
+        flags: unit
+        name: unit-coverage
       continue-on-error: true

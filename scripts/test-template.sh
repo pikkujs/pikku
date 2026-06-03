@@ -138,14 +138,29 @@ esac
 
 # Build
 log_info "Building the app..."
-if ! yarn run tsc; then
-    log_error "TypeScript compilation failed"
-    exit 1
-fi
+case "$TEMPLATE_NAME" in
+    nextjs|nextjs-full)
+        if ! yarn run build; then
+            log_error "Build failed"
+            exit 1
+        fi
+        ;;
+    *)
+        if ! yarn run tsc; then
+            log_error "TypeScript compilation failed"
+            exit 1
+        fi
+        ;;
+esac
 
 # Run tests
 log_info "Running tests..."
-if ! yarn run test; then
+if [ -n "$TEMPLATE_V8_COVERAGE_DIR" ]; then
+    if ! NODE_V8_COVERAGE="$TEMPLATE_V8_COVERAGE_DIR" yarn run test; then
+        log_error "Tests failed"
+        exit 1
+    fi
+elif ! yarn run test; then
     log_error "Tests failed"
     exit 1
 fi
