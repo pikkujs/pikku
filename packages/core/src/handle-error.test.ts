@@ -111,7 +111,7 @@ describe('handleHTTPError', () => {
     )
 
     assert.strictEqual(http._state.statusCode, 400)
-    assert.ok(http._state.jsonBody.message.includes('client error'))
+    assert.strictEqual(http._state.jsonBody.message, 'Invalid input')
     assert.strictEqual(http._state.jsonBody.errorId, 'tracker-2')
   })
 
