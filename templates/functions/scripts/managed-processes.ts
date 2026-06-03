@@ -56,7 +56,9 @@ export async function shutdownManagedProcesses(
   const processes = [...managedProcesses].reverse()
   managedProcesses.length = 0
   await Promise.all(
-    processes.map((processInfo) => shutdownManagedProcess(processInfo, gracePeriodMs))
+    processes.map((processInfo) =>
+      shutdownManagedProcess(processInfo, gracePeriodMs)
+    )
   )
 }
 

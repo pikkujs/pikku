@@ -36,7 +36,10 @@ export const handleHTTPError = (
     // Set status and response body
     http?.response?.status(errorResponse.status)
     http?.response?.json({
-      message: errorResponse.message,
+      message:
+        e instanceof Error && e.message && e.message !== 'An error occurred'
+          ? e.message
+          : errorResponse.message,
       payload: (e as any).payload,
       errorId: traceId,
     })

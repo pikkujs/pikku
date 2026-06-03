@@ -4,7 +4,7 @@ import type { JSONValue } from '@pikku/core'
 import type { CLILogger } from '../services/cli-logger.service.js'
 
 function toValidIdentifier(name: string): string {
-  let result = name.replace(/[-./]/g, '_')
+  let result = name.replace(/[-./: ]/g, '_')
   if (/^\d/.test(result)) {
     result = '_' + result
   }

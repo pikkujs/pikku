@@ -274,7 +274,10 @@ async function startCloudflareProxy(port: number) {
     { method: 'POST', path: '/rpc/ext:hello' },
     { method: 'POST', path: '/workflow/createAndNotifyWorkflow/start' },
     { method: 'POST', path: '/workflow/createAndNotifyWorkflow/run' },
-    { method: 'GET', path: '/workflow/createAndNotifyWorkflow/status/example-run' },
+    {
+      method: 'GET',
+      path: '/workflow/createAndNotifyWorkflow/status/example-run',
+    },
   ]
   const selectedUnits = new Map<string, number>()
   const routeBindings: RouteBinding[] = []
