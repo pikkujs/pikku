@@ -24,7 +24,13 @@ export async function createWorker(
   dispatchNamespace?: string
 ): Promise<WorkerMetadata> {
   const metadata = buildWorkerMetadataPayload(bindings, compatibilityDate)
-  const result = await uploadWorkerScript(client, name, script, metadata, dispatchNamespace)
+  const result = await uploadWorkerScript(
+    client,
+    name,
+    script,
+    metadata,
+    dispatchNamespace
+  )
 
   if (routes.length > 0) {
     await setWorkerRoutes(client, name, routes)
@@ -158,11 +164,7 @@ async function uploadWorkerScript(
     ? `/workers/dispatch/namespaces/${encodeURIComponent(dispatchNamespace)}/scripts/${encodeURIComponent(name)}`
     : `/workers/scripts/${encodeURIComponent(name)}`
 
-  return client.requestRaw<WorkerMetadata>(
-    'PUT',
-    path,
-    formData
-  )
+  return client.requestRaw<WorkerMetadata>('PUT', path, formData)
 }
 
 async function setWorkerRoutes(

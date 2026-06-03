@@ -61,7 +61,6 @@
 - Updated dependencies [62a8725]
 - Updated dependencies [62a8725]
 - Updated dependencies [62a8725]
-
   - @pikku/core@0.12.1
 
 - Updated dependencies
@@ -96,7 +95,6 @@
 - 730adb6: Update runtime adapters for channel middleware support
 
   **Updates:**
-
   - Update Cloudflare hibernation WebSocket server for middleware changes
   - Update Fastify response convertor for improved channel handling
   - Update MCP server for channel middleware support

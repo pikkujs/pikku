@@ -177,7 +177,10 @@ export class PikkuMCPServer {
             res.writeHead(400).end(
               JSON.stringify({
                 jsonrpc: '2.0',
-                error: { code: -32000, message: 'Invalid or missing session ID' },
+                error: {
+                  code: -32000,
+                  message: 'Invalid or missing session ID',
+                },
                 id: null,
               })
             )

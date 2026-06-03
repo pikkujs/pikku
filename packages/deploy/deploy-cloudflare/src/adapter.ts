@@ -96,8 +96,12 @@ export type PlatformImports = {
 export interface PlatformServiceContributor {
   /** Identifier — used for diagnostics and dedup if a contributor is passed twice. */
   name: string
-  /** Module-level import lines this contributor's emitted code depends on. */
-  imports?: string[]
+  /**
+   * Module-level import lines this contributor's emitted code depends on.
+   * May be a static array or a function gated on platform capabilities —
+   * useful to avoid bundling heavy packages into workers that don't need them.
+   */
+  imports?: string[] | ((platform: PlatformImports) => string[])
   /**
    * Lines emitted inside `createPlatformServices`, before `return services`.
    * `services` is in scope (typed as `ctx.servicesType`); so is `env` and
@@ -176,11 +180,15 @@ export class CloudflareProviderAdapter {
   }
 
   /** Collect all contributor imports as a flat, de-duplicated array. */
-  private contributorImports(): string[] {
+  private contributorImports(platform: PlatformImports): string[] {
     const seen = new Set<string>()
     const out: string[] = []
     for (const c of this.contributors) {
-      for (const line of c.imports ?? []) {
+      const lines =
+        typeof c.imports === 'function'
+          ? c.imports(platform)
+          : (c.imports ?? [])
+      for (const line of lines) {
         if (!seen.has(line)) {
           seen.add(line)
           out.push(line)
@@ -301,7 +309,7 @@ export class CloudflareProviderAdapter {
         : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
-      ...this.contributorImports(),
+      ...this.contributorImports(platform),
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
@@ -359,7 +367,7 @@ export class CloudflareProviderAdapter {
         : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
-      ...this.contributorImports(),
+      ...this.contributorImports(platform),
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
@@ -444,7 +452,7 @@ export class CloudflareProviderAdapter {
         : []),
       `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
       `import { JsonConsoleLogger } from '@pikku/core/services'`,
-      ...this.contributorImports(),
+      ...this.contributorImports(platform),
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,

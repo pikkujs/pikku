@@ -242,7 +242,7 @@ export class CorePikkuFetch {
    * @returns {any} - The transformed data.
    */
   private transformDates(data: any): any {
-    if (!this.options.transformDate) {
+    if (this.options.transformDate === false) {
       return data
     }
     return transformDates(data)
