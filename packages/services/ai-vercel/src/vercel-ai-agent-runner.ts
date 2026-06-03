@@ -74,6 +74,17 @@ function stripNulls(obj: any): any {
   return result
 }
 
+function extractStructuredText(output: unknown): string {
+  if (!output || typeof output !== 'object') return ''
+  const text = (output as Record<string, unknown>).text
+  return typeof text === 'string' ? text : ''
+}
+
+function extractStructuredUI(output: unknown): unknown | null {
+  if (!output || typeof output !== 'object') return null
+  return (output as Record<string, unknown>).ui ?? null
+}
+
 export class VercelAIAgentRunner implements AIAgentRunnerService {
   /** Public + mutable so deploy-time contributors (e.g. fabric's AI Gateway
    *  contributor) can replace providers post-construction with ones that
@@ -163,6 +174,8 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
     const sdkModel = provider(modelName)
     const aiTools = this.buildTools(params)
     const messages = await convertToSDKMessages(params.messages)
+    const useStructuredOutput =
+      !!params.outputSchema && params.tools.length === 0
 
     const stepResult: AIAgentStepResult = {
       text: '',
@@ -182,12 +195,50 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
       ...(params.temperature !== undefined && {
         temperature: params.temperature,
       }),
+      ...(useStructuredOutput
+        ? {
+            output: Output.object({
+              schema: jsonSchema(cleanSchema(params.outputSchema)),
+            }),
+          }
+        : {}),
     })
 
     try {
+      let lastStructuredText = ''
+      let lastStructuredUISerialized: string | null = null
+
+      const structuredOutputTask = useStructuredOutput
+        ? (async () => {
+            for await (const partial of result.partialOutputStream) {
+              const nextText = extractStructuredText(partial)
+              if (nextText) {
+                const delta = nextText.startsWith(lastStructuredText)
+                  ? nextText.slice(lastStructuredText.length)
+                  : nextText
+                stepResult.text = nextText
+                if (delta) {
+                  channel.send({ type: 'text-delta', text: delta })
+                }
+                lastStructuredText = nextText
+              }
+
+              const nextUI = extractStructuredUI(partial)
+              if (nextUI != null) {
+                const serialized = JSON.stringify(nextUI)
+                if (serialized !== lastStructuredUISerialized) {
+                  lastStructuredUISerialized = serialized
+                  channel.send({ type: 'generative-ui', spec: nextUI })
+                }
+              }
+            }
+          })()
+        : null
+
       for await (const part of result.fullStream) {
         switch (part.type) {
           case 'text-delta':
+            if (useStructuredOutput) break
             stepResult.text += part.text
             channel.send({ type: 'text-delta', text: part.text })
             break
@@ -266,6 +317,13 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
             break
         }
       }
+
+      if (structuredOutputTask) {
+        await structuredOutputTask
+        const finalOutput = await result.output
+        stepResult.object = finalOutput
+        stepResult.text = extractStructuredText(finalOutput) || stepResult.text
+      }
     } catch (err) {
       console.warn(
         '[VercelAIAgentRunner] Stream error:',
@@ -329,12 +387,14 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
       }
     }
 
+    const outputObject =
+      params.outputSchema && params.tools.length === 0
+        ? (result as any).output
+        : undefined
+
     return {
-      text: result.text,
-      object:
-        params.outputSchema && params.tools.length === 0
-          ? (result as any).output
-          : undefined,
+      text: extractStructuredText(outputObject) || result.text,
+      object: outputObject,
       toolCalls,
       toolResults,
       usage: {
@@ -343,6 +403,9 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
       },
       finishReason:
         (step?.finishReason as AIAgentStepResult['finishReason']) ?? 'unknown',
+      reasoningContent:
+        (step?.content as any)?.find((p: any) => p.type === 'reasoning')
+          ?.text ?? undefined,
     }
   }
 }
