@@ -179,18 +179,27 @@ export interface InspectorPermissionState {
 export type InspectorFilters = {
   names?: string[] // Wildcard support: "email-*" matches "email-worker", "email-sender"
   tags?: string[]
-  types?: string[]
+  wires?: string[]
   directories?: string[]
   httpRoutes?: string[] // HTTP route patterns: "/api/*", "/webhooks/*"
   httpMethods?: string[] // HTTP methods: "GET", "POST", "DELETE", etc.
+
+  excludeNames?: string[]
+  excludeTags?: string[]
+  excludeWires?: string[]
+  excludeDirectories?: string[]
+  excludeHttpRoutes?: string[]
+  excludeHttpMethods?: string[]
+
   // Keep only functions whose effective deploy target is in this list.
   // A function's effective target is its explicit `deploy` field, or
   // 'server' if any of its services are listed in `serverlessIncompatible`,
   // otherwise 'serverless'.
   target?: Array<'serverless' | 'server'>
+  excludeTarget?: Array<'serverless' | 'server'>
   // Service names that, when consumed by a function, force its target
   // to 'server'. Sourced from `pikku.config.json` →
-  // `deploy.serverlessIncompatible`. Used only when `target` is set.
+  // `deploy.serverlessIncompatible`. Used only when deploy filters are set.
   serverlessIncompatible?: string[]
 }
 
@@ -199,19 +208,6 @@ export type AddonConfig = {
   rpcEndpoint?: string
   secretOverrides?: Record<string, string>
   forceInclude?: boolean
-}
-
-export type ModelConfigEntry =
-  | string
-  | { model: string; temperature?: number; maxSteps?: number }
-
-export type InspectorModelConfig = {
-  models?: Record<string, ModelConfigEntry>
-  agentDefaults?: { temperature?: number; maxSteps?: number }
-  agentOverrides?: Record<
-    string,
-    { model?: string; temperature?: number; maxSteps?: number }
-  >
 }
 
 export type InspectorOptions = Partial<{
@@ -234,7 +230,6 @@ export type InspectorOptions = Partial<{
   }
   tags: string[]
   manifest: VersionManifest
-  modelConfig: InspectorModelConfig
   oldProgram: ts.Program | undefined
 }>
 
