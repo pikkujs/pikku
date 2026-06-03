@@ -9,7 +9,7 @@ export interface DetailHeaderProps {
   children?: React.ReactNode
 }
 
-export const DetailHeader: React.FunctionComponent<DetailHeaderProps> = ({
+export const DetailHeader: React.FC<DetailHeaderProps> = ({
   title,
   subtitle,
   badge,
@@ -17,7 +17,13 @@ export const DetailHeader: React.FunctionComponent<DetailHeaderProps> = ({
 }) => (
   <Box className={classes.detailHeader}>
     <Box className={classes.flexGrow}>
-      <Text size="sm" fw={600} ff="monospace" c="var(--app-meta-value)" mb={subtitle ? 4 : 0}>
+      <Text
+        size="sm"
+        fw={600}
+        ff="monospace"
+        c="var(--app-meta-value)"
+        mb={subtitle ? 4 : 0}
+      >
         {title}
       </Text>
       {subtitle && (

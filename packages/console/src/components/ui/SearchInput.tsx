@@ -10,7 +10,7 @@ export interface SearchInputProps {
   count?: number
 }
 
-export const SearchInput: React.FunctionComponent<SearchInputProps> = ({
+export const SearchInput: React.FC<SearchInputProps> = ({
   value,
   onChange,
   placeholder = 'Search...',

@@ -55,7 +55,7 @@ const mapDbThreadToAgentThread = (dbThread: any): AgentThread => ({
   label: dbThread.title || dbThread.id.slice(0, 8),
 })
 
-export const AgentPlaygroundProvider: React.FunctionComponent<
+export const AgentPlaygroundProvider: React.FC<
   AgentPlaygroundProviderProps
 > = ({ children, agentId }) => {
   const [searchParams, setSearchParams] = useSearchParams()

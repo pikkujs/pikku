@@ -72,7 +72,7 @@ const collectCategoryIds = (nodes: TreeNode[]): string[] => {
   return ids
 }
 
-export const Tree: React.FunctionComponent<TreeProps> = ({
+export const Tree: React.FC<TreeProps> = ({
   data,
   rowHeight,
   nestedIndent,

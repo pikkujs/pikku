@@ -9,7 +9,7 @@ interface CancelNodeData {
   stepName?: string
 }
 
-export const CancelNode: React.FunctionComponent<NodeProps<CancelNodeData>> = ({
+export const CancelNode: React.FC<NodeProps<CancelNodeData>> = ({
   data,
   id,
 }) => {

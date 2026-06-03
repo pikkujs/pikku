@@ -6,7 +6,7 @@ import { PanelContainer } from '../panel/PanelContainer'
 import { usePanelContext } from '../../context/PanelContext'
 import classes from '../ui/console.module.css'
 
-const CollapsedSidebar: React.FunctionComponent<{
+const CollapsedSidebar: React.FC<{
   side: 'left' | 'right'
   onExpand: () => void
 }> = ({ side, onExpand }) => {
@@ -48,9 +48,11 @@ interface ThreePaneLayoutProps {
   emptyPanelMessage?: string
   showTabs?: boolean
   hidePanel?: boolean
+  initialLeftCollapsed?: boolean
+  initialRightCollapsed?: boolean
 }
 
-export const ThreePaneLayout: React.FunctionComponent<ThreePaneLayoutProps> = ({
+export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
   children,
   header,
   runsPanel,
@@ -58,12 +60,14 @@ export const ThreePaneLayout: React.FunctionComponent<ThreePaneLayoutProps> = ({
   emptyPanelMessage,
   showTabs = false,
   hidePanel = false,
+  initialLeftCollapsed = false,
+  initialRightCollapsed = false,
 }) => {
   const { panels } = usePanelContext()
   const alwaysVisible = !showTabs
 
-  const [leftCollapsed, setLeftCollapsed] = useState(false)
-  const [rightCollapsed, setRightCollapsed] = useState(false)
+  const [leftCollapsed, setLeftCollapsed] = useState(initialLeftCollapsed)
+  const [rightCollapsed, setRightCollapsed] = useState(initialRightCollapsed)
 
   const prevRunsPanelVisible = useRef(runsPanelVisible)
   useEffect(() => {
@@ -93,12 +97,9 @@ export const ThreePaneLayout: React.FunctionComponent<ThreePaneLayoutProps> = ({
   )
 
   return (
-    <Box className={classes.flexColumn} style={{ height: '100vh' }}>
+    <Box className={classes.flexColumn} style={{ height: '100%' }}>
       {header}
-      <Box
-        className={classes.flexRow}
-        style={{ flex: 1, minHeight: 0 }}
-      >
+      <Box className={classes.flexRow} style={{ flex: 1, minHeight: 0 }}>
         {hasLeftPane && leftCollapsed && (
           <CollapsedSidebar
             side="left"
@@ -139,7 +140,9 @@ export const ThreePaneLayout: React.FunctionComponent<ThreePaneLayoutProps> = ({
               </Allotment.Pane>
             )}
             <Allotment.Pane>
-              <Box className={`${classes.flexColumn} ${classes.overflowAuto}`}>{children}</Box>
+              <Box className={`${classes.flexColumn} ${classes.overflowAuto}`}>
+                {children}
+              </Box>
             </Allotment.Pane>
             {hasRightPane && (
               <Allotment.Pane
@@ -148,7 +151,9 @@ export const ThreePaneLayout: React.FunctionComponent<ThreePaneLayoutProps> = ({
                 minSize={200}
                 preferredSize={400}
               >
-                <Box className={`${classes.flexColumn} ${classes.overflowAuto}`}>
+                <Box
+                  className={`${classes.flexColumn} ${classes.overflowAuto}`}
+                >
                   <PanelContainer
                     showTabs={showTabs}
                     emptyMessage={emptyPanelMessage}

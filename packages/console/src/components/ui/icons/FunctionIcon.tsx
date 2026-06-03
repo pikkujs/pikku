@@ -1,6 +1,4 @@
-export const FunctionIcon: React.FunctionComponent<{ size?: number }> = ({
-  size = 40,
-}) => {
+export const FunctionIcon: React.FC<{ size?: number }> = ({ size = 40 }) => {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" fill="currentColor">
       <path d="M24,25.9a14.7,14.7,0,0,1,3.5-9.6,2,2,0,0,0-3-2.6A18.2,18.2,0,0,0,20,25.9a18.4,18.4,0,0,0,4.5,12.5A2.2,2.2,0,0,0,26,39a2.4,2.4,0,0,0,1.4-.5,2.2,2.2,0,0,0,.1-2.9A14.2,14.2,0,0,1,24,25.9Z" />

@@ -12,7 +12,7 @@ const TABS = [
   { value: 'variables', label: 'Variables' },
 ]
 
-export const ConfigPage: React.FunctionComponent = () => {
+export const ConfigPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = searchParams.get('tab') || 'secrets'
 

@@ -15,7 +15,7 @@ interface FilterNodeData {
 
 type HighlightType = 'focused' | 'referenced' | null
 
-export const FilterNode: React.FunctionComponent<NodeProps<FilterNodeData>> = ({
+export const FilterNode: React.FC<NodeProps<FilterNodeData>> = ({
   data,
   id,
 }) => {

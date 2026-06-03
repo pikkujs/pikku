@@ -1,7 +1,7 @@
 import React from 'react'
 import { BaseEdge, EdgeLabelRenderer, type EdgeProps } from 'reactflow'
 
-export const ElkEdge: React.FunctionComponent<EdgeProps> = ({
+export const ElkEdge: React.FC<EdgeProps> = ({
   id,
   sourceX,
   sourceY,

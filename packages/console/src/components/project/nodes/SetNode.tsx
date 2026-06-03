@@ -13,10 +13,7 @@ interface SetNodeData {
 
 type HighlightType = 'focused' | 'referenced' | null
 
-export const SetNode: React.FunctionComponent<NodeProps<SetNodeData>> = ({
-  data,
-  id,
-}) => {
+export const SetNode: React.FC<NodeProps<SetNodeData>> = ({ data, id }) => {
   const { openWorkflowStep } = usePanelContext()
   const workflowContext = useWorkflowContextSafe()
 

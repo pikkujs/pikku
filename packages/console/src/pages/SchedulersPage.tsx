@@ -15,7 +15,7 @@ interface SchedulerItem {
   data: any
 }
 
-const SchedulersTable: React.FunctionComponent<{
+const SchedulersTable: React.FC<{
   items: SchedulerItem[]
   loading?: boolean
 }> = ({ items, loading }) => {
@@ -74,7 +74,7 @@ const SchedulersTable: React.FunctionComponent<{
   )
 }
 
-export const SchedulersPage: React.FunctionComponent = () => {
+export const SchedulersPage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
 
   const items = useMemo((): SchedulerItem[] => {

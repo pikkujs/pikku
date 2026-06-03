@@ -21,7 +21,7 @@ interface HttpTabbedPanelProps {
   metadata: any
 }
 
-export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
+export const HttpTabbedPanel: React.FC<HttpTabbedPanelProps> = ({
   wireId,
   metadata,
 }) => {
@@ -65,12 +65,8 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
           </Text>
         </Box>
         <Group gap={6}>
-          {metadata?.auth !== false && (
-            <PikkuBadge type="flag" flag="auth" />
-          )}
-          {metadata?.sse && (
-            <PikkuBadge type="flag" flag="sse" />
-          )}
+          {metadata?.auth !== false && <PikkuBadge type="flag" flag="auth" />}
+          {metadata?.sse && <PikkuBadge type="flag" flag="sse" />}
           {metadata?.tags?.map((tag: string) => (
             <TagBadge key={tag}>{tag}</TagBadge>
           ))}
@@ -100,7 +96,9 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
 
           {metadata?.sse && (
             <MetaRow label="transport">
-              <Text size="sm" c="gray.4">SSE stream</Text>
+              <Text size="sm" c="gray.4">
+                SSE stream
+              </Text>
             </MetaRow>
           )}
 
@@ -154,22 +152,18 @@ export const HttpTabbedPanel: React.FunctionComponent<HttpTabbedPanelProps> = ({
           )}
         </Box>
 
-        <Box className={`${classes.flexGrow} ${classes.flexColumn} ${classes.overflowHidden}`}>
+        <Box
+          className={`${classes.flexGrow} ${classes.flexColumn} ${classes.overflowHidden}`}
+        >
           <Tabs
             defaultValue="pikku-fetch"
             className={classes.flexColumn}
             style={{ minHeight: 0 }}
           >
             <Tabs.List>
-              <Tabs.Tab value="pikku-fetch">
-                pikku-fetch
-              </Tabs.Tab>
-              <Tabs.Tab value="fetch">
-                fetch
-              </Tabs.Tab>
-              <Tabs.Tab value="curl">
-                curl
-              </Tabs.Tab>
+              <Tabs.Tab value="pikku-fetch">pikku-fetch</Tabs.Tab>
+              <Tabs.Tab value="fetch">fetch</Tabs.Tab>
+              <Tabs.Tab value="curl">curl</Tabs.Tab>
             </Tabs.List>
             <Tabs.Panel
               value="pikku-fetch"

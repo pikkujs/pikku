@@ -27,7 +27,7 @@ const COLUMNS = [
   },
 ]
 
-export const ServicesTab: React.FunctionComponent = () => {
+export const ServicesTab: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
 
   const services = useMemo((): ServiceItem[] => {

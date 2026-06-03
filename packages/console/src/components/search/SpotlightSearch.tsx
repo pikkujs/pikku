@@ -30,7 +30,7 @@ const TYPE_CONFIG: Record<
   agent: { icon: Bot, color: 'grape', href: '/agents' },
 }
 
-export const SpotlightSearch: React.FunctionComponent = () => {
+export const SpotlightSearch: React.FC = () => {
   const { meta } = usePikkuMeta()
   const navigate = useNavigate()
 

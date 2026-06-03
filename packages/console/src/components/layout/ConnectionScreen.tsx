@@ -12,15 +12,27 @@ import {
 import { AlertTriangle } from 'lucide-react'
 import { getServerUrl, setServerUrl } from '../../context/PikkuRpcProvider'
 
-function getErrorGuidance(error: string, url: string): { title: string; hint: string } {
+function getErrorGuidance(
+  error: string,
+  url: string
+): { title: string; hint: string } {
   const lower = error.toLowerCase()
-  if (lower.includes('fetch') || lower.includes('network') || lower.includes('econnrefused') || lower.includes('failed to fetch')) {
+  if (
+    lower.includes('fetch') ||
+    lower.includes('network') ||
+    lower.includes('econnrefused') ||
+    lower.includes('failed to fetch')
+  ) {
     return {
       title: 'Connection refused',
       hint: `Make sure your Pikku server is running at ${url}`,
     }
   }
-  if (lower.includes('404') || lower.includes('not found') || lower.includes('rpc function')) {
+  if (
+    lower.includes('404') ||
+    lower.includes('not found') ||
+    lower.includes('rpc function')
+  ) {
     return {
       title: 'Console addon not found',
       hint: 'The @pikku/addon-console package may not be installed. Add it to your project and run pikku to generate the bootstrap.',
@@ -44,9 +56,7 @@ function getErrorGuidance(error: string, url: string): { title: string; hint: st
   }
 }
 
-export const ConnectionScreen: React.FunctionComponent<{ error: string }> = ({
-  error,
-}) => {
+export const ConnectionScreen: React.FC<{ error: string }> = ({ error }) => {
   const [url, setUrl] = useState(getServerUrl)
   const guidance = getErrorGuidance(error, url)
 

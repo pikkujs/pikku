@@ -4,7 +4,7 @@ import { useSchema } from '../../../../hooks/useWirings'
 import { SchemaViewer } from '../../../ui/SchemaViewer'
 import { SectionLabel } from './SectionLabel'
 
-export const SchemaSection: React.FunctionComponent<{
+export const SchemaSection: React.FC<{
   label?: string
   schemaName?: string | null
 }> = ({ label, schemaName }) => {

@@ -20,7 +20,7 @@ interface ProjectSecretsProps {
   installed?: boolean
 }
 
-export const ProjectSecrets: React.FunctionComponent<ProjectSecretsProps> = ({
+export const ProjectSecrets: React.FC<ProjectSecretsProps> = ({
   secrets,
   loading,
   installed = true,

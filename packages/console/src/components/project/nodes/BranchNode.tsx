@@ -15,7 +15,7 @@ interface BranchNodeData {
 
 type HighlightType = 'focused' | 'referenced' | null
 
-export const BranchNode: React.FunctionComponent<NodeProps<BranchNodeData>> = ({
+export const BranchNode: React.FC<NodeProps<BranchNodeData>> = ({
   data,
   id,
 }) => {

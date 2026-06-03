@@ -13,9 +13,10 @@ interface ParallelNodeData {
 
 type HighlightType = 'focused' | 'referenced' | null
 
-export const ParallelNode: React.FunctionComponent<
-  NodeProps<ParallelNodeData>
-> = ({ data, id }) => {
+export const ParallelNode: React.FC<NodeProps<ParallelNodeData>> = ({
+  data,
+  id,
+}) => {
   const { openWorkflowStep } = usePanelContext()
   const workflowContext = useWorkflowContextSafe()
 

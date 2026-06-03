@@ -8,7 +8,7 @@ interface CopyableCodeProps {
   language?: string
 }
 
-export const CopyableCode: React.FunctionComponent<CopyableCodeProps> = ({
+export const CopyableCode: React.FC<CopyableCodeProps> = ({
   code,
   label,
   language = 'typescript',
@@ -20,7 +20,12 @@ export const CopyableCode: React.FunctionComponent<CopyableCodeProps> = ({
           {label}
         </Text>
       )}
-      <CodeHighlight code={code} language={language} copyLabel="Copy" copiedLabel="Copied" />
+      <CodeHighlight
+        code={code}
+        language={language}
+        copyLabel="Copy"
+        copiedLabel="Copied"
+      />
     </Box>
   )
 }

@@ -17,7 +17,7 @@ interface SchedulerWireDetailsFormProps {
   metadata: any
 }
 
-export const SchedulerWireDetailsForm: React.FunctionComponent<
+export const SchedulerWireDetailsForm: React.FC<
   SchedulerWireDetailsFormProps
 > = ({ wireType, wireId, metadata }) => {
   const taskName = wireId
@@ -78,7 +78,10 @@ export const SchedulerWireDetailsForm: React.FunctionComponent<
         </Tabs.Panel>
 
         <Tabs.Panel value="meta" pt="md" px="md">
-          <CodeHighlight code={JSON.stringify(metadata, null, 2)} language="json" />
+          <CodeHighlight
+            code={JSON.stringify(metadata, null, 2)}
+            language="json"
+          />
         </Tabs.Panel>
       </Tabs>
     </Box>

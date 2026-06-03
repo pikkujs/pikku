@@ -22,7 +22,7 @@ interface FunctionNodeProps extends NodeProps<FunctionNodeData> {
 
 type HighlightType = 'focused' | 'referenced' | null
 
-export const FunctionNode: React.FunctionComponent<FunctionNodeProps> = ({
+export const FunctionNode: React.FC<FunctionNodeProps> = ({
   data,
   id,
   inFlow = true,

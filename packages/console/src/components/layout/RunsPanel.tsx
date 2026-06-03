@@ -49,7 +49,7 @@ interface RunsPanelProps {
   onDelete?: (id: string) => void
 }
 
-const RunRow: React.FunctionComponent<{
+const RunRow: React.FC<{
   run: RunItem
   selected: boolean
   onSelect: () => void
@@ -154,7 +154,7 @@ const RunRow: React.FunctionComponent<{
   )
 }
 
-export const RunsPanel: React.FunctionComponent<RunsPanelProps> = ({
+export const RunsPanel: React.FC<RunsPanelProps> = ({
   runs,
   selectedId,
   onSelect,

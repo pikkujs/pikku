@@ -2,13 +2,10 @@ import { createContext, useContext } from 'react'
 
 const ConsoleEditableContext = createContext<boolean>(true)
 
-export function ConsoleEditableProvider({
-  editable,
-  children,
-}: {
+export const ConsoleEditableProvider: React.FC<{
   editable: boolean
   children: React.ReactNode
-}) {
+}> = ({ editable, children }) => {
   return (
     <ConsoleEditableContext.Provider value={editable}>
       {children}

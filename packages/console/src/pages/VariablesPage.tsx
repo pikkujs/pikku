@@ -4,7 +4,7 @@ import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ProjectVariables } from '../components/project/ProjectVariables'
 
-const VariablesPageContent: React.FunctionComponent = () => {
+const VariablesPageContent: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
 
   const variables = useMemo(() => {
@@ -27,7 +27,7 @@ const VariablesPageContent: React.FunctionComponent = () => {
   )
 }
 
-export const VariablesPage: React.FunctionComponent = () => {
+export const VariablesPage: React.FC = () => {
   return (
     <PanelProvider>
       <VariablesPageContent />

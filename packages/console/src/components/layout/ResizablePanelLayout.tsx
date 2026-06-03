@@ -14,9 +14,7 @@ interface ResizablePanelLayoutProps {
   hidePanel?: boolean
 }
 
-export const ResizablePanelLayout: React.FunctionComponent<
-  ResizablePanelLayoutProps
-> = ({
+export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
   children,
   header,
   minSize = 267,
@@ -37,7 +35,9 @@ export const ResizablePanelLayout: React.FunctionComponent<
           defaultSizes={[840, 267]}
         >
           <Allotment.Pane>
-            <Box className={`${classes.flexColumn} ${classes.overflowAuto}`}>{children}</Box>
+            <Box className={`${classes.flexColumn} ${classes.overflowAuto}`}>
+              {children}
+            </Box>
           </Allotment.Pane>
           <Allotment.Pane
             visible={showPanel}

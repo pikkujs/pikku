@@ -29,7 +29,7 @@ interface BaseNodeProps {
   inFlow?: boolean
 }
 
-export const BaseNode: React.FunctionComponent<BaseNodeProps> = ({
+export const BaseNode: React.FC<BaseNodeProps> = ({
   data,
   hasInput = false,
   hasOutput = true,

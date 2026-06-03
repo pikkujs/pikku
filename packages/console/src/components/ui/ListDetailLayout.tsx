@@ -12,7 +12,7 @@ export interface ListDetailLayoutProps {
   height?: string
 }
 
-export const ListDetailLayout: React.FunctionComponent<ListDetailLayoutProps> = ({
+export const ListDetailLayout: React.FC<ListDetailLayoutProps> = ({
   list,
   detail,
   emptyMessage = 'Select an item',
@@ -21,10 +21,23 @@ export const ListDetailLayout: React.FunctionComponent<ListDetailLayoutProps> = 
   listWidth,
   height,
 }) => (
-  <Box className={classes.listDetailContainer} style={height ? { height } : undefined}>
+  <Box
+    className={classes.listDetailContainer}
+    style={height ? { height } : undefined}
+  >
     <Box
       className={listWidth ? classes.listPaneFixed : classes.listPaneFlex}
-      style={listWidth ? { width: listWidth, minWidth: typeof listWidth === 'number' ? Math.round(listWidth * 0.78) : undefined } : undefined}
+      style={
+        listWidth
+          ? {
+              width: listWidth,
+              minWidth:
+                typeof listWidth === 'number'
+                  ? Math.round(listWidth * 0.78)
+                  : undefined,
+            }
+          : undefined
+      }
     >
       {list}
     </Box>

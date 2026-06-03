@@ -1,11 +1,5 @@
 import React, { useMemo } from 'react'
-import {
-  Box,
-  Stack,
-  Group,
-  Paper,
-  Divider,
-} from '@mantine/core'
+import { Box, Stack, Group, Paper, Divider } from '@mantine/core'
 import { Paintbrush } from 'lucide-react'
 import type { CLIMeta, CLICommandMeta } from '@pikku/core/cli'
 import { FunctionLink } from '../project/panels/shared/FunctionLink'
@@ -44,7 +38,7 @@ interface CliHelpViewProps {
   onNavigate: (path: string[]) => void
 }
 
-export const CliHelpView: React.FunctionComponent<CliHelpViewProps> = ({
+export const CliHelpView: React.FC<CliHelpViewProps> = ({
   programId,
   cliMeta,
   cliRenderers,

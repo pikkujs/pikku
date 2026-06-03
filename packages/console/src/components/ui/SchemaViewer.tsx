@@ -32,7 +32,7 @@ const getNotes = (prop: any): string | null => {
   return null
 }
 
-const PropertyRow: React.FunctionComponent<{
+const PropertyRow: React.FC<{
   name: string
   prop: any
   required: boolean
@@ -99,7 +99,7 @@ const PropertyRow: React.FunctionComponent<{
   )
 }
 
-const PropertyRows: React.FunctionComponent<{
+const PropertyRows: React.FC<{
   properties: Record<string, any>
   required: string[]
   depth: number
@@ -117,9 +117,7 @@ const PropertyRows: React.FunctionComponent<{
   </>
 )
 
-export const SchemaViewer: React.FunctionComponent<SchemaViewerProps> = ({
-  schema,
-}) => {
+export const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema }) => {
   if (!schema || typeof schema !== 'object') {
     return (
       <Text c="dimmed" size="sm">
@@ -136,14 +134,22 @@ export const SchemaViewer: React.FunctionComponent<SchemaViewerProps> = ({
 
   let resolvedSchema = schema
   if (schema.type === 'array' && schema.items) {
-    const items = schema.items.$ref ? resolveRef(schema.items.$ref) : schema.items
+    const items = schema.items.$ref
+      ? resolveRef(schema.items.$ref)
+      : schema.items
     if (items) resolvedSchema = items
   }
 
-  const properties = resolvedSchema.properties || (resolvedSchema.type ? null : resolvedSchema)
+  const properties =
+    resolvedSchema.properties || (resolvedSchema.type ? null : resolvedSchema)
   if (!properties) {
     return (
-      <Badge size="sm" variant="light" color={getColor(resolvedSchema)} tt="none">
+      <Badge
+        size="sm"
+        variant="light"
+        color={getColor(resolvedSchema)}
+        tt="none"
+      >
         {getTypeLabel(schema)}
       </Badge>
     )

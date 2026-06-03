@@ -4,7 +4,7 @@ import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ProjectSecrets } from '../components/project/ProjectSecrets'
 
-const SecretsPageContent: React.FunctionComponent = () => {
+const SecretsPageContent: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
 
   const secrets = useMemo(() => {
@@ -28,7 +28,7 @@ const SecretsPageContent: React.FunctionComponent = () => {
   )
 }
 
-export const SecretsPage: React.FunctionComponent = () => {
+export const SecretsPage: React.FC = () => {
   return (
     <PanelProvider>
       <SecretsPageContent />

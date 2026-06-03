@@ -15,7 +15,7 @@ const TABS = [
   { value: 'triggers', label: 'Triggers' },
 ]
 
-export const JobsPage: React.FunctionComponent = () => {
+export const JobsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = searchParams.get('tab') || 'schedulers'
 

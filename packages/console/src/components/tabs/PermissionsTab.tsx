@@ -12,7 +12,7 @@ interface PermissionItem {
   data: any
 }
 
-export const PermissionsTab: React.FunctionComponent = () => {
+export const PermissionsTab: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
   const { openPermission } = usePanelContext()
 

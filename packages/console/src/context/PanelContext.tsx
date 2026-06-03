@@ -87,9 +87,7 @@ interface PanelProviderProps {
   children: React.ReactNode
 }
 
-export const PanelProvider: React.FunctionComponent<PanelProviderProps> = ({
-  children,
-}) => {
+export const PanelProvider: React.FC<PanelProviderProps> = ({ children }) => {
   const [panels, setPanels] = useState<Map<string, Panel>>(new Map())
   const [activePanel, setActivePanelState] = useState<string | null>(null)
 

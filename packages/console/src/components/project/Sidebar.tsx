@@ -132,7 +132,9 @@ export interface SidebarBranding {
   homeHref: string
 }
 
-const consoleLogo = (import.meta.env.VITE_CONSOLE_LOGO || 'pikku-console-logo.png').replace(/^\//, '')
+const consoleLogo = (
+  import.meta.env.VITE_CONSOLE_LOGO || 'pikku-console-logo.png'
+).replace(/^\//, '')
 
 const DEFAULT_BRANDING: SidebarBranding = {
   logo: (
@@ -141,7 +143,11 @@ const DEFAULT_BRANDING: SidebarBranding = {
       alt={import.meta.env.VITE_CONSOLE_TITLE || 'Pikku Console'}
       width={28}
       height={28}
-      style={import.meta.env.VITE_CONSOLE_LOGO_INVERT === 'true' ? { filter: 'brightness(0) invert(1)' } : undefined}
+      style={
+        import.meta.env.VITE_CONSOLE_LOGO_INVERT === 'true'
+          ? { filter: 'brightness(0) invert(1)' }
+          : undefined
+      }
     />
   ),
   title: import.meta.env.VITE_CONSOLE_TITLE || 'Pikku Console',
@@ -161,7 +167,7 @@ const EXPANDED_WIDTH = 210
 export const SIDEBAR_COLLAPSED_WIDTH = COLLAPSED_WIDTH
 export const SIDEBAR_EXPANDED_WIDTH = EXPANDED_WIDTH
 
-export const Sidebar: React.FunctionComponent<SidebarProps> = ({
+export const Sidebar: React.FC<SidebarProps> = ({
   sections = DEFAULT_NAV_SECTIONS,
   branding = DEFAULT_BRANDING,
   footer,
@@ -307,7 +313,11 @@ export const Sidebar: React.FunctionComponent<SidebarProps> = ({
       <Box className={css.noShrink}>
         <Divider mx="sm" />
         <Stack gap={2} px={6} py={4}>
-          <Tooltip label="Refresh metadata" position="right" disabled={!collapsed}>
+          <Tooltip
+            label="Refresh metadata"
+            position="right"
+            disabled={!collapsed}
+          >
             <UnstyledButton
               onClick={() => refresh()}
               disabled={metaLoading}
@@ -323,11 +333,22 @@ export const Sidebar: React.FunctionComponent<SidebarProps> = ({
                 opacity: metaLoading ? 0.5 : 1,
               }}
             >
-              <RefreshCw size={18} style={metaLoading ? { animation: 'spin 1s linear infinite' } : undefined} />
+              <RefreshCw
+                size={18}
+                style={
+                  metaLoading
+                    ? { animation: 'spin 1s linear infinite' }
+                    : undefined
+                }
+              />
               {!collapsed && <Text size="sm">Refresh</Text>}
             </UnstyledButton>
           </Tooltip>
-          <Tooltip label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} position="right" disabled={!collapsed}>
+          <Tooltip
+            label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            position="right"
+            disabled={!collapsed}
+          >
             <UnstyledButton
               onClick={() => setCollapsed(!collapsed)}
               px={collapsed ? 0 : 10}
@@ -341,7 +362,11 @@ export const Sidebar: React.FunctionComponent<SidebarProps> = ({
                 color: 'var(--mantine-color-dimmed)',
               }}
             >
-              {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+              {collapsed ? (
+                <PanelLeftOpen size={18} />
+              ) : (
+                <PanelLeftClose size={18} />
+              )}
               {!collapsed && <Text size="sm">Collapse</Text>}
             </UnstyledButton>
           </Tooltip>

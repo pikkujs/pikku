@@ -16,7 +16,7 @@ interface ArrayPredicateNodeData {
 
 type HighlightType = 'focused' | 'referenced' | null
 
-export const ArrayPredicateNode: React.FunctionComponent<
+export const ArrayPredicateNode: React.FC<
   NodeProps<ArrayPredicateNodeData>
 > = ({ data, id }) => {
   const { openWorkflowStep } = usePanelContext()

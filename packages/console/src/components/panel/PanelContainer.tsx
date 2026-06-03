@@ -18,7 +18,7 @@ interface PanelContainerProps {
   emptyMessage?: string
 }
 
-export const PanelContainer: React.FunctionComponent<PanelContainerProps> = ({
+export const PanelContainer: React.FC<PanelContainerProps> = ({
   showTabs = true,
   emptyMessage,
 }) => {
@@ -47,7 +47,10 @@ export const PanelContainer: React.FunctionComponent<PanelContainerProps> = ({
   }
 
   return (
-    <Stack gap={0} className={`${classes.flexColumn} ${classes.overflowHidden}`}>
+    <Stack
+      gap={0}
+      className={`${classes.flexColumn} ${classes.overflowHidden}`}
+    >
       {showTabs && (
         <Box
           style={{

@@ -2,7 +2,7 @@ import React, { Suspense } from 'react'
 import { Center, Loader } from '@mantine/core'
 import { ChannelTabContent } from './ChannelTabContent'
 
-export const ChannelsTab: React.FunctionComponent = () => {
+export const ChannelsTab: React.FC = () => {
   return (
     <Suspense
       fallback={

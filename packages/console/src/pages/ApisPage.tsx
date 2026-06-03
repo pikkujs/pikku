@@ -17,7 +17,7 @@ const TABS = [
   { value: 'cli', label: 'CLI' },
 ]
 
-const ApisPageInner: React.FunctionComponent = () => {
+const ApisPageInner: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = searchParams.get('tab') || 'http'
 
@@ -57,7 +57,7 @@ const ApisPageInner: React.FunctionComponent = () => {
   )
 }
 
-export const ApisPage: React.FunctionComponent = () => {
+export const ApisPage: React.FC = () => {
   return (
     <Suspense
       fallback={

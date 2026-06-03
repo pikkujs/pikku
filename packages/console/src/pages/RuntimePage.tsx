@@ -14,7 +14,7 @@ const TABS = [
   { value: 'permissions', label: 'Permissions' },
 ]
 
-export const RuntimePage: React.FunctionComponent = () => {
+export const RuntimePage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = searchParams.get('tab') || 'services'
 

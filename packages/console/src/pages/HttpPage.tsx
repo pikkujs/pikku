@@ -9,7 +9,7 @@ import { DetailPageHeader } from '../components/layout/DetailPageHeader'
 import { TableListPage } from '../components/layout/TableListPage'
 import { PikkuBadge } from '../components/ui/PikkuBadge'
 
-const HttpTable: React.FunctionComponent<{
+const HttpTable: React.FC<{
   routes: any[]
   loading?: boolean
 }> = ({ routes, loading }) => {
@@ -78,7 +78,7 @@ const HttpTable: React.FunctionComponent<{
   )
 }
 
-export const HttpPage: React.FunctionComponent = () => {
+export const HttpPage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
 
   const routes = useMemo(() => {

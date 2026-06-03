@@ -73,9 +73,7 @@ const filterTreeNode = (node: TreeNode, query: string): TreeNode | null => {
   return null
 }
 
-export const ListExplorerPage: React.FunctionComponent<
-  ListExplorerPageProps
-> = ({
+export const ListExplorerPage: React.FC<ListExplorerPageProps> = ({
   header,
   title,
   totalCount,
@@ -142,7 +140,10 @@ export const ListExplorerPage: React.FunctionComponent<
               )}
             </Group>
           </Box>
-          <Box className={`${classes.flexGrow} ${classes.overflowHidden}`} style={{ position: 'relative' }}>
+          <Box
+            className={`${classes.flexGrow} ${classes.overflowHidden}`}
+            style={{ position: 'relative' }}
+          >
             {filteredData.length === 0 ? (
               <Box p="xl">
                 <Text c="dimmed" ta="center">

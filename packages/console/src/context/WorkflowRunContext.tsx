@@ -72,9 +72,12 @@ interface WorkflowRunProviderProps {
   workflowNodes?: Record<string, any>
 }
 
-export const WorkflowRunProvider: React.FunctionComponent<
-  WorkflowRunProviderProps
-> = ({ children, workflowName, currentGraphHash, workflowNodes }) => {
+export const WorkflowRunProvider: React.FC<WorkflowRunProviderProps> = ({
+  children,
+  workflowName,
+  currentGraphHash,
+  workflowNodes,
+}) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const initialRunId = searchParams.get('runId')
   const [selectedRunId, setSelectedRunIdState] = useState<string | null>(

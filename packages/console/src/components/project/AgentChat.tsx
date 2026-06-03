@@ -3,8 +3,6 @@ import {
   Stack,
   Box,
   Text,
-  Textarea,
-  ActionIcon,
   ScrollArea,
   Paper,
   Group,
@@ -33,7 +31,7 @@ import {
   type MissingCredentialPayload,
 } from '@pikku/assistant-ui'
 import {
-  Send,
+  ArrowUp,
   ChevronDown,
   ChevronRight,
   Wrench,
@@ -41,6 +39,7 @@ import {
   User,
   ShieldAlert,
 } from 'lucide-react'
+import { ComposerShell, composerStyles } from '../ui/ComposerShell'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { PikkuBadge } from '../ui/PikkuBadge'
@@ -48,7 +47,7 @@ import { useAgentPlayground } from '../../context/AgentPlaygroundContext'
 import { getServerUrl } from '../../context/PikkuRpcProvider'
 import classes from '../ui/console.module.css'
 
-const ToolCallDisplay: React.FunctionComponent<{
+const ToolCallDisplay: React.FC<{
   toolCallId: string
   toolName: string
   args: Record<string, unknown>
@@ -62,12 +61,23 @@ const ToolCallDisplay: React.FunctionComponent<{
 
   const credentialPayload = (() => {
     if (!result) return null
-    const r = typeof result === 'string' ? (() => { try { return JSON.parse(result) } catch { return null } })() : result
-    return r && typeof r === 'object' && (r as any).__credentialRequired ? r as {
-      credentialName: string
-      credentialType: 'oauth2' | 'apikey'
-      connectUrl?: string
-    } : null
+    const r =
+      typeof result === 'string'
+        ? (() => {
+            try {
+              return JSON.parse(result)
+            } catch {
+              return null
+            }
+          })()
+        : result
+    return r && typeof r === 'object' && (r as any).__credentialRequired
+      ? (r as {
+          credentialName: string
+          credentialType: 'oauth2' | 'apikey'
+          connectUrl?: string
+        })
+      : null
   })()
 
   const pendingCredential = pendingApprovals.find(
@@ -174,7 +184,11 @@ const ToolCallDisplay: React.FunctionComponent<{
 
     const handleConnect = () => {
       if (cred?.credentialType === 'oauth2' && connectUrl) {
-        const popup = window.open(connectUrl, 'oauth-connect', 'width=600,height=700')
+        const popup = window.open(
+          connectUrl,
+          'oauth-connect',
+          'width=600,height=700'
+        )
         oauthTimerRef.current = setInterval(() => {
           if (!popup || popup.closed) {
             clearInterval(oauthTimerRef.current!)
@@ -215,8 +229,9 @@ const ToolCallDisplay: React.FunctionComponent<{
           </PikkuBadge>
         </Group>
         <Text size="sm" mb="xs">
-          This action requires the <strong>{cred?.credentialName ?? 'OAuth'}</strong>{' '}
-          credential to be connected.
+          This action requires the{' '}
+          <strong>{cred?.credentialName ?? 'OAuth'}</strong> credential to be
+          connected.
         </Text>
         <Group gap="xs">
           <Button size="xs" variant="light" onClick={handleConnect}>
@@ -305,7 +320,7 @@ const ToolCallDisplay: React.FunctionComponent<{
   )
 }
 
-const UserMessage: React.FunctionComponent = () => (
+const UserMessage: React.FC = () => (
   <Box className={classes.chatMessageRight}>
     <Box maw="80%">
       <Group gap={6} mb={4}>
@@ -333,7 +348,7 @@ const UserMessage: React.FunctionComponent = () => (
   </Box>
 )
 
-const AssistantMessage: React.FunctionComponent = () => (
+const AssistantMessage: React.FC = () => (
   <Box data-testid="assistant-block" className={classes.chatMessageLeft}>
     <Box maw="80%">
       <Group gap={6} mb={4}>
@@ -342,11 +357,7 @@ const AssistantMessage: React.FunctionComponent = () => (
           Assistant
         </Text>
       </Group>
-      <Paper
-        p="sm"
-        radius="md"
-        bg="var(--mantine-color-default-hover)"
-      >
+      <Paper p="sm" radius="md" bg="var(--mantine-color-default-hover)">
         <MessagePrimitive.Content
           components={{
             Text: ({ text }) => (
@@ -386,62 +397,46 @@ const AssistantMessage: React.FunctionComponent = () => (
   </Box>
 )
 
-const AgentComposer: React.FunctionComponent<{ disabled?: boolean }> = ({
-  disabled,
-}) => (
+const AgentComposer: React.FC<{ disabled?: boolean }> = ({ disabled }) => (
   <Box py="sm" pb="md">
     <Container size="md">
-      <ComposerPrimitive.Root>
-        <Paper
-          radius="md"
-          withBorder
-          style={{
-            overflow: 'hidden',
-            ...(disabled
-              ? { opacity: 0.5, pointerEvents: 'none' as const }
-              : {}),
-          }}
-        >
-          <Group gap={0} align="flex-end" wrap="nowrap" px="lg" py={6}>
-            <ComposerPrimitive.Input asChild>
-              <Textarea
-                placeholder={
-                  disabled
-                    ? 'Respond to approval request above...'
-                    : 'Message...'
-                }
-                autosize
-                minRows={2}
-                maxRows={6}
-                variant="unstyled"
-                disabled={disabled}
-                style={{ flex: 1 }}
-                styles={{ input: { padding: '4px 0' } }}
-              />
-            </ComposerPrimitive.Input>
-            <ComposerPrimitive.Send asChild>
-              <ActionIcon
-                variant="filled"
-                size={28}
-                radius="xl"
-                mb={2}
-                disabled={disabled}
-              >
-                <Send size={14} />
-              </ActionIcon>
-            </ComposerPrimitive.Send>
-          </Group>
-        </Paper>
-      </ComposerPrimitive.Root>
+      <ComposerShell
+        component={ComposerPrimitive.Root}
+        input={
+          <ComposerPrimitive.Input
+            className={composerStyles.composerInput}
+            placeholder={
+              disabled ? 'Respond to approval request above...' : 'Message...'
+            }
+            rows={1}
+            disabled={disabled ?? false}
+          />
+        }
+        send={
+          <ComposerPrimitive.Send
+            className={composerStyles.sendButton}
+            disabled={disabled ?? false}
+          >
+            <ArrowUp size={15} />
+          </ComposerPrimitive.Send>
+        }
+      />
     </Container>
   </Box>
 )
 
-export const AgentChat: React.FunctionComponent<{
+export const AgentChat: React.FC<{
   streaming?: boolean
 }> = ({ streaming = false }) => {
-  const { agentId, threadId, setThreadId, refetchThreads, dbMessages, model, temperature } =
-    useAgentPlayground()
+  const {
+    agentId,
+    threadId,
+    setThreadId,
+    refetchThreads,
+    dbMessages,
+    model,
+    temperature,
+  } = useAgentPlayground()
 
   const onStreamDone = useCallback(() => {
     refetchThreads()
@@ -472,45 +467,49 @@ export const AgentChat: React.FunctionComponent<{
 
   return (
     <PikkuApprovalContext.Provider value={{ pendingApprovals, handleApproval }}>
-    <AssistantRuntimeProvider runtime={runtime}>
-      <Stack
-        gap={0}
-        className={classes.flexColumn}
-      >
-        <ThreadPrimitive.Root style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-          <ThreadPrimitive.Viewport asChild>
-            <ScrollArea style={{ flex: 1, minHeight: 0 }} type="auto">
-              <Container size="md" p="md" pb="xl">
-                <Stack gap="md">
-                  <ThreadPrimitive.Empty>
-                    <Center style={{ flex: 1, minHeight: 300 }}>
-                      <Stack align="center" gap="xs">
-                        <Bot
-                          size={40}
-                          color="var(--mantine-color-default-border)"
-                        />
-                        <Text c="dimmed" ta="center">
-                          {threadId
-                            ? 'Send a message to start the conversation.'
-                            : 'Start a new conversation.'}
-                        </Text>
-                      </Stack>
-                    </Center>
-                  </ThreadPrimitive.Empty>
-                  <ThreadPrimitive.Messages
-                    components={{
-                      UserMessage,
-                      AssistantMessage,
-                    }}
-                  />
-                </Stack>
-              </Container>
-            </ScrollArea>
-          </ThreadPrimitive.Viewport>
-          <AgentComposer disabled={isAwaitingApproval} />
-        </ThreadPrimitive.Root>
-      </Stack>
-    </AssistantRuntimeProvider>
+      <AssistantRuntimeProvider runtime={runtime}>
+        <Stack gap={0} className={classes.flexColumn}>
+          <ThreadPrimitive.Root
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              flex: 1,
+              minHeight: 0,
+            }}
+          >
+            <ThreadPrimitive.Viewport asChild>
+              <ScrollArea style={{ flex: 1, minHeight: 0 }} type="auto">
+                <Container size="md" p="md" pb="xl">
+                  <Stack gap="md">
+                    <ThreadPrimitive.Empty>
+                      <Center style={{ flex: 1, minHeight: 300 }}>
+                        <Stack align="center" gap="xs">
+                          <Bot
+                            size={40}
+                            color="var(--mantine-color-default-border)"
+                          />
+                          <Text c="dimmed" ta="center">
+                            {threadId
+                              ? 'Send a message to start the conversation.'
+                              : 'Start a new conversation.'}
+                          </Text>
+                        </Stack>
+                      </Center>
+                    </ThreadPrimitive.Empty>
+                    <ThreadPrimitive.Messages
+                      components={{
+                        UserMessage,
+                        AssistantMessage,
+                      }}
+                    />
+                  </Stack>
+                </Container>
+              </ScrollArea>
+            </ThreadPrimitive.Viewport>
+            <AgentComposer disabled={isAwaitingApproval} />
+          </ThreadPrimitive.Root>
+        </Stack>
+      </AssistantRuntimeProvider>
     </PikkuApprovalContext.Provider>
   )
 }

@@ -17,9 +17,10 @@ interface PackagePanelProps {
   metadata?: any
 }
 
-export const PackageConfiguration: React.FunctionComponent<
-  PackagePanelProps
-> = ({ packageId, metadata = {} }) => {
+export const PackageConfiguration: React.FC<PackagePanelProps> = ({
+  packageId,
+  metadata = {},
+}) => {
   const functions = metadata?.functions ?? {}
   const rpcWirings = metadata?.rpcWirings ?? {}
   const agents = metadata?.agents ?? {}

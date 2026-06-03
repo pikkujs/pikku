@@ -15,7 +15,7 @@ interface QueueItem {
   data: any
 }
 
-const QueuesTable: React.FunctionComponent<{
+const QueuesTable: React.FC<{
   items: QueueItem[]
   loading?: boolean
 }> = ({ items, loading }) => {
@@ -77,7 +77,7 @@ const QueuesTable: React.FunctionComponent<{
   )
 }
 
-export const QueuesPage: React.FunctionComponent = () => {
+export const QueuesPage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
 
   const items = useMemo((): QueueItem[] => {
