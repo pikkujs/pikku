@@ -1,3 +1,17 @@
+## 0.12.9
+
+### Patch Changes
+
+- 9060165: Agents now declare their model directly as `<provider>/<model>` (e.g. `openai/gpt-4o`). The `models`, `agentDefaults`, and `agentOverrides` config blocks have been removed.
+
+  **Migration:** replace any bare `model: 'alias'` values with the full provider-qualified form and remove those blocks from `pikku.config.json`.
+
+- 9060165: New `pikku tests init` scaffolds a Cucumber BDD test harness in your functions package. The companion `@pikku/cucumber` package provides the world, hooks, step library, and database utilities — wiring real Pikku RPC dispatch against an in-process SQLite copy seeded from migrations. `pikku tests coverage` generates per-function coverage summaries, surfaced in the console.
+- Updated dependencies [9060165]
+- Updated dependencies [9060165]
+- Updated dependencies [9060165]
+  - @pikku/core@0.12.21
+
 ## 0.12.0
 
 ## 0.12.8

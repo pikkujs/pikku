@@ -1,5 +1,11 @@
 # @pikku/deploy-cloudflare
 
+## 0.12.3
+
+### Patch Changes
+
+- 9060165: Workflow steps now support per-step `retries` and `retryDelay` configuration. Cloudflare deployments gain Workflow Durable Object bindings for graph-DSL workflows on Workers-for-Platforms, and the deploy bundle now boots cleanly on the Cloudflare Workers runtime.
+
 ## 0.12.2
 
 ### Patch Changes

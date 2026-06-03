@@ -1,3 +1,30 @@
+## 0.12.22
+
+### Patch Changes
+
+- 9060165: Agents now declare their model directly as `<provider>/<model>` (e.g. `openai/gpt-4o`). The `models`, `agentDefaults`, and `agentOverrides` config blocks have been removed.
+
+  **Migration:** replace any bare `model: 'alias'` values with the full provider-qualified form and remove those blocks from `pikku.config.json`.
+
+- 9060165: New `pikku db migrate`, `pikku db seed`, and `pikku db reset` commands manage your database using a built-in `node:sqlite` migrator with dev-injection support.
+- 9060165: The `pikku fabric` command group gains `deploy plan` and `deploy apply` subcommands (replacing `--dry-run`), plus new read-only commands: `deploy list`, `deploy units`, `status`, `errors`, and `db schema`. `deploy apply` prompts for confirmation before deploying; `--auto-apply` skips it.
+- 9060165: New `pikku tests init` scaffolds a Cucumber BDD test harness in your functions package. The companion `@pikku/cucumber` package provides the world, hooks, step library, and database utilities — wiring real Pikku RPC dispatch against an in-process SQLite copy seeded from migrations. `pikku tests coverage` generates per-function coverage summaries, surfaced in the console.
+- 9060165: The CLI is now available as a native binary via Homebrew (`brew install pikkujs/tap/pikku`) or as a direct download for macOS and Linux (arm64 + x64). On startup, pikku checks for newer versions and suggests an upgrade when one is available.
+- 9060165: New realtime events system: `pikku realtime` generates a typed `PikkuRealtime` client that pairs with `PikkuRPC`. A `/events` channel can be scaffolded to fan out server events to subscribers over SSE. `pikku dev` wires `LocalEventHubService` automatically so realtime works out of the box locally. The React provider exposes `PikkuRealtime` alongside `PikkuRPC`.
+- 9060165: Set `startServerFnsFile` in `clientFiles` to generate a typed `makeApi(): PikkuRPC` caller for use in TanStack Start loaders, actions, and components.
+- Updated dependencies [9060165]
+- Updated dependencies [9060165]
+- Updated dependencies [9060165]
+- Updated dependencies [9060165]
+- Updated dependencies [9060165]
+- Updated dependencies [9060165]
+  - @pikku/core@0.12.21
+  - @pikku/inspector@0.12.12
+  - @pikku/kysely-node-sqlite@0.12.1
+  - @pikku/fetch@0.12.2
+  - @pikku/node-http-server@0.12.1
+  - @pikku/deploy-cloudflare@0.12.3
+
 ## 0.12.21
 
 ### Patch Changes
