@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict'
 import { runLocalChannel } from './local-channel-runner.js'
 import { pikkuState, resetPikkuState } from '../../../pikku-state.js'
 import { wireChannel } from '../channel-runner.js'
+import { addHTTPMiddleware } from '../../http/http-runner.js'
 import type {
   HTTPMethod,
   PikkuHTTPRequest,
@@ -11,6 +12,7 @@ import type {
 } from '../../http/http.types.js'
 import type { SerializeOptions } from 'cookie'
 import { httpRouter } from '../../http/routers/http-router.js'
+import { pikkuMiddleware } from '../../../types/core.types.js'
 
 /**
  * Minimal stubs for dependencies that runChannel expects.
@@ -216,4 +218,65 @@ test('runChannel should close wire services once when channel closes', async () 
   result.close()
   await new Promise((resolve) => setTimeout(resolve, 0))
   assert.equal(closeCount, 1)
+})
+
+test('runChannel should run HTTP middleware on websocket upgrade and establish session', async () => {
+  resetPikkuState()
+  pikkuState(null, 'package', 'singletonServices', mockSingletonServices as any)
+  pikkuState(null, 'package', 'factories', {
+    createWireServices: mockCreateWireServices,
+  } as any)
+
+  addHTTPMiddleware(
+    '*',
+    [
+      pikkuMiddleware(async (_services, { setSession }, next) => {
+        setSession?.({ userId: 'user-1' } as any)
+        await next()
+      }),
+    ],
+    null
+  )
+
+  pikkuState(null, 'channel', 'meta', {
+    test: {
+      name: 'test',
+      route: '/test-channel',
+      messageWirings: {
+        action: {
+          ping: {
+            pikkuFuncId: 'test:ping',
+          },
+        },
+      },
+    },
+  } as any)
+  wireChannel({
+    name: 'test',
+    route: '/test-channel',
+    onMessageWiring: {
+      action: {
+        ping: {
+          func: async (_services, data) => data,
+        },
+      },
+    },
+  } as any)
+
+  httpRouter.initialize()
+
+  const result = await runLocalChannel({
+    channelId: 'test-channel-id',
+    request: new PikkuMockRequest('/test-channel', 'get'),
+    response: new PikkuMockResponse(),
+    route: '/test-channel',
+  })
+
+  assert.ok(result)
+  let sent: unknown
+  result.registerOnSend((message) => {
+    sent = message
+  })
+  await result.message(JSON.stringify({ action: 'ping' }))
+  assert.deepEqual(sent, { action: 'ping' })
 })

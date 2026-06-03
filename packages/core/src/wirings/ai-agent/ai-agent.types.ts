@@ -29,6 +29,15 @@ export type AIContentPart =
       mediaType: string
       filename?: string
     }
+  | {
+      type: 'data'
+      name: string
+      data: unknown
+    }
+  | {
+      type: 'generative-ui'
+      spec: unknown
+    }
 
 export interface AIToolCall {
   id: string
@@ -48,6 +57,7 @@ export interface AIMessage {
   content?: string | AIContentPart[]
   toolCalls?: AIToolCall[]
   toolResults?: AIToolResult[]
+  reasoningContent?: string
   createdAt: Date
 }
 
@@ -300,6 +310,19 @@ export type AIStreamEvent =
       session?: string
     }
   | {
+      type: 'data'
+      name: string
+      data: unknown
+      agent?: string
+      session?: string
+    }
+  | {
+      type: 'generative-ui'
+      spec: unknown
+      agent?: string
+      session?: string
+    }
+  | {
       type: 'suspended'
       reason: 'rpc-missing'
       missingRpcs: string[]
@@ -367,6 +390,7 @@ export interface AgentRunRow {
 export interface AgentRunService {
   listThreads(options?: {
     agentName?: string
+    resourceId?: string
     limit?: number
     offset?: number
   }): Promise<AIThread[]>

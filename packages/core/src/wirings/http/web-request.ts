@@ -7,11 +7,9 @@ import type { PikkuHTTPResponse } from './http.types.js'
  */
 export function toWebRequest(req: PikkuHTTPRequest, baseUrl?: string): Request {
   const proto = req.header('x-forwarded-proto') ?? 'http'
-  const host = req.header('x-forwarded-host') ?? req.header('host') ?? 'localhost'
-  const url = new URL(
-    req.path(),
-    baseUrl ?? `${proto}://${host}`
-  )
+  const host =
+    req.header('x-forwarded-host') ?? req.header('host') ?? 'localhost'
+  const url = new URL(req.path(), baseUrl ?? `${proto}://${host}`)
 
   const query = req.query()
   for (const [key, value] of Object.entries(query)) {
@@ -73,6 +71,37 @@ export function toWebRequest(req: PikkuHTTPRequest, baseUrl?: string): Request {
 
 const SKIP_RESPONSE_HEADERS = new Set(['content-length', 'transfer-encoding'])
 
+function collectSetCookieHeaders(webResponse: Response): string[] {
+  const seen = new Set<string>()
+  const values: string[] = []
+
+  const add = (cookie: string) => {
+    if (!cookie || seen.has(cookie)) {
+      return
+    }
+    seen.add(cookie)
+    values.push(cookie)
+  }
+
+  const headersWithGetSetCookie = webResponse.headers as Headers & {
+    getSetCookie?: () => string[]
+  }
+
+  if (typeof headersWithGetSetCookie.getSetCookie === 'function') {
+    for (const cookie of headersWithGetSetCookie.getSetCookie()) {
+      add(cookie)
+    }
+  } else {
+    webResponse.headers.forEach((value, name) => {
+      if (name.toLowerCase() === 'set-cookie') {
+        add(value)
+      }
+    })
+  }
+
+  return values
+}
+
 /**
  * Applies a Web API Response to a PikkuHTTPResponse.
  * Copies status, headers (including Set-Cookie), redirects, and body.
@@ -83,9 +112,14 @@ export async function applyWebResponse(
 ): Promise<void> {
   res.status(webResponse.status)
 
+  const setCookieValues = collectSetCookieHeaders(webResponse)
+
   webResponse.headers.forEach((value, name) => {
     const lower = name.toLowerCase()
     if (SKIP_RESPONSE_HEADERS.has(lower)) {
+      return
+    }
+    if (lower === 'set-cookie') {
       return
     }
     if (lower === 'location') {
@@ -94,6 +128,10 @@ export async function applyWebResponse(
       res.header(name, value)
     }
   })
+
+  if (setCookieValues.length > 0) {
+    res.header('Set-Cookie', setCookieValues)
+  }
 
   const body = await webResponse.text()
   if (body) {

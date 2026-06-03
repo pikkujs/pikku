@@ -197,6 +197,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
   }
 
+  public rewireQueueWorkers(): void {
+    this.wireQueueWorkers()
+  }
+
   /**
    * Wire the queue-based orchestrator/step/sleeper workers.
    * Subclasses that orchestrate without queues (e.g. Durable Objects) should
@@ -281,6 +285,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       addFunction('pikkuWorkflowSleeper', {
         func: pikkuWorkflowSleeperFunc,
       })
+    }
+    if (!functionsMeta.pikkuWorkflowSleeper) {
+      functionsMeta.pikkuWorkflowSleeper = mkMeta('pikkuWorkflowSleeper')
     }
   }
 

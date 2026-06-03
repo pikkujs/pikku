@@ -3,8 +3,7 @@ import type { SessionStore } from './session-store.js'
 
 export class InMemorySessionStore<
   UserSession extends CoreUserSession = CoreUserSession,
-> implements SessionStore<UserSession>
-{
+> implements SessionStore<UserSession> {
   private sessions = new Map<string, UserSession>()
 
   async get(pikkuUserId: string): Promise<UserSession | undefined> {

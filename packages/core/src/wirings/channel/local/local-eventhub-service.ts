@@ -5,9 +5,9 @@ import type { EventHubService } from '../eventhub-service.js'
  * Implementation of the SubscriptionService interface.
  * Manages subscriptions and publishes messages to subscribers.
  */
-export class LocalEventHubService<Data extends Record<string, any> = {}>
-  implements EventHubService<Data>
-{
+export class LocalEventHubService<
+  Data extends Record<string, any> = {},
+> implements EventHubService<Data> {
   private channels = new Map<string, PikkuChannelHandler>()
 
   /**

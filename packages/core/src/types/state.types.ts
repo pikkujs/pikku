@@ -155,19 +155,6 @@ export interface PikkuPackageState {
     channelMiddleware: Record<string, CorePikkuChannelMiddleware[]>
     permissions: Record<string, CorePermissionGroup | CorePikkuPermission[]>
   }
-  models: {
-    config: {
-      models?: Record<
-        string,
-        string | { model: string; temperature?: number; maxSteps?: number }
-      >
-      agentDefaults?: { temperature?: number; maxSteps?: number }
-      agentOverrides?: Record<
-        string,
-        { model?: string; temperature?: number; maxSteps?: number }
-      >
-    } | null
-  }
   package: {
     /** Service factory functions for addon packages */
     factories: {

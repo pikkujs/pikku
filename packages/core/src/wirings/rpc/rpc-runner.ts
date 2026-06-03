@@ -3,7 +3,6 @@ import type { SessionService } from '../../services/user-session-service.js'
 import type { CoreUserSession } from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
-import { ForbiddenError } from '../../errors/errors.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
 import type { PikkuRPC, ResolvedFunction } from './rpc-types.js'
 import { parseVersionedId } from '../../version.js'
@@ -82,6 +81,16 @@ const resolvePikkuFunction = (
     }
   }
   if (!rpcMeta) {
+    const rootFunctions = pikkuState(null, 'function', 'meta')
+    const rootFunctionMeta = rootFunctions?.[rpcName]
+    if (rootFunctionMeta) {
+      return {
+        pikkuFuncId: rootFunctionMeta.pikkuFuncId || rpcName,
+        packageName: null,
+      }
+    }
+  }
+  if (!rpcMeta) {
     throw new RPCNotFoundError(rpcName)
   }
   return { pikkuFuncId: rpcMeta, packageName: null }
@@ -109,13 +118,16 @@ export class ContextAwareRPCService {
         ]
       }
     } else {
-      functionMeta = pikkuState(null, 'function', 'meta')[funcName]
+      const resolved = resolvePikkuFunction(funcName, this.packageName)
+      functionMeta = pikkuState(resolved.packageName, 'function', 'meta')[
+        resolved.pikkuFuncId
+      ]
     }
     if (!functionMeta) {
       throw new RPCNotFoundError(funcName)
     }
     if (!functionMeta.expose) {
-      throw new ForbiddenError()
+      throw new RPCNotFoundError(funcName)
     }
     return await this.rpc(funcName, data)
   }

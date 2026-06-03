@@ -172,6 +172,23 @@ describe('Command Parser', () => {
       })
     })
 
+    test('should report missing subcommand for a group node with no func', () => {
+      const result = parseCLIArguments(['user'], 'test-cli', testMeta)
+
+      assert.deepStrictEqual(result.commandPath, ['user'])
+      assert.ok(
+        result.errors.some((error) => error.startsWith('Missing subcommand:')),
+        `expected a "Missing subcommand:" error, got: ${JSON.stringify(result.errors)}`
+      )
+    })
+
+    test('should not flag a runnable command as a missing subcommand', () => {
+      const result = parseCLIArguments(['greet', 'Alice'], 'test-cli', testMeta)
+
+      assert.deepStrictEqual(result.commandPath, ['greet'])
+      assert.strictEqual(result.errors.length, 0)
+    })
+
     test('should parse variadic positionals', () => {
       const result = parseCLIArguments(
         ['files', 'file1.txt', 'file2.txt', 'file3.txt'],
@@ -440,6 +457,72 @@ describe('Command Parser', () => {
       const help = generateCommandHelp('test-cli', testMeta, ['nonexistent'])
 
       assert.ok(help.includes('Unknown command'))
+    })
+  })
+
+  describe('camelCase ↔ kebab-case options', () => {
+    const kebabMeta: CLIMeta = {
+      programs: {
+        'test-cli': {
+          program: 'test-cli',
+          options: {},
+          commands: {
+            deploy: {
+              pikkuFuncId: 'deployFunc',
+              positionals: [],
+              options: {
+                autoApply: {
+                  description: 'Deploy without the confirmation prompt',
+                  default: false,
+                },
+                apiUrl: { description: 'Override the API URL' },
+                token: { description: 'Auth token', required: true },
+              },
+            },
+          },
+        },
+      },
+      renderers: {},
+    }
+
+    test('renders camelCase option keys as kebab-case in help', () => {
+      const help = generateCommandHelp('test-cli', kebabMeta, ['deploy'])
+
+      assert.ok(help.includes('--auto-apply'), 'expected --auto-apply')
+      assert.ok(help.includes('--api-url'), 'expected --api-url')
+      assert.ok(!help.includes('--autoApply'), 'should not show camelCase')
+      assert.ok(!help.includes('--apiUrl'), 'should not show camelCase')
+    })
+
+    test('accepts the kebab-case form and maps it to the camelCase field', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--auto-apply', '--api-url', 'https://x'],
+        'test-cli',
+        kebabMeta
+      )
+
+      assert.strictEqual(result.options.autoApply, true)
+      assert.strictEqual(result.options.apiUrl, 'https://x')
+    })
+
+    test('still accepts the camelCase form (back-compat)', () => {
+      const result = parseCLIArguments(
+        ['deploy', '--autoApply', '--apiUrl', 'https://x'],
+        'test-cli',
+        kebabMeta
+      )
+
+      assert.strictEqual(result.options.autoApply, true)
+      assert.strictEqual(result.options.apiUrl, 'https://x')
+    })
+
+    test('renders missing-required-option errors in kebab-case', () => {
+      const result = parseCLIArguments(['deploy'], 'test-cli', kebabMeta)
+
+      assert.ok(
+        result.errors.some((e) => e.includes('--token')),
+        'expected a missing --token error'
+      )
     })
   })
 })

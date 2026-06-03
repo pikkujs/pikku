@@ -8,9 +8,9 @@ import { UnprocessableContentError } from '../../errors/errors.js'
  * @template In - The type of the request body.
  * @group RequestResponse
  */
-export class PikkuFetchHTTPRequest<In = unknown>
-  implements PikkuHTTPRequest<In>
-{
+export class PikkuFetchHTTPRequest<
+  In = unknown,
+> implements PikkuHTTPRequest<In> {
   #cookies: Partial<Record<string, string>> | undefined
   #params: Partial<Record<string, string | string[]>> = {}
   #url: URL
@@ -105,7 +105,11 @@ export class PikkuFetchHTTPRequest<In = unknown>
     const merged: Record<string, unknown> = {}
     for (const part of parts) {
       for (const [key, value] of Object.entries(part)) {
-        if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+        if (
+          key === '__proto__' ||
+          key === 'constructor' ||
+          key === 'prototype'
+        ) {
           continue
         }
         if (key in merged && !valuesAreEquivalent(merged[key], value)) {

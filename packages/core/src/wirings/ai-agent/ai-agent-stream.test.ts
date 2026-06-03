@@ -2,11 +2,19 @@ import { beforeEach, describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { resetPikkuState, pikkuState } from '../../pikku-state.js'
-import { streamAIAgent } from './ai-agent-stream.js'
+import {
+  appendStepMessages,
+  checkForApprovals,
+  checkForCredentialRequests,
+  resumeAIAgent,
+  streamAIAgent,
+} from './ai-agent-stream.js'
 import { ToolApprovalRequired } from './ai-agent-prepare.js'
 import type {
+  AgentRunState,
   CoreAIAgent,
   AIStreamEvent,
+  AIMessage,
   PikkuAIMiddlewareHooks,
 } from './ai-agent.types.js'
 import type { AIAgentStepResult } from '../../services/ai-agent-runner-service.js'
@@ -20,7 +28,7 @@ const addTestAgent = (agentName: string) => {
     name: agentName,
     description: 'test agent',
     instructions: 'be helpful',
-    model: 'test-model',
+    model: 'test/test-model',
   }
 
   pikkuState(null, 'agent', 'agentsMeta')[agentName] = {
@@ -30,9 +38,6 @@ const addTestAgent = (agentName: string) => {
     workingMemorySchema: null,
   }
   pikkuState(null, 'agent', 'agents').set(agentName, agent)
-  pikkuState(null, 'models', 'config', {
-    models: { 'test-model': 'test/test-model' },
-  })
 }
 
 const makeStepResult = (
@@ -855,5 +860,539 @@ describe('streamAIAgent', () => {
     assert.equal(hookCalls[1].ctx.toolName, 'myTool')
     assert.deepEqual(hookCalls[1].ctx.args, { q: 'test', injected: true })
     assert.ok(hookCalls[1].ctx.durationMs >= 0)
+  })
+
+  test('suspends for credential requests and does not emit approval events', async () => {
+    addTestAgent('credential-stream-agent')
+
+    const updates: Array<{ runId: string; patch: unknown }> = []
+    const events: AIStreamEvent[] = []
+
+    const mockServices = {
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      },
+      aiAgentRunner: {
+        stream: async (): Promise<AIAgentStepResult> =>
+          makeStepResult({
+            toolCalls: [
+              { toolCallId: 'cred-1', toolName: 'secretTool', args: { id: 1 } },
+            ],
+            toolResults: [
+              {
+                toolCallId: 'cred-1',
+                toolName: 'secretTool',
+                result: {
+                  __credentialRequired: true,
+                  credentialName: 'github',
+                  credentialType: 'oauth2',
+                  connectUrl: '/connect',
+                },
+              },
+            ],
+          }),
+      },
+      aiRunState: {
+        createRun: async () => 'run-cred',
+        updateRun: async (runId: string, patch: unknown) => {
+          updates.push({ runId, patch })
+        },
+      },
+    } as any
+
+    pikkuState(null, 'package', 'singletonServices', mockServices)
+
+    await streamAIAgent(
+      'credential-stream-agent',
+      {
+        message: 'connect',
+        threadId: 'thread-cred',
+        resourceId: 'resource-cred',
+      },
+      {
+        channelId: 'channel-cred',
+        openingData: undefined,
+        state: 'open',
+        send: (event: AIStreamEvent) => events.push(event),
+        close: () => {},
+      },
+      {}
+    )
+
+    assert.deepEqual(updates, [
+      {
+        runId: 'run-cred',
+        patch: {
+          status: 'suspended',
+          suspendReason: 'credential',
+          pendingApprovals: [
+            {
+              type: 'credential-request',
+              toolCallId: 'cred-1',
+              toolName: 'secretTool',
+              args: { id: 1 },
+              credentialName: 'github',
+              credentialType: 'oauth2',
+              connectUrl: '/connect',
+            },
+          ],
+        },
+      },
+    ])
+    assert.ok(events.every((event) => event.type !== 'approval-request'))
+    assert.equal(events.at(-1)?.type, 'done')
+  })
+
+  test('persists streamed events, applies output stream middleware, and updates usage', async () => {
+    addTestAgent('persisted-stream-agent')
+
+    const events: AIStreamEvent[] = []
+    const savedMessages: Array<{ threadId: string; messages: AIMessage[] }> = []
+    const updates: Array<{ runId: string; patch: unknown }> = []
+    const middlewareStateSnapshots: number[] = []
+
+    const middleware: PikkuAIMiddlewareHooks = {
+      modifyOutputStream: async (_services, ctx) => {
+        const count = Number((ctx.state.count as number | undefined) ?? 0) + 1
+        ctx.state.count = count
+        middlewareStateSnapshots.push(count)
+        if (ctx.event.type === 'text-delta') {
+          return [
+            ctx.event,
+            { type: 'reasoning-delta', text: `seen:${count}` } as AIStreamEvent,
+          ]
+        }
+        return ctx.event
+      },
+      modifyOutput: async (_services, ctx) => ({
+        text: `${ctx.text} [streamed]`,
+        messages: ctx.messages,
+      }),
+    }
+    const agent = pikkuState(null, 'agent', 'agents').get(
+      'persisted-stream-agent'
+    )!
+    agent.aiMiddleware = [middleware] as any
+    pikkuState(null, 'agent', 'agents').set('persisted-stream-agent', agent)
+
+    const mockServices = {
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      },
+      aiAgentRunner: {
+        stream: async (
+          _params: any,
+          channel: any
+        ): Promise<AIAgentStepResult> => {
+          channel.send({ type: 'text-delta', text: 'Hello' })
+          channel.send({
+            type: 'tool-call',
+            toolCallId: 'tc-1',
+            toolName: 'echo',
+            args: { value: 1 },
+          })
+          channel.send({
+            type: 'tool-result',
+            toolCallId: 'tc-1',
+            toolName: 'echo',
+            result: { ok: true },
+          })
+          channel.send({
+            type: 'usage',
+            tokens: { input: 3, output: 4 },
+            model: 'test/test-model',
+          } as AIStreamEvent)
+          return makeStepResult({
+            text: 'Hello',
+            usage: { inputTokens: 3, outputTokens: 4 },
+            finishReason: 'stop',
+          })
+        },
+      },
+      aiRunState: {
+        createRun: async () => 'run-persisted',
+        updateRun: async (runId: string, patch: unknown) => {
+          updates.push({ runId, patch })
+        },
+      },
+      aiStorage: {
+        createThread: async () => {},
+        getMessages: async () => [],
+        saveMessages: async (threadId: string, messages: AIMessage[]) => {
+          savedMessages.push({ threadId, messages })
+        },
+      },
+    } as any
+
+    pikkuState(null, 'package', 'singletonServices', mockServices)
+
+    const result = await streamAIAgent(
+      'persisted-stream-agent',
+      {
+        message: 'hello',
+        threadId: 'thread-persisted',
+        resourceId: 'resource-persisted',
+      },
+      {
+        channelId: 'channel-persisted',
+        openingData: undefined,
+        state: 'open',
+        send: (event: AIStreamEvent) => events.push(event),
+        close: () => {},
+      },
+      {}
+    )
+
+    assert.equal(result, 'Hello')
+    assert.ok(events.some((event) => event.type === 'reasoning-delta'))
+    assert.deepEqual(middlewareStateSnapshots, [1, 2, 3, 4])
+    assert.equal(savedMessages[0].messages[0].role, 'user')
+    assert.equal(savedMessages[1].messages[0].role, 'assistant')
+    assert.equal(savedMessages[1].messages[1].role, 'tool')
+    assert.deepEqual(updates, [
+      {
+        runId: 'run-persisted',
+        patch: {
+          status: 'completed',
+          usage: {
+            inputTokens: 3,
+            outputTokens: 4,
+            model: 'test/test-model',
+          },
+        },
+      },
+    ])
+  })
+})
+
+describe('ai-agent-stream helpers', () => {
+  test('checkForApprovals expands nested sub-approvals and explicit tool approvals', () => {
+    const approvals = checkForApprovals(
+      {
+        text: '',
+        toolCalls: [
+          { toolCallId: 'tc-1', toolName: 'toolA', args: { id: 1 } },
+          { toolCallId: 'tc-2', toolName: 'toolB', args: { id: 2 } },
+        ],
+        toolResults: [
+          {
+            toolCallId: 'tc-2',
+            toolName: 'toolB',
+            result: {
+              __approvalRequired: true,
+              toolName: 'sub-agent',
+              args: { task: 'x' },
+              agentRunId: 'sub-run-1',
+              subApprovals: [
+                {
+                  toolCallId: 'sub-1',
+                  toolName: 'deleteTodo',
+                  args: { todoId: '1' },
+                  runId: 'sub-run-1',
+                },
+              ],
+            },
+          },
+        ],
+        usage: { inputTokens: 0, outputTokens: 0 },
+        finishReason: 'tool-calls',
+      },
+      [
+        {
+          name: 'toolA',
+          description: '',
+          inputSchema: {},
+          execute: async () => {},
+          needsApproval: true,
+        },
+      ],
+      'run-1'
+    )
+
+    assert.equal(approvals.length, 2)
+    assert.ok(approvals[0] instanceof ToolApprovalRequired)
+    assert.equal(approvals[0].toolName, 'toolA')
+    assert.equal(approvals[1].toolName, 'sub-agent')
+    assert.equal(approvals[1].displayToolName, 'deleteTodo')
+    assert.equal(approvals[1].agentRunId, 'sub-run-1')
+  })
+
+  test('checkForCredentialRequests and appendStepMessages handle structured results', () => {
+    const requests = checkForCredentialRequests(
+      {
+        text: '',
+        toolCalls: [
+          { toolCallId: 'tc-1', toolName: 'secretTool', args: { id: 1 } },
+        ],
+        toolResults: [
+          {
+            toolCallId: 'tc-1',
+            toolName: 'secretTool',
+            result: {
+              __credentialRequired: true,
+              credentialName: 'github',
+              credentialType: 'oauth2',
+              connectUrl: '/connect',
+            },
+          },
+        ],
+        usage: { inputTokens: 0, outputTokens: 0 },
+        finishReason: 'tool-calls',
+      },
+      'run-1'
+    )
+
+    assert.equal(requests[0].toolCallId, 'tc-1')
+    assert.equal(requests[0].toolName, 'secretTool')
+    assert.deepEqual(requests[0].args, { id: 1 })
+    assert.equal(requests[0].credentialName, 'github')
+    assert.equal(requests[0].credentialType, 'oauth2')
+    assert.equal(requests[0].connectUrl, '/connect')
+
+    const runnerParams = { messages: [] as AIMessage[] } as any
+    appendStepMessages(runnerParams, {
+      text: 'hello',
+      toolCalls: [
+        { toolCallId: 'tc-1', toolName: 'secretTool', args: { id: 1 } },
+      ],
+      toolResults: [
+        { toolCallId: 'tc-1', toolName: 'secretTool', result: { ok: true } },
+      ],
+      usage: { inputTokens: 0, outputTokens: 0 },
+      finishReason: 'tool-calls',
+    })
+
+    assert.equal(runnerParams.messages.length, 2)
+    assert.equal(runnerParams.messages[0].role, 'assistant')
+    assert.equal(runnerParams.messages[1].role, 'tool')
+    assert.equal(
+      runnerParams.messages[1].toolResults[0].result,
+      JSON.stringify({ ok: true })
+    )
+  })
+})
+
+describe('resumeAIAgent', () => {
+  test('rejecting one approval while others remain only resolves and finishes the stream', async () => {
+    addTestAgent('resume-stream-agent')
+
+    const events: AIStreamEvent[] = []
+    const updates: any[] = []
+    const resolveCalls: any[] = []
+    const savedMessages: any[] = []
+    let remainingRun: AgentRunState
+
+    const initialRun: AgentRunState = {
+      runId: 'run-1',
+      agentName: 'resume-stream-agent',
+      threadId: 'thread-1',
+      resourceId: 'resource-1',
+      status: 'suspended',
+      suspendReason: 'approval',
+      pendingApprovals: [
+        {
+          type: 'tool-call',
+          toolCallId: 'tool-1',
+          toolName: 'deploy',
+          args: { env: 'prod' },
+        },
+        {
+          type: 'tool-call',
+          toolCallId: 'tool-2',
+          toolName: 'deploy',
+          args: { env: 'stage' },
+        },
+      ],
+      usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+    remainingRun = {
+      ...initialRun,
+      pendingApprovals: [initialRun.pendingApprovals![1]],
+    }
+
+    const mockServices = {
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      },
+      aiAgentRunner: {
+        stream: async () => {
+          throw new Error('should not continue')
+        },
+      },
+      aiRunState: {
+        getRun: async () => remainingRun,
+        resolveApproval: async (toolCallId: string, status: string) => {
+          resolveCalls.push({ toolCallId, status })
+        },
+        updateRun: async (_runId: string, patch: any) => {
+          updates.push(patch)
+        },
+      },
+      aiStorage: {
+        saveMessages: async (_threadId: string, messages: AIMessage[]) => {
+          savedMessages.push(messages)
+        },
+      },
+    } as any
+
+    let first = true
+    mockServices.aiRunState.getRun = async () => {
+      if (first) {
+        first = false
+        return initialRun
+      }
+      return remainingRun
+    }
+
+    pikkuState(null, 'package', 'singletonServices', mockServices)
+
+    await resumeAIAgent(
+      { runId: 'run-1', toolCallId: 'tool-1', approved: false },
+      {
+        channelId: 'resume-channel',
+        openingData: undefined,
+        state: 'open',
+        send: (event: AIStreamEvent) => events.push(event),
+        close: () => {},
+      },
+      {}
+    )
+
+    assert.deepEqual(resolveCalls, [{ toolCallId: 'tool-1', status: 'denied' }])
+    assert.match(
+      savedMessages[0][0].toolResults[0].result,
+      /explicitly declined/
+    )
+    assert.deepEqual(updates, [])
+    assert.equal(events.at(-1)?.type, 'done')
+  })
+
+  test('approving a tool executes it, streams the result, and resumes completion', async () => {
+    addTestAgent('resume-stream-agent')
+    pikkuState(null, 'agent', 'agentsMeta')['resume-stream-agent'].tools = [
+      'deploy',
+    ]
+    pikkuState(null, 'rpc', 'meta').deploy = 'deploy'
+    pikkuState(null, 'function', 'meta').deploy = {
+      description: 'Deploy',
+      inputSchemaName: 'DeployInput',
+    }
+    pikkuState(null, 'misc', 'schemas').set('DeployInput', {
+      type: 'object',
+      properties: { env: { type: 'string' } },
+    })
+    pikkuState(null, 'function', 'functions').set('deploy', {
+      func: async (_services: any, input: any) => ({ deployed: input.env }),
+    })
+
+    const events: AIStreamEvent[] = []
+    const updates: any[] = []
+    const resolveCalls: any[] = []
+    const savedMessages: any[] = []
+
+    const run: AgentRunState = {
+      runId: 'run-approve',
+      agentName: 'resume-stream-agent',
+      threadId: 'thread-approve',
+      resourceId: 'resource-approve',
+      status: 'suspended',
+      suspendReason: 'approval',
+      pendingApprovals: [
+        {
+          type: 'tool-call',
+          toolCallId: 'tool-1',
+          toolName: 'deploy',
+          args: { env: 'prod' },
+        },
+      ],
+      usage: { inputTokens: 0, outputTokens: 0, model: 'test/test-model' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    let getRunCalls = 0
+    const mockServices = {
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      },
+      aiAgentRunner: {
+        stream: async (
+          _params: any,
+          channel: any
+        ): Promise<AIAgentStepResult> => {
+          channel.send({ type: 'text-delta', text: 'continued' })
+          channel.send({
+            type: 'usage',
+            tokens: { input: 2, output: 3 },
+            model: 'test/test-model',
+          } as AIStreamEvent)
+          return makeStepResult({
+            text: 'continued',
+            usage: { inputTokens: 2, outputTokens: 3 },
+            finishReason: 'stop',
+          })
+        },
+      },
+      aiRunState: {
+        getRun: async () => {
+          getRunCalls++
+          return getRunCalls === 1 ? run : { ...run, pendingApprovals: [] }
+        },
+        resolveApproval: async (toolCallId: string, status: string) => {
+          resolveCalls.push({ toolCallId, status })
+        },
+        updateRun: async (_runId: string, patch: any) => {
+          updates.push(patch)
+        },
+      },
+      aiStorage: {
+        saveMessages: async (_threadId: string, messages: AIMessage[]) => {
+          savedMessages.push(messages)
+        },
+        getMessages: async () => [],
+      },
+    } as any
+
+    pikkuState(null, 'package', 'singletonServices', mockServices)
+
+    await resumeAIAgent(
+      { runId: 'run-approve', toolCallId: 'tool-1', approved: true },
+      {
+        channelId: 'resume-channel',
+        openingData: undefined,
+        state: 'open',
+        send: (event: AIStreamEvent) => events.push(event),
+        close: () => {},
+      },
+      {}
+    )
+
+    assert.deepEqual(resolveCalls, [
+      { toolCallId: 'tool-1', status: 'approved' },
+    ])
+    assert.equal(events[0].type, 'tool-result')
+    assert.equal(events.at(-1)?.type, 'done')
+    assert.deepEqual(updates, [
+      { status: 'running' },
+      {
+        status: 'completed',
+        usage: { inputTokens: 2, outputTokens: 3, model: 'test/test-model' },
+      },
+    ])
+    assert.equal(savedMessages.length, 2)
   })
 })

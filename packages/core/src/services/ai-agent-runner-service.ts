@@ -30,6 +30,7 @@ export type AIAgentStepResult = {
   toolResults: { toolCallId: string; toolName: string; result: unknown }[]
   usage: { inputTokens: number; outputTokens: number }
   finishReason: 'stop' | 'tool-calls' | 'length' | 'error' | 'unknown'
+  reasoningContent?: string
 }
 
 export interface AIAgentRunnerService {

@@ -359,8 +359,9 @@ const executeRoute = async (
     response.header('Content-Type', 'text/event-stream')
     response.header('Cache-Control', 'no-cache')
     let sseState: unknown
+    const channelId = createWeakUID()
     channel = {
-      channelId: requestId,
+      channelId,
       openingData: await data(),
       send: (data: any) => {
         response.arrayBuffer(isSerializable(data) ? JSON.stringify(data) : data)
@@ -381,6 +382,27 @@ const executeRoute = async (
         sseState = undefined
       },
     }
+
+    // Register the SSE channel with the eventHub (if present) so that
+    // eventHub.publish() can deliver messages to SSE subscribers.
+    // The channel handler wraps the SSE channel to match PikkuChannelHandler.
+    if (singletonServices.eventHub?.onChannelOpened) {
+      const channelRef = channel
+      const channelHandler = {
+        getChannel: () => channelRef,
+        send: (data: unknown, isBinary?: boolean) => {
+          if (isBinary) channelRef.sendBinary(data as any)
+          else channelRef.send(data)
+        },
+        sendBinary: (data: any) => channelRef.sendBinary(data),
+      }
+      singletonServices.eventHub.onChannelOpened(channelHandler)
+      const originalClose = channel.close
+      channel.close = () => {
+        singletonServices.eventHub.onChannelClosed(channelId)
+        originalClose()
+      }
+    }
   }
 
   const wire: PikkuWire = {
@@ -393,27 +415,49 @@ const executeRoute = async (
     hasSessionChanged: () => userSession.sessionChanged,
   }
 
-  result = await runPikkuFunc(
-    'http',
-    `${meta.method}:${meta.route}`,
-    meta.pikkuFuncId,
-    {
-      singletonServices,
-      createWireServices,
-      auth: route.auth !== false,
-      data,
-      inheritedMiddleware: meta.middleware,
-      wireMiddleware: route.middleware,
-      inheritedPermissions: meta.permissions,
-      wirePermissions: route.permissions,
-      coerceDataFromSchema: options.coerceDataFromSchema,
-      tags: route.tags,
-      wire,
-      sessionService: userSession,
-      packageName: meta.packageName,
+  try {
+    result = await runPikkuFunc(
+      'http',
+      `${meta.method}:${meta.route}`,
+      meta.pikkuFuncId,
+      {
+        singletonServices,
+        createWireServices,
+        auth: route.auth !== false,
+        data,
+        inheritedMiddleware: meta.middleware,
+        wireMiddleware: route.middleware,
+        inheritedPermissions: meta.permissions,
+        wirePermissions: route.permissions,
+        coerceDataFromSchema: options.coerceDataFromSchema,
+        tags: route.tags,
+        wire,
+        sessionService: userSession,
+        packageName: meta.packageName,
+      }
+    )
+  } catch (e: any) {
+    if (matchedRoute.route.sse) {
+      singletonServices.logger.error(e instanceof Error ? e.message : e)
+      try {
+        const errorResponse = getErrorResponse(e)
+        http?.response?.arrayBuffer(
+          JSON.stringify({
+            type: 'error',
+            errorText: errorResponse?.message ?? 'Internal server error',
+          })
+        )
+        http?.response?.arrayBuffer(JSON.stringify({ type: 'done' }))
+      } catch {}
+      channel?.close()
+      return wireServices ? { result, wireServices } : { result }
     }
-  )
-  if (!matchedRoute.route.sse) {
+    throw e
+  }
+  if (matchedRoute.route.sse) {
+    // Flush headers after middleware has run so CORS/auth headers are included
+    http?.response?.flushHeaders?.()
+  } else {
     if (result instanceof Response) {
       await applyWebResponse(http!.response!, result)
     } else if (result === undefined || result === null) {
@@ -573,36 +617,16 @@ export const fetchData = async <In, Out>(
 
     return result
   } catch (e: any) {
-    if (matchedRoute?.route.sse) {
-      // For SSE routes, send error through the stream since the response is already in stream mode
-      scopedLogger.error(e instanceof Error ? e.message : e)
-      try {
-        const errorResponse = getErrorResponse(e)
-        response.arrayBuffer(
-          JSON.stringify({
-            type: 'error',
-            errorText: errorResponse?.message ?? 'Internal server error',
-          })
-        )
-        response.arrayBuffer(JSON.stringify({ type: 'done' }))
-      } catch (streamErr: any) {
-        scopedLogger.error(
-          `SSE error while sending error payload: ${streamErr instanceof Error ? streamErr.message : String(streamErr)}`
-        )
-      }
-      response.close?.()
-    } else {
-      handleHTTPError(
-        e,
-        http,
-        requestId,
-        scopedLogger,
-        logWarningsForStatusCodes,
-        respondWith404,
-        bubbleErrors,
-        exposeErrors
-      )
-    }
+    handleHTTPError(
+      e,
+      http,
+      requestId,
+      scopedLogger,
+      logWarningsForStatusCodes,
+      respondWith404,
+      bubbleErrors,
+      exposeErrors
+    )
   } finally {
     // Clean up any session-specific services created during processing
     if (wireServices) {
