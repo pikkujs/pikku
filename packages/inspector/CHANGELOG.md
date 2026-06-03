@@ -1,3 +1,16 @@
+## 0.12.12
+
+### Patch Changes
+
+- 9060165: Agents now declare their model directly as `<provider>/<model>` (e.g. `openai/gpt-4o`). The `models`, `agentDefaults`, and `agentOverrides` config blocks have been removed.
+
+  **Migration:** replace any bare `model: 'alias'` values with the full provider-qualified form and remove those blocks from `pikku.config.json`.
+
+- Updated dependencies [9060165]
+- Updated dependencies [9060165]
+- Updated dependencies [9060165]
+  - @pikku/core@0.12.21
+
 ## 0.12.11
 
 ### Patch Changes

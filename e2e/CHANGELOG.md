@@ -1,5 +1,20 @@
 # @pikku/e2e
 
+## 0.0.21
+
+### Patch Changes
+
+- Updated dependencies [9060165]
+- Updated dependencies [9060165]
+- Updated dependencies [9060165]
+- Updated dependencies [9060165]
+- Updated dependencies [9060165]
+- Updated dependencies [9060165]
+  - @pikku/core@0.12.21
+  - @pikku/addon-console@0.12.9
+  - @pikku/kysely-sqlite@0.12.5
+  - @pikku/addon-graph@0.12.2
+
 ## 0.0.20
 
 ### Patch Changes

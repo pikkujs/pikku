@@ -1,5 +1,11 @@
 # @pikku/assistant-ui
 
+## 0.12.5
+
+### Patch Changes
+
+- 9060165: The console now shows function version history, live queue depths with a Failed column, and scheduler last-run status with run history. Workflow canvas and run selector have been polished. The console build is ~6.5× faster thanks to a switch to rolldown-vite (Vite 7 + Oxc React transform).
+
 ## 0.12.4
 
 ### Patch Changes

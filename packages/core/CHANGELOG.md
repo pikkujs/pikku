@@ -1,3 +1,14 @@
+## 0.12.21
+
+### Patch Changes
+
+- 9060165: Agents now declare their model directly as `<provider>/<model>` (e.g. `openai/gpt-4o`). The `models`, `agentDefaults`, and `agentOverrides` config blocks have been removed.
+
+  **Migration:** replace any bare `model: 'alias'` values with the full provider-qualified form and remove those blocks from `pikku.config.json`.
+
+- 9060165: WebSocket channels now expose `setState`, `getState`, and `clearState` — channel state and session lifecycle are managed independently.
+- 9060165: Workflow steps now support per-step `retries` and `retryDelay` configuration. Cloudflare deployments gain Workflow Durable Object bindings for graph-DSL workflows on Workers-for-Platforms, and the deploy bundle now boots cleanly on the Cloudflare Workers runtime.
+
 ## 0.12.20
 
 ### Patch Changes
