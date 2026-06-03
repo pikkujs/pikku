@@ -1,5 +1,12 @@
 # @pikku/e2e
 
+## 0.0.22
+
+### Patch Changes
+
+- Updated dependencies [4f8917f]
+  - @pikku/addon-graph@0.12.3
+
 ## 0.0.21
 
 ### Patch Changes

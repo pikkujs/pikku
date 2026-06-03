@@ -1,5 +1,11 @@
 # @pikku/addon-graph
 
+## 0.12.3
+
+### Patch Changes
+
+- 4f8917f: Fix publish builds by falling back to a published CLI when the local workspace CLI binary is unavailable during release packaging.
+
 ## 0.12.2
 
 ### Patch Changes
