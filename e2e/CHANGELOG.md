@@ -1,5 +1,12 @@
 # @pikku/e2e
 
+## 0.0.23
+
+### Patch Changes
+
+- Updated dependencies [265461b]
+  - @pikku/core@0.12.22
+
 ## 0.0.22
 
 ### Patch Changes
