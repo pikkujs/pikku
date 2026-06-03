@@ -12,7 +12,9 @@ export const readFunctionSource = pikkuSessionlessFunc<
   auth: false,
   func: async ({ codeEditService }, { sourceFile, exportedName }) => {
     if (!codeEditService) {
-      throw new LocalEnvironmentOnlyError('Only available in local development mode')
+      throw new LocalEnvironmentOnlyError(
+        'Only available in local development mode'
+      )
     }
     return codeEditService.readFunctionSource(sourceFile, exportedName)
   },

@@ -87,6 +87,17 @@ type ToolCall = {
   isError?: boolean
 }
 
+type StructuredPart =
+  | {
+      type: 'generative-ui'
+      spec: unknown
+    }
+  | {
+      type: 'data'
+      name: string
+      data: unknown
+    }
+
 /**
  * Shared helper: consume an SSE stream and populate text/toolCalls.
  * Returns an array of PendingApprovals when the stream requests them, or empty when done.
@@ -95,6 +106,7 @@ async function processStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   text: { value: string },
   toolCalls: ToolCall[],
+  structuredParts: StructuredPart[],
   yieldContent: () => void,
   onFinish?: () => void
 ): Promise<PendingApproval[]> {
@@ -138,6 +150,31 @@ async function processStream(
             tc.isError = true
           }
         }
+        break
+      }
+      case 'generative-ui': {
+        const nextPart = {
+          type: 'generative-ui' as const,
+          spec: event.spec,
+        }
+        const existingIndex = structuredParts.findIndex(
+          (part) => part.type === 'generative-ui'
+        )
+        if (existingIndex === -1) structuredParts.push(nextPart)
+        else structuredParts[existingIndex] = nextPart
+        break
+      }
+      case 'data': {
+        const nextPart = {
+          type: 'data' as const,
+          name: event.name,
+          data: event.data,
+        }
+        const existingIndex = structuredParts.findIndex(
+          (part) => part.type === 'data' && part.name === event.name
+        )
+        if (existingIndex === -1) structuredParts.push(nextPart)
+        else structuredParts[existingIndex] = nextPart
         break
       }
       case 'approval-request':
@@ -237,10 +274,36 @@ export function resolvePikkuToolStatus(
   return { type: 'completed' }
 }
 
-function buildContent(text: { value: string }, toolCalls: ToolCall[]): any[] {
+function buildRichContent(
+  text: { value: string },
+  structuredParts: StructuredPart[],
+  toolCalls: ToolCall[]
+): any[] {
   const content: any[] = []
   if (text.value) content.push({ type: 'text' as const, text: text.value })
+  content.push(...structuredParts)
   content.push(...toolCalls)
+  return content
+}
+
+function buildContentFromAgentResult(result: unknown): any[] {
+  const content: any[] = []
+
+  if (typeof result === 'string') {
+    if (result) content.push({ type: 'text' as const, text: result })
+    return content
+  }
+
+  if (!result || typeof result !== 'object') return content
+
+  const record = result as Record<string, unknown>
+  if (typeof record.text === 'string' && record.text) {
+    content.push({ type: 'text' as const, text: record.text })
+  }
+  if (record.ui != null) {
+    content.push({ type: 'generative-ui' as const, spec: record.ui })
+  }
+
   return content
 }
 
@@ -281,6 +344,7 @@ function createPikkuStreamingAdapter(
         // The last resume triggers continuation (next LLM step).
         let lastText = { value: '' }
         let lastToolCalls: ToolCall[] = []
+        let lastStructuredParts: StructuredPart[] = []
         let nextApprovals: PendingApproval[] = []
 
         for (let i = 0; i < decisions.length; i++) {
@@ -320,11 +384,13 @@ function createPikkuStreamingAdapter(
 
           const text = { value: '' }
           const toolCalls: ToolCall[] = []
+          const structuredParts: StructuredPart[] = []
           const reader = resumeResponse.body.getReader()
           const streamApprovals = await processStream(
             reader,
             text,
             toolCalls,
+            structuredParts,
             () => {},
             i === decisions.length - 1
               ? (onFinishRef.current ?? undefined)
@@ -334,13 +400,18 @@ function createPikkuStreamingAdapter(
           // Keep the last resume's output (it has continuation content)
           lastText = text
           lastToolCalls = toolCalls
+          lastStructuredParts = structuredParts
           if (streamApprovals.length > 0) {
             nextApprovals = streamApprovals
           }
         }
 
         // Build content from the last resume's output
-        const content = buildContent(lastText, lastToolCalls)
+        const content = buildRichContent(
+          lastText,
+          lastStructuredParts,
+          lastToolCalls
+        )
 
         if (nextApprovals.length > 0) {
           // More approvals from continuation — show them
@@ -372,7 +443,11 @@ function createPikkuStreamingAdapter(
             }
           }
 
-          const updatedContent = buildContent(lastText, lastToolCalls)
+          const updatedContent = buildRichContent(
+            lastText,
+            lastStructuredParts,
+            lastToolCalls
+          )
           yield {
             content: updatedContent,
             status: {
@@ -451,9 +526,10 @@ function createPikkuStreamingAdapter(
 
       const text = { value: '' }
       const toolCalls: ToolCall[] = []
+      const structuredParts: StructuredPart[] = []
       let pendingContent: any[] | null = null
       const yieldContent = () => {
-        const content = buildContent(text, toolCalls)
+        const content = buildRichContent(text, structuredParts, toolCalls)
         if (content.length > 0) pendingContent = content
       }
 
@@ -462,6 +538,7 @@ function createPikkuStreamingAdapter(
         reader,
         text,
         toolCalls,
+        structuredParts,
         yieldContent,
         onFinishRef.current ?? undefined
       )
@@ -516,7 +593,7 @@ function createPikkuStreamingAdapter(
         }
       }
 
-      const content = buildContent(text, toolCalls)
+      const content = buildRichContent(text, structuredParts, toolCalls)
       yield {
         content,
         status: {
@@ -596,7 +673,11 @@ export const convertDbMessages = (dbMessages: any[]): ThreadMessageLike[] => {
     const parts: any[] = []
 
     if (msg.content) {
-      parts.push({ type: 'text' as const, text: msg.content })
+      if (Array.isArray(msg.content)) {
+        parts.push(...msg.content)
+      } else {
+        parts.push({ type: 'text' as const, text: msg.content })
+      }
     }
 
     if (Array.isArray(msg.toolCalls)) {
@@ -732,6 +813,7 @@ function createPikkuNonStreamingAdapter(
         // Resume uses SSE (same as streaming mode)
         let lastText = { value: '' }
         let lastToolCalls: ToolCall[] = []
+        let lastStructuredParts: StructuredPart[] = []
         let nextApprovals: PendingApproval[] = []
 
         for (let i = 0; i < decisions.length; i++) {
@@ -770,11 +852,13 @@ function createPikkuNonStreamingAdapter(
 
           const text = { value: '' }
           const toolCalls: ToolCall[] = []
+          const structuredParts: StructuredPart[] = []
           const reader = resumeResponse.body.getReader()
           const streamApprovals = await processStream(
             reader,
             text,
             toolCalls,
+            structuredParts,
             () => {},
             i === decisions.length - 1
               ? (onFinishRef.current ?? undefined)
@@ -783,12 +867,17 @@ function createPikkuNonStreamingAdapter(
 
           lastText = text
           lastToolCalls = toolCalls
+          lastStructuredParts = structuredParts
           if (streamApprovals.length > 0) {
             nextApprovals = streamApprovals
           }
         }
 
-        const content = buildContent(lastText, lastToolCalls)
+        const content = buildRichContent(
+          lastText,
+          lastStructuredParts,
+          lastToolCalls
+        )
 
         if (nextApprovals.length > 0) {
           pendingApprovalsRef.current = nextApprovals
@@ -818,7 +907,11 @@ function createPikkuNonStreamingAdapter(
             }
           }
 
-          const updatedContent = buildContent(lastText, lastToolCalls)
+          const updatedContent = buildRichContent(
+            lastText,
+            lastStructuredParts,
+            lastToolCalls
+          )
           yield {
             content: updatedContent,
             status: {
@@ -884,9 +977,7 @@ function createPikkuNonStreamingAdapter(
         }))
 
         const content: any[] = []
-        if (json.result) {
-          content.push({ type: 'text' as const, text: json.result })
-        }
+        content.push(...buildContentFromAgentResult(json.result))
         content.push(...toolCalls)
 
         yield {
@@ -901,10 +992,7 @@ function createPikkuNonStreamingAdapter(
 
       // No approvals — yield complete content
       onFinishRef.current?.()
-      const content: any[] = []
-      if (json.result) {
-        content.push({ type: 'text' as const, text: String(json.result) })
-      }
+      const content = buildContentFromAgentResult(json.result)
       if (content.length > 0) {
         yield { content }
       }
