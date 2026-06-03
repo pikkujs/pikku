@@ -84,6 +84,8 @@ export async function runAIAgent(
     workingMemorySchemaName,
   } = await prepareAgentRun(agentName, input, params, sessionMap)
 
+  runnerParams.agentId = agentName
+
   const singletonServices = getSingletonServices()
   const { aiRunState } = singletonServices
   if (!aiRunState) {
@@ -597,6 +599,7 @@ async function continueAfterToolResultSync(
     outputSchema: meta?.outputSchema
       ? pikkuState(packageName, 'misc', 'schemas').get(meta.outputSchema)
       : undefined,
+    agentId: run.agentName,
   }
 
   try {
