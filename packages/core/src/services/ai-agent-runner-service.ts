@@ -14,6 +14,9 @@ export type AIAgentRunnerParams = {
   maxSteps: number
   toolChoice: 'auto' | 'required' | 'none'
   outputSchema?: Record<string, unknown>
+  /** Pikku agent function name — forwarded to the LLM proxy (LiteLLM) as
+   *  request-level metadata so usage can be broken down per agent. */
+  agentId?: string
 }
 
 export type AIAgentRunnerResult = {

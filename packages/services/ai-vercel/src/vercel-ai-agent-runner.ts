@@ -165,6 +165,14 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
     )
   }
 
+  private buildProviderOptions(params: AIAgentRunnerParams) {
+    if (!params.agentId) return undefined
+    const meta = { agent_id: params.agentId }
+    // Spread into the request body for every provider so LiteLLM picks up
+    // agent_id and includes it in the spend-log / generic_api callback.
+    return { openai: { metadata: meta }, anthropic: { metadata: meta } }
+  }
+
   async stream(
     params: AIAgentRunnerParams,
     channel: AIStreamChannel
@@ -202,6 +210,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
             }),
           }
         : {}),
+      providerOptions: this.buildProviderOptions(params),
     })
 
     try {
@@ -359,6 +368,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
             }),
           }
         : {}),
+      providerOptions: this.buildProviderOptions(params),
     })
 
     const step = result.steps[0]

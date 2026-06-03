@@ -595,6 +595,8 @@ export async function streamAIAgent(
     streamContext
   )
 
+  runnerParams.agentId = agentName
+
   const singletonServices = getSingletonServices()
   const { aiRunState } = singletonServices
   if (!aiRunState) {
