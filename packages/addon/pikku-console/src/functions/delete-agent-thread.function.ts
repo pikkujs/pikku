@@ -11,7 +11,8 @@ export const deleteAgentThread = pikkuSessionlessFunc<
   expose: true,
   auth: false,
   func: async ({ agentRunService }, input) => {
-    if (!agentRunService) throw new MissingServiceError('agentRunService is not available')
+    if (!agentRunService)
+      throw new MissingServiceError('agentRunService is not available')
     const deleted = await agentRunService.deleteThread(input.threadId)
     return { deleted }
   },

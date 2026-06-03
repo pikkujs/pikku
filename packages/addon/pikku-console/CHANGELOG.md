@@ -13,7 +13,6 @@
 ### Patch Changes
 
 - 624097e: Add deploy pipeline with provider-agnostic architecture
-
   - Add MetaService with explicit typed API, absorb WiringService reads
   - Add deployment service, traceId propagation, scoped logger
   - Rewrite analyzer: one function = one worker, gateways dispatch via RPC
@@ -33,7 +32,6 @@
 ### Patch Changes
 
 - f85c234: Add unified credential system with per-user OAuth and AI agent pre-flight checks
-
   - Unified CredentialService with lazy loading per user via pikkuUserId
   - wire.getCredential() for typed single credential lookup
   - MissingCredentialError with structured payload for client-side connect flows
@@ -83,7 +81,6 @@
 ### Patch Changes
 
 - 62a8725: Console UI improvements:
-
   - Add markdown rendering for addon detail pages
   - Add shared `ProjectSecrets` and `ProjectVariables` components to addon detail view
   - Show `Addon Service Not Running` status when an addon RPC endpoint is unreachable

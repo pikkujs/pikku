@@ -1,0 +1,70 @@
+import { existsSync, readFileSync } from 'node:fs'
+import { join, dirname } from 'node:path'
+import { spawn } from 'node:child_process'
+import { pikkuSessionlessFunc } from '#pikku'
+import type { FunctionCoverageReport } from './get-function-coverage.function.js'
+
+function findBin(name: string, searchFrom: string): string {
+  let dir = searchFrom
+  for (let i = 0; i < 6; i++) {
+    const candidate = join(dir, 'node_modules', '.bin', name)
+    if (existsSync(candidate)) return candidate
+    const parent = dirname(dir)
+    if (parent === dir) break
+    dir = parent
+  }
+  return name
+}
+
+export const runFunctionTests = pikkuSessionlessFunc<
+  null,
+  FunctionCoverageReport | null
+>({
+  title: 'Run Function Tests',
+  description:
+    'Runs the function-tests suite under c8 and returns the updated coverage report.',
+  expose: true,
+  auth: false,
+  func: async ({ metaService }) => {
+    if (!metaService?.basePath) return null
+
+    const functionsDir = join(metaService.basePath, '..')
+    const ftestDir = join(functionsDir, 'function-tests')
+    if (!existsSync(ftestDir)) return null
+
+    const pikku = findBin('pikku', functionsDir)
+
+    const spawnEnv = { ...process.env }
+    const envFile = join(ftestDir, '.env.test')
+    if (existsSync(envFile)) {
+      for (const line of readFileSync(envFile, 'utf8').split('\n')) {
+        const trimmed = line.trim()
+        if (!trimmed || trimmed.startsWith('#')) continue
+        const eq = trimmed.indexOf('=')
+        if (eq < 0) continue
+        spawnEnv[trimmed.slice(0, eq).trim()] = trimmed
+          .slice(eq + 1)
+          .trim()
+          .replace(/^['"]|['"]$/g, '')
+      }
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      const proc = spawn(process.execPath, [pikku, 'tests', 'coverage'], {
+        cwd: functionsDir,
+        env: spawnEnv,
+        stdio: 'ignore',
+      })
+      proc.on('close', (code) =>
+        code === 0
+          ? resolve()
+          : reject(new Error(`tests failed (exit ${code})`))
+      )
+      proc.on('error', reject)
+    })
+
+    const outFile = join(ftestDir, 'coverage', 'function-coverage.json')
+    if (!existsSync(outFile)) return null
+    return JSON.parse(readFileSync(outFile, 'utf-8')) as FunctionCoverageReport
+  },
+})
