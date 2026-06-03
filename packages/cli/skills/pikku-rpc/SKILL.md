@@ -3,9 +3,20 @@ name: pikku-rpc
 description: 'Use when making internal function-to-function calls within a Pikku app, composing functions, or exposing RPC endpoints. Covers rpc.invoke, rpc.remote, rpc.exposed, and generated RPC client.
 TRIGGER when: code uses wire.rpc or expose: true, user asks about calling one Pikku function from another, function composition, or RPC endpoints.
 DO NOT TRIGGER when: user asks about HTTP routes (use pikku-http) or addon cross-package calls (use pikku-addon).'
+installGroups: [core]
 ---
 
 # Pikku RPC Wiring
+
+## Agent Operating Procedure
+
+Use this skill as an execution checklist, not reference material.
+
+1. Discover before editing. Prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
+2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
+3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
+4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
 Call Pikku functions from other Pikku functions internally with full type safety. Use RPC to compose business logic without importing functions directly.
 

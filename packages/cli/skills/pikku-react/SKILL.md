@@ -1,9 +1,20 @@
 ---
 name: pikku-react
 description: 'Set up @pikku/react in a React app: PikkuProvider context, createPikku factory, and the usePikkuRPC / usePikkuFetch hooks for direct (non-React-Query) calls. TRIGGER when: the user is bootstrapping a React frontend that talks to a Pikku backend, asks how to wire `PikkuProvider`, or needs to make one-off RPC calls outside of useQuery/useMutation. DO NOT TRIGGER when: the user is asking about useQuery/useMutation hooks (use pikku-react-query) or about workflows (use pikku-workflows-client).'
+installGroups: [core]
 ---
 
 # Pikku React
+
+## Agent Operating Procedure
+
+Use this skill as an execution checklist, not reference material.
+
+1. Discover before editing. Prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
+2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
+3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
+4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
 `@pikku/react` is the smallest possible binding: a Context provider plus
 two hooks. It does **not** depend on React Query — that's a separate
@@ -59,11 +70,11 @@ const pikku = createPikku(PikkuFetch, PikkuRPC, PikkuRealtime, {
 
 The generated classes come from your `pikku.config.json`:
 
-| config field                       | generated file                                         |
-|------------------------------------|--------------------------------------------------------|
-| `clientFiles.fetchFile`            | typed HTTP client (`PikkuFetch` class)                 |
-| `clientFiles.rpcWiringsFile`       | RPC client (`PikkuRPC` class) calling all exposed fns  |
-| `clientFiles.realtimeFile`         | `PikkuRealtime` (websocket events + SSE + channels)    |
+| config field                 | generated file                                        |
+| ---------------------------- | ----------------------------------------------------- |
+| `clientFiles.fetchFile`      | typed HTTP client (`PikkuFetch` class)                |
+| `clientFiles.rpcWiringsFile` | RPC client (`PikkuRPC` class) calling all exposed fns |
+| `clientFiles.realtimeFile`   | `PikkuRealtime` (websocket events + SSE + channels)   |
 
 If a file isn't being generated, that field is missing from the config —
 add it and re-run `pikku all`.
@@ -114,7 +125,9 @@ import type { PikkuRealtime } from './pikku/realtime.gen'
 function TodoList() {
   const realtime = usePikkuRealtime<PikkuRealtime>()
   useEffect(() => {
-    return realtime.subscribe('todo-created', ({ todo }) => { /* ... */ })
+    return realtime.subscribe('todo-created', ({ todo }) => {
+      /* ... */
+    })
   }, [realtime])
   // ...
 }
@@ -126,15 +139,15 @@ helpers live in **pikku-realtime**.
 
 ## When to reach for what
 
-| Need                                          | Use                       |
-|-----------------------------------------------|---------------------------|
-| Render data, dedupe + cache                   | **usePikkuQuery** (react-query) |
-| Trigger a write, wait for result              | **usePikkuMutation** (react-query) |
-| Paginate                                      | **usePikkuInfiniteQuery** (react-query) |
-| One-off call from an event handler            | `usePikkuRPC()` direct |
-| Hit a REST endpoint (not RPC)                 | `usePikkuFetch()` |
-| Run a workflow                                | **pikku-workflows-client** |
-| Subscribe to events / SSE / channel           | `usePikkuRealtime()` (see **pikku-realtime**) |
+| Need                                | Use                                           |
+| ----------------------------------- | --------------------------------------------- |
+| Render data, dedupe + cache         | **usePikkuQuery** (react-query)               |
+| Trigger a write, wait for result    | **usePikkuMutation** (react-query)            |
+| Paginate                            | **usePikkuInfiniteQuery** (react-query)       |
+| One-off call from an event handler  | `usePikkuRPC()` direct                        |
+| Hit a REST endpoint (not RPC)       | `usePikkuFetch()`                             |
+| Run a workflow                      | **pikku-workflows-client**                    |
+| Subscribe to events / SSE / channel | `usePikkuRealtime()` (see **pikku-realtime**) |
 
 The first three live in your generated `api.gen.ts` (see the
 **pikku-react-query** skill). This skill covers the bottom four rows.
@@ -166,3 +179,5 @@ Exact option names depend on the `@pikku/fetch` version — read
 - Don't call `usePikkuRPC()` outside a `<PikkuProvider>` — it throws.
 - Don't write a custom RPC client. The generated one already covers every
   exposed function with full types.
+- Don't hardcode user-facing strings. Every display string goes through an
+  i18n token — see **pikku-i18n** for the setup (it's English-only by default).

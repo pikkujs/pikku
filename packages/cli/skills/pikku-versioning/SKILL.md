@@ -3,9 +3,20 @@ name: pikku-versioning
 description: 'Use when versioning Pikku function contracts, detecting breaking changes, or managing API backward compatibility. Covers the version property, versions.pikku.json manifest, contract hashing, and CI integration.
 TRIGGER when: code uses version: on a pikkuFunc, user asks about API versioning, breaking changes, contract hashes, backward compatibility, or "pikku versions" CLI commands.
 DO NOT TRIGGER when: user asks about secrets/variables/OAuth2 (use pikku-config) or general function definitions (use pikku-concepts).'
+installGroups: [core]
 ---
 
 # Pikku Function Versioning
+
+## Agent Operating Procedure
+
+Use this skill as an execution checklist, not reference material.
+
+1. Discover before editing. Prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
+2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
+3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
+4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
 Track and protect function contracts across releases. Pikku hashes each function's input/output schema into a manifest so you can detect breaking changes before they ship.
 
@@ -22,6 +33,7 @@ See `pikku-concepts` for the core mental model.
 When you need to introduce a breaking change, keep the old function as a pinned version and let the new one become the latest.
 
 **The pattern:**
+
 1. Create a new file `my-function-v1.function.ts` — export a variable with the `V1` suffix
 2. Set `override: 'myFunction'` — this is the contract key the manifest groups under
 3. Set `version: 1` — pins this as version 1 of the contract
@@ -30,7 +42,7 @@ When you need to introduce a breaking change, keep the old function as a pinned 
 ```typescript
 // my-function-v1.function.ts — old contract, kept for running workflows/agents
 export const getBookV1 = pikkuFunc({
-  override: 'getBook',   // REQUIRED — links this to the 'getBook' contract family
+  override: 'getBook', // REQUIRED — links this to the 'getBook' contract family
   version: 1,
   input: z.object({ bookId: z.string() }),
   output: z.object({ title: z.string() }),
@@ -121,7 +133,7 @@ jobs:
 ```typescript
 // create-todo-v1.function.ts — v1 locked contract
 export const createTodoV1 = pikkuSessionlessFunc({
-  override: 'createTodo',  // groups under 'createTodo' contract family
+  override: 'createTodo', // groups under 'createTodo' contract family
   version: 1,
   input: z.object({ title: z.string() }),
   output: z.object({ id: z.string(), title: z.string() }),
@@ -139,11 +151,13 @@ export const createTodo = pikkuSessionlessFunc({
     title: z.string(),
     priority: z.string(),
   }),
-  func: async ({ todoStore }, { title, priority }) => todoStore.add(title, priority),
+  func: async ({ todoStore }, { title, priority }) =>
+    todoStore.add(title, priority),
 })
 ```
 
 Result in manifest:
+
 ```json
 "createTodo": {
   "latest": 2,

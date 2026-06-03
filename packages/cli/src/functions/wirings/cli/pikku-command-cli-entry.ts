@@ -13,9 +13,10 @@ import { existsSync } from 'fs'
 import { rm } from 'fs/promises'
 import { ErrorCode } from '@pikku/inspector'
 
-export const pikkuCLIEntry = pikkuSessionlessFunc<void, void>({
+export const pikkuCLIEntry = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config, getInspectorState }) => {
     const visitState = await getInspectorState()
+    let channelWireGenerated = false
 
     // Check if CLI entrypoints are configured
     if (
@@ -27,7 +28,7 @@ export const pikkuCLIEntry = pikkuSessionlessFunc<void, void>({
           'No CLI entrypoints configured in config.cli.entrypoints, skipping CLI bootstrap generation',
         type: 'skip',
       })
-      return
+      return false
     }
 
     // Generate bootstrap files for each configured entrypoint
@@ -97,6 +98,7 @@ export const pikkuCLIEntry = pikkuSessionlessFunc<void, void>({
           )
 
           await writeFileInDir(logger, channelWireFile, channelCode)
+          channelWireGenerated = true
           logger.debug(
             `Serialized CLI channel for ${programName}: ${channelWireFile}`
           )
@@ -213,6 +215,8 @@ export const pikkuCLIEntry = pikkuSessionlessFunc<void, void>({
         )
       }
     }
+
+    return channelWireGenerated
   },
   middleware: [
     logCommandInfoAndTime({

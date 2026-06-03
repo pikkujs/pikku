@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { resolveApiContext } from '../lib/config.js'
-import { getRpc } from '../lib/http.js'
+import { getFabricRPC } from '../lib/http.js'
 
 export const FabricMetricsInput = z.object({
   branch: z.string(),
@@ -40,7 +40,7 @@ export const FabricMetrics = pikkuSessionlessFunc({
         'No fabric project linked. Run `pikku fabric link` first.'
       )
 
-    const rpc = getRpc({ apiUrl: ctx.apiUrl, token: ctx.token })
+    const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
     const res = await rpc.invoke('getProjectMetricsByStageKind', {
       projectId: ctx.projectId,
       branch,
@@ -50,9 +50,16 @@ export const FabricMetrics = pikkuSessionlessFunc({
 
     if (json) {
       const wireTypes = Object.fromEntries(
-        (res.wireTypes ?? []).map((r: { wireType: string; requests: number }) => [r.wireType, r.requests]),
+        (res.wireTypes ?? []).map(
+          (r: { wireType: string; requests: number }) => [
+            r.wireType,
+            r.requests,
+          ]
+        )
       )
-      console.log(JSON.stringify({ branch, metrics: res.metrics, wireTypes }, null, 2))
+      console.log(
+        JSON.stringify({ branch, metrics: res.metrics, wireTypes }, null, 2)
+      )
     } else if (res.metrics.length === 0) {
       console.log(
         `[fabric] no metrics for ${branch} in the last ${hours ?? 24}h`

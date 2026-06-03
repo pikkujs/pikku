@@ -53,7 +53,7 @@ export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
           if (timeout) {
             clearTimeout(timeout)
           }
-          timeout = setTimeout(handle, 10)
+          timeout = setTimeout(handle, 1000)
         }
 
         watcher.on('change', deduped)

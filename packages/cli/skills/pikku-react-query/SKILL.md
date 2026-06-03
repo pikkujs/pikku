@@ -1,9 +1,20 @@
 ---
 name: pikku-react-query
 description: 'Use the Pikku auto-generated React Query hooks (`usePikkuQuery`, `usePikkuMutation`, `usePikkuInfiniteQuery`) to call backend RPC functions from a React frontend with full type safety. TRIGGER when: writing React components that need to call a Pikku function, fetch data, mutate data, or paginate; user mentions React Query, useQuery, useMutation, or building a frontend that talks to a Pikku backend. DO NOT TRIGGER when: working on the backend (use pikku-rpc / pikku-feature) or wiring a non-React frontend.'
+installGroups: [core]
 ---
 
 # Pikku React Query Hooks
+
+## Agent Operating Procedure
+
+Use this skill as an execution checklist, not reference material.
+
+1. Discover before editing. Prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
+2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
+3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
+4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
 Pikku generates a typed React Query layer from your backend `expose: true`
 functions. You don''t write `useQuery`/`useMutation` against `fetch`
@@ -88,7 +99,11 @@ export function TodoList() {
   if (isLoading) return <p>Loading…</p>
   if (error) return <p>{error.message}</p>
   return (
-    <ul>{data?.todos.map((t) => <li key={t.id}>{t.title}</li>)}</ul>
+    <ul>
+      {data?.todos.map((t) => (
+        <li key={t.id}>{t.title}</li>
+      ))}
+    </ul>
   )
 }
 ```
@@ -109,7 +124,9 @@ export function CreateTodoForm() {
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const title = (e.currentTarget.elements.namedItem('title') as HTMLInputElement).value
+    const title = (
+      e.currentTarget.elements.namedItem('title') as HTMLInputElement
+    ).value
     mutation.mutate({ title })
   }
 

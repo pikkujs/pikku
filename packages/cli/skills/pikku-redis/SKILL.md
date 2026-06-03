@@ -7,6 +7,16 @@ DO NOT TRIGGER when: user asks about BullMQ queues (use pikku-queue) or SQL data
 
 # Pikku Redis
 
+## Agent Operating Procedure
+
+Use this skill as an execution checklist, not reference material.
+
+1. Discover before editing. Prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
+2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
+3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
+4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
+
 `@pikku/redis` provides Redis-backed implementations of Pikku's core service interfaces using [ioredis](https://github.com/redis/ioredis).
 
 ## Installation
@@ -21,15 +31,15 @@ yarn add @pikku/redis
 
 All services accept a Redis connection (ioredis `Redis` instance, `RedisOptions`, or connection string) in their constructor.
 
-| Service | Interface | Purpose |
-|---------|-----------|---------|
-| `RedisChannelStore` | `ChannelStore` | WebSocket channel state persistence |
-| `RedisEventHubStore` | `EventHubStore` | Event hub state persistence |
-| `RedisWorkflowService` | `PikkuWorkflowService` | Workflow definition storage |
-| `RedisWorkflowRunService` | `WorkflowRunService` | Workflow execution tracking |
-| `RedisDeploymentService` | `DeploymentService` | Deployment state management |
-| `RedisAgentRunService` | `AgentRunService` | Agent execution tracking |
-| `RedisSecretService` | `SecretService` | Encrypted secret storage (envelope encryption) |
+| Service                   | Interface              | Purpose                                        |
+| ------------------------- | ---------------------- | ---------------------------------------------- |
+| `RedisChannelStore`       | `ChannelStore`         | WebSocket channel state persistence            |
+| `RedisEventHubStore`      | `EventHubStore`        | Event hub state persistence                    |
+| `RedisWorkflowService`    | `PikkuWorkflowService` | Workflow definition storage                    |
+| `RedisWorkflowRunService` | `WorkflowRunService`   | Workflow execution tracking                    |
+| `RedisDeploymentService`  | `DeploymentService`    | Deployment state management                    |
+| `RedisAgentRunService`    | `AgentRunService`      | Agent execution tracking                       |
+| `RedisSecretService`      | `SecretService`        | Encrypted secret storage (envelope encryption) |
 
 ### Secret Service
 
@@ -55,7 +65,11 @@ await secrets.close(): Promise<void>
 ### Full Setup
 
 ```typescript
-import { RedisChannelStore, RedisWorkflowService, RedisSecretService } from '@pikku/redis'
+import {
+  RedisChannelStore,
+  RedisWorkflowService,
+  RedisSecretService,
+} from '@pikku/redis'
 
 const createSingletonServices = pikkuServices(async (config) => {
   const logger = new PinoLogger()

@@ -17,6 +17,7 @@ export const rpcCaller = pikkuSessionlessFunc<
   { rpcName: string; data?: unknown },
   unknown
 >({
+  tags: ['pikku'],
   auth: ${authFlag},
   func: async (_services, { rpcName, data }, { rpc }) => {
     return await rpc.exposed(rpcName, data)

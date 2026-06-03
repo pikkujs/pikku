@@ -1,4 +1,4 @@
-import { join, dirname, resolve, isAbsolute } from 'path'
+import { join, dirname, resolve, isAbsolute, parse as parsePath } from 'path'
 import { readdir, readFile } from 'fs/promises'
 import type { PikkuCLIConfig } from '../../types/config.js'
 import type { CLILogger } from '../services/cli-logger.service.js'
@@ -13,6 +13,7 @@ const CLIENT_FILE_KEYS = [
   'mcpJsonFile',
   'nextBackendFile',
   'nextHTTPFile',
+  'startServerFnsFile',
 ] as const
 
 export const getPikkuCLIConfig = async (
@@ -32,6 +33,21 @@ export const getPikkuCLIConfig = async (
   return config
 }
 
+async function findConfigFile(): Promise<string> {
+  let dir = process.cwd()
+  const { root } = parsePath(dir)
+  while (true) {
+    const files = await readdir(dir)
+    const match = files.find((f) => /pikku\.config\.(ts|js|json)$/.test(f))
+    if (match) return join(dir, match)
+    // Stop if we've reached the git repo root or the filesystem root
+    const hasGit = files.includes('.git')
+    if (hasGit || dir === root) break
+    dir = dirname(dir)
+  }
+  throw new Error('Config file pikku.config.json not found')
+}
+
 const _getPikkuCLIConfig = async (
   logger: CLILogger,
   configFile: string | undefined = undefined,
@@ -40,13 +56,7 @@ const _getPikkuCLIConfig = async (
   outDirOverride?: string
 ): Promise<PikkuCLIConfig> => {
   if (!configFile) {
-    let execDirectory = process.cwd()
-    const files = await readdir(execDirectory)
-    const file = files.find((file) => /pikku\.config\.(ts|js|json)$/.test(file))
-    if (!file) {
-      throw new Error('Config file pikku.config.json not found')
-    }
-    configFile = join(execDirectory, file)
+    configFile = await findConfigFile()
   }
 
   try {
@@ -258,7 +268,7 @@ const _getPikkuCLIConfig = async (
         'rpc-remote.gen.ts'
       )
     }
-    if (!result.workflowRoutesFile) {
+    if (result.scaffold?.workflow && !result.workflowRoutesFile) {
       result.workflowRoutesFile = join(
         resolvedScaffoldDir,
         'workflow-routes.gen.ts'
@@ -275,6 +285,16 @@ const _getPikkuCLIConfig = async (
     }
     if (result.scaffold?.events && !result.eventsChannelFile) {
       result.eventsChannelFile = join(resolvedScaffoldDir, 'events.gen.ts')
+    }
+    if (
+      result.scaffold?.events &&
+      result.clientFiles?.fetchFile &&
+      !result.clientFiles.realtimeFile
+    ) {
+      result.clientFiles.realtimeFile = join(
+        dirname(result.clientFiles.fetchFile),
+        'realtime.gen.ts'
+      )
     }
     const triggerDir = join(result.outDir, 'trigger')
     if (!result.triggersTypesFile) {

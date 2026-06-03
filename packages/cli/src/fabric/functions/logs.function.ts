@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { resolveApiContext } from '../lib/config.js'
-import { getRpc } from '../lib/http.js'
+import { getFabricRPC } from '../lib/http.js'
 
 export const FabricLogsInput = z.object({
   branch: z.string().optional(),
@@ -52,7 +52,7 @@ export const FabricLogs = pikkuSessionlessFunc({
 
     const seen = new Set<string>()
     const cursorWindow = 5_000
-    const rpc = getRpc({ apiUrl: ctx.apiUrl, token: ctx.token })
+    const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
     const projectId = ctx.projectId
 
     const fetchAndPrintNew = async () => {

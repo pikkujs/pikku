@@ -3,9 +3,20 @@ name: pikku-concepts
 description: 'Foundational guide to Pikku framework concepts. Use this skill when working with any Pikku codebase, starting a new Pikku project, or migrating a backend to Pikku. Covers the core mental model, function types, project structure, code generation, testing, and how Pikku maps to traditional backend patterns.
 TRIGGER when: user asks "what is Pikku?", starts a new Pikku project, migrates from Express/NestJS/Hono, or needs to understand how Pikku works.
 DO NOT TRIGGER when: user is doing a specific wiring task (use the specific skill instead, e.g. pikku-http, pikku-websocket).'
+installGroups: [core]
 ---
 
 # Pikku Framework Concepts
+
+## Agent Operating Procedure
+
+Use this skill as an execution checklist, not reference material.
+
+1. Discover before editing. Prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
+2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
+3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
+4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
 Pikku is a TypeScript framework that separates business logic from transport mechanisms. You define a function once, then wire it to HTTP, WebSocket, queues, schedulers, MCP, CLI, or RPC — without the function knowing how it's being called.
 
@@ -248,17 +259,17 @@ expect(result.todos).toHaveLength(3)
 
 ### Service Packages
 
-| Package                  | Provides                           |
-| ------------------------ | ---------------------------------- |
-| `@pikku/jose`            | JWT (sign/verify) via jose library |
-| `@pikku/schema-ajv`      | Schema validation via AJV          |
-| `@pikku/schema-cfworker` | Schema validation for Cloudflare   |
-| `@pikku/pino`            | Structured logging via Pino        |
+| Package                  | Provides                                             |
+| ------------------------ | ---------------------------------------------------- |
+| `@pikku/jose`            | JWT (sign/verify) via jose library                   |
+| `@pikku/schema-ajv`      | Schema validation via AJV                            |
+| `@pikku/schema-cfworker` | Schema validation for Cloudflare                     |
+| `@pikku/pino`            | Structured logging via Pino                          |
 | `@pikku/kysely`          | Type-safe SQL via Kysely (PostgreSQL, SQLite, MySQL) |
-| `@pikku/redis`           | Redis client                       |
-| `@pikku/queue-bullmq`    | Job queues via BullMQ              |
-| `@pikku/queue-pg-boss`   | Job queues via PgBoss              |
-| `@pikku/aws-services`    | AWS SDK (SQS, DynamoDB, etc.)      |
+| `@pikku/redis`           | Redis client                                         |
+| `@pikku/queue-bullmq`    | Job queues via BullMQ                                |
+| `@pikku/queue-pg-boss`   | Job queues via PgBoss                                |
+| `@pikku/aws-services`    | AWS SDK (SQS, DynamoDB, etc.)                        |
 
 ## Key Differences from Traditional Frameworks
 

@@ -10,7 +10,10 @@ describe('serializeWorkflowRoutes', () => {
     assert.equal(initMatches.length, 2)
     assert.match(result, /if \(!initSent && run\.deterministic\)/)
     assert.match(result, /steps: \(run\.plannedSteps \?\? \[\]\)\.map/)
-    assert.match(result, /status: statusByStep\.get\(s\.stepName\) \?\? 'pending'/)
+    assert.match(
+      result,
+      /status: statusByStep\.get\(s\.stepName\) \?\? 'pending'/
+    )
   })
 
   test('keeps update and done events in both streams', () => {

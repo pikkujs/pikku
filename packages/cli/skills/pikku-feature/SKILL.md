@@ -1,11 +1,22 @@
 ---
 name: pikku-feature
 description: 'Drive create-a-feature work for a Pikku project: discover project context, work on a feature branch, implement + verify + commit, and ask the user to review via the diff. TRIGGER when: the user asks to "create a feature", "build a todo app", "add X to my Pikku project", "wire up a new endpoint", or anything that implies turning a natural-language request into Pikku functions/wirings/migrations. DO NOT TRIGGER when: the user asks for a one-off code edit in an existing function, or asks about Pikku concepts (use pikku-concepts).'
+installGroups: [core]
 allowed-tools: Bash(yarn pikku meta *), Bash(yarn pikku all *), Bash(yarn tsc), Bash(git status *), Bash(git diff *), Bash(git switch *), Bash(git checkout *), Bash(git checkout -b *), Bash(git add *), Bash(git commit *), Bash(git log *), Bash(git branch *)
 argument-hint: '<feature description>'
 ---
 
 # Pikku Create-a-Feature
+
+## Agent Operating Procedure
+
+Use this skill as an execution checklist, not reference material.
+
+1. Discover before editing. Prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
+2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
+3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
+4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
 End-to-end flow: **discover → state intent → branch → implement → verify → commit → hand to reviewer**.
 
@@ -145,7 +156,7 @@ Some patterns vary by project; **read a neighbour file before writing**:
   shapes — match what the project already uses:
   - Per-route `wireHTTP({ method, route, func, auth })`.
   - Single map: `const routes = defineHTTPRoutes({ auth: false, routes: {
-    fooName: { method: 'post', route: '/foo', func: fooFunc } }}); wireHTTPRoutes(routes)`.
+fooName: { method: 'post', route: '/foo', func: fooFunc } }}); wireHTTPRoutes(routes)`.
 
 For shared wiring files (e.g. `todos.http.ts` holding both create and list):
 create the file with imports if it doesn't exist; **append** wire calls and
@@ -219,7 +230,7 @@ Tell the user the branch name and how to review. Two options:
   current branch against `main` with pikku-aware structure (added functions,
   new wires, migrations).
 - **PR review:** ask before pushing. Once they confirm, `git push -u origin
-  feature/<slug>` and surface the PR-create URL.
+feature/<slug>` and surface the PR-create URL.
 
 Do not push without explicit confirmation. Do not merge.
 

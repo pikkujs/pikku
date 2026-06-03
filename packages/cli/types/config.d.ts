@@ -156,6 +156,8 @@ export type PikkuCLIInput = {
   extends?: string
 
   rootDir: string
+  /** Runtime artifacts directory (dev.db, content, tmp). Resolved relative to rootDir. Defaults to <rootDir>/.pikku-runtime. */
+  runtimeDir?: string
   srcDirectories: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
@@ -172,16 +174,6 @@ export type PikkuCLIInput = {
         }
       }
   addonName?: string
-
-  models?: Record<
-    string,
-    string | { model: string; temperature?: number; maxSteps?: number }
-  >
-  agentDefaults?: { temperature?: number; maxSteps?: number }
-  agentOverrides?: Record<
-    string,
-    { model?: string; temperature?: number; maxSteps?: number }
-  >
 
   configDir: string
   tsconfig: string
@@ -222,6 +214,14 @@ export type PikkuCLIInput = {
      * `nextBackendFile`. Required when `nextBackendTransport === 'worker-rpc'`.
      */
     nextBackendFetcherImport?: string
+    /**
+     * Emit a TanStack Start server-function shim into this file. The shim
+     * exports `makeApi(): PikkuRPC` — a typed caller over the generated RPC map
+     * for use in Start loaders, actions and components. It reads the API base
+     * URL from `import.meta.env.VITE_API_URL` (throws if unset). Requires
+     * `rpcWiringsFile` (where the `PikkuRPC` class is generated).
+     */
+    startServerFnsFile?: string
   }
 
   openAPI?: {
@@ -297,11 +297,20 @@ export type PikkuCLIInput = {
 
   globalHTTPPrefix?: string
 
+  binary?: {
+    entrypoint: string
+    output: string
+    targets?: string[]
+  }
+
   deploy?: {
     providers: Record<string, string>
     defaultProvider?: string
     serverlessIncompatible?: string[]
   }
+
+  /** Named filter presets keyed by name, used via CLI --filter <name>. */
+  namedFilters?: Record<string, InspectorFilters>
 
   filters: InspectorFilters
 } & PikkuCLICoreOutputFiles
@@ -309,7 +318,8 @@ export type PikkuCLIInput = {
 export type PikkuCLIConfig = PikkuCLIInput & {
   configFile?: string
   tags?: string[]
-  types?: string[]
+  wires?: string[]
+  excludeWires?: string[]
 
   userSessionType?: string
   singletonServicesFactoryType?: string
