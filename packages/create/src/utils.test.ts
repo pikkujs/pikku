@@ -11,6 +11,7 @@ import {
   mergeJsonFiles,
   replaceFunctionReferences,
   cleanTSConfig,
+  removeFunctionsOnlyFiles,
   wranglerChanges,
   serverlessChanges,
   updatePackageJSONScripts,
@@ -191,6 +192,17 @@ describe('Functions Test Suite', () => {
       { target: 'ES6' },
       'Other properties should remain unchanged'
     )
+  })
+
+  test('removeFunctionsOnlyFiles: removes the runtime script harness', () => {
+    const testDir = path.join(tempRoot, 'functionsOnlyFilesTest')
+    const scriptsDir = path.join(testDir, 'scripts')
+    fs.mkdirSync(scriptsDir, { recursive: true })
+    fs.writeFileSync(path.join(scriptsDir, 'test-runtime.ts'), '', 'utf-8')
+
+    removeFunctionsOnlyFiles(testDir)
+
+    assert.ok(!fs.existsSync(scriptsDir), 'scripts directory should be removed')
   })
 
   test('wranglerChanges: updates wranger.toml file content', () => {
