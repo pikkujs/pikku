@@ -136,3 +136,4 @@ typings/
 
 # Bun build cache
 *.bun-build
+packages/cli/release/
