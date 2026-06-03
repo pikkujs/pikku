@@ -162,6 +162,10 @@ export function cleanTSConfig(targetPath: string, stackblitz?: boolean): void {
   fs.writeFileSync(tsconfigFile, JSON.stringify(tsconfig, null, 2))
 }
 
+export function removeFunctionsOnlyFiles(targetPath: string): void {
+  fs.rmSync(path.join(targetPath, 'scripts'), { recursive: true, force: true })
+}
+
 /**
  * Cleans up the pikku.config.json file and removes config options for unsupported features
  */

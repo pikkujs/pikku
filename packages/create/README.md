@@ -17,12 +17,22 @@ npm install -g @pikku/create
 
 ## Usage
 
-### Interactive Mode
+### Default Mode
 
-Simply run the command without arguments to be prompted for options:
+Running without arguments now scaffolds the default starter template with Yarn, keeps the default frontend, installs dependencies, and runs Pikku setup:
 
 ```bash
 npm create pikku@latest
+```
+
+By default this creates `./my-app`. Use `--name` to override it.
+
+### Variations Mode
+
+Use `--variations` to access the full template picker and interactive options:
+
+```bash
+npm create pikku@latest -- --variations
 ```
 
 ### CLI Mode
@@ -35,16 +45,18 @@ npm create pikku@latest -- --template express --name my-app --install --package-
 
 ## CLI Options
 
-| Option                        | Short | Description                        | Example                  |
-| ----------------------------- | ----- | ---------------------------------- | ------------------------ |
-| `--template <template>`       | `-t`  | Template to use                    | `--template express`     |
-| `--name <name>`               | `-n`  | Project name                       | `--name my-app`          |
-| `--install`                   | `-i`  | Install dependencies automatically | `--install`              |
-| `--package-manager <manager>` | `-p`  | Package manager to use             | `--package-manager yarn` |
-| `--version <version>`         | `-v`  | Template version/branch            | `--version main`         |
-| `--yarn-link <path>`          |       | Link to local Pikku development    | `--yarn-link ../pikku`   |
-| `--stackblitz`                |       | Add StackBlitz configuration       | `--stackblitz`           |
-| `--help`                      | `-h`  | Display help information           | `--help`                 |
+| Option                        | Short | Description                           | Example                      |
+| ----------------------------- | ----- | ------------------------------------- | ---------------------------- |
+| `--template <template>`       | `-t`  | Template to use                       | `--template express`         |
+| `--name <name>`               | `-n`  | Project name                          | `--name my-app`              |
+| `--install`                   | `-i`  | Install dependencies automatically    | `--install`                  |
+| `--package-manager <manager>` | `-p`  | Package manager to use                | `--package-manager yarn`     |
+| `--version <version>`         | `-v`  | Template version/branch               | `--version main`             |
+| `--yarn-link <path>`          |       | Link to local Pikku development       | `--yarn-link ../pikku`       |
+| `--stackblitz`                |       | Add StackBlitz configuration          | `--stackblitz`               |
+| `--variations`                |       | Show all template variations          | `--variations`               |
+| `--frontend <frontend>`       |       | Frontend to keep for starter template | `--frontend nextjs-tailwind` |
+| `--help`                      | `-h`  | Display help information              | `--help`                     |
 
 ## Available Templates
 
@@ -72,11 +84,11 @@ npm create pikku@latest -- --template express --name my-app --install --package-
 
 ### Full-Stack Templates
 
-| Template         | Description                  | Features                                    |
-| ---------------- | ---------------------------- | ------------------------------------------- |
-| `nextjs`         | Next.js hello world template | HTTP, Full-stack                            |
-| `nextjs-full`    | Next.js book application     | HTTP, Full-stack                            |
-| `yarn-workspace` | Complete workspace example   | HTTP, Channels, Scheduled tasks, Full-stack |
+| Template           | Description                  | Features         |
+| ------------------ | ---------------------------- | ---------------- |
+| `nextjs`           | Next.js hello world template | HTTP, Full-stack |
+| `nextjs-full`      | Next.js book application     | HTTP, Full-stack |
+| `starter-template` | Opinionated starter template | HTTP, Full-stack |
 
 ### Specialized Templates
 
@@ -119,10 +131,10 @@ npm create pikku@latest -- --template express-middleware --name test-app --packa
 npm create pikku@latest -- --template nextjs --name stackblitz-app --stackblitz --package-manager npm
 ```
 
-### Full Workspace
+### Starter Template
 
 ```bash
-npm create pikku@latest -- --template yarn-workspace --name my-workspace --package-manager yarn --install
+npm create pikku@latest -- --template starter-template --frontend nextjs-tailwind --name my-app
 ```
 
 ## Features

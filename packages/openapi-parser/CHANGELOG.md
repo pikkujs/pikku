@@ -5,7 +5,6 @@
 ### Patch Changes
 
 - 02fca80: Fix OpenAPI-to-addon codegen robustness across 2521 real-world specs (77% → 97.8% pass rate).
-
   - Cycle detection and depth limits in schema generation to prevent stack overflows
   - Schema partitioning: shared types file for multi-referenced schemas, inline for single-use (fixes crash on large specs)
   - Topological sort with z.lazy() for circular schema references
