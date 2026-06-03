@@ -1,5 +1,5 @@
 import { existsSync } from 'fs'
-import { resolve } from 'path'
+import { join, resolve } from 'path'
 
 import { pikkuSessionlessFunc } from '#pikku'
 import chokidar, { type FSWatcher } from 'chokidar'
@@ -20,6 +20,10 @@ import { stopSingletonServices } from '@pikku/core'
 import { pikkuState } from '@pikku/core/internal'
 import { LocalMetaService } from '@pikku/core/services/local-meta'
 import { LocalEventHubService } from '@pikku/core/channel/local'
+import {
+  LocalContent,
+  type LocalContentConfig,
+} from '@pikku/core/services/local-content'
 import { pikkuWebsocketHandler } from '@pikku/ws'
 import { PikkuNodeHTTPServer } from '@pikku/node-http-server'
 import { WebSocketServer } from 'ws'
@@ -154,6 +158,8 @@ export const dev = pikkuSessionlessFunc<
       await loadUserBootstrap(pikkuDir)
     }
 
+    workflowService.rewireQueueWorkers()
+
     const configModule = await loadUserModule(pikkuConfigFactory.file)
     const servicesModule = await loadUserModule(singletonServicesFactory.file)
     const userCreateConfig = configModule[pikkuConfigFactory.variable]
@@ -162,9 +168,30 @@ export const dev = pikkuSessionlessFunc<
 
     const userConfig = await userCreateConfig()
 
-    const resolvedLocalDb = resolveLocalDb(userConfig.dev?.db, config.rootDir)
+    const resolvedLocalDb = resolveLocalDb(
+      userConfig.dev?.db,
+      config.rootDir,
+      config.outDir,
+      config.runtimeDir
+    )
     const kysely = resolvedLocalDb
       ? await createKysely(resolvedLocalDb)
+      : undefined
+
+    const resolvedRuntimeDir =
+      config.runtimeDir ?? join(config.rootDir, '.pikku-runtime')
+    const localContentConfig: LocalContentConfig | undefined = userConfig.dev
+      ?.content
+      ? {
+          localFileUploadPath: join(resolvedRuntimeDir, 'content'),
+          uploadUrlPrefix: '/upload',
+          assetUrlPrefix: '/assets',
+          server: `http://${hostname}:${resolvedPort}`,
+          ...(userConfig.dev.content !== true ? userConfig.dev.content : {}),
+        }
+      : undefined
+    const localContent = localContentConfig
+      ? new LocalContent(localContentConfig, logger)
       : undefined
 
     const schedulerService = new InMemorySchedulerService()
@@ -201,6 +228,7 @@ export const dev = pikkuSessionlessFunc<
       agentRunService,
       eventHub: new LocalEventHubService(),
       ...(kysely ? { kysely } : {}),
+      ...(localContent ? { content: localContent } : {}),
     }
 
     const singletonServices = await userCreateSingletonServices(userConfig, {
@@ -214,7 +242,12 @@ export const dev = pikkuSessionlessFunc<
 
     const wss = new WebSocketServer({ noServer: true })
     const pikkuServer = new PikkuNodeHTTPServer(
-      { ...userConfig, hostname, port: resolvedPort },
+      {
+        ...userConfig,
+        hostname,
+        port: resolvedPort,
+        content: localContentConfig,
+      },
       logger,
       {
         configureServer: (httpServer) => {
@@ -276,6 +309,7 @@ export const dev = pikkuSessionlessFunc<
             try {
               const start = Date.now()
               await runAllWithCommandState()
+              workflowService.rewireQueueWorkers()
               logger.info({
                 message: `✓ Generated in ${Date.now() - start}ms`,
                 type: 'timing',

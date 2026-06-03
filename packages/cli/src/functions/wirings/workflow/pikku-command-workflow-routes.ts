@@ -6,7 +6,7 @@ import { serializeWorkflowRoutes } from './serialize-workflow-routes.js'
 
 export const pikkuWorkflowRoutes = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config }) => {
-    if (config.workflowRoutesFile) {
+    if (config.scaffold?.workflow && config.workflowRoutesFile) {
       const pathToPikkuTypes = getFileImportRelativePath(
         config.workflowRoutesFile,
         config.typesDeclarationFile,

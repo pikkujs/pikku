@@ -79,4 +79,50 @@ if [ -d "../console/dist" ]; then
   cp -r ../console/dist console-app
 fi
 
+# Build native CLI binaries for all platforms using bun --compile
+if command -v bun >/dev/null 2>&1; then
+  echo "Building native CLI binaries..."
+  mkdir -p release/binaries
+
+  CLI_VERSION=$(node -p "require('./package.json').version")
+
+  # Write a static entry point that bun can bundle without dynamic imports.
+  # Version is baked in as a literal so package.json is not needed at runtime.
+  cat > dist/bin/pikku-bin.mjs << ENTRY
+process.removeAllListeners('warning')
+process.on('warning', (w) => {
+  if (w.name === 'ExperimentalWarning' && w.message.includes('SQLite')) return
+  process.stderr.write(\`\${w.name}: \${w.message}\n\`)
+})
+async function checkForUpdate() {
+  if (process.env.CI || !process.stderr.isTTY) return
+  try {
+    const res = await fetch('https://registry.npmjs.org/@pikku/cli/latest', {
+      signal: AbortSignal.timeout(3000),
+    })
+    if (!res.ok) return
+    const { version: latest } = await res.json()
+    if (latest !== '${CLI_VERSION}') {
+      process.stderr.write(\`\n  Update available  ${CLI_VERSION} → \${latest}\n  brew upgrade pikku  or  npm install -g @pikku/cli\n\n\`)
+    }
+  } catch {}
+}
+import { PikkuCLI } from '../.pikku/cli/pikku-cli.gen.js'
+const updateCheck = checkForUpdate()
+await PikkuCLI(process.argv.slice(2))
+await updateCheck
+process.exit(0)
+ENTRY
+
+  for target in bun-linux-x64 bun-linux-arm64 bun-darwin-x64 bun-darwin-arm64; do
+    suffix="${target#bun-}"
+    echo "  → $target"
+    bun build --compile "--target=$target" "--outfile=release/binaries/pikku-$suffix" dist/bin/pikku-bin.mjs
+  done
+
+  echo "Native binaries written to release/binaries/"
+else
+  echo "Bun not found — skipping native binary build"
+fi
+
 echo "Build complete! ✓"

@@ -13,28 +13,27 @@ const DEFAULT_API_URL = 'http://localhost:7103'
 export interface ProjectConfig {
   projectId: string
   apiUrl?: string
-  apps?: Record<string, FabricAppConfig>
+  frontends?: Record<string, FabricAppConfig>
   production?: FabricProductionConfig
 }
 
-/**
- * One entry per deployable app/frontend in the repo. Key is the app's package
- * name (e.g. "@project/next-app" or "next-app"); slug controls the subdomain
- * label it gets in derived URLs ("app" → app.example.com / app.j7k2p9.pikkufabric.app).
- * If slug is omitted it defaults to the package name's final segment.
- */
+/** One entry per deployable frontend in the repo. Key is a short slug. */
 export interface FabricAppConfig {
-  slug?: string
+  cwd: string
+  primary?: boolean
+  deploy?: boolean
+  kind?: 'spa' | 'ssr' | 'static'
+  dev?: { command?: string[]; port?: number; healthPath?: string }
 }
 
 /**
- * Production branch + optional custom domain. If `domain` is set, fabric
- * expects users to CNAME `<slug>.<domain>` and `api.<domain>` at the
- * matching `*.pikkufabric.app` hostnames. If absent, production lives only
- * on the platform-managed `*.pikkufabric.app` hostnames.
+ * Production custom domain config. Production always maps to `main`; if
+ * `domain` is set, fabric expects users to CNAME `<slug>.<domain>` and
+ * `api.<domain>` at the matching `*.pikkufabric.app` hostnames. If absent,
+ * production lives only on the platform-managed `*.pikkufabric.app`
+ * hostnames.
  */
 export interface FabricProductionConfig {
-  branch?: string
   domain?: string
 }
 

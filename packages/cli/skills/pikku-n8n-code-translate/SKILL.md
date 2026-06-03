@@ -7,6 +7,16 @@ metadata:
 
 # n8n Code Node → Pikku Function Translator
 
+## Agent Operating Procedure
+
+Use this skill as an execution checklist, not reference material.
+
+1. Discover before editing. Prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
+2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
+3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
+4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
+
 You are translating an n8n **Code node** body into a Pikku `pikkuSessionlessFunc` body. The original JavaScript is preserved verbatim in the JSDoc above the function. Your job: replace the `throw new Error(...)` body with a faithful TypeScript reimplementation, keep the function signature and the JSDoc intact, and only widen the Zod input/output if the original code's data shape demands it.
 
 This is a **narrow, mechanical translation**. Do not "improve" the logic, refactor for style, add error handling, or invent fields. The goal is behavioral parity, not better code.
@@ -21,11 +31,11 @@ This is a **narrow, mechanical translation**. Do not "improve" the logic, refact
 2. **Determine the n8n mode** from the original n8n JSON if available (the importer leaves the JSON on disk in `fixtures/` or you can ask the user). The two modes:
    - `runOnceForAllItems` (default) — code runs once with `items: Array<{ json, binary, pairedItem }>` in scope, returns an array of envelopes.
    - `runOnceForEachItem` — code runs once per input item, with `$json` / `$input.item.json` in scope, returns a single envelope.
-   If you can't determine the mode, infer from the code: bare `items.X` → all-items; bare `$json.X` or `$input.item.X` → each-item.
+     If you can't determine the mode, infer from the code: bare `items.X` → all-items; bare `$json.X` or `$input.item.X` → each-item.
 3. **Apply the rubric below** to translate.
 4. **Edit the file** to replace only the function body. Leave the import block, schema definitions, JSDoc, function name, description, and Zod refs untouched unless step 5 forces a change.
 5. **If the schemas are wrong** (e.g. the code reads `$json.userId: string` but the input schema is `items: z.array(z.unknown())`), tighten the schemas with the smallest change that lets the code compile. Prefer `z.unknown()` over `z.any()`. Never widen output to `z.any()`.
-6. **Add a one-line comment at the top of the body** noting the n8n mode you assumed: `// translated from n8n Code node, mode: runOnceForAllItems`. This is the *only* comment you may add.
+6. **Add a one-line comment at the top of the body** noting the n8n mode you assumed: `// translated from n8n Code node, mode: runOnceForAllItems`. This is the _only_ comment you may add.
 7. **Run the test/typecheck** if available (`yarn tsc` from the package root). Fix any type errors with the smallest viable change.
 
 ## Translation rubric
@@ -34,32 +44,32 @@ This is a **narrow, mechanical translation**. Do not "improve" the logic, refact
 
 The n8n `items` is an array of `{ json, binary, pairedItem }` envelopes. In Pikku, the input is typed — `data.items` is the payload array. Translate by treating `items[i]` as the payload directly.
 
-| n8n                         | Pikku                                              |
-| --------------------------- | -------------------------------------------------- |
-| `items`                     | `(data.items ?? []) as any[]` (or typed if known)  |
-| `items[i].json.X`           | `items[i].X`                                       |
-| `items[i].json`             | `items[i]`                                         |
-| `items[i].binary`           | **NOT supported** — leave a TODO and explain       |
-| `items.length`              | `items.length`                                     |
-| `items.map(i => i.json.X)`  | `items.map((i: any) => i.X)`                       |
+| n8n                        | Pikku                                             |
+| -------------------------- | ------------------------------------------------- |
+| `items`                    | `(data.items ?? []) as any[]` (or typed if known) |
+| `items[i].json.X`          | `items[i].X`                                      |
+| `items[i].json`            | `items[i]`                                        |
+| `items[i].binary`          | **NOT supported** — leave a TODO and explain      |
+| `items.length`             | `items.length`                                    |
+| `items.map(i => i.json.X)` | `items.map((i: any) => i.X)`                      |
 
 ### Envelope unwrapping (each-item mode)
 
-| n8n                         | Pikku                                              |
-| --------------------------- | -------------------------------------------------- |
-| `$json.X` / `$input.item.json.X` | `data.X` (assuming input is the item itself)  |
-| `$input.item.json`          | `data`                                             |
-| `$input.all()`              | not available per-item — change to all-items mode  |
+| n8n                              | Pikku                                             |
+| -------------------------------- | ------------------------------------------------- |
+| `$json.X` / `$input.item.json.X` | `data.X` (assuming input is the item itself)      |
+| `$input.item.json`               | `data`                                            |
+| `$input.all()`                   | not available per-item — change to all-items mode |
 
 ### Return statement
 
-| n8n                                    | Pikku                                  |
-| -------------------------------------- | -------------------------------------- |
-| `return [{ json: X }]`                 | `return { items: [X] }`                |
-| `return items.map(i => ({ json: ... }))` | `return { items: items.map(...) }`   |
-| `return [{ json: X }, { json: Y }]`    | `return { items: [X, Y] }`             |
-| `return { json: X }` (each-item)       | `return X`                             |
-| `return [...]` (already plain)         | wrap in `{ items: [...] }` only if output schema expects it |
+| n8n                                      | Pikku                                                       |
+| ---------------------------------------- | ----------------------------------------------------------- |
+| `return [{ json: X }]`                   | `return { items: [X] }`                                     |
+| `return items.map(i => ({ json: ... }))` | `return { items: items.map(...) }`                          |
+| `return [{ json: X }, { json: Y }]`      | `return { items: [X, Y] }`                                  |
+| `return { json: X }` (each-item)         | `return X`                                                  |
+| `return [...]` (already plain)           | wrap in `{ items: [...] }` only if output schema expects it |
 
 ### n8n built-ins and helpers — do NOT auto-translate
 
@@ -80,7 +90,7 @@ If the code references **any** of the following, **stop**, leave the body as a s
 ### Types
 
 - Cast incoming `items` as `any[]` only if the schema is `z.array(z.unknown())`. If the user has tightened the schema, use the inferred type.
-- Never use `as any` on the *return* value. If the return doesn't match the output schema, the schema is wrong — fix it (step 5).
+- Never use `as any` on the _return_ value. If the return doesn't match the output schema, the schema is wrong — fix it (step 5).
 
 ## Example
 
@@ -113,7 +123,9 @@ export const codeStubCustomCode = pikkuSessionlessFunc({
   input: CodeStubCustomCodeInput,
   output: CodeStubCustomCodeOutput,
   func: async (_services, _data) => {
-    throw new Error('Stub: ported from n8n Code node "Custom Code" — implement me')
+    throw new Error(
+      'Stub: ported from n8n Code node "Custom Code" — implement me'
+    )
   },
 })
 ```
@@ -144,6 +156,7 @@ A short summary, no fluff:
 - Any schema tightening you did (with before → after).
 
 Do **not**:
+
 - Add tests
 - Refactor surrounding code
 - Edit other files unless the user asked

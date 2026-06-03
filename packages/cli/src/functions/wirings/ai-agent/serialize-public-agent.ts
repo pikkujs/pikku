@@ -4,12 +4,14 @@ export const serializePublicAgent = (
   globalHTTPPrefix: string = ''
 ) => {
   const authFlag = requireAuth ? 'true' : 'false'
-  return `import { pikkuSessionlessFunc, defineHTTPRoutes, wireHTTPRoutes } from '${pathToPikkuTypes}'
+  return `import { MissingServiceError } from '@pikku/core/errors'
+import { pikkuSessionlessFunc, defineHTTPRoutes, wireHTTPRoutes } from '${pathToPikkuTypes}'
 
 export const agentCaller = pikkuSessionlessFunc<
   { agentName: string; message: string; threadId: string; resourceId: string },
   unknown
 >({
+  tags: ['pikku'],
   auth: ${authFlag},
   func: async (_services, data, { rpc }) => {
     return await rpc.agent.run(data.agentName as any, {
@@ -24,6 +26,7 @@ export const agentStreamCaller = pikkuSessionlessFunc<
   { agentName: string; message: string; threadId: string; resourceId: string },
   void
 >({
+  tags: ['pikku'],
   auth: ${authFlag},
   func: async (_services, data, { rpc }) => {
     await rpc.agent.stream(data.agentName as any, {
@@ -38,6 +41,7 @@ export const agentApproveCaller = pikkuSessionlessFunc<
   { agentName: string; runId: string; approvals: { toolCallId: string; approved: boolean }[] },
   unknown
 >({
+  tags: ['pikku'],
   auth: ${authFlag},
   func: async (_services, { runId, approvals, agentName }, { rpc }) => {
     return await rpc.agent.approve(runId, approvals, agentName)
@@ -48,12 +52,83 @@ export const agentResumeCaller = pikkuSessionlessFunc<
   { agentName: string; runId: string; toolCallId: string; approved: boolean },
   void
 >({
+  tags: ['pikku'],
   auth: ${authFlag},
   func: async (_services, data, { rpc }) => {
     await rpc.agent.resume(data.runId, {
       toolCallId: data.toolCallId,
       approved: data.approved,
     })
+  },
+})
+
+export const getAgentThreads = pikkuSessionlessFunc<
+  { agentName?: string; resourceId?: string; limit?: number; offset?: number },
+  any[]
+>({
+  tags: ['pikku', 'pikku:agent'],
+  title: 'Get Agent Threads',
+  description:
+    'Returns a list of AI agent threads from storage. Accepts optional filters: agentName, resourceId, limit, and offset for pagination.',
+  expose: true,
+  auth: ${authFlag},
+  func: async ({ agentRunService }, input) => {
+    if (!agentRunService) throw new MissingServiceError('agentRunService is not available')
+    return await agentRunService.listThreads({
+      agentName: input?.agentName,
+      resourceId: input?.resourceId,
+      limit: input?.limit,
+      offset: input?.offset,
+    })
+  },
+})
+
+export const getAgentThreadMessages = pikkuSessionlessFunc<
+  { threadId: string; resourceId?: string },
+  any[]
+>({
+  tags: ['pikku', 'pikku:agent'],
+  title: 'Get Agent Thread Messages',
+  description:
+    'Returns all messages for a given AI agent thread, ordered by creation time.',
+  expose: true,
+  auth: ${authFlag},
+  func: async ({ agentRunService }, input) => {
+    if (!agentRunService) throw new MissingServiceError('agentRunService is not available')
+    return await agentRunService.getThreadMessages(input.threadId)
+  },
+})
+
+export const getAgentThreadRuns = pikkuSessionlessFunc<
+  { threadId: string; resourceId?: string },
+  any[]
+>({
+  tags: ['pikku', 'pikku:agent'],
+  title: 'Get Agent Thread Runs',
+  description:
+    'Returns the run history for a given AI agent thread, ordered by creation time.',
+  expose: true,
+  auth: ${authFlag},
+  func: async ({ agentRunService }, input) => {
+    if (!agentRunService) throw new MissingServiceError('agentRunService is not available')
+    return await agentRunService.getThreadRuns(input.threadId)
+  },
+})
+
+export const deleteAgentThread = pikkuSessionlessFunc<
+  { threadId: string; resourceId?: string },
+  { deleted: boolean }
+>({
+  tags: ['pikku', 'pikku:agent'],
+  title: 'Delete Agent Thread',
+  description:
+    'Deletes an AI agent thread and all of its persisted state.',
+  expose: true,
+  auth: ${authFlag},
+  func: async ({ agentRunService }, input) => {
+    if (!agentRunService) throw new MissingServiceError('agentRunService is not available')
+    const deleted = await agentRunService.deleteThread(input.threadId)
+    return { deleted }
   },
 })
 

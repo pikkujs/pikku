@@ -49,6 +49,88 @@ async function copyDir(src: string, dest: string): Promise<void> {
   }
 }
 
+function parseInstallGroups(frontmatter: string): string[] {
+  const inline = frontmatter.match(/^\s*installGroups\s*:\s*\[([^\]]*)\]/m)
+  if (inline) {
+    return inline[1]
+      .split(',')
+      .map((value) => value.trim().replace(/^['"]|['"]$/g, ''))
+      .filter(Boolean)
+  }
+
+  const block = frontmatter.match(
+    /^\s*installGroups\s*:\s*\n((?:\s*-\s*[^\n]+\n?)*)/m
+  )
+  if (block) {
+    return block[1]
+      .split('\n')
+      .map((line) =>
+        line
+          .match(/^\s*-\s*(.+)\s*$/)?.[1]
+          ?.trim()
+          .replace(/^['"]|['"]$/g, '')
+      )
+      .filter(Boolean) as string[]
+  }
+
+  const single = frontmatter.match(/^\s*installGroups\s*:\s*([^\n]+)/m)
+  if (single) {
+    const value = single[1].trim().replace(/^['"]|['"]$/g, '')
+    return value ? [value] : []
+  }
+
+  return []
+}
+
+async function readSkillInstallGroups(
+  skillsDir: string,
+  skillName: string
+): Promise<string[]> {
+  const skillPath = join(skillsDir, skillName, 'SKILL.md')
+  if (!existsSync(skillPath)) return []
+  const content = await readFile(skillPath, 'utf-8')
+  const match = content.match(/^---\n([\s\S]*?)\n---/)
+  if (!match) return []
+  return parseInstallGroups(match[1])
+}
+
+async function getWantedSkills(
+  skillsDir: string,
+  allEntries: string[],
+  {
+    only,
+    core = false,
+    fabric = false,
+  }: { only?: string; core?: boolean; fabric?: boolean }
+): Promise<string[]> {
+  const wanted = new Set<string>()
+
+  if (only) {
+    for (const name of only
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)) {
+      wanted.add(name)
+    }
+  }
+
+  const requestedGroups = [
+    ...(core ? ['core'] : []),
+    ...(fabric ? ['fabric'] : []),
+  ]
+
+  if (requestedGroups.length > 0) {
+    for (const name of allEntries) {
+      const groups = await readSkillInstallGroups(skillsDir, name)
+      if (requestedGroups.some((group) => groups.includes(group))) {
+        wanted.add(name)
+      }
+    }
+  }
+
+  return wanted.size === 0 ? allEntries : [...wanted].sort()
+}
+
 export const pikkuSkillsList = pikkuSessionlessFunc<{ target?: string }, void>({
   func: async ({ logger }) => {
     const skillsDir = await findSkillsDir()
@@ -77,16 +159,28 @@ export const pikkuSkillsList = pikkuSessionlessFunc<{ target?: string }, void>({
     console.log('')
     console.log('Run `pikku skills install` to copy them into .claude/skills/')
     console.log(
+      'Run `pikku skills install --core --fabric` to install the Fabric sandbox skill set.'
+    )
+    console.log(
       'Run `pikku skills install --agent opencode` to copy them into .opencode/skills/'
     )
   },
 })
 
 export const pikkuSkillsInstall = pikkuSessionlessFunc<
-  { agent?: string; only?: string; update?: boolean },
+  {
+    agent?: string
+    only?: string
+    core?: boolean
+    fabric?: boolean
+    update?: boolean
+  },
   void
 >({
-  func: async ({ logger }, { agent = 'claude', only, update = false }) => {
+  func: async (
+    { logger },
+    { agent = 'claude', only, core = false, fabric = false, update = false }
+  ) => {
     const supportedAgents = ['claude', 'opencode']
     if (!supportedAgents.includes(agent)) {
       logger.error(
@@ -103,12 +197,11 @@ export const pikkuSkillsInstall = pikkuSessionlessFunc<
       .map((e) => e.name)
       .sort()
 
-    const wanted = only
-      ? only
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : allEntries
+    const wanted = await getWantedSkills(skillsDir, allEntries, {
+      only,
+      core,
+      fabric,
+    })
     const missing = wanted.filter((n) => !allEntries.includes(n))
     if (missing.length > 0) {
       logger.error(`Unknown skill(s): ${missing.join(', ')}`)

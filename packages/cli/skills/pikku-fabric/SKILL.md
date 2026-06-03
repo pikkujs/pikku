@@ -1,9 +1,25 @@
 ---
 name: pikku-fabric
 description: 'Build and convert apps for the Pikku Fabric platform. Covers SQLite/libSQL database setup with Kysely, fabric project layout, deploy provider config, `fabric.config.json`, and the pikku-verify workflow. TRIGGER when: user is working on a Fabric-hosted Pikku project, converting an app to Fabric format, or asking about Fabric deployment, database, or project conventions. DO NOT TRIGGER when: user is working on a generic (non-Fabric) Pikku deployment — use pikku-deploy-cloudflare, pikku-deploy-fastify, etc. instead.'
+installGroups: [fabric]
 ---
 
 # Pikku Fabric
+
+## Agent Operating Procedure
+
+Use this skill as an execution checklist, not reference material.
+
+1. **Run structural validation first.** Before any edit, run:
+   ```bash
+   pikku fabric validate --json
+   ```
+   This prints every missing file, misconfigured field, and dependency gap with a `fixHint`. Address all `error` findings before proceeding — they block deploy. Resolve `warn` findings before testing — they cause runtime failures. `info` findings are best-practice gaps that are safe to defer.
+2. Discover before editing. Prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
+3. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
+4. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
+5. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+6. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
 Fabric is a serverless deployment platform for Pikku apps. Every Fabric app runs on Cloudflare Workers with a SQLite database (via libSQL/Turso). This skill covers what's unique to Fabric. For general Pikku concepts, function authoring, HTTP wiring, and more, see `pikku-concepts`, `pikku-http`, `pikku-services`, etc.
 
@@ -14,6 +30,21 @@ Always run project discovery first:
 ```bash
 yarn pikku meta context --json
 ```
+
+In OpenCode, call the `pikku-meta` tool before grepping or editing a Fabric app.
+
+- Use `section: "context"` for the project map: functions, wires, workflows, capabilities, and source files.
+- Use `section: "clients"` before frontend/RPC work.
+- Use `section: "functions"` to list function ids, then `section: "function", id: "<functionId>"` for one function.
+- Use `section: "schemas"` to list schema names. Only request full JSON Schema bodies with `schemas: ["SchemaName"]` for the specific schemas needed.
+
+Do not load every schema body by default; that wastes context and usually makes the model worse.
+
+For database work in OpenCode:
+
+- Use `pikku-db` for the actual attached Fabric database state: tables, columns, foreign keys, and applied migrations.
+- Use `pikku-meta` `section: "schemas"` for code-level JSON Schema contracts, not database introspection.
+- Do not inspect database credentials or connect to the database directly; Fabric Control already exposes the safe introspection surface.
 
 ## Database: SQLite via libSQL
 
@@ -81,6 +112,7 @@ Generate Kysely types after migrations: `yarn db:types` (uses kysely-codegen)
 Without this, `pikku deploy plan --provider cloudflare` uses the OSS adapter which lacks Fabric's workflow service wiring.
 
 The Fabric adapter automatically:
+
 - Injects `SQLiteKyselyWorkflowService` when `DATABASE_URL` is bound
 - Sets up the libSQL workflow queue
 - Wires `workflowQueues: true` for the scaffold
@@ -157,6 +189,15 @@ export const listTasks = pikkuSessionlessFunc({
 
 Add `wireHTTP` only when you need a specific REST shape (webhooks, third-party callers).
 
+### Transport rule
+
+- Always use RPC first.
+- If the function should be callable from the app or other generated clients, prefer `expose: true`.
+- Use `expose: true` for public/generated client access unless the user explicitly wants a private function.
+- Do not add HTTP routes unless the user explicitly asks for HTTP/REST, or the project settings explicitly require HTTP transport.
+- Every new or changed function must have a real description.
+- If function metadata would show `missing description`, the work is not finished yet.
+
 ## Versioning
 
 Functions with `expose: true` are versioned via `versions.pikku.json`. When you change a function's input or output schema, you must bump its version number — otherwise `pikku all` will report a breaking change and callers' generated clients become stale.
@@ -166,6 +207,7 @@ The `pikku-verify` tool catches this automatically.
 ## After every code change
 
 Always call the `pikku-verify` tool after modifying functions, wirings, or schemas. It runs:
+
 1. `pikku all` — regenerates all codegen, checks version compliance
 2. `tsc --noEmit` — validates TypeScript types
 
@@ -185,10 +227,19 @@ These apply in every Fabric app:
 
 ## Converting an existing app to Fabric format
 
+Start by running the structural validator — it tells you exactly what is missing:
+
+```bash
+pikku fabric validate --json
+```
+
+Fix every `error` and `warn` in the output before continuing. Then:
+
 1. **Replace the database layer**: swap PostgreSQL/MySQL queries for Kysely + libSQL. Convert schema to SQLite-compatible SQL migrations in `db/migrations/`.
 2. **Replace route handlers with pikkuFuncs**: extract business logic into `pikkuFunc`/`pikkuSessionlessFunc`, add `wireHTTP` or `expose: true` for transport.
 3. **Replace DI/IoC with pikkuServices**: move service construction to `createSingletonServices` in `services.ts`.
 4. **Replace `process.env` calls** with `wireVariable`/`wireSecret` + `variables.get()`.
-5. **Add `pikku.config.json`** at project root with `deploy.providers.cloudflare = "@pikkufabric/deploy-cloudflare"`.
+5. **Add `pikku.config.json`** at project root with `srcDirectories`, `outDir`, and `clientFiles`.
 6. **Add `fabric.config.json`** at project root with `projectId`, `production.branch`, and `frontends`.
 7. **Run `pikku all`** — verify codegen succeeds and there are no type errors.
+8. **Run `pikku fabric validate`** once more to confirm no structural issues remain.

@@ -231,6 +231,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
           workflow.do('Fetch', 'pikkuFetch', null),
           workflow.do('RPC client', 'pikkuRPCClient', null),
           workflow.do('React query', 'pikkuReactQuery', null),
+          workflow.do('TanStack Start', 'pikkuTanStackStart', null),
           workflow.do('Realtime client', 'pikkuRealtime', null),
         ])
         allImports.push(config.httpWiringMetaFile, config.httpWiringsFile)
@@ -307,8 +308,38 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       }
 
       if (cli) {
-        await workflow.do('CLI entry', 'pikkuCLIEntry', null)
+        const cliChannelGenerated = await workflow.do(
+          'CLI entry',
+          'pikkuCLIEntry',
+          null
+        )
         allImports.push(config.cliWiringMetaFile, config.cliWiringsFile)
+
+        if (cliChannelGenerated) {
+          await workflow.do('Re-inspect after CLI channel', async () =>
+            getInspectorState(true)
+          )
+          const cliChannels = await workflow.do(
+            'Channels after CLI',
+            'pikkuCommandChannels',
+            null
+          )
+          await workflow.do('Functions after CLI', 'pikkuFunctions', null)
+          await workflow.do('Schemas after CLI', 'pikkuSchemas', null)
+          if (cliChannels) {
+            await workflow.do(
+              'Channels map after CLI',
+              'pikkuChannelsMap',
+              null
+            )
+            if (!channels) {
+              allImports.push(
+                config.channelsWiringMetaFile,
+                config.channelsWiringFile
+              )
+            }
+          }
+        }
       }
     }
 

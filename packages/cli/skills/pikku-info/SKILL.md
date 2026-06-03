@@ -3,11 +3,22 @@ name: pikku-info
 description: 'Discover what exists in a Pikku project — functions, tags, middleware, permissions, HTTP routes, channels, schedulers, queues, and more. Use when you need to understand the project structure, find existing functions, or check what middleware and permissions are defined.
 TRIGGER when: user asks "what functions exist?", "show me the project structure", "list routes/middleware/permissions", or needs to understand an existing Pikku codebase.
 DO NOT TRIGGER when: user is writing new code (use the specific wiring skill) or asking about Pikku concepts (use pikku-concepts).'
+installGroups: [core]
 allowed-tools: Bash(yarn pikku info *)
 argument-hint: '[functions|tags|middleware|permissions] [--verbose] [--limit N]'
 ---
 
 # Pikku Project Discovery
+
+## Agent Operating Procedure
+
+Use this skill as an execution checklist, not reference material.
+
+1. Discover before editing. Prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
+2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
+3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
+4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
 Use the `pikku info` CLI commands to inspect this Pikku project. Run the commands below and present the results to the user in a clear summary.
 

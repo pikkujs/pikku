@@ -7,6 +7,16 @@ DO NOT TRIGGER when: user asks about SQL databases (use pikku-kysely) or Redis (
 
 # Pikku MongoDB
 
+## Agent Operating Procedure
+
+Use this skill as an execution checklist, not reference material.
+
+1. Discover before editing. Prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
+2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
+3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
+4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
+
 `@pikku/mongodb` provides MongoDB-backed implementations of Pikku's core service interfaces.
 
 ## Installation
@@ -36,16 +46,16 @@ await mongo.close()
 
 ### Available Services
 
-| Service | Interface | Purpose |
-|---------|-----------|---------|
-| `MongoDBChannelStore` | `ChannelStore` | WebSocket channel state persistence |
-| `MongoDBEventHubStore` | `EventHubStore` | Event hub state persistence |
-| `MongoDBWorkflowService` | `PikkuWorkflowService` | Workflow definition storage |
-| `MongoDBWorkflowRunService` | `WorkflowRunService` | Workflow execution tracking |
-| `MongoDBDeploymentService` | `DeploymentService` | Deployment state management |
-| `MongoDBAIStorageService` | `AIStorageService, AIRunStateService` | AI conversation/run storage |
-| `MongoDBAgentRunService` | `AgentRunService` | Agent execution tracking |
-| `MongoDBSecretService` | `SecretService` | Encrypted secret storage (envelope encryption) |
+| Service                     | Interface                             | Purpose                                        |
+| --------------------------- | ------------------------------------- | ---------------------------------------------- |
+| `MongoDBChannelStore`       | `ChannelStore`                        | WebSocket channel state persistence            |
+| `MongoDBEventHubStore`      | `EventHubStore`                       | Event hub state persistence                    |
+| `MongoDBWorkflowService`    | `PikkuWorkflowService`                | Workflow definition storage                    |
+| `MongoDBWorkflowRunService` | `WorkflowRunService`                  | Workflow execution tracking                    |
+| `MongoDBDeploymentService`  | `DeploymentService`                   | Deployment state management                    |
+| `MongoDBAIStorageService`   | `AIStorageService, AIRunStateService` | AI conversation/run storage                    |
+| `MongoDBAgentRunService`    | `AgentRunService`                     | Agent execution tracking                       |
+| `MongoDBSecretService`      | `SecretService`                       | Encrypted secret storage (envelope encryption) |
 
 All services take a `Db` instance in their constructor and have an `init()` method that creates collections/indexes.
 
@@ -70,7 +80,11 @@ await secrets.rotateKEK()
 ### Full Setup
 
 ```typescript
-import { PikkuMongoDB, MongoDBChannelStore, MongoDBWorkflowService } from '@pikku/mongodb'
+import {
+  PikkuMongoDB,
+  MongoDBChannelStore,
+  MongoDBWorkflowService,
+} from '@pikku/mongodb'
 
 const createSingletonServices = pikkuServices(async (config) => {
   const logger = new PinoLogger()

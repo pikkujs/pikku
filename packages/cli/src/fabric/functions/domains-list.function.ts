@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { findProjectConfig, resolveApiContext } from '../lib/config.js'
-import { getRpc } from '../lib/http.js'
+import { getFabricRPC } from '../lib/http.js'
 
 export const FabricDomainsListInput = z.object({
   apiUrl: z.string().optional(),
@@ -26,7 +26,7 @@ export const FabricDomainsList = pikkuSessionlessFunc({
         'No fabric.config.json found. Run `pikku fabric link` first.'
       )
 
-    const rpc = getRpc({ apiUrl: ctx.apiUrl, token: ctx.token })
+    const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
 
     const stagesResult = await rpc.invoke('listStages', {
       projectId: local.config.projectId,

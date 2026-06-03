@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite'
-import { existsSync, rmSync } from 'node:fs'
-import { resolve, isAbsolute, relative } from 'node:path'
+import { existsSync, mkdirSync, rmSync } from 'node:fs'
+import { resolve, isAbsolute, relative, dirname, join } from 'node:path'
 import type { Kysely } from 'kysely'
 import {
   createNodeSqliteKysely,
@@ -9,35 +9,47 @@ import {
 } from '@pikku/kysely-node-sqlite'
 import { migrate, type MigrateResult } from './sql-migrator.js'
 import { generateSchemaTypes, type CodegenResult } from './sqlite-codegen.js'
+import { generateZodTypes, type ZodCodegenResult } from './zod-codegen.js'
 import { seed as runSeed, type SeedResult } from './seed.js'
 
 export type DevDbConfig = true | { file?: string }
 
 export interface ResolvedLocalDb {
   dbFile: string
+  runtimeDir: string
   migrationsDir: string
   seedFile: string
   schemaFile: string
   coercionFile: string
+  zodFile: string
   camelCase: boolean
 }
 
 /**
- * Resolve a DevDbConfig into absolute paths against the project root.
- * All paths apart from `dbFile` are conventional and not configurable.
+ * Resolve a DevDbConfig into absolute paths.
+ * - dbFile lives under runtimeDir (default: <rootDir>/.pikku-runtime)
+ * - schema/coercion/zod are generated into outDir/db
+ * - migrations and seed are authored source under rootDir/db
  */
 export function resolveLocalDb(
   config: DevDbConfig | undefined,
-  rootDir: string
+  rootDir: string,
+  outDir: string,
+  runtimeDir?: string
 ): ResolvedLocalDb | null {
   if (!config) return null
   const file = config === true ? undefined : config.file
+  const resolvedRuntimeDir = runtimeDir ?? join(rootDir, '.pikku-runtime')
   return {
-    dbFile: resolveAgainst(rootDir, file ?? '.pikku/dev.db'),
+    dbFile: file
+      ? resolveAgainst(rootDir, file)
+      : join(resolvedRuntimeDir, 'dev.db'),
+    runtimeDir: resolvedRuntimeDir,
     migrationsDir: resolveAgainst(rootDir, 'db/migrations'),
     seedFile: resolveAgainst(rootDir, 'db/seed.sql'),
-    schemaFile: resolveAgainst(rootDir, 'db/schema.d.ts'),
-    coercionFile: resolveAgainst(rootDir, 'db/coercion.gen.ts'),
+    schemaFile: join(outDir, 'db', 'schema.d.ts'),
+    coercionFile: join(outDir, 'db', 'coercion.gen.ts'),
+    zodFile: join(outDir, 'db', 'zod.gen.ts'),
     camelCase: true,
   }
 }
@@ -49,6 +61,7 @@ function resolveAgainst(root: string, p: string): string {
 export interface MigrateAndCodegenOutcome {
   migrate: MigrateResult
   codegen: CodegenResult
+  zod: ZodCodegenResult
 }
 
 /**
@@ -58,6 +71,7 @@ export interface MigrateAndCodegenOutcome {
 export function migrateAndCodegen(
   resolved: ResolvedLocalDb
 ): MigrateAndCodegenOutcome {
+  mkdirSync(dirname(resolved.dbFile), { recursive: true })
   const db = new DatabaseSync(resolved.dbFile)
   try {
     const migrateResult = migrate(db, resolved.migrationsDir)
@@ -67,7 +81,11 @@ export function migrateAndCodegen(
       camelCase: resolved.camelCase,
       migrationsDir: resolved.migrationsDir,
     })
-    return { migrate: migrateResult, codegen: codegenResult }
+    const zodResult = generateZodTypes({
+      schemaFile: resolved.schemaFile,
+      outFile: resolved.zodFile,
+    })
+    return { migrate: migrateResult, codegen: codegenResult, zod: zodResult }
   } finally {
     db.close()
   }
@@ -93,10 +111,10 @@ export function reset(resolved: ResolvedLocalDb, rootDir: string): void {
       `pikku db reset refused: NODE_ENV=production. This command only runs in dev.`
     )
   }
-  const rel = relative(rootDir, resolved.dbFile)
+  const rel = relative(resolved.runtimeDir, resolved.dbFile)
   if (rel.startsWith('..') || isAbsolute(rel)) {
     throw new Error(
-      `pikku db reset refused: resolved DB file (${resolved.dbFile}) is outside the project root (${rootDir}). Override dev.db.file or move the file inside the project.`
+      `pikku db reset refused: resolved DB file (${resolved.dbFile}) is outside the runtime directory (${resolved.runtimeDir}). Override dev.db.file or set runtimeDir correctly.`
     )
   }
   if (existsSync(resolved.dbFile)) {

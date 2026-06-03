@@ -1,9 +1,20 @@
 ---
 name: pikku-realtime
 description: 'Use Pikku''s realtime feature — typed pub/sub events over WebSocket (multi-topic) or SSE (single-topic, auto-cleanup). Covers declaring EventHubTopics, scaffolding the /events channel, the auto-generated `PikkuRealtime` client, and publishing events from a function. TRIGGER when: the user asks for realtime updates, pub/sub, push notifications, server-sent events, websocket events, eventhub, or "live" data on the frontend. DO NOT TRIGGER when: the user wants RPC-style request/response (use pikku-rpc / pikku-react-query) or a custom one-off WebSocket channel (use pikku-websocket).'
+installGroups: [core]
 ---
 
 # Pikku Realtime
+
+## Agent Operating Procedure
+
+Use this skill as an execution checklist, not reference material.
+
+1. Discover before editing. Prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
+2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
+3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
+4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
 Most realtime UI is just typed pub/sub: a server pushes `todo-created`, the
 client renders it. Pikku's realtime feature ships exactly that, two ways:
@@ -79,8 +90,8 @@ Add to `pikku.config.json`:
     // ...
     "realtimeFile": "packages/sdk/src/pikku/realtime.gen.ts",
     // Optional: full type inference for subscribe/unsubscribe
-    "realtimeEventHubTopicsImport": "../../../functions/types/eventhub-topics.js#EventHubTopics"
-  }
+    "realtimeEventHubTopicsImport": "../../../functions/types/eventhub-topics.js#EventHubTopics",
+  },
 }
 ```
 
@@ -116,7 +127,11 @@ export const createTodo = pikkuFunc({
   input: CreateTodoInput,
   output: CreateTodoOutput,
   func: async ({ kysely, eventHub }, data) => {
-    const todo = await kysely.insertInto('todos').values(data).returningAll().executeTakeFirstOrThrow()
+    const todo = await kysely
+      .insertInto('todos')
+      .values(data)
+      .returningAll()
+      .executeTakeFirstOrThrow()
 
     if (eventHub) {
       // Envelope the payload with `topic` so the client dispatcher works.
@@ -157,9 +172,9 @@ and realtime transports.
 
 ```tsx
 import { createPikku, PikkuProvider } from '@pikku/react'
-import { PikkuFetch }     from './pikku/pikku-fetch.gen'
-import { PikkuRPC }       from './pikku/pikku-rpc.gen'
-import { PikkuRealtime }  from './pikku/realtime.gen'
+import { PikkuFetch } from './pikku/pikku-fetch.gen'
+import { PikkuRPC } from './pikku/pikku-rpc.gen'
+import { PikkuRealtime } from './pikku/realtime.gen'
 
 const pikku = createPikku(
   PikkuFetch,
@@ -199,7 +214,13 @@ function TodoList() {
     return off
   }, [realtime])
 
-  return <ul>{todos.map((t) => <li key={t.id}>{t.title}</li>)}</ul>
+  return (
+    <ul>
+      {todos.map((t) => (
+        <li key={t.id}>{t.title}</li>
+      ))}
+    </ul>
+  )
 }
 ```
 
@@ -230,7 +251,9 @@ const sub = realtime.subscribeToSSE<{ progress: number }>(
 // Any wireChannel — open a raw socket, wrap in PikkuWebSocket for typed I/O
 const ws = realtime.connectToChannel('/ws/kanban')
 const typed = new PikkuWebSocket<'kanban-live'>(ws)
-typed.getRoute('command').subscribe('message', (data) => { /* ... */ })
+typed.getRoute('command').subscribe('message', (data) => {
+  /* ... */
+})
 ```
 
 Discover what's available with `pikku meta clients --json` — `channels`
@@ -238,12 +261,12 @@ and any HTTP `sse: true` routes are listed there.
 
 ## When to pick which transport
 
-| Need | Use |
-|------|-----|
-| Many topics in one connection | **PikkuRealtime** (WebSocket) |
-| Single live stream, simple cleanup | **subscribeToTopicViaSSE** |
-| Bidirectional (client also sends messages) | **PikkuRealtime** |
-| WebSockets blocked by infra | **subscribeToTopicViaSSE** |
+| Need                                       | Use                           |
+| ------------------------------------------ | ----------------------------- |
+| Many topics in one connection              | **PikkuRealtime** (WebSocket) |
+| Single live stream, simple cleanup         | **subscribeToTopicViaSSE**    |
+| Bidirectional (client also sends messages) | **PikkuRealtime**             |
+| WebSockets blocked by infra                | **subscribeToTopicViaSSE**    |
 
 Both auto-clean on the server (the eventHub's `onChannelClosed` hook
 unsubscribes all topics for the dead channel id). Don't write manual

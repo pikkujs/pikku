@@ -5,7 +5,7 @@ import {
   writeAuthFile,
   resolveApiContext,
 } from '../lib/config.js'
-import { getRpc } from '../lib/http.js'
+import { getFabricRPC } from '../lib/http.js'
 import { deriveConsoleUrl } from '../lib/console-url.js'
 
 export const FabricLoginInput = z.object({
@@ -54,7 +54,7 @@ export const FabricLogin = pikkuSessionlessFunc({
       /\/$/,
       ''
     )
-    const rpc = getRpc({ apiUrl, token: null })
+    const rpc = getFabricRPC({ apiUrl, token: null })
 
     const { code, expiresAt } = await rpc.invoke('requestCliAuth')
 

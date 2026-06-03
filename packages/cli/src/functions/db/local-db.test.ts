@@ -24,7 +24,7 @@ let root: string
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'pikku-db-test-'))
   mkdirSync(join(root, 'db', 'migrations'), { recursive: true })
-  mkdirSync(join(root, '.pikku'), { recursive: true })
+  mkdirSync(join(root, '.pikku-runtime'), { recursive: true })
   writeFileSync(
     join(root, 'db', 'migrations', '0001-init.sql'),
     `CREATE TABLE todos (
@@ -47,16 +47,17 @@ afterEach(() => {
 })
 
 test('resolveLocalDb returns null when config is undefined', () => {
-  assert.equal(resolveLocalDb(undefined, root), null)
+  assert.equal(resolveLocalDb(undefined, root, root), null)
 })
 
 test('migrateAndCodegen applies pending migrations and writes schema.d.ts', () => {
-  const resolved = resolveLocalDb(true, root)!
-  const { migrate, codegen } = migrateAndCodegen(resolved)
+  const resolved = resolveLocalDb(true, root, root)!
+  const { migrate, codegen, zod } = migrateAndCodegen(resolved)
 
   assert.deepEqual(migrate.applied, ['0001-init.sql'])
   assert.deepEqual(migrate.skipped, [])
   assert.equal(codegen.written, true)
+  assert.equal(zod.written, true)
   assert.ok(
     codegen.tables.length >= 1,
     'expected at least one table in codegen'
@@ -64,6 +65,10 @@ test('migrateAndCodegen applies pending migrations and writes schema.d.ts', () =
 
   const schema = readFileSync(resolved.schemaFile, 'utf8')
   assert.match(schema, /todos/i)
+  const zodSchema = readFileSync(resolved.zodFile, 'utf8')
+  assert.match(zodSchema, /export const TodosZ = z\.object\(/)
+  assert.match(zodSchema, /export const TodosInsertZ = z\.object\(/)
+  assert.match(zodSchema, /export const TodosPatchZ = TodosZ\.partial\(\)/)
 
   const db = new DatabaseSync(resolved.dbFile)
   try {
@@ -80,7 +85,7 @@ test('migrateAndCodegen applies pending migrations and writes schema.d.ts', () =
 })
 
 test('migrateAndCodegen is a no-op on second run', () => {
-  const resolved = resolveLocalDb(true, root)!
+  const resolved = resolveLocalDb(true, root, root)!
   migrateAndCodegen(resolved)
   const second = migrateAndCodegen(resolved)
   assert.deepEqual(second.migrate.applied, [])
@@ -90,10 +95,11 @@ test('migrateAndCodegen is a no-op on second run', () => {
     false,
     'codegen output should be unchanged'
   )
+  assert.equal(second.zod.written, false, 'zod output should be unchanged')
 })
 
 test('migrateAndCodegen throws MigrationDriftError when applied file changes', () => {
-  const resolved = resolveLocalDb(true, root)!
+  const resolved = resolveLocalDb(true, root, root)!
   migrateAndCodegen(resolved)
 
   const migPath = join(root, 'db', 'migrations', '0001-init.sql')
@@ -114,7 +120,7 @@ test('migrateAndCodegen throws MigrationDriftError when applied file changes', (
 })
 
 test('seed applies db/seed.sql once migrate has run', () => {
-  const resolved = resolveLocalDb(true, root)!
+  const resolved = resolveLocalDb(true, root, root)!
   migrateAndCodegen(resolved)
 
   const result = runSeed(resolved)
@@ -133,7 +139,7 @@ test('seed applies db/seed.sql once migrate has run', () => {
 })
 
 test('reset wipes the dev DB so a follow-up migrate replays from scratch', () => {
-  const resolved = resolveLocalDb(true, root)!
+  const resolved = resolveLocalDb(true, root, root)!
   migrateAndCodegen(resolved)
   runSeed(resolved)
 
@@ -153,9 +159,13 @@ test('reset wipes the dev DB so a follow-up migrate replays from scratch', () =>
   }
 })
 
-test('reset refuses when resolved DB lives outside the project root', () => {
+test('reset refuses when resolved DB lives outside the runtime directory', () => {
   const outside = mkdtempSync(join(tmpdir(), 'pikku-db-outside-'))
-  const resolved = resolveLocalDb({ file: join(outside, 'evil.db') }, root)!
-  assert.throws(() => runReset(resolved, root), /outside the project root/)
+  const resolved = resolveLocalDb(
+    { file: join(outside, 'evil.db') },
+    root,
+    root
+  )!
+  assert.throws(() => runReset(resolved, root), /outside the runtime directory/)
   rmSync(outside, { recursive: true, force: true })
 })

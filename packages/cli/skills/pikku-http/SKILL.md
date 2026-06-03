@@ -3,9 +3,20 @@ name: pikku-http
 description: 'Use when adding HTTP routes, REST APIs, web endpoints, or SSE streams to a Pikku app. Covers wireHTTP, defineHTTPRoutes, route groups, auth, middleware, permissions, SSE, and generated fetch client.
 TRIGGER when: code uses wireHTTP/defineHTTPRoutes/wireHTTPRoutes, user asks about REST endpoints, API routes, SSE, or the generated fetch client.
 DO NOT TRIGGER when: user asks about WebSocket (use pikku-websocket), queue workers (use pikku-queue), or deployment (use pikku-deploy-*).'
+installGroups: [core]
 ---
 
 # Pikku HTTP Wiring
+
+## Agent Operating Procedure
+
+Use this skill as an execution checklist, not reference material.
+
+1. Discover before editing. Prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
+2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
+3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
+4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
 Wire Pikku functions to HTTP endpoints. Supports single routes, composable route groups, auth, middleware, permissions, SSE, and auto-generated type-safe clients.
 

@@ -1,9 +1,20 @@
 ---
 name: pikku-workflows-client
 description: 'Run Pikku workflows from a React frontend and track their progress. Covers `useRunWorkflow` (run-and-wait), `useStartWorkflow` (fire-and-poll), and `useWorkflowStatus` (live status). TRIGGER when: a React component needs to invoke or display the status of a Pikku workflow, the user mentions long-running tasks / background jobs / progress UI tied to a workflow, or asks how to start/track a workflow from the client. DO NOT TRIGGER when: the user is wiring the workflow itself (use pikku-workflow) or only making regular RPC calls (use pikku-react-query).'
+installGroups: [core]
 ---
 
 # Pikku Workflows — Client Hooks
+
+## Agent Operating Procedure
+
+Use this skill as an execution checklist, not reference material.
+
+1. Discover before editing. Prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
+2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
+3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
+4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
 When a project has `pikkuWorkflowGraph` workflows, three React Query
 hooks are auto-generated alongside the standard RPC hooks. They handle
@@ -82,9 +93,10 @@ function VideoStatus({ runId }: { runId: string }) {
   })
 
   if (!status) return null
-  if (status.status === 'running')   return <Spinner />
+  if (status.status === 'running') return <Spinner />
   if (status.status === 'completed') return <Result {...status.output} />
-  if (status.status === 'failed')    return <Error message={status.error?.message} />
+  if (status.status === 'failed')
+    return <Error message={status.error?.message} />
   return null
 }
 ```
@@ -106,7 +118,10 @@ function ProcessVideoFlow({ videoId }: { videoId: string }) {
 
   if (!runId) {
     return (
-      <button onClick={() => start.mutate({ videoId })} disabled={start.isPending}>
+      <button
+        onClick={() => start.mutate({ videoId })}
+        disabled={start.isPending}
+      >
         Start
       </button>
     )

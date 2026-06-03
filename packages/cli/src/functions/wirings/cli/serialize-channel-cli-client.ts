@@ -36,16 +36,34 @@ export function collectRendererNames(programMeta: CLIProgramMeta): Set<string> {
 }
 
 /**
+ * Resolve a renderer name (e.g. `cli-render:kanban:list`) to the JS identifier
+ * actually imported into the client file. Returns null when the name has no
+ * importable binding so callers can skip it rather than emit invalid JS.
+ */
+function resolveRendererBinding(
+  renderName: string,
+  renderersMeta?: Record<string, any>
+): string | null {
+  return renderersMeta?.[renderName]?.exportedName ?? null
+}
+
+/**
  * Build a renderers map for CLI commands
  */
-function buildRenderersMap(programMeta: CLIProgramMeta): string {
+function buildRenderersMap(
+  programMeta: CLIProgramMeta,
+  renderersMeta?: Record<string, any>
+): string {
   const entries: string[] = []
 
-  // Build map entries for each command that has a renderer
+  // Build map entries for each command that has an importable renderer
   function addCommandRenderer(command: CLICommandMeta, path: string[]): void {
     const commandId = path.join('.')
     if (command.renderName) {
-      entries.push(`    '${commandId}': ${command.renderName}`)
+      const binding = resolveRendererBinding(command.renderName, renderersMeta)
+      if (binding) {
+        entries.push(`    '${commandId}': ${binding}`)
+      }
     }
 
     // Recursively process subcommands
@@ -111,7 +129,11 @@ export function serializeChannelCLIClient(
         if (!importsByFile.has(relativePath)) {
           importsByFile.set(relativePath, [])
         }
-        importsByFile.get(relativePath)!.push(meta.exportedName)
+        const names = importsByFile.get(relativePath)!
+        // Distinct renderer names can share an exported binding — import once.
+        if (!names.includes(meta.exportedName)) {
+          names.push(meta.exportedName)
+        }
       }
     }
 
@@ -121,12 +143,15 @@ export function serializeChannelCLIClient(
     }
   }
 
-  // Build renderers map
-  const renderersMap = buildRenderersMap(programMeta)
+  // Build renderers map (keyed by command id → imported renderer binding)
+  const renderersMap = buildRenderersMap(programMeta, renderersMeta)
 
-  // Determine default renderer
-  const defaultRendererCode = programMeta.defaultRenderName
-    ? `,\n    defaultRenderer: ${programMeta.defaultRenderName}`
+  // Determine default renderer — only when it resolves to an imported binding
+  const defaultRendererBinding = programMeta.defaultRenderName
+    ? resolveRendererBinding(programMeta.defaultRenderName, renderersMeta)
+    : null
+  const defaultRendererCode = defaultRendererBinding
+    ? `,\n    defaultRenderer: ${defaultRendererBinding}`
     : ''
 
   return `

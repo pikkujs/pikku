@@ -16,3 +16,23 @@ export async function promptSecret(label: string): Promise<string> {
   rl.close()
   return value.trim()
 }
+
+/**
+ * Classic yes/no confirmation. Returns `defaultYes` on an empty answer.
+ * Callers must gate on `process.stdin.isTTY` first — there is no human to
+ * answer in a non-interactive session, so prompting there would hang.
+ */
+export async function promptConfirm(
+  label: string,
+  defaultYes = false
+): Promise<boolean> {
+  const rl = createInterface({ input: stdin, output: stdout })
+  const answer = (
+    await rl.question(`${label} [${defaultYes ? 'Y/n' : 'y/N'}] `)
+  )
+    .trim()
+    .toLowerCase()
+  rl.close()
+  if (!answer) return defaultYes
+  return answer === 'y' || answer === 'yes'
+}

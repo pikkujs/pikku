@@ -3,9 +3,20 @@ name: pikku-workflow
 description: 'Use when building multi-step workflows, state machines, or orchestration pipelines with Pikku. Covers pikkuWorkflowFunc, workflow steps (do, sleep, suspend), graph workflows, and HTTP wiring.
 TRIGGER when: code uses pikkuWorkflowFunc/pikkuWorkflowGraph, user asks about workflows, multi-step processes, durable execution, suspend/resume, or DAG orchestration.
 DO NOT TRIGGER when: user asks about simple background jobs (use pikku-queue) or scheduled tasks (use pikku-cron).'
+installGroups: [core]
 ---
 
 # Pikku Workflow Wiring
+
+## Agent Operating Procedure
+
+Use this skill as an execution checklist, not reference material.
+
+1. Discover before editing. Prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
+2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
+3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
+4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
 Build durable, multi-step workflows with automatic retry, sleep, suspend/resume, and parallel execution. Steps are cached for replay safety.
 
@@ -38,9 +49,14 @@ const myWorkflow = pikkuWorkflowFunc<InputType, OutputType>(
 ```typescript
 // RPC step — execute a Pikku function as a queue job
 // workflow.do(stepName, funcName, data, options?)
-const result = await workflow.do('Create profile', 'createUserProfile', {
-  email: data.email,
-}, { retries: 3, retryDelay: '1s' })
+const result = await workflow.do(
+  'Create profile',
+  'createUserProfile',
+  {
+    email: data.email,
+  },
+  { retries: 3, retryDelay: '1s' }
+)
 
 // Inline step — immediate execution, cached for replay
 // workflow.do(stepName, asyncFn)
@@ -63,15 +79,16 @@ import { pikkuWorkflowGraph } from '#pikku'
 pikkuWorkflowGraph({
   description: 'Onboard a new user',
   nodes: {
-    createProfile: 'createUserProfile',  // nodeName → Pikku function name
+    createProfile: 'createUserProfile', // nodeName → Pikku function name
     sendWelcome: 'sendEmail',
   },
   config: {
     createProfile: {
-      next: ['sendWelcome'],             // Nodes to run after this one (parallel)
+      next: ['sendWelcome'], // Nodes to run after this one (parallel)
     },
     sendWelcome: {
-      input: (ref) => ({                 // Transform input using refs to prior node outputs
+      input: (ref) => ({
+        // Transform input using refs to prior node outputs
         to: ref('createProfile', 'email'),
         subject: 'Welcome!',
       }),

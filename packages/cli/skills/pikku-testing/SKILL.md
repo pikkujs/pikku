@@ -3,9 +3,20 @@ name: pikku-testing
 description: 'Use when writing tests for Pikku functions, middleware, permissions, or services. Covers unit testing with direct invocation, runPikkuFunc, service mocking, and integration testing with the HTTP runner.
 TRIGGER when: user asks about testing, writing tests, test setup, mocking services, or integration testing Pikku functions.
 DO NOT TRIGGER when: user asks about running the existing test suite (use Bash) or CI configuration (not a Pikku skill).'
+installGroups: [core]
 ---
 
 # Pikku Testing
+
+## Agent Operating Procedure
+
+Use this skill as an execution checklist, not reference material.
+
+1. Discover before editing. Prefer OpenCode tools such as `pikku-meta` when available; otherwise run the relevant `pikku meta ... --json` command and inspect only the focused output you need.
+2. Identify the source files that own the behavior. Do not start by reading generated output, `.pikku`, `node_modules`, vendored packages, or broad build artifacts.
+3. Make the smallest source change that satisfies the task. Keep generated files generated, and avoid hand-editing SDKs, schema output, or typegen.
+4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
+5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
 Pikku functions are pure business logic — no HTTP, no framework — making them easy to test. Test at three levels: direct function calls, `runPikkuFunc` (with middleware/permissions), and integration tests (full HTTP stack).
 
@@ -53,10 +64,9 @@ describe('createTodo', () => {
       },
     }
 
-    const result = await createTodo.func(
-      mockServices as any,
-      { title: 'Buy milk' }
-    )
+    const result = await createTodo.func(mockServices as any, {
+      title: 'Buy milk',
+    })
 
     assert.equal(result.title, 'Buy milk')
     assert.equal(result.completed, false)
@@ -81,7 +91,12 @@ beforeEach(() => {
 
 test('should run function with middleware', async () => {
   const mockSingletonServices = {
-    logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+    logger: {
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      debug: () => {},
+    },
   } as any
 
   // Register function metadata
@@ -115,13 +130,18 @@ test('should run function with middleware', async () => {
 ```typescript
 test('middleware runs in order: wiring tags -> wiring -> func tags -> func', async () => {
   const mockSingletonServices = {
-    logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+    logger: {
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      debug: () => {},
+    },
   } as any
 
   const order: string[] = []
 
-  const createMiddleware = (name: string) =>
-    async (services: any, wire: any, next: Function) => {
+  const createMiddleware =
+    (name: string) => async (services: any, wire: any, next: Function) => {
       order.push(name)
       await next()
     }
@@ -137,7 +157,10 @@ test('middleware runs in order: wiring tags -> wiring -> func tags -> func', asy
   }
 
   addFunction('myFunc', {
-    func: async () => { order.push('main'); return 'ok' },
+    func: async () => {
+      order.push('main')
+      return 'ok'
+    },
     middleware: [createMiddleware('funcMiddleware')],
     tags: ['funcTag'],
   })
@@ -167,11 +190,16 @@ test('middleware runs in order: wiring tags -> wiring -> func tags -> func', asy
 ```typescript
 test('should reject when permission fails', async () => {
   const mockSingletonServices = {
-    logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+    logger: {
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      debug: () => {},
+    },
   } as any
 
   addPermission('admin', [
-    async () => false,  // Always deny
+    async () => false, // Always deny
   ])
 
   pikkuState(null, 'function', 'meta')['adminFunc'] = {
@@ -217,12 +245,15 @@ beforeEach(() => {
 
   // Set up singleton services in state
   pikkuState(null, 'package', 'singletonServices', mockSingletonServices)
-  pikkuState(null, 'package', 'factories', { createWireServices: async () => ({}) })
+  pikkuState(null, 'package', 'factories', {
+    createWireServices: async () => ({}),
+  })
 })
 
 test('GET /todos returns todo list', async () => {
   // Register route metadata and function
-  pikkuState(null, 'http', 'meta')['get'] = pikkuState(null, 'http', 'meta')['get'] || {}
+  pikkuState(null, 'http', 'meta')['get'] =
+    pikkuState(null, 'http', 'meta')['get'] || {}
   pikkuState(null, 'http', 'meta')['get']['/todos'] = {
     pikkuFuncId: 'listTodos',
     method: 'get',
@@ -285,7 +316,11 @@ import { createSingletonServices, createWireServices } from './services.js'
 
 const config = {}
 const singletonServices = await createSingletonServices(config)
-const server = new PikkuFastifyServer(config, singletonServices, createWireServices)
+const server = new PikkuFastifyServer(
+  config,
+  singletonServices,
+  createWireServices
+)
 await server.init()
 await server.start()
 ```
@@ -373,10 +408,9 @@ describe('createTodo', () => {
   })
 
   test('creates a todo with the given title', async () => {
-    const result = await createTodo.func(
-      { todoStore } as any,
-      { title: 'Buy milk' }
-    )
+    const result = await createTodo.func({ todoStore } as any, {
+      title: 'Buy milk',
+    })
 
     assert.equal(result.id, '1')
     assert.equal(result.title, 'Buy milk')
@@ -384,7 +418,9 @@ describe('createTodo', () => {
 
   test('increments IDs', async () => {
     await createTodo.func({ todoStore } as any, { title: 'First' })
-    const second = await createTodo.func({ todoStore } as any, { title: 'Second' })
+    const second = await createTodo.func({ todoStore } as any, {
+      title: 'Second',
+    })
 
     assert.equal(second.id, '2')
   })

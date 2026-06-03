@@ -3,6 +3,19 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
+export function filterInternalRPCMeta(
+  internalMeta: Record<string, string>,
+  functionsMeta: Record<string, unknown>
+): Record<string, string> {
+  const filteredInternalMeta: Record<string, string> = {}
+  for (const [key, value] of Object.entries(internalMeta)) {
+    if (key in functionsMeta || value in functionsMeta) {
+      filteredInternalMeta[key] = value
+    }
+  }
+  return filteredInternalMeta
+}
+
 export const pikkuRPC = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config, getInspectorState }) => {
     const { rpc, functions } = await getInspectorState()
@@ -13,13 +26,13 @@ export const pikkuRPC = pikkuSessionlessFunc<void, boolean>({
       schema,
     } = config
 
-    // Filter internal RPC meta to only include functions in the filtered meta
-    const filteredInternalMeta: Record<string, string> = {}
-    for (const [key, value] of Object.entries(rpc.internalMeta)) {
-      if (key in functions.meta) {
-        filteredInternalMeta[key] = value
-      }
-    }
+    // Keep direct function ids and unversioned aliases whose target function
+    // survived filtering. Without the second check, aliases like `listCards`
+    // get dropped even though `listCards@v2` still exists.
+    const filteredInternalMeta = filterInternalRPCMeta(
+      rpc.internalMeta,
+      functions.meta
+    )
 
     if (Object.keys(filteredInternalMeta).length > 0) {
       await writeFileInDir(

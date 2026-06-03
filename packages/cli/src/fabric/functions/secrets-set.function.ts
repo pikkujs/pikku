@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { resolveApiContext } from '../lib/config.js'
-import { getRpc } from '../lib/http.js'
+import { getFabricRPC } from '../lib/http.js'
 import { promptSecret } from '../lib/prompt.js'
 
 export const FabricSecretsSetInput = z.object({
@@ -30,7 +30,7 @@ export const FabricSecretsSet = pikkuSessionlessFunc({
     const plaintext = value ?? (await promptSecret(`${name} value`))
     if (!plaintext) throw new Error('Empty secret value — aborting.')
 
-    const rpc = getRpc({ apiUrl: ctx.apiUrl, token: ctx.token })
+    const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
     const result = await rpc.invoke('setStageSecret', {
       projectId: ctx.projectId,
       branch,

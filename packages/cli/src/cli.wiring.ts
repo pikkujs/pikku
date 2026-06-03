@@ -3,6 +3,7 @@ import { pikkuFetch } from './functions/runtimes/fetch/index.js'
 import { pikkuWebSocketTyped } from './functions/runtimes/websocket/pikku-command-websocket-typed.js'
 import { pikkuRPCClient } from './functions/wirings/rpc/pikku-command-rpc-client.js'
 import { pikkuReactQuery } from './functions/wirings/rpc/pikku-command-react-query.js'
+import { pikkuTanStackStart } from './functions/runtimes/tanstack-start/pikku-command-tanstack-start.js'
 import { pikkuQueueService } from './functions/wirings/queue/pikku-command-queue-service.js'
 import { pikkuOpenAPI } from './functions/wirings/http/pikku-command-openapi.js'
 import { pikkuNext } from './functions/runtimes/nextjs/pikku-command-nextjs.js'
@@ -17,6 +18,8 @@ import { dbMigrate } from './functions/commands/db-migrate.js'
 import { dbSeed } from './functions/commands/db-seed.js'
 import { dbReset } from './functions/commands/db-reset.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
+import { pikkuTestsInit } from './functions/commands/tests-init.js'
+import { pikkuTestsCoverage } from './functions/commands/tests-coverage.js'
 import { pikkuVersionsCheck } from './functions/commands/versions-check.js'
 import { pikkuVersionsUpdate } from './functions/commands/versions-update.js'
 import { pikkuNewFunction } from './functions/commands/new-function.js'
@@ -38,6 +41,7 @@ import {
   enableEvents,
 } from './functions/commands/enable.js'
 import { pikkuRealtime } from './functions/wirings/realtime/pikku-command-realtime.js'
+import { binary } from './functions/commands/binary.js'
 import { deployPlan } from './functions/commands/deploy-plan.js'
 import { deployApply } from './functions/commands/deploy-apply.js'
 import { deployInfo } from './functions/commands/deploy-info.js'
@@ -48,6 +52,8 @@ import {
 import {
   pikkuMetaFunctionsGet,
   pikkuMetaFunctionsList,
+  pikkuMetaSchemasGet,
+  pikkuMetaSchemasList,
   pikkuMetaMiddlewareGet,
   pikkuMetaMiddlewareList,
   pikkuMetaPermissionsGet,
@@ -119,30 +125,60 @@ wireCLI({
       description: 'Generate all Pikku files (types, schemas, wirings, etc.)',
       isDefault: true,
       options: {
+        filter: {
+          description:
+            'Named filter(s) from pikku.config.json filters map (comma-separated)',
+        },
         tags: {
-          description: 'Filter functions by tags (comma-separated)',
+          description: 'Include functions by tags (comma-separated)',
           short: 't',
         },
-        types: {
-          description: 'Filter functions by types (comma-separated)',
+        wires: {
+          description: 'Filter direct wirings by category (comma-separated)',
+        },
+        excludeWires: {
+          description: 'Exclude direct wirings by category (comma-separated)',
+        },
+        excludeTags: {
+          description: 'Exclude functions by tags (comma-separated)',
         },
         directories: {
-          description: 'Filter functions by directories (comma-separated)',
+          description: 'Include functions by directories (comma-separated)',
           short: 'd',
         },
+        excludeDirectories: {
+          description: 'Exclude functions by directories (comma-separated)',
+        },
         httpMethods: {
-          description: 'Filter HTTP routes by methods (comma-separated)',
+          description: 'Include HTTP routes by methods (comma-separated)',
+        },
+        excludeHttpMethods: {
+          description: 'Exclude HTTP routes by methods (comma-separated)',
         },
         httpRoutes: {
-          description: 'Filter HTTP routes by route patterns (comma-separated)',
+          description:
+            'Include HTTP routes by route patterns (comma-separated)',
+        },
+        excludeHttpRoutes: {
+          description:
+            'Exclude HTTP routes by route patterns (comma-separated)',
         },
         names: {
-          description: 'Filter functions by name patterns (supports wildcards)',
+          description:
+            'Include functions by name patterns (supports wildcards)',
           short: 'n',
+        },
+        excludeNames: {
+          description:
+            'Exclude functions by name patterns (supports wildcards)',
         },
         target: {
           description:
-            'Filter functions by deploy target (comma-separated: serverless, server)',
+            'Include functions by deploy target (comma-separated: serverless, server)',
+        },
+        excludeTarget: {
+          description:
+            'Exclude functions by deploy target (comma-separated: serverless, server)',
         },
       },
     }),
@@ -241,6 +277,10 @@ wireCLI({
     'react-query': pikkuCLICommand({
       func: pikkuReactQuery,
       description: 'Generate React Query hooks from RPC map',
+    }),
+    'tanstack-start': pikkuCLICommand({
+      func: pikkuTanStackStart,
+      description: 'Generate the TanStack Start server-function shim (makeApi)',
     }),
     realtime: pikkuCLICommand({
       func: pikkuRealtime,
@@ -429,6 +469,32 @@ wireCLI({
         }),
       },
     },
+    tests: {
+      description: 'Manage function tests',
+      subcommands: {
+        init: pikkuCLICommand({
+          func: pikkuTestsInit,
+          description:
+            'Scaffold the ftest Cucumber harness in your functions package',
+          options: {
+            force: {
+              description: 'Overwrite existing ftest directory',
+            },
+          },
+        }),
+        coverage: pikkuCLICommand({
+          func: pikkuTestsCoverage,
+          description:
+            'Run the tests suite under c8 and emit tests/coverage/function-coverage.json',
+          options: {
+            noRun: {
+              description:
+                'Skip running the suite and only re-analyse an existing coverage-final.json',
+            },
+          },
+        }),
+      },
+    },
     versions: {
       description: 'Manage function contract versions',
       subcommands: {
@@ -453,6 +519,17 @@ wireCLI({
         }),
       },
     },
+    binary: pikkuCLICommand({
+      func: binary,
+      description:
+        'Compile a TypeScript entrypoint to a self-contained native binary using bun build --compile',
+      options: {
+        compileTarget: {
+          description:
+            'Override compilation target (e.g. bun-linux-x64). Defaults to targets in pikku.config.json.',
+        },
+      },
+    }),
     deploy: {
       description: 'Deploy Pikku project to cloud infrastructure',
       subcommands: {
@@ -528,6 +605,16 @@ wireCLI({
               description:
                 'Comma-separated list of skill names to install (default: all)',
             },
+            core: {
+              description:
+                'Install skills whose frontmatter includes installGroups: [core]',
+              default: false,
+            },
+            fabric: {
+              description:
+                'Install skills whose frontmatter includes installGroups: [fabric]',
+              default: false,
+            },
             update: {
               description: 'Overwrite existing skills if already installed',
               default: false,
@@ -550,6 +637,7 @@ wireCLI({
             'Frontend-targeted metadata: exposed RPCs, workflows, channels with their input/output type names and descriptions',
         }),
         functions: {
+          func: pikkuMetaFunctionsList,
           description: 'Inspect function metadata',
           subcommands: {
             list: pikkuCLICommand({
@@ -563,7 +651,23 @@ wireCLI({
             }),
           },
         },
+        schemas: {
+          func: pikkuMetaSchemasList,
+          description: 'Inspect generated JSON schemas',
+          subcommands: {
+            list: pikkuCLICommand({
+              func: pikkuMetaSchemasList,
+              description: 'List generated JSON schema names',
+            }),
+            get: pikkuCLICommand({
+              func: pikkuMetaSchemasGet,
+              description: 'Get one generated JSON schema by name',
+              parameters: '<schemaName>',
+            }),
+          },
+        },
         workflows: {
+          func: pikkuMetaWorkflowsList,
           description: 'Inspect workflow metadata',
           subcommands: {
             list: pikkuCLICommand({
@@ -578,6 +682,7 @@ wireCLI({
           },
         },
         middleware: {
+          func: pikkuMetaMiddlewareList,
           description: 'Inspect middleware metadata',
           subcommands: {
             list: pikkuCLICommand({
@@ -592,6 +697,7 @@ wireCLI({
           },
         },
         permissions: {
+          func: pikkuMetaPermissionsList,
           description: 'Inspect permission metadata',
           subcommands: {
             list: pikkuCLICommand({
@@ -606,6 +712,7 @@ wireCLI({
           },
         },
         wires: {
+          func: pikkuMetaWiresList,
           description: 'Inspect wire metadata',
           subcommands: {
             list: pikkuCLICommand({
