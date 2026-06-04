@@ -130,6 +130,7 @@ export function reset(resolved: ResolvedLocalDb, rootDir: string): void {
 export async function createKysely<DB>(
   resolved: ResolvedLocalDb
 ): Promise<Kysely<DB>> {
+  mkdirSync(dirname(resolved.dbFile), { recursive: true })
   let coercionMap: CoercionMap | undefined
   try {
     const mod = await import(resolved.coercionFile)
