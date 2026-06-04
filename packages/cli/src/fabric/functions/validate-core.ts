@@ -4,12 +4,12 @@ import { join } from 'node:path'
 import { z } from 'zod'
 import { added, changed, dim, removed } from '../lib/output.js'
 import {
-  Finding,
   WorkspaceValidateOutput,
   readJsonSafe,
   readTextSafe,
   runWorkspaceValidate,
 } from '../../functions/validate/workspace-validate.js'
+import type { Finding } from '../../functions/validate/workspace-validate.js'
 
 export const FabricValidateInput = z.object({})
 export const FabricValidateOutput = WorkspaceValidateOutput
