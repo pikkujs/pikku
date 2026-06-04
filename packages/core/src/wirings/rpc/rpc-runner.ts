@@ -325,6 +325,7 @@ export class ContextAwareRPCService {
       run: async (agentName: string, input: AIAgentInput) => {
         const result = await runAIAgent(agentName, input, {
           sessionService: this.options.sessionService,
+          getCredential: this.wire.getCredential?.bind(this.wire),
         })
         return {
           runId: result.runId,
@@ -353,7 +354,10 @@ export class ContextAwareRPCService {
           agentName,
           input,
           channel,
-          { sessionService: this.options.sessionService },
+          {
+            sessionService: this.options.sessionService,
+            getCredential: this.wire.getCredential?.bind(this.wire),
+          },
           undefined,
           options
         )
@@ -368,7 +372,10 @@ export class ContextAwareRPCService {
         await resumeAIAgent(
           { runId, ...input },
           channel,
-          { sessionService: this.options.sessionService },
+          {
+            sessionService: this.options.sessionService,
+            getCredential: this.wire.getCredential?.bind(this.wire),
+          },
           options
         )
       },
