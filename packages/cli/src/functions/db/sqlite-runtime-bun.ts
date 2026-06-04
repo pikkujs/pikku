@@ -9,8 +9,11 @@ import type {
 class BunSqliteStatement implements SyncSqliteStatement {
   readonly reader: boolean
 
-  constructor(private readonly stmt: ReturnType<Database['prepare']>) {
-    this.reader = Boolean(stmt.reader)
+  constructor(
+    private readonly stmt: ReturnType<Database['prepare']>,
+    reader: boolean
+  ) {
+    this.reader = reader
   }
 
   all(...parameters: unknown[]): unknown[] {
@@ -42,12 +45,22 @@ class BunSqliteDatabase implements SyncSqliteDatabase {
   }
 
   prepare(sql: string): SyncSqliteStatement {
-    return new BunSqliteStatement(this.db.prepare(sql))
+    return new BunSqliteStatement(this.db.prepare(sql), isReaderSql(sql))
   }
 
   close(): void {
     this.db.close()
   }
+}
+
+function isReaderSql(sql: string): boolean {
+  const normalized = sql.trimStart().toUpperCase()
+  return (
+    normalized.startsWith('SELECT') ||
+    normalized.startsWith('WITH') ||
+    normalized.startsWith('PRAGMA') ||
+    normalized.startsWith('EXPLAIN')
+  )
 }
 
 export const bunSqliteRuntime: SqliteRuntime = {
