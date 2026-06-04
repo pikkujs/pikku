@@ -1,5 +1,6 @@
-import { resolve } from 'path'
-import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
+import { existsSync } from 'fs'
+import { resolve, join } from 'path'
+import { loadUserModule } from './load-user-project.js'
 import type { DevDbConfig } from '../db/local-db.js'
 
 export interface UserConfigShape {
@@ -10,41 +11,71 @@ export interface UserConfigShape {
 }
 
 interface LoadOptions {
-  config: { rootDir: string; outDir: string }
-  getInspectorState: (refresh: boolean) => Promise<{
-    filesAndMethods: {
-      pikkuConfigFactory?: { file: string; variable: string }
-    }
-  }>
-  logger: { error: (msg: string) => void }
+  config: { rootDir: string; srcDirectories: string[] }
+  logger: { error: (msg: string) => void; warn: (msg: string) => void }
 }
 
-/**
- * Load the user's pikkuConfig the same way `dev.ts` does — through the
- * inspector state, then by importing the user's config factory file.
- * Returns `null` (and logs the error) if the project hasn't defined a
- * pikkuConfigFactory, so the caller can early-exit.
- */
+function findUserConfigFactoryFile(
+  rootDir: string,
+  srcDirectories: string[]
+): string | null {
+  for (const srcDir of srcDirectories) {
+    for (const name of ['config.ts', 'config.js']) {
+      const candidate = resolve(rootDir, srcDir, name)
+      if (existsSync(candidate)) return candidate
+    }
+  }
+
+  for (const name of ['config.ts', 'config.js']) {
+    const candidate = join(rootDir, name)
+    if (existsSync(candidate)) return candidate
+  }
+
+  return null
+}
+
 export async function loadUserConfigForDb(
   options: LoadOptions
 ): Promise<UserConfigShape | null> {
-  const { config, getInspectorState, logger } = options
-  const inspectorState = await getInspectorState(true)
-  const { pikkuConfigFactory } = inspectorState.filesAndMethods
-
-  if (!pikkuConfigFactory) {
+  const { config, logger } = options
+  const hasConventionalDbAssets =
+    existsSync(join(config.rootDir, 'db', 'migrations')) ||
+    existsSync(join(config.rootDir, 'db', 'seed.sql'))
+  const configFactoryFile = findUserConfigFactoryFile(
+    config.rootDir,
+    config.srcDirectories
+  )
+  if (!configFactoryFile) {
+    if (hasConventionalDbAssets) {
+      return { dev: { db: true } }
+    }
     logger.error('createConfig must be defined in your project')
     return null
   }
 
-  const pikkuDir = resolve(config.rootDir, config.outDir)
-  await loadUserBootstrap(pikkuDir)
+  let configModule: Record<string, any>
+  try {
+    configModule = await loadUserModule(configFactoryFile)
+  } catch (error: any) {
+    if (hasConventionalDbAssets) {
+      logger.warn(
+        `Falling back to default local db config because '${configFactoryFile}' could not be loaded: ${error.message}`
+      )
+      return { dev: { db: true } }
+    }
+    throw error
+  }
 
-  const configModule = await loadUserModule(pikkuConfigFactory.file)
-  const userCreateConfig = configModule[pikkuConfigFactory.variable]
+  const userCreateConfig = configModule.createConfig
   if (typeof userCreateConfig !== 'function') {
+    if (hasConventionalDbAssets) {
+      logger.warn(
+        `Falling back to default local db config because '${configFactoryFile}' does not export createConfig`
+      )
+      return { dev: { db: true } }
+    }
     logger.error(
-      `Expected '${pikkuConfigFactory.variable}' in '${pikkuConfigFactory.file}' to be a function`
+      `Expected 'createConfig' in '${configFactoryFile}' to be a function`
     )
     return null
   }

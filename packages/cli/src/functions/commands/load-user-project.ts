@@ -1,8 +1,13 @@
 import { existsSync } from 'fs'
 import { join } from 'path'
+import { pathToFileURL } from 'url'
 import { register } from 'tsx/esm/api'
 
 let tsxRegistered = false
+
+function isBunRuntime(): boolean {
+  return typeof (globalThis as { Bun?: unknown }).Bun !== 'undefined'
+}
 
 /**
  * Globally register tsx so subsequent `import()` calls go through Node's
@@ -15,9 +20,14 @@ let tsxRegistered = false
  * module state (e.g. `pikkuState` registrations from wireHTTPRoutes).
  */
 function ensureTsxRegistered(): void {
+  if (isBunRuntime()) return
   if (tsxRegistered) return
   register()
   tsxRegistered = true
+}
+
+async function importUserPath(filePath: string): Promise<Record<string, any>> {
+  return import(pathToFileURL(filePath).href)
 }
 
 /**
@@ -26,11 +36,11 @@ function ensureTsxRegistered(): void {
  * `pikkuState`.
  */
 export async function loadUserBootstrap(pikkuDir: string): Promise<void> {
-  ensureTsxRegistered()
   const bootstrapTs = join(pikkuDir, 'pikku-bootstrap.gen.ts')
   const bootstrapJs = join(pikkuDir, 'pikku-bootstrap.gen.js')
   const bootstrapPath = existsSync(bootstrapTs) ? bootstrapTs : bootstrapJs
-  await import(bootstrapPath)
+  ensureTsxRegistered()
+  await importUserPath(bootstrapPath)
 }
 
 /**
@@ -41,5 +51,5 @@ export async function loadUserModule(
   filePath: string
 ): Promise<Record<string, any>> {
   ensureTsxRegistered()
-  return import(filePath)
+  return importUserPath(filePath)
 }

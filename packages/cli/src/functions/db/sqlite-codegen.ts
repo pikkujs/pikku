@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import type { DatabaseSync } from 'node:sqlite'
-import type { ColumnKind, CoercionMap } from '@pikku/kysely-node-sqlite'
+import type { ColumnKind, CoercionMap } from './coercion-plugin.js'
+import type { SyncSqliteDatabase } from './sqlite-runtime.js'
 
 interface ColumnInfo {
   name: string
@@ -64,7 +64,7 @@ function mapType(sqlType: string): string {
   return 'string'
 }
 
-function listTables(db: DatabaseSync): TableInfo[] {
+function listTables(db: SyncSqliteDatabase): TableInfo[] {
   const tableRows = db
     .prepare(
       `SELECT name FROM sqlite_master
@@ -273,7 +273,7 @@ export interface CodegenResult {
  * Returns `written: false` if the on-disk file already matches.
  */
 export function generateSchemaTypes(
-  db: DatabaseSync,
+  db: SyncSqliteDatabase,
   options: CodegenOptions
 ): CodegenResult {
   const camelCase = options.camelCase ?? true

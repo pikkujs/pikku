@@ -4,10 +4,9 @@ import { loadUserConfigForDb } from './db-shared.js'
 
 export const dbSeed = pikkuSessionlessFunc<{}, void>({
   remote: true,
-  func: async ({ logger, config, getInspectorState }) => {
+  func: async ({ logger, config }) => {
     const userConfig = await loadUserConfigForDb({
       config,
-      getInspectorState,
       logger,
     })
     if (!userConfig) return
@@ -25,7 +24,7 @@ export const dbSeed = pikkuSessionlessFunc<{}, void>({
       throw new Error('dev.db not configured')
     }
 
-    const result = seed(resolved)
+    const result = await seed(resolved)
     if (!result.applied) {
       logger.info(`db seed: no ${resolved.seedFile} found, nothing to do`)
     } else {

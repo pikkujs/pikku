@@ -3,7 +3,7 @@ import assert from 'node:assert'
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { runValidate } from './validate.function.js'
+import { runValidate } from './validate-core.js'
 
 async function makeTmp() {
   return mkdtemp(join(tmpdir(), 'pikku-validate-'))

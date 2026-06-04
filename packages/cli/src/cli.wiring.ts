@@ -17,6 +17,10 @@ import { dev } from './functions/commands/dev.js'
 import { dbMigrate } from './functions/commands/db-migrate.js'
 import { dbSeed } from './functions/commands/db-seed.js'
 import { dbReset } from './functions/commands/db-reset.js'
+import {
+  workspaceValidate,
+  renderWorkspaceValidate,
+} from './functions/commands/workspace-validate.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuTestsInit } from './functions/commands/tests-init.js'
 import { pikkuTestsCoverage } from './functions/commands/tests-coverage.js'
@@ -254,6 +258,17 @@ wireCLI({
         reset: pikkuCLICommand({
           func: dbReset,
           description: 'Wipe and recreate the dev database (migrate + seed)',
+        }),
+      },
+    },
+    workspace: {
+      description: 'Workspace-level validation and maintenance commands',
+      subcommands: {
+        validate: pikkuCLICommand({
+          func: workspaceValidate,
+          render: renderWorkspaceValidate,
+          description:
+            'Check the project structure for Pikku workspace compatibility',
         }),
       },
     },
