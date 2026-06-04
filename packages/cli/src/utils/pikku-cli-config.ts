@@ -115,6 +115,10 @@ const _getPikkuCLIConfig = async (
       }
     }
 
+    if (result.outDir && !isAbsolute(result.outDir)) {
+      result.outDir = resolve(configDir, result.outDir)
+    }
+
     // Override outDir if provided via CLI flag (must happen before derived paths)
     if (outDirOverride) {
       result.outDir = isAbsolute(outDirOverride)
@@ -611,6 +615,10 @@ const _getPikkuCLIConfig = async (
           result.clientFiles[key] = join(result.configDir, val)
         }
       }
+    }
+
+    if (result.emailTemplatesDir && !isAbsolute(result.emailTemplatesDir)) {
+      result.emailTemplatesDir = join(result.configDir, result.emailTemplatesDir)
     }
 
     if (!isAbsolute(result.tsconfig)) {

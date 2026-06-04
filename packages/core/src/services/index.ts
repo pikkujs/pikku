@@ -17,6 +17,7 @@ export {
 } from './credential-wire-service.js'
 export { TypedVariablesService } from './typed-variables-service.js'
 export { LocalSecretService } from './local-secrets.js'
+export { LocalEmailService } from './local-email-service.js'
 export { LocalCredentialService } from './local-credential-service.js'
 export { LocalVariablesService } from './local-variables.js'
 export { ConsoleLogger, JsonConsoleLogger } from './logger-console.js'
@@ -36,6 +37,15 @@ export type {
   CopyFileArgs,
 } from './content-service.js'
 export type { JWTService } from './jwt-service.js'
+export type {
+  EmailService,
+  EmailTemplateReference,
+  SendEmailInput,
+  SendEmailResult,
+  SendHTMLEmailInput,
+  SendTemplateEmailInput,
+  SendTextEmailInput,
+} from './email-service.js'
 export type { Logger } from './logger.js'
 export type { SecretService } from './secret-service.js'
 export type { VariablesService } from './variables-service.js'
@@ -96,4 +106,8 @@ export type {
   PermissionMeta,
   AgentsMeta,
   AgentMeta,
+  EmailsMeta,
+  EmailTemplateMeta,
+  EmailTemplateLocaleMeta,
+  EmailTemplateAssets,
 } from './meta-service.js'

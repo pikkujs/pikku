@@ -2,6 +2,15 @@ import { useQuery } from '@tanstack/react-query'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
 import { useMemo } from 'react'
 
+type EmailPreviewValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | Record<string, unknown>
+  | Array<unknown>
+
 export function useChannelSnippets(channelName: string) {
   const rpc = usePikkuRPC()
 
@@ -69,4 +78,27 @@ export function useOutputSchema(rpcName: string | null | undefined) {
   const outputSchemaName = funcMeta?.outputSchemaName
 
   return useSchema(outputSchemaName)
+}
+
+export function useRenderEmailPreview(
+  templateName: string | null | undefined,
+  locale: string | null | undefined,
+  data: Record<string, EmailPreviewValue>,
+  enabled = true
+) {
+  const rpc = usePikkuRPC()
+
+  return useQuery({
+    queryKey: ['emails', 'preview', templateName, locale, JSON.stringify(data)],
+    queryFn: async () => {
+      if (!templateName) return null
+
+      return await rpc.invoke('console:renderEmailPreview', {
+        templateName,
+        locale: locale ?? undefined,
+        data,
+      })
+    },
+    enabled: enabled && !!templateName,
+  })
 }

@@ -96,6 +96,15 @@ export { NotFoundError } from './errors/errors.js'
 export type { EventHubService } from './wirings/channel/eventhub-service.js'
 export type { QueueService } from './wirings/queue/queue.types.js'
 export type { JWTService } from './services/jwt-service.js'
+export type {
+  EmailService,
+  EmailTemplateReference,
+  SendEmailInput,
+  SendEmailResult,
+  SendHTMLEmailInput,
+  SendTemplateEmailInput,
+  SendTextEmailInput,
+} from './services/email-service.js'
 export type { SecretService } from './services/secret-service.js'
 export type { VariablesService } from './services/variables-service.js'
 export type {
@@ -117,6 +126,13 @@ export type { SessionService } from './services/user-session-service.js'
 export type { AIAgentRunnerService } from './services/ai-agent-runner-service.js'
 export type { AIRunStateService } from './services/ai-run-state-service.js'
 export type { AIStorageService } from './services/ai-storage-service.js'
+export type {
+  EmailsMeta,
+  EmailTemplateMeta,
+  EmailTemplateLocaleMeta,
+  EmailTemplateAssets,
+  MetaService,
+} from './services/meta-service.js'
 export type { HTTPMethod } from './wirings/http/http.types.js'
 export type { GraphNodeConfig } from './wirings/workflow/graph/workflow-graph.types.js'
 export { createGraph } from './wirings/workflow/graph/graph-node.js'

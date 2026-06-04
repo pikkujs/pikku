@@ -25,7 +25,7 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
   func: async ({ logger, config, getInspectorState }, input) => {
     const bootstrap = input?.bootstrap === true
     const visitState = bootstrap
-      ? await getInspectorState(false, true, false)
+      ? await getInspectorState(false, true, true)
       : await getInspectorState()
     const {
       workflowsWiringFile,

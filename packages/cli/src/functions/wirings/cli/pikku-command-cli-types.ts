@@ -17,7 +17,7 @@ export const pikkuCLITypes = pikkuSessionlessFunc<CLITypesCommandInput, void>({
     // services types) — skip schema generation. Full mode would dynamic-import
     // pikku-types.gen.ts, which re-exports the not-yet-written cli-types file.
     const visitState = bootstrap
-      ? await getInspectorState(false, true, false)
+      ? await getInspectorState(false, true, true)
       : await getInspectorState()
 
     const functionTypesImportPath = getFileImportRelativePath(

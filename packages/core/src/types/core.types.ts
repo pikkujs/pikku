@@ -35,6 +35,7 @@ import type { AgentRunService } from '../wirings/ai-agent/ai-agent.types.js'
 import type { PikkuAIMiddlewareHooks } from '../wirings/ai-agent/ai-agent.types.js'
 import type { WorkflowRunService } from '../wirings/workflow/workflow.types.js'
 import type { CredentialService } from '../services/credential-service.js'
+import type { EmailService } from '../services/email-service.js'
 import type { MetaService } from '../services/meta-service.js'
 import type { SessionStore } from '../services/session-store.js'
 
@@ -239,6 +240,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   workflowRunService?: WorkflowRunService
   /** Credential service for dynamic/managed credentials (OAuth tokens, per-user API keys) */
   credentialService?: CredentialService
+  /** Email service for outbound messages and template-backed delivery */
+  emailService?: EmailService
   /** Meta service for reading .pikku metadata files (filesystem on Node, R2/KV on CF) */
   metaService?: MetaService
   /** Session store for persisting user sessions keyed by pikkuUserId */

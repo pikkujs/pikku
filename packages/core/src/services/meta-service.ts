@@ -109,6 +109,38 @@ export interface PermissionsGroupsMeta {
   tagGroups: Record<string, GroupMeta>
 }
 
+export interface EmailTemplateLocaleMeta {
+  contentHash: string
+  htmlHash: string
+  subjectHash: string
+  textHash: string
+}
+
+export interface EmailTemplateMeta {
+  variables: string[]
+  hasHtml: boolean
+  hasSubject: boolean
+  hasText: boolean
+  locales: Record<string, EmailTemplateLocaleMeta>
+}
+
+export interface EmailsMeta {
+  src: string
+  themeHash: string
+  templates: Record<string, EmailTemplateMeta>
+}
+
+export interface EmailTemplateAssets {
+  theme: Record<string, unknown>
+  strings: Record<string, unknown>
+  layout: string
+  partials: Record<string, string>
+  html: string
+  subject: string
+  text: string
+  missing: string[]
+}
+
 /**
  * Abstraction over .pikku metadata file access.
  * All paths are relative to the .pikku root directory.
@@ -123,6 +155,8 @@ export interface MetaService {
   readFile(relativePath: string): Promise<string | null>
   /** List files in a directory by relative path. Returns empty array if not found. */
   readDir(relativePath: string): Promise<string[]>
+  /** Read a project source file relative to the project root (one level above .pikku). */
+  readProjectFile(relativePath: string): Promise<string | null>
 
   // -- Typed metadata accessors --
 
@@ -143,6 +177,11 @@ export interface MetaService {
   getSecretsMeta(): Promise<SecretDefinitionsMeta>
   getCredentialsMeta(): Promise<CredentialDefinitionsMeta>
   getVariablesMeta(): Promise<VariableDefinitionsMeta>
+  getEmailMeta(): Promise<EmailsMeta>
+  getEmailTemplateAssets(
+    templateName: string,
+    locale: string
+  ): Promise<EmailTemplateAssets>
   getServicesMeta(): Promise<ServicesMetaRecord>
 
   getSchema(schemaName: string): Promise<JSONSchema7 | null>
@@ -173,6 +212,7 @@ export class LocalMetaService implements MetaService {
   private secretsMetaCache: SecretDefinitionsMeta | null = null
   private credentialsMetaCache: CredentialDefinitionsMeta | null = null
   private variablesMetaCache: VariableDefinitionsMeta | null = null
+  private emailMetaCache: EmailsMeta | null = null
   private middlewareGroupsMetaCache: MiddlewareGroupsMeta | null = null
   private permissionsGroupsMetaCache: PermissionsGroupsMeta | null = null
   private agentsMetaCache: AgentsMeta | null = null
@@ -198,6 +238,14 @@ export class LocalMetaService implements MetaService {
     }
   }
 
+  async readProjectFile(relativePath: string): Promise<string | null> {
+    try {
+      return await readFile(join(this.basePath, '..', relativePath), 'utf-8')
+    } catch {
+      return null
+    }
+  }
+
   clearCache(): void {
     this.httpMetaCache = null
     this.channelsMetaCache = null
@@ -214,6 +262,7 @@ export class LocalMetaService implements MetaService {
     this.secretsMetaCache = null
     this.credentialsMetaCache = null
     this.variablesMetaCache = null
+    this.emailMetaCache = null
     this.middlewareGroupsMetaCache = null
     this.permissionsGroupsMetaCache = null
     this.agentsMetaCache = null
@@ -457,6 +506,72 @@ export class LocalMetaService implements MetaService {
     )
     this.variablesMetaCache = content ? JSON.parse(content) : {}
     return this.variablesMetaCache!
+  }
+
+  async getEmailMeta(): Promise<EmailsMeta> {
+    if (this.emailMetaCache) return this.emailMetaCache
+
+    const content = await this.readFile('email/pikku-emails-meta.gen.json')
+    this.emailMetaCache = content
+      ? JSON.parse(content)
+      : {
+          src: '',
+          themeHash: '',
+          templates: {},
+        }
+    return this.emailMetaCache!
+  }
+
+  async getEmailTemplateAssets(
+    templateName: string,
+    locale: string
+  ): Promise<EmailTemplateAssets> {
+    const emailsMeta = await this.getEmailMeta()
+    if (!emailsMeta.src) {
+      throw new Error(
+        'No generated email metadata found. Run `pikku emails generate`.'
+      )
+    }
+
+    const baseDir = emailsMeta.src
+    const [
+      themeRaw,
+      localeRaw,
+      layoutRaw,
+      footerRaw,
+      templateHtml,
+      templateSubject,
+      templateText,
+    ] = await Promise.all([
+      this.readProjectFile(`${baseDir}/theme.json`),
+      this.readProjectFile(`${baseDir}/locales/${locale}.json`),
+      this.readProjectFile(`${baseDir}/partials/layout.html`),
+      this.readProjectFile(`${baseDir}/partials/footer.html`),
+      this.readProjectFile(`${baseDir}/templates/${templateName}.html`),
+      this.readProjectFile(`${baseDir}/templates/${templateName}.subject.txt`),
+      this.readProjectFile(`${baseDir}/templates/${templateName}.text.txt`),
+    ])
+
+    return {
+      theme: themeRaw ? (JSON.parse(themeRaw) as Record<string, unknown>) : {},
+      strings: localeRaw
+        ? (JSON.parse(localeRaw) as Record<string, unknown>)
+        : {},
+      layout: layoutRaw ?? '',
+      partials: {
+        footer: footerRaw ?? '',
+      },
+      html: templateHtml ?? '',
+      subject: templateSubject ?? '',
+      text: templateText ?? '',
+      missing: [
+        ...(themeRaw ? [] : ['theme']),
+        ...(localeRaw ? [] : ['locale']),
+        ...(templateHtml ? [] : ['html']),
+        ...(templateSubject ? [] : ['subject']),
+        ...(templateText ? [] : ['text']),
+      ],
+    }
   }
 
   async getServicesMeta(): Promise<ServicesMetaRecord> {

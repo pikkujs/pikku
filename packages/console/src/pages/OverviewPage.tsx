@@ -21,6 +21,7 @@ import {
   Terminal,
   Clock,
   ListOrdered,
+  Mail,
 } from 'lucide-react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 
@@ -153,6 +154,12 @@ export const OverviewPage: React.FC = () => {
       count: counts.queues,
       icon: ListOrdered,
       href: '/jobs?tab=queues',
+    },
+    {
+      label: 'Emails',
+      count: counts.emails,
+      icon: Mail,
+      href: '/emails',
     },
   ]
 
