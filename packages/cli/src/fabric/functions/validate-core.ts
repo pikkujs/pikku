@@ -194,7 +194,14 @@ export async function runFabricValidate(
     }
 
     const migrationsDir = join(fnDir, 'db', 'migrations')
-    if (existsSync(migrationsDir)) {
+    if (!existsSync(migrationsDir)) {
+      e(
+        'migrations-dir-missing',
+        'packages/functions/db/migrations/ not found',
+        migrationsDir,
+        'Create db/migrations/ and add numbered .sql files (e.g. 0001-init.sql) using SQLite-compatible syntax'
+      )
+    } else {
       try {
         const files = (await readdir(migrationsDir)).filter((f) =>
           f.endsWith('.sql')
@@ -217,6 +224,16 @@ export async function runFabricValidate(
       } catch {
         // readdir failure — skip
       }
+    }
+
+    const seedPath = join(fnDir, 'db', 'seed.sql')
+    if (!existsSync(seedPath)) {
+      e(
+        'seed-sql-missing',
+        'packages/functions/db/seed.sql not found',
+        seedPath,
+        'Create db/seed.sql with idempotent INSERT OR IGNORE statements for demo/test data'
+      )
     }
   }
 
