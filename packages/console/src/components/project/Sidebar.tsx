@@ -27,6 +27,7 @@ import {
   Package,
   RefreshCw,
   GitCompare,
+  Mail,
 } from 'lucide-react'
 import { spotlight } from '@mantine/spotlight'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
@@ -92,6 +93,12 @@ export const DEFAULT_NAV_SECTIONS: NavSection[] = [
         href: '/runtime',
         icon: Server,
         matchPrefix: '/runtime',
+      },
+      {
+        label: 'Emails',
+        href: '/emails',
+        icon: Mail,
+        matchPrefix: '/emails',
       },
       {
         label: 'Secrets',

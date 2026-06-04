@@ -7,6 +7,7 @@ import { pikkuTanStackStart } from './functions/runtimes/tanstack-start/pikku-co
 import { pikkuQueueService } from './functions/wirings/queue/pikku-command-queue-service.js'
 import { pikkuOpenAPI } from './functions/wirings/http/pikku-command-openapi.js'
 import { pikkuNext } from './functions/runtimes/nextjs/pikku-command-nextjs.js'
+import { pikkuEmails } from './functions/wirings/emails/pikku-command-emails.js'
 import { pikkuCLICommand, wireCLI } from '../.pikku/cli/pikku-cli-types.gen.js'
 import { fabricCommands } from './fabric/fabric-commands.js'
 import { all } from './functions/commands/all.js'
@@ -243,6 +244,16 @@ wireCLI({
       func: pikkuSchemas,
       description: 'Generate JSON schemas for function input/output types',
     }),
+    emails: {
+      description: 'Email template generation commands',
+      subcommands: {
+        generate: pikkuCLICommand({
+          func: pikkuEmails,
+          description:
+            'Generate typed email renderers and metadata from emailTemplatesDir in pikku.config.json',
+        }),
+      },
+    },
     db: {
       description: 'Local development database commands',
       subcommands: {

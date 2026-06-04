@@ -6,6 +6,7 @@ import chokidar, { type FSWatcher } from 'chokidar'
 import { pikkuDevReloader } from '@pikku/core/dev'
 import {
   ConsoleLogger,
+  LocalEmailService,
   InMemoryQueueService,
   InMemoryWorkflowService,
   InMemoryTriggerService,
@@ -45,6 +46,9 @@ export const dev = pikkuSessionlessFunc<
     const hostname = 'localhost'
     const enableWatch = watch !== false
     const enableHmr = hmr !== false
+    const watchDirectories = [
+      ...new Set([config.emailTemplatesDir, ...config.srcDirectories].filter(Boolean)),
+    ] as string[]
     const commandSingletonServices = pikkuState(
       null,
       'package',
@@ -232,8 +236,10 @@ export const dev = pikkuSessionlessFunc<
     // single instance under both names so addons like @pikku/addon-console
     // can read runs in dev without projects having to wire their own backing
     // store.
+    const devLogger = new ConsoleLogger()
     const inMemoryServices = {
-      logger: new ConsoleLogger(),
+      logger: devLogger,
+      emailService: new LocalEmailService(),
       metaService: new LocalMetaService(pikkuDir),
       schedulerService,
       queueService: new InMemoryQueueService(),
@@ -297,7 +303,7 @@ export const dev = pikkuSessionlessFunc<
 
     if (enableHmr) {
       await pikkuDevReloader({
-        srcDirectories: config.srcDirectories,
+        srcDirectories: watchDirectories,
         logger,
       })
     }
@@ -305,7 +311,7 @@ export const dev = pikkuSessionlessFunc<
     if (enableWatch) {
       const genIgnore = /\.gen\.tsx?$/
 
-      configWatcher = chokidar.watch(config.srcDirectories, {
+      configWatcher = chokidar.watch(watchDirectories, {
         ignoreInitial: true,
         ignored: genIgnore,
       })
@@ -313,10 +319,8 @@ export const dev = pikkuSessionlessFunc<
       const generatorWatcher = () => {
         watcher?.close()
 
-        logger.info(
-          `• Watching directories: \n  - ${config.srcDirectories.join('\n  - ')}`
-        )
-        watcher = chokidar.watch(config.srcDirectories, {
+        logger.info(`• Watching directories: \n  - ${watchDirectories.join('\n  - ')}`)
+        watcher = chokidar.watch(watchDirectories, {
           ignoreInitial: true,
           ignored: genIgnore,
         })

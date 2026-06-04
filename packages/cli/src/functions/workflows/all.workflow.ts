@@ -45,7 +45,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       await workflow.do(
         'Bootstrap function types split',
         'pikkuFunctionTypesSplit',
-        null
+        { bootstrap: true }
       )
       await workflow.do('Bootstrap function types', 'pikkuFunctionTypes', null)
       await workflow.do('Bootstrap addon types', 'pikkuAddonTypes', {
@@ -59,7 +59,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         workflow.do('Bootstrap workflow', 'pikkuWorkflow', {
           bootstrap: true,
         }),
-        workflow.do('Bootstrap Trigger types', 'pikkuTriggerTypes', null),
+        workflow.do('Bootstrap Trigger types', 'pikkuTriggerTypes', { bootstrap: true }),
         workflow.do('Bootstrap MCP types', 'pikkuMCPTypes', null),
         workflow.do('Bootstrap AI agent types', 'pikkuAIAgentTypes', null),
       ])
@@ -103,8 +103,8 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
 
     // Type generators are independent of each other
     const typeGenerators: Promise<any>[] = [
-      workflow.do('Function types split', 'pikkuFunctionTypesSplit', null),
-      workflow.do('Trigger types', 'pikkuTriggerTypes', null),
+      workflow.do('Function types split', 'pikkuFunctionTypesSplit', {}),
+      workflow.do('Trigger types', 'pikkuTriggerTypes', {}),
       workflow.do('AI agent types', 'pikkuAIAgentTypes', null),
     ]
     if (!config.addon) {
@@ -161,6 +161,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Public RPC', 'pikkuPublicRPC', null),
       workflow.do('Console functions', 'pikkuConsoleFunctions', null),
       workflow.do('Events scaffold', 'pikkuEventsScaffold', null),
+      workflow.do('Emails', 'pikkuEmails' as any, null),
       workflow.do(
         'Secret definition types',
         'pikkuSecretDefinitionTypes',

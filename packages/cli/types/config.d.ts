@@ -224,6 +224,9 @@ export type PikkuCLIInput = {
     startServerFnsFile?: string
   }
 
+  /** Directory containing email templates, locales, partials, and theme.json. */
+  emailTemplatesDir?: string
+
   openAPI?: {
     outputFile: string
     additionalInfo: OpenAPISpecInfo

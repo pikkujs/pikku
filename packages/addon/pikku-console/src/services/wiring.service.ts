@@ -20,6 +20,7 @@ import type {
   MiddlewareInstanceMeta,
   GroupMeta,
   PermissionDefinitionMeta,
+  EmailsMeta,
 } from '@pikku/core/services'
 
 export type {
@@ -39,6 +40,7 @@ export type {
   MiddlewareInstanceMeta,
   GroupMeta,
   PermissionDefinitionMeta,
+  EmailsMeta,
 }
 
 export interface WiringRef {
@@ -216,6 +218,7 @@ export interface MetaCounts {
   triggers: number
   triggerSources: number
   agents: number
+  emails: number
   secrets: number
   variables: number
 }
@@ -263,6 +266,7 @@ export interface PikkuMetaState {
   middlewareGroupsMeta: MiddlewareGroupsMeta
   permissionsGroupsMeta: PermissionsGroupsMeta
   agentsMeta: AgentsMeta
+  emailsMeta: EmailsMeta
   secretsMeta: Record<string, unknown>
   credentialsMeta: Record<string, unknown>
   variablesMeta: Record<string, unknown>
@@ -644,6 +648,7 @@ export class WiringService {
       middlewareGroupsMeta,
       permissionsGroupsMeta,
       agentsMeta,
+      emailsMeta,
       secretsMeta,
       credentialsMeta,
       variablesMeta,
@@ -662,6 +667,7 @@ export class WiringService {
       this.metaService.getMiddlewareGroupsMeta(),
       this.metaService.getPermissionsGroupsMeta(),
       this.metaService.getAgentsMeta(),
+      this.metaService.getEmailMeta(),
       this.metaService.getSecretsMeta(),
       this.metaService.getCredentialsMeta(),
       this.metaService.getVariablesMeta(),
@@ -900,6 +906,7 @@ export class WiringService {
       triggers: Object.keys(triggerMeta).length,
       triggerSources: Object.keys(triggerSourceMeta).length,
       agents: Object.keys(agentsMeta).length,
+      emails: Object.keys(emailsMeta.templates ?? {}).length,
       secrets: Object.keys(secretsMeta).length,
       variables: Object.keys(variablesMeta).length,
     }
@@ -921,6 +928,7 @@ export class WiringService {
       middlewareGroupsMeta,
       permissionsGroupsMeta,
       agentsMeta,
+      emailsMeta,
       secretsMeta,
       credentialsMeta,
       variablesMeta,

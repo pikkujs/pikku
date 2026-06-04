@@ -56,6 +56,7 @@ const EMPTY_META: PikkuMetaState = {
   },
   permissionsGroupsMeta: { definitions: {}, httpGroups: {}, tagGroups: {} },
   agentsMeta: {},
+  emailsMeta: { src: '', themeHash: '', templates: {} },
   secretsMeta: {},
   credentialsMeta: {},
   variablesMeta: {},
@@ -74,6 +75,7 @@ const EMPTY_COUNTS: MetaCounts = {
   triggers: 0,
   triggerSources: 0,
   agents: 0,
+  emails: 0,
   secrets: 0,
   variables: 0,
 }
@@ -111,6 +113,7 @@ export const PikkuMetaProvider: React.FC<{
         middlewareGroupsMeta: allMeta.middlewareGroupsMeta,
         permissionsGroupsMeta: allMeta.permissionsGroupsMeta,
         agentsMeta: allMeta.agentsMeta,
+        emailsMeta: allMeta.emailsMeta,
         secretsMeta: allMeta.secretsMeta,
         credentialsMeta: allMeta.credentialsMeta ?? {},
         variablesMeta: allMeta.variablesMeta,
