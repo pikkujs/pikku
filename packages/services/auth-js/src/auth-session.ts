@@ -2,13 +2,11 @@ import { decode } from '@auth/core/jwt'
 import type { CoreUserSession, CorePikkuMiddleware } from '@pikku/core'
 import { pikkuMiddleware } from '@pikku/core'
 
-type AuthJsSessionOptionsBase = {
+type AuthJsSessionOptions = {
+  secretId: string
   cookieName?: string
   mapSession?: (claims: any) => CoreUserSession
 }
-
-type AuthJsSessionOptions = AuthJsSessionOptionsBase &
-  ({ secret: string } | { secretId: string })
 
 /**
  * Middleware that reads Auth.js session cookies and bridges them into Pikku sessions.
@@ -53,10 +51,7 @@ export const authJsSession = (
 
       if (cookieValue) {
         try {
-          const secret =
-            'secret' in options
-              ? options.secret
-              : await services.secrets.getSecret(options.secretId)
+          const secret = await services.secrets.getSecret(options.secretId)
           const decoded = await decode({
             token: cookieValue,
             secret,
