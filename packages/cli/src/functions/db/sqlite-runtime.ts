@@ -4,6 +4,7 @@ export interface SyncSqliteChanges {
 }
 
 export interface SyncSqliteStatement {
+  reader: boolean
   all(...parameters: unknown[]): unknown[]
   get(...parameters: unknown[]): unknown | null
   iterate(...parameters: unknown[]): IterableIterator<unknown>
