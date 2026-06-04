@@ -42,4 +42,7 @@ export interface AIAgentRunnerService {
     channel: AIStreamChannel
   ): Promise<AIAgentStepResult>
   run(params: AIAgentRunnerParams): Promise<AIAgentStepResult>
+  /** Return a new runner that uses the given API key for every LLM call.
+   *  Optional — runners that don't support per-key scoping leave this undefined. */
+  withApiKey?(apiKey: string): AIAgentRunnerService
 }

@@ -91,8 +91,19 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
    *  route through a gateway / inject headers. */
   public providers: Record<string, any>
 
-  constructor(providers: Record<string, any>) {
+  private readonly providerFactory?: (apiKey: string) => Record<string, any>
+
+  constructor(
+    providers: Record<string, any>,
+    providerFactory?: (apiKey: string) => Record<string, any>
+  ) {
     this.providers = providers
+    this.providerFactory = providerFactory
+  }
+
+  withApiKey(apiKey: string): VercelAIAgentRunner {
+    if (!this.providerFactory) return this
+    return new VercelAIAgentRunner(this.providerFactory(apiKey))
   }
 
   private parseModel(model: string): { provider: string; modelName: string } {

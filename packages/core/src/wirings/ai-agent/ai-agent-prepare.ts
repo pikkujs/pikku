@@ -32,6 +32,8 @@ import { resolveModelConfig } from './ai-agent-model-config.js'
 
 export type RunAIAgentParams = {
   sessionService?: SessionService<CoreUserSession>
+  /** Credential accessor for the current request — used to read per-user overrides (e.g. AI_API_KEY). */
+  getCredential?: <T = unknown>(name: string) => T | null | Promise<T | null>
 }
 
 export type StreamAIAgentOptions = {
@@ -616,9 +618,16 @@ export async function prepareAgentRun(
   const singletonServices = getSingletonServices()
   const { agent, packageName, resolvedName } = resolveAgent(agentName)
 
-  const agentRunner = singletonServices.aiAgentRunner
+  let agentRunner = singletonServices.aiAgentRunner
   if (!agentRunner) {
     throw new AIProviderNotConfiguredError()
+  }
+
+  if (params.getCredential && agentRunner.withApiKey) {
+    const aiCredential = await params.getCredential<{ apiKey: string }>('AI_API_KEY')
+    if (aiCredential?.apiKey) {
+      agentRunner = agentRunner.withApiKey(aiCredential.apiKey)
+    }
   }
 
   const { storage } = resolveMemoryServices(agent, singletonServices)
