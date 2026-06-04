@@ -15,14 +15,17 @@ function coerce(v: unknown): unknown {
   if (v === null || v === undefined) return null
   if (typeof v === 'boolean') return v ? 1 : 0
   if (v instanceof Date) return v.toISOString()
+  if (v instanceof Uint8Array) return v
   if (typeof v === 'object') return JSON.stringify(v)
   return v
 }
 
 class RuntimeSqliteStatement implements SqliteStatement {
-  readonly reader = true
+  readonly reader: boolean
 
-  constructor(private readonly stmt: SyncSqliteStatement) {}
+  constructor(private readonly stmt: SyncSqliteStatement) {
+    this.reader = Boolean(stmt.reader)
+  }
 
   all(parameters: ReadonlyArray<unknown>): unknown[] {
     return this.stmt.all(...parameters.map(coerce))

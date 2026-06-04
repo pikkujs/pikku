@@ -7,7 +7,11 @@ import type {
 } from './sqlite-runtime.js'
 
 class BunSqliteStatement implements SyncSqliteStatement {
-  constructor(private readonly stmt: ReturnType<Database['prepare']>) {}
+  readonly reader: boolean
+
+  constructor(private readonly stmt: ReturnType<Database['prepare']>) {
+    this.reader = Boolean(stmt.reader)
+  }
 
   all(...parameters: unknown[]): unknown[] {
     return this.stmt.all(...parameters) as unknown[]

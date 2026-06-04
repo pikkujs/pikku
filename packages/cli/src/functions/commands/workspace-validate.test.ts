@@ -3,7 +3,10 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, test } from 'node:test'
-import { runWorkspaceValidate } from '../validate/workspace-validate.js'
+import {
+  readJsonSafe,
+  runWorkspaceValidate,
+} from '../validate/workspace-validate.js'
 
 async function makeTmp() {
   return mkdtemp(join(tmpdir(), 'pikku-workspace-validate-'))
@@ -115,6 +118,20 @@ describe('pikku workspace validate', () => {
       assert.ok(!ids.includes('fn-pkg-postgres-dep'))
       assert.ok(!ids.includes('services-wrong-db-adapter'))
       assert.strictEqual(result.ok, true)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('invalid JSON throws instead of looking missing', async () => {
+    const tmp = await makeTmp()
+    try {
+      const path = join(tmp, 'broken.json')
+      await writeFile(path, '{ nope', 'utf8')
+      await assert.rejects(
+        () => readJsonSafe(path),
+        /Invalid JSON in .*broken\.json:/
+      )
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }

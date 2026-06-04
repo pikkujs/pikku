@@ -45,8 +45,9 @@ export async function readJsonSafe<T>(path: string): Promise<T | null> {
   if (!existsSync(path)) return null
   try {
     return JSON.parse(await readFile(path, 'utf8')) as T
-  } catch {
-    return null
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    throw new Error(`Invalid JSON in ${path}: ${message}`)
   }
 }
 

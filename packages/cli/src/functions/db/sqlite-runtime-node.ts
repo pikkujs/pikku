@@ -6,6 +6,7 @@ import type {
 } from './sqlite-runtime.js'
 
 interface NodeSqliteStatementShape {
+  reader?: boolean
   all(...parameters: unknown[]): unknown[]
   get(...parameters: unknown[]): unknown
   iterate(...parameters: unknown[]): IterableIterator<unknown>
@@ -26,7 +27,11 @@ interface NodeSqliteModule {
 }
 
 class NodeSqliteStatement implements SyncSqliteStatement {
-  constructor(private readonly stmt: NodeSqliteStatementShape) {}
+  readonly reader: boolean
+
+  constructor(private readonly stmt: NodeSqliteStatementShape) {
+    this.reader = Boolean(stmt.reader)
+  }
 
   all(...parameters: unknown[]): unknown[] {
     return this.stmt.all(...parameters) as unknown[]
