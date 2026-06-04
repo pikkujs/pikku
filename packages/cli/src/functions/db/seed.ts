@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
-import type { DatabaseSync } from 'node:sqlite'
+import type { SyncSqliteDatabase } from './sqlite-runtime.js'
 
 export interface SeedResult {
   applied: boolean
@@ -11,7 +11,7 @@ export interface SeedResult {
  * (e.g. `INSERT OR IGNORE`, upserts). Returns `applied: false` if the file
  * doesn't exist; throws on SQL errors.
  */
-export function seed(db: DatabaseSync, seedFile: string): SeedResult {
+export function seed(db: SyncSqliteDatabase, seedFile: string): SeedResult {
   if (!existsSync(seedFile)) {
     return { applied: false, bytes: 0 }
   }

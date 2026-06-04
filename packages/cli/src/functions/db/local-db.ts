@@ -1,16 +1,13 @@
-import { DatabaseSync } from 'node:sqlite'
 import { existsSync, mkdirSync, rmSync } from 'node:fs'
 import { resolve, isAbsolute, relative, dirname, join } from 'node:path'
 import type { Kysely } from 'kysely'
-import {
-  createNodeSqliteKysely,
-  createCoercionPlugin,
-  type CoercionMap,
-} from '@pikku/kysely-node-sqlite'
 import { migrate, type MigrateResult } from './sql-migrator.js'
 import { generateSchemaTypes, type CodegenResult } from './sqlite-codegen.js'
 import { generateZodTypes, type ZodCodegenResult } from './zod-codegen.js'
 import { seed as runSeed, type SeedResult } from './seed.js'
+import { createCoercionPlugin, type CoercionMap } from './coercion-plugin.js'
+import { createSqliteKysely } from './sqlite-kysely.js'
+import { loadSqliteRuntime } from './sqlite-runtime.js'
 
 export type DevDbConfig = true | { file?: string }
 
@@ -68,11 +65,12 @@ export interface MigrateAndCodegenOutcome {
  * Run the migrate routine (open → tracking-table → drift-check → apply →
  * codegen → close). Used by both `pikku db migrate` and `pikku dev` boot.
  */
-export function migrateAndCodegen(
+export async function migrateAndCodegen(
   resolved: ResolvedLocalDb
-): MigrateAndCodegenOutcome {
+): Promise<MigrateAndCodegenOutcome> {
   mkdirSync(dirname(resolved.dbFile), { recursive: true })
-  const db = new DatabaseSync(resolved.dbFile)
+  const runtime = await loadSqliteRuntime()
+  const db = runtime.open(resolved.dbFile)
   try {
     const migrateResult = migrate(db, resolved.migrationsDir)
     const codegenResult = generateSchemaTypes(db, {
@@ -91,8 +89,9 @@ export function migrateAndCodegen(
   }
 }
 
-export function seed(resolved: ResolvedLocalDb): SeedResult {
-  const db = new DatabaseSync(resolved.dbFile)
+export async function seed(resolved: ResolvedLocalDb): Promise<SeedResult> {
+  const runtime = await loadSqliteRuntime()
+  const db = runtime.open(resolved.dbFile)
   try {
     return runSeed(db, resolved.seedFile)
   } finally {
@@ -131,6 +130,7 @@ export async function createKysely<DB>(
   resolved: ResolvedLocalDb
 ): Promise<Kysely<DB>> {
   mkdirSync(dirname(resolved.dbFile), { recursive: true })
+  const runtime = await loadSqliteRuntime()
   let coercionMap: CoercionMap | undefined
   try {
     const mod = await import(resolved.coercionFile)
@@ -139,8 +139,8 @@ export async function createKysely<DB>(
     // coercion.gen.ts not yet generated — run `pikku db migrate` first
   }
 
-  return createNodeSqliteKysely<DB>({
-    filename: resolved.dbFile,
+  return createSqliteKysely<DB>({
+    db: runtime.open(resolved.dbFile),
     camelCase: resolved.camelCase,
     plugins: coercionMap ? [createCoercionPlugin({ map: coercionMap })] : [],
   })

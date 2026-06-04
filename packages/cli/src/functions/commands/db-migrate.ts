@@ -4,10 +4,9 @@ import { loadUserConfigForDb } from './db-shared.js'
 
 export const dbMigrate = pikkuSessionlessFunc<{}, void>({
   remote: true,
-  func: async ({ logger, config, getInspectorState }) => {
+  func: async ({ logger, config }) => {
     const userConfig = await loadUserConfigForDb({
       config,
-      getInspectorState,
       logger,
     })
     if (!userConfig) return
@@ -25,7 +24,7 @@ export const dbMigrate = pikkuSessionlessFunc<{}, void>({
       throw new Error('dev.db not configured')
     }
 
-    const { migrate, codegen, zod } = migrateAndCodegen(resolved)
+    const { migrate, codegen, zod } = await migrateAndCodegen(resolved)
 
     if (migrate.applied.length === 0) {
       logger.info(

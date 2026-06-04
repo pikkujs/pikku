@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import type { DatabaseSync } from 'node:sqlite'
+import type { SyncSqliteDatabase } from './sqlite-runtime.js'
 
 const TRACKING_TABLE = 'sql_migrations'
 
@@ -43,7 +43,7 @@ function sha256(bytes: Buffer): string {
   return createHash('sha256').update(bytes).digest('hex')
 }
 
-function ensureTrackingTable(db: DatabaseSync): void {
+function ensureTrackingTable(db: SyncSqliteDatabase): void {
   db.exec(
     `CREATE TABLE IF NOT EXISTS ${TRACKING_TABLE} (
        name       TEXT PRIMARY KEY,
@@ -59,7 +59,7 @@ function listMigrationFiles(migrationsDir: string): string[] {
     .sort()
 }
 
-function readApplied(db: DatabaseSync): MigrationRow[] {
+function readApplied(db: SyncSqliteDatabase): MigrationRow[] {
   return db
     .prepare(
       `SELECT name, hash, applied_at FROM ${TRACKING_TABLE} ORDER BY name`
@@ -95,7 +95,7 @@ function checkDrift(applied: MigrationRow[], migrationsDir: string): void {
  * splitting, trimming, or normalization. See docs/dev-builtin-sqlite.md.
  */
 export function migrate(
-  db: DatabaseSync,
+  db: SyncSqliteDatabase,
   migrationsDir: string
 ): MigrateResult {
   ensureTrackingTable(db)
@@ -136,6 +136,6 @@ export function migrate(
  * Wipe the tracking table. Used by `pikku db reset` after the DB file is
  * removed (calling this on its own does NOT drop user tables).
  */
-export function dropTrackingTable(db: DatabaseSync): void {
+export function dropTrackingTable(db: SyncSqliteDatabase): void {
   db.exec(`DROP TABLE IF EXISTS ${TRACKING_TABLE}`)
 }

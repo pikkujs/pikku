@@ -9,10 +9,9 @@ import { loadUserConfigForDb } from './db-shared.js'
 
 export const dbReset = pikkuSessionlessFunc<{}, void>({
   remote: true,
-  func: async ({ logger, config, getInspectorState }) => {
+  func: async ({ logger, config }) => {
     const userConfig = await loadUserConfigForDb({
       config,
-      getInspectorState,
       logger,
     })
     if (!userConfig) return
@@ -33,7 +32,7 @@ export const dbReset = pikkuSessionlessFunc<{}, void>({
     reset(resolved, config.rootDir)
     logger.info(`db reset: removed ${resolved.dbFile}`)
 
-    const { migrate, codegen, zod } = migrateAndCodegen(resolved)
+    const { migrate, codegen, zod } = await migrateAndCodegen(resolved)
     for (const name of migrate.applied) {
       logger.info(`db reset: applied ${name}`)
     }
@@ -48,7 +47,7 @@ export const dbReset = pikkuSessionlessFunc<{}, void>({
         : `db reset: ${zod.outFile} unchanged`
     )
 
-    const seedResult = seed(resolved)
+    const seedResult = await seed(resolved)
     if (seedResult.applied) {
       logger.info(
         `db reset: seeded ${resolved.seedFile} (${seedResult.bytes} bytes)`
