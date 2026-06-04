@@ -86,7 +86,24 @@ export const dev = pikkuSessionlessFunc<
         'workflows',
         'registrations'
       )
-      pikkuState(null, 'package', 'singletonServices', commandSingletonServices)
+      // During hot-reload (when user services are already live), build a hybrid services
+      // object: user services (so in-flight requests keep kysely/content/etc.) overlaid
+      // with the CLI config (outDir, scaffold, schemaDirectory, etc. — required by
+      // allWorkflow for code generation paths). Replacing the entire services object with
+      // commandSingletonServices during hot-reload caused a race condition where concurrent
+      // auth requests saw CLI services (no kysely) and crashed.
+      const isHotReload =
+        previousSingletonServices !== commandSingletonServices &&
+        !!previousSingletonServices
+      const codegenServices = isHotReload
+        ? ({
+            ...previousSingletonServices,
+            config:
+              commandSingletonServices?.config ??
+              previousSingletonServices.config,
+          } as typeof previousSingletonServices)
+        : commandSingletonServices
+      pikkuState(null, 'package', 'singletonServices', codegenServices)
       pikkuState(
         null,
         'function',
