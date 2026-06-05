@@ -193,12 +193,37 @@ export async function runFabricValidate(
       }
     }
 
+    // db/migrations/ — presence, numbering and SQL dialect
     const migrationsDir = join(fnDir, 'db', 'migrations')
-    if (existsSync(migrationsDir)) {
+    if (!existsSync(migrationsDir)) {
+      e(
+        'migrations-dir-missing',
+        'packages/functions/db/migrations/ not found',
+        migrationsDir,
+        'Create db/migrations/ and add numbered .sql files (e.g. 0001-init.sql) using SQLite-compatible syntax'
+      )
+    } else {
       try {
         const files = (await readdir(migrationsDir)).filter((f) =>
           f.endsWith('.sql')
         )
+        const nums: number[] = []
+        for (const f of files) {
+          const m = f.match(/^(\d+)/)
+          if (m) nums.push(parseInt(m[1], 10))
+        }
+        for (let idx = 1; idx < nums.length; idx++) {
+          if (nums[idx] !== nums[idx - 1] + 1) {
+            const missing = `${nums[idx - 1] + 1}..${nums[idx] - 1}`
+            e(
+              'migration-gap',
+              `Migration numbering gap: IDs ${missing} are missing`,
+              migrationsDir,
+              'Migrations must be consecutive. Add the missing .sql file or renumber if not yet applied.'
+            )
+            break
+          }
+        }
         for (const f of files) {
           const sql = await readTextSafe(join(migrationsDir, f))
           if (!sql) continue
@@ -217,6 +242,17 @@ export async function runFabricValidate(
       } catch {
         // readdir failure — skip
       }
+    }
+
+    // db/seed.sql
+    const seedPath = join(fnDir, 'db', 'seed.sql')
+    if (!existsSync(seedPath)) {
+      e(
+        'seed-sql-missing',
+        'packages/functions/db/seed.sql not found',
+        seedPath,
+        'Create db/seed.sql with idempotent INSERT OR IGNORE statements for demo/test data'
+      )
     }
   }
 
