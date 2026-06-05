@@ -84,3 +84,25 @@ test('LocalEmailService logs textLength only for plain text email', async () => 
   assert.equal(payload.textLength, 'Plain text body'.length)
   assert.equal(payload.htmlLength, undefined)
 })
+
+test('LocalEmailService logs null textLength for HTML email without plain text', async () => {
+  const service = new LocalEmailService()
+  const writes: string[] = []
+  const originalInfo = console.info
+  console.info = (value?: unknown) => {
+    writes.push(String(value))
+  }
+
+  try {
+    await service.send({
+      to: 'user@example.com',
+      html: '<p>Hello</p>',
+    })
+  } finally {
+    console.info = originalInfo
+  }
+
+  const payload = JSON.parse(writes[0])
+  assert.equal(payload.htmlLength, '<p>Hello</p>'.length)
+  assert.equal(payload.textLength, null)
+})
