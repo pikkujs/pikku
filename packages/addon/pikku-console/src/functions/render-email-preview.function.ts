@@ -3,7 +3,10 @@ import { NotFoundError } from '@pikku/core'
 import type { EmailTemplateMeta } from '@pikku/core/services'
 
 type EmailPrimitive = string | number | boolean | null | undefined
-type EmailTemplateValue = EmailPrimitive | Record<string, unknown> | Array<unknown>
+type EmailTemplateValue =
+  | EmailPrimitive
+  | Record<string, unknown>
+  | Array<unknown>
 
 export interface RenderEmailPreviewInput {
   templateName: string
@@ -36,7 +39,10 @@ function getNestedValue(source: Record<string, unknown>, path: string): string {
     : ''
 }
 
-function applyTemplate(source: string, context: Record<string, unknown>): string {
+function applyTemplate(
+  source: string,
+  context: Record<string, unknown>
+): string {
   return source.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_match, rawKey) => {
     const key = String(rawKey).trim()
     if (key === 'content') {
@@ -49,7 +55,10 @@ function applyTemplate(source: string, context: Record<string, unknown>): string
   })
 }
 
-function renderTemplate(source: string, context: Record<string, unknown>): string {
+function renderTemplate(
+  source: string,
+  context: Record<string, unknown>
+): string {
   let rendered = source
   for (let i = 0; i < 5; i += 1) {
     const next = applyTemplate(rendered, context)
@@ -120,6 +129,7 @@ export const renderEmailPreview = pikkuSessionlessFunc<
 
     const partialMatches = [...htmlBody.matchAll(/@@PARTIAL:([^@]+)@@/g)]
     for (const match of partialMatches) {
+      if (!match[1]) continue
       const rendered = renderPartial(match[1], assets.partials, {
         ...baseContext,
         subject,
