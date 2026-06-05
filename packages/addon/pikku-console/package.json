@@ -29,6 +29,7 @@
     "pikku": "pikku all",
     "pretest": "pikku all",
     "test": "tsc --noEmit",
+    "test:coverage": "bash run-tests.sh --coverage",
     "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
