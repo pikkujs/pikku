@@ -2,7 +2,10 @@
   "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
   "rootDir": ".",
   "tsconfig": "./tsconfig.json",
-  "srcDirectories": ["src", "packages/functions/src"],
+  "srcDirectories": [
+    "src",
+    "packages/functions/src"
+  ],
   "outDir": ".pikku",
   "rpcMapDeclarationFile": ".pikku/rpc-map.gen.d.ts",
   "httpMapDeclarationFile": ".pikku/http-map.gen.d.ts",
@@ -28,5 +31,6 @@
     "console": "no-auth",
     "agent": "no-auth",
     "workflow": "no-auth"
-  }
+  },
+  "emailTemplatesDir": "emails"
 }

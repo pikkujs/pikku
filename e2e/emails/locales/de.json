@@ -1,0 +1,11 @@
+{
+  "helloWorld": {
+    "subject": "Hallo von {{appName}}",
+    "eyebrow": "E-Mail-Vorlagen sind aktiv",
+    "title": "Deine erste Pikku-E-Mail ist bereit",
+    "intro": "Diese Startvorlage zeigt, dass die Pipeline funktioniert, und gibt dir einen Ausgangspunkt fuer dein eigenes Design.",
+    "body": "Sprich mit deiner KI, um neue E-Mails zu erstellen, das Theme zu verfeinern oder jede Nachricht zu lokalisieren.",
+    "cta": "E-Mail-Konsole oeffnen",
+    "footer": "Erstellt mit Pikku-E-Mail-Vorlagen."
+  }
+}
