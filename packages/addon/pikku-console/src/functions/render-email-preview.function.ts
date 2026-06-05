@@ -3,7 +3,6 @@ import { NotFoundError } from '@pikku/core'
 import type { EmailTemplateMeta } from '@pikku/core/services'
 import {
   getNestedValue,
-  applyTemplate,
   renderTemplate,
   renderPartial,
 } from './render-email-template.utils.js'

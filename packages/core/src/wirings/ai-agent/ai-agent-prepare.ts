@@ -16,7 +16,7 @@ import { AIProviderNotConfiguredError } from '../../errors/errors.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { createMiddlewareSessionWireProps } from '../../services/user-session-service.js'
 import type { SessionService } from '../../services/user-session-service.js'
-import { randomUUID } from 'crypto'
+import { randomUUID } from './ai-agent-utils.js'
 import { streamAIAgent } from './ai-agent-stream.js'
 import { runAIAgent } from './ai-agent-runner.js'
 import {
@@ -624,7 +624,9 @@ export async function prepareAgentRun(
   }
 
   if (params.getCredential && agentRunner.withApiKey) {
-    const aiCredential = await params.getCredential<{ apiKey: string }>('AI_API_KEY')
+    const aiCredential = await params.getCredential<{ apiKey: string }>(
+      'AI_API_KEY'
+    )
     if (aiCredential?.apiKey) {
       agentRunner = agentRunner.withApiKey(aiCredential.apiKey)
     }
