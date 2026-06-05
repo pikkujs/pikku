@@ -59,6 +59,14 @@ async function makeValidProject(root: string) {
   await mkdir(join(root, 'packages', 'functions-sdk', 'src', 'pikku'), {
     recursive: true,
   })
+  await mkdir(join(root, 'packages', 'functions', 'db', 'migrations'), {
+    recursive: true,
+  })
+  await writeFile(
+    join(root, 'packages', 'functions', 'db', 'seed.sql'),
+    '-- seed data\n',
+    'utf8'
+  )
   await mkdir(join(root, 'packages', 'theme'), {
     recursive: true,
   })
