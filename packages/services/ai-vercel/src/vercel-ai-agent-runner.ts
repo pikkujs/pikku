@@ -103,6 +103,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
 
   withApiKey(apiKey: string): VercelAIAgentRunner {
     if (!this.providerFactory) return this
+    if (!apiKey?.trim()) return this
     return new VercelAIAgentRunner(this.providerFactory(apiKey))
   }
 

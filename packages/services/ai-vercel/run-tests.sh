@@ -1,7 +1,7 @@
 #!/bin/bash
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$script_dir"
+cd "$script_dir" || exit 1
 
 # Enable nullglob to handle cases where no files match the pattern
 shopt -s nullglob
@@ -29,7 +29,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Define the pattern to match your test files
-pattern="src/*.test.ts"
+pattern="src/**/*.test.ts"
 
 # Expand the pattern into an array of files
 files=($(find src -type f -name "*.test.ts"))
