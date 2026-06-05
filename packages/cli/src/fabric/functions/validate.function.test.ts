@@ -743,6 +743,134 @@ describe('pikku fabric validate', () => {
     })
   })
 
+  describe('fabric.config.json projectId warnings', () => {
+    test('no projectId → info', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'fabric.config.json'), {})
+        const result = await runValidate(tmp)
+        const finding = result.findings.find((f) => f.id === 'fabric-config-no-project-id')
+        assert.ok(finding, 'expected fabric-config-no-project-id finding')
+        assert.strictEqual(finding!.severity, 'info')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('placeholder __PROJECT_ID__ → info', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'fabric.config.json'), { projectId: '__PROJECT_ID__' })
+        const result = await runValidate(tmp)
+        const finding = result.findings.find(
+          (f) => f.id === 'fabric-config-placeholder-project-id'
+        )
+        assert.ok(finding, 'expected fabric-config-placeholder-project-id finding')
+        assert.strictEqual(finding!.severity, 'info')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('@pikku/fabric-cli missing', () => {
+    test('not in root devDependencies → info', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'package.json'), {
+          workspaces: ['packages/*', 'apps/*'],
+          dependencies: { '@pikku/core': '^1.0.0' },
+        })
+        const result = await runValidate(tmp)
+        const finding = result.findings.find((f) => f.id === 'missing-fabric-cli')
+        assert.ok(finding, 'expected missing-fabric-cli finding')
+        assert.strictEqual(finding!.severity, 'info')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('functions package — DB adapter checks', () => {
+    test('@pikku/kysely-postgres in functions deps → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
+          type: 'module',
+          dependencies: { '@pikku/kysely-postgres': '^1.0.0' },
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const finding = result.findings.find((f) => f.id === 'fn-pkg-postgres-dep')
+        assert.ok(finding, 'expected fn-pkg-postgres-dep finding')
+        assert.strictEqual(finding!.severity, 'error')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('services.ts uses Kysely without LibsqlWebDialect → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+          "import { Kysely } from 'kysely'\nexport const db = new Kysely({})\n",
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const finding = result.findings.find((f) => f.id === 'services-wrong-db-adapter')
+        assert.ok(finding, 'expected services-wrong-db-adapter finding')
+        assert.strictEqual(finding!.severity, 'error')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('services.ts uses process.env → info', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+          'export const secret = process.env.MY_SECRET\n',
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        const finding = result.findings.find((f) => f.id === 'services-process-env')
+        assert.ok(finding, 'expected services-process-env finding')
+        assert.strictEqual(finding!.severity, 'info')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('services.ts uses LibsqlWebDialect but root pkg missing @pikku/kysely-sqlite → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+          "import { LibsqlWebDialect } from '@pikku/kysely-sqlite'\nexport const dialect = new LibsqlWebDialect({ url: 'db' })\n",
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const finding = result.findings.find((f) => f.id === 'missing-kysely-sqlite')
+        assert.ok(finding, 'expected missing-kysely-sqlite finding')
+        assert.strictEqual(finding!.severity, 'error')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+
   describe('packages/theme and packages/components presence', () => {
     test('missing packages/theme → info', async () => {
       const tmp = await makeTmp()
