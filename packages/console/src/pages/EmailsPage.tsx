@@ -160,9 +160,6 @@ const EmailsOverview: React.FC<{
                         ) : null}
                       </Group>
 
-                      <Text size="xs" c="dimmed" ff="monospace">
-                        {template.hash.slice(0, 16)}
-                      </Text>
                     </Stack>
                   </UnstyledButton>
                 )
