@@ -6,7 +6,6 @@ import { config } from '../support/types.js'
 When('I navigate to the emails page', async function (this: AgentWorld) {
   await this.page.goto(`${config.consoleUrl}/emails`)
   await this.page.waitForLoadState('networkidle').catch(() => {})
-  // Wait for the page to settle — either template grid or empty state
   await Promise.race([
     this.page
       .getByText('Emails')
