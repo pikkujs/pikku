@@ -205,7 +205,7 @@ Auth.js handles these via its standard endpoints. With `basePath: '/auth'`:
 
 `POST /auth/callback/credentials` with a `application/x-www-form-urlencoded` body:
 
-```
+```text
 email=user@example.com&password=secret
 ```
 
@@ -301,11 +301,12 @@ import Google from '@auth/core/providers/google'
 const configFactory: AuthConfigOrFactory = async (services) => {
   const secret = await services.secrets.getSecret('AUTH_SECRET').catch(() => null) ?? DEV_AUTH_SECRET
   const github = await services.secrets.getSecretJSON('GITHUB_OAUTH').catch(() => null)
+  const google = await services.secrets.getSecretJSON('GOOGLE_OAUTH').catch(() => null)
 
   return {
     providers: [
       GitHub({ clientId: github?.clientId, clientSecret: github?.clientSecret }),
-      Google({ clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET }),
+      Google({ clientId: google?.clientId, clientSecret: google?.clientSecret }),
     ],
     session: { strategy: 'jwt' as const },
     secret,
@@ -315,4 +316,4 @@ const configFactory: AuthConfigOrFactory = async (services) => {
 }
 ```
 
-Each OAuth provider needs its client ID and secret registered in the secrets service or as env vars. No adapter or DB changes required when using JWT sessions.
+Each OAuth provider needs its client ID and secret registered in the secrets service. No adapter or DB changes required when using JWT sessions.

@@ -624,10 +624,8 @@ export async function prepareAgentRun(
   }
 
   if (params.getCredential && agentRunner.withApiKey) {
-    const aiCredential = await params.getCredential<{ apiKey: string }>(
-      'AI_API_KEY'
-    )
-    if (aiCredential?.apiKey) {
+    const aiCredential = await params.getCredential<{ apiKey: string }>('AI_API_KEY')
+    if (aiCredential?.apiKey?.trim()) {
       agentRunner = agentRunner.withApiKey(aiCredential.apiKey)
     }
   }
