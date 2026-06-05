@@ -65,6 +65,14 @@ async function makeValidProject(root: string) {
   await mkdir(join(root, 'packages', 'components'), {
     recursive: true,
   })
+  await mkdir(join(root, 'packages', 'functions', 'db', 'migrations'), {
+    recursive: true,
+  })
+  await writeFile(
+    join(root, 'packages', 'functions', 'db', 'seed.sql'),
+    '-- seed data\n',
+    'utf8'
+  )
 }
 
 describe('pikku fabric validate', () => {
