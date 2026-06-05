@@ -106,6 +106,7 @@ export class LocalContent implements ContentService {
   }
 
   public async getUploadURL(args: GetUploadURLArgs): Promise<UploadURLResult> {
+    void args.visibility
     const fullKey = this.joinKey(args.bucket, args.fileKey)
     this.logger.debug(`Going to upload with key: ${fullKey}`)
     return {

@@ -171,6 +171,7 @@ export class B2Content implements ContentService {
   }
 
   async getUploadURL(args: GetUploadURLArgs): Promise<UploadURLResult> {
+    void args.visibility
     const fullKey = this.join(args.bucket, args.fileKey)
     const { uploadUrl, authorizationToken } = await this.getUploadToken()
     return {
