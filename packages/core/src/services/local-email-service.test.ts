@@ -39,3 +39,48 @@ test('LocalEmailService logs sent email metadata as JSON', async () => {
     data: { userName: 'Yasser' },
   })
 })
+
+test('LocalEmailService logs htmlLength and textLength for HTML email', async () => {
+  const service = new LocalEmailService()
+  const writes: string[] = []
+  const originalInfo = console.info
+  console.info = (value?: unknown) => {
+    writes.push(String(value))
+  }
+
+  try {
+    await service.send({
+      to: 'user@example.com',
+      html: '<p>Hello</p>',
+      text: 'Hello',
+    })
+  } finally {
+    console.info = originalInfo
+  }
+
+  const payload = JSON.parse(writes[0])
+  assert.equal(payload.htmlLength, '<p>Hello</p>'.length)
+  assert.equal(payload.textLength, 'Hello'.length)
+})
+
+test('LocalEmailService logs textLength only for plain text email', async () => {
+  const service = new LocalEmailService()
+  const writes: string[] = []
+  const originalInfo = console.info
+  console.info = (value?: unknown) => {
+    writes.push(String(value))
+  }
+
+  try {
+    await service.send({
+      to: 'user@example.com',
+      text: 'Plain text body',
+    })
+  } finally {
+    console.info = originalInfo
+  }
+
+  const payload = JSON.parse(writes[0])
+  assert.equal(payload.textLength, 'Plain text body'.length)
+  assert.equal(payload.htmlLength, undefined)
+})
