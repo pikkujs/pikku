@@ -33,6 +33,7 @@ import { checkForApprovals, appendStepMessages } from './ai-agent-stream.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { resolveModelConfig } from './ai-agent-model-config.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
+import { randomUUID } from './ai-agent-utils.js'
 
 function stripNulls(obj: unknown): unknown {
   if (obj === null) return undefined
@@ -46,7 +47,6 @@ function stripNulls(obj: unknown): unknown {
   }
   return result
 }
-import { randomUUID } from 'crypto'
 
 function extractStructuredAssistantOutput(object: unknown): {
   text: string | null

@@ -11,11 +11,11 @@ import type {
 } from './ai-agent.types.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { AIProviderNotConfiguredError } from '../../errors/errors.js'
+import { randomUUID } from './ai-agent-utils.js'
 import {
   combineChannelMiddleware,
   wrapChannelWithMiddleware,
 } from '../channel/channel-middleware-runner.js'
-import { randomUUID } from 'crypto'
 import type { AIStorageService } from '../../services/ai-storage-service.js'
 import type {
   AIAgentRunnerParams,
