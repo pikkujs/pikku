@@ -624,6 +624,45 @@ describe('pikku fabric validate', () => {
     })
   })
 
+  describe('db/seed.sql', () => {
+    test('missing db/seed.sql → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await rm(join(tmp, 'packages', 'functions', 'db', 'seed.sql'), {
+          force: true,
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const finding = result.findings.find((f) => f.id === 'seed-sql-missing')
+        assert.ok(finding)
+        assert.strictEqual(finding!.severity, 'error')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('missing db/migrations/ → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await rm(
+          join(tmp, 'packages', 'functions', 'db', 'migrations'),
+          { recursive: true, force: true }
+        )
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const finding = result.findings.find(
+          (f) => f.id === 'migrations-dir-missing'
+        )
+        assert.ok(finding)
+        assert.strictEqual(finding!.severity, 'error')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
   describe('db.types.ts', () => {
     test('re-export only → no warning', async () => {
       const tmp = await makeTmp()
