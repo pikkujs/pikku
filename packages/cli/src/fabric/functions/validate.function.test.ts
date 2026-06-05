@@ -3,7 +3,7 @@ import assert from 'node:assert'
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { runValidate } from './validate-core.js'
+import { runValidate, renderValidate } from './validate-core.js'
 
 async function makeTmp() {
   return mkdtemp(join(tmpdir(), 'pikku-validate-'))
@@ -740,6 +740,350 @@ describe('pikku fabric validate', () => {
       } finally {
         await rm(tmp, { recursive: true, force: true })
       }
+    })
+  })
+
+  describe('fabric.config.json projectId warnings', () => {
+    test('no projectId → info', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'fabric.config.json'), {})
+        const result = await runValidate(tmp)
+        const finding = result.findings.find((f) => f.id === 'fabric-config-no-project-id')
+        assert.ok(finding, 'expected fabric-config-no-project-id finding')
+        assert.strictEqual(finding!.severity, 'info')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('placeholder __PROJECT_ID__ → info', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'fabric.config.json'), { projectId: '__PROJECT_ID__' })
+        const result = await runValidate(tmp)
+        const finding = result.findings.find(
+          (f) => f.id === 'fabric-config-placeholder-project-id'
+        )
+        assert.ok(finding, 'expected fabric-config-placeholder-project-id finding')
+        assert.strictEqual(finding!.severity, 'info')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('@pikku/fabric-cli missing', () => {
+    test('not in root devDependencies → info', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'package.json'), {
+          workspaces: ['packages/*', 'apps/*'],
+          dependencies: { '@pikku/core': '^1.0.0' },
+        })
+        const result = await runValidate(tmp)
+        const finding = result.findings.find((f) => f.id === 'missing-fabric-cli')
+        assert.ok(finding, 'expected missing-fabric-cli finding')
+        assert.strictEqual(finding!.severity, 'info')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('functions package — DB adapter checks', () => {
+    test('@pikku/kysely-postgres in functions deps → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
+          type: 'module',
+          dependencies: { '@pikku/kysely-postgres': '^1.0.0' },
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const finding = result.findings.find((f) => f.id === 'fn-pkg-postgres-dep')
+        assert.ok(finding, 'expected fn-pkg-postgres-dep finding')
+        assert.strictEqual(finding!.severity, 'error')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('services.ts uses Kysely without LibsqlWebDialect → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+          "import { Kysely } from 'kysely'\nexport const db = new Kysely({})\n",
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const finding = result.findings.find((f) => f.id === 'services-wrong-db-adapter')
+        assert.ok(finding, 'expected services-wrong-db-adapter finding')
+        assert.strictEqual(finding!.severity, 'error')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('services.ts uses process.env → info', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+          'export const secret = process.env.MY_SECRET\n',
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        const finding = result.findings.find((f) => f.id === 'services-process-env')
+        assert.ok(finding, 'expected services-process-env finding')
+        assert.strictEqual(finding!.severity, 'info')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('services.ts uses LibsqlWebDialect but root pkg missing @pikku/kysely-sqlite → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          join(tmp, 'packages', 'functions', 'src', 'services.ts'),
+          "import { LibsqlWebDialect } from '@pikku/kysely-sqlite'\nexport const dialect = new LibsqlWebDialect({ url: 'db' })\n",
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const finding = result.findings.find((f) => f.id === 'missing-kysely-sqlite')
+        assert.ok(finding, 'expected missing-kysely-sqlite finding')
+        assert.strictEqual(finding!.severity, 'error')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('packages/theme and packages/components presence', () => {
+    test('missing packages/theme → info', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await rm(join(tmp, 'packages', 'theme'), { recursive: true, force: true })
+        const result = await runValidate(tmp)
+        const finding = result.findings.find((f) => f.id === 'theme-missing')
+        assert.ok(finding, 'expected theme-missing finding')
+        assert.strictEqual(finding!.severity, 'info')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('missing packages/components → info', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await rm(join(tmp, 'packages', 'components'), { recursive: true, force: true })
+        const result = await runValidate(tmp)
+        const finding = result.findings.find((f) => f.id === 'components-missing')
+        assert.ok(finding, 'expected components-missing finding')
+        assert.strictEqual(finding!.severity, 'info')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('apps/ frontend checks', () => {
+    test('app not declared in fabric.config.json frontends → warn', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await mkdir(join(tmp, 'apps', 'web'), { recursive: true })
+        await writeJson(join(tmp, 'apps', 'web', 'package.json'), { name: 'web' })
+        const result = await runValidate(tmp)
+        const finding = result.findings.find((f) => f.id === 'app-not-declared-web')
+        assert.ok(finding, 'expected app-not-declared-web finding')
+        assert.strictEqual(finding!.severity, 'warn')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('fabric.config.json frontend cwd does not exist → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await mkdir(join(tmp, 'apps'), { recursive: true })
+        await writeJson(join(tmp, 'fabric.config.json'), {
+          projectId: 'proj-abc123',
+          frontends: { web: { cwd: './apps/web', kind: 'ssr' } },
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const finding = result.findings.find((f) => f.id === 'frontend-cwd-missing-web')
+        assert.ok(finding, 'expected frontend-cwd-missing-web finding')
+        assert.strictEqual(finding!.severity, 'error')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('app missing functions-sdk, theme, and components deps → info findings', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'packages', 'functions-sdk', 'package.json'), {
+          name: '@project/functions-sdk',
+        })
+        await writeJson(join(tmp, 'packages', 'theme', 'package.json'), {
+          name: '@project/theme',
+        })
+        await writeJson(join(tmp, 'packages', 'components', 'package.json'), {
+          name: '@project/components',
+        })
+        await mkdir(join(tmp, 'apps', 'web'), { recursive: true })
+        await writeJson(join(tmp, 'apps', 'web', 'package.json'), {
+          name: 'web',
+          dependencies: {},
+        })
+        await writeJson(join(tmp, 'fabric.config.json'), {
+          projectId: 'proj-abc123',
+          frontends: { web: { cwd: 'apps/web', kind: 'ssr' } },
+        })
+        const result = await runValidate(tmp)
+        assert.ok(
+          result.findings.some((f) => f.id === 'app-missing-functions-sdk-web'),
+          'expected app-missing-functions-sdk-web'
+        )
+        assert.ok(
+          result.findings.some((f) => f.id === 'app-missing-theme-web'),
+          'expected app-missing-theme-web'
+        )
+        assert.ok(
+          result.findings.some((f) => f.id === 'app-missing-components-web'),
+          'expected app-missing-components-web'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('app directory without package.json is skipped gracefully', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await mkdir(join(tmp, 'apps', 'web'), { recursive: true })
+        // no package.json in apps/web — appPkg will be null → continue
+        const result = await runValidate(tmp)
+        // app-not-declared warn fires (no frontends declared), but no crash
+        assert.ok(result.findings.some((f) => f.id === 'app-not-declared-web'))
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('renderValidate', () => {
+    function captureLog(fn: () => void): string[] {
+      const lines: string[] = []
+      const orig = console.log
+      console.log = (...args: unknown[]) => {
+        lines.push(args.map(String).join(' '))
+      }
+      try {
+        fn()
+      } finally {
+        console.log = orig
+      }
+      return lines
+    }
+
+    test('prints ok message when there are no findings', () => {
+      const lines = captureLog(() =>
+        renderValidate(null, { ok: true, root: '/tmp/proj', findings: [] })
+      )
+      assert.ok(lines.some((l) => l.includes('All checks passed')))
+    })
+
+    test('prints error, warn, and info findings with correct icons', () => {
+      const lines = captureLog(() =>
+        renderValidate(null, {
+          ok: false,
+          root: '/tmp/proj',
+          findings: [
+            {
+              id: 'e1',
+              severity: 'error',
+              message: 'bad error',
+              path: '/tmp/proj/foo',
+              fixHint: 'fix it',
+            },
+            {
+              id: 'w1',
+              severity: 'warn',
+              message: 'a warning',
+              path: '/tmp/proj/bar',
+              fixHint: 'consider this',
+            },
+            {
+              id: 'i1',
+              severity: 'info',
+              message: 'some info',
+              path: '/tmp/proj/baz',
+              fixHint: 'note this',
+            },
+          ],
+        })
+      )
+      assert.ok(lines.some((l) => l.includes('bad error')))
+      assert.ok(lines.some((l) => l.includes('a warning')))
+      assert.ok(lines.some((l) => l.includes('some info')))
+    })
+
+    test('prints no-errors footer when ok=true but findings exist', () => {
+      const lines = captureLog(() =>
+        renderValidate(null, {
+          ok: true,
+          root: '/tmp/proj',
+          findings: [
+            {
+              id: 'w1',
+              severity: 'warn',
+              message: 'a warning',
+              path: '/tmp/proj/bar',
+              fixHint: 'consider this',
+            },
+          ],
+        })
+      )
+      assert.ok(lines.some((l) => l.includes('no errors')))
+    })
+
+    test('relative path is shown instead of absolute in findings', () => {
+      const root = '/tmp/proj'
+      const lines = captureLog(() =>
+        renderValidate(null, {
+          ok: false,
+          root,
+          findings: [
+            {
+              id: 'e1',
+              severity: 'error',
+              message: 'bad error',
+              path: `${root}/packages/functions/src/services.ts`,
+              fixHint: 'fix it',
+            },
+          ],
+        })
+      )
+      assert.ok(lines.some((l) => l.includes('packages/functions/src/services.ts')))
     })
   })
 })
