@@ -1,0 +1,9 @@
+{{t.helloWorld.title}}
+
+Hello {{userName}}.
+
+{{t.helloWorld.intro}}
+
+{{t.helloWorld.body}}
+
+{{t.helloWorld.cta}}: {{previewUrl}}

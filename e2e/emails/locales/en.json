@@ -1,0 +1,11 @@
+{
+  "helloWorld": {
+    "subject": "Hello from {{appName}}",
+    "eyebrow": "Email templates are live",
+    "title": "Your first Pikku email is ready",
+    "intro": "This starter template proves the pipeline works and gives you a place to shape your own visual language.",
+    "body": "Chat to your AI to create new emails, refine the theme, or localize every message for your product.",
+    "cta": "Open the email console",
+    "footer": "Built with Pikku email templates."
+  }
+}

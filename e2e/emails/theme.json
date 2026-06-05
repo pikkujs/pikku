@@ -1,0 +1,17 @@
+{
+  "appName": "Pikku App",
+  "previewText": "Your app can render localized emails out of the box.",
+  "colors": {
+    "background": "#f5f7fb",
+    "surface": "#ffffff",
+    "text": "#101828",
+    "muted": "#475467",
+    "border": "#d0d5dd",
+    "primary": "#7c3aed",
+    "primaryText": "#ffffff",
+    "footer": "#667085"
+  },
+  "fonts": {
+    "body": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+  }
+}
