@@ -71,6 +71,7 @@ export class S3Content implements ContentService {
   }
 
   public async getUploadURL(args: GetUploadURLArgs): Promise<UploadURLResult> {
+    void args.visibility
     const Key = this.join(args.bucket, args.fileKey)
     const command = new PutObjectCommand({
       Bucket: this.config.bucketName,

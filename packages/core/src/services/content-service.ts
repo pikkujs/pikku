@@ -25,6 +25,7 @@ export interface GetUploadURLArgs<TBucket extends string = string> {
   fileKey: string
   contentType: string
   size?: number
+  visibility?: 'private' | 'public'
 }
 
 /**
