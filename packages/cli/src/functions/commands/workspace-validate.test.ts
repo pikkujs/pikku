@@ -20,6 +20,11 @@ async function makeValidWorkspace(root: string) {
   await writeJson(join(root, 'pikku.config.json'), {
     srcDirectories: ['packages/functions/src'],
     outDir: 'packages/functions/.pikku',
+    dev: {
+      db: {
+        file: '.pikku-runtime/dev.db',
+      },
+    },
     clientFiles: {
       rpcMapDeclarationFile:
         'packages/functions-sdk/src/pikku/rpc-map.gen.d.ts',
@@ -39,6 +44,12 @@ async function makeValidWorkspace(root: string) {
   await mkdir(join(root, 'packages', 'functions', 'src', 'types'), {
     recursive: true,
   })
+  await mkdir(join(root, 'packages', 'functions', '.pikku', 'middleware'), {
+    recursive: true,
+  })
+  await mkdir(join(root, 'packages', 'functions', 'db', 'migrations'), {
+    recursive: true,
+  })
   await mkdir(join(root, 'packages', 'functions', 'tests'), {
     recursive: true,
   })
@@ -56,6 +67,18 @@ async function makeValidWorkspace(root: string) {
   await writeFile(
     join(root, 'packages', 'functions', 'src', 'config.ts'),
     'export const createConfig = () => ({})\n',
+    'utf8'
+  )
+  await writeFile(
+    join(
+      root,
+      'packages',
+      'functions',
+      '.pikku',
+      'middleware',
+      'pikku-middleware-groups-meta.gen.json'
+    ),
+    JSON.stringify({ definitions: {}, instances: {}, httpGroups: {} }, null, 2),
     'utf8'
   )
 }
@@ -132,6 +155,113 @@ describe('pikku workspace validate', () => {
         () => readJsonSafe(path),
         /Invalid JSON in .*broken\.json:/
       )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('auth middleware requires dev.db and auth tables', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidWorkspace(tmp)
+      await writeJson(join(tmp, 'pikku.config.json'), {
+        srcDirectories: ['packages/functions/src'],
+        outDir: 'packages/functions/.pikku',
+        clientFiles: {
+          rpcMapDeclarationFile:
+            'packages/functions-sdk/src/pikku/rpc-map.gen.d.ts',
+          reactQueryFile: 'packages/functions-sdk/src/pikku/api.gen.ts',
+        },
+      })
+      await writeFile(
+        join(
+          tmp,
+          'packages',
+          'functions',
+          '.pikku',
+          'middleware',
+          'pikku-middleware-groups-meta.gen.json'
+        ),
+        JSON.stringify(
+          {
+            definitions: {},
+            instances: {
+              'http:*:0': { definitionId: 'authJsSession' },
+            },
+            httpGroups: {
+              '*': { instanceIds: ['http:*:0'] },
+            },
+          },
+          null,
+          2
+        ),
+        'utf8'
+      )
+
+      const result = await runWorkspaceValidate(tmp)
+      const ids = result.findings.map((f) => f.id)
+
+      assert.strictEqual(result.ok, false)
+      assert.ok(ids.includes('auth-dev-db-missing'))
+      assert.ok(ids.includes('auth-schema-missing-app-user'))
+      assert.ok(ids.includes('auth-schema-missing-verification-token'))
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('auth middleware with auth migrations passes auth-specific checks', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidWorkspace(tmp)
+      await writeFile(
+        join(
+          tmp,
+          'packages',
+          'functions',
+          '.pikku',
+          'middleware',
+          'pikku-middleware-groups-meta.gen.json'
+        ),
+        JSON.stringify(
+          {
+            definitions: {},
+            instances: {
+              'http:*:0': { definitionId: 'authJsSession' },
+            },
+            httpGroups: {
+              '*': { instanceIds: ['http:*:0'] },
+            },
+          },
+          null,
+          2
+        ),
+        'utf8'
+      )
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'db', 'migrations', '0001-auth.sql'),
+        [
+          'CREATE TABLE IF NOT EXISTS app_user (',
+          '  user_id TEXT PRIMARY KEY,',
+          '  email TEXT NOT NULL',
+          ');',
+          '',
+          'CREATE TABLE IF NOT EXISTS auth_verification_token (',
+          '  identifier TEXT NOT NULL,',
+          '  token TEXT NOT NULL,',
+          '  expires_at TEXT NOT NULL',
+          ');',
+          '',
+        ].join('\n'),
+        'utf8'
+      )
+
+      const result = await runWorkspaceValidate(tmp)
+      const ids = result.findings.map((f) => f.id)
+
+      assert.ok(!ids.includes('auth-dev-db-missing'))
+      assert.ok(!ids.includes('auth-schema-missing-app-user'))
+      assert.ok(!ids.includes('auth-schema-missing-verification-token'))
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }

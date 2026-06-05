@@ -60,6 +60,33 @@ export async function readTextSafe(path: string): Promise<string | null> {
   }
 }
 
+type MiddlewareGroupsMeta = {
+  instances?: Record<string, { definitionId?: string }>
+}
+
+async function hasAuthSessionMiddleware(fnDir: string): Promise<boolean> {
+  const metaPath = join(
+    fnDir,
+    '.pikku',
+    'middleware',
+    'pikku-middleware-groups-meta.gen.json'
+  )
+  const meta = await readJsonSafe<MiddlewareGroupsMeta>(metaPath)
+  if (!meta?.instances) return false
+  return Object.values(meta.instances).some(
+    (instance) => instance.definitionId === 'authJsSession'
+  )
+}
+
+function migrationCreatesTable(sql: string, tableName: string): boolean {
+  const escapedTable = tableName.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')
+  const re = new RegExp(
+    `\\bcreate\\s+table\\s+(?:if\\s+not\\s+exists\\s+)?["'\`]?${escapedTable}["'\`]?\\b`,
+    'i'
+  )
+  return re.test(sql)
+}
+
 export async function runWorkspaceValidate(
   startDir = process.cwd()
 ): Promise<z.infer<typeof WorkspaceValidateOutput>> {
@@ -127,6 +154,10 @@ export async function runWorkspaceValidate(
       )
     }
   }
+
+  const hasConfiguredDevDb = Boolean(
+    (pikkuConfig as { dev?: { db?: unknown } } | null)?.dev?.db
+  )
 
   type RootPkg = {
     workspaces?: unknown
@@ -224,6 +255,9 @@ export async function runWorkspaceValidate(
     }
 
     const migrationsDir = join(fnDir, 'db', 'migrations')
+    const authEnabled = await hasAuthSessionMiddleware(fnDir)
+    let createsAppUser = false
+    let createsAuthVerificationToken = false
     if (existsSync(migrationsDir)) {
       try {
         const files = (await readdir(migrationsDir))
@@ -246,9 +280,45 @@ export async function runWorkspaceValidate(
             break
           }
         }
+        for (const f of files) {
+          const sql = await readTextSafe(join(migrationsDir, f))
+          if (!sql) continue
+          createsAppUser ||= migrationCreatesTable(sql, 'app_user')
+          createsAuthVerificationToken ||= migrationCreatesTable(
+            sql,
+            'auth_verification_token'
+          )
+        }
       } catch {
         // readdir failure — skip
       }
+    }
+
+    if (authEnabled && !hasConfiguredDevDb) {
+      e(
+        'auth-dev-db-missing',
+        'Auth middleware is registered, but pikku.config.json is missing dev.db so local auth schema validation and db migrate cannot run',
+        pikkuConfigPath,
+        'Add dev.db to pikku.config.json so `pikku db migrate` can create and validate the local auth schema'
+      )
+    }
+
+    if (authEnabled && !createsAppUser) {
+      e(
+        'auth-schema-missing-app-user',
+        'Auth middleware is registered, but no SQL migration creates the app_user table',
+        migrationsDir,
+        'Add a migration that creates app_user before enabling auth'
+      )
+    }
+
+    if (authEnabled && !createsAuthVerificationToken) {
+      e(
+        'auth-schema-missing-verification-token',
+        'Auth middleware is registered, but no SQL migration creates the auth_verification_token table',
+        migrationsDir,
+        'Add a migration that creates auth_verification_token before enabling auth'
+      )
     }
 
     const dbTypesPath = join(fnDir, 'src', 'types', 'db.types.ts')
