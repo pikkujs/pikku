@@ -24,6 +24,7 @@ import {
 } from './functions/commands/workspace-validate.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuTestsInit } from './functions/commands/tests-init.js'
+import { pikkuEmailsInit } from './functions/commands/emails-init.js'
 import { pikkuTestsCoverage } from './functions/commands/tests-coverage.js'
 import { pikkuVersionsCheck } from './functions/commands/versions-check.js'
 import { pikkuVersionsUpdate } from './functions/commands/versions-update.js'
@@ -247,6 +248,16 @@ wireCLI({
     emails: {
       description: 'Email template generation commands',
       subcommands: {
+        init: pikkuCLICommand({
+          func: pikkuEmailsInit,
+          description:
+            'Scaffold emailTemplatesDir with starter locales, theme, partials, and a hello-world email',
+          options: {
+            force: {
+              description: 'Overwrite an existing email scaffold',
+            },
+          },
+        }),
         generate: pikkuCLICommand({
           func: pikkuEmails,
           description:
