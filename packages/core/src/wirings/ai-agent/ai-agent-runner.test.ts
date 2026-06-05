@@ -970,3 +970,108 @@ describe('resumeAIAgentSync', () => {
     assert.equal(result.text, 'Recovered')
   })
 })
+
+describe('getCredential API key override', () => {
+  test('uses withApiKey runner when getCredential returns apiKey', async () => {
+    addTestAgent('api-key-agent')
+
+    const originalRunCalls: string[] = []
+    const overrideRunCalls: string[] = []
+
+    const overrideRunner = {
+      run: async (): Promise<AIAgentStepResult> => {
+        overrideRunCalls.push('override')
+        return makeStepResult({ text: 'from-override', finishReason: 'stop' })
+      },
+    }
+
+    const mockServices = {
+      logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+      aiAgentRunner: {
+        run: async (): Promise<AIAgentStepResult> => {
+          originalRunCalls.push('original')
+          return makeStepResult({ text: 'from-original', finishReason: 'stop' })
+        },
+        withApiKey: (_key: string) => overrideRunner,
+      },
+      aiRunState: {
+        createRun: async () => 'run-key-override',
+        updateRun: async () => {},
+      },
+    } as any
+
+    pikkuState(null, 'package', 'singletonServices', mockServices)
+
+    const result = await runAIAgent(
+      'api-key-agent',
+      { message: 'hi', threadId: 't-key', resourceId: 'r-key' },
+      { getCredential: async () => ({ apiKey: 'my-secret-key' }) }
+    )
+
+    assert.equal(result.text, 'from-override')
+    assert.equal(overrideRunCalls.length, 1)
+    assert.equal(originalRunCalls.length, 0)
+  })
+
+  test('uses original runner when getCredential returns null', async () => {
+    addTestAgent('no-cred-agent')
+
+    const originalRunCalls: string[] = []
+
+    const mockServices = {
+      logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+      aiAgentRunner: {
+        run: async (): Promise<AIAgentStepResult> => {
+          originalRunCalls.push('original')
+          return makeStepResult({ text: 'from-original', finishReason: 'stop' })
+        },
+        withApiKey: (_key: string) => ({ run: async () => makeStepResult({ text: 'should-not-be-called', finishReason: 'stop' }) }),
+      },
+      aiRunState: {
+        createRun: async () => 'run-no-cred',
+        updateRun: async () => {},
+      },
+    } as any
+
+    pikkuState(null, 'package', 'singletonServices', mockServices)
+
+    const result = await runAIAgent(
+      'no-cred-agent',
+      { message: 'hi', threadId: 't-no-cred', resourceId: 'r-no-cred' },
+      { getCredential: async () => null }
+    )
+
+    assert.equal(result.text, 'from-original')
+    assert.equal(originalRunCalls.length, 1)
+  })
+
+  test('uses original runner when runner does not implement withApiKey', async () => {
+    addTestAgent('no-withkey-agent')
+
+    const originalRunCalls: string[] = []
+
+    const mockServices = {
+      logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+      aiAgentRunner: {
+        run: async (): Promise<AIAgentStepResult> => {
+          originalRunCalls.push('original')
+          return makeStepResult({ text: 'from-original', finishReason: 'stop' })
+        },
+      },
+      aiRunState: {
+        createRun: async () => 'run-no-withkey',
+        updateRun: async () => {},
+      },
+    } as any
+
+    pikkuState(null, 'package', 'singletonServices', mockServices)
+
+    await runAIAgent(
+      'no-withkey-agent',
+      { message: 'hi', threadId: 't-no-withkey', resourceId: 'r-no-withkey' },
+      { getCredential: async () => ({ apiKey: 'ignored-key' }) }
+    )
+
+    assert.equal(originalRunCalls.length, 1)
+  })
+})
