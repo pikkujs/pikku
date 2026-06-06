@@ -9,7 +9,12 @@ export const dbAudit = pikkuSessionlessFunc<{}, void>({
     const userConfig = await loadUserConfigForDb({ config, logger })
     if (!userConfig) return
 
-    const resolved = resolveDb(userConfig, config.rootDir, config.outDir, config.runtimeDir)
+    const resolved = resolveDb(
+      userConfig,
+      config.rootDir,
+      config.outDir,
+      config.runtimeDir
+    )
     if (!resolved) {
       logger.error(
         'pikku db audit: no database configured — set sqliteDb or postgresUrl in your createConfig.'
