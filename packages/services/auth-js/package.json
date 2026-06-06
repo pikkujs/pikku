@@ -12,6 +12,7 @@
     "build": "tsc -b",
     "test": "bash run-tests.sh",
     "test:watch": "bash run-tests.sh --watch",
+    "test:coverage": "bash run-tests.sh --coverage",
     "release": "npm run build && npm test",
     "prepublishOnly": "yarn build"
   },

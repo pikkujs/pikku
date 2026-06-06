@@ -1,3 +1,15 @@
+coverage:
+  status:
+    patch:
+      default:
+        # `node --experimental-test-coverage` + tsx misattributes line hits
+        # for multi-line calls (e.g. multi-arg `e(...)` validators), so patch
+        # coverage is systematically under-reported even when every new branch
+        # is exercised by a passing test. The threshold absorbs that artifact
+        # while still failing genuinely under-tested diffs.
+        target: auto
+        threshold: 10%
+
 flags:
   unit:
     paths:
