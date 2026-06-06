@@ -25,6 +25,8 @@ export {
   ListPageHeader,
   PageHeaderControls,
   PageToolbar,
+  PageActionBar,
+  PageRow,
 } from './components/layout/PageLayout'
 
 // Sidebar

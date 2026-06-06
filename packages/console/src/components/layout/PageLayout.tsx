@@ -1,5 +1,5 @@
 import type { ComponentProps, ReactNode } from 'react'
-import { ActionIcon, Container, Group, Stack, Text, Title, Tooltip } from '@mantine/core'
+import { ActionIcon, Box, Container, Group, Stack, Text, Title, Tooltip } from '@mantine/core'
 import { ExternalLink } from 'lucide-react'
 import { usePageGate } from '../../context/PageGateContext'
 
@@ -176,6 +176,73 @@ export function PageToolbar({ children }: PageToolbarProps) {
   return (
     <Group gap="sm" wrap="wrap" align="center" style={{ minWidth: 0 }}>
       {children}
+    </Group>
+  )
+}
+
+interface PageActionBarProps {
+  lead?: ReactNode
+  filters?: ReactNode
+  view?: ReactNode
+}
+
+export function PageActionBar({ lead, filters, view }: PageActionBarProps) {
+  if (!lead && !filters && !view) return null
+  return (
+    <Group gap="sm" align="center" style={{ minWidth: 0 }}>
+      {lead && (
+        <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>
+          {lead}
+        </Group>
+      )}
+      {filters && (
+        <Group gap="xs" wrap="wrap" style={{ flex: 1, minWidth: 0 }}>
+          {filters}
+        </Group>
+      )}
+      {view && (
+        <Group gap="xs" wrap="nowrap" style={{ marginLeft: 'auto', flexShrink: 0 }}>
+          {view}
+        </Group>
+      )}
+    </Group>
+  )
+}
+
+interface PageRowProps {
+  left?: ReactNode
+  right?: ReactNode
+  children: ReactNode
+}
+
+export function PageRow({ left, right, children }: PageRowProps) {
+  return (
+    <Group align="flex-start" gap={0} style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+      {left && (
+        <Box
+          style={{
+            flexShrink: 0,
+            alignSelf: 'stretch',
+            borderRight: '1px solid var(--mantine-color-default-border)',
+          }}
+        >
+          {left}
+        </Box>
+      )}
+      <Stack gap="md" style={{ flex: 1, minWidth: 0 }}>
+        {children}
+      </Stack>
+      {right && (
+        <Box
+          style={{
+            flexShrink: 0,
+            alignSelf: 'stretch',
+            borderLeft: '1px solid var(--mantine-color-default-border)',
+          }}
+        >
+          {right}
+        </Box>
+      )}
     </Group>
   )
 }
