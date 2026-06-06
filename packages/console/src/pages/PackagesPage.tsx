@@ -9,12 +9,14 @@ import {
   Box,
   Loader,
   Center,
+  Stack,
+  SegmentedControl,
 } from '@mantine/core'
 import { Package, Globe } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
-import { TabbedPageHeader } from '../components/layout/TabbedPageHeader'
+import { ListPageHeader } from '../components/layout/PageLayout'
 import { TableListPage } from '../components/layout/TableListPage'
 import { PanelProvider } from '../context/PanelContext'
 
@@ -369,14 +371,10 @@ const PackagesList: React.FC<{
   return (
     <ResizablePanelLayout
       header={
-        <TabbedPageHeader
-          icon={Package}
-          category="Addons"
-          docsHref="https://pikku.dev/docs/external-packages"
-          tabs={ADDON_TABS}
-          activeTab={tab}
-          onTabChange={setTab}
-        />
+        <Stack gap="md">
+          <ListPageHeader title="Addons" description="Third-party addons and packages available for your project" />
+          <SegmentedControl size="xs" value={tab} onChange={setTab} data={ADDON_TABS} />
+        </Stack>
       }
       hidePanel
     >

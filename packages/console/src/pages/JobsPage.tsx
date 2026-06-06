@@ -1,13 +1,11 @@
 import React from 'react'
-import { Box } from '@mantine/core'
-import { Clock } from 'lucide-react'
+import { Box, Stack, SegmentedControl } from '@mantine/core'
 import { useSearchParams } from '../router'
 import { PanelProvider } from '../context/PanelContext'
-import { TabbedPageHeader } from '../components/layout/TabbedPageHeader'
 import { SchedulersTab } from '../components/tabs/SchedulersTab'
 import { QueuesTab } from '../components/tabs/QueuesTab'
 import { TriggersTab } from '../components/tabs/TriggersTab'
-import styles from '../components/ui/console.module.css'
+import { PageContainer, ListPageHeader } from '../components/layout/PageLayout'
 
 const TABS = [
   { value: 'schedulers', label: 'Schedulers' },
@@ -36,19 +34,19 @@ export const JobsPage: React.FC = () => {
 
   return (
     <PanelProvider>
-      <Box className={styles.flexColumn} style={{ height: '100vh' }}>
-        <TabbedPageHeader
-          icon={Clock}
-          category="Jobs"
-          docsHref="https://pikku.dev/docs/wiring/scheduled-tasks"
-          tabs={TABS}
-          activeTab={tab}
-          onTabChange={handleTabChange}
-        />
-        <Box className={styles.flexGrow} style={{ minHeight: 0 }}>
-          {renderTab()}
-        </Box>
-      </Box>
+      <PageContainer
+        fullWidth
+        contentGap="md"
+        style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}
+        header={
+          <Stack gap="md">
+            <ListPageHeader title="Async" description="Schedulers, queues, and triggers for this project" />
+            <SegmentedControl size="xs" value={tab} onChange={handleTabChange} data={TABS} />
+          </Stack>
+        }
+      >
+        <Box style={{ flex: 1, minHeight: 0 }}>{renderTab()}</Box>
+      </PageContainer>
     </PanelProvider>
   )
 }

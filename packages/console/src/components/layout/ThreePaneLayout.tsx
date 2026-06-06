@@ -1,44 +1,8 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react'
-import { Allotment } from 'allotment'
-import { Box, ActionIcon, Tooltip } from '@mantine/core'
-import { PanelLeftOpen, PanelRightOpen } from 'lucide-react'
+import React from 'react'
+import { Box } from '@mantine/core'
 import { PanelContainer } from '../panel/PanelContainer'
 import { usePanelContext } from '../../context/PanelContext'
 import classes from '../ui/console.module.css'
-
-const CollapsedSidebar: React.FC<{
-  side: 'left' | 'right'
-  onExpand: () => void
-}> = ({ side, onExpand }) => {
-  const Icon = side === 'left' ? PanelLeftOpen : PanelRightOpen
-  return (
-    <Box
-      style={{
-        width: 36,
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRight:
-          side === 'left'
-            ? '1px solid var(--mantine-color-default-border)'
-            : undefined,
-        borderLeft:
-          side === 'right'
-            ? '1px solid var(--mantine-color-default-border)'
-            : undefined,
-        background: 'var(--mantine-color-body)',
-        flexShrink: 0,
-      }}
-    >
-      <Tooltip label="Expand" position={side === 'left' ? 'right' : 'left'}>
-        <ActionIcon variant="subtle" size="sm" color="gray" onClick={onExpand}>
-          <Icon size={16} />
-        </ActionIcon>
-      </Tooltip>
-    </Box>
-  )
-}
 
 interface ThreePaneLayoutProps {
   children: React.ReactNode
@@ -48,8 +12,6 @@ interface ThreePaneLayoutProps {
   emptyPanelMessage?: string
   showTabs?: boolean
   hidePanel?: boolean
-  initialLeftCollapsed?: boolean
-  initialRightCollapsed?: boolean
 }
 
 export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
@@ -60,115 +22,63 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
   emptyPanelMessage,
   showTabs = false,
   hidePanel = false,
-  initialLeftCollapsed = false,
-  initialRightCollapsed = false,
 }) => {
   const { panels } = usePanelContext()
   const alwaysVisible = !showTabs
 
-  const [leftCollapsed, setLeftCollapsed] = useState(initialLeftCollapsed)
-  const [rightCollapsed, setRightCollapsed] = useState(initialRightCollapsed)
-
-  const prevRunsPanelVisible = useRef(runsPanelVisible)
-  useEffect(() => {
-    if (!prevRunsPanelVisible.current && runsPanelVisible) {
-      setLeftCollapsed(false)
-    }
-    prevRunsPanelVisible.current = runsPanelVisible
-  }, [runsPanelVisible])
-
-  const hasLeftPane = !!runsPanel && runsPanelVisible
-  const leftVisible = hasLeftPane && !leftCollapsed
-
-  const hasRightPane = !hidePanel && (alwaysVisible || panels.size !== 0)
-  const rightVisible = hasRightPane && !rightCollapsed
-
-  const handleVisibleChange = useCallback(
-    (index: number, visible: boolean) => {
-      if (hasLeftPane && index === 0) {
-        setLeftCollapsed(!visible)
-      }
-      const rightIndex = hasLeftPane ? 2 : 1
-      if (hasRightPane && index === rightIndex) {
-        setRightCollapsed(!visible)
-      }
-    },
-    [hasLeftPane, hasRightPane]
-  )
+  const showLeft = !!runsPanel && runsPanelVisible
+  const showRight = !hidePanel && (alwaysVisible || panels.size !== 0)
 
   return (
-    <Box className={classes.flexColumn} style={{ height: '100%' }}>
+    <Box className={classes.flexColumn} style={{ height: '100vh' }}>
       {header}
-      <Box className={classes.flexRow} style={{ flex: 1, minHeight: 0 }}>
-        {hasLeftPane && leftCollapsed && (
-          <CollapsedSidebar
-            side="left"
-            onExpand={() => setLeftCollapsed(false)}
-          />
-        )}
-        <Box className={`${classes.flexGrow} ${classes.flexColumn}`}>
-          <Allotment
-            key={`${hasLeftPane}-${hasRightPane}`}
-            defaultSizes={
-              hasLeftPane && hasRightPane
-                ? [220, 640, 400]
-                : hasLeftPane
-                  ? [220, 840]
-                  : hasRightPane
-                    ? [840, 400]
-                    : undefined
-            }
-            onVisibleChange={handleVisibleChange}
-          >
-            {hasLeftPane && (
-              <Allotment.Pane
-                visible={leftVisible}
-                snap
-                minSize={180}
-                preferredSize={220}
-                maxSize={300}
-              >
-                <Box
-                  className={`${classes.flexColumn} ${classes.overflowAuto}`}
-                  style={{
-                    borderRight:
-                      '1px solid var(--mantine-color-default-border)',
-                  }}
-                >
-                  {runsPanel}
-                </Box>
-              </Allotment.Pane>
-            )}
-            <Allotment.Pane>
-              <Box className={`${classes.flexColumn} ${classes.overflowAuto}`}>
-                {children}
-              </Box>
-            </Allotment.Pane>
-            {hasRightPane && (
-              <Allotment.Pane
-                visible={rightVisible}
-                snap
-                minSize={200}
-                preferredSize={400}
-              >
-                <Box
-                  className={`${classes.flexColumn} ${classes.overflowAuto}`}
-                >
-                  <PanelContainer
-                    showTabs={showTabs}
-                    emptyMessage={emptyPanelMessage}
-                  />
-                </Box>
-              </Allotment.Pane>
-            )}
-          </Allotment>
+      <Box
+        style={{
+          display: 'flex',
+          flex: 1,
+          minHeight: 0,
+          gap: 'var(--mantine-spacing-md)',
+          padding: 'var(--mantine-spacing-md)',
+        }}
+      >
+        {/* Left card: runs / history panel */}
+        <Box
+          style={{
+            width: showLeft ? 240 : 0,
+            minWidth: showLeft ? 240 : 0,
+            flexShrink: 0,
+            overflow: 'hidden',
+            opacity: showLeft ? 1 : 0,
+            transition: 'width 180ms ease, min-width 180ms ease, opacity 180ms ease',
+          }}
+        >
+          <Box className={classes.listSurfaceCard} style={{ height: '100%' }}>
+            {runsPanel}
+          </Box>
         </Box>
-        {hasRightPane && rightCollapsed && (
-          <CollapsedSidebar
-            side="right"
-            onExpand={() => setRightCollapsed(false)}
-          />
-        )}
+
+        {/* Center card: main content */}
+        <Box
+          className={classes.listSurfaceCard}
+          style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}
+        >
+          {children}
+        </Box>
+
+        {/* Right card: panel / detail */}
+        <Box
+          style={{
+            width: showRight ? 'min(520px, 42vw)' : 0,
+            flexShrink: 0,
+            overflow: 'hidden',
+            opacity: showRight ? 1 : 0,
+            transition: 'width 180ms ease, opacity 180ms ease',
+          }}
+        >
+          <Box className={classes.listSurfaceCard} style={{ height: '100%', width: 'min(520px, 42vw)' }}>
+            <PanelContainer showTabs={false} emptyMessage={emptyPanelMessage} />
+          </Box>
+        </Box>
       </Box>
     </Box>
   )

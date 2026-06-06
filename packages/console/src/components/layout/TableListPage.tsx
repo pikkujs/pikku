@@ -10,6 +10,7 @@ import {
 } from '@mantine/core'
 import { Search } from 'lucide-react'
 import { EmptyStatePlaceholder } from './EmptyStatePlaceholder'
+import { usePageGate } from '../../context/PageGateContext'
 import classes from '../ui/console.module.css'
 
 interface Column<T> {
@@ -55,6 +56,7 @@ export const TableListPage = <T,>({
   description,
   headerRight,
 }: TableListPageProps<T>) => {
+  const gate = usePageGate()
   const [searchQuery, setSearchQuery] = useState('')
 
   const filtered = useMemo(() => {
@@ -63,11 +65,17 @@ export const TableListPage = <T,>({
     return data.filter((item) => searchFilter(item, query))
   }, [data, searchQuery, searchFilter])
 
+  if (gate) {
+    return <>{gate}</>
+  }
+
   if (loading) {
     return (
-      <Center h="100%">
-        <Loader />
-      </Center>
+      <Box className={classes.listSurfaceCard}>
+        <Center h="100%">
+          <Loader />
+        </Center>
+      </Box>
     )
   }
 
@@ -83,6 +91,7 @@ export const TableListPage = <T,>({
   }
 
   return (
+    <Box className={classes.listSurfaceCard}>
     <Stack gap={0} className={classes.flexColumn}>
       {description && (
         <Box
@@ -166,5 +175,6 @@ export const TableListPage = <T,>({
         </Box>
       )}
     </Stack>
+    </Box>
   )
 }

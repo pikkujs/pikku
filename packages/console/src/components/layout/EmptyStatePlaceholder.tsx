@@ -1,5 +1,5 @@
 import React from 'react'
-import { Stack, Text, Button } from '@mantine/core'
+import { Box, Stack, Text, Button } from '@mantine/core'
 import { ExternalLink } from 'lucide-react'
 import classes from '../ui/console.module.css'
 
@@ -17,33 +17,35 @@ export const EmptyStatePlaceholder: React.FC<EmptyStatePlaceholderProps> = ({
   docsHref,
 }) => {
   return (
-    <Stack
-      align="center"
-      justify="center"
-      gap="md"
-      className={classes.emptyState}
-      py="xl"
-      style={{ minHeight: '60vh' }}
-    >
-      <Icon size={48} strokeWidth={1} />
-      <Text size="xl" fw={600}>
-        {title}
-      </Text>
-      {description && (
-        <Text c="dimmed" ta="center" maw={500}>
-          {description}
-        </Text>
-      )}
-      <Button
-        component="a"
-        href={docsHref}
-        target="_blank"
-        rel="noopener noreferrer"
-        variant="default"
-        leftSection={<ExternalLink size={16} />}
+    <Box className={classes.listSurfaceCard}>
+      <Stack
+        align="center"
+        justify="center"
+        gap="md"
+        className={classes.emptyState}
+        py="xl"
+        style={{ minHeight: '60vh' }}
       >
-        Docs
-      </Button>
-    </Stack>
+        <Icon size={48} strokeWidth={1} />
+        <Text size="xl" fw={600}>
+          {title}
+        </Text>
+        {description && (
+          <Text c="dimmed" ta="center" maw={500}>
+            {description}
+          </Text>
+        )}
+        <Button
+          component="a"
+          href={docsHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          variant="default"
+          leftSection={<ExternalLink size={16} />}
+        >
+          Docs
+        </Button>
+      </Stack>
+    </Box>
   )
 }

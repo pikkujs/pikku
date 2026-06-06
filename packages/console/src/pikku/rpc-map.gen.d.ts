@@ -5,88 +5,68 @@
  * This provides the structure needed for typescript to be aware of RPCs and their return types
  */
 
-export type GraphStarterInput = {
-  workflowName: string
-  nodeId: string
-  data?: unknown
-}
-export type GraphStarterOutput = { runId: string }
-export type PikkuConsoleGetSecretInput = { secretId: string }
-export type PikkuConsoleGetSecretOutput = { exists: boolean; value: unknown }
-export type PikkuConsoleGetVariableInput = { variableId: string }
-export type PikkuConsoleGetVariableOutput = { exists: boolean; value: unknown }
-export type PikkuConsoleHasSecretInput = { secretId: string }
-export type PikkuConsoleHasSecretOutput = { exists: boolean }
-export type PikkuConsoleSetSecretInput = { secretId: string; value: unknown }
-export type PikkuConsoleSetSecretOutput = { success: boolean }
-export type PikkuConsoleSetVariableInput = {
-  variableId: string
-  value: unknown
-}
-export type PikkuConsoleSetVariableOutput = { success: boolean }
-export type PikkuRemoteInternalRPCInput = { rpcName: string; data?: any }
-export type PikkuWorkflowOrchestratorInput = { runId: string }
-export type PikkuWorkflowSleeperInput = { runId: string; stepId: string }
-export type RemoteRPCHandlerInput = { rpcName: string; data?: unknown }
-export type RpcCallerInput = { rpcName: string; data?: unknown }
-export type WorkflowRunnerInput = { workflowName: string; data?: unknown }
-export type WorkflowStarterInput = { workflowName: string; data?: unknown }
-export type WorkflowStarterOutput = { runId: string }
-export type WorkflowStatusCheckerInput = { workflowName: string; runId: string }
-export type WorkflowStatusStreamFullInput = {
-  workflowName: string
-  runId: string
-}
-export type WorkflowStatusStreamInput = { workflowName: string; runId: string }
+
+
+
+
+export type GraphStarterInput = { workflowName: string; nodeId: string; data?: unknown; }
+export type GraphStarterOutput = { runId: string; }
+export type PikkuConsoleGetSecretInput = { secretId: string; }
+export type PikkuConsoleGetSecretOutput = { exists: boolean; value: unknown; }
+export type PikkuConsoleGetVariableInput = { variableId: string; }
+export type PikkuConsoleGetVariableOutput = { exists: boolean; value: unknown; }
+export type PikkuConsoleHasSecretInput = { secretId: string; }
+export type PikkuConsoleHasSecretOutput = { exists: boolean; }
+export type PikkuConsoleSetSecretInput = { secretId: string; value: unknown; }
+export type PikkuConsoleSetSecretOutput = { success: boolean; }
+export type PikkuConsoleSetVariableInput = { variableId: string; value: unknown; }
+export type PikkuConsoleSetVariableOutput = { success: boolean; }
+export type PikkuRemoteInternalRPCInput = { rpcName: string; data?: any; }
+export type PikkuWorkflowOrchestratorInput = { runId: string; }
+export type PikkuWorkflowSleeperInput = { runId: string; stepId: string; }
+export type RemoteRPCHandlerInput = { rpcName: string; data?: unknown; }
+export type RpcCallerInput = { rpcName: string; data?: unknown; }
+export type WorkflowRunnerInput = { workflowName: string; data?: unknown; }
+export type WorkflowStarterInput = { workflowName: string; data?: unknown; }
+export type WorkflowStarterOutput = { runId: string; }
+export type WorkflowStatusCheckerInput = { workflowName: string; runId: string; }
+export type WorkflowStatusStreamFullInput = { workflowName: string; runId: string; }
+export type WorkflowStatusStreamInput = { workflowName: string; runId: string; }
 
 interface RPCHandler<I, O> {
-  input: I
-  output: O
+    input: I;
+    output: O;
 }
 
 export type RPCMap = {
-  readonly pikkuConsoleSetSecret: RPCHandler<
-    PikkuConsoleSetSecretInput,
-    PikkuConsoleSetSecretOutput
-  >
-  readonly pikkuConsoleGetVariable: RPCHandler<
-    PikkuConsoleGetVariableInput,
-    PikkuConsoleGetVariableOutput
-  >
-  readonly pikkuConsoleSetVariable: RPCHandler<
-    PikkuConsoleSetVariableInput,
-    PikkuConsoleSetVariableOutput
-  >
-  readonly pikkuConsoleHasSecret: RPCHandler<
-    PikkuConsoleHasSecretInput,
-    PikkuConsoleHasSecretOutput
-  >
-  readonly pikkuConsoleGetSecret: RPCHandler<
-    PikkuConsoleGetSecretInput,
-    PikkuConsoleGetSecretOutput
-  >
-}
+  readonly 'pikkuConsoleSetSecret': RPCHandler<PikkuConsoleSetSecretInput, PikkuConsoleSetSecretOutput>,
+  readonly 'pikkuConsoleGetVariable': RPCHandler<PikkuConsoleGetVariableInput, PikkuConsoleGetVariableOutput>,
+  readonly 'pikkuConsoleSetVariable': RPCHandler<PikkuConsoleSetVariableInput, PikkuConsoleSetVariableOutput>,
+  readonly 'pikkuConsoleHasSecret': RPCHandler<PikkuConsoleHasSecretInput, PikkuConsoleHasSecretOutput>,
+  readonly 'pikkuConsoleGetSecret': RPCHandler<PikkuConsoleGetSecretInput, PikkuConsoleGetSecretOutput>,
+};
+
 
 // Addon package RPC maps
 import type { RPCMap as ConsoleRPCMap } from '@pikku/addon-console/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js'
 
+
 // Utility type to prefix keys with namespace (skips 'any' to prevent type poisoning)
-type PrefixKeys<T, Prefix extends string> = unknown extends T
-  ? {}
-  : {
-      [K in keyof T as `${Prefix}:${string & K}`]: T[K]
-    }
+type PrefixKeys<T, Prefix extends string> = unknown extends T ? {} : {
+  [K in keyof T as `${Prefix}:${string & K}`]: T[K]
+}
 
 // Merge all RPC maps with namespace prefixes
-export type FlattenedRPCMap = RPCMap & PrefixKeys<ConsoleRPCMap, 'console'>
+export type FlattenedRPCMap =
+  RPCMap & PrefixKeys<ConsoleRPCMap, 'console'>
 
-type IsAny<T> = 0 extends 1 & T ? true : false
-type IsVoidishInput<T> =
-  IsAny<T> extends true
-    ? false
-    : [T] extends [void | null | undefined]
-      ? true
-      : false
+type IsAny<T> = 0 extends (1 & T) ? true : false
+type IsVoidishInput<T> = IsAny<T> extends true
+  ? false
+  : [T] extends [void | null | undefined]
+    ? true
+    : false
+
 
 export type RPCInvoke = <Name extends keyof FlattenedRPCMap>(
   ...args: IsVoidishInput<FlattenedRPCMap[Name]['input']> extends true
@@ -107,7 +87,10 @@ import type { AgentMap } from '../../backend/.pikku/agent/pikku-agent-map.gen.d.
 // Addon package Agent maps
 import type { AgentMap as ConsoleAgentMap } from '@pikku/addon-console/.pikku/agent/pikku-agent-map.gen.d.js'
 
-type FlattenedAgentMap = AgentMap & PrefixKeys<ConsoleAgentMap, 'console'>
+
+type FlattenedAgentMap =
+  AgentMap & PrefixKeys<ConsoleAgentMap, 'console'>
+
 
 import type { PikkuRPC } from '@pikku/core/rpc'
 
@@ -131,40 +114,22 @@ export type TypedRunWorkflow = <Name extends keyof FlattenedWorkflowMap>(
 export type TypedWorkflowStatus = (
   workflowName: string,
   runId: string
-) => Promise<{
-  id: string
-  status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'
-  output?: unknown
-  error?: { message?: string }
-}>
+) => Promise<{ id: string; status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled'; output?: unknown; error?: { message?: string } }>
 
 type TypedAgentRun = [keyof FlattenedAgentMap] extends [never]
   ? (name: string, input: AIAgentInput) => Promise<any>
   : <Name extends keyof FlattenedAgentMap>(
       name: Name,
       input: AIAgentInput
-    ) => Promise<{
-      runId: string
-      result: FlattenedAgentMap[Name]['output']
-      usage: { inputTokens: number; outputTokens: number }
-    }>
+    ) => Promise<{ runId: string; result: FlattenedAgentMap[Name]['output']; usage: { inputTokens: number; outputTokens: number } }>
 
 type TypedAgentStream = [keyof FlattenedAgentMap] extends [never]
-  ? (
-      name: string,
-      input: AIAgentInput,
-      options?: { requiresToolApproval?: 'all' | 'explicit' | false }
-    ) => Promise<void>
+  ? (name: string, input: AIAgentInput, options?: { requiresToolApproval?: 'all' | 'explicit' | false }) => Promise<void>
   : <Name extends keyof FlattenedAgentMap>(
       name: Name,
       input: AIAgentInput,
       options?: { requiresToolApproval?: 'all' | 'explicit' | false }
     ) => Promise<void>
 
-export type TypedPikkuRPC = PikkuRPC<
-  RPCInvoke,
-  RPCRemote,
-  TypedStartWorkflow,
-  TypedAgentRun,
-  TypedAgentStream
->
+export type TypedPikkuRPC = PikkuRPC<RPCInvoke, RPCRemote, TypedStartWorkflow, TypedAgentRun, TypedAgentStream>
+  

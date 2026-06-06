@@ -12,6 +12,9 @@ export type { ConsoleRouter } from './router'
 // React Router adapter
 export { reactRouterAdapter } from './adapters/react-router'
 
+// Page gate context (host apps use this to inject a body override while keeping headers visible)
+export { PageGateContext } from './context/PageGateContext'
+
 // Layout
 export { AppLayout } from './components/layout/AppLayout'
 export type { AppLayoutProps } from './components/layout/AppLayout'

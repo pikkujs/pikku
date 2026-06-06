@@ -1,9 +1,9 @@
 import React from 'react'
-import { Server } from 'lucide-react'
 import { useSearchParams } from '../router'
+import { Stack, SegmentedControl } from '@mantine/core'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
-import { TabbedPageHeader } from '../components/layout/TabbedPageHeader'
+import { ListPageHeader } from '../components/layout/PageLayout'
 import { ServicesTab } from '../components/tabs/ServicesTab'
 import { MiddlewareTab } from '../components/tabs/MiddlewareTab'
 import { PermissionsTab } from '../components/tabs/PermissionsTab'
@@ -37,14 +37,10 @@ export const RuntimePage: React.FC = () => {
     <PanelProvider>
       <ResizablePanelLayout
         header={
-          <TabbedPageHeader
-            icon={Server}
-            category="Runtime"
-            docsHref="https://pikku.dev/docs/core-features/services"
-            tabs={TABS}
-            activeTab={tab}
-            onTabChange={handleTabChange}
-          />
+          <Stack gap="md">
+            <ListPageHeader title="Runtime" description="Services, middleware, and permission guards" />
+            <SegmentedControl size="xs" value={tab} onChange={handleTabChange} data={TABS} />
+          </Stack>
         }
         showTabs={false}
         emptyPanelMessage="Select an item to view its details"

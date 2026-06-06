@@ -13,6 +13,7 @@ import { ListItem } from '../ui/ListItem'
 import { SearchInput } from '../ui/SearchInput'
 import { DetailHeader } from '../ui/DetailHeader'
 import { TagBadge } from '../ui/TagBadge'
+import { EmptyState } from '../ui/EmptyState'
 import classes from '../ui/console.module.css'
 
 type RunEntry = {
@@ -169,12 +170,12 @@ const SchedulerDetail: React.FC<{ item: any; history: SchedulerHistory }> = ({
         <SectionLabel>Schedule</SectionLabel>
         <Box
           style={{
-            background: '#111827',
+            background: 'var(--app-code-bg)',
             border: '1px solid rgba(245,158,11,0.15)',
             borderRadius: 6,
             padding: '8px 10px',
             fontSize: 11,
-            color: '#fbbf24',
+            color: 'var(--app-amber, #fbbf24)',
             fontFamily: 'var(--mantine-font-family-monospace)',
             marginBottom: 4,
           }}
@@ -397,6 +398,15 @@ export const SchedulersTab: React.FC = () => {
         gridTemplateColumns={GRID_COLUMNS}
       />
       <ScrollArea className={classes.flexGrow}>
+        {filtered.length === 0 && (
+          <EmptyState
+            message={
+              items.length === 0
+                ? 'No scheduled tasks defined'
+                : 'No scheduled tasks match your search'
+            }
+          />
+        )}
         {filtered.map((item: any) => {
           const isActive = selected === item.name
           const taskName = item.wireId || item.name

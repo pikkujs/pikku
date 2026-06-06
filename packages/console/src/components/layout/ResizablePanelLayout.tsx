@@ -1,9 +1,9 @@
 import React from 'react'
-import { Allotment } from 'allotment'
 import { Box } from '@mantine/core'
 import { PanelContainer } from '../panel/PanelContainer'
 import { usePanelContext } from '../../context/PanelContext'
 import classes from '../ui/console.module.css'
+import { PageContainer } from './PageLayout'
 
 interface ResizablePanelLayoutProps {
   children: React.ReactNode
@@ -17,43 +17,42 @@ interface ResizablePanelLayoutProps {
 export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
   children,
   header,
-  minSize = 267,
   emptyPanelMessage,
   showTabs = false,
   hidePanel = false,
 }) => {
-  const { panels } = usePanelContext()
+  const { panels, activePanel } = usePanelContext()
   const alwaysVisible = !showTabs
-  const showPanel = !hidePanel && (alwaysVisible || panels.size !== 0)
+  const showPanel = !hidePanel && (!!activePanel || (alwaysVisible && panels.size !== 0))
 
   return (
-    <Box className={classes.flexColumn} style={{ height: '100vh' }}>
-      {header}
-      <Box className={classes.flexGrow} style={{ minHeight: 0 }}>
-        <Allotment
-          key={showPanel ? 'with-panel' : 'no-panel'}
-          defaultSizes={[840, 267]}
+    <PageContainer
+      fullWidth
+      contentGap="md"
+      style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}
+      header={header}
+    >
+      <Box style={{ display: 'flex', flex: 1, minHeight: 0, gap: 'var(--mantine-spacing-md)' }}>
+        <Box className={`${classes.flexColumn} ${classes.overflowAuto}`} style={{ flex: 1, minWidth: 0, height: '100%' }}>
+          {children}
+        </Box>
+
+        <Box
+          style={{
+            width: showPanel ? 'min(520px, 42vw)' : 0,
+            minWidth: showPanel ? 'min(420px, 32vw)' : 0,
+            opacity: showPanel ? 1 : 0,
+            overflow: 'hidden',
+            transition: 'width 180ms ease, min-width 180ms ease, opacity 180ms ease',
+            flexShrink: 0,
+          }}
+          aria-hidden={!showPanel}
         >
-          <Allotment.Pane>
-            <Box className={`${classes.flexColumn} ${classes.overflowAuto}`}>
-              {children}
-            </Box>
-          </Allotment.Pane>
-          <Allotment.Pane
-            visible={showPanel}
-            minSize={minSize}
-            maxSize={500}
-            preferredSize={267}
-          >
-            <Box className={`${classes.flexColumn} ${classes.overflowAuto}`}>
-              <PanelContainer
-                showTabs={showTabs}
-                emptyMessage={emptyPanelMessage}
-              />
-            </Box>
-          </Allotment.Pane>
-        </Allotment>
+          <Box className={`${classes.flexColumn} ${classes.listSurfaceCard}`} style={{ height: '100%' }}>
+            <PanelContainer showTabs={showTabs} emptyMessage={emptyPanelMessage} />
+          </Box>
+        </Box>
       </Box>
-    </Box>
+    </PageContainer>
   )
 }

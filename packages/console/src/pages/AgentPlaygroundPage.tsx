@@ -9,8 +9,13 @@ import {
   Paper,
   Group,
   Button,
+  Box,
+  Popover,
+  TextInput,
+  UnstyledButton,
+  ScrollArea,
 } from '@mantine/core'
-import { Bot, KeyRound, Link2 } from 'lucide-react'
+import { KeyRound, Link2, ChevronDown, Search, Check } from 'lucide-react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
 import {
@@ -19,7 +24,6 @@ import {
 } from '../context/AgentPlaygroundContext'
 import { ThreePaneLayout } from '../components/layout/ThreePaneLayout'
 import { RunsPanel } from '../components/layout/RunsPanel'
-import { DetailPageHeader } from '../components/layout/DetailPageHeader'
 import { AgentChat } from '../components/project/AgentChat'
 import { useDeleteAgentThread } from '../hooks/useAgentRuns'
 import { useAgentCredentials } from '../hooks/useAgentCredentials'
@@ -108,6 +112,8 @@ const AgentPlaygroundInner: React.FC<{
     useAgentPlayground()
   const deleteThread = useDeleteAgentThread()
   const [streaming, setStreaming] = useState(false)
+  const [selectorOpen, setSelectorOpen] = useState(false)
+  const [search, setSearch] = useState('')
   const {
     requirements,
     allConnected,
@@ -132,6 +138,108 @@ const AgentPlaygroundInner: React.FC<{
     })
   }
 
+  const filteredItems = useMemo(() => {
+    if (!search) return agentItems
+    const q = search.toLowerCase()
+    return agentItems.filter(
+      (i) => i.name.toLowerCase().includes(q) || i.description?.toLowerCase().includes(q)
+    )
+  }, [agentItems, search])
+
+  const handleSelect = (name: string) => {
+    setSelectorOpen(false)
+    setSearch('')
+    onAgentSelect(name)
+  }
+
+  const selector = (
+    <Popover
+      opened={selectorOpen}
+      onChange={setSelectorOpen}
+      width={280}
+      position="bottom-start"
+      shadow="md"
+      zIndex={10000}
+    >
+      <Popover.Target>
+        <UnstyledButton
+          px="sm"
+          py="xs"
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            borderBottom: '1px solid var(--mantine-color-default-border)',
+          }}
+          onClick={() => setSelectorOpen((o) => !o)}
+        >
+          <Text size="sm" fw={600} style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {agentId}
+          </Text>
+          <ChevronDown size={14} style={{ flexShrink: 0 }} />
+        </UnstyledButton>
+      </Popover.Target>
+      <Popover.Dropdown p={0}>
+        <TextInput
+          placeholder="Search agents..."
+          leftSection={<Search size={14} />}
+          value={search}
+          onChange={(e) => setSearch(e.currentTarget.value)}
+          styles={{
+            input: {
+              border: 'none',
+              borderBottom: '1px solid var(--mantine-color-default-border)',
+              borderRadius: 0,
+            },
+          }}
+        />
+        <ScrollArea.Autosize mah={300}>
+          <Stack gap={0}>
+            {filteredItems.map((item) => (
+              <UnstyledButton
+                key={item.name}
+                onClick={() => handleSelect(item.name)}
+                py="xs"
+                px="sm"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  backgroundColor:
+                    item.name === agentId
+                      ? 'var(--mantine-color-green-light)'
+                      : undefined,
+                }}
+              >
+                {item.name === agentId ? (
+                  <Check size={14} color="var(--mantine-color-green-6)" />
+                ) : (
+                  <Box w={14} />
+                )}
+                <div>
+                  <Text size="sm" fw={item.name === agentId ? 500 : 400}>
+                    {item.name}
+                  </Text>
+                  {item.description && (
+                    <Text size="sm" c="dimmed">
+                      {item.description}
+                    </Text>
+                  )}
+                </div>
+              </UnstyledButton>
+            ))}
+            {filteredItems.length === 0 && (
+              <Text size="sm" c="dimmed" ta="center" py="md">
+                No results
+              </Text>
+            )}
+          </Stack>
+        </ScrollArea.Autosize>
+      </Popover.Dropdown>
+    </Popover>
+  )
+
   const runsPanel = (
     <RunsPanel
       title="Conversations"
@@ -143,48 +251,47 @@ const AgentPlaygroundInner: React.FC<{
       newButtonLabel="New conversation"
       emptyMessage="No conversations yet"
       statusFilters={[]}
+      header={selector}
       onDelete={handleDelete}
-    />
-  )
-
-  const header = (
-    <DetailPageHeader
-      icon={Bot}
-      category="Agents"
-      docsHref="https://pikku.dev/docs/wiring/ai-agents"
-      categoryPath="/agents"
-      currentItem={agentId}
-      items={agentItems}
-      onItemSelect={onAgentSelect}
-      rightSection={
-        <SegmentedControl
-          size="xs"
-          value={streaming ? 'stream' : 'normal'}
-          onChange={(v) => setStreaming(v === 'stream')}
-          data={[
-            { label: 'Normal', value: 'normal' },
-            { label: 'Stream', value: 'stream' },
-          ]}
-        />
-      }
     />
   )
 
   return (
     <ThreePaneLayout
-      header={header}
       runsPanel={runsPanel}
       runsPanelVisible
       emptyPanelMessage="Agent configuration"
     >
-      {!credLoading && !allConnected ? (
-        <CredentialPrompt
-          requirements={requirements}
-          onRefresh={refetchCreds}
-        />
-      ) : (
-        <AgentChat key={`${threadId}-${streaming}`} streaming={streaming} />
-      )}
+      <Box style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Box
+          px="md"
+          py="xs"
+          style={{
+            borderBottom: '1px solid var(--mantine-color-default-border)',
+            flexShrink: 0,
+          }}
+        >
+          <SegmentedControl
+            size="xs"
+            value={streaming ? 'stream' : 'normal'}
+            onChange={(v) => setStreaming(v === 'stream')}
+            data={[
+              { label: 'Normal', value: 'normal' },
+              { label: 'Stream', value: 'stream' },
+            ]}
+          />
+        </Box>
+        <Box style={{ flex: 1, minHeight: 0 }}>
+          {!credLoading && !allConnected ? (
+            <CredentialPrompt
+              requirements={requirements}
+              onRefresh={refetchCreds}
+            />
+          ) : (
+            <AgentChat key={`${threadId}-${streaming}`} streaming={streaming} />
+          )}
+        </Box>
+      </Box>
     </ThreePaneLayout>
   )
 }
