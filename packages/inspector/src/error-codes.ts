@@ -77,4 +77,7 @@ export enum ErrorCode {
 
   // Feature Flag
   WORKFLOW_MULTI_QUEUE_NOT_SUPPORTED = 'PKU901',
+
+  // Data classification errors
+  PII_IN_OUTPUT = 'PKU910',
 }

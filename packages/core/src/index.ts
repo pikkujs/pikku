@@ -177,3 +177,12 @@ export {
   type ScheduledTaskSummary,
 } from './services/scheduler-service.js'
 export { SchedulerService } from './services/scheduler-service.js'
+
+export type {
+  Private,
+  Secret,
+  Classification,
+  AnonymizeStrategy,
+  ColumnClassification,
+  ClassificationManifest,
+} from './data-classification.js'
