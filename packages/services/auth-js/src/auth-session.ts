@@ -20,14 +20,6 @@ type AuthJsSessionOptions = {
  *     mapSession: (claims) => ({ userId: claims.sub, email: claims.email }),
  *   })
  * ])
- *
- * // With a direct secret (for development/testing)
- * addHTTPMiddleware('*', [
- *   authJsSession({
- *     secret: 'dev-secret',
- *     mapSession: (claims) => ({ userId: claims.sub }),
- *   })
- * ])
  * ```
  */
 export const authJsSession = (
