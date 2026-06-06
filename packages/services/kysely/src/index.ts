@@ -12,6 +12,10 @@ export type { KyselySecretServiceConfig } from './kysely-secret-service.js'
 export { KyselyCredentialService } from './kysely-credential-service.js'
 export type { KyselyCredentialServiceConfig } from './kysely-credential-service.js'
 export { KyselySessionStore } from './kysely-session-store.js'
+export {
+  createAuditedKysely,
+  type CreateAuditedKyselyOptions,
+} from './create-audited-kysely.js'
 
 export type { KyselyPikkuDB } from './kysely-tables.js'
 export type { WorkflowRunService } from '@pikku/core/workflow'
