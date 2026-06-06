@@ -1,0 +1,16 @@
+{
+  "name": "@pikku/verifiers-classification",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@pikku/core": "workspace:*",
+    "@pikku/inspector": "workspace:*",
+    "@types/node": "^24",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9"
+  },
+  "scripts": {
+    "test": "npx tsx --test src/tests/codegen.assert.ts src/tests/anonymize.assert.ts src/tests/audit.assert.ts"
+  }
+}

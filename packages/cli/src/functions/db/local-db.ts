@@ -16,6 +16,7 @@ export interface ResolvedLocalDb {
   seedFile: string
   schemaFile: string
   coercionFile: string
+  manifestFile: string
   zodFile: string
   camelCase: boolean
 }
@@ -42,6 +43,7 @@ export function resolveLocalDb(
     seedFile: resolveAgainst(rootDir, 'db/seed.sql'),
     schemaFile: join(outDir, 'db', 'schema.d.ts'),
     coercionFile: join(outDir, 'db', 'coercion.gen.ts'),
+    manifestFile: join(outDir, 'db', 'classification.gen.ts'),
     zodFile: join(outDir, 'db', 'zod.gen.ts'),
     camelCase: true,
   }
@@ -72,6 +74,7 @@ export async function migrateAndCodegen(
     const codegenResult = generateSchemaTypes(db, {
       outFile: resolved.schemaFile,
       coercionFile: resolved.coercionFile,
+      manifestFile: resolved.manifestFile,
       camelCase: resolved.camelCase,
       migrationsDir: resolved.migrationsDir,
     })

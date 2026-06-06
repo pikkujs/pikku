@@ -19,6 +19,7 @@ import { resolveMiddleware } from '../utils/middleware.js'
 import { resolvePermissions } from '../utils/permissions.js'
 import { extractWireNames } from '../utils/post-process.js'
 import { ErrorCode } from '../error-codes.js'
+import { findPiiPaths } from '../utils/check-pii-output.js'
 import type { NodeType } from '@pikku/core/node'
 
 const isValidVariableName = (name: string) => {
@@ -878,6 +879,29 @@ export const addFunctions: AddWiring = (
             `It already points to '${existingExposed}' in '${existingSource}', but '${pikkuFuncId}' in '${sourceFile}' tried to use the same name.`
         )
         return
+      }
+    }
+  }
+
+  // ── PII brand check ───────────────────────────────────────────────────────
+  // Walk the function body's ACTUAL inferred return type looking for Private<T>
+  // / Secret<T> brands (__pii__ property).  This runs for every function,
+  // including those with a Zod output schema, because the TS return type
+  // reflects what the body actually returns before any Zod coercion.
+  {
+    const sig = checker.getSignatureFromDeclaration(handler)
+    if (sig) {
+      const rawRet = checker.getReturnTypeOfSignature(sig)
+      const unwrapped = unwrapPromise(checker, rawRet)
+      const piiPaths = findPiiPaths(checker, unwrapped)
+      if (piiPaths.length > 0) {
+        logger.critical(
+          ErrorCode.PII_IN_OUTPUT,
+          `Function '${name}' exposes PII-classified field(s) in its return type: ` +
+            piiPaths.map((p) => `'${p}'`).join(', ') +
+            `.\n  Either strip these fields before returning or mark the column ` +
+            `@public in the migration if it is safe to expose.`
+        )
       }
     }
   }
