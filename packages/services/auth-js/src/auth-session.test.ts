@@ -29,6 +29,15 @@ const createMockLogger = () => ({
   debug: () => {},
 })
 
+const AUTH_SECRET_ID = 'AUTH_SECRET'
+
+const createMockServices = () => ({
+  logger: createMockLogger(),
+  secrets: {
+    getSecret: async (_key: string) => TEST_SECRET,
+  },
+})
+
 const createSessionWireProps = () => {
   let session: CoreUserSession | undefined
   let changed = false
@@ -51,11 +60,11 @@ describe('authJsSession middleware', () => {
     const token = await createToken({ sub: 'user123', email: 'a@b.com' })
     const wire = createSessionWireProps()
 
-    const middleware = authJsSession({ secret: TEST_SECRET })
+    const middleware = authJsSession({ secretId: AUTH_SECRET_ID })
     let nextCalled = false
 
     await middleware(
-      { logger: createMockLogger() } as any,
+      createMockServices() as any,
       {
         ...wire,
         http: {
@@ -83,7 +92,7 @@ describe('authJsSession middleware', () => {
     const wire = createSessionWireProps()
 
     const middleware = authJsSession({
-      secret: TEST_SECRET,
+      secretId: AUTH_SECRET_ID,
       mapSession: (claims) => ({
         userId: claims.sub,
         email: claims.email,
@@ -91,7 +100,7 @@ describe('authJsSession middleware', () => {
     })
 
     await middleware(
-      { logger: createMockLogger() } as any,
+      createMockServices() as any,
       {
         ...wire,
         http: {
@@ -113,10 +122,10 @@ describe('authJsSession middleware', () => {
     const token = await createToken({ sub: 'secure-user' }, secureSalt)
     const wire = createSessionWireProps()
 
-    const middleware = authJsSession({ secret: TEST_SECRET })
+    const middleware = authJsSession({ secretId: AUTH_SECRET_ID })
 
     await middleware(
-      { logger: createMockLogger() } as any,
+      createMockServices() as any,
       {
         ...wire,
         http: {
@@ -137,12 +146,12 @@ describe('authJsSession middleware', () => {
     const wire = createSessionWireProps()
 
     const middleware = authJsSession({
-      secret: TEST_SECRET,
+      secretId: AUTH_SECRET_ID,
       cookieName: 'my-session',
     })
 
     await middleware(
-      { logger: createMockLogger() } as any,
+      createMockServices() as any,
       {
         ...wire,
         http: {
@@ -158,11 +167,11 @@ describe('authJsSession middleware', () => {
 
   test('should skip when no cookie present', async () => {
     const wire = createSessionWireProps()
-    const middleware = authJsSession({ secret: TEST_SECRET })
+    const middleware = authJsSession({ secretId: AUTH_SECRET_ID })
     let nextCalled = false
 
     await middleware(
-      { logger: createMockLogger() } as any,
+      createMockServices() as any,
       {
         ...wire,
         http: { request: createMockHTTPRequest({}) },
@@ -182,11 +191,11 @@ describe('authJsSession middleware', () => {
     const wire = createSessionWireProps()
     wire.session = existing
 
-    const middleware = authJsSession({ secret: TEST_SECRET })
+    const middleware = authJsSession({ secretId: AUTH_SECRET_ID })
     let nextCalled = false
 
     await middleware(
-      { logger: createMockLogger() } as any,
+      createMockServices() as any,
       {
         ...wire,
         http: {
@@ -207,11 +216,11 @@ describe('authJsSession middleware', () => {
 
   test('should skip when http.request is not available', async () => {
     const wire = createSessionWireProps()
-    const middleware = authJsSession({ secret: TEST_SECRET })
+    const middleware = authJsSession({ secretId: AUTH_SECRET_ID })
     let nextCalled = false
 
     await middleware(
-      { logger: createMockLogger() } as any,
+      createMockServices() as any,
       { ...wire } as any,
       async () => {
         nextCalled = true
@@ -224,11 +233,11 @@ describe('authJsSession middleware', () => {
 
   test('should handle invalid token gracefully', async () => {
     const wire = createSessionWireProps()
-    const middleware = authJsSession({ secret: TEST_SECRET })
+    const middleware = authJsSession({ secretId: AUTH_SECRET_ID })
     let nextCalled = false
 
     await middleware(
-      { logger: createMockLogger() } as any,
+      createMockServices() as any,
       {
         ...wire,
         http: {
@@ -285,12 +294,12 @@ describe('authJsSession middleware', () => {
     const token = await createToken({ sub: 'user789' })
     const wire = createSessionWireProps()
 
-    const middleware = authJsSession({ secret: TEST_SECRET })
+    const middleware = authJsSession({ secretId: AUTH_SECRET_ID })
 
     await assert.rejects(
       () =>
         middleware(
-          { logger: createMockLogger() } as any,
+          createMockServices() as any,
           {
             ...wire,
             http: {
