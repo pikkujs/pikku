@@ -36,6 +36,7 @@ import {
   createWireServicesCredentialWireProps,
 } from '../services/credential-wire-service.js'
 import { defaultPikkuUserIdResolver } from '../services/pikku-user-id.js'
+import { resolveAuditConfig } from '../services/audit-service.js'
 import { rpcService } from '../wirings/rpc/rpc-runner.js'
 import { closeWireServices } from '../utils.js'
 
@@ -262,6 +263,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
 ): Promise<Out> => {
   wire.wireType ??= wireType
   wire.wireId ??= wireId
+  wire.functionId ??= funcName
 
   const funcMap = pikkuState(packageName, 'function', 'functions')
   let funcConfig = funcMap.get(funcName)
@@ -331,6 +333,9 @@ export const runPikkuFunc = async <In = any, Out = any>(
       createWireServicesCredentialWireProps(resolvedCredentialWireService)
     )
   }
+
+  const resolvedAuditConfig = resolveAuditConfig(funcConfig.audit)
+  resolvedWire.audit = resolvedAuditConfig
 
   // Convert tags to PermissionMetadata and merge with inheritedPermissions
   let mergedInheritedPermissions: PermissionMetadata[]

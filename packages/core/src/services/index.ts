@@ -88,6 +88,25 @@ export type {
 export type { VariableStatus, VariableMeta } from './typed-variables-service.js'
 export type { MetaService } from './meta-service.js'
 export type { SessionStore } from './session-store.js'
+export {
+  NoopAuditService,
+  createInvocationAudit,
+  resolveAuditActorFromWire,
+  resolveAuditConfig,
+} from './audit-service.js'
+export type {
+  AuditActor,
+  AuditConfig,
+  AuditDurability,
+  AuditEvent,
+  AuditEventBatch,
+  AuditLog,
+  AuditLogWriteInput,
+  AuditOutcome,
+  AuditService,
+  AuditSource,
+  ResolvedAuditConfig,
+} from './audit-service.js'
 export { InMemorySessionStore } from './in-memory-session-store.js'
 export type {
   MCPMeta,

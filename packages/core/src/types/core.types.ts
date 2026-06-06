@@ -38,6 +38,10 @@ import type { CredentialService } from '../services/credential-service.js'
 import type { EmailService } from '../services/email-service.js'
 import type { MetaService } from '../services/meta-service.js'
 import type { SessionStore } from '../services/session-store.js'
+import type {
+  AuditDurability,
+  AuditService,
+} from '../services/audit-service.js'
 
 export type PikkuWiringTypes =
   | 'http'
@@ -197,7 +201,10 @@ export type CoreConfig<Config extends Record<string, unknown> = {}> = {
 /**
  * Represents a core user session, which can be extended for more specific session information.
  */
-export interface CoreUserSession {}
+export interface CoreUserSession {
+  userId?: string
+  orgId?: string
+}
 
 /**
  * Interface for core singleton services provided by Pikku.
@@ -244,6 +251,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   emailService?: EmailService
   /** Meta service for reading .pikku metadata files (filesystem on Node, R2/KV on CF) */
   metaService?: MetaService
+  /** Audit service for durable or staged audit event capture */
+  audit: AuditService
   /** Session store for persisting user sessions keyed by pikkuUserId */
   sessionStore?: SessionStore
 }
@@ -266,6 +275,8 @@ export type PikkuWire<
   wireId: string
   /** Trace ID for distributed tracing — propagated across remote RPC calls via x-trace-id header */
   traceId: string
+  /** Function id for the current invocation */
+  functionId: string
   http: PikkuHTTP<In>
   mcp: PikkuMCP<MCPTools>
   rpc: TypedRPC
@@ -301,6 +312,10 @@ export type PikkuWire<
   getCredentials: () =>
     | Record<string, unknown>
     | Promise<Record<string, unknown>>
+  /** Resolved function audit metadata for this invocation, if enabled */
+  audit: {
+    durability: AuditDurability
+  }
 }>
 
 /**
