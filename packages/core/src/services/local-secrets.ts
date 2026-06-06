@@ -23,50 +23,36 @@ export class LocalSecretService implements SecretService {
    * @returns A promise that resolves to the secret value.
    * @throws {Error} If the secret is not found.
    */
-  public async getSecretJSON<R>(key: string): Promise<R> {
+  public async getSecret<R = unknown>(key: string): Promise<R> {
+    const tryParse = (raw: string): R => {
+      try {
+        return JSON.parse(raw) as R
+      } catch {
+        return raw as unknown as R
+      }
+    }
+
     // Check local storage first
     const localValue = this.localSecrets.get(key)
     if (localValue) {
-      return JSON.parse(localValue)
+      return tryParse(localValue)
     }
 
     // Fall back to environment variables
     const value = await this.variables.get(key)
     if (value) {
-      return JSON.parse(value)
+      return tryParse(value)
     }
     throw new Error('Requested secret not found')
   }
 
   /**
-   * Retrieves a secret by key.
-   * Checks local storage first, then falls back to environment variables.
-   * @param key - The key of the secret to retrieve.
-   * @returns A promise that resolves to the secret value.
-   * @throws {Error} If the secret is not found.
-   */
-  public async getSecret(key: string): Promise<string> {
-    // Check local storage first
-    const localValue = this.localSecrets.get(key)
-    if (localValue) {
-      return localValue
-    }
-
-    // Fall back to environment variables
-    const value = await this.variables.get(key)
-    if (value) {
-      return value
-    }
-    throw new Error('Requested secret not found')
-  }
-
-  /**
-   * Stores a JSON value as a secret in local storage.
+   * Stores a value as a JSON-encoded secret in local storage.
    * @param key - The key to store the secret under.
-   * @param value - The JSON value to store.
+   * @param value - The value to store.
    * @returns A promise that resolves when the secret is stored.
    */
-  public async setSecretJSON(key: string, value: unknown): Promise<void> {
+  public async setSecret(key: string, value: unknown): Promise<void> {
     this.localSecrets.set(key, JSON.stringify(value))
   }
 

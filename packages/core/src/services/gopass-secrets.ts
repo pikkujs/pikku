@@ -20,30 +20,25 @@ export class GopassSecretService implements SecretService {
   }
 
   /**
-   * Retrieves a secret by key and parses it as JSON.
-   * @param key - The key of the secret to retrieve.
-   * @returns A promise that resolves to the parsed secret value.
-   * @throws {Error} If the secret is not found or gopass fails.
-   */
-  public async getSecretJSON<R>(key: string): Promise<R> {
-    const value = await this.getSecret(key)
-    return JSON.parse(value)
-  }
-
-  /**
    * Retrieves a secret by key as a string.
    * @param key - The key of the secret to retrieve.
    * @returns A promise that resolves to the secret value.
    * @throws {Error} If the secret is not found or gopass fails.
    */
-  public async getSecret(key: string): Promise<string> {
+  public async getSecret<R = unknown>(key: string): Promise<R> {
     const fullKey = this.getFullKey(key)
+    let raw: string
     try {
-      return execFileSync('gopass', ['show', '-o', fullKey], {
+      raw = execFileSync('gopass', ['show', '-o', fullKey], {
         encoding: 'utf8',
       }).trim()
     } catch (error: any) {
       throw new Error(`Secret Not Found: ${key}`, { cause: error })
+    }
+    try {
+      return JSON.parse(raw) as R
+    } catch {
+      return raw as unknown as R
     }
   }
 
@@ -63,12 +58,12 @@ export class GopassSecretService implements SecretService {
   }
 
   /**
-   * Stores a JSON value as a secret in gopass.
+   * Stores a value as a JSON-encoded secret in gopass.
    * @param key - The key to store the secret under.
-   * @param value - The JSON value to store.
+   * @param value - The value to store.
    * @returns A promise that resolves when the secret is stored.
    */
-  public async setSecretJSON(key: string, value: unknown): Promise<void> {
+  public async setSecret(key: string, value: unknown): Promise<void> {
     const fullKey = this.getFullKey(key)
     const jsonValue = JSON.stringify(value)
     try {

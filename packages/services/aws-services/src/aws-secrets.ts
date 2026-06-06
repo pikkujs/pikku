@@ -13,26 +13,23 @@ export class AWSSecrets implements SecretService {
     this.client = new SecretsManagerClient({ region: config.awsRegion })
   }
 
-  public async getSecretJSON<Result = string>(
-    SecretId: string
-  ): Promise<Result> {
-    const secretValue = await this.getSecret(SecretId)
-    return JSON.parse(secretValue)
-  }
-
   public async getSecret<Result = string>(SecretId: string): Promise<Result> {
+    let raw: string
     try {
       const result = await this.client.send(
         new GetSecretValueCommand({ SecretId })
       )
-      if (result.SecretString) {
-        return result.SecretString as any
+      if (!result.SecretString) {
+        throw new Error(`Secret '${SecretId}' has no string value`)
       }
-      throw new Error(`Secret '${SecretId}' has no string value`)
+      raw = result.SecretString
     } catch (e: any) {
-      throw new Error(`FATAL: Error finding secret: ${SecretId}`, {
-        cause: e,
-      })
+      throw new Error(`FATAL: Error finding secret: ${SecretId}`, { cause: e })
+    }
+    try {
+      return JSON.parse(raw) as Result
+    } catch {
+      return raw as unknown as Result
     }
   }
 
@@ -47,8 +44,8 @@ export class AWSSecrets implements SecretService {
     }
   }
 
-  public async setSecretJSON(_key: string, _value: unknown): Promise<void> {
-    throw new Error('setSecretJSON is not implemented for AWSSecrets')
+  public async setSecret(_key: string, _value: unknown): Promise<void> {
+    throw new Error('setSecret is not implemented for AWSSecrets')
   }
 
   public async deleteSecret(_key: string): Promise<void> {
