@@ -123,6 +123,25 @@ export type { GatewayService } from './services/gateway-service.js'
 export type { TriggerService } from './services/trigger-service.js'
 export type { SchemaService } from './services/schema-service.js'
 export type { SessionService } from './services/user-session-service.js'
+export {
+  NoopAuditService,
+  createInvocationAudit,
+  resolveAuditActorFromWire,
+  resolveAuditConfig,
+} from './services/audit-service.js'
+export type {
+  AuditActor,
+  AuditConfig,
+  AuditDurability,
+  AuditEvent,
+  AuditEventBatch,
+  AuditLog,
+  AuditLogWriteInput,
+  AuditOutcome,
+  AuditService,
+  AuditSource,
+  ResolvedAuditConfig,
+} from './services/audit-service.js'
 export type { AIAgentRunnerService } from './services/ai-agent-runner-service.js'
 export type { AIRunStateService } from './services/ai-run-state-service.js'
 export type { AIStorageService } from './services/ai-storage-service.js'

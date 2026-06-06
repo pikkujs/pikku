@@ -969,6 +969,49 @@ describe('runPikkuFunc - Integration Tests', () => {
     assert.equal(result, true)
     assert.ok(receivedWire.rpc)
   })
+
+  test('should expose resolved audit metadata on the wire for audited functions', async () => {
+    let receivedWire: any
+
+    addTestFunction('auditedWire', {
+      audit: { durability: 'transactional' },
+      func: async (_services: any, _data: any, wire: any) => {
+        receivedWire = wire
+        return 'ok'
+      },
+    })
+
+    const result = await runPikkuFunc('rpc', 'wire-audit-on', 'auditedWire', {
+      singletonServices: mockSingletonServices,
+      data: () => ({}),
+      auth: false,
+      wire: {},
+    })
+
+    assert.equal(result, 'ok')
+    assert.deepEqual(receivedWire.audit, { durability: 'transactional' })
+  })
+
+  test('should leave wire audit metadata undefined when audit is disabled', async () => {
+    let receivedWire: any
+
+    addTestFunction('plainWire', {
+      func: async (_services: any, _data: any, wire: any) => {
+        receivedWire = wire
+        return 'ok'
+      },
+    })
+
+    const result = await runPikkuFunc('rpc', 'wire-audit-off', 'plainWire', {
+      singletonServices: mockSingletonServices,
+      data: () => ({}),
+      auth: false,
+      wire: {},
+    })
+
+    assert.equal(result, 'ok')
+    assert.equal(receivedWire.audit, undefined)
+  })
 })
 
 describe('function-runner helpers', () => {

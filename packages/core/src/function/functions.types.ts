@@ -285,6 +285,11 @@ export type CorePikkuFunctionConfig<
   readonly?: boolean
   deploy?: 'serverless' | 'server' | 'auto'
   approvalRequired?: boolean
+  audit?:
+    | boolean
+    | {
+        durability?: 'best-effort' | 'transactional'
+      }
   approvalDescription?: any
   func: PikkuFunction
   auth?: boolean
