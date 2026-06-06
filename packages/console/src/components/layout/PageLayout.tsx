@@ -4,22 +4,58 @@ import { ExternalLink } from 'lucide-react'
 import { usePageGate } from '../../context/PageGateContext'
 
 interface ListPageHeaderProps {
-  title: string
-  description: string
+  title: ReactNode
+  description?: ReactNode
   actions?: ReactNode
+  docsHref?: string
 }
 
-export function ListPageHeader({ title, description, actions }: ListPageHeaderProps) {
+export function ListPageHeader({ title, description, actions, docsHref }: ListPageHeaderProps) {
+  // One canonical page header for OSS + fabric: title row, then subtitle, then a
+  // dedicated full-width actions row. The title sits alone on its row so it can
+  // never be squished by heavy actions (filters, multiple buttons); the actions
+  // row wraps instead of overflowing. Do not put actions inline with the title.
   return (
-    <Group justify="space-between" align="flex-start" wrap="nowrap">
+    <Stack gap="sm">
       <Stack gap={2}>
-        <Text fw={600} size="md">{title}</Text>
-        <Text size="sm" c="dimmed">{description}</Text>
+        <Group justify="space-between" align="center" wrap="nowrap" gap="md">
+          {/* Pin the title color so it never inherits a wrapper's `color` (fabric
+              CardListShell sets one, OSS layouts don't) — same on every page. */}
+          <Text fw={600} size="md" c="var(--app-text)" truncate style={{ minWidth: 0 }}>
+            {title}
+          </Text>
+          {docsHref && (
+            <Tooltip label="Docs">
+              <ActionIcon
+                component="a"
+                href={docsHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="subtle"
+                color="gray"
+                size="sm"
+                style={{ flexShrink: 0 }}
+              >
+                <ExternalLink size={14} />
+              </ActionIcon>
+            </Tooltip>
+          )}
+        </Group>
+        {description != null &&
+          (typeof description === 'string' ? (
+            <Text size="sm" c="dimmed">
+              {description}
+            </Text>
+          ) : (
+            description
+          ))}
       </Stack>
       {actions && (
-        <Group gap="xs" style={{ flexShrink: 0 }}>{actions}</Group>
+        <Group gap="xs" wrap="wrap" align="center" style={{ minWidth: 0 }}>
+          {actions}
+        </Group>
       )}
-    </Group>
+    </Stack>
   )
 }
 
