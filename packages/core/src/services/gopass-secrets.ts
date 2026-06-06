@@ -17,17 +17,18 @@ export class GopassSecretService implements SecretService {
 
   public async getSecret<T = string>(key: string): Promise<T> {
     const fullKey = this.getFullKey(key)
+    let raw: string
     try {
-      const raw = execFileSync('gopass', ['show', '-o', fullKey], {
+      raw = execFileSync('gopass', ['show', '-o', fullKey], {
         encoding: 'utf8',
       }).trim()
-      try {
-        return JSON.parse(raw) as T
-      } catch {
-        return raw as unknown as T
-      }
     } catch (error: any) {
       throw new Error(`Secret Not Found: ${key}`, { cause: error })
+    }
+    try {
+      return JSON.parse(raw) as T
+    } catch {
+      return raw as unknown as T
     }
   }
 

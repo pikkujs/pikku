@@ -14,22 +14,22 @@ export class AWSSecrets implements SecretService {
   }
 
   public async getSecret<T = string>(SecretId: string): Promise<T> {
+    let raw: string
     try {
       const result = await this.client.send(
         new GetSecretValueCommand({ SecretId })
       )
-      if (result.SecretString) {
-        try {
-          return JSON.parse(result.SecretString) as T
-        } catch {
-          return result.SecretString as unknown as T
-        }
+      if (!result.SecretString) {
+        throw new Error(`Secret '${SecretId}' has no string value`)
       }
-      throw new Error(`Secret '${SecretId}' has no string value`)
+      raw = result.SecretString
     } catch (e: any) {
-      throw new Error(`FATAL: Error finding secret: ${SecretId}`, {
-        cause: e,
-      })
+      throw new Error(`FATAL: Error finding secret: ${SecretId}`, { cause: e })
+    }
+    try {
+      return JSON.parse(raw) as T
+    } catch {
+      return raw as unknown as T
     }
   }
 
