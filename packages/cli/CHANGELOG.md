@@ -1,3 +1,15 @@
+## 0.12.25
+
+### Patch Changes
+
+- 0bd0433: Add `db.engine` and `db.pgVersion` to the CLI config types, and make local env-backed secrets fall back to raw strings when JSON parsing fails.
+- fbfe592: Fix Bun standalone CLI startup and local DB commands, add workspace-level validate, and verify the native binary against a real starter workspace.
+- Updated dependencies [c02275f]
+- Updated dependencies [0bd0433]
+- Updated dependencies [55ba75a]
+  - @pikku/core@0.12.24
+  - @pikku/kysely@0.12.12
+
 ## 0.12.24
 
 ### Patch Changes

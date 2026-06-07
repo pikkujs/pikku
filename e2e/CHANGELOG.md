@@ -1,5 +1,17 @@
 # @pikku/e2e
 
+## 0.0.25
+
+### Patch Changes
+
+- Updated dependencies [c02275f]
+- Updated dependencies [0bd0433]
+- Updated dependencies [55ba75a]
+  - @pikku/core@0.12.24
+  - @pikku/ai-vercel@0.12.5
+  - @pikku/uws@0.12.5
+  - @pikku/kysely@0.12.12
+
 ## 0.0.24
 
 ### Patch Changes
