@@ -336,11 +336,15 @@ export const runPikkuFunc = async <In = any, Out = any>(
   }
 
   const resolvedAuditConfig = resolveAuditConfig(funcConfig.audit)
-  const invocationWire = {
-    ...resolvedWire,
-    functionId: resolvedFunctionId,
-    audit: resolvedAuditConfig,
-  } satisfies PikkuWire
+  const invocationWire = resolvedWire as PikkuWire
+  const previousFunctionId = invocationWire.functionId
+  const previousAudit = invocationWire.audit
+  const previousRpcDescriptor = Object.getOwnPropertyDescriptor(
+    invocationWire,
+    'rpc'
+  )
+  invocationWire.functionId = resolvedFunctionId
+  invocationWire.audit = resolvedAuditConfig
 
   // Convert tags to PermissionMetadata and merge with inheritedPermissions
   let mergedInheritedPermissions: PermissionMetadata[]
@@ -471,10 +475,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
       return await funcConfig.func(services, actualData, invocationWire)
     } finally {
       if (wireServices && Object.keys(wireServices).length > 0) {
-        await closeWireServices(
-          resolvedSingletonServices.logger,
-          wireServices
-        )
+        await closeWireServices(resolvedSingletonServices.logger, wireServices)
       }
     }
   }
@@ -488,13 +489,45 @@ export const runPikkuFunc = async <In = any, Out = any>(
   })
 
   if (allMiddleware.length > 0) {
-    return (await runMiddleware<CorePikkuMiddleware>(
-      resolvedSingletonServices,
-      invocationWire,
-      allMiddleware,
-      executeFunction
-    )) as Out
+    try {
+      return (await runMiddleware<CorePikkuMiddleware>(
+        resolvedSingletonServices,
+        invocationWire,
+        allMiddleware,
+        executeFunction
+      )) as Out
+    } finally {
+      if (previousRpcDescriptor) {
+        Object.defineProperty(invocationWire, 'rpc', previousRpcDescriptor)
+      }
+      if (previousFunctionId === undefined) {
+        delete (invocationWire as any).functionId
+      } else {
+        invocationWire.functionId = previousFunctionId
+      }
+      if (previousAudit === undefined) {
+        delete (invocationWire as any).audit
+      } else {
+        invocationWire.audit = previousAudit
+      }
+    }
   }
 
-  return (await executeFunction()) as Out
+  try {
+    return (await executeFunction()) as Out
+  } finally {
+    if (previousRpcDescriptor) {
+      Object.defineProperty(invocationWire, 'rpc', previousRpcDescriptor)
+    }
+    if (previousFunctionId === undefined) {
+      delete (invocationWire as any).functionId
+    } else {
+      invocationWire.functionId = previousFunctionId
+    }
+    if (previousAudit === undefined) {
+      delete (invocationWire as any).audit
+    } else {
+      invocationWire.audit = previousAudit
+    }
+  }
 }
