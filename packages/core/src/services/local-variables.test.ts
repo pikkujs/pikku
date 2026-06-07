@@ -51,7 +51,7 @@ describe('LocalVariablesService', () => {
   test('should set JSON variable', () => {
     const service = new LocalVariablesService({})
     service.set('DATA', { key: 'val' })
-    assert.strictEqual(service.get('DATA'), '{"key":"val"}')
+    assert.deepStrictEqual(service.get('DATA'), { key: 'val' })
   })
 
   test('should handle has with undefined value', () => {

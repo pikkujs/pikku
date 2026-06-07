@@ -8,7 +8,7 @@ describe('LocalSecretService', () => {
     const service = new LocalSecretService()
     await service.setSecret('MY_KEY', { token: 'abc' })
     const result = await service.getSecret('MY_KEY')
-    assert.strictEqual(result, '{"token":"abc"}')
+    assert.deepStrictEqual(result, { token: 'abc' })
   })
 
   test('should get secret from environment variables', async () => {
@@ -53,7 +53,7 @@ describe('LocalSecretService', () => {
     const service = new LocalSecretService(vars)
     await service.setSecret('KEY', 'local-value')
     const result = await service.getSecret('KEY')
-    assert.strictEqual(result, '"local-value"')
+    assert.strictEqual(result, 'local-value')
   })
 
   test('should check hasSecret in local storage', async () => {
