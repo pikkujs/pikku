@@ -1,6 +1,4 @@
 import type {
-  CoreSingletonServices,
-  PikkuWire,
   CorePikkuMiddleware,
   CorePikkuMiddlewareGroup,
   PikkuWiringTypes,
@@ -18,16 +16,16 @@ const PRIORITY_ORDER: Record<MiddlewarePriority, number> = {
   lowest: 4,
 }
 
-const getMiddlewarePriority = (fn: CorePikkuMiddleware): number => {
+const getMiddlewarePriority = (fn: CorePikkuMiddleware<any, any>): number => {
   const priority = (
-    fn as CorePikkuMiddleware & { __priority?: MiddlewarePriority }
+    fn as CorePikkuMiddleware<any, any> & { __priority?: MiddlewarePriority }
   ).__priority
   return PRIORITY_ORDER[priority ?? 'medium']
 }
 
 const sortByPriority = (
-  middlewares: CorePikkuMiddleware[]
-): CorePikkuMiddleware[] => {
+  middlewares: CorePikkuMiddleware<any, any>[]
+): CorePikkuMiddleware<any, any>[] => {
   return middlewares.sort(
     (a, b) => getMiddlewarePriority(a) - getMiddlewarePriority(b)
   )
@@ -50,9 +48,11 @@ const sortByPriority = (
  *   async () => { return await runMain(); }
  * );
  */
-export const runMiddleware = async <Middleware extends CorePikkuMiddleware>(
-  services: CoreSingletonServices,
-  wire: PikkuWire,
+export const runMiddleware = async <
+  Middleware extends CorePikkuMiddleware<any, any>,
+>(
+  services: Parameters<Middleware>[0],
+  wire: Parameters<Middleware>[1],
   middlewares: readonly Middleware[],
   main?: () => Promise<unknown>
 ): Promise<unknown> => {
@@ -77,7 +77,7 @@ export const runMiddleware = async <Middleware extends CorePikkuMiddleware>(
 }
 
 const isSortedByPriority = (
-  middlewares: readonly CorePikkuMiddleware[]
+  middlewares: readonly CorePikkuMiddleware<any, any>[]
 ): boolean => {
   for (let i = 1; i < middlewares.length; i++) {
     if (

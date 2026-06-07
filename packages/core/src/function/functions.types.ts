@@ -29,7 +29,12 @@ export type CorePikkuFunction<
   Out,
   Services extends CoreSingletonServices = CoreServices,
   Session extends CoreUserSession = CoreUserSession,
-  Wire extends PikkuWire<In, Out> = PikkuWire<In, Out, true, Session>,
+  Wire extends PikkuWire<In, Out, true, Session> = PikkuWire<
+    In,
+    Out,
+    true,
+    Session
+  >,
 > = (
   services: Services,
   data: In,
@@ -74,8 +79,9 @@ export type CorePikkuFunctionSessionless<
 export type CorePikkuPermission<
   In = any,
   Services extends CoreSingletonServices = CoreServices,
-  Wire extends PikkuWire<In, never, false, CoreUserSession, any, never, never> =
-    PikkuWire<In, never, false, CoreUserSession, never, never, never>,
+  Session extends CoreUserSession = CoreUserSession,
+  Wire extends PikkuWire<In, never, false, Session, any, never, never> =
+    PikkuWire<In, never, false, Session, never, never, never>,
 > = (services: Services, data: In, wire: Wire) => Promise<boolean>
 
 /**
@@ -88,15 +94,16 @@ export type CorePikkuPermission<
 export type CorePikkuPermissionConfig<
   In = any,
   Services extends CoreSingletonServices = CoreServices,
-  Wire extends PikkuWire<In, never, false, CoreUserSession> = PikkuWire<
+  Session extends CoreUserSession = CoreUserSession,
+  Wire extends PikkuWire<In, never, false, Session> = PikkuWire<
     In,
     never,
     false,
-    CoreUserSession
+    Session
   >,
 > = {
   /** The permission function */
-  func: CorePikkuPermission<In, Services, Wire>
+  func: CorePikkuPermission<In, Services, Session, Wire>
   /** Optional human-readable name for the permission */
   name?: string
   /** Optional description of what the permission checks */
@@ -131,15 +138,14 @@ export type CorePikkuPermissionConfig<
 export const pikkuPermission = <
   In = any,
   Services extends CoreSingletonServices = CoreServices,
-  Wire extends PickRequired<
-    PikkuWire<In, never, false, CoreUserSession>,
-    'session'
-  > = PickRequired<PikkuWire<In, never, false, CoreUserSession>, 'session'>,
+  Session extends CoreUserSession = CoreUserSession,
+  Wire extends PickRequired<PikkuWire<In, never, false, Session>, 'session'> =
+    PickRequired<PikkuWire<In, never, false, Session>, 'session'>,
 >(
   permission:
-    | CorePikkuPermission<In, Services, Wire>
-    | CorePikkuPermissionConfig<In, Services, Wire>
-): CorePikkuPermission<In, Services, Wire> => {
+    | CorePikkuPermission<In, Services, Session, Wire>
+    | CorePikkuPermissionConfig<In, Services, Session, Wire>
+): CorePikkuPermission<In, Services, Session, Wire> => {
   return typeof permission === 'function' ? permission : permission.func
 }
 
@@ -154,13 +160,14 @@ export const pikkuPermission = <
 export type CorePikkuPermissionFactory<
   In = any,
   Services extends CoreSingletonServices = CoreServices,
-  Wire extends PikkuWire<In, never, false, CoreUserSession> = PikkuWire<
+  Session extends CoreUserSession = CoreUserSession,
+  Wire extends PikkuWire<In, never, false, Session> = PikkuWire<
     In,
     never,
     false,
-    CoreUserSession
+    Session
   >,
-> = (input: In) => CorePikkuPermission<any, Services, Wire>
+> = (input: In) => CorePikkuPermission<any, Services, Session, Wire>
 
 /**
  * Factory function for creating permission factories
