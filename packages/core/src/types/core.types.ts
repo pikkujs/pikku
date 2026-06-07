@@ -295,7 +295,7 @@ export type PikkuWire<
     ? UserSession
     : UserSession | undefined
   /** Update and persist the current session */
-  setSession: (session: CoreUserSession) => Promise<void> | void
+  setSession: (session: UserSession) => Promise<void> | void
   /** Clear and persist the current session */
   clearSession: () => Promise<void> | void
   /** Fetch the latest session (may read from backing store) */

@@ -24,7 +24,7 @@ const verifyPermissions = async <Out = any>(
   permissions: CorePermissionGroup,
   services: CoreServices,
   data: any,
-  wire: PikkuWire<any, never, any, never, never, never>
+  wire: PikkuWire<any, never, any, CoreUserSession, never, never, never>
 ): Promise<boolean> => {
   if (!permissions) {
     return true
@@ -311,7 +311,7 @@ export const runPermissions = async (
     funcInheritedPermissions?: PermissionMetadata[]
     funcPermissions?: CorePermissionGroup | CorePikkuPermission[]
     services: CoreServices
-    wire: PikkuWire<any, never, any, never, never, never>
+    wire: PikkuWire<any, never, any, CoreUserSession, never, never, never>
     data: any
     packageName?: string | null
   }
@@ -377,13 +377,13 @@ export const checkAuthPermissions = async (
     any,
     never,
     any,
-    never,
+    CoreUserSession,
     never,
     never
   >
 
   // Extract only pikkuAuth permissions (marked with __pikkuAuth)
-  const authPerms: CorePikkuPermission[] = []
+  const authPerms: CorePikkuPermission<any, any, any, any>[] = []
   for (const permission of allPermissions) {
     if (typeof permission === 'function') {
       if ((permission as any).__pikkuAuth) {

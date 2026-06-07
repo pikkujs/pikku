@@ -20,7 +20,7 @@ import type {
 export const getSession = async <UserSession extends CoreUserSession>(
   nextRequest: Request,
   singletonServices: CoreSingletonServices,
-  middleware: CorePikkuMiddleware[]
+  middleware: CorePikkuMiddleware<CoreSingletonServices, UserSession>[]
 ): Promise<UserSession | undefined> => {
   const request = new PikkuFetchHTTPRequest(nextRequest)
   const userSession = new PikkuSessionService<CoreUserSession>(
