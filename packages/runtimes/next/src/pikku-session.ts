@@ -1,5 +1,8 @@
 import { runMiddleware } from '@pikku/core'
-import { PikkuSessionService } from '@pikku/core/services'
+import {
+  PikkuSessionService,
+  createMiddlewareSessionWireProps,
+} from '@pikku/core/services'
 import { PikkuFetchHTTPRequest } from '@pikku/core/http'
 import type {
   CoreSingletonServices,
@@ -20,16 +23,16 @@ export const getSession = async <UserSession extends CoreUserSession>(
   middleware: CorePikkuMiddleware[]
 ): Promise<UserSession | undefined> => {
   const request = new PikkuFetchHTTPRequest(nextRequest)
-  const userSession = new PikkuSessionService<UserSession>(
+  const userSession = new PikkuSessionService<CoreUserSession>(
     singletonServices.sessionStore as any
   )
   await runMiddleware(
     singletonServices,
     {
       http: { request },
-      session: userSession,
+      ...createMiddlewareSessionWireProps(userSession),
     },
     middleware as any
   )
-  return userSession.get()
+  return userSession.get() as UserSession | undefined
 }
