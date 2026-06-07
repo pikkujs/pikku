@@ -335,169 +335,166 @@ export const runPikkuFunc = async <In = any, Out = any>(
     )
   }
 
-  const previousFunctionId = resolvedWire.functionId
-  const previousAudit = resolvedWire.audit
-  resolvedWire.functionId = resolvedFunctionId
   const resolvedAuditConfig = resolveAuditConfig(funcConfig.audit)
-  resolvedWire.audit = resolvedAuditConfig
-  try {
-    // Convert tags to PermissionMetadata and merge with inheritedPermissions
-    let mergedInheritedPermissions: PermissionMetadata[]
-    if (tags && tags.length > 0) {
-      mergedInheritedPermissions = [
-        ...(inheritedPermissions || []),
-        ...tags.map((tag) => ({ type: 'tag' as const, tag })),
-      ]
-    } else {
-      mergedInheritedPermissions = inheritedPermissions || []
+  const invocationWire = {
+    ...resolvedWire,
+    functionId: resolvedFunctionId,
+    audit: resolvedAuditConfig,
+  } satisfies PikkuWire
+
+  // Convert tags to PermissionMetadata and merge with inheritedPermissions
+  let mergedInheritedPermissions: PermissionMetadata[]
+  if (tags && tags.length > 0) {
+    mergedInheritedPermissions = [
+      ...(inheritedPermissions || []),
+      ...tags.map((tag) => ({ type: 'tag' as const, tag })),
+    ]
+  } else {
+    mergedInheritedPermissions = inheritedPermissions || []
+  }
+
+  // Helper function to run permissions and execute the function
+  const executeFunction = async () => {
+    await resolveSession(
+      invocationWire,
+      resolvedSingletonServices,
+      sessionService
+    )
+
+    if (sessionService) {
+      invocationWire.session = sessionService.freezeInitial()
+      invocationWire.setSession = (s: any) => sessionService.set(s)
+      invocationWire.clearSession = () => sessionService.clear()
+      invocationWire.getSession = () => sessionService.get()
+      invocationWire.hasSessionChanged = () => sessionService.sessionChanged
     }
 
-    // Helper function to run permissions and execute the function
-    const executeFunction = async () => {
-      await resolveSession(
-        resolvedWire,
-        resolvedSingletonServices,
-        sessionService
-      )
+    const session = invocationWire.session
 
-      if (sessionService) {
-        resolvedWire.session = sessionService.freezeInitial()
-        resolvedWire.setSession = (s: any) => sessionService.set(s)
-        resolvedWire.clearSession = () => sessionService.clear()
-        resolvedWire.getSession = () => sessionService.get()
-        resolvedWire.hasSessionChanged = () => sessionService.sessionChanged
-      }
-
-      const session = resolvedWire.session
-
-      if (funcMeta.sessionless) {
-        if (wiringAuth === true || funcConfig.auth === true) {
-          if (!session) {
-            throw new ForbiddenError('Authentication required')
-          }
-        }
-      } else if (funcMeta.sessionless === false) {
-        if (wiringAuth === false || funcConfig.auth === false) {
-          resolvedSingletonServices.logger.warn(
-            `Function '${funcName}' requires a session but auth was explicitly disabled — use pikkuSessionlessFunc instead.`
-          )
-        }
+    if (funcMeta.sessionless) {
+      if (wiringAuth === true || funcConfig.auth === true) {
         if (!session) {
           throw new ForbiddenError('Authentication required')
         }
-      } else {
-        // TODO: Remove after a couple of releases — backward compat for
-        // generated metadata that doesn't include the `sessionless` field yet.
-        if (wiringAuth === true || funcConfig.auth === true) {
-          if (!session) {
-            throw new ForbiddenError('Authentication required')
-          }
-        }
       }
-
-      if ((session as any)?.readonly && !funcMeta.readonly) {
-        throw new ReadonlySessionError()
-      }
-
-      // Evaluate the data from the lazy function
-      const actualData = await data()
-
-      // Validate and coerce data if schema is defined
-      const inputSchemaName = funcMeta.inputSchemaName
-      if (inputSchemaName) {
-        // Coerce (top level) data types before validation (e.g. string→array, string→date)
-        if (coerceDataFromSchema) {
-          coerceTopLevelDataFromSchema(inputSchemaName, actualData, packageName)
-        }
-        // Validate request data against the defined schema, if any
-        await validateSchema(
-          resolvedSingletonServices.logger,
-          resolvedSingletonServices.schema,
-          inputSchemaName,
-          actualData,
-          packageName
+    } else if (funcMeta.sessionless === false) {
+      if (wiringAuth === false || funcConfig.auth === false) {
+        resolvedSingletonServices.logger.warn(
+          `Function '${funcName}' requires a session but auth was explicitly disabled — use pikkuSessionlessFunc instead.`
         )
       }
-
-      if (
-        mergedInheritedPermissions.length > 0 ||
-        wirePermissions ||
-        funcMeta.permissions ||
-        funcConfig.permissions
-      ) {
-        await runPermissions(wireType, wireId, {
-          wireInheritedPermissions: mergedInheritedPermissions,
-          wirePermissions: wirePermissions,
-          funcInheritedPermissions: funcMeta.permissions,
-          funcPermissions: funcConfig.permissions,
-          services: resolvedSingletonServices,
-          wire: resolvedWire as any,
-          data: actualData,
-          packageName,
-        })
+      if (!session) {
+        throw new ForbiddenError('Authentication required')
       }
-
-      let wireServices: Record<string, unknown> | undefined
-      try {
-        wireServices = (await resolvedCreateWireServices?.(
-          resolvedSingletonServices,
-          resolvedWire
-        )) as Record<string, unknown> | undefined
-        const services =
-          wireServices && Object.keys(wireServices).length > 0
-            ? { ...resolvedSingletonServices, ...wireServices }
-            : resolvedSingletonServices
-        const callerPackageName = packageName
-        Object.defineProperty(resolvedWire, 'rpc', {
-          get() {
-            const rpc = rpcService.getContextRPCService(
-              services,
-              resolvedWire,
-              { sessionService },
-              0,
-              callerPackageName
-            )
-            Object.defineProperty(resolvedWire, 'rpc', {
-              value: rpc,
-              writable: true,
-              configurable: true,
-            })
-            return rpc
-          },
-          configurable: true,
-          enumerable: true,
-        })
-        return await funcConfig.func(services, actualData, resolvedWire)
-      } finally {
-        if (wireServices && Object.keys(wireServices).length > 0) {
-          await closeWireServices(
-            resolvedSingletonServices.logger,
-            wireServices
-          )
+    } else {
+      // TODO: Remove after a couple of releases — backward compat for
+      // generated metadata that doesn't include the `sessionless` field yet.
+      if (wiringAuth === true || funcConfig.auth === true) {
+        if (!session) {
+          throw new ForbiddenError('Authentication required')
         }
       }
     }
 
-    const allMiddleware = combineMiddleware(wireType, wireId, {
-      wireInheritedMiddleware: inheritedMiddleware,
-      wireMiddleware,
-      funcInheritedMiddleware: funcMeta.middleware,
-      funcMiddleware: funcConfig.middleware,
-      packageName,
-    })
-
-    if (allMiddleware.length > 0) {
-      return (await runMiddleware<CorePikkuMiddleware>(
-        resolvedSingletonServices,
-        resolvedWire,
-        allMiddleware,
-        executeFunction
-      )) as Out
+    if ((session as any)?.readonly && !funcMeta.readonly) {
+      throw new ReadonlySessionError()
     }
 
-    return (await executeFunction()) as Out
-  } finally {
-    resolvedWire.functionId = previousFunctionId
-    resolvedWire.audit = previousAudit
+    // Evaluate the data from the lazy function
+    const actualData = await data()
+
+    // Validate and coerce data if schema is defined
+    const inputSchemaName = funcMeta.inputSchemaName
+    if (inputSchemaName) {
+      // Coerce (top level) data types before validation (e.g. string→array, string→date)
+      if (coerceDataFromSchema) {
+        coerceTopLevelDataFromSchema(inputSchemaName, actualData, packageName)
+      }
+      // Validate request data against the defined schema, if any
+      await validateSchema(
+        resolvedSingletonServices.logger,
+        resolvedSingletonServices.schema,
+        inputSchemaName,
+        actualData,
+        packageName
+      )
+    }
+
+    if (
+      mergedInheritedPermissions.length > 0 ||
+      wirePermissions ||
+      funcMeta.permissions ||
+      funcConfig.permissions
+    ) {
+      await runPermissions(wireType, wireId, {
+        wireInheritedPermissions: mergedInheritedPermissions,
+        wirePermissions: wirePermissions,
+        funcInheritedPermissions: funcMeta.permissions,
+        funcPermissions: funcConfig.permissions,
+        services: resolvedSingletonServices,
+        wire: invocationWire as any,
+        data: actualData,
+        packageName,
+      })
+    }
+
+    let wireServices: Record<string, unknown> | undefined
+    try {
+      wireServices = (await resolvedCreateWireServices?.(
+        resolvedSingletonServices,
+        invocationWire
+      )) as Record<string, unknown> | undefined
+      const services =
+        wireServices && Object.keys(wireServices).length > 0
+          ? { ...resolvedSingletonServices, ...wireServices }
+          : resolvedSingletonServices
+      const callerPackageName = packageName
+      Object.defineProperty(invocationWire, 'rpc', {
+        get() {
+          const rpc = rpcService.getContextRPCService(
+            services,
+            invocationWire,
+            { sessionService },
+            0,
+            callerPackageName
+          )
+          Object.defineProperty(invocationWire, 'rpc', {
+            value: rpc,
+            writable: true,
+            configurable: true,
+          })
+          return rpc
+        },
+        configurable: true,
+        enumerable: true,
+      })
+      return await funcConfig.func(services, actualData, invocationWire)
+    } finally {
+      if (wireServices && Object.keys(wireServices).length > 0) {
+        await closeWireServices(
+          resolvedSingletonServices.logger,
+          wireServices
+        )
+      }
+    }
   }
+
+  const allMiddleware = combineMiddleware(wireType, wireId, {
+    wireInheritedMiddleware: inheritedMiddleware,
+    wireMiddleware,
+    funcInheritedMiddleware: funcMeta.middleware,
+    funcMiddleware: funcConfig.middleware,
+    packageName,
+  })
+
+  if (allMiddleware.length > 0) {
+    return (await runMiddleware<CorePikkuMiddleware>(
+      resolvedSingletonServices,
+      invocationWire,
+      allMiddleware,
+      executeFunction
+    )) as Out
+  }
+
+  return (await executeFunction()) as Out
 }
