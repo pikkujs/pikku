@@ -39,18 +39,18 @@ describe('LocalVariablesService', () => {
 
   test('should get JSON variable', () => {
     const service = new LocalVariablesService({ DATA: '{"key":"val"}' })
-    const result = service.getJSON('DATA')
+    const result = service.get('DATA')
     assert.deepStrictEqual(result, { key: 'val' })
   })
 
   test('should return undefined for missing JSON variable', () => {
     const service = new LocalVariablesService({})
-    assert.strictEqual(service.getJSON('MISSING'), undefined)
+    assert.strictEqual(service.get('MISSING'), undefined)
   })
 
   test('should set JSON variable', () => {
     const service = new LocalVariablesService({})
-    service.setJSON('DATA', { key: 'val' })
+    service.set('DATA', { key: 'val' })
     assert.strictEqual(service.get('DATA'), '{"key":"val"}')
   })
 

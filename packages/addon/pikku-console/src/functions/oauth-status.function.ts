@@ -52,7 +52,7 @@ export const oauthStatus = pikkuSessionlessFunc<
       }
 
       if (!token) {
-        token = await secrets.getSecretJSON<{
+        token = await secrets.getSecret<{
           accessToken: string
           refreshToken?: string
           expiresAt?: number

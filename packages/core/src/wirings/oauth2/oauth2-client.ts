@@ -124,7 +124,7 @@ export class OAuth2Client {
     }
 
     // Load from secrets
-    const token = await this.secrets.getSecretJSON<OAuth2Token>(
+    const token = await this.secrets.getSecret<OAuth2Token>(
       this.oauth2Config.tokenSecretId
     )
     this.cachedToken = token
@@ -209,7 +209,7 @@ export class OAuth2Client {
       scope: data.scope,
     }
 
-    await this.secrets.setSecretJSON(this.oauth2Config.tokenSecretId, token)
+    await this.secrets.setSecret(this.oauth2Config.tokenSecretId, token)
     this.cachedToken = token
 
     return token
@@ -233,7 +233,7 @@ export class OAuth2Client {
       return this.cachedAppCredential
     }
     this.cachedAppCredential =
-      await this.secrets.getSecretJSON<OAuth2AppCredential>(
+      await this.secrets.getSecret<OAuth2AppCredential>(
         this.appCredentialSecretId
       )
     return this.cachedAppCredential

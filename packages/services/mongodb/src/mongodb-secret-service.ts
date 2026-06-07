@@ -87,23 +87,14 @@ export class MongoDBSecretService implements SecretService {
     throw new Error(`No KEK available for key_version ${version}`)
   }
 
-  async getSecret(key: string): Promise<string> {
+  async getSecret<T = string>(key: string): Promise<T> {
     const row = await this.secrets.findOne({ _id: key })
     if (!row) throw new Error('Requested secret not found')
 
     const kek = this.getKEK(row.keyVersion)
-    const result = await envelopeDecrypt<string>(
-      kek,
-      row.ciphertext,
-      row.wrappedDek
-    )
+    const result = await envelopeDecrypt<T>(kek, row.ciphertext, row.wrappedDek)
     await this.logAudit(key, 'read')
     return result
-  }
-
-  async getSecretJSON<R = {}>(key: string): Promise<R> {
-    const raw = await this.getSecret(key)
-    return JSON.parse(raw) as R
   }
 
   async hasSecret(key: string): Promise<boolean> {
@@ -111,12 +102,8 @@ export class MongoDBSecretService implements SecretService {
     return count > 0
   }
 
-  async setSecretJSON(key: string, value: unknown): Promise<void> {
-    const plaintext = JSON.stringify(value)
-    const { ciphertext, wrappedDEK } = await envelopeEncrypt(
-      this.key,
-      plaintext
-    )
+  async setSecret(key: string, value: unknown): Promise<void> {
+    const { ciphertext, wrappedDEK } = await envelopeEncrypt(this.key, value)
     const now = new Date()
 
     await this.secrets.updateOne(

@@ -9,81 +9,38 @@ import type { VariablesService } from './variables-service.js'
 export class LocalSecretService implements SecretService {
   private localSecrets: Map<string, string> = new Map()
 
-  // TODO: Drop this fallback once secrets and variables expose aligned typed/raw access paths again.
-  private parseSecret<R>(raw: string): R {
+  private parseSecret<T>(raw: string): T {
     try {
-      return JSON.parse(raw) as R
+      return JSON.parse(raw) as T
     } catch {
-      return raw as unknown as R
+      return raw as unknown as T
     }
   }
 
-  /**
-   * Creates an instance of LocalSecretService.
-   */
   constructor(
     private variables: VariablesService = new LocalVariablesService()
   ) {}
 
-  /**
-   * Retrieves a secret by key.
-   * Checks local storage first, then falls back to environment variables.
-   * @param key - The key of the secret to retrieve.
-   * @returns A promise that resolves to the secret value.
-   * @throws {Error} If the secret is not found.
-   */
-  public async getSecretJSON<R>(key: string): Promise<R> {
-    // Check local storage first
+  public async getSecret<T = string>(key: string): Promise<T> {
     const localValue = this.localSecrets.get(key)
     if (localValue) {
-      return this.parseSecret(localValue)
+      return this.parseSecret<T>(localValue)
     }
 
-    // Fall back to environment variables
     const value = await this.variables.get(key)
     if (value) {
-      return this.parseSecret(value)
+      return this.parseSecret<T>(value)
     }
     throw new Error('Requested secret not found')
   }
 
-  /**
-   * Retrieves a secret by key.
-   * Checks local storage first, then falls back to environment variables.
-   * @param key - The key of the secret to retrieve.
-   * @returns A promise that resolves to the secret value.
-   * @throws {Error} If the secret is not found.
-   */
-  public async getSecret(key: string): Promise<string> {
-    // Check local storage first
-    const localValue = this.localSecrets.get(key)
-    if (localValue) {
-      return localValue
-    }
-
-    // Fall back to environment variables
-    const value = await this.variables.get(key)
-    if (value) {
-      return value
-    }
-    throw new Error('Requested secret not found')
+  public async setSecret(key: string, value: unknown): Promise<void> {
+    this.localSecrets.set(
+      key,
+      typeof value === 'string' ? value : JSON.stringify(value)
+    )
   }
 
-  /**
-   * Stores a JSON value as a secret in local storage.
-   * @param key - The key to store the secret under.
-   * @param value - The JSON value to store.
-   * @returns A promise that resolves when the secret is stored.
-   */
-  public async setSecretJSON(key: string, value: unknown): Promise<void> {
-    this.localSecrets.set(key, JSON.stringify(value))
-  }
-
-  /**
-   * Checks if a secret exists without throwing.
-   * @param key - The key of the secret to check.
-   * @returns A promise that resolves to true if the secret exists.
-   */
   public async hasSecret(key: string): Promise<boolean> {
     if (this.localSecrets.has(key)) {
       return true
@@ -92,11 +49,6 @@ export class LocalSecretService implements SecretService {
     return value !== undefined && value !== null && value !== ''
   }
 
-  /**
-   * Deletes a secret from local storage.
-   * @param key - The key of the secret to delete.
-   * @returns A promise that resolves when the secret is deleted.
-   */
   public async deleteSecret(key: string): Promise<void> {
     this.localSecrets.delete(key)
   }

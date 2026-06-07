@@ -274,7 +274,7 @@ export const createSingletonServices = pikkuAddonServices(async (
   config,
   { secrets, variables }
 ) => {
-  const creds = await secrets.getSecretJSON<${pascalName}Secrets>('${screamingName}_CREDENTIALS')
+  const creds = await secrets.getSecret<${pascalName}Secrets>('${screamingName}_CREDENTIALS')
   const ${camelName} = new ${pascalName}Service(creds, variables)
 
   return { ${camelName} }
@@ -794,7 +794,7 @@ import { createSingletonServices } from './services.js'
 test('${name} addon', async () => {
   const secrets = new LocalSecretService()
   // Set up secrets for the service
-  // await secrets.setSecretJSON('${screamingName}_CREDENTIALS', { ... })
+  // await secrets.setSecret('${screamingName}_CREDENTIALS', { ... })
 
   const singletonServices = await createSingletonServices({}, { secrets })
   const rpc = rpcService.getContextRPCService(singletonServices as any, {})

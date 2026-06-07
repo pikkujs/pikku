@@ -14,9 +14,8 @@ function createMockSecretService(
 ): SecretService & { getStoredSecrets: () => Map<string, unknown> } {
   const secrets = new Map<string, unknown>(Object.entries(initialSecrets))
   return {
-    getSecret: async (key: string) => secrets.get(key) as string,
-    getSecretJSON: async <T>(key: string) => secrets.get(key) as T,
-    setSecretJSON: async (key: string, value: unknown) => {
+    getSecret: async <T = string>(key: string) => secrets.get(key) as T,
+    setSecret: async (key: string, value: unknown) => {
       secrets.set(key, value)
     },
     deleteSecret: async (_key: string) => {

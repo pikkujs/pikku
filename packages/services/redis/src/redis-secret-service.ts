@@ -56,17 +56,12 @@ export class RedisSecretService implements SecretService {
     throw new Error(`No KEK available for key_version ${version}`)
   }
 
-  async getSecret(key: string): Promise<string> {
+  async getSecret<T = string>(key: string): Promise<T> {
     const data = await this.redis.hgetall(this.secretKey(key))
     if (!data.ciphertext) throw new Error('Requested secret not found')
 
     const kek = this.getKEK(Number(data.key_version))
-    return envelopeDecrypt<string>(kek, data.ciphertext!, data.wrapped_dek!)
-  }
-
-  async getSecretJSON<R = {}>(key: string): Promise<R> {
-    const raw = await this.getSecret(key)
-    return JSON.parse(raw) as R
+    return envelopeDecrypt<T>(kek, data.ciphertext!, data.wrapped_dek!)
   }
 
   async hasSecret(key: string): Promise<boolean> {
@@ -74,12 +69,8 @@ export class RedisSecretService implements SecretService {
     return exists === 1
   }
 
-  async setSecretJSON(key: string, value: unknown): Promise<void> {
-    const plaintext = JSON.stringify(value)
-    const { ciphertext, wrappedDEK } = await envelopeEncrypt(
-      this.key,
-      plaintext
-    )
+  async setSecret(key: string, value: unknown): Promise<void> {
+    const { ciphertext, wrappedDEK } = await envelopeEncrypt(this.key, value)
 
     await this.redis.hset(this.secretKey(key), {
       ciphertext,

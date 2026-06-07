@@ -36,14 +36,14 @@ describe('TypedVariablesService', () => {
     assert.strictEqual(service.has('DB_URL'), false)
   })
 
-  test('should delegate getJSON to underlying service', () => {
+  test('should delegate get to underlying service', () => {
     const service = createService({ DATA: '{"key":"val"}' })
-    assert.deepStrictEqual(service.getJSON('DATA'), { key: 'val' })
+    assert.deepStrictEqual(service.get('DATA'), { key: 'val' })
   })
 
-  test('should delegate setJSON to underlying service', () => {
+  test('should delegate set to underlying service', () => {
     const service = createService()
-    service.setJSON('DATA', { key: 'val' })
+    service.set('DATA', { key: 'val' })
     assert.strictEqual(service.get('DATA'), '{"key":"val"}')
   })
 

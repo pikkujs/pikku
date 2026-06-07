@@ -5,28 +5,23 @@ export class LocalVariablesService implements VariablesService {
     private variables: Record<string, string | undefined> = process.env
   ) {}
 
-  public getAll():
-    | Promise<Record<string, string | undefined>>
-    | Record<string, string | undefined> {
+  public getAll(): Record<string, string | undefined> {
     return this.variables || {}
   }
 
-  public get(name: string): Promise<string | undefined> | string | undefined {
-    return this.variables[name]
+  public get<T = string>(name: string): T | undefined {
+    const raw = this.variables[name]
+    if (raw === undefined) return undefined
+    try {
+      return JSON.parse(raw) as T
+    } catch {
+      return raw as unknown as T
+    }
   }
 
-  public getJSON<T = unknown>(name: string): T | undefined {
-    const value = this.variables[name]
-    if (value === undefined) return undefined
-    return JSON.parse(value)
-  }
-
-  public set(name: string, value: string): void {
-    this.variables[name] = value
-  }
-
-  public setJSON(name: string, value: unknown): void {
-    this.variables[name] = JSON.stringify(value)
+  public set(name: string, value: unknown): void {
+    this.variables[name] =
+      typeof value === 'string' ? value : JSON.stringify(value)
   }
 
   public has(name: string): boolean {

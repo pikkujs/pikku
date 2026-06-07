@@ -20,20 +20,12 @@ export class TypedVariablesService<
     private variablesMeta: Record<string, VariableMeta>
   ) {}
 
-  get(
-    name: keyof TMap & string
-  ): Promise<string | undefined> | string | undefined
-  get(name: string): Promise<string | undefined> | string | undefined
-  get(name: string): Promise<string | undefined> | string | undefined {
-    return this.variables.get(name)
-  }
-
-  getJSON<K extends keyof TMap & string>(
+  get<K extends keyof TMap & string>(
     name: K
   ): Promise<TMap[K] | undefined> | TMap[K] | undefined
-  getJSON<T = unknown>(name: string): Promise<T | undefined> | T | undefined
-  getJSON(name: string): Promise<unknown> | unknown {
-    return this.variables.getJSON(name)
+  get<T = string>(name: string): Promise<T | undefined> | T | undefined
+  get(name: string): Promise<unknown> | unknown {
+    return this.variables.get(name)
   }
 
   getAll():
@@ -42,12 +34,8 @@ export class TypedVariablesService<
     return this.variables.getAll()
   }
 
-  set(name: string, value: string): Promise<void> | void {
+  set(name: string, value: unknown): Promise<void> | void {
     return this.variables.set(name, value)
-  }
-
-  setJSON(name: string, value: unknown): Promise<void> | void {
-    return this.variables.setJSON(name, value)
   }
 
   has(name: string): Promise<boolean> | boolean {

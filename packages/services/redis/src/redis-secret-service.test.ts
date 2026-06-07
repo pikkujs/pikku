@@ -35,11 +35,11 @@ describe('RedisSecretService', () => {
       keyPrefix: 'app2',
     })
 
-    await s1.setSecretJSON('shared-name', { from: 'app1' })
-    await s2.setSecretJSON('shared-name', { from: 'app2' })
+    await s1.setSecret('shared-name', { from: 'app1' })
+    await s2.setSecret('shared-name', { from: 'app2' })
 
-    const r1 = await s1.getSecretJSON<{ from: string }>('shared-name')
-    const r2 = await s2.getSecretJSON<{ from: string }>('shared-name')
+    const r1 = await s1.getSecret<{ from: string }>('shared-name')
+    const r2 = await s2.getSecret<{ from: string }>('shared-name')
 
     assert.deepEqual(r1, { from: 'app1' })
     assert.deepEqual(r2, { from: 'app2' })

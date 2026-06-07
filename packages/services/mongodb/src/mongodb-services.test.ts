@@ -71,7 +71,7 @@ function registerTests(name: string, getDb: () => Db) {
         auditReads: true,
       })
       await service.init()
-      await service.setSecretJSON('audit-test', 'value')
+      await service.setSecret('audit-test', 'value')
       await service.getSecret('audit-test')
       await service.deleteSecret('audit-test')
 
@@ -94,7 +94,7 @@ function registerTests(name: string, getDb: () => Db) {
         auditReads: false,
       })
       await service.init()
-      await service.setSecretJSON('no-read-audit', 'value')
+      await service.setSecret('no-read-audit', 'value')
       await service.getSecret('no-read-audit')
 
       const logs = await getDb()

@@ -6,10 +6,6 @@ import type { SecretService } from './secret-service.js'
  * Requires gopass to be installed and configured on the system.
  */
 export class GopassSecretService implements SecretService {
-  /**
-   * Creates an instance of GopassSecretService.
-   * @param prefix - Optional prefix for all secret keys (e.g., 'pikku/' will look up 'pikku/mykey' for key 'mykey')
-   */
   constructor(private prefix: string = '') {}
 
   private getFullKey(key: string): string {
@@ -19,39 +15,22 @@ export class GopassSecretService implements SecretService {
     return this.prefix ? `${this.prefix}${key}` : key
   }
 
-  /**
-   * Retrieves a secret by key and parses it as JSON.
-   * @param key - The key of the secret to retrieve.
-   * @returns A promise that resolves to the parsed secret value.
-   * @throws {Error} If the secret is not found or gopass fails.
-   */
-  public async getSecretJSON<R>(key: string): Promise<R> {
-    const value = await this.getSecret(key)
-    return JSON.parse(value)
-  }
-
-  /**
-   * Retrieves a secret by key as a string.
-   * @param key - The key of the secret to retrieve.
-   * @returns A promise that resolves to the secret value.
-   * @throws {Error} If the secret is not found or gopass fails.
-   */
-  public async getSecret(key: string): Promise<string> {
+  public async getSecret<T = string>(key: string): Promise<T> {
     const fullKey = this.getFullKey(key)
     try {
-      return execFileSync('gopass', ['show', '-o', fullKey], {
+      const raw = execFileSync('gopass', ['show', '-o', fullKey], {
         encoding: 'utf8',
       }).trim()
+      try {
+        return JSON.parse(raw) as T
+      } catch {
+        return raw as unknown as T
+      }
     } catch (error: any) {
       throw new Error(`Secret Not Found: ${key}`, { cause: error })
     }
   }
 
-  /**
-   * Checks if a secret exists without throwing.
-   * @param key - The key of the secret to check.
-   * @returns A promise that resolves to true if the secret exists.
-   */
   public async hasSecret(key: string): Promise<boolean> {
     const fullKey = this.getFullKey(key)
     try {
@@ -62,19 +41,13 @@ export class GopassSecretService implements SecretService {
     }
   }
 
-  /**
-   * Stores a JSON value as a secret in gopass.
-   * @param key - The key to store the secret under.
-   * @param value - The JSON value to store.
-   * @returns A promise that resolves when the secret is stored.
-   */
-  public async setSecretJSON(key: string, value: unknown): Promise<void> {
+  public async setSecret(key: string, value: unknown): Promise<void> {
     const fullKey = this.getFullKey(key)
-    const jsonValue = JSON.stringify(value)
+    const encoded = typeof value === 'string' ? value : JSON.stringify(value)
     try {
       execFileSync('gopass', ['insert', '-f', fullKey], {
         encoding: 'utf8',
-        input: jsonValue,
+        input: encoded,
         stdio: ['pipe', 'pipe', 'pipe'],
       })
     } catch (error: any) {
@@ -82,11 +55,6 @@ export class GopassSecretService implements SecretService {
     }
   }
 
-  /**
-   * Deletes a secret from gopass.
-   * @param key - The key of the secret to delete.
-   * @returns A promise that resolves when the secret is deleted.
-   */
   public async deleteSecret(key: string): Promise<void> {
     const fullKey = this.getFullKey(key)
     try {
