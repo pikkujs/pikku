@@ -129,12 +129,12 @@ export const createSingletonServices = pikkuServices(
     ])
     await jwt.init()
 
-    await secrets.setSecretJSON('MOCK_OAUTH_APP', {
+    await secrets.setSecret('MOCK_OAUTH_APP', {
       clientId: 'mock-client-id',
       clientSecret: 'mock-client-secret',
     })
 
-    await secrets.setSecretJSON('SLACK_OAUTH_APP', {
+    await secrets.setSecret('SLACK_OAUTH_APP', {
       clientId: '00512a03116f14d0000000003',
       clientSecret: 'K005p2Yl6t9kDmAppyq0vsKlxcW1Y7I',
     })

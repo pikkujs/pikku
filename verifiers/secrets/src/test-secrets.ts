@@ -30,22 +30,21 @@ void ({
 
 // Inline VariablesService that reads from process.env
 class EnvVariablesService implements VariablesService {
-  get(key: string): string | undefined {
-    return process.env[key]
-  }
-  getJSON<T = unknown>(name: string): T | undefined {
-    const value = process.env[name]
-    if (value === undefined) return undefined
-    return JSON.parse(value)
+  get<T = string>(key: string): T | undefined {
+    const raw = process.env[key]
+    if (raw === undefined) return undefined
+    try {
+      return JSON.parse(raw) as T
+    } catch {
+      return raw as unknown as T
+    }
   }
   getAll(): Record<string, string> {
     return process.env as Record<string, string>
   }
-  set(name: string, value: string): void {
-    process.env[name] = value
-  }
-  setJSON(name: string, value: unknown): void {
-    process.env[name] = JSON.stringify(value)
+  set(name: string, value: unknown): void {
+    process.env[name] =
+      typeof value === 'string' ? value : JSON.stringify(value)
   }
   has(name: string): boolean {
     return process.env[name] !== undefined
@@ -70,10 +69,10 @@ async function testTypedSecretService() {
   const secretService = new LocalSecretService(variablesService)
   const secrets = new TypedSecretService(secretService)
 
-  // Test 1: getSecretJSON() returns correct types
-  console.log('Test 1: Type inference for getSecretJSON()')
+  // Test 1: getSecret() returns correct types
+  console.log('Test 1: Type inference for getSecret()')
 
-  const apiCreds = await secrets.getSecretJSON('EXAMPLE_API_CREDENTIALS')
+  const apiCreds = await secrets.getSecret('EXAMPLE_API_CREDENTIALS')
   console.log(`  EXAMPLE_API_CREDENTIALS.apiKey: ${apiCreds.apiKey}`)
   console.log(`  EXAMPLE_API_CREDENTIALS.apiSecret: ${apiCreds.apiSecret}`)
   console.log(`  EXAMPLE_API_CREDENTIALS.baseUrl: ${apiCreds.baseUrl}`)
@@ -123,15 +122,15 @@ async function testTypedSecretService() {
     throw new Error(`Expected 1 missing secret, got ${missingCreds.length}`)
   }
 
-  // Test 6: setSecretJSON() type enforcement
-  console.log('\nTest 6: setSecretJSON() type enforcement')
-  await secrets.setSecretJSON('EXAMPLE_API_CREDENTIALS', {
+  // Test 6: setSecret() type enforcement
+  console.log('\nTest 6: setSecret() type enforcement')
+  await secrets.setSecret('EXAMPLE_API_CREDENTIALS', {
     apiKey: 'new-key',
     apiSecret: 'new-secret',
     // @ts-expect-error - extra properties should cause type error
     extraProperty: 5,
   })
-  console.log('  setSecretJSON() rejects extra properties at compile time')
+  console.log('  setSecret() rejects extra properties at compile time')
 
   console.log('\n✓ All TypedSecretService tests passed!')
 }
