@@ -802,7 +802,7 @@ export function defineServiceTests(config: ServiceTestConfig): void {
         const service = await factory({ key: kek })
         await service.setSecret('string-secret', 'plain-value')
         const result = await service.getSecret('string-secret')
-        assert.strictEqual(result, '"plain-value"')
+        assert.strictEqual(result, 'plain-value')
       })
 
       test('hasSecret returns true/false', async () => {
