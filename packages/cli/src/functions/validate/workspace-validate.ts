@@ -155,9 +155,7 @@ export async function runWorkspaceValidate(
     }
   }
 
-  const hasConfiguredDevDb = Boolean(
-    (pikkuConfig as { sqliteDb?: unknown } | null)?.sqliteDb
-  )
+  const hasConfiguredDevDb = existsSync(join(root, 'db', 'migrations'))
 
   type RootPkg = {
     workspaces?: unknown

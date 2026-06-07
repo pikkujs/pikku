@@ -21,8 +21,9 @@ export interface ResolvedLocalDb {
 }
 
 /**
- * Resolve a DevDbConfig into absolute paths.
- * - dbFile lives under runtimeDir (default: <rootDir>/.pikku-runtime)
+ * Resolve a sqliteDb path into absolute paths.
+ * - sqliteDb is the file path (relative to rootDir or absolute); if undefined, returns null
+ * - dbFile resolves to the absolute path of the SQLite file
  * - schema/coercion/zod are generated into outDir/db
  * - migrations and seed are authored source under rootDir/db
  */

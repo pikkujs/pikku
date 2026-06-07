@@ -44,7 +44,7 @@ export async function loadUserConfigForDb(
   )
   if (!configFactoryFile) {
     if (hasConventionalDbAssets) {
-      return { sqliteDb: join(config.rootDir, '.pikku-runtime', 'dev.db') }
+      return { sqliteDb: '.pikku-runtime/dev.db' }
     }
     logger.error('createConfig must be defined in your project')
     return null
@@ -58,7 +58,7 @@ export async function loadUserConfigForDb(
       logger.warn(
         `Falling back to default local db config because '${configFactoryFile}' could not be loaded: ${error.message}`
       )
-      return { sqliteDb: join(config.rootDir, '.pikku-runtime', 'dev.db') }
+      return { sqliteDb: '.pikku-runtime/dev.db' }
     }
     throw error
   }
@@ -69,7 +69,7 @@ export async function loadUserConfigForDb(
       logger.warn(
         `Falling back to default local db config because '${configFactoryFile}' does not export createConfig`
       )
-      return { sqliteDb: join(config.rootDir, '.pikku-runtime', 'dev.db') }
+      return { sqliteDb: '.pikku-runtime/dev.db' }
     }
     logger.error(
       `Expected 'createConfig' in '${configFactoryFile}' to be a function`
