@@ -1,5 +1,5 @@
 ---
-"@pikku/cli": minor
+"@pikku/cli": patch
 ---
 
 Flatten `createConfig` dev fields: replace `dev: { db, content }` with top-level `sqliteDb: string` and `content: { contentPath?, uploadUrlPrefix?, assetUrlPrefix?, sizeLimit? }`.
