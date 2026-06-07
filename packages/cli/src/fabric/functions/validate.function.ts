@@ -460,7 +460,7 @@ export async function runValidate(
         'config-missing',
         'packages/functions/src/config.ts not found',
         join(fnDir, 'src', 'config.ts'),
-        'Create src/config.ts: export const createConfig = pikkuConfig(async () => ({ dev: { db: true } }))'
+        "Create src/config.ts: export const createConfig = pikkuConfig(async () => ({ sqliteDb: '.pikku-runtime/dev.db' }))"
       )
     }
   }

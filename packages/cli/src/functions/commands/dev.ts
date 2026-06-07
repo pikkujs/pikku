@@ -190,7 +190,7 @@ export const dev = pikkuSessionlessFunc<
     const userConfig = await userCreateConfig()
 
     const resolvedLocalDb = resolveLocalDb(
-      userConfig.dev?.db ?? true,
+      userConfig.sqliteDb,
       config.rootDir,
       config.outDir,
       config.runtimeDir
@@ -201,14 +201,15 @@ export const dev = pikkuSessionlessFunc<
 
     const resolvedRuntimeDir =
       config.runtimeDir ?? join(config.rootDir, '.pikku-runtime')
-    const localContentConfig: LocalContentConfig | undefined = userConfig.dev
-      ?.content
+    const localContentConfig: LocalContentConfig | undefined = userConfig.content
       ? {
-          localFileUploadPath: join(resolvedRuntimeDir, 'content'),
-          uploadUrlPrefix: '/upload',
-          assetUrlPrefix: '/assets',
+          localFileUploadPath: userConfig.content.contentPath
+            ? resolve(config.rootDir, userConfig.content.contentPath)
+            : join(resolvedRuntimeDir, 'content'),
+          uploadUrlPrefix: userConfig.content.uploadUrlPrefix ?? '/upload',
+          assetUrlPrefix: userConfig.content.assetUrlPrefix ?? '/assets',
           server: `http://${hostname}:${resolvedPort}`,
-          ...(userConfig.dev.content !== true ? userConfig.dev.content : {}),
+          sizeLimit: userConfig.content.sizeLimit,
         }
       : undefined
     const localContent = localContentConfig
