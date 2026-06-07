@@ -4,12 +4,6 @@ import { loadUserModule } from './load-user-project.js'
 
 export interface UserConfigShape {
   sqliteDb?: string
-  content?: {
-    contentPath?: string
-    uploadUrlPrefix?: string
-    assetUrlPrefix?: string
-    sizeLimit?: string
-  }
   [key: string]: unknown
 }
 
