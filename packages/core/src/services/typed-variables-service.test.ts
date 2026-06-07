@@ -44,7 +44,7 @@ describe('TypedVariablesService', () => {
   test('should delegate set to underlying service', () => {
     const service = createService()
     service.set('DATA', { key: 'val' })
-    assert.strictEqual(service.get('DATA'), '{"key":"val"}')
+    assert.deepStrictEqual(service.get('DATA'), { key: 'val' })
   })
 
   test('should get all status for configured variables', async () => {
