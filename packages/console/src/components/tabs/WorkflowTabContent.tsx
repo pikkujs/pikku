@@ -5,9 +5,8 @@ import { WorkflowRunProvider } from '../../context/WorkflowRunContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { WorkflowCanvas } from '../project/WorkflowCanvas'
-import { Center, Loader, Box, Text } from '@mantine/core'
+import { Center, Loader, Text } from '@mantine/core'
 import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
-import styles from '../ui/console.module.css'
 
 export const WorkflowTabContent: React.FC<{ immersiveDetail?: boolean }> = ({
   immersiveDetail = false,
@@ -54,16 +53,12 @@ export const WorkflowTabContent: React.FC<{ immersiveDetail?: boolean }> = ({
         currentGraphHash={(workflow as any).graphHash}
         workflowNodes={(workflow as any).nodes}
       >
-        <Box h="100vh" className={styles.flexColumn}>
-          <Box className={`${styles.flexGrow} ${styles.overflowAuto}`}>
-            <WorkflowCanvas
-              workflow={workflow}
-              items={workflowItems}
-              onItemSelect={(name) => navigateTo('workflows', name)}
-              immersiveDetail={immersiveDetail}
-            />
-          </Box>
-        </Box>
+        <WorkflowCanvas
+          workflow={workflow}
+          items={workflowItems}
+          onItemSelect={(name) => navigateTo('workflows', name)}
+          immersiveDetail={immersiveDetail}
+        />
       </WorkflowRunProvider>
     </PanelProvider>
   )

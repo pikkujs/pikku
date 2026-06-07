@@ -4,7 +4,7 @@ import { Shield } from 'lucide-react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '../components/layout/DetailPageHeader'
+import { ListPageHeader } from '../components/layout/PageLayout'
 import { TableListPage } from '../components/layout/TableListPage'
 import { PikkuBadge } from '../components/ui/PikkuBadge'
 
@@ -111,13 +111,7 @@ export const PermissionsPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={
-          <DetailPageHeader
-            icon={Shield}
-            category="Permissions"
-            docsHref="https://pikku.dev/docs/core-features/permission-guards"
-          />
-        }
+        header={<ListPageHeader title="Permissions" description="Access control guards protecting your functions" />}
         showTabs={false}
         hidePanel={!loading && items.length === 0}
         emptyPanelMessage="Select a permission to view its details"

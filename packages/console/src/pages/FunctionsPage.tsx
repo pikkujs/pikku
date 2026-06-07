@@ -4,6 +4,7 @@ import { FunctionSquare } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { ListPageHeader } from '../components/layout/PageLayout'
 import { TableListPage } from '../components/layout/TableListPage'
 import { funcWrapperDefs } from '../components/ui/badge-defs'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
@@ -280,6 +281,7 @@ export const FunctionsPage: React.FC<{
   return (
     <PanelProvider>
       <ResizablePanelLayout
+        header={<ListPageHeader title="Functions" description="All registered pikku functions across your project" />}
         emptyPanelMessage="Select a function to view details"
         hidePanel={isLoading || !functions || functions.length === 0}
       >

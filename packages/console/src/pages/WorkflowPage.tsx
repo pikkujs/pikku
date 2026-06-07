@@ -3,10 +3,11 @@ import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { WorkflowsList } from '../components/project/WorkflowsList'
 import type { WorkflowExtraColumn } from '../components/project/WorkflowsList'
 import { WorkflowTabContent } from '../components/tabs/WorkflowTabContent'
-import { PanelProvider } from '../context/PanelContext'
-import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { Center, Loader } from '@mantine/core'
 import { useAIWorkflows } from '../hooks/useWorkflowRuns'
+import { PanelProvider } from '../context/PanelContext'
+import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { ListPageHeader } from '../components/layout/PageLayout'
 import {
   OSSConsoleNavigator,
   ConsoleNavigatorCtx,
@@ -34,26 +35,11 @@ const WorkflowPageInner: React.FC<{
     )
   }
 
-  const workflows = meta.workflows || {}
-  const hasWorkflows =
-    Object.keys(workflows).length > 0 || (aiWorkflows && aiWorkflows.length > 0)
-
-  if (!hasWorkflows) {
-    return (
-      <WorkflowsList
-        workflows={workflows}
-        aiWorkflows={aiWorkflows as any}
-        extraColumns={extraColumns}
-        headerRight={headerRight}
-      />
-    )
-  }
-
   return (
     <PanelProvider>
-      <ResizablePanelLayout hidePanel>
+      <ResizablePanelLayout hidePanel header={<ListPageHeader title="Workflows" description="Visual workflow definitions and run history" />}>
         <WorkflowsList
-          workflows={workflows}
+          workflows={meta.workflows || {}}
           aiWorkflows={aiWorkflows as any}
           extraColumns={extraColumns}
           headerRight={headerRight}
@@ -84,8 +70,6 @@ export const WorkflowsPage: React.FC<{
       />
     </Suspense>
   )
-  // Fabric (or any other host) provides its own navigator above this component.
-  // Only wrap with the OSS default when none is present.
   if (existingNavigator) return inner
   return <OSSConsoleNavigator>{inner}</OSSConsoleNavigator>
 }

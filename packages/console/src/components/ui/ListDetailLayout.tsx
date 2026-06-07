@@ -20,29 +20,42 @@ export const ListDetailLayout: React.FC<ListDetailLayoutProps> = ({
   collapsible = false,
   listWidth,
   height,
-}) => (
-  <Box
-    className={classes.listDetailContainer}
-    style={height ? { height } : undefined}
-  >
+}) => {
+  const showDetail = collapsible ? hasSelection : hasSelection || !!detail
+
+  return (
     <Box
-      className={listWidth ? classes.listPaneFixed : classes.listPaneFlex}
-      style={
-        listWidth
-          ? {
-              width: listWidth,
-              minWidth:
-                typeof listWidth === 'number'
-                  ? Math.round(listWidth * 0.78)
-                  : undefined,
-            }
-          : undefined
-      }
+      className={classes.listDetailContainer}
+      style={{
+        ...(height ? { height } : undefined),
+        gap: 'var(--mantine-spacing-md)',
+      }}
     >
-      {list}
-    </Box>
-    {(!collapsible || hasSelection) && (
-      <Box className={classes.detailPane}>
+      <Box
+        className={`${listWidth ? classes.listPaneFixed : classes.listPaneFlex} ${classes.listSurfaceCard}`}
+        style={
+          listWidth
+            ? {
+                width: listWidth,
+                minWidth:
+                  typeof listWidth === 'number'
+                    ? Math.round(listWidth * 0.78)
+                    : undefined,
+              }
+            : undefined
+        }
+      >
+        {list}
+      </Box>
+      <Box
+        className={`${classes.detailDrawerPane} ${classes.listSurfaceCard}`}
+        style={{
+          width: showDetail ? 'min(520px, 42vw)' : 0,
+          minWidth: showDetail ? 'min(420px, 32vw)' : 0,
+          opacity: showDetail ? 1 : 0,
+        }}
+        aria-hidden={!showDetail}
+      >
         {hasSelection ? (
           detail
         ) : (
@@ -53,6 +66,6 @@ export const ListDetailLayout: React.FC<ListDetailLayoutProps> = ({
           </Box>
         )}
       </Box>
-    )}
-  </Box>
-)
+    </Box>
+  )
+}

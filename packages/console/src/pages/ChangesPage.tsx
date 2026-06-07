@@ -11,17 +11,20 @@ import {
   TextInput,
   Button,
   ScrollArea,
-  Divider,
   Code,
 } from '@mantine/core'
-import { GitBranch, GitCompare, ChevronRight, ChevronDown } from 'lucide-react'
+import { GitCompare, ChevronRight, ChevronDown } from 'lucide-react'
 import { useSearchParams } from '../router'
+import { PanelProvider } from '../context/PanelContext'
+import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { ListPageHeader } from '../components/layout/PageLayout'
 import {
   useStateDiff,
   type DiffEntry,
   type StateDiff,
 } from '../hooks/useStateDiff'
 import { httpMethodDefs, funcWrapperDefs } from '../components/ui/badge-defs'
+import classes from '../components/ui/console.module.css'
 
 const CATEGORY_LABELS: Record<string, string> = {
   functions: 'Functions',
@@ -98,7 +101,6 @@ const PrimaryRow: React.FC<{
   entry: DiffEntry
   category: string
 }> = ({ entry, category }) => {
-  // Display priority: ours if present (added/modified/unchanged), otherwise base (removed)
   const data = (entry.ours ?? entry.base ?? {}) as Record<string, unknown>
 
   if (category === 'http') {
@@ -111,7 +113,7 @@ const PrimaryRow: React.FC<{
         <HttpMethodBadge method={method} />
         <Text
           size="sm"
-          c="white"
+          c="var(--app-meta-value)"
           ff="monospace"
           style={{ flex: 1, minWidth: 0 }}
           truncate
@@ -149,7 +151,7 @@ const PrimaryRow: React.FC<{
       <Group gap="sm" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
         <Text
           size="sm"
-          c="white"
+          c="var(--app-meta-value)"
           ff="monospace"
           fw={500}
           style={{ minWidth: 0 }}
@@ -178,7 +180,6 @@ const PrimaryRow: React.FC<{
     )
   }
 
-  // Generic fallback: id + best-effort secondary info
   const route = data.route ? String(data.route) : null
   const queueName = data.queueName ? String(data.queueName) : null
   const cronValue = data.cron ?? data.schedule
@@ -187,7 +188,7 @@ const PrimaryRow: React.FC<{
     <Group gap="sm" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
       <Text
         size="sm"
-        c="white"
+        c="var(--app-meta-value)"
         ff="monospace"
         fw={500}
         style={{ minWidth: 0 }}
@@ -226,16 +227,16 @@ const FieldDiff: React.FC<{
     <Box
       style={{
         borderRadius: 4,
-        border: '1px solid var(--app-border)',
-        background: 'var(--app-panel-bg)',
+        border: '1px solid var(--app-row-border)',
+        background: 'var(--app-surface, var(--mantine-color-body))',
         overflow: 'hidden',
       }}
     >
       <Group
         gap={0}
         style={{
-          borderBottom: '1px solid var(--app-border)',
-          background: 'var(--app-panel-bg-raised)',
+          borderBottom: '1px solid var(--app-row-border)',
+          background: 'var(--mantine-color-default-hover)',
         }}
       >
         <Text
@@ -255,7 +256,7 @@ const FieldDiff: React.FC<{
           style={{
             flex: 1,
             padding: '6px 12px',
-            borderLeft: '1px solid var(--app-border)',
+            borderLeft: '1px solid var(--app-row-border)',
           }}
         >
           base
@@ -268,7 +269,7 @@ const FieldDiff: React.FC<{
           style={{
             flex: 1,
             padding: '6px 12px',
-            borderLeft: '1px solid var(--app-border)',
+            borderLeft: '1px solid var(--app-row-border)',
           }}
         >
           ours
@@ -284,8 +285,8 @@ const FieldDiff: React.FC<{
             gap={0}
             wrap="nowrap"
             style={{
-              borderBottom: '1px solid var(--app-border)',
-              background: equal ? 'transparent' : 'var(--app-panel-bg-raised)',
+              borderBottom: '1px solid var(--app-row-border)',
+              background: equal ? 'transparent' : 'var(--mantine-color-default-hover)',
             }}
           >
             <Text
@@ -300,7 +301,7 @@ const FieldDiff: React.FC<{
               style={{
                 flex: 1,
                 padding: '6px 12px',
-                borderLeft: '1px solid var(--app-border)',
+                borderLeft: '1px solid var(--app-row-border)',
                 background:
                   !equal && b !== undefined
                     ? 'rgba(255, 80, 80, 0.06)'
@@ -311,7 +312,7 @@ const FieldDiff: React.FC<{
                 style={{
                   background: 'transparent',
                   fontSize: 11,
-                  color: b === undefined ? 'var(--app-text-faint)' : undefined,
+                  color: b === undefined ? 'var(--mantine-color-dimmed)' : undefined,
                 }}
               >
                 {b === undefined ? '—' : JSON.stringify(b)}
@@ -321,7 +322,7 @@ const FieldDiff: React.FC<{
               style={{
                 flex: 1,
                 padding: '6px 12px',
-                borderLeft: '1px solid var(--app-border)',
+                borderLeft: '1px solid var(--app-row-border)',
                 background:
                   !equal && o !== undefined
                     ? 'rgba(80, 200, 120, 0.06)'
@@ -332,7 +333,7 @@ const FieldDiff: React.FC<{
                 style={{
                   background: 'transparent',
                   fontSize: 11,
-                  color: o === undefined ? 'var(--app-text-faint)' : undefined,
+                  color: o === undefined ? 'var(--mantine-color-dimmed)' : undefined,
                 }}
               >
                 {o === undefined ? '—' : JSON.stringify(o)}
@@ -353,7 +354,7 @@ const EntryCard: React.FC<{ entry: DiffEntry; category: string }> = ({
   return (
     <Box
       style={{
-        borderBottom: '1px solid var(--app-border)',
+        borderBottom: '1px solid var(--app-row-border)',
       }}
     >
       <Group
@@ -419,8 +420,8 @@ const DiffSummaryBar: React.FC<{ diff: StateDiff }> = ({ diff }) => {
       px="md"
       py={6}
       style={{
-        borderBottom: '1px solid var(--app-border)',
-        background: 'var(--app-panel-bg)',
+        borderBottom: '1px solid var(--app-row-border)',
+        background: 'var(--app-surface, var(--mantine-color-body))',
       }}
     >
       <Text size="sm" c="dimmed">
@@ -587,81 +588,65 @@ export const ChangesPage: React.FC = () => {
     }
   }
 
+  const toolbar = (
+    <Stack gap="md">
+      <ListPageHeader title="Changes" description="Diff your current project state against a base .pikku snapshot" />
+      <Group gap="sm" align="flex-end">
+      <TextInput
+        label="Base .pikku path"
+        description="Path to a .pikku/ directory to diff against (e.g. a worktree at main)"
+        placeholder="../project-main/packages/functions/.pikku"
+        value={draftPath}
+        onChange={(e) => setDraftPath(e.currentTarget.value)}
+        style={{ flex: 1 }}
+      />
+      <Button
+        leftSection={<GitCompare size={14} />}
+        onClick={apply}
+        disabled={draftPath.trim() === (activePath ?? '')}
+      >
+        Compare
+      </Button>
+    </Group>
+    </Stack>
+  )
+
   return (
-    <Box style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      <Group
-        px="md"
-        h={48}
-        style={{ borderBottom: '1px solid var(--app-border)' }}
-      >
-        <GitBranch size={16} />
-        <Text size="sm" fw={500} c="var(--app-text)">
-          Changes
-        </Text>
-        <Text size="sm" c="dimmed">
-          ours vs base
-        </Text>
-      </Group>
-      <Group
-        px="md"
-        py="sm"
-        gap="sm"
-        align="flex-end"
-        style={{ flexShrink: 0 }}
-      >
-        <TextInput
-          label="Base .pikku path"
-          description="Path to a .pikku/ directory to diff against (e.g. a worktree at main)"
-          placeholder="../project-main/packages/functions/.pikku"
-          value={draftPath}
-          onChange={(e) => setDraftPath(e.currentTarget.value)}
-          style={{ flex: 1 }}
-        />
-        <Button
-          leftSection={<GitCompare size={14} />}
-          onClick={apply}
-          disabled={draftPath.trim() === (activePath ?? '')}
+    <PanelProvider>
+      <ResizablePanelLayout hidePanel header={toolbar}>
+        <Box
+          className={classes.listSurfaceCard}
+          style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
         >
-          Compare
-        </Button>
-      </Group>
-      <Divider />
-      <Box
-        style={{
-          flex: 1,
-          minHeight: 0,
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        {!activePath && (
-          <Center p="xl">
-            <Text size="sm" c="dimmed">
-              Set a base path above to see the diff.
-            </Text>
-          </Center>
-        )}
-        {activePath && isLoading && (
-          <Center p="xl">
-            <Loader />
-          </Center>
-        )}
-        {activePath && error && (
-          <Center p="xl">
-            <Text size="sm" c="red">
-              {(error as Error).message}
-            </Text>
-          </Center>
-        )}
-        {activePath && diff && !diff.baseExists && (
-          <Center p="xl">
-            <Text size="sm" c="red">
-              Base path does not exist: <Code>{diff.basePath}</Code>
-            </Text>
-          </Center>
-        )}
-        {activePath && diff && diff.baseExists && <DiffView diff={diff} />}
-      </Box>
-    </Box>
+          {!activePath && (
+            <Center p="xl">
+              <Text size="sm" c="dimmed">
+                Set a base path above to see the diff.
+              </Text>
+            </Center>
+          )}
+          {activePath && isLoading && (
+            <Center p="xl">
+              <Loader />
+            </Center>
+          )}
+          {activePath && error && (
+            <Center p="xl">
+              <Text size="sm" c="red">
+                {(error as Error).message}
+              </Text>
+            </Center>
+          )}
+          {activePath && diff && !diff.baseExists && (
+            <Center p="xl">
+              <Text size="sm" c="red">
+                Base path does not exist: <Code>{diff.basePath}</Code>
+              </Text>
+            </Center>
+          )}
+          {activePath && diff && diff.baseExists && <DiffView diff={diff} />}
+        </Box>
+      </ResizablePanelLayout>
+    </PanelProvider>
   )
 }

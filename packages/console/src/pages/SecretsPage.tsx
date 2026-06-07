@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { ListPageHeader } from '../components/layout/PageLayout'
 import { ProjectSecrets } from '../components/project/ProjectSecrets'
 
 const SecretsPageContent: React.FC = () => {
@@ -22,7 +23,7 @@ const SecretsPageContent: React.FC = () => {
   }, [meta.secretsMeta])
 
   return (
-    <ResizablePanelLayout>
+    <ResizablePanelLayout header={<ListPageHeader title="Secrets" description="Encrypted secrets managed by pikku" />}>
       <ProjectSecrets secrets={secrets} loading={loading} />
     </ResizablePanelLayout>
   )

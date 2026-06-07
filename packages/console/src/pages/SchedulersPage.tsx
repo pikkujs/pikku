@@ -4,7 +4,7 @@ import { Clock } from 'lucide-react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '../components/layout/DetailPageHeader'
+import { ListPageHeader } from '../components/layout/PageLayout'
 import { TableListPage } from '../components/layout/TableListPage'
 import { PikkuBadge } from '../components/ui/PikkuBadge'
 
@@ -92,13 +92,7 @@ export const SchedulersPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={
-          <DetailPageHeader
-            icon={Clock}
-            category="Schedulers"
-            docsHref="https://pikku.dev/docs/wiring/scheduled-tasks"
-          />
-        }
+        header={<ListPageHeader title="Schedulers" description="Cron and interval tasks that run on a schedule" />}
         showTabs={false}
         hidePanel={!loading && items.length === 0}
         emptyPanelMessage="Select a scheduler to view its details"

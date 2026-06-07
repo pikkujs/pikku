@@ -1,12 +1,13 @@
-import React, { useMemo, useEffect } from 'react'
-import { useSearchParams, useNavigate } from '../router'
+import React, { useMemo } from 'react'
+import { useNavigate } from '../router'
 import { Text, Center, Loader } from '@mantine/core'
 import { Bot } from 'lucide-react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
-import { PanelProvider, usePanelContext } from '../context/PanelContext'
-import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { TableListPage } from '../components/layout/TableListPage'
 import { PikkuBadge } from '../components/ui/PikkuBadge'
+import { PanelProvider } from '../context/PanelContext'
+import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { ListPageHeader } from '../components/layout/PageLayout'
 
 export interface AgentExtraColumn {
   label: string
@@ -22,7 +23,7 @@ interface AgentItem {
   data: any
 }
 
-const AgentsList: React.FC<{
+export const AgentsPage: React.FC<{
   extraColumns?: AgentExtraColumn[]
   headerRight?: React.ReactNode
 }> = ({ extraColumns, headerRight }) => {
@@ -95,67 +96,29 @@ const AgentsList: React.FC<{
   )
 
   return (
-    <TableListPage
-      title="Agents"
-      icon={Bot}
-      docsHref="https://pikku.dev/docs/wiring/ai-agents"
-      data={items}
-      columns={columns}
-      getKey={(item) => item.name}
-      onRowClick={(item) =>
-        navigate(`/agents/playground?id=${encodeURIComponent(item.name)}`)
-      }
-      searchPlaceholder="Search agents..."
-      searchFilter={(item, q) =>
-        item.name.toLowerCase().includes(q) ||
-        item.model?.toLowerCase().includes(q) ||
-        item.data?.summary?.toLowerCase().includes(q) ||
-        false
-      }
-      emptyMessage="No agents found."
-      loading={loading}
-      headerRight={headerRight ?? null}
-    />
-  )
-}
-
-const AgentDetailView: React.FC<{ agentId: string }> = ({ agentId }) => {
-  const { meta } = usePikkuMeta()
-  const { openAgent } = usePanelContext()
-
-  useEffect(() => {
-    const agentData = meta.agentsMeta?.[agentId]
-    if (agentData) {
-      openAgent(agentId, agentData)
-    }
-  }, [agentId, meta.agentsMeta, openAgent])
-
-  return <div />
-}
-
-export const AgentsPage: React.FC<{
-  extraColumns?: AgentExtraColumn[]
-  headerRight?: React.ReactNode
-}> = ({ extraColumns, headerRight }) => {
-  const [searchParams] = useSearchParams()
-  const agentId = searchParams.get('id')
-  const { meta, loading } = usePikkuMeta()
-
-  const hasAgents =
-    !loading && meta.agentsMeta && Object.keys(meta.agentsMeta).length > 0
-
-  if (!agentId && !hasAgents) {
-    return <AgentsList extraColumns={extraColumns} headerRight={headerRight} />
-  }
-
-  return (
     <PanelProvider>
-      <ResizablePanelLayout hidePanel={!agentId}>
-        {agentId ? (
-          <AgentDetailView agentId={agentId} />
-        ) : (
-          <AgentsList extraColumns={extraColumns} headerRight={headerRight} />
-        )}
+      <ResizablePanelLayout hidePanel header={<ListPageHeader title="Agents" description="AI agents and their configurations" />}>
+        <TableListPage
+          title="Agents"
+          icon={Bot}
+          docsHref="https://pikku.dev/docs/wiring/ai-agents"
+          data={items}
+          columns={columns}
+          getKey={(item) => item.name}
+          onRowClick={(item) =>
+            navigate(`/agents/playground?id=${encodeURIComponent(item.name)}`)
+          }
+          searchPlaceholder="Search agents..."
+          searchFilter={(item, q) =>
+            item.name.toLowerCase().includes(q) ||
+            item.model?.toLowerCase().includes(q) ||
+            item.data?.summary?.toLowerCase().includes(q) ||
+            false
+          }
+          emptyMessage="No agents found."
+          loading={loading}
+          headerRight={headerRight ?? null}
+        />
       </ResizablePanelLayout>
     </PanelProvider>
   )

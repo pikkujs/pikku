@@ -1,14 +1,13 @@
 import React, { Suspense } from 'react'
-import { Center, Loader, Box } from '@mantine/core'
-import { Globe } from 'lucide-react'
+import { Center, Loader, Box, Stack, SegmentedControl } from '@mantine/core'
 import { useSearchParams } from '../router'
 import { PanelProvider } from '../context/PanelContext'
-import { TabbedPageHeader } from '../components/layout/TabbedPageHeader'
+import { ListPageHeader } from '../components/layout/PageLayout'
 import { HttpTab } from '../components/tabs/HttpTab'
 import { ChannelsTab } from '../components/tabs/ChannelsTab'
 import { McpTab } from '../components/tabs/McpTab'
 import { CliTab } from '../components/tabs/CliTab'
-import styles from '../components/ui/console.module.css'
+import { PageContainer } from '../components/layout/PageLayout'
 
 const TABS = [
   { value: 'http', label: 'HTTP' },
@@ -40,19 +39,19 @@ const ApisPageInner: React.FC = () => {
 
   return (
     <PanelProvider>
-      <Box className={styles.flexColumn} style={{ height: '100vh' }}>
-        <TabbedPageHeader
-          icon={Globe}
-          category="APIs"
-          docsHref="https://pikku.dev/docs/wiring/http"
-          tabs={TABS}
-          activeTab={tab}
-          onTabChange={handleTabChange}
-        />
-        <Box className={styles.flexGrow} style={{ minHeight: 0 }}>
-          {renderTab()}
-        </Box>
-      </Box>
+      <PageContainer
+        fullWidth
+        contentGap="md"
+        style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}
+        header={
+          <Stack gap="md">
+            <ListPageHeader title="Wires" description="Browse HTTP routes, channels, MCP servers, and CLI surfaces" />
+            <SegmentedControl size="xs" value={tab} onChange={handleTabChange} data={TABS} />
+          </Stack>
+        }
+      >
+        <Box style={{ flex: 1, minHeight: 0 }}>{renderTab()}</Box>
+      </PageContainer>
     </PanelProvider>
   )
 }

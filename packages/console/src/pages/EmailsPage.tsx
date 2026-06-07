@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Allotment } from 'allotment'
 import type { RJSFSchema } from '@rjsf/utils'
 import {
   Alert,
@@ -10,6 +9,8 @@ import {
   Divider,
   Group,
   Loader,
+  Paper,
+  Popover,
   Select,
   SegmentedControl,
   SimpleGrid,
@@ -17,14 +18,16 @@ import {
   Text,
   TextInput,
   UnstyledButton,
+  ScrollArea,
 } from '@mantine/core'
-import { AlertTriangle, Mail, Monitor, Search, Smartphone } from 'lucide-react'
+import { AlertTriangle, Mail, Monitor, Search, Smartphone, ChevronDown, Check } from 'lucide-react'
 import { useSearchParams } from '../router'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { SchemaForm } from '../components/ui/SchemaForm'
 import { useRenderEmailPreview } from '../hooks/useWirings'
-import { EmptyState } from '../components/ui/EmptyState'
-import { DetailPageHeader } from '../components/layout/DetailPageHeader'
+import { PanelProvider } from '../context/PanelContext'
+import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { ListPageHeader } from '../components/layout/PageLayout'
 import classes from '../components/ui/console.module.css'
 
 type EmailPreviewValue =
@@ -75,100 +78,65 @@ const EmailsOverview: React.FC<{
   }, [query, templateNames, templates])
 
   return (
-    <Box className={classes.flexColumn} style={{ height: '100vh' }}>
-      <DetailPageHeader
-        icon={Mail}
-        category="Emails"
-        docsHref={EMAIL_DOCS_HREF}
-      />
-
-      <Box
-        px="md"
-        py="sm"
-        style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}
-      >
-        <Text size="sm" c="dimmed">
-          Browse generated email templates, inspect locale coverage, and open a
-          template to render desktop and mobile previews.
-        </Text>
-      </Box>
-
-      <Box
-        px="md"
-        py="sm"
-        style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}
-      >
-        <TextInput
-          placeholder="Search email templates..."
-          leftSection={<Search size={16} />}
-          value={query}
-          onChange={(event) => setQuery(event.currentTarget.value)}
-        />
-      </Box>
-
-      <Box className={classes.flexGrow} style={{ minHeight: 0 }}>
-        <Box className={classes.overflowAuto} p="md" h="100%">
-          {filteredNames.length === 0 ? (
-            <EmptyState message="No email templates match the current search." />
-          ) : (
-            <SimpleGrid cols={{ base: 1, md: 2, xl: 3 }} spacing="md">
-              {filteredNames.map((templateName) => {
-                const template = templates[templateName]
-                const localeCount = Object.keys(template.locales).length
-                return (
-                  <UnstyledButton
-                    key={templateName}
-                    onClick={() => onSelect(templateName)}
-                    style={{
-                      border: '1px solid var(--mantine-color-default-border)',
-                      borderRadius: 8,
-                      padding: 16,
-                      background: 'var(--mantine-color-body)',
-                      textAlign: 'start',
-                    }}
-                  >
-                    <Stack gap="sm">
-                      <Group
-                        justify="space-between"
-                        align="flex-start"
-                        wrap="nowrap"
-                      >
-                        <Stack gap={4} style={{ minWidth: 0 }}>
-                          <Text ff="monospace" fw={600} truncate>
-                            {templateName}
-                          </Text>
-                          <Text size="sm" c="dimmed">
-                            {template.variables.length} variable
-                            {template.variables.length === 1 ? '' : 's'}
-                          </Text>
-                        </Stack>
-                        <Badge variant="light">{localeCount} locales</Badge>
-                      </Group>
-
-                      <Group gap={6}>
-                        {Object.keys(template.locales)
-                          .slice(0, 3)
-                          .map((locale) => (
-                            <Badge key={locale} variant="outline" color="gray">
-                              {locale}
-                            </Badge>
+    <PanelProvider>
+      <ResizablePanelLayout hidePanel header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" />}>
+        <Box className={classes.listSurfaceCard} style={{ display: 'flex', flexDirection: 'column' }}>
+          <Box px="md" py="sm" style={{ borderBottom: '1px solid var(--mantine-color-default-border)', flexShrink: 0 }}>
+            <TextInput
+              placeholder="Search email templates..."
+              leftSection={<Search size={16} />}
+              value={query}
+              onChange={(event) => setQuery(event.currentTarget.value)}
+            />
+          </Box>
+          <Box p="md" style={{ flex: 1, overflow: 'auto' }}>
+            {filteredNames.length === 0 ? (
+              <Center py="xl">
+                <Text size="sm" c="dimmed">No email templates match the current search.</Text>
+              </Center>
+            ) : (
+              <SimpleGrid cols={{ base: 1, md: 2, xl: 3 }} spacing="md">
+                {filteredNames.map((templateName) => {
+                  const template = templates[templateName]
+                  const localeCount = Object.keys(template.locales).length
+                  return (
+                    <UnstyledButton
+                      key={templateName}
+                      onClick={() => onSelect(templateName)}
+                      style={{
+                        border: '1px solid var(--app-row-border)',
+                        borderRadius: 8,
+                        padding: 16,
+                        background: 'var(--app-surface, var(--mantine-color-body))',
+                        textAlign: 'start',
+                      }}
+                    >
+                      <Stack gap="sm">
+                        <Group justify="space-between" align="flex-start" wrap="nowrap">
+                          <Stack gap={4} style={{ minWidth: 0 }}>
+                            <Text ff="monospace" fw={600} truncate>{templateName}</Text>
+                            <Text size="sm" c="dimmed">
+                              {template.variables.length} variable{template.variables.length === 1 ? '' : 's'}
+                            </Text>
+                          </Stack>
+                          <Badge variant="light">{localeCount} locales</Badge>
+                        </Group>
+                        <Group gap={6}>
+                          {Object.keys(template.locales).slice(0, 3).map((locale) => (
+                            <Badge key={locale} variant="outline" color="gray">{locale}</Badge>
                           ))}
-                        {localeCount > 3 ? (
-                          <Badge variant="outline" color="gray">
-                            +{localeCount - 3}
-                          </Badge>
-                        ) : null}
-                      </Group>
-
-                    </Stack>
-                  </UnstyledButton>
-                )
-              })}
-            </SimpleGrid>
-          )}
+                          {localeCount > 3 ? <Badge variant="outline" color="gray">+{localeCount - 3}</Badge> : null}
+                        </Group>
+                      </Stack>
+                    </UnstyledButton>
+                  )
+                })}
+              </SimpleGrid>
+            )}
+          </Box>
         </Box>
-      </Box>
-    </Box>
+      </ResizablePanelLayout>
+    </PanelProvider>
   )
 }
 
@@ -245,19 +213,31 @@ export const EmailsPage: React.FC = () => {
     [selectedMeta]
   )
 
-  if (loading) {
+  if (loading || templateNames.length === 0) {
     return (
-      <Center h="100vh">
-        <Loader />
-      </Center>
-    )
-  }
-
-  if (templateNames.length === 0) {
-    return (
-      <Center h="100vh" px="xl">
-        <EmptyState message="No email templates found. Add an `emailTemplatesDir` and run `pikku emails generate`." />
-      </Center>
+      <PanelProvider>
+        <ResizablePanelLayout hidePanel header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" />}>
+          <Center h="100%">
+            {loading ? (
+              <Loader />
+            ) : (
+              <Paper withBorder p="xl" radius="md" style={{ maxWidth: 480, textAlign: 'center' }}>
+                <Stack gap="xs" align="center">
+                  <Mail size={28} style={{ opacity: 0.4 }} />
+                  <Text fw={500}>No email templates found</Text>
+                  <Text size="sm" c="dimmed">
+                    Add an email templates directory and run{' '}
+                    <Text component="span" ff="monospace" size="sm" c="dimmed">
+                      pikku emails generate
+                    </Text>{' '}
+                    to populate previews here.
+                  </Text>
+                </Stack>
+              </Paper>
+            )}
+          </Center>
+        </ResizablePanelLayout>
+      </PanelProvider>
     )
   }
 
@@ -279,240 +259,201 @@ export const EmailsPage: React.FC = () => {
     )
   }
 
+  const [selectorOpen, setSelectorOpen] = useState(false)
+  const [selectorSearch, setSelectorSearch] = useState('')
+
+  const filteredTemplateItems = useMemo(() => {
+    if (!selectorSearch) return templateItems
+    const q = selectorSearch.toLowerCase()
+    return templateItems.filter(
+      (i) => i.name.toLowerCase().includes(q) || i.description?.toLowerCase().includes(q)
+    )
+  }, [templateItems, selectorSearch])
+
+  const handleTemplateSelect = (templateName: string) => {
+    setSelectorOpen(false)
+    setSelectorSearch('')
+    setPreviewInput({})
+    setSearchParams({
+      template: templateName,
+      locale: Object.keys(templates[templateName].locales).sort((a, b) => a.localeCompare(b))[0] ?? 'en',
+    })
+  }
+
   return (
-    <Box className={classes.flexColumn} style={{ height: '100vh' }}>
-      <DetailPageHeader
-        icon={Mail}
-        category="Emails"
-        docsHref={EMAIL_DOCS_HREF}
-        categoryPath="/emails"
-        currentItem={selectedTemplate}
-        items={templateItems}
-        onItemSelect={(templateName) => {
-          setPreviewInput({})
-          setSearchParams({
-            template: templateName,
-            locale:
-              Object.keys(templates[templateName].locales)
-                .sort((a, b) => a.localeCompare(b))[0] ?? 'en',
-          })
-        }}
-        rightSection={
-          <Group gap="sm" wrap="nowrap">
-            <Select
-              data={localeOptions}
-              value={selectedLocale}
-              onChange={(value) => {
-                if (!value) return
-                setPreviewInput({})
-                setSearchParams({
-                  template: selectedTemplate,
-                  locale: value,
-                })
-              }}
-              allowDeselect={false}
-              size="xs"
-              w={96}
-            />
-            <SegmentedControl
-              value={previewMode}
-              onChange={(value) =>
-                setPreviewMode(value as 'desktop' | 'mobile')
-              }
-              size="xs"
-              data={[
-                {
-                  label: (
-                    <Group gap={6} wrap="nowrap">
-                      <Monitor size={14} />
-                      <span>Desktop</span>
-                    </Group>
-                  ),
-                  value: 'desktop',
-                },
-                {
-                  label: (
-                    <Group gap={6} wrap="nowrap">
-                      <Smartphone size={14} />
-                      <span>Mobile</span>
-                    </Group>
-                  ),
-                  value: 'mobile',
-                },
-              ]}
-            />
-          </Group>
-        }
-      />
-
+    <Box
+      className={classes.flexColumn}
+      style={{
+        height: '100vh',
+        padding: 'var(--mantine-spacing-xl)',
+        gap: 'var(--mantine-spacing-md)',
+      }}
+    >
       <Box
-        px="md"
-        py="sm"
-        style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          gap: 'var(--mantine-spacing-md)',
+        }}
       >
-        <Text size="sm" c="dimmed">
-          Render a template with sample variables and inspect its desktop or
-          mobile presentation before sending.
-        </Text>
-      </Box>
+        {/* Preview area */}
+        <Box
+          className={classes.listSurfaceCard}
+          style={{ flex: 1, minWidth: 480, display: 'flex', flexDirection: 'column' }}
+        >
+          <Box
+            px="md"
+            py="xs"
+            style={{ borderBottom: '1px solid var(--mantine-color-default-border)', flexShrink: 0 }}
+          >
+            <Group gap="sm" justify="space-between" wrap="nowrap">
+              <Group gap="xs" style={{ minWidth: 0 }}>
+                <Mail size={16} />
+                <Text fw={600} ff="monospace" truncate>{selectedTemplate}</Text>
+                {preview.data?.hash ? (
+                  <Badge variant="outline" color="gray" style={{ flexShrink: 0 }}>
+                    {preview.data.hash.slice(0, 10)}
+                  </Badge>
+                ) : null}
+              </Group>
+              <Group gap="sm" wrap="nowrap" style={{ flexShrink: 0 }}>
+                <Select
+                  data={localeOptions}
+                  value={selectedLocale}
+                  onChange={(value) => {
+                    if (!value) return
+                    setPreviewInput({})
+                    setSearchParams({ template: selectedTemplate, locale: value })
+                  }}
+                  allowDeselect={false}
+                  size="xs"
+                  w={96}
+                />
+                <SegmentedControl
+                  value={previewMode}
+                  onChange={(value) => setPreviewMode(value as 'desktop' | 'mobile')}
+                  size="xs"
+                  data={[
+                    { label: <Group gap={4} wrap="nowrap"><Monitor size={14} /><span>Desktop</span></Group>, value: 'desktop' },
+                    { label: <Group gap={4} wrap="nowrap"><Smartphone size={14} /><span>Mobile</span></Group>, value: 'mobile' },
+                  ]}
+                />
+              </Group>
+            </Group>
+            {preview.data?.subject && (
+              <Text size="sm" c="dimmed" truncate mt={4}>{preview.data.subject}</Text>
+            )}
+          </Box>
 
-      <Box className={classes.flexGrow} style={{ minHeight: 0 }}>
-        <Allotment defaultSizes={[760, 340]}>
-          <Allotment.Pane minSize={480}>
-            <Box className={classes.flexColumn} h="100%">
-              <Box className={classes.detailHeader}>
-                <Stack gap={4} style={{ minWidth: 0 }}>
-                  <Group gap="xs">
-                    <Mail size={16} />
-                    <Text fw={600} ff="monospace">
-                      {selectedTemplate}
-                    </Text>
-                    <Badge variant="light">{selectedLocale}</Badge>
-                    {preview.data?.hash ? (
-                      <Badge variant="outline" color="gray">
-                        {preview.data.hash.slice(0, 10)}
-                      </Badge>
-                    ) : null}
-                  </Group>
-                  <Text size="sm" c="dimmed" truncate>
-                    {preview.data?.subject || 'No subject rendered yet'}
-                  </Text>
-                </Stack>
-              </Box>
-
-              <Box className={classes.overflowAuto} p="md">
-                <Stack gap="md">
-                  {preview.isLoading ? (
-                    <Center py="xl">
-                      <Loader />
-                    </Center>
-                  ) : null}
-
-                  {preview.error ? (
-                    <Alert color="red" icon={<AlertTriangle size={16} />}>
-                      {preview.error instanceof Error
-                        ? preview.error.message
-                        : 'Failed to render email preview'}
-                    </Alert>
-                  ) : null}
-
-                  {preview.data?.missing?.length ? (
-                    <Alert color="yellow" icon={<AlertTriangle size={16} />}>
-                      Missing source files: {preview.data.missing.join(', ')}
-                    </Alert>
-                  ) : null}
-
-                  <Center py="sm">
-                    {previewMode === 'desktop' ? (
-                      <Box
-                        style={{
-                          width: '100%',
-                          maxWidth: 960,
-                          height: 720,
-                          border: '1px solid var(--mantine-color-default-border)',
-                          borderRadius: 8,
-                          overflow: 'hidden',
-                          background: '#fff',
-                        }}
-                      >
-                        <iframe
-                          title="Desktop email preview"
-                          srcDoc={preview.data?.html ?? ''}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            border: 0,
-                            background: '#fff',
-                          }}
-                        />
-                      </Box>
-                    ) : (
-                      <Box
-                        style={{
-                          width: 390,
-                          maxWidth: '100%',
-                          height: 720,
-                          border: '1px solid var(--mantine-color-default-border)',
-                          borderRadius: 24,
-                          overflow: 'hidden',
-                          background: '#fff',
-                        }}
-                      >
-                        <iframe
-                          title="Mobile email preview"
-                          srcDoc={preview.data?.html ?? ''}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            border: 0,
-                            background: '#fff',
-                          }}
-                        />
-                      </Box>
-                    )}
-                  </Center>
-
-                  {preview.data?.text ? (
-                    <>
-                      <Divider />
-                      <Stack gap="xs">
-                        <Text fw={600}>Text fallback</Text>
-                        <Code block>{preview.data.text}</Code>
-                      </Stack>
-                    </>
-                  ) : null}
-                </Stack>
-              </Box>
-            </Box>
-          </Allotment.Pane>
-
-          <Allotment.Pane minSize={280} preferredSize={340} maxSize={420}>
-            <Box
-              className={classes.flexColumn}
-              h="100%"
-              style={{
-                borderLeft: '1px solid var(--mantine-color-default-border)',
-              }}
-            >
-              <Box className={classes.detailHeader}>
-                <Stack gap={2}>
-                  <Text fw={600}>Render</Text>
-                  <Text size="sm" c="dimmed">
-                    Supply variables and render the selected template.
-                  </Text>
-                </Stack>
-              </Box>
-
-              <Box className={classes.overflowAuto} p="md">
-                <Stack gap="lg">
-                  <SchemaForm
-                    key={`${selectedTemplate}:${selectedLocale}`}
-                    schema={schema}
-                    submitLabel="Render preview"
-                    onSubmit={(formData) => setPreviewInput(formData ?? {})}
-                  />
-
+          <Box style={{ flex: 1, minHeight: 0, overflow: 'auto' }} p="md">
+            <Stack gap="md">
+              {preview.isLoading ? <Center py="xl"><Loader /></Center> : null}
+              {preview.error ? (
+                <Alert color="red" icon={<AlertTriangle size={16} />}>
+                  {preview.error instanceof Error ? preview.error.message : 'Failed to render email preview'}
+                </Alert>
+              ) : null}
+              {preview.data?.missing?.length ? (
+                <Alert color="yellow" icon={<AlertTriangle size={16} />}>
+                  Missing source files: {preview.data.missing.join(', ')}
+                </Alert>
+              ) : null}
+              <Center py="sm">
+                {previewMode === 'desktop' ? (
+                  <Box style={{ width: '100%', maxWidth: 960, height: 720, border: '1px solid var(--app-row-border)', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
+                    <iframe title="Desktop email preview" srcDoc={preview.data?.html ?? ''} style={{ width: '100%', height: '100%', border: 0, background: '#fff' }} />
+                  </Box>
+                ) : (
+                  <Box style={{ width: 390, maxWidth: '100%', height: 720, border: '1px solid var(--app-row-border)', borderRadius: 24, overflow: 'hidden', background: '#fff' }}>
+                    <iframe title="Mobile email preview" srcDoc={preview.data?.html ?? ''} style={{ width: '100%', height: '100%', border: 0, background: '#fff' }} />
+                  </Box>
+                )}
+              </Center>
+              {preview.data?.text ? (
+                <>
                   <Divider />
-
                   <Stack gap="xs">
-                    <Text fw={600}>Template details</Text>
-                    <Group gap="xs">
-                      <Badge variant="light">
-                        {selectedMeta.variables.length} variables
-                      </Badge>
-                      <Badge variant="light">
-                        {Object.keys(selectedMeta.locales).length} locales
-                      </Badge>
-                    </Group>
-                    {preview.data?.hash ? (
-                      <Code block>{preview.data.hash}</Code>
-                    ) : null}
+                    <Text fw={600}>Text fallback</Text>
+                    <Code block>{preview.data.text}</Code>
                   </Stack>
+                </>
+              ) : null}
+            </Stack>
+          </Box>
+        </Box>
+
+        {/* Form / render panel */}
+        <Box
+          className={classes.listSurfaceCard}
+          style={{ width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column' }}
+        >
+          {/* Template selector */}
+          <Popover opened={selectorOpen} onChange={setSelectorOpen} width={280} position="bottom-start" shadow="md" zIndex={10000}>
+            <Popover.Target>
+              <UnstyledButton
+                px="sm"
+                py="xs"
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 4, borderBottom: '1px solid var(--mantine-color-default-border)' }}
+                onClick={() => setSelectorOpen((o) => !o)}
+              >
+                <Text size="sm" fw={600} style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {selectedTemplate}
+                </Text>
+                <ChevronDown size={14} style={{ flexShrink: 0 }} />
+              </UnstyledButton>
+            </Popover.Target>
+            <Popover.Dropdown p={0}>
+              <TextInput
+                placeholder="Search templates..."
+                leftSection={<Search size={14} />}
+                value={selectorSearch}
+                onChange={(e) => setSelectorSearch(e.currentTarget.value)}
+                styles={{ input: { border: 'none', borderBottom: '1px solid var(--mantine-color-default-border)', borderRadius: 0 } }}
+              />
+              <ScrollArea.Autosize mah={300}>
+                <Stack gap={0}>
+                  {filteredTemplateItems.map((item) => (
+                    <UnstyledButton
+                      key={item.name}
+                      onClick={() => handleTemplateSelect(item.name)}
+                      py="xs"
+                      px="sm"
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, backgroundColor: item.name === selectedTemplate ? 'var(--mantine-color-green-light)' : undefined }}
+                    >
+                      {item.name === selectedTemplate ? <Check size={14} color="var(--mantine-color-green-6)" /> : <Box w={14} />}
+                      <div>
+                        <Text size="sm" fw={item.name === selectedTemplate ? 500 : 400}>{item.name}</Text>
+                        {item.description && <Text size="sm" c="dimmed">{item.description}</Text>}
+                      </div>
+                    </UnstyledButton>
+                  ))}
+                  {filteredTemplateItems.length === 0 && <Text size="sm" c="dimmed" ta="center" py="md">No results</Text>}
                 </Stack>
-              </Box>
-            </Box>
-          </Allotment.Pane>
-        </Allotment>
+              </ScrollArea.Autosize>
+            </Popover.Dropdown>
+          </Popover>
+
+          <Box style={{ flex: 1, minHeight: 0, overflow: 'auto' }} p="md">
+            <Stack gap="lg">
+              <SchemaForm
+                key={`${selectedTemplate}:${selectedLocale}`}
+                schema={schema}
+                submitLabel="Render preview"
+                onSubmit={(formData) => setPreviewInput(formData ?? {})}
+              />
+              <Divider />
+              <Stack gap="xs">
+                <Text fw={600}>Template details</Text>
+                <Group gap="xs">
+                  <Badge variant="light">{selectedMeta.variables.length} variables</Badge>
+                  <Badge variant="light">{Object.keys(selectedMeta.locales).length} locales</Badge>
+                </Group>
+                {preview.data?.hash ? <Code block>{preview.data.hash}</Code> : null}
+              </Stack>
+            </Stack>
+          </Box>
+        </Box>
       </Box>
     </Box>
   )

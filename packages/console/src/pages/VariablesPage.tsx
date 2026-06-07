@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { ListPageHeader } from '../components/layout/PageLayout'
 import { ProjectVariables } from '../components/project/ProjectVariables'
 
 const VariablesPageContent: React.FC = () => {
@@ -21,7 +22,7 @@ const VariablesPageContent: React.FC = () => {
   }, [meta.variablesMeta])
 
   return (
-    <ResizablePanelLayout>
+    <ResizablePanelLayout header={<ListPageHeader title="Variables" description="Runtime configuration variables for this environment" />}>
       <ProjectVariables variables={variables} loading={loading} />
     </ResizablePanelLayout>
   )

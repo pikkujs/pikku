@@ -16,6 +16,7 @@ import { KeyRound, Link2, Circle, AlertTriangle } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import classes from '../ui/console.module.css'
 
 interface CredentialMeta {
   name: string
@@ -66,22 +67,24 @@ export const CredentialsOverviewTab: React.FC = () => {
 
   if (credentials.length === 0) {
     return (
-      <Center h={300}>
-        <Stack align="center" gap="sm">
-          <KeyRound size={40} color="var(--mantine-color-dimmed)" />
-          <Text c="dimmed" size="sm" ta="center">
-            No credentials declared yet.
-            <br />
-            Use <Code>wireCredential()</Code> in your code to declare
-            credentials.
-          </Text>
-        </Stack>
-      </Center>
+      <Box className={classes.listSurfaceCard}>
+        <Center h={300}>
+          <Stack align="center" gap="sm">
+            <KeyRound size={40} color="var(--mantine-color-dimmed)" />
+            <Text c="dimmed" size="sm" ta="center">
+              No credentials declared yet.
+              <br />
+              Use <Code>wireCredential()</Code> in your code to declare
+              credentials.
+            </Text>
+          </Stack>
+        </Center>
+      </Box>
     )
   }
 
   return (
-    <Box p="md">
+    <Box className={classes.listSurfaceCard} p="md">
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
         {credentials.map((cred) => (
           <CredentialCard
