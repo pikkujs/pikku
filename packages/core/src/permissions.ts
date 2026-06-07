@@ -383,7 +383,7 @@ export const checkAuthPermissions = async (
   >
 
   // Extract only pikkuAuth permissions (marked with __pikkuAuth)
-  const authPerms: CorePikkuPermission<any, any, any, any>[] = []
+  const authPerms: CorePikkuPermission<any, any, any>[] = []
   for (const permission of allPermissions) {
     if (typeof permission === 'function') {
       if ((permission as any).__pikkuAuth) {
