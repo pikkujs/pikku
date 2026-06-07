@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
-    "better-sqlite3": "^12.6.2",
+    "better-sqlite3": "^12.10.0",
     "kysely-codegen": "^0.20.0",
     "kysely-plugin-serialize": "^0.8.2",
     "kysely-postgres-js": "^3.0.0",

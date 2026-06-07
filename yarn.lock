@@ -5421,7 +5421,7 @@ __metadata:
     "@types/better-sqlite3": "npm:^7.0.0"
     "@types/node": "npm:^22"
     ai: "npm:^6.0.105"
-    better-sqlite3: "npm:^11.0.0"
+    better-sqlite3: "npm:^12.10.0"
     ioredis: "npm:^5.10.0"
     kysely: "npm:^0.28.12"
     kysely-plugin-serialize: "npm:^0.6.0"
@@ -5602,7 +5602,7 @@ __metadata:
   resolution: "@pikku/kysely@workspace:packages/services/kysely"
   dependencies:
     "@types/better-sqlite3": "npm:^7.6.13"
-    better-sqlite3: "npm:^12.6.2"
+    better-sqlite3: "npm:^12.10.0"
     kysely: "npm:^0.28.12"
     kysely-codegen: "npm:^0.20.0"
     kysely-plugin-serialize: "npm:^0.8.2"
@@ -6284,7 +6284,7 @@ __metadata:
     "@types/qs": "npm:^6"
     qs: "npm:^6.15.0"
     typescript: "npm:^5.9.3"
-    uWebSockets.js: "uNetworking/uWebSockets.js#v20.58.0"
+    uWebSockets.js: "uNetworking/uWebSockets.js#v20.68.0"
   peerDependencies:
     "@pikku/core": ^0.12.9
   languageName: unknown
@@ -11912,25 +11912,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"better-sqlite3@npm:^11.0.0":
-  version: 11.10.0
-  resolution: "better-sqlite3@npm:11.10.0"
+"better-sqlite3@npm:^12.10.0":
+  version: 12.10.0
+  resolution: "better-sqlite3@npm:12.10.0"
   dependencies:
     bindings: "npm:^1.5.0"
     node-gyp: "npm:latest"
     prebuild-install: "npm:^7.1.1"
-  checksum: 10/5e4c7437c4fe6033335a79c82974d7ab29f33c51c36f48b73e87e087d21578468575de1c56a7badd4f76f17255e25abefddaeacf018e5eeb9e0cb8d6e3e4a5e1
-  languageName: node
-  linkType: hard
-
-"better-sqlite3@npm:^12.6.2":
-  version: 12.6.2
-  resolution: "better-sqlite3@npm:12.6.2"
-  dependencies:
-    bindings: "npm:^1.5.0"
-    node-gyp: "npm:latest"
-    prebuild-install: "npm:^7.1.1"
-  checksum: 10/28600c06c03c33b027717f48d7208561d4a51d1fab48b4efb9041cafb9ca79568bc3a702835ad3bdd2b17189942745df22ed827be220254dd2a3928e257c138f
+  checksum: 10/99e213e78f15a7f40d5cb666b56781223a6b83ffc317c93846e2b63b694592978c1e3762e81afd6ce851e0e3c24ebc9d0c42341158ea93c8a39987e5e19602f8
   languageName: node
   linkType: hard
 
@@ -22779,10 +22768,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uWebSockets.js@uNetworking/uWebSockets.js#v20.58.0":
-  version: 20.58.0
-  resolution: "uWebSockets.js@https://github.com/uNetworking/uWebSockets.js.git#commit=ba110e817908b56c61d625b02f367b4ec9cfc8ab"
-  checksum: 10/25d5885e410fe6f61cff9eb8739d273b70987f0dddc5251104ae2670636db7c00b26b4eda3733002cd1faca492e583acda1733621956f8f9be011d23d61cf839
+"uWebSockets.js@uNetworking/uWebSockets.js#v20.68.0":
+  version: 20.68.0
+  resolution: "uWebSockets.js@https://github.com/uNetworking/uWebSockets.js.git#commit=624987739d4da0acb628aaf2a10fc43e7ce27c5c"
+  checksum: 10/1afbd9a49cbbf2d3e475687ad4cca56625834c1e973185c42aed104ab61ab2867a16047f25644713264a99afa7f2fe9a0f3a36828892f87bffc9a3218bac8923
   languageName: node
   linkType: hard
 
