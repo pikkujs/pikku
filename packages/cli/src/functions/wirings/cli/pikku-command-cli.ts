@@ -15,64 +15,78 @@ export const pikkuCLI = pikkuSessionlessFunc<void, boolean | undefined>({
       cliWiringsFile,
       cliWiringMetaFile,
       cliWiringMetaJsonFile,
+      cliContractsMetaJsonFile,
       packageMappings,
       schema,
     } = config
-    const { cli } = visitState
+    const { cli, exportedContracts } = visitState
+    const hasCLIContracts = Object.keys(exportedContracts.cli).length > 0
 
-    if (cli.files.size === 0 || Object.keys(cli.meta).length === 0) {
+    if (
+      (cli.files.size === 0 || Object.keys(cli.meta).length === 0) &&
+      !hasCLIContracts
+    ) {
       return undefined
     }
 
-    // Generate CLI wirings file
-    await writeFileInDir(
-      logger,
-      cliWiringsFile,
-      serializeFileImports(
-        'wireCLI',
-        cliWiringsFile,
-        cli.files,
-        packageMappings
-      )
-    )
-
-    // Write minimal JSON (runtime-only fields)
-    const minimalMeta = stripVerboseFields(cli.meta)
-    await writeFileInDir(
-      logger,
-      cliWiringMetaJsonFile,
-      JSON.stringify(minimalMeta, null, 2)
-    )
-
-    // Write verbose JSON only if it has additional fields
-    if (hasVerboseFields(cli.meta)) {
-      const verbosePath = cliWiringMetaJsonFile.replace(
-        /\.gen\.json$/,
-        '-verbose.gen.json'
-      )
+    if (cli.files.size > 0 && Object.keys(cli.meta).length > 0) {
       await writeFileInDir(
         logger,
-        verbosePath,
-        JSON.stringify(cli.meta, null, 2)
+        cliWiringsFile,
+        serializeFileImports(
+          'wireCLI',
+          cliWiringsFile,
+          cli.files,
+          packageMappings
+        )
       )
     }
 
-    const jsonImportPath = getFileImportRelativePath(
-      cliWiringMetaFile,
-      cliWiringMetaJsonFile,
-      packageMappings
-    )
+    if (Object.keys(cli.meta).length > 0) {
+      const minimalMeta = stripVerboseFields(cli.meta)
+      await writeFileInDir(
+        logger,
+        cliWiringMetaJsonFile,
+        JSON.stringify(minimalMeta, null, 2)
+      )
 
-    const supportsImportAttributes = schema?.supportsImportAttributes ?? false
-    const importStatement = supportsImportAttributes
-      ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
-      : `import metaData from '${jsonImportPath}'`
+      if (hasVerboseFields(cli.meta)) {
+        const verbosePath = cliWiringMetaJsonFile.replace(
+          /\.gen\.json$/,
+          '-verbose.gen.json'
+        )
+        await writeFileInDir(
+          logger,
+          verbosePath,
+          JSON.stringify(cli.meta, null, 2)
+        )
+      }
+    }
 
     await writeFileInDir(
       logger,
-      cliWiringMetaFile,
-      `import { pikkuState } from '@pikku/core/internal'\nimport { CLIMeta } from '@pikku/core/cli'\n${importStatement}\npikkuState(null, 'cli', 'meta', metaData as CLIMeta)`
+      cliContractsMetaJsonFile,
+      JSON.stringify(exportedContracts.cli, null, 2)
     )
+
+    if (Object.keys(cli.meta).length > 0) {
+      const jsonImportPath = getFileImportRelativePath(
+        cliWiringMetaFile,
+        cliWiringMetaJsonFile,
+        packageMappings
+      )
+
+      const supportsImportAttributes = schema?.supportsImportAttributes ?? false
+      const importStatement = supportsImportAttributes
+        ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
+        : `import metaData from '${jsonImportPath}'`
+
+      await writeFileInDir(
+        logger,
+        cliWiringMetaFile,
+        `import { pikkuState } from '@pikku/core/internal'\nimport { CLIMeta } from '@pikku/core/cli'\n${importStatement}\npikkuState(null, 'cli', 'meta', metaData as CLIMeta)`
+      )
+    }
 
     return true
   },

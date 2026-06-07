@@ -21,6 +21,8 @@ import { resolveIdentifier } from '../utils/resolve-identifier.js'
 import { resolveFunctionMeta } from '../utils/resolve-function-meta.js'
 import { resolveAddonName } from '../utils/resolve-addon-package.js'
 import { validateAuthSessionless } from '../utils/validate-auth-sessionless.js'
+import { getExportedVariableName } from '../utils/get-exported-variable-name.js'
+import { resolveImportedAddonContract } from '../utils/resolve-addon-contract.js'
 
 /**
  * Safely get the "initializer" expression of a property-like AST node:
@@ -38,6 +40,16 @@ function getInitializerOf(
     return elem.name
   }
   return undefined
+}
+
+function getObjectPropertyName(
+  name: ts.PropertyName | undefined
+): string | null {
+  if (!name) return null
+  if (ts.isIdentifier(name)) return name.text
+  if (ts.isStringLiteral(name) || ts.isNumericLiteral(name)) return name.text
+  if (ts.isComputedPropertyName(name)) return null
+  return name.getText()
 }
 
 /**
@@ -116,6 +128,27 @@ function getHandlerNameFromExpression(
   return null
 }
 
+function extractExportedChannelRoutes(
+  logger: {
+    error: (msg: string) => void
+    critical: (code: ErrorCode, msg: string) => void
+  },
+  routes: ts.ObjectLiteralExpression,
+  state: InspectorState,
+  checker: ts.TypeChecker
+): Record<string, ChannelMessageMeta> {
+  const wrapper = ts.factory.createObjectLiteralExpression([
+    ts.factory.createPropertyAssignment(
+      'onMessageWiring',
+      ts.factory.createObjectLiteralExpression([
+        ts.factory.createPropertyAssignment('contract', routes),
+      ])
+    ),
+  ])
+
+  return addMessagesRoutes(logger, wrapper, state, checker).contract ?? {}
+}
+
 /**
  * Build out the nested message-routes by looking up each handler
  * in state.functions.meta instead of re-inferring it here.
@@ -152,12 +185,28 @@ export function addMessagesRoutes(
       ])
       if (resolved && ts.isObjectLiteralExpression(resolved)) {
         chanInit = resolved
+      } else {
+        const addonContract = resolveImportedAddonContract(
+          chanInit,
+          checker,
+          state.rpc.wireAddonDeclarations,
+          state.exportedContracts.addonChannel
+        )
+        if (addonContract) {
+          const channelKey = getObjectPropertyName(chanElem.name)
+          if (!channelKey) continue
+          result[channelKey] = {
+            ...addonContract,
+          }
+          continue
+        }
       }
     }
 
     if (!ts.isObjectLiteralExpression(chanInit)) continue
 
-    const channelKey = chanElem.name!.getText()
+    const channelKey = getObjectPropertyName(chanElem.name)
+    if (!channelKey) continue
     result[channelKey] = {}
 
     for (const routeElem of chanInit.properties) {
@@ -168,11 +217,8 @@ export function addMessagesRoutes(
       const routeName = routeElem.name
       if (!routeName) continue
 
-      let routeKey = routeName.getText()
-      // For string literals like 'greet' or "greet", strip the quotes
-      if (ts.isStringLiteral(routeName)) {
-        routeKey = routeName.text
-      }
+      const routeKey = getObjectPropertyName(routeName)
+      if (!routeKey) continue
 
       // For shorthand properties, we need to resolve the identifier to its declaration
       if (ts.isShorthandPropertyAssignment(routeElem)) {
@@ -529,6 +575,22 @@ export const addChannel: AddWiring = (
   options
 ) => {
   if (!ts.isCallExpression(node)) return
+  if (
+    ts.isIdentifier(node.expression) &&
+    node.expression.text === 'defineChannelRoutes'
+  ) {
+    const exportName = getExportedVariableName(node, options.sourceFile)
+    const [firstArg] = node.arguments
+    if (exportName && firstArg && ts.isObjectLiteralExpression(firstArg)) {
+      state.exportedContracts.channel[exportName] = extractExportedChannelRoutes(
+        logger,
+        firstArg,
+        state,
+        checker
+      )
+    }
+    return
+  }
   const { expression, arguments: args } = node
   if (!ts.isIdentifier(expression) || expression.text !== 'wireChannel') return
   const first = args[0]
@@ -664,7 +726,9 @@ export const addChannel: AddWiring = (
     state.serviceAggregation.usedFunctions.add(message.pikkuFuncId)
   }
 
-  for (const channelHandlers of Object.values(messageWirings)) {
+  for (const channelHandlers of Object.values(
+    messageWirings as Record<string, Record<string, ChannelMessageMeta>>
+  )) {
     for (const handler of Object.values(channelHandlers)) {
       state.serviceAggregation.usedFunctions.add(handler.pikkuFuncId)
     }

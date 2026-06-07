@@ -18,63 +18,77 @@ export const pikkuCommandChannels = pikkuSessionlessFunc<
       channelsWiringFile,
       channelsWiringMetaFile,
       channelsWiringMetaJsonFile,
+      channelContractsMetaJsonFile,
       packageMappings,
       schema,
     } = config
-    const { channels } = visitState
+    const { channels, exportedContracts } = visitState
+    const hasChannelContracts = Object.keys(exportedContracts.channel).length > 0
 
-    if (channels.files.size === 0 || Object.keys(channels.meta).length === 0) {
+    if (
+      (channels.files.size === 0 || Object.keys(channels.meta).length === 0) &&
+      !hasChannelContracts
+    ) {
       return undefined
     }
 
-    await writeFileInDir(
-      logger,
-      channelsWiringFile,
-      serializeFileImports(
-        'addChannel',
-        channelsWiringFile,
-        channels.files,
-        packageMappings
-      )
-    )
-
-    // Write minimal JSON (runtime-only fields)
-    const minimalMeta = stripVerboseFields(channels.meta)
-    await writeFileInDir(
-      logger,
-      channelsWiringMetaJsonFile,
-      JSON.stringify(minimalMeta, null, 2)
-    )
-
-    // Write verbose JSON only if it has additional fields
-    if (hasVerboseFields(channels.meta)) {
-      const verbosePath = channelsWiringMetaJsonFile.replace(
-        /\.gen\.json$/,
-        '-verbose.gen.json'
-      )
+    if (channels.files.size > 0 && Object.keys(channels.meta).length > 0) {
       await writeFileInDir(
         logger,
-        verbosePath,
-        JSON.stringify(channels.meta, null, 2)
+        channelsWiringFile,
+        serializeFileImports(
+          'addChannel',
+          channelsWiringFile,
+          channels.files,
+          packageMappings
+        )
       )
     }
 
-    // Generate TypeScript file that imports the minimal JSON
-    const jsonImportPath = getFileImportRelativePath(
-      channelsWiringMetaFile,
-      channelsWiringMetaJsonFile,
-      packageMappings
-    )
-    const supportsImportAttributes = schema?.supportsImportAttributes ?? false
-    const importStatement = supportsImportAttributes
-      ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
-      : `import metaData from '${jsonImportPath}'`
+    if (Object.keys(channels.meta).length > 0) {
+      const minimalMeta = stripVerboseFields(channels.meta)
+      await writeFileInDir(
+        logger,
+        channelsWiringMetaJsonFile,
+        JSON.stringify(minimalMeta, null, 2)
+      )
+
+      if (hasVerboseFields(channels.meta)) {
+        const verbosePath = channelsWiringMetaJsonFile.replace(
+          /\.gen\.json$/,
+          '-verbose.gen.json'
+        )
+        await writeFileInDir(
+          logger,
+          verbosePath,
+          JSON.stringify(channels.meta, null, 2)
+        )
+      }
+    }
 
     await writeFileInDir(
       logger,
-      channelsWiringMetaFile,
-      `import { pikkuState } from '@pikku/core/internal'\nimport type { ChannelsMeta } from '@pikku/core/channel'\n${importStatement}\npikkuState(null, 'channel', 'meta', metaData as ChannelsMeta)`
+      channelContractsMetaJsonFile,
+      JSON.stringify(exportedContracts.channel, null, 2)
     )
+
+    if (Object.keys(channels.meta).length > 0) {
+      const jsonImportPath = getFileImportRelativePath(
+        channelsWiringMetaFile,
+        channelsWiringMetaJsonFile,
+        packageMappings
+      )
+      const supportsImportAttributes = schema?.supportsImportAttributes ?? false
+      const importStatement = supportsImportAttributes
+        ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
+        : `import metaData from '${jsonImportPath}'`
+
+      await writeFileInDir(
+        logger,
+        channelsWiringMetaFile,
+        `import { pikkuState } from '@pikku/core/internal'\nimport type { ChannelsMeta } from '@pikku/core/channel'\n${importStatement}\npikkuState(null, 'channel', 'meta', metaData as ChannelsMeta)`
+      )
+    }
 
     return true
   },

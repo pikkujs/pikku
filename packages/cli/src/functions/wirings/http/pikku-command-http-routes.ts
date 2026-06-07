@@ -16,63 +16,78 @@ export const pikkuCommandHTTP = pikkuSessionlessFunc<void, boolean | undefined>(
         httpWiringsFile,
         httpWiringMetaFile,
         httpWiringMetaJsonFile,
+        httpContractsMetaJsonFile,
         packageMappings,
         schema,
       } = config
-      const { http } = visitState
+      const { http, exportedContracts } = visitState
+      const hasHTTPContracts = Object.keys(exportedContracts.http).length > 0
 
-      if (http.files.size === 0 || Object.keys(http.meta).length === 0) {
+      if (
+        (http.files.size === 0 || Object.keys(http.meta).length === 0) &&
+        !hasHTTPContracts
+      ) {
         return undefined
       }
 
-      await writeFileInDir(
-        logger,
-        httpWiringsFile,
-        serializeFileImports(
-          'wireHTTP',
-          httpWiringsFile,
-          http.files,
-          packageMappings
-        )
-      )
-
-      // Write minimal JSON (runtime-only fields)
-      const minimalMeta = stripVerboseFields(http.meta)
-      await writeFileInDir(
-        logger,
-        httpWiringMetaJsonFile,
-        JSON.stringify(minimalMeta, null, 2)
-      )
-
-      // Write verbose JSON only if it has additional fields
-      if (hasVerboseFields(http.meta)) {
-        const verbosePath = httpWiringMetaJsonFile.replace(
-          /\.gen\.json$/,
-          '-verbose.gen.json'
-        )
+      if (http.files.size > 0 && Object.keys(http.meta).length > 0) {
         await writeFileInDir(
           logger,
-          verbosePath,
-          JSON.stringify(http.meta, null, 2)
+          httpWiringsFile,
+          serializeFileImports(
+            'wireHTTP',
+            httpWiringsFile,
+            http.files,
+            packageMappings
+          )
         )
       }
 
-      // Generate TypeScript file that imports the minimal JSON
-      const jsonImportPath = getFileImportRelativePath(
-        httpWiringMetaFile,
-        httpWiringMetaJsonFile,
-        packageMappings
-      )
-      const supportsImportAttributes = schema?.supportsImportAttributes ?? false
-      const importStatement = supportsImportAttributes
-        ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
-        : `import metaData from '${jsonImportPath}'`
+      if (Object.keys(http.meta).length > 0) {
+        const minimalMeta = stripVerboseFields(http.meta)
+        await writeFileInDir(
+          logger,
+          httpWiringMetaJsonFile,
+          JSON.stringify(minimalMeta, null, 2)
+        )
+
+        if (hasVerboseFields(http.meta)) {
+          const verbosePath = httpWiringMetaJsonFile.replace(
+            /\.gen\.json$/,
+            '-verbose.gen.json'
+          )
+          await writeFileInDir(
+            logger,
+            verbosePath,
+            JSON.stringify(http.meta, null, 2)
+          )
+        }
+      }
 
       await writeFileInDir(
         logger,
-        httpWiringMetaFile,
-        `import { pikkuState } from '@pikku/core/internal'\nimport type { HTTPWiringsMeta } from '@pikku/core/http'\n${importStatement}\npikkuState(null, 'http', 'meta', metaData as HTTPWiringsMeta)`
+        httpContractsMetaJsonFile,
+        JSON.stringify(exportedContracts.http, null, 2)
       )
+
+      if (Object.keys(http.meta).length > 0) {
+        const jsonImportPath = getFileImportRelativePath(
+          httpWiringMetaFile,
+          httpWiringMetaJsonFile,
+          packageMappings
+        )
+        const supportsImportAttributes =
+          schema?.supportsImportAttributes ?? false
+        const importStatement = supportsImportAttributes
+          ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
+          : `import metaData from '${jsonImportPath}'`
+
+        await writeFileInDir(
+          logger,
+          httpWiringMetaFile,
+          `import { pikkuState } from '@pikku/core/internal'\nimport type { HTTPWiringsMeta } from '@pikku/core/http'\n${importStatement}\npikkuState(null, 'http', 'meta', metaData as HTTPWiringsMeta)`
+        )
+      }
 
       return true
     },

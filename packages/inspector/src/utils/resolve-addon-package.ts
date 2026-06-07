@@ -80,7 +80,12 @@ export const resolveAddonName = (
   // Bare package import path
   if (candidatePackage && !candidatePackage.startsWith('.')) {
     for (const addonDecl of wireAddonDeclarations.values()) {
-      if (addonDecl.package === candidatePackage) return addonDecl.package
+      if (
+        addonDecl.package === candidatePackage ||
+        candidatePackage.startsWith(`${addonDecl.package}/`)
+      ) {
+        return addonDecl.package
+      }
     }
   }
 

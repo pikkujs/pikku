@@ -15,6 +15,8 @@ export const serializeTypedChannelsMap = (
   channelsMeta: ChannelsMeta
 ): string => {
   const { channels, requiredTypes } = generateChannels(
+    logger,
+    typesMap,
     functionsMeta,
     addonFunctions,
     channelsMeta
@@ -67,6 +69,8 @@ export type ChannelWiringHandlerOf<
 }
 
 function generateChannels(
+  logger: Logger,
+  typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
   addonFunctions: Record<string, FunctionsMeta>,
   channelsMeta: ChannelsMeta
@@ -107,11 +111,15 @@ function generateChannels(
       const inputTypes = func.inputs || null
       const outputTypes = func.outputs || null
       channelsObject[name].message = {
-        inputs: inputTypes,
-        outputs: outputTypes,
+        inputs: normalizeTypes(logger, typesMap, inputTypes),
+        outputs: normalizeTypes(logger, typesMap, outputTypes),
       }
-      inputTypes?.forEach((type) => requiredTypes.add(type))
-      outputTypes?.forEach((type) => requiredTypes.add(type))
+      channelsObject[name].message.inputs?.forEach((type) =>
+        requiredTypes.add(type)
+      )
+      channelsObject[name].message.outputs?.forEach((type) =>
+        requiredTypes.add(type)
+      )
     }
 
     for (const [key, route] of Object.entries(messageWirings)) {
@@ -128,11 +136,15 @@ function generateChannels(
         const inputTypes = func.inputs || null
         const outputTypes = func.outputs || null
         channelsObject[name].routes[key][method] = {
-          inputTypes,
-          outputTypes,
+          inputTypes: normalizeTypes(logger, typesMap, inputTypes),
+          outputTypes: normalizeTypes(logger, typesMap, outputTypes),
         }
-        inputTypes?.forEach((type) => requiredTypes.add(type))
-        outputTypes?.forEach((type) => requiredTypes.add(type))
+        channelsObject[name].routes[key][method].inputTypes?.forEach((type) =>
+          requiredTypes.add(type)
+        )
+        channelsObject[name].routes[key][method].outputTypes?.forEach((type) =>
+          requiredTypes.add(type)
+        )
       }
     }
   }
@@ -177,4 +189,39 @@ function generateChannels(
 // Utility to format type arrays
 function formatTypeArray(types: string[] | null): string {
   return types ? types.join(' | ') : 'null'
+}
+
+function normalizeTypes(
+  logger: Logger,
+  typesMap: TypesMap,
+  types: string[] | null
+): string[] | null {
+  if (!types || types.length === 0) return types
+
+  const resolved = types.filter(
+    (type) =>
+      hasType(typesMap, type)
+  )
+
+  if (resolved.length > 0) {
+    return resolved
+  }
+
+  logger.warn(
+    `Channel type '${types.join(' | ')}' not found in local typesMap, falling back to unknown`
+  )
+  return ['unknown']
+}
+
+function hasType(typesMap: TypesMap, type: string): boolean {
+  if (['void', 'never', 'unknown', 'null', 'undefined'].includes(type)) {
+    return true
+  }
+
+  try {
+    typesMap.getTypeMeta(type)
+    return true
+  } catch {
+    return false
+  }
 }

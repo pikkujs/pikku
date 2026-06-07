@@ -263,6 +263,7 @@ export interface SerializableInspectorState {
   openAPISpec: Record<string, any> | null
   diagnostics: InspectorDiagnostic[]
   addonFunctions: InspectorState['addonFunctions']
+  exportedContracts: InspectorState['exportedContracts']
 }
 
 /**
@@ -443,6 +444,7 @@ export function serializeInspectorState(
     openAPISpec: state.openAPISpec,
     diagnostics: state.diagnostics,
     addonFunctions: state.addonFunctions,
+    exportedContracts: state.exportedContracts,
   }
 }
 
@@ -630,6 +632,14 @@ export function deserializeInspectorState(
     openAPISpec: data.openAPISpec || null,
     diagnostics: data.diagnostics || [],
     addonFunctions: data.addonFunctions || {},
+    exportedContracts: data.exportedContracts || {
+      http: {},
+      cli: {},
+      channel: {},
+      addonHttp: {},
+      addonCli: {},
+      addonChannel: {},
+    },
     program: null,
   }
 }
