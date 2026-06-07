@@ -12,16 +12,16 @@ export const dbMigrate = pikkuSessionlessFunc<{}, void>({
     if (!userConfig) return
 
     const resolved = resolveLocalDb(
-      userConfig.dev?.db,
+      userConfig.sqliteDb,
       config.rootDir,
       config.outDir,
       config.runtimeDir
     )
     if (!resolved) {
       logger.error(
-        'pikku db migrate: dev.db is not configured in your pikku config.'
+        'pikku db migrate: sqliteDb is not configured in your createConfig.'
       )
-      throw new Error('dev.db not configured')
+      throw new Error('sqliteDb not configured')
     }
 
     const { migrate, codegen, zod } = await migrateAndCodegen(resolved)

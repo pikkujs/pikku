@@ -156,7 +156,7 @@ export async function runWorkspaceValidate(
   }
 
   const hasConfiguredDevDb = Boolean(
-    (pikkuConfig as { dev?: { db?: unknown } } | null)?.dev?.db
+    (pikkuConfig as { sqliteDb?: unknown } | null)?.sqliteDb
   )
 
   type RootPkg = {
@@ -297,9 +297,9 @@ export async function runWorkspaceValidate(
     if (authEnabled && !hasConfiguredDevDb) {
       e(
         'auth-dev-db-missing',
-        'Auth middleware is registered, but pikku.config.json is missing dev.db so local auth schema validation and db migrate cannot run',
+        'Auth middleware is registered, but createConfig is missing sqliteDb so local auth schema validation and db migrate cannot run',
         pikkuConfigPath,
-        'Add dev.db to pikku.config.json so `pikku db migrate` can create and validate the local auth schema'
+        'Add sqliteDb to createConfig so `pikku db migrate` can create and validate the local auth schema'
       )
     }
 

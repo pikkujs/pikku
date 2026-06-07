@@ -1,11 +1,14 @@
 import { existsSync } from 'fs'
 import { resolve, join } from 'path'
 import { loadUserModule } from './load-user-project.js'
-import type { DevDbConfig } from '../db/local-db.js'
 
 export interface UserConfigShape {
-  dev?: {
-    db?: DevDbConfig
+  sqliteDb?: string
+  content?: {
+    contentPath?: string
+    uploadUrlPrefix?: string
+    assetUrlPrefix?: string
+    sizeLimit?: string
   }
   [key: string]: unknown
 }
@@ -47,7 +50,7 @@ export async function loadUserConfigForDb(
   )
   if (!configFactoryFile) {
     if (hasConventionalDbAssets) {
-      return { dev: { db: true } }
+      return { sqliteDb: join(config.rootDir, '.pikku-runtime', 'dev.db') }
     }
     logger.error('createConfig must be defined in your project')
     return null
@@ -61,7 +64,7 @@ export async function loadUserConfigForDb(
       logger.warn(
         `Falling back to default local db config because '${configFactoryFile}' could not be loaded: ${error.message}`
       )
-      return { dev: { db: true } }
+      return { sqliteDb: join(config.rootDir, '.pikku-runtime', 'dev.db') }
     }
     throw error
   }
@@ -72,7 +75,7 @@ export async function loadUserConfigForDb(
       logger.warn(
         `Falling back to default local db config because '${configFactoryFile}' does not export createConfig`
       )
-      return { dev: { db: true } }
+      return { sqliteDb: join(config.rootDir, '.pikku-runtime', 'dev.db') }
     }
     logger.error(
       `Expected 'createConfig' in '${configFactoryFile}' to be a function`

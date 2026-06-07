@@ -9,8 +9,6 @@ import { createCoercionPlugin, type CoercionMap } from './coercion-plugin.js'
 import { createSqliteKysely } from './sqlite-kysely.js'
 import { loadSqliteRuntime } from './sqlite-runtime.js'
 
-export type DevDbConfig = true | { file?: string }
-
 export interface ResolvedLocalDb {
   dbFile: string
   runtimeDir: string
@@ -29,18 +27,15 @@ export interface ResolvedLocalDb {
  * - migrations and seed are authored source under rootDir/db
  */
 export function resolveLocalDb(
-  config: DevDbConfig | undefined,
+  sqliteDb: string | undefined,
   rootDir: string,
   outDir: string,
   runtimeDir?: string
 ): ResolvedLocalDb | null {
-  if (!config) return null
-  const file = config === true ? undefined : config.file
+  if (!sqliteDb) return null
   const resolvedRuntimeDir = runtimeDir ?? join(rootDir, '.pikku-runtime')
   return {
-    dbFile: file
-      ? resolveAgainst(rootDir, file)
-      : join(resolvedRuntimeDir, 'dev.db'),
+    dbFile: resolveAgainst(rootDir, sqliteDb),
     runtimeDir: resolvedRuntimeDir,
     migrationsDir: resolveAgainst(rootDir, 'db/migrations'),
     seedFile: resolveAgainst(rootDir, 'db/seed.sql'),
@@ -113,7 +108,7 @@ export function reset(resolved: ResolvedLocalDb, rootDir: string): void {
   const rel = relative(resolved.runtimeDir, resolved.dbFile)
   if (rel.startsWith('..') || isAbsolute(rel)) {
     throw new Error(
-      `pikku db reset refused: resolved DB file (${resolved.dbFile}) is outside the runtime directory (${resolved.runtimeDir}). Override dev.db.file or set runtimeDir correctly.`
+      `pikku db reset refused: resolved DB file (${resolved.dbFile}) is outside the runtime directory (${resolved.runtimeDir}). Override sqliteDb or set runtimeDir correctly.`
     )
   }
   if (existsSync(resolved.dbFile)) {

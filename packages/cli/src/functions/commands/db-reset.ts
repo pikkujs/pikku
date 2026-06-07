@@ -17,16 +17,16 @@ export const dbReset = pikkuSessionlessFunc<{}, void>({
     if (!userConfig) return
 
     const resolved = resolveLocalDb(
-      userConfig.dev?.db,
+      userConfig.sqliteDb,
       config.rootDir,
       config.outDir,
       config.runtimeDir
     )
     if (!resolved) {
       logger.error(
-        'pikku db reset: dev.db is not configured in your pikku config.'
+        'pikku db reset: sqliteDb is not configured in your createConfig.'
       )
-      throw new Error('dev.db not configured')
+      throw new Error('sqliteDb not configured')
     }
 
     reset(resolved, config.rootDir)
