@@ -13,6 +13,7 @@ import { GridHeader } from '../ui/GridHeader'
 import { ListItem } from '../ui/ListItem'
 import { SearchInput } from '../ui/SearchInput'
 import { DetailHeader } from '../ui/DetailHeader'
+import { EmptyState } from '../ui/EmptyState'
 import classes from '../ui/console.module.css'
 
 type QueueDepths = Record<
@@ -166,6 +167,15 @@ export const QueuesTab: React.FC = () => {
         gridTemplateColumns={GRID_COLUMNS}
       />
       <ScrollArea className={classes.flexGrow}>
+        {filtered.length === 0 && (
+          <EmptyState
+            title={
+              items.length === 0
+                ? 'No queue workers defined'
+                : 'No queue workers match your search'
+            }
+          />
+        )}
         {filtered.map((item: any) => {
           const isActive = selected === item.name
           const queueName = item.wireId || item.name

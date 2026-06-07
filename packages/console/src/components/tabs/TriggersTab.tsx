@@ -10,6 +10,7 @@ import { GridHeader } from '../ui/GridHeader'
 import { ListItem } from '../ui/ListItem'
 import { SearchInput } from '../ui/SearchInput'
 import { DetailHeader } from '../ui/DetailHeader'
+import { EmptyState } from '../ui/EmptyState'
 import classes from '../ui/console.module.css'
 
 const GRID_COLUMNS = '1fr 1fr 1fr'
@@ -138,6 +139,15 @@ export const TriggersTab: React.FC = () => {
         gridTemplateColumns={GRID_COLUMNS}
       />
       <ScrollArea className={classes.flexGrow}>
+        {filtered.length === 0 && (
+          <EmptyState
+            title={
+              pairs.length === 0
+                ? 'No triggers defined'
+                : 'No triggers match your search'
+            }
+          />
+        )}
         {filtered.map((pair) => {
           const isActive = selected === pair.name
           return (

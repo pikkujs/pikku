@@ -12,10 +12,22 @@ export type { ConsoleRouter } from './router'
 // React Router adapter
 export { reactRouterAdapter } from './adapters/react-router'
 
+// Page gate context (host apps use this to inject a body override while keeping headers visible)
+export { PageGateContext } from './context/PageGateContext'
+
 // Layout
 export { AppLayout } from './components/layout/AppLayout'
 export type { AppLayoutProps } from './components/layout/AppLayout'
 export { ConnectionScreen } from './components/layout/ConnectionScreen'
+export {
+  PageContainer,
+  PageHeader,
+  ListPageHeader,
+  PageHeaderControls,
+  PageToolbar,
+  PageActionBar,
+  PageRow,
+} from './components/layout/PageLayout'
 
 // Sidebar
 export {
@@ -73,6 +85,10 @@ export { DetailHeader } from './components/ui/DetailHeader'
 export type { DetailHeaderProps } from './components/ui/DetailHeader'
 export { EmptyState } from './components/ui/EmptyState'
 export type { EmptyStateProps } from './components/ui/EmptyState'
+export {
+  SeatsHero, TestsHero, DesignHero, DatabaseHero, ContentHero,
+  EmailsHero, ProjectsHero, I18nHero, SettingsHero, LabsHero, SandboxHero,
+} from './components/ui/EmptyStateHeroes'
 export { SearchInput } from './components/ui/SearchInput'
 export type { SearchInputProps } from './components/ui/SearchInput'
 export { TagBadge, ServiceBadge } from './components/ui/TagBadge'

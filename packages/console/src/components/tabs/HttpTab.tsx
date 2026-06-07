@@ -110,7 +110,7 @@ export const HttpTab: React.FC = () => {
             metadata={selectedRoute}
           />
         ) : (
-          <EmptyState message="Select a route to view its details" />
+          <EmptyState title="Select a route to view its details" />
         )}
       </Box>
     </Box>
