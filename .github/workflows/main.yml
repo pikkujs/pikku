@@ -129,7 +129,6 @@ jobs:
             cloudflare-websocket,
             nextjs,
             mcp-server,
-            cli,
             pg-boss,
             bullmq,
             workflows-bullmq,
@@ -151,6 +150,31 @@ jobs:
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
       DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_workspace_starter
       REDIS_URL: redis://localhost:6379
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      SLS_TELEMETRY_DISABLED: 1
+      SLS_NOTIFICATIONS_MODE: off
+
+  templates-no-services:
+    name: Templates (${{ matrix.version }}, ${{ matrix.template }}, ${{ matrix.package-manager }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [24]
+        template: [cli]
+        package-manager: [yarn]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          node-version: ${{ matrix.version }}
+      - name: Test template
+        timeout-minutes: 2
+        run: ./scripts/test-template.sh ${{ matrix.template }} ${{ github.ref_name }}
+    env:
+      SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       SLS_TELEMETRY_DISABLED: 1
       SLS_NOTIFICATIONS_MODE: off
@@ -188,7 +212,8 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
-    needs: [verifiers, templates, template-runtime-targets, e2e]
+    needs:
+      [verifiers, templates, templates-no-services, template-runtime-targets, e2e]
     outputs:
       published: ${{ steps.changesets.outputs.published }}
       publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
