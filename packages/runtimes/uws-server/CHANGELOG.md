@@ -1,3 +1,12 @@
+## 0.12.5
+
+### Patch Changes
+
+- 55ba75a: Update the OSS runtime dependency set for newer Node support by bumping `uWebSockets.js` to `v20.68.0` and `better-sqlite3` to `v12.10.0`.
+- Updated dependencies [c02275f]
+- Updated dependencies [0bd0433]
+  - @pikku/core@0.12.24
+
 ## 0.12.0
 
 ## 0.12.4
