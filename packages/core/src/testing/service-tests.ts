@@ -782,13 +782,13 @@ export function defineServiceTests(config: ServiceTestConfig): void {
     const kek = 'test-key-encryption-key-32chars!'
 
     describe(`SecretService [${name}]`, () => {
-      test('setSecretJSON and getSecretJSON', async () => {
+      test('setSecret and getSecret', async () => {
         const service = await factory({ key: kek })
-        await service.setSecretJSON('api-key', {
+        await service.setSecret('api-key', {
           token: 'sk-123',
           endpoint: 'https://api.example.com',
         })
-        const result = await service.getSecretJSON<{
+        const result = await service.getSecret<{
           token: string
           endpoint: string
         }>('api-key')
@@ -800,7 +800,7 @@ export function defineServiceTests(config: ServiceTestConfig): void {
 
       test('getSecret returns raw string', async () => {
         const service = await factory({ key: kek })
-        await service.setSecretJSON('string-secret', 'plain-value')
+        await service.setSecret('string-secret', 'plain-value')
         const result = await service.getSecret('string-secret')
         assert.strictEqual(result, '"plain-value"')
       })
@@ -818,17 +818,17 @@ export function defineServiceTests(config: ServiceTestConfig): void {
         })
       })
 
-      test('setSecretJSON upserts existing key', async () => {
+      test('setSecret upserts existing key', async () => {
         const service = await factory({ key: kek })
-        await service.setSecretJSON('upsert-key', { v: 1 })
-        await service.setSecretJSON('upsert-key', { v: 2 })
-        const result = await service.getSecretJSON<{ v: number }>('upsert-key')
+        await service.setSecret('upsert-key', { v: 1 })
+        await service.setSecret('upsert-key', { v: 2 })
+        const result = await service.getSecret<{ v: number }>('upsert-key')
         assert.deepEqual(result, { v: 2 })
       })
 
       test('deleteSecret removes the key', async () => {
         const service = await factory({ key: kek })
-        await service.setSecretJSON('to-delete', 'bye')
+        await service.setSecret('to-delete', 'bye')
         assert.strictEqual(await service.hasSecret('to-delete'), true)
         await service.deleteSecret('to-delete')
         assert.strictEqual(await service.hasSecret('to-delete'), false)
@@ -837,7 +837,7 @@ export function defineServiceTests(config: ServiceTestConfig): void {
       test('rotateKEK re-wraps all secrets', async () => {
         const newKEK = 'new-key-encryption-key-rotated!'
         const oldService = await factory({ key: kek })
-        await oldService.setSecretJSON('rotate-test', { important: 'data' })
+        await oldService.setSecret('rotate-test', { important: 'data' })
 
         const rotatedService = await factory({
           key: newKEK,
@@ -845,7 +845,7 @@ export function defineServiceTests(config: ServiceTestConfig): void {
           previousKey: kek,
         })
 
-        const before = await rotatedService.getSecretJSON<{
+        const before = await rotatedService.getSecret<{
           important: string
         }>('rotate-test')
         assert.deepEqual(before, { important: 'data' })
@@ -858,7 +858,7 @@ export function defineServiceTests(config: ServiceTestConfig): void {
           key: newKEK,
           keyVersion: 2,
         })
-        const after = await newOnlyService.getSecretJSON<{
+        const after = await newOnlyService.getSecret<{
           important: string
         }>('rotate-test')
         assert.deepEqual(after, { important: 'data' })

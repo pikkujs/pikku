@@ -16,14 +16,9 @@ export class ScopedSecretService implements SecretService {
     }
   }
 
-  async getSecret(key: string): Promise<string> {
+  async getSecret<T = string>(key: string): Promise<T> {
     this.assertAllowed(key)
-    return this.secrets.getSecret(key)
-  }
-
-  async getSecretJSON<T = {}>(key: string): Promise<T> {
-    this.assertAllowed(key)
-    return this.secrets.getSecretJSON<T>(key)
+    return this.secrets.getSecret<T>(key)
   }
 
   async hasSecret(key: string): Promise<boolean> {
@@ -31,8 +26,8 @@ export class ScopedSecretService implements SecretService {
     return this.secrets.hasSecret(key)
   }
 
-  async setSecretJSON(_key: string, _value: unknown): Promise<void> {
-    throw new Error('setSecretJSON is not allowed in scoped secret service')
+  async setSecret(_key: string, _value: unknown): Promise<void> {
+    throw new Error('setSecret is not allowed in scoped secret service')
   }
 
   async deleteSecret(_key: string): Promise<void> {

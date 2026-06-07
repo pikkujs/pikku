@@ -12,22 +12,18 @@ import { LocalSecretService } from '@pikku/core/services'
 class TestVariablesService implements VariablesService {
   private store: Record<string, string> = {}
 
-  set(key: string, value: string) {
-    this.store[key] = value
+  set(name: string, value: unknown): void {
+    this.store[name] = typeof value === 'string' ? value : JSON.stringify(value)
   }
 
-  setJSON(name: string, value: unknown): void {
-    this.store[name] = JSON.stringify(value)
-  }
-
-  get(key: string): string | undefined {
-    return this.store[key]
-  }
-
-  getJSON<T = unknown>(name: string): T | undefined {
-    const value = this.store[name]
-    if (value === undefined) return undefined
-    return JSON.parse(value)
+  get<T = string>(name: string): T | undefined {
+    const raw = this.store[name]
+    if (raw === undefined) return undefined
+    try {
+      return JSON.parse(raw) as T
+    } catch {
+      return raw as unknown as T
+    }
   }
 
   getAll(): Record<string, string> {

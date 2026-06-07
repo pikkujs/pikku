@@ -16,7 +16,7 @@ export const pikkuConsoleSetSecret = pikkuSessionlessFunc<{
   expose: true,
   auth: false,
   func: async ({ secrets }, { secretId, value }) => {
-    await secrets.setSecretJSON(secretId, value)
+    await secrets.setSecret(secretId, value)
     return { success: true }
   },
 })
@@ -35,7 +35,7 @@ export const pikkuConsoleGetVariable = pikkuSessionlessFunc<
       return { exists: false, value: null }
     }
     try {
-      const value = await variables.getJSON(variableId)
+      const value = await variables.get(variableId)
       return { exists: true, value }
     } catch {
       const value = await variables.get(variableId)
@@ -56,7 +56,7 @@ export const pikkuConsoleSetVariable = pikkuSessionlessFunc<
     if (typeof value === 'string') {
       await variables.set(variableId, value)
     } else {
-      await variables.setJSON(variableId, value)
+      await variables.set(variableId, value)
     }
     return { success: true }
   },
@@ -89,7 +89,7 @@ export const pikkuConsoleGetSecret = pikkuSessionlessFunc<
     if (!exists) {
       return { exists: false, value: null }
     }
-    const value = await secrets.getSecretJSON(secretId)
+    const value = await secrets.getSecret(secretId)
     return { exists: true, value }
   },
 })

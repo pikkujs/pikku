@@ -3,10 +3,9 @@ import assert from 'node:assert'
 import { ScopedSecretService } from './scoped-secret-service.js'
 
 const createMockSecrets = () => ({
-  getSecret: async (key: string) => `value-of-${key}`,
-  getSecretJSON: async (key: string) => ({ key }),
+  getSecret: async <T>(key: string) => ({ key }) as T,
   hasSecret: async () => true,
-  setSecretJSON: async () => {},
+  setSecret: async () => {},
   deleteSecret: async () => {},
 })
 
@@ -15,7 +14,7 @@ describe('ScopedSecretService', () => {
     const mock = createMockSecrets()
     const scoped = new ScopedSecretService(mock, new Set(['KEY1', 'KEY2']))
     const result = await scoped.getSecret('KEY1')
-    assert.strictEqual(result, 'value-of-KEY1')
+    assert.deepStrictEqual(result, { key: 'KEY1' })
   })
 
   test('should deny access to non-allowed keys', async () => {
@@ -26,17 +25,17 @@ describe('ScopedSecretService', () => {
     })
   })
 
-  test('should allow getSecretJSON for allowed keys', async () => {
+  test('should allow getSecret for allowed keys', async () => {
     const mock = createMockSecrets()
     const scoped = new ScopedSecretService(mock, new Set(['KEY1']))
-    const result = await scoped.getSecretJSON('KEY1')
+    const result = await scoped.getSecret('KEY1')
     assert.deepStrictEqual(result, { key: 'KEY1' })
   })
 
-  test('should deny getSecretJSON for non-allowed keys', async () => {
+  test('should deny getSecret for non-allowed keys', async () => {
     const mock = createMockSecrets()
     const scoped = new ScopedSecretService(mock, new Set(['KEY1']))
-    await assert.rejects(() => scoped.getSecretJSON('FORBIDDEN'), {
+    await assert.rejects(() => scoped.getSecret('FORBIDDEN'), {
       message: 'Access denied to secret key: FORBIDDEN',
     })
   })
@@ -56,11 +55,11 @@ describe('ScopedSecretService', () => {
     })
   })
 
-  test('should always throw on setSecretJSON', async () => {
+  test('should always throw on setSecret', async () => {
     const mock = createMockSecrets()
     const scoped = new ScopedSecretService(mock, new Set(['KEY1']))
-    await assert.rejects(() => scoped.setSecretJSON('KEY1', 'val'), {
-      message: 'setSecretJSON is not allowed in scoped secret service',
+    await assert.rejects(() => scoped.setSecret('KEY1', 'val'), {
+      message: 'setSecret is not allowed in scoped secret service',
     })
   })
 

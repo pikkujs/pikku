@@ -3,18 +3,17 @@ import assert from 'node:assert'
 import { TypedSecretService } from './typed-secret-service.js'
 
 const createMockSecrets = (store: Map<string, string> = new Map()) => ({
-  getSecret: async (key: string) => {
+  getSecret: async <T = string>(key: string): Promise<T> => {
     const val = store.get(key)
     if (!val) throw new Error(`Not found: ${key}`)
-    return val
-  },
-  getSecretJSON: async (key: string) => {
-    const val = store.get(key)
-    if (!val) throw new Error(`Not found: ${key}`)
-    return JSON.parse(val)
+    try {
+      return JSON.parse(val) as T
+    } catch {
+      return val as unknown as T
+    }
   },
   hasSecret: async (key: string) => store.has(key),
-  setSecretJSON: async (key: string, value: unknown) => {
+  setSecret: async (key: string, value: unknown) => {
     store.set(key, JSON.stringify(value))
   },
   deleteSecret: async (key: string) => {
@@ -24,42 +23,42 @@ const createMockSecrets = (store: Map<string, string> = new Map()) => ({
 
 describe('TypedSecretService', () => {
   test('should delegate getSecret to underlying service', async () => {
-    const store = new Map([['API_KEY', 'sk-123']])
+    const store = new Map([['API_KEY', '"sk-123"']])
     const service = new TypedSecretService(createMockSecrets(store), {})
     const result = await service.getSecret('API_KEY')
     assert.strictEqual(result, 'sk-123')
   })
 
-  test('should delegate getSecretJSON to underlying service', async () => {
+  test('should delegate getSecret with type to underlying service', async () => {
     const store = new Map([['CONFIG', '{"port":3000}']])
     const service = new TypedSecretService(createMockSecrets(store), {})
-    const result = await service.getSecretJSON('CONFIG')
+    const result = await service.getSecret<{ port: number }>('CONFIG')
     assert.deepStrictEqual(result, { port: 3000 })
   })
 
   test('should delegate hasSecret to underlying service', async () => {
-    const store = new Map([['EXISTS', 'val']])
+    const store = new Map([['EXISTS', '"val"']])
     const service = new TypedSecretService(createMockSecrets(store), {})
     assert.strictEqual(await service.hasSecret('EXISTS'), true)
     assert.strictEqual(await service.hasSecret('MISSING'), false)
   })
 
-  test('should delegate setSecretJSON to underlying service', async () => {
+  test('should delegate setSecret to underlying service', async () => {
     const store = new Map<string, string>()
     const service = new TypedSecretService(createMockSecrets(store), {})
-    await service.setSecretJSON('NEW_KEY', { data: 'val' })
+    await service.setSecret('NEW_KEY', { data: 'val' })
     assert.strictEqual(store.get('NEW_KEY'), '{"data":"val"}')
   })
 
   test('should delegate deleteSecret to underlying service', async () => {
-    const store = new Map([['KEY', 'val']])
+    const store = new Map([['KEY', '"val"']])
     const service = new TypedSecretService(createMockSecrets(store), {})
     await service.deleteSecret('KEY')
     assert.strictEqual(store.has('KEY'), false)
   })
 
   test('should get all status for credentials', async () => {
-    const store = new Map([['STRIPE_KEY', 'sk-123']])
+    const store = new Map([['STRIPE_KEY', '"sk-123"']])
     const meta = {
       STRIPE_KEY: { name: 'stripe', displayName: 'Stripe' },
       GITHUB_TOKEN: {
@@ -80,7 +79,7 @@ describe('TypedSecretService', () => {
   })
 
   test('should get missing credentials', async () => {
-    const store = new Map([['STRIPE_KEY', 'sk-123']])
+    const store = new Map([['STRIPE_KEY', '"sk-123"']])
     const meta = {
       STRIPE_KEY: { name: 'stripe', displayName: 'Stripe' },
       GITHUB_TOKEN: { name: 'github', displayName: 'GitHub' },

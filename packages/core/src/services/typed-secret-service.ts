@@ -22,13 +22,9 @@ export class TypedSecretService<
     private credentialsMeta: Record<string, CredentialMeta>
   ) {}
 
-  async getSecretJSON<K extends keyof TMap & string>(key: K): Promise<TMap[K]>
-  async getSecretJSON<T = unknown>(key: string): Promise<T>
-  async getSecretJSON(key: string): Promise<unknown> {
-    return this.secrets.getSecretJSON(key)
-  }
-
-  async getSecret(key: string): Promise<string> {
+  async getSecret<K extends keyof TMap & string>(key: K): Promise<TMap[K]>
+  async getSecret<T = string>(key: string): Promise<T>
+  async getSecret(key: string): Promise<unknown> {
     return this.secrets.getSecret(key)
   }
 
@@ -36,11 +32,11 @@ export class TypedSecretService<
     return this.secrets.hasSecret(key)
   }
 
-  async setSecretJSON<K extends string>(
+  async setSecret<K extends string>(
     key: K,
     value: K extends keyof TMap ? TMap[K] : unknown
   ): Promise<void> {
-    return this.secrets.setSecretJSON(key, value)
+    return this.secrets.setSecret(key, value)
   }
 
   async deleteSecret(key: string): Promise<void> {

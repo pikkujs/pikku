@@ -3,19 +3,12 @@
  */
 export interface SecretService {
   /**
-   * Retrieves a secret by key and parses it as JSON.
-   * @param key - The key of the secret to retrieve.
-   * @returns A promise that resolves to the parsed secret value.
-   * @throws If the secret is not found.
-   */
-  getSecretJSON<Return = {}>(key: string): Promise<Return>
-  /**
-   * Retrieves a secret by key as a string.
+   * Retrieves a secret by key, typed as T (defaults to string).
    * @param key - The key of the secret to retrieve.
    * @returns A promise that resolves to the secret value.
    * @throws If the secret is not found.
    */
-  getSecret(key: string): Promise<string>
+  getSecret<T = string>(key: string): Promise<T>
   /**
    * Checks if a secret exists without throwing.
    * @param key - The key of the secret to check.
@@ -23,12 +16,12 @@ export interface SecretService {
    */
   hasSecret(key: string): Promise<boolean>
   /**
-   * Stores a JSON value as a secret.
+   * Stores a secret value.
    * @param key - The key to store the secret under.
-   * @param value - The JSON value to store.
+   * @param value - The value to store.
    * @returns A promise that resolves when the secret is stored.
    */
-  setSecretJSON(key: string, value: unknown): Promise<void>
+  setSecret(key: string, value: unknown): Promise<void>
   /**
    * Deletes a secret by key.
    * @param key - The key of the secret to delete.
