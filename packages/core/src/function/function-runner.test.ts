@@ -971,12 +971,12 @@ describe('runPikkuFunc - Integration Tests', () => {
   })
 
   test('should expose resolved audit metadata on the wire for audited functions', async () => {
-    let receivedWire: any
+    let receivedAudit: any
 
     addTestFunction('auditedWire', {
       audit: { durability: 'transactional' },
       func: async (_services: any, _data: any, wire: any) => {
-        receivedWire = wire
+        receivedAudit = wire.audit
         return 'ok'
       },
     })
@@ -989,7 +989,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     })
 
     assert.equal(result, 'ok')
-    assert.deepEqual(receivedWire.audit, { durability: 'transactional' })
+    assert.deepEqual(receivedAudit, { durability: 'transactional' })
   })
 
   test('should leave wire audit metadata undefined when audit is disabled', async () => {
@@ -1011,6 +1011,73 @@ describe('runPikkuFunc - Integration Tests', () => {
 
     assert.equal(result, 'ok')
     assert.equal(receivedWire.audit, undefined)
+  })
+
+  test('should restore parent audit metadata after nested non-audited calls', async () => {
+    let auditBeforeChild: any
+    let auditAfterChild: any
+
+    addTestFunction('childPlain', {
+      func: async () => 'child-ok',
+    })
+
+    addTestFunction('parentAudited', {
+      audit: true,
+      func: async (_services: any, _data: any, wire: any) => {
+        auditBeforeChild = wire.audit
+        await runPikkuFunc('rpc', 'nested-child-wire', 'childPlain', {
+          singletonServices: mockSingletonServices,
+          data: () => ({}),
+          auth: false,
+          wire,
+        })
+        auditAfterChild = wire.audit
+        return 'parent-ok'
+      },
+    })
+
+    const result = await runPikkuFunc(
+      'rpc',
+      'nested-parent-wire',
+      'parentAudited',
+      {
+        singletonServices: mockSingletonServices,
+        data: () => ({}),
+        auth: false,
+        wire: {},
+      }
+    )
+
+    assert.equal(result, 'parent-ok')
+    assert.deepEqual(auditBeforeChild, { durability: 'best-effort' })
+    assert.deepEqual(auditAfterChild, { durability: 'best-effort' })
+  })
+
+  test('should expose the resolved base function id after version fallback', async () => {
+    let receivedFunctionId: any
+
+    addTestFunction('versionedBase', {
+      audit: true,
+      func: async (_services: any, _data: any, wire: any) => {
+        receivedFunctionId = wire.functionId
+        return 'ok'
+      },
+    })
+
+    const result = await runPikkuFunc(
+      'rpc',
+      'wire-version-fallback',
+      'versionedBase@v2',
+      {
+        singletonServices: mockSingletonServices,
+        data: () => ({}),
+        auth: false,
+        wire: {},
+      }
+    )
+
+    assert.equal(result, 'ok')
+    assert.equal(receivedFunctionId, 'versionedBase')
   })
 })
 

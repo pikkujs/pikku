@@ -252,7 +252,7 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   /** Meta service for reading .pikku metadata files (filesystem on Node, R2/KV on CF) */
   metaService?: MetaService
   /** Audit service for durable or staged audit event capture */
-  audit: AuditService
+  audit?: AuditService
   /** Session store for persisting user sessions keyed by pikkuUserId */
   sessionStore?: SessionStore
 }

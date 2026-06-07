@@ -119,13 +119,20 @@ class InvocationAuditLog implements AuditLog {
       queryEvents[0]!.queryId = null
     }
 
-    if (this.service.write) {
-      await this.service.write(batch)
-      return
-    }
+    try {
+      if (this.service.write) {
+        await this.service.write(batch)
+        return
+      }
 
-    for (const event of batch) {
-      await this.service.audit(event)
+      for (const event of batch) {
+        await this.service.audit(event)
+      }
+    } catch (error) {
+      ;(this.wire as any).logger?.warn?.(
+        'best-effort audit flush failed',
+        error
+      )
     }
   }
 
