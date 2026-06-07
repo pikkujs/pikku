@@ -9,6 +9,15 @@ import type { VariablesService } from './variables-service.js'
 export class LocalSecretService implements SecretService {
   private localSecrets: Map<string, string> = new Map()
 
+  // TODO: Drop this fallback once secrets and variables expose aligned typed/raw access paths again.
+  private parseSecret<R>(raw: string): R {
+    try {
+      return JSON.parse(raw) as R
+    } catch {
+      return raw as unknown as R
+    }
+  }
+
   /**
    * Creates an instance of LocalSecretService.
    */
@@ -27,13 +36,13 @@ export class LocalSecretService implements SecretService {
     // Check local storage first
     const localValue = this.localSecrets.get(key)
     if (localValue) {
-      return JSON.parse(localValue)
+      return this.parseSecret(localValue)
     }
 
     // Fall back to environment variables
     const value = await this.variables.get(key)
     if (value) {
-      return JSON.parse(value)
+      return this.parseSecret(value)
     }
     throw new Error('Requested secret not found')
   }

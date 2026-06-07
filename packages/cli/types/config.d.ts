@@ -237,6 +237,11 @@ export type PikkuCLIInput = {
     supportsImportAttributes?: boolean
   }
 
+  db?: {
+    engine?: 'sqlite' | 'postgres'
+    pgVersion?: number
+  }
+
   cli?: {
     entrypoints?: Record<
       string,
