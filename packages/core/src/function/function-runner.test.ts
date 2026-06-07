@@ -785,6 +785,55 @@ describe('runPikkuFunc - Integration Tests', () => {
     assert.deepEqual(receivedSession, { userId: 'user-1', loaded: true })
   })
 
+  test('should expose middleware-set session to createWireServices credential lookups', async () => {
+    let credentialLookups = 0
+    let receivedCredential: any
+    const sessionService = new PikkuSessionService<any>()
+
+    addTestFunction('credentialWire', {
+      middleware: [
+        async (_services: any, wire: any, next: any) => {
+          wire.setSession({ userId: 'user-1' })
+          await next()
+        },
+      ],
+      func: async (_services: any, _data: any, wire: any) => {
+        return wire.getSession()
+      },
+    })
+
+    await runPikkuFunc('rpc', Math.random().toString(), 'credentialWire', {
+      singletonServices: {
+        ...mockSingletonServices,
+        credentialService: {
+          getAll: async (userId: string) => {
+            credentialLookups++
+            assert.equal(userId, 'user-1')
+            return {
+              'user-oauth': { accessToken: 'token-1' },
+            }
+          },
+        },
+      } as any,
+      createWireServices: async (_services: any, wire: any) => {
+        receivedCredential = await wire.getCredential('user-oauth')
+        return {}
+      },
+      data: () => ({}),
+      auth: false,
+      wire: {
+        session: undefined,
+        setSession: (session: any) => sessionService.setInitial(session),
+        getSession: () => sessionService.get(),
+        hasSessionChanged: () => sessionService.sessionChanged,
+      } as any,
+      sessionService,
+    })
+
+    assert.equal(credentialLookups, 1)
+    assert.deepEqual(receivedCredential, { accessToken: 'token-1' })
+  })
+
   test('should pass addon-scoped singleton services and wrap bare workflow names', async () => {
     pikkuState(null, 'addons', 'packages').set('stripe', {
       package: '@addon/stripe',
