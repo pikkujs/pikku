@@ -48,11 +48,11 @@ async function createProject(migrations: Record<string, string>): Promise<string
       include: ['src'],
     })
   )
-  await mkdir(join(tmpDir, 'db', 'migrations'), { recursive: true })
+  await mkdir(join(tmpDir, 'db', 'sqlite'), { recursive: true })
   await mkdir(join(tmpDir, 'src'), { recursive: true })
 
   for (const [name, sql] of Object.entries(migrations)) {
-    await writeFile(join(tmpDir, 'db', 'migrations', name), sql)
+    await writeFile(join(tmpDir, 'db', 'sqlite', name), sql)
   }
 
   return tmpDir

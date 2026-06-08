@@ -49,9 +49,9 @@ async function createProject(migrationSql: string): Promise<string> {
       include: ['src'],
     })
   )
-  await mkdir(join(tmpDir, 'db', 'migrations'), { recursive: true })
+  await mkdir(join(tmpDir, 'db', 'sqlite'), { recursive: true })
   await mkdir(join(tmpDir, 'src'), { recursive: true })
-  await writeFile(join(tmpDir, 'db', 'migrations', '001_init.sql'), migrationSql)
+  await writeFile(join(tmpDir, 'db', 'sqlite', '001_init.sql'), migrationSql)
   return tmpDir
 }
 
