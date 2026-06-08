@@ -11,6 +11,6 @@
     "typescript": "^5.9"
   },
   "scripts": {
-    "test": "npx tsx --test src/tests/codegen.assert.ts src/tests/anonymize.assert.ts src/tests/audit.assert.ts"
+    "test": "yarn tsx --test src/tests/codegen.assert.ts src/tests/anonymize.assert.ts src/tests/audit.assert.ts"
   }
 }

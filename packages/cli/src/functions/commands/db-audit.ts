@@ -50,6 +50,7 @@ export const dbAudit = pikkuSessionlessFunc<{}, void>({
         } else if (classification === 'secret') {
           secretCount++
           secretColumns.push(`${table}.${col}`)
+          if (!anonymize_strategy) noStrategyColumns.push(`${table}.${col}`)
           logger.info(`    ${col.padEnd(30)} secret   ${strategyLabel}`)
         } else {
           privateCount++

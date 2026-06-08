@@ -46,6 +46,22 @@ export function findPiiPaths(
 
   // ── Object: recurse into named properties ─────────────────────────────────
   if (type.flags & ts.TypeFlags.Object) {
+    const ref = type as ts.TypeReference
+    for (const arg of (ref as any).typeArguments ?? []) {
+      violations.push(...findPiiPaths(checker, arg, path, depth + 1, seen))
+    }
+
+    const numberIndex = checker.getIndexTypeOfType(type, ts.IndexKind.Number)
+    if (numberIndex) {
+      const idxPath = path ? `${path}[]` : '[]'
+      violations.push(...findPiiPaths(checker, numberIndex, idxPath, depth + 1, seen))
+    }
+    const stringIndex = checker.getIndexTypeOfType(type, ts.IndexKind.String)
+    if (stringIndex) {
+      const idxPath = path ? `${path}[*]` : '[*]'
+      violations.push(...findPiiPaths(checker, stringIndex, idxPath, depth + 1, seen))
+    }
+
     for (const prop of type.getProperties()) {
       if (prop.name.startsWith('__')) continue
       const decl = prop.valueDeclaration ?? prop.declarations?.[0]

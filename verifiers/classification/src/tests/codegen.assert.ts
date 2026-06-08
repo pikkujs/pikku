@@ -185,7 +185,12 @@ describe('DB codegen — classification brands', () => {
     assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
 
     const schema = await readFile(join(dir, '.pikku', 'db', 'schema.d.ts'), 'utf-8')
-    assert.match(schema, /Private<string>/, 'ALTER TABLE column should get Private brand')
+    assert.match(schema, /phone[^;]*Private<string>|Private<string>[^;]*phone/, 'ALTER TABLE phone column should get Private brand')
+
+    const manifest = await readFile(join(dir, '.pikku', 'db', 'classification.gen.ts'), 'utf-8')
+    assert.match(manifest, /"phone"/, 'manifest should include the phone column')
+    assert.match(manifest, /classification:\s*['"]private['"]/, 'phone should be classified private')
+    assert.match(manifest, /['"]fake:name['"]/, 'ALTER annotation strategy fake:name should be preserved')
   })
 
   test('generates classification.gen.ts manifest with correct entries', async (t) => {

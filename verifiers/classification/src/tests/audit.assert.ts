@@ -89,7 +89,8 @@ describe('DB audit command', () => {
     `)
     t.after(() => rm(dir, { recursive: true, force: true }))
 
-    runPikku(dir, ['db', 'migrate'])
+    const migrate1 = runPikku(dir, ['db', 'migrate'])
+    assert.equal(migrate1.exitCode, 0, `migrate failed: ${migrate1.stdout}\n${migrate1.stderr}`)
     const audit = runPikku(dir, ['db', 'audit'])
     assert.equal(audit.exitCode, 0, `audit failed: ${audit.stdout}\n${audit.stderr}`)
 
@@ -110,7 +111,8 @@ describe('DB audit command', () => {
     `)
     t.after(() => rm(dir, { recursive: true, force: true }))
 
-    runPikku(dir, ['db', 'migrate'])
+    const migrate2 = runPikku(dir, ['db', 'migrate'])
+    assert.equal(migrate2.exitCode, 0, `migrate failed: ${migrate2.stdout}\n${migrate2.stderr}`)
     const audit = runPikku(dir, ['db', 'audit'])
     assert.equal(audit.exitCode, 0, `audit failed: ${audit.stdout}\n${audit.stderr}`)
 
@@ -133,7 +135,8 @@ describe('DB audit command', () => {
     `)
     t.after(() => rm(dir, { recursive: true, force: true }))
 
-    runPikku(dir, ['db', 'migrate'])
+    const migrate3 = runPikku(dir, ['db', 'migrate'])
+    assert.equal(migrate3.exitCode, 0, `migrate failed: ${migrate3.stdout}\n${migrate3.stderr}`)
     const audit = runPikku(dir, ['db', 'audit'])
     assert.equal(audit.exitCode, 0, `audit failed: ${audit.stdout}\n${audit.stderr}`)
 
