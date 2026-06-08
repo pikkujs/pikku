@@ -10,6 +10,48 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  validate-changesets:
+    name: Validate Changesets
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check changeset packages exist in workspace
+        run: |
+          set -euo pipefail
+
+          WORKSPACE_PACKAGES=$(find . -name "package.json" \
+            -not -path "*/node_modules/*" \
+            | xargs jq -r '.name // empty' 2>/dev/null | sort)
+
+          ERRORS=0
+          CHECKED=0
+
+          while IFS= read -r file; do
+            CHECKED=$((CHECKED + 1))
+            in_front=0
+            while IFS= read -r line; do
+              if [[ "$line" == "---" ]]; then
+                if [[ $in_front -eq 0 ]]; then in_front=1; else break; fi
+                continue
+              fi
+              if [[ $in_front -eq 1 ]] && [[ "$line" =~ ^\"(@[^\"]+)\" ]]; then
+                pkg="${BASH_REMATCH[1]}"
+                if ! echo "$WORKSPACE_PACKAGES" | grep -qx "$pkg"; then
+                  echo "ERROR in $file: '$pkg' is not a workspace package"
+                  ERRORS=$((ERRORS + 1))
+                fi
+              fi
+            done < "$file"
+          done < <(find .changeset -name "*.md" -not -name "README.md" 2>/dev/null)
+
+          echo "Checked $CHECKED changeset(s)"
+          if [[ $ERRORS -gt 0 ]]; then
+            echo "$ERRORS invalid package reference(s) found"
+            exit 1
+          fi
+          echo "All changeset packages are valid"
+
   build:
     name: Build
     runs-on: ubuntu-latest
