@@ -22,6 +22,11 @@ const invokeConsoleRpc = (
       ? rpcName.slice('console:'.length)
       : rpcName
     const ws = new WebSocket(wsUrl)
+    const timeout = setTimeout(() => {
+      ws.close()
+      reject(new Error(`Console RPC "${action}" timed out`))
+    }, 30_000)
+    const cleanup = () => clearTimeout(timeout)
     ws.addEventListener(
       'open',
       () => {
@@ -32,15 +37,23 @@ const invokeConsoleRpc = (
     ws.addEventListener(
       'message',
       (event) => {
-        const { action: _, ...result } = JSON.parse(event.data)
-        ws.close()
-        resolve(result)
+        cleanup()
+        try {
+          const parsed = JSON.parse(event.data as string)
+          const { action: _, ...result } = parsed as Record<string, unknown>
+          ws.close()
+          resolve(result)
+        } catch {
+          ws.close()
+          reject(new Error(`Console RPC "${action}" returned invalid JSON`))
+        }
       },
       { once: true }
     )
     ws.addEventListener(
       'error',
       (event) => {
+        cleanup()
         reject(event)
       },
       { once: true }

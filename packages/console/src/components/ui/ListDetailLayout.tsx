@@ -21,7 +21,7 @@ export const ListDetailLayout: React.FC<ListDetailLayoutProps> = ({
   listWidth,
   height,
 }) => {
-  const showDetail = collapsible ? hasSelection : hasSelection || !!detail
+  const showDetail = !collapsible || hasSelection
 
   return (
     <Box

@@ -210,14 +210,6 @@
   padding: 16px;
 }
 
-/* ── Surface card ── */
-
-.surfaceCard {
-  background: var(--app-surface);
-  border: 1px solid var(--app-row-border);
-  border-radius: 8px;
-}
-
 /* ── Code-like input box ── */
 
 .codeInputBox {

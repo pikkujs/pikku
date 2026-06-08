@@ -41,7 +41,6 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
           padding: 'var(--mantine-spacing-md)',
         }}
       >
-        {/* Left card: runs / history panel */}
         <Box
           style={{
             width: showLeft ? 240 : 0,
@@ -57,7 +56,6 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
           </Box>
         </Box>
 
-        {/* Center card: main content */}
         <Box
           className={classes.listSurfaceCard}
           style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}
@@ -65,7 +63,6 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
           {children}
         </Box>
 
-        {/* Right card: panel / detail */}
         <Box
           style={{
             width: showRight ? 'min(520px, 42vw)' : 0,

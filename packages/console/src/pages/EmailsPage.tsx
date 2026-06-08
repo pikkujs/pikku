@@ -157,6 +157,8 @@ export const EmailsPage: React.FC = () => {
   const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>(
     'desktop'
   )
+  const [selectorOpen, setSelectorOpen] = useState(false)
+  const [selectorSearch, setSelectorSearch] = useState('')
 
   const templates = meta.emailsMeta?.templates || {}
   const templateNames = useMemo(
@@ -266,9 +268,6 @@ export const EmailsPage: React.FC = () => {
       />
     )
   }
-
-  const [selectorOpen, setSelectorOpen] = useState(false)
-  const [selectorSearch, setSelectorSearch] = useState('')
 
   const filteredTemplateItems = useMemo(() => {
     if (!selectorSearch) return templateItems
