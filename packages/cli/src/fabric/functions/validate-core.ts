@@ -193,14 +193,14 @@ export async function runFabricValidate(
       }
     }
 
-    // db/migrations/ — presence, numbering and SQL dialect
-    const migrationsDir = join(fnDir, 'db', 'migrations')
+    // db/sqlite/ — presence, numbering and SQL dialect
+    const migrationsDir = join(fnDir, 'db', 'sqlite')
     if (!existsSync(migrationsDir)) {
       e(
         'migrations-dir-missing',
-        'packages/functions/db/migrations/ not found',
+        'packages/functions/db/sqlite/ not found',
         migrationsDir,
-        'Create db/migrations/ and add numbered .sql files (e.g. 0001-init.sql) using SQLite-compatible syntax'
+        'Create db/sqlite/ and add numbered .sql files (e.g. 0001-init.sql) using SQLite-compatible syntax'
       )
     } else {
       try {
@@ -244,14 +244,14 @@ export async function runFabricValidate(
       }
     }
 
-    // db/seed.sql
-    const seedPath = join(fnDir, 'db', 'seed.sql')
+    // db/sqlite-seed.sql
+    const seedPath = join(fnDir, 'db', 'sqlite-seed.sql')
     if (!existsSync(seedPath)) {
       e(
         'seed-sql-missing',
-        'packages/functions/db/seed.sql not found',
+        'packages/functions/db/sqlite-seed.sql not found',
         seedPath,
-        'Create db/seed.sql with idempotent INSERT OR IGNORE statements for demo/test data'
+        'Create db/sqlite-seed.sql with idempotent INSERT OR IGNORE statements for demo/test data'
       )
     }
   }
