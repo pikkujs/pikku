@@ -28,16 +28,18 @@ export function ListPageHeader({ title, description, docsHref, lead, filters, vi
   return (
     <Stack gap="xs">
       <Stack gap={2}>
-        <Text fw={600} size="md" c="var(--app-text)" truncate style={{ minWidth: 0 }}>
+        <Text fw={600} size="xl" c="var(--app-text)" truncate style={{ minWidth: 0 }}>
           {title}
         </Text>
         {description != null &&
           (typeof description === 'string' ? (
-            <Text size="sm" c="dimmed">
+            <Text size="md" c="dimmed">
               {description}
             </Text>
           ) : (
-            description
+            <Text size="md" c="dimmed" component="div">
+              {description}
+            </Text>
           ))}
       </Stack>
       {hasActionBar && (
