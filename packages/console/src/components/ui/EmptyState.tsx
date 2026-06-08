@@ -115,8 +115,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       ))}
 
       <Text
-        mt={hasTop ? (compact ? 14 : 20) : 0}
-        fz={compact ? 16 : 19}
+        mt={hasTop ? (compact ? 14 : 24) : 0}
+        fz={compact ? 17 : 22}
         fw={650}
         c="var(--app-text, var(--mantine-color-text))"
         style={{ letterSpacing: '-0.01em' }}
@@ -126,10 +126,10 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
       {subtitle && (
         <Text
-          mt={8}
-          fz={14}
+          mt={10}
+          fz={15}
           c="var(--app-text-dim, var(--mantine-color-dimmed))"
-          maw={440}
+          maw={460}
           lh={1.55}
           ta="center"
         >

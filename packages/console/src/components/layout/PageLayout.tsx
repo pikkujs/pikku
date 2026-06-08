@@ -16,36 +16,49 @@ interface ListPageHeaderProps {
 export function ListPageHeader({ title, description, docsHref, lead, filters, view }: ListPageHeaderProps) {
   const docsButton = docsHref ? <DocLink href={docsHref} /> : null
 
-  const combinedView = (view || docsButton) ? (
-    <Group gap="xs" wrap="nowrap">
-      {view}
-      {docsButton}
-    </Group>
-  ) : null
-
-  const hasActionBar = !!(lead || filters || combinedView)
+  const titleStack = (
+    <Stack gap={2} style={{ minWidth: 0, flex: 1 }}>
+      <Text fw={600} size="xl" c="var(--app-text)" truncate style={{ minWidth: 0 }}>
+        {title}
+      </Text>
+      {description != null &&
+        (typeof description === 'string' ? (
+          <Text size="md" c="dimmed">
+            {description}
+          </Text>
+        ) : (
+          <Text size="md" c="dimmed" component="div">
+            {description}
+          </Text>
+        ))}
+    </Stack>
+  )
 
   return (
-    <Stack gap="xs">
-      <Stack gap={2}>
-        <Text fw={600} size="xl" c="var(--app-text)" truncate style={{ minWidth: 0 }}>
-          {title}
-        </Text>
-        {description != null &&
-          (typeof description === 'string' ? (
-            <Text size="md" c="dimmed">
-              {description}
-            </Text>
-          ) : (
-            <Text size="md" c="dimmed" component="div">
-              {description}
-            </Text>
-          ))}
+    <>
+      {/* Wide: single row — title | filters | view | lead | docs */}
+      <Group justify="space-between" align="center" wrap="nowrap" gap="md" visibleFrom="lg">
+        {titleStack}
+        {filters && <Group gap="sm" wrap="nowrap" style={{ flexShrink: 0 }}>{filters}</Group>}
+        {view && <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>{view}</Group>}
+        {lead && <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>{lead}</Group>}
+        {docsButton}
+      </Group>
+
+      {/* Narrow: [title | lead | docs] then [filters | view] */}
+      <Stack gap="xs" hiddenFrom="lg">
+        <Group justify="space-between" align="center" wrap="nowrap" gap="md">
+          {titleStack}
+          <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>
+            {lead}
+            {docsButton}
+          </Group>
+        </Group>
+        {(filters || view) && (
+          <PageActionBar filters={filters} view={view} />
+        )}
       </Stack>
-      {hasActionBar && (
-        <PageActionBar lead={lead} filters={filters} view={combinedView} />
-      )}
-    </Stack>
+    </>
   )
 }
 
@@ -173,19 +186,17 @@ export function PageToolbar({ children }: PageToolbarProps) {
 }
 
 interface PageActionBarProps {
-  lead?: ReactNode
   view?: ReactNode
   filters?: ReactNode
 }
 
-export function PageActionBar({ lead, view, filters }: PageActionBarProps) {
-  if (!lead && !view && !filters) return null
+export function PageActionBar({ view, filters }: PageActionBarProps) {
+  if (!view && !filters) return null
   return (
     <Group gap="sm" wrap="nowrap" align="center" style={{ width: '100%', minWidth: 0 }}>
-      {lead}
-      {(filters || view) && (
+      {filters}
+      {view && (
         <Group gap="sm" wrap="nowrap" align="center" style={{ marginLeft: 'auto' }}>
-          {filters}
           {view}
         </Group>
       )}
