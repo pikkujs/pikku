@@ -1,4 +1,4 @@
-import { execSync } from 'child_process'
+import { spawnSync } from 'child_process'
 import { mkdirSync, writeFileSync, rmSync, existsSync, symlinkSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -20,6 +20,7 @@ const RUNS_PER_SIZE = 3
 function setupProject() {
   mkdirSync(resolve(PROJECT_DIR, 'src/functions'), { recursive: true })
   mkdirSync(resolve(PROJECT_DIR, 'src/wirings'), { recursive: true })
+  mkdirSync(resolve(PROJECT_DIR, 'src/workflows'), { recursive: true })
   mkdirSync(resolve(PROJECT_DIR, 'types'), { recursive: true })
 
   const nmLink = resolve(PROJECT_DIR, 'node_modules')
@@ -148,6 +149,115 @@ export const ${name} = pikkuSessionlessFunc({
 })`
 }
 
+// n-th workflow references functions at indices n, n+1, n+2 (wrapping within count)
+function wrap(n: number, count: number): string {
+  return String(((n - 1) % count) + 1).padStart(4, '0')
+}
+
+function workflowFile(n: number, count: number): string {
+  const name = `benchWorkflow${String(n).padStart(4, '0')}`
+  const graphName = `benchGraph${String(n).padStart(4, '0')}`
+  // Graph nodes reference 5 functions spread across the function set
+  const nodes = [0, 1, 2, 3, 4].map((offset) => wrap(n + offset, count))
+
+  return `import { pikkuWorkflowComplexFunc, pikkuWorkflowGraph } from '../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { z } from 'zod'
+
+export const ${name}Input = z.object({
+  id: z.string(),
+  name: z.string(),
+  trigger: z.enum(['manual', 'scheduled', 'event']),
+  priority: z.number(),
+  context: z.object({
+    userId: z.string(),
+    orgId: z.string(),
+    region: z.string(),
+  }),
+  options: z.object({
+    retries: z.number(),
+    timeout: z.number(),
+    notify: z.boolean(),
+  }),
+  tags: z.array(z.string()),
+  dryRun: z.boolean().optional(),
+})
+
+export const ${name}Output = z.object({
+  workflowId: z.string(),
+  status: z.enum(['completed', 'failed', 'partial']),
+  steps: z.array(z.object({
+    name: z.string(),
+    duration: z.number(),
+    result: z.string(),
+  })),
+  summary: z.object({
+    totalSteps: z.number(),
+    successCount: z.number(),
+    failureCount: z.number(),
+  }),
+  startedAt: z.string(),
+  completedAt: z.string(),
+  triggeredBy: z.string(),
+  version: z.string(),
+  retryCount: z.number(),
+})
+
+export const ${name} = pikkuWorkflowComplexFunc({
+  input: ${name}Input,
+  output: ${name}Output,
+  func: async (_services, data, { workflow }) => {
+    const r1 = await workflow.do('Step 1', async () => ({ id: data.id, val: \`s1-\${data.name}\`, score: 10 }))
+    const r2 = await workflow.do('Step 2', async () => ({ id: r1.id, val: \`s2-\${r1.val}\`, score: 20 }))
+    const r3 = await workflow.do('Step 3', async () => ({ id: r2.id, val: \`s3-\${r2.val}\`, score: 30 }))
+    const r4 = await workflow.do('Step 4', async () => ({ id: r3.id, val: \`s4-\${r3.val}\`, score: 40 }))
+    const r5 = await workflow.do('Step 5', async () => ({ id: r4.id, val: \`s5-\${r4.val}\`, score: 50 }))
+    const now = new Date().toISOString()
+    return {
+      workflowId: data.id,
+      status: 'completed' as const,
+      steps: [
+        { name: 'Step 1', duration: r1.score, result: r1.val },
+        { name: 'Step 2', duration: r2.score, result: r2.val },
+        { name: 'Step 3', duration: r3.score, result: r3.val },
+        { name: 'Step 4', duration: r4.score, result: r4.val },
+        { name: 'Step 5', duration: r5.score, result: r5.val },
+      ],
+      summary: { totalSteps: 5, successCount: 5, failureCount: 0 },
+      startedAt: now,
+      completedAt: now,
+      triggeredBy: data.trigger,
+      version: '1',
+      retryCount: 0,
+    }
+  },
+})
+
+const benchInput = () => ({
+  id: '1', name: 'bench', age: 25, email: 'a@b.com', isActive: true,
+  role: 'user' as const,
+  address: { street: '1 Main St', city: 'Bench City', country: 'US' },
+  tags: ['bench'], metadata: { createdAt: '2024-01-01', updatedAt: '2024-01-01' },
+})
+
+export const ${graphName} = pikkuWorkflowGraph({
+  description: 'Benchmark graph ${n} — 5-node linear chain',
+  nodes: {
+    init:      'testFunc${nodes[0]}',
+    validate:  'testFunc${nodes[1]}',
+    transform: 'testFunc${nodes[2]}',
+    enrich:    'testFunc${nodes[3]}',
+    finalize:  'testFunc${nodes[4]}',
+  } as any,
+  config: {
+    init:      { input: benchInput, next: 'validate' },
+    validate:  { input: benchInput, next: 'transform' },
+    transform: { input: benchInput, next: 'enrich' },
+    enrich:    { input: benchInput, next: 'finalize' },
+    finalize:  { input: benchInput },
+  } as any,
+})`
+}
+
 function httpWiringFile(count: number): string {
   const imports = Array.from({ length: count }, (_, i) => {
     const pad = String(i + 1).padStart(4, '0')
@@ -223,9 +333,11 @@ function schedulerWiringFile(count: number): string {
 function writeSize(count: number) {
   const fnDir = resolve(PROJECT_DIR, 'src/functions')
   const wireDir = resolve(PROJECT_DIR, 'src/wirings')
+  const wfDir = resolve(PROJECT_DIR, 'src/workflows')
   for (let i = 1; i <= count; i++) {
     const pad = String(i).padStart(4, '0')
     writeFileSync(resolve(fnDir, `test-func-${pad}.function.ts`), functionFile(i))
+    writeFileSync(resolve(wfDir, `bench-workflow-${pad}.ts`), workflowFile(i, count))
   }
   writeFileSync(resolve(wireDir, 'bench.http.wirings.ts'), httpWiringFile(count))
   writeFileSync(resolve(wireDir, 'bench.queue.wirings.ts'), queueWiringFile(count))
@@ -235,21 +347,32 @@ function writeSize(count: number) {
 function cleanSrc() {
   const fnDir = resolve(PROJECT_DIR, 'src/functions')
   const wireDir = resolve(PROJECT_DIR, 'src/wirings')
+  const wfDir = resolve(PROJECT_DIR, 'src/workflows')
   rmSync(fnDir, { recursive: true, force: true })
   rmSync(wireDir, { recursive: true, force: true })
+  rmSync(wfDir, { recursive: true, force: true })
   mkdirSync(fnDir, { recursive: true })
   mkdirSync(wireDir, { recursive: true })
+  mkdirSync(wfDir, { recursive: true })
   // services.ts is kept (not in functions/ or wirings/)
 }
 
-function runAll(): number {
+function runAll(): { ms: number; peakMB: number } {
   const start = performance.now()
-  execSync(`${PIKKU_BIN} all`, {
+  const result = spawnSync('/usr/bin/time', ['-l', PIKKU_BIN, 'all'], {
     cwd: PROJECT_DIR,
-    stdio: 'pipe',
     timeout: 600_000,
+    env: { ...process.env, NODE_OPTIONS: '--max-old-space-size=8192' },
   })
-  return performance.now() - start
+  const ms = performance.now() - start
+  if (result.status !== 0) {
+    throw new Error(result.stderr?.toString() ?? result.error?.message ?? 'pikku all failed')
+  }
+  // /usr/bin/time -l writes "NNN  maximum resident set size" to stderr (bytes on macOS)
+  const stderr = result.stderr?.toString() ?? ''
+  const match = stderr.match(/(\d+)\s+maximum resident set size/)
+  const peakMB = match ? Math.round(parseInt(match[1]) / 1024 / 1024) : 0
+  return { ms, peakMB }
 }
 
 function median(vals: number[]): number {
@@ -283,6 +406,7 @@ async function main() {
     minMs: number
     medianMs: number
     maxMs: number
+    peakMB: number
   }> = []
 
   for (const size of SIZES) {
@@ -290,12 +414,15 @@ async function main() {
     writeSize(size)
 
     const times: number[] = []
+    const heaps: number[] = []
     for (let r = 0; r < RUNS_PER_SIZE; r++) {
-      times.push(runAll())
+      const { ms, peakMB } = runAll()
+      times.push(ms)
+      heaps.push(peakMB)
       process.stdout.write('.')
     }
     console.log(
-      `  min=${Math.round(Math.min(...times))}ms  median=${Math.round(median(times))}ms  max=${Math.round(Math.max(...times))}ms`
+      `  min=${Math.round(Math.min(...times))}ms  median=${Math.round(median(times))}ms  max=${Math.round(Math.max(...times))}ms  peak=${Math.max(...heaps)}MB`
     )
 
     cleanSrc()
@@ -304,6 +431,7 @@ async function main() {
       minMs: Math.min(...times),
       medianMs: median(times),
       maxMs: Math.max(...times),
+      peakMB: Math.max(...heaps),
     })
   }
 
@@ -314,6 +442,7 @@ async function main() {
       'min (ms)': Math.round(r.minMs),
       'median (ms)': Math.round(r.medianMs),
       'max (ms)': Math.round(r.maxMs),
+      'peak heap (MB)': r.peakMB,
     }))
   )
 }
