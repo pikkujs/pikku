@@ -45,7 +45,7 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
             }}
           >
             <Box className={`${classes.flexColumn} ${classes.listSurfaceCard}`} style={{ height: '100%' }}>
-              <PanelContainer showTabs={showTabs} emptyMessage={emptyPanelMessage} />
+              <PanelContainer emptyMessage={emptyPanelMessage} />
             </Box>
           </Box>
         )}
