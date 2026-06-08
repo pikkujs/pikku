@@ -94,6 +94,11 @@ export { ValText } from './components/ui/ValText'
 export type { ValTextProps } from './components/ui/ValText'
 export { CopyableCode } from './components/ui/CopyableCode'
 export { ComposerShell, composerStyles } from './components/ui/ComposerShell'
+export { EntityCardList } from './components/layout/EntityCardList'
+export type {
+  EntityCardItem,
+  EntityCardBadge,
+} from './components/layout/EntityCardList'
 
 // Pages
 export { OverviewPage } from './pages/OverviewPage'

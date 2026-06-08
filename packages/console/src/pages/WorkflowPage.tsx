@@ -1,36 +1,42 @@
-import { Suspense, useContext, useMemo, useState } from 'react'
+import React, { Suspense, useContext, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
+import { Group, TextInput, Center, Loader } from '@mantine/core'
+import { GitBranch, Search } from 'lucide-react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
-import { WorkflowsList } from '../components/project/WorkflowsList'
-import type { WorkflowExtraColumn } from '../components/project/WorkflowsList'
 import { WorkflowTabContent } from '../components/tabs/WorkflowTabContent'
-import { Center, Group, Loader, TextInput } from '@mantine/core'
-import { Search } from 'lucide-react'
-import { useAIWorkflows } from '../hooks/useWorkflowRuns'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
+import { EntityCardList } from '../components/layout/EntityCardList'
+import type { EntityCardItem } from '../components/layout/EntityCardList'
 import {
   OSSConsoleNavigator,
   ConsoleNavigatorCtx,
   useConsoleNavigator,
 } from '../context/ConsoleNavigatorContext'
+import { useAIWorkflows } from '../hooks/useWorkflowRuns'
+
+// Keep this export for backwards compat
+export type { WorkflowExtraColumn } from '../components/project/WorkflowsList'
 
 const WorkflowPageInner: React.FC<{
-  extraColumns?: WorkflowExtraColumn[]
-  headerRight?: React.ReactNode
+  onOpen?: (name: string) => void
+  headerRight?: ReactNode
+  emptyHero?: ReactNode
+  metricSlot?: (name: string) => ReactNode
   immersiveDetail?: boolean
-}> = ({ extraColumns, headerRight, immersiveDetail = false }) => {
-  const { workflowId } = useConsoleNavigator()
+}> = ({ onOpen, headerRight, emptyHero, metricSlot, immersiveDetail = false }) => {
+  const { workflowId, navigateTo } = useConsoleNavigator()
   const { meta, loading } = usePikkuMeta()
   const { data: aiWorkflows } = useAIWorkflows()
   const [searchQuery, setSearchQuery] = useState('')
 
-  const allWorkflows = useMemo(() => {
-    const workflows = meta.workflows || {}
+  const allItems = useMemo((): EntityCardItem[] => {
+    const workflows = meta.workflows ?? {}
     const all = Object.values(workflows) as any[]
     if (aiWorkflows) {
       const existingNames = new Set(all.map((w: any) => w.name))
-      for (const ai of (aiWorkflows as unknown as any[])) {
+      for (const ai of aiWorkflows as unknown as any[]) {
         if (!existingNames.has(ai.workflowName)) {
           all.push({
             name: ai.workflowName,
@@ -43,26 +49,45 @@ const WorkflowPageInner: React.FC<{
       }
     }
     return all
+      .map((w: any): EntityCardItem => {
+        const stepCount = w.nodes ? Object.keys(w.nodes).length : (w.steps?.length ?? 0)
+        const badges = []
+        if (w.source === 'dynamic-workflow') badges.push({ label: 'Dynamic', tone: 'accent' as const })
+        else if (w.dsl === true) badges.push({ label: 'DSL', tone: 'neutral' as const })
+        const metaTags: string[] = []
+        if (stepCount > 0) metaTags.push(`${stepCount} ${stepCount === 1 ? 'step' : 'steps'}`)
+        return {
+          name: w.name,
+          badges,
+          meta: metaTags,
+          description: w.description ?? w.summary,
+          tags: w.tags,
+        }
+      })
+      .sort((a, b) => a.name.localeCompare(b.name))
   }, [meta.workflows, aiWorkflows])
 
-  const filteredWorkflows = useMemo(() => {
+  const items = useMemo(() => {
     const q = searchQuery.toLowerCase()
-    if (!q) return allWorkflows
-    return allWorkflows.filter((w: any) =>
-      w.name?.toLowerCase().includes(q) || w.pikkuFuncId?.toLowerCase().includes(q)
+    if (!q) return allItems
+    return allItems.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        item.description?.toLowerCase().includes(q)
     )
-  }, [allWorkflows, searchQuery])
+  }, [allItems, searchQuery])
 
-  if (workflowId) {
+  // OSS inline detail view (not used when fabric provides onOpen)
+  if (!onOpen && workflowId) {
     return <WorkflowTabContent immersiveDetail={immersiveDetail} />
   }
 
-  if (loading) {
-    return (
-      <Center h="100vh">
-        <Loader />
-      </Center>
-    )
+  const handleOpen = (name: string) => {
+    if (onOpen) {
+      onOpen(name)
+    } else {
+      navigateTo('workflows', name)
+    }
   }
 
   return (
@@ -90,9 +115,16 @@ const WorkflowPageInner: React.FC<{
           />
         }
       >
-        <WorkflowsList
-          workflows={filteredWorkflows}
-          extraColumns={extraColumns}
+        <EntityCardList
+          items={items}
+          onOpen={handleOpen}
+          loading={loading}
+          icon={GitBranch}
+          emptyHero={emptyHero}
+          emptyTitle="No workflows found"
+          emptyDescription="Define workflows in your project to see them here."
+          docsHref="https://pikku.dev/docs/wiring/workflows"
+          metricSlot={metricSlot}
         />
       </ResizablePanelLayout>
     </PanelProvider>
@@ -100,10 +132,14 @@ const WorkflowPageInner: React.FC<{
 }
 
 export const WorkflowsPage: React.FC<{
-  extraColumns?: WorkflowExtraColumn[]
-  headerRight?: React.ReactNode
+  onOpen?: (name: string) => void
+  headerRight?: ReactNode
+  emptyHero?: ReactNode
+  metricSlot?: (name: string) => ReactNode
   immersiveDetail?: boolean
-}> = ({ extraColumns, headerRight, immersiveDetail = false }) => {
+  /** @deprecated — cards have no columns; ignored */
+  extraColumns?: unknown[]
+}> = ({ onOpen, headerRight, emptyHero, metricSlot, immersiveDetail = false }) => {
   const existingNavigator = useContext(ConsoleNavigatorCtx)
   const inner = (
     <Suspense
@@ -114,8 +150,10 @@ export const WorkflowsPage: React.FC<{
       }
     >
       <WorkflowPageInner
-        extraColumns={extraColumns}
+        onOpen={onOpen}
         headerRight={headerRight}
+        emptyHero={emptyHero}
+        metricSlot={metricSlot}
         immersiveDetail={immersiveDetail}
       />
     </Suspense>
