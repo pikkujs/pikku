@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react'
-import { Text, Badge, Group, Switch, UnstyledButton } from '@mantine/core'
-import { FunctionSquare } from 'lucide-react'
+import { Text, Badge, Group, UnstyledButton, TextInput } from '@mantine/core'
+import { FunctionSquare, Search } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
+import { PikkuToggle } from '../components/ui/PikkuToggle'
 import { TableListPage } from '../components/layout/TableListPage'
 import { funcWrapperDefs } from '../components/ui/badge-defs'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
@@ -49,22 +50,13 @@ function isPikkuFunction(func: any): boolean {
 const FunctionsList: React.FC<{
   functions: any[]
   extraColumns?: FunctionExtraColumn[]
-  headerRight?: React.ReactNode
   testsByFunction?: Record<string, FunctionTestData>
-}> = ({ functions, extraColumns = [], headerRight, testsByFunction }) => {
+}> = ({ functions, extraColumns = [], testsByFunction }) => {
   const { openFunction } = usePanelContext()
   const { functionUsedBy } = usePikkuMeta()
-  const [showPikkuFunctions, setShowPikkuFunctions] = useState(false)
   const hasTestsColumn = useMemo(
     () => !!testsByFunction || functions.some((func: any) => !!func.tests),
     [functions, testsByFunction]
-  )
-  const visibleFunctions = useMemo(
-    () =>
-      functions.filter((func: any) => {
-        return showPikkuFunctions || !isPikkuFunction(func)
-      }),
-    [functions, showPikkuFunctions]
   )
 
   const columns = useMemo(
@@ -235,33 +227,13 @@ const FunctionsList: React.FC<{
       title="Functions"
       icon={FunctionSquare}
       docsHref="https://pikku.dev/docs/core-features/functions"
-      data={visibleFunctions}
+      data={functions}
       columns={columns}
       getKey={(func) => func.pikkuFuncName || func.pikkuFuncId}
       onRowClick={(func) =>
         openFunction(func.pikkuFuncName || func.pikkuFuncId, func)
       }
-      searchPlaceholder="Search functions..."
-      searchFilter={(func, q) =>
-        func.pikkuFuncId?.toLowerCase().includes(q) ||
-        func.summary?.toLowerCase().includes(q) ||
-        func.description?.toLowerCase().includes(q) ||
-        false
-      }
       emptyMessage="No functions found."
-      headerRight={
-        <Group gap="sm" wrap="nowrap">
-          <Switch
-            size="sm"
-            label="Show Pikku"
-            checked={showPikkuFunctions}
-            onChange={(event) =>
-              setShowPikkuFunctions(event.currentTarget.checked)
-            }
-          />
-          {headerRight}
-        </Group>
-      }
     />
   )
 }
@@ -272,23 +244,62 @@ export const FunctionsPage: React.FC<{
   testsByFunction?: Record<string, FunctionTestData>
 }> = ({ extraColumns, headerRight, testsByFunction }) => {
   const rpc = usePikkuRPC()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showPikkuFunctions, setShowPikkuFunctions] = useState(false)
 
-  const { data: functions, isLoading } = useQuery({
+  const { data: rawFunctions, isLoading } = useQuery({
     queryKey: ['functions-meta'],
     queryFn: () => rpc.invoke('console:getFunctionsMeta'),
   })
 
+  const functions = useMemo(() => {
+    const all = (rawFunctions ?? []) as any[]
+    const q = searchQuery.toLowerCase()
+    return all.filter((func: any) => {
+      if (!showPikkuFunctions && isPikkuFunction(func)) return false
+      if (!q) return true
+      return (
+        func.pikkuFuncId?.toLowerCase().includes(q) ||
+        func.summary?.toLowerCase().includes(q) ||
+        func.description?.toLowerCase().includes(q)
+      )
+    })
+  }, [rawFunctions, searchQuery, showPikkuFunctions])
+
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title="Functions" description="All registered pikku functions across your project" />}
+        header={
+          <ListPageHeader
+            title="Functions"
+            description="All registered pikku functions across your project"
+            docsHref="https://pikku.dev/docs/core-features/functions"
+            filters={
+              <Group gap="sm" wrap="nowrap">
+                <TextInput
+                  placeholder="Search functions..."
+                  leftSection={<Search size={14} />}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  size="xs"
+                  style={{ width: 240 }}
+                />
+                <PikkuToggle
+                  checked={showPikkuFunctions}
+                  onChange={setShowPikkuFunctions}
+                  tooltip="Show Pikku internals"
+                />
+                {headerRight}
+              </Group>
+            }
+          />
+        }
         emptyPanelMessage="Select a function to view details"
-        hidePanel={isLoading || !functions || functions.length === 0}
+        hidePanel={isLoading || !rawFunctions || (rawFunctions as unknown as any[]).length === 0}
       >
         <FunctionsList
-          functions={functions ?? []}
+          functions={functions}
           extraColumns={extraColumns}
-          headerRight={headerRight}
           testsByFunction={testsByFunction}
         />
       </ResizablePanelLayout>

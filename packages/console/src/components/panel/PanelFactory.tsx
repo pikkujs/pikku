@@ -53,6 +53,7 @@ interface PanelChild {
   id: string
   title: string
   content: React.ReactNode
+  selfContained?: boolean
 }
 
 const WorkflowStepTabbedPanel: React.FC<{
@@ -210,6 +211,7 @@ export const createPanelChildren = (panelData: PanelData): PanelChild[] => {
         {
           id: 'configuration',
           title: 'Function',
+          selfContained: true,
           content: (
             <FunctionTabbedPanel
               functionName={panelData.id}

@@ -104,25 +104,29 @@ export const TableListPage = <T,>({
           {description}
         </Box>
       )}
-      <Box
-        px="md"
-        py="sm"
-        style={{
-          borderBottom: '1px solid var(--mantine-color-default-border)',
-          display: 'flex',
-          gap: 8,
-          alignItems: 'center',
-        }}
-      >
-        <TextInput
-          placeholder={searchPlaceholder}
-          leftSection={<Search size={16} />}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className={classes.flexGrow}
-        />
-        {headerRight}
-      </Box>
+      {(searchFilter || headerRight) && (
+        <Box
+          px="md"
+          py="sm"
+          style={{
+            borderBottom: '1px solid var(--mantine-color-default-border)',
+            display: 'flex',
+            gap: 8,
+            alignItems: 'center',
+          }}
+        >
+          {searchFilter && (
+            <TextInput
+              placeholder={searchPlaceholder}
+              leftSection={<Search size={16} />}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={classes.flexGrow}
+            />
+          )}
+          {headerRight}
+        </Box>
+      )}
       {filtered.length === 0 ? (
         <Box p="xl">
           <Text c="dimmed" ta="center">

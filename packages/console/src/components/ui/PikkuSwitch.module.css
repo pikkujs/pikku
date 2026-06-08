@@ -1,0 +1,69 @@
+.root {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 9px;
+  border: 0.5px solid var(--app-border, var(--mantine-color-default-border));
+  background: var(--app-panel-bg, var(--mantine-color-body));
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--app-text-faint, var(--mantine-color-dimmed));
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.item:hover {
+  color: var(--app-text, var(--mantine-color-text));
+  background: var(--app-panel-bg-strong, var(--mantine-color-default-hover));
+}
+
+.itemActive {
+  color: var(--switch-active-fg, var(--mantine-color-primary-light-color));
+  background: var(--switch-active-bg, var(--mantine-color-primary-light));
+  box-shadow: inset 0 0 0 1px var(--switch-active-border, transparent);
+}
+
+.icon {
+  flex: 0 0 15px;
+}
+
+.label {
+  display: grid;
+  grid-template-columns: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-columns 200ms ease-out,
+    opacity 160ms ease-out,
+    margin-left 200ms ease-out;
+}
+
+.labelInner {
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.itemActive .label {
+  grid-template-columns: 1fr;
+  opacity: 1;
+  margin-left: 6px;
+}
+
+.showAllLabels .label {
+  grid-template-columns: 1fr;
+  opacity: 1;
+  margin-left: 6px;
+}

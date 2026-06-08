@@ -11,14 +11,16 @@ import {
   Divider,
   Paper,
   Progress,
-  Tabs,
 } from '@mantine/core'
 import { CodeHighlight } from '@mantine/code-highlight'
-import { FunctionSquare, Pencil } from 'lucide-react'
+import { CheckCheck, FunctionSquare, LayoutList, Pencil } from 'lucide-react'
 import { useFunctionMeta, useSchema } from '../../../hooks/useWirings'
 import { useFunctionSource } from '../../../hooks/useCodeEdit'
 import { SchemaViewer } from '../../ui/SchemaViewer'
 import { PikkuBadge } from '../../ui/PikkuBadge'
+import { PikkuSwitch } from '../../ui/PikkuSwitch'
+import { SidePanel, SidePanelContent, SidePanelHeader } from '../../panel/SidePanel'
+import { usePanelContext } from '../../../context/PanelContext'
 import { funcWrapperDefs } from '../../ui/badge-defs'
 import { CommonDetails } from './shared/CommonDetails'
 import { FunctionEditor } from './FunctionEditor'
@@ -91,7 +93,7 @@ export const FunctionConfiguration: React.FC<FunctionDetailsFormProps> = ({
       </Group>
 
       <CommonDetails
-        description={meta.description}
+        description={meta.summary || meta.description}
         services={services}
         wires={meta.wires}
         middleware={middleware}
@@ -160,27 +162,39 @@ export const FunctionTabbedPanel: React.FC<FunctionDetailsFormProps> = ({
   functionName,
   metadata,
 }) => {
+  const [tab, setTab] = useState<'overview' | 'tests'>('overview')
+  const { activePanel, panels, closePanel, goBack } = usePanelContext()
+  const panelData = activePanel ? panels.get(activePanel) : null
+
   return (
-    <Stack gap="md">
-      <Box px="md">
-        <FunctionHeader functionName={functionName} metadata={metadata} />
-      </Box>
-      <Tabs defaultValue="overview">
-        <Tabs.List grow>
-          <Tabs.Tab value="overview">Overview</Tabs.Tab>
-          <Tabs.Tab value="tests">Tests</Tabs.Tab>
-        </Tabs.List>
-        <Tabs.Panel value="overview" pt="md" px="md">
-          <FunctionConfiguration
-            functionName={functionName}
-            metadata={metadata}
-          />
-        </Tabs.Panel>
-        <Tabs.Panel value="tests" pt="md" px="md">
-          <FunctionTestsPanel functionName={functionName} metadata={metadata} />
-        </Tabs.Panel>
-      </Tabs>
-    </Stack>
+    <SidePanel>
+      <SidePanelHeader
+        title={panelData?.title ?? functionName}
+        onBack={panelData && panelData.history.length > 0 ? goBack : undefined}
+        onClose={() => activePanel && closePanel(activePanel)}
+      >
+        <PikkuSwitch
+          ariaLabel="Function panel sections"
+          value={tab}
+          onChange={setTab}
+          showAllLabels
+          options={[
+            { value: 'overview', label: 'Overview', icon: <LayoutList size={15} /> },
+            { value: 'tests', label: 'Tests', icon: <CheckCheck size={15} /> },
+          ]}
+        />
+      </SidePanelHeader>
+      <SidePanelContent>
+        <Box px="md">
+          {tab === 'overview' && (
+            <FunctionConfiguration functionName={functionName} metadata={metadata} />
+          )}
+          {tab === 'tests' && (
+            <FunctionTestsPanel functionName={functionName} metadata={metadata} />
+          )}
+        </Box>
+      </SidePanelContent>
+    </SidePanel>
   )
 }
 

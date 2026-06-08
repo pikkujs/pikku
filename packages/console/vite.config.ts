@@ -13,6 +13,10 @@ export default defineConfig({
   },
   server: {
     port: 7070,
+    proxy: {
+      '/rpc': { target: 'http://localhost:7103', changeOrigin: true },
+      '/api': { target: 'http://localhost:7103', changeOrigin: true },
+    },
   },
   build: {
     outDir: 'dist',

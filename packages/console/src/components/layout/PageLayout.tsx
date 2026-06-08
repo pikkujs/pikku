@@ -1,46 +1,36 @@
 import type { ComponentProps, ReactNode } from 'react'
 import { ActionIcon, Box, Container, Group, Stack, Text, Title, Tooltip } from '@mantine/core'
 import { ExternalLink } from 'lucide-react'
+import DocLink from '../ui/DocLink'
 import { usePageGate } from '../../context/PageGateContext'
 
 interface ListPageHeaderProps {
   title: ReactNode
   description?: ReactNode
-  actions?: ReactNode
   docsHref?: string
+  lead?: ReactNode
+  filters?: ReactNode
+  view?: ReactNode
 }
 
-export function ListPageHeader({ title, description, actions, docsHref }: ListPageHeaderProps) {
-  // One canonical page header for OSS + fabric: title row, then subtitle, then a
-  // dedicated full-width actions row. The title sits alone on its row so it can
-  // never be squished by heavy actions (filters, multiple buttons); the actions
-  // row wraps instead of overflowing. Do not put actions inline with the title.
+export function ListPageHeader({ title, description, docsHref, lead, filters, view }: ListPageHeaderProps) {
+  const docsButton = docsHref ? <DocLink href={docsHref} /> : null
+
+  const combinedView = (view || docsButton) ? (
+    <Group gap="xs" wrap="nowrap">
+      {view}
+      {docsButton}
+    </Group>
+  ) : null
+
+  const hasActionBar = !!(lead || filters || combinedView)
+
   return (
-    <Stack gap="sm">
+    <Stack gap="xs">
       <Stack gap={2}>
-        <Group justify="space-between" align="center" wrap="nowrap" gap="md">
-          {/* Pin the title color so it never inherits a wrapper's `color` (fabric
-              CardListShell sets one, OSS layouts don't) — same on every page. */}
-          <Text fw={600} size="md" c="var(--app-text)" truncate style={{ minWidth: 0 }}>
-            {title}
-          </Text>
-          {docsHref && (
-            <Tooltip label="Docs">
-              <ActionIcon
-                component="a"
-                href={docsHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                variant="subtle"
-                color="gray"
-                size="sm"
-                style={{ flexShrink: 0 }}
-              >
-                <ExternalLink size={14} />
-              </ActionIcon>
-            </Tooltip>
-          )}
-        </Group>
+        <Text fw={600} size="md" c="var(--app-text)" truncate style={{ minWidth: 0 }}>
+          {title}
+        </Text>
         {description != null &&
           (typeof description === 'string' ? (
             <Text size="sm" c="dimmed">
@@ -50,10 +40,8 @@ export function ListPageHeader({ title, description, actions, docsHref }: ListPa
             description
           ))}
       </Stack>
-      {actions && (
-        <Group gap="xs" wrap="wrap" align="center" style={{ minWidth: 0 }}>
-          {actions}
-        </Group>
+      {hasActionBar && (
+        <PageActionBar lead={lead} filters={filters} view={combinedView} />
       )}
     </Stack>
   )
@@ -189,14 +177,14 @@ interface PageActionBarProps {
 export function PageActionBar({ lead, view, filters }: PageActionBarProps) {
   if (!lead && !view && !filters) return null
   return (
-    <Group gap="sm" wrap="nowrap" align="center" justify="space-between" h={45} style={{ width: '100%', minWidth: 0 }}>
-      <Group gap="sm" wrap="nowrap" align="center" style={{ minWidth: 0, flex: 1, flexDirection: 'row' }}>
-        {lead}
-        <Group gap="sm" style={{ flex: 1, flexDirection: 'row', display: 'flex', justifyContent: 'flex-end' }}>
+    <Group gap="sm" wrap="nowrap" align="center" style={{ width: '100%', minWidth: 0 }}>
+      {lead}
+      {(filters || view) && (
+        <Group gap="sm" wrap="nowrap" align="center" style={{ marginLeft: 'auto' }}>
           {filters}
           {view}
         </Group>
-      </Group>
+      )}
     </Group>
   )
 }

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+
 import {
   Stack,
   TextInput,
@@ -11,6 +12,7 @@ import {
   Code,
 } from '@mantine/core'
 import { Save, X, AlertTriangle, CheckCircle } from 'lucide-react'
+import { SidePanelFooter } from '../../panel/SidePanel'
 import CodeMirror from '@uiw/react-codemirror'
 import { javascript } from '@codemirror/lang-javascript'
 import { SectionLabel } from '../../ui/SectionLabel'
@@ -71,7 +73,7 @@ export const FunctionEditor: React.FC<FunctionEditorProps> = ({
     }
   }, [source])
 
-  const handleSaveConfig = async () => {
+  const handleSaveConfig = useCallback(async () => {
     const original = source?.config || {}
     const changes: Record<string, unknown> = {}
 
@@ -112,16 +114,17 @@ export const FunctionEditor: React.FC<FunctionEditorProps> = ({
     } catch {
       // error is in mutation state
     }
-  }
+  }, [source, title, description, summary, tags, expose, remote, mcp, readonly_, approvalRequired, body, sourceFile, exportedName, updateConfig, updateBody, onClose])
+
+  const isPending = updateConfig.isPending || updateBody.isPending
+  const error = updateConfig.error || updateBody.error
 
   if (isLoading) {
     return null
   }
 
-  const isPending = updateConfig.isPending || updateBody.isPending
-  const error = updateConfig.error || updateBody.error
-
   return (
+    <>
     <Stack gap="md">
       {successMessage && (
         <Alert
@@ -230,6 +233,9 @@ export const FunctionEditor: React.FC<FunctionEditorProps> = ({
         </>
       )}
 
+    </Stack>
+
+    <SidePanelFooter>
       <Group gap="xs" justify="flex-end">
         <Button
           variant="subtle"
@@ -249,6 +255,7 @@ export const FunctionEditor: React.FC<FunctionEditorProps> = ({
           Save & Rebuild
         </Button>
       </Group>
-    </Stack>
+    </SidePanelFooter>
+    </>
   )
 }
