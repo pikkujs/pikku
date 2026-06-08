@@ -86,8 +86,17 @@ export type { DetailHeaderProps } from './components/ui/DetailHeader'
 export { EmptyState } from './components/ui/EmptyState'
 export type { EmptyStateProps } from './components/ui/EmptyState'
 export {
-  SeatsHero, TestsHero, DesignHero, DatabaseHero, ContentHero,
-  EmailsHero, ProjectsHero, I18nHero, SettingsHero, LabsHero, SandboxHero,
+  SeatsHero,
+  TestsHero,
+  DesignHero,
+  DatabaseHero,
+  ContentHero,
+  EmailsHero,
+  ProjectsHero,
+  I18nHero,
+  SettingsHero,
+  LabsHero,
+  SandboxHero,
 } from './components/ui/EmptyStateHeroes'
 export { SearchInput } from './components/ui/SearchInput'
 export type { SearchInputProps } from './components/ui/SearchInput'
@@ -117,5 +126,6 @@ export { SecretsPage } from './pages/SecretsPage'
 export { VariablesPage } from './pages/VariablesPage'
 export { EmailsPage } from './pages/EmailsPage'
 export { CredentialsPage } from './pages/CredentialsPage'
+export { TestsPage } from './pages/TestsPage'
 export { NotFoundTitle } from './components/NotFoundTitle'
 export { ConsoleEditableProvider } from './context/ConsoleEditableContext'

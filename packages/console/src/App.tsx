@@ -18,6 +18,7 @@ import { PackagesPage } from './pages/PackagesPage'
 import { CredentialsPage } from './pages/CredentialsPage'
 import { RenderWorkflowPage } from './pages/RenderWorkflowPage'
 import { ChangesPage } from './pages/ChangesPage'
+import { TestsPage } from './pages/TestsPage'
 
 export const App: React.FC = () => {
   return (
@@ -38,6 +39,7 @@ export const App: React.FC = () => {
         <Route path="/agents" element={<AgentsPage />} />
         <Route path="/agents/playground" element={<AgentPlaygroundPage />} />
         <Route path="/changes" element={<ChangesPage />} />
+        <Route path="/tests" element={<TestsPage />} />
         <Route path="/apis" element={<ApisPage />} />
         <Route path="/jobs" element={<JobsPage />} />
         <Route path="/runtime" element={<RuntimePage />} />

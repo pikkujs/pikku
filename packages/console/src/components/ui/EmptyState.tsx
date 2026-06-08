@@ -90,7 +90,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       justify="center"
       gap={0}
       style={{
-        height: '100%',
+        flex: 1,
         textAlign: 'center',
         padding: compact ? '24px 16px' : '44px 16px',
       }}

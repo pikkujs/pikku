@@ -88,6 +88,8 @@ export function PageContainer({
       {...props}
       style={{
         flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
         width: '100%',
         minWidth: 0,
         minHeight: 0,

@@ -4,7 +4,8 @@ import { ExternalLink, Copy, Check } from 'lucide-react'
 import classes from '../ui/console.module.css'
 
 interface EmptyStatePlaceholderProps {
-  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>
+  icon?: React.ComponentType<{ size?: number; strokeWidth?: number }>
+  hero?: React.ReactNode
   title: string
   description?: string
   code?: string
@@ -50,6 +51,7 @@ const CommandChip: React.FC<{ cmd: string }> = ({ cmd }) => {
 
 export const EmptyStatePlaceholder: React.FC<EmptyStatePlaceholderProps> = ({
   icon: Icon,
+  hero,
   title,
   description,
   code,
@@ -65,7 +67,7 @@ export const EmptyStatePlaceholder: React.FC<EmptyStatePlaceholderProps> = ({
         py="xl"
         style={{ minHeight: '60vh' }}
       >
-        <Icon size={48} strokeWidth={1} />
+        {hero ?? (Icon ? <Icon size={48} strokeWidth={1} /> : null)}
         <Text size="xl" fw={600}>
           {title}
         </Text>
