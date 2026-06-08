@@ -155,8 +155,6 @@ export async function runWorkspaceValidate(
     }
   }
 
-  const hasConfiguredDevDb = existsSync(join(root, 'db', 'migrations'))
-
   type RootPkg = {
     workspaces?: unknown
     dependencies?: Record<string, string>
@@ -254,6 +252,8 @@ export async function runWorkspaceValidate(
 
     const migrationsDir = join(fnDir, 'db', 'migrations')
     const authEnabled = await hasAuthSessionMiddleware(fnDir)
+    const configText = await readTextSafe(join(fnDir, 'src', 'config.ts'))
+    const hasConfiguredDevDb = /sqliteDb/.test(configText ?? '')
     let createsAppUser = false
     let createsAuthVerificationToken = false
     if (existsSync(migrationsDir)) {

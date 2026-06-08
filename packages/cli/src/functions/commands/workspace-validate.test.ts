@@ -215,6 +215,11 @@ describe('pikku workspace validate', () => {
     try {
       await makeValidWorkspace(tmp)
       await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'config.ts'),
+        "export const createConfig = () => ({ sqliteDb: '.pikku-runtime/dev.db' })\n",
+        'utf8'
+      )
+      await writeFile(
         join(
           tmp,
           'packages',
