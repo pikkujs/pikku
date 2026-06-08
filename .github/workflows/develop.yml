@@ -21,6 +21,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           download-build: 'false'
+      - run: git fetch origin main:main
       - run: npx changeset status
 
   build:
