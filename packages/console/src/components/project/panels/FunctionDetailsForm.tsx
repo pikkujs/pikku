@@ -25,6 +25,7 @@ import { funcWrapperDefs } from '../../ui/badge-defs'
 import { CommonDetails } from './shared/CommonDetails'
 import { FunctionEditor } from './FunctionEditor'
 
+
 interface FunctionDetailsFormProps {
   functionName: string
   metadata?: any
@@ -36,26 +37,12 @@ export const FunctionConfiguration: React.FC<FunctionDetailsFormProps> = ({
 }) => {
   const { data: fetchedMeta, isLoading } = useFunctionMeta(functionName)
   const meta = passedMetadata || fetchedMeta || {}
-  const [editing, setEditing] = useState(false)
 
   if (isLoading && !passedMetadata) {
     return (
       <Center py="xl">
         <Loader size="sm" />
       </Center>
-    )
-  }
-
-  const canEdit = !!meta.sourceFile && !!meta.exportedName
-
-  if (editing && canEdit) {
-    return (
-      <FunctionEditor
-        functionName={functionName}
-        sourceFile={meta.sourceFile}
-        exportedName={meta.exportedName}
-        onClose={() => setEditing(false)}
-      />
     )
   }
 
@@ -67,19 +54,6 @@ export const FunctionConfiguration: React.FC<FunctionDetailsFormProps> = ({
 
   return (
     <Stack gap="lg">
-      <Group gap="xs">
-        {canEdit && (
-          <ActionIcon
-            variant="subtle"
-            size="sm"
-            onClick={() => setEditing(true)}
-            title="Edit function"
-          >
-            <Pencil size={14} />
-          </ActionIcon>
-        )}
-      </Group>
-
       <Group gap="xs">
         {funcWrapperDefs[meta.funcWrapper] && (
           <PikkuBadge type="funcWrapper" value={meta.funcWrapper} />
@@ -160,10 +134,14 @@ export const FunctionTestsPanel: React.FC<FunctionDetailsFormProps> = ({
 
 export const FunctionTabbedPanel: React.FC<FunctionDetailsFormProps> = ({
   functionName,
-  metadata,
+  metadata: passedMetadata,
 }) => {
   const [tab, setTab] = useState<'overview' | 'tests'>('overview')
+  const [editing, setEditing] = useState(false)
   const { activePanel, panels, closePanel, goBack } = usePanelContext()
+  const { data: fetchedMeta } = useFunctionMeta(functionName)
+  const meta = passedMetadata || fetchedMeta || {}
+  const canEdit = !!meta.sourceFile && !!meta.exportedName
   const panelData = activePanel ? panels.get(activePanel) : null
 
   return (
@@ -173,24 +151,37 @@ export const FunctionTabbedPanel: React.FC<FunctionDetailsFormProps> = ({
         onBack={panelData && panelData.history.length > 0 ? goBack : undefined}
         onClose={() => activePanel && closePanel(activePanel)}
       >
-        <PikkuSwitch
-          ariaLabel="Function panel sections"
-          value={tab}
-          onChange={setTab}
-          showAllLabels
-          options={[
-            { value: 'overview', label: 'Overview', icon: <LayoutList size={15} /> },
-            { value: 'tests', label: 'Tests', icon: <CheckCheck size={15} /> },
-          ]}
-        />
+        {!editing && (
+          <PikkuSwitch
+            ariaLabel="Function panel sections"
+            value={tab}
+            onChange={setTab}
+            showAllLabels
+            options={[
+              { value: 'overview', label: 'Overview', icon: <LayoutList size={15} /> },
+              { value: 'tests', label: 'Tests', icon: <CheckCheck size={15} /> },
+            ]}
+          />
+        )}
+        {canEdit && !editing && (
+          <ActionIcon variant="subtle" size="sm" onClick={() => setEditing(true)} title="Edit function">
+            <Pencil size={14} />
+          </ActionIcon>
+        )}
       </SidePanelHeader>
       <SidePanelContent>
         <Box px="md">
-          {tab === 'overview' && (
-            <FunctionConfiguration functionName={functionName} metadata={metadata} />
-          )}
-          {tab === 'tests' && (
-            <FunctionTestsPanel functionName={functionName} metadata={metadata} />
+          {editing && canEdit ? (
+            <FunctionEditor
+              functionName={functionName}
+              sourceFile={meta.sourceFile}
+              exportedName={meta.exportedName}
+              onClose={() => setEditing(false)}
+            />
+          ) : tab === 'overview' ? (
+            <FunctionConfiguration functionName={functionName} metadata={passedMetadata} />
+          ) : (
+            <FunctionTestsPanel functionName={functionName} metadata={passedMetadata} />
           )}
         </Box>
       </SidePanelContent>
