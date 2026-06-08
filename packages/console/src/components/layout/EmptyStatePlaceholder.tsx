@@ -1,6 +1,5 @@
 import React from 'react'
-import { Stack, Text, Button } from '@mantine/core'
-import { ExternalLink } from 'lucide-react'
+import { Stack, Text, Anchor } from '@mantine/core'
 import classes from '../ui/console.module.css'
 import { CommandChip } from '../ui/CommandChip'
 
@@ -40,16 +39,15 @@ export const EmptyStatePlaceholder: React.FC<EmptyStatePlaceholderProps> = ({
         </Text>
       )}
       {code && <CommandChip cmd={code} />}
-      <Button
-        component="a"
+      <Anchor
         href={docsHref}
         target="_blank"
         rel="noopener noreferrer"
-        variant="default"
-        leftSection={<ExternalLink size={16} />}
+        size="sm"
+        c="dimmed"
       >
-        Docs
-      </Button>
+        How this works →
+      </Anchor>
     </Stack>
   )
 }
