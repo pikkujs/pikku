@@ -6,9 +6,9 @@ import { usePanelContext } from '../../context/PanelContext'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
 
-type McpTabProps = { searchQuery: string }
+type McpTabProps = { searchQuery: string; emptyHero?: React.ReactNode }
 
-export const McpTab: React.FC<McpTabProps> = ({ searchQuery }) => {
+export const McpTab: React.FC<McpTabProps> = ({ searchQuery, emptyHero }) => {
   const { meta } = usePikkuMeta()
   const { openMCP } = usePanelContext()
 
@@ -68,6 +68,7 @@ export const McpTab: React.FC<McpTabProps> = ({ searchQuery }) => {
         item.method?.toLowerCase().includes(q)
       }
       emptyMessage="No MCP entries found."
+      emptyHero={emptyHero}
       externalSearch={searchQuery}
     />
   )

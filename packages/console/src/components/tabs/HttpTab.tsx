@@ -6,9 +6,9 @@ import { usePanelContext } from '../../context/PanelContext'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
 
-type HttpTabProps = { searchQuery: string }
+type HttpTabProps = { searchQuery: string; emptyHero?: React.ReactNode }
 
-export const HttpTab: React.FC<HttpTabProps> = ({ searchQuery }) => {
+export const HttpTab: React.FC<HttpTabProps> = ({ searchQuery, emptyHero }) => {
   const { meta } = usePikkuMeta()
   const { openHTTPWire } = usePanelContext()
 
@@ -64,6 +64,7 @@ export const HttpTab: React.FC<HttpTabProps> = ({ searchQuery }) => {
         route.method?.toLowerCase().includes(q)
       }
       emptyMessage="No HTTP routes found."
+      emptyHero={emptyHero}
       externalSearch={searchQuery}
     />
   )

@@ -24,7 +24,13 @@ const SEARCH_PLACEHOLDER: Record<string, string> = {
   cli: 'Search commands...',
 }
 
-const ApisPageInner: React.FC = () => {
+type ApisPageProps = {
+  httpHero?: React.ReactNode
+  channelsHero?: React.ReactNode
+  mcpHero?: React.ReactNode
+}
+
+const ApisPageInner: React.FC<ApisPageProps> = ({ httpHero, channelsHero, mcpHero }) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
   const tab = searchParams.get('tab') || 'http'
@@ -37,13 +43,13 @@ const ApisPageInner: React.FC = () => {
   const renderTab = () => {
     switch (tab) {
       case 'channels':
-        return <ChannelsTab searchQuery={searchQuery} />
+        return <ChannelsTab searchQuery={searchQuery} emptyHero={channelsHero} />
       case 'mcp':
-        return <McpTab searchQuery={searchQuery} />
+        return <McpTab searchQuery={searchQuery} emptyHero={mcpHero} />
       case 'cli':
         return <CliTab searchQuery={searchQuery} />
       default:
-        return <HttpTab searchQuery={searchQuery} />
+        return <HttpTab searchQuery={searchQuery} emptyHero={httpHero} />
     }
   }
 
@@ -83,7 +89,7 @@ const ApisPageInner: React.FC = () => {
   )
 }
 
-export const ApisPage: React.FC = () => {
+export const ApisPage: React.FC<ApisPageProps> = (props) => {
   return (
     <Suspense
       fallback={
@@ -92,7 +98,7 @@ export const ApisPage: React.FC = () => {
         </Center>
       }
     >
-      <ApisPageInner />
+      <ApisPageInner {...props} />
     </Suspense>
   )
 }

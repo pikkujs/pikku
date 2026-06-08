@@ -2,9 +2,9 @@ import React, { Suspense } from 'react'
 import { Center, Loader } from '@mantine/core'
 import { ChannelTabContent } from './ChannelTabContent'
 
-type ChannelsTabProps = { searchQuery: string }
+type ChannelsTabProps = { searchQuery: string; emptyHero?: React.ReactNode }
 
-export const ChannelsTab: React.FC<ChannelsTabProps> = ({ searchQuery }) => {
+export const ChannelsTab: React.FC<ChannelsTabProps> = ({ searchQuery, emptyHero }) => {
   return (
     <Suspense
       fallback={
@@ -13,7 +13,7 @@ export const ChannelsTab: React.FC<ChannelsTabProps> = ({ searchQuery }) => {
         </Center>
       }
     >
-      <ChannelTabContent searchQuery={searchQuery} />
+      <ChannelTabContent searchQuery={searchQuery} emptyHero={emptyHero} />
     </Suspense>
   )
 }

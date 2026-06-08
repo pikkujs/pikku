@@ -55,9 +55,9 @@ const ChannelTabInner: React.FC<{
   )
 }
 
-type ChannelTabContentProps = { searchQuery: string }
+type ChannelTabContentProps = { searchQuery: string; emptyHero?: React.ReactNode }
 
-export const ChannelTabContent: React.FC<ChannelTabContentProps> = ({ searchQuery }) => {
+export const ChannelTabContent: React.FC<ChannelTabContentProps> = ({ searchQuery, emptyHero }) => {
   const [searchParams] = useSearchParams()
   const channelName = searchParams.get('id') || ''
   const { meta } = usePikkuMeta()
@@ -71,6 +71,7 @@ export const ChannelTabContent: React.FC<ChannelTabContentProps> = ({ searchQuer
     return (
       <EmptyStatePlaceholder
         icon={Radio}
+        hero={emptyHero}
         title="No channels found"
         description="Define channels in your project using addChannel() to see them here."
         docsHref="https://pikku.dev/docs/core-features/channels"
