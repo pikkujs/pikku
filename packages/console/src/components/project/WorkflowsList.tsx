@@ -1,12 +1,11 @@
-import React, { useState, useMemo } from 'react'
-import { Text, Badge, Tooltip, ActionIcon, Group } from '@mantine/core'
+import React, { useMemo } from 'react'
+import { Text, Badge } from '@mantine/core'
 import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
-import { GitBranch, ExternalLink } from 'lucide-react'
+import { GitBranch } from 'lucide-react'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
 
-type FilterValue = 'all' | 'dsl' | 'graph' | 'dynamic-workflow'
 type Workflow = WorkflowsMeta[string] & {
   nodes?: Record<string, unknown>
   source?: string
@@ -48,56 +47,20 @@ export interface WorkflowExtraColumn {
 }
 
 interface WorkflowsListProps {
-  workflows: WorkflowsMeta
-  aiWorkflows?: Array<{
-    workflowName: string
-    graphHash: string
-    graph: any
-  }>
+  workflows: Workflow[]
   extraColumns?: WorkflowExtraColumn[]
-  headerRight?: React.ReactNode
 }
 
 export const WorkflowsList: React.FC<WorkflowsListProps> = ({
   workflows,
-  aiWorkflows,
   extraColumns = [],
-  headerRight,
 }) => {
-  const [filter, setFilter] = useState<FilterValue>('all')
   const { navigateTo } = useConsoleNavigator()
 
-  const sortedWorkflows = useMemo(() => {
-    const all: Workflow[] = workflows ? Object.values(workflows) : []
-
-    if (aiWorkflows) {
-      const existingNames = new Set(all.map((w) => w.name))
-      for (const ai of aiWorkflows) {
-        if (!existingNames.has(ai.workflowName)) {
-          all.push({
-            name: ai.workflowName,
-            pikkuFuncId: ai.workflowName,
-            steps: [],
-            source: 'dynamic-workflow',
-            nodes: ai.graph?.nodes,
-          })
-        }
-      }
-    }
-
-    return all.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-  }, [workflows, aiWorkflows])
-
-  const filteredByType = useMemo(() => {
-    if (filter === 'dsl') return sortedWorkflows.filter((w) => w.dsl === true)
-    if (filter === 'graph')
-      return sortedWorkflows.filter(
-        (w) => w.dsl !== true && w.source !== 'dynamic-workflow'
-      )
-    if (filter === 'dynamic-workflow')
-      return sortedWorkflows.filter((w) => w.source === 'dynamic-workflow')
-    return sortedWorkflows
-  }, [sortedWorkflows, filter])
+  const sorted = useMemo(
+    () => [...workflows].sort((a, b) => (a.name || '').localeCompare(b.name || '')),
+    [workflows]
+  )
 
   const allColumns = [
     ...COLUMNS,
@@ -114,35 +77,11 @@ export const WorkflowsList: React.FC<WorkflowsListProps> = ({
       title="Workflows"
       icon={GitBranch}
       docsHref="https://pikku.dev/docs/wiring/workflows"
-      data={filteredByType}
+      data={sorted}
       columns={allColumns}
       getKey={(w) => w.name}
       onRowClick={(w) => navigateTo('workflows', w.name)}
-      searchPlaceholder="Search workflows..."
-      searchFilter={(w, q) =>
-        (w.name?.toLowerCase().includes(q) ||
-          w.pikkuFuncId?.toLowerCase().includes(q)) ??
-        false
-      }
       emptyMessage="No workflows found."
-      headerRight={
-        <Group gap={4}>
-          {headerRight}
-          <Tooltip label="Workflows docs">
-            <ActionIcon
-              component="a"
-              href="https://pikku.dev/docs/wiring/workflows"
-              target="_blank"
-              rel="noopener noreferrer"
-              variant="subtle"
-              color="gray"
-              size="sm"
-            >
-              <ExternalLink size={14} />
-            </ActionIcon>
-          </Tooltip>
-        </Group>
-      }
     />
   )
 }

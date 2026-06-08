@@ -1,9 +1,10 @@
-import { Suspense, useContext } from 'react'
+import { Suspense, useContext, useMemo, useState } from 'react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { WorkflowsList } from '../components/project/WorkflowsList'
 import type { WorkflowExtraColumn } from '../components/project/WorkflowsList'
 import { WorkflowTabContent } from '../components/tabs/WorkflowTabContent'
-import { Center, Loader } from '@mantine/core'
+import { Center, Group, Loader, TextInput } from '@mantine/core'
+import { Search } from 'lucide-react'
 import { useAIWorkflows } from '../hooks/useWorkflowRuns'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -22,6 +23,35 @@ const WorkflowPageInner: React.FC<{
   const { workflowId } = useConsoleNavigator()
   const { meta, loading } = usePikkuMeta()
   const { data: aiWorkflows } = useAIWorkflows()
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const allWorkflows = useMemo(() => {
+    const workflows = meta.workflows || {}
+    const all = Object.values(workflows) as any[]
+    if (aiWorkflows) {
+      const existingNames = new Set(all.map((w: any) => w.name))
+      for (const ai of (aiWorkflows as unknown as any[])) {
+        if (!existingNames.has(ai.workflowName)) {
+          all.push({
+            name: ai.workflowName,
+            pikkuFuncId: ai.workflowName,
+            steps: [],
+            source: 'dynamic-workflow',
+            nodes: ai.graph?.nodes,
+          })
+        }
+      }
+    }
+    return all
+  }, [meta.workflows, aiWorkflows])
+
+  const filteredWorkflows = useMemo(() => {
+    const q = searchQuery.toLowerCase()
+    if (!q) return allWorkflows
+    return allWorkflows.filter((w: any) =>
+      w.name?.toLowerCase().includes(q) || w.pikkuFuncId?.toLowerCase().includes(q)
+    )
+  }, [allWorkflows, searchQuery])
 
   if (workflowId) {
     return <WorkflowTabContent immersiveDetail={immersiveDetail} />
@@ -37,12 +67,32 @@ const WorkflowPageInner: React.FC<{
 
   return (
     <PanelProvider>
-      <ResizablePanelLayout hidePanel header={<ListPageHeader title="Workflows" description="Visual workflow definitions and run history" />}>
+      <ResizablePanelLayout
+        hidePanel
+        header={
+          <ListPageHeader
+            title="Workflows"
+            description="Visual workflow definitions and run history"
+            docsHref="https://pikku.dev/docs/wiring/workflows"
+            filters={
+              <Group gap="sm" wrap="nowrap">
+                <TextInput
+                  placeholder="Search workflows..."
+                  leftSection={<Search size={14} />}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  size="xs"
+                  style={{ width: 240 }}
+                />
+                {headerRight}
+              </Group>
+            }
+          />
+        }
+      >
         <WorkflowsList
-          workflows={meta.workflows || {}}
-          aiWorkflows={aiWorkflows as any}
+          workflows={filteredWorkflows}
           extraColumns={extraColumns}
-          headerRight={headerRight}
         />
       </ResizablePanelLayout>
     </PanelProvider>
