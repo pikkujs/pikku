@@ -12,11 +12,11 @@ interface PermissionItem {
   data: any
 }
 
-export const PermissionsTab: React.FC = () => {
+export const PermissionsTab: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
   const { meta, loading } = usePikkuMeta()
   const { openPermission } = usePanelContext()
 
-  const items = useMemo((): PermissionItem[] => {
+  const allItems = useMemo((): PermissionItem[] => {
     if (!meta.permissionsGroupsMeta) return []
     const definitions = meta.permissionsGroupsMeta.definitions || {}
     const result: PermissionItem[] = []
@@ -30,6 +30,16 @@ export const PermissionsTab: React.FC = () => {
     }
     return result
   }, [meta.permissionsGroupsMeta])
+
+  const items = useMemo(() => {
+    if (!searchQuery) return allItems
+    const q = searchQuery.toLowerCase()
+    return allItems.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        item.data?.description?.toLowerCase().includes(q)
+    )
+  }, [allItems, searchQuery])
 
   const columns = useMemo(
     () => [
@@ -88,11 +98,6 @@ export const PermissionsTab: React.FC = () => {
       columns={columns}
       getKey={(item) => item.id}
       onRowClick={(item) => openPermission(item.id, item.data)}
-      searchPlaceholder="Search permissions..."
-      searchFilter={(item, q) =>
-        item.name.toLowerCase().includes(q) ||
-        item.data?.description?.toLowerCase().includes(q)
-      }
       emptyMessage="No permissions found."
       loading={loading}
     />
