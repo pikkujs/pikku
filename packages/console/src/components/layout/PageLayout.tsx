@@ -186,14 +186,20 @@ export function PageToolbar({ children }: PageToolbarProps) {
 }
 
 interface PageActionBarProps {
+  lead?: ReactNode
   view?: ReactNode
   filters?: ReactNode
 }
 
-export function PageActionBar({ view, filters }: PageActionBarProps) {
-  if (!view && !filters) return null
+export function PageActionBar({ lead, view, filters }: PageActionBarProps) {
+  if (!lead && !view && !filters) return null
   return (
     <Group gap="sm" wrap="nowrap" align="center" style={{ width: '100%', minWidth: 0 }}>
+      {lead && (
+        <Group gap="xs" wrap="nowrap" align="center" style={{ flexShrink: 0 }}>
+          {lead}
+        </Group>
+      )}
       {filters}
       {view && (
         <Group gap="sm" wrap="nowrap" align="center" style={{ marginLeft: 'auto' }}>
