@@ -65,6 +65,7 @@ jobs:
           [
             addon,
             binary,
+            classification,
             gateway,
             middleware-and-permissions,
             treeshaking,
