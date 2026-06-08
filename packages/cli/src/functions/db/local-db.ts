@@ -60,6 +60,12 @@ export function resolveDb(
     camelCase: true,
   })
 
+  if (userConfig.postgresUrl && userConfig.sqliteDb) {
+    throw new Error(
+      'Both postgresUrl and sqliteDb are set. Configure exactly one database dialect.'
+    )
+  }
+
   if (userConfig.postgresUrl) {
     return {
       dialect: 'postgres',
@@ -69,7 +75,9 @@ export function resolveDb(
   }
 
   if (userConfig.sqliteDb) {
-    const resolvedRuntimeDir = runtimeDir ?? join(rootDir, '.pikku-runtime')
+    const resolvedRuntimeDir = runtimeDir
+      ? resolveAgainst(rootDir, runtimeDir)
+      : join(rootDir, '.pikku-runtime')
     return {
       dialect: 'sqlite',
       dbFile: resolveAgainst(rootDir, userConfig.sqliteDb),

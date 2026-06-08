@@ -271,9 +271,12 @@ describe('DB anonymize — per-strategy verification', () => {
     })
     t.after(() => rm(dir, { recursive: true, force: true }))
 
-    runPikku(dir, ['db', 'migrate'])
-    runPikku(dir, ['db', 'seed'])
-    runPikku(dir, ['db', 'anonymize', '--out', 'anon.db'])
+    const migrate = runPikku(dir, ['db', 'migrate'])
+    assert.equal(migrate.exitCode, 0, `migrate failed: ${migrate.output}`)
+    const seed = runPikku(dir, ['db', 'seed'])
+    assert.equal(seed.exitCode, 0, `seed failed: ${seed.output}`)
+    const anon = runPikku(dir, ['db', 'anonymize', '--out', 'anon.db'])
+    assert.equal(anon.exitCode, 0, `anonymize failed: ${anon.output}`)
 
     const srcRows = queryDb(
       join(dir, '.pikku-runtime', 'dev.db'),

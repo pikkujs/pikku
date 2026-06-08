@@ -152,6 +152,32 @@ export const getSafe = pikkuFunc({
     assert.equal(hits.length, 2, `Expected 2 PKU910 but got ${hits.length}`)
   })
 
+  test('flags branded values inside arrays', async () => {
+    const criticals = await runInspect(`
+${BRAND_TYPES}
+import { pikkuFunc } from '@pikku/core'
+export const getEmails = pikkuFunc({
+  func: async () => ({ emails: ['x@y.com' as Private<string>] })
+})
+`)
+    const hit = criticals.find((c) => c.code === ErrorCode.PII_IN_OUTPUT)
+    assert.ok(hit, `Expected PKU910 but got: ${JSON.stringify(criticals)}`)
+    assert.match(hit.message, /emails/)
+  })
+
+  test('flags branded values inside string-indexed records', async () => {
+    const criticals = await runInspect(`
+${BRAND_TYPES}
+import { pikkuFunc } from '@pikku/core'
+export const getMap = pikkuFunc({
+  func: async () => ({ byId: { a: 'x@y.com' as Private<string> } as Record<string, Private<string>> })
+})
+`)
+    const hit = criticals.find((c) => c.code === ErrorCode.PII_IN_OUTPUT)
+    assert.ok(hit, `Expected PKU910 but got: ${JSON.stringify(criticals)}`)
+    assert.match(hit.message, /byId/)
+  })
+
   test('does not flag when branded field is stripped before return', async () => {
     const criticals = await runInspect(`
 ${BRAND_TYPES}

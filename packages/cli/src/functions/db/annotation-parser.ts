@@ -105,7 +105,7 @@ export function parseAnnotations(migrationsDir: string): AnnotationMap {
     }
 
     const alterPattern =
-      /ALTER\s+TABLE\s+"?(\w+)"?\s+ADD\s+(?:COLUMN\s+)?"?(\w+)"?\s+\w[^;-]*--\s*(.+?)(?:;|$)/gim
+      /ALTER\s+TABLE\s+"?(\w+)"?\s+ADD\s+(?:COLUMN\s+)?"?(\w+)"?\s+\w[^;\n-]*(?:;\s*)?--\s*(.+?)(?:\r?\n|$)/gim
     let alterMatch: RegExpExecArray | null
     while ((alterMatch = alterPattern.exec(content)) !== null) {
       merge(

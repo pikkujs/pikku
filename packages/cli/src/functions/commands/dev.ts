@@ -29,7 +29,7 @@ import { pikkuWebsocketHandler } from '@pikku/ws'
 import { PikkuNodeHTTPServer } from '@pikku/node-http-server'
 import { WebSocketServer } from 'ws'
 import { InMemorySchedulerService } from '@pikku/schedule'
-import { resolveDb, createKysely } from '../db/local-db.js'
+import { resolveDb, createKysely, type ResolvedSqliteDb } from '../db/local-db.js'
 import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
 
 export const dev = pikkuSessionlessFunc<
@@ -190,7 +190,17 @@ export const dev = pikkuSessionlessFunc<
     const userConfig = await userCreateConfig()
 
     const resolvedDb = resolveDb(userConfig, config.rootDir, config.outDir, config.runtimeDir)
-    const resolvedLocalDb = resolvedDb?.dialect === 'sqlite' ? resolvedDb : undefined
+    const resolvedLocalDb: ResolvedSqliteDb | undefined =
+      resolvedDb?.dialect === 'sqlite'
+        ? resolvedDb
+        : userConfig.sqliteDb
+          ? resolveDb(
+              { sqliteDb: userConfig.sqliteDb },
+              config.rootDir,
+              config.outDir,
+              config.runtimeDir
+            ) as ResolvedSqliteDb
+          : undefined
     const kysely = resolvedLocalDb
       ? await createKysely(resolvedLocalDb)
       : undefined
