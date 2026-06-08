@@ -17,7 +17,8 @@ const WorkflowPageInner: React.FC<{
   extraColumns?: WorkflowExtraColumn[]
   headerRight?: React.ReactNode
   immersiveDetail?: boolean
-}> = ({ extraColumns, headerRight, immersiveDetail = false }) => {
+  icon?: React.ComponentType<{ size?: number; strokeWidth?: number }>
+}> = ({ extraColumns, headerRight, immersiveDetail = false, icon }) => {
   const { workflowId } = useConsoleNavigator()
   const { meta, loading } = usePikkuMeta()
   const { data: aiWorkflows } = useAIWorkflows()
@@ -45,6 +46,7 @@ const WorkflowPageInner: React.FC<{
         aiWorkflows={aiWorkflows as any}
         extraColumns={extraColumns}
         headerRight={headerRight}
+        icon={icon}
       />
     )
   }
@@ -67,7 +69,8 @@ export const WorkflowsPage: React.FC<{
   extraColumns?: WorkflowExtraColumn[]
   headerRight?: React.ReactNode
   immersiveDetail?: boolean
-}> = ({ extraColumns, headerRight, immersiveDetail = false }) => {
+  icon?: React.ComponentType<{ size?: number; strokeWidth?: number }>
+}> = ({ extraColumns, headerRight, immersiveDetail = false, icon }) => {
   const existingNavigator = useContext(ConsoleNavigatorCtx)
   const inner = (
     <Suspense
@@ -81,6 +84,7 @@ export const WorkflowsPage: React.FC<{
         extraColumns={extraColumns}
         headerRight={headerRight}
         immersiveDetail={immersiveDetail}
+        icon={icon}
       />
     </Suspense>
   )

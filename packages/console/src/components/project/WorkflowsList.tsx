@@ -56,6 +56,7 @@ interface WorkflowsListProps {
   }>
   extraColumns?: WorkflowExtraColumn[]
   headerRight?: React.ReactNode
+  icon?: React.ComponentType<{ size?: number; strokeWidth?: number }>
 }
 
 export const WorkflowsList: React.FC<WorkflowsListProps> = ({
@@ -63,6 +64,7 @@ export const WorkflowsList: React.FC<WorkflowsListProps> = ({
   aiWorkflows,
   extraColumns = [],
   headerRight,
+  icon = GitBranch,
 }) => {
   const [filter, setFilter] = useState<FilterValue>('all')
   const { navigateTo } = useConsoleNavigator()
@@ -112,7 +114,7 @@ export const WorkflowsList: React.FC<WorkflowsListProps> = ({
   return (
     <TableListPage
       title="Workflows"
-      icon={GitBranch}
+      icon={icon}
       docsHref="https://pikku.dev/docs/wiring/workflows"
       data={filteredByType}
       columns={allColumns}

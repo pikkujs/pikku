@@ -23,8 +23,7 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
   hidePanel = false,
 }) => {
   const { panels } = usePanelContext()
-  const alwaysVisible = !showTabs
-  const showPanel = !hidePanel && (alwaysVisible || panels.size !== 0)
+  const showPanel = !hidePanel && panels.size !== 0
 
   return (
     <Box className={classes.flexColumn} style={{ height: '100vh' }}>
@@ -39,19 +38,16 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
               {children}
             </Box>
           </Allotment.Pane>
-          <Allotment.Pane
-            visible={showPanel}
-            minSize={minSize}
-            maxSize={500}
-            preferredSize={267}
-          >
-            <Box className={`${classes.flexColumn} ${classes.overflowAuto}`}>
-              <PanelContainer
-                showTabs={showTabs}
-                emptyMessage={emptyPanelMessage}
-              />
-            </Box>
-          </Allotment.Pane>
+          {showPanel && (
+            <Allotment.Pane minSize={minSize} maxSize={500} preferredSize={267}>
+              <Box className={`${classes.flexColumn} ${classes.overflowAuto}`}>
+                <PanelContainer
+                  showTabs={showTabs}
+                  emptyMessage={emptyPanelMessage}
+                />
+              </Box>
+            </Allotment.Pane>
+          )}
         </Allotment>
       </Box>
     </Box>
