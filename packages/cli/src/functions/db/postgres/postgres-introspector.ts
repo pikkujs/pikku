@@ -13,8 +13,11 @@ interface PgColumnRow {
 export class PostgresIntrospector implements DbIntrospector {
   private client: Client
 
-  constructor(connectionString: string) {
-    this.client = new Client({ connectionString })
+  constructor(connectionStringOrClient: string | Client) {
+    this.client =
+      typeof connectionStringOrClient === 'string'
+        ? new Client({ connectionString: connectionStringOrClient })
+        : connectionStringOrClient
   }
 
   async connect(): Promise<void> {
