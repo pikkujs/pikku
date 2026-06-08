@@ -26,11 +26,11 @@ interface CredentialMeta {
   isOAuth2: boolean
 }
 
-export const CredentialsOverviewTab: React.FC = () => {
+export const CredentialsOverviewTab: React.FC<{ searchQuery?: string }> = ({ searchQuery = '' }) => {
   const { meta } = usePikkuMeta()
   const rpc = usePikkuRPC()
 
-  const credentials = useMemo(() => {
+  const allCredentials = useMemo(() => {
     const creds = (meta as any).credentialsMeta ?? {}
     return Object.entries(creds)
       .filter(
@@ -48,6 +48,17 @@ export const CredentialsOverviewTab: React.FC = () => {
       )
   }, [meta])
 
+  const credentials = useMemo(() => {
+    if (!searchQuery) return allCredentials
+    const q = searchQuery.toLowerCase()
+    return allCredentials.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.displayName.toLowerCase().includes(q) ||
+        c.description?.toLowerCase().includes(q)
+    )
+  }, [allCredentials, searchQuery])
+
   const { data: globalStatus } = useQuery({
     queryKey: ['credential-global-status'],
     queryFn: async () => {
@@ -62,10 +73,10 @@ export const CredentialsOverviewTab: React.FC = () => {
         return {}
       }
     },
-    enabled: credentials.length > 0,
+    enabled: allCredentials.length > 0,
   })
 
-  if (credentials.length === 0) {
+  if (allCredentials.length === 0) {
     return (
       <Box className={classes.listSurfaceCard}>
         <Center h={300}>

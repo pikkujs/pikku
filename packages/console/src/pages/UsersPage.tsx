@@ -33,16 +33,14 @@ export const UsersPage: React.FC = () => {
             docsHref="https://pikku.dev/docs/core-features/credentials"
             filters={
               <Group gap="sm" wrap="nowrap">
-                {tab === 'users' && (
-                  <TextInput
-                    placeholder="Search users..."
-                    leftSection={<Search size={14} />}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    size="xs"
-                    style={{ width: 240 }}
-                  />
-                )}
+                <TextInput
+                  placeholder={tab === 'users' ? 'Search users...' : 'Search credentials...'}
+                  leftSection={<Search size={14} />}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  size="xs"
+                  style={{ width: 240 }}
+                />
                 <SegmentedControl
                   size="xs"
                   value={tab}
@@ -59,7 +57,7 @@ export const UsersPage: React.FC = () => {
         {tab === 'users' ? (
           <CredentialUsersTab searchQuery={searchQuery} />
         ) : (
-          <CredentialsOverviewTab />
+          <CredentialsOverviewTab searchQuery={searchQuery} />
         )}
       </ResizablePanelLayout>
     </PanelProvider>
