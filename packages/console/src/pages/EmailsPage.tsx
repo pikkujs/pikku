@@ -12,7 +12,6 @@ import {
   Popover,
   Select,
   SegmentedControl,
-  SimpleGrid,
   Stack,
   Text,
   TextInput,
@@ -28,6 +27,7 @@ import { useRenderEmailPreview } from '../hooks/useWirings'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
+import { TableListPage } from '../components/layout/TableListPage'
 import classes from '../components/ui/console.module.css'
 
 type EmailPreviewValue =
@@ -56,93 +56,87 @@ function buildVariablesSchema(variables: string[]): RJSFSchema {
   }
 }
 
+type EmailTemplateItem = {
+  name: string
+  variables: string[]
+  locales: Record<string, unknown>
+}
+
+const emailColumns = [
+  {
+    key: 'name',
+    header: 'NAME',
+    render: (item: EmailTemplateItem) => (
+      <Text fw={500} ff="monospace" truncate>
+        {item.name}
+      </Text>
+    ),
+  },
+  {
+    key: 'variables',
+    header: 'VARIABLES',
+    width: 120,
+    render: (item: EmailTemplateItem) => (
+      <Text size="sm" c="dimmed">
+        {item.variables.length}
+      </Text>
+    ),
+  },
+  {
+    key: 'locales',
+    header: 'LOCALES',
+    width: 280,
+    render: (item: EmailTemplateItem) => {
+      const localeKeys = Object.keys(item.locales)
+      return (
+        <Group gap={4}>
+          {localeKeys.slice(0, 5).map((locale) => (
+            <Badge key={locale} variant="outline" color="gray" size="sm">
+              {locale}
+            </Badge>
+          ))}
+          {localeKeys.length > 5 && (
+            <Badge variant="outline" color="gray" size="sm">
+              +{localeKeys.length - 5}
+            </Badge>
+          )}
+        </Group>
+      )
+    },
+  },
+]
+
 const EmailsOverview: React.FC<{
   templateNames: string[]
   templates: Record<string, any>
   onSelect: (templateName: string) => void
 }> = ({ templateNames, templates, onSelect }) => {
-  const [query, setQuery] = useState('')
-
-  const filteredNames = useMemo(() => {
-    if (!query) return templateNames
-    const normalized = query.toLowerCase()
-    return templateNames.filter((templateName) => {
-      const template = templates[templateName]
-      return (
-        templateName.toLowerCase().includes(normalized) ||
-        template.variables.some((variable: string) =>
-          variable.toLowerCase().includes(normalized)
-        )
-      )
-    })
-  }, [query, templateNames, templates])
+  const data = useMemo<EmailTemplateItem[]>(
+    () => templateNames.map((name) => ({ name, ...templates[name] })),
+    [templateNames, templates]
+  )
 
   return (
     <PanelProvider>
       <ResizablePanelLayout
         hidePanel
-        header={
-          <ListPageHeader
-            title="Email Templates"
-            description="Preview and inspect email templates with live variable rendering"
-            filters={
-              <TextInput
-                placeholder="Search email templates..."
-                leftSection={<Search size={14} />}
-                value={query}
-                onChange={(event) => setQuery(event.currentTarget.value)}
-                size="xs"
-                style={{ width: 240 }}
-              />
-            }
-          />
-        }
+        header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" />}
       >
-        <Box className={classes.listSurfaceCard} p="md" style={{ flex: 1, overflow: 'auto' }}>
-          {filteredNames.length === 0 ? (
-            <Center py="xl">
-              <Text size="sm" c="dimmed">No email templates match the current search.</Text>
-            </Center>
-          ) : (
-            <SimpleGrid cols={{ base: 1, md: 2, xl: 3 }} spacing="md">
-              {filteredNames.map((templateName) => {
-                const template = templates[templateName]
-                const localeCount = Object.keys(template.locales).length
-                return (
-                  <UnstyledButton
-                    key={templateName}
-                    onClick={() => onSelect(templateName)}
-                    style={{
-                      border: '1px solid var(--app-row-border)',
-                      borderRadius: 8,
-                      padding: 16,
-                      background: 'var(--app-surface, var(--mantine-color-body))',
-                      textAlign: 'start',
-                    }}
-                  >
-                    <Stack gap="sm">
-                      <Group justify="space-between" align="flex-start" wrap="nowrap">
-                        <Stack gap={4} style={{ minWidth: 0 }}>
-                          <Text ff="monospace" fw={600} truncate>{templateName}</Text>
-                          <Text size="sm" c="dimmed">
-                            {template.variables.length} variable{template.variables.length === 1 ? '' : 's'}
-                          </Text>
-                        </Stack>
-                        <Badge variant="light">{localeCount} locales</Badge>
-                      </Group>
-                      <Group gap={6}>
-                        {Object.keys(template.locales).slice(0, 3).map((locale) => (
-                          <Badge key={locale} variant="outline" color="gray">{locale}</Badge>
-                        ))}
-                        {localeCount > 3 ? <Badge variant="outline" color="gray">+{localeCount - 3}</Badge> : null}
-                      </Group>
-                    </Stack>
-                  </UnstyledButton>
-                )
-              })}
-            </SimpleGrid>
-          )}
-        </Box>
+        <TableListPage
+          icon={Mail}
+          title="Email Templates"
+          docsHref={EMAIL_DOCS_HREF}
+          data={data}
+          columns={emailColumns}
+          getKey={(item) => item.name}
+          onRowClick={(item) => onSelect(item.name)}
+          searchPlaceholder="Search email templates..."
+          searchFilter={(item, q) =>
+            item.name.toLowerCase().includes(q) ||
+            item.variables.some((v) => v.toLowerCase().includes(q))
+          }
+          emptyMessage="No email templates match the current search."
+        />
       </ResizablePanelLayout>
     </PanelProvider>
   )
