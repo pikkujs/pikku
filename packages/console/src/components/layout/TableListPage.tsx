@@ -96,7 +96,7 @@ export const TableListPage = <T,>({
       {description && (
         <Box
           px="md"
-          py="sm"
+          py="xs"
           style={{
             borderBottom: '1px solid var(--mantine-color-default-border)',
           }}
@@ -107,8 +107,8 @@ export const TableListPage = <T,>({
       {(searchFilter || headerRight) && (
         <Box
           px="md"
-          py="sm"
           style={{
+            height: 42,
             borderBottom: '1px solid var(--mantine-color-default-border)',
             display: 'flex',
             gap: 8,
@@ -118,10 +118,11 @@ export const TableListPage = <T,>({
           {searchFilter && (
             <TextInput
               placeholder={searchPlaceholder}
-              leftSection={<Search size={16} />}
+              leftSection={<Search size={14} />}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className={classes.flexGrow}
+              size="sm"
             />
           )}
           {headerRight}
@@ -136,17 +137,21 @@ export const TableListPage = <T,>({
           </Text>
         </Box>
       ) : (
-        <Box style={{ overflowX: 'auto' }}>
-          <Table highlightOnHover withRowBorders>
-            <Table.Thead>
-              <Table.Tr>
+        <Box style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          <Table
+            highlightOnHover
+            withRowBorders
+            style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
+          >
+            <Table.Thead style={{ display: 'block', flexShrink: 0 }}>
+              <Table.Tr style={{ display: 'table', width: '100%', tableLayout: 'fixed', height: 42 }}>
                 {columns.map((col, i) => (
                   <Table.Th
                     key={col.key}
                     pl={i === 0 ? 'md' : undefined}
                     pr={i === columns.length - 1 ? 'md' : undefined}
                     fw={600}
-                    fz="xs"
+                    fz="sm"
                     style={col.width ? { width: col.width } : undefined}
                   >
                     {col.header}
@@ -154,12 +159,12 @@ export const TableListPage = <T,>({
                 ))}
               </Table.Tr>
             </Table.Thead>
-            <Table.Tbody>
+            <Table.Tbody style={{ display: 'block', overflowY: 'auto', flex: 1, minHeight: 0 }}>
               {filtered.map((item, index) => (
                 <Table.Tr
                   key={getKey(item, index)}
                   className={classes.clickableText}
-                  style={{ height: '3.75rem' }}
+                  style={{ display: 'table', width: '100%', tableLayout: 'fixed', height: '3.75rem' }}
                   onClick={() => onRowClick(item)}
                 >
                   {columns.map((col, i) => (

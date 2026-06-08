@@ -32,10 +32,15 @@ interface SidePanelHeaderProps {
 export const SidePanelHeader: React.FC<SidePanelHeaderProps> = ({ title, onClose, onBack, children }) => (
   <Box
     px="md"
-    py="xs"
-    style={{ borderBottom: '1px solid var(--mantine-color-default-border)', flexShrink: 0 }}
+    style={{
+      height: 42,
+      display: 'flex',
+      alignItems: 'center',
+      borderBottom: '1px solid var(--mantine-color-default-border)',
+      flexShrink: 0,
+    }}
   >
-    <Group gap="xs" wrap="nowrap" align="center">
+    <Group gap="xs" wrap="nowrap" align="center" style={{ width: '100%' }}>
       {onBack && (
         <UnstyledButton onClick={onBack} style={{ display: 'flex', alignItems: 'center' }}>
           <ChevronLeft size={16} color="var(--mantine-color-dimmed)" />
