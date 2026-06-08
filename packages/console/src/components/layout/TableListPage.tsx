@@ -32,6 +32,8 @@ interface TableListPageProps<T> {
   onRowClick: (item: T) => void
   searchPlaceholder?: string
   searchFilter?: (item: T, query: string) => boolean
+  /** When provided, the internal search input is hidden and this value is used for filtering */
+  externalSearch?: string
   emptyMessage?: string
   emptyTitle?: string
   emptyDescription?: string
@@ -51,6 +53,7 @@ export const TableListPage = <T,>({
   onRowClick,
   searchPlaceholder = 'Search...',
   searchFilter,
+  externalSearch,
   emptyMessage = 'No items found.',
   emptyTitle,
   emptyDescription,
@@ -60,7 +63,8 @@ export const TableListPage = <T,>({
   headerRight,
 }: TableListPageProps<T>) => {
   const gate = usePageGate()
-  const [searchQuery, setSearchQuery] = useState('')
+  const [internalSearch, setInternalSearch] = useState('')
+  const searchQuery = externalSearch !== undefined ? externalSearch : internalSearch
 
   const filtered = useMemo(() => {
     if (!searchQuery || !searchFilter) return data
@@ -108,7 +112,7 @@ export const TableListPage = <T,>({
           {description}
         </Box>
       )}
-      {(searchFilter || headerRight) && (
+      {(searchFilter && externalSearch === undefined || headerRight) && (
         <Box
           px="md"
           style={{
@@ -119,12 +123,12 @@ export const TableListPage = <T,>({
             alignItems: 'center',
           }}
         >
-          {searchFilter && (
+          {searchFilter && externalSearch === undefined && (
             <TextInput
               placeholder={searchPlaceholder}
               leftSection={<Search size={14} />}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={internalSearch}
+              onChange={(e) => setInternalSearch(e.target.value)}
               className={classes.flexGrow}
               size="sm"
             />

@@ -1,224 +1,16 @@
-import React, { useMemo, useState } from 'react'
-import { Box, Text, ScrollArea, Badge } from '@mantine/core'
+import React, { useMemo } from 'react'
+import { Text } from '@mantine/core'
+import { Cpu } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
-import { useFunctionMeta } from '../../hooks/useWirings'
-import { SchemaSection } from '../project/panels/shared/SchemaSection'
-import { CopyableCode } from '../ui/CopyableCode'
-import { MetaRow } from '../ui/MetaRow'
-import { SectionLabel } from '../ui/SectionLabel'
-import { ListDetailLayout } from '../ui/ListDetailLayout'
-import { ListItem } from '../ui/ListItem'
-import classes from '../ui/console.module.css'
-
-const TYPE_DOTS: Record<string, string> = {
-  tool: 'rgba(245,158,11,0.7)',
-  resource: 'rgba(6,182,212,0.6)',
-  prompt: 'rgba(124,58,237,0.7)',
-}
-
-const TYPE_BADGE_COLORS: Record<string, string> = {
-  tool: 'yellow',
-  resource: 'cyan',
-  prompt: 'violet',
-}
-
-const McpDetailPanel: React.FC<{ item: any }> = ({ item }) => {
-  const { navigateInPanel } = usePanelContext()
-  const funcId = item?.pikkuFuncId
-  const { data: funcMeta } = useFunctionMeta(funcId ?? '')
-  const inputSchemaName = funcMeta?.inputSchemaName
-  const outputSchemaName = funcMeta?.outputSchemaName
-  const displayName = funcMeta?.name || funcId
-  const method = item?.method || 'tool'
-
-  return (
-    <Box className={classes.flexColumn}>
-      {/* Header */}
-      <Box
-        className={classes.detailHeader}
-        style={{ padding: '10px 16px', background: 'rgba(255,255,255,0.01)' }}
-      >
-        <Box className={classes.flexGrow}>
-          <Text size="sm" fw={600} ff="monospace" c="var(--app-meta-value)">
-            {item.name || item.wireId || 'unnamed'}
-          </Text>
-          {displayName && (
-            <Text size="sm" ff="monospace" c="var(--app-text-muted)">
-              {displayName}()
-            </Text>
-          )}
-        </Box>
-        <Badge size="sm" variant="light" color={TYPE_BADGE_COLORS[method]}>
-          {method}
-        </Badge>
-      </Box>
-
-      {/* Body: detail left + config right */}
-      <Box className={classes.flexRow} style={{ flex: 1, minHeight: 0 }}>
-        {/* Left: metadata + schema */}
-        <Box className={classes.splitLeft}>
-          <SectionLabel>{method}</SectionLabel>
-
-          <MetaRow label="name">
-            <Text size="sm" ff="monospace" c="var(--app-meta-value)">
-              {item.name || item.wireId || 'unnamed'}
-            </Text>
-          </MetaRow>
-
-          {funcId && (
-            <MetaRow label="function">
-              <Text
-                size="sm"
-                fw={600}
-                ff="monospace"
-                c="var(--app-meta-value)"
-                className={classes.clickableText}
-                onClick={() =>
-                  navigateInPanel(
-                    'function',
-                    funcId,
-                    displayName || funcId,
-                    funcMeta
-                  )
-                }
-              >
-                {displayName}
-              </Text>
-            </MetaRow>
-          )}
-
-          {item.description ? (
-            <MetaRow label="description" align="flex-start">
-              <Text size="sm" c="var(--app-text)" lh={1.6}>
-                {item.description}
-              </Text>
-            </MetaRow>
-          ) : (
-            <Box
-              p="xs"
-              mt={4}
-              mb={4}
-              style={{
-                background: 'rgba(245,158,11,0.08)',
-                borderRadius: 6,
-                border: '1px solid rgba(245,158,11,0.2)',
-              }}
-            >
-              <Text size="sm" c="rgba(245,158,11,0.9)" lh={1.6}>
-                Missing description — MCP clients won't know when to use this{' '}
-                {method}.
-              </Text>
-            </Box>
-          )}
-
-          {inputSchemaName && (
-            <>
-              <SectionLabel>Input Schema</SectionLabel>
-              <SchemaSection schemaName={inputSchemaName} />
-            </>
-          )}
-
-          {outputSchemaName && (
-            <>
-              <SectionLabel>Output Schema</SectionLabel>
-              <SchemaSection schemaName={outputSchemaName} />
-            </>
-          )}
-        </Box>
-
-        {/* Right: MCP client config */}
-        <Box className={classes.splitRight}>
-          <Text
-            size="sm"
-            fw={600}
-            ff="monospace"
-            c="var(--app-meta-label)"
-            mb={4}
-          >
-            Connect your MCP client
-          </Text>
-          <Text size="sm" c="var(--app-text-muted)" mb="md" lh={1.6}>
-            All tools, resources, and prompts are available once connected.
-          </Text>
-
-          <CopyableCode
-            label="Claude Desktop · claude_desktop_config.json"
-            code={JSON.stringify(
-              {
-                mcpServers: {
-                  pikku: {
-                    command: 'npx',
-                    args: ['-y', '@pikku/mcp-server', 'http://localhost:4002'],
-                  },
-                },
-              },
-              null,
-              2
-            )}
-            language="json"
-          />
-
-          <Box mt="md">
-            <CopyableCode
-              label="Cursor · .cursor/mcp.json"
-              code={JSON.stringify(
-                {
-                  mcpServers: {
-                    pikku: {
-                      command: 'npx',
-                      args: [
-                        '-y',
-                        '@pikku/mcp-server',
-                        'http://localhost:4002',
-                      ],
-                    },
-                  },
-                },
-                null,
-                2
-              )}
-              language="json"
-            />
-          </Box>
-
-          <Box mt="md" p="sm" className={classes.surfaceCard}>
-            <Text
-              size="sm"
-              fw={600}
-              ff="monospace"
-              c="var(--app-section-label)"
-              tt="uppercase"
-              mb={8}
-            >
-              SSE endpoint · any client
-            </Text>
-            <Box className={classes.codeInputBox}>
-              <Text
-                size="sm"
-                ff="monospace"
-                c="var(--app-tag-color)"
-                className={classes.flexGrow}
-              >
-                http://localhost:4002/mcp
-              </Text>
-            </Box>
-            <Text size="sm" c="var(--app-text-muted)" mt={8} lh={1.6}>
-              Use this URL directly in any MCP-compatible client that supports
-              SSE transport.
-            </Text>
-          </Box>
-        </Box>
-      </Box>
-    </Box>
-  )
-}
+import { TableListPage } from '../layout/TableListPage'
+import { PikkuBadge } from '../ui/PikkuBadge'
 
 type McpTabProps = { searchQuery: string }
 
 export const McpTab: React.FC<McpTabProps> = ({ searchQuery }) => {
   const { meta } = usePikkuMeta()
-  const [selected, setSelected] = useState<string | null>(null)
+  const { openMCP } = usePanelContext()
 
   const items = useMemo(() => {
     if (!meta.mcpMeta) return []
@@ -227,128 +19,56 @@ export const McpTab: React.FC<McpTabProps> = ({ searchQuery }) => {
     )
   }, [meta.mcpMeta])
 
-  const grouped = useMemo(() => {
-    const groups: Record<string, any[]> = { tool: [], resource: [], prompt: [] }
-    const q = searchQuery.toLowerCase()
-    for (const item of items) {
-      const method = item.method || 'tool'
-      if (
-        q &&
-        !item.name?.toLowerCase().includes(q) &&
-        !item.pikkuFuncId?.toLowerCase().includes(q)
-      )
-        continue
-      if (!groups[method]) groups[method] = []
-      groups[method].push(item)
-    }
-    return groups
-  }, [items, searchQuery])
-
-  const selectedItem = useMemo(() => {
-    if (!selected) return null
-    return (
-      items.find(
-        (i: any) => `${i.method}::${i.wireId || i.name}` === selected
-      ) || null
-    )
-  }, [items, selected])
-
-  const list = (
-    <ScrollArea className={classes.flexGrow}>
-        {Object.entries(grouped).map(([type, typeItems]) => {
-          if (typeItems.length === 0) return null
-          return (
-            <React.Fragment key={type}>
-              <Box className={classes.groupLabel}>
-                <Text
-                  size="sm"
-                  ff="monospace"
-                  c="var(--app-section-label)"
-                  tt="uppercase"
-                  className={classes.gridHeaderLabel}
-                >
-                  {type}s
-                </Text>
-                <Box className={classes.separator} />
-              </Box>
-
-              {typeItems.map((item: any) => {
-                const key = `${item.method}::${item.wireId || item.name}`
-                const isActive = selected === key
-                return (
-                  <ListItem
-                    key={key}
-                    active={isActive}
-                    onClick={() => setSelected(key)}
-                    padding="6px 12px"
-                  >
-                    <Box
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 7,
-                        width: '100%',
-                      }}
-                    >
-                      <Box
-                        className={classes.typeDot}
-                        style={{ background: TYPE_DOTS[item.method || 'tool'] }}
-                      />
-                      <Box className={classes.flexGrow}>
-                        <Text
-                          size="sm"
-                          ff="monospace"
-                          c={
-                            isActive
-                              ? 'var(--app-meta-value)'
-                              : 'var(--app-text)'
-                          }
-                          truncate
-                        >
-                          {item.name || item.wireId || 'unnamed'}
-                        </Text>
-                        {item.pikkuFuncId && (
-                          <Text
-                            size="sm"
-                            ff="monospace"
-                            c={
-                              isActive
-                                ? 'var(--app-meta-label)'
-                                : 'var(--app-text-muted)'
-                            }
-                            truncate
-                            style={{ fontSize: 9 }}
-                          >
-                            {item.pikkuFuncId}()
-                          </Text>
-                        )}
-                      </Box>
-                      {!item.description && (
-                        <Text
-                          size="sm"
-                          c="rgba(245,158,11,0.8)"
-                          title="Missing description"
-                        >
-                          &#9888;
-                        </Text>
-                      )}
-                    </Box>
-                  </ListItem>
-                )
-              })}
-            </React.Fragment>
-          )
-        })}
-      </ScrollArea>
+  const columns = useMemo(
+    () => [
+      {
+        key: 'name',
+        header: 'NAME',
+        render: (item: any) => (
+          <>
+            <Text fw={500} truncate>
+              {item.name || item.wireId || 'unnamed'}
+            </Text>
+            {item.pikkuFuncId && (
+              <Text size="xs" ff="monospace" c="dimmed" truncate>
+                {item.pikkuFuncId}
+              </Text>
+            )}
+          </>
+        ),
+      },
+      {
+        key: 'type',
+        header: 'TYPE',
+        align: 'right' as const,
+        render: (item: any) => {
+          const method = item.method || 'tool'
+          return <PikkuBadge type="mcpType" value={method} />
+        },
+      },
+    ],
+    []
   )
 
   return (
-    <ListDetailLayout
-      listWidth={280}
-      list={list}
-      detail={selectedItem ? <McpDetailPanel item={selectedItem} /> : null}
-      hasSelection={!!selectedItem}
-      emptyMessage="Select a tool, resource, or prompt"
+    <TableListPage
+      title="MCP"
+      icon={Cpu}
+      docsHref="https://pikku.dev/docs/wiring/mcp"
+      data={items}
+      columns={columns}
+      getKey={(item) => `${item.method}::${item.wireId || item.name}`}
+      onRowClick={(item) =>
+        openMCP(`mcp::${item.method}::${item.wireId || item.name}`, item)
+      }
+      searchPlaceholder="Search MCP tools, resources, prompts..."
+      searchFilter={(item, q) =>
+        item.name?.toLowerCase().includes(q) ||
+        item.pikkuFuncId?.toLowerCase().includes(q) ||
+        item.method?.toLowerCase().includes(q)
+      }
+      emptyMessage="No MCP entries found."
+      externalSearch={searchQuery}
     />
   )
 }
