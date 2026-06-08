@@ -53,7 +53,7 @@ test('resolveLocalDb returns null when config is undefined', () => {
 test(
   'migrateAndCodegen applies pending migrations and writes schema.d.ts',
   async () => {
-    const resolved = resolveLocalDb(true, root, root)!
+    const resolved = resolveLocalDb('.pikku-runtime/dev.db', root, root)!
     const { migrate, codegen, zod } = await migrateAndCodegen(resolved)
 
     assert.deepEqual(migrate.applied, ['0001-init.sql'])
@@ -89,7 +89,7 @@ test(
 )
 
 test('migrateAndCodegen is a no-op on second run', async () => {
-  const resolved = resolveLocalDb(true, root, root)!
+  const resolved = resolveLocalDb('.pikku-runtime/dev.db', root, root)!
   await migrateAndCodegen(resolved)
   const second = await migrateAndCodegen(resolved)
   assert.deepEqual(second.migrate.applied, [])
@@ -105,7 +105,7 @@ test('migrateAndCodegen is a no-op on second run', async () => {
 test(
   'migrateAndCodegen throws MigrationDriftError when applied file changes',
   async () => {
-    const resolved = resolveLocalDb(true, root, root)!
+    const resolved = resolveLocalDb('.pikku-runtime/dev.db', root, root)!
     await migrateAndCodegen(resolved)
 
     const migPath = join(root, 'db', 'migrations', '0001-init.sql')
@@ -127,7 +127,7 @@ test(
 )
 
 test('seed applies db/seed.sql once migrate has run', async () => {
-  const resolved = resolveLocalDb(true, root, root)!
+  const resolved = resolveLocalDb('.pikku-runtime/dev.db', root, root)!
   await migrateAndCodegen(resolved)
 
   const result = await runSeed(resolved)
@@ -149,7 +149,7 @@ test('seed applies db/seed.sql once migrate has run', async () => {
 test(
   'reset wipes the dev DB so a follow-up migrate replays from scratch',
   async () => {
-    const resolved = resolveLocalDb(true, root, root)!
+    const resolved = resolveLocalDb('.pikku-runtime/dev.db', root, root)!
     await migrateAndCodegen(resolved)
     await runSeed(resolved)
 
@@ -173,11 +173,7 @@ test(
 
 test('reset refuses when resolved DB lives outside the runtime directory', () => {
   const outside = mkdtempSync(join(tmpdir(), 'pikku-db-outside-'))
-  const resolved = resolveLocalDb(
-    { file: join(outside, 'evil.db') },
-    root,
-    root
-  )!
+  const resolved = resolveLocalDb(join(outside, 'evil.db'), root, root)!
   assert.throws(() => runReset(resolved, root), /outside the runtime directory/)
   rmSync(outside, { recursive: true, force: true })
 })
