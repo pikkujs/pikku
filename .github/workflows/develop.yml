@@ -20,7 +20,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           download-build: 'false'
-      - run: npx changeset status
+      - run: npx changeset status --since origin/main
 
   build:
     name: Build
