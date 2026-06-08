@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 
 import {
+  Box,
   Stack,
   TextInput,
   Textarea,
@@ -9,9 +10,8 @@ import {
   Group,
   Alert,
   MultiSelect,
-  Code,
 } from '@mantine/core'
-import { Save, X, AlertTriangle, CheckCircle } from 'lucide-react'
+import { CheckCircle, Save, X, AlertTriangle } from 'lucide-react'
 import { SidePanelFooter } from '../../panel/SidePanel'
 import CodeMirror from '@uiw/react-codemirror'
 import { javascript } from '@codemirror/lang-javascript'
@@ -55,7 +55,7 @@ export const FunctionEditor: React.FC<FunctionEditorProps> = ({
   const [readonly_, setReadonly] = useState(false)
   const [approvalRequired, setApprovalRequired] = useState(false)
   const [body, setBody] = useState('')
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     if (source) {
@@ -106,11 +106,8 @@ export const FunctionEditor: React.FC<FunctionEditorProps> = ({
       if (body !== (source?.body || '')) {
         await updateBody.mutateAsync({ sourceFile, exportedName, body })
       }
-      setSuccessMessage('Saved and rebuilt successfully')
-      setTimeout(() => {
-        setSuccessMessage(null)
-        onClose()
-      }, 1500)
+      setSaved(true)
+      setTimeout(() => onClose(), 1200)
     } catch {
       // error is in mutation state
     }
@@ -125,18 +122,19 @@ export const FunctionEditor: React.FC<FunctionEditorProps> = ({
 
   return (
     <>
+    {isPending && (
+      <Box
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'var(--mantine-color-body)',
+          opacity: 0.6,
+          zIndex: 10,
+          pointerEvents: 'all',
+        }}
+      />
+    )}
     <Stack gap="md">
-      {successMessage && (
-        <Alert
-          color="green"
-          icon={<CheckCircle size={16} />}
-          withCloseButton
-          onClose={() => setSuccessMessage(null)}
-        >
-          {successMessage}
-        </Alert>
-      )}
-
       {error && (
         <Alert color="red" icon={<AlertTriangle size={16} />}>
           {(error as Error).message}
@@ -249,10 +247,12 @@ export const FunctionEditor: React.FC<FunctionEditorProps> = ({
         <Button
           onClick={handleSaveConfig}
           loading={isPending}
-          leftSection={<Save size={14} />}
+          disabled={saved}
+          color={saved ? 'green' : undefined}
+          leftSection={saved ? <CheckCircle size={14} /> : <Save size={14} />}
           size="sm"
         >
-          Save & Rebuild
+          {saved ? 'Saved' : isPending ? 'Saving…' : 'Save & Rebuild'}
         </Button>
       </Group>
     </SidePanelFooter>
