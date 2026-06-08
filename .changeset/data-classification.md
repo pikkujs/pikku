@@ -1,7 +1,7 @@
 ---
-"@pikku/core": minor
-"@pikku/cli": minor
-"@pikku/inspector": minor
+"@pikku/core": patch
+"@pikku/cli": patch
+"@pikku/inspector": patch
 ---
 
 Add end-to-end data classification for SQLite and Postgres projects.
