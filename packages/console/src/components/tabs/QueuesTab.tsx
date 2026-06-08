@@ -12,7 +12,10 @@ type QueueDepths = Record<
   { queued: number; active: number; failed: number }
 >
 
-export const QueuesTab: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
+export const QueuesTab: React.FC<{
+  searchQuery: string
+  emptyHero?: React.ReactNode
+}> = ({ searchQuery, emptyHero }) => {
   const { meta } = usePikkuMeta()
   const rpc = usePikkuRPC()
   const { openQueue } = usePanelContext()
@@ -127,6 +130,7 @@ export const QueuesTab: React.FC<{ searchQuery: string }> = ({ searchQuery }) =>
       getKey={(item) => item.name}
       onRowClick={(item) => openQueue(item.wireId || item.name, item)}
       emptyMessage="No queue workers found."
+      emptyHero={emptyHero}
     />
   )
 }

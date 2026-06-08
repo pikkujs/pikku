@@ -65,7 +65,10 @@ const columns = [
   },
 ]
 
-export const TriggersTab: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
+export const TriggersTab: React.FC<{
+  searchQuery: string
+  emptyHero?: React.ReactNode
+}> = ({ searchQuery, emptyHero }) => {
   const { meta } = usePikkuMeta()
   const { openTrigger } = usePanelContext()
 
@@ -105,6 +108,7 @@ export const TriggersTab: React.FC<{ searchQuery: string }> = ({ searchQuery }) 
       getKey={(item) => item.name}
       onRowClick={(item) => openTrigger(item.name, item.trigger)}
       emptyMessage="No triggers found."
+      emptyHero={emptyHero}
     />
   )
 }

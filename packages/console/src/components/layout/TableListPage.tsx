@@ -35,6 +35,7 @@ interface TableListPageProps<T> {
   emptyMessage?: string
   emptyTitle?: string
   emptyDescription?: string
+  emptyHero?: React.ReactNode
   loading?: boolean
   headerRight?: React.ReactNode
   description?: React.ReactNode
@@ -53,6 +54,7 @@ export const TableListPage = <T,>({
   emptyMessage = 'No items found.',
   emptyTitle,
   emptyDescription,
+  emptyHero,
   loading = false,
   description,
   headerRight,
@@ -84,6 +86,7 @@ export const TableListPage = <T,>({
     return (
       <EmptyStatePlaceholder
         icon={icon}
+        hero={emptyHero}
         title={emptyTitle || `No ${title} found`}
         description={emptyDescription ?? `No ${title.toLowerCase()} exist yet.`}
         docsHref={docsHref}
