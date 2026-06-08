@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Box, Text, Table } from '@mantine/core'
+import { Box, Text, Table, Group } from '@mantine/core'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { HttpTabbedPanel } from '../http/HttpTabbedPanel'
@@ -56,30 +56,30 @@ export const HttpTab: React.FC<HttpTabProps> = ({ searchQuery }) => {
                   borderLeft: isActive ? '2px solid #7c3aed' : '2px solid transparent',
                 }}
               >
-                <Table.Td pl="md">
+                <Table.Td pl="md" pr="md">
+                  <Group gap={5} wrap="nowrap" mb={2}>
+                    <PikkuBadge
+                      type="httpMethod"
+                      value={route.method?.toUpperCase() || 'GET'}
+                      size="xs"
+                    />
+                    <Text
+                      size="xs"
+                      ff="monospace"
+                      truncate
+                      c={isActive ? 'var(--app-meta-value)' : undefined}
+                    >
+                      {route.route}
+                    </Text>
+                  </Group>
                   <Text
-                    size="sm"
-                    ff="monospace"
-                    truncate
-                    c={isActive ? 'var(--app-meta-value)' : undefined}
-                  >
-                    {route.route}
-                  </Text>
-                  <Text
-                    size="sm"
+                    size="xs"
                     ff="monospace"
                     c={isActive ? 'var(--app-meta-label)' : 'dimmed'}
                     truncate
                   >
                     {route.pikkuFuncId}
                   </Text>
-                </Table.Td>
-                <Table.Td pr="md" style={{ textAlign: 'right' }}>
-                  <PikkuBadge
-                    type="httpMethod"
-                    value={route.method?.toUpperCase() || 'GET'}
-                    size="sm"
-                  />
                 </Table.Td>
               </Table.Tr>
             )
@@ -91,7 +91,7 @@ export const HttpTab: React.FC<HttpTabProps> = ({ searchQuery }) => {
 
   return (
     <ListDetailLayout
-      listWidth={250}
+      listWidth={180}
       list={list}
       detail={
         selectedRoute ? (
