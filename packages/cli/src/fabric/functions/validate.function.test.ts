@@ -59,7 +59,7 @@ async function makeValidProject(root: string) {
   await mkdir(join(root, 'packages', 'functions-sdk', 'src', 'pikku'), {
     recursive: true,
   })
-  await mkdir(join(root, 'packages', 'functions', 'db', 'migrations'), {
+  await mkdir(join(root, 'packages', 'functions', 'db', 'sqlite'), {
     recursive: true,
   })
   await writeFile(
@@ -487,7 +487,7 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        const migrDir = join(tmp, 'packages', 'functions', 'db', 'migrations')
+        const migrDir = join(tmp, 'packages', 'functions', 'db', 'sqlite')
         await mkdir(migrDir, { recursive: true })
         await writeFile(
           join(migrDir, '0001-init.sql'),
@@ -515,7 +515,7 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        const migrDir = join(tmp, 'packages', 'functions', 'db', 'migrations')
+        const migrDir = join(tmp, 'packages', 'functions', 'db', 'sqlite')
         await mkdir(migrDir, { recursive: true })
         await writeFile(join(migrDir, '0001-init.sql'), 'SELECT 1;', 'utf8')
         await writeFile(join(migrDir, '0003-skip.sql'), 'SELECT 1;', 'utf8') // 0002 missing
@@ -533,7 +533,7 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        const migrDir = join(tmp, 'packages', 'functions', 'db', 'migrations')
+        const migrDir = join(tmp, 'packages', 'functions', 'db', 'sqlite')
         await mkdir(migrDir, { recursive: true })
         await writeFile(
           join(migrDir, '0001-init.sql'),
@@ -557,7 +557,7 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        const migrDir = join(tmp, 'packages', 'functions', 'db', 'migrations')
+        const migrDir = join(tmp, 'packages', 'functions', 'db', 'sqlite')
         await mkdir(migrDir, { recursive: true })
         await writeFile(
           join(migrDir, '0001-init.sql'),
@@ -582,7 +582,7 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        const migrDir = join(tmp, 'packages', 'functions', 'db', 'migrations')
+        const migrDir = join(tmp, 'packages', 'functions', 'db', 'sqlite')
         await mkdir(migrDir, { recursive: true })
         await writeFile(
           join(migrDir, '0001-init.sql'),
@@ -605,7 +605,7 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        const migrDir = join(tmp, 'packages', 'functions', 'db', 'migrations')
+        const migrDir = join(tmp, 'packages', 'functions', 'db', 'sqlite')
         await mkdir(migrDir, { recursive: true })
         await writeFile(
           join(migrDir, '0001-init.sql'),
@@ -642,12 +642,12 @@ describe('pikku fabric validate', () => {
       }
     })
 
-    test('missing db/migrations/ → error', async () => {
+    test('missing db/sqlite/ → error', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
         await rm(
-          join(tmp, 'packages', 'functions', 'db', 'migrations'),
+          join(tmp, 'packages', 'functions', 'db', 'sqlite'),
           { recursive: true, force: true }
         )
         const result = await runValidate(tmp)
