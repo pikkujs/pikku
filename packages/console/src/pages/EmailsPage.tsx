@@ -117,28 +117,21 @@ const EmailsOverview: React.FC<{
   )
 
   return (
-    <PanelProvider>
-      <ResizablePanelLayout
-        hidePanel
-        header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" />}
-      >
-        <TableListPage
-          icon={Mail}
-          title="Email Templates"
-          docsHref={EMAIL_DOCS_HREF}
-          data={data}
-          columns={emailColumns}
-          getKey={(item) => item.name}
-          onRowClick={(item) => onSelect(item.name)}
-          searchPlaceholder="Search email templates..."
-          searchFilter={(item, q) =>
-            item.name.toLowerCase().includes(q) ||
-            item.variables.some((v) => v.toLowerCase().includes(q))
-          }
-          emptyMessage="No email templates match the current search."
-        />
-      </ResizablePanelLayout>
-    </PanelProvider>
+    <TableListPage
+      icon={Mail}
+      title="Email Templates"
+      docsHref={EMAIL_DOCS_HREF}
+      data={data}
+      columns={emailColumns}
+      getKey={(item) => item.name}
+      onRowClick={(item) => onSelect(item.name)}
+      searchPlaceholder="Search email templates..."
+      searchFilter={(item, q) =>
+        item.name.toLowerCase().includes(q) ||
+        item.variables.some((v) => v.toLowerCase().includes(q))
+      }
+      emptyMessage="No email templates match the current search."
+    />
   )
 }
 
@@ -248,19 +241,26 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode }> = ({ hero }) => {
 
   if (!selectedTemplate || !selectedMeta || !selectedLocale) {
     return (
-      <EmailsOverview
-        templateNames={templateNames}
-        templates={templates}
-        onSelect={(templateName) => {
-          setPreviewInput({})
-          setSearchParams({
-            template: templateName,
-            locale:
-              Object.keys(templates[templateName].locales)
-                .sort((a, b) => a.localeCompare(b))[0] ?? 'en',
-          })
-        }}
-      />
+      <PanelProvider>
+        <ResizablePanelLayout
+          hidePanel
+          header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" />}
+        >
+          <EmailsOverview
+            templateNames={templateNames}
+            templates={templates}
+            onSelect={(templateName) => {
+              setPreviewInput({})
+              setSearchParams({
+                template: templateName,
+                locale:
+                  Object.keys(templates[templateName].locales)
+                    .sort((a, b) => a.localeCompare(b))[0] ?? 'en',
+              })
+            }}
+          />
+        </ResizablePanelLayout>
+      </PanelProvider>
     )
   }
 
