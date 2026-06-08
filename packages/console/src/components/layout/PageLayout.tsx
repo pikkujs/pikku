@@ -200,11 +200,20 @@ export function PageActionBar({ lead, view, filters }: PageActionBarProps) {
           {lead}
         </Group>
       )}
-      {filters}
-      {view && (
-        <Group gap="sm" wrap="nowrap" align="center" style={{ marginLeft: 'auto' }}>
+      {lead ? (
+        <Group gap="sm" wrap="nowrap" align="center" style={{ marginLeft: 'auto', flexShrink: 0 }}>
+          {filters}
           {view}
         </Group>
+      ) : (
+        <>
+          {filters}
+          {view && (
+            <Group gap="sm" wrap="nowrap" align="center" style={{ marginLeft: 'auto' }}>
+              {view}
+            </Group>
+          )}
+        </>
       )}
     </Group>
   )
