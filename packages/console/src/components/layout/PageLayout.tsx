@@ -189,7 +189,7 @@ interface PageActionBarProps {
 export function PageActionBar({ lead, view, filters }: PageActionBarProps) {
   if (!lead && !view && !filters) return null
   return (
-    <Group flex={1} gap="sm" wrap="nowrap" align="center" justify="space-between" h={45} style={{ flex: 1, minWidth: 0 }}>
+    <Group gap="sm" wrap="nowrap" align="center" justify="space-between" h={45} style={{ width: '100%', minWidth: 0 }}>
       <Group gap="sm" wrap="nowrap" align="center" style={{ minWidth: 0, flex: 1, flexDirection: 'row' }}>
         {lead}
         <Group gap="sm" style={{ flex: 1, flexDirection: 'row', display: 'flex', justifyContent: 'flex-end' }}>
