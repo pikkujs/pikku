@@ -19,7 +19,6 @@ import { dbMigrate } from './functions/commands/db-migrate.js'
 import { dbSeed } from './functions/commands/db-seed.js'
 import { dbReset } from './functions/commands/db-reset.js'
 import { dbAudit } from './functions/commands/db-audit.js'
-import { dbAnonymize } from './functions/commands/db-anonymize.js'
 import {
   workspaceValidate,
   renderWorkspaceValidate,
@@ -287,11 +286,6 @@ wireCLI({
           func: dbAudit,
           description:
             'Report column classifications from the manifest and flag columns with no anonymize strategy',
-        }),
-        anonymize: pikkuCLICommand({
-          func: dbAnonymize,
-          description:
-            'Copy a database and replace PII-classified column values with fake/hashed/nulled data',
         }),
       },
     },

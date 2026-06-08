@@ -4,6 +4,7 @@ import { loadUserModule } from './load-user-project.js'
 
 export interface UserConfigShape {
   sqliteDb?: string
+  postgresUrl?: string
   [key: string]: unknown
 }
 
@@ -36,8 +37,8 @@ export async function loadUserConfigForDb(
 ): Promise<UserConfigShape | null> {
   const { config, logger } = options
   const hasConventionalDbAssets =
-    existsSync(join(config.rootDir, 'db', 'migrations')) ||
-    existsSync(join(config.rootDir, 'db', 'seed.sql'))
+    existsSync(join(config.rootDir, 'db', 'sqlite')) ||
+    existsSync(join(config.rootDir, 'db', 'postgres'))
   const configFactoryFile = findUserConfigFactoryFile(
     config.rootDir,
     config.srcDirectories

@@ -1,5 +1,5 @@
 import { pikkuSessionlessFunc } from '#pikku'
-import { resolveLocalDb } from '../db/local-db.js'
+import { resolveDb } from '../db/local-db.js'
 import { loadUserConfigForDb } from './db-shared.js'
 import type { ClassificationManifest } from '@pikku/core'
 
@@ -9,17 +9,12 @@ export const dbAudit = pikkuSessionlessFunc<{}, void>({
     const userConfig = await loadUserConfigForDb({ config, logger })
     if (!userConfig) return
 
-    const resolved = resolveLocalDb(
-      userConfig.sqliteDb,
-      config.rootDir,
-      config.outDir,
-      config.runtimeDir
-    )
+    const resolved = resolveDb(userConfig, config.rootDir, config.outDir, config.runtimeDir)
     if (!resolved) {
       logger.error(
-        'pikku db audit: sqliteDb is not configured in your createConfig.'
+        'pikku db audit: no database configured — set sqliteDb or postgresUrl in your createConfig.'
       )
-      throw new Error('sqliteDb not configured')
+      throw new Error('no database configured')
     }
 
     let manifest: ClassificationManifest

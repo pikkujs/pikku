@@ -1,32 +1,24 @@
 import { pikkuSessionlessFunc } from '#pikku'
-import {
-  resolveLocalDb,
-  reset,
-  migrateAndCodegen,
-  seed,
-} from '../db/local-db.js'
+import { resolveDb, reset, migrateAndCodegen, seed } from '../db/local-db.js'
 import { loadUserConfigForDb } from './db-shared.js'
 
 export const dbReset = pikkuSessionlessFunc<{}, void>({
   remote: true,
   func: async ({ logger, config }) => {
-    const userConfig = await loadUserConfigForDb({
-      config,
-      logger,
-    })
+    const userConfig = await loadUserConfigForDb({ config, logger })
     if (!userConfig) return
 
-    const resolved = resolveLocalDb(
-      userConfig.sqliteDb,
-      config.rootDir,
-      config.outDir,
-      config.runtimeDir
-    )
+    const resolved = resolveDb(userConfig, config.rootDir, config.outDir, config.runtimeDir)
     if (!resolved) {
       logger.error(
-        'pikku db reset: sqliteDb is not configured in your createConfig.'
+        'pikku db reset: no database configured — set sqliteDb in your createConfig.'
       )
-      throw new Error('sqliteDb not configured')
+      throw new Error('no database configured')
+    }
+
+    if (resolved.dialect !== 'sqlite') {
+      logger.error('pikku db reset: reset is only supported for SQLite databases.')
+      throw new Error('reset not supported for postgres')
     }
 
     reset(resolved, config.rootDir)
@@ -49,9 +41,7 @@ export const dbReset = pikkuSessionlessFunc<{}, void>({
 
     const seedResult = await seed(resolved)
     if (seedResult.applied) {
-      logger.info(
-        `db reset: seeded ${resolved.seedFile} (${seedResult.bytes} bytes)`
-      )
+      logger.info(`db reset: seeded ${resolved.seedFile} (${seedResult.bytes} bytes)`)
     }
   },
 })
