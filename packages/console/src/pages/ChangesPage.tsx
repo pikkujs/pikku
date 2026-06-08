@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import {
   Box,
   Text,
@@ -9,11 +9,13 @@ import {
   Center,
   Tabs,
   TextInput,
+  ActionIcon,
   Button,
   ScrollArea,
   Code,
 } from '@mantine/core'
-import { GitCompare, ChevronRight, ChevronDown } from 'lucide-react'
+import { GitCompare, ChevronRight, ChevronDown, FolderOpen } from 'lucide-react'
+import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { useSearchParams } from '../router'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -560,6 +562,7 @@ export const ChangesPage: React.FC = () => {
   const [searchParams] = useSearchParams()
   const queryBase = searchParams.get('base')
   const queryOurs = searchParams.get('ours')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [draftPath, setDraftPath] = useState<string>(
     () => queryBase ?? localStorage.getItem(STORAGE_KEY) ?? ''
@@ -567,6 +570,12 @@ export const ChangesPage: React.FC = () => {
   const [activePath, setActivePath] = useState<string | null>(
     () => queryBase ?? localStorage.getItem(STORAGE_KEY)
   )
+
+  useEffect(() => {
+    if (fileInputRef.current) {
+      fileInputRef.current.setAttribute('webkitdirectory', '')
+    }
+  }, [])
 
   useEffect(() => {
     if (queryBase && queryBase !== activePath) {
@@ -588,42 +597,69 @@ export const ChangesPage: React.FC = () => {
     }
   }
 
-  const toolbar = (
-    <Stack gap="md">
-      <ListPageHeader title="Changes" description="Diff your current project state against a base .pikku snapshot" />
-      <Group gap="sm" align="flex-end">
-      <TextInput
-        label="Base .pikku path"
-        description="Path to a .pikku/ directory to diff against (e.g. a worktree at main)"
-        placeholder="../project-main/packages/functions/.pikku"
-        value={draftPath}
-        onChange={(e) => setDraftPath(e.currentTarget.value)}
-        style={{ flex: 1 }}
-      />
-      <Button
-        leftSection={<GitCompare size={14} />}
-        onClick={apply}
-        disabled={draftPath.trim() === (activePath ?? '')}
-      >
-        Compare
-      </Button>
-    </Group>
-    </Stack>
-  )
+  const handleFolderSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const path = (file as any).path as string | undefined
+    if (path) {
+      const dir = path.split('/').slice(0, -1).join('/')
+      setDraftPath(dir)
+    }
+  }
 
   return (
     <PanelProvider>
-      <ResizablePanelLayout hidePanel header={toolbar}>
+      <ResizablePanelLayout
+        hidePanel
+        header={
+          <ListPageHeader
+            title="Changes"
+            description="Compare the current project state against a base .pikku snapshot"
+            lead={
+              <Group gap="sm" wrap="nowrap">
+                <TextInput
+                  placeholder="../worktree-to-compare/.pikku"
+                  value={draftPath}
+                  onChange={(e) => setDraftPath(e.currentTarget.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && apply()}
+                  rightSection={
+                    <ActionIcon variant="subtle" size="sm" onClick={() => fileInputRef.current?.click()}>
+                      <FolderOpen size={14} />
+                    </ActionIcon>
+                  }
+                  size="xs"
+                  style={{ width: 360 }}
+                />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  style={{ display: 'none' }}
+                  onChange={handleFolderSelect}
+                />
+                <Button
+                  size="xs"
+                  leftSection={<GitCompare size={14} />}
+                  onClick={apply}
+                  disabled={draftPath.trim() === (activePath ?? '')}
+                >
+                  Compare
+                </Button>
+              </Group>
+            }
+          />
+        }
+      >
         <Box
           className={classes.listSurfaceCard}
           style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
         >
           {!activePath && (
-            <Center p="xl">
-              <Text size="sm" c="dimmed">
-                Set a base path above to see the diff.
-              </Text>
-            </Center>
+            <EmptyStatePlaceholder
+              icon={GitCompare}
+              title="No base path set"
+              description="Enter a path to a .pikku directory above to diff against."
+              docsHref="https://pikku.dev/docs"
+            />
           )}
           {activePath && isLoading && (
             <Center p="xl">
