@@ -2946,6 +2946,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@electric-sql/pglite@npm:^0.5.1":
+  version: 0.5.1
+  resolution: "@electric-sql/pglite@npm:0.5.1"
+  checksum: 10/7432306b9f7aae9f1c8c529bfdd02c82c28b7df336185f252ef6edd3386157c904d2a7264467d8db17da9a4a8d7e158e018f5e13e680c2dcc703098ff32e19d4
+  languageName: node
+  linkType: hard
+
 "@emnapi/runtime@npm:^1.7.0":
   version: 1.8.1
   resolution: "@emnapi/runtime@npm:1.8.1"
@@ -6318,6 +6325,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-classification@workspace:verifiers/classification"
   dependencies:
+    "@electric-sql/pglite": "npm:^0.5.1"
     "@pikku/cli": "workspace:*"
     "@pikku/core": "workspace:*"
     "@pikku/inspector": "workspace:*"
