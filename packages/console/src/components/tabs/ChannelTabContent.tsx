@@ -15,7 +15,8 @@ const ChannelTabInner: React.FC<{
   channelName: string
   channelMeta: ChannelMeta
   allChannelsMeta: Record<string, ChannelMeta>
-}> = ({ channelName, channelMeta, allChannelsMeta }) => {
+  searchQuery: string
+}> = ({ channelName, channelMeta, allChannelsMeta, searchQuery }) => {
   const navigate = useNavigate()
   const [selected, setSelected] = useState<ChannelSelection>(null)
 
@@ -40,6 +41,7 @@ const ChannelTabInner: React.FC<{
           selected={selected}
           onSelect={setSelected}
           onChannelSwitch={handleChannelSwitch}
+          searchQuery={searchQuery}
         />
       </Box>
       <Box className={`${styles.detailPane} ${styles.overflowHidden}`}>
@@ -53,7 +55,9 @@ const ChannelTabInner: React.FC<{
   )
 }
 
-export const ChannelTabContent: React.FC = () => {
+type ChannelTabContentProps = { searchQuery: string }
+
+export const ChannelTabContent: React.FC<ChannelTabContentProps> = ({ searchQuery }) => {
   const [searchParams] = useSearchParams()
   const channelName = searchParams.get('id') || ''
   const { meta } = usePikkuMeta()
@@ -77,6 +81,7 @@ export const ChannelTabContent: React.FC = () => {
         channelName={resolvedName}
         channelMeta={channelMeta}
         allChannelsMeta={allChannelsMeta}
+        searchQuery={searchQuery}
       />
     </PanelProvider>
   )

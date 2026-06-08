@@ -8,8 +8,6 @@ import { CopyableCode } from '../ui/CopyableCode'
 import { MetaRow } from '../ui/MetaRow'
 import { SectionLabel } from '../ui/SectionLabel'
 import { ListDetailLayout } from '../ui/ListDetailLayout'
-import { SearchInput } from '../ui/SearchInput'
-import { EmptyState } from '../ui/EmptyState'
 import { ListItem } from '../ui/ListItem'
 import classes from '../ui/console.module.css'
 
@@ -216,10 +214,11 @@ const McpDetailPanel: React.FC<{ item: any }> = ({ item }) => {
   )
 }
 
-export const McpTab: React.FC = () => {
+type McpTabProps = { searchQuery: string }
+
+export const McpTab: React.FC<McpTabProps> = ({ searchQuery }) => {
   const { meta } = usePikkuMeta()
   const [selected, setSelected] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
 
   const items = useMemo(() => {
     if (!meta.mcpMeta) return []
@@ -230,7 +229,7 @@ export const McpTab: React.FC = () => {
 
   const grouped = useMemo(() => {
     const groups: Record<string, any[]> = { tool: [], resource: [], prompt: [] }
-    const q = search.toLowerCase()
+    const q = searchQuery.toLowerCase()
     for (const item of items) {
       const method = item.method || 'tool'
       if (
@@ -243,7 +242,7 @@ export const McpTab: React.FC = () => {
       groups[method].push(item)
     }
     return groups
-  }, [items, search])
+  }, [items, searchQuery])
 
   const selectedItem = useMemo(() => {
     if (!selected) return null
@@ -255,14 +254,7 @@ export const McpTab: React.FC = () => {
   }, [items, selected])
 
   const list = (
-    <>
-      <SearchInput
-        value={search}
-        onChange={setSearch}
-        label="MCP"
-        count={items.length}
-      />
-      <ScrollArea className={classes.flexGrow}>
+    <ScrollArea className={classes.flexGrow}>
         {Object.entries(grouped).map(([type, typeItems]) => {
           if (typeItems.length === 0) return null
           return (
@@ -348,7 +340,6 @@ export const McpTab: React.FC = () => {
           )
         })}
       </ScrollArea>
-    </>
   )
 
   return (

@@ -15,7 +15,6 @@ import type { CLIMeta } from '@pikku/core/cli'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { PanelProvider } from '../../context/PanelContext'
 import { CliHelpText } from '../cli/CliHelpText'
-import { SearchInput } from '../ui/SearchInput'
 import classes from '../ui/console.module.css'
 
 const countCommands = (commands: Record<string, any>): number => {
@@ -30,8 +29,8 @@ const countCommands = (commands: Record<string, any>): number => {
 const CliPageInner: React.FC<{
   programs: any[]
   cliRenderers: Record<string, any>
-}> = ({ programs, cliRenderers }) => {
-  const [search, setSearch] = useState('')
+  searchQuery: string
+}> = ({ programs, cliRenderers, searchQuery }) => {
   const [activeProgramId, setActiveProgramId] = useState<string>(
     programs[0]?.wireId || ''
   )
@@ -100,19 +99,12 @@ const CliPageInner: React.FC<{
         className={classes.listPaneFixed}
         style={{ width: 280, minWidth: 220 }}
       >
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder="Search commands..."
-          label="CLI"
-          count={programCount}
-        />
         <ScrollArea style={{ flex: 1 }}>
           {programs.map((prog) => {
             const isActive = prog.wireId === activeProgramId
             const isExpanded = expandedPrograms.has(prog.wireId)
             const commands = Object.entries(prog.commands || {})
-            const q = search.toLowerCase()
+            const q = searchQuery.toLowerCase()
 
             const filteredCommands = q
               ? commands.filter(
@@ -296,7 +288,9 @@ const CliPageInner: React.FC<{
   )
 }
 
-export const CliTabContent: React.FC = () => {
+type CliTabContentProps = { searchQuery: string }
+
+export const CliTabContent: React.FC<CliTabContentProps> = ({ searchQuery }) => {
   const { meta } = usePikkuMeta()
   const programs = meta.cliMeta || []
 
@@ -313,6 +307,7 @@ export const CliTabContent: React.FC = () => {
       <CliPageInner
         programs={programs}
         cliRenderers={meta.cliRenderers || {}}
+        searchQuery={searchQuery}
       />
     </PanelProvider>
   )

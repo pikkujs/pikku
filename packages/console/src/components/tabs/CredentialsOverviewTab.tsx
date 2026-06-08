@@ -7,8 +7,6 @@ import {
   Group,
   Stack,
   Box,
-  Center,
-  Code,
   Button,
   Alert,
 } from '@mantine/core'
@@ -16,6 +14,7 @@ import { KeyRound, Link2, Circle, AlertTriangle } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import classes from '../ui/console.module.css'
 
 interface CredentialMeta {
@@ -78,19 +77,12 @@ export const CredentialsOverviewTab: React.FC<{ searchQuery?: string }> = ({ sea
 
   if (allCredentials.length === 0) {
     return (
-      <Box className={classes.listSurfaceCard}>
-        <Center h={300}>
-          <Stack align="center" gap="sm">
-            <KeyRound size={40} color="var(--mantine-color-dimmed)" />
-            <Text c="dimmed" size="sm" ta="center">
-              No credentials declared yet.
-              <br />
-              Use <Code>wireCredential()</Code> in your code to declare
-              credentials.
-            </Text>
-          </Stack>
-        </Center>
-      </Box>
+      <EmptyStatePlaceholder
+        icon={KeyRound}
+        title="No credentials declared yet"
+        description="Use wireCredential() in your code to declare credentials."
+        docsHref="https://pikku.dev/docs/core-features/credentials"
+      />
     )
   }
 

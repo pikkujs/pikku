@@ -3,14 +3,14 @@ import { Box, Text, ScrollArea, Stack, UnstyledButton } from '@mantine/core'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { HttpTabbedPanel } from '../http/HttpTabbedPanel'
-import { SearchInput } from '../ui/SearchInput'
 import { EmptyState } from '../ui/EmptyState'
 import styles from '../ui/console.module.css'
 
-export const HttpTab: React.FC = () => {
+type HttpTabProps = { searchQuery: string }
+
+export const HttpTab: React.FC<HttpTabProps> = ({ searchQuery }) => {
   const { meta } = usePikkuMeta()
   const [selected, setSelected] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
 
   const routes = useMemo(() => {
     if (!meta.httpMeta) return []
@@ -20,15 +20,15 @@ export const HttpTab: React.FC = () => {
   }, [meta.httpMeta])
 
   const filtered = useMemo(() => {
-    if (!search) return routes
-    const q = search.toLowerCase()
+    if (!searchQuery) return routes
+    const q = searchQuery.toLowerCase()
     return routes.filter(
       (r: any) =>
         r.route?.toLowerCase().includes(q) ||
         r.pikkuFuncId?.toLowerCase().includes(q) ||
         r.method?.toLowerCase().includes(q)
     )
-  }, [routes, search])
+  }, [routes, searchQuery])
 
   const selectedRoute = useMemo(() => {
     if (!selected) return null
@@ -43,13 +43,6 @@ export const HttpTab: React.FC = () => {
         className={`${styles.listPaneFixed} ${styles.flexColumn}`}
         style={{ width: 340, minWidth: 260 }}
       >
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          label="HTTP Routes"
-          count={routes.length}
-          placeholder="Search..."
-        />
         <ScrollArea className={styles.flexGrow}>
           <Stack gap={0}>
             {filtered.map((route: any) => {

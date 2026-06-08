@@ -2,7 +2,9 @@ import React, { Suspense } from 'react'
 import { Center, Loader } from '@mantine/core'
 import { ChannelTabContent } from './ChannelTabContent'
 
-export const ChannelsTab: React.FC = () => {
+type ChannelsTabProps = { searchQuery: string }
+
+export const ChannelsTab: React.FC<ChannelsTabProps> = ({ searchQuery }) => {
   return (
     <Suspense
       fallback={
@@ -11,7 +13,7 @@ export const ChannelsTab: React.FC = () => {
         </Center>
       }
     >
-      <ChannelTabContent />
+      <ChannelTabContent searchQuery={searchQuery} />
     </Suspense>
   )
 }
