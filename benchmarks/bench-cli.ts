@@ -88,13 +88,64 @@ function setupProject() {
 
 function functionFile(n: number): string {
   const name = `testFunc${String(n).padStart(4, '0')}`
-  return [
-    `import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'`,
-    ``,
-    `export const ${name} = pikkuSessionlessFunc<{ name: string }, { result: string }>({`,
-    `  func: async (_services, data) => ({ result: data.name }),`,
-    `})`,
-  ].join('\n')
+  return `import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
+import { z } from 'zod'
+
+export const ${name}Input = z.object({
+  id: z.string(),
+  name: z.string(),
+  age: z.number(),
+  email: z.string().email(),
+  isActive: z.boolean(),
+  role: z.enum(['admin', 'user', 'guest']),
+  address: z.object({
+    street: z.string(),
+    city: z.string(),
+    country: z.string(),
+  }),
+  tags: z.array(z.string()),
+  metadata: z.object({
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  }),
+  score: z.number().optional(),
+})
+
+export const ${name}Output = z.object({
+  result: z.string(),
+  processedAt: z.string(),
+  status: z.enum(['success', 'failure', 'pending']),
+  data: z.object({
+    id: z.string(),
+    name: z.string(),
+    transformedScore: z.number(),
+  }),
+  warnings: z.array(z.string()),
+  metadata: z.object({
+    duration: z.number(),
+    version: z.string(),
+  }),
+  total: z.number(),
+  page: z.number(),
+  hasMore: z.boolean(),
+  nextCursor: z.string().optional(),
+})
+
+export const ${name} = pikkuSessionlessFunc({
+  input: ${name}Input,
+  output: ${name}Output,
+  func: async (_services, data) => ({
+    result: data.name,
+    processedAt: new Date().toISOString(),
+    status: 'success' as const,
+    data: { id: data.id, name: data.name, transformedScore: data.score ?? 0 },
+    warnings: [],
+    metadata: { duration: 0, version: '1' },
+    total: 1,
+    page: 1,
+    hasMore: false,
+  }),
+})`
 }
 
 function wiringFile(count: number): string {
