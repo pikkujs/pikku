@@ -92,6 +92,11 @@ yarn changeset
 yarn release
 ```
 
+> **When creating a changeset, every package name listed MUST exist as a workspace package.** Run `yarn workspaces list --json` to get the exact names before writing the `.changeset/*.md` file. A wrong name (e.g. `@pikku/services-redis` instead of `@pikku/redis`) causes `changeset status` to throw and blocks CI.
+
+```bash
+```
+
 ### Individual Package Testing
 
 Each package has its own test runner:
