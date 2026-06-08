@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react'
 import { useSearchParams, useNavigate } from '../../router'
-import { Box, Center, Text } from '@mantine/core'
+import { Box } from '@mantine/core'
+import { Radio } from 'lucide-react'
+import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { PanelProvider } from '../../context/PanelContext'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import {
@@ -69,9 +71,12 @@ export const ChannelTabContent: React.FC<ChannelTabContentProps> = ({ searchQuer
 
   if (!channelMeta) {
     return (
-      <Center h="100%">
-        <Text c="dimmed">No channels found.</Text>
-      </Center>
+      <EmptyStatePlaceholder
+        icon={Radio}
+        title="No channels found"
+        description="Define channels in your project using addChannel() to see them here."
+        docsHref="https://pikku.dev/docs/core-features/channels"
+      />
     )
   }
 

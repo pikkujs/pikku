@@ -15,7 +15,8 @@ import {
   UnstyledButton,
   ScrollArea,
 } from '@mantine/core'
-import { KeyRound, Link2, ChevronDown, Search, Check } from 'lucide-react'
+import { KeyRound, Link2, ChevronDown, Search, Check, Bot } from 'lucide-react'
+import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
 import {
@@ -328,9 +329,12 @@ export const AgentPlaygroundPage: React.FC = () => {
 
   if (!agentId || !agentData) {
     return (
-      <Center h="100vh">
-        <Text c="dimmed">Agent &quot;{agentId}&quot; not found.</Text>
-      </Center>
+      <EmptyStatePlaceholder
+        icon={Bot}
+        title={agentId ? `Agent "${agentId}" not found` : 'No agent selected'}
+        description={agentId ? 'This agent may have been removed or renamed.' : 'Select an agent from the Agents page to open the playground.'}
+        docsHref="https://pikku.dev/docs/core-features/agents"
+      />
     )
   }
 

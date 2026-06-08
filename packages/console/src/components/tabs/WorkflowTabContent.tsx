@@ -5,8 +5,10 @@ import { WorkflowRunProvider } from '../../context/WorkflowRunContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { WorkflowCanvas } from '../project/WorkflowCanvas'
-import { Center, Loader, Text } from '@mantine/core'
+import { Center, Loader } from '@mantine/core'
+import { GitBranch } from 'lucide-react'
 import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
+import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 
 export const WorkflowTabContent: React.FC<{ immersiveDetail?: boolean }> = ({
   immersiveDetail = false,
@@ -40,9 +42,12 @@ export const WorkflowTabContent: React.FC<{ immersiveDetail?: boolean }> = ({
 
   if (!workflow) {
     return (
-      <Center h="100vh">
-        <Text c="dimmed">Workflow &quot;{workflowId}&quot; not found.</Text>
-      </Center>
+      <EmptyStatePlaceholder
+        icon={GitBranch}
+        title={workflowId ? `Workflow "${workflowId}" not found` : 'No workflows found'}
+        description={workflowId ? 'This workflow may have been removed or renamed.' : 'Define workflows in your project to visualize them here.'}
+        docsHref="https://pikku.dev/docs/core-features/workflows"
+      />
     )
   }
 

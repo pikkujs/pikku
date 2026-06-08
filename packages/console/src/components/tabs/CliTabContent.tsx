@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import {
   Box,
-  Center,
   Text,
   ScrollArea,
   UnstyledButton,
@@ -10,7 +9,8 @@ import {
   ActionIcon,
   Tooltip,
 } from '@mantine/core'
-import { ChevronDown, ChevronRight, Copy, Check } from 'lucide-react'
+import { ChevronDown, ChevronRight, Copy, Check, Terminal } from 'lucide-react'
+import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import type { CLIMeta } from '@pikku/core/cli'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { PanelProvider } from '../../context/PanelContext'
@@ -296,9 +296,12 @@ export const CliTabContent: React.FC<CliTabContentProps> = ({ searchQuery }) => 
 
   if (programs.length === 0) {
     return (
-      <Center h="100%">
-        <Text c="dimmed">No CLI programs found.</Text>
-      </Center>
+      <EmptyStatePlaceholder
+        icon={Terminal}
+        title="No CLI programs found"
+        description="Define CLI programs in your project to see them here."
+        docsHref="https://pikku.dev/docs/core-features/cli"
+      />
     )
   }
 

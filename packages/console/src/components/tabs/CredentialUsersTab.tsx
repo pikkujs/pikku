@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
-import { Text, Group, Badge, Stack, Center, Loader, Code } from '@mantine/core'
+import { Text, Group, Badge, Center, Loader } from '@mantine/core'
 import { Users, Check } from 'lucide-react'
+import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { usePanelContext } from '../../context/PanelContext'
@@ -145,17 +146,12 @@ export const CredentialUsersTab: React.FC<{ searchQuery?: string }> = ({ searchQ
 
   if (perUserCredentials.length === 0) {
     return (
-      <Center h={300}>
-        <Stack align="center" gap="sm">
-          <Users size={40} color="var(--mantine-color-dimmed)" />
-          <Text c="dimmed" size="sm" ta="center">
-            No per-user credentials declared.
-            <br />
-            Use <Code>wireCredential({"{ type: 'wire' }"})</Code> to declare
-            per-user credentials.
-          </Text>
-        </Stack>
-      </Center>
+      <EmptyStatePlaceholder
+        icon={Users}
+        title="No per-user credentials declared"
+        description="Use wireCredential({ type: 'wire' }) in your code to declare per-user credentials."
+        docsHref="https://pikku.dev/docs/core-features/credentials"
+      />
     )
   }
 

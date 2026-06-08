@@ -9,7 +9,6 @@ import {
   Divider,
   Group,
   Loader,
-  Paper,
   Popover,
   Select,
   SegmentedControl,
@@ -21,6 +20,7 @@ import {
   ScrollArea,
 } from '@mantine/core'
 import { AlertTriangle, Mail, Monitor, Search, Smartphone, ChevronDown, Check } from 'lucide-react'
+import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { useSearchParams } from '../router'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { SchemaForm } from '../components/ui/SchemaForm'
@@ -213,29 +213,28 @@ export const EmailsPage: React.FC = () => {
     [selectedMeta]
   )
 
-  if (loading || templateNames.length === 0) {
+  if (loading) {
     return (
       <PanelProvider>
         <ResizablePanelLayout hidePanel header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" />}>
           <Center h="100%">
-            {loading ? (
-              <Loader />
-            ) : (
-              <Paper withBorder p="xl" radius="md" style={{ maxWidth: 480, textAlign: 'center' }}>
-                <Stack gap="xs" align="center">
-                  <Mail size={28} style={{ opacity: 0.4 }} />
-                  <Text fw={500}>No email templates found</Text>
-                  <Text size="sm" c="dimmed">
-                    Add an email templates directory and run{' '}
-                    <Text component="span" ff="monospace" size="sm" c="dimmed">
-                      pikku emails generate
-                    </Text>{' '}
-                    to populate previews here.
-                  </Text>
-                </Stack>
-              </Paper>
-            )}
+            <Loader />
           </Center>
+        </ResizablePanelLayout>
+      </PanelProvider>
+    )
+  }
+
+  if (templateNames.length === 0) {
+    return (
+      <PanelProvider>
+        <ResizablePanelLayout hidePanel header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" />}>
+          <EmptyStatePlaceholder
+            icon={Mail}
+            title="No email templates found"
+            description="Add an email templates directory and run pikku emails generate to populate previews here."
+            docsHref={EMAIL_DOCS_HREF}
+          />
         </ResizablePanelLayout>
       </PanelProvider>
     )
