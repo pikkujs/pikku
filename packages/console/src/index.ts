@@ -85,19 +85,7 @@ export { DetailHeader } from './components/ui/DetailHeader'
 export type { DetailHeaderProps } from './components/ui/DetailHeader'
 export { EmptyState } from './components/ui/EmptyState'
 export type { EmptyStateProps } from './components/ui/EmptyState'
-export {
-  SeatsHero,
-  TestsHero,
-  DesignHero,
-  DatabaseHero,
-  ContentHero,
-  EmailsHero,
-  ProjectsHero,
-  I18nHero,
-  SettingsHero,
-  LabsHero,
-  SandboxHero,
-} from './components/ui/EmptyStateHeroes'
+
 export { SearchInput } from './components/ui/SearchInput'
 export type { SearchInputProps } from './components/ui/SearchInput'
 export { TagBadge, ServiceBadge } from './components/ui/TagBadge'

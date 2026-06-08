@@ -13,9 +13,8 @@ import {
   Text,
   TextInput,
 } from '@mantine/core'
-import { Play, Search } from 'lucide-react'
+import { FlaskConical, Play, Search } from 'lucide-react'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
-import { TestsHero } from '../components/ui/EmptyStateHeroes'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
 import { PanelProvider } from '../context/PanelContext'
@@ -588,7 +587,7 @@ export const TestsPage: React.FC = () => {
       <PanelProvider>
         <ResizablePanelLayout hidePanel header={header}>
           <EmptyStatePlaceholder
-            hero={<TestsHero />}
+            icon={FlaskConical}
             title="No test data yet"
             description="Run your function tests to populate scenarios here."
             docsHref="https://pikku.dev/docs/core-features/testing"
