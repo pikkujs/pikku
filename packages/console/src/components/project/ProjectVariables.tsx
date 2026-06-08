@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
-import { Text, Tooltip, ActionIcon } from '@mantine/core'
-import { Settings2, ExternalLink } from 'lucide-react'
+import { Text } from '@mantine/core'
+import { Settings2 } from 'lucide-react'
 import { usePanelContext } from '../../context/PanelContext'
 import { TableListPage } from '../layout/TableListPage'
 
@@ -67,31 +67,8 @@ export const ProjectVariables: React.FC<ProjectVariablesProps> = ({
       onRowClick={(v) =>
         openVariable(v.name, { ...(v.rawData ?? v), installed })
       }
-      searchPlaceholder="Search variables..."
-      searchFilter={(v, q) =>
-        v.name.toLowerCase().includes(q) ||
-        v.displayName.toLowerCase().includes(q) ||
-        v.description?.toLowerCase().includes(q) ||
-        v.variableId.toLowerCase().includes(q) ||
-        false
-      }
       emptyMessage="No variables found."
       loading={loading}
-      headerRight={
-        <Tooltip label="Environment Variables docs">
-          <ActionIcon
-            component="a"
-            href="https://pikku.dev/docs/core-features/variables"
-            target="_blank"
-            rel="noopener noreferrer"
-            variant="subtle"
-            color="gray"
-            size="sm"
-          >
-            <ExternalLink size={14} />
-          </ActionIcon>
-        </Tooltip>
-      }
     />
   )
 }
