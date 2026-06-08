@@ -114,9 +114,9 @@ export const DEFAULT_NAV_SECTIONS: NavSection[] = [
       },
       {
         label: 'Credentials',
-        href: '/users',
+        href: '/credentials',
         icon: KeyRound,
-        matchPrefix: '/users',
+        matchPrefix: '/credentials',
       },
     ],
   },
