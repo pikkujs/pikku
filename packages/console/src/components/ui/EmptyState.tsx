@@ -2,6 +2,7 @@ import React from 'react'
 import { Box, Stack, Text, Button, Group } from '@mantine/core'
 import { ArrowRight } from 'lucide-react'
 import { CommandChip } from './CommandChip'
+import classes from './console.module.css'
 
 interface EmptyStateAction {
   label: string
@@ -41,6 +42,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   const hasTop = !!hero || !!Icon
 
   return (
+    <Box className={classes.listSurfaceCard}>
     <Stack
       align="center"
       justify="center"
@@ -145,5 +147,6 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         </Group>
       )}
     </Stack>
+    </Box>
   )
 }
