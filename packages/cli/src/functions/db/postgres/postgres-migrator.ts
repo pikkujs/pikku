@@ -1,4 +1,4 @@
-import { Client } from 'pg'
+import type { Client } from 'pg'
 import type { MigrationExecutor, AppliedMigration } from '../db-migrator.js'
 
 const TRACKING_TABLE = 'sql_migrations'
