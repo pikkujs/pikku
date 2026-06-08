@@ -1,6 +1,5 @@
 import React, { useState, useCallback } from 'react'
 import { useSearchParams, useNavigate } from '../../router'
-import { Box } from '@mantine/core'
 import { Radio } from 'lucide-react'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { PanelProvider } from '../../context/PanelContext'
@@ -10,8 +9,8 @@ import {
   type ChannelSelection,
 } from '../channel/ChannelNavTree'
 import { ChannelDetailView } from '../channel/ChannelDetailView'
+import { ListDetailLayout } from '../ui/ListDetailLayout'
 import type { ChannelMeta } from '@pikku/core/channel'
-import styles from '../ui/console.module.css'
 
 const ChannelTabInner: React.FC<{
   channelName: string
@@ -31,11 +30,9 @@ const ChannelTabInner: React.FC<{
   )
 
   return (
-    <Box className={styles.flexRow}>
-      <Box
-        className={`${styles.listPaneFixed} ${styles.flexColumn}`}
-        style={{ width: 280, minWidth: 220 }}
-      >
+    <ListDetailLayout
+      listWidth={320}
+      list={
         <ChannelNavTree
           channelName={channelName}
           channel={channelMeta}
@@ -45,15 +42,16 @@ const ChannelTabInner: React.FC<{
           onChannelSwitch={handleChannelSwitch}
           searchQuery={searchQuery}
         />
-      </Box>
-      <Box className={`${styles.detailPane} ${styles.overflowHidden}`}>
+      }
+      detail={
         <ChannelDetailView
           channelName={channelName}
           channel={channelMeta}
           selected={selected}
         />
-      </Box>
-    </Box>
+      }
+      hasSelection={true}
+    />
   )
 }
 
