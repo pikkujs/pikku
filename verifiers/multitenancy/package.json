@@ -1,0 +1,25 @@
+{
+  "name": "@pikku/verifiers-multitenancy",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "echo 'skip'",
+    "pikku": "echo 'skip'",
+    "tsc": "echo 'skip'",
+    "test": "npx tsx test-multitenancy.ts"
+  },
+  "dependencies": {
+    "@auth/core": "^0.41.1",
+    "@pikku/auth-js": "workspace:*",
+    "@pikku/core": "workspace:*",
+    "@pikku/kysely": "workspace:*",
+    "better-sqlite3": "^12.6.2",
+    "kysely": "^0.28.12",
+    "kysely-plugin-serialize": "^0.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9"
+  }
+}
