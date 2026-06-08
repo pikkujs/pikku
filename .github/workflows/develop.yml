@@ -16,11 +16,10 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - run: git fetch origin main
       - uses: ./.github/actions/setup
         with:
           download-build: 'false'
-      - run: npx changeset status --since origin/main
+      - run: npx changeset status
 
   build:
     name: Build
