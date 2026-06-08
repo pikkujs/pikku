@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useNavigate } from '../router'
-import { Text, Center, Loader } from '@mantine/core'
-import { Bot } from 'lucide-react'
+import { Text, Group, TextInput } from '@mantine/core'
+import { Bot, Search } from 'lucide-react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { TableListPage } from '../components/layout/TableListPage'
 import { PikkuBadge } from '../components/ui/PikkuBadge'
@@ -29,8 +29,9 @@ export const AgentsPage: React.FC<{
 }> = ({ extraColumns, headerRight }) => {
   const navigate = useNavigate()
   const { meta, loading } = usePikkuMeta()
+  const [searchQuery, setSearchQuery] = useState('')
 
-  const items = useMemo((): AgentItem[] => {
+  const allItems = useMemo((): AgentItem[] => {
     if (!meta.agentsMeta) return []
     return Object.entries(meta.agentsMeta).map(
       ([name, data]: [string, any]) => ({
@@ -42,6 +43,17 @@ export const AgentsPage: React.FC<{
       })
     )
   }, [meta.agentsMeta])
+
+  const items = useMemo(() => {
+    const q = searchQuery.toLowerCase()
+    if (!q) return allItems
+    return allItems.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        item.model?.toLowerCase().includes(q) ||
+        item.data?.summary?.toLowerCase().includes(q)
+    )
+  }, [allItems, searchQuery])
 
   const columns = useMemo(
     () => [
@@ -97,7 +109,29 @@ export const AgentsPage: React.FC<{
 
   return (
     <PanelProvider>
-      <ResizablePanelLayout hidePanel header={<ListPageHeader title="Agents" description="AI agents and their configurations" />}>
+      <ResizablePanelLayout
+        hidePanel
+        header={
+          <ListPageHeader
+            title="Agents"
+            description="AI agents and their configurations"
+            docsHref="https://pikku.dev/docs/wiring/ai-agents"
+            filters={
+              <Group gap="sm" wrap="nowrap">
+                <TextInput
+                  placeholder="Search agents..."
+                  leftSection={<Search size={14} />}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  size="xs"
+                  style={{ width: 240 }}
+                />
+                {headerRight}
+              </Group>
+            }
+          />
+        }
+      >
         <TableListPage
           title="Agents"
           icon={Bot}
@@ -108,16 +142,8 @@ export const AgentsPage: React.FC<{
           onRowClick={(item) =>
             navigate(`/agents/playground?id=${encodeURIComponent(item.name)}`)
           }
-          searchPlaceholder="Search agents..."
-          searchFilter={(item, q) =>
-            item.name.toLowerCase().includes(q) ||
-            item.model?.toLowerCase().includes(q) ||
-            item.data?.summary?.toLowerCase().includes(q) ||
-            false
-          }
           emptyMessage="No agents found."
           loading={loading}
-          headerRight={headerRight ?? null}
         />
       </ResizablePanelLayout>
     </PanelProvider>

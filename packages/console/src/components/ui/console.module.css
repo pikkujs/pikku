@@ -161,10 +161,15 @@
   border-radius: 8px;
 }
 
+.tableLastRowBorder tbody tr:last-child td {
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+
 .listSurfaceCard {
   composes: surfaceCard;
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-height: 0;
   overflow: hidden;
 }

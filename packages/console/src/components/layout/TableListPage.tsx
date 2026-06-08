@@ -139,7 +139,7 @@ export const TableListPage = <T,>({
         </Box>
       ) : (
         <Box style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-          <Table highlightOnHover withRowBorders>
+          <Table highlightOnHover withRowBorders className={classes.tableLastRowBorder}>
             <Table.Thead style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--mantine-color-body)' }}>
               <Table.Tr style={{ height: 42 }}>
                 {columns.map((col, i) => (
