@@ -148,7 +148,7 @@ export const ${name} = pikkuSessionlessFunc({
 })`
 }
 
-function wiringFile(count: number): string {
+function httpWiringFile(count: number): string {
   const imports = Array.from({ length: count }, (_, i) => {
     const pad = String(i + 1).padStart(4, '0')
     return `import { testFunc${pad} } from '../functions/test-func-${pad}.function.js'`
@@ -156,7 +156,13 @@ function wiringFile(count: number): string {
 
   const routes = Array.from({ length: count }, (_, i) => {
     const pad = String(i + 1).padStart(4, '0')
-    return `    r${pad}: { method: 'get', route: '/test/${pad}', func: testFunc${pad} },`
+    return [
+      `    r${pad}List:   { method: 'get',    route: '/test/${pad}',     func: testFunc${pad} },`,
+      `    r${pad}Create: { method: 'post',   route: '/test/${pad}',     func: testFunc${pad} },`,
+      `    r${pad}Get:    { method: 'get',    route: '/test/${pad}/:id', func: testFunc${pad} },`,
+      `    r${pad}Update: { method: 'put',    route: '/test/${pad}/:id', func: testFunc${pad} },`,
+      `    r${pad}Delete: { method: 'delete', route: '/test/${pad}/:id', func: testFunc${pad} },`,
+    ].join('\n')
   })
 
   return [
@@ -174,6 +180,46 @@ function wiringFile(count: number): string {
   ].join('\n')
 }
 
+function queueWiringFile(count: number): string {
+  const imports = Array.from({ length: count }, (_, i) => {
+    const pad = String(i + 1).padStart(4, '0')
+    return `import { testFunc${pad} } from '../functions/test-func-${pad}.function.js'`
+  })
+
+  const wires = Array.from({ length: count }, (_, i) => {
+    const pad = String(i + 1).padStart(4, '0')
+    return `wireQueueWorker({ name: 'queue-${pad}', func: testFunc${pad} })`
+  })
+
+  return [
+    `import { wireQueueWorker } from '../../.pikku/pikku-types.gen.js'`,
+    ...imports,
+    ``,
+    ...wires,
+  ].join('\n')
+}
+
+function schedulerWiringFile(count: number): string {
+  const imports = Array.from({ length: count }, (_, i) => {
+    const pad = String(i + 1).padStart(4, '0')
+    return `import { testFunc${pad} } from '../functions/test-func-${pad}.function.js'`
+  })
+
+  const wires = Array.from({ length: count }, (_, i) => {
+    const pad = String(i + 1).padStart(4, '0')
+    const minute = (i % 60).toString().padStart(2, '0')
+    const hour = Math.floor(i / 60) % 24
+    return `wireScheduler({ name: 'schedule-${pad}', schedule: '${minute} ${hour} * * *', func: testFunc${pad} })`
+  })
+
+  return [
+    `import { wireScheduler } from '../../.pikku/pikku-types.gen.js'`,
+    ...imports,
+    ``,
+    ...wires,
+  ].join('\n')
+}
+
 function writeSize(count: number) {
   const fnDir = resolve(PROJECT_DIR, 'src/functions')
   const wireDir = resolve(PROJECT_DIR, 'src/wirings')
@@ -181,7 +227,9 @@ function writeSize(count: number) {
     const pad = String(i).padStart(4, '0')
     writeFileSync(resolve(fnDir, `test-func-${pad}.function.ts`), functionFile(i))
   }
-  writeFileSync(resolve(wireDir, 'bench.http.wirings.ts'), wiringFile(count))
+  writeFileSync(resolve(wireDir, 'bench.http.wirings.ts'), httpWiringFile(count))
+  writeFileSync(resolve(wireDir, 'bench.queue.wirings.ts'), queueWiringFile(count))
+  writeFileSync(resolve(wireDir, 'bench.scheduler.wirings.ts'), schedulerWiringFile(count))
 }
 
 function cleanSrc() {
