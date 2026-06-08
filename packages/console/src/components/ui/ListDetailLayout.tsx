@@ -41,6 +41,7 @@ export const ListDetailLayout: React.FC<ListDetailLayoutProps> = ({
                   typeof listWidth === 'number'
                     ? Math.round(listWidth * 0.78)
                     : undefined,
+                flex: '0 0 auto',
               }
             : undefined
         }
@@ -50,6 +51,7 @@ export const ListDetailLayout: React.FC<ListDetailLayoutProps> = ({
       <Box
         className={`${classes.detailDrawerPane} ${classes.listSurfaceCard}`}
         style={{
+          flex: showDetail ? '1 0 auto' : undefined,
           width: showDetail ? 'min(520px, 42vw)' : 0,
           minWidth: showDetail ? 'min(420px, 32vw)' : 0,
           opacity: showDetail ? 1 : 0,
