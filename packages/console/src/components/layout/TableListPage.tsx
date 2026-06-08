@@ -18,6 +18,7 @@ interface Column<T> {
   header: string
   align?: 'left' | 'right'
   width?: string | number
+  maxWidth?: string | number
   render: (item: T, index: number) => React.ReactNode
 }
 
@@ -137,14 +138,10 @@ export const TableListPage = <T,>({
           </Text>
         </Box>
       ) : (
-        <Box style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-          <Table
-            highlightOnHover
-            withRowBorders
-            style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
-          >
-            <Table.Thead style={{ display: 'block', flexShrink: 0 }}>
-              <Table.Tr style={{ display: 'table', width: '100%', tableLayout: 'fixed', height: 42 }}>
+        <Box style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+          <Table highlightOnHover withRowBorders>
+            <Table.Thead style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--mantine-color-body)' }}>
+              <Table.Tr style={{ height: 42 }}>
                 {columns.map((col, i) => (
                   <Table.Th
                     key={col.key}
@@ -152,19 +149,19 @@ export const TableListPage = <T,>({
                     pr={i === columns.length - 1 ? 'md' : undefined}
                     fw={600}
                     fz="sm"
-                    style={col.width ? { width: col.width } : undefined}
+                    style={{ ...(col.width ? { width: col.width } : {}), ...(col.maxWidth ? { maxWidth: col.maxWidth } : {}) }}
                   >
                     {col.header}
                   </Table.Th>
                 ))}
               </Table.Tr>
             </Table.Thead>
-            <Table.Tbody style={{ display: 'block', overflowY: 'auto', flex: 1, minHeight: 0 }}>
+            <Table.Tbody>
               {filtered.map((item, index) => (
                 <Table.Tr
                   key={getKey(item, index)}
                   className={classes.clickableText}
-                  style={{ display: 'table', width: '100%', tableLayout: 'fixed', height: '3.75rem' }}
+                  style={{ height: '3.75rem' }}
                   onClick={() => onRowClick(item)}
                 >
                   {columns.map((col, i) => (
@@ -172,7 +169,7 @@ export const TableListPage = <T,>({
                       key={col.key}
                       pl={i === 0 ? 'md' : undefined}
                       pr={i === columns.length - 1 ? 'md' : undefined}
-                      style={col.width ? { width: col.width } : undefined}
+                      style={{ ...(col.width ? { width: col.width } : {}), ...(col.maxWidth ? { maxWidth: col.maxWidth } : {}) }}
                     >
                       {col.render(item, index)}
                     </Table.Td>

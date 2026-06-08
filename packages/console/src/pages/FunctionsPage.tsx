@@ -64,7 +64,7 @@ const FunctionsList: React.FC<{
       {
         key: 'name',
         header: 'NAME',
-        width: 320,
+        maxWidth: 350,
         render: (func: any) => {
           const funcId = func.pikkuFuncName || func.pikkuFuncId
           return (
