@@ -158,7 +158,7 @@ export const EmailsPage: React.FC = () => {
     'desktop'
   )
 
-  const templates = meta.emailsMeta.templates || {}
+  const templates = meta.emailsMeta?.templates || {}
   const templateNames = useMemo(
     () => Object.keys(templates).sort((a, b) => a.localeCompare(b)),
     [templates]
@@ -240,7 +240,8 @@ export const EmailsPage: React.FC = () => {
           <EmptyStatePlaceholder
             icon={Mail}
             title="No email templates found"
-            description="Add an email templates directory and run pikku emails generate to populate previews here."
+            description="Add an email templates directory to your project, then run:"
+            code="pikku emails generate"
             docsHref={EMAIL_DOCS_HREF}
           />
         </ResizablePanelLayout>
