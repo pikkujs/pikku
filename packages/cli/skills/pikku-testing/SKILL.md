@@ -27,6 +27,28 @@ pikku info functions --verbose   # See existing functions and their middleware/p
 pikku info middleware --verbose  # See middleware applied
 ```
 
+## Coverage-Driven Test Writing
+
+When asked to improve or fill test coverage, start with the AI prompt from the coverage command:
+
+```bash
+# Run tests and emit an AI-ready prompt listing every uncovered/partial function
+pikku tests coverage --ai-out coverage-prompt.md
+
+# Or skip re-running if you already have fresh coverage data
+pikku tests coverage --no-run --ai-out coverage-prompt.md
+
+# Pipe directly to stdout (e.g. to paste into a chat)
+pikku tests coverage --ai-out -
+```
+
+The prompt lists each function that needs work with its status (`uncovered`/`partial`), coverage ratio, missed line numbers, and source file path. Use it as your starting point:
+
+1. Read the prompt to know which functions need Gherkin scenarios.
+2. Run `pikku meta functions list` or `pikku meta context` to get input/output schemas for those functions.
+3. Write `.feature` files under `tests/tests/features/` — one feature per domain, one scenario per case.
+4. Re-run `pikku tests coverage` to confirm coverage improved.
+
 See `pikku-concepts` for the core mental model.
 
 ## Test Runner Setup
