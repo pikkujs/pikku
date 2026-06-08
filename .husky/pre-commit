@@ -1,2 +1,3 @@
 yarn install --immutable
 npx lint-staged
+npx changeset status
