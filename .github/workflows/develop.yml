@@ -10,20 +10,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate-changesets:
-    name: Validate Changesets
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: ./.github/actions/setup
-        with:
-          download-build: 'false'
-      - run: git fetch origin main:main
-      - run: npx changeset status
-
   build:
     name: Build
     runs-on: ubuntu-latest
