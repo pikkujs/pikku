@@ -1,8 +1,10 @@
-import React from 'react'
-import { Box, SegmentedControl } from '@mantine/core'
+import React, { useState } from 'react'
+import { Group, SegmentedControl, TextInput } from '@mantine/core'
+import { Search } from 'lucide-react'
 import { useSearchParams } from '../router'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { ListPageHeader } from '../components/layout/PageLayout'
 import { CredentialsOverviewTab } from '../components/tabs/CredentialsOverviewTab'
 import { CredentialUsersTab } from '../components/tabs/CredentialUsersTab'
 
@@ -13,27 +15,52 @@ const TABS = [
 
 export const UsersPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
+  const [searchQuery, setSearchQuery] = useState('')
   const tab = searchParams.get('tab') || 'credentials'
 
-  const tabHeader = (
-    <Box px="sm" py="xs">
-      <SegmentedControl
-        size="sm"
-        value={tab}
-        onChange={(value) => setSearchParams({ tab: value })}
-        data={TABS}
-      />
-    </Box>
-  )
+  const handleTabChange = (value: string) => {
+    setSearchQuery('')
+    setSearchParams({ tab: value })
+  }
 
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={tabHeader}
+        header={
+          <ListPageHeader
+            title="Credentials"
+            description="OAuth2 and API key credentials"
+            docsHref="https://pikku.dev/docs/core-features/credentials"
+            filters={
+              <Group gap="sm" wrap="nowrap">
+                {tab === 'users' && (
+                  <TextInput
+                    placeholder="Search users..."
+                    leftSection={<Search size={14} />}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    size="xs"
+                    style={{ width: 240 }}
+                  />
+                )}
+                <SegmentedControl
+                  size="xs"
+                  value={tab}
+                  onChange={handleTabChange}
+                  data={TABS}
+                />
+              </Group>
+            }
+          />
+        }
         emptyPanelMessage="Select a user to view their credentials"
         hidePanel={tab === 'credentials'}
       >
-        {tab === 'users' ? <CredentialUsersTab /> : <CredentialsOverviewTab />}
+        {tab === 'users' ? (
+          <CredentialUsersTab searchQuery={searchQuery} />
+        ) : (
+          <CredentialsOverviewTab />
+        )}
       </ResizablePanelLayout>
     </PanelProvider>
   )

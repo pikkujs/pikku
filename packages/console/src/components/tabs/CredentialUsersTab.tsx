@@ -27,7 +27,7 @@ interface UserRow {
   isComplete: boolean
 }
 
-export const CredentialUsersTab: React.FC = () => {
+export const CredentialUsersTab: React.FC<{ searchQuery?: string }> = ({ searchQuery = '' }) => {
   const { meta, loading: metaLoading } = usePikkuMeta()
   const rpc = usePikkuRPC()
   const { openCredentialUser } = usePanelContext()
@@ -61,7 +61,7 @@ export const CredentialUsersTab: React.FC = () => {
 
   const loading = metaLoading || usersLoading
 
-  const rows: UserRow[] = useMemo(() => {
+  const allRows: UserRow[] = useMemo(() => {
     if (!usersData) return []
     const total = perUserCredentials.length
     return usersData.map((u) => {
@@ -74,6 +74,12 @@ export const CredentialUsersTab: React.FC = () => {
       }
     })
   }, [usersData, perUserCredentials])
+
+  const rows = useMemo(() => {
+    if (!searchQuery) return allRows
+    const q = searchQuery.toLowerCase()
+    return allRows.filter((row) => row.userId.toLowerCase().includes(q))
+  }, [allRows, searchQuery])
 
   const columns = useMemo(
     () => [
@@ -171,8 +177,6 @@ export const CredentialUsersTab: React.FC = () => {
           })),
         })
       }
-      searchPlaceholder="Search users..."
-      searchFilter={(row, q) => row.userId.toLowerCase().includes(q)}
       emptyMessage="No users have configured credentials yet."
     />
   )
