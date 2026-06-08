@@ -1,3 +1,42 @@
+## 0.12.26
+
+### Patch Changes
+
+- 665bdb0: Add end-to-end data classification for SQLite and Postgres projects.
+
+  **Core (`@pikku/core`):** New `Private<T>` and `Secret<T>` intersection brands, `ClassificationManifest`, `ColumnClassification`, and `AnonymizeStrategy` types exported from `data-classification.ts`.
+
+  **CLI (`@pikku/cli`):**
+  - SQL comment annotations: `-- @public`, `-- @private[:strategy]`, `-- @secret[:strategy]` on `CREATE TABLE` columns and `ALTER TABLE ... ADD COLUMN` statements. Unannotated columns default to `private`.
+  - `pikku db migrate` now emits a `classification.gen.ts` manifest alongside `schema.d.ts`.
+  - New `pikku db audit` command — prints a per-column classification summary and warns on `private`/`secret` columns with no anonymize strategy.
+  - Postgres dialect support in `resolveDb`, `PostgresMigrationExecutor`, and `PostgresIntrospector`.
+
+  **Inspector (`@pikku/inspector`):** New PKU910 check — `findPiiPaths()` walks inferred function return types looking for `__pii__` brands (including inside `Array<T>`, `Record<K,V>`, and index signatures) and fails the build if a function exposes branded fields in its output.
+
+- 3aaed21: Flatten `createConfig` dev fields: replace `dev: { db, content }` with top-level `sqliteDb: string` and `content: { contentPath?, uploadUrlPrefix?, assetUrlPrefix?, sizeLimit? }`.
+
+  **Migration:** update your `createConfig` export:
+
+  ```ts
+  // before
+  export const createConfig = pikkuConfig(async () => ({
+    dev: { db: true, content: true },
+  }))
+
+  // after
+  export const createConfig = pikkuConfig(async () => ({
+    sqliteDb: '.pikku-runtime/dev.db',
+    content: {},
+  }))
+  ```
+
+  For test helpers that override the db path, replace `{ ...config, dev: { db: { file: dbFile } } }` with `{ ...config, sqliteDb: dbFile }`.
+
+- Updated dependencies [665bdb0]
+  - @pikku/core@0.12.25
+  - @pikku/inspector@0.12.13
+
 ## 0.12.25
 
 ### Patch Changes
