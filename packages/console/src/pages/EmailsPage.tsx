@@ -79,61 +79,69 @@ const EmailsOverview: React.FC<{
 
   return (
     <PanelProvider>
-      <ResizablePanelLayout hidePanel header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" />}>
-        <Box className={classes.listSurfaceCard} style={{ display: 'flex', flexDirection: 'column' }}>
-          <Box px="md" py="sm" style={{ borderBottom: '1px solid var(--mantine-color-default-border)', flexShrink: 0 }}>
-            <TextInput
-              placeholder="Search email templates..."
-              leftSection={<Search size={16} />}
-              value={query}
-              onChange={(event) => setQuery(event.currentTarget.value)}
-            />
-          </Box>
-          <Box p="md" style={{ flex: 1, overflow: 'auto' }}>
-            {filteredNames.length === 0 ? (
-              <Center py="xl">
-                <Text size="sm" c="dimmed">No email templates match the current search.</Text>
-              </Center>
-            ) : (
-              <SimpleGrid cols={{ base: 1, md: 2, xl: 3 }} spacing="md">
-                {filteredNames.map((templateName) => {
-                  const template = templates[templateName]
-                  const localeCount = Object.keys(template.locales).length
-                  return (
-                    <UnstyledButton
-                      key={templateName}
-                      onClick={() => onSelect(templateName)}
-                      style={{
-                        border: '1px solid var(--app-row-border)',
-                        borderRadius: 8,
-                        padding: 16,
-                        background: 'var(--app-surface, var(--mantine-color-body))',
-                        textAlign: 'start',
-                      }}
-                    >
-                      <Stack gap="sm">
-                        <Group justify="space-between" align="flex-start" wrap="nowrap">
-                          <Stack gap={4} style={{ minWidth: 0 }}>
-                            <Text ff="monospace" fw={600} truncate>{templateName}</Text>
-                            <Text size="sm" c="dimmed">
-                              {template.variables.length} variable{template.variables.length === 1 ? '' : 's'}
-                            </Text>
-                          </Stack>
-                          <Badge variant="light">{localeCount} locales</Badge>
-                        </Group>
-                        <Group gap={6}>
-                          {Object.keys(template.locales).slice(0, 3).map((locale) => (
-                            <Badge key={locale} variant="outline" color="gray">{locale}</Badge>
-                          ))}
-                          {localeCount > 3 ? <Badge variant="outline" color="gray">+{localeCount - 3}</Badge> : null}
-                        </Group>
-                      </Stack>
-                    </UnstyledButton>
-                  )
-                })}
-              </SimpleGrid>
-            )}
-          </Box>
+      <ResizablePanelLayout
+        hidePanel
+        header={
+          <ListPageHeader
+            title="Email Templates"
+            description="Preview and inspect email templates with live variable rendering"
+            filters={
+              <TextInput
+                placeholder="Search email templates..."
+                leftSection={<Search size={14} />}
+                value={query}
+                onChange={(event) => setQuery(event.currentTarget.value)}
+                size="xs"
+                style={{ width: 240 }}
+              />
+            }
+          />
+        }
+      >
+        <Box className={classes.listSurfaceCard} p="md" style={{ flex: 1, overflow: 'auto' }}>
+          {filteredNames.length === 0 ? (
+            <Center py="xl">
+              <Text size="sm" c="dimmed">No email templates match the current search.</Text>
+            </Center>
+          ) : (
+            <SimpleGrid cols={{ base: 1, md: 2, xl: 3 }} spacing="md">
+              {filteredNames.map((templateName) => {
+                const template = templates[templateName]
+                const localeCount = Object.keys(template.locales).length
+                return (
+                  <UnstyledButton
+                    key={templateName}
+                    onClick={() => onSelect(templateName)}
+                    style={{
+                      border: '1px solid var(--app-row-border)',
+                      borderRadius: 8,
+                      padding: 16,
+                      background: 'var(--app-surface, var(--mantine-color-body))',
+                      textAlign: 'start',
+                    }}
+                  >
+                    <Stack gap="sm">
+                      <Group justify="space-between" align="flex-start" wrap="nowrap">
+                        <Stack gap={4} style={{ minWidth: 0 }}>
+                          <Text ff="monospace" fw={600} truncate>{templateName}</Text>
+                          <Text size="sm" c="dimmed">
+                            {template.variables.length} variable{template.variables.length === 1 ? '' : 's'}
+                          </Text>
+                        </Stack>
+                        <Badge variant="light">{localeCount} locales</Badge>
+                      </Group>
+                      <Group gap={6}>
+                        {Object.keys(template.locales).slice(0, 3).map((locale) => (
+                          <Badge key={locale} variant="outline" color="gray">{locale}</Badge>
+                        ))}
+                        {localeCount > 3 ? <Badge variant="outline" color="gray">+{localeCount - 3}</Badge> : null}
+                      </Group>
+                    </Stack>
+                  </UnstyledButton>
+                )
+              })}
+            </SimpleGrid>
+          )}
         </Box>
       </ResizablePanelLayout>
     </PanelProvider>
