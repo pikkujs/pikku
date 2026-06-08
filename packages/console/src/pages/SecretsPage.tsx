@@ -7,7 +7,7 @@ import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { ProjectSecrets } from '../components/project/ProjectSecrets'
 
-const SecretsPageContent: React.FC = () => {
+const SecretsPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
   const { meta, loading } = usePikkuMeta()
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -60,15 +60,15 @@ const SecretsPageContent: React.FC = () => {
       }
       emptyPanelMessage="Select a secret to view details"
     >
-      <ProjectSecrets secrets={secrets} loading={loading} />
+      <ProjectSecrets secrets={secrets} loading={loading} emptyHero={emptyHero} />
     </ResizablePanelLayout>
   )
 }
 
-export const SecretsPage: React.FC = () => {
+export const SecretsPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
   return (
     <PanelProvider>
-      <SecretsPageContent />
+      <SecretsPageContent emptyHero={emptyHero} />
     </PanelProvider>
   )
 }

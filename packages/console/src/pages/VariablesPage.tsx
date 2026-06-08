@@ -7,7 +7,7 @@ import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { ProjectVariables } from '../components/project/ProjectVariables'
 
-const VariablesPageContent: React.FC = () => {
+const VariablesPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
   const { meta, loading } = usePikkuMeta()
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -59,15 +59,15 @@ const VariablesPageContent: React.FC = () => {
       }
       emptyPanelMessage="Select a variable to view details"
     >
-      <ProjectVariables variables={variables} loading={loading} />
+      <ProjectVariables variables={variables} loading={loading} emptyHero={emptyHero} />
     </ResizablePanelLayout>
   )
 }
 
-export const VariablesPage: React.FC = () => {
+export const VariablesPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
   return (
     <PanelProvider>
-      <VariablesPageContent />
+      <VariablesPageContent emptyHero={emptyHero} />
     </PanelProvider>
   )
 }

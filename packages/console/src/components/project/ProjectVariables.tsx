@@ -16,12 +16,14 @@ interface ProjectVariablesProps {
   variables: VariableMeta[]
   loading?: boolean
   installed?: boolean
+  emptyHero?: React.ReactNode
 }
 
 export const ProjectVariables: React.FC<ProjectVariablesProps> = ({
   variables,
   loading,
   installed = true,
+  emptyHero,
 }) => {
   const { openVariable } = usePanelContext()
 
@@ -69,6 +71,7 @@ export const ProjectVariables: React.FC<ProjectVariablesProps> = ({
       }
       emptyMessage="No variables found."
       loading={loading}
+      emptyHero={emptyHero}
     />
   )
 }

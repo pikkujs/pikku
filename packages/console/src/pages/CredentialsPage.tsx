@@ -13,7 +13,7 @@ const TABS = [
   { value: 'users', label: 'Users' },
 ]
 
-export const CredentialsPage: React.FC = () => {
+export const CredentialsPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
   const tab = searchParams.get('tab') || 'credentials'
@@ -57,7 +57,7 @@ export const CredentialsPage: React.FC = () => {
         {tab === 'users' ? (
           <CredentialUsersTab searchQuery={searchQuery} />
         ) : (
-          <CredentialsOverviewTab searchQuery={searchQuery} />
+          <CredentialsOverviewTab searchQuery={searchQuery} emptyHero={emptyHero} />
         )}
       </ResizablePanelLayout>
     </PanelProvider>

@@ -26,7 +26,8 @@ interface AgentItem {
 export const AgentsPage: React.FC<{
   extraColumns?: AgentExtraColumn[]
   headerRight?: React.ReactNode
-}> = ({ extraColumns, headerRight }) => {
+  emptyHero?: React.ReactNode
+}> = ({ extraColumns, headerRight, emptyHero }) => {
   const navigate = useNavigate()
   const { meta, loading } = usePikkuMeta()
   const [searchQuery, setSearchQuery] = useState('')
@@ -143,6 +144,7 @@ export const AgentsPage: React.FC<{
             navigate(`/agents/playground?id=${encodeURIComponent(item.name)}`)
           }
           emptyMessage="No agents found."
+          emptyHero={emptyHero}
           loading={loading}
         />
       </ResizablePanelLayout>

@@ -18,12 +18,14 @@ interface ProjectSecretsProps {
   secrets: SecretMeta[]
   loading?: boolean
   installed?: boolean
+  emptyHero?: React.ReactNode
 }
 
 export const ProjectSecrets: React.FC<ProjectSecretsProps> = ({
   secrets,
   loading,
   installed = true,
+  emptyHero,
 }) => {
   const { openSecret } = usePanelContext()
 
@@ -76,6 +78,7 @@ export const ProjectSecrets: React.FC<ProjectSecretsProps> = ({
       onRowClick={(s) => openSecret(s.name, { ...(s.rawData ?? s), installed })}
       emptyMessage="No secrets found."
       loading={loading}
+      emptyHero={emptyHero}
     />
   )
 }

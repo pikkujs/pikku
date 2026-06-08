@@ -157,7 +157,8 @@ const INSTALLED_COLUMNS = () => [
 const InstalledList: React.FC<{
   searchQuery: string
   onSelect: (id: string, source: 'installed' | 'community') => void
-}> = ({ searchQuery, onSelect }) => {
+  emptyHero?: React.ReactNode
+}> = ({ searchQuery, onSelect, emptyHero }) => {
   const rpc = usePikkuRPC()
 
   const { data, isLoading } = useQuery({
@@ -193,6 +194,7 @@ const InstalledList: React.FC<{
       onRowClick={(item) => onSelect(item.packageName, 'installed')}
       emptyMessage="No installed addons found."
       loading={isLoading}
+      emptyHero={emptyHero}
     />
   )
 }
@@ -381,7 +383,8 @@ const SEARCH_PLACEHOLDER: Record<string, string> = {
 
 const PackagesList: React.FC<{
   onSelect: (id: string, source: 'installed' | 'community' | 'api') => void
-}> = ({ onSelect }) => {
+  emptyHero?: React.ReactNode
+}> = ({ onSelect, emptyHero }) => {
   const [tab, setTab] = useState<string>('installed')
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -420,7 +423,7 @@ const PackagesList: React.FC<{
       }
     >
       {tab === 'installed' ? (
-        <InstalledList searchQuery={searchQuery} onSelect={onSelect} />
+        <InstalledList searchQuery={searchQuery} onSelect={onSelect} emptyHero={emptyHero} />
       ) : tab === 'apis' ? (
         <ApisList searchQuery={searchQuery} onSelect={onSelect} />
       ) : (
@@ -430,7 +433,7 @@ const PackagesList: React.FC<{
   )
 }
 
-const PackagesPageContent: React.FC = () => {
+const PackagesPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedId = searchParams.get('id')
   const source = (searchParams.get('source') ?? 'community') as
@@ -451,14 +454,15 @@ const PackagesPageContent: React.FC = () => {
   return (
     <PackagesList
       onSelect={(id, src) => setSearchParams({ id, source: src })}
+      emptyHero={emptyHero}
     />
   )
 }
 
-export const PackagesPage: React.FC = () => {
+export const PackagesPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
   return (
     <PanelProvider>
-      <PackagesPageContent />
+      <PackagesPageContent emptyHero={emptyHero} />
     </PanelProvider>
   )
 }

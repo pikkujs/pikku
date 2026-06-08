@@ -51,7 +51,8 @@ const FunctionsList: React.FC<{
   functions: any[]
   extraColumns?: FunctionExtraColumn[]
   testsByFunction?: Record<string, FunctionTestData>
-}> = ({ functions, extraColumns = [], testsByFunction }) => {
+  emptyHero?: React.ReactNode
+}> = ({ functions, extraColumns = [], testsByFunction, emptyHero }) => {
   const { openFunction } = usePanelContext()
   const { functionUsedBy } = usePikkuMeta()
   const hasTestsColumn = useMemo(
@@ -234,6 +235,7 @@ const FunctionsList: React.FC<{
         openFunction(func.pikkuFuncName || func.pikkuFuncId, func)
       }
       emptyMessage="No functions found."
+      emptyHero={emptyHero}
     />
   )
 }
@@ -242,7 +244,8 @@ export const FunctionsPage: React.FC<{
   extraColumns?: FunctionExtraColumn[]
   headerRight?: React.ReactNode
   testsByFunction?: Record<string, FunctionTestData>
-}> = ({ extraColumns, headerRight, testsByFunction }) => {
+  emptyHero?: React.ReactNode
+}> = ({ extraColumns, headerRight, testsByFunction, emptyHero }) => {
   const rpc = usePikkuRPC()
   const [searchQuery, setSearchQuery] = useState('')
   const [showPikkuFunctions, setShowPikkuFunctions] = useState(false)
@@ -301,6 +304,7 @@ export const FunctionsPage: React.FC<{
           functions={functions}
           extraColumns={extraColumns}
           testsByFunction={testsByFunction}
+          emptyHero={emptyHero}
         />
       </ResizablePanelLayout>
     </PanelProvider>

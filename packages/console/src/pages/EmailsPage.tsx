@@ -148,7 +148,7 @@ const EmailsOverview: React.FC<{
   )
 }
 
-export const EmailsPage: React.FC = () => {
+export const EmailsPage: React.FC<{ hero?: React.ReactNode }> = ({ hero }) => {
   const { meta, loading } = usePikkuMeta()
   const [searchParams, setSearchParams] = useSearchParams()
   const [previewInput, setPreviewInput] = useState<
@@ -241,6 +241,7 @@ export const EmailsPage: React.FC = () => {
         <ResizablePanelLayout hidePanel header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" />}>
           <EmptyStatePlaceholder
             icon={Mail}
+            hero={hero}
             title="No email templates found"
             description="Add an email templates directory to your project, then run:"
             code="pikku emails generate"

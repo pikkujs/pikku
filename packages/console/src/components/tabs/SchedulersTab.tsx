@@ -50,7 +50,10 @@ const fmtRelative = (ts: number): string => {
   return `${Math.floor(diff / 86400)}d ago`
 }
 
-export const SchedulersTab: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
+export const SchedulersTab: React.FC<{
+  searchQuery: string
+  emptyHero?: React.ReactNode
+}> = ({ searchQuery, emptyHero }) => {
   const { meta } = usePikkuMeta()
   const rpc = usePikkuRPC()
   const { openScheduler } = usePanelContext()
@@ -154,6 +157,7 @@ export const SchedulersTab: React.FC<{ searchQuery: string }> = ({ searchQuery }
       getKey={(item) => item.name}
       onRowClick={(item) => openScheduler(item.wireId || item.name, item)}
       emptyMessage="No scheduled tasks found."
+      emptyHero={emptyHero}
     />
   )
 }

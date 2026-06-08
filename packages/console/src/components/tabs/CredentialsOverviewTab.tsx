@@ -25,7 +25,7 @@ interface CredentialMeta {
   isOAuth2: boolean
 }
 
-export const CredentialsOverviewTab: React.FC<{ searchQuery?: string }> = ({ searchQuery = '' }) => {
+export const CredentialsOverviewTab: React.FC<{ searchQuery?: string; emptyHero?: React.ReactNode }> = ({ searchQuery = '', emptyHero }) => {
   const { meta } = usePikkuMeta()
   const rpc = usePikkuRPC()
 
@@ -79,6 +79,7 @@ export const CredentialsOverviewTab: React.FC<{ searchQuery?: string }> = ({ sea
     return (
       <EmptyStatePlaceholder
         icon={KeyRound}
+        hero={emptyHero}
         title="No credentials declared yet"
         description="Use wireCredential() in your code to declare credentials."
         docsHref="https://pikku.dev/docs/core-features/credentials"

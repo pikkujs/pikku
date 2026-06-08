@@ -24,11 +24,13 @@ const SEARCH_PLACEHOLDER: Record<string, string> = {
 interface JobsPageProps {
   queuesHero?: React.ReactNode
   triggersHero?: React.ReactNode
+  schedulersHero?: React.ReactNode
 }
 
 export const JobsPage: React.FC<JobsPageProps> = ({
   queuesHero,
   triggersHero,
+  schedulersHero,
 }) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
@@ -46,7 +48,7 @@ export const JobsPage: React.FC<JobsPageProps> = ({
       case 'triggers':
         return <TriggersTab searchQuery={searchQuery} emptyHero={triggersHero} />
       default:
-        return <SchedulersTab searchQuery={searchQuery} />
+        return <SchedulersTab searchQuery={searchQuery} emptyHero={schedulersHero} />
     }
   }
 
