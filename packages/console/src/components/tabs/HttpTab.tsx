@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Box, Text, Table, ScrollArea } from '@mantine/core'
+import { Box, Text, Table } from '@mantine/core'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { HttpTabbedPanel } from '../http/HttpTabbedPanel'
@@ -41,12 +41,6 @@ export const HttpTab: React.FC<HttpTabProps> = ({ searchQuery }) => {
   const list = (
     <Box style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
       <Table highlightOnHover withRowBorders className={styles.tableLastRowBorder}>
-        <Table.Thead style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--mantine-color-body)' }}>
-          <Table.Tr style={{ height: 38 }}>
-            <Table.Th pl="md" fw={600} fz="xs">ROUTE</Table.Th>
-            <Table.Th pr="md" fw={600} fz="xs" style={{ textAlign: 'right' }}>METHOD</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
         <Table.Tbody>
           {filtered.map((route: any) => {
             const key = `${route.method}::${route.route}`
@@ -97,7 +91,7 @@ export const HttpTab: React.FC<HttpTabProps> = ({ searchQuery }) => {
 
   return (
     <ListDetailLayout
-      listWidth={340}
+      listWidth={250}
       list={list}
       detail={
         selectedRoute ? (
@@ -105,10 +99,11 @@ export const HttpTab: React.FC<HttpTabProps> = ({ searchQuery }) => {
             wireId={`${selectedRoute.method}::${selectedRoute.route}`}
             metadata={selectedRoute}
           />
-        ) : null
+        ) : (
+          <EmptyState title="Select a route to view its details" />
+        )
       }
-      hasSelection={!!selectedRoute}
-      emptyMessage="Select a route to view its details"
+      hasSelection={true}
     />
   )
 }
