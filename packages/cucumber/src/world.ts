@@ -51,7 +51,12 @@ export interface IFunctionWorld {
   ): Promise<Record<string, unknown>[]>
   persona(name: string): Persona
   setSession(name: string, session: Record<string, unknown>): void
-  call(personaName: string, rpcName: string, data: unknown): Promise<void>
+  call(
+    personaName: string,
+    rpcName: string,
+    data: unknown,
+    httpHeaders?: Record<string, string>
+  ): Promise<void>
   httpCall(personaName: string, config: StubHttpRequestConfig): Promise<void>
 }
 
@@ -152,12 +157,22 @@ export function createFunctionWorld(
       this.persona(name).session = session
     }
 
-    async call(personaName: string, rpcName: string, data: unknown) {
+    async call(
+      personaName: string,
+      rpcName: string,
+      data: unknown,
+      httpHeaders?: Record<string, string>
+    ) {
       const persona = this.persona(personaName)
       const session = new PikkuSessionService()
       if (persona.session) session.setInitial(persona.session as never)
 
       const http = createStubHttp()
+      if (httpHeaders) {
+        for (const [k, v] of Object.entries(httpHeaders)) {
+          http.setRequestHeader(k, v)
+        }
+      }
 
       const queueWire = this.nextQueueConfig
         ? createStubQueueWire(this.nextQueueConfig)
