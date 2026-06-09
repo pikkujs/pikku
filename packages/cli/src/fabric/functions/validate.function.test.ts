@@ -624,8 +624,8 @@ describe('pikku fabric validate', () => {
     })
   })
 
-  describe('db/seed.sql', () => {
-    test('missing db/seed.sql → error', async () => {
+  describe('db/sqlite-seed.sql', () => {
+    test('missing db/sqlite-seed.sql → error', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
