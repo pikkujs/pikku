@@ -417,6 +417,35 @@ export async function runValidate(
       )
     }
 
+    // audit table — info if not present (optional feature)
+    if (existsSync(migrationsDir)) {
+      try {
+        const migFiles = (await readdir(migrationsDir)).filter((f) =>
+          f.endsWith('.sql')
+        )
+        const hasAuditTable = (
+          await Promise.all(
+            migFiles.map((f) => readTextSafe(join(migrationsDir, f)))
+          )
+        ).some(
+          (sql) =>
+            sql &&
+            /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?audit\b/i.test(sql)
+        )
+
+        if (!hasAuditTable) {
+          info(
+            'audit-table-missing',
+            'No migration creates the audit table — Fabric audit events will be dropped',
+            migrationsDir,
+            'Add a migration with CREATE TABLE IF NOT EXISTS audit (...) — see the starter-template for a reference schema'
+          )
+        }
+      } catch {
+        // readdir failure — skip
+      }
+    }
+
     // db.types.ts — should only re-export from .pikku
     const dbTypesPath = join(fnDir, 'src', 'types', 'db.types.ts')
     const dbTypesText = await readTextSafe(dbTypesPath)
