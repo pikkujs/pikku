@@ -16,7 +16,6 @@ import {
 } from '../context/ConsoleNavigatorContext'
 import { useAIWorkflows } from '../hooks/useWorkflowRuns'
 
-// Keep this export for backwards compat
 export type { WorkflowExtraColumn } from '../components/project/WorkflowsList'
 
 const WorkflowPageInner: React.FC<{
@@ -25,7 +24,15 @@ const WorkflowPageInner: React.FC<{
   emptyHero?: ReactNode
   metricSlot?: (name: string) => ReactNode
   immersiveDetail?: boolean
-}> = ({ onOpen, headerRight, emptyHero, metricSlot, immersiveDetail = false }) => {
+  icon?: React.ComponentType<{ size?: number; strokeWidth?: number }>
+}> = ({
+  onOpen,
+  headerRight,
+  emptyHero,
+  metricSlot,
+  immersiveDetail = false,
+  icon = GitBranch,
+}) => {
   const { workflowId, navigateTo } = useConsoleNavigator()
   const { meta, loading } = usePikkuMeta()
   const { data: aiWorkflows } = useAIWorkflows()
@@ -77,7 +84,6 @@ const WorkflowPageInner: React.FC<{
     )
   }, [allItems, searchQuery])
 
-  // OSS inline detail view (not used when fabric provides onOpen)
   if (!onOpen && workflowId) {
     return <WorkflowTabContent immersiveDetail={immersiveDetail} />
   }
@@ -119,7 +125,7 @@ const WorkflowPageInner: React.FC<{
           items={items}
           onOpen={handleOpen}
           loading={loading}
-          icon={GitBranch}
+          icon={icon}
           emptyHero={emptyHero}
           emptyTitle="No workflows found"
           emptyDescription="Define workflows in your project to see them here."
@@ -137,9 +143,17 @@ export const WorkflowsPage: React.FC<{
   emptyHero?: ReactNode
   metricSlot?: (name: string) => ReactNode
   immersiveDetail?: boolean
-  /** @deprecated — cards have no columns; ignored */
   extraColumns?: unknown[]
-}> = ({ onOpen, headerRight, emptyHero, metricSlot, immersiveDetail = false }) => {
+  icon?: React.ComponentType<{ size?: number; strokeWidth?: number }>
+}> = ({
+  onOpen,
+  headerRight,
+  emptyHero,
+  metricSlot,
+  immersiveDetail = false,
+  extraColumns,
+  icon = GitBranch,
+}) => {
   const existingNavigator = useContext(ConsoleNavigatorCtx)
   const inner = (
     <Suspense
@@ -155,6 +169,7 @@ export const WorkflowsPage: React.FC<{
         emptyHero={emptyHero}
         metricSlot={metricSlot}
         immersiveDetail={immersiveDetail}
+        icon={icon}
       />
     </Suspense>
   )

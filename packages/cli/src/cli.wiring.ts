@@ -18,6 +18,7 @@ import { dev } from './functions/commands/dev.js'
 import { dbMigrate } from './functions/commands/db-migrate.js'
 import { dbSeed } from './functions/commands/db-seed.js'
 import { dbReset } from './functions/commands/db-reset.js'
+import { dbAudit } from './functions/commands/db-audit.js'
 import {
   workspaceValidate,
   renderWorkspaceValidate,
@@ -281,6 +282,11 @@ wireCLI({
           func: dbReset,
           description: 'Wipe and recreate the dev database (migrate + seed)',
         }),
+        audit: pikkuCLICommand({
+          func: dbAudit,
+          description:
+            'Report column classifications from the manifest and flag columns with no anonymize strategy',
+        }),
       },
     },
     workspace: {
@@ -527,6 +533,10 @@ wireCLI({
             noRun: {
               description:
                 'Skip running the suite and only re-analyse an existing coverage-final.json',
+            },
+            aiOut: {
+              description:
+                'Write an AI-ready coverage prompt to the given file path (use - for stdout)',
             },
           },
         }),

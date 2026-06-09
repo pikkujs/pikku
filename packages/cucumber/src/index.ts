@@ -1,3 +1,4 @@
+export { PersonaData } from './persona-data.js'
 export { StubTracker } from './tracker.js'
 export { createDbUtils, type DbUtils } from './db.js'
 export {

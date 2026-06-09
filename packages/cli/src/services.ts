@@ -16,6 +16,7 @@ import {
   LogLevel,
   InMemoryWorkflowService,
 } from '@pikku/core/services'
+import { NoopAuditService } from '@pikku/core'
 import { CLILogger } from './services/cli-logger.service.js'
 import { getPikkuCLIConfig } from './utils/pikku-cli-config.js'
 import type { InspectorState, InspectorDiagnostic } from '@pikku/inspector'
@@ -353,6 +354,7 @@ export const createSingletonServices: CreateSingletonServices<
     logger,
     variables,
     secrets: new LocalSecretService(variables),
+    audit: new NoopAuditService(),
     getInspectorState,
     workflowService,
   }

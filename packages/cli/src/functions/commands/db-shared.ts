@@ -4,6 +4,7 @@ import { loadUserModule } from './load-user-project.js'
 
 export interface UserConfigShape {
   sqliteDb?: string
+  postgresUrl?: string
   [key: string]: unknown
 }
 
@@ -35,16 +36,28 @@ export async function loadUserConfigForDb(
   options: LoadOptions
 ): Promise<UserConfigShape | null> {
   const { config, logger } = options
-  const hasConventionalDbAssets =
-    existsSync(join(config.rootDir, 'db', 'migrations')) ||
-    existsSync(join(config.rootDir, 'db', 'seed.sql'))
+  const hasSqliteDbAssets = existsSync(join(config.rootDir, 'db', 'sqlite'))
+  const hasPostgresDbAssets = existsSync(join(config.rootDir, 'db', 'postgres'))
+  const hasConventionalDbAssets = hasSqliteDbAssets || hasPostgresDbAssets
+
+  const getFallbackConfig = (): UserConfigShape | null => {
+    if (hasSqliteDbAssets) return { sqliteDb: '.pikku-runtime/dev.db' }
+    if (hasPostgresDbAssets) {
+      logger.error(
+        'Postgres assets detected but postgresUrl is not configured in createConfig.'
+      )
+      return null
+    }
+    return null
+  }
+
   const configFactoryFile = findUserConfigFactoryFile(
     config.rootDir,
     config.srcDirectories
   )
   if (!configFactoryFile) {
     if (hasConventionalDbAssets) {
-      return { sqliteDb: '.pikku-runtime/dev.db' }
+      return getFallbackConfig()
     }
     logger.error('createConfig must be defined in your project')
     return null
@@ -58,7 +71,7 @@ export async function loadUserConfigForDb(
       logger.warn(
         `Falling back to default local db config because '${configFactoryFile}' could not be loaded: ${error.message}`
       )
-      return { sqliteDb: '.pikku-runtime/dev.db' }
+      return getFallbackConfig()
     }
     throw error
   }
@@ -69,7 +82,7 @@ export async function loadUserConfigForDb(
       logger.warn(
         `Falling back to default local db config because '${configFactoryFile}' does not export createConfig`
       )
-      return { sqliteDb: '.pikku-runtime/dev.db' }
+      return getFallbackConfig()
     }
     logger.error(
       `Expected 'createConfig' in '${configFactoryFile}' to be a function`

@@ -29,7 +29,11 @@ import { pikkuWebsocketHandler } from '@pikku/ws'
 import { PikkuNodeHTTPServer } from '@pikku/node-http-server'
 import { WebSocketServer } from 'ws'
 import { InMemorySchedulerService } from '@pikku/schedule'
-import { resolveLocalDb, createKysely } from '../db/local-db.js'
+import {
+  resolveDb,
+  createKysely,
+  type ResolvedSqliteDb,
+} from '../db/local-db.js'
 import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
 
 export const dev = pikkuSessionlessFunc<
@@ -47,7 +51,9 @@ export const dev = pikkuSessionlessFunc<
     const enableWatch = watch !== false
     const enableHmr = hmr !== false
     const watchDirectories = [
-      ...new Set([config.emailTemplatesDir, ...config.srcDirectories].filter(Boolean)),
+      ...new Set(
+        [config.emailTemplatesDir, ...config.srcDirectories].filter(Boolean)
+      ),
     ] as string[]
     const commandSingletonServices = pikkuState(
       null,
@@ -189,29 +195,41 @@ export const dev = pikkuSessionlessFunc<
 
     const userConfig = await userCreateConfig()
 
-    const resolvedLocalDb = resolveLocalDb(
-      userConfig.sqliteDb,
+    const resolvedDb = resolveDb(
+      userConfig,
       config.rootDir,
       config.outDir,
       config.runtimeDir
     )
+    const resolvedLocalDb: ResolvedSqliteDb | undefined =
+      resolvedDb?.dialect === 'sqlite'
+        ? resolvedDb
+        : userConfig.sqliteDb
+          ? (resolveDb(
+              { sqliteDb: userConfig.sqliteDb },
+              config.rootDir,
+              config.outDir,
+              config.runtimeDir
+            ) as ResolvedSqliteDb)
+          : undefined
     const kysely = resolvedLocalDb
       ? await createKysely(resolvedLocalDb)
       : undefined
 
     const resolvedRuntimeDir =
       config.runtimeDir ?? join(config.rootDir, '.pikku-runtime')
-    const localContentConfig: LocalContentConfig | undefined = userConfig.content
-      ? {
-          localFileUploadPath: userConfig.content.contentPath
-            ? resolve(config.rootDir, userConfig.content.contentPath)
-            : join(resolvedRuntimeDir, 'content'),
-          uploadUrlPrefix: userConfig.content.uploadUrlPrefix ?? '/upload',
-          assetUrlPrefix: userConfig.content.assetUrlPrefix ?? '/assets',
-          server: `http://${hostname}:${resolvedPort}`,
-          sizeLimit: userConfig.content.sizeLimit,
-        }
-      : undefined
+    const localContentConfig: LocalContentConfig | undefined =
+      userConfig.content
+        ? {
+            localFileUploadPath: userConfig.content.contentPath
+              ? resolve(config.rootDir, userConfig.content.contentPath)
+              : join(resolvedRuntimeDir, 'content'),
+            uploadUrlPrefix: userConfig.content.uploadUrlPrefix ?? '/upload',
+            assetUrlPrefix: userConfig.content.assetUrlPrefix ?? '/assets',
+            server: `http://${hostname}:${resolvedPort}`,
+            sizeLimit: userConfig.content.sizeLimit,
+          }
+        : undefined
     const localContent = localContentConfig
       ? new LocalContent(localContentConfig, logger)
       : undefined
@@ -320,7 +338,9 @@ export const dev = pikkuSessionlessFunc<
       const generatorWatcher = () => {
         watcher?.close()
 
-        logger.info(`• Watching directories: \n  - ${watchDirectories.join('\n  - ')}`)
+        logger.info(
+          `• Watching directories: \n  - ${watchDirectories.join('\n  - ')}`
+        )
         watcher = chokidar.watch(watchDirectories, {
           ignoreInitial: true,
           ignored: genIgnore,

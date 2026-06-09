@@ -23,7 +23,7 @@ export const agentCaller = pikkuSessionlessFunc<
 })
 
 export const agentStreamCaller = pikkuSessionlessFunc<
-  { agentName: string; message: string; threadId: string; resourceId: string },
+  { agentName: string; message: string; threadId: string; resourceId: string; context?: string },
   void
 >({
   tags: ['pikku'],
@@ -33,6 +33,7 @@ export const agentStreamCaller = pikkuSessionlessFunc<
       message: data.message,
       threadId: data.threadId,
       resourceId: data.resourceId,
+      ...(data.context ? { context: data.context } : {}),
     })
   },
 })
