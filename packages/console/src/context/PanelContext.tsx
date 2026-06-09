@@ -19,6 +19,7 @@ export type PanelType =
   | 'secret'
   | 'variable'
   | 'credentialUser'
+  | 'authProvider'
 
 export interface PanelData {
   type: PanelType
@@ -60,6 +61,7 @@ interface PanelContextType {
   openSecret: (secretId: string, metadata?: any) => void
   openVariable: (variableId: string, metadata?: any) => void
   openCredentialUser: (userId: string, metadata?: any) => void
+  openAuthProvider: (providerId: string, metadata?: any) => void
   navigateInPanel: (
     type: PanelType,
     id: string,
@@ -248,6 +250,14 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({ children }) => {
     [openPanelGeneric]
   )
 
+  const openAuthProvider = useCallback(
+    (providerId: string, metadata?: any) => {
+      const title = metadata?.name || providerId
+      openPanelGeneric('authProvider', providerId, title, metadata)
+    },
+    [openPanelGeneric]
+  )
+
   const navigateInPanel = useCallback(
     (type: PanelType, id: string, title: string, metadata?: any) => {
       setPanels((prev) => {
@@ -372,6 +382,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({ children }) => {
         openSecret,
         openVariable,
         openCredentialUser,
+        openAuthProvider,
         navigateInPanel,
         goBack,
         goBackTo,
