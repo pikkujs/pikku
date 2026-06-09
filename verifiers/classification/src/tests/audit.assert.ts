@@ -102,6 +102,29 @@ describe('DB audit command', () => {
     assert.match(combined, /1 secret/, 'should report 1 secret column')
   })
 
+  test('reports @encrypted columns in the summary and listing', async (t) => {
+    const dir = await createProject(`
+      CREATE TABLE cards (
+        id     INTEGER PRIMARY KEY AUTOINCREMENT, -- @public
+        number TEXT NOT NULL                      -- @encrypted
+      );
+    `)
+    t.after(() => rm(dir, { recursive: true, force: true }))
+
+    const migrate = runPikku(dir, ['db', 'migrate'])
+    assert.equal(migrate.exitCode, 0, `migrate failed: ${migrate.stdout}\n${migrate.stderr}`)
+    const audit = runPikku(dir, ['db', 'audit'])
+    assert.equal(audit.exitCode, 0, `audit failed: ${audit.stdout}\n${audit.stderr}`)
+
+    const combined = audit.stdout + audit.stderr
+    assert.match(combined, /encrypted/, 'output must mention encrypted classification')
+    assert.match(combined, /1 encrypted/, 'summary should count the encrypted column')
+    assert.match(combined, /cards\.number/, 'should list the encrypted table.column')
+    // Encrypted data is already protected at rest — it should not be flagged
+    // as needing an anonymize strategy.
+    assert.doesNotMatch(combined, /have no anonymize strategy/i)
+  })
+
   test('warns when private/secret columns have no anonymize strategy', async (t) => {
     const dir = await createProject(`
       CREATE TABLE items (

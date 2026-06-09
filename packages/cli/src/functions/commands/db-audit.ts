@@ -32,8 +32,10 @@ export const dbAudit = pikkuSessionlessFunc<{}, void>({
     let publicCount = 0
     let privateCount = 0
     let secretCount = 0
+    let encryptedCount = 0
     const noStrategyColumns: string[] = []
     const secretColumns: string[] = []
+    const encryptedColumns: string[] = []
 
     logger.info('Classification audit:')
 
@@ -52,6 +54,10 @@ export const dbAudit = pikkuSessionlessFunc<{}, void>({
           secretColumns.push(`${table}.${col}`)
           if (!anonymize_strategy) noStrategyColumns.push(`${table}.${col}`)
           logger.info(`    ${col.padEnd(30)} secret   ${strategyLabel}`)
+        } else if (classification === 'encrypted') {
+          encryptedCount++
+          encryptedColumns.push(`${table}.${col}`)
+          logger.info(`    ${col.padEnd(30)} encrypted`)
         } else {
           privateCount++
           if (!anonymize_strategy) noStrategyColumns.push(`${table}.${col}`)
@@ -60,16 +66,22 @@ export const dbAudit = pikkuSessionlessFunc<{}, void>({
       }
     }
 
-    const total = publicCount + privateCount + secretCount
+    const total = publicCount + privateCount + secretCount + encryptedCount
     logger.info('')
     logger.info(
       `Summary: ${total} columns total — ` +
-        `${publicCount} public, ${privateCount} private, ${secretCount} secret`
+        `${publicCount} public, ${privateCount} private, ${secretCount} secret, ${encryptedCount} encrypted`
     )
 
     if (secretColumns.length > 0) {
       logger.info(
         `Secret columns (extra-sensitive): ${secretColumns.join(', ')}`
+      )
+    }
+
+    if (encryptedColumns.length > 0) {
+      logger.info(
+        `Encrypted columns (encrypted at rest): ${encryptedColumns.join(', ')}`
       )
     }
 

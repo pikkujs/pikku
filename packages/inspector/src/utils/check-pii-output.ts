@@ -2,7 +2,7 @@ import * as ts from 'typescript'
 
 /**
  * Recursively walks a resolved TypeScript type looking for `__pii__` brands —
- * the structural marker emitted by `Private<T>` and `Secret<T>`.
+ * the structural marker emitted by `Private<T>`, `Secret<T>` and `Encrypted<T>`.
  *
  * `Private<T> = T & { readonly __pii__: 'private' }` shows up in the TS type
  * system as an intersection whose constituents include a type with a `__pii__`

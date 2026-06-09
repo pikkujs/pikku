@@ -182,6 +182,7 @@ export { SchedulerService } from './services/scheduler-service.js'
 export type {
   Private,
   Secret,
+  Encrypted,
   Classification,
   AnonymizeStrategy,
   ColumnClassification,

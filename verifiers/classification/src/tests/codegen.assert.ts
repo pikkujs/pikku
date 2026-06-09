@@ -100,6 +100,36 @@ describe('DB codegen — classification brands', () => {
     assert.match(schema, /Secret<string>/)
   })
 
+  test('emits Encrypted<string> for @encrypted columns', async (t) => {
+    const dir = await createProject({
+      '001_cards.sql': `
+        CREATE TABLE IF NOT EXISTS cards (
+          id     INTEGER PRIMARY KEY AUTOINCREMENT,
+          number TEXT NOT NULL -- @encrypted
+        );
+      `,
+    })
+    t.after(() => rm(dir, { recursive: true, force: true }))
+
+    const { exitCode, output } = runPikkuDbMigrate(dir)
+    assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
+
+    const schema = await readFile(join(dir, '.pikku', 'db', 'schema.d.ts'), 'utf-8')
+    assert.match(schema, /export type Encrypted<T>/, 'Encrypted<T> brand alias should be emitted')
+    assert.match(schema, /Encrypted<string>/, 'number column should be Encrypted<string>')
+    assert.ok(
+      schema.includes('number:') && schema.includes('ColumnType<Encrypted<string>'),
+      'number column type should use ColumnType<Encrypted<string>, ...'
+    )
+
+    const manifest = await readFile(
+      join(dir, '.pikku', 'db', 'classification.gen.ts'),
+      'utf-8'
+    )
+    assert.match(manifest, /"number"/)
+    assert.match(manifest, /classification: 'encrypted'/)
+  })
+
   test('emits plain type for @public columns (no brand)', async (t) => {
     const dir = await createProject({
       '001_posts.sql': `
