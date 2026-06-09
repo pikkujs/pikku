@@ -181,6 +181,42 @@ When userA calls "listTodos"
 Then the call succeeds
 ```
 
+### Feature descriptions
+
+Every feature file must have a description — free text after the `Feature:` line, before the first scenario. Describe what system behavior the feature covers and any non-obvious constraints. This is the place for context that would otherwise end up as inline comments scattered through scenarios.
+
+```gherkin
+Feature: Builder-auth RPC endpoints
+  All builder-protected functions check the Authorization header via
+  assertBuilderAuth. Requests without a valid token are rejected with
+  UnauthorizedError before the function body runs.
+
+  Scenario: Anonymous cannot call getSandboxGitStatus
+    When anonymous calls "getSandboxGitStatus"
+    Then the call fails because they are unauthorized
+```
+
+### No inline comments
+
+Scenarios must be self-explanatory. If a scenario needs a comment to explain what it's doing or why, the scenario title is wrong — rename it. Comments that explain system behavior belong in the feature description, not scattered above individual scenarios.
+
+```gherkin
+# Wrong
+# commitSandboxChanges requires a message field, so calling it with no data
+# triggers schema validation before assertBuilderAuth runs — hence UnprocessableContentError
+# not UnauthorizedError. Pass valid data here so auth is actually reached.
+Scenario: Anonymous cannot commit sandbox changes
+  When anonymous calls "commitSandboxChanges" with:
+    | message | test commit |
+  Then the call fails because they are unauthorized
+
+# Right — the title says what it tests; the feature description explains the schema-before-auth rule
+Scenario: Anonymous cannot commit sandbox changes
+  When anonymous calls "commitSandboxChanges" with:
+    | message | test commit |
+  Then the call fails because they are unauthorized
+```
+
 ### Scenario Outline for repeated patterns
 
 When multiple scenarios have identical step structure with only the data varying, collapse them into a `Scenario Outline`:
