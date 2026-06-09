@@ -4,6 +4,7 @@ import {
   createFunctionSessionWireProps,
 } from '@pikku/core/services'
 import { StubTracker } from './tracker.js'
+import { createStubHttp } from './stubs/http.js'
 
 export type Persona = { name: string; session?: Record<string, unknown> }
 export type StubBundle = { services: unknown; kysely?: unknown }
@@ -16,6 +17,8 @@ export interface IFunctionWorld {
   tracker: StubTracker
   lastResult: unknown
   lastError: Error | undefined
+  lastStatus: number | undefined
+  lastResponseHeaders: Record<string, string>
   data?: Map<string, unknown>
   init(dbFile: string): Promise<void>
   destroy(removeDb: (path: string) => void): Promise<void>
@@ -28,18 +31,6 @@ export interface IFunctionWorld {
   persona(name: string): Persona
   setSession(name: string, session: Record<string, unknown>): void
   call(personaName: string, rpcName: string, data: unknown): Promise<void>
-}
-
-function stubHttp() {
-  const cookies = new Map<string, string>()
-  return {
-    wire: {
-      request: { cookie: (name: string) => cookies.get(name) },
-      response: {
-        cookie: (name: string, value: string) => cookies.set(name, value),
-      },
-    },
-  }
 }
 
 /**
@@ -62,10 +53,13 @@ export function createFunctionWorld(
     private _bundle!: StubBundle
     private _dbFile!: string
     private _personas = new Map<string, Persona>()
+    private _http = createStubHttp()
     readonly tracker = new StubTracker()
 
     lastResult: unknown = undefined
     lastError: Error | undefined = undefined
+    lastStatus: number | undefined = undefined
+    lastResponseHeaders: Record<string, string> = {}
 
     async init(dbFile: string) {
       this._dbFile = dbFile
@@ -132,11 +126,12 @@ export function createFunctionWorld(
       const session = new PikkuSessionService()
       if (persona.session) session.setInitial(persona.session as never)
 
-      const http = stubHttp()
+      this._http = createStubHttp()
+
       const wire = {
         wireType: 'rpc',
         ...createFunctionSessionWireProps(session),
-        http: http.wire,
+        http: this._http.wire,
       }
 
       const ctx = rpcService.getContextRPCService(
@@ -147,10 +142,15 @@ export function createFunctionWorld(
 
       this.lastResult = undefined
       this.lastError = undefined
+      this.lastStatus = undefined
+      this.lastResponseHeaders = {}
       try {
         this.lastResult = await ctx.exposed(rpcName, data)
       } catch (err) {
         this.lastError = err as Error
+      } finally {
+        this.lastStatus = this._http.response.statusCode
+        this.lastResponseHeaders = this._http.response.headers
       }
     }
   }

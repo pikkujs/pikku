@@ -282,6 +282,30 @@ export function registerCommonSteps(
     }
   )
 
+  // ── HTTP response assertion steps ────────────────────────────────────────
+  cucumber.Then(
+    'the response status is {int}',
+    function (this: IFunctionWorld, expected: number) {
+      assert.equal(
+        this.lastStatus,
+        expected,
+        `expected response status ${expected} but got ${this.lastStatus}`
+      )
+    }
+  )
+
+  cucumber.Then(
+    'the response header {string} is {string}',
+    function (this: IFunctionWorld, name: string, expected: string) {
+      const actual = this.lastResponseHeaders[name.toLowerCase()]
+      assert.equal(
+        actual,
+        expected,
+        `expected header "${name}" to be "${expected}" but got "${actual}"`
+      )
+    }
+  )
+
   // ── Outcome steps ─────────────────────────────────────────────────────────
   cucumber.Then('the call succeeds', function (this: IFunctionWorld) {
     assert.equal(
@@ -437,11 +461,7 @@ export function registerCommonSteps(
 
   cucumber.Then(
     '{string} emails were sent to:',
-    function (
-      this: IFunctionWorld,
-      template: string,
-      table: ListTableLike
-    ) {
+    function (this: IFunctionWorld, template: string, table: ListTableLike) {
       for (const [to] of table.rows()) {
         this.tracker.assertCall(
           'email',
