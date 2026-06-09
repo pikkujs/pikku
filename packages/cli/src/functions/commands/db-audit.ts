@@ -1,13 +1,90 @@
+import chalk from 'chalk'
 import { pikkuSessionlessFunc } from '#pikku'
 import { resolveDb } from '../db/local-db.js'
 import { loadUserConfigForDb } from './db-shared.js'
-import type { ClassificationManifest } from '@pikku/core'
+import type { ClassificationManifest, Classification, AnonymizeStrategy } from '@pikku/core'
 
-export const dbAudit = pikkuSessionlessFunc<{}, void>({
+export interface AuditColumn {
+  name: string
+  classification: Classification
+  anonymize_strategy: AnonymizeStrategy
+}
+
+export interface AuditTable {
+  name: string
+  columns: AuditColumn[]
+}
+
+export interface DbAuditResult {
+  tables: AuditTable[]
+  summary: {
+    total: number
+    public: number
+    private: number
+    secret: number
+    encrypted: number
+  }
+  noStrategyColumns: string[]
+  secretColumns: string[]
+  encryptedColumns: string[]
+}
+
+const CLASSIFICATION_COLORS: Record<Classification, (s: string) => string> = {
+  public: chalk.green,
+  private: chalk.blue,
+  secret: chalk.red,
+  encrypted: chalk.cyan,
+}
+
+export const renderDbAudit = (_s: unknown, result: DbAuditResult): void => {
+  for (const table of result.tables) {
+    console.log(chalk.bold(`  ${table.name}:`))
+    for (const col of table.columns) {
+      const color = CLASSIFICATION_COLORS[col.classification]
+      const label = color(col.classification.padEnd(10))
+      const strategy = col.anonymize_strategy
+        ? chalk.dim(col.anonymize_strategy)
+        : col.classification === 'encrypted'
+          ? ''
+          : chalk.dim('(null → will be nulled on clone)')
+      console.log(`    ${col.name.padEnd(30)} ${label} ${strategy}`)
+    }
+  }
+
+  const { total, public: pub, private: priv, secret, encrypted } = result.summary
+  console.log('')
+  console.log(
+    chalk.bold('Summary: ') +
+      `${total} columns total — ` +
+      chalk.green(`${pub} public`) + ', ' +
+      chalk.blue(`${priv} private`) + ', ' +
+      chalk.red(`${secret} secret`) + ', ' +
+      chalk.cyan(`${encrypted} encrypted`)
+  )
+
+  if (result.secretColumns.length > 0) {
+    console.log(chalk.red(`Secret columns (extra-sensitive): ${result.secretColumns.join(', ')}`))
+  }
+
+  if (result.encryptedColumns.length > 0) {
+    console.log(chalk.cyan(`Encrypted columns (encrypted at rest): ${result.encryptedColumns.join(', ')}`))
+  }
+
+  if (result.noStrategyColumns.length > 0) {
+    console.error(
+      chalk.yellow(
+        `⚠  ${result.noStrategyColumns.length} private/secret column(s) have no anonymize strategy ` +
+          `and will be NULLed on clone: ${result.noStrategyColumns.join(', ')}`
+      )
+    )
+  }
+}
+
+export const dbAudit = pikkuSessionlessFunc<{}, DbAuditResult>({
   remote: true,
   func: async ({ logger, config }) => {
     const userConfig = await loadUserConfigForDb({ config, logger })
-    if (!userConfig) return
+    if (!userConfig) throw new Error('no user config')
 
     const resolved = resolveDb(userConfig, config.rootDir, config.outDir, config.runtimeDir)
     if (!resolved) {
@@ -29,67 +106,32 @@ export const dbAudit = pikkuSessionlessFunc<{}, void>({
       throw new Error('classification manifest not found')
     }
 
-    let publicCount = 0
-    let privateCount = 0
-    let secretCount = 0
-    let encryptedCount = 0
+    const tables: AuditTable[] = []
     const noStrategyColumns: string[] = []
     const secretColumns: string[] = []
     const encryptedColumns: string[] = []
+    const summary = { total: 0, public: 0, private: 0, secret: 0, encrypted: 0 }
 
-    logger.info('Classification audit:')
-
-    for (const [table, cols] of Object.entries(manifest.tables)) {
-      logger.info(`  ${table}:`)
-      for (const [col, info] of Object.entries(cols)) {
+    for (const [tableName, cols] of Object.entries(manifest.tables)) {
+      const columns: AuditColumn[] = []
+      for (const [colName, info] of Object.entries(cols)) {
         const { classification, anonymize_strategy } = info
-        const strategyLabel =
-          anonymize_strategy ?? '(null → will be nulled on clone)'
+        columns.push({ name: colName, classification, anonymize_strategy })
+        summary.total++
+        summary[classification]++
 
-        if (classification === 'public') {
-          publicCount++
-          logger.info(`    ${col.padEnd(30)} public`)
-        } else if (classification === 'secret') {
-          secretCount++
-          secretColumns.push(`${table}.${col}`)
-          if (!anonymize_strategy) noStrategyColumns.push(`${table}.${col}`)
-          logger.info(`    ${col.padEnd(30)} secret   ${strategyLabel}`)
+        if (classification === 'secret') {
+          secretColumns.push(`${tableName}.${colName}`)
+          if (!anonymize_strategy) noStrategyColumns.push(`${tableName}.${colName}`)
         } else if (classification === 'encrypted') {
-          encryptedCount++
-          encryptedColumns.push(`${table}.${col}`)
-          logger.info(`    ${col.padEnd(30)} encrypted`)
-        } else {
-          privateCount++
-          if (!anonymize_strategy) noStrategyColumns.push(`${table}.${col}`)
-          logger.info(`    ${col.padEnd(30)} private  ${strategyLabel}`)
+          encryptedColumns.push(`${tableName}.${colName}`)
+        } else if (classification === 'private') {
+          if (!anonymize_strategy) noStrategyColumns.push(`${tableName}.${colName}`)
         }
       }
+      tables.push({ name: tableName, columns })
     }
 
-    const total = publicCount + privateCount + secretCount + encryptedCount
-    logger.info('')
-    logger.info(
-      `Summary: ${total} columns total — ` +
-        `${publicCount} public, ${privateCount} private, ${secretCount} secret, ${encryptedCount} encrypted`
-    )
-
-    if (secretColumns.length > 0) {
-      logger.info(
-        `Secret columns (extra-sensitive): ${secretColumns.join(', ')}`
-      )
-    }
-
-    if (encryptedColumns.length > 0) {
-      logger.info(
-        `Encrypted columns (encrypted at rest): ${encryptedColumns.join(', ')}`
-      )
-    }
-
-    if (noStrategyColumns.length > 0) {
-      logger.warn(
-        `${noStrategyColumns.length} private/secret column(s) have no anonymize strategy ` +
-          `and will be NULLed on clone: ${noStrategyColumns.join(', ')}`
-      )
-    }
+    return { tables, summary, noStrategyColumns, secretColumns, encryptedColumns }
   },
 })

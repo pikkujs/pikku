@@ -15,10 +15,10 @@ import { bootstrap } from './functions/commands/bootstrap.js'
 import { watch } from './functions/commands/watch.js'
 import { consoleCommand } from './functions/commands/console.js'
 import { dev } from './functions/commands/dev.js'
-import { dbMigrate } from './functions/commands/db-migrate.js'
+import { dbMigrate, renderDbMigrate } from './functions/commands/db-migrate.js'
 import { dbSeed } from './functions/commands/db-seed.js'
 import { dbReset } from './functions/commands/db-reset.js'
-import { dbAudit } from './functions/commands/db-audit.js'
+import { dbAudit, renderDbAudit } from './functions/commands/db-audit.js'
 import {
   workspaceValidate,
   renderWorkspaceValidate,
@@ -51,7 +51,7 @@ import { pikkuRealtime } from './functions/wirings/realtime/pikku-command-realti
 import { binary } from './functions/commands/binary.js'
 import { deployPlan } from './functions/commands/deploy-plan.js'
 import { deployApply } from './functions/commands/deploy-apply.js'
-import { deployInfo } from './functions/commands/deploy-info.js'
+import { deployInfo, renderDeployInfo } from './functions/commands/deploy-info.js'
 import {
   pikkuSkillsInstall,
   pikkuSkillsList,
@@ -271,6 +271,7 @@ wireCLI({
       subcommands: {
         migrate: pikkuCLICommand({
           func: dbMigrate,
+          render: renderDbMigrate,
           description:
             'Apply pending SQL migrations and regenerate db/schema.d.ts',
         }),
@@ -284,6 +285,7 @@ wireCLI({
         }),
         audit: pikkuCLICommand({
           func: dbAudit,
+          render: renderDbAudit,
           description:
             'Report column classifications from the manifest and flag columns with no anonymize strategy',
         }),
@@ -618,6 +620,7 @@ wireCLI({
         }),
         info: pikkuCLICommand({
           func: deployInfo,
+          render: renderDeployInfo,
           description:
             'Show project deployment info (workers, queues, crons, secrets)',
           options: {
