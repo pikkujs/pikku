@@ -1,4 +1,5 @@
 import type { HTTPMethod } from '@pikku/core/http'
+import type { Actor } from '../actor.js'
 import type { IFunctionWorld } from '../world.js'
 import type { CucumberStepApi } from './common.js'
 
@@ -36,13 +37,14 @@ export function registerHTTPSteps(cucumber: CucumberStepApi): void {
     '{actor} makes a {string} request to {string}',
     async function (
       this: IFunctionWorld,
-      personaName: string,
+      actor: Actor,
       method: string,
       path: string
     ) {
-      await this.httpCall(personaName, {
+      await this.httpCall(actor.name, {
         method: method.toLowerCase() as HTTPMethod,
         path,
+        headers: actor.headers,
       })
     }
   )
@@ -52,16 +54,16 @@ export function registerHTTPSteps(cucumber: CucumberStepApi): void {
     '{actor} makes a {string} request to {string} with:',
     async function (
       this: IFunctionWorld,
-      personaName: string,
+      actor: Actor,
       method: string,
       path: string,
       table: TableLike
     ) {
       const { headers, body } = parseRequestTable(table)
-      await this.httpCall(personaName, {
+      await this.httpCall(actor.name, {
         method: method.toLowerCase() as HTTPMethod,
         path,
-        headers,
+        headers: { ...actor.headers, ...headers },
         body: Object.keys(body).length > 0 ? body : undefined,
       })
     }
