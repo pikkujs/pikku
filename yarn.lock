@@ -5353,6 +5353,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/cucumber@workspace:packages/cucumber"
   dependencies:
+    "@pikku/fetch": "npm:^0.12.2"
     "@types/node": "npm:^25.6.0"
     typescript: "npm:^5.9"
   peerDependencies:
