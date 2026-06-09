@@ -3,7 +3,7 @@ import { dirname } from 'node:path'
 import type { ColumnKind, CoercionMap } from './coercion-plugin.js'
 import type { DbIntrospector, ColumnInfo } from './db-introspector.js'
 import {
-  parseAnnotations,
+  loadAnnotations,
   annotationFromName,
   type AnnotationMap,
   type ColAnnotation,
@@ -283,6 +283,7 @@ export interface CodegenOptions {
   manifestFile?: string
   classificationMapFile?: string
   camelCase?: boolean
+  rootDir?: string
   migrationsDir?: string
 }
 
@@ -318,8 +319,8 @@ export async function generateSchemaTypes(
     }))
   )
 
-  const explicitAnnotations = options.migrationsDir
-    ? parseAnnotations(options.migrationsDir)
+  const explicitAnnotations = (options.rootDir || options.migrationsDir)
+    ? await loadAnnotations(options.rootDir ?? '', options.migrationsDir)
     : {}
 
   // ── schema.d.ts ─────────────────────────────────────────────────────────────
