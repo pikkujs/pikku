@@ -9,4 +9,9 @@ export {
   type Persona,
 } from './world.js'
 export { registerHooks, type CucumberHookApi } from './hooks.js'
-export { registerCommonSteps, type CucumberStepApi } from './steps/common.js'
+export {
+  registerCommonSteps,
+  type CucumberStepApi,
+  type ActorOptions,
+} from './steps/common.js'
+export { Actor, type ActorCallResult } from './actor.js'
