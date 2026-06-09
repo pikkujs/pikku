@@ -193,6 +193,10 @@ export const getSingletonServices = (): CoreSingletonServices => {
   return services
 }
 
+export const setSingletonServices = (services: CoreSingletonServices): void => {
+  pikkuState(null, 'package', 'singletonServices', services)
+}
+
 export const getCreateWireServices = (): CreateWireServices | undefined => {
   return pikkuState(null, 'package', 'factories')?.createWireServices
 }
