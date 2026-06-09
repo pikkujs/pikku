@@ -16,6 +16,7 @@ import { AgentPlaygroundPage } from './pages/AgentPlaygroundPage'
 import { OAuthCallbackPage } from './pages/OAuthCallbackPage'
 import { PackagesPage } from './pages/PackagesPage'
 import { CredentialsPage } from './pages/CredentialsPage'
+import { OSSUsersPage } from './pages/OSSUsersPage'
 import { RenderWorkflowPage } from './pages/RenderWorkflowPage'
 import { ChangesPage } from './pages/ChangesPage'
 import { TestsPage } from './pages/TestsPage'
@@ -50,7 +51,7 @@ export const App: React.FC = () => {
         <Route path="/variables" element={<VariablesPage />} />
         <Route path="/config" element={<Navigate to="/secrets" replace />} />
         <Route path="/credentials" element={<CredentialsPage />} />
-        <Route path="/users" element={<Navigate to="/credentials" replace />} />
+        <Route path="/users" element={<OSSUsersPage />} />
         <Route path="/addons" element={<PackagesPage />} />
         <Route path="*" element={<NotFoundTitle />} />
       </Route>
