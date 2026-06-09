@@ -4,6 +4,7 @@ import { AddonService } from './services/addon.service.js'
 import { OAuthService } from './services/oauth.service.js'
 import type { CodeEditService } from './services/code-edit.service.js'
 import { StateDiffService } from './services/state-diff.service.js'
+import { DbSchemaService, type OpenDbFn, type PgPoolCtor } from './services/db-schema.service.js'
 
 export const createSingletonServices = pikkuAddonServices(
   async (
@@ -39,6 +40,7 @@ export const createSingletonServices = pikkuAddonServices(
     const metaBasePath = existingMetaService?.basePath
     let codeEditService: CodeEditService | null = null
     let stateDiffService: StateDiffService | null = null
+    let dbSchemaService: DbSchemaService | null = null
     if (metaBasePath) {
       const { dirname } = await import('node:path')
       const codeEditPath = './services/code-edit.service.js'
@@ -46,6 +48,28 @@ export const createSingletonServices = pikkuAddonServices(
       const projectRoot = dirname(metaBasePath)
       codeEditService = new CodeEditService(projectRoot)
       stateDiffService = new StateDiffService(projectRoot)
+
+      let openDb: OpenDbFn | null = null
+      let PgPool: PgPoolCtor | null = null
+
+      try {
+        // node:sqlite is built into Node 22+; cast to any to avoid missing @types
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sqliteMod: any = await import('node:sqlite' as string)
+        openDb = (filename) => new sqliteMod.DatabaseSync(filename)
+      } catch {
+        // Node < 22 — SQLite unavailable
+      }
+
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const pgMod: any = await import('pg' as string)
+        PgPool = pgMod.Pool ?? pgMod.default?.Pool ?? null
+      } catch {
+        // pg not installed — Postgres unavailable
+      }
+
+      dbSchemaService = new DbSchemaService(projectRoot, openDb, PgPool)
     }
 
     return {
@@ -64,6 +88,7 @@ export const createSingletonServices = pikkuAddonServices(
       credentialService,
       codeEditService,
       stateDiffService,
+      dbSchemaService,
     }
   }
 )

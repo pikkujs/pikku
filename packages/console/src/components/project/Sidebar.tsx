@@ -29,6 +29,7 @@ import {
   GitCompare,
   Mail,
   FlaskConical,
+  Database,
 } from 'lucide-react'
 import { spotlight } from '@mantine/spotlight'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
@@ -83,6 +84,12 @@ export const DEFAULT_NAV_SECTIONS: NavSection[] = [
   },
   {
     items: [
+      {
+        label: 'Database',
+        href: '/database',
+        icon: Database,
+        matchPrefix: '/database',
+      },
       {
         label: 'APIs',
         href: '/apis',
