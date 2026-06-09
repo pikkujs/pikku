@@ -179,8 +179,8 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
             <MetaRow label="routing">
               <Box
                 style={{
-                  background: '#111827',
-                  border: '1px solid rgba(255,255,255,0.05)',
+                  background: 'var(--app-code-bg)',
+                  border: '1px solid var(--app-row-border)',
                   borderRadius: 5,
                   padding: '5px 8px',
                   fontSize: 10,

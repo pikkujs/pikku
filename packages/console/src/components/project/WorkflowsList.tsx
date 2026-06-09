@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Text, Badge, Tooltip, ActionIcon, Group } from '@mantine/core'
 import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
-import { GitBranch, ExternalLink } from 'lucide-react'
+import { ExternalLink, GitBranch } from 'lucide-react'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
@@ -66,7 +66,7 @@ export const WorkflowsList: React.FC<WorkflowsListProps> = ({
   headerRight,
   icon = GitBranch,
 }) => {
-  const [filter, setFilter] = useState<FilterValue>('all')
+  const [filter] = useState<FilterValue>('all')
   const { navigateTo } = useConsoleNavigator()
 
   const sortedWorkflows = useMemo(() => {
@@ -92,12 +92,14 @@ export const WorkflowsList: React.FC<WorkflowsListProps> = ({
 
   const filteredByType = useMemo(() => {
     if (filter === 'dsl') return sortedWorkflows.filter((w) => w.dsl === true)
-    if (filter === 'graph')
+    if (filter === 'graph') {
       return sortedWorkflows.filter(
         (w) => w.dsl !== true && w.source !== 'dynamic-workflow'
       )
-    if (filter === 'dynamic-workflow')
+    }
+    if (filter === 'dynamic-workflow') {
       return sortedWorkflows.filter((w) => w.source === 'dynamic-workflow')
+    }
     return sortedWorkflows
   }, [sortedWorkflows, filter])
 

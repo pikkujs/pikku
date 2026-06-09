@@ -11,17 +11,20 @@ import {
   Divider,
   Paper,
   Progress,
-  Tabs,
 } from '@mantine/core'
 import { CodeHighlight } from '@mantine/code-highlight'
-import { FunctionSquare, Pencil } from 'lucide-react'
+import { CheckCheck, FunctionSquare, LayoutList, Pencil } from 'lucide-react'
 import { useFunctionMeta, useSchema } from '../../../hooks/useWirings'
 import { useFunctionSource } from '../../../hooks/useCodeEdit'
 import { SchemaViewer } from '../../ui/SchemaViewer'
 import { PikkuBadge } from '../../ui/PikkuBadge'
+import { PikkuSwitch } from '../../ui/PikkuSwitch'
+import { SidePanel, SidePanelContent, SidePanelHeader } from '../../panel/SidePanel'
+import { usePanelContext } from '../../../context/PanelContext'
 import { funcWrapperDefs } from '../../ui/badge-defs'
 import { CommonDetails } from './shared/CommonDetails'
 import { FunctionEditor } from './FunctionEditor'
+
 
 interface FunctionDetailsFormProps {
   functionName: string
@@ -34,26 +37,12 @@ export const FunctionConfiguration: React.FC<FunctionDetailsFormProps> = ({
 }) => {
   const { data: fetchedMeta, isLoading } = useFunctionMeta(functionName)
   const meta = passedMetadata || fetchedMeta || {}
-  const [editing, setEditing] = useState(false)
 
   if (isLoading && !passedMetadata) {
     return (
       <Center py="xl">
         <Loader size="sm" />
       </Center>
-    )
-  }
-
-  const canEdit = !!meta.sourceFile && !!meta.exportedName
-
-  if (editing && canEdit) {
-    return (
-      <FunctionEditor
-        functionName={functionName}
-        sourceFile={meta.sourceFile}
-        exportedName={meta.exportedName}
-        onClose={() => setEditing(false)}
-      />
     )
   }
 
@@ -65,19 +54,6 @@ export const FunctionConfiguration: React.FC<FunctionDetailsFormProps> = ({
 
   return (
     <Stack gap="lg">
-      <Group gap="xs">
-        {canEdit && (
-          <ActionIcon
-            variant="subtle"
-            size="sm"
-            onClick={() => setEditing(true)}
-            title="Edit function"
-          >
-            <Pencil size={14} />
-          </ActionIcon>
-        )}
-      </Group>
-
       <Group gap="xs">
         {funcWrapperDefs[meta.funcWrapper] && (
           <PikkuBadge type="funcWrapper" value={meta.funcWrapper} />
@@ -91,7 +67,7 @@ export const FunctionConfiguration: React.FC<FunctionDetailsFormProps> = ({
       </Group>
 
       <CommonDetails
-        description={meta.description}
+        description={meta.summary || meta.description}
         services={services}
         wires={meta.wires}
         middleware={middleware}
@@ -158,29 +134,58 @@ export const FunctionTestsPanel: React.FC<FunctionDetailsFormProps> = ({
 
 export const FunctionTabbedPanel: React.FC<FunctionDetailsFormProps> = ({
   functionName,
-  metadata,
+  metadata: passedMetadata,
 }) => {
+  const [tab, setTab] = useState<'overview' | 'tests'>('overview')
+  const [editing, setEditing] = useState(false)
+  const { activePanel, panels, closePanel, goBack } = usePanelContext()
+  const { data: fetchedMeta } = useFunctionMeta(functionName)
+  const meta = passedMetadata || fetchedMeta || {}
+  const canEdit = !!meta.sourceFile && !!meta.exportedName
+  const panelData = activePanel ? panels.get(activePanel) : null
+
   return (
-    <Stack gap="md">
-      <Box px="md">
-        <FunctionHeader functionName={functionName} metadata={metadata} />
-      </Box>
-      <Tabs defaultValue="overview">
-        <Tabs.List grow>
-          <Tabs.Tab value="overview">Overview</Tabs.Tab>
-          <Tabs.Tab value="tests">Tests</Tabs.Tab>
-        </Tabs.List>
-        <Tabs.Panel value="overview" pt="md" px="md">
-          <FunctionConfiguration
-            functionName={functionName}
-            metadata={metadata}
+    <SidePanel>
+      <SidePanelHeader
+        title={panelData?.title ?? functionName}
+        onBack={panelData && panelData.history.length > 0 ? goBack : undefined}
+        onClose={() => activePanel && closePanel(activePanel)}
+      >
+        {!editing && (
+          <PikkuSwitch
+            ariaLabel="Function panel sections"
+            value={tab}
+            onChange={setTab}
+            showAllLabels
+            options={[
+              { value: 'overview', label: 'Overview', icon: <LayoutList size={15} /> },
+              { value: 'tests', label: 'Tests', icon: <CheckCheck size={15} /> },
+            ]}
           />
-        </Tabs.Panel>
-        <Tabs.Panel value="tests" pt="md" px="md">
-          <FunctionTestsPanel functionName={functionName} metadata={metadata} />
-        </Tabs.Panel>
-      </Tabs>
-    </Stack>
+        )}
+        {canEdit && !editing && (
+          <ActionIcon variant="subtle" size="sm" onClick={() => setEditing(true)} title="Edit function">
+            <Pencil size={14} />
+          </ActionIcon>
+        )}
+      </SidePanelHeader>
+      <SidePanelContent>
+        <Box px="md">
+          {editing && canEdit ? (
+            <FunctionEditor
+              functionName={functionName}
+              sourceFile={meta.sourceFile}
+              exportedName={meta.exportedName}
+              onClose={() => setEditing(false)}
+            />
+          ) : tab === 'overview' ? (
+            <FunctionConfiguration functionName={functionName} metadata={passedMetadata} />
+          ) : (
+            <FunctionTestsPanel functionName={functionName} metadata={passedMetadata} />
+          )}
+        </Box>
+      </SidePanelContent>
+    </SidePanel>
   )
 }
 

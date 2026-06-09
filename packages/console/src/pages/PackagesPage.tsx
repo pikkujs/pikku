@@ -6,15 +6,14 @@ import {
   Text,
   ThemeIcon,
   Badge,
-  Box,
-  Loader,
-  Center,
+  TextInput,
+  SegmentedControl,
 } from '@mantine/core'
-import { Package, Globe } from 'lucide-react'
+import { Package, Globe, Search } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
-import { TabbedPageHeader } from '../components/layout/TabbedPageHeader'
+import { ListPageHeader } from '../components/layout/PageLayout'
 import { TableListPage } from '../components/layout/TableListPage'
 import { PanelProvider } from '../context/PanelContext'
 
@@ -156,8 +155,10 @@ const INSTALLED_COLUMNS = () => [
 ]
 
 const InstalledList: React.FC<{
+  searchQuery: string
   onSelect: (id: string, source: 'installed' | 'community') => void
-}> = ({ onSelect }) => {
+  emptyHero?: React.ReactNode
+}> = ({ searchQuery, onSelect, emptyHero }) => {
   const rpc = usePikkuRPC()
 
   const { data, isLoading } = useQuery({
@@ -170,6 +171,16 @@ const InstalledList: React.FC<{
     retry: false,
   })
 
+  const filtered = useMemo(() => {
+    if (!searchQuery) return data ?? []
+    const q = searchQuery.toLowerCase()
+    return (data ?? []).filter(
+      (item) =>
+        item.namespace.toLowerCase().includes(q) ||
+        item.packageName.toLowerCase().includes(q)
+    )
+  }, [data, searchQuery])
+
   const columns = useMemo(() => INSTALLED_COLUMNS(), [])
 
   return (
@@ -177,28 +188,24 @@ const InstalledList: React.FC<{
       title="Installed Addons"
       icon={Package}
       docsHref="https://pikku.dev/docs/external-packages"
-      data={data ?? []}
+      data={filtered}
       columns={columns}
       getKey={(item) => item.namespace}
       onRowClick={(item) => onSelect(item.packageName, 'installed')}
-      searchPlaceholder="Search installed addons..."
-      searchFilter={(item, q) =>
-        item.namespace.toLowerCase().includes(q) ||
-        item.packageName.toLowerCase().includes(q) ||
-        false
-      }
       emptyMessage="No installed addons found."
       loading={isLoading}
+      emptyHero={emptyHero}
     />
   )
 }
 
 const CommunityList: React.FC<{
+  searchQuery: string
   onSelect: (id: string, source: 'installed' | 'community') => void
-}> = ({ onSelect }) => {
+}> = ({ searchQuery, onSelect }) => {
   const rpc = usePikkuRPC()
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['addons'],
     queryFn: async () => {
       const result = await rpc.invoke('console:getAddonMeta')
@@ -222,6 +229,17 @@ const CommunityList: React.FC<{
     [installedAddons]
   )
 
+  const filtered = useMemo(() => {
+    if (!searchQuery) return data ?? []
+    const q = searchQuery.toLowerCase()
+    return (data ?? []).filter(
+      (item) =>
+        item.displayName?.toLowerCase().includes(q) ||
+        item.name?.toLowerCase().includes(q) ||
+        item.description?.toLowerCase().includes(q)
+    )
+  }, [data, searchQuery])
+
   const columns = useMemo(
     () => COMMUNITY_COLUMNS(installedNames),
     [installedNames]
@@ -232,17 +250,10 @@ const CommunityList: React.FC<{
       title="Community Addons"
       icon={Package}
       docsHref="https://pikku.dev/docs/external-packages"
-      data={data ?? []}
+      data={filtered}
       columns={columns}
       getKey={(item) => item.id}
       onRowClick={(item) => onSelect(item.id, 'community')}
-      searchPlaceholder="Search community addons..."
-      searchFilter={(item, q) =>
-        item.displayName?.toLowerCase().includes(q) ||
-        item.name?.toLowerCase().includes(q) ||
-        item.description?.toLowerCase().includes(q) ||
-        false
-      }
       emptyTitle="Registry Unavailable"
       emptyDescription="Could not fetch addons from the registry. Check your network connection."
       loading={isLoading}
@@ -312,18 +323,17 @@ const API_COLUMNS = [
 ]
 
 const ApisList: React.FC<{
+  searchQuery: string
   onSelect: (id: string, source: 'installed' | 'community' | 'api') => void
-}> = ({ onSelect }) => {
+}> = ({ searchQuery, onSelect }) => {
   const rpc = usePikkuRPC()
-  const [search, setSearch] = useState('')
 
   const { data, isLoading } = useQuery({
-    queryKey: ['openapis', search],
+    queryKey: ['openapis'],
     queryFn: async () => {
       const result = await rpc.invoke('console:getOpenapis', {
         limit: 100,
         offset: 0,
-        search: search || undefined,
       })
       return result as { apis: OpenApiEntry[]; total: number }
     },
@@ -331,23 +341,27 @@ const ApisList: React.FC<{
     retry: false,
   })
 
+  const filtered = useMemo(() => {
+    if (!searchQuery) return data?.apis ?? []
+    const q = searchQuery.toLowerCase()
+    return (data?.apis ?? []).filter(
+      (item) =>
+        item.title?.toLowerCase().includes(q) ||
+        item.name?.toLowerCase().includes(q) ||
+        item.provider?.toLowerCase().includes(q) ||
+        item.description?.toLowerCase().includes(q)
+    )
+  }, [data, searchQuery])
+
   return (
     <TableListPage
       title={`APIs (${data?.total ?? '...'})`}
       icon={Globe}
       docsHref="https://pikku.dev/docs/external-packages"
-      data={data?.apis ?? []}
+      data={filtered}
       columns={API_COLUMNS}
       getKey={(item) => item.name}
       onRowClick={(item) => onSelect(item.name, 'api' as any)}
-      searchPlaceholder="Search APIs..."
-      searchFilter={(item, q) =>
-        item.title?.toLowerCase().includes(q) ||
-        item.name?.toLowerCase().includes(q) ||
-        item.provider?.toLowerCase().includes(q) ||
-        item.description?.toLowerCase().includes(q) ||
-        false
-      }
       emptyTitle="No APIs Found"
       emptyDescription="Could not fetch APIs from the registry."
       loading={isLoading}
@@ -361,37 +375,65 @@ const ADDON_TABS = [
   { value: 'apis', label: 'APIs' },
 ]
 
+const SEARCH_PLACEHOLDER: Record<string, string> = {
+  installed: 'Search installed addons...',
+  community: 'Search community addons...',
+  apis: 'Search APIs...',
+}
+
 const PackagesList: React.FC<{
   onSelect: (id: string, source: 'installed' | 'community' | 'api') => void
-}> = ({ onSelect }) => {
+  emptyHero?: React.ReactNode
+}> = ({ onSelect, emptyHero }) => {
   const [tab, setTab] = useState<string>('installed')
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const handleTabChange = (value: string) => {
+    setSearchQuery('')
+    setTab(value)
+  }
 
   return (
     <ResizablePanelLayout
+      hidePanel
       header={
-        <TabbedPageHeader
-          icon={Package}
-          category="Addons"
+        <ListPageHeader
+          title="Addons"
+          description="Third-party addons and packages available for your project"
           docsHref="https://pikku.dev/docs/external-packages"
-          tabs={ADDON_TABS}
-          activeTab={tab}
-          onTabChange={setTab}
+          filters={
+            <Group gap="sm" wrap="nowrap">
+              <TextInput
+                placeholder={SEARCH_PLACEHOLDER[tab]}
+                leftSection={<Search size={14} />}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                size="xs"
+                style={{ width: 240 }}
+              />
+              <SegmentedControl
+                size="xs"
+                value={tab}
+                onChange={handleTabChange}
+                data={ADDON_TABS}
+              />
+            </Group>
+          }
         />
       }
-      hidePanel
     >
       {tab === 'installed' ? (
-        <InstalledList onSelect={onSelect} />
+        <InstalledList searchQuery={searchQuery} onSelect={onSelect} emptyHero={emptyHero} />
       ) : tab === 'apis' ? (
-        <ApisList onSelect={onSelect} />
+        <ApisList searchQuery={searchQuery} onSelect={onSelect} />
       ) : (
-        <CommunityList onSelect={onSelect} />
+        <CommunityList searchQuery={searchQuery} onSelect={onSelect} />
       )}
     </ResizablePanelLayout>
   )
 }
 
-const PackagesPageContent: React.FC = () => {
+const PackagesPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedId = searchParams.get('id')
   const source = (searchParams.get('source') ?? 'community') as
@@ -412,14 +454,15 @@ const PackagesPageContent: React.FC = () => {
   return (
     <PackagesList
       onSelect={(id, src) => setSearchParams({ id, source: src })}
+      emptyHero={emptyHero}
     />
   )
 }
 
-export const PackagesPage: React.FC = () => {
+export const PackagesPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
   return (
     <PanelProvider>
-      <PackagesPageContent />
+      <PackagesPageContent emptyHero={emptyHero} />
     </PanelProvider>
   )
 }

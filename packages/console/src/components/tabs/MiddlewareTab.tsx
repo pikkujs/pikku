@@ -12,11 +12,11 @@ interface MiddlewareItem {
   data: any
 }
 
-export const MiddlewareTab: React.FC = () => {
+export const MiddlewareTab: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
   const { meta, loading } = usePikkuMeta()
   const { openMiddleware } = usePanelContext()
 
-  const items = useMemo((): MiddlewareItem[] => {
+  const allItems = useMemo((): MiddlewareItem[] => {
     if (!meta.middlewareGroupsMeta) return []
     const definitions = meta.middlewareGroupsMeta.definitions || {}
     const result: MiddlewareItem[] = []
@@ -30,6 +30,16 @@ export const MiddlewareTab: React.FC = () => {
     }
     return result
   }, [meta.middlewareGroupsMeta])
+
+  const items = useMemo(() => {
+    if (!searchQuery) return allItems
+    const q = searchQuery.toLowerCase()
+    return allItems.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        item.data?.description?.toLowerCase().includes(q)
+    )
+  }, [allItems, searchQuery])
 
   const columns = useMemo(
     () => [
@@ -88,11 +98,6 @@ export const MiddlewareTab: React.FC = () => {
       columns={columns}
       getKey={(item) => item.id}
       onRowClick={(item) => openMiddleware(item.id, item.data)}
-      searchPlaceholder="Search middleware..."
-      searchFilter={(item, q) =>
-        item.name.toLowerCase().includes(q) ||
-        item.data?.description?.toLowerCase().includes(q)
-      }
       emptyMessage="No middleware found."
       loading={loading}
     />

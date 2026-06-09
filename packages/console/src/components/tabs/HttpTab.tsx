@@ -1,16 +1,16 @@
-import React, { useMemo, useState } from 'react'
-import { Box, Text, ScrollArea, Stack, UnstyledButton } from '@mantine/core'
+import React, { useMemo } from 'react'
+import { Text, Group } from '@mantine/core'
+import { Globe } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
+import { usePanelContext } from '../../context/PanelContext'
+import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
-import { HttpTabbedPanel } from '../http/HttpTabbedPanel'
-import { SearchInput } from '../ui/SearchInput'
-import { EmptyState } from '../ui/EmptyState'
-import styles from '../ui/console.module.css'
 
-export const HttpTab: React.FC = () => {
+type HttpTabProps = { searchQuery: string; emptyHero?: React.ReactNode }
+
+export const HttpTab: React.FC<HttpTabProps> = ({ searchQuery, emptyHero }) => {
   const { meta } = usePikkuMeta()
-  const [selected, setSelected] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
+  const { openHTTPWire } = usePanelContext()
 
   const routes = useMemo(() => {
     if (!meta.httpMeta) return []
@@ -19,100 +19,53 @@ export const HttpTab: React.FC = () => {
     )
   }, [meta.httpMeta])
 
-  const filtered = useMemo(() => {
-    if (!search) return routes
-    const q = search.toLowerCase()
-    return routes.filter(
-      (r: any) =>
-        r.route?.toLowerCase().includes(q) ||
-        r.pikkuFuncId?.toLowerCase().includes(q) ||
-        r.method?.toLowerCase().includes(q)
-    )
-  }, [routes, search])
-
-  const selectedRoute = useMemo(() => {
-    if (!selected) return null
-    return (
-      routes.find((r: any) => `${r.method}::${r.route}` === selected) || null
-    )
-  }, [routes, selected])
+  const columns = useMemo(
+    () => [
+      {
+        key: 'route',
+        header: 'ROUTE',
+        render: (route: any) => (
+          <>
+            <Group gap={5} wrap="nowrap" mb={2}>
+              <PikkuBadge
+                type="httpMethod"
+                value={route.method?.toUpperCase() || 'GET'}
+                size="xs"
+              />
+              <Text size="xs" ff="monospace" fw={500} truncate>
+                {route.route}
+              </Text>
+            </Group>
+            <Text size="xs" ff="monospace" c="dimmed" truncate>
+              {route.pikkuFuncId}
+            </Text>
+          </>
+        ),
+      },
+    ],
+    []
+  )
 
   return (
-    <Box className={styles.flexRow}>
-      <Box
-        className={`${styles.listPaneFixed} ${styles.flexColumn}`}
-        style={{ width: 340, minWidth: 260 }}
-      >
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          label="HTTP Routes"
-          count={routes.length}
-          placeholder="Search..."
-        />
-        <ScrollArea className={styles.flexGrow}>
-          <Stack gap={0}>
-            {filtered.map((route: any) => {
-              const key = `${route.method}::${route.route}`
-              const isActive = selected === key
-              return (
-                <UnstyledButton
-                  key={key}
-                  onClick={() => setSelected(key)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 7,
-                    padding: '7px 12px',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
-                    borderLeft: isActive
-                      ? '2px solid #7c3aed'
-                      : '2px solid transparent',
-                    backgroundColor: isActive
-                      ? 'rgba(124, 58, 237, 0.06)'
-                      : undefined,
-                  }}
-                >
-                  <PikkuBadge
-                    type="httpMethod"
-                    value={route.method?.toUpperCase() || 'GET'}
-                    size="sm"
-                  />
-                  <Box className={styles.flexGrow}>
-                    <Text
-                      size="sm"
-                      ff="monospace"
-                      truncate
-                      c={isActive ? 'var(--app-meta-value)' : undefined}
-                    >
-                      {route.route}
-                    </Text>
-                    <Text
-                      size="sm"
-                      ff="monospace"
-                      c={isActive ? 'var(--app-meta-label)' : 'dimmed'}
-                      truncate
-                    >
-                      {route.pikkuFuncId}
-                    </Text>
-                  </Box>
-                </UnstyledButton>
-              )
-            })}
-          </Stack>
-        </ScrollArea>
-      </Box>
-      <Box className={`${styles.flexGrow} ${styles.overflowAuto}`}>
-        {selectedRoute ? (
-          <HttpTabbedPanel
-            wireId={`${selectedRoute.method}::${selectedRoute.route}`}
-            metadata={selectedRoute}
-          />
-        ) : (
-          <EmptyState message="Select a route to view its details" />
-        )}
-      </Box>
-    </Box>
+    <TableListPage
+      title="HTTP Routes"
+      icon={Globe}
+      docsHref="https://pikku.dev/docs/wiring/http"
+      data={routes}
+      columns={columns}
+      getKey={(route) => `${route.method}::${route.route}`}
+      onRowClick={(route) =>
+        openHTTPWire(`http::${route.method}::${route.route}`, route)
+      }
+      searchPlaceholder="Search routes..."
+      searchFilter={(route, q) =>
+        route.route?.toLowerCase().includes(q) ||
+        route.pikkuFuncId?.toLowerCase().includes(q) ||
+        route.method?.toLowerCase().includes(q)
+      }
+      emptyMessage="No HTTP routes found."
+      emptyHero={emptyHero}
+      externalSearch={searchQuery}
+    />
   )
 }

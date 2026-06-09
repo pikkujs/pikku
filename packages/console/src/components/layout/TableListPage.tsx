@@ -10,6 +10,7 @@ import {
 } from '@mantine/core'
 import { Search } from 'lucide-react'
 import { EmptyStatePlaceholder } from './EmptyStatePlaceholder'
+import { usePageGate } from '../../context/PageGateContext'
 import classes from '../ui/console.module.css'
 
 interface Column<T> {
@@ -17,6 +18,7 @@ interface Column<T> {
   header: string
   align?: 'left' | 'right'
   width?: string | number
+  maxWidth?: string | number
   render: (item: T, index: number) => React.ReactNode
 }
 
@@ -30,9 +32,12 @@ interface TableListPageProps<T> {
   onRowClick: (item: T) => void
   searchPlaceholder?: string
   searchFilter?: (item: T, query: string) => boolean
+  /** When provided, the internal search input is hidden and this value is used for filtering */
+  externalSearch?: string
   emptyMessage?: string
   emptyTitle?: string
   emptyDescription?: string
+  emptyHero?: React.ReactNode
   loading?: boolean
   headerRight?: React.ReactNode
   description?: React.ReactNode
@@ -48,14 +53,18 @@ export const TableListPage = <T,>({
   onRowClick,
   searchPlaceholder = 'Search...',
   searchFilter,
+  externalSearch,
   emptyMessage = 'No items found.',
   emptyTitle,
   emptyDescription,
+  emptyHero,
   loading = false,
   description,
   headerRight,
 }: TableListPageProps<T>) => {
-  const [searchQuery, setSearchQuery] = useState('')
+  const gate = usePageGate()
+  const [internalSearch, setInternalSearch] = useState('')
+  const searchQuery = externalSearch !== undefined ? externalSearch : internalSearch
 
   const filtered = useMemo(() => {
     if (!searchQuery || !searchFilter) return data
@@ -63,11 +72,17 @@ export const TableListPage = <T,>({
     return data.filter((item) => searchFilter(item, query))
   }, [data, searchQuery, searchFilter])
 
+  if (gate) {
+    return <>{gate}</>
+  }
+
   if (loading) {
     return (
-      <Center h="100%">
-        <Loader />
-      </Center>
+      <Box className={classes.listSurfaceCard}>
+        <Center h="100%">
+          <Loader />
+        </Center>
+      </Box>
     )
   }
 
@@ -75,6 +90,7 @@ export const TableListPage = <T,>({
     return (
       <EmptyStatePlaceholder
         icon={icon}
+        hero={emptyHero}
         title={emptyTitle || `No ${title} found`}
         description={emptyDescription ?? `No ${title.toLowerCase()} exist yet.`}
         docsHref={docsHref}
@@ -83,11 +99,12 @@ export const TableListPage = <T,>({
   }
 
   return (
+    <Box className={classes.listSurfaceCard}>
     <Stack gap={0} className={classes.flexColumn}>
       {description && (
         <Box
           px="md"
-          py="sm"
+          py="xs"
           style={{
             borderBottom: '1px solid var(--mantine-color-default-border)',
           }}
@@ -95,25 +112,30 @@ export const TableListPage = <T,>({
           {description}
         </Box>
       )}
-      <Box
-        px="md"
-        py="sm"
-        style={{
-          borderBottom: '1px solid var(--mantine-color-default-border)',
-          display: 'flex',
-          gap: 8,
-          alignItems: 'center',
-        }}
-      >
-        <TextInput
-          placeholder={searchPlaceholder}
-          leftSection={<Search size={16} />}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className={classes.flexGrow}
-        />
-        {headerRight}
-      </Box>
+      {(searchFilter && externalSearch === undefined || headerRight) && (
+        <Box
+          px="md"
+          style={{
+            height: 42,
+            borderBottom: '1px solid var(--mantine-color-default-border)',
+            display: 'flex',
+            gap: 8,
+            alignItems: 'center',
+          }}
+        >
+          {searchFilter && externalSearch === undefined && (
+            <TextInput
+              placeholder={searchPlaceholder}
+              leftSection={<Search size={14} />}
+              value={internalSearch}
+              onChange={(e) => setInternalSearch(e.target.value)}
+              className={classes.flexGrow}
+              size="sm"
+            />
+          )}
+          {headerRight}
+        </Box>
+      )}
       {filtered.length === 0 ? (
         <Box p="xl">
           <Text c="dimmed" ta="center">
@@ -123,18 +145,18 @@ export const TableListPage = <T,>({
           </Text>
         </Box>
       ) : (
-        <Box style={{ overflowX: 'auto' }}>
-          <Table highlightOnHover withRowBorders>
-            <Table.Thead>
-              <Table.Tr>
+        <Box style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+          <Table highlightOnHover withRowBorders className={classes.tableLastRowBorder}>
+            <Table.Thead style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--mantine-color-body)' }}>
+              <Table.Tr style={{ height: 42 }}>
                 {columns.map((col, i) => (
                   <Table.Th
                     key={col.key}
                     pl={i === 0 ? 'md' : undefined}
                     pr={i === columns.length - 1 ? 'md' : undefined}
                     fw={600}
-                    fz="xs"
-                    style={col.width ? { width: col.width } : undefined}
+                    fz="sm"
+                    style={{ ...(col.width ? { width: col.width } : {}), ...(col.maxWidth ? { maxWidth: col.maxWidth } : {}) }}
                   >
                     {col.header}
                   </Table.Th>
@@ -154,7 +176,7 @@ export const TableListPage = <T,>({
                       key={col.key}
                       pl={i === 0 ? 'md' : undefined}
                       pr={i === columns.length - 1 ? 'md' : undefined}
-                      style={col.width ? { width: col.width } : undefined}
+                      style={{ ...(col.width ? { width: col.width } : {}), ...(col.maxWidth ? { maxWidth: col.maxWidth } : {}) }}
                     >
                       {col.render(item, index)}
                     </Table.Td>
@@ -166,5 +188,6 @@ export const TableListPage = <T,>({
         </Box>
       )}
     </Stack>
+    </Box>
   )
 }

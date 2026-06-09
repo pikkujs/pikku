@@ -16,7 +16,6 @@ import {
   TypographyStylesProvider,
 } from '@mantine/core'
 import {
-  AssistantRuntimeProvider,
   ThreadPrimitive,
   MessagePrimitive,
   ComposerPrimitive,
@@ -30,6 +29,7 @@ import {
   type PikkuToolStatus,
   type MissingCredentialPayload,
 } from '@pikku/assistant-ui'
+import { AssistantRuntimeProvider } from '@assistant-ui/react'
 import {
   ArrowUp,
   ChevronDown,
