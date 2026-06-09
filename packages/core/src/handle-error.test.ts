@@ -89,6 +89,7 @@ describe('handleHTTPError', () => {
 
     assert.strictEqual(http._state.statusCode, 404)
     assert.deepStrictEqual(http._state.jsonBody, {
+      name: 'NotFoundError',
       message: 'The server cannot find the requested resource.',
       payload: undefined,
       errorId: 'tracker-1',
