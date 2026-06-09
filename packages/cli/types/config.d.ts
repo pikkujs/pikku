@@ -294,6 +294,10 @@ export type PikkuCLIInput = {
     events?: PikkuScaffoldFeature
   }
 
+  tests?: {
+    outputDir?: string
+  }
+
   forceRequiredServices?: string[]
 
   schemasFromTypes?: string[]
