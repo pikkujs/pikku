@@ -5,6 +5,17 @@ import {
 } from '@pikku/core/services'
 import { StubTracker } from './tracker.js'
 import { createStubHttp } from './stubs/http.js'
+import {
+  createStubQueueWire,
+  type QueueWireConfig,
+  type StubQueueWire,
+} from './stubs/queue.js'
+import {
+  createStubChannelWire,
+  type ChannelWireConfig,
+  type StubChannelWire,
+} from './stubs/channel.js'
+import { createStubTriggerWire, type StubTriggerWire } from './stubs/trigger.js'
 
 export type Persona = { name: string; session?: Record<string, unknown> }
 export type StubBundle = { services: unknown; kysely?: unknown }
@@ -19,6 +30,12 @@ export interface IFunctionWorld {
   lastError: Error | undefined
   lastStatus: number | undefined
   lastResponseHeaders: Record<string, string>
+  lastQueueWire: StubQueueWire | undefined
+  lastChannelWire: StubChannelWire | undefined
+  lastTriggerWire: StubTriggerWire | undefined
+  nextQueueConfig: QueueWireConfig | undefined
+  nextChannelConfig: ChannelWireConfig | undefined
+  nextTriggerConfig: boolean | undefined
   data?: Map<string, unknown>
   init(dbFile: string): Promise<void>
   destroy(removeDb: (path: string) => void): Promise<void>
@@ -53,13 +70,18 @@ export function createFunctionWorld(
     private _bundle!: StubBundle
     private _dbFile!: string
     private _personas = new Map<string, Persona>()
-    private _http = createStubHttp()
     readonly tracker = new StubTracker()
 
     lastResult: unknown = undefined
     lastError: Error | undefined = undefined
     lastStatus: number | undefined = undefined
     lastResponseHeaders: Record<string, string> = {}
+    lastQueueWire: StubQueueWire | undefined = undefined
+    lastChannelWire: StubChannelWire | undefined = undefined
+    lastTriggerWire: StubTriggerWire | undefined = undefined
+    nextQueueConfig: QueueWireConfig | undefined = undefined
+    nextChannelConfig: ChannelWireConfig | undefined = undefined
+    nextTriggerConfig: boolean | undefined = undefined
 
     async init(dbFile: string) {
       this._dbFile = dbFile
@@ -126,12 +148,25 @@ export function createFunctionWorld(
       const session = new PikkuSessionService()
       if (persona.session) session.setInitial(persona.session as never)
 
-      this._http = createStubHttp()
+      const http = createStubHttp()
 
-      const wire = {
+      const queueWire = this.nextQueueConfig
+        ? createStubQueueWire(this.nextQueueConfig)
+        : undefined
+      const channelWire = this.nextChannelConfig
+        ? createStubChannelWire(this.nextChannelConfig)
+        : undefined
+      const triggerWire = this.nextTriggerConfig
+        ? createStubTriggerWire()
+        : undefined
+
+      const wire: Record<string, unknown> = {
         wireType: 'rpc',
         ...createFunctionSessionWireProps(session),
-        http: this._http.wire,
+        http: http.wire,
+        ...(queueWire ? { queue: queueWire.wire } : {}),
+        ...(channelWire ? { channel: channelWire.wire } : {}),
+        ...(triggerWire ? { trigger: triggerWire.wire } : {}),
       }
 
       const ctx = rpcService.getContextRPCService(
@@ -144,13 +179,21 @@ export function createFunctionWorld(
       this.lastError = undefined
       this.lastStatus = undefined
       this.lastResponseHeaders = {}
+      this.lastQueueWire = queueWire
+      this.lastChannelWire = channelWire
+      this.lastTriggerWire = triggerWire
+      // reset next configs — they're one-shot per call
+      this.nextQueueConfig = undefined
+      this.nextChannelConfig = undefined
+      this.nextTriggerConfig = undefined
+
       try {
         this.lastResult = await ctx.exposed(rpcName, data)
       } catch (err) {
         this.lastError = err as Error
       } finally {
-        this.lastStatus = this._http.response.statusCode
-        this.lastResponseHeaders = this._http.response.headers
+        this.lastStatus = http.response.statusCode
+        this.lastResponseHeaders = http.response.headers
       }
     }
   }

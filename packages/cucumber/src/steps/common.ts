@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import { Actor } from '../actor.js'
 import type { IFunctionWorld } from '../world.js'
+import { registerQueueSteps } from './queue.js'
+import { registerChannelSteps } from './channel.js'
+import { registerTriggerSteps } from './trigger.js'
 
 type TableLike = { rowsHash: () => Record<string, string> }
 type ListTableLike = { rows: () => string[][] }
@@ -546,4 +549,8 @@ export function registerCommonSteps(
       )
     }
   )
+
+  registerQueueSteps(cucumber)
+  registerChannelSteps(cucumber)
+  registerTriggerSteps(cucumber)
 }
