@@ -16,6 +16,7 @@ export interface IFunctionWorld {
   tracker: StubTracker
   lastResult: unknown
   lastError: Error | undefined
+  data?: Map<string, unknown>
   init(dbFile: string): Promise<void>
   destroy(removeDb: (path: string) => void): Promise<void>
   verify(): void
