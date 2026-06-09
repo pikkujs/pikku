@@ -36,7 +36,6 @@ export const handleHTTPError = (
     // Set status and response body
     http?.response?.status(errorResponse.status)
     http?.response?.json({
-      name: e instanceof Error ? e.constructor.name : undefined,
       message:
         e instanceof Error && e.message && e.message !== 'An error occurred'
           ? e.message

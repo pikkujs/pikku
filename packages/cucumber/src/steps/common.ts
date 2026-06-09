@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict'
 import type { IFunctionWorld } from '../world.js'
-import type { Actor } from '../actor.js'
 
 type TableLike = { rowsHash: () => Record<string, string> }
 
@@ -20,16 +19,6 @@ export interface CucumberStepApi {
     pattern: string,
     fn: (this: IFunctionWorld, ...args: any[]) => void | Promise<void>
   ) => void
-  defineParameterType?: (opts: {
-    name: string
-    regexp: RegExp
-    transformer: (s: string) => unknown
-  }) => void
-}
-
-export interface ActorOptions {
-  actors: Map<string, Actor>
-  loginRpc?: string
 }
 
 function tableToInput(table: TableLike): Record<string, unknown> {
@@ -66,55 +55,11 @@ function result(world: IFunctionWorld): Record<string, unknown> {
  * Register the built-in step library against the consumer's cucumber instance.
  * Call from hooks.ts:
  *
- *   import { Given, When, Then, defineParameterType } from '@cucumber/cucumber'
- *   import { registerCommonSteps } from '@pikku/cucumber'
- *   registerCommonSteps({ Given, When, Then, defineParameterType }, { actors })
+ *   import { Given, When, Then } from '@cucumber/cucumber'
+ *   import { registerCommonSteps } from '@pikku/cucumber/steps'
+ *   registerCommonSteps({ Given, When, Then })
  */
-export function registerCommonSteps(
-  cucumber: CucumberStepApi,
-  actorOptions?: ActorOptions
-): void {
-  if (actorOptions && cucumber.defineParameterType) {
-    const { actors, loginRpc } = actorOptions
-    cucumber.defineParameterType({
-      name: 'actor',
-      regexp: new RegExp([...actors.keys()].join('|')),
-      transformer: (s: string) => actors.get(s)!,
-    })
-
-    cucumber.When(
-      '{actor} calls {string}',
-      async function (this: IFunctionWorld, actor: Actor, rpc: string) {
-        const { result, error } = await actor.call(rpc, null)
-        this.lastResult = result
-        this.lastError = error
-      }
-    )
-
-    cucumber.When(
-      '{actor} calls {string} with:',
-      async function (
-        this: IFunctionWorld,
-        actor: Actor,
-        rpc: string,
-        table: TableLike
-      ) {
-        const { result, error } = await actor.call(rpc, tableToInput(table))
-        this.lastResult = result
-        this.lastError = error
-      }
-    )
-
-    if (loginRpc) {
-      cucumber.Given(
-        '{actor} logs in',
-        async function (this: IFunctionWorld, actor: Actor) {
-          await actor.login(loginRpc)
-        }
-      )
-    }
-  }
-
+export function registerCommonSteps(cucumber: CucumberStepApi): void {
   cucumber.Given(
     '{string} has session:',
     function (this: IFunctionWorld, name: string, table: TableLike) {
