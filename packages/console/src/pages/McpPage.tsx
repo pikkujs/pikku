@@ -5,7 +5,7 @@ import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider } from '../context/PanelContext'
 import { usePanelContext } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '../components/layout/DetailPageHeader'
+import { ListPageHeader } from '../components/layout/PageLayout'
 import { TableListPage } from '../components/layout/TableListPage'
 import { PikkuBadge } from '../components/ui/PikkuBadge'
 
@@ -95,13 +95,7 @@ export const McpPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={
-          <DetailPageHeader
-            icon={Cpu}
-            category="MCP"
-            docsHref="https://pikku.dev/docs/wiring/mcp"
-          />
-        }
+        header={<ListPageHeader title="MCP" description="Model Context Protocol tools, resources, and prompts" />}
         showTabs={false}
         hidePanel={!loading && items.length === 0}
         emptyPanelMessage="Select an MCP entry to view its details"

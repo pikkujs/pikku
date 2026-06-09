@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useCallback } from 'react'
+import React, { useMemo, useEffect, useCallback, useState } from 'react'
 import type { NodeTypes, EdgeTypes } from 'reactflow'
 import ReactFlow, {
   useNodesState,
@@ -9,8 +9,18 @@ import ReactFlow, {
   useReactFlow,
   ReactFlowProvider,
 } from 'reactflow'
-import { Box, Drawer, Group, Text, Alert } from '@mantine/core'
-import { AlertTriangle, GitBranch, History } from 'lucide-react'
+import {
+  Box,
+  Drawer,
+  Text,
+  Alert,
+  Popover,
+  TextInput,
+  UnstyledButton,
+  ScrollArea,
+  Stack,
+} from '@mantine/core'
+import { AlertTriangle, History, ChevronDown, Search, Check } from 'lucide-react'
 import {
   CanvasDrawerProvider,
   useCanvasDrawerContext,
@@ -25,8 +35,6 @@ import {
 } from '../../context/WorkflowRunContext'
 import { usePanelContext } from '../../context/PanelContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
-import { DetailPageHeader } from '../layout/DetailPageHeader'
-import { PikkuBadge } from '../ui/PikkuBadge'
 import { createCanvasDrawerContent } from '../canvas-drawer/CanvasDrawerFactory'
 import { useWorkflowRuns } from '../../hooks/useWorkflowRuns'
 import { RunsPanel, type RunItem } from '../layout/RunsPanel'
@@ -207,15 +215,33 @@ const WorkflowCanvasInner: React.FC<{
   )
 }
 
-const WorkflowRunsPanel: React.FC<{ workflowName: string }> = ({
-  workflowName,
-}) => {
+const WorkflowRunsPanel: React.FC<{
+  workflowName: string
+  items: { name: string; description?: string }[]
+  onItemSelect: (name: string) => void
+}> = ({ workflowName, items, onItemSelect }) => {
   const { selectedRunId, setSelectedRunId, setIsCreatingRun } =
     useWorkflowRunContext()
   const { setActivePanel } = usePanelContext()
   const editable = useConsoleEditable()
   const rpc = usePikkuRPC()
   const { data: runs, isLoading, refetch } = useWorkflowRuns(workflowName)
+  const [selectorOpen, setSelectorOpen] = useState(false)
+  const [search, setSearch] = useState('')
+
+  const filteredItems = useMemo(() => {
+    if (!search) return items
+    const q = search.toLowerCase()
+    return items.filter(
+      (i) => i.name.toLowerCase().includes(q) || i.description?.toLowerCase().includes(q)
+    )
+  }, [items, search])
+
+  const handleSelect = (name: string) => {
+    setSelectorOpen(false)
+    setSearch('')
+    onItemSelect(name)
+  }
 
   const runItems: RunItem[] = useMemo(() => {
     if (!runs || !Array.isArray(runs)) return []
@@ -239,6 +265,94 @@ const WorkflowRunsPanel: React.FC<{ workflowName: string }> = ({
     setActivePanel(`workflow-${workflowName}`)
   }, [setSelectedRunId, setIsCreatingRun, setActivePanel, workflowName])
 
+  const selector = (
+    <Popover
+      opened={selectorOpen}
+      onChange={setSelectorOpen}
+      width={280}
+      position="bottom-start"
+      shadow="md"
+      zIndex={10000}
+    >
+      <Popover.Target>
+        <UnstyledButton
+          px="sm"
+          py="xs"
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            borderBottom: '1px solid var(--mantine-color-default-border)',
+          }}
+          onClick={() => setSelectorOpen((o) => !o)}
+        >
+          <Text size="sm" fw={600} style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {workflowName}
+          </Text>
+          <ChevronDown size={14} style={{ flexShrink: 0 }} />
+        </UnstyledButton>
+      </Popover.Target>
+      <Popover.Dropdown p={0}>
+        <TextInput
+          placeholder="Search workflows..."
+          leftSection={<Search size={14} />}
+          value={search}
+          onChange={(e) => setSearch(e.currentTarget.value)}
+          styles={{
+            input: {
+              border: 'none',
+              borderBottom: '1px solid var(--mantine-color-default-border)',
+              borderRadius: 0,
+            },
+          }}
+        />
+        <ScrollArea.Autosize mah={300}>
+          <Stack gap={0}>
+            {filteredItems.map((item) => (
+              <UnstyledButton
+                key={item.name}
+                onClick={() => handleSelect(item.name)}
+                py="xs"
+                px="sm"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  backgroundColor:
+                    item.name === workflowName
+                      ? 'var(--mantine-color-green-light)'
+                      : undefined,
+                }}
+              >
+                {item.name === workflowName ? (
+                  <Check size={14} color="var(--mantine-color-green-6)" />
+                ) : (
+                  <Box w={14} />
+                )}
+                <div>
+                  <Text size="sm" fw={item.name === workflowName ? 500 : 400}>
+                    {item.name}
+                  </Text>
+                  {item.description && (
+                    <Text size="sm" c="dimmed">
+                      {item.description}
+                    </Text>
+                  )}
+                </div>
+              </UnstyledButton>
+            ))}
+            {filteredItems.length === 0 && (
+              <Text size="sm" c="dimmed" ta="center" py="md">
+                No results
+              </Text>
+            )}
+          </Stack>
+        </ScrollArea.Autosize>
+      </Popover.Dropdown>
+    </Popover>
+  )
+
   return (
     <RunsPanel
       title="Runs"
@@ -249,6 +363,7 @@ const WorkflowRunsPanel: React.FC<{ workflowName: string }> = ({
       loading={isLoading}
       emptyMessage="No runs found"
       statusFilters={[]}
+      header={selector}
       onNewClick={editable ? handleNewClick : undefined}
       newButtonLabel={editable ? 'New workflow run' : undefined}
       onDelete={editable ? handleDelete : undefined}
@@ -300,70 +415,6 @@ const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
 
   const runContext = useWorkflowRunContextSafe()
 
-  const header = (
-    <>
-      <DetailPageHeader
-        icon={GitBranch}
-        category="Workflows"
-        docsHref="https://pikku.dev/docs/wiring/workflows"
-        categoryPath="/workflow"
-        currentItem={workflowName}
-        items={items}
-        onItemSelect={onItemSelect}
-        subtitle={
-          workflow.source ? (
-            <PikkuBadge type="dynamic" badge="source" value={workflow.source} />
-          ) : undefined
-        }
-      />
-      {isComplex && (
-        <Alert
-          icon={<AlertTriangle size={16} />}
-          color="yellow"
-          radius={0}
-          py="xs"
-          styles={{
-            root: {
-              borderBottom: '1px solid var(--mantine-color-default-border)',
-            },
-          }}
-        >
-          <Group justify="space-between" align="center">
-            <Text size="sm">
-              This is a complex workflow. The visual representation may not be
-              accurate.
-            </Text>
-            <Text
-              size="sm"
-              c="yellow.7"
-              style={{ cursor: 'pointer', textDecoration: 'underline' }}
-            >
-              Learn more
-            </Text>
-          </Group>
-        </Alert>
-      )}
-      {runContext?.isVersionMismatch && (
-        <Alert
-          icon={<History size={16} />}
-          color="orange"
-          radius={0}
-          py="xs"
-          styles={{
-            root: {
-              borderBottom: '1px solid var(--mantine-color-default-border)',
-            },
-          }}
-        >
-          <Text size="sm">
-            Viewing historical version — workflow definition has changed since
-            this run
-          </Text>
-        </Alert>
-      )}
-    </>
-  )
-
   const baseWorkflow =
     runContext?.isVersionMismatch && runContext?.historicalWorkflow
       ? { ...workflow, ...runContext.historicalWorkflow }
@@ -379,24 +430,53 @@ const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
   }, [baseWorkflow, runContext?.runData?.wire])
 
   const runsPanel = runContext ? (
-    <WorkflowRunsPanel workflowName={workflowName} />
+    <WorkflowRunsPanel
+      workflowName={workflowName}
+      items={items}
+      onItemSelect={onItemSelect}
+    />
   ) : undefined
 
   return (
     <>
       <ThreePaneLayout
-        header={header}
         showTabs={immersiveDetail}
         emptyPanelMessage="Select a node to view its details"
         runsPanel={runsPanel}
-        initialLeftCollapsed={immersiveDetail}
-        initialRightCollapsed={immersiveDetail}
       >
-        <Box style={{ height: '100%', position: 'relative' }}>
-          <WorkflowCanvasInner
-            workflow={canvasWorkflow}
-            onPaneClick={handlePaneClick}
-          />
+        <Box style={{ height: '100%', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+          {isComplex && (
+            <Alert
+              icon={<AlertTriangle size={16} />}
+              color="yellow"
+              radius={0}
+              py="xs"
+              style={{ flexShrink: 0 }}
+            >
+              <Text size="sm">
+                This is a complex workflow. The visual representation may not be accurate.
+              </Text>
+            </Alert>
+          )}
+          {runContext?.isVersionMismatch && (
+            <Alert
+              icon={<History size={16} />}
+              color="orange"
+              radius={0}
+              py="xs"
+              style={{ flexShrink: 0 }}
+            >
+              <Text size="sm">
+                Viewing historical version — workflow definition has changed since this run
+              </Text>
+            </Alert>
+          )}
+          <Box style={{ flex: 1, minHeight: 0 }}>
+            <WorkflowCanvasInner
+              workflow={canvasWorkflow}
+              onPaneClick={handlePaneClick}
+            />
+          </Box>
         </Box>
       </ThreePaneLayout>
       {canvasDrawer && (

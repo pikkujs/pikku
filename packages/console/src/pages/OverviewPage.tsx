@@ -2,7 +2,6 @@ import React from 'react'
 import { useLink } from '../router'
 import {
   Box,
-  Container,
   SimpleGrid,
   Paper,
   Text,
@@ -24,6 +23,7 @@ import {
   Mail,
 } from 'lucide-react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
+import { PageContainer, ListPageHeader } from '../components/layout/PageLayout'
 
 interface StatCardProps {
   label: string
@@ -164,22 +164,13 @@ export const OverviewPage: React.FC = () => {
   ]
 
   return (
-    <Container size="md" py="xl">
-      <Stack gap="xl">
-        <Box>
-          <Text size="xl" fw={700}>
-            Overview
-          </Text>
-          <Text size="sm" c="dimmed">
-            Explore your Pikku project metadata
-          </Text>
-        </Box>
-        <SimpleGrid cols={{ base: 1, xs: 2, sm: 3, md: 4 }} spacing="md">
-          {stats.map((stat) => (
-            <StatCard key={stat.label} {...stat} />
-          ))}
-        </SimpleGrid>
-      </Stack>
-    </Container>
+    <PageContainer>
+      <ListPageHeader title="Overview" description="Explore your Pikku project metadata" />
+      <SimpleGrid cols={{ base: 1, xs: 2, sm: 3, md: 4 }} spacing="md">
+        {stats.map((stat) => (
+          <StatCard key={stat.label} {...stat} />
+        ))}
+      </SimpleGrid>
+    </PageContainer>
   )
 }

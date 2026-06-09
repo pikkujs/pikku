@@ -1,0 +1,17 @@
+{
+  "name": "@pikku/verifiers-classification",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.1",
+    "@pikku/cli": "workspace:*",
+    "@pikku/core": "workspace:*",
+    "@pikku/inspector": "workspace:*",
+    "@types/node": "^24",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9"
+  },
+  "scripts": {
+    "test": "yarn tsx --test src/tests/codegen.assert.ts src/tests/codegen-postgres.assert.ts src/tests/audit.assert.ts"
+  }
+}

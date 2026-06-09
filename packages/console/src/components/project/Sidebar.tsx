@@ -28,6 +28,7 @@ import {
   RefreshCw,
   GitCompare,
   Mail,
+  FlaskConical,
 } from 'lucide-react'
 import { spotlight } from '@mantine/spotlight'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
@@ -72,6 +73,12 @@ export const DEFAULT_NAV_SECTIONS: NavSection[] = [
         icon: GitCompare,
         matchPrefix: '/changes',
       },
+      {
+        label: 'Tests',
+        href: '/tests',
+        icon: FlaskConical,
+        matchPrefix: '/tests',
+      },
     ],
   },
   {
@@ -114,9 +121,9 @@ export const DEFAULT_NAV_SECTIONS: NavSection[] = [
       },
       {
         label: 'Credentials',
-        href: '/users',
+        href: '/credentials',
         icon: KeyRound,
-        matchPrefix: '/users',
+        matchPrefix: '/credentials',
       },
     ],
   },

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
-import { Text, Group, Badge, Stack, Center, Loader, Code } from '@mantine/core'
+import { Text, Group, Badge, Center, Loader } from '@mantine/core'
 import { Users, Check } from 'lucide-react'
+import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { usePanelContext } from '../../context/PanelContext'
@@ -27,7 +28,7 @@ interface UserRow {
   isComplete: boolean
 }
 
-export const CredentialUsersTab: React.FC = () => {
+export const CredentialUsersTab: React.FC<{ searchQuery?: string }> = ({ searchQuery = '' }) => {
   const { meta, loading: metaLoading } = usePikkuMeta()
   const rpc = usePikkuRPC()
   const { openCredentialUser } = usePanelContext()
@@ -61,7 +62,7 @@ export const CredentialUsersTab: React.FC = () => {
 
   const loading = metaLoading || usersLoading
 
-  const rows: UserRow[] = useMemo(() => {
+  const allRows: UserRow[] = useMemo(() => {
     if (!usersData) return []
     const total = perUserCredentials.length
     return usersData.map((u) => {
@@ -74,6 +75,12 @@ export const CredentialUsersTab: React.FC = () => {
       }
     })
   }, [usersData, perUserCredentials])
+
+  const rows = useMemo(() => {
+    if (!searchQuery) return allRows
+    const q = searchQuery.toLowerCase()
+    return allRows.filter((row) => row.userId.toLowerCase().includes(q))
+  }, [allRows, searchQuery])
 
   const columns = useMemo(
     () => [
@@ -139,17 +146,12 @@ export const CredentialUsersTab: React.FC = () => {
 
   if (perUserCredentials.length === 0) {
     return (
-      <Center h={300}>
-        <Stack align="center" gap="sm">
-          <Users size={40} color="var(--mantine-color-dimmed)" />
-          <Text c="dimmed" size="sm" ta="center">
-            No per-user credentials declared.
-            <br />
-            Use <Code>wireCredential({"{ type: 'wire' }"})</Code> to declare
-            per-user credentials.
-          </Text>
-        </Stack>
-      </Center>
+      <EmptyStatePlaceholder
+        icon={Users}
+        title="No per-user credentials declared"
+        description="Use wireCredential({ type: 'wire' }) in your code to declare per-user credentials."
+        docsHref="https://pikku.dev/docs/core-features/credentials"
+      />
     )
   }
 
@@ -171,8 +173,6 @@ export const CredentialUsersTab: React.FC = () => {
           })),
         })
       }
-      searchPlaceholder="Search users..."
-      searchFilter={(row, q) => row.userId.toLowerCase().includes(q)}
       emptyMessage="No users have configured credentials yet."
     />
   )

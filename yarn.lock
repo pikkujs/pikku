@@ -2946,6 +2946,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@electric-sql/pglite@npm:^0.5.1":
+  version: 0.5.1
+  resolution: "@electric-sql/pglite@npm:0.5.1"
+  checksum: 10/7432306b9f7aae9f1c8c529bfdd02c82c28b7df336185f252ef6edd3386157c904d2a7264467d8db17da9a4a8d7e158e018f5e13e680c2dcc703098ff32e19d4
+  languageName: node
+  linkType: hard
+
 "@emnapi/runtime@npm:^1.7.0":
   version: 1.8.1
   resolution: "@emnapi/runtime@npm:1.8.1"
@@ -5207,15 +5214,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/cli@npm:*, @pikku/cli@npm:^0.12.0, @pikku/cli@npm:^0.12.1, @pikku/cli@npm:^0.12.22, @pikku/cli@npm:^0.12.25, @pikku/cli@workspace:*, @pikku/cli@workspace:packages/cli":
+"@pikku/cli@npm:*, @pikku/cli@npm:^0.12.0, @pikku/cli@npm:^0.12.1, @pikku/cli@npm:^0.12.22, @pikku/cli@npm:^0.12.26, @pikku/cli@workspace:*, @pikku/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@pikku/cli@workspace:packages/cli"
   dependencies:
     "@openapi-contrib/json-schema-to-openapi-schema": "npm:^4.3.1"
-    "@pikku/core": "npm:^0.12.24"
+    "@pikku/core": "npm:^0.12.25"
     "@pikku/deploy-cloudflare": "npm:^0.12.3"
     "@pikku/fetch": "npm:^0.12.2"
-    "@pikku/inspector": "npm:^0.12.12"
+    "@pikku/inspector": "npm:^0.12.13"
     "@pikku/kysely": "npm:^0.12.12"
     "@pikku/kysely-node-sqlite": "npm:^0.12.1"
     "@pikku/node-http-server": "npm:^0.12.1"
@@ -5225,6 +5232,7 @@ __metadata:
     "@types/cookie": "npm:^1.0.0"
     "@types/json-schema": "npm:^7.0.15"
     "@types/node": "npm:^24.11.0"
+    "@types/pg": "npm:^8.11.0"
     "@types/ws": "npm:^8"
     chalk: "npm:^5.6.2"
     chokidar: "npm:^4.0.3"
@@ -5232,6 +5240,7 @@ __metadata:
     open: "npm:^10.2.0"
     openapi-types: "npm:^12.1.3"
     path-to-regexp: "npm:^8.3.0"
+    pg: "npm:^8.13.0"
     tinyglobby: "npm:^0.2.12"
     ts-json-schema-generator: "npm:^2.5.0"
     tsx: "npm:^4.21.0"
@@ -5326,7 +5335,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/core@npm:*, @pikku/core@npm:^0.12.0, @pikku/core@npm:^0.12.1, @pikku/core@npm:^0.12.15, @pikku/core@npm:^0.12.2, @pikku/core@npm:^0.12.21, @pikku/core@npm:^0.12.24, @pikku/core@npm:^0.12.3, @pikku/core@npm:^0.12.9, @pikku/core@workspace:*, @pikku/core@workspace:packages/core":
+"@pikku/core@npm:*, @pikku/core@npm:^0.12.0, @pikku/core@npm:^0.12.1, @pikku/core@npm:^0.12.15, @pikku/core@npm:^0.12.2, @pikku/core@npm:^0.12.21, @pikku/core@npm:^0.12.24, @pikku/core@npm:^0.12.25, @pikku/core@npm:^0.12.3, @pikku/core@npm:^0.12.9, @pikku/core@workspace:*, @pikku/core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@pikku/core@workspace:packages/core"
   dependencies:
@@ -5522,12 +5531,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/inspector@npm:^0.12.12, @pikku/inspector@workspace:*, @pikku/inspector@workspace:packages/inspector":
+"@pikku/inspector@npm:^0.12.13, @pikku/inspector@workspace:*, @pikku/inspector@workspace:packages/inspector":
   version: 0.0.0-use.local
   resolution: "@pikku/inspector@workspace:packages/inspector"
   dependencies:
     "@openapi-contrib/json-schema-to-openapi-schema": "npm:^4.3.1"
-    "@pikku/core": "npm:^0.12.21"
+    "@pikku/core": "npm:^0.12.25"
     "@types/node": "npm:^24.11.0"
     path-to-regexp: "npm:^8.3.0"
     ts-json-schema-generator: "npm:^2.5.0"
@@ -5828,7 +5837,7 @@ __metadata:
     "@auth/core": "npm:^0.37.0"
     "@pikku/ai-vercel": "npm:^0.12.5"
     "@pikku/auth-js": "npm:^0.12.3"
-    "@pikku/core": "npm:^0.12.24"
+    "@pikku/core": "npm:^0.12.25"
     "@pikku/express": "npm:^0.12.5"
     "@pikku/kysely-postgres": "npm:^0.12.6"
     "@pikku/schema-cfworker": "npm:^0.12.2"
@@ -5854,7 +5863,7 @@ __metadata:
     "@aws-sdk/s3-request-presigner": "npm:^3.1000.0"
     "@pikku/auth-js": "npm:^0.12.3"
     "@pikku/aws-services": "npm:^0.12.3"
-    "@pikku/core": "npm:^0.12.24"
+    "@pikku/core": "npm:^0.12.25"
     "@pikku/kysely-postgres": "npm:^0.12.6"
     "@pikku/lambda": "npm:^0.12.3"
     "@types/aws-lambda": "npm:^8.10.161"
@@ -5884,7 +5893,7 @@ __metadata:
     "@aws-sdk/s3-request-presigner": "npm:^3.1000.0"
     "@pikku/auth-js": "npm:^0.12.3"
     "@pikku/aws-services": "npm:^0.12.3"
-    "@pikku/core": "npm:^0.12.24"
+    "@pikku/core": "npm:^0.12.25"
     "@pikku/jose": "npm:^0.12.3"
     "@pikku/lambda": "npm:^0.12.3"
     "@pikku/schema-cfworker": "npm:^0.12.2"
@@ -5906,7 +5915,7 @@ __metadata:
   dependencies:
     "@auth/core": "npm:^0.37.0"
     "@pikku/auth-js": "npm:^0.12.3"
-    "@pikku/core": "npm:^0.12.24"
+    "@pikku/core": "npm:^0.12.25"
     "@pikku/queue-bullmq": "npm:^0.12.2"
     "@types/node": "npm:^24"
     tslib: "npm:^2.8.1"
@@ -5921,8 +5930,8 @@ __metadata:
   dependencies:
     "@auth/core": "npm:^0.37.0"
     "@pikku/auth-js": "npm:^0.12.3"
-    "@pikku/cli": "npm:^0.12.25"
-    "@pikku/core": "npm:^0.12.24"
+    "@pikku/cli": "npm:^0.12.26"
+    "@pikku/core": "npm:^0.12.25"
     "@pikku/uws": "npm:^0.12.5"
     "@pikku/websocket": "npm:^0.12.1"
     "@types/node": "npm:^24"
@@ -5939,7 +5948,7 @@ __metadata:
     "@cloudflare/workers-types": "npm:^4.20260305.0"
     "@pikku/auth-js": "npm:^0.12.3"
     "@pikku/cloudflare": "npm:^0.12.8"
-    "@pikku/core": "npm:^0.12.24"
+    "@pikku/core": "npm:^0.12.25"
     "@types/node": "npm:^24"
     "@types/ws": "npm:^8"
     typescript: "npm:^5.9.3"
@@ -5955,7 +5964,7 @@ __metadata:
     "@cloudflare/workers-types": "npm:^4.20260305.0"
     "@pikku/auth-js": "npm:^0.12.3"
     "@pikku/cloudflare": "npm:^0.12.8"
-    "@pikku/core": "npm:^0.12.24"
+    "@pikku/core": "npm:^0.12.25"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9.3"
     wrangler: "npm:^4.78.0"
@@ -5968,8 +5977,8 @@ __metadata:
   dependencies:
     "@auth/core": "npm:^0.37.0"
     "@pikku/auth-js": "npm:^0.12.3"
-    "@pikku/cli": "npm:^0.12.25"
-    "@pikku/core": "npm:^0.12.24"
+    "@pikku/cli": "npm:^0.12.26"
+    "@pikku/core": "npm:^0.12.25"
     "@pikku/express-middleware": "npm:^0.12.2"
     "@pikku/jose": "npm:^0.12.3"
     "@pikku/schedule": "npm:^0.12.2"
@@ -5990,7 +5999,7 @@ __metadata:
   dependencies:
     "@auth/core": "npm:^0.37.0"
     "@pikku/auth-js": "npm:^0.12.3"
-    "@pikku/core": "npm:^0.12.24"
+    "@pikku/core": "npm:^0.12.25"
     "@pikku/express": "npm:^0.12.5"
     "@pikku/schedule": "npm:^0.12.2"
     "@types/node": "npm:^24"
@@ -6007,7 +6016,7 @@ __metadata:
   dependencies:
     "@auth/core": "npm:^0.37.0"
     "@pikku/auth-js": "npm:^0.12.3"
-    "@pikku/core": "npm:^0.12.24"
+    "@pikku/core": "npm:^0.12.25"
     "@pikku/fastify-plugin": "npm:^0.12.2"
     "@pikku/schedule": "npm:^0.12.2"
     "@types/node": "npm:^24"
@@ -6025,7 +6034,7 @@ __metadata:
   dependencies:
     "@auth/core": "npm:^0.37.0"
     "@pikku/auth-js": "npm:^0.12.3"
-    "@pikku/core": "npm:^0.12.24"
+    "@pikku/core": "npm:^0.12.25"
     "@pikku/fastify": "npm:^0.12.3"
     "@types/node": "npm:^24"
     fastify: "npm:^5.8.2"
@@ -6058,9 +6067,9 @@ __metadata:
     "@pikku/addon-console": "workspace:*"
     "@pikku/addon-graph": "workspace:*"
     "@pikku/auth-js": "npm:^0.12.3"
-    "@pikku/cli": "npm:^0.12.25"
+    "@pikku/cli": "npm:^0.12.26"
     "@pikku/cloudflare": "workspace:*"
-    "@pikku/core": "npm:^0.12.24"
+    "@pikku/core": "npm:^0.12.25"
     "@pikku/deploy-cloudflare": "workspace:*"
     "@pikku/deploy-serverless": "workspace:*"
     "@pikku/deploy-standalone": "workspace:*"
@@ -6110,8 +6119,8 @@ __metadata:
     "@auth/core": "npm:^0.37.0"
     "@next/swc-darwin-arm64": "npm:^16.2.6"
     "@pikku/auth-js": "npm:^0.12.3"
-    "@pikku/cli": "npm:^0.12.25"
-    "@pikku/core": "npm:^0.12.24"
+    "@pikku/cli": "npm:^0.12.26"
+    "@pikku/core": "npm:^0.12.25"
     "@pikku/fetch": "npm:^0.12.2"
     "@pikku/jose": "npm:^0.12.3"
     "@pikku/next": "npm:^0.12.4"
@@ -6135,7 +6144,7 @@ __metadata:
   dependencies:
     "@auth/core": "npm:^0.37.0"
     "@pikku/auth-js": "npm:^0.12.3"
-    "@pikku/core": "npm:^0.12.24"
+    "@pikku/core": "npm:^0.12.25"
     "@pikku/queue-pg-boss": "npm:^0.12.3"
     "@types/node": "npm:^24"
     tslib: "npm:^2.8.1"
@@ -6150,8 +6159,8 @@ __metadata:
   dependencies:
     "@auth/core": "npm:^0.37.0"
     "@pikku/auth-js": "npm:^0.12.3"
-    "@pikku/cli": "npm:^0.12.25"
-    "@pikku/core": "npm:^0.12.24"
+    "@pikku/cli": "npm:^0.12.26"
+    "@pikku/core": "npm:^0.12.25"
     "@pikku/express": "npm:^0.12.5"
     "@pikku/jose": "npm:^0.12.3"
     "@pikku/kysely-postgres": "npm:^0.12.6"
@@ -6173,8 +6182,8 @@ __metadata:
   dependencies:
     "@auth/core": "npm:^0.37.0"
     "@pikku/auth-js": "npm:^0.12.3"
-    "@pikku/cli": "npm:^0.12.25"
-    "@pikku/core": "npm:^0.12.24"
+    "@pikku/cli": "npm:^0.12.26"
+    "@pikku/core": "npm:^0.12.25"
     "@pikku/express": "npm:^0.12.5"
     "@pikku/jose": "npm:^0.12.3"
     "@pikku/redis": "npm:^0.12.6"
@@ -6194,7 +6203,7 @@ __metadata:
   dependencies:
     "@auth/core": "npm:^0.37.0"
     "@pikku/auth-js": "npm:^0.12.3"
-    "@pikku/core": "npm:^0.12.24"
+    "@pikku/core": "npm:^0.12.25"
     "@pikku/uws": "npm:^0.12.5"
     "@pikku/websocket": "npm:^0.12.1"
     "@types/node": "npm:^24"
@@ -6212,8 +6221,8 @@ __metadata:
   dependencies:
     "@auth/core": "npm:^0.37.0"
     "@pikku/auth-js": "npm:^0.12.3"
-    "@pikku/cli": "npm:^0.12.25"
-    "@pikku/core": "npm:^0.12.24"
+    "@pikku/cli": "npm:^0.12.26"
+    "@pikku/core": "npm:^0.12.25"
     "@pikku/express": "npm:^0.12.5"
     "@pikku/queue-bullmq": "npm:^0.12.2"
     "@pikku/redis": "npm:^0.12.6"
@@ -6230,8 +6239,8 @@ __metadata:
   dependencies:
     "@auth/core": "npm:^0.37.0"
     "@pikku/auth-js": "npm:^0.12.3"
-    "@pikku/cli": "npm:^0.12.25"
-    "@pikku/core": "npm:^0.12.24"
+    "@pikku/cli": "npm:^0.12.26"
+    "@pikku/core": "npm:^0.12.25"
     "@pikku/express": "npm:^0.12.5"
     "@pikku/kysely-postgres": "npm:^0.12.6"
     "@pikku/queue-pg-boss": "npm:^0.12.3"
@@ -6251,7 +6260,7 @@ __metadata:
   dependencies:
     "@auth/core": "npm:^0.37.0"
     "@pikku/auth-js": "npm:^0.12.3"
-    "@pikku/core": "npm:^0.12.24"
+    "@pikku/core": "npm:^0.12.25"
     "@pikku/ws": "npm:^0.12.2"
     "@types/node": "npm:^24"
     "@types/ws": "npm:^8"
@@ -6308,6 +6317,20 @@ __metadata:
   dependencies:
     "@pikku/cli": "workspace:*"
     "@types/node": "npm:^24"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/verifiers-classification@workspace:verifiers/classification":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-classification@workspace:verifiers/classification"
+  dependencies:
+    "@electric-sql/pglite": "npm:^0.5.1"
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
+    "@pikku/inspector": "workspace:*"
+    "@types/node": "npm:^24"
+    tsx: "npm:^4.21.0"
     typescript: "npm:^5.9"
   languageName: unknown
   linkType: soft
@@ -10794,6 +10817,17 @@ __metadata:
   version: 4.0.2
   resolution: "@types/parse-json@npm:4.0.2"
   checksum: 10/5bf62eec37c332ad10059252fc0dab7e7da730764869c980b0714777ad3d065e490627be9f40fc52f238ffa3ac4199b19de4127196910576c2fe34dd47c7a470
+  languageName: node
+  linkType: hard
+
+"@types/pg@npm:^8.11.0":
+  version: 8.20.0
+  resolution: "@types/pg@npm:8.20.0"
+  dependencies:
+    "@types/node": "npm:*"
+    pg-protocol: "npm:*"
+    pg-types: "npm:^2.2.0"
+  checksum: 10/3fb5be6e02de5c1a519acfbcb73647864e0d118bd09d0dea9b02091992095094e1ba150454c1175fd0127a596947e7216e15ff9b6162cd7792b62effce6aa751
   languageName: node
   linkType: hard
 
@@ -19320,10 +19354,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"pg-cloudflare@npm:^1.4.0":
+  version: 1.4.0
+  resolution: "pg-cloudflare@npm:1.4.0"
+  checksum: 10/7b4ad661a5f73e5ed86ae84b18a82434d38acec00ab47e79896ade7321e9d59aeecf4f88c33323cfa0504fda52c39ccfc7add508c1165a866264fd54ac30191e
+  languageName: node
+  linkType: hard
+
 "pg-connection-string@npm:^2.11.0":
   version: 2.11.0
   resolution: "pg-connection-string@npm:2.11.0"
   checksum: 10/0333bb1b7ddeac6fa5262920f82a983222c600d21ef14fdc5254b0d3cbb1763030d20c1e8e3c20fa767a6eda8f4b4773550954c06f3e072e5288b6fa9e9cae13
+  languageName: node
+  linkType: hard
+
+"pg-connection-string@npm:^2.13.0":
+  version: 2.13.0
+  resolution: "pg-connection-string@npm:2.13.0"
+  checksum: 10/b38bb5e27ff375b1c53e7fd805dba7c0380674db1325860d1b59a4ad668970ef0d9a97b15b8625ce393696a4b47083af9f345d998afa8abfe99a5180de52922a
   languageName: node
   linkType: hard
 
@@ -19343,6 +19391,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"pg-pool@npm:^3.14.0":
+  version: 3.14.0
+  resolution: "pg-pool@npm:3.14.0"
+  peerDependencies:
+    pg: ">=8.0"
+  checksum: 10/0d90984fa8304fc07c4d06f8324ac5f5f6dcf4fe387b02263fa3f4e1f7bb6e7d8f3a97471836c3d38ca1ee129dae2f1fc28cb53e72bf48cb6515a848729c863a
+  languageName: node
+  linkType: hard
+
+"pg-protocol@npm:*, pg-protocol@npm:^1.14.0":
+  version: 1.14.0
+  resolution: "pg-protocol@npm:1.14.0"
+  checksum: 10/81c69dba142f3cecf3926afbef97c18c53ba54717d2073d759e2cde98dff61ac7b178c4676950e0e3e6bd43fcf4ba21ef96a217b2765020aadeef6bf6bf82a7e
+  languageName: node
+  linkType: hard
+
 "pg-protocol@npm:^1.12.0":
   version: 1.12.0
   resolution: "pg-protocol@npm:1.12.0"
@@ -19350,7 +19414,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pg-types@npm:2.2.0":
+"pg-types@npm:2.2.0, pg-types@npm:^2.2.0":
   version: 2.2.0
   resolution: "pg-types@npm:2.2.0"
   dependencies:
@@ -19360,6 +19424,28 @@ __metadata:
     postgres-date: "npm:~1.0.4"
     postgres-interval: "npm:^1.1.0"
   checksum: 10/87a84d4baa91378d3a3da6076c69685eb905d1087bf73525ae1ba84b291b9dd8738c6716b333d8eac6cec91bf087237adc3e9281727365e9cbab0d9d072778b1
+  languageName: node
+  linkType: hard
+
+"pg@npm:^8.13.0":
+  version: 8.21.0
+  resolution: "pg@npm:8.21.0"
+  dependencies:
+    pg-cloudflare: "npm:^1.4.0"
+    pg-connection-string: "npm:^2.13.0"
+    pg-pool: "npm:^3.14.0"
+    pg-protocol: "npm:^1.14.0"
+    pg-types: "npm:2.2.0"
+    pgpass: "npm:1.0.5"
+  peerDependencies:
+    pg-native: ">=3.0.1"
+  dependenciesMeta:
+    pg-cloudflare:
+      optional: true
+  peerDependenciesMeta:
+    pg-native:
+      optional: true
+  checksum: 10/c02cdd43f54001910cd45a181f6c702f89d3a7336d70375502c296727fc1a1ff0242b2f64dfb55fb05b0af26926ebea409810f5a52bdc0e6a9dc01dcf5fbb441
   languageName: node
   linkType: hard
 

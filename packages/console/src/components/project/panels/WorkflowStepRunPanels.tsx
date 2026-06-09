@@ -5,6 +5,7 @@ import { Clock, AlertTriangle, CheckCircle, Play } from 'lucide-react'
 import { useWorkflowRunContextSafe } from '../../../context/WorkflowRunContext'
 import { PikkuBadge } from '../../ui/PikkuBadge'
 import { statusDefs } from '../../ui/badge-defs'
+import { DataViewer } from '../../ui/DataViewer'
 import { useWorkflowRunHistory } from '../../../hooks/useWorkflowRuns'
 import { SectionLabel } from './shared/SectionLabel'
 import { EmptyState } from './shared/EmptyState'
@@ -163,14 +164,7 @@ export const WorkflowStepInputData: React.FC<StepRunPanelProps> = ({
       <SectionLabel>Input Data</SectionLabel>
       <Card withBorder radius="md" padding={0}>
         <Card.Section p="md">
-          {step?.data ? (
-            <CodeHighlight
-              code={JSON.stringify(step.data, null, 2)}
-              language="json"
-            />
-          ) : (
-            <EmptyState />
-          )}
+          {step?.data ? <DataViewer data={step.data} /> : <EmptyState />}
         </Card.Section>
       </Card>
     </Stack>
@@ -189,14 +183,7 @@ export const WorkflowStepOutputData: React.FC<StepRunPanelProps> = ({
       <SectionLabel>Output Data</SectionLabel>
       <Card withBorder radius="md" padding={0}>
         <Card.Section p="md">
-          {step?.result ? (
-            <CodeHighlight
-              code={JSON.stringify(step.result, null, 2)}
-              language="json"
-            />
-          ) : (
-            <EmptyState />
-          )}
+          {step?.result ? <DataViewer data={step.result} /> : <EmptyState />}
         </Card.Section>
       </Card>
     </Stack>

@@ -81,6 +81,10 @@ export interface AIAgentInput {
   attachments?: AIAgentInputAttachment[]
   model?: string
   temperature?: number
+  /** Structured context injected into the system instructions for this request.
+   *  Use to provide upfront state (e.g. current org/project/branch/deployment)
+   *  so the agent can call tools without asking the user for identifiers. */
+  context?: string
 }
 
 export interface AIAgentOutput {
