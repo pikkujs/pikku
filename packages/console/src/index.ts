@@ -120,12 +120,8 @@ export { VariablesPage } from './pages/VariablesPage'
 export { EmailsPage } from './pages/EmailsPage'
 export { CredentialsPage } from './pages/CredentialsPage'
 export { AuditPage } from './pages/AuditPage'
-export { AuthProvidersPage } from './pages/AuthProvidersPage'
-export type {
-  AuthProvidersPageProps,
-  AuthProviderDef,
-  AuthProviderField,
-} from './pages/AuthProvidersPage'
+export { AuthProvidersPage, AUTH_PROVIDERS } from './pages/AuthProvidersPage'
+export type { AuthProviderDef, AuthProviderField } from './pages/AuthProvidersPage'
 export { TestsPage } from './pages/TestsPage'
 export { NotFoundTitle } from './components/NotFoundTitle'
 export { ConsoleEditableProvider } from './context/ConsoleEditableContext'

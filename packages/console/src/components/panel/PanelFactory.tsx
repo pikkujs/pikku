@@ -48,6 +48,7 @@ import {
   VariableConfiguration,
 } from '../project/panels/SecretVariablePanels'
 import { CredentialUserPanel } from '../project/panels/CredentialUserPanel'
+import { AuthProviderPanel } from '../project/panels/AuthProviderPanel'
 
 interface PanelChild {
   id: string
@@ -480,6 +481,19 @@ export const createPanelChildren = (panelData: PanelData): PanelChild[] => {
                 userId={panelData.id}
                 metadata={panelData.metadata}
               />
+            </Box>
+          ),
+        },
+      ]
+
+    case 'authProvider':
+      return [
+        {
+          id: 'configuration',
+          title: 'Configuration',
+          content: (
+            <Box px="md">
+              <AuthProviderPanel metadata={panelData.metadata} />
             </Box>
           ),
         },
