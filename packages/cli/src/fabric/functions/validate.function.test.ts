@@ -642,7 +642,7 @@ describe('pikku fabric validate', () => {
       }
     })
 
-    test('missing db/migrations/ → error', async () => {
+    test('missing db/sqlite/ → error', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)

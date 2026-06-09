@@ -1,0 +1,484 @@
+import { spawnSync } from 'child_process'
+import { mkdirSync, writeFileSync, rmSync, existsSync, symlinkSync } from 'fs'
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
+import os from 'os'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
+// Derive paths from the worktree location:
+//   benchmarks/  -> pikku-benchmarks/ -> pikku/ (sibling with node_modules)
+const SIBLING_PIKKU = resolve(__dirname, '..', '..', 'pikku')
+const PIKKU_BIN = resolve(SIBLING_PIKKU, 'node_modules/.bin/pikku')
+const PIKKU_NODE_MODULES = resolve(SIBLING_PIKKU, 'node_modules')
+
+const PROJECT_DIR = resolve(os.tmpdir(), 'pikku-cli-bench')
+
+const SIZES = [10, 50, 100, 250, 500, 1000]
+const RUNS_PER_SIZE = 3
+
+function setupProject() {
+  mkdirSync(resolve(PROJECT_DIR, 'src/functions'), { recursive: true })
+  mkdirSync(resolve(PROJECT_DIR, 'src/wirings'), { recursive: true })
+  mkdirSync(resolve(PROJECT_DIR, 'src/workflows'), { recursive: true })
+  mkdirSync(resolve(PROJECT_DIR, 'types'), { recursive: true })
+
+  const nmLink = resolve(PROJECT_DIR, 'node_modules')
+  if (!existsSync(nmLink)) {
+    symlinkSync(PIKKU_NODE_MODULES, nmLink)
+  }
+
+  writeFileSync(
+    resolve(PROJECT_DIR, 'package.json'),
+    JSON.stringify(
+      { name: 'pikku-cli-bench', version: '0.0.1', type: 'module' },
+      null,
+      2
+    )
+  )
+
+  writeFileSync(
+    resolve(PROJECT_DIR, 'pikku.config.json'),
+    JSON.stringify(
+      {
+        $schema:
+          'https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json',
+        srcDirectories: ['./src', './types'],
+        outDir: './.pikku',
+        tsconfig: './tsconfig.json',
+      },
+      null,
+      2
+    )
+  )
+
+  writeFileSync(
+    resolve(PROJECT_DIR, 'tsconfig.json'),
+    JSON.stringify(
+      {
+        compilerOptions: {
+          target: 'ESNext',
+          module: 'NodeNext',
+          moduleResolution: 'NodeNext',
+          strict: true,
+          allowImportingTsExtensions: true,
+          noEmit: true,
+        },
+        include: ['src/**/*', 'types/**/*', '.pikku/**/*'],
+      },
+      null,
+      2
+    )
+  )
+
+  // Project types — must use interface-extends-CoreXxx so the inspector finds them
+  writeFileSync(
+    resolve(PROJECT_DIR, 'types/application-types.ts'),
+    [
+      `import type { CoreUserSession, CoreSingletonServices, CoreServices, CoreConfig } from '@pikku/core'`,
+      ``,
+      `export interface UserSession extends CoreUserSession { userId: string }`,
+      `export interface SingletonServices extends CoreSingletonServices {}`,
+      `export interface Services extends CoreServices {}`,
+      `export interface Config extends CoreConfig {}`,
+    ].join('\n')
+  )
+
+  // Factory stubs — defined inline to avoid .pikku/ chicken-and-egg at bootstrap
+  writeFileSync(
+    resolve(PROJECT_DIR, 'src/services.ts'),
+    [
+      `const pikkuConfig = (fn: any) => fn`,
+      `const pikkuServices = (fn: any) => fn`,
+      `const pikkuWireServices = (fn: any) => fn`,
+      ``,
+      `export const createConfig = pikkuConfig(async () => ({}))`,
+      `export const createSingletonServices = pikkuServices(async () => ({}))`,
+      `export const createWireServices = pikkuWireServices(async () => ({}))`,
+    ].join('\n')
+  )
+}
+
+function functionFile(n: number): string {
+  const name = `testFunc${String(n).padStart(4, '0')}`
+  return `import { pikkuSessionlessFunc } from '../../.pikku/pikku-types.gen.js'
+import { z } from 'zod'
+
+export const ${name}Input = z.object({
+  id: z.string(),
+  name: z.string(),
+  age: z.number(),
+  email: z.string().email(),
+  isActive: z.boolean(),
+  role: z.enum(['admin', 'user', 'guest']),
+  address: z.object({
+    street: z.string(),
+    city: z.string(),
+    country: z.string(),
+  }),
+  tags: z.array(z.string()),
+  metadata: z.object({
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  }),
+  score: z.number().optional(),
+})
+
+export const ${name}Output = z.object({
+  result: z.string(),
+  processedAt: z.string(),
+  status: z.enum(['success', 'failure', 'pending']),
+  data: z.object({
+    id: z.string(),
+    name: z.string(),
+    transformedScore: z.number(),
+  }),
+  warnings: z.array(z.string()),
+  metadata: z.object({
+    duration: z.number(),
+    version: z.string(),
+  }),
+  total: z.number(),
+  page: z.number(),
+  hasMore: z.boolean(),
+  nextCursor: z.string().optional(),
+})
+
+export const ${name} = pikkuSessionlessFunc({
+  input: ${name}Input,
+  output: ${name}Output,
+  func: async (_services, data) => ({
+    result: data.name,
+    processedAt: new Date().toISOString(),
+    status: 'success' as const,
+    data: { id: data.id, name: data.name, transformedScore: data.score ?? 0 },
+    warnings: [],
+    metadata: { duration: 0, version: '1' },
+    total: 1,
+    page: 1,
+    hasMore: false,
+  }),
+})`
+}
+
+// n-th workflow references functions at indices n, n+1, n+2 (wrapping within count)
+function wrap(n: number, count: number): string {
+  return String(((n - 1) % count) + 1).padStart(4, '0')
+}
+
+function workflowFile(n: number, count: number): string {
+  const name = `benchWorkflow${String(n).padStart(4, '0')}`
+  const graphName = `benchGraph${String(n).padStart(4, '0')}`
+  // Graph nodes reference 5 functions spread across the function set
+  const nodes = [0, 1, 2, 3, 4].map((offset) => wrap(n + offset, count))
+
+  return `import { pikkuWorkflowComplexFunc, pikkuWorkflowGraph } from '../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { z } from 'zod'
+
+export const ${name}Input = z.object({
+  id: z.string(),
+  name: z.string(),
+  trigger: z.enum(['manual', 'scheduled', 'event']),
+  priority: z.number(),
+  context: z.object({
+    userId: z.string(),
+    orgId: z.string(),
+    region: z.string(),
+  }),
+  options: z.object({
+    retries: z.number(),
+    timeout: z.number(),
+    notify: z.boolean(),
+  }),
+  tags: z.array(z.string()),
+  dryRun: z.boolean().optional(),
+})
+
+export const ${name}Output = z.object({
+  workflowId: z.string(),
+  status: z.enum(['completed', 'failed', 'partial']),
+  steps: z.array(z.object({
+    name: z.string(),
+    duration: z.number(),
+    result: z.string(),
+  })),
+  summary: z.object({
+    totalSteps: z.number(),
+    successCount: z.number(),
+    failureCount: z.number(),
+  }),
+  startedAt: z.string(),
+  completedAt: z.string(),
+  triggeredBy: z.string(),
+  version: z.string(),
+  retryCount: z.number(),
+})
+
+export const ${name} = pikkuWorkflowComplexFunc({
+  input: ${name}Input,
+  output: ${name}Output,
+  func: async (_services, data, { workflow }) => {
+    const r1 = await workflow.do('Step 1', async () => ({ id: data.id, val: \`s1-\${data.name}\`, score: 10 }))
+    const r2 = await workflow.do('Step 2', async () => ({ id: r1.id, val: \`s2-\${r1.val}\`, score: 20 }))
+    const r3 = await workflow.do('Step 3', async () => ({ id: r2.id, val: \`s3-\${r2.val}\`, score: 30 }))
+    const r4 = await workflow.do('Step 4', async () => ({ id: r3.id, val: \`s4-\${r3.val}\`, score: 40 }))
+    const r5 = await workflow.do('Step 5', async () => ({ id: r4.id, val: \`s5-\${r4.val}\`, score: 50 }))
+    const now = new Date().toISOString()
+    return {
+      workflowId: data.id,
+      status: 'completed' as const,
+      steps: [
+        { name: 'Step 1', duration: r1.score, result: r1.val },
+        { name: 'Step 2', duration: r2.score, result: r2.val },
+        { name: 'Step 3', duration: r3.score, result: r3.val },
+        { name: 'Step 4', duration: r4.score, result: r4.val },
+        { name: 'Step 5', duration: r5.score, result: r5.val },
+      ],
+      summary: { totalSteps: 5, successCount: 5, failureCount: 0 },
+      startedAt: now,
+      completedAt: now,
+      triggeredBy: data.trigger,
+      version: '1',
+      retryCount: 0,
+    }
+  },
+})
+
+const benchInput = () => ({
+  id: '1', name: 'bench', age: 25, email: 'a@b.com', isActive: true,
+  role: 'user' as const,
+  address: { street: '1 Main St', city: 'Bench City', country: 'US' },
+  tags: ['bench'], metadata: { createdAt: '2024-01-01', updatedAt: '2024-01-01' },
+})
+
+export const ${graphName} = pikkuWorkflowGraph({
+  description: 'Benchmark graph ${n} — 5-node linear chain',
+  nodes: {
+    init:      'testFunc${nodes[0]}',
+    validate:  'testFunc${nodes[1]}',
+    transform: 'testFunc${nodes[2]}',
+    enrich:    'testFunc${nodes[3]}',
+    finalize:  'testFunc${nodes[4]}',
+  } as any,
+  config: {
+    init:      { input: benchInput, next: 'validate' },
+    validate:  { input: benchInput, next: 'transform' },
+    transform: { input: benchInput, next: 'enrich' },
+    enrich:    { input: benchInput, next: 'finalize' },
+    finalize:  { input: benchInput },
+  } as any,
+})`
+}
+
+function httpWiringFile(count: number): string {
+  const imports = Array.from({ length: count }, (_, i) => {
+    const pad = String(i + 1).padStart(4, '0')
+    return `import { testFunc${pad} } from '../functions/test-func-${pad}.function.js'`
+  })
+
+  const routes = Array.from({ length: count }, (_, i) => {
+    const pad = String(i + 1).padStart(4, '0')
+    return [
+      `    r${pad}List:   { method: 'get',    route: '/test/${pad}',     func: testFunc${pad} },`,
+      `    r${pad}Create: { method: 'post',   route: '/test/${pad}',     func: testFunc${pad} },`,
+      `    r${pad}Get:    { method: 'get',    route: '/test/${pad}/:id', func: testFunc${pad} },`,
+      `    r${pad}Update: { method: 'put',    route: '/test/${pad}/:id', func: testFunc${pad} },`,
+      `    r${pad}Delete: { method: 'delete', route: '/test/${pad}/:id', func: testFunc${pad} },`,
+    ].join('\n')
+  })
+
+  return [
+    `import { wireHTTPRoutes, defineHTTPRoutes } from '../../.pikku/pikku-types.gen.js'`,
+    ...imports,
+    ``,
+    `wireHTTPRoutes([`,
+    `  defineHTTPRoutes({`,
+    `    auth: false,`,
+    `    routes: {`,
+    ...routes,
+    `    },`,
+    `  }),`,
+    `])`,
+  ].join('\n')
+}
+
+function queueWiringFile(count: number): string {
+  const imports = Array.from({ length: count }, (_, i) => {
+    const pad = String(i + 1).padStart(4, '0')
+    return `import { testFunc${pad} } from '../functions/test-func-${pad}.function.js'`
+  })
+
+  const wires = Array.from({ length: count }, (_, i) => {
+    const pad = String(i + 1).padStart(4, '0')
+    return `wireQueueWorker({ name: 'queue-${pad}', func: testFunc${pad} })`
+  })
+
+  return [
+    `import { wireQueueWorker } from '../../.pikku/pikku-types.gen.js'`,
+    ...imports,
+    ``,
+    ...wires,
+  ].join('\n')
+}
+
+function schedulerWiringFile(count: number): string {
+  const imports = Array.from({ length: count }, (_, i) => {
+    const pad = String(i + 1).padStart(4, '0')
+    return `import { testFunc${pad} } from '../functions/test-func-${pad}.function.js'`
+  })
+
+  const wires = Array.from({ length: count }, (_, i) => {
+    const pad = String(i + 1).padStart(4, '0')
+    const minute = (i % 60).toString().padStart(2, '0')
+    const hour = Math.floor(i / 60) % 24
+    return `wireScheduler({ name: 'schedule-${pad}', schedule: '${minute} ${hour} * * *', func: testFunc${pad} })`
+  })
+
+  return [
+    `import { wireScheduler } from '../../.pikku/pikku-types.gen.js'`,
+    ...imports,
+    ``,
+    ...wires,
+  ].join('\n')
+}
+
+function writeSize(count: number) {
+  const fnDir = resolve(PROJECT_DIR, 'src/functions')
+  const wireDir = resolve(PROJECT_DIR, 'src/wirings')
+  const wfDir = resolve(PROJECT_DIR, 'src/workflows')
+  for (let i = 1; i <= count; i++) {
+    const pad = String(i).padStart(4, '0')
+    writeFileSync(
+      resolve(fnDir, `test-func-${pad}.function.ts`),
+      functionFile(i)
+    )
+    writeFileSync(
+      resolve(wfDir, `bench-workflow-${pad}.ts`),
+      workflowFile(i, count)
+    )
+  }
+  writeFileSync(
+    resolve(wireDir, 'bench.http.wirings.ts'),
+    httpWiringFile(count)
+  )
+  writeFileSync(
+    resolve(wireDir, 'bench.queue.wirings.ts'),
+    queueWiringFile(count)
+  )
+  writeFileSync(
+    resolve(wireDir, 'bench.scheduler.wirings.ts'),
+    schedulerWiringFile(count)
+  )
+}
+
+function cleanSrc() {
+  const fnDir = resolve(PROJECT_DIR, 'src/functions')
+  const wireDir = resolve(PROJECT_DIR, 'src/wirings')
+  const wfDir = resolve(PROJECT_DIR, 'src/workflows')
+  rmSync(fnDir, { recursive: true, force: true })
+  rmSync(wireDir, { recursive: true, force: true })
+  rmSync(wfDir, { recursive: true, force: true })
+  mkdirSync(fnDir, { recursive: true })
+  mkdirSync(wireDir, { recursive: true })
+  mkdirSync(wfDir, { recursive: true })
+  // services.ts is kept (not in functions/ or wirings/)
+}
+
+function runAll(): { ms: number; peakMB: number } {
+  const start = performance.now()
+  const result = spawnSync('/usr/bin/time', ['-l', PIKKU_BIN, 'all'], {
+    cwd: PROJECT_DIR,
+    timeout: 600_000,
+    env: { ...process.env, NODE_OPTIONS: '--max-old-space-size=8192' },
+  })
+  const ms = performance.now() - start
+  if (result.status !== 0) {
+    throw new Error(
+      result.stderr?.toString() ?? result.error?.message ?? 'pikku all failed'
+    )
+  }
+  // /usr/bin/time -l writes "NNN  maximum resident set size" to stderr (bytes on macOS)
+  const stderr = result.stderr?.toString() ?? ''
+  const match = stderr.match(/(\d+)\s+maximum resident set size/)
+  const peakMB = match ? Math.round(parseInt(match[1]) / 1024 / 1024) : 0
+  return { ms, peakMB }
+}
+
+function median(vals: number[]): number {
+  const s = [...vals].sort((a, b) => a - b)
+  const m = Math.floor(s.length / 2)
+  return s.length % 2 === 0 ? (s[m - 1] + s[m]) / 2 : s[m]
+}
+
+async function main() {
+  console.log(`Project dir: ${PROJECT_DIR}`)
+  console.log(`Pikku bin:   ${PIKKU_BIN}\n`)
+
+  if (!existsSync(PIKKU_BIN)) {
+    console.error(`pikku binary not found at ${PIKKU_BIN}`)
+    console.error(
+      `Build the pikku CLI first: cd ${SIBLING_PIKKU} && yarn build`
+    )
+    process.exit(1)
+  }
+
+  setupProject()
+
+  if (!existsSync(resolve(PROJECT_DIR, '.pikku'))) {
+    process.stdout.write('Bootstrapping .pikku/ (first run, untimed)... ')
+    runAll()
+    console.log('done\n')
+  }
+
+  console.log(`pikku all codegen scaling — ${RUNS_PER_SIZE} runs per size\n`)
+
+  const results: Array<{
+    functions: number
+    minMs: number
+    medianMs: number
+    maxMs: number
+    peakMB: number
+  }> = []
+
+  for (const size of SIZES) {
+    process.stdout.write(`  ${String(size).padStart(4)} functions: `)
+    writeSize(size)
+
+    const times: number[] = []
+    const heaps: number[] = []
+    for (let r = 0; r < RUNS_PER_SIZE; r++) {
+      const { ms, peakMB } = runAll()
+      times.push(ms)
+      heaps.push(peakMB)
+      process.stdout.write('.')
+    }
+    console.log(
+      `  min=${Math.round(Math.min(...times))}ms  median=${Math.round(median(times))}ms  max=${Math.round(Math.max(...times))}ms  peak=${Math.max(...heaps)}MB`
+    )
+
+    cleanSrc()
+    results.push({
+      functions: size,
+      minMs: Math.min(...times),
+      medianMs: median(times),
+      maxMs: Math.max(...times),
+      peakMB: Math.max(...heaps),
+    })
+  }
+
+  console.log('\n')
+  console.table(
+    results.map((r) => ({
+      functions: r.functions,
+      'min (ms)': Math.round(r.minMs),
+      'median (ms)': Math.round(r.medianMs),
+      'max (ms)': Math.round(r.maxMs),
+      'peak heap (MB)': r.peakMB,
+    }))
+  )
+}
+
+main().catch((err) => {
+  console.error(err)
+  process.exit(1)
+})
