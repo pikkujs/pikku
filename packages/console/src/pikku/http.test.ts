@@ -28,7 +28,8 @@ class FakeWebSocket {
     listener: (event: any) => void,
     options?: { once?: boolean }
   ) {
-    const listeners = this.listeners.get(type) ?? new Set<(event: any) => void>()
+    const listeners =
+      this.listeners.get(type) ?? new Set<(event: any) => void>()
     const wrapped = options?.once
       ? (event: any) => {
           this.removeEventListener(type, wrapped)
@@ -74,7 +75,10 @@ test('console websocket helpers map console RPCs to websocket transport', async 
   globalThis.WebSocket = FakeWebSocket as unknown as typeof WebSocket
 
   try {
-    assert.equal(toWebsocketUrl('https://example.com/api'), 'wss://example.com/api/ws/console')
+    assert.equal(
+      toWebsocketUrl('https://example.com/api'),
+      'wss://example.com/api/ws/console'
+    )
     assert.equal(isConsoleRpcName('console:getAllMeta'), true)
     assert.equal(isConsoleRpcName('pikkuConsoleGetSecret'), true)
     assert.equal(isConsoleRpcName('workflow:run'), false)
@@ -84,7 +88,10 @@ test('console websocket helpers map console RPCs to websocket transport', async 
 
     assert.deepEqual(result, { ok: true })
     assert.equal(FakeWebSocket.instances.length, 1)
-    assert.equal(FakeWebSocket.instances[0].url, 'wss://example.com/api/ws/console')
+    assert.equal(
+      FakeWebSocket.instances[0].url,
+      'wss://example.com/api/ws/console'
+    )
     assert.deepEqual(JSON.parse(FakeWebSocket.instances[0].sent[0]), {
       action: 'getAllMeta',
     })
