@@ -26,6 +26,7 @@ import type { UserConfigShape } from '../commands/db-shared.js'
 // ─── Resolved DB descriptors ─────────────────────────────────────────────────
 
 interface ResolvedDbBase {
+  rootDir: string
   migrationsDir: string
   schemaFile: string
   coercionFile: string
@@ -64,6 +65,7 @@ export function resolveDb(
   runtimeDir?: string
 ): ResolvedDb | null {
   const base = (sub: string): ResolvedDbBase => ({
+    rootDir,
     migrationsDir: resolveAgainst(rootDir, sub),
     schemaFile: join(outDir, 'db', 'schema.d.ts'),
     coercionFile: join(outDir, 'db', 'coercion.gen.ts'),
@@ -151,6 +153,7 @@ export async function migrateAndCodegen(
         manifestFile: resolved.manifestFile,
         classificationMapFile: resolved.classificationMapFile,
         camelCase: resolved.camelCase,
+        rootDir: resolved.rootDir,
         migrationsDir: resolved.migrationsDir,
       })
     } finally {
