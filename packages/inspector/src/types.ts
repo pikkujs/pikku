@@ -382,6 +382,10 @@ export interface InspectorState {
     meta: NodesMeta
     files: Set<string>
   }
+  auth: {
+    providers: string[]
+    files: Set<string>
+  }
   secrets: {
     definitions: SecretDefinitions
     files: Set<string>
