@@ -1,6 +1,6 @@
 ---
-"@pikku/addon-console": minor
-"@pikku/console": minor
+"@pikku/addon-console": patch
+"@pikku/console": patch
 ---
 
 **Database schema visualizer in the OSS console.**

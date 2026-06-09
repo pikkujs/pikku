@@ -1,5 +1,5 @@
 ---
-"@pikku/cli": minor
+"@pikku/cli": patch
 ---
 
 **`pikku db migrate` now loads column classification annotations from a `db/annotations.gen.json` sidecar.**
