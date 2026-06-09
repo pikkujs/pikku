@@ -10,11 +10,23 @@ interface PgColumnRow {
   is_pk: boolean
 }
 
-export class PostgresIntrospector implements DbIntrospector {
-  private pool: Pool
+interface QueryClient {
+  query<T = unknown>(sql: string, params?: unknown[]): Promise<{ rows: T[] }>
+  end(): Promise<void>
+}
 
-  constructor(connectionString: string) {
-    this.pool = new Pool({ connectionString, max: 10 })
+export class PostgresIntrospector implements DbIntrospector {
+  private client: QueryClient
+
+  constructor(clientOrConnectionString: QueryClient | string) {
+    if (typeof clientOrConnectionString === 'string') {
+      this.client = new Pool({
+        connectionString: clientOrConnectionString,
+        max: 10,
+      })
+    } else {
+      this.client = clientOrConnectionString
+    }
   }
 
   async connect(): Promise<void> {
@@ -22,7 +34,10 @@ export class PostgresIntrospector implements DbIntrospector {
   }
 
   async listTables(): Promise<string[]> {
-    const result = await this.pool.query<{ table_schema: string; table_name: string }>(
+    const result = await this.client.query<{
+      table_schema: string
+      table_name: string
+    }>(
       `SELECT table_schema, table_name
        FROM information_schema.tables
        WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
@@ -31,7 +46,9 @@ export class PostgresIntrospector implements DbIntrospector {
        ORDER BY table_schema, table_name`
     )
     return result.rows.map((r) =>
-      r.table_schema === 'public' ? r.table_name : `${r.table_schema}.${r.table_name}`
+      r.table_schema === 'public'
+        ? r.table_name
+        : `${r.table_schema}.${r.table_name}`
     )
   }
 
@@ -40,7 +57,7 @@ export class PostgresIntrospector implements DbIntrospector {
     const schema = dotIdx >= 0 ? table.slice(0, dotIdx) : 'public'
     const tableName = dotIdx >= 0 ? table.slice(dotIdx + 1) : table
 
-    const result = await this.pool.query<PgColumnRow>(
+    const result = await this.client.query<PgColumnRow>(
       `SELECT
          c.column_name,
          c.data_type,
@@ -76,6 +93,6 @@ export class PostgresIntrospector implements DbIntrospector {
   }
 
   async close(): Promise<void> {
-    await this.pool.end()
+    await this.client.end()
   }
 }
