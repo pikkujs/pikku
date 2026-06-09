@@ -20,10 +20,25 @@ installGroups: [core]
 ```typescript
 import { pikkuMiddleware } from '#pikku'
 
+// Simple: just a function
 const myMiddleware = pikkuMiddleware(async (services, wire, next) => {
   // runs before the function
   await next()
   // runs after the function (optional)
+})
+
+// With metadata (name + priority)
+const telemetryMiddleware = pikkuMiddleware({
+  name: 'my-telemetry',
+  priority: 'highest',
+  func: async (services, wire, next) => {
+    const start = performance.now()
+    try {
+      await next()
+    } finally {
+      services.logger.info({ duration: Math.round(performance.now() - start) })
+    }
+  },
 })
 ```
 
@@ -35,21 +50,24 @@ The `wire` object gives you:
 
 Throw a typed error to abort: `UnauthorizedError`, `ForbiddenError`, etc. from `@pikku/core/errors`.
 
-## Scoping: Four Levels
+## Scoping: Five Levels
 
 From broadest to narrowest:
 
 ```typescript
-// 1. Global: all HTTP routes
+// 1. Wire-agnostic global: all wire types (HTTP, Queue, Channel, Trigger, Workflow, ...)
+addGlobalMiddleware([telemetryOuter()])
+
+// 2. HTTP global: all HTTP routes
 addHTTPMiddleware('*', [cors(), authBearer()])
 
-// 2. Prefix-based: URL pattern
+// 3. Prefix-based: URL pattern
 addHTTPMiddleware('/admin/*', [auditLog])
 
-// 3. Tag-based: any wiring with matching tag
+// 4. Tag-based: any wiring with matching tag
 addTagMiddleware('machine-agent', [bearerAuth])  // tag on function or wire
 
-// 4. Inline: per-wiring
+// 5. Inline: per-wiring
 wireHTTP({
   route: '/books/:id',
   func: getBook,
@@ -57,7 +75,24 @@ wireHTTP({
 })
 ```
 
-## Global & Prefix Middleware (`addHTTPMiddleware`)
+## Global Middleware (`addGlobalMiddleware`)
+
+`addGlobalMiddleware` registers middleware that runs before everything else — across every wire type: HTTP, Queue, Channel, Trigger, Scheduler, Workflow, Agent, CLI, MCP. Use it for cross-cutting concerns like telemetry that must wrap every invocation regardless of transport.
+
+```typescript
+import { addGlobalMiddleware } from '@pikku/core'
+import { telemetryOuter, telemetryInner } from '@pikku/core/middleware'
+
+// Outer telemetry: wraps the full call (highest priority)
+addGlobalMiddleware([telemetryOuter({ environmentId: env.STAGE_ID })])
+
+// Inner telemetry: closest to the function body (lowest priority)
+addGlobalMiddleware([telemetryInner({ environmentId: env.STAGE_ID })])
+```
+
+`telemetryOuter` ships with `priority: 'highest'` and `telemetryInner` with `priority: 'lowest'` — so even if both are added in the same call, priority sorting places outer first regardless of array order.
+
+## HTTP & Prefix Middleware (`addHTTPMiddleware`)
 
 ```typescript
 import { addHTTPMiddleware } from '@pikku/core/http'
@@ -108,13 +143,29 @@ Call at module load time — typically in the same `wirings/*.ts` file as the `w
 
 ## Middleware Execution Order
 
+**Scope resolution order (broadest → narrowest):**
+
 ```
-wiringTags middleware → wiringMiddleware → funcTags middleware → funcMiddleware → function body
+global → httpGroup/* → httpGroup/prefix → wiringTags → wiringMiddleware → funcTags → funcMiddleware → function body
 ```
 
-Within a scope, middleware registered earlier via `addTagMiddleware` (or `addHTTPMiddleware`) runs before later registrations for the same tag/pattern.
+**Within each scope, sorted by priority:**
 
-To enforce ordering, register middleware in the correct sequence at module load. There is no explicit `priority` field — registration order IS the priority.
+```
+highest → high → medium (default) → low → lowest
+```
+
+Set priority using the config-object form of `pikkuMiddleware`:
+
+```typescript
+const earlyMiddleware = pikkuMiddleware({
+  name: 'early',
+  priority: 'highest',   // 'highest' | 'high' | 'medium' | 'low' | 'lowest'
+  func: async (services, wire, next) => { ... },
+})
+```
+
+Within the same priority level, registration order is preserved. Priority is the primary sort key — use it when a middleware must run before or after others regardless of registration order (e.g. telemetry wrapping everything, session extraction before auth checks).
 
 ## Common Patterns
 
