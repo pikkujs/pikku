@@ -120,11 +120,12 @@ function lineCoverage(
 }
 
 export const pikkuTestsCoverage = pikkuSessionlessFunc<
-  { noRun?: boolean },
+  { noRun?: boolean; aiOut?: string },
   void
 >({
   func: async ({ logger, config }, input) => {
     const noRun = input?.noRun ?? false
+    const aiOut = input?.aiOut ?? null
 
     const packageMappings = config.packageMappings ?? {}
     const srcDirs: string[] =
@@ -163,8 +164,8 @@ export const pikkuTestsCoverage = pikkuSessionlessFunc<
       process.exit(1)
     }
 
-    const coverageFinal = join(functionsDir, 'coverage', 'coverage-final.json')
-    const outDir = join(ftestDir, 'coverage')
+    const coverageFinal = join(functionsDir, '.coverage', 'coverage-final.json')
+    const outDir = join(ftestDir, '.coverage')
     const outFile = join(outDir, 'function-coverage.json')
 
     if (!noRun) {
@@ -207,6 +208,8 @@ export const pikkuTestsCoverage = pikkuSessionlessFunc<
           'src',
           '--include',
           'src/**',
+          '--report-dir',
+          '.coverage',
           '--reporter',
           'json',
           '--reporter',
@@ -318,5 +321,44 @@ export const pikkuTestsCoverage = pikkuSessionlessFunc<
     )
     if (uncovered.length)
       console.log(`  uncovered: ${uncovered.map((f) => f.name).join(', ')}`)
+
+    if (aiOut !== null) {
+      const generatedAt = new Date().toISOString()
+      const pct = Math.round(overallRatio * 100)
+      const needWork = functions.filter((f) => f.status !== 'covered')
+      const lines: string[] = [
+        `Coverage report — generated ${generatedAt}.`,
+        `Overall: ${pct}% (${summary.covered}/${summary.total} functions fully covered)`,
+        '',
+        needWork.length === 0
+          ? 'All functions are fully covered — nothing to do!'
+          : `Functions needing coverage (${needWork.length}):`,
+        ...needWork.flatMap((fn) => {
+          const ratio = Math.round(fn.ratio * 100)
+          const missed =
+            fn.missedLines.length > 0 ? fn.missedLines.join(', ') : 'none'
+          return [
+            `- ${fn.name} [${fn.status}, ${ratio}% covered, ${fn.coveredLines}/${fn.totalLines} lines]`,
+            `  file: ${fn.sourceFile}`,
+            `  missed lines: ${missed}`,
+          ]
+        }),
+      ]
+      if (needWork.length > 0) {
+        lines.push(
+          '',
+          'Write @pikku/cucumber Gherkin scenarios (no custom steps) in tests/tests/features/ to cover the missed lines above.',
+          'Use pikku meta to get versioned RPC names and function schemas before writing.',
+          'Run pikku tests coverage after writing to verify coverage improved.'
+        )
+      }
+      const prompt = lines.join('\n') + '\n'
+      if (aiOut === '-') {
+        process.stdout.write(prompt)
+      } else {
+        writeFileSync(aiOut, prompt, 'utf-8')
+        console.log(`AI prompt → ${relative(config.rootDir, aiOut)}`)
+      }
+    }
   },
 })

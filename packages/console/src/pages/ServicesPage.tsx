@@ -4,7 +4,7 @@ import { Server } from 'lucide-react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '../components/layout/DetailPageHeader'
+import { ListPageHeader } from '../components/layout/PageLayout'
 import { TableListPage } from '../components/layout/TableListPage'
 import { PikkuBadge } from '../components/ui/PikkuBadge'
 
@@ -59,13 +59,7 @@ export const ServicesPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={
-          <DetailPageHeader
-            icon={Server}
-            category="Services"
-            docsHref="https://pikku.dev/docs/core-features/services"
-          />
-        }
+        header={<ListPageHeader title="Services" description="Singleton services available across your application" />}
         hidePanel
       >
         <TableListPage

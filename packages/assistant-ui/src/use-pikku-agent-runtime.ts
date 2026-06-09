@@ -23,6 +23,10 @@ export interface PikkuAgentRuntimeOptions {
   headers?: Record<string, string>
   model?: string
   temperature?: number
+  /** Structured context injected into the agent's system instructions.
+   *  Provide upfront state (e.g. current org/project/branch/deployment IDs)
+   *  so the agent can call tools without asking the user. */
+  context?: string
 }
 
 export interface PendingApproval {
@@ -486,6 +490,7 @@ function createPikkuStreamingAdapter(
             resourceId: opts.resourceId,
             model: opts.model,
             temperature: opts.temperature,
+            ...(opts.context ? { context: opts.context } : {}),
           }),
           signal: abortSignal,
           credentials: opts.credentials,
@@ -948,6 +953,7 @@ function createPikkuNonStreamingAdapter(
           resourceId: opts.resourceId,
           model: opts.model,
           temperature: opts.temperature,
+          ...(opts.context ? { context: opts.context } : {}),
         }),
         signal: abortSignal,
         credentials: opts.credentials,

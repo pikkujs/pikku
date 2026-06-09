@@ -624,7 +624,9 @@ export async function prepareAgentRun(
   }
 
   if (params.getCredential && agentRunner.withApiKey) {
-    const aiCredential = await params.getCredential<{ apiKey: string }>('AI_API_KEY')
+    const aiCredential = await params.getCredential<{ apiKey: string }>(
+      'AI_API_KEY'
+    )
     if (aiCredential?.apiKey?.trim()) {
       agentRunner = agentRunner.withApiKey(aiCredential.apiKey)
     }
@@ -707,7 +709,10 @@ export async function prepareAgentRun(
     agent.agentMode
   )
 
-  const instructions = await buildInstructions(resolvedName, packageName)
+  let instructions = await buildInstructions(resolvedName, packageName)
+  if (input.context) {
+    instructions = `${instructions}\n\nCurrent context (use these identifiers directly in tool calls — do not ask the user for them):\n${input.context}`
+  }
 
   const resolved = resolveModelConfig(resolvedName, agent)
 

@@ -1,0 +1,165 @@
+---
+name: pikku-permissions
+description: 'Use when adding authorization checks to Pikku functions or routes — pikkuPermission, pikkuAuth, per-function permissions, pattern-based permissions, or understanding OR/AND permission logic.
+TRIGGER when: user wants to restrict who can call a function, check resource ownership, add role-based access, or understand where permission checks belong.
+DO NOT TRIGGER when: user asks about middleware or request interception (use pikku-middleware), authentication strategies (use pikku-security), or session management.'
+installGroups: [core]
+---
+
+# Pikku Permissions
+
+## The Rule
+
+**ALWAYS put authorization checks in the `permissions` field of `pikkuFunc` or `pikkuSessionlessFunc` — NEVER inside the `func` body.**
+
+This includes: org access checks, repo access checks, role checks, resource ownership, and any other authorization logic. The `permissions` field runs before `func`, is visible to the inspector, and is the only place Pikku enforces authorization.
+
+```typescript
+// CORRECT
+export const deleteBook = pikkuFunc({
+  func: async ({ db }, { bookId }) => {
+    await db.deleteBook(bookId)
+  },
+  permissions: {
+    owner: isBookOwner,   // ← authorization here
+  },
+})
+
+// WRONG — permission check inside func body
+export const deleteBook = pikkuFunc({
+  func: async ({ db }, { bookId }, { session }) => {
+    if (!session) throw new UnauthorizedError()  // ← never do this
+    await db.deleteBook(bookId)
+  },
+})
+```
+
+## Agent Operating Procedure
+
+1. Discover before editing. Run `pikku info permissions --verbose` and `pikku info functions --verbose` to understand what permissions are already defined and applied.
+2. Define permission checkers in a `src/permissions.ts` or domain-specific `src/lib/*-permissions.ts` file.
+3. Apply them via the `permissions` field on the function, or via `addHTTPPermission` / `addPermission` for pattern/tag-based application.
+4. Validate: run `pikku tsc` to confirm permission checker signatures are correct.
+
+## Permission Factories
+
+### `pikkuAuth(fn)` — Session-Only Checks
+
+Use for checks that only need the session — no request data required.
+
+```typescript
+import { pikkuAuth } from '#pikku'
+
+export const isAuthenticated = pikkuAuth(
+  async (_services, session) => !!session
+)
+
+export const isAdmin = pikkuAuth(
+  async (_services, session) => session?.role === 'admin'
+)
+```
+
+### `pikkuPermission(fn)` — Data-Aware Checks
+
+Use when authorization depends on the actual request data (e.g., resource ownership).
+
+```typescript
+import { pikkuPermission } from '#pikku'
+
+export const isBookOwner = pikkuPermission(
+  async ({ db }, { bookId }, { session }) => {
+    const book = await db.getBook(bookId)
+    return book?.authorId === session?.userId
+  }
+)
+
+export const hasBookAccess = pikkuPermission(
+  async ({ db }, { bookId }, { session }) => {
+    return await db.hasAccess(session?.userId, bookId)
+  }
+)
+```
+
+## OR / AND Logic
+
+```typescript
+permissions: {
+  admin: isAdmin,                              // OR: admins can access
+  owner: isBookOwner,                          // OR: owners can access
+  reviewer: [isAuthenticated, hasBookAccess],  // AND: both must pass
+}
+// Logic: admin OR owner OR (isAuthenticated AND hasBookAccess)
+```
+
+Groups are OR'd. Entries within a group array are AND'd.
+
+## Where to Apply Permissions
+
+### Per-Function (preferred)
+
+```typescript
+export const deleteBook = pikkuFunc({
+  func: async ({ db }, { bookId }) => {
+    await db.deleteBook(bookId)
+  },
+  permissions: {
+    admin: isAdmin,
+    owner: isBookOwner,
+  },
+})
+```
+
+### Pattern-Based (`addHTTPPermission`)
+
+```typescript
+import { addHTTPPermission } from '@pikku/core/http'
+
+addHTTPPermission('/admin/*', { admin: isAdmin })
+```
+
+### Tag-Based (`addPermission`)
+
+```typescript
+import { addPermission } from '.pikku/pikku-types.gen.js'
+
+addPermission('internal', { machine: isMachineAgent })
+```
+
+## Complete Example
+
+```typescript
+// src/permissions.ts
+import { pikkuAuth, pikkuPermission } from '#pikku'
+
+export const isAuthenticated = pikkuAuth(
+  async (_services, session) => !!session
+)
+
+export const isAdmin = pikkuAuth(
+  async (_services, session) => session?.role === 'admin'
+)
+
+export const isOrgMember = pikkuPermission(
+  async ({ db }, { orgId }, { session }) => {
+    return await db.isMember(session?.userId, orgId)
+  }
+)
+
+// src/functions/org.function.ts
+export const deleteOrg = pikkuFunc({
+  func: async ({ db }, { orgId }) => {
+    await db.deleteOrg(orgId)
+  },
+  permissions: {
+    admin: isAdmin,
+    owner: [isAuthenticated, isOrgMember],
+  },
+})
+```
+
+## After Changes
+
+```bash
+pikku tsc        # verify permission checker types are correct
+pikku all        # regenerate if wirings changed
+```

@@ -1,5 +1,14 @@
 # @pikku/kysely-postgres
 
+## 0.12.8
+
+### Patch Changes
+
+- 35bac18: Export PgEventHubService — Postgres LISTEN/NOTIFY backed EventHubService for multi-instance deployments
+- Updated dependencies [909eb25]
+  - @pikku/core@0.12.26
+  - @pikku/kysely@0.12.13
+
 ## 0.12.6
 
 ### Patch Changes

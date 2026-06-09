@@ -243,8 +243,11 @@ describe('pikku workspace validate', () => {
         ),
         'utf8'
       )
+      await mkdir(join(tmp, 'packages', 'functions', 'db', 'sqlite'), {
+        recursive: true,
+      })
       await writeFile(
-        join(tmp, 'packages', 'functions', 'db', 'migrations', '0001-auth.sql'),
+        join(tmp, 'packages', 'functions', 'db', 'sqlite', '0001-auth.sql'),
         [
           'CREATE TABLE IF NOT EXISTS app_user (',
           '  user_id TEXT PRIMARY KEY,',

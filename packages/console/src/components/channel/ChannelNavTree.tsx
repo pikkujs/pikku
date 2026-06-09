@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react'
 import { Box, Text, ScrollArea, Badge, UnstyledButton } from '@mantine/core'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import type { ChannelMeta } from '@pikku/core/channel'
-import { SearchInput } from '../ui/SearchInput'
 import styles from '../ui/console.module.css'
 
 export type ChannelSelection =
@@ -17,6 +16,7 @@ interface ChannelNavTreeProps {
   selected: ChannelSelection
   onSelect: (item: ChannelSelection) => void
   onChannelSwitch: (name: string) => void
+  searchQuery?: string
 }
 
 const HANDLER_KEYS = ['connect', 'disconnect'] as const
@@ -265,16 +265,18 @@ export const ChannelNavTree: React.FC<ChannelNavTreeProps> = ({
   selected,
   onSelect,
   onChannelSwitch,
+  searchQuery = '',
 }) => {
-  const [search, setSearch] = useState('')
   const [expandedChannels, setExpandedChannels] = useState<Set<string>>(
     () => new Set([channelName])
   )
 
-  const channelEntries = useMemo(
-    () => Object.entries(allChannelsMeta),
-    [allChannelsMeta]
-  )
+  const channelEntries = useMemo(() => {
+    const entries = Object.entries(allChannelsMeta)
+    if (!searchQuery) return entries
+    const q = searchQuery.toLowerCase()
+    return entries.filter(([name]) => name.toLowerCase().includes(q))
+  }, [allChannelsMeta, searchQuery])
 
   const toggleChannel = (name: string) => {
     setExpandedChannels((prev) => {
@@ -285,19 +287,9 @@ export const ChannelNavTree: React.FC<ChannelNavTreeProps> = ({
     })
   }
 
-  const channelCount = channelEntries.length
-
   return (
-    <Box className={styles.flexColumn}>
-      <SearchInput
-        value={search}
-        onChange={setSearch}
-        label="Channels"
-        count={channelCount}
-        placeholder="Search..."
-      />
-      <ScrollArea className={styles.flexGrow}>
-        {channelEntries.map(([name, chMeta]) => (
+    <ScrollArea className={styles.flexGrow}>
+      {channelEntries.map(([name, chMeta]) => (
           <ChannelTree
             key={name}
             name={name}
@@ -315,7 +307,6 @@ export const ChannelNavTree: React.FC<ChannelNavTreeProps> = ({
             onChannelSwitch={onChannelSwitch}
           />
         ))}
-      </ScrollArea>
-    </Box>
+    </ScrollArea>
   )
 }

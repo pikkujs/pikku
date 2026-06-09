@@ -1,6 +1,5 @@
 import React from 'react'
 import { Stack, Text, Group, Table, Card, Box, Anchor } from '@mantine/core'
-import { CodeHighlight } from '@mantine/code-highlight'
 import { GitBranch } from 'lucide-react'
 import { useLink } from '../../../router'
 import { useWorkflowContext } from '../../../context/WorkflowContext'
@@ -9,8 +8,7 @@ import { usePanelContext } from '../../../context/PanelContext'
 import { PikkuBadge } from '../../ui/PikkuBadge'
 import { wiringTypeColor } from '../../ui/badge-defs'
 import { SectionLabel } from '../../ui/SectionLabel'
-import { SchemaForm } from '../../ui/SchemaForm'
-import { useWorkflowInputSchema } from '../../../hooks/useWorkflowInputSchema'
+import { DataViewer } from '../../ui/DataViewer'
 import { CommonDetails } from './shared/CommonDetails'
 import { EmptyState } from './shared/EmptyState'
 import classes from '../../ui/console.module.css'
@@ -385,21 +383,12 @@ const formatDuration = (start: string | undefined, end: string | undefined) => {
 }
 
 const RunInput: React.FC<{ input: unknown }> = ({ input }) => {
-  const { schema } = useWorkflowInputSchema()
-
   return (
     <Stack gap={6}>
       <SectionLabel>Input</SectionLabel>
       <Card withBorder radius="md" padding={0}>
         <Card.Section p="md">
-          {schema && input && typeof input === 'object' ? (
-            <SchemaForm schema={schema} initialData={input} readOnly />
-          ) : (
-            <CodeHighlight
-              code={JSON.stringify(input, null, 2)}
-              language="json"
-            />
-          )}
+          <DataViewer data={input} />
         </Card.Section>
       </Card>
     </Stack>
@@ -552,10 +541,7 @@ export const WorkflowRunOverview: React.FC<WorkflowPanelProps> = ({
           <SectionLabel>Output</SectionLabel>
           <Card withBorder radius="md" padding={0}>
             <Card.Section p="md">
-              <CodeHighlight
-                code={JSON.stringify(runData.output, null, 2)}
-                language="json"
-              />
+              <DataViewer data={runData.output} />
             </Card.Section>
           </Card>
         </Stack>

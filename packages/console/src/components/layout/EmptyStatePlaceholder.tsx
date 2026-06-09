@@ -1,19 +1,23 @@
 import React from 'react'
-import { Stack, Text, Button } from '@mantine/core'
-import { ExternalLink } from 'lucide-react'
+import { Stack, Text, Anchor } from '@mantine/core'
 import classes from '../ui/console.module.css'
+import { CommandChip } from '../ui/CommandChip'
 
 interface EmptyStatePlaceholderProps {
-  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>
+  icon?: React.ComponentType<{ size?: number; strokeWidth?: number }>
+  hero?: React.ReactNode
   title: string
   description?: string
+  code?: string
   docsHref: string
 }
 
 export const EmptyStatePlaceholder: React.FC<EmptyStatePlaceholderProps> = ({
   icon: Icon,
+  hero,
   title,
   description,
+  code,
   docsHref,
 }) => {
   return (
@@ -25,7 +29,7 @@ export const EmptyStatePlaceholder: React.FC<EmptyStatePlaceholderProps> = ({
       py="xl"
       style={{ minHeight: '60vh' }}
     >
-      <Icon size={48} strokeWidth={1} />
+      {hero ?? (Icon ? <Icon size={48} strokeWidth={1} /> : null)}
       <Text size="xl" fw={600}>
         {title}
       </Text>
@@ -34,16 +38,16 @@ export const EmptyStatePlaceholder: React.FC<EmptyStatePlaceholderProps> = ({
           {description}
         </Text>
       )}
-      <Button
-        component="a"
+      {code && <CommandChip cmd={code} />}
+      <Anchor
         href={docsHref}
         target="_blank"
         rel="noopener noreferrer"
-        variant="default"
-        leftSection={<ExternalLink size={16} />}
+        size="sm"
+        c="dimmed"
       >
-        Docs
-      </Button>
+        How this works →
+      </Anchor>
     </Stack>
   )
 }

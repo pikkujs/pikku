@@ -2,7 +2,9 @@ import React, { Suspense } from 'react'
 import { Center, Loader } from '@mantine/core'
 import { CliTabContent } from './CliTabContent'
 
-export const CliTab: React.FC = () => {
+type CliTabProps = { searchQuery: string }
+
+export const CliTab: React.FC<CliTabProps> = ({ searchQuery }) => {
   return (
     <Suspense
       fallback={
@@ -11,7 +13,7 @@ export const CliTab: React.FC = () => {
         </Center>
       }
     >
-      <CliTabContent />
+      <CliTabContent searchQuery={searchQuery} />
     </Suspense>
   )
 }

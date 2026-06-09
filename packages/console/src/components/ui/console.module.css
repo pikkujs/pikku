@@ -38,7 +38,6 @@
 .listPane {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--app-row-border);
 }
 
 .listPaneFlex {
@@ -56,12 +55,21 @@
   overflow: hidden;
 }
 
+.detailDrawerPane {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  min-height: 0;
+  overflow: hidden;
+  transition: width 180ms ease, min-width 180ms ease, opacity 180ms ease;
+}
+
 /* ── Grid header (column headings row) ── */
 
 .gridHeader {
   padding: 7px 16px;
   border-bottom: 1px solid var(--app-row-border);
-  background: #0a0c12;
+  background: var(--app-surface);
   flex-shrink: 0;
   column-gap: 12px;
 }
@@ -145,6 +153,27 @@
   height: 100%;
 }
 
+/* ── Card surface ── */
+
+.surfaceCard {
+  background: var(--app-surface, var(--mantine-color-body));
+  border: 1px solid var(--app-row-border);
+  border-radius: 8px;
+}
+
+.tableLastRowBorder tbody tr:last-child td {
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}
+
+.listSurfaceCard {
+  composes: surfaceCard;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 /* ── Badge variants ── */
 
 .tagBadge {
@@ -179,14 +208,6 @@
   min-width: 0;
   overflow: auto;
   padding: 16px;
-}
-
-/* ── Surface card ── */
-
-.surfaceCard {
-  background: var(--app-surface);
-  border: 1px solid var(--app-row-border);
-  border-radius: 8px;
 }
 
 /* ── Code-like input box ── */

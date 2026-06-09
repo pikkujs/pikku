@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react'
-import { Tabs, Stack, Group, Text, Box, Button, Loader } from '@mantine/core'
+import { Stack, Group, Text, Box, Button, Loader } from '@mantine/core'
 import { GitBranch, Play } from 'lucide-react'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { SchemaForm } from '../ui/SchemaForm'
@@ -53,6 +53,7 @@ interface PanelChild {
   id: string
   title: string
   content: React.ReactNode
+  selfContained?: boolean
 }
 
 const WorkflowStepTabbedPanel: React.FC<{
@@ -107,23 +108,9 @@ const WorkflowStepTabbedPanel: React.FC<{
           {stepType}
         </PikkuBadge>
       </Group>
-      <Tabs
-        defaultValue={hasRun ? 'run' : 'overview'}
-        key={hasRun ? 'with-run' : 'no-run'}
-      >
-        <Tabs.List grow>
-          <Tabs.Tab value="overview">Overview</Tabs.Tab>
-          <Tabs.Tab value="run" disabled={!hasRun}>
-            Run
-          </Tabs.Tab>
-        </Tabs.List>
-        <Tabs.Panel value="overview" pt="md" px="md">
-          {overviewContent}
-        </Tabs.Panel>
-        <Tabs.Panel value="run" pt="md" px="md">
-          {runContent}
-        </Tabs.Panel>
-      </Tabs>
+      <Box px="md" pt="md">
+        {hasRun ? runContent : overviewContent}
+      </Box>
     </Stack>
   )
 }
@@ -195,37 +182,24 @@ const WorkflowTabbedPanel: React.FC<{ workflowId: string }> = ({
   const hasRun = !!runContext?.selectedRunId
   const isCreating = !!runContext?.isCreatingRun
 
-  const tabKey = `${isCreating ? 'creating' : ''}${hasRun ? 'with-run' : 'no-run'}`
-
   return (
     <Stack gap="md">
       <Box px="md">
         <WorkflowHeader workflowId={workflowId} />
       </Box>
-      <Tabs defaultValue="overview" key={tabKey}>
-        <Tabs.List grow>
-          <Tabs.Tab value="overview">Overview</Tabs.Tab>
-          <Tabs.Tab value="run">
-            {hasRun && !isCreating ? 'Run' : 'New Run'}
-          </Tabs.Tab>
-        </Tabs.List>
-        <Tabs.Panel value="overview" pt="md" px="md">
+      <Box px="md" pt="md">
+        {isCreating ? (
+          <NewWorkflowRunForm workflowId={workflowId} />
+        ) : hasRun ? (
+          <WorkflowRunOverview workflowId={workflowId} />
+        ) : (
           <Stack gap="xl">
             <WorkflowConfiguration workflowId={workflowId} />
             <WorkflowNodes workflowId={workflowId} />
             <WorkflowState workflowId={workflowId} />
           </Stack>
-        </Tabs.Panel>
-        <Tabs.Panel value="run" pt="md" px="md">
-          {isCreating ? (
-            <NewWorkflowRunForm workflowId={workflowId} />
-          ) : hasRun ? (
-            <WorkflowRunOverview workflowId={workflowId} />
-          ) : (
-            <NewWorkflowRunForm workflowId={workflowId} />
-          )}
-        </Tabs.Panel>
-      </Tabs>
+        )}
+      </Box>
     </Stack>
   )
 }
@@ -237,6 +211,7 @@ export const createPanelChildren = (panelData: PanelData): PanelChild[] => {
         {
           id: 'configuration',
           title: 'Function',
+          selfContained: true,
           content: (
             <FunctionTabbedPanel
               functionName={panelData.id}

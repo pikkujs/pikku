@@ -1,3 +1,11 @@
+## 0.12.17
+
+### Patch Changes
+
+- 6da42b8: Add consistent empty state system, responsive list page header, and WebSocket routing for console RPCs
+- Updated dependencies [909eb25]
+  - @pikku/core@0.12.26
+
 ## 0.12.16
 
 ### Patch Changes

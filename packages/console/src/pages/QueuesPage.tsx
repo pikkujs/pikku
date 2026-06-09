@@ -4,7 +4,7 @@ import { ListOrdered } from 'lucide-react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '../components/layout/DetailPageHeader'
+import { ListPageHeader } from '../components/layout/PageLayout'
 import { TableListPage } from '../components/layout/TableListPage'
 import { PikkuBadge } from '../components/ui/PikkuBadge'
 
@@ -95,13 +95,7 @@ export const QueuesPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={
-          <DetailPageHeader
-            icon={ListOrdered}
-            category="Queues"
-            docsHref="https://pikku.dev/docs/wiring/queue"
-          />
-        }
+        header={<ListPageHeader title="Queues" description="Queue workers consuming messages from your message bus" />}
         showTabs={false}
         hidePanel={!loading && items.length === 0}
         emptyPanelMessage="Select a queue worker to view its details"

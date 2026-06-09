@@ -1,14 +1,14 @@
-import React, { Suspense } from 'react'
-import { Center, Loader, Box } from '@mantine/core'
-import { Globe } from 'lucide-react'
+import React, { Suspense, useState } from 'react'
+import { Center, Loader, Group, SegmentedControl, TextInput } from '@mantine/core'
+import { Search } from 'lucide-react'
 import { useSearchParams } from '../router'
 import { PanelProvider } from '../context/PanelContext'
-import { TabbedPageHeader } from '../components/layout/TabbedPageHeader'
+import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
+import { ListPageHeader } from '../components/layout/PageLayout'
 import { HttpTab } from '../components/tabs/HttpTab'
 import { ChannelsTab } from '../components/tabs/ChannelsTab'
 import { McpTab } from '../components/tabs/McpTab'
 import { CliTab } from '../components/tabs/CliTab'
-import styles from '../components/ui/console.module.css'
 
 const TABS = [
   { value: 'http', label: 'HTTP' },
@@ -17,47 +17,79 @@ const TABS = [
   { value: 'cli', label: 'CLI' },
 ]
 
-const ApisPageInner: React.FC = () => {
+const SEARCH_PLACEHOLDER: Record<string, string> = {
+  http: 'Search routes...',
+  channels: 'Search channels...',
+  mcp: 'Search MCP tools, resources, prompts...',
+  cli: 'Search commands...',
+}
+
+type ApisPageProps = {
+  httpHero?: React.ReactNode
+  channelsHero?: React.ReactNode
+  mcpHero?: React.ReactNode
+}
+
+const ApisPageInner: React.FC<ApisPageProps> = ({ httpHero, channelsHero, mcpHero }) => {
   const [searchParams, setSearchParams] = useSearchParams()
+  const [searchQuery, setSearchQuery] = useState('')
   const tab = searchParams.get('tab') || 'http'
 
   const handleTabChange = (value: string) => {
+    setSearchQuery('')
     setSearchParams({ tab: value })
   }
 
   const renderTab = () => {
     switch (tab) {
       case 'channels':
-        return <ChannelsTab />
+        return <ChannelsTab searchQuery={searchQuery} emptyHero={channelsHero} />
       case 'mcp':
-        return <McpTab />
+        return <McpTab searchQuery={searchQuery} emptyHero={mcpHero} />
       case 'cli':
-        return <CliTab />
+        return <CliTab searchQuery={searchQuery} />
       default:
-        return <HttpTab />
+        return <HttpTab searchQuery={searchQuery} emptyHero={httpHero} />
     }
   }
 
   return (
     <PanelProvider>
-      <Box className={styles.flexColumn} style={{ height: '100vh' }}>
-        <TabbedPageHeader
-          icon={Globe}
-          category="APIs"
-          docsHref="https://pikku.dev/docs/wiring/http"
-          tabs={TABS}
-          activeTab={tab}
-          onTabChange={handleTabChange}
-        />
-        <Box className={styles.flexGrow} style={{ minHeight: 0 }}>
-          {renderTab()}
-        </Box>
-      </Box>
+      <ResizablePanelLayout
+        header={
+          <ListPageHeader
+            title="APIs"
+            description="Browse HTTP routes, channels, MCP servers, and CLI surfaces"
+            docsHref="https://pikku.dev/docs/wiring/http"
+            filters={
+              <Group gap="sm" wrap="nowrap">
+                <TextInput
+                  placeholder={SEARCH_PLACEHOLDER[tab]}
+                  leftSection={<Search size={14} />}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  size="xs"
+                  style={{ width: 240 }}
+                />
+                <SegmentedControl
+                  size="xs"
+                  value={tab}
+                  onChange={handleTabChange}
+                  data={TABS}
+                />
+              </Group>
+            }
+          />
+        }
+        emptyPanelMessage="Select an item to view details"
+      >
+        {renderTab()}
+      </ResizablePanelLayout>
     </PanelProvider>
   )
 }
 
-export const ApisPage: React.FC = () => {
+export const ApisPage: React.FC<ApisPageProps> = (props) => {
   return (
     <Suspense
       fallback={
@@ -66,7 +98,7 @@ export const ApisPage: React.FC = () => {
         </Center>
       }
     >
-      <ApisPageInner />
+      <ApisPageInner {...props} />
     </Suspense>
   )
 }

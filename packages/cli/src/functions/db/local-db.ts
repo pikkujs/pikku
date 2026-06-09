@@ -51,8 +51,9 @@ export function resolveDb(
   outDir: string,
   runtimeDir?: string
 ): ResolvedDb | null {
-  const base = (sub: string): ResolvedDbBase => ({
+  const base = (sub: string, seedFileName: string): ResolvedDbBase => ({
     migrationsDir: resolveAgainst(rootDir, sub),
+    seedFile: resolveAgainst(rootDir, seedFileName),
     schemaFile: join(outDir, 'db', 'schema.d.ts'),
     coercionFile: join(outDir, 'db', 'coercion.gen.ts'),
     manifestFile: join(outDir, 'db', 'classification.gen.ts'),
@@ -70,7 +71,7 @@ export function resolveDb(
     return {
       dialect: 'postgres',
       connectionString: userConfig.postgresUrl,
-      ...base('db/postgres'),
+      ...base('db/postgres', 'db/postgres-seed.sql'),
     }
   }
 
@@ -82,8 +83,7 @@ export function resolveDb(
       dialect: 'sqlite',
       dbFile: resolveAgainst(rootDir, userConfig.sqliteDb),
       runtimeDir: resolvedRuntimeDir,
-      seedFile: resolveAgainst(rootDir, 'db/seed.sql'),
-      ...base('db/sqlite'),
+      ...base('db/sqlite', 'db/sqlite-seed.sql'),
     }
   }
 
