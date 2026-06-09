@@ -15,7 +15,8 @@
     "jsx": "preserve",
     "incremental": false,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@pikku/assistant-ui": ["../assistant-ui/src/index.ts"]
     },
     "typeRoots": ["./node_modules/@types", "./types"],
     "target": "ES2017"

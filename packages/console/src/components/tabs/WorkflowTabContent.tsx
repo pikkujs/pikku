@@ -5,9 +5,10 @@ import { WorkflowRunProvider } from '../../context/WorkflowRunContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { WorkflowCanvas } from '../project/WorkflowCanvas'
-import { Center, Loader, Box, Text } from '@mantine/core'
+import { Center, Loader } from '@mantine/core'
+import { GitBranch } from 'lucide-react'
 import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
-import styles from '../ui/console.module.css'
+import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 
 export const WorkflowTabContent: React.FC<{ immersiveDetail?: boolean }> = ({
   immersiveDetail = false,
@@ -41,9 +42,12 @@ export const WorkflowTabContent: React.FC<{ immersiveDetail?: boolean }> = ({
 
   if (!workflow) {
     return (
-      <Center h="100vh">
-        <Text c="dimmed">Workflow &quot;{workflowId}&quot; not found.</Text>
-      </Center>
+      <EmptyStatePlaceholder
+        icon={GitBranch}
+        title={workflowId ? `Workflow "${workflowId}" not found` : 'No workflows found'}
+        description={workflowId ? 'This workflow may have been removed or renamed.' : 'Define workflows in your project to visualize them here.'}
+        docsHref="https://pikku.dev/docs/core-features/workflows"
+      />
     )
   }
 
@@ -54,16 +58,12 @@ export const WorkflowTabContent: React.FC<{ immersiveDetail?: boolean }> = ({
         currentGraphHash={(workflow as any).graphHash}
         workflowNodes={(workflow as any).nodes}
       >
-        <Box h="100vh" className={styles.flexColumn}>
-          <Box className={`${styles.flexGrow} ${styles.overflowAuto}`}>
-            <WorkflowCanvas
-              workflow={workflow}
-              items={workflowItems}
-              onItemSelect={(name) => navigateTo('workflows', name)}
-              immersiveDetail={immersiveDetail}
-            />
-          </Box>
-        </Box>
+        <WorkflowCanvas
+          workflow={workflow}
+          items={workflowItems}
+          onItemSelect={(name) => navigateTo('workflows', name)}
+          immersiveDetail={immersiveDetail}
+        />
       </WorkflowRunProvider>
     </PanelProvider>
   )

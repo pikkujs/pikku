@@ -4,7 +4,7 @@ import { Zap } from 'lucide-react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '../components/layout/DetailPageHeader'
+import { ListPageHeader } from '../components/layout/PageLayout'
 import { TableListPage } from '../components/layout/TableListPage'
 import { PikkuBadge } from '../components/ui/PikkuBadge'
 
@@ -119,13 +119,7 @@ export const TriggersPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={
-          <DetailPageHeader
-            icon={Zap}
-            category="Triggers"
-            docsHref="https://pikku.dev/docs/wiring/triggers"
-          />
-        }
+        header={<ListPageHeader title="Triggers" description="Event-driven triggers wired to pikku functions" />}
         showTabs={false}
         hidePanel={!loading && pairs.length === 0}
         emptyPanelMessage="Select a trigger to view its details"

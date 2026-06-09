@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
-import { Text, Group, Tooltip, ActionIcon } from '@mantine/core'
-import { KeyRound, ExternalLink } from 'lucide-react'
+import { Text, Group } from '@mantine/core'
+import { KeyRound } from 'lucide-react'
 import { usePanelContext } from '../../context/PanelContext'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
@@ -18,12 +18,14 @@ interface ProjectSecretsProps {
   secrets: SecretMeta[]
   loading?: boolean
   installed?: boolean
+  emptyHero?: React.ReactNode
 }
 
 export const ProjectSecrets: React.FC<ProjectSecretsProps> = ({
   secrets,
   loading,
   installed = true,
+  emptyHero,
 }) => {
   const { openSecret } = usePanelContext()
 
@@ -74,31 +76,9 @@ export const ProjectSecrets: React.FC<ProjectSecretsProps> = ({
       columns={columns}
       getKey={(s) => s.name}
       onRowClick={(s) => openSecret(s.name, { ...(s.rawData ?? s), installed })}
-      searchPlaceholder="Search secrets..."
-      searchFilter={(s, q) =>
-        s.name.toLowerCase().includes(q) ||
-        s.displayName.toLowerCase().includes(q) ||
-        s.description?.toLowerCase().includes(q) ||
-        s.secretId.toLowerCase().includes(q) ||
-        false
-      }
       emptyMessage="No secrets found."
       loading={loading}
-      headerRight={
-        <Tooltip label="Secrets docs">
-          <ActionIcon
-            component="a"
-            href="https://pikku.dev/docs/core-features/secrets"
-            target="_blank"
-            rel="noopener noreferrer"
-            variant="subtle"
-            color="gray"
-            size="sm"
-          >
-            <ExternalLink size={14} />
-          </ActionIcon>
-        </Tooltip>
-      }
+      emptyHero={emptyHero}
     />
   )
 }

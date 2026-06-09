@@ -23,32 +23,30 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
   hidePanel = false,
 }) => {
   const { panels } = usePanelContext()
-  const showPanel = !hidePanel && panels.size !== 0
+  const showPanel = !hidePanel
 
   return (
     <Box className={classes.flexColumn} style={{ height: '100vh' }}>
       {header}
       <Box className={classes.flexGrow} style={{ minHeight: 0 }}>
-        <Allotment
-          key={showPanel ? 'with-panel' : 'no-panel'}
-          defaultSizes={[840, 267]}
-        >
-          <Allotment.Pane>
-            <Box className={`${classes.flexColumn} ${classes.overflowAuto}`}>
-              {children}
-            </Box>
-          </Allotment.Pane>
-          {showPanel && (
-            <Allotment.Pane minSize={minSize} maxSize={500} preferredSize={267}>
-              <Box className={`${classes.flexColumn} ${classes.overflowAuto}`}>
-                <PanelContainer
-                  showTabs={showTabs}
-                  emptyMessage={emptyPanelMessage}
-                />
+        {showPanel ? (
+          <Allotment key={panels.size === 0 ? 'empty-panel' : 'with-panel'} defaultSizes={[840, 267]}>
+            <Allotment.Pane>
+              <Box className={`${classes.flexColumn} ${classes.overflowAuto}`} style={{ minWidth: 0, height: '100%' }}>
+                {children}
               </Box>
             </Allotment.Pane>
-          )}
-        </Allotment>
+            <Allotment.Pane minSize={minSize} maxSize={500} preferredSize={267}>
+              <Box className={`${classes.flexColumn} ${classes.overflowAuto}`} style={{ minWidth: 0, height: '100%' }}>
+                <PanelContainer emptyMessage={emptyPanelMessage} />
+              </Box>
+            </Allotment.Pane>
+          </Allotment>
+        ) : (
+          <Box className={`${classes.flexColumn} ${classes.overflowAuto}`} style={{ minWidth: 0, height: '100%' }}>
+            {children}
+          </Box>
+        )}
       </Box>
     </Box>
   )

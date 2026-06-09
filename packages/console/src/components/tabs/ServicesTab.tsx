@@ -27,10 +27,10 @@ const COLUMNS = [
   },
 ]
 
-export const ServicesTab: React.FC = () => {
+export const ServicesTab: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
   const { meta, loading } = usePikkuMeta()
 
-  const services = useMemo((): ServiceItem[] => {
+  const allServices = useMemo((): ServiceItem[] => {
     const serviceMap = new Map<
       string,
       { funcCount: number; functions: string[] }
@@ -53,6 +53,16 @@ export const ServicesTab: React.FC = () => {
       .sort((a, b) => b.funcCount - a.funcCount)
   }, [meta.functions])
 
+  const services = useMemo(() => {
+    if (!searchQuery) return allServices
+    const q = searchQuery.toLowerCase()
+    return allServices.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        item.functions.some((f) => f.toLowerCase().includes(q))
+    )
+  }, [allServices, searchQuery])
+
   return (
     <TableListPage
       title="Services"
@@ -62,11 +72,6 @@ export const ServicesTab: React.FC = () => {
       columns={COLUMNS}
       getKey={(item) => item.name}
       onRowClick={() => {}}
-      searchPlaceholder="Search services..."
-      searchFilter={(item, q) =>
-        item.name.toLowerCase().includes(q) ||
-        item.functions.some((f) => f.toLowerCase().includes(q))
-      }
       emptyMessage="No services found."
       loading={loading}
     />

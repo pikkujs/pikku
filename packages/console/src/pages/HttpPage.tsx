@@ -5,7 +5,7 @@ import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider } from '../context/PanelContext'
 import { usePanelContext } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
-import { DetailPageHeader } from '../components/layout/DetailPageHeader'
+import { ListPageHeader } from '../components/layout/PageLayout'
 import { TableListPage } from '../components/layout/TableListPage'
 import { PikkuBadge } from '../components/ui/PikkuBadge'
 
@@ -89,12 +89,7 @@ export const HttpPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={
-          <DetailPageHeader
-            icon={Globe}
-            category="HTTP Routes"
-            docsHref="https://pikku.dev/docs/wiring/http"
-          />
+        header={<ListPageHeader title="HTTP Routes" description="Registered HTTP endpoints and their bound functions" />
         }
         showTabs={false}
         hidePanel={!loading && routes.length === 0}

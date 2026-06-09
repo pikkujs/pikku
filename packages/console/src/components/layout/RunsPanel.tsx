@@ -47,6 +47,7 @@ interface RunsPanelProps {
   newButtonLabel?: string
   onStatusFilterChange?: (status: string | undefined) => void
   onDelete?: (id: string) => void
+  header?: React.ReactNode
 }
 
 const RunRow: React.FC<{
@@ -167,6 +168,7 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
   newButtonLabel = 'New',
   onStatusFilterChange,
   onDelete,
+  header,
 }) => {
   const [statusFilter, setStatusFilter] = useState('all')
 
@@ -190,6 +192,7 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
 
   return (
     <Stack gap={0} className={classes.flexColumn}>
+      {header}
       {statusFilters.length > 0 && (
         <Box
           px="sm"

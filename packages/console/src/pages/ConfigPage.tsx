@@ -1,9 +1,9 @@
 import React from 'react'
-import { KeyRound } from 'lucide-react'
 import { useSearchParams } from '../router'
+import { Stack, SegmentedControl } from '@mantine/core'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
-import { TabbedPageHeader } from '../components/layout/TabbedPageHeader'
+import { ListPageHeader } from '../components/layout/PageLayout'
 import { SecretsTab } from '../components/tabs/SecretsTab'
 import { VariablesTab } from '../components/tabs/VariablesTab'
 
@@ -24,14 +24,10 @@ export const ConfigPage: React.FC = () => {
     <PanelProvider>
       <ResizablePanelLayout
         header={
-          <TabbedPageHeader
-            icon={KeyRound}
-            category="Config"
-            docsHref="https://pikku.dev/docs/core-features/secrets"
-            tabs={TABS}
-            activeTab={tab}
-            onTabChange={handleTabChange}
-          />
+          <Stack gap="md">
+            <ListPageHeader title="Config" description="Runtime variables and secrets configuration" />
+            <SegmentedControl size="xs" value={tab} onChange={handleTabChange} data={TABS} />
+          </Stack>
         }
         emptyPanelMessage="Select an item to view its details"
       >
