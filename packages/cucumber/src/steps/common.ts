@@ -3,6 +3,7 @@ import { Actor } from '../actor.js'
 import type { IFunctionWorld } from '../world.js'
 
 type TableLike = { rowsHash: () => Record<string, string> }
+type ListTableLike = { rows: () => string[][] }
 
 export interface CucumberStepApi {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -119,6 +120,30 @@ const ERROR_REASON_MAP: Record<string, string> = {
 const ERROR_STEP_REGEXP = new RegExp(
   `^the call fails because (${Object.keys(ERROR_REASON_MAP).join('|')})(?: with the message "([^"]*)")?$`
 )
+
+function matchTemplateEmail(
+  args: unknown[],
+  template: string,
+  to: string,
+  variables?: Record<string, unknown>
+): boolean {
+  const input = args[0] as Record<string, unknown>
+  if (!input || typeof input !== 'object') return false
+  const tmpl = input.template as Record<string, unknown> | undefined
+  if (!tmpl || tmpl.name !== template) return false
+  const toField = input.to
+  const toMatch = Array.isArray(toField)
+    ? (toField as string[]).includes(to)
+    : toField === to
+  if (!toMatch) return false
+  if (variables) {
+    const data = (tmpl.data as Record<string, unknown>) ?? {}
+    for (const [k, v] of Object.entries(variables)) {
+      if (String(data[k]) !== String(v)) return false
+    }
+  }
+  return true
+}
 
 /**
  * Register the built-in step library against the consumer's cucumber instance.
@@ -380,13 +405,75 @@ export function registerCommonSteps(
     }
   )
 
-  // ── DB / tracker steps (in-process only) ──────────────────────────────────
+  // ── Email stub steps (in-process only) ───────────────────────────────────
   cucumber.Then(
-    'an email {string} was sent',
-    function (this: IFunctionWorld, method: string) {
-      this.tracker.assert('email', method)
+    'the {string} email was sent to {string}',
+    function (this: IFunctionWorld, template: string, to: string) {
+      this.tracker.assertCall(
+        'email',
+        'send',
+        (args) => matchTemplateEmail(args, template, to),
+        `"${template}" email to "${to}"`
+      )
     }
   )
+
+  cucumber.Then(
+    'the {string} email was sent to {string} with:',
+    function (
+      this: IFunctionWorld,
+      template: string,
+      to: string,
+      table: TableLike
+    ) {
+      this.tracker.assertCall(
+        'email',
+        'send',
+        (args) => matchTemplateEmail(args, template, to, tableToInput(table)),
+        `"${template}" email to "${to}" with matching variables`
+      )
+    }
+  )
+
+  cucumber.Then(
+    '{string} emails were sent to:',
+    function (
+      this: IFunctionWorld,
+      template: string,
+      table: ListTableLike
+    ) {
+      for (const [to] of table.rows()) {
+        this.tracker.assertCall(
+          'email',
+          'send',
+          (args) => matchTemplateEmail(args, template, to!),
+          `"${template}" email to "${to}"`
+        )
+      }
+    }
+  )
+
+  cucumber.Then(
+    'no {string} email was sent',
+    function (this: IFunctionWorld, template: string) {
+      this.tracker.assertNoCalls(
+        'email',
+        'send',
+        (args) => {
+          const input = args[0] as Record<string, unknown>
+          const tmpl = input?.template as Record<string, unknown> | undefined
+          return tmpl?.name === template
+        },
+        `"${template}" email`
+      )
+    }
+  )
+
+  cucumber.Then('no emails were sent', function (this: IFunctionWorld) {
+    this.tracker.assertNoCalls('email')
+  })
+
+  // ── DB / tracker steps (in-process only) ──────────────────────────────────
 
   cucumber.Then(
     '{string} where {string} is {string} has {string} equal to {string}',
