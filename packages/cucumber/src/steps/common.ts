@@ -79,13 +79,46 @@ function resolveData(world: IFunctionWorld, name: string): unknown {
 }
 
 const ERROR_REASON_MAP: Record<string, string> = {
+  // HTTP 4xx
   'they are unauthorized': 'UnauthorizedError',
+  'payment is required': 'PaymentRequiredError',
   'they are forbidden': 'ForbiddenError',
   'it was not found': 'NotFoundError',
-  'the input is invalid': 'BadRequestError',
+  'the method is not allowed': 'MethodNotAllowedError',
+  'the response format is not acceptable': 'NotAcceptableError',
+  'the request timed out': 'RequestTimeoutError',
   'there was a conflict': 'ConflictError',
+  'the resource is gone': 'GoneError',
+  'a precondition failed': 'PreconditionFailedError',
+  'the payload is too large': 'PayloadTooLargeError',
+  'the media type is not supported': 'UnsupportedMediaTypeError',
+  'the content is unprocessable': 'UnprocessableContentError',
+  'the resource is locked': 'LockedError',
+  'the limit was exceeded': 'TooManyRequestsError',
+  'the input is invalid': 'BadRequestError',
+  // HTTP 5xx
   'the server errored': 'InternalServerError',
+  'it is not implemented': 'NotImplementedError',
+  'the gateway errored': 'BadGatewayError',
+  'the service is unavailable': 'ServiceUnavailableError',
+  'the gateway timed out': 'GatewayTimeoutError',
+  // Session
+  'the session is invalid': 'InvalidSessionError',
+  'there is no session': 'MissingSessionError',
+  'the session is read-only': 'ReadonlySessionError',
+  // App-level
+  'the origin is not allowed': 'InvalidOriginError',
+  'a credential is missing': 'MissingCredentialError',
+  'it is only available locally': 'LocalEnvironmentOnlyError',
+  'the compute time was exceeded': 'MaxComputeTimeReachedError',
+  // AI
+  'the AI provider auth failed': 'AIProviderAuthError',
+  'the AI provider is not configured': 'AIProviderNotConfiguredError',
 }
+
+const ERROR_STEP_REGEXP = new RegExp(
+  `^the call fails because (${Object.keys(ERROR_REASON_MAP).join('|')})(?: with the message "([^"]*)")?$`
+)
 
 /**
  * Register the built-in step library against the consumer's cucumber instance.
@@ -250,7 +283,7 @@ export function registerCommonSteps(
   )
 
   cucumber.Then(
-    /^the call fails because (they are unauthorized|they are forbidden|it was not found|the input is invalid|there was a conflict|the server errored)(?: with the message "([^"]*)")?$/,
+    ERROR_STEP_REGEXP,
     function (
       this: IFunctionWorld,
       reason: string,
