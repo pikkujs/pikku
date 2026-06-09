@@ -93,7 +93,8 @@ function parseComment(comment: string): Partial<ColAnnotation> {
   const classM = comment.match(/@(public|private|pii|secret)(?::([^\s@]+))?/i)
   if (classM) {
     ann.classification = classM[1]!.toLowerCase() as Classification
-    ann.anonymize = parseStrategy(classM[2])
+    const strategy = parseStrategy(classM[2])
+    if (strategy !== null) ann.anonymize = strategy
   }
 
   return ann
