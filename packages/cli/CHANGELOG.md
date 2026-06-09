@@ -1,3 +1,15 @@
+## 0.12.27
+
+### Patch Changes
+
+- 909eb25: Fix db migration directory detection in validators to use db/sqlite/ and db/postgres/ instead of db/migrations/
+
+  Fabric validator now checks db/sqlite/ (Fabric always uses SQLite/libSQL). Workspace validator derives the migrations directory from createConfig — postgresUrl → db/postgres/, sqliteDb → db/sqlite/.
+
+- Updated dependencies [909eb25]
+  - @pikku/core@0.12.26
+  - @pikku/kysely@0.12.13
+
 ## 0.12.26
 
 ### Patch Changes

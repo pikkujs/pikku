@@ -1,5 +1,15 @@
 # @pikku/e2e
 
+## 0.0.27
+
+### Patch Changes
+
+- Updated dependencies [909eb25]
+- Updated dependencies [35bac18]
+  - @pikku/core@0.12.26
+  - @pikku/kysely@0.12.13
+  - @pikku/kysely-postgres@0.12.8
+
 ## 0.0.26
 
 ### Patch Changes

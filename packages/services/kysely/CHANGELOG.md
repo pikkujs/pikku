@@ -1,3 +1,14 @@
+## 0.12.13
+
+### Patch Changes
+
+- 909eb25: Add audit logging support for function invocations and database queries.
+
+  Introduces `AuditService` and `createAuditedKysely` — configurable audit capture with best-effort and transactional durability modes. Audit logs capture session metadata (user, org), RPC call details, and Kysely query operations (type, tables, changes). Audit context is scoped per-invocation so nested RPC calls are correctly attributed.
+
+- Updated dependencies [909eb25]
+  - @pikku/core@0.12.26
+
 ## 0.12.12
 
 ### Patch Changes
