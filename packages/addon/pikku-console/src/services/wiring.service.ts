@@ -550,14 +550,32 @@ async function loadFunctionTests(
   functionsMeta: FunctionsMeta,
   rpcMeta: RPCMetaRecord
 ): Promise<Record<string, FunctionTestData>> {
-  const coverageCandidates = [
-    '../function-tests/coverage/function-coverage.json',
-    'function-tests/coverage/function-coverage.json',
-  ]
-  const cucumberCandidates = [
-    '../function-tests/tests/reports/cucumber-report.html',
-    'function-tests/tests/reports/cucumber-report.html',
-  ]
+  let testsOutputDir: string | null = null
+  try {
+    const configContent = await readOptionalMetaFile(metaSource, '../pikku.config.json')
+    if (configContent) {
+      const pikkuConfig = parseJsonOrNull(configContent) as { tests?: { outputDir?: string } } | null
+      testsOutputDir = pikkuConfig?.tests?.outputDir ?? null
+    }
+  } catch {
+    // ignore — no config or unreadable
+  }
+
+  const coverageCandidates = testsOutputDir
+    ? [`../${testsOutputDir}/coverage/function-coverage.json`]
+    : [
+        '../function-tests/coverage/function-coverage.json',
+        'function-tests/coverage/function-coverage.json',
+      ]
+  const cucumberCandidates = testsOutputDir
+    ? [
+        `../${testsOutputDir}/tests/reports/cucumber-report.html`,
+        `../${testsOutputDir}/reports/cucumber-report.html`,
+      ]
+    : [
+        '../function-tests/tests/reports/cucumber-report.html',
+        'function-tests/tests/reports/cucumber-report.html',
+      ]
 
   const coverageContent =
     (
