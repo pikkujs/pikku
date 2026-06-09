@@ -171,7 +171,11 @@ export {
   checkAuthPermissions,
 } from './permissions.js'
 export { isSerializable, stopSingletonServices } from './utils.js'
-export { getSingletonServices, getCreateWireServices } from './pikku-state.js'
+export {
+  getSingletonServices,
+  getCreateWireServices,
+  setSingletonServices,
+} from './pikku-state.js'
 export { clearPikkuRuntimeState } from './test-utils.js'
 export {
   type ScheduledTaskInfo,

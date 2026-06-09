@@ -22,6 +22,10 @@ export class StubHttpResponse {
     return this
   }
 
+  arrayBuffer(): this {
+    return this
+  }
+
   json(): this {
     return this
   }

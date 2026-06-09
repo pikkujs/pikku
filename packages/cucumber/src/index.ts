@@ -3,6 +3,11 @@ export { StubTracker } from './tracker.js'
 export { createDbUtils, type DbUtils } from './db.js'
 export { createStubHttp, type StubHttp } from './stubs/http.js'
 export {
+  StubHttpRequest,
+  type StubHttpRequestConfig,
+} from './stubs/http-request.js'
+export { registerHTTPSteps } from './steps/http.js'
+export {
   createStubQueueWire,
   type StubQueueWire,
   type QueueWireConfig,

@@ -3,8 +3,11 @@ import {
   PikkuSessionService,
   createFunctionSessionWireProps,
 } from '@pikku/core/services'
+import { fetchData } from '@pikku/core/http'
 import { StubTracker } from './tracker.js'
 import { createStubHttp } from './stubs/http.js'
+import { StubHttpRequest } from './stubs/http-request.js'
+import type { StubHttpRequestConfig } from './stubs/http-request.js'
 import {
   createStubQueueWire,
   type QueueWireConfig,
@@ -26,6 +29,7 @@ export type StubServicesFactory = (
 
 export interface IFunctionWorld {
   tracker: StubTracker
+  services: unknown
   lastResult: unknown
   lastError: Error | undefined
   lastStatus: number | undefined
@@ -48,6 +52,7 @@ export interface IFunctionWorld {
   persona(name: string): Persona
   setSession(name: string, session: Record<string, unknown>): void
   call(personaName: string, rpcName: string, data: unknown): Promise<void>
+  httpCall(personaName: string, config: StubHttpRequestConfig): Promise<void>
 }
 
 /**
@@ -71,6 +76,10 @@ export function createFunctionWorld(
     private _dbFile!: string
     private _personas = new Map<string, Persona>()
     readonly tracker = new StubTracker()
+
+    get services(): unknown {
+      return this._bundle?.services
+    }
 
     lastResult: unknown = undefined
     lastError: Error | undefined = undefined
@@ -182,13 +191,49 @@ export function createFunctionWorld(
       this.lastQueueWire = queueWire
       this.lastChannelWire = channelWire
       this.lastTriggerWire = triggerWire
-      // reset next configs — they're one-shot per call
       this.nextQueueConfig = undefined
       this.nextChannelConfig = undefined
       this.nextTriggerConfig = undefined
 
       try {
         this.lastResult = await ctx.exposed(rpcName, data)
+      } catch (err) {
+        this.lastError = err as Error
+      } finally {
+        this.lastStatus = http.response.statusCode
+        this.lastResponseHeaders = http.response.headers
+      }
+    }
+
+    async httpCall(personaName: string, config: StubHttpRequestConfig) {
+      const persona = this.persona(personaName)
+      const http = createStubHttp()
+
+      // Inject the test session via the x-test-session header so the
+      // highest-priority global middleware can extract it before auth runs.
+      const headers: Record<string, string> = { ...config.headers }
+      if (persona.session) {
+        headers['x-test-session'] = JSON.stringify(persona.session)
+      }
+
+      const request = new StubHttpRequest({ ...config, headers })
+
+      this.lastResult = undefined
+      this.lastError = undefined
+      this.lastStatus = undefined
+      this.lastResponseHeaders = {}
+      this.lastQueueWire = undefined
+      this.lastChannelWire = undefined
+      this.lastTriggerWire = undefined
+      this.nextQueueConfig = undefined
+      this.nextChannelConfig = undefined
+      this.nextTriggerConfig = undefined
+
+      try {
+        this.lastResult = await fetchData(request, http.response, {
+          bubbleErrors: false,
+          exposeErrors: true,
+        })
       } catch (err) {
         this.lastError = err as Error
       } finally {
