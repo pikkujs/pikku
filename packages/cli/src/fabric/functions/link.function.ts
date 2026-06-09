@@ -1,8 +1,10 @@
 import { z } from 'zod'
+import chalk from 'chalk'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { resolveApiContext, writeProjectConfig } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
 import { assertDeploySafety, getRemoteUrl } from '../lib/git.js'
+import { added, dim, keyValue } from '../lib/output.js'
 
 export const FabricLinkInput = z.object({
   apiUrl: z.string().optional(),
@@ -12,7 +14,22 @@ export const FabricLinkOutput = z.object({
   projectSlug: z.string(),
   deploymentId: z.string(),
   stageId: z.string(),
+  branch: z.string(),
 })
+
+export const renderFabricLink = (
+  _s: unknown,
+  { projectSlug, deploymentId, branch }: z.infer<typeof FabricLinkOutput>
+): void => {
+  console.log(added('✓') + ' project linked')
+  console.log(
+    keyValue([
+      ['project', chalk.bold(projectSlug)],
+      ['branch', branch],
+      ['deploy', dim(deploymentId)],
+    ])
+  )
+}
 
 const GITHUB_POLL_INTERVAL_MS = 2000
 const GITHUB_POLL_TIMEOUT_MS = 5 * 60 * 1000
@@ -45,11 +62,11 @@ export const FabricLink = pikkuSessionlessFunc({
           )
         }
         console.log('')
-        console.log('  GitHub App not installed. Connect GitHub to continue:')
+        console.log(dim('  GitHub App not installed. Connect GitHub to continue:'))
         console.log('')
-        console.log(`    ${ghInstall.installUrl}`)
+        console.log(`    ${chalk.bold(ghInstall.installUrl)}`)
         console.log('')
-        console.log('  Waiting for GitHub App installation...')
+        console.log(dim('  Waiting for GitHub App installation…'))
         const deadline = Date.now() + GITHUB_POLL_TIMEOUT_MS
         let installed = false
         while (Date.now() < deadline) {
@@ -57,7 +74,7 @@ export const FabricLink = pikkuSessionlessFunc({
           const check = await rpc.invoke('checkGithubInstall', {})
           if (check.installed) {
             installed = true
-            console.log(`  GitHub connected (${check.accountLogin})`)
+            console.log(added('  ✓') + ` GitHub connected (${check.accountLogin})`)
             break
           }
         }
@@ -75,21 +92,18 @@ export const FabricLink = pikkuSessionlessFunc({
       projectId: project.projectId,
       ...(apiUrlOverride ? { apiUrl: apiUrlOverride } : {}),
     })
-    console.log(`[fabric] linked ${project.projectSlug}`)
 
     const deploy = await rpc.invoke('deployByStageKind', {
       projectId: project.projectId,
       branch: safety.branch,
       expectedHeadSha: safety.headSha,
     })
-    console.log(
-      `[fabric] queued deploy: branch=${safety.branch} deploymentId=${deploy.deploymentId}`
-    )
 
     return {
       projectSlug: project.projectSlug,
       deploymentId: deploy.deploymentId,
       stageId: deploy.stageId,
+      branch: safety.branch,
     }
   },
 })

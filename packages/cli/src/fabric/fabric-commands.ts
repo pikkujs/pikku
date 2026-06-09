@@ -22,9 +22,9 @@ import {
   defineCLICommands,
   pikkuCLICommand,
 } from '../../.pikku/cli/pikku-cli-types.gen.js'
-import { FabricLogin } from './functions/login.function.js'
-import { FabricInit } from './functions/init.function.js'
-import { FabricLink } from './functions/link.function.js'
+import { FabricLogin, renderLogin } from './functions/login.function.js'
+import { FabricInit, renderFabricInit } from './functions/init.function.js'
+import { FabricLink, renderFabricLink } from './functions/link.function.js'
 import {
   FabricDeployPlan,
   FabricDeployApply,
@@ -45,14 +45,14 @@ import {
   FabricDbSchema,
   renderDbSchema,
 } from './functions/db-schema.function.js'
-import { FabricRollback } from './functions/rollback.function.js'
+import { FabricRollback, renderRollback } from './functions/rollback.function.js'
 import { FabricSecretsSet } from './functions/secrets-set.function.js'
-import { FabricSecretsList } from './functions/secrets-list.function.js'
+import { FabricSecretsList, renderSecretsList } from './functions/secrets-list.function.js'
 import { FabricLogs } from './functions/logs.function.js'
-import { FabricMetrics } from './functions/metrics.function.js'
-import { FabricTrace } from './functions/trace.function.js'
-import { FabricDomainsList } from './functions/domains-list.function.js'
-import { FabricDomainsAdd } from './functions/domains-add.function.js'
+import { FabricMetrics, renderMetrics } from './functions/metrics.function.js'
+import { FabricTrace, renderTrace } from './functions/trace.function.js'
+import { FabricDomainsList, renderDomainsList } from './functions/domains-list.function.js'
+import { FabricDomainsAdd, renderDomainsAdd } from './functions/domains-add.function.js'
 import { FabricDomainsRemove } from './functions/domains-remove.function.js'
 import { FabricLLMKey, renderLLMKey } from './functions/llm-key.function.js'
 import {
@@ -69,6 +69,7 @@ export const fabricCommands = defineCLICommands({
   }),
   login: pikkuCLICommand({
     func: FabricLogin,
+    render: renderLogin,
     description: 'Authenticate against fabric-api',
     options: {
       apiKey: { description: 'Use a static API key instead of browser flow' },
@@ -82,6 +83,7 @@ export const fabricCommands = defineCLICommands({
   init: pikkuCLICommand({
     parameters: '<repo>',
     func: FabricInit,
+    render: renderFabricInit,
     description: 'Adopt an existing git repo as a fabric project',
     options: {
       name: {
@@ -98,6 +100,7 @@ export const fabricCommands = defineCLICommands({
   }),
   link: pikkuCLICommand({
     func: FabricLink,
+    render: renderFabricLink,
     description:
       'Register the current git repo as a fabric project and queue an initial deploy',
     options: {
@@ -162,6 +165,7 @@ export const fabricCommands = defineCLICommands({
   rollback: pikkuCLICommand({
     parameters: '<branch> [target]',
     func: FabricRollback,
+    render: renderRollback,
     description: 'Roll live back to a previous deployment artifact',
     options: {
       list: { description: 'List rollback candidates', default: false },
@@ -194,10 +198,10 @@ export const fabricCommands = defineCLICommands({
       }),
       list: pikkuCLICommand({
         func: FabricSecretsList,
+        render: renderSecretsList,
         description: 'List stage secrets',
         options: {
           branch: { description: 'Target branch', short: 'b' },
-          json: { description: 'Machine-readable output', default: false },
         },
       }),
     },
@@ -220,21 +224,21 @@ export const fabricCommands = defineCLICommands({
   }),
   metrics: pikkuCLICommand({
     func: FabricMetrics,
+    render: renderMetrics,
     description: 'Show request rate / error rate / latency for a stage',
     options: {
       branch: { description: 'Target branch', short: 'b' },
       hours: { description: 'Lookback window in hours (default 24)' },
       function: { description: 'Filter by wire id (e.g. function name)' },
-      json: { description: 'Machine-readable output', default: false },
     },
   }),
   trace: pikkuCLICommand({
     parameters: '<traceId>',
     func: FabricTrace,
+    render: renderTrace,
     description: 'Print every event for a single trace across the stage',
     options: {
       branch: { description: 'Target branch', short: 'b' },
-      json: { description: 'Machine-readable output', default: false },
     },
   }),
   status: pikkuCLICommand({
@@ -269,6 +273,7 @@ export const fabricCommands = defineCLICommands({
     subcommands: {
       list: pikkuCLICommand({
         func: FabricDomainsList,
+        render: renderDomainsList,
         description: 'List custom domains for the linked project',
         options: {
           apiUrl: { description: 'Override the fabric-api URL for this call' },
@@ -277,6 +282,7 @@ export const fabricCommands = defineCLICommands({
       add: pikkuCLICommand({
         parameters: '<hostname>',
         func: FabricDomainsAdd,
+        render: renderDomainsAdd,
         description: 'Add a custom domain to the production stage',
         options: {
           target: {

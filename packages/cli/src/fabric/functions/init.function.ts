@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import chalk from 'chalk'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import {
   findProjectConfig,
@@ -6,6 +7,7 @@ import {
   writeProjectConfig,
 } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
+import { added, dim, keyValue } from '../lib/output.js'
 
 export const FabricInitInput = z.object({
   repo: z.string(),
@@ -20,6 +22,20 @@ export const FabricInitOutput = z.object({
   projectSlug: z.string(),
   path: z.string(),
 })
+
+export const renderFabricInit = (
+  _s: unknown,
+  { projectId, projectSlug, path }: z.infer<typeof FabricInitOutput>
+): void => {
+  console.log(added('✓') + ' project imported')
+  console.log(
+    keyValue([
+      ['slug', chalk.bold(projectSlug)],
+      ['id', dim(projectId)],
+      ['config', path],
+    ])
+  )
+}
 
 /**
  * Adopt an existing repo as a fabric project. Calls `importProject` on
@@ -59,10 +75,6 @@ export const FabricInit = pikkuSessionlessFunc({
       projectId: result.projectId,
       ...(apiUrlOverride ? { apiUrl: apiUrlOverride } : {}),
     })
-    console.log(
-      `[fabric] imported ${result.projectSlug} (${result.projectId}) → ${path}`
-    )
-    console.log(`[fabric] main stage: ${result.mainStageId}`)
     return {
       projectId: result.projectId,
       projectSlug: result.projectSlug,

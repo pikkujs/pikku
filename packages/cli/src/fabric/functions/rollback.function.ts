@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
+import { added, dim, table } from '../lib/output.js'
 
 export const FabricRollbackInput = z.object({
   branch: z.string(),
@@ -11,21 +12,58 @@ export const FabricRollbackInput = z.object({
   yes: z.boolean().optional(),
 })
 
+const RollbackCandidate = z.object({
+  deploymentId: z.string(),
+  gitSha: z.string().nullable(),
+  artifactHash: z.string().nullable(),
+  deployedAt: z.string().nullable(),
+  versionMajor: z.number(),
+  versionMinor: z.number(),
+  versionPatch: z.number(),
+})
+
 export const FabricRollbackOutput = z.object({
+  mode: z.enum(['list', 'dry-run', 'applied']),
   deploymentId: z.string().optional(),
   rolledBackToDeploymentId: z.string().optional(),
-  candidates: z.array(
-    z.object({
-      deploymentId: z.string(),
-      gitSha: z.string().nullable(),
-      artifactHash: z.string().nullable(),
-      deployedAt: z.string().nullable(),
-      versionMajor: z.number(),
-      versionMinor: z.number(),
-      versionPatch: z.number(),
-    })
-  ),
+  target: z.string().optional(),
+  candidates: z.array(RollbackCandidate),
 })
+
+type RollbackCandidate = z.infer<typeof RollbackCandidate>
+
+export const renderRollback = (
+  _s: unknown,
+  result: z.infer<typeof FabricRollbackOutput>
+): void => {
+  if (result.mode === 'dry-run') {
+    console.log(dim(`dry-run: would roll back live → ${result.target}`))
+    return
+  }
+
+  if (result.mode === 'applied') {
+    console.log(added('✓') + ` rollback queued`)
+    console.log(dim(`  new live=${result.deploymentId}  ← artifact from ${result.rolledBackToDeploymentId}`))
+    return
+  }
+
+  if (result.candidates.length === 0) {
+    console.log(dim('No rollback candidates available.'))
+    return
+  }
+
+  console.log(
+    table(
+      ['DEPLOYMENT', 'VERSION', 'SHA', 'DEPLOYED AT'],
+      result.candidates.map((c: RollbackCandidate) => [
+        c.deploymentId,
+        `v${c.versionMajor}.${c.versionMinor}.${c.versionPatch}`,
+        c.gitSha ? c.gitSha.slice(0, 8) : '—',
+        c.deployedAt ?? '—',
+      ])
+    )
+  )
+}
 
 export const FabricRollback = pikkuSessionlessFunc({
   description:
@@ -42,39 +80,23 @@ export const FabricRollback = pikkuSessionlessFunc({
       )
     const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
 
-    // --list (or no target) → just show candidates.
     if (list || !target) {
       const result = await rpc.invoke('rollbackDeployment', {
         projectId: ctx.projectId,
       })
-      if (result.candidates.length === 0) {
-        console.log('[fabric] no rollback candidates available')
-      } else {
-        console.log('[fabric] rollback candidates (newest first):')
-        for (const c of result.candidates) {
-          const v = `v${c.versionMajor}.${c.versionMinor}.${c.versionPatch}`
-          const sha = c.gitSha ? c.gitSha.slice(0, 8) : '—'
-          console.log(
-            `  ${c.deploymentId}  ${v}  sha=${sha}  ${c.deployedAt ?? '—'}`
-          )
-        }
-      }
-      return { candidates: result.candidates }
+      return { mode: 'list', candidates: result.candidates }
     }
 
     if (dryRun) {
-      console.log(`[fabric] dry-run: would roll back live → ${target}`)
-      return { candidates: [] }
+      return { mode: 'dry-run', target, candidates: [] }
     }
 
     const result = await rpc.invoke('rollbackDeployment', {
       projectId: ctx.projectId,
       target,
     })
-    console.log(
-      `[fabric] rollback queued: new live=${result.deploymentId} (artifact from ${result.rolledBackToDeploymentId})`
-    )
     return {
+      mode: 'applied',
       deploymentId: result.deploymentId,
       rolledBackToDeploymentId: result.rolledBackToDeploymentId,
       candidates: result.candidates,

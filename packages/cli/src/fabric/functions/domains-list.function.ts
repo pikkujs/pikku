@@ -2,14 +2,47 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { findProjectConfig, resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
+import { dim, statusColor, table } from '../lib/output.js'
 
 export const FabricDomainsListInput = z.object({
   apiUrl: z.string().optional(),
 })
 
-export const FabricDomainsListOutput = z.object({
-  count: z.number(),
+const DomainHostname = z.object({
+  hostname: z.string(),
+  target: z.string(),
+  status: z.string(),
+  cnameTarget: z.string(),
 })
+
+export const FabricDomainsListOutput = z.object({
+  projectId: z.string(),
+  hostnames: z.array(DomainHostname),
+})
+
+type DomainHostname = z.infer<typeof DomainHostname>
+
+export const renderDomainsList = (
+  _s: unknown,
+  { projectId, hostnames }: z.infer<typeof FabricDomainsListOutput>
+): void => {
+  console.log(dim(`project: ${projectId}`))
+  if (hostnames.length === 0) {
+    console.log(dim('No custom domains attached.'))
+    return
+  }
+  console.log(
+    table(
+      ['HOSTNAME', 'TARGET', 'STATUS', 'CNAME'],
+      hostnames.map((h: DomainHostname) => [
+        h.hostname,
+        h.target,
+        statusColor(h.status),
+        dim(h.cnameTarget),
+      ])
+    )
+  )
+}
 
 export const FabricDomainsList = pikkuSessionlessFunc({
   description: 'List custom domains for the linked project.',
@@ -33,30 +66,16 @@ export const FabricDomainsList = pikkuSessionlessFunc({
     })
     const production = stagesResult.stages.find((s) => s.type === 'production')
     if (!production) {
-      console.log('')
-      console.log(`Project: ${local.config.projectId}`)
-      console.log('  No production stage exists yet.')
-      console.log('')
-      return { count: 0 }
+      return { projectId: local.config.projectId, hostnames: [] }
     }
 
     const result = await rpc.invoke('listStageCustomHostnames', {
       stageId: production.stageId,
     })
 
-    console.log('')
-    console.log(`Project: ${local.config.projectId}`)
-    if (result.hostnames.length === 0) {
-      console.log('  No custom domains attached.')
-    } else {
-      for (const h of result.hostnames) {
-        console.log(
-          `  ${h.hostname.padEnd(40)} ${h.target.padEnd(4)}  ${h.status.padEnd(12)}  CNAME → ${h.cnameTarget}`
-        )
-      }
+    return {
+      projectId: local.config.projectId,
+      hostnames: result.hostnames as DomainHostname[],
     }
-    console.log('')
-
-    return { count: result.hostnames.length }
   },
 })

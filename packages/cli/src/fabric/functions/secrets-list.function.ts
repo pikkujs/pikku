@@ -2,20 +2,34 @@ import { z } from 'zod'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
+import { dim } from '../lib/output.js'
 
 export const FabricSecretsListInput = z.object({
   branch: z.string(),
-  json: z.boolean().optional(),
 })
 
-export const FabricSecretsListOutput = z.object({ names: z.array(z.string()) })
+export const FabricSecretsListOutput = z.object({
+  branch: z.string(),
+  names: z.array(z.string()),
+})
+
+export const renderSecretsList = (
+  _s: unknown,
+  { branch, names }: z.infer<typeof FabricSecretsListOutput>
+): void => {
+  if (names.length === 0) {
+    console.log(dim(`No secrets set on ${branch}.`))
+    return
+  }
+  for (const name of names) console.log(name)
+}
 
 export const FabricSecretsList = pikkuSessionlessFunc({
   description:
     'List secret names visible to a stage (values never leave the server).',
   input: FabricSecretsListInput,
   output: FabricSecretsListOutput,
-  func: async (_services, { branch, json }) => {
+  func: async (_services, { branch }) => {
     const ctx = await resolveApiContext()
     if (!ctx.token)
       throw new Error('Not logged in. Run `pikku fabric login` first.')
@@ -29,13 +43,6 @@ export const FabricSecretsList = pikkuSessionlessFunc({
       projectId: ctx.projectId,
       branch,
     })
-    if (json) {
-      console.log(JSON.stringify({ branch, names: result.names }, null, 2))
-    } else if (result.names.length === 0) {
-      console.log(`[fabric] no secrets set on ${branch}`)
-    } else {
-      for (const name of result.names) console.log(name)
-    }
-    return result
+    return { branch, names: result.names }
   },
 })

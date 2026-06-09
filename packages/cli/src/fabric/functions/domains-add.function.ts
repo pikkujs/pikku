@@ -1,7 +1,9 @@
 import { z } from 'zod'
+import chalk from 'chalk'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { findProjectConfig, resolveApiContext } from '../lib/config.js'
 import { getFabricRPC } from '../lib/http.js'
+import { added, dim } from '../lib/output.js'
 
 export const FabricDomainsAddInput = z.object({
   hostname: z.string(),
@@ -11,8 +13,26 @@ export const FabricDomainsAddInput = z.object({
 
 export const FabricDomainsAddOutput = z.object({
   hostname: z.string(),
+  target: z.string(),
   cnameTarget: z.string(),
+  ownershipVerification: z
+    .object({ type: z.string(), name: z.string(), value: z.string() })
+    .optional(),
 })
+
+export const renderDomainsAdd = (
+  _s: unknown,
+  { hostname, target, cnameTarget, ownershipVerification }: z.infer<typeof FabricDomainsAddOutput>
+): void => {
+  console.log(added('✓') + ` ${hostname} ${dim(`(${target})`)} added`)
+  console.log(dim('  CNAME:     ') + `${hostname}  →  ${chalk.bold(cnameTarget)}`)
+  if (ownershipVerification) {
+    console.log(
+      dim(`  Ownership: ${ownershipVerification.type} `) +
+        `${ownershipVerification.name} = ${chalk.bold(ownershipVerification.value)}`
+    )
+  }
+}
 
 export const FabricDomainsAdd = pikkuSessionlessFunc({
   description: 'Add a custom domain to the production stage.',
@@ -49,16 +69,17 @@ export const FabricDomainsAdd = pikkuSessionlessFunc({
       target,
     })
 
-    console.log('')
-    console.log(`  ✓ added   ${hostname}  (${target})`)
-    console.log(`            CNAME: ${hostname}  →  ${result.cnameTarget}`)
-    if (result.ownershipVerification?.name) {
-      console.log(
-        `            Ownership: ${result.ownershipVerification.type ?? 'TXT'} ${result.ownershipVerification.name} = ${result.ownershipVerification.value}`
-      )
+    return {
+      hostname,
+      target,
+      cnameTarget: result.cnameTarget,
+      ownershipVerification: result.ownershipVerification?.name
+        ? {
+            type: result.ownershipVerification.type ?? 'TXT',
+            name: result.ownershipVerification.name,
+            value: result.ownershipVerification.value,
+          }
+        : undefined,
     }
-    console.log('')
-
-    return { hostname, cnameTarget: result.cnameTarget }
   },
 })
