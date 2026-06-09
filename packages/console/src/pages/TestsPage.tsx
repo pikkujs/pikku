@@ -111,7 +111,7 @@ function buildTestsViewData(functions: any[]): {
   scenarios: ScenarioItem[]
 } {
   const testedFunctions = functions.filter(
-    (fn: any) => fn?.tests?.scenarios?.length > 0 || fn?.tests?.coverage
+    (fn: any) => fn?.tests?.scenarios?.length > 0 || fn?.tests?.status !== undefined
   )
 
   if (testedFunctions.length === 0) {
@@ -123,7 +123,7 @@ function buildTestsViewData(functions: any[]): {
   let latestGeneratedAt: string | null = null
 
   for (const fn of functions) {
-    const cov = fn?.tests?.coverage
+    const cov = fn?.tests
     const fnName: string = fn?.name ?? fn?.funcName ?? fn?.routeName ?? ''
 
     covFunctions.push({
