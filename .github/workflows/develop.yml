@@ -21,6 +21,17 @@ jobs:
           download-build: 'false'
       - uses: ./.github/actions/build
 
+  codegen-perf:
+    name: Codegen Perf (500 functions ≤ 15s)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Run codegen perf gate
+        run: node --import tsx/esm benchmarks/bench-codegen-perf.ts
+
   e2e:
     name: E2E Standard
     runs-on: ubuntu-latest
