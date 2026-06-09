@@ -1,3 +1,5 @@
+import { CorePikkuFetch } from '@pikku/fetch'
+
 export interface ActorDispatchContext {
   lastResult: unknown
   lastError: Error | undefined
@@ -48,26 +50,28 @@ export class Actor {
     rpcName: string,
     data: unknown
   ): Promise<ActorCallResult> {
-    let response: Response
-    try {
-      response = await fetch(`${this.baseUrl}/rpc/${rpcName}`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', ...this._headers },
-        body: JSON.stringify({ data }),
-      })
-    } catch (err) {
-      return { result: undefined, error: err as Error }
+    const client = new CorePikkuFetch({ serverUrl: this.baseUrl })
+    const authHeader = this._headers['authorization']
+    if (authHeader?.startsWith('Bearer ')) {
+      client.setAuthorizationJWT(authHeader.slice(7))
     }
+    const extraHeaders = Object.fromEntries(
+      Object.entries(this._headers).filter(([k]) => k !== 'authorization')
+    )
+    const options = Object.keys(extraHeaders).length
+      ? { headers: extraHeaders }
+      : undefined
+
     try {
-      if (!response.ok) {
-        const body = (await response.json().catch(() => ({}))) as Record<string, unknown>
-        const err = new Error((body.message as string | undefined) ?? response.statusText)
+      const result = await client.api(`/rpc/${rpcName}`, 'POST', { data }, options)
+      return { result, error: undefined }
+    } catch (thrown: unknown) {
+      if (thrown instanceof Response) {
+        const body = (await thrown.json().catch(() => ({}))) as Record<string, unknown>
+        const err = new Error((body.message as string | undefined) ?? thrown.statusText)
         err.name = (body.name as string | undefined) ?? 'HttpError'
         return { result: undefined, error: err }
       }
-      const result = await response.json()
-      return { result, error: undefined }
-    } catch (thrown: unknown) {
       return { result: undefined, error: thrown as Error }
     }
   }
