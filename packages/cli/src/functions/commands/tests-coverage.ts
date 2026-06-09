@@ -164,8 +164,8 @@ export const pikkuTestsCoverage = pikkuSessionlessFunc<
       process.exit(1)
     }
 
-    const coverageFinal = join(functionsDir, 'coverage', 'coverage-final.json')
-    const outDir = join(ftestDir, 'coverage')
+    const coverageFinal = join(functionsDir, '.coverage', 'coverage-final.json')
+    const outDir = join(ftestDir, '.coverage')
     const outFile = join(outDir, 'function-coverage.json')
 
     if (!noRun) {
@@ -208,6 +208,8 @@ export const pikkuTestsCoverage = pikkuSessionlessFunc<
           'src',
           '--include',
           'src/**',
+          '--report-dir',
+          '.coverage',
           '--reporter',
           'json',
           '--reporter',
