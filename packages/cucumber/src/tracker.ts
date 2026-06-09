@@ -37,6 +37,47 @@ export class StubTracker {
     list[idx]!.verified = true
   }
 
+  assertCall(
+    service: string,
+    method: string,
+    predicate: (args: unknown[]) => boolean,
+    description: string
+  ): void {
+    this.touched.add(service)
+    const list = this.calls.get(service) ?? []
+    const idx = list.findIndex(
+      (c) => c.method === method && !c.verified && predicate(c.args)
+    )
+    if (idx === -1) {
+      const seen =
+        list
+          .filter((c) => c.method === method)
+          .map((c) => JSON.stringify(c.args[0]))
+          .join('\n  ') || '(none)'
+      throw new Error(`Expected ${description} but found:\n  ${seen}`)
+    }
+    list[idx]!.verified = true
+  }
+
+  assertNoCalls(
+    service: string,
+    method?: string,
+    predicate?: (args: unknown[]) => boolean,
+    description?: string
+  ): void {
+    const list = this.calls.get(service) ?? []
+    const relevant = (method ? list.filter((c) => c.method === method) : list).filter(
+      (c) => !predicate || predicate(c.args)
+    )
+    if (relevant.length > 0) {
+      const calls = relevant
+        .map((c) => `${c.method}(${c.args.map((a) => JSON.stringify(a)).join(', ')})`)
+        .join('\n  ')
+      const what = description ?? `"${service}${method ? '.' + method : ''}"`
+      throw new Error(`Expected no ${what} calls but got:\n  ${calls}`)
+    }
+  }
+
   verify(): void {
     const errors: string[] = []
     for (const service of this.touched) {
