@@ -9,13 +9,6 @@ import { registerHTTPSteps } from './http.js'
 type TableLike = { rowsHash: () => Record<string, string> }
 type ListTableLike = { rows: () => string[][] }
 
-function isServerMode(world: IFunctionWorld): boolean {
-  const pickle = (
-    world as unknown as { pickle?: { tags?: Array<{ name: string }> } }
-  ).pickle
-  return pickle?.tags?.some((t) => t.name === '@server') ?? false
-}
-
 export interface CucumberStepApi {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   Given: (
@@ -180,13 +173,7 @@ export function registerCommonSteps(
     cucumber.When(
       '{actor} calls {string}',
       async function (this: IFunctionWorld, actor: Actor, rpc: string) {
-        if (isServerMode(this)) {
-          const { result, error } = await actor.call(rpc, null)
-          this.lastResult = result
-          this.lastError = error
-        } else {
-          await this.call(actor.name, rpc, null, actor.headers)
-        }
+        await actor.call(this, rpc, null)
       }
     )
 
@@ -198,13 +185,7 @@ export function registerCommonSteps(
         rpc: string,
         table: TableLike
       ) {
-        if (isServerMode(this)) {
-          const { result, error } = await actor.call(rpc, tableToInput(table))
-          this.lastResult = result
-          this.lastError = error
-        } else {
-          await this.call(actor.name, rpc, tableToInput(table), actor.headers)
-        }
+        await actor.call(this, rpc, tableToInput(table))
       }
     )
 
@@ -216,21 +197,7 @@ export function registerCommonSteps(
         rpc: string,
         name: string
       ) {
-        if (isServerMode(this)) {
-          const { result, error } = await actor.call(
-            rpc,
-            resolveData(this, name)
-          )
-          this.lastResult = result
-          this.lastError = error
-        } else {
-          await this.call(
-            actor.name,
-            rpc,
-            resolveData(this, name),
-            actor.headers
-          )
-        }
+        await actor.call(this, rpc, resolveData(this, name))
       }
     )
 
@@ -238,58 +205,33 @@ export function registerCommonSteps(
       cucumber.Given(
         '{actor} logs in',
         async function (this: IFunctionWorld, actor: Actor) {
-          await actor.login(loginRpc)
+          await actor.login(this, loginRpc)
         }
       )
     }
   }
 
   // ── Anonymous user steps (no actor map needed) ───────────────────────────
+  const anonymous = new Actor('anonymous', {})
+
   cucumber.When(
     'an anonymous user calls {string}',
     async function (this: IFunctionWorld, rpc: string) {
-      if (isServerMode(this)) {
-        const { result, error } = await new Actor('anonymous', {}).call(
-          rpc,
-          null
-        )
-        this.lastResult = result
-        this.lastError = error
-      } else {
-        await this.call('anonymous', rpc, null)
-      }
+      await anonymous.call(this, rpc, null)
     }
   )
 
   cucumber.When(
     'an anonymous user calls {string} with:',
     async function (this: IFunctionWorld, rpc: string, table: TableLike) {
-      if (isServerMode(this)) {
-        const { result, error } = await new Actor('anonymous', {}).call(
-          rpc,
-          tableToInput(table)
-        )
-        this.lastResult = result
-        this.lastError = error
-      } else {
-        await this.call('anonymous', rpc, tableToInput(table))
-      }
+      await anonymous.call(this, rpc, tableToInput(table))
     }
   )
 
   cucumber.When(
     'an anonymous user calls {string} using {string}',
     async function (this: IFunctionWorld, rpc: string, name: string) {
-      if (isServerMode(this)) {
-        const { result, error } = await new Actor('anonymous', {}).call(
-          rpc,
-          resolveData(this, name)
-        )
-        this.lastResult = result
-        this.lastError = error
-      } else {
-        await this.call('anonymous', rpc, resolveData(this, name))
-      }
+      await anonymous.call(this, rpc, resolveData(this, name))
     }
   )
 
