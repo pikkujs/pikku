@@ -34,12 +34,14 @@ export const consoleCommand = pikkuSessionlessFunc<
     { rpc }
   ) => {
     const watchDirectories = [
-      ...new Set([config.emailTemplatesDir, ...config.srcDirectories].filter(Boolean)),
+      ...new Set(
+        [config.emailTemplatesDir, ...config.srcDirectories].filter(Boolean)
+      ),
     ] as string[]
 
     if (!config.scaffold?.console) {
       logger.error(
-        'Console is not enabled. Add { "scaffold": { "console": "no-auth" } } to your pikku.config.json'
+        'Console is not enabled. Run `pikku enable console` or add { "scaffold": { "console": "no-auth" } } to your pikku.config.json'
       )
       return
     }
@@ -114,7 +116,9 @@ export const consoleCommand = pikkuSessionlessFunc<
     const generatorWatcher = () => {
       watcher.close()
 
-      logger.info(`• Watching directories: \n  - ${watchDirectories.join('\n  - ')}`)
+      logger.info(
+        `• Watching directories: \n  - ${watchDirectories.join('\n  - ')}`
+      )
       watcher = chokidar.watch(watchDirectories, {
         ignoreInitial: true,
         ignored: /.*\.gen\.ts/,

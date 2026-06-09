@@ -270,6 +270,31 @@ Scenario: Anonymous cannot commit changes
 
 A symptom: the function appears in both a validation test (`the call fails`) and an auth test (`the call fails because they are unauthorized`). That's correct — they test two different paths.
 
+### Never stub the schema service
+
+The schema service must always be real. A stubbed schema makes validation a no-op: required fields pass silently, the function body runs with null input, and you get `TypeError` instead of `UnprocessableContentError`. Tests appear to pass but validate nothing.
+
+In `createStubServices`, exclude `schema` from the catch-all Proxy so `createSingletonServices` falls through to creating a real `CFWorkerSchemaService`:
+
+```typescript
+// Wrong — stubs everything including schema; schema validation becomes a no-op
+const injected = new Proxy({} as Record<string, unknown>, {
+  get(_, prop: string) {
+    return tracker.stub(prop)
+  },
+})
+
+// Right — schema excluded from stub; real CFWorkerSchemaService is created
+const injected = new Proxy({} as Record<string, unknown>, {
+  get(_, prop: string) {
+    if (prop === 'schema') return undefined
+    return tracker.stub(prop)
+  },
+})
+```
+
+This applies to every test harness without exception.
+
 ## Coverage-Driven Test Writing
 
 When asked to improve or fill test coverage, start with the AI prompt from the coverage command:
