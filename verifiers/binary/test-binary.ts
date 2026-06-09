@@ -1,12 +1,5 @@
 import { execFileSync, execSync } from 'node:child_process'
-import {
-  cpSync,
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs'
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -107,12 +100,12 @@ function makeStarterWorkspace(): string {
   )
   if (existsSync(functionsConfigPath)) {
     const configSource = readFileSync(functionsConfigPath, 'utf8')
-    if (!configSource.includes('sqliteDb')) {
+    if (!configSource.includes('dev: { db: true }')) {
       writeFileSync(
         functionsConfigPath,
         configSource.replace(
           'export const createConfig = pikkuConfig(async () => ({',
-          "export const createConfig = pikkuConfig(async () => ({\n  dev: { db: true },\n  sqliteDb: '.pikku-runtime/dev.db',"
+          'export const createConfig = pikkuConfig(async () => ({\n  dev: { db: true },'
         )
       )
     }
@@ -257,7 +250,8 @@ console.log('='.repeat(60))
 console.log('Binary Verifier Results')
 console.log('='.repeat(60))
 for (const r of results) {
-  const icon = r.status === 'passed' ? '✓' : r.status === 'skipped' ? '↷' : '✗'
+  const icon =
+    r.status === 'passed' ? '✓' : r.status === 'skipped' ? '↷' : '✗'
   console.log(`  ${icon} ${r.name}`)
   if (r.error) console.log(`    ${r.error}`)
 }
