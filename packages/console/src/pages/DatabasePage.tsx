@@ -499,7 +499,7 @@ function DatabasePageInner() {
     DbSchema | null
   >({
     queryKey: ['console:getDbSchema'],
-    queryFn: () => rpc.invoke('console:getDbSchema', null) as Promise<DbSchema | null>,
+    queryFn: () => rpc.invoke('console:getDbSchema') as Promise<DbSchema | null>,
   })
 
   return (
