@@ -15,7 +15,9 @@ export class StubHttpRequest implements PikkuHTTPRequest {
   private readonly _cookies: Record<string, string>
 
   constructor(private readonly config: StubHttpRequestConfig) {
-    this._headers = config.headers ?? {}
+    this._headers = Object.fromEntries(
+      Object.entries(config.headers ?? {}).map(([k, v]) => [k.toLowerCase(), v])
+    )
     this._cookies = config.cookies ?? {}
   }
 
@@ -45,7 +47,7 @@ export class StubHttpRequest implements PikkuHTTPRequest {
   }
 
   header(name: string): string | null {
-    return this._headers[name.toLowerCase()] ?? this._headers[name] ?? null
+    return this._headers[name.toLowerCase()] ?? null
   }
 
   cookie(name?: string): string | null {
