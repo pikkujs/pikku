@@ -1,4 +1,4 @@
-import { Client } from 'pg'
+import { Pool } from 'pg'
 import type { DbIntrospector, ColumnInfo } from '../db-introspector.js'
 
 interface PgColumnRow {
@@ -11,31 +11,36 @@ interface PgColumnRow {
 }
 
 export class PostgresIntrospector implements DbIntrospector {
-  private client: Client
+  private pool: Pool
 
-  constructor(connectionStringOrClient: string | Client) {
-    this.client =
-      typeof connectionStringOrClient === 'string'
-        ? new Client({ connectionString: connectionStringOrClient })
-        : connectionStringOrClient
+  constructor(connectionString: string) {
+    this.pool = new Pool({ connectionString, max: 10 })
   }
 
   async connect(): Promise<void> {
-    await this.client.connect()
+    // Pool connects lazily; nothing to do here.
   }
 
   async listTables(): Promise<string[]> {
-    const result = await this.client.query<{ table_name: string }>(
-      `SELECT table_name
+    const result = await this.pool.query<{ table_schema: string; table_name: string }>(
+      `SELECT table_schema, table_name
        FROM information_schema.tables
-       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-       ORDER BY table_name`
+       WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+         AND table_schema NOT LIKE 'pg_temp_%'
+         AND table_type = 'BASE TABLE'
+       ORDER BY table_schema, table_name`
     )
-    return result.rows.map((r) => r.table_name)
+    return result.rows.map((r) =>
+      r.table_schema === 'public' ? r.table_name : `${r.table_schema}.${r.table_name}`
+    )
   }
 
   async getColumns(table: string): Promise<ColumnInfo[]> {
-    const result = await this.client.query<PgColumnRow>(
+    const dotIdx = table.indexOf('.')
+    const schema = dotIdx >= 0 ? table.slice(0, dotIdx) : 'public'
+    const tableName = dotIdx >= 0 ? table.slice(dotIdx + 1) : table
+
+    const result = await this.pool.query<PgColumnRow>(
       `SELECT
          c.column_name,
          c.data_type,
@@ -50,14 +55,14 @@ export class PostgresIntrospector implements DbIntrospector {
             AND tc.table_schema = kcu.table_schema
             AND tc.table_name = kcu.table_name
            WHERE tc.constraint_type = 'PRIMARY KEY'
-             AND tc.table_schema = 'public'
+             AND tc.table_schema = $2
              AND tc.table_name = $1
              AND kcu.column_name = c.column_name
          ) AS is_pk
        FROM information_schema.columns c
-       WHERE c.table_schema = 'public' AND c.table_name = $1
+       WHERE c.table_schema = $2 AND c.table_name = $1
        ORDER BY c.ordinal_position`,
-      [table]
+      [tableName, schema]
     )
 
     return result.rows.map((r) => ({
@@ -71,6 +76,6 @@ export class PostgresIntrospector implements DbIntrospector {
   }
 
   async close(): Promise<void> {
-    await this.client.end()
+    await this.pool.end()
   }
 }
