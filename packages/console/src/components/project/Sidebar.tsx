@@ -30,6 +30,7 @@ import {
   Mail,
   FlaskConical,
   Database,
+  Users,
 } from 'lucide-react'
 import { spotlight } from '@mantine/spotlight'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
@@ -131,6 +132,12 @@ export const DEFAULT_NAV_SECTIONS: NavSection[] = [
         href: '/credentials',
         icon: KeyRound,
         matchPrefix: '/credentials',
+      },
+      {
+        label: 'Users',
+        href: '/users',
+        icon: Users,
+        matchPrefix: '/users',
       },
     ],
   },
