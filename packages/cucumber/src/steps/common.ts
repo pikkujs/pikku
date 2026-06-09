@@ -164,9 +164,13 @@ export function registerCommonSteps(
   // ── Actor parameter type + actor steps ───────────────────────────────────
   if (actorOptions && cucumber.defineParameterType) {
     const { actors, loginRpc } = actorOptions
+    const actorNames = [...actors.keys()]
+    const escapedNames = actorNames.map((n) =>
+      n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    )
     cucumber.defineParameterType({
       name: 'actor',
-      regexp: new RegExp([...actors.keys()].join('|')),
+      regexp: new RegExp(escapedNames.join('|')),
       transformer: (s: string) => actors.get(s)!,
     })
 
