@@ -137,26 +137,46 @@ Keep one `PersonaData` instance per domain concept. Steps import only what they 
 
 ### How `{actor} calls "functionName"` works
 
-Every `{actor} calls "rpcName"` step sends an HTTP POST to `/rpc/{rpcName}` on the live server. This is **not** an in-process call — it goes through the full HTTP stack: route matching → `rpcCaller` → schema validation → the actual function. The server must be running (via PM2 or a test process).
+By default, `{actor} calls "rpcName"` runs **in-process** — it calls the function directly through the pikku RPC pipeline (schema validation → middleware → permissions → function body), with the actor's headers injected into the stub HTTP wire. No server process is required.
 
-| Step | What it does | Use when |
+Add a `@server` tag to a feature or scenario to switch to **HTTP mode** — the actor sends a real HTTP POST to `/BASE_URL/rpc/{rpcName}`. The server must be running in HTTP mode.
+
+```gherkin
+# Default: in-process (fast, no server required)
+Feature: Builder auth
+  Scenario: Anonymous cannot call a protected function
+    When anonymous calls "getSandboxGitStatus"
+    Then the call fails because they are unauthorized
+
+# @server: real HTTP to the running server
+@server
+Feature: HTTP wire
+  Scenario: Health check is reachable
+    When anonymous makes a "get" request to "/health-check"
+    Then the response status is 200
+```
+
+The actor owns the dispatch — `Actor.call(ctx, rpc, data)` checks the `@server` tag on the world context and routes accordingly. In-process mode injects `actor.headers` (including `Authorization: Bearer ...`) into the stub HTTP wire so auth middleware receives the token.
+
+| Step | Mode | What it does |
 |---|---|---|
-| `{actor} calls "functionName"` | HTTP POST to `/rpc/functionName` | Default. Tests function logic, schema, auth. |
-| `{actor} makes a "get" request to "/path"` | HTTP to a named route | When the specific route has behavior the RPC path doesn't (e.g., URL-param routing, route-specific middleware). |
+| `{actor} calls "functionName"` | in-process (default) | Full RPC pipeline, no HTTP hop |
+| `{actor} calls "functionName"` | HTTP (with `@server`) | POST to `/rpc/functionName` on live server |
+| `{actor} makes a "get" request to "/path"` | HTTP always | Named-route test — for route-specific behavior |
 
 ### RPC vs wire: the decision rule
 
 Before writing a wire-level test (`makes a "method" request to "/path"`), check whether the route adds anything beyond calling the function:
 
-- No extra middleware or transforms → just use `{actor} calls "functionName"`
-- Route has specific middleware, auth tags, or transforms → write a wire test for those specific behaviors; an RPC test for the function logic
+- No extra middleware or transforms → just use `{actor} calls "functionName"` (in-process)
+- Route has specific behavior (URL-param routing, route-specific middleware, status codes) → write a `@server` wire test for those behaviors; an in-process RPC test for the function logic
 
 ```gherkin
 # Wrong — testing rpcCaller behavior that adds nothing over the direct RPC call
 When userA makes a "post" request to "/rpc/listTodos"
 Then the response status is 200
 
-# Right — test the function directly; only use a route test if the route does something extra
+# Right — test the function directly in-process; only use a @server route test if the route does something extra
 When userA calls "listTodos"
 Then the call succeeds
 ```
