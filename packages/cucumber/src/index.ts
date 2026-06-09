@@ -1,5 +1,5 @@
 export { PersonaData } from './persona-data.js'
-export { StubTracker } from './tracker.js'
+export { StubTracker, createStubProxy } from './tracker.js'
 export { createDbUtils, type DbUtils } from './db.js'
 export { createStubHttp, type StubHttp } from './stubs/http.js'
 export {
@@ -29,5 +29,9 @@ export {
   type Persona,
 } from './world.js'
 export { registerHooks, type CucumberHookApi } from './hooks.js'
-export { registerCommonSteps, type CucumberStepApi } from './steps/common.js'
+export {
+  registerCommonSteps,
+  type CucumberStepApi,
+  type ActorOptions,
+} from './steps/common.js'
 export { Actor, type ActorDispatchContext } from './actor.js'
