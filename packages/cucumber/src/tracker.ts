@@ -66,12 +66,15 @@ export class StubTracker {
     description?: string
   ): void {
     const list = this.calls.get(service) ?? []
-    const relevant = (method ? list.filter((c) => c.method === method) : list).filter(
-      (c) => !predicate || predicate(c.args)
-    )
+    const relevant = (
+      method ? list.filter((c) => c.method === method) : list
+    ).filter((c) => !predicate || predicate(c.args))
     if (relevant.length > 0) {
       const calls = relevant
-        .map((c) => `${c.method}(${c.args.map((a) => JSON.stringify(a)).join(', ')})`)
+        .map(
+          (c) =>
+            `${c.method}(${c.args.map((a) => JSON.stringify(a)).join(', ')})`
+        )
         .join('\n  ')
       const what = description ?? `"${service}${method ? '.' + method : ''}"`
       throw new Error(`Expected no ${what} calls but got:\n  ${calls}`)
@@ -95,4 +98,20 @@ export class StubTracker {
       )
     }
   }
+}
+
+/**
+ * Creates a Proxy suitable for passing as `existingServices` to
+ * `createSingletonServices`. Every property returns `tracker.stub(prop)`
+ * EXCEPT `schema`, which returns `undefined` so the service factory creates
+ * a real schema service. Stubbing the schema makes validation a no-op —
+ * required fields pass silently and tests validate nothing.
+ */
+export function createStubProxy(tracker: StubTracker): Record<string, unknown> {
+  return new Proxy({} as Record<string, unknown>, {
+    get(_, prop: string) {
+      if (prop === 'schema') return undefined
+      return tracker.stub(prop)
+    },
+  })
 }
