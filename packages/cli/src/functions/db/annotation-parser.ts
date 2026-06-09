@@ -29,68 +29,40 @@ export function annotationFromName(
   return null
 }
 
-// ── camelCase → snake_case conversion ────────────────────────────────────────
-
-function camelToSnake(s: string): string {
-  return s.replace(/([A-Z])/g, '_$1').toLowerCase()
-}
-
-// ── Load from db/annotations.ts sidecar ──────────────────────────────────────
+// ── Load from db/annotations.gen.json sidecar ────────────────────────────────
 
 /**
- * Try to load annotations from a `db/annotations.ts` (or `.js`) sidecar file
- * in `rootDir`. Returns null if the file doesn't exist.
+ * Try to load annotations from a `db/annotations.gen.json` sidecar generated
+ * by `yarn db:types`. Returns null if the file doesn't exist.
  *
- * The sidecar uses camelCase keys (matching the Kysely DB interface).
- * We convert them to snake_case to match the raw introspected table/column names.
+ * The JSON file uses snake_case keys (raw DB names) so it can be read
+ * directly without any conversion. It is emitted by bin/db-classify.ts.
  */
-async function loadAnnotationsSidecar(rootDir: string): Promise<AnnotationMap | null> {
-  const candidates = [
-    join(rootDir, 'db', 'annotations.js'),
-    join(rootDir, 'db', 'annotations.ts'),
-  ]
-  const found = candidates.find((p) => existsSync(p))
-  if (!found) return null
-
-  let mod: { annotations?: Record<string, Record<string, {
-    visibility?: string
-    classification?: string
-    kind?: string
-    tsType?: string
-  }>> }
+function loadAnnotationsSidecar(rootDir: string): AnnotationMap | null {
+  const jsonPath = join(rootDir, 'db', 'annotations.gen.json')
+  if (!existsSync(jsonPath)) return null
   try {
-    mod = await import(found)
+    const raw = JSON.parse(readFileSync(jsonPath, 'utf8')) as Record<
+      string,
+      Record<string, { visibility?: string; classification?: string; kind?: string; tsType?: string }>
+    >
+    const result: AnnotationMap = {}
+    for (const [table, cols] of Object.entries(raw)) {
+      result[table] = {}
+      for (const [col, ann] of Object.entries(cols)) {
+        if (!ann) continue
+        const entry: ColAnnotation = {}
+        if (ann.kind === 'bool' || ann.kind === 'date' || ann.kind === 'json') entry.kind = ann.kind
+        if (ann.tsType) entry.tsType = ann.tsType
+        const vis = ann.visibility
+        if (vis === 'public' || vis === 'private' || vis === 'secret') entry.classification = vis
+        result[table][col] = entry
+      }
+    }
+    return result
   } catch {
     return null
   }
-
-  const raw = mod.annotations
-  if (!raw || typeof raw !== 'object') return null
-
-  const result: AnnotationMap = {}
-  for (const [camelTable, cols] of Object.entries(raw)) {
-    if (!cols || typeof cols !== 'object') continue
-    const snakeTable = camelToSnake(camelTable)
-    result[snakeTable] = {}
-    for (const [camelCol, ann] of Object.entries(cols)) {
-      if (!ann || typeof ann !== 'object') continue
-      const snakeCol = camelToSnake(camelCol)
-      const entry: ColAnnotation = {}
-
-      if (ann.kind === 'bool' || ann.kind === 'date' || ann.kind === 'json') {
-        entry.kind = ann.kind
-      }
-      if (ann.tsType) entry.tsType = ann.tsType
-
-      const vis = ann.visibility
-      if (vis === 'public' || vis === 'private' || vis === 'secret') {
-        entry.classification = vis
-      }
-
-      result[snakeTable][snakeCol] = entry
-    }
-  }
-  return result
 }
 
 // ── SQL comment parsing (fallback) ───────────────────────────────────────────
@@ -193,11 +165,8 @@ export function parseAnnotations(migrationsDir: string): AnnotationMap {
  * Load annotations for a project. Tries `db/annotations.ts` sidecar first;
  * falls back to SQL comment parsing from `migrationsDir` if not found.
  */
-export async function loadAnnotations(
-  rootDir: string,
-  migrationsDir?: string
-): Promise<AnnotationMap> {
-  const sidecar = await loadAnnotationsSidecar(rootDir)
+export function loadAnnotations(rootDir: string, migrationsDir?: string): AnnotationMap {
+  const sidecar = loadAnnotationsSidecar(rootDir)
   if (sidecar) return sidecar
   return migrationsDir ? parseAnnotations(migrationsDir) : {}
 }

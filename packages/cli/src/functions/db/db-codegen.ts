@@ -141,13 +141,19 @@ interface TableSchema {
   columns: ColumnInfo[]
 }
 
+/** Strip optional schema prefix (e.g. "app.user" → "user"). */
+function bareTableName(name: string): string {
+  const dot = name.indexOf('.')
+  return dot >= 0 ? name.slice(dot + 1) : name
+}
+
 function emitInterface(
   table: TableSchema,
   camelCase: boolean,
   explicitAnnotations: AnnotationMap
 ): string {
   const ifaceName = snakeToPascal(table.name)
-  const tableCols = explicitAnnotations[table.name] ?? {}
+  const tableCols = explicitAnnotations[bareTableName(table.name)] ?? {}
 
   const fields = table.columns
     .map((col) => {
@@ -179,7 +185,7 @@ function emitManifest(
 ): string {
   const tableEntries = tables
     .map((table) => {
-      const tableCols = explicitAnnotations[table.name] ?? {}
+      const tableCols = explicitAnnotations[bareTableName(table.name)] ?? {}
       const colEntries = table.columns
         .map((col) => {
           const ann = tableCols[col.name]
@@ -320,7 +326,7 @@ export async function generateSchemaTypes(
   )
 
   const explicitAnnotations = (options.rootDir || options.migrationsDir)
-    ? await loadAnnotations(options.rootDir ?? '', options.migrationsDir)
+    ? loadAnnotations(options.rootDir ?? '', options.migrationsDir)
     : {}
 
   // ── schema.d.ts ─────────────────────────────────────────────────────────────
@@ -363,7 +369,7 @@ export async function generateSchemaTypes(
   // ── coercion.gen.ts ──────────────────────────────────────────────────────────
   const coercionMap: CoercionMap = {}
   for (const table of tables) {
-    const tableCols = explicitAnnotations[table.name] ?? {}
+    const tableCols = explicitAnnotations[bareTableName(table.name)] ?? {}
     for (const col of table.columns) {
       const sqlAnn = tableCols[col.name]
       const kind: ColumnKind | undefined =
