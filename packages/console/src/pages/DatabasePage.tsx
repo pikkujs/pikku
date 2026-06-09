@@ -443,9 +443,10 @@ const INTERNAL_TABLE_PREFIXES = [
 const ALWAYS_SKIP = new Set(['migrations', 'sql_migrations', 'pgmigrations'])
 
 function shouldShowTable(name: string, hideInternal: boolean): boolean {
-  if (ALWAYS_SKIP.has(name)) return false
+  const bare = name.includes('.') ? name.split('.').pop()! : name
+  if (ALWAYS_SKIP.has(bare)) return false
   if (!hideInternal) return true
-  return !INTERNAL_TABLE_PREFIXES.some((prefix) => name.startsWith(prefix))
+  return !INTERNAL_TABLE_PREFIXES.some((prefix) => bare.startsWith(prefix))
 }
 
 // ── Canvas component ──────────────────────────────────────────────────────────

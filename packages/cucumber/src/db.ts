@@ -54,6 +54,7 @@ export function createDbUtils(options: {
     },
 
     removeScenarioDb(path: string) {
+      if (!path) return
       rmSync(path, { force: true })
     },
 

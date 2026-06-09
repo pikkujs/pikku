@@ -145,13 +145,13 @@ Call at module load time — typically in the same `wirings/*.ts` file as the `w
 
 **Scope resolution order (broadest → narrowest):**
 
-```
+```text
 global → httpGroup/* → httpGroup/prefix → wiringTags → wiringMiddleware → funcTags → funcMiddleware → function body
 ```
 
 **Within each scope, sorted by priority:**
 
-```
+```text
 highest → high → medium (default) → low → lowest
 ```
 

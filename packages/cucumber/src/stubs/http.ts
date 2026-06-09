@@ -14,23 +14,23 @@ export class StubHttpResponse {
     return this
   }
 
-  cookie(): this {
+  cookie(..._args: unknown[]): this {
     return this
   }
 
-  clearCookie(): this {
+  clearCookie(..._args: unknown[]): this {
     return this
   }
 
-  arrayBuffer(): this {
+  arrayBuffer(..._args: unknown[]): this {
     return this
   }
 
-  json(): this {
+  json(..._args: unknown[]): this {
     return this
   }
 
-  redirect(): this {
+  redirect(..._args: unknown[]): this {
     return this
   }
 
