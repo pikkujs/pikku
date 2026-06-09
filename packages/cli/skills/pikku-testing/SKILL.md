@@ -131,6 +131,89 @@ tests/tests/support/
 
 Keep one `PersonaData` instance per domain concept. Steps import only what they need — no cross-domain coupling.
 
+## @pikku/cucumber: RPC-first Testing Philosophy
+
+**Default to `{actor} calls "functionName"`** for all endpoint tests. Only use wire-level steps when the wire itself adds behavior.
+
+### How `{actor} calls "functionName"` works
+
+Every `{actor} calls "rpcName"` step sends an HTTP POST to `/rpc/{rpcName}` on the live server. This is **not** an in-process call — it goes through the full HTTP stack: route matching → `rpcCaller` → schema validation → the actual function. The server must be running (via PM2 or a test process).
+
+| Step | What it does | Use when |
+|---|---|---|
+| `{actor} calls "functionName"` | HTTP POST to `/rpc/functionName` | Default. Tests function logic, schema, auth. |
+| `{actor} makes a "get" request to "/path"` | HTTP to a named route | When the specific route has behavior the RPC path doesn't (e.g., URL-param routing, route-specific middleware). |
+
+### RPC vs wire: the decision rule
+
+Before writing a wire-level test (`makes a "method" request to "/path"`), check whether the route adds anything beyond calling the function:
+
+- No extra middleware or transforms → just use `{actor} calls "functionName"`
+- Route has specific middleware, auth tags, or transforms → write a wire test for those specific behaviors; an RPC test for the function logic
+
+```gherkin
+# Wrong — testing rpcCaller behavior that adds nothing over the direct RPC call
+When userA makes a "post" request to "/rpc/listTodos"
+Then the response status is 200
+
+# Right — test the function directly; only use a route test if the route does something extra
+When userA calls "listTodos"
+Then the call succeeds
+```
+
+### Scenario Outline for repeated patterns
+
+When multiple scenarios have identical step structure with only the data varying, collapse them into a `Scenario Outline`:
+
+```gherkin
+# Wrong — 6 identical scenarios differing only by function name
+Scenario: Anonymous cannot call listTodos
+  When an anonymous user calls "listTodos"
+  Then the call fails because they are unauthorized
+
+Scenario: Anonymous cannot call createTodo
+  When an anonymous user calls "createTodo"
+  Then the call fails because they are unauthorized
+# ... repeated 4 more times
+
+# Right — one outline, one table
+Scenario Outline: Anonymous cannot call protected functions
+  When anonymous calls "<function>"
+  Then the call fails because they are unauthorized
+
+  Examples:
+    | function   |
+    | listTodos  |
+    | createTodo |
+    | deleteTodo |
+    | updateTodo |
+    | getTodo    |
+    | archiveTodo |
+```
+
+The `Examples:` block drives one scenario per row — same test, different data. Use this whenever you have 3+ scenarios sharing the same step structure.
+
+### Schema validation order gotcha
+
+If a function has required input fields AND auth is checked in the function body (not in `permissions`), calling the function with missing/null data will trigger **schema validation before auth** — even for anonymous callers. The error will be `UnprocessableContentError`, not `UnauthorizedError`.
+
+Fix: when testing auth rejection on a function that requires input, pass valid data so schema passes and auth is reached:
+
+```gherkin
+# Wrong — commitSandboxChanges requires message; schema rejects null data before auth runs
+Scenario: Anonymous cannot commit changes
+  When anonymous calls "commitSandboxChanges"
+  Then the call fails because they are unauthorized  # fails! gets UnprocessableContentError
+
+# Right — pass valid data so assertBuilderAuth is actually reached
+Scenario: Anonymous cannot commit changes
+  When anonymous calls "commitSandboxChanges" with:
+    | message | test commit |
+  Then the call fails because they are unauthorized
+```
+
+A symptom: the function appears in both a validation test (`the call fails`) and an auth test (`the call fails because they are unauthorized`). That's correct — they test two different paths.
+
 ## Coverage-Driven Test Writing
 
 When asked to improve or fill test coverage, start with the AI prompt from the coverage command:
