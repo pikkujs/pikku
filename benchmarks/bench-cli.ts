@@ -30,33 +30,45 @@ function setupProject() {
 
   writeFileSync(
     resolve(PROJECT_DIR, 'package.json'),
-    JSON.stringify({ name: 'pikku-cli-bench', version: '0.0.1', type: 'module' }, null, 2)
+    JSON.stringify(
+      { name: 'pikku-cli-bench', version: '0.0.1', type: 'module' },
+      null,
+      2
+    )
   )
 
   writeFileSync(
     resolve(PROJECT_DIR, 'pikku.config.json'),
-    JSON.stringify({
-      $schema:
-        'https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json',
-      srcDirectories: ['./src', './types'],
-      outDir: './.pikku',
-      tsconfig: './tsconfig.json',
-    }, null, 2)
+    JSON.stringify(
+      {
+        $schema:
+          'https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json',
+        srcDirectories: ['./src', './types'],
+        outDir: './.pikku',
+        tsconfig: './tsconfig.json',
+      },
+      null,
+      2
+    )
   )
 
   writeFileSync(
     resolve(PROJECT_DIR, 'tsconfig.json'),
-    JSON.stringify({
-      compilerOptions: {
-        target: 'ESNext',
-        module: 'NodeNext',
-        moduleResolution: 'NodeNext',
-        strict: true,
-        allowImportingTsExtensions: true,
-        noEmit: true,
+    JSON.stringify(
+      {
+        compilerOptions: {
+          target: 'ESNext',
+          module: 'NodeNext',
+          moduleResolution: 'NodeNext',
+          strict: true,
+          allowImportingTsExtensions: true,
+          noEmit: true,
+        },
+        include: ['src/**/*', 'types/**/*', '.pikku/**/*'],
       },
-      include: ['src/**/*', 'types/**/*', '.pikku/**/*'],
-    }, null, 2)
+      null,
+      2
+    )
   )
 
   // Project types — must use interface-extends-CoreXxx so the inspector finds them
@@ -336,12 +348,27 @@ function writeSize(count: number) {
   const wfDir = resolve(PROJECT_DIR, 'src/workflows')
   for (let i = 1; i <= count; i++) {
     const pad = String(i).padStart(4, '0')
-    writeFileSync(resolve(fnDir, `test-func-${pad}.function.ts`), functionFile(i))
-    writeFileSync(resolve(wfDir, `bench-workflow-${pad}.ts`), workflowFile(i, count))
+    writeFileSync(
+      resolve(fnDir, `test-func-${pad}.function.ts`),
+      functionFile(i)
+    )
+    writeFileSync(
+      resolve(wfDir, `bench-workflow-${pad}.ts`),
+      workflowFile(i, count)
+    )
   }
-  writeFileSync(resolve(wireDir, 'bench.http.wirings.ts'), httpWiringFile(count))
-  writeFileSync(resolve(wireDir, 'bench.queue.wirings.ts'), queueWiringFile(count))
-  writeFileSync(resolve(wireDir, 'bench.scheduler.wirings.ts'), schedulerWiringFile(count))
+  writeFileSync(
+    resolve(wireDir, 'bench.http.wirings.ts'),
+    httpWiringFile(count)
+  )
+  writeFileSync(
+    resolve(wireDir, 'bench.queue.wirings.ts'),
+    queueWiringFile(count)
+  )
+  writeFileSync(
+    resolve(wireDir, 'bench.scheduler.wirings.ts'),
+    schedulerWiringFile(count)
+  )
 }
 
 function cleanSrc() {
@@ -366,7 +393,9 @@ function runAll(): { ms: number; peakMB: number } {
   })
   const ms = performance.now() - start
   if (result.status !== 0) {
-    throw new Error(result.stderr?.toString() ?? result.error?.message ?? 'pikku all failed')
+    throw new Error(
+      result.stderr?.toString() ?? result.error?.message ?? 'pikku all failed'
+    )
   }
   // /usr/bin/time -l writes "NNN  maximum resident set size" to stderr (bytes on macOS)
   const stderr = result.stderr?.toString() ?? ''
@@ -387,7 +416,9 @@ async function main() {
 
   if (!existsSync(PIKKU_BIN)) {
     console.error(`pikku binary not found at ${PIKKU_BIN}`)
-    console.error(`Build the pikku CLI first: cd ${SIBLING_PIKKU} && yarn build`)
+    console.error(
+      `Build the pikku CLI first: cd ${SIBLING_PIKKU} && yarn build`
+    )
     process.exit(1)
   }
 

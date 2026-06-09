@@ -243,7 +243,9 @@ describe('pikku workspace validate', () => {
         ),
         'utf8'
       )
-      await mkdir(join(tmp, 'packages', 'functions', 'db', 'sqlite'), { recursive: true })
+      await mkdir(join(tmp, 'packages', 'functions', 'db', 'sqlite'), {
+        recursive: true,
+      })
       await writeFile(
         join(tmp, 'packages', 'functions', 'db', 'sqlite', '0001-auth.sql'),
         [

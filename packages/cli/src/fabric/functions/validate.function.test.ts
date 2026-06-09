@@ -63,7 +63,7 @@ async function makeValidProject(root: string) {
     recursive: true,
   })
   await writeFile(
-    join(root, 'packages', 'functions', 'db', 'seed.sql'),
+    join(root, 'packages', 'functions', 'db', 'sqlite-seed.sql'),
     '-- seed data\n',
     'utf8'
   )
@@ -629,7 +629,7 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await rm(join(tmp, 'packages', 'functions', 'db', 'seed.sql'), {
+        await rm(join(tmp, 'packages', 'functions', 'db', 'sqlite-seed.sql'), {
           force: true,
         })
         const result = await runValidate(tmp)
@@ -646,10 +646,10 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await rm(
-          join(tmp, 'packages', 'functions', 'db', 'sqlite'),
-          { recursive: true, force: true }
-        )
+        await rm(join(tmp, 'packages', 'functions', 'db', 'sqlite'), {
+          recursive: true,
+          force: true,
+        })
         const result = await runValidate(tmp)
         assert.strictEqual(result.ok, false)
         const finding = result.findings.find(
@@ -748,7 +748,10 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await rm(join(tmp, 'packages', 'theme'), { recursive: true, force: true })
+        await rm(join(tmp, 'packages', 'theme'), {
+          recursive: true,
+          force: true,
+        })
         const result = await runValidate(tmp)
         const finding = result.findings.find((f) => f.id === 'theme-missing')
         assert.ok(finding, 'expected theme-missing finding')
@@ -762,9 +765,14 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await rm(join(tmp, 'packages', 'components'), { recursive: true, force: true })
+        await rm(join(tmp, 'packages', 'components'), {
+          recursive: true,
+          force: true,
+        })
         const result = await runValidate(tmp)
-        const finding = result.findings.find((f) => f.id === 'components-missing')
+        const finding = result.findings.find(
+          (f) => f.id === 'components-missing'
+        )
         assert.ok(finding, 'expected components-missing finding')
         assert.strictEqual(finding!.severity, 'info')
       } finally {
@@ -779,9 +787,13 @@ describe('pikku fabric validate', () => {
       try {
         await makeValidProject(tmp)
         await mkdir(join(tmp, 'apps', 'web'), { recursive: true })
-        await writeJson(join(tmp, 'apps', 'web', 'package.json'), { name: 'web' })
+        await writeJson(join(tmp, 'apps', 'web', 'package.json'), {
+          name: 'web',
+        })
         const result = await runValidate(tmp)
-        const finding = result.findings.find((f) => f.id === 'app-not-declared-web')
+        const finding = result.findings.find(
+          (f) => f.id === 'app-not-declared-web'
+        )
         assert.ok(finding, 'expected app-not-declared-web finding')
         assert.strictEqual(finding!.severity, 'warn')
       } finally {
@@ -800,7 +812,9 @@ describe('pikku fabric validate', () => {
         })
         const result = await runValidate(tmp)
         assert.strictEqual(result.ok, false)
-        const finding = result.findings.find((f) => f.id === 'frontend-cwd-missing-web')
+        const finding = result.findings.find(
+          (f) => f.id === 'frontend-cwd-missing-web'
+        )
         assert.ok(finding, 'expected frontend-cwd-missing-web finding')
         assert.strictEqual(finding!.severity, 'error')
       } finally {
@@ -812,9 +826,12 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await writeJson(join(tmp, 'packages', 'functions-sdk', 'package.json'), {
-          name: '@project/functions-sdk',
-        })
+        await writeJson(
+          join(tmp, 'packages', 'functions-sdk', 'package.json'),
+          {
+            name: '@project/functions-sdk',
+          }
+        )
         await writeJson(join(tmp, 'packages', 'theme', 'package.json'), {
           name: '@project/theme',
         })
@@ -956,7 +973,9 @@ describe('pikku fabric validate', () => {
           ],
         })
       )
-      assert.ok(lines.some((l) => l.includes('packages/functions/src/services.ts')))
+      assert.ok(
+        lines.some((l) => l.includes('packages/functions/src/services.ts'))
+      )
     })
   })
 })

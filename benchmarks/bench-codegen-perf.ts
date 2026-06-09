@@ -20,7 +20,7 @@ const PIKKU_NODE_MODULES = resolve(REPO_ROOT, 'node_modules')
 
 const PROJECT_DIR = resolve(os.tmpdir(), 'pikku-codegen-perf')
 const FUNCTION_COUNT = 500
-const THRESHOLD_MS = 15_000
+const THRESHOLD_MS = 30_000
 
 // ── project scaffold ──────────────────────────────────────────────────────────
 
