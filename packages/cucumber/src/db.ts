@@ -20,13 +20,11 @@ export function createDbUtils(options: {
   migrationsDir: string
   seedFile: string
 }): DbUtils {
-  const hasDb = Boolean(options.migrationsDir)
   let baseDbPath: string | null = null
   let scratchDir: string | null = null
 
   return {
     buildBaseDb() {
-      if (!hasDb) return ''
       if (baseDbPath) return baseDbPath
       scratchDir = mkdtempSync(join(tmpdir(), 'function-tests-db-'))
       const base = join(scratchDir, 'base.db')
@@ -47,7 +45,6 @@ export function createDbUtils(options: {
     },
 
     freshScenarioDb() {
-      if (!hasDb) return ''
       if (!baseDbPath || !scratchDir) {
         throw new Error('buildBaseDb() must run before freshScenarioDb()')
       }
