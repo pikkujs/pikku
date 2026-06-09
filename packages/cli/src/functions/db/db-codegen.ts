@@ -4,6 +4,7 @@ import type { ColumnKind, CoercionMap } from './coercion-plugin.js'
 import type { DbIntrospector, ColumnInfo } from './db-introspector.js'
 import {
   loadAnnotations,
+  parseAnnotations,
   annotationFromName,
   type AnnotationMap,
   type ColAnnotation,
@@ -325,9 +326,11 @@ export async function generateSchemaTypes(
     }))
   )
 
-  const explicitAnnotations = (options.rootDir || options.migrationsDir)
-    ? loadAnnotations(options.rootDir ?? '', options.migrationsDir)
-    : {}
+  const explicitAnnotations = options.rootDir
+    ? loadAnnotations(options.rootDir, options.migrationsDir)
+    : options.migrationsDir
+      ? parseAnnotations(options.migrationsDir)
+      : {}
 
   // ── schema.d.ts ─────────────────────────────────────────────────────────────
   const interfaces = tables

@@ -65,6 +65,7 @@ export class StubTracker {
     predicate?: (args: unknown[]) => boolean,
     description?: string
   ): void {
+    this.touched.add(service)
     const list = this.calls.get(service) ?? []
     const relevant = (
       method ? list.filter((c) => c.method === method) : list
