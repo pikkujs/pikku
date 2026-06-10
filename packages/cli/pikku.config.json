@@ -6,6 +6,7 @@
     "**/serialize-*.ts",
     "**/*.test.ts",
     "**/*.spec.ts",
+    "**/*.js",
     "**/node_modules/**",
     "**/dist/**"
   ],
