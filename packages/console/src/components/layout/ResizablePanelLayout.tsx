@@ -29,9 +29,9 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
   return (
     <Box className={classes.flexColumn} px="xl" py="md" style={{ height: '100vh', gap: 'var(--mantine-spacing-md)' }}>
       {header}
-      <Box style={{ flex: 1, display: 'flex', minHeight: 0, gap: 'var(--mantine-spacing-md)' }}>
+      <Box style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         {leftDrawer && (
-          <Box style={{ width: leftDrawerWidth, flexShrink: 0, overflow: 'hidden' }}>
+          <Box style={{ width: leftDrawerWidth, flexShrink: 0, overflow: 'hidden', marginRight: 'var(--mantine-spacing-md)' }}>
             {leftDrawer}
           </Box>
         )}
@@ -41,9 +41,10 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
         {!hidePanel && (
           <Box style={{
             width: rightOpen ? PANEL_WIDTH : 0,
+            marginLeft: rightOpen ? 'var(--mantine-spacing-md)' : 0,
             flexShrink: 0,
             overflow: 'hidden',
-            transition: 'width 180ms ease',
+            transition: 'width 180ms ease, margin-left 180ms ease',
           }}>
             <Box className={classes.listSurfaceCard} style={{ width: PANEL_WIDTH, height: '100%' }}>
               <PanelContainer emptyMessage={emptyPanelMessage} />

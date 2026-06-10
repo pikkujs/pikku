@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, memo } from 'react'
-import { Box, Center, Button, Loader, Text, Group, useMantineColorScheme } from '@mantine/core'
+import { Box, Center, ActionIcon, Loader, Text, Group, Tooltip, SegmentedControl, useMantineColorScheme } from '@mantine/core'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import ReactFlow, {
@@ -17,15 +17,17 @@ import ReactFlow, {
 import type { NodeProps, Node, Edge, ReactFlowInstance } from 'reactflow'
 import { useQuery } from '@tanstack/react-query'
 import ELK from 'elkjs/lib/elk.bundled.js'
-import { Database as DatabaseIcon, Table2, Key, Link, RefreshCw, Globe, Shield, LockKeyhole } from 'lucide-react'
+import { Database as DatabaseIcon, Key, Link, RefreshCw } from 'lucide-react'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
 import { ListPageHeader } from '../components/layout/PageLayout'
+import { PikkuToggle } from '../components/ui/PikkuToggle'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import 'reactflow/dist/style.css'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Classification = 'public' | 'private' | 'secret'
+type ClassificationFilter = 'all' | Classification
 
 interface DbColumn {
   name: string
@@ -448,12 +450,14 @@ function DatabaseCanvas({
   onRefresh,
   refreshing,
   hideInternal,
+  classificationFilter,
 }: {
   schema: DbSchema | null | undefined
   loading: boolean
   onRefresh: () => void
   refreshing: boolean
   hideInternal: boolean
+  classificationFilter: ClassificationFilter
 }) {
   const { colorScheme } = useMantineColorScheme()
   const isDark = colorScheme === 'dark'
@@ -472,9 +476,11 @@ function DatabaseCanvas({
         return
       }
 
-      const filtered = schema.tables.filter((t) =>
-        shouldShowTable(t.name, hideInternal)
-      )
+      const filtered = schema.tables.filter((t) => {
+        if (!shouldShowTable(t.name, hideInternal)) return false
+        if (classificationFilter === 'all') return true
+        return t.columns.some((col) => col.classification === classificationFilter)
+      })
       if (!filtered.length) {
         setNodes([])
         setEdges([])
@@ -504,7 +510,7 @@ function DatabaseCanvas({
     return () => {
       cancelled = true
     }
-  }, [schema, hideInternal, setEdges, setNodes])
+  }, [schema, hideInternal, classificationFilter, setEdges, setNodes])
 
   if (loading || (layouting && nodes.length === 0)) {
     return (
@@ -584,26 +590,13 @@ function DatabaseCanvas({
 
 // ── Legend ────────────────────────────────────────────────────────────────────
 
-function ClassificationLegend() {
-  return (
-    <Group gap="md">
-      {(['public', 'private', 'secret'] as Classification[]).map((label) => (
-        <Group key={label} gap={4} align="center">
-          {CLASSIFICATION_ICON[label]}
-          <Text size="xs" c="dimmed">
-            {label}
-          </Text>
-        </Group>
-      ))}
-    </Group>
-  )
-}
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 function DatabasePageInner() {
   const rpc = usePikkuRPC()
   const [hideInternal, setHideInternal] = useState(true)
+  const [classificationFilter, setClassificationFilter] = useState<ClassificationFilter>('all')
 
   const { data: schema, isLoading, isFetching, error, refetch } = useQuery<
     DbSchema | null
@@ -616,28 +609,36 @@ function DatabasePageInner() {
     <ListPageHeader
       title="Database"
       description="Visual schema for your local development database."
-      filters={
-        <Group gap="sm">
-          <ClassificationLegend />
-          <Button
-            size="xs"
-            variant={hideInternal ? 'light' : 'subtle'}
-            onClick={() => setHideInternal((v) => !v)}
-          >
-            Hide internal tables
-          </Button>
-        </Group>
-      }
       view={
-        <Button
-          size="xs"
-          variant="subtle"
-          leftSection={<RefreshCw size={13} />}
-          loading={isFetching}
-          onClick={() => void refetch()}
-        >
-          Refresh
-        </Button>
+        <Group gap="xs" wrap="nowrap">
+          <SegmentedControl
+            size="xs"
+            value={classificationFilter}
+            onChange={(v) => setClassificationFilter(v as ClassificationFilter)}
+            data={[
+              { label: 'All', value: 'all' },
+              { label: 'Public', value: 'public' },
+              { label: 'Private', value: 'private' },
+              { label: 'Secret', value: 'secret' },
+            ]}
+          />
+          <PikkuToggle
+            checked={!hideInternal}
+            onChange={(v) => setHideInternal(!v)}
+            tooltip="Show Pikku internal tables"
+          />
+          <Tooltip label="Refresh">
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              size="sm"
+              loading={isFetching}
+              onClick={() => void refetch()}
+            >
+              <RefreshCw size={14} />
+            </ActionIcon>
+          </Tooltip>
+        </Group>
       }
     />
   )
@@ -661,6 +662,7 @@ function DatabasePageInner() {
               onRefresh={() => void refetch()}
               refreshing={isFetching}
               hideInternal={hideInternal}
+              classificationFilter={classificationFilter}
             />
           )}
         </Box>

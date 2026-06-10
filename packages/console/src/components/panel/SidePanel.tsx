@@ -37,6 +37,7 @@ export const SidePanelHeader: React.FC<SidePanelHeaderProps> = ({ title, onClose
       display: 'flex',
       alignItems: 'center',
       borderBottom: '1px solid var(--mantine-color-default-border)',
+      background: 'var(--app-surface)',
       flexShrink: 0,
     }}
   >

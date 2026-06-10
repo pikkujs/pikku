@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react'
-import { Group, Text, Badge } from '@mantine/core'
-import { KeyRound } from 'lucide-react'
+import React, { useMemo, useState } from 'react'
+import { Group, Text, Badge, TextInput } from '@mantine/core'
+import { KeyRound, Search } from 'lucide-react'
 import { PanelProvider } from '../context/PanelContext'
 import { usePanelContext } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -195,7 +195,7 @@ export const AUTH_PROVIDERS: AuthProviderDef[] = [
 
 // ─── Table ────────────────────────────────────────────────────────────────────
 
-const AuthProvidersTable: React.FC = () => {
+const AuthProvidersTable: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
   const { openAuthProvider } = usePanelContext()
 
   const columns = useMemo(
@@ -246,6 +246,7 @@ const AuthProvidersTable: React.FC = () => {
       columns={columns}
       getKey={(p) => p.id}
       onRowClick={(p) => openAuthProvider(p.id, p)}
+      externalSearch={searchQuery}
       searchFilter={(p, q) =>
         p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)
       }
@@ -257,6 +258,8 @@ const AuthProvidersTable: React.FC = () => {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export const AuthProvidersPage: React.FC = () => {
+  const [searchQuery, setSearchQuery] = useState('')
+
   return (
     <PanelProvider>
       <ResizablePanelLayout
@@ -265,11 +268,21 @@ export const AuthProvidersPage: React.FC = () => {
             title="Auth Providers"
             description="Configure OAuth sign-in providers. Secrets are read from your environment via auth.js."
             docsHref="https://authjs.dev/getting-started/providers"
+            filters={
+              <TextInput
+                placeholder="Search providers..."
+                leftSection={<Search size={14} />}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                size="xs"
+                style={{ width: 240 }}
+              />
+            }
           />
         }
         emptyPanelMessage="Select a provider to configure"
       >
-        <AuthProvidersTable />
+        <AuthProvidersTable searchQuery={searchQuery} />
       </ResizablePanelLayout>
     </PanelProvider>
   )

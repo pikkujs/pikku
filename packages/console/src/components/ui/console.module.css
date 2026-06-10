@@ -89,14 +89,14 @@
 }
 
 .listItem[data-active='true'] {
-  border-left-color: #7c3aed;
-  background: rgba(124, 58, 237, 0.05);
+  border-left-color: var(--app-service-color);
+  background: var(--app-service-bg);
 }
 
 .listItemPadded {
   composes: listItem;
   padding: 10px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--app-row-border);
   align-items: center;
   column-gap: 12px;
 }
@@ -227,7 +227,7 @@
 .separator {
   flex: 1;
   height: 1px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--app-row-border);
 }
 
 /* ── Group label row (type header in lists) ── */
