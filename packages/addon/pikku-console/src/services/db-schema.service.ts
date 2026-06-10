@@ -247,20 +247,23 @@ async function introspectPostgres(
         foreign_table_name: string
         foreign_column_name: string
       }>(
-        `SELECT a.attname  AS column_name,
-                nf.nspname AS foreign_table_schema,
-                cf.relname AS foreign_table_name,
-                af.attname AS foreign_column_name
-         FROM pg_constraint c
-         JOIN pg_class     ct ON ct.oid = c.conrelid
-         JOIN pg_namespace nt ON nt.oid = ct.relnamespace
-         JOIN pg_class     cf ON cf.oid = c.confrelid
-         JOIN pg_namespace nf ON nf.oid = cf.relnamespace
-         JOIN pg_attribute a  ON a.attrelid  = c.conrelid   AND a.attnum  = c.conkey[1]
-         JOIN pg_attribute af ON af.attrelid = c.confrelid  AND af.attnum = c.confkey[1]
-         WHERE c.contype = 'f'
-           AND nt.nspname = $1
-           AND ct.relname = $2`,
+        `SELECT kcu.column_name,
+                kcu2.table_schema  AS foreign_table_schema,
+                kcu2.table_name   AS foreign_table_name,
+                kcu2.column_name  AS foreign_column_name
+         FROM information_schema.referential_constraints rc
+         JOIN information_schema.key_column_usage kcu
+           ON kcu.constraint_catalog = rc.constraint_catalog
+          AND kcu.constraint_schema  = rc.constraint_schema
+          AND kcu.constraint_name    = rc.constraint_name
+         JOIN information_schema.key_column_usage kcu2
+           ON kcu2.constraint_catalog = rc.unique_constraint_catalog
+          AND kcu2.constraint_schema  = rc.unique_constraint_schema
+          AND kcu2.constraint_name    = rc.unique_constraint_name
+          AND kcu2.ordinal_position   = kcu.ordinal_position
+         WHERE kcu.table_schema = $1
+           AND kcu.table_name   = $2
+         ORDER BY kcu.ordinal_position`,
         [schema, tableName]
       )
 
