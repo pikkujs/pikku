@@ -27,7 +27,11 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
 
   return (
     <Box className={classes.flexColumn} style={{ height: '100vh' }}>
-      {header}
+      {header && (
+        <Box px="xl" py="md" style={{ flexShrink: 0 }}>
+          {header}
+        </Box>
+      )}
       <Box className={classes.flexGrow} style={{ minHeight: 0 }}>
         {showPanel ? (
           <Allotment key={panels.size === 0 ? 'empty-panel' : 'with-panel'} defaultSizes={[840, 267]}>
