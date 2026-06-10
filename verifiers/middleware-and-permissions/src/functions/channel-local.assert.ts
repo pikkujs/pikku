@@ -44,7 +44,7 @@ export async function testChannelWiring(
       })
 
       // Open the channel
-      channelHandler.open()
+      await channelHandler.open()
 
       // Send a message
       await channelHandler.message(
@@ -55,7 +55,7 @@ export async function testChannelWiring(
       )
 
       // Close the channel
-      channelHandler.close()
+      await channelHandler.close()
     },
     singletonServices.logger
   )

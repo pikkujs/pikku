@@ -7,19 +7,19 @@ export class PikkuLocalChannelHandler<
 > extends PikkuAbstractChannelHandler<OpeningData, Out> {
   private onMessageCallback?: (message: unknown) => void
   private onBinaryMessageCallback?: (data: BinaryData) => void
-  private openCallBack?: () => void
-  private closeCallbacks: (() => void)[] = []
+  private openCallBack?: () => Promise<void> | void
+  private closeCallbacks: (() => Promise<void> | void)[] = []
   private sendCallback?: (message: Out, isBinary?: boolean) => void
   private sendBinaryCallback?: (data: BinaryData) => void
 
-  public registerOnOpen(callback: () => void): void {
+  public registerOnOpen(callback: () => Promise<void> | void): void {
     this.openCallBack = callback
   }
 
-  public open() {
+  public async open(): Promise<void> {
     this.getChannel().state = 'open'
     if (this.openCallBack) {
-      this.openCallBack()
+      await this.openCallBack()
     }
   }
 
@@ -43,17 +43,17 @@ export class PikkuLocalChannelHandler<
     return this.onBinaryMessageCallback?.(data)
   }
 
-  public registerOnClose(callback: () => void): void {
+  public registerOnClose(callback: () => Promise<void> | void): void {
     this.closeCallbacks.push(callback)
   }
 
-  public close() {
+  public async close(): Promise<void> {
     if (this.getChannel().state === 'closed') {
       return
     }
     super.close()
     for (const cb of this.closeCallbacks) {
-      cb()
+      await cb()
     }
   }
 
