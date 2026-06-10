@@ -243,10 +243,12 @@ async function introspectPostgres(
 
       const fkResult = await pool.query<{
         column_name: string
+        foreign_table_schema: string
         foreign_table_name: string
         foreign_column_name: string
       }>(
         `SELECT kcu.column_name,
+                ccu.table_schema AS foreign_table_schema,
                 ccu.table_name AS foreign_table_name,
                 ccu.column_name AS foreign_column_name
          FROM information_schema.table_constraints AS tc
@@ -261,10 +263,16 @@ async function introspectPostgres(
       )
 
       const fkMap = new Map(
-        fkResult.rows.map((r) => [
-          r.column_name,
-          { table: r.foreign_table_name, column: r.foreign_column_name },
-        ])
+        fkResult.rows.map((r) => {
+          const refTable =
+            r.foreign_table_schema === 'public'
+              ? r.foreign_table_name
+              : `${r.foreign_table_schema}.${r.foreign_table_name}`
+          return [
+            r.column_name,
+            { table: refTable, column: r.foreign_column_name },
+          ]
+        })
       )
 
       interface PgColRow {
