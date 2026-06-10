@@ -91,7 +91,6 @@ export const HttpPage: React.FC = () => {
       <ResizablePanelLayout
         header={<ListPageHeader title="HTTP Routes" description="Registered HTTP endpoints and their bound functions" />
         }
-        showTabs={false}
         hidePanel={!loading && routes.length === 0}
         emptyPanelMessage="Select a route to view its details"
       >

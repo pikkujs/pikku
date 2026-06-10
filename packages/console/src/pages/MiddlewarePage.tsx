@@ -110,7 +110,6 @@ export const MiddlewarePage: React.FC = () => {
     <PanelProvider>
       <ResizablePanelLayout
         header={<ListPageHeader title="Middleware" description="Request pipeline middleware applied to API calls" />}
-        showTabs={false}
         hidePanel={!loading && items.length === 0}
         emptyPanelMessage="Select a middleware to view its details"
       >

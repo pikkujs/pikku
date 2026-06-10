@@ -96,7 +96,6 @@ export const McpPage: React.FC = () => {
     <PanelProvider>
       <ResizablePanelLayout
         header={<ListPageHeader title="MCP" description="Model Context Protocol tools, resources, and prompts" />}
-        showTabs={false}
         hidePanel={!loading && items.length === 0}
         emptyPanelMessage="Select an MCP entry to view its details"
       >

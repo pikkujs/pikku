@@ -93,7 +93,6 @@ export const SchedulersPage: React.FC = () => {
     <PanelProvider>
       <ResizablePanelLayout
         header={<ListPageHeader title="Schedulers" description="Cron and interval tasks that run on a schedule" />}
-        showTabs={false}
         hidePanel={!loading && items.length === 0}
         emptyPanelMessage="Select a scheduler to view its details"
       >

@@ -120,7 +120,6 @@ export const TriggersPage: React.FC = () => {
     <PanelProvider>
       <ResizablePanelLayout
         header={<ListPageHeader title="Triggers" description="Event-driven triggers wired to pikku functions" />}
-        showTabs={false}
         hidePanel={!loading && pairs.length === 0}
         emptyPanelMessage="Select a trigger to view its details"
       >
