@@ -26,5 +26,8 @@
     "@types/ioredis-mock": "^8",
     "ioredis-mock": "^8.13.1",
     "typescript": "^5.9"
+  },
+  "exports": {
+    ".": "./dist/src/index.js"
   }
 }

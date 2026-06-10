@@ -29,5 +29,8 @@
   "dependencies": {
     "cron": "^4.4.0",
     "cron-schedule": "^5.0.4"
+  },
+  "exports": {
+    ".": "./dist/index.js"
   }
 }

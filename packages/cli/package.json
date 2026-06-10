@@ -67,5 +67,8 @@
   ],
   "engines": {
     "node": ">=18"
+  },
+  "exports": {
+    ".": "./dist/bin/pikku.js"
   }
 }

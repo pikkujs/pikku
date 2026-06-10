@@ -30,5 +30,8 @@
   },
   "devDependencies": {
     "@types/node": "^24"
+  },
+  "exports": {
+    ".": "./src/start.ts"
   }
 }

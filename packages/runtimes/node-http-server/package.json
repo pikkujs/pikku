@@ -1,7 +1,7 @@
 {
   "name": "@pikku/node-http-server",
   "version": "0.12.1",
-  "description": "Pikku node:http server — shared by `pikku dev` and container deployments",
+  "description": "Pikku node:http server \u2014 shared by `pikku dev` and container deployments",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",
@@ -26,5 +26,8 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "exports": {
+    ".": "./dist/index.js"
   }
 }

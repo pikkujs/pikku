@@ -28,5 +28,8 @@
   "dependencies": {
     "@azure/functions": "4.11.2",
     "@azure/storage-queue": "^12.25.0"
+  },
+  "exports": {
+    ".": "./dist/index.js"
   }
 }

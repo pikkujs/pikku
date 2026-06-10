@@ -30,5 +30,8 @@
   "devDependencies": {
     "@pikku/cli": "^0.12.27",
     "@types/node": "^24"
+  },
+  "exports": {
+    ".": "./src/start.ts"
   }
 }
