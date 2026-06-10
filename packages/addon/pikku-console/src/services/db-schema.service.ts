@@ -247,18 +247,20 @@ async function introspectPostgres(
         foreign_table_name: string
         foreign_column_name: string
       }>(
-        `SELECT kcu.column_name,
-                ccu.table_schema AS foreign_table_schema,
-                ccu.table_name AS foreign_table_name,
-                ccu.column_name AS foreign_column_name
-         FROM information_schema.table_constraints AS tc
-         JOIN information_schema.key_column_usage AS kcu
-           ON tc.constraint_name = kcu.constraint_name
-          AND tc.table_schema = kcu.table_schema
-         JOIN information_schema.constraint_column_usage AS ccu
-           ON ccu.constraint_name = tc.constraint_name
-         WHERE tc.constraint_type = 'FOREIGN KEY'
-           AND tc.table_schema = $1 AND tc.table_name = $2`,
+        `SELECT a.attname  AS column_name,
+                nf.nspname AS foreign_table_schema,
+                cf.relname AS foreign_table_name,
+                af.attname AS foreign_column_name
+         FROM pg_constraint c
+         JOIN pg_class     ct ON ct.oid = c.conrelid
+         JOIN pg_namespace nt ON nt.oid = ct.relnamespace
+         JOIN pg_class     cf ON cf.oid = c.confrelid
+         JOIN pg_namespace nf ON nf.oid = cf.relnamespace
+         JOIN pg_attribute a  ON a.attrelid  = c.conrelid   AND a.attnum  = c.conkey[1]
+         JOIN pg_attribute af ON af.attrelid = c.confrelid  AND af.attnum = c.confkey[1]
+         WHERE c.contype = 'f'
+           AND nt.nspname = $1
+           AND ct.relname = $2`,
         [schema, tableName]
       )
 
