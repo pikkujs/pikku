@@ -11,6 +11,7 @@ export interface DbColumn {
   isPrimaryKey: boolean
   classification: Classification
   foreignKey?: { table: string; column: string }
+  enumType?: string
 }
 
 export interface DbTable {
@@ -18,8 +19,15 @@ export interface DbTable {
   columns: DbColumn[]
 }
 
+export interface DbEnum {
+  name: string
+  schema: string
+  values: string[]
+}
+
 export interface DbSchema {
   tables: DbTable[]
+  enums: DbEnum[]
 }
 
 // ── Internal DB adapters ──────────────────────────────────────────────────────
@@ -178,11 +186,33 @@ async function introspectSqlite(
 
 // ── Postgres introspector ─────────────────────────────────────────────────────
 
+async function introspectPostgresEnums(pool: PgPool): Promise<DbEnum[]> {
+  const result = await pool.query<{
+    enum_name: string
+    schema_name: string
+    values: string[]
+  }>(
+    `SELECT t.typname AS enum_name,
+            t.typnamespace::regnamespace::text AS schema_name,
+            array_agg(e.enumlabel ORDER BY e.enumsortorder) AS values
+     FROM pg_type t
+     JOIN pg_enum e ON e.enumtypid = t.oid
+     WHERE t.typtype = 'e'
+     GROUP BY t.typname, t.typnamespace
+     ORDER BY schema_name, enum_name`
+  )
+  return result.rows.map((r) => ({
+    name: r.enum_name,
+    schema: r.schema_name,
+    values: r.values,
+  }))
+}
+
 async function introspectPostgres(
   connectionString: string,
   annotations: Record<string, Record<string, { visibility?: string }>>,
   Pool: PgPoolCtor
-): Promise<DbTable[]> {
+): Promise<{ tables: DbTable[]; enums: DbEnum[] }> {
   const pool = new Pool({ connectionString, max: 3 })
 
   try {
@@ -240,6 +270,7 @@ async function introspectPostgres(
       interface PgColRow {
         column_name: string
         data_type: string
+        udt_name: string
         is_nullable: string
         is_pk: boolean
       }
@@ -248,6 +279,7 @@ async function introspectPostgres(
         `SELECT
            c.column_name,
            c.data_type,
+           c.udt_name,
            c.is_nullable,
            EXISTS(
              SELECT 1
@@ -268,15 +300,17 @@ async function introspectPostgres(
       )
 
       const columns: DbColumn[] = colResult.rows.map((r) => {
+        const isUserDefined = r.data_type === 'USER-DEFINED'
         const col: DbColumn = {
           name: r.column_name,
-          type: r.data_type,
+          type: isUserDefined ? r.udt_name : r.data_type,
           nullable: r.is_nullable === 'YES',
           isPrimaryKey: Boolean(r.is_pk),
           classification: classificationFor(
             tableAnns[r.column_name]?.visibility
           ),
         }
+        if (isUserDefined) col.enumType = r.udt_name
         const fk = fkMap.get(r.column_name)
         if (fk) col.foreignKey = fk
         return col
@@ -285,7 +319,8 @@ async function introspectPostgres(
       tables.push({ name: qualifiedName, columns })
     }
 
-    return tables
+    const enums = await introspectPostgresEnums(pool)
+    return { tables, enums }
   } finally {
     await pool.end()
   }
@@ -313,7 +348,7 @@ export class DbSchemaService {
       const dbFile = candidates.find((f) => existsSync(f))
       if (dbFile) {
         const tables = await introspectSqlite(dbFile, annotations, this.openDb)
-        return { tables }
+        return { tables, enums: [] }
       }
     }
 
@@ -323,12 +358,7 @@ export class DbSchemaService {
       process.env.POSTGRES_URL ??
       this.buildEnvPostgresUrl()
     if (postgresUrl && this.PgPool) {
-      const tables = await introspectPostgres(
-        postgresUrl,
-        annotations,
-        this.PgPool
-      )
-      return { tables }
+      return await introspectPostgres(postgresUrl, annotations, this.PgPool)
     }
 
     return null

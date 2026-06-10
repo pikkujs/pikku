@@ -31,6 +31,7 @@ interface DbColumn {
   isPrimaryKey: boolean
   classification: Classification
   foreignKey?: { table: string; column: string }
+  enumType?: string
 }
 
 interface DbTable {
@@ -38,13 +39,25 @@ interface DbTable {
   columns: DbColumn[]
 }
 
+interface DbEnum {
+  name: string
+  schema: string
+  values: string[]
+}
+
 interface DbSchema {
   tables: DbTable[]
+  enums: DbEnum[]
 }
 
 interface DatabaseSchemaNodeData {
   label: string
   columns: DbColumn[]
+}
+
+interface EnumSchemaNodeData {
+  label: string
+  values: string[]
 }
 
 // ── Classification colors ─────────────────────────────────────────────────────
@@ -192,6 +205,80 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
   )
 })
 
+// ── EnumSchemaNode ────────────────────────────────────────────────────────────
+
+const EnumSchemaNode = memo(function EnumSchemaNode({
+  data,
+  id,
+}: NodeProps<EnumSchemaNodeData>) {
+  const enumName = data.label?.trim() || id
+  const { colorScheme } = useMantineColorScheme()
+  const isDark = colorScheme === 'dark'
+
+  const border = isDark ? 'var(--mantine-color-dark-4)' : 'var(--app-glass-border, #e0e0e0)'
+  const headerBg = isDark ? 'var(--mantine-color-violet-9)' : 'var(--mantine-color-violet-1)'
+  const rowBorder = isDark ? 'var(--mantine-color-dark-5)' : '#f0f0f0'
+  const valueColor = isDark ? 'var(--mantine-color-dark-1)' : '#555'
+
+  return (
+    <div
+      style={{
+        minWidth: 180,
+        border: `1px solid ${border}`,
+        borderRadius: 8,
+        overflow: 'hidden',
+        backgroundColor: 'var(--mantine-color-body)',
+        boxShadow: isDark ? '0 1px 4px rgba(0,0,0,.4)' : '0 1px 4px rgba(0,0,0,.08)',
+      }}
+    >
+      <div
+        style={{
+          padding: '8px 12px',
+          background: headerBg,
+          borderBottom: `1px solid ${border}`,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}
+      >
+        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--mantine-color-violet-5)', letterSpacing: 1 }}>
+          ENUM
+        </span>
+        <span
+          style={{
+            flex: 1,
+            minWidth: 0,
+            fontFamily: 'monospace',
+            fontWeight: 600,
+            fontSize: 13,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {enumName}
+        </span>
+      </div>
+      <div style={{ padding: '4px 0' }}>
+        {data.values.map((val) => (
+          <div
+            key={val}
+            style={{
+              padding: '4px 12px',
+              borderBottom: `1px solid ${rowBorder}`,
+              fontFamily: 'monospace',
+              fontSize: 12,
+              color: valueColor,
+            }}
+          >
+            {val}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+})
+
 // ── ELK layout ────────────────────────────────────────────────────────────────
 
 const TABLE_WIDTH = 300
@@ -216,13 +303,26 @@ function tableHeight(cols: DbColumn[]): number {
   return Math.max(TABLE_MIN_HEIGHT, HEADER_HEIGHT + cols.length * ROW_HEIGHT)
 }
 
+const ENUM_NODE_WIDTH = 200
+const ENUM_ROW_HEIGHT = 28
+
+function enumNodeId(e: DbEnum): string {
+  return e.schema === 'public' ? e.name : `${e.schema}.${e.name}`
+}
+
+function enumHeight(e: DbEnum): number {
+  return Math.max(80, HEADER_HEIGHT + e.values.length * ENUM_ROW_HEIGHT)
+}
+
 async function schemaToFlow(schema: DbSchema): Promise<{
-  nodes: Node<DatabaseSchemaNodeData>[]
+  nodes: Node[]
   edges: Edge[]
 }> {
   const edges: Edge[] = []
   const edgeIds = new Set<string>()
   const elkEdges: Array<{ id: string; sources: string[]; targets: string[] }> = []
+
+  const enumNodeIds = new Set(schema.enums.map(enumNodeId))
 
   for (const table of schema.tables) {
     for (const col of table.columns) {
@@ -245,27 +345,61 @@ async function schemaToFlow(schema: DbSchema): Promise<{
           })
         }
       }
+      if (col.enumType) {
+        const targetId = enumNodeIds.has(col.enumType) ? col.enumType : null
+        if (targetId) {
+          const edgeId = `${table.name}.${col.name}->enum:${targetId}`
+          if (!edgeIds.has(edgeId)) {
+            edgeIds.add(edgeId)
+            edges.push({
+              id: edgeId,
+              source: table.name,
+              target: targetId,
+              label: col.name,
+              type: 'smoothstep',
+              style: { strokeDasharray: '4 3', stroke: 'var(--mantine-color-violet-5)' },
+            })
+            elkEdges.push({
+              id: edgeId,
+              sources: [table.name],
+              targets: [targetId],
+            })
+          }
+        }
+      }
     }
   }
 
-  const fallback: Node<DatabaseSchemaNodeData>[] = schema.tables.map(
-    (table, i) => ({
-      id: table.name,
-      type: 'databaseSchema',
-      position: { x: (i % 3) * 360, y: Math.floor(i / 3) * 320 },
-      data: { label: table.name, columns: table.columns },
-    })
-  )
+  const tableNodes: Node[] = schema.tables.map((table, i) => ({
+    id: table.name,
+    type: 'databaseSchema',
+    position: { x: (i % 3) * 360, y: Math.floor(i / 3) * 320 },
+    data: { label: table.name, columns: table.columns },
+  }))
+
+  const enumNodes: Node[] = schema.enums.map((e, i) => ({
+    id: enumNodeId(e),
+    type: 'enumSchema',
+    position: { x: (i % 3) * 260, y: Math.floor(i / 3) * 240 },
+    data: { label: e.name, values: e.values },
+  }))
 
   try {
     const layout = await elk.layout({
       id: 'schema',
       layoutOptions: ELK_OPTIONS,
-      children: schema.tables.map((table) => ({
-        id: table.name,
-        width: TABLE_WIDTH,
-        height: tableHeight(table.columns),
-      })),
+      children: [
+        ...schema.tables.map((table) => ({
+          id: table.name,
+          width: TABLE_WIDTH,
+          height: tableHeight(table.columns),
+        })),
+        ...schema.enums.map((e) => ({
+          id: enumNodeId(e),
+          width: ENUM_NODE_WIDTH,
+          height: enumHeight(e),
+        })),
+      ],
       edges: elkEdges,
     })
 
@@ -273,23 +407,30 @@ async function schemaToFlow(schema: DbSchema): Promise<{
       (layout.children ?? []).map((c) => [c.id, { x: c.x ?? 0, y: c.y ?? 0 }])
     )
 
-    const nodes: Node<DatabaseSchemaNodeData>[] = schema.tables.map((table, i) => ({
-      id: table.name,
-      type: 'databaseSchema',
-      position:
-        posById.get(table.name) ?? fallback[i]?.position ?? { x: 0, y: 0 },
-      data: { label: table.name, columns: table.columns },
-    }))
+    const nodes: Node[] = [
+      ...schema.tables.map((table, i) => ({
+        id: table.name,
+        type: 'databaseSchema',
+        position: posById.get(table.name) ?? tableNodes[i]?.position ?? { x: 0, y: 0 },
+        data: { label: table.name, columns: table.columns },
+      })),
+      ...schema.enums.map((e, i) => ({
+        id: enumNodeId(e),
+        type: 'enumSchema',
+        position: posById.get(enumNodeId(e)) ?? enumNodes[i]?.position ?? { x: 0, y: 0 },
+        data: { label: e.name, values: e.values },
+      })),
+    ]
 
     return { nodes, edges }
   } catch {
-    return { nodes: fallback, edges }
+    return { nodes: [...tableNodes, ...enumNodes], edges }
   }
 }
 
 // ── Node types ────────────────────────────────────────────────────────────────
 
-const nodeTypes = { databaseSchema: DatabaseSchemaNode }
+const nodeTypes = { databaseSchema: DatabaseSchemaNode, enumSchema: EnumSchemaNode }
 
 // ── Filter helpers ────────────────────────────────────────────────────────────
 
@@ -325,7 +466,7 @@ function DatabaseCanvas({
 }) {
   const { colorScheme } = useMantineColorScheme()
   const isDark = colorScheme === 'dark'
-  const [nodes, setNodes, onNodesChange] = useNodesState<DatabaseSchemaNodeData>([])
+  const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [layouting, setLayouting] = useState(false)
   const flowRef = useRef<ReactFlowInstance | null>(null)
@@ -351,7 +492,7 @@ function DatabaseCanvas({
 
       setLayouting(true)
       try {
-        const flow = await schemaToFlow({ tables: filtered })
+        const flow = await schemaToFlow({ tables: filtered, enums: schema.enums ?? [] })
         if (cancelled) return
         setNodes(flow.nodes)
         setEdges(flow.edges)
