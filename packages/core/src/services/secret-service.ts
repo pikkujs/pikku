@@ -28,4 +28,11 @@ export interface SecretService {
    * @returns A promise that resolves when the secret is deleted.
    */
   deleteSecret(key: string): Promise<void>
+  /**
+   * Retrieves multiple secrets in a single batch operation.
+   * Returns a map of key → value for successfully fetched secrets; missing
+   * keys are omitted rather than throwing.
+   * @param keys - The keys of the secrets to retrieve.
+   */
+  getSecrets(keys: string[]): Promise<Record<string, unknown>>
 }

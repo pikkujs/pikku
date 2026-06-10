@@ -227,6 +227,13 @@ export type PikkuCLIInput = {
   /** Directory containing email templates, locales, partials, and theme.json. */
   emailTemplatesDir?: string
 
+  /**
+   * Path to write the generated Auth.js wiring file (auth.gen.ts).
+   * Must be within srcDirectories so wireSecret calls are picked up by the inspector.
+   * Example: "src/auth.gen.ts"
+   */
+  authFile?: string
+
   openAPI?: {
     outputFile: string
     additionalInfo: OpenAPISpecInfo

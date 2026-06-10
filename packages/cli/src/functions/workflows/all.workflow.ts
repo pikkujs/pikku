@@ -171,6 +171,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         'pikkuSecretDefinitionTypes',
         null
       ),
+      workflow.do('Auth', 'pikkuAuth', null),
       workflow.do('Secrets', 'pikkuSecrets', null),
       workflow.do('Credentials', 'pikkuCredentials', null),
       workflow.do(

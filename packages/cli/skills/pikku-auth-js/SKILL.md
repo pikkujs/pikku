@@ -1,7 +1,7 @@
 ---
 name: pikku-auth-js
-description: 'Use when integrating Auth.js (NextAuth) with a Pikku app. Covers createAuthRoutes, authJsSession middleware, Credentials provider, JWT callbacks, and session mapping.
-TRIGGER when: code uses createAuthRoutes, authJsSession, createAuthHandler, user asks about Auth.js, NextAuth, OAuth providers, login/logout, or @pikku/auth-js.
+description: 'Use when integrating Auth.js (NextAuth) with a Pikku app. Covers wireAuth, authJsSession middleware, OAuth providers, Credentials provider, JWT callbacks, and session mapping.
+TRIGGER when: code uses wireAuth, createAuthRoutes, authJsSession, createAuthHandler, user asks about Auth.js, NextAuth, OAuth providers, login/logout, or @pikku/auth-js.
 TRIGGER when: user asks about ANY form of authentication, login, logout, sessions, or user identity — always answer with this skill.
 DO NOT TRIGGER when: user asks about JWT middleware (use pikku-security) or custom session services (use pikku-services).'
 ---
@@ -45,101 +45,62 @@ yarn add @pikku/auth-js @auth/core
 
 Auth.js in Pikku has two independent concerns:
 
-1. **Route wiring** (`createAuthRoutes`) — mounts the Auth.js signin/signout/callback endpoints into Pikku's HTTP router.
+1. **Route wiring** (`wireAuth`) — mounts the Auth.js signin/signout/callback endpoints into Pikku's HTTP router. The CLI generates `auth.gen.ts` with provider imports, secret wires, and route setup.
 2. **Session middleware** (`authJsSession`) — reads the Auth.js JWT cookie on every request and populates the Pikku session object.
 
-Both must be present and must share the same `secret`.
+Both must be present and must share the same `AUTH_SECRET`.
 
 ---
 
-## Standard Setup (Credentials Provider)
+## Standard Setup (OAuth Providers)
 
 ### 1. Auth wiring — `wirings/auth.wiring.ts`
 
+Use `wireAuth` to declare which providers you need. The CLI reads this call and generates `auth.gen.ts` with all imports, secret declarations, and route wiring automatically.
+
 ```typescript
-import Credentials from '@auth/core/providers/credentials'
-import { createAuthRoutes } from '@pikku/auth-js'
-import type { AuthConfigOrFactory } from '@pikku/auth-js'
-import { wireHTTPRoutes } from '#pikku'
+import { wireAuth } from '@pikku/auth-js'
 
-const DEV_AUTH_SECRET = 'dev-insecure-auth-secret-change-me'
-
-const configFactory: AuthConfigOrFactory = async (services) => {
-  const secret = await services.secrets.getSecret('AUTH_SECRET').catch(() => null) ?? DEV_AUTH_SECRET
-
-  return {
-    providers: [
-      Credentials({
-        credentials: {
-          email: { label: 'Email', type: 'email' },
-          password: { label: 'Password', type: 'password' },
-        },
-        async authorize(credentials) {
-          const email = (credentials?.email as string)?.toLowerCase()
-          const password = credentials?.password as string
-          if (!email || !password) return null
-
-          // Look up user and verify password against your DB
-          const user = await (services as any).kysely
-            .selectFrom('appUser')
-            .where('email', '=', email)
-            .select(['userId', 'role', 'name', 'email', 'passwordHash'])
-            .executeTakeFirst()
-
-          if (!user || !user.passwordHash) return null
-          // verifyPassword must be implemented in your app — use bcrypt or argon2.
-          // See services/password.ts in seminarhof for a reference implementation.
-          const ok = await verifyPassword(password, user.passwordHash)
-          if (!ok) return null
-
-          // Return shape is the Auth.js User — add any custom claims here
-          return { id: user.userId, email: user.email, name: user.name, role: user.role }
-        },
-      }),
-    ],
-    // Embed custom claims into the JWT
-    callbacks: {
-      jwt({ token, user }: any) {
-        if (user) token.role = user.role
-        return token
-      },
-      session({ session, token }: any) {
-        if (token) session.role = token.role
-        return session
-      },
-    },
-    session: { strategy: 'jwt' as const },
-    secret,
-    trustHost: true,
-    basePath: '/auth',
-  }
-}
-
-wireHTTPRoutes({ routes: { auth: createAuthRoutes(configFactory) as any } })
+wireAuth({
+  providers: ['github', 'google'],
+  callbacks: {
+    signIn: async (rpc, { user, account }) =>
+      rpc.invoke('auth:signIn', { userId: user.id, provider: account.provider }),
+    redirect: async (rpc, { url, baseUrl }) =>
+      rpc.invoke('auth:redirect', { url, baseUrl }),
+  },
+})
 ```
 
 **Key points:**
-- `configFactory` is async and receives singleton services — use it to read `AUTH_SECRET` from the secrets service.
-- Always provide a `DEV_AUTH_SECRET` fallback with the same literal in both the wiring and the middleware (see below) so sign and verify agree during local dev without env vars.
-- The `jwt` + `session` callbacks are how you embed custom fields (e.g. `role`) into the token. Without them, only the standard Auth.js claims (`sub`, `name`, `email`) are available.
-- `trustHost: true` is required in non-Next.js deployments.
-- `basePath: '/auth'` must match the path your frontend hits.
+- `providers` must be an array of string literals — the CLI inspector reads them statically and generates the `auth.gen.ts` file.
+- `callbacks` are standard Auth.js callbacks but receive `rpc` as a first argument. Use `rpc.invoke('funcName', data)` to delegate to typed pikku functions that have access to services and sessions.
+- The generated `auth.gen.ts` file handles provider imports, Zod schemas, `wireSecret` declarations for all credentials and `AUTH_SECRET`, and the `createAuthRoutes` + `wireHTTPRoutes` call.
+- Do NOT edit `auth.gen.ts` — re-run `pikku auth` (or `pikku all`) to regenerate.
 
-### 2. Middleware — `wirings/middleware.ts`
+**Supported providers:** `github`, `google`, `discord`, `twitter`, `apple`, `facebook`, `linkedin`, `slack`, `spotify`, `twitch`, `gitlab`, `auth0`, `azure-ad`, `okta`
+
+### 2. Configure `pikku.config.json`
+
+Add `authFile` pointing to where `auth.gen.ts` should be written (must be within `srcDirectories`):
+
+```json
+{
+  "srcDirectories": ["src"],
+  "authFile": "src/wirings/auth.gen.ts"
+}
+```
+
+### 3. Middleware — `wirings/middleware.ts`
 
 ```typescript
 import { addHTTPMiddleware } from '#pikku'
 import { authJsSession } from '@pikku/auth-js'
-import { sessionCookieMiddleware } from '../middleware/session-cookie.js'
 
-// Order is load-bearing: sessionCookieMiddleware MUST run before authJsSession.
-// If you have a custom DB session middleware it must go first, otherwise
-// authJsSession's post-check throws when the session is set inside next().
 addHTTPMiddleware('*', [
-  sessionCookieMiddleware,   // custom session (if present) — always first
   authJsSession({
     secretId: 'AUTH_SECRET',
-    mapSession: (claims) => ({ userId: claims.sub as string, role: claims.role as string }),
+    mapSession: (claims) => ({ userId: claims.sub as string }),
   }),
 ])
 ```
@@ -163,7 +124,56 @@ cors({
 })
 ```
 
-### 3. Auth-protected functions
+---
+
+## Credentials Provider (Username/Password)
+
+Use `wireAuth` with the `credentials` option. The `authorize` callback receives `rpc` as a first argument so you can delegate to a typed Pikku function:
+
+```typescript
+import { wireAuth } from '@pikku/auth-js'
+
+wireAuth({
+  credentials: {
+    fields: {
+      email: { label: 'Email', type: 'email' },
+      password: { label: 'Password', type: 'password' },
+    },
+    authorize: async (rpc, { email, password }) =>
+      rpc.invoke('auth:login', { email, password }),
+  },
+  callbacks: {
+    jwt: async (_rpc, { token, user }) => {
+      if (user) token.role = user.role
+      return token
+    },
+  },
+})
+```
+
+The `auth:login` function handles password verification and returns the Auth.js `User` shape (with `id` required), or `null` to reject the credentials:
+
+```typescript
+export const login = pikkuSessionlessFunc({
+  func: async ({ kysely }, { email, password }) => {
+    const user = await kysely
+      .selectFrom('appUser')
+      .where('email', '=', email.toLowerCase())
+      .select(['userId', 'role', 'name', 'email', 'passwordHash'])
+      .executeTakeFirst()
+
+    if (!user || !user.passwordHash) return null
+    const ok = await verifyPassword(password, user.passwordHash)
+    if (!ok) return null
+
+    return { id: user.userId, email: user.email, name: user.name, role: user.role }
+  },
+})
+```
+
+---
+
+## Auth-Protected Functions
 
 Functions that require a session use `pikkuFunc` — anonymous callers are rejected automatically:
 
@@ -245,23 +255,58 @@ The Pikku SDK does **not** wrap these — call them directly or use `@auth/core`
 
 ## Secret Management
 
-Both the auth config factory and `authJsSession` must use the same `AUTH_SECRET` value — they resolve it through the secrets service in both cases.
+All auth secrets are managed through the secrets service. `wireAuth` reads `AUTH_SECRET` and each provider's credentials object at request time using `services.secrets.getSecrets(keys)`.
 
-**In `auth.wiring.ts`** — read via the services factory (falls back to a dev literal if the secret is absent):
-```typescript
-const secret = await services.secrets.getSecret('AUTH_SECRET').catch(() => null) ?? DEV_AUTH_SECRET
-```
+**`AUTH_SECRET`** — a random string used to sign all JWT session tokens. Required.
+
+**Provider credentials** — each provider (e.g. `GITHUB_OAUTH`, `GOOGLE_OAUTH`) stores a JSON object with `clientId` and `clientSecret`.
+
+Both are registered in `auth.gen.ts` via `wireSecret`, which makes them visible in the Pikku console for secret management.
 
 **In `middleware.ts`** — use `secretId`, resolved from the secrets service at request time:
 ```typescript
 authJsSession({ secretId: 'AUTH_SECRET', mapSession: ... })
 ```
 
-Do **not** pass `secret: process.env.AUTH_SECRET` or any string value directly to `authJsSession`. The `secret` option no longer exists — `secretId` is the only accepted form. This ensures the secret is always fetched through the secrets service rather than leaked into the process environment.
+Do **not** pass `secret: process.env.AUTH_SECRET` or any string value directly to `authJsSession`. The `secret` option no longer exists — `secretId` is the only accepted form.
 
 ---
 
-## `createAuthRoutes` API
+## `wireAuth` API
+
+```typescript
+import { wireAuth } from '@pikku/auth-js'
+import type { WireAuthOptions } from '@pikku/auth-js'
+
+wireAuth({
+  providers: ['github', 'google'],  // optional — string literals read by CLI at build time
+  credentials: {                    // optional — Credentials provider (username/password)
+    fields: {                       // optional — defines what form fields to show
+      email: { label: 'Email', type: 'email' },
+      password: { label: 'Password', type: 'password' },
+    },
+    authorize: async (rpc, credentials) =>
+      rpc.invoke('auth:login', { email: credentials.email, password: credentials.password }),
+  },
+  basePath: '/auth',                // optional, defaults to '/auth'
+  callbacks: {                      // optional — all standard Auth.js callbacks
+    signIn: async (rpc, data) => rpc.invoke('auth:signIn', data),
+    redirect: async (rpc, { url }) => url,
+    session: async (rpc, data) => data,
+    jwt: async (rpc, data) => data,
+  },
+})
+```
+
+- `providers` and `credentials` are both optional — use one, both, or neither.
+- `rpc.invoke(funcName, data)` calls any registered Pikku function with full service injection. The return type is typed from your function definition.
+- `credentials.authorize` returns the Auth.js `User` object on success, or `null` on failure.
+
+---
+
+## `createAuthRoutes` API (low-level escape hatch)
+
+Use this only when you need full manual control, e.g. for the Credentials provider with custom `authorize` logic.
 
 ```typescript
 import { createAuthRoutes } from '@pikku/auth-js'
@@ -283,37 +328,12 @@ wireHTTPRoutes({ routes: { auth: routes as any } })
 
 ## Adding Custom Claims (e.g. `role`)
 
-1. Return extra fields from `authorize()` in your Credentials provider (Auth.js `User` type is open).
-2. Copy them into the JWT token in the `jwt` callback (`token.role = user.role`).
-3. Expose them in `mapSession` in `authJsSession` (`role: claims.role`).
-4. They are now available on every `session` object in your Pikku functions.
+When using `wireAuth` with callbacks:
+1. Return extra fields from your `signIn` callback.
+2. Handle them in the `jwt` callback: `jwt: async (rpc, { token, user }) => { if (user) token.role = user.role; return token }`.
+3. Expose them in `mapSession` in `authJsSession`: `role: claims.role`.
 
----
-
-## Adding OAuth Providers (GitHub, Google, etc.)
-
-With `strategy: 'jwt'` no database adapter is needed — tokens are self-contained.
-
-```typescript
-import GitHub from '@auth/core/providers/github'
-import Google from '@auth/core/providers/google'
-
-const configFactory: AuthConfigOrFactory = async (services) => {
-  const secret = await services.secrets.getSecret('AUTH_SECRET').catch(() => null) ?? DEV_AUTH_SECRET
-  const github = await services.secrets.getSecretJSON('GITHUB_OAUTH').catch(() => null)
-  const google = await services.secrets.getSecretJSON('GOOGLE_OAUTH').catch(() => null)
-
-  return {
-    providers: [
-      GitHub({ clientId: github?.clientId, clientSecret: github?.clientSecret }),
-      Google({ clientId: google?.clientId, clientSecret: google?.clientSecret }),
-    ],
-    session: { strategy: 'jwt' as const },
-    secret,
-    trustHost: true,
-    basePath: '/auth',
-  }
-}
-```
-
-Each OAuth provider needs its client ID and secret registered in the secrets service. No adapter or DB changes required when using JWT sessions.
+When using `createAuthRoutes` directly:
+1. Return extra fields from `authorize()` in your Credentials provider.
+2. Copy them into the JWT token in the `jwt` callback.
+3. Expose them in `mapSession` in `authJsSession`.

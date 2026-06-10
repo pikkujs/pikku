@@ -618,7 +618,14 @@ const _getPikkuCLIConfig = async (
     }
 
     if (result.emailTemplatesDir && !isAbsolute(result.emailTemplatesDir)) {
-      result.emailTemplatesDir = join(result.configDir, result.emailTemplatesDir)
+      result.emailTemplatesDir = join(
+        result.configDir,
+        result.emailTemplatesDir
+      )
+    }
+
+    if (result.authFile && !isAbsolute(result.authFile)) {
+      result.authFile = join(result.configDir, result.authFile)
     }
 
     if (!isAbsolute(result.tsconfig)) {

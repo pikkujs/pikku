@@ -83,6 +83,16 @@ export class RedisSecretService implements SecretService {
     await this.redis.del(this.secretKey(key))
   }
 
+  async getSecrets(keys: string[]): Promise<Record<string, unknown>> {
+    const results = await Promise.allSettled(keys.map((k) => this.getSecret(k)))
+    const out: Record<string, unknown> = {}
+    keys.forEach((key, i) => {
+      const result = results[i]
+      if (result?.status === 'fulfilled') out[key] = result.value
+    })
+    return out
+  }
+
   async rotateKEK(): Promise<number> {
     if (!this.previousKey) {
       throw new Error('No previousKey configured — nothing to rotate from')
