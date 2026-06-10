@@ -112,7 +112,6 @@ export const PermissionsPage: React.FC = () => {
     <PanelProvider>
       <ResizablePanelLayout
         header={<ListPageHeader title="Permissions" description="Access control guards protecting your functions" />}
-        showTabs={false}
         hidePanel={!loading && items.length === 0}
         emptyPanelMessage="Select a permission to view its details"
       >

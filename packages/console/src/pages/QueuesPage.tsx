@@ -96,7 +96,6 @@ export const QueuesPage: React.FC = () => {
     <PanelProvider>
       <ResizablePanelLayout
         header={<ListPageHeader title="Queues" description="Queue workers consuming messages from your message bus" />}
-        showTabs={false}
         hidePanel={!loading && items.length === 0}
         emptyPanelMessage="Select a queue worker to view its details"
       >
