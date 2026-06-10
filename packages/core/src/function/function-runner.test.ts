@@ -5,7 +5,6 @@ import {
   getAllFunctionNames,
   getFunctionNames,
   runPikkuFunc,
-  runPikkuFuncDirectly,
 } from './function-runner.js'
 import { addTagMiddleware, addTagPermission } from '../index.js'
 import { resetPikkuState, pikkuState } from '../pikku-state.js'
@@ -1227,32 +1226,6 @@ describe('runPikkuFunc - Integration Tests', () => {
 })
 
 describe('function-runner helpers', () => {
-  test('runPikkuFuncDirectly should pass through the provided wire and session helpers', async () => {
-    let receivedWire: any
-    const sessionService = new PikkuSessionService({
-      get: async () => undefined,
-    } as any)
-
-    addTestFunction('directFunc', {
-      func: async (_services: any, _data: any, wire: any) => {
-        receivedWire = wire
-        return 'ok'
-      },
-    })
-
-    const result = await runPikkuFuncDirectly(
-      'directFunc',
-      mockServices,
-      { traceId: 'trace-1' },
-      { hello: 'world' },
-      sessionService
-    )
-
-    assert.equal(result, 'ok')
-    assert.equal(receivedWire.traceId, 'trace-1')
-    assert.equal(typeof receivedWire.getSession, 'function')
-  })
-
   test('getFunctionNames and getAllFunctionNames should include addon namespaces', () => {
     addTestFunction('rootFunc', { func: async () => 'ok' })
     pikkuState(null, 'addons', 'packages').set('stripe', {

@@ -7,7 +7,6 @@ import { runPermissions } from '../permissions.js'
 import { pikkuState } from '../pikku-state.js'
 import { coerceTopLevelDataFromSchema, validateSchema } from '../schema.js'
 import type {
-  CoreServices,
   CoreUserSession,
   CorePikkuMiddleware,
   PikkuWiringTypes,
@@ -26,10 +25,7 @@ import type {
 } from './functions.types.js'
 import { parseVersionedId } from '../version.js'
 import type { SessionService } from '../services/user-session-service.js'
-import {
-  PikkuSessionService,
-  createFunctionSessionWireProps,
-} from '../services/user-session-service.js'
+import { PikkuSessionService } from '../services/user-session-service.js'
 import { ForbiddenError, ReadonlySessionError } from '../errors/errors.js'
 import {
   PikkuCredentialWireService,
@@ -200,27 +196,6 @@ export const getAllFunctionNames = (): string[] => {
   return functions
 }
 
-export const runPikkuFuncDirectly = async <In, Out>(
-  funcName: string,
-  allServices: CoreServices,
-  wire: PikkuWire,
-  data: In,
-  userSession?: SessionService<CoreUserSession>,
-  packageName: string | null = null
-) => {
-  const funcConfig = pikkuState(packageName, 'function', 'functions').get(
-    funcName
-  )
-  if (!funcConfig) {
-    throw new Error(`Function not found: ${funcName}`)
-  }
-  const wireWithSession = {
-    ...wire,
-    ...(userSession && createFunctionSessionWireProps(userSession)),
-  }
-  return (await funcConfig.func(allServices, data, wireWithSession)) as Out
-}
-
 export const runPikkuFunc = async <In = any, Out = any>(
   wireType: PikkuWiringTypes,
   wireId: string,
@@ -381,7 +356,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
           throw new ForbiddenError('Authentication required')
         }
       }
-    } else if (funcMeta.sessionless === false) {
+    } else {
       if (wiringAuth === false || funcConfig.auth === false) {
         resolvedSingletonServices.logger.warn(
           `Function '${funcName}' requires a session but auth was explicitly disabled — use pikkuSessionlessFunc instead.`
@@ -389,14 +364,6 @@ export const runPikkuFunc = async <In = any, Out = any>(
       }
       if (!session) {
         throw new ForbiddenError('Authentication required')
-      }
-    } else {
-      // TODO: Remove after a couple of releases — backward compat for
-      // generated metadata that doesn't include the `sessionless` field yet.
-      if (wiringAuth === true || funcConfig.auth === true) {
-        if (!session) {
-          throw new ForbiddenError('Authentication required')
-        }
       }
     }
 

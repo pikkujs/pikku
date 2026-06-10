@@ -6,7 +6,7 @@ import type {
 } from '../../types/core.types.js'
 import type { CoreChannel, ChannelMessageMeta } from './channel.types.js'
 import { combineMiddleware, runMiddleware } from '../../middleware-runner.js'
-import { runPikkuFuncDirectly } from '../../function/function-runner.js'
+import { runPikkuFunc } from '../../function/function-runner.js'
 import {
   combineChannelMiddleware,
   wrapChannelWithMiddleware,
@@ -79,7 +79,14 @@ export const runChannelLifecycleWithMiddleware = async ({
   }
 
   const runLifecycle = async () => {
-    return await runPikkuFuncDirectly(meta.pikkuFuncId, services, wire, data)
+    return await runPikkuFunc('channel', channelConfig.name, meta.pikkuFuncId, {
+      singletonServices: services,
+      data: () => data as any,
+      wire,
+      tags: meta.tags ?? [],
+      inheritedPermissions: meta.permissions,
+      packageName: meta.packageName ?? null,
+    })
   }
 
   if (allMiddleware.length > 0) {
