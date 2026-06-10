@@ -82,6 +82,7 @@ function makeStarterWorkspace(): string {
         if (excluded.has(part)) return false
       }
       if (src.includes('/.yarn/cache/')) return false
+      if (src.includes('/scaffold/') && src.endsWith('.gen.ts')) return false
       return true
     },
   })
