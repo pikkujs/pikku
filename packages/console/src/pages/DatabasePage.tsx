@@ -324,18 +324,21 @@ async function schemaToFlow(schema: DbSchema): Promise<{
   const edgeIds = new Set<string>()
   const elkEdges: Array<{ id: string; sources: string[]; targets: string[] }> = []
 
+  const tableNodeIds = new Set(schema.tables.map((t) => t.name))
   const enumNodeIds = new Set(schema.enums.map(enumNodeId))
 
   for (const table of schema.tables) {
     for (const col of table.columns) {
       if (col.foreignKey) {
-        const edgeId = `${table.name}.${col.name}->${col.foreignKey.table}`
+        const target = col.foreignKey.table
+        if (!tableNodeIds.has(target)) continue
+        const edgeId = `${table.name}.${col.name}->${target}`
         if (!edgeIds.has(edgeId)) {
           edgeIds.add(edgeId)
           edges.push({
             id: edgeId,
             source: table.name,
-            target: col.foreignKey.table,
+            target,
             label: col.name,
             type: 'smoothstep',
             animated: true,
@@ -343,7 +346,7 @@ async function schemaToFlow(schema: DbSchema): Promise<{
           elkEdges.push({
             id: edgeId,
             sources: [table.name],
-            targets: [col.foreignKey.table],
+            targets: [target],
           })
         }
       }
