@@ -176,6 +176,7 @@ export async function migrateAndCodegen(
           manifestFile: resolved.manifestFile,
           classificationMapFile: resolved.classificationMapFile,
           camelCase: resolved.camelCase,
+          rootDir: resolved.rootDir,
           migrationsDir: resolved.migrationsDir,
         })
       } finally {

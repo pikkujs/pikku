@@ -46,26 +46,15 @@ async function runInspect(sourceCode: string) {
   return criticals
 }
 
-// ── findPiiPaths unit tests via full inspect() round-trip ────────────────────
+// ── classification semantics:
+//   secret  → never returned by any function (sessioned or not)
+//   private → only blocked in sessionless functions (pikkuSessionlessFunc)
+//   public  → safe for sessionless functions
 
 describe('PII output check — PKU910', () => {
-  test('flags a top-level Private<string> field', async () => {
-    const criticals = await runInspect(`
-${BRAND_TYPES}
-import { pikkuFunc } from '@pikku/core'
-export const getUser = pikkuFunc({
-  func: async () => {
-    const email = 'test@example.com' as Private<string>
-    return { id: 1, email }
-  }
-})
-`)
-    const hit = criticals.find((c) => c.code === ErrorCode.PII_IN_OUTPUT)
-    assert.ok(hit, `Expected PKU910 but got: ${JSON.stringify(criticals)}`)
-    assert.match(hit.message, /email/)
-  })
+  // ── Secret<T>: always blocked ──────────────────────────────────────────────
 
-  test('flags a top-level Secret<string> field', async () => {
+  test('flags a top-level Secret<string> field in a sessioned function', async () => {
     const criticals = await runInspect(`
 ${BRAND_TYPES}
 import { pikkuFunc } from '@pikku/core'
@@ -81,11 +70,64 @@ export const getToken = pikkuFunc({
     assert.match(hit.message, /token/)
   })
 
-  test('flags a nested Private field', async () => {
+  test('flags a top-level Secret<string> field in a sessionless function', async () => {
+    const criticals = await runInspect(`
+${BRAND_TYPES}
+import { pikkuSessionlessFunc } from '@pikku/core'
+export const getToken = pikkuSessionlessFunc({
+  func: async () => {
+    const token = 'abc' as Secret<string>
+    return { token }
+  }
+})
+`)
+    const hit = criticals.find((c) => c.code === ErrorCode.PII_IN_OUTPUT)
+    assert.ok(hit)
+    assert.match(hit.message, /token/)
+  })
+
+  // ── Private<T>: only blocked in sessionless functions ─────────────────────
+
+  test('flags a top-level Private<string> field in a sessionless function', async () => {
+    const criticals = await runInspect(`
+${BRAND_TYPES}
+import { pikkuSessionlessFunc } from '@pikku/core'
+export const getUser = pikkuSessionlessFunc({
+  func: async () => {
+    const email = 'test@example.com' as Private<string>
+    return { id: 1, email }
+  }
+})
+`)
+    const hit = criticals.find((c) => c.code === ErrorCode.PII_IN_OUTPUT)
+    assert.ok(hit, `Expected PKU910 but got: ${JSON.stringify(criticals)}`)
+    assert.match(hit.message, /email/)
+  })
+
+  test('does not flag a Private<string> field in a sessioned function', async () => {
     const criticals = await runInspect(`
 ${BRAND_TYPES}
 import { pikkuFunc } from '@pikku/core'
-export const getProfile = pikkuFunc({
+export const getUser = pikkuFunc({
+  func: async () => {
+    const email = 'test@example.com' as Private<string>
+    return { id: 1, email }
+  }
+})
+`)
+    const hit = criticals.find((c) => c.code === ErrorCode.PII_IN_OUTPUT)
+    assert.equal(
+      hit,
+      undefined,
+      `Expected no PKU910 (sessioned function may return Private fields) but got: ${JSON.stringify(hit)}`
+    )
+  })
+
+  test('flags a nested Private field in a sessionless function', async () => {
+    const criticals = await runInspect(`
+${BRAND_TYPES}
+import { pikkuSessionlessFunc } from '@pikku/core'
+export const getProfile = pikkuSessionlessFunc({
   func: async () => {
     const email = 'x@y.com' as Private<string>
     return { user: { id: 1, email } }
@@ -123,12 +165,12 @@ export const doWork = pikkuFunc({
     assert.equal(hit, undefined)
   })
 
-  test('flags a function that returns a typed alias with Private field', async () => {
+  test('flags a sessionless function that returns a typed alias with Private field', async () => {
     const criticals = await runInspect(`
 ${BRAND_TYPES}
-import { pikkuFunc } from '@pikku/core'
+import { pikkuSessionlessFunc } from '@pikku/core'
 type UserRow = { id: number; email: Private<string> }
-export const getUser = pikkuFunc({
+export const getUser = pikkuSessionlessFunc({
   func: async (): Promise<UserRow> => {
     return { id: 1, email: 'x' as Private<string> }
   }
@@ -139,17 +181,17 @@ export const getUser = pikkuFunc({
     assert.match(hit.message, /email/)
   })
 
-  test('flags across multiple functions in the same file', async () => {
+  test('flags across multiple sessionless functions in the same file', async () => {
     const criticals = await runInspect(`
 ${BRAND_TYPES}
-import { pikkuFunc } from '@pikku/core'
-export const getEmail = pikkuFunc({
+import { pikkuSessionlessFunc } from '@pikku/core'
+export const getEmail = pikkuSessionlessFunc({
   func: async () => ({ email: 'x' as Private<string> })
 })
-export const getPhone = pikkuFunc({
+export const getPhone = pikkuSessionlessFunc({
   func: async () => ({ phone: '555' as Private<string> })
 })
-export const getSafe = pikkuFunc({
+export const getSafe = pikkuSessionlessFunc({
   func: async () => ({ name: 'Alice' })
 })
 `)
@@ -157,11 +199,11 @@ export const getSafe = pikkuFunc({
     assert.equal(hits.length, 2, `Expected 2 PKU910 but got ${hits.length}`)
   })
 
-  test('flags branded values inside arrays', async () => {
+  test('flags branded values inside arrays (sessionless)', async () => {
     const criticals = await runInspect(`
 ${BRAND_TYPES}
-import { pikkuFunc } from '@pikku/core'
-export const getEmails = pikkuFunc({
+import { pikkuSessionlessFunc } from '@pikku/core'
+export const getEmails = pikkuSessionlessFunc({
   func: async () => ({ emails: ['x@y.com' as Private<string>] })
 })
 `)
@@ -170,11 +212,11 @@ export const getEmails = pikkuFunc({
     assert.match(hit.message, /emails/)
   })
 
-  test('flags branded values inside string-indexed records', async () => {
+  test('flags branded values inside string-indexed records (sessionless)', async () => {
     const criticals = await runInspect(`
 ${BRAND_TYPES}
-import { pikkuFunc } from '@pikku/core'
-export const getMap = pikkuFunc({
+import { pikkuSessionlessFunc } from '@pikku/core'
+export const getMap = pikkuSessionlessFunc({
   func: async () => ({ byId: { a: 'x@y.com' as Private<string> } as Record<string, Private<string>> })
 })
 `)
@@ -186,8 +228,8 @@ export const getMap = pikkuFunc({
   test('does not flag when branded field is stripped before return', async () => {
     const criticals = await runInspect(`
 ${BRAND_TYPES}
-import { pikkuFunc } from '@pikku/core'
-export const getUser = pikkuFunc({
+import { pikkuSessionlessFunc } from '@pikku/core'
+export const getUser = pikkuSessionlessFunc({
   func: async () => {
     const raw: { email: Private<string> } = { email: 'x' as Private<string> }
     const safe: { email: string } = { email: raw.email as string }
