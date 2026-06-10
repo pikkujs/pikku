@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, memo } from 'react'
-import { Box, Center, ActionIcon, Loader, Text, Group, Tooltip, SegmentedControl, useMantineColorScheme } from '@mantine/core'
+import { Box, Center, ActionIcon, Loader, Text, Group, Tooltip, SegmentedControl, TextInput, useMantineColorScheme } from '@mantine/core'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import ReactFlow, {
@@ -17,7 +17,7 @@ import ReactFlow, {
 import type { NodeProps, Node, Edge, ReactFlowInstance } from 'reactflow'
 import { useQuery } from '@tanstack/react-query'
 import ELK from 'elkjs/lib/elk.bundled.js'
-import { Database as DatabaseIcon, Key, Link, RefreshCw, Globe, Shield, LockKeyhole, UserCheck } from 'lucide-react'
+import { Database as DatabaseIcon, Key, Link, RefreshCw, Globe, Shield, LockKeyhole, UserCheck, Table2, Search } from 'lucide-react'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { PikkuToggle } from '../components/ui/PikkuToggle'
@@ -452,6 +452,7 @@ function DatabaseCanvas({
   refreshing,
   hideInternal,
   classificationFilter,
+  search,
 }: {
   schema: DbSchema | null | undefined
   loading: boolean
@@ -459,6 +460,7 @@ function DatabaseCanvas({
   refreshing: boolean
   hideInternal: boolean
   classificationFilter: ClassificationFilter
+  search: string
 }) {
   const { colorScheme } = useMantineColorScheme()
   const isDark = colorScheme === 'dark'
@@ -477,11 +479,19 @@ function DatabaseCanvas({
         return
       }
 
-      const filtered = schema.tables.filter((t) => {
-        if (!shouldShowTable(t.name, hideInternal)) return false
-        if (classificationFilter === 'all') return true
-        return t.columns.some((col) => col.classification === classificationFilter)
-      })
+      const q = search.trim().toLowerCase()
+      const filtered = schema.tables
+        .filter((t) => {
+          if (!shouldShowTable(t.name, hideInternal)) return false
+          if (classificationFilter !== 'all' && !t.columns.some((col) => col.classification === classificationFilter)) return false
+          if (q && !t.name.toLowerCase().includes(q) && !t.columns.some((col) => col.name.toLowerCase().includes(q))) return false
+          return true
+        })
+        .map((t) => {
+          const byClass = classificationFilter === 'all' ? t.columns : t.columns.filter((col) => col.classification === classificationFilter)
+          const cols = q && !t.name.toLowerCase().includes(q) ? byClass.filter((col) => col.name.toLowerCase().includes(q)) : byClass
+          return { ...t, columns: cols }
+        })
       if (!filtered.length) {
         setNodes([])
         setEdges([])
@@ -511,7 +521,7 @@ function DatabaseCanvas({
     return () => {
       cancelled = true
     }
-  }, [schema, hideInternal, classificationFilter, setEdges, setNodes])
+  }, [schema, hideInternal, classificationFilter, search, setEdges, setNodes])
 
   if (loading || (layouting && nodes.length === 0)) {
     return (
@@ -598,6 +608,7 @@ function DatabasePageInner() {
   const rpc = usePikkuRPC()
   const [hideInternal, setHideInternal] = useState(true)
   const [classificationFilter, setClassificationFilter] = useState<ClassificationFilter>('all')
+  const [search, setSearch] = useState('')
 
   const { data: schema, isLoading, isFetching, error, refetch } = useQuery<
     DbSchema | null
@@ -612,16 +623,24 @@ function DatabasePageInner() {
       description="Visual schema for your local development database."
       view={
         <Group gap="xs" wrap="nowrap">
+          <TextInput
+            size="xs"
+            placeholder="Filter tables / columns…"
+            leftSection={<Search size={12} />}
+            value={search}
+            onChange={(e) => setSearch(e.currentTarget.value)}
+            style={{ width: 200 }}
+          />
           <SegmentedControl
             size="xs"
             value={classificationFilter}
             onChange={(v) => setClassificationFilter(v as ClassificationFilter)}
             data={[
               { label: 'All', value: 'all' },
-              { label: 'Public', value: 'public' },
-              { label: 'Private', value: 'private' },
-              { label: 'PII', value: 'pii' },
-              { label: 'Secret', value: 'secret' },
+              { label: <Group gap={4} wrap="nowrap"><Globe size={14} color="var(--mantine-color-teal-5)" />Public</Group>, value: 'public' },
+              { label: <Group gap={4} wrap="nowrap"><Shield size={14} color="var(--mantine-color-orange-5)" />Private</Group>, value: 'private' },
+              { label: <Group gap={4} wrap="nowrap"><UserCheck size={14} color="var(--mantine-color-violet-5)" />PII</Group>, value: 'pii' },
+              { label: <Group gap={4} wrap="nowrap"><LockKeyhole size={14} color="var(--mantine-color-red-5)" />Secret</Group>, value: 'secret' },
             ]}
           />
           <PikkuToggle
@@ -665,6 +684,7 @@ function DatabasePageInner() {
               refreshing={isFetching}
               hideInternal={hideInternal}
               classificationFilter={classificationFilter}
+              search={search}
             />
           )}
         </Box>
