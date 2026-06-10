@@ -1,6 +1,12 @@
 ---
-'@pikku/auth-js': minor
+'@pikku/auth-js': patch
 '@pikku/cli': patch
+'@pikku/core': patch
+'@pikku/inspector': patch
+'@pikku/redis': patch
+'@pikku/aws-services': patch
+'@pikku/kysely': patch
+'@pikku/mongodb': patch
 ---
 
 feat(auth-js): wire OIDC config (issuer/tenantId) as variables, expand provider registry
