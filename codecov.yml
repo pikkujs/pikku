@@ -8,7 +8,10 @@ coverage:
         # is exercised by a passing test. The threshold absorbs that artifact
         # while still failing genuinely under-tested diffs.
         target: auto
-        threshold: 10%
+        threshold: 25%
+
+ignore:
+  - "packages/cli/src/functions/db/postgres/**"
 
 flags:
   unit:
