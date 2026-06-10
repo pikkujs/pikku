@@ -9,8 +9,6 @@ import ReactFlow, {
   Background,
   Controls,
   MiniMap,
-  Handle,
-  Position,
   BackgroundVariant,
 } from 'reactflow'
 import type { NodeProps, Node, Edge, ReactFlowInstance } from 'reactflow'
@@ -74,7 +72,6 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
   const rowBorder = isDark ? 'var(--mantine-color-dark-5)' : '#f0f0f0'
   const typeBg = isDark ? 'var(--mantine-color-dark-4)' : '#f5f5f5'
   const typeColor = isDark ? 'var(--mantine-color-dark-1)' : '#888'
-  const handleDefault = isDark ? '#555' : '#ccc'
   const nullableColor = isDark ? 'var(--mantine-color-dark-2)' : '#aaa'
 
   return (
@@ -141,21 +138,6 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
               borderLeft: `3px solid ${CLASSIFICATION_COLOR[col.classification]}`,
             }}
           >
-            <Handle
-              type="target"
-              position={Position.Left}
-              id={`${id}-${col.name}-target`}
-              style={{
-                width: 8,
-                height: 8,
-                background: col.foreignKey
-                  ? 'var(--mantine-color-blue-5)'
-                  : handleDefault,
-                border: 'none',
-                left: -4,
-              }}
-            />
-
             <div
               style={{
                 flex: 1,
@@ -203,20 +185,6 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
               <span style={{ fontSize: 11, color: nullableColor, flexShrink: 0 }}>?</span>
             )}
 
-            <Handle
-              type="source"
-              position={Position.Right}
-              id={`${id}-${col.name}-source`}
-              style={{
-                width: 8,
-                height: 8,
-                background: col.foreignKey
-                  ? 'var(--mantine-color-blue-5)'
-                  : handleDefault,
-                border: 'none',
-                right: -4,
-              }}
-            />
           </div>
         ))}
       </div>
@@ -265,9 +233,7 @@ async function schemaToFlow(schema: DbSchema): Promise<{
           edges.push({
             id: edgeId,
             source: table.name,
-            sourceHandle: `${table.name}-${col.name}-source`,
             target: col.foreignKey.table,
-            targetHandle: `${col.foreignKey.table}-${col.foreignKey.column}-target`,
             label: col.name,
             type: 'smoothstep',
             animated: true,
