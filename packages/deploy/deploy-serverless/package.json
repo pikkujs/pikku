@@ -9,5 +9,8 @@
   },
   "devDependencies": {
     "typescript": "^5.9"
+  },
+  "exports": {
+    ".": "./dist/index.js"
   }
 }

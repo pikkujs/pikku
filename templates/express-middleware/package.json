@@ -29,5 +29,8 @@
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'"
+  },
+  "exports": {
+    ".": "./src/start.ts"
   }
 }

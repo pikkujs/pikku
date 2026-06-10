@@ -33,5 +33,8 @@
     "kysely-postgres-js": "^3.0.0",
     "postgres": "^3.4.8",
     "typescript": "^5.9"
+  },
+  "exports": {
+    ".": "./dist/src/index.js"
   }
 }

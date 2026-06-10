@@ -35,5 +35,8 @@
   },
   "dependencies": {
     "cookie": "^1.1.1"
+  },
+  "exports": {
+    ".": "./dist/index.js"
   }
 }

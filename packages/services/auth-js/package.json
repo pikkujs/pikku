@@ -23,5 +23,8 @@
   "devDependencies": {
     "@auth/core": "^0.37.0",
     "typescript": "^5.9"
+  },
+  "exports": {
+    ".": "./dist/index.js"
   }
 }
