@@ -69,13 +69,13 @@ export const AuthProviderPanel: React.FC<{ metadata: AuthProviderDef }> = ({ met
   const setSecretMutation = useSetSecret()
 
   const handleSave = async () => {
-    const toSave = provider.fields.filter((f) => values[f.key].trim())
+    const toSave = provider.fields.filter((f) => (values[f.key] ?? '').trim())
     if (!toSave.length) return
     setSaving(true)
     try {
       await Promise.all(
         toSave.map((f) =>
-          setSecretMutation.mutateAsync({ secretId: f.key, value: values[f.key].trim() }),
+          setSecretMutation.mutateAsync({ secretId: f.key, value: (values[f.key] ?? '').trim() }),
         ),
       )
       setValues(Object.fromEntries(provider.fields.map((f) => [f.key, ''])))
@@ -97,7 +97,7 @@ export const AuthProviderPanel: React.FC<{ metadata: AuthProviderDef }> = ({ met
     }
   }
 
-  const hasAnyValue = provider.fields.some((f) => values[f.key].trim())
+  const hasAnyValue = provider.fields.some((f) => (values[f.key] ?? '').trim())
 
   return (
     <Stack gap="lg">
@@ -152,7 +152,7 @@ export const AuthProviderPanel: React.FC<{ metadata: AuthProviderDef }> = ({ met
             <FieldRow
               key={field.key}
               field={field}
-              value={values[field.key]}
+              value={values[field.key] ?? ''}
               onChange={(v) => setValues((prev) => ({ ...prev, [field.key]: v }))}
             />
           ))}
