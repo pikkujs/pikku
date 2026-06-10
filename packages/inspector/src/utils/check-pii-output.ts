@@ -1,16 +1,22 @@
 import * as ts from 'typescript'
 
+export type ClassifiedField = {
+  path: string
+  classification: 'private' | 'pii' | 'secret' | string
+}
+
 /**
  * Recursively walks a resolved TypeScript type looking for `__classification__` brands —
- * the structural marker emitted by `Private<T>` and `Secret<T>`.
+ * the structural marker emitted by `Private<T>`, `Pii<T>`, and `Secret<T>`.
  *
  * `Private<T> = T & { readonly __classification__: 'private' }` shows up in the TS type
  * system as an intersection whose constituents include a type with a `__classification__`
  * property.  We detect that by checking whether any constituent of an
  * intersection exposes a property named `__classification__`.
  *
- * Returns the list of dotted field paths where a brand was found
- * (e.g. `['email', 'address.phone']`).  An empty array means clean.
+ * Returns the list of classified fields found, each with its dotted path and
+ * classification level (e.g. `[{ path: 'email', classification: 'private' }]`).
+ * An empty array means clean.
  */
 export function findPiiPaths(
   checker: ts.TypeChecker,
@@ -18,23 +24,33 @@ export function findPiiPaths(
   path = '',
   depth = 0,
   seen = new Set<ts.Type>()
-): string[] {
+): ClassifiedField[] {
   if (depth > 8 || seen.has(type)) return []
   seen.add(type)
 
   // ── Is this type itself branded? ─────────────────────────────────────────
   // Private<T> = T & { readonly __classification__: 'private' }  →  isIntersection()
-  // where one constituent has a `__classification__` property.
+  // where one constituent has a `__classification__` property whose type is a string literal.
   if (type.isIntersection()) {
-    const branded = type.types.some((t) =>
-      t.getProperties().some((p) => p.name === '__classification__')
-    )
-    if (branded) {
-      return [path || '<return value>']
+    for (const t of type.types) {
+      const classificationProp = t
+        .getProperties()
+        .find((p) => p.name === '__classification__')
+      if (classificationProp) {
+        const decl =
+          classificationProp.valueDeclaration ??
+          classificationProp.declarations?.[0]
+        const classification = decl
+          ? ((
+              checker.getTypeOfSymbolAtLocation(classificationProp, decl) as any
+            )?.value ?? 'private')
+          : 'private'
+        return [{ path: path || '<return value>', classification }]
+      }
     }
   }
 
-  const violations: string[] = []
+  const violations: ClassifiedField[] = []
 
   // ── Union: check every branch ─────────────────────────────────────────────
   if (type.isUnion()) {

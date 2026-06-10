@@ -883,24 +883,50 @@ export const addFunctions: AddWiring = (
     }
   }
 
-  // ── PII brand check ───────────────────────────────────────────────────────
-  // Walk the function body's ACTUAL inferred return type looking for Private<T>
-  // / Pii<T> / Secret<T> brands (__classification__ property).  This runs for every function,
-  // including those with a Zod output schema, because the TS return type
-  // reflects what the body actually returns before any Zod coercion.
+  const sessionless = expression.text !== 'pikkuFunc'
+
+  // ── Classification brand check ─────────────────────────────────────────────
+  // Walk the function body's ACTUAL inferred return type looking for classification
+  // brands (__classification__ property on Private<T>, Pii<T>, Secret<T>).
+  //
+  // Semantics:
+  //   secret  → never returned by any exposed function (sessioned or not)
+  //   private → only visible to authenticated (sessioned) users; ok for pikkuFunc
+  //   public  → safe for sessionless functions
   {
     const sig = checker.getSignatureFromDeclaration(handler)
     if (sig) {
       const rawRet = checker.getReturnTypeOfSignature(sig)
       const unwrapped = unwrapPromise(checker, rawRet)
-      const piiPaths = findPiiPaths(checker, unwrapped)
-      if (piiPaths.length > 0) {
+      const classifiedFields = findPiiPaths(checker, unwrapped)
+
+      const secretPaths = classifiedFields
+        .filter((f) => f.classification === 'secret')
+        .map((f) => f.path)
+
+      const privatePaths = classifiedFields
+        .filter(
+          (f) => f.classification === 'private' || f.classification === 'pii'
+        )
+        .map((f) => f.path)
+
+      if (secretPaths.length > 0) {
         logger.critical(
           ErrorCode.PII_IN_OUTPUT,
-          `Function '${name}' exposes PII-classified field(s) in its return type: ` +
-            piiPaths.map((p) => `'${p}'`).join(', ') +
-            `.\n  Either strip these fields before returning or mark the column ` +
-            `@public in the migration if it is safe to expose.`
+          `Function '${name}' exposes secret-classified field(s) in its return type: ` +
+            secretPaths.map((p) => `'${p}'`).join(', ') +
+            `.\n  Secret fields must never appear in function output. ` +
+            `Strip these fields before returning or change the column classification.`
+        )
+      }
+
+      if (sessionless && privatePaths.length > 0) {
+        logger.critical(
+          ErrorCode.PII_IN_OUTPUT,
+          `Sessionless function '${name}' exposes private-classified field(s) in its return type: ` +
+            privatePaths.map((p) => `'${p}'`).join(', ') +
+            `.\n  Private fields are only safe to return from authenticated (sessioned) functions. ` +
+            `Either require a session (use pikkuFunc) or mark the column @public if it is safe to expose publicly.`
         )
       }
     }
@@ -946,7 +972,6 @@ export const addFunctions: AddWiring = (
     }
   }
 
-  const sessionless = expression.text !== 'pikkuFunc'
   const implementationHash = computeImplementationHash({
     wrapper: expression.text,
     handler,
