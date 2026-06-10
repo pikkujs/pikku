@@ -17,7 +17,7 @@ import ReactFlow, {
 import type { NodeProps, Node, Edge, ReactFlowInstance } from 'reactflow'
 import { useQuery } from '@tanstack/react-query'
 import ELK from 'elkjs/lib/elk.bundled.js'
-import { Database as DatabaseIcon, Key, Link, RefreshCw } from 'lucide-react'
+import { Database as DatabaseIcon, Key, Link, RefreshCw, Globe, Shield, LockKeyhole } from 'lucide-react'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { PikkuToggle } from '../components/ui/PikkuToggle'
