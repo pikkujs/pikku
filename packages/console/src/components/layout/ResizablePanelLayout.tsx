@@ -26,18 +26,18 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
   const showPanel = !hidePanel
 
   return (
-    <Box className={classes.flexColumn} px="xl" py="md" style={{ height: '100vh' }}>
+    <Box className={classes.flexColumn} px="xl" py="md" style={{ height: '100vh', gap: 'var(--mantine-spacing-md)' }}>
       {header}
       <Box className={classes.flexGrow} style={{ minHeight: 0 }}>
         {showPanel ? (
           <Allotment key={panels.size === 0 ? 'empty-panel' : 'with-panel'} defaultSizes={[840, 267]}>
             <Allotment.Pane>
-              <Box className={`${classes.flexColumn} ${classes.overflowAuto}`} style={{ minWidth: 0, height: '100%' }}>
+              <Box className={`${classes.flexColumn} ${classes.overflowAuto}`} style={{ minWidth: 0, height: '100%', paddingRight: 'var(--mantine-spacing-sm)' }}>
                 {children}
               </Box>
             </Allotment.Pane>
             <Allotment.Pane minSize={minSize} maxSize={500} preferredSize={267}>
-              <Box className={`${classes.flexColumn} ${classes.overflowAuto}`} style={{ minWidth: 0, height: '100%' }}>
+              <Box className={`${classes.flexColumn} ${classes.overflowAuto}`} style={{ minWidth: 0, height: '100%', paddingLeft: 'var(--mantine-spacing-sm)' }}>
                 <PanelContainer emptyMessage={emptyPanelMessage} />
               </Box>
             </Allotment.Pane>
