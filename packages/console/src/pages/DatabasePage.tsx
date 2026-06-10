@@ -23,6 +23,7 @@ import { usePanelContext } from '../context/PanelContext'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { PikkuToggle } from '../components/ui/PikkuToggle'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
+import classes from '../components/ui/console.module.css'
 import 'reactflow/dist/style.css'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -558,7 +559,7 @@ function DatabaseCanvas({
   }
 
   return (
-    <Box style={{ flex: 1, minHeight: 0 }}>
+    <Box className={classes.listSurfaceCard} style={{ flex: 1, minHeight: 0 }}>
       <ReactFlow
         onInit={(instance) => {
           flowRef.current = instance
@@ -572,7 +573,7 @@ function DatabaseCanvas({
         minZoom={0.2}
         maxZoom={2}
         style={{
-          background: isDark ? 'var(--mantine-color-dark-8)' : 'var(--mantine-color-gray-0, #f8f9fa)',
+          background: 'transparent',
           height: '100%',
         }}
       >
