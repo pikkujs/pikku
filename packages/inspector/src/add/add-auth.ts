@@ -18,10 +18,14 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
       p.name.text === 'providers'
   ) as ts.PropertyAssignment | undefined
 
-  if (
-    !providersProp ||
-    !ts.isArrayLiteralExpression(providersProp.initializer)
-  ) {
+  const sourceFile = node.getSourceFile().fileName
+  state.auth.files.add(sourceFile)
+
+  if (!providersProp) {
+    return
+  }
+
+  if (!ts.isArrayLiteralExpression(providersProp.initializer)) {
     logger.critical(
       ErrorCode.MISSING_NAME,
       'wireAuth: providers must be an array literal of string literals.'
@@ -29,7 +33,6 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
     return
   }
 
-  const providers: string[] = []
   for (const element of (providersProp.initializer as ts.ArrayLiteralExpression)
     .elements) {
     if (!ts.isStringLiteral(element)) {
@@ -39,15 +42,8 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
       )
       return
     }
-    providers.push(element.text)
-  }
-
-  const sourceFile = node.getSourceFile().fileName
-  state.auth.files.add(sourceFile)
-
-  for (const p of providers) {
-    if (!state.auth.providers.includes(p)) {
-      state.auth.providers.push(p)
+    if (!state.auth.providers.includes(element.text)) {
+      state.auth.providers.push(element.text)
     }
   }
 }

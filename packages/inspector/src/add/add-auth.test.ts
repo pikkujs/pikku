@@ -91,15 +91,47 @@ describe('addAuth inspector', () => {
     }
   })
 
-  test('logs critical error when providers is missing', async () => {
-    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-missing-'))
+  test('does not error when providers is absent (credentials-only wireAuth)', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-creds-only-'))
     const file = join(rootDir, 'auth.ts')
 
     await writeFile(
       file,
       [
         "import { wireAuth } from '@pikku/auth-js'",
-        'wireAuth({ callbacks: {} })',
+        'wireAuth({ credentials: { authorize: async () => null } })',
+      ].join('\n')
+    )
+
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      const state = await inspect(makeLogger(criticals), [file], { rootDir })
+      assert.equal(
+        criticals.length,
+        0,
+        'credentials-only wireAuth must not produce errors'
+      )
+      assert.deepEqual(
+        state.auth.providers,
+        [],
+        'no providers should be extracted'
+      )
+      assert.ok(state.auth.files.has(file), 'source file still tracked')
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test('logs critical error when providers is not an array literal', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-nonarray-'))
+    const file = join(rootDir, 'auth.ts')
+
+    await writeFile(
+      file,
+      [
+        "import { wireAuth } from '@pikku/auth-js'",
+        "const PROVIDERS = ['github']",
+        'wireAuth({ providers: PROVIDERS })',
       ].join('\n')
     )
 
@@ -107,7 +139,10 @@ describe('addAuth inspector', () => {
     try {
       await inspect(makeLogger(criticals), [file], { rootDir })
       const hit = criticals.find((e) => e.code === ErrorCode.MISSING_NAME)
-      assert.ok(hit, 'expected MISSING_NAME critical')
+      assert.ok(
+        hit,
+        'expected MISSING_NAME critical for non-array-literal providers'
+      )
     } finally {
       await rm(rootDir, { recursive: true, force: true })
     }
