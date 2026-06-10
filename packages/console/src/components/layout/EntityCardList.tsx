@@ -45,48 +45,53 @@ function EntityCard({
         alignItems: 'center',
       }}
     >
-      <Stack gap={6} style={{ minWidth: 0 }}>
-        <Group gap={8} wrap="wrap">
-          <Text size="sm" fw={500} ff="monospace" truncate style={{ maxWidth: '100%' }}>
+      <Stack gap={4} style={{ minWidth: 0 }}>
+        <Group gap={8} wrap="nowrap" align="center">
+          <Text size="sm" fw={500} ff="monospace" style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {item.name}
           </Text>
-          {item.badges?.map((b) => (
-            <Box
-              key={b.label}
-              component="span"
-              style={{
-                fontSize: 10,
-                fontWeight: 600,
-                padding: '2px 7px',
-                borderRadius: 20,
-                letterSpacing: '0.05em',
-                textTransform: 'uppercase',
-                background:
-                  b.tone === 'accent'
-                    ? 'var(--mantine-color-blue-light)'
-                    : 'var(--mantine-color-default)',
-                color:
-                  b.tone === 'accent'
-                    ? 'var(--mantine-color-blue-light-color)'
-                    : 'var(--mantine-color-dimmed)',
-                border: '1px solid var(--mantine-color-default-border)',
-              }}
-            >
-              {b.label}
-            </Box>
-          ))}
-        </Group>
-        {item.description && (
-          <Text size="xs" c="dimmed" lineClamp={2}>
-            {item.description}
-          </Text>
-        )}
-        {(item.meta?.length || item.tags?.length) ? (
-          <Group gap={12} wrap="wrap">
+          <Group gap={6} wrap="nowrap" style={{ flexShrink: 0 }}>
             {item.meta?.map((m) => (
-              <Text key={m} size="xs" c="dimmed">
+              <Box
+                key={m}
+                component="span"
+                style={{
+                  fontSize: 11,
+                  padding: '2px 8px',
+                  borderRadius: 20,
+                  background: 'var(--mantine-color-default)',
+                  color: 'var(--mantine-color-dimmed)',
+                  border: '1px solid var(--mantine-color-default-border)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 {m}
-              </Text>
+              </Box>
+            ))}
+            {item.badges?.map((b) => (
+              <Box
+                key={b.label}
+                component="span"
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  padding: '2px 7px',
+                  borderRadius: 20,
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                  background:
+                    b.tone === 'accent'
+                      ? 'var(--mantine-color-blue-light)'
+                      : 'var(--mantine-color-default)',
+                  color:
+                    b.tone === 'accent'
+                      ? 'var(--mantine-color-blue-light-color)'
+                      : 'var(--mantine-color-dimmed)',
+                  border: '1px solid var(--mantine-color-default-border)',
+                }}
+              >
+                {b.label}
+              </Box>
             ))}
             {item.tags?.map((t) => (
               <Box
@@ -105,7 +110,12 @@ function EntityCard({
               </Box>
             ))}
           </Group>
-        ) : null}
+        </Group>
+        {item.description && (
+          <Text size="xs" c="dimmed" lineClamp={2}>
+            {item.description}
+          </Text>
+        )}
       </Stack>
       {metricSlot && <Box style={{ flexShrink: 0 }}>{metricSlot(item.name)}</Box>}
     </Box>
@@ -158,12 +168,10 @@ export const EntityCardList: React.FC<EntityCardListProps> = ({
   }
 
   return (
-    <Box p="md">
-      <Stack gap={10}>
-        {items.map((item) => (
-          <EntityCard key={item.name} item={item} onOpen={onOpen} metricSlot={metricSlot} />
-        ))}
-      </Stack>
-    </Box>
+    <Stack gap={10}>
+      {items.map((item) => (
+        <EntityCard key={item.name} item={item} onOpen={onOpen} metricSlot={metricSlot} />
+      ))}
+    </Stack>
   )
 }
