@@ -46,6 +46,7 @@ function registerAuthMeta(basePath: string): void {
       pikkuFuncId,
       inputSchemaName: null,
       outputSchemaName: null,
+      sessionless: true,
       services: { optimized: false, services: [] },
     }
   }
