@@ -17,7 +17,7 @@ import ReactFlow, {
 import type { NodeProps, Node, Edge, ReactFlowInstance } from 'reactflow'
 import { useQuery } from '@tanstack/react-query'
 import ELK from 'elkjs/lib/elk.bundled.js'
-import { Database as DatabaseIcon, Key, Link, RefreshCw, Globe, Shield, LockKeyhole } from 'lucide-react'
+import { Database as DatabaseIcon, Key, Link, RefreshCw, Globe, Shield, LockKeyhole, UserCheck } from 'lucide-react'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { PikkuToggle } from '../components/ui/PikkuToggle'
@@ -26,7 +26,7 @@ import 'reactflow/dist/style.css'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Classification = 'public' | 'private' | 'secret'
+type Classification = 'public' | 'private' | 'pii' | 'secret'
 type ClassificationFilter = 'all' | Classification
 
 interface DbColumn {
@@ -70,6 +70,7 @@ interface EnumSchemaNodeData {
 const CLASSIFICATION_ICON: Record<Classification, React.ReactNode> = {
   public: <Globe size={10} color="var(--mantine-color-teal-5)" />,
   private: <Shield size={10} color="var(--mantine-color-orange-5)" />,
+  pii: <UserCheck size={10} color="var(--mantine-color-violet-5)" />,
   secret: <LockKeyhole size={10} color="var(--mantine-color-red-5)" />,
 }
 
@@ -619,6 +620,7 @@ function DatabasePageInner() {
               { label: 'All', value: 'all' },
               { label: 'Public', value: 'public' },
               { label: 'Private', value: 'private' },
+              { label: 'PII', value: 'pii' },
               { label: 'Secret', value: 'secret' },
             ]}
           />

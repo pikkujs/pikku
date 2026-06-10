@@ -1,8 +1,14 @@
-export type Private<T> = T & { readonly __pii__: 'private' }
-export type Secret<T> = T & { readonly __pii__: 'secret' }
+export type Private<T> = T & { readonly __classification__: 'private' }
+export type Pii<T> = T & { readonly __classification__: 'pii' }
+export type Secret<T> = T & { readonly __classification__: 'secret' }
 
-export type Classification = 'public' | 'private' | 'secret'
-export type AnonymizeStrategy = 'fake:email' | 'fake:name' | 'hash' | 'keep' | null
+export type Classification = 'public' | 'private' | 'pii' | 'secret'
+export type AnonymizeStrategy =
+  | 'fake:email'
+  | 'fake:name'
+  | 'hash'
+  | 'keep'
+  | null
 
 export interface ColumnClassification {
   classification: Classification

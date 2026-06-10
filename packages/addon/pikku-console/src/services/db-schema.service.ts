@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import type { MetaService } from '@pikku/core'
 
-export type Classification = 'public' | 'private' | 'secret'
+export type Classification = 'public' | 'private' | 'pii' | 'secret'
 
 export interface DbColumn {
   name: string
@@ -87,6 +87,7 @@ function classificationFor(visibility: string | undefined): Classification {
   if (
     visibility === 'public' ||
     visibility === 'private' ||
+    visibility === 'pii' ||
     visibility === 'secret'
   )
     return visibility
@@ -94,7 +95,7 @@ function classificationFor(visibility: string | undefined): Classification {
 }
 
 interface AnnotationEntry {
-  visibility?: 'public' | 'private' | 'secret'
+  visibility?: 'public' | 'private' | 'pii' | 'secret'
   classification?: string
 }
 

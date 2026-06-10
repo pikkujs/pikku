@@ -1,13 +1,13 @@
 import * as ts from 'typescript'
 
 /**
- * Recursively walks a resolved TypeScript type looking for `__pii__` brands —
+ * Recursively walks a resolved TypeScript type looking for `__classification__` brands —
  * the structural marker emitted by `Private<T>` and `Secret<T>`.
  *
- * `Private<T> = T & { readonly __pii__: 'private' }` shows up in the TS type
- * system as an intersection whose constituents include a type with a `__pii__`
+ * `Private<T> = T & { readonly __classification__: 'private' }` shows up in the TS type
+ * system as an intersection whose constituents include a type with a `__classification__`
  * property.  We detect that by checking whether any constituent of an
- * intersection exposes a property named `__pii__`.
+ * intersection exposes a property named `__classification__`.
  *
  * Returns the list of dotted field paths where a brand was found
  * (e.g. `['email', 'address.phone']`).  An empty array means clean.
@@ -23,11 +23,11 @@ export function findPiiPaths(
   seen.add(type)
 
   // ── Is this type itself branded? ─────────────────────────────────────────
-  // Private<T> = T & { readonly __pii__: 'private' }  →  isIntersection()
-  // where one constituent has a `__pii__` property.
+  // Private<T> = T & { readonly __classification__: 'private' }  →  isIntersection()
+  // where one constituent has a `__classification__` property.
   if (type.isIntersection()) {
     const branded = type.types.some((t) =>
-      t.getProperties().some((p) => p.name === '__pii__')
+      t.getProperties().some((p) => p.name === '__classification__')
     )
     if (branded) {
       return [path || '<return value>']
@@ -54,12 +54,16 @@ export function findPiiPaths(
     const numberIndex = checker.getIndexTypeOfType(type, ts.IndexKind.Number)
     if (numberIndex) {
       const idxPath = path ? `${path}[]` : '[]'
-      violations.push(...findPiiPaths(checker, numberIndex, idxPath, depth + 1, seen))
+      violations.push(
+        ...findPiiPaths(checker, numberIndex, idxPath, depth + 1, seen)
+      )
     }
     const stringIndex = checker.getIndexTypeOfType(type, ts.IndexKind.String)
     if (stringIndex) {
       const idxPath = path ? `${path}[*]` : '[*]'
-      violations.push(...findPiiPaths(checker, stringIndex, idxPath, depth + 1, seen))
+      violations.push(
+        ...findPiiPaths(checker, stringIndex, idxPath, depth + 1, seen)
+      )
     }
 
     for (const prop of type.getProperties()) {
@@ -68,7 +72,9 @@ export function findPiiPaths(
       if (!decl) continue
       const propType = checker.getTypeOfSymbolAtLocation(prop, decl)
       const subPath = path ? `${path}.${prop.name}` : prop.name
-      violations.push(...findPiiPaths(checker, propType, subPath, depth + 1, seen))
+      violations.push(
+        ...findPiiPaths(checker, propType, subPath, depth + 1, seen)
+      )
     }
   }
 

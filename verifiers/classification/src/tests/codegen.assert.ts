@@ -31,7 +31,9 @@ function runPikkuDbMigrate(dir: string): { exitCode: number; output: string } {
   }
 }
 
-async function createProject(migrations: Record<string, string>): Promise<string> {
+async function createProject(
+  migrations: Record<string, string>
+): Promise<string> {
   const tmpDir = await mkdtemp(join(tmpdir(), 'pikku-codegen-test-'))
   await writeFile(
     join(tmpDir, 'pikku.config.json'),
@@ -44,7 +46,12 @@ async function createProject(migrations: Record<string, string>): Promise<string
   await writeFile(
     join(tmpDir, 'tsconfig.json'),
     JSON.stringify({
-      compilerOptions: { target: 'ES2022', module: 'Node16', moduleResolution: 'Node16', strict: true },
+      compilerOptions: {
+        target: 'ES2022',
+        module: 'Node16',
+        moduleResolution: 'Node16',
+        strict: true,
+      },
       include: ['src'],
     })
   )
@@ -74,10 +81,14 @@ describe('DB codegen — classification brands', () => {
     const { exitCode, output } = runPikkuDbMigrate(dir)
     assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
 
-    const schema = await readFile(join(dir, '.pikku', 'db', 'schema.d.ts'), 'utf-8')
+    const schema = await readFile(
+      join(dir, '.pikku', 'db', 'schema.d.ts'),
+      'utf-8'
+    )
     assert.match(schema, /Private<string>/, 'email should be Private<string>')
     assert.ok(
-      schema.includes('email:') && schema.includes('ColumnType<Private<string>'),
+      schema.includes('email:') &&
+        schema.includes('ColumnType<Private<string>'),
       'email column type should use ColumnType<Private<string>, ...'
     )
   })
@@ -96,7 +107,10 @@ describe('DB codegen — classification brands', () => {
     const { exitCode, output } = runPikkuDbMigrate(dir)
     assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
 
-    const schema = await readFile(join(dir, '.pikku', 'db', 'schema.d.ts'), 'utf-8')
+    const schema = await readFile(
+      join(dir, '.pikku', 'db', 'schema.d.ts'),
+      'utf-8'
+    )
     assert.match(schema, /Secret<string>/)
   })
 
@@ -115,13 +129,21 @@ describe('DB codegen — classification brands', () => {
     const { exitCode, output } = runPikkuDbMigrate(dir)
     assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
 
-    const schema = await readFile(join(dir, '.pikku', 'db', 'schema.d.ts'), 'utf-8')
-    // The type aliases Private<T>/Secret<T> are always emitted in the header.
-    // Verify that no column *uses* them (no ColumnType<Private<...> or ColumnType<Secret<...)
+    const schema = await readFile(
+      join(dir, '.pikku', 'db', 'schema.d.ts'),
+      'utf-8'
+    )
+    // The type aliases Private<T>/Pii<T>/Secret<T> are always emitted in the header.
+    // Verify that no column *uses* them (no ColumnType<Private<...>, ColumnType<Pii<...>, or ColumnType<Secret<...)
     assert.doesNotMatch(
       schema,
       /ColumnType<Private</,
       'all-@public table should have no columns using Private<> brand'
+    )
+    assert.doesNotMatch(
+      schema,
+      /ColumnType<Pii</,
+      'all-@public table should have no columns using Pii<> brand'
     )
     assert.doesNotMatch(
       schema,
@@ -144,8 +166,15 @@ describe('DB codegen — classification brands', () => {
     const { exitCode, output } = runPikkuDbMigrate(dir)
     assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
 
-    const schema = await readFile(join(dir, '.pikku', 'db', 'schema.d.ts'), 'utf-8')
-    assert.match(schema, /Private<string>/, 'unannotated text column defaults to Private')
+    const schema = await readFile(
+      join(dir, '.pikku', 'db', 'schema.d.ts'),
+      'utf-8'
+    )
+    assert.match(
+      schema,
+      /Private<string>/,
+      'unannotated text column defaults to Private'
+    )
   })
 
   test('handles combined annotations on same line (@date @private:keep)', async (t) => {
@@ -162,7 +191,10 @@ describe('DB codegen — classification brands', () => {
     const { exitCode, output } = runPikkuDbMigrate(dir)
     assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
 
-    const schema = await readFile(join(dir, '.pikku', 'db', 'schema.d.ts'), 'utf-8')
+    const schema = await readFile(
+      join(dir, '.pikku', 'db', 'schema.d.ts'),
+      'utf-8'
+    )
     // @date makes it Date type, @private:keep means it's Private<Date>
     assert.match(schema, /Private<Date>/)
   })
@@ -184,13 +216,35 @@ describe('DB codegen — classification brands', () => {
     const { exitCode, output } = runPikkuDbMigrate(dir)
     assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
 
-    const schema = await readFile(join(dir, '.pikku', 'db', 'schema.d.ts'), 'utf-8')
-    assert.match(schema, /phone[^;]*Private<string>|Private<string>[^;]*phone/, 'ALTER TABLE phone column should get Private brand')
+    const schema = await readFile(
+      join(dir, '.pikku', 'db', 'schema.d.ts'),
+      'utf-8'
+    )
+    assert.match(
+      schema,
+      /phone[^;]*Private<string>|Private<string>[^;]*phone/,
+      'ALTER TABLE phone column should get Private brand'
+    )
 
-    const manifest = await readFile(join(dir, '.pikku', 'db', 'classification.gen.ts'), 'utf-8')
-    assert.match(manifest, /"phone"/, 'manifest should include the phone column')
-    assert.match(manifest, /classification:\s*['"]private['"]/, 'phone should be classified private')
-    assert.match(manifest, /['"]fake:name['"]/, 'ALTER annotation strategy fake:name should be preserved')
+    const manifest = await readFile(
+      join(dir, '.pikku', 'db', 'classification.gen.ts'),
+      'utf-8'
+    )
+    assert.match(
+      manifest,
+      /"phone"/,
+      'manifest should include the phone column'
+    )
+    assert.match(
+      manifest,
+      /classification:\s*['"]private['"]/,
+      'phone should be classified private'
+    )
+    assert.match(
+      manifest,
+      /['"]fake:name['"]/,
+      'ALTER annotation strategy fake:name should be preserved'
+    )
   })
 
   test('generates classification.gen.ts manifest with correct entries', async (t) => {
@@ -269,7 +323,10 @@ describe('DB codegen — classification brands', () => {
     const { exitCode } = runPikkuDbMigrate(dir)
     assert.equal(exitCode, 0)
 
-    const schema = await readFile(join(dir, '.pikku', 'db', 'schema.d.ts'), 'utf-8')
+    const schema = await readFile(
+      join(dir, '.pikku', 'db', 'schema.d.ts'),
+      'utf-8'
+    )
     // The pattern must be ColumnType<Private<string>, string, string>
     // NOT Private<ColumnType<string, ...>>
     assert.match(
