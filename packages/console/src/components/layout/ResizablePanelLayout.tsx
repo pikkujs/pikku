@@ -45,7 +45,7 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
             overflow: 'hidden',
             transition: 'width 180ms ease',
           }}>
-            <Box style={{ width: PANEL_WIDTH, height: '100%', overflow: 'auto' }}>
+            <Box className={classes.listSurfaceCard} style={{ width: PANEL_WIDTH, height: '100%' }}>
               <PanelContainer emptyMessage={emptyPanelMessage} />
             </Box>
           </Box>
