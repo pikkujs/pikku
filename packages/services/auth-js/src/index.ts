@@ -6,6 +6,7 @@ export { wireAuth } from './wire-auth.js'
 export type {
   WireAuthOptions,
   WireAuthCallbacks,
+  WireAuthCredentials,
   AuthProvider,
 } from './wire-auth.js'
 export { PROVIDER_REGISTRY } from './provider-registry.js'

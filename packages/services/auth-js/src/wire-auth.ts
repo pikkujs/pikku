@@ -16,8 +16,17 @@ export type WireAuthCallbacks = {
   authorized?: (rpc: any, data: any) => any
 }
 
+export interface WireAuthCredentials {
+  fields?: Record<
+    string,
+    { label?: string; type?: string; placeholder?: string; required?: boolean }
+  >
+  authorize: (rpc: any, credentials: Record<string, unknown>) => Promise<any>
+}
+
 export interface WireAuthOptions {
-  providers: (AuthProvider | string)[]
+  providers?: (AuthProvider | string)[]
+  credentials?: WireAuthCredentials
   callbacks?: WireAuthCallbacks
   basePath?: string
 }
@@ -28,6 +37,23 @@ async function batchLoadSecrets(
 ): Promise<Map<string, unknown>> {
   const map = await secrets.getSecrets(keys)
   return new Map(Object.entries(map))
+}
+
+async function buildCredentialsProvider(
+  credentials: WireAuthCredentials,
+  rpc: any
+): Promise<any | null> {
+  try {
+    const mod = await import('@auth/core/providers/credentials')
+    const CredentialsFn = mod.default ?? mod.Credentials
+    if (!CredentialsFn) return null
+    return CredentialsFn({
+      ...(credentials.fields ? { credentials: credentials.fields } : {}),
+      authorize: (creds: any) => credentials.authorize(rpc, creds),
+    })
+  } catch {
+    return null
+  }
 }
 
 async function buildProviders(
@@ -54,7 +80,12 @@ async function buildProviders(
 }
 
 export const wireAuth = (options: WireAuthOptions): void => {
-  const { providers, callbacks = {}, basePath = '/auth' } = options
+  const {
+    providers = [],
+    credentials,
+    callbacks = {},
+    basePath = '/auth',
+  } = options
 
   const secretIds = [
     'AUTH_SECRET',
@@ -74,6 +105,11 @@ export const wireAuth = (options: WireAuthOptions): void => {
       })
 
       const providerInstances = await buildProviders(providers, secretsMap)
+
+      if (credentials) {
+        const credProvider = await buildCredentialsProvider(credentials, rpc)
+        if (credProvider) providerInstances.push(credProvider)
+      }
 
       const wrappedCallbacks: Record<string, (data: any) => any> = {}
       for (const [key, cb] of Object.entries(callbacks)) {
