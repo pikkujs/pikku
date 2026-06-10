@@ -307,12 +307,13 @@ const TABLE_MIN_HEIGHT = 80
 
 const elk = new ELK()
 const ELK_OPTIONS = {
-  'elk.algorithm': 'force',
-  'elk.force.repulsivePower': '2',
-  'elk.force.iterations': '300',
-  'elk.spacing.nodeNode': '80',
-  'elk.padding': '[top=60,left=60,bottom=60,right=60]',
+  'elk.algorithm': 'layered',
+  'elk.direction': 'DOWN',
+  'elk.spacing.nodeNode': '40',
+  'elk.layered.spacing.nodeNodeBetweenLayers': '50',
+  'elk.padding': '[top=40,left=40,bottom=40,right=40]',
   'elk.separateConnectedComponents': 'true',
+  'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
 }
 
 function colSortKey(col: DbColumn): number {
@@ -554,9 +555,28 @@ function DatabaseCanvas({
           height: '100%',
         }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
-        <Controls />
-        <MiniMap nodeColor="#aaa" />
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={20}
+          size={1}
+          color={isDark ? 'var(--mantine-color-dark-4)' : 'var(--mantine-color-gray-4)'}
+        />
+        <Controls
+          style={{
+            '--xy-controls-button-background-color': isDark ? 'var(--mantine-color-dark-6)' : '#fff',
+            '--xy-controls-button-background-color-hover': isDark ? 'var(--mantine-color-dark-5)' : '#f4f4f5',
+            '--xy-controls-button-color': isDark ? 'var(--mantine-color-dark-0)' : '#333',
+            '--xy-controls-button-border-color': isDark ? 'var(--mantine-color-dark-4)' : '#d1d5db',
+          } as React.CSSProperties}
+        />
+        <MiniMap
+          nodeColor={isDark ? 'var(--mantine-color-dark-3)' : '#ccc'}
+          maskColor={isDark ? 'rgba(0,0,0,0.6)' : 'rgba(240,240,240,0.7)'}
+          style={{
+            background: isDark ? 'var(--mantine-color-dark-7)' : '#f8f9fa',
+            border: `1px solid ${isDark ? 'var(--mantine-color-dark-4)' : '#e5e7eb'}`,
+          }}
+        />
       </ReactFlow>
     </Box>
   )
