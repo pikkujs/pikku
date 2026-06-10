@@ -1,5 +1,14 @@
-import { existsSync, mkdirSync, rmSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  rmSync,
+  writeFileSync,
+  readFileSync,
+} from 'node:fs'
 import { resolve, isAbsolute, relative, dirname, join } from 'node:path'
+import { execSync } from 'node:child_process'
+import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
 import type { Kysely } from 'kysely'
 import { migrate, type MigrateResult } from './db-migrator.js'
 import { generateSchemaTypes, type CodegenResult } from './db-codegen.js'
@@ -21,6 +30,9 @@ interface ResolvedDbBase {
   schemaFile: string
   coercionFile: string
   manifestFile: string
+  classificationMapFile: string
+  classificationsFile: string
+  classificationsGenJsonFile: string
   zodFile: string
   camelCase: boolean
 }
@@ -56,6 +68,9 @@ export function resolveDb(
     schemaFile: join(outDir, 'db', 'schema.d.ts'),
     coercionFile: join(outDir, 'db', 'coercion.gen.ts'),
     manifestFile: join(outDir, 'db', 'classification.gen.ts'),
+    classificationMapFile: join(outDir, 'db', 'classification-map.gen.d.ts'),
+    classificationsFile: join(rootDir, 'db', 'annotations.ts'),
+    classificationsGenJsonFile: join(outDir, 'db', 'annotations.gen.json'),
     zodFile: join(outDir, 'db', 'zod.gen.ts'),
     camelCase: true,
   })
@@ -112,63 +127,80 @@ export interface MigrateAndCodegenOutcome {
   migrate: MigrateResult
   codegen: CodegenResult
   zod: ZodCodegenResult
+  classificationsScaffolded: boolean
+  classificationsJsonWritten: boolean
 }
 
 export async function migrateAndCodegen(
   resolved: ResolvedDb
 ): Promise<MigrateAndCodegenOutcome> {
+  let migrateResult: MigrateResult
+  let codegenResult: CodegenResult
+
   if (resolved.dialect === 'sqlite') {
     mkdirSync(dirname(resolved.dbFile), { recursive: true })
     const runtime = await loadSqliteRuntime()
     const db = runtime.open(resolved.dbFile)
     try {
       const executor = new SqliteMigrationExecutor(db)
-      const migrateResult = await migrate(executor, resolved.migrationsDir)
+      migrateResult = await migrate(executor, resolved.migrationsDir)
       const introspector = new SqliteIntrospector(db)
-      const codegenResult = await generateSchemaTypes(introspector, {
+      codegenResult = await generateSchemaTypes(introspector, {
         outFile: resolved.schemaFile,
         coercionFile: resolved.coercionFile,
         manifestFile: resolved.manifestFile,
+        classificationMapFile: resolved.classificationMapFile,
         camelCase: resolved.camelCase,
         migrationsDir: resolved.migrationsDir,
       })
-      const zodResult = generateZodTypes({
-        schemaFile: resolved.schemaFile,
-        outFile: resolved.zodFile,
-      })
-      return { migrate: migrateResult, codegen: codegenResult, zod: zodResult }
     } finally {
       db.close()
     }
+  } else {
+    // Postgres
+    const introspector = new PostgresIntrospector(resolved.connectionString)
+    await introspector.connect()
+    try {
+      const { Client } = await import('pg')
+      const client = new Client({ connectionString: resolved.connectionString })
+      await client.connect()
+      try {
+        const executor = new PostgresMigrationExecutor(client)
+        migrateResult = await migrate(executor, resolved.migrationsDir)
+        codegenResult = await generateSchemaTypes(introspector, {
+          outFile: resolved.schemaFile,
+          coercionFile: resolved.coercionFile,
+          manifestFile: resolved.manifestFile,
+          classificationMapFile: resolved.classificationMapFile,
+          camelCase: resolved.camelCase,
+          migrationsDir: resolved.migrationsDir,
+        })
+      } finally {
+        await client.end()
+      }
+    } finally {
+      await introspector.close()
+    }
   }
 
-  // Postgres
-  const introspector = new PostgresIntrospector(resolved.connectionString)
-  await introspector.connect()
-  try {
-    const { Client } = await import('pg')
-    const client = new Client({ connectionString: resolved.connectionString })
-    await client.connect()
-    try {
-      const executor = new PostgresMigrationExecutor(client)
-      const migrateResult = await migrate(executor, resolved.migrationsDir)
-      const codegenResult = await generateSchemaTypes(introspector, {
-        outFile: resolved.schemaFile,
-        coercionFile: resolved.coercionFile,
-        manifestFile: resolved.manifestFile,
-        camelCase: resolved.camelCase,
-        migrationsDir: resolved.migrationsDir,
-      })
-      const zodResult = generateZodTypes({
-        schemaFile: resolved.schemaFile,
-        outFile: resolved.zodFile,
-      })
-      return { migrate: migrateResult, codegen: codegenResult, zod: zodResult }
-    } finally {
-      await client.end()
-    }
-  } finally {
-    await introspector.close()
+  const zodResult = generateZodTypes({
+    schemaFile: resolved.schemaFile,
+    outFile: resolved.zodFile,
+  })
+
+  // ── Classifications step ──────────────────────────────────────────────────
+  const { scaffolded, jsonWritten } = syncClassifications(
+    resolved.classificationsFile,
+    resolved.classificationsGenJsonFile,
+    codegenResult.tables
+  )
+
+  return {
+    migrate: migrateResult,
+    codegen: codegenResult,
+    zod: zodResult,
+    classificationsScaffolded: scaffolded,
+    classificationsJsonWritten: jsonWritten,
   }
 }
 
@@ -199,6 +231,109 @@ export function reset(resolved: ResolvedSqliteDb, rootDir: string): void {
   if (existsSync(resolved.dbFile)) {
     rmSync(resolved.dbFile)
   }
+}
+
+// ── Classification sync ───────────────────────────────────────────────────────
+
+/**
+ * Loads `db/classifications.ts` via tsx, serialises it to
+ * `.pikku/db/classifications.gen.json` for runtime consumption (console, etc.).
+ *
+ * If `db/classifications.ts` doesn't exist yet, writes a scaffold with every
+ * table defaulting to `private` so the developer has a starting point.
+ */
+function syncClassifications(
+  classificationsFile: string,
+  genJsonFile: string,
+  tableNames: string[]
+): { scaffolded: boolean; jsonWritten: boolean } {
+  let scaffolded = false
+
+  if (!existsSync(classificationsFile)) {
+    const relMap = join(
+      dirname(classificationsFile),
+      '..',
+      '.pikku',
+      'db',
+      'classification-map.gen.d.ts'
+    )
+    const relMapPosix = relMap.replace(/\\/g, '/')
+
+    const groups = new Map<string, string[]>()
+    for (const name of tableNames) {
+      const dot = name.indexOf('.')
+      const schema = dot >= 0 ? name.slice(0, dot) : ''
+      const table = dot >= 0 ? name.slice(dot + 1) : name
+      if (!groups.has(schema)) groups.set(schema, [])
+      groups.get(schema)!.push(table)
+    }
+
+    const bodyLines: string[] = [
+      `import type { DbClassificationMap } from '${relMapPosix}'`,
+      ``,
+      `export const classifications = {`,
+    ]
+    for (const [schema, tables] of groups) {
+      if (schema) bodyLines.push(`  ${JSON.stringify(schema)}: {`)
+      for (const table of tables) {
+        bodyLines.push(
+          schema
+            ? `    ${JSON.stringify(table)}: {`
+            : `  ${JSON.stringify(table)}: {`
+        )
+        bodyLines.push(schema ? `    },` : `  },`)
+      }
+      if (schema) bodyLines.push(`  },`)
+    }
+    bodyLines.push(`} satisfies DbClassificationMap`, ``)
+
+    mkdirSync(dirname(classificationsFile), { recursive: true })
+    writeFileSync(classificationsFile, bodyLines.join('\n'), 'utf8')
+    scaffolded = true
+  }
+
+  // Resolve tsx from the CLI package's own node_modules so it works regardless
+  // of whether the user's project has tsx installed.
+  const _require = createRequire(fileURLToPath(import.meta.url))
+  let tsxEsmPath: string | null = null
+  try {
+    tsxEsmPath = _require.resolve('tsx/esm')
+  } catch {
+    // tsx not bundled with this CLI install — skip JSON emit
+  }
+
+  const script = [
+    `import * as mod from ${JSON.stringify(classificationsFile)}`,
+    `const val = Object.values(mod)[0]`,
+    `process.stdout.write(JSON.stringify(val))`,
+  ].join('\n')
+
+  let jsonWritten = false
+  if (tsxEsmPath) {
+    try {
+      const json = execSync(
+        `node --import ${JSON.stringify(tsxEsmPath)} --input-type=module`,
+        {
+          input: script,
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'pipe'],
+        }
+      )
+      const existing = existsSync(genJsonFile)
+        ? readFileSync(genJsonFile, 'utf8')
+        : null
+      const next = JSON.stringify(JSON.parse(json), null, 2) + '\n'
+      if (existing !== next) {
+        mkdirSync(dirname(genJsonFile), { recursive: true })
+        writeFileSync(genJsonFile, next, 'utf8')
+        jsonWritten = true
+      }
+    } catch {
+      // annotations file has syntax errors — skip JSON emit
+    }
+  }
+
+  return { scaffolded, jsonWritten }
 }
 
 export async function createKysely<DB>(

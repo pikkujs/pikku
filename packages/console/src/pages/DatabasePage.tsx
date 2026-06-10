@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, memo } from 'react'
-import { Box, Center, Button, Loader, Text, Group } from '@mantine/core'
+import { Box, Center, Button, Loader, Text, Group, useMantineColorScheme } from '@mantine/core'
+import { PanelProvider } from '../context/PanelContext'
+import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import ReactFlow, {
   ReactFlowProvider,
   useNodesState,
@@ -17,6 +19,7 @@ import ELK from 'elkjs/lib/elk.bundled.js'
 import { Database as DatabaseIcon, Table2, Key, Link, RefreshCw } from 'lucide-react'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
 import { ListPageHeader } from '../components/layout/PageLayout'
+import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import 'reactflow/dist/style.css'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -61,23 +64,35 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
   id,
 }: NodeProps<DatabaseSchemaNodeData>) {
   const tableName = data.label?.trim() || id
+  const { colorScheme } = useMantineColorScheme()
+  const isDark = colorScheme === 'dark'
+
+  const border = isDark ? 'var(--mantine-color-dark-4)' : 'var(--app-glass-border, #e0e0e0)'
+  const headerBg = isDark ? 'var(--mantine-color-dark-5)' : 'var(--mantine-color-blue-0, #e7f5ff)'
+  const badgeBg = isDark ? 'var(--mantine-color-dark-4)' : '#f0f0f0'
+  const badgeColor = isDark ? 'var(--mantine-color-dark-1)' : '#888'
+  const rowBorder = isDark ? 'var(--mantine-color-dark-5)' : '#f0f0f0'
+  const typeBg = isDark ? 'var(--mantine-color-dark-4)' : '#f5f5f5'
+  const typeColor = isDark ? 'var(--mantine-color-dark-1)' : '#888'
+  const handleDefault = isDark ? '#555' : '#ccc'
+  const nullableColor = isDark ? 'var(--mantine-color-dark-2)' : '#aaa'
 
   return (
     <div
       style={{
         minWidth: 260,
-        border: '1px solid var(--app-glass-border, #e0e0e0)',
+        border: `1px solid ${border}`,
         borderRadius: 8,
         overflow: 'hidden',
-        backgroundColor: 'var(--mantine-color-body, white)',
-        boxShadow: '0 1px 4px rgba(0,0,0,.08)',
+        backgroundColor: 'var(--mantine-color-body)',
+        boxShadow: isDark ? '0 1px 4px rgba(0,0,0,.4)' : '0 1px 4px rgba(0,0,0,.08)',
       }}
     >
       <div
         style={{
           padding: '8px 12px',
-          background: 'var(--mantine-color-blue-0, #e7f5ff)',
-          borderBottom: '1px solid var(--app-glass-border, #e0e0e0)',
+          background: headerBg,
+          borderBottom: `1px solid ${border}`,
           display: 'flex',
           alignItems: 'center',
           gap: 8,
@@ -101,8 +116,8 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
         <span
           style={{
             fontSize: 11,
-            color: '#888',
-            backgroundColor: '#f0f0f0',
+            color: badgeColor,
+            backgroundColor: badgeBg,
             padding: '1px 6px',
             borderRadius: 10,
             flexShrink: 0,
@@ -122,7 +137,7 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
               alignItems: 'center',
               gap: 6,
               padding: '4px 12px',
-              borderBottom: '1px solid #f0f0f0',
+              borderBottom: `1px solid ${rowBorder}`,
               borderLeft: `3px solid ${CLASSIFICATION_COLOR[col.classification]}`,
             }}
           >
@@ -135,7 +150,7 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
                 height: 8,
                 background: col.foreignKey
                   ? 'var(--mantine-color-blue-5)'
-                  : '#ccc',
+                  : handleDefault,
                 border: 'none',
                 left: -4,
               }}
@@ -174,8 +189,8 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
               style={{
                 fontFamily: 'monospace',
                 fontSize: 11,
-                color: '#888',
-                backgroundColor: '#f5f5f5',
+                color: typeColor,
+                backgroundColor: typeBg,
                 padding: '1px 5px',
                 borderRadius: 4,
                 flexShrink: 0,
@@ -185,7 +200,7 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
             </span>
 
             {col.nullable && (
-              <span style={{ fontSize: 11, color: '#aaa', flexShrink: 0 }}>?</span>
+              <span style={{ fontSize: 11, color: nullableColor, flexShrink: 0 }}>?</span>
             )}
 
             <Handle
@@ -197,7 +212,7 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
                 height: 8,
                 background: col.foreignKey
                   ? 'var(--mantine-color-blue-5)'
-                  : '#ccc',
+                  : handleDefault,
                 border: 'none',
                 right: -4,
               }}
@@ -342,6 +357,8 @@ function DatabaseCanvas({
   refreshing: boolean
   hideInternal: boolean
 }) {
+  const { colorScheme } = useMantineColorScheme()
+  const isDark = colorScheme === 'dark'
   const [nodes, setNodes, onNodesChange] = useNodesState<DatabaseSchemaNodeData>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [layouting, setLayouting] = useState(false)
@@ -401,35 +418,23 @@ function DatabaseCanvas({
 
   if (!schema) {
     return (
-      <Center h="60vh">
-        <Box ta="center">
-          <DatabaseIcon size={40} color="#aaa" />
-          <Text mt="sm" c="dimmed">
-            No database configured
-          </Text>
-          <Text size="sm" c="dimmed">
-            Add a SQLite or Postgres database to your pikku project.
-          </Text>
-        </Box>
-      </Center>
+      <EmptyStatePlaceholder
+        icon={DatabaseIcon}
+        title="No database configured"
+        description="Add a SQLite or Postgres database to your pikku project."
+        docsHref="https://pikku.dev/docs/core-features/database"
+      />
     )
   }
 
   if (nodes.length === 0) {
     return (
-      <Center h="60vh">
-        <Box ta="center">
-          <DatabaseIcon size={40} color="#aaa" />
-          <Text mt="sm" c="dimmed">
-            {hideInternal ? 'No visible tables' : 'No tables found'}
-          </Text>
-          {hideInternal && (
-            <Text size="sm" c="dimmed">
-              All tables are hidden by the Pikku-internal filter.
-            </Text>
-          )}
-        </Box>
-      </Center>
+      <EmptyStatePlaceholder
+        icon={DatabaseIcon}
+        title={hideInternal ? 'No visible tables' : 'No tables found'}
+        description={hideInternal ? 'All tables are hidden by the Pikku-internal filter.' : undefined}
+        docsHref="https://pikku.dev/docs/core-features/database"
+      />
     )
   }
 
@@ -446,7 +451,7 @@ function DatabaseCanvas({
         nodeTypes={nodeTypes}
         fitView
         style={{
-          background: 'var(--mantine-color-gray-0, #f8f9fa)',
+          background: isDark ? 'var(--mantine-color-dark-8)' : 'var(--mantine-color-gray-0, #f8f9fa)',
           height: '100%',
         }}
       >
@@ -495,61 +500,67 @@ function DatabasePageInner() {
   const rpc = usePikkuRPC()
   const [hideInternal, setHideInternal] = useState(true)
 
-  const { data: schema, isLoading, isFetching, refetch } = useQuery<
+  const { data: schema, isLoading, isFetching, error, refetch } = useQuery<
     DbSchema | null
   >({
     queryKey: ['console:getDbSchema'],
     queryFn: () => rpc.invoke('console:getDbSchema') as Promise<DbSchema | null>,
   })
 
-  return (
-    <Box
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        padding: '16px 24px 0',
-        gap: 12,
-      }}
-    >
-      <ListPageHeader
-        title="Database"
-        description="Visual schema for your local development database."
-        filters={
-          <Group gap="sm">
-            <ClassificationLegend />
-            <Button
-              size="xs"
-              variant={hideInternal ? 'light' : 'subtle'}
-              onClick={() => setHideInternal((v) => !v)}
-            >
-              Hide internal tables
-            </Button>
-          </Group>
-        }
-        view={
+  const header = (
+    <ListPageHeader
+      title="Database"
+      description="Visual schema for your local development database."
+      filters={
+        <Group gap="sm">
+          <ClassificationLegend />
           <Button
             size="xs"
-            variant="subtle"
-            leftSection={<RefreshCw size={13} />}
-            loading={isFetching}
-            onClick={() => void refetch()}
+            variant={hideInternal ? 'light' : 'subtle'}
+            onClick={() => setHideInternal((v) => !v)}
           >
-            Refresh
+            Hide internal tables
           </Button>
-        }
-      />
+        </Group>
+      }
+      view={
+        <Button
+          size="xs"
+          variant="subtle"
+          leftSection={<RefreshCw size={13} />}
+          loading={isFetching}
+          onClick={() => void refetch()}
+        >
+          Refresh
+        </Button>
+      }
+    />
+  )
 
-      <Box style={{ flex: 1, minHeight: 0 }}>
-        <DatabaseCanvas
-          schema={schema}
-          loading={isLoading}
-          onRefresh={() => void refetch()}
-          refreshing={isFetching}
-          hideInternal={hideInternal}
-        />
-      </Box>
-    </Box>
+  return (
+    <PanelProvider>
+      <ResizablePanelLayout hidePanel header={header}>
+        <Box style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          {error ? (
+            <EmptyStatePlaceholder
+              icon={DatabaseIcon}
+              title="See your tables and data privacy here"
+              description="Run pikku db migrate to visualise your schema with column-level privacy classifications."
+              code="pikku db migrate"
+              docsHref="https://pikku.dev/docs/core-features/database"
+            />
+          ) : (
+            <DatabaseCanvas
+              schema={schema}
+              loading={isLoading}
+              onRefresh={() => void refetch()}
+              refreshing={isFetching}
+              hideInternal={hideInternal}
+            />
+          )}
+        </Box>
+      </ResizablePanelLayout>
+    </PanelProvider>
   )
 }
 

@@ -51,6 +51,7 @@ async function setup(migrations: Record<string, string>) {
     outFile: join(outDir, 'schema.d.ts'),
     coercionFile: join(outDir, 'coercion.gen.ts'),
     manifestFile: join(outDir, 'classification.gen.ts'),
+    classificationMapFile: join(outDir, 'classification-map.gen.d.ts'),
     camelCase: true,
     migrationsDir,
   })
@@ -114,7 +115,11 @@ describe('DB codegen (Postgres) — classification brands', () => {
     })
 
     const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
-    assert.match(schema, /Private<string>/, 'unannotated name should default to Private')
+    assert.match(
+      schema,
+      /Private<string>/,
+      'unannotated name should default to Private'
+    )
   })
 
   test('@public columns have no brand', async (t) => {
@@ -137,7 +142,11 @@ describe('DB codegen (Postgres) — classification brands', () => {
     // (the internal tracking table has unannotated columns that default to Private)
     const postsBlock = schema.match(/export interface Posts \{[^}]+\}/)
     assert.ok(postsBlock, 'Posts interface should exist in schema')
-    assert.doesNotMatch(postsBlock[0], /Private<|Secret</, 'public columns should have no brand')
+    assert.doesNotMatch(
+      postsBlock[0],
+      /Private<|Secret</,
+      'public columns should have no brand'
+    )
   })
 
   test('classification manifest records strategy correctly', async (t) => {
@@ -157,7 +166,10 @@ describe('DB codegen (Postgres) — classification brands', () => {
       await rm(migrationsDir, { recursive: true, force: true })
     })
 
-    const manifest = await readFile(join(outDir, 'classification.gen.ts'), 'utf-8')
+    const manifest = await readFile(
+      join(outDir, 'classification.gen.ts'),
+      'utf-8'
+    )
     assert.match(manifest, /"pub"/)
     assert.match(manifest, /classification: 'public'/)
     assert.match(manifest, /"priv"/)
@@ -187,12 +199,52 @@ describe('DB codegen (Postgres) — classification brands', () => {
     })
 
     const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
-    assert.match(schema, /Private<string>/, 'ALTER TABLE phone column should get Private brand')
+    assert.match(
+      schema,
+      /Private<string>/,
+      'ALTER TABLE phone column should get Private brand'
+    )
 
-    const manifest = await readFile(join(outDir, 'classification.gen.ts'), 'utf-8')
+    const manifest = await readFile(
+      join(outDir, 'classification.gen.ts'),
+      'utf-8'
+    )
     assert.match(manifest, /"phone"/)
     assert.match(manifest, /classification: 'private'/)
     assert.match(manifest, /'fake:name'/)
+  })
+
+  test('classification-map.gen.d.ts lists all tables and columns', async (t) => {
+    const { outDir, migrationsDir, db } = await setup({
+      '001_mixed.sql': `
+        CREATE TABLE mixed (
+          id    SERIAL PRIMARY KEY,
+          pub   TEXT NOT NULL,
+          priv  TEXT NOT NULL,
+          sec   TEXT NOT NULL
+        );
+      `,
+    })
+    t.after(async () => {
+      await db.close()
+      await rm(outDir, { recursive: true, force: true })
+      await rm(migrationsDir, { recursive: true, force: true })
+    })
+
+    const map = await readFile(
+      join(outDir, 'classification-map.gen.d.ts'),
+      'utf-8'
+    )
+    assert.match(
+      map,
+      /DbClassificationMap/,
+      'should export DbClassificationMap'
+    )
+    assert.match(map, /"mixed"/, 'mixed table should be present')
+    assert.match(map, /"pub"/, 'pub column should be present')
+    assert.match(map, /"priv"/, 'priv column should be present')
+    assert.match(map, /"sec"/, 'sec column should be present')
+    assert.match(map, /ColumnEntry/, 'columns should reference ColumnEntry')
   })
 
   test('BOOLEAN columns map to boolean type', async (t) => {

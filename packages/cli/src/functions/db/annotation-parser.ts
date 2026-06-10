@@ -21,7 +21,9 @@ export type AnnotationMap = Record<string, Record<string, ColAnnotation>>
  *   *_at / *_on            → date
  *   is_* / has_* / can_*   → bool
  */
-export function annotationFromName(colName: string): { kind: ColumnKind } | null {
+export function annotationFromName(
+  colName: string
+): { kind: ColumnKind } | null {
   if (/_at$|_on$/.test(colName)) return { kind: 'date' }
   if (/^is_|^has_|^can_/.test(colName)) return { kind: 'bool' }
   return null
@@ -30,7 +32,9 @@ export function annotationFromName(colName: string): { kind: ColumnKind } | null
 function parseStrategy(s: string | undefined): AnonymizeStrategy {
   if (!s) return null
   const valid = ['fake:email', 'fake:name', 'hash', 'keep'] as const
-  return (valid as readonly string[]).includes(s) ? (s as AnonymizeStrategy) : null
+  return (valid as readonly string[]).includes(s)
+    ? (s as AnonymizeStrategy)
+    : null
 }
 
 function parseComment(comment: string): Partial<ColAnnotation> {
@@ -50,7 +54,7 @@ function parseComment(comment: string): Partial<ColAnnotation> {
 
   const classM = comment.match(/@(public|private|secret)(?::([^\s@]+))?/i)
   if (classM) {
-    ann.classification = classM[1].toLowerCase() as Classification
+    ann.classification = classM[1]!.toLowerCase() as Classification
     ann.anonymize = parseStrategy(classM[2])
   }
 
@@ -69,7 +73,9 @@ function parseComment(comment: string): Partial<ColAnnotation> {
 export function parseAnnotations(migrationsDir: string): AnnotationMap {
   let files: string[]
   try {
-    files = readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')).sort()
+    files = readdirSync(migrationsDir)
+      .filter((f) => f.endsWith('.sql'))
+      .sort()
   } catch {
     return {}
   }
@@ -93,14 +99,19 @@ export function parseAnnotations(migrationsDir: string): AnnotationMap {
       /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?"?(\w+)"?\s*\(([^;]+)\)/gis
     let tableMatch: RegExpExecArray | null
     while ((tableMatch = createTablePattern.exec(content)) !== null) {
-      const tableName = tableMatch[1].toLowerCase()
-      const body = tableMatch[2]
+      const tableName = tableMatch[1]!.toLowerCase()
+      const body = tableMatch[2]!
       for (const line of body.split('\n')) {
         const trimmed = line.trim()
-        if (/^(PRIMARY|UNIQUE|CHECK|FOREIGN|CONSTRAINT)/i.test(trimmed)) continue
+        if (/^(PRIMARY|UNIQUE|CHECK|FOREIGN|CONSTRAINT)/i.test(trimmed))
+          continue
         const lineMatch = trimmed.match(/^(\w+)\s+\w[^-]*--\s*(.+?)\s*,?\s*$/)
         if (!lineMatch) continue
-        merge(tableName, lineMatch[1].toLowerCase(), parseComment(lineMatch[2]))
+        merge(
+          tableName,
+          lineMatch[1]!.toLowerCase(),
+          parseComment(lineMatch[2]!)
+        )
       }
     }
 
@@ -109,9 +120,9 @@ export function parseAnnotations(migrationsDir: string): AnnotationMap {
     let alterMatch: RegExpExecArray | null
     while ((alterMatch = alterPattern.exec(content)) !== null) {
       merge(
-        alterMatch[1].toLowerCase(),
-        alterMatch[2].toLowerCase(),
-        parseComment(alterMatch[3])
+        alterMatch[1]!.toLowerCase(),
+        alterMatch[2]!.toLowerCase(),
+        parseComment(alterMatch[3]!)
       )
     }
   }
