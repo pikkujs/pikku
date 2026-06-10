@@ -10,7 +10,11 @@ rm -rf -- .pikku dist
 # Bootstrap using the published CLI - generates all .pikku files
 echo "Bootstrapping with published @pikku/cli..."
 : "${PIKKU_CLI_VERSION:=latest}"
-npx -y "@pikku/cli@${PIKKU_CLI_VERSION}"
+_bootstrap_dir=$(mktemp -d)
+npm install --prefix "$_bootstrap_dir" --no-save --no-package-lock \
+  "@pikku/cli@${PIKKU_CLI_VERSION}" "@pikku/auth-js"
+"$_bootstrap_dir/node_modules/.bin/pikku"
+rm -rf "$_bootstrap_dir"
 
 # Patch stale forge references from published CLI (renamed to node/)
 rm -rf .pikku/forge
