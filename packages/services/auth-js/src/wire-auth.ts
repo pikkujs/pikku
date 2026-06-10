@@ -25,7 +25,7 @@ export interface WireAuthCredentials {
 }
 
 export interface WireAuthOptions {
-  providers?: (AuthProvider | string)[]
+  providers?: AuthProvider[]
   credentials?: WireAuthCredentials
   callbacks?: WireAuthCallbacks
   basePath?: string

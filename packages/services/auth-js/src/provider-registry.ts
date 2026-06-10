@@ -11,7 +11,7 @@ export interface AuthProviderDef {
   fields: Record<string, string>
 }
 
-export const PROVIDER_REGISTRY: Record<string, AuthProviderDef> = {
+export const PROVIDER_REGISTRY = {
   github: {
     importPath: '@auth/core/providers/github',
     importName: 'GitHub',
@@ -155,4 +155,4 @@ export const PROVIDER_REGISTRY: Record<string, AuthProviderDef> = {
       issuer: 'z.string().describe("Okta issuer URL")',
     },
   },
-}
+} satisfies Record<string, AuthProviderDef>
