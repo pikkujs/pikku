@@ -11,17 +11,11 @@ export interface EntityCardBadge {
 
 export interface EntityCardItem {
   name: string
+  displayName?: string
   badges?: EntityCardBadge[]
   meta?: string[]
   description?: string
   tags?: string[]
-}
-
-function toEnglishName(name: string): string {
-  return name
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^(.)/, (c) => c.toUpperCase())
-    .trim()
 }
 
 function EntityCard({
@@ -56,7 +50,7 @@ function EntityCard({
         <Group gap={8} wrap="nowrap" align="center">
           <Stack gap={1} style={{ flex: 1, minWidth: 0 }}>
             <Text size="sm" fw={600} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {toEnglishName(item.name)}
+              {item.displayName ?? item.name}
             </Text>
             <Text size="xs" ff="monospace" c="dimmed" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {item.name}
