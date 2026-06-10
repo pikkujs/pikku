@@ -1,7 +1,7 @@
 import { wireHTTPRoutes } from '@pikku/core/http'
 import { rpcService } from '@pikku/core/rpc'
 import type { CoreSingletonServices, PikkuWire } from '@pikku/core'
-import type { SecretService } from '@pikku/core/services'
+import type { SecretService, VariablesService } from '@pikku/core/services'
 import { createAuthRoutes } from './auth-routes.js'
 import { PROVIDER_REGISTRY } from './provider-registry.js'
 
@@ -45,7 +45,7 @@ async function buildCredentialsProvider(
 ): Promise<any | null> {
   try {
     const mod = await import('@auth/core/providers/credentials')
-    const CredentialsFn = mod.default ?? mod.Credentials
+    const CredentialsFn = (mod as any).default ?? (mod as any).Credentials
     if (!CredentialsFn) return null
     return CredentialsFn({
       ...(credentials.fields ? { credentials: credentials.fields } : {}),
@@ -58,7 +58,8 @@ async function buildCredentialsProvider(
 
 async function buildProviders(
   providers: string[],
-  secretsMap: Map<string, unknown>
+  secretsMap: Map<string, unknown>,
+  variables: VariablesService
 ): Promise<any[]> {
   const instances: any[] = []
   for (const name of providers) {
@@ -68,10 +69,20 @@ async function buildProviders(
       | Record<string, string>
       | undefined
     if (!creds) continue
+    const config: Record<string, unknown> = { ...creds }
+    if (def.variables) {
+      for (const [field, meta] of Object.entries(def.variables) as [
+        string,
+        { variableId: string },
+      ][]) {
+        const value = await variables.get(meta.variableId)
+        if (value !== undefined) config[field] = value
+      }
+    }
     try {
       const mod = await import(def.importPath)
       const ctor = mod.default ?? mod[def.importName]
-      if (ctor) instances.push(ctor(creds))
+      if (ctor) instances.push(ctor(config))
     } catch {
       // provider package not installed — skip
     }
@@ -104,7 +115,11 @@ export const wireAuth = (options: WireAuthOptions): void => {
         requiresAuth: false,
       })
 
-      const providerInstances = await buildProviders(providers, secretsMap)
+      const providerInstances = await buildProviders(
+        providers,
+        secretsMap,
+        services.variables
+      )
 
       if (credentials) {
         const credProvider = await buildCredentialsProvider(credentials, rpc)

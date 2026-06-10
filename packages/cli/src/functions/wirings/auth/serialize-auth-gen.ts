@@ -32,6 +32,7 @@ export const serializeAuthGen = (providers: string[]): string => {
   if (known.length > 0) lines.push('')
 
   lines.push(`import { wireSecret } from '@pikku/core/secret'`)
+  lines.push(`import { wireVariable } from '@pikku/core/variable'`)
   lines.push(`import { wireHTTPRoutes } from '@pikku/core/http'`)
   lines.push(`import { createAuthRoutes } from '@pikku/auth-js'`)
   lines.push(`import { z } from 'zod'`)
@@ -74,6 +75,22 @@ export const serializeAuthGen = (providers: string[]): string => {
     lines.push('')
   }
 
+  // wireVariable for providers with non-secret config (issuer, tenantId, etc.)
+  for (const name of known) {
+    const def = PROVIDER_REGISTRY[name]
+    if (!def.variables) continue
+    for (const [field, meta] of Object.entries(def.variables)) {
+      lines.push(`wireVariable({`)
+      lines.push(`  name: '${name}_${field}',`)
+      lines.push(`  displayName: '${def.displayName} ${capitalize(field)}',`)
+      lines.push(`  description: '${meta.description}',`)
+      lines.push(`  variableId: '${meta.variableId}',`)
+      lines.push(`  schema: z.string(),`)
+      lines.push(`})`)
+      lines.push('')
+    }
+  }
+
   // Auth route setup
   lines.push(`const authRoutes = createAuthRoutes(async (services) => {`)
   lines.push(
@@ -92,10 +109,25 @@ export const serializeAuthGen = (providers: string[]): string => {
   for (const name of known) {
     const def = PROVIDER_REGISTRY[name]
     const varName = providerSecretName(name)
-    lines.push(`  const ${varName} = secretsMap.get('${def.secretId}')`)
-    lines.push(
-      `  if (${varName}) providers.push(${def.importName}(${varName} as any))`
-    )
+    const hasVariables = def.variables && Object.keys(def.variables).length > 0
+
+    lines.push(`  const ${varName}Secrets = secretsMap.get('${def.secretId}')`)
+    lines.push(`  if (${varName}Secrets) {`)
+    lines.push(`    const ${varName}Config = { ...${varName}Secrets as any }`)
+
+    if (hasVariables && def.variables) {
+      for (const [field, meta] of Object.entries(def.variables)) {
+        lines.push(
+          `    const ${varName}${capitalize(field)} = await services.variables.get('${meta.variableId}')`
+        )
+        lines.push(
+          `    if (${varName}${capitalize(field)} !== undefined) ${varName}Config.${field} = ${varName}${capitalize(field)}`
+        )
+      }
+    }
+
+    lines.push(`    providers.push(${def.importName}(${varName}Config))`)
+    lines.push(`  }`)
   }
 
   lines.push('')

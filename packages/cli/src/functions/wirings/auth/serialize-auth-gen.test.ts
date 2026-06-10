@@ -23,6 +23,10 @@ describe('serializeAuthGen', () => {
   test('generates imports for all framework modules', () => {
     const output = serializeAuthGen(['github'])
     assert.match(output, /import { wireSecret } from '@pikku\/core\/secret'/)
+    assert.match(
+      output,
+      /import { wireVariable } from '@pikku\/core\/variable'/
+    )
     assert.match(output, /import { wireHTTPRoutes } from '@pikku\/core\/http'/)
     assert.match(output, /import { createAuthRoutes } from '@pikku\/auth-js'/)
     assert.match(output, /import { z } from 'zod'/)
@@ -83,5 +87,32 @@ describe('serializeAuthGen', () => {
     const output = serializeAuthGen(['azure-ad'])
     assert.match(output, /AzureAdOAuthSchema/)
     assert.match(output, /azureAdOAuth/)
+  })
+
+  test('does not emit wireVariable call for standard oauth providers (no variables field)', () => {
+    const output = serializeAuthGen(['github'])
+    assert.doesNotMatch(output, /wireVariable\({/)
+  })
+
+  test('emits wireVariable for auth0 issuer', () => {
+    const output = serializeAuthGen(['auth0'])
+    assert.match(output, /wireVariable\({/)
+    assert.match(output, /variableId: 'AUTH0_ISSUER'/)
+    assert.match(output, /description: 'Auth0 tenant URL/)
+  })
+
+  test('emits wireVariable for okta issuer', () => {
+    const output = serializeAuthGen(['okta'])
+    assert.match(output, /variableId: 'OKTA_ISSUER'/)
+  })
+
+  test('emits wireVariable for azure-ad tenantId', () => {
+    const output = serializeAuthGen(['azure-ad'])
+    assert.match(output, /variableId: 'AZURE_AD_TENANT_ID'/)
+  })
+
+  test('uses services.variables.get in factory for OIDC providers', () => {
+    const output = serializeAuthGen(['auth0'])
+    assert.match(output, /services\.variables\.get\('AUTH0_ISSUER'\)/)
   })
 })
