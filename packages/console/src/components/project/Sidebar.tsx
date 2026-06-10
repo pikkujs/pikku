@@ -4,6 +4,7 @@ import {
   Box,
   Text,
   useMantineTheme,
+  useMantineColorScheme,
   Tooltip,
   NavLink,
   Divider,
@@ -19,7 +20,6 @@ import {
   Clock,
   Server,
   KeyRound,
-  Settings,
   Variable,
   PanelLeftClose,
   PanelLeftOpen,
@@ -31,6 +31,8 @@ import {
   FlaskConical,
   Database,
   Users,
+  Sun,
+  Moon,
 } from 'lucide-react'
 import { spotlight } from '@mantine/spotlight'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
@@ -44,12 +46,13 @@ export interface NavItem {
 }
 
 export interface NavSection {
-  title?: string
+  title: string
   items: NavItem[]
 }
 
 export const DEFAULT_NAV_SECTIONS: NavSection[] = [
   {
+    title: 'Run',
     items: [
       {
         label: 'Functions',
@@ -78,6 +81,7 @@ export const DEFAULT_NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    title: 'Data',
     items: [
       {
         label: 'Database',
@@ -109,6 +113,11 @@ export const DEFAULT_NAV_SECTIONS: NavSection[] = [
         icon: Mail,
         matchPrefix: '/emails',
       },
+    ],
+  },
+  {
+    title: 'Config',
+    items: [
       {
         label: 'Secrets',
         href: '/secrets',
@@ -122,27 +131,33 @@ export const DEFAULT_NAV_SECTIONS: NavSection[] = [
         matchPrefix: '/variables',
       },
       {
-        label: 'Credentials',
-        href: '/credentials',
-        icon: KeyRound,
-        matchPrefix: '/credentials',
-      },
-      {
-        label: 'Users',
-        href: '/users',
-        icon: Users,
-        matchPrefix: '/users',
-      },
-    ],
-  },
-  {
-    items: [
-      {
         label: 'Addons',
         href: '/addons',
         icon: Package,
         matchPrefix: '/addons',
       },
+    ],
+  },
+  {
+    title: 'Users',
+    items: [
+      {
+        label: 'OAuth',
+        href: '/users',
+        icon: Users,
+        matchPrefix: '/users',
+      },
+      {
+        label: 'Credentials',
+        href: '/credentials',
+        icon: KeyRound,
+        matchPrefix: '/credentials',
+      },
+    ],
+  },
+  {
+    title: '',
+    items: [
       {
         label: 'Changes',
         href: '/changes',
@@ -208,6 +223,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     key: 'sidebar-collapsed',
     defaultValue: false,
   })
+  const { colorScheme, toggleColorScheme } = useMantineColorScheme()
 
   const sidebarWidth = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH
 
@@ -282,6 +298,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {sections.map((section, sectionIndex) => (
           <Box key={sectionIndex}>
             {sectionIndex > 0 && <Divider my={4} mx="sm" />}
+            {section.title && (
+              collapsed ? null : (
+                <Text
+                  size="xs"
+                  fw={600}
+                  px="sm"
+                  style={{
+                    color: 'var(--mantine-color-dimmed)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    fontSize: 10,
+                    paddingTop: 8,
+                    paddingBottom: 2,
+                  }}
+                >
+                  {section.title}
+                </Text>
+              )
+            )}
             {section.items.map((item) => {
               const active = isActive(item)
 
@@ -370,6 +405,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 }
               />
               {!collapsed && <Text size="sm">Refresh</Text>}
+            </UnstyledButton>
+          </Tooltip>
+          <Tooltip
+            label={colorScheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            position="right"
+          >
+            <UnstyledButton
+              onClick={() => toggleColorScheme()}
+              px={collapsed ? 0 : 10}
+              py={8}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: collapsed ? 'center' : 'flex-start',
+                gap: 10,
+                borderRadius: 6,
+                color: 'var(--mantine-color-dimmed)',
+              }}
+            >
+              {colorScheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+              {!collapsed && <Text size="sm">{colorScheme === 'dark' ? 'Light mode' : 'Dark mode'}</Text>}
             </UnstyledButton>
           </Tooltip>
           <Tooltip

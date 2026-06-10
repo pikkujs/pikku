@@ -11,6 +11,8 @@ import { funcWrapperDefs } from '../components/ui/badge-defs'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 
+import { toEnglishName } from '../lib/strings'
+
 export interface FunctionExtraColumn {
   label: string
   width?: string
@@ -68,16 +70,16 @@ const FunctionsList: React.FC<{
         maxWidth: 350,
         render: (func: any) => {
           const funcId = func.pikkuFuncName || func.pikkuFuncId
+          const englishName = func.displayName || toEnglishName(funcId)
+          const description = func.summary || func.description
           return (
             <>
-              <Text fw={500} truncate ff="monospace">
-                {funcId}
+              <Text fw={500} truncate>
+                {englishName}
               </Text>
-              {(func.summary || func.description) && (
-                <Text size="xs" c="dimmed" truncate>
-                  {func.summary || func.description}
-                </Text>
-              )}
+              <Text size="xs" c="dimmed" truncate ff="monospace">
+                {funcId}{description ? ` · ${description}` : ''}
+              </Text>
             </>
           )
         },
@@ -261,8 +263,11 @@ export const FunctionsPage: React.FC<{
     return all.filter((func: any) => {
       if (!showPikkuFunctions && isPikkuFunction(func)) return false
       if (!q) return true
+      const funcId = func.pikkuFuncName || func.pikkuFuncId
       return (
-        func.pikkuFuncId?.toLowerCase().includes(q) ||
+        funcId?.toLowerCase().includes(q) ||
+        func.displayName?.toLowerCase().includes(q) ||
+        toEnglishName(funcId).toLowerCase().includes(q) ||
         func.summary?.toLowerCase().includes(q) ||
         func.description?.toLowerCase().includes(q)
       )

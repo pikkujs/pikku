@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react'
+import { toEnglishName } from '../lib/strings'
 
 export type PanelType =
   | 'function'
@@ -117,7 +118,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({ children }) => {
       openPanelGeneric(
         'function',
         functionName,
-        metadata?.summary || functionName,
+        metadata?.displayName || toEnglishName(functionName),
         metadata
       )
     },

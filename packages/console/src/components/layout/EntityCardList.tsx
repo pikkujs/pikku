@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { Box, Text, Stack, Group, Skeleton } from '@mantine/core'
 import { EmptyStatePlaceholder } from './EmptyStatePlaceholder'
 import { Boxes } from 'lucide-react'
+import { toEnglishName } from '../../lib/strings'
 
 export interface EntityCardBadge {
   label: string
@@ -16,13 +17,6 @@ export interface EntityCardItem {
   meta?: string[]
   description?: string
   tags?: string[]
-}
-
-function toEnglishName(name: string): string {
-  return name
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^(.)/, (c) => c.toUpperCase())
-    .trim()
 }
 
 function EntityCard({
