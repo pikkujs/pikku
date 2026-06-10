@@ -12,6 +12,7 @@ export interface DbColumn {
   classification: Classification
   foreignKey?: { table: string; column: string }
   enumType?: string
+  description?: string
 }
 
 export interface DbTable {
@@ -97,22 +98,31 @@ function classificationFor(visibility: string | undefined): Classification {
 interface AnnotationEntry {
   visibility?: 'public' | 'private' | 'pii' | 'secret'
   classification?: string
+  description?: string
 }
 
 type AnnotationsJson = Record<string, Record<string, AnnotationEntry>>
 
 async function loadAnnotations(
   metaService: MetaService
-): Promise<Record<string, Record<string, { visibility?: string }>>> {
+): Promise<
+  Record<string, Record<string, { visibility?: string; description?: string }>>
+> {
   const raw = await metaService.readFile('db/annotations.gen.json')
   if (!raw) return {}
   const data = JSON.parse(raw) as AnnotationsJson
-  const result: Record<string, Record<string, { visibility?: string }>> = {}
+  const result: Record<
+    string,
+    Record<string, { visibility?: string; description?: string }>
+  > = {}
   for (const [tableName, cols] of Object.entries(data)) {
     const key = camelToSnake(bareTableName(tableName))
     result[key] = {}
     for (const [col, entry] of Object.entries(cols)) {
-      result[key][camelToSnake(col)] = { visibility: entry.visibility }
+      result[key][camelToSnake(col)] = {
+        visibility: entry.visibility,
+        description: entry.description,
+      }
     }
   }
   return result
@@ -131,7 +141,10 @@ function camelToSnake(s: string): string {
 
 async function introspectSqlite(
   dbFile: string,
-  annotations: Record<string, Record<string, { visibility?: string }>>,
+  annotations: Record<
+    string,
+    Record<string, { visibility?: string; description?: string }>
+  >,
   openDb: OpenDbFn
 ): Promise<DbTable[]> {
   const db = openDb(dbFile)
@@ -166,13 +179,15 @@ async function introspectSqlite(
       const columns: DbColumn[] = colRows
         .filter((c) => c.hidden !== 1)
         .map((c) => {
+          const ann = tableAnns[c.name]
           const col: DbColumn = {
             name: c.name,
             type: c.type,
             nullable: !Boolean(c.notnull) && c.pk === 0,
             isPrimaryKey: c.pk > 0,
-            classification: classificationFor(tableAnns[c.name]?.visibility),
+            classification: classificationFor(ann?.visibility),
           }
+          if (ann?.description) col.description = ann.description
           const fk = fkMap.get(c.name)
           if (fk) col.foreignKey = fk
           return col
@@ -213,7 +228,10 @@ async function introspectPostgresEnums(pool: PgPool): Promise<DbEnum[]> {
 
 async function introspectPostgres(
   connectionString: string,
-  annotations: Record<string, Record<string, { visibility?: string }>>,
+  annotations: Record<
+    string,
+    Record<string, { visibility?: string; description?: string }>
+  >,
   Pool: PgPoolCtor
 ): Promise<{ tables: DbTable[]; enums: DbEnum[] }> {
   const pool = new Pool({
@@ -332,16 +350,16 @@ async function introspectPostgres(
 
       const columns: DbColumn[] = colRows.map((r) => {
         const isUserDefined = r.data_type === 'USER-DEFINED'
+        const ann = tableAnns[r.column_name]
         const col: DbColumn = {
           name: r.column_name,
           type: isUserDefined ? r.udt_name : r.data_type,
           nullable: r.is_nullable === 'YES',
           isPrimaryKey: Boolean(r.is_pk),
-          classification: classificationFor(
-            tableAnns[r.column_name]?.visibility
-          ),
+          classification: classificationFor(ann?.visibility),
         }
         if (isUserDefined) col.enumType = r.udt_name
+        if (ann?.description) col.description = ann.description
         const fk = fkIndex.get(`${schema}.${tableName}.${r.column_name}`)
         if (fk) col.foreignKey = fk
         return col
