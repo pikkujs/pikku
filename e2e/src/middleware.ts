@@ -1,6 +1,7 @@
 import { cors } from '@pikku/core/middleware'
 import { addHTTPMiddleware } from '@pikku/core/http'
 import type { CoreSingletonServices, CorePikkuMiddleware } from '@pikku/core'
+import { authJsSession } from '@pikku/auth-js'
 
 const setSessionFromHeader: CorePikkuMiddleware = async (
   _services,
@@ -38,5 +39,9 @@ const loadCredentials: CorePikkuMiddleware = async (services, wire, next) => {
 addHTTPMiddleware('*', [
   cors({ origin: true, credentials: true }),
   setSessionFromHeader,
+  authJsSession({
+    secretId: 'AUTH_SECRET',
+    mapSession: (claims) => ({ userId: claims.sub as string }),
+  }),
   loadCredentials,
 ])

@@ -139,6 +139,11 @@ export const createSingletonServices = pikkuServices(
       clientSecret: 'K005p2Yl6t9kDmAppyq0vsKlxcW1Y7I',
     })
 
+    await secrets.setSecret(
+      'AUTH_SECRET',
+      'e2e-auth-js-secret-key-at-least-32-chars'
+    )
+
     return {
       config,
       variables,

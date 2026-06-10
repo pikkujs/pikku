@@ -27,15 +27,18 @@
     "test:code-editor": "cucumber-js --config tests/cucumber.mjs --tags '@code-editor and not @console'",
     "test:code-editor-ui": "cucumber-js --config tests/cucumber.mjs --tags '@code-editor and @console'",
     "test:changes-console": "cucumber-js --config tests/cucumber.mjs --tags @changes-console",
+    "test:auth": "cucumber-js --config tests/cucumber.mjs --tags @auth",
     "test:emails-console": "cucumber-js --config tests/cucumber.mjs --tags @emails-console",
     "tsc": "tsc --noEmit"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.37",
+    "@auth/core": "^0.37.0",
     "@pikku/addon-console": "workspace:*",
     "@pikku/addon-graph": "workspace:*",
     "@pikku/addon-hmac-signer": "workspace:*",
     "@pikku/ai-vercel": "workspace:*",
+    "@pikku/auth-js": "workspace:*",
     "@pikku/core": "workspace:*",
     "@pikku/jose": "workspace:*",
     "@pikku/kysely": "workspace:*",

@@ -5158,7 +5158,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/auth-js@npm:^0.12.1, @pikku/auth-js@npm:^0.12.3, @pikku/auth-js@workspace:packages/services/auth-js":
+"@pikku/auth-js@npm:^0.12.1, @pikku/auth-js@npm:^0.12.3, @pikku/auth-js@workspace:*, @pikku/auth-js@workspace:packages/services/auth-js":
   version: 0.0.0-use.local
   resolution: "@pikku/auth-js@workspace:packages/services/auth-js"
   dependencies:
@@ -5411,11 +5411,13 @@ __metadata:
   resolution: "@pikku/e2e@workspace:e2e"
   dependencies:
     "@ai-sdk/openai": "npm:^3.0.37"
+    "@auth/core": "npm:^0.37.0"
     "@cucumber/cucumber": "npm:^11.0.0"
     "@pikku/addon-console": "workspace:*"
     "@pikku/addon-graph": "workspace:*"
     "@pikku/addon-hmac-signer": "workspace:*"
     "@pikku/ai-vercel": "workspace:*"
+    "@pikku/auth-js": "workspace:*"
     "@pikku/cli": "workspace:*"
     "@pikku/core": "workspace:*"
     "@pikku/jose": "workspace:*"
