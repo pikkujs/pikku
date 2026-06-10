@@ -18,6 +18,13 @@ export interface EntityCardItem {
   tags?: string[]
 }
 
+function toEnglishName(name: string): string {
+  return name
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^(.)/, (c) => c.toUpperCase())
+    .trim()
+}
+
 function EntityCard({
   item,
   onOpen,
@@ -50,7 +57,7 @@ function EntityCard({
         <Group gap={8} wrap="nowrap" align="center">
           <Stack gap={1} style={{ flex: 1, minWidth: 0 }}>
             <Text size="sm" fw={600} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {item.displayName ?? item.name}
+              {item.displayName ?? toEnglishName(item.name)}
             </Text>
             <Text size="xs" ff="monospace" c="dimmed" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {item.name}
