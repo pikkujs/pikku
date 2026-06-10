@@ -10,3 +10,4 @@ export {
 } from './world.js'
 export { registerHooks, type CucumberHookApi } from './hooks.js'
 export { registerCommonSteps, type CucumberStepApi } from './steps/common.js'
+export { Actor, type ActorDispatchContext } from './actor.js'
