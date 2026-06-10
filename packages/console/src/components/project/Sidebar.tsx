@@ -70,12 +70,6 @@ export const DEFAULT_NAV_SECTIONS: NavSection[] = [
         matchPrefix: '/agents',
       },
       {
-        label: 'Changes',
-        href: '/changes',
-        icon: GitCompare,
-        matchPrefix: '/changes',
-      },
-      {
         label: 'Tests',
         href: '/tests',
         icon: FlaskConical,
@@ -148,6 +142,12 @@ export const DEFAULT_NAV_SECTIONS: NavSection[] = [
         href: '/addons',
         icon: Package,
         matchPrefix: '/addons',
+      },
+      {
+        label: 'Changes',
+        href: '/changes',
+        icon: GitCompare,
+        matchPrefix: '/changes',
       },
     ],
   },
