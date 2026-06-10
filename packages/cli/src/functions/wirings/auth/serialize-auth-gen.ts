@@ -79,20 +79,9 @@ export const serializeAuthGen = (providers: string[]): string => {
   lines.push(
     `  const secretIds = ['AUTH_SECRET', ${known.map((n) => `'${PROVIDER_REGISTRY[n].secretId}'`).join(', ')}]`
   )
-  lines.push(`  const secretsMap = services.secrets.getSecrets`)
   lines.push(
-    `    ? new Map(Object.entries(await services.secrets.getSecrets(secretIds)))`
+    `  const secretsMap = new Map(Object.entries(await services.secrets.getSecrets(secretIds)))`
   )
-  lines.push(`    : await (async () => {`)
-  lines.push(
-    `        const results = await Promise.allSettled(secretIds.map(k => services.secrets.getSecret(k)))`
-  )
-  lines.push(`        const m = new Map<string, unknown>()`)
-  lines.push(
-    `        secretIds.forEach((k, i) => { if (results[i].status === 'fulfilled') m.set(k, (results[i] as any).value) })`
-  )
-  lines.push(`        return m`)
-  lines.push(`      })()`)
   lines.push('')
   lines.push(
     `  const authSecret = secretsMap.get('AUTH_SECRET') as string | undefined`

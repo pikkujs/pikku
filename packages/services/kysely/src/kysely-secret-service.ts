@@ -149,6 +149,29 @@ export class KyselySecretService implements SecretService {
     await this.logAudit(key, 'delete')
   }
 
+  async getSecrets(keys: string[]): Promise<Record<string, unknown>> {
+    const rows = await this.db
+      .selectFrom('secrets')
+      .select(['key', 'ciphertext', 'wrappedDek', 'keyVersion'])
+      .where('key', 'in', keys)
+      .execute()
+
+    const out: Record<string, unknown> = {}
+    for (const row of rows) {
+      try {
+        const kek = this.getKEK(row.keyVersion)
+        out[row.key] = await envelopeDecrypt(
+          kek,
+          row.ciphertext,
+          row.wrappedDek
+        )
+      } catch {
+        // skip secrets that fail to decrypt
+      }
+    }
+    return out
+  }
+
   async rotateKEK(): Promise<number> {
     if (!this.previousKey) {
       throw new Error('No previousKey configured — nothing to rotate from')

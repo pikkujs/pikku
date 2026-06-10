@@ -34,5 +34,5 @@ export interface SecretService {
    * keys are omitted rather than throwing.
    * @param keys - The keys of the secrets to retrieve.
    */
-  getSecrets?(keys: string[]): Promise<Record<string, unknown>>
+  getSecrets(keys: string[]): Promise<Record<string, unknown>>
 }

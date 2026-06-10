@@ -26,19 +26,8 @@ async function batchLoadSecrets(
   secrets: SecretService,
   keys: string[]
 ): Promise<Map<string, unknown>> {
-  if (secrets.getSecrets) {
-    const map = await secrets.getSecrets(keys)
-    return new Map(Object.entries(map))
-  }
-  const results = await Promise.allSettled(
-    keys.map((k) => secrets.getSecret(k))
-  )
-  const out = new Map<string, unknown>()
-  keys.forEach((key, i) => {
-    const r = results[i]
-    if (r.status === 'fulfilled') out.set(key, r.value)
-  })
-  return out
+  const map = await secrets.getSecrets(keys)
+  return new Map(Object.entries(map))
 }
 
 async function buildProviders(
