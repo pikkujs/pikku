@@ -40,7 +40,7 @@ function EntityCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: hovered ? 'var(--mantine-color-default-hover)' : 'var(--mantine-color-body)',
+        background: hovered ? 'var(--mantine-color-default-hover)' : 'var(--app-surface, var(--mantine-color-body))',
         border: '1px solid var(--mantine-color-default-border)',
         borderRadius: 12,
         cursor: 'pointer',
@@ -54,9 +54,14 @@ function EntityCard({
     >
       <Stack gap={4} style={{ minWidth: 0 }}>
         <Group gap={8} wrap="nowrap" align="center">
-          <Text size="sm" fw={600} style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {toEnglishName(item.name)}
-          </Text>
+          <Stack gap={1} style={{ flex: 1, minWidth: 0 }}>
+            <Text size="sm" fw={600} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {toEnglishName(item.name)}
+            </Text>
+            <Text size="xs" ff="monospace" c="dimmed" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {item.name}
+            </Text>
+          </Stack>
           <Group gap={6} wrap="nowrap" style={{ flexShrink: 0 }}>
             {item.meta?.map((m) => (
               <Box key={m} component="span" style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: 'var(--mantine-color-default)', color: 'var(--mantine-color-dimmed)', border: '1px solid var(--mantine-color-default-border)', whiteSpace: 'nowrap' }}>
