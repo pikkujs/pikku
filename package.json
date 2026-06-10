@@ -80,7 +80,8 @@
     "typescript": "~6.0.3"
   },
   "resolutions": {
-    "esbuild": "0.27.2"
+    "esbuild": "0.27.2",
+    "pikkufabric": "portal:/Users/yasser/git/pikku/fabric"
   },
   "engines": {
     "node": ">=20"

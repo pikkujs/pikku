@@ -4,7 +4,11 @@ import { AddonService } from './services/addon.service.js'
 import { OAuthService } from './services/oauth.service.js'
 import type { CodeEditService } from './services/code-edit.service.js'
 import { StateDiffService } from './services/state-diff.service.js'
-import { DbSchemaService, type OpenDbFn, type PgPoolCtor } from './services/db-schema.service.js'
+import {
+  DbSchemaService,
+  type OpenDbFn,
+  type PgPoolCtor,
+} from './services/db-schema.service.js'
 
 export const createSingletonServices = pikkuAddonServices(
   async (
@@ -69,7 +73,12 @@ export const createSingletonServices = pikkuAddonServices(
         // pg not installed — Postgres unavailable
       }
 
-      dbSchemaService = new DbSchemaService(projectRoot, openDb, PgPool)
+      dbSchemaService = new DbSchemaService(
+        projectRoot,
+        openDb,
+        PgPool,
+        metaService
+      )
     }
 
     return {

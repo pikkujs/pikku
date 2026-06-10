@@ -1,5 +1,6 @@
-import { readFileSync, existsSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
+import type { MetaService } from '@pikku/core'
 
 export type Classification = 'public' | 'private' | 'secret'
 
@@ -70,6 +71,8 @@ const SKIP_TABLES = new Set([
   'pgmigrations',
 ])
 
+const SKIP_SCHEMAS = new Set(['pgboss', 'pgboss_tenant'])
+
 function classificationFor(visibility: string | undefined): Classification {
   if (
     visibility === 'public' ||
@@ -80,24 +83,37 @@ function classificationFor(visibility: string | undefined): Classification {
   return 'private'
 }
 
-function loadAnnotations(
-  rootDir: string
-): Record<string, Record<string, { visibility?: string }>> {
-  const jsonPath = join(rootDir, 'db', 'annotations.gen.json')
-  if (!existsSync(jsonPath)) return {}
-  try {
-    return JSON.parse(readFileSync(jsonPath, 'utf8')) as Record<
-      string,
-      Record<string, { visibility?: string }>
-    >
-  } catch {
-    return {}
+interface AnnotationEntry {
+  visibility?: 'public' | 'private' | 'secret'
+  classification?: string
+}
+
+type AnnotationsJson = Record<string, Record<string, AnnotationEntry>>
+
+async function loadAnnotations(
+  metaService: MetaService
+): Promise<Record<string, Record<string, { visibility?: string }>>> {
+  const raw = await metaService.readFile('db/annotations.gen.json')
+  if (!raw) return {}
+  const data = JSON.parse(raw) as AnnotationsJson
+  const result: Record<string, Record<string, { visibility?: string }>> = {}
+  for (const [tableName, cols] of Object.entries(data)) {
+    const key = camelToSnake(bareTableName(tableName))
+    result[key] = {}
+    for (const [col, entry] of Object.entries(cols)) {
+      result[key][camelToSnake(col)] = { visibility: entry.visibility }
+    }
   }
+  return result
 }
 
 function bareTableName(name: string): string {
   const dot = name.indexOf('.')
   return dot >= 0 ? name.slice(dot + 1) : name
+}
+
+function camelToSnake(s: string): string {
+  return s.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)
 }
 
 // ── SQLite introspector ───────────────────────────────────────────────────────
@@ -126,9 +142,7 @@ async function introspectSqlite(
       const tableAnns = annotations[tableName] ?? {}
 
       const fkRows = db
-        .prepare(
-          `PRAGMA foreign_key_list("${tableName.replace(/"/g, '""')}")`
-        )
+        .prepare(`PRAGMA foreign_key_list("${tableName.replace(/"/g, '""')}")`)
         .all() as SqliteForeignKeyRow[]
       const fkMap = new Map(
         fkRows.map((fk) => [fk.from, { table: fk.table, column: fk.to }])
@@ -190,6 +204,7 @@ async function introspectPostgres(
       table_schema: schema,
       table_name: tableName,
     } of tablesResult.rows) {
+      if (SKIP_SCHEMAS.has(schema)) continue
       if (SKIP_TABLES.has(tableName)) continue
 
       const qualifiedName =
@@ -282,11 +297,12 @@ export class DbSchemaService {
   constructor(
     private readonly projectRoot: string,
     private readonly openDb: OpenDbFn | null,
-    private readonly PgPool: PgPoolCtor | null
+    private readonly PgPool: PgPoolCtor | null,
+    private readonly metaService: MetaService
   ) {}
 
   async getSchema(): Promise<DbSchema | null> {
-    const annotations = loadAnnotations(this.projectRoot)
+    const annotations = await loadAnnotations(this.metaService)
 
     // SQLite: prefer .pikku-runtime/dev.db when it exists
     if (this.openDb) {
@@ -301,13 +317,32 @@ export class DbSchemaService {
       }
     }
 
-    // Postgres: fall back to env-var connection string
-    const postgresUrl = process.env.DATABASE_URL ?? process.env.POSTGRES_URL
+    // Postgres: explicit env vars only — no config file sniffing
+    const postgresUrl =
+      process.env.DATABASE_URL ??
+      process.env.POSTGRES_URL ??
+      this.buildEnvPostgresUrl()
     if (postgresUrl && this.PgPool) {
-      const tables = await introspectPostgres(postgresUrl, annotations, this.PgPool)
+      const tables = await introspectPostgres(
+        postgresUrl,
+        annotations,
+        this.PgPool
+      )
       return { tables }
     }
 
     return null
+  }
+
+  private buildEnvPostgresUrl(): string | null {
+    const dbName = process.env.DB_NAME
+    if (!dbName) return null
+    const host = process.env.DB_HOST ?? 'localhost'
+    const port = process.env.DB_PORT ?? '5432'
+    const user = encodeURIComponent(process.env.DB_USER ?? 'postgres')
+    const password = encodeURIComponent(process.env.DB_PASSWORD ?? '')
+    return password
+      ? `postgres://${user}:${password}@${host}:${port}/${dbName}`
+      : `postgres://${user}@${host}:${port}/${dbName}`
   }
 }
