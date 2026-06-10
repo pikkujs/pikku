@@ -274,7 +274,7 @@ const EnumSchemaNode = memo(function EnumSchemaNode({
         </span>
       </div>
       <div style={{ padding: '4px 0' }}>
-        {data.values.map((val) => (
+        {(Array.isArray(data.values) ? data.values : []).map((val) => (
           <div
             key={val}
             style={{
@@ -307,10 +307,12 @@ const TABLE_MIN_HEIGHT = 80
 
 const elk = new ELK()
 const ELK_OPTIONS = {
-  'elk.algorithm': 'stress',
-  'elk.stress.desiredEdgeLength': '300',
+  'elk.algorithm': 'force',
+  'elk.force.repulsivePower': '2',
+  'elk.force.iterations': '300',
   'elk.spacing.nodeNode': '80',
   'elk.padding': '[top=60,left=60,bottom=60,right=60]',
+  'elk.separateConnectedComponents': 'true',
 }
 
 function colSortKey(col: DbColumn): number {
@@ -347,7 +349,6 @@ async function schemaToFlow(schema: DbSchema): Promise<{
   const elkEdges: Array<{ id: string; sources: string[]; targets: string[] }> = []
 
   const tableNodeIds = new Set(schema.tables.map((t) => t.name))
-  const enumNodeIds = new Set(schema.enums.map(enumNodeId))
 
   for (const table of schema.tables) {
     for (const col of table.columns) {
@@ -375,28 +376,6 @@ async function schemaToFlow(schema: DbSchema): Promise<{
           })
         }
       }
-      if (col.enumType) {
-        const targetId = enumNodeIds.has(col.enumType) ? col.enumType : null
-        if (targetId) {
-          const edgeId = `${table.name}.${col.name}->enum:${targetId}`
-          if (!edgeIds.has(edgeId)) {
-            edgeIds.add(edgeId)
-            edges.push({
-              id: edgeId,
-              source: table.name,
-              target: targetId,
-              label: col.name,
-              type: 'smoothstep',
-              style: { strokeDasharray: '4 3', stroke: 'var(--mantine-color-violet-5)' },
-            })
-            elkEdges.push({
-              id: edgeId,
-              sources: [table.name],
-              targets: [targetId],
-            })
-          }
-        }
-      }
     }
   }
 
@@ -405,13 +384,6 @@ async function schemaToFlow(schema: DbSchema): Promise<{
     type: 'databaseSchema',
     position: { x: (i % 3) * 360, y: Math.floor(i / 3) * 320 },
     data: { label: table.name, columns: sortedColumns(table.columns) },
-  }))
-
-  const enumNodes: Node[] = schema.enums.map((e, i) => ({
-    id: enumNodeId(e),
-    type: 'enumSchema',
-    position: { x: (i % 3) * 260, y: Math.floor(i / 3) * 240 },
-    data: { label: e.name, values: e.values },
   }))
 
   try {
@@ -424,11 +396,6 @@ async function schemaToFlow(schema: DbSchema): Promise<{
           width: TABLE_WIDTH,
           height: tableHeight(sortedColumns(table.columns)),
         })),
-        ...schema.enums.map((e) => ({
-          id: enumNodeId(e),
-          width: ENUM_NODE_WIDTH,
-          height: enumHeight(e),
-        })),
       ],
       edges: elkEdges,
     })
@@ -437,30 +404,23 @@ async function schemaToFlow(schema: DbSchema): Promise<{
       (layout.children ?? []).map((c) => [c.id, { x: c.x ?? 0, y: c.y ?? 0 }])
     )
 
-    const nodes: Node[] = [
-      ...schema.tables.map((table, i) => ({
-        id: table.name,
-        type: 'databaseSchema',
-        position: posById.get(table.name) ?? tableNodes[i]?.position ?? { x: 0, y: 0 },
-        data: { label: table.name, columns: sortedColumns(table.columns) },
-      })),
-      ...schema.enums.map((e, i) => ({
-        id: enumNodeId(e),
-        type: 'enumSchema',
-        position: posById.get(enumNodeId(e)) ?? enumNodes[i]?.position ?? { x: 0, y: 0 },
-        data: { label: e.name, values: e.values },
-      })),
-    ]
+    const nodes: Node[] = schema.tables.map((table, i) => ({
+      id: table.name,
+      type: 'databaseSchema',
+      position: posById.get(table.name) ?? tableNodes[i]?.position ?? { x: 0, y: 0 },
+      data: { label: table.name, columns: sortedColumns(table.columns) },
+    }))
 
     return { nodes, edges }
-  } catch {
-    return { nodes: [...tableNodes, ...enumNodes], edges }
+  } catch (err) {
+    console.error('[ELK layout error]', err)
+    return { nodes: tableNodes, edges }
   }
 }
 
 // ── Node types ────────────────────────────────────────────────────────────────
 
-const nodeTypes = { databaseSchema: DatabaseSchemaNode, enumSchema: EnumSchemaNode }
+const nodeTypes = { databaseSchema: DatabaseSchemaNode }
 
 // ── Filter helpers ────────────────────────────────────────────────────────────
 
