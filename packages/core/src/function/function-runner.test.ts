@@ -32,6 +32,7 @@ const addTestFunction = (funcName: string, funcConfig: any) => {
     pikkuFuncId: funcName,
     inputSchemaName: null,
     outputSchemaName: null,
+    sessionless: true,
     middleware,
     permissions,
   }
@@ -675,7 +676,7 @@ describe('runPikkuFunc - Integration Tests', () => {
     )
   })
 
-  test('should use backward-compatible auth checks when sessionless metadata is absent', async () => {
+  test('should require auth when sessionless metadata is absent (undefined defaults to session-required)', async () => {
     addTestFunction('legacyAuth', {
       func: async () => 'ok',
       auth: true,

@@ -560,6 +560,7 @@ describe('runAIAgent', () => {
       description: 'Deploy',
       approvalRequired: true,
       inputSchemaName: 'DeployInput',
+      sessionless: true,
     }
     pikkuState(null, 'misc', 'schemas').set('DeployInput', {
       type: 'object',
@@ -716,6 +717,7 @@ describe('resumeAIAgentSync', () => {
     pikkuState(null, 'function', 'meta').deploy = {
       description: 'Deploy',
       inputSchemaName: 'DeployInput',
+      sessionless: true,
     }
     pikkuState(null, 'misc', 'schemas').set('DeployInput', {
       type: 'object',
@@ -901,6 +903,7 @@ describe('resumeAIAgentSync', () => {
     pikkuState(null, 'function', 'meta').deploy = {
       description: 'Deploy',
       inputSchemaName: 'DeployInput',
+      sessionless: true,
     }
     pikkuState(null, 'misc', 'schemas').set('DeployInput', {
       type: 'object',
@@ -986,7 +989,12 @@ describe('getCredential API key override', () => {
     }
 
     const mockServices = {
-      logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      },
       aiAgentRunner: {
         run: async (): Promise<AIAgentStepResult> => {
           originalRunCalls.push('original')
@@ -1019,13 +1027,24 @@ describe('getCredential API key override', () => {
     const originalRunCalls: string[] = []
 
     const mockServices = {
-      logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      },
       aiAgentRunner: {
         run: async (): Promise<AIAgentStepResult> => {
           originalRunCalls.push('original')
           return makeStepResult({ text: 'from-original', finishReason: 'stop' })
         },
-        withApiKey: (_key: string) => ({ run: async () => makeStepResult({ text: 'should-not-be-called', finishReason: 'stop' }) }),
+        withApiKey: (_key: string) => ({
+          run: async () =>
+            makeStepResult({
+              text: 'should-not-be-called',
+              finishReason: 'stop',
+            }),
+        }),
       },
       aiRunState: {
         createRun: async () => 'run-no-cred',
@@ -1051,7 +1070,12 @@ describe('getCredential API key override', () => {
     const originalRunCalls: string[] = []
 
     const mockServices = {
-      logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      },
       aiAgentRunner: {
         run: async (): Promise<AIAgentStepResult> => {
           originalRunCalls.push('original')

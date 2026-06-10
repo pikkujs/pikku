@@ -129,6 +129,7 @@ const setRouteMeta = (
     inputSchemaName: null,
     outputSchemaName: null,
     sessionless: true,
+    sessionless: true,
     permissions: undefined,
     middleware: undefined,
   } as any

@@ -43,6 +43,7 @@ const addTestQueueFunction = (pikkuFuncId: string) => {
     pikkuFuncId,
     inputSchemaName: null,
     outputSchemaName: null,
+    sessionless: true,
     middleware: undefined,
     permissions: undefined,
   }

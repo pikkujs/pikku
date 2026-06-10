@@ -327,6 +327,7 @@ describe('streamAIAgent', () => {
       description: 'Add a todo',
       approvalRequired: true,
       inputSchemaName: 'AddTodoInput',
+      sessionless: true,
     }
     pikkuState(null, 'misc', 'schemas').set('AddTodoInput', {
       type: 'object',
@@ -428,6 +429,7 @@ describe('streamAIAgent', () => {
       description: 'Add a todo',
       approvalRequired: true,
       inputSchemaName: 'AddTodoInput',
+      sessionless: true,
     }
     pikkuState('@test/addon-todos', 'misc', 'schemas').set('AddTodoInput', {
       type: 'object',
@@ -1287,6 +1289,7 @@ describe('resumeAIAgent', () => {
     pikkuState(null, 'function', 'meta').deploy = {
       description: 'Deploy',
       inputSchemaName: 'DeployInput',
+      sessionless: true,
     }
     pikkuState(null, 'misc', 'schemas').set('DeployInput', {
       type: 'object',
