@@ -144,6 +144,11 @@ export const createSingletonServices = pikkuServices(
       'e2e-auth-js-secret-key-at-least-32-chars'
     )
 
+    await secrets.setSecret('GITHUB_OAUTH', {
+      clientId: 'mock-github-client-id',
+      clientSecret: 'mock-github-secret',
+    })
+
     return {
       config,
       variables,

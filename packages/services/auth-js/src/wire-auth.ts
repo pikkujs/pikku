@@ -7,6 +7,23 @@ import { PROVIDER_REGISTRY } from './provider-registry.js'
 
 export type AuthProvider = keyof typeof PROVIDER_REGISTRY
 
+export interface WiredAuthProviderMeta {
+  id: string
+  displayName: string
+  secretId: string
+}
+
+export interface WiredAuthMeta {
+  providers: WiredAuthProviderMeta[]
+  hasCredentials: boolean
+}
+
+let _wiredAuthMeta: WiredAuthMeta | null = null
+
+export function getWiredAuthMeta(): WiredAuthMeta | null {
+  return _wiredAuthMeta
+}
+
 export type WireAuthCallbacks = {
   signIn?: (rpc: any, data: any) => any
   signOut?: (rpc: any, data: any) => any
@@ -97,6 +114,16 @@ export const wireAuth = (options: WireAuthOptions): void => {
     callbacks = {},
     basePath = '/auth',
   } = options
+
+  _wiredAuthMeta = {
+    providers: providers
+      .filter((p) => PROVIDER_REGISTRY[p])
+      .map((p) => {
+        const def = PROVIDER_REGISTRY[p]
+        return { id: p, displayName: def.displayName, secretId: def.secretId }
+      }),
+    hasCredentials: !!credentials,
+  }
 
   const secretIds = [
     'AUTH_SECRET',

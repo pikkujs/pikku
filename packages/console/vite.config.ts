@@ -7,10 +7,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
-      '@pikku/assistant-ui': path.resolve(
-        __dirname,
-        '../assistant-ui/src/index.ts'
-      ),
       crypto: path.resolve(__dirname, 'src/polyfills/crypto.ts'),
     },
     extensions: ['.ts', '.tsx', '.js', '.jsx'],
