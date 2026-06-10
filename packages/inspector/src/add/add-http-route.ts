@@ -248,6 +248,31 @@ export function registerHTTPRoute({
     extracted.isHelper
   )
 
+  // Propagate sessionless from the addon target so the runtime can correctly
+  // determine whether a session is required for ref()-based routes.
+  if (refAddonTarget) {
+    const targetMeta = resolveFunctionMeta(state, refAddonTarget)
+    const inlineMeta = state.functions.meta[funcName]
+    if (targetMeta && inlineMeta && targetMeta.sessionless !== undefined) {
+      inlineMeta.sessionless = targetMeta.sessionless
+    }
+  }
+
+  // For inline functions (e.g. oauth2 handlers), propagate sessionless: true
+  // when auth is explicitly disabled at the route or group level — the
+  // developer opted out of auth so no session is required.
+  {
+    const inlineMeta = state.functions.meta[funcName]
+    if (inlineMeta && inlineMeta.sessionless === undefined) {
+      const routeAuth = getPropertyValue(obj, 'auth')
+      const resolvedAuth =
+        routeAuth === true || routeAuth === false ? routeAuth : inheritedAuth
+      if (resolvedAuth === false) {
+        inlineMeta.sessionless = true
+      }
+    }
+  }
+
   // Lookup existing function metadata
   const fnMeta = resolveFunctionMeta(state, funcName)
   if (!fnMeta) {
