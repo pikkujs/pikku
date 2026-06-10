@@ -79,7 +79,10 @@ export const serializeAuthGen = (providers: string[]): string => {
   for (const name of known) {
     const def = PROVIDER_REGISTRY[name]
     if (!def.variables) continue
-    for (const [field, meta] of Object.entries(def.variables)) {
+    for (const [field, meta] of Object.entries(def.variables) as [
+      string,
+      { variableId: string; description: string },
+    ][]) {
       lines.push(`wireVariable({`)
       lines.push(`  name: '${name}_${field}',`)
       lines.push(`  displayName: '${def.displayName} ${capitalize(field)}',`)
@@ -116,7 +119,10 @@ export const serializeAuthGen = (providers: string[]): string => {
     lines.push(`    const ${varName}Config = { ...${varName}Secrets as any }`)
 
     if (hasVariables && def.variables) {
-      for (const [field, meta] of Object.entries(def.variables)) {
+      for (const [field, meta] of Object.entries(def.variables) as [
+        string,
+        { variableId: string },
+      ][]) {
         lines.push(
           `    const ${varName}${capitalize(field)} = await services.variables.get('${meta.variableId}')`
         )
