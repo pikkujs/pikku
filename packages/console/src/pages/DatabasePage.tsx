@@ -285,20 +285,25 @@ const EnumSchemaNode = memo(function EnumSchemaNode({
 
 const TABLE_WIDTH = 300
 const HEADER_HEIGHT = 44
-const ROW_HEIGHT = 34
-const TABLE_MIN_HEIGHT = 120
+const ROW_HEIGHT = 30
+const TABLE_MIN_HEIGHT = 80
 
 const elk = new ELK()
 const ELK_OPTIONS = {
-  'elk.algorithm': 'layered',
-  'elk.direction': 'RIGHT',
-  'elk.edgeRouting': 'ORTHOGONAL',
-  'elk.layered.spacing.nodeNodeBetweenLayers': '200',
-  'elk.spacing.nodeNode': '120',
-  'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
-  'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
-  'elk.layered.nodePlacement.favorStraightEdges': 'true',
-  'elk.padding': '[top=40,left=40,bottom=40,right=40]',
+  'elk.algorithm': 'stress',
+  'elk.stress.desiredEdgeLength': '300',
+  'elk.spacing.nodeNode': '80',
+  'elk.padding': '[top=60,left=60,bottom=60,right=60]',
+}
+
+function colSortKey(col: DbColumn): number {
+  if (col.isPrimaryKey) return 0
+  if (col.foreignKey) return 1
+  return 2
+}
+
+function sortedColumns(cols: DbColumn[]): DbColumn[] {
+  return [...cols].sort((a, b) => colSortKey(a) - colSortKey(b))
 }
 
 function tableHeight(cols: DbColumn[]): number {
@@ -379,7 +384,7 @@ async function schemaToFlow(schema: DbSchema): Promise<{
     id: table.name,
     type: 'databaseSchema',
     position: { x: (i % 3) * 360, y: Math.floor(i / 3) * 320 },
-    data: { label: table.name, columns: table.columns },
+    data: { label: table.name, columns: sortedColumns(table.columns) },
   }))
 
   const enumNodes: Node[] = schema.enums.map((e, i) => ({
@@ -397,7 +402,7 @@ async function schemaToFlow(schema: DbSchema): Promise<{
         ...schema.tables.map((table) => ({
           id: table.name,
           width: TABLE_WIDTH,
-          height: tableHeight(table.columns),
+          height: tableHeight(sortedColumns(table.columns)),
         })),
         ...schema.enums.map((e) => ({
           id: enumNodeId(e),
@@ -417,7 +422,7 @@ async function schemaToFlow(schema: DbSchema): Promise<{
         id: table.name,
         type: 'databaseSchema',
         position: posById.get(table.name) ?? tableNodes[i]?.position ?? { x: 0, y: 0 },
-        data: { label: table.name, columns: table.columns },
+        data: { label: table.name, columns: sortedColumns(table.columns) },
       })),
       ...schema.enums.map((e, i) => ({
         id: enumNodeId(e),
