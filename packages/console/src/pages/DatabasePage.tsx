@@ -12,6 +12,7 @@ import ReactFlow, {
   Handle,
   Position,
   BackgroundVariant,
+  MarkerType,
 } from 'reactflow'
 import type { NodeProps, Node, Edge, ReactFlowInstance } from 'reactflow'
 import { useQuery } from '@tanstack/react-query'
@@ -364,7 +365,10 @@ async function schemaToFlow(schema: DbSchema): Promise<{
             target,
             label: col.name,
             type: 'smoothstep',
-            animated: true,
+            markerEnd: { type: MarkerType.ArrowClosed },
+            style: { stroke: 'var(--mantine-color-blue-5)', strokeWidth: 1.5 },
+            labelStyle: { fontSize: 10, fill: 'var(--mantine-color-blue-5)' },
+            labelBgStyle: { fill: 'transparent' },
           })
           elkEdges.push({
             id: edgeId,
@@ -524,9 +528,9 @@ function DatabaseCanvas({
         if (cancelled) return
         setNodes(flow.nodes)
         setEdges(flow.edges)
-        requestAnimationFrame(() =>
-          flowRef.current?.fitView({ padding: 0.12, duration: 220, minZoom: 0.4 })
-        )
+        setTimeout(() => {
+          if (!cancelled) flowRef.current?.fitView({ padding: 0.15, duration: 300, minZoom: 0.4 })
+        }, 50)
       } catch {
         if (!cancelled) {
           setNodes([])
