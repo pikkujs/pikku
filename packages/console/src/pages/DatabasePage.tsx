@@ -62,10 +62,10 @@ interface EnumSchemaNodeData {
 
 // ── Classification colors ─────────────────────────────────────────────────────
 
-const CLASSIFICATION_COLOR: Record<Classification, string> = {
-  public: 'var(--mantine-color-teal-6)',
-  private: 'var(--mantine-color-orange-5)',
-  secret: 'var(--mantine-color-red-5)',
+const CLASSIFICATION_ROW_BG: Record<Classification, { light: string; dark: string }> = {
+  public: { light: 'rgba(18, 184, 134, 0.07)', dark: 'rgba(18, 184, 134, 0.12)' },
+  private: { light: 'rgba(255, 146, 43, 0.07)', dark: 'rgba(255, 146, 43, 0.12)' },
+  secret: { light: 'rgba(250, 82, 82, 0.07)', dark: 'rgba(250, 82, 82, 0.12)' },
 }
 
 // ── DatabaseSchemaNode ────────────────────────────────────────────────────────
@@ -142,13 +142,12 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
           <div
             key={col.name}
             style={{
-              position: 'relative',
               display: 'flex',
               alignItems: 'center',
               gap: 6,
               padding: '4px 12px',
               borderBottom: `1px solid ${rowBorder}`,
-              borderLeft: `3px solid ${CLASSIFICATION_COLOR[col.classification]}`,
+              backgroundColor: CLASSIFICATION_ROW_BG[col.classification][isDark ? 'dark' : 'light'],
             }}
           >
             <div
@@ -572,23 +571,23 @@ function DatabaseCanvas({
 
 // ── Legend ────────────────────────────────────────────────────────────────────
 
+const CLASSIFICATION_LEGEND_COLOR: Record<Classification, string> = {
+  public: 'rgba(18, 184, 134, 0.55)',
+  private: 'rgba(255, 146, 43, 0.55)',
+  secret: 'rgba(250, 82, 82, 0.55)',
+}
+
 function ClassificationLegend() {
   return (
     <Group gap="md">
-      {(
-        [
-          { label: 'public', color: CLASSIFICATION_COLOR.public },
-          { label: 'private', color: CLASSIFICATION_COLOR.private },
-          { label: 'secret', color: CLASSIFICATION_COLOR.secret },
-        ] as const
-      ).map(({ label, color }) => (
+      {(['public', 'private', 'secret'] as Classification[]).map((label) => (
         <Group key={label} gap={4} align="center">
           <div
             style={{
               width: 10,
               height: 10,
               borderRadius: 2,
-              backgroundColor: color,
+              backgroundColor: CLASSIFICATION_LEGEND_COLOR[label],
               flexShrink: 0,
             }}
           />
