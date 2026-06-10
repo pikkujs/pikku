@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, memo } from 'react'
+import React, { useState, useEffect, useRef, memo } from 'react'
 import { Box, Center, Button, Loader, Text, Group, useMantineColorScheme } from '@mantine/core'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -14,7 +14,7 @@ import ReactFlow, {
 import type { NodeProps, Node, Edge, ReactFlowInstance } from 'reactflow'
 import { useQuery } from '@tanstack/react-query'
 import ELK from 'elkjs/lib/elk.bundled.js'
-import { Database as DatabaseIcon, Table2, Key, Link, RefreshCw } from 'lucide-react'
+import { Database as DatabaseIcon, Table2, Key, Link, RefreshCw, Globe, Shield, LockKeyhole } from 'lucide-react'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
@@ -62,10 +62,10 @@ interface EnumSchemaNodeData {
 
 // ── Classification colors ─────────────────────────────────────────────────────
 
-const CLASSIFICATION_ROW_BG: Record<Classification, { light: string; dark: string }> = {
-  public: { light: 'rgba(18, 184, 134, 0.07)', dark: 'rgba(18, 184, 134, 0.12)' },
-  private: { light: 'rgba(255, 146, 43, 0.07)', dark: 'rgba(255, 146, 43, 0.12)' },
-  secret: { light: 'rgba(250, 82, 82, 0.07)', dark: 'rgba(250, 82, 82, 0.12)' },
+const CLASSIFICATION_ICON: Record<Classification, React.ReactNode> = {
+  public: <Globe size={10} color="var(--mantine-color-teal-5)" />,
+  private: <Shield size={10} color="var(--mantine-color-orange-5)" />,
+  secret: <LockKeyhole size={10} color="var(--mantine-color-red-5)" />,
 }
 
 // ── DatabaseSchemaNode ────────────────────────────────────────────────────────
@@ -147,7 +147,6 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
               gap: 6,
               padding: '4px 12px',
               borderBottom: `1px solid ${rowBorder}`,
-              backgroundColor: CLASSIFICATION_ROW_BG[col.classification][isDark ? 'dark' : 'light'],
             }}
           >
             <div
@@ -196,6 +195,10 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
             {col.nullable && (
               <span style={{ fontSize: 11, color: nullableColor, flexShrink: 0 }}>?</span>
             )}
+
+            <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+              {CLASSIFICATION_ICON[col.classification]}
+            </span>
 
           </div>
         ))}
@@ -571,26 +574,12 @@ function DatabaseCanvas({
 
 // ── Legend ────────────────────────────────────────────────────────────────────
 
-const CLASSIFICATION_LEGEND_COLOR: Record<Classification, string> = {
-  public: 'rgba(18, 184, 134, 0.55)',
-  private: 'rgba(255, 146, 43, 0.55)',
-  secret: 'rgba(250, 82, 82, 0.55)',
-}
-
 function ClassificationLegend() {
   return (
     <Group gap="md">
       {(['public', 'private', 'secret'] as Classification[]).map((label) => (
         <Group key={label} gap={4} align="center">
-          <div
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: 2,
-              backgroundColor: CLASSIFICATION_LEGEND_COLOR[label],
-              flexShrink: 0,
-            }}
-          />
+          {CLASSIFICATION_ICON[label]}
           <Text size="xs" c="dimmed">
             {label}
           </Text>
