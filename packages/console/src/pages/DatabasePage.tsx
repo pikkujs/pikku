@@ -105,7 +105,6 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
         minWidth: 260,
         border: `1px solid ${border}`,
         borderRadius: 8,
-        overflow: 'hidden',
         backgroundColor: 'var(--mantine-color-body)',
         boxShadow: isDark ? '0 1px 4px rgba(0,0,0,.4)' : '0 1px 4px rgba(0,0,0,.08)',
       }}
@@ -242,7 +241,6 @@ const EnumSchemaNode = memo(function EnumSchemaNode({
         minWidth: 180,
         border: `1px solid ${border}`,
         borderRadius: 8,
-        overflow: 'hidden',
         backgroundColor: 'var(--mantine-color-body)',
         boxShadow: isDark ? '0 1px 4px rgba(0,0,0,.4)' : '0 1px 4px rgba(0,0,0,.08)',
       }}
