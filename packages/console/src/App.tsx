@@ -21,6 +21,7 @@ import { RenderWorkflowPage } from './pages/RenderWorkflowPage'
 import { ChangesPage } from './pages/ChangesPage'
 import { TestsPage } from './pages/TestsPage'
 import { DatabasePage } from './pages/DatabasePage'
+import { AuthProvidersPage } from './pages/AuthProvidersPage'
 
 export const App: React.FC = () => {
   return (
@@ -52,6 +53,7 @@ export const App: React.FC = () => {
         <Route path="/config" element={<Navigate to="/secrets" replace />} />
         <Route path="/credentials" element={<CredentialsPage />} />
         <Route path="/users" element={<OSSUsersPage />} />
+        <Route path="/auth-providers" element={<AuthProvidersPage />} />
         <Route path="/addons" element={<PackagesPage />} />
         <Route path="*" element={<NotFoundTitle />} />
       </Route>

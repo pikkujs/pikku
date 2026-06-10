@@ -2,6 +2,7 @@ import { wireAuth } from '@pikku/auth-js'
 import { createUser, lookupUser } from '../functions/auth-user-store.js'
 
 wireAuth({
+  providers: ['github'],
   credentials: {
     fields: {
       email: { label: 'Email', type: 'email', required: true },
