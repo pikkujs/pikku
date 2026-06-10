@@ -9,6 +9,8 @@ import ReactFlow, {
   Background,
   Controls,
   MiniMap,
+  Handle,
+  Position,
   BackgroundVariant,
 } from 'reactflow'
 import type { NodeProps, Node, Edge, ReactFlowInstance } from 'reactflow'
@@ -86,6 +88,15 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
   const typeBg = isDark ? 'var(--mantine-color-dark-4)' : '#f5f5f5'
   const typeColor = isDark ? 'var(--mantine-color-dark-1)' : '#888'
   const nullableColor = isDark ? 'var(--mantine-color-dark-2)' : '#aaa'
+
+  const hiddenHandle: React.CSSProperties = {
+    opacity: 0,
+    pointerEvents: 'none',
+    width: 8,
+    height: 8,
+    minWidth: 0,
+    minHeight: 0,
+  }
 
   return (
     <div
@@ -203,6 +214,8 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
           </div>
         ))}
       </div>
+      <Handle type="target" position={Position.Left} style={hiddenHandle} />
+      <Handle type="source" position={Position.Right} style={hiddenHandle} />
     </div>
   )
 })
@@ -277,6 +290,11 @@ const EnumSchemaNode = memo(function EnumSchemaNode({
           </div>
         ))}
       </div>
+      <Handle
+        type="target"
+        position={Position.Left}
+        style={{ opacity: 0, pointerEvents: 'none', width: 8, height: 8, minWidth: 0, minHeight: 0 }}
+      />
     </div>
   )
 })
@@ -507,7 +525,7 @@ function DatabaseCanvas({
         setNodes(flow.nodes)
         setEdges(flow.edges)
         requestAnimationFrame(() =>
-          flowRef.current?.fitView({ padding: 0.12, duration: 220 })
+          flowRef.current?.fitView({ padding: 0.12, duration: 220, minZoom: 0.4 })
         )
       } catch {
         if (!cancelled) {
@@ -567,6 +585,8 @@ function DatabaseCanvas({
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         fitView
+        minZoom={0.2}
+        maxZoom={2}
         style={{
           background: isDark ? 'var(--mantine-color-dark-8)' : 'var(--mantine-color-gray-0, #f8f9fa)',
           height: '100%',
