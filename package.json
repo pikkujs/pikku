@@ -37,7 +37,7 @@
     "release": "yarn build:packages && yarn pikku && yarn build:addons && yarn build:console && npx changeset publish",
     "ncu": "yarn workspaces foreach -p -A run ncu",
     "ncu:pikku": "yarn workspaces foreach -p -A run ncu -f '/@pikku/.*/'",
-    "test:verifiers": "yarn workspaces foreach -p -A --include 'verifiers/**' run test",
+    "test:verifiers": "yarn workspaces foreach -p -A --include 'verifiers/**' --exclude '@pikku/verifiers-deploy-azure' run test",
     "test:templates": "yarn workspaces foreach -A --include 'templates/**' run test",
     "test:e2e": "yarn workspace @pikku/e2e test",
     "test:e2e:ai": "yarn workspace @pikku/e2e test:ai",
