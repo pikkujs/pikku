@@ -14,7 +14,7 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
   const providersProp = firstArg.properties.find(
     (p) =>
       ts.isPropertyAssignment(p) &&
-      ts.isIdentifier(p.name) &&
+      (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name)) &&
       p.name.text === 'providers'
   ) as ts.PropertyAssignment | undefined
 
