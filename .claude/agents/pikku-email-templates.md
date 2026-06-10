@@ -206,7 +206,7 @@ Plain-text fallback. Use the same variables as the HTML template:
 
 ## Variable extraction
 
-The CLI scans all `{{...}}` tokens in `.html`, `.subject.txt`, `.text.txt`, and locale string leaves. It skips `t.*`, `theme.*`, `locale`, `subject`, and partial includes (`{{> name}}`). Every remaining root key becomes a typed input variable in the generated `TemplateVariableMap`.
+The CLI scans all `{{...}}` tokens in `.html`, `.subject.txt`, `.text.txt`, and locale string leaves. It skips `content`, `t.*`, `theme.*`, `locale`, `subject`, and partial includes (`{{> name}}`). Every remaining root key becomes a typed input variable in the generated `TemplateVariableMap`.
 
 So `{{confirmUrl}}` and `{{email}}` in the example above become typed fields on `renderEmailTemplate`'s `data` argument.
 
