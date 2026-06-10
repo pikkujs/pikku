@@ -17,6 +17,13 @@ export interface EntityCardItem {
   tags?: string[]
 }
 
+function toEnglishName(name: string): string {
+  return name
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^(.)/, (c) => c.toUpperCase())
+    .trim()
+}
+
 function EntityCard({
   item,
   onOpen,
@@ -47,75 +54,30 @@ function EntityCard({
     >
       <Stack gap={4} style={{ minWidth: 0 }}>
         <Group gap={8} wrap="nowrap" align="center">
-          <Text size="sm" fw={500} ff="monospace" style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {item.name}
+          <Text size="sm" fw={600} style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {toEnglishName(item.name)}
           </Text>
           <Group gap={6} wrap="nowrap" style={{ flexShrink: 0 }}>
             {item.meta?.map((m) => (
-              <Box
-                key={m}
-                component="span"
-                style={{
-                  fontSize: 11,
-                  padding: '2px 8px',
-                  borderRadius: 20,
-                  background: 'var(--mantine-color-default)',
-                  color: 'var(--mantine-color-dimmed)',
-                  border: '1px solid var(--mantine-color-default-border)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
+              <Box key={m} component="span" style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: 'var(--mantine-color-default)', color: 'var(--mantine-color-dimmed)', border: '1px solid var(--mantine-color-default-border)', whiteSpace: 'nowrap' }}>
                 {m}
               </Box>
             ))}
             {item.badges?.map((b) => (
-              <Box
-                key={b.label}
-                component="span"
-                style={{
-                  fontSize: 10,
-                  fontWeight: 600,
-                  padding: '2px 7px',
-                  borderRadius: 20,
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase',
-                  background:
-                    b.tone === 'accent'
-                      ? 'var(--mantine-color-blue-light)'
-                      : 'var(--mantine-color-default)',
-                  color:
-                    b.tone === 'accent'
-                      ? 'var(--mantine-color-blue-light-color)'
-                      : 'var(--mantine-color-dimmed)',
-                  border: '1px solid var(--mantine-color-default-border)',
-                }}
-              >
+              <Box key={b.label} component="span" style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20, letterSpacing: '0.05em', textTransform: 'uppercase', background: b.tone === 'accent' ? 'var(--mantine-color-blue-light)' : 'var(--mantine-color-default)', color: b.tone === 'accent' ? 'var(--mantine-color-blue-light-color)' : 'var(--mantine-color-dimmed)', border: '1px solid var(--mantine-color-default-border)' }}>
                 {b.label}
               </Box>
             ))}
             {item.tags?.map((t) => (
-              <Box
-                key={t}
-                component="span"
-                style={{
-                  fontSize: 10,
-                  padding: '1px 6px',
-                  borderRadius: 4,
-                  background: 'var(--mantine-color-default)',
-                  color: 'var(--mantine-color-dimmed)',
-                  border: '1px solid var(--mantine-color-default-border)',
-                }}
-              >
+              <Box key={t} component="span" style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: 'var(--mantine-color-default)', color: 'var(--mantine-color-dimmed)', border: '1px solid var(--mantine-color-default-border)' }}>
                 {t}
               </Box>
             ))}
           </Group>
         </Group>
-        {item.description && (
-          <Text size="xs" c="dimmed" lineClamp={2}>
-            {item.description}
-          </Text>
-        )}
+        <Text size="xs" c={item.description ? 'dimmed' : 'var(--mantine-color-placeholder)'} lineClamp={2} fs={item.description ? undefined : 'italic'}>
+          {item.description ?? 'No description'}
+        </Text>
       </Stack>
       {metricSlot && <Box style={{ flexShrink: 0 }}>{metricSlot(item.name)}</Box>}
     </Box>
