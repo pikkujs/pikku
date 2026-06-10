@@ -13,6 +13,7 @@ export type AnonymizeStrategy =
 export interface ColumnClassification {
   classification: Classification
   anonymize_strategy: AnonymizeStrategy
+  description?: string
 }
 
 export type ClassificationManifest = {

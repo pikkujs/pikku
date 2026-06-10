@@ -49,6 +49,7 @@ import {
 } from '../project/panels/SecretVariablePanels'
 import { CredentialUserPanel } from '../project/panels/CredentialUserPanel'
 import { AuthProviderPanel } from '../project/panels/AuthProviderPanel'
+import { DbColumnPanel } from '../project/panels/DbColumnPanel'
 
 interface PanelChild {
   id: string
@@ -494,6 +495,19 @@ export const createPanelChildren = (panelData: PanelData): PanelChild[] => {
           content: (
             <Box px="md">
               <AuthProviderPanel metadata={panelData.metadata} />
+            </Box>
+          ),
+        },
+      ]
+
+    case 'dbColumn':
+      return [
+        {
+          id: 'configuration',
+          title: 'Column',
+          content: (
+            <Box px="md">
+              <DbColumnPanel metadata={panelData.metadata} />
             </Box>
           ),
         },

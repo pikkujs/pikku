@@ -220,7 +220,7 @@ function emitManifest(
  * flag added or removed columns.
  */
 function emitClassificationMap(tables: TableSchema[]): string {
-  const colEntry = `  security: 'public' | 'private' | 'pii' | 'secret' | 'encrypted'\n  classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'`
+  const colEntry = `  security: 'public' | 'private' | 'pii' | 'secret' | 'encrypted'\n  classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'\n  description?: string`
 
   // Group tables by schema (for postgres schema.table names)
   const schemaMap = new Map<string, Map<string, string[]>>()

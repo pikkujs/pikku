@@ -19,6 +19,7 @@ import { useQuery } from '@tanstack/react-query'
 import ELK from 'elkjs/lib/elk.bundled.js'
 import { Database as DatabaseIcon, Key, Link, RefreshCw, Globe, Shield, LockKeyhole, UserCheck, Table2, Search } from 'lucide-react'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
+import { usePanelContext } from '../context/PanelContext'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { PikkuToggle } from '../components/ui/PikkuToggle'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
@@ -82,6 +83,7 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
 }: NodeProps<DatabaseSchemaNodeData>) {
   const tableName = data.label?.trim() || id
   const { colorScheme } = useMantineColorScheme()
+  const { openDbColumn } = usePanelContext()
   const isDark = colorScheme === 'dark'
 
   const border = isDark ? 'var(--mantine-color-dark-4)' : 'var(--app-glass-border, #e0e0e0)'
@@ -155,12 +157,14 @@ const DatabaseSchemaNode = memo(function DatabaseSchemaNode({
         {data.columns.map((col) => (
           <div
             key={col.name}
+            onClick={() => openDbColumn(tableName, col.name, col)}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 6,
               padding: '4px 12px',
               borderBottom: `1px solid ${rowBorder}`,
+              cursor: 'pointer',
             }}
           >
             <div
@@ -604,6 +608,15 @@ function DatabaseCanvas({
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+const DatabasePageLayout: React.FC<{ header: React.ReactNode; children: React.ReactNode }> = ({ header, children }) => {
+  const { activePanel } = usePanelContext()
+  return (
+    <ResizablePanelLayout hidePanel={!activePanel} header={header}>
+      {children}
+    </ResizablePanelLayout>
+  )
+}
+
 function DatabasePageInner() {
   const rpc = usePikkuRPC()
   const [hideInternal, setHideInternal] = useState(true)
@@ -666,7 +679,7 @@ function DatabasePageInner() {
 
   return (
     <PanelProvider>
-      <ResizablePanelLayout hidePanel header={header}>
+      <DatabasePageLayout header={header}>
         <Box style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           {error ? (
             <EmptyStatePlaceholder
@@ -688,7 +701,7 @@ function DatabasePageInner() {
             />
           )}
         </Box>
-      </ResizablePanelLayout>
+      </DatabasePageLayout>
     </PanelProvider>
   )
 }
