@@ -202,6 +202,7 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       SLS_TELEMETRY_DISABLED: 1
       SLS_NOTIFICATIONS_MODE: off
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   templates-no-services:
     name: Templates (${{ matrix.version }}, ${{ matrix.template }}, ${{ matrix.package-manager }})
@@ -249,6 +250,7 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       SLS_TELEMETRY_DISABLED: 1
       SLS_NOTIFICATIONS_MODE: off
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   template-runtime-targets:
     name: Template Functions Runtimes (${{ matrix.version }}, ${{ matrix.target }})
