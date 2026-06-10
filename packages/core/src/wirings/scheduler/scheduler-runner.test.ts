@@ -157,6 +157,7 @@ describe('runScheduledTask', () => {
       pikkuFuncId: 'scheduler_simple-task',
       inputSchemaName: null,
       outputSchemaName: null,
+      sessionless: true,
     }
     wireScheduler(mockTask)
 
@@ -199,6 +200,7 @@ describe('runScheduledTask', () => {
       pikkuFuncId: 'scheduler_task-with-session',
       inputSchemaName: null,
       outputSchemaName: null,
+      sessionless: true,
     }
     wireScheduler(mockTask)
 
@@ -287,6 +289,7 @@ describe('runScheduledTask', () => {
       pikkuFuncId: 'scheduler_skipped-task',
       inputSchemaName: null,
       outputSchemaName: null,
+      sessionless: true,
     }
     wireScheduler(mockTask)
 
@@ -332,6 +335,7 @@ describe('runScheduledTask', () => {
       pikkuFuncId: 'scheduler_skipped-task-no-reason',
       inputSchemaName: null,
       outputSchemaName: null,
+      sessionless: true,
     }
     wireScheduler(mockTask)
 
@@ -380,6 +384,7 @@ describe('runScheduledTask', () => {
       pikkuFuncId: 'scheduler_wire-task',
       inputSchemaName: null,
       outputSchemaName: null,
+      sessionless: true,
     }
     wireScheduler(mockTask)
 
@@ -420,6 +425,7 @@ describe('runScheduledTask', () => {
       pikkuFuncId: 'scheduler_session-services-task',
       inputSchemaName: null,
       outputSchemaName: null,
+      sessionless: true,
     }
     wireScheduler(mockTask)
 
@@ -469,6 +475,7 @@ describe('runScheduledTask', () => {
       pikkuFuncId: 'scheduler_cleanup-task',
       inputSchemaName: null,
       outputSchemaName: null,
+      sessionless: true,
     }
     wireScheduler(mockTask)
 
@@ -517,6 +524,7 @@ describe('runScheduledTask', () => {
       pikkuFuncId: 'scheduler_error-cleanup-task',
       inputSchemaName: null,
       outputSchemaName: null,
+      sessionless: true,
     }
     wireScheduler(mockTask)
 
@@ -558,6 +566,7 @@ describe('runScheduledTask', () => {
       pikkuFuncId: 'scheduler_error-task',
       inputSchemaName: null,
       outputSchemaName: null,
+      sessionless: true,
     }
     wireScheduler(mockTask)
 
@@ -607,6 +616,7 @@ describe('runScheduledTask', () => {
       pikkuFuncId: 'scheduler_middleware-task',
       inputSchemaName: null,
       outputSchemaName: null,
+      sessionless: true,
     }
     wireScheduler(mockTask)
 

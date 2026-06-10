@@ -308,6 +308,7 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
       pikkuFuncId: 'hotTask',
       inputSchemaName: null,
       outputSchemaName: null,
+      sessionless: true,
     }
 
     addFunction('hotTask', {
@@ -375,6 +376,7 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
       pikkuFuncId: 'queue_hot-queue',
       inputSchemaName: null,
       outputSchemaName: null,
+      sessionless: true,
     }
 
     addFunction('queue_hot-queue', {

@@ -128,6 +128,7 @@ describe('CLI Runner', () => {
           pikkuFuncId: 'greetFunc',
           inputSchemaName: null,
           outputSchemaName: null,
+          sessionless: true,
         },
       })
 
@@ -192,6 +193,7 @@ describe('CLI Runner', () => {
           pikkuFuncId: 'testFunc',
           inputSchemaName: null,
           outputSchemaName: null,
+          sessionless: true,
         },
       })
 
@@ -252,6 +254,7 @@ describe('CLI Runner', () => {
           pikkuFuncId: 'greetFunc',
           inputSchemaName: null,
           outputSchemaName: null,
+          sessionless: true,
         },
       })
 
@@ -296,6 +299,7 @@ describe('CLI Runner', () => {
           pikkuFuncId: 'secureFunc',
           inputSchemaName: null,
           outputSchemaName: null,
+          sessionless: true,
         },
       })
 
@@ -617,6 +621,7 @@ describe('CLI Runner', () => {
           pikkuFuncId: 'greetFunc',
           inputSchemaName: null,
           outputSchemaName: null,
+          sessionless: true,
           sessionless: true,
         },
       })

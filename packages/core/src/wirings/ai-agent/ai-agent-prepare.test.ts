@@ -178,6 +178,7 @@ describe('ai-agent-prepare', () => {
       description: 'Deploy the service',
       approvalRequired: true,
       inputSchemaName: 'DeployInput',
+      sessionless: true,
     }
     pikkuState(null, 'misc', 'schemas').set('DeployInput', {
       type: 'object',
@@ -254,6 +255,7 @@ describe('ai-agent-prepare', () => {
       description: 'Secret tool',
       permissions: ['admin'],
       inputSchemaName: 'SecretInput',
+      sessionless: true,
     }
     pikkuState(null, 'misc', 'schemas').set('SecretInput', {
       type: 'object',
