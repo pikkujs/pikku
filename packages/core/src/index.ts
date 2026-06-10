@@ -181,6 +181,7 @@ export { SchedulerService } from './services/scheduler-service.js'
 
 export type {
   Private,
+  Pii,
   Secret,
   Classification,
   AnonymizeStrategy,

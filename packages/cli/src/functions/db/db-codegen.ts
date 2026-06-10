@@ -11,7 +11,7 @@ import {
 
 // ─── Type aliases ─────────────────────────────────────────────────────────────
 
-type Classification = 'public' | 'private' | 'secret'
+type Classification = 'public' | 'private' | 'pii' | 'secret'
 
 // ─── Name helpers ─────────────────────────────────────────────────────────────
 
@@ -116,7 +116,12 @@ function columnTypeExpression(
     return nullable ? `${base} | null` : base
   }
 
-  const B = classification === 'secret' ? 'Secret' : 'Private'
+  const B =
+    classification === 'secret'
+      ? 'Secret'
+      : classification === 'pii'
+        ? 'Pii'
+        : 'Private'
   const sBase = selectBase(annotation, col)
   const iBase = insertBase(annotation, col)
 
@@ -342,8 +347,9 @@ export async function generateSchemaTypes(
     `  ? ColumnType<S, I | undefined, U>`,
     `  : ColumnType<T, T | undefined, T>`,
     ``,
-    `export type Private<T> = T & { readonly __pii__: 'private' }`,
-    `export type Secret<T> = T & { readonly __pii__: 'secret' }`,
+    `export type Private<T> = T & { readonly __classification__: 'private' }`,
+    `export type Pii<T> = T & { readonly __classification__: 'pii' }`,
+    `export type Secret<T> = T & { readonly __classification__: 'secret' }`,
     ``,
     interfaces,
     ``,

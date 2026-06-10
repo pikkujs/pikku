@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import type { ColumnKind } from './coercion-plugin.js'
 
-type Classification = 'public' | 'private' | 'secret'
+type Classification = 'public' | 'private' | 'pii' | 'secret'
 type AnonymizeStrategy = 'fake:email' | 'fake:name' | 'hash' | 'keep' | null
 
 export interface ColAnnotation {
@@ -52,7 +52,7 @@ function parseComment(comment: string): Partial<ColAnnotation> {
     }
   }
 
-  const classM = comment.match(/@(public|private|secret)(?::([^\s@]+))?/i)
+  const classM = comment.match(/@(public|private|pii|secret)(?::([^\s@]+))?/i)
   if (classM) {
     ann.classification = classM[1]!.toLowerCase() as Classification
     ann.anonymize = parseStrategy(classM[2])
@@ -62,7 +62,7 @@ function parseComment(comment: string): Partial<ColAnnotation> {
 }
 
 /**
- * Parse `-- @bool | @date | @json [TsType] | @public | @private[:strategy] | @secret[:strategy]`
+ * Parse `-- @bool | @date | @json [TsType] | @public | @private[:strategy] | @pii[:strategy] | @secret[:strategy]`
  * inline annotations from migration SQL files in `migrationsDir`.
  *
  * Multiple annotations on the same comment line are supported, e.g.:

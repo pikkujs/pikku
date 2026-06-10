@@ -885,7 +885,7 @@ export const addFunctions: AddWiring = (
 
   // ── PII brand check ───────────────────────────────────────────────────────
   // Walk the function body's ACTUAL inferred return type looking for Private<T>
-  // / Secret<T> brands (__pii__ property).  This runs for every function,
+  // / Pii<T> / Secret<T> brands (__classification__ property).  This runs for every function,
   // including those with a Zod output schema, because the TS return type
   // reflects what the body actually returns before any Zod coercion.
   {

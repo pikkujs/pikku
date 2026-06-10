@@ -23,13 +23,14 @@ function makeLogger() {
 }
 
 /**
- * Inline Private<T>/Secret<T> definitions that the test source files use.
+ * Inline Private<T>/Pii<T>/Secret<T> definitions that the test source files use.
  * Mirrors what schema.d.ts emits so the TypeScript program sees the correct
  * structural brand type even without @pikku/core being importable from /tmp.
  */
 const BRAND_TYPES = `
-type Private<T> = T & { readonly __pii__: 'private' }
-type Secret<T> = T & { readonly __pii__: 'secret' }
+type Private<T> = T & { readonly __classification__: 'private' }
+type Pii<T> = T & { readonly __classification__: 'pii' }
+type Secret<T> = T & { readonly __classification__: 'secret' }
 `
 
 async function runInspect(sourceCode: string) {
@@ -104,7 +105,11 @@ export const getPublicData = pikkuFunc({
 })
 `)
     const hit = criticals.find((c) => c.code === ErrorCode.PII_IN_OUTPUT)
-    assert.equal(hit, undefined, `Expected no PKU910 but got: ${JSON.stringify(hit)}`)
+    assert.equal(
+      hit,
+      undefined,
+      `Expected no PKU910 but got: ${JSON.stringify(hit)}`
+    )
   })
 
   test('does not flag a void-returning function', async () => {

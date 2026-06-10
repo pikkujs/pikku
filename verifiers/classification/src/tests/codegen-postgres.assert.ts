@@ -144,7 +144,7 @@ describe('DB codegen (Postgres) — classification brands', () => {
     assert.ok(postsBlock, 'Posts interface should exist in schema')
     assert.doesNotMatch(
       postsBlock[0],
-      /Private<|Secret</,
+      /Private<|Pii<|Secret</,
       'public columns should have no brand'
     )
   })
