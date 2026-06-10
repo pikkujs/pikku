@@ -51,6 +51,8 @@ interface PgPool {
 export type PgPoolCtor = new (opts: {
   connectionString: string
   max: number
+  connectionTimeoutMillis?: number
+  idleTimeoutMillis?: number
 }) => PgPool
 
 // ── Column-row shapes ─────────────────────────────────────────────────────────
@@ -194,7 +196,7 @@ async function introspectPostgresEnums(pool: PgPool): Promise<DbEnum[]> {
   }>(
     `SELECT t.typname AS enum_name,
             t.typnamespace::regnamespace::text AS schema_name,
-            array_agg(e.enumlabel ORDER BY e.enumsortorder) AS values
+            json_agg(e.enumlabel ORDER BY e.enumsortorder) AS values
      FROM pg_type t
      JOIN pg_enum e ON e.enumtypid = t.oid
      WHERE t.typtype = 'e'
@@ -213,41 +215,67 @@ async function introspectPostgres(
   annotations: Record<string, Record<string, { visibility?: string }>>,
   Pool: PgPoolCtor
 ): Promise<{ tables: DbTable[]; enums: DbEnum[] }> {
-  const pool = new Pool({ connectionString, max: 3 })
+  const pool = new Pool({
+    connectionString,
+    max: 3,
+    connectionTimeoutMillis: 5000,
+    idleTimeoutMillis: 5000,
+  })
 
   try {
-    const tablesResult = await pool.query<{
-      table_schema: string
-      table_name: string
-    }>(
-      `SELECT table_schema, table_name
-       FROM information_schema.tables
-       WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-         AND table_schema NOT LIKE 'pg_temp_%'
-         AND table_type = 'BASE TABLE'
-       ORDER BY table_schema, table_name`
-    )
-
-    const tables: DbTable[] = []
-
-    for (const {
-      table_schema: schema,
-      table_name: tableName,
-    } of tablesResult.rows) {
-      if (SKIP_SCHEMAS.has(schema)) continue
-      if (SKIP_TABLES.has(tableName)) continue
-
-      const qualifiedName =
-        schema === 'public' ? tableName : `${schema}.${tableName}`
-      const tableAnns = annotations[bareTableName(qualifiedName)] ?? {}
-
-      const fkResult = await pool.query<{
+    const [tablesResult, colsResult, fkResult] = await Promise.all([
+      pool.query<{ table_schema: string; table_name: string }>(
+        `SELECT table_schema, table_name
+         FROM information_schema.tables
+         WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+           AND table_schema NOT LIKE 'pg_temp_%'
+           AND table_type = 'BASE TABLE'
+         ORDER BY table_schema, table_name`
+      ),
+      pool.query<{
+        table_schema: string
+        table_name: string
+        column_name: string
+        data_type: string
+        udt_name: string
+        is_nullable: string
+        is_pk: boolean
+      }>(
+        `SELECT
+           c.table_schema,
+           c.table_name,
+           c.column_name,
+           c.data_type,
+           c.udt_name,
+           c.is_nullable,
+           EXISTS(
+             SELECT 1
+             FROM information_schema.table_constraints tc
+             JOIN information_schema.key_column_usage kcu
+               ON tc.constraint_name = kcu.constraint_name
+              AND tc.table_schema    = kcu.table_schema
+              AND tc.table_name      = kcu.table_name
+             WHERE tc.constraint_type = 'PRIMARY KEY'
+               AND tc.table_schema    = c.table_schema
+               AND tc.table_name      = c.table_name
+               AND kcu.column_name    = c.column_name
+           ) AS is_pk
+         FROM information_schema.columns c
+         WHERE c.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+           AND c.table_schema NOT LIKE 'pg_temp_%'
+         ORDER BY c.table_schema, c.table_name, c.ordinal_position`
+      ),
+      pool.query<{
+        table_schema: string
+        table_name: string
         column_name: string
         foreign_table_schema: string
         foreign_table_name: string
         foreign_column_name: string
       }>(
-        `SELECT kcu.column_name,
+        `SELECT kcu.table_schema,
+                kcu.table_name,
+                kcu.column_name,
                 kcu2.table_schema  AS foreign_table_schema,
                 kcu2.table_name   AS foreign_table_name,
                 kcu2.column_name  AS foreign_column_name
@@ -261,58 +289,47 @@ async function introspectPostgres(
           AND kcu2.constraint_schema  = rc.unique_constraint_schema
           AND kcu2.constraint_name    = rc.unique_constraint_name
           AND kcu2.ordinal_position   = kcu.ordinal_position
-         WHERE kcu.table_schema = $1
-           AND kcu.table_name   = $2
-         ORDER BY kcu.ordinal_position`,
-        [schema, tableName]
-      )
+         ORDER BY kcu.table_schema, kcu.table_name, kcu.ordinal_position`
+      ),
+    ])
 
-      const fkMap = new Map(
-        fkResult.rows.map((r) => {
-          const refTable =
-            r.foreign_table_schema === 'public'
-              ? r.foreign_table_name
-              : `${r.foreign_table_schema}.${r.foreign_table_name}`
-          return [
-            r.column_name,
-            { table: refTable, column: r.foreign_column_name },
-          ]
-        })
-      )
+    const fkIndex = new Map<string, { table: string; column: string }>()
+    for (const r of fkResult.rows) {
+      const refTable =
+        r.foreign_table_schema === 'public'
+          ? r.foreign_table_name
+          : `${r.foreign_table_schema}.${r.foreign_table_name}`
+      fkIndex.set(`${r.table_schema}.${r.table_name}.${r.column_name}`, {
+        table: refTable,
+        column: r.foreign_column_name,
+      })
+    }
 
-      interface PgColRow {
-        column_name: string
-        data_type: string
-        udt_name: string
-        is_nullable: string
-        is_pk: boolean
+    const colIndex = new Map<string, typeof colsResult.rows>()
+    for (const r of colsResult.rows) {
+      const key = `${r.table_schema}.${r.table_name}`
+      let arr = colIndex.get(key)
+      if (!arr) {
+        arr = []
+        colIndex.set(key, arr)
       }
+      arr.push(r)
+    }
 
-      const colResult = await pool.query<PgColRow>(
-        `SELECT
-           c.column_name,
-           c.data_type,
-           c.udt_name,
-           c.is_nullable,
-           EXISTS(
-             SELECT 1
-             FROM information_schema.table_constraints tc
-             JOIN information_schema.key_column_usage kcu
-               ON tc.constraint_name = kcu.constraint_name
-              AND tc.table_schema = kcu.table_schema
-              AND tc.table_name = kcu.table_name
-             WHERE tc.constraint_type = 'PRIMARY KEY'
-               AND tc.table_schema = $2
-               AND tc.table_name = $1
-               AND kcu.column_name = c.column_name
-           ) AS is_pk
-         FROM information_schema.columns c
-         WHERE c.table_schema = $2 AND c.table_name = $1
-         ORDER BY c.ordinal_position`,
-        [tableName, schema]
-      )
+    const tables: DbTable[] = []
+    for (const {
+      table_schema: schema,
+      table_name: tableName,
+    } of tablesResult.rows) {
+      if (SKIP_SCHEMAS.has(schema)) continue
+      if (SKIP_TABLES.has(tableName)) continue
 
-      const columns: DbColumn[] = colResult.rows.map((r) => {
+      const qualifiedName =
+        schema === 'public' ? tableName : `${schema}.${tableName}`
+      const tableAnns = annotations[bareTableName(qualifiedName)] ?? {}
+      const colRows = colIndex.get(`${schema}.${tableName}`) ?? []
+
+      const columns: DbColumn[] = colRows.map((r) => {
         const isUserDefined = r.data_type === 'USER-DEFINED'
         const col: DbColumn = {
           name: r.column_name,
@@ -324,7 +341,7 @@ async function introspectPostgres(
           ),
         }
         if (isUserDefined) col.enumType = r.udt_name
-        const fk = fkMap.get(r.column_name)
+        const fk = fkIndex.get(`${schema}.${tableName}.${r.column_name}`)
         if (fk) col.foreignKey = fk
         return col
       })
