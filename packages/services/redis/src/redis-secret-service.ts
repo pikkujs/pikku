@@ -87,8 +87,8 @@ export class RedisSecretService implements SecretService {
     const results = await Promise.allSettled(keys.map((k) => this.getSecret(k)))
     const out: Record<string, unknown> = {}
     keys.forEach((key, i) => {
-      if (results[i].status === 'fulfilled')
-        out[key] = (results[i] as PromiseFulfilledResult<unknown>).value
+      const result = results[i]
+      if (result?.status === 'fulfilled') out[key] = result.value
     })
     return out
   }
