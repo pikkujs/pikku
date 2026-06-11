@@ -84,7 +84,12 @@ yarn tsc -b
 
 # Copy schema file
 echo "Copying schema file..."
-cp .pikku/schemas/schemas/PikkuCLIConfig.schema.json cli.schema.json
+schema_src=$(find .pikku/schemas -maxdepth 2 -name "PikkuCLIConfig.schema.json" | head -1)
+if [ -n "$schema_src" ]; then
+  cp "$schema_src" cli.schema.json
+else
+  echo "Warning: PikkuCLIConfig.schema.json not found, skipping schema copy"
+fi
 
 echo "Copying console app..."
 rm -rf console-app
