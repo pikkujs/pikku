@@ -1,3 +1,9 @@
+## 0.12.11
+
+### Patch Changes
+
+- cd237c3: fix(pikku-console): use correct `tests` dir and `.coverage` output path in runFunctionTests
+
 ## 0.12.10
 
 ### Patch Changes

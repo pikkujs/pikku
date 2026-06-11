@@ -1,5 +1,11 @@
 # @pikku/assistant-ui
 
+## 0.12.6
+
+### Patch Changes
+
+- f4f7046: feat(assistant-ui): export useFileAttachment hook, modelSupportsVision, PendingFile, UploadAttachmentFn, and INLINE_SIZE_LIMIT
+
 ## 0.12.5
 
 ### Patch Changes
