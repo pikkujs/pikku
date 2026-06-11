@@ -368,7 +368,7 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
         {/* Form / render panel */}
         <Box
           className={classes.listSurfaceCard}
-          style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}
+          style={{ width: 400, flexShrink: 0, display: 'flex', flexDirection: 'column' }}
         >
           {/* Template selector */}
           <Popover opened={selectorOpen} onChange={setSelectorOpen} width={280} position="bottom-start" shadow="md" zIndex={10000}>
