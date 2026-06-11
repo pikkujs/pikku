@@ -476,6 +476,9 @@ const _getPikkuCLIConfig = async (
     if (!result.mcpTypesFile) {
       result.mcpTypesFile = join(mcpDir, 'pikku-mcp-types.gen.ts')
     }
+    if (!result.mcpJsonFile) {
+      result.mcpJsonFile = join(mcpDir, 'mcp.gen.json')
+    }
 
     // AI Agent
     const agentDir = join(result.outDir, 'agent')
