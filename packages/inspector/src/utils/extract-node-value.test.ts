@@ -46,18 +46,20 @@ describe('extractDescription', () => {
     assert.equal(extractDescription(obj, checker), 'my step')
   })
 
-  test('returns null for non-literal description value without crashing', () => {
+  test('extracts concatenated string literals in description', () => {
     const { checker, sourceFile } = createChecker(
-      `const name = 'test'; const data = { description: name + ' addon' }`
+      `const data = { description: 'line one ' + 'line two' }`
     )
-    const objs: ts.ObjectLiteralExpression[] = []
-    const visit = (node: ts.Node) => {
-      if (ts.isObjectLiteralExpression(node)) objs.push(node)
-      ts.forEachChild(node, visit)
-    }
-    ts.forEachChild(sourceFile, visit)
-    const dataObj = objs[objs.length - 1]!
-    assert.equal(extractDescription(dataObj, checker), null)
+    const obj = findObjectLiteral(sourceFile)!
+    assert.equal(extractDescription(obj, checker), 'line one line two')
+  })
+
+  test('extracts deeply nested concatenation in description', () => {
+    const { checker, sourceFile } = createChecker(
+      `const data = { description: 'a' + 'b' + 'c' }`
+    )
+    const obj = findObjectLiteral(sourceFile)!
+    assert.equal(extractDescription(obj, checker), 'abc')
   })
 
   test('returns null for non-object node', () => {

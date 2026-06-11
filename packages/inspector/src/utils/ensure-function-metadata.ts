@@ -280,7 +280,9 @@ export function ensureFunctionMetadata(
           const { tags } = getCommonWireMetaData(
             firstArg,
             'Function',
-            fallbackName || pikkuFuncId
+            fallbackName || pikkuFuncId,
+            undefined,
+            checker
           )
           if (tags) {
             meta.tags = tags

@@ -45,7 +45,7 @@ export const addGateway: AddWiring = (
   const typeValue = getPropertyValue(obj, 'type') as GatewayTransportType | null
   const routeValue = getPropertyValue(obj, 'route') as string | undefined
   const { disabled, tags, summary, description, errors } =
-    getCommonWireMetaData(obj, 'Gateway', nameValue, logger)
+    getCommonWireMetaData(obj, 'Gateway', nameValue, logger, checker)
 
   if (disabled) return
 

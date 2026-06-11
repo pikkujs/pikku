@@ -32,6 +32,16 @@ export function extractStringLiteral(
     return extractStringLiteral(node.expression, checker)
   }
 
+  if (
+    ts.isBinaryExpression(node) &&
+    node.operatorToken.kind === ts.SyntaxKind.PlusToken
+  ) {
+    return (
+      extractStringLiteral(node.left, checker) +
+      extractStringLiteral(node.right, checker)
+    )
+  }
+
   // Try to evaluate constant identifiers
   if (ts.isIdentifier(node)) {
     const symbol = checker.getSymbolAtLocation(node)
