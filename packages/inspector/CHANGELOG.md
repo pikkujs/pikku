@@ -1,3 +1,14 @@
+## 0.12.17
+
+### Patch Changes
+
+- 2cf67be: Add inline option to pikkuFunc/pikkuSessionlessFunc for workflow step dispatch
+
+  By default, workflow steps now run inline (no queue hop). Set inline: false on a function to force dispatch through the queue for that step.
+
+- Updated dependencies [2cf67be]
+  - @pikku/core@0.12.28
+
 ## 0.12.16
 
 ### Patch Changes
