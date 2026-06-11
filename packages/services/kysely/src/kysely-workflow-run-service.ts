@@ -5,6 +5,7 @@ import type {
   WorkflowRunService,
 } from '@pikku/core/workflow'
 import type { Kysely } from 'kysely'
+import { sql } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { parseJson } from './kysely-json.js'
 
@@ -111,6 +112,15 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
           )
           .as('attemptCount')
       )
+      .select(
+        sql<string | null>`(SELECT MAX(h.runningAt) FROM workflowStepHistory h WHERE h.workflowStepId = s.workflowStepId)`.as('runningAt')
+      )
+      .select(
+        sql<string | null>`(SELECT MAX(h.succeededAt) FROM workflowStepHistory h WHERE h.workflowStepId = s.workflowStepId)`.as('succeededAt')
+      )
+      .select(
+        sql<string | null>`(SELECT MAX(h.failedAt) FROM workflowStepHistory h WHERE h.workflowStepId = s.workflowStepId)`.as('failedAt')
+      )
       .where('s.workflowRunId', '=', runId)
       .orderBy('s.createdAt', 'asc')
       .execute()
@@ -129,6 +139,15 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
       retryDelay: row.retryDelay ?? undefined,
       createdAt: new Date(row.createdAt as unknown as string),
       updatedAt: new Date(row.updatedAt as unknown as string),
+      runningAt: row.runningAt
+        ? new Date(row.runningAt as unknown as string)
+        : undefined,
+      succeededAt: row.succeededAt
+        ? new Date(row.succeededAt as unknown as string)
+        : undefined,
+      failedAt: row.failedAt
+        ? new Date(row.failedAt as unknown as string)
+        : undefined,
     }))
   }
 
