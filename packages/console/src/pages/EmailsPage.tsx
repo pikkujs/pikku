@@ -282,7 +282,7 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
         {/* Preview area */}
         <Box
           className={classes.listSurfaceCard}
-          style={{ flex: 1, minWidth: 480, display: 'flex', flexDirection: 'column' }}
+          style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}
         >
           <Box
             px="md"
@@ -368,7 +368,7 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
         {/* Form / render panel */}
         <Box
           className={classes.listSurfaceCard}
-          style={{ width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column' }}
+          style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}
         >
           {/* Template selector */}
           <Popover opened={selectorOpen} onChange={setSelectorOpen} width={280} position="bottom-start" shadow="md" zIndex={10000}>
