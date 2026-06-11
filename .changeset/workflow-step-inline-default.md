@@ -1,5 +1,5 @@
 ---
-"@pikku/core": minor
+"@pikku/core": patch
 "@pikku/inspector": patch
 ---
 
