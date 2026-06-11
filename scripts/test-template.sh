@@ -84,13 +84,14 @@ if [ "$PACKAGE_MANAGER" = "yarn" ]; then
         --yarn-link "$PROJECT_ROOT"
     )
 else
-    # For non-yarn: scaffold only (no --install) so we can patch overrides
+    # For non-yarn: scaffold only so we can patch overrides
     # before the package manager resolves deps from npm.
     CREATE_ARGS=(
         --template "$TEMPLATE_NAME"
         --version "$VERSION"
         --name ../../../test-app
         --package-manager "$PACKAGE_MANAGER"
+        --no-install
     )
 fi
 
@@ -163,6 +164,18 @@ for (const f of files) {
 }
 
 pkg.overrides = { ...(pkg.overrides || {}), ...overrides };
+
+const depTypes = ['dependencies', 'devDependencies', 'peerDependencies'];
+for (const dt of depTypes) {
+  if (pkg[dt]) {
+    for (const [name, ver] of Object.entries(pkg[dt])) {
+      if (typeof ver === 'string' && ver.includes('workspace:')) {
+        pkg[dt][name] = '*';
+      }
+    }
+  }
+}
+
 fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
 console.log('Added ' + Object.keys(overrides).length + ' @pikku/* file: overrides');
 "

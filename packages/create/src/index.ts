@@ -467,7 +467,7 @@ async function run() {
             })
           : 'npm')
 
-  const install = cliOptions.install || !cliOptions.variations
+  const install = cliOptions.install === false ? false : (cliOptions.install || !cliOptions.variations)
 
   const selectedOptions: CliOptions = {
     name,
