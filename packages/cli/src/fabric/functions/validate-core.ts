@@ -222,8 +222,7 @@ export async function runFabricValidate(
       agentsMeta?: Record<string, unknown>
     }>(agentMetaPath)
     if (agentMeta && Object.keys(agentMeta.agentsMeta ?? {}).length > 0) {
-      const fnDeps = { ...fnPkg?.dependencies }
-      if (!fnDeps['@pikku/ai-vercel']) {
+      if (!fnPkg?.dependencies?.['@pikku/ai-vercel']) {
         e(
           'missing-ai-vercel',
           'Project declares agent units but @pikku/ai-vercel is not in dependencies',
@@ -231,7 +230,7 @@ export async function runFabricValidate(
           'Run `yarn add @pikku/ai-vercel` in packages/functions — must be in dependencies, not devDependencies'
         )
       }
-      if (!fnDeps['@ai-sdk/openai-compatible']) {
+      if (!fnPkg?.dependencies?.['@ai-sdk/openai-compatible']) {
         e(
           'missing-ai-sdk-openai-compatible',
           'Project declares agent units but @ai-sdk/openai-compatible is not in dependencies',
