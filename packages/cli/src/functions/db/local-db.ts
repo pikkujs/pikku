@@ -55,6 +55,20 @@ export type ResolvedDb = ResolvedSqliteDb | ResolvedPostgresDb
 // ─── Resolution ───────────────────────────────────────────────────────────────
 
 /**
+ * Parse a DATABASE_URL string into the subset of UserConfigShape that resolveDb understands.
+ * - postgres(ql):// → { postgresUrl }
+ * - libsql:// or http(s):// → {} (remote, not handled by the CLI layer)
+ * - anything else → { sqliteDb } (local file path)
+ */
+export function parseDatabaseUrl(
+  url: string
+): Pick<UserConfigShape, 'sqliteDb' | 'postgresUrl'> {
+  if (/^postgres(ql)?:\/\//.test(url)) return { postgresUrl: url }
+  if (/^(libsql|https?):\/\//.test(url)) return {}
+  return { sqliteDb: url }
+}
+
+/**
  * Resolve a UserConfigShape into an absolute-path descriptor.
  * Returns null when neither sqliteDb nor postgresUrl is configured.
  */
