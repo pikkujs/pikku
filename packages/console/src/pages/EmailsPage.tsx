@@ -135,7 +135,7 @@ const EmailsOverview: React.FC<{
   )
 }
 
-export const EmailsPage: React.FC<{ hero?: React.ReactNode }> = ({ hero }) => {
+export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.ReactNode }> = ({ hero, headerRight }) => {
   const { meta, loading } = usePikkuMeta()
   const [searchParams, setSearchParams] = useSearchParams()
   const [previewInput, setPreviewInput] = useState<
@@ -213,7 +213,7 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode }> = ({ hero }) => {
   if (loading) {
     return (
       <PanelProvider>
-        <ResizablePanelLayout hidePanel header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" />}>
+        <ResizablePanelLayout hidePanel header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" lead={headerRight} />}>
           <Center h="100%">
             <Loader />
           </Center>
@@ -225,7 +225,7 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode }> = ({ hero }) => {
   if (templateNames.length === 0) {
     return (
       <PanelProvider>
-        <ResizablePanelLayout hidePanel header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" />}>
+        <ResizablePanelLayout hidePanel header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" lead={headerRight} />}>
           <EmptyStatePlaceholder
             icon={Mail}
             hero={hero}
@@ -244,7 +244,7 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode }> = ({ hero }) => {
       <PanelProvider>
         <ResizablePanelLayout
           hidePanel
-          header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" />}
+          header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" lead={headerRight} />}
         >
           <EmailsOverview
             templateNames={templateNames}
