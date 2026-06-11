@@ -533,7 +533,17 @@ export class LocalMetaService implements MetaService {
       )
     }
 
+    // emailsMeta.src is an absolute path resolved by the CLI at generation time.
+    // Read directly rather than through readProjectFile (which prepends the project
+    // root and produces a wrong compound path when baseDir is absolute).
     const baseDir = emailsMeta.src
+    const readEmailFile = async (rel: string): Promise<string | null> => {
+      try {
+        return await readFile(join(baseDir, rel), 'utf-8')
+      } catch {
+        return null
+      }
+    }
     const [
       themeRaw,
       localeRaw,
@@ -543,13 +553,13 @@ export class LocalMetaService implements MetaService {
       templateSubject,
       templateText,
     ] = await Promise.all([
-      this.readProjectFile(`${baseDir}/theme.json`),
-      this.readProjectFile(`${baseDir}/locales/${locale}.json`),
-      this.readProjectFile(`${baseDir}/partials/layout.html`),
-      this.readProjectFile(`${baseDir}/partials/footer.html`),
-      this.readProjectFile(`${baseDir}/templates/${templateName}.html`),
-      this.readProjectFile(`${baseDir}/templates/${templateName}.subject.txt`),
-      this.readProjectFile(`${baseDir}/templates/${templateName}.text.txt`),
+      readEmailFile('theme.json'),
+      readEmailFile(`locales/${locale}.json`),
+      readEmailFile('partials/layout.html'),
+      readEmailFile('partials/footer.html'),
+      readEmailFile(`templates/${templateName}.html`),
+      readEmailFile(`templates/${templateName}.subject.txt`),
+      readEmailFile(`templates/${templateName}.text.txt`),
     ])
 
     return {
