@@ -11,6 +11,7 @@ rm -rf -- .pikku dist
 echo "Bootstrapping with published @pikku/cli..."
 : "${PIKKU_CLI_VERSION:=latest}"
 _bootstrap_dir=$(mktemp -d)
+trap 'rm -rf "$_bootstrap_dir"' EXIT
 npm install --prefix "$_bootstrap_dir" --no-save --no-package-lock \
   "@pikku/cli@${PIKKU_CLI_VERSION}" "@pikku/auth-js"
 "$_bootstrap_dir/node_modules/.bin/pikku"
