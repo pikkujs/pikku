@@ -77,6 +77,11 @@ async function makeValidProject(root: string) {
   await mkdir(join(root, 'packages', 'components'), {
     recursive: true,
   })
+  await writeFile(
+    join(root, '.gitignore'),
+    '.pikku\n.pikku-runtime\n.opencode\n*.gen.ts\n*.gen.js\n',
+    'utf8'
+  )
 }
 
 describe('pikku fabric validate', () => {
