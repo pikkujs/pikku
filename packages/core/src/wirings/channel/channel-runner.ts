@@ -42,30 +42,14 @@ export const wireChannel = <
     return
   }
 
-  const funcMetaMap = pikkuState(null, 'function', 'meta')
-
   // Register onConnect function if provided
   if (channel.onConnect && channelMeta.connect) {
-    const funcId = channelMeta.connect.pikkuFuncId
-    addFunction(funcId, channel.onConnect as any)
-    funcMetaMap[funcId] ??= {
-      pikkuFuncId: funcId,
-      sessionless: true,
-      inputSchemaName: null,
-      outputSchemaName: null,
-    }
+    addFunction(channelMeta.connect.pikkuFuncId, channel.onConnect as any)
   }
 
   // Register onDisconnect function if provided
   if (channel.onDisconnect && channelMeta.disconnect) {
-    const funcId = channelMeta.disconnect.pikkuFuncId
-    addFunction(funcId, channel.onDisconnect as any)
-    funcMetaMap[funcId] ??= {
-      pikkuFuncId: funcId,
-      sessionless: true,
-      inputSchemaName: null,
-      outputSchemaName: null,
-    }
+    addFunction(channelMeta.disconnect.pikkuFuncId, channel.onDisconnect as any)
   }
 
   // Register onMessage function if provided
