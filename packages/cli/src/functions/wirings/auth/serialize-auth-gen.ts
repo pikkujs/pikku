@@ -45,19 +45,21 @@ export const serializeAuthGen = (providers: string[]): string => {
     const fieldLines = Object.entries(def.fields).map(
       ([field, zodExpr]) => `  ${field}: ${zodExpr},`
     )
-    lines.push(`const ${schemaName} = z.object({`)
+    lines.push(`export const ${schemaName} = z.object({`)
     lines.push(...fieldLines)
     lines.push(`})`)
     lines.push('')
   }
 
   // wireSecret for AUTH_SECRET
+  lines.push(`export const AuthSecretSchema = z.string()`)
+  lines.push('')
   lines.push(`wireSecret({`)
   lines.push(`  name: 'authSecret',`)
   lines.push(`  displayName: 'Auth Secret',`)
   lines.push(`  description: 'JWT signing secret for Auth.js sessions',`)
   lines.push(`  secretId: 'AUTH_SECRET',`)
-  lines.push(`  schema: z.string(),`)
+  lines.push(`  schema: AuthSecretSchema,`)
   lines.push(`})`)
   lines.push('')
 
