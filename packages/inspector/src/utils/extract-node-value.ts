@@ -52,13 +52,17 @@ export function extractStringLiteral(
 /**
  * Check if node is string-like (string literal or template expression)
  */
-export function isStringLike(node: ts.Node, _checker: ts.TypeChecker): boolean {
+export function isStringLike(node: ts.Node, checker: ts.TypeChecker): boolean {
   if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
     return true
   }
   // Check if it's a template string with substitutions
   if (ts.isTemplateExpression(node)) {
     return true
+  }
+  // Unwrap type assertions: `expr as Type` or `<Type>expr`
+  if (ts.isAsExpression(node) || ts.isTypeAssertionExpression(node)) {
+    return isStringLike(node.expression, checker)
   }
   return false
 }
