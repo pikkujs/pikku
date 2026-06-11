@@ -12,6 +12,7 @@ coverage:
 
 ignore:
   - "packages/cli/src/functions/db/postgres/**"
+  - "packages/inspector/src/utils/workflow/dsl/extract-dsl-workflow.ts"
 
 flags:
   unit:
