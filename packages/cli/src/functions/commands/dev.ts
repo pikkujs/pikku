@@ -43,7 +43,7 @@ export const dev = pikkuSessionlessFunc<
 >({
   remote: true,
   func: async (
-    { logger, config, getInspectorState },
+    { logger, config, getInspectorState, variables },
     { port, watch, hmr },
     { rpc }
   ) => {
@@ -196,14 +196,9 @@ export const dev = pikkuSessionlessFunc<
 
     const userConfig = await userCreateConfig()
 
-    // Resolution priority: DATABASE_URL env var → userConfig.sqliteDb → userConfig.postgresUrl
-    const envDatabaseUrl = process.env.DATABASE_URL
+    const envDatabaseUrl = await variables.get('DATABASE_URL')
     const effectiveDbConfig = envDatabaseUrl
-      ? {
-          sqliteDb: userConfig.sqliteDb,
-          postgresUrl: userConfig.postgresUrl,
-          ...parseDatabaseUrl(envDatabaseUrl),
-        }
+      ? parseDatabaseUrl(envDatabaseUrl)
       : userConfig
     const resolvedDb = resolveDb(
       effectiveDbConfig,
