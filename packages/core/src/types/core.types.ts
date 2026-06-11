@@ -118,6 +118,8 @@ export type FunctionRuntimeMeta = {
   readonly?: boolean
   deploy?: 'serverless' | 'server' | 'auto'
   sessionless?: boolean
+  /** When false, workflow steps calling this function are dispatched via the queue. Defaults to true (inline). */
+  inline?: boolean
   version?: number
   approvalRequired?: boolean
   approvalDescription?: string

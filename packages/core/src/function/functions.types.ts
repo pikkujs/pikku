@@ -295,6 +295,8 @@ export type CorePikkuFunctionConfig<
   readonly?: boolean
   deploy?: 'serverless' | 'server' | 'auto'
   approvalRequired?: boolean
+  /** When false, workflow steps calling this function are dispatched via the queue instead of running inline. Defaults to true (inline). */
+  inline?: boolean
   audit?:
     | boolean
     | {

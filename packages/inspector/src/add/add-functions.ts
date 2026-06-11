@@ -392,6 +392,7 @@ export const addFunctions: AddWiring = (
   let deploy: 'serverless' | 'server' | 'auto' | undefined
   let approvalRequired: boolean | undefined
   let approvalDescription: string | undefined
+  let inline: boolean | undefined
   let version: number | undefined
   let objectNode: ts.ObjectLiteralExpression | undefined
   let nodeDisplayName: string | null = null
@@ -487,6 +488,7 @@ export const addFunctions: AddWiring = (
     approvalRequired = getPropertyValue(firstArg, 'approvalRequired') as
       | boolean
       | undefined
+    inline = getPropertyValue(firstArg, 'inline') as boolean | undefined
 
     // Extract approvalDescription identifier reference
     for (const prop of firstArg.properties) {
@@ -1004,6 +1006,7 @@ export const addFunctions: AddWiring = (
     deploy: deploy || undefined,
     approvalRequired: approvalRequired || undefined,
     approvalDescription: approvalDescription || undefined,
+    inline: inline === false ? false : undefined,
     implementationHash,
     version,
     title,

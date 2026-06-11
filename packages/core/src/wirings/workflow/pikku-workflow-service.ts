@@ -879,7 +879,16 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     data: unknown,
     stepOptions?: WorkflowStepOptions
   ): Promise<boolean> {
-    if (this.isInline(runId) || !getSingletonServices()?.queueService) {
+    if (!getSingletonServices()?.queueService) {
+      return false
+    }
+    // Functions default to inline execution. Only dispatch via queue when the
+    // function explicitly sets inline: false.
+    const functionsMeta = pikkuState(null, 'function', 'meta')
+    const rpcFuncId = pikkuState(null, 'rpc', 'meta')[rpcName]
+    const rpcMeta = typeof rpcFuncId === 'string' ? functionsMeta[rpcFuncId] : undefined
+    const forceQueue = rpcMeta?.inline === false
+    if (!forceQueue && this.isInline(runId)) {
       return false
     }
     const retries = stepOptions?.retries ?? 0
