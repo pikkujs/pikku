@@ -138,7 +138,7 @@ if [ "$PACKAGE_MANAGER" = "yarn" ]; then
         fi
     done
 else
-    log_info "Patching package.json with file: overrides for @pikku/* packages..."
+    log_info "Patching package.json with file: paths for @pikku/* packages..."
     PROJECT_ROOT="$PROJECT_ROOT" node -e "
 const fs = require('fs');
 const path = require('path');
@@ -153,31 +153,29 @@ const files = execSync(
   { encoding: 'utf8' }
 ).trim().split('\n').filter(Boolean);
 
-const overrides = {};
+const localPaths = {};
 for (const f of files) {
   try {
     const p = JSON.parse(fs.readFileSync(f, 'utf8'));
     if (p.name && p.name.startsWith('@pikku/')) {
-      overrides[p.name] = 'file:' + path.dirname(f);
+      localPaths[p.name] = 'file:' + path.dirname(f);
     }
   } catch {}
 }
-
-pkg.overrides = { ...(pkg.overrides || {}), ...overrides };
 
 const depTypes = ['dependencies', 'devDependencies', 'peerDependencies'];
 for (const dt of depTypes) {
   if (pkg[dt]) {
     for (const [name, ver] of Object.entries(pkg[dt])) {
-      if (typeof ver === 'string' && ver.includes('workspace:')) {
-        pkg[dt][name] = '*';
+      if (localPaths[name]) {
+        pkg[dt][name] = localPaths[name];
       }
     }
   }
 }
 
 fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
-console.log('Added ' + Object.keys(overrides).length + ' @pikku/* file: overrides');
+console.log('Replaced ' + Object.keys(localPaths).length + ' @pikku/* entries with file: paths');
 "
 
     log_info "Installing dependencies..."
