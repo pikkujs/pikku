@@ -630,6 +630,25 @@ export const addChannel: AddWiring = (
     state.serviceAggregation.usedFunctions.add(disconnectFuncId)
   }
 
+  // Synthesize function meta for connect/disconnect handlers that are defined
+  // with pikkuChannelConnectionFunc/pikkuChannelDisconnectionFunc (not pikkuFunc/
+  // pikkuSessionlessFunc), so the runtime has correct sessionless info without
+  // needing to inject it at runtime.
+  {
+    const routeAuth = getPropertyValue(obj, 'auth')
+    const sessionless = routeAuth === false ? true : undefined
+    for (const funcId of [connectFuncId, disconnectFuncId]) {
+      if (funcId && !state.functions.meta[funcId]) {
+        state.functions.meta[funcId] = {
+          pikkuFuncId: funcId,
+          sessionless,
+          inputSchemaName: null,
+          outputSchemaName: null,
+        }
+      }
+    }
+  }
+
   if (message) {
     state.serviceAggregation.usedFunctions.add(message.pikkuFuncId)
   }
