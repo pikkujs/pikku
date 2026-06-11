@@ -38,7 +38,7 @@ const DEFAULT_TEMPLATE = 'starter-template'
 const DEFAULT_PROJECT_NAME = 'my-app'
 const DEFAULT_FABRIC_APP = 'react-vite-mantine'
 
-const packageManagers = ['npm', 'yarn', 'pnpm'] as const
+const packageManagers = ['npm', 'yarn', 'pnpm', 'bun'] as const
 
 const templates = [
   {
@@ -110,6 +110,11 @@ const templates = [
     template: 'pg-boss',
     description: 'A PostgreSQL-based queue template using pg-boss',
     supports: ['queue'],
+  },
+  {
+    template: 'bun',
+    description: 'A Bun (Bun.serve) template',
+    supports: ['http', 'channel', 'scheduled'],
   },
   {
     template: 'uws',

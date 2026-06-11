@@ -225,8 +225,24 @@ jobs:
             remote-rpc-pg,
             remote-rpc-redis,
             ai-postgres,
+            bun,
           ]
-        package-manager: [yarn]
+        package-manager: [yarn, bun]
+        exclude:
+          - package-manager: bun
+            template: uws
+          - package-manager: bun
+            template: aws-lambda
+          - package-manager: bun
+            template: aws-lambda-websocket
+          - package-manager: bun
+            template: cloudflare-workers
+          - package-manager: bun
+            template: cloudflare-websocket
+          - package-manager: bun
+            template: nextjs
+          - package-manager: bun
+            template: nextjs-full
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -234,7 +250,7 @@ jobs:
           node-version: ${{ matrix.version }}
       - name: Test template
         timeout-minutes: 2
-        run: ./scripts/test-template.sh ${{ matrix.template }} ${{ github.ref_name }}
+        run: ./scripts/test-template.sh ${{ matrix.template }} ${{ github.ref_name }} ${{ matrix.package-manager }}
         env:
           TEMPLATE_V8_COVERAGE_DIR: ${{ runner.temp }}/template-coverage/${{ matrix.template }}/raw
       - name: Generate template coverage report

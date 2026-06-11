@@ -18,6 +18,9 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
         cache: yarn
+    - uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: latest
     - name: Download build output
       if: ${{ inputs.download-build == 'true' }}
       uses: actions/download-artifact@v4
