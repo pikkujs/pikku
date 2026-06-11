@@ -1,5 +1,5 @@
 import { Pool } from 'pg'
-import type { DbIntrospector, ColumnInfo } from '../db-introspector.js'
+import type { DbIntrospector, ColumnInfo, ForeignKeyInfo, EnumInfo } from '../db-introspector.js'
 
 interface PgColumnRow {
   column_name: string
@@ -89,6 +89,68 @@ export class PostgresIntrospector implements DbIntrospector {
       pk: Boolean(r.is_pk),
       defaultValue: r.column_default,
       generated: r.is_generated === 'ALWAYS',
+    }))
+  }
+
+  async getForeignKeys(table: string): Promise<ForeignKeyInfo[]> {
+    const dotIdx = table.indexOf('.')
+    const schema = dotIdx >= 0 ? table.slice(0, dotIdx) : 'public'
+    const tableName = dotIdx >= 0 ? table.slice(dotIdx + 1) : table
+
+    const result = await this.client.query<{
+      column_name: string
+      foreign_table_schema: string
+      foreign_table_name: string
+      foreign_column_name: string
+    }>(
+      `SELECT kcu.column_name,
+              kcu2.table_schema  AS foreign_table_schema,
+              kcu2.table_name   AS foreign_table_name,
+              kcu2.column_name  AS foreign_column_name
+       FROM information_schema.referential_constraints rc
+       JOIN information_schema.key_column_usage kcu
+         ON kcu.constraint_catalog = rc.constraint_catalog
+        AND kcu.constraint_schema  = rc.constraint_schema
+        AND kcu.constraint_name    = rc.constraint_name
+       JOIN information_schema.key_column_usage kcu2
+         ON kcu2.constraint_catalog = rc.unique_constraint_catalog
+        AND kcu2.constraint_schema  = rc.unique_constraint_schema
+        AND kcu2.constraint_name    = rc.unique_constraint_name
+        AND kcu2.ordinal_position   = kcu.ordinal_position
+       WHERE kcu.table_schema = $2 AND kcu.table_name = $1
+       ORDER BY kcu.ordinal_position`,
+      [tableName, schema]
+    )
+
+    return result.rows.map((r) => ({
+      column: r.column_name,
+      foreignTable:
+        r.foreign_table_schema === 'public'
+          ? r.foreign_table_name
+          : `${r.foreign_table_schema}.${r.foreign_table_name}`,
+      foreignColumn: r.foreign_column_name,
+    }))
+  }
+
+  async listEnums(): Promise<EnumInfo[]> {
+    const result = await this.client.query<{
+      enum_name: string
+      schema_name: string
+      values: string[]
+    }>(
+      `SELECT t.typname AS enum_name,
+              t.typnamespace::regnamespace::text AS schema_name,
+              json_agg(e.enumlabel ORDER BY e.enumsortorder) AS values
+       FROM pg_type t
+       JOIN pg_enum e ON e.enumtypid = t.oid
+       WHERE t.typtype = 'e'
+       GROUP BY t.typname, t.typnamespace
+       ORDER BY schema_name, enum_name`
+    )
+    return result.rows.map((r) => ({
+      name: r.enum_name,
+      schema: r.schema_name,
+      values: r.values,
     }))
   }
 

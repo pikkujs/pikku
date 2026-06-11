@@ -4,11 +4,7 @@ import { AddonService } from './services/addon.service.js'
 import { OAuthService } from './services/oauth.service.js'
 import type { CodeEditService } from './services/code-edit.service.js'
 import { StateDiffService } from './services/state-diff.service.js'
-import {
-  DbSchemaService,
-  type OpenDbFn,
-  type PgPoolCtor,
-} from './services/db-schema.service.js'
+import { DbSchemaService } from './services/db-schema.service.js'
 
 export const createSingletonServices = pikkuAddonServices(
   async (
@@ -53,32 +49,7 @@ export const createSingletonServices = pikkuAddonServices(
       codeEditService = new CodeEditService(projectRoot)
       stateDiffService = new StateDiffService(projectRoot)
 
-      let openDb: OpenDbFn | null = null
-      let PgPool: PgPoolCtor | null = null
-
-      try {
-        // node:sqlite is built into Node 22+; cast to any to avoid missing @types
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const sqliteMod: any = await import('node:sqlite' as string)
-        openDb = (filename) => new sqliteMod.DatabaseSync(filename)
-      } catch {
-        // Node < 22 — SQLite unavailable
-      }
-
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const pgMod: any = await import('pg' as string)
-        PgPool = pgMod.Pool ?? pgMod.default?.Pool ?? null
-      } catch {
-        // pg not installed — Postgres unavailable
-      }
-
-      dbSchemaService = new DbSchemaService(
-        projectRoot,
-        openDb,
-        PgPool,
-        metaService
-      )
+      dbSchemaService = new DbSchemaService(metaService)
     }
 
     return {
