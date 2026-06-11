@@ -1,5 +1,11 @@
 # @pikku/cucumber
 
+## 0.12.2
+
+### Patch Changes
+
+- 25848ee: Bumping up
+
 ## 0.12.1
 
 ### Patch Changes

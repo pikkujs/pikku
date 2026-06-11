@@ -1,3 +1,30 @@
+## 0.12.29
+
+### Patch Changes
+
+- b6d3d8f: `pikku fabric validate` now warns when `.pikku/` is not listed in `.gitignore`. Generated codegen artifacts should never be committed as they bloat PRs and can cause stale-codegen issues.
+- ec434c4: `pikku fabric validate` now errors when required Cloudflare deploy dependencies are missing from `packages/functions/dependencies` (not devDependencies):
+  - `@pikku/schema-cfworker` — always required; injected into every worker entry
+  - `@pikku/kysely` — always required; `secretContributor` imports `KyselySecretService` unconditionally
+  - `@pikku/ai-vercel` + `@ai-sdk/openai-compatible` — required when the project declares agent units (detected via `.pikku/agent/pikku-agent-wirings-meta.gen.json`)
+
+- 0db854e: Fix workflow DSL extractor treating `x = await workflow.do(...)` as a set-step when `x` was previously declared as `null`. The referenced function is now correctly registered in `invokedFunctions` and `internalFiles`, so it appears in the generated `pikku-functions.gen.ts`.
+- 8249f6f: Fix `isStringLike` to unwrap type assertion expressions (`as T` / `<T>expr`) so that `workflow.do('step', 'rpcName' as any, data)` is correctly parsed as an RPC step rather than silently dropped as an inline step. Also removes the `as any` cast from the `Emails` step in `all.workflow.ts` now that the inspector handles it, and ensures `pikku all` generates email template artifacts.
+- f373a87: Fix PKU910 classification semantics and Postgres annotation propagation.
+
+  **Inspector (`@pikku/inspector`):**
+  - `findPiiPaths()` now returns `ClassifiedField[]` (path + classification level) so `private`/`pii` and `secret` brands are distinguished
+  - `Secret<T>` fields are blocked in the output of all exposed functions (sessioned or not)
+  - `Private<T>` / `Pii<T>` fields are only blocked in sessionless functions — authenticated (sessioned) functions may return private-classified data to their callers
+
+  **CLI (`@pikku/cli`):**
+  - Fix missing `rootDir` in the Postgres `generateSchemaTypes` call — the annotations sidecar file (`db/annotations.gen.json`) was silently ignored during Postgres migrations, causing columns annotated `@public` to remain branded as `Private<T>` in the generated schema
+
+- Updated dependencies [0db854e]
+- Updated dependencies [8249f6f]
+- Updated dependencies [f373a87]
+  - @pikku/inspector@0.12.15
+
 ## 0.12.28
 
 ### Patch Changes

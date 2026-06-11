@@ -1,3 +1,11 @@
+## 0.12.19
+
+### Patch Changes
+
+- 6180ddb: Add `headerRight` prop to `EmailsPage` so callers can inject a refresh button or other controls into the page header.
+- Updated dependencies [f4f7046]
+  - @pikku/assistant-ui@0.12.6
+
 ## 0.12.18
 
 ### Patch Changes
