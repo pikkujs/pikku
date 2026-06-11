@@ -165,7 +165,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Public RPC', 'pikkuPublicRPC', null),
       workflow.do('Console functions', 'pikkuConsoleFunctions', null),
       workflow.do('Events scaffold', 'pikkuEventsScaffold', null),
-      workflow.do('Emails', 'pikkuEmails' as any, null),
+      workflow.do('Emails', 'pikkuEmails', null),
       workflow.do(
         'Secret definition types',
         'pikkuSecretDefinitionTypes',
