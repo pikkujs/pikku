@@ -14,10 +14,11 @@ import {
   SegmentedControl,
   Stack,
   Text,
+  TextInput,
   UnstyledButton,
   ScrollArea,
 } from '@mantine/core'
-import { AlertTriangle, Mail, Monitor, Smartphone, ChevronDown, Check } from 'lucide-react'
+import { AlertTriangle, Mail, Monitor, Search, Smartphone, ChevronDown, Check } from 'lucide-react'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { useSearchParams } from '../router'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
