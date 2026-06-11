@@ -1,3 +1,11 @@
+## 0.12.15
+
+### Patch Changes
+
+- ea48df2: Include runningAt, succeededAt, and failedAt timestamps in getRunSteps results
+- Updated dependencies [2cf67be]
+  - @pikku/core@0.12.28
+
 ## 0.12.14
 
 ### Patch Changes
