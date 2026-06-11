@@ -1,3 +1,4 @@
+import type { Logger } from '../../../services/logger.js'
 import type { BinaryData } from '../channel.types.js'
 import { PikkuAbstractChannelHandler } from '../pikku-abstract-channel-handler.js'
 
@@ -11,6 +12,17 @@ export class PikkuLocalChannelHandler<
   private closeCallbacks: (() => Promise<void> | void)[] = []
   private sendCallback?: (message: Out, isBinary?: boolean) => void
   private sendBinaryCallback?: (data: BinaryData) => void
+  private logger?: Logger
+
+  constructor(
+    channelId: string,
+    channelName: string,
+    openingData: OpeningData,
+    logger?: Logger
+  ) {
+    super(channelId, channelName, openingData)
+    this.logger = logger
+  }
 
   public registerOnOpen(callback: () => Promise<void> | void): void {
     this.openCallBack = callback
@@ -52,8 +64,11 @@ export class PikkuLocalChannelHandler<
       return
     }
     super.close()
-    for (const cb of this.closeCallbacks) {
-      await cb()
+    const results = await Promise.allSettled(this.closeCallbacks.map((cb) => cb()))
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        this.logger?.error('Error in channel close callback:', result.reason)
+      }
     }
   }
 

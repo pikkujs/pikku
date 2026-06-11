@@ -119,7 +119,8 @@ export const runLocalChannel = async ({
       channelHandler = new PikkuLocalChannelHandler(
         channelId,
         channelConfig.name,
-        openingData
+        openingData,
+        singletonServices.logger
       )
       const channel = channelHandler.getChannel()
       const wire: PikkuWire = {
