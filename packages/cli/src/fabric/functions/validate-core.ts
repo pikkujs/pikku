@@ -158,6 +158,15 @@ export async function runFabricValidate(
           'Run `yarn add @pikku/schema-cfworker` in packages/functions — must be in dependencies, not devDependencies'
         )
       }
+
+      if (!fnPkg.dependencies?.['@pikku/kysely']) {
+        e(
+          'missing-pikku-kysely',
+          '@pikku/kysely is not in dependencies — every Cloudflare worker entry requires it (KyselySecretService)',
+          fnPkgPath,
+          'Run `yarn add @pikku/kysely` in packages/functions — must be in dependencies, not devDependencies'
+        )
+      }
     }
 
     const servicesPath = join(fnDir, 'src', 'services.ts')
