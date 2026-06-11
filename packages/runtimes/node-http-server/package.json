@@ -18,10 +18,17 @@
     "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.21"
+    "@pikku/core": "^0.12.21",
+    "@pikku/modelcontextprotocol": "^0.12.4"
+  },
+  "peerDependenciesMeta": {
+    "@pikku/modelcontextprotocol": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@pikku/core": "^0.12.21",
+    "@pikku/modelcontextprotocol": "^0.12.4",
     "typescript": "^5.9.3"
   },
   "engines": {

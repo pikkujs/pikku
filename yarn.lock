@@ -5661,7 +5661,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/modelcontextprotocol@npm:^0.12.1, @pikku/modelcontextprotocol@workspace:*, @pikku/modelcontextprotocol@workspace:packages/runtimes/modelcontextprotocol":
+"@pikku/modelcontextprotocol@npm:^0.12.1, @pikku/modelcontextprotocol@npm:^0.12.4, @pikku/modelcontextprotocol@workspace:*, @pikku/modelcontextprotocol@workspace:packages/runtimes/modelcontextprotocol":
   version: 0.0.0-use.local
   resolution: "@pikku/modelcontextprotocol@workspace:packages/runtimes/modelcontextprotocol"
   dependencies:
@@ -5726,9 +5726,14 @@ __metadata:
   resolution: "@pikku/node-http-server@workspace:packages/runtimes/node-http-server"
   dependencies:
     "@pikku/core": "npm:^0.12.21"
+    "@pikku/modelcontextprotocol": "npm:^0.12.4"
     typescript: "npm:^5.9.3"
   peerDependencies:
     "@pikku/core": ^0.12.21
+    "@pikku/modelcontextprotocol": ^0.12.4
+  peerDependenciesMeta:
+    "@pikku/modelcontextprotocol":
+      optional: true
   languageName: unknown
   linkType: soft
 
