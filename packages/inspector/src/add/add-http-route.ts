@@ -175,7 +175,7 @@ export function registerHTTPRoute({
     summary,
     description,
     errors,
-  } = getCommonWireMetaData(obj, 'HTTP route', fullRoute, logger)
+  } = getCommonWireMetaData(obj, 'HTTP route', fullRoute, logger, checker)
 
   if (disabled) return
 

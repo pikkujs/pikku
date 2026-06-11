@@ -1,5 +1,6 @@
 import * as ts from 'typescript'
 import { ErrorCode } from '../error-codes.js'
+import { extractStringLiteral } from './extract-node-value.js'
 
 /**
  * Extracts an array of strings from an object property.
@@ -137,7 +138,8 @@ export const getCommonWireMetaData = (
   obj: ts.ObjectLiteralExpression,
   wiringType: string,
   wiringName: string | null,
-  logger?: { critical: (code: ErrorCode, message: string) => void }
+  logger?: { critical: (code: ErrorCode, message: string) => void },
+  checker?: ts.TypeChecker
 ): {
   disabled?: true
   title?: string
@@ -166,18 +168,36 @@ export const getCommonWireMetaData = (
         prop.initializer.kind === ts.SyntaxKind.TrueKeyword
       ) {
         metadata.disabled = true
-      } else if (propName === 'title' && ts.isStringLiteral(prop.initializer)) {
-        metadata.title = prop.initializer.text
-      } else if (
-        propName === 'summary' &&
-        ts.isStringLiteral(prop.initializer)
-      ) {
-        metadata.summary = prop.initializer.text
-      } else if (
-        propName === 'description' &&
-        ts.isStringLiteral(prop.initializer)
-      ) {
-        metadata.description = prop.initializer.text
+      } else if (propName === 'title') {
+        try {
+          metadata.title = checker
+            ? extractStringLiteral(prop.initializer, checker)
+            : ts.isStringLiteral(prop.initializer)
+              ? prop.initializer.text
+              : undefined
+        } catch {
+          // non-static title — skip
+        }
+      } else if (propName === 'summary') {
+        try {
+          metadata.summary = checker
+            ? extractStringLiteral(prop.initializer, checker)
+            : ts.isStringLiteral(prop.initializer)
+              ? prop.initializer.text
+              : undefined
+        } catch {
+          // non-static summary — skip
+        }
+      } else if (propName === 'description') {
+        try {
+          metadata.description = checker
+            ? extractStringLiteral(prop.initializer, checker)
+            : ts.isStringLiteral(prop.initializer)
+              ? prop.initializer.text
+              : undefined
+        } catch {
+          // non-static description — skip
+        }
       } else if (propName === 'tags') {
         if (ts.isArrayLiteralExpression(prop.initializer)) {
           metadata.tags = prop.initializer.elements

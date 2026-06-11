@@ -238,7 +238,8 @@ export function addMessagesRoutes(
                             init,
                             'Channel message',
                             routeKey,
-                            logger
+                            logger,
+                            checker
                           ).tags
                         : undefined
                       const routeMiddleware = ts.isObjectLiteralExpression(init)
@@ -270,7 +271,8 @@ export function addMessagesRoutes(
                           init,
                           'Channel message',
                           routeKey,
-                          logger
+                          logger,
+                          checker
                         ).tags
                       : undefined
                     const routeMiddleware = ts.isObjectLiteralExpression(init)
@@ -319,7 +321,8 @@ export function addMessagesRoutes(
                                 init,
                                 'Channel message',
                                 routeKey,
-                                logger
+                                logger,
+                                checker
                               ).tags
                             : undefined
                           const routeMiddleware = ts.isObjectLiteralExpression(
@@ -350,7 +353,8 @@ export function addMessagesRoutes(
                                 init,
                                 'Channel message',
                                 routeKey,
-                                logger
+                                logger,
+                                checker
                               ).tags
                             : undefined
                           const routeMiddleware = ts.isObjectLiteralExpression(
@@ -438,7 +442,8 @@ export function addMessagesRoutes(
                       init,
                       'Channel message',
                       routeKey,
-                      logger
+                      logger,
+                      checker
                     ).tags
                   : undefined
                 const routeMiddleware = ts.isObjectLiteralExpression(init)
@@ -481,7 +486,13 @@ export function addMessagesRoutes(
       // Resolve middleware and permissions for this route
       // Check if the route config is an object literal with middleware/permissions
       const routeTags = ts.isObjectLiteralExpression(init)
-        ? getCommonWireMetaData(init, 'Channel message', routeKey, logger).tags
+        ? getCommonWireMetaData(
+            init,
+            'Channel message',
+            routeKey,
+            logger,
+            checker
+          ).tags
         : undefined
       const routeMiddleware = ts.isObjectLiteralExpression(init)
         ? resolveMiddleware(state, init, routeTags, checker)
@@ -540,7 +551,7 @@ export const addChannel: AddWiring = (
     : []
 
   const { disabled, tags, summary, description, errors } =
-    getCommonWireMetaData(obj, 'Channel', name, logger)
+    getCommonWireMetaData(obj, 'Channel', name, logger, checker)
 
   if (disabled) return
 

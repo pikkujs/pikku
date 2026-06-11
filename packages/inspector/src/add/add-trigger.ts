@@ -55,7 +55,7 @@ const addWireTrigger: (
 
   const nameValue = getPropertyValue(obj, 'name') as string | null
   const { disabled, tags, summary, description, errors } =
-    getCommonWireMetaData(obj, 'Trigger', nameValue, logger)
+    getCommonWireMetaData(obj, 'Trigger', nameValue, logger, checker)
 
   if (disabled) return
 

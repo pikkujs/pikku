@@ -462,7 +462,13 @@ export const addFunctions: AddWiring = (
   // Extract config properties if using object form
   if (ts.isObjectLiteralExpression(firstArg)) {
     objectNode = firstArg
-    const metadata = getCommonWireMetaData(firstArg, 'Function', name, logger)
+    const metadata = getCommonWireMetaData(
+      firstArg,
+      'Function',
+      name,
+      logger,
+      checker
+    )
     if (metadata.disabled) return
     title = metadata.title
     tags = metadata.tags

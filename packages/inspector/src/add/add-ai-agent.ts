@@ -252,7 +252,7 @@ export const addAIAgent: AddWiring = (
 
     const nameValue = getPropertyValue(obj, 'name') as string | null
     const { disabled, tags, summary, description, errors } =
-      getCommonWireMetaData(obj, 'AI agent', nameValue, logger)
+      getCommonWireMetaData(obj, 'AI agent', nameValue, logger, checker)
 
     if (disabled) return
 

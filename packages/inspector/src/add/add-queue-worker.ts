@@ -37,7 +37,7 @@ export const addQueueWorker: AddWiring = (logger, node, checker, state) => {
 
     const name = getPropertyValue(obj, 'name') as string | null
     const { disabled, tags, summary, description, errors } =
-      getCommonWireMetaData(obj, 'Queue worker', name, logger)
+      getCommonWireMetaData(obj, 'Queue worker', name, logger, checker)
 
     if (disabled) return
 
