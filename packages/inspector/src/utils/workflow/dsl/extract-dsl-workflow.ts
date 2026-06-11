@@ -436,21 +436,34 @@ function extractExpressionStatement(
       outputVar = expr.left.text
 
       // Check if this is an assignment to a context variable (set step)
+      // But if the RHS is a workflow.do() call, fall through to RPC extraction —
+      // reassigning a pre-declared variable with a workflow step is valid and common.
       if (context.contextVars.has(outputVar)) {
-        const literalValue = extractLiteralValue(expr.right)
-        if (literalValue !== undefined) {
+        const rhs = expr.right
+        const rhsCall =
+          ts.isAwaitExpression(rhs) && ts.isCallExpression(rhs.expression)
+            ? rhs.expression
+            : null
+        const isWorkflowCall = rhsCall
+          ? isWorkflowDoCall(rhsCall, context.checker)
+          : false
+
+        if (!isWorkflowCall) {
+          const literalValue = extractLiteralValue(expr.right)
+          if (literalValue !== undefined) {
+            return {
+              type: 'set',
+              variable: outputVar,
+              value: literalValue,
+            } as SetStepMeta
+          }
+          // Non-literal assignment to context var - use expression as string
           return {
             type: 'set',
             variable: outputVar,
-            value: literalValue,
+            value: getSourceText(expr.right),
           } as SetStepMeta
         }
-        // Non-literal assignment to context var - use expression as string
-        return {
-          type: 'set',
-          variable: outputVar,
-          value: getSourceText(expr.right),
-        } as SetStepMeta
       }
     }
     // Use right side as the expression to extract from
