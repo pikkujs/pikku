@@ -5,8 +5,8 @@ import {
   type ServerResponse,
 } from 'node:http'
 import { createReadStream } from 'node:fs'
-import { mkdir, stat, writeFile } from 'node:fs/promises'
-import { normalize, resolve } from 'node:path'
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { join, normalize, resolve } from 'node:path'
 
 import type { CoreConfig } from '@pikku/core'
 import { stopSingletonServices } from '@pikku/core'
@@ -20,6 +20,7 @@ import {
   type RunHTTPWiringOptions,
 } from '@pikku/core/http'
 import { compileAllSchemas } from '@pikku/core/schema'
+import { getMCPToolsMeta } from '@pikku/core/mcp'
 
 import { incomingMessageToRequest } from './request-converter.js'
 import { writeResponse } from './response-writer.js'
@@ -90,6 +91,7 @@ export class PikkuNodeHTTPServer {
   public server: Server
   private listening = false
   private shutdownGracePeriodMs: number
+  private mcpHandler?: (req: IncomingMessage, res: ServerResponse) => Promise<void>
 
   constructor(
     private readonly config: NodeHTTPServerConfig,
@@ -115,6 +117,27 @@ export class PikkuNodeHTTPServer {
       await this.options.configureServer(this.server)
     }
     logRegisterRoutes(this.logger)
+    await this.initMCP()
+  }
+
+  private async initMCP(): Promise<void> {
+    const toolsMeta = getMCPToolsMeta()
+    if (Object.keys(toolsMeta).length === 0) return
+    try {
+      const { PikkuMCPServer } = await import('@pikku/modelcontextprotocol')
+      const mcpJsonPath = join(process.cwd(), '.pikku', 'mcp', 'mcp.gen.json')
+      const mcpJson = JSON.parse(await readFile(mcpJsonPath, 'utf8'))
+      const mcpServer = new PikkuMCPServer(
+        { name: 'pikku', version: '1.0.0', mcpJSON: mcpJson, capabilities: { tools: {} } },
+        this.logger
+      )
+      await mcpServer.init()
+      const { handler } = mcpServer.createHTTPRequestHandler({ path: '/mcp' })
+      this.mcpHandler = handler
+      this.logger.info('pikku-node-http-server: MCP tools mounted at /mcp')
+    } catch {
+      // @pikku/modelcontextprotocol not installed or mcp.gen.json not yet generated — skip
+    }
   }
 
   private handleRequest = async (
@@ -130,6 +153,11 @@ export class PikkuNodeHTTPServer {
       }
 
       if (await this.handleContentRequest(req, res)) {
+        return
+      }
+
+      if (this.mcpHandler && req.url?.startsWith('/mcp')) {
+        await this.mcpHandler(req, res)
         return
       }
 

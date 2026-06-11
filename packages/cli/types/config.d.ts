@@ -87,6 +87,7 @@ export interface PikkuCLICoreOutputFiles {
   mcpWiringsMetaFile: string
   mcpWiringsMetaJsonFile: string
   mcpTypesFile: string
+  mcpJsonFile: string
 
   // AI Agent
   agentWiringsFile: string
