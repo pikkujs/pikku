@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cucumber",
-  "version": "0.12.2",
+  "version": "0.12.3",
   "description": "Cucumber test harness for Pikku function tests",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",

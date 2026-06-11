@@ -1,5 +1,11 @@
 # @pikku/cucumber
 
+## 0.12.3
+
+### Patch Changes
+
+- a8f115e: Export Actor and ActorDispatchContext for HTTP-based e2e test actors
+
 ## 0.12.2
 
 ### Patch Changes
