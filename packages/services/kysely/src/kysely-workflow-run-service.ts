@@ -113,13 +113,13 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
           .as('attemptCount')
       )
       .select(
-        sql<string | null>`(SELECT MAX(h.runningAt) FROM workflowStepHistory h WHERE h.workflowStepId = s.workflowStepId)`.as('runningAt')
+        sql<string | null>`(SELECT MAX(h.running_at) FROM workflow_step_history h WHERE h.workflow_step_id = s.workflow_step_id)`.as('runningAt')
       )
       .select(
-        sql<string | null>`(SELECT MAX(h.succeededAt) FROM workflowStepHistory h WHERE h.workflowStepId = s.workflowStepId)`.as('succeededAt')
+        sql<string | null>`(SELECT MAX(h.succeeded_at) FROM workflow_step_history h WHERE h.workflow_step_id = s.workflow_step_id)`.as('succeededAt')
       )
       .select(
-        sql<string | null>`(SELECT MAX(h.failedAt) FROM workflowStepHistory h WHERE h.workflowStepId = s.workflowStepId)`.as('failedAt')
+        sql<string | null>`(SELECT MAX(h.failed_at) FROM workflow_step_history h WHERE h.workflow_step_id = s.workflow_step_id)`.as('failedAt')
       )
       .where('s.workflowRunId', '=', runId)
       .orderBy('s.createdAt', 'asc')
