@@ -1,5 +1,5 @@
 ---
-"@pikku/pikku-console": patch
+"@pikku/addon-console": patch
 "@pikku/cli": patch
 ---
 
