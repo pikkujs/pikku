@@ -138,7 +138,7 @@ if [ "$PACKAGE_MANAGER" = "yarn" ]; then
     done
 else
     log_info "Patching package.json with file: overrides for @pikku/* packages..."
-    node -e "
+    PROJECT_ROOT="$PROJECT_ROOT" node -e "
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
@@ -165,7 +165,7 @@ for (const f of files) {
 pkg.overrides = { ...(pkg.overrides || {}), ...overrides };
 fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
 console.log('Added ' + Object.keys(overrides).length + ' @pikku/* file: overrides');
-" PROJECT_ROOT="$PROJECT_ROOT"
+"
 
     log_info "Installing dependencies..."
     if ! "$PACKAGE_MANAGER" install; then
