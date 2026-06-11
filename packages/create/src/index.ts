@@ -178,6 +178,7 @@ interface CliOptions {
   template: string
   version: string
   install: boolean
+  skipInstall?: boolean
   packageManager: PackageManager
   yarnLink?: string
   stackblitz?: boolean
@@ -191,6 +192,7 @@ program
   .option('-v, --version <version>', 'Version')
   .option('-n, --name <name>', 'Project name')
   .option('-i, --install', 'Install dependencies')
+  .option('--skip-install', 'Skip installing dependencies (useful when the caller will run install manually)')
   .option('-p, --package-manager <packageManager>', 'Package manager')
   .option('--yarn-link <link>', 'Yarn link (for local pikku development)')
   .option('--stackblitz', 'Add StackBlitz configuration')
@@ -467,7 +469,7 @@ async function run() {
             })
           : 'npm')
 
-  const install = cliOptions.install === false ? false : (cliOptions.install || !cliOptions.variations)
+  const install = !cliOptions.skipInstall && (cliOptions.install || !cliOptions.variations)
 
   const selectedOptions: CliOptions = {
     name,

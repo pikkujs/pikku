@@ -91,7 +91,7 @@ else
         --version "$VERSION"
         --name ../../../test-app
         --package-manager "$PACKAGE_MANAGER"
-        --no-install
+        --skip-install
     )
 fi
 
