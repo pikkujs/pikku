@@ -26,11 +26,15 @@ export const runFunctionTests = pikkuSessionlessFunc<
   expose: true,
   auth: false,
   func: async ({ metaService }) => {
-    if (!metaService?.basePath) return null
+    if (!metaService?.basePath) {
+      throw new Error('Meta service is not configured. Ensure the console addon is set up with a MetaService.')
+    }
 
     const functionsDir = join(metaService.basePath, '..')
     const ftestDir = join(functionsDir, 'tests')
-    if (!existsSync(ftestDir)) return null
+    if (!existsSync(ftestDir)) {
+      throw new Error('No tests found. Add a tests directory to your project first — see the test-harness template for an example.')
+    }
 
     const pikku = findBin('pikku', functionsDir)
 
