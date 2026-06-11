@@ -149,6 +149,15 @@ export async function runFabricValidate(
           'Remove @pikku/kysely-postgres and use @pikku/kysely-sqlite with LibsqlWebDialect instead'
         )
       }
+
+      if (!fnPkg.dependencies?.['@pikku/schema-cfworker']) {
+        e(
+          'missing-schema-cfworker',
+          '@pikku/schema-cfworker is not in dependencies — every Cloudflare worker entry requires it',
+          fnPkgPath,
+          'Run `yarn add @pikku/schema-cfworker` in packages/functions — must be in dependencies, not devDependencies'
+        )
+      }
     }
 
     const servicesPath = join(fnDir, 'src', 'services.ts')
