@@ -9,8 +9,22 @@ export interface ColumnInfo {
   generated?: boolean
 }
 
+export interface ForeignKeyInfo {
+  column: string
+  foreignTable: string
+  foreignColumn: string
+}
+
+export interface EnumInfo {
+  name: string
+  schema: string
+  values: string[]
+}
+
 export interface DbIntrospector {
   listTables(): Promise<string[]>
   getColumns(table: string): Promise<ColumnInfo[]>
+  getForeignKeys(table: string): Promise<ForeignKeyInfo[]>
+  listEnums(): Promise<EnumInfo[]>
   close(): Promise<void>
 }

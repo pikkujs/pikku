@@ -32,6 +32,7 @@ interface ResolvedDbBase {
   coercionFile: string
   manifestFile: string
   classificationMapFile: string
+  schemaJsonFile: string
   classificationsFile: string
   classificationsGenJsonFile: string
   zodFile: string
@@ -85,6 +86,7 @@ export function resolveDb(
     coercionFile: join(outDir, 'db', 'coercion.gen.ts'),
     manifestFile: join(outDir, 'db', 'classification.gen.ts'),
     classificationMapFile: join(outDir, 'db', 'classification-map.gen.d.ts'),
+    schemaJsonFile: join(outDir, 'db', 'pikku-db-schema.gen.json'),
     classificationsFile: join(rootDir, 'db', 'annotations.ts'),
     classificationsGenJsonFile: join(outDir, 'db', 'annotations.gen.json'),
     zodFile: join(outDir, 'db', 'zod.gen.ts'),
@@ -166,6 +168,7 @@ export async function migrateAndCodegen(
         coercionFile: resolved.coercionFile,
         manifestFile: resolved.manifestFile,
         classificationMapFile: resolved.classificationMapFile,
+        schemaJsonFile: resolved.schemaJsonFile,
         camelCase: resolved.camelCase,
         rootDir: resolved.rootDir,
         migrationsDir: resolved.migrationsDir,
@@ -189,6 +192,7 @@ export async function migrateAndCodegen(
           coercionFile: resolved.coercionFile,
           manifestFile: resolved.manifestFile,
           classificationMapFile: resolved.classificationMapFile,
+          schemaJsonFile: resolved.schemaJsonFile,
           camelCase: resolved.camelCase,
           rootDir: resolved.rootDir,
           migrationsDir: resolved.migrationsDir,

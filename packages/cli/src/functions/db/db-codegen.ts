@@ -289,6 +289,7 @@ export interface CodegenOptions {
   coercionFile: string
   manifestFile?: string
   classificationMapFile?: string
+  schemaJsonFile?: string
   camelCase?: boolean
   rootDir?: string
   migrationsDir?: string
@@ -414,11 +415,36 @@ export async function generateSchemaTypes(
     ? emitClassificationMap(tables)
     : null
 
+  // ── pikku-db-schema.gen.json ─────────────────────────────────────────────────
+  let schemaJsonBody: string | null = null
+  if (options.schemaJsonFile) {
+    const [fkResults, enums] = await Promise.all([
+      Promise.all(tableNames.map((name) => introspector.getForeignKeys(name))),
+      introspector.listEnums(),
+    ])
+    const fkMap = new Map(tableNames.map((name, i) => [name, fkResults[i]!]))
+    const jsonTables = tables.map((t) => ({
+      name: t.name,
+      columns: t.columns.map((c) => {
+        const fk = fkMap.get(t.name)?.find((f) => f.column === c.name)
+        return {
+          name: c.name,
+          type: c.type,
+          nullable: !c.notNull,
+          isPrimaryKey: c.pk,
+          ...(fk ? { foreignKey: { table: fk.foreignTable, column: fk.foreignColumn } } : {}),
+        }
+      }),
+    }))
+    schemaJsonBody = JSON.stringify({ tables: jsonTables, enums }, null, 2) + '\n'
+  }
+
   // ── write files ───────────────────────────────────────────────────────────────
   let existingSchema: string | null = null
   let existingCoercion: string | null = null
   let existingManifest: string | null = null
   let existingClassificationMap: string | null = null
+  let existingSchemaJson: string | null = null
   try {
     existingSchema = readFileSync(options.outFile, 'utf8')
   } catch {
@@ -446,6 +472,13 @@ export async function generateSchemaTypes(
       /* ok */
     }
   }
+  if (options.schemaJsonFile) {
+    try {
+      existingSchemaJson = readFileSync(options.schemaJsonFile, 'utf8')
+    } catch {
+      /* ok */
+    }
+  }
 
   const schemaChanged = existingSchema !== schemaBody
   const coercionChanged = existingCoercion !== coercionBody
@@ -454,6 +487,8 @@ export async function generateSchemaTypes(
   const classificationMapChanged =
     classificationMapBody !== null &&
     existingClassificationMap !== classificationMapBody
+  const schemaJsonChanged =
+    schemaJsonBody !== null && existingSchemaJson !== schemaJsonBody
 
   if (schemaChanged) {
     mkdirSync(dirname(options.outFile), { recursive: true })
@@ -474,6 +509,10 @@ export async function generateSchemaTypes(
   ) {
     mkdirSync(dirname(options.classificationMapFile), { recursive: true })
     writeFileSync(options.classificationMapFile, classificationMapBody, 'utf8')
+  }
+  if (schemaJsonChanged && options.schemaJsonFile && schemaJsonBody) {
+    mkdirSync(dirname(options.schemaJsonFile), { recursive: true })
+    writeFileSync(options.schemaJsonFile, schemaJsonBody, 'utf8')
   }
 
   return {

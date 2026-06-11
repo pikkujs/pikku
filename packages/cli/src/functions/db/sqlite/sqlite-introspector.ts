@@ -1,4 +1,4 @@
-import type { DbIntrospector, ColumnInfo } from '../db-introspector.js'
+import type { DbIntrospector, ColumnInfo, ForeignKeyInfo, EnumInfo } from '../db-introspector.js'
 import type { SyncSqliteDatabase } from './sqlite-runtime.js'
 
 const SKIP_TABLES = new Set(['sqlite_sequence', 'sql_migrations'])
@@ -43,6 +43,22 @@ export class SqliteIntrospector implements DbIntrospector {
         defaultValue: c.dflt_value != null ? String(c.dflt_value) : null,
         generated: c.hidden === 2 || c.hidden === 3,
       }))
+  }
+
+  async getForeignKeys(table: string): Promise<ForeignKeyInfo[]> {
+    const escaped = `"${table.replace(/"/g, '""')}"`
+    const rows = this.db
+      .prepare(`PRAGMA foreign_key_list(${escaped})`)
+      .all() as Array<{ from: string; table: string; to: string }>
+    return rows.map((r) => ({
+      column: r.from,
+      foreignTable: r.table,
+      foreignColumn: r.to,
+    }))
+  }
+
+  async listEnums(): Promise<EnumInfo[]> {
+    return []
   }
 
   async close(): Promise<void> {
