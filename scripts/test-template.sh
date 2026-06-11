@@ -178,6 +178,21 @@ fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
 console.log('Replaced ' + Object.keys(localPaths).length + ' @pikku/* entries with file: paths');
 "
 
+    log_info "Ensuring TypeScript declarations exist for @pikku/* file: deps..."
+    for pkg_path in $(node -e "
+const fs = require('fs');
+const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+const all = {...(pkg.dependencies||{}), ...(pkg.devDependencies||{})};
+Object.entries(all)
+  .filter(([n,v]) => n.startsWith('@pikku/') && typeof v === 'string' && v.startsWith('file:'))
+  .forEach(([n,v]) => console.log(v.replace('file:', '')));
+" 2>/dev/null); do
+        if [ -d "$pkg_path" ] && [ ! -f "$pkg_path/dist/index.d.ts" ]; then
+            log_info "Rebuilding $pkg_path (dist/index.d.ts missing)..."
+            (cd "$pkg_path" && yarn build 2>/dev/null) || log_warning "Build failed for $pkg_path"
+        fi
+    done
+
     log_info "Installing dependencies..."
     if ! "$PACKAGE_MANAGER" install; then
         log_error "Failed to install dependencies"
@@ -191,7 +206,7 @@ console.log('Replaced ' + Object.keys(localPaths).length + ' @pikku/* entries wi
             if [ -f "$pkg_dir/dist/index.d.ts" ]; then
                 log_success "@pikku/$pkg: dist/index.d.ts exists"
             else
-                log_warning "@pikku/$pkg: dist/index.d.ts MISSING (ls: $(ls $pkg_dir/ 2>/dev/null))"
+                log_warning "@pikku/$pkg: dist/index.d.ts MISSING (root: $(ls $pkg_dir/ 2>/dev/null | tr '\n' ' '); dist/: $(ls $pkg_dir/dist/ 2>/dev/null | tr '\n' ' '))"
             fi
         fi
     done
