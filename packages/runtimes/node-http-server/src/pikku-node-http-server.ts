@@ -135,8 +135,8 @@ export class PikkuNodeHTTPServer {
       const { handler } = mcpServer.createHTTPRequestHandler({ path: '/mcp' })
       this.mcpHandler = handler
       this.logger.info('pikku-node-http-server: MCP tools mounted at /mcp')
-    } catch {
-      // @pikku/modelcontextprotocol not installed or mcp.gen.json not yet generated — skip
+    } catch (err) {
+      this.logger.warn(`pikku-node-http-server: MCP tools registered but /mcp could not be mounted — ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
