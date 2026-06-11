@@ -71,6 +71,28 @@ await workflow.sleep('Wait 5 minutes', '5min')
 await workflow.suspend('Awaiting approval')
 ```
 
+### Choosing the right wrapper
+
+| Wrapper | When to use |
+|---|---|
+| `pikkuWorkflowFunc` | **Default.** Use for all new workflows. DSL mode — serialisable, replay-safe. |
+| `pikkuWorkflowComplexFunc` | **Only with explicit user approval.** For workflows with patterns the DSL extractor cannot handle (e.g. dynamic inline functions). Not a general escape hatch — restructure first. |
+| `pikkuWorkflowGraph` | **Only with explicit user approval.** For genuine DAGs where there is a cyclic dependency between nodes or a Node.js-only import DSL cannot express. |
+
+**Conditional results** — the correct DSL pattern when a step only runs under some condition:
+
+```typescript
+// ✅ Declare at top level, assign inside block
+let result: { id: string } | null = null
+if (input.createFoo) {
+  result = await workflow.do('Create foo', 'createFoo', { ... })
+}
+// Use result?.id downstream
+
+// ❌ Do NOT declare const inside a block — DSL forbids block-scoped declarations
+// ❌ Do NOT switch to pikkuWorkflowComplexFunc to avoid the restriction
+```
+
 ### `pikkuWorkflowGraph(config)` — DAG Workflows
 
 ```typescript
