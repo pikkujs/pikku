@@ -1,4 +1,4 @@
-import { test, beforeEach, afterEach } from 'node:test'
+import { test, describe, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   mkdtempSync,
@@ -12,6 +12,7 @@ import { join } from 'node:path'
 
 import {
   resolveDb,
+  parseDatabaseUrl,
   migrateAndCodegen,
   seed as runSeed,
   reset as runReset,
@@ -93,7 +94,11 @@ test('migrateAndCodegen is a no-op on second run', async () => {
   const second = await migrateAndCodegen(resolved)
   assert.deepEqual(second.migrate.applied, [])
   assert.deepEqual(second.migrate.skipped, ['0001-init.sql'])
-  assert.equal(second.codegen.written, false, 'codegen output should be unchanged')
+  assert.equal(
+    second.codegen.written,
+    false,
+    'codegen output should be unchanged'
+  )
   assert.equal(second.zod.written, false, 'zod output should be unchanged')
 })
 
@@ -130,7 +135,9 @@ test('seed applies db/seed.sql once migrate has run', async () => {
   const runtime = await loadSqliteRuntime()
   const db = runtime.open(resolved.dbFile)
   try {
-    const count = db.prepare('SELECT COUNT(*) AS c FROM todos').get() as { c: number }
+    const count = db.prepare('SELECT COUNT(*) AS c FROM todos').get() as {
+      c: number
+    }
     assert.equal(count.c, 2)
   } finally {
     db.close()
@@ -151,7 +158,9 @@ test('reset wipes the dev DB so a follow-up migrate replays from scratch', async
   const runtime = await loadSqliteRuntime()
   const db = runtime.open(resolved.dbFile)
   try {
-    const count = db.prepare('SELECT COUNT(*) AS c FROM todos').get() as { c: number }
+    const count = db.prepare('SELECT COUNT(*) AS c FROM todos').get() as {
+      c: number
+    }
     assert.equal(count.c, 0, 'reset should leave todos empty until seed runs')
   } finally {
     db.close()
@@ -160,8 +169,48 @@ test('reset wipes the dev DB so a follow-up migrate replays from scratch', async
 
 test('reset refuses when resolved DB lives outside the runtime directory', () => {
   const outside = mkdtempSync(join(tmpdir(), 'pikku-db-outside-'))
-  const resolved = resolveDb({ sqliteDb: join(outside, 'evil.db') }, root, root)!
+  const resolved = resolveDb(
+    { sqliteDb: join(outside, 'evil.db') },
+    root,
+    root
+  )!
   assert.equal(resolved.dialect, 'sqlite')
   assert.throws(() => runReset(resolved, root), /outside the runtime directory/)
   rmSync(outside, { recursive: true, force: true })
+})
+
+describe('parseDatabaseUrl', () => {
+  test('postgres URL sets postgresUrl', () => {
+    const url = 'postgres://user:pass@localhost:5432/mydb'
+    assert.deepEqual(parseDatabaseUrl(url), { postgresUrl: url })
+  })
+
+  test('postgresql:// variant also sets postgresUrl', () => {
+    const url = 'postgresql://user:pass@localhost:5432/mydb'
+    assert.deepEqual(parseDatabaseUrl(url), { postgresUrl: url })
+  })
+
+  test('libsql URL returns empty object (remote, CLI does not handle it)', () => {
+    assert.deepEqual(parseDatabaseUrl('libsql://db.turso.io?authToken=abc'), {})
+  })
+
+  test('https URL returns empty object (remote, CLI does not handle it)', () => {
+    assert.deepEqual(parseDatabaseUrl('https://db.turso.io'), {})
+  })
+
+  test('http URL returns empty object', () => {
+    assert.deepEqual(parseDatabaseUrl('http://localhost:8080'), {})
+  })
+
+  test('bare file path sets sqliteDb', () => {
+    assert.deepEqual(parseDatabaseUrl('.pikku-runtime/dev.db'), {
+      sqliteDb: '.pikku-runtime/dev.db',
+    })
+  })
+
+  test('absolute file path sets sqliteDb', () => {
+    assert.deepEqual(parseDatabaseUrl('/var/data/dev.db'), {
+      sqliteDb: '/var/data/dev.db',
+    })
+  })
 })
