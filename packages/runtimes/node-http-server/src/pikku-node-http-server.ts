@@ -5,8 +5,8 @@ import {
   type ServerResponse,
 } from 'node:http'
 import { createReadStream } from 'node:fs'
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
-import { join, normalize, resolve } from 'node:path'
+import { mkdir, stat, writeFile } from 'node:fs/promises'
+import { normalize, resolve } from 'node:path'
 
 import type { CoreConfig } from '@pikku/core'
 import { stopSingletonServices } from '@pikku/core'
@@ -20,7 +20,6 @@ import {
   type RunHTTPWiringOptions,
 } from '@pikku/core/http'
 import { compileAllSchemas } from '@pikku/core/schema'
-import { getMCPToolsMeta } from '@pikku/core/mcp'
 
 import { incomingMessageToRequest } from './request-converter.js'
 import { writeResponse } from './response-writer.js'
@@ -67,6 +66,12 @@ export type PikkuNodeHTTPServerOptions = {
    * starts (e.g. WebSocket upgrades). Called once during `init()`.
    */
   configureServer?: (server: Server) => void | Promise<void>
+  /**
+   * Parsed content of `.pikku/mcp/mcp.gen.json`. When provided and non-empty,
+   * `@pikku/modelcontextprotocol` is dynamically imported and `/mcp` is mounted.
+   * Import the JSON statically so bundlers (esbuild) inline it: no runtime file read needed.
+   */
+  mcpJson?: { tools?: unknown[]; resources?: unknown[]; prompts?: unknown[] }
 } & RunHTTPWiringOptions
 
 const HARDENING_DEFAULTS = {
@@ -91,7 +96,10 @@ export class PikkuNodeHTTPServer {
   public server: Server
   private listening = false
   private shutdownGracePeriodMs: number
-  private mcpHandler?: (req: IncomingMessage, res: ServerResponse) => Promise<void>
+  private mcpHandler?: (
+    req: IncomingMessage,
+    res: ServerResponse
+  ) => Promise<void>
 
   constructor(
     private readonly config: NodeHTTPServerConfig,
@@ -121,22 +129,33 @@ export class PikkuNodeHTTPServer {
   }
 
   private async initMCP(): Promise<void> {
-    const toolsMeta = getMCPToolsMeta()
-    if (Object.keys(toolsMeta).length === 0) return
+    const mcpJson = this.options.mcpJson
+    if (!mcpJson) return
+    const { tools = [], resources = [], prompts = [] } = mcpJson
+    if (tools.length + resources.length + prompts.length === 0) return
     try {
       const { PikkuMCPServer } = await import('@pikku/modelcontextprotocol')
-      const mcpJsonPath = join(process.cwd(), '.pikku', 'mcp', 'mcp.gen.json')
-      const mcpJson = JSON.parse(await readFile(mcpJsonPath, 'utf8'))
       const mcpServer = new PikkuMCPServer(
-        { name: 'pikku', version: '1.0.0', mcpJSON: mcpJson, capabilities: { tools: {} } },
+        {
+          name: 'pikku',
+          version: '1.0.0',
+          mcpJSON: mcpJson,
+          capabilities: {
+            ...(tools.length > 0 && { tools: {} }),
+            ...(resources.length > 0 && { resources: {} }),
+            ...(prompts.length > 0 && { prompts: {} }),
+          },
+        },
         this.logger
       )
       await mcpServer.init()
       const { handler } = mcpServer.createHTTPRequestHandler({ path: '/mcp' })
       this.mcpHandler = handler
-      this.logger.info('pikku-node-http-server: MCP tools mounted at /mcp')
+      this.logger.info('pikku-node-http-server: MCP mounted at /mcp')
     } catch (err) {
-      this.logger.warn(`pikku-node-http-server: MCP tools registered but /mcp could not be mounted — ${err instanceof Error ? err.message : String(err)}`)
+      this.logger.warn(
+        `pikku-node-http-server: MCP could not be mounted — ${err instanceof Error ? err.message : String(err)}`
+      )
     }
   }
 
