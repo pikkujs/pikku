@@ -45,6 +45,10 @@ async function makeValidProject(root: string) {
   })
   await writeJson(join(root, 'packages', 'functions', 'package.json'), {
     type: 'module',
+    dependencies: {
+      '@pikku/schema-cfworker': '^0.12.0',
+      '@pikku/kysely': '^0.12.0',
+    },
   })
   await writeFile(
     join(root, 'packages', 'functions', 'src', 'services.ts'),
@@ -360,7 +364,11 @@ describe('pikku fabric validate', () => {
       try {
         await makeValidProject(tmp)
         await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
-          dependencies: { '@pikku/cloudflare': '^0.12.6' },
+          dependencies: {
+            '@pikku/cloudflare': '^0.12.6',
+            '@pikku/schema-cfworker': '^0.12.0',
+            '@pikku/kysely': '^0.12.0',
+          },
           // no type: 'module'
         })
         const result = await runValidate(tmp)
