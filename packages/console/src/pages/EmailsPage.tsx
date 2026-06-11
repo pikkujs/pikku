@@ -14,11 +14,10 @@ import {
   SegmentedControl,
   Stack,
   Text,
-  TextInput,
   UnstyledButton,
   ScrollArea,
 } from '@mantine/core'
-import { AlertTriangle, Mail, Monitor, Search, Smartphone, ChevronDown, Check } from 'lucide-react'
+import { AlertTriangle, Mail, Monitor, Smartphone, ChevronDown, Check } from 'lucide-react'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { useSearchParams } from '../router'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
@@ -27,8 +26,7 @@ import { useRenderEmailPreview } from '../hooks/useWirings'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
-import { EntityCardList } from '../components/layout/EntityCardList'
-import type { EntityCardItem } from '../components/layout/EntityCardList'
+import { EmailsOverview } from './EmailsOverview'
 import classes from '../components/ui/console.module.css'
 
 type EmailPreviewValue =
@@ -55,68 +53,6 @@ function buildVariablesSchema(variables: string[]): RJSFSchema {
       ])
     ),
   }
-}
-
-const EmailsOverview: React.FC<{
-  templateNames: string[]
-  templates: Record<string, any>
-  onSelect: (templateName: string) => void
-  headerRight?: React.ReactNode
-}> = ({ templateNames, templates, onSelect, headerRight }) => {
-  const [searchQuery, setSearchQuery] = useState('')
-
-  const allItems = useMemo((): EntityCardItem[] =>
-    templateNames.map((name): EntityCardItem => {
-      const t = templates[name]
-      const varCount = (t.variables ?? []).length
-      const localeCount = Object.keys(t.locales ?? {}).length
-      const metaTags: string[] = []
-      if (varCount > 0) metaTags.push(`${varCount} ${varCount === 1 ? 'variable' : 'variables'}`)
-      if (localeCount > 0) metaTags.push(`${localeCount} ${localeCount === 1 ? 'locale' : 'locales'}`)
-      return { name, meta: metaTags }
-    }),
-    [templateNames, templates]
-  )
-
-  const items = useMemo(() => {
-    const q = searchQuery.toLowerCase()
-    if (!q) return allItems
-    return allItems.filter((item) => item.name.toLowerCase().includes(q))
-  }, [allItems, searchQuery])
-
-  return (
-    <ResizablePanelLayout
-      hidePanel
-      header={
-        <ListPageHeader
-          title="Email Templates"
-          description="Preview and inspect email templates with live variable rendering"
-          docsHref={EMAIL_DOCS_HREF}
-          filters={
-            <Group gap="sm" wrap="nowrap">
-              <TextInput
-                placeholder="Search email templates..."
-                leftSection={<Search size={14} />}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                size="xs"
-                style={{ width: 240 }}
-              />
-              {headerRight}
-            </Group>
-          }
-        />
-      }
-    >
-      <EntityCardList
-        items={items}
-        onOpen={onSelect}
-        icon={Mail}
-        emptyTitle="No email templates match the current search."
-        docsHref={EMAIL_DOCS_HREF}
-      />
-    </ResizablePanelLayout>
-  )
 }
 
 export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.ReactNode }> = ({ hero, headerRight }) => {
