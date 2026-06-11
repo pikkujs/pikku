@@ -22,7 +22,6 @@ describe('pikku-workflow-service worker registration', () => {
       functionType: 'helper',
       inputSchemaName: null,
       outputSchemaName: null,
-      sessionless: true,
     })
   })
 })

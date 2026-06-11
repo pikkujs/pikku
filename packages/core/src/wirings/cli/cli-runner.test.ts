@@ -622,7 +622,6 @@ describe('CLI Runner', () => {
           inputSchemaName: null,
           outputSchemaName: null,
           sessionless: true,
-          sessionless: true,
         },
       })
 
