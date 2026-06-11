@@ -29,7 +29,7 @@ export const runFunctionTests = pikkuSessionlessFunc<
     if (!metaService?.basePath) return null
 
     const functionsDir = join(metaService.basePath, '..')
-    const ftestDir = join(functionsDir, 'function-tests')
+    const ftestDir = join(functionsDir, 'tests')
     if (!existsSync(ftestDir)) return null
 
     const pikku = findBin('pikku', functionsDir)
@@ -63,7 +63,7 @@ export const runFunctionTests = pikkuSessionlessFunc<
       proc.on('error', reject)
     })
 
-    const outFile = join(ftestDir, 'coverage', 'function-coverage.json')
+    const outFile = join(ftestDir, '.coverage', 'function-coverage.json')
     if (!existsSync(outFile)) return null
     return JSON.parse(readFileSync(outFile, 'utf-8')) as FunctionCoverageReport
   },
