@@ -5,6 +5,7 @@
   "license": "MIT",
   "module": "dist/index.js",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
     "tsc": "tsc",
@@ -31,6 +32,10 @@
     "cron-schedule": "^5.0.4"
   },
   "exports": {
-    ".": "./dist/index.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
   }
 }

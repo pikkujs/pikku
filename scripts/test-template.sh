@@ -184,6 +184,18 @@ console.log('Replaced ' + Object.keys(localPaths).length + ' @pikku/* entries wi
         exit 1
     fi
 
+    log_info "Checking @pikku package installation..."
+    for pkg in schedule modelcontextprotocol; do
+        pkg_dir=$(find node_modules/@pikku -maxdepth 1 -name "$pkg" -type d -o -name "$pkg" -type l 2>/dev/null | head -1)
+        if [ -n "$pkg_dir" ]; then
+            if [ -f "$pkg_dir/dist/index.d.ts" ]; then
+                log_success "@pikku/$pkg: dist/index.d.ts exists"
+            else
+                log_warning "@pikku/$pkg: dist/index.d.ts MISSING (ls: $(ls $pkg_dir/ 2>/dev/null))"
+            fi
+        fi
+    done
+
     log_info "Running pikku codegen..."
     if ! "$PACKAGE_MANAGER" run pikku; then
         log_error "Pikku codegen failed"
