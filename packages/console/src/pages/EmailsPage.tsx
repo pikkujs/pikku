@@ -27,7 +27,8 @@ import { useRenderEmailPreview } from '../hooks/useWirings'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
-import { TableListPage } from '../components/layout/TableListPage'
+import { EntityCardList } from '../components/layout/EntityCardList'
+import type { EntityCardItem } from '../components/layout/EntityCardList'
 import classes from '../components/ui/console.module.css'
 
 type EmailPreviewValue =
@@ -56,82 +57,65 @@ function buildVariablesSchema(variables: string[]): RJSFSchema {
   }
 }
 
-type EmailTemplateItem = {
-  name: string
-  variables: string[]
-  locales: Record<string, unknown>
-}
-
-const emailColumns = [
-  {
-    key: 'name',
-    header: 'NAME',
-    render: (item: EmailTemplateItem) => (
-      <Text fw={500} ff="monospace" truncate>
-        {item.name}
-      </Text>
-    ),
-  },
-  {
-    key: 'variables',
-    header: 'VARIABLES',
-    width: 120,
-    render: (item: EmailTemplateItem) => (
-      <Text size="sm" c="dimmed">
-        {item.variables.length}
-      </Text>
-    ),
-  },
-  {
-    key: 'locales',
-    header: 'LOCALES',
-    width: 280,
-    render: (item: EmailTemplateItem) => {
-      const localeKeys = Object.keys(item.locales)
-      return (
-        <Group gap={4}>
-          {localeKeys.slice(0, 5).map((locale) => (
-            <Badge key={locale} variant="outline" color="gray" size="sm">
-              {locale}
-            </Badge>
-          ))}
-          {localeKeys.length > 5 && (
-            <Badge variant="outline" color="gray" size="sm">
-              +{localeKeys.length - 5}
-            </Badge>
-          )}
-        </Group>
-      )
-    },
-  },
-]
-
 const EmailsOverview: React.FC<{
   templateNames: string[]
   templates: Record<string, any>
   onSelect: (templateName: string) => void
-}> = ({ templateNames, templates, onSelect }) => {
-  const data = useMemo<EmailTemplateItem[]>(
-    () => templateNames.map((name) => ({ name, ...templates[name] })),
+  headerRight?: React.ReactNode
+}> = ({ templateNames, templates, onSelect, headerRight }) => {
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const allItems = useMemo((): EntityCardItem[] =>
+    templateNames.map((name): EntityCardItem => {
+      const t = templates[name]
+      const varCount = (t.variables ?? []).length
+      const localeCount = Object.keys(t.locales ?? {}).length
+      const metaTags: string[] = []
+      if (varCount > 0) metaTags.push(`${varCount} ${varCount === 1 ? 'variable' : 'variables'}`)
+      if (localeCount > 0) metaTags.push(`${localeCount} ${localeCount === 1 ? 'locale' : 'locales'}`)
+      return { name, meta: metaTags }
+    }),
     [templateNames, templates]
   )
 
+  const items = useMemo(() => {
+    const q = searchQuery.toLowerCase()
+    if (!q) return allItems
+    return allItems.filter((item) => item.name.toLowerCase().includes(q))
+  }, [allItems, searchQuery])
+
   return (
-    <TableListPage
-      icon={Mail}
-      title="Email Templates"
-      docsHref={EMAIL_DOCS_HREF}
-      data={data}
-      columns={emailColumns}
-      getKey={(item) => item.name}
-      onRowClick={(item) => onSelect(item.name)}
-      searchPlaceholder="Search email templates..."
-      searchFilter={(item, q) =>
-        item.name.toLowerCase().includes(q) ||
-        item.variables.some((v) => v.toLowerCase().includes(q))
+    <ResizablePanelLayout
+      hidePanel
+      header={
+        <ListPageHeader
+          title="Email Templates"
+          description="Preview and inspect email templates with live variable rendering"
+          docsHref={EMAIL_DOCS_HREF}
+          filters={
+            <Group gap="sm" wrap="nowrap">
+              <TextInput
+                placeholder="Search email templates..."
+                leftSection={<Search size={14} />}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                size="xs"
+                style={{ width: 240 }}
+              />
+              {headerRight}
+            </Group>
+          }
+        />
       }
-      emptyMessage="No email templates match the current search."
-    />
+    >
+      <EntityCardList
+        items={items}
+        onOpen={onSelect}
+        icon={Mail}
+        emptyTitle="No email templates match the current search."
+        docsHref={EMAIL_DOCS_HREF}
+      />
+    </ResizablePanelLayout>
   )
 }
 
@@ -210,10 +194,18 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
     [selectedMeta]
   )
 
+  const filteredTemplateItems = useMemo(() => {
+    if (!selectorSearch) return templateItems
+    const q = selectorSearch.toLowerCase()
+    return templateItems.filter(
+      (i) => i.name.toLowerCase().includes(q) || i.description?.toLowerCase().includes(q)
+    )
+  }, [templateItems, selectorSearch])
+
   if (loading) {
     return (
       <PanelProvider>
-        <ResizablePanelLayout hidePanel header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" lead={headerRight} />}>
+        <ResizablePanelLayout hidePanel header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" />}>
           <Center h="100%">
             <Loader />
           </Center>
@@ -225,7 +217,7 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
   if (templateNames.length === 0) {
     return (
       <PanelProvider>
-        <ResizablePanelLayout hidePanel header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" lead={headerRight} />}>
+        <ResizablePanelLayout hidePanel header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" />}>
           <EmptyStatePlaceholder
             icon={Mail}
             hero={hero}
@@ -242,35 +234,23 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
   if (!selectedTemplate || !selectedMeta || !selectedLocale) {
     return (
       <PanelProvider>
-        <ResizablePanelLayout
-          hidePanel
-          header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" lead={headerRight} />}
-        >
-          <EmailsOverview
-            templateNames={templateNames}
-            templates={templates}
-            onSelect={(templateName) => {
-              setPreviewInput({})
-              setSearchParams({
-                template: templateName,
-                locale:
-                  Object.keys(templates[templateName].locales)
-                    .sort((a, b) => a.localeCompare(b))[0] ?? 'en',
-              })
-            }}
-          />
-        </ResizablePanelLayout>
+        <EmailsOverview
+          templateNames={templateNames}
+          templates={templates}
+          headerRight={headerRight}
+          onSelect={(templateName) => {
+            setPreviewInput({})
+            setSearchParams({
+              template: templateName,
+              locale:
+                Object.keys(templates[templateName].locales)
+                  .sort((a, b) => a.localeCompare(b))[0] ?? 'en',
+            })
+          }}
+        />
       </PanelProvider>
     )
   }
-
-  const filteredTemplateItems = useMemo(() => {
-    if (!selectorSearch) return templateItems
-    const q = selectorSearch.toLowerCase()
-    return templateItems.filter(
-      (i) => i.name.toLowerCase().includes(q) || i.description?.toLowerCase().includes(q)
-    )
-  }, [templateItems, selectorSearch])
 
   const handleTemplateSelect = (templateName: string) => {
     setSelectorOpen(false)
