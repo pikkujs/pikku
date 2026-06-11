@@ -38,6 +38,9 @@ export const serializeAuthGen = (providers: string[]): string => {
   lines.push(`import { z } from 'zod'`)
   lines.push('')
 
+  lines.push(`export const AuthSecretSchema = z.string()`)
+  lines.push('')
+
   // Zod schemas for each provider
   for (const name of known) {
     const def = PROVIDER_REGISTRY[name]
@@ -45,7 +48,7 @@ export const serializeAuthGen = (providers: string[]): string => {
     const fieldLines = Object.entries(def.fields).map(
       ([field, zodExpr]) => `  ${field}: ${zodExpr},`
     )
-    lines.push(`const ${schemaName} = z.object({`)
+    lines.push(`export const ${schemaName} = z.object({`)
     lines.push(...fieldLines)
     lines.push(`})`)
     lines.push('')
@@ -57,7 +60,7 @@ export const serializeAuthGen = (providers: string[]): string => {
   lines.push(`  displayName: 'Auth Secret',`)
   lines.push(`  description: 'JWT signing secret for Auth.js sessions',`)
   lines.push(`  secretId: 'AUTH_SECRET',`)
-  lines.push(`  schema: z.string(),`)
+  lines.push(`  schema: AuthSecretSchema,`)
   lines.push(`})`)
   lines.push('')
 
