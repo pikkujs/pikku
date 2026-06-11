@@ -11,6 +11,61 @@ export function sanitizeTypeName(name: string): string {
   return name.replace(/[^a-zA-Z0-9_$]/g, '_')
 }
 
+const CLASSIFICATION_WRAPPERS = new Set(['Private', 'Pii', 'Secret'])
+
+function findMatchingAngleBracket(type: string, startIndex: number): number {
+  let depth = 0
+  for (let i = startIndex; i < type.length; i += 1) {
+    const char = type[i]
+    if (char === '<') {
+      depth += 1
+      continue
+    }
+    if (char === '>') {
+      depth -= 1
+      if (depth === 0) {
+        return i
+      }
+    }
+  }
+  return -1
+}
+
+function stripClassificationWrappers(type: string): string {
+  let output = ''
+  let index = 0
+
+  while (index < type.length) {
+    const char = type[index]
+    if (!/[A-Za-z_$]/.test(char)) {
+      output += char
+      index += 1
+      continue
+    }
+
+    let end = index + 1
+    while (end < type.length && /[A-Za-z0-9_$]/.test(type[end])) {
+      end += 1
+    }
+
+    const identifier = type.slice(index, end)
+    if (CLASSIFICATION_WRAPPERS.has(identifier) && type[end] === '<') {
+      const closingIndex = findMatchingAngleBracket(type, end)
+      if (closingIndex !== -1) {
+        const inner = type.slice(end + 1, closingIndex)
+        output += stripClassificationWrappers(inner)
+        index = closingIndex + 1
+        continue
+      }
+    }
+
+    output += identifier
+    index = end
+  }
+
+  return output
+}
+
 export function generateCustomTypes(
   typesMap: TypesMap,
   requiredTypes: Set<string>
@@ -25,12 +80,16 @@ export function generateCustomTypes(
     .map(([originalName, { type, references }]) => {
       const name = sanitizeTypeName(originalName)
       references.forEach((refName) => {
-        if (refName !== '__object' && !refName.startsWith('__object_')) {
+        if (
+          refName !== '__object' &&
+          !refName.startsWith('__object_') &&
+          !CLASSIFICATION_WRAPPERS.has(refName)
+        ) {
           requiredTypes.add(refName)
         }
       })
 
-      const typeString = type
+      const typeString = stripClassificationWrappers(type)
       const typeNameRegex = /\b[A-Z][a-zA-Z0-9]*\b/g
       const potentialTypes = typeString.match(typeNameRegex) || []
 
@@ -59,12 +118,13 @@ export function generateCustomTypes(
         }
       })
 
-      if (name === type) return null
-      return `export type ${name} = ${type}`
+      if (name === typeString) return null
+      return `export type ${name} = ${typeString}`
     })
 
   const importsByPath = new Map<string, Set<string>>()
   for (const typeName of requiredTypes) {
+    if (CLASSIFICATION_WRAPPERS.has(typeName)) continue
     try {
       const typeMeta = typesMap.getTypeMeta(typeName)
       if (typeMeta.path) {
