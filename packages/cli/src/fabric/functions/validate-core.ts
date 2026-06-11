@@ -193,6 +193,36 @@ export async function runFabricValidate(
       }
     }
 
+    // agent units — require explicit deps rather than CI injection
+    const agentMetaPath = join(
+      fnDir,
+      '.pikku',
+      'agent',
+      'pikku-agent-wirings-meta.gen.json'
+    )
+    const agentMeta = await readJsonSafe<{
+      agentsMeta?: Record<string, unknown>
+    }>(agentMetaPath)
+    if (agentMeta && Object.keys(agentMeta.agentsMeta ?? {}).length > 0) {
+      const fnDeps = { ...fnPkg?.dependencies }
+      if (!fnDeps['@pikku/ai-vercel']) {
+        e(
+          'missing-ai-vercel',
+          'Project declares agent units but @pikku/ai-vercel is not in dependencies',
+          fnPkgPath,
+          'Run `yarn add @pikku/ai-vercel` in packages/functions — must be in dependencies, not devDependencies'
+        )
+      }
+      if (!fnDeps['@ai-sdk/openai-compatible']) {
+        e(
+          'missing-ai-sdk-openai-compatible',
+          'Project declares agent units but @ai-sdk/openai-compatible is not in dependencies',
+          fnPkgPath,
+          'Run `yarn add @ai-sdk/openai-compatible` in packages/functions — must be in dependencies, not devDependencies'
+        )
+      }
+    }
+
     // db/sqlite/ — presence, numbering and SQL dialect
     const migrationsDir = join(fnDir, 'db', 'sqlite')
     if (!existsSync(migrationsDir)) {
