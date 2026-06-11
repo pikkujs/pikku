@@ -180,7 +180,7 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
             setSearchParams({
               template: templateName,
               locale:
-                Object.keys(templates[templateName].locales)
+                Object.keys(templates[templateName]?.locales ?? {})
                   .sort((a, b) => a.localeCompare(b))[0] ?? 'en',
             })
           }}
@@ -195,7 +195,7 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
     setPreviewInput({})
     setSearchParams({
       template: templateName,
-      locale: Object.keys(templates[templateName].locales).sort((a, b) => a.localeCompare(b))[0] ?? 'en',
+      locale: Object.keys(templates[templateName]?.locales ?? {}).sort((a, b) => a.localeCompare(b))[0] ?? 'en',
     })
   }
 
