@@ -297,7 +297,9 @@ async function batchImportWithRegister(
     logger.debug(`tsx register() batch import failed: ${(e as Error).message}`)
     return null
   } finally {
-    void unregister?.()
+    void Promise.resolve(unregister?.()).catch((e) => {
+      logger.debug(`tsx unregister() failed: ${(e as Error).message}`)
+    })
   }
 }
 
@@ -308,7 +310,7 @@ async function importWithRegister(
   try {
     return await import(sourceFile)
   } finally {
-    void unregister()
+    void Promise.resolve(unregister()).catch(() => {})
   }
 }
 

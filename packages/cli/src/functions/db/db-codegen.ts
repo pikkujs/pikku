@@ -430,13 +430,21 @@ export async function generateSchemaTypes(
         return {
           name: c.name,
           type: c.type,
-          nullable: !c.notNull,
+          nullable: !c.notNull && !c.pk,
           isPrimaryKey: c.pk,
-          ...(fk ? { foreignKey: { table: fk.foreignTable, column: fk.foreignColumn } } : {}),
+          ...(fk
+            ? {
+                foreignKey: {
+                  table: fk.foreignTable,
+                  column: fk.foreignColumn,
+                },
+              }
+            : {}),
         }
       }),
     }))
-    schemaJsonBody = JSON.stringify({ tables: jsonTables, enums }, null, 2) + '\n'
+    schemaJsonBody =
+      JSON.stringify({ tables: jsonTables, enums }, null, 2) + '\n'
   }
 
   // ── write files ───────────────────────────────────────────────────────────────

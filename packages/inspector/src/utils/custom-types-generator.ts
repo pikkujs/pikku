@@ -21,7 +21,7 @@ function findMatchingAngleBracket(type: string, startIndex: number): number {
       depth += 1
       continue
     }
-    if (char === '>') {
+    if (char === '>' && (i === 0 || type[i - 1] !== '=')) {
       depth -= 1
       if (depth === 0) {
         return i
