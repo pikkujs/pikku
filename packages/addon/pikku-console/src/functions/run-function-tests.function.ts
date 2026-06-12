@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { spawn } from 'node:child_process'
 import { pikkuSessionlessFunc } from '#pikku'
+import { NotFoundError } from '@pikku/core'
 import type { FunctionCoverageReport } from './get-function-coverage.function.js'
 
 function findBin(name: string, searchFrom: string): string {
@@ -33,7 +34,9 @@ export const runFunctionTests = pikkuSessionlessFunc<
     const functionsDir = join(metaService.basePath, '..')
     const ftestDir = join(functionsDir, 'tests')
     if (!existsSync(ftestDir)) {
-      throw new Error('No tests found. Add a tests directory to your project first — see the test-harness template for an example.')
+      throw new NotFoundError(
+        'No tests found. Add a tests directory to your project first — see the test-harness template for an example.'
+      )
     }
 
     const pikku = findBin('pikku', functionsDir)
