@@ -1,5 +1,13 @@
 # @pikku/auth-js
 
+## 0.12.5
+
+### Patch Changes
+
+- c2124eb: Remove invalid provider registry entries: figma and bitbucket do not exist in @auth/core, and the azure-ad alias is a duplicate of microsoft-entra-id (Auth.js always assigns id: "microsoft-entra-id" regardless of which entry initialises it).
+- Updated dependencies [294e365]
+  - @pikku/core@0.12.29
+
 ## 0.12.4
 
 ### Patch Changes
