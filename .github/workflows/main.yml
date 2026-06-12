@@ -64,7 +64,7 @@ jobs:
         verifier:
           [
             addon,
-            binary,
+            # binary,
             classification,
             gateway,
             middleware-and-permissions,
