@@ -14,6 +14,9 @@ export class PikkuFetchHTTPRequest<
   #cookies: Partial<Record<string, string>> | undefined
   #params: Partial<Record<string, string | string[]>> = {}
   #url: URL
+  #rawBodyText: string | undefined
+  #rawBodyBuffer: ArrayBuffer | undefined
+  #bodyRead = false
 
   constructor(private request: Request) {
     this.#url = new URL(request.url)
@@ -31,16 +34,53 @@ export class PikkuFetchHTTPRequest<
    * Retrieves the request body.
    * @returns A promise that resolves to the request body.
    */
-  public json(): Promise<In> {
-    return this.request.json()
+  public async json(): Promise<In> {
+    if (this.#bodyRead) {
+      if (this.#rawBodyText !== undefined) {
+        return JSON.parse(this.#rawBodyText)
+      }
+      return {} as In
+    }
+    const text = await this.#readRawText()
+    return JSON.parse(text) as In
   }
 
   /**
    * Retrieves the raw request body as a Buffer.
    * @returns A promise that resolves to the raw request body.
    */
-  public arrayBuffer(): Promise<ArrayBuffer> {
-    return this.request.arrayBuffer()
+  public async arrayBuffer(): Promise<ArrayBuffer> {
+    if (this.#rawBodyBuffer !== undefined) {
+      return this.#rawBodyBuffer
+    }
+    if (this.#bodyRead) {
+      if (this.#rawBodyText !== undefined) {
+        const buf = new TextEncoder().encode(this.#rawBodyText)
+          .buffer as ArrayBuffer
+        this.#rawBodyBuffer = buf
+        return buf
+      }
+      return new ArrayBuffer(0)
+    }
+    const buf = await this.request.arrayBuffer()
+    this.#rawBodyBuffer = buf
+    this.#bodyRead = true
+    return buf
+  }
+
+  async #readRawText(): Promise<string> {
+    if (this.#rawBodyText !== undefined) {
+      return this.#rawBodyText
+    }
+    if (this.#rawBodyBuffer !== undefined) {
+      const text = new TextDecoder().decode(this.#rawBodyBuffer)
+      this.#rawBodyText = text
+      return text
+    }
+    const text = await this.request.text()
+    this.#rawBodyText = text
+    this.#bodyRead = true
+    return text
   }
 
   public headers(): Record<string, string> {
@@ -133,7 +173,8 @@ export class PikkuFetchHTTPRequest<
     const contentType = this.header('content-type') || ''
     try {
       if (contentType.includes('application/json')) {
-        const parsed = await this.json()
+        const text = await this.#readRawText()
+        const parsed = text ? JSON.parse(text) : null
         body =
           typeof parsed === 'object' &&
           parsed !== null &&
@@ -141,13 +182,13 @@ export class PikkuFetchHTTPRequest<
             ? parsed
             : { data: parsed }
       } else if (contentType.includes('text/')) {
-        const text = await this.request.text()
+        const text = await this.#readRawText()
         body = { data: text }
       } else if (contentType.includes('application/octet-stream')) {
-        const buffer = await this.request.arrayBuffer()
+        const buffer = await this.arrayBuffer()
         body = { data: buffer }
       } else if (contentType === 'application/x-www-form-urlencoded') {
-        const text = await this.request.text()
+        const text = await this.#readRawText()
         const params = new URLSearchParams(text)
         let count = 0
         for (const _ of params) {

@@ -6313,6 +6313,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/verifiers-auth-js@workspace:verifiers/auth-js":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-auth-js@workspace:verifiers/auth-js"
+  dependencies:
+    "@auth/core": "npm:^0.37.0"
+    "@pikku/auth-js": "workspace:*"
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
+    "@pikku/schema-cfworker": "workspace:*"
+    "@types/node": "npm:^24"
+    tsx: "npm:^4.21.0"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/verifiers-classification@workspace:verifiers/classification":
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-classification@workspace:verifiers/classification"
