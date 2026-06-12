@@ -29,8 +29,23 @@ interface NodeSqliteModule {
 class NodeSqliteStatement implements SyncSqliteStatement {
   readonly reader: boolean
 
-  constructor(private readonly stmt: NodeSqliteStatementShape) {
-    this.reader = Boolean(stmt.reader)
+  constructor(
+    private readonly stmt: NodeSqliteStatementShape,
+    sql: string,
+  ) {
+    // node:sqlite StatementSync does not have a .reader property
+    // (that's a better-sqlite3 API). Fall back to SQL inspection when absent.
+    if (stmt.reader !== undefined) {
+      this.reader = Boolean(stmt.reader)
+    } else {
+      const upper = sql.trimStart().toUpperCase()
+      this.reader =
+        upper.startsWith('SELECT') ||
+        upper.startsWith('WITH') ||
+        upper.startsWith('PRAGMA') ||
+        upper.startsWith('EXPLAIN') ||
+        upper.startsWith('VALUES')
+    }
   }
 
   all(...parameters: unknown[]): unknown[] {
@@ -62,7 +77,7 @@ class NodeSqliteDatabase implements SyncSqliteDatabase {
   }
 
   prepare(sql: string): SyncSqliteStatement {
-    return new NodeSqliteStatement(this.db.prepare(sql))
+    return new NodeSqliteStatement(this.db.prepare(sql), sql)
   }
 
   close(): void {
