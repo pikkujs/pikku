@@ -47,8 +47,19 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true })
 })
 
-test('resolveDb returns null when config has no db settings', () => {
-  assert.equal(resolveDb({}, root, root), null)
+test('resolveDb auto-detects sqlite when db/sqlite dir exists and no config', () => {
+  const resolved = resolveDb({}, root, root)
+  assert.ok(resolved !== null)
+  assert.equal(resolved!.dialect, 'sqlite')
+})
+
+test('resolveDb returns null when no db settings and no db/sqlite dir', () => {
+  const emptyRoot = mkdtempSync(join(tmpdir(), 'pikku-db-empty-'))
+  try {
+    assert.equal(resolveDb({}, emptyRoot, emptyRoot), null)
+  } finally {
+    rmSync(emptyRoot, { recursive: true, force: true })
+  }
 })
 
 test('migrateAndCodegen applies pending migrations and writes schema.d.ts', async () => {
