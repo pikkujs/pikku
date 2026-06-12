@@ -287,9 +287,16 @@ async function main(): Promise<void> {
     const location = signoutRes.headers.get('location') ?? ''
     assertFalsy(location.includes('error='), 'no error after signout')
 
+    const signoutSetCookie = signoutRes.headers.get('set-cookie') ?? ''
+    assertTruthy(
+      signoutSetCookie.includes('authjs.session-token=') &&
+        /(Max-Age=0|Expires=)/i.test(signoutSetCookie),
+      'session cookie cleared by signout response'
+    )
+
     const sessionAfter = await fetch(new Request(`${BASE}/auth/session`))
     const data = await sessionAfter.json()
-    assertFalsy(data, 'session is empty after logout')
+    assertFalsy(data, 'session is empty without cookie after logout')
   })
 
   const passed = results.filter((r) => r.passed).length
