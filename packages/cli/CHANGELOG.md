@@ -1,3 +1,10 @@
+## 0.12.30
+
+### Patch Changes
+
+- e108c30: Fix `pikku dev` startup ordering so generated bootstrap is loaded after `allWorkflow` regeneration instead of before it. This avoids stale bootstrap/module-state hangs during dev startup on projects with heavy generated wiring graphs.
+- 5093725: runFunctionTests throws a descriptive error when tests dir is missing instead of returning null; db-codegen formatting reflow
+
 ## 0.12.29
 
 ### Patch Changes

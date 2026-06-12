@@ -1,3 +1,9 @@
+## 0.12.12
+
+### Patch Changes
+
+- 5093725: runFunctionTests throws a descriptive error when tests dir is missing instead of returning null; db-codegen formatting reflow
+
 ## 0.12.11
 
 ### Patch Changes

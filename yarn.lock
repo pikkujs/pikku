@@ -5038,7 +5038,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/addon-console@workspace:packages/addon/pikku-console"
   dependencies:
-    "@pikku/cli": "npm:^0.12.29"
+    "@pikku/cli": "npm:^0.12.30"
     "@pikku/core": "npm:^0.12.27"
     json-schema: "npm:^0.4.0"
     oauth2-mock-server: "npm:^7.1.1"
@@ -5213,7 +5213,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/cli@npm:*, @pikku/cli@npm:^0.12.0, @pikku/cli@npm:^0.12.1, @pikku/cli@npm:^0.12.22, @pikku/cli@npm:^0.12.29, @pikku/cli@workspace:*, @pikku/cli@workspace:packages/cli":
+"@pikku/cli@npm:*, @pikku/cli@npm:^0.12.0, @pikku/cli@npm:^0.12.1, @pikku/cli@npm:^0.12.22, @pikku/cli@npm:^0.12.29, @pikku/cli@npm:^0.12.30, @pikku/cli@workspace:*, @pikku/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@pikku/cli@workspace:packages/cli"
   dependencies:
@@ -5932,7 +5932,7 @@ __metadata:
   dependencies:
     "@auth/core": "npm:^0.37.0"
     "@pikku/auth-js": "npm:^0.12.4"
-    "@pikku/cli": "npm:^0.12.29"
+    "@pikku/cli": "npm:^0.12.30"
     "@pikku/core": "npm:^0.12.28"
     "@pikku/uws": "npm:^0.12.5"
     "@pikku/websocket": "npm:^0.12.1"
@@ -5979,7 +5979,7 @@ __metadata:
   dependencies:
     "@auth/core": "npm:^0.37.0"
     "@pikku/auth-js": "npm:^0.12.4"
-    "@pikku/cli": "npm:^0.12.29"
+    "@pikku/cli": "npm:^0.12.30"
     "@pikku/core": "npm:^0.12.28"
     "@pikku/express-middleware": "npm:^0.12.2"
     "@pikku/jose": "npm:^0.12.3"
@@ -6069,7 +6069,7 @@ __metadata:
     "@pikku/addon-console": "workspace:*"
     "@pikku/addon-graph": "workspace:*"
     "@pikku/auth-js": "npm:^0.12.4"
-    "@pikku/cli": "npm:^0.12.29"
+    "@pikku/cli": "npm:^0.12.30"
     "@pikku/cloudflare": "workspace:*"
     "@pikku/core": "npm:^0.12.28"
     "@pikku/deploy-cloudflare": "workspace:*"
@@ -6121,7 +6121,7 @@ __metadata:
     "@auth/core": "npm:^0.37.0"
     "@next/swc-darwin-arm64": "npm:^16.2.6"
     "@pikku/auth-js": "npm:^0.12.4"
-    "@pikku/cli": "npm:^0.12.29"
+    "@pikku/cli": "npm:^0.12.30"
     "@pikku/core": "npm:^0.12.28"
     "@pikku/fetch": "npm:^0.12.2"
     "@pikku/jose": "npm:^0.12.3"
@@ -6161,7 +6161,7 @@ __metadata:
   dependencies:
     "@auth/core": "npm:^0.37.0"
     "@pikku/auth-js": "npm:^0.12.4"
-    "@pikku/cli": "npm:^0.12.29"
+    "@pikku/cli": "npm:^0.12.30"
     "@pikku/core": "npm:^0.12.28"
     "@pikku/express": "npm:^0.12.5"
     "@pikku/jose": "npm:^0.12.3"
@@ -6184,7 +6184,7 @@ __metadata:
   dependencies:
     "@auth/core": "npm:^0.37.0"
     "@pikku/auth-js": "npm:^0.12.4"
-    "@pikku/cli": "npm:^0.12.29"
+    "@pikku/cli": "npm:^0.12.30"
     "@pikku/core": "npm:^0.12.28"
     "@pikku/express": "npm:^0.12.5"
     "@pikku/jose": "npm:^0.12.3"
@@ -6223,7 +6223,7 @@ __metadata:
   dependencies:
     "@auth/core": "npm:^0.37.0"
     "@pikku/auth-js": "npm:^0.12.4"
-    "@pikku/cli": "npm:^0.12.29"
+    "@pikku/cli": "npm:^0.12.30"
     "@pikku/core": "npm:^0.12.28"
     "@pikku/express": "npm:^0.12.5"
     "@pikku/queue-bullmq": "npm:^0.12.2"
@@ -6241,7 +6241,7 @@ __metadata:
   dependencies:
     "@auth/core": "npm:^0.37.0"
     "@pikku/auth-js": "npm:^0.12.4"
-    "@pikku/cli": "npm:^0.12.29"
+    "@pikku/cli": "npm:^0.12.30"
     "@pikku/core": "npm:^0.12.28"
     "@pikku/express": "npm:^0.12.5"
     "@pikku/kysely-postgres": "npm:^0.12.8"
