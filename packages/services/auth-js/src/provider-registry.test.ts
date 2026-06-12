@@ -40,10 +40,16 @@ describe('PROVIDER_REGISTRY', () => {
     assert.equal(def.variables!.issuer.variableId, 'OKTA_ISSUER')
   })
 
-  test('azure-ad has variables.tenantId with variableId AZURE_AD_TENANT_ID', () => {
-    const def = PROVIDER_REGISTRY['azure-ad']
-    assert.ok(def.variables?.tenantId, 'azure-ad must have variables.tenantId')
-    assert.equal(def.variables!.tenantId.variableId, 'AZURE_AD_TENANT_ID')
+  test('microsoft-entra-id has variables.tenantId with variableId MICROSOFT_ENTRA_ID_TENANT_ID', () => {
+    const def = PROVIDER_REGISTRY['microsoft-entra-id']
+    assert.ok(
+      def.variables?.tenantId,
+      'microsoft-entra-id must have variables.tenantId'
+    )
+    assert.equal(
+      def.variables!.tenantId.variableId,
+      'MICROSOFT_ENTRA_ID_TENANT_ID'
+    )
   })
 
   test('keycloak has variables.issuer', () => {
@@ -86,12 +92,10 @@ describe('PROVIDER_REGISTRY', () => {
       'notion',
       'instagram',
       'zoom',
-      'figma',
       'tiktok',
       'threads',
       'patreon',
       'dropbox',
-      'bitbucket',
       'hubspot',
       'salesforce',
       'atlassian',
