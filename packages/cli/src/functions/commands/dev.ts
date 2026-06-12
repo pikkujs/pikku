@@ -1,4 +1,3 @@
-import { existsSync } from 'fs'
 import { join, resolve } from 'path'
 
 import { pikkuSessionlessFunc } from '#pikku'
@@ -76,9 +75,6 @@ export const dev = pikkuSessionlessFunc<
     )
     const workflowService = new InMemoryWorkflowService()
     const pikkuDir = resolve(config.rootDir, config.outDir)
-    const bootstrapExists =
-      existsSync(resolve(pikkuDir, 'pikku-bootstrap.gen.ts')) ||
-      existsSync(resolve(pikkuDir, 'pikku-bootstrap.gen.js'))
     const runAll = async () => {
       await workflowService.runToCompletion('allWorkflow', {}, rpc)
     }
@@ -165,10 +161,6 @@ export const dev = pikkuSessionlessFunc<
       }
     }
 
-    if (bootstrapExists) {
-      await loadUserBootstrap(pikkuDir)
-    }
-
     await runAllWithCommandState()
 
     const inspectorState = await getInspectorState(true)
@@ -182,9 +174,7 @@ export const dev = pikkuSessionlessFunc<
       return
     }
 
-    if (!bootstrapExists) {
-      await loadUserBootstrap(pikkuDir)
-    }
+    await loadUserBootstrap(pikkuDir)
 
     workflowService.rewireQueueWorkers()
 
