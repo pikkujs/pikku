@@ -671,6 +671,13 @@ export const addFunctions: AddWiring = (
     .map((tn) => checker.getTypeFromTypeNode(tn))
     .map((t) => unwrapPromise(checker, t))
 
+  // pikkuChannelConnectionFunc<Out> declares a single generic that is the
+  // OUTPUT type — its input is always void (PikkuFunctionSessionless<void, Out>).
+  // Every other wrapper reads generic[0] as INPUT, so without this guard the
+  // connect handler's output generic is mis-recorded as inputSchemaName and the
+  // empty WS handshake fails input validation at connect (1008/403).
+  const isChannelConnectionFunc = /ChannelConnection/i.test(expression.text)
+
   const capitalizedName = funcIdToTypeName(name)
 
   // --- Input Extraction ---
@@ -708,7 +715,12 @@ export const addFunctions: AddWiring = (
     } else {
       inputTypes = [filterType]
     }
-  } else if (!isListFunc && genericTypes.length >= 1 && genericTypes[0]) {
+  } else if (
+    !isChannelConnectionFunc &&
+    !isListFunc &&
+    genericTypes.length >= 1 &&
+    genericTypes[0]
+  ) {
     // Fall back to extracting from generic type arguments
     const result = getNamesAndTypes(
       checker,
