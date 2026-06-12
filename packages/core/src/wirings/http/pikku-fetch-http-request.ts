@@ -35,12 +35,6 @@ export class PikkuFetchHTTPRequest<
    * @returns A promise that resolves to the request body.
    */
   public async json(): Promise<In> {
-    if (this.#bodyRead) {
-      if (this.#rawBodyText !== undefined) {
-        return JSON.parse(this.#rawBodyText)
-      }
-      return {} as In
-    }
     const text = await this.#readRawText()
     return JSON.parse(text) as In
   }
