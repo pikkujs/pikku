@@ -1340,9 +1340,36 @@ function extractOutputBinding(
 function extractReturn(
   statement: ts.ReturnStatement,
   context: ExtractionContext
-): ReturnStepMeta | null {
+): StepMeta | null {
   if (!statement.expression) {
     return null
+  }
+
+  if (
+    ts.isAwaitExpression(statement.expression) &&
+    ts.isCallExpression(statement.expression.expression)
+  ) {
+    const call = statement.expression.expression
+    if (isWorkflowDoCall(call, context.checker)) {
+      return isInlineDoCall(call)
+        ? extractInlineStep(call, context)
+        : extractRpcStep(call, context)
+    }
+    if (isWorkflowSleepCall(call, context.checker)) {
+      return extractSleepStep(call, context)
+    }
+  }
+
+  if (ts.isCallExpression(statement.expression)) {
+    const call = statement.expression
+    if (isWorkflowDoCall(call, context.checker)) {
+      return isInlineDoCall(call)
+        ? extractInlineStep(call, context)
+        : extractRpcStep(call, context)
+    }
+    if (isWorkflowSleepCall(call, context.checker)) {
+      return extractSleepStep(call, context)
+    }
   }
 
   if (!ts.isObjectLiteralExpression(statement.expression)) {
