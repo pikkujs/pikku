@@ -131,13 +131,6 @@ export const PROVIDER_REGISTRY = {
     displayName: 'Zoom OAuth',
     fields: standardFields,
   },
-  figma: {
-    importPath: '@auth/core/providers/figma',
-    importName: 'Figma',
-    secretId: 'FIGMA_OAUTH',
-    displayName: 'Figma OAuth',
-    fields: standardFields,
-  },
   tiktok: {
     importPath: '@auth/core/providers/tiktok',
     importName: 'TikTok',
@@ -164,13 +157,6 @@ export const PROVIDER_REGISTRY = {
     importName: 'Dropbox',
     secretId: 'DROPBOX_OAUTH',
     displayName: 'Dropbox OAuth',
-    fields: standardFields,
-  },
-  bitbucket: {
-    importPath: '@auth/core/providers/bitbucket',
-    importName: 'Bitbucket',
-    secretId: 'BITBUCKET_OAUTH',
-    displayName: 'Bitbucket OAuth',
     fields: standardFields,
   },
   hubspot: {
@@ -224,19 +210,6 @@ export const PROVIDER_REGISTRY = {
       issuer: {
         variableId: 'OKTA_ISSUER',
         description: 'Okta issuer URL (e.g. https://dev-123.okta.com)',
-      },
-    },
-  },
-  'azure-ad': {
-    importPath: '@auth/core/providers/microsoft-entra-id',
-    importName: 'MicrosoftEntraId',
-    secretId: 'AZURE_AD_OAUTH',
-    displayName: 'Microsoft Entra ID / Azure AD OAuth',
-    fields: standardFields,
-    variables: {
-      tenantId: {
-        variableId: 'AZURE_AD_TENANT_ID',
-        description: 'Azure AD tenant ID',
       },
     },
   },
