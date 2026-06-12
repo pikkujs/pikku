@@ -39,6 +39,15 @@ function worstStatus(a: CucumberStatus, b: CucumberStatus): CucumberStatus {
 }
 
 export type TestStreamEvent =
+  | {
+      type: 'run-start'
+      scenarios: Array<{
+        id: string
+        name: string
+        uri: string
+        steps: string[]
+      }>
+    }
   | { type: 'scenario-start'; id: string; name: string; uri: string }
   | {
       type: 'step'
@@ -98,6 +107,7 @@ export const streamFunctionTests = pikkuSessionlessFunc<null, TestStreamEvent>({
     }
 
     // State for correlating Cucumber message protocol envelopes
+    const astStepKeywords = new Map<string, string>()
     const pickles = new Map<
       string,
       { name: string; uri: string; steps: Map<string, string> }
@@ -110,6 +120,7 @@ export const streamFunctionTests = pikkuSessionlessFunc<null, TestStreamEvent>({
       string,
       { testCaseId: string; worstStatus: CucumberStatus }
     >()
+    let runStartEmitted = false
 
     await new Promise<void>((resolve) => {
       const proc = spawn(
@@ -153,10 +164,31 @@ export const streamFunctionTests = pikkuSessionlessFunc<null, TestStreamEvent>({
             continue
           }
 
-          if ('pickle' in envelope) {
+          if ('gherkinDocument' in envelope) {
+            const walk = (nodes: any[]) => {
+              for (const node of nodes ?? []) {
+                for (const step of node?.scenario?.steps ??
+                  node?.background?.steps ??
+                  []) {
+                  if (step.id)
+                    astStepKeywords.set(
+                      step.id,
+                      ((step.keyword as string) ?? '').trimEnd()
+                    )
+                }
+                walk(node?.rule?.children ?? [])
+              }
+            }
+            walk((envelope.gherkinDocument as any)?.feature?.children ?? [])
+          } else if ('pickle' in envelope) {
             const p = envelope.pickle as any
             const steps = new Map<string, string>()
-            for (const s of p.steps ?? []) steps.set(s.id, s.text)
+            for (const s of p.steps ?? []) {
+              const keyword = s.astNodeIds?.[0]
+                ? astStepKeywords.get(s.astNodeIds[0])
+                : undefined
+              steps.set(s.id, keyword ? `${keyword} ${s.text}` : s.text)
+            }
             pickles.set(p.id, { name: p.name, uri: p.uri ?? '', steps })
           } else if ('testCase' in envelope) {
             const tc = envelope.testCase as any
@@ -169,6 +201,21 @@ export const streamFunctionTests = pikkuSessionlessFunc<null, TestStreamEvent>({
             const tcs = envelope.testCaseStarted as any
             const tc = testCases.get(tcs.testCaseId)
             const pickle = tc ? pickles.get(tc.pickleId) : undefined
+            if (!runStartEmitted) {
+              runStartEmitted = true
+              const allScenarios = Array.from(testCases.entries()).map(
+                ([, c]) => {
+                  const p = pickles.get(c.pickleId)
+                  return {
+                    id: c.pickleId,
+                    name: p?.name ?? '',
+                    uri: p?.uri ?? '',
+                    steps: p ? Array.from(p.steps.values()) : [],
+                  }
+                }
+              )
+              channel.send({ type: 'run-start', scenarios: allScenarios })
+            }
             if (pickle) {
               activeScenarios.set(tcs.id, {
                 testCaseId: tcs.testCaseId,
