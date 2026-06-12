@@ -78,6 +78,29 @@ export const serializeMiddlewareImports = (
     collectDirectImports(fullState.channelMiddleware.tagMiddleware)
   }
 
+  // Global middleware (addGlobalMiddleware) is registered by a top-level call
+  // at module evaluation, so a side-effect import of its source file runs the
+  // registration. Unlike tag/http middleware it has no associated wire group —
+  // it lives only in `instances` keyed `global:*` — so the per-unit `--names`
+  // filter leaves it out of every deployed unit (the `state.http.files`
+  // fallback that add-middleware adds gets stripped by that filter). Emitting
+  // it here, into the always-bootstrap-imported pikku-middleware.gen.ts,
+  // guarantees global middleware registers in every unit. A duplicate import
+  // in full builds is harmless — module bodies evaluate once.
+  for (const [instanceId, instance] of Object.entries(
+    middlewareState.instances
+  )) {
+    if (instanceId.startsWith('global:') && !instance.isFactoryCall) {
+      directImports.add(
+        getFileImportRelativePath(
+          outputPath,
+          instance.sourceFile,
+          packageMappings
+        )
+      )
+    }
+  }
+
   const allFactories = new Map([
     ...httpFactories,
     ...tagFactories,
