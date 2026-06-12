@@ -341,3 +341,108 @@ describe('DB codegen — classification brands', () => {
     )
   })
 })
+
+describe('DB codegen — pikku-db-schema.gen.json', () => {
+  test('writes schema JSON with tables and columns', async (t) => {
+    const dir = await createProject({
+      '001_users.sql': `
+        CREATE TABLE IF NOT EXISTS users (
+          id    INTEGER PRIMARY KEY AUTOINCREMENT,
+          name  TEXT NOT NULL,
+          bio   TEXT
+        );
+      `,
+    })
+    t.after(() => rm(dir, { recursive: true, force: true }))
+
+    const { exitCode, output } = runPikkuDbMigrate(dir)
+    assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
+
+    const raw = await readFile(
+      join(dir, '.pikku', 'db', 'pikku-db-schema.gen.json'),
+      'utf-8'
+    )
+    const schema = JSON.parse(raw)
+
+    assert.ok(Array.isArray(schema.tables), 'schema.tables must be an array')
+    assert.ok(Array.isArray(schema.enums), 'schema.enums must be an array')
+
+    const users = schema.tables.find((t: any) => t.name === 'users')
+    assert.ok(users, 'users table must be present')
+    assert.ok(Array.isArray(users.columns), 'users.columns must be an array')
+
+    const colNames = users.columns.map((c: any) => c.name)
+    assert.ok(colNames.includes('id'), 'id column must be present')
+    assert.ok(colNames.includes('name'), 'name column must be present')
+    assert.ok(colNames.includes('bio'), 'bio column must be present')
+  })
+
+  test('primary key columns are non-nullable', async (t) => {
+    const dir = await createProject({
+      '001_items.sql': `
+        CREATE TABLE IF NOT EXISTS items (
+          id    INTEGER PRIMARY KEY AUTOINCREMENT,
+          label TEXT
+        );
+      `,
+    })
+    t.after(() => rm(dir, { recursive: true, force: true }))
+
+    const { exitCode, output } = runPikkuDbMigrate(dir)
+    assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
+
+    const raw = await readFile(
+      join(dir, '.pikku', 'db', 'pikku-db-schema.gen.json'),
+      'utf-8'
+    )
+    const schema = JSON.parse(raw)
+    const items = schema.tables.find((t: any) => t.name === 'items')
+    const idCol = items.columns.find((c: any) => c.name === 'id')
+
+    assert.equal(idCol.isPrimaryKey, true, 'id must be marked as primary key')
+    assert.equal(
+      idCol.nullable,
+      false,
+      'primary key columns must not be nullable'
+    )
+
+    const labelCol = items.columns.find((c: any) => c.name === 'label')
+    assert.equal(
+      labelCol.nullable,
+      true,
+      'optional TEXT column must be nullable'
+    )
+  })
+
+  test('foreign keys are captured in the schema JSON', async (t) => {
+    const dir = await createProject({
+      '001_base.sql': `
+        CREATE TABLE IF NOT EXISTS authors (
+          id   INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS books (
+          id        INTEGER PRIMARY KEY AUTOINCREMENT,
+          title     TEXT NOT NULL,
+          author_id INTEGER NOT NULL REFERENCES authors(id)
+        );
+      `,
+    })
+    t.after(() => rm(dir, { recursive: true, force: true }))
+
+    const { exitCode, output } = runPikkuDbMigrate(dir)
+    assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
+
+    const raw = await readFile(
+      join(dir, '.pikku', 'db', 'pikku-db-schema.gen.json'),
+      'utf-8'
+    )
+    const schema = JSON.parse(raw)
+    const books = schema.tables.find((t: any) => t.name === 'books')
+    const authorIdCol = books.columns.find((c: any) => c.name === 'author_id')
+
+    assert.ok(authorIdCol.foreignKey, 'author_id must have a foreignKey entry')
+    assert.equal(authorIdCol.foreignKey.table, 'authors')
+    assert.equal(authorIdCol.foreignKey.column, 'id')
+  })
+})
