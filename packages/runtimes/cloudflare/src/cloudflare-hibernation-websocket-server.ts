@@ -51,9 +51,26 @@ export abstract class CloudflareWebSocketHibernationServer<
         response,
         bubbleErrors: true,
       })
-    } catch {
+    } catch (e) {
+      // A connect-time throw is either an expected permission/auth denial (a
+      // legitimate handshake "no") or a real fault — a service not wired into
+      // this DO, the DB unreachable, the channel not registered, or a bug in
+      // onConnect. A mid-handshake WebSocket client can only be told "denied"
+      // via close + a non-101 status, but the two cases must NOT be conflated
+      // silently: discarding the error turns every fault into an opaque 403
+      // with no trace. Log it so deploy/runtime faults are diagnosable.
+      const detail = e instanceof Error ? (e.stack ?? e.message) : String(e)
+      try {
+        params.singletonServices.logger.error(
+          `channel connect failed for route ${request.path()}: ${detail}`
+        )
+      } catch {
+        // logger may be unavailable if service construction itself failed
+      }
       server.close(1008, 'Unauthorized')
-      return new Response(null, { status: 403 }) as any
+      // Body is intentionally generic — the fault detail is logged above, not
+      // leaked to the (possibly unauthenticated) handshake client.
+      return new Response('Forbidden', { status: 403 }) as any
     }
 
     return response.status(101).toResponse({ webSocket: client }) as any
