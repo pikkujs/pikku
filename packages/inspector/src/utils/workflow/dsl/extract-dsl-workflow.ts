@@ -6,7 +6,6 @@ import type {
   BranchStepMeta,
   ParallelGroupStepMeta,
   FanoutStepMeta,
-  ReturnStepMeta,
   CancelStepMeta,
   SetStepMeta,
   SwitchStepMeta,
@@ -1340,7 +1339,7 @@ function extractOutputBinding(
 function extractReturn(
   statement: ts.ReturnStatement,
   context: ExtractionContext
-): StepMeta | null {
+): WorkflowStepMeta | null {
   if (!statement.expression) {
     return null
   }
