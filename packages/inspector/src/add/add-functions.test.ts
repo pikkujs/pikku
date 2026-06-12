@@ -316,3 +316,55 @@ describe('addFunctions implementationHash', () => {
     }
   })
 })
+
+describe('pikkuChannelConnectionFunc generic mapping', () => {
+  // Regression: pikkuChannelConnectionFunc<Out> has a single generic that is the
+  // OUTPUT type (input is always void). The inspector must NOT record that generic
+  // as inputSchemaName — otherwise the empty WS handshake is validated against an
+  // input schema requiring the send-payload shape and the connect is rejected 403.
+  test('does not map the output generic to inputSchemaName', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-channel-connect-'))
+    const file = join(rootDir, 'channel.ts')
+
+    await writeFile(
+      file,
+      [
+        'type Sessionless<In, Out> = (',
+        '  services: any,',
+        '  data: In,',
+        '  interaction: any',
+        ') => Promise<Out>',
+        'export const pikkuChannelConnectionFunc = <Out = unknown>(',
+        '  func: Sessionless<void, Out>',
+        ') => ({ func })',
+        'export const onCardsConnect = pikkuChannelConnectionFunc<{',
+        "  type: 'hello'",
+        '  count: number',
+        '}>(async (_services, _data, _interaction) => {})',
+      ].join('\n')
+    )
+
+    const logger: InspectorLogger = {
+      debug: () => {},
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      critical: () => {},
+      hasCriticalErrors: () => false,
+    }
+
+    try {
+      const state = await inspect(logger, [file], { rootDir })
+      const meta = state.functions.meta['onCardsConnect']
+      assert.ok(meta, 'onCardsConnect meta should exist')
+      assert.strictEqual(
+        meta!.inputSchemaName,
+        null,
+        'connect input must be void (no input schema), not the output generic'
+      )
+      assert.deepStrictEqual(meta!.inputs, [])
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+})
