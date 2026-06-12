@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  Alert,
   Badge,
   Box,
   Button,
@@ -16,13 +17,13 @@ import {
 import { FlaskConical, Play, Search } from 'lucide-react'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
-import { usePikkuRPC } from '../context/PikkuRpcProvider'
+import { usePikkuRPC, usePikkuSSE } from '../context/PikkuRpcProvider'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import classes from '../components/ui/console.module.css'
 
-type RunPhase = 'idle' | 'running'
+type RunPhase = 'idle' | 'pending' | 'running'
 type GroupBy = 'feature' | 'function'
 type StatusFilter = 'all' | 'pass' | 'fail'
 
@@ -49,7 +50,7 @@ interface FunctionCoverage {
   status: 'covered' | 'partial' | 'uncovered' | 'unknown'
 }
 
-interface CoverageReport {
+export interface CoverageReport {
   generatedAt: string | null
   summary: {
     total: number
@@ -96,15 +97,6 @@ function titleCaseLabel(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-function getLatestGeneratedAt(functions: any[]): string | null {
-  return (
-    functions
-      .map((fn: any) => fn?.tests?.generatedAt)
-      .filter((v): v is string => typeof v === 'string' && v.length > 0)
-      .sort()
-      .at(-1) ?? null
-  )
-}
 
 function buildTestsViewData(functions: any[]): {
   report: CoverageReport | null
@@ -456,60 +448,191 @@ const ScenariosView: React.FC<ScenariosViewProps> = ({
   )
 }
 
-export const TestsPage: React.FC = () => {
+export interface TestsPageProps {
+  showRunButton?: boolean
+  onIncreaseCoverage?: (data: CoverageReport | null) => void
+}
+
+type CucumberStatus = 'PASSED' | 'FAILED' | 'SKIPPED' | 'PENDING' | 'UNDEFINED' | 'AMBIGUOUS'
+
+type TestStreamEvent =
+  | { type: 'scenario-start'; id: string; name: string; uri: string }
+  | { type: 'step'; scenarioId: string; step: string; status: CucumberStatus; duration: number; message?: string }
+  | { type: 'scenario-done'; id: string; name: string; status: CucumberStatus }
+  | { type: 'done'; coverage: CoverageReport | null }
+  | { type: 'error'; message: string }
+
+type LiveStep = {
+  step: string
+  status: CucumberStatus | 'running'
+  duration: number
+  message?: string
+}
+
+type LiveScenario = {
+  id: string
+  name: string
+  uri: string
+  status: CucumberStatus | 'running'
+  steps: LiveStep[]
+}
+
+const LIVE_STATUS_COLOR: Record<string, string> = {
+  running: 'blue',
+  PASSED: 'green',
+  FAILED: 'red',
+  SKIPPED: 'gray',
+  PENDING: 'yellow',
+  UNDEFINED: 'gray',
+  AMBIGUOUS: 'orange',
+}
+
+type LiveRunViewProps = { scenarios: LiveScenario[] }
+
+const LiveRunView: React.FC<LiveRunViewProps> = ({ scenarios }) => {
+  if (scenarios.length === 0) {
+    return (
+      <Center h="100%">
+        <Stack align="center" gap="xs">
+          <Loader size="sm" />
+          <Text size="sm" c="dimmed">Running tests…</Text>
+        </Stack>
+      </Center>
+    )
+  }
+
+  return (
+    <ScrollArea style={{ flex: 1 }}>
+      <Stack gap={4} p="md">
+        {scenarios.map((scenario) => (
+          <Group key={scenario.id} gap="xs" wrap="nowrap" align="flex-start">
+            <Box style={{ width: 18, flexShrink: 0, paddingTop: 2 }}>
+              {scenario.status === 'running' ? (
+                <Loader size={12} />
+              ) : (
+                <Text
+                  fz={12}
+                  fw={700}
+                  c={LIVE_STATUS_COLOR[scenario.status] ?? 'gray'}
+                  style={{ lineHeight: 1 }}
+                >
+                  {scenario.status === 'PASSED' ? '✓' : '✗'}
+                </Text>
+              )}
+            </Box>
+            <Box style={{ flex: 1, minWidth: 0 }}>
+              <Group gap={6} wrap="nowrap">
+                <Text fz={13} truncate style={{ flex: 1 }}>{scenario.name}</Text>
+                {scenario.status !== 'running' && scenario.steps.length > 0 && (
+                  <Text fz={11} c="dimmed" style={{ flexShrink: 0 }}>
+                    {scenario.steps.reduce((acc, s) => acc + s.duration, 0)}ms
+                  </Text>
+                )}
+              </Group>
+            </Box>
+          </Group>
+        ))}
+      </Stack>
+    </ScrollArea>
+  )
+}
+
+export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseCoverage }) => {
   const { meta, loading, refresh } = usePikkuMeta()
   const rpc = usePikkuRPC()
+  const subscribeToSSE = usePikkuSSE()
 
   const [runPhase, setRunPhase] = useState<RunPhase>('idle')
+  const [runError, setRunError] = useState<string | null>(null)
+  const [coverageLoading, setCoverageLoading] = useState(false)
   const [search, setSearch] = useState('')
   const [groupBy, setGroupBy] = useState<GroupBy>('feature')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [liveScenarios, setLiveScenarios] = useState<LiveScenario[]>([])
 
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const baseGeneratedAtRef = useRef<string | null>(null)
+  const sseRef = useRef<{ close: () => void } | null>(null)
 
   const { report, scenarios } = useMemo(
     () => buildTestsViewData(meta.functions),
     [meta.functions]
   )
 
-  const stopPolling = () => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current)
-      pollRef.current = null
-    }
-  }
-
   useEffect(() => {
-    return () => stopPolling()
+    return () => { sseRef.current?.close() }
   }, [])
 
-  const handleRunTests = async () => {
-    if (runPhase === 'running') return
+  const handleRunTests = () => {
+    if (runPhase !== 'idle') return
     setRunPhase('running')
-    baseGeneratedAtRef.current = getLatestGeneratedAt(meta.functions)
+    setRunError(null)
+    setLiveScenarios([])
 
-    try {
-      await rpc.invoke('console:runFunctionTests' as any, {} as any)
-    } catch {
-      // If the server returns a proxy error while tests are booting, continue polling
-    }
-
-    stopPolling()
-    pollRef.current = setInterval(async () => {
-      await refresh()
-      const current = getLatestGeneratedAt(meta.functions)
-      if (current && current !== baseGeneratedAtRef.current) {
-        stopPolling()
+    sseRef.current = subscribeToSSE<TestStreamEvent>(
+      '/function-tests/stream',
+      (event) => {
+        if (event.type === 'scenario-start') {
+          setLiveScenarios((prev) => [
+            ...prev,
+            { id: event.id, name: event.name, uri: event.uri, status: 'running', steps: [] },
+          ])
+        } else if (event.type === 'step') {
+          setLiveScenarios((prev) => {
+            const idx = prev.findIndex((s) => s.id === event.scenarioId)
+            if (idx === -1) return prev
+            const updated = [...prev]
+            updated[idx] = {
+              ...updated[idx],
+              steps: [
+                ...updated[idx].steps,
+                { step: event.step, status: event.status, duration: event.duration, message: event.message },
+              ],
+            }
+            return updated
+          })
+        } else if (event.type === 'scenario-done') {
+          setLiveScenarios((prev) => {
+            const idx = prev.findIndex((s) => s.id === event.id)
+            if (idx === -1) return prev
+            const updated = [...prev]
+            updated[idx] = { ...updated[idx], status: event.status }
+            return updated
+          })
+        } else if (event.type === 'done') {
+          sseRef.current = null
+          setLiveScenarios([])
+          void refresh()
+          setRunPhase('idle')
+        } else if (event.type === 'error') {
+          sseRef.current = null
+          setRunError(event.message)
+          setLiveScenarios([])
+          setRunPhase('idle')
+        }
+      },
+      (err) => {
+        sseRef.current = null
+        setRunError(err instanceof Error ? err.message : 'Failed to run tests')
+        setLiveScenarios([])
         setRunPhase('idle')
       }
-    }, 5000)
-
-    setTimeout(() => {
-      stopPolling()
-      setRunPhase('idle')
-    }, 90_000)
+    )
   }
+
+  const handleIncreaseCoverage = () => {
+    if (!rpc || !onIncreaseCoverage) return
+    setCoverageLoading(true)
+    void rpc
+      .invoke('console:getFunctionCoverage' as any, {} as any)
+      .then((data) => {
+        onIncreaseCoverage(data as CoverageReport | null)
+      })
+      .catch(() => {
+        onIncreaseCoverage(null)
+      })
+      .finally(() => setCoverageLoading(false))
+  }
+
+  const running = runPhase !== 'idle'
 
   const header = (
     <ListPageHeader
@@ -520,17 +643,33 @@ export const TestsPage: React.FC = () => {
           : 'Feature-first view of your test scenarios and function coverage'
       }
       lead={
-        <Button
-          size="xs"
-          leftSection={
-            runPhase === 'running' ? <Loader size={12} color="white" /> : <Play size={14} />
-          }
-          onClick={handleRunTests}
-          disabled={runPhase === 'running'}
-          loading={runPhase === 'running'}
-        >
-          {runPhase === 'running' ? 'Running…' : 'Run tests'}
-        </Button>
+        showRunButton ? (
+          <Group gap="xs">
+            <Button
+              size="xs"
+              leftSection={
+                running ? <Loader size={12} color="white" /> : <Play size={14} />
+              }
+              onClick={handleRunTests}
+              disabled={running}
+              loading={running}
+            >
+              {running ? 'Running…' : 'Run tests'}
+            </Button>
+            {onIncreaseCoverage && (
+              <Button
+                size="xs"
+                variant="default"
+                leftSection={<FlaskConical size={14} />}
+                onClick={handleIncreaseCoverage}
+                disabled={running || coverageLoading || !rpc}
+                loading={coverageLoading}
+              >
+                Increase coverage
+              </Button>
+            )}
+          </Group>
+        ) : null
       }
       filters={
         <TextInput
@@ -582,36 +721,49 @@ export const TestsPage: React.FC = () => {
     )
   }
 
-  if (!report || scenarios.length === 0) {
-    return (
-      <PanelProvider>
-        <ResizablePanelLayout hidePanel header={header}>
+  return (
+    <PanelProvider>
+      <ResizablePanelLayout hidePanel header={header}>
+        {runError && (
+          <Alert
+            color="red"
+            title="Test run failed"
+            withCloseButton
+            onClose={() => setRunError(null)}
+            m="md"
+          >
+            {runError}
+          </Alert>
+        )}
+
+        {running ? (
+          <Box
+            className={classes.listSurfaceCard}
+            style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+          >
+            <LiveRunView scenarios={liveScenarios} />
+          </Box>
+        ) : !report || scenarios.length === 0 ? (
           <EmptyStatePlaceholder
             icon={FlaskConical}
             title="No test data yet"
             description="Run your function tests to populate scenarios here."
             docsHref="https://pikku.dev/docs/core-features/testing"
           />
-        </ResizablePanelLayout>
-      </PanelProvider>
-    )
-  }
-
-  return (
-    <PanelProvider>
-      <ResizablePanelLayout hidePanel header={header}>
-        <Box
-          className={classes.listSurfaceCard}
-          style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
-        >
-          <ScenariosView
-            scenarios={scenarios}
-            report={report}
-            search={search}
-            groupBy={groupBy}
-            statusFilter={statusFilter}
-          />
-        </Box>
+        ) : (
+          <Box
+            className={classes.listSurfaceCard}
+            style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
+          >
+            <ScenariosView
+              scenarios={scenarios}
+              report={report}
+              search={search}
+              groupBy={groupBy}
+              statusFilter={statusFilter}
+            />
+          </Box>
+        )}
       </ResizablePanelLayout>
     </PanelProvider>
   )

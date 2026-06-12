@@ -55,6 +55,7 @@ export {
   PikkuRPCContext,
   usePikkuHTTP,
   usePikkuRPC,
+  usePikkuSSE,
   getServerUrl,
   setServerUrl,
 } from './context/PikkuRpcProvider'
@@ -121,7 +122,11 @@ export { EmailsPage } from './pages/EmailsPage'
 export { CredentialsPage } from './pages/CredentialsPage'
 export { AuditPage } from './pages/AuditPage'
 export { AuthProvidersPage, AUTH_PROVIDERS } from './pages/AuthProvidersPage'
-export type { AuthProviderDef, AuthProviderField } from './pages/AuthProvidersPage'
+export type {
+  AuthProviderDef,
+  AuthProviderField,
+} from './pages/AuthProvidersPage'
 export { TestsPage } from './pages/TestsPage'
+export type { TestsPageProps, CoverageReport } from './pages/TestsPage'
 export { NotFoundTitle } from './components/NotFoundTitle'
 export { ConsoleEditableProvider } from './context/ConsoleEditableContext'

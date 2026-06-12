@@ -80,3 +80,15 @@ export const usePikkuRPC = () => {
   }
   return context
 }
+
+export const usePikkuSSE = () => {
+  const context = useContext(PikkuRPCContext)
+  if (!context) {
+    throw new Error('usePikkuSSE must be used within PikkuRPCProvider')
+  }
+  return context.subscribeToSSE.bind(context) as <T = unknown>(
+    path: string,
+    handler: (event: T) => void,
+    onError?: (err: unknown) => void
+  ) => { close: () => void }
+}
