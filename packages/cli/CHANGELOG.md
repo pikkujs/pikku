@@ -1,3 +1,9 @@
+## 0.12.31
+
+### Patch Changes
+
+- cd51724: Default SQLite to `.pikku-runtime/dev.db` when `db/sqlite` directory exists and no db engine is configured in pikku.config.json.
+
 ## 0.12.30
 
 ### Patch Changes
