@@ -456,6 +456,7 @@ export interface TestsPageProps {
 type CucumberStatus = 'PASSED' | 'FAILED' | 'SKIPPED' | 'PENDING' | 'UNDEFINED' | 'AMBIGUOUS'
 
 type TestStreamEvent =
+  | { type: 'run-start'; scenarios: Array<{ id: string; name: string; uri: string; steps: string[] }> }
   | { type: 'scenario-start'; id: string; name: string; uri: string }
   | { type: 'step'; scenarioId: string; step: string; status: CucumberStatus; duration: number; message?: string }
   | { type: 'scenario-done'; id: string; name: string; status: CucumberStatus }
@@ -473,7 +474,7 @@ type LiveScenario = {
   id: string
   name: string
   uri: string
-  status: CucumberStatus | 'running'
+  status: CucumberStatus | 'pending' | 'running'
   steps: LiveStep[]
 }
 
@@ -503,35 +504,79 @@ const LiveRunView: React.FC<LiveRunViewProps> = ({ scenarios }) => {
 
   return (
     <ScrollArea style={{ flex: 1 }}>
-      <Stack gap={4} p="md">
-        {scenarios.map((scenario) => (
-          <Group key={scenario.id} gap="xs" wrap="nowrap" align="flex-start">
-            <Box style={{ width: 18, flexShrink: 0, paddingTop: 2 }}>
-              {scenario.status === 'running' ? (
-                <Loader size={12} />
-              ) : (
-                <Text
-                  fz={12}
-                  fw={700}
-                  c={LIVE_STATUS_COLOR[scenario.status] ?? 'gray'}
-                  style={{ lineHeight: 1 }}
-                >
-                  {scenario.status === 'PASSED' ? '✓' : '✗'}
-                </Text>
+      <Stack gap="sm" p="md">
+        {scenarios.map((scenario) => {
+          const totalMs = scenario.steps.reduce((acc, s) => acc + s.duration, 0)
+          const isPending = scenario.status === 'pending'
+          const isRunning = scenario.status === 'running'
+          const passed = scenario.status === 'PASSED'
+          const statusColor = isPending ? 'gray' : isRunning ? 'blue' : passed ? 'green' : 'red'
+          const borderLeft = isPending
+            ? SCENARIO_STATUS_BORDER.pending
+            : isRunning
+              ? SCENARIO_STATUS_BORDER.running
+              : passed
+                ? SCENARIO_STATUS_BORDER.pass
+                : SCENARIO_STATUS_BORDER.fail
+
+          return (
+            <Box
+              key={scenario.id}
+              style={{
+                border: `1px solid var(--app-border, var(--mantine-color-default-border))`,
+                borderRadius: 8,
+                background: 'var(--app-panel-bg, var(--mantine-color-body))',
+                overflow: 'hidden',
+              }}
+            >
+              <Box
+                px="md"
+                py="xs"
+                style={{
+                  borderBottom: scenario.steps.length > 0
+                    ? `1px solid var(--app-border, var(--mantine-color-default-border))`
+                    : undefined,
+                  background: 'var(--app-surface, var(--mantine-color-default-hover))',
+                }}
+              >
+                <Group justify="space-between" wrap="nowrap">
+                  <Group gap="xs" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
+                    {isPending ? (
+                      <Text fz={12} c="dimmed" style={{ lineHeight: 1, flexShrink: 0 }}>○</Text>
+                    ) : isRunning ? (
+                      <Loader size={12} style={{ flexShrink: 0 }} />
+                    ) : (
+                      <Text fz={12} fw={700} c={statusColor} style={{ lineHeight: 1, flexShrink: 0 }}>
+                        {passed ? '✓' : '✗'}
+                      </Text>
+                    )}
+                    <Text ff="monospace" fz={13} fw={600} truncate>
+                      {scenario.name}
+                    </Text>
+                  </Group>
+                  <Group gap={6} wrap="nowrap" style={{ flexShrink: 0 }}>
+                    {!isRunning && !isPending && scenario.steps.length > 0 && (
+                      <Text fz={11} c="dimmed">{totalMs}ms</Text>
+                    )}
+                    <Badge color={statusColor} variant="light" size="sm">
+                      {isPending ? 'Pending' : isRunning ? 'Running' : passed ? 'Pass' : 'Fail'}
+                    </Badge>
+                  </Group>
+                </Group>
+              </Box>
+
+              {scenario.steps.length > 0 && (
+                <Box p="md">
+                  <Stack gap={2} pl="sm" style={{ borderLeft: `3px solid ${borderLeft}` }}>
+                    {scenario.steps.map((s, si) => (
+                      <HighlightedStep key={si} step={s.step} />
+                    ))}
+                  </Stack>
+                </Box>
               )}
             </Box>
-            <Box style={{ flex: 1, minWidth: 0 }}>
-              <Group gap={6} wrap="nowrap">
-                <Text fz={13} truncate style={{ flex: 1 }}>{scenario.name}</Text>
-                {scenario.status !== 'running' && scenario.steps.length > 0 && (
-                  <Text fz={11} c="dimmed" style={{ flexShrink: 0 }}>
-                    {scenario.steps.reduce((acc, s) => acc + s.duration, 0)}ms
-                  </Text>
-                )}
-              </Group>
-            </Box>
-          </Group>
-        ))}
+          )
+        })}
       </Stack>
     </ScrollArea>
   )
@@ -570,11 +615,20 @@ export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseC
     sseRef.current = subscribeToSSE<TestStreamEvent>(
       '/function-tests/stream',
       (event) => {
-        if (event.type === 'scenario-start') {
-          setLiveScenarios((prev) => [
-            ...prev,
-            { id: event.id, name: event.name, uri: event.uri, status: 'running', steps: [] },
-          ])
+        if (event.type === 'run-start') {
+          setLiveScenarios(
+            event.scenarios.map((s) => ({
+              id: s.id,
+              name: s.name,
+              uri: s.uri,
+              status: 'pending' as const,
+              steps: s.steps.map((step) => ({ step, status: 'running' as const, duration: 0 })),
+            }))
+          )
+        } else if (event.type === 'scenario-start') {
+          setLiveScenarios((prev) =>
+            prev.map((s) => (s.name === event.name ? { ...s, id: event.id, status: 'running', steps: [] } : s))
+          )
         } else if (event.type === 'step') {
           setLiveScenarios((prev) => {
             const idx = prev.findIndex((s) => s.id === event.scenarioId)
