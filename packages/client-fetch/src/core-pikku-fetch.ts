@@ -194,6 +194,78 @@ export class CorePikkuFetch {
   }
 
   /**
+   * Opens an SSE stream to the given path and calls `handler` for each parsed
+   * JSON event. Returns a handle with a `close()` method that aborts the stream.
+   *
+   * @param path - Server-relative path (e.g. `/function-tests/stream`)
+   * @param handler - Called with each decoded JSON event
+   * @param onError - Called once if the stream errors (and is not already closed)
+   */
+  public subscribeToSSE<T = unknown>(
+    path: string,
+    handler: (event: T) => void,
+    onError?: (err: unknown) => void
+  ): { close: () => void } {
+    this.verifyServerUrlSet()
+    const url = path.startsWith('/')
+      ? `${this.options.serverUrl}${path}`
+      : `${this.options.serverUrl}/${path}`
+
+    const controller = new AbortController()
+    let closed = false
+
+    const run = async () => {
+      try {
+        const response = await corePikkuFetch(url, null, {
+          method: 'GET',
+          mode: this.options.mode,
+          credentials: this.options.credentials,
+          headers: { ...this.getHeaders(), Accept: 'text/event-stream' },
+          signal: controller.signal,
+        })
+        if (!response.ok || !response.body) {
+          throw new Error(`SSE request failed: ${response.status}`)
+        }
+        const reader = response.body
+          .pipeThrough(new TextDecoderStream())
+          .getReader()
+        let buffer = ''
+        while (!closed) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += value
+          let sep: number
+          while ((sep = buffer.indexOf('\n\n')) !== -1) {
+            const raw = buffer.slice(0, sep)
+            buffer = buffer.slice(sep + 2)
+            const data = raw
+              .split('\n')
+              .filter((l) => l.startsWith('data:'))
+              .map((l) => l.slice(5).trimStart())
+              .join('\n')
+            if (!data) continue
+            try {
+              handler(JSON.parse(data) as T)
+            } catch {
+              /* ignore malformed event */
+            }
+          }
+        }
+      } catch (err) {
+        if (!closed) onError?.(err)
+      }
+    }
+
+    run()
+    return {
+      close: () => {
+        closed = true
+        controller.abort()
+      },
+    }
+  }
+
+  /**
    * Makes a raw fetch request with the specified URI, method, and data.
    *
    * @param {string} uri - The endpoint URI for the request.

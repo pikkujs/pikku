@@ -136,6 +136,14 @@ export class PikkuRPC {
             return await this.pikkuFetch.post(\`${globalHTTPPrefix}/rpc/agent/\${String(agentName)}/approve\` as never, input) as any
         },
     }
+
+    subscribeToSSE<T = unknown>(
+        path: string,
+        handler: (event: T) => void,
+        onError?: (err: unknown) => void
+    ): { close: () => void } {
+        return this.pikkuFetch.subscribeToSSE(path, handler, onError)
+    }
 }
 
 export const pikkuRPC = new PikkuRPC();
