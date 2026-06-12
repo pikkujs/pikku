@@ -1,3 +1,9 @@
+## 0.12.29
+
+### Patch Changes
+
+- 294e365: Fix body stream caching in PikkuFetchHTTPRequest so that arrayBuffer() can be called after body() has already consumed the stream via text(). This is required for Auth.js CSRF validation to work correctly when integrated with Pikku's internal fetch.
+
 ## 0.12.28
 
 ### Patch Changes
