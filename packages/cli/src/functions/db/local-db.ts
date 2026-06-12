@@ -107,13 +107,19 @@ export function resolveDb(
     }
   }
 
-  if (userConfig.sqliteDb) {
+  const sqliteDb =
+    userConfig.sqliteDb ??
+    (existsSync(join(rootDir, 'db/sqlite'))
+      ? '.pikku-runtime/dev.db'
+      : undefined)
+
+  if (sqliteDb) {
     const resolvedRuntimeDir = runtimeDir
       ? resolveAgainst(rootDir, runtimeDir)
       : join(rootDir, '.pikku-runtime')
     return {
       dialect: 'sqlite',
-      dbFile: resolveAgainst(rootDir, userConfig.sqliteDb),
+      dbFile: resolveAgainst(rootDir, sqliteDb),
       runtimeDir: resolvedRuntimeDir,
       seedFile: resolveAgainst(rootDir, 'db/sqlite-seed.sql'),
       ...base('db/sqlite'),
