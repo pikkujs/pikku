@@ -1,7 +1,7 @@
 ---
-"@pikku/addon-console": minor
-"@pikku/console": minor
-"@pikku/fetch": minor
+"@pikku/addon-console": patch
+"@pikku/console": patch
+"@pikku/fetch": patch
 "@pikku/cli": patch
 ---
 
