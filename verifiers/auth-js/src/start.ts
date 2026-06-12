@@ -5,6 +5,7 @@ import './me.http.js'
 
 import { fetch } from '@pikku/core'
 import { resetStore } from './user-store.js'
+import { ALL_OAUTH_PROVIDERS } from './providers.js'
 
 const BASE = 'http://localhost'
 
@@ -112,6 +113,20 @@ async function main(): Promise<void> {
     const { csrfToken } = await getCsrf()
     assertTruthy(csrfToken, 'csrfToken')
   })
+
+  console.log('\n--- Providers ---')
+
+  await runTest(
+    'GET /auth/providers lists all configured providers',
+    async () => {
+      const res = await fetch(new Request(`${BASE}/auth/providers`))
+      const providers = (await res.json()) as Record<string, unknown>
+      for (const provider of ALL_OAUTH_PROVIDERS) {
+        assertTruthy(providers[provider], `provider ${provider} present`)
+      }
+      assertTruthy(providers['credentials'], 'credentials provider present')
+    }
+  )
 
   console.log('\n--- Credentials Signup ---')
 

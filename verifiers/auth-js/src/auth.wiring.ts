@@ -3,6 +3,36 @@ import { wireAuth, authJsSession } from '@pikku/auth-js'
 import { createUser, lookupUser } from './user-store.js'
 
 wireAuth({
+  providers: [
+    'github',
+    'google',
+    'discord',
+    'twitter',
+    'apple',
+    'facebook',
+    'linkedin',
+    'slack',
+    'spotify',
+    'twitch',
+    'gitlab',
+    'reddit',
+    'notion',
+    'instagram',
+    'zoom',
+    'tiktok',
+    'threads',
+    'patreon',
+    'dropbox',
+    'hubspot',
+    'salesforce',
+    'atlassian',
+    'strava',
+    'auth0',
+    'okta',
+    'microsoft-entra-id',
+    'keycloak',
+    'cognito',
+  ],
   credentials: {
     fields: {
       email: { label: 'Email', type: 'email', required: true },
