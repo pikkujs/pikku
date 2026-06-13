@@ -6,6 +6,7 @@ import {
 import type { AddWiring, InspectorState } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
 import { detectSchemaVendorOrError } from '../utils/detect-schema-vendor.js'
+import { parseDurationString } from '@pikku/core'
 
 export interface KeyedWiringConfig {
   functionName: string
@@ -50,6 +51,9 @@ export const createAddKeyedWiring = (config: KeyedWiringConfig): AddWiring => {
         | string
         | null
       const descriptionValue = getPropertyValue(obj, 'description') as
+        | string
+        | null
+      const rotationPeriodValue = getPropertyValue(obj, 'rotationPeriod') as
         | string
         | null
       const idValue = getPropertyValue(obj, config.idField) as string | null
@@ -123,6 +127,18 @@ export const createAddKeyedWiring = (config: KeyedWiringConfig): AddWiring => {
         return
       }
 
+      if (rotationPeriodValue) {
+        try {
+          parseDurationString(rotationPeriodValue)
+        } catch {
+          logger.critical(
+            ErrorCode.INVALID_VALUE,
+            `${config.label} '${nameValue}' has an invalid 'rotationPeriod': '${rotationPeriodValue}'. Use a duration like '1d', '30day', or '1w'.`
+          )
+          return
+        }
+      }
+
       const sourceFile = node.getSourceFile().fileName
 
       const wiringState = config.getState(state)
@@ -148,6 +164,7 @@ export const createAddKeyedWiring = (config: KeyedWiringConfig): AddWiring => {
         name: nameValue,
         displayName: displayNameValue,
         description: descriptionValue || undefined,
+        rotationPeriod: rotationPeriodValue || undefined,
         [config.idField]: idValue,
         schema: schemaLookupName,
         sourceFile,

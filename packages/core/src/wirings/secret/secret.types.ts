@@ -4,6 +4,12 @@ export type CoreSecret<T = unknown> = {
   description?: string
   secretId: string
   schema: T
+  /**
+   * Optional rotation cadence for this secret, e.g. '1d', '30day', '1w'.
+   * Stored in the generated secrets metadata so consumers can tell when a
+   * secret was last updated and whether it is due for rotation.
+   */
+  rotationPeriod?: string
 }
 
 export type OAuth2CredentialConfig = {
@@ -22,6 +28,7 @@ export type SecretDefinitionMeta = {
   secretId: string
   schema?: Record<string, unknown> | string
   oauth2?: OAuth2CredentialConfig
+  rotationPeriod?: string
   sourceFile?: string
 }
 
