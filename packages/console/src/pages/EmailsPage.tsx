@@ -200,22 +200,25 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
   }
 
   return (
-    <Box
-      className={classes.flexColumn}
-      style={{
-        height: '100vh',
-        padding: 'var(--mantine-spacing-xl)',
-        gap: 'var(--mantine-spacing-md)',
-      }}
-    >
-      <Box
-        style={{
-          flex: 1,
-          minHeight: 0,
-          display: 'flex',
-          gap: 'var(--mantine-spacing-md)',
-        }}
+    <PanelProvider>
+      <ResizablePanelLayout
+        hidePanel
+        header={
+          <ListPageHeader
+            title="Email Templates"
+            description="Preview and inspect email templates with live variable rendering"
+            lead={headerRight}
+          />
+        }
       >
+        <Box
+          style={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            gap: 'var(--mantine-spacing-md)',
+          }}
+        >
         {/* Preview area */}
         <Box
           className={classes.listSurfaceCard}
@@ -373,7 +376,8 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
             </Stack>
           </Box>
         </Box>
-      </Box>
-    </Box>
+        </Box>
+      </ResizablePanelLayout>
+    </PanelProvider>
   )
 }
