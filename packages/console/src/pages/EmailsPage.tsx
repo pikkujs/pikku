@@ -44,6 +44,15 @@ type EmailPreviewValue =
 
 const EMAIL_DOCS_HREF = 'https://pikku.dev/docs'
 
+/** "confirm-email" -> "Confirm Email" for human-friendly display. */
+function humanizeTemplateName(name: string): string {
+  return name
+    .split(/[-_]/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
 function buildVariablesSchema(variables: string[]): RJSFSchema {
   return {
     type: 'object',
@@ -246,7 +255,7 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
             <Group gap="sm" justify="space-between" wrap="nowrap">
               <Group gap="xs" style={{ minWidth: 0 }}>
                 <Mail size={16} />
-                <Text fw={600} ff="monospace" truncate>{selectedTemplate}</Text>
+                <Text fw={600} truncate>{humanizeTemplateName(selectedTemplate)}</Text>
                 {preview.data?.hash ? (
                   <Badge variant="outline" color="gray" style={{ flexShrink: 0 }}>
                     {preview.data.hash.slice(0, 10)}
