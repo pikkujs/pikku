@@ -4,6 +4,7 @@ import {
   Alert,
   Badge,
   Box,
+  Button,
   Center,
   Code,
   Divider,
@@ -18,12 +19,14 @@ import {
   UnstyledButton,
   ScrollArea,
 } from '@mantine/core'
-import { AlertTriangle, Mail, Monitor, Search, Smartphone, ChevronDown, Check } from 'lucide-react'
+import { AlertTriangle, Mail, Monitor, Search, Smartphone, ChevronDown, Check, Code2, Save } from 'lucide-react'
+import CodeMirror from '@uiw/react-codemirror'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { useSearchParams } from '../router'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { SchemaForm } from '../components/ui/SchemaForm'
 import { useRenderEmailPreview } from '../hooks/useWirings'
+import { useUpdateEmailTemplate } from '../hooks/useCodeEdit'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
@@ -62,11 +65,12 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
   const [previewInput, setPreviewInput] = useState<
     Record<string, EmailPreviewValue>
   >({})
-  const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>(
+  const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile' | 'html'>(
     'desktop'
   )
   const [selectorOpen, setSelectorOpen] = useState(false)
   const [selectorSearch, setSelectorSearch] = useState('')
+  const [editorValue, setEditorValue] = useState<string>('')
 
   const templates = meta.emailsMeta?.templates || {}
   const templateNames = useMemo(
@@ -130,6 +134,16 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
     () => buildVariablesSchema(selectedMeta?.variables ?? []),
     [selectedMeta]
   )
+
+  // Sync the editor to the raw template source whenever it (re)loads — including
+  // after a successful save, when the invalidated preview refetches the new source.
+  const templateSource = preview.data?.source ?? ''
+  useEffect(() => {
+    setEditorValue(templateSource)
+  }, [templateSource, selectedTemplate])
+
+  const updateEmailTemplate = useUpdateEmailTemplate()
+  const sourceDirty = editorValue !== templateSource
 
   const filteredTemplateItems = useMemo(() => {
     if (!selectorSearch) return templateItems
@@ -254,11 +268,12 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
                 />
                 <SegmentedControl
                   value={previewMode}
-                  onChange={(value) => setPreviewMode(value as 'desktop' | 'mobile')}
+                  onChange={(value) => setPreviewMode(value as 'desktop' | 'mobile' | 'html')}
                   size="xs"
                   data={[
                     { label: <Group gap={4} wrap="nowrap"><Monitor size={14} /><span>Desktop</span></Group>, value: 'desktop' },
                     { label: <Group gap={4} wrap="nowrap"><Smartphone size={14} /><span>Mobile</span></Group>, value: 'mobile' },
+                    { label: <Group gap={4} wrap="nowrap"><Code2 size={14} /><span>HTML</span></Group>, value: 'html' },
                   ]}
                 />
               </Group>
@@ -281,26 +296,66 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
                   Missing source files: {preview.data.missing.join(', ')}
                 </Alert>
               ) : null}
-              <Center py="sm">
-                {previewMode === 'desktop' ? (
-                  <Box style={{ width: '100%', maxWidth: 960, height: 720, border: '1px solid var(--app-row-border)', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
-                    <iframe title="Desktop email preview" srcDoc={preview.data?.html ?? ''} style={{ width: '100%', height: '100%', border: 0, background: '#fff' }} />
+              {previewMode === 'html' ? (
+                <Stack gap="sm">
+                  <Group justify="space-between" wrap="nowrap">
+                    <Text size="sm" c="dimmed">
+                      Editing <Code>templates/{selectedTemplate}.html</Code> — saving regenerates the preview.
+                    </Text>
+                    <Button
+                      size="xs"
+                      leftSection={<Save size={14} />}
+                      loading={updateEmailTemplate.isPending}
+                      disabled={!sourceDirty || updateEmailTemplate.isPending}
+                      onClick={() =>
+                        updateEmailTemplate.mutate({
+                          templateName: selectedTemplate,
+                          source: editorValue,
+                        })
+                      }
+                    >
+                      Save
+                    </Button>
+                  </Group>
+                  {updateEmailTemplate.isError ? (
+                    <Alert color="red" icon={<AlertTriangle size={16} />}>
+                      {updateEmailTemplate.error instanceof Error
+                        ? updateEmailTemplate.error.message
+                        : 'Failed to save email template'}
+                    </Alert>
+                  ) : null}
+                  <Box style={{ border: '1px solid var(--app-row-border)', borderRadius: 8, overflow: 'hidden' }}>
+                    <CodeMirror
+                      value={editorValue}
+                      height="600px"
+                      onChange={(value) => setEditorValue(value)}
+                    />
                   </Box>
-                ) : (
-                  <Box style={{ width: 390, maxWidth: '100%', height: 720, border: '1px solid var(--app-row-border)', borderRadius: 24, overflow: 'hidden', background: '#fff' }}>
-                    <iframe title="Mobile email preview" srcDoc={preview.data?.html ?? ''} style={{ width: '100%', height: '100%', border: 0, background: '#fff' }} />
-                  </Box>
-                )}
-              </Center>
-              {preview.data?.text ? (
+                </Stack>
+              ) : (
                 <>
-                  <Divider />
-                  <Stack gap="xs">
-                    <Text fw={600}>Text fallback</Text>
-                    <Code block>{preview.data.text}</Code>
-                  </Stack>
+                  <Center py="sm">
+                    {previewMode === 'desktop' ? (
+                      <Box style={{ width: '100%', maxWidth: 960, height: 720, border: '1px solid var(--app-row-border)', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
+                        <iframe title="Desktop email preview" srcDoc={preview.data?.html ?? ''} style={{ width: '100%', height: '100%', border: 0, background: '#fff' }} />
+                      </Box>
+                    ) : (
+                      <Box style={{ width: 390, maxWidth: '100%', height: 720, border: '1px solid var(--app-row-border)', borderRadius: 24, overflow: 'hidden', background: '#fff' }}>
+                        <iframe title="Mobile email preview" srcDoc={preview.data?.html ?? ''} style={{ width: '100%', height: '100%', border: 0, background: '#fff' }} />
+                      </Box>
+                    )}
+                  </Center>
+                  {preview.data?.text ? (
+                    <>
+                      <Divider />
+                      <Stack gap="xs">
+                        <Text fw={600}>Text fallback</Text>
+                        <Code block>{preview.data.text}</Code>
+                      </Stack>
+                    </>
+                  ) : null}
                 </>
-              ) : null}
+              )}
             </Stack>
           </Box>
         </Box>

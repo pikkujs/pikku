@@ -25,6 +25,8 @@ export interface RenderEmailPreviewOutput {
   subject: string
   html: string
   text?: string
+  /** Raw, un-rendered template HTML source (templates/<name>.html) — what the editor edits. */
+  source: string
   variables: string[]
   hash: string
   missing: string[]
@@ -111,6 +113,7 @@ export const renderEmailPreview = pikkuSessionlessFunc<
       subject,
       html,
       ...(text ? { text } : {}),
+      source: assets.html,
       variables: templateMeta.variables,
       hash: templateMeta.locales[locale]?.contentHash ?? '',
       missing: assets.missing,

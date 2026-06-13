@@ -176,6 +176,24 @@ export class CodeEditService {
     await writeFile(absPath, result, 'utf-8')
   }
 
+  /**
+   * Overwrite an email template's HTML source file (templates/<name>.html) under
+   * an absolute email-templates baseDir (emailsMeta.src). Plain file write — email
+   * templates are not TypeScript, so no AST parsing is involved.
+   */
+  async updateEmailTemplate(
+    baseDir: string,
+    templateName: string,
+    source: string
+  ): Promise<void> {
+    // Strict whitelist: no slashes or dots, so no path traversal is possible.
+    if (!/^[a-zA-Z0-9-_]+$/.test(templateName)) {
+      throw new Error(`Invalid email template name: ${templateName}`)
+    }
+    const filePath = resolve(baseDir, 'templates', `${templateName}.html`)
+    await writeFile(filePath, source, 'utf-8')
+  }
+
   private resolvePath(sourceFile: string): string {
     const resolved = sourceFile.startsWith('/')
       ? sourceFile

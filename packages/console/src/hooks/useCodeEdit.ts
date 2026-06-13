@@ -94,6 +94,28 @@ export function useUpdateFunctionBody() {
   })
 }
 
+export function useUpdateEmailTemplate() {
+  const rpc = usePikkuRPC()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      templateName,
+      source,
+    }: {
+      templateName: string
+      source: string
+    }) =>
+      rpc.invoke('console:updateEmailTemplate', {
+        templateName,
+        source,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['emails'] })
+    },
+  })
+}
+
 export function useAgentSource(
   sourceFile: string | undefined,
   exportedName: string | undefined,
