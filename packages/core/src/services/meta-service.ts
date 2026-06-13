@@ -562,6 +562,24 @@ export class LocalMetaService implements MetaService {
       readEmailFile(`templates/${templateName}.text.txt`),
     ])
 
+    const missing = [
+      ...(themeRaw ? [] : ['theme']),
+      ...(localeRaw ? [] : ['locale']),
+      ...(templateHtml ? [] : ['html']),
+      ...(templateSubject ? [] : ['subject']),
+      ...(templateText ? [] : ['text']),
+    ]
+
+    if (missing.length > 0) {
+      // Diagnostic for the intermittent "Missing source files" report: logs which
+      // process and which resolved baseDir saw the gap. Different pids across
+      // failures => multiple runtime workers with divergent cached `src`; same pid
+      // + transient absence => files being rewritten under us (e.g. regeneration).
+      console.warn(
+        `[email-assets] pid=${process.pid} template=${templateName} locale=${locale} baseDir=${baseDir} missing=${missing.join(',')}`
+      )
+    }
+
     return {
       theme: themeRaw ? (JSON.parse(themeRaw) as Record<string, unknown>) : {},
       strings: localeRaw
@@ -574,13 +592,7 @@ export class LocalMetaService implements MetaService {
       html: templateHtml ?? '',
       subject: templateSubject ?? '',
       text: templateText ?? '',
-      missing: [
-        ...(themeRaw ? [] : ['theme']),
-        ...(localeRaw ? [] : ['locale']),
-        ...(templateHtml ? [] : ['html']),
-        ...(templateSubject ? [] : ['subject']),
-        ...(templateText ? [] : ['text']),
-      ],
+      missing,
     }
   }
 
