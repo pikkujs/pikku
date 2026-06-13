@@ -147,6 +147,8 @@ export const streamFunctionTests = pikkuSessionlessFunc<null, TestStreamEvent>({
         { cwd: functionsDir, env: spawnEnv, stdio: ['ignore', 'pipe', 'pipe'] }
       )
 
+      proc.stderr!.resume()
+
       let stdoutBuf = ''
 
       proc.stdout!.on('data', (chunk: Buffer) => {
@@ -301,9 +303,16 @@ export const streamFunctionTests = pikkuSessionlessFunc<null, TestStreamEvent>({
     })
 
     const outFile = join(ftestDir, '.coverage', 'function-coverage.json')
-    const coverage: FunctionCoverageReport | null = existsSync(outFile)
-      ? (JSON.parse(readFileSync(outFile, 'utf-8')) as FunctionCoverageReport)
-      : null
+    let coverage: FunctionCoverageReport | null = null
+    if (existsSync(outFile)) {
+      try {
+        coverage = JSON.parse(
+          readFileSync(outFile, 'utf-8')
+        ) as FunctionCoverageReport
+      } catch {
+        coverage = null
+      }
+    }
 
     channel.send({ type: 'done', coverage })
     channel.close()

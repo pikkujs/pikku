@@ -244,11 +244,14 @@ export class CorePikkuFetch {
               .map((l) => l.slice(5).trimStart())
               .join('\n')
             if (!data) continue
+            let parsed: T
             try {
-              handler(JSON.parse(data) as T)
+              parsed = JSON.parse(data) as T
             } catch {
               /* ignore malformed event */
+              continue
             }
+            handler(parsed)
           }
         }
       } catch (err) {
