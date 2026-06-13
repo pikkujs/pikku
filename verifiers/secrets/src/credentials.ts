@@ -18,6 +18,7 @@ wireSecret({
   description: 'Credentials for the example external API',
   secretId: 'EXAMPLE_API_CREDENTIALS',
   schema: apiCredentialsSchema,
+  rotationPeriod: '30day',
 })
 
 /**

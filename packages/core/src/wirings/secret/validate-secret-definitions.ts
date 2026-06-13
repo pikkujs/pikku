@@ -57,6 +57,7 @@ export function validateAndBuildSecretDefinitionsMeta(
           secretId: def.secretId,
           schema: def.schema,
           oauth2: def.oauth2,
+          rotationPeriod: def.rotationPeriod,
           sourceFile: def.sourceFile,
         }
       }
@@ -73,6 +74,7 @@ export function validateAndBuildSecretDefinitionsMeta(
         secretId: def.secretId,
         schema: def.schema,
         oauth2: def.oauth2,
+        rotationPeriod: def.rotationPeriod,
         sourceFile: def.sourceFile,
       }
     }
