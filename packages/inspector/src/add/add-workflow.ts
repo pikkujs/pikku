@@ -209,7 +209,6 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   let summary: string | undefined
   let description: string | undefined
   let errors: string[] | undefined
-  let inline: boolean | undefined
   let expose: boolean | undefined
 
   if (ts.isObjectLiteralExpression(firstArg)) {
@@ -225,11 +224,6 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     summary = metadata.summary
     description = metadata.description
     errors = metadata.errors
-
-    const inlineProp = getPropertyValue(firstArg, 'inline')
-    if (inlineProp === true) {
-      inline = true
-    }
 
     expose = getPropertyValue(firstArg, 'expose') as boolean | undefined
   }
@@ -337,7 +331,6 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     description,
     errors,
     tags,
-    inline,
     expose,
   }
 

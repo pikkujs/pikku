@@ -47,7 +47,7 @@ const myWorkflow = pikkuWorkflowFunc<InputType, OutputType>(
 ### Workflow Step Types
 
 ```typescript
-// RPC step — execute a Pikku function as a queue job
+// RPC step — run a named Pikku function as a step
 // workflow.do(stepName, funcName, data, options?)
 const result = await workflow.do(
   'Create profile',
@@ -58,11 +58,40 @@ const result = await workflow.do(
   { retries: 3, retryDelay: '1s' }
 )
 
-// Inline step — immediate execution, cached for replay
+// Inline closure step — immediate execution, cached for replay
 // workflow.do(stepName, asyncFn)
 const result = await workflow.do('Generate message', async () => {
   return `Welcome, ${data.email}!`
 })
+```
+
+### Step execution: inline vs queue dispatch
+
+Whether a step runs **inline** (same process/session, no queue round-trip) or is **dispatched to the queue** is decided **purely by the step's function** — there is no workflow-level or per-call `inline` flag.
+
+- **Steps default to inline.** Most steps don't need their own worker; running them inline avoids a queue round-trip per step, so a normally-started workflow executes its whole chain in one orchestrator pass.
+- **`inline: false` opts a function out.** Set `inline: false` on the **function config** (`pikkuFunc` / `pikkuSessionlessFunc`, same level as `auth`/`expose`) to dispatch that step via the queue — for expensive/long-running steps that deserve their own worker, retry isolation, and concurrency limits. It is **not** a `workflow.do(...)` option (those are only `retries`/`retryDelay`/`description`).
+
+The rule (`dispatchStep`):
+
+| Function `inline` | `queueService` present? | Result |
+|---|---|---|
+| default / `true` | any | **inline** |
+| `false` | yes | **queued** (own worker) |
+| `false` | no | **inline + a `logger.warn`** (misconfiguration: can't dispatch) |
+
+```typescript
+// Push this one expensive step onto the queue; every other step stays inline:
+export const renderLargeReport = pikkuSessionlessFunc({
+  inline: false, // dispatch via queue instead of running inline
+  input: ReportInput,
+  output: ReportOutput,
+  func: async (services, data) => { /* ... */ },
+})
+```
+
+- **Run-level `inline` is separate** and only controls whether the *whole run* executes in-process without queue infrastructure (it's set automatically when there is no `queueService`, or via `startWorkflow(..., { inline: true })`). It governs sleep handling, **not** per-step dispatch — step dispatch is always per-function.
+- `inline: false` requires a `queueService`; without one the step still runs (so the workflow progresses) but emits a `logger.warn` so the misconfiguration is visible.
 
 // Sleep — durable pause (duration: '5min', '1h', '30s', '1d')
 await workflow.sleep('Wait 5 minutes', '5min')

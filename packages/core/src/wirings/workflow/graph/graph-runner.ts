@@ -497,8 +497,7 @@ export async function executeGraphStep(
         parentRunId: runId,
         parentStepId: stepId,
       }
-      const shouldInline =
-        subWorkflowMeta.inline || !getSingletonServices()?.queueService
+      const shouldInline = !getSingletonServices()?.queueService
       const { runId: childRunId } = await workflowService.startWorkflow(
         rpcName,
         data,

@@ -1061,21 +1061,28 @@ export function filterInspectorState(
     filteredState.requiredSchemas = prunedSchemas
   }
 
-  // If any surviving function is a non-inline workflow step, the unit needs
-  // workflowService + queueService even though the function doesn't use them.
-  // Check the ORIGINAL graph meta (before filtering pruned it).
+  // Step dispatch is decided purely per-function: a workflow step runs via the
+  // queue only when its function opts out of inline execution (inline: false).
+  // Such a unit needs workflowService + queueService injected even though the
+  // function itself doesn't reference them. Check the ORIGINAL graph meta
+  // (before filtering pruned it).
   const survivingFuncIds = new Set(Object.keys(filteredState.functions.meta))
+  const resolveFuncId = (rpcName: string): string =>
+    filteredState.rpc.internalMeta[rpcName] ??
+    filteredState.rpc.exposedMeta[rpcName] ??
+    rpcName
   // Use the snapshot taken before filtering
   for (const graph of Object.values(originalGraphMeta)) {
     if (!graph.nodes) continue
     for (const node of Object.values(graph.nodes)) {
       if (!('rpcName' in node) || !node.rpcName) continue
       const rpcName = node.rpcName as string
-      if (!survivingFuncIds.has(rpcName)) continue
-      const isInline =
-        (node as { options?: { async?: boolean } }).options?.async !== true &&
-        graph.inline === true
-      if (!isInline) {
+      const funcId = resolveFuncId(rpcName)
+      if (!survivingFuncIds.has(funcId) && !survivingFuncIds.has(rpcName))
+        continue
+      const funcMeta = (filteredState.functions.meta[funcId] ??
+        filteredState.functions.meta[rpcName]) as { inline?: boolean }
+      if (funcMeta?.inline === false) {
         filteredState.serviceAggregation.requiredServices.add('workflowService')
         filteredState.serviceAggregation.requiredServices.add('queueService')
       }

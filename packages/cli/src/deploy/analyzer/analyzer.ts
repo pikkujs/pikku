@@ -348,6 +348,7 @@ export function analyzeDeployment(
   buildWorkflows(
     state.workflows.graphMeta,
     functionsMeta,
+    { ...state.rpc?.exposedMeta, ...state.rpc?.internalMeta },
     httpMeta,
     units,
     workflows,
@@ -488,7 +489,8 @@ export function analyzeDeployment(
 
 function buildWorkflows(
   graphMeta: Record<string, SerializedWorkflowGraph>,
-  _functionsMeta: Record<string, FunctionMeta>,
+  functionsMeta: Record<string, FunctionMeta>,
+  rpcMeta: Record<string, string>,
   _httpMeta: HTTPWiringsMeta,
   units: DeploymentUnit[],
   workflows: WorkflowDefinition[],
@@ -504,8 +506,12 @@ function buildWorkflows(
       if (!('rpcName' in node)) continue
 
       const stepUnitName = toSafeKebab(node.rpcName)
-      const isAsync = node.options?.async === true
-      const isInline = !isAsync && graph.inline === true
+      // Step dispatch is decided per-function: a step runs inline unless its
+      // function opts out with `inline: false` (then it dispatches via queue).
+      const stepFuncId = rpcMeta[node.rpcName] ?? node.rpcName
+      const stepFuncMeta =
+        functionsMeta[stepFuncId] ?? functionsMeta[node.rpcName]
+      const isInline = stepFuncMeta?.inline !== false
 
       steps.push({
         name: node.stepName ?? nodeId,

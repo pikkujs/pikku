@@ -879,16 +879,27 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     data: unknown,
     stepOptions?: WorkflowStepOptions
   ): Promise<boolean> {
-    if (!getSingletonServices()?.queueService) {
-      return false
-    }
-    // Functions default to inline execution. Only dispatch via queue when the
-    // function explicitly sets inline: false.
+    // Step execution is decided purely by the function's `inline` flag (default
+    // true). Only a function explicitly marked `inline: false` dispatches via
+    // the queue. The run-level inline state is intentionally NOT consulted
+    // here: default steps run inline even inside a queue-dispatched run, so a
+    // normally-started workflow executes its steps in one orchestrator-worker
+    // pass instead of one queue round-trip per step.
     const functionsMeta = pikkuState(null, 'function', 'meta')
     const rpcFuncId = pikkuState(null, 'rpc', 'meta')[rpcName]
     const rpcMeta = typeof rpcFuncId === 'string' ? functionsMeta[rpcFuncId] : undefined
     const forceQueue = rpcMeta?.inline === false
-    if (!forceQueue && this.isInline(runId)) {
+    if (!forceQueue) {
+      return false
+    }
+    // The function opted out of inline execution (`inline: false`) but no queue
+    // service is configured to dispatch it. Fall back to inline so the workflow
+    // still progresses, but warn loudly — silently swallowing this hides a real
+    // misconfiguration (the step won't get its own worker/retry isolation).
+    if (!getSingletonServices()?.queueService) {
+      getSingletonServices()?.logger.warn(
+        `Workflow step '${stepName}' (function '${rpcName}') is marked 'inline: false' but no queue service is configured — running it inline instead of dispatching to a queue.`
+      )
       return false
     }
     const retries = stepOptions?.retries ?? 0
@@ -977,9 +988,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       workflowMeta.source === 'dynamic-workflow'
     ) {
       const shouldInline =
-        options?.inline ||
-        workflowMeta.inline ||
-        !getSingletonServices()?.queueService
+        options?.inline || !getSingletonServices()?.queueService
       return runWorkflowGraph(
         this,
         name,
@@ -1005,9 +1014,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
 
     const shouldInline =
-      options?.inline ||
-      workflowMeta.inline ||
-      !getSingletonServices()?.queueService
+      options?.inline || !getSingletonServices()?.queueService
 
     const runId = await this.createRun(
       name,
@@ -1351,8 +1358,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
               parentRunId: runId,
               parentStepId: stepState.stepId,
             }
-            const shouldInline =
-              subWorkflowMeta.inline || !getSingletonServices()?.queueService
+            const shouldInline = !getSingletonServices()?.queueService
             const { runId: childRunId } = await this.startWorkflow(
               rpcName,
               data,

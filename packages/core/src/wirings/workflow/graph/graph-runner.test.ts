@@ -485,7 +485,7 @@ describe('graph-runner bugs', () => {
     delete metaState['testInlineRpcMissing']
   })
 
-  test('graph workflow with inline: true in meta should run inline', async () => {
+  test('graph workflow started with the inline flag should run inline', async () => {
     const ws = new InMemoryWorkflowService()
     let executed = false
 
@@ -511,7 +511,6 @@ describe('graph-runner bugs', () => {
       name: 'testInlineMetaGraph',
       pikkuFuncId: 'testInlineMetaGraph',
       source: 'graph',
-      inline: true,
       entryNodeIds: ['a'],
       graphHash: 'inline-meta-graph-hash',
       nodes: {
