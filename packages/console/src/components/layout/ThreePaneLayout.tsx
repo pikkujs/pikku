@@ -30,7 +30,7 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
   const showRight = !hidePanel && (alwaysVisible || panels.size !== 0)
 
   return (
-    <Box className={classes.flexColumn} style={{ height: '100vh' }}>
+    <Box className={classes.flexColumn} style={{ flex: 1, minHeight: 0 }}>
       {header}
       <Box
         style={{

@@ -27,7 +27,7 @@ export const ResizablePanelLayout: React.FC<ResizablePanelLayoutProps> = ({
   const rightOpen = !hidePanel && panels.size > 0
 
   return (
-    <Box className={classes.flexColumn} px="xl" py="md" style={{ height: '100vh', gap: 'var(--mantine-spacing-md)' }}>
+    <Box className={classes.flexColumn} px="xl" py="md" style={{ flex: 1, minHeight: 0, gap: 'var(--mantine-spacing-md)' }}>
       {header}
       <Box style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         {leftDrawer && (
