@@ -62,6 +62,22 @@ const createSignedAssetUrl = async (options?: {
   return url
 }
 
+const createCapturingLogger = () => {
+  const warnings: string[] = []
+  const infos: string[] = []
+  return {
+    logger: {
+      info: (msg: string) => infos.push(msg),
+      warn: (msg: string) => warnings.push(msg),
+      error: (_msg: string | Error) => {},
+      debug: (_msg: string) => {},
+      setLevel: () => {},
+    },
+    warnings,
+    infos,
+  }
+}
+
 const skipContentRouteSuite = Number.parseInt(process.versions.node, 10) >= 24
 
 describe(
@@ -317,3 +333,102 @@ describe(
     })
   }
 )
+
+const MCP_SESSION_ERROR = 'Invalid or missing session ID'
+
+describe('PikkuNodeHTTPServer MCP mounting', { concurrency: false }, () => {
+  let server: PikkuNodeHTTPServer | undefined
+
+  beforeEach(() => {
+    resetPikkuState()
+    pikkuState(null, 'package', 'singletonServices', {
+      schema: {
+        compileSchema: async () => {},
+        getSchemaNames: () => new Set<string>(),
+      },
+    } as any)
+  })
+
+  afterEach(async () => {
+    if (server) {
+      await server.stop()
+      server = undefined
+    }
+  })
+
+  const startServer = async (
+    options?: ConstructorParameters<typeof PikkuNodeHTTPServer>[2],
+    logger = createMockLogger()
+  ) => {
+    server = new PikkuNodeHTTPServer(
+      { hostname: '127.0.0.1', port: 0 } as any,
+      logger as any,
+      options
+    )
+    await server.init()
+    await server.start()
+    const address = server.server.address()
+    assert.ok(address && typeof address === 'object')
+    return `http://127.0.0.1:${address.port}`
+  }
+
+  const getMcp = (origin: string) =>
+    fetch(`${origin}/mcp`, { headers: { connection: 'close' } })
+
+  test('does not mount /mcp when mcpJson is absent', async () => {
+    const origin = await startServer()
+    const response = await getMcp(origin)
+    assert.equal(
+      (await response.text()).includes(MCP_SESSION_ERROR),
+      false,
+      '/mcp should not be handled by the MCP server when mcpJson is absent'
+    )
+  })
+
+  test('does not mount /mcp when mcpJson has no tools, resources, or prompts', async () => {
+    const origin = await startServer({
+      mcpJson: { tools: [], resources: [], prompts: [] },
+    })
+    const response = await getMcp(origin)
+    assert.equal(
+      (await response.text()).includes(MCP_SESSION_ERROR),
+      false,
+      'empty mcpJson should not mount the MCP server'
+    )
+  })
+
+  test('mounts /mcp when mcpJson declares at least one tool', async () => {
+    const { logger, infos } = createCapturingLogger()
+    const origin = await startServer({ mcpJson: { tools: [{ name: 'echo' }] } }, logger)
+
+    const response = await getMcp(origin)
+    // A GET to /mcp with no session is handled by the MCP server, which
+    // responds with a JSON-RPC "missing session" error — proving the request
+    // was routed to the mounted handler rather than the normal pikku pipeline.
+    assert.equal(response.status, 400)
+    assert.equal((await response.text()).includes(MCP_SESSION_ERROR), true)
+    assert.ok(
+      infos.some((msg) => msg.includes('MCP mounted at /mcp')),
+      'expected a log line confirming the mount'
+    )
+  })
+
+  test('logs a warning and serves normally when MCP mounting fails', async () => {
+    const { logger, warnings } = createCapturingLogger()
+    // A null entry makes the registry throw while reading `tool.name`, which
+    // exercises the catch branch in initMCP.
+    const origin = await startServer({ mcpJson: { tools: [null] } as any }, logger)
+
+    assert.ok(
+      warnings.some((msg) => msg.includes('MCP could not be mounted')),
+      'expected a warning when the MCP server fails to initialize'
+    )
+
+    const response = await getMcp(origin)
+    assert.equal(
+      (await response.text()).includes(MCP_SESSION_ERROR),
+      false,
+      'a failed mount must not leave a partial /mcp handler installed'
+    )
+  })
+})

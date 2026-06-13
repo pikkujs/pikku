@@ -116,6 +116,46 @@ jobs:
           name: verifier-coverage
         continue-on-error: true
 
+  unit-coverage:
+    name: Unit Coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: Run package unit tests with coverage
+        # --enable-source-maps so tsx-transpiled line numbers map back to the
+        # original .ts before lcov is written. A single package's test failure
+        # must not halt the sweep, so each run is isolated with `|| warning`.
+        env:
+          NODE_OPTIONS: --enable-source-maps
+        run: |
+          while IFS= read -r script; do
+            dir=$(dirname "$script")
+            echo "::group::coverage ${dir}"
+            (cd "$dir" && bash run-tests.sh --coverage) || echo "::warning::unit tests failed in ${dir}"
+            echo "::endgroup::"
+          done < <(find packages -name run-tests.sh -not -path '*/node_modules/*' | sort)
+      - name: Merge lcov reports and re-root paths to repo root
+        # Each package writes lcov.info with package-relative SF paths (src/...).
+        # Prefix them with the package directory so Codecov maps them to the
+        # correct file in a monorepo where many packages share src/index.ts.
+        run: |
+          : > unit-lcov.info
+          while IFS= read -r f; do
+            dir=$(dirname "$f")
+            sed "s#^SF:#SF:${dir}/#" "$f" >> unit-lcov.info
+          done < <(find packages -name lcov.info -not -path '*/node_modules/*' | sort)
+          echo "Merged $(grep -c '^SF:' unit-lcov.info || echo 0) source files into unit-lcov.info"
+      - name: Upload unit coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: unit-lcov.info
+          flags: unit
+          name: unit-coverage
+        continue-on-error: true
+
   templates:
     name: Templates (${{ matrix.version }}, ${{ matrix.template }}, ${{ matrix.package-manager }})
     runs-on: ubuntu-latest
