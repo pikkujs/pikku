@@ -19,7 +19,7 @@ import {
   UnstyledButton,
   ScrollArea,
 } from '@mantine/core'
-import { AlertTriangle, Mail, Monitor, Search, Smartphone, ChevronDown, Check, Code2, Save } from 'lucide-react'
+import { AlertTriangle, Mail, Monitor, Search, Smartphone, ChevronDown, Check, Code2, Save, FileText } from 'lucide-react'
 import CodeMirror from '@uiw/react-codemirror'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { useSearchParams } from '../router'
@@ -65,9 +65,9 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
   const [previewInput, setPreviewInput] = useState<
     Record<string, EmailPreviewValue>
   >({})
-  const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile' | 'html'>(
-    'desktop'
-  )
+  const [previewMode, setPreviewMode] = useState<
+    'desktop' | 'mobile' | 'html' | 'text'
+  >('desktop')
   const [selectorOpen, setSelectorOpen] = useState(false)
   const [selectorSearch, setSelectorSearch] = useState('')
   const [editorValue, setEditorValue] = useState<string>('')
@@ -268,11 +268,12 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
                 />
                 <SegmentedControl
                   value={previewMode}
-                  onChange={(value) => setPreviewMode(value as 'desktop' | 'mobile' | 'html')}
+                  onChange={(value) => setPreviewMode(value as 'desktop' | 'mobile' | 'html' | 'text')}
                   size="xs"
                   data={[
                     { label: <Group gap={4} wrap="nowrap"><Monitor size={14} /><span>Desktop</span></Group>, value: 'desktop' },
                     { label: <Group gap={4} wrap="nowrap"><Smartphone size={14} /><span>Mobile</span></Group>, value: 'mobile' },
+                    { label: <Group gap={4} wrap="nowrap"><FileText size={14} /><span>Text</span></Group>, value: 'text' },
                     { label: <Group gap={4} wrap="nowrap"><Code2 size={14} /><span>HTML</span></Group>, value: 'html' },
                   ]}
                 />
@@ -332,29 +333,26 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
                     />
                   </Box>
                 </Stack>
+              ) : previewMode === 'text' ? (
+                preview.data?.text ? (
+                  <Code block>{preview.data.text}</Code>
+                ) : (
+                  <Text size="sm" c="dimmed" ta="center" py="xl">
+                    This template has no text version.
+                  </Text>
+                )
               ) : (
-                <>
-                  <Center py="sm">
-                    {previewMode === 'desktop' ? (
-                      <Box style={{ width: '100%', maxWidth: 960, height: 720, border: '1px solid var(--app-row-border)', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
-                        <iframe title="Desktop email preview" srcDoc={preview.data?.html ?? ''} style={{ width: '100%', height: '100%', border: 0, background: '#fff' }} />
-                      </Box>
-                    ) : (
-                      <Box style={{ width: 390, maxWidth: '100%', height: 720, border: '1px solid var(--app-row-border)', borderRadius: 24, overflow: 'hidden', background: '#fff' }}>
-                        <iframe title="Mobile email preview" srcDoc={preview.data?.html ?? ''} style={{ width: '100%', height: '100%', border: 0, background: '#fff' }} />
-                      </Box>
-                    )}
-                  </Center>
-                  {preview.data?.text ? (
-                    <>
-                      <Divider />
-                      <Stack gap="xs">
-                        <Text fw={600}>Text fallback</Text>
-                        <Code block>{preview.data.text}</Code>
-                      </Stack>
-                    </>
-                  ) : null}
-                </>
+                <Center py="sm">
+                  {previewMode === 'desktop' ? (
+                    <Box style={{ width: '100%', maxWidth: 960, height: 720, border: '1px solid var(--app-row-border)', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
+                      <iframe title="Desktop email preview" srcDoc={preview.data?.html ?? ''} style={{ width: '100%', height: '100%', border: 0, background: '#fff' }} />
+                    </Box>
+                  ) : (
+                    <Box style={{ width: 390, maxWidth: '100%', height: 720, border: '1px solid var(--app-row-border)', borderRadius: 24, overflow: 'hidden', background: '#fff' }}>
+                      <iframe title="Mobile email preview" srcDoc={preview.data?.html ?? ''} style={{ width: '100%', height: '100%', border: 0, background: '#fff' }} />
+                    </Box>
+                  )}
+                </Center>
               )}
             </Stack>
           </Box>
@@ -363,7 +361,7 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
         {/* Form / render panel */}
         <Box
           className={classes.listSurfaceCard}
-          style={{ width: 400, flexShrink: 0, display: 'flex', flexDirection: 'column' }}
+          style={{ width: 300, maxWidth: 300, flexShrink: 0, display: 'flex', flexDirection: 'column' }}
         >
           {/* Template selector */}
           <Popover opened={selectorOpen} onChange={setSelectorOpen} width={280} position="bottom-start" shadow="md" zIndex={10000}>
