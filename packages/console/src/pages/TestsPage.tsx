@@ -22,6 +22,7 @@ import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import classes from '../components/ui/console.module.css'
+import LiveRunView, { type CucumberStatus, type LiveScenario, type LiveStep } from './LiveRunView'
 
 type RunPhase = 'idle' | 'pending' | 'running'
 type GroupBy = 'feature' | 'function'
@@ -453,8 +454,6 @@ export interface TestsPageProps {
   onIncreaseCoverage?: (data: CoverageReport | null) => void
 }
 
-type CucumberStatus = 'PASSED' | 'FAILED' | 'SKIPPED' | 'PENDING' | 'UNDEFINED' | 'AMBIGUOUS'
-
 type TestStreamEvent =
   | { type: 'run-start'; scenarios: Array<{ id: string; name: string; uri: string; steps: string[] }> }
   | { type: 'scenario-start'; id: string; name: string; uri: string }
@@ -463,124 +462,6 @@ type TestStreamEvent =
   | { type: 'done'; coverage: CoverageReport | null }
   | { type: 'error'; message: string }
 
-type LiveStep = {
-  step: string
-  status: CucumberStatus | 'running'
-  duration: number
-  message?: string
-}
-
-type LiveScenario = {
-  id: string
-  name: string
-  uri: string
-  status: CucumberStatus | 'pending' | 'running'
-  steps: LiveStep[]
-}
-
-const LIVE_STATUS_COLOR: Record<string, string> = {
-  running: 'blue',
-  PASSED: 'green',
-  FAILED: 'red',
-  SKIPPED: 'gray',
-  PENDING: 'yellow',
-  UNDEFINED: 'gray',
-  AMBIGUOUS: 'orange',
-}
-
-type LiveRunViewProps = { scenarios: LiveScenario[] }
-
-const LiveRunView: React.FC<LiveRunViewProps> = ({ scenarios }) => {
-  if (scenarios.length === 0) {
-    return (
-      <Center h="100%">
-        <Stack align="center" gap="xs">
-          <Loader size="sm" />
-          <Text size="sm" c="dimmed">Running tests…</Text>
-        </Stack>
-      </Center>
-    )
-  }
-
-  return (
-    <ScrollArea style={{ flex: 1 }}>
-      <Stack gap="sm" p="md">
-        {scenarios.map((scenario) => {
-          const totalMs = scenario.steps.reduce((acc, s) => acc + s.duration, 0)
-          const isPending = scenario.status === 'pending'
-          const isRunning = scenario.status === 'running'
-          const passed = scenario.status === 'PASSED'
-          const statusColor = isPending ? 'gray' : isRunning ? 'blue' : passed ? 'green' : 'red'
-          const borderLeft = isPending
-            ? SCENARIO_STATUS_BORDER.pending
-            : isRunning
-              ? SCENARIO_STATUS_BORDER.running
-              : passed
-                ? SCENARIO_STATUS_BORDER.pass
-                : SCENARIO_STATUS_BORDER.fail
-
-          return (
-            <Box
-              key={scenario.id}
-              style={{
-                border: `1px solid var(--app-border, var(--mantine-color-default-border))`,
-                borderRadius: 8,
-                background: 'var(--app-panel-bg, var(--mantine-color-body))',
-                overflow: 'hidden',
-              }}
-            >
-              <Box
-                px="md"
-                py="xs"
-                style={{
-                  borderBottom: scenario.steps.length > 0
-                    ? `1px solid var(--app-border, var(--mantine-color-default-border))`
-                    : undefined,
-                  background: 'var(--app-surface, var(--mantine-color-default-hover))',
-                }}
-              >
-                <Group justify="space-between" wrap="nowrap">
-                  <Group gap="xs" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
-                    {isPending ? (
-                      <Text fz={12} c="dimmed" style={{ lineHeight: 1, flexShrink: 0 }}>○</Text>
-                    ) : isRunning ? (
-                      <Loader size={12} style={{ flexShrink: 0 }} />
-                    ) : (
-                      <Text fz={12} fw={700} c={statusColor} style={{ lineHeight: 1, flexShrink: 0 }}>
-                        {passed ? '✓' : '✗'}
-                      </Text>
-                    )}
-                    <Text ff="monospace" fz={13} fw={600} truncate>
-                      {scenario.name}
-                    </Text>
-                  </Group>
-                  <Group gap={6} wrap="nowrap" style={{ flexShrink: 0 }}>
-                    {!isRunning && !isPending && scenario.steps.length > 0 && (
-                      <Text fz={11} c="dimmed">{totalMs}ms</Text>
-                    )}
-                    <Badge color={statusColor} variant="light" size="sm">
-                      {isPending ? 'Pending' : isRunning ? 'Running' : passed ? 'Pass' : 'Fail'}
-                    </Badge>
-                  </Group>
-                </Group>
-              </Box>
-
-              {scenario.steps.length > 0 && (
-                <Box p="md">
-                  <Stack gap={2} pl="sm" style={{ borderLeft: `3px solid ${borderLeft}` }}>
-                    {scenario.steps.map((s, si) => (
-                      <HighlightedStep key={si} step={s.step} />
-                    ))}
-                  </Stack>
-                </Box>
-              )}
-            </Box>
-          )
-        })}
-      </Stack>
-    </ScrollArea>
-  )
-}
 
 export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseCoverage }) => {
   const { meta, loading, refresh } = usePikkuMeta()
@@ -652,11 +533,13 @@ export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseC
             return updated
           })
         } else if (event.type === 'done') {
+          sseRef.current?.close()
           sseRef.current = null
           setLiveScenarios([])
           void refresh()
           setRunPhase('idle')
         } else if (event.type === 'error') {
+          sseRef.current?.close()
           sseRef.current = null
           setRunError(event.message)
           setLiveScenarios([])
@@ -664,6 +547,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseC
         }
       },
       (err) => {
+        sseRef.current?.close()
         sseRef.current = null
         setRunError(err instanceof Error ? err.message : 'Failed to run tests')
         setLiveScenarios([])
