@@ -1,6 +1,6 @@
 ---
-"@pikku/mantine": minor
-"@pikku/react": minor
+"@pikku/mantine": patch
+"@pikku/react": patch
 ---
 
 feat(react,mantine): i18n brand types + zero-runtime Mantine overrides
