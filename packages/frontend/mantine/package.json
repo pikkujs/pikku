@@ -19,12 +19,12 @@
     "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
-    "@mantine/core": "^9",
+    "@mantine/core": "^8 || ^9",
     "@pikku/react": "workspace:^",
     "react": "^18 || ^19"
   },
   "devDependencies": {
-    "@mantine/core": "^9",
+    "@mantine/core": "^8.3.8",
     "@pikku/react": "workspace:^",
     "@types/react": "^19",
     "react": "^19",
