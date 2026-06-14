@@ -40,6 +40,7 @@ import type { MetaService } from '../services/meta-service.js'
 import type { SessionStore } from '../services/session-store.js'
 import type {
   AuditDurability,
+  AuditLog,
   AuditService,
 } from '../services/audit-service.js'
 
@@ -255,6 +256,14 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   metaService?: MetaService
   /** Audit service for durable or staged audit event capture */
   audit?: AuditService
+  /**
+   * Per-invocation audit log. Typically created in `createWireServices` via
+   * `createInvocationAudit(audit, wire)` and returned as a wire service so the
+   * runner flushes its buffer (via `close()`) when the invocation ends. Distinct
+   * from `audit` (the durable sink): this is the request-scoped buffer that
+   * writes into it.
+   */
+  auditLog?: AuditLog
   /** Session store for persisting user sessions keyed by pikkuUserId */
   sessionStore?: SessionStore
 }
