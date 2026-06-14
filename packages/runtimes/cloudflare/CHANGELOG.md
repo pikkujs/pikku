@@ -1,3 +1,14 @@
+## 0.12.9
+
+### Patch Changes
+
+- 595e54a: fix(cloudflare): log channel connect faults instead of silently swallowing them
+- Updated dependencies [cd101a5]
+- Updated dependencies [ac16265]
+- Updated dependencies [a05e864]
+- Updated dependencies [20750fd]
+  - @pikku/core@0.12.30
+
 ## 0.12.8
 
 ### Patch Changes

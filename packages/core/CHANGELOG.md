@@ -1,3 +1,67 @@
+## 0.12.30
+
+### Patch Changes
+
+- cd101a5: feat(core): add `auditLog` service slot for per-invocation audit logs
+
+  `CoreSingletonServices` now declares `auditLog?: AuditLog`, giving the
+  per-request audit log returned by `createInvocationAudit` a typed home in the
+  service container. Apps wire it in `createWireServices`
+  (`return { auditLog, kysely: createAuditedKysely(kysely, { audit: auditLog }) }`)
+  and the runner flushes its buffer via `close()` when the invocation ends.
+
+  Previously there was no slot to return it from: `audit` is typed `AuditService`
+  (the durable sink, `.audit()`), while `createInvocationAudit` returns an
+  `AuditLog` (the request-scoped buffer, `.write/.flush/.close`). Returning the
+  buffer under `audit` was a type error, so audited-Kysely wiring could not
+  type-check. `auditLog` is distinct from `audit` and never shadows it.
+
+- ac16265: fix(core): read email template assets from the absolute `emailsMeta.src` directly
+
+  `getEmailTemplateAssets` passed an absolute `baseDir` (e.g. `/project/emails`) into
+  `readProjectFile`, which resolves `join(basePath, '..', relativePath)`. Because
+  `path.join` does not treat an absolute second segment as a root reset, this produced
+  a non-existent compound path (`/project/packages/functions/project/emails/...`), so
+  every asset read returned `null` and the email preview reported all source files
+  (`theme, locale, html, subject, text`) as missing. Read the assets directly via
+  `readFile(join(baseDir, rel))` instead, which resolves correctly for an absolute
+  base. Verified live: a previously all-missing preview now renders.
+
+- a05e864: fix(core): allow multiple independent suspend points in one workflow
+
+  `getSuspendStepName()` returned the constant `'__workflow_suspend'` for every
+  `workflow.suspend()` call, so all suspends in a run shared a single step row.
+  Once the first suspend resolved (row → `succeeded`), every later `suspend()`
+  read that same `succeeded` row and fell straight through without pausing — so a
+  workflow could only ever have one working suspend point, and a second one (e.g.
+  wait-for-build, then wait-for-approval) was silently skipped.
+
+  The suspend step is now keyed on its `reason` (used raw, just namespaced so it
+  can't collide with a `do`/`sleep` step of the same name), so each distinct
+  reason is its own step row. A workflow can now have multiple independent
+  suspends, including dynamic reasons in loops (`suspend(`Wait for ${i}`)`),
+  exactly like dynamic `do()` step names. As with `do()`/`sleep()`, the reason is
+  the suspend's stable identity and must be derived deterministically so it
+  matches on replay. `suspend(reason)` is unchanged at the call site.
+
+- 20750fd: feat(workflow): decide step dispatch purely per-function
+
+  Workflow step execution (inline vs queue dispatch) is now decided entirely by
+  the step's function `inline` flag — the workflow-level / run-level `inline`
+  meta no longer participates in per-step dispatch.
+  - Steps default to **inline**, so a normally-started (queue-backed) workflow
+    runs its whole chain in one orchestrator pass instead of one queue
+    round-trip per step.
+  - A function marked `inline: false` is dispatched via the queue (its own
+    worker, retry isolation). When `inline: false` but no `queueService` is
+    configured, the step falls back to inline and emits a `logger.warn` instead
+    of silently swallowing the misconfiguration.
+  - Removed the now-unused workflow-level `inline` from `WorkflowsMeta` /
+    `WorkflowRuntimeMeta`, the inspector's workflow extraction, the DSL→graph
+    converter, and the deploy analyzer / service inference (which now key off
+    the per-function flag). Run-level `inline` is retained: it still controls
+    whether a whole run executes in-process without queue infrastructure.
+
 ## 0.12.29
 
 ### Patch Changes

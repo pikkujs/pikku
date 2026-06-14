@@ -14,8 +14,8 @@
   "dependencies": {
     "@auth/core": "^0.37.0",
     "@pikku/auth-js": "^0.12.5",
-    "@pikku/cloudflare": "^0.12.8",
-    "@pikku/core": "^0.12.29"
+    "@pikku/cloudflare": "^0.12.9",
+    "@pikku/core": "^0.12.30"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260305.0",

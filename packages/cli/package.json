@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cli",
-  "version": "0.12.32",
+  "version": "0.12.33",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
   "imports": {
@@ -26,13 +26,13 @@
   },
   "dependencies": {
     "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.1",
-    "@pikku/core": "^0.12.29",
+    "@pikku/core": "^0.12.30",
     "@pikku/deploy-cloudflare": "^0.12.3",
-    "@pikku/fetch": "^0.12.2",
-    "@pikku/inspector": "^0.12.15",
+    "@pikku/fetch": "^0.12.3",
+    "@pikku/inspector": "^0.12.18",
     "@pikku/kysely": "^0.12.14",
     "@pikku/kysely-node-sqlite": "^0.12.1",
-    "@pikku/node-http-server": "^0.12.1",
+    "@pikku/node-http-server": "^0.12.2",
     "@pikku/openapi-parser": "^0.12.10",
     "@pikku/schedule": "^0.12.0",
     "@pikku/ws": "^0.12.2",

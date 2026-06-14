@@ -1,3 +1,35 @@
+## 0.12.13
+
+### Patch Changes
+
+- f95dd07: feat(console): add an HTML tab to the email preview with an inline source editor
+
+  The email preview now has a Desktop | Mobile | HTML toggle. The HTML tab shows the
+  raw template source (`templates/<name>.html`) in a CodeMirror editor with a Save
+  button that writes the file back via a new `console:updateEmailTemplate` RPC
+  (local-dev only, mirrors `updateFunctionBody`), so small edits can be made from the
+  console without leaving the preview. Saving invalidates and re-renders the preview.
+  - `renderEmailPreview` now returns `source` (the un-rendered template HTML) so the
+    editor binds to the source, never the rendered output.
+
+- 409ec80: feat(console): Tests page with live SSE streaming and function test harness
+  - `@pikku/addon-console`: add `streamFunctionTests` SSE function that runs the
+    cucumber/c8 test harness and streams structured per-scenario events
+    (scenario-start, step, scenario-done, done)
+  - `@pikku/console`: TestsPage live run view — renders scenario names and step
+    status in real time during a test run via SSE; adds `usePikkuSSE` hook and
+    `showRunButton` prop
+  - `@pikku/fetch`: add `subscribePikkuSSE` helper for typed server-sent event
+    streams
+  - `@pikku/cli`: wire SSE-returning functions through the console serialiser and
+    RPC wrapper so the stream route is included in generated clients
+
+- Updated dependencies [cd101a5]
+- Updated dependencies [ac16265]
+- Updated dependencies [a05e864]
+- Updated dependencies [20750fd]
+  - @pikku/core@0.12.30
+
 ## 0.12.12
 
 ### Patch Changes
