@@ -9,7 +9,7 @@ import ReactFlow, {
   useReactFlow,
   ReactFlowProvider,
 } from 'reactflow'
-import { MantineProvider, Box } from '@mantine/core'
+import { MantineProvider, Box } from '@pikku/mantine/core'
 import { createFlow } from '../hooks/useWiringFlow'
 import { useElkLayout } from '../hooks/useElkLayout'
 import { WiringNode } from '../components/project/nodes/WiringNode'

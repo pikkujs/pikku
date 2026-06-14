@@ -1,5 +1,6 @@
 import React from 'react'
-import { Box, Group, Paper, Stack, Text, useMantineTheme } from '@mantine/core'
+import { Box, Group, Paper, Stack, Text, useMantineTheme } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { Handle, Position } from 'reactflow'
 import { Lock, LockOpen, Shield, Layers } from 'lucide-react'
 import { PikkuBadge } from '../../ui/PikkuBadge'
@@ -59,11 +60,11 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
       >
         <Stack gap={4}>
           <Text size="sm" c="dimmed" lineClamp={2}>
-            {data.title}
+            {asI18n(data.title)}
           </Text>
           {data.description && (
             <Text size="sm" ff="monospace" fw={500}>
-              {data.description}
+              {asI18n(data.description)}
             </Text>
           )}
 
@@ -100,7 +101,7 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
                     <Group gap={4}>
                       <Shield size={12} strokeWidth={2} />
                       <Text size="sm" fw={500}>
-                        {data.permissionsCount}
+                        {asI18n(String(data.permissionsCount))}
                       </Text>
                     </Group>
                   )}
@@ -110,7 +111,7 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
                     <Group gap={4}>
                       <Layers size={12} strokeWidth={2} />
                       <Text size="sm" fw={500}>
-                        {data.middlewareCount}
+                        {asI18n(String(data.middlewareCount))}
                       </Text>
                     </Group>
                   )}
@@ -146,7 +147,7 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
                   }}
                 >
                   <Text size="sm" c="dimmed" ff="monospace" fw={500}>
-                    {handle.label || handle.id}
+                    {asI18n(handle.label || handle.id)}
                   </Text>
                   <Handle
                     type="source"

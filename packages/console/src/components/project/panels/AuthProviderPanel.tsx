@@ -10,7 +10,8 @@ import {
   ActionIcon,
   Tooltip,
   Anchor,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { KeyRound, ExternalLink, Copy, Check, Trash2 } from 'lucide-react'
 import { useClipboard } from '@mantine/hooks'
 import { useSetSecret, useSecretValue } from '../../../hooks/useSecrets'
@@ -31,23 +32,23 @@ const FieldRow: React.FC<{
     <Box>
       <Group gap={6} mb={4}>
         <Text size="sm" fw={500}>
-          {field.label}
+          {asI18n(field.label)}
         </Text>
         {isSet && (
           <Text size="xs" c="teal">
-            set
+            {asI18n('set')}
           </Text>
         )}
       </Group>
       <PasswordInput
-        placeholder={isSet ? 'Leave blank to keep existing' : `Enter ${field.label}`}
+        placeholder={asI18n(isSet ? 'Leave blank to keep existing' : `Enter ${field.label}`)}
         value={value}
         onChange={(e) => onChange(e.currentTarget.value)}
         ff="monospace"
         fz={13}
       />
       <Text fz={11} c="dimmed" mt={2} ff="monospace">
-        {field.key}
+        {asI18n(field.key)}
       </Text>
     </Box>
   )
@@ -105,21 +106,21 @@ export const AuthProviderPanel: React.FC<{ metadata: AuthProviderDef }> = ({ met
         <Group gap="xs">
           <KeyRound size={20} />
           <Text size="lg" fw={600}>
-            {provider.name}
+            {asI18n(provider.name)}
           </Text>
         </Group>
         <Text size="sm" c="dimmed" mt={4}>
-          {provider.description}
+          {asI18n(provider.description)}
         </Text>
       </Box>
 
       <Box>
-        <SectionLabel>Callback URL</SectionLabel>
+        <SectionLabel>{asI18n('Callback URL')}</SectionLabel>
         <Group gap="xs" wrap="nowrap">
           <Text fz={13} ff="monospace" style={{ flex: 1, wordBreak: 'break-all' }}>
-            {callbackPath}
+            {asI18n(callbackPath)}
           </Text>
-          <Tooltip label={clipboard.copied ? 'Copied!' : 'Copy'}>
+          <Tooltip label={asI18n(clipboard.copied ? 'Copied!' : 'Copy')}>
             <ActionIcon
               variant="subtle"
               color={clipboard.copied ? 'teal' : 'gray'}
@@ -131,22 +132,22 @@ export const AuthProviderPanel: React.FC<{ metadata: AuthProviderDef }> = ({ met
           </Tooltip>
         </Group>
         <Text fz={12} c="dimmed" mt={4}>
-          Register this as the authorized redirect URI in your OAuth app.
+          {asI18n('Register this as the authorized redirect URI in your OAuth app.')}
         </Text>
       </Box>
 
       <Box>
-        <SectionLabel>Setup</SectionLabel>
+        <SectionLabel>{asI18n('Setup')}</SectionLabel>
         <Anchor href={provider.setupUrl} target="_blank" fz={13}>
           <Group gap={4}>
             <ExternalLink size={13} />
-            {provider.setupLabel}
+            {asI18n(provider.setupLabel)}
           </Group>
         </Anchor>
       </Box>
 
       <Box>
-        <SectionLabel>Secrets</SectionLabel>
+        <SectionLabel>{asI18n('Secrets')}</SectionLabel>
         <Stack gap="sm">
           {provider.fields.map((field) => (
             <FieldRow
@@ -161,7 +162,7 @@ export const AuthProviderPanel: React.FC<{ metadata: AuthProviderDef }> = ({ met
 
       {setSecretMutation.isError && (
         <Alert color="red" variant="light">
-          Failed to save secrets.
+          {asI18n('Failed to save secrets.')}
         </Alert>
       )}
 
@@ -174,10 +175,10 @@ export const AuthProviderPanel: React.FC<{ metadata: AuthProviderDef }> = ({ met
           loading={removing}
           onClick={handleRemove}
         >
-          Remove
+          {asI18n('Remove')}
         </Button>
         <Button size="sm" disabled={!hasAnyValue} loading={saving} onClick={handleSave}>
-          Save secrets
+          {asI18n('Save secrets')}
         </Button>
       </Group>
     </Stack>

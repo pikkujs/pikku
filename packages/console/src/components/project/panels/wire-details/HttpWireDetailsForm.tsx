@@ -1,3 +1,4 @@
+import React from 'react'
 import {
   Stack,
   Text,
@@ -6,7 +7,8 @@ import {
   Box,
   Tabs,
   Title,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { CodeHighlight } from '@mantine/code-highlight'
 import type { PikkuWiringTypes } from '@pikku/core'
 import { PikkuBadge } from '../../../ui/PikkuBadge'
@@ -40,47 +42,47 @@ export const HttpWireDetailsForm: React.FC<HttpWireDetailsFormProps> = ({
         }}
       >
         <Title order={3} tt="uppercase">
-          {wireType}
+          {asI18n(wireType)}
         </Title>
       </Box>
 
       <Tabs defaultValue="configuration">
         <Tabs.List px="md">
-          <Tabs.Tab value="configuration">Configuration</Tabs.Tab>
-          <Tabs.Tab value="meta">Meta</Tabs.Tab>
+          <Tabs.Tab value="configuration">{asI18n('Configuration')}</Tabs.Tab>
+          <Tabs.Tab value="meta">{asI18n('Meta')}</Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="configuration" pt="md" px="md">
           <Stack gap="md">
             <Box>
               <Text size="sm" fw={500} mb={4}>
-                Route
+                {asI18n('Route')}
               </Text>
-              <Text size="lg">{route}</Text>
+              <Text size="lg">{asI18n(route)}</Text>
             </Box>
 
             <Box>
               <Text size="sm" fw={500} mb={4}>
-                Method
+                {asI18n('Method')}
               </Text>
               <PikkuBadge type="httpMethod" value={method} />
             </Box>
 
             <Box>
               <Text size="sm" fw={500} mb={4}>
-                Server-Sent Events (SSE)
+                {asI18n('Server-Sent Events (SSE)')}
               </Text>
-              <Text size="md">{isSSE ? 'Enabled' : 'Disabled'}</Text>
+              <Text size="md">{asI18n(isSSE ? 'Enabled' : 'Disabled')}</Text>
             </Box>
 
             <TextInput
-              label="Summary"
+              label={asI18n('Summary')}
               value={metadata.docs?.summary || ''}
               readOnly
             />
 
             <Textarea
-              label="Description"
+              label={asI18n('Description')}
               value={metadata.docs?.description || ''}
               minRows={3}
               readOnly
@@ -88,9 +90,9 @@ export const HttpWireDetailsForm: React.FC<HttpWireDetailsFormProps> = ({
 
             <Box>
               <Text size="sm" fw={500} mb={4}>
-                Public
+                {asI18n('Public')}
               </Text>
-              <Text size="md">{isPublic ? 'Yes' : 'No'}</Text>
+              <Text size="md">{asI18n(isPublic ? 'Yes' : 'No')}</Text>
             </Box>
           </Stack>
         </Tabs.Panel>

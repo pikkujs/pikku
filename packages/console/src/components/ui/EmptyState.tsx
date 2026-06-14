@@ -1,10 +1,11 @@
 import React from 'react'
-import { Box, Stack, Text, Button, Group } from '@mantine/core'
+import { Box, Stack, Text, Button, Group } from '@pikku/mantine/core'
+import type { I18nNode } from '@pikku/react'
 import { ArrowRight } from 'lucide-react'
 import { CommandChip } from './CommandChip'
 
 interface EmptyStateAction {
-  label: string
+  label: I18nNode
   icon?: React.ReactNode
   onClick?: () => void
   href?: string
@@ -15,12 +16,12 @@ export interface EmptyStateProps {
   icon?: React.ComponentType<{ size?: number; strokeWidth?: number }>
   /** Hero illustration rendered above the title — when provided, the icon token is hidden */
   hero?: React.ReactNode
-  title: string
-  subtitle?: React.ReactNode
+  title: I18nNode
+  subtitle?: I18nNode
   code?: string
   action?: EmptyStateAction
   secondaryAction?: {
-    label: string
+    label: I18nNode
     href?: string
     onClick?: () => void
   }

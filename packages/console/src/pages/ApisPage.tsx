@@ -1,5 +1,5 @@
 import React, { Suspense, useState } from 'react'
-import { Center, Loader, Group, SegmentedControl, TextInput } from '@mantine/core'
+import { Center, Loader, Group, SegmentedControl, TextInput } from '@pikku/mantine/core'
 import { Search } from 'lucide-react'
 import { useSearchParams } from '../router'
 import { PanelProvider } from '../context/PanelContext'
@@ -9,6 +9,7 @@ import { HttpTab } from '../components/tabs/HttpTab'
 import { ChannelsTab } from '../components/tabs/ChannelsTab'
 import { McpTab } from '../components/tabs/McpTab'
 import { CliTab } from '../components/tabs/CliTab'
+import { useI18n } from '@pikku/react/i18n'
 
 const TABS = [
   { value: 'http', label: 'HTTP' },
@@ -17,11 +18,11 @@ const TABS = [
   { value: 'cli', label: 'CLI' },
 ]
 
-const SEARCH_PLACEHOLDER: Record<string, string> = {
-  http: 'Search routes...',
-  channels: 'Search channels...',
-  mcp: 'Search MCP tools, resources, prompts...',
-  cli: 'Search commands...',
+const SEARCH_PLACEHOLDER_KEY: Record<string, string> = {
+  http: 'apis.search.http',
+  channels: 'apis.search.channels',
+  mcp: 'apis.search.mcp',
+  cli: 'apis.search.cli',
 }
 
 type ApisPageProps = {
@@ -31,6 +32,7 @@ type ApisPageProps = {
 }
 
 const ApisPageInner: React.FC<ApisPageProps> = ({ httpHero, channelsHero, mcpHero }) => {
+  const { t } = useI18n()
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
   const tab = searchParams.get('tab') || 'http'
@@ -58,13 +60,13 @@ const ApisPageInner: React.FC<ApisPageProps> = ({ httpHero, channelsHero, mcpHer
       <ResizablePanelLayout
         header={
           <ListPageHeader
-            title="APIs"
-            description="Browse HTTP routes, channels, MCP servers, and CLI surfaces"
+            title={t('apis.title')}
+            description={t('apis.description')}
             docsHref="https://pikku.dev/docs/wiring/http"
             filters={
               <Group gap="sm" wrap="nowrap">
                 <TextInput
-                  placeholder={SEARCH_PLACEHOLDER[tab]}
+                  placeholder={t(SEARCH_PLACEHOLDER_KEY[tab])}
                   leftSection={<Search size={14} />}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -81,7 +83,7 @@ const ApisPageInner: React.FC<ApisPageProps> = ({ httpHero, channelsHero, mcpHer
             }
           />
         }
-        emptyPanelMessage="Select an item to view details"
+        emptyPanelMessage={t('common.select_item')}
       >
         {renderTab()}
       </ResizablePanelLayout>

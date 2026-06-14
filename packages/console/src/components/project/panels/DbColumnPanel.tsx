@@ -1,5 +1,6 @@
 import React from 'react'
-import { Stack, Box, Text, Group, Code, Badge } from '@mantine/core'
+import { Stack, Box, Text, Group, Code, Badge } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { Globe, Shield, UserCheck, LockKeyhole, Key, Link } from 'lucide-react'
 import { SectionLabel } from './shared/SectionLabel'
 
@@ -54,12 +55,12 @@ export const DbColumnPanel: React.FC<DbColumnPanelProps> = ({ metadata = {} }) =
         <Group gap="xs" align="center">
           {isPrimaryKey && <Key size={16} />}
           <Text size="lg" ff="monospace" fw={600}>
-            {columnName}
+            {columnName != null ? asI18n(columnName) : null}
           </Text>
         </Group>
         {tableName && (
           <Text size="sm" c="dimmed" mt={2}>
-            {tableName}
+            {asI18n(tableName)}
           </Text>
         )}
       </Box>
@@ -70,39 +71,39 @@ export const DbColumnPanel: React.FC<DbColumnPanelProps> = ({ metadata = {} }) =
           variant="light"
           leftSection={CLASSIFICATION_ICON[cls]}
         >
-          {cls}
+          {asI18n(cls)}
         </Badge>
         {isPrimaryKey && (
           <Badge color="blue" variant="light" leftSection={<Key size={10} />}>
-            Primary Key
+            {asI18n('Primary Key')}
           </Badge>
         )}
         {nullable === false && (
           <Badge color="gray" variant="light">
-            NOT NULL
+            {asI18n('NOT NULL')}
           </Badge>
         )}
       </Group>
 
       {description && (
         <Box>
-          <SectionLabel>Description</SectionLabel>
-          <Text size="sm">{description}</Text>
+          <SectionLabel>{asI18n('Description')}</SectionLabel>
+          <Text size="sm">{asI18n(description)}</Text>
         </Box>
       )}
 
       <Box>
-        <SectionLabel>SQL Type</SectionLabel>
-        <Code>{enumType ?? type ?? '—'}</Code>
+        <SectionLabel>{asI18n('SQL Type')}</SectionLabel>
+        <Code>{asI18n(enumType ?? type ?? '—')}</Code>
       </Box>
 
       {foreignKey && (
         <Box>
-          <SectionLabel>Foreign Key</SectionLabel>
+          <SectionLabel>{asI18n('Foreign Key')}</SectionLabel>
           <Group gap={4}>
             <Link size={12} />
             <Code>
-              {foreignKey.table}.{foreignKey.column}
+              {asI18n(`${foreignKey.table}.${foreignKey.column}`)}
             </Code>
           </Group>
         </Box>

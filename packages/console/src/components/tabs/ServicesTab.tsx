@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react'
-import { Text } from '@mantine/core'
+import { Text } from '@pikku/mantine/core'
 import { Server } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 
 interface ServiceItem {
   name: string
@@ -15,7 +17,7 @@ const COLUMNS = [
   {
     key: 'name',
     header: 'NAME',
-    render: (item: ServiceItem) => <Text fw={500}>{item.name}</Text>,
+    render: (item: ServiceItem) => <Text fw={500}>{asI18n(item.name)}</Text>,
   },
   {
     key: 'functions',
@@ -29,6 +31,7 @@ const COLUMNS = [
 
 export const ServicesTab: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
   const { meta, loading } = usePikkuMeta()
+  const { t } = useI18n()
 
   const allServices = useMemo((): ServiceItem[] => {
     const serviceMap = new Map<
@@ -72,7 +75,7 @@ export const ServicesTab: React.FC<{ searchQuery: string }> = ({ searchQuery }) 
       columns={COLUMNS}
       getKey={(item) => item.name}
       onRowClick={() => {}}
-      emptyMessage="No services found."
+      emptyMessage={t('services.empty_message')}
       loading={loading}
     />
   )

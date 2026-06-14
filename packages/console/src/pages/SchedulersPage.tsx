@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react'
-import { Text } from '@mantine/core'
+import { Text } from '@pikku/mantine/core'
 import { Clock } from 'lucide-react'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -20,6 +22,7 @@ const SchedulersTable: React.FC<{
   loading?: boolean
 }> = ({ items, loading }) => {
   const { openScheduler } = usePanelContext()
+  const { t } = useI18n()
 
   const columns = useMemo(
     () => [
@@ -29,11 +32,11 @@ const SchedulersTable: React.FC<{
         render: (item: SchedulerItem) => (
           <>
             <Text fw={500} truncate>
-              {item.name}
+              {asI18n(item.name)}
             </Text>
             {item.handler && (
               <Text size="sm" c="dimmed" truncate>
-                {item.handler}
+                {asI18n(item.handler)}
               </Text>
             )}
           </>
@@ -61,14 +64,14 @@ const SchedulersTable: React.FC<{
       columns={columns}
       getKey={(item) => item.name}
       onRowClick={(item) => openScheduler(item.name, item.data)}
-      searchPlaceholder="Search scheduled tasks..."
+      searchPlaceholder={t('schedulers.search_placeholder')}
       searchFilter={(item, q) =>
         item.name.toLowerCase().includes(q) ||
         item.handler?.toLowerCase().includes(q) ||
         item.schedule?.toLowerCase().includes(q) ||
         false
       }
-      emptyMessage="No scheduled tasks found."
+      emptyMessage={t('schedulers.empty_message')}
       loading={loading}
     />
   )
@@ -76,6 +79,7 @@ const SchedulersTable: React.FC<{
 
 export const SchedulersPage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
+  const { t } = useI18n()
 
   const items = useMemo((): SchedulerItem[] => {
     if (!meta.schedulerMeta) return []
@@ -92,9 +96,9 @@ export const SchedulersPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title="Schedulers" description="Cron and interval tasks that run on a schedule" />}
+        header={<ListPageHeader title={t('schedulers.title')} description={t('schedulers.description')} />}
         hidePanel={!loading && items.length === 0}
-        emptyPanelMessage="Select a scheduler to view its details"
+        emptyPanelMessage={t('schedulers.select_item')}
       >
         <SchedulersTable items={items} loading={loading} />
       </ResizablePanelLayout>

@@ -11,7 +11,9 @@ import {
   Box,
   Tooltip,
   ActionIcon,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { Search, ChevronDown, Check, ExternalLink } from 'lucide-react'
 import classes from '../ui/console.module.css'
 
@@ -46,6 +48,7 @@ export const DetailPageHeader: React.FC<DetailPageHeaderProps> = ({
   rightSection,
 }) => {
   const Link = useLink()
+  const { t } = useI18n()
   const [opened, setOpened] = useState(false)
   const [search, setSearch] = useState('')
 
@@ -81,22 +84,22 @@ export const DetailPageHeader: React.FC<DetailPageHeaderProps> = ({
       {categoryPath ? (
         <Link to={categoryPath} style={{ textDecoration: 'none' }}>
           <Text size="md" c="dimmed">
-            {category}
+            {asI18n(category)}
           </Text>
         </Link>
       ) : currentItem ? (
         <Text size="md" c="dimmed">
-          {category}
+          {asI18n(category)}
         </Text>
       ) : null}
 
       {currentItem && !items && (
         <>
           <Text size="md" c="dimmed">
-            /
+            {t('detail_header.separator')}
           </Text>
           <Text size="md" fw={500}>
-            {currentItem}
+            {asI18n(currentItem)}
           </Text>
         </>
       )}
@@ -104,7 +107,7 @@ export const DetailPageHeader: React.FC<DetailPageHeaderProps> = ({
       {currentItem && items && onItemSelect && (
         <>
           <Text size="md" c="dimmed">
-            /
+            {t('detail_header.separator')}
           </Text>
           <Popover
             opened={opened}
@@ -120,14 +123,14 @@ export const DetailPageHeader: React.FC<DetailPageHeaderProps> = ({
                 style={{ display: 'flex', alignItems: 'center', gap: 4 }}
               >
                 <Text size="md" fw={500}>
-                  {currentItem}
+                  {asI18n(currentItem)}
                 </Text>
                 <ChevronDown size={14} />
               </UnstyledButton>
             </Popover.Target>
             <Popover.Dropdown p={0}>
               <TextInput
-                placeholder={`Search ${category.toLowerCase()}...`}
+                placeholder={asI18n(`Search ${category.toLowerCase()}...`)}
                 leftSection={<Search size={14} />}
                 value={search}
                 onChange={(e) => setSearch(e.currentTarget.value)}
@@ -170,11 +173,11 @@ export const DetailPageHeader: React.FC<DetailPageHeaderProps> = ({
                           size="sm"
                           fw={item.name === currentItem ? 500 : 400}
                         >
-                          {item.name}
+                          {asI18n(item.name)}
                         </Text>
                         {item.description && (
                           <Text size="sm" c="dimmed">
-                            {item.description}
+                            {asI18n(item.description)}
                           </Text>
                         )}
                       </div>
@@ -182,7 +185,7 @@ export const DetailPageHeader: React.FC<DetailPageHeaderProps> = ({
                   ))}
                   {filtered.length === 0 && (
                     <Text size="sm" c="dimmed" ta="center" py="md">
-                      No results
+                      {t('detail_header.no_results')}
                     </Text>
                   )}
                 </Stack>
@@ -198,7 +201,7 @@ export const DetailPageHeader: React.FC<DetailPageHeaderProps> = ({
 
       <Group ml="auto" gap="sm">
         {rightSection}
-        <Tooltip label={`${category} docs`}>
+        <Tooltip label={asI18n(`${category} docs`)}>
           <ActionIcon
             component="a"
             href={docsHref}

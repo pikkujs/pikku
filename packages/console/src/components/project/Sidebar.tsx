@@ -10,7 +10,10 @@ import {
   Divider,
   ActionIcon,
   UnstyledButton,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import type { I18nNode, I18nString } from '@pikku/react'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { useLocalStorage } from '@mantine/hooks'
 import {
   FunctionSquare,
@@ -39,41 +42,41 @@ import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import css from '../ui/console.module.css'
 
 export interface NavItem {
-  label: string
+  label: I18nNode
   href: string
   icon: React.ComponentType<{ size?: number }>
   matchPrefix: string
 }
 
 export interface NavSection {
-  title: string
+  title: I18nNode
   items: NavItem[]
 }
 
 export const DEFAULT_NAV_SECTIONS: NavSection[] = [
   {
-    title: 'Run',
+    title: asI18n('Run'),
     items: [
       {
-        label: 'Functions',
+        label: asI18n('Functions'),
         href: '/functions',
         icon: FunctionSquare,
         matchPrefix: '/functions',
       },
       {
-        label: 'Workflows',
+        label: asI18n('Workflows'),
         href: '/workflow',
         icon: GitBranch,
         matchPrefix: '/workflow',
       },
       {
-        label: 'Agents',
+        label: asI18n('Agents'),
         href: '/agents',
         icon: Bot,
         matchPrefix: '/agents',
       },
       {
-        label: 'Tests',
+        label: asI18n('Tests'),
         href: '/tests',
         icon: FlaskConical,
         matchPrefix: '/tests',
@@ -81,34 +84,34 @@ export const DEFAULT_NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    title: 'Data',
+    title: asI18n('Data'),
     items: [
       {
-        label: 'Database',
+        label: asI18n('Database'),
         href: '/database',
         icon: Database,
         matchPrefix: '/database',
       },
       {
-        label: 'APIs',
+        label: asI18n('APIs'),
         href: '/apis',
         icon: Globe,
         matchPrefix: '/apis',
       },
       {
-        label: 'Jobs',
+        label: asI18n('Jobs'),
         href: '/jobs',
         icon: Clock,
         matchPrefix: '/jobs',
       },
       {
-        label: 'Runtime',
+        label: asI18n('Runtime'),
         href: '/runtime',
         icon: Server,
         matchPrefix: '/runtime',
       },
       {
-        label: 'Emails',
+        label: asI18n('Emails'),
         href: '/emails',
         icon: Mail,
         matchPrefix: '/emails',
@@ -116,22 +119,22 @@ export const DEFAULT_NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    title: 'Config',
+    title: asI18n('Config'),
     items: [
       {
-        label: 'Secrets',
+        label: asI18n('Secrets'),
         href: '/secrets',
         icon: KeyRound,
         matchPrefix: '/secrets',
       },
       {
-        label: 'Environment Variables',
+        label: asI18n('Environment Variables'),
         href: '/variables',
         icon: Variable,
         matchPrefix: '/variables',
       },
       {
-        label: 'Addons',
+        label: asI18n('Addons'),
         href: '/addons',
         icon: Package,
         matchPrefix: '/addons',
@@ -139,16 +142,16 @@ export const DEFAULT_NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    title: 'Users',
+    title: asI18n('Users'),
     items: [
       {
-        label: 'OAuth',
+        label: asI18n('OAuth'),
         href: '/users',
         icon: Users,
         matchPrefix: '/users',
       },
       {
-        label: 'Credentials',
+        label: asI18n('Credentials'),
         href: '/credentials',
         icon: KeyRound,
         matchPrefix: '/credentials',
@@ -156,10 +159,10 @@ export const DEFAULT_NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    title: '',
+    title: asI18n(''),
     items: [
       {
-        label: 'Changes',
+        label: asI18n('Changes'),
         href: '/changes',
         icon: GitCompare,
         matchPrefix: '/changes',
@@ -170,8 +173,8 @@ export const DEFAULT_NAV_SECTIONS: NavSection[] = [
 
 export interface SidebarBranding {
   logo: React.ReactNode
-  title: string
-  tooltipLabel: string
+  title: I18nNode
+  tooltipLabel: I18nString
   homeHref: string
 }
 
@@ -193,8 +196,8 @@ const DEFAULT_BRANDING: SidebarBranding = {
       }
     />
   ),
-  title: import.meta.env.VITE_CONSOLE_TITLE || 'Pikku Console',
-  tooltipLabel: import.meta.env.VITE_CONSOLE_TITLE || 'Pikku Console Alpha',
+  title: asI18n(import.meta.env.VITE_CONSOLE_TITLE || 'Pikku Console'),
+  tooltipLabel: asI18n(import.meta.env.VITE_CONSOLE_TITLE || 'Pikku Console Alpha'),
   homeHref: '/',
 }
 
@@ -216,6 +219,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   footer,
 }) => {
   const Link = useLink()
+  const { t } = useI18n()
   const theme = useMantineTheme()
   const { pathname } = useLocation()
   const { refresh, loading: metaLoading } = usePikkuMeta()
@@ -281,7 +285,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </Link>
         </Tooltip>
         {!collapsed && (
-          <Tooltip label="Search (⌘K)">
+          <Tooltip label={t('sidebar.search')}>
             <ActionIcon
               variant="subtle"
               size="sm"
@@ -377,7 +381,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <Divider mx="sm" />
         <Stack gap={2} px={6} py={4}>
           <Tooltip
-            label="Refresh metadata"
+            label={t('sidebar.refreshMetadata')}
             position="right"
             disabled={!collapsed}
           >
@@ -404,11 +408,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     : undefined
                 }
               />
-              {!collapsed && <Text size="sm">Refresh</Text>}
+              {!collapsed && <Text size="sm">{t('sidebar.refresh')}</Text>}
             </UnstyledButton>
           </Tooltip>
           <Tooltip
-            label={colorScheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            label={colorScheme === 'dark' ? t('sidebar.switchToLight') : t('sidebar.switchToDark')}
             position="right"
           >
             <UnstyledButton
@@ -425,11 +429,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }}
             >
               {colorScheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-              {!collapsed && <Text size="sm">{colorScheme === 'dark' ? 'Light mode' : 'Dark mode'}</Text>}
+              {!collapsed && <Text size="sm">{colorScheme === 'dark' ? t('sidebar.lightMode') : t('sidebar.darkMode')}</Text>}
             </UnstyledButton>
           </Tooltip>
           <Tooltip
-            label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            label={collapsed ? t('sidebar.expand') : t('sidebar.collapse')}
             position="right"
             disabled={!collapsed}
           >
@@ -451,7 +455,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               ) : (
                 <PanelLeftClose size={18} />
               )}
-              {!collapsed && <Text size="sm">Collapse</Text>}
+              {!collapsed && <Text size="sm">{t('sidebar.collapse')}</Text>}
             </UnstyledButton>
           </Tooltip>
         </Stack>

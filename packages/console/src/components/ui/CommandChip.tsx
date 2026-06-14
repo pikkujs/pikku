@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Box, Text } from '@mantine/core'
+import { Box, Text } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { Check, Copy } from 'lucide-react'
 
 type CommandChipProps = { cmd: string }
@@ -42,8 +43,8 @@ export const CommandChip: React.FC<CommandChipProps> = ({ cmd }) => {
         lineHeight: 1,
       }}
     >
-      <Text span c="var(--app-text-faint, var(--mantine-color-dimmed))" ff="inherit" fz="inherit">$</Text>
-      <Text span c="var(--app-text, var(--mantine-color-text))" ff="inherit" fz="inherit">{cmd}</Text>
+      <Text span c="var(--app-text-faint, var(--mantine-color-dimmed))" ff="inherit" fz="inherit">{asI18n('$')}</Text>
+      <Text span c="var(--app-text, var(--mantine-color-text))" ff="inherit" fz="inherit">{asI18n(cmd)}</Text>
       <Box
         display="flex"
         style={{

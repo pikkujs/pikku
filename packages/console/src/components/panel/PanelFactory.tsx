@@ -1,5 +1,7 @@
 import React, { useCallback } from 'react'
-import { Stack, Group, Text, Box, Button, Loader } from '@mantine/core'
+import { Stack, Group, Text, Box, Button, Loader } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { GitBranch, Play } from 'lucide-react'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { SchemaForm } from '../ui/SchemaForm'
@@ -120,6 +122,7 @@ const WorkflowStepTabbedPanel: React.FC<{
 const NewWorkflowRunForm: React.FC<{ workflowId: string }> = ({
   workflowId,
 }) => {
+  const { t } = useI18n()
   const runContext = useWorkflowRunContextSafe()
   const startMutation = useStartWorkflowRun()
   const { schema: effectiveSchema, isLoading } = useWorkflowInputSchema()
@@ -158,7 +161,7 @@ const NewWorkflowRunForm: React.FC<{ workflowId: string }> = ({
             onClick={() => handleSubmit({})}
             loading={startMutation.isPending}
           >
-            Run
+            {t('workflows.run')}
           </Button>
         </Group>
       )}

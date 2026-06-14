@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react'
-import { Text } from '@mantine/core'
+import { Text } from '@pikku/mantine/core'
 import { Server } from 'lucide-react'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -14,24 +16,28 @@ interface ServiceItem {
   functions: string[]
 }
 
-const COLUMNS = [
-  {
-    key: 'name',
-    header: 'NAME',
-    render: (item: ServiceItem) => <Text fw={500}>{item.name}</Text>,
-  },
-  {
-    key: 'functions',
-    header: 'FUNCTIONS',
-    align: 'right' as const,
-    render: (item: ServiceItem) => (
-      <PikkuBadge type="dynamic" badge="functions" value={item.funcCount} />
-    ),
-  },
-]
-
 export const ServicesPage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
+  const { t } = useI18n()
+
+  const columns = useMemo(
+    () => [
+      {
+        key: 'name',
+        header: 'NAME',
+        render: (item: ServiceItem) => <Text fw={500}>{asI18n(item.name)}</Text>,
+      },
+      {
+        key: 'functions',
+        header: 'FUNCTIONS',
+        align: 'right' as const,
+        render: (item: ServiceItem) => (
+          <PikkuBadge type="dynamic" badge="functions" value={item.funcCount} />
+        ),
+      },
+    ],
+    []
+  )
 
   const services = useMemo((): ServiceItem[] => {
     const serviceMap = new Map<
@@ -59,7 +65,7 @@ export const ServicesPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title="Services" description="Singleton services available across your application" />}
+        header={<ListPageHeader title={t('services.title')} description={t('services.description')} />}
         hidePanel
       >
         <TableListPage
@@ -67,15 +73,15 @@ export const ServicesPage: React.FC = () => {
           icon={Server}
           docsHref="https://pikku.dev/docs/core-features/services"
           data={services}
-          columns={COLUMNS}
+          columns={columns}
           getKey={(item) => item.name}
           onRowClick={() => {}}
-          searchPlaceholder="Search services..."
+          searchPlaceholder={t('services.search_placeholder')}
           searchFilter={(item, q) =>
             item.name.toLowerCase().includes(q) ||
             item.functions.some((f) => f.toLowerCase().includes(q))
           }
-          emptyMessage="No services found."
+          emptyMessage={t('services.empty_message')}
           loading={loading}
         />
       </ResizablePanelLayout>

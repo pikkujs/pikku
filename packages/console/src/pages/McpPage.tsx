@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react'
-import { Text } from '@mantine/core'
+import { Text } from '@pikku/mantine/core'
 import { Cpu } from 'lucide-react'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider } from '../context/PanelContext'
 import { usePanelContext } from '../context/PanelContext'
@@ -21,6 +23,7 @@ const McpTable: React.FC<{
   loading?: boolean
 }> = ({ items, loading }) => {
   const { openMCP } = usePanelContext()
+  const { t } = useI18n()
   const [filter, setFilter] = useState('all')
 
   const filtered = useMemo(() => {
@@ -36,11 +39,11 @@ const McpTable: React.FC<{
         render: (item: any) => (
           <>
             <Text fw={500} truncate>
-              {item.name || item.wireId || 'unnamed'}
+              {asI18n(item.name || item.wireId || 'unnamed')}
             </Text>
             {item.pikkuFuncId && (
               <Text size="sm" c="dimmed" truncate>
-                {item.pikkuFuncId}
+                {asI18n(item.pikkuFuncId)}
               </Text>
             )}
           </>
@@ -70,13 +73,13 @@ const McpTable: React.FC<{
       onRowClick={(item) =>
         openMCP(`mcp::${item.method}::${item.wireId || item.name}`, item)
       }
-      searchPlaceholder="Search MCP tools, resources, prompts..."
+      searchPlaceholder={t('mcp.search_placeholder')}
       searchFilter={(item, q) =>
         item.name?.toLowerCase().includes(q) ||
         item.pikkuFuncId?.toLowerCase().includes(q) ||
         item.method?.toLowerCase().includes(q)
       }
-      emptyMessage="No MCP entries found."
+      emptyMessage={t('mcp.empty_message')}
       loading={loading}
     />
   )
@@ -84,6 +87,7 @@ const McpTable: React.FC<{
 
 export const McpPage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
+  const { t } = useI18n()
 
   const items = useMemo(() => {
     if (!meta.mcpMeta) return []
@@ -95,9 +99,9 @@ export const McpPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title="MCP" description="Model Context Protocol tools, resources, and prompts" />}
+        header={<ListPageHeader title={t('mcp.title')} description={t('mcp.description')} />}
         hidePanel={!loading && items.length === 0}
-        emptyPanelMessage="Select an MCP entry to view its details"
+        emptyPanelMessage={t('mcp.select_entry')}
       >
         <McpTable items={items} loading={loading} />
       </ResizablePanelLayout>

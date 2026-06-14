@@ -1,5 +1,7 @@
 import React from 'react'
-import { Group, Chip, SegmentedControl, Stack } from '@mantine/core'
+import { Group, Chip, SegmentedControl, Stack } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { httpMethodDefs } from '../ui/badge-defs'
 
 interface HttpFilterBarProps {
@@ -29,6 +31,7 @@ export const HttpFilterBar: React.FC<HttpFilterBarProps> = ({
   sortBy,
   onSortByChange,
 }) => {
+  const { t } = useI18n()
   return (
     <Stack gap="xs">
       <Chip.Group multiple value={selectedMethods} onChange={onMethodsChange}>
@@ -43,7 +46,7 @@ export const HttpFilterBar: React.FC<HttpFilterBarProps> = ({
                 color={def?.color || 'gray'}
                 variant="outline"
               >
-                {method}
+                {asI18n(method)}
               </Chip>
             )
           })}
@@ -69,7 +72,7 @@ export const HttpFilterBar: React.FC<HttpFilterBarProps> = ({
           color="cyan"
           variant="outline"
         >
-          SSE
+          {t('http.filter.sse')}
         </Chip>
 
         <Chip
@@ -79,7 +82,7 @@ export const HttpFilterBar: React.FC<HttpFilterBarProps> = ({
           color="red"
           variant="outline"
         >
-          Permissioned
+          {t('http.filter.permissioned')}
         </Chip>
 
         <SegmentedControl

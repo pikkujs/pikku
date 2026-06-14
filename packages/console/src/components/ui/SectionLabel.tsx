@@ -1,9 +1,10 @@
 import React from 'react'
-import { Text } from '@mantine/core'
+import { Text } from '@pikku/mantine/core'
+import type { I18nNode } from '@pikku/react'
 import classes from './console.module.css'
 
 export interface SectionLabelProps {
-  children: React.ReactNode
+  children: I18nNode
 }
 
 export const SectionLabel: React.FC<SectionLabelProps> = ({ children }) => (

@@ -1,5 +1,6 @@
 import React from 'react'
-import { Stack, Text, Box, Code, Group, Table } from '@mantine/core'
+import { Stack, Text, Box, Code, Group, Table } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import {
   Globe,
   Radio,
@@ -42,12 +43,12 @@ export const HttpConfiguration: React.FC<WiringPanelProps> = ({
           <Globe size={20} />
           <PikkuBadge type="httpMethod" value={method} variant="filled" />
           <Text size="lg" ff="monospace" fw={600}>
-            {route}
+            {asI18n(route)}
           </Text>
         </Group>
         {metadata?.summary && (
           <Text size="sm" c="dimmed" mt={4}>
-            {metadata.summary}
+            {asI18n(metadata.summary)}
           </Text>
         )}
       </Box>
@@ -115,17 +116,17 @@ export const ChannelConfiguration: React.FC<WiringPanelProps> = ({
         <Group gap="xs">
           <Radio size={20} />
           <Text size="lg" ff="monospace" fw={600}>
-            {metadata?.name || wireId}
+            {asI18n(metadata?.name || wireId)}
           </Text>
         </Group>
         {metadata?.route && (
           <Text size="sm" c="dimmed" mt={4}>
-            {metadata.route}
+            {asI18n(metadata.route)}
           </Text>
         )}
         {metadata?.summary && (
           <Text size="sm" c="dimmed" mt={4}>
-            {metadata.summary}
+            {asI18n(metadata.summary)}
           </Text>
         )}
       </Box>
@@ -168,7 +169,7 @@ export const ChannelConfiguration: React.FC<WiringPanelProps> = ({
         errors={metadata?.errors || []}
       >
         {metadata?.input && (
-          <SchemaSection label="Input Schema" schemaName={metadata.input} />
+          <SchemaSection label={asI18n('Input Schema')} schemaName={metadata.input} />
         )}
 
         <FunctionLink
@@ -186,7 +187,7 @@ export const ChannelConfiguration: React.FC<WiringPanelProps> = ({
 
         {channelMiddleware.length > 0 && (
           <Box>
-            <SectionLabel>Channel Middleware</SectionLabel>
+            <SectionLabel>{asI18n('Channel Middleware')}</SectionLabel>
             <Group gap={6}>
               {channelMiddleware.map((mw: any, i: number) => (
                 <LinkedBadge key={i} item={mw} kind="middleware" />
@@ -197,12 +198,12 @@ export const ChannelConfiguration: React.FC<WiringPanelProps> = ({
 
         {messageWirings && Object.keys(messageWirings).length > 0 && (
           <Box>
-            <SectionLabel>Message Wirings</SectionLabel>
+            <SectionLabel>{asI18n('Message Wirings')}</SectionLabel>
             <Stack gap="sm">
               {Object.entries(messageWirings).map(([category, actions]) => (
                 <Box key={category}>
                   <Text size="sm" fw={600} mb={4}>
-                    {category}
+                    {asI18n(category)}
                   </Text>
                   <Group gap={6}>
                     {Object.entries(actions).map(([actionName, actionData]) => (
@@ -250,7 +251,7 @@ export const RpcConfiguration: React.FC<WiringPanelProps> = ({
         <Group gap="xs">
           <FunctionSquare size={20} />
           <Text size="lg" ff="monospace" fw={600}>
-            {wireId}
+            {asI18n(wireId)}
           </Text>
         </Group>
       </Box>
@@ -277,12 +278,12 @@ export const SchedulerConfiguration: React.FC<WiringPanelProps> = ({
         <Group gap="xs">
           <Clock size={20} />
           <Text size="lg" ff="monospace" fw={600}>
-            {metadata?.name || wireId}
+            {asI18n(metadata?.name || wireId)}
           </Text>
         </Group>
         {metadata?.summary && (
           <Text size="sm" c="dimmed" mt={4}>
-            {metadata.summary}
+            {asI18n(metadata.summary)}
           </Text>
         )}
       </Box>
@@ -296,18 +297,18 @@ export const SchedulerConfiguration: React.FC<WiringPanelProps> = ({
 
       {metadata?.schedule && (
         <Box>
-          <SectionLabel>Schedule</SectionLabel>
-          <Text size="sm">{cronstrue.toString(metadata.schedule)}</Text>
+          <SectionLabel>{asI18n('Schedule')}</SectionLabel>
+          <Text size="sm">{asI18n(cronstrue.toString(metadata.schedule))}</Text>
           <Text size="sm" c="dimmed" ff="monospace" mt={2}>
-            {metadata.schedule}
+            {asI18n(metadata.schedule)}
           </Text>
         </Box>
       )}
 
       {metadata?.timezone && (
         <Box>
-          <SectionLabel>Timezone</SectionLabel>
-          <Text size="sm">{metadata.timezone}</Text>
+          <SectionLabel>{asI18n('Timezone')}</SectionLabel>
+          <Text size="sm">{asI18n(metadata.timezone)}</Text>
         </Box>
       )}
 
@@ -337,12 +338,12 @@ export const QueueConfiguration: React.FC<WiringPanelProps> = ({
         <Group gap="xs">
           <ListOrdered size={20} />
           <Text size="lg" ff="monospace" fw={600}>
-            {metadata?.name || wireId}
+            {asI18n(metadata?.name || wireId)}
           </Text>
         </Group>
         {metadata?.summary && (
           <Text size="sm" c="dimmed" mt={4}>
-            {metadata.summary}
+            {asI18n(metadata.summary)}
           </Text>
         )}
       </Box>
@@ -373,7 +374,7 @@ export const QueueConfiguration: React.FC<WiringPanelProps> = ({
       >
         {config && Object.keys(config).length > 0 && (
           <Box>
-            <SectionLabel>Config</SectionLabel>
+            <SectionLabel>{asI18n('Config')}</SectionLabel>
             <Group gap={6}>
               {Object.entries(config).map(([key, value]) => (
                 <PikkuBadge
@@ -383,7 +384,7 @@ export const QueueConfiguration: React.FC<WiringPanelProps> = ({
                   variant="outline"
                   color="gray"
                 >
-                  {key}: {String(value)}
+                  {asI18n(`${key}: ${String(value)}`)}
                 </PikkuBadge>
               ))}
             </Group>
@@ -420,12 +421,11 @@ const CliOptionsTable: React.FC<{
           <Table.Tr key={name}>
             <Table.Td>
               <Text size="sm" ff="monospace">
-                --{name}
-                {opt.short ? `, -${opt.short}` : ''}
+                {asI18n(`--${name}${opt.short ? `, -${opt.short}` : ''}`)}
               </Text>
             </Table.Td>
             <Table.Td>
-              <Text size="sm">{opt.description || ''}</Text>
+              <Text size="sm">{asI18n(opt.description || '')}</Text>
             </Table.Td>
             <Table.Td>
               {opt.required ? (
@@ -434,7 +434,7 @@ const CliOptionsTable: React.FC<{
                 <Code>{String(opt.default)}</Code>
               ) : (
                 <Text size="sm" c="dimmed">
-                  -
+                  {asI18n('-')}
                 </Text>
               )}
             </Table.Td>
@@ -457,11 +457,11 @@ const CliCommandTree: React.FC<{
         <Box key={name} ml={depth * 16}>
           <Group gap={6} mb={4}>
             <Text size="sm" ff="monospace" fw={600}>
-              {name}
+              {asI18n(name)}
             </Text>
             {cmd.isDefault && (
               <PikkuBadge type="label" size="sm" variant="light" color="gray">
-                default
+                {asI18n('default')}
               </PikkuBadge>
             )}
             {cmd.pikkuFuncId && (
@@ -480,13 +480,13 @@ const CliCommandTree: React.FC<{
                   )
                 }
               >
-                {cmd.pikkuFuncId}
+                {asI18n(cmd.pikkuFuncId)}
               </PikkuBadge>
             )}
           </Group>
           {cmd.description && (
             <Text size="sm" c="dimmed" mb={4}>
-              {cmd.description}
+              {asI18n(cmd.description)}
             </Text>
           )}
           {cmd.positionals && cmd.positionals.length > 0 && (
@@ -499,8 +499,7 @@ const CliCommandTree: React.FC<{
                   variant="outline"
                   color={pos.required ? 'red' : 'gray'}
                 >
-                  {pos.variadic ? `...${pos.name}` : pos.name}
-                  {pos.required ? '*' : ''}
+                  {asI18n(`${pos.variadic ? `...${pos.name}` : pos.name}${pos.required ? '*' : ''}`)}
                 </PikkuBadge>
               ))}
             </Group>
@@ -531,12 +530,12 @@ export const CliConfiguration: React.FC<WiringPanelProps> = ({
         <Group gap="xs">
           <Terminal size={20} />
           <Text size="lg" ff="monospace" fw={600}>
-            {program}
+            {asI18n(program)}
           </Text>
         </Group>
         {metadata?.summary && (
           <Text size="sm" c="dimmed" mt={4}>
-            {metadata.summary}
+            {asI18n(metadata.summary)}
           </Text>
         )}
       </Box>
@@ -555,14 +554,14 @@ export const CliConfiguration: React.FC<WiringPanelProps> = ({
       <CommonDetails description={metadata?.description}>
         {globalOptions && Object.keys(globalOptions).length > 0 && (
           <Box>
-            <SectionLabel>Global Options</SectionLabel>
+            <SectionLabel>{asI18n('Global Options')}</SectionLabel>
             <CliOptionsTable options={globalOptions} />
           </Box>
         )}
 
         {commands && Object.keys(commands).length > 0 && (
           <Box>
-            <SectionLabel>Commands</SectionLabel>
+            <SectionLabel>{asI18n('Commands')}</SectionLabel>
             <CliCommandTree commands={commands} />
           </Box>
         )}
@@ -589,21 +588,21 @@ export const McpConfiguration: React.FC<WiringPanelProps> = ({
           <Cpu size={20} />
           <PikkuBadge type="mcpType" value={method} variant="filled" />
           <Text size="lg" ff="monospace" fw={600}>
-            {metadata?.name || wireId}
+            {asI18n(metadata?.name || wireId)}
           </Text>
         </Group>
         {metadata?.summary && (
           <Text size="sm" c="dimmed" mt={4}>
-            {metadata.summary}
+            {asI18n(metadata.summary)}
           </Text>
         )}
       </Box>
 
       {metadata?.uri && (
         <Box>
-          <SectionLabel>URI</SectionLabel>
+          <SectionLabel>{asI18n('URI')}</SectionLabel>
           <Text size="sm" ff="monospace">
-            {metadata.uri}
+            {asI18n(metadata.uri)}
           </Text>
         </Box>
       )}
@@ -620,7 +619,7 @@ export const McpConfiguration: React.FC<WiringPanelProps> = ({
       >
         {args && args.length > 0 && (
           <Box>
-            <SectionLabel>Arguments</SectionLabel>
+            <SectionLabel>{asI18n('Arguments')}</SectionLabel>
             <Table verticalSpacing={4} horizontalSpacing="xs">
               <Table.Thead>
                 <Table.Tr>
@@ -640,11 +639,11 @@ export const McpConfiguration: React.FC<WiringPanelProps> = ({
                   <Table.Tr key={arg.name}>
                     <Table.Td>
                       <Text size="sm" ff="monospace">
-                        {arg.name}
+                        {asI18n(arg.name)}
                       </Text>
                     </Table.Td>
                     <Table.Td>
-                      <Text size="sm">{arg.description || ''}</Text>
+                      <Text size="sm">{asI18n(arg.description || '')}</Text>
                     </Table.Td>
                     <Table.Td>
                       {arg.required && (
@@ -675,12 +674,12 @@ export const TriggerConfiguration: React.FC<WiringPanelProps> = ({
         <Group gap="xs">
           <Zap size={20} />
           <Text size="lg" ff="monospace" fw={600}>
-            {metadata?.name || wireId}
+            {asI18n(metadata?.name || wireId)}
           </Text>
         </Group>
         {metadata?.summary && (
           <Text size="sm" c="dimmed" mt={4}>
-            {metadata.summary}
+            {asI18n(metadata.summary)}
           </Text>
         )}
       </Box>
@@ -714,12 +713,12 @@ export const TriggerSourceConfiguration: React.FC<WiringPanelProps> = ({
         <Group gap="xs">
           <Zap size={20} />
           <Text size="lg" ff="monospace" fw={600}>
-            {metadata?.name || wireId}
+            {asI18n(metadata?.name || wireId)}
           </Text>
         </Group>
         {metadata?.summary && (
           <Text size="sm" c="dimmed" mt={4}>
-            {metadata.summary}
+            {asI18n(metadata.summary)}
           </Text>
         )}
       </Box>

@@ -1,15 +1,19 @@
 import React, { useMemo } from 'react'
-import { Box, Center, Stack, Text } from '@mantine/core'
+import { Box, Center, Stack, Text } from '@pikku/mantine/core'
+import type { I18nNode } from '@pikku/react'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { usePanelContext } from '../../context/PanelContext'
 import { createPanelChildren } from './PanelFactory'
 import { SidePanel, SidePanelContent, SidePanelHeader } from './SidePanel'
 
 interface PanelContainerProps {
-  emptyMessage?: string
+  emptyMessage?: I18nNode
 }
 
 export const PanelContainer: React.FC<PanelContainerProps> = ({ emptyMessage }) => {
   const { panels, activePanel, closePanel, goBack } = usePanelContext()
+  const { t } = useI18n()
 
   const activePanelData = activePanel ? panels.get(activePanel) : null
 
@@ -21,7 +25,7 @@ export const PanelContainer: React.FC<PanelContainerProps> = ({ emptyMessage }) 
     return (
       <Center h="100%" p="xl">
         <Text c="dimmed" ta="center">
-          {emptyMessage || 'Select an item to view details'}
+          {emptyMessage ?? t('panel.select_item')}
         </Text>
       </Center>
     )
@@ -37,7 +41,7 @@ export const PanelContainer: React.FC<PanelContainerProps> = ({ emptyMessage }) 
         ) : (
           <SidePanel key={child.id}>
             <SidePanelHeader
-              title={activePanelData.title}
+              title={asI18n(activePanelData.title)}
               onBack={activePanelData.history.length > 0 ? goBack : undefined}
               onClose={() => closePanel(activePanel!)}
             />

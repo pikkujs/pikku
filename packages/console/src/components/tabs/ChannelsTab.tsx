@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react'
-import { Center, Loader } from '@mantine/core'
+import { Center, Loader } from '@pikku/mantine/core'
 import { ChannelTabContent } from './ChannelTabContent'
 
 type ChannelsTabProps = { searchQuery: string; emptyHero?: React.ReactNode }

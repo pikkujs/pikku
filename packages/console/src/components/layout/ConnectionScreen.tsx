@@ -2,20 +2,24 @@ import { useState } from 'react'
 import {
   Center,
   Stack,
+  Paper,
+  Box,
+} from '@pikku/mantine/core'
+import {
   TextInput,
   Button,
   Text,
-  Paper,
-  Box,
   Alert,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
 import { AlertTriangle } from 'lucide-react'
 import { getServerUrl, setServerUrl } from '../../context/PikkuRpcProvider'
+import { useI18n } from '@pikku/react/i18n'
+import { asI18n } from '@pikku/react'
 
 function getErrorGuidance(
   error: string,
   url: string
-): { title: string; hint: string } {
+): { titleKey: string; hint: string } {
   const lower = error.toLowerCase()
   if (
     lower.includes('fetch') ||
@@ -24,7 +28,7 @@ function getErrorGuidance(
     lower.includes('failed to fetch')
   ) {
     return {
-      title: 'Connection refused',
+      titleKey: 'connection.errors.connection_refused',
       hint: `Make sure your Pikku server is running at ${url}`,
     }
   }
@@ -34,29 +38,30 @@ function getErrorGuidance(
     lower.includes('rpc function')
   ) {
     return {
-      title: 'Console addon not found',
+      titleKey: 'connection.errors.addon_not_found',
       hint: 'The @pikku/addon-console package may not be installed. Add it to your project and run pikku to generate the bootstrap.',
     }
   }
   if (lower.includes('cors') || lower.includes('cross-origin')) {
     return {
-      title: 'CORS error',
+      titleKey: 'connection.errors.cors_error',
       hint: 'Your Pikku server may need CORS configured to allow requests from the console origin.',
     }
   }
   if (lower.includes('timeout')) {
     return {
-      title: 'Request timed out',
+      titleKey: 'connection.errors.timeout',
       hint: 'The server took too long to respond. Check if it is under heavy load or unreachable.',
     }
   }
   return {
-    title: 'Connection failed',
+    titleKey: 'connection.errors.connection_failed',
     hint: error,
   }
 }
 
 export const ConnectionScreen: React.FC<{ error: string }> = ({ error }) => {
+  const { t } = useI18n()
   const [url, setUrl] = useState(getServerUrl)
   const guidance = getErrorGuidance(error, url)
 
@@ -79,7 +84,7 @@ export const ConnectionScreen: React.FC<{ error: string }> = ({ error }) => {
               />
             </Center>
             <Text size="xl" fw={500} ta="center" mt="xs">
-              Pikku Console
+              {t('connection.title')}
             </Text>
           </Box>
 
@@ -87,21 +92,21 @@ export const ConnectionScreen: React.FC<{ error: string }> = ({ error }) => {
             icon={<AlertTriangle size={16} />}
             color="red"
             variant="light"
-            title={guidance.title}
+            title={t(guidance.titleKey)}
             w="100%"
           >
-            <Text size="sm">{guidance.hint}</Text>
+            <Text size="sm">{asI18n(guidance.hint)}</Text>
           </Alert>
 
           <TextInput
-            label="Pikku instance URL"
+            label={t('connection.server_url_label')}
             value={url}
             onChange={(e) => setUrl(e.currentTarget.value)}
             w="100%"
           />
 
           <Button fullWidth variant="default" onClick={handleReconnect}>
-            Reconnect
+            {t('connection.reconnect')}
           </Button>
         </Stack>
       </Paper>

@@ -1,9 +1,10 @@
 import React from 'react'
-import { Box, Text } from '@mantine/core'
+import { Box, Text } from '@pikku/mantine/core'
+import type { I18nNode } from '@pikku/react'
 import classes from './console.module.css'
 
 export interface MetaRowProps {
-  label: string
+  label: I18nNode
   labelWidth?: number
   align?: 'center' | 'flex-start'
   gap?: number

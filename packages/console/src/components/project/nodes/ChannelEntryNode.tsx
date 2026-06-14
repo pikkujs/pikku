@@ -1,12 +1,14 @@
 import React from 'react'
 import type { NodeProps } from 'reactflow'
 import { Handle, Position } from 'reactflow'
-import { Box, Paper, Text, Stack, useMantineTheme } from '@mantine/core'
+import { Box, Paper, Text, Stack, useMantineTheme } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
+import type { I18nNode } from '@pikku/react'
 import { ArrowRight } from 'lucide-react'
 import { usePanelContext } from '../../../context/PanelContext'
 
 interface HandlerRowProps {
-  label: string
+  label: I18nNode
   handleId: string
 }
 
@@ -89,24 +91,24 @@ export const ChannelEntryNode: React.FC<NodeProps<ChannelEntryNodeData>> = ({
       <Stack gap={0} py="xs">
         <Box px="md" pb={4}>
           <Text size="md" fw={600}>
-            {data.channelName}
+            {asI18n(data.channelName)}
           </Text>
           <Text size="sm" c="dimmed">
-            {data.route}
+            {asI18n(data.route)}
           </Text>
         </Box>
 
         {data.handlers.includes('connect') && (
-          <HandlerRow label="onConnect" handleId="connect" />
+          <HandlerRow label={asI18n('onConnect')} handleId="connect" />
         )}
         {data.handlers.includes('disconnect') && (
-          <HandlerRow label="onDisconnect" handleId="disconnect" />
+          <HandlerRow label={asI18n('onDisconnect')} handleId="disconnect" />
         )}
         {data.handlers.includes('message') && (
-          <HandlerRow label="onMessage" handleId="message" />
+          <HandlerRow label={asI18n('onMessage')} handleId="message" />
         )}
         {data.categories.map((cat) => (
-          <HandlerRow key={cat} label={cat} handleId={`category-${cat}`} />
+          <HandlerRow key={cat} label={asI18n(cat)} handleId={`category-${cat}`} />
         ))}
       </Stack>
     </Paper>

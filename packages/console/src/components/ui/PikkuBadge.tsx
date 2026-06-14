@@ -1,5 +1,7 @@
 import React from 'react'
-import { Badge, type BadgeProps } from '@mantine/core'
+import { Badge, type BadgeProps } from '@pikku/mantine/core'
+import type { I18nNode } from '@pikku/react'
+import { asI18n } from '@pikku/react'
 import css from './console.module.css'
 import {
   httpMethodDefs,
@@ -47,7 +49,7 @@ type PikkuBadgeProps = (
   | { type: 'dynamic'; badge: string; value: string | number }
   | {
       type: 'label'
-      children: React.ReactNode
+      children: I18nNode
       color?: string
       variant?: BadgeProps['variant']
     }
@@ -83,7 +85,7 @@ export const PikkuBadge: React.FC<PikkuBadgeProps> = (props) => {
 
   if (type === 'label') {
     const { children, color, variant, ...badgeProps } = rest as {
-      children: React.ReactNode
+      children: I18nNode
       color?: string
       variant?: BadgeProps['variant']
     } & Omit<BadgeProps, 'children'>
@@ -122,7 +124,7 @@ export const PikkuBadge: React.FC<PikkuBadgeProps> = (props) => {
         }
         {...badgeProps}
       >
-        {def.label}
+        {asI18n(def.label)}
       </Badge>
     )
   }
@@ -161,7 +163,7 @@ export const PikkuBadge: React.FC<PikkuBadgeProps> = (props) => {
         }
         {...badgeProps}
       >
-        {humanize(label)}
+        {asI18n(humanize(label))}
       </Badge>
     )
   }
@@ -183,7 +185,7 @@ export const PikkuBadge: React.FC<PikkuBadgeProps> = (props) => {
       className={css.noShrink}
       {...badgeProps}
     >
-      {humanize(label)}
+      {asI18n(humanize(label))}
     </Badge>
   )
 }

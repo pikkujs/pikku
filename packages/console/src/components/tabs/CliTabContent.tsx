@@ -8,7 +8,7 @@ import {
   CopyButton,
   ActionIcon,
   Tooltip,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
 import { ChevronDown, ChevronRight, Copy, Check, Terminal } from 'lucide-react'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import type { CLIMeta } from '@pikku/core/cli'
@@ -16,6 +16,8 @@ import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { PanelProvider } from '../../context/PanelContext'
 import { CliHelpText } from '../cli/CliHelpText'
 import classes from '../ui/console.module.css'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 
 const countCommands = (commands: Record<string, any>): number => {
   let count = 0
@@ -31,6 +33,7 @@ const CliPageInner: React.FC<{
   cliRenderers: Record<string, any>
   searchQuery: string
 }> = ({ programs, cliRenderers, searchQuery }) => {
+  const { t } = useI18n()
   const [activeProgramId, setActiveProgramId] = useState<string>(
     programs[0]?.wireId || ''
   )
@@ -151,7 +154,7 @@ const CliPageInner: React.FC<{
                     {prog.wireId}
                   </Text>
                   <Badge size="sm" variant="light" color="cyan" ff="monospace">
-                    cli
+                    {t('cli.badge_label')}
                   </Badge>
                 </UnstyledButton>
 
@@ -190,7 +193,7 @@ const CliPageInner: React.FC<{
                             }
                             truncate
                           >
-                            {cmdName}
+                            {asI18n(cmdName)}
                           </Text>
                           {cmd.description && (
                             <Text
@@ -232,10 +235,10 @@ const CliPageInner: React.FC<{
             style={{ flex: 1 }}
           >
             <Text component="span" c="violet" ff="monospace">
-              $
-            </Text>{' '}
+              {asI18n('$')}
+            </Text>{asI18n(' ')}
             <Text component="span" c="var(--app-text)" ff="monospace">
-              {promptText.slice(2)}
+              {asI18n(promptText.slice(2))}
             </Text>
           </Text>
           <CopyButton
@@ -246,7 +249,7 @@ const CliPageInner: React.FC<{
             }
           >
             {({ copied, copy }) => (
-              <Tooltip label={copied ? 'Copied' : 'Copy'}>
+              <Tooltip label={copied ? t('common.copied') : t('common.copy')}>
                 <ActionIcon
                   variant="subtle"
                   color={copied ? 'teal' : 'gray'}
@@ -279,7 +282,7 @@ const CliPageInner: React.FC<{
             />
           ) : (
             <Text c="dimmed" ff="monospace" size="sm">
-              No CLI programs found.
+              {t('cli.no_programs')}
             </Text>
           )}
         </Box>
@@ -292,14 +295,15 @@ type CliTabContentProps = { searchQuery: string }
 
 export const CliTabContent: React.FC<CliTabContentProps> = ({ searchQuery }) => {
   const { meta } = usePikkuMeta()
+  const { t } = useI18n()
   const programs = meta.cliMeta || []
 
   if (programs.length === 0) {
     return (
       <EmptyStatePlaceholder
         icon={Terminal}
-        title="No CLI programs found"
-        description="Define CLI programs in your project to see them here."
+        title={t('cli.empty_title')}
+        description={t('cli.empty_description')}
         docsHref="https://pikku.dev/docs/core-features/cli"
       />
     )

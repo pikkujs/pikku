@@ -1,12 +1,14 @@
 import type { ComponentProps, ReactNode } from 'react'
-import { ActionIcon, Box, Container, Group, Stack, Text, Title, Tooltip } from '@mantine/core'
+import { ActionIcon, Box, Container, Group, Stack, Text, Title, Tooltip } from '@pikku/mantine/core'
+import type { I18nNode } from '@pikku/react'
 import { ExternalLink } from 'lucide-react'
+import { useI18n } from '@pikku/react/i18n'
 import DocLink from '../ui/DocLink'
 import { usePageGate } from '../../context/PageGateContext'
 
 interface ListPageHeaderProps {
-  title: ReactNode
-  description?: ReactNode
+  title: I18nNode
+  description?: I18nNode
   docsHref?: string
   lead?: ReactNode
   filters?: ReactNode
@@ -117,13 +119,14 @@ export function PageContainer({
 }
 
 interface PageHeaderProps {
-  title: ReactNode
-  subtitle?: ReactNode
+  title: I18nNode
+  subtitle?: I18nNode
   actions?: ReactNode
   docsHref?: string
 }
 
 export function PageHeader({ title, subtitle, actions, docsHref }: PageHeaderProps) {
+  const { t } = useI18n()
   return (
     <Stack gap={4} style={{ marginBottom: 'var(--mantine-spacing-xl)' }}>
       <Group justify="space-between" align="center" wrap="nowrap" gap="md">
@@ -133,7 +136,7 @@ export function PageHeader({ title, subtitle, actions, docsHref }: PageHeaderPro
         <Group gap="xs" wrap="nowrap" align="center" style={{ flexShrink: 0 }}>
           {actions && <PageHeaderControls>{actions}</PageHeaderControls>}
           {docsHref && (
-            <Tooltip label="Docs">
+            <Tooltip label={t('common.docs_link')}>
               <ActionIcon
                 component="a"
                 href={docsHref}

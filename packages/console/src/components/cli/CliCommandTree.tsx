@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react'
-import { Box, Stack, TextInput, NavLink, Text, ScrollArea } from '@mantine/core'
+import { Box, Stack, TextInput, NavLink, Text, ScrollArea } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { Search } from 'lucide-react'
 import css from '../ui/console.module.css'
 
@@ -83,10 +85,10 @@ const CommandNode: React.FC<CommandNodeProps> = ({
     <NavLink
       label={
         <Text size="sm" fw={isActive ? 600 : 400} truncate>
-          {command.name}
+          {asI18n(command.name)}
         </Text>
       }
-      description={command.description}
+      description={command.description ? asI18n(command.description) : undefined}
       active={isActive}
       opened={isParentOfActive || undefined}
       onClick={() => onSelect(command.path)}
@@ -122,6 +124,7 @@ export const CliCommandTree: React.FC<CliCommandTreeProps> = ({
   onSelect,
 }) => {
   const [search, setSearch] = useState('')
+  const { t } = useI18n()
 
   const tree = useMemo(
     () => buildTree(program.commands, []),
@@ -143,7 +146,7 @@ export const CliCommandTree: React.FC<CliCommandTreeProps> = ({
         }}
       >
         <TextInput
-          placeholder="Search commands..."
+          placeholder={t('cli.search.placeholder')}
           leftSection={<Search size={14} />}
           size="sm"
           value={search}
@@ -162,7 +165,7 @@ export const CliCommandTree: React.FC<CliCommandTreeProps> = ({
         ))}
         {search && filtered.length === 0 && (
           <Text size="sm" c="dimmed" ta="center" py="md">
-            No commands match &ldquo;{search}&rdquo;
+            {t('cli.search.noMatch', { query: search })}
           </Text>
         )}
       </ScrollArea>

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
-import { Group, TextInput } from '@mantine/core'
+import { useI18n } from '@pikku/react/i18n'
+import { Group, TextInput } from '@pikku/mantine/core'
 import { Mail, Search } from 'lucide-react'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
@@ -21,6 +22,7 @@ export const EmailsOverview: React.FC<EmailsOverviewProps> = ({
   onSelect,
   headerRight,
 }) => {
+  const { t } = useI18n()
   const [searchQuery, setSearchQuery] = useState('')
 
   const allItems = useMemo((): EntityCardItem[] =>
@@ -47,13 +49,13 @@ export const EmailsOverview: React.FC<EmailsOverviewProps> = ({
       hidePanel
       header={
         <ListPageHeader
-          title="Email Templates"
-          description="Preview and inspect email templates with live variable rendering"
+          title={t('emails.title')}
+          description={t('emails.description')}
           docsHref={EMAIL_DOCS_HREF}
           filters={
             <Group gap="sm" wrap="nowrap">
               <TextInput
-                placeholder="Search email templates..."
+                placeholder={t('emails.search_placeholder')}
                 leftSection={<Search size={14} />}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -70,7 +72,7 @@ export const EmailsOverview: React.FC<EmailsOverviewProps> = ({
         items={items}
         onOpen={onSelect}
         icon={Mail}
-        emptyTitle="No email templates match the current search."
+        emptyTitle={t('emails.empty_title')}
         docsHref={EMAIL_DOCS_HREF}
       />
     </ResizablePanelLayout>

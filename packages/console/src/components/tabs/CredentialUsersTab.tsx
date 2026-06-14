@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Text, Group, Badge, Center, Loader } from '@mantine/core'
+import { Text, Group, Badge, Center, Loader } from '@pikku/mantine/core'
 import { Users, Check } from 'lucide-react'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
@@ -7,6 +7,8 @@ import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { usePanelContext } from '../../context/PanelContext'
 import { useQuery } from '@tanstack/react-query'
 import { TableListPage } from '../layout/TableListPage'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 
 interface CredentialMeta {
   name: string
@@ -31,6 +33,7 @@ interface UserRow {
 export const CredentialUsersTab: React.FC<{ searchQuery?: string }> = ({ searchQuery = '' }) => {
   const { meta, loading: metaLoading } = usePikkuMeta()
   const rpc = usePikkuRPC()
+  const { t } = useI18n()
   const { openCredentialUser } = usePanelContext()
 
   const allCredentials = useMemo(() => {
@@ -89,7 +92,7 @@ export const CredentialUsersTab: React.FC<{ searchQuery?: string }> = ({ searchQ
         header: 'USER',
         render: (row: UserRow) => (
           <Text size="sm" ff="monospace" fw={500}>
-            {row.userId}
+            {asI18n(row.userId)}
           </Text>
         ),
       },
@@ -107,11 +110,11 @@ export const CredentialUsersTab: React.FC<{ searchQuery?: string }> = ({ searchQ
                   color="teal"
                   leftSection={<Check size={10} />}
                 >
-                  {cred.displayName}
+                  {asI18n(cred.displayName)}
                 </Badge>
               ) : (
                 <Badge key={cred.name} size="sm" variant="light" color="gray">
-                  {cred.displayName}
+                  {asI18n(cred.displayName)}
                 </Badge>
               )
             )}
@@ -128,7 +131,7 @@ export const CredentialUsersTab: React.FC<{ searchQuery?: string }> = ({ searchQ
             variant="light"
             color={row.isComplete ? 'teal' : 'orange'}
           >
-            {row.connectedCount}/{row.totalCount}
+            {asI18n(`${row.connectedCount}/${row.totalCount}`)}
           </Badge>
         ),
       },
@@ -148,8 +151,8 @@ export const CredentialUsersTab: React.FC<{ searchQuery?: string }> = ({ searchQ
     return (
       <EmptyStatePlaceholder
         icon={Users}
-        title="No per-user credentials declared"
-        description="Use wireCredential({ type: 'wire' }) in your code to declare per-user credentials."
+        title={t('credential_users.empty_title')}
+        description={t('credential_users.empty_description')}
         docsHref="https://pikku.dev/docs/core-features/credentials"
       />
     )
@@ -173,7 +176,7 @@ export const CredentialUsersTab: React.FC<{ searchQuery?: string }> = ({ searchQ
           })),
         })
       }
-      emptyMessage="No users have configured credentials yet."
+      emptyMessage={t('credential_users.empty_message')}
     />
   )
 }

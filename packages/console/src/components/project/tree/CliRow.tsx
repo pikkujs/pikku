@@ -1,5 +1,6 @@
 import React from 'react'
-import { Group, Stack, Text, ActionIcon } from '@mantine/core'
+import { Group, Stack, Text, ActionIcon } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { Workflow } from 'lucide-react'
 import { usePanelContext } from '../../../context/PanelContext'
 import styles from './Row.module.css'
@@ -34,11 +35,11 @@ export const CliRow: React.FC<CliRowProps> = ({
     >
       <Stack gap={0} className={css.flexGrow}>
         <Text fw={600} size="md">
-          {name}
+          {asI18n(name)}
         </Text>
         {functionName && (
           <Text size="sm" c="dimmed" fs="italic">
-            → {functionName}
+            {asI18n(`→ ${functionName}`)}
           </Text>
         )}
       </Stack>

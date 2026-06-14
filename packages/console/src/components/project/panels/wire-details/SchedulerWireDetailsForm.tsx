@@ -1,3 +1,4 @@
+import React from 'react'
 import {
   Stack,
   Text,
@@ -7,7 +8,8 @@ import {
   Tabs,
   Code,
   Title,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { CodeHighlight } from '@mantine/code-highlight'
 import type { PikkuWiringTypes } from '@pikku/core'
 
@@ -36,40 +38,40 @@ export const SchedulerWireDetailsForm: React.FC<
         }}
       >
         <Title order={3} tt="uppercase">
-          {wireType}
+          {asI18n(wireType)}
         </Title>
       </Box>
 
       <Tabs defaultValue="configuration">
         <Tabs.List px="md">
-          <Tabs.Tab value="configuration">Configuration</Tabs.Tab>
-          <Tabs.Tab value="meta">Meta</Tabs.Tab>
+          <Tabs.Tab value="configuration">{asI18n('Configuration')}</Tabs.Tab>
+          <Tabs.Tab value="meta">{asI18n('Meta')}</Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="configuration" pt="md" px="md">
           <Stack gap="md">
             <Box>
               <Text size="sm" fw={500} mb={4}>
-                Schedule
+                {asI18n('Schedule')}
               </Text>
-              <Text size="lg">{taskName}</Text>
+              <Text size="lg">{asI18n(taskName)}</Text>
             </Box>
 
             <Box>
               <Text size="sm" fw={500} mb={4}>
-                Cron Expression
+                {asI18n('Cron Expression')}
               </Text>
               <Code>{schedule}</Code>
             </Box>
 
             <TextInput
-              label="Summary"
+              label={asI18n('Summary')}
               value={metadata.docs?.summary || ''}
               readOnly
             />
 
             <Textarea
-              label="Description"
+              label={asI18n('Description')}
               value={metadata.docs?.description || ''}
               minRows={3}
               readOnly

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { Box, CloseButton, Group, Text, UnstyledButton } from '@mantine/core'
+import { Box, CloseButton, Group, Text, UnstyledButton } from '@pikku/mantine/core'
+import type { I18nNode } from '@pikku/react'
 import { ChevronLeft } from 'lucide-react'
 import classes from '../ui/console.module.css'
 
@@ -23,7 +24,7 @@ export const SidePanel: React.FC<{ children: React.ReactNode }> = ({ children })
 }
 
 interface SidePanelHeaderProps {
-  title: string
+  title: I18nNode
   onClose: () => void
   onBack?: () => void
   children?: React.ReactNode

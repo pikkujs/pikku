@@ -11,7 +11,9 @@ import {
   Code,
   Group,
   ActionIcon,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { Save, AlertTriangle, CheckCircle, Eye, Pencil } from 'lucide-react'
 import { useSecretValue, useSetSecret } from '../../../hooks/useSecrets'
 import { useSchema } from '../../../hooks/useWirings'
@@ -39,6 +41,7 @@ export const SecretValueEditor: React.FC<SecretValueEditorProps> = ({
   schemaName,
   isOAuth2,
 }) => {
+  const { t } = useI18n()
   const editable = useConsoleEditable()
   const [retrieved, setRetrieved] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -111,14 +114,14 @@ export const SecretValueEditor: React.FC<SecretValueEditorProps> = ({
   if (!retrieved) {
     return (
       <Box>
-        <SectionLabel>Secret Value</SectionLabel>
+        <SectionLabel>{t('secret_editor.secret_value')}</SectionLabel>
         <Button
           variant="light"
           leftSection={<Eye size={16} />}
           onClick={() => setRetrieved(true)}
           size="sm"
         >
-          Retrieve secret value
+          {t('secret_editor.retrieve_secret_value')}
         </Button>
       </Box>
     )
@@ -127,7 +130,7 @@ export const SecretValueEditor: React.FC<SecretValueEditorProps> = ({
   if (secretLoading) {
     return (
       <Box>
-        <SectionLabel>Secret Value</SectionLabel>
+        <SectionLabel>{t('secret_editor.secret_value')}</SectionLabel>
         <Loader size="sm" />
       </Box>
     )
@@ -138,14 +141,14 @@ export const SecretValueEditor: React.FC<SecretValueEditorProps> = ({
   return (
     <Stack gap="sm">
       <Group justify="space-between" align="center">
-        <SectionLabel>Secret Value</SectionLabel>
+        <SectionLabel>{t('secret_editor.secret_value')}</SectionLabel>
         <Group gap="xs" align="center">
           {!editing && editable && (
             <ActionIcon
               variant="subtle"
               size="sm"
               onClick={() => setEditing(true)}
-              title="Edit secret value"
+              title={t('secret_editor.edit_secret_value')}
             >
               <Pencil size={14} />
             </ActionIcon>
@@ -155,8 +158,8 @@ export const SecretValueEditor: React.FC<SecretValueEditorProps> = ({
               value={effectiveMode}
               onChange={setMode}
               data={[
-                { label: 'Form', value: 'form' },
-                { label: 'JSON', value: 'json' },
+                { label: t('secret_editor.form'), value: 'form' },
+                { label: t('secret_editor.json'), value: 'json' },
               ]}
               size="sm"
               style={{ width: 'auto' }}
@@ -167,19 +170,19 @@ export const SecretValueEditor: React.FC<SecretValueEditorProps> = ({
 
       {successMessage && (
         <Alert icon={<CheckCircle size={16} />} color="green" variant="light">
-          {successMessage}
+          {asI18n(successMessage)}
         </Alert>
       )}
 
       {setSecretMutation.isError && (
         <Alert icon={<AlertTriangle size={16} />} color="red" variant="light">
-          Failed to save secret
+          {t('secret_editor.failed_to_save_secret')}
         </Alert>
       )}
 
       {!secretData?.exists && !editing && (
         <Text size="sm" c="dimmed">
-          No value set yet.
+          {t('secret_editor.no_value_set')}
         </Text>
       )}
 
@@ -216,19 +219,19 @@ export const SecretValueEditor: React.FC<SecretValueEditorProps> = ({
               schema={effectiveSchema as any}
               onSubmit={handleFormSubmit}
               submitting={setSecretMutation.isPending}
-              submitLabel="Save"
+              submitLabel={t('secret_editor.save')}
               initialData={currentValue ?? undefined}
             >
               <Group mt="sm" gap="xs" justify="flex-end">
                 <Button variant="subtle" onClick={() => setEditing(false)}>
-                  Cancel
+                  {t('secret_editor.cancel')}
                 </Button>
                 <Button
                   type="submit"
                   leftSection={<Save size={16} />}
                   loading={setSecretMutation.isPending}
                 >
-                  Save
+                  {t('secret_editor.save')}
                 </Button>
               </Group>
             </SchemaForm>
@@ -240,7 +243,7 @@ export const SecretValueEditor: React.FC<SecretValueEditorProps> = ({
                   setJsonValue(e.currentTarget.value)
                   setJsonError(null)
                 }}
-                placeholder='{"key": "value"}'
+                placeholder={t('secret_editor.json_placeholder')}
                 autosize
                 minRows={4}
                 maxRows={12}
@@ -254,19 +257,19 @@ export const SecretValueEditor: React.FC<SecretValueEditorProps> = ({
                   color="red"
                   variant="light"
                 >
-                  {jsonError}
+                  {asI18n(jsonError)}
                 </Alert>
               )}
               <Group gap="xs" justify="flex-end">
                 <Button variant="subtle" onClick={() => setEditing(false)}>
-                  Cancel
+                  {t('secret_editor.cancel')}
                 </Button>
                 <Button
                   leftSection={<Save size={16} />}
                   loading={setSecretMutation.isPending}
                   onClick={handleJsonSubmit}
                 >
-                  Save
+                  {t('secret_editor.save')}
                 </Button>
               </Group>
             </Stack>

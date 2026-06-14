@@ -1,7 +1,9 @@
 import React from 'react'
 import type { Node, NodeProps } from 'reactflow'
 import { Handle, Position } from 'reactflow'
-import { Box, Paper, Text, Stack, useMantineTheme } from '@mantine/core'
+import { Box, Paper, Text, Stack, useMantineTheme } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
+import type { I18nNode } from '@pikku/react'
 import { ArrowRight } from 'lucide-react'
 import { usePanelContext } from '../../../context/PanelContext'
 
@@ -15,7 +17,7 @@ interface ChannelWiringNodeData {
 }
 
 interface HandlerRowProps {
-  label: string
+  label: I18nNode
   handleId: string
   hasTarget: boolean
 }
@@ -104,25 +106,25 @@ export const ChannelWiringNode: React.FC<NodeProps<ChannelWiringNodeData>> = ({
 
       <Stack gap={0} py={4}>
         <HandlerRow
-          label="onConnect"
+          label={asI18n('onConnect')}
           handleId="onConnect"
           hasTarget={!!data.onConnect}
         />
         <HandlerRow
-          label="onMessage"
+          label={asI18n('onMessage')}
           handleId="onMessage"
           hasTarget={!!data.onMessage}
         />
         {routeEntries.map(([route, target]) => (
           <HandlerRow
             key={route}
-            label={`→ ${route}`}
+            label={asI18n(`→ ${route}`)}
             handleId={`route-${route}`}
             hasTarget={!!target}
           />
         ))}
         <HandlerRow
-          label="onDisconnect"
+          label={asI18n('onDisconnect')}
           handleId="onDisconnect"
           hasTarget={!!data.onDisconnect}
         />

@@ -1,5 +1,6 @@
 import React from 'react'
-import { Box } from '@mantine/core'
+import { Box } from '@pikku/mantine/core'
+import type { I18nNode } from '@pikku/react'
 import { PanelContainer } from '../panel/PanelContainer'
 import { usePanelContext } from '../../context/PanelContext'
 import classes from '../ui/console.module.css'
@@ -9,7 +10,7 @@ interface ThreePaneLayoutProps {
   header?: React.ReactNode
   runsPanel?: React.ReactNode
   runsPanelVisible?: boolean
-  emptyPanelMessage?: string
+  emptyPanelMessage?: I18nNode
   showTabs?: boolean
   hidePanel?: boolean
 }

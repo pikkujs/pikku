@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react'
-import { Box, Text, ScrollArea, Badge, UnstyledButton } from '@mantine/core'
+import { Box, Text, ScrollArea, Badge, UnstyledButton } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import type { ChannelMeta } from '@pikku/core/channel'
 import styles from '../ui/console.module.css'
@@ -95,10 +96,10 @@ const ChannelTree: React.FC<{
           <ChevronRight size={9} color="var(--app-section-label)" />
         )}
         <Text size="sm" ff="monospace" className={styles.flexGrow}>
-          {name}
+          {asI18n(name)}
         </Text>
         <Badge size="sm" variant="light" color="cyan" ff="monospace">
-          ws
+          {asI18n('ws')}
         </Badge>
       </UnstyledButton>
 
@@ -143,7 +144,7 @@ const ChannelTree: React.FC<{
                   }}
                 />
                 <Text size="sm" ff="monospace">
-                  {h === 'connect' ? 'onConnect' : 'onDisconnect'}
+                  {asI18n(h === 'connect' ? 'onConnect' : 'onDisconnect')}
                 </Text>
               </UnstyledButton>
             )
@@ -175,7 +176,7 @@ const ChannelTree: React.FC<{
                     <ChevronRight size={8} />
                   )}
                   <Text size="sm" ff="monospace" c="var(--app-meta-label)">
-                    {category}
+                    {asI18n(category)}
                   </Text>
                   <Badge
                     size="sm"
@@ -187,7 +188,7 @@ const ChannelTree: React.FC<{
                       color: '#7c3aed',
                     }}
                   >
-                    routing
+                    {asI18n('routing')}
                   </Badge>
                 </UnstyledButton>
 
@@ -230,7 +231,7 @@ const ChannelTree: React.FC<{
                             }
                             truncate
                           >
-                            {action}
+                            {asI18n(action)}
                           </Text>
                           <Text
                             size="sm"
@@ -243,7 +244,7 @@ const ChannelTree: React.FC<{
                             truncate
                             style={{ fontSize: 9 }}
                           >
-                            {funcName}()
+                            {asI18n(`${funcName}()`)}
                           </Text>
                         </Box>
                       </UnstyledButton>

@@ -16,7 +16,10 @@
     "incremental": false,
     "paths": {
       "@/*": ["./src/*"],
-      "@pikku/assistant-ui": ["../assistant-ui/src/index.ts"]
+      "@pikku/assistant-ui": ["../assistant-ui/src/index.ts"],
+      "@pikku/mantine/core": ["../frontend/mantine/src/core/index.ts"],
+      "@pikku/react": ["../frontend/react/src/index.ts"],
+      "@pikku/react/i18n": ["../frontend/react/src/i18n.tsx"]
     },
     "typeRoots": ["./node_modules/@types", "./types"],
     "target": "ES2017"

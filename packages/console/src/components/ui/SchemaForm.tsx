@@ -2,7 +2,9 @@ import React, { useState } from 'react'
 import Form from '@rjsf/mantine'
 import validator from '@rjsf/validator-ajv8'
 import type { RJSFSchema, UiSchema } from '@rjsf/utils'
-import { Button, Group } from '@mantine/core'
+import { Button, Group } from '@pikku/mantine/core'
+import type { I18nNode } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { Play } from 'lucide-react'
 
 const buildDefaults = (schema: RJSFSchema): any => {
@@ -32,7 +34,7 @@ interface SchemaFormProps {
   uiSchema?: UiSchema
   onSubmit?: (formData: any) => void
   submitting?: boolean
-  submitLabel?: string
+  submitLabel?: I18nNode
   initialData?: any
   /** Render every field disabled and hide the submit button (display only). */
   readOnly?: boolean
@@ -44,11 +46,13 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
   uiSchema,
   onSubmit,
   submitting,
-  submitLabel = 'Run',
+  submitLabel,
   initialData,
   readOnly,
   children,
 }) => {
+  const { t } = useI18n()
+  const resolvedSubmitLabel = submitLabel ?? t('common.run')
   const [formData, setFormData] = useState<any>(() => {
     const defaults = buildDefaults(schema)
     return { ...defaults, ...initialData }
@@ -72,7 +76,7 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
           leftSection={<Play size={16} />}
           loading={submitting}
         >
-          {submitLabel}
+          {resolvedSubmitLabel}
         </Button>
       </Group>
     ))

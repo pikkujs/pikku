@@ -11,6 +11,7 @@ import {
 import { ChannelDetailView } from '../channel/ChannelDetailView'
 import { ListDetailLayout } from '../ui/ListDetailLayout'
 import type { ChannelMeta } from '@pikku/core/channel'
+import { useI18n } from '@pikku/react/i18n'
 
 const ChannelTabInner: React.FC<{
   channelName: string
@@ -61,6 +62,7 @@ export const ChannelTabContent: React.FC<ChannelTabContentProps> = ({ searchQuer
   const [searchParams] = useSearchParams()
   const channelName = searchParams.get('id') || ''
   const { meta } = usePikkuMeta()
+  const { t } = useI18n()
 
   const allChannelsMeta = meta.channelsMeta || {}
   const channelNames = Object.keys(allChannelsMeta)
@@ -72,8 +74,8 @@ export const ChannelTabContent: React.FC<ChannelTabContentProps> = ({ searchQuer
       <EmptyStatePlaceholder
         icon={Radio}
         hero={emptyHero}
-        title="No channels found"
-        description="Define channels in your project using addChannel() to see them here."
+        title={t('channels.empty_title')}
+        description={t('channels.empty_description')}
         docsHref="https://pikku.dev/docs/core-features/channels"
       />
     )

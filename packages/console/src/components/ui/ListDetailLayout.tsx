@@ -1,11 +1,13 @@
 import React from 'react'
-import { Box, Text } from '@mantine/core'
+import { Box, Text } from '@pikku/mantine/core'
+import type { I18nNode } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import classes from './console.module.css'
 
 export interface ListDetailLayoutProps {
   list: React.ReactNode
   detail: React.ReactNode
-  emptyMessage?: string
+  emptyMessage?: I18nNode
   hasSelection: boolean
   collapsible?: boolean
   listWidth?: number | string
@@ -15,13 +17,15 @@ export interface ListDetailLayoutProps {
 export const ListDetailLayout: React.FC<ListDetailLayoutProps> = ({
   list,
   detail,
-  emptyMessage = 'Select an item',
+  emptyMessage,
   hasSelection,
   collapsible = false,
   listWidth,
   height,
 }) => {
+  const { t } = useI18n()
   const showDetail = !collapsible || hasSelection
+  const msg = emptyMessage ?? t('common.select_item')
 
   return (
     <Box
@@ -63,7 +67,7 @@ export const ListDetailLayout: React.FC<ListDetailLayoutProps> = ({
         ) : (
           <Box className={classes.emptyState}>
             <Text c="dimmed" ff="monospace" size="sm">
-              {emptyMessage}
+              {msg}
             </Text>
           </Box>
         )}

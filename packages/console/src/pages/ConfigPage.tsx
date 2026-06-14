@@ -1,11 +1,12 @@
 import React from 'react'
 import { useSearchParams } from '../router'
-import { Stack, SegmentedControl } from '@mantine/core'
+import { Stack, SegmentedControl } from '@pikku/mantine/core'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { SecretsTab } from '../components/tabs/SecretsTab'
 import { VariablesTab } from '../components/tabs/VariablesTab'
+import { useI18n } from '@pikku/react/i18n'
 
 const TABS = [
   { value: 'secrets', label: 'Secrets' },
@@ -13,6 +14,7 @@ const TABS = [
 ]
 
 export const ConfigPage: React.FC = () => {
+  const { t } = useI18n()
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = searchParams.get('tab') || 'secrets'
 
@@ -25,11 +27,11 @@ export const ConfigPage: React.FC = () => {
       <ResizablePanelLayout
         header={
           <Stack gap="md">
-            <ListPageHeader title="Config" description="Runtime variables and secrets configuration" />
+            <ListPageHeader title={t('config.title')} description={t('config.description')} />
             <SegmentedControl size="xs" value={tab} onChange={handleTabChange} data={TABS} />
           </Stack>
         }
-        emptyPanelMessage="Select an item to view its details"
+        emptyPanelMessage={t('common.select_item')}
       >
         {tab === 'variables' ? <VariablesTab /> : <SecretsTab />}
       </ResizablePanelLayout>

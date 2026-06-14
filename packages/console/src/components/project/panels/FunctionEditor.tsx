@@ -10,7 +10,8 @@ import {
   Group,
   Alert,
   MultiSelect,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { CheckCircle, Save, X, AlertTriangle } from 'lucide-react'
 import { SidePanelFooter } from '../../panel/SidePanel'
 import CodeMirror from '@uiw/react-codemirror'
@@ -137,19 +138,19 @@ export const FunctionEditor: React.FC<FunctionEditorProps> = ({
     <Stack gap="md">
       {error && (
         <Alert color="red" icon={<AlertTriangle size={16} />}>
-          {(error as Error).message}
+          {asI18n((error as Error).message)}
         </Alert>
       )}
 
-      <SectionLabel>Metadata</SectionLabel>
+      <SectionLabel>{asI18n('Metadata')}</SectionLabel>
       <TextInput
-        label="Title"
+        label={asI18n('Title')}
         value={title}
         onChange={(e) => setTitle(e.currentTarget.value)}
         size="sm"
       />
       <Textarea
-        label="Description"
+        label={asI18n('Description')}
         value={description}
         onChange={(e) => setDescription(e.currentTarget.value)}
         autosize
@@ -158,50 +159,50 @@ export const FunctionEditor: React.FC<FunctionEditorProps> = ({
         size="sm"
       />
       <TextInput
-        label="Summary"
+        label={asI18n('Summary')}
         value={summary}
         onChange={(e) => setSummary(e.currentTarget.value)}
         size="sm"
       />
       <MultiSelect
-        label="Tags"
+        label={asI18n('Tags')}
         data={tagOptions}
         value={tags}
         onChange={setTags}
         searchable
         clearable
         size="sm"
-        placeholder="Search tags..."
+        placeholder={asI18n('Search tags...')}
       />
 
-      <SectionLabel>Flags</SectionLabel>
+      <SectionLabel>{asI18n('Flags')}</SectionLabel>
       <Group gap="lg">
         <Switch
-          label="expose"
+          label={asI18n('expose')}
           checked={expose}
           onChange={(e) => setExpose(e.currentTarget.checked)}
           size="sm"
         />
         <Switch
-          label="remote"
+          label={asI18n('remote')}
           checked={remote}
           onChange={(e) => setRemote(e.currentTarget.checked)}
           size="sm"
         />
         <Switch
-          label="mcp"
+          label={asI18n('mcp')}
           checked={mcp}
           onChange={(e) => setMcp(e.currentTarget.checked)}
           size="sm"
         />
         <Switch
-          label="readonly"
+          label={asI18n('readonly')}
           checked={readonly_}
           onChange={(e) => setReadonly(e.currentTarget.checked)}
           size="sm"
         />
         <Switch
-          label="approvalRequired"
+          label={asI18n('approvalRequired')}
           checked={approvalRequired}
           onChange={(e) => setApprovalRequired(e.currentTarget.checked)}
           size="sm"
@@ -210,7 +211,7 @@ export const FunctionEditor: React.FC<FunctionEditorProps> = ({
 
       {source?.body != null && (
         <>
-          <SectionLabel>Function Body</SectionLabel>
+          <SectionLabel>{asI18n('Function Body')}</SectionLabel>
           <CodeMirror
             value={body}
             onChange={setBody}
@@ -242,7 +243,7 @@ export const FunctionEditor: React.FC<FunctionEditorProps> = ({
           leftSection={<X size={14} />}
           size="sm"
         >
-          Cancel
+          {asI18n('Cancel')}
         </Button>
         <Button
           onClick={handleSaveConfig}
@@ -252,7 +253,7 @@ export const FunctionEditor: React.FC<FunctionEditorProps> = ({
           leftSection={saved ? <CheckCircle size={14} /> : <Save size={14} />}
           size="sm"
         >
-          {saved ? 'Saved' : isPending ? 'Saving…' : 'Save & Rebuild'}
+          {asI18n(saved ? 'Saved' : isPending ? 'Saving…' : 'Save & Rebuild')}
         </Button>
       </Group>
     </SidePanelFooter>

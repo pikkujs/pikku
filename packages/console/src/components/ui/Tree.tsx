@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback } from 'react'
-import { Box, useMantineTheme } from '@mantine/core'
+import { Box, useMantineTheme } from '@pikku/mantine/core'
 import type { Range } from '@tanstack/react-virtual'
 import { useVirtualizer, defaultRangeExtractor } from '@tanstack/react-virtual'
 

@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react'
-import { Text } from '@mantine/core'
+import { Text } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { Zap } from 'lucide-react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
@@ -19,13 +21,14 @@ const TriggersTable: React.FC<{
   loading?: boolean
 }> = ({ pairs, loading }) => {
   const { openTriggerSource, openTrigger } = usePanelContext()
+  const { t } = useI18n()
 
   const columns = useMemo(
     () => [
       {
         key: 'name',
         header: 'NAME',
-        render: (pair: TriggerPair) => <Text fw={500}>{pair.name}</Text>,
+        render: (pair: TriggerPair) => <Text fw={500}>{asI18n(pair.name)}</Text>,
       },
       {
         key: 'source',
@@ -44,7 +47,7 @@ const TriggersTable: React.FC<{
               }
             }}
           >
-            {pair.source ? pair.source.pikkuFuncId || 'Source' : 'Missing'}
+            {asI18n(pair.source ? pair.source.pikkuFuncId || 'Source' : 'Missing')}
           </PikkuBadge>
         ),
       },
@@ -66,7 +69,7 @@ const TriggersTable: React.FC<{
               }
             }}
           >
-            {pair.trigger ? pair.trigger.pikkuFuncId || 'Trigger' : 'Missing'}
+            {asI18n(pair.trigger ? pair.trigger.pikkuFuncId || 'Trigger' : 'Missing')}
           </PikkuBadge>
         ),
       },
@@ -86,13 +89,13 @@ const TriggersTable: React.FC<{
         if (pair.source) openTriggerSource(pair.name, pair.source)
         else if (pair.trigger) openTrigger(pair.name, pair.trigger)
       }}
-      searchPlaceholder="Search triggers..."
+      searchPlaceholder={t('triggers.search_placeholder')}
       searchFilter={(pair, q) =>
         pair.name.toLowerCase().includes(q) ||
         pair.source?.pikkuFuncId?.toLowerCase().includes(q) ||
         pair.trigger?.pikkuFuncId?.toLowerCase().includes(q)
       }
-      emptyMessage="No triggers found."
+      emptyMessage={t('triggers.empty_message')}
       loading={loading}
     />
   )
@@ -100,6 +103,7 @@ const TriggersTable: React.FC<{
 
 export const TriggersPage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
+  const { t } = useI18n()
 
   const pairs = useMemo((): TriggerPair[] => {
     const names = new Set<string>()
@@ -119,9 +123,9 @@ export const TriggersPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title="Triggers" description="Event-driven triggers wired to pikku functions" />}
+        header={<ListPageHeader title={t('triggers.title')} description={t('triggers.description')} />}
         hidePanel={!loading && pairs.length === 0}
-        emptyPanelMessage="Select a trigger to view its details"
+        emptyPanelMessage={t('triggers.select_item')}
       >
         <TriggersTable pairs={pairs} loading={loading} />
       </ResizablePanelLayout>

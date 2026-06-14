@@ -14,7 +14,9 @@ import {
   Container,
   Button,
   TypographyStylesProvider,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import {
   ThreadPrimitive,
   MessagePrimitive,
@@ -57,6 +59,7 @@ const ToolCallDisplay: React.FC<{
   addResult?: (result: unknown) => void
 }> = ({ toolCallId, toolName, args, result, status, addResult }) => {
   const [opened, setOpened] = useState(false)
+  const { t } = useI18n()
   const { handleApproval, pendingApprovals } = usePikkuApproval()
 
   const credentialPayload = (() => {
@@ -124,19 +127,19 @@ const ToolCallDisplay: React.FC<{
         <Group gap="xs" mb="xs">
           <ShieldAlert size={14} color="var(--mantine-color-orange-6)" />
           <Text size="xs" fw={600}>
-            Approval required
+            {t('agent.approval.required')}
           </Text>
         </Group>
         {approvalReason && (
           <Text size="xs" mb={4}>
-            {approvalReason}
+            {asI18n(approvalReason)}
           </Text>
         )}
-        <Text size="xs" c="dimmed" mb={4}>
-          The agent wants to call <Code>{toolName}</Code>
-        </Text>
+        <Box component="p" style={{ fontSize: 'var(--mantine-font-size-xs)', color: 'var(--mantine-color-dimmed)', margin: '0 0 4px' }}>
+          {t('agent.approval.agentWantsToCall')} <Code>{asI18n(toolName)}</Code>
+        </Box>
         <Code block style={{ fontSize: 11, marginBottom: 8 }}>
-          {JSON.stringify(displayArgs, null, 2)}
+          {asI18n(JSON.stringify(displayArgs, null, 2))}
         </Code>
         <Group gap="xs">
           <Button
@@ -145,10 +148,10 @@ const ToolCallDisplay: React.FC<{
             variant="light"
             onClick={handleApprove}
           >
-            Approve
+            {t('agent.approval.approve')}
           </Button>
           <Button size="xs" color="red" variant="light" onClick={handleDeny}>
-            Deny
+            {t('agent.approval.deny')}
           </Button>
         </Group>
       </Paper>
@@ -161,13 +164,13 @@ const ToolCallDisplay: React.FC<{
         <Group gap="xs" mb="xs">
           <ShieldAlert size={14} color="var(--mantine-color-orange-6)" />
           <Text size="xs" fw={600}>
-            {toolName}
+            {asI18n(toolName)}
           </Text>
           <PikkuBadge
             type="label"
             color={responded === 'approved' ? 'green' : 'red'}
           >
-            {responded}
+            {responded === 'approved' ? t('agent.status.approved') : t('agent.status.denied')}
           </PikkuBadge>
         </Group>
       </Paper>
@@ -222,23 +225,23 @@ const ToolCallDisplay: React.FC<{
         <Group gap="xs" mb="xs">
           <Wrench size={14} color="var(--mantine-color-orange-6)" />
           <Text size="xs" fw={600}>
-            {toolName}
+            {asI18n(toolName)}
           </Text>
           <PikkuBadge type="label" color="orange">
-            credential required
+            {t('agent.credential.required')}
           </PikkuBadge>
         </Group>
-        <Text size="sm" mb="xs">
-          This action requires the{' '}
-          <strong>{cred?.credentialName ?? 'OAuth'}</strong> credential to be
-          connected.
-        </Text>
+        <Box component="p" style={{ fontSize: 'var(--mantine-font-size-sm)', margin: '0 0 var(--mantine-spacing-xs)' }}>
+          {t('agent.credential.actionRequires')}{' '}
+          <strong>{asI18n(cred?.credentialName ?? 'OAuth')}</strong>{' '}
+          {t('agent.credential.toBeConnected')}
+        </Box>
         <Group gap="xs">
           <Button size="xs" variant="light" onClick={handleConnect}>
-            Connect {cred?.credentialName ?? 'OAuth'}
+            {asI18n(`Connect ${cred?.credentialName ?? 'OAuth'}`)}
           </Button>
           <Button size="xs" color="gray" variant="light" onClick={handleIgnore}>
-            Ignore
+            {t('agent.credential.ignore')}
           </Button>
         </Group>
       </Paper>
@@ -251,13 +254,13 @@ const ToolCallDisplay: React.FC<{
         <Group gap="xs">
           <Wrench size={14} color="var(--mantine-color-orange-6)" />
           <Text size="xs" fw={600}>
-            {toolName}
+            {asI18n(toolName)}
           </Text>
           <PikkuBadge
             type="label"
             color={responded === 'approved' ? 'green' : 'gray'}
           >
-            {responded === 'approved' ? 'connected' : 'ignored'}
+            {responded === 'approved' ? t('agent.credential.connected') : t('agent.credential.ignored')}
           </PikkuBadge>
         </Group>
       </Paper>
@@ -274,22 +277,22 @@ const ToolCallDisplay: React.FC<{
           {opened ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           <Wrench size={12} />
           <Text size="xs" fw={500} ff="monospace">
-            {toolName}
+            {asI18n(toolName)}
           </Text>
           {status.type === 'running' && <Loader size={10} />}
           {status.type === 'error' && (
             <PikkuBadge type="label" color="red">
-              error
+              {t('agent.toolcall.error')}
             </PikkuBadge>
           )}
           {status.type === 'denied' && (
             <PikkuBadge type="label" color="red">
-              denied
+              {t('agent.toolcall.denied')}
             </PikkuBadge>
           )}
           {status.type === 'completed' && (
             <PikkuBadge type="label" color="green">
-              done
+              {t('agent.toolcall.done')}
             </PikkuBadge>
           )}
         </Group>
@@ -297,20 +300,20 @@ const ToolCallDisplay: React.FC<{
       <Collapse in={opened}>
         <Stack gap={4} mt="xs">
           <Text size="xs" c="dimmed">
-            Arguments:
+            {t('agent.toolcall.arguments')}
           </Text>
           <Code block style={{ fontSize: 11 }}>
-            {JSON.stringify(displayArgs, null, 2)}
+            {asI18n(JSON.stringify(displayArgs, null, 2))}
           </Code>
           {result !== undefined && (
             <>
               <Text size="xs" c="dimmed">
-                Result:
+                {t('agent.toolcall.result')}
               </Text>
               <Code block style={{ fontSize: 11 }}>
-                {typeof result === 'string'
+                {asI18n(typeof result === 'string'
                   ? result
-                  : JSON.stringify(result, null, 2)}
+                  : JSON.stringify(result, null, 2))}
               </Code>
             </>
           )}
@@ -320,114 +323,124 @@ const ToolCallDisplay: React.FC<{
   )
 }
 
-const UserMessage: React.FC = () => (
-  <Box className={classes.chatMessageRight}>
-    <Box maw="80%">
-      <Group gap={6} mb={4}>
-        <Text size="xs" c="dimmed">
-          You
-        </Text>
-        <User size={14} color="var(--mantine-color-dimmed)" />
-      </Group>
-      <Paper
-        p="sm"
-        radius="md"
-        style={{ backgroundColor: 'var(--mantine-color-default-hover)' }}
-      >
-        <MessagePrimitive.Content
-          components={{
-            Text: ({ text }) => (
-              <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
-                {text}
-              </Text>
-            ),
-          }}
-        />
-      </Paper>
-    </Box>
-  </Box>
-)
-
-const AssistantMessage: React.FC = () => (
-  <Box data-testid="assistant-block" className={classes.chatMessageLeft}>
-    <Box maw="80%">
-      <Group gap={6} mb={4}>
-        <Bot size={14} color="var(--mantine-color-dimmed)" />
-        <Text size="xs" c="dimmed">
-          Assistant
-        </Text>
-      </Group>
-      <Paper p="sm" radius="md" bg="var(--mantine-color-default-hover)">
-        <MessagePrimitive.Content
-          components={{
-            Text: ({ text }) => (
-              <TypographyStylesProvider p={0} m={0} fz="sm">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {text}
-                </ReactMarkdown>
-              </TypographyStylesProvider>
-            ),
-            tools: {
-              Fallback: (props) => (
-                <ToolCallDisplay
-                  toolCallId={props.toolCallId}
-                  toolName={props.toolName}
-                  args={props.args as Record<string, unknown>}
-                  result={props.result}
-                  status={resolvePikkuToolStatus(props.status, props.result)}
-                  argsText={props.argsText}
-                  addResult={props.addResult}
-                />
+const UserMessage: React.FC = () => {
+  const { t } = useI18n()
+  return (
+    <Box className={classes.chatMessageRight}>
+      <Box maw="80%">
+        <Group gap={6} mb={4}>
+          <Text size="xs" c="dimmed">
+            {t('agent.message.you')}
+          </Text>
+          <User size={14} color="var(--mantine-color-dimmed)" />
+        </Group>
+        <Paper
+          p="sm"
+          radius="md"
+          style={{ backgroundColor: 'var(--mantine-color-default-hover)' }}
+        >
+          <MessagePrimitive.Content
+            components={{
+              Text: ({ text }) => (
+                <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
+                  {asI18n(text)}
+                </Text>
               ),
-            },
-          }}
-        />
-        <MessagePrimitive.If last>
-          <ThreadPrimitive.If running>
-            <Group gap="xs" mt="xs">
-              <Loader size={12} />
-              <Text size="sm" c="dimmed">
-                Thinking...
-              </Text>
-            </Group>
-          </ThreadPrimitive.If>
-        </MessagePrimitive.If>
-      </Paper>
-    </Box>
-  </Box>
-)
-
-const AgentComposer: React.FC<{ disabled?: boolean }> = ({ disabled }) => (
-  <Box py="sm" pb="md">
-    <Container size="md">
-      <ComposerShell
-        component={ComposerPrimitive.Root}
-        input={
-          <ComposerPrimitive.Input
-            className={composerStyles.composerInput}
-            placeholder={
-              disabled ? 'Respond to approval request above...' : 'Message...'
-            }
-            rows={1}
-            disabled={disabled ?? false}
+            }}
           />
-        }
-        send={
-          <ComposerPrimitive.Send
-            className={composerStyles.sendButton}
-            disabled={disabled ?? false}
-          >
-            <ArrowUp size={15} />
-          </ComposerPrimitive.Send>
-        }
-      />
-    </Container>
-  </Box>
-)
+        </Paper>
+      </Box>
+    </Box>
+  )
+}
+
+const AssistantMessage: React.FC = () => {
+  const { t } = useI18n()
+  return (
+    <Box data-testid="assistant-block" className={classes.chatMessageLeft}>
+      <Box maw="80%">
+        <Group gap={6} mb={4}>
+          <Bot size={14} color="var(--mantine-color-dimmed)" />
+          <Text size="xs" c="dimmed">
+            {t('agent.message.assistant')}
+          </Text>
+        </Group>
+        <Paper p="sm" radius="md" bg="var(--mantine-color-default-hover)">
+          <MessagePrimitive.Content
+            components={{
+              Text: ({ text }) => (
+                <TypographyStylesProvider p={0} m={0} fz="sm">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {text}
+                  </ReactMarkdown>
+                </TypographyStylesProvider>
+              ),
+              tools: {
+                Fallback: (props) => (
+                  <ToolCallDisplay
+                    toolCallId={props.toolCallId}
+                    toolName={props.toolName}
+                    args={props.args as Record<string, unknown>}
+                    result={props.result}
+                    status={resolvePikkuToolStatus(props.status, props.result)}
+                    argsText={props.argsText}
+                    addResult={props.addResult}
+                  />
+                ),
+              },
+            }}
+          />
+          <MessagePrimitive.If last>
+            <ThreadPrimitive.If running>
+              <Group gap="xs" mt="xs">
+                <Loader size={12} />
+                <Text size="sm" c="dimmed">
+                  {t('agent.message.thinking')}
+                </Text>
+              </Group>
+            </ThreadPrimitive.If>
+          </MessagePrimitive.If>
+        </Paper>
+      </Box>
+    </Box>
+  )
+}
+
+const AgentComposer: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
+  const { t } = useI18n()
+  return (
+    <Box py="sm" pb="md">
+      <Container size="md">
+        <ComposerShell
+          component={ComposerPrimitive.Root}
+          input={
+            <ComposerPrimitive.Input
+              className={composerStyles.composerInput}
+              placeholder={
+                disabled ? t('agent.composer.approvalPlaceholder') : t('agent.composer.messagePlaceholder')
+              }
+              rows={1}
+              disabled={disabled ?? false}
+            />
+          }
+          send={
+            <ComposerPrimitive.Send
+              className={composerStyles.sendButton}
+              disabled={disabled ?? false}
+            >
+              <ArrowUp size={15} />
+            </ComposerPrimitive.Send>
+          }
+        />
+      </Container>
+    </Box>
+  )
+}
 
 export const AgentChat: React.FC<{
   streaming?: boolean
 }> = ({ streaming = false }) => {
+  const { t } = useI18n()
   const {
     agentId,
     threadId,
@@ -490,8 +503,8 @@ export const AgentChat: React.FC<{
                           />
                           <Text c="dimmed" ta="center">
                             {threadId
-                              ? 'Send a message to start the conversation.'
-                              : 'Start a new conversation.'}
+                              ? t('agent.empty.sendMessage')
+                              : t('agent.empty.startConversation')}
                           </Text>
                         </Stack>
                       </Center>

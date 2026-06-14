@@ -1,15 +1,17 @@
 import React, { useMemo } from 'react'
-import { Text } from '@mantine/core'
+import { Text } from '@pikku/mantine/core'
 import { Cpu } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
+import { useI18n } from '@pikku/react/i18n'
 
 type McpTabProps = { searchQuery: string; emptyHero?: React.ReactNode }
 
 export const McpTab: React.FC<McpTabProps> = ({ searchQuery, emptyHero }) => {
   const { meta } = usePikkuMeta()
+  const { t } = useI18n()
   const { openMCP } = usePanelContext()
 
   const items = useMemo(() => {
@@ -61,13 +63,13 @@ export const McpTab: React.FC<McpTabProps> = ({ searchQuery, emptyHero }) => {
       onRowClick={(item) =>
         openMCP(`mcp::${item.method}::${item.wireId || item.name}`, item)
       }
-      searchPlaceholder="Search MCP tools, resources, prompts..."
+      searchPlaceholder={t('mcp.search_placeholder')}
       searchFilter={(item, q) =>
         item.name?.toLowerCase().includes(q) ||
         item.pikkuFuncId?.toLowerCase().includes(q) ||
         item.method?.toLowerCase().includes(q)
       }
-      emptyMessage="No MCP entries found."
+      emptyMessage={t('mcp.empty_message')}
       emptyHero={emptyHero}
       externalSearch={searchQuery}
     />

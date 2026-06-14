@@ -1,11 +1,13 @@
 import React, { useMemo } from 'react'
-import { Text, Badge, Group } from '@mantine/core'
+import { Text, Badge, Group } from '@pikku/mantine/core'
 import { Clock } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { TableListPage } from '../layout/TableListPage'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 
 type RunEntry = {
   timestamp: number
@@ -35,7 +37,7 @@ const CronBadges: React.FC<{ schedule: string }> = ({ schedule }) => {
             padding: '1px 5px',
           }}
         >
-          {part}
+          {asI18n(part)}
         </Badge>
       ))}
     </Group>
@@ -56,6 +58,7 @@ export const SchedulersTab: React.FC<{
 }> = ({ searchQuery, emptyHero }) => {
   const { meta } = usePikkuMeta()
   const rpc = usePikkuRPC()
+  const { t } = useI18n()
   const { openScheduler } = usePanelContext()
 
   const { data: history = {} } = useQuery<SchedulerHistory>({
@@ -119,7 +122,7 @@ export const SchedulersTab: React.FC<{
           if (!lastRun) {
             return (
               <Text size="xs" ff="monospace" c="var(--app-meta-label)">
-                —
+                {asI18n('—')}
               </Text>
             )
           }
@@ -134,10 +137,10 @@ export const SchedulersTab: React.FC<{
                     : 'var(--mantine-color-green-5)'
                 }
               >
-                {lastRun.status}
+                {asI18n(lastRun.status)}
               </Text>
               <Text size="xs" ff="monospace" c="var(--app-text-muted)">
-                {fmtRelative(lastRun.timestamp)}
+                {asI18n(fmtRelative(lastRun.timestamp))}
               </Text>
             </>
           )
@@ -156,7 +159,7 @@ export const SchedulersTab: React.FC<{
       columns={columns}
       getKey={(item) => item.name}
       onRowClick={(item) => openScheduler(item.wireId || item.name, item)}
-      emptyMessage="No scheduled tasks found."
+      emptyMessage={t('schedulers.empty_message')}
       emptyHero={emptyHero}
     />
   )

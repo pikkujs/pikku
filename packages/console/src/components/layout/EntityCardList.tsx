@@ -1,6 +1,9 @@
 import React, { useState } from 'react'
 import type { ReactNode } from 'react'
-import { Box, Text, Stack, Group, Skeleton } from '@mantine/core'
+import { Box, Text, Stack, Group, Skeleton } from '@pikku/mantine/core'
+import type { I18nNode } from '@pikku/react'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { EmptyStatePlaceholder } from './EmptyStatePlaceholder'
 import { Boxes } from 'lucide-react'
 import { toEnglishName } from '../../lib/strings'
@@ -29,6 +32,7 @@ function EntityCard({
   metricSlot?: (name: string) => ReactNode
 }) {
   const [hovered, setHovered] = useState(false)
+  const { t } = useI18n()
   return (
     <Box
       onClick={() => onOpen(item.name)}
@@ -51,10 +55,10 @@ function EntityCard({
         <Group gap={8} wrap="nowrap" align="center">
           <Stack gap={1} style={{ flex: 1, minWidth: 0 }}>
             <Text size="sm" fw={600} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {item.displayName ?? toEnglishName(item.name)}
+              {asI18n(item.displayName ?? toEnglishName(item.name))}
             </Text>
             <Text size="xs" ff="monospace" c="dimmed" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {item.name}
+              {asI18n(item.name)}
             </Text>
           </Stack>
           <Group gap={6} wrap="nowrap" style={{ flexShrink: 0 }}>
@@ -76,7 +80,7 @@ function EntityCard({
           </Group>
         </Group>
         <Text size="xs" c={item.description ? 'dimmed' : 'var(--mantine-color-placeholder)'} lineClamp={2} fs={item.description ? undefined : 'italic'}>
-          {item.description ?? 'No description'}
+          {item.description ? asI18n(item.description) : t('entity_card.no_description')}
         </Text>
       </Stack>
       {metricSlot && <Box style={{ flexShrink: 0 }}>{metricSlot(item.name)}</Box>}
@@ -89,8 +93,8 @@ interface EntityCardListProps {
   onOpen: (name: string) => void
   loading?: boolean
   emptyHero?: ReactNode
-  emptyTitle?: string
-  emptyDescription?: string
+  emptyTitle?: I18nNode
+  emptyDescription?: I18nNode
   docsHref?: string
   icon?: React.ComponentType<{ size?: number; strokeWidth?: number }>
   metricSlot?: (name: string) => ReactNode
@@ -101,12 +105,14 @@ export const EntityCardList: React.FC<EntityCardListProps> = ({
   onOpen,
   loading = false,
   emptyHero,
-  emptyTitle = 'No items found',
+  emptyTitle,
   emptyDescription,
   docsHref = 'https://pikku.dev/docs',
   icon = Boxes,
   metricSlot,
 }) => {
+  const { t } = useI18n()
+
   if (loading) {
     return (
       <Stack gap={10} p="md">
@@ -122,7 +128,7 @@ export const EntityCardList: React.FC<EntityCardListProps> = ({
       <EmptyStatePlaceholder
         icon={icon}
         hero={emptyHero}
-        title={emptyTitle}
+        title={emptyTitle ?? t('entity_card_list.empty_title')}
         description={emptyDescription}
         docsHref={docsHref}
       />

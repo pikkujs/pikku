@@ -1,5 +1,6 @@
 import React from 'react'
-import { Stack, Text, Box, Group, Anchor } from '@mantine/core'
+import { Stack, Text, Box, Group, Anchor } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { useLink } from '../../../router'
 import { usePikkuMeta } from '../../../context/PikkuMetaContext'
 import { PikkuBadge } from '../../ui/PikkuBadge'
@@ -37,7 +38,7 @@ export const FunctionCrossLinks: React.FC<{
       {usedBy && usedBy.transports.length > 0 && (
         <Box>
           <Text size="sm" fw={500} mb={4}>
-            Wired To
+            {asI18n('Wired To')}
           </Text>
           <Group gap={4} wrap="wrap">
             {usedBy.transports.map((t: any) => (
@@ -53,7 +54,7 @@ export const FunctionCrossLinks: React.FC<{
                   color={wiringTypeColor(t.type)}
                   className={classes.clickableText}
                 >
-                  {t.name}
+                  {asI18n(t.name)}
                 </PikkuBadge>
               </Anchor>
             ))}
@@ -63,7 +64,7 @@ export const FunctionCrossLinks: React.FC<{
       {usedBy && usedBy.jobs.length > 0 && (
         <Box>
           <Text size="sm" fw={500} mb={4}>
-            Jobs
+            {asI18n('Jobs')}
           </Text>
           <Group gap={4} wrap="wrap">
             {usedBy.jobs.map((j: any) => (
@@ -79,7 +80,7 @@ export const FunctionCrossLinks: React.FC<{
                   color={wiringTypeColor(j.type)}
                   className={classes.clickableText}
                 >
-                  {j.name}
+                  {asI18n(j.name)}
                 </PikkuBadge>
               </Anchor>
             ))}
@@ -89,7 +90,7 @@ export const FunctionCrossLinks: React.FC<{
       {services && services.length > 0 && (
         <Box>
           <Text size="sm" fw={500} mb={4}>
-            Services
+            {asI18n('Services')}
           </Text>
           <Group gap={4} wrap="wrap">
             {services.map((svc) => (
@@ -106,7 +107,7 @@ export const FunctionCrossLinks: React.FC<{
                   color="gray"
                   className={classes.clickableText}
                 >
-                  {svc}
+                  {asI18n(svc)}
                 </PikkuBadge>
               </Anchor>
             ))}
@@ -142,12 +143,12 @@ export const WiringCrossLinks: React.FC<{
         fw={500}
         underline="hover"
       >
-        Handler: {pikkuFuncId}
+        {asI18n(`Handler: ${pikkuFuncId}`)}
       </Anchor>
       {services && services.length > 0 && (
         <Box>
           <Text size="sm" fw={500} mb={4}>
-            Services Used
+            {asI18n('Services Used')}
           </Text>
           <Group gap={4} wrap="wrap">
             {services.map((svc) => (
@@ -164,7 +165,7 @@ export const WiringCrossLinks: React.FC<{
                   color="gray"
                   className={classes.clickableText}
                 >
-                  {svc}
+                  {asI18n(svc)}
                 </PikkuBadge>
               </Anchor>
             ))}
@@ -174,7 +175,7 @@ export const WiringCrossLinks: React.FC<{
       {usedBy && usedBy.transports.length > 1 && (
         <Box>
           <Text size="sm" fw={500} mb={4}>
-            Also Wired To
+            {asI18n('Also Wired To')}
           </Text>
           <Group gap={4} wrap="wrap">
             {usedBy.transports.map((t: any) => (
@@ -190,7 +191,7 @@ export const WiringCrossLinks: React.FC<{
                   color={wiringTypeColor(t.type)}
                   className={classes.clickableText}
                 >
-                  {t.name}
+                  {asI18n(t.name)}
                 </PikkuBadge>
               </Anchor>
             ))}

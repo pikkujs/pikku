@@ -1,5 +1,6 @@
 import React from 'react'
-import { Box } from '@mantine/core'
+import { Box } from '@pikku/mantine/core'
+import type { I18nNode } from '@pikku/react'
 import { PanelContainer } from '../panel/PanelContainer'
 import { usePanelContext } from '../../context/PanelContext'
 import classes from '../ui/console.module.css'
@@ -11,7 +12,7 @@ interface ResizablePanelLayoutProps {
   header?: React.ReactNode
   leftDrawer?: React.ReactNode
   leftDrawerWidth?: number
-  emptyPanelMessage?: string
+  emptyPanelMessage?: I18nNode
   hidePanel?: boolean
 }
 

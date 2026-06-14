@@ -15,7 +15,7 @@ import {
 import { usePanelContext } from '../../../context/PanelContext'
 import { useWorkflowContextSafe } from '../../../context/WorkflowContext'
 import { useWorkflowRunContextSafe } from '../../../context/WorkflowRunContext'
-import { useMantineTheme } from '@mantine/core'
+import { useMantineTheme } from '@pikku/mantine/core'
 
 type WiringType =
   | 'http'

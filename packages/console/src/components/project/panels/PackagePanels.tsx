@@ -1,5 +1,6 @@
 import React from 'react'
-import { Stack, Text, Box, Group, Code, Table, Accordion } from '@mantine/core'
+import { Stack, Text, Box, Group, Code, Table, Accordion } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import {
   Package,
   FunctionSquare,
@@ -41,37 +42,37 @@ export const PackageConfiguration: React.FC<PackagePanelProps> = ({
         <Group gap="xs">
           <Package size={20} />
           <Text size="lg" ff="monospace" fw={600}>
-            {metadata?.displayName || metadata?.name || packageId}
+            {asI18n(metadata?.displayName || metadata?.name || packageId)}
           </Text>
         </Group>
         {metadata?.description && (
           <Text size="sm" c="dimmed" mt={4}>
-            {metadata.description}
+            {asI18n(metadata.description)}
           </Text>
         )}
       </Box>
 
       <Group gap="xs">
         <PikkuBadge type="label" color="gray">
-          v{metadata?.version || '?'}
+          {asI18n(`v${metadata?.version || '?'}`)}
         </PikkuBadge>
         {metadata?.license && (
           <PikkuBadge type="label" color="gray">
-            {metadata.license}
+            {asI18n(metadata.license)}
           </PikkuBadge>
         )}
       </Group>
 
       {metadata?.author && (
         <Box>
-          <SectionLabel>Author</SectionLabel>
-          <Text size="sm">{metadata.author}</Text>
+          <SectionLabel>{asI18n('Author')}</SectionLabel>
+          <Text size="sm">{asI18n(metadata.author)}</Text>
         </Box>
       )}
 
       {metadata?.repository && (
         <Box>
-          <SectionLabel>Repository</SectionLabel>
+          <SectionLabel>{asI18n('Repository')}</SectionLabel>
           <Code>{metadata.repository}</Code>
         </Box>
       )}
@@ -97,23 +98,23 @@ export const PackageConfiguration: React.FC<PackagePanelProps> = ({
                     <Table.Tr key={fn.name}>
                       <Table.Td>
                         <Text size="sm" ff="monospace">
-                          {fn.name}
+                          {asI18n(fn.name)}
                         </Text>
                       </Table.Td>
                       <Table.Td>
                         <Text size="sm" c="dimmed" ff="monospace">
-                          {fn.inputSchemaName || '—'}
+                          {asI18n(fn.inputSchemaName || '—')}
                         </Text>
                       </Table.Td>
                       <Table.Td>
                         <Text size="sm" c="dimmed" ff="monospace">
-                          {fn.outputSchemaName || '—'}
+                          {asI18n(fn.outputSchemaName || '—')}
                         </Text>
                       </Table.Td>
                       <Table.Td>
                         {fn.expose && (
                           <PikkuBadge type="label" color="green">
-                            exposed
+                            {asI18n('exposed')}
                           </PikkuBadge>
                         )}
                       </Table.Td>
@@ -136,7 +137,7 @@ export const PackageConfiguration: React.FC<PackagePanelProps> = ({
                   <Group key={key} gap="xs">
                     <Code>{key}</Code>
                     <Text size="sm" c="dimmed">
-                      →
+                      {asI18n('→')}
                     </Text>
                     <Code>{String(value)}</Code>
                   </Group>

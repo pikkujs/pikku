@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
-import { Text, Group } from '@mantine/core'
+import { Text, Group } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { KeyRound } from 'lucide-react'
 import { usePanelContext } from '../../context/PanelContext'
 import { TableListPage } from '../layout/TableListPage'
@@ -38,17 +39,17 @@ export const ProjectSecrets: React.FC<ProjectSecretsProps> = ({
           <>
             <Group gap="xs">
               <Text fw={500} truncate>
-                {s.displayName}
+                {asI18n(s.displayName)}
               </Text>
               {s.isOAuth2 && (
                 <PikkuBadge type="label" color="gray">
-                  OAuth2
+                  {asI18n('OAuth2')}
                 </PikkuBadge>
               )}
             </Group>
             {s.description && (
               <Text size="sm" c="dimmed" truncate>
-                {s.description}
+                {asI18n(s.description)}
               </Text>
             )}
           </>
@@ -59,7 +60,7 @@ export const ProjectSecrets: React.FC<ProjectSecretsProps> = ({
         header: 'SECRET ID',
         render: (s: SecretMeta) => (
           <Text size="sm" c="dimmed" ff="monospace">
-            {s.secretId}
+            {asI18n(s.secretId)}
           </Text>
         ),
       },
@@ -76,7 +77,7 @@ export const ProjectSecrets: React.FC<ProjectSecretsProps> = ({
       columns={columns}
       getKey={(s) => s.name}
       onRowClick={(s) => openSecret(s.name, { ...(s.rawData ?? s), installed })}
-      emptyMessage="No secrets found."
+      emptyMessage={asI18n('No secrets found.')}
       loading={loading}
       emptyHero={emptyHero}
     />

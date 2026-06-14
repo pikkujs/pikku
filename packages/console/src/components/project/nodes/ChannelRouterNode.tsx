@@ -1,11 +1,13 @@
 import React from 'react'
 import type { NodeProps } from 'reactflow'
 import { Handle, Position } from 'reactflow'
-import { Box, Paper, Text, Stack, useMantineTheme } from '@mantine/core'
+import { Box, Paper, Text, Stack, useMantineTheme } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
+import type { I18nNode } from '@pikku/react'
 import { ArrowRight } from 'lucide-react'
 
 interface ActionRowProps {
-  label: string
+  label: I18nNode
   handleId: string
 }
 
@@ -84,14 +86,14 @@ export const ChannelRouterNode: React.FC<NodeProps<ChannelRouterNodeData>> = ({
       <Stack gap={0} py="xs">
         <Box px="md" pb={4}>
           <Text size="sm" fw={600}>
-            {data.category}
+            {asI18n(data.category)}
           </Text>
         </Box>
 
         {data.actions.map((action) => (
           <ActionRow
             key={action}
-            label={action}
+            label={asI18n(action)}
             handleId={`action-${action}`}
           />
         ))}

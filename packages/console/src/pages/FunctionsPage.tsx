@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react'
-import { Text, Badge, Group, UnstyledButton, TextInput } from '@mantine/core'
+import { Text, Badge, Group, UnstyledButton, TextInput } from '@pikku/mantine/core'
 import { FunctionSquare, Search } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
@@ -55,6 +57,7 @@ const FunctionsList: React.FC<{
   testsByFunction?: Record<string, FunctionTestData>
   emptyHero?: React.ReactNode
 }> = ({ functions, extraColumns = [], testsByFunction, emptyHero }) => {
+  const { t } = useI18n()
   const { openFunction } = usePanelContext()
   const { functionUsedBy } = usePikkuMeta()
   const hasTestsColumn = useMemo(
@@ -75,10 +78,10 @@ const FunctionsList: React.FC<{
           return (
             <>
               <Text fw={500} truncate>
-                {englishName}
+                {asI18n(englishName)}
               </Text>
               <Text size="xs" c="dimmed" truncate ff="monospace">
-                {funcId}{description ? ` · ${description}` : ''}
+                {asI18n(`${funcId}${description ? ` · ${description}` : ''}`)}
               </Text>
             </>
           )
@@ -90,7 +93,7 @@ const FunctionsList: React.FC<{
         width: 80,
         render: (func: any) => (
           <Text size="sm" ff="monospace" c="var(--app-text-muted)">
-            {func.version != null ? `v${func.version}` : '—'}
+            {asI18n(func.version != null ? `v${func.version}` : '—')}
           </Text>
         ),
       },
@@ -102,7 +105,7 @@ const FunctionsList: React.FC<{
           const wrapperDef = funcWrapperDefs[func.funcWrapper]
           return wrapperDef ? (
             <Badge size="sm" variant="light" color="gray" tt="none">
-              {wrapperDef.label}
+              {asI18n(wrapperDef.label)}
             </Badge>
           ) : null
         },
@@ -119,7 +122,7 @@ const FunctionsList: React.FC<{
               ff="monospace"
               c={hasAuth ? '#86efac' : 'var(--app-text-muted)'}
             >
-              {hasAuth ? 'Auth' : '—'}
+              {asI18n(hasAuth ? 'Auth' : '—')}
             </Text>
           )
         },
@@ -142,7 +145,7 @@ const FunctionsList: React.FC<{
                 count > 0 ? 'var(--app-service-color)' : 'var(--app-text-muted)'
               }
             >
-              {count > 0 ? String(count) : '—'}
+              {asI18n(count > 0 ? String(count) : '—')}
             </Text>
           )
         },
@@ -165,7 +168,7 @@ const FunctionsList: React.FC<{
                       }}
                     >
                       <Badge size="sm" variant="light" color="gray">
-                        unknown
+                        {asI18n('unknown')}
                       </Badge>
                     </UnstyledButton>
                   )
@@ -193,12 +196,14 @@ const FunctionsList: React.FC<{
                         variant="light"
                         color={TEST_STATUS_COLOR[status]}
                       >
-                        {ratioLabel}
+                        {asI18n(ratioLabel)}
                       </Badge>
                       <Text size="xs" c="dimmed">
-                        {tests.scenarios.length === 0
-                          ? 'No tests'
-                          : `${tests.scenarios.length} linked`}
+                        {asI18n(
+                          tests.scenarios.length === 0
+                            ? 'No tests'
+                            : `${tests.scenarios.length} linked`
+                        )}
                       </Text>
                     </Group>
                   </UnstyledButton>
@@ -236,7 +241,7 @@ const FunctionsList: React.FC<{
       onRowClick={(func) =>
         openFunction(func.pikkuFuncName || func.pikkuFuncId, func)
       }
-      emptyMessage="No functions found."
+      emptyMessage={t('functions.empty_message')}
       emptyHero={emptyHero}
     />
   )
@@ -248,6 +253,7 @@ export const FunctionsPage: React.FC<{
   testsByFunction?: Record<string, FunctionTestData>
   emptyHero?: React.ReactNode
 }> = ({ extraColumns, headerRight, testsByFunction, emptyHero }) => {
+  const { t } = useI18n()
   const rpc = usePikkuRPC()
   const [searchQuery, setSearchQuery] = useState('')
   const [showPikkuFunctions, setShowPikkuFunctions] = useState(false)
@@ -279,13 +285,13 @@ export const FunctionsPage: React.FC<{
       <ResizablePanelLayout
         header={
           <ListPageHeader
-            title="Functions"
-            description="All registered pikku functions across your project"
+            title={t('functions.title')}
+            description={t('functions.description')}
             docsHref="https://pikku.dev/docs/core-features/functions"
             filters={
               <Group gap="sm" wrap="nowrap">
                 <TextInput
-                  placeholder="Search functions..."
+                  placeholder={t('functions.search_placeholder')}
                   leftSection={<Search size={14} />}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -295,14 +301,14 @@ export const FunctionsPage: React.FC<{
                 <PikkuToggle
                   checked={showPikkuFunctions}
                   onChange={setShowPikkuFunctions}
-                  tooltip="Show Pikku internals"
+                  tooltip={t('common.show_pikku_internals')}
                 />
                 {headerRight}
               </Group>
             }
           />
         }
-        emptyPanelMessage="Select a function to view details"
+        emptyPanelMessage={t('functions.select_function')}
         hidePanel={isLoading || !rawFunctions || (rawFunctions as unknown as any[]).length === 0}
       >
         <FunctionsList

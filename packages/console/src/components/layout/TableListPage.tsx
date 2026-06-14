@@ -7,7 +7,10 @@ import {
   Table,
   Center,
   Loader,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import type { I18nNode, I18nString } from '@pikku/react'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { Search } from 'lucide-react'
 import { EmptyStatePlaceholder } from './EmptyStatePlaceholder'
 import { usePageGate } from '../../context/PageGateContext'
@@ -30,13 +33,13 @@ interface TableListPageProps<T> {
   columns: Column<T>[]
   getKey: (item: T, index: number) => string
   onRowClick: (item: T) => void
-  searchPlaceholder?: string
+  searchPlaceholder?: I18nString
   searchFilter?: (item: T, query: string) => boolean
   /** When provided, the internal search input is hidden and this value is used for filtering */
   externalSearch?: string
-  emptyMessage?: string
-  emptyTitle?: string
-  emptyDescription?: string
+  emptyMessage?: I18nNode
+  emptyTitle?: I18nNode
+  emptyDescription?: I18nNode
   emptyHero?: React.ReactNode
   loading?: boolean
   headerRight?: React.ReactNode
@@ -51,10 +54,10 @@ export const TableListPage = <T,>({
   columns,
   getKey,
   onRowClick,
-  searchPlaceholder = 'Search...',
+  searchPlaceholder,
   searchFilter,
   externalSearch,
-  emptyMessage = 'No items found.',
+  emptyMessage,
   emptyTitle,
   emptyDescription,
   emptyHero,
@@ -63,6 +66,7 @@ export const TableListPage = <T,>({
   headerRight,
 }: TableListPageProps<T>) => {
   const gate = usePageGate()
+  const { t } = useI18n()
   const [internalSearch, setInternalSearch] = useState('')
   const searchQuery = externalSearch !== undefined ? externalSearch : internalSearch
 
@@ -91,8 +95,8 @@ export const TableListPage = <T,>({
       <EmptyStatePlaceholder
         icon={icon}
         hero={emptyHero}
-        title={emptyTitle || `No ${title} found`}
-        description={emptyDescription ?? `No ${title.toLowerCase()} exist yet.`}
+        title={emptyTitle ?? asI18n(`No ${title} found`)}
+        description={emptyDescription ?? asI18n(`No ${title.toLowerCase()} exist yet.`)}
         docsHref={docsHref}
       />
     )
@@ -125,7 +129,7 @@ export const TableListPage = <T,>({
         >
           {searchFilter && externalSearch === undefined && (
             <TextInput
-              placeholder={searchPlaceholder}
+              placeholder={searchPlaceholder ?? t('common.search')}
               leftSection={<Search size={14} />}
               value={internalSearch}
               onChange={(e) => setInternalSearch(e.target.value)}
@@ -140,8 +144,8 @@ export const TableListPage = <T,>({
         <Box p="xl">
           <Text c="dimmed" ta="center">
             {searchQuery
-              ? `No results found for "${searchQuery}"`
-              : emptyMessage}
+              ? asI18n(`No results found for "${searchQuery}"`)
+              : (emptyMessage ?? t('common.no_items'))}
           </Text>
         </Box>
       ) : (

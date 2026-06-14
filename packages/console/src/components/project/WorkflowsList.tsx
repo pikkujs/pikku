@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
-import { Text, Badge, Tooltip, ActionIcon, Group } from '@mantine/core'
+import { Text, Badge, Tooltip, ActionIcon, Group } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
 import { ExternalLink, GitBranch } from 'lucide-react'
 import { TableListPage } from '../layout/TableListPage'
@@ -18,10 +19,10 @@ const COLUMNS = [
     header: 'NAME',
     render: (w: Workflow) => (
       <Text fw={500}>
-        {w.name}
+        {asI18n(w.name)}
         {w.source === 'dynamic-workflow' && (
           <Badge size="sm" variant="light" color="violet" ml={8}>
-            Dynamic
+            {asI18n('Dynamic')}
           </Badge>
         )}
       </Text>
@@ -122,17 +123,17 @@ export const WorkflowsList: React.FC<WorkflowsListProps> = ({
       columns={allColumns}
       getKey={(w) => w.name}
       onRowClick={(w) => navigateTo('workflows', w.name)}
-      searchPlaceholder="Search workflows..."
+      searchPlaceholder={asI18n('Search workflows...')}
       searchFilter={(w, q) =>
         (w.name?.toLowerCase().includes(q) ||
           w.pikkuFuncId?.toLowerCase().includes(q)) ??
         false
       }
-      emptyMessage="No workflows found."
+      emptyMessage={asI18n('No workflows found.')}
       headerRight={
         <Group gap={4}>
           {headerRight}
-          <Tooltip label="Workflows docs">
+          <Tooltip label={asI18n('Workflows docs')}>
             <ActionIcon
               component="a"
               href="https://pikku.dev/docs/wiring/workflows"

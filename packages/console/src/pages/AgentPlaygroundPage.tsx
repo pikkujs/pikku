@@ -14,7 +14,9 @@ import {
   TextInput,
   UnstyledButton,
   ScrollArea,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import { useI18n } from '@pikku/react/i18n'
+import { asI18n } from '@pikku/react'
 import { KeyRound, Link2, ChevronDown, Search, Check, Bot } from 'lucide-react'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
@@ -39,6 +41,7 @@ const CredentialPrompt: React.FC<{
   }>
   onRefresh: () => void
 }> = ({ requirements, onRefresh }) => {
+  const { t } = useI18n()
   const serverUrl = getServerUrl()
   const missing = requirements.filter((r) => !r.connected)
 
@@ -63,11 +66,10 @@ const CredentialPrompt: React.FC<{
         <Stack gap="md" align="center">
           <KeyRound size={32} color="var(--mantine-color-orange-6)" />
           <Text fw={600} size="lg" ta="center">
-            Connect your accounts
+            {t('agent_playground.connect_accounts')}
           </Text>
           <Text size="sm" c="dimmed" ta="center">
-            This agent requires the following credentials to be connected before
-            you can start chatting.
+            {t('agent_playground.credentials_required')}
           </Text>
           <Stack gap="xs" w="100%">
             {missing.map((req) => (
@@ -83,7 +85,7 @@ const CredentialPrompt: React.FC<{
                 <Group gap="xs">
                   <Link2 size={16} color="var(--mantine-color-dimmed)" />
                   <Text size="sm" fw={500}>
-                    {req.displayName}
+                    {asI18n(req.displayName)}
                   </Text>
                 </Group>
                 <Button
@@ -91,7 +93,7 @@ const CredentialPrompt: React.FC<{
                   variant="light"
                   onClick={() => handleConnect(req.credentialName)}
                 >
-                  Connect
+                  {t('agent_playground.connect')}
                 </Button>
               </Group>
             ))}
@@ -108,6 +110,7 @@ const AgentPlaygroundInner: React.FC<{
   agentItems: { name: string; description?: string }[]
   onAgentSelect: (name: string) => void
 }> = ({ agentId, agentData, agentItems, onAgentSelect }) => {
+  const { t } = useI18n()
   const { openAgent } = usePanelContext()
   const { threadId, setThreadId, threads, createNewThread, refetchThreads } =
     useAgentPlayground()
@@ -176,14 +179,14 @@ const AgentPlaygroundInner: React.FC<{
           onClick={() => setSelectorOpen((o) => !o)}
         >
           <Text size="sm" fw={600} style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {agentId}
+            {asI18n(agentId)}
           </Text>
           <ChevronDown size={14} style={{ flexShrink: 0 }} />
         </UnstyledButton>
       </Popover.Target>
       <Popover.Dropdown p={0}>
         <TextInput
-          placeholder="Search agents..."
+          placeholder={t('agent_playground.search_agents')}
           leftSection={<Search size={14} />}
           value={search}
           onChange={(e) => setSearch(e.currentTarget.value)}
@@ -220,11 +223,11 @@ const AgentPlaygroundInner: React.FC<{
                 )}
                 <div>
                   <Text size="sm" fw={item.name === agentId ? 500 : 400}>
-                    {item.name}
+                    {asI18n(item.name)}
                   </Text>
                   {item.description && (
                     <Text size="sm" c="dimmed">
-                      {item.description}
+                      {asI18n(item.description)}
                     </Text>
                   )}
                 </div>
@@ -232,7 +235,7 @@ const AgentPlaygroundInner: React.FC<{
             ))}
             {filteredItems.length === 0 && (
               <Text size="sm" c="dimmed" ta="center" py="md">
-                No results
+                {t('common.no_results')}
               </Text>
             )}
           </Stack>
@@ -249,8 +252,8 @@ const AgentPlaygroundInner: React.FC<{
       onSelect={setThreadId}
       onClear={() => setThreadId(null)}
       onNewClick={createNewThread}
-      newButtonLabel="New conversation"
-      emptyMessage="No conversations yet"
+      newButtonLabel={t('agent_playground.new_conversation')}
+      emptyMessage={t('agent_playground.no_conversations')}
       statusFilters={[]}
       header={selector}
       onDelete={handleDelete}
@@ -261,7 +264,7 @@ const AgentPlaygroundInner: React.FC<{
     <ThreePaneLayout
       runsPanel={runsPanel}
       runsPanelVisible
-      emptyPanelMessage="Agent configuration"
+      emptyPanelMessage={t('agent_playground.panel_message')}
     >
       <Box style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         <Box
@@ -298,6 +301,7 @@ const AgentPlaygroundInner: React.FC<{
 }
 
 export const AgentPlaygroundPage: React.FC = () => {
+  const { t } = useI18n()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const agentId = searchParams.get('id') || ''
@@ -331,8 +335,8 @@ export const AgentPlaygroundPage: React.FC = () => {
     return (
       <EmptyStatePlaceholder
         icon={Bot}
-        title={agentId ? `Agent "${agentId}" not found` : 'No agent selected'}
-        description={agentId ? 'This agent may have been removed or renamed.' : 'Select an agent from the Agents page to open the playground.'}
+        title={agentId ? asI18n(`Agent "${agentId}" not found`) : t('agent_playground.no_agent_selected')}
+        description={agentId ? t('agent_playground.agent_not_found_description') : t('agent_playground.select_agent_description')}
         docsHref="https://pikku.dev/docs/core-features/agents"
       />
     )

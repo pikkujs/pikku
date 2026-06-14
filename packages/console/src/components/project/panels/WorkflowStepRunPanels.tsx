@@ -1,5 +1,6 @@
 import React from 'react'
-import { Stack, Text, Group, Card, Table, Timeline, Box } from '@mantine/core'
+import { Stack, Text, Group, Card, Table, Timeline, Box } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { CodeHighlight } from '@mantine/code-highlight'
 import { Clock, AlertTriangle, CheckCircle, Play } from 'lucide-react'
 import { useWorkflowRunContextSafe } from '../../../context/WorkflowRunContext'
@@ -37,7 +38,7 @@ export const WorkflowStepExecution: React.FC<StepRunPanelProps> = ({
   if (!step) {
     return (
       <Stack gap="md">
-        <SectionLabel>Execution</SectionLabel>
+        <SectionLabel>{asI18n('Execution')}</SectionLabel>
         <Card withBorder radius="md" padding={0}>
           <Card.Section p="md">
             <EmptyState />
@@ -53,12 +54,12 @@ export const WorkflowStepExecution: React.FC<StepRunPanelProps> = ({
   return (
     <Stack gap="md">
       <Group gap="xs">
-        <SectionLabel>Execution</SectionLabel>
+        <SectionLabel>{asI18n('Execution')}</SectionLabel>
         <PikkuBadge type="status" value={step.status} variant="filled" />
       </Group>
 
       <Stack gap={6}>
-        <SectionLabel>Timing</SectionLabel>
+        <SectionLabel>{asI18n('Timing')}</SectionLabel>
         <Card withBorder radius="md" padding={0}>
           <Card.Section>
             <Table verticalSpacing={4} horizontalSpacing="xs">
@@ -66,12 +67,12 @@ export const WorkflowStepExecution: React.FC<StepRunPanelProps> = ({
                 <Table.Tr>
                   <Table.Td>
                     <Text size="sm" c="dimmed">
-                      Created
+                      {asI18n('Created')}
                     </Text>
                   </Table.Td>
                   <Table.Td>
                     <Text size="sm" ff="monospace">
-                      {formatTimestamp(step.createdAt)}
+                      {asI18n(formatTimestamp(step.createdAt))}
                     </Text>
                   </Table.Td>
                 </Table.Tr>
@@ -79,12 +80,12 @@ export const WorkflowStepExecution: React.FC<StepRunPanelProps> = ({
                   <Table.Tr>
                     <Table.Td>
                       <Text size="sm" c="dimmed">
-                        Started
+                        {asI18n('Started')}
                       </Text>
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm" ff="monospace">
-                        {formatTimestamp(step.runningAt)}
+                        {asI18n(formatTimestamp(step.runningAt))}
                       </Text>
                     </Table.Td>
                   </Table.Tr>
@@ -93,12 +94,12 @@ export const WorkflowStepExecution: React.FC<StepRunPanelProps> = ({
                   <Table.Tr>
                     <Table.Td>
                       <Text size="sm" c="dimmed">
-                        Succeeded
+                        {asI18n('Succeeded')}
                       </Text>
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm" ff="monospace">
-                        {formatTimestamp(step.succeededAt)}
+                        {asI18n(formatTimestamp(step.succeededAt))}
                       </Text>
                     </Table.Td>
                   </Table.Tr>
@@ -107,12 +108,12 @@ export const WorkflowStepExecution: React.FC<StepRunPanelProps> = ({
                   <Table.Tr>
                     <Table.Td>
                       <Text size="sm" c="dimmed">
-                        Failed
+                        {asI18n('Failed')}
                       </Text>
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm" ff="monospace">
-                        {formatTimestamp(step.failedAt)}
+                        {asI18n(formatTimestamp(step.failedAt))}
                       </Text>
                     </Table.Td>
                   </Table.Tr>
@@ -121,12 +122,12 @@ export const WorkflowStepExecution: React.FC<StepRunPanelProps> = ({
                   <Table.Tr>
                     <Table.Td>
                       <Text size="sm" c="dimmed">
-                        Duration
+                        {asI18n('Duration')}
                       </Text>
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm" ff="monospace" fw={500}>
-                        {duration}
+                        {asI18n(duration)}
                       </Text>
                     </Table.Td>
                   </Table.Tr>
@@ -134,12 +135,12 @@ export const WorkflowStepExecution: React.FC<StepRunPanelProps> = ({
                 <Table.Tr>
                   <Table.Td>
                     <Text size="sm" c="dimmed">
-                      Attempts
+                      {asI18n('Attempts')}
                     </Text>
                   </Table.Td>
                   <Table.Td>
                     <Text size="sm" ff="monospace">
-                      {step.attemptCount}
+                      {asI18n(String(step.attemptCount))}
                     </Text>
                   </Table.Td>
                 </Table.Tr>
@@ -161,7 +162,7 @@ export const WorkflowStepInputData: React.FC<StepRunPanelProps> = ({
 
   return (
     <Stack gap={6}>
-      <SectionLabel>Input Data</SectionLabel>
+      <SectionLabel>{asI18n('Input Data')}</SectionLabel>
       <Card withBorder radius="md" padding={0}>
         <Card.Section p="md">
           {step?.data ? <DataViewer data={step.data} /> : <EmptyState />}
@@ -180,7 +181,7 @@ export const WorkflowStepOutputData: React.FC<StepRunPanelProps> = ({
 
   return (
     <Stack gap={6}>
-      <SectionLabel>Output Data</SectionLabel>
+      <SectionLabel>{asI18n('Output Data')}</SectionLabel>
       <Card withBorder radius="md" padding={0}>
         <Card.Section p="md">
           {step?.result ? <DataViewer data={step.result} /> : <EmptyState />}
@@ -198,7 +199,7 @@ export const WorkflowStepError: React.FC<StepRunPanelProps> = ({ stepId }) => {
   if (!step?.error) {
     return (
       <Stack gap={6}>
-        <SectionLabel>Error</SectionLabel>
+        <SectionLabel>{asI18n('Error')}</SectionLabel>
         <Card withBorder radius="md" padding={0}>
           <Card.Section p="md">
             <EmptyState />
@@ -210,16 +211,16 @@ export const WorkflowStepError: React.FC<StepRunPanelProps> = ({ stepId }) => {
 
   return (
     <Stack gap="md">
-      <SectionLabel>Error</SectionLabel>
+      <SectionLabel>{asI18n('Error')}</SectionLabel>
 
       <Stack gap={6}>
-        <SectionLabel>Message</SectionLabel>
+        <SectionLabel>{asI18n('Message')}</SectionLabel>
         <Card withBorder radius="md" padding={0}>
           <Card.Section p="md">
             <Text size="sm" ff="monospace" c="red">
-              {typeof step.error.message === 'string'
+              {asI18n(typeof step.error.message === 'string'
                 ? step.error.message
-                : JSON.stringify(step.error.message, null, 2)}
+                : JSON.stringify(step.error.message, null, 2))}
             </Text>
           </Card.Section>
         </Card>
@@ -227,11 +228,11 @@ export const WorkflowStepError: React.FC<StepRunPanelProps> = ({ stepId }) => {
 
       {step.error.code && (
         <Stack gap={6}>
-          <SectionLabel>Code</SectionLabel>
+          <SectionLabel>{asI18n('Code')}</SectionLabel>
           <Card withBorder radius="md" padding={0}>
             <Card.Section p="md">
               <PikkuBadge type="label" color="red">
-                {step.error.code}
+                {asI18n(step.error.code)}
               </PikkuBadge>
             </Card.Section>
           </Card>
@@ -240,7 +241,7 @@ export const WorkflowStepError: React.FC<StepRunPanelProps> = ({ stepId }) => {
 
       {step.error.stack && (
         <Stack gap={6}>
-          <SectionLabel>Stack Trace</SectionLabel>
+          <SectionLabel>{asI18n('Stack Trace')}</SectionLabel>
           <Card withBorder radius="md" padding={0}>
             <Card.Section p="md">
               <CodeHighlight code={step.error.stack} language="text" />
@@ -267,11 +268,11 @@ export const WorkflowStepRetryHistory: React.FC<StepRunPanelProps> = ({
   if (stepHistory.length <= 1) {
     return (
       <Stack gap={6}>
-        <SectionLabel>Retry History</SectionLabel>
+        <SectionLabel>{asI18n('Retry History')}</SectionLabel>
         <Card withBorder radius="md" padding={0}>
           <Card.Section p="md">
             <Text c="dimmed" size="sm" ta="center">
-              No retries
+              {asI18n('No retries')}
             </Text>
           </Card.Section>
         </Card>
@@ -282,8 +283,8 @@ export const WorkflowStepRetryHistory: React.FC<StepRunPanelProps> = ({
   return (
     <Stack gap="md">
       <Group gap="xs">
-        <SectionLabel>Retry History</SectionLabel>
-        <PikkuBadge type="label">{stepHistory.length} attempts</PikkuBadge>
+        <SectionLabel>{asI18n('Retry History')}</SectionLabel>
+        <PikkuBadge type="label">{asI18n(`${stepHistory.length} attempts`)}</PikkuBadge>
       </Group>
 
       <Timeline active={stepHistory.length - 1} bulletSize={24} lineWidth={2}>
@@ -309,14 +310,14 @@ export const WorkflowStepRetryHistory: React.FC<StepRunPanelProps> = ({
               <Group gap="xs">
                 <PikkuBadge type="status" value={attempt.status} />
                 <Text size="sm" c="dimmed">
-                  {formatTimestamp(attempt.createdAt)}
+                  {asI18n(formatTimestamp(attempt.createdAt))}
                 </Text>
               </Group>
               {attempt.error && (
                 <Text size="sm" c="red" mt={4}>
-                  {typeof attempt.error.message === 'string'
+                  {asI18n(typeof attempt.error.message === 'string'
                     ? attempt.error.message
-                    : JSON.stringify(attempt.error.message, null, 2)}
+                    : JSON.stringify(attempt.error.message, null, 2))}
                 </Text>
               )}
             </Timeline.Item>

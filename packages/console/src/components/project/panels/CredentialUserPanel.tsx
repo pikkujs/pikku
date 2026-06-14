@@ -1,5 +1,6 @@
 import React from 'react'
-import { Text, Badge, Group, Stack, Box, Button, Alert } from '@mantine/core'
+import { Text, Badge, Group, Stack, Box, Button, Alert } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { Trash2, AlertTriangle, KeyRound, Link2 } from 'lucide-react'
 import { usePikkuRPC } from '../../../context/PikkuRpcProvider'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -64,14 +65,13 @@ export const CredentialUserPanel: React.FC<{
         variant="light"
         color={connectedCreds.length > 0 ? 'teal' : 'gray'}
       >
-        {connectedCreds.length} of {credentialsMeta.length} credentials
-        connected
+        {asI18n(`${connectedCreds.length} of ${credentialsMeta.length} credentials connected`)}
       </Badge>
 
       {connectedCreds.length > 0 && (
         <Box>
           <Text size="sm" fw={500} mb="xs">
-            Connected
+            {asI18n('Connected')}
           </Text>
           <Stack gap="xs">
             {connectedCreds.map((cred) => (
@@ -92,14 +92,14 @@ export const CredentialUserPanel: React.FC<{
                   )}
                   <Box>
                     <Text size="sm" fw={500}>
-                      {cred.displayName}
+                      {asI18n(cred.displayName)}
                     </Text>
                     <Badge
                       size="sm"
                       variant="light"
                       color={cred.isOAuth2 ? 'violet' : 'blue'}
                     >
-                      {cred.isOAuth2 ? 'OAuth2' : 'API Key'}
+                      {asI18n(cred.isOAuth2 ? 'OAuth2' : 'API Key')}
                     </Badge>
                   </Box>
                 </Group>
@@ -111,7 +111,7 @@ export const CredentialUserPanel: React.FC<{
                   onClick={() => revokeMutation.mutate(cred.name)}
                   loading={revokeMutation.isPending}
                 >
-                  Revoke
+                  {asI18n('Revoke')}
                 </Button>
               </Group>
             ))}
@@ -122,7 +122,7 @@ export const CredentialUserPanel: React.FC<{
       {missingCreds.length > 0 && (
         <Box>
           <Text size="sm" fw={500} mb="xs" c="dimmed">
-            Not Connected
+            {asI18n('Not Connected')}
           </Text>
           <Stack gap="xs">
             {missingCreds.map((cred) => (
@@ -143,7 +143,7 @@ export const CredentialUserPanel: React.FC<{
                     <KeyRound size={14} color="var(--mantine-color-dimmed)" />
                   )}
                   <Text size="sm" c="dimmed">
-                    {cred.displayName}
+                    {asI18n(cred.displayName)}
                   </Text>
                 </Group>
                 {cred.isOAuth2 && (
@@ -154,7 +154,7 @@ export const CredentialUserPanel: React.FC<{
                     onClick={() => connectMutation.mutate(cred.name)}
                     loading={connectMutation.isPending}
                   >
-                    Connect
+                    {asI18n('Connect')}
                   </Button>
                 )}
               </Group>
@@ -165,17 +165,17 @@ export const CredentialUserPanel: React.FC<{
 
       {connectedCreds.length === 0 && !missingCreds.some((c) => c.isOAuth2) && (
         <Text size="sm" c="dimmed">
-          This user hasn't connected any credentials yet.
+          {asI18n("This user hasn't connected any credentials yet.")}
         </Text>
       )}
 
       {(revokeMutation.isError || connectMutation.isError) && (
         <Alert color="red" variant="light" icon={<AlertTriangle size={14} />}>
-          {String(
+          {asI18n(String(
             (revokeMutation.error as any)?.message ||
               (connectMutation.error as any)?.message ||
               'An error occurred'
-          )}
+          ))}
         </Alert>
       )}
     </Stack>

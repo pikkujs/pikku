@@ -1,5 +1,6 @@
 import React from 'react'
-import { Text } from '@mantine/core'
+import { Text } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 
 export interface ValTextProps {
   value: any
@@ -22,7 +23,7 @@ export const ValText: React.FC<ValTextProps> = ({
         ff="monospace"
         c={value ? '#86efac' : 'var(--app-text-muted)'}
       >
-        {String(value)}
+        {asI18n(String(value))}
       </Text>
     )
   }
@@ -33,7 +34,7 @@ export const ValText: React.FC<ValTextProps> = ({
       ff="monospace"
       c={isDim ? 'var(--app-text-muted)' : 'var(--app-text)'}
     >
-      {display}
+      {asI18n(display)}
     </Text>
   )
 }

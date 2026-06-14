@@ -9,7 +9,8 @@ import {
   Button,
   Group,
   Alert,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { Save, X, AlertTriangle, CheckCircle } from 'lucide-react'
 import { SectionLabel } from '../../ui/SectionLabel'
 import {
@@ -154,19 +155,19 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
           withCloseButton
           onClose={() => setSuccessMessage(null)}
         >
-          {successMessage}
+          {asI18n(successMessage)}
         </Alert>
       )}
 
       {updateAgent.error && (
         <Alert color="red" icon={<AlertTriangle size={16} />}>
-          {(updateAgent.error as Error).message}
+          {asI18n((updateAgent.error as Error).message)}
         </Alert>
       )}
 
-      <SectionLabel>Configuration</SectionLabel>
+      <SectionLabel>{asI18n('Configuration')}</SectionLabel>
       <Textarea
-        label="Description"
+        label={asI18n('Description')}
         value={description}
         onChange={(e) => setDescription(e.currentTarget.value)}
         autosize
@@ -175,16 +176,16 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
         size="xs"
       />
       <TextInput
-        label="Model"
-        description="Provider-qualified, e.g. openai/gpt-4o"
-        placeholder="provider/model"
+        label={asI18n('Model')}
+        description={asI18n('Provider-qualified, e.g. openai/gpt-4o')}
+        placeholder={asI18n('provider/model')}
         value={model ?? ''}
         onChange={(e) => setModel(e.currentTarget.value || null)}
         size="xs"
       />
       <Group grow gap="xs" wrap="wrap">
         <NumberInput
-          label="Max Steps"
+          label={asI18n('Max Steps')}
           style={{ minWidth: 100 }}
           value={maxSteps}
           onChange={(v) => setMaxSteps(typeof v === 'number' ? v : '')}
@@ -193,7 +194,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
           size="xs"
         />
         <NumberInput
-          label="Temperature"
+          label={asI18n('Temperature')}
           style={{ minWidth: 100 }}
           value={temperature}
           onChange={(v) => setTemperature(typeof v === 'number' ? v : '')}
@@ -204,7 +205,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
           size="xs"
         />
         <Select
-          label="Tool Choice"
+          label={asI18n('Tool Choice')}
           style={{ minWidth: 120 }}
           data={['auto', 'required', 'none']}
           value={toolChoice}
@@ -215,32 +216,32 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
       </Group>
 
       <MultiSelect
-        label="Tools"
+        label={asI18n('Tools')}
         data={toolOptions}
         value={tools}
         onChange={setTools}
         searchable
         clearable
         size="xs"
-        placeholder="Search functions..."
+        placeholder={asI18n('Search functions...')}
       />
 
       <MultiSelect
-        label="Tags"
+        label={asI18n('Tags')}
         data={tagOptions}
         value={tags}
         onChange={setTags}
         searchable
         clearable
         size="xs"
-        placeholder="Search tags..."
+        placeholder={asI18n('Search tags...')}
       />
 
-      <SectionLabel>Role</SectionLabel>
+      <SectionLabel>{asI18n('Role')}</SectionLabel>
       <Textarea
         value={role}
         onChange={(e) => setRole(e.currentTarget.value)}
-        placeholder="Who the agent is -- role, expertise, domain context"
+        placeholder={asI18n('Who the agent is -- role, expertise, domain context')}
         autosize
         minRows={2}
         maxRows={6}
@@ -249,11 +250,11 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
         }}
       />
 
-      <SectionLabel>Personality</SectionLabel>
+      <SectionLabel>{asI18n('Personality')}</SectionLabel>
       <Textarea
         value={personality}
         onChange={(e) => setPersonality(e.currentTarget.value)}
-        placeholder="Defines how the agent behaves -- tone, style, constraints"
+        placeholder={asI18n('Defines how the agent behaves -- tone, style, constraints')}
         autosize
         minRows={3}
         maxRows={10}
@@ -262,11 +263,11 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
         }}
       />
 
-      <SectionLabel>Goal</SectionLabel>
+      <SectionLabel>{asI18n('Goal')}</SectionLabel>
       <Textarea
         value={goal}
         onChange={(e) => setGoal(e.currentTarget.value)}
-        placeholder="Defines what the agent is trying to accomplish"
+        placeholder={asI18n('Defines what the agent is trying to accomplish')}
         autosize
         minRows={3}
         maxRows={10}
@@ -283,7 +284,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
           leftSection={<X size={14} />}
           size="xs"
         >
-          Cancel
+          {asI18n('Cancel')}
         </Button>
         <Button
           onClick={handleSave}
@@ -291,7 +292,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({
           leftSection={<Save size={14} />}
           size="xs"
         >
-          Save & Rebuild
+          {asI18n('Save & Rebuild')}
         </Button>
       </Group>
     </Stack>

@@ -1,19 +1,23 @@
 import React from 'react'
-import { Button, Tooltip } from '@mantine/core'
+import { Button, Tooltip } from '@pikku/mantine/core'
+import type { I18nNode } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 
 interface PikkuToggleProps {
   checked: boolean
   onChange: (checked: boolean) => void
-  tooltip?: string
+  tooltip?: I18nNode
 }
 
 export const PikkuToggle: React.FC<PikkuToggleProps> = ({
   checked,
   onChange,
-  tooltip = 'Show Pikku internals',
+  tooltip,
 }) => {
+  const { t } = useI18n()
+  const label = tooltip ?? t('common.show_pikku_internals')
   return (
-    <Tooltip label={tooltip} withArrow>
+    <Tooltip label={label} withArrow>
       <Button
         variant={checked ? 'light' : 'default'}
         color={checked ? 'blue' : 'gray'}
