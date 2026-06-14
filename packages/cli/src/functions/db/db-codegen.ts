@@ -358,9 +358,13 @@ export async function generateSchemaTypes(
     `  ? ColumnType<S, I | undefined, U>`,
     `  : ColumnType<T, T | undefined, T>`,
     ``,
-    `export type Private<T> = T & { readonly __classification__: 'private' }`,
-    `export type Pii<T> = T & { readonly __classification__: 'pii' }`,
-    `export type Secret<T> = T & { readonly __classification__: 'secret' }`,
+    // `__classification__` is optional so plain values stay assignable to branded
+    // columns (Kysely where/insert/update operands) while the brand remains
+    // structurally detectable for the inspector's PKU910 output check. Keep this
+    // in lockstep with `@pikku/core`'s data-classification.ts definitions.
+    `export type Private<T> = T & { readonly __classification__?: 'private' }`,
+    `export type Pii<T> = T & { readonly __classification__?: 'pii' }`,
+    `export type Secret<T> = T & { readonly __classification__?: 'secret' }`,
     ``,
     interfaces,
     ``,

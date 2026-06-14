@@ -29,8 +29,12 @@ export function findPiiPaths(
   seen.add(type)
 
   // ── Is this type itself branded? ─────────────────────────────────────────
-  // Private<T> = T & { readonly __classification__: 'private' }  →  isIntersection()
-  // where one constituent has a `__classification__` property whose type is a string literal.
+  // Private<T> = T & { readonly __classification__?: 'private' }  →  isIntersection()
+  // where one constituent has a `__classification__` property whose type is a
+  // string literal. The marker is OPTIONAL (so plain values stay assignable to
+  // branded columns), which means its resolved type is `'private' | undefined` —
+  // a union, not a bare literal. Read the level union-aware via `literalString`,
+  // otherwise pii/secret silently downgrade to the `'private'` fallback.
   if (type.isIntersection()) {
     for (const t of type.types) {
       const classificationProp = t
@@ -41,9 +45,9 @@ export function findPiiPaths(
           classificationProp.valueDeclaration ??
           classificationProp.declarations?.[0]
         const classification = decl
-          ? ((
-              checker.getTypeOfSymbolAtLocation(classificationProp, decl) as any
-            )?.value ?? 'private')
+          ? (literalString(
+              checker.getTypeOfSymbolAtLocation(classificationProp, decl)
+            ) ?? 'private')
           : 'private'
         return [{ path: path || '<return value>', classification }]
       }
@@ -95,4 +99,22 @@ export function findPiiPaths(
   }
 
   return violations
+}
+
+/**
+ * Recover a string-literal value from a type that may be the literal itself or a
+ * union containing it (e.g. `'private' | undefined`, produced by the optional
+ * `__classification__?` marker). Returns undefined when no string literal is
+ * present so the caller can apply its own fallback.
+ */
+function literalString(type: ts.Type): string | undefined {
+  const value = (type as { value?: unknown }).value
+  if (typeof value === 'string') return value
+  if (type.isUnion()) {
+    for (const member of type.types) {
+      const found = literalString(member)
+      if (found !== undefined) return found
+    }
+  }
+  return undefined
 }

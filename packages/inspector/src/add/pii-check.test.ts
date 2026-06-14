@@ -27,10 +27,15 @@ function makeLogger() {
  * Mirrors what schema.d.ts emits so the TypeScript program sees the correct
  * structural brand type even without @pikku/core being importable from /tmp.
  */
+// Optional `__classification__?` mirrors what @pikku/core and `pikku db migrate`
+// actually emit (optional so plain values stay assignable to branded columns).
+// The `Secret`-in-sessioned-function cases below double as the level-fidelity
+// guard: they only pass if `findPiiPaths` reads the level union-aware
+// ('secret' | undefined), not via a naive `.value`.
 const BRAND_TYPES = `
-type Private<T> = T & { readonly __classification__: 'private' }
-type Pii<T> = T & { readonly __classification__: 'pii' }
-type Secret<T> = T & { readonly __classification__: 'secret' }
+type Private<T> = T & { readonly __classification__?: 'private' }
+type Pii<T> = T & { readonly __classification__?: 'pii' }
+type Secret<T> = T & { readonly __classification__?: 'secret' }
 `
 
 async function runInspect(sourceCode: string) {

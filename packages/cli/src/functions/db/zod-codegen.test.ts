@@ -16,7 +16,7 @@ function generate(schema: string): string {
 
 test('classified ColumnType columns resolve to proper scalars, not z.unknown()', () => {
   const out = generate(`
-export type Private<T> = T & { readonly __classification__: 'private' }
+export type Private<T> = T & { readonly __classification__?: 'private' }
 
 export interface AppUser {
   userId: ColumnType<Private<string>, string, string>
@@ -39,7 +39,7 @@ export interface AppUser {
 
 test('insert schema marks columns optional when Insert admits undefined', () => {
   const out = generate(`
-export type Private<T> = T & { readonly __classification__: 'private' }
+export type Private<T> = T & { readonly __classification__?: 'private' }
 
 export interface Room {
   roomId: ColumnType<Private<string>, string, string>
