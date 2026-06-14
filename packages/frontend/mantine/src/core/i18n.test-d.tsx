@@ -4,6 +4,8 @@
 
 import {
   Button,
+  Text,
+  Title,
   ActionIcon,
   TextInput,
   Select,
@@ -38,6 +40,10 @@ const _ok_mixed = (
     {t('save')}
   </Button>
 )
+const _ok_text = <Text>{t('greeting')}</Text>
+// Text is polymorphic too
+const _ok_text_poly = <Text component="span">{t('greeting')}</Text>
+const _ok_title = <Title order={2}>{t('page.title')}</Title>
 const _ok_icon = <ActionIcon aria-label={t('close')} />
 const _ok_input = <TextInput label={t('email')} placeholder={asI18n('you@x.com')} />
 const _ok_select = (
@@ -93,6 +99,10 @@ const _bad_button2 = <Button>{'Save'}</Button>
 // prettier-ignore
 // @ts-expect-error — raw string child on polymorphic usage
 const _bad_poly = <Button component="a" href="/x">Go</Button>;
+// @ts-expect-error — raw string child on Text
+const _bad_text = <Text>Hello</Text>
+// @ts-expect-error — raw string child on Title
+const _bad_title = <Title order={1}>Page</Title>
 // @ts-expect-error — raw string aria-label
 const _bad_icon = <ActionIcon aria-label="close" />
 // @ts-expect-error — raw string label
@@ -109,6 +119,9 @@ void [
   _ok_button_jsx,
   _ok_poly,
   _ok_mixed,
+  _ok_text,
+  _ok_text_poly,
+  _ok_title,
   _ok_icon,
   _ok_input,
   _ok_select,
@@ -120,6 +133,8 @@ void [
   _bad_button,
   _bad_button2,
   _bad_poly,
+  _bad_text,
+  _bad_title,
   _bad_icon,
   _bad_input,
   _bad_modal,
