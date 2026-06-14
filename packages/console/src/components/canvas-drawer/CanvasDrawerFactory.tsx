@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { CanvasDrawerData } from '../../context/DrawerContext'
-import { Box, Text, Stack, Group, UnstyledButton, Loader } from '@mantine/core'
+import { Box, Text, Stack, Group, UnstyledButton, Loader } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
+import type { I18nNode } from '@pikku/react'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import {
   GitCompare,
@@ -242,8 +244,8 @@ const wireNodes = {
 
 const MenuButton: React.FC<{
   icon: React.ElementType
-  title: string
-  description: string
+  title: I18nNode
+  description: I18nNode
   onClick: () => void
   showArrow?: boolean
 }> = ({ icon: Icon, title, description, onClick, showArrow = true }) => {
@@ -282,7 +284,7 @@ const MenuButton: React.FC<{
 }
 
 const BackButton: React.FC<{
-  title: string
+  title: I18nNode
   iconId?: string
   onClick: () => void
 }> = ({ title, iconId, onClick }) => (
@@ -299,8 +301,8 @@ const BackButton: React.FC<{
 
 const NodeItem: React.FC<{
   icon?: React.ElementType
-  name: string
-  description: string
+  name: I18nNode
+  description: I18nNode
   onClick?: () => void
 }> = ({ icon: Icon, name, description, onClick }) => {
   const [hovered, setHovered] = useState(false)
@@ -336,14 +338,14 @@ const NodeItem: React.FC<{
 
 const FlowView: React.FC<{ onBack: () => void }> = ({ onBack }) => (
   <Box>
-    <BackButton title="Flow" onClick={onBack} />
+    <BackButton title={asI18n('Flow')} onClick={onBack} />
     <Stack gap={0}>
       {flowNodes.map((node) => (
         <NodeItem
           key={node.id}
           icon={node.icon}
-          name={node.name}
-          description={node.description}
+          name={asI18n(node.name)}
+          description={asI18n(node.description)}
         />
       ))}
     </Stack>
@@ -352,14 +354,14 @@ const FlowView: React.FC<{ onBack: () => void }> = ({ onBack }) => (
 
 const TriggersView: React.FC<{ onBack: () => void }> = ({ onBack }) => (
   <Box>
-    <BackButton title="Triggers" onClick={onBack} />
+    <BackButton title={asI18n('Triggers')} onClick={onBack} />
     <Stack gap={0}>
       {triggerNodes.map((node) => (
         <NodeItem
           key={node.id}
           icon={node.icon}
-          name={node.name}
-          description={node.description}
+          name={asI18n(node.name)}
+          description={asI18n(node.description)}
         />
       ))}
     </Stack>
@@ -375,20 +377,20 @@ const wireCategories = [
 
 const WireView: React.FC<{ onBack: () => void }> = ({ onBack }) => (
   <Box>
-    <BackButton title="Wire" onClick={onBack} />
+    <BackButton title={asI18n('Wire')} onClick={onBack} />
     <Stack gap={0}>
       {wireCategories.map(({ key, title }) => (
         <Box key={key}>
           <Box px="md" py="xs" bg="var(--mantine-color-default-hover)">
             <Text size="sm" fw={600} c="dimmed" tt="uppercase">
-              {title}
+              {asI18n(title)}
             </Text>
           </Box>
           {wireNodes[key].map((node) => (
             <NodeItem
               key={node.id}
-              name={node.name}
-              description={node.description}
+              name={asI18n(node.name)}
+              description={asI18n(node.description)}
             />
           ))}
         </Box>
@@ -404,7 +406,7 @@ const TransformView: React.FC<{
 
   return (
     <Box>
-      <BackButton title="Transform" onClick={onBack} />
+      <BackButton title={asI18n('Transform')} onClick={onBack} />
       {isLoading && (
         <Box p="xl" className={classes.centeredLoader}>
           <Loader size="sm" />
@@ -413,14 +415,14 @@ const TransformView: React.FC<{
       {isError && (
         <Box p="md">
           <Text size="sm" c="red">
-            Failed to load transforms
+            {asI18n('Failed to load transforms')}
           </Text>
         </Box>
       )}
       {!isLoading && !isError && (
         <Box p="md">
           <Text size="sm" c="dimmed">
-            No transforms available
+            {asI18n('No transforms available')}
           </Text>
         </Box>
       )}
@@ -453,7 +455,7 @@ const FunctionsView: React.FC<{
 
   return (
     <Box>
-      <BackButton title="Functions" onClick={onBack} />
+      <BackButton title={asI18n('Functions')} onClick={onBack} />
       {isLoading && (
         <Box p="xl" className={classes.centeredLoader}>
           <Loader size="sm" />
@@ -462,14 +464,14 @@ const FunctionsView: React.FC<{
       {isError && (
         <Box p="md">
           <Text size="sm" c="red">
-            Failed to load functions
+            {asI18n('Failed to load functions')}
           </Text>
         </Box>
       )}
       {internalFunctions.length === 0 && !isLoading && (
         <Box p="md">
           <Text size="sm" c="dimmed">
-            No functions available
+            {asI18n('No functions available')}
           </Text>
         </Box>
       )}
@@ -479,8 +481,8 @@ const FunctionsView: React.FC<{
             <NodeItem
               key={fn.name}
               icon={Code2}
-              name={fn.name}
-              description={fn.summary || fn.description || ''}
+              name={asI18n(fn.name)}
+              description={asI18n(fn.summary || fn.description || '')}
             />
           ))}
         </Stack>
@@ -512,7 +514,7 @@ const AddonItem: React.FC<{
           <Box className={classes.flexGrow}>
             <Group gap="xs">
               <Text size="sm" fw={500}>
-                {addon.displayName}
+                {asI18n(addon.displayName)}
               </Text>
               <PikkuBadge
                 type="dynamic"
@@ -521,7 +523,7 @@ const AddonItem: React.FC<{
               />
             </Group>
             <Text size="sm" c="dimmed">
-              {addon.description}
+              {asI18n(addon.description)}
             </Text>
           </Box>
         </Group>
@@ -544,7 +546,7 @@ const AddonsView: React.FC<{
 
   return (
     <Box>
-      <BackButton title="Addons" onClick={onBack} />
+      <BackButton title={asI18n('Addons')} onClick={onBack} />
       {isLoading && (
         <Box p="xl" className={classes.centeredLoader}>
           <Loader size="sm" />
@@ -553,14 +555,14 @@ const AddonsView: React.FC<{
       {isError && (
         <Box p="md">
           <Text size="sm" c="red">
-            Failed to load addons
+            {asI18n('Failed to load addons')}
           </Text>
         </Box>
       )}
       {filteredAddons.length === 0 && !isLoading && !isError && (
         <Box p="md">
           <Text size="sm" c="dimmed">
-            No addons available
+            {asI18n('No addons available')}
           </Text>
         </Box>
       )}
@@ -589,24 +591,24 @@ const AddonDetailView: React.FC<{
   return (
     <Box>
       <BackButton
-        title={addon.displayName}
+        title={asI18n(addon.displayName)}
         iconId={addon.id}
         onClick={onBack}
       />
       <Box p="md" className={classes.drawerButton}>
         <Text size="sm" c="dimmed">
-          {addon.description}
+          {asI18n(addon.description)}
         </Text>
         {secrets.length > 0 && (
           <Box mt="sm">
             <Text size="sm" fw={600} c="dimmed" mb="xs">
-              Secrets
+              {asI18n('Secrets')}
             </Text>
             <Stack gap="xs">
               {secrets.map((name) => (
                 <Group key={name} gap="xs" wrap="nowrap">
                   <Key size={14} color="var(--mantine-color-default-border)" />
-                  <Text size="sm">{name}</Text>
+                  <Text size="sm">{asI18n(name)}</Text>
                 </Group>
               ))}
             </Stack>
@@ -617,8 +619,8 @@ const AddonDetailView: React.FC<{
         {functions.map(([name, meta]: [string, any]) => (
           <NodeItem
             key={name}
-            name={meta?.displayName ?? name}
-            description={meta?.description ?? ''}
+            name={asI18n(meta?.displayName ?? name)}
+            description={asI18n(meta?.description ?? '')}
           />
         ))}
       </Stack>
@@ -668,44 +670,44 @@ const AddStepContent: React.FC = () => {
     <Box>
       <Box p="md" className={classes.drawerButton}>
         <Text size="sm" fw={600}>
-          Add a node
+          {asI18n('Add a node')}
         </Text>
       </Box>
       <Stack gap={0}>
         <MenuButton
           icon={Code2}
-          title="Function"
-          description="Call an internal function or RPC"
+          title={asI18n('Function')}
+          description={asI18n('Call an internal function or RPC')}
           onClick={() => setView('functions')}
         />
         <MenuButton
           icon={GitCompare}
-          title="Flow"
-          description="Branch, merge or loop the flow, etc."
+          title={asI18n('Flow')}
+          description={asI18n('Branch, merge or loop the flow, etc.')}
           onClick={() => setView('flow')}
         />
         <MenuButton
           icon={Wand2}
-          title="Transform"
-          description="Edit, filter, and transform data"
+          title={asI18n('Transform')}
+          description={asI18n('Edit, filter, and transform data')}
           onClick={() => setView('transform')}
         />
         <MenuButton
           icon={Plug}
-          title="Addons"
-          description="Third-party services and APIs"
+          title={asI18n('Addons')}
+          description={asI18n('Third-party services and APIs')}
           onClick={() => setView('addons')}
         />
         <MenuButton
           icon={Radio}
-          title="Triggers"
-          description="HTTP, WebSocket, CLI, MCP, Queue, Scheduler"
+          title={asI18n('Triggers')}
+          description={asI18n('HTTP, WebSocket, CLI, MCP, Queue, Scheduler')}
           onClick={() => setView('triggers')}
         />
         <MenuButton
           icon={Cable}
-          title="Wire"
-          description="HTTP headers, session, channel, MCP tools"
+          title={asI18n('Wire')}
+          description={asI18n('HTTP headers, session, channel, MCP tools')}
           onClick={() => setView('wire')}
         />
       </Stack>

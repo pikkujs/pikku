@@ -1,6 +1,6 @@
 import React from 'react'
 import type { Node, NodeProps } from 'reactflow'
-import { SimpleGrid, Box } from '@mantine/core'
+import { SimpleGrid, Box } from '@pikku/mantine/core'
 import { PikkuBadge } from '../../ui/PikkuBadge'
 import { RotateCw, Timer, Code } from 'lucide-react'
 import { BaseNode } from './BaseNode'

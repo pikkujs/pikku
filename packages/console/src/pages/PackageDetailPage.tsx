@@ -15,7 +15,9 @@ import {
   Text,
   ThemeIcon,
   TypographyStylesProvider,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import styles from '../components/ui/console.module.css'
 import {
   Package,
@@ -174,17 +176,18 @@ const HttpRoutesTab: React.FC<{
       })
     }
   }
+  const { t } = useI18n()
   return (
     <ReadOnlyTable
       headers={['METHOD', 'ROUTE', '']}
       rows={rows.map((r) => [
         <Code key="m">{r.method}</Code>,
         <Text key="r" size="sm" fw={500} ff="monospace">
-          {r.route}
+          {asI18n(r.route)}
         </Text>,
         r.sse ? (
           <Badge key="s" size="sm" variant="light" color="teal">
-            SSE
+            {t('package_detail.sse')}
           </Badge>
         ) : null,
       ])}
@@ -199,10 +202,10 @@ const ChannelsTab: React.FC<{
     headers={['NAME', 'ROUTE']}
     rows={Object.entries(channels ?? {}).map(([name, meta]) => [
       <Text key="n" size="sm" fw={500}>
-        {name}
+        {asI18n(name)}
       </Text>,
       <Text key="r" size="sm" ff="monospace" c="dimmed">
-        {meta.route}
+        {asI18n(meta.route)}
       </Text>,
     ])}
   />
@@ -227,10 +230,10 @@ const CliTab: React.FC<{
       rows={rows.map((r) => [
         <Code key="p">{r.program}</Code>,
         <Text key="c" size="sm" fw={500}>
-          {r.command}
+          {asI18n(r.command)}
         </Text>,
         <Text key="d" size="sm" c="dimmed">
-          {r.description ?? ''}
+          {asI18n(r.description ?? '')}
         </Text>,
       ])}
     />
@@ -268,13 +271,13 @@ const McpTab: React.FC<{ mcp: McpMeta }> = ({ mcp }) => {
                 : 'orange'
           }
         >
-          {r.type}
+          {asI18n(r.type)}
         </Badge>,
         <Text key="n" size="sm" fw={500}>
-          {r.name}
+          {asI18n(r.name)}
         </Text>,
         <Text key="d" size="sm" c="dimmed">
-          {r.description ?? ''}
+          {asI18n(r.description ?? '')}
         </Text>,
       ])}
     />
@@ -289,6 +292,7 @@ export const PackageDetailPage: React.FC<{
   const rpc = usePikkuRPC()
   const editable = useConsoleEditable()
   const queryClient = useQueryClient()
+  const { t } = useI18n()
   const [activeTab, setActiveTab] = React.useState<string | null>(null)
 
   const { data: installedAddons } = useQuery<
@@ -440,34 +444,33 @@ export const PackageDetailPage: React.FC<{
               <div>
                 <Group gap="xs">
                   <Text size="xl" fw={700}>
-                    {api.title || api.name}
+                    {asI18n(api.title || api.name)}
                   </Text>
                   <Badge size="sm" variant="light" color="gray">
-                    {api.openapiVer}
+                    {asI18n(api.openapiVer)}
                   </Badge>
                   <Badge size="sm" variant="light">
-                    v{api.version}
+                    {asI18n(`v${api.version}`)}
                   </Badge>
                 </Group>
                 <Text size="sm" c="dimmed">
-                  {api.provider}
-                  {api.service ? ` / ${api.service}` : ''}
+                  {asI18n(`${api.provider}${api.service ? ` / ${api.service}` : ''}`)}
                 </Text>
               </div>
             </Group>
 
-            {api.description && <Text size="sm">{api.description}</Text>}
+            {api.description && <Text size="sm">{asI18n(api.description)}</Text>}
 
             {(api.categories?.length > 0 || api.tags?.length > 0) && (
               <Group gap={6}>
                 {api.categories?.map((c: string) => (
                   <Badge key={c} size="sm" variant="light" color="blue">
-                    {c}
+                    {asI18n(c)}
                   </Badge>
                 ))}
-                {api.tags?.map((t: string) => (
-                  <Badge key={t} size="sm" variant="dot">
-                    {t}
+                {api.tags?.map((tag: string) => (
+                  <Badge key={tag} size="sm" variant="dot">
+                    {asI18n(tag)}
                   </Badge>
                 ))}
               </Group>
@@ -476,32 +479,32 @@ export const PackageDetailPage: React.FC<{
             {api.totalOperations > 0 && (
               <Box>
                 <Text size="sm" fw={600} c="dimmed" tt="uppercase" mb={4}>
-                  Operations ({api.totalOperations})
+                  {t('package_detail.operations', { count: api.totalOperations })}
                 </Text>
                 <Group gap={6}>
                   {api.opsGet > 0 && (
                     <Badge size="sm" color="blue">
-                      GET {api.opsGet}
+                      {asI18n(`GET ${api.opsGet}`)}
                     </Badge>
                   )}
                   {api.opsPost > 0 && (
                     <Badge size="sm" color="green">
-                      POST {api.opsPost}
+                      {asI18n(`POST ${api.opsPost}`)}
                     </Badge>
                   )}
                   {api.opsPut > 0 && (
                     <Badge size="sm" color="yellow">
-                      PUT {api.opsPut}
+                      {asI18n(`PUT ${api.opsPut}`)}
                     </Badge>
                   )}
                   {api.opsPatch > 0 && (
                     <Badge size="sm" color="orange">
-                      PATCH {api.opsPatch}
+                      {asI18n(`PATCH ${api.opsPatch}`)}
                     </Badge>
                   )}
                   {api.opsDelete > 0 && (
                     <Badge size="sm" color="red">
-                      DELETE {api.opsDelete}
+                      {asI18n(`DELETE ${api.opsDelete}`)}
                     </Badge>
                   )}
                 </Group>
@@ -511,7 +514,7 @@ export const PackageDetailPage: React.FC<{
             {api.servers?.length > 0 && (
               <Box>
                 <Text size="sm" fw={600} c="dimmed" tt="uppercase" mb={4}>
-                  Servers
+                  {t('package_detail.servers')}
                 </Text>
                 {api.servers.map((s: string) => (
                   <Code key={s} block style={{ fontSize: '12px' }}>
@@ -524,12 +527,12 @@ export const PackageDetailPage: React.FC<{
             {api.securitySchemes?.length > 0 && (
               <Box>
                 <Text size="sm" fw={600} c="dimmed" tt="uppercase" mb={4}>
-                  Authentication
+                  {t('package_detail.authentication')}
                 </Text>
                 <Group gap={6}>
                   {api.securitySchemes.map((s: string) => (
                     <Badge key={s} size="sm" variant="outline" color="gray">
-                      {s}
+                      {asI18n(s)}
                     </Badge>
                   ))}
                 </Group>
@@ -539,12 +542,12 @@ export const PackageDetailPage: React.FC<{
             {api.contentTypes?.length > 0 && (
               <Box>
                 <Text size="sm" fw={600} c="dimmed" tt="uppercase" mb={4}>
-                  Content Types
+                  {t('package_detail.content_types')}
                 </Text>
                 <Group gap={6}>
                   {api.contentTypes.map((c: string) => (
                     <Badge key={c} size="sm" variant="outline" color="gray">
-                      {c}
+                      {asI18n(c)}
                     </Badge>
                   ))}
                 </Group>
@@ -561,7 +564,7 @@ export const PackageDetailPage: React.FC<{
                   target="_blank"
                   leftSection={<BookOpen size={13} />}
                 >
-                  OpenAPI JSON
+                  {t('package_detail.openapi_json')}
                 </Button>
               )}
               {api.swaggerYamlUrl && (
@@ -573,7 +576,7 @@ export const PackageDetailPage: React.FC<{
                   target="_blank"
                   leftSection={<BookOpen size={13} />}
                 >
-                  OpenAPI YAML
+                  {t('package_detail.openapi_yaml')}
                 </Button>
               )}
               {editable && (
@@ -603,19 +606,19 @@ export const PackageDetailPage: React.FC<{
                     })
                   }}
                 >
-                  Generate & Install Addon
+                  {t('package_detail.generate_install_addon')}
                 </Button>
               )}
             </Group>
 
             {installOpenapiMutation.isSuccess && (
               <Alert color="green" icon={<Check size={16} />}>
-                Addon generated and installed successfully!
+                {t('package_detail.addon_installed_success')}
               </Alert>
             )}
             {installOpenapiMutation.error && (
               <Alert color="red">
-                {(installOpenapiMutation.error as Error).message}
+                {asI18n((installOpenapiMutation.error as Error).message)}
               </Alert>
             )}
           </Stack>
@@ -646,7 +649,7 @@ export const PackageDetailPage: React.FC<{
         hidePanel
       >
         <Box p="xl">
-          <Text c="dimmed">Package not found.</Text>
+          <Text c="dimmed">{t('package_detail.not_found')}</Text>
         </Box>
       </ResizablePanelLayout>
     )
@@ -696,10 +699,10 @@ export const PackageDetailPage: React.FC<{
   const showPanel = panelTabs.includes(currentTab)
   const emptyPanelMessage =
     currentTab === 'secrets'
-      ? 'Select a secret to view its details'
+      ? t('package_detail.select_secret')
       : currentTab === 'variables'
-        ? 'Select a variable to view its details'
-        : 'Select a function to view its details'
+        ? t('package_detail.select_variable')
+        : t('package_detail.select_function')
 
   return (
     <ResizablePanelLayout
@@ -712,16 +715,16 @@ export const PackageDetailPage: React.FC<{
           subtitle={
             <Group gap="xs">
               <Text size="md" c="dimmed">
-                /
+                {asI18n('/')}
               </Text>
               <Text size="md" c="dimmed">
-                {pkg.displayName}
+                {asI18n(pkg.displayName)}
               </Text>
               <Text size="md" c="dimmed">
-                /
+                {asI18n('/')}
               </Text>
               <Text size="md" fw={500}>
-                {pkg.version}
+                {asI18n(pkg.version)}
               </Text>
             </Group>
           }
@@ -744,16 +747,16 @@ export const PackageDetailPage: React.FC<{
               <Group gap="sm" align="center" justify="space-between">
                 <Group gap="xs" align="center">
                   <Text fw={600} size="lg">
-                    {pkg.displayName}
+                    {asI18n(pkg.displayName)}
                   </Text>
                   {pkg.author && (
                     <Text size="sm" c="dimmed">
-                      by {pkg.author}
+                      {asI18n(`by ${pkg.author}`)}
                     </Text>
                   )}
                   {pkg.license && (
                     <Badge size="sm" variant="outline" color="gray">
-                      {pkg.license}
+                      {asI18n(pkg.license)}
                     </Badge>
                   )}
                   {pkg.repository && (
@@ -764,7 +767,7 @@ export const PackageDetailPage: React.FC<{
                       rel="noopener noreferrer"
                       c="dimmed"
                     >
-                      {pkg.repository.replace(/^https?:\/\//, '')}
+                      {asI18n(pkg.repository.replace(/^https?:\/\//, ''))}
                     </Anchor>
                   )}
                 </Group>
@@ -797,7 +800,7 @@ export const PackageDetailPage: React.FC<{
                             })
                           }
                         >
-                          Update to {communityVersion}
+                          {asI18n(`Update to ${communityVersion}`)}
                         </Button>
                       )
                     }
@@ -810,7 +813,7 @@ export const PackageDetailPage: React.FC<{
                           leftSection={<Check size={13} />}
                           disabled
                         >
-                          Installed
+                          {t('package_detail.installed')}
                         </Button>
                       )
                     }
@@ -829,21 +832,21 @@ export const PackageDetailPage: React.FC<{
                           })
                         }
                       >
-                        Install
+                        {t('package_detail.install')}
                       </Button>
                     )
                   })()}
               </Group>
               {pkg.description && (
                 <Text size="sm" c="dimmed">
-                  {pkg.description}
+                  {asI18n(pkg.description)}
                 </Text>
               )}
               {(pkg.tags ?? []).length > 0 && (
                 <Group gap="xs">
                   {pkg.tags.map((tag) => (
                     <Badge key={tag} size="sm" variant="dot">
-                      {tag}
+                      {asI18n(tag)}
                     </Badge>
                   ))}
                 </Group>
@@ -862,37 +865,37 @@ export const PackageDetailPage: React.FC<{
               <Tabs.List style={{ borderBottom: 'none' }}>
                 {pkg.readme && (
                   <Tabs.Tab value="readme" leftSection={<BookOpen size={14} />}>
-                    README
+                    {t('package_detail.tab_readme')}
                   </Tabs.Tab>
                 )}
                 {functionList.length > 0 && (
                   <Tabs.Tab value="functions" leftSection={<Code2 size={14} />}>
-                    Functions ({functionList.length})
+                    {asI18n(`Functions (${functionList.length})`)}
                   </Tabs.Tab>
                 )}
                 {agentList.length > 0 && (
                   <Tabs.Tab value="agents" leftSection={<Bot size={14} />}>
-                    Agents ({agentList.length})
+                    {asI18n(`Agents (${agentList.length})`)}
                   </Tabs.Tab>
                 )}
                 {httpRouteCount > 0 && (
                   <Tabs.Tab value="http" leftSection={<Globe size={14} />}>
-                    HTTP Routes ({httpRouteCount})
+                    {asI18n(`HTTP Routes (${httpRouteCount})`)}
                   </Tabs.Tab>
                 )}
                 {channelList.length > 0 && (
                   <Tabs.Tab value="channels" leftSection={<Radio size={14} />}>
-                    Channels ({channelList.length})
+                    {asI18n(`Channels (${channelList.length})`)}
                   </Tabs.Tab>
                 )}
                 {cliCommandCount > 0 && (
                   <Tabs.Tab value="cli" leftSection={<Terminal size={14} />}>
-                    CLI ({cliCommandCount})
+                    {asI18n(`CLI (${cliCommandCount})`)}
                   </Tabs.Tab>
                 )}
                 {mcpCount > 0 && (
                   <Tabs.Tab value="mcp" leftSection={<Cpu size={14} />}>
-                    MCP ({mcpCount})
+                    {asI18n(`MCP (${mcpCount})`)}
                   </Tabs.Tab>
                 )}
                 <Tabs.Tab
@@ -900,14 +903,14 @@ export const PackageDetailPage: React.FC<{
                   leftSection={<KeyRound size={14} />}
                   disabled={secretList.length === 0}
                 >
-                  Secrets ({secretList.length})
+                  {asI18n(`Secrets (${secretList.length})`)}
                 </Tabs.Tab>
                 <Tabs.Tab
                   value="variables"
                   leftSection={<Settings2 size={14} />}
                   disabled={variableList.length === 0}
                 >
-                  Variables ({variableList.length})
+                  {asI18n(`Variables (${variableList.length})`)}
                 </Tabs.Tab>
               </Tabs.List>
             </Box>
@@ -947,7 +950,7 @@ export const PackageDetailPage: React.FC<{
                   headers={['NAME']}
                   rows={agentList.map(([key]) => [
                     <Text key={key} size="sm" fw={500}>
-                      {key}
+                      {asI18n(key)}
                     </Text>,
                   ])}
                 />

@@ -1,4 +1,4 @@
-import { Box, Center, Loader } from '@mantine/core'
+import { Box, Center, Loader } from '@pikku/mantine/core'
 import { useLocalStorage } from '@mantine/hooks'
 import {
   Sidebar,

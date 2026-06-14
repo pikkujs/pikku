@@ -1,5 +1,6 @@
 import React from 'react'
-import { Stack, Text, Group, Table, Card, Box, Anchor } from '@mantine/core'
+import { Stack, Text, Group, Table, Card, Box, Anchor } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { GitBranch } from 'lucide-react'
 import { useLink } from '../../../router'
 import { useWorkflowContext } from '../../../context/WorkflowContext'
@@ -40,16 +41,16 @@ export const WorkflowHeader: React.FC<WorkflowPanelProps> = ({
       <Group gap="xs">
         <GitBranch size={20} />
         <Text size="lg" ff="monospace" fw={600}>
-          {workflow?.name || workflowId}
+          {asI18n(workflow?.name || workflowId)}
         </Text>
         {workflow?.graphHash && (
           <Text size="sm" ff="monospace" c="dimmed">
-            #{workflow.graphHash}
+            {asI18n(`#${workflow.graphHash}`)}
           </Text>
         )}
       </Group>
       <Text size="sm" c="dimmed" mt={4}>
-        {workflow?.summary || 'No summary'}
+        {asI18n(workflow?.summary || 'No summary')}
       </Text>
     </Box>
   )
@@ -70,7 +71,7 @@ const WorkflowWiring: React.FC<{ wiredTo: WiredTo }> = ({ wiredTo }) => {
     <Stack gap="sm">
       {wiredTo.transports.length > 0 && (
         <Box>
-          <SectionLabel>Wired To</SectionLabel>
+          <SectionLabel>{asI18n('Wired To')}</SectionLabel>
           <Group gap={4} wrap="wrap">
             {wiredTo.transports.map((t) => (
               <Anchor
@@ -85,7 +86,7 @@ const WorkflowWiring: React.FC<{ wiredTo: WiredTo }> = ({ wiredTo }) => {
                   color={wiringTypeColor(t.type)}
                   className={classes.clickableText}
                 >
-                  {t.name}
+                  {asI18n(t.name)}
                 </PikkuBadge>
               </Anchor>
             ))}
@@ -94,7 +95,7 @@ const WorkflowWiring: React.FC<{ wiredTo: WiredTo }> = ({ wiredTo }) => {
       )}
       {wiredTo.jobs.length > 0 && (
         <Box>
-          <SectionLabel>Jobs</SectionLabel>
+          <SectionLabel>{asI18n('Jobs')}</SectionLabel>
           <Group gap={4} wrap="wrap">
             {wiredTo.jobs.map((j) => (
               <Anchor
@@ -109,7 +110,7 @@ const WorkflowWiring: React.FC<{ wiredTo: WiredTo }> = ({ wiredTo }) => {
                   color={wiringTypeColor(j.type)}
                   className={classes.clickableText}
                 >
-                  {j.name}
+                  {asI18n(j.name)}
                 </PikkuBadge>
               </Anchor>
             ))}
@@ -140,9 +141,9 @@ export const WorkflowConfiguration: React.FC<WorkflowPanelProps> = ({
 
       {workflow?.pikkuFuncId && (
         <Box>
-          <SectionLabel>Handler Function</SectionLabel>
+          <SectionLabel>{asI18n('Handler Function')}</SectionLabel>
           <Text size="sm" ff="monospace">
-            {workflow.pikkuFuncId}
+            {asI18n(workflow.pikkuFuncId)}
           </Text>
         </Box>
       )}
@@ -164,7 +165,7 @@ export const WorkflowNodes: React.FC<WorkflowPanelProps> = ({ workflowId }) => {
 
   return (
     <Stack gap={6}>
-      <SectionLabel>Nodes</SectionLabel>
+      <SectionLabel>{asI18n('Nodes')}</SectionLabel>
       <Card withBorder radius="md" padding={0}>
         {hasNodes ? (
           <Card.Section>
@@ -188,21 +189,21 @@ export const WorkflowNodes: React.FC<WorkflowPanelProps> = ({ workflowId }) => {
                   >
                     <Table.Td>
                       <Text fw={500} ff="monospace" size="sm">
-                        {node.stepName || nodeId}
+                        {asI18n(node.stepName || nodeId)}
                       </Text>
                       {node.stepName && node.stepName !== nodeId && (
                         <Text size="sm" c="dimmed">
-                          {nodeId}
+                          {asI18n(nodeId)}
                         </Text>
                       )}
                     </Table.Td>
                     <Table.Td>
                       {node.flow && (
-                        <PikkuBadge type="label">{node.flow}</PikkuBadge>
+                        <PikkuBadge type="label">{asI18n(node.flow)}</PikkuBadge>
                       )}
                       {node.rpcName && (
                         <PikkuBadge type="label" color="green">
-                          RPC
+                          {asI18n('RPC')}
                         </PikkuBadge>
                       )}
                     </Table.Td>
@@ -237,7 +238,7 @@ const WorkflowRunNodes: React.FC<WorkflowPanelProps> = ({ workflowId }) => {
 
   return (
     <Stack gap={6}>
-      <SectionLabel>Nodes</SectionLabel>
+      <SectionLabel>{asI18n('Nodes')}</SectionLabel>
       <Card withBorder radius="md" padding={0}>
         <Card.Section>
           <Table verticalSpacing={4} horizontalSpacing="xs" highlightOnHover>
@@ -270,21 +271,21 @@ const WorkflowRunNodes: React.FC<WorkflowPanelProps> = ({ workflowId }) => {
                   >
                     <Table.Td>
                       <Text fw={500} ff="monospace" size="sm">
-                        {node.stepName || nodeId}
+                        {asI18n(node.stepName || nodeId)}
                       </Text>
                       {node.stepName && node.stepName !== nodeId && (
                         <Text size="sm" c="dimmed">
-                          {nodeId}
+                          {asI18n(nodeId)}
                         </Text>
                       )}
                     </Table.Td>
                     <Table.Td>
                       {node.flow && (
-                        <PikkuBadge type="label">{node.flow}</PikkuBadge>
+                        <PikkuBadge type="label">{asI18n(node.flow)}</PikkuBadge>
                       )}
                       {node.rpcName && (
                         <PikkuBadge type="label" color="green">
-                          {node.rpcName}
+                          {asI18n(node.rpcName)}
                         </PikkuBadge>
                       )}
                     </Table.Td>
@@ -293,7 +294,7 @@ const WorkflowRunNodes: React.FC<WorkflowPanelProps> = ({ workflowId }) => {
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm" ff="monospace">
-                        {step.attemptCount}
+                        {asI18n(String(step.attemptCount))}
                       </Text>
                     </Table.Td>
                   </Table.Tr>
@@ -314,7 +315,7 @@ export const WorkflowState: React.FC<WorkflowPanelProps> = ({ workflowId }) => {
 
   return (
     <Stack gap={6}>
-      <SectionLabel>State Variables</SectionLabel>
+      <SectionLabel>{asI18n('State Variables')}</SectionLabel>
       <Card withBorder radius="md" padding={0}>
         {hasContext ? (
           <Card.Section>
@@ -338,19 +339,19 @@ export const WorkflowState: React.FC<WorkflowPanelProps> = ({ workflowId }) => {
                     <Table.Tr key={varName}>
                       <Table.Td>
                         <Text fw={500} ff="monospace" size="sm">
-                          {varName}
+                          {asI18n(varName)}
                         </Text>
                       </Table.Td>
                       <Table.Td>
                         <PikkuBadge type="label">
-                          {varDef.type || 'unknown'}
+                          {asI18n(varDef.type || 'unknown')}
                         </PikkuBadge>
                       </Table.Td>
                       <Table.Td>
                         <Text size="sm" ff="monospace" c="dimmed">
-                          {varDef.default !== undefined
+                          {asI18n(varDef.default !== undefined
                             ? String(varDef.default)
-                            : '\u2014'}
+                            : '\u2014')}
                         </Text>
                       </Table.Td>
                     </Table.Tr>
@@ -385,7 +386,7 @@ const formatDuration = (start: string | undefined, end: string | undefined) => {
 const RunInput: React.FC<{ input: unknown }> = ({ input }) => {
   return (
     <Stack gap={6}>
-      <SectionLabel>Input</SectionLabel>
+      <SectionLabel>{asI18n('Input')}</SectionLabel>
       <Card withBorder radius="md" padding={0}>
         <Card.Section p="md">
           <DataViewer data={input} />
@@ -404,7 +405,7 @@ export const WorkflowRunOverview: React.FC<WorkflowPanelProps> = ({
   if (!runData) {
     return (
       <Stack gap={6}>
-        <SectionLabel>Run</SectionLabel>
+        <SectionLabel>{asI18n('Run')}</SectionLabel>
         <Card withBorder radius="md" padding={0}>
           <Card.Section p="md">
             <EmptyState />
@@ -425,12 +426,12 @@ export const WorkflowRunOverview: React.FC<WorkflowPanelProps> = ({
   return (
     <Stack gap="md">
       <Group gap="xs">
-        <SectionLabel>Run</SectionLabel>
+        <SectionLabel>{asI18n('Run')}</SectionLabel>
         <PikkuBadge type="status" value={runData.status} variant="filled" />
       </Group>
 
       <Stack gap={6}>
-        <SectionLabel>Details</SectionLabel>
+        <SectionLabel>{asI18n('Details')}</SectionLabel>
         <Card withBorder radius="md" padding={0}>
           <Card.Section>
             <Table verticalSpacing={4} horizontalSpacing="xs">
@@ -438,24 +439,24 @@ export const WorkflowRunOverview: React.FC<WorkflowPanelProps> = ({
                 <Table.Tr>
                   <Table.Td>
                     <Text size="sm" c="dimmed">
-                      Run ID
+                      {asI18n('Run ID')}
                     </Text>
                   </Table.Td>
                   <Table.Td>
                     <Text size="sm" ff="monospace">
-                      {runData.id}
+                      {asI18n(runData.id)}
                     </Text>
                   </Table.Td>
                 </Table.Tr>
                 <Table.Tr>
                   <Table.Td>
                     <Text size="sm" c="dimmed">
-                      Started
+                      {asI18n('Started')}
                     </Text>
                   </Table.Td>
                   <Table.Td>
                     <Text size="sm" ff="monospace">
-                      {formatTimestamp(runData.createdAt)}
+                      {asI18n(formatTimestamp(runData.createdAt))}
                     </Text>
                   </Table.Td>
                 </Table.Tr>
@@ -463,12 +464,12 @@ export const WorkflowRunOverview: React.FC<WorkflowPanelProps> = ({
                   <Table.Tr>
                     <Table.Td>
                       <Text size="sm" c="dimmed">
-                        Ended
+                        {asI18n('Ended')}
                       </Text>
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm" ff="monospace">
-                        {formatTimestamp(endTime)}
+                        {asI18n(formatTimestamp(endTime))}
                       </Text>
                     </Table.Td>
                   </Table.Tr>
@@ -477,12 +478,12 @@ export const WorkflowRunOverview: React.FC<WorkflowPanelProps> = ({
                   <Table.Tr>
                     <Table.Td>
                       <Text size="sm" c="dimmed">
-                        Duration
+                        {asI18n('Duration')}
                       </Text>
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm" ff="monospace" fw={500}>
-                        {duration}
+                        {asI18n(duration)}
                       </Text>
                     </Table.Td>
                   </Table.Tr>
@@ -491,7 +492,7 @@ export const WorkflowRunOverview: React.FC<WorkflowPanelProps> = ({
                   <Table.Tr>
                     <Table.Td>
                       <Text size="sm" c="dimmed">
-                        Wire
+                        {asI18n('Wire')}
                       </Text>
                     </Table.Td>
                     <Table.Td>
@@ -501,11 +502,11 @@ export const WorkflowRunOverview: React.FC<WorkflowPanelProps> = ({
                           size="sm"
                           color={wiringTypeColor(runData.wire.type)}
                         >
-                          {runData.wire.type}
+                          {asI18n(runData.wire.type)}
                         </PikkuBadge>
                         {runData.wire.id && (
                           <Text size="sm" ff="monospace">
-                            {runData.wire.id}
+                            {asI18n(runData.wire.id)}
                           </Text>
                         )}
                       </Group>
@@ -516,12 +517,12 @@ export const WorkflowRunOverview: React.FC<WorkflowPanelProps> = ({
                   <Table.Tr>
                     <Table.Td>
                       <Text size="sm" c="dimmed">
-                        Graph Hash
+                        {asI18n('Graph Hash')}
                       </Text>
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm" ff="monospace">
-                        {runData.graphHash}
+                        {asI18n(runData.graphHash)}
                       </Text>
                     </Table.Td>
                   </Table.Tr>
@@ -538,7 +539,7 @@ export const WorkflowRunOverview: React.FC<WorkflowPanelProps> = ({
 
       {runData.output && (
         <Stack gap={6}>
-          <SectionLabel>Output</SectionLabel>
+          <SectionLabel>{asI18n('Output')}</SectionLabel>
           <Card withBorder radius="md" padding={0}>
             <Card.Section p="md">
               <DataViewer data={runData.output} />
@@ -549,17 +550,17 @@ export const WorkflowRunOverview: React.FC<WorkflowPanelProps> = ({
 
       {runData.error && (
         <Stack gap={6}>
-          <SectionLabel>Error</SectionLabel>
+          <SectionLabel>{asI18n('Error')}</SectionLabel>
           <Card withBorder radius="md" padding={0}>
             <Card.Section p="md">
               <Text size="sm" ff="monospace" c="red">
-                {typeof runData.error.message === 'string'
+                {asI18n(typeof runData.error.message === 'string'
                   ? runData.error.message
                   : JSON.stringify(
                       runData.error.message ?? runData.error,
                       null,
                       2
-                    )}
+                    ))}
               </Text>
             </Card.Section>
           </Card>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Group, SegmentedControl, TextInput } from '@mantine/core'
+import { Group, SegmentedControl, TextInput } from '@pikku/mantine/core'
 import { Search } from 'lucide-react'
 import { useSearchParams } from '../router'
 import { PanelProvider } from '../context/PanelContext'
@@ -8,6 +8,7 @@ import { ListPageHeader } from '../components/layout/PageLayout'
 import { SchedulersTab } from '../components/tabs/SchedulersTab'
 import { QueuesTab } from '../components/tabs/QueuesTab'
 import { TriggersTab } from '../components/tabs/TriggersTab'
+import { useI18n } from '@pikku/react/i18n'
 
 const TABS = [
   { value: 'schedulers', label: 'Schedulers' },
@@ -15,10 +16,10 @@ const TABS = [
   { value: 'triggers', label: 'Triggers' },
 ]
 
-const SEARCH_PLACEHOLDER: Record<string, string> = {
-  schedulers: 'Search scheduled tasks...',
-  queues: 'Search queue workers...',
-  triggers: 'Search triggers...',
+const SEARCH_PLACEHOLDER_KEY: Record<string, string> = {
+  schedulers: 'jobs.search.schedulers',
+  queues: 'jobs.search.queues',
+  triggers: 'jobs.search.triggers',
 }
 
 interface JobsPageProps {
@@ -32,6 +33,7 @@ export const JobsPage: React.FC<JobsPageProps> = ({
   triggersHero,
   schedulersHero,
 }) => {
+  const { t } = useI18n()
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
   const tab = searchParams.get('tab') || 'schedulers'
@@ -57,13 +59,13 @@ export const JobsPage: React.FC<JobsPageProps> = ({
       <ResizablePanelLayout
         header={
           <ListPageHeader
-            title="Jobs"
-            description="Scheduled tasks, queues, and triggers"
+            title={t('jobs.title')}
+            description={t('jobs.description')}
             docsHref="https://pikku.dev/docs/wiring/scheduled-tasks"
             filters={
               <Group gap="sm" wrap="nowrap">
                 <TextInput
-                  placeholder={SEARCH_PLACEHOLDER[tab]}
+                  placeholder={t(SEARCH_PLACEHOLDER_KEY[tab])}
                   leftSection={<Search size={14} />}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -80,7 +82,7 @@ export const JobsPage: React.FC<JobsPageProps> = ({
             }
           />
         }
-        emptyPanelMessage="Select an item to view details"
+        emptyPanelMessage={t('common.select_item')}
       >
         {renderTab()}
       </ResizablePanelLayout>

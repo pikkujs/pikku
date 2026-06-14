@@ -8,7 +8,7 @@ import {
   Button,
   Alert,
   Loader,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
 import {
   KeyRound,
   Settings,
@@ -18,6 +18,8 @@ import {
   CheckCircle,
   ShieldCheck,
 } from 'lucide-react'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { PikkuBadge } from '../../ui/PikkuBadge'
 import { SectionLabel } from './shared/SectionLabel'
 import { SchemaSection } from './shared/SchemaSection'
@@ -40,6 +42,7 @@ export const SecretConfiguration: React.FC<SecretPanelProps> = ({
   secretId,
   metadata = {},
 }) => {
+  const { t } = useI18n()
   const isOAuth2 = !!metadata?.oauth2
 
   return (
@@ -48,12 +51,12 @@ export const SecretConfiguration: React.FC<SecretPanelProps> = ({
         <Group gap="xs">
           <KeyRound size={20} />
           <Text size="lg" ff="monospace" fw={600}>
-            {metadata?.displayName || secretId}
+            {asI18n(metadata?.displayName || secretId)}
           </Text>
         </Group>
         {metadata?.description && (
           <Text size="sm" c="dimmed" mt={4}>
-            {metadata.description}
+            {asI18n(metadata.description)}
           </Text>
         )}
       </Box>
@@ -61,17 +64,17 @@ export const SecretConfiguration: React.FC<SecretPanelProps> = ({
       <Group gap="xs">
         {isOAuth2 ? (
           <PikkuBadge type="label" color="gray">
-            OAuth2
+            {t('secret_config.oauth2')}
           </PikkuBadge>
         ) : (
           <PikkuBadge type="label" color="gray">
-            Secret
+            {t('secret_config.secret')}
           </PikkuBadge>
         )}
       </Group>
 
       <Box>
-        <SectionLabel>Secret ID</SectionLabel>
+        <SectionLabel>{t('secret_config.secret_id')}</SectionLabel>
         <Code>{metadata?.secretId}</Code>
       </Box>
 
@@ -79,33 +82,33 @@ export const SecretConfiguration: React.FC<SecretPanelProps> = ({
         <>
           {metadata.oauth2.tokenSecretId && (
             <Box>
-              <SectionLabel>Token Secret ID</SectionLabel>
+              <SectionLabel>{t('secret_config.token_secret_id')}</SectionLabel>
               <Code>{metadata.oauth2.tokenSecretId}</Code>
             </Box>
           )}
           {metadata.oauth2.authorizationUrl && (
             <Box>
-              <SectionLabel>Authorization URL</SectionLabel>
+              <SectionLabel>{t('secret_config.authorization_url')}</SectionLabel>
               <Text size="sm" ff="monospace">
-                {metadata.oauth2.authorizationUrl}
+                {asI18n(metadata.oauth2.authorizationUrl)}
               </Text>
             </Box>
           )}
           {metadata.oauth2.tokenUrl && (
             <Box>
-              <SectionLabel>Token URL</SectionLabel>
+              <SectionLabel>{t('secret_config.token_url')}</SectionLabel>
               <Text size="sm" ff="monospace">
-                {metadata.oauth2.tokenUrl}
+                {asI18n(metadata.oauth2.tokenUrl)}
               </Text>
             </Box>
           )}
           {metadata.oauth2.scopes?.length > 0 && (
             <Box>
-              <SectionLabel>Scopes</SectionLabel>
+              <SectionLabel>{t('secret_config.scopes')}</SectionLabel>
               <Group gap={6}>
                 {metadata.oauth2.scopes.map((scope: string) => (
                   <PikkuBadge key={scope} type="label" color="gray">
-                    {scope}
+                    {asI18n(scope)}
                   </PikkuBadge>
                 ))}
               </Group>
@@ -114,7 +117,7 @@ export const SecretConfiguration: React.FC<SecretPanelProps> = ({
         </>
       )}
 
-      <SchemaSection label="Fields" schemaName={metadata?.schema} />
+      <SchemaSection label={t('secret_config.fields')} schemaName={metadata?.schema} />
 
       {metadata?.installed !== false && (
         <>
@@ -135,6 +138,7 @@ export const SecretConfiguration: React.FC<SecretPanelProps> = ({
 const OAuthConnectionSection: React.FC<{
   credentialName: string
 }> = ({ credentialName }) => {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const popupRef = useRef<Window | null>(null)
   const { data: status, isLoading: statusLoading } = useOAuthStatus(
@@ -184,7 +188,7 @@ const OAuthConnectionSection: React.FC<{
 
   return (
     <Box>
-      <SectionLabel>OAuth2 Connection</SectionLabel>
+      <SectionLabel>{t('oauth_connection.title')}</SectionLabel>
       <Stack gap="sm">
         {statusLoading ? (
           <Loader size="sm" />
@@ -192,37 +196,39 @@ const OAuthConnectionSection: React.FC<{
           <Stack gap="xs">
             <Group gap="xs">
               <PikkuBadge type="label" color="green">
-                Connected
+                {t('oauth_connection.connected')}
               </PikkuBadge>
               {status.hasRefreshToken && (
                 <PikkuBadge type="label" color="gray">
-                  Has Refresh Token
+                  {t('oauth_connection.has_refresh_token')}
                 </PikkuBadge>
               )}
             </Group>
             {status.expiresAt && (
               <Text size="sm" c="dimmed">
-                {status.isExpired
-                  ? `Token expired at ${new Date(status.expiresAt).toLocaleString()}`
-                  : `Token expires at ${new Date(status.expiresAt).toLocaleString()}`}
+                {asI18n(
+                  status.isExpired
+                    ? `Token expired at ${new Date(status.expiresAt).toLocaleString()}`
+                    : `Token expires at ${new Date(status.expiresAt).toLocaleString()}`
+                )}
               </Text>
             )}
           </Stack>
         ) : (
           <PikkuBadge type="label" color="gray">
-            Not Connected
+            {t('oauth_connection.not_connected')}
           </PikkuBadge>
         )}
 
         {connectMutation.isError && (
           <Alert icon={<AlertTriangle size={16} />} color="red" variant="light">
-            Failed to start OAuth flow
+            {t('oauth_connection.failed_to_connect')}
           </Alert>
         )}
 
         {disconnectMutation.isError && (
           <Alert icon={<AlertTriangle size={16} />} color="red" variant="light">
-            Failed to disconnect
+            {t('oauth_connection.failed_to_disconnect')}
           </Alert>
         )}
 
@@ -238,15 +244,17 @@ const OAuthConnectionSection: React.FC<{
             color={(testTokenMutation.data as any)?.valid ? 'green' : 'red'}
             variant="light"
           >
-            {(testTokenMutation.data as any)?.valid
-              ? 'Token is valid'
-              : `Token invalid: ${(testTokenMutation.data as any)?.error || 'unknown error'}`}
+            {asI18n(
+              (testTokenMutation.data as any)?.valid
+                ? 'Token is valid'
+                : `Token invalid: ${(testTokenMutation.data as any)?.error || 'unknown error'}`
+            )}
           </Alert>
         )}
 
         {testTokenMutation.isError && (
           <Alert icon={<AlertTriangle size={16} />} color="red" variant="light">
-            Failed to test token
+            {t('oauth_connection.failed_to_test_token')}
           </Alert>
         )}
 
@@ -260,7 +268,7 @@ const OAuthConnectionSection: React.FC<{
               loading={connectMutation.isPending}
               onClick={handleConnect}
             >
-              Connect
+              {t('oauth_connection.connect')}
             </Button>
           ) : (
             <>
@@ -271,7 +279,7 @@ const OAuthConnectionSection: React.FC<{
                 loading={testTokenMutation.isPending}
                 onClick={handleTestToken}
               >
-                Test Token
+                {t('oauth_connection.test_token')}
               </Button>
               <Button
                 variant="light"
@@ -281,7 +289,7 @@ const OAuthConnectionSection: React.FC<{
                 loading={disconnectMutation.isPending}
                 onClick={handleDisconnect}
               >
-                Disconnect
+                {t('oauth_connection.disconnect')}
               </Button>
             </>
           )}
@@ -300,34 +308,35 @@ export const VariableConfiguration: React.FC<VariablePanelProps> = ({
   variableId,
   metadata = {},
 }) => {
+  const { t } = useI18n()
   return (
     <Stack gap="lg">
       <Box>
         <Group gap="xs">
           <Settings size={20} />
           <Text size="lg" ff="monospace" fw={600}>
-            {metadata?.displayName || variableId}
+            {asI18n(metadata?.displayName || variableId)}
           </Text>
         </Group>
         {metadata?.description && (
           <Text size="sm" c="dimmed" mt={4}>
-            {metadata.description}
+            {asI18n(metadata.description)}
           </Text>
         )}
       </Box>
 
       <Group gap="xs">
         <PikkuBadge type="label" color="teal">
-          Variable
+          {t('variable_config.variable')}
         </PikkuBadge>
       </Group>
 
       <Box>
-        <SectionLabel>Variable ID</SectionLabel>
+        <SectionLabel>{t('variable_config.variable_id')}</SectionLabel>
         <Code>{metadata?.variableId}</Code>
       </Box>
 
-      <SchemaSection label="Fields" schemaName={metadata?.schema} />
+      <SchemaSection label={t('variable_config.fields')} schemaName={metadata?.schema} />
 
       {metadata?.installed !== false && (
         <VariableValueEditor

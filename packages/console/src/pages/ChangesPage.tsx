@@ -13,8 +13,10 @@ import {
   Button,
   ScrollArea,
   Code,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
 import { GitCompare, ChevronRight, ChevronDown, FolderOpen } from 'lucide-react'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { useSearchParams } from '../router'
 import { PanelProvider } from '../context/PanelContext'
@@ -67,7 +69,7 @@ const StatusPill: React.FC<{ status: DiffEntry['status'] }> = ({ status }) => {
       variant="light"
       style={{ fontFamily: 'monospace', minWidth: 20, textAlign: 'center' }}
     >
-      {STATUS_GLYPH[status]}
+      {asI18n(STATUS_GLYPH[status])}
     </Badge>
   )
 }
@@ -84,7 +86,7 @@ const HttpMethodBadge: React.FC<{ method: string }> = ({ method }) => {
       variant="light"
       style={{ fontFamily: 'monospace', minWidth: 44, textAlign: 'center' }}
     >
-      {def.label}
+      {asI18n(def.label)}
     </Badge>
   )
 }
@@ -94,7 +96,7 @@ const FuncWrapperBadge: React.FC<{ wrapper?: string }> = ({ wrapper }) => {
   const def = funcWrapperDefs[wrapper] ?? { color: 'gray', label: wrapper }
   return (
     <Badge size="sm" color={def.color} variant="outline">
-      {def.label}
+      {asI18n(def.label)}
     </Badge>
   )
 }
@@ -120,11 +122,11 @@ const PrimaryRow: React.FC<{
           style={{ flex: 1, minWidth: 0 }}
           truncate
         >
-          {route}
+          {asI18n(route)}
         </Text>
         {params.length > 0 && (
           <Text size="sm" c="dimmed" ff="monospace">
-            params: {params.join(', ')}
+            {asI18n(`params: ${params.join(', ')}`)}
           </Text>
         )}
         {funcId && (
@@ -135,7 +137,7 @@ const PrimaryRow: React.FC<{
             truncate
             style={{ maxWidth: 240 }}
           >
-            → {funcId}
+            {asI18n(`→ ${funcId}`)}
           </Text>
         )}
       </Group>
@@ -159,12 +161,12 @@ const PrimaryRow: React.FC<{
           style={{ minWidth: 0 }}
           truncate
         >
-          {entry.id}
+          {asI18n(entry.id)}
         </Text>
         <FuncWrapperBadge wrapper={wrapper} />
         {sessionless && (
           <Badge size="sm" color="gray" variant="light">
-            sessionless
+            {asI18n('sessionless')}
           </Badge>
         )}
         {(inSchema || outSchema) && (
@@ -175,7 +177,7 @@ const PrimaryRow: React.FC<{
             truncate
             style={{ flex: 1, minWidth: 0 }}
           >
-            {inSchema ?? '·'} → {outSchema ?? 'void'}
+            {asI18n(`${inSchema ?? '·'} → ${outSchema ?? 'void'}`)}
           </Text>
         )}
       </Group>
@@ -196,21 +198,21 @@ const PrimaryRow: React.FC<{
         style={{ minWidth: 0 }}
         truncate
       >
-        {entry.id}
+        {asI18n(entry.id)}
       </Text>
       {route && (
         <Text size="sm" c="dimmed" ff="monospace">
-          {route}
+          {asI18n(route)}
         </Text>
       )}
       {queueName && (
         <Text size="sm" c="dimmed" ff="monospace">
-          queue: {queueName}
+          {asI18n(`queue: ${queueName}`)}
         </Text>
       )}
       {cron && (
         <Text size="sm" c="dimmed" ff="monospace">
-          cron: {cron}
+          {asI18n(`cron: ${cron}`)}
         </Text>
       )}
     </Group>
@@ -221,6 +223,7 @@ const FieldDiff: React.FC<{
   ours?: Record<string, unknown>
   base?: Record<string, unknown>
 }> = ({ ours, base }) => {
+  const { t } = useI18n()
   const allKeys = Array.from(
     new Set([...Object.keys(ours ?? {}), ...Object.keys(base ?? {})])
   ).sort()
@@ -248,7 +251,7 @@ const FieldDiff: React.FC<{
           tt="uppercase"
           style={{ width: 180, padding: '6px 12px' }}
         >
-          field
+          {t('changes.field')}
         </Text>
         <Text
           size="sm"
@@ -261,7 +264,7 @@ const FieldDiff: React.FC<{
             borderLeft: '1px solid var(--app-row-border)',
           }}
         >
-          base
+          {t('changes.base')}
         </Text>
         <Text
           size="sm"
@@ -274,7 +277,7 @@ const FieldDiff: React.FC<{
             borderLeft: '1px solid var(--app-row-border)',
           }}
         >
-          ours
+          {t('changes.ours')}
         </Text>
       </Group>
       {allKeys.map((key) => {
@@ -297,7 +300,7 @@ const FieldDiff: React.FC<{
               ff="monospace"
               style={{ width: 180, padding: '6px 12px' }}
             >
-              {key}
+              {asI18n(key)}
             </Text>
             <Box
               style={{
@@ -386,12 +389,13 @@ const CategoryPanel: React.FC<{
   entries: DiffEntry[]
   category: string
 }> = ({ entries, category }) => {
+  const { t } = useI18n()
   const visible = entries.filter((e) => e.status !== 'unchanged')
   if (visible.length === 0) {
     return (
       <Center p="xl">
         <Text size="sm" c="dimmed">
-          No changes in this category.
+          {t('changes.no_changes_in_category')}
         </Text>
       </Center>
     )
@@ -427,13 +431,13 @@ const DiffSummaryBar: React.FC<{ diff: StateDiff }> = ({ diff }) => {
       }}
     >
       <Text size="sm" c="dimmed">
-        {totalChanges} change{totalChanges === 1 ? '' : 's'}
+        {asI18n(`${totalChanges} change${totalChanges === 1 ? '' : 's'}`)}
       </Text>
       {totals.added > 0 && (
         <Group gap={4}>
           <StatusPill status="added" />
           <Text size="sm" c="green.4">
-            {totals.added} added
+            {asI18n(`${totals.added} added`)}
           </Text>
         </Group>
       )}
@@ -441,7 +445,7 @@ const DiffSummaryBar: React.FC<{ diff: StateDiff }> = ({ diff }) => {
         <Group gap={4}>
           <StatusPill status="modified" />
           <Text size="sm" c="yellow.4">
-            {totals.modified} modified
+            {asI18n(`${totals.modified} modified`)}
           </Text>
         </Group>
       )}
@@ -449,7 +453,7 @@ const DiffSummaryBar: React.FC<{ diff: StateDiff }> = ({ diff }) => {
         <Group gap={4}>
           <StatusPill status="removed" />
           <Text size="sm" c="red.4">
-            {totals.removed} removed
+            {asI18n(`${totals.removed} removed`)}
           </Text>
         </Group>
       )}
@@ -461,13 +465,14 @@ const DiffSummaryBar: React.FC<{ diff: StateDiff }> = ({ diff }) => {
         truncate
         style={{ maxWidth: 380 }}
       >
-        base: {diff.basePath.split('/').slice(-3).join('/')}
+        {asI18n(`base: ${diff.basePath.split('/').slice(-3).join('/')}`)}
       </Text>
     </Group>
   )
 }
 
 const DiffView: React.FC<{ diff: StateDiff }> = ({ diff }) => {
+  const { t } = useI18n()
   const tabs = useMemo(() => {
     return Object.entries(diff.categories)
       .map(([key, cat]) => ({
@@ -493,7 +498,7 @@ const DiffView: React.FC<{ diff: StateDiff }> = ({ diff }) => {
     return (
       <Center p="xl">
         <Text size="sm" c="dimmed">
-          No changes between ours and base.
+          {t('changes.no_changes')}
         </Text>
       </Center>
     )
@@ -524,20 +529,20 @@ const DiffView: React.FC<{ diff: StateDiff }> = ({ diff }) => {
           {tabs.map((t) => (
             <Tabs.Tab key={t.key} value={t.key}>
               <Group gap={4}>
-                <Text size="sm">{t.label}</Text>
+                <Text size="sm">{asI18n(t.label)}</Text>
                 {t.added > 0 && (
                   <Badge size="sm" color="green" variant="light">
-                    +{t.added}
+                    {asI18n(`+${t.added}`)}
                   </Badge>
                 )}
                 {t.modified > 0 && (
                   <Badge size="sm" color="yellow" variant="light">
-                    ~{t.modified}
+                    {asI18n(`~${t.modified}`)}
                   </Badge>
                 )}
                 {t.removed > 0 && (
                   <Badge size="sm" color="red" variant="light">
-                    −{t.removed}
+                    {asI18n(`−${t.removed}`)}
                   </Badge>
                 )}
               </Group>
@@ -559,6 +564,7 @@ const DiffView: React.FC<{ diff: StateDiff }> = ({ diff }) => {
 }
 
 export const ChangesPage: React.FC = () => {
+  const { t } = useI18n()
   const [searchParams] = useSearchParams()
   const queryBase = searchParams.get('base')
   const queryOurs = searchParams.get('ours')
@@ -613,12 +619,12 @@ export const ChangesPage: React.FC = () => {
         hidePanel
         header={
           <ListPageHeader
-            title="Changes"
-            description="Compare the current project state against a base .pikku snapshot"
+            title={t('changes.title')}
+            description={t('changes.description')}
             lead={
               <Group gap="sm" wrap="nowrap">
                 <TextInput
-                  placeholder="../worktree-to-compare/.pikku"
+                  placeholder={asI18n('../worktree-to-compare/.pikku')}
                   value={draftPath}
                   onChange={(e) => setDraftPath(e.currentTarget.value)}
                   onKeyDown={(e) => e.key === 'Enter' && apply()}
@@ -642,7 +648,7 @@ export const ChangesPage: React.FC = () => {
                   onClick={apply}
                   disabled={draftPath.trim() === (activePath ?? '')}
                 >
-                  Compare
+                  {t('changes.compare')}
                 </Button>
               </Group>
             }
@@ -656,8 +662,8 @@ export const ChangesPage: React.FC = () => {
           {!activePath && (
             <EmptyStatePlaceholder
               icon={GitCompare}
-              title="No base path set"
-              description="Enter a path to a .pikku directory above to diff against."
+              title={t('changes.no_base_path_title')}
+              description={t('changes.no_base_path_description')}
               docsHref="https://pikku.dev/docs"
             />
           )}
@@ -669,14 +675,14 @@ export const ChangesPage: React.FC = () => {
           {activePath && error && (
             <Center p="xl">
               <Text size="sm" c="red">
-                {(error as Error).message}
+                {asI18n((error as Error).message)}
               </Text>
             </Center>
           )}
           {activePath && diff && !diff.baseExists && (
             <Center p="xl">
               <Text size="sm" c="red">
-                Base path does not exist: <Code>{diff.basePath}</Code>
+                {asI18n('Base path does not exist: ')}<Code>{diff.basePath}</Code>
               </Text>
             </Center>
           )}

@@ -7,7 +7,8 @@ import {
   Table,
   Loader,
   Card,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { CodeHighlight } from '@mantine/code-highlight'
 import {
   useWorkflowNode,
@@ -63,7 +64,7 @@ const parseInputValue = (value: any): ParsedInputValue => {
       type: '$static',
       displayValue: (
         <Text c="dimmed" size="sm">
-          null
+          {asI18n('null')}
         </Text>
       ),
     }
@@ -77,7 +78,7 @@ const parseInputValue = (value: any): ParsedInputValue => {
       if (template.parts[i]) {
         elements.push(
           <Text key={`part-${i}`} span size="sm" ff="monospace">
-            {template.parts[i]}
+            {asI18n(template.parts[i])}
           </Text>
         )
       }
@@ -94,7 +95,7 @@ const parseInputValue = (value: any): ParsedInputValue => {
               type="label"
               color={workflowInputTypeDefs[badgeType]?.color || 'gray'}
             >
-              {expr.$ref + displayPath}
+              {asI18n(expr.$ref + displayPath)}
             </PikkuBadge>
           )
         } else {
@@ -104,7 +105,7 @@ const parseInputValue = (value: any): ParsedInputValue => {
               type="label"
               color={workflowInputTypeDefs.$expression?.color || 'cyan'}
             >
-              {String(expr)}
+              {asI18n(String(expr))}
             </PikkuBadge>
           )
         }
@@ -131,7 +132,7 @@ const parseInputValue = (value: any): ParsedInputValue => {
       type: badgeType,
       displayValue: (
         <Text size="sm" ff="monospace">
-          {value.$ref + displayPath}
+          {asI18n(value.$ref + displayPath)}
         </Text>
       ),
       isHoverable: !isSpecial,
@@ -144,7 +145,7 @@ const parseInputValue = (value: any): ParsedInputValue => {
       type: '$state',
       displayValue: (
         <Text size="sm" ff="monospace">
-          {value.$state}
+          {asI18n(value.$state)}
         </Text>
       ),
     }
@@ -155,7 +156,7 @@ const parseInputValue = (value: any): ParsedInputValue => {
       type: '$expression',
       displayValue: (
         <Text size="sm" ff="monospace">
-          {value.$expression}
+          {asI18n(value.$expression)}
         </Text>
       ),
     }
@@ -174,7 +175,7 @@ const parseInputValue = (value: any): ParsedInputValue => {
     type: '$static',
     displayValue: (
       <Text size="sm" ff="monospace">
-        {String(value)}
+        {asI18n(String(value))}
       </Text>
     ),
   }
@@ -188,7 +189,7 @@ export const WorkflowStepConfiguration: React.FC<WorkflowStepPanelProps> = ({
 
   return (
     <Stack gap={6}>
-      <SectionLabel>Options</SectionLabel>
+      <SectionLabel>{asI18n('Options')}</SectionLabel>
       <Card withBorder radius="md" padding={0}>
         <Card.Section p="md">
           {node?.options ? (
@@ -224,7 +225,7 @@ export const WorkflowStepInput: React.FC<WorkflowStepPanelProps> = ({
 
   return (
     <Stack gap={6}>
-      <SectionLabel>Input Parameters</SectionLabel>
+      <SectionLabel>{asI18n('Input Parameters')}</SectionLabel>
       <Card withBorder radius="md" padding={0}>
         {hasInput ? (
           <Card.Section>
@@ -249,7 +250,7 @@ export const WorkflowStepInput: React.FC<WorkflowStepPanelProps> = ({
                     <Table.Tr key={key}>
                       <Table.Td>
                         <Text fw={500} ff="monospace" size="sm">
-                          {key}
+                          {asI18n(key)}
                         </Text>
                       </Table.Td>
                       <Table.Td>
@@ -311,7 +312,7 @@ export const WorkflowStepOutput: React.FC<
   return (
     <Stack gap="md">
       <Stack gap={6}>
-        <SectionLabel>Output Schema</SectionLabel>
+        <SectionLabel>{asI18n('Output Schema')}</SectionLabel>
         <Card withBorder radius="md" padding={0}>
           {schemaLoading ? (
             <Card.Section p="md">
@@ -337,7 +338,7 @@ export const WorkflowStepOutput: React.FC<
                         <Table.Td>
                           <Group gap="xs">
                             <Text fw={500} ff="monospace" size="sm">
-                              {key}
+                              {asI18n(key)}
                             </Text>
                             {schema.required?.includes(key) && (
                               <PikkuBadge type="flag" flag="required" />
@@ -346,7 +347,7 @@ export const WorkflowStepOutput: React.FC<
                         </Table.Td>
                         <Table.Td>
                           <Text size="sm" ff="monospace" c="dimmed">
-                            {renderSchemaType(prop)}
+                            {asI18n(renderSchemaType(prop))}
                           </Text>
                         </Table.Td>
                       </Table.Tr>
@@ -368,12 +369,12 @@ export const WorkflowStepOutput: React.FC<
       </Stack>
 
       <Stack gap={6}>
-        <SectionLabel>Output Variable</SectionLabel>
+        <SectionLabel>{asI18n('Output Variable')}</SectionLabel>
         <Card withBorder radius="md" padding={0}>
           <Card.Section p="md">
             {outputVar ? (
               <Group gap="xs">
-                <Text ff="monospace">{outputVar}</Text>
+                <Text ff="monospace">{asI18n(outputVar)}</Text>
                 {schemaLoading && <Loader size="sm" />}
               </Group>
             ) : (
@@ -385,7 +386,7 @@ export const WorkflowStepOutput: React.FC<
 
       {showOutputs && (
         <Stack gap={6}>
-          <SectionLabel>Outputs</SectionLabel>
+          <SectionLabel>{asI18n('Outputs')}</SectionLabel>
           <Card withBorder radius="md" padding={0}>
             {hasOutputs ? (
               <Card.Section>
@@ -406,32 +407,32 @@ export const WorkflowStepOutput: React.FC<
                         <Table.Tr key={key}>
                           <Table.Td>
                             <Text fw={500} ff="monospace" size="sm">
-                              {key}
+                              {asI18n(key)}
                             </Text>
                           </Table.Td>
                           <Table.Td>
                             {value?.from && (
                               <Group gap="xs">
                                 <PikkuBadge type="label">
-                                  {value.from}
+                                  {asI18n(value.from)}
                                 </PikkuBadge>
                                 {value.name && (
                                   <Text size="sm" ff="monospace">
-                                    {value.name}
+                                    {asI18n(value.name)}
                                   </Text>
                                 )}
                                 {value.expression && (
                                   <Text size="sm" ff="monospace">
-                                    {value.expression}
+                                    {asI18n(value.expression)}
                                   </Text>
                                 )}
                                 {value.path && (
                                   <>
                                     <Text size="sm" c="dimmed">
-                                      .
+                                      {asI18n('.')}
                                     </Text>
                                     <Text size="sm" ff="monospace">
-                                      {value.path}
+                                      {asI18n(value.path)}
                                     </Text>
                                   </>
                                 )}
@@ -479,7 +480,7 @@ export const WorkflowStepBranches: React.FC<WorkflowStepPanelProps> = ({
   return (
     <Stack gap="md">
       <Stack gap={6}>
-        <SectionLabel>{flowLabel}</SectionLabel>
+        <SectionLabel>{asI18n(flowLabel)}</SectionLabel>
         <Card withBorder radius="md" padding={0}>
           <Card.Section p="md">
             {flowType === 'branch' && node?.branches ? (
@@ -495,19 +496,17 @@ export const WorkflowStepBranches: React.FC<WorkflowStepPanelProps> = ({
                   >
                     <Group gap="xs" mb="xs">
                       <PikkuBadge type="label">
-                        {index === 0 ? 'if' : 'else if'}
+                        {asI18n(index === 0 ? 'if' : 'else if')}
                       </PikkuBadge>
                       <Text size="sm" ff="monospace">
-                        {branch.condition?.expression || 'true'}
+                        {asI18n(branch.condition?.expression || 'true')}
                       </Text>
                     </Group>
                     {branch.entry && (
-                      <Text size="sm" c="dimmed">
-                        Entry:{' '}
-                        <Text span ff="monospace">
-                          {branch.entry}
-                        </Text>
-                      </Text>
+                      <Group gap={4}>
+                        <Text size="sm" c="dimmed">{asI18n('Entry:')}</Text>
+                        <Text size="sm" ff="monospace">{asI18n(branch.entry)}</Text>
+                      </Group>
                     )}
                   </Box>
                 ))}
@@ -524,18 +523,16 @@ export const WorkflowStepBranches: React.FC<WorkflowStepPanelProps> = ({
                     }}
                   >
                     <Group gap="xs" mb="xs">
-                      <PikkuBadge type="label">case</PikkuBadge>
+                      <PikkuBadge type="label">{asI18n('case')}</PikkuBadge>
                       <Text size="sm" ff="monospace">
-                        {caseItem.value}
+                        {asI18n(String(caseItem.value))}
                       </Text>
                     </Group>
                     {caseItem.entry && (
-                      <Text size="sm" c="dimmed">
-                        Entry:{' '}
-                        <Text span ff="monospace">
-                          {caseItem.entry}
-                        </Text>
-                      </Text>
+                      <Group gap={4}>
+                        <Text size="sm" c="dimmed">{asI18n('Entry:')}</Text>
+                        <Text size="sm" ff="monospace">{asI18n(caseItem.entry)}</Text>
+                      </Group>
                     )}
                   </Box>
                 ))}
@@ -549,15 +546,13 @@ export const WorkflowStepBranches: React.FC<WorkflowStepPanelProps> = ({
                   >
                     <Group gap="xs" mb="xs">
                       <PikkuBadge type="label" color="gray">
-                        default
+                        {asI18n('default')}
                       </PikkuBadge>
                     </Group>
-                    <Text size="sm" c="dimmed">
-                      Entry:{' '}
-                      <Text span ff="monospace">
-                        {node.defaultEntry}
-                      </Text>
-                    </Text>
+                    <Group gap={4}>
+                      <Text size="sm" c="dimmed">{asI18n('Entry:')}</Text>
+                      <Text size="sm" ff="monospace">{asI18n(node.defaultEntry)}</Text>
+                    </Group>
                   </Box>
                 )}
               </Stack>
@@ -565,7 +560,7 @@ export const WorkflowStepBranches: React.FC<WorkflowStepPanelProps> = ({
               <Stack gap="xs">
                 {node.children.map((childId: string, index: number) => (
                   <Text key={index} size="sm" ff="monospace">
-                    {childId}
+                    {asI18n(childId)}
                   </Text>
                 ))}
               </Stack>
@@ -574,38 +569,38 @@ export const WorkflowStepBranches: React.FC<WorkflowStepPanelProps> = ({
                 {node?.sourceVar && (
                   <Group gap="xs">
                     <Text size="sm" c="dimmed">
-                      Source:
+                      {asI18n('Source:')}
                     </Text>
                     <Text size="sm" ff="monospace">
-                      {node.sourceVar}
+                      {asI18n(node.sourceVar)}
                     </Text>
                   </Group>
                 )}
                 {node?.itemVar && (
                   <Group gap="xs">
                     <Text size="sm" c="dimmed">
-                      Item:
+                      {asI18n('Item:')}
                     </Text>
                     <Text size="sm" ff="monospace">
-                      {node.itemVar}
+                      {asI18n(node.itemVar)}
                     </Text>
                   </Group>
                 )}
                 {node?.mode && (
                   <Group gap="xs">
                     <Text size="sm" c="dimmed">
-                      Mode:
+                      {asI18n('Mode:')}
                     </Text>
-                    <PikkuBadge type="label">{node.mode}</PikkuBadge>
+                    <PikkuBadge type="label">{asI18n(node.mode)}</PikkuBadge>
                   </Group>
                 )}
                 {node?.childEntry && (
                   <Group gap="xs">
                     <Text size="sm" c="dimmed">
-                      Child Entry:
+                      {asI18n('Child Entry:')}
                     </Text>
                     <Text size="sm" ff="monospace">
-                      {node.childEntry}
+                      {asI18n(node.childEntry)}
                     </Text>
                   </Group>
                 )}
@@ -618,11 +613,11 @@ export const WorkflowStepBranches: React.FC<WorkflowStepPanelProps> = ({
       </Stack>
 
       <Stack gap={6}>
-        <SectionLabel>Next Step</SectionLabel>
+        <SectionLabel>{asI18n('Next Step')}</SectionLabel>
         <Card withBorder radius="md" padding={0}>
           <Card.Section p="md">
             {node?.next ? (
-              <Text ff="monospace">{node.next}</Text>
+              <Text ff="monospace">{asI18n(node.next)}</Text>
             ) : (
               <EmptyState />
             )}

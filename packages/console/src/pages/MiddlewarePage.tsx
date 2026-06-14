@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react'
-import { Text, Group } from '@mantine/core'
+import { Text, Group } from '@pikku/mantine/core'
 import { Layers } from 'lucide-react'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -19,6 +21,7 @@ const MiddlewareTable: React.FC<{
   loading?: boolean
 }> = ({ items, loading }) => {
   const { openMiddleware } = usePanelContext()
+  const { t } = useI18n()
 
   const columns = useMemo(
     () => [
@@ -28,11 +31,11 @@ const MiddlewareTable: React.FC<{
         render: (item: MiddlewareItem) => (
           <>
             <Text fw={500} truncate>
-              {item.name}
+              {asI18n(item.name)}
             </Text>
             {item.data?.description && (
               <Text size="sm" c="dimmed" lineClamp={1}>
-                {item.data.description}
+                {asI18n(item.data.description)}
               </Text>
             )}
           </>
@@ -77,12 +80,12 @@ const MiddlewareTable: React.FC<{
       columns={columns}
       getKey={(item) => item.id}
       onRowClick={(item) => openMiddleware(item.id, item.data)}
-      searchPlaceholder="Search middleware..."
+      searchPlaceholder={t('middleware.search_placeholder')}
       searchFilter={(item, q) =>
         item.name.toLowerCase().includes(q) ||
         item.data?.description?.toLowerCase().includes(q)
       }
-      emptyMessage="No middleware found."
+      emptyMessage={t('middleware.empty_message')}
       loading={loading}
     />
   )
@@ -90,6 +93,7 @@ const MiddlewareTable: React.FC<{
 
 export const MiddlewarePage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
+  const { t } = useI18n()
 
   const items = useMemo((): MiddlewareItem[] => {
     if (!meta.middlewareGroupsMeta) return []
@@ -109,9 +113,9 @@ export const MiddlewarePage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title="Middleware" description="Request pipeline middleware applied to API calls" />}
+        header={<ListPageHeader title={t('middleware.title')} description={t('middleware.description')} />}
         hidePanel={!loading && items.length === 0}
-        emptyPanelMessage="Select a middleware to view its details"
+        emptyPanelMessage={t('middleware.select_item')}
       >
         <MiddlewareTable items={items} loading={loading} />
       </ResizablePanelLayout>

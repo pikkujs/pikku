@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react'
-import { Text, Badge } from '@mantine/core'
+import { Text, Badge } from '@pikku/mantine/core'
 import { Zap } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
 import { TableListPage } from '../layout/TableListPage'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 
 interface TriggerPair {
   name: string
@@ -17,7 +19,7 @@ const columns = [
     header: 'NAME',
     render: (item: TriggerPair) => (
       <Text fw={500} ff="monospace" truncate>
-        {item.name}
+        {asI18n(item.name)}
       </Text>
     ),
   },
@@ -70,6 +72,7 @@ export const TriggersTab: React.FC<{
   emptyHero?: React.ReactNode
 }> = ({ searchQuery, emptyHero }) => {
   const { meta } = usePikkuMeta()
+  const { t } = useI18n()
   const { openTrigger } = usePanelContext()
 
   const allPairs = useMemo((): TriggerPair[] => {
@@ -107,7 +110,7 @@ export const TriggersTab: React.FC<{
       columns={columns}
       getKey={(item) => item.name}
       onRowClick={(item) => openTrigger(item.name, item.trigger)}
-      emptyMessage="No triggers found."
+      emptyMessage={t('triggers.empty_message')}
       emptyHero={emptyHero}
     />
   )

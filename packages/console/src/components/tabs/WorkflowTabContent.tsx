@@ -5,15 +5,18 @@ import { WorkflowRunProvider } from '../../context/WorkflowRunContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { WorkflowCanvas } from '../project/WorkflowCanvas'
-import { Center, Loader } from '@mantine/core'
+import { Center, Loader } from '@pikku/mantine/core'
 import { GitBranch } from 'lucide-react'
 import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 
 export const WorkflowTabContent: React.FC<{ immersiveDetail?: boolean }> = ({
   immersiveDetail = false,
 }) => {
   const { workflowId, navigateTo } = useConsoleNavigator()
+  const { t } = useI18n()
   const rpc = usePikkuRPC()
   const { data: workflow, isLoading } = useQuery({
     queryKey: ['workflow-meta-by-id', workflowId],
@@ -44,8 +47,8 @@ export const WorkflowTabContent: React.FC<{ immersiveDetail?: boolean }> = ({
     return (
       <EmptyStatePlaceholder
         icon={GitBranch}
-        title={workflowId ? `Workflow "${workflowId}" not found` : 'No workflows found'}
-        description={workflowId ? 'This workflow may have been removed or renamed.' : 'Define workflows in your project to visualize them here.'}
+        title={workflowId ? asI18n(`Workflow "${workflowId}" not found`) : t('workflows.empty_title')}
+        description={workflowId ? t('workflows.not_found_description') : t('workflows.empty_description')}
         docsHref="https://pikku.dev/docs/core-features/workflows"
       />
     )

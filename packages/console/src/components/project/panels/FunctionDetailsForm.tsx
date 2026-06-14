@@ -11,7 +11,8 @@ import {
   Divider,
   Paper,
   Progress,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { CodeHighlight } from '@mantine/code-highlight'
 import { CheckCheck, FunctionSquare, LayoutList, Pencil } from 'lucide-react'
 import { useFunctionMeta, useSchema } from '../../../hooks/useWirings'
@@ -94,11 +95,11 @@ export const FunctionHeader: React.FC<FunctionDetailsFormProps> = ({
       <Group gap="xs">
         <FunctionSquare size={20} />
         <Text size="lg" ff="monospace" fw={600}>
-          {functionName}
+          {asI18n(functionName)}
         </Text>
       </Group>
       <Text size="sm" c="dimmed" mt={4}>
-        {meta.summary || 'No summary'}
+        {asI18n(meta.summary || 'No summary')}
       </Text>
     </Box>
   )
@@ -120,7 +121,7 @@ export const FunctionTestsPanel: React.FC<FunctionDetailsFormProps> = ({
   }
 
   if (!meta.tests) {
-    return <Text c="dimmed">No test data yet.</Text>
+    return <Text c="dimmed">{asI18n('No test data yet.')}</Text>
   }
 
   return (
@@ -147,7 +148,7 @@ export const FunctionTabbedPanel: React.FC<FunctionDetailsFormProps> = ({
   return (
     <SidePanel>
       <SidePanelHeader
-        title={panelData?.title ?? functionName}
+        title={asI18n(panelData?.title ?? functionName)}
         onBack={panelData && panelData.history.length > 0 ? goBack : undefined}
         onClose={() => activePanel && closePanel(activePanel)}
       >
@@ -222,14 +223,14 @@ function FunctionTestsSection({
                       : 'gray'
               }
             >
-              {tests.status === 'covered'
+              {asI18n(tests.status === 'covered'
                 ? `${tests.coveredLines}/${tests.totalLines}`
-                : `${Math.round((tests.ratio ?? 0) * 100)}%`}
+                : `${Math.round((tests.ratio ?? 0) * 100)}%`)}
             </Badge>
             <Text size="sm" c="dimmed">
-              {tests.scenarios?.length === 0
+              {asI18n(tests.scenarios?.length === 0
                 ? 'No linked scenarios yet'
-                : `${tests.scenarios?.length ?? 0} linked scenarios`}
+                : `${tests.scenarios?.length ?? 0} linked scenarios`)}
             </Text>
           </Group>
           <Progress
@@ -258,16 +259,16 @@ function FunctionTestsSection({
             lts="0.12em"
             c="dimmed"
           >
-            Scenarios
+            {asI18n('Scenarios')}
           </Text>
           <Text ff="monospace" size="xs" c="dimmed">
-            {tests.scenarios?.length ?? 0} linked
+            {asI18n(`${tests.scenarios?.length ?? 0} linked`)}
           </Text>
         </Group>
         {!tests.scenarios || tests.scenarios.length === 0 ? (
           <Paper withBorder radius="lg" p="md" bg="rgba(248,113,113,0.08)">
             <Text size="sm" c="dimmed">
-              No scenarios are linked to this function yet.
+              {asI18n('No scenarios are linked to this function yet.')}
             </Text>
           </Paper>
         ) : (
@@ -281,20 +282,20 @@ function FunctionTestsSection({
                         variant="light"
                         color={scenario.status === 'fail' ? 'red' : 'green'}
                       >
-                        {scenario.status === 'fail' ? 'Failing' : 'Passing'}
+                        {asI18n(scenario.status === 'fail' ? 'Failing' : 'Passing')}
                       </Badge>
                       <Text ff="monospace" size="sm" fw={600} c="white">
-                        {scenario.scenarioName}
+                        {asI18n(scenario.scenarioName)}
                       </Text>
                       {scenario.duration && (
                         <Badge variant="light" color="gray">
-                          {scenario.duration}
+                          {asI18n(scenario.duration)}
                         </Badge>
                       )}
                     </Group>
                     {scenario.featureName && (
                       <Text size="sm" c="dimmed">
-                        {scenario.featureName}
+                        {asI18n(scenario.featureName)}
                       </Text>
                     )}
                     <Stack gap={2} pl={8}>
@@ -325,18 +326,18 @@ function FunctionTestsSection({
             lts="0.12em"
             c="dimmed"
           >
-            Coverage Gaps
+            {asI18n('Coverage Gaps')}
           </Text>
           <Text ff="monospace" size="xs" c="dimmed">
-            {missedLines.length === 0
+            {asI18n(missedLines.length === 0
               ? 'clean'
-              : `${missedLines.length} uncovered`}
+              : `${missedLines.length} uncovered`)}
           </Text>
         </Group>
         {missedLines.length === 0 ? (
           <Paper withBorder radius="lg" p="md" bg="rgba(52,211,153,0.08)">
             <Text size="sm" c="dimmed">
-              All executable lines are covered for this function.
+              {asI18n('All executable lines are covered for this function.')}
             </Text>
           </Paper>
         ) : isSourceLoading ? (
@@ -382,10 +383,10 @@ function FunctionTestsSection({
                   }}
                 >
                   <Text ff="monospace" size="xs" c="dimmed" w={42}>
-                    {line}
+                    {asI18n(String(line))}
                   </Text>
                   <Text ff="monospace" size="sm" c="white">
-                    branch on line {line} is still not exercised
+                    {asI18n(`branch on line ${line} is still not exercised`)}
                   </Text>
                 </Group>
               ))}
@@ -440,7 +441,7 @@ function FunctionCoverageCode({
                 userSelect: 'none',
               }}
             >
-              {lineNumber}
+              {asI18n(String(lineNumber))}
             </Text>
             <Text
               ff="monospace"
@@ -453,7 +454,7 @@ function FunctionCoverageCode({
                 flex: 1,
               }}
             >
-              {line || ' '}
+              {asI18n(line || ' ')}
             </Text>
           </Group>
         )
@@ -470,17 +471,17 @@ function HighlightedStep({ step }: { step: string }) {
 
   return (
     <Text ff="monospace" size="sm" c="white" pl={isAnd ? 16 : 0}>
-      {keyword && (
+      {keyword ? (
         <Text
           component="span"
           inherit
           c="var(--mantine-color-violet-4)"
           fw={600}
         >
-          {keyword}
+          {asI18n(keyword)}
         </Text>
-      )}
-      {keyword ? ` ${remainder}` : step}
+      ) : null}
+      {asI18n(keyword ? ` ${remainder}` : step)}
     </Text>
   )
 }
@@ -508,7 +509,7 @@ export const FunctionInput: React.FC<FunctionDetailsFormProps> = ({
   const { data: schema, isLoading, error } = useSchema(inputSchemaName)
 
   if (!inputSchemaName) {
-    return <Text c="dimmed">No input schema defined</Text>
+    return <Text c="dimmed">{asI18n('No input schema defined')}</Text>
   }
 
   if (isLoading) {
@@ -520,11 +521,11 @@ export const FunctionInput: React.FC<FunctionDetailsFormProps> = ({
   }
 
   if (error) {
-    return <Text c="red">Error loading schema: {error.message}</Text>
+    return <Text c="red">{asI18n(`Error loading schema: ${error.message}`)}</Text>
   }
 
   if (!schema) {
-    return <Text c="dimmed">Schema not found: {inputSchemaName}</Text>
+    return <Text c="dimmed">{asI18n(`Schema not found: ${inputSchemaName}`)}</Text>
   }
 
   return <SchemaViewer schema={schema} />
@@ -540,7 +541,7 @@ export const FunctionOutput: React.FC<FunctionDetailsFormProps> = ({
   const { data: schema, isLoading, error } = useSchema(outputSchemaName)
 
   if (!outputSchemaName) {
-    return <Text c="dimmed">No output schema defined</Text>
+    return <Text c="dimmed">{asI18n('No output schema defined')}</Text>
   }
 
   if (isLoading) {
@@ -552,11 +553,11 @@ export const FunctionOutput: React.FC<FunctionDetailsFormProps> = ({
   }
 
   if (error) {
-    return <Text c="red">Error loading schema: {error.message}</Text>
+    return <Text c="red">{asI18n(`Error loading schema: ${error.message}`)}</Text>
   }
 
   if (!schema) {
-    return <Text c="dimmed">Schema not found: {outputSchemaName}</Text>
+    return <Text c="dimmed">{asI18n(`Schema not found: ${outputSchemaName}`)}</Text>
   }
 
   return <SchemaViewer schema={schema} />

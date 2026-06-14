@@ -10,7 +10,8 @@ import {
   ActionIcon,
   Box,
   Loader,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { ChevronDown, X } from 'lucide-react'
 import { useWorkflowRuns } from '../../hooks/useWorkflowRuns'
 import { useWorkflowRunContext } from '../../context/WorkflowRunContext'
@@ -100,18 +101,18 @@ export const WorkflowRunSelector: React.FC<WorkflowRunSelectorProps> = ({
                   variant="filled"
                   circle
                 >
-                  {' '}
+                  {asI18n(' ')}
                 </PikkuBadge>
                 <Text size="sm" ff="monospace" truncate maw={120}>
-                  {selectedRun.id.slice(0, 8)}
+                  {asI18n(selectedRun.id.slice(0, 8))}
                 </Text>
                 <Text size="sm" c="dimmed">
-                  {formatTime(selectedRun.createdAt)}
+                  {asI18n(formatTime(selectedRun.createdAt))}
                 </Text>
               </>
             ) : (
               <Text size="sm" c="dimmed">
-                Select run...
+                {asI18n('Select run...')}
               </Text>
             )}
             <ChevronDown size={14} />
@@ -132,10 +133,10 @@ export const WorkflowRunSelector: React.FC<WorkflowRunSelectorProps> = ({
               value={statusFilter}
               onChange={setStatusFilter}
               data={[
-                { value: 'all', label: 'All' },
-                { value: 'running', label: 'Running' },
-                { value: 'completed', label: 'Completed' },
-                { value: 'failed', label: 'Failed' },
+                { value: 'all', label: asI18n('All') },
+                { value: 'running', label: asI18n('Running') },
+                { value: 'completed', label: asI18n('Completed') },
+                { value: 'failed', label: asI18n('Failed') },
               ]}
             />
           </Box>
@@ -147,7 +148,7 @@ export const WorkflowRunSelector: React.FC<WorkflowRunSelectorProps> = ({
               </Box>
             ) : filteredRuns.length === 0 ? (
               <Text size="sm" c="dimmed" ta="center" py="md">
-                No runs found
+                {asI18n('No runs found')}
               </Text>
             ) : (
               <Stack gap={0}>
@@ -172,15 +173,15 @@ export const WorkflowRunSelector: React.FC<WorkflowRunSelectorProps> = ({
                           variant="filled"
                           circle
                         >
-                          {' '}
+                          {asI18n(' ')}
                         </PikkuBadge>
                         <Text size="sm" ff="monospace">
-                          {run.id.slice(0, 8)}
+                          {asI18n(run.id.slice(0, 8))}
                         </Text>
                         <PikkuBadge type="status" value={run.status} />
                       </Group>
                       <Text size="sm" c="dimmed">
-                        {formatTime(run.createdAt)}
+                        {asI18n(formatTime(run.createdAt))}
                       </Text>
                     </Group>
                   </UnstyledButton>
@@ -196,7 +197,7 @@ export const WorkflowRunSelector: React.FC<WorkflowRunSelectorProps> = ({
           variant="subtle"
           size="sm"
           onClick={handleClear}
-          title="Clear run selection"
+          title={asI18n('Clear run selection')}
         >
           <X size={14} />
         </ActionIcon>

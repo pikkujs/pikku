@@ -1,11 +1,13 @@
 import React, { useMemo } from 'react'
-import { Text } from '@mantine/core'
+import { Text } from '@pikku/mantine/core'
 import { ListOrdered } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { TableListPage } from '../layout/TableListPage'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 
 type QueueDepths = Record<
   string,
@@ -18,6 +20,7 @@ export const QueuesTab: React.FC<{
 }> = ({ searchQuery, emptyHero }) => {
   const { meta } = usePikkuMeta()
   const rpc = usePikkuRPC()
+  const { t } = useI18n()
   const { openQueue } = usePanelContext()
 
   const { data: depths } = useQuery<QueueDepths>({
@@ -77,7 +80,7 @@ export const QueuesTab: React.FC<{
               ff="monospace"
               c={depth?.queued ? 'var(--app-meta-value)' : 'var(--app-meta-label)'}
             >
-              {depth?.queued ?? '—'}
+              {depth?.queued ?? asI18n('—')}
             </Text>
           )
         },
@@ -94,7 +97,7 @@ export const QueuesTab: React.FC<{
               ff="monospace"
               c={depth?.active ? 'var(--mantine-color-green-5)' : 'var(--app-meta-label)'}
             >
-              {depth?.active ?? '—'}
+              {depth?.active ?? asI18n('—')}
             </Text>
           )
         },
@@ -111,7 +114,7 @@ export const QueuesTab: React.FC<{
               ff="monospace"
               c={depth?.failed ? 'var(--mantine-color-red-5)' : 'var(--app-meta-label)'}
             >
-              {depth?.failed ?? '—'}
+              {depth?.failed ?? asI18n('—')}
             </Text>
           )
         },
@@ -129,7 +132,7 @@ export const QueuesTab: React.FC<{
       columns={columns}
       getKey={(item) => item.name}
       onRowClick={(item) => openQueue(item.wireId || item.name, item)}
-      emptyMessage="No queue workers found."
+      emptyMessage={t('queues.empty_message')}
       emptyHero={emptyHero}
     />
   )

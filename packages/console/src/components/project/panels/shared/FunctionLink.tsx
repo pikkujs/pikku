@@ -1,5 +1,6 @@
 import React from 'react'
-import { Box, Group } from '@mantine/core'
+import { Box, Group } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { Link2 } from 'lucide-react'
 import { PikkuBadge } from '../../../ui/PikkuBadge'
 import { useFunctionMeta } from '../../../../hooks/useWirings'
@@ -18,7 +19,7 @@ export const FunctionLink: React.FC<{
 
   return (
     <Box>
-      <SectionLabel>{label || 'Handler Function'}</SectionLabel>
+      <SectionLabel>{asI18n(label || 'Handler Function')}</SectionLabel>
       <Group gap={6}>
         <PikkuBadge
           type="label"
@@ -31,7 +32,7 @@ export const FunctionLink: React.FC<{
             navigateInPanel('function', pikkuFuncId, displayName, funcMeta)
           }
         >
-          {displayName}
+          {asI18n(displayName)}
         </PikkuBadge>
       </Group>
     </Box>

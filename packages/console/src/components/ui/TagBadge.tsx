@@ -1,9 +1,10 @@
 import React from 'react'
-import { Badge } from '@mantine/core'
+import { Badge } from '@pikku/mantine/core'
+import type { I18nNode } from '@pikku/react'
 import classes from './console.module.css'
 
 export interface TagBadgeProps {
-  children: React.ReactNode
+  children: I18nNode
 }
 
 export const TagBadge: React.FC<TagBadgeProps> = ({ children }) => (
@@ -13,7 +14,7 @@ export const TagBadge: React.FC<TagBadgeProps> = ({ children }) => (
 )
 
 export interface ServiceBadgeProps {
-  children: React.ReactNode
+  children: I18nNode
 }
 
 export const ServiceBadge: React.FC<ServiceBadgeProps> = ({ children }) => (

@@ -1,0 +1,313 @@
+{
+  "common": {
+    "search": "Search",
+    "loading": "Loading",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "reconnect": "Reconnect",
+    "not_found": "Not found",
+    "no_results": "No results",
+    "docs_link": "Docs",
+    "show_pikku_internals": "Show Pikku internals",
+    "select_item": "Select an item",
+    "run": "Run",
+    "refresh": "Refresh"
+  },
+  "connection": {
+    "title": "Pikku Console",
+    "server_url_label": "Pikku instance URL",
+    "reconnect": "Reconnect",
+    "errors": {
+      "connection_refused": "Connection refused",
+      "addon_not_found": "Console addon not found",
+      "cors_error": "CORS error",
+      "timeout": "Request timed out",
+      "connection_failed": "Connection failed"
+    }
+  },
+  "schema_viewer": {
+    "no_schema": "No schema"
+  },
+  "http": {
+    "title": "HTTP Routes",
+    "description": "Registered HTTP endpoints and their bound functions",
+    "search_placeholder": "Search HTTP routes...",
+    "empty_message": "No HTTP routes found.",
+    "description_heading": "See every route at a glance",
+    "description_body": "Pikku prints your full route table at startup. Every method, route, function, and flag — visible in one place.",
+    "select_route": "Select a route to view its details"
+  },
+  "mcp": {
+    "title": "MCP",
+    "description": "Model Context Protocol tools, resources, and prompts",
+    "search_placeholder": "Search MCP tools, resources, prompts...",
+    "empty_message": "No MCP entries found.",
+    "select_entry": "Select an MCP entry to view its details"
+  },
+  "middleware": {
+    "title": "Middleware",
+    "description": "Request pipeline middleware applied to API calls",
+    "search_placeholder": "Search middleware...",
+    "empty_message": "No middleware found.",
+    "select_item": "Select a middleware to view its details"
+  },
+  "permissions": {
+    "title": "Permissions",
+    "description": "Access control guards protecting your functions",
+    "search_placeholder": "Search permissions...",
+    "empty_message": "No permissions found.",
+    "select_item": "Select a permission to view its details"
+  },
+  "queues": {
+    "title": "Queues",
+    "description": "Queue workers consuming messages from your message bus",
+    "search_placeholder": "Search queue workers...",
+    "empty_message": "No queue workers found.",
+    "select_item": "Select a queue worker to view its details"
+  },
+  "schedulers": {
+    "title": "Schedulers",
+    "description": "Cron and interval tasks that run on a schedule",
+    "search_placeholder": "Search scheduled tasks...",
+    "empty_message": "No scheduled tasks found.",
+    "select_item": "Select a scheduler to view its details"
+  },
+  "services": {
+    "title": "Services",
+    "description": "Singleton services available across your application",
+    "search_placeholder": "Search services...",
+    "empty_message": "No services found."
+  },
+  "database": {
+    "title": "Database",
+    "description": "Visual schema for your local development database.",
+    "search_placeholder": "Filter tables / columns…",
+    "show_internal_tables": "Show Pikku internal tables",
+    "no_db_title": "No database configured",
+    "no_db_description": "Add a SQLite or Postgres database to your pikku project.",
+    "no_visible_tables": "No visible tables",
+    "no_tables_found": "No tables found",
+    "no_visible_tables_description": "All tables are hidden by the Pikku-internal filter.",
+    "setup_title": "See your tables and data privacy here",
+    "setup_description": "Run pikku db migrate to visualise your schema with column-level privacy classifications."
+  },
+  "emails": {
+    "title": "Email Templates",
+    "description": "Preview and inspect email templates with live variable rendering",
+    "search_placeholder": "Search email templates...",
+    "empty_title": "No email templates match the current search.",
+    "no_templates_title": "No email templates found",
+    "no_templates_description": "Add an email templates directory to your project, then run:",
+    "editing_template_prefix": "Editing ",
+    "editing_template_suffix": " — saving regenerates the preview.",
+    "no_text_version": "This template has no text version.",
+    "template_details": "Template details",
+    "search_templates": "Search templates...",
+    "render_preview": "Render preview"
+  },
+  "changes": {
+    "title": "Changes",
+    "description": "Compare the current project state against a base .pikku snapshot",
+    "field": "field",
+    "base": "base",
+    "ours": "ours",
+    "no_changes_in_category": "No changes in this category.",
+    "no_changes": "No changes between ours and base.",
+    "compare": "Compare",
+    "no_base_path_title": "No base path set",
+    "no_base_path_description": "Enter a path to a .pikku directory above to diff against."
+  },
+  "functions": {
+    "title": "Functions",
+    "description": "All registered pikku functions across your project",
+    "empty_message": "No functions found.",
+    "search_placeholder": "Search functions...",
+    "select_function": "Select a function to view details"
+  },
+  "overview": {
+    "title": "Overview",
+    "description": "Explore your Pikku project metadata",
+    "functions": "Functions",
+    "workflows": "Workflows",
+    "agents": "Agents",
+    "http_routes": "HTTP Routes",
+    "channels": "Channels",
+    "mcp_tools": "MCP Tools",
+    "cli_commands": "CLI Commands",
+    "schedulers": "Schedulers",
+    "queues": "Queues",
+    "emails": "Emails"
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Application preferences and metadata status",
+    "metadata": "Metadata",
+    "about": "About",
+    "product_name": "Pikku Console",
+    "product_description": "A visual explorer for Pikku project metadata. Browse functions, workflows, APIs, jobs, runtime services, and configuration.",
+    "stat": {
+      "functions": "Functions",
+      "workflows": "Workflows",
+      "http_routes": "HTTP Routes",
+      "channels": "Channels",
+      "mcp_tools": "MCP Tools",
+      "cli_commands": "CLI Commands",
+      "schedulers": "Schedulers",
+      "queues": "Queues",
+      "rpc_methods": "RPC Methods"
+    }
+  },
+  "oauth_callback": {
+    "loading": "Completing authorization...",
+    "success_title": "Authorization Successful",
+    "success_description": "You can close this window. The connection status will update automatically.",
+    "close_window": "Close Window"
+  },
+  "tests": {
+    "title": "Tests",
+    "description": "Feature-first view of your test scenarios and function coverage",
+    "run_tests": "Run tests",
+    "running": "Running…",
+    "increase_coverage": "Increase coverage",
+    "search_placeholder": "Search scenarios, features, functions…",
+    "test_run_failed": "Test run failed",
+    "no_scenarios_match": "No scenarios match the current filter.",
+    "empty_title": "No test data yet",
+    "empty_description": "Run your function tests to populate scenarios here."
+  },
+  "auth_providers": {
+    "title": "Auth Providers",
+    "description": "Configure OAuth sign-in providers. Secrets are read from your environment via auth.js.",
+    "search_placeholder": "Search providers...",
+    "empty_message": "No providers found.",
+    "select_provider": "Select a provider to configure",
+    "popular": "popular"
+  },
+  "live_run": {
+    "running": "Running tests…"
+  },
+  "triggers": {
+    "title": "Triggers",
+    "description": "Event-driven triggers wired to pikku functions",
+    "search_placeholder": "Search triggers...",
+    "empty_message": "No triggers found.",
+    "select_item": "Select a trigger to view its details"
+  },
+  "packages": {
+    "title": "Addons",
+    "description": "Third-party addons and packages available for your project",
+    "search_installed_placeholder": "Search installed addons...",
+    "search_community_placeholder": "Search community addons...",
+    "search_apis_placeholder": "Search APIs...",
+    "installed": "Installed",
+    "installed_empty_message": "No installed addons found.",
+    "registry_unavailable_title": "Registry Unavailable",
+    "registry_unavailable_description": "Could not fetch addons from the registry. Check your network connection.",
+    "no_apis_title": "No APIs Found",
+    "no_apis_description": "Could not fetch APIs from the registry."
+  },
+  "package_detail": {
+    "not_found": "Package not found.",
+    "select_function": "Select a function to view its details",
+    "select_secret": "Select a secret to view its details",
+    "select_variable": "Select a variable to view its details",
+    "install": "Install",
+    "installed": "Installed",
+    "tab_readme": "README",
+    "sse": "SSE",
+    "operations": "Operations ({{count}})",
+    "servers": "Servers",
+    "authentication": "Authentication",
+    "content_types": "Content Types",
+    "openapi_json": "OpenAPI JSON",
+    "openapi_yaml": "OpenAPI YAML",
+    "generate_install_addon": "Generate & Install Addon",
+    "addon_installed_success": "Addon generated and installed successfully!"
+  },
+  "agents": {
+    "title": "Agents",
+    "description": "AI agents and their configurations",
+    "search_placeholder": "Search agents...",
+    "empty_title": "No agents found",
+    "empty_description": "Define agents in your project to see them here."
+  },
+  "audit": {
+    "title": "Audit",
+    "description": "Activity log and audit trail for this stage",
+    "empty_title": "No audit events yet",
+    "empty_description": "Activity and changes to this stage will appear here."
+  },
+  "config": {
+    "title": "Config",
+    "description": "Runtime variables and secrets configuration"
+  },
+  "credentials": {
+    "title": "Credentials",
+    "description": "OAuth2 and API key credentials",
+    "search_users": "Search users...",
+    "search_credentials": "Search credentials...",
+    "select_user": "Select a user to view their credentials"
+  },
+  "jobs": {
+    "title": "Jobs",
+    "description": "Scheduled tasks, queues, and triggers",
+    "search": {
+      "schedulers": "Search scheduled tasks...",
+      "queues": "Search queue workers...",
+      "triggers": "Search triggers..."
+    }
+  },
+  "runtime": {
+    "title": "Runtime",
+    "description": "Services, middleware, and permission guards",
+    "search": {
+      "services": "Search services...",
+      "middleware": "Search middleware...",
+      "permissions": "Search permissions..."
+    }
+  },
+  "secrets": {
+    "title": "Secrets",
+    "description": "Encrypted secrets managed by pikku",
+    "search_placeholder": "Search secrets...",
+    "select_item": "Select a secret to view details"
+  },
+  "variables": {
+    "title": "Variables",
+    "description": "Runtime configuration variables for this environment",
+    "search_placeholder": "Search variables...",
+    "select_item": "Select a variable to view details"
+  },
+  "workflows": {
+    "title": "Workflows",
+    "description": "Visual workflow definitions and run history",
+    "search_placeholder": "Search workflows...",
+    "empty_title": "No workflows found",
+    "empty_description": "Define workflows in your project to see them here."
+  },
+  "apis": {
+    "title": "APIs",
+    "description": "Browse HTTP routes, channels, MCP servers, and CLI surfaces",
+    "search": {
+      "http": "Search routes...",
+      "channels": "Search channels...",
+      "mcp": "Search MCP tools, resources, prompts...",
+      "cli": "Search commands..."
+    }
+  },
+  "agent_playground": {
+    "connect_accounts": "Connect your accounts",
+    "credentials_required": "This agent requires the following credentials to be connected before you can start chatting.",
+    "connect": "Connect",
+    "search_agents": "Search agents...",
+    "no_conversations": "No conversations yet",
+    "new_conversation": "New conversation",
+    "panel_message": "Agent configuration",
+    "no_agent_selected": "No agent selected",
+    "agent_not_found_description": "This agent may have been removed or renamed.",
+    "select_agent_description": "Select an agent from the Agents page to open the playground."
+  }
+}

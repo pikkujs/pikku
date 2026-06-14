@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
-import { Box, Text, Table, Badge } from '@mantine/core'
+import { Box, Text, Table, Badge } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { schemaTypeColor } from './badge-defs'
 
@@ -66,10 +68,10 @@ const PropertyRow: React.FC<{
               <Box w={12} />
             )}
             <Text size="sm" ff="monospace" fw={500} c="var(--app-meta-value)">
-              {name}
+              {asI18n(name)}
               {required && (
                 <Text component="span" c="yellow" fw={700}>
-                  *
+                  {asI18n('*')}
                 </Text>
               )}
             </Text>
@@ -77,13 +79,13 @@ const PropertyRow: React.FC<{
         </Table.Td>
         <Table.Td>
           <Badge size="sm" variant="light" color={getColor(prop)} tt="none">
-            {getTypeLabel(prop)}
+            {asI18n(getTypeLabel(prop))}
           </Badge>
         </Table.Td>
         <Table.Td>
           {notes && (
             <Text size="sm" c="var(--app-meta-label)">
-              {notes}
+              {asI18n(notes)}
             </Text>
           )}
         </Table.Td>
@@ -118,10 +120,11 @@ const PropertyRows: React.FC<{
 )
 
 export const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema }) => {
+  const { t } = useI18n()
   if (!schema || typeof schema !== 'object') {
     return (
       <Text c="dimmed" size="sm">
-        No schema
+        {t('schema_viewer.no_schema')}
       </Text>
     )
   }
@@ -150,7 +153,7 @@ export const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema }) => {
         color={getColor(resolvedSchema)}
         tt="none"
       >
-        {getTypeLabel(schema)}
+        {asI18n(getTypeLabel(schema))}
       </Badge>
     )
   }

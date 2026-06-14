@@ -1,5 +1,6 @@
 import React from 'react'
-import { Box, Paper, Text, Stack, useMantineTheme } from '@mantine/core'
+import { Box, Paper, Text, Stack, useMantineTheme } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { Handle, Position } from 'reactflow'
 import { useWorkflowRunContextSafe } from '../../../context/WorkflowRunContext'
 
@@ -220,7 +221,7 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
                       borderRadius: 2,
                     }}
                   >
-                    {handle.label}
+                    {asI18n(handle.label!)}
                   </Text>
                 )}
               </React.Fragment>
@@ -244,12 +245,12 @@ export const FlowNode: React.FC<FlowNodeProps> = ({
               fw={600}
               c={highlightIconColor || (labelDimmed ? 'dimmed' : undefined)}
             >
-              {label}
+              {asI18n(label)}
             </Text>
           )}
           {subtitle && (
             <Text size="sm" c="dimmed">
-              {subtitle}
+              {asI18n(subtitle)}
             </Text>
           )}
         </Box>

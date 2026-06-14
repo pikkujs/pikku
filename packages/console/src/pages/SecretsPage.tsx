@@ -1,13 +1,15 @@
 import React, { useMemo, useState } from 'react'
-import { Group, TextInput } from '@mantine/core'
+import { Group, TextInput } from '@pikku/mantine/core'
 import { Search } from 'lucide-react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { ProjectSecrets } from '../components/project/ProjectSecrets'
+import { useI18n } from '@pikku/react/i18n'
 
 const SecretsPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
+  const { t } = useI18n()
   const { meta, loading } = usePikkuMeta()
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -41,13 +43,13 @@ const SecretsPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHe
     <ResizablePanelLayout
       header={
         <ListPageHeader
-          title="Secrets"
-          description="Encrypted secrets managed by pikku"
+          title={t('secrets.title')}
+          description={t('secrets.description')}
           docsHref="https://pikku.dev/docs/core-features/secrets"
           filters={
             <Group gap="sm" wrap="nowrap">
               <TextInput
-                placeholder="Search secrets..."
+                placeholder={t('secrets.search_placeholder')}
                 leftSection={<Search size={14} />}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -58,7 +60,7 @@ const SecretsPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHe
           }
         />
       }
-      emptyPanelMessage="Select a secret to view details"
+      emptyPanelMessage={t('secrets.select_item')}
     >
       <ProjectSecrets secrets={secrets} loading={loading} emptyHero={emptyHero} />
     </ResizablePanelLayout>

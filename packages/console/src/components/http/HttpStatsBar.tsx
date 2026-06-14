@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
-import { Group, Badge } from '@mantine/core'
+import { Group, Badge } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { httpMethodDefs } from '../ui/badge-defs'
 
 interface HttpStatsBarProps {
@@ -19,7 +20,7 @@ export const HttpStatsBar: React.FC<HttpStatsBarProps> = ({ routes }) => {
   return (
     <Group gap="xs">
       <Badge variant="light" color="gray" size="sm" tt="none">
-        {routes.length} total
+        {asI18n(`${routes.length} total`)}
       </Badge>
       {Object.entries(counts)
         .sort(([a], [b]) => a.localeCompare(b))
@@ -33,7 +34,7 @@ export const HttpStatsBar: React.FC<HttpStatsBarProps> = ({ routes }) => {
               size="sm"
               tt="none"
             >
-              {count} {method}
+              {asI18n(`${count} ${method}`)}
             </Badge>
           )
         })}

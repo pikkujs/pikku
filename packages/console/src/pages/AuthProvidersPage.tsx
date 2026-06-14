@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react'
-import { Group, Text, Badge, TextInput } from '@mantine/core'
+import { Group, Text, Badge, TextInput } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { KeyRound, Search } from 'lucide-react'
 import { PanelProvider } from '../context/PanelContext'
 import { usePanelContext } from '../context/PanelContext'
@@ -197,6 +199,7 @@ export const AUTH_PROVIDERS: AuthProviderDef[] = [
 
 const AuthProvidersTable: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
   const { openAuthProvider } = usePanelContext()
+  const { t } = useI18n()
 
   const columns = useMemo(
     () => [
@@ -206,10 +209,10 @@ const AuthProvidersTable: React.FC<{ searchQuery: string }> = ({ searchQuery }) 
         render: (p: AuthProviderDef) => (
           <Group gap="xs">
             <KeyRound size={14} />
-            <Text fw={500}>{p.name}</Text>
+            <Text fw={500}>{asI18n(p.name)}</Text>
             {p.featured && (
               <Badge size="xs" variant="light" color="blue">
-                popular
+                {t('auth_providers.popular')}
               </Badge>
             )}
           </Group>
@@ -220,7 +223,7 @@ const AuthProvidersTable: React.FC<{ searchQuery: string }> = ({ searchQuery }) 
         header: 'DESCRIPTION',
         render: (p: AuthProviderDef) => (
           <Text size="sm" c="dimmed">
-            {p.description}
+            {asI18n(p.description)}
           </Text>
         ),
       },
@@ -229,12 +232,12 @@ const AuthProvidersTable: React.FC<{ searchQuery: string }> = ({ searchQuery }) 
         header: 'ENV VARS',
         render: (p: AuthProviderDef) => (
           <Text size="sm" c="dimmed" ff="monospace">
-            {p.fields.length} secret{p.fields.length !== 1 ? 's' : ''}
+            {asI18n(`${p.fields.length} secret${p.fields.length !== 1 ? 's' : ''}`)}
           </Text>
         ),
       },
     ],
-    [],
+    [t],
   )
 
   return (
@@ -250,7 +253,7 @@ const AuthProvidersTable: React.FC<{ searchQuery: string }> = ({ searchQuery }) 
       searchFilter={(p, q) =>
         p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)
       }
-      emptyMessage="No providers found."
+      emptyMessage={t('auth_providers.empty_message')}
     />
   )
 }
@@ -259,18 +262,19 @@ const AuthProvidersTable: React.FC<{ searchQuery: string }> = ({ searchQuery }) 
 
 export const AuthProvidersPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('')
+  const { t } = useI18n()
 
   return (
     <PanelProvider>
       <ResizablePanelLayout
         header={
           <ListPageHeader
-            title="Auth Providers"
-            description="Configure OAuth sign-in providers. Secrets are read from your environment via auth.js."
+            title={t('auth_providers.title')}
+            description={t('auth_providers.description')}
             docsHref="https://authjs.dev/getting-started/providers"
             filters={
               <TextInput
-                placeholder="Search providers..."
+                placeholder={t('auth_providers.search_placeholder')}
                 leftSection={<Search size={14} />}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -280,7 +284,7 @@ export const AuthProvidersPage: React.FC = () => {
             }
           />
         }
-        emptyPanelMessage="Select a provider to configure"
+        emptyPanelMessage={t('auth_providers.select_provider')}
       >
         <AuthProvidersTable searchQuery={searchQuery} />
       </ResizablePanelLayout>

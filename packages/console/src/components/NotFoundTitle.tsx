@@ -1,9 +1,11 @@
-import { Button, Container, Group, Text, Title } from '@mantine/core'
+import { Button, Container, Group, Text, Title } from '@pikku/mantine/core'
 import { useNavigate } from '../router'
+import { useI18n } from '@pikku/react/i18n'
 import classes from './NotFoundTitle.module.css'
 
 export const NotFoundTitle: React.FC = () => {
   const navigate = useNavigate()
+  const { t } = useI18n()
 
   const handleGoHome = () => {
     navigate('/')
@@ -12,14 +14,13 @@ export const NotFoundTitle: React.FC = () => {
   return (
     <Container className={classes.root}>
       <div className={classes.label}>404</div>
-      <Title className={classes.title}>You have found a secret place.</Title>
+      <Title className={classes.title}>{t('not_found.title')}</Title>
       <Text c="dimmed" size="lg" ta="center" className={classes.description}>
-        Unfortunately, this is only a 404 page. You may have mistyped the
-        address, or the page has been moved to another URL.
+        {t('not_found.description')}
       </Text>
       <Group justify="center">
         <Button variant="subtle" size="md" onClick={handleGoHome}>
-          Take me back to home page
+          {t('not_found.go_home')}
         </Button>
       </Group>
     </Container>

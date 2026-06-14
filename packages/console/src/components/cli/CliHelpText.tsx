@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Box } from '@mantine/core'
+import { Box } from '@pikku/mantine/core'
 import { generateCommandHelp } from '@pikku/core/cli'
 import type { CLIMeta } from '@pikku/core/cli'
 

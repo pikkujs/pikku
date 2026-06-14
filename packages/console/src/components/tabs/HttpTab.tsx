@@ -1,15 +1,17 @@
 import React, { useMemo } from 'react'
-import { Text, Group } from '@mantine/core'
+import { Text, Group } from '@pikku/mantine/core'
 import { Globe } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
+import { useI18n } from '@pikku/react/i18n'
 
 type HttpTabProps = { searchQuery: string; emptyHero?: React.ReactNode }
 
 export const HttpTab: React.FC<HttpTabProps> = ({ searchQuery, emptyHero }) => {
   const { meta } = usePikkuMeta()
+  const { t } = useI18n()
   const { openHTTPWire } = usePanelContext()
 
   const routes = useMemo(() => {
@@ -57,13 +59,13 @@ export const HttpTab: React.FC<HttpTabProps> = ({ searchQuery, emptyHero }) => {
       onRowClick={(route) =>
         openHTTPWire(`http::${route.method}::${route.route}`, route)
       }
-      searchPlaceholder="Search routes..."
+      searchPlaceholder={t('http.search_placeholder')}
       searchFilter={(route, q) =>
         route.route?.toLowerCase().includes(q) ||
         route.pikkuFuncId?.toLowerCase().includes(q) ||
         route.method?.toLowerCase().includes(q)
       }
-      emptyMessage="No HTTP routes found."
+      emptyMessage={t('http.empty_message')}
       emptyHero={emptyHero}
       externalSearch={searchQuery}
     />

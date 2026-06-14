@@ -1,5 +1,6 @@
 import React from 'react'
-import { Stack, Text, Box, Group, Divider, Table } from '@mantine/core'
+import { Stack, Text, Box, Group, Divider, Table } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { Layers, Shield } from 'lucide-react'
 import { usePikkuMeta } from '../../../context/PikkuMetaContext'
 import { usePanelContext } from '../../../context/PanelContext'
@@ -38,12 +39,12 @@ const DefinitionPanel: React.FC<{ defId: string; def: any }> = ({
         <Group gap="xs">
           <Shield size={20} />
           <Text size="lg" fw={600}>
-            {def.name || def.exportedName || defId}
+            {asI18n(def.name || def.exportedName || defId)}
           </Text>
         </Group>
         {def.description && (
           <Text size="sm" c="dimmed" mt={4}>
-            {def.description}
+            {asI18n(def.description)}
           </Text>
         )}
       </Box>
@@ -65,7 +66,7 @@ const DefinitionPanel: React.FC<{ defId: string; def: any }> = ({
 
       {def.services?.services?.length > 0 && (
         <Box>
-          <SectionLabel>Services</SectionLabel>
+          <SectionLabel>{asI18n('Services')}</SectionLabel>
           <Group gap={4}>
             {def.services.services.map((svc: string) => (
               <PikkuBadge
@@ -81,7 +82,7 @@ const DefinitionPanel: React.FC<{ defId: string; def: any }> = ({
 
       {def.wires && (
         <Box>
-          <SectionLabel>Wires</SectionLabel>
+          <SectionLabel>{asI18n('Wires')}</SectionLabel>
           {def.wires.wires?.length > 0 ? (
             <Group gap={4}>
               {def.wires.wires.some((w: string) =>
@@ -110,7 +111,7 @@ const DefinitionPanel: React.FC<{ defId: string; def: any }> = ({
             </Group>
           ) : (
             <Text size="sm" c="dimmed">
-              None
+              {asI18n('None')}
             </Text>
           )}
         </Box>
@@ -120,7 +121,7 @@ const DefinitionPanel: React.FC<{ defId: string; def: any }> = ({
         <>
           <Divider />
           <Box>
-            <SectionLabel>Used in Groups</SectionLabel>
+            <SectionLabel>{asI18n('Used in Groups')}</SectionLabel>
             <Group gap={4}>
               {usedByGroups.map((g) => (
                 <PikkuBadge
@@ -129,7 +130,7 @@ const DefinitionPanel: React.FC<{ defId: string; def: any }> = ({
                   color={g.type === 'http' ? 'blue' : 'green'}
                   leftSection={<Layers size={10} />}
                 >
-                  {g.type === 'http' ? `HTTP ${g.key}` : `Tag: ${g.key}`}
+                  {asI18n(g.type === 'http' ? `HTTP ${g.key}` : `Tag: ${g.key}`)}
                 </PikkuBadge>
               ))}
             </Group>
@@ -169,22 +170,22 @@ const GroupPanel: React.FC<{
           type="label"
           color={groupType === 'http' ? 'blue' : 'green'}
         >
-          {groupType === 'http' ? `HTTP ${groupKey}` : `Tag: ${groupKey}`}
+          {asI18n(groupType === 'http' ? `HTTP ${groupKey}` : `Tag: ${groupKey}`)}
         </PikkuBadge>
       </Box>
 
       {group?.exportName && (
         <Box>
-          <SectionLabel>Export</SectionLabel>
+          <SectionLabel>{asI18n('Export')}</SectionLabel>
           <Text size="sm" ff="monospace">
-            {group.exportName}
+            {asI18n(group.exportName)}
           </Text>
         </Box>
       )}
 
       {resolvedDefs.length > 0 && (
         <Box>
-          <SectionLabel>Permissions ({resolvedDefs.length})</SectionLabel>
+          <SectionLabel>{asI18n(`Permissions (${resolvedDefs.length})`)}</SectionLabel>
           <Table verticalSpacing={4} horizontalSpacing="xs">
             <Table.Thead>
               <Table.Tr>

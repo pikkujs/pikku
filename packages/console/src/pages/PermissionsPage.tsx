@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react'
-import { Text, Group } from '@mantine/core'
+import { Text, Group } from '@pikku/mantine/core'
 import { Shield } from 'lucide-react'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -19,6 +21,7 @@ const PermissionsTable: React.FC<{
   loading?: boolean
 }> = ({ items, loading }) => {
   const { openPermission } = usePanelContext()
+  const { t } = useI18n()
 
   const columns = useMemo(
     () => [
@@ -28,11 +31,11 @@ const PermissionsTable: React.FC<{
         render: (item: PermissionItem) => (
           <>
             <Text fw={500} truncate>
-              {item.name}
+              {asI18n(item.name)}
             </Text>
             {item.data?.description && (
               <Text size="sm" c="dimmed" lineClamp={1}>
-                {item.data.description}
+                {asI18n(item.data.description)}
               </Text>
             )}
           </>
@@ -77,12 +80,12 @@ const PermissionsTable: React.FC<{
       columns={columns}
       getKey={(item) => item.id}
       onRowClick={(item) => openPermission(item.id, item.data)}
-      searchPlaceholder="Search permissions..."
+      searchPlaceholder={t('permissions.search_placeholder')}
       searchFilter={(item, q) =>
         item.name.toLowerCase().includes(q) ||
         item.data?.description?.toLowerCase().includes(q)
       }
-      emptyMessage="No permissions found."
+      emptyMessage={t('permissions.empty_message')}
       loading={loading}
     />
   )
@@ -90,6 +93,7 @@ const PermissionsTable: React.FC<{
 
 export const PermissionsPage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
+  const { t } = useI18n()
 
   const items = useMemo((): PermissionItem[] => {
     if (!meta.permissionsGroupsMeta) return []
@@ -111,9 +115,9 @@ export const PermissionsPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title="Permissions" description="Access control guards protecting your functions" />}
+        header={<ListPageHeader title={t('permissions.title')} description={t('permissions.description')} />}
         hidePanel={!loading && items.length === 0}
-        emptyPanelMessage="Select a permission to view its details"
+        emptyPanelMessage={t('permissions.select_item')}
       >
         <PermissionsTable items={items} loading={loading} />
       </ResizablePanelLayout>

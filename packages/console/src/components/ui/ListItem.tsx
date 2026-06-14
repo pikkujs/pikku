@@ -1,5 +1,5 @@
 import React from 'react'
-import { UnstyledButton } from '@mantine/core'
+import { UnstyledButton } from '@pikku/mantine/core'
 import classes from './console.module.css'
 
 export interface ListItemProps {

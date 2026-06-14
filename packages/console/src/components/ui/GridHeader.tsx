@@ -1,9 +1,10 @@
 import React from 'react'
-import { Box, Text } from '@mantine/core'
+import { Box, Text } from '@pikku/mantine/core'
+import type { I18nNode } from '@pikku/react'
 import classes from './console.module.css'
 
 export interface GridColumn {
-  label: string
+  label: I18nNode
   align?: 'left' | 'right'
 }
 
@@ -20,9 +21,9 @@ export const GridHeader: React.FC<GridHeaderProps> = ({
     className={classes.gridHeader}
     style={{ display: 'grid', gridTemplateColumns }}
   >
-    {columns.map((col) => (
+    {columns.map((col, i) => (
       <Text
-        key={col.label}
+        key={i}
         size="sm"
         fw={600}
         ff="monospace"

@@ -9,13 +9,15 @@ import {
   Box,
   Button,
   Alert,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
 import { KeyRound, Link2, Circle, AlertTriangle } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import classes from '../ui/console.module.css'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 
 interface CredentialMeta {
   name: string
@@ -75,13 +77,15 @@ export const CredentialsOverviewTab: React.FC<{ searchQuery?: string; emptyHero?
     enabled: allCredentials.length > 0,
   })
 
+  const { t } = useI18n()
+
   if (allCredentials.length === 0) {
     return (
       <EmptyStatePlaceholder
         icon={KeyRound}
         hero={emptyHero}
-        title="No credentials declared yet"
-        description="Use wireCredential() in your code to declare credentials."
+        title={t('credentials.empty_title')}
+        description={t('credentials.empty_description')}
         docsHref="https://pikku.dev/docs/core-features/credentials"
       />
     )
@@ -106,6 +110,7 @@ const CredentialCard: React.FC<{
   credential: CredentialMeta
   isConnected: boolean
 }> = ({ credential, isConnected }) => {
+  const { t } = useI18n()
   const rpc = usePikkuRPC()
   const queryClient = useQueryClient()
 
@@ -137,7 +142,7 @@ const CredentialCard: React.FC<{
       <Stack gap="xs">
         <Group justify="space-between">
           <Text fw={600} size="sm">
-            {credential.displayName}
+            {asI18n(credential.displayName)}
           </Text>
           {credential.isOAuth2 ? (
             <Link2 size={16} color="var(--mantine-color-dimmed)" />
@@ -148,7 +153,7 @@ const CredentialCard: React.FC<{
 
         {credential.description && (
           <Text size="sm" c="dimmed" lineClamp={2}>
-            {credential.description}
+            {asI18n(credential.description)}
           </Text>
         )}
 
@@ -157,7 +162,7 @@ const CredentialCard: React.FC<{
           variant="light"
           color={credential.isOAuth2 ? 'violet' : 'blue'}
         >
-          {credential.isOAuth2 ? 'OAuth2' : 'API Key'}
+          {credential.isOAuth2 ? t('credentials.type_oauth2') : t('credentials.type_api_key')}
         </Badge>
 
         <Group gap={6} mt={4}>
@@ -169,14 +174,14 @@ const CredentialCard: React.FC<{
                 color="var(--mantine-color-teal-6)"
               />
               <Text size="sm" c="teal.6">
-                Connected
+                {t('credentials.connected')}
               </Text>
             </>
           ) : (
             <>
               <Circle size={8} color="var(--mantine-color-gray-5)" />
               <Text size="sm" c="dimmed">
-                Not connected
+                {t('credentials.not_connected')}
               </Text>
             </>
           )}
@@ -192,7 +197,7 @@ const CredentialCard: React.FC<{
                   onClick={() => connectMutation.mutate()}
                   loading={connectMutation.isPending}
                 >
-                  Reconnect
+                  {t('credentials.reconnect')}
                 </Button>
                 <Button
                   size="compact-xs"
@@ -201,7 +206,7 @@ const CredentialCard: React.FC<{
                   onClick={() => disconnectMutation.mutate()}
                   loading={disconnectMutation.isPending}
                 >
-                  Disconnect
+                  {t('credentials.disconnect')}
                 </Button>
               </Group>
             ) : (
@@ -211,7 +216,7 @@ const CredentialCard: React.FC<{
                 loading={connectMutation.isPending}
                 leftSection={<Link2 size={12} />}
               >
-                Connect
+                {t('credentials.connect')}
               </Button>
             )}
           </Box>
@@ -219,9 +224,9 @@ const CredentialCard: React.FC<{
 
         {connectMutation.isError && (
           <Alert color="red" variant="light" icon={<AlertTriangle size={14} />}>
-            {String(
+            {asI18n(String(
               (connectMutation.error as any)?.message || connectMutation.error
-            )}
+            ))}
           </Alert>
         )}
       </Stack>

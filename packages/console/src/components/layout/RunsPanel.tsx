@@ -10,7 +10,10 @@ import {
   Group,
   ActionIcon,
   Button,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import type { I18nNode } from '@pikku/react'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { Check, Plus, X } from 'lucide-react'
 import classes from '../ui/console.module.css'
 
@@ -42,9 +45,9 @@ interface RunsPanelProps {
   loading?: boolean
   statusFilters?: string[]
   title: string
-  emptyMessage?: string
+  emptyMessage?: I18nNode
   onNewClick?: () => void
-  newButtonLabel?: string
+  newButtonLabel?: I18nNode
   onStatusFilterChange?: (status: string | undefined) => void
   onDelete?: (id: string) => void
   header?: React.ReactNode
@@ -58,6 +61,7 @@ const RunRow: React.FC<{
 }> = ({ run, selected, onSelect, onDelete }) => {
   const [confirming, setConfirming] = useState(false)
   const [hovered, setHovered] = useState(false)
+  const { t } = useI18n()
 
   if (confirming) {
     return (
@@ -70,7 +74,7 @@ const RunRow: React.FC<{
         }}
       >
         <Text size="sm" fw={500} mb={6}>
-          Delete this run? This can't be undone.
+          {t('runs_panel.delete_confirm')}
         </Text>
         <Group gap="xs">
           <Button
@@ -82,7 +86,7 @@ const RunRow: React.FC<{
               setConfirming(false)
             }}
           >
-            Yes
+            {t('common.yes')}
           </Button>
           <Button
             size="compact-xs"
@@ -90,7 +94,7 @@ const RunRow: React.FC<{
             leftSection={<X size={12} />}
             onClick={() => setConfirming(false)}
           >
-            No
+            {t('common.no')}
           </Button>
         </Group>
       </Box>
@@ -121,19 +125,19 @@ const RunRow: React.FC<{
               variant="filled"
               circle
             >
-              {' '}
+              {asI18n(' ')}
             </Badge>
             <Text size="sm" ff="monospace" truncate>
-              {run.label || run.id.slice(0, 8)}
+              {asI18n(run.label || run.id.slice(0, 8))}
             </Text>
             {run.wire && (
               <Badge size="sm" variant="light" color="gray">
-                {run.wire.type}
+                {asI18n(run.wire.type)}
               </Badge>
             )}
           </Group>
           <Text size="sm" c="dimmed" pl={18}>
-            {formatDateTime(run.createdAt)}
+            {asI18n(formatDateTime(run.createdAt))}
           </Text>
         </Stack>
         {onDelete && hovered && (
@@ -145,7 +149,7 @@ const RunRow: React.FC<{
               e.stopPropagation()
               setConfirming(true)
             }}
-            title="Delete run"
+            title={t('runs_panel.delete_run')}
           >
             <X size={16} />
           </ActionIcon>
@@ -163,14 +167,15 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
   loading = false,
   statusFilters = ['running', 'completed', 'failed'],
   title,
-  emptyMessage = 'No runs found',
+  emptyMessage,
   onNewClick,
-  newButtonLabel = 'New',
+  newButtonLabel,
   onStatusFilterChange,
   onDelete,
   header,
 }) => {
   const [statusFilter, setStatusFilter] = useState('all')
+  const { t } = useI18n()
 
   const filteredRuns = useMemo(() => {
     if (statusFilter === 'all') return runs
@@ -183,10 +188,10 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
   }
 
   const segmentData = [
-    { value: 'all', label: 'All' },
+    { value: 'all', label: t('runs_panel.filter_all') },
     ...statusFilters.map((s) => ({
       value: s,
-      label: s.charAt(0).toUpperCase() + s.slice(1),
+      label: asI18n(s.charAt(0).toUpperCase() + s.slice(1)),
     })),
   ]
 
@@ -225,7 +230,7 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
             <Group gap="xs">
               <Plus size={16} color="var(--mantine-color-primary-6)" />
               <Text size="sm" fw={500} c="primary">
-                {newButtonLabel}
+                {newButtonLabel ?? t('runs_panel.new')}
               </Text>
             </Group>
           </Box>
@@ -236,7 +241,7 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
           </Box>
         ) : filteredRuns.length === 0 ? (
           <Text size="sm" c="dimmed" ta="center" py="md">
-            {emptyMessage}
+            {emptyMessage ?? t('runs_panel.empty')}
           </Text>
         ) : (
           <Stack gap={0}>

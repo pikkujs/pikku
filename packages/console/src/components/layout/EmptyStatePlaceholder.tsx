@@ -1,13 +1,15 @@
 import React from 'react'
-import { Stack, Text, Anchor } from '@mantine/core'
+import { Stack, Text, Anchor } from '@pikku/mantine/core'
+import type { I18nNode } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import classes from '../ui/console.module.css'
 import { CommandChip } from '../ui/CommandChip'
 
 interface EmptyStatePlaceholderProps {
   icon?: React.ComponentType<{ size?: number; strokeWidth?: number }>
   hero?: React.ReactNode
-  title: string
-  description?: string
+  title: I18nNode
+  description?: I18nNode
   code?: string
   docsHref: string
 }
@@ -20,6 +22,7 @@ export const EmptyStatePlaceholder: React.FC<EmptyStatePlaceholderProps> = ({
   code,
   docsHref,
 }) => {
+  const { t } = useI18n()
   return (
     <Stack
       align="center"
@@ -46,7 +49,7 @@ export const EmptyStatePlaceholder: React.FC<EmptyStatePlaceholderProps> = ({
         size="sm"
         c="dimmed"
       >
-        How this works →
+        {t('empty_state.how_it_works')}
       </Anchor>
     </Stack>
   )

@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
-import { Text } from '@mantine/core'
+import { Text } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { Settings2 } from 'lucide-react'
 import { usePanelContext } from '../../context/PanelContext'
 import { TableListPage } from '../layout/TableListPage'
@@ -35,11 +36,11 @@ export const ProjectVariables: React.FC<ProjectVariablesProps> = ({
         render: (v: VariableMeta) => (
           <>
             <Text fw={500} truncate>
-              {v.displayName}
+              {asI18n(v.displayName)}
             </Text>
             {v.description && (
               <Text size="sm" c="dimmed" truncate>
-                {v.description}
+                {asI18n(v.description)}
               </Text>
             )}
           </>
@@ -50,7 +51,7 @@ export const ProjectVariables: React.FC<ProjectVariablesProps> = ({
         header: 'VARIABLE ID',
         render: (v: VariableMeta) => (
           <Text size="sm" c="dimmed" ff="monospace">
-            {v.variableId}
+            {asI18n(v.variableId)}
           </Text>
         ),
       },
@@ -69,7 +70,7 @@ export const ProjectVariables: React.FC<ProjectVariablesProps> = ({
       onRowClick={(v) =>
         openVariable(v.name, { ...(v.rawData ?? v), installed })
       }
-      emptyMessage="No variables found."
+      emptyMessage={asI18n('No variables found.')}
       loading={loading}
       emptyHero={emptyHero}
     />

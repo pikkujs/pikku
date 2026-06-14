@@ -7,12 +7,15 @@ import {
   Paper,
   Group,
   Button,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import { type I18nNode, asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { PikkuBadge } from '../components/ui/PikkuBadge'
 import { RefreshCw } from 'lucide-react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 
 export const SettingsPage: React.FC = () => {
+  const { t } = useI18n()
   const { counts, loading, error, refresh } = usePikkuMeta()
 
   return (
@@ -20,17 +23,17 @@ export const SettingsPage: React.FC = () => {
       <Stack gap="lg">
         <Box>
           <Text size="xl" fw={700}>
-            Settings
+            {t('settings.title')}
           </Text>
           <Text size="sm" c="dimmed">
-            Application preferences and metadata status
+            {t('settings.description')}
           </Text>
         </Box>
 
         <Paper p="lg" radius="md" withBorder>
           <Stack gap="md">
             <Group justify="space-between">
-              <Text fw={600}>Metadata</Text>
+              <Text fw={600}>{t('settings.metadata')}</Text>
               <Button
                 variant="light"
                 size="sm"
@@ -38,40 +41,39 @@ export const SettingsPage: React.FC = () => {
                 loading={loading}
                 onClick={refresh}
               >
-                Refresh
+                {t('common.refresh')}
               </Button>
             </Group>
             {error && (
               <Text size="sm" c="red">
-                {error}
+                {asI18n(error)}
               </Text>
             )}
             <Group gap="lg" style={{ flexWrap: 'wrap' }}>
-              <MetaStat label="Functions" count={counts.functions} />
-              <MetaStat label="Workflows" count={counts.workflows} />
-              <MetaStat label="HTTP Routes" count={counts.httpRoutes} />
-              <MetaStat label="Channels" count={counts.channels} />
-              <MetaStat label="MCP Tools" count={counts.mcpTools} />
-              <MetaStat label="CLI Commands" count={counts.cliCommands} />
-              <MetaStat label="Schedulers" count={counts.schedulers} />
-              <MetaStat label="Queues" count={counts.queues} />
-              <MetaStat label="RPC Methods" count={counts.rpcMethods} />
+              <MetaStat label={t('settings.stat.functions')} count={counts.functions} />
+              <MetaStat label={t('settings.stat.workflows')} count={counts.workflows} />
+              <MetaStat label={t('settings.stat.http_routes')} count={counts.httpRoutes} />
+              <MetaStat label={t('settings.stat.channels')} count={counts.channels} />
+              <MetaStat label={t('settings.stat.mcp_tools')} count={counts.mcpTools} />
+              <MetaStat label={t('settings.stat.cli_commands')} count={counts.cliCommands} />
+              <MetaStat label={t('settings.stat.schedulers')} count={counts.schedulers} />
+              <MetaStat label={t('settings.stat.queues')} count={counts.queues} />
+              <MetaStat label={t('settings.stat.rpc_methods')} count={counts.rpcMethods} />
             </Group>
           </Stack>
         </Paper>
 
         <Paper p="lg" radius="md" withBorder>
           <Stack gap="md">
-            <Text fw={600}>About</Text>
+            <Text fw={600}>{t('settings.about')}</Text>
             <Group gap="xs">
               <Text size="sm" c="dimmed">
-                Pikku Console
+                {t('settings.product_name')}
               </Text>
-              <PikkuBadge type="label">Alpha</PikkuBadge>
+              <PikkuBadge type="label">{asI18n('Alpha')}</PikkuBadge>
             </Group>
             <Text size="sm" c="dimmed">
-              A visual explorer for Pikku project metadata. Browse functions,
-              workflows, APIs, jobs, runtime services, and configuration.
+              {t('settings.product_description')}
             </Text>
           </Stack>
         </Paper>
@@ -81,7 +83,7 @@ export const SettingsPage: React.FC = () => {
 }
 
 const MetaStat: React.FC<{
-  label: string
+  label: I18nNode
   count: number
 }> = ({ label, count }) => (
   <Box>

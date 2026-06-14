@@ -7,7 +7,8 @@ import {
   TextInput,
   NumberInput,
   ActionIcon,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { Bot, Pencil } from 'lucide-react'
 import { PikkuBadge } from '../../ui/PikkuBadge'
 import { CommonDetails } from './shared/CommonDetails'
@@ -114,12 +115,12 @@ export const AgentConfiguration: React.FC<AgentPanelProps> = ({
 
       {playgroundCtx && (
         <Box>
-          <SectionLabel>Playground Overrides</SectionLabel>
+          <SectionLabel>{asI18n('Playground Overrides')}</SectionLabel>
           <Stack gap="xs">
             <TextInput
               size="xs"
-              label={`Model${metadata?.model ? ` (default: ${metadata.model})` : ''}`}
-              placeholder={metadata?.model ?? 'provider/model'}
+              label={asI18n(`Model${metadata?.model ? ` (default: ${metadata.model})` : ''}`)}
+              placeholder={asI18n(metadata?.model ?? 'provider/model')}
               value={playgroundCtx.model ?? ''}
               onChange={(e) =>
                 playgroundCtx.setModel(e.currentTarget.value || undefined)
@@ -127,11 +128,11 @@ export const AgentConfiguration: React.FC<AgentPanelProps> = ({
             />
             <NumberInput
               size="xs"
-              label={`Temperature${metadata?.temperature != null ? ` (default: ${metadata.temperature})` : ''}`}
+              label={asI18n(`Temperature${metadata?.temperature != null ? ` (default: ${metadata.temperature})` : ''}`)}
               placeholder={
-                metadata?.temperature != null
+                asI18n(metadata?.temperature != null
                   ? String(metadata.temperature)
-                  : 'default'
+                  : 'default')
               }
               value={playgroundCtx.temperature ?? ''}
               onChange={(v) =>
@@ -156,34 +157,34 @@ export const AgentConfiguration: React.FC<AgentPanelProps> = ({
       >
         {metadata?.role && (
           <Box>
-            <SectionLabel>Role</SectionLabel>
+            <SectionLabel>{asI18n('Role')}</SectionLabel>
             <Text size="md" style={{ whiteSpace: 'pre-wrap' }}>
-              {metadata.role}
+              {asI18n(metadata.role)}
             </Text>
           </Box>
         )}
 
         {metadata?.personality && (
           <Box>
-            <SectionLabel>Personality</SectionLabel>
+            <SectionLabel>{asI18n('Personality')}</SectionLabel>
             <Text size="md" style={{ whiteSpace: 'pre-wrap' }}>
-              {metadata.personality}
+              {asI18n(metadata.personality)}
             </Text>
           </Box>
         )}
 
         {metadata?.goal && (
           <Box>
-            <SectionLabel>Goal</SectionLabel>
+            <SectionLabel>{asI18n('Goal')}</SectionLabel>
             <Text size="md" style={{ whiteSpace: 'pre-wrap' }}>
-              {metadata.goal}
+              {asI18n(metadata.goal)}
             </Text>
           </Box>
         )}
 
         {tools.length > 0 && (
           <Box>
-            <SectionLabel>Tools ({tools.length})</SectionLabel>
+            <SectionLabel>{asI18n(`Tools (${tools.length})`)}</SectionLabel>
             <Group gap={6}>
               {tools.map((tool: string) => (
                 <PikkuBadge
@@ -201,7 +202,7 @@ export const AgentConfiguration: React.FC<AgentPanelProps> = ({
 
         {subAgents.length > 0 && (
           <Box>
-            <SectionLabel>Sub-Agents ({subAgents.length})</SectionLabel>
+            <SectionLabel>{asI18n(`Sub-Agents (${subAgents.length})`)}</SectionLabel>
             <Group gap={6}>
               {subAgents.map((agent: string) => (
                 <PikkuBadge
@@ -219,7 +220,7 @@ export const AgentConfiguration: React.FC<AgentPanelProps> = ({
 
         {channelMiddleware.length > 0 && (
           <Box>
-            <SectionLabel>Channel Middleware</SectionLabel>
+            <SectionLabel>{asI18n('Channel Middleware')}</SectionLabel>
             <Group gap={6}>
               {channelMiddleware.map((mw: any, i: number) => (
                 <LinkedBadge key={i} item={mw} kind="middleware" />
@@ -230,7 +231,7 @@ export const AgentConfiguration: React.FC<AgentPanelProps> = ({
 
         {aiMiddleware.length > 0 && (
           <Box>
-            <SectionLabel>AI Middleware</SectionLabel>
+            <SectionLabel>{asI18n('AI Middleware')}</SectionLabel>
             <Group gap={6}>
               {aiMiddleware.map((mw: any, i: number) => (
                 <LinkedBadge key={i} item={mw} kind="middleware" />
@@ -241,7 +242,7 @@ export const AgentConfiguration: React.FC<AgentPanelProps> = ({
 
         {memory && (
           <Box>
-            <SectionLabel>Memory</SectionLabel>
+            <SectionLabel>{asI18n('Memory')}</SectionLabel>
             <Group gap={6}>
               {memory.storage && (
                 <PikkuBadge
@@ -266,15 +267,15 @@ export const AgentConfiguration: React.FC<AgentPanelProps> = ({
         )}
 
         <SchemaSection
-          label="Input Schema"
+          label={asI18n('Input Schema')}
           schemaName={metadata?.inputSchema}
         />
         <SchemaSection
-          label="Output Schema"
+          label={asI18n('Output Schema')}
           schemaName={metadata?.outputSchema}
         />
         <SchemaSection
-          label="Working Memory Schema"
+          label={asI18n('Working Memory Schema')}
           schemaName={metadata?.workingMemorySchema}
         />
       </CommonDetails>

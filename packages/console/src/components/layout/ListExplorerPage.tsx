@@ -8,7 +8,10 @@ import {
   SegmentedControl,
   Center,
   Loader,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import type { I18nNode, I18nString } from '@pikku/react'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { Search } from 'lucide-react'
 import classes from '../ui/console.module.css'
 import { Tree } from '../ui/Tree'
@@ -35,8 +38,8 @@ interface ListExplorerPageProps {
   header?: React.ReactNode
   title: string
   totalCount?: number
-  searchPlaceholder?: string
-  emptyMessage?: string
+  searchPlaceholder?: I18nString
+  emptyMessage?: I18nNode
   data: TreeNode[]
   loading?: boolean
   filters?: FilterOption[]
@@ -47,7 +50,7 @@ interface ListExplorerPageProps {
   rowHeight?: number
   nestedIndent?: number
   useStickyCategories?: boolean
-  panelMessage?: string
+  panelMessage?: I18nNode
 }
 
 const filterTreeNode = (node: TreeNode, query: string): TreeNode | null => {
@@ -77,8 +80,8 @@ export const ListExplorerPage: React.FC<ListExplorerPageProps> = ({
   header,
   title,
   totalCount,
-  searchPlaceholder = 'Search...',
-  emptyMessage = 'No items found.',
+  searchPlaceholder,
+  emptyMessage,
   data,
   loading = false,
   filters,
@@ -91,6 +94,7 @@ export const ListExplorerPage: React.FC<ListExplorerPageProps> = ({
   panelMessage,
 }) => {
   const [searchQuery, setSearchQuery] = useState('')
+  const { t } = useI18n()
 
   const filteredData = useMemo(() => {
     const query = searchQuery.toLowerCase()
@@ -112,7 +116,7 @@ export const ListExplorerPage: React.FC<ListExplorerPageProps> = ({
     <PanelProvider>
       <ResizablePanelLayout
         header={header}
-        emptyPanelMessage={panelMessage || `Select an item to see its details`}
+        emptyPanelMessage={panelMessage ?? t('list_explorer.select_item')}
       >
         <Stack gap={0} className={classes.flexColumn}>
           <Box
@@ -124,7 +128,7 @@ export const ListExplorerPage: React.FC<ListExplorerPageProps> = ({
           >
             <Group gap="md" wrap="nowrap">
               <TextInput
-                placeholder={searchPlaceholder}
+                placeholder={searchPlaceholder ?? t('common.search')}
                 leftSection={<Search size={16} />}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -148,8 +152,8 @@ export const ListExplorerPage: React.FC<ListExplorerPageProps> = ({
               <Box p="xl">
                 <Text c="dimmed" ta="center">
                   {searchQuery
-                    ? `No results found for "${searchQuery}"`
-                    : emptyMessage}
+                    ? asI18n(`No results found for "${searchQuery}"`)
+                    : (emptyMessage ?? t('common.no_items'))}
                 </Text>
               </Box>
             ) : (

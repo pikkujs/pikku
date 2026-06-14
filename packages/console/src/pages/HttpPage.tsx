@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react'
-import { Text, Stack } from '@mantine/core'
+import { Text, Stack } from '@pikku/mantine/core'
 import { Globe } from 'lucide-react'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider } from '../context/PanelContext'
 import { usePanelContext } from '../context/PanelContext'
@@ -14,6 +16,7 @@ const HttpTable: React.FC<{
   loading?: boolean
 }> = ({ routes, loading }) => {
   const { openHTTPWire } = usePanelContext()
+  const { t } = useI18n()
 
   const columns = useMemo(
     () => [
@@ -23,10 +26,10 @@ const HttpTable: React.FC<{
         render: (route: any) => (
           <>
             <Text fw={500} truncate>
-              {route.route}
+              {asI18n(route.route)}
             </Text>
             <Text size="sm" c="dimmed" truncate>
-              {route.pikkuFuncId}
+              {asI18n(route.pikkuFuncId)}
             </Text>
           </>
         ),
@@ -55,22 +58,21 @@ const HttpTable: React.FC<{
       onRowClick={(route) =>
         openHTTPWire(`http::${route.method}::${route.route}`, route)
       }
-      searchPlaceholder="Search HTTP routes..."
+      searchPlaceholder={t('http.search_placeholder')}
       searchFilter={(route, q) =>
         route.route?.toLowerCase().includes(q) ||
         route.pikkuFuncId?.toLowerCase().includes(q) ||
         route.method?.toLowerCase().includes(q)
       }
-      emptyMessage="No HTTP routes found."
+      emptyMessage={t('http.empty_message')}
       loading={loading}
       description={
         <Stack gap={2}>
           <Text size="sm" fw={500}>
-            See every route at a glance
+            {t('http.description_heading')}
           </Text>
           <Text size="sm" c="dimmed">
-            Pikku prints your full route table at startup. Every method, route,
-            function, and flag — visible in one place.
+            {t('http.description_body')}
           </Text>
         </Stack>
       }
@@ -80,6 +82,7 @@ const HttpTable: React.FC<{
 
 export const HttpPage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
+  const { t } = useI18n()
 
   const routes = useMemo(() => {
     if (!meta.httpMeta) return []
@@ -89,10 +92,10 @@ export const HttpPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title="HTTP Routes" description="Registered HTTP endpoints and their bound functions" />
+        header={<ListPageHeader title={t('http.title')} description={t('http.description')} />
         }
         hidePanel={!loading && routes.length === 0}
-        emptyPanelMessage="Select a route to view its details"
+        emptyPanelMessage={t('http.select_route')}
       >
         <HttpTable routes={routes} loading={loading} />
       </ResizablePanelLayout>

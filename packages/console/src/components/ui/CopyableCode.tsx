@@ -1,10 +1,11 @@
 import React from 'react'
-import { Box, Text } from '@mantine/core'
+import { Box, Text } from '@pikku/mantine/core'
+import type { I18nNode } from '@pikku/react'
 import { CodeHighlight } from '@mantine/code-highlight'
 
 interface CopyableCodeProps {
   code: string
-  label?: string
+  label?: I18nNode
   language?: string
 }
 

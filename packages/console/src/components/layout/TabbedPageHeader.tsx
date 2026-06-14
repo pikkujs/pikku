@@ -1,5 +1,7 @@
 import React from 'react'
-import { SegmentedControl } from '@mantine/core'
+import { SegmentedControl } from '@pikku/mantine/core'
+import type { I18nNode } from '@pikku/react'
+import { asI18n } from '@pikku/react'
 import { PageHeader, PageHeaderControls } from './PageLayout'
 
 interface Tab {
@@ -11,7 +13,7 @@ interface TabbedPageHeaderProps {
   icon: React.ComponentType<{ size?: number }>
   category: string
   docsHref: string
-  subtitle?: React.ReactNode
+  subtitle?: I18nNode
   tabs: Tab[]
   activeTab: string
   onTabChange: (value: string) => void
@@ -30,7 +32,7 @@ export const TabbedPageHeader: React.FC<TabbedPageHeaderProps> = ({
 }) => {
   return (
     <PageHeader
-      title={category}
+      title={asI18n(category)}
       subtitle={subtitle}
       docsHref={docsHref}
       actions={

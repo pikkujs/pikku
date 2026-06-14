@@ -1,19 +1,20 @@
 import React, { useState } from 'react'
-import { Box, Text, Table, Badge } from '@mantine/core'
+import { Box, Text, Table, Badge } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 
 const ValueInline: React.FC<{ value: unknown }> = ({ value }) => {
   if (value === null || value === undefined) {
     return (
       <Text size="sm" ff="monospace" c="dimmed" fs="italic">
-        null
+        {asI18n('null')}
       </Text>
     )
   }
   if (typeof value === 'string') {
     return (
       <Text size="sm" ff="monospace" c="teal.4">
-        &quot;{value}&quot;
+        {asI18n(`"${value}"`)}
       </Text>
     )
   }
@@ -27,14 +28,14 @@ const ValueInline: React.FC<{ value: unknown }> = ({ value }) => {
   if (typeof value === 'boolean') {
     return (
       <Badge size="sm" variant="light" color={value ? 'green' : 'red'}>
-        {String(value)}
+        {asI18n(String(value))}
       </Badge>
     )
   }
   if (Array.isArray(value)) {
     return (
       <Text size="sm" ff="monospace" c="dimmed">
-        [{value.length}]
+        {asI18n(`[${value.length}]`)}
       </Text>
     )
   }
@@ -42,13 +43,11 @@ const ValueInline: React.FC<{ value: unknown }> = ({ value }) => {
     const count = Object.keys(value as object).length
     return (
       <Text size="sm" ff="monospace" c="dimmed">
-        {'{'}
-        {count}
-        {'}'}
+        {asI18n(`{${count}}`)}
       </Text>
     )
   }
-  return <Text size="sm" ff="monospace">{String(value)}</Text>
+  return <Text size="sm" ff="monospace">{asI18n(String(value))}</Text>
 }
 
 const DataRow: React.FC<{ name: string; value: unknown; depth: number }> = ({
@@ -87,7 +86,7 @@ const DataRow: React.FC<{ name: string; value: unknown; depth: number }> = ({
               <Box w={12} />
             )}
             <Text size="sm" ff="monospace" fw={500} c="var(--app-meta-value)">
-              {name}
+              {asI18n(name)}
             </Text>
           </Box>
         </Table.Td>
@@ -108,7 +107,7 @@ export const DataViewer: React.FC<{ data: unknown }> = ({ data }) => {
   if (data === null || data === undefined) {
     return (
       <Text c="dimmed" size="sm" fs="italic">
-        null
+        {asI18n('null')}
       </Text>
     )
   }
@@ -121,7 +120,7 @@ export const DataViewer: React.FC<{ data: unknown }> = ({ data }) => {
   if (entries.length === 0) {
     return (
       <Text c="dimmed" size="sm" fs="italic">
-        {Array.isArray(data) ? '[ ]' : '{ }'}
+        {asI18n(Array.isArray(data) ? '[ ]' : '{ }')}
       </Text>
     )
   }

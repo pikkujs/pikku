@@ -1,11 +1,12 @@
 import React from 'react'
-import { Box, Text, Badge } from '@mantine/core'
+import { Box, Text, Badge } from '@pikku/mantine/core'
+import type { I18nNode } from '@pikku/react'
 import classes from './console.module.css'
 
 export interface DetailHeaderProps {
-  title: string
-  subtitle?: string | null
-  badge?: { label: string; color: string }
+  title: I18nNode
+  subtitle?: I18nNode | null
+  badge?: { label: I18nNode; color: string }
   children?: React.ReactNode
 }
 

@@ -13,7 +13,9 @@ import {
   Stack,
   Text,
   TextInput,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { FlaskConical, Play, Search } from 'lucide-react'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
@@ -179,7 +181,7 @@ const HighlightedStep: React.FC<{ step: string }> = ({ step }) => {
   if (!keyword) {
     return (
       <Text component="span" ff="monospace" fz={12} c="var(--app-text, var(--mantine-color-text))">
-        {step}
+        {asI18n(step)}
       </Text>
     )
   }
@@ -193,7 +195,7 @@ const HighlightedStep: React.FC<{ step: string }> = ({ step }) => {
         fw={600}
         c="var(--mantine-color-blue-5)"
       >
-        {keyword}
+        {asI18n(keyword)}
       </Text>
       <Text
         component="span"
@@ -201,7 +203,7 @@ const HighlightedStep: React.FC<{ step: string }> = ({ step }) => {
         fz={12}
         c="var(--app-text, var(--mantine-color-text))"
       >
-        {rest}
+        {asI18n(rest)}
       </Text>
     </Text>
   )
@@ -234,24 +236,24 @@ const FeatureCodeBlock: React.FC<FeatureCodeBlockProps> = ({ feature }) => {
       >
         <Group justify="space-between" wrap="nowrap">
           <Text ff="monospace" fz={13} fw={600} truncate>
-            {feature.featureName}
+            {asI18n(feature.featureName)}
           </Text>
           <Group gap={6} wrap="nowrap" style={{ flexShrink: 0 }}>
             {passCount > 0 && (
               <Badge color="green" variant="light" size="sm">
-                {passCount} pass
+                {asI18n(`${passCount} pass`)}
               </Badge>
             )}
             {failCount > 0 && (
               <Badge color="red" variant="light" size="sm">
-                {failCount} fail
+                {asI18n(`${failCount} fail`)}
               </Badge>
             )}
           </Group>
         </Group>
         {feature.featureDescription && (
           <Text fz={12} c="dimmed" mt={2}>
-            {feature.featureDescription}
+            {asI18n(feature.featureDescription)}
           </Text>
         )}
       </Box>
@@ -268,12 +270,12 @@ const FeatureCodeBlock: React.FC<FeatureCodeBlockProps> = ({ feature }) => {
             >
               <Group justify="space-between" wrap="nowrap" mb={4}>
                 <Text fz={13} fw={500} style={{ flex: 1, minWidth: 0 }} truncate>
-                  {scenario.scenarioName}
+                  {asI18n(scenario.scenarioName)}
                 </Text>
                 <Group gap={6} wrap="nowrap" style={{ flexShrink: 0 }}>
                   {scenario.duration && (
                     <Text fz={11} c="dimmed">
-                      {scenario.duration}
+                      {asI18n(scenario.duration)}
                     </Text>
                   )}
                   <Badge
@@ -281,7 +283,7 @@ const FeatureCodeBlock: React.FC<FeatureCodeBlockProps> = ({ feature }) => {
                     variant="dot"
                     size="sm"
                   >
-                    {titleCaseLabel(scenario.status)}
+                    {asI18n(titleCaseLabel(scenario.status))}
                   </Badge>
                 </Group>
               </Group>
@@ -315,16 +317,16 @@ const ScenarioGroup: React.FC<ScenarioGroupProps> = ({
     <Box>
       <Group gap="xs" mb="sm" align="center">
         <Text ff="monospace" fz={14} fw={600}>
-          {title}
+          {asI18n(title)}
         </Text>
         {status && (
           <Badge color={STATUS_COLOR[status] ?? 'gray'} variant="light" size="sm">
-            {titleCaseLabel(status)}
+            {asI18n(titleCaseLabel(status))}
           </Badge>
         )}
         {subtitle && (
           <Text fz={12} c="dimmed">
-            {subtitle}
+            {asI18n(subtitle)}
           </Text>
         )}
       </Group>
@@ -352,6 +354,7 @@ const ScenariosView: React.FC<ScenariosViewProps> = ({
   groupBy,
   statusFilter,
 }) => {
+  const { t } = useI18n()
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
     return scenarios.filter((s) => {
@@ -426,7 +429,7 @@ const ScenariosView: React.FC<ScenariosViewProps> = ({
     return (
       <Center py="xl">
         <Text c="dimmed" size="sm">
-          No scenarios match the current filter.
+          {t('tests.no_scenarios_match')}
         </Text>
       </Center>
     )
@@ -464,6 +467,7 @@ type TestStreamEvent =
 
 
 export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseCoverage }) => {
+  const { t } = useI18n()
   const { meta, loading, refresh } = usePikkuMeta()
   const rpc = usePikkuRPC()
   const subscribeToSSE = usePikkuSSE()
@@ -574,11 +578,11 @@ export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseC
 
   const header = (
     <ListPageHeader
-      title="Tests"
+      title={t('tests.title')}
       description={
         report?.generatedAt
-          ? `Last run: ${formatTestDate(report.generatedAt)}`
-          : 'Feature-first view of your test scenarios and function coverage'
+          ? asI18n(`Last run: ${formatTestDate(report.generatedAt)}`)
+          : t('tests.description')
       }
       lead={
         showRunButton ? (
@@ -592,7 +596,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseC
               disabled={running}
               loading={running}
             >
-              {running ? 'Running…' : 'Run tests'}
+              {running ? t('tests.running') : t('tests.run_tests')}
             </Button>
             {onIncreaseCoverage && (
               <Button
@@ -603,7 +607,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseC
                 disabled={running || coverageLoading || !rpc}
                 loading={coverageLoading}
               >
-                Increase coverage
+                {t('tests.increase_coverage')}
               </Button>
             )}
           </Group>
@@ -611,7 +615,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseC
       }
       filters={
         <TextInput
-          placeholder="Search scenarios, features, functions…"
+          placeholder={t('tests.search_placeholder')}
           leftSection={<Search size={14} />}
           value={search}
           onChange={(e) => setSearch(e.currentTarget.value)}
@@ -665,12 +669,12 @@ export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseC
         {runError && (
           <Alert
             color="red"
-            title="Test run failed"
+            title={t('tests.test_run_failed')}
             withCloseButton
             onClose={() => setRunError(null)}
             m="md"
           >
-            {runError}
+            {asI18n(runError)}
           </Alert>
         )}
 
@@ -684,8 +688,8 @@ export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseC
         ) : !report || scenarios.length === 0 ? (
           <EmptyStatePlaceholder
             icon={FlaskConical}
-            title="No test data yet"
-            description="Run your function tests to populate scenarios here."
+            title={t('tests.empty_title')}
+            description={t('tests.empty_description')}
             docsHref="https://pikku.dev/docs/core-features/testing"
           />
         ) : (

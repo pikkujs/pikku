@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react'
-import { Box, Stack, Group, Paper, Divider } from '@mantine/core'
+import { Box, Stack, Group, Paper, Divider } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { Paintbrush } from 'lucide-react'
 import type { CLIMeta, CLICommandMeta } from '@pikku/core/cli'
 import { FunctionLink } from '../project/panels/shared/FunctionLink'
@@ -45,6 +47,7 @@ export const CliHelpView: React.FC<CliHelpViewProps> = ({
   commandPath,
   onNavigate,
 }) => {
+  const { t } = useI18n()
   const command = useMemo(
     () => getCommandAtPath(cliMeta, programId, commandPath),
     [cliMeta, programId, commandPath]
@@ -79,7 +82,7 @@ export const CliHelpView: React.FC<CliHelpViewProps> = ({
 
             {renderer && (
               <Box>
-                <SectionLabel>Renderer</SectionLabel>
+                <SectionLabel>{t('cli.section.renderer')}</SectionLabel>
                 <Group gap={6}>
                   <PikkuBadge
                     type="label"
@@ -88,7 +91,7 @@ export const CliHelpView: React.FC<CliHelpViewProps> = ({
                     color="gray"
                     leftSection={<Paintbrush size={10} />}
                   >
-                    {renderer.name}
+                    {asI18n(renderer.name)}
                   </PikkuBadge>
                   {renderer.exportedName &&
                     renderer.exportedName !== renderer.name && (
@@ -104,7 +107,7 @@ export const CliHelpView: React.FC<CliHelpViewProps> = ({
 
             {renderer?.services && renderer.services.services.length > 0 && (
               <Box>
-                <SectionLabel>Renderer Services</SectionLabel>
+                <SectionLabel>{t('cli.section.rendererServices')}</SectionLabel>
                 <Group gap={6}>
                   {renderer.services.services.map((svc) => (
                     <PikkuBadge

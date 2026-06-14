@@ -8,6 +8,15 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, 'src'),
       crypto: path.resolve(__dirname, 'src/polyfills/crypto.ts'),
+      '@pikku/mantine/core': path.resolve(
+        __dirname,
+        '../frontend/mantine/src/core/index.ts'
+      ),
+      '@pikku/react/i18n': path.resolve(
+        __dirname,
+        '../frontend/react/src/i18n.tsx'
+      ),
+      '@pikku/react': path.resolve(__dirname, '../frontend/react/src/index.ts'),
     },
     extensions: ['.ts', '.tsx', '.js', '.jsx'],
   },

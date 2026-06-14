@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Group, SegmentedControl, TextInput } from '@mantine/core'
+import { Group, SegmentedControl, TextInput } from '@pikku/mantine/core'
 import { Search } from 'lucide-react'
 import { useSearchParams } from '../router'
 import { PanelProvider } from '../context/PanelContext'
@@ -8,6 +8,7 @@ import { ListPageHeader } from '../components/layout/PageLayout'
 import { ServicesTab } from '../components/tabs/ServicesTab'
 import { MiddlewareTab } from '../components/tabs/MiddlewareTab'
 import { PermissionsTab } from '../components/tabs/PermissionsTab'
+import { useI18n } from '@pikku/react/i18n'
 
 const TABS = [
   { value: 'services', label: 'Services' },
@@ -15,13 +16,14 @@ const TABS = [
   { value: 'permissions', label: 'Permissions' },
 ]
 
-const SEARCH_PLACEHOLDER: Record<string, string> = {
-  services: 'Search services...',
-  middleware: 'Search middleware...',
-  permissions: 'Search permissions...',
+const SEARCH_PLACEHOLDER_KEY: Record<string, string> = {
+  services: 'runtime.search.services',
+  middleware: 'runtime.search.middleware',
+  permissions: 'runtime.search.permissions',
 }
 
 export const RuntimePage: React.FC = () => {
+  const { t } = useI18n()
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
   const tab = searchParams.get('tab') || 'services'
@@ -47,12 +49,12 @@ export const RuntimePage: React.FC = () => {
       <ResizablePanelLayout
         header={
           <ListPageHeader
-            title="Runtime"
-            description="Services, middleware, and permission guards"
+            title={t('runtime.title')}
+            description={t('runtime.description')}
             filters={
               <Group gap="sm" wrap="nowrap">
                 <TextInput
-                  placeholder={SEARCH_PLACEHOLDER[tab]}
+                  placeholder={t(SEARCH_PLACEHOLDER_KEY[tab])}
                   leftSection={<Search size={14} />}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -69,7 +71,7 @@ export const RuntimePage: React.FC = () => {
             }
           />
         }
-        emptyPanelMessage="Select an item to view its details"
+        emptyPanelMessage={t('common.select_item')}
       >
         {renderTab()}
       </ResizablePanelLayout>

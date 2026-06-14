@@ -8,7 +8,9 @@ import {
   ScrollArea,
   Stack,
   Text,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 
 const GHERKIN_KEYWORDS = ['Given', 'When', 'Then', 'And', 'But']
 
@@ -17,7 +19,7 @@ const HighlightedStep: React.FC<{ step: string }> = ({ step }) => {
   if (!keyword) {
     return (
       <Text component="span" ff="monospace" fz={12} c="var(--app-text, var(--mantine-color-text))">
-        {step}
+        {asI18n(step)}
       </Text>
     )
   }
@@ -25,10 +27,10 @@ const HighlightedStep: React.FC<{ step: string }> = ({ step }) => {
   return (
     <Text component="span" ff="monospace" fz={12}>
       <Text component="span" ff="monospace" fz={12} fw={600} c="var(--mantine-color-blue-5)">
-        {keyword}
+        {asI18n(keyword)}
       </Text>
       <Text component="span" ff="monospace" fz={12} c="var(--app-text, var(--mantine-color-text))">
-        {rest}
+        {asI18n(rest)}
       </Text>
     </Text>
   )
@@ -61,12 +63,14 @@ export type LiveScenario = {
 type LiveRunViewProps = { scenarios: LiveScenario[] }
 
 const LiveRunView: React.FC<LiveRunViewProps> = ({ scenarios }) => {
+  const { t } = useI18n()
+
   if (scenarios.length === 0) {
     return (
       <Center h="100%">
         <Stack align="center" gap="xs">
           <Loader size="sm" />
-          <Text size="sm" c="dimmed">Running tests…</Text>
+          <Text size="sm" c="dimmed">{t('live_run.running')}</Text>
         </Stack>
       </Center>
     )
@@ -114,27 +118,27 @@ const LiveRunView: React.FC<LiveRunViewProps> = ({ scenarios }) => {
                   <Group gap="xs" wrap="nowrap" style={{ flex: 1, minWidth: 0 }}>
                     {isPending ? (
                       <Text fz={12} c="dimmed" style={{ lineHeight: 1, flexShrink: 0 }}>
-                        ○
+                        {asI18n('○')}
                       </Text>
                     ) : isRunning ? (
                       <Loader size={12} style={{ flexShrink: 0 }} />
                     ) : (
                       <Text fz={12} fw={700} c={statusColor} style={{ lineHeight: 1, flexShrink: 0 }}>
-                        {passed ? '✓' : '✗'}
+                        {asI18n(passed ? '✓' : '✗')}
                       </Text>
                     )}
                     <Text ff="monospace" fz={13} fw={600} truncate>
-                      {scenario.name}
+                      {asI18n(scenario.name)}
                     </Text>
                   </Group>
                   <Group gap={6} wrap="nowrap" style={{ flexShrink: 0 }}>
                     {!isRunning && !isPending && scenario.steps.length > 0 && (
                       <Text fz={11} c="dimmed">
-                        {totalMs}ms
+                        {asI18n(`${totalMs}ms`)}
                       </Text>
                     )}
                     <Badge color={statusColor} variant="light" size="sm">
-                      {isPending ? 'Pending' : isRunning ? 'Running' : passed ? 'Pass' : 'Fail'}
+                      {asI18n(isPending ? 'Pending' : isRunning ? 'Running' : passed ? 'Pass' : 'Fail')}
                     </Badge>
                   </Group>
                 </Group>

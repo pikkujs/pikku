@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
-import { Text, Group } from '@mantine/core'
+import { Text, Group } from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { FunctionSquare } from 'lucide-react'
 import { usePanelContext } from '../../context/PanelContext'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
@@ -41,7 +42,7 @@ export const ProjectFunctions: React.FC<ProjectFunctionsProps> = ({
           return (
             <>
               <Text fw={500} truncate>
-                {funcId}
+                {asI18n(funcId)}
               </Text>
               <Text
                 size="sm"
@@ -53,7 +54,7 @@ export const ProjectFunctions: React.FC<ProjectFunctionsProps> = ({
                     : undefined
                 }
               >
-                {func.summary || func.description || 'No description'}
+                {asI18n(func.summary || func.description || 'No description')}
               </Text>
             </>
           )
@@ -124,13 +125,13 @@ export const ProjectFunctions: React.FC<ProjectFunctionsProps> = ({
       onRowClick={(func) =>
         openFunction(func.pikkuFuncName || func.pikkuFuncId, func)
       }
-      searchPlaceholder="Search functions..."
+      searchPlaceholder={asI18n('Search functions...')}
       searchFilter={(func, q) =>
         func.pikkuFuncId?.toLowerCase().includes(q) ||
         func.summary?.toLowerCase().includes(q) ||
         func.description?.toLowerCase().includes(q)
       }
-      emptyMessage="No functions found."
+      emptyMessage={asI18n('No functions found.')}
     />
   )
 }

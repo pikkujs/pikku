@@ -19,7 +19,8 @@ import {
   UnstyledButton,
   ScrollArea,
   Stack,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
 import { AlertTriangle, History, ChevronDown, Search, Check } from 'lucide-react'
 import {
   CanvasDrawerProvider,
@@ -288,14 +289,14 @@ const WorkflowRunsPanel: React.FC<{
           onClick={() => setSelectorOpen((o) => !o)}
         >
           <Text size="sm" fw={600} style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {workflowName}
+            {asI18n(workflowName)}
           </Text>
           <ChevronDown size={14} style={{ flexShrink: 0 }} />
         </UnstyledButton>
       </Popover.Target>
       <Popover.Dropdown p={0}>
         <TextInput
-          placeholder="Search workflows..."
+          placeholder={asI18n('Search workflows...')}
           leftSection={<Search size={14} />}
           value={search}
           onChange={(e) => setSearch(e.currentTarget.value)}
@@ -332,11 +333,11 @@ const WorkflowRunsPanel: React.FC<{
                 )}
                 <div>
                   <Text size="sm" fw={item.name === workflowName ? 500 : 400}>
-                    {item.name}
+                    {asI18n(item.name)}
                   </Text>
                   {item.description && (
                     <Text size="sm" c="dimmed">
-                      {item.description}
+                      {asI18n(item.description)}
                     </Text>
                   )}
                 </div>
@@ -344,7 +345,7 @@ const WorkflowRunsPanel: React.FC<{
             ))}
             {filteredItems.length === 0 && (
               <Text size="sm" c="dimmed" ta="center" py="md">
-                No results
+                {asI18n('No results')}
               </Text>
             )}
           </Stack>
@@ -361,11 +362,11 @@ const WorkflowRunsPanel: React.FC<{
       onSelect={setSelectedRunId}
       onClear={() => setSelectedRunId(null)}
       loading={isLoading}
-      emptyMessage="No runs found"
+      emptyMessage={asI18n('No runs found')}
       statusFilters={[]}
       header={selector}
       onNewClick={editable ? handleNewClick : undefined}
-      newButtonLabel={editable ? 'New workflow run' : undefined}
+      newButtonLabel={editable ? asI18n('New workflow run') : undefined}
       onDelete={editable ? handleDelete : undefined}
     />
   )
@@ -441,7 +442,7 @@ const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
     <>
       <ThreePaneLayout
         showTabs={immersiveDetail}
-        emptyPanelMessage="Select a node to view its details"
+        emptyPanelMessage={asI18n('Select a node to view its details')}
         runsPanel={runsPanel}
       >
         <Box style={{ height: '100%', position: 'relative', display: 'flex', flexDirection: 'column' }}>
@@ -454,7 +455,7 @@ const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
               style={{ flexShrink: 0 }}
             >
               <Text size="sm">
-                This is a complex workflow. The visual representation may not be accurate.
+                {asI18n('This is a complex workflow. The visual representation may not be accurate.')}
               </Text>
             </Alert>
           )}
@@ -467,7 +468,7 @@ const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
               style={{ flexShrink: 0 }}
             >
               <Text size="sm">
-                Viewing historical version — workflow definition has changed since this run
+                {asI18n('Viewing historical version — workflow definition has changed since this run')}
               </Text>
             </Alert>
           )}

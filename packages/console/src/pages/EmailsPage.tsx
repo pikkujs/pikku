@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useI18n } from '@pikku/react/i18n'
+import { asI18n } from '@pikku/react'
 import type { RJSFSchema } from '@rjsf/utils'
 import {
   Alert,
@@ -18,7 +20,7 @@ import {
   TextInput,
   UnstyledButton,
   ScrollArea,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
 import { AlertTriangle, Mail, Monitor, Search, Smartphone, ChevronDown, Check, Code2, Save, FileText } from 'lucide-react'
 import CodeMirror from '@uiw/react-codemirror'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
@@ -69,6 +71,7 @@ function buildVariablesSchema(variables: string[]): RJSFSchema {
 }
 
 export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.ReactNode }> = ({ hero, headerRight }) => {
+  const { t } = useI18n()
   const { meta, loading } = usePikkuMeta()
   const [searchParams, setSearchParams] = useSearchParams()
   const [previewInput, setPreviewInput] = useState<
@@ -165,7 +168,7 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
   if (loading) {
     return (
       <PanelProvider>
-        <ResizablePanelLayout hidePanel header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" />}>
+        <ResizablePanelLayout hidePanel header={<ListPageHeader title={t('emails.title')} description={t('emails.description')} />}>
           <Center h="100%">
             <Loader />
           </Center>
@@ -177,12 +180,12 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
   if (templateNames.length === 0) {
     return (
       <PanelProvider>
-        <ResizablePanelLayout hidePanel header={<ListPageHeader title="Email Templates" description="Preview and inspect email templates with live variable rendering" />}>
+        <ResizablePanelLayout hidePanel header={<ListPageHeader title={t('emails.title')} description={t('emails.description')} />}>
           <EmptyStatePlaceholder
             icon={Mail}
             hero={hero}
-            title="No email templates found"
-            description="Add an email templates directory to your project, then run:"
+            title={t('emails.no_templates_title')}
+            description={t('emails.no_templates_description')}
             code="pikku emails generate"
             docsHref={EMAIL_DOCS_HREF}
           />
@@ -228,8 +231,8 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
         hidePanel
         header={
           <ListPageHeader
-            title="Email Templates"
-            description="Preview and inspect email templates with live variable rendering"
+            title={t('emails.title')}
+            description={t('emails.description')}
             lead={headerRight}
           />
         }
@@ -255,10 +258,10 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
             <Group gap="sm" justify="space-between" wrap="nowrap">
               <Group gap="xs" style={{ minWidth: 0 }}>
                 <Mail size={16} />
-                <Text fw={600} truncate>{humanizeTemplateName(selectedTemplate)}</Text>
+                <Text fw={600} truncate>{asI18n(humanizeTemplateName(selectedTemplate))}</Text>
                 {preview.data?.hash ? (
                   <Badge variant="outline" color="gray" style={{ flexShrink: 0 }}>
-                    {preview.data.hash.slice(0, 10)}
+                    {asI18n(preview.data.hash.slice(0, 10))}
                   </Badge>
                 ) : null}
               </Group>
@@ -289,7 +292,7 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
               </Group>
             </Group>
             {preview.data?.subject && (
-              <Text size="sm" c="dimmed" truncate mt={4}>{preview.data.subject}</Text>
+              <Text size="sm" c="dimmed" truncate mt={4}>{asI18n(preview.data.subject)}</Text>
             )}
           </Box>
 
@@ -298,19 +301,19 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
               {preview.isLoading ? <Center py="xl"><Loader /></Center> : null}
               {preview.error ? (
                 <Alert color="red" icon={<AlertTriangle size={16} />}>
-                  {preview.error instanceof Error ? preview.error.message : 'Failed to render email preview'}
+                  {asI18n(preview.error instanceof Error ? preview.error.message : 'Failed to render email preview')}
                 </Alert>
               ) : null}
               {preview.data?.missing?.length ? (
                 <Alert color="yellow" icon={<AlertTriangle size={16} />}>
-                  Missing source files: {preview.data.missing.join(', ')}
+                  {asI18n(`Missing source files: ${preview.data.missing.join(', ')}`)}
                 </Alert>
               ) : null}
               {previewMode === 'html' ? (
                 <Stack gap="sm">
                   <Group justify="space-between" wrap="nowrap">
                     <Text size="sm" c="dimmed">
-                      Editing <Code>templates/{selectedTemplate}.html</Code> — saving regenerates the preview.
+                      {t('emails.editing_template_prefix')}<Code>templates/{selectedTemplate}.html</Code>{t('emails.editing_template_suffix')}
                     </Text>
                     <Button
                       size="xs"
@@ -324,14 +327,14 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
                         })
                       }
                     >
-                      Save
+                      {t('common.save')}
                     </Button>
                   </Group>
                   {updateEmailTemplate.isError ? (
                     <Alert color="red" icon={<AlertTriangle size={16} />}>
-                      {updateEmailTemplate.error instanceof Error
+                      {asI18n(updateEmailTemplate.error instanceof Error
                         ? updateEmailTemplate.error.message
-                        : 'Failed to save email template'}
+                        : 'Failed to save email template')}
                     </Alert>
                   ) : null}
                   <Box style={{ border: '1px solid var(--app-row-border)', borderRadius: 8, overflow: 'hidden' }}>
@@ -347,7 +350,7 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
                   <Code block>{preview.data.text}</Code>
                 ) : (
                   <Text size="sm" c="dimmed" ta="center" py="xl">
-                    This template has no text version.
+                    {t('emails.no_text_version')}
                   </Text>
                 )
               ) : (
@@ -382,14 +385,14 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
                 onClick={() => setSelectorOpen((o) => !o)}
               >
                 <Text size="sm" fw={600} style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {selectedTemplate}
+                  {asI18n(selectedTemplate)}
                 </Text>
                 <ChevronDown size={14} style={{ flexShrink: 0 }} />
               </UnstyledButton>
             </Popover.Target>
             <Popover.Dropdown p={0}>
               <TextInput
-                placeholder="Search templates..."
+                placeholder={t('emails.search_templates')}
                 leftSection={<Search size={14} />}
                 value={selectorSearch}
                 onChange={(e) => setSelectorSearch(e.currentTarget.value)}
@@ -407,12 +410,12 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
                     >
                       {item.name === selectedTemplate ? <Check size={14} color="var(--mantine-color-green-6)" /> : <Box w={14} />}
                       <div>
-                        <Text size="sm" fw={item.name === selectedTemplate ? 500 : 400}>{item.name}</Text>
-                        {item.description && <Text size="sm" c="dimmed">{item.description}</Text>}
+                        <Text size="sm" fw={item.name === selectedTemplate ? 500 : 400}>{asI18n(item.name)}</Text>
+                        {item.description && <Text size="sm" c="dimmed">{asI18n(item.description)}</Text>}
                       </div>
                     </UnstyledButton>
                   ))}
-                  {filteredTemplateItems.length === 0 && <Text size="sm" c="dimmed" ta="center" py="md">No results</Text>}
+                  {filteredTemplateItems.length === 0 && <Text size="sm" c="dimmed" ta="center" py="md">{t('common.no_results')}</Text>}
                 </Stack>
               </ScrollArea.Autosize>
             </Popover.Dropdown>
@@ -423,15 +426,15 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
               <SchemaForm
                 key={`${selectedTemplate}:${selectedLocale}`}
                 schema={schema}
-                submitLabel="Render preview"
+                submitLabel={t('emails.render_preview')}
                 onSubmit={(formData) => setPreviewInput(formData ?? {})}
               />
               <Divider />
               <Stack gap="xs">
-                <Text fw={600}>Template details</Text>
+                <Text fw={600}>{t('emails.template_details')}</Text>
                 <Group gap="xs">
-                  <Badge variant="light">{selectedMeta.variables.length} variables</Badge>
-                  <Badge variant="light">{Object.keys(selectedMeta.locales).length} locales</Badge>
+                  <Badge variant="light">{asI18n(`${selectedMeta.variables.length} variables`)}</Badge>
+                  <Badge variant="light">{asI18n(`${Object.keys(selectedMeta.locales).length} locales`)}</Badge>
                 </Group>
                 {preview.data?.hash ? <Code block>{preview.data.hash}</Code> : null}
               </Stack>

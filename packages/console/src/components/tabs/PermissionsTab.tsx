@@ -1,10 +1,12 @@
 import React, { useMemo } from 'react'
-import { Text, Group } from '@mantine/core'
+import { Text, Group } from '@pikku/mantine/core'
 import { Shield } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 
 interface PermissionItem {
   id: string
@@ -14,6 +16,7 @@ interface PermissionItem {
 
 export const PermissionsTab: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
   const { meta, loading } = usePikkuMeta()
+  const { t } = useI18n()
   const { openPermission } = usePanelContext()
 
   const allItems = useMemo((): PermissionItem[] => {
@@ -49,7 +52,7 @@ export const PermissionsTab: React.FC<{ searchQuery: string }> = ({ searchQuery 
         render: (item: PermissionItem) => (
           <>
             <Text fw={500} truncate>
-              {item.name}
+              {asI18n(item.name)}
             </Text>
             {item.data?.description && (
               <Text size="sm" c="dimmed" lineClamp={1}>
@@ -98,7 +101,7 @@ export const PermissionsTab: React.FC<{ searchQuery: string }> = ({ searchQuery 
       columns={columns}
       getKey={(item) => item.id}
       onRowClick={(item) => openPermission(item.id, item.data)}
-      emptyMessage="No permissions found."
+      emptyMessage={t('permissions.empty_message')}
       loading={loading}
     />
   )

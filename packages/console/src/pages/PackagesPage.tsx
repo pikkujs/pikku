@@ -8,7 +8,9 @@ import {
   Badge,
   TextInput,
   SegmentedControl,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { Package, Globe, Search } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
@@ -65,7 +67,7 @@ const PackageIcon: React.FC<{ icon?: string; name: string }> = ({
   )
 }
 
-const COMMUNITY_COLUMNS = (installedNames: Set<string>) => [
+const COMMUNITY_COLUMNS = (installedNames: Set<string>, t: (key: string) => any) => [
   {
     key: 'package',
     header: 'PACKAGE',
@@ -75,20 +77,20 @@ const COMMUNITY_COLUMNS = (installedNames: Set<string>) => [
         <div>
           <Group gap="xs" wrap="nowrap">
             <Text fw={500} size="sm">
-              {item.displayName || item.name}
+              {asI18n(item.displayName || item.name)}
             </Text>
             <Badge size="sm" variant="light" color="gray">
-              v{item.version}
+              {asI18n(`v${item.version}`)}
             </Badge>
             {installedNames.has(item.name) && (
               <Badge size="sm" variant="light" color="green">
-                Installed
+                {t('packages.installed')}
               </Badge>
             )}
           </Group>
           {item.description && (
             <Text size="sm" c="dimmed" truncate style={{ maxWidth: 400 }}>
-              {item.description}
+              {asI18n(item.description)}
             </Text>
           )}
         </div>
@@ -99,14 +101,14 @@ const COMMUNITY_COLUMNS = (installedNames: Set<string>) => [
     key: 'functions',
     header: 'FUNCTIONS',
     render: (item: PackageMeta) => (
-      <Text size="sm">{Object.keys(item.functions ?? {}).length}</Text>
+      <Text size="sm">{asI18n(String(Object.keys(item.functions ?? {}).length))}</Text>
     ),
   },
   {
     key: 'agents',
     header: 'AGENTS',
     render: (item: PackageMeta) => (
-      <Text size="sm">{Object.keys(item.agents ?? {}).length}</Text>
+      <Text size="sm">{asI18n(String(Object.keys(item.agents ?? {}).length))}</Text>
     ),
   },
 ]
@@ -121,17 +123,17 @@ const INSTALLED_COLUMNS = () => [
         <div>
           <Group gap="xs" wrap="nowrap">
             <Text fw={500} size="sm">
-              {item.namespace}
+              {asI18n(item.namespace)}
             </Text>
             <Badge size="sm" variant="light" color="gray">
-              {item.packageName}
+              {asI18n(item.packageName)}
             </Badge>
           </Group>
           {(item.tags ?? []).length > 0 && (
             <Group gap={4} mt={2}>
               {item.tags!.map((tag) => (
                 <Badge key={tag} size="sm" variant="dot">
-                  {tag}
+                  {asI18n(tag)}
                 </Badge>
               ))}
             </Group>
@@ -144,13 +146,13 @@ const INSTALLED_COLUMNS = () => [
     key: 'functions',
     header: 'FUNCTIONS',
     render: (item: InstalledAddon) => (
-      <Text size="sm">{item.functionCount}</Text>
+      <Text size="sm">{asI18n(String(item.functionCount))}</Text>
     ),
   },
   {
     key: 'agents',
     header: 'AGENTS',
-    render: (item: InstalledAddon) => <Text size="sm">{item.agentCount}</Text>,
+    render: (item: InstalledAddon) => <Text size="sm">{asI18n(String(item.agentCount))}</Text>,
   },
 ]
 
@@ -160,6 +162,7 @@ const InstalledList: React.FC<{
   emptyHero?: React.ReactNode
 }> = ({ searchQuery, onSelect, emptyHero }) => {
   const rpc = usePikkuRPC()
+  const { t } = useI18n()
 
   const { data, isLoading } = useQuery({
     queryKey: ['installed-addons'],
@@ -192,7 +195,7 @@ const InstalledList: React.FC<{
       columns={columns}
       getKey={(item) => item.namespace}
       onRowClick={(item) => onSelect(item.packageName, 'installed')}
-      emptyMessage="No installed addons found."
+      emptyMessage={t('packages.installed_empty_message')}
       loading={isLoading}
       emptyHero={emptyHero}
     />
@@ -204,6 +207,7 @@ const CommunityList: React.FC<{
   onSelect: (id: string, source: 'installed' | 'community') => void
 }> = ({ searchQuery, onSelect }) => {
   const rpc = usePikkuRPC()
+  const { t } = useI18n()
 
   const { data, isLoading } = useQuery({
     queryKey: ['addons'],
@@ -241,8 +245,8 @@ const CommunityList: React.FC<{
   }, [data, searchQuery])
 
   const columns = useMemo(
-    () => COMMUNITY_COLUMNS(installedNames),
-    [installedNames]
+    () => COMMUNITY_COLUMNS(installedNames, t),
+    [installedNames, t]
   )
 
   return (
@@ -254,8 +258,8 @@ const CommunityList: React.FC<{
       columns={columns}
       getKey={(item) => item.id}
       onRowClick={(item) => onSelect(item.id, 'community')}
-      emptyTitle="Registry Unavailable"
-      emptyDescription="Could not fetch addons from the registry. Check your network connection."
+      emptyTitle={t('packages.registry_unavailable_title')}
+      emptyDescription={t('packages.registry_unavailable_description')}
       loading={isLoading}
     />
   )
@@ -295,15 +299,15 @@ const API_COLUMNS = [
         <div>
           <Group gap="xs" wrap="nowrap">
             <Text fw={500} size="sm">
-              {item.title || item.name}
+              {asI18n(item.title || item.name)}
             </Text>
             <Badge size="sm" variant="light" color="gray">
-              {item.openapiVer}
+              {asI18n(item.openapiVer)}
             </Badge>
           </Group>
           {item.description && (
             <Text size="sm" c="dimmed" truncate style={{ maxWidth: 400 }}>
-              {item.description}
+              {asI18n(item.description)}
             </Text>
           )}
         </div>
@@ -313,12 +317,12 @@ const API_COLUMNS = [
   {
     key: 'provider',
     header: 'PROVIDER',
-    render: (item: OpenApiEntry) => <Text size="sm">{item.provider}</Text>,
+    render: (item: OpenApiEntry) => <Text size="sm">{asI18n(item.provider)}</Text>,
   },
   {
     key: 'operations',
     header: 'OPS',
-    render: (item: any) => <Text size="sm">{item.totalOperations ?? '-'}</Text>,
+    render: (item: any) => <Text size="sm">{asI18n(String(item.totalOperations ?? '-'))}</Text>,
   },
 ]
 
@@ -327,6 +331,7 @@ const ApisList: React.FC<{
   onSelect: (id: string, source: 'installed' | 'community' | 'api') => void
 }> = ({ searchQuery, onSelect }) => {
   const rpc = usePikkuRPC()
+  const { t } = useI18n()
 
   const { data, isLoading } = useQuery({
     queryKey: ['openapis'],
@@ -362,8 +367,8 @@ const ApisList: React.FC<{
       columns={API_COLUMNS}
       getKey={(item) => item.name}
       onRowClick={(item) => onSelect(item.name, 'api' as any)}
-      emptyTitle="No APIs Found"
-      emptyDescription="Could not fetch APIs from the registry."
+      emptyTitle={t('packages.no_apis_title')}
+      emptyDescription={t('packages.no_apis_description')}
       loading={isLoading}
     />
   )
@@ -376,9 +381,9 @@ const ADDON_TABS = [
 ]
 
 const SEARCH_PLACEHOLDER: Record<string, string> = {
-  installed: 'Search installed addons...',
-  community: 'Search community addons...',
-  apis: 'Search APIs...',
+  installed: 'packages.search_installed_placeholder',
+  community: 'packages.search_community_placeholder',
+  apis: 'packages.search_apis_placeholder',
 }
 
 const PackagesList: React.FC<{
@@ -387,6 +392,7 @@ const PackagesList: React.FC<{
 }> = ({ onSelect, emptyHero }) => {
   const [tab, setTab] = useState<string>('installed')
   const [searchQuery, setSearchQuery] = useState('')
+  const { t } = useI18n()
 
   const handleTabChange = (value: string) => {
     setSearchQuery('')
@@ -398,13 +404,13 @@ const PackagesList: React.FC<{
       hidePanel
       header={
         <ListPageHeader
-          title="Addons"
-          description="Third-party addons and packages available for your project"
+          title={t('packages.title')}
+          description={t('packages.description')}
           docsHref="https://pikku.dev/docs/external-packages"
           filters={
             <Group gap="sm" wrap="nowrap">
               <TextInput
-                placeholder={SEARCH_PLACEHOLDER[tab]}
+                placeholder={t(SEARCH_PLACEHOLDER[tab])}
                 leftSection={<Search size={14} />}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
