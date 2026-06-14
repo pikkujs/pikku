@@ -1,3 +1,63 @@
+## 0.12.33
+
+### Patch Changes
+
+- 4d1f94a: fix(cli): emit global middleware side-effect imports in per-unit codegen
+
+  `addGlobalMiddleware` registrations live only in `middlewareState.instances`
+  (keyed `global:middleware:N`) with no associated wire group. The per-unit
+  `--names` deploy filter strips the `state.http.files` fallback that
+  `add-middleware` relies on, so a globally-registered middleware was never
+  imported into deployed per-unit bundles and silently no-opped at runtime.
+
+  `serializeMiddlewareImports` now emits a deduped side-effect import for each
+  non-factory global instance into `pikku-middleware.gen.ts`, which the bootstrap
+  always imports — guaranteeing global middleware registers in every unit.
+  Duplicate imports in full builds are harmless (module bodies evaluate once).
+
+- ccd9e27: Auto-mount the MCP server in PikkuNodeHTTPServer
+- 409ec80: feat(console): Tests page with live SSE streaming and function test harness
+  - `@pikku/addon-console`: add `streamFunctionTests` SSE function that runs the
+    cucumber/c8 test harness and streams structured per-scenario events
+    (scenario-start, step, scenario-done, done)
+  - `@pikku/console`: TestsPage live run view — renders scenario names and step
+    status in real time during a test run via SSE; adds `usePikkuSSE` hook and
+    `showRunButton` prop
+  - `@pikku/fetch`: add `subscribePikkuSSE` helper for typed server-sent event
+    streams
+  - `@pikku/cli`: wire SSE-returning functions through the console serialiser and
+    RPC wrapper so the stream route is included in generated clients
+
+- 20750fd: feat(workflow): decide step dispatch purely per-function
+
+  Workflow step execution (inline vs queue dispatch) is now decided entirely by
+  the step's function `inline` flag — the workflow-level / run-level `inline`
+  meta no longer participates in per-step dispatch.
+  - Steps default to **inline**, so a normally-started (queue-backed) workflow
+    runs its whole chain in one orchestrator pass instead of one queue
+    round-trip per step.
+  - A function marked `inline: false` is dispatched via the queue (its own
+    worker, retry isolation). When `inline: false` but no `queueService` is
+    configured, the step falls back to inline and emits a `logger.warn` instead
+    of silently swallowing the misconfiguration.
+  - Removed the now-unused workflow-level `inline` from `WorkflowsMeta` /
+    `WorkflowRuntimeMeta`, the inspector's workflow extraction, the DSL→graph
+    converter, and the deploy analyzer / service inference (which now key off
+    the per-function flag). Run-level `inline` is retained: it still controls
+    whether a whole run executes in-process without queue infrastructure.
+
+- Updated dependencies [cd101a5]
+- Updated dependencies [ac16265]
+- Updated dependencies [ccd9e27]
+- Updated dependencies [bc28e3b]
+- Updated dependencies [409ec80]
+- Updated dependencies [a05e864]
+- Updated dependencies [20750fd]
+  - @pikku/core@0.12.30
+  - @pikku/node-http-server@0.12.2
+  - @pikku/fetch@0.12.3
+  - @pikku/inspector@0.12.18
+
 ## 0.12.32
 
 ### Patch Changes
