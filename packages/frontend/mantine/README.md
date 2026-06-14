@@ -29,7 +29,7 @@ errors, user content).
 
 ```sh
 yarn add @pikku/mantine @pikku/react
-# peers: @mantine/core@^9, react
+# peers: @mantine/core@^8 || ^9, react
 ```
 
 ## How it works
