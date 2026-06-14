@@ -26,3 +26,18 @@ sidecar, never actually wired up.
   Node ≥ 23 (`ERR_REQUIRE_CYCLE_MODULE`) — replaced with an in-process esbuild +
   `vm` transpile. The sidecar is now compiled **before** codegen, so authored
   edits apply in a single `pikku db migrate` instead of one run behind.
+- **Postgres enum columns auto-type** as a string-literal union (e.g.
+  `'admin' | 'user'`) with no annotation — resolved from the column's `udt_name`
+  against the introspected enum types — and the zod codegen emits
+  `z.enum([...])` (or `z.literal(...)` for a single value). SQLite has no native
+  enum type; use `tsType: "'a' | 'b'"` there. Non-`public` Postgres schemas are
+  not yet supported by the zod codegen.
+- New **`format`** field in `ColumnEntry` (`email`, `url`, `e164`, `ulid`,
+  `cuid`/`cuid2`, `nanoid`, `jwt`, `emoji`, `base64`/`base64url`, `ipv4`/`ipv6`,
+  `cidrv4`/`cidrv6`, `isoDate`/`isoTime`/`isoDatetime`/`isoDuration`). These are
+  zod string-format **validators** — they refine the zod schema (`z.email()`, …)
+  but keep the TypeScript type as `string`. A `format` applies only when the
+  column's resolved select type is `string`; combining it with a `kind`/`tsType`
+  that resolves to a non-string type (e.g. `kind: 'date'`) is ignored with a
+  warning. Identical across both dialects (it is annotation-driven, not derived
+  from storage).

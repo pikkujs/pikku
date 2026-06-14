@@ -225,6 +225,7 @@ export async function migrateAndCodegen(
   const zodResult = generateZodTypes({
     schemaFile: resolved.schemaFile,
     outFile: resolved.zodFile,
+    formats: codegenResult.zodFormats,
   })
 
   // ── Classifications step ──────────────────────────────────────────────────

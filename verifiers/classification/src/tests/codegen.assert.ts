@@ -9,7 +9,7 @@
 import { mkdtemp, mkdir, writeFile, rm, readFile } from 'fs/promises'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { execFileSync } from 'child_process'
+import { spawnSync } from 'child_process'
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 
@@ -22,24 +22,23 @@ const PIKKU_BIN = join(
 type ColumnEntry = {
   security?: 'public' | 'private' | 'pii' | 'secret' | 'encrypted'
   classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'
-  kind?: 'date' | 'bool' | 'json'
+  kind?: 'date' | 'bool' | 'json' | 'uuid'
   tsType?: string
+  format?: string
 }
 type Annotations = Record<string, Record<string, ColumnEntry>>
 
 function runPikkuDbMigrate(dir: string): { exitCode: number; output: string } {
-  try {
-    const output = execFileSync('node', [PIKKU_BIN, 'db', 'migrate'], {
-      cwd: dir,
-      stdio: 'pipe',
-      timeout: 30_000,
-    })
-    return { exitCode: 0, output: output.toString() }
-  } catch (err: any) {
-    return {
-      exitCode: err.status ?? 1,
-      output: (err.stdout?.toString() ?? '') + (err.stderr?.toString() ?? ''),
-    }
+  // spawnSync (not execFileSync) so we capture stderr on *success* too — codegen
+  // warnings go to console.warn (stderr) and some tests assert on them.
+  const res = spawnSync('node', [PIKKU_BIN, 'db', 'migrate'], {
+    cwd: dir,
+    timeout: 30_000,
+    encoding: 'utf8',
+  })
+  return {
+    exitCode: res.status ?? 1,
+    output: (res.stdout ?? '') + (res.stderr ?? ''),
   }
 }
 
@@ -303,6 +302,73 @@ describe('DB codegen — classification brands', () => {
     const zod = await readFile(join(dir, '.pikku', 'db', 'zod.gen.ts'), 'utf-8')
     assert.match(zod, /id: z\.uuid\(\)/, 'zod emits z.uuid() for the uuid column')
     assert.match(zod, /email: z\.string\(\)/, 'plain text column stays z.string()')
+  })
+
+  test('format: email refines the zod schema to z.email()', async (t) => {
+    const dir = await createProject(
+      {
+        '001_users.sql': `
+        CREATE TABLE IF NOT EXISTS users (
+          id    INTEGER PRIMARY KEY AUTOINCREMENT,
+          email TEXT NOT NULL,
+          name  TEXT NOT NULL
+        );
+      `,
+      },
+      {
+        users: {
+          email: { security: 'public', format: 'email' },
+          name: { security: 'public' },
+        },
+      }
+    )
+    t.after(() => rm(dir, { recursive: true, force: true }))
+
+    const { exitCode, output } = runPikkuDbMigrate(dir)
+    assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
+
+    // The TS type is unchanged by a format — it stays a plain string.
+    const schema = await readFile(
+      join(dir, '.pikku', 'db', 'schema.d.ts'),
+      'utf-8'
+    )
+    assert.doesNotMatch(schema, /Email/, 'format must not introduce a named type')
+
+    const zod = await readFile(join(dir, '.pikku', 'db', 'zod.gen.ts'), 'utf-8')
+    assert.match(zod, /email: z\.email\(\)/, 'zod emits z.email() for the format')
+    assert.match(zod, /name: z\.string\(\)/, 'unformatted column stays z.string()')
+  })
+
+  test('format on a non-string (kind: date) column is ignored with a warning', async (t) => {
+    const dir = await createProject(
+      {
+        '001_events.sql': `
+        CREATE TABLE IF NOT EXISTS events (
+          id         INTEGER PRIMARY KEY AUTOINCREMENT,
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+      `,
+      },
+      {
+        events: {
+          // kind: date resolves the type to Date, so format: email cannot apply.
+          created_at: { security: 'public', kind: 'date', format: 'email' },
+        },
+      }
+    )
+    t.after(() => rm(dir, { recursive: true, force: true }))
+
+    const { exitCode, output } = runPikkuDbMigrate(dir)
+    assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
+    assert.match(
+      output,
+      /format 'email' ignored/,
+      'a contradicting format should warn'
+    )
+
+    const zod = await readFile(join(dir, '.pikku', 'db', 'zod.gen.ts'), 'utf-8')
+    assert.match(zod, /createdAt: z\.date\(\)/, 'date kind wins; no z.email()')
+    assert.doesNotMatch(zod, /z\.email\(\)/, 'the ignored format is not emitted')
   })
 
   test('applies annotations to columns added via ALTER TABLE', async (t) => {

@@ -8,6 +8,7 @@ import {
   type AnnotationMap,
   type ColAnnotation,
 } from './annotation-parser.js'
+import { ZOD_FORMATS, type ZodFormat } from './zod-codegen.js'
 
 // ─── Type aliases ─────────────────────────────────────────────────────────────
 
@@ -41,6 +42,11 @@ function snakeToPascal(name: string): string {
 
 function snakeToCamel(name: string): string {
   return name.replace(/_([a-z])/g, (_, c) => c.toUpperCase())
+}
+
+/** Escape a value for embedding inside a single-quoted TS string literal. */
+function escapeTsString(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
 }
 
 // ─── Type mapping ─────────────────────────────────────────────────────────────
@@ -177,6 +183,8 @@ function emitInterface(
   camelCase: boolean,
   explicitAnnotations: AnnotationMap,
   dialect: Dialect,
+  enumByName: Map<string, string[]>,
+  formatHints: Record<string, Record<string, ZodFormat>>,
   warnings: string[]
 ): string {
   const ifaceName = snakeToPascal(table.name)
@@ -213,10 +221,38 @@ function emitInterface(
         }
       }
 
-      const typeAnn: { kind?: ColumnKind; tsType?: string } | null =
-        typingKind || ann?.tsType
-          ? { kind: typingKind, tsType: ann?.tsType }
+      // A Postgres enum column reports `type` as 'USER-DEFINED'; its real values
+      // come from `udtName`. Type it as a union of string literals — only when
+      // no explicit `tsType`/`kind` overrides it. This reuses the `tsType`
+      // plumbing, so it flows through both the public and classified branches.
+      const enumValues = col.udtName ? enumByName.get(col.udtName) : undefined
+      const enumUnion =
+        enumValues && enumValues.length > 0
+          ? enumValues.map((v) => `'${escapeTsString(v)}'`).join(' | ')
           : null
+      const effectiveTsType =
+        ann?.tsType ?? (typingKind ? undefined : (enumUnion ?? undefined))
+
+      const typeAnn: { kind?: ColumnKind; tsType?: string } | null =
+        typingKind || effectiveTsType
+          ? { kind: typingKind, tsType: effectiveTsType }
+          : null
+
+      // A `format` validator refines the zod schema only and keeps the TS type
+      // as `string`. It therefore applies only when the resolved select base is
+      // plain `string`; on anything else (Date/Uuid/boolean/enum/unknown via
+      // kind/tsType) it would contradict the type, so warn and skip.
+      if (ann?.format) {
+        const base = selectBase(typeAnn, col)
+        if (base === 'string') {
+          ;(formatHints[ifaceName] ??= {})[fieldName] = ann.format
+        } else {
+          warnings.push(
+            `Column "${bare}.${col.name}": format '${ann.format}' ignored — its ` +
+              `resolved type is ${base}, not string. Remove the conflicting kind/tsType.`
+          )
+        }
+      }
 
       const classification: Classification = ann?.classification ?? 'private'
       const type = columnTypeExpression(col, typeAnn, classification)
@@ -288,6 +324,10 @@ function emitClassificationMap(tables: TableSchema[]): string {
     `  kind?: 'date' | 'bool' | 'json' | 'uuid'`,
     `  /** TypeScript type override, e.g. \`string[]\` or \`MyJson\`. Wins over \`kind\`. */`,
     `  tsType?: string`,
+    `  /** Zod string-format validator (keeps the TS type as \`string\`). */`,
+    `  format?: ${Object.keys(ZOD_FORMATS)
+      .map((f) => `'${f}'`)
+      .join(' | ')}`,
     `  description?: string`,
   ].join('\n')
 
@@ -370,6 +410,12 @@ export interface CodegenResult {
   tables: string[]
   /** Non-fatal codegen warnings (e.g. name looks like a date but unannotated). */
   warnings: string[]
+  /**
+   * Per-interface, per-field zod `format` overrides for the zod codegen. Keyed
+   * by interface name (PascalCase) and field name (camelCase), matching the
+   * shapes the zod emitter parses out of `schema.d.ts`.
+   */
+  zodFormats: Record<string, Record<string, ZodFormat>>
 }
 
 /**
@@ -397,10 +443,31 @@ export async function generateSchemaTypes(
     ? loadAnnotations(options.rootDir)
     : {}
 
+  // Enum types — used to auto-type enum columns as string-literal unions. Keyed
+  // by both bare and schema-qualified name; `udtName` is bare so the bare key
+  // resolves it (a one-line changeset note flags the cross-schema-name caveat).
+  const enums = await introspector.listEnums()
+  const enumByName = new Map<string, string[]>()
+  for (const e of enums) {
+    enumByName.set(e.name, e.values)
+    enumByName.set(`${e.schema}.${e.name}`, e.values)
+  }
+
   // ── schema.d.ts ─────────────────────────────────────────────────────────────
   const warnings: string[] = []
+  const zodFormats: Record<string, Record<string, ZodFormat>> = {}
   const interfaces = tables
-    .map((t) => emitInterface(t, camelCase, explicitAnnotations, dialect, warnings))
+    .map((t) =>
+      emitInterface(
+        t,
+        camelCase,
+        explicitAnnotations,
+        dialect,
+        enumByName,
+        zodFormats,
+        warnings
+      )
+    )
     .join('\n\n')
   for (const w of warnings) console.warn(`[pikku db] ${w}`)
 
@@ -492,10 +559,9 @@ export async function generateSchemaTypes(
   // ── pikku-db-schema.gen.json ─────────────────────────────────────────────────
   let schemaJsonBody: string | null = null
   if (options.schemaJsonFile) {
-    const [fkResults, enums] = await Promise.all([
-      Promise.all(tableNames.map((name) => introspector.getForeignKeys(name))),
-      introspector.listEnums(),
-    ])
+    const fkResults = await Promise.all(
+      tableNames.map((name) => introspector.getForeignKeys(name))
+    )
     const fkMap = new Map(tableNames.map((name, i) => [name, fkResults[i]!]))
     const jsonTables = tables.map((t) => ({
       name: t.name,
@@ -608,5 +674,6 @@ export async function generateSchemaTypes(
     classificationMapWritten: classificationMapChanged,
     tables: tables.map((t) => t.name),
     warnings,
+    zodFormats,
   }
 }

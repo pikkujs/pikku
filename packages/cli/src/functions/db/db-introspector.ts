@@ -7,6 +7,12 @@ export interface ColumnInfo {
   defaultValue: string | null
   /** True for virtual or stored generated columns — these are read-only and never inserted. */
   generated?: boolean
+  /**
+   * Underlying DB type name (Postgres `udt_name`). For an enum column `type` is
+   * the generic `'USER-DEFINED'`, while `udtName` holds the actual enum type
+   * name used to resolve its values. Undefined on SQLite (no native enums).
+   */
+  udtName?: string
 }
 
 export interface ForeignKeyInfo {
