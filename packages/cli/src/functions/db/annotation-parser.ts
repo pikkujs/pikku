@@ -73,7 +73,12 @@ export function loadAnnotations(rootDir: string): AnnotationMap {
       for (const [col, ann] of Object.entries(cols)) {
         if (!ann) continue
         const entry: ColAnnotation = {}
-        if (ann.kind === 'bool' || ann.kind === 'date' || ann.kind === 'json')
+        if (
+          ann.kind === 'bool' ||
+          ann.kind === 'date' ||
+          ann.kind === 'json' ||
+          ann.kind === 'uuid'
+        )
           entry.kind = ann.kind
         if (ann.tsType) entry.tsType = ann.tsType
         // `security` is the privacy level. `encrypted` brands as `secret`.

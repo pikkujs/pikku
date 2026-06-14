@@ -332,6 +332,41 @@ describe('DB codegen (Postgres) — classification brands', () => {
     assert.match(schema, /boolean/, 'BOOLEAN column should map to boolean')
   })
 
+  test('Postgres native uuid columns auto-type as Uuid (no kind annotation)', async (t) => {
+    const { outDir, migrationsDir, rootDir, db } = await setup(
+      {
+        '001_things.sql': `
+        CREATE TABLE things (
+          id   UUID PRIMARY KEY,
+          name TEXT NOT NULL
+        );
+      `,
+      },
+      {
+        things: {
+          id: { security: 'public' },
+          name: { security: 'public' },
+        },
+      }
+    )
+    t.after(async () => {
+      await db.close()
+      await rm(outDir, { recursive: true, force: true })
+      await rm(migrationsDir, { recursive: true, force: true })
+      await rm(rootDir, { recursive: true, force: true })
+    })
+
+    const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
+    assert.match(schema, /export type Uuid = string/, 'emits the Uuid alias')
+    const thingsBlock = schema.match(/export interface Things \{[^}]+\}/)
+    assert.ok(thingsBlock, 'Things interface should exist')
+    assert.match(
+      thingsBlock[0],
+      /id:[^\n]*Uuid/,
+      'real Postgres uuid should auto-type as Uuid'
+    )
+  })
+
   test('Postgres timestamp columns auto-type as Date (no kind annotation)', async (t) => {
     const { outDir, migrationsDir, rootDir, db } = await setup(
       {

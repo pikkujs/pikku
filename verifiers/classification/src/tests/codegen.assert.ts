@@ -271,6 +271,40 @@ describe('DB codegen — classification brands', () => {
     assert.match(schema, /string\[\]/, 'tsType override should surface as string[]')
   })
 
+  test('kind: uuid types as Uuid and emits z.uuid() in zod', async (t) => {
+    const dir = await createProject(
+      {
+        '001_users.sql': `
+        CREATE TABLE IF NOT EXISTS users (
+          id    TEXT PRIMARY KEY,
+          email TEXT NOT NULL
+        );
+      `,
+      },
+      {
+        users: {
+          id: { security: 'public', kind: 'uuid' },
+          email: { security: 'public' },
+        },
+      }
+    )
+    t.after(() => rm(dir, { recursive: true, force: true }))
+
+    const { exitCode, output } = runPikkuDbMigrate(dir)
+    assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
+
+    const schema = await readFile(
+      join(dir, '.pikku', 'db', 'schema.d.ts'),
+      'utf-8'
+    )
+    assert.match(schema, /export type Uuid = string/, 'emits the Uuid alias')
+    assert.match(schema, /id: Uuid/, 'id column types as Uuid')
+
+    const zod = await readFile(join(dir, '.pikku', 'db', 'zod.gen.ts'), 'utf-8')
+    assert.match(zod, /id: z\.uuid\(\)/, 'zod emits z.uuid() for the uuid column')
+    assert.match(zod, /email: z\.string\(\)/, 'plain text column stays z.string()')
+  })
+
   test('applies annotations to columns added via ALTER TABLE', async (t) => {
     const dir = await createProject(
       {
