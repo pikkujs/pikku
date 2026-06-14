@@ -95,14 +95,73 @@ function emitZodModule(tables: TableDef[]): string {
   return `${lines.join('\n')}\n`
 }
 
+/**
+ * Resolve a Kysely field type to a `{ schema, generated }` pair, where `schema`
+ * is the zod expression for the *row* (select) shape and `generated` is true
+ * when the column is optional on insert.
+ *
+ * `db-codegen` emits two field shapes depending on a column's classification:
+ *   - public columns →  `Generated<T>`, bare `T`, `T | null`, or a public
+ *                       bool/date column as `Generated<ColumnType<base, rw, rw>>`
+ *   - private/pii/secret columns (the default is `private`) →
+ *                       `ColumnType<Brand<base> | null, insert | undefined, update>`
+ *                       where Brand is `Private` | `Pii` | `Secret`.
+ *
+ * For `ColumnType<Select, Insert, Update>` the row schema comes from `Select`
+ * and the column is insert-optional when `Insert` admits `undefined` (Kysely's
+ * encoding for default/auto/generated columns).
+ */
 function zodForType(tsType: string): { schema: string; generated: boolean } {
-  const generatedMatch = tsType.match(/^Generated<(.+)>$/)
-  const generated = generatedMatch !== null
-  let inner = generated ? generatedMatch[1].trim() : tsType
+  let inner = tsType.trim()
+  let generated = false
+
+  // Peel a single `Generated<…>` wrapper. For public bool/date columns this
+  // wraps a `ColumnType<…>`, so the unwrapped inner is handled below.
+  const generatedMatch = inner.match(/^Generated<(.+)>$/)
+  if (generatedMatch) {
+    generated = true
+    inner = generatedMatch[1].trim()
+  }
+
+  // `ColumnType<Select, Insert, Update>` — classified columns and wrapped
+  // public bool/date columns. Row schema from Select; optional from Insert.
+  if (inner.startsWith('ColumnType<') && inner.endsWith('>')) {
+    const args = splitGenericArgs(inner.slice('ColumnType<'.length, -1))
+    const selectT = args[0]?.trim() ?? 'unknown'
+    const insertT = args[1]?.trim() ?? ''
+    if (unionIncludesUndefined(insertT)) {
+      generated = true
+    }
+    return { schema: scalarSchema(selectT), generated }
+  }
+
+  return { schema: scalarSchema(inner), generated }
+}
+
+/**
+ * Resolve a scalar/select type expression to a zod expression. Handles a
+ * trailing `| null`, classification brands (`Private`/`Pii`/`Secret`), arrays,
+ * and the known scalar bases. Unknown bases fall back to `z.unknown()` so
+ * generation stays total.
+ */
+function scalarSchema(tsType: string): string {
+  let inner = tsType.trim()
+
+  // Defensive: a Select arg may itself be `Generated<…>` in older schemas.
+  const generatedMatch = inner.match(/^Generated<(.+)>$/)
+  if (generatedMatch) {
+    inner = generatedMatch[1].trim()
+  }
 
   const nullable = inner.endsWith(' | null')
   if (nullable) {
     inner = inner.slice(0, -' | null'.length).trim()
+  }
+
+  // Unwrap a classification brand: `Private<T>` / `Pii<T>` / `Secret<T>` → T.
+  const brandMatch = inner.match(/^(?:Private|Pii|Secret)<(.+)>$/)
+  if (brandMatch) {
+    inner = brandMatch[1].trim()
   }
 
   let schema: string
@@ -124,8 +183,7 @@ function zodForType(tsType: string): { schema: string; generated: boolean } {
       break
     default:
       if (inner.endsWith('[]')) {
-        const item = zodForType(inner.slice(0, -2).trim()).schema
-        schema = `z.array(${item})`
+        schema = `z.array(${scalarSchema(inner.slice(0, -2).trim())})`
       } else {
         schema = 'z.unknown()'
       }
@@ -136,5 +194,28 @@ function zodForType(tsType: string): { schema: string; generated: boolean } {
     schema += '.nullable()'
   }
 
-  return { schema, generated }
+  return schema
+}
+
+/** Split the generic argument list of `Foo<a, b, c>` on top-level commas. */
+function splitGenericArgs(args: string): string[] {
+  const parts: string[] = []
+  let depth = 0
+  let start = 0
+  for (let i = 0; i < args.length; i++) {
+    const char = args[i]
+    if (char === '<') depth++
+    else if (char === '>') depth--
+    else if (char === ',' && depth === 0) {
+      parts.push(args.slice(start, i))
+      start = i + 1
+    }
+  }
+  parts.push(args.slice(start))
+  return parts
+}
+
+/** True when a union type expression contains `undefined` as a top-level member. */
+function unionIncludesUndefined(union: string): boolean {
+  return union.split('|').some((member) => member.trim() === 'undefined')
 }
