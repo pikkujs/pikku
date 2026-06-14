@@ -26,6 +26,7 @@ function realKind(dialect: Dialect, sqlType: string): ColumnKind | null {
   const u = sqlType.toUpperCase()
   if (u.includes('TIMESTAMP') || u === 'DATE') return 'date'
   if (u === 'BOOLEAN' || u === 'BOOL') return 'bool'
+  if (u === 'UUID') return 'uuid'
   return null
 }
 
@@ -79,6 +80,7 @@ function selectBase(
   if (annotation?.tsType) return annotation.tsType
   if (annotation?.kind === 'bool') return 'boolean'
   if (annotation?.kind === 'date') return 'Date'
+  if (annotation?.kind === 'uuid') return 'Uuid'
   if (annotation?.kind === 'json') return 'unknown'
   return mapType(col.type)
 }
@@ -90,6 +92,7 @@ function insertBase(
   if (annotation?.tsType) return annotation.tsType
   if (annotation?.kind === 'bool') return 'boolean | number'
   if (annotation?.kind === 'date') return 'Date | string'
+  if (annotation?.kind === 'uuid') return 'Uuid'
   if (annotation?.kind === 'json') return 'unknown'
   return mapType(col.type)
 }
@@ -117,6 +120,9 @@ function columnTypeExpression(
       const base = nullable ? 'Date | null' : 'Date'
       const rw = nullable ? 'Date | string | null' : 'Date | string'
       return wrap(`ColumnType<${base}, ${rw}, ${rw}>`)
+    }
+    if (annotation?.kind === 'uuid') {
+      return wrap(nullable ? 'Uuid | null' : 'Uuid')
     }
     if (annotation?.tsType) {
       const base = nullable
@@ -186,9 +192,12 @@ function emitInterface(
       // the *real* column type tells us (a timestamp genuinely is a Date). On
       // SQLite there is no native date storage (dates are TEXT), so nothing is
       // derived — `string` unless explicitly `kind: 'date'`.
+      // On Postgres, real `timestamp`/`uuid` types carry through automatically
+      // (no annotation needed); SQLite has neither native type so derives nothing.
       const real = realKind(dialect, col.type)
-      const typingKind: ColumnKind | undefined =
-        ann?.kind ?? (!ann?.tsType && real === 'date' ? 'date' : undefined)
+      const derived =
+        !ann?.tsType && (real === 'date' || real === 'uuid') ? real : undefined
+      const typingKind: ColumnKind | undefined = ann?.kind ?? derived
 
       // Warn (don't force) only on a genuine contradiction the real type can
       // prove: a column NAMED like a date/bool whose actual type disagrees
@@ -276,7 +285,7 @@ function emitClassificationMap(tables: TableSchema[]): string {
     `  /** Anonymize strategy used by \`pikku db anonymize\`. */`,
     `  classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'`,
     `  /** Column kind override for codegen coercion + typing. */`,
-    `  kind?: 'date' | 'bool' | 'json'`,
+    `  kind?: 'date' | 'bool' | 'json' | 'uuid'`,
     `  /** TypeScript type override, e.g. \`string[]\` or \`MyJson\`. Wins over \`kind\`. */`,
     `  tsType?: string`,
     `  description?: string`,
@@ -422,6 +431,9 @@ export async function generateSchemaTypes(
     `export type Private<T> = T & { readonly __classification__?: 'private' }`,
     `export type Pii<T> = T & { readonly __classification__?: 'pii' }`,
     `export type Secret<T> = T & { readonly __classification__?: 'secret' }`,
+    // Transparent alias (structurally a string, so plain strings stay
+    // interchangeable) — its name lets the zod codegen emit `z.uuid()`.
+    `export type Uuid = string`,
     ``,
     interfaces,
     ``,
@@ -437,9 +449,10 @@ export async function generateSchemaTypes(
     const tableCols = explicitAnnotations[bareTableName(table.name)] ?? {}
     for (const col of table.columns) {
       // Coercion is driven only by an explicit `kind` in db/annotations.ts —
-      // no name inference. An unannotated `*_at` column is not coerced.
+      // no name inference. An unannotated `*_at` column is not coerced. `uuid`
+      // is a string in both dialects, so it needs no runtime coercion.
       const kind: ColumnKind | undefined = tableCols[col.name]?.kind
-      if (kind) {
+      if (kind && kind !== 'uuid') {
         if (!coercionMap[table.name])
           coercionMap[table.name] = {} as Record<string, ColumnKind>
         coercionMap[table.name]![col.name] = kind

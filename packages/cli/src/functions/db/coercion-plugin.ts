@@ -1,7 +1,7 @@
 import type { KyselyPlugin, UnknownRow } from 'kysely'
 import type { RootOperationNode } from 'kysely'
 
-export type ColumnKind = 'date' | 'bool' | 'json'
+export type ColumnKind = 'date' | 'bool' | 'json' | 'uuid'
 
 export type CoercionMap = Record<string, Record<string, ColumnKind>>
 
@@ -29,6 +29,10 @@ function fromDb(value: unknown, kind: ColumnKind): unknown {
       } catch {
         return value
       }
+    case 'uuid':
+      // UUIDs are strings in both Postgres and SQLite — no runtime coercion.
+      // (Codegen also omits `uuid` from the coercion map; this is defensive.)
+      return value
   }
 }
 

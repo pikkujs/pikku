@@ -9,8 +9,12 @@ overrides. SQL-comment annotations (`-- @private`, `-- @date`, etc.) and
 name-based kind inference are removed — they were ambiguous and, for the
 sidecar, never actually wired up.
 
-- `ColumnEntry` now exposes `kind` (`date`/`bool`/`json`) and `tsType`. `tsType`
-  is a general type override (not json-only) and wins over `kind`.
+- `ColumnEntry` now exposes `kind` (`date`/`bool`/`json`/`uuid`) and `tsType`.
+  `tsType` is a general type override (not json-only) and wins over `kind`.
+- New `kind: 'uuid'` types a column as a transparent `Uuid` alias (structurally
+  a string) and makes the zod codegen emit `z.uuid()`. Postgres native `uuid`
+  columns are detected automatically (no annotation); SQLite has no native uuid
+  type, so use `kind: 'uuid'`.
 - **Dialect-aware typing**: on Postgres, real temporal columns auto-type as
   `Date` from the introspected type (no annotation needed). On SQLite — which
   stores dates as TEXT — columns stay `string` unless `kind: 'date'` is set.

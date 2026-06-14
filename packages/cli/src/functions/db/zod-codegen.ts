@@ -178,6 +178,9 @@ function scalarSchema(tsType: string): string {
     case 'Date':
       schema = 'z.date()'
       break
+    case 'Uuid':
+      schema = 'z.uuid()'
+      break
     case 'unknown':
       schema = 'z.unknown()'
       break
