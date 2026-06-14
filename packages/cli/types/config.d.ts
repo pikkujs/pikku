@@ -235,6 +235,13 @@ export type PikkuCLIInput = {
    */
   authFile?: string
 
+  /**
+   * Path to write the generated typed `defineAuth` re-export (auth.types.ts).
+   * Defaults to `{outDir}/auth/auth.types.ts`. Re-exported from `#pikku` so
+   * user code can `import { defineAuth } from '#pikku'` with project-typed services.
+   */
+  authTypesFile?: string
+
   openAPI?: {
     outputFile: string
     additionalInfo: OpenAPISpecInfo

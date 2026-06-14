@@ -3,10 +3,11 @@ import { pikkuSessionlessFunc } from '#pikku'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeAuthGen } from './serialize-auth-gen.js'
+import { serializeAuthTypes } from './serialize-auth-types.js'
 
 export const pikkuAuth = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
-    const { authFile, packageMappings } = config
+    const { authFile, authTypesFile, functionTypesFile, packageMappings } = config
     if (!authFile) return
 
     const state = await getInspectorState()
@@ -27,6 +28,12 @@ export const pikkuAuth = pikkuSessionlessFunc<void, void>({
     const secretsFile = join(dirname(authFile), 'auth-secrets.gen.ts')
     await writeFileInDir(logger, authFile, wiring)
     await writeFileInDir(logger, secretsFile, secrets)
+
+    // Generate the typed defineAuth re-export consumed by `import { defineAuth } from '#pikku'`.
+    if (authTypesFile && functionTypesFile) {
+      const authTypes = serializeAuthTypes(authTypesFile, functionTypesFile)
+      await writeFileInDir(logger, authTypesFile, authTypes)
+    }
   },
   middleware: [
     logCommandInfoAndTime({

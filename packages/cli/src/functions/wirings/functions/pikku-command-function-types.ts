@@ -5,7 +5,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializePikkuTypesHub } from './serialize-pikku-types-hub.js'
 
 export const pikkuFunctionTypes = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config }) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const {
       typesDeclarationFile: typesFile,
       packageMappings,
@@ -20,6 +20,7 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<void, void>({
       nodeTypesFile,
       secretTypesFile,
       addonTypesFile,
+      authTypesFile,
     } = config
 
     const getImportPath = (file: string) =>
@@ -30,6 +31,15 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<void, void>({
     // Node and trigger types are included for addon packages
     const getAlwaysImportPath = (file: string) =>
       getFileImportRelativePath(typesFile, file, packageMappings)
+
+    // Include the typed defineAuth re-export only when the project has a
+    // defineAuth declaration. This avoids importing @pikku/auth-js in projects
+    // that don't use it.
+    const state = await getInspectorState()
+    const authTypesImportPath =
+      authTypesFile && state.auth.definition
+        ? getFileImportRelativePath(typesFile, authTypesFile, packageMappings)
+        : null
 
     const content = serializePikkuTypesHub(
       getFileImportRelativePath(typesFile, functionTypesFile, packageMappings),
@@ -42,7 +52,8 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<void, void>({
       getImportPath(cliTypesFile),
       getAlwaysImportPath(nodeTypesFile),
       getAlwaysImportPath(secretTypesFile),
-      config.addon ? getAlwaysImportPath(addonTypesFile) : null
+      config.addon ? getAlwaysImportPath(addonTypesFile) : null,
+      authTypesImportPath
     )
 
     await writeFileInDir(logger, typesFile, content)

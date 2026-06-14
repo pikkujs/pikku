@@ -290,6 +290,9 @@ const _getPikkuCLIConfig = async (
     if (!result.authFile) {
       result.authFile = join(resolvedScaffoldDir, 'auth.gen.ts')
     }
+    if (!result.authTypesFile) {
+      result.authTypesFile = join(result.outDir, 'auth', 'auth.types.ts')
+    }
     if (result.scaffold?.events && !result.eventsChannelFile) {
       result.eventsChannelFile = join(resolvedScaffoldDir, 'events.gen.ts')
     }
@@ -632,6 +635,10 @@ const _getPikkuCLIConfig = async (
 
     if (result.authFile && !isAbsolute(result.authFile)) {
       result.authFile = join(result.configDir, result.authFile)
+    }
+
+    if (result.authTypesFile && !isAbsolute(result.authTypesFile)) {
+      result.authTypesFile = join(result.configDir, result.authTypesFile)
     }
 
     if (!isAbsolute(result.tsconfig)) {
