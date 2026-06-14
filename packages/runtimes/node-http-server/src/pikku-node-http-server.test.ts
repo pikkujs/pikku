@@ -65,12 +65,27 @@ const createSignedAssetUrl = async (options?: {
 const createCapturingLogger = () => {
   const warnings: string[] = []
   const infos: string[] = []
+  const capture =
+    (sink: string[]) =>
+    (messageOrObj: string | Record<string, any>, ..._meta: any[]) => {
+      sink.push(
+        typeof messageOrObj === 'string'
+          ? messageOrObj
+          : JSON.stringify(messageOrObj)
+      )
+    }
   return {
     logger: {
-      info: (msg: string) => infos.push(msg),
-      warn: (msg: string) => warnings.push(msg),
-      error: (_msg: string | Error) => {},
-      debug: (_msg: string) => {},
+      info: capture(infos),
+      warn: capture(warnings),
+      error: (
+        _messageOrObj: string | Record<string, any> | Error,
+        ..._meta: any[]
+      ) => {},
+      debug: (
+        _messageOrObj: string | Record<string, any>,
+        ..._meta: any[]
+      ) => {},
       setLevel: () => {},
     },
     warnings,
@@ -399,7 +414,10 @@ describe('PikkuNodeHTTPServer MCP mounting', { concurrency: false }, () => {
 
   test('mounts /mcp when mcpJson declares at least one tool', async () => {
     const { logger, infos } = createCapturingLogger()
-    const origin = await startServer({ mcpJson: { tools: [{ name: 'echo' }] } }, logger)
+    const origin = await startServer(
+      { mcpJson: { tools: [{ name: 'echo' }] } },
+      logger
+    )
 
     const response = await getMcp(origin)
     // A GET to /mcp with no session is handled by the MCP server, which
@@ -413,11 +431,54 @@ describe('PikkuNodeHTTPServer MCP mounting', { concurrency: false }, () => {
     )
   })
 
+  test('mounts the MCP server at a configurable path', async () => {
+    const { logger, infos } = createCapturingLogger()
+    const origin = await startServer(
+      { mcpJson: { tools: [{ name: 'echo' }] }, mcpPath: '/api/mcp' },
+      logger
+    )
+
+    const mounted = await fetch(`${origin}/api/mcp`, {
+      headers: { connection: 'close' },
+    })
+    assert.equal(mounted.status, 400)
+    assert.equal((await mounted.text()).includes(MCP_SESSION_ERROR), true)
+    assert.ok(
+      infos.some((msg) => msg.includes('MCP mounted at /api/mcp')),
+      'expected a log line confirming the configured mount path'
+    )
+
+    const defaultPath = await fetch(`${origin}/mcp`, {
+      headers: { connection: 'close' },
+    })
+    assert.equal(
+      (await defaultPath.text()).includes(MCP_SESSION_ERROR),
+      false,
+      'the default /mcp path must not be served when a custom path is set'
+    )
+  })
+
+  test('does not route /mcp-prefixed paths to the MCP handler', async () => {
+    const origin = await startServer({ mcpJson: { tools: [{ name: 'echo' }] } })
+    const response = await fetch(`${origin}/mcpfoo`, {
+      headers: { connection: 'close' },
+    })
+    const body = await response.text()
+    // The MCP handler answers an unmatched path with an empty-body 404; the
+    // normal pikku pipeline always returns a JSON body. A non-empty body proves
+    // /mcpfoo was NOT diverted to the MCP handler.
+    assert.equal(body.includes(MCP_SESSION_ERROR), false)
+    assert.notEqual(body, '', '/mcpfoo must not be routed to the MCP handler')
+  })
+
   test('logs a warning and serves normally when MCP mounting fails', async () => {
     const { logger, warnings } = createCapturingLogger()
     // A null entry makes the registry throw while reading `tool.name`, which
     // exercises the catch branch in initMCP.
-    const origin = await startServer({ mcpJson: { tools: [null] } as any }, logger)
+    const origin = await startServer(
+      { mcpJson: { tools: [null] } as any },
+      logger
+    )
 
     assert.ok(
       warnings.some((msg) => msg.includes('MCP could not be mounted')),

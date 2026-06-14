@@ -68,10 +68,15 @@ export type PikkuNodeHTTPServerOptions = {
   configureServer?: (server: Server) => void | Promise<void>
   /**
    * Parsed content of `.pikku/mcp/mcp.gen.json`. When provided and non-empty,
-   * `@pikku/modelcontextprotocol` is dynamically imported and `/mcp` is mounted.
+   * `@pikku/modelcontextprotocol` is dynamically imported and the MCP server is
+   * mounted at `mcpPath`.
    * Import the JSON statically so bundlers (esbuild) inline it: no runtime file read needed.
    */
   mcpJson?: { tools?: unknown[]; resources?: unknown[]; prompts?: unknown[] }
+  /**
+   * Path the MCP server is mounted at when `mcpJson` is provided. Default `/mcp`.
+   */
+  mcpPath?: string
 } & RunHTTPWiringOptions
 
 const HARDENING_DEFAULTS = {
@@ -96,6 +101,7 @@ export class PikkuNodeHTTPServer {
   public server: Server
   private listening = false
   private shutdownGracePeriodMs: number
+  private mcpPath: string
   private mcpHandler?: (
     req: IncomingMessage,
     res: ServerResponse
@@ -117,6 +123,7 @@ export class PikkuNodeHTTPServer {
       config.maxRequestsPerSocket ?? HARDENING_DEFAULTS.maxRequestsPerSocket
     this.shutdownGracePeriodMs =
       config.shutdownGracePeriodMs ?? HARDENING_DEFAULTS.shutdownGracePeriodMs
+    this.mcpPath = options.mcpPath ?? '/mcp'
   }
 
   public async init(): Promise<void> {
@@ -149,14 +156,29 @@ export class PikkuNodeHTTPServer {
         this.logger
       )
       await mcpServer.init()
-      const { handler } = mcpServer.createHTTPRequestHandler({ path: '/mcp' })
+      const { handler } = mcpServer.createHTTPRequestHandler({
+        path: this.mcpPath,
+      })
       this.mcpHandler = handler
-      this.logger.info('pikku-node-http-server: MCP mounted at /mcp')
+      this.logger.info(`pikku-node-http-server: MCP mounted at ${this.mcpPath}`)
     } catch (err) {
       this.logger.warn(
         `pikku-node-http-server: MCP could not be mounted — ${err instanceof Error ? err.message : String(err)}`
       )
     }
+  }
+
+  private matchesMcpPath(url: string): boolean {
+    if (!url.startsWith(this.mcpPath)) {
+      return false
+    }
+    const boundary = url.charAt(this.mcpPath.length)
+    return (
+      boundary === '' ||
+      boundary === '/' ||
+      boundary === '?' ||
+      boundary === '#'
+    )
   }
 
   private handleRequest = async (
@@ -175,7 +197,7 @@ export class PikkuNodeHTTPServer {
         return
       }
 
-      if (this.mcpHandler && req.url?.startsWith('/mcp')) {
+      if (this.mcpHandler && req.url && this.matchesMcpPath(req.url)) {
         await this.mcpHandler(req, res)
         return
       }
