@@ -165,8 +165,18 @@ export class KyselySecretService implements SecretService {
           row.ciphertext,
           row.wrappedDek
         )
-      } catch {
-        // skip secrets that fail to decrypt
+      } catch (cause) {
+        // A stored secret that fails to decrypt is never expected — it means the
+        // KEK does not match what the value was wrapped under (mismatched
+        // PIKKU_SECRET_KEK, or a missing previousKey for an older key_version).
+        // Swallowing it produces an undefined secret and an opaque downstream
+        // failure (e.g. Auth.js "server configuration" 500). Fail loud, naming
+        // the key and key_version so the misconfiguration is diagnosable.
+        throw new Error(
+          `Failed to decrypt secret "${row.key}" (key_version ${row.keyVersion}): ` +
+            `the configured KEK does not match the key it was wrapped under`,
+          { cause }
+        )
       }
     }
     return out
