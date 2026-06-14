@@ -2,6 +2,8 @@
  * Verifies that `pikku db audit` produces a readable classification summary
  * with correct per-column counts and warns on private/secret columns that
  * have no anonymize strategy.
+ *
+ * Classification is authored in `db/annotations.ts` (the single source).
  */
 
 import { mkdtemp, mkdir, writeFile, rm } from 'fs/promises'
@@ -15,6 +17,12 @@ const PIKKU_BIN = join(
   import.meta.dirname!,
   '../../../../packages/cli/dist/bin/pikku.js'
 )
+
+type ColumnEntry = {
+  security?: 'public' | 'private' | 'pii' | 'secret' | 'encrypted'
+  classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'
+}
+type Annotations = Record<string, Record<string, ColumnEntry>>
 
 function runPikku(
   dir: string,
@@ -32,7 +40,10 @@ function runPikku(
   }
 }
 
-async function createProject(migrationSql: string): Promise<string> {
+async function createProject(
+  migrationSql: string,
+  annotations?: Annotations
+): Promise<string> {
   const tmpDir = await mkdtemp(join(tmpdir(), 'pikku-audit-test-'))
   await writeFile(
     join(tmpDir, 'pikku.config.json'),
@@ -52,18 +63,33 @@ async function createProject(migrationSql: string): Promise<string> {
   await mkdir(join(tmpDir, 'db', 'sqlite'), { recursive: true })
   await mkdir(join(tmpDir, 'src'), { recursive: true })
   await writeFile(join(tmpDir, 'db', 'sqlite', '001_init.sql'), migrationSql)
+  if (annotations) {
+    await writeFile(
+      join(tmpDir, 'db', 'annotations.ts'),
+      `export const classifications = ${JSON.stringify(annotations, null, 2)}\n`
+    )
+  }
   return tmpDir
 }
 
 describe('DB audit command', () => {
   test('prints per-table column classification summary', async (t) => {
-    const dir = await createProject(`
+    const dir = await createProject(
+      `
       CREATE TABLE users (
-        id    INTEGER PRIMARY KEY AUTOINCREMENT, -- @public
-        email TEXT NOT NULL,                     -- @private:fake:email
-        token TEXT NOT NULL                      -- @secret:hash
+        id    INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT NOT NULL,
+        token TEXT NOT NULL
       );
-    `)
+    `,
+      {
+        users: {
+          id: { security: 'public' },
+          email: { security: 'private', classification: 'fake:email' },
+          token: { security: 'secret', classification: 'hash' },
+        },
+      }
+    )
     t.after(() => rm(dir, { recursive: true, force: true }))
 
     const migrate = runPikku(dir, ['db', 'migrate'])
@@ -80,13 +106,22 @@ describe('DB audit command', () => {
   })
 
   test('prints column counts in summary line', async (t) => {
-    const dir = await createProject(`
+    const dir = await createProject(
+      `
       CREATE TABLE data (
-        id   INTEGER PRIMARY KEY AUTOINCREMENT, -- @public
-        a    TEXT NOT NULL,                     -- @private:fake:email
-        b    TEXT NOT NULL                      -- @secret:hash
+        id   INTEGER PRIMARY KEY AUTOINCREMENT,
+        a    TEXT NOT NULL,
+        b    TEXT NOT NULL
       );
-    `)
+    `,
+      {
+        data: {
+          id: { security: 'public' },
+          a: { security: 'private', classification: 'fake:email' },
+          b: { security: 'secret', classification: 'hash' },
+        },
+      }
+    )
     t.after(() => rm(dir, { recursive: true, force: true }))
 
     const migrate1 = runPikku(dir, ['db', 'migrate'])
@@ -103,12 +138,20 @@ describe('DB audit command', () => {
   })
 
   test('warns when private/secret columns have no anonymize strategy', async (t) => {
-    const dir = await createProject(`
+    const dir = await createProject(
+      `
       CREATE TABLE items (
-        id   INTEGER PRIMARY KEY AUTOINCREMENT, -- @public
-        name TEXT NOT NULL                      -- @private  (no strategy)
+        id   INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL
       );
-    `)
+    `,
+      {
+        items: {
+          id: { security: 'public' },
+          name: { security: 'private' }, // no strategy
+        },
+      }
+    )
     t.after(() => rm(dir, { recursive: true, force: true }))
 
     const migrate2 = runPikku(dir, ['db', 'migrate'])
@@ -126,13 +169,22 @@ describe('DB audit command', () => {
   })
 
   test('does not warn when all private columns have explicit strategies', async (t) => {
-    const dir = await createProject(`
+    const dir = await createProject(
+      `
       CREATE TABLE safe (
-        id    INTEGER PRIMARY KEY AUTOINCREMENT, -- @public
-        email TEXT NOT NULL,                     -- @private:fake:email
-        slug  TEXT NOT NULL                      -- @private:keep
+        id    INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT NOT NULL,
+        slug  TEXT NOT NULL
       );
-    `)
+    `,
+      {
+        safe: {
+          id: { security: 'public' },
+          email: { security: 'private', classification: 'fake:email' },
+          slug: { security: 'private', classification: 'keep' },
+        },
+      }
+    )
     t.after(() => rm(dir, { recursive: true, force: true }))
 
     const migrate3 = runPikku(dir, ['db', 'migrate'])

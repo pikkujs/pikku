@@ -6,9 +6,9 @@ import {
   readFileSync,
 } from 'node:fs'
 import { resolve, isAbsolute, relative, dirname, join } from 'node:path'
-import { execSync } from 'node:child_process'
 import { createRequire } from 'node:module'
-import { fileURLToPath } from 'node:url'
+import { runInNewContext } from 'node:vm'
+import { transformSync } from 'esbuild'
 import type { Kysely } from 'kysely'
 import { migrate, type MigrateResult } from './db-migrator.js'
 import { generateSchemaTypes, type CodegenResult } from './db-codegen.js'
@@ -334,13 +334,17 @@ function scaffoldClassificationsFile(
 }
 
 /**
- * Compile `db/annotations.ts` via tsx into the `annotations.gen.json` sidecar
- * that the codegen and the pikku-console addon read. No-op if the authored file
- * doesn't exist (nothing to compile yet) or tsx isn't bundled. Returns whether
- * the sidecar changed on disk.
+ * Compile `db/annotations.ts` into the `annotations.gen.json` sidecar that the
+ * codegen and the pikku-console addon read. No-op if the authored file doesn't
+ * exist (nothing to compile yet). Returns whether the sidecar changed on disk.
  *
- * This is run BEFORE codegen so authored edits reflect in a single `db migrate`
- * (and again after, to capture a freshly-scaffolded file).
+ * Uses esbuild (a CLI dependency) to transpile the TS in-process and a `vm`
+ * sandbox to evaluate it — no subprocess and no tsx. The previous `node --import
+ * tsx/esm` subprocess silently fails on Node ≥ 23 (ERR_REQUIRE_CYCLE_MODULE),
+ * which is why this sidecar never materialised before.
+ *
+ * Run BEFORE codegen so authored edits reflect in a single `db migrate` (and
+ * again after, to capture a freshly-scaffolded file).
  */
 function compileClassifications(
   classificationsFile: string,
@@ -348,42 +352,33 @@ function compileClassifications(
 ): boolean {
   if (!existsSync(classificationsFile)) return false
 
-  // Resolve tsx from the CLI package's own node_modules so it works regardless
-  // of whether the user's project has tsx installed.
-  const _require = createRequire(fileURLToPath(import.meta.url))
-  let tsxEsmPath: string | null = null
+  let value: unknown
   try {
-    tsxEsmPath = _require.resolve('tsx/esm')
+    const src = readFileSync(classificationsFile, 'utf8')
+    const { code } = transformSync(src, {
+      loader: 'ts',
+      format: 'cjs',
+    })
+    const mod: { exports: Record<string, unknown> } = { exports: {} }
+    runInNewContext(code, {
+      module: mod,
+      exports: mod.exports,
+      require: createRequire(classificationsFile),
+    })
+    value = Object.values(mod.exports)[0]
   } catch {
-    return false // tsx not bundled with this CLI install — skip JSON emit
+    return false // syntax/transform error — skip JSON emit
   }
 
-  const script = [
-    `import * as mod from ${JSON.stringify(classificationsFile)}`,
-    `const val = Object.values(mod)[0]`,
-    `process.stdout.write(JSON.stringify(val))`,
-  ].join('\n')
-
-  try {
-    const json = execSync(
-      `node --import ${JSON.stringify(tsxEsmPath)} --input-type=module`,
-      {
-        input: script,
-        encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'pipe'],
-      }
-    )
-    const existing = existsSync(genJsonFile)
-      ? readFileSync(genJsonFile, 'utf8')
-      : null
-    const next = JSON.stringify(JSON.parse(json), null, 2) + '\n'
-    if (existing !== next) {
-      mkdirSync(dirname(genJsonFile), { recursive: true })
-      writeFileSync(genJsonFile, next, 'utf8')
-      return true
-    }
-  } catch {
-    // annotations file has syntax errors — skip JSON emit
+  if (value === undefined) return false
+  const next = JSON.stringify(value, null, 2) + '\n'
+  const existing = existsSync(genJsonFile)
+    ? readFileSync(genJsonFile, 'utf8')
+    : null
+  if (existing !== next) {
+    mkdirSync(dirname(genJsonFile), { recursive: true })
+    writeFileSync(genJsonFile, next, 'utf8')
+    return true
   }
   return false
 }

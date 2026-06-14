@@ -1,6 +1,9 @@
 /**
  * Verifies that `pikku db migrate` emits correct Private<T>/Secret<T> brands
  * in schema.d.ts and a well-formed classification.gen.ts manifest.
+ *
+ * Classification + type info is authored in `db/annotations.ts` (the single
+ * source) — there is no SQL-comment annotation path anymore.
  */
 
 import { mkdtemp, mkdir, writeFile, rm, readFile } from 'fs/promises'
@@ -14,6 +17,15 @@ const PIKKU_BIN = join(
   import.meta.dirname!,
   '../../../../packages/cli/dist/bin/pikku.js'
 )
+
+/** Authored `db/annotations.ts` shape: table → column → ColumnEntry. */
+type ColumnEntry = {
+  security?: 'public' | 'private' | 'pii' | 'secret' | 'encrypted'
+  classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'
+  kind?: 'date' | 'bool' | 'json'
+  tsType?: string
+}
+type Annotations = Record<string, Record<string, ColumnEntry>>
 
 function runPikkuDbMigrate(dir: string): { exitCode: number; output: string } {
   try {
@@ -32,7 +44,8 @@ function runPikkuDbMigrate(dir: string): { exitCode: number; output: string } {
 }
 
 async function createProject(
-  migrations: Record<string, string>
+  migrations: Record<string, string>,
+  annotations?: Annotations
 ): Promise<string> {
   const tmpDir = await mkdtemp(join(tmpdir(), 'pikku-codegen-test-'))
   await writeFile(
@@ -62,20 +75,32 @@ async function createProject(
     await writeFile(join(tmpDir, 'db', 'sqlite', name), sql)
   }
 
+  // The codegen compiles db/annotations.ts → annotations.gen.json before
+  // introspection, so authored classification applies in a single migrate.
+  if (annotations) {
+    await writeFile(
+      join(tmpDir, 'db', 'annotations.ts'),
+      `export const classifications = ${JSON.stringify(annotations, null, 2)}\n`
+    )
+  }
+
   return tmpDir
 }
 
 describe('DB codegen — classification brands', () => {
-  test('emits Private<string> for @private columns', async (t) => {
-    const dir = await createProject({
-      '001_users.sql': `
+  test('emits Private<string> for private columns', async (t) => {
+    const dir = await createProject(
+      {
+        '001_users.sql': `
         CREATE TABLE IF NOT EXISTS users (
           id    INTEGER PRIMARY KEY AUTOINCREMENT,
           name  TEXT NOT NULL,
-          email TEXT NOT NULL -- @private:fake:email
+          email TEXT NOT NULL
         );
       `,
-    })
+      },
+      { users: { email: { security: 'private', classification: 'fake:email' } } }
+    )
     t.after(() => rm(dir, { recursive: true, force: true }))
 
     const { exitCode, output } = runPikkuDbMigrate(dir)
@@ -93,15 +118,18 @@ describe('DB codegen — classification brands', () => {
     )
   })
 
-  test('emits Secret<string> for @secret columns', async (t) => {
-    const dir = await createProject({
-      '001_tokens.sql': `
+  test('emits Secret<string> for secret columns', async (t) => {
+    const dir = await createProject(
+      {
+        '001_tokens.sql': `
         CREATE TABLE IF NOT EXISTS tokens (
           id    INTEGER PRIMARY KEY AUTOINCREMENT,
-          value TEXT NOT NULL -- @secret:hash
+          value TEXT NOT NULL
         );
       `,
-    })
+      },
+      { tokens: { value: { security: 'secret', classification: 'hash' } } }
+    )
     t.after(() => rm(dir, { recursive: true, force: true }))
 
     const { exitCode, output } = runPikkuDbMigrate(dir)
@@ -114,16 +142,25 @@ describe('DB codegen — classification brands', () => {
     assert.match(schema, /Secret<string>/)
   })
 
-  test('emits plain type for @public columns (no brand)', async (t) => {
-    const dir = await createProject({
-      '001_posts.sql': `
+  test('emits plain type for public columns (no brand)', async (t) => {
+    const dir = await createProject(
+      {
+        '001_posts.sql': `
         CREATE TABLE IF NOT EXISTS posts (
-          id    INTEGER PRIMARY KEY AUTOINCREMENT, -- @public
-          title TEXT NOT NULL, -- @public
-          body  TEXT NOT NULL  -- @public
+          id    INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          body  TEXT NOT NULL
         );
       `,
-    })
+      },
+      {
+        posts: {
+          id: { security: 'public' },
+          title: { security: 'public' },
+          body: { security: 'public' },
+        },
+      }
+    )
     t.after(() => rm(dir, { recursive: true, force: true }))
 
     const { exitCode, output } = runPikkuDbMigrate(dir)
@@ -134,25 +171,25 @@ describe('DB codegen — classification brands', () => {
       'utf-8'
     )
     // The type aliases Private<T>/Pii<T>/Secret<T> are always emitted in the header.
-    // Verify that no column *uses* them (no ColumnType<Private<...>, ColumnType<Pii<...>, or ColumnType<Secret<...)
+    // Verify that no column *uses* them.
     assert.doesNotMatch(
       schema,
       /ColumnType<Private</,
-      'all-@public table should have no columns using Private<> brand'
+      'all-public table should have no columns using Private<> brand'
     )
     assert.doesNotMatch(
       schema,
       /ColumnType<Pii</,
-      'all-@public table should have no columns using Pii<> brand'
+      'all-public table should have no columns using Pii<> brand'
     )
     assert.doesNotMatch(
       schema,
       /ColumnType<Secret</,
-      'all-@public table should have no columns using Secret<> brand'
+      'all-public table should have no columns using Secret<> brand'
     )
   })
 
-  test('defaults unnanotated columns to private (Private brand)', async (t) => {
+  test('defaults unannotated columns to private (Private brand)', async (t) => {
     const dir = await createProject({
       '001_items.sql': `
         CREATE TABLE IF NOT EXISTS items (
@@ -177,15 +214,22 @@ describe('DB codegen — classification brands', () => {
     )
   })
 
-  test('handles combined annotations on same line (@date @private:keep)', async (t) => {
-    const dir = await createProject({
-      '001_events.sql': `
+  test('honours kind: date together with a private classification', async (t) => {
+    const dir = await createProject(
+      {
+        '001_events.sql': `
         CREATE TABLE IF NOT EXISTS events (
           id         INTEGER PRIMARY KEY AUTOINCREMENT,
-          created_at TEXT NOT NULL DEFAULT (datetime('now')) -- @date @private:keep
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
       `,
-    })
+      },
+      {
+        events: {
+          created_at: { security: 'private', classification: 'keep', kind: 'date' },
+        },
+      }
+    )
     t.after(() => rm(dir, { recursive: true, force: true }))
 
     const { exitCode, output } = runPikkuDbMigrate(dir)
@@ -195,22 +239,58 @@ describe('DB codegen — classification brands', () => {
       join(dir, '.pikku', 'db', 'schema.d.ts'),
       'utf-8'
     )
-    // @date makes it Date type, @private:keep means it's Private<Date>
+    // kind: 'date' makes it Date; private classification makes it Private<Date>.
     assert.match(schema, /Private<Date>/)
   })
 
-  test('handles ALTER TABLE ADD COLUMN annotations', async (t) => {
-    const dir = await createProject({
-      '001_users.sql': `
-        CREATE TABLE IF NOT EXISTS users (
+  test('honours tsType as a general type override', async (t) => {
+    const dir = await createProject(
+      {
+        '001_configs.sql': `
+        CREATE TABLE IF NOT EXISTS configs (
           id   INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL -- @public
+          tags TEXT NOT NULL
         );
       `,
-      '002_add_phone.sql': `
-        ALTER TABLE users ADD COLUMN phone TEXT; -- @private:fake:name
+      },
+      {
+        configs: {
+          tags: { security: 'public', kind: 'json', tsType: 'string[]' },
+        },
+      }
+    )
+    t.after(() => rm(dir, { recursive: true, force: true }))
+
+    const { exitCode, output } = runPikkuDbMigrate(dir)
+    assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
+
+    const schema = await readFile(
+      join(dir, '.pikku', 'db', 'schema.d.ts'),
+      'utf-8'
+    )
+    assert.match(schema, /string\[\]/, 'tsType override should surface as string[]')
+  })
+
+  test('applies annotations to columns added via ALTER TABLE', async (t) => {
+    const dir = await createProject(
+      {
+        '001_users.sql': `
+        CREATE TABLE IF NOT EXISTS users (
+          id   INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL
+        );
       `,
-    })
+        '002_add_phone.sql': `
+        ALTER TABLE users ADD COLUMN phone TEXT;
+      `,
+      },
+      {
+        users: {
+          name: { security: 'public' },
+          phone: { security: 'private', classification: 'fake:name' },
+        },
+      }
+    )
     t.after(() => rm(dir, { recursive: true, force: true }))
 
     const { exitCode, output } = runPikkuDbMigrate(dir)
@@ -248,16 +328,25 @@ describe('DB codegen — classification brands', () => {
   })
 
   test('generates classification.gen.ts manifest with correct entries', async (t) => {
-    const dir = await createProject({
-      '001_mixed.sql': `
+    const dir = await createProject(
+      {
+        '001_mixed.sql': `
         CREATE TABLE IF NOT EXISTS mixed (
           id    INTEGER PRIMARY KEY AUTOINCREMENT,
-          pub   TEXT NOT NULL, -- @public
-          priv  TEXT NOT NULL, -- @private:fake:email
-          sec   TEXT NOT NULL  -- @secret:hash
+          pub   TEXT NOT NULL,
+          priv  TEXT NOT NULL,
+          sec   TEXT NOT NULL
         );
       `,
-    })
+      },
+      {
+        mixed: {
+          pub: { security: 'public' },
+          priv: { security: 'private', classification: 'fake:email' },
+          sec: { security: 'secret', classification: 'hash' },
+        },
+      }
+    )
     t.after(() => rm(dir, { recursive: true, force: true }))
 
     const { exitCode, output } = runPikkuDbMigrate(dir)
@@ -288,14 +377,22 @@ describe('DB codegen — classification brands', () => {
   })
 
   test('manifest covers ALL columns including public ones', async (t) => {
-    const dir = await createProject({
-      '001_posts.sql': `
+    const dir = await createProject(
+      {
+        '001_posts.sql': `
         CREATE TABLE IF NOT EXISTS posts (
-          id    INTEGER PRIMARY KEY AUTOINCREMENT, -- @public
-          title TEXT NOT NULL -- @public
+          id    INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL
         );
       `,
-    })
+      },
+      {
+        posts: {
+          id: { security: 'public' },
+          title: { security: 'public' },
+        },
+      }
+    )
     t.after(() => rm(dir, { recursive: true, force: true }))
 
     const { exitCode } = runPikkuDbMigrate(dir)
@@ -310,14 +407,17 @@ describe('DB codegen — classification brands', () => {
   })
 
   test('brand is placed in SelectType slot only — ColumnType<Private<T>, T, T>', async (t) => {
-    const dir = await createProject({
-      '001_users.sql': `
+    const dir = await createProject(
+      {
+        '001_users.sql': `
         CREATE TABLE IF NOT EXISTS users (
           id   INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL -- @private:fake:name
+          name TEXT NOT NULL
         );
       `,
-    })
+      },
+      { users: { name: { security: 'private', classification: 'fake:name' } } }
+    )
     t.after(() => rm(dir, { recursive: true, force: true }))
 
     const { exitCode } = runPikkuDbMigrate(dir)
