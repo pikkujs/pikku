@@ -16,6 +16,7 @@ import {
   Button as MantineButton,
   Anchor as MantineAnchor,
   Badge as MantineBadge,
+  Text as MantineText,
   // polymorphic (aria-label only)
   ActionIcon as MantineActionIcon,
   CloseButton as MantineCloseButton,
@@ -25,6 +26,7 @@ import {
   InputBase as MantineInputBase,
   // plain (children)
   Chip as MantineChip,
+  Title as MantineTitle,
   // plain (single label-ish prop)
   Tooltip as MantineTooltip,
   Divider as MantineDivider,
@@ -63,6 +65,8 @@ import {
   type ButtonFactory,
   type AnchorFactory,
   type BadgeFactory,
+  type TextFactory,
+  type TitleFactory,
   type ActionIconFactory,
   type CloseButtonFactory,
   type NavLinkFactory,
@@ -118,6 +122,7 @@ type Input = {
 export const Button = MantineButton as OverridePoly<ButtonFactory, Children>
 export const Anchor = MantineAnchor as OverridePoly<AnchorFactory, Children>
 export const Badge = MantineBadge as OverridePoly<BadgeFactory, Children>
+export const Text = MantineText as OverridePoly<TextFactory, Children>
 
 // ── Polymorphic: icon-only buttons (aria-label is the only visible text) ──────
 export const ActionIcon = MantineActionIcon as OverridePoly<
@@ -140,6 +145,7 @@ export const InputBase = MantineInputBase as OverridePoly<InputBaseFactory, Inpu
 
 // ── Plain: children ───────────────────────────────────────────────────────────
 export const Chip = MantineChip as OverrideFactory<ChipFactory, Children>
+export const Title = MantineTitle as OverrideFactory<TitleFactory, Children>
 
 // ── Plain: single label-ish prop ─────────────────────────────────────────────
 export const Tooltip = MantineTooltip as OverrideFactory<
