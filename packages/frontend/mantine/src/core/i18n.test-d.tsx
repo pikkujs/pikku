@@ -43,6 +43,12 @@ const _ok_mixed = (
 const _ok_text = <Text>{t('greeting')}</Text>
 // Text is polymorphic too
 const _ok_text_poly = <Text component="span">{t('greeting')}</Text>
+// aria-label / title on children components are branded too
+const _ok_button_attrs = (
+  <Button aria-label={t('save')} title={t('save')}>
+    {t('save')}
+  </Button>
+)
 const _ok_title = <Title order={2}>{t('page.title')}</Title>
 const _ok_icon = <ActionIcon aria-label={t('close')} />
 const _ok_input = <TextInput label={t('email')} placeholder={asI18n('you@x.com')} />
@@ -99,6 +105,10 @@ const _bad_button2 = <Button>{'Save'}</Button>
 // prettier-ignore
 // @ts-expect-error — raw string child on polymorphic usage
 const _bad_poly = <Button component="a" href="/x">Go</Button>;
+// @ts-expect-error — raw string aria-label on a children component
+const _bad_button_aria = <Button aria-label="save">{t('save')}</Button>
+// @ts-expect-error — raw string title on a children component
+const _bad_button_title = <Button title="save">{t('save')}</Button>
 // @ts-expect-error — raw string child on Text
 const _bad_text = <Text>Hello</Text>
 // @ts-expect-error — raw string child on Title
@@ -121,6 +131,7 @@ void [
   _ok_mixed,
   _ok_text,
   _ok_text_poly,
+  _ok_button_attrs,
   _ok_title,
   _ok_icon,
   _ok_input,
@@ -133,6 +144,8 @@ void [
   _bad_button,
   _bad_button2,
   _bad_poly,
+  _bad_button_aria,
+  _bad_button_title,
   _bad_text,
   _bad_title,
   _bad_icon,
