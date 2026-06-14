@@ -142,6 +142,13 @@ export const defineAuth = (options: DefineAuthOptions): DefinedAuth => {
   ) => {
     const secretsMap = await batchLoadSecrets(services.secrets, secretIds)
     const authSecret = secretsMap.get('AUTH_SECRET') as string | undefined
+    // A missing AUTH_SECRET must fail loudly — never sign sessions with an
+    // absent/empty key. Defaulting here would be a silent security hazard.
+    if (!authSecret) {
+      throw new Error(
+        'AUTH_SECRET is not set — Auth.js cannot sign sessions without it. Configure the AUTH_SECRET secret for this stage.'
+      )
+    }
 
     const wire: PikkuWire = { wireType: 'http' }
     const rpc = rpcService.getContextRPCService(services, wire, {

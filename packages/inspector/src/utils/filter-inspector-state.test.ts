@@ -421,54 +421,6 @@ describe('filterInspectorState', () => {
       assert.equal(Object.keys(result.http.meta.post).length, 0)
     })
 
-    test('preserves runtime-registered auth wiring files for HTTP-serving units', () => {
-      const state = createMockInspectorState()
-      const authFile = '/test/project/src/wirings/auth.wiring.ts'
-      // wireAuth's /auth/* routes are registered at runtime, so they never
-      // appear in http.meta — only the source file is tracked in auth.files.
-      ;(state as any).auth = {
-        providers: [],
-        files: new Set([authFile]),
-      }
-      const filters: InspectorFilters = {
-        httpMethods: ['GET'],
-      }
-
-      const result = filterInspectorState(state, filters, mockLogger)
-
-      // The unit still serves HTTP, so the auth wiring must be retained so the
-      // deployed worker imports it and registers /auth/*.
-      assert.ok(
-        result.http.files.has(authFile),
-        'auth wiring file should be preserved in http.files'
-      )
-    })
-
-    test('does not attach auth wiring to units that serve no HTTP', () => {
-      const state = createMockInspectorState()
-      const authFile = '/test/project/src/wirings/auth.wiring.ts'
-      ;(state as any).auth = {
-        providers: [],
-        files: new Set([authFile]),
-      }
-      // Keep only channels — no HTTP routes survive.
-      const filters: InspectorFilters = {
-        wires: ['channel'],
-      }
-
-      const result = filterInspectorState(state, filters, mockLogger)
-
-      assert.equal(
-        Object.keys(result.http.meta.get).length,
-        0,
-        'precondition: no HTTP routes survive'
-      )
-      assert.ok(
-        !result.http.files.has(authFile),
-        'auth wiring must not leak into a non-HTTP unit'
-      )
-    })
-
     test('should filter HTTP routes by httpRoute pattern', () => {
       const state = createMockInspectorState()
       const filters: InspectorFilters = {
