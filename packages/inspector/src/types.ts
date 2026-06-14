@@ -309,6 +309,19 @@ export interface AuthDefinition {
   sourceFile: string
   /** Resolved Auth.js base path (the `basePath` option, default `/auth`). */
   basePath: string
+  /**
+   * Singleton services the generated auth handler must have available at
+   * runtime — the union of services destructured by the `authorize` and
+   * `callbacks` factories, plus `secrets`/`variables` (which `defineAuth`'s own
+   * configFactory always uses to load AUTH_SECRET and build providers).
+   *
+   * The generated `authHandler` calls `createAuthHandler(...).func`, an opaque
+   * property access the inspector can't see through; without this stamp the
+   * deployed auth worker would instantiate none of these services and
+   * `authorize` would receive an undefined `kysely`. Re-derived every inspect
+   * and applied to the handler meta before service aggregation runs.
+   */
+  services: FunctionServicesMeta
 }
 
 export interface InspectorState {

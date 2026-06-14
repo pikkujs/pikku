@@ -11,6 +11,7 @@ import { getFilesAndMethods } from './utils/get-files-and-methods.js'
 import { findCommonAncestor } from './utils/find-root-dir.js'
 import {
   aggregateRequiredServices,
+  stampAuthHandlerServices,
   validateAgentModels,
   validateSecretOverrides,
   validateVariableOverrides,
@@ -334,6 +335,9 @@ export const inspect = async (
 
   if (!options.setupOnly) {
     const startAggregate = performance.now()
+    // Apply the inspected auth handler service set before aggregation so it
+    // flows into requiredServices (the generated handler's own func is opaque).
+    stampAuthHandlerServices(state)
     aggregateRequiredServices(state)
     logger.debug(
       `Aggregate required services completed in ${(performance.now() - startAggregate).toFixed(2)}ms`

@@ -1,4 +1,5 @@
 import { PROVIDER_REGISTRY, AUTH_ROUTES } from '@pikku/auth-js'
+import { AUTH_HANDLER_FUNC_ID } from '@pikku/inspector'
 import type { AuthDefinition } from '@pikku/inspector'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
@@ -127,9 +128,11 @@ export const serializeAuthGen = (
   }
 
   // One shared handler for every /auth/* route. Exporting the const gives all
-  // routes the same pikkuFuncId, so they collapse to a single deployed worker.
+  // routes the same pikkuFuncId (= the export name), so they collapse to a
+  // single deployed worker — and the inspector's post-process stamps this
+  // handler's required services (authorize/callbacks deps) onto that same id.
   lines.push(
-    `export const authHandler = pikkuSessionlessFunc({ func: createAuthHandler(${definition.exportName}.configFactory).func })`
+    `export const ${AUTH_HANDLER_FUNC_ID} = pikkuSessionlessFunc({ func: createAuthHandler(${definition.exportName}.configFactory).func })`
   )
   lines.push('')
 
@@ -140,7 +143,7 @@ export const serializeAuthGen = (
     const key = routeKey(method, route)
     const fullRoute = basePath + route
     lines.push(
-      `    ${key}: { method: '${method}', route: '${fullRoute}', func: authHandler, auth: false },`
+      `    ${key}: { method: '${method}', route: '${fullRoute}', func: ${AUTH_HANDLER_FUNC_ID}, auth: false },`
     )
   }
   lines.push(`  },`)

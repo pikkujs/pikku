@@ -10,6 +10,7 @@ const def = (overrides: Partial<AuthDefinition> = {}): AuthDefinition => ({
   exportName: 'auth',
   sourceFile: SOURCE_FILE,
   basePath: '/auth',
+  services: { optimized: true, services: ['kysely', 'secrets', 'variables'] },
   ...overrides,
 })
 

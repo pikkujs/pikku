@@ -41,6 +41,8 @@ describe('addAuth inspector', () => {
         exportName: 'auth',
         sourceFile: file,
         basePath: '/auth',
+        // No authorize/callbacks here — only the always-on configFactory deps.
+        services: { optimized: true, services: ['secrets', 'variables'] },
       })
       // The /auth/* routes are emitted into a generated auth.gen.ts; the user's
       // source file must NOT be imported into the HTTP bootstrap.
@@ -216,6 +218,85 @@ describe('addAuth inspector', () => {
         (e) => e.code === ErrorCode.DUPLICATE_AUTH_DEFINITION
       )
       assert.ok(hit, 'expected DUPLICATE_AUTH_DEFINITION critical')
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test('extracts services from authorize + callbacks factories', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-svc-'))
+    const file = join(rootDir, 'auth.ts')
+
+    await writeFile(
+      file,
+      [
+        "import { defineAuth } from '@pikku/auth-js'",
+        'export const auth = defineAuth({',
+        '  credentials: {',
+        '    authorize: ({ kysely }) => async () => null,',
+        '  },',
+        '  callbacks: ({ variables }) => ({}),',
+        '})',
+      ].join('\n')
+    )
+
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      const state = await inspect(makeLogger(criticals), [file], { rootDir })
+      assert.equal(criticals.length, 0)
+      // Union of authorize (kysely) + callbacks (variables) + always-on
+      // configFactory deps (secrets, variables).
+      assert.deepEqual(state.auth.definition?.services, {
+        optimized: true,
+        services: ['kysely', 'variables', 'secrets'],
+      })
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test('stamps the inspected services onto the generated handler meta', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-stamp-'))
+    const authFile = join(rootDir, 'auth.ts')
+    const genFile = join(rootDir, 'auth.gen.ts')
+
+    await writeFile(
+      authFile,
+      [
+        "import { defineAuth } from '@pikku/auth-js'",
+        'export const auth = defineAuth({',
+        '  credentials: {',
+        '    authorize: ({ kysely }) => async () => null,',
+        '  },',
+        '})',
+      ].join('\n')
+    )
+    // Mimic the CLI-generated handler: an exported const whose func is an
+    // opaque property access. Without the stamp this records zero services, so
+    // the deployed worker would never instantiate kysely/secrets/variables.
+    await writeFile(
+      genFile,
+      [
+        "import { pikkuSessionlessFunc } from '#pikku'",
+        "import { createAuthHandler } from '@pikku/auth-js'",
+        "import { auth } from './auth.js'",
+        'export const authHandler = pikkuSessionlessFunc({ func: createAuthHandler(auth.configFactory).func })',
+      ].join('\n')
+    )
+
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      const state = await inspect(makeLogger(criticals), [authFile, genFile], {
+        rootDir,
+      })
+      const handlerMeta = state.functions.meta['authHandler']
+      assert.ok(handlerMeta, 'generated authHandler must register a function')
+      // The stamp (keyed on AUTH_HANDLER_FUNC_ID, ordered before aggregation)
+      // overwrites the opaque-handler's empty service list with the real deps.
+      assert.deepEqual(handlerMeta.services, {
+        optimized: true,
+        services: ['kysely', 'secrets', 'variables'],
+      })
     } finally {
       await rm(rootDir, { recursive: true, force: true })
     }

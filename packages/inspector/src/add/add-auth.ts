@@ -1,6 +1,43 @@
 import * as ts from 'typescript'
+import type { FunctionServicesMeta } from '@pikku/core'
 import type { AddWiring } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
+import { extractServicesFromFunction } from '../utils/extract-services.js'
+
+/**
+ * The pikku function id of the single shared auth handler the CLI generates
+ * (`export const authHandler = pikkuSessionlessFunc(...)` in auth.gen.ts). An
+ * exported top-level const collapses every `/auth/*` route onto one worker, and
+ * the export name becomes the function id. Shared with the CLI codegen and the
+ * post-process service stamp so all three agree on the same id without the
+ * inspector having to import `@pikku/auth-js`.
+ */
+export const AUTH_HANDLER_FUNC_ID = 'authHandler'
+
+/**
+ * Services `defineAuth`'s own configFactory always touches, regardless of what
+ * the user's authorize/callbacks factories destructure: `secrets` loads
+ * AUTH_SECRET, `variables` drives buildProviders. Always merged into the
+ * handler's required-services set.
+ */
+const ALWAYS_REQUIRED_AUTH_SERVICES = ['secrets', 'variables']
+
+/** Find a property's arrow/function initializer in an object literal. */
+const findFactory = (
+  obj: ts.ObjectLiteralExpression,
+  name: string
+): ts.ArrowFunction | ts.FunctionExpression | undefined => {
+  const prop = obj.properties.find(
+    (p) =>
+      ts.isPropertyAssignment(p) &&
+      (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name)) &&
+      p.name.text === name
+  ) as ts.PropertyAssignment | undefined
+  if (!prop) return undefined
+  const init = prop.initializer
+  if (ts.isArrowFunction(init) || ts.isFunctionExpression(init)) return init
+  return undefined
+}
 
 /**
  * Detects `defineAuth({...})` calls.
@@ -93,7 +130,48 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
     basePath = basePathProp.initializer.text
   }
 
-  state.auth.definition = { exportName, sourceFile, basePath }
+  // Inspect the authorize + callbacks factories to learn which singleton
+  // services the auth handler reaches for. Both are factories of shape
+  // `(services, rpc) => ...`, so the first parameter's destructuring names the
+  // services (see extractServicesFromFunction). `authorize` lives under the
+  // `credentials` object; `callbacks` is a top-level factory.
+  const services: FunctionServicesMeta = { optimized: true, services: [] }
+  const mergeFactory = (
+    factory: ts.ArrowFunction | ts.FunctionExpression | undefined
+  ) => {
+    if (!factory) return
+    const extracted = extractServicesFromFunction(factory)
+    // A non-destructured param (`(services) => ...`) means we can't statically
+    // know the dependency set — propagate optimized:false so the diagnostic
+    // surfaces and the user is steered to destructure.
+    if (!extracted.optimized) services.optimized = false
+    for (const s of extracted.services) {
+      if (!services.services.includes(s)) services.services.push(s)
+    }
+  }
+
+  const credentialsObj = firstArg.properties.find(
+    (p) =>
+      ts.isPropertyAssignment(p) &&
+      (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name)) &&
+      p.name.text === 'credentials' &&
+      ts.isObjectLiteralExpression(p.initializer)
+  ) as ts.PropertyAssignment | undefined
+  if (credentialsObj) {
+    mergeFactory(
+      findFactory(
+        credentialsObj.initializer as ts.ObjectLiteralExpression,
+        'authorize'
+      )
+    )
+  }
+  mergeFactory(findFactory(firstArg, 'callbacks'))
+
+  for (const s of ALWAYS_REQUIRED_AUTH_SERVICES) {
+    if (!services.services.includes(s)) services.services.push(s)
+  }
+
+  state.auth.definition = { exportName, sourceFile, basePath, services }
 
   // Collect OAuth provider ids (optional — credentials-only auth has none).
   const providersProp = firstArg.properties.find(
