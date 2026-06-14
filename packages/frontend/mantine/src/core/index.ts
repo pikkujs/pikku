@@ -112,17 +112,21 @@ import type { OverrideFactory, OverridePoly, WithStatics } from './helpers.js'
 // shared override shapes
 type Children = { children?: I18nNode }
 type AriaLabel = { 'aria-label'?: I18nString }
+// Global string attributes present on every host element that still carry
+// user-visible text. Both are native DOM string attributes, so I18nString —
+// never I18nNode (they can't hold elements).
+type Labelled = { 'aria-label'?: I18nString; title?: I18nString }
 type Input = {
   label?: I18nNode
   placeholder?: I18nString
   description?: I18nNode
 }
 
-// ── Polymorphic: children ────────────────────────────────────────────────────
-export const Button = MantineButton as OverridePoly<ButtonFactory, Children>
-export const Anchor = MantineAnchor as OverridePoly<AnchorFactory, Children>
-export const Badge = MantineBadge as OverridePoly<BadgeFactory, Children>
-export const Text = MantineText as OverridePoly<TextFactory, Children>
+// ── Polymorphic: children (+ branded aria-label / title) ─────────────────────
+export const Button = MantineButton as OverridePoly<ButtonFactory, Children & Labelled>
+export const Anchor = MantineAnchor as OverridePoly<AnchorFactory, Children & Labelled>
+export const Badge = MantineBadge as OverridePoly<BadgeFactory, Children & Labelled>
+export const Text = MantineText as OverridePoly<TextFactory, Children & Labelled>
 
 // ── Polymorphic: icon-only buttons (aria-label is the only visible text) ──────
 export const ActionIcon = MantineActionIcon as OverridePoly<
