@@ -301,6 +301,16 @@ export interface InspectorDiagnostic {
   position: number
 }
 
+/** A single discovered `export const X = defineAuth({...})`. */
+export interface AuthDefinition {
+  /** The exported binding name the CLI imports (`export const <exportName>`). */
+  exportName: string
+  /** Absolute path of the file declaring it. */
+  sourceFile: string
+  /** Resolved Auth.js base path (the `basePath` option, default `/auth`). */
+  basePath: string
+}
+
 export interface InspectorState {
   rootDir: string // Root directory inferred from source files
   singletonServicesTypeImportMap: PathToNameAndType
@@ -385,6 +395,10 @@ export interface InspectorState {
   auth: {
     providers: string[]
     files: Set<string>
+    /** The single `export const X = defineAuth({...})` discovered in the
+     *  codebase, if any. The CLI generates the `/auth/*` HTTP wiring from it.
+     *  More than one `defineAuth` is a critical error. */
+    definition: AuthDefinition | null
   }
   secrets: {
     definitions: SecretDefinitions

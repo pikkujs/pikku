@@ -148,6 +148,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     auth: {
       providers: [],
       files: new Set(),
+      definition: null,
     },
     secrets: {
       definitions: [],
