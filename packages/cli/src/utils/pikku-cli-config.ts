@@ -287,6 +287,9 @@ const _getPikkuCLIConfig = async (
     if (result.scaffold?.console && !result.consoleFunctionsFile) {
       result.consoleFunctionsFile = join(resolvedScaffoldDir, 'console.gen.ts')
     }
+    if (!result.authFile) {
+      result.authFile = join(resolvedScaffoldDir, 'auth.gen.ts')
+    }
     if (result.scaffold?.events && !result.eventsChannelFile) {
       result.eventsChannelFile = join(resolvedScaffoldDir, 'events.gen.ts')
     }
