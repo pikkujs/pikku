@@ -88,7 +88,11 @@ export function resolveDb(
     classificationMapFile: join(outDir, 'db', 'classification-map.gen.d.ts'),
     schemaJsonFile: join(outDir, 'db', 'pikku-db-schema.gen.json'),
     classificationsFile: join(rootDir, 'db', 'annotations.ts'),
-    classificationsGenJsonFile: join(outDir, 'db', 'annotations.gen.json'),
+    // Compiled sidecar lives beside the authored annotations.ts in db/ — this is
+    // where both consumers read it: the codegen's loadAnnotations() and the
+    // pikku-console addon (db/annotations.gen.json). Writing it into outDir
+    // (.pikku) would leave both readers looking at a file that never appears.
+    classificationsGenJsonFile: join(rootDir, 'db', 'annotations.gen.json'),
     zodFile: join(outDir, 'db', 'zod.gen.ts'),
     camelCase: true,
   })
@@ -161,6 +165,13 @@ export async function migrateAndCodegen(
   let migrateResult: MigrateResult
   let codegenResult: CodegenResult
 
+  // Compile any authored db/annotations.ts → sidecar BEFORE codegen so edits
+  // reflect in a single `db migrate` (codegen reads the sidecar).
+  compileClassifications(
+    resolved.classificationsFile,
+    resolved.classificationsGenJsonFile
+  )
+
   if (resolved.dialect === 'sqlite') {
     mkdirSync(dirname(resolved.dbFile), { recursive: true })
     const runtime = await loadSqliteRuntime()
@@ -177,7 +188,7 @@ export async function migrateAndCodegen(
         schemaJsonFile: resolved.schemaJsonFile,
         camelCase: resolved.camelCase,
         rootDir: resolved.rootDir,
-        migrationsDir: resolved.migrationsDir,
+        dialect: 'sqlite',
       })
     } finally {
       db.close()
@@ -201,7 +212,7 @@ export async function migrateAndCodegen(
           schemaJsonFile: resolved.schemaJsonFile,
           camelCase: resolved.camelCase,
           rootDir: resolved.rootDir,
-          migrationsDir: resolved.migrationsDir,
+          dialect: 'postgres',
         })
       } finally {
         await client.end()
@@ -217,10 +228,15 @@ export async function migrateAndCodegen(
   })
 
   // ── Classifications step ──────────────────────────────────────────────────
-  const { scaffolded, jsonWritten } = syncClassifications(
+  // Scaffold the authored file if missing (needs the table list), then compile
+  // it to the sidecar so a freshly-scaffolded file is captured too.
+  const scaffolded = scaffoldClassificationsFile(
     resolved.classificationsFile,
-    resolved.classificationsGenJsonFile,
     codegenResult.tables
+  )
+  const jsonWritten = compileClassifications(
+    resolved.classificationsFile,
+    resolved.classificationsGenJsonFile
   )
 
   return {
@@ -264,61 +280,73 @@ export function reset(resolved: ResolvedSqliteDb, rootDir: string): void {
 // ── Classification sync ───────────────────────────────────────────────────────
 
 /**
- * Loads `db/classifications.ts` via tsx, serialises it to
- * `.pikku/db/classifications.gen.json` for runtime consumption (console, etc.).
- *
- * If `db/classifications.ts` doesn't exist yet, writes a scaffold with every
- * table defaulting to `private` so the developer has a starting point.
+ * If `db/annotations.ts` doesn't exist yet, write a scaffold listing every
+ * table/column so the developer has a typed starting point. Every field of
+ * `ColumnEntry` is optional, so the empty-per-table scaffold is valid and means
+ * "everything default `private`". Returns whether a scaffold was written.
  */
-function syncClassifications(
+function scaffoldClassificationsFile(
   classificationsFile: string,
-  genJsonFile: string,
   tableNames: string[]
-): { scaffolded: boolean; jsonWritten: boolean } {
-  let scaffolded = false
+): boolean {
+  if (existsSync(classificationsFile)) return false
 
-  if (!existsSync(classificationsFile)) {
-    const relMap = join(
-      dirname(classificationsFile),
-      '..',
-      '.pikku',
-      'db',
-      'classification-map.gen.d.ts'
-    )
-    const relMapPosix = relMap.replace(/\\/g, '/')
+  const relMap = join(
+    dirname(classificationsFile),
+    '..',
+    '.pikku',
+    'db',
+    'classification-map.gen.d.ts'
+  )
+  const relMapPosix = relMap.replace(/\\/g, '/')
 
-    const groups = new Map<string, string[]>()
-    for (const name of tableNames) {
-      const dot = name.indexOf('.')
-      const schema = dot >= 0 ? name.slice(0, dot) : ''
-      const table = dot >= 0 ? name.slice(dot + 1) : name
-      if (!groups.has(schema)) groups.set(schema, [])
-      groups.get(schema)!.push(table)
-    }
-
-    const bodyLines: string[] = [
-      `import type { DbClassificationMap } from '${relMapPosix}'`,
-      ``,
-      `export const classifications = {`,
-    ]
-    for (const [schema, tables] of groups) {
-      if (schema) bodyLines.push(`  ${JSON.stringify(schema)}: {`)
-      for (const table of tables) {
-        bodyLines.push(
-          schema
-            ? `    ${JSON.stringify(table)}: {`
-            : `  ${JSON.stringify(table)}: {`
-        )
-        bodyLines.push(schema ? `    },` : `  },`)
-      }
-      if (schema) bodyLines.push(`  },`)
-    }
-    bodyLines.push(`} satisfies DbClassificationMap`, ``)
-
-    mkdirSync(dirname(classificationsFile), { recursive: true })
-    writeFileSync(classificationsFile, bodyLines.join('\n'), 'utf8')
-    scaffolded = true
+  const groups = new Map<string, string[]>()
+  for (const name of tableNames) {
+    const dot = name.indexOf('.')
+    const schema = dot >= 0 ? name.slice(0, dot) : ''
+    const table = dot >= 0 ? name.slice(dot + 1) : name
+    if (!groups.has(schema)) groups.set(schema, [])
+    groups.get(schema)!.push(table)
   }
+
+  const bodyLines: string[] = [
+    `import type { DbClassificationMap } from '${relMapPosix}'`,
+    ``,
+    `export const classifications = {`,
+  ]
+  for (const [schema, tables] of groups) {
+    if (schema) bodyLines.push(`  ${JSON.stringify(schema)}: {`)
+    for (const table of tables) {
+      bodyLines.push(
+        schema
+          ? `    ${JSON.stringify(table)}: {`
+          : `  ${JSON.stringify(table)}: {`
+      )
+      bodyLines.push(schema ? `    },` : `  },`)
+    }
+    if (schema) bodyLines.push(`  },`)
+  }
+  bodyLines.push(`} satisfies DbClassificationMap`, ``)
+
+  mkdirSync(dirname(classificationsFile), { recursive: true })
+  writeFileSync(classificationsFile, bodyLines.join('\n'), 'utf8')
+  return true
+}
+
+/**
+ * Compile `db/annotations.ts` via tsx into the `annotations.gen.json` sidecar
+ * that the codegen and the pikku-console addon read. No-op if the authored file
+ * doesn't exist (nothing to compile yet) or tsx isn't bundled. Returns whether
+ * the sidecar changed on disk.
+ *
+ * This is run BEFORE codegen so authored edits reflect in a single `db migrate`
+ * (and again after, to capture a freshly-scaffolded file).
+ */
+function compileClassifications(
+  classificationsFile: string,
+  genJsonFile: string
+): boolean {
+  if (!existsSync(classificationsFile)) return false
 
   // Resolve tsx from the CLI package's own node_modules so it works regardless
   // of whether the user's project has tsx installed.
@@ -327,7 +355,7 @@ function syncClassifications(
   try {
     tsxEsmPath = _require.resolve('tsx/esm')
   } catch {
-    // tsx not bundled with this CLI install — skip JSON emit
+    return false // tsx not bundled with this CLI install — skip JSON emit
   }
 
   const script = [
@@ -336,32 +364,28 @@ function syncClassifications(
     `process.stdout.write(JSON.stringify(val))`,
   ].join('\n')
 
-  let jsonWritten = false
-  if (tsxEsmPath) {
-    try {
-      const json = execSync(
-        `node --import ${JSON.stringify(tsxEsmPath)} --input-type=module`,
-        {
-          input: script,
-          encoding: 'utf8',
-          stdio: ['pipe', 'pipe', 'pipe'],
-        }
-      )
-      const existing = existsSync(genJsonFile)
-        ? readFileSync(genJsonFile, 'utf8')
-        : null
-      const next = JSON.stringify(JSON.parse(json), null, 2) + '\n'
-      if (existing !== next) {
-        mkdirSync(dirname(genJsonFile), { recursive: true })
-        writeFileSync(genJsonFile, next, 'utf8')
-        jsonWritten = true
+  try {
+    const json = execSync(
+      `node --import ${JSON.stringify(tsxEsmPath)} --input-type=module`,
+      {
+        input: script,
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
       }
-    } catch {
-      // annotations file has syntax errors — skip JSON emit
+    )
+    const existing = existsSync(genJsonFile)
+      ? readFileSync(genJsonFile, 'utf8')
+      : null
+    const next = JSON.stringify(JSON.parse(json), null, 2) + '\n'
+    if (existing !== next) {
+      mkdirSync(dirname(genJsonFile), { recursive: true })
+      writeFileSync(genJsonFile, next, 'utf8')
+      return true
     }
+  } catch {
+    // annotations file has syntax errors — skip JSON emit
   }
-
-  return { scaffolded, jsonWritten }
+  return false
 }
 
 export async function createKysely<DB>(

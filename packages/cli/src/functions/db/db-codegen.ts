@@ -4,8 +4,7 @@ import type { ColumnKind, CoercionMap } from './coercion-plugin.js'
 import type { DbIntrospector, ColumnInfo } from './db-introspector.js'
 import {
   loadAnnotations,
-  parseAnnotations,
-  annotationFromName,
+  nameSuggestsKind,
   type AnnotationMap,
   type ColAnnotation,
 } from './annotation-parser.js'
@@ -13,6 +12,22 @@ import {
 // ─── Type aliases ─────────────────────────────────────────────────────────────
 
 type Classification = 'public' | 'private' | 'pii' | 'secret'
+type Dialect = 'sqlite' | 'postgres'
+
+/**
+ * The column kind implied by the *real* DB type, dialect-aware. Postgres has
+ * native temporal/boolean types so we can trust them; SQLite stores dates as
+ * TEXT and booleans as INTEGER, so its declared types are indeterminate and we
+ * derive nothing (return null). Used both to auto-type Postgres dates and to
+ * detect name↔type contradictions for warnings.
+ */
+function realKind(dialect: Dialect, sqlType: string): ColumnKind | null {
+  if (dialect !== 'postgres') return null
+  const u = sqlType.toUpperCase()
+  if (u.includes('TIMESTAMP') || u === 'DATE') return 'date'
+  if (u === 'BOOLEAN' || u === 'BOOL') return 'bool'
+  return null
+}
 
 // ─── Name helpers ─────────────────────────────────────────────────────────────
 
@@ -60,9 +75,11 @@ function selectBase(
   annotation: { kind?: ColumnKind; tsType?: string } | null,
   col: ColumnInfo
 ): string {
+  // An explicit `tsType` is a general type override and wins over everything.
+  if (annotation?.tsType) return annotation.tsType
   if (annotation?.kind === 'bool') return 'boolean'
   if (annotation?.kind === 'date') return 'Date'
-  if (annotation?.kind === 'json') return annotation.tsType ?? 'unknown'
+  if (annotation?.kind === 'json') return 'unknown'
   return mapType(col.type)
 }
 
@@ -70,9 +87,10 @@ function insertBase(
   annotation: { kind?: ColumnKind; tsType?: string } | null,
   col: ColumnInfo
 ): string {
+  if (annotation?.tsType) return annotation.tsType
   if (annotation?.kind === 'bool') return 'boolean | number'
   if (annotation?.kind === 'date') return 'Date | string'
-  if (annotation?.kind === 'json') return annotation.tsType ?? 'unknown'
+  if (annotation?.kind === 'json') return 'unknown'
   return mapType(col.type)
 }
 
@@ -100,14 +118,14 @@ function columnTypeExpression(
       const rw = nullable ? 'Date | string | null' : 'Date | string'
       return wrap(`ColumnType<${base}, ${rw}, ${rw}>`)
     }
+    if (annotation?.tsType) {
+      const base = nullable
+        ? `${annotation.tsType} | null`
+        : annotation.tsType
+      return wrap(base)
+    }
     if (annotation?.kind === 'json') {
-      const base = annotation.tsType
-        ? nullable
-          ? `${annotation.tsType} | null`
-          : annotation.tsType
-        : nullable
-          ? 'unknown | null'
-          : 'unknown'
+      const base = nullable ? 'unknown | null' : 'unknown'
       return wrap(base)
     }
     const base = mapType(col.type)
@@ -151,23 +169,48 @@ function bareTableName(name: string): string {
 function emitInterface(
   table: TableSchema,
   camelCase: boolean,
-  explicitAnnotations: AnnotationMap
+  explicitAnnotations: AnnotationMap,
+  dialect: Dialect,
+  warnings: string[]
 ): string {
   const ifaceName = snakeToPascal(table.name)
-  const tableCols = explicitAnnotations[bareTableName(table.name)] ?? {}
+  const bare = bareTableName(table.name)
+  const tableCols = explicitAnnotations[bare] ?? {}
 
   const fields = table.columns
     .map((col) => {
       const fieldName = camelCase ? snakeToCamel(col.name) : col.name
-      const sqlAnn: ColAnnotation | null = tableCols[col.name] ?? null
+      const ann: ColAnnotation | null = tableCols[col.name] ?? null
 
-      const kindAnn: { kind?: ColumnKind; tsType?: string } | null =
-        sqlAnn?.kind
-          ? { kind: sqlAnn.kind, tsType: sqlAnn.tsType }
-          : annotationFromName(col.name)
+      // Effective typing kind: explicit annotation wins; otherwise, on Postgres
+      // the *real* column type tells us (a timestamp genuinely is a Date). On
+      // SQLite there is no native date storage (dates are TEXT), so nothing is
+      // derived — `string` unless explicitly `kind: 'date'`.
+      const real = realKind(dialect, col.type)
+      const typingKind: ColumnKind | undefined =
+        ann?.kind ?? (!ann?.tsType && real === 'date' ? 'date' : undefined)
 
-      const classification: Classification = sqlAnn?.classification ?? 'private'
-      const type = columnTypeExpression(col, kindAnn, classification)
+      // Warn (don't force) only on a genuine contradiction the real type can
+      // prove: a column NAMED like a date/bool whose actual type disagrees
+      // (e.g. `created_at` that is really a boolean in Postgres). On SQLite the
+      // type is indeterminate, so there is nothing to contradict — no warning.
+      if (!ann?.kind && !ann?.tsType) {
+        const suggested = nameSuggestsKind(col.name)
+        if (suggested && real && suggested !== real) {
+          warnings.push(
+            `Column "${bare}.${col.name}" is named like a ${suggested} but its DB type ` +
+              `is ${col.type} (${real}). If intentional, set its kind in db/annotations.ts.`
+          )
+        }
+      }
+
+      const typeAnn: { kind?: ColumnKind; tsType?: string } | null =
+        typingKind || ann?.tsType
+          ? { kind: typingKind, tsType: ann?.tsType }
+          : null
+
+      const classification: Classification = ann?.classification ?? 'private'
+      const type = columnTypeExpression(col, typeAnn, classification)
       const safeName = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(fieldName)
         ? fieldName
         : JSON.stringify(fieldName)
@@ -227,7 +270,17 @@ function emitManifest(
  * flag added or removed columns.
  */
 function emitClassificationMap(tables: TableSchema[]): string {
-  const colEntry = `  security: 'public' | 'private' | 'pii' | 'secret' | 'encrypted'\n  classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'\n  description?: string`
+  const colEntry = [
+    `  /** Privacy level. Defaults to 'private' when omitted. */`,
+    `  security?: 'public' | 'private' | 'pii' | 'secret' | 'encrypted'`,
+    `  /** Anonymize strategy used by \`pikku db anonymize\`. */`,
+    `  classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'`,
+    `  /** Column kind override for codegen coercion + typing. */`,
+    `  kind?: 'date' | 'bool' | 'json'`,
+    `  /** TypeScript type override, e.g. \`string[]\` or \`MyJson\`. Wins over \`kind\`. */`,
+    `  tsType?: string`,
+    `  description?: string`,
+  ].join('\n')
 
   // Group tables by schema (for postgres schema.table names)
   const schemaMap = new Map<string, Map<string, string[]>>()
@@ -292,7 +345,8 @@ export interface CodegenOptions {
   schemaJsonFile?: string
   camelCase?: boolean
   rootDir?: string
-  migrationsDir?: string
+  /** DB dialect — drives real-type-aware date typing. Defaults to 'sqlite'. */
+  dialect?: Dialect
 }
 
 export interface CodegenResult {
@@ -305,6 +359,8 @@ export interface CodegenResult {
   manifestWritten: boolean
   classificationMapWritten: boolean
   tables: string[]
+  /** Non-fatal codegen warnings (e.g. name looks like a date but unannotated). */
+  warnings: string[]
 }
 
 /**
@@ -318,6 +374,7 @@ export async function generateSchemaTypes(
   options: CodegenOptions
 ): Promise<CodegenResult> {
   const camelCase = options.camelCase ?? true
+  const dialect: Dialect = options.dialect ?? 'sqlite'
 
   const tableNames = await introspector.listTables()
   const tables: TableSchema[] = await Promise.all(
@@ -328,15 +385,15 @@ export async function generateSchemaTypes(
   )
 
   const explicitAnnotations = options.rootDir
-    ? loadAnnotations(options.rootDir, options.migrationsDir)
-    : options.migrationsDir
-      ? parseAnnotations(options.migrationsDir)
-      : {}
+    ? loadAnnotations(options.rootDir)
+    : {}
 
   // ── schema.d.ts ─────────────────────────────────────────────────────────────
+  const warnings: string[] = []
   const interfaces = tables
-    .map((t) => emitInterface(t, camelCase, explicitAnnotations))
+    .map((t) => emitInterface(t, camelCase, explicitAnnotations, dialect, warnings))
     .join('\n\n')
+  for (const w of warnings) console.warn(`[pikku db] ${w}`)
 
   const dbEntries = tables
     .map((t) => {
@@ -379,9 +436,9 @@ export async function generateSchemaTypes(
   for (const table of tables) {
     const tableCols = explicitAnnotations[bareTableName(table.name)] ?? {}
     for (const col of table.columns) {
-      const sqlAnn = tableCols[col.name]
-      const kind: ColumnKind | undefined =
-        sqlAnn?.kind ?? annotationFromName(col.name)?.kind
+      // Coercion is driven only by an explicit `kind` in db/annotations.ts —
+      // no name inference. An unannotated `*_at` column is not coerced.
+      const kind: ColumnKind | undefined = tableCols[col.name]?.kind
       if (kind) {
         if (!coercionMap[table.name])
           coercionMap[table.name] = {} as Record<string, ColumnKind>
@@ -537,5 +594,6 @@ export async function generateSchemaTypes(
     manifestWritten: manifestChanged,
     classificationMapWritten: classificationMapChanged,
     tables: tables.map((t) => t.name),
+    warnings,
   }
 }
