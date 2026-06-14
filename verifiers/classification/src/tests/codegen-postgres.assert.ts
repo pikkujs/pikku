@@ -5,9 +5,12 @@
  * Uses PGlite (in-process WASM Postgres) so no running server is needed.
  * PGlite is API-compatible with pg.Client for the query/connect/end surface
  * that PostgresIntrospector and PostgresMigrationExecutor use.
+ *
+ * Classification is authored in `db/annotations.ts`; here we write the compiled
+ * `db/annotations.gen.json` sidecar directly (the codegen reads it via rootDir).
  */
 
-import { mkdtemp, rm, readFile } from 'fs/promises'
+import { mkdtemp, mkdir, writeFile, rm, readFile } from 'fs/promises'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { test, describe } from 'node:test'
@@ -18,6 +21,14 @@ import { PostgresMigrationExecutor } from '../../../../packages/cli/src/function
 import { PostgresIntrospector } from '../../../../packages/cli/src/functions/db/postgres/postgres-introspector.js'
 import { migrate } from '../../../../packages/cli/src/functions/db/db-migrator.js'
 import { generateSchemaTypes } from '../../../../packages/cli/src/functions/db/db-codegen.js'
+
+type ColumnEntry = {
+  security?: 'public' | 'private' | 'pii' | 'secret' | 'encrypted'
+  classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'
+  kind?: 'date' | 'bool' | 'json'
+  tsType?: string
+}
+type Annotations = Record<string, Record<string, ColumnEntry>>
 
 // ── PGlite adapter ────────────────────────────────────────────────────────────
 // PGlite's query() surface matches what PostgresMigrationExecutor and
@@ -31,14 +42,26 @@ function pgliteAsClient(db: PGlite): Client {
   } as unknown as Client
 }
 
-async function setup(migrations: Record<string, string>) {
+async function setup(
+  migrations: Record<string, string>,
+  annotations?: Annotations
+) {
   const db = new PGlite()
   const client = pgliteAsClient(db)
 
   const migrationsDir = await mkdtemp(join(tmpdir(), 'pikku-pg-test-'))
   for (const [name, sql] of Object.entries(migrations)) {
-    const { writeFile } = await import('fs/promises')
     await writeFile(join(migrationsDir, name), sql)
+  }
+
+  // rootDir holds the compiled annotations sidecar the codegen reads.
+  const rootDir = await mkdtemp(join(tmpdir(), 'pikku-pg-root-'))
+  if (annotations) {
+    await mkdir(join(rootDir, 'db'), { recursive: true })
+    await writeFile(
+      join(rootDir, 'db', 'annotations.gen.json'),
+      JSON.stringify(annotations, null, 2)
+    )
   }
 
   const outDir = await mkdtemp(join(tmpdir(), 'pikku-pg-out-'))
@@ -53,46 +76,55 @@ async function setup(migrations: Record<string, string>) {
     manifestFile: join(outDir, 'classification.gen.ts'),
     classificationMapFile: join(outDir, 'classification-map.gen.d.ts'),
     camelCase: true,
-    migrationsDir,
+    rootDir,
+    dialect: 'postgres',
   })
 
-  return { outDir, migrationsDir, db, result }
+  return { outDir, migrationsDir, rootDir, db, result }
 }
 
 describe('DB codegen (Postgres) — classification brands', () => {
-  test('emits Private<string> for @private columns', async (t) => {
-    const { outDir, migrationsDir, db } = await setup({
-      '001_users.sql': `
+  test('emits Private<string> for private columns', async (t) => {
+    const { outDir, migrationsDir, rootDir, db } = await setup(
+      {
+        '001_users.sql': `
         CREATE TABLE users (
           id    SERIAL PRIMARY KEY,
           name  TEXT NOT NULL,
-          email TEXT NOT NULL -- @private:fake:email
+          email TEXT NOT NULL
         );
       `,
-    })
+      },
+      { users: { email: { security: 'private', classification: 'fake:email' } } }
+    )
     t.after(async () => {
       await db.close()
       await rm(outDir, { recursive: true, force: true })
       await rm(migrationsDir, { recursive: true, force: true })
+      await rm(rootDir, { recursive: true, force: true })
     })
 
     const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
     assert.match(schema, /Private<string>/, 'email should be Private<string>')
   })
 
-  test('emits Secret<string> for @secret columns', async (t) => {
-    const { outDir, migrationsDir, db } = await setup({
-      '001_tokens.sql': `
+  test('emits Secret<string> for secret columns', async (t) => {
+    const { outDir, migrationsDir, rootDir, db } = await setup(
+      {
+        '001_tokens.sql': `
         CREATE TABLE tokens (
           id    SERIAL PRIMARY KEY,
-          token TEXT NOT NULL -- @secret:hash
+          token TEXT NOT NULL
         );
       `,
-    })
+      },
+      { tokens: { token: { security: 'secret', classification: 'hash' } } }
+    )
     t.after(async () => {
       await db.close()
       await rm(outDir, { recursive: true, force: true })
       await rm(migrationsDir, { recursive: true, force: true })
+      await rm(rootDir, { recursive: true, force: true })
     })
 
     const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
@@ -100,7 +132,7 @@ describe('DB codegen (Postgres) — classification brands', () => {
   })
 
   test('unannotated columns default to Private', async (t) => {
-    const { outDir, migrationsDir, db } = await setup({
+    const { outDir, migrationsDir, rootDir, db } = await setup({
       '001_items.sql': `
         CREATE TABLE items (
           id   SERIAL PRIMARY KEY,
@@ -112,6 +144,7 @@ describe('DB codegen (Postgres) — classification brands', () => {
       await db.close()
       await rm(outDir, { recursive: true, force: true })
       await rm(migrationsDir, { recursive: true, force: true })
+      await rm(rootDir, { recursive: true, force: true })
     })
 
     const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
@@ -122,19 +155,28 @@ describe('DB codegen (Postgres) — classification brands', () => {
     )
   })
 
-  test('@public columns have no brand', async (t) => {
-    const { outDir, migrationsDir, db } = await setup({
-      '001_posts.sql': `
+  test('public columns have no brand', async (t) => {
+    const { outDir, migrationsDir, rootDir, db } = await setup(
+      {
+        '001_posts.sql': `
         CREATE TABLE posts (
-          id    SERIAL PRIMARY KEY, -- @public
-          slug  TEXT NOT NULL       -- @public
+          id    SERIAL PRIMARY KEY,
+          slug  TEXT NOT NULL
         );
       `,
-    })
+      },
+      {
+        posts: {
+          id: { security: 'public' },
+          slug: { security: 'public' },
+        },
+      }
+    )
     t.after(async () => {
       await db.close()
       await rm(outDir, { recursive: true, force: true })
       await rm(migrationsDir, { recursive: true, force: true })
+      await rm(rootDir, { recursive: true, force: true })
     })
 
     const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
@@ -150,20 +192,30 @@ describe('DB codegen (Postgres) — classification brands', () => {
   })
 
   test('classification manifest records strategy correctly', async (t) => {
-    const { outDir, migrationsDir, db } = await setup({
-      '001_mixed.sql': `
+    const { outDir, migrationsDir, rootDir, db } = await setup(
+      {
+        '001_mixed.sql': `
         CREATE TABLE mixed (
           id    SERIAL PRIMARY KEY,
-          pub   TEXT NOT NULL, -- @public
-          priv  TEXT NOT NULL, -- @private:fake:email
-          sec   TEXT NOT NULL  -- @secret:hash
+          pub   TEXT NOT NULL,
+          priv  TEXT NOT NULL,
+          sec   TEXT NOT NULL
         );
       `,
-    })
+      },
+      {
+        mixed: {
+          pub: { security: 'public' },
+          priv: { security: 'private', classification: 'fake:email' },
+          sec: { security: 'secret', classification: 'hash' },
+        },
+      }
+    )
     t.after(async () => {
       await db.close()
       await rm(outDir, { recursive: true, force: true })
       await rm(migrationsDir, { recursive: true, force: true })
+      await rm(rootDir, { recursive: true, force: true })
     })
 
     const manifest = await readFile(
@@ -180,22 +232,31 @@ describe('DB codegen (Postgres) — classification brands', () => {
     assert.match(manifest, /'hash'/)
   })
 
-  test('ALTER TABLE ADD COLUMN annotations are parsed', async (t) => {
-    const { outDir, migrationsDir, db } = await setup({
-      '001_users.sql': `
+  test('annotations apply to columns added via ALTER TABLE', async (t) => {
+    const { outDir, migrationsDir, rootDir, db } = await setup(
+      {
+        '001_users.sql': `
         CREATE TABLE users (
           id   SERIAL PRIMARY KEY,
-          name TEXT NOT NULL -- @public
+          name TEXT NOT NULL
         );
       `,
-      '002_add_phone.sql': `
-        ALTER TABLE users ADD COLUMN phone TEXT; -- @private:fake:name
+        '002_add_phone.sql': `
+        ALTER TABLE users ADD COLUMN phone TEXT;
       `,
-    })
+      },
+      {
+        users: {
+          name: { security: 'public' },
+          phone: { security: 'private', classification: 'fake:name' },
+        },
+      }
+    )
     t.after(async () => {
       await db.close()
       await rm(outDir, { recursive: true, force: true })
       await rm(migrationsDir, { recursive: true, force: true })
+      await rm(rootDir, { recursive: true, force: true })
     })
 
     const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
@@ -215,7 +276,7 @@ describe('DB codegen (Postgres) — classification brands', () => {
   })
 
   test('classification-map.gen.d.ts lists all tables and columns', async (t) => {
-    const { outDir, migrationsDir, db } = await setup({
+    const { outDir, migrationsDir, rootDir, db } = await setup({
       '001_mixed.sql': `
         CREATE TABLE mixed (
           id    SERIAL PRIMARY KEY,
@@ -229,6 +290,7 @@ describe('DB codegen (Postgres) — classification brands', () => {
       await db.close()
       await rm(outDir, { recursive: true, force: true })
       await rm(migrationsDir, { recursive: true, force: true })
+      await rm(rootDir, { recursive: true, force: true })
     })
 
     const map = await readFile(
@@ -248,21 +310,54 @@ describe('DB codegen (Postgres) — classification brands', () => {
   })
 
   test('BOOLEAN columns map to boolean type', async (t) => {
-    const { outDir, migrationsDir, db } = await setup({
-      '001_flags.sql': `
+    const { outDir, migrationsDir, rootDir, db } = await setup(
+      {
+        '001_flags.sql': `
         CREATE TABLE flags (
           id      SERIAL PRIMARY KEY,
-          active  BOOLEAN NOT NULL DEFAULT FALSE -- @public
+          active  BOOLEAN NOT NULL DEFAULT FALSE
         );
       `,
-    })
+      },
+      { flags: { active: { security: 'public' } } }
+    )
     t.after(async () => {
       await db.close()
       await rm(outDir, { recursive: true, force: true })
       await rm(migrationsDir, { recursive: true, force: true })
+      await rm(rootDir, { recursive: true, force: true })
     })
 
     const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
     assert.match(schema, /boolean/, 'BOOLEAN column should map to boolean')
+  })
+
+  test('Postgres timestamp columns auto-type as Date (no kind annotation)', async (t) => {
+    const { outDir, migrationsDir, rootDir, db } = await setup(
+      {
+        '001_events.sql': `
+        CREATE TABLE events (
+          id         SERIAL PRIMARY KEY,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+      `,
+      },
+      { events: { created_at: { security: 'public' } } }
+    )
+    t.after(async () => {
+      await db.close()
+      await rm(outDir, { recursive: true, force: true })
+      await rm(migrationsDir, { recursive: true, force: true })
+      await rm(rootDir, { recursive: true, force: true })
+    })
+
+    const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
+    const eventsBlock = schema.match(/export interface Events \{[^}]+\}/)
+    assert.ok(eventsBlock, 'Events interface should exist')
+    assert.match(
+      eventsBlock[0],
+      /createdAt:[^\n]*Date/,
+      'real Postgres timestamp should auto-type as Date'
+    )
   })
 })
