@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import type { ColumnKind } from './coercion-plugin.js'
 
@@ -6,66 +6,29 @@ type Classification = 'public' | 'private' | 'pii' | 'secret'
 type AnonymizeStrategy = 'fake:email' | 'fake:name' | 'hash' | 'keep' | null
 
 export interface ColAnnotation {
+  /** Column kind override: `date`, `bool`, or `json`. */
   kind?: ColumnKind
-  /** TypeScript type string for @json columns, e.g. `string[]`. */
+  /** TypeScript type string that overrides the inferred column type, e.g. `string[]`. */
   tsType?: string
   classification?: Classification
   anonymize?: AnonymizeStrategy
 }
 
-/** Per-table, per-column annotation map built from migration SQL comments. */
+/** Per-table, per-column annotation map sourced from `db/annotations.ts`. */
 export type AnnotationMap = Record<string, Record<string, ColAnnotation>>
 
 /**
- * Determine column kind from naming conventions:
- *   *_at / *_on            → date
- *   is_* / has_* / can_*   → bool
+ * Warn-only naming heuristic. We no longer *infer* a column's kind from its
+ * name (it produced wrong types — e.g. SQLite stores `*_at` as ISO TEXT, not a
+ * `Date`). Instead the codegen warns when a column name looks like it wants a
+ * `kind` but none is declared in `db/annotations.ts`, so the developer can opt
+ * in explicitly. Returns the *suggested* kind, or null.
  */
-export function annotationFromName(
-  colName: string
-): { kind: ColumnKind } | null {
-  if (/_at$|_on$/.test(colName)) return { kind: 'date' }
-  if (/^is_|^has_|^can_/.test(colName)) return { kind: 'bool' }
+export function nameSuggestsKind(colName: string): ColumnKind | null {
+  if (/_at$|_on$/.test(colName)) return 'date'
+  if (/^is_|^has_|^can_/.test(colName)) return 'bool'
   return null
 }
-
-// ── Load from db/annotations.gen.json sidecar ────────────────────────────────
-
-/**
- * Try to load annotations from a `db/annotations.gen.json` sidecar generated
- * by `yarn db:types`. Returns null if the file doesn't exist.
- *
- * The JSON file uses snake_case keys (raw DB names) so it can be read
- * directly without any conversion. It is emitted by bin/db-classify.ts.
- */
-function loadAnnotationsSidecar(rootDir: string): AnnotationMap | null {
-  const jsonPath = join(rootDir, 'db', 'annotations.gen.json')
-  if (!existsSync(jsonPath)) return null
-  try {
-    const raw = JSON.parse(readFileSync(jsonPath, 'utf8')) as Record<
-      string,
-      Record<string, { visibility?: string; classification?: string; kind?: string; tsType?: string }>
-    >
-    const result: AnnotationMap = {}
-    for (const [table, cols] of Object.entries(raw)) {
-      result[table] = {}
-      for (const [col, ann] of Object.entries(cols)) {
-        if (!ann) continue
-        const entry: ColAnnotation = {}
-        if (ann.kind === 'bool' || ann.kind === 'date' || ann.kind === 'json') entry.kind = ann.kind
-        if (ann.tsType) entry.tsType = ann.tsType
-        const vis = ann.visibility
-        if (vis === 'public' || vis === 'private' || vis === 'secret') entry.classification = vis
-        result[table][col] = entry
-      }
-    }
-    return result
-  } catch {
-    return null
-  }
-}
-
-// ── SQL comment parsing (fallback) ───────────────────────────────────────────
 
 function parseStrategy(s: string | undefined): AnonymizeStrategy {
   if (!s) return null
@@ -75,99 +38,63 @@ function parseStrategy(s: string | undefined): AnonymizeStrategy {
     : null
 }
 
-function parseComment(comment: string): Partial<ColAnnotation> {
-  const ann: Partial<ColAnnotation> = {}
-
-  if (/@bool\b/i.test(comment)) {
-    ann.kind = 'bool'
-  } else if (/@date\b/i.test(comment)) {
-    ann.kind = 'date'
-  } else {
-    const jsonM = comment.match(/@json\b(?:\s+([^\s@]+))?/i)
-    if (jsonM) {
-      ann.kind = 'json'
-      if (jsonM[1]) ann.tsType = jsonM[1].trim()
-    }
-  }
-
-  const classM = comment.match(/@(public|private|pii|secret)(?::([^\s@]+))?/i)
-  if (classM) {
-    ann.classification = classM[1]!.toLowerCase() as Classification
-    const strategy = parseStrategy(classM[2])
-    if (strategy !== null) ann.anonymize = strategy
-  }
-
-  return ann
-}
-
 /**
- * Parse `-- @bool | @date | @json [TsType] | @public | @private[:strategy] | @pii[:strategy] | @secret[:strategy]`
- * inline annotations from migration SQL files in `migrationsDir`.
+ * Load annotations from the `db/annotations.gen.json` sidecar, which is
+ * compiled from the developer-authored `db/annotations.ts` (`DbClassificationMap`)
+ * by `syncClassifications`. This is the single source of column classification
+ * and type-override information — there is no SQL-comment fallback.
+ *
+ * The authored `ColumnEntry` shape is:
+ *   { security?, classification?: <anonymize strategy>, kind?, tsType?, description? }
+ * where `security` is the privacy level and `classification` is the anonymize
+ * strategy. Returns `{}` if the sidecar doesn't exist yet (first migrate run,
+ * before it has been generated).
  */
-export function parseAnnotations(migrationsDir: string): AnnotationMap {
-  let files: string[]
+export function loadAnnotations(rootDir: string): AnnotationMap {
+  const jsonPath = join(rootDir, 'db', 'annotations.gen.json')
+  if (!existsSync(jsonPath)) return {}
   try {
-    files = readdirSync(migrationsDir)
-      .filter((f) => f.endsWith('.sql'))
-      .sort()
+    const raw = JSON.parse(readFileSync(jsonPath, 'utf8')) as Record<
+      string,
+      Record<
+        string,
+        {
+          security?: string
+          classification?: string
+          kind?: string
+          tsType?: string
+          description?: string
+        } | null
+      >
+    >
+    const result: AnnotationMap = {}
+    for (const [table, cols] of Object.entries(raw)) {
+      result[table] = {}
+      for (const [col, ann] of Object.entries(cols)) {
+        if (!ann) continue
+        const entry: ColAnnotation = {}
+        if (ann.kind === 'bool' || ann.kind === 'date' || ann.kind === 'json')
+          entry.kind = ann.kind
+        if (ann.tsType) entry.tsType = ann.tsType
+        // `security` is the privacy level. `encrypted` brands as `secret`.
+        switch (ann.security) {
+          case 'public':
+          case 'private':
+          case 'pii':
+          case 'secret':
+            entry.classification = ann.security
+            break
+          case 'encrypted':
+            entry.classification = 'secret'
+            break
+        }
+        const strategy = parseStrategy(ann.classification)
+        if (strategy !== null) entry.anonymize = strategy
+        result[table][col] = entry
+      }
+    }
+    return result
   } catch {
     return {}
   }
-
-  const result: AnnotationMap = {}
-
-  function merge(tableName: string, colName: string, partial: Partial<ColAnnotation>): void {
-    if (!partial.kind && partial.classification === undefined) return
-    if (!result[tableName]) result[tableName] = {}
-    result[tableName][colName] = { ...result[tableName][colName], ...partial }
-  }
-
-  for (const file of files) {
-    const content = readFileSync(join(migrationsDir, file), 'utf8')
-
-    const createTablePattern =
-      /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?"?(\w+)"?\s*\(([^;]+)\)/gis
-    let tableMatch: RegExpExecArray | null
-    while ((tableMatch = createTablePattern.exec(content)) !== null) {
-      const tableName = tableMatch[1]!.toLowerCase()
-      const body = tableMatch[2]!
-      for (const line of body.split('\n')) {
-        const trimmed = line.trim()
-        if (/^(PRIMARY|UNIQUE|CHECK|FOREIGN|CONSTRAINT)/i.test(trimmed))
-          continue
-        const lineMatch = trimmed.match(/^(\w+)\s+\w[^-]*--\s*(.+?)\s*,?\s*$/)
-        if (!lineMatch) continue
-        merge(
-          tableName,
-          lineMatch[1]!.toLowerCase(),
-          parseComment(lineMatch[2]!)
-        )
-      }
-    }
-
-    const alterPattern =
-      /ALTER\s+TABLE\s+"?(\w+)"?\s+ADD\s+(?:COLUMN\s+)?"?(\w+)"?\s+\w[^;\n-]*(?:;\s*)?--\s*(.+?)(?:\r?\n|$)/gim
-    let alterMatch: RegExpExecArray | null
-    while ((alterMatch = alterPattern.exec(content)) !== null) {
-      merge(
-        alterMatch[1]!.toLowerCase(),
-        alterMatch[2]!.toLowerCase(),
-        parseComment(alterMatch[3]!)
-      )
-    }
-  }
-
-  return result
-}
-
-// ── Public entry point ────────────────────────────────────────────────────────
-
-/**
- * Load annotations for a project. Tries `db/annotations.ts` sidecar first;
- * falls back to SQL comment parsing from `migrationsDir` if not found.
- */
-export function loadAnnotations(rootDir: string, migrationsDir?: string): AnnotationMap {
-  const sidecar = loadAnnotationsSidecar(rootDir)
-  if (sidecar) return sidecar
-  return migrationsDir ? parseAnnotations(migrationsDir) : {}
 }
