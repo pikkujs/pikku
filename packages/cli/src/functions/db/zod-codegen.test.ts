@@ -3,14 +3,21 @@ import test from 'node:test'
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { generateZodTypes } from './zod-codegen.js'
+import {
+  generateZodTypes,
+  type ZodFormat,
+  type ZodCodegenOptions,
+} from './zod-codegen.js'
 
-function generate(schema: string): string {
+function generate(
+  schema: string,
+  formats?: ZodCodegenOptions['formats']
+): string {
   const dir = mkdtempSync(join(tmpdir(), 'zod-codegen-'))
   const schemaFile = join(dir, 'schema.d.ts')
   const outFile = join(dir, 'zod.gen.ts')
   writeFileSync(schemaFile, schema, 'utf8')
-  generateZodTypes({ schemaFile, outFile })
+  generateZodTypes({ schemaFile, outFile, formats })
   return readFileSync(outFile, 'utf8')
 }
 
@@ -75,4 +82,61 @@ export interface Widget {
   assert.match(insert, /id: z\.string\(\)\.optional\(\),/)
   assert.match(insert, /label: z\.string\(\),/)
   assert.match(insert, /flag: z\.boolean\(\)\.optional\(\),/)
+})
+
+test('string-literal unions (enum columns) map to z.enum / z.literal', () => {
+  const out = generate(`
+export type Private<T> = T & { readonly __classification__?: 'private' }
+
+export interface Account {
+  role: 'admin' | 'user' | 'guest'
+  status: ColumnType<Private<'active' | 'banned'>, 'active' | 'banned', 'active' | 'banned'>
+  tier: 'free' | null
+  only: 'solo'
+}
+`)
+
+  assert.match(out, /role: z\.enum\(\['admin', 'user', 'guest'\]\),/)
+  // Enum inside a classification brand resolves too.
+  assert.match(out, /status: z\.enum\(\['active', 'banned'\]\),/)
+  // Nullable single-literal keeps the `.nullable()` suffix.
+  assert.match(out, /tier: z\.literal\('free'\)\.nullable\(\),/)
+  // A single literal degrades to z.literal, not z.enum.
+  assert.match(out, /only: z\.literal\('solo'\),/)
+  assert.doesNotMatch(out, /z\.unknown\(\)/)
+})
+
+test('format hints refine string columns to the right zod validator', () => {
+  const formats: Record<string, Record<string, ZodFormat>> = {
+    User: {
+      email: 'email',
+      website: 'url',
+      phone: 'e164',
+      avatar: 'nanoid',
+    },
+  }
+  const out = generate(
+    `
+export type Private<T> = T & { readonly __classification__?: 'private' }
+
+export interface User {
+  email: ColumnType<Private<string>, string, string>
+  website: string | null
+  phone: ColumnType<Private<string> | null, string | null, string | null>
+  avatar: Generated<string>
+  bio: string
+}
+`,
+    formats
+  )
+
+  assert.match(out, /email: z\.email\(\),/)
+  // Nullable + format → validator first, then .nullable().
+  assert.match(out, /website: z\.url\(\)\.nullable\(\),/)
+  assert.match(out, /phone: z\.e164\(\)\.nullable\(\),/)
+  // Format applies to the row schema; insert-optionality is independent.
+  const insert = out.slice(out.indexOf('UserInsertZ'))
+  assert.match(insert, /avatar: z\.nanoid\(\)\.optional\(\),/)
+  // Unformatted string stays plain.
+  assert.match(out, /bio: z\.string\(\),/)
 })

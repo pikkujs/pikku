@@ -25,8 +25,9 @@ import { generateSchemaTypes } from '../../../../packages/cli/src/functions/db/d
 type ColumnEntry = {
   security?: 'public' | 'private' | 'pii' | 'secret' | 'encrypted'
   classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'
-  kind?: 'date' | 'bool' | 'json'
+  kind?: 'date' | 'bool' | 'json' | 'uuid'
   tsType?: string
+  format?: string
 }
 type Annotations = Record<string, Record<string, ColumnEntry>>
 
@@ -364,6 +365,37 @@ describe('DB codegen (Postgres) — classification brands', () => {
       thingsBlock[0],
       /id:[^\n]*Uuid/,
       'real Postgres uuid should auto-type as Uuid'
+    )
+  })
+
+  test('Postgres enum columns auto-type as a string-literal union (no annotation)', async (t) => {
+    const { outDir, migrationsDir, rootDir, db } = await setup(
+      {
+        // PGlite executes one statement per query(), so split the type + table.
+        '001_role_type.sql': `CREATE TYPE account_role AS ENUM ('admin', 'member', 'guest');`,
+        '002_accounts.sql': `
+        CREATE TABLE accounts (
+          id   SERIAL PRIMARY KEY,
+          role account_role NOT NULL
+        );
+      `,
+      },
+      { accounts: { id: { security: 'public' }, role: { security: 'public' } } }
+    )
+    t.after(async () => {
+      await db.close()
+      await rm(outDir, { recursive: true, force: true })
+      await rm(migrationsDir, { recursive: true, force: true })
+      await rm(rootDir, { recursive: true, force: true })
+    })
+
+    const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
+    const accountsBlock = schema.match(/export interface Accounts \{[^}]+\}/)
+    assert.ok(accountsBlock, 'Accounts interface should exist')
+    assert.match(
+      accountsBlock[0],
+      /role:[^\n]*'admin' \| 'member' \| 'guest'/,
+      'enum column should type as a string-literal union'
     )
   })
 

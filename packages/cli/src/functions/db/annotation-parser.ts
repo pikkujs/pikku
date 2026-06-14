@@ -1,15 +1,22 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import type { ColumnKind } from './coercion-plugin.js'
+import { ZOD_FORMATS, type ZodFormat } from './zod-codegen.js'
 
 type Classification = 'public' | 'private' | 'pii' | 'secret'
 type AnonymizeStrategy = 'fake:email' | 'fake:name' | 'hash' | 'keep' | null
 
 export interface ColAnnotation {
-  /** Column kind override: `date`, `bool`, or `json`. */
+  /** Column kind override: `date`, `bool`, `json`, or `uuid`. */
   kind?: ColumnKind
   /** TypeScript type string that overrides the inferred column type, e.g. `string[]`. */
   tsType?: string
+  /**
+   * Zod string-format validator (`email`, `url`, …). Refines the zod schema only;
+   * the TypeScript type stays `string`. Applied by the codegen only when the
+   * column's resolved type is plain `string`.
+   */
+  format?: ZodFormat
   classification?: Classification
   anonymize?: AnonymizeStrategy
 }
@@ -63,6 +70,7 @@ export function loadAnnotations(rootDir: string): AnnotationMap {
           classification?: string
           kind?: string
           tsType?: string
+          format?: string
           description?: string
         } | null
       >
@@ -81,6 +89,8 @@ export function loadAnnotations(rootDir: string): AnnotationMap {
         )
           entry.kind = ann.kind
         if (ann.tsType) entry.tsType = ann.tsType
+        if (ann.format && ann.format in ZOD_FORMATS)
+          entry.format = ann.format as ZodFormat
         // `security` is the privacy level. `encrypted` brands as `secret`.
         switch (ann.security) {
           case 'public':

@@ -4,6 +4,7 @@ import type { DbIntrospector, ColumnInfo, ForeignKeyInfo, EnumInfo } from '../db
 interface PgColumnRow {
   column_name: string
   data_type: string
+  udt_name: string
   is_nullable: string
   column_default: string | null
   is_generated: string
@@ -61,6 +62,7 @@ export class PostgresIntrospector implements DbIntrospector {
       `SELECT
          c.column_name,
          c.data_type,
+         c.udt_name,
          c.is_nullable,
          c.column_default,
          c.is_generated,
@@ -85,6 +87,7 @@ export class PostgresIntrospector implements DbIntrospector {
     return result.rows.map((r) => ({
       name: r.column_name,
       type: r.data_type,
+      udtName: r.udt_name,
       notNull: r.is_nullable === 'NO',
       pk: Boolean(r.is_pk),
       defaultValue: r.column_default,
