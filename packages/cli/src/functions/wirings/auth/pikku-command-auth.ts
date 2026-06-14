@@ -5,13 +5,21 @@ import { serializeAuthGen } from './serialize-auth-gen.js'
 
 export const pikkuAuth = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
-    const { authFile } = config
+    const { authFile, packageMappings } = config
     if (!authFile) return
 
     const state = await getInspectorState()
-    if (state.auth.providers.length === 0) return
+    // Only generate when the project declares auth via `defineAuth`. Gating on
+    // the definition (not provider count) means credentials-only auth — which
+    // has no OAuth providers — still generates its /auth/* wiring.
+    if (!state.auth.definition) return
 
-    const content = serializeAuthGen(state.auth.providers)
+    const content = serializeAuthGen(
+      state.auth.definition,
+      state.auth.providers,
+      authFile,
+      packageMappings ?? {}
+    )
     await writeFileInDir(logger, authFile, content)
   },
   middleware: [

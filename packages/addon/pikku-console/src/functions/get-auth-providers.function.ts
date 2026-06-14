@@ -14,26 +14,15 @@ export interface AuthProvidersMeta {
 export const getAuthProviders = pikkuSessionlessFunc<null, AuthProvidersMeta>({
   title: 'Get Auth Providers',
   description:
-    'Returns the auth providers configured via wireAuth(), enriched with display metadata.',
+    'Returns the auth providers configured via defineAuth(), enriched with display metadata.',
   expose: true,
   auth: false,
   func: async () => {
-    try {
-      const authJs = await import('@pikku/auth-js' as string)
-      const meta = authJs.getWiredAuthMeta?.()
-      if (!meta) {
-        return { providers: [], hasCredentials: false }
-      }
-      return {
-        providers: (meta.providers ?? []).map((p: any) => ({
-          id: p.id,
-          displayName: p.displayName,
-          secretId: p.secretId,
-        })),
-        hasCredentials: Boolean(meta.hasCredentials),
-      }
-    } catch {
-      return { providers: [], hasCredentials: false }
-    }
+    // Auth provider metadata now lives on the project's exported `defineAuth`
+    // config (`auth.providers` / `auth.hasCredentials`). pikku-console cannot
+    // import that user-owned const, and a runtime registry would not survive a
+    // per-unit deploy (each worker is its own process), so this returns empty
+    // until the console reads provider metadata from the deploy manifest.
+    return { providers: [], hasCredentials: false }
   },
 })
