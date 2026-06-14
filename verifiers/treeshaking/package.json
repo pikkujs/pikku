@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@pikku/core": "workspace:*",
-    "@pikku/templates-function-addon": "workspace:*"
+    "@pikku/templates-function-addon": "0.0.0"
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
