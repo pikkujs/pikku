@@ -161,7 +161,7 @@ const NewWorkflowRunForm: React.FC<{ workflowId: string }> = ({
             onClick={() => handleSubmit({})}
             loading={startMutation.isPending}
           >
-            {t('workflow.run')}
+            {t('workflows.run')}
           </Button>
         </Group>
       )}

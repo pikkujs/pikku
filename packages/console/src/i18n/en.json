@@ -7,6 +7,8 @@
     "delete": "Delete",
     "edit": "Edit",
     "close": "Close",
+    "yes": "Yes",
+    "no": "No",
     "reconnect": "Reconnect",
     "not_found": "Not found",
     "no_results": "No results",
@@ -15,6 +17,16 @@
     "select_item": "Select an item",
     "run": "Run",
     "refresh": "Refresh"
+  },
+  "panel": {
+    "select_item": "Select an item"
+  },
+  "runs_panel": {
+    "delete_confirm": "Delete this run?",
+    "delete_run": "Delete run",
+    "filter_all": "All",
+    "new": "New",
+    "empty": "No runs found"
   },
   "connection": {
     "title": "Pikku Console",
@@ -286,7 +298,8 @@
     "description": "Visual workflow definitions and run history",
     "search_placeholder": "Search workflows...",
     "empty_title": "No workflows found",
-    "empty_description": "Define workflows in your project to see them here."
+    "empty_description": "Define workflows in your project to see them here.",
+    "run": "Run"
   },
   "apis": {
     "title": "APIs",
