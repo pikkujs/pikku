@@ -400,4 +400,76 @@ describe('pikku-workflow-service suspend', () => {
     delete functionMetaState[workflowName]
     pikkuState(null, 'workflows', 'registrations').delete(workflowName)
   })
+
+  test('should support multiple independent suspend points in one workflow', async () => {
+    const ws = new InMemoryWorkflowService()
+    pikkuState(null, 'package', 'singletonServices', {
+      queueService: {
+        add: async () => {},
+      },
+    } as any)
+
+    const workflowName = 'testMultiSuspendWorkflow'
+    const graphHash = 'multi-suspend-hash'
+    const metaState = pikkuState(null, 'workflows', 'meta')
+    metaState[workflowName] = {
+      name: workflowName,
+      pikkuFuncId: workflowName,
+      source: 'dsl',
+      graphHash,
+    }
+    const functionMetaState = pikkuState(null, 'function', 'meta')
+    functionMetaState[workflowName] = {
+      name: workflowName,
+      sessionless: true,
+      permissions: [],
+    } as any
+
+    addWorkflow(workflowName, {
+      func: async (
+        _services: any,
+        _data: any,
+        { workflow }: { workflow: PikkuWorkflowWire }
+      ) => {
+        await workflow.suspend('Building')
+        await workflow.suspend('Awaiting approval')
+        return { ok: true }
+      },
+    })
+
+    const runId = await ws.createRun(workflowName, {}, false, graphHash, {
+      type: 'test',
+    })
+
+    // First suspend: 'await_build' pauses the run.
+    await assert.rejects(
+      ws.runWorkflowJob(runId, {}),
+      (error: unknown) => error instanceof WorkflowSuspendedException
+    )
+    let run = await ws.getRun(runId)
+    assert.equal(run?.status, 'suspended')
+    assert.equal(run?.error?.message, 'Building')
+
+    // Resuming must hit the SECOND suspend ('awaiting_approval'), not fall
+    // through it — this is what the shared-step-name bug broke.
+    await ws.resumeWorkflow(runId)
+    await assert.rejects(
+      ws.runWorkflowJob(runId, {}),
+      (error: unknown) => error instanceof WorkflowSuspendedException
+    )
+    run = await ws.getRun(runId)
+    assert.equal(run?.status, 'suspended')
+    assert.equal(run?.error?.message, 'Awaiting approval')
+
+    // Resuming again completes the workflow.
+    await ws.resumeWorkflow(runId)
+    await ws.runWorkflowJob(runId, {})
+    run = await ws.getRun(runId)
+    assert.equal(run?.status, 'completed')
+    assert.deepEqual(run?.output, { ok: true })
+
+    delete metaState[workflowName]
+    delete functionMetaState[workflowName]
+    pikkuState(null, 'workflows', 'registrations').delete(workflowName)
+  })
 })
