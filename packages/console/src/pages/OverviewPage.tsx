@@ -22,7 +22,7 @@ import {
   ListOrdered,
   Mail,
 } from 'lucide-react'
-import { type I18nString } from '@pikku/react'
+import type { I18nString } from '@pikku/react'
 import { useI18n } from '@pikku/react/i18n'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PageContainer, ListPageHeader } from '../components/layout/PageLayout'
