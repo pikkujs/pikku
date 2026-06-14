@@ -271,28 +271,55 @@ describe('addAuth inspector', () => {
         '})',
       ].join('\n')
     )
-    // Mimic the CLI-generated handler: an exported const whose func is an
-    // opaque property access. Without the stamp this records zero services, so
-    // the deployed worker would never instantiate kysely/secrets/variables.
+    // Mimic the CLI-generated wiring file: the handler is a plain arrow (so the
+    // inspector resolves a valid func and the routes are not skipped) that
+    // delegates to createAuthHandler(...).func.
     await writeFile(
       genFile,
       [
         "import { pikkuSessionlessFunc } from '#pikku'",
+        "import { wireHTTPRoutes } from '@pikku/core/http'",
         "import { createAuthHandler } from '@pikku/auth-js'",
         "import { auth } from './auth.js'",
-        'export const authHandler = pikkuSessionlessFunc({ func: createAuthHandler(auth.configFactory).func })',
+        'const authConfigHandler = createAuthHandler(auth.configFactory)',
+        'export const authHandler = pikkuSessionlessFunc({',
+        '  func: (services, data, interaction) =>',
+        '    authConfigHandler.func(services, data, interaction),',
+        '})',
+        'wireHTTPRoutes({',
+        '  routes: {',
+        "    getcsrf: { method: 'get', route: '/auth/csrf', func: authHandler, auth: false },",
+        '  },',
+        '})',
       ].join('\n')
     )
 
     const criticals: Array<{ code: ErrorCode; message: string }> = []
+    const errors: string[] = []
+    const logger = makeLogger(criticals)
+    logger.error = (message: string) => {
+      errors.push(message)
+    }
     try {
-      const state = await inspect(makeLogger(criticals), [authFile, genFile], {
-        rootDir,
-      })
+      const state = await inspect(logger, [authFile, genFile], { rootDir })
+      assert.equal(criticals.length, 0, 'no critical diagnostics')
+      // The arrow handler must resolve to a valid func — no "No valid 'func'"
+      // error (which previously skipped every /auth/* route).
+      assert.equal(
+        errors.filter((e) => e.includes('No valid')).length,
+        0,
+        `handler func must resolve; got: ${errors.join('; ')}`
+      )
       const handlerMeta = state.functions.meta['authHandler']
       assert.ok(handlerMeta, 'generated authHandler must register a function')
+      // The route must find the handler metadata (no "metadata not found" skip).
+      assert.ok(
+        state.http.meta.get['/auth/csrf'],
+        'GET /auth/csrf must be registered to the handler'
+      )
       // The stamp (keyed on AUTH_HANDLER_FUNC_ID, ordered before aggregation)
-      // overwrites the opaque-handler's empty service list with the real deps.
+      // overwrites the pass-through arrow's empty service list with the real
+      // deps, and forces optimized:true so no SERVICES_NOT_DESTRUCTURED fires.
       assert.deepEqual(handlerMeta.services, {
         optimized: true,
         services: ['kysely', 'secrets', 'variables'],

@@ -1,3 +1,4 @@
+import { join, dirname } from 'node:path'
 import { pikkuSessionlessFunc } from '#pikku'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
@@ -14,13 +15,18 @@ export const pikkuAuth = pikkuSessionlessFunc<void, void>({
     // has no OAuth providers — still generates its /auth/* wiring.
     if (!state.auth.definition) return
 
-    const content = serializeAuthGen(
+    const { wiring, secrets } = serializeAuthGen(
       state.auth.definition,
       state.auth.providers,
       authFile,
       packageMappings ?? {}
     )
-    await writeFileInDir(logger, authFile, content)
+    // The secrets file sits alongside authFile so re-inspection rediscovers it.
+    // It is kept separate from the wiring file because the CLI forbids Zod
+    // schemas and HTTP wiring (wireHTTPRoutes) in the same file (PKU490).
+    const secretsFile = join(dirname(authFile), 'auth-secrets.gen.ts')
+    await writeFileInDir(logger, authFile, wiring)
+    await writeFileInDir(logger, secretsFile, secrets)
   },
   middleware: [
     logCommandInfoAndTime({
