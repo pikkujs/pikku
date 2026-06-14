@@ -46,7 +46,11 @@ export type WorkflowWireSleep = (
 ) => Promise<void>
 
 /**
- * Type signature for workflow.suspend() - used by inspector
+ * Type signature for workflow.suspend() - used by inspector.
+ * `reason` is both the human-readable message stored on the suspended run and
+ * the suspend point's stable identity (used raw as the durable step name), so a
+ * workflow can have multiple independent suspends — including dynamic reasons in
+ * loops, like dynamic `do()` step names.
  */
 export type WorkflowWireSuspend = (reason: string) => Promise<void>
 

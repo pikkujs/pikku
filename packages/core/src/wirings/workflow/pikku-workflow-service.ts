@@ -887,7 +887,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     // pass instead of one queue round-trip per step.
     const functionsMeta = pikkuState(null, 'function', 'meta')
     const rpcFuncId = pikkuState(null, 'rpc', 'meta')[rpcName]
-    const rpcMeta = typeof rpcFuncId === 'string' ? functionsMeta[rpcFuncId] : undefined
+    const rpcMeta =
+      typeof rpcFuncId === 'string' ? functionsMeta[rpcFuncId] : undefined
     const forceQueue = rpcMeta?.inline === false
     if (!forceQueue) {
       return false
@@ -1768,23 +1769,31 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     await this.setStepResult(stepState.stepId, null)
   }
 
+  /**
+   * Derive the durable step name for a suspend point from its `reason`, so each
+   * distinct reason is its own step row — letting one workflow have multiple
+   * independent suspends (e.g. wait-for-build, then wait-for-approval), and
+   * supporting dynamic reasons in loops (`suspend(`Wait for ${i}`)`) exactly
+   * like dynamic `do()` step names. The reason is used raw (it's just a text
+   * step name), only namespaced so it can't collide with a `do`/`sleep` step of
+   * the same name. Like `do()` / `sleep()`, the reason is the step's stable
+   * identity: it MUST be derived deterministically so it's the same every time
+   * the workflow replays through that point.
+   */
   private getSuspendStepName(reason: string): string {
-    if (!reason) {
-      return '__workflow_suspend'
-    }
-    return '__workflow_suspend'
+    return `__workflow_suspend:${reason}`
   }
 
   private async suspendStep(runId: string, reason: string): Promise<void> {
-    const stepName = this.getSuspendStepName(reason)
-    await this.withStepLock(runId, stepName, async () => {
+    const suspendStepName = this.getSuspendStepName(reason)
+    await this.withStepLock(runId, suspendStepName, async () => {
       let stepState: StepState
       try {
-        stepState = await this.getStepState(runId, stepName)
+        stepState = await this.getStepState(runId, suspendStepName)
       } catch {
         stepState = await this.insertStepState(
           runId,
-          stepName,
+          suspendStepName,
           'pikkuWorkflowSuspend',
           {
             reason,
@@ -1794,7 +1803,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       if (!stepState.stepId) {
         stepState = await this.insertStepState(
           runId,
-          stepName,
+          suspendStepName,
           'pikkuWorkflowSuspend',
           {
             reason,
@@ -1871,7 +1880,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       },
 
       suspend: async (reason: string) => {
-        await this.suspendStep(runId, reason || 'Workflow suspended')
+        this.verifyStepName(reason)
+        await this.suspendStep(runId, reason)
       },
     }
     return workflowWire
