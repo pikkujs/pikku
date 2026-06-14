@@ -505,6 +505,17 @@ export function filterInspectorState(
     }
   }
 
+  // Auth wiring files register their /auth/* routes at runtime (via `wireAuth` /
+  // `createAuthRoutes`), so those routes never appear in the static http.meta and
+  // the repopulation above drops the file. Any unit that still serves HTTP must
+  // keep importing the auth wiring, otherwise the deployed worker is missing the
+  // /auth/* routes entirely.
+  if (filteredState.http.files.size > 0 && state.auth?.files) {
+    for (const file of state.auth.files) {
+      filteredState.http.files.add(file)
+    }
+  }
+
   // Filter channels
   for (const name of Object.keys(filteredState.channels.meta)) {
     const channelMeta = filteredState.channels.meta[name]

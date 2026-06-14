@@ -37,6 +37,13 @@ describe('addAuth inspector', () => {
       const state = await inspect(makeLogger(criticals), [file], { rootDir })
       assert.equal(criticals.length, 0)
       assert.deepEqual(state.auth.providers, ['github', 'google'])
+      // OAuth-provider wireAuth is handled by a generated auth.gen.ts; the user's
+      // source file must NOT be imported into the HTTP bootstrap (would
+      // double-register the /auth/* routes).
+      assert.ok(
+        !state.http.files.has(file),
+        'provider wireAuth file must not be added to http.files'
+      )
     } finally {
       await rm(rootDir, { recursive: true, force: true })
     }
@@ -117,6 +124,13 @@ describe('addAuth inspector', () => {
         'no providers should be extracted'
       )
       assert.ok(state.auth.files.has(file), 'source file still tracked')
+      // Credentials-only wireAuth registers its routes at runtime, so the file
+      // must be imported into the HTTP bootstrap (added to http.files) for the
+      // /auth/* routes to exist in the deployed worker.
+      assert.ok(
+        state.http.files.has(file),
+        'credentials-only wireAuth file must be added to http.files'
+      )
     } finally {
       await rm(rootDir, { recursive: true, force: true })
     }

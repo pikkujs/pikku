@@ -22,6 +22,19 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
   state.auth.files.add(sourceFile)
 
   if (!providersProp) {
+    // Credentials- and/or callbacks-only `wireAuth`: there are no OAuth
+    // providers, so the CLI never generates an `auth.gen.ts` for this call.
+    // `wireAuth` registers its /auth/* routes at runtime (it calls
+    // `wireHTTPRoutes` internally via `createAuthRoutes`), but the static
+    // inspector only sees the outer `wireAuth(...)` call — never the inner
+    // `wireHTTPRoutes`. Add the file to the HTTP wiring set so it is imported
+    // into the generated bootstrap; otherwise `wireAuth` never executes and the
+    // auth routes are absent from the deployed worker.
+    //
+    // The OAuth-provider path intentionally does NOT do this: those routes are
+    // emitted into a generated file (see serializeAuthGen) and importing the
+    // user's source file too would double-register the /auth/* routes.
+    state.http.files.add(sourceFile)
     return
   }
 
