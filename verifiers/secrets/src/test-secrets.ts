@@ -39,6 +39,11 @@ class EnvVariablesService implements VariablesService {
       return raw as unknown as T
     }
   }
+  getVariables<T extends Record<string, unknown> = Record<string, unknown>>(
+    names: (keyof T & string)[]
+  ): T {
+    return Object.fromEntries(names.map((key) => [key, this.get(key)])) as T
+  }
   getAll(): Record<string, string> {
     return process.env as Record<string, string>
   }

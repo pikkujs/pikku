@@ -89,11 +89,13 @@ function parseTables(src: string): TableDef[] {
   const tables: TableDef[] = []
   for (const match of src.matchAll(INTERFACE_RE)) {
     const name = match[1]
-    if (name === 'DB') continue
-    const body = match[2]
+    if (!name || name === 'DB') continue
+    const body = match[2] ?? ''
     const fields: TableDef['fields'] = []
     for (const field of body.matchAll(FIELD_RE)) {
-      fields.push({ name: field[1], type: field[2].trim() })
+      const fieldName = field[1]
+      if (!fieldName) continue
+      fields.push({ name: fieldName, type: (field[2] ?? '').trim() })
     }
     tables.push({ name, fields })
   }
@@ -168,7 +170,7 @@ function zodForType(
   // Peel a single `Generated<…>` wrapper. For public bool/date columns this
   // wraps a `ColumnType<…>`, so the unwrapped inner is handled below.
   const generatedMatch = inner.match(/^Generated<(.+)>$/)
-  if (generatedMatch) {
+  if (generatedMatch?.[1]) {
     generated = true
     inner = generatedMatch[1].trim()
   }
@@ -199,7 +201,7 @@ function scalarSchema(tsType: string, format?: ZodFormat): string {
 
   // Defensive: a Select arg may itself be `Generated<…>` in older schemas.
   const generatedMatch = inner.match(/^Generated<(.+)>$/)
-  if (generatedMatch) {
+  if (generatedMatch?.[1]) {
     inner = generatedMatch[1].trim()
   }
 
@@ -210,7 +212,7 @@ function scalarSchema(tsType: string, format?: ZodFormat): string {
 
   // Unwrap a classification brand: `Private<T>` / `Pii<T>` / `Secret<T>` → T.
   const brandMatch = inner.match(/^(?:Private|Pii|Secret)<(.+)>$/)
-  if (brandMatch) {
+  if (brandMatch?.[1]) {
     inner = brandMatch[1].trim()
   }
 
