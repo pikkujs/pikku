@@ -1,5 +1,5 @@
 {
-  "name": "@pikku/verifiers-auth-js",
+  "name": "@pikku/verifiers-better-auth",
   "type": "module",
   "private": true,
   "imports": {
@@ -7,10 +7,10 @@
     "#pikku/*": "./.pikku/*"
   },
   "dependencies": {
-    "@auth/core": "^0.37.0",
-    "@pikku/auth-js": "workspace:*",
+    "@pikku/better-auth": "workspace:*",
     "@pikku/core": "workspace:*",
-    "@pikku/schema-cfworker": "workspace:*"
+    "@pikku/schema-cfworker": "workspace:*",
+    "better-auth": "^1.6.18"
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",

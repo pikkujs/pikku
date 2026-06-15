@@ -1,23 +1,12 @@
-import { PROVIDER_REGISTRY } from '@pikku/auth-js'
-
-// Inlined from @pikku/auth-js auth-route-meta.ts — avoids a runtime import
-// of a specific auth-js version from the user's node_modules at codegen time.
-const AUTH_ROUTES: Array<{ method: string; route: string }> = [
-  { method: 'get', route: '/csrf' },
-  { method: 'get', route: '/providers' },
-  { method: 'get', route: '/session' },
-  { method: 'get', route: '/signin' },
-  { method: 'post', route: '/signin' },
-  { method: 'post', route: '/signin/:provider' },
-  { method: 'get', route: '/callback/:provider' },
-  { method: 'post', route: '/callback/:provider' },
-  { method: 'get', route: '/signout' },
-  { method: 'post', route: '/signout' },
-  { method: 'get', route: '/error' },
-]
+import { PROVIDER_REGISTRY } from '@pikku/better-auth'
 import { AUTH_HANDLER_FUNC_ID } from '@pikku/inspector'
 import type { AuthDefinition } from '@pikku/inspector'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+
+// better-auth uses GET and POST for all of its endpoints (sign-in, callbacks,
+// session, sign-out, plugin routes). A single catch-all per method forwards
+// everything under basePath to better-auth's own internal router.
+const AUTH_METHODS = ['get', 'post'] as const
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
@@ -31,11 +20,6 @@ function providerSecretName(name: string): string {
   return `${name.replace(/-([a-z])/g, (_, c) => c.toUpperCase())}OAuth`
 }
 
-/** A stable, valid identifier key for a route in the wireHTTPRoutes map. */
-function routeKey(method: string, route: string): string {
-  return `${method}${route.replace(/[^a-z0-9]/gi, '_')}`
-}
-
 /**
  * The two files generated from a `defineAuth` export.
  *
@@ -47,7 +31,7 @@ function routeKey(method: string, route: string): string {
  * separated out.
  */
 export interface AuthGenOutput {
-  /** The HTTP wiring file (authFile): handler + routes + session middleware. */
+  /** The HTTP wiring file (authFile): handler + catch-all routes + session middleware. */
   wiring: string
   /** The secrets file: Zod schemas + wireSecret/wireVariable. */
   secrets: string
@@ -55,13 +39,16 @@ export interface AuthGenOutput {
 
 /**
  * Generates the `auth.gen.ts` (HTTP wiring) and `auth-secrets.gen.ts` (schemas +
- * secret/variable wiring) files from a `defineAuth` export.
+ * secret/variable wiring) files from a `defineAuth((services) => betterAuth(...))`
+ * export.
  *
- * The wiring file imports the user's exported config (`auth`), builds ONE shared
- * sessionless handler that delegates to Auth.js, wires every `/auth/*` route to
- * it, and registers the Auth.js session-bridge middleware globally. Because this
- * is normal, statically inspectable HTTP wiring, the routes flow through
- * inspection into the deploy manifest (one worker for all routes).
+ * The wiring file imports the user's exported `DefinedAuth`, builds ONE shared
+ * sessionless handler that delegates to better-auth's fetch handler, wires a
+ * catch-all `${basePath}{/*splat}` route per method to it, registers the
+ * better-auth session-bridge middleware globally, and records provider metadata
+ * via `setAuthRegistry` (consumed by the console's getAuthProviders). Because
+ * this is normal, statically inspectable HTTP wiring, the routes flow through
+ * inspection into the deploy manifest (one worker for all auth routes).
  */
 export const serializeAuthGen = (
   definition: AuthDefinition,
@@ -69,14 +56,7 @@ export const serializeAuthGen = (
   authFile: string,
   packageMappings: Record<string, string>
 ): AuthGenOutput => {
-  const known = providers.filter((p) => PROVIDER_REGISTRY[p])
-  const unknown = providers.filter((p) => !PROVIDER_REGISTRY[p])
-
-  if (unknown.length > 0) {
-    throw new Error(
-      `defineAuth: unknown providers: ${unknown.join(', ')}. Supported: ${Object.keys(PROVIDER_REGISTRY).join(', ')}`
-    )
-  }
+  const known = providers.filter((p) => p in PROVIDER_REGISTRY)
 
   const basePath = definition.basePath
   const configImportPath = getFileImportRelativePath(
@@ -91,17 +71,32 @@ export const serializeAuthGen = (
     '',
     `import { wireSecret } from '@pikku/core/secret'`,
   ]
-  const hasVariables = known.some((name) => PROVIDER_REGISTRY[name].variables)
+  const hasVariables = known.some(
+    (name) => (PROVIDER_REGISTRY as any)[name].variables
+  )
   if (hasVariables) {
     secrets.push(`import { wireVariable } from '@pikku/core/variable'`)
   }
   secrets.push(`import { z } from 'zod'`, '')
 
-  // Zod schemas for each provider
+  // better-auth's session-signing secret is always required (its BETTER_AUTH_SECRET
+  // env convention). Wire it so the platform collects it, regardless of providers.
+  secrets.push(`export const BetterAuthSecretSchema = z.string()`)
+  secrets.push('')
+  secrets.push(`wireSecret({`)
+  secrets.push(`  name: 'betterAuthSecret',`)
+  secrets.push(`  displayName: 'Better Auth Secret',`)
+  secrets.push(`  description: 'Signing secret for better-auth sessions',`)
+  secrets.push(`  secretId: 'BETTER_AUTH_SECRET',`)
+  secrets.push(`  schema: BetterAuthSecretSchema,`)
+  secrets.push(`})`)
+  secrets.push('')
+
+  // Zod schemas for each provider's OAuth credentials secret.
   for (const name of known) {
-    const def = PROVIDER_REGISTRY[name]
+    const def = (PROVIDER_REGISTRY as any)[name]
     const schemaName = providerSchemaName(name)
-    const fieldLines = Object.entries(def.fields).map(
+    const fieldLines = Object.entries(def.fields as Record<string, string>).map(
       ([field, zodExpr]) => `  ${field}: ${zodExpr},`
     )
     secrets.push(`export const ${schemaName} = z.object({`)
@@ -110,21 +105,9 @@ export const serializeAuthGen = (
     secrets.push('')
   }
 
-  // wireSecret for AUTH_SECRET
-  secrets.push(`export const AuthSecretSchema = z.string()`)
-  secrets.push('')
-  secrets.push(`wireSecret({`)
-  secrets.push(`  name: 'authSecret',`)
-  secrets.push(`  displayName: 'Auth Secret',`)
-  secrets.push(`  description: 'JWT signing secret for Auth.js sessions',`)
-  secrets.push(`  secretId: 'AUTH_SECRET',`)
-  secrets.push(`  schema: AuthSecretSchema,`)
-  secrets.push(`})`)
-  secrets.push('')
-
-  // wireSecret for each provider
+  // wireSecret for each provider.
   for (const name of known) {
-    const def = PROVIDER_REGISTRY[name]
+    const def = (PROVIDER_REGISTRY as any)[name]
     const schemaName = providerSchemaName(name)
     const secretName = providerSecretName(name)
     secrets.push(`wireSecret({`)
@@ -136,9 +119,9 @@ export const serializeAuthGen = (
     secrets.push('')
   }
 
-  // wireVariable for providers with non-secret config (issuer, tenantId, etc.)
+  // wireVariable for providers with non-secret config (issuer, tenantId, etc.).
   for (const name of known) {
-    const def = PROVIDER_REGISTRY[name]
+    const def = (PROVIDER_REGISTRY as any)[name]
     if (!def.variables) continue
     for (const [field, meta] of Object.entries(def.variables) as [
       string,
@@ -155,37 +138,54 @@ export const serializeAuthGen = (
     }
   }
 
-  // ─── Wiring file: handler + routes + session middleware ───────────────────
+  // ─── Wiring file: handler + catch-all routes + session middleware ─────────
+  const registryProviders = known
+    .map((name) => {
+      const def = (PROVIDER_REGISTRY as any)[name]
+      return `    { id: '${name}', displayName: '${def.displayName}', secretId: '${def.secretId}' },`
+    })
+    .join('\n')
+
   const wiring: string[] = [
     '// AUTO-GENERATED by pikku CLI — do not edit',
     '',
     `import { pikkuSessionlessFunc, wireHTTPRoutes, addHTTPMiddleware } from '#pikku'`,
-    `import { createAuthHandler, authJsSession } from '@pikku/auth-js'`,
+    `import { createAuthHandler, betterAuthSession } from '@pikku/better-auth'`,
+    `import { setAuthRegistry } from '@pikku/core'`,
     `import { ${definition.exportName} } from '${configImportPath}'`,
+    '',
+    // Provider metadata for the console (getAuthProviders reads this registry).
+    // Set at module load so it is populated independently of when the lazy
+    // better-auth factory first runs.
+    `setAuthRegistry({`,
+    `  providers: [`,
+    registryProviders,
+    `  ],`,
+    `  hasCredentials: ${definition.hasCredentials},`,
+    `})`,
     '',
     // createAuthHandler is called once at module load; the exported handler is a
     // plain arrow (so the inspector can resolve a valid `func`) that delegates to
     // it. The handler's required services are stamped onto its meta by the
-    // inspector from the defineAuth authorize/callbacks factories.
-    `const authConfigHandler = createAuthHandler(${definition.exportName}.configFactory)`,
+    // inspector from the defineAuth factory.
+    `const authConfigHandler = createAuthHandler(${definition.exportName})`,
     `export const ${AUTH_HANDLER_FUNC_ID} = pikkuSessionlessFunc({`,
     `  func: (services: any, data: any, interaction: any) =>`,
     `    authConfigHandler.func(services, data, interaction),`,
     `})`,
     '',
-    // Bridge the Auth.js session cookie into the Pikku session on every request.
-    // The default mapping is `{ userId: claims.sub }`, which matches defineAuth's
-    // convention of stamping the user id onto `token.sub`.
-    `addHTTPMiddleware('*', [authJsSession({ secretId: 'AUTH_SECRET' })])`,
+    // Bridge the better-auth session into the Pikku session on every request.
+    `addHTTPMiddleware('*', [betterAuthSession({ auth: ${definition.exportName} })])`,
     '',
     `wireHTTPRoutes({`,
     `  routes: {`,
   ]
-  for (const { method, route } of AUTH_ROUTES) {
-    const key = routeKey(method, route)
-    const fullRoute = basePath + route
+  // One catch-all route per method. `{/*splat}` matches both the bare basePath
+  // and every sub-path under it, so better-auth's internal router sees the full
+  // request and handles all of its own endpoints.
+  for (const method of AUTH_METHODS) {
     wiring.push(
-      `    ${key}: { method: '${method}', route: '${fullRoute}', func: ${AUTH_HANDLER_FUNC_ID}, auth: false },`
+      `    ${method}AuthCatchAll: { method: '${method}', route: '${basePath}{/*splat}', func: ${AUTH_HANDLER_FUNC_ID}, auth: false },`
     )
   }
   wiring.push(`  },`)

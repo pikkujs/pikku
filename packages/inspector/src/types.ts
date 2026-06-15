@@ -301,25 +301,29 @@ export interface InspectorDiagnostic {
   position: number
 }
 
-/** A single discovered `export const X = defineAuth({...})`. */
+/** A single discovered `export const X = defineAuth((services) => betterAuth({...}))`. */
 export interface AuthDefinition {
   /** The exported binding name the CLI imports (`export const <exportName>`). */
   exportName: string
   /** Absolute path of the file declaring it. */
   sourceFile: string
-  /** Resolved Auth.js base path (the `basePath` option, default `/auth`). */
+  /** better-auth base path (the `basePath` option, default `/api/auth`). */
   basePath: string
+  /** Whether email/password auth is enabled (`emailAndPassword.enabled`). Fed
+   *  into the generated `setAuthRegistry` so the console knows credentials are
+   *  available alongside the OAuth providers. */
+  hasCredentials: boolean
   /**
    * Singleton services the generated auth handler must have available at
-   * runtime — the union of services destructured by the `authorize` and
-   * `callbacks` factories, plus `secrets`/`variables` (which `defineAuth`'s own
-   * configFactory always uses to load AUTH_SECRET and build providers).
+   * runtime — the services the `defineAuth` factory reaches for (either
+   * destructured from its first param, or accessed as `services.<name>` in its
+   * body). better-auth's factory typically touches `secrets` and the DB.
    *
    * The generated `authHandler` calls `createAuthHandler(...).func`, an opaque
    * property access the inspector can't see through; without this stamp the
-   * deployed auth worker would instantiate none of these services and
-   * `authorize` would receive an undefined `kysely`. Re-derived every inspect
-   * and applied to the handler meta before service aggregation runs.
+   * deployed auth worker would instantiate none of these services and the
+   * factory would receive an undefined `kysely`. Re-derived every inspect and
+   * applied to the handler meta before service aggregation runs.
    */
   services: FunctionServicesMeta
 }

@@ -1,18 +1,9 @@
-import { authJsSession } from '@pikku/auth-js'
 import type { AIStreamEvent } from '@pikku/core/ai-agent'
-import {
-  addHTTPMiddleware,
-  pikkuChannelMiddleware,
-} from '../.pikku/pikku-types.gen.js'
+import { pikkuChannelMiddleware } from '../.pikku/pikku-types.gen.js'
 import { pikkuAIMiddleware } from '../.pikku/agent/pikku-agent-types.gen.js'
 
-export const httpAuthMiddleware = () =>
-  addHTTPMiddleware('*', [
-    authJsSession({
-      secretId: 'AUTH_SECRET',
-      mapSession: (claims) => ({ userId: claims.sub as string }),
-    }),
-  ])
+// The better-auth session-bridge middleware is generated into auth.gen.ts by the
+// pikku CLI (from the `defineAuth` export in src/auth.ts) — no manual wiring here.
 
 export const appendModified = pikkuChannelMiddleware<any, AIStreamEvent>(
   async (_services, event, next) => {

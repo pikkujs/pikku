@@ -9,8 +9,9 @@ const SOURCE_FILE = '/project/src/auth.ts'
 const def = (overrides: Partial<AuthDefinition> = {}): AuthDefinition => ({
   exportName: 'auth',
   sourceFile: SOURCE_FILE,
-  basePath: '/auth',
-  services: { optimized: true, services: ['kysely', 'secrets', 'variables'] },
+  basePath: '/api/auth',
+  hasCredentials: false,
+  services: { optimized: true, services: ['kysely', 'secrets'] },
   ...overrides,
 })
 
@@ -22,24 +23,24 @@ const genSecrets = (providers: string[], d: AuthDefinition = def()) =>
   gen(providers, d).secrets
 
 describe('serializeAuthGen', () => {
-  test('throws for unknown providers', () => {
-    assert.throws(
-      () => gen(['nonexistent-provider']),
-      /defineAuth: unknown providers: nonexistent-provider/
-    )
+  test('silently ignores unknown providers (genericOAuth plugin etc.)', () => {
+    // Unknown keys are skipped (not thrown) — they may come from the genericOAuth
+    // plugin, whose secret the user wires manually.
+    const secrets = genSecrets(['nonexistent-provider'])
+    assert.doesNotMatch(secrets, /NonexistentProvider/)
   })
 
   test('wiring file imports the framework modules it uses', () => {
     const output = genWiring(['github'])
-    assert.match(output, /import { pikkuSessionlessFunc } from '#pikku'/)
     assert.match(
       output,
-      /import { wireHTTPRoutes, addHTTPMiddleware } from '@pikku\/core\/http'/
+      /import { pikkuSessionlessFunc, wireHTTPRoutes, addHTTPMiddleware } from '#pikku'/
     )
     assert.match(
       output,
-      /import { createAuthHandler, authJsSession } from '@pikku\/auth-js'/
+      /import { createAuthHandler, betterAuthSession } from '@pikku\/better-auth'/
     )
+    assert.match(output, /import { setAuthRegistry } from '@pikku\/core'/)
   })
 
   test('secrets file imports zod and wireSecret', () => {
@@ -57,7 +58,24 @@ describe('serializeAuthGen', () => {
   test('honours a custom export name', () => {
     const output = genWiring(['github'], def({ exportName: 'myAuth' }))
     assert.match(output, /import { myAuth } from /)
-    assert.match(output, /createAuthHandler\(myAuth\.configFactory\)/)
+    assert.match(output, /createAuthHandler\(myAuth\)/)
+    assert.match(output, /betterAuthSession\(\{ auth: myAuth \}\)/)
+  })
+
+  test('records provider metadata via setAuthRegistry', () => {
+    const output = genWiring(['github'], def({ hasCredentials: true }))
+    assert.match(output, /setAuthRegistry\(\{/)
+    assert.match(
+      output,
+      /\{ id: 'github', displayName: 'GitHub OAuth', secretId: 'GITHUB_OAUTH' \}/
+    )
+    assert.match(output, /hasCredentials: true/)
+  })
+
+  test('always wires the better-auth signing secret', () => {
+    const output = genSecrets([])
+    assert.match(output, /secretId: 'BETTER_AUTH_SECRET'/)
+    assert.match(output, /displayName: 'Better Auth Secret'/)
   })
 
   test('generates Zod schema for github provider in the secrets file', () => {
@@ -65,13 +83,6 @@ describe('serializeAuthGen', () => {
     assert.match(output, /const GithubOAuthSchema = z\.object\({/)
     assert.match(output, /clientId:/)
     assert.match(output, /clientSecret:/)
-  })
-
-  test('generates wireSecret for AUTH_SECRET', () => {
-    const output = genSecrets(['github'])
-    assert.match(output, /wireSecret\({/)
-    assert.match(output, /secretId: 'AUTH_SECRET'/)
-    assert.match(output, /displayName: 'Auth Secret'/)
   })
 
   test('generates wireSecret for provider credentials', () => {
@@ -82,52 +93,49 @@ describe('serializeAuthGen', () => {
     const output = genWiring(['github'])
     // The handler must be a plain arrow (not `createAuthHandler(...).func`
     // directly) so the inspector resolves a valid `func`.
+    assert.match(output, /const authConfigHandler = createAuthHandler\(auth\)/)
+    assert.match(output, /export const authHandler = pikkuSessionlessFunc\(\{/)
     assert.match(
       output,
-      /const authConfigHandler = createAuthHandler\(auth\.configFactory\)/
+      /func: \(services: any, data: any, interaction: any\) =>/
     )
-    assert.match(output, /export const authHandler = pikkuSessionlessFunc\(\{/)
-    assert.match(output, /func: \(services, data, interaction\) =>/)
     assert.match(
       output,
       /authConfigHandler\.func\(services, data, interaction\)/
     )
   })
 
-  test('registers the Auth.js session-bridge middleware globally', () => {
+  test('registers the better-auth session-bridge middleware globally', () => {
     const output = genWiring([])
     assert.match(
       output,
-      /addHTTPMiddleware\('\*', \[authJsSession\(\{ secretId: 'AUTH_SECRET' \}\)\]\)/
+      /addHTTPMiddleware\('\*', \[betterAuthSession\(\{ auth: auth \}\)\]\)/
     )
   })
 
-  test('wires every auth route to the shared handler with auth:false', () => {
+  test('wires a catch-all route per method to the shared handler', () => {
     const output = genWiring(['github'])
     assert.match(output, /wireHTTPRoutes\(\{/)
-    assert.match(output, /route: '\/auth\/csrf', func: authHandler, auth: false/)
-    assert.match(output, /route: '\/auth\/session', func: authHandler, auth: false/)
     assert.match(
       output,
-      /route: '\/auth\/callback\/:provider', func: authHandler, auth: false/
+      /getAuthCatchAll: \{ method: 'get', route: '\/api\/auth\{\/\*splat\}', func: authHandler, auth: false \}/
     )
     assert.match(
       output,
-      /route: '\/auth\/signin\/:provider', func: authHandler, auth: false/
+      /postAuthCatchAll: \{ method: 'post', route: '\/api\/auth\{\/\*splat\}', func: authHandler, auth: false \}/
     )
   })
 
-  test('applies a custom basePath to every route', () => {
-    const output = genWiring(['github'], def({ basePath: '/api/auth' }))
-    assert.match(output, /route: '\/api\/auth\/csrf'/)
-    assert.match(output, /route: '\/api\/auth\/session'/)
+  test('applies a custom basePath to the catch-all route', () => {
+    const output = genWiring(['github'], def({ basePath: '/auth' }))
+    assert.match(output, /route: '\/auth\{\/\*splat\}'/)
   })
 
   test('works with credentials-only auth (no providers)', () => {
-    const { wiring, secrets } = gen([])
+    const { wiring, secrets } = gen([], def({ hasCredentials: true }))
     assert.match(wiring, /export const authHandler = pikkuSessionlessFunc/)
-    assert.match(wiring, /route: '\/auth\/csrf', func: authHandler/)
-    assert.match(secrets, /secretId: 'AUTH_SECRET'/)
+    assert.match(wiring, /route: '\/api\/auth\{\/\*splat\}', func: authHandler/)
+    assert.match(secrets, /secretId: 'BETTER_AUTH_SECRET'/)
     assert.doesNotMatch(secrets, /OAuthSchema/)
   })
 
@@ -147,8 +155,6 @@ describe('serializeAuthGen', () => {
 
   test('keeps Zod schemas out of the HTTP wiring file (PKU490)', () => {
     const { wiring } = gen(['github'])
-    // The wiring file must not declare schemas or it co-locates schemas with
-    // wireHTTPRoutes, which the CLI rejects.
     assert.doesNotMatch(wiring, /z\.object/)
     assert.doesNotMatch(wiring, /z\.string/)
     assert.doesNotMatch(wiring, /wireSecret/)
@@ -164,21 +170,11 @@ describe('serializeAuthGen', () => {
     const output = genSecrets(['microsoft-entra-id'])
     assert.match(output, /MicrosoftEntraIdOAuthSchema/)
     assert.match(output, /microsoftEntraIdOAuth/)
+    assert.match(output, /secretId: 'MICROSOFT_ENTRA_ID_OAUTH'/)
   })
 
   test('does not emit wireVariable for standard oauth providers', () => {
     assert.doesNotMatch(genSecrets(['github']), /wireVariable\({/)
-  })
-
-  test('emits wireVariable for auth0 issuer', () => {
-    const output = genSecrets(['auth0'])
-    assert.match(output, /wireVariable\({/)
-    assert.match(output, /variableId: 'AUTH0_ISSUER'/)
-    assert.match(output, /description: 'Auth0 tenant URL/)
-  })
-
-  test('emits wireVariable for okta issuer', () => {
-    assert.match(genSecrets(['okta']), /variableId: 'OKTA_ISSUER'/)
   })
 
   test('emits wireVariable for microsoft-entra-id tenantId', () => {
@@ -186,5 +182,9 @@ describe('serializeAuthGen', () => {
       genSecrets(['microsoft-entra-id']),
       /variableId: 'MICROSOFT_ENTRA_ID_TENANT_ID'/
     )
+  })
+
+  test('emits wireVariable for cognito domain', () => {
+    assert.match(genSecrets(['cognito']), /variableId: 'COGNITO_DOMAIN'/)
   })
 })

@@ -33,12 +33,11 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.37",
-    "@auth/core": "^0.37.0",
     "@pikku/addon-console": "workspace:*",
     "@pikku/addon-graph": "workspace:*",
     "@pikku/addon-hmac-signer": "workspace:*",
     "@pikku/ai-vercel": "workspace:*",
-    "@pikku/auth-js": "workspace:*",
+    "@pikku/better-auth": "workspace:*",
     "@pikku/core": "workspace:*",
     "@pikku/jose": "workspace:*",
     "@pikku/kysely": "workspace:*",

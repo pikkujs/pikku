@@ -7,54 +7,116 @@ import { extractServicesFromFunction } from '../utils/extract-services.js'
 /**
  * The pikku function id of the single shared auth handler the CLI generates
  * (`export const authHandler = pikkuSessionlessFunc(...)` in auth.gen.ts). An
- * exported top-level const collapses every `/auth/*` route onto one worker, and
- * the export name becomes the function id. Shared with the CLI codegen and the
- * post-process service stamp so all three agree on the same id without the
- * inspector having to import `@pikku/auth-js`.
+ * exported top-level const collapses the catch-all `/api/auth/**` route onto one
+ * worker, and the export name becomes the function id. Shared with the CLI
+ * codegen and the post-process service stamp so all three agree on the same id
+ * without the inspector having to import `@pikku/better-auth`.
  */
 export const AUTH_HANDLER_FUNC_ID = 'authHandler'
 
-/**
- * Services `defineAuth`'s own configFactory always touches, regardless of what
- * the user's authorize/callbacks factories destructure: `secrets` loads
- * AUTH_SECRET, `variables` drives buildProviders. Always merged into the
- * handler's required-services set.
- */
-const ALWAYS_REQUIRED_AUTH_SERVICES = ['secrets', 'variables']
+/** The default better-auth base path when `basePath` is not configured. */
+const DEFAULT_BASE_PATH = '/api/auth'
 
-/** Find a property's arrow/function initializer in an object literal. */
-const findFactory = (
+/**
+ * Find the first `betterAuth({...})` call anywhere inside the `defineAuth`
+ * factory body. Supports both `(s) => betterAuth({...})` and
+ * `(s) => { ...; return betterAuth({...}) }`.
+ */
+const findBetterAuthCall = (
+  node: ts.Node
+): ts.CallExpression | undefined => {
+  let found: ts.CallExpression | undefined
+  const visit = (n: ts.Node) => {
+    if (found) return
+    if (
+      ts.isCallExpression(n) &&
+      ts.isIdentifier(n.expression) &&
+      n.expression.text === 'betterAuth'
+    ) {
+      found = n
+      return
+    }
+    ts.forEachChild(n, visit)
+  }
+  visit(node)
+  return found
+}
+
+/** Read a string-literal property off an object literal, if present. */
+const readStringProp = (
   obj: ts.ObjectLiteralExpression,
   name: string
-): ts.ArrowFunction | ts.FunctionExpression | undefined => {
+): string | undefined => {
   const prop = obj.properties.find(
     (p) =>
       ts.isPropertyAssignment(p) &&
       (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name)) &&
       p.name.text === name
   ) as ts.PropertyAssignment | undefined
-  if (!prop) return undefined
-  const init = prop.initializer
-  if (ts.isArrowFunction(init) || ts.isFunctionExpression(init)) return init
+  if (prop && ts.isStringLiteral(prop.initializer)) return prop.initializer.text
+  return undefined
+}
+
+/** Find an object-literal-valued property off an object literal, if present. */
+const readObjectProp = (
+  obj: ts.ObjectLiteralExpression,
+  name: string
+): ts.ObjectLiteralExpression | undefined => {
+  const prop = obj.properties.find(
+    (p) =>
+      ts.isPropertyAssignment(p) &&
+      (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name)) &&
+      p.name.text === name
+  ) as ts.PropertyAssignment | undefined
+  if (prop && ts.isObjectLiteralExpression(prop.initializer))
+    return prop.initializer
   return undefined
 }
 
 /**
- * Detects `defineAuth({...})` calls.
+ * Collect the services a non-destructured factory reaches for by scanning its
+ * body for `<paramName>.<service>` member accesses, e.g. `services.kysely`,
+ * `services.secrets`. Lets the `(services) => betterAuth(...)` form still produce
+ * an optimized service set instead of falling back to "all services".
+ */
+const extractServicesFromMemberAccess = (
+  factory: ts.ArrowFunction | ts.FunctionExpression,
+  paramName: string
+): string[] => {
+  const found = new Set<string>()
+  const visit = (n: ts.Node) => {
+    if (
+      ts.isPropertyAccessExpression(n) &&
+      ts.isIdentifier(n.expression) &&
+      n.expression.text === paramName &&
+      ts.isIdentifier(n.name)
+    ) {
+      found.add(n.name.text)
+    }
+    ts.forEachChild(n, visit)
+  }
+  if (factory.body) visit(factory.body)
+  return [...found]
+}
+
+/**
+ * Detects `defineAuth((services) => betterAuth({...}))` calls.
  *
- * `defineAuth` is pure: it returns an auth config object with NO side effects.
- * The user assigns it to an exported binding, e.g.
+ * `defineAuth` is pure: it wraps a factory that returns a configured better-auth
+ * instance and has NO side effects. The user assigns it to an exported binding,
+ * e.g.
  *
- *   export const auth = defineAuth({ ... })
+ *   export const auth = defineAuth(async (services) => betterAuth({ ... }))
  *
- * The pikku CLI discovers that single export and generates an explicit-route
- * `auth.gen.ts` that wires every `/auth/*` route to one shared handler — so the
- * routes flow through normal inspection into the deploy manifest, instead of a
- * runtime-only side-channel hidden in node_modules.
+ * The pikku CLI discovers that single export and generates a catch-all
+ * `auth.gen.ts` that wires `${basePath}/**` to one shared handler, registers the
+ * better-auth session middleware, and emits a `wireSecret` for every configured
+ * social provider — so the auth routes and secret requirements flow through
+ * normal inspection into the deploy manifest.
  *
- * This add-wiring records the exported binding name, source file, and basePath
- * into `state.auth.definition` so the CLI knows what to import and generate.
- * Exactly one `defineAuth` is allowed per codebase; a second is a critical error.
+ * This add-wiring records the exported binding name, source file, basePath, the
+ * `socialProviders` keys, whether email/password is enabled, and the services
+ * the factory touches. Exactly one `defineAuth` is allowed per codebase.
  */
 export const addAuth: AddWiring = (logger, node, _checker, state) => {
   if (!ts.isCallExpression(node)) return
@@ -69,7 +131,7 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
   if (!ts.isVariableDeclaration(varDecl) || !ts.isIdentifier(varDecl.name)) {
     logger.critical(
       ErrorCode.AUTH_NOT_EXPORTED,
-      `defineAuth(...) must be assigned to an exported const, e.g. \`export const auth = defineAuth({...})\` in ${sourceFile}`
+      `defineAuth(...) must be assigned to an exported const, e.g. \`export const auth = defineAuth((services) => betterAuth({...}))\` in ${sourceFile}`
     )
     return
   }
@@ -81,9 +143,7 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
   const isExported =
     varStatement &&
     ts.isVariableStatement(varStatement) &&
-    varStatement.modifiers?.some(
-      (m) => m.kind === ts.SyntaxKind.ExportKeyword
-    )
+    varStatement.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)
   if (!isExported) {
     logger.critical(
       ErrorCode.AUTH_NOT_EXPORTED,
@@ -100,106 +160,85 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
     return
   }
 
-  state.auth.files.add(sourceFile)
-
-  const firstArg = node.arguments[0]
-  if (!firstArg || !ts.isObjectLiteralExpression(firstArg)) {
+  // The single argument must be the factory: (services) => betterAuth({...}).
+  const factory = node.arguments[0]
+  if (
+    !factory ||
+    (!ts.isArrowFunction(factory) && !ts.isFunctionExpression(factory))
+  ) {
     logger.critical(
       ErrorCode.MISSING_NAME,
-      `defineAuth: the first argument must be an object literal in ${sourceFile}`
+      `defineAuth(...) must take a factory function returning betterAuth(...), e.g. \`defineAuth((services) => betterAuth({...}))\` in ${sourceFile}`
     )
     return
   }
 
-  // Optional basePath string literal (default /auth).
-  let basePath = '/auth'
-  const basePathProp = firstArg.properties.find(
-    (p) =>
-      ts.isPropertyAssignment(p) &&
-      (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name)) &&
-      p.name.text === 'basePath'
-  ) as ts.PropertyAssignment | undefined
-  if (basePathProp) {
-    if (!ts.isStringLiteral(basePathProp.initializer)) {
-      logger.critical(
-        ErrorCode.NON_LITERAL_WIRE_NAME,
-        `defineAuth: basePath must be a string literal. Found: ${basePathProp.initializer.getText()}`
-      )
-      return
-    }
-    basePath = basePathProp.initializer.text
+  state.auth.files.add(sourceFile)
+
+  // Derive the services the factory touches. A destructured first param names
+  // them directly; a plain `(services) =>` is scanned for `services.<name>`.
+  let services: FunctionServicesMeta
+  const firstParam = factory.parameters[0]
+  if (firstParam && ts.isObjectBindingPattern(firstParam.name)) {
+    services = extractServicesFromFunction(factory)
+  } else if (firstParam && ts.isIdentifier(firstParam.name)) {
+    const accessed = extractServicesFromMemberAccess(
+      factory,
+      firstParam.name.text
+    )
+    services = { optimized: true, services: accessed }
+  } else {
+    services = { optimized: true, services: [] }
   }
 
-  // Inspect the authorize + callbacks factories to learn which singleton
-  // services the auth handler reaches for. Both are factories of shape
-  // `(services, rpc) => ...`, so the first parameter's destructuring names the
-  // services (see extractServicesFromFunction). `authorize` lives under the
-  // `credentials` object; `callbacks` is a top-level factory.
-  const services: FunctionServicesMeta = { optimized: true, services: [] }
-  const mergeFactory = (
-    factory: ts.ArrowFunction | ts.FunctionExpression | undefined
-  ) => {
-    if (!factory) return
-    const extracted = extractServicesFromFunction(factory)
-    // A non-destructured param (`(services) => ...`) means we can't statically
-    // know the dependency set — propagate optimized:false so the diagnostic
-    // surfaces and the user is steered to destructure.
-    if (!extracted.optimized) services.optimized = false
-    for (const s of extracted.services) {
-      if (!services.services.includes(s)) services.services.push(s)
-    }
-  }
+  // Find the inner betterAuth({...}) call to read providers/basePath/credentials.
+  let basePath = DEFAULT_BASE_PATH
+  let hasCredentials = false
+  const betterAuthCall = findBetterAuthCall(factory)
+  const config = betterAuthCall?.arguments[0]
 
-  const credentialsObj = firstArg.properties.find(
-    (p) =>
-      ts.isPropertyAssignment(p) &&
-      (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name)) &&
-      p.name.text === 'credentials' &&
-      ts.isObjectLiteralExpression(p.initializer)
-  ) as ts.PropertyAssignment | undefined
-  if (credentialsObj) {
-    mergeFactory(
-      findFactory(
-        credentialsObj.initializer as ts.ObjectLiteralExpression,
-        'authorize'
-      )
+  if (config && ts.isObjectLiteralExpression(config)) {
+    basePath = readStringProp(config, 'basePath') ?? DEFAULT_BASE_PATH
+
+    const emailAndPassword = readObjectProp(config, 'emailAndPassword')
+    if (emailAndPassword) {
+      // `emailAndPassword: { enabled: true }` — treat a present block without an
+      // explicit `enabled: false` as credentials being available.
+      const enabledProp = emailAndPassword.properties.find(
+        (p) =>
+          ts.isPropertyAssignment(p) &&
+          ts.isIdentifier(p.name) &&
+          p.name.text === 'enabled'
+      ) as ts.PropertyAssignment | undefined
+      hasCredentials =
+        !enabledProp ||
+        enabledProp.initializer.kind !== ts.SyntaxKind.FalseKeyword
+    }
+
+    const socialProviders = readObjectProp(config, 'socialProviders')
+    if (socialProviders) {
+      for (const prop of socialProviders.properties) {
+        const key =
+          (ts.isPropertyAssignment(prop) || ts.isShorthandPropertyAssignment(prop)) &&
+          (ts.isIdentifier(prop.name) || ts.isStringLiteral(prop.name))
+            ? prop.name.text
+            : undefined
+        if (key && !state.auth.providers.includes(key)) {
+          state.auth.providers.push(key)
+        }
+      }
+    }
+  } else {
+    logger.warn(
+      `defineAuth in ${sourceFile}: could not statically find a betterAuth({...}) call inside the factory — social provider secrets will not be auto-wired.`
     )
   }
-  mergeFactory(findFactory(firstArg, 'callbacks'))
 
-  for (const s of ALWAYS_REQUIRED_AUTH_SERVICES) {
-    if (!services.services.includes(s)) services.services.push(s)
-  }
-
-  state.auth.definition = { exportName, sourceFile, basePath, services }
-
-  // Collect OAuth provider ids (optional — credentials-only auth has none).
-  const providersProp = firstArg.properties.find(
-    (p) =>
-      ts.isPropertyAssignment(p) &&
-      (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name)) &&
-      p.name.text === 'providers'
-  ) as ts.PropertyAssignment | undefined
-
-  if (providersProp) {
-    if (!ts.isArrayLiteralExpression(providersProp.initializer)) {
-      logger.critical(
-        ErrorCode.MISSING_NAME,
-        'defineAuth: providers must be an array literal of string literals.'
-      )
-      return
-    }
-    for (const element of providersProp.initializer.elements) {
-      if (!ts.isStringLiteral(element)) {
-        logger.critical(
-          ErrorCode.NON_LITERAL_WIRE_NAME,
-          `defineAuth: each provider must be a string literal. Found: ${element.getText()}`
-        )
-        return
-      }
-      if (!state.auth.providers.includes(element.text)) {
-        state.auth.providers.push(element.text)
-      }
-    }
+  state.auth.definition = {
+    exportName,
+    sourceFile,
+    basePath,
+    hasCredentials,
+    services,
   }
 }
