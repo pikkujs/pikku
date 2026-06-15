@@ -4,6 +4,7 @@ import {
   rmSync,
   writeFileSync,
   readFileSync,
+  readdirSync,
 } from 'node:fs'
 import { resolve, isAbsolute, relative, dirname, join } from 'node:path'
 import { createRequire } from 'node:module'
@@ -11,6 +12,8 @@ import { runInNewContext } from 'node:vm'
 import { transformSync } from 'esbuild'
 import type { Kysely } from 'kysely'
 import { migrate, type MigrateResult } from './db-migrator.js'
+import type { DbIntrospector } from './db-introspector.js'
+import { loadAuthOptions, getAuthMigrations } from './better-auth-schema.js'
 import { generateSchemaTypes, type CodegenResult } from './db-codegen.js'
 import { generateZodTypes, type ZodCodegenResult } from './zod-codegen.js'
 import { createCoercionPlugin, type CoercionMap } from './coercion-plugin.js'
@@ -401,4 +404,207 @@ export async function createKysely<DB>(
     camelCase: resolved.camelCase,
     plugins: coercionMap ? [createCoercionPlugin({ map: coercionMap })] : [],
   })
+}
+
+// ─── Better Auth schema drift + generation ────────────────────────────────────
+//
+// The auth schema is owned by Better Auth, not hand-written. We ask Better Auth
+// for it (`getMigrations`) run through a CamelCasePlugin kysely so the DDL is
+// snake_case, then detect drift by introspection — NOT via getMigrations' own
+// diff arrays, which compare its camelCase field keys against snake_case columns
+// and so always report false drift. See better-auth-schema.ts.
+
+type SchemaMap = Map<string, Set<string>>
+
+async function introspectorToMap(intro: DbIntrospector): Promise<SchemaMap> {
+  const map: SchemaMap = new Map()
+  for (const table of await intro.listTables()) {
+    const cols = await intro.getColumns(table)
+    map.set(table, new Set(cols.map((c) => c.name)))
+  }
+  return map
+}
+
+function diffSchemas(
+  desired: SchemaMap,
+  actual: SchemaMap
+): { missingTables: string[]; missingColumns: { table: string; columns: string[] }[] } {
+  const missingTables: string[] = []
+  const missingColumns: { table: string; columns: string[] }[] = []
+  for (const [table, cols] of desired) {
+    const actualCols = actual.get(table)
+    if (!actualCols) {
+      missingTables.push(table)
+      continue
+    }
+    const missing = [...cols].filter((c) => !actualCols.has(c))
+    if (missing.length) missingColumns.push({ table, columns: missing })
+  }
+  return { missingTables, missingColumns }
+}
+
+export interface DesiredAuthSchema {
+  tables: SchemaMap
+  /** Full snake_case DDL for the whole auth schema (from compileMigrations). */
+  sql: string
+}
+
+/**
+ * Materialise Better Auth's required schema into an in-memory SQLite scratch DB
+ * (always SQLite — table/column NAMES are dialect-independent, which is all the
+ * drift check needs) and introspect it. Returns null when the project has no
+ * `defineAuth`.
+ */
+export async function desiredAuthSchema(
+  rootDir: string,
+  srcDirectories: string[],
+  logger: { error: (msg: string) => void }
+): Promise<DesiredAuthSchema | null> {
+  const runtime = await loadSqliteRuntime()
+  const db = runtime.open(':memory:')
+  try {
+    const kysely = createSqliteKysely({ db, camelCase: true })
+    const options = await loadAuthOptions({ rootDir, srcDirectories, kysely, logger })
+    if (!options) return null
+    const { runMigrations, compileMigrations } = await getAuthMigrations(options)
+    await runMigrations()
+    const tables = await introspectorToMap(new SqliteIntrospector(db))
+    const sql = await compileMigrations()
+    return { tables, sql }
+  } finally {
+    db.close()
+  }
+}
+
+/** Introspect the actual live/dev database (post-migration). */
+export async function introspectSchema(resolved: ResolvedDb): Promise<SchemaMap> {
+  if (resolved.dialect === 'sqlite') {
+    const runtime = await loadSqliteRuntime()
+    const db = runtime.open(resolved.dbFile)
+    try {
+      return await introspectorToMap(new SqliteIntrospector(db))
+    } finally {
+      db.close()
+    }
+  }
+  const intro = new PostgresIntrospector(resolved.connectionString)
+  await intro.connect()
+  try {
+    return await introspectorToMap(intro)
+  } finally {
+    await intro.close()
+  }
+}
+
+/** The schema the committed SQLite migration files currently produce. */
+async function coveredSqliteSchema(migrationsDir: string): Promise<SchemaMap> {
+  const runtime = await loadSqliteRuntime()
+  const db = runtime.open(':memory:')
+  try {
+    await migrate(new SqliteMigrationExecutor(db), migrationsDir)
+    return await introspectorToMap(new SqliteIntrospector(db))
+  } finally {
+    db.close()
+  }
+}
+
+export interface AuthDriftResult {
+  hasAuth: boolean
+  inSync: boolean
+  missingTables: string[]
+  missingColumns: { table: string; columns: string[] }[]
+}
+
+/**
+ * Compare the schema Better Auth requires against what the actual migrated DB
+ * holds. `inSync: false` means the migration files have fallen behind the auth
+ * config — the caller should tell the user to run `pikku db generate`.
+ */
+export async function computeAuthDrift(
+  resolved: ResolvedDb,
+  rootDir: string,
+  srcDirectories: string[],
+  logger: { error: (msg: string) => void }
+): Promise<AuthDriftResult> {
+  const desired = await desiredAuthSchema(rootDir, srcDirectories, logger)
+  if (!desired) {
+    return { hasAuth: false, inSync: true, missingTables: [], missingColumns: [] }
+  }
+  const actual = await introspectSchema(resolved)
+  const { missingTables, missingColumns } = diffSchemas(desired.tables, actual)
+  return {
+    hasAuth: true,
+    inSync: missingTables.length === 0 && missingColumns.length === 0,
+    missingTables,
+    missingColumns,
+  }
+}
+
+function nextMigrationFile(migrationsDir: string, label: string): string {
+  mkdirSync(migrationsDir, { recursive: true })
+  let max = 0
+  try {
+    for (const file of readdirSync(migrationsDir)) {
+      const m = /^(\d+)/.exec(file)
+      if (m) max = Math.max(max, parseInt(m[1], 10))
+    }
+  } catch {
+    // empty dir
+  }
+  const num = String(max + 1).padStart(4, '0')
+  return join(migrationsDir, `${num}-${label}.sql`)
+}
+
+export interface GenerateAuthResult {
+  status:
+    | 'no-auth'
+    | 'up-to-date'
+    | 'written'
+    | 'incremental-unsupported'
+    | 'unsupported-dialect'
+  file?: string
+  missingTables?: string[]
+  missingColumns?: { table: string; columns: string[] }[]
+}
+
+/**
+ * Write a new forward migration for the Better Auth schema when the existing
+ * migrations don't yet provide it. Only the first-time/full case is auto-written
+ * (safe: no auth tables exist yet). A later incremental change returns
+ * `incremental-unsupported` with the delta listed rather than emitting a broken
+ * full-schema file (precise ALTERs would re-enter the camelCase-diff trap).
+ */
+export async function generateAuthMigration(
+  resolved: ResolvedDb,
+  rootDir: string,
+  srcDirectories: string[],
+  logger: { error: (msg: string) => void }
+): Promise<GenerateAuthResult> {
+  if (resolved.dialect !== 'sqlite') return { status: 'unsupported-dialect' }
+
+  const desired = await desiredAuthSchema(rootDir, srcDirectories, logger)
+  if (!desired) return { status: 'no-auth' }
+
+  const covered = await coveredSqliteSchema(resolved.migrationsDir)
+  const { missingTables, missingColumns } = diffSchemas(desired.tables, covered)
+  if (missingTables.length === 0 && missingColumns.length === 0) {
+    return { status: 'up-to-date' }
+  }
+
+  // Incremental change (some auth tables already migrated) — don't emit a full
+  // re-CREATE that would fail on apply; surface the delta for a hand-written
+  // forward migration instead.
+  const coveredHasAnyAuthTable = [...desired.tables.keys()].some((t) =>
+    covered.has(t)
+  )
+  if (coveredHasAnyAuthTable) {
+    return { status: 'incremental-unsupported', missingTables, missingColumns }
+  }
+
+  const file = nextMigrationFile(resolved.migrationsDir, 'better-auth')
+  const header =
+    '-- Generated by `pikku db generate` from defineAuth (Better Auth).\n' +
+    '-- Re-run the command after changing the auth config.\n\n'
+  writeFileSync(file, header + desired.sql + '\n', 'utf8')
+  return { status: 'written', file, missingTables }
 }

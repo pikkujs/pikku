@@ -16,6 +16,7 @@ import { watch } from './functions/commands/watch.js'
 import { consoleCommand } from './functions/commands/console.js'
 import { dev } from './functions/commands/dev.js'
 import { dbMigrate } from './functions/commands/db-migrate.js'
+import { dbGenerate } from './functions/commands/db-generate.js'
 import { dbSeed } from './functions/commands/db-seed.js'
 import { dbReset } from './functions/commands/db-reset.js'
 import { dbAudit } from './functions/commands/db-audit.js'
@@ -273,6 +274,10 @@ wireCLI({
           func: dbMigrate,
           description:
             'Apply pending SQL migrations and regenerate db/schema.d.ts',
+        }),
+        generate: pikkuCLICommand({
+          func: dbGenerate,
+          description: 'Generate SQL migrations from detected schema changes',
         }),
         seed: pikkuCLICommand({
           func: dbSeed,
