@@ -26,6 +26,17 @@ class TestVariablesService implements VariablesService {
     }
   }
 
+  getVariables<T extends Record<string, unknown> = Record<string, unknown>>(
+    names: (keyof T & string)[]
+  ): T {
+    const out: Record<string, unknown> = {}
+    for (const name of names) {
+      const value = this.get(name)
+      if (value !== undefined) out[name] = value
+    }
+    return out as T
+  }
+
   getAll(): Record<string, string> {
     return this.store
   }

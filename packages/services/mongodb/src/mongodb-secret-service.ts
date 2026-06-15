@@ -131,7 +131,9 @@ export class MongoDBSecretService implements SecretService {
     await this.logAudit(key, 'delete')
   }
 
-  async getSecrets(keys: string[]): Promise<Record<string, unknown>> {
+  async getSecrets<
+    T extends Record<string, unknown> = Record<string, unknown>,
+  >(keys: (keyof T & string)[]): Promise<T> {
     const rows = await this.secrets
       .find({ _id: { $in: keys } } as any)
       .toArray()
@@ -148,7 +150,7 @@ export class MongoDBSecretService implements SecretService {
         // skip secrets that fail to decrypt
       }
     }
-    return out
+    return out as T
   }
 
   async rotateKEK(): Promise<number> {

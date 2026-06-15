@@ -13,19 +13,22 @@ import { defineAuth } from '@pikku/better-auth'
  * The factory runs lazily on the first auth request, so it pulls secrets (and a
  * database) off the injected `services`.
  */
-export const auth = defineAuth(async (services) =>
-  betterAuth({
-    secret: await services.secrets.getSecret('BETTER_AUTH_SECRET'),
+export const auth = defineAuth(async ({ secrets }) => {
+  // Fetch every secret in one batch rather than awaiting each individually.
+  const { BETTER_AUTH_SECRET, GITHUB_OAUTH } = await secrets.getSecrets<{
+    BETTER_AUTH_SECRET: string
+    GITHUB_OAUTH: { clientId: string; clientSecret: string }
+  }>(['BETTER_AUTH_SECRET', 'GITHUB_OAUTH'])
+
+  return betterAuth({
+    secret: BETTER_AUTH_SECRET,
     // In-memory store keeps the template zero-config; swap for the Kysely
     // adapter (`better-auth/adapters/kysely`) backed by `services.kysely` in
     // production.
     database: memoryAdapter({}),
     emailAndPassword: { enabled: true },
     socialProviders: {
-      github: await services.secrets.getSecret<{
-        clientId: string
-        clientSecret: string
-      }>('GITHUB_OAUTH'),
+      github: GITHUB_OAUTH,
     },
   })
-)
+})

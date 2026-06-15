@@ -232,7 +232,7 @@ describe('addAuth inspector', () => {
     }
   })
 
-  test('extracts services from services.<name> member access', async () => {
+  test('extracts services from the destructured factory param', async () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-svc-member-'))
     const file = join(rootDir, 'auth.ts')
 
@@ -241,10 +241,10 @@ describe('addAuth inspector', () => {
       [
         "import { defineAuth } from '@pikku/better-auth'",
         "import { betterAuth } from 'better-auth'",
-        'export const auth = defineAuth(async (services) =>',
+        'export const auth = defineAuth(async ({ kysely, secrets }) =>',
         '  betterAuth({',
-        '    database: { db: services.kysely, type: "postgres" },',
-        "    socialProviders: { github: await services.secrets.getSecret('GITHUB_OAUTH') },",
+        '    database: { db: kysely, type: "postgres" },',
+        "    socialProviders: { github: await secrets.getSecret('GITHUB_OAUTH') },",
         '  })',
         ')',
       ].join('\n')
@@ -274,8 +274,8 @@ describe('addAuth inspector', () => {
       [
         "import { defineAuth } from '@pikku/better-auth'",
         "import { betterAuth } from 'better-auth'",
-        'export const auth = defineAuth((services) =>',
-        '  betterAuth({ database: { db: services.kysely, type: "postgres" } })',
+        'export const auth = defineAuth(({ kysely }) =>',
+        '  betterAuth({ database: { db: kysely, type: "postgres" } })',
         ')',
       ].join('\n')
     )
