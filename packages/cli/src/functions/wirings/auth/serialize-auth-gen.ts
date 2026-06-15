@@ -20,6 +20,11 @@ function providerSecretName(name: string): string {
   return `${name.replace(/-([a-z])/g, (_, c) => c.toUpperCase())}OAuth`
 }
 
+function variableSchemaName(name: string, field: string): string {
+  const camel = (s: string) => s.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+  return `${capitalize(camel(name))}${capitalize(field)}VariableSchema`
+}
+
 /**
  * The two files generated from a `defineAuth` export.
  *
@@ -127,12 +132,17 @@ export const serializeAuthGen = (
       string,
       { variableId: string; description: string },
     ][]) {
+      // PKU111 requires `schema` to be a variable reference, not an inline
+      // expression — so each variable gets a named schema const.
+      const schemaName = variableSchemaName(name, field)
+      secrets.push(`export const ${schemaName} = z.string()`)
+      secrets.push('')
       secrets.push(`wireVariable({`)
       secrets.push(`  name: '${name}_${field}',`)
       secrets.push(`  displayName: '${def.displayName} ${capitalize(field)}',`)
       secrets.push(`  description: '${meta.description}',`)
       secrets.push(`  variableId: '${meta.variableId}',`)
-      secrets.push(`  schema: z.string(),`)
+      secrets.push(`  schema: ${schemaName},`)
       secrets.push(`})`)
       secrets.push('')
     }

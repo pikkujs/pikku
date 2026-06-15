@@ -24,8 +24,13 @@ export const auth = defineAuth(async ({ secrets }) => {
     secret: BETTER_AUTH_SECRET,
     // In-memory store keeps the template zero-config; swap for the Kysely
     // adapter (`better-auth/adapters/kysely`) backed by `services.kysely` in
-    // production.
-    database: memoryAdapter({}),
+    // production. The memory adapter needs an array per better-auth model.
+    database: memoryAdapter({
+      user: [],
+      session: [],
+      account: [],
+      verification: [],
+    }),
     emailAndPassword: { enabled: true },
     socialProviders: {
       github: GITHUB_OAUTH,

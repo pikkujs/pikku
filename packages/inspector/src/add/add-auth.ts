@@ -74,32 +74,6 @@ const readObjectProp = (
 }
 
 /**
- * Collect the services a non-destructured factory reaches for by scanning its
- * body for `<paramName>.<service>` member accesses, e.g. `services.kysely`,
- * `services.secrets`. Lets the `(services) => betterAuth(...)` form still produce
- * an optimized service set instead of falling back to "all services".
- */
-const extractServicesFromMemberAccess = (
-  factory: ts.ArrowFunction | ts.FunctionExpression,
-  paramName: string
-): string[] => {
-  const found = new Set<string>()
-  const visit = (n: ts.Node) => {
-    if (
-      ts.isPropertyAccessExpression(n) &&
-      ts.isIdentifier(n.expression) &&
-      n.expression.text === paramName &&
-      ts.isIdentifier(n.name)
-    ) {
-      found.add(n.name.text)
-    }
-    ts.forEachChild(n, visit)
-  }
-  if (factory.body) visit(factory.body)
-  return [...found]
-}
-
-/**
  * Detects `defineAuth((services) => betterAuth({...}))` calls.
  *
  * `defineAuth` is pure: it wraps a factory that returns a configured better-auth
@@ -175,21 +149,11 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
 
   state.auth.files.add(sourceFile)
 
-  // Derive the services the factory touches. A destructured first param names
-  // them directly; a plain `(services) =>` is scanned for `services.<name>`.
-  let services: FunctionServicesMeta
-  const firstParam = factory.parameters[0]
-  if (firstParam && ts.isObjectBindingPattern(firstParam.name)) {
-    services = extractServicesFromFunction(factory)
-  } else if (firstParam && ts.isIdentifier(firstParam.name)) {
-    const accessed = extractServicesFromMemberAccess(
-      factory,
-      firstParam.name.text
-    )
-    services = { optimized: true, services: accessed }
-  } else {
-    services = { optimized: true, services: [] }
-  }
+  // Derive the services the factory touches from its destructured first param —
+  // the same convention as every other pikku wiring. A non-destructured param
+  // yields optimized:false (handler gets all singleton services), with the
+  // standard diagnostic steering the user to destructure.
+  const services: FunctionServicesMeta = extractServicesFromFunction(factory)
 
   // Find the inner betterAuth({...}) call to read providers/basePath/credentials.
   let basePath = DEFAULT_BASE_PATH

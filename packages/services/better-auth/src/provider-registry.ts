@@ -19,7 +19,7 @@ const clientId = 'z.string().describe("OAuth client ID")'
 const clientSecret = 'z.string().describe("OAuth client secret")'
 const standardFields = { clientId, clientSecret }
 
-/** PROVIDER_KEY → KEY_OAUTH (e.g. `microsoft-entra-id` → `MICROSOFT_ENTRA_ID_OAUTH`). */
+/** PROVIDER_KEY → KEY_OAUTH (e.g. `github` → `GITHUB_OAUTH`). */
 const secretIdFor = (key: string) => `${key.replace(/-/g, '_').toUpperCase()}_OAUTH`
 
 const oauth = (key: string, displayName: string): AuthProviderDef => ({
@@ -51,7 +51,15 @@ export const PROVIDER_REGISTRY = {
       domain: {
         variableId: 'COGNITO_DOMAIN',
         description:
-          'Cognito user pool domain (e.g. https://your-domain.auth.us-east-1.amazoncognito.com)',
+          'Cognito user pool domain (e.g. your-domain.auth.us-east-1.amazoncognito.com)',
+      },
+      region: {
+        variableId: 'COGNITO_REGION',
+        description: 'AWS region the Cognito user pool is hosted in (e.g. us-east-1)',
+      },
+      userPoolId: {
+        variableId: 'COGNITO_USER_POOL_ID',
+        description: 'Cognito user pool id (e.g. us-east-1_xxxxxxxxx)',
       },
     },
   },
@@ -68,11 +76,11 @@ export const PROVIDER_REGISTRY = {
   line: oauth('line', 'LINE OAuth'),
   linear: oauth('linear', 'Linear OAuth'),
   linkedin: oauth('linkedin', 'LinkedIn OAuth'),
-  'microsoft-entra-id': {
-    ...oauth('microsoft-entra-id', 'Microsoft Entra ID OAuth'),
+  microsoft: {
+    ...oauth('microsoft', 'Microsoft Entra ID OAuth'),
     variables: {
       tenantId: {
-        variableId: 'MICROSOFT_ENTRA_ID_TENANT_ID',
+        variableId: 'MICROSOFT_TENANT_ID',
         description: 'Microsoft Entra ID tenant ID (or "common")',
       },
     },

@@ -166,25 +166,31 @@ describe('serializeAuthGen', () => {
     assert.doesNotMatch(secrets, /addHTTPMiddleware/)
   })
 
-  test('generates hyphenated provider names correctly (microsoft-entra-id)', () => {
-    const output = genSecrets(['microsoft-entra-id'])
-    assert.match(output, /MicrosoftEntraIdOAuthSchema/)
-    assert.match(output, /microsoftEntraIdOAuth/)
-    assert.match(output, /secretId: 'MICROSOFT_ENTRA_ID_OAUTH'/)
+  test('derives schema/secret names from the provider key (microsoft)', () => {
+    const output = genSecrets(['microsoft'])
+    assert.match(output, /MicrosoftOAuthSchema/)
+    assert.match(output, /microsoftOAuth/)
+    assert.match(output, /secretId: 'MICROSOFT_OAUTH'/)
   })
 
   test('does not emit wireVariable for standard oauth providers', () => {
     assert.doesNotMatch(genSecrets(['github']), /wireVariable\({/)
   })
 
-  test('emits wireVariable for microsoft-entra-id tenantId', () => {
-    assert.match(
-      genSecrets(['microsoft-entra-id']),
-      /variableId: 'MICROSOFT_ENTRA_ID_TENANT_ID'/
-    )
+  test('emits wireVariable for microsoft tenantId', () => {
+    assert.match(genSecrets(['microsoft']), /variableId: 'MICROSOFT_TENANT_ID'/)
   })
 
   test('emits wireVariable for cognito domain', () => {
     assert.match(genSecrets(['cognito']), /variableId: 'COGNITO_DOMAIN'/)
+  })
+
+  test('wireVariable schema is a named const reference, not inline (PKU111)', () => {
+    const out = genSecrets(['cognito'])
+    // A named schema const must be exported and referenced by the wireVariable.
+    assert.match(out, /export const \w+VariableSchema = z\.string\(\)/)
+    assert.match(out, /schema: \w+VariableSchema,/)
+    // The inline form would trip PKU111 (schema must be an identifier).
+    assert.doesNotMatch(out, /schema: z\.string\(\),/)
   })
 })

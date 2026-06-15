@@ -4,10 +4,17 @@ import './auth.wiring.js'
 import './me.http.js'
 
 import { fetch } from '@pikku/core'
-import { resetStore } from './user-store.js'
-import { ALL_OAUTH_PROVIDERS } from './providers.js'
+import { VERIFIER_OAUTH_PROVIDERS } from './providers.js'
 
 const BASE = 'http://localhost'
+const AUTH = `${BASE}/api/auth`
+
+// better-auth enforces an Origin check on state-changing requests; a browser
+// always sends one, so the verifier does too.
+const JSON_HEADERS = {
+  'Content-Type': 'application/json',
+  Origin: BASE,
+}
 
 interface TestResult {
   name: string
@@ -41,262 +48,154 @@ function assertTruthy(value: unknown, label: string): void {
     throw new Error(`${label}: expected truthy, got ${JSON.stringify(value)}`)
 }
 
-function assertFalsy(value: unknown, label: string): void {
-  if (value)
-    throw new Error(`${label}: expected falsy, got ${JSON.stringify(value)}`)
+/** Pull the better-auth session cookie out of a response's Set-Cookie header. */
+function extractSessionCookie(res: Response): string | null {
+  const raw = res.headers.get('set-cookie') ?? ''
+  const match = raw.match(/(better-auth\.session_token)=([^;]+)/)
+  // A cleared cookie (sign-out) has an empty value — treat that as no cookie.
+  return match && match[2] ? `${match[1]}=${match[2]}` : null
 }
 
-interface CsrfResult {
-  csrfToken: string
-  csrfCookie: string
-}
-
-async function getCsrf(sessionCookie?: string): Promise<CsrfResult> {
-  const headers: Record<string, string> = {}
-  if (sessionCookie) headers['Cookie'] = sessionCookie
-
-  const res = await fetch(new Request(`${BASE}/auth/csrf`, { headers }))
-  const { csrfToken } = (await res.json()) as { csrfToken: string }
-
-  const rawCookie = res.headers.get('set-cookie') ?? ''
-  const csrfCookieMatch = rawCookie.match(/authjs\.csrf-token=([^;]+)/)
-  const csrfCookie = csrfCookieMatch
-    ? `authjs.csrf-token=${csrfCookieMatch[1]}`
-    : ''
-
-  return { csrfToken, csrfCookie }
-}
-
-async function credentialsPost(
-  email: string,
-  password: string,
-  csrfToken: string,
-  csrfCookie: string,
-  mode?: string
-): Promise<Response> {
-  const body = new URLSearchParams({
-    email,
-    password,
-    csrfToken,
-    callbackUrl: `${BASE}/`,
-  })
-  if (mode) body.set('mode', mode)
-
+function signUp(email: string, password: string): Promise<Response> {
   return fetch(
-    new Request(`${BASE}/auth/callback/credentials`, {
+    new Request(`${AUTH}/sign-up/email`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Cookie: csrfCookie,
-      },
-      body: body.toString(),
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ name: email.split('@')[0], email, password }),
     })
   )
 }
 
-function extractSessionCookie(res: Response): string | null {
-  const raw = res.headers.get('set-cookie') ?? ''
-  const match = raw.match(/authjs\.session-token=([^;]+)/)
-  return match ? `authjs.session-token=${match[1]}` : null
+function signIn(email: string, password: string): Promise<Response> {
+  return fetch(
+    new Request(`${AUTH}/sign-in/email`, {
+      method: 'POST',
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ email, password }),
+    })
+  )
 }
 
 async function main(): Promise<void> {
   const config = await createConfig()
   await createSingletonServices(config)
 
-  console.log('\nAuth.js Verifier')
-  console.log('================')
-
-  console.log('\n--- CSRF ---')
-
-  await runTest('GET /auth/csrf returns csrfToken', async () => {
-    const { csrfToken } = await getCsrf()
-    assertTruthy(csrfToken, 'csrfToken')
-  })
-
-  console.log('\n--- Providers ---')
-
-  await runTest(
-    'GET /auth/providers lists all configured providers',
-    async () => {
-      const res = await fetch(new Request(`${BASE}/auth/providers`))
-      const providers = (await res.json()) as Record<string, unknown>
-      for (const provider of ALL_OAUTH_PROVIDERS) {
-        assertTruthy(providers[provider], `provider ${provider} present`)
-      }
-      assertTruthy(providers['credentials'], 'credentials provider present')
-    }
-  )
+  console.log('\nBetter Auth Verifier')
+  console.log('====================')
 
   console.log('\n--- Credentials Signup ---')
 
   await runTest('signup creates user and returns session cookie', async () => {
-    resetStore()
-    const { csrfToken, csrfCookie } = await getCsrf()
-    const res = await credentialsPost(
-      'alice@example.com',
-      'password123',
-      csrfToken,
-      csrfCookie,
-      'signup'
-    )
-    const location = res.headers.get('location') ?? ''
-    assertFalsy(location.includes('error='), 'no error in redirect')
-    const sessionCookie = extractSessionCookie(res)
-    assertTruthy(sessionCookie, 'session cookie present after signup')
+    const res = await signUp('alice@example.com', 'password123')
+    assertEqual(res.status, 200, 'signup status')
+    assertTruthy(extractSessionCookie(res), 'session cookie present after signup')
   })
 
-  await runTest('duplicate signup fails with CredentialsSignin', async () => {
-    resetStore()
-    const { csrfToken: t1, csrfCookie: c1 } = await getCsrf()
-    await credentialsPost('bob@example.com', 'pass', t1, c1, 'signup')
-    const { csrfToken: t2, csrfCookie: c2 } = await getCsrf()
-    const res = await credentialsPost(
-      'bob@example.com',
-      'other',
-      t2,
-      c2,
-      'signup'
-    )
-    const location = res.headers.get('location') ?? ''
-    assertTruthy(
-      location.includes('error=CredentialsSignin'),
-      'CredentialsSignin error'
-    )
+  await runTest('duplicate signup is rejected', async () => {
+    await signUp('bob@example.com', 'password123')
+    const res = await signUp('bob@example.com', 'password123')
+    assertTruthy(res.status >= 400, `duplicate signup status ${res.status} >= 400`)
   })
 
   console.log('\n--- Session ---')
 
-  await runTest('GET /auth/session returns user after login', async () => {
-    resetStore()
-    const { csrfToken, csrfCookie } = await getCsrf()
-    const signupRes = await credentialsPost(
-      'carol@example.com',
-      'secret',
-      csrfToken,
-      csrfCookie,
-      'signup'
-    )
-    const sessionCookie = extractSessionCookie(signupRes)
-    assertTruthy(sessionCookie, 'session cookie from signup')
+  await runTest('GET /api/auth/get-session returns user after signup', async () => {
+    const signupRes = await signUp('carol@example.com', 'password123')
+    const cookie = extractSessionCookie(signupRes)
+    assertTruthy(cookie, 'session cookie from signup')
 
-    const sessionRes = await fetch(
-      new Request(`${BASE}/auth/session`, {
-        headers: { Cookie: sessionCookie! },
-      })
+    const res = await fetch(
+      new Request(`${AUTH}/get-session`, { headers: { Cookie: cookie! } })
     )
-    const session = (await sessionRes.json()) as any
+    const session = (await res.json()) as any
     assertEqual(session?.user?.email, 'carol@example.com', 'session email')
   })
 
   await runTest(
-    'authJsSession middleware decodes cookie into pikku session',
+    'betterAuthSession middleware decodes cookie into pikku session',
     async () => {
-      resetStore()
-      const { csrfToken, csrfCookie } = await getCsrf()
-      const signupRes = await credentialsPost(
-        'dave@example.com',
-        'pass',
-        csrfToken,
-        csrfCookie,
-        'signup'
-      )
-      const sessionCookie = extractSessionCookie(signupRes)
-      assertTruthy(sessionCookie, 'session cookie')
+      const signupRes = await signUp('dave@example.com', 'password123')
+      const cookie = extractSessionCookie(signupRes)
+      assertTruthy(cookie, 'session cookie')
 
-      const meRes = await fetch(
-        new Request(`${BASE}/me`, {
-          headers: { Cookie: sessionCookie! },
-        })
+      const res = await fetch(
+        new Request(`${BASE}/me`, { headers: { Cookie: cookie! } })
       )
-      const body = (await meRes.json()) as any
-      assertTruthy(body?.userId, 'userId from authJsSession')
+      const body = (await res.json()) as any
+      assertTruthy(body?.userId, 'userId from betterAuthSession')
     }
   )
+
+  await runTest('GET /me is unauthorized without a session', async () => {
+    const res = await fetch(new Request(`${BASE}/me`))
+    assertTruthy(res.status >= 400, `unauthenticated /me status ${res.status} >= 400`)
+  })
 
   console.log('\n--- Login ---')
 
   await runTest('login with valid credentials succeeds', async () => {
-    resetStore()
-    const { csrfToken: t1, csrfCookie: c1 } = await getCsrf()
-    await credentialsPost('eve@example.com', 'correct', t1, c1, 'signup')
-
-    const { csrfToken: t2, csrfCookie: c2 } = await getCsrf()
-    const loginRes = await credentialsPost('eve@example.com', 'correct', t2, c2)
-    const location = loginRes.headers.get('location') ?? ''
-    assertFalsy(location.includes('error='), 'no error in redirect')
-    assertTruthy(extractSessionCookie(loginRes), 'session cookie after login')
+    await signUp('eve@example.com', 'correct-password')
+    const res = await signIn('eve@example.com', 'correct-password')
+    assertEqual(res.status, 200, 'login status')
+    assertTruthy(extractSessionCookie(res), 'session cookie after login')
   })
 
   await runTest('login with wrong password fails', async () => {
-    resetStore()
-    const { csrfToken: t1, csrfCookie: c1 } = await getCsrf()
-    await credentialsPost('frank@example.com', 'correct', t1, c1, 'signup')
-
-    const { csrfToken: t2, csrfCookie: c2 } = await getCsrf()
-    const loginRes = await credentialsPost('frank@example.com', 'wrong', t2, c2)
-    const location = loginRes.headers.get('location') ?? ''
-    assertTruthy(
-      location.includes('error=CredentialsSignin'),
-      'CredentialsSignin error'
-    )
+    await signUp('frank@example.com', 'correct-password')
+    const res = await signIn('frank@example.com', 'wrong-password')
+    assertEqual(res.status, 401, 'wrong-password status')
   })
 
   await runTest('login for unknown user fails', async () => {
-    const { csrfToken, csrfCookie } = await getCsrf()
-    const res = await credentialsPost(
-      'ghost@example.com',
-      'anything',
-      csrfToken,
-      csrfCookie
-    )
-    const location = res.headers.get('location') ?? ''
-    assertTruthy(
-      location.includes('error=CredentialsSignin'),
-      'CredentialsSignin error'
-    )
+    const res = await signIn('ghost@example.com', 'anything-here')
+    assertEqual(res.status, 401, 'unknown-user status')
   })
+
+  console.log('\n--- Social Providers ---')
+
+  for (const provider of VERIFIER_OAUTH_PROVIDERS) {
+    await runTest(
+      `social sign-in for ${provider} builds an authorization URL`,
+      async () => {
+        const res = await fetch(
+          new Request(`${AUTH}/sign-in/social`, {
+            method: 'POST',
+            headers: JSON_HEADERS,
+            body: JSON.stringify({ provider, callbackURL: '/' }),
+          })
+        )
+        assertEqual(res.status, 200, `${provider} status`)
+        const body = (await res.json()) as { url?: string }
+        assertTruthy(body.url, `${provider} authorization url`)
+        assertTruthy(
+          body.url!.includes(`fake-${provider}-client-id`),
+          `${provider} url carries the wired client id`
+        )
+      }
+    )
+  }
 
   console.log('\n--- Logout ---')
 
-  await runTest('signout clears session', async () => {
-    resetStore()
-    const { csrfToken: t1, csrfCookie: c1 } = await getCsrf()
-    const signupRes = await credentialsPost(
-      'grace@example.com',
-      'pass',
-      t1,
-      c1,
-      'signup'
-    )
-    const sessionCookie = extractSessionCookie(signupRes)
-    assertTruthy(sessionCookie, 'session cookie before logout')
+  await runTest('sign-out clears the session', async () => {
+    const signupRes = await signUp('grace@example.com', 'password123')
+    const cookie = extractSessionCookie(signupRes)
+    assertTruthy(cookie, 'session cookie before logout')
 
-    const { csrfToken: t2, csrfCookie: c2 } = await getCsrf(sessionCookie!)
-    const body = new URLSearchParams({ csrfToken: t2, callbackUrl: `${BASE}/` })
     const signoutRes = await fetch(
-      new Request(`${BASE}/auth/signout`, {
+      new Request(`${AUTH}/sign-out`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Cookie: `${sessionCookie}; ${c2}`,
-        },
-        body: body.toString(),
+        headers: { ...JSON_HEADERS, Cookie: cookie! },
+        body: '{}',
       })
     )
-    const location = signoutRes.headers.get('location') ?? ''
-    assertFalsy(location.includes('error='), 'no error after signout')
-
-    const signoutSetCookie = signoutRes.headers.get('set-cookie') ?? ''
+    assertEqual(signoutRes.status, 200, 'sign-out status')
+    const cleared = signoutRes.headers.get('set-cookie') ?? ''
     assertTruthy(
-      signoutSetCookie.includes('authjs.session-token=') &&
-        /(Max-Age=0|Expires=)/i.test(signoutSetCookie),
-      'session cookie cleared by signout response'
+      cleared.includes('better-auth.session_token=') &&
+        /Max-Age=0/i.test(cleared),
+      'session cookie cleared by sign-out response'
     )
-
-    const sessionAfter = await fetch(new Request(`${BASE}/auth/session`))
-    const data = await sessionAfter.json()
-    assertFalsy(data, 'session is empty without cookie after logout')
   })
 
   const passed = results.filter((r) => r.passed).length
@@ -312,10 +211,10 @@ async function main(): Promise<void> {
     for (const r of results.filter((r) => !r.passed)) {
       console.log(`  ✗ ${r.name}: ${r.error}`)
     }
-    console.log('\n✗ Some auth-js tests failed!')
+    console.log('\n✗ Some better-auth tests failed!')
     process.exit(1)
   } else {
-    console.log('\n✓ All auth-js tests passed!')
+    console.log('\n✓ All better-auth tests passed!')
   }
 }
 

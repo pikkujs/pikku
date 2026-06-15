@@ -1,32 +1,15 @@
-import type { AuthProvider } from '@pikku/auth-js'
+import type { AuthProvider } from '@pikku/better-auth'
 
-export const ALL_OAUTH_PROVIDERS: AuthProvider[] = [
+/**
+ * A representative set of better-auth social providers the verifier configures —
+ * including one with a single config variable (`microsoft` → tenantId) and one
+ * with several (`cognito` → domain/region/userPoolId) to exercise the CLI's
+ * wireSecret/wireVariable codegen.
+ */
+export const VERIFIER_OAUTH_PROVIDERS: AuthProvider[] = [
   'github',
   'google',
   'discord',
-  'twitter',
-  'apple',
-  'facebook',
-  'linkedin',
-  'slack',
-  'spotify',
-  'twitch',
-  'gitlab',
-  'reddit',
-  'notion',
-  'instagram',
-  'zoom',
-  'tiktok',
-  'threads',
-  'patreon',
-  'dropbox',
-  'hubspot',
-  'salesforce',
-  'atlassian',
-  'strava',
-  'auth0',
-  'okta',
-  'microsoft-entra-id',
-  'keycloak',
+  'microsoft',
   'cognito',
 ]
