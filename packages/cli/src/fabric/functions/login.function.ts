@@ -25,7 +25,7 @@ const POLL_TIMEOUT_MS = 5 * 60 * 1000
 
 /**
  * Device-authorization-style CLI login. Server mints a short code, user types
- * it on the console's /cli-auth page (logging in via Auth.js if not already
+ * it on the console's /cli-auth page (logging in via Better Auth if not already
  * signed in). CLI polls until the row flips to 'confirmed' and grabs the
  * one-shot bearer.
  */

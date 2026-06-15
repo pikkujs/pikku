@@ -20,7 +20,7 @@ export interface AuthProviderField {
 export interface AuthProviderDef {
   id: string
   name: string
-  /** Auth.js provider id used in the callback URL path segment */
+  /** Better Auth provider id used in the callback URL path segment */
   callbackId: string
   description: string
   setupUrl: string
@@ -244,7 +244,7 @@ const AuthProvidersTable: React.FC<{ searchQuery: string }> = ({ searchQuery }) 
     <TableListPage
       icon={KeyRound}
       title="Auth Providers"
-      docsHref="https://authjs.dev/getting-started/providers"
+      docsHref="https://www.better-auth.com/docs/concepts/oauth"
       data={AUTH_PROVIDERS}
       columns={columns}
       getKey={(p) => p.id}
@@ -271,7 +271,7 @@ export const AuthProvidersPage: React.FC = () => {
           <ListPageHeader
             title={t('auth_providers.title')}
             description={t('auth_providers.description')}
-            docsHref="https://authjs.dev/getting-started/providers"
+            docsHref="https://www.better-auth.com/docs/concepts/oauth"
             filters={
               <TextInput
                 placeholder={t('auth_providers.search_placeholder')}
