@@ -74,7 +74,7 @@ async function hasAuthSessionMiddleware(fnDir: string): Promise<boolean> {
   const meta = await readJsonSafe<MiddlewareGroupsMeta>(metaPath)
   if (!meta?.instances) return false
   return Object.values(meta.instances).some(
-    (instance) => instance.definitionId === 'authJsSession'
+    (instance) => instance.definitionId === 'betterAuthSession'
   )
 }
 

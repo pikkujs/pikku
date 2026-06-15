@@ -33,8 +33,8 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<void, void>({
       getFileImportRelativePath(typesFile, file, packageMappings)
 
     // Include the typed defineAuth re-export only when the project has a
-    // defineAuth declaration. This avoids importing @pikku/auth-js in projects
-    // that don't use it.
+    // defineAuth declaration. This avoids importing @pikku/better-auth in
+    // projects that don't use it.
     const state = await getInspectorState()
     const authTypesImportPath =
       authTypesFile && state.auth.definition
