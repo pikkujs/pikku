@@ -651,8 +651,15 @@ export const pikkuServices = (
     const authFactory = __pikkuState(null, 'package', 'authFactory')
     if (authFactory) {
       let authInstance: Promise<unknown> | undefined
-      ;(services as any).auth = () =>
-        (authInstance ??= Promise.resolve(authFactory(services as any)))
+      ;(services as any).auth = () => {
+        authInstance ??= Promise.resolve()
+          .then(() => authFactory(services as any))
+          .catch((error) => {
+            authInstance = undefined
+            throw error
+          })
+        return authInstance
+      }
     }
     const resolved = services as RequiredSingletonServices
     __pikkuState(null, 'package', 'singletonServices', resolved as any)

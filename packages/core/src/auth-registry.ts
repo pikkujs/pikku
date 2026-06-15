@@ -11,8 +11,13 @@ export interface AuthRegistry {
 
 let _registry: AuthRegistry = { providers: [], hasCredentials: false }
 
+const cloneRegistry = (registry: AuthRegistry): AuthRegistry => ({
+  hasCredentials: registry.hasCredentials,
+  providers: registry.providers.map((provider) => ({ ...provider })),
+})
+
 export const setAuthRegistry = (registry: AuthRegistry): void => {
-  _registry = registry
+  _registry = cloneRegistry(registry)
 }
 
-export const getAuthRegistry = (): AuthRegistry => _registry
+export const getAuthRegistry = (): AuthRegistry => cloneRegistry(_registry)

@@ -170,6 +170,29 @@ describe('addAuth inspector', () => {
     }
   })
 
+  test('errors when pikkuBetterAuth is exported but not a const', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-notconst-'))
+    const file = join(rootDir, 'auth.ts')
+
+    await writeFile(
+      file,
+      [
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
+        "import { betterAuth } from 'better-auth'",
+        'export let auth = pikkuBetterAuth(() => betterAuth({}))',
+      ].join('\n')
+    )
+
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      await inspect(makeLogger(criticals), [file], { rootDir })
+      const hit = criticals.find((e) => e.code === ErrorCode.AUTH_NOT_EXPORTED)
+      assert.ok(hit, 'expected AUTH_NOT_EXPORTED critical for non-const export')
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
   test('errors when more than one pikkuBetterAuth exists in the codebase', async () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-dupe-'))
     const fileA = join(rootDir, 'auth.ts')

@@ -22,9 +22,7 @@ const DEFAULT_BASE_PATH = '/api/auth'
  * factory body. Supports both `(s) => betterAuth({...})` and
  * `(s) => { ...; return betterAuth({...}) }`.
  */
-const findBetterAuthCall = (
-  node: ts.Node
-): ts.CallExpression | undefined => {
+const findBetterAuthCall = (node: ts.Node): ts.CallExpression | undefined => {
   let found: ts.CallExpression | undefined
   const visit = (n: ts.Node) => {
     if (found) return
@@ -96,7 +94,8 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
   if (!ts.isCallExpression(node)) return
 
   const expression = node.expression
-  if (!ts.isIdentifier(expression) || expression.text !== 'pikkuBetterAuth') return
+  if (!ts.isIdentifier(expression) || expression.text !== 'pikkuBetterAuth')
+    return
 
   const sourceFile = node.getSourceFile().fileName
 
@@ -114,14 +113,17 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
   // VariableDeclaration -> VariableDeclarationList -> VariableStatement
   const declList = varDecl.parent
   const varStatement = declList?.parent
+  const isConst =
+    ts.isVariableDeclarationList(declList) &&
+    (declList.flags & ts.NodeFlags.Const) !== 0
   const isExported =
     varStatement &&
     ts.isVariableStatement(varStatement) &&
     varStatement.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)
-  if (!isExported) {
+  if (!isExported || !isConst) {
     logger.critical(
       ErrorCode.AUTH_NOT_EXPORTED,
-      `pikkuBetterAuth(...) must be assigned to an exported const so the CLI can import it. Add \`export\` to \`const ${exportName}\` in ${sourceFile}`
+      `pikkuBetterAuth(...) must be assigned to an exported const so the CLI can import it. Use \`export const ${exportName} = pikkuBetterAuth(...)\` in ${sourceFile}`
     )
     return
   }
@@ -183,7 +185,8 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
     if (socialProviders) {
       for (const prop of socialProviders.properties) {
         const key =
-          (ts.isPropertyAssignment(prop) || ts.isShorthandPropertyAssignment(prop)) &&
+          (ts.isPropertyAssignment(prop) ||
+            ts.isShorthandPropertyAssignment(prop)) &&
           (ts.isIdentifier(prop.name) || ts.isStringLiteral(prop.name))
             ? prop.name.text
             : undefined

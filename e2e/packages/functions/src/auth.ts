@@ -15,15 +15,23 @@ type OAuthSecret = { clientId: string; clientSecret: string }
  * for the lifetime of the server process; scenarios use unique emails rather
  * than resetting (Better Auth exposes no reset hook).
  */
-export const auth = pikkuBetterAuth(async ({ secrets }) => {
+export const auth = pikkuBetterAuth(async ({ secrets, variables }) => {
   const { BETTER_AUTH_SECRET, GITHUB_OAUTH } = await secrets.getSecrets<{
     BETTER_AUTH_SECRET: string
     GITHUB_OAUTH: OAuthSecret
   }>(['BETTER_AUTH_SECRET', 'GITHUB_OAUTH'])
 
+  const { API_URL } = await variables.getVariables<{ API_URL: string }>([
+    'API_URL',
+  ])
+
+  if (!BETTER_AUTH_SECRET) {
+    throw new Error('Missing required secret: BETTER_AUTH_SECRET')
+  }
+
   return betterAuth({
     secret: BETTER_AUTH_SECRET,
-    baseURL: process.env.API_URL || 'http://localhost:4077',
+    baseURL: API_URL ?? 'http://localhost:4077',
     // The memory adapter needs an array per Better Auth model.
     database: memoryAdapter({
       user: [],
@@ -38,7 +46,7 @@ export const auth = pikkuBetterAuth(async ({ secrets }) => {
       minPasswordLength: 6,
     },
     socialProviders: {
-      github: GITHUB_OAUTH,
+      ...(GITHUB_OAUTH ? { github: GITHUB_OAUTH } : {}),
     },
   })
 })

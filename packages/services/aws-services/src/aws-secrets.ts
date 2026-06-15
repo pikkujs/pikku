@@ -54,13 +54,13 @@ export class AWSSecrets implements SecretService {
 
   public async getSecrets<
     T extends Record<string, unknown> = Record<string, unknown>,
-  >(keys: (keyof T & string)[]): Promise<T> {
+  >(keys: (keyof T & string)[]): Promise<Partial<T>> {
     const results = await Promise.allSettled(keys.map((k) => this.getSecret(k)))
     const out: Record<string, unknown> = {}
     keys.forEach((key, i) => {
       if (results[i].status === 'fulfilled')
         out[key] = (results[i] as PromiseFulfilledResult<unknown>).value
     })
-    return out as T
+    return out as Partial<T>
   }
 }

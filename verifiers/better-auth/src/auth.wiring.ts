@@ -53,6 +53,10 @@ export const auth = pikkuBetterAuth(async ({ secrets, variables }) => {
     'COGNITO_USER_POOL_ID',
   ])
 
+  if (!BETTER_AUTH_SECRET) {
+    throw new Error('Missing required secret: BETTER_AUTH_SECRET')
+  }
+
   return betterAuth({
     secret: BETTER_AUTH_SECRET,
     baseURL: 'http://localhost',
@@ -66,19 +70,30 @@ export const auth = pikkuBetterAuth(async ({ secrets, variables }) => {
     }),
     emailAndPassword: { enabled: true },
     socialProviders: {
-      github: GITHUB_OAUTH,
-      google: GOOGLE_OAUTH,
-      discord: DISCORD_OAUTH,
-      microsoft: {
-        ...MICROSOFT_OAUTH,
-        tenantId: MICROSOFT_TENANT_ID,
-      },
-      cognito: {
-        ...COGNITO_OAUTH,
-        domain: COGNITO_DOMAIN,
-        region: COGNITO_REGION,
-        userPoolId: COGNITO_USER_POOL_ID,
-      },
+      ...(GITHUB_OAUTH ? { github: GITHUB_OAUTH } : {}),
+      ...(GOOGLE_OAUTH ? { google: GOOGLE_OAUTH } : {}),
+      ...(DISCORD_OAUTH ? { discord: DISCORD_OAUTH } : {}),
+      ...(MICROSOFT_OAUTH && MICROSOFT_TENANT_ID
+        ? {
+            microsoft: {
+              ...MICROSOFT_OAUTH,
+              tenantId: MICROSOFT_TENANT_ID,
+            },
+          }
+        : {}),
+      ...(COGNITO_OAUTH &&
+      COGNITO_DOMAIN &&
+      COGNITO_REGION &&
+      COGNITO_USER_POOL_ID
+        ? {
+            cognito: {
+              ...COGNITO_OAUTH,
+              domain: COGNITO_DOMAIN,
+              region: COGNITO_REGION,
+              userPoolId: COGNITO_USER_POOL_ID,
+            },
+          }
+        : {}),
     },
   })
 })

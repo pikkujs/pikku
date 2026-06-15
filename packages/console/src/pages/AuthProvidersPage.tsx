@@ -158,7 +158,7 @@ export const AUTH_PROVIDERS: AuthProviderDef[] = [
   {
     id: 'microsoft-entra-id',
     name: 'Microsoft / Azure AD',
-    callbackId: 'microsoft-entra-id',
+    callbackId: 'microsoft',
     description: 'Sign in with Microsoft Entra ID (Azure AD).',
     setupUrl: 'https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade',
     setupLabel: 'Register app on Azure Portal',

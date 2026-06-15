@@ -30,7 +30,7 @@ export class TypedVariablesService<
 
   getVariables<T extends Record<string, unknown> = Record<string, unknown>>(
     names: (keyof T & string)[]
-  ): Promise<T> | T {
+  ): Promise<Partial<T>> | Partial<T> {
     return this.variables.getVariables<T>(names)
   }
 

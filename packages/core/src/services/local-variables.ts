@@ -11,13 +11,13 @@ export class LocalVariablesService implements VariablesService {
 
   public getVariables<
     T extends Record<string, unknown> = Record<string, unknown>,
-  >(names: (keyof T & string)[]): T {
+  >(names: (keyof T & string)[]): Partial<T> {
     const out: Record<string, unknown> = {}
     for (const name of names) {
       const value = this.get(name)
       if (value !== undefined) out[name] = value
     }
-    return out as T
+    return out as Partial<T>
   }
 
   public get<T = string>(name: string): T | undefined {

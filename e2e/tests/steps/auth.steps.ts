@@ -20,7 +20,8 @@ function cookieHeader(): string {
 }
 
 function storeSetCookie(res: Response): void {
-  const cookies = (res.headers as { getSetCookie?: () => string[] }).getSetCookie?.() ?? []
+  const cookies =
+    (res.headers as { getSetCookie?: () => string[] }).getSetCookie?.() ?? []
   for (const c of cookies) {
     const [pair] = c.split(';')
     const idx = pair.indexOf('=')
@@ -66,7 +67,11 @@ Before({ tags: '@auth' }, function () {
 When(
   'I sign up as {string} with password {string}',
   async function (email: string, password: string) {
-    const { error } = await authClient.signUp.email({ name: email, email, password })
+    const { error } = await authClient.signUp.email({
+      name: email,
+      email,
+      password,
+    })
     lastSignupOk = !error
     if (error) jar = {}
   }
@@ -83,7 +88,11 @@ Then('the signup should fail', function () {
 Given(
   'I have signed up as {string} with password {string}',
   async function (email: string, password: string) {
-    const { error } = await authClient.signUp.email({ name: email, email, password })
+    const { error } = await authClient.signUp.email({
+      name: email,
+      email,
+      password,
+    })
     if (error) {
       throw new Error(`Signup failed unexpectedly: ${JSON.stringify(error)}`)
     }
@@ -122,8 +131,10 @@ Then('I should not be logged in', async function () {
 })
 
 When('I log out', async function () {
-  await authClient.signOut()
-  jar = {}
+  const { error } = await authClient.signOut()
+  if (error) {
+    throw new Error(`Sign out failed unexpectedly: ${JSON.stringify(error)}`)
+  }
 })
 
 Then('I should be logged out', async function () {

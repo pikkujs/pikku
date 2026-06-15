@@ -29,12 +29,16 @@ export const auth = pikkuBetterAuth(
       GITHUB_OAUTH: { clientId: string; clientSecret: string }
     }>(['BETTER_AUTH_SECRET', 'GITHUB_OAUTH'])
 
+    if (!BETTER_AUTH_SECRET) {
+      throw new Error('Missing required secret: BETTER_AUTH_SECRET')
+    }
+
     return betterAuth({
       secret: BETTER_AUTH_SECRET,
       database: { db: kysely, type: 'sqlite' },
       emailAndPassword: { enabled: true },
       socialProviders: {
-        github: GITHUB_OAUTH,
+        ...(GITHUB_OAUTH ? { github: GITHUB_OAUTH } : {}),
       },
     })
   }
