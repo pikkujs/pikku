@@ -11,6 +11,8 @@
     "tsc": "tsc --noEmit"
   },
   "dependencies": {
+    "@pikku/better-auth": "workspace:*",
+    "better-auth": "^1.6.18",
     "zod": "*"
   },
   "peerDependencies": {

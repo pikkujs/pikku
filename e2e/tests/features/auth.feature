@@ -1,20 +1,19 @@
 @auth
-Feature: Auth.js Credentials Authentication
+Feature: Better Auth Email/Password Authentication
 
   Background:
     Given the API is available
-    And auth users are reset
 
   Scenario: User signs up successfully
     When I sign up as "alice@example.com" with password "password123"
     Then the signup should succeed
-    And the user "alice@example.com" should exist
+    And I should be logged in as "alice@example.com"
 
   Scenario: Duplicate signup is rejected
     When I sign up as "bob@example.com" with password "password123"
     Then the signup should succeed
-    When I sign up as "bob@example.com" with password "other"
-    Then the signup should fail with "CredentialsSignin"
+    When I sign up as "bob@example.com" with password "password456"
+    Then the signup should fail
 
   Scenario: User logs in with valid credentials
     Given I have signed up as "carol@example.com" with password "secret99"
@@ -22,8 +21,8 @@ Feature: Auth.js Credentials Authentication
     Then I should be logged in as "carol@example.com"
 
   Scenario: Login fails with wrong password
-    Given I have signed up as "dave@example.com" with password "correct"
-    When I log in as "dave@example.com" with password "wrong"
+    Given I have signed up as "dave@example.com" with password "correct1"
+    When I log in as "dave@example.com" with password "wrongpass"
     Then I should not be logged in
 
   Scenario: Login fails for unknown user

@@ -140,8 +140,8 @@ export const createSingletonServices = pikkuServices(
     })
 
     await secrets.setSecret(
-      'AUTH_SECRET',
-      'e2e-auth-js-secret-key-at-least-32-chars'
+      'BETTER_AUTH_SECRET',
+      'e2e-better-auth-secret-key-at-least-32-chars'
     )
 
     await secrets.setSecret('GITHUB_OAUTH', {
