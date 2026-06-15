@@ -96,7 +96,10 @@ export const addHTTPMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
   packageName: string | null = null
 ): CorePikkuMiddlewareGroup => {
   const httpGroups = pikkuState(packageName, 'middleware', 'httpGroup')
-  httpGroups[pattern] = middleware
+  const existing = httpGroups[pattern] as CorePikkuMiddleware[] | undefined
+  httpGroups[pattern] = existing
+    ? [...existing, ...(middleware as CorePikkuMiddleware[])]
+    : middleware
   return middleware
 }
 

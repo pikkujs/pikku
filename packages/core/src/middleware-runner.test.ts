@@ -5,7 +5,7 @@ import {
   addTagMiddleware,
   runMiddleware,
 } from './middleware-runner.js'
-import { resetPikkuState } from './pikku-state.js'
+import { pikkuState, resetPikkuState } from './pikku-state.js'
 import type {
   CorePikkuMiddleware,
   MiddlewarePriority,
@@ -30,6 +30,21 @@ const withPriority = (
 
 beforeEach(() => {
   resetPikkuState()
+})
+
+describe('addTagMiddleware', () => {
+  test('composes repeated registrations for the same tag', () => {
+    const first: CorePikkuMiddleware = async (_s, _w, next) => next()
+    const second: CorePikkuMiddleware = async (_s, _w, next) => next()
+
+    addTagMiddleware('shared', [first])
+    addTagMiddleware('shared', [second])
+
+    assert.deepEqual(pikkuState(null, 'middleware', 'tagGroup')['shared'], [
+      first,
+      second,
+    ])
+  })
 })
 
 describe('combineMiddleware', () => {
