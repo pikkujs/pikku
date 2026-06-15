@@ -644,7 +644,7 @@ export const pikkuConfig = (
  * \`\`\`
  */
 export const pikkuServices = (
-  func: (config: Config, existingServices: Partial<SingletonServices>) => Promise<RequiredSingletonServices>
+  func: (config: Config, existingServices: Partial<SingletonServices>) => Promise<Omit<RequiredSingletonServices, 'auth'>>
 ) => {
   return async (config: Config, existingServices: Partial<SingletonServices> = {}) => {
     const services = await func(config, existingServices)
