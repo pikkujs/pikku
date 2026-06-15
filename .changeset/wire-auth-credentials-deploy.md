@@ -1,6 +1,9 @@
 ---
+"@pikku/core": patch
 "@pikku/inspector": patch
 "@pikku/cli": patch
+"@pikku/auth-js": patch
+"@pikku/addon-console": patch
 ---
 
 fix(inspector): deploy `/auth/*` routes for credentials-only `wireAuth`

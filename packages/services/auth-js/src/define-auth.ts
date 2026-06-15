@@ -1,4 +1,5 @@
 import { rpcService } from '@pikku/core/rpc'
+import { setAuthRegistry } from '@pikku/core'
 import type { AuthConfig } from '@auth/core'
 import type { CoreSingletonServices, PikkuWire } from '@pikku/core'
 import type { SecretService, VariablesService } from '@pikku/core/services'
@@ -181,15 +182,22 @@ export const defineAuth = (options: DefineAuthOptions): DefinedAuth => {
     }
   }
 
+  const resolvedProviders = providers
+    .filter((p) => PROVIDER_REGISTRY[p])
+    .map((p) => {
+      const def = PROVIDER_REGISTRY[p]
+      return { id: p, displayName: def.displayName, secretId: def.secretId }
+    })
+
+  setAuthRegistry({
+    providers: resolvedProviders,
+    hasCredentials: !!credentials,
+  })
+
   return {
     configFactory,
     basePath,
-    providers: providers
-      .filter((p) => PROVIDER_REGISTRY[p])
-      .map((p) => {
-        const def = PROVIDER_REGISTRY[p]
-        return { id: p, displayName: def.displayName, secretId: def.secretId }
-      }),
+    providers: resolvedProviders,
     hasCredentials: !!credentials,
   }
 }

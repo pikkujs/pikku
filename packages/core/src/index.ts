@@ -192,3 +192,9 @@ export type {
   ColumnClassification,
   ClassificationManifest,
 } from './data-classification.js'
+
+export { setAuthRegistry, getAuthRegistry } from './auth-registry.js'
+export type {
+  AuthRegistry,
+  AuthRegistryProviderEntry,
+} from './auth-registry.js'

@@ -1,3 +1,4 @@
+import { getAuthRegistry } from '@pikku/core'
 import { pikkuSessionlessFunc } from '#pikku'
 
 export interface AuthProviderEntry {
@@ -18,11 +19,10 @@ export const getAuthProviders = pikkuSessionlessFunc<null, AuthProvidersMeta>({
   expose: true,
   auth: false,
   func: async () => {
-    // Auth provider metadata now lives on the project's exported `defineAuth`
-    // config (`auth.providers` / `auth.hasCredentials`). pikku-console cannot
-    // import that user-owned const, and a runtime registry would not survive a
-    // per-unit deploy (each worker is its own process), so this returns empty
-    // until the console reads provider metadata from the deploy manifest.
-    return { providers: [], hasCredentials: false }
+    // defineAuth() writes into the module-level registry at eval time.
+    // auth.gen.ts imports the user's auth file (which calls defineAuth) before
+    // any request is handled, so the registry is always populated by the time
+    // this function runs.
+    return getAuthRegistry()
   },
 })
