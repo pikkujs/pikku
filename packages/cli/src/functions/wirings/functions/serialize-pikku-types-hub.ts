@@ -30,7 +30,7 @@ export const serializePikkuTypesHub = (
     { comment: 'Node wiring types', path: nodeTypesImportPath },
     { comment: 'Secret definition types', path: secretTypesImportPath },
     { comment: 'Addon types', path: addonTypesImportPath },
-    { comment: 'Auth types (typed defineAuth re-export)', path: authTypesImportPath },
+    { comment: 'Auth types (typed pikkuBetterAuth re-export)', path: authTypesImportPath },
   ]
 
   const exportStatements = exports

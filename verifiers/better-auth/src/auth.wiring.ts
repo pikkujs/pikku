@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
-import { defineAuth } from '@pikku/better-auth'
+import { pikkuBetterAuth } from '@pikku/better-auth'
 
 type OAuthSecret = { clientId: string; clientSecret: string }
 
@@ -11,7 +11,7 @@ type OAuthSecret = { clientId: string; clientSecret: string }
  * from the seeded secrets. The pikku CLI generates the catch-all `/api/auth/**`
  * wiring, the session middleware, and a wireSecret for each provider.
  */
-export const auth = defineAuth(async ({ secrets, variables }) => {
+export const auth = pikkuBetterAuth(async ({ secrets, variables }) => {
   // Fetch every secret/variable in one batch rather than awaiting each.
   const {
     BETTER_AUTH_SECRET,

@@ -1,10 +1,10 @@
 ---
-"@pikku/cli": minor
+"@pikku/cli": patch
 ---
 
 feat(cli): `pikku db generate` + Better Auth drift guard in `pikku db migrate`
 
-The Better Auth schema is owned by `defineAuth`, not hand-written, so the
+The Better Auth schema is owned by `pikkuBetterAuth`, not hand-written, so the
 committed SQL migrations can silently fall behind the auth config (a stale
 migration deploys a half-applied auth schema and `signUp` 500s at runtime).
 

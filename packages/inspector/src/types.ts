@@ -301,7 +301,7 @@ export interface InspectorDiagnostic {
   position: number
 }
 
-/** A single discovered `export const X = defineAuth((services) => betterAuth({...}))`. */
+/** A single discovered `export const X = pikkuBetterAuth((services) => betterAuth({...}))`. */
 export interface AuthDefinition {
   /** The exported binding name the CLI imports (`export const <exportName>`). */
   exportName: string
@@ -315,7 +315,7 @@ export interface AuthDefinition {
   hasCredentials: boolean
   /**
    * Singleton services the generated auth handler must have available at
-   * runtime — the services the `defineAuth` factory reaches for (either
+   * runtime — the services the `pikkuBetterAuth` factory reaches for (either
    * destructured from its first param, or accessed as `services.<name>` in its
    * body). better-auth's factory typically touches `secrets` and the DB.
    *
@@ -412,9 +412,9 @@ export interface InspectorState {
   auth: {
     providers: string[]
     files: Set<string>
-    /** The single `export const X = defineAuth({...})` discovered in the
+    /** The single `export const X = pikkuBetterAuth({...})` discovered in the
      *  codebase, if any. The CLI generates the `/auth/*` HTTP wiring from it.
-     *  More than one `defineAuth` is a critical error. */
+     *  More than one `pikkuBetterAuth` is a critical error. */
     definition: AuthDefinition | null
   }
   secrets: {

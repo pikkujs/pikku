@@ -3,7 +3,7 @@ import { pikkuChannelMiddleware } from '../.pikku/pikku-types.gen.js'
 import { pikkuAIMiddleware } from '../.pikku/agent/pikku-agent-types.gen.js'
 
 // The better-auth session-bridge middleware is generated into auth.gen.ts by the
-// pikku CLI (from the `defineAuth` export in src/auth.ts) — no manual wiring here.
+// pikku CLI (from the `pikkuBetterAuth` export in src/auth.ts) — no manual wiring here.
 
 export const appendModified = pikkuChannelMiddleware<any, AIStreamEvent>(
   async (_services, event, next) => {

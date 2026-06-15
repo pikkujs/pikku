@@ -3,27 +3,11 @@ import { pathToFileURL } from 'node:url'
 import { readdirSync, statSync, readFileSync, existsSync } from 'node:fs'
 import { join, extname, dirname } from 'node:path'
 import type { Kysely } from 'kysely'
+import { PIKKU_BETTER_AUTH } from '@pikku/better-auth'
 import { loadUserModule } from '../commands/load-user-project.js'
 
-/**
- * Bridge to Better Auth's own migration generator. The CLI never hand-writes the
- * auth schema — it asks Better Auth for it via `getMigrations`, run through the
- * project's own kysely (so the CamelCasePlugin renders snake_case columns).
- *
- * Important: Better Auth's `getMigrations` field-level diff arrays
- * (`toBeCreated`/`toBeAdded`) compare its camelCase field keys against the
- * introspected snake_case columns, so they are unreliable here. We use only
- * `runMigrations()` / `compileMigrations()` (whose output IS correct snake_case)
- * and compute drift ourselves by introspecting a materialised schema — see
- * local-db.ts.
- */
+type AuthFactoryLike = (services: unknown) => unknown
 
-/** Minimal shape of the value `defineAuth(...)` returns. */
-interface DefinedAuthLike {
-  getInstance: (services: unknown) => Promise<unknown>
-}
-
-/** Minimal shape of the resolved better-auth options we need. */
 export interface BetterAuthOptionsLike {
   database?: { db?: unknown; type?: string }
   [key: string]: unknown
@@ -40,16 +24,9 @@ let cachedGetMigrations:
   | ((config: BetterAuthOptionsLike) => Promise<GetMigrationsResult>)
   | null = null
 
-/**
- * `getMigrations` is not in better-auth's package `exports`, so resolve the
- * package root and import the internal module by absolute file URL.
- */
 async function loadGetMigrations() {
   if (cachedGetMigrations) return cachedGetMigrations
   const require = createRequire(import.meta.url)
-  // better-auth's `exports` map does NOT expose `./package.json` nor the
-  // internal `get-migration` module, so resolve the package's main entry and
-  // walk up to the package root (the dir holding its package.json).
   const mainEntry = require.resolve('better-auth')
   let root = dirname(mainEntry)
   while (!existsSync(join(root, 'package.json'))) {
@@ -73,7 +50,6 @@ const SKIP_DIRS = new Set([
   '.pikku-runtime',
 ])
 
-/** Find the single source file that declares a `defineAuth(...)` export. */
 function findAuthSourceFile(
   rootDir: string,
   srcDirectories: string[]
@@ -106,7 +82,7 @@ function findAuthSourceFile(
       } catch {
         continue
       }
-      if (/\bdefineAuth\s*\(/.test(src)) return full
+      if (/\bpikkuBetterAuth\s*\(/.test(src)) return full
     }
     return null
   }
@@ -118,27 +94,18 @@ function findAuthSourceFile(
   return walk(rootDir)
 }
 
-async function loadDefinedAuth(
+async function loadAuthFactory(
   sourceFile: string
-): Promise<DefinedAuthLike | null> {
+): Promise<AuthFactoryLike | null> {
   const mod = await loadUserModule(sourceFile)
   for (const value of Object.values(mod)) {
-    if (
-      value &&
-      typeof (value as DefinedAuthLike).getInstance === 'function'
-    ) {
-      return value as DefinedAuthLike
+    if (typeof value === 'function' && (value as any)[PIKKU_BETTER_AUTH]) {
+      return value as AuthFactoryLike
     }
   }
   return null
 }
 
-/**
- * A schema-only `services` stub. The `defineAuth` factory must be side-effect
- * free (it just constructs `betterAuth(options)`), so dummy secrets/variables
- * and the supplied kysely are enough to obtain the resolved options. Any other
- * service it reaches for resolves to `undefined` rather than throwing.
- */
 function schemaServicesStub(kysely: Kysely<any>, logger: unknown) {
   const dummy = 'x'.repeat(32)
   const fromKeys = (keys: string[]) =>
@@ -161,10 +128,6 @@ function schemaServicesStub(kysely: Kysely<any>, logger: unknown) {
   })
 }
 
-/**
- * Resolve the project's `defineAuth` options with `database.db` bound to the
- * supplied kysely. Returns null when the project declares no `defineAuth`.
- */
 export async function loadAuthOptions(opts: {
   rootDir: string
   srcDirectories: string[]
@@ -174,10 +137,10 @@ export async function loadAuthOptions(opts: {
   const sourceFile = findAuthSourceFile(opts.rootDir, opts.srcDirectories)
   if (!sourceFile) return null
 
-  const defined = await loadDefinedAuth(sourceFile)
-  if (!defined) return null
+  const factory = await loadAuthFactory(sourceFile)
+  if (!factory) return null
 
-  const instance = await defined.getInstance(
+  const instance = await factory(
     schemaServicesStub(opts.kysely, opts.logger)
   )
   const options = (instance as { options?: BetterAuthOptionsLike }).options

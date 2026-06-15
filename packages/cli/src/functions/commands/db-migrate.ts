@@ -42,10 +42,6 @@ export const dbMigrate = pikkuSessionlessFunc<{}, void>({
         : `db migrate: ${zod.outFile} unchanged`
     )
 
-    // Drift guard: the Better Auth schema is owned by defineAuth, not the
-    // migration files. If the applied migrations don't satisfy what Better Auth
-    // requires, fail loudly pointing at `pikku db generate` rather than letting a
-    // half-migrated auth schema reach runtime (where signUp would 500).
     const drift = await computeAuthDrift(
       resolved,
       config.rootDir,

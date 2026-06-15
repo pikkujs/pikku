@@ -23,7 +23,7 @@ import { AUTH_HANDLER_FUNC_ID } from '../add/add-auth.js'
  * normal extraction records zero services for the handler — which would leave
  * the deployed auth worker without `kysely`/`variables`/`secrets` and break
  * `authorize` at runtime. `add-auth` already computed the real dependency set
- * (from the defineAuth source) into `state.auth.definition.services`; copy it
+ * (from the pikkuBetterAuth source) into `state.auth.definition.services`; copy it
  * onto the handler meta. Re-derived every inspect and ordered BEFORE
  * `aggregateRequiredServices` so it flows into `requiredServices`.
  */

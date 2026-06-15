@@ -26,7 +26,7 @@ function variableSchemaName(name: string, field: string): string {
 }
 
 /**
- * The two files generated from a `defineAuth` export.
+ * The two files generated from a `pikkuBetterAuth` export.
  *
  * They are split because the CLI's schema/wiring-separation rule (PKU490)
  * forbids a file from declaring Zod schemas AND `wireHTTPRoutes` together —
@@ -44,11 +44,12 @@ export interface AuthGenOutput {
 
 /**
  * Generates the `auth.gen.ts` (HTTP wiring) and `auth-secrets.gen.ts` (schemas +
- * secret/variable wiring) files from a `defineAuth((services) => betterAuth(...))`
+ * secret/variable wiring) files from a `pikkuBetterAuth((services) => betterAuth(...))`
  * export.
  *
- * The wiring file imports the user's exported `DefinedAuth`, builds ONE shared
- * sessionless handler that delegates to better-auth's fetch handler, wires a
+ * The wiring file side-effect imports the user's auth file (so `pikkuBetterAuth`
+ * registers its factory), builds ONE shared sessionless handler that reads the
+ * resolved `services.auth` and delegates to better-auth's fetch handler, wires a
  * catch-all `${basePath}{/*splat}` route per method to it, registers the
  * better-auth session-bridge middleware globally, and records provider metadata
  * via `setAuthRegistry` (consumed by the console's getAuthProviders). Because
@@ -65,6 +66,8 @@ export const serializeAuthGen = (
   const known = providers.filter((p) => p in PROVIDER_REGISTRY)
 
   const basePath = definition.basePath
+  // Side-effect import of the user's auth file so `pikkuBetterAuth` runs and
+  // registers its factory into pikkuState before singleton services are built.
   const configImportPath = getFileImportRelativePath(
     authFile,
     definition.sourceFile,
@@ -172,7 +175,7 @@ export const serializeAuthGen = (
     `import { pikkuSessionlessFunc, wireHTTPRoutes, addHTTPMiddleware } from '${pikkuTypesImportPath}'`,
     `import { createAuthHandler, betterAuthSession } from '@pikku/better-auth'`,
     `import { setAuthRegistry } from '@pikku/core'`,
-    `import { ${definition.exportName} } from '${configImportPath}'`,
+    `import '${configImportPath}'`,
     '',
     // Provider metadata for the console (getAuthProviders reads this registry).
     // Set at module load so it is populated independently of when the lazy
@@ -187,15 +190,15 @@ export const serializeAuthGen = (
     // createAuthHandler is called once at module load; the exported handler is a
     // plain arrow (so the inspector can resolve a valid `func`) that delegates to
     // it. The handler's required services are stamped onto its meta by the
-    // inspector from the defineAuth factory.
-    `const authConfigHandler = createAuthHandler(${definition.exportName})`,
+    // inspector from the pikkuBetterAuth factory.
+    `const authConfigHandler = createAuthHandler()`,
     `export const ${AUTH_HANDLER_FUNC_ID} = pikkuSessionlessFunc({`,
     `  func: (services: any, data: any, interaction: any) =>`,
     `    authConfigHandler.func(services, data, interaction),`,
     `})`,
     '',
     // Bridge the better-auth session into the Pikku session on every request.
-    `addHTTPMiddleware('*', [betterAuthSession({ auth: ${definition.exportName} })])`,
+    `addHTTPMiddleware('*', [betterAuthSession()])`,
     '',
     `wireHTTPRoutes({`,
     `  routes: {`,

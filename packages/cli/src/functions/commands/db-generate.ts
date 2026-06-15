@@ -2,13 +2,6 @@ import { pikkuSessionlessFunc } from '#pikku'
 import { resolveDb, generateAuthMigration } from '../db/local-db.js'
 import { loadUserConfigForDb } from './db-shared.js'
 
-/**
- * `pikku db generate` — write a new SQL migration for the project's Better Auth
- * schema (from `defineAuth`) when the existing migrations don't yet provide it.
- * The auth schema is owned by Better Auth and never hand-written; this keeps the
- * committed migrations in sync with the auth config so `pikku db migrate`'s drift
- * guard stays green.
- */
 export const dbGenerate = pikkuSessionlessFunc<{}, void>({
   remote: true,
   func: async ({ logger, config }) => {
@@ -37,7 +30,7 @@ export const dbGenerate = pikkuSessionlessFunc<{}, void>({
 
     switch (result.status) {
       case 'no-auth':
-        logger.info('db generate: no defineAuth found — nothing to generate')
+        logger.info('db generate: no pikkuBetterAuth found — nothing to generate')
         return
       case 'up-to-date':
         logger.info(
@@ -63,7 +56,9 @@ export const dbGenerate = pikkuSessionlessFunc<{}, void>({
         logger.error(
           '  Write a forward migration adding these by hand (incremental auto-generation is not yet supported).'
         )
-        throw new Error('incremental auth schema change requires a manual migration')
+        throw new Error(
+          'incremental auth schema change requires a manual migration'
+        )
       }
       case 'written':
         logger.info(`db generate: wrote ${result.file}`)

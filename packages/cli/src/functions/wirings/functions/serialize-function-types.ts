@@ -648,8 +648,12 @@ export const pikkuServices = (
 ) => {
   return async (config: Config, existingServices: Partial<SingletonServices> = {}) => {
     const services = await func(config, existingServices)
-    __pikkuState(null, 'package', 'singletonServices', services as any)
-    return services
+    const authFactory = __pikkuState(null, 'package', 'authFactory')
+    const resolved = (authFactory
+      ? { ...services, auth: await authFactory(services as any) }
+      : services) as RequiredSingletonServices
+    __pikkuState(null, 'package', 'singletonServices', resolved as any)
+    return resolved
   }
 }
 

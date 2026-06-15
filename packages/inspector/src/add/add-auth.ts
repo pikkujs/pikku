@@ -18,7 +18,7 @@ export const AUTH_HANDLER_FUNC_ID = 'authHandler'
 const DEFAULT_BASE_PATH = '/api/auth'
 
 /**
- * Find the first `betterAuth({...})` call anywhere inside the `defineAuth`
+ * Find the first `betterAuth({...})` call anywhere inside the `pikkuBetterAuth`
  * factory body. Supports both `(s) => betterAuth({...})` and
  * `(s) => { ...; return betterAuth({...}) }`.
  */
@@ -74,13 +74,13 @@ const readObjectProp = (
 }
 
 /**
- * Detects `defineAuth((services) => betterAuth({...}))` calls.
+ * Detects `pikkuBetterAuth((services) => betterAuth({...}))` calls.
  *
- * `defineAuth` is pure: it wraps a factory that returns a configured better-auth
+ * `pikkuBetterAuth` is pure: it wraps a factory that returns a configured better-auth
  * instance and has NO side effects. The user assigns it to an exported binding,
  * e.g.
  *
- *   export const auth = defineAuth(async (services) => betterAuth({ ... }))
+ *   export const auth = pikkuBetterAuth(async (services) => betterAuth({ ... }))
  *
  * The pikku CLI discovers that single export and generates a catch-all
  * `auth.gen.ts` that wires `${basePath}/**` to one shared handler, registers the
@@ -90,22 +90,22 @@ const readObjectProp = (
  *
  * This add-wiring records the exported binding name, source file, basePath, the
  * `socialProviders` keys, whether email/password is enabled, and the services
- * the factory touches. Exactly one `defineAuth` is allowed per codebase.
+ * the factory touches. Exactly one `pikkuBetterAuth` is allowed per codebase.
  */
 export const addAuth: AddWiring = (logger, node, _checker, state) => {
   if (!ts.isCallExpression(node)) return
 
   const expression = node.expression
-  if (!ts.isIdentifier(expression) || expression.text !== 'defineAuth') return
+  if (!ts.isIdentifier(expression) || expression.text !== 'pikkuBetterAuth') return
 
   const sourceFile = node.getSourceFile().fileName
 
-  // Walk up to the `export const <name> = defineAuth(...)` binding.
+  // Walk up to the `export const <name> = pikkuBetterAuth(...)` binding.
   const varDecl = node.parent
   if (!ts.isVariableDeclaration(varDecl) || !ts.isIdentifier(varDecl.name)) {
     logger.critical(
       ErrorCode.AUTH_NOT_EXPORTED,
-      `defineAuth(...) must be assigned to an exported const, e.g. \`export const auth = defineAuth((services) => betterAuth({...}))\` in ${sourceFile}`
+      `pikkuBetterAuth(...) must be assigned to an exported const, e.g. \`export const auth = pikkuBetterAuth((services) => betterAuth({...}))\` in ${sourceFile}`
     )
     return
   }
@@ -121,7 +121,7 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
   if (!isExported) {
     logger.critical(
       ErrorCode.AUTH_NOT_EXPORTED,
-      `defineAuth(...) must be assigned to an exported const so the CLI can import it. Add \`export\` to \`const ${exportName}\` in ${sourceFile}`
+      `pikkuBetterAuth(...) must be assigned to an exported const so the CLI can import it. Add \`export\` to \`const ${exportName}\` in ${sourceFile}`
     )
     return
   }
@@ -129,7 +129,7 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
   if (state.auth.definition) {
     logger.critical(
       ErrorCode.DUPLICATE_AUTH_DEFINITION,
-      `Only one defineAuth(...) is allowed per codebase. Found a second in ${sourceFile} (first: ${state.auth.definition.sourceFile}).`
+      `Only one pikkuBetterAuth(...) is allowed per codebase. Found a second in ${sourceFile} (first: ${state.auth.definition.sourceFile}).`
     )
     return
   }
@@ -142,7 +142,7 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
   ) {
     logger.critical(
       ErrorCode.MISSING_NAME,
-      `defineAuth(...) must take a factory function returning betterAuth(...), e.g. \`defineAuth((services) => betterAuth({...}))\` in ${sourceFile}`
+      `pikkuBetterAuth(...) must take a factory function returning betterAuth(...), e.g. \`pikkuBetterAuth((services) => betterAuth({...}))\` in ${sourceFile}`
     )
     return
   }
@@ -194,7 +194,7 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
     }
   } else {
     logger.warn(
-      `defineAuth in ${sourceFile}: could not statically find a betterAuth({...}) call inside the factory — social provider secrets will not be auto-wired.`
+      `pikkuBetterAuth in ${sourceFile}: could not statically find a betterAuth({...}) call inside the factory — social provider secrets will not be auto-wired.`
     )
   }
 

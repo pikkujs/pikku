@@ -5,7 +5,7 @@
 fix(cli): don't inspect during the cold bootstrap function-types pass
 
 `pikkuFunctionTypes` began calling `getInspectorState()` to decide whether to
-re-export the typed `defineAuth` from the generated types hub. But it also runs
+re-export the typed `pikkuBetterAuth` from the generated types hub. But it also runs
 as the cold bootstrap step whose job is to *write* `.pikku/pikku-types.gen.ts`
 before any inspection happens — and a full inspect runtime-imports user files
 that themselves import that not-yet-written file, deadlocking on a cold `.pikku`

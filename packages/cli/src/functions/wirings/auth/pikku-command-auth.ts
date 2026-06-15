@@ -17,7 +17,7 @@ export const pikkuAuth = pikkuSessionlessFunc<void, void>({
     if (!authFile) return
 
     const state = await getInspectorState()
-    // Only generate when the project declares auth via `defineAuth`. Gating on
+    // Only generate when the project declares auth via `pikkuBetterAuth`. Gating on
     // the definition (not provider count) means credentials-only auth — which
     // has no OAuth providers — still generates its /auth/* wiring.
     if (!state.auth.definition) return
@@ -36,7 +36,7 @@ export const pikkuAuth = pikkuSessionlessFunc<void, void>({
     await writeFileInDir(logger, authFile, wiring)
     await writeFileInDir(logger, secretsFile, secrets)
 
-    // Generate the typed defineAuth re-export consumed by `import { defineAuth } from '#pikku'`.
+    // Generate the typed pikkuBetterAuth re-export consumed by `import { pikkuBetterAuth } from '#pikku'`.
     if (authTypesFile && functionTypesFile) {
       const authTypes = serializeAuthTypes(authTypesFile, functionTypesFile)
       await writeFileInDir(logger, authTypesFile, authTypes)

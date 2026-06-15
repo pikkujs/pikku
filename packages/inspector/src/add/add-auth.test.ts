@@ -27,9 +27,9 @@ describe('addAuth inspector', () => {
     await writeFile(
       file,
       [
-        "import { defineAuth } from '@pikku/better-auth'",
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
         "import { betterAuth } from 'better-auth'",
-        'export const auth = defineAuth(() =>',
+        'export const auth = pikkuBetterAuth(() =>',
         '  betterAuth({',
         '    socialProviders: {',
         "      github: { clientId: 'x', clientSecret: 'y' },",
@@ -56,7 +56,7 @@ describe('addAuth inspector', () => {
       // user's source file must NOT be imported into the HTTP bootstrap.
       assert.ok(
         !state.http.files.has(file),
-        'defineAuth source file must not be added to http.files'
+        'pikkuBetterAuth source file must not be added to http.files'
       )
     } finally {
       await rm(rootDir, { recursive: true, force: true })
@@ -70,9 +70,9 @@ describe('addAuth inspector', () => {
     await writeFile(
       file,
       [
-        "import { defineAuth } from '@pikku/better-auth'",
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
         "import { betterAuth } from 'better-auth'",
-        'export const auth = defineAuth(() =>',
+        'export const auth = pikkuBetterAuth(() =>',
         '  betterAuth({',
         "    basePath: '/auth',",
         '    emailAndPassword: { enabled: true },',
@@ -101,9 +101,9 @@ describe('addAuth inspector', () => {
     await writeFile(
       file,
       [
-        "import { defineAuth } from '@pikku/better-auth'",
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
         "import { betterAuth } from 'better-auth'",
-        'export const auth = defineAuth(() =>',
+        'export const auth = pikkuBetterAuth(() =>',
         '  betterAuth({ emailAndPassword: { enabled: true } })',
         ')',
       ].join('\n')
@@ -118,22 +118,22 @@ describe('addAuth inspector', () => {
       assert.ok(state.auth.files.has(file), 'source file still tracked')
       assert.ok(
         !state.http.files.has(file),
-        'defineAuth source file must not be added to http.files'
+        'pikkuBetterAuth source file must not be added to http.files'
       )
     } finally {
       await rm(rootDir, { recursive: true, force: true })
     }
   })
 
-  test('errors when defineAuth is not given a factory function', async () => {
+  test('errors when pikkuBetterAuth is not given a factory function', async () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-nonfactory-'))
     const file = join(rootDir, 'auth.ts')
 
     await writeFile(
       file,
       [
-        "import { defineAuth } from '@pikku/better-auth'",
-        'export const auth = defineAuth({ providers: [] } as any)',
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
+        'export const auth = pikkuBetterAuth({ providers: [] } as any)',
       ].join('\n')
     )
 
@@ -147,16 +147,16 @@ describe('addAuth inspector', () => {
     }
   })
 
-  test('errors when defineAuth is not assigned to an exported const', async () => {
+  test('errors when pikkuBetterAuth is not assigned to an exported const', async () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-notexport-'))
     const file = join(rootDir, 'auth.ts')
 
     await writeFile(
       file,
       [
-        "import { defineAuth } from '@pikku/better-auth'",
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
         "import { betterAuth } from 'better-auth'",
-        'const auth = defineAuth(() => betterAuth({}))',
+        'const auth = pikkuBetterAuth(() => betterAuth({}))',
       ].join('\n')
     )
 
@@ -170,7 +170,7 @@ describe('addAuth inspector', () => {
     }
   })
 
-  test('errors when more than one defineAuth exists in the codebase', async () => {
+  test('errors when more than one pikkuBetterAuth exists in the codebase', async () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-dupe-'))
     const fileA = join(rootDir, 'auth.ts')
     const fileB = join(rootDir, 'auth-other.ts')
@@ -178,17 +178,17 @@ describe('addAuth inspector', () => {
     await writeFile(
       fileA,
       [
-        "import { defineAuth } from '@pikku/better-auth'",
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
         "import { betterAuth } from 'better-auth'",
-        'export const auth = defineAuth(() => betterAuth({}))',
+        'export const auth = pikkuBetterAuth(() => betterAuth({}))',
       ].join('\n')
     )
     await writeFile(
       fileB,
       [
-        "import { defineAuth } from '@pikku/better-auth'",
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
         "import { betterAuth } from 'better-auth'",
-        'export const auth2 = defineAuth(() => betterAuth({}))',
+        'export const auth2 = pikkuBetterAuth(() => betterAuth({}))',
       ].join('\n')
     )
 
@@ -211,9 +211,9 @@ describe('addAuth inspector', () => {
     await writeFile(
       file,
       [
-        "import { defineAuth } from '@pikku/better-auth'",
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
         "import { betterAuth } from 'better-auth'",
-        'export const auth = defineAuth(({ kysely, secrets }) =>',
+        'export const auth = pikkuBetterAuth(({ kysely, secrets }) =>',
         '  betterAuth({ database: { db: kysely, type: "postgres" }, secret: secrets })',
         ')',
       ].join('\n')
@@ -239,9 +239,9 @@ describe('addAuth inspector', () => {
     await writeFile(
       file,
       [
-        "import { defineAuth } from '@pikku/better-auth'",
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
         "import { betterAuth } from 'better-auth'",
-        'export const auth = defineAuth(async ({ kysely, secrets }) =>',
+        'export const auth = pikkuBetterAuth(async ({ kysely, secrets }) =>',
         '  betterAuth({',
         '    database: { db: kysely, type: "postgres" },',
         "    socialProviders: { github: await secrets.getSecret('GITHUB_OAUTH') },",
@@ -272,9 +272,9 @@ describe('addAuth inspector', () => {
     await writeFile(
       authFile,
       [
-        "import { defineAuth } from '@pikku/better-auth'",
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
         "import { betterAuth } from 'better-auth'",
-        'export const auth = defineAuth(({ kysely }) =>',
+        'export const auth = pikkuBetterAuth(({ kysely }) =>',
         '  betterAuth({ database: { db: kysely, type: "postgres" } })',
         ')',
       ].join('\n')
@@ -336,9 +336,9 @@ describe('addAuth inspector', () => {
     await writeFile(
       file,
       [
-        "import { defineAuth } from '@pikku/better-auth'",
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
         "import { betterAuth } from 'better-auth'",
-        "export const auth = defineAuth(() => betterAuth({ socialProviders: { discord: { clientId: 'x', clientSecret: 'y' } } }))",
+        "export const auth = pikkuBetterAuth(() => betterAuth({ socialProviders: { discord: { clientId: 'x', clientSecret: 'y' } } }))",
       ].join('\n')
     )
 

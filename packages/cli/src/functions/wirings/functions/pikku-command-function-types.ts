@@ -35,8 +35,8 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<
     const getAlwaysImportPath = (file: string) =>
       getFileImportRelativePath(typesFile, file, packageMappings)
 
-    // Include the typed defineAuth re-export only when the project has a
-    // defineAuth declaration. This avoids importing @pikku/better-auth in
+    // Include the typed pikkuBetterAuth re-export only when the project has a
+    // pikkuBetterAuth declaration. This avoids importing @pikku/better-auth in
     // projects that don't use it.
     //
     // Skip inspector state entirely during cold bootstrap: .pikku doesn't exist

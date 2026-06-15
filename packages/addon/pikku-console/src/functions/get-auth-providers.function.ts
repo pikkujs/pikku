@@ -15,12 +15,12 @@ export interface AuthProvidersMeta {
 export const getAuthProviders = pikkuSessionlessFunc<null, AuthProvidersMeta>({
   title: 'Get Auth Providers',
   description:
-    'Returns the auth providers configured via defineAuth(), enriched with display metadata.',
+    'Returns the auth providers configured via pikkuBetterAuth(), enriched with display metadata.',
   expose: true,
   auth: false,
   func: async () => {
-    // defineAuth() writes into the module-level registry at eval time.
-    // auth.gen.ts imports the user's auth file (which calls defineAuth) before
+    // pikkuBetterAuth() writes into the module-level registry at eval time.
+    // auth.gen.ts imports the user's auth file (which calls pikkuBetterAuth) before
     // any request is handled, so the registry is always populated by the time
     // this function runs.
     return getAuthRegistry()

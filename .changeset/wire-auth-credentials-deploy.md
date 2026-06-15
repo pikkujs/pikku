@@ -12,7 +12,7 @@ The auth integration is now built on [Better Auth](https://better-auth.com)
 and ships as a single package, `@pikku/better-auth` (replacing the former
 `@pikku/auth-js`). There is exactly one auth package now.
 
-- `defineAuth(async ({ secrets, variables }) => betterAuth({ ... }))` is the new
+- `pikkuBetterAuth(async ({ secrets, variables }) => betterAuth({ ... }))` is the new
   single entry point. The CLI inspects the `betterAuth(...)` call and generates:
   - `auth.gen.ts` — a catch-all `${basePath}{/*splat}` HTTP route per method and
     a global `betterAuthSession({ auth })` middleware that bridges the Better
@@ -21,7 +21,7 @@ and ships as a single package, `@pikku/better-auth` (replacing the former
     `<PROVIDER>_OAUTH` secret for each configured social provider, and
     `wireVariable` for non-secret provider config (e.g. `MICROSOFT_TENANT_ID`,
     `COGNITO_DOMAIN`/`REGION`/`USER_POOL_ID`).
-  - `auth.types.ts` — a typed `defineAuth` re-export.
+  - `auth.types.ts` — a typed `pikkuBetterAuth` re-export.
 - `add-auth` (inspector) walks into the `betterAuth(...)` options to discover the
   configured providers and required secrets/variables.
 - The auth secret is now auto-wired by codegen from `BETTER_AUTH_SECRET` — it no

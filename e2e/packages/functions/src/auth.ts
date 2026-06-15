@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
-import { defineAuth } from '@pikku/better-auth'
+import { pikkuBetterAuth } from '@pikku/better-auth'
 
 type OAuthSecret = { clientId: string; clientSecret: string }
 
@@ -15,7 +15,7 @@ type OAuthSecret = { clientId: string; clientSecret: string }
  * for the lifetime of the server process; scenarios use unique emails rather
  * than resetting (Better Auth exposes no reset hook).
  */
-export const auth = defineAuth(async ({ secrets }) => {
+export const auth = pikkuBetterAuth(async ({ secrets }) => {
   const { BETTER_AUTH_SECRET, GITHUB_OAUTH } = await secrets.getSecrets<{
     BETTER_AUTH_SECRET: string
     GITHUB_OAUTH: OAuthSecret

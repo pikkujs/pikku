@@ -53,17 +53,17 @@ describe('serializeAuthGen', () => {
     assert.match(output, /import { z } from 'zod'/)
   })
 
-  test('imports the exported config from the user source file', () => {
+  test('side-effect imports the user source file so the factory registers', () => {
     const output = genWiring(['github'])
     // /project/.pikku/auth.gen.ts -> /project/src/auth.ts == ../src/auth.js
-    assert.match(output, /import { auth } from '\.\.\/src\/auth\.js'/)
+    assert.match(output, /import '\.\.\/src\/auth\.js'/)
   })
 
-  test('honours a custom export name', () => {
+  test('resolves auth from services regardless of export name', () => {
     const output = genWiring(['github'], def({ exportName: 'myAuth' }))
-    assert.match(output, /import { myAuth } from /)
-    assert.match(output, /createAuthHandler\(myAuth\)/)
-    assert.match(output, /betterAuthSession\(\{ auth: myAuth \}\)/)
+    assert.match(output, /import '\.\.\/src\/auth\.js'/)
+    assert.match(output, /createAuthHandler\(\)/)
+    assert.match(output, /betterAuthSession\(\)/)
   })
 
   test('records provider metadata via setAuthRegistry', () => {
@@ -97,7 +97,7 @@ describe('serializeAuthGen', () => {
     const output = genWiring(['github'])
     // The handler must be a plain arrow (not `createAuthHandler(...).func`
     // directly) so the inspector resolves a valid `func`.
-    assert.match(output, /const authConfigHandler = createAuthHandler\(auth\)/)
+    assert.match(output, /const authConfigHandler = createAuthHandler\(\)/)
     assert.match(output, /export const authHandler = pikkuSessionlessFunc\(\{/)
     assert.match(
       output,
@@ -113,7 +113,7 @@ describe('serializeAuthGen', () => {
     const output = genWiring([])
     assert.match(
       output,
-      /addHTTPMiddleware\('\*', \[betterAuthSession\(\{ auth: auth \}\)\]\)/
+      /addHTTPMiddleware\('\*', \[betterAuthSession\(\)\]\)/
     )
   })
 
