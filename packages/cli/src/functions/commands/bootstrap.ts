@@ -6,7 +6,7 @@ export const bootstrap = pikkuVoidFunc({
     await getInspectorState(false, true, true)
 
     await rpc.invoke('pikkuFunctionTypesSplit', { bootstrap: true })
-    await rpc.invoke('pikkuFunctionTypes')
+    await rpc.invoke('pikkuFunctionTypes', { bootstrap: true })
     await rpc.invoke('pikkuHTTPTypes')
     await rpc.invoke('pikkuChannelTypes')
     await rpc.invoke('pikkuSchedulerTypes')

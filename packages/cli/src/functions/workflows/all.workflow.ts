@@ -47,7 +47,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         'pikkuFunctionTypesSplit',
         { bootstrap: true }
       )
-      await workflow.do('Bootstrap function types', 'pikkuFunctionTypes', null)
+      await workflow.do('Bootstrap function types', 'pikkuFunctionTypes', {
+        bootstrap: true,
+      })
       await workflow.do('Bootstrap addon types', 'pikkuAddonTypes', {
         bootstrap: true,
       })
@@ -94,7 +96,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       }
     }
 
-    await workflow.do('Generate function types', 'pikkuFunctionTypes', null)
+    await workflow.do('Generate function types', 'pikkuFunctionTypes', {})
 
     if (!typesDeclarationFileExists || missingScaffolds.length > 0) {
       logger.debug(

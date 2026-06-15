@@ -4,8 +4,11 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializePikkuTypesHub } from './serialize-pikku-types-hub.js'
 
-export const pikkuFunctionTypes = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config, getInspectorState }) => {
+export const pikkuFunctionTypes = pikkuSessionlessFunc<
+  { bootstrap?: boolean },
+  void
+>({
+  func: async ({ logger, config, getInspectorState }, data) => {
     const {
       typesDeclarationFile: typesFile,
       packageMappings,
@@ -35,9 +38,15 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<void, void>({
     // Include the typed defineAuth re-export only when the project has a
     // defineAuth declaration. This avoids importing @pikku/better-auth in
     // projects that don't use it.
-    const state = await getInspectorState()
+    //
+    // Skip inspector state entirely during cold bootstrap: .pikku doesn't exist
+    // yet, so a full inspect would runtime-import user files that themselves
+    // import `.pikku/pikku-types.gen.js` — deadlocking before this step can
+    // write that very file. The auth re-export is added on the later
+    // post-inspect pass (where .pikku already exists) instead.
+    const state = data?.bootstrap ? null : await getInspectorState()
     const authTypesImportPath =
-      authTypesFile && state.auth.definition
+      authTypesFile && state?.auth.definition
         ? getFileImportRelativePath(typesFile, authTypesFile, packageMappings)
         : null
 
