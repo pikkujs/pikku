@@ -16,7 +16,7 @@ export class PikkuFetchHTTPRequest<
   #url: URL
   #rawBodyText: string | undefined
   #rawBodyBuffer: ArrayBuffer | undefined
-  #bodyRead = false
+  #rawBufferPromise: Promise<ArrayBuffer> | undefined
 
   constructor(private request: Request) {
     this.#url = new URL(request.url)
@@ -44,36 +44,53 @@ export class PikkuFetchHTTPRequest<
    * @returns A promise that resolves to the raw request body.
    */
   public async arrayBuffer(): Promise<ArrayBuffer> {
+    return this.#readRawBuffer()
+  }
+
+  /**
+   * Reads the underlying single-use request body exactly once and memoises both
+   * the in-flight promise and the result. `json()`, `arrayBuffer()`, `body()`
+   * and `toWebRequest()` all funnel through here, so a request whose body is
+   * consumed in more than one place can no longer race on the underlying stream
+   * and fail with "Body has already been used".
+   *
+   * If a second consumer asks for the body while the first read is still in
+   * flight, that is the concurrent double-read that used to crash — now safe,
+   * but warned about so the redundant consumer is found and removed at the
+   * source rather than silently leaning on this cache.
+   */
+  async #readRawBuffer(): Promise<ArrayBuffer> {
     if (this.#rawBodyBuffer !== undefined) {
       return this.#rawBodyBuffer
     }
-    if (this.#bodyRead) {
-      if (this.#rawBodyText !== undefined) {
-        const buf = new TextEncoder().encode(this.#rawBodyText)
-          .buffer as ArrayBuffer
-        this.#rawBodyBuffer = buf
-        return buf
-      }
-      return new ArrayBuffer(0)
+    if (this.#rawBodyText !== undefined) {
+      const buf = new TextEncoder().encode(this.#rawBodyText)
+        .buffer as ArrayBuffer
+      this.#rawBodyBuffer = buf
+      return buf
     }
-    const buf = await this.request.arrayBuffer()
-    this.#rawBodyBuffer = buf
-    this.#bodyRead = true
-    return buf
+    if (this.#rawBufferPromise !== undefined) {
+      console.warn(
+        `[pikku] request body for ${this.method().toUpperCase()} ${this.path()} ` +
+          `was requested again before the first read resolved — the read is now ` +
+          `shared, but a duplicate body consumer (e.g. middleware calling ` +
+          `toWebRequest just for headers) should be removed.`
+      )
+      return this.#rawBufferPromise
+    }
+    this.#rawBufferPromise = this.request.arrayBuffer().then((buf) => {
+      this.#rawBodyBuffer = buf
+      return buf
+    })
+    return this.#rawBufferPromise
   }
 
   async #readRawText(): Promise<string> {
     if (this.#rawBodyText !== undefined) {
       return this.#rawBodyText
     }
-    if (this.#rawBodyBuffer !== undefined) {
-      const text = new TextDecoder().decode(this.#rawBodyBuffer)
-      this.#rawBodyText = text
-      return text
-    }
-    const text = await this.request.text()
+    const text = new TextDecoder().decode(await this.#readRawBuffer())
     this.#rawBodyText = text
-    this.#bodyRead = true
     return text
   }
 

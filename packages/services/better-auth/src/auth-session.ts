@@ -1,6 +1,5 @@
 import type { CoreUserSession, CorePikkuMiddleware } from '@pikku/core'
 import { pikkuMiddleware } from '@pikku/core'
-import { toWebRequest } from '@pikku/core/http'
 import type { BetterAuthInstance } from './define-auth.js'
 
 type BetterAuthSessionResult = { user: any; session: any }
@@ -20,9 +19,12 @@ export const betterAuthSession = (
 
     try {
       const auth = (services as any).auth as BetterAuthInstance
-      const webRequest = toWebRequest(http.request)
+      // getSession only needs the request headers — build them directly instead
+      // of going through toWebRequest(), which (for a POST) would otherwise read
+      // the single-use request body just to discard it, starving the route
+      // handler that actually needs it.
       const result = (await auth.api.getSession({
-        headers: webRequest.headers,
+        headers: new Headers(http.request.headers()),
       })) as BetterAuthSessionResult | null
 
       if (result?.user) {
