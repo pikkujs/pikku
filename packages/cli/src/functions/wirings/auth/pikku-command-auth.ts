@@ -7,7 +7,13 @@ import { serializeAuthTypes } from './serialize-auth-types.js'
 
 export const pikkuAuth = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
-    const { authFile, authTypesFile, functionTypesFile, packageMappings } = config
+    const {
+      authFile,
+      authTypesFile,
+      functionTypesFile,
+      typesDeclarationFile,
+      packageMappings,
+    } = config
     if (!authFile) return
 
     const state = await getInspectorState()
@@ -20,6 +26,7 @@ export const pikkuAuth = pikkuSessionlessFunc<void, void>({
       state.auth.definition,
       state.auth.providers,
       authFile,
+      typesDeclarationFile,
       packageMappings ?? {}
     )
     // The secrets file sits alongside authFile so re-inspection rediscovers it.

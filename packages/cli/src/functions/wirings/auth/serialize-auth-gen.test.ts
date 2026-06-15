@@ -5,6 +5,7 @@ import type { AuthDefinition } from '@pikku/inspector'
 
 const AUTH_FILE = '/project/.pikku/auth.gen.ts'
 const SOURCE_FILE = '/project/src/auth.ts'
+const TYPES_FILE = '/project/.pikku/pikku-types.gen.ts'
 
 const def = (overrides: Partial<AuthDefinition> = {}): AuthDefinition => ({
   exportName: 'auth',
@@ -16,7 +17,7 @@ const def = (overrides: Partial<AuthDefinition> = {}): AuthDefinition => ({
 })
 
 const gen = (providers: string[], d: AuthDefinition = def()) =>
-  serializeAuthGen(d, providers, AUTH_FILE, {})
+  serializeAuthGen(d, providers, AUTH_FILE, TYPES_FILE, {})
 const genWiring = (providers: string[], d: AuthDefinition = def()) =>
   gen(providers, d).wiring
 const genSecrets = (providers: string[], d: AuthDefinition = def()) =>
@@ -32,9 +33,12 @@ describe('serializeAuthGen', () => {
 
   test('wiring file imports the framework modules it uses', () => {
     const output = genWiring(['github'])
+    // The pikku types import is resolved relative to the scaffold location (not
+    // the `#pikku` subpath) so it works when the scaffold dir is outside the
+    // package's imports map.
     assert.match(
       output,
-      /import { pikkuSessionlessFunc, wireHTTPRoutes, addHTTPMiddleware } from '#pikku'/
+      /import { pikkuSessionlessFunc, wireHTTPRoutes, addHTTPMiddleware } from '\.\/pikku-types\.gen\.js'/
     )
     assert.match(
       output,

@@ -20,7 +20,6 @@ export const createConfig = pikkuConfig(async () => {
   return {
     awsRegion: 'us-east-1',
     secrets: {
-      auth: 'AUTH_SECRET',
       remote: 'PIKKU_REMOTE_SECRET',
     },
   }
