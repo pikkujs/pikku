@@ -10,11 +10,15 @@ export const PIKKU_BETTER_AUTH = Symbol.for('pikku.betterAuth')
 
 export type PikkuBetterAuthFactory<
   I extends BetterAuthInstance = BetterAuthInstance,
-> = (services: CoreSingletonServices) => I | Promise<I>
+  S extends CoreSingletonServices = CoreSingletonServices,
+> = (services: S) => I | Promise<I>
 
-export const pikkuBetterAuth = <I extends BetterAuthInstance>(
-  factory: PikkuBetterAuthFactory<I>
-): PikkuBetterAuthFactory<I> => {
+export const pikkuBetterAuth = <
+  I extends BetterAuthInstance,
+  S extends CoreSingletonServices = CoreSingletonServices,
+>(
+  factory: PikkuBetterAuthFactory<I, S>
+): PikkuBetterAuthFactory<I, S> => {
   Object.defineProperty(factory, PIKKU_BETTER_AUTH, {
     value: true,
     enumerable: false,

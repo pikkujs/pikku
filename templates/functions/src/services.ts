@@ -64,6 +64,7 @@ export const createSingletonServices = pikkuServices(
       schema,
       secrets,
       jwt,
+      kysely: existingServices?.kysely,
       todoStore: existingServices?.todoStore || new TodoStore(),
       aiStorage: existingServices?.aiStorage,
       aiAgentRunner: existingServices?.aiAgentRunner,

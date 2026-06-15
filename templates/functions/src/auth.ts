@@ -1,6 +1,8 @@
 import { betterAuth } from 'better-auth'
-import { memoryAdapter } from 'better-auth/adapters/memory'
 import { pikkuBetterAuth } from '@pikku/better-auth'
+import type { CoreSingletonServices } from '@pikku/core'
+import type { Kysely } from 'kysely'
+import type { KyselyPikkuDB } from '@pikku/kysely'
 
 /**
  * Better Auth configuration.
@@ -10,30 +12,30 @@ import { pikkuBetterAuth } from '@pikku/better-auth'
  * for every configured social provider — so the auth routes and secret
  * requirements flow through normal inspection into the deploy manifest.
  *
- * The factory runs lazily on the first auth request, so it pulls secrets (and a
- * database) off the injected `services`.
+ * The factory runs lazily on the first auth request, so it pulls secrets and the
+ * Kysely database off the injected `services`. Better Auth owns its own tables
+ * (user/session/account/verification); run `pikku db migrate` to materialise
+ * them. Each runtime injects its own `kysely` singleton (a SQLite/Postgres
+ * Kysely on node, a D1-backed Kysely on Cloudflare Workers).
  */
-export const auth = pikkuBetterAuth(async ({ secrets }) => {
-  // Fetch every secret in one batch rather than awaiting each individually.
-  const { BETTER_AUTH_SECRET, GITHUB_OAUTH } = await secrets.getSecrets<{
-    BETTER_AUTH_SECRET: string
-    GITHUB_OAUTH: { clientId: string; clientSecret: string }
-  }>(['BETTER_AUTH_SECRET', 'GITHUB_OAUTH'])
+export const auth = pikkuBetterAuth(
+  async ({
+    secrets,
+    kysely,
+  }: CoreSingletonServices & { kysely: Kysely<KyselyPikkuDB> }) => {
+    // Fetch every secret in one batch rather than awaiting each individually.
+    const { BETTER_AUTH_SECRET, GITHUB_OAUTH } = await secrets.getSecrets<{
+      BETTER_AUTH_SECRET: string
+      GITHUB_OAUTH: { clientId: string; clientSecret: string }
+    }>(['BETTER_AUTH_SECRET', 'GITHUB_OAUTH'])
 
-  return betterAuth({
-    secret: BETTER_AUTH_SECRET,
-    // In-memory store keeps the template zero-config; swap for the Kysely
-    // adapter (`better-auth/adapters/kysely`) backed by `services.kysely` in
-    // production. The memory adapter needs an array per better-auth model.
-    database: memoryAdapter({
-      user: [],
-      session: [],
-      account: [],
-      verification: [],
-    }),
-    emailAndPassword: { enabled: true },
-    socialProviders: {
-      github: GITHUB_OAUTH,
-    },
-  })
-})
+    return betterAuth({
+      secret: BETTER_AUTH_SECRET,
+      database: { db: kysely, type: 'sqlite' },
+      emailAndPassword: { enabled: true },
+      socialProviders: {
+        github: GITHUB_OAUTH,
+      },
+    })
+  }
+)

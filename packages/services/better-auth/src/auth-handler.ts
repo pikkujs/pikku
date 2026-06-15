@@ -10,7 +10,7 @@ export const createAuthHandler = (): {
     if (!request) {
       return
     }
-    const auth = (services as any).auth as BetterAuthInstance
+    const auth = (await (services as any).auth()) as BetterAuthInstance
     return await auth.handler(toWebRequest(request))
   },
 })

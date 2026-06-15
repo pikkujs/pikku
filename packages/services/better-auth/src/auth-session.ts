@@ -18,7 +18,7 @@ export const betterAuthSession = (
     }
 
     try {
-      const auth = (services as any).auth as BetterAuthInstance
+      const auth = (await (services as any).auth()) as BetterAuthInstance
       // getSession only needs the request headers — build them directly instead
       // of going through toWebRequest(), which (for a POST) would otherwise read
       // the single-use request body just to discard it, starving the route

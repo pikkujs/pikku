@@ -15,6 +15,8 @@ import type {
 import type { EventHubTopics } from './eventhub-topics.js'
 import type { TodoStore } from '../src/services/store.service.ts'
 import type { auth } from '../src/auth.ts'
+import type { Kysely } from 'kysely'
+import type { KyselyPikkuDB } from '@pikku/kysely'
 
 export interface Config extends CoreConfig {
   awsRegion: string
@@ -32,7 +34,8 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
   aiStorage?: AIStorageService
   aiAgentRunner?: AIAgentRunnerService
   aiRunState?: AIRunStateService
-  auth: Awaited<ReturnType<typeof auth>>
+  kysely?: Kysely<KyselyPikkuDB>
+  auth: () => Promise<Awaited<ReturnType<typeof auth>>>
 }
 
 export interface Services extends CoreServices<SingletonServices> {}

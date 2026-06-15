@@ -5747,7 +5747,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/kysely@npm:^0.12.0, @pikku/kysely@npm:^0.12.10, @pikku/kysely@npm:^0.12.13, @pikku/kysely@npm:^0.12.14, @pikku/kysely@npm:^0.12.9, @pikku/kysely@workspace:*, @pikku/kysely@workspace:packages/services/kysely":
+"@pikku/kysely@npm:^0.12.0, @pikku/kysely@npm:^0.12.10, @pikku/kysely@npm:^0.12.13, @pikku/kysely@npm:^0.12.14, @pikku/kysely@npm:^0.12.9, @pikku/kysely@workspace:*, @pikku/kysely@workspace:^, @pikku/kysely@workspace:packages/services/kysely":
   version: 0.0.0-use.local
   resolution: "@pikku/kysely@workspace:packages/services/kysely"
   dependencies:
@@ -6223,6 +6223,7 @@ __metadata:
     "@pikku/deploy-standalone": "workspace:*"
     "@pikku/fetch": "npm:^0.12.3"
     "@pikku/jose": "workspace:^"
+    "@pikku/kysely": "workspace:^"
     "@pikku/lambda": "workspace:*"
     "@pikku/modelcontextprotocol": "workspace:*"
     "@pikku/node-http-server": "workspace:*"
@@ -6235,6 +6236,7 @@ __metadata:
     better-auth: "npm:^1.6.18"
     concurrently: "npm:^9.2.1"
     eventsource: "npm:^4.1.0"
+    kysely: "npm:^0.28.12"
     serverless: "npm:^4.33.0"
     serverless-offline: "npm:^14.5.0"
     serverless-offline-sqs: "npm:^8.0.0"
