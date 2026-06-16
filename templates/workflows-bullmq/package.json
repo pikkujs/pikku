@@ -14,9 +14,9 @@
     "test": "bash ../functions/run-tests.sh --workflow --ignore-server-ready-check"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.31",
-    "@pikku/express": "^0.12.5",
-    "@pikku/queue-bullmq": "^0.12.2",
+    "@pikku/core": "^0.6.9",
+    "@pikku/express": "^0.6.2",
+    "@pikku/queue-bullmq": "^0.7.0",
     "@pikku/redis": "^0.12.7",
     "tslib": "^2.8.1",
     "tsx": "^4.21.0",
