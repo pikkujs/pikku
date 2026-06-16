@@ -91,7 +91,7 @@ jobs:
             deploy-serverless,
             deploy-azure,
             deploy-standalone,
-            auth-js,
+            better-auth,
           ]
     steps:
       - uses: actions/checkout@v4

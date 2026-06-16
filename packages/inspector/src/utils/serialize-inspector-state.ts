@@ -183,7 +183,9 @@ export interface SerializableInspectorState {
   }
   auth: {
     providers: string[]
+    plugins: string[]
     files: string[]
+    definition: InspectorState['auth']['definition']
   }
   secrets: {
     definitions: InspectorState['secrets']['definitions']
@@ -389,7 +391,9 @@ export function serializeInspectorState(
     },
     auth: {
       providers: state.auth.providers,
+      plugins: state.auth.plugins,
       files: Array.from(state.auth.files),
+      definition: state.auth.definition,
     },
     secrets: {
       definitions: state.secrets.definitions,
@@ -566,7 +570,9 @@ export function deserializeInspectorState(
     },
     auth: {
       providers: data.auth?.providers || [],
+      plugins: data.auth?.plugins || [],
       files: new Set(data.auth?.files || []),
+      definition: data.auth?.definition || null,
     },
     secrets: {
       definitions: data.secrets?.definitions || [],

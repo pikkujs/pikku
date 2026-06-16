@@ -106,7 +106,10 @@ export const addTagMiddleware = <PikkuMiddleware extends CorePikkuMiddleware>(
   packageName: string | null = null
 ): CorePikkuMiddlewareGroup => {
   const tagGroups = pikkuState(packageName, 'middleware', 'tagGroup')
-  tagGroups[tag] = middleware
+  const existing = tagGroups[tag] as CorePikkuMiddleware[] | undefined
+  tagGroups[tag] = existing
+    ? [...existing, ...(middleware as CorePikkuMiddleware[])]
+    : middleware
   return middleware
 }
 

@@ -83,14 +83,16 @@ export class RedisSecretService implements SecretService {
     await this.redis.del(this.secretKey(key))
   }
 
-  async getSecrets(keys: string[]): Promise<Record<string, unknown>> {
+  async getSecrets<
+    T extends Record<string, unknown> = Record<string, unknown>,
+  >(keys: (keyof T & string)[]): Promise<T> {
     const results = await Promise.allSettled(keys.map((k) => this.getSecret(k)))
     const out: Record<string, unknown> = {}
     keys.forEach((key, i) => {
       const result = results[i]
       if (result?.status === 'fulfilled') out[key] = result.value
     })
-    return out
+    return out as T
   }
 
   async rotateKEK(): Promise<number> {

@@ -644,12 +644,26 @@ export const pikkuConfig = (
  * \`\`\`
  */
 export const pikkuServices = (
-  func: (config: Config, existingServices: Partial<SingletonServices>) => Promise<RequiredSingletonServices>
+  func: (config: Config, existingServices: Partial<SingletonServices>) => Promise<Omit<RequiredSingletonServices, 'auth'>>
 ) => {
   return async (config: Config, existingServices: Partial<SingletonServices> = {}) => {
     const services = await func(config, existingServices)
-    __pikkuState(null, 'package', 'singletonServices', services as any)
-    return services
+    const authFactory = __pikkuState(null, 'package', 'authFactory')
+    if (authFactory) {
+      let authInstance: Promise<unknown> | undefined
+      ;(services as any).auth = () => {
+        authInstance ??= Promise.resolve()
+          .then(() => authFactory(services as any))
+          .catch((error) => {
+            authInstance = undefined
+            throw error
+          })
+        return authInstance
+      }
+    }
+    const resolved = services as RequiredSingletonServices
+    __pikkuState(null, 'package', 'singletonServices', resolved as any)
+    return resolved
   }
 }
 

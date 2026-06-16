@@ -51,8 +51,12 @@ const functionsDir = path.resolve(import.meta.dirname, '..')
 const managedProcesses: ManagedProcess[] = []
 const managedClosers: Array<() => Promise<void>> = []
 const sharedRuntimeEnv = {
-  AUTH_SECRET: 'pikku-test-auth-secret',
+  BETTER_AUTH_SECRET: 'pikku-test-better-auth-secret-32chars!',
   PIKKU_REMOTE_SECRET: 'pikku-test-remote-secret',
+  GITHUB_OAUTH: JSON.stringify({
+    clientId: 'pikku-test-github-client-id',
+    clientSecret: 'pikku-test-github-client-secret',
+  }),
 }
 const mcpPorts: Record<'dev' | 'standalone', number> = {
   dev: 4020,

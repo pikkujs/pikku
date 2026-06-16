@@ -273,6 +273,14 @@ export const createSingletonServices: CreateSingletonServices<
         config.workflowRoutesFile,
         config.publicRpcFile,
         config.publicAgentFile,
+        // The auth scaffold (catch-all routes + session middleware) and its
+        // sibling secrets file (wireSecret per provider) are generated into the
+        // scaffold dir, which may live outside srcDirectories (e.g. a project's
+        // `pikku/` dir). Add them explicitly so their wirings are inspected.
+        config.authFile,
+        config.authFile
+          ? path.join(path.dirname(config.authFile), 'auth-secrets.gen.ts')
+          : undefined,
       ]
       for (const file of scaffoldFiles) {
         if (file && !wiringFiles.includes(file) && existsSync(file)) {

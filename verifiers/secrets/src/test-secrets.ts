@@ -39,6 +39,16 @@ class EnvVariablesService implements VariablesService {
       return raw as unknown as T
     }
   }
+  getVariables<T extends Record<string, unknown> = Record<string, unknown>>(
+    names: (keyof T & string)[]
+  ): Partial<T> {
+    const out: Record<string, unknown> = {}
+    for (const key of names) {
+      const value = this.get(key)
+      if (value !== undefined) out[key] = value
+    }
+    return out as Partial<T>
+  }
   getAll(): Record<string, string> {
     return process.env as Record<string, string>
   }

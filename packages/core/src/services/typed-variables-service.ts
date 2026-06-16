@@ -28,6 +28,12 @@ export class TypedVariablesService<
     return this.variables.get(name)
   }
 
+  getVariables<T extends Record<string, unknown> = Record<string, unknown>>(
+    names: (keyof T & string)[]
+  ): Promise<Partial<T>> | Partial<T> {
+    return this.variables.getVariables<T>(names)
+  }
+
   getAll():
     | Promise<Record<string, string | undefined>>
     | Record<string, string | undefined> {

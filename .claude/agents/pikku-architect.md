@@ -45,7 +45,7 @@ All provide the same service interfaces (ChannelStore, WorkflowService, SecretSe
 | Option     | Package                  | Best For                                              |
 | ---------- | ------------------------ | ----------------------------------------------------- |
 | JWT (jose) | `@pikku/jose`            | Stateless auth, API tokens, microservices             |
-| Auth.js    | `@pikku/auth-js`         | OAuth providers (GitHub, Google, etc.), session-based |
+| Better Auth | `@pikku/better-auth`    | OAuth providers (GitHub, Google, etc.), MFA, organizations, session-based |
 | Custom     | `@pikku/core` middleware | Enterprise SSO, custom identity providers             |
 
 ### Runtime Selection

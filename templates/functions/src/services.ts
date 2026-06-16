@@ -20,7 +20,6 @@ export const createConfig = pikkuConfig(async () => {
   return {
     awsRegion: 'us-east-1',
     secrets: {
-      auth: 'AUTH_SECRET',
       remote: 'PIKKU_REMOTE_SECRET',
     },
   }
@@ -65,6 +64,7 @@ export const createSingletonServices = pikkuServices(
       schema,
       secrets,
       jwt,
+      kysely: existingServices?.kysely,
       todoStore: existingServices?.todoStore || new TodoStore(),
       aiStorage: existingServices?.aiStorage,
       aiAgentRunner: existingServices?.aiAgentRunner,

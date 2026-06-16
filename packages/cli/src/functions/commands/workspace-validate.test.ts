@@ -186,7 +186,7 @@ describe('pikku workspace validate', () => {
           {
             definitions: {},
             instances: {
-              'http:*:0': { definitionId: 'authJsSession' },
+              'http:*:0': { definitionId: 'betterAuthSession' },
             },
             httpGroups: {
               '*': { instanceIds: ['http:*:0'] },
@@ -232,7 +232,7 @@ describe('pikku workspace validate', () => {
           {
             definitions: {},
             instances: {
-              'http:*:0': { definitionId: 'authJsSession' },
+              'http:*:0': { definitionId: 'betterAuthSession' },
             },
             httpGroups: {
               '*': { instanceIds: ['http:*:0'] },

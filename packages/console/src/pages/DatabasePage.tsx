@@ -435,7 +435,6 @@ const nodeTypes = { databaseSchema: DatabaseSchemaNode }
 // ── Filter helpers ────────────────────────────────────────────────────────────
 
 const INTERNAL_TABLE_PREFIXES = [
-  'authjs_',
   'workflow_',
   'ai_',
   'pikku_',

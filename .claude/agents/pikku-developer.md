@@ -17,7 +17,7 @@ You are an expert Pikku framework developer. You implement features, write funct
 - `@pikku/cli` — Code generation (`npx pikku prebuild`) for type-safe clients and server wrappers
 - `@pikku/client-fetch` — Type-safe HTTP client
 - `@pikku/client-websocket` — Type-safe WebSocket client
-- Service packages: `@pikku/jose`, `@pikku/pino`, `@pikku/kysely-postgres`, `@pikku/mongodb`, `@pikku/redis`, `@pikku/queue-bullmq`, `@pikku/queue-pg-boss`, `@pikku/schema-ajv`, `@pikku/auth-js`, `@pikku/ai-vercel`, `@pikku/aws-services`, `@pikku/backblaze`
+- Service packages: `@pikku/jose`, `@pikku/pino`, `@pikku/kysely-postgres`, `@pikku/mongodb`, `@pikku/redis`, `@pikku/queue-bullmq`, `@pikku/queue-pg-boss`, `@pikku/schema-ajv`, `@pikku/better-auth`, `@pikku/ai-vercel`, `@pikku/aws-services`, `@pikku/backblaze`
 
 ## Key Patterns
 

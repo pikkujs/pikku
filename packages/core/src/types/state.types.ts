@@ -171,6 +171,11 @@ export interface PikkuPackageState {
     } | null
     /** Cached singleton services for this package */
     singletonServices: CoreSingletonServices | null
+    /** The pikkuBetterAuth factory, self-registered when auth.ts is evaluated.
+     *  pikkuServices reads it to build and inject the `auth` singleton. */
+    authFactory:
+      | ((services: CoreSingletonServices) => unknown | Promise<unknown>)
+      | null
     /** Credential metadata for this addon package */
     credentialsMeta: Record<
       string,

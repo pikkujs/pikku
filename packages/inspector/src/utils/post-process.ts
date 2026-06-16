@@ -12,6 +12,33 @@ import type {
 } from '@pikku/core'
 import { extractTypeKeys } from './type-utils.js'
 import { ErrorCode } from '../error-codes.js'
+import { AUTH_HANDLER_FUNC_ID } from '../add/add-auth.js'
+
+/**
+ * Stamp the inspected authorize/callbacks service set onto the generated auth
+ * handler's function meta.
+ *
+ * The CLI generates `export const authHandler = pikkuSessionlessFunc({ func:
+ * createAuthHandler(...).func })`. That `func` is an opaque property access, so
+ * normal extraction records zero services for the handler — which would leave
+ * the deployed auth worker without `kysely`/`variables`/`secrets` and break
+ * `authorize` at runtime. `add-auth` already computed the real dependency set
+ * (from the pikkuBetterAuth source) into `state.auth.definition.services`; copy it
+ * onto the handler meta. Re-derived every inspect and ordered BEFORE
+ * `aggregateRequiredServices` so it flows into `requiredServices`.
+ */
+export function stampAuthHandlerServices(
+  state: InspectorState | Omit<InspectorState, 'typesLookup'>
+): void {
+  const definition = state.auth.definition
+  if (!definition) return
+  const handlerMeta = state.functions.meta[AUTH_HANDLER_FUNC_ID]
+  if (!handlerMeta) return
+  handlerMeta.services = {
+    optimized: definition.services.optimized,
+    services: [...definition.services.services],
+  }
+}
 
 /**
  * Helper to extract wire-level middleware/permission names from metadata.

@@ -44,3 +44,14 @@ Then(
     await expect(badge).not.toBeVisible({ timeout: 5_000 })
   }
 )
+
+Then(
+  'I should see plugin {string} enabled',
+  { timeout: 10_000 },
+  async function (this: AgentWorld, pluginId: string) {
+    const badge = this.page
+      .locator(`[data-testid="auth-plugin-${pluginId}"]`)
+      .first()
+    await expect(badge).toBeVisible({ timeout: 5_000 })
+  }
+)

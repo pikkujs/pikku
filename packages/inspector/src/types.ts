@@ -301,6 +301,38 @@ export interface InspectorDiagnostic {
   position: number
 }
 
+/** A single discovered `export const X = pikkuBetterAuth((services) => betterAuth({...}))`. */
+export interface AuthDefinition {
+  /** The exported binding name the CLI imports (`export const <exportName>`). */
+  exportName: string
+  /** Absolute path of the file declaring it. */
+  sourceFile: string
+  /** better-auth base path (the `basePath` option, default `/api/auth`). */
+  basePath: string
+  /** Whether email/password auth is enabled (`emailAndPassword.enabled`). Written
+   *  into the generated `auth-meta.gen.json` so the console knows credentials are
+   *  available alongside the OAuth providers. */
+  hasCredentials: boolean
+  /** better-auth plugin ids used in the config's `plugins: [...]` array, read
+   *  from each entry's callee name (e.g. `bearer()` → `'bearer'`). Written into
+   *  `auth-meta.gen.json` so the console SSO page can show which plugins are
+   *  enabled. */
+  plugins: string[]
+  /**
+   * Singleton services the generated auth handler must have available at
+   * runtime — the services the `pikkuBetterAuth` factory reaches for (either
+   * destructured from its first param, or accessed as `services.<name>` in its
+   * body). better-auth's factory typically touches `secrets` and the DB.
+   *
+   * The generated `authHandler` calls `createAuthHandler(...).func`, an opaque
+   * property access the inspector can't see through; without this stamp the
+   * deployed auth worker would instantiate none of these services and the
+   * factory would receive an undefined `kysely`. Re-derived every inspect and
+   * applied to the handler meta before service aggregation runs.
+   */
+  services: FunctionServicesMeta
+}
+
 export interface InspectorState {
   rootDir: string // Root directory inferred from source files
   singletonServicesTypeImportMap: PathToNameAndType
@@ -384,7 +416,12 @@ export interface InspectorState {
   }
   auth: {
     providers: string[]
+    plugins: string[]
     files: Set<string>
+    /** The single `export const X = pikkuBetterAuth({...})` discovered in the
+     *  codebase, if any. The CLI generates the `/auth/*` HTTP wiring from it.
+     *  More than one `pikkuBetterAuth` is a critical error. */
+    definition: AuthDefinition | null
   }
   secrets: {
     definitions: SecretDefinitions

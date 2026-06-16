@@ -274,8 +274,8 @@ describe('applyWebResponse', () => {
     const { res, state } = createMockResponse()
     const webRes = new Response('{"csrfToken":"abc"}', { status: 200 })
     const cookies = [
-      'authjs.csrf-token=abc; Path=/; HttpOnly',
-      'authjs.callback-url=http%3A%2F%2Flocalhost; Path=/; HttpOnly',
+      'better-auth.session_token=abc; Path=/; HttpOnly',
+      'better-auth.callback-url=http%3A%2F%2Flocalhost; Path=/; HttpOnly',
     ]
     ;(webRes.headers as any).getSetCookie = () => cookies
 

@@ -12,6 +12,10 @@ echo "Bootstrapping with published @pikku/cli..."
 : "${PIKKU_CLI_VERSION:=latest}"
 _bootstrap_dir=$(mktemp -d)
 trap 'rm -rf "$_bootstrap_dir"' EXIT
+# The published bootstrap CLI's own auth codegen imports the auth package at
+# module load, so it must be installed alongside it. This stays @pikku/auth-js
+# until a CLI release that imports @pikku/better-auth is published, after which
+# this should flip to "@pikku/better-auth".
 npm install --prefix "$_bootstrap_dir" --no-save --no-package-lock \
   "@pikku/cli@${PIKKU_CLI_VERSION}" "@pikku/auth-js"
 "$_bootstrap_dir/node_modules/.bin/pikku"

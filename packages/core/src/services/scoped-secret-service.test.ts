@@ -7,6 +7,8 @@ const createMockSecrets = () => ({
   hasSecret: async () => true,
   setSecret: async () => {},
   deleteSecret: async () => {},
+  getSecrets: async <T>(keys: string[]) =>
+    Object.fromEntries(keys.map((key) => [key, { key }])) as T,
 })
 
 describe('ScopedSecretService', () => {
@@ -51,6 +53,24 @@ describe('ScopedSecretService', () => {
     const mock = createMockSecrets()
     const scoped = new ScopedSecretService(mock, new Set(['KEY1']))
     await assert.rejects(() => scoped.hasSecret('KEY2'), {
+      message: 'Access denied to secret key: KEY2',
+    })
+  })
+
+  test('should return batch secrets for allowed keys', async () => {
+    const mock = createMockSecrets()
+    const scoped = new ScopedSecretService(mock, new Set(['KEY1', 'KEY2']))
+    const result = await scoped.getSecrets(['KEY1', 'KEY2'])
+    assert.deepStrictEqual(result, {
+      KEY1: { key: 'KEY1' },
+      KEY2: { key: 'KEY2' },
+    })
+  })
+
+  test('should reject batch getSecrets when any key is not allowed', async () => {
+    const mock = createMockSecrets()
+    const scoped = new ScopedSecretService(mock, new Set(['KEY1']))
+    await assert.rejects(() => scoped.getSecrets(['KEY1', 'KEY2']), {
       message: 'Access denied to secret key: KEY2',
     })
   })

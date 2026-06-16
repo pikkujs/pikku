@@ -229,11 +229,25 @@ export type PikkuCLIInput = {
   emailTemplatesDir?: string
 
   /**
-   * Path to write the generated Auth.js wiring file (auth.gen.ts).
+   * Path to write the generated Better Auth wiring file (auth.gen.ts).
    * Must be within srcDirectories so wireSecret calls are picked up by the inspector.
    * Example: "src/auth.gen.ts"
    */
   authFile?: string
+
+  /**
+   * Path to write the generated typed `pikkuBetterAuth` re-export (auth.types.ts).
+   * Defaults to `{outDir}/auth/auth.types.ts`. Re-exported from `#pikku` so
+   * user code can `import { pikkuBetterAuth } from '#pikku'` with project-typed services.
+   */
+  authTypesFile?: string
+
+  /**
+   * Path to write the generated Better Auth metadata (auth-meta.gen.json) —
+   * the enabled social providers and plugins the console SSO page reads via
+   * getAuthProviders. Defaults to `{outDir}/auth/pikku-auth-meta.gen.json`.
+   */
+  authMetaJsonFile?: string
 
   openAPI?: {
     outputFile: string

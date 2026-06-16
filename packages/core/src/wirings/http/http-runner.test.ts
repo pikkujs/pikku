@@ -272,6 +272,19 @@ describe('http-runner helpers', () => {
     )
   })
 
+  test('addHTTPMiddleware composes repeated registrations for the same pattern', () => {
+    const first: CorePikkuMiddleware = async (_s, _w, next) => next()
+    const second: CorePikkuMiddleware = async (_s, _w, next) => next()
+
+    addHTTPMiddleware('*', [first])
+    addHTTPMiddleware('*', [second])
+
+    assert.deepEqual(pikkuState(null, 'middleware', 'httpGroup')['*'], [
+      first,
+      second,
+    ])
+  })
+
   test('createHTTPWire combines request and response when present', () => {
     const req = new TestRequest('/x', 'get')
     const res = new TestResponse()

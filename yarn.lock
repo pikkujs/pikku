@@ -210,30 +210,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@auth/core@npm:^0.37.0":
-  version: 0.37.4
-  resolution: "@auth/core@npm:0.37.4"
-  dependencies:
-    "@panva/hkdf": "npm:^1.2.1"
-    jose: "npm:^5.9.6"
-    oauth4webapi: "npm:^3.1.1"
-    preact: "npm:10.24.3"
-    preact-render-to-string: "npm:6.5.11"
-  peerDependencies:
-    "@simplewebauthn/browser": ^9.0.1
-    "@simplewebauthn/server": ^9.0.2
-    nodemailer: ^6.8.0
-  peerDependenciesMeta:
-    "@simplewebauthn/browser":
-      optional: true
-    "@simplewebauthn/server":
-      optional: true
-    nodemailer:
-      optional: true
-  checksum: 10/859e416c3b5d4ffcaaf9cba175204066c3474e4ee9653e2533f187006673b7fce9d40ad6be0c06bd3113cac5c10895df42470bae866b3dd5de9ab1fdf3c2c23a
-  languageName: node
-  linkType: hard
-
 "@aws-crypto/crc32@npm:5.2.0":
   version: 5.2.0
   resolution: "@aws-crypto/crc32@npm:5.2.0"
@@ -2225,6 +2201,127 @@ __metadata:
   version: 1.0.2
   resolution: "@bcoe/v8-coverage@npm:1.0.2"
   checksum: 10/46600b2dde460269b07a8e4f12b72e418eae1337b85c979f43af3336c9a1c65b04e42508ab6b245f1e0e3c64328e1c38d8cd733e4a7cebc4fbf9cf65c6e59937
+  languageName: node
+  linkType: hard
+
+"@better-auth/core@npm:1.6.18":
+  version: 1.6.18
+  resolution: "@better-auth/core@npm:1.6.18"
+  dependencies:
+    "@opentelemetry/semantic-conventions": "npm:^1.39.0"
+    "@standard-schema/spec": "npm:^1.1.0"
+    zod: "npm:^4.3.6"
+  peerDependencies:
+    "@better-auth/utils": 0.4.1
+    "@better-fetch/fetch": 1.3.0
+    "@cloudflare/workers-types": ">=4"
+    "@opentelemetry/api": ^1.9.0
+    better-call: 1.3.6
+    jose: ^6.1.0
+    kysely: ^0.28.5 || ^0.29.0
+    nanostores: ^1.0.1
+  peerDependenciesMeta:
+    "@cloudflare/workers-types":
+      optional: true
+    "@opentelemetry/api":
+      optional: true
+  checksum: 10/c6c7d4ede036ca02538fe139cd4ae94b2b02598b628e484e4296beebdb2d310f967c9fdcebf0d86e22356553d38e64e4563a12831fc9c908086577e9956af954
+  languageName: node
+  linkType: hard
+
+"@better-auth/drizzle-adapter@npm:1.6.18":
+  version: 1.6.18
+  resolution: "@better-auth/drizzle-adapter@npm:1.6.18"
+  peerDependencies:
+    "@better-auth/core": ^1.6.18
+    "@better-auth/utils": 0.4.1
+    drizzle-orm: ^0.45.2
+  peerDependenciesMeta:
+    drizzle-orm:
+      optional: true
+  checksum: 10/8a7a866e8361fa5830364370e38100c46c0db56e3dd6eab51e17d277b3aeabbc241d6316b87291ab792b3eb536d37eb6d7635df9fc4c492346074d10be7ae054
+  languageName: node
+  linkType: hard
+
+"@better-auth/kysely-adapter@npm:1.6.18":
+  version: 1.6.18
+  resolution: "@better-auth/kysely-adapter@npm:1.6.18"
+  peerDependencies:
+    "@better-auth/core": ^1.6.18
+    "@better-auth/utils": 0.4.1
+    kysely: ^0.28.17 || ^0.29.0
+  peerDependenciesMeta:
+    kysely:
+      optional: true
+  checksum: 10/f213eb1227ea32cb21ca7c112b59764dae8dfbbe60007e9862a8508a7a11f7256e7e1a6b115eb663c266d8923e3d0b15408b0f1e20fa52d9cf86edd244716ca3
+  languageName: node
+  linkType: hard
+
+"@better-auth/memory-adapter@npm:1.6.18":
+  version: 1.6.18
+  resolution: "@better-auth/memory-adapter@npm:1.6.18"
+  peerDependencies:
+    "@better-auth/core": ^1.6.18
+    "@better-auth/utils": 0.4.1
+  checksum: 10/85be406cfb2a0e99ea2d7180bb381e08adcda9aeecb10109aba3407c7f2ccc24dbcd7bb42d6f003a66578d2e7752f2135e0c9ab5e04b6e45864f4cff32f536d4
+  languageName: node
+  linkType: hard
+
+"@better-auth/mongo-adapter@npm:1.6.18":
+  version: 1.6.18
+  resolution: "@better-auth/mongo-adapter@npm:1.6.18"
+  peerDependencies:
+    "@better-auth/core": ^1.6.18
+    "@better-auth/utils": 0.4.1
+    mongodb: ^6.0.0 || ^7.0.0
+  peerDependenciesMeta:
+    mongodb:
+      optional: true
+  checksum: 10/003fdf6e66ea6f2b18e9a3d2160ad6cf04a75e681cb8a52de9ea809f49ba10d4dc64844c1ce41109cb5eef0c4eedf267e3c39f37f07379d02eb4bb9489428493
+  languageName: node
+  linkType: hard
+
+"@better-auth/prisma-adapter@npm:1.6.18":
+  version: 1.6.18
+  resolution: "@better-auth/prisma-adapter@npm:1.6.18"
+  peerDependencies:
+    "@better-auth/core": ^1.6.18
+    "@better-auth/utils": 0.4.1
+    "@prisma/client": ^5.0.0 || ^6.0.0 || ^7.0.0
+    prisma: ^5.0.0 || ^6.0.0 || ^7.0.0
+  peerDependenciesMeta:
+    "@prisma/client":
+      optional: true
+    prisma:
+      optional: true
+  checksum: 10/8547cdf9bfd227d768104cb2f4d5a3b2e9454e52101212ffd7c017ce477187f9ff64f770567eb73e9a0648130f88a41cf7e705582b18bf47d10de848f08021cc
+  languageName: node
+  linkType: hard
+
+"@better-auth/telemetry@npm:1.6.18":
+  version: 1.6.18
+  resolution: "@better-auth/telemetry@npm:1.6.18"
+  peerDependencies:
+    "@better-auth/core": ^1.6.18
+    "@better-auth/utils": 0.4.1
+    "@better-fetch/fetch": 1.3.0
+  checksum: 10/a1da12f98f39ccd440442eb2f1d825caa718603b02f6d1387af829b7e9301f1b12f2864857a49c154436c759fc36b5195aacee9f3242e41980182b21f2e08d56
+  languageName: node
+  linkType: hard
+
+"@better-auth/utils@npm:0.4.1, @better-auth/utils@npm:^0.4.0":
+  version: 0.4.1
+  resolution: "@better-auth/utils@npm:0.4.1"
+  dependencies:
+    "@noble/hashes": "npm:^2.0.1"
+  checksum: 10/82ce080d1100414a10aaa8414d80b53b474e3b669c66626297eeb447f9867bc4b7a061bcb9b8c1c7065fd54e4b2cf39926b936aca962d5f01333dd374d2f8cd1
+  languageName: node
+  linkType: hard
+
+"@better-fetch/fetch@npm:1.3.0, @better-fetch/fetch@npm:^1.1.21":
+  version: 1.3.0
+  resolution: "@better-fetch/fetch@npm:1.3.0"
+  checksum: 10/c1190be172ec72218cc9a30ae70d2edcad7e2bf56857d91601d868f9472702684b6d6ec1f0b38d95ff0fbd7de6464965f03ace4d9ed83df56c7effd06cbb870f
   languageName: node
   linkType: hard
 
@@ -4686,6 +4783,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@noble/ciphers@npm:^2.1.1":
+  version: 2.2.0
+  resolution: "@noble/ciphers@npm:2.2.0"
+  checksum: 10/d75348aa682b41ad3e24cdd0a56c6d9ca033fb629ab93f37d6690be41c4882359b27598a11af0f5439ba82df4f9e3875dea1f875064310f68fef63cf24e3481a
+  languageName: node
+  linkType: hard
+
+"@noble/hashes@npm:^2.0.1":
+  version: 2.2.0
+  resolution: "@noble/hashes@npm:2.2.0"
+  checksum: 10/b1b78bedc2a01394be047429f3d888905015fe8a09f1b7e43e0b5736b54133df62f73dcc73ede43af38e96e86156afb45b86973fdeaa95d9f0880333c3fc0907
+  languageName: node
+  linkType: hard
+
 "@nodelib/fs.scandir@npm:2.1.5":
   version: 2.1.5
   resolution: "@nodelib/fs.scandir@npm:2.1.5"
@@ -4754,6 +4865,13 @@ __metadata:
   version: 1.9.0
   resolution: "@opentelemetry/api@npm:1.9.0"
   checksum: 10/a607f0eef971893c4f2ee2a4c2069aade6ec3e84e2a1f5c2aac19f65c5d9eeea41aa72db917c1029faafdd71789a1a040bdc18f40d63690e22ccae5d7070f194
+  languageName: node
+  linkType: hard
+
+"@opentelemetry/semantic-conventions@npm:^1.39.0":
+  version: 1.41.1
+  resolution: "@opentelemetry/semantic-conventions@npm:1.41.1"
+  checksum: 10/3b80fba5b0f28884326966a7b0dfc228c55698531db08834ece2c0ef7537aaaa83cba3f933731c14ffa6b0162b72cc14fee4a0ba68a1858837a590b49be23ee5
   languageName: node
   linkType: hard
 
@@ -4901,13 +5019,6 @@ __metadata:
   version: 1.60.0
   resolution: "@oxlint/binding-win32-x64-msvc@npm:1.60.0"
   conditions: os=win32 & cpu=x64
-  languageName: node
-  linkType: hard
-
-"@panva/hkdf@npm:^1.2.1":
-  version: 1.2.1
-  resolution: "@panva/hkdf@npm:1.2.1"
-  checksum: 10/a4a9d1812f88f02bc163b365524bbaa5239cc4711e5e7be1bda68dabae1c896cf1cd12520949b0925a6910733d1afcb25ab51fd3cf06f0f69aee988fffebf56e
   languageName: node
   linkType: hard
 
@@ -5178,18 +5289,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/auth-js@npm:^0.12.1, @pikku/auth-js@npm:^0.12.5, @pikku/auth-js@workspace:*, @pikku/auth-js@workspace:packages/services/auth-js":
-  version: 0.0.0-use.local
-  resolution: "@pikku/auth-js@workspace:packages/services/auth-js"
-  dependencies:
-    "@auth/core": "npm:^0.37.0"
-    typescript: "npm:^5.9"
-  peerDependencies:
-    "@auth/core": ^0.37.0
-    "@pikku/core": ^0.12.29
-  languageName: unknown
-  linkType: soft
-
 "@pikku/aws-services@npm:^0.12.4, @pikku/aws-services@workspace:packages/services/aws-services":
   version: 0.0.0-use.local
   resolution: "@pikku/aws-services@workspace:packages/services/aws-services"
@@ -5234,11 +5333,24 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/better-auth@npm:^0.12.5, @pikku/better-auth@workspace:*, @pikku/better-auth@workspace:packages/services/better-auth":
+  version: 0.0.0-use.local
+  resolution: "@pikku/better-auth@workspace:packages/services/better-auth"
+  dependencies:
+    better-auth: "npm:^1.6.18"
+    typescript: "npm:^5.9"
+  peerDependencies:
+    "@pikku/core": ^0.12.29
+    better-auth: ^1.6.0
+  languageName: unknown
+  linkType: soft
+
 "@pikku/cli@npm:*, @pikku/cli@npm:^0.12.0, @pikku/cli@npm:^0.12.1, @pikku/cli@npm:^0.12.22, @pikku/cli@npm:^0.12.33, @pikku/cli@npm:^0.12.35, @pikku/cli@workspace:*, @pikku/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@pikku/cli@workspace:packages/cli"
   dependencies:
     "@openapi-contrib/json-schema-to-openapi-schema": "npm:^4.3.1"
+    "@pikku/better-auth": "workspace:*"
     "@pikku/core": "npm:^0.12.31"
     "@pikku/deploy-cloudflare": "npm:^0.12.3"
     "@pikku/fetch": "npm:^0.12.3"
@@ -5421,7 +5533,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/e2e-functions@workspace:e2e/packages/functions"
   dependencies:
+    "@pikku/better-auth": "workspace:*"
     "@pikku/core": "npm:*"
+    better-auth: "npm:^1.6.18"
     typescript: "npm:~5.8.0"
     zod: "npm:*"
   peerDependencies:
@@ -5434,13 +5548,12 @@ __metadata:
   resolution: "@pikku/e2e@workspace:e2e"
   dependencies:
     "@ai-sdk/openai": "npm:^3.0.37"
-    "@auth/core": "npm:^0.37.0"
     "@cucumber/cucumber": "npm:^11.0.0"
     "@pikku/addon-console": "workspace:*"
     "@pikku/addon-graph": "workspace:*"
     "@pikku/addon-hmac-signer": "workspace:*"
     "@pikku/ai-vercel": "workspace:*"
-    "@pikku/auth-js": "workspace:*"
+    "@pikku/better-auth": "workspace:*"
     "@pikku/cli": "workspace:*"
     "@pikku/core": "workspace:*"
     "@pikku/cucumber": "workspace:*"
@@ -5456,6 +5569,7 @@ __metadata:
     "@types/better-sqlite3": "npm:^7.0.0"
     "@types/node": "npm:^22"
     ai: "npm:^6.0.105"
+    better-auth: "npm:^1.6.18"
     better-sqlite3: "npm:^12.10.0"
     c8: "npm:^10.1.3"
     ioredis: "npm:^5.10.0"
@@ -5633,7 +5747,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/kysely@npm:^0.12.0, @pikku/kysely@npm:^0.12.10, @pikku/kysely@npm:^0.12.13, @pikku/kysely@npm:^0.12.14, @pikku/kysely@npm:^0.12.9, @pikku/kysely@workspace:*, @pikku/kysely@workspace:packages/services/kysely":
+"@pikku/kysely@npm:^0.12.0, @pikku/kysely@npm:^0.12.10, @pikku/kysely@npm:^0.12.13, @pikku/kysely@npm:^0.12.14, @pikku/kysely@npm:^0.12.9, @pikku/kysely@workspace:*, @pikku/kysely@workspace:^, @pikku/kysely@workspace:packages/services/kysely":
   version: 0.0.0-use.local
   resolution: "@pikku/kysely@workspace:packages/services/kysely"
   dependencies:
@@ -5891,9 +6005,7 @@ __metadata:
   dependencies:
     "@ai-sdk/anthropic": "npm:^3.0.50"
     "@ai-sdk/openai": "npm:^3.0.37"
-    "@auth/core": "npm:^0.37.0"
     "@pikku/ai-vercel": "npm:^0.12.5"
-    "@pikku/auth-js": "npm:^0.12.5"
     "@pikku/core": "npm:^0.12.31"
     "@pikku/express": "npm:^0.12.5"
     "@pikku/kysely-postgres": "npm:^0.12.8"
@@ -5911,14 +6023,12 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-aws-lambda-websocket@workspace:templates/aws-lambda-websocket"
   dependencies:
-    "@auth/core": "npm:^0.37.0"
     "@aws-sdk/client-apigatewaymanagementapi": "npm:^3.1000.0"
     "@aws-sdk/client-s3": "npm:^3.1000.0"
     "@aws-sdk/client-secrets-manager": "npm:^3.1000.0"
     "@aws-sdk/client-sqs": "npm:^3.1000.0"
     "@aws-sdk/cloudfront-signer": "npm:^3.999.0"
     "@aws-sdk/s3-request-presigner": "npm:^3.1000.0"
-    "@pikku/auth-js": "npm:^0.12.5"
     "@pikku/aws-services": "npm:^0.12.4"
     "@pikku/core": "npm:^0.12.31"
     "@pikku/kysely-postgres": "npm:^0.12.8"
@@ -5942,13 +6052,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-aws-lambda@workspace:templates/aws-lambda"
   dependencies:
-    "@auth/core": "npm:^0.37.0"
     "@aws-sdk/client-s3": "npm:^3.1000.0"
     "@aws-sdk/client-secrets-manager": "npm:^3.1000.0"
     "@aws-sdk/client-sqs": "npm:^3.1000.0"
     "@aws-sdk/cloudfront-signer": "npm:^3.999.0"
     "@aws-sdk/s3-request-presigner": "npm:^3.1000.0"
-    "@pikku/auth-js": "npm:^0.12.5"
     "@pikku/aws-services": "npm:^0.12.4"
     "@pikku/core": "npm:^0.12.31"
     "@pikku/jose": "npm:^0.12.3"
@@ -5970,8 +6078,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-bullmq@workspace:templates/bullmq"
   dependencies:
-    "@auth/core": "npm:^0.37.0"
-    "@pikku/auth-js": "npm:^0.12.5"
     "@pikku/core": "npm:^0.12.31"
     "@pikku/queue-bullmq": "npm:^0.12.2"
     "@types/node": "npm:^24"
@@ -5985,8 +6091,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-cli@workspace:templates/cli"
   dependencies:
-    "@auth/core": "npm:^0.37.0"
-    "@pikku/auth-js": "npm:^0.12.5"
     "@pikku/cli": "npm:^0.12.35"
     "@pikku/core": "npm:^0.12.31"
     "@pikku/uws": "npm:^0.12.5"
@@ -6001,9 +6105,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-cloudflare-websocket@workspace:templates/cloudflare-websocket"
   dependencies:
-    "@auth/core": "npm:^0.37.0"
     "@cloudflare/workers-types": "npm:^4.20260305.0"
-    "@pikku/auth-js": "npm:^0.12.5"
     "@pikku/cloudflare": "npm:^0.12.9"
     "@pikku/core": "npm:^0.12.31"
     "@types/node": "npm:^24"
@@ -6017,9 +6119,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-cloudflare-workers@workspace:templates/cloudflare-workers"
   dependencies:
-    "@auth/core": "npm:^0.37.0"
     "@cloudflare/workers-types": "npm:^4.20260305.0"
-    "@pikku/auth-js": "npm:^0.12.5"
     "@pikku/cloudflare": "npm:^0.12.9"
     "@pikku/core": "npm:^0.12.31"
     "@types/node": "npm:^24"
@@ -6032,8 +6132,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-express-middleware@workspace:templates/express-middleware"
   dependencies:
-    "@auth/core": "npm:^0.37.0"
-    "@pikku/auth-js": "npm:^0.12.5"
     "@pikku/cli": "npm:^0.12.35"
     "@pikku/core": "npm:^0.12.31"
     "@pikku/express-middleware": "npm:^0.12.2"
@@ -6054,8 +6152,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-express-server@workspace:templates/express"
   dependencies:
-    "@auth/core": "npm:^0.37.0"
-    "@pikku/auth-js": "npm:^0.12.5"
     "@pikku/core": "npm:^0.12.31"
     "@pikku/express": "npm:^0.12.5"
     "@pikku/schedule": "npm:^0.12.2"
@@ -6071,8 +6167,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-fastify-plugin@workspace:templates/fastify-plugin"
   dependencies:
-    "@auth/core": "npm:^0.37.0"
-    "@pikku/auth-js": "npm:^0.12.5"
     "@pikku/core": "npm:^0.12.31"
     "@pikku/fastify-plugin": "npm:^0.12.2"
     "@pikku/schedule": "npm:^0.12.2"
@@ -6089,8 +6183,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-fastify-server@workspace:templates/fastify"
   dependencies:
-    "@auth/core": "npm:^0.37.0"
-    "@pikku/auth-js": "npm:^0.12.5"
     "@pikku/core": "npm:^0.12.31"
     "@pikku/fastify": "npm:^0.12.3"
     "@types/node": "npm:^24"
@@ -6119,11 +6211,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-functions@workspace:templates/functions"
   dependencies:
-    "@auth/core": "npm:^0.37.0"
     "@modelcontextprotocol/sdk": "npm:1.27.1"
     "@pikku/addon-console": "workspace:*"
     "@pikku/addon-graph": "workspace:*"
-    "@pikku/auth-js": "npm:^0.12.5"
+    "@pikku/better-auth": "npm:^0.12.5"
     "@pikku/cli": "npm:^0.12.35"
     "@pikku/cloudflare": "workspace:*"
     "@pikku/core": "npm:^0.12.31"
@@ -6132,6 +6223,7 @@ __metadata:
     "@pikku/deploy-standalone": "workspace:*"
     "@pikku/fetch": "npm:^0.12.3"
     "@pikku/jose": "workspace:^"
+    "@pikku/kysely": "workspace:^"
     "@pikku/lambda": "workspace:*"
     "@pikku/modelcontextprotocol": "workspace:*"
     "@pikku/node-http-server": "workspace:*"
@@ -6141,8 +6233,10 @@ __metadata:
     "@pikku/websocket": "npm:^0.12.1"
     "@types/node": "npm:^24"
     "@types/ws": "npm:^8"
+    better-auth: "npm:^1.6.18"
     concurrently: "npm:^9.2.1"
     eventsource: "npm:^4.1.0"
+    kysely: "npm:^0.28.12"
     serverless: "npm:^4.33.0"
     serverless-offline: "npm:^14.5.0"
     serverless-offline-sqs: "npm:^8.0.0"
@@ -6158,8 +6252,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-mcp-server@workspace:templates/mcp-server"
   dependencies:
-    "@auth/core": "npm:^0.37.0"
-    "@pikku/auth-js": "npm:^0.12.1"
     "@pikku/cli": "npm:^0.12.1"
     "@pikku/core": "npm:^0.12.1"
     "@pikku/modelcontextprotocol": "npm:^0.12.1"
@@ -6173,9 +6265,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-nextjs@workspace:templates/nextjs"
   dependencies:
-    "@auth/core": "npm:^0.37.0"
     "@next/swc-darwin-arm64": "npm:^16.2.6"
-    "@pikku/auth-js": "npm:^0.12.5"
     "@pikku/cli": "npm:^0.12.35"
     "@pikku/core": "npm:^0.12.31"
     "@pikku/fetch": "npm:^0.12.3"
@@ -6199,8 +6289,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-pg-boss@workspace:templates/pg-boss"
   dependencies:
-    "@auth/core": "npm:^0.37.0"
-    "@pikku/auth-js": "npm:^0.12.5"
     "@pikku/core": "npm:^0.12.31"
     "@pikku/queue-pg-boss": "npm:^0.12.3"
     "@types/node": "npm:^24"
@@ -6214,8 +6302,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-remote-rpc-pg@workspace:templates/remote-rpc-pg"
   dependencies:
-    "@auth/core": "npm:^0.37.0"
-    "@pikku/auth-js": "npm:^0.12.5"
     "@pikku/cli": "npm:^0.12.35"
     "@pikku/core": "npm:^0.12.31"
     "@pikku/express": "npm:^0.12.5"
@@ -6237,8 +6323,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-remote-rpc-redis@workspace:templates/remote-rpc-redis"
   dependencies:
-    "@auth/core": "npm:^0.37.0"
-    "@pikku/auth-js": "npm:^0.12.5"
     "@pikku/cli": "npm:^0.12.35"
     "@pikku/core": "npm:^0.12.31"
     "@pikku/express": "npm:^0.12.5"
@@ -6258,8 +6342,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-uws@workspace:templates/uws"
   dependencies:
-    "@auth/core": "npm:^0.37.0"
-    "@pikku/auth-js": "npm:^0.12.5"
     "@pikku/core": "npm:^0.12.31"
     "@pikku/uws": "npm:^0.12.5"
     "@pikku/websocket": "npm:^0.12.1"
@@ -6276,8 +6358,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-workflows-bullmq@workspace:templates/workflows-bullmq"
   dependencies:
-    "@auth/core": "npm:^0.37.0"
-    "@pikku/auth-js": "npm:^0.12.5"
     "@pikku/cli": "npm:^0.12.35"
     "@pikku/core": "npm:^0.12.31"
     "@pikku/express": "npm:^0.12.5"
@@ -6294,8 +6374,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-workflows-pg-boss@workspace:templates/workflows-pg-boss"
   dependencies:
-    "@auth/core": "npm:^0.37.0"
-    "@pikku/auth-js": "npm:^0.12.5"
     "@pikku/cli": "npm:^0.12.35"
     "@pikku/core": "npm:^0.12.31"
     "@pikku/express": "npm:^0.12.5"
@@ -6315,8 +6393,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-ws-server@workspace:templates/ws"
   dependencies:
-    "@auth/core": "npm:^0.37.0"
-    "@pikku/auth-js": "npm:^0.12.5"
     "@pikku/core": "npm:^0.12.31"
     "@pikku/ws": "npm:^0.12.2"
     "@types/node": "npm:^24"
@@ -6368,16 +6444,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/verifiers-auth-js@workspace:verifiers/auth-js":
+"@pikku/verifiers-better-auth@workspace:verifiers/better-auth":
   version: 0.0.0-use.local
-  resolution: "@pikku/verifiers-auth-js@workspace:verifiers/auth-js"
+  resolution: "@pikku/verifiers-better-auth@workspace:verifiers/better-auth"
   dependencies:
-    "@auth/core": "npm:^0.37.0"
-    "@pikku/auth-js": "workspace:*"
+    "@pikku/better-auth": "workspace:*"
     "@pikku/cli": "workspace:*"
     "@pikku/core": "workspace:*"
+    "@pikku/kysely": "workspace:*"
     "@pikku/schema-cfworker": "workspace:*"
+    "@types/better-sqlite3": "npm:^7.6.13"
     "@types/node": "npm:^24"
+    better-auth: "npm:^1.6.18"
+    better-sqlite3: "npm:^12.10.0"
+    kysely: "npm:^0.28.12"
     tsx: "npm:^4.21.0"
     typescript: "npm:^5.9"
   languageName: unknown
@@ -11964,6 +12044,107 @@ __metadata:
   languageName: node
   linkType: hard
 
+"better-auth@npm:^1.6.18":
+  version: 1.6.18
+  resolution: "better-auth@npm:1.6.18"
+  dependencies:
+    "@better-auth/core": "npm:1.6.18"
+    "@better-auth/drizzle-adapter": "npm:1.6.18"
+    "@better-auth/kysely-adapter": "npm:1.6.18"
+    "@better-auth/memory-adapter": "npm:1.6.18"
+    "@better-auth/mongo-adapter": "npm:1.6.18"
+    "@better-auth/prisma-adapter": "npm:1.6.18"
+    "@better-auth/telemetry": "npm:1.6.18"
+    "@better-auth/utils": "npm:0.4.1"
+    "@better-fetch/fetch": "npm:1.3.0"
+    "@noble/ciphers": "npm:^2.1.1"
+    "@noble/hashes": "npm:^2.0.1"
+    better-call: "npm:1.3.6"
+    defu: "npm:^6.1.4"
+    jose: "npm:^6.1.3"
+    kysely: "npm:^0.28.17 || ^0.29.0"
+    nanostores: "npm:^1.1.1"
+    zod: "npm:^4.3.6"
+  peerDependencies:
+    "@lynx-js/react": "*"
+    "@prisma/client": ^5.0.0 || ^6.0.0 || ^7.0.0
+    "@sveltejs/kit": ^2.0.0
+    "@tanstack/react-start": ^1.0.0
+    "@tanstack/solid-start": ^1.0.0
+    better-sqlite3: ^12.0.0
+    drizzle-kit: ">=0.31.4"
+    drizzle-orm: ^0.45.2
+    mongodb: ^6.0.0 || ^7.0.0
+    mysql2: ^3.0.0
+    next: ^14.0.0 || ^15.0.0 || ^16.0.0
+    pg: ^8.0.0
+    prisma: ^5.0.0 || ^6.0.0 || ^7.0.0
+    react: ^18.0.0 || ^19.0.0
+    react-dom: ^18.0.0 || ^19.0.0
+    solid-js: ^1.0.0
+    svelte: ^4.0.0 || ^5.0.0
+    vitest: ^2.0.0 || ^3.0.0 || ^4.0.0
+    vue: ^3.0.0
+  peerDependenciesMeta:
+    "@lynx-js/react":
+      optional: true
+    "@prisma/client":
+      optional: true
+    "@sveltejs/kit":
+      optional: true
+    "@tanstack/react-start":
+      optional: true
+    "@tanstack/solid-start":
+      optional: true
+    better-sqlite3:
+      optional: true
+    drizzle-kit:
+      optional: true
+    drizzle-orm:
+      optional: true
+    mongodb:
+      optional: true
+    mysql2:
+      optional: true
+    next:
+      optional: true
+    pg:
+      optional: true
+    prisma:
+      optional: true
+    react:
+      optional: true
+    react-dom:
+      optional: true
+    solid-js:
+      optional: true
+    svelte:
+      optional: true
+    vitest:
+      optional: true
+    vue:
+      optional: true
+  checksum: 10/3ac38cbe2c42691548b336d7cb93cc71be6a53b8941f6bb9fec7acdf6e373cfe294a0d779bfc8e4bae7a595d0fc75ce3294890ead9be0494af18e121cea0421d
+  languageName: node
+  linkType: hard
+
+"better-call@npm:1.3.6":
+  version: 1.3.6
+  resolution: "better-call@npm:1.3.6"
+  dependencies:
+    "@better-auth/utils": "npm:^0.4.0"
+    "@better-fetch/fetch": "npm:^1.1.21"
+    rou3: "npm:^0.7.12"
+    set-cookie-parser: "npm:^3.0.1"
+  peerDependencies:
+    zod: ^4.0.0
+  peerDependenciesMeta:
+    zod:
+      optional: true
+  checksum: 10/1ce90263a1673f142b85a7ac2506c8f6feae4351ea54a867b184707169c9fb6e13988f79d4d2915cbb066b9616113e6cb86fc1f9c8ffc82a9a8a135b78d4b140
+  languageName: node
+  linkType: hard
+
 "better-path-resolve@npm:1.0.0":
   version: 1.0.0
   resolution: "better-path-resolve@npm:1.0.0"
@@ -16379,7 +16560,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jose@npm:^5.10.0, jose@npm:^5.7.0, jose@npm:^5.9.6":
+"jose@npm:^5.10.0, jose@npm:^5.7.0":
   version: 5.10.0
   resolution: "jose@npm:5.10.0"
   checksum: 10/03881d1dfb390dcf50926402edcfe233bf557b5a77321fcb1bdb53453bc1cdd26d2d0a9ab28c7445cbb826881f84fdf5074179700f10c2711ccb9880f51065d7
@@ -16711,6 +16892,13 @@ __metadata:
   version: 0.28.12
   resolution: "kysely@npm:0.28.12"
   checksum: 10/b835848f0811e7cb6cd09a4c2d6fd5723f12c9f9d84e48d8e9a86642d5451943399f7b56f60b726c76a8cc96bbde954ad82d838ce66218438e4735646bf781be
+  languageName: node
+  linkType: hard
+
+"kysely@npm:^0.28.17 || ^0.29.0":
+  version: 0.29.2
+  resolution: "kysely@npm:0.29.2"
+  checksum: 10/abe40e648447880e06a7dfdb829717859162e0cc762e0d53d0c9193c51be7bc2fd9f30f58c7fc71679a49f8e95dd3a4ac5c9147434a83decdbf0cfcea8eeae0d
   languageName: node
   linkType: hard
 
@@ -18567,6 +18755,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"nanostores@npm:^1.1.1":
+  version: 1.3.0
+  resolution: "nanostores@npm:1.3.0"
+  checksum: 10/272165e23a64e4ee31126fba2bc0d87a3afdde31c68d569b58abed46909b8da20f51c552d7383b17d0cd5c419b2b18fc7315b0112fded54618c1b9683eef2729
+  languageName: node
+  linkType: hard
+
 "napi-build-utils@npm:^2.0.0":
   version: 2.0.0
   resolution: "napi-build-utils@npm:2.0.0"
@@ -18897,13 +19092,6 @@ __metadata:
   bin:
     oauth2-mock-server: dist/oauth2-mock-server.js
   checksum: 10/80328d9e7cc9dcdc2a0c50c580a8bacdc948312c7a639ab6fd872f07f661f70278e583929df9fc523e3706010f5514968003a61a50eed6414e4af55fbe92d829
-  languageName: node
-  linkType: hard
-
-"oauth4webapi@npm:^3.1.1":
-  version: 3.8.5
-  resolution: "oauth4webapi@npm:3.8.5"
-  checksum: 10/5c39d4dbd95b795438e79444a1d710631b3f8311e8b8913150b385b5815857b32f617a49d4869a4476b2318f614adfbc9d19510360df198719973f6f69a2e75b
   languageName: node
   linkType: hard
 
@@ -19956,22 +20144,6 @@ __metadata:
   version: 3.4.8
   resolution: "postgres@npm:3.4.8"
   checksum: 10/65bf20b4ada953926c05a83f3fb454f10f5db0f05bd1fd2d41ddba4ce16d2038b46a973fd04e0331fb43cb5b6028fda272db438e497bc7c947756790f8fadc52
-  languageName: node
-  linkType: hard
-
-"preact-render-to-string@npm:6.5.11":
-  version: 6.5.11
-  resolution: "preact-render-to-string@npm:6.5.11"
-  peerDependencies:
-    preact: ">=10"
-  checksum: 10/a77f7715f3b7e94d6157dab3708e204663a605f86bb20d70a2916c734b873640335dd4180aa79f4eeb4555c07dc4e92b9a4fadc809beeb56b206eaf41e5762dd
-  languageName: node
-  linkType: hard
-
-"preact@npm:10.24.3":
-  version: 10.24.3
-  resolution: "preact@npm:10.24.3"
-  checksum: 10/e9c4c901a4ddd475a1072355b5c6c944b05797445e0d68f317ad0dbc976b831523573693ea75d2e12e7902042e3729af435377816d25558bf693ecf6b516c707
   languageName: node
   linkType: hard
 
@@ -21219,6 +21391,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"rou3@npm:^0.7.12":
+  version: 0.7.12
+  resolution: "rou3@npm:0.7.12"
+  checksum: 10/567969f8bb5ebcc9a0c5a1b6964d90ca6883a9e17302b0e66a263b415da4291d8a3c421e8f4214fe290386311c13fdd73db2729bc96bbac0e2dd502d41c25980
+  languageName: node
+  linkType: hard
+
 "router@npm:^2.2.0":
   version: 2.2.0
   resolution: "router@npm:2.2.0"
@@ -21555,6 +21734,13 @@ __metadata:
   version: 2.7.2
   resolution: "set-cookie-parser@npm:2.7.2"
   checksum: 10/4b6f5ec4e3fa1aef471d9207117704d217ba6bb6443400b41f5ea945c4a7f6fc08e405a122c1a32b4ebde41f06dea75e02c2af87cee9abb27f3e3fe911e5839b
+  languageName: node
+  linkType: hard
+
+"set-cookie-parser@npm:^3.0.1":
+  version: 3.1.0
+  resolution: "set-cookie-parser@npm:3.1.0"
+  checksum: 10/ff4ddfc1ab9daf7a2ed760b350536012be8063ec6de45afda96e7a0a3671fcafdb70bd31b2ad92c27fb1f9fb2edf9207e5f4ea316ffa83adfd011b505d370df2
   languageName: node
   linkType: hard
 

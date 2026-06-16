@@ -7,7 +7,6 @@ import { startMockOAuthServer } from '../tests/support/mock-oauth-server.js'
 import '../src/middleware.js'
 import '../.pikku/pikku-bootstrap.gen.js'
 import '../packages/functions/src/wirings/oauth2-routes.wirings.js'
-import '../packages/functions/src/wirings/auth.wirings.js'
 
 async function main(): Promise<void> {
   try {

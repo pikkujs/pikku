@@ -34,8 +34,10 @@ export class ScopedSecretService implements SecretService {
     throw new Error('deleteSecret is not allowed in scoped secret service')
   }
 
-  async getSecrets(keys: string[]): Promise<Record<string, unknown>> {
-    const allowed = keys.filter((k) => this.allowedKeys.has(k))
-    return this.secrets.getSecrets(allowed)
+  async getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(
+    keys: (keyof T & string)[]
+  ): Promise<Partial<T>> {
+    keys.forEach((k) => this.assertAllowed(k))
+    return this.secrets.getSecrets<T>(keys)
   }
 }

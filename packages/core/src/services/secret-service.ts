@@ -31,8 +31,14 @@ export interface SecretService {
   /**
    * Retrieves multiple secrets in a single batch operation.
    * Returns a map of key → value for successfully fetched secrets; missing
-   * keys are omitted rather than throwing.
+   * keys are omitted rather than throwing, so the result is typed as
+   * `Partial<T>` and callers must handle keys that may be absent at runtime.
+   *
+   * Pass a shape as `T` to get a typed result without casting, e.g.
+   * `await secrets.getSecrets<{ FOO: string; BAR: { id: string } }>(['FOO', 'BAR'])`.
    * @param keys - The keys of the secrets to retrieve.
    */
-  getSecrets(keys: string[]): Promise<Record<string, unknown>>
+  getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(
+    keys: (keyof T & string)[]
+  ): Promise<Partial<T>>
 }

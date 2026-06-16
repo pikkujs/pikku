@@ -43,8 +43,10 @@ export class TypedSecretService<
     return this.secrets.deleteSecret(key)
   }
 
-  async getSecrets(keys: string[]): Promise<Record<string, unknown>> {
-    return this.secrets.getSecrets(keys)
+  async getSecrets<T extends Record<string, unknown> = Record<string, unknown>>(
+    keys: (keyof T & string)[]
+  ): Promise<Partial<T>> {
+    return this.secrets.getSecrets<T>(keys)
   }
 
   async getAllStatus(): Promise<CredentialStatus[]> {

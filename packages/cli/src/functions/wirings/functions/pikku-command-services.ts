@@ -11,7 +11,8 @@ export const serializeServicesMap = (
   forceRequiredServices: string[] = [],
   servicesImport: string,
   wireServicesImport: string,
-  addonRequiredParentServices: string[] = []
+  addonRequiredParentServices: string[] = [],
+  authInjected: boolean = false
 ): string => {
   // Use pre-aggregated services from inspector state
   // This includes services from:
@@ -44,6 +45,14 @@ export const serializeServicesMap = (
   // Services that are always required internally by the framework
   const defaultServices = ['config', 'logger', 'variables', 'schema', 'secrets']
   defaultServices.forEach((service) => usedServices.add(service))
+
+  // When a pikkuBetterAuth factory is present, the generated `pikkuServices`
+  // wrapper always injects a resolved `auth` singleton. Mark it required so
+  // RequiredSingletonServices keeps `auth` non-optional and stays assignable
+  // to a SingletonServices type that types `auth` from the factory's return.
+  if (authInjected) {
+    usedServices.add('auth')
+  }
 
   // Create singleton services map: all singleton services with true/false based on usage
   const singletonServicesMap: Record<string, boolean> = {}
@@ -136,7 +145,8 @@ export const pikkuServices = pikkuSessionlessFunc<void, void>({
       config.forceRequiredServices,
       servicesImport,
       wireServicesImport,
-      config.addonName ? visitState.addonRequiredParentServices : []
+      config.addonName ? visitState.addonRequiredParentServices : [],
+      Boolean(visitState.auth?.definition)
     )
     await writeFileInDir(logger, config.servicesFile, servicesCode)
   },

@@ -4,8 +4,11 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializePikkuTypesHub } from './serialize-pikku-types-hub.js'
 
-export const pikkuFunctionTypes = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config }) => {
+export const pikkuFunctionTypes = pikkuSessionlessFunc<
+  { bootstrap?: boolean },
+  void
+>({
+  func: async ({ logger, config, getInspectorState }, data) => {
     const {
       typesDeclarationFile: typesFile,
       packageMappings,
@@ -20,6 +23,7 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<void, void>({
       nodeTypesFile,
       secretTypesFile,
       addonTypesFile,
+      authTypesFile,
     } = config
 
     const getImportPath = (file: string) =>
@@ -30,6 +34,21 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<void, void>({
     // Node and trigger types are included for addon packages
     const getAlwaysImportPath = (file: string) =>
       getFileImportRelativePath(typesFile, file, packageMappings)
+
+    // Include the typed pikkuBetterAuth re-export only when the project has a
+    // pikkuBetterAuth declaration. This avoids importing @pikku/better-auth in
+    // projects that don't use it.
+    //
+    // Skip inspector state entirely during cold bootstrap: .pikku doesn't exist
+    // yet, so a full inspect would runtime-import user files that themselves
+    // import `.pikku/pikku-types.gen.js` — deadlocking before this step can
+    // write that very file. The auth re-export is added on the later
+    // post-inspect pass (where .pikku already exists) instead.
+    const state = data?.bootstrap ? null : await getInspectorState()
+    const authTypesImportPath =
+      authTypesFile && state?.auth.definition
+        ? getFileImportRelativePath(typesFile, authTypesFile, packageMappings)
+        : null
 
     const content = serializePikkuTypesHub(
       getFileImportRelativePath(typesFile, functionTypesFile, packageMappings),
@@ -42,7 +61,8 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<void, void>({
       getImportPath(cliTypesFile),
       getAlwaysImportPath(nodeTypesFile),
       getAlwaysImportPath(secretTypesFile),
-      config.addon ? getAlwaysImportPath(addonTypesFile) : null
+      config.addon ? getAlwaysImportPath(addonTypesFile) : null,
+      authTypesImportPath
     )
 
     await writeFileInDir(logger, typesFile, content)

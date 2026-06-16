@@ -30,8 +30,13 @@ export function toWebRequest(req: PikkuHTTPRequest, baseUrl?: string): Request {
   return new Request(url, {
     method,
     headers,
+    // `pull` (lazy) rather than `start` (eager): the body is only read from the
+    // underlying request when this stream is actually consumed. A consumer that
+    // builds a web Request just to read its headers (e.g. a session middleware
+    // calling getSession({ headers })) never touches the body, so it does zero
+    // body I/O and cannot race the route handler's read of the same request.
     body: new ReadableStream({
-      async start(controller) {
+      async pull(controller) {
         try {
           const buffer = await req.arrayBuffer()
           if (buffer.byteLength > 0) {

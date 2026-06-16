@@ -47,7 +47,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         'pikkuFunctionTypesSplit',
         { bootstrap: true }
       )
-      await workflow.do('Bootstrap function types', 'pikkuFunctionTypes', null)
+      await workflow.do('Bootstrap function types', 'pikkuFunctionTypes', {
+        bootstrap: true,
+      })
       await workflow.do('Bootstrap addon types', 'pikkuAddonTypes', {
         bootstrap: true,
       })
@@ -94,7 +96,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       }
     }
 
-    await workflow.do('Generate function types', 'pikkuFunctionTypes', null)
+    await workflow.do('Generate function types', 'pikkuFunctionTypes', {})
 
     if (!typesDeclarationFileExists || missingScaffolds.length > 0) {
       logger.debug(
@@ -191,6 +193,19 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       await workflow.do('Re-inspect after agents', async () =>
         getInspectorState(true)
       )
+    }
+
+    // pikkuAuth generates auth-secrets.gen.ts (with wireSecret calls) inside the
+    // Promise.all above, but pikkuSecrets runs concurrently from the pre-auth
+    // inspector state. Re-run secret/credential/variable codegen now so that the
+    // freshly-generated auth-secrets.gen.ts (just picked up by Re-inspect above)
+    // is reflected in pikku-secrets-meta.gen.json.
+    if ((await getInspectorState()).auth.definition) {
+      await Promise.all([
+        workflow.do('Secrets (post-auth)', 'pikkuSecrets', null),
+        workflow.do('Credentials (post-auth)', 'pikkuCredentials', null),
+        workflow.do('Variables (post-auth)', 'pikkuVariables', null),
+      ])
     }
 
     const schemas = await workflow.do('Schemas', 'pikkuSchemas', null)

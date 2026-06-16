@@ -64,13 +64,15 @@ export class GopassSecretService implements SecretService {
     }
   }
 
-  public async getSecrets(keys: string[]): Promise<Record<string, unknown>> {
+  public async getSecrets<
+    T extends Record<string, unknown> = Record<string, unknown>,
+  >(keys: (keyof T & string)[]): Promise<Partial<T>> {
     const results = await Promise.allSettled(keys.map((k) => this.getSecret(k)))
     const out: Record<string, unknown> = {}
     keys.forEach((key, i) => {
       if (results[i].status === 'fulfilled')
         out[key] = (results[i] as PromiseFulfilledResult<unknown>).value
     })
-    return out
+    return out as Partial<T>
   }
 }
