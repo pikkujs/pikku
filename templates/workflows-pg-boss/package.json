@@ -14,9 +14,9 @@
     "test": "bash ../functions/run-tests.sh --workflow --ignore-server-ready-check"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.31",
-    "@pikku/express": "^0.12.5",
-    "@pikku/kysely-postgres": "^0.12.8",
+    "@pikku/core": "^0.6.9",
+    "@pikku/express": "^0.6.2",
+    "@pikku/kysely-postgres": "^0.12.4",
     "@pikku/queue-pg-boss": "^0.12.3",
     "kysely": "^0.28.12",
     "kysely-postgres-js": "^3.0.0",
