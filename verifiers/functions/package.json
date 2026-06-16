@@ -7,12 +7,12 @@
     "#pikku/*": "./.pikku/*"
   },
   "dependencies": {
-    "@pikku/core": "workspace:*",
+    "@pikku/core": "0.6.9",
     "@pikku/jose": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
-    "@pikku/templates-function-addon": "workspace:*",
+    "@pikku/templates-function-addon": "0.0.0",
     "eventsource": "^4.1.0",
-    "ws": "^8.19.0",
+    "ws": "^8.21.0",
     "zod": "^4"
   },
   "devDependencies": {
