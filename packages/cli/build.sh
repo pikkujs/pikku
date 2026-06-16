@@ -7,9 +7,13 @@ echo "Starting Pikku CLI build process..."
 test -f package.json || { echo "Refusing to run outside package root"; exit 1; }
 rm -rf -- .pikku dist
 
-# Bootstrap using the published CLI - generates all .pikku files
+# Bootstrap using the published CLI - generates all .pikku files.
+# Pinned to 0.12.35 (not `latest`): 0.12.36 shipped a `@pikku/better-auth:
+# workspace:*` dependency that leaked verbatim to npm and is uninstallable, so
+# bootstrapping off `latest` self-deadlocks the build. 0.12.35 is the last clean
+# release and still uses @pikku/auth-js (matching the install below).
 echo "Bootstrapping with published @pikku/cli..."
-: "${PIKKU_CLI_VERSION:=latest}"
+: "${PIKKU_CLI_VERSION:=0.12.35}"
 _bootstrap_dir=$(mktemp -d)
 trap 'rm -rf "$_bootstrap_dir"' EXIT
 # The published bootstrap CLI's own auth codegen imports the auth package at
