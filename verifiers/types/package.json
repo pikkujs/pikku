@@ -8,8 +8,8 @@
     "#pikku/*": "./.pikku/*"
   },
   "dependencies": {
-    "@pikku/core": "workspace:*",
-    "@pikku/templates-function-addon": "workspace:*"
+    "@pikku/core": "0.6.9",
+    "@pikku/templates-function-addon": "0.0.0"
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
