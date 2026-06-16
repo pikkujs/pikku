@@ -9,11 +9,15 @@
   "dependencies": {
     "@pikku/better-auth": "workspace:*",
     "@pikku/core": "workspace:*",
+    "@pikku/kysely": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
-    "better-auth": "^1.6.18"
+    "better-auth": "^1.6.18",
+    "better-sqlite3": "^12.10.0",
+    "kysely": "^0.28.12"
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^24",
     "tsx": "^4.21.0",
     "typescript": "^5.9"

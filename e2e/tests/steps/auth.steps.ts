@@ -1,64 +1,34 @@
 import { Before, Given, When, Then } from '@cucumber/cucumber'
 import { expect } from '@playwright/test'
 import { createAuthClient } from 'better-auth/client'
+import { Actor } from '@pikku/cucumber'
 import { config } from '../support/types.js'
 
 // Drive the REAL Better Auth client SDK (the same one a frontend uses) over
 // real HTTP against the running e2e server — no hand-rolled endpoint calls.
 //
 // The browser persists the session cookie automatically; in this Node process
-// we supply a `customFetchImpl` with a tiny cookie jar that replays the
-// `better-auth.session_token` cookie and stamps the `Origin` header (Better
-// Auth rejects state-changing POSTs without an Origin matching the baseURL).
+// an `Actor` (from @pikku/cucumber) owns the cookie jar. Its `cookieFetch`
+// replays the `better-auth.session_token` cookie and stamps the `Origin` header
+// (Better Auth rejects state-changing POSTs without an Origin matching the
+// baseURL); we hand it to the client SDK as the `customFetchImpl`.
 
-let jar: Record<string, string> = {}
-
-function cookieHeader(): string {
-  return Object.entries(jar)
-    .map(([k, v]) => `${k}=${v}`)
-    .join('; ')
-}
-
-function storeSetCookie(res: Response): void {
-  const cookies =
-    (res.headers as { getSetCookie?: () => string[] }).getSetCookie?.() ?? []
-  for (const c of cookies) {
-    const [pair] = c.split(';')
-    const idx = pair.indexOf('=')
-    if (idx === -1) continue
-    const name = pair.slice(0, idx).trim()
-    const value = pair.slice(idx + 1).trim()
-    if (!name.startsWith('better-auth')) continue
-    // Max-Age=0 clears emit an empty value — drop the cookie.
-    if (value === '') delete jar[name]
-    else jar[name] = value
-  }
-}
-
-const customFetchImpl: typeof fetch = async (input, init = {}) => {
-  const headers = new Headers(init?.headers as HeadersInit | undefined)
-  const cookie = cookieHeader()
-  if (cookie) headers.set('cookie', cookie)
-  if (!headers.has('origin')) headers.set('origin', config.apiUrl)
-  const res = await fetch(input as RequestInfo, { ...init, headers })
-  storeSetCookie(res)
-  return res
-}
-
-const authClient = createAuthClient({
-  baseURL: config.apiUrl,
-  fetchOptions: { customFetchImpl },
-})
-
+let actor: Actor
+let authClient: ReturnType<typeof createAuthClient>
 let lastSignupOk: boolean | null = null
 let lastLoginError: string | null = null
 let lastSession: { user?: { email?: string } } | null = null
 
-// Better Auth's in-memory store persists for the server's lifetime and has no
-// reset hook — scenarios use unique emails. Reset only the per-client cookie
-// jar + assertion state between scenarios so sessions don't leak across them.
+// Better Auth persists its tables for the server's lifetime and the suite uses
+// unique emails per scenario, so there is nothing to reset server-side. Each
+// scenario gets a fresh Actor (a clean cookie jar) plus reset assertion state so
+// sessions don't leak across scenarios.
 Before({ tags: '@auth' }, function () {
-  jar = {}
+  actor = new Actor('user', {}, config.apiUrl)
+  authClient = createAuthClient({
+    baseURL: config.apiUrl,
+    fetchOptions: { customFetchImpl: actor.cookieFetch },
+  })
   lastSignupOk = null
   lastLoginError = null
   lastSession = null
@@ -73,7 +43,7 @@ When(
       password,
     })
     lastSignupOk = !error
-    if (error) jar = {}
+    if (error) actor.clearCookies()
   }
 )
 
@@ -102,10 +72,10 @@ Given(
 When(
   'I log in as {string} with password {string}',
   async function (email: string, password: string) {
-    jar = {}
+    actor.clearCookies()
     const { error } = await authClient.signIn.email({ email, password })
     lastLoginError = error ? `sign-in failed (${error.status})` : null
-    if (error) jar = {}
+    if (error) actor.clearCookies()
   }
 )
 

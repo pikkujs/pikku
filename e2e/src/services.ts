@@ -122,6 +122,20 @@ export const createSingletonServices = pikkuServices(
       throw new Error(`Unknown DB_BACKEND: ${backend}`)
     }
 
+    // Dedicated plugin-free Kysely for Better Auth. Better Auth owns its own
+    // user/session/account/verification tables and expects unmangled column
+    // names, so it gets its own SQLite instance rather than sharing the
+    // AI/workflow db (which runs CamelCase/Serialize plugins). The auth factory
+    // runs Better Auth's migrations against it on first request.
+    const { default: AuthDatabase } = await import('better-sqlite3')
+    const { Kysely: AuthKysely, SqliteDialect: AuthSqliteDialect } =
+      await import('kysely')
+    const kysely = new AuthKysely<KyselyPikkuDB>({
+      dialect: new AuthSqliteDialect({
+        database: new AuthDatabase(':memory:'),
+      }),
+    })
+
     const credentialService = new LocalCredentialService()
 
     const jwt = new JoseJWTService(async () => [
@@ -153,6 +167,7 @@ export const createSingletonServices = pikkuServices(
       config,
       variables,
       secrets,
+      kysely,
       credentialService,
       jwt,
       schema,

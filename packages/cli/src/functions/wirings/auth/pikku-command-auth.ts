@@ -12,6 +12,8 @@ export const pikkuAuth = pikkuSessionlessFunc<void, void>({
       authTypesFile,
       functionTypesFile,
       typesDeclarationFile,
+      secretsFile: secretsServiceFile,
+      variablesFile,
       packageMappings,
     } = config
     if (!authFile) return
@@ -37,8 +39,19 @@ export const pikkuAuth = pikkuSessionlessFunc<void, void>({
     await writeFileInDir(logger, secretsFile, secrets)
 
     // Generate the typed pikkuBetterAuth re-export consumed by `import { pikkuBetterAuth } from '#pikku'`.
-    if (authTypesFile && functionTypesFile) {
-      const authTypes = serializeAuthTypes(authTypesFile, functionTypesFile)
+    if (
+      authTypesFile &&
+      functionTypesFile &&
+      secretsServiceFile &&
+      variablesFile
+    ) {
+      const authTypes = serializeAuthTypes(
+        authTypesFile,
+        functionTypesFile,
+        secretsServiceFile,
+        variablesFile,
+        packageMappings ?? {}
+      )
       await writeFileInDir(logger, authTypesFile, authTypes)
     }
   },

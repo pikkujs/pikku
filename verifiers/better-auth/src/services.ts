@@ -5,6 +5,9 @@ import {
   LocalVariablesService,
 } from '@pikku/core/services'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
+import Database from 'better-sqlite3'
+import { Kysely, SqliteDialect } from 'kysely'
+import type { KyselyPikkuDB } from '@pikku/kysely'
 import { VERIFIER_OAUTH_PROVIDERS } from './providers.js'
 import { PROVIDER_REGISTRY, type AuthProviderDef } from '@pikku/better-auth'
 
@@ -24,6 +27,13 @@ export const createSingletonServices = pikkuServices(
       existingServices?.secrets ?? new LocalSecretService(variables)
     const logger = new ConsoleLogger()
     const schema = new CFWorkerSchemaService(logger)
+
+    // Dedicated in-memory Kysely for Better Auth. Better Auth owns its own
+    // user/session/account/verification tables and runs its migrations against
+    // this instance on the first auth request (see auth.wiring.ts).
+    const kysely = new Kysely<KyselyPikkuDB>({
+      dialect: new SqliteDialect({ database: new Database(':memory:') }),
+    })
 
     // better-auth's session-signing secret.
     await secrets.setSecret(
@@ -48,6 +58,6 @@ export const createSingletonServices = pikkuServices(
       }
     }
 
-    return { config, secrets, logger, variables, schema }
+    return { config, secrets, logger, variables, schema, kysely }
   }
 )

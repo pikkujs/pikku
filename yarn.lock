@@ -6451,9 +6451,13 @@ __metadata:
     "@pikku/better-auth": "workspace:*"
     "@pikku/cli": "workspace:*"
     "@pikku/core": "workspace:*"
+    "@pikku/kysely": "workspace:*"
     "@pikku/schema-cfworker": "workspace:*"
+    "@types/better-sqlite3": "npm:^7.6.13"
     "@types/node": "npm:^24"
     better-auth: "npm:^1.6.18"
+    better-sqlite3: "npm:^12.10.0"
+    kysely: "npm:^0.28.12"
     tsx: "npm:^4.21.0"
     typescript: "npm:^5.9"
   languageName: unknown

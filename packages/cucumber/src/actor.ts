@@ -24,6 +24,7 @@ function isServerMode(ctx: ActorDispatchContext): boolean {
 
 export class Actor {
   private _headers: Record<string, string> = {}
+  private _cookies: Record<string, string> = {}
   readonly baseUrl: string
 
   constructor(
@@ -46,6 +47,52 @@ export class Actor {
     this._headers[key.toLowerCase()] = value
   }
 
+  /** The `Cookie` header value for this actor's jar (empty string if none). */
+  get cookieHeader(): string {
+    return Object.entries(this._cookies)
+      .map(([k, v]) => `${k}=${v}`)
+      .join('; ')
+  }
+
+  /** Drop every cookie from this actor's jar (e.g. to start a fresh session). */
+  clearCookies() {
+    this._cookies = {}
+  }
+
+  /** Capture `Set-Cookie` headers from a response into this actor's jar. */
+  storeSetCookie(res: Response) {
+    const cookies =
+      (res.headers as { getSetCookie?: () => string[] }).getSetCookie?.() ?? []
+    for (const cookie of cookies) {
+      const [pair] = cookie.split(';')
+      if (!pair) continue
+      const idx = pair.indexOf('=')
+      if (idx === -1) continue
+      const name = pair.slice(0, idx).trim()
+      const value = pair.slice(idx + 1).trim()
+      // Max-Age=0 clears emit an empty value — drop the cookie.
+      if (value === '') delete this._cookies[name]
+      else this._cookies[name] = value
+    }
+  }
+
+  /**
+   * A `fetch` implementation bound to this actor's cookie jar — replays stored
+   * cookies, stamps an `Origin` header (cookie-auth servers like Better Auth
+   * reject state-changing requests without one), and captures `Set-Cookie` from
+   * the response. Pass it to a client SDK's `customFetchImpl` so the actor
+   * drives a real cookie-backed session.
+   */
+  readonly cookieFetch: typeof fetch = async (input, init = {}) => {
+    const headers = new Headers(init?.headers as HeadersInit | undefined)
+    const cookie = this.cookieHeader
+    if (cookie) headers.set('cookie', cookie)
+    if (!headers.has('origin')) headers.set('origin', this.baseUrl)
+    const res = await fetch(input as RequestInfo, { ...init, headers })
+    this.storeSetCookie(res)
+    return res
+  }
+
   private async httpCall(
     rpcName: string,
     data: unknown
@@ -63,12 +110,22 @@ export class Actor {
       : undefined
 
     try {
-      const result = await client.api(`/rpc/${rpcName}`, 'POST', { data }, options)
+      const result = await client.api(
+        `/rpc/${rpcName}`,
+        'POST',
+        { data },
+        options
+      )
       return { result, error: undefined }
     } catch (thrown: unknown) {
       if (thrown instanceof Response) {
-        const body = (await thrown.json().catch(() => ({}))) as Record<string, unknown>
-        const err = new Error((body.message as string | undefined) ?? thrown.statusText)
+        const body = (await thrown.json().catch(() => ({}))) as Record<
+          string,
+          unknown
+        >
+        const err = new Error(
+          (body.message as string | undefined) ?? thrown.statusText
+        )
         err.name = (body.name as string | undefined) ?? 'HttpError'
         return { result: undefined, error: err }
       }

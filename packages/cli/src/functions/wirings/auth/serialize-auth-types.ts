@@ -13,17 +13,40 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
  * `services.kysely` as the project's Kysely instance, not the loose `any` from
  * `CoreSingletonServices`).
  *
+ * The wrapper also substitutes the project's generated `TypedSecretService` /
+ * `TypedVariablesService` for the base `secrets` / `variables` services and wraps
+ * them at runtime — the same treatment addon services get from
+ * `pikkuAddonServices`. That gives the factory typed, map-aware access:
+ *
+ *   socialProviders: { github: await secrets.getSecret('GITHUB_OAUTH') }
+ *
+ * with no inline `getSecrets<{ ... }>()` generic, because the secret types flow
+ * from the generated `CredentialsMap`.
+ *
  * The file is re-exported from `.pikku/pikku-types.gen.ts` (the `#pikku` hub)
  * so the single import resolves correctly.
  */
 export const serializeAuthTypes = (
   authTypesFile: string,
-  functionTypesFile: string
+  functionTypesFile: string,
+  secretsFile: string,
+  variablesFile: string,
+  packageMappings: Record<string, string>
 ): string => {
   const functionTypesImport = getFileImportRelativePath(
     authTypesFile,
     functionTypesFile,
-    {}
+    packageMappings
+  )
+  const secretsImport = getFileImportRelativePath(
+    authTypesFile,
+    secretsFile,
+    packageMappings
+  )
+  const variablesImport = getFileImportRelativePath(
+    authTypesFile,
+    variablesFile,
+    packageMappings
   )
 
   return [
@@ -32,10 +55,24 @@ export const serializeAuthTypes = (
     `import { pikkuBetterAuth as _pikkuBetterAuth } from '@pikku/better-auth'`,
     `import type { BetterAuthInstance, PikkuBetterAuthFactory } from '@pikku/better-auth'`,
     `import type { SingletonServices } from '${functionTypesImport}'`,
+    `import { TypedSecretService } from '${secretsImport}'`,
+    `import { TypedVariablesService } from '${variablesImport}'`,
+    '',
+    `type AuthSingletonServices = Omit<SingletonServices, 'secrets' | 'variables'> & {`,
+    `  secrets: TypedSecretService`,
+    `  variables: TypedVariablesService`,
+    `}`,
     '',
     `export const pikkuBetterAuth = <I extends BetterAuthInstance>(`,
-    `  factory: (services: SingletonServices) => I | Promise<I>`,
-    `): PikkuBetterAuthFactory<I> => _pikkuBetterAuth(factory as any)`,
+    `  factory: (services: AuthSingletonServices) => I | Promise<I>`,
+    `): PikkuBetterAuthFactory<I> =>`,
+    `  _pikkuBetterAuth((services) =>`,
+    `    factory({`,
+    `      ...services,`,
+    `      secrets: new TypedSecretService(services.secrets),`,
+    `      variables: new TypedVariablesService(services.variables),`,
+    `    } as AuthSingletonServices)`,
+    `  )`,
     '',
   ].join('\n')
 }
