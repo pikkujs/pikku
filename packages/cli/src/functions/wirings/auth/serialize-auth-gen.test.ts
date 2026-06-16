@@ -44,7 +44,6 @@ describe('serializeAuthGen', () => {
       output,
       /import { createAuthHandler, betterAuthSession } from '@pikku\/better-auth'/
     )
-    assert.match(output, /import { setAuthRegistry } from '@pikku\/core'/)
   })
 
   test('secrets file imports zod and wireSecret', () => {
@@ -66,14 +65,10 @@ describe('serializeAuthGen', () => {
     assert.match(output, /betterAuthSession\(\)/)
   })
 
-  test('records provider metadata via setAuthRegistry', () => {
+  test('does not wire provider metadata at runtime (emitted as auth-meta.gen.json)', () => {
     const output = genWiring(['github'], def({ hasCredentials: true }))
-    assert.match(output, /setAuthRegistry\(\{/)
-    assert.match(
-      output,
-      /\{ id: 'github', displayName: 'GitHub OAuth', secretId: 'GITHUB_OAUTH' \}/
-    )
-    assert.match(output, /hasCredentials: true/)
+    assert.doesNotMatch(output, /setAuthRegistry/)
+    assert.doesNotMatch(output, /@pikku\/core'/)
   })
 
   test('always wires the better-auth signing secret', () => {
@@ -111,10 +106,7 @@ describe('serializeAuthGen', () => {
 
   test('registers the better-auth session-bridge middleware globally', () => {
     const output = genWiring([])
-    assert.match(
-      output,
-      /addHTTPMiddleware\('\*', \[betterAuthSession\(\)\]\)/
-    )
+    assert.match(output, /addHTTPMiddleware\('\*', \[betterAuthSession\(\)\]\)/)
   })
 
   test('wires a catch-all route per method to the shared handler', () => {

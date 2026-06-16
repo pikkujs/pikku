@@ -148,6 +148,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     },
     auth: {
       providers: [],
+      plugins: [],
       files: new Set(),
       definition: null,
     },

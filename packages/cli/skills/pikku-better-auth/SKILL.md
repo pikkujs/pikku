@@ -46,7 +46,7 @@ yarn add @pikku/better-auth better-auth
 Better Auth owns its own HTTP surface, database tables, and session cookie. The Pikku integration is thin:
 
 1. **`pikkuBetterAuth(factory)`** — you export ONE `pikkuBetterAuth` call whose factory returns a configured `betterAuth({...})` instance. The pikku CLI inspects this export and generates everything else.
-2. **Generated `auth.gen.ts`** — a catch-all `${basePath}{/*splat}` HTTP route per method (GET + POST) that forwards every request under the base path to better-auth's own internal router, plus `addHTTPMiddleware('*', [betterAuthSession({ auth })])` and a `setAuthRegistry(...)` call recording the providers (for the console).
+2. **Generated `auth.gen.ts`** — a catch-all `${basePath}{/*splat}` HTTP route per method (GET + POST) that forwards every request under the base path to better-auth's own internal router, plus `addHTTPMiddleware('*', [betterAuthSession({ auth })])`. The enabled providers and plugins are written to `auth/pikku-auth-meta.gen.json` (read by the console SSO page via `getAuthProviders`).
 3. **Generated `auth-secrets.gen.ts`** — a `wireSecret` for `BETTER_AUTH_SECRET` and for each social provider's OAuth credentials, plus a `wireVariable` for any non-secret provider config (e.g. `tenantId`).
 4. **`betterAuthSession`** — middleware that reads better-auth's session on every request and populates the Pikku session object.
 

@@ -71,6 +71,34 @@ const readObjectProp = (
   return undefined
 }
 
+/** Find an array-literal-valued property off an object literal, if present. */
+const readArrayProp = (
+  obj: ts.ObjectLiteralExpression,
+  name: string
+): ts.ArrayLiteralExpression | undefined => {
+  const prop = obj.properties.find(
+    (p) =>
+      ts.isPropertyAssignment(p) &&
+      (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name)) &&
+      p.name.text === name
+  ) as ts.PropertyAssignment | undefined
+  if (prop && ts.isArrayLiteralExpression(prop.initializer))
+    return prop.initializer
+  return undefined
+}
+
+/**
+ * Read the callee name of a `plugins: [...]` entry. better-auth plugins are
+ * factory calls (`bearer()`, `twoFactor({ ... })`, `admin()`); the entry's id
+ * is the called function's name. Member-expression callees (`foo.bar()`) and
+ * non-call entries are ignored.
+ */
+const readPluginId = (el: ts.Expression): string | undefined => {
+  if (ts.isCallExpression(el) && ts.isIdentifier(el.expression))
+    return el.expression.text
+  return undefined
+}
+
 /**
  * Detects `pikkuBetterAuth((services) => betterAuth({...}))` calls.
  *
@@ -195,6 +223,16 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
         }
       }
     }
+
+    const plugins = readArrayProp(config, 'plugins')
+    if (plugins) {
+      for (const el of plugins.elements) {
+        const id = readPluginId(el)
+        if (id && !state.auth.plugins.includes(id)) {
+          state.auth.plugins.push(id)
+        }
+      }
+    }
   } else {
     logger.warn(
       `pikkuBetterAuth in ${sourceFile}: could not statically find a betterAuth({...}) call inside the factory — social provider secrets will not be auto-wired.`
@@ -206,6 +244,7 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
     sourceFile,
     basePath,
     hasCredentials,
+    plugins: [...state.auth.plugins],
     services,
   }
 }

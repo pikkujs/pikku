@@ -309,10 +309,15 @@ export interface AuthDefinition {
   sourceFile: string
   /** better-auth base path (the `basePath` option, default `/api/auth`). */
   basePath: string
-  /** Whether email/password auth is enabled (`emailAndPassword.enabled`). Fed
-   *  into the generated `setAuthRegistry` so the console knows credentials are
+  /** Whether email/password auth is enabled (`emailAndPassword.enabled`). Written
+   *  into the generated `auth-meta.gen.json` so the console knows credentials are
    *  available alongside the OAuth providers. */
   hasCredentials: boolean
+  /** better-auth plugin ids used in the config's `plugins: [...]` array, read
+   *  from each entry's callee name (e.g. `bearer()` → `'bearer'`). Written into
+   *  `auth-meta.gen.json` so the console SSO page can show which plugins are
+   *  enabled. */
+  plugins: string[]
   /**
    * Singleton services the generated auth handler must have available at
    * runtime — the services the `pikkuBetterAuth` factory reaches for (either
@@ -411,6 +416,7 @@ export interface InspectorState {
   }
   auth: {
     providers: string[]
+    plugins: string[]
     files: Set<string>
     /** The single `export const X = pikkuBetterAuth({...})` discovered in the
      *  codebase, if any. The CLI generates the `/auth/*` HTTP wiring from it.

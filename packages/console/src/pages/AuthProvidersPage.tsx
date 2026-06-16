@@ -8,6 +8,9 @@ import { usePanelContext } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { TableListPage } from '../components/layout/TableListPage'
 import { ListPageHeader } from '../components/layout/PageLayout'
+import { ConfiguredBadge } from '../components/auth/ConfiguredBadge'
+import { AuthPluginsBar } from '../components/auth/AuthPluginsBar'
+import { useAuthProviders } from '../hooks/useAuthProviders'
 
 // ─── Provider catalog ─────────────────────────────────────────────────────────
 
@@ -61,7 +64,8 @@ export const AUTH_PROVIDERS: AuthProviderDef[] = [
     name: 'Apple',
     callbackId: 'apple',
     description: 'Sign in with Apple ID.',
-    setupUrl: 'https://developer.apple.com/account/resources/identifiers/list/serviceId',
+    setupUrl:
+      'https://developer.apple.com/account/resources/identifiers/list/serviceId',
     setupLabel: 'Configure Service ID on Apple Developer',
     fields: [
       { key: 'AUTH_APPLE_ID', label: 'Service ID (Client ID)' },
@@ -160,7 +164,8 @@ export const AUTH_PROVIDERS: AuthProviderDef[] = [
     name: 'Microsoft / Azure AD',
     callbackId: 'microsoft',
     description: 'Sign in with Microsoft Entra ID (Azure AD).',
-    setupUrl: 'https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade',
+    setupUrl:
+      'https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade',
     setupLabel: 'Register app on Azure Portal',
     fields: [
       { key: 'AUTH_MICROSOFT_ENTRA_ID_ID', label: 'Client ID' },
@@ -195,11 +200,39 @@ export const AUTH_PROVIDERS: AuthProviderDef[] = [
   },
 ]
 
+// Email+password is not an OAuth provider, but it shows up in the same list so
+// the SSO page reflects every configured sign-in method. It is synthesized into
+// the table and marked configured from `hasCredentials`.
+const CREDENTIALS_PROVIDER: AuthProviderDef = {
+  id: 'credentials',
+  name: 'Credentials',
+  callbackId: 'credentials',
+  description: 'Email and password sign-in.',
+  setupUrl: 'https://www.better-auth.com/docs/authentication/email-password',
+  setupLabel: 'Better Auth email & password docs',
+  fields: [],
+}
+
 // ─── Table ────────────────────────────────────────────────────────────────────
 
-const AuthProvidersTable: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
+const AuthProvidersTable: React.FC<{ searchQuery: string }> = ({
+  searchQuery,
+}) => {
   const { openAuthProvider } = usePanelContext()
   const { t } = useI18n()
+  const { meta } = useAuthProviders()
+
+  const configuredCallbackIds = useMemo(
+    () => new Set(meta.providers.map((p) => p.id)),
+    [meta.providers]
+  )
+
+  const isConfigured = (p: AuthProviderDef): boolean =>
+    p.id === CREDENTIALS_PROVIDER.id
+      ? meta.hasCredentials
+      : configuredCallbackIds.has(p.callbackId)
+
+  const data = useMemo(() => [CREDENTIALS_PROVIDER, ...AUTH_PROVIDERS], [])
 
   const columns = useMemo(
     () => [
@@ -219,6 +252,16 @@ const AuthProvidersTable: React.FC<{ searchQuery: string }> = ({ searchQuery }) 
         ),
       },
       {
+        key: 'status',
+        header: 'STATUS',
+        render: (p: AuthProviderDef) => (
+          <ConfiguredBadge
+            configured={isConfigured(p)}
+            testId={`auth-provider-configured-${p.name.toLowerCase()}`}
+          />
+        ),
+      },
+      {
         key: 'description',
         header: 'DESCRIPTION',
         render: (p: AuthProviderDef) => (
@@ -232,12 +275,14 @@ const AuthProvidersTable: React.FC<{ searchQuery: string }> = ({ searchQuery }) 
         header: 'ENV VARS',
         render: (p: AuthProviderDef) => (
           <Text size="sm" c="dimmed" ff="monospace">
-            {asI18n(`${p.fields.length} secret${p.fields.length !== 1 ? 's' : ''}`)}
+            {asI18n(
+              `${p.fields.length} secret${p.fields.length !== 1 ? 's' : ''}`
+            )}
           </Text>
         ),
       },
     ],
-    [t],
+    [t, meta]
   )
 
   return (
@@ -245,13 +290,19 @@ const AuthProvidersTable: React.FC<{ searchQuery: string }> = ({ searchQuery }) 
       icon={KeyRound}
       title="Auth Providers"
       docsHref="https://www.better-auth.com/docs/concepts/oauth"
-      data={AUTH_PROVIDERS}
+      data={data}
       columns={columns}
       getKey={(p) => p.id}
       onRowClick={(p) => openAuthProvider(p.id, p)}
       externalSearch={searchQuery}
       searchFilter={(p, q) =>
-        p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)
+        p.name.toLowerCase().includes(q) ||
+        p.description.toLowerCase().includes(q)
+      }
+      description={
+        meta.plugins.length > 0 ? (
+          <AuthPluginsBar plugins={meta.plugins} />
+        ) : undefined
       }
       emptyMessage={t('auth_providers.empty_message')}
     />

@@ -4,12 +4,14 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeAuthGen } from './serialize-auth-gen.js'
 import { serializeAuthTypes } from './serialize-auth-types.js'
+import { serializeAuthMeta } from './serialize-auth-meta.js'
 
 export const pikkuAuth = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
     const {
       authFile,
       authTypesFile,
+      authMetaJsonFile,
       functionTypesFile,
       typesDeclarationFile,
       secretsFile: secretsServiceFile,
@@ -37,6 +39,21 @@ export const pikkuAuth = pikkuSessionlessFunc<void, void>({
     const secretsFile = join(dirname(authFile), 'auth-secrets.gen.ts')
     await writeFileInDir(logger, authFile, wiring)
     await writeFileInDir(logger, secretsFile, secrets)
+
+    // Static metadata of the enabled providers/plugins for the console SSO page,
+    // following the `*-meta.gen.json` convention. Read at runtime by the console
+    // getAuthProviders function instead of a runtime registry.
+    if (authMetaJsonFile) {
+      const meta = serializeAuthMeta(
+        state.auth.definition,
+        state.auth.providers
+      )
+      await writeFileInDir(
+        logger,
+        authMetaJsonFile,
+        JSON.stringify(meta, null, 2)
+      )
+    }
 
     // Generate the typed pikkuBetterAuth re-export consumed by `import { pikkuBetterAuth } from '#pikku'`.
     if (

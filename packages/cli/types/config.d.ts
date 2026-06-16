@@ -242,6 +242,13 @@ export type PikkuCLIInput = {
    */
   authTypesFile?: string
 
+  /**
+   * Path to write the generated Better Auth metadata (auth-meta.gen.json) —
+   * the enabled social providers and plugins the console SSO page reads via
+   * getAuthProviders. Defaults to `{outDir}/auth/pikku-auth-meta.gen.json`.
+   */
+  authMetaJsonFile?: string
+
   openAPI?: {
     outputFile: string
     additionalInfo: OpenAPISpecInfo

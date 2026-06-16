@@ -18,3 +18,7 @@ Feature: Auth Providers Console Page
     When I open the auth providers page in the console
     Then I should see provider "Google" in the list
     And provider "Google" should not be marked as configured
+
+  Scenario: Enabled plugin appears as enabled
+    When I open the auth providers page in the console
+    Then I should see plugin "bearer" enabled

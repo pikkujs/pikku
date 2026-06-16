@@ -11,3 +11,5 @@ export type {
   AuthProviderDef,
   AuthProviderVariable,
 } from './provider-registry.js'
+export { PLUGIN_REGISTRY, pluginDisplayName } from './plugin-registry.js'
+export type { AuthPluginDef } from './plugin-registry.js'

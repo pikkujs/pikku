@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth'
 import { getMigrations } from 'better-auth/db/migration'
+import { bearer } from 'better-auth/plugins'
 import { pikkuBetterAuth } from '#pikku'
 
 /**
@@ -39,6 +40,7 @@ export const auth = pikkuBetterAuth(async ({ secrets, variables, kysely }) => {
         userPoolId: (await variables.get('COGNITO_USER_POOL_ID'))!,
       },
     },
+    plugins: [bearer()],
   })
 
   migrated ??= getMigrations(instance.options).then(({ runMigrations }) =>

@@ -293,6 +293,13 @@ const _getPikkuCLIConfig = async (
     if (!result.authTypesFile) {
       result.authTypesFile = join(result.outDir, 'auth', 'auth.types.ts')
     }
+    if (!result.authMetaJsonFile) {
+      result.authMetaJsonFile = join(
+        result.outDir,
+        'auth',
+        'pikku-auth-meta.gen.json'
+      )
+    }
     if (result.scaffold?.events && !result.eventsChannelFile) {
       result.eventsChannelFile = join(resolvedScaffoldDir, 'events.gen.ts')
     }

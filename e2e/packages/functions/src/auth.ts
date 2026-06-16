@@ -1,14 +1,16 @@
 import { betterAuth } from 'better-auth'
 import { getMigrations } from 'better-auth/db/migration'
+import { bearer } from 'better-auth/plugins'
 import { pikkuBetterAuth } from '#pikku/pikku-types.gen.js'
 
 /**
  * Better Auth configuration for the e2e suite. Exercises email+password
- * credentials plus the GitHub social provider, all read from the seeded
- * secrets via the typed secret service (the secret types flow from the
- * generated `CredentialsMap`, so no inline generic is needed). The pikku CLI
- * generates the catch-all `/api/auth/**` wiring, the session-bridge
- * middleware, and a wireSecret per provider.
+ * credentials plus the GitHub social provider and the bearer plugin, all read
+ * from the seeded secrets via the typed secret service (the secret types flow
+ * from the generated `CredentialsMap`, so no inline generic is needed). The
+ * pikku CLI generates the catch-all `/api/auth/**` wiring, the session-bridge
+ * middleware, a wireSecret per provider, and the `auth-meta.gen.json` that
+ * powers the console SSO page (providers + plugins).
  *
  * Better Auth owns its own user/session/account/verification tables. The suite
  * injects a dedicated in-memory Kysely (see `services.ts`) and runs Better
@@ -32,6 +34,7 @@ export const auth = pikkuBetterAuth(async ({ secrets, variables, kysely }) => {
     socialProviders: {
       github: await secrets.getSecret('GITHUB_OAUTH'),
     },
+    plugins: [bearer()],
   })
 
   migrated ??= getMigrations(instance.options).then(({ runMigrations }) =>

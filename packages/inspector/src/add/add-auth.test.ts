@@ -50,6 +50,7 @@ describe('addAuth inspector', () => {
         sourceFile: file,
         basePath: '/api/auth',
         hasCredentials: false,
+        plugins: [],
         services: { optimized: true, services: [] },
       })
       // The /api/auth/** routes are emitted into a generated auth.gen.ts; the
@@ -89,6 +90,64 @@ describe('addAuth inspector', () => {
       assert.equal(state.auth.definition?.basePath, '/auth')
       assert.equal(state.auth.definition?.hasCredentials, true)
       assert.deepEqual(state.auth.providers, ['github'])
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test('extracts plugin ids from the betterAuth plugins array', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-plugins-'))
+    const file = join(rootDir, 'auth.ts')
+
+    await writeFile(
+      file,
+      [
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
+        "import { betterAuth } from 'better-auth'",
+        "import { bearer, admin, twoFactor } from 'better-auth/plugins'",
+        'export const auth = pikkuBetterAuth(() =>',
+        '  betterAuth({',
+        "    socialProviders: { github: { clientId: 'x', clientSecret: 'y' } },",
+        '    plugins: [bearer(), admin(), twoFactor({ issuer: "pikku" })],',
+        '  })',
+        ')',
+      ].join('\n')
+    )
+
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      const state = await inspect(makeLogger(criticals), [file], { rootDir })
+      assert.equal(criticals.length, 0)
+      assert.deepEqual(state.auth.plugins, ['bearer', 'admin', 'twoFactor'])
+      assert.deepEqual(state.auth.definition?.plugins, [
+        'bearer',
+        'admin',
+        'twoFactor',
+      ])
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test('records no plugins when the plugins array is absent', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-noplugins-'))
+    const file = join(rootDir, 'auth.ts')
+
+    await writeFile(
+      file,
+      [
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
+        "import { betterAuth } from 'better-auth'",
+        'export const auth = pikkuBetterAuth(() => betterAuth({ emailAndPassword: { enabled: true } }))',
+      ].join('\n')
+    )
+
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      const state = await inspect(makeLogger(criticals), [file], { rootDir })
+      assert.equal(criticals.length, 0)
+      assert.deepEqual(state.auth.plugins, [])
+      assert.deepEqual(state.auth.definition?.plugins, [])
     } finally {
       await rm(rootDir, { recursive: true, force: true })
     }

@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { createConfig, createSingletonServices } from './services.js'
 import '../.pikku/pikku-bootstrap.gen.js'
 import './auth.wiring.js'
@@ -88,28 +90,37 @@ async function main(): Promise<void> {
   await runTest('signup creates user and returns session cookie', async () => {
     const res = await signUp('alice@example.com', 'password123')
     assertEqual(res.status, 200, 'signup status')
-    assertTruthy(extractSessionCookie(res), 'session cookie present after signup')
+    assertTruthy(
+      extractSessionCookie(res),
+      'session cookie present after signup'
+    )
   })
 
   await runTest('duplicate signup is rejected', async () => {
     await signUp('bob@example.com', 'password123')
     const res = await signUp('bob@example.com', 'password123')
-    assertTruthy(res.status >= 400, `duplicate signup status ${res.status} >= 400`)
+    assertTruthy(
+      res.status >= 400,
+      `duplicate signup status ${res.status} >= 400`
+    )
   })
 
   console.log('\n--- Session ---')
 
-  await runTest('GET /api/auth/get-session returns user after signup', async () => {
-    const signupRes = await signUp('carol@example.com', 'password123')
-    const cookie = extractSessionCookie(signupRes)
-    assertTruthy(cookie, 'session cookie from signup')
+  await runTest(
+    'GET /api/auth/get-session returns user after signup',
+    async () => {
+      const signupRes = await signUp('carol@example.com', 'password123')
+      const cookie = extractSessionCookie(signupRes)
+      assertTruthy(cookie, 'session cookie from signup')
 
-    const res = await fetch(
-      new Request(`${AUTH}/get-session`, { headers: { Cookie: cookie! } })
-    )
-    const session = (await res.json()) as any
-    assertEqual(session?.user?.email, 'carol@example.com', 'session email')
-  })
+      const res = await fetch(
+        new Request(`${AUTH}/get-session`, { headers: { Cookie: cookie! } })
+      )
+      const session = (await res.json()) as any
+      assertEqual(session?.user?.email, 'carol@example.com', 'session email')
+    }
+  )
 
   await runTest(
     'betterAuthSession middleware decodes cookie into pikku session',
@@ -128,7 +139,10 @@ async function main(): Promise<void> {
 
   await runTest('GET /me is unauthorized without a session', async () => {
     const res = await fetch(new Request(`${BASE}/me`))
-    assertTruthy(res.status >= 400, `unauthenticated /me status ${res.status} >= 400`)
+    assertTruthy(
+      res.status >= 400,
+      `unauthenticated /me status ${res.status} >= 400`
+    )
   })
 
   console.log('\n--- Login ---')
@@ -174,6 +188,41 @@ async function main(): Promise<void> {
       }
     )
   }
+
+  console.log('\n--- Auth metadata (auth-meta.gen.json) ---')
+
+  await runTest(
+    'generates auth-meta.gen.json with all social providers and plugins',
+    async () => {
+      const metaPath = join(
+        process.cwd(),
+        '.pikku',
+        'auth',
+        'pikku-auth-meta.gen.json'
+      )
+      const meta = JSON.parse(await readFile(metaPath, 'utf-8')) as {
+        hasCredentials: boolean
+        providers: Array<{ id: string; displayName: string; secretId: string }>
+        plugins: Array<{ id: string; displayName: string }>
+      }
+      assertEqual(meta.hasCredentials, true, 'hasCredentials')
+      assertEqual(
+        meta.providers.map((p) => p.id),
+        VERIFIER_OAUTH_PROVIDERS,
+        'meta provider ids'
+      )
+      assertEqual(
+        meta.providers.find((p) => p.id === 'github')?.secretId,
+        'GITHUB_OAUTH',
+        'github secretId'
+      )
+      assertEqual(
+        meta.plugins,
+        [{ id: 'bearer', displayName: 'Bearer' }],
+        'meta plugins'
+      )
+    }
+  )
 
   console.log('\n--- Logout ---')
 
