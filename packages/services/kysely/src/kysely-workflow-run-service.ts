@@ -5,7 +5,6 @@ import type {
   WorkflowRunService,
 } from '@pikku/core/workflow'
 import type { Kysely } from 'kysely'
-import { sql } from 'kysely'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { parseJson } from './kysely-json.js'
 
@@ -112,14 +111,43 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
           )
           .as('attemptCount')
       )
-      .select(
-        sql<string | null>`(SELECT MAX(h.running_at) FROM workflow_step_history h WHERE h.workflow_step_id = s.workflow_step_id)`.as('runningAt')
+      // Build these correlated subqueries through the query builder rather
+      // than a raw `sql` fragment so the active schema (e.g.
+      // `withSchema('app')`) is applied to `workflow_step_history`. A raw
+      // fragment hardcodes an unqualified table name and dies against a
+      // connection whose search_path does not include the schema.
+      .select((eb) =>
+        eb
+          .selectFrom('workflowStepHistory')
+          .select((eb2) => eb2.fn.max('workflowStepHistory.runningAt').as('m'))
+          .whereRef(
+            'workflowStepHistory.workflowStepId',
+            '=',
+            's.workflowStepId'
+          )
+          .as('runningAt')
       )
-      .select(
-        sql<string | null>`(SELECT MAX(h.succeeded_at) FROM workflow_step_history h WHERE h.workflow_step_id = s.workflow_step_id)`.as('succeededAt')
+      .select((eb) =>
+        eb
+          .selectFrom('workflowStepHistory')
+          .select((eb2) => eb2.fn.max('workflowStepHistory.succeededAt').as('m'))
+          .whereRef(
+            'workflowStepHistory.workflowStepId',
+            '=',
+            's.workflowStepId'
+          )
+          .as('succeededAt')
       )
-      .select(
-        sql<string | null>`(SELECT MAX(h.failed_at) FROM workflow_step_history h WHERE h.workflow_step_id = s.workflow_step_id)`.as('failedAt')
+      .select((eb) =>
+        eb
+          .selectFrom('workflowStepHistory')
+          .select((eb2) => eb2.fn.max('workflowStepHistory.failedAt').as('m'))
+          .whereRef(
+            'workflowStepHistory.workflowStepId',
+            '=',
+            's.workflowStepId'
+          )
+          .as('failedAt')
       )
       .where('s.workflowRunId', '=', runId)
       .orderBy('s.createdAt', 'asc')
