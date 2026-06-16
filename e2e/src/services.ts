@@ -56,7 +56,7 @@ export const createSingletonServices = pikkuServices(
         SQLiteKyselyWorkflowService,
         SQLiteKyselyWorkflowRunService,
       } = await import('@pikku/kysely-sqlite')
-      const { SerializePlugin } = await import('kysely-plugin-serialize')
+      const { SerializePlugin } = await import('@pikku/kysely')
       const db = new Kysely<KyselyPikkuDB>({
         dialect: new SqliteDialect({ database: new Database(':memory:') }),
         plugins: [new CamelCasePlugin(), new SerializePlugin()],

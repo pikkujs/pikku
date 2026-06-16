@@ -1,7 +1,7 @@
 import { describe, test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { CamelCasePlugin, Kysely, SqliteDialect } from 'kysely'
-import { SerializePlugin } from 'kysely-plugin-serialize'
+import { SerializePlugin } from './serialize-plugin.js'
 import Database from 'better-sqlite3'
 import { PostgresJSDialect } from 'kysely-postgres-js'
 import postgres from 'postgres'

@@ -8,7 +8,7 @@
  */
 
 import { CamelCasePlugin, Kysely } from 'kysely'
-import { SerializePlugin } from 'kysely-plugin-serialize'
+import { SerializePlugin } from '@pikku/kysely'
 import { D1Dialect } from 'kysely-d1'
 import type { D1Database } from '@cloudflare/workers-types'
 import type { KyselyPikkuDB } from '@pikku/kysely'

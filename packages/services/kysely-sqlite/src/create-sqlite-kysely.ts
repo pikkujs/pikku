@@ -1,5 +1,5 @@
 import { Kysely, SqliteDialect, type SqliteDatabase } from 'kysely'
-import { SerializePlugin } from 'kysely-plugin-serialize'
+import { SerializePlugin } from '@pikku/kysely'
 import type { KyselyPikkuDB } from '@pikku/kysely'
 
 export function createSQLiteKysely(

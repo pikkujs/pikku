@@ -17,6 +17,20 @@ export {
   type CreateAuditedKyselyOptions,
 } from './create-audited-kysely.js'
 
+export {
+  SerializePlugin,
+  SqliteSerializePlugin,
+  BaseSerializePlugin,
+  defaultSerializer,
+  defaultDeserializer,
+  maybeJson,
+  skipTransform,
+  dateRegex,
+  type Serializer,
+  type Deserializer,
+  type SerializePluginOptions,
+} from './serialize-plugin.js'
+
 export type { KyselyPikkuDB } from './kysely-tables.js'
 export type { WorkflowRunService } from '@pikku/core/workflow'
 export type { AgentRunService, AgentRunRow } from '@pikku/core/ai-agent'

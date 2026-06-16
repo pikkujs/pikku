@@ -32,13 +32,12 @@
     "./workflow-do": "./dist/workflow-do/index.js"
   },
   "dependencies": {
-    "kysely-d1": "^0.4.0",
-    "kysely-plugin-serialize": "^0.8.2"
+    "kysely-d1": "^0.4.0"
   },
   "peerDependencies": {
     "@pikku/core": "^0.12.30",
     "@pikku/kysely": "^0.12.10",
-    "kysely": "^0.28.0"
+    "kysely": "^0.29.0"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.12.18",

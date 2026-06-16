@@ -5396,13 +5396,12 @@ __metadata:
     "@vitest/runner": "npm:^2.1.9"
     "@vitest/snapshot": "npm:^2.1.9"
     kysely-d1: "npm:^0.4.0"
-    kysely-plugin-serialize: "npm:^0.8.2"
     typescript: "npm:^5.9.3"
     vitest: "npm:^2.1.9"
   peerDependencies:
     "@pikku/core": ^0.12.30
     "@pikku/kysely": ^0.12.10
-    kysely: ^0.28.0
+    kysely: ^0.29.0
   languageName: unknown
   linkType: soft
 
@@ -5573,8 +5572,7 @@ __metadata:
     better-sqlite3: "npm:^12.10.0"
     c8: "npm:^10.1.3"
     ioredis: "npm:^5.10.0"
-    kysely: "npm:^0.28.12"
-    kysely-plugin-serialize: "npm:^0.6.0"
+    kysely: "npm:^0.29.0"
     kysely-postgres-js: "npm:^3.0.0"
     mysql2: "npm:^3.18.2"
     postgres: "npm:^3.4.8"
@@ -5705,7 +5703,7 @@ __metadata:
   dependencies:
     "@pikku/core": "npm:^0.12.15"
     "@pikku/kysely": "npm:^0.12.9"
-    kysely: "npm:^0.28.12"
+    kysely: "npm:^0.29.0"
     typescript: "npm:^5.9"
   languageName: unknown
   linkType: soft
@@ -5717,7 +5715,7 @@ __metadata:
     "@pikku/kysely": "npm:^0.12.0"
     "@pikku/kysely-sqlite": "npm:^0.12.5"
     "@types/node": "npm:^22"
-    kysely: "npm:^0.28.12"
+    kysely: "npm:^0.29.0"
     typescript: "npm:^5.9"
   languageName: unknown
   linkType: soft
@@ -5728,7 +5726,7 @@ __metadata:
   dependencies:
     "@pikku/core": "npm:^0.12.26"
     "@pikku/kysely": "npm:^0.12.13"
-    kysely: "npm:^0.28.12"
+    kysely: "npm:^0.29.0"
     kysely-postgres-js: "npm:^3.0.0"
     postgres: "npm:^3.4.8"
     typescript: "npm:^5.9"
@@ -5741,8 +5739,7 @@ __metadata:
   dependencies:
     "@pikku/core": "npm:^0.12.21"
     "@pikku/kysely": "npm:^0.12.0"
-    kysely: "npm:^0.28.12"
-    kysely-plugin-serialize: "npm:^0.8.2"
+    kysely: "npm:^0.29.0"
     typescript: "npm:^5.9"
   languageName: unknown
   linkType: soft
@@ -5753,9 +5750,8 @@ __metadata:
   dependencies:
     "@types/better-sqlite3": "npm:^7.6.13"
     better-sqlite3: "npm:^12.10.0"
-    kysely: "npm:^0.28.12"
+    kysely: "npm:^0.29.0"
     kysely-codegen: "npm:^0.20.0"
-    kysely-plugin-serialize: "npm:^0.8.2"
     kysely-postgres-js: "npm:^3.0.0"
     postgres: "npm:^3.4.8"
     typescript: "npm:^5.9"
@@ -6011,7 +6007,7 @@ __metadata:
     "@pikku/kysely-postgres": "npm:^0.12.8"
     "@pikku/schema-cfworker": "npm:^0.12.2"
     "@types/node": "npm:^24"
-    kysely: "npm:^0.28.12"
+    kysely: "npm:^0.29.0"
     kysely-postgres-js: "npm:^3.0.0"
     postgres: "npm:^3.4.8"
     tsx: "npm:^4.21.0"
@@ -6036,7 +6032,7 @@ __metadata:
     "@types/aws-lambda": "npm:^8.10.161"
     "@types/node": "npm:^24"
     esbuild: "npm:~0.27.0"
-    kysely: "npm:^0.28.12"
+    kysely: "npm:^0.29.0"
     kysely-postgres-js: "npm:^3.0.0"
     postgres: "npm:^3.4.8"
     serverless: "npm:^4.33.0"
@@ -6236,7 +6232,7 @@ __metadata:
     better-auth: "npm:^1.6.18"
     concurrently: "npm:^9.2.1"
     eventsource: "npm:^4.1.0"
-    kysely: "npm:^0.28.12"
+    kysely: "npm:^0.29.0"
     serverless: "npm:^4.33.0"
     serverless-offline: "npm:^14.5.0"
     serverless-offline-sqs: "npm:^8.0.0"
@@ -6309,7 +6305,7 @@ __metadata:
     "@pikku/kysely-postgres": "npm:^0.12.8"
     "@pikku/schema-cfworker": "npm:^0.12.2"
     "@types/node": "npm:^24"
-    kysely: "npm:^0.28.12"
+    kysely: "npm:^0.29.0"
     kysely-postgres-js: "npm:^3.0.0"
     pino-pretty: "npm:^13.1.3"
     postgres: "npm:^3.4.8"
@@ -6380,7 +6376,7 @@ __metadata:
     "@pikku/kysely-postgres": "npm:^0.12.8"
     "@pikku/queue-pg-boss": "npm:^0.12.3"
     "@types/node": "npm:^24"
-    kysely: "npm:^0.28.12"
+    kysely: "npm:^0.29.0"
     kysely-postgres-js: "npm:^3.0.0"
     postgres: "npm:^3.4.8"
     tslib: "npm:^2.8.1"
@@ -6457,7 +6453,7 @@ __metadata:
     "@types/node": "npm:^24"
     better-auth: "npm:^1.6.18"
     better-sqlite3: "npm:^12.10.0"
-    kysely: "npm:^0.28.12"
+    kysely: "npm:^0.29.0"
     tsx: "npm:^4.21.0"
     typescript: "npm:^5.9"
   languageName: unknown
@@ -6642,7 +6638,7 @@ __metadata:
     "@pikku/queue-pg-boss": "workspace:*"
     "@pikku/redis": "workspace:*"
     "@types/node": "npm:^24"
-    kysely: "npm:^0.28.12"
+    kysely: "npm:^0.29.0"
     kysely-postgres-js: "npm:^3.0.0"
     postgres: "npm:^3.4.8"
     tsx: "npm:^4.20.6"
@@ -16857,24 +16853,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"kysely-plugin-serialize@npm:^0.6.0":
-  version: 0.6.3
-  resolution: "kysely-plugin-serialize@npm:0.6.3"
-  peerDependencies:
-    kysely: ">=0.26"
-  checksum: 10/1d7d744f9966ced8486113b326f6ca2d0dc26d84d2a303edf3feb31d57eaf4dc87ea5507a9330c1bd9cc97bd65090357b13bc18202e528cd9079976925a5e310
-  languageName: node
-  linkType: hard
-
-"kysely-plugin-serialize@npm:^0.8.2":
-  version: 0.8.2
-  resolution: "kysely-plugin-serialize@npm:0.8.2"
-  peerDependencies:
-    kysely: ">=0.26"
-  checksum: 10/9d8938ee81d93b19dd14160cf07102c2b615e445c3402e6133ea7d80c3061d69e72ea342988ab3d10c77f5f4574553e6f547afee204a03eb4691e140bedea201
-  languageName: node
-  linkType: hard
-
 "kysely-postgres-js@npm:^3.0.0":
   version: 3.0.0
   resolution: "kysely-postgres-js@npm:3.0.0"
@@ -16888,14 +16866,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"kysely@npm:^0.28.12":
-  version: 0.28.12
-  resolution: "kysely@npm:0.28.12"
-  checksum: 10/b835848f0811e7cb6cd09a4c2d6fd5723f12c9f9d84e48d8e9a86642d5451943399f7b56f60b726c76a8cc96bbde954ad82d838ce66218438e4735646bf781be
-  languageName: node
-  linkType: hard
-
-"kysely@npm:^0.28.17 || ^0.29.0":
+"kysely@npm:^0.28.17 || ^0.29.0, kysely@npm:^0.29.0":
   version: 0.29.2
   resolution: "kysely@npm:0.29.2"
   checksum: 10/abe40e648447880e06a7dfdb829717859162e0cc762e0d53d0c9193c51be7bc2fd9f30f58c7fc71679a49f8e95dd3a4ac5c9147434a83decdbf0cfcea8eeae0d

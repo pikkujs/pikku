@@ -13,7 +13,7 @@
     "@pikku/templates-function-addon": "workspace:*",
     "better-auth": "^1.6.18",
     "eventsource": "^4.1.0",
-    "kysely": "^0.28.12",
+    "kysely": "^0.29.0",
     "ws": "^8.19.0",
     "zod": "^4"
   },
