@@ -5345,7 +5345,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/cli@npm:*, @pikku/cli@npm:^0.12.0, @pikku/cli@npm:^0.12.1, @pikku/cli@npm:^0.12.22, @pikku/cli@npm:^0.12.36, @pikku/cli@workspace:*, @pikku/cli@workspace:packages/cli":
+"@pikku/cli@npm:*, @pikku/cli@npm:^0.12.0, @pikku/cli@npm:^0.12.1, @pikku/cli@npm:^0.12.22, @pikku/cli@npm:^0.12.36, @pikku/cli@npm:^0.12.37, @pikku/cli@workspace:*, @pikku/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@pikku/cli@workspace:packages/cli"
   dependencies:
@@ -5355,8 +5355,8 @@ __metadata:
     "@pikku/deploy-cloudflare": "npm:^0.12.3"
     "@pikku/fetch": "npm:^0.12.3"
     "@pikku/inspector": "npm:^0.12.20"
-    "@pikku/kysely": "npm:^0.12.14"
-    "@pikku/kysely-node-sqlite": "npm:^0.12.1"
+    "@pikku/kysely": "npm:^0.12.16"
+    "@pikku/kysely-node-sqlite": "npm:^0.12.2"
     "@pikku/node-http-server": "npm:^0.12.2"
     "@pikku/openapi-parser": "npm:^0.12.10"
     "@pikku/schedule": "npm:^0.12.0"
@@ -5386,13 +5386,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/cloudflare@npm:^0.12.9, @pikku/cloudflare@workspace:*, @pikku/cloudflare@workspace:packages/runtimes/cloudflare":
+"@pikku/cloudflare@npm:^0.12.10, @pikku/cloudflare@workspace:*, @pikku/cloudflare@workspace:packages/runtimes/cloudflare":
   version: 0.0.0-use.local
   resolution: "@pikku/cloudflare@workspace:packages/runtimes/cloudflare"
   dependencies:
     "@cloudflare/vitest-pool-workers": "npm:^0.12.18"
     "@cloudflare/workers-types": "npm:^4.20260305.0"
-    "@pikku/kysely": "npm:^0.12.10"
+    "@pikku/kysely": "npm:^0.12.16"
     "@vitest/runner": "npm:^2.1.9"
     "@vitest/snapshot": "npm:^2.1.9"
     kysely-d1: "npm:^0.4.0"
@@ -5400,7 +5400,7 @@ __metadata:
     vitest: "npm:^2.1.9"
   peerDependencies:
     "@pikku/core": ^0.12.30
-    "@pikku/kysely": ^0.12.10
+    "@pikku/kysely": ^0.12.16
     kysely: ^0.29.0
   languageName: unknown
   linkType: soft
@@ -5702,30 +5702,30 @@ __metadata:
   resolution: "@pikku/kysely-mysql@workspace:packages/services/kysely-mysql"
   dependencies:
     "@pikku/core": "npm:^0.12.15"
-    "@pikku/kysely": "npm:^0.12.9"
+    "@pikku/kysely": "npm:^0.12.16"
     kysely: "npm:^0.29.0"
     typescript: "npm:^5.9"
   languageName: unknown
   linkType: soft
 
-"@pikku/kysely-node-sqlite@npm:^0.12.1, @pikku/kysely-node-sqlite@workspace:packages/services/kysely-node-sqlite":
+"@pikku/kysely-node-sqlite@npm:^0.12.2, @pikku/kysely-node-sqlite@workspace:packages/services/kysely-node-sqlite":
   version: 0.0.0-use.local
   resolution: "@pikku/kysely-node-sqlite@workspace:packages/services/kysely-node-sqlite"
   dependencies:
-    "@pikku/kysely": "npm:^0.12.0"
-    "@pikku/kysely-sqlite": "npm:^0.12.5"
+    "@pikku/kysely": "npm:^0.12.16"
+    "@pikku/kysely-sqlite": "npm:^0.12.6"
     "@types/node": "npm:^22"
     kysely: "npm:^0.29.0"
     typescript: "npm:^5.9"
   languageName: unknown
   linkType: soft
 
-"@pikku/kysely-postgres@npm:^0.12.8, @pikku/kysely-postgres@workspace:*, @pikku/kysely-postgres@workspace:packages/services/kysely-postgres":
+"@pikku/kysely-postgres@npm:^0.12.9, @pikku/kysely-postgres@workspace:*, @pikku/kysely-postgres@workspace:packages/services/kysely-postgres":
   version: 0.0.0-use.local
   resolution: "@pikku/kysely-postgres@workspace:packages/services/kysely-postgres"
   dependencies:
     "@pikku/core": "npm:^0.12.26"
-    "@pikku/kysely": "npm:^0.12.13"
+    "@pikku/kysely": "npm:^0.12.16"
     kysely: "npm:^0.29.0"
     kysely-postgres-js: "npm:^3.0.0"
     postgres: "npm:^3.4.8"
@@ -5733,18 +5733,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/kysely-sqlite@npm:^0.12.5, @pikku/kysely-sqlite@workspace:*, @pikku/kysely-sqlite@workspace:packages/services/kysely-sqlite":
+"@pikku/kysely-sqlite@npm:^0.12.6, @pikku/kysely-sqlite@workspace:*, @pikku/kysely-sqlite@workspace:packages/services/kysely-sqlite":
   version: 0.0.0-use.local
   resolution: "@pikku/kysely-sqlite@workspace:packages/services/kysely-sqlite"
   dependencies:
     "@pikku/core": "npm:^0.12.21"
-    "@pikku/kysely": "npm:^0.12.0"
+    "@pikku/kysely": "npm:^0.12.16"
     kysely: "npm:^0.29.0"
     typescript: "npm:^5.9"
   languageName: unknown
   linkType: soft
 
-"@pikku/kysely@npm:^0.12.0, @pikku/kysely@npm:^0.12.10, @pikku/kysely@npm:^0.12.13, @pikku/kysely@npm:^0.12.14, @pikku/kysely@npm:^0.12.9, @pikku/kysely@workspace:*, @pikku/kysely@workspace:^, @pikku/kysely@workspace:packages/services/kysely":
+"@pikku/kysely@npm:^0.12.16, @pikku/kysely@workspace:*, @pikku/kysely@workspace:^, @pikku/kysely@workspace:packages/services/kysely":
   version: 0.0.0-use.local
   resolution: "@pikku/kysely@workspace:packages/services/kysely"
   dependencies:
@@ -6004,7 +6004,7 @@ __metadata:
     "@pikku/ai-vercel": "npm:^0.12.5"
     "@pikku/core": "npm:^0.12.32"
     "@pikku/express": "npm:^0.12.5"
-    "@pikku/kysely-postgres": "npm:^0.12.8"
+    "@pikku/kysely-postgres": "npm:^0.12.9"
     "@pikku/schema-cfworker": "npm:^0.12.2"
     "@types/node": "npm:^24"
     kysely: "npm:^0.29.0"
@@ -6027,7 +6027,7 @@ __metadata:
     "@aws-sdk/s3-request-presigner": "npm:^3.1000.0"
     "@pikku/aws-services": "npm:^0.12.5"
     "@pikku/core": "npm:^0.12.32"
-    "@pikku/kysely-postgres": "npm:^0.12.8"
+    "@pikku/kysely-postgres": "npm:^0.12.9"
     "@pikku/lambda": "npm:^0.12.3"
     "@types/aws-lambda": "npm:^8.10.161"
     "@types/node": "npm:^24"
@@ -6087,7 +6087,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-cli@workspace:templates/cli"
   dependencies:
-    "@pikku/cli": "npm:^0.12.36"
+    "@pikku/cli": "npm:^0.12.37"
     "@pikku/core": "npm:^0.12.32"
     "@pikku/uws": "npm:^0.12.5"
     "@pikku/websocket": "npm:^0.12.1"
@@ -6102,7 +6102,7 @@ __metadata:
   resolution: "@pikku/templates-cloudflare-websocket@workspace:templates/cloudflare-websocket"
   dependencies:
     "@cloudflare/workers-types": "npm:^4.20260305.0"
-    "@pikku/cloudflare": "npm:^0.12.9"
+    "@pikku/cloudflare": "npm:^0.12.10"
     "@pikku/core": "npm:^0.12.32"
     "@types/node": "npm:^24"
     "@types/ws": "npm:^8"
@@ -6116,7 +6116,7 @@ __metadata:
   resolution: "@pikku/templates-cloudflare-workers@workspace:templates/cloudflare-workers"
   dependencies:
     "@cloudflare/workers-types": "npm:^4.20260305.0"
-    "@pikku/cloudflare": "npm:^0.12.9"
+    "@pikku/cloudflare": "npm:^0.12.10"
     "@pikku/core": "npm:^0.12.32"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9.3"
@@ -6128,7 +6128,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-express-middleware@workspace:templates/express-middleware"
   dependencies:
-    "@pikku/cli": "npm:^0.12.36"
+    "@pikku/cli": "npm:^0.12.37"
     "@pikku/core": "npm:^0.12.32"
     "@pikku/express-middleware": "npm:^0.12.2"
     "@pikku/jose": "npm:^0.12.3"
@@ -6211,7 +6211,7 @@ __metadata:
     "@pikku/addon-console": "workspace:*"
     "@pikku/addon-graph": "workspace:*"
     "@pikku/better-auth": "npm:^0.12.6"
-    "@pikku/cli": "npm:^0.12.36"
+    "@pikku/cli": "npm:^0.12.37"
     "@pikku/cloudflare": "workspace:*"
     "@pikku/core": "npm:^0.12.32"
     "@pikku/deploy-cloudflare": "workspace:*"
@@ -6262,7 +6262,7 @@ __metadata:
   resolution: "@pikku/templates-nextjs@workspace:templates/nextjs"
   dependencies:
     "@next/swc-darwin-arm64": "npm:^16.2.6"
-    "@pikku/cli": "npm:^0.12.36"
+    "@pikku/cli": "npm:^0.12.37"
     "@pikku/core": "npm:^0.12.32"
     "@pikku/fetch": "npm:^0.12.3"
     "@pikku/jose": "npm:^0.12.3"
@@ -6298,11 +6298,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-remote-rpc-pg@workspace:templates/remote-rpc-pg"
   dependencies:
-    "@pikku/cli": "npm:^0.12.36"
+    "@pikku/cli": "npm:^0.12.37"
     "@pikku/core": "npm:^0.12.32"
     "@pikku/express": "npm:^0.12.5"
     "@pikku/jose": "npm:^0.12.3"
-    "@pikku/kysely-postgres": "npm:^0.12.8"
+    "@pikku/kysely-postgres": "npm:^0.12.9"
     "@pikku/schema-cfworker": "npm:^0.12.2"
     "@types/node": "npm:^24"
     kysely: "npm:^0.29.0"
@@ -6319,7 +6319,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-remote-rpc-redis@workspace:templates/remote-rpc-redis"
   dependencies:
-    "@pikku/cli": "npm:^0.12.36"
+    "@pikku/cli": "npm:^0.12.37"
     "@pikku/core": "npm:^0.12.32"
     "@pikku/express": "npm:^0.12.5"
     "@pikku/jose": "npm:^0.12.3"
@@ -6354,7 +6354,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-workflows-bullmq@workspace:templates/workflows-bullmq"
   dependencies:
-    "@pikku/cli": "npm:^0.12.36"
+    "@pikku/cli": "npm:^0.12.37"
     "@pikku/core": "npm:^0.12.32"
     "@pikku/express": "npm:^0.12.5"
     "@pikku/queue-bullmq": "npm:^0.12.2"
@@ -6370,10 +6370,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/templates-workflows-pg-boss@workspace:templates/workflows-pg-boss"
   dependencies:
-    "@pikku/cli": "npm:^0.12.36"
+    "@pikku/cli": "npm:^0.12.37"
     "@pikku/core": "npm:^0.12.32"
     "@pikku/express": "npm:^0.12.5"
-    "@pikku/kysely-postgres": "npm:^0.12.8"
+    "@pikku/kysely-postgres": "npm:^0.12.9"
     "@pikku/queue-pg-boss": "npm:^0.12.3"
     "@types/node": "npm:^24"
     kysely: "npm:^0.29.0"

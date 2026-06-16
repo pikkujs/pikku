@@ -1,3 +1,24 @@
+## 0.12.16
+
+### Patch Changes
+
+- 6565b97: Fix `KyselyWorkflowRunService.getRunSteps`: build the `runningAt` /
+  `succeededAt` / `failedAt` correlated subqueries through the query builder
+  instead of raw `sql` fragments, so the active schema (`withSchema(...)`)
+  qualifies `workflow_step_history`. The raw fragments hardcoded an unqualified
+  table name and failed with `relation "workflow_step_history" does not exist`
+  against a connection whose `search_path` did not include the schema.
+- 34f254e: Bump the `kysely` dependency range to `^0.29.0` so it dedupes onto a single
+  copy alongside Better Auth (which bundles kysely 0.29.x), avoiding two
+  incompatible `Kysely` classes (the `#private` brand mismatch) when both pikku's
+  adapters and Better Auth share a database connection.
+
+  kysely 0.29 is ESM-only, which the unmaintained `kysely-plugin-serialize`
+  (no `exports` map, CommonJS build) cannot import. Its `SerializePlugin` is now
+  maintained directly in `@pikku/kysely` and re-exported, and the external
+  dependency is dropped from `@pikku/kysely`, `@pikku/kysely-sqlite`, and
+  `@pikku/cloudflare`.
+
 ## 0.12.15
 
 ### Patch Changes
