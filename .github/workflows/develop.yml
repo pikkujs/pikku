@@ -10,6 +10,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  validate-deps:
+    name: Validate Package Deps
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check published deps for workspace protocol
+        run: node scripts/check-no-workspace-protocol.mjs
+
   build:
     name: Build
     runs-on: ubuntu-latest
