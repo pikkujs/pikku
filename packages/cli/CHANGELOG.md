@@ -1,3 +1,133 @@
+## 0.12.36
+
+### Patch Changes
+
+- a027a8e: feat: emit auth provider + plugin metadata as `auth-meta.gen.json` for the console SSO page
+
+  The enabled social providers and Better Auth plugins are now extracted statically
+  and written to a generated `auth-meta.gen.json`, replacing the runtime
+  `setAuthRegistry`/`getAuthRegistry` approach — so the console can show them without
+  evaluating the Better Auth factory.
+  - **inspector**: the `pikkuBetterAuth` inspector now reads the `plugins` array from
+    the `betterAuth({ ... })` config and records each plugin id (the callee name of
+    each `plugins: [organization(), bearer()]` entry) on the auth definition.
+  - **cli**: `pikku auth` (and `pikku all`) emit `auth/pikku-auth-meta.gen.json` (path
+    configurable via `authMetaJsonFile`) containing `basePath`, `hasCredentials`, the
+    enabled `providers` (`id` + `displayName` + `secretId`), and the enabled `plugins`
+    (`id` + `displayName`). The previous `setAuthRegistry(...)` runtime wiring is
+    removed from the generated `auth.gen.ts`.
+  - **better-auth**: exports a `PLUGIN_REGISTRY` and `pluginDisplayName(id)` helper so
+    plugin ids resolve to human-readable names.
+  - **core**: removes the unreleased `setAuthRegistry`/`getAuthRegistry` runtime auth
+    registry (now superseded by `auth-meta.gen.json`).
+  - **addon-console**: `getAuthProviders` reads `auth-meta.gen.json` and returns the
+    configured providers, plugins, and `hasCredentials` flag.
+  - **console**: the Auth Providers (SSO) page fetches `console:getAuthProviders` and
+    marks each provider configured/unconfigured, lists email+password credentials as a
+    provider, and shows the enabled Better Auth plugins.
+
+- a027a8e: fix: typed secret/variables access in Better Auth factories + cucumber Actor cookie jar
+  - **cli**: the generated `#pikku` `pikkuBetterAuth` wrapper now substitutes the
+    project's generated `TypedSecretService` / `TypedVariablesService` for the base
+    `secrets` / `variables` services (typed and wrapped at runtime, the same way
+    addon services are). The auth factory can read provider secrets straight off
+    the generated `CredentialsMap` — `socialProviders: { github: await
+secrets.getSecret('GITHUB_OAUTH') }` — with no inline `getSecrets<{ ... }>()`
+    generic. (Provider secrets are wired as before, from the `socialProviders`
+    keys, so they appear in the credentials map.)
+  - **cucumber**: `Actor` gains an additive cookie jar — `cookieFetch` (a
+    `customFetchImpl` that replays stored cookies, stamps `Origin`, and captures
+    `Set-Cookie`), plus `cookieHeader`, `storeSetCookie`, and `clearCookies`. This
+    lets a cucumber actor drive a real cookie-backed session (e.g. the Better Auth
+    client SDK) instead of hand-rolling a jar per suite. The existing JWT/bearer
+    actor behaviour is unchanged.
+
+- a027a8e: fix: address Better Auth review findings (secret/variable batch typing, auth init, guards)
+  - **core**: `SecretService.getSecrets` / `VariablesService.getVariables` (and the
+    Local/Typed/Scoped/AWS implementations) now return `Partial<T>`, honestly
+    reflecting that missing keys are omitted at runtime rather than typing partial
+    data as fully populated. `ScopedSecretService.getSecrets` now throws on a
+    disallowed key instead of silently filtering it out.
+  - **cli**: the generated `services.auth()` thunk clears its memoised promise on
+    rejection, so a transient Better Auth/Kysely startup failure no longer
+    permanently poisons auth for the process lifetime.
+  - **inspector**: the `pikkuBetterAuth` export guard now requires an exported
+    `const` (rejects `export let`/`export var`), matching its error message.
+  - **console**: the Microsoft auth provider's `callbackId` is `microsoft` (the
+    Better Auth provider id) rather than `microsoft-entra-id`.
+
+- a027a8e: fix(cli): don't inspect during the cold bootstrap function-types pass
+
+  `pikkuFunctionTypes` began calling `getInspectorState()` to decide whether to
+  re-export the typed `pikkuBetterAuth` from the generated types hub. But it also runs
+  as the cold bootstrap step whose job is to _write_ `.pikku/pikku-types.gen.ts`
+  before any inspection happens — and a full inspect runtime-imports user files
+  that themselves import that not-yet-written file, deadlocking on a cold `.pikku`
+  (`pikku bootstrap` returned rc=1 with the types file missing; schema generation
+  for a `wireSecret` schema failed with "Cannot find module
+  .pikku/pikku-types.gen.js"). The function-types step now takes a `{ bootstrap }`
+  flag (matching the other bootstrap type steps) so the cold pass skips inspector
+  state entirely; the auth re-export is added on the later post-inspect pass where
+  `.pikku` already exists.
+
+- a027a8e: feat(cli): `pikku db generate` + Better Auth drift guard in `pikku db migrate`
+
+  The Better Auth schema is owned by `pikkuBetterAuth`, not hand-written, so the
+  committed SQL migrations can silently fall behind the auth config (a stale
+  migration deploys a half-applied auth schema and `signUp` 500s at runtime).
+
+  `pikku db generate` asks Better Auth for its required schema and, when the
+  existing migrations don't yet cover it, writes a forward SQL migration. The
+  schema is materialised by running Better Auth's own `runMigrations()` through the
+  project's CamelCasePlugin kysely (so columns are snake_case), then drift is
+  detected by introspection set-diff — never via `getMigrations`' field-level diff
+  arrays, which compare its camelCase field keys against snake_case columns and so
+  always report false drift.
+
+  `pikku db migrate` now runs the same check after applying migrations and fails
+  loudly ("run `pikku db generate`") if the applied schema doesn't satisfy what
+  Better Auth requires, rather than letting the drift reach runtime.
+
+  Generation is SQLite-only for now (table/column names are dialect-independent, so
+  the drift _check_ works for postgres too; postgres migration emission is not yet
+  automated). Incremental changes on top of an already-migrated auth schema are
+  reported with the delta for a hand-written forward migration rather than emitting
+  a full re-CREATE.
+
+- a027a8e: feat(auth): migrate auth integration from Auth.js to Better Auth
+
+  The auth integration is now built on [Better Auth](https://better-auth.com)
+  and ships as a single package, `@pikku/better-auth` (replacing the former
+  `@pikku/auth-js`). There is exactly one auth package now.
+  - `pikkuBetterAuth(async ({ secrets, variables }) => betterAuth({ ... }))` is the new
+    single entry point. The CLI inspects the `betterAuth(...)` call and generates:
+    - `auth.gen.ts` — a catch-all `${basePath}{/*splat}` HTTP route per method and
+      a global `betterAuthSession({ auth })` middleware that bridges the Better
+      Auth session into the Pikku wire session.
+    - `auth-secrets.gen.ts` — `wireSecret(BETTER_AUTH_SECRET)` plus a
+      `<PROVIDER>_OAUTH` secret for each configured social provider, and
+      `wireVariable` for non-secret provider config (e.g. `MICROSOFT_TENANT_ID`,
+      `COGNITO_DOMAIN`/`REGION`/`USER_POOL_ID`).
+    - `auth.types.ts` — a typed `pikkuBetterAuth` re-export.
+  - `add-auth` (inspector) walks into the `betterAuth(...)` options to discover the
+    configured providers and required secrets/variables.
+  - The auth secret is now auto-wired by codegen from `BETTER_AUTH_SECRET` — it no
+    longer needs to be registered as a JWT signing key in `services.ts`.
+
+  CLI fix included: scaffold files generated outside `srcDirectories` (e.g. an
+  `auth.gen.ts` under a project's `pikku/` dir) are now added to the inspector's
+  wiring files, so their routes and secret metadata are picked up. The generated
+  wiring imports Pikku types via a resolved relative path instead of a hardcoded
+  `#pikku` specifier, so templates without a `#pikku` import map type-check.
+
+- Updated dependencies [a027a8e]
+- Updated dependencies [a027a8e]
+- Updated dependencies [a027a8e]
+- Updated dependencies [a027a8e]
+  - @pikku/inspector@0.12.20
+  - @pikku/better-auth@0.12.6
+  - @pikku/core@0.12.32
+
 ## 0.12.35
 
 ### Patch Changes

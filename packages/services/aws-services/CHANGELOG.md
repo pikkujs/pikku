@@ -1,3 +1,27 @@
+## 0.12.5
+
+### Patch Changes
+
+- a027a8e: fix: address Better Auth review findings (secret/variable batch typing, auth init, guards)
+  - **core**: `SecretService.getSecrets` / `VariablesService.getVariables` (and the
+    Local/Typed/Scoped/AWS implementations) now return `Partial<T>`, honestly
+    reflecting that missing keys are omitted at runtime rather than typing partial
+    data as fully populated. `ScopedSecretService.getSecrets` now throws on a
+    disallowed key instead of silently filtering it out.
+  - **cli**: the generated `services.auth()` thunk clears its memoised promise on
+    rejection, so a transient Better Auth/Kysely startup failure no longer
+    permanently poisons auth for the process lifetime.
+  - **inspector**: the `pikkuBetterAuth` export guard now requires an exported
+    `const` (rejects `export let`/`export var`), matching its error message.
+  - **console**: the Microsoft auth provider's `callbackId` is `microsoft` (the
+    Better Auth provider id) rather than `microsoft-entra-id`.
+
+- Updated dependencies [a027a8e]
+- Updated dependencies [a027a8e]
+- Updated dependencies [a027a8e]
+- Updated dependencies [a027a8e]
+  - @pikku/core@0.12.32
+
 ## 0.12.4
 
 ### Patch Changes
