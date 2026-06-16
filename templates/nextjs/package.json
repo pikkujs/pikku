@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@next/swc-darwin-arm64": "^16.2.6",
-    "@pikku/core": "^0.12.31",
+    "@pikku/core": "^0.6.9",
     "@pikku/fetch": "^0.12.3",
     "@pikku/jose": "^0.12.3",
     "@pikku/next": "^0.12.4",
