@@ -12,8 +12,8 @@
     "start": "wrangler dev"
   },
   "dependencies": {
-    "@pikku/cloudflare": "^0.12.9",
-    "@pikku/core": "^0.12.31"
+    "@pikku/cloudflare": "^0.6.2",
+    "@pikku/core": "^0.6.9"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260305.0",
