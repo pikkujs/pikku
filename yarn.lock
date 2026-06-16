@@ -5350,7 +5350,7 @@ __metadata:
   resolution: "@pikku/cli@workspace:packages/cli"
   dependencies:
     "@openapi-contrib/json-schema-to-openapi-schema": "npm:^4.3.1"
-    "@pikku/better-auth": "workspace:*"
+    "@pikku/better-auth": "npm:^0.12.6"
     "@pikku/core": "npm:^0.12.32"
     "@pikku/deploy-cloudflare": "npm:^0.12.3"
     "@pikku/fetch": "npm:^0.12.3"
@@ -5791,7 +5791,7 @@ __metadata:
     typescript: "npm:^5.9"
   peerDependencies:
     "@mantine/core": ^8 || ^9
-    "@pikku/react": "workspace:^"
+    "@pikku/react": ^0.12.3
     react: ^18 || ^19
   languageName: unknown
   linkType: soft
