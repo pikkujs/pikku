@@ -269,6 +269,7 @@ export async function runValidate(
     // packages/functions/package.json
     type FnPkg = {
       type?: string
+      imports?: Record<string, unknown>
       dependencies?: Record<string, string>
       devDependencies?: Record<string, string>
       peerDependencies?: Record<string, string>
@@ -282,6 +283,16 @@ export async function runValidate(
           'packages/functions/package.json is missing "type": "module"',
           fnPkgPath,
           'Add "type": "module" to packages/functions/package.json — Cloudflare Workers require ES modules'
+        )
+      }
+
+      // #pikku bare import — required by the injected fabric-telemetry.wiring.ts
+      if (!fnPkg.imports?.['#pikku']) {
+        e(
+          'functions-pkg-missing-pikku-import',
+          'packages/functions/package.json is missing a bare "#pikku" entry in "imports" — the Fabric-injected telemetry middleware imports from "#pikku" and will fail to bundle without it',
+          fnPkgPath,
+          'Add to "imports": { "#pikku": "./.pikku/pikku-types.gen.ts", "#pikku/*": "./.pikku/*" }'
         )
       }
 
