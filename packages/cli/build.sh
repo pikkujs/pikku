@@ -20,8 +20,26 @@ trap 'rm -rf "$_bootstrap_dir"' EXIT
 # module load, so it must be installed alongside it. This stays @pikku/auth-js
 # until a CLI release that imports @pikku/better-auth is published, after which
 # this should flip to "@pikku/better-auth".
-npm install --prefix "$_bootstrap_dir" --no-save --no-package-lock \
-  "@pikku/cli@${PIKKU_CLI_VERSION}" "@pikku/auth-js"
+#
+# The `overrides` neutralises an unconverted `workspace:*` specifier that can
+# leak into a published @pikku/cli manifest (e.g. @pikku/cli@0.12.36 shipped
+# `@pikku/better-auth: workspace:*`, which npm cannot resolve). Declaring the
+# bootstrap deps in a package.json is what lets the override apply during
+# resolution — npm ignores `overrides` for packages passed as install args.
+cat > "$_bootstrap_dir/package.json" <<JSON
+{
+  "name": "pikku-bootstrap",
+  "private": true,
+  "dependencies": {
+    "@pikku/cli": "${PIKKU_CLI_VERSION}",
+    "@pikku/auth-js": "latest"
+  },
+  "overrides": {
+    "@pikku/better-auth": "latest"
+  }
+}
+JSON
+(cd "$_bootstrap_dir" && npm install --no-save --no-package-lock)
 "$_bootstrap_dir/node_modules/.bin/pikku"
 rm -rf "$_bootstrap_dir"
 
