@@ -25,7 +25,9 @@ export const FabricValidateOutput = z.object({
 async function findProjectRoot(startDir: string): Promise<string> {
   let dir = startDir
   while (true) {
-    if (existsSync(join(dir, 'fabric.config.json'))) return dir
+    if (existsSync(join(dir, 'pikkufabric.config.json'))) {
+      return dir
+    }
     if (existsSync(join(dir, 'package.json'))) {
       try {
         const pkg = JSON.parse(
@@ -105,30 +107,30 @@ export async function runValidate(
     findings.push({ id, severity: 'info', message, path, fixHint })
   }
 
-  // ── fabric.config.json ─────────────────────────────────────────────────
+  // ── pikkufabric.config.json ────────────────────────────────────────────
   // Not required to run validate — downgraded to info so any pikku project
   // can be checked for compatibility before it is linked to a fabric account.
-  const fabricConfigPath = join(root, 'fabric.config.json')
+  const fabricConfigPath = join(root, 'pikkufabric.config.json')
   const fabricConfig =
     await readJsonSafe<Record<string, unknown>>(fabricConfigPath)
   if (!fabricConfig) {
     info(
       'fabric-config-missing',
-      'fabric.config.json not found — project has not been linked to fabric yet',
+      'pikkufabric.config.json not found — project has not been linked to fabric yet',
       fabricConfigPath,
       'Run `pikku fabric link` to create it, or create manually: {"projectId": "__PROJECT_ID__"}'
     )
   } else if (!fabricConfig.projectId) {
     info(
       'fabric-config-no-project-id',
-      'fabric.config.json is missing "projectId"',
+      'pikkufabric.config.json is missing "projectId"',
       fabricConfigPath,
-      'Add "projectId": "<your-project-id>" to fabric.config.json, or run `pikku fabric link`'
+      'Add "projectId": "<your-project-id>" to pikkufabric.config.json, or run `pikku fabric link`'
     )
   } else if (fabricConfig.projectId === '__PROJECT_ID__') {
     info(
       'fabric-config-placeholder-project-id',
-      'fabric.config.json has a placeholder projectId ("__PROJECT_ID__") — project is not linked',
+      'pikkufabric.config.json has a placeholder projectId ("__PROJECT_ID__") — project is not linked',
       fabricConfigPath,
       'Run `pikku fabric link` to replace the placeholder with a real project ID'
     )
@@ -136,8 +138,15 @@ export async function runValidate(
 
   // ── root pikku.config.json ─────────────────────────────────────────────
   const pikkuConfigPath = join(root, 'pikku.config.json')
-  const pikkuConfig =
-    await readJsonSafe<Record<string, unknown>>(pikkuConfigPath)
+  type PikkuConfig = {
+    srcDirectories?: unknown
+    outDir?: unknown
+    clientFiles?: unknown
+    db?: {
+      engine?: 'sqlite' | 'postgres'
+    }
+  }
+  const pikkuConfig = await readJsonSafe<PikkuConfig>(pikkuConfigPath)
   if (!pikkuConfig) {
     e(
       'pikku-config-missing',
@@ -171,6 +180,7 @@ export async function runValidate(
       )
     }
   }
+  const dbEngine = pikkuConfig?.db?.engine ?? 'sqlite'
 
   // ── root package.json ──────────────────────────────────────────────────
   type RootPkg = {
@@ -249,7 +259,7 @@ export async function runValidate(
   )?.name
   const themePkgName = (
     await readJsonSafe<PkgWithName>(
-      join(root, 'packages', 'theme', 'package.json')
+      join(root, 'packages', 'mantine-theme', 'package.json')
     )
   )?.name
   const componentsPkgName = (
@@ -302,7 +312,7 @@ export async function runValidate(
         ...fnPkg.peerDependencies,
       }
 
-      if (fnAllDeps['@pikku/kysely-postgres']) {
+      if (dbEngine !== 'postgres' && fnAllDeps['@pikku/kysely-postgres']) {
         e(
           'fn-pkg-postgres-dep',
           '@pikku/kysely-postgres is in packages/functions dependencies — Fabric uses SQLite/libSQL (Turso), not PostgreSQL',
@@ -329,7 +339,7 @@ export async function runValidate(
         servicesText.includes('LibsqlWebDialect')
       const usesProcessEnv = /\bprocess\.env\.[A-Z_]/.test(servicesText)
 
-      if (usesKysely && !usesLibsql) {
+      if (dbEngine !== 'postgres' && usesKysely && !usesLibsql) {
         e(
           'services-wrong-db-adapter',
           'services.ts uses Kysely but not LibsqlWebDialect — Fabric injects a Turso/libSQL DATABASE_URL at runtime, not a PostgreSQL URL',
@@ -348,6 +358,7 @@ export async function runValidate(
       }
 
       if (
+        dbEngine !== 'postgres' &&
         usesLibsql &&
         rootPkg &&
         !rootPkg.dependencies?.['@pikku/kysely-sqlite'] &&
@@ -362,16 +373,20 @@ export async function runValidate(
       }
     }
 
-    // db/sqlite/ — presence, numbering and SQL dialect
-    // Mirrors local-db.ts which resolves migrationsDir from the config root as
-    // db/sqlite (SQLite/libSQL) or db/postgres (PostgreSQL).
-    const migrationsDir = join(root, 'db', 'sqlite')
+    // Database layout is declared by pikku.config.json db.engine.
+    const migrationsDir = join(
+      root,
+      'db',
+      dbEngine === 'postgres' ? 'postgres' : 'sqlite'
+    )
     if (!existsSync(migrationsDir)) {
       e(
         'migrations-dir-missing',
-        'db/sqlite/ not found',
+        `db/${dbEngine === 'postgres' ? 'postgres' : 'sqlite'}/ not found`,
         migrationsDir,
-        'Create db/sqlite/ and add numbered .sql files (e.g. 0001-init.sql) using SQLite-compatible syntax'
+        dbEngine === 'postgres'
+          ? 'Create db/postgres/ and add numbered .sql files (e.g. 0001-init.sql) using PostgreSQL-compatible syntax'
+          : 'Create db/sqlite/ and add numbered .sql files (e.g. 0001-init.sql) using SQLite-compatible syntax'
       )
     } else {
       try {
@@ -396,20 +411,22 @@ export async function runValidate(
           }
         }
 
-        // Check for PostgreSQL-specific syntax — Fabric uses Turso (SQLite/libSQL)
-        for (const f of files) {
-          const sql = await readTextSafe(join(migrationsDir, f))
-          if (!sql) continue
-          const hits = POSTGRES_SQL_PATTERNS.filter(({ re }) =>
-            re.test(sql)
-          ).map(({ label }) => label)
-          if (hits.length > 0) {
-            e(
-              `migration-postgres-sql-${f.replace(/[^a-z0-9]/gi, '-')}`,
-              `${f} contains PostgreSQL syntax (${hits.join(', ')}) — Fabric uses SQLite/libSQL (Turso)`,
-              join(migrationsDir, f),
-              "Rewrite the migration using SQLite-compatible syntax: TEXT instead of JSONB, INTEGER PRIMARY KEY for auto-increment, datetime('now') instead of NOW(), no :: casts"
-            )
+        if (dbEngine !== 'postgres') {
+          // Check for PostgreSQL-specific syntax — Fabric uses Turso (SQLite/libSQL)
+          for (const f of files) {
+            const sql = await readTextSafe(join(migrationsDir, f))
+            if (!sql) continue
+            const hits = POSTGRES_SQL_PATTERNS.filter(({ re }) =>
+              re.test(sql)
+            ).map(({ label }) => label)
+            if (hits.length > 0) {
+              e(
+                `migration-postgres-sql-${f.replace(/[^a-z0-9]/gi, '-')}`,
+                `${f} contains PostgreSQL syntax (${hits.join(', ')}) — Fabric uses SQLite/libSQL (Turso)`,
+                join(migrationsDir, f),
+                "Rewrite the migration using SQLite-compatible syntax: TEXT instead of JSONB, INTEGER PRIMARY KEY for auto-increment, datetime('now') instead of NOW(), no :: casts"
+              )
+            }
           }
         }
       } catch {
@@ -417,14 +434,21 @@ export async function runValidate(
       }
     }
 
-    // db/sqlite-seed.sql
-    const seedPath = join(root, 'db', 'sqlite-seed.sql')
+    const seedPath = join(
+      root,
+      'db',
+      dbEngine === 'postgres' ? 'postgres-seed.sql' : 'sqlite-seed.sql'
+    )
     if (!existsSync(seedPath)) {
       e(
         'seed-sql-missing',
-        'db/sqlite-seed.sql not found',
+        dbEngine === 'postgres'
+          ? 'db/postgres-seed.sql not found'
+          : 'db/sqlite-seed.sql not found',
         seedPath,
-        'Create db/sqlite-seed.sql with idempotent INSERT OR IGNORE statements for demo/test data'
+        dbEngine === 'postgres'
+          ? 'Create db/postgres-seed.sql with idempotent seed data for local/test data'
+          : 'Create db/sqlite-seed.sql with idempotent INSERT OR IGNORE statements for demo/test data'
       )
     }
 
@@ -600,12 +624,12 @@ export async function runValidate(
 
   // ── packages/theme + packages/components ──────────────────────────────
   const designDocUrl = 'https://pikkufabric.dev/docs/design'
-  if (!existsSync(join(root, 'packages', 'theme'))) {
+  if (!existsSync(join(root, 'packages', 'mantine-theme'))) {
     info(
       'theme-missing',
-      'packages/theme/ not found — Fabric design features require a theme package',
-      join(root, 'packages', 'theme'),
-      `Create packages/theme/ with your Mantine theme tokens. See ${designDocUrl}`
+      'packages/mantine-theme/ not found — Fabric design features require a theme package',
+      join(root, 'packages', 'mantine-theme'),
+      `Create packages/mantine-theme/ with your Mantine theme tokens. See ${designDocUrl}`
     )
   }
   if (!existsSync(join(root, 'packages', 'components'))) {

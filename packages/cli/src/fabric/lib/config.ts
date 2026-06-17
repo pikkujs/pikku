@@ -6,9 +6,9 @@ import { homedir } from 'node:os'
 const DEFAULT_API_URL = 'http://localhost:7103'
 
 /**
- * `fabric.config.json` lives next to `pikku.config.json` in the project root.
- * Pins the project link (id, default api url) and declares deployable apps
- * + production domain. Discovered by walking up from cwd until found.
+ * `pikkufabric.config.json` lives next to `pikku.config.json` in the project
+ * root. Pins the project link (id, default api url) and declares deployable
+ * apps + production domain. Discovered by walking up from cwd until found.
  */
 export interface ProjectConfig {
   projectId: string
@@ -45,7 +45,7 @@ export interface AuthFile {
   tokens: Record<string, string>
 }
 
-const projectConfigName = 'fabric.config.json'
+const projectConfigName = 'pikkufabric.config.json'
 const authFilePath = join(homedir(), '.fabric', 'auth.json')
 
 export async function findProjectConfig(
@@ -97,7 +97,7 @@ export interface ResolvedApiContext {
 /**
  * Stitch together the api-url + auth token from the standard sources:
  *   1. explicit override (e.g. --api-url flag)
- *   2. fabric.config.json apiUrl
+ *   2. pikkufabric.config.json apiUrl
  *   3. FABRIC_API_URL env var
  *   4. hardcoded default
  *

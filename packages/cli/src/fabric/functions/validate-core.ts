@@ -123,27 +123,27 @@ export async function runFabricValidate(
     )
   }
 
-  const fabricConfigPath = join(root, 'fabric.config.json')
+  const fabricConfigPath = join(root, 'pikkufabric.config.json')
   const fabricConfig =
     await readJsonSafe<Record<string, unknown>>(fabricConfigPath)
   if (!fabricConfig) {
     info(
       'fabric-config-missing',
-      'fabric.config.json not found — project has not been linked to fabric yet',
+      'pikkufabric.config.json not found — project has not been linked to fabric yet',
       fabricConfigPath,
       'Run `pikku fabric link` to create it, or create manually: {"projectId": "__PROJECT_ID__"}'
     )
   } else if (!fabricConfig.projectId) {
     info(
       'fabric-config-no-project-id',
-      'fabric.config.json is missing "projectId"',
+      'pikkufabric.config.json is missing "projectId"',
       fabricConfigPath,
-      'Add "projectId": "<your-project-id>" to fabric.config.json, or run `pikku fabric link`'
+      'Add "projectId": "<your-project-id>" to pikkufabric.config.json, or run `pikku fabric link`'
     )
   } else if (fabricConfig.projectId === '__PROJECT_ID__') {
     info(
       'fabric-config-placeholder-project-id',
-      'fabric.config.json has a placeholder projectId ("__PROJECT_ID__") — project is not linked',
+      'pikkufabric.config.json has a placeholder projectId ("__PROJECT_ID__") — project is not linked',
       fabricConfigPath,
       'Run `pikku fabric link` to replace the placeholder with a real project ID'
     )
@@ -181,7 +181,7 @@ export async function runFabricValidate(
   )?.name
   const themePkgName = (
     await readJsonSafe<PkgWithName>(
-      join(root, 'packages', 'theme', 'package.json')
+      join(root, 'packages', 'mantine-theme', 'package.json')
     )
   )?.name
   const componentsPkgName = (
@@ -455,12 +455,12 @@ export async function runFabricValidate(
   }
 
   const designDocUrl = 'https://pikkufabric.dev/docs/design'
-  if (!existsSync(join(root, 'packages', 'theme'))) {
+  if (!existsSync(join(root, 'packages', 'mantine-theme'))) {
     info(
       'theme-missing',
-      'packages/theme/ not found — Fabric design features require a theme package',
-      join(root, 'packages', 'theme'),
-      `Create packages/theme/ with your Mantine theme tokens. See ${designDocUrl}`
+      'packages/mantine-theme/ not found — Fabric design features require a theme package',
+      join(root, 'packages', 'mantine-theme'),
+      `Create packages/mantine-theme/ with your Mantine theme tokens. See ${designDocUrl}`
     )
   }
   if (!existsSync(join(root, 'packages', 'components'))) {
