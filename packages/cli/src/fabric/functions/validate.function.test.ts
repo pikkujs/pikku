@@ -14,7 +14,7 @@ async function writeJson(path: string, data: unknown) {
 }
 
 async function makeValidProject(root: string) {
-  await writeJson(join(root, 'fabric.config.json'), {
+  await writeJson(join(root, 'pikkufabric.config.json'), {
     projectId: 'proj-abc123',
   })
   await writeJson(join(root, 'pikku.config.json'), {
@@ -71,7 +71,7 @@ async function makeValidProject(root: string) {
     '-- seed data\n',
     'utf8'
   )
-  await mkdir(join(root, 'packages', 'theme'), {
+  await mkdir(join(root, 'packages', 'mantine-theme'), {
     recursive: true,
   })
   await mkdir(join(root, 'packages', 'components'), {
@@ -134,12 +134,12 @@ describe('pikku fabric validate', () => {
     }
   })
 
-  describe('fabric.config.json', () => {
-    test('missing fabric.config.json → info (not blocking)', async () => {
+  describe('pikkufabric.config.json', () => {
+    test('missing pikkufabric.config.json → info (not blocking)', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await rm(join(tmp, 'fabric.config.json'), { force: true })
+        await rm(join(tmp, 'pikkufabric.config.json'), { force: true })
         const result = await runValidate(tmp)
         assert.strictEqual(result.ok, true) // info only — validate works without fabric config
         const finding = result.findings.find(
@@ -156,7 +156,7 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await writeJson(join(tmp, 'fabric.config.json'), {}) // no projectId
+        await writeJson(join(tmp, 'pikkufabric.config.json'), {}) // no projectId
         const result = await runValidate(tmp)
         assert.strictEqual(result.ok, true)
         const ids = result.findings.map((f) => f.id)
@@ -175,7 +175,7 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await writeJson(join(tmp, 'fabric.config.json'), {
+        await writeJson(join(tmp, 'pikkufabric.config.json'), {
           projectId: '__PROJECT_ID__',
         })
         const result = await runValidate(tmp)
@@ -756,12 +756,12 @@ describe('pikku fabric validate', () => {
     })
   })
 
-  describe('packages/theme and packages/components presence', () => {
-    test('missing packages/theme → info', async () => {
+  describe('packages/mantine-theme and packages/components presence', () => {
+    test('missing packages/mantine-theme → info', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await rm(join(tmp, 'packages', 'theme'), {
+        await rm(join(tmp, 'packages', 'mantine-theme'), {
           recursive: true,
           force: true,
         })
@@ -795,7 +795,7 @@ describe('pikku fabric validate', () => {
   })
 
   describe('apps/ frontend checks', () => {
-    test('app not declared in fabric.config.json frontends → warn', async () => {
+    test('app not declared in pikkufabric.config.json frontends → warn', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
@@ -814,12 +814,12 @@ describe('pikku fabric validate', () => {
       }
     })
 
-    test('fabric.config.json frontend cwd does not exist → error', async () => {
+    test('pikkufabric.config.json frontend cwd does not exist → error', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
         await mkdir(join(tmp, 'apps'), { recursive: true })
-        await writeJson(join(tmp, 'fabric.config.json'), {
+        await writeJson(join(tmp, 'pikkufabric.config.json'), {
           projectId: 'proj-abc123',
           frontends: { web: { cwd: './apps/web', kind: 'ssr' } },
         })
@@ -845,9 +845,12 @@ describe('pikku fabric validate', () => {
             name: '@project/functions-sdk',
           }
         )
-        await writeJson(join(tmp, 'packages', 'theme', 'package.json'), {
-          name: '@project/theme',
-        })
+        await writeJson(
+          join(tmp, 'packages', 'mantine-theme', 'package.json'),
+          {
+            name: '@project/mantine-theme',
+          }
+        )
         await writeJson(join(tmp, 'packages', 'components', 'package.json'), {
           name: '@project/components',
         })
@@ -856,7 +859,7 @@ describe('pikku fabric validate', () => {
           name: 'web',
           dependencies: {},
         })
-        await writeJson(join(tmp, 'fabric.config.json'), {
+        await writeJson(join(tmp, 'pikkufabric.config.json'), {
           projectId: 'proj-abc123',
           frontends: { web: { cwd: 'apps/web', kind: 'ssr' } },
         })
