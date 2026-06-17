@@ -44,7 +44,8 @@ class NodeSqliteStatement implements SyncSqliteStatement {
         upper.startsWith('WITH') ||
         upper.startsWith('PRAGMA') ||
         upper.startsWith('EXPLAIN') ||
-        upper.startsWith('VALUES')
+        upper.startsWith('VALUES') ||
+        /\bRETURNING\b/.test(upper)
     }
   }
 
