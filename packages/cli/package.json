@@ -33,7 +33,7 @@
     "@pikku/inspector": "^0.12.20",
     "@pikku/kysely": "^0.12.16",
     "@pikku/kysely-node-sqlite": "^0.12.2",
-    "@pikku/node-http-server": "^0.12.2",
+    "@pikku/node-http-server": "^0.12.1",
     "@pikku/openapi-parser": "^0.12.10",
     "@pikku/schedule": "^0.12.0",
     "@pikku/ws": "^0.12.2",
