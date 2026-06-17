@@ -1,3 +1,35 @@
+## 0.12.38
+
+### Patch Changes
+
+- ee6d80f: Fix Better Auth schema introspection during `pikku db migrate` by using
+  `LocalVariablesService` and `LocalSecretService` for the non-runtime auth
+  factory context instead of a handwritten stub with the wrong variables
+  interface shape.
+- db2fe60: Honor Better Auth `database.type = "postgres"` when computing desired auth schema and drift.
+- 5cd8929: Add a `startServerFnsFile` codegen option that emits a TanStack Start server-function shim.
+
+  When set in `clientFiles`, the CLI generates a typed `makeApi(): PikkuRPC` caller over the generated RPC map for use in Start loaders, actions and components. The shim reads the API base URL from `import.meta.env.VITE_API_URL` (throws if unset) and imports the `PikkuRPC` class from `rpcWiringsFile`, so the import path is always correct relative to the app. Self-skips when `startServerFnsFile` is unset and warns when `rpcWiringsFile` is missing.
+
+- 85e6c33: Update Fabric validation to respect `pikku.config.json` `db.engine` when
+  checking migration layout and database adapter usage, and standardize Fabric
+  project conventions on `pikkufabric.config.json` plus
+  `packages/mantine-theme`.
+- d7e1edb: Fix Postgres DB schema codegen for schema-qualified tables so `pikku db migrate`
+  emits legal flat interface names like `InstitutionsCountry` instead of invalid
+  dotted identifiers such as `Institutions.country`.
+- e7fac23: Fix `INSERT ... RETURNING` statements being treated as write queries on Node.js 22+
+
+  `node:sqlite`'s `StatementSync` has no `.reader` property (unlike `better-sqlite3`).
+  The fallback SQL inspection only checked for `SELECT`, `WITH`, `PRAGMA`, `EXPLAIN`,
+  and `VALUES` prefixes, so `INSERT ... RETURNING *` was incorrectly classified as a
+  write query. Kysely then called `stmt.run()` (which discards rows) instead of
+  `stmt.all()`, causing `INSERT ... RETURNING` to return no data — breaking
+  `better-auth` user creation and any other query that relies on `RETURNING`.
+
+  Fix: add `|| /\bRETURNING\b/.test(upper)` to the reader-detection heuristic so any
+  statement containing a `RETURNING` clause is correctly dispatched to `stmt.all()`.
+
 ## 0.12.37
 
 ### Patch Changes

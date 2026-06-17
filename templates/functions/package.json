@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "1.27.1",
-    "@pikku/cli": "^0.12.37",
+    "@pikku/cli": "^0.12.38",
     "@pikku/cloudflare": "workspace:*",
     "@pikku/deploy-cloudflare": "workspace:*",
     "@pikku/deploy-serverless": "workspace:*",
