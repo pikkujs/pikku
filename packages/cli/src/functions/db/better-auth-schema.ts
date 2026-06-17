@@ -122,6 +122,42 @@ function schemaServicesStub(kysely: Kysely<any>, logger: unknown) {
   })
 }
 
+function findUserConfigFactoryFile(
+  rootDir: string,
+  srcDirectories: string[]
+): string | null {
+  for (const srcDir of srcDirectories) {
+    for (const name of ['config.ts', 'config.js']) {
+      const candidate = join(rootDir, srcDir, name)
+      if (existsSync(candidate)) return candidate
+    }
+  }
+
+  for (const name of ['config.ts', 'config.js']) {
+    const candidate = join(rootDir, name)
+    if (existsSync(candidate)) return candidate
+  }
+
+  return null
+}
+
+async function loadAuthConfig(opts: {
+  rootDir: string
+  srcDirectories: string[]
+}): Promise<unknown | undefined> {
+  const configFactoryFile = findUserConfigFactoryFile(
+    opts.rootDir,
+    opts.srcDirectories
+  )
+  if (!configFactoryFile) return undefined
+
+  const configModule = await loadUserModule(configFactoryFile)
+  const userCreateConfig = configModule.createConfig
+  if (typeof userCreateConfig !== 'function') return undefined
+
+  return userCreateConfig(new LocalVariablesService())
+}
+
 export async function loadAuthOptions(opts: {
   rootDir: string
   srcDirectories: string[]
@@ -134,7 +170,13 @@ export async function loadAuthOptions(opts: {
   const factory = await loadAuthFactory(sourceFile)
   if (!factory) return null
 
-  const instance = await factory(schemaServicesStub(opts.kysely, opts.logger))
+  const services = schemaServicesStub(opts.kysely, opts.logger) as Record<
+    string,
+    unknown
+  >
+  services.config = await loadAuthConfig(opts)
+
+  const instance = await factory(services)
   const options = (instance as { options?: BetterAuthOptionsLike }).options
   return options ?? null
 }

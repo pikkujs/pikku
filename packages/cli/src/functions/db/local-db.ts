@@ -10,7 +10,7 @@ import { resolve, isAbsolute, relative, dirname, join } from 'node:path'
 import { createRequire } from 'node:module'
 import { runInNewContext } from 'node:vm'
 import { transformSync } from 'esbuild'
-import type { Kysely } from 'kysely'
+import { CamelCasePlugin, CompiledQuery, Kysely, PostgresDialect } from 'kysely'
 import { migrate, type MigrateResult } from './db-migrator.js'
 import type { DbIntrospector } from './db-introspector.js'
 import { loadAuthOptions, getAuthMigrations } from './better-auth-schema.js'
@@ -420,7 +420,10 @@ async function introspectorToMap(intro: DbIntrospector): Promise<SchemaMap> {
 function diffSchemas(
   desired: SchemaMap,
   actual: SchemaMap
-): { missingTables: string[]; missingColumns: { table: string; columns: string[] }[] } {
+): {
+  missingTables: string[]
+  missingColumns: { table: string; columns: string[] }[]
+} {
   const missingTables: string[] = []
   const missingColumns: { table: string; columns: string[] }[] = []
   for (const [table, cols] of desired) {
@@ -440,7 +443,120 @@ export interface DesiredAuthSchema {
   sql: string
 }
 
+function isPostgresAuthDatabase(options: {
+  database?: { type?: string }
+}): boolean {
+  return options.database?.type === 'postgres'
+}
+
+function createScratchPostgresSchemaName(): string {
+  const random = Math.random().toString(36).slice(2, 10)
+  return `pikku_auth_${Date.now().toString(36)}_${random}`
+}
+
+async function postgresSchemaToMap(
+  connectionString: string,
+  schema: string
+): Promise<SchemaMap> {
+  const { Client } = await import('pg')
+  const client = new Client({ connectionString })
+  await client.connect()
+  try {
+    const tablesResult = await client.query<{ table_name: string }>(
+      `SELECT table_name
+       FROM information_schema.tables
+       WHERE table_schema = $1
+         AND table_type = 'BASE TABLE'
+       ORDER BY table_name`,
+      [schema]
+    )
+    const map: SchemaMap = new Map()
+    for (const { table_name } of tablesResult.rows) {
+      const columnsResult = await client.query<{ column_name: string }>(
+        `SELECT column_name
+         FROM information_schema.columns
+         WHERE table_schema = $1
+           AND table_name = $2
+         ORDER BY ordinal_position`,
+        [schema, table_name]
+      )
+      map.set(table_name, new Set(columnsResult.rows.map((c) => c.column_name)))
+    }
+    return map
+  } finally {
+    await client.end()
+  }
+}
+
+async function desiredPostgresAuthSchema(
+  resolved: ResolvedPostgresDb,
+  rootDir: string,
+  srcDirectories: string[],
+  logger: { error: (msg: string) => void }
+): Promise<DesiredAuthSchema | null> {
+  const { Pool } = await import('pg')
+  const schema = createScratchPostgresSchemaName()
+  const pool = new Pool({
+    connectionString: resolved.connectionString,
+    max: 1,
+  })
+  try {
+    const admin = await pool.connect()
+    try {
+      await admin.query(`CREATE SCHEMA "${schema}"`)
+      await admin.query(`SET search_path TO "${schema}"`)
+    } finally {
+      admin.release()
+    }
+
+    const kysely = new Kysely<any>({
+      dialect: new PostgresDialect({
+        pool,
+        onReserveConnection: async (connection) => {
+          await connection.executeQuery(
+            CompiledQuery.raw(`SET search_path TO "${schema}"`)
+          )
+        },
+      }),
+      plugins: [new CamelCasePlugin()],
+    }).withSchema(schema)
+
+    try {
+      const options = await loadAuthOptions({
+        rootDir,
+        srcDirectories,
+        kysely,
+        logger,
+      })
+      if (!options) return null
+
+      const { runMigrations, compileMigrations } =
+        await getAuthMigrations(options)
+      await runMigrations()
+      const tables = await postgresSchemaToMap(
+        resolved.connectionString,
+        schema
+      )
+      const sql = await compileMigrations()
+      return { tables, sql }
+    } finally {
+      await kysely.destroy()
+    }
+  } finally {
+    const cleanup = new Pool({
+      connectionString: resolved.connectionString,
+      max: 1,
+    })
+    try {
+      await cleanup.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`)
+    } finally {
+      await cleanup.end()
+    }
+  }
+}
+
 export async function desiredAuthSchema(
+  resolved: ResolvedDb,
   rootDir: string,
   srcDirectories: string[],
   logger: { error: (msg: string) => void }
@@ -449,9 +565,28 @@ export async function desiredAuthSchema(
   const db = runtime.open(':memory:')
   try {
     const kysely = createSqliteKysely({ db, camelCase: true })
-    const options = await loadAuthOptions({ rootDir, srcDirectories, kysely, logger })
+    const options = await loadAuthOptions({
+      rootDir,
+      srcDirectories,
+      kysely,
+      logger,
+    })
     if (!options) return null
-    const { runMigrations, compileMigrations } = await getAuthMigrations(options)
+    if (isPostgresAuthDatabase(options)) {
+      if (resolved.dialect !== 'postgres') {
+        throw new Error(
+          'Better Auth database.type is postgres, but the resolved app database is not postgres.'
+        )
+      }
+      return desiredPostgresAuthSchema(
+        resolved,
+        rootDir,
+        srcDirectories,
+        logger
+      )
+    }
+    const { runMigrations, compileMigrations } =
+      await getAuthMigrations(options)
     await runMigrations()
     const tables = await introspectorToMap(new SqliteIntrospector(db))
     const sql = await compileMigrations()
@@ -461,7 +596,9 @@ export async function desiredAuthSchema(
   }
 }
 
-export async function introspectSchema(resolved: ResolvedDb): Promise<SchemaMap> {
+export async function introspectSchema(
+  resolved: ResolvedDb
+): Promise<SchemaMap> {
   if (resolved.dialect === 'sqlite') {
     const runtime = await loadSqliteRuntime()
     const db = runtime.open(resolved.dbFile)
@@ -504,9 +641,19 @@ export async function computeAuthDrift(
   srcDirectories: string[],
   logger: { error: (msg: string) => void }
 ): Promise<AuthDriftResult> {
-  const desired = await desiredAuthSchema(rootDir, srcDirectories, logger)
+  const desired = await desiredAuthSchema(
+    resolved,
+    rootDir,
+    srcDirectories,
+    logger
+  )
   if (!desired) {
-    return { hasAuth: false, inSync: true, missingTables: [], missingColumns: [] }
+    return {
+      hasAuth: false,
+      inSync: true,
+      missingTables: [],
+      missingColumns: [],
+    }
   }
   const actual = await introspectSchema(resolved)
   const { missingTables, missingColumns } = diffSchemas(desired.tables, actual)
@@ -553,7 +700,12 @@ export async function generateAuthMigration(
 ): Promise<GenerateAuthResult> {
   if (resolved.dialect !== 'sqlite') return { status: 'unsupported-dialect' }
 
-  const desired = await desiredAuthSchema(rootDir, srcDirectories, logger)
+  const desired = await desiredAuthSchema(
+    resolved,
+    rootDir,
+    srcDirectories,
+    logger
+  )
   if (!desired) return { status: 'no-auth' }
 
   const covered = await coveredSqliteSchema(resolved.migrationsDir)
