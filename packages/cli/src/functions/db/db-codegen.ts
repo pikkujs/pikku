@@ -40,6 +40,13 @@ function snakeToPascal(name: string): string {
     .join('')
 }
 
+function tableToInterfaceName(name: string): string {
+  return name
+    .split('.')
+    .map((part) => snakeToPascal(part))
+    .join('')
+}
+
 function snakeToCamel(name: string): string {
   return name.replace(/_([a-z])/g, (_, c) => c.toUpperCase())
 }
@@ -131,9 +138,7 @@ function columnTypeExpression(
       return wrap(nullable ? 'Uuid | null' : 'Uuid')
     }
     if (annotation?.tsType) {
-      const base = nullable
-        ? `${annotation.tsType} | null`
-        : annotation.tsType
+      const base = nullable ? `${annotation.tsType} | null` : annotation.tsType
       return wrap(base)
     }
     if (annotation?.kind === 'json') {
@@ -187,7 +192,7 @@ function emitInterface(
   formatHints: Record<string, Record<string, ZodFormat>>,
   warnings: string[]
 ): string {
-  const ifaceName = snakeToPascal(table.name)
+  const ifaceName = tableToInterfaceName(table.name)
   const bare = bareTableName(table.name)
   const tableCols = explicitAnnotations[bare] ?? {}
 
@@ -477,7 +482,7 @@ export async function generateSchemaTypes(
       const safe = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(tableKey)
         ? tableKey
         : JSON.stringify(tableKey)
-      return `  ${safe}: ${snakeToPascal(t.name)}`
+      return `  ${safe}: ${tableToInterfaceName(t.name)}`
     })
     .join('\n')
 

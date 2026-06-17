@@ -96,7 +96,9 @@ describe('DB codegen (Postgres) — classification brands', () => {
         );
       `,
       },
-      { users: { email: { security: 'private', classification: 'fake:email' } } }
+      {
+        users: { email: { security: 'private', classification: 'fake:email' } },
+      }
     )
     t.after(async () => {
       await db.close()
@@ -425,6 +427,43 @@ describe('DB codegen (Postgres) — classification brands', () => {
       eventsBlock[0],
       /createdAt:[^\n]*Date/,
       'real Postgres timestamp should auto-type as Date'
+    )
+  })
+
+  test('schema-qualified tables emit flat legal interface names and string-keyed DB entries', async (t) => {
+    const { outDir, migrationsDir, rootDir, db } = await setup({
+      '001_schema.sql': `
+        CREATE SCHEMA institutions;
+      `,
+      '002_table.sql': `
+        CREATE TABLE institutions.country (
+          country_id SERIAL PRIMARY KEY,
+          name TEXT NOT NULL
+        );
+      `,
+    })
+    t.after(async () => {
+      await db.close()
+      await rm(outDir, { recursive: true, force: true })
+      await rm(migrationsDir, { recursive: true, force: true })
+      await rm(rootDir, { recursive: true, force: true })
+    })
+
+    const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
+    assert.match(
+      schema,
+      /export interface InstitutionsCountry \{/,
+      'schema-qualified table should flatten to a legal PascalCase interface name'
+    )
+    assert.doesNotMatch(
+      schema,
+      /export interface Institutions\.Country|export interface Institutions\.country/,
+      'schema-qualified tables should not emit dotted interface names'
+    )
+    assert.match(
+      schema,
+      /"institutions\.country": InstitutionsCountry/,
+      'DB map should keep the string-qualified table key'
     )
   })
 })
