@@ -4,6 +4,7 @@ import { readdirSync, statSync, readFileSync, existsSync } from 'node:fs'
 import { join, extname, dirname } from 'node:path'
 import type { Kysely } from 'kysely'
 import { PIKKU_BETTER_AUTH } from '@pikku/better-auth'
+import { LocalSecretService, LocalVariablesService } from '@pikku/core/services'
 import { loadUserModule } from '../commands/load-user-project.js'
 
 type AuthFactoryLike = (services: unknown) => unknown
@@ -107,20 +108,13 @@ async function loadAuthFactory(
 }
 
 function schemaServicesStub(kysely: Kysely<any>, logger: unknown) {
-  const dummy = 'x'.repeat(32)
-  const fromKeys = (keys: string[]) =>
-    Object.fromEntries(keys.map((k) => [k, dummy]))
+  const variables = new LocalVariablesService()
+  const secrets = new LocalSecretService(variables)
   const base: Record<string, unknown> = {
     kysely,
     logger,
-    secrets: {
-      getSecret: async () => dummy,
-      getSecrets: async (keys: string[]) => fromKeys(keys),
-    },
-    variables: {
-      getVariable: async () => dummy,
-      getVariables: async (keys: string[]) => fromKeys(keys),
-    },
+    secrets,
+    variables,
   }
   return new Proxy(base, {
     get: (target, prop) =>
@@ -140,9 +134,7 @@ export async function loadAuthOptions(opts: {
   const factory = await loadAuthFactory(sourceFile)
   if (!factory) return null
 
-  const instance = await factory(
-    schemaServicesStub(opts.kysely, opts.logger)
-  )
+  const instance = await factory(schemaServicesStub(opts.kysely, opts.logger))
   const options = (instance as { options?: BetterAuthOptionsLike }).options
   return options ?? null
 }
