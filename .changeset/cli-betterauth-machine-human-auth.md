@@ -1,6 +1,6 @@
 ---
-'@pikku/cli': minor
-'@pikku/better-auth': minor
+'@pikku/cli': patch
+'@pikku/better-auth': patch
 ---
 
 feat(cli,better-auth): unified machine + human auth (pikku login + api-key)
