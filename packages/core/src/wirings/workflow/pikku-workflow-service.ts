@@ -1174,6 +1174,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       const wire: PikkuWire = {
         workflow: workflowWire,
         pikkuUserId: run.wire?.pikkuUserId,
+        session: rpcService.wire?.session,
         rpc: rpcService.wire?.rpc,
       }
       try {
@@ -1358,6 +1359,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
               id: rpcName,
               parentRunId: runId,
               parentStepId: stepState.stepId,
+              pikkuUserId: rpcService.wire?.pikkuUserId,
             }
             const shouldInline = !getSingletonServices()?.queueService
             const { runId: childRunId } = await this.startWorkflow(
@@ -1555,6 +1557,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
               type: 'workflow',
               id: rpcName,
               parentRunId: runId,
+              pikkuUserId: rpcService.wire?.pikkuUserId,
             }
             const { runId: childRunId } = await this.startWorkflow(
               rpcName,
