@@ -5,24 +5,37 @@ import { loadUserConfigForDb } from './db-shared.js'
 export const dbReset = pikkuSessionlessFunc<{}, void>({
   remote: true,
   func: async ({ logger, config }) => {
+    if (process.env.NODE_ENV === 'production') {
+      logger.error(
+        'pikku db reset refused: NODE_ENV=production. This command only runs in dev.'
+      )
+      throw new Error('pikku db reset refused: NODE_ENV=production')
+    }
+
     const userConfig = await loadUserConfigForDb({ config, logger })
     if (!userConfig) return
 
-    const resolved = resolveDb(userConfig, config.rootDir, config.outDir, config.runtimeDir)
+    const resolved = resolveDb(
+      userConfig,
+      config.rootDir,
+      config.outDir,
+      config.runtimeDir
+    )
     if (!resolved) {
       logger.error(
-        'pikku db reset: no database configured — set sqliteDb in your createConfig.'
+        'pikku db reset: no database configured — set sqliteDb or postgresUrl in your createConfig.'
       )
       throw new Error('no database configured')
     }
 
-    if (resolved.dialect !== 'sqlite') {
-      logger.error('pikku db reset: reset is only supported for SQLite databases.')
-      throw new Error('reset not supported for postgres')
-    }
-
-    reset(resolved, config.rootDir)
-    logger.info(`db reset: removed ${resolved.dbFile}`)
+    await reset(resolved, config.rootDir)
+    logger.info(
+      resolved.dialect === 'sqlite'
+        ? `db reset: removed ${resolved.dbFile}`
+        : resolved.mode === 'pglite'
+          ? `db reset: removed ${resolved.pgliteDir}`
+          : 'db reset: cleared non-system Postgres schemas'
+    )
 
     const { migrate, codegen, zod } = await migrateAndCodegen(resolved)
     for (const name of migrate.applied) {
@@ -41,7 +54,9 @@ export const dbReset = pikkuSessionlessFunc<{}, void>({
 
     const seedResult = await seed(resolved)
     if (seedResult.applied) {
-      logger.info(`db reset: seeded ${resolved.seedFile} (${seedResult.bytes} bytes)`)
+      logger.info(
+        `db reset: seeded ${resolved.seedFile} (${seedResult.bytes} bytes)`
+      )
     }
   },
 })

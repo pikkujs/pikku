@@ -16,11 +16,40 @@ import {
   migrateAndCodegen,
   seed as runSeed,
   reset as runReset,
+  createKysely,
 } from './local-db.js'
 import { MigrationDriftError } from './db-migrator.js'
 import { loadSqliteRuntime } from './sqlite/sqlite-runtime.js'
 
 let root: string
+
+function usePostgresProject(options?: {
+  migrationSql?: string
+  seedSql?: string
+}) {
+  rmSync(join(root, 'db', 'sqlite'), { recursive: true, force: true })
+  mkdirSync(join(root, 'db', 'postgres'), { recursive: true })
+  writeFileSync(
+    join(root, 'db', 'postgres', '0001-init.sql'),
+    options?.migrationSql ??
+      `CREATE TABLE todos (
+  id SERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  done BOOLEAN NOT NULL DEFAULT FALSE
+);
+`
+  )
+  if (options?.seedSql !== undefined) {
+    writeFileSync(join(root, 'db', 'postgres-seed.sql'), options.seedSql)
+  } else {
+    writeFileSync(
+      join(root, 'db', 'postgres-seed.sql'),
+      `INSERT INTO todos (title, done) VALUES ('walk dog', FALSE);
+INSERT INTO todos (title, done) VALUES ('buy milk', TRUE);
+`
+    )
+  }
+}
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'pikku-db-test-'))
@@ -53,6 +82,21 @@ test('resolveDb auto-detects sqlite when db/sqlite dir exists and no config', ()
   assert.equal(resolved!.dialect, 'sqlite')
 })
 
+test('resolveDb throws when both postgresUrl and sqliteDb are configured', () => {
+  assert.throws(
+    () =>
+      resolveDb(
+        {
+          postgresUrl: 'postgres://user:pass@localhost:5432/mydb',
+          sqliteDb: '.pikku-runtime/dev.db',
+        },
+        root,
+        root
+      ),
+    /Configure exactly one database dialect/
+  )
+})
+
 test('resolveDb returns null when no db settings and no db/sqlite dir', () => {
   const emptyRoot = mkdtempSync(join(tmpdir(), 'pikku-db-empty-'))
   try {
@@ -60,6 +104,62 @@ test('resolveDb returns null when no db settings and no db/sqlite dir', () => {
   } finally {
     rmSync(emptyRoot, { recursive: true, force: true })
   }
+})
+
+test('resolveDb auto-detects local PGlite postgres when db/postgres exists and no config', () => {
+  rmSync(join(root, 'db', 'sqlite'), { recursive: true, force: true })
+  mkdirSync(join(root, 'db', 'postgres'), { recursive: true })
+
+  const resolved = resolveDb({}, root, root)
+  assert.ok(resolved !== null)
+  assert.equal(resolved!.dialect, 'postgres')
+  if (resolved!.dialect !== 'postgres') throw new Error('expected postgres')
+  assert.equal(resolved.mode, 'pglite')
+  assert.equal(resolved.pgliteDir, join(root, '.pikku-runtime', 'dev-postgres'))
+})
+
+test('resolveDb honors explicit sqliteDb even when db/postgres exists', () => {
+  mkdirSync(join(root, 'db', 'postgres'), { recursive: true })
+
+  const resolved = resolveDb(
+    { sqliteDb: '.pikku-runtime/explicit.db' },
+    root,
+    root
+  )
+  assert.ok(resolved !== null)
+  assert.equal(resolved!.dialect, 'sqlite')
+  if (resolved!.dialect !== 'sqlite') throw new Error('expected sqlite')
+  assert.equal(resolved.dbFile, join(root, '.pikku-runtime', 'explicit.db'))
+})
+
+test('resolveDb honors explicit postgresUrl over inferred local assets', () => {
+  mkdirSync(join(root, 'db', 'postgres'), { recursive: true })
+
+  const resolved = resolveDb(
+    { postgresUrl: 'postgres://user:pass@localhost:5432/mydb' },
+    root,
+    root
+  )
+  assert.ok(resolved !== null)
+  assert.equal(resolved!.dialect, 'postgres')
+  if (resolved!.dialect !== 'postgres') throw new Error('expected postgres')
+  assert.equal(resolved.mode, 'url')
+  assert.equal(
+    resolved.connectionString,
+    'postgres://user:pass@localhost:5432/mydb'
+  )
+})
+
+test('resolveDb uses custom runtimeDir for local PGlite postgres', () => {
+  rmSync(join(root, 'db', 'sqlite'), { recursive: true, force: true })
+  mkdirSync(join(root, 'db', 'postgres'), { recursive: true })
+
+  const resolved = resolveDb({}, root, root, 'custom-runtime')
+  assert.ok(resolved !== null)
+  assert.equal(resolved!.dialect, 'postgres')
+  if (resolved!.dialect !== 'postgres') throw new Error('expected postgres')
+  assert.equal(resolved.runtimeDir, join(root, 'custom-runtime'))
+  assert.equal(resolved.pgliteDir, join(root, 'custom-runtime', 'dev-postgres'))
 })
 
 test('migrateAndCodegen applies pending migrations and writes schema.d.ts', async () => {
@@ -161,7 +261,7 @@ test('reset wipes the dev DB so a follow-up migrate replays from scratch', async
   await migrateAndCodegen(resolved)
   await runSeed(resolved)
 
-  runReset(resolved, root)
+  await runReset(resolved, root)
 
   const after = await migrateAndCodegen(resolved)
   assert.deepEqual(after.migrate.applied, ['0001-init.sql'])
@@ -178,7 +278,7 @@ test('reset wipes the dev DB so a follow-up migrate replays from scratch', async
   }
 })
 
-test('reset refuses when resolved DB lives outside the runtime directory', () => {
+test('reset refuses when resolved DB lives outside the runtime directory', async () => {
   const outside = mkdtempSync(join(tmpdir(), 'pikku-db-outside-'))
   const resolved = resolveDb(
     { sqliteDb: join(outside, 'evil.db') },
@@ -186,8 +286,138 @@ test('reset refuses when resolved DB lives outside the runtime directory', () =>
     root
   )!
   assert.equal(resolved.dialect, 'sqlite')
-  assert.throws(() => runReset(resolved, root), /outside the runtime directory/)
+  await assert.rejects(
+    () => runReset(resolved, root),
+    /outside the runtime directory/
+  )
   rmSync(outside, { recursive: true, force: true })
+})
+
+test('reset refuses in NODE_ENV=production for local Postgres too', async () => {
+  usePostgresProject()
+  const resolved = resolveDb({}, root, root)!
+  const previous = process.env.NODE_ENV
+  process.env.NODE_ENV = 'production'
+  try {
+    await assert.rejects(() => runReset(resolved, root), /NODE_ENV=production/)
+  } finally {
+    if (previous === undefined) {
+      delete process.env.NODE_ENV
+    } else {
+      process.env.NODE_ENV = previous
+    }
+  }
+})
+
+test('reset refuses when resolved PGlite dir lives outside the runtime directory', async () => {
+  usePostgresProject()
+  const outside = mkdtempSync(join(tmpdir(), 'pikku-pg-outside-'))
+  const resolved = resolveDb({}, root, root)!
+  assert.equal(resolved.dialect, 'postgres')
+  if (resolved.dialect !== 'postgres') throw new Error('expected postgres')
+
+  await assert.rejects(
+    () =>
+      runReset(
+        {
+          ...resolved,
+          pgliteDir: join(outside, 'dev-postgres'),
+        },
+        root
+      ),
+    /outside the runtime directory/
+  )
+  rmSync(outside, { recursive: true, force: true })
+})
+
+test('postgres PGlite seed is a no-op when the seed file is missing', async () => {
+  usePostgresProject()
+  rmSync(join(root, 'db', 'postgres-seed.sql'), { force: true })
+
+  const resolved = resolveDb({}, root, root)!
+  assert.equal(resolved.dialect, 'postgres')
+
+  const result = await runSeed(resolved)
+  assert.deepEqual(result, { applied: false, bytes: 0 })
+})
+
+test('postgres PGlite seed is a no-op when the seed file is blank', async () => {
+  usePostgresProject({ seedSql: '   \n\t  ' })
+
+  const resolved = resolveDb({}, root, root)!
+  assert.equal(resolved.dialect, 'postgres')
+
+  const result = await runSeed(resolved)
+  assert.deepEqual(result, { applied: false, bytes: 0 })
+})
+
+test('postgres PGlite migrations support multi-statement SQL files', async () => {
+  usePostgresProject({
+    migrationSql: `CREATE TABLE todos (
+  id SERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  done BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE INDEX todos_title_idx ON todos (title);
+INSERT INTO todos (title, done) VALUES ('seed from migration', FALSE);
+`,
+    seedSql: '',
+  })
+
+  const resolved = resolveDb({}, root, root)!
+  assert.equal(resolved.dialect, 'postgres')
+
+  const result = await migrateAndCodegen(resolved)
+  assert.deepEqual(result.migrate.applied, ['0001-init.sql'])
+
+  const kysely = await createKysely<{ todos: { title: string } }>(resolved)
+  try {
+    const rows = await kysely.selectFrom('todos').select('title').execute()
+    assert.deepEqual(rows, [{ title: 'seed from migration' }])
+  } finally {
+    await kysely.destroy()
+  }
+})
+
+test('postgres PGlite migrate, seed, createKysely, and reset work end-to-end', async () => {
+  usePostgresProject()
+
+  const resolved = resolveDb({}, root, root)!
+  assert.equal(resolved.dialect, 'postgres')
+  assert.equal(resolved.mode, 'pglite')
+
+  const first = await migrateAndCodegen(resolved)
+  assert.deepEqual(first.migrate.applied, ['0001-init.sql'])
+  assert.equal(first.codegen.written, true)
+  assert.equal(first.zod.written, true)
+
+  const seedResult = await runSeed(resolved)
+  assert.equal(seedResult.applied, true)
+
+  const kysely = await createKysely<{
+    todos: { title: string; done: boolean }
+  }>(resolved)
+  try {
+    const rows = await kysely.selectFrom('todos').selectAll().execute()
+    assert.equal(rows.length, 2)
+  } finally {
+    await kysely.destroy()
+  }
+
+  await runReset(resolved, root)
+
+  const after = await migrateAndCodegen(resolved)
+  assert.deepEqual(after.migrate.applied, ['0001-init.sql'])
+
+  const freshKysely = await createKysely<{
+    todos: { title: string; done: boolean }
+  }>(resolved)
+  try {
+    const rows = await freshKysely.selectFrom('todos').selectAll().execute()
+    assert.equal(rows.length, 0)
+  } finally {
+    await freshKysely.destroy()
+  }
 })
 
 describe('parseDatabaseUrl', () => {

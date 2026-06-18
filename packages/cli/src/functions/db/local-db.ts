@@ -10,7 +10,8 @@ import { resolve, isAbsolute, relative, dirname, join } from 'node:path'
 import { createRequire } from 'node:module'
 import { runInNewContext } from 'node:vm'
 import { transformSync } from 'esbuild'
-import { CamelCasePlugin, CompiledQuery, Kysely, PostgresDialect } from 'kysely'
+import { CamelCasePlugin, Kysely, PostgresDialect } from 'kysely'
+import type { PGlite } from '@electric-sql/pglite'
 import { migrate, type MigrateResult } from './db-migrator.js'
 import type { DbIntrospector } from './db-introspector.js'
 import { loadAuthOptions, getAuthMigrations } from './better-auth-schema.js'
@@ -23,6 +24,7 @@ import { createSqliteKysely } from './sqlite/sqlite-kysely.js'
 import { loadSqliteRuntime } from './sqlite/sqlite-runtime.js'
 import { seed as runSeed, type SeedResult } from './sqlite/seed.js'
 import { PostgresMigrationExecutor } from './postgres/postgres-migrator.js'
+import { createPGliteKysely } from './postgres/pglite-kysely.js'
 import { PostgresIntrospector } from './postgres/postgres-introspector.js'
 import type { UserConfigShape } from '../commands/db-shared.js'
 
@@ -51,7 +53,11 @@ export interface ResolvedSqliteDb extends ResolvedDbBase {
 
 export interface ResolvedPostgresDb extends ResolvedDbBase {
   dialect: 'postgres'
-  connectionString: string
+  mode: 'url' | 'pglite'
+  connectionString?: string
+  pgliteDir?: string
+  runtimeDir: string
+  seedFile: string
 }
 
 export type ResolvedDb = ResolvedSqliteDb | ResolvedPostgresDb
@@ -82,6 +88,9 @@ export function resolveDb(
   outDir: string,
   runtimeDir?: string
 ): ResolvedDb | null {
+  const resolvedRuntimeDir = runtimeDir
+    ? resolveAgainst(rootDir, runtimeDir)
+    : join(rootDir, '.pikku-runtime')
   const base = (sub: string): ResolvedDbBase => ({
     rootDir,
     migrationsDir: resolveAgainst(rootDir, sub),
@@ -109,7 +118,10 @@ export function resolveDb(
   if (userConfig.postgresUrl) {
     return {
       dialect: 'postgres',
+      mode: 'url',
       connectionString: userConfig.postgresUrl,
+      runtimeDir: resolvedRuntimeDir,
+      seedFile: resolveAgainst(rootDir, 'db/postgres-seed.sql'),
       ...base('db/postgres'),
     }
   }
@@ -121,15 +133,23 @@ export function resolveDb(
       : undefined)
 
   if (sqliteDb) {
-    const resolvedRuntimeDir = runtimeDir
-      ? resolveAgainst(rootDir, runtimeDir)
-      : join(rootDir, '.pikku-runtime')
     return {
       dialect: 'sqlite',
       dbFile: resolveAgainst(rootDir, sqliteDb),
       runtimeDir: resolvedRuntimeDir,
       seedFile: resolveAgainst(rootDir, 'db/sqlite-seed.sql'),
       ...base('db/sqlite'),
+    }
+  }
+
+  if (existsSync(join(rootDir, 'db/postgres'))) {
+    return {
+      dialect: 'postgres',
+      mode: 'pglite',
+      pgliteDir: join(resolvedRuntimeDir, 'dev-postgres'),
+      runtimeDir: resolvedRuntimeDir,
+      seedFile: resolveAgainst(rootDir, 'db/postgres-seed.sql'),
+      ...base('db/postgres'),
     }
   }
 
@@ -152,6 +172,73 @@ function resolveAgainst(root: string, p: string): string {
   return isAbsolute(p) ? p : resolve(root, p)
 }
 
+interface PostgresQueryClient {
+  query<T = unknown>(sql: string, params?: unknown[]): Promise<{ rows: T[] }>
+  connect?(): Promise<unknown>
+  end(): Promise<void>
+  exec?(sql: string): Promise<unknown>
+  __connectionString?: string
+  __pglite?: PGlite
+}
+
+async function createPostgresClient(
+  resolved: ResolvedPostgresDb
+): Promise<PostgresQueryClient> {
+  if (resolved.mode === 'url') {
+    const { Client } = await import('pg')
+    const client = new Client({ connectionString: resolved.connectionString })
+    await client.connect()
+    return Object.assign(client, {
+      __connectionString: resolved.connectionString,
+    })
+  }
+
+  if (!resolved.pgliteDir) {
+    throw new Error('PGlite Postgres resolution is missing pgliteDir.')
+  }
+
+  mkdirSync(dirname(resolved.pgliteDir), { recursive: true })
+  const { PGlite } = await import('@electric-sql/pglite')
+  const db = new PGlite(resolved.pgliteDir)
+  return pgliteAsClient(db)
+}
+
+function pgliteAsClient(db: PGlite): PostgresQueryClient {
+  return {
+    query: (sql: string, params?: unknown[]) => db.query(sql, params),
+    exec: (sql: string) => db.exec(sql),
+    __pglite: db,
+    end: async () => {
+      if (!db.closed) {
+        await db.close()
+      }
+    },
+  }
+}
+
+async function withPostgresClient<T>(
+  resolved: ResolvedPostgresDb,
+  run: (client: PostgresQueryClient) => Promise<T>
+): Promise<T> {
+  const client = await createPostgresClient(resolved)
+  try {
+    return await run(client)
+  } finally {
+    await client.end()
+  }
+}
+
+async function loadCoercionPlugin(
+  coercionFile: string
+): Promise<CoercionMap | undefined> {
+  try {
+    const mod = await import(coercionFile)
+    return mod.coercionMap as CoercionMap
+  } catch {
+    return undefined
+  }
+}
+
 // ─── Migrate + codegen ────────────────────────────────────────────────────────
 
 export interface MigrateAndCodegenOutcome {
@@ -165,8 +252,8 @@ export interface MigrateAndCodegenOutcome {
 export async function migrateAndCodegen(
   resolved: ResolvedDb
 ): Promise<MigrateAndCodegenOutcome> {
-  let migrateResult: MigrateResult
-  let codegenResult: CodegenResult
+  let migrateResult!: MigrateResult
+  let codegenResult!: CodegenResult
 
   // Compile any authored db/annotations.ts → sidecar BEFORE codegen so edits
   // reflect in a single `db migrate` (codegen reads the sidecar).
@@ -197,13 +284,9 @@ export async function migrateAndCodegen(
       db.close()
     }
   } else {
-    // Postgres
-    const introspector = new PostgresIntrospector(resolved.connectionString)
-    await introspector.connect()
-    try {
-      const { Client } = await import('pg')
-      const client = new Client({ connectionString: resolved.connectionString })
-      await client.connect()
+    await withPostgresClient(resolved, async (client) => {
+      const introspector = new PostgresIntrospector(client)
+      await introspector.connect()
       try {
         const executor = new PostgresMigrationExecutor(client)
         migrateResult = await migrate(executor, resolved.migrationsDir)
@@ -218,11 +301,9 @@ export async function migrateAndCodegen(
           dialect: 'postgres',
         })
       } finally {
-        await client.end()
+        await introspector.close()
       }
-    } finally {
-      await introspector.close()
-    }
+    })
   }
 
   const zodResult = generateZodTypes({
@@ -254,31 +335,92 @@ export async function migrateAndCodegen(
 
 // ─── SQLite-only operations ───────────────────────────────────────────────────
 
-export async function seed(resolved: ResolvedSqliteDb): Promise<SeedResult> {
-  const runtime = await loadSqliteRuntime()
-  const db = runtime.open(resolved.dbFile)
-  try {
-    return runSeed(db, resolved.seedFile)
-  } finally {
-    db.close()
+export async function seed(resolved: ResolvedDb): Promise<SeedResult> {
+  if (resolved.dialect === 'sqlite') {
+    const runtime = await loadSqliteRuntime()
+    const db = runtime.open(resolved.dbFile)
+    try {
+      return runSeed(db, resolved.seedFile)
+    } finally {
+      db.close()
+    }
   }
+
+  if (!existsSync(resolved.seedFile)) {
+    return { applied: false, bytes: 0 }
+  }
+
+  const sql = readFileSync(resolved.seedFile, 'utf8')
+  if (sql.trim().length === 0) {
+    return { applied: false, bytes: 0 }
+  }
+
+  await withPostgresClient(resolved, async (client) => {
+    if (typeof client.exec === 'function') {
+      await client.exec(sql)
+    } else {
+      await client.query(sql)
+    }
+  })
+
+  return { applied: true, bytes: Buffer.byteLength(sql) }
 }
 
-export function reset(resolved: ResolvedSqliteDb, rootDir: string): void {
+export async function reset(
+  resolved: ResolvedDb,
+  rootDir: string
+): Promise<void> {
   if (process.env.NODE_ENV === 'production') {
     throw new Error(
       `pikku db reset refused: NODE_ENV=production. This command only runs in dev.`
     )
   }
-  const rel = relative(resolved.runtimeDir, resolved.dbFile)
-  if (rel.startsWith('..') || isAbsolute(rel)) {
-    throw new Error(
-      `pikku db reset refused: resolved DB file (${resolved.dbFile}) is outside the runtime directory (${resolved.runtimeDir}). Override sqliteDb or set runtimeDir correctly.`
-    )
+
+  if (resolved.dialect === 'sqlite') {
+    const rel = relative(resolved.runtimeDir, resolved.dbFile)
+    if (rel.startsWith('..') || isAbsolute(rel)) {
+      throw new Error(
+        `pikku db reset refused: resolved DB file (${resolved.dbFile}) is outside the runtime directory (${resolved.runtimeDir}). Override sqliteDb or set runtimeDir correctly.`
+      )
+    }
+    if (existsSync(resolved.dbFile)) {
+      rmSync(resolved.dbFile)
+    }
+    return
   }
-  if (existsSync(resolved.dbFile)) {
-    rmSync(resolved.dbFile)
+
+  if (resolved.mode === 'pglite') {
+    if (!resolved.pgliteDir) {
+      throw new Error('PGlite Postgres resolution is missing pgliteDir.')
+    }
+    const rel = relative(resolved.runtimeDir, resolved.pgliteDir)
+    if (rel.startsWith('..') || isAbsolute(rel)) {
+      throw new Error(
+        `pikku db reset refused: resolved PGlite dir (${resolved.pgliteDir}) is outside the runtime directory (${resolved.runtimeDir}).`
+      )
+    }
+    if (existsSync(resolved.pgliteDir)) {
+      rmSync(resolved.pgliteDir, { recursive: true, force: true })
+    }
+    return
   }
+
+  await withPostgresClient(resolved, async (client) => {
+    const result = await client.query<{ schema_name: string }>(`
+      SELECT schema_name
+      FROM information_schema.schemata
+      WHERE schema_name NOT IN ('information_schema', 'pg_catalog')
+        AND schema_name NOT LIKE 'pg_toast%'
+        AND schema_name NOT LIKE 'pg_temp_%'
+    `)
+
+    for (const { schema_name: schemaName } of result.rows) {
+      const quoted = `"${schemaName.replace(/"/g, '""')}"`
+      await client.query(`DROP SCHEMA IF EXISTS ${quoted} CASCADE`)
+    }
+
+    await client.query('CREATE SCHEMA IF NOT EXISTS public')
+  })
 }
 
 // ── Classification sync ───────────────────────────────────────────────────────
@@ -388,21 +530,47 @@ function compileClassifications(
 }
 
 export async function createKysely<DB>(
-  resolved: ResolvedSqliteDb
+  resolved: ResolvedDb
 ): Promise<Kysely<DB>> {
-  mkdirSync(dirname(resolved.dbFile), { recursive: true })
-  const runtime = await loadSqliteRuntime()
-  let coercionMap: CoercionMap | undefined
-  try {
-    const mod = await import(resolved.coercionFile)
-    coercionMap = mod.coercionMap as CoercionMap
-  } catch {
-    // coercion.gen.ts not yet generated — run `pikku db migrate` first
+  const coercionMap = await loadCoercionPlugin(resolved.coercionFile)
+  const plugins = coercionMap
+    ? [createCoercionPlugin({ map: coercionMap })]
+    : []
+
+  if (resolved.dialect === 'sqlite') {
+    mkdirSync(dirname(resolved.dbFile), { recursive: true })
+    const runtime = await loadSqliteRuntime()
+    return createSqliteKysely<DB>({
+      db: runtime.open(resolved.dbFile),
+      camelCase: resolved.camelCase,
+      plugins,
+    })
   }
-  return createSqliteKysely<DB>({
-    db: runtime.open(resolved.dbFile),
+
+  if (resolved.mode === 'url') {
+    const { Pool } = await import('pg')
+    const pool = new Pool({
+      connectionString: resolved.connectionString,
+      max: 10,
+    })
+    return new Kysely<DB>({
+      dialect: new PostgresDialect({ pool }),
+      plugins: resolved.camelCase
+        ? [new CamelCasePlugin(), ...plugins]
+        : plugins,
+    })
+  }
+
+  if (!resolved.pgliteDir) {
+    throw new Error('PGlite Postgres resolution is missing pgliteDir.')
+  }
+
+  mkdirSync(dirname(resolved.pgliteDir), { recursive: true })
+  const { PGlite } = await import('@electric-sql/pglite')
+  return createPGliteKysely<DB>({
+    db: new PGlite(resolved.pgliteDir),
     camelCase: resolved.camelCase,
-    plugins: coercionMap ? [createCoercionPlugin({ map: coercionMap })] : [],
+    plugins,
   })
 }
 
@@ -460,42 +628,107 @@ function isPostgresAuthDatabase(options: {
   return options.database?.type === 'postgres'
 }
 
-function createScratchPostgresSchemaName(): string {
+function createScratchPostgresDatabaseName(prefix: string): string {
   const random = Math.random().toString(36).slice(2, 10)
-  return `pikku_auth_${Date.now().toString(36)}_${random}`
+  return `${prefix}_${Date.now().toString(36)}_${random}`.slice(0, 63)
 }
 
-async function postgresSchemaToMap(
+function quotePgIdentifier(identifier: string): string {
+  return `"${identifier.replace(/"/g, '""')}"`
+}
+
+function withPostgresDatabase(
   connectionString: string,
-  schema: string
-): Promise<SchemaMap> {
-  const { Client } = await import('pg')
-  const client = new Client({ connectionString })
-  await client.connect()
-  try {
-    const tablesResult = await client.query<{ table_name: string }>(
-      `SELECT table_name
-       FROM information_schema.tables
-       WHERE table_schema = $1
-         AND table_type = 'BASE TABLE'
-       ORDER BY table_name`,
-      [schema]
-    )
-    const map: SchemaMap = new Map()
-    for (const { table_name } of tablesResult.rows) {
-      const columnsResult = await client.query<{ column_name: string }>(
-        `SELECT column_name
-         FROM information_schema.columns
-         WHERE table_schema = $1
-           AND table_name = $2
-         ORDER BY ordinal_position`,
-        [schema, table_name]
-      )
-      map.set(table_name, new Set(columnsResult.rows.map((c) => c.column_name)))
+  databaseName: string
+): string {
+  const url = new URL(connectionString)
+  url.pathname = `/${databaseName}`
+  return url.toString()
+}
+
+function getPostgresAdminConnectionString(connectionString: string): string {
+  return withPostgresDatabase(connectionString, 'postgres')
+}
+
+async function withScratchPostgresDatabase<T>(
+  resolved: ResolvedPostgresDb,
+  prefix: string,
+  run: (scratchDb: PostgresQueryClient) => Promise<T>
+): Promise<T> {
+  if (resolved.mode === 'pglite') {
+    const { PGlite } = await import('@electric-sql/pglite')
+    const scratchDb = new PGlite()
+    try {
+      return await run(pgliteAsClient(scratchDb))
+    } finally {
+      if (!scratchDb.closed) {
+        await scratchDb.close()
+      }
     }
-    return map
+  }
+
+  const { Client } = await import('pg')
+  const databaseName = createScratchPostgresDatabaseName(prefix)
+  const adminConnectionString = getPostgresAdminConnectionString(
+    resolved.connectionString!
+  )
+  const adminClient = new Client({ connectionString: adminConnectionString })
+  await adminClient.connect()
+  try {
+    await adminClient.query(
+      `CREATE DATABASE ${quotePgIdentifier(databaseName)}`
+    )
   } finally {
-    await client.end()
+    await adminClient.end()
+  }
+
+  const scratchConnectionString = withPostgresDatabase(
+    resolved.connectionString!,
+    databaseName
+  )
+
+  try {
+    const scratchClient = Object.assign(
+      new Client({ connectionString: scratchConnectionString }),
+      { __connectionString: scratchConnectionString }
+    )
+    await scratchClient.connect()
+    try {
+      return await run(scratchClient)
+    } finally {
+      await scratchClient.end()
+    }
+  } finally {
+    const cleanupClient = new Client({
+      connectionString: adminConnectionString,
+    })
+    await cleanupClient.connect()
+    try {
+      await cleanupClient.query(
+        `SELECT pg_terminate_backend(pid)
+         FROM pg_stat_activity
+         WHERE datname = $1
+           AND pid <> pg_backend_pid()`,
+        [databaseName]
+      )
+      await cleanupClient.query(
+        `DROP DATABASE IF EXISTS ${quotePgIdentifier(databaseName)}`
+      )
+    } finally {
+      await cleanupClient.end()
+    }
+  }
+}
+
+async function postgresDatabaseToMap(
+  client: PostgresQueryClient
+): Promise<SchemaMap> {
+  const intro = new PostgresIntrospector(client)
+  await intro.connect()
+  try {
+    return await introspectorToMap(intro)
+  } finally {
+    await intro.close()
   }
 }
 
@@ -505,65 +738,47 @@ async function desiredPostgresAuthSchema(
   srcDirectories: string[],
   logger: { error: (msg: string) => void }
 ): Promise<DesiredAuthSchema | null> {
-  const { Pool } = await import('pg')
-  const schema = createScratchPostgresSchemaName()
-  const pool = new Pool({
-    connectionString: resolved.connectionString,
-    max: 1,
-  })
-  try {
-    const admin = await pool.connect()
-    try {
-      await admin.query(`CREATE SCHEMA "${schema}"`)
-      await admin.query(`SET search_path TO "${schema}"`)
-    } finally {
-      admin.release()
-    }
+  return withScratchPostgresDatabase(
+    resolved,
+    'pikku_auth',
+    async (scratchDb) => {
+      const { Pool } = await import('pg')
+      const kysely =
+        resolved.mode === 'url'
+          ? new Kysely<any>({
+              dialect: new PostgresDialect({
+                pool: new Pool({
+                  connectionString: scratchDb.__connectionString,
+                  max: 1,
+                }),
+              }),
+              plugins: [new CamelCasePlugin()],
+            })
+          : createPGliteKysely<any>({
+              db: scratchDb.__pglite!,
+              camelCase: true,
+            })
 
-    const kysely = new Kysely<any>({
-      dialect: new PostgresDialect({
-        pool,
-        onReserveConnection: async (connection) => {
-          await connection.executeQuery(
-            CompiledQuery.raw(`SET search_path TO "${schema}"`)
-          )
-        },
-      }),
-      plugins: [new CamelCasePlugin()],
-    }).withSchema(schema)
+      try {
+        const options = await loadAuthOptions({
+          rootDir,
+          srcDirectories,
+          kysely,
+          logger,
+        })
+        if (!options) return null
 
-    try {
-      const options = await loadAuthOptions({
-        rootDir,
-        srcDirectories,
-        kysely,
-        logger,
-      })
-      if (!options) return null
-
-      const { runMigrations, compileMigrations } =
-        await getAuthMigrations(options)
-      await runMigrations()
-      const tables = await postgresSchemaToMap(
-        resolved.connectionString,
-        schema
-      )
-      const sql = await compileMigrations()
-      return { tables, sql }
-    } finally {
-      await kysely.destroy()
+        const { runMigrations, compileMigrations } =
+          await getAuthMigrations(options)
+        await runMigrations()
+        const tables = await postgresDatabaseToMap(scratchDb)
+        const sql = await compileMigrations()
+        return { tables, sql }
+      } finally {
+        await kysely.destroy()
+      }
     }
-  } finally {
-    const cleanup = new Pool({
-      connectionString: resolved.connectionString,
-      max: 1,
-    })
-    try {
-      await cleanup.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`)
-    } finally {
-      await cleanup.end()
-    }
-  }
+  )
 }
 
 export async function desiredAuthSchema(
@@ -619,13 +834,15 @@ export async function introspectSchema(
       db.close()
     }
   }
-  const intro = new PostgresIntrospector(resolved.connectionString)
-  await intro.connect()
-  try {
-    return await introspectorToMap(intro)
-  } finally {
-    await intro.close()
-  }
+  return withPostgresClient(resolved, async (client) => {
+    const intro = new PostgresIntrospector(client)
+    await intro.connect()
+    try {
+      return await introspectorToMap(intro)
+    } finally {
+      await intro.close()
+    }
+  })
 }
 
 async function coveredSqliteSchema(migrationsDir: string): Promise<SchemaMap> {
@@ -637,6 +854,20 @@ async function coveredSqliteSchema(migrationsDir: string): Promise<SchemaMap> {
   } finally {
     db.close()
   }
+}
+
+async function coveredPostgresSchema(
+  resolved: ResolvedPostgresDb,
+  migrationsDir: string
+): Promise<SchemaMap> {
+  return withScratchPostgresDatabase(
+    resolved,
+    'pikku_migrate',
+    async (client) => {
+      await migrate(new PostgresMigrationExecutor(client), migrationsDir)
+      return postgresDatabaseToMap(client)
+    }
+  )
 }
 
 export interface AuthDriftResult {
@@ -692,12 +923,7 @@ function nextMigrationFile(migrationsDir: string, label: string): string {
 }
 
 export interface GenerateAuthResult {
-  status:
-    | 'no-auth'
-    | 'up-to-date'
-    | 'written'
-    | 'incremental-unsupported'
-    | 'unsupported-dialect'
+  status: 'no-auth' | 'up-to-date' | 'written' | 'incremental-unsupported'
   file?: string
   missingTables?: string[]
   missingColumns?: { table: string; columns: string[] }[]
@@ -709,8 +935,6 @@ export async function generateAuthMigration(
   srcDirectories: string[],
   logger: { error: (msg: string) => void }
 ): Promise<GenerateAuthResult> {
-  if (resolved.dialect !== 'sqlite') return { status: 'unsupported-dialect' }
-
   const desired = await desiredAuthSchema(
     resolved,
     rootDir,
@@ -719,7 +943,10 @@ export async function generateAuthMigration(
   )
   if (!desired) return { status: 'no-auth' }
 
-  const covered = await coveredSqliteSchema(resolved.migrationsDir)
+  const covered =
+    resolved.dialect === 'sqlite'
+      ? await coveredSqliteSchema(resolved.migrationsDir)
+      : await coveredPostgresSchema(resolved, resolved.migrationsDir)
   const { missingTables, missingColumns } = diffSchemas(desired.tables, covered)
   if (missingTables.length === 0 && missingColumns.length === 0) {
     return { status: 'up-to-date' }

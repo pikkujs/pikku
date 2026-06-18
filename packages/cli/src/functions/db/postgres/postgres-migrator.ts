@@ -1,10 +1,14 @@
-import type { Client } from 'pg'
 import type { MigrationExecutor, AppliedMigration } from '../db-migrator.js'
 
 const TRACKING_TABLE = 'sql_migrations'
 
+export interface PostgresMigrationClient {
+  query<T = unknown>(sql: string, params?: unknown[]): Promise<{ rows: T[] }>
+  exec?(sql: string): Promise<unknown>
+}
+
 export class PostgresMigrationExecutor implements MigrationExecutor {
-  constructor(private readonly client: Client) {}
+  constructor(private readonly client: PostgresMigrationClient) {}
 
   async ensureTrackingTable(): Promise<void> {
     await this.client.query(`
@@ -26,7 +30,11 @@ export class PostgresMigrationExecutor implements MigrationExecutor {
   async runMigration(sql: string, name: string, hash: string): Promise<void> {
     await this.client.query('BEGIN')
     try {
-      await this.client.query(sql)
+      if (typeof this.client.exec === 'function') {
+        await this.client.exec(sql)
+      } else {
+        await this.client.query(sql)
+      }
       await this.client.query(
         `INSERT INTO ${TRACKING_TABLE} (name, hash) VALUES ($1, $2)`,
         [name, hash]

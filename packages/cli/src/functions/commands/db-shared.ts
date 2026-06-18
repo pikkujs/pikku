@@ -42,12 +42,7 @@ export async function loadUserConfigForDb(
 
   const getFallbackConfig = (): UserConfigShape | null => {
     if (hasSqliteDbAssets) return { sqliteDb: '.pikku-runtime/dev.db' }
-    if (hasPostgresDbAssets) {
-      logger.error(
-        'Postgres assets detected but postgresUrl is not configured in createConfig.'
-      )
-      return null
-    }
+    if (hasPostgresDbAssets) return {}
     return null
   }
 

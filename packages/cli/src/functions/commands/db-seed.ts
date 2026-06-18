@@ -8,24 +8,25 @@ export const dbSeed = pikkuSessionlessFunc<{}, void>({
     const userConfig = await loadUserConfigForDb({ config, logger })
     if (!userConfig) return
 
-    const resolved = resolveDb(userConfig, config.rootDir, config.outDir, config.runtimeDir)
+    const resolved = resolveDb(
+      userConfig,
+      config.rootDir,
+      config.outDir,
+      config.runtimeDir
+    )
     if (!resolved) {
       logger.error(
-        'pikku db seed: no database configured — set sqliteDb in your createConfig.'
+        'pikku db seed: no database configured — set sqliteDb or postgresUrl in your createConfig.'
       )
       throw new Error('no database configured')
     }
 
-    if (resolved.dialect !== 'sqlite') {
-      logger.error('pikku db seed: seed is only supported for SQLite databases.')
-      throw new Error('seed not supported for postgres')
-    }
-
     const result = await seed(resolved)
+    const seedFile = resolved.seedFile
     if (!result.applied) {
-      logger.info(`db seed: no ${resolved.seedFile} found, nothing to do`)
+      logger.info(`db seed: no ${seedFile} found, nothing to do`)
     } else {
-      logger.info(`db seed: applied ${resolved.seedFile} (${result.bytes} bytes)`)
+      logger.info(`db seed: applied ${seedFile} (${result.bytes} bytes)`)
     }
   },
 })
