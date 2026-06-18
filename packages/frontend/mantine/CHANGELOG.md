@@ -1,5 +1,11 @@
 # @pikku/mantine
 
+## 0.12.5
+
+### Patch Changes
+
+- 50a96f8: Improve Fabric validation fix hints for coding agents and add `lineBreaks` plus numeric `Text` children support in Mantine.
+
 ## 0.12.4
 
 ### Patch Changes

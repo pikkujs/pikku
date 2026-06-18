@@ -12,7 +12,7 @@
     "dev": "tsx --watch src/start.ts"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.32",
+    "@pikku/core": "^0.12.33",
     "@pikku/fastify-plugin": "^0.12.2",
     "@pikku/schedule": "^0.12.2",
     "fastify": "^5.8.2",
