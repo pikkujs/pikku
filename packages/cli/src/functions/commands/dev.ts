@@ -32,7 +32,7 @@ import {
   resolveDb,
   createKysely,
   parseDatabaseUrl,
-  type ResolvedSqliteDb,
+  type ResolvedDb,
 } from '../db/local-db.js'
 import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
 
@@ -196,8 +196,7 @@ export const dev = pikkuSessionlessFunc<
       config.outDir,
       config.runtimeDir
     )
-    const resolvedLocalDb: ResolvedSqliteDb | undefined =
-      resolvedDb?.dialect === 'sqlite' ? resolvedDb : undefined
+    const resolvedLocalDb: ResolvedDb | undefined = resolvedDb ?? undefined
     const kysely = resolvedLocalDb
       ? await createKysely(resolvedLocalDb)
       : undefined

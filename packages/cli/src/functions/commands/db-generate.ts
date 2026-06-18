@@ -30,16 +30,13 @@ export const dbGenerate = pikkuSessionlessFunc<{}, void>({
 
     switch (result.status) {
       case 'no-auth':
-        logger.info('db generate: no pikkuBetterAuth found — nothing to generate')
+        logger.info(
+          'db generate: no pikkuBetterAuth found — nothing to generate'
+        )
         return
       case 'up-to-date':
         logger.info(
           'db generate: Better Auth schema already covered by existing migrations — nothing to generate'
-        )
-        return
-      case 'unsupported-dialect':
-        logger.warn(
-          'db generate: automatic Better Auth migration generation is currently SQLite-only. Run Better Auth schema generation manually for postgres.'
         )
         return
       case 'incremental-unsupported': {

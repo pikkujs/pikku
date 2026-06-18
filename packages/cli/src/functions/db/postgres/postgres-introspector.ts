@@ -1,5 +1,10 @@
 import { Pool } from 'pg'
-import type { DbIntrospector, ColumnInfo, ForeignKeyInfo, EnumInfo } from '../db-introspector.js'
+import type {
+  DbIntrospector,
+  ColumnInfo,
+  ForeignKeyInfo,
+  EnumInfo,
+} from '../db-introspector.js'
 
 interface PgColumnRow {
   column_name: string
@@ -18,6 +23,7 @@ interface QueryClient {
 
 export class PostgresIntrospector implements DbIntrospector {
   private client: QueryClient
+  private ownsClient: boolean
 
   constructor(clientOrConnectionString: QueryClient | string) {
     if (typeof clientOrConnectionString === 'string') {
@@ -25,8 +31,10 @@ export class PostgresIntrospector implements DbIntrospector {
         connectionString: clientOrConnectionString,
         max: 10,
       })
+      this.ownsClient = true
     } else {
       this.client = clientOrConnectionString
+      this.ownsClient = false
     }
   }
 
@@ -158,6 +166,8 @@ export class PostgresIntrospector implements DbIntrospector {
   }
 
   async close(): Promise<void> {
-    await this.client.end()
+    if (this.ownsClient) {
+      await this.client.end()
+    }
   }
 }
