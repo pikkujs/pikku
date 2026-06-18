@@ -148,9 +148,9 @@ export async function runWorkspaceValidate(
     if (!pikkuConfig.clientFiles) {
       info(
         'pikku-config-no-client-files',
-        'pikku.config.json missing "clientFiles" — no generated SDK or React Query hooks',
+        'pikku.config.json missing "clientFiles" — generated RPC client files and React Query hooks will not be written',
         pikkuConfigPath,
-        'Add clientFiles.rpcMapDeclarationFile and clientFiles.reactQueryFile pointing to packages/functions-sdk/src/pikku/'
+        'Add clientFiles.rpcMapDeclarationFile and clientFiles.reactQueryFile pointing to packages/functions-sdk/src/pikku/ (for example: rpc-map.gen.d.ts and api.gen.ts)'
       )
     }
   }
@@ -215,7 +215,7 @@ export async function runWorkspaceValidate(
       'functions-pkg-missing',
       'packages/functions/ directory not found',
       fnDir,
-      'Create packages/functions/ as a workspace containing src/, config.ts, and any local db assets you use'
+      'Create packages/functions/ as a workspace containing src/, tests/, config.ts, and any local db assets you use'
     )
   } else {
     type FnPkg = {
@@ -376,7 +376,7 @@ export async function runWorkspaceValidate(
       'tests-missing',
       'packages/functions/tests/ not found — no function test harness',
       testsDir,
-      'Run `pikku tests init` to scaffold the function test harness'
+      'Run `pikku tests init` to scaffold the generated function test harness under packages/functions/tests/ (feature files, step defs, and support files)'
     )
   }
 
@@ -386,7 +386,7 @@ export async function runWorkspaceValidate(
       'functions-sdk-missing',
       'packages/functions-sdk/ not found — generated RPC client and React Query hooks will not be available',
       sdkDir,
-      'Create packages/functions-sdk/ as a workspace with src/pikku/ and point clientFiles there'
+      'Create packages/functions-sdk/ as a workspace with src/pikku/ as the generated output root; point clientFiles.rpcMapDeclarationFile and clientFiles.reactQueryFile there'
     )
   }
 

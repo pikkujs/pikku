@@ -1,15 +1,18 @@
 // @pikku/mantine/core — a drop-in for `@mantine/core` with i18n-tightened types.
 //
-// The VALUES below are the untouched Mantine components — this package adds ZERO
-// runtime. We only re-cast each component's TYPE so that string-bearing props
-// (children, label, placeholder, title, aria-label…) accept the branded
-// `I18nString` / `I18nNode` from `@pikku/react` instead of a bare `string`.
+// Most exports below are the untouched Mantine components. `Text` gets a tiny
+// runtime wrapper so `lineBreaks` can map to CSS without call-site boilerplate.
+// The type overrides keep string-bearing props (children, label, placeholder,
+// title, aria-label…) on branded `I18nString` / `I18nNode` values instead of
+// bare `string`.
 //
 // Aliasing `@mantine/core` -> `@pikku/mantine/core` over code written against
 // plain Mantine (`<Button>Save</Button>`) is therefore a STRICT GATE: untranslated
 // raw strings fail to compile. Pass text through `t()` / `asI18n()`.
 
 export * from '@mantine/core'
+import { createElement } from 'react'
+import type { CSSProperties } from 'react'
 
 import {
   // polymorphic (children)
@@ -111,6 +114,12 @@ import type { OverrideFactory, OverridePoly, WithStatics } from './helpers.js'
 
 // shared override shapes
 type Children = { children?: I18nNode }
+type TextChildren = { children?: I18nNode | number }
+type TextProps = TextChildren &
+  Labelled & {
+    lineBreaks?: boolean
+    style?: CSSProperties
+  }
 type AriaLabel = { 'aria-label'?: I18nString }
 // Global string attributes present on every host element that still carry
 // user-visible text. Both are native DOM string attributes, so I18nString —
@@ -123,10 +132,32 @@ type Input = {
 }
 
 // ── Polymorphic: children (+ branded aria-label / title) ─────────────────────
-export const Button = MantineButton as OverridePoly<ButtonFactory, Children & Labelled>
-export const Anchor = MantineAnchor as OverridePoly<AnchorFactory, Children & Labelled>
-export const Badge = MantineBadge as OverridePoly<BadgeFactory, Children & Labelled>
-export const Text = MantineText as OverridePoly<TextFactory, Children & Labelled>
+export const Button = MantineButton as OverridePoly<
+  ButtonFactory,
+  Children & Labelled
+>
+export const Anchor = MantineAnchor as OverridePoly<
+  AnchorFactory,
+  Children & Labelled
+>
+export const Badge = MantineBadge as OverridePoly<
+  BadgeFactory,
+  Children & Labelled
+>
+export const Text = (({ lineBreaks, style, children, ...props }: TextProps) => {
+  const shouldPreserveLineBreaks =
+    lineBreaks && (typeof children === 'string' || typeof children === 'number')
+
+  const resolvedStyle = shouldPreserveLineBreaks
+    ? { ...style, whiteSpace: 'pre-line' as const }
+    : style
+
+  return createElement(
+    MantineText as any,
+    { ...props, style: resolvedStyle },
+    children
+  )
+}) as unknown as OverridePoly<TextFactory, TextProps>
 
 // ── Polymorphic: icon-only buttons (aria-label is the only visible text) ──────
 export const ActionIcon = MantineActionIcon as OverridePoly<
@@ -145,7 +176,10 @@ export const NavLink = MantineNavLink as OverridePoly<
 >
 
 // ── Polymorphic: generic input wrapper ───────────────────────────────────────
-export const InputBase = MantineInputBase as OverridePoly<InputBaseFactory, Input>
+export const InputBase = MantineInputBase as OverridePoly<
+  InputBaseFactory,
+  Input
+>
 
 // ── Plain: children ───────────────────────────────────────────────────────────
 export const Chip = MantineChip as OverrideFactory<ChipFactory, Children>
@@ -200,13 +234,22 @@ export const Notification = MantineNotification as OverrideFactory<
 >
 
 // ── Plain: inputs (label / placeholder / description, plus extras) ────────────
-export const TextInput = MantineTextInput as OverrideFactory<TextInputFactory, Input>
+export const TextInput = MantineTextInput as OverrideFactory<
+  TextInputFactory,
+  Input
+>
 export const PasswordInput = MantinePasswordInput as OverrideFactory<
   PasswordInputFactory,
   Input
 >
-export const Textarea = MantineTextarea as OverrideFactory<TextareaFactory, Input>
-export const JsonInput = MantineJsonInput as OverrideFactory<JsonInputFactory, Input>
+export const Textarea = MantineTextarea as OverrideFactory<
+  TextareaFactory,
+  Input
+>
+export const JsonInput = MantineJsonInput as OverrideFactory<
+  JsonInputFactory,
+  Input
+>
 export const NativeSelect = MantineNativeSelect as OverrideFactory<
   NativeSelectFactory,
   Input

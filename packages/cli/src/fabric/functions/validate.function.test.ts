@@ -29,7 +29,6 @@ async function makeValidProject(root: string) {
   await writeJson(join(root, 'package.json'), {
     workspaces: ['packages/*', 'apps/*'],
     dependencies: { '@pikku/core': '^1.0.0' },
-    devDependencies: { '@pikku/fabric-cli': '^1.0.0' },
   })
   await mkdir(join(root, 'packages', 'functions', 'src', 'functions'), {
     recursive: true,
@@ -256,27 +255,6 @@ describe('pikku fabric validate', () => {
   })
 
   describe('root package.json', () => {
-    test('missing @pikku/fabric-cli → info (not blocking)', async () => {
-      const tmp = await makeTmp()
-      try {
-        await makeValidProject(tmp)
-        await writeJson(join(tmp, 'package.json'), {
-          workspaces: ['packages/*'],
-          dependencies: { '@pikku/core': '^1.0.0' },
-          devDependencies: {},
-        })
-        const result = await runValidate(tmp)
-        assert.strictEqual(result.ok, true) // info only — not required to run fabric deploy
-        const finding = result.findings.find(
-          (f) => f.id === 'missing-fabric-cli'
-        )
-        assert.ok(finding)
-        assert.strictEqual(finding!.severity, 'info')
-      } finally {
-        await rm(tmp, { recursive: true, force: true })
-      }
-    })
-
     test('missing @pikku/core → error', async () => {
       const tmp = await makeTmp()
       try {

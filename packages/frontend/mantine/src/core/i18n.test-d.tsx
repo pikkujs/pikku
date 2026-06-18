@@ -41,6 +41,8 @@ const _ok_mixed = (
   </Button>
 )
 const _ok_text = <Text>{t('greeting')}</Text>
+const _ok_text_number = <Text>{1}</Text>
+const _ok_text_breaks = <Text lineBreaks>{t('line1\nline2')}</Text>
 // Text is polymorphic too
 const _ok_text_poly = <Text component="span">{t('greeting')}</Text>
 // aria-label / title on children components are branded too
@@ -130,6 +132,8 @@ void [
   _ok_poly,
   _ok_mixed,
   _ok_text,
+  _ok_text_number,
+  _ok_text_breaks,
   _ok_text_poly,
   _ok_button_attrs,
   _ok_title,

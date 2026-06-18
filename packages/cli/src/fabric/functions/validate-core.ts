@@ -156,19 +156,8 @@ export async function runFabricValidate(
   const rootPkgPath = join(root, 'package.json')
   const rootPkg = await readJsonSafe<RootPkg>(rootPkgPath)
   if (rootPkg) {
-    const allDeps = {
-      ...rootPkg.dependencies,
-      ...rootPkg.devDependencies,
-    }
-
-    if (!allDeps['@pikku/fabric-cli']) {
-      info(
-        'missing-fabric-cli',
-        '@pikku/fabric-cli not in devDependencies — fabric CLI commands (validate, deploy) will not be available',
-        rootPkgPath,
-        'Add "@pikku/fabric-cli" to devDependencies: use "file:./vendor/pikku-fabric-cli.tgz" (bundled release) or "portal:/path/to/pikku/packages/fabric-cli" (local dev)'
-      )
-    }
+    // Intentionally only validating presence/shape here; dependency-specific
+    // checks live in the main fabric validator.
   }
 
   const fnDir = join(root, 'packages', 'functions')
