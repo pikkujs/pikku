@@ -268,6 +268,7 @@ export const deployApply = pikkuSessionlessFunc<
       inspectorState,
       serverlessIncompatible: config.deploy?.serverlessIncompatible,
       getEntryContext,
+      outDir: config.outDir,
       logger,
     })
 

@@ -81,6 +81,7 @@ export async function runBuildPipeline(options: {
     state: InspectorState
   ) => unknown
   deployDir?: string
+  outDir?: string
   logger: BuildLogger
 }): Promise<BuildPipelineResult> {
   const {
@@ -128,7 +129,7 @@ export async function runBuildPipeline(options: {
     manifest.units = [singleUnit]
 
     const unitDir = join(providerDir, unitName)
-    const pikkuDir = join(projectDir, '.pikku')
+    const pikkuDir = options.outDir ?? join(projectDir, '.pikku')
     await mkdir(unitDir, { recursive: true })
 
     const ctx = getEntryContext(unitDir, pikkuDir, singleUnit, inspectorState)
