@@ -1,3 +1,16 @@
+## 0.12.39
+
+### Patch Changes
+
+- c871920: Fix Better Auth drift check incorrectly reporting tables as missing when they live in a non-public Postgres schema (e.g. `app.user` not matching desired `user`).
+- 837c397: Fix a Better Auth schema-drift false positive in `pikku db migrate`. Better
+  Auth's desired schema uses bare table names (`user`, `account`, …) while
+  Postgres introspection returns schema-qualified names (`public.user`). The
+  diff now falls back to matching a bare desired table against a uniquely
+  schema-qualified introspected table, so a fully-migrated Postgres database no
+  longer reports every auth table as missing (which aborted the migrate with a
+  spurious "run `pikku db generate`").
+
 ## 0.12.38
 
 ### Patch Changes
