@@ -426,8 +426,19 @@ function diffSchemas(
 } {
   const missingTables: string[] = []
   const missingColumns: { table: string; columns: string[] }[] = []
+
+  const findSchemaQualifiedMatch = (table: string): Set<string> | undefined => {
+    if (table.includes('.')) return undefined
+    const matches = [...actual.entries()].filter(([actualTable]) => {
+      const parts = actualTable.split('.')
+      return parts.length === 2 && parts[1] === table
+    })
+    if (matches.length !== 1) return undefined
+    return matches[0][1]
+  }
+
   for (const [table, cols] of desired) {
-    const actualCols = actual.get(table)
+    const actualCols = actual.get(table) ?? findSchemaQualifiedMatch(table)
     if (!actualCols) {
       missingTables.push(table)
       continue
