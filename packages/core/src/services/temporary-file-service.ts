@@ -1,8 +1,8 @@
 import { createReadStream, createWriteStream } from 'fs'
 import { mkdir, rm, stat } from 'fs/promises'
 import { resolve } from 'path'
-import { Readable } from 'stream'
 import { pipeline } from 'stream/promises'
+import type { Readable } from 'stream'
 import type { Logger } from './logger.js'
 
 export class TemporaryFileInstance {
