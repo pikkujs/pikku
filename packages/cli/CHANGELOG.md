@@ -1,3 +1,22 @@
+## 0.12.40
+
+### Patch Changes
+
+- f6a32db: Fix `pikku deploy plan/apply` failing when `outDir` differs from `rootDir/.pikku`.
+
+  `build-pipeline` was hardcoding `pikkuDir = join(projectDir, '.pikku')`, ignoring
+  the `outDir` config option. Projects that set a custom `outDir` (e.g. a monorepo
+  where sources live in a sub-package) would get a build error:
+  `Could not resolve "../../../.pikku/pikku-bootstrap.gen.js"`.
+
+  `pikkuDir` now falls back to `join(projectDir, '.pikku')` only when `outDir` is not set.
+
+- 50a96f8: Improve Fabric validation fix hints for coding agents and add `lineBreaks` plus numeric `Text` children support in Mantine.
+- d729cf8: Add embedded PGlite-backed Postgres support for local dev and DB commands when `db/postgres` is present without a configured `postgresUrl`, while keeping real Postgres as the explicit path when `postgresUrl` is set.
+- Updated dependencies [5c67b7e]
+- Updated dependencies [1b22977]
+  - @pikku/core@0.12.33
+
 ## 0.12.39
 
 ### Patch Changes
