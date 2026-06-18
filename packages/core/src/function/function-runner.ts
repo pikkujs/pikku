@@ -58,6 +58,10 @@ async function resolveSession(
       wire.session = stored
       sessionService?.setInitial(stored)
     }
+  } else {
+    // Session already present on wire (e.g. propagated from parent workflow).
+    // Seed the sessionService so freezeInitial() returns it instead of undefined.
+    sessionService?.setInitial(wire.session as CoreUserSession)
   }
 }
 
