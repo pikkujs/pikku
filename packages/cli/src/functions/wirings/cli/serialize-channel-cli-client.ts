@@ -188,17 +188,48 @@ export default ${capitalizedName}CLIClient
 if (import.meta.url === \`file://\${process.argv[1]}\`) {
   const url = process.env.PIKKU_WS_URL || 'ws://localhost:4002${finalChannelRoute}'
 
-  // Create WebSocket instance
-  let WebSocketImpl: any
-  if (typeof WebSocket !== 'undefined') {
-    WebSocketImpl = WebSocket
+  // Attach credentials so the channel authenticates like any other pikku client.
+  // A machine API key (PIKKU_API_KEY -> x-api-key) takes precedence; otherwise
+  // the human session token saved by \`pikku login\` (~/.pikku/session.json ->
+  // Authorization: Bearer) is used. This block only runs under Node (direct
+  // execution), so reading the session file and using the 'ws' headers option
+  // is safe — the browser WebSocket cannot set custom headers anyway.
+  const headers: Record<string, string> = {}
+  if (process.env.PIKKU_API_KEY) {
+    headers['x-api-key'] = process.env.PIKKU_API_KEY
   } else {
-    // Node.js environment - dynamically import 'ws'
+    try {
+      const { homedir } = await import('os')
+      const { readFileSync } = await import('fs')
+      const { join } = await import('path')
+      const store = JSON.parse(
+        readFileSync(join(homedir(), '.pikku', 'session.json'), 'utf8')
+      ) as {
+        current?: string
+        sessions?: Record<string, { accessToken?: string }>
+      }
+      const token = store.current
+        ? store.sessions?.[store.current]?.accessToken
+        : undefined
+      if (token) {
+        headers['authorization'] = \`Bearer \${token}\`
+      }
+    } catch {
+      // No saved session — connect unauthenticated (the server may reject).
+    }
+  }
+  const hasAuth = Object.keys(headers).length > 0
+
+  // Custom headers require the Node 'ws' module — the global/browser WebSocket
+  // cannot set them — so prefer 'ws' whenever we have credentials to send.
+  let ws: WebSocket
+  if (hasAuth || typeof WebSocket === 'undefined') {
     const wsModule = await import('ws')
-    WebSocketImpl = wsModule.default
+    ws = new wsModule.default(url, { headers }) as unknown as WebSocket
+  } else {
+    ws = new WebSocket(url)
   }
 
-  const ws = new WebSocketImpl(url) as WebSocket
   ${capitalizedName}CLIClient(ws, process.argv.slice(2)).catch(error => {
     console.error('Fatal channel CLI error:', error)
     // TODO: We get an error code even when it exists cleanly, investigate

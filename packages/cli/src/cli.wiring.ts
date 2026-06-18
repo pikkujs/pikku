@@ -14,6 +14,7 @@ import { all } from './functions/commands/all.js'
 import { bootstrap } from './functions/commands/bootstrap.js'
 import { watch } from './functions/commands/watch.js'
 import { consoleCommand } from './functions/commands/console.js'
+import { login, logout, whoami } from './functions/commands/login.js'
 import { dev } from './functions/commands/dev.js'
 import { dbMigrate } from './functions/commands/db-migrate.js'
 import { dbGenerate } from './functions/commands/db-generate.js'
@@ -240,6 +241,51 @@ wireCLI({
         hmr: {
           description: 'Enable hot module reload for registered functions',
           default: false,
+        },
+      },
+    }),
+    login: pikkuCLICommand({
+      func: login,
+      description:
+        'Authenticate the CLI against a pikku server (device-authorization flow)',
+      options: {
+        url: {
+          description: 'Server base URL (default: http://localhost:3000)',
+          short: 'u',
+        },
+        clientId: {
+          description: 'Client identifier sent to the device flow',
+          default: 'pikku-cli',
+        },
+        scope: {
+          description: 'Optional space-separated scopes to request',
+        },
+        authPath: {
+          description: "better-auth base path (default: '/auth')",
+        },
+        open: {
+          description: 'Open the verification URL in a browser',
+          default: true,
+        },
+      },
+    }),
+    logout: pikkuCLICommand({
+      func: logout,
+      description: 'Remove a stored CLI session',
+      options: {
+        url: {
+          description: 'Server base URL to log out of (default: current)',
+          short: 'u',
+        },
+      },
+    }),
+    whoami: pikkuCLICommand({
+      func: whoami,
+      description: 'Show the current CLI session',
+      options: {
+        url: {
+          description: 'Server base URL to inspect (default: current)',
+          short: 'u',
         },
       },
     }),
