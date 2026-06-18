@@ -198,9 +198,22 @@ async function createPostgresClient(
   }
 
   mkdirSync(dirname(resolved.pgliteDir), { recursive: true })
-  const { PGlite } = await import('@electric-sql/pglite')
-  const db = new PGlite(resolved.pgliteDir)
+  const db = await createEmbeddedPostgres(resolved.pgliteDir)
   return pgliteAsClient(db)
+}
+
+async function createEmbeddedPostgres(dataDir?: string): Promise<PGlite> {
+  const [{ PGlite }, { pgcrypto }] = await Promise.all([
+    import('@electric-sql/pglite'),
+    import('@electric-sql/pglite/contrib/pgcrypto'),
+  ])
+
+  return new PGlite({
+    ...(dataDir ? { dataDir } : {}),
+    extensions: {
+      pgcrypto,
+    },
+  })
 }
 
 function pgliteAsClient(db: PGlite): PostgresQueryClient {
@@ -566,9 +579,8 @@ export async function createKysely<DB>(
   }
 
   mkdirSync(dirname(resolved.pgliteDir), { recursive: true })
-  const { PGlite } = await import('@electric-sql/pglite')
   return createPGliteKysely<DB>({
-    db: new PGlite(resolved.pgliteDir),
+    db: await createEmbeddedPostgres(resolved.pgliteDir),
     camelCase: resolved.camelCase,
     plugins,
   })
@@ -656,8 +668,7 @@ async function withScratchPostgresDatabase<T>(
   run: (scratchDb: PostgresQueryClient) => Promise<T>
 ): Promise<T> {
   if (resolved.mode === 'pglite') {
-    const { PGlite } = await import('@electric-sql/pglite')
-    const scratchDb = new PGlite()
+    const scratchDb = await createEmbeddedPostgres()
     try {
       return await run(pgliteAsClient(scratchDb))
     } finally {
