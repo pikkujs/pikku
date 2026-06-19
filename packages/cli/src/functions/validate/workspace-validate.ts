@@ -153,6 +153,15 @@ export async function runWorkspaceValidate(
         'Add clientFiles.rpcMapDeclarationFile and clientFiles.reactQueryFile pointing to packages/functions-sdk/src/pikku/ (for example: rpc-map.gen.d.ts and api.gen.ts)'
       )
     }
+    const scaffold = pikkuConfig.scaffold as { console?: unknown } | undefined
+    if (!scaffold?.console) {
+      e(
+        'pikku-config-no-console-scaffold',
+        'pikku.config.json missing "scaffold.console" — Fabric cannot introspect the running app (console:getFunctionsMeta and friends 404), so the sandbox builder shows no functions',
+        pikkuConfigPath,
+        'Add "console": "no-auth" under "scaffold" in pikku.config.json (use "auth" to require a session)'
+      )
+    }
   }
 
   type RootPkg = {

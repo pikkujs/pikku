@@ -30,6 +30,7 @@ async function makeValidWorkspace(root: string) {
         'packages/functions-sdk/src/pikku/rpc-map.gen.d.ts',
       reactQueryFile: 'packages/functions-sdk/src/pikku/api.gen.ts',
     },
+    scaffold: { console: 'no-auth' },
   })
   await writeJson(join(root, 'package.json'), {
     workspaces: ['packages/*', 'apps/*'],
@@ -109,6 +110,32 @@ describe('pikku workspace validate', () => {
       )
       assert.strictEqual(result.ok, true)
       assert.strictEqual(result.root, tmp)
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('missing scaffold.console → error finding', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidWorkspace(tmp)
+      // Drop scaffold.console from the otherwise-valid config.
+      await writeJson(join(tmp, 'pikku.config.json'), {
+        srcDirectories: ['packages/functions/src'],
+        outDir: 'packages/functions/.pikku',
+        clientFiles: {
+          rpcMapDeclarationFile:
+            'packages/functions-sdk/src/pikku/rpc-map.gen.d.ts',
+          reactQueryFile: 'packages/functions-sdk/src/pikku/api.gen.ts',
+        },
+      })
+      const result = await runWorkspaceValidate(tmp)
+      const finding = result.findings.find(
+        (f) => f.id === 'pikku-config-no-console-scaffold'
+      )
+      assert.ok(finding, 'expected pikku-config-no-console-scaffold finding')
+      assert.strictEqual(finding!.severity, 'error')
+      assert.strictEqual(result.ok, false)
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }
