@@ -6,6 +6,8 @@ export {
 } from './ai-agent-helpers.js'
 export { runAIAgent, resumeAIAgentSync } from './ai-agent-runner.js'
 export { streamAIAgent, resumeAIAgent } from './ai-agent-stream.js'
+export { voiceInput } from './voice-input.js'
+export { voiceOutput } from './voice-output.js'
 export {
   type RunAIAgentParams,
   type StreamAIAgentOptions,
