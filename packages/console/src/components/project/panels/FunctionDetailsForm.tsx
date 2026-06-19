@@ -88,6 +88,7 @@ export const FunctionHeader: React.FC<FunctionDetailsFormProps> = ({
   functionName,
   metadata: passedMetadata,
 }) => {
+  const { t } = useI18n()
   const { data: fetchedMeta } = useFunctionMeta(functionName)
   const meta = passedMetadata || fetchedMeta || {}
 
@@ -100,7 +101,7 @@ export const FunctionHeader: React.FC<FunctionDetailsFormProps> = ({
         </Text>
       </Group>
       <Text size="sm" c="dimmed" mt={4}>
-        {asI18n(meta.summary || 'No summary')}
+        {meta.summary ? asI18n(meta.summary) : t('functions.no_summary')}
       </Text>
     </Box>
   )
@@ -110,6 +111,7 @@ export const FunctionTestsPanel: React.FC<FunctionDetailsFormProps> = ({
   functionName,
   metadata: passedMetadata,
 }) => {
+  const { t } = useI18n()
   const { data: fetchedMeta, isLoading } = useFunctionMeta(functionName)
   const meta = passedMetadata || fetchedMeta || {}
 
@@ -122,7 +124,7 @@ export const FunctionTestsPanel: React.FC<FunctionDetailsFormProps> = ({
   }
 
   if (!meta.tests) {
-    return <Text c="dimmed">{asI18n('No test data yet.')}</Text>
+    return <Text c="dimmed">{t('functions.no_test_data')}</Text>
   }
 
   return (
@@ -167,7 +169,7 @@ export const FunctionTabbedPanel: React.FC<FunctionDetailsFormProps> = ({
           />
         )}
         {canEdit && !editing && (
-          <ActionIcon variant="subtle" size="sm" onClick={() => setEditing(true)} title="Edit function">
+          <ActionIcon variant="subtle" size="sm" onClick={() => setEditing(true)} title={t('functions.edit_function')}>
             <Pencil size={14} />
           </ActionIcon>
         )}
@@ -201,6 +203,7 @@ function FunctionTestsSection({
   sourceFile?: string
   exportedName?: string
 }) {
+  const { t } = useI18n()
   const missedLines = Array.isArray(tests.missedLines) ? tests.missedLines : []
   const { data: source, isLoading: isSourceLoading } = useFunctionSource(
     sourceFile,
@@ -230,9 +233,9 @@ function FunctionTestsSection({
                 : `${Math.round((tests.ratio ?? 0) * 100)}%`)}
             </Badge>
             <Text size="sm" c="dimmed">
-              {asI18n(tests.scenarios?.length === 0
-                ? 'No linked scenarios yet'
-                : `${tests.scenarios?.length ?? 0} linked scenarios`)}
+              {tests.scenarios?.length === 0
+                ? t('functions.linked_scenarios_none')
+                : t('functions.linked_scenarios_count', { count: tests.scenarios?.length ?? 0 })}
             </Text>
           </Group>
           <Progress
@@ -261,16 +264,16 @@ function FunctionTestsSection({
             lts="0.12em"
             c="dimmed"
           >
-            {asI18n('Scenarios')}
+            {t('functions.scenarios_heading')}
           </Text>
           <Text ff="monospace" size="xs" c="dimmed">
-            {asI18n(`${tests.scenarios?.length ?? 0} linked`)}
+            {t('functions.scenarios_linked_count', { count: tests.scenarios?.length ?? 0 })}
           </Text>
         </Group>
         {!tests.scenarios || tests.scenarios.length === 0 ? (
           <Paper withBorder radius="lg" p="md" bg="rgba(248,113,113,0.08)">
             <Text size="sm" c="dimmed">
-              {asI18n('No scenarios are linked to this function yet.')}
+              {t('functions.no_scenarios_linked')}
             </Text>
           </Paper>
         ) : (
@@ -284,7 +287,7 @@ function FunctionTestsSection({
                         variant="light"
                         color={scenario.status === 'fail' ? 'red' : 'green'}
                       >
-                        {asI18n(scenario.status === 'fail' ? 'Failing' : 'Passing')}
+                        {scenario.status === 'fail' ? t('functions.scenario_failing') : t('functions.scenario_passing')}
                       </Badge>
                       <Text ff="monospace" size="sm" fw={600} c="white">
                         {asI18n(scenario.scenarioName)}
@@ -328,18 +331,18 @@ function FunctionTestsSection({
             lts="0.12em"
             c="dimmed"
           >
-            {asI18n('Coverage Gaps')}
+            {t('functions.coverage_gaps')}
           </Text>
           <Text ff="monospace" size="xs" c="dimmed">
-            {asI18n(missedLines.length === 0
-              ? 'clean'
-              : `${missedLines.length} uncovered`)}
+            {missedLines.length === 0
+              ? t('functions.coverage_clean')
+              : t('functions.coverage_uncovered_count', { count: missedLines.length })}
           </Text>
         </Group>
         {missedLines.length === 0 ? (
           <Paper withBorder radius="lg" p="md" bg="rgba(52,211,153,0.08)">
             <Text size="sm" c="dimmed">
-              {asI18n('All executable lines are covered for this function.')}
+              {t('functions.coverage_all_covered')}
             </Text>
           </Paper>
         ) : isSourceLoading ? (
@@ -388,7 +391,7 @@ function FunctionTestsSection({
                     {asI18n(String(line))}
                   </Text>
                   <Text ff="monospace" size="sm" c="white">
-                    {asI18n(`branch on line ${line} is still not exercised`)}
+                    {t('functions.coverage_branch_not_exercised', { line })}
                   </Text>
                 </Group>
               ))}
@@ -505,13 +508,14 @@ export const FunctionInput: React.FC<FunctionDetailsFormProps> = ({
   functionName,
   metadata = {},
 }) => {
+  const { t } = useI18n()
   const { data: fetchedMeta } = useFunctionMeta(functionName)
   const meta = metadata?.inputSchemaName ? metadata : fetchedMeta || {}
   const inputSchemaName = meta?.inputSchemaName
   const { data: schema, isLoading, error } = useSchema(inputSchemaName)
 
   if (!inputSchemaName) {
-    return <Text c="dimmed">{asI18n('No input schema defined')}</Text>
+    return <Text c="dimmed">{t('functions.no_input_schema')}</Text>
   }
 
   if (isLoading) {
@@ -523,11 +527,11 @@ export const FunctionInput: React.FC<FunctionDetailsFormProps> = ({
   }
 
   if (error) {
-    return <Text c="red">{asI18n(`Error loading schema: ${error.message}`)}</Text>
+    return <Text c="red">{t('functions.schema_load_error', { message: error.message })}</Text>
   }
 
   if (!schema) {
-    return <Text c="dimmed">{asI18n(`Schema not found: ${inputSchemaName}`)}</Text>
+    return <Text c="dimmed">{t('functions.schema_not_found', { name: inputSchemaName })}</Text>
   }
 
   return <SchemaViewer schema={schema} />
@@ -537,13 +541,14 @@ export const FunctionOutput: React.FC<FunctionDetailsFormProps> = ({
   functionName,
   metadata = {},
 }) => {
+  const { t } = useI18n()
   const { data: fetchedMeta } = useFunctionMeta(functionName)
   const meta = metadata?.outputSchemaName ? metadata : fetchedMeta || {}
   const outputSchemaName = meta?.outputSchemaName
   const { data: schema, isLoading, error } = useSchema(outputSchemaName)
 
   if (!outputSchemaName) {
-    return <Text c="dimmed">{asI18n('No output schema defined')}</Text>
+    return <Text c="dimmed">{t('functions.no_output_schema')}</Text>
   }
 
   if (isLoading) {
@@ -555,11 +560,11 @@ export const FunctionOutput: React.FC<FunctionDetailsFormProps> = ({
   }
 
   if (error) {
-    return <Text c="red">{asI18n(`Error loading schema: ${error.message}`)}</Text>
+    return <Text c="red">{t('functions.schema_load_error', { message: error.message })}</Text>
   }
 
   if (!schema) {
-    return <Text c="dimmed">{asI18n(`Schema not found: ${outputSchemaName}`)}</Text>
+    return <Text c="dimmed">{t('functions.schema_not_found', { name: outputSchemaName })}</Text>
   }
 
   return <SchemaViewer schema={schema} />
