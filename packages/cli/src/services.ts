@@ -268,6 +268,14 @@ export const createSingletonServices: CreateSingletonServices<
         config.authFile
           ? path.join(path.dirname(config.authFile), 'auth-secrets.gen.ts')
           : undefined,
+        // The stateless-session split (cookieCache) emits a separate
+        // middleware-only file that nothing imports. It is not reachable via the
+        // import graph, so add it explicitly or its `addHTTPMiddleware('*')`
+        // never gets inspected and the session middleware vanishes from every
+        // unit's bootstrap.
+        config.authFile
+          ? path.join(path.dirname(config.authFile), 'auth-middleware.gen.ts')
+          : undefined,
       ]
       for (const file of scaffoldFiles) {
         if (file && !wiringFiles.includes(file) && existsSync(file)) {
