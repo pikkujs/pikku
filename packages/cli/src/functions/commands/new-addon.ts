@@ -7,7 +7,7 @@ import {
 } from '../../utils/contract-versions.js'
 import ts from 'typescript'
 import { pikkuSessionlessFunc } from '#pikku'
-import { assignBundlePaths, resolveFilteredFunctions } from './addon-filter.js'
+import { assignBundlePaths, selectBundledFunctions } from './addon-bundle.js'
 import { checkRawSqlOwnership } from '../db/addon-table-discovery.js'
 import {
   parseOpenAPISpec,
@@ -864,7 +864,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
     openapi?: string
     mcp?: boolean
     camelCase?: boolean
-    filter?: string
+    carve?: boolean
   },
   void
 >({
@@ -884,7 +884,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       openapi,
       mcp = false,
       camelCase = false,
-      filter,
+      carve = false,
     }
   ) => {
     name = sanitizeAddonName(name)
@@ -970,14 +970,18 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       addonFiles['pikku.config.json'] = JSON.stringify(config, null, 2)
     }
 
-    // Filter: bundle matching project functions into the addon and record the
-    // filter on the addon declaration so a later regeneration reattaches it.
-    if (filter) {
+    // Carve: bundle the project's functions into the addon. Which functions are
+    // in scope is pikku's call, not ours — `getInspectorState()` returns the
+    // state already narrowed by the global `--filter`/`--tags`/`--names` flags,
+    // so we just bundle whatever's left.
+    if (carve) {
       const state = await getInspectorState()
       const meta = state.functions.meta ?? {}
-      const { matched, skipped } = resolveFilteredFunctions(meta, filter)
+      const { matched, skipped } = selectBundledFunctions(meta)
       if (matched.length === 0) {
-        logger.error(`No functions matched filter "${filter}"`)
+        logger.error(
+          'No functions to carve. Narrow the project with --filter/--tags/--names so there is something to bundle.'
+        )
         process.exit(1)
       }
 
@@ -1011,11 +1015,11 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
 
       const cfg = JSON.parse(addonFiles['pikku.config.json'])
       if (typeof cfg.addon === 'boolean' || !cfg.addon) cfg.addon = {}
-      cfg.addon.filter = filter
+      cfg.addon.carve = true
       addonFiles['pikku.config.json'] = JSON.stringify(cfg, null, 2)
 
       logger.info(
-        `Bundled ${bundled.length} function(s) matching "${filter}"` +
+        `Bundled ${bundled.length} function(s) into the addon` +
           (skipped.length > 0
             ? `; skipped ${skipped.length} without a source file (${skipped.join(', ')})`
             : '')

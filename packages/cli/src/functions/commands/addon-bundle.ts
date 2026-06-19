@@ -1,6 +1,6 @@
 /**
- * Minimal view of the inspector's per-function metadata we need to select and
- * copy functions into an addon. Kept local so this doesn't couple to the full
+ * Minimal view of the inspector's per-function metadata we need to copy
+ * functions into an addon. Kept local so this doesn't couple to the full
  * `@pikku/inspector` state shape.
  */
 export interface FunctionMetaLike {
@@ -9,44 +9,27 @@ export interface FunctionMetaLike {
   sourceFile?: string
 }
 
-export interface FilteredFunction {
+export interface BundledFunction {
   id: string
   name: string
   sourceFile: string
 }
 
 /**
- * Resolve a `--filter` expression against the inspector's function metadata.
- *
- * The expression is a comma-separated list of tokens; a function matches if, for
- * any token, the token is one of its tags or a case-insensitive substring of its
- * name/id. Functions without a resolvable `sourceFile` cannot be bundled and are
- * skipped (reported via `skipped`).
+ * Turn the inspector's function meta into the set of functions to bundle into
+ * the addon. Selection is pikku's job, not ours: the meta handed in is whatever
+ * the global `--filter`/`--tags`/`--names` flags already left in scope
+ * (`getInspectorState()` returns the filtered state). We only drop entries
+ * without a resolvable source file, since those can't be copied.
  */
-export function resolveFilteredFunctions(
-  meta: Record<string, FunctionMetaLike>,
-  filter: string
-): { matched: FilteredFunction[]; skipped: string[] } {
-  const tokens = filter
-    .split(',')
-    .map((t) => t.trim().toLowerCase())
-    .filter((t) => t.length > 0)
-
-  if (tokens.length === 0) {
-    throw new Error('Addon filter is empty — pass at least one token')
-  }
-
-  const matched: FilteredFunction[] = []
+export function selectBundledFunctions(
+  meta: Record<string, FunctionMetaLike>
+): { matched: BundledFunction[]; skipped: string[] } {
+  const matched: BundledFunction[] = []
   const skipped: string[] = []
 
   for (const [id, m] of Object.entries(meta)) {
     const name = m.name ?? id
-    const tags = (m.tags ?? []).map((t) => t.toLowerCase())
-    const haystack = `${id} ${name}`.toLowerCase()
-    const hit = tokens.some(
-      (token) => tags.includes(token) || haystack.includes(token)
-    )
-    if (!hit) continue
     if (!m.sourceFile) {
       skipped.push(name)
       continue
@@ -66,11 +49,11 @@ export interface BundledFile {
 }
 
 /**
- * Assign each matched function a collision-free destination under
+ * Assign each bundled function a collision-free destination under
  * `src/functions/`. Two source files with the same basename get a numeric
  * suffix so neither is silently overwritten.
  */
-export function assignBundlePaths(matched: FilteredFunction[]): BundledFile[] {
+export function assignBundlePaths(matched: BundledFunction[]): BundledFile[] {
   const used = new Set<string>()
   const bundled: BundledFile[] = []
   for (const fn of matched) {
