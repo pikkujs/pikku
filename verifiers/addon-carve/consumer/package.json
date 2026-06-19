@@ -1,0 +1,19 @@
+{
+  "name": "@pikku/verifiers-addon-carve-consumer",
+  "type": "module",
+  "private": true,
+  "description": "Consumer project: wires and calls carved addons",
+  "imports": {
+    "#pikku": "./.pikku/pikku-types.gen.ts",
+    "#pikku/*": "./.pikku/*"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@types/node": "^24",
+    "typescript": "^5.9",
+    "zod": "^4"
+  }
+}
