@@ -28,7 +28,10 @@ execSync(`node ${PIKKU_BIN}`, {
   timeout: 60_000,
 })
 execSync(
-  `node ${PIKKU_BIN} deploy plan --provider serverless --result-file .deploy/serverless/plan-result.json`,
+  // --debug-artifacts emits per-unit esbuild metafiles (off by default since
+  // lean-artifacts) so the bundle tree-shaking checks below can read what each
+  // unit's bundle actually contains.
+  `node ${PIKKU_BIN} deploy plan --provider serverless --debug-artifacts --result-file .deploy/serverless/plan-result.json`,
   {
     cwd: FUNCTIONS_DIR,
     stdio: 'pipe',
@@ -300,6 +303,87 @@ check('every unit has entry.ts', () => {
     if (!existsSync(join(getUnitPath(u), 'entry.ts')))
       throw new Error(`${u} missing entry.ts`)
   }
+})
+
+// --- Bundle tree-shaking (what each unit actually bundles) ---
+//
+// Goal: every unit is tiny and only bundles what it needs. Two heavy SDKs must
+// stay out of units that don't use them:
+//   1. The AI SDK (@ai-sdk / `ai`) — only AI-using units may bundle it.
+//   2. The better-auth *server* (db adapters, /api routes, kysely adapter) —
+//      only the auth handler unit bundles it. Every other unit verifies the
+//      session statelessly from a signed cookie (betterAuthStatelessSession +
+//      better-auth/cookies), which is a tiny fraction of the full server.
+//
+// Asserted structurally (which modules contribute bytes), not as a KB number,
+// so the check stays correct as bundle sizes drift.
+
+/** Module paths that actually contribute bytes to a unit's bundle output. */
+function bundledModules(unitName: string): string[] {
+  const metafilePath = join(getUnitPath(unitName), 'metafile.json')
+  if (!existsSync(metafilePath))
+    throw new Error(`${unitName}: missing metafile.json (run with --debug-artifacts)`)
+  const meta = readJSON(metafilePath) as {
+    outputs?: Record<string, { inputs?: Record<string, { bytesInOutput?: number }> }>
+  }
+  const bundleKey = Object.keys(meta.outputs ?? {}).find(
+    (k) => k.endsWith('bundle.js') && !k.endsWith('.map')
+  )
+  if (!bundleKey) throw new Error(`${unitName}: no bundle.js output in metafile`)
+  const inputs = meta.outputs![bundleKey]!.inputs ?? {}
+  return Object.entries(inputs)
+    .filter(([, v]) => (v.bytesInOutput ?? 0) > 0)
+    .map(([k]) => k)
+}
+
+const AI_SDK_RE = /@ai-sdk\/|\/node_modules\/ai\/|@pikku\/ai-vercel/
+// Server-only better-auth modules — present in the auth handler, never needed to
+// verify a signed cookie.
+const BETTER_AUTH_SERVER_RE =
+  /better-auth\/dist\/api\/routes\/|better-auth\/dist\/db\/internal-adapter|@better-auth\/core\/dist\/db\/adapter|@better-auth\/kysely-adapter|better-auth\/dist\/db\/schema\.|services\/better-auth\/dist\/auth-handler\.js|services\/better-auth\/dist\/auth-api\.js|services\/better-auth\/dist\/auth-session\.js$|services\/better-auth\/dist\/provider-registry|services\/better-auth\/dist\/plugin-registry/
+// The lightweight stateless verifier every non-auth unit SHOULD carry.
+const STATELESS_SESSION_RE =
+  /services\/better-auth\/dist\/auth-session-stateless\.js|better-auth\/dist\/cookies\//
+
+// A representative non-auth, non-AI HTTP unit.
+const LEAN_UNIT = 'greet'
+// The unit that legitimately bundles the full better-auth server.
+const AUTH_UNIT = 'auth-handler'
+
+check(`${LEAN_UNIT}: bundles zero AI SDK code`, () => {
+  const hits = bundledModules(LEAN_UNIT).filter((m) => AI_SDK_RE.test(m))
+  if (hits.length > 0)
+    throw new Error(`unexpected AI modules: ${hits.slice(0, 5).join(', ')}`)
+})
+
+check(`${LEAN_UNIT}: bundles zero better-auth server code`, () => {
+  const hits = bundledModules(LEAN_UNIT).filter((m) =>
+    BETTER_AUTH_SERVER_RE.test(m)
+  )
+  if (hits.length > 0)
+    throw new Error(`unexpected server modules: ${hits.slice(0, 5).join(', ')}`)
+})
+
+check(`${LEAN_UNIT}: still carries the stateless session verifier`, () => {
+  // Guards against the split silently dropping session validation from non-auth
+  // units (the regression that motivated this check).
+  const hits = bundledModules(LEAN_UNIT).filter((m) =>
+    STATELESS_SESSION_RE.test(m)
+  )
+  if (hits.length === 0)
+    throw new Error('stateless session middleware missing from non-auth unit')
+})
+
+check(`${AUTH_UNIT}: bundles the full better-auth server (markers valid)`, () => {
+  // Anti-tautology: prove the server markers actually match real modules
+  // somewhere, so the LEAN_UNIT "zero server code" check can't pass trivially.
+  if (!unitDirs.includes(AUTH_UNIT))
+    throw new Error(`${AUTH_UNIT} unit not found`)
+  const hits = bundledModules(AUTH_UNIT).filter((m) =>
+    BETTER_AUTH_SERVER_RE.test(m)
+  )
+  if (hits.length === 0)
+    throw new Error('auth handler unexpectedly has no server modules')
 })
 
 // --- Results ---
