@@ -1,6 +1,6 @@
 {
   "name": "@pikku/e2e-functions",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "type": "module",
   "private": true,
   "imports": {

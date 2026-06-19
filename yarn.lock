@@ -5640,7 +5640,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/better-auth@npm:^0.12.7, @pikku/better-auth@workspace:*, @pikku/better-auth@workspace:packages/services/better-auth":
+"@pikku/better-auth@npm:^0.12.7, @pikku/better-auth@npm:^0.12.8, @pikku/better-auth@workspace:*, @pikku/better-auth@workspace:packages/services/better-auth":
   version: 0.0.0-use.local
   resolution: "@pikku/better-auth@workspace:packages/services/better-auth"
   dependencies:
@@ -6165,11 +6165,11 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/next@npm:^0.12.4, @pikku/next@workspace:*, @pikku/next@workspace:packages/runtimes/next":
+"@pikku/next@npm:^0.12.5, @pikku/next@workspace:*, @pikku/next@workspace:packages/runtimes/next":
   version: 0.0.0-use.local
   resolution: "@pikku/next@workspace:packages/runtimes/next"
   dependencies:
-    "@pikku/better-auth": "npm:^0.12.7"
+    "@pikku/better-auth": "npm:^0.12.8"
     "@pikku/core": "npm:^0.12.34"
     "@types/react": "npm:^19"
     better-auth: "npm:^1.6.19"
@@ -6180,7 +6180,7 @@ __metadata:
     react-dom: "npm:^19"
     typescript: "npm:^5.9.3"
   peerDependencies:
-    "@pikku/better-auth": ^0.12.7
+    "@pikku/better-auth": ^0.12.8
     "@pikku/core": ^0.12.21
     better-auth: ^1.6.0
     next: ^15
@@ -6333,7 +6333,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/tanstack-start@workspace:packages/runtimes/tanstack-start"
   dependencies:
-    "@pikku/better-auth": "npm:^0.12.7"
+    "@pikku/better-auth": "npm:^0.12.8"
     "@pikku/core": "npm:^0.12.34"
     "@tanstack/react-start": "npm:^1.132.0"
     better-auth: "npm:^1.6.19"
@@ -6341,7 +6341,7 @@ __metadata:
     react-dom: "npm:^19"
     typescript: "npm:^5.9.3"
   peerDependencies:
-    "@pikku/better-auth": ^0.12.7
+    "@pikku/better-auth": ^0.12.8
     "@pikku/core": ^0.12.34
     "@tanstack/react-start": ^1.0.0
     better-auth: ^1.6.0
@@ -6565,7 +6565,7 @@ __metadata:
     "@modelcontextprotocol/sdk": "npm:1.27.1"
     "@pikku/addon-console": "workspace:*"
     "@pikku/addon-graph": "workspace:*"
-    "@pikku/better-auth": "npm:^0.12.7"
+    "@pikku/better-auth": "npm:^0.12.8"
     "@pikku/cli": "npm:^0.12.42"
     "@pikku/cloudflare": "workspace:*"
     "@pikku/core": "npm:^0.12.34"
@@ -6618,12 +6618,12 @@ __metadata:
   resolution: "@pikku/templates-nextjs@workspace:templates/nextjs"
   dependencies:
     "@next/swc-darwin-arm64": "npm:^16.2.6"
-    "@pikku/better-auth": "npm:^0.12.7"
+    "@pikku/better-auth": "npm:^0.12.8"
     "@pikku/cli": "npm:^0.12.42"
     "@pikku/core": "npm:^0.12.34"
     "@pikku/fetch": "npm:^0.12.3"
     "@pikku/jose": "npm:^0.12.3"
-    "@pikku/next": "npm:^0.12.4"
+    "@pikku/next": "npm:^0.12.5"
     "@types/node": "npm:^24"
     "@types/react": "npm:^19"
     "@types/react-dom": "npm:^19"
