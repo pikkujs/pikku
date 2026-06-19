@@ -319,6 +319,16 @@ export interface AuthDefinition {
    *  enabled. */
   plugins: string[]
   /**
+   * Whether `session.cookieCache` is enabled in the better-auth config. When
+   * true the session `{ user, session }` snapshot is signed into the cookie, so
+   * the generated global `*` session middleware can verify it statelessly
+   * (`betterAuthStatelessSession`, secret-only, no DB) instead of calling
+   * `services.auth().api.getSession()` — which would otherwise pull the entire
+   * better-auth server into every unit. Drives the auth codegen middleware
+   * split (see serializeAuthGen). Absent/false ⇒ full, stateful middleware.
+   */
+  cookieCache?: boolean
+  /**
    * Singleton services the generated auth handler must have available at
    * runtime — the services the `pikkuBetterAuth` factory reaches for (either
    * destructured from its first param, or accessed as `services.<name>` in its

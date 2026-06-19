@@ -26,7 +26,7 @@ export const pikkuAuth = pikkuSessionlessFunc<void, void>({
     // has no OAuth providers — still generates its /auth/* wiring.
     if (!state.auth.definition) return
 
-    const { wiring, secrets } = serializeAuthGen(
+    const { wiring, secrets, middleware } = serializeAuthGen(
       state.auth.definition,
       state.auth.providers,
       authFile,
@@ -39,6 +39,14 @@ export const pikkuAuth = pikkuSessionlessFunc<void, void>({
     const secretsFile = join(dirname(authFile), 'auth-secrets.gen.ts')
     await writeFileInDir(logger, authFile, wiring)
     await writeFileInDir(logger, secretsFile, secrets)
+
+    // When cookieCache is enabled the global `*` session middleware is split
+    // into its own file so it can be bundled into every unit without the
+    // better-auth server (kept in authFile). See serializeAuthGen.
+    const middlewareFile = join(dirname(authFile), 'auth-middleware.gen.ts')
+    if (middleware) {
+      await writeFileInDir(logger, middlewareFile, middleware)
+    }
 
     // Static metadata of the enabled providers/plugins for the console SSO page,
     // following the `*-meta.gen.json` convention. Read at runtime by the console

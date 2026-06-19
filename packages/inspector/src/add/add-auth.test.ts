@@ -50,6 +50,7 @@ describe('addAuth inspector', () => {
         sourceFile: file,
         basePath: '/api/auth',
         hasCredentials: false,
+        cookieCache: false,
         plugins: [],
         services: { optimized: true, services: [] },
       })
@@ -90,6 +91,61 @@ describe('addAuth inspector', () => {
       assert.equal(state.auth.definition?.basePath, '/auth')
       assert.equal(state.auth.definition?.hasCredentials, true)
       assert.deepEqual(state.auth.providers, ['github'])
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test('detects session.cookieCache for the stateless middleware split', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-cookiecache-'))
+    const file = join(rootDir, 'auth.ts')
+
+    await writeFile(
+      file,
+      [
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
+        "import { betterAuth } from 'better-auth'",
+        'export const auth = pikkuBetterAuth(() =>',
+        '  betterAuth({',
+        '    session: { cookieCache: { enabled: true } },',
+        "    emailAndPassword: { enabled: true },",
+        '  })',
+        ')',
+      ].join('\n')
+    )
+
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      const state = await inspect(makeLogger(criticals), [file], { rootDir })
+      assert.equal(criticals.length, 0)
+      assert.equal(state.auth.definition?.cookieCache, true)
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test('cookieCache: { enabled: false } does not enable the stateless split', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-nocache-'))
+    const file = join(rootDir, 'auth.ts')
+
+    await writeFile(
+      file,
+      [
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
+        "import { betterAuth } from 'better-auth'",
+        'export const auth = pikkuBetterAuth(() =>',
+        '  betterAuth({',
+        '    session: { cookieCache: { enabled: false } },',
+        '  })',
+        ')',
+      ].join('\n')
+    )
+
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      const state = await inspect(makeLogger(criticals), [file], { rootDir })
+      assert.equal(criticals.length, 0)
+      assert.equal(state.auth.definition?.cookieCache, false)
     } finally {
       await rm(rootDir, { recursive: true, force: true })
     }

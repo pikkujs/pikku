@@ -188,11 +188,31 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
   // Find the inner betterAuth({...}) call to read providers/basePath/credentials.
   let basePath = DEFAULT_BASE_PATH
   let hasCredentials = false
+  let cookieCache = false
   const betterAuthCall = findBetterAuthCall(factory)
   const config = betterAuthCall?.arguments[0]
 
   if (config && ts.isObjectLiteralExpression(config)) {
     basePath = readStringProp(config, 'basePath') ?? DEFAULT_BASE_PATH
+
+    // `session: { cookieCache: { enabled: true } }` — when present (and not
+    // explicitly disabled) the signed session snapshot lives in the cookie, so
+    // the global session middleware can be verified statelessly.
+    const session = readObjectProp(config, 'session')
+    if (session) {
+      const cookieCacheBlock = readObjectProp(session, 'cookieCache')
+      if (cookieCacheBlock) {
+        const enabledProp = cookieCacheBlock.properties.find(
+          (p) =>
+            ts.isPropertyAssignment(p) &&
+            ts.isIdentifier(p.name) &&
+            p.name.text === 'enabled'
+        ) as ts.PropertyAssignment | undefined
+        cookieCache =
+          !enabledProp ||
+          enabledProp.initializer.kind !== ts.SyntaxKind.FalseKeyword
+      }
+    }
 
     const emailAndPassword = readObjectProp(config, 'emailAndPassword')
     if (emailAndPassword) {
@@ -244,6 +264,7 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
     sourceFile,
     basePath,
     hasCredentials,
+    cookieCache,
     plugins: [...state.auth.plugins],
     services,
   }
