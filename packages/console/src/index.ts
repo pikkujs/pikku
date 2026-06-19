@@ -32,7 +32,7 @@ export {
 // Sidebar
 export {
   Sidebar,
-  DEFAULT_NAV_SECTIONS,
+  useDefaultNavSections,
   SIDEBAR_COLLAPSED_WIDTH,
   SIDEBAR_EXPANDED_WIDTH,
 } from './components/project/Sidebar'

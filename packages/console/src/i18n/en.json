@@ -349,5 +349,26 @@
     "filters": "Filters",
     "more_actions": "More actions",
     "cycle_aria": "{{ariaLabel}}: {{label}}. Click to switch."
+  },
+  "nav": {
+    "run": "Run",
+    "functions": "Functions",
+    "workflows": "Workflows",
+    "agents": "Agents",
+    "tests": "Tests",
+    "data": "Data",
+    "database": "Database",
+    "apis": "APIs",
+    "jobs": "Jobs",
+    "runtime": "Runtime",
+    "emails": "Emails",
+    "config": "Config",
+    "secrets": "Secrets",
+    "env_vars": "Environment Variables",
+    "addons": "Addons",
+    "users": "Users",
+    "oauth": "OAuth",
+    "credentials": "Credentials",
+    "changes": "Changes"
   }
 }
