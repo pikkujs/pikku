@@ -1,7 +1,11 @@
 import type { Logger } from '@pikku/core/services'
 import { LogLevel } from '@pikku/core/services'
 import type { PikkuChannel } from '@pikku/core/channel'
-import type { ErrorCode } from '@pikku/inspector'
+import type {
+  ErrorCode,
+  CodedDiagnostic,
+  DiagnosticSeverity,
+} from '@pikku/inspector'
 
 /**
  * Log message structure sent through the channel
@@ -87,14 +91,32 @@ export class CLILoggerForwarder implements Logger {
     this.log('trace', LogLevel.trace, message)
   }
 
-  critical(code: ErrorCode, message: string) {
+  diagnostic({ severity, code, message }: CodedDiagnostic) {
+    // Delegate tracking to the underlying CLILogger so the build gate still
+    // sees diagnostics emitted through the forwarder, then forward to the
+    // channel for display.
+    ;(this.logger as any).diagnostic?.({ severity, code, message })
     const url = `https://pikku.dev/docs/pikku-cli/errors/${code.toLowerCase()}`
     const formattedMessage = `[${code}] ${message}\n  → ${url}`
-    this.error(formattedMessage)
+    if (severity === 'warn') this.warn(formattedMessage)
+    else this.error(formattedMessage)
+  }
+
+  critical(code: ErrorCode, message: string) {
+    this.diagnostic({ severity: 'critical', code, message })
   }
 
   hasCriticalErrors(): boolean {
     // The underlying logger (CLILogger) tracks critical errors
     return (this.logger as any).hasCriticalErrors?.() ?? false
+  }
+
+  hasBlockingDiagnostics(): boolean {
+    // The underlying logger (CLILogger) owns failOn + diagnostic tracking
+    return (this.logger as any).hasBlockingDiagnostics?.() ?? false
+  }
+
+  blockingSeverities(): DiagnosticSeverity[] {
+    return (this.logger as any).blockingSeverities?.() ?? []
   }
 }

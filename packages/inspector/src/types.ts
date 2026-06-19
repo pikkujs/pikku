@@ -25,7 +25,7 @@ import type {
   JSONValue,
 } from '@pikku/core'
 import type { OpenAPISpecInfo } from './utils/serialize-openapi-json.js'
-import type { ErrorCode } from './error-codes.js'
+import type { ErrorCode, CodedDiagnostic } from './error-codes.js'
 import type {
   VersionManifest,
   VersionValidateError,
@@ -238,6 +238,15 @@ export interface InspectorLogger {
   error: (message: string) => void
   warn: (message: string) => void
   debug: (message: string) => void
+  /**
+   * Emit a tracked, coded diagnostic. It is recorded and printed; `error`/`warn`
+   * only block the build when the CLI is run with `--fail-on-error` /
+   * `--fail-on-warn` (default: critical only). Use this for issues worth
+   * surfacing (e.g. data-classification leaks) that should not stop the dev
+   * server from starting.
+   */
+  diagnostic: (diagnostic: CodedDiagnostic) => void
+  /** Sugar for `diagnostic({ severity: 'critical', code, message })`. */
   critical: (code: ErrorCode, message: string) => void
   hasCriticalErrors: () => boolean
 }

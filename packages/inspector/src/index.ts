@@ -3,6 +3,7 @@ export type { TypesMap } from './types-map.js'
 export type * from './types.js'
 export type { FilesAndMethodsErrors } from './utils/get-files-and-methods.js'
 export { ErrorCode } from './error-codes.js'
+export type { DiagnosticSeverity, CodedDiagnostic } from './error-codes.js'
 export { AUTH_HANDLER_FUNC_ID } from './add/add-auth.js'
 export {
   serializeInspectorState,

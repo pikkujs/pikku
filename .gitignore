@@ -20,6 +20,7 @@ dist
 my-app
 .pikku
 .deploy
+.tmp-pii-gate-*
 console-app
 cli.schema.json
 .playwright-mcp

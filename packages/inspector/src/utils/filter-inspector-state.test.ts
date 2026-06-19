@@ -344,6 +344,7 @@ const mockLogger = {
   error: () => {},
   warn: () => {},
   debug: () => {},
+  diagnostic: () => {},
   critical: () => {},
   hasCriticalErrors: () => false,
 }

@@ -39,6 +39,9 @@ describe('addFunctions duplicate name handling', () => {
       info: () => {},
       warn: () => {},
       error: () => {},
+      diagnostic: ({ code, message }) => {
+        criticals.push({ code, message })
+      },
       critical: (code: ErrorCode, message: string) => {
         criticals.push({ code, message })
       },
@@ -91,6 +94,9 @@ describe('addFunctions duplicate name handling', () => {
       info: () => {},
       warn: () => {},
       error: () => {},
+      diagnostic: ({ code, message }) => {
+        criticals.push({ code, message })
+      },
       critical: (code: ErrorCode, message: string) => {
         criticals.push({ code, message })
       },
@@ -142,6 +148,7 @@ describe('addFunctions duplicate name handling', () => {
       info: () => {},
       warn: () => {},
       error: () => {},
+      diagnostic: () => {},
       critical: () => {},
       hasCriticalErrors: () => false,
     }
@@ -204,6 +211,9 @@ describe('addFunctions duplicate name handling', () => {
       info: () => {},
       warn: () => {},
       error: () => {},
+      diagnostic: ({ code, message }) => {
+        criticals.push({ code, message })
+      },
       critical: (code: ErrorCode, message: string) => {
         criticals.push({ code, message })
       },
@@ -250,6 +260,7 @@ describe('addFunctions implementationHash', () => {
       info: () => {},
       warn: () => {},
       error: () => {},
+      diagnostic: () => {},
       critical: () => {},
       hasCriticalErrors: () => false,
     }
@@ -296,6 +307,7 @@ describe('addFunctions implementationHash', () => {
       info: () => {},
       warn: () => {},
       error: () => {},
+      diagnostic: () => {},
       critical: () => {},
       hasCriticalErrors: () => false,
     }
@@ -349,6 +361,7 @@ describe('pikkuChannelConnectionFunc generic mapping', () => {
       info: () => {},
       warn: () => {},
       error: () => {},
+      diagnostic: () => {},
       critical: () => {},
       hasCriticalErrors: () => false,
     }

@@ -120,6 +120,12 @@ export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
   logger.setLevel(logLevel)
   logger.setSilent(isSilent)
 
+  // Build gate: critical always fails; --fail-on-warn implies --fail-on-error.
+  const extraFailOn: Array<'error' | 'warn'> = []
+  if ((data as any).failOnWarn) extraFailOn.push('warn', 'error')
+  else if ((data as any).failOnError) extraFailOn.push('error')
+  logger.setFailOn(extraFailOn)
+
   // Display logo unless in silent mode
   if (!isSilent && outputMode !== 'json') {
     logger.logLogo()

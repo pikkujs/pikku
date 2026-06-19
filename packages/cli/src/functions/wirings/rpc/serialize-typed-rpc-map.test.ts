@@ -8,6 +8,7 @@ describe('serializeTypedRPCMap', () => {
     info: () => {},
     debug: () => {},
     error: () => {},
+    diagnostic: () => {},
     critical: () => {},
     hasCriticalErrors: () => false,
   } as any

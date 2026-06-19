@@ -85,3 +85,17 @@ export enum ErrorCode {
   // Data classification errors
   PII_IN_OUTPUT = 'PKU910',
 }
+
+/**
+ * Severity of a tracked, coded diagnostic. `critical` always blocks the build;
+ * `error`/`warn` only block when the CLI is told to via `--fail-on-error` /
+ * `--fail-on-warn` (default: critical only). All severities are still printed.
+ */
+export type DiagnosticSeverity = 'warn' | 'error' | 'critical'
+
+/** A coded diagnostic emitted via `logger.diagnostic(...)`. */
+export interface CodedDiagnostic {
+  severity: DiagnosticSeverity
+  code: ErrorCode
+  message: string
+}

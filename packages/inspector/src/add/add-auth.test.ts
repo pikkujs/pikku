@@ -13,6 +13,9 @@ const makeLogger = (criticals: Array<{ code: ErrorCode; message: string }>) =>
     info: () => {},
     warn: () => {},
     error: () => {},
+    diagnostic: ({ code, message }) => {
+      criticals.push({ code, message })
+    },
     critical: (code: ErrorCode, message: string) => {
       criticals.push({ code, message })
     },

@@ -12,6 +12,6 @@
     "typescript": "^5.9"
   },
   "scripts": {
-    "test": "yarn tsx --test src/tests/codegen.assert.ts src/tests/codegen-postgres.assert.ts src/tests/audit.assert.ts"
+    "test": "yarn tsx --test src/tests/codegen.assert.ts src/tests/codegen-postgres.assert.ts src/tests/audit.assert.ts src/tests/pii-gate.assert.ts"
   }
 }

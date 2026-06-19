@@ -931,23 +931,27 @@ export const addFunctions: AddWiring = (
         .map((f) => f.path)
 
       if (secretPaths.length > 0) {
-        logger.critical(
-          ErrorCode.PII_IN_OUTPUT,
-          `Function '${name}' exposes secret-classified field(s) in its return type: ` +
+        logger.diagnostic({
+          severity: 'error',
+          code: ErrorCode.PII_IN_OUTPUT,
+          message:
+            `Function '${name}' exposes secret-classified field(s) in its return type: ` +
             secretPaths.map((p) => `'${p}'`).join(', ') +
             `.\n  Secret fields must never appear in function output. ` +
-            `Strip these fields before returning or change the column classification.`
-        )
+            `Strip these fields before returning or change the column classification.`,
+        })
       }
 
       if (sessionless && privatePaths.length > 0) {
-        logger.critical(
-          ErrorCode.PII_IN_OUTPUT,
-          `Sessionless function '${name}' exposes private-classified field(s) in its return type: ` +
+        logger.diagnostic({
+          severity: 'error',
+          code: ErrorCode.PII_IN_OUTPUT,
+          message:
+            `Sessionless function '${name}' exposes private-classified field(s) in its return type: ` +
             privatePaths.map((p) => `'${p}'`).join(', ') +
             `.\n  Private fields are only safe to return from authenticated (sessioned) functions. ` +
-            `Either require a session (use pikkuFunc) or mark the column @public if it is safe to expose publicly.`
-        )
+            `Either require a session (use pikkuFunc) or mark the column @public if it is safe to expose publicly.`,
+        })
       }
     }
   }
