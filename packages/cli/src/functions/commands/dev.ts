@@ -25,6 +25,7 @@ import {
   type LocalContentConfig,
 } from '@pikku/core/services/local-content'
 import { pikkuWebsocketHandler } from '@pikku/ws'
+import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import { PikkuNodeHTTPServer } from '@pikku/node-http-server'
 import { WebSocketServer } from 'ws'
 import { InMemorySchedulerService } from '@pikku/schedule'
@@ -243,6 +244,11 @@ export const dev = pikkuSessionlessFunc<
     const devLogger = new ConsoleLogger()
     const inMemoryServices = {
       logger: devLogger,
+      // Default schema service so a minimal project (e.g. a runnable addon)
+      // boots without wiring its own — the HTTP server compiles function
+      // schemas at init. A project that returns its own `schema` overrides this
+      // (pikkuServices merges `{ ...existingServices, ...createdServices }`).
+      schema: new CFWorkerSchemaService(devLogger),
       emailService: new LocalEmailService(),
       metaService: new LocalMetaService(pikkuDir),
       schedulerService,

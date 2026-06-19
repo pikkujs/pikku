@@ -37,6 +37,7 @@
     "@pikku/node-http-server": "^0.12.2",
     "@pikku/openapi-parser": "^0.12.10",
     "@pikku/schedule": "^0.12.0",
+    "@pikku/schema-cfworker": "^0.12.0",
     "@pikku/ws": "^0.12.2",
     "@types/cookie": "^1.0.0",
     "@types/json-schema": "^7.0.15",

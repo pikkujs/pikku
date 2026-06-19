@@ -181,8 +181,11 @@ function getAddonFiles(
       tsconfig: './tsconfig.json',
       srcDirectories: ['src', 'types'],
       outDir: './.pikku',
-      addon: true,
-      node: {
+      // Presentation metadata lives under `addon` (an object) — the node-meta
+      // codegen reads `config.addon` (`typeof addon === 'object' ? addon : …`),
+      // so a boolean `addon: true` with a sibling `node` block would leave the
+      // generated package metadata empty.
+      addon: {
         displayName,
         description,
         categories: [category],
@@ -1057,6 +1060,19 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
     if (carve) {
       const state = await getInspectorState()
       const meta = state.functions.meta ?? {}
+
+      // Presentation metadata the source project may carry under `node` in
+      // pikku.config.json (a key `pikku dev`/codegen ignore). Read it raw — the
+      // parsed CLI config drops keys it doesn't model.
+      let sourceNodeMeta: Record<string, unknown> = {}
+      try {
+        const raw = JSON.parse(
+          await readFile(join(config.rootDir, 'pikku.config.json'), 'utf-8')
+        )
+        if (raw?.node && typeof raw.node === 'object') sourceNodeMeta = raw.node
+      } catch {
+        // no source pikku.config.json metadata — fall back to flags/defaults
+      }
       const { matched, skipped } = selectBundledFunctions(meta)
       if (matched.length === 0) {
         logger.error(
@@ -1202,10 +1218,45 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
         members: svc.members,
       })
 
+      // Finalize the addon metadata. A source project carries its presentation
+      // metadata under a `node` block in pikku.config.json — a key `pikku dev`
+      // and the codegen ignore, so it stays a runnable normal project — and the
+      // carve lifts it into the `addon` block the node-meta codegen reads. Source
+      // `node` wins over the flag-derived defaults; `carve: true` marks it.
       const cfg = JSON.parse(addonFiles['pikku.config.json'])
-      if (typeof cfg.addon === 'boolean' || !cfg.addon) cfg.addon = {}
-      cfg.addon.carve = true
+      if (typeof cfg.addon !== 'object' || !cfg.addon) cfg.addon = {}
+      cfg.addon = { ...cfg.addon, ...sourceNodeMeta, carve: true }
       addonFiles['pikku.config.json'] = JSON.stringify(cfg, null, 2)
+
+      // Ship the icon the metadata points at — the source keeps it at the
+      // project root; without copying it the addon's `addon.icon` path dangles.
+      if (typeof cfg.addon.icon === 'string') {
+        const iconBase = cfg.addon.icon.replace(/^\.\//, '')
+        try {
+          addonFiles[iconBase] = await readFile(
+            join(config.rootDir, iconBase),
+            'utf-8'
+          )
+        } catch {
+          logger.warn(
+            `Addon icon '${iconBase}' not found in the source project; the addon's icon path will dangle.`
+          )
+        }
+      }
+
+      // Re-export the carved functions from the package root so the documented
+      // `import { fn } from '@pikku/addon-<name>'` entrypoint resolves. The
+      // consumer's generated wiring imports each function by its own module
+      // path, but external code uses the root export (and `exports['.']` points
+      // at it) — a placeholder index would break that.
+      addonFiles['src/index.ts'] =
+        bundled
+          .map(({ destPath }, i) => {
+            const spec =
+              './' + destPath.replace(/^src\//, '').replace(/\.tsx?$/, '.js')
+            return `export { ${matched[i]!.name} } from '${spec}'`
+          })
+          .join('\n') + '\n'
 
       logger.info(
         `Bundled ${bundled.length} function(s) into the addon` +
