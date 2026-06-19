@@ -10,6 +10,7 @@ describe('matchesFilters', () => {
     error: () => {},
     warn: () => {},
     debug: () => {},
+    diagnostic: () => {},
     critical: () => {},
     hasCriticalErrors: () => false,
   }

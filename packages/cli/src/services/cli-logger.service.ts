@@ -1,7 +1,11 @@
 import chalk from 'chalk'
 import type { Logger } from '@pikku/core/services'
 import { LogLevel } from '@pikku/core/services'
-import type { ErrorCode } from '@pikku/inspector'
+import type {
+  ErrorCode,
+  DiagnosticSeverity,
+  CodedDiagnostic,
+} from '@pikku/inspector'
 
 // Compact one-line wordmark — the old multi-line ASCII art got cropped in
 // short/narrow AI-agent panes. Coloured directly (not via the blue `info`
@@ -15,7 +19,12 @@ export type CLIOutputMode = 'text' | 'json'
 export class CLILogger implements Logger {
   private silent: boolean
   private level: LogLevel = LogLevel.info // default to info level
-  private criticalErrors: string[] = []
+  private diagnostics: CodedDiagnostic[] = []
+  // Severities that should fail the build. Critical always blocks; error/warn
+  // are opt-in via --fail-on-error / --fail-on-warn.
+  private failOn: Set<DiagnosticSeverity> = new Set<DiagnosticSeverity>([
+    'critical',
+  ])
   private outputMode: CLIOutputMode = 'text'
   private jsonFlushHookRegistered = false
 
@@ -190,15 +199,44 @@ export class CLILogger implements Logger {
     this.emit('debug', msg, type, undefined, data)
   }
 
-  critical(code: ErrorCode, message: string) {
+  diagnostic({ severity, code, message }: CodedDiagnostic) {
     const url = `${BASE_ERROR_URL}/${code.toLowerCase()}`
     const formattedMessage = `[${code}] ${message}\n  → ${url}`
-    this.criticalErrors.push(formattedMessage)
-    this.emit('critical', formattedMessage, undefined, code)
+    this.diagnostics.push({ severity, code, message })
+    // critical → bold red, error → red, warn → yellow. Always printed so the
+    // issue surfaces even when it doesn't fail the build.
+    this.emit(severity, formattedMessage, undefined, code)
+  }
+
+  /** Sugar for `diagnostic({ severity: 'critical', code, message })`. */
+  critical(code: ErrorCode, message: string) {
+    this.diagnostic({ severity: 'critical', code, message })
+  }
+
+  /**
+   * Configure which severities fail the build. Critical is always included.
+   */
+  setFailOn(severities: Iterable<DiagnosticSeverity>) {
+    this.failOn = new Set<DiagnosticSeverity>(['critical', ...severities])
   }
 
   hasCriticalErrors(): boolean {
-    return this.criticalErrors.length > 0
+    return this.diagnostics.some((d) => d.severity === 'critical')
+  }
+
+  /**
+   * True if any tracked diagnostic matches a severity configured to fail the
+   * build (default: critical only).
+   */
+  hasBlockingDiagnostics(): boolean {
+    return this.diagnostics.some((d) => this.failOn.has(d.severity))
+  }
+
+  /** Distinct severities among tracked diagnostics that would fail the build. */
+  blockingSeverities(): DiagnosticSeverity[] {
+    return [...this.failOn].filter((s) =>
+      this.diagnostics.some((d) => d.severity === s)
+    )
   }
 
   logLogo() {

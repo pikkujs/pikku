@@ -10,12 +10,16 @@ import type { InspectorLogger } from '../types.js'
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 function makeLogger() {
+  // Collects every coded diagnostic regardless of severity. PKU910 is now
+  // emitted at 'error' severity (surface, don't block the dev server) so it
+  // arrives via `diagnostic`, not `critical`.
   const criticals: Array<{ code: ErrorCode; message: string }> = []
   const logger: InspectorLogger = {
     debug: () => {},
     info: () => {},
     warn: () => {},
     error: () => {},
+    diagnostic: ({ code, message }) => criticals.push({ code, message }),
     critical: (code, message) => criticals.push({ code, message }),
     hasCriticalErrors: () => criticals.length > 0,
   }

@@ -71,8 +71,9 @@ export const pikkuSummary = pikkuSessionlessFunc<void, void>({
       logger.info({ message: summary.format(), type: 'summary' })
     }
 
-    if (logger.hasCriticalErrors()) {
-      throw new Error('Pikku inspection failed due to critical diagnostics')
+    if (logger.hasBlockingDiagnostics()) {
+      const severities = logger.blockingSeverities().join(', ')
+      throw new Error(`Pikku inspection failed due to ${severities} diagnostics`)
     }
   },
 })

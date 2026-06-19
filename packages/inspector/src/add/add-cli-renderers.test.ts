@@ -12,6 +12,7 @@ const makeLogger = () =>
     info: () => {},
     warn: () => {},
     error: () => {},
+    diagnostic: () => {},
     critical: () => {},
     hasCriticalErrors: () => false,
   }) satisfies InspectorLogger

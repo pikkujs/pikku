@@ -14,6 +14,9 @@ function makeLogger(
     info: () => {},
     warn: () => {},
     error: () => {},
+    diagnostic: ({ code, message }) => {
+      criticals.push({ code, message })
+    },
     critical: (code: any, message: string) => {
       criticals.push({ code, message })
     },

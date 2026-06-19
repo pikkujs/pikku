@@ -106,6 +106,21 @@ wireCLI({
       default: false,
       short: 'j',
     },
+    failOnError: {
+      description:
+        'Fail the build on error-severity diagnostics (e.g. data-classification leaks). Default: only critical diagnostics fail.',
+      default: false,
+    },
+    failOnWarn: {
+      description:
+        'Fail the build on warn-severity diagnostics (implies --fail-on-error).',
+      default: false,
+    },
+    failOnCritical: {
+      description:
+        'Fail the build on critical diagnostics. Always on; accepted for symmetry with --fail-on-error/--fail-on-warn.',
+      default: true,
+    },
     userSessionType: {
       description:
         'Specify which UserSession type to use (when multiple exist)',

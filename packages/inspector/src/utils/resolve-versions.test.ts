@@ -43,6 +43,7 @@ function makeLogger() {
       info: () => {},
       warn: () => {},
       error: (msg: string) => errors.push(msg),
+      diagnostic: ({ message }: { message: string }) => errors.push(message),
       critical: (_code: string, msg: string) => errors.push(msg),
     },
     errors,

@@ -47,6 +47,8 @@ describe('pikkuVersionsUpdate', () => {
             {
               logger: {
                 warn: (msg: string) => warnings.push(msg),
+                diagnostic: ({ code, message }: { code: string; message: string }) =>
+                  criticals.push({ code, message }),
                 critical: (code: string, message: string) =>
                   criticals.push({ code, message }),
                 hasCriticalErrors: () => criticals.length > 0,
