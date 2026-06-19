@@ -15,7 +15,10 @@ export const createConfig = pikkuConfig(async () => {
  * It's important to use the types here, as the pikku CLI uses them to improve the development experience!
  */
 export const createSingletonServices = pikkuServices(
-  async (config, existingServices): Promise<RequiredSingletonServices> => {
+  async (
+    config,
+    existingServices
+  ): Promise<Partial<Omit<RequiredSingletonServices, 'auth'>>> => {
     const variables = existingServices?.variables || new LocalVariablesService()
     const secrets =
       existingServices?.secrets || new LocalSecretService(variables)
