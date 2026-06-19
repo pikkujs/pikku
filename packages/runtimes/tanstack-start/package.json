@@ -26,6 +26,12 @@
     "better-auth": "^1.6.0"
   },
   "devDependencies": {
+    "@pikku/better-auth": "^0.12.7",
+    "@pikku/core": "^0.12.34",
+    "@tanstack/react-start": "^1.132.0",
+    "better-auth": "^1.6.19",
+    "react": "^19",
+    "react-dom": "^19",
     "typescript": "^5.9.3"
   },
   "engines": {
