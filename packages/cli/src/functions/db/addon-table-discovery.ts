@@ -158,3 +158,118 @@ export function discoverOwnedTables(
 
   return { owned: [...owned].sort(), residual }
 }
+
+/**
+ * kysely raw-SQL constructs that build queries from strings the type system
+ * never checks against the DB, so table ownership can't be derived from them.
+ *
+ * The `sql` tagged template (including the `sql<T>\`...\`` type-argument form) is
+ * the *silent* case: it produces no diagnostic, so the oracle under-reports the
+ * referenced table with no residual to catch it — proven empirically. This gate
+ * exists for exactly that class.
+ *
+ * `db.dynamic.table('x')` is deliberately NOT covered here: kysely type-checks
+ * its argument against the DB, so a missing table surfaces as a residual TS2345
+ * (a loud failure the residual check already catches), not a silent miss.
+ */
+const SQL_RAW_MEMBERS = new Set(['raw', 'table'])
+
+export interface RawSqlUsage {
+  fileName: string
+  /** 1-based line of the offending expression. */
+  line: number
+  /** The offending expression, single-lined and truncated for the message. */
+  text: string
+}
+
+/** Local binding names a kysely export is imported under (handles aliases). */
+function importedAs(sourceFile: ts.SourceFile, exportName: string): Set<string> {
+  const names = new Set<string>()
+  sourceFile.forEachChild((node) => {
+    if (!ts.isImportDeclaration(node)) return
+    const spec = node.moduleSpecifier
+    if (!ts.isStringLiteralLike(spec) || !/(^|\/)kysely(\/|$)/.test(spec.text)) {
+      return
+    }
+    const bindings = node.importClause?.namedBindings
+    if (bindings && ts.isNamedImports(bindings)) {
+      for (const el of bindings.elements) {
+        if ((el.propertyName?.text ?? el.name.text) === exportName) {
+          names.add(el.name.text)
+        }
+      }
+    }
+  })
+  return names
+}
+
+/**
+ * Find kysely raw-SQL usages in a single source file. A bare `sql` tag is always
+ * treated as raw — a re-exported or postgres.js `sql` is raw SQL too, and the
+ * safe bias for a correctness gate is to flag it. Aliased kysely imports
+ * (`import { sql as q }`) are resolved from the import. `sql.raw(...)` /
+ * `sql.table(...)` and `CompiledQuery.raw(...)` are the other escape hatches.
+ */
+export function findRawSqlUsages(sourceFile: ts.SourceFile): RawSqlUsage[] {
+  const sqlNames = new Set<string>([...importedAs(sourceFile, 'sql'), 'sql'])
+  const cqNames = new Set<string>([
+    ...importedAs(sourceFile, 'CompiledQuery'),
+    'CompiledQuery',
+  ])
+  const usages: RawSqlUsage[] = []
+
+  const record = (node: ts.Node): void => {
+    const line =
+      sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1
+    const text = node.getText(sourceFile).replace(/\s+/g, ' ').slice(0, 80)
+    usages.push({ fileName: sourceFile.fileName, line, text })
+  }
+
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isTaggedTemplateExpression(node) &&
+      ts.isIdentifier(node.tag) &&
+      sqlNames.has(node.tag.text)
+    ) {
+      record(node)
+    } else if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression)
+    ) {
+      const base = node.expression.expression
+      const member = node.expression.name.text
+      if (ts.isIdentifier(base)) {
+        if (sqlNames.has(base.text) && SQL_RAW_MEMBERS.has(member)) record(node)
+        else if (cqNames.has(base.text) && member === 'raw') record(node)
+      }
+    }
+    node.forEachChild(visit)
+  }
+  visit(sourceFile)
+  return usages
+}
+
+/**
+ * Gate: a function whose table ownership can't be determined from types must not
+ * be bundled into an addon silently. Returns one `[PKU-ADDON-RAWSQL]` error per
+ * raw-SQL usage so the caller can fail the generation.
+ *
+ * Scope is the files passed in. Today those are the bundled leaf functions; once
+ * the code-dependency closure exists, run this over the whole closure so raw SQL
+ * inside a called helper is caught too — not just at the leaf.
+ */
+export function checkRawSqlOwnership(
+  sourceFiles: readonly ts.SourceFile[]
+): string[] {
+  const errors: string[] = []
+  for (const sourceFile of sourceFiles) {
+    for (const u of findRawSqlUsages(sourceFile)) {
+      errors.push(
+        `[PKU-ADDON-RAWSQL] ${u.fileName}:${u.line} uses raw SQL (\`${u.text}\`) — ` +
+          `table ownership can't be determined from types. Rewrite with typed ` +
+          `kysely query-builder methods, or exclude this function from the addon.`
+      )
+    }
+  }
+  return errors
+}

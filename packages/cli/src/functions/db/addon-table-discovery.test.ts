@@ -2,8 +2,10 @@ import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
 import ts from 'typescript'
 import {
+  checkRawSqlOwnership,
   collectMissingTables,
   discoverOwnedTables,
+  findRawSqlUsages,
 } from './addon-table-discovery.js'
 
 // A real source file so the extractor can inspect AST structure. Tables appear
@@ -106,5 +108,65 @@ describe('discoverOwnedTables (fixpoint)', () => {
     assert.deepEqual(owned, [])
     assert.equal(residual.length, 1)
     assert.equal(residual[0]!.code, 2304)
+  })
+})
+
+describe('raw-SQL ownership gate', () => {
+  const sf = (src: string) =>
+    ts.createSourceFile('fn.ts', src, ts.ScriptTarget.Latest, true)
+
+  test('flags a `sql` tagged template (incl. the sql<T>`...` form)', () => {
+    const a = findRawSqlUsages(
+      sf("import { sql } from 'kysely'\nawait sql`select * from audit_log`.execute(db)")
+    )
+    const b = findRawSqlUsages(
+      sf("import { sql } from 'kysely'\nawait sql<{ id: string }>`select id from audit_log`.execute(db)")
+    )
+    assert.equal(a.length, 1)
+    assert.equal(b.length, 1)
+  })
+
+  test('flags sql.raw and sql.table, plus CompiledQuery.raw', () => {
+    const usages = findRawSqlUsages(
+      sf(
+        "import { sql, CompiledQuery } from 'kysely'\n" +
+          "await db.executeQuery(sql.raw('select * from audit_log'))\n" +
+          "db.selectFrom(sql.table('audit_log').as('a'))\n" +
+          "await db.executeQuery(CompiledQuery.raw('select 1'))"
+      )
+    )
+    assert.equal(usages.length, 3)
+  })
+
+  test('resolves an aliased kysely `sql` import', () => {
+    const usages = findRawSqlUsages(
+      sf("import { sql as q } from 'kysely'\nawait q`select 1`.execute(db)")
+    )
+    assert.equal(usages.length, 1)
+  })
+
+  test('does not flag typed query-builder calls or sql.ref', () => {
+    const usages = findRawSqlUsages(
+      sf(
+        "import { sql } from 'kysely'\n" +
+          "await db.selectFrom('organization').selectAll().execute()\n" +
+          "db.selectFrom('project').orderBy(sql.ref('project.id')).execute()"
+      )
+    )
+    assert.deepEqual(usages, [])
+  })
+
+  test('checkRawSqlOwnership emits one PKU-ADDON-RAWSQL error per usage', () => {
+    const clean = sf("await db.selectFrom('organization').execute()")
+    const raw = ts.createSourceFile(
+      'audit.function.ts',
+      "import { sql } from 'kysely'\nawait sql`select * from audit_log`.execute(db)",
+      ts.ScriptTarget.Latest,
+      true
+    )
+    assert.deepEqual(checkRawSqlOwnership([clean]), [])
+    const errors = checkRawSqlOwnership([clean, raw])
+    assert.equal(errors.length, 1)
+    assert.match(errors[0]!, /\[PKU-ADDON-RAWSQL\] audit\.function\.ts:2/)
   })
 })

@@ -5,8 +5,10 @@ import {
   createEmptyManifest,
   saveManifest,
 } from '../../utils/contract-versions.js'
+import ts from 'typescript'
 import { pikkuSessionlessFunc } from '#pikku'
 import { assignBundlePaths, resolveFilteredFunctions } from './addon-filter.js'
+import { checkRawSqlOwnership } from '../db/addon-table-discovery.js'
 import {
   parseOpenAPISpec,
   computeContractHash,
@@ -987,6 +989,24 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
           logger.error(`Could not read bundled function source: ${sourceFile}`)
           process.exit(1)
         }
+      }
+
+      // Gate: a bundled function that builds queries with raw SQL has table
+      // ownership the type oracle can't determine — refuse rather than ship an
+      // addon silently missing its tables. Report against the original source.
+      const rawSqlErrors = checkRawSqlOwnership(
+        bundled.map(({ sourceFile, destPath }) =>
+          ts.createSourceFile(
+            sourceFile,
+            addonFiles[destPath]!,
+            ts.ScriptTarget.Latest,
+            /* setParentNodes */ true
+          )
+        )
+      )
+      if (rawSqlErrors.length > 0) {
+        for (const e of rawSqlErrors) logger.error(e)
+        process.exit(1)
       }
 
       const cfg = JSON.parse(addonFiles['pikku.config.json'])
