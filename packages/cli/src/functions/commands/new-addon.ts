@@ -9,6 +9,7 @@ import ts from 'typescript'
 import { pikkuSessionlessFunc } from '#pikku'
 import { assignBundlePaths, selectBundledFunctions } from './addon-bundle.js'
 import { checkRawSqlOwnership } from '../db/addon-table-discovery.js'
+import { generateAddonServices } from '../db/addon-assembly.js'
 import {
   parseOpenAPISpec,
   computeContractHash,
@@ -136,14 +137,16 @@ function getAddonFiles(
           types: './dist/src/index.d.ts',
           import: './dist/src/index.js',
         },
-        './.pikku/*': './dist/.pikku/*',
-        './.pikku/pikku-metadata.gen.json':
-          './dist/.pikku/pikku-metadata.gen.json',
+        // `.pikku` is exported from source (not dist): its gen files import
+        // sibling `../types/*.d.ts`, which tsc never emits into dist — so a
+        // dist-rooted `.pikku` would dangle for any consumer that compiles it.
+        './.pikku/*': './.pikku/*',
+        './.pikku/pikku-metadata.gen.json': './.pikku/pikku-metadata.gen.json',
         './.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js': {
-          types: './dist/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts',
+          types: './.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts',
         },
       },
-      files: ['dist'],
+      files: ['dist', '.pikku', 'types'],
       scripts: {
         prepublishOnly: 'yarn build',
         prebuild: 'pikku all',
@@ -849,6 +852,59 @@ async function writeFiles(
   return written
 }
 
+/** Base services the host always provides; never re-declared by the addon. */
+const BASE_SERVICES = new Set([
+  'config',
+  'logger',
+  'variables',
+  'secrets',
+  'schema',
+])
+
+/**
+ * Carve mode replaces the API-client scaffold (`{name}-api.service.ts`,
+ * the service it constructs, the `{name}.types.ts` Zod stub) with a
+ * `pikkuAddonServices` factory derived from what the bundled functions
+ * actually destructure. Base services are auto-provided; any non-base service
+ * (e.g. `kysely`) becomes a required parent service. Returns the files to
+ * overwrite and the scaffold files to drop.
+ */
+function carveServiceFiles(
+  vars: AddonVars,
+  requiredServices: string[]
+): { write: Record<string, string>; remove: string[]; unsupported: string[] } {
+  const { name } = vars
+  const unsupported = [...new Set(requiredServices)].filter(
+    (s) => !BASE_SERVICES.has(s) && s !== 'kysely'
+  )
+
+  const write: Record<string, string> = {
+    'src/services.ts': generateAddonServices(requiredServices),
+    'types/application-types.d.ts': `import type {
+  CoreConfig,
+  CoreServices,
+  CoreSingletonServices,
+  CoreUserSession,
+} from '@pikku/core'
+
+export interface Config extends CoreConfig {}
+
+export interface UserSession extends CoreUserSession {}
+
+export interface SingletonServices extends CoreSingletonServices<Config> {}
+
+export interface Services extends CoreServices<SingletonServices> {}
+`,
+    'src/index.ts': `// Functions carved from the source project live in src/functions/.\n`,
+  }
+
+  return {
+    write,
+    remove: [`src/${name}-api.service.ts`, `src/${name}.types.ts`],
+    unsupported,
+  }
+}
+
 export const pikkuNewAddon = pikkuSessionlessFunc<
   {
     name: string
@@ -1011,6 +1067,26 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       if (rawSqlErrors.length > 0) {
         for (const e of rawSqlErrors) logger.error(e)
         process.exit(1)
+      }
+
+      // Derive the addon's service contract from what the bundled functions
+      // actually use, and replace the API-client scaffold with it.
+      const requiredServices = new Set<string>()
+      for (const fn of matched) {
+        for (const s of meta[fn.id]?.services?.services ?? []) {
+          requiredServices.add(s)
+        }
+      }
+      const { write, remove, unsupported } = carveServiceFiles(vars, [
+        ...requiredServices,
+      ])
+      for (const path of remove) delete addonFiles[path]
+      Object.assign(addonFiles, write)
+      if (unsupported.length > 0) {
+        logger.warn(
+          `Carved functions use service(s) the addon can't auto-provide: ${unsupported.join(', ')}. ` +
+            `Wire them into src/services.ts before publishing.`
+        )
       }
 
       const cfg = JSON.parse(addonFiles['pikku.config.json'])
