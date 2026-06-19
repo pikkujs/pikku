@@ -142,7 +142,23 @@ export type {
   AuditSource,
   ResolvedAuditConfig,
 } from './services/audit-service.js'
-export type { AIAgentRunnerService } from './services/ai-agent-runner-service.js'
+export type {
+  AIAgentRunnerService,
+  AIEmbedManyParams,
+  AIEmbedManyResult,
+  AIEmbedParams,
+  AIEmbedResult,
+  AIGenerateImageParams,
+  AIGenerateImagePrompt,
+  AIGenerateImageResult,
+  AIGenerateSpeechParams,
+  AIGenerateSpeechResult,
+  AIProviderOptions,
+  AIRerankParams,
+  AIRerankResult,
+  AITranscriptionParams,
+  AITranscriptionResult,
+} from './services/ai-agent-runner-service.js'
 export type { AIRunStateService } from './services/ai-run-state-service.js'
 export type { AIStorageService } from './services/ai-storage-service.js'
 export type {

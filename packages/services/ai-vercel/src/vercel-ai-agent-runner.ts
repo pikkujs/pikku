@@ -1,18 +1,161 @@
 import {
+  embed,
+  embedMany,
+  experimental_generateSpeech as generateSpeech,
+  experimental_transcribe as transcribe,
+  generateImage,
   generateText,
+  jsonSchema,
+  Output,
+  rerank,
+  stepCountIs,
   streamText,
   tool as aiTool,
-  Output,
-  jsonSchema,
-  stepCountIs,
 } from 'ai'
 import type {
-  AIAgentRunnerService,
   AIAgentRunnerParams,
+  AIAgentRunnerService,
   AIAgentStepResult,
 } from '@pikku/core/services'
 import type { AIStreamChannel } from '@pikku/core/ai-agent'
 import { convertToSDKMessages } from './message-converter.js'
+
+type AIProviderOptions = Record<string, Record<string, unknown>>
+type AITranscriptionParams = {
+  model: string
+  audio: Uint8Array
+  providerOptions?: AIProviderOptions
+  maxRetries?: number
+  abortSignal?: AbortSignal
+  headers?: Record<string, string>
+}
+type AITranscriptionResult = {
+  text: string
+  segments?: Array<{
+    text: string
+    startSecond: number
+    endSecond: number
+  }>
+  language?: string
+  durationInSeconds?: number
+  warnings?: unknown[]
+  providerMetadata?: Record<string, unknown>
+  responses?: unknown[]
+}
+type AIGenerateSpeechParams = {
+  model: string
+  text: string
+  voice?: string
+  outputFormat?: string
+  instructions?: string
+  speed?: number
+  language?: string
+  providerOptions?: AIProviderOptions
+  maxRetries?: number
+  abortSignal?: AbortSignal
+  headers?: Record<string, string>
+}
+type AIGenerateSpeechResult = {
+  audio: {
+    uint8Array: Uint8Array
+    base64: string
+    mediaType: string
+    format: string
+  }
+  warnings?: unknown[]
+  providerMetadata?: Record<string, unknown>
+  responses?: unknown[]
+}
+type AIGenerateImagePrompt =
+  | string
+  | {
+      images: Array<Uint8Array | ArrayBuffer | string>
+      text?: string
+      mask?: Uint8Array | ArrayBuffer | string
+    }
+type AIGenerateImageParams = {
+  model: string
+  prompt: AIGenerateImagePrompt
+  n?: number
+  maxImagesPerCall?: number
+  size?: `${number}x${number}`
+  aspectRatio?: `${number}:${number}`
+  seed?: number
+  providerOptions?: AIProviderOptions
+  maxRetries?: number
+  abortSignal?: AbortSignal
+  headers?: Record<string, string>
+}
+type AIGenerateImageResult = {
+  images: Array<{
+    uint8Array: Uint8Array
+    base64: string
+    mediaType: string
+  }>
+  warnings?: unknown[]
+  providerMetadata?: Record<string, unknown>
+  responses?: unknown[]
+  usage?: {
+    inputTokens?: number
+    outputTokens?: number
+    totalTokens?: number
+  }
+}
+type AIEmbedParams = {
+  model: string
+  value: string
+  providerOptions?: AIProviderOptions
+  maxRetries?: number
+  abortSignal?: AbortSignal
+  headers?: Record<string, string>
+}
+type AIEmbedResult = {
+  value: string
+  embedding: number[]
+  usage?: { tokens?: number }
+  warnings?: unknown[]
+  providerMetadata?: Record<string, unknown>
+  response?: unknown
+}
+type AIEmbedManyParams = {
+  model: string
+  values: string[]
+  providerOptions?: AIProviderOptions
+  maxRetries?: number
+  abortSignal?: AbortSignal
+  headers?: Record<string, string>
+  maxParallelCalls?: number
+}
+type AIEmbedManyResult = {
+  values: string[]
+  embeddings: number[][]
+  usage?: { tokens?: number }
+  warnings?: unknown[]
+  providerMetadata?: Record<string, unknown>
+  responses?: unknown[]
+}
+type AIRerankParams<VALUE extends string | Record<string, unknown>> =
+  {
+    model: string
+    query: string
+    documents: VALUE[]
+    topK?: number
+    providerOptions?: Record<string, Record<string, unknown>>
+    maxRetries?: number
+    abortSignal?: AbortSignal
+    headers?: Record<string, string>
+  }
+type AIRerankResult<VALUE extends string | Record<string, unknown>> = {
+  ranking: Array<{
+    index: number
+    document: VALUE
+    score: number
+  }>
+  rerankedDocuments: VALUE[]
+  originalDocuments: VALUE[]
+  providerMetadata?: Record<string, unknown>
+  response?: unknown
+}
 
 function cleanSchema(schema: any): any {
   if (!schema || typeof schema !== 'object') return schema
@@ -85,6 +228,27 @@ function extractStructuredUI(output: unknown): unknown | null {
   return (output as Record<string, unknown>).ui ?? null
 }
 
+type ModelKind =
+  | 'language'
+  | 'embedding'
+  | 'image'
+  | 'transcription'
+  | 'speech'
+  | 'reranking'
+
+const MODEL_METHODS: Record<ModelKind, string[]> = {
+  language: ['languageModel'],
+  embedding: ['embedding', 'embeddingModel'],
+  image: ['image', 'imageModel'],
+  transcription: ['transcription', 'transcriptionModel'],
+  speech: ['speech', 'speechModel'],
+  reranking: ['reranking', 'rerankingModel'],
+}
+
+function isCallable(value: unknown): value is (...args: any[]) => any {
+  return typeof value === 'function'
+}
+
 export class VercelAIAgentRunner implements AIAgentRunnerService {
   /** Public + mutable so deploy-time contributors (e.g. fabric's AI Gateway
    *  contributor) can replace providers post-construction with ones that
@@ -104,7 +268,10 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
   withApiKey(apiKey: string): VercelAIAgentRunner {
     if (!this.providerFactory) return this
     if (!apiKey?.trim()) return this
-    return new VercelAIAgentRunner(this.providerFactory(apiKey))
+    return new VercelAIAgentRunner(
+      this.providerFactory(apiKey),
+      this.providerFactory
+    )
   }
 
   private parseModel(model: string): { provider: string; modelName: string } {
@@ -134,6 +301,26 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
       )
     }
     return provider
+  }
+
+  private getModel(model: string, kind: ModelKind) {
+    const { provider: providerName, modelName } = this.parseModel(model)
+    const provider = this.getProvider(providerName)
+
+    if (kind === 'language' && isCallable(provider)) {
+      return provider(modelName)
+    }
+
+    for (const methodName of MODEL_METHODS[kind]) {
+      const candidate = provider?.[methodName]
+      if (isCallable(candidate)) {
+        return candidate.call(provider, modelName)
+      }
+    }
+
+    throw new Error(
+      `Provider '${providerName}' does not support ${kind} models via ${MODEL_METHODS[kind].join(' / ')}`
+    )
   }
 
   private buildTools(params: AIAgentRunnerParams) {
@@ -189,9 +376,8 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
     params: AIAgentRunnerParams,
     channel: AIStreamChannel
   ): Promise<AIAgentStepResult> {
-    const { provider: providerName, modelName } = this.parseModel(params.model)
-    const provider = this.getProvider(providerName)
-    const sdkModel = provider(modelName)
+    const sdkModel = this.getModel(params.model, 'language')
+    const { modelName } = this.parseModel(params.model)
     const aiTools = this.buildTools(params)
     const messages = await convertToSDKMessages(params.messages)
     const useStructuredOutput =
@@ -357,9 +543,7 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
   }
 
   async run(params: AIAgentRunnerParams): Promise<AIAgentStepResult> {
-    const { provider: providerName, modelName } = this.parseModel(params.model)
-    const provider = this.getProvider(providerName)
-    const sdkModel = provider(modelName)
+    const sdkModel = this.getModel(params.model, 'language')
     const aiTools = this.buildTools(params)
     const messages = await convertToSDKMessages(params.messages)
 
@@ -428,6 +612,157 @@ export class VercelAIAgentRunner implements AIAgentRunnerService {
       reasoningContent:
         (step?.content as any)?.find((p: any) => p.type === 'reasoning')
           ?.text ?? undefined,
+    }
+  }
+
+  async transcribe(
+    params: AITranscriptionParams
+  ): Promise<AITranscriptionResult> {
+    const result = await transcribe({
+      model: this.getModel(params.model, 'transcription'),
+      audio: params.audio,
+      providerOptions: params.providerOptions as any,
+      maxRetries: params.maxRetries,
+      abortSignal: params.abortSignal,
+      headers: params.headers,
+    })
+
+    return {
+      text: result.text,
+      segments: result.segments,
+      language: result.language,
+      durationInSeconds: result.durationInSeconds,
+      warnings: result.warnings,
+      providerMetadata: result.providerMetadata,
+      responses: result.responses,
+    }
+  }
+
+  async generateSpeech(
+    params: AIGenerateSpeechParams
+  ): Promise<AIGenerateSpeechResult> {
+    const result = await generateSpeech({
+      model: this.getModel(params.model, 'speech'),
+      text: params.text,
+      voice: params.voice,
+      outputFormat: params.outputFormat,
+      instructions: params.instructions,
+      speed: params.speed,
+      language: params.language,
+      providerOptions: params.providerOptions as any,
+      maxRetries: params.maxRetries,
+      abortSignal: params.abortSignal,
+      headers: params.headers,
+    })
+
+    return {
+      audio: {
+        uint8Array: result.audio.uint8Array,
+        base64: result.audio.base64,
+        mediaType: result.audio.mediaType,
+        format: result.audio.format,
+      },
+      warnings: result.warnings,
+      providerMetadata: result.providerMetadata,
+      responses: result.responses,
+    }
+  }
+
+  async generateImage(
+    params: AIGenerateImageParams
+  ): Promise<AIGenerateImageResult> {
+    const result = await generateImage({
+      model: this.getModel(params.model, 'image'),
+      prompt: params.prompt as any,
+      n: params.n,
+      maxImagesPerCall: params.maxImagesPerCall,
+      size: params.size,
+      aspectRatio: params.aspectRatio,
+      seed: params.seed,
+      providerOptions: params.providerOptions as any,
+      maxRetries: params.maxRetries,
+      abortSignal: params.abortSignal,
+      headers: params.headers,
+    })
+
+    return {
+      images: result.images.map((image) => ({
+        uint8Array: image.uint8Array,
+        base64: image.base64,
+        mediaType: image.mediaType,
+      })),
+      warnings: result.warnings,
+      providerMetadata: result.providerMetadata,
+      responses: result.responses,
+      usage: result.usage,
+    }
+  }
+
+  async embed(params: AIEmbedParams): Promise<AIEmbedResult> {
+    const result = await embed({
+      model: this.getModel(params.model, 'embedding'),
+      value: params.value,
+      providerOptions: params.providerOptions as any,
+      maxRetries: params.maxRetries,
+      abortSignal: params.abortSignal,
+      headers: params.headers,
+    })
+
+    return {
+      value: result.value,
+      embedding: result.embedding as number[],
+      usage: result.usage,
+      warnings: result.warnings,
+      providerMetadata: result.providerMetadata,
+      response: result.response,
+    }
+  }
+
+  async embedMany(params: AIEmbedManyParams): Promise<AIEmbedManyResult> {
+    const result = await embedMany({
+      model: this.getModel(params.model, 'embedding'),
+      values: params.values,
+      providerOptions: params.providerOptions as any,
+      maxRetries: params.maxRetries,
+      abortSignal: params.abortSignal,
+      headers: params.headers,
+      maxParallelCalls: params.maxParallelCalls,
+    })
+
+    return {
+      values: result.values,
+      embeddings: result.embeddings as number[][],
+      usage: result.usage,
+      warnings: result.warnings,
+      providerMetadata: result.providerMetadata,
+      responses: result.responses,
+    }
+  }
+
+  async rerank<VALUE extends string | Record<string, unknown>>(
+    params: AIRerankParams<VALUE>
+  ): Promise<AIRerankResult<VALUE>> {
+    const result = await rerank({
+      model: this.getModel(params.model, 'reranking'),
+      query: params.query,
+      documents: params.documents as any,
+      topN: params.topK,
+      providerOptions: params.providerOptions as any,
+      maxRetries: params.maxRetries,
+      abortSignal: params.abortSignal,
+      headers: params.headers,
+    })
+
+    return {
+      ranking: result.ranking.map((entry) => ({
+        index: entry.originalIndex,
+        document: entry.document as VALUE,
+        score: entry.score,
+      })),
+      rerankedDocuments: result.rerankedDocuments as VALUE[],
+      originalDocuments: result.originalDocuments as VALUE[],
+      providerMetadata: result.providerMetadata,
+      response: result.response,
     }
   }
 }
