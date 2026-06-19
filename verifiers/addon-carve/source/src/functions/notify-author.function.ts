@@ -7,7 +7,7 @@ export const notifyAuthor = pikkuSessionlessFunc<
   { postId: string },
   { sentAt: string }
 >({
-  func: async ({ kysely, email, clock }, { postId }) => {
+  func: async ({ kysely, email, clock, auditLogger }, { postId }) => {
     const post = await kysely
       .selectFrom('post')
       .where('id', '=', postId)
@@ -21,6 +21,7 @@ export const notifyAuthor = pikkuSessionlessFunc<
       .executeTakeFirstOrThrow()
 
     await email.send(author.email, 'Your post is live', post.title)
+    auditLogger.info(`notified ${author.email} about ${post.title}`)
     return { sentAt: clock.now().toISOString() }
   },
   expose: true,

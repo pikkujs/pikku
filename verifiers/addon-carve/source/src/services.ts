@@ -25,6 +25,7 @@ export const createSingletonServices = pikkuServices(async (config) => {
     kysely: new Kysely<DB>({ dialect: {} as any }),
     email: { send: async () => {} },
     clock: { now: () => new Date() },
+    auditLogger: new ConsoleLogger(),
   }
 })
 

@@ -1115,18 +1115,29 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
             members: [],
             imports: [],
             files: {},
+            packages: [],
             unsupported: requiredServicesList.filter(
               (s) => !BASE_SERVICES.has(s) && s !== 'kysely'
             ),
           }
       Object.assign(addonFiles, svc.files)
+      // A package-typed service is re-imported from its package, which must
+      // resolve when the addon — and its consumer — compiles.
+      if (svc.packages.length > 0) {
+        const pkg = JSON.parse(addonFiles['package.json']!)
+        for (const p of svc.packages) {
+          pkg.peerDependencies = { ...pkg.peerDependencies, [p]: '*' }
+          pkg.devDependencies = { ...pkg.devDependencies, [p]: '*' }
+        }
+        addonFiles['package.json'] = JSON.stringify(pkg, null, 2)
+      }
       // Gate (mirrors the raw-SQL gate): a service whose type can't be carved
       // from the source would leave the factory destructuring an undeclared
       // service — a non-compiling addon. Refuse rather than ship it broken.
       if (svc.unsupported.length > 0) {
         logger.error(
           `Carved functions use service(s) the addon can't type from the source: ${svc.unsupported.join(', ')}. ` +
-            `Their types resolve through an external package or a sibling-imported file, which the carve can't copy cleanly. ` +
+            `Their types resolve through a sibling-imported local file, which the carve can't copy cleanly. ` +
             `Declare them on the addon's SingletonServices manually, or exclude the functions using them.`
         )
         process.exit(1)

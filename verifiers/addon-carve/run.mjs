@@ -54,15 +54,18 @@ const addons = [
     ownedTables: ['post', 'user'],
     services: ['kysely'],
   },
-  // Multi-service addon: `notifyAuthor` uses `kysely` (post + user) AND two
-  // user-defined services (`email`, `clock`). The addon must require all three
-  // as parent services and copy each user service's type into its own surface.
+  // Multi-service addon: `notifyAuthor` uses `kysely` (post + user), two
+  // user-defined services (`email`, `clock`) carved by copying their local
+  // types, AND `auditLogger` typed by an external package (`@pikku/core`) —
+  // carved by re-import + a peer dep, not a copy.
   {
     name: 'notifyaddon',
     names: 'notifyAuthor',
     ownedTables: ['post', 'user'],
-    services: ['clock', 'email', 'kysely'],
+    services: ['auditLogger', 'clock', 'email', 'kysely'],
     serviceTypeFiles: ['email-service.ts', 'clock-service.ts'],
+    packageImports: ["import type { Logger } from '@pikku/core/services'"],
+    packageDeps: ['@pikku/core'],
   },
 ]
 
@@ -110,6 +113,32 @@ const assertServiceShake = (addonDir, services, typeFiles) => {
   )
 }
 
+// Assert a package-typed service was carved by RE-IMPORT (not copied): the type
+// is imported from its package in application-types, and the package is added as
+// a peer dependency so it resolves for the addon and its consumer.
+const assertPackageReimport = (addonDir, packageImports, packageDeps) => {
+  const appTypes = readFileSync(
+    join(addonDir, 'types/application-types.d.ts'),
+    'utf-8'
+  )
+  for (const imp of packageImports ?? []) {
+    assert.ok(
+      appTypes.includes(imp),
+      `expected re-import "${imp}" in application-types:\n${appTypes}`
+    )
+  }
+  const pkg = JSON.parse(readFileSync(join(addonDir, 'package.json'), 'utf-8'))
+  for (const dep of packageDeps ?? []) {
+    assert.ok(
+      pkg.peerDependencies?.[dep],
+      `expected peer dependency '${dep}' for a re-imported service type`
+    )
+  }
+  console.log(
+    `[addon-carve] ✓ package re-import: ${(packageDeps ?? []).join(', ')}`
+  )
+}
+
 const assertDbShake = (addonDir, owned) => {
   const scoped = readFileSync(
     join(addonDir, 'types/addon-db.gen.ts'),
@@ -147,7 +176,15 @@ rmSync(genDir, { recursive: true, force: true })
 mkdirSync(genDir, { recursive: true })
 mkdirSync(join(root, 'node_modules/@pikku'), { recursive: true })
 
-for (const { name, names, ownedTables, services, serviceTypeFiles } of addons) {
+for (const {
+  name,
+  names,
+  ownedTables,
+  services,
+  serviceTypeFiles,
+  packageImports,
+  packageDeps,
+} of addons) {
   console.log(`\n[addon-carve] 2. carve addon '${name}' (--names ${names})`)
   run(
     'node',
@@ -159,6 +196,8 @@ for (const { name, names, ownedTables, services, serviceTypeFiles } of addons) {
   if (ownedTables) assertDbShake(addonDir, ownedTables)
   if (services) assertServiceRequirement(addonDir, services)
   if (serviceTypeFiles) assertServiceShake(addonDir, services, serviceTypeFiles)
+  if (packageImports || packageDeps)
+    assertPackageReimport(addonDir, packageImports, packageDeps)
 
   console.log(`[addon-carve] 3. build addon '${name}'`)
   run('node', [cli, 'all'], addonDir)

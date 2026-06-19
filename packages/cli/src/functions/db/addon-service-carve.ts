@@ -17,7 +17,9 @@ export interface ServiceCarveResult {
   imports: string[]
   /** type files to ship with the addon, keyed `types/<basename>`. */
   files: Record<string, string>
-  /** services whose type couldn't be carved cleanly — caller warns. */
+  /** packages to add as peer/dev deps (services typed via an external package). */
+  packages: string[]
+  /** services whose type couldn't be carved cleanly — caller gates. */
   unsupported: string[]
 }
 
@@ -104,6 +106,12 @@ function moduleName(fileName: string): string {
   return basename(fileName).replace(/\.d\.ts$|\.tsx?$/, '')
 }
 
+/** The installable package name from a (possibly sub-pathed) module specifier. */
+function packageName(spec: string): string {
+  const parts = spec.split('/')
+  return spec.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0]!
+}
+
 /**
  * Carve the user-defined (non-base, non-kysely) services the bundled functions
  * use into the addon: copy each service's declaring type file and emit the
@@ -112,10 +120,14 @@ function moduleName(fileName: string): string {
  *
  * The service type is resolved through the source `application-types` imports —
  * NOT by name — so a type sharing a name with one in a dependency (e.g. core's
- * own `EmailService`) can't be picked up by mistake. A service is supported when
- * every type its declaration references resolves to a self-contained local file
- * (no relative imports) or to a global/library type. Services typed via an
- * external package or a transitive local file are reported as unsupported.
+ * own `EmailService`) can't be picked up by mistake. Each referenced type is
+ * carved by origin:
+ *   - global/library type        → used as-is (no copy, no import)
+ *   - external-package type      → re-imported from the package, which is added
+ *                                  as a peer/dev dep (same as the kysely path)
+ *   - self-contained local file  → copied into the addon and imported
+ *   - sibling-importing local    → unsupported (transitive copy not chased)
+ * A service is supported unless one of its types is a transitive local file.
  */
 export function carveServiceTypes(
   program: ts.Program,
@@ -128,6 +140,7 @@ export function carveServiceTypes(
     members: [],
     imports: [],
     files: {},
+    packages: [],
     unsupported: [],
   }
   if (wanted.size === 0) return result
@@ -140,6 +153,7 @@ export function carveServiceTypes(
   const { decl, sourceFile: appTypesFile } = singleton
   const imports = importMap(appTypesFile)
   const importByModule = new Map<string, Set<string>>()
+  const packages = new Set<string>()
 
   for (const member of decl.members) {
     if (
@@ -154,19 +168,29 @@ export function carveServiceTypes(
     if (!wanted.has(service)) continue
 
     const typeText = member.type.getText(appTypesFile)
+    // Imports this service's declaration needs, by module specifier.
+    const refImports = new Map<string, Set<string>>()
     const toCopy: { sf: ts.SourceFile; name: string }[] = []
+    const pkgDeps: string[] = []
     let ok = true
+
+    const addRefImport = (mod: string, name: string) => {
+      if (!refImports.has(mod)) refImports.set(mod, new Set())
+      refImports.get(mod)!.add(name)
+    }
 
     for (const ref of collectTypeRefs(member.type)) {
       const spec = imports.get(ref)
-      if (!spec) continue // not imported → global/library type, no copy needed
+      if (!spec) continue // not imported → global/library type, nothing to do
       if (!spec.startsWith('.')) {
-        ok = false // typed via an external package — can't carve cleanly
-        break
+        // External package: re-import from it, add the package as a dep.
+        addRefImport(spec, ref)
+        pkgDeps.push(packageName(spec))
+        continue
       }
       const sf = resolveLocal(program, appTypesFile.fileName, spec)
       if (!sf || hasRelativeImports(sf)) {
-        ok = false
+        ok = false // transitive local file — not chased
         break
       }
       toCopy.push({ sf, name: ref })
@@ -178,10 +202,13 @@ export function carveServiceTypes(
 
     for (const { sf, name } of toCopy) {
       result.files[`types/${basename(sf.fileName)}`] = sf.text
-      const mod = `./${moduleName(sf.fileName)}.js`
-      if (!importByModule.has(mod)) importByModule.set(mod, new Set())
-      importByModule.get(mod)!.add(name)
+      addRefImport(`./${moduleName(sf.fileName)}.js`, name)
     }
+    for (const [mod, names] of refImports) {
+      if (!importByModule.has(mod)) importByModule.set(mod, new Set())
+      for (const n of names) importByModule.get(mod)!.add(n)
+    }
+    for (const p of pkgDeps) packages.add(p)
     result.members.push(`  ${service}: ${typeText}`)
   }
 
@@ -190,5 +217,6 @@ export function carveServiceTypes(
       `import type { ${[...names].sort().join(', ')} } from '${mod}'`
     )
   }
+  result.packages = [...packages].sort()
   return result
 }
