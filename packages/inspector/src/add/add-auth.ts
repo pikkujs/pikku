@@ -195,9 +195,7 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
   if (config && ts.isObjectLiteralExpression(config)) {
     basePath = readStringProp(config, 'basePath') ?? DEFAULT_BASE_PATH
 
-    // `session: { cookieCache: { enabled: true } }` — when present (and not
-    // explicitly disabled) the signed session snapshot lives in the cookie, so
-    // the global session middleware can be verified statelessly.
+    // Detect `session.cookieCache.enabled` → drives the stateless middleware split.
     const session = readObjectProp(config, 'session')
     if (session) {
       const cookieCacheBlock = readObjectProp(session, 'cookieCache')

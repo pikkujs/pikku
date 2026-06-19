@@ -82,10 +82,7 @@ export async function runBuildPipeline(options: {
   ) => unknown
   deployDir?: string
   outDir?: string
-  /**
-   * Emit `.js.map` sourcemaps and persist `metafile.json` per unit. Defaults to
-   * `false` — these are debug-only artifacts that dominate deploy upload size.
-   */
+  /** Emit sourcemaps + per-unit `metafile.json` (debug-only). Default false. */
   debugArtifacts?: boolean
   logger: BuildLogger
 }): Promise<BuildPipelineResult> {

@@ -102,17 +102,9 @@ interface BundleUnitOptions {
   platform?: 'node' | 'neutral' | 'browser'
   format?: 'esm' | 'cjs'
   noRequireShim?: boolean
-  /**
-   * Emit a `.js.map` sourcemap next to the bundle. Defaults to `false`.
-   * Sourcemaps are ~2x the bundle size and are never needed at runtime — they
-   * dominate deploy upload time. Enable only for debugging via the deploy flag.
-   */
+  /** Emit a `.js.map` sourcemap next to the bundle (debug-only). Default false. */
   sourcemap?: boolean
-  /**
-   * Write esbuild's metafile to `metafile.json` on disk. Defaults to `false`.
-   * The metafile is always generated in-memory (it drives dependency
-   * extraction); this only controls whether it is persisted as an artifact.
-   */
+  /** Persist esbuild's metafile to `metafile.json` (debug-only). Default false. */
   emitMetafile?: boolean
 }
 
@@ -204,9 +196,8 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     plugins: [createDeadModuleStubPlugin(deadPatterns)],
   })
 
-  // The metafile is always produced in-memory (it drives dependency
-  // extraction below). Only persist it as an on-disk artifact when explicitly
-  // requested — it is large (~1.6MB/unit) and never needed at runtime.
+  // Always produced in-memory (drives dependency extraction); only persisted
+  // when requested — it's large (~1.6MB/unit) and never needed at runtime.
   if (emitMetafile) {
     const metafileJson = JSON.stringify(result.metafile, null, 2)
     await writeFile(metafilePath, metafileJson, 'utf-8')

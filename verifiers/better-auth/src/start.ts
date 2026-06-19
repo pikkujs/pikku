@@ -59,16 +59,10 @@ function extractSessionCookie(res: Response): string | null {
   return match && match[2] ? `${match[1]}=${match[2]}` : null
 }
 
-/**
- * Build a full `Cookie` header from *every* Set-Cookie the response carried —
- * crucially including `better-auth.session_data` (the signed {session,user}
- * cookie cache), which `extractSessionCookie` deliberately ignores. The
- * stateless middleware reads that cache cookie, so the round-trip test needs it.
- */
+/** Full `Cookie` header from every Set-Cookie, including `session_data` (the
+ * cookie cache the stateless middleware reads). */
 function extractAllCookies(res: Response): string {
-  // undici's Headers exposes getSetCookie() which returns each Set-Cookie as a
-  // discrete entry — the only reliable way to split multiple cookies, since a
-  // single comma-joined header is ambiguous (cookie values contain commas).
+  // getSetCookie() splits multiple cookies reliably (comma-join is ambiguous).
   const entries =
     typeof (res.headers as any).getSetCookie === 'function'
       ? ((res.headers as any).getSetCookie() as string[])
@@ -147,9 +141,7 @@ async function main(): Promise<void> {
     'global session middleware decodes cookie into pikku session on /me',
     async () => {
       const signupRes = await signUp('dave@example.com', 'password123')
-      // cookieCache is enabled, so the CLI wires the *stateless* session
-      // middleware globally — it reads the signed `session_data` cache cookie,
-      // so the request must carry the full cookie set, not just session_token.
+      // Global middleware is stateless (cookieCache on), so send session_data too.
       const cookie = extractAllCookies(signupRes)
       assertTruthy(cookie, 'session cookie')
 
@@ -180,9 +172,7 @@ async function main(): Promise<void> {
       const expectedUserId = ((await sessionRes.json()) as any)?.user?.id
       assertTruthy(expectedUserId, 'user id from get-session')
 
-      // Drive the stateless middleware directly with the *same* cookie the
-      // server just wrote. This is the one fact inspection can't establish:
-      // does getCookieCache(secret) actually read what cookieCache writes?
+      // Drive the stateless middleware with the same cookie the server wrote.
       const headers = new Headers({ cookie: cookieHeader })
       let captured: any = null
       const mw = betterAuthStatelessSession()

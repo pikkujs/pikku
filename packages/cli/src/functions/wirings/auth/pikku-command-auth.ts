@@ -40,9 +40,7 @@ export const pikkuAuth = pikkuSessionlessFunc<void, void>({
     await writeFileInDir(logger, authFile, wiring)
     await writeFileInDir(logger, secretsFile, secrets)
 
-    // When cookieCache is enabled the global `*` session middleware is split
-    // into its own file so it can be bundled into every unit without the
-    // better-auth server (kept in authFile). See serializeAuthGen.
+    // Stateless split: session middleware in its own file (see serializeAuthGen).
     const middlewareFile = join(dirname(authFile), 'auth-middleware.gen.ts')
     if (middleware) {
       await writeFileInDir(logger, middlewareFile, middleware)

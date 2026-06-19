@@ -318,15 +318,8 @@ export interface AuthDefinition {
    *  `auth-meta.gen.json` so the console SSO page can show which plugins are
    *  enabled. */
   plugins: string[]
-  /**
-   * Whether `session.cookieCache` is enabled in the better-auth config. When
-   * true the session `{ user, session }` snapshot is signed into the cookie, so
-   * the generated global `*` session middleware can verify it statelessly
-   * (`betterAuthStatelessSession`, secret-only, no DB) instead of calling
-   * `services.auth().api.getSession()` — which would otherwise pull the entire
-   * better-auth server into every unit. Drives the auth codegen middleware
-   * split (see serializeAuthGen). Absent/false ⇒ full, stateful middleware.
-   */
+  /** Whether `session.cookieCache` is enabled — drives the stateless session
+   * middleware split in the auth codegen. Absent/false ⇒ stateful middleware. */
   cookieCache?: boolean
   /**
    * Singleton services the generated auth handler must have available at

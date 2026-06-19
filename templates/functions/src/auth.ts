@@ -37,10 +37,8 @@ export const auth = pikkuBetterAuth(
       secret: BETTER_AUTH_SECRET,
       database: { db: kysely, type: 'sqlite' },
       emailAndPassword: { enabled: true },
-      // Sign the session snapshot into the cookie so the global session
-      // middleware can be verified statelessly (betterAuthStatelessSession) —
-      // every non-auth worker then avoids bundling the full better-auth server.
-      // The pikku CLI detects this and splits the middleware accordingly.
+      // Enables the stateless session middleware split (CLI detects this), so
+      // non-auth workers skip bundling the full better-auth server.
       session: { cookieCache: { enabled: true } },
       socialProviders: {
         ...(GITHUB_OAUTH ? { github: GITHUB_OAUTH } : {}),

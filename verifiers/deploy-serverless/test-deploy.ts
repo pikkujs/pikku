@@ -28,9 +28,7 @@ execSync(`node ${PIKKU_BIN}`, {
   timeout: 60_000,
 })
 execSync(
-  // --debug-artifacts emits per-unit esbuild metafiles (off by default since
-  // lean-artifacts) so the bundle tree-shaking checks below can read what each
-  // unit's bundle actually contains.
+  // --debug-artifacts emits per-unit metafiles for the tree-shaking checks below.
   `node ${PIKKU_BIN} deploy plan --provider serverless --debug-artifacts --result-file .deploy/serverless/plan-result.json`,
   {
     cwd: FUNCTIONS_DIR,
@@ -306,17 +304,8 @@ check('every unit has entry.ts', () => {
 })
 
 // --- Bundle tree-shaking (what each unit actually bundles) ---
-//
-// Goal: every unit is tiny and only bundles what it needs. Two heavy SDKs must
-// stay out of units that don't use them:
-//   1. The AI SDK (@ai-sdk / `ai`) — only AI-using units may bundle it.
-//   2. The better-auth *server* (db adapters, /api routes, kysely adapter) —
-//      only the auth handler unit bundles it. Every other unit verifies the
-//      session statelessly from a signed cookie (betterAuthStatelessSession +
-//      better-auth/cookies), which is a tiny fraction of the full server.
-//
-// Asserted structurally (which modules contribute bytes), not as a KB number,
-// so the check stays correct as bundle sizes drift.
+// Assert structurally (which modules contribute bytes), not as a KB number, that
+// the AI SDK and the better-auth server stay out of units that don't use them.
 
 /** Module paths that actually contribute bytes to a unit's bundle output. */
 function bundledModules(unitName: string): string[] {
