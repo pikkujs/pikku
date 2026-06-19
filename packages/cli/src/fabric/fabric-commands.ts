@@ -59,6 +59,10 @@ import {
   FabricValidate,
   renderValidate,
 } from './functions/validate.function.js'
+import {
+  FabricSmoke,
+  renderSmoke,
+} from './functions/smoke.function.js'
 
 export const fabricCommands = defineCLICommands({
   validate: pikkuCLICommand({
@@ -66,6 +70,27 @@ export const fabricCommands = defineCLICommands({
     render: renderValidate,
     description:
       'Check the project structure for fabric compatibility — prints all missing or misconfigured items with fix hints',
+  }),
+  smoke: pikkuCLICommand({
+    func: FabricSmoke,
+    render: renderSmoke,
+    description:
+      'Run a clean-room Fabric smoke test: temp worktree, install, codegen, migrate, and verify pikku dev startup',
+    options: {
+      keepTemp: {
+        description: 'Keep the temp worktree even on success',
+        default: false,
+      },
+      timeoutSeconds: {
+        description: 'Per-step timeout for install/build/codegen commands',
+      },
+      startupTimeoutSeconds: {
+        description: 'Timeout for waiting on pikku dev /health-check',
+      },
+      port: {
+        description: 'Port to use for the temporary pikku dev startup check',
+      },
+    },
   }),
   login: pikkuCLICommand({
     func: FabricLogin,
