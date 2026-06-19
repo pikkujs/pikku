@@ -1,7 +1,11 @@
 import type { Logger } from '@pikku/core/services'
 import { LogLevel } from '@pikku/core/services'
 import type { PikkuChannel } from '@pikku/core/channel'
-import type { ErrorCode, CodedDiagnostic } from '@pikku/inspector'
+import type {
+  ErrorCode,
+  CodedDiagnostic,
+  DiagnosticSeverity,
+} from '@pikku/inspector'
 
 /**
  * Log message structure sent through the channel
@@ -105,5 +109,14 @@ export class CLILoggerForwarder implements Logger {
   hasCriticalErrors(): boolean {
     // The underlying logger (CLILogger) tracks critical errors
     return (this.logger as any).hasCriticalErrors?.() ?? false
+  }
+
+  hasBlockingDiagnostics(): boolean {
+    // The underlying logger (CLILogger) owns failOn + diagnostic tracking
+    return (this.logger as any).hasBlockingDiagnostics?.() ?? false
+  }
+
+  blockingSeverities(): DiagnosticSeverity[] {
+    return (this.logger as any).blockingSeverities?.() ?? []
   }
 }

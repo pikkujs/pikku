@@ -125,3 +125,64 @@ describe('CLILogger json output mode', () => {
     assert.ok(!textLines[0]!.startsWith('{'))
   })
 })
+
+describe('CLILogger diagnostic severity gate', () => {
+  const silentLogger = () => {
+    const logger = new CLILogger({ logLogo: false, silent: true })
+    logger.setOutputMode('json')
+    return logger
+  }
+
+  test('default: only critical diagnostics block the build', () => {
+    const logger = silentLogger()
+    captureStderr(() => {
+      logger.diagnostic({
+        severity: 'error',
+        code: 'PKU910' as any,
+        message: 'secret leak',
+      })
+    })
+    assert.strictEqual(logger.hasBlockingDiagnostics(), false)
+    assert.deepStrictEqual(logger.blockingSeverities(), [])
+    assert.strictEqual(logger.hasCriticalErrors(), false)
+  })
+
+  test('critical always blocks regardless of failOn', () => {
+    const logger = silentLogger()
+    captureStderr(() => {
+      logger.critical('PKU111' as any, 'duplicate name')
+    })
+    assert.strictEqual(logger.hasBlockingDiagnostics(), true)
+    assert.deepStrictEqual(logger.blockingSeverities(), ['critical'])
+    assert.strictEqual(logger.hasCriticalErrors(), true)
+  })
+
+  test('setFailOn(["error"]) makes error-severity diagnostics block', () => {
+    const logger = silentLogger()
+    logger.setFailOn(['error'])
+    captureStderr(() => {
+      logger.diagnostic({
+        severity: 'error',
+        code: 'PKU910' as any,
+        message: 'secret leak',
+      })
+    })
+    assert.strictEqual(logger.hasBlockingDiagnostics(), true)
+    assert.deepStrictEqual(logger.blockingSeverities(), ['error'])
+    // error is not critical
+    assert.strictEqual(logger.hasCriticalErrors(), false)
+  })
+
+  test('warn-severity does not block under --fail-on-error', () => {
+    const logger = silentLogger()
+    logger.setFailOn(['error'])
+    captureStderr(() => {
+      logger.diagnostic({
+        severity: 'warn',
+        code: 'PKU910' as any,
+        message: 'heads up',
+      })
+    })
+    assert.strictEqual(logger.hasBlockingDiagnostics(), false)
+  })
+})
