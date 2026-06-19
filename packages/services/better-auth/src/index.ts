@@ -1,6 +1,8 @@
 export { createAuthHandler } from './auth-handler.js'
 export { createResolvedAuthGetter, getAuthSession } from './auth-api.js'
 export { betterAuthSession } from './auth-session.js'
+export { betterAuthStatelessSession } from './auth-session-stateless.js'
+export type { BetterAuthStatelessSessionOptions } from './auth-session-stateless.js'
 export { pikkuBetterAuth, PIKKU_BETTER_AUTH } from './define-auth.js'
 export type {
   PikkuBetterAuthFactory,

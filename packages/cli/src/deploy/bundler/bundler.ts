@@ -102,6 +102,18 @@ interface BundleUnitOptions {
   platform?: 'node' | 'neutral' | 'browser'
   format?: 'esm' | 'cjs'
   noRequireShim?: boolean
+  /**
+   * Emit a `.js.map` sourcemap next to the bundle. Defaults to `false`.
+   * Sourcemaps are ~2x the bundle size and are never needed at runtime — they
+   * dominate deploy upload time. Enable only for debugging via the deploy flag.
+   */
+  sourcemap?: boolean
+  /**
+   * Write esbuild's metafile to `metafile.json` on disk. Defaults to `false`.
+   * The metafile is always generated in-memory (it drives dependency
+   * extraction); this only controls whether it is persisted as an artifact.
+   */
+  emitMetafile?: boolean
 }
 
 /**
@@ -123,6 +135,8 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     define,
     platform,
     format,
+    sourcemap,
+    emitMetafile,
   } = options
 
   await mkdir(unitOutputDir, { recursive: true })
@@ -181,7 +195,7 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     target: 'es2022',
     outfile: bundlePath,
     minify: false,
-    sourcemap: true,
+    sourcemap: sourcemap ?? false,
     logLevel: 'warning',
     loader: { '.ts': 'ts' },
     external: externals ?? ['node:*'],
@@ -190,9 +204,13 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     plugins: [createDeadModuleStubPlugin(deadPatterns)],
   })
 
-  // Write metafile
-  const metafileJson = JSON.stringify(result.metafile, null, 2)
-  await writeFile(metafilePath, metafileJson, 'utf-8')
+  // The metafile is always produced in-memory (it drives dependency
+  // extraction below). Only persist it as an on-disk artifact when explicitly
+  // requested — it is large (~1.6MB/unit) and never needed at runtime.
+  if (emitMetafile) {
+    const metafileJson = JSON.stringify(result.metafile, null, 2)
+    await writeFile(metafilePath, metafileJson, 'utf-8')
+  }
 
   // Extract dependencies and generate minimal package.json
   const { exactDependencies, exactOptionalDependencies } =
@@ -282,6 +300,8 @@ export async function bundleUnits(
     platform?: 'node' | 'neutral' | 'browser'
     format?: 'esm' | 'cjs'
     noRequireShim?: boolean
+    sourcemap?: boolean
+    emitMetafile?: boolean
     resolveOutputDir?: (unit: DeploymentUnit, baseOutputDir: string) => string
   }
 ): Promise<BundleOutput> {

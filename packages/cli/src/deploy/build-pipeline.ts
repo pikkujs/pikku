@@ -82,6 +82,11 @@ export async function runBuildPipeline(options: {
   ) => unknown
   deployDir?: string
   outDir?: string
+  /**
+   * Emit `.js.map` sourcemaps and persist `metafile.json` per unit. Defaults to
+   * `false` — these are debug-only artifacts that dominate deploy upload size.
+   */
+  debugArtifacts?: boolean
   logger: BuildLogger
 }): Promise<BuildPipelineResult> {
   const {
@@ -90,6 +95,7 @@ export async function runBuildPipeline(options: {
     provider,
     inspectorState,
     getEntryContext,
+    debugArtifacts,
     logger,
   } = options
   const deployDir = options.deployDir ?? join(projectDir, '.deploy')
@@ -153,6 +159,8 @@ export async function runBuildPipeline(options: {
         platform: provider.getPlatform?.(),
         format: provider.getFormat?.(),
         noRequireShim: provider.getNoRequireShim?.(),
+        sourcemap: debugArtifacts,
+        emitMetafile: debugArtifacts,
       }
     )
     bundled = bundleResult.results
@@ -305,6 +313,8 @@ export async function runBuildPipeline(options: {
           platform: provider.getPlatform?.(),
           format: provider.getFormat?.(),
           noRequireShim: provider.getNoRequireShim?.(),
+          sourcemap: debugArtifacts,
+          emitMetafile: debugArtifacts,
           resolveOutputDir: (unit) => join(unitsDir, unit.name),
         }
       )
@@ -334,6 +344,8 @@ export async function runBuildPipeline(options: {
           platform: 'node',
           format: 'esm',
           noRequireShim: false,
+          sourcemap: debugArtifacts,
+          emitMetafile: debugArtifacts,
           resolveOutputDir: () => containerDir,
         }
       )

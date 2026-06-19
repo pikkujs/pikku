@@ -225,7 +225,12 @@ async function runDeploy(
 }
 
 export const deployApply = pikkuSessionlessFunc<
-  { fromPlan?: boolean; provider?: string; resultFile?: string },
+  {
+    fromPlan?: boolean
+    provider?: string
+    resultFile?: string
+    debugArtifacts?: boolean
+  },
   void
 >({
   func: async ({ logger, config, getInspectorState }, data) => {
@@ -269,6 +274,7 @@ export const deployApply = pikkuSessionlessFunc<
       serverlessIncompatible: config.deploy?.serverlessIncompatible,
       getEntryContext,
       outDir: config.outDir,
+      debugArtifacts: data?.debugArtifacts ?? false,
       logger,
     })
 

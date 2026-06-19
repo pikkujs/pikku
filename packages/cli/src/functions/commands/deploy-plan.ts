@@ -52,7 +52,7 @@ function createEmptyProvider(): DeployProvider {
 }
 
 export const deployPlan = pikkuSessionlessFunc<
-  { resultFile?: string; provider?: string },
+  { resultFile?: string; provider?: string; debugArtifacts?: boolean },
   void
 >({
   func: async ({ logger, config, getInspectorState }, data) => {
@@ -69,6 +69,7 @@ export const deployPlan = pikkuSessionlessFunc<
       serverlessIncompatible: config.deploy?.serverlessIncompatible,
       getEntryContext,
       outDir: config.outDir,
+      debugArtifacts: data?.debugArtifacts ?? false,
       logger,
     })
 
