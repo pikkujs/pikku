@@ -4,6 +4,7 @@ import { pikkuSessionlessFunc, wireAddon } from '#pikku'
 // functions via RPC, type-checked against each addon's published surface.
 wireAddon({ name: 'greeter', package: '@pikku/addon-greeter' })
 wireAddon({ name: 'farewell', package: '@pikku/addon-farewell' })
+wireAddon({ name: 'dbpost', package: '@pikku/addon-dbpost' })
 
 export type ConsumeInput = { name: string }
 export type ConsumeOutput = { message: string }
@@ -21,3 +22,14 @@ export const consumeFarewell = pikkuSessionlessFunc<ConsumeInput, ConsumeOutput>
     },
   }
 )
+
+// The carved DB addon: the consumer calls it via RPC, type-checked against the
+// addon's published surface (which is scoped to the tables it owns).
+export const consumeCreatePost = pikkuSessionlessFunc<
+  { title: string; authorId: string },
+  { id: string }
+>({
+  func: async (_services, data, { rpc }) => {
+    return await rpc.invoke('dbpost:createPost', data)
+  },
+})

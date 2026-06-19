@@ -9,7 +9,11 @@ import ts from 'typescript'
 import { pikkuSessionlessFunc } from '#pikku'
 import { assignBundlePaths, selectBundledFunctions } from './addon-bundle.js'
 import { checkRawSqlOwnership } from '../db/addon-table-discovery.js'
-import { generateAddonServices } from '../db/addon-assembly.js'
+import {
+  generateAddonServices,
+  generateScopedDbTypes,
+} from '../db/addon-assembly.js'
+import { carveDbAddon } from '../db/addon-db-carve.js'
 import {
   parseOpenAPISpec,
   computeContractHash,
@@ -905,6 +909,33 @@ export interface Services extends CoreServices<SingletonServices> {}
   }
 }
 
+/**
+ * application-types for a DB carve: kysely is declared scoped to the addon's
+ * owned tables (`AddonDB`), so the bundled functions only ever see what the
+ * addon owns — the type-level half of the DB shake.
+ */
+function dbApplicationTypes(): string {
+  return `import type {
+  CoreConfig,
+  CoreServices,
+  CoreSingletonServices,
+  CoreUserSession,
+} from '@pikku/core'
+import type { Kysely } from 'kysely'
+import type { AddonDB } from './addon-db.gen.js'
+
+export interface Config extends CoreConfig {}
+
+export interface UserSession extends CoreUserSession {}
+
+export interface SingletonServices extends CoreSingletonServices<Config> {
+  kysely: Kysely<AddonDB>
+}
+
+export interface Services extends CoreServices<SingletonServices> {}
+`
+}
+
 export const pikkuNewAddon = pikkuSessionlessFunc<
   {
     name: string
@@ -1077,15 +1108,69 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
           requiredServices.add(s)
         }
       }
-      const { write, remove, unsupported } = carveServiceFiles(vars, [
-        ...requiredServices,
-      ])
+      const requiredServicesList = [...requiredServices]
+      const { write, remove, unsupported } = carveServiceFiles(
+        vars,
+        requiredServicesList
+      )
       for (const path of remove) delete addonFiles[path]
       Object.assign(addonFiles, write)
       if (unsupported.length > 0) {
         logger.warn(
           `Carved functions use service(s) the addon can't auto-provide: ${unsupported.join(', ')}. ` +
             `Wire them into src/services.ts before publishing.`
+        )
+      }
+
+      // DB shake: if the bundled functions use kysely, scope the addon to the
+      // tables they actually own (compile-oracle) and ship the owned-table SQL +
+      // scoped DB type. kysely is declared as a required parent service.
+      if (requiredServices.has('kysely')) {
+        if (!state.program) {
+          logger.error(
+            'Cannot scope the DB addon: the inspector produced no TypeScript program.'
+          )
+          process.exit(1)
+        }
+        const carved = carveDbAddon({
+          addonName: name,
+          engine: 'sqlite', // TODO: derive the engine from the project config
+          program: state.program,
+          functionFiles: matched.map((f) => f.sourceFile),
+          requiredServices: requiredServicesList,
+          dbTypeName: 'DB', // TODO: discover the kysely DB type, don't assume `DB`
+        })
+        if ('error' in carved) {
+          logger.error(carved.error)
+          process.exit(1)
+        }
+        const { result, dbTypesContent } = carved
+        if (result.errors.length > 0) {
+          for (const e of result.errors) logger.error(e)
+          process.exit(1)
+        }
+        for (const w of result.warnings) logger.warn(w)
+
+        // Keep the scoped DB type in `types/` (not `.pikku/`, which `pikku all`
+        // owns and would clobber). It and db.types ship with the addon.
+        const dbFiles = { ...result.files }
+        delete dbFiles['.pikku/addon-db.gen.ts']
+        Object.assign(addonFiles, dbFiles)
+        addonFiles['types/db.types.ts'] = dbTypesContent
+        addonFiles['types/addon-db.gen.ts'] = generateScopedDbTypes(
+          result.owned,
+          "import type { DB } from './db.types.js'"
+        )
+        addonFiles['types/application-types.d.ts'] = dbApplicationTypes()
+
+        // kysely must resolve when the addon — and its consumer — compiles.
+        const pkg = JSON.parse(addonFiles['package.json']!)
+        pkg.peerDependencies = { ...pkg.peerDependencies, kysely: '*' }
+        pkg.devDependencies = { ...pkg.devDependencies, kysely: '*' }
+        addonFiles['package.json'] = JSON.stringify(pkg, null, 2)
+
+        logger.info(
+          `Carved DB addon owns table(s): ${result.owned.join(', ') || '(none)'}`
         )
       }
 

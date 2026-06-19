@@ -16,9 +16,16 @@
  * Any failing step exits non-zero, failing the verifier.
  */
 import { execFileSync } from 'node:child_process'
-import { rmSync, mkdirSync, symlinkSync, cpSync } from 'node:fs'
+import {
+  rmSync,
+  mkdirSync,
+  symlinkSync,
+  cpSync,
+  readFileSync,
+} from 'node:fs'
 import { join, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import assert from 'node:assert/strict'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '../..')
@@ -37,7 +44,43 @@ const run = (cmd, args, cwd) =>
 const addons = [
   { name: 'greeter', names: 'greet' },
   { name: 'farewell', names: 'farewell' },
+  // DB addon: carves only `createPost` (touches `post` + `user`). The source DB
+  // also has `auditLog` (used by the un-carved `writeAudit`) — it must NOT leak
+  // into this addon's owned set.
+  { name: 'dbpost', names: 'createPost', ownedTables: ['post', 'user'] },
 ]
+
+// Assert a carved DB addon scoped itself to a STRICT SUBSET of the source DB —
+// tsc passing alone would also pass an un-shaken `Kysely<DB>`, so this is what
+// actually proves the shake.
+const assertDbShake = (addonDir, owned) => {
+  const scoped = readFileSync(
+    join(addonDir, 'types/addon-db.gen.ts'),
+    'utf-8'
+  )
+  for (const t of owned) {
+    assert.ok(
+      scoped.includes(`'${t}'`),
+      `expected scoped AddonDB to own '${t}':\n${scoped}`
+    )
+  }
+  assert.ok(
+    !scoped.includes(`'auditLog'`),
+    `'auditLog' must NOT be owned by the addon (used only by an un-carved fn):\n${scoped}`
+  )
+
+  const sql = readFileSync(
+    join(addonDir, 'db/sqlite/0001-dbpost.sql'),
+    'utf-8'
+  )
+  assert.ok(/\bpost\b/.test(sql), `owned-table SQL must create 'post':\n${sql}`)
+  assert.ok(/\buser\b/.test(sql), `owned-table SQL must create 'user':\n${sql}`)
+  assert.ok(
+    !/audit/i.test(sql),
+    `owned-table SQL must NOT create 'auditLog':\n${sql}`
+  )
+  console.log(`[addon-carve] ✓ DB shake: addon owns exactly ${owned.join(', ')}`)
+}
 
 console.log('\n[addon-carve] 1. codegen source')
 run('node', [cli, 'all'], sourceDir)
@@ -46,7 +89,7 @@ rmSync(genDir, { recursive: true, force: true })
 mkdirSync(genDir, { recursive: true })
 mkdirSync(join(root, 'node_modules/@pikku'), { recursive: true })
 
-for (const { name, names } of addons) {
+for (const { name, names, ownedTables } of addons) {
   console.log(`\n[addon-carve] 2. carve addon '${name}' (--names ${names})`)
   run(
     'node',
@@ -55,6 +98,8 @@ for (const { name, names } of addons) {
   )
 
   const addonDir = join(genDir, name)
+  if (ownedTables) assertDbShake(addonDir, ownedTables)
+
   console.log(`[addon-carve] 3. build addon '${name}'`)
   run('node', [cli, 'all'], addonDir)
   run(tsc, [], addonDir)
