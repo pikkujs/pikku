@@ -1,0 +1,35 @@
+{
+  "name": "@pikku/verifiers-next-better-auth",
+  "type": "module",
+  "private": true,
+  "imports": {
+    "#pikku": "./.pikku/pikku-types.gen.ts",
+    "#pikku/*": "./.pikku/*"
+  },
+  "dependencies": {
+    "@pikku/better-auth": "workspace:*",
+    "@pikku/core": "workspace:*",
+    "@pikku/kysely": "workspace:*",
+    "@pikku/next": "workspace:*",
+    "@pikku/schema-cfworker": "workspace:*",
+    "better-auth": "^1.6.19",
+    "better-sqlite3": "^12.10.0",
+    "kysely": "^0.29.0",
+    "next": "15.5.12",
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^24",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9"
+  },
+  "scripts": {
+    "pikku": "pikku",
+    "test": "pikku && npx tsx ../write-js-shims.ts ./.pikku ./src && npx tsx src/start.ts"
+  }
+}

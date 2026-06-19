@@ -1,0 +1,34 @@
+{
+  "name": "@pikku/tanstack-start",
+  "version": "0.12.0",
+  "license": "MIT",
+  "author": "yasser.fadl@gmail.com",
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "tsc": "tsc",
+    "ncu": "npx npm-check-updates",
+    "build": "tsc -b",
+    "release": "npm run build && npm test",
+    "test": "bash run-tests.sh",
+    "test:watch": "bash run-tests.sh --watch",
+    "test:coverage": "bash run-tests.sh --coverage",
+    "prepublishOnly": "yarn build"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "peerDependencies": {
+    "@pikku/better-auth": "^0.12.7",
+    "@pikku/core": "^0.12.34",
+    "@tanstack/react-start": "^1.0.0",
+    "better-auth": "^1.6.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
