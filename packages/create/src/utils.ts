@@ -99,35 +99,32 @@ export function replaceFunctionReferences(
 ): void {
   const pikkuDir = stackblitz ? 'pikku-gen' : '.pikku'
 
+  const toImportPath = (fromFilePath: string, toPath: string): string => {
+    let relativePath = path.relative(path.dirname(fromFilePath), toPath)
+    relativePath = relativePath.replaceAll(path.sep, '/')
+    if (!relativePath.startsWith('./') && !relativePath.startsWith('../')) {
+      relativePath = `./${relativePath}`
+    }
+    return relativePath
+  }
+
   const replaceInFile = (filePath: string): void => {
     let content = fs.readFileSync(filePath, 'utf-8')
 
-    // Determine if this file is in a client directory
-    const isInClientDir =
-      filePath.includes(`${path.sep}client${path.sep}`) ||
-      filePath.includes(`${path.sep}src${path.sep}client${path.sep}`)
+    const srcImportPath = `${toImportPath(filePath, path.join(targetPath, 'src'))}/`
+    const pikkuImportPath = `${toImportPath(filePath, path.join(targetPath, pikkuDir))}/`
+    const typesImportPath = `${toImportPath(filePath, path.join(targetPath, 'types'))}/`
+    const runTestsImportPath = toImportPath(
+      filePath,
+      path.join(targetPath, 'run-tests.sh')
+    )
 
-    let updatedContent = content
-
-    if (isInClientDir) {
-      // For files in client/, keep the relative path to src/
-      updatedContent = updatedContent
-        .replaceAll('../../functions/src/', '../src/')
-        .replaceAll('../functions/src/', '../src/')
-        .replaceAll('../../functions/.pikku/', `../${pikkuDir}/`)
-        .replaceAll('../functions/.pikku/', `../${pikkuDir}/`)
-        .replaceAll('../functions/types/', '../types/')
-        .replaceAll('../functions/run-tests.sh', 'run-tests.sh')
-    } else {
-      // For files in src/ or root, flatten to ./
-      updatedContent = updatedContent
-        .replaceAll('../../functions/src/', './')
-        .replaceAll('../functions/src/', './')
-        .replaceAll('../../functions/.pikku/', `../${pikkuDir}/`)
-        .replaceAll('../functions/types/', './types/')
-        .replaceAll('/.pikku', `/${pikkuDir}`)
-        .replaceAll('../functions/run-tests.sh', 'run-tests.sh')
-    }
+    const updatedContent = content
+      .replaceAll(/(?:\.\.\/)+functions\/src\//g, srcImportPath)
+      .replaceAll(/(?:\.\.\/)+functions\/\.pikku\//g, pikkuImportPath)
+      .replaceAll(/(?:\.\.\/)+functions\/types\//g, typesImportPath)
+      .replaceAll(/(?:\.\.\/)+functions\/run-tests\.sh/g, runTestsImportPath)
+      .replaceAll('/.pikku', `/${pikkuDir}`)
 
     fs.writeFileSync(filePath, updatedContent)
   }
