@@ -1,11 +1,12 @@
 import { existsSync } from 'fs'
 import { join } from 'path'
-import { mkdir, writeFile } from 'fs/promises'
+import { mkdir, readFile, writeFile } from 'fs/promises'
 import {
   createEmptyManifest,
   saveManifest,
 } from '../../utils/contract-versions.js'
 import { pikkuSessionlessFunc } from '#pikku'
+import { assignBundlePaths, resolveFilteredFunctions } from './addon-filter.js'
 import {
   parseOpenAPISpec,
   computeContractHash,
@@ -861,11 +862,12 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
     openapi?: string
     mcp?: boolean
     camelCase?: boolean
+    filter?: string
   },
   void
 >({
   func: async (
-    { logger, config },
+    { logger, config, getInspectorState },
     {
       name,
       displayName,
@@ -880,6 +882,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       openapi,
       mcp = false,
       camelCase = false,
+      filter,
     }
   ) => {
     name = sanitizeAddonName(name)
@@ -963,6 +966,40 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
         ...(camelCase ? { camelCase: true } : {}),
       }
       addonFiles['pikku.config.json'] = JSON.stringify(config, null, 2)
+    }
+
+    // Filter: bundle matching project functions into the addon and record the
+    // filter on the addon declaration so a later regeneration reattaches it.
+    if (filter) {
+      const state = await getInspectorState()
+      const meta = state.functions.meta ?? {}
+      const { matched, skipped } = resolveFilteredFunctions(meta, filter)
+      if (matched.length === 0) {
+        logger.error(`No functions matched filter "${filter}"`)
+        process.exit(1)
+      }
+
+      const bundled = assignBundlePaths(matched)
+      for (const { destPath, sourceFile } of bundled) {
+        try {
+          addonFiles[destPath] = await readFile(sourceFile, 'utf-8')
+        } catch {
+          logger.error(`Could not read bundled function source: ${sourceFile}`)
+          process.exit(1)
+        }
+      }
+
+      const cfg = JSON.parse(addonFiles['pikku.config.json'])
+      if (typeof cfg.addon === 'boolean' || !cfg.addon) cfg.addon = {}
+      cfg.addon.filter = filter
+      addonFiles['pikku.config.json'] = JSON.stringify(cfg, null, 2)
+
+      logger.info(
+        `Bundled ${bundled.length} function(s) matching "${filter}"` +
+          (skipped.length > 0
+            ? `; skipped ${skipped.length} without a source file (${skipped.join(', ')})`
+            : '')
+      )
     }
 
     const written = await writeFiles(addonDir, addonFiles)

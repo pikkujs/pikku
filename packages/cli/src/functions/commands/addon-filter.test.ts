@@ -1,6 +1,7 @@
 import { strict as assert } from 'assert'
 import { describe, test } from 'node:test'
 import {
+  assignBundlePaths,
   resolveFilteredFunctions,
   type FunctionMetaLike,
 } from './addon-filter.js'
@@ -76,5 +77,35 @@ describe('resolveFilteredFunctions', () => {
 
   test('throws on an empty filter', () => {
     assert.throws(() => resolveFilteredFunctions(meta, '  ,  '), /empty/)
+  })
+})
+
+describe('assignBundlePaths', () => {
+  test('places each function under src/functions by basename', () => {
+    const bundled = assignBundlePaths([
+      { id: 'a', name: 'a', sourceFile: '/p/src/functions/create-charge.function.ts' },
+      { id: 'b', name: 'b', sourceFile: '/p/src/functions/refund.function.ts' },
+    ])
+    assert.deepEqual(bundled, [
+      {
+        destPath: 'src/functions/create-charge.function.ts',
+        sourceFile: '/p/src/functions/create-charge.function.ts',
+      },
+      {
+        destPath: 'src/functions/refund.function.ts',
+        sourceFile: '/p/src/functions/refund.function.ts',
+      },
+    ])
+  })
+
+  test('disambiguates colliding basenames instead of overwriting', () => {
+    const bundled = assignBundlePaths([
+      { id: 'a', name: 'a', sourceFile: '/p/stripe/charge.function.ts' },
+      { id: 'b', name: 'b', sourceFile: '/p/legacy/charge.function.ts' },
+    ])
+    assert.deepEqual(
+      bundled.map((b) => b.destPath),
+      ['src/functions/charge.function.ts', 'src/functions/charge-2.function.ts']
+    )
   })
 })

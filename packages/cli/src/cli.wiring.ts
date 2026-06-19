@@ -574,6 +574,11 @@ wireCLI({
                 'Convert snake_case property names to camelCase in generated Zod schemas',
               default: false,
             },
+            filter: {
+              description:
+                'Bundle existing project functions whose tag or name matches the filter (comma-separated tokens) into the addon',
+              short: 'f',
+            },
           },
         }),
       },
