@@ -137,7 +137,10 @@
     "description": "All registered pikku functions across your project",
     "empty_message": "No functions found.",
     "search_placeholder": "Search functions...",
-    "select_function": "Select a function to view details"
+    "select_function": "Select a function to view details",
+    "panel_sections": "Function panel sections",
+    "tab_overview": "Overview",
+    "tab_tests": "Tests"
   },
   "overview": {
     "title": "Overview",
@@ -322,5 +325,10 @@
     "no_agent_selected": "No agent selected",
     "agent_not_found_description": "This agent may have been removed or renamed.",
     "select_agent_description": "Select an agent from the Agents page to open the playground."
+  },
+  "shell_header": {
+    "filters": "Filters",
+    "more_actions": "More actions",
+    "cycle_aria": "{{ariaLabel}}: {{label}}. Click to switch."
   }
 }

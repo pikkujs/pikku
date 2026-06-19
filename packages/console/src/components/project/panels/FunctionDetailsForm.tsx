@@ -13,6 +13,7 @@ import {
   Progress,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { CodeHighlight } from '@mantine/code-highlight'
 import { CheckCheck, FunctionSquare, LayoutList, Pencil } from 'lucide-react'
 import { useFunctionMeta, useSchema } from '../../../hooks/useWirings'
@@ -137,6 +138,7 @@ export const FunctionTabbedPanel: React.FC<FunctionDetailsFormProps> = ({
   functionName,
   metadata: passedMetadata,
 }) => {
+  const { t } = useI18n()
   const [tab, setTab] = useState<'overview' | 'tests'>('overview')
   const [editing, setEditing] = useState(false)
   const { activePanel, panels, closePanel, goBack } = usePanelContext()
@@ -154,13 +156,13 @@ export const FunctionTabbedPanel: React.FC<FunctionDetailsFormProps> = ({
       >
         {!editing && (
           <PikkuSwitch
-            ariaLabel="Function panel sections"
+            ariaLabel={t('functions.panel_sections')}
             value={tab}
             onChange={setTab}
             showAllLabels
             options={[
-              { value: 'overview', label: 'Overview', icon: <LayoutList size={15} /> },
-              { value: 'tests', label: 'Tests', icon: <CheckCheck size={15} /> },
+              { value: 'overview', label: t('functions.tab_overview'), icon: <LayoutList size={15} /> },
+              { value: 'tests', label: t('functions.tab_tests'), icon: <CheckCheck size={15} /> },
             ]}
           />
         )}

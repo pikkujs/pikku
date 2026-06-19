@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
+import type { I18nString } from '@pikku/react'
 import clsx from 'clsx'
 import classes from './PikkuSwitch.module.css'
 
@@ -6,7 +7,7 @@ type SwitchTone = 'default' | 'green' | 'red' | 'yellow' | 'blue'
 
 export interface PikkuSwitchOption<T extends string> {
   value: T
-  label: string
+  label: I18nString
   icon: ReactNode
   tone?: SwitchTone
   'data-testid'?: string
@@ -41,7 +42,7 @@ const TONE_VARS: Record<SwitchTone, CSSProperties> = {
 }
 
 interface PikkuSwitchProps<T extends string> {
-  ariaLabel: string
+  ariaLabel: I18nString
   value: T
   onChange: (value: T) => void
   options: Array<PikkuSwitchOption<T>>

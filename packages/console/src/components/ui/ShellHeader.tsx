@@ -12,8 +12,10 @@ import {
   Text,
   TextInput,
   Tooltip,
-} from '@mantine/core'
+} from '@pikku/mantine/core'
 import { useElementSize } from '@mantine/hooks'
+import { asI18n, type I18nNode, type I18nString } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
 import { ChevronDown, ListFilter, MoreHorizontal, Search } from 'lucide-react'
 import { PikkuSwitch, type PikkuSwitchOption } from './PikkuSwitch'
 
@@ -27,7 +29,7 @@ import { PikkuSwitch, type PikkuSwitchOption } from './PikkuSwitch'
    ========================================================================== */
 
 export interface ShellHeaderSelection<T extends string> {
-  ariaLabel: string
+  ariaLabel: I18nString
   value: T
   onChange: (value: T) => void
   options: Array<PikkuSwitchOption<T>>
@@ -35,14 +37,14 @@ export interface ShellHeaderSelection<T extends string> {
 
 export interface ShellHeaderFilterOption {
   value: string
-  label: string
+  label: I18nString
 }
 
 export interface ShellHeaderFilter {
   key: string
   /** Field name, e.g. "Status". */
-  label: string
-  /** With `options`: the selected option's value. Without: a display string. */
+  label: I18nString
+  /** With `options`: the selected option's value (a key). Without: a display value. */
   value: string
   options?: ShellHeaderFilterOption[]
   onChange?: (value: string) => void
@@ -52,7 +54,7 @@ export interface ShellHeaderFilter {
 }
 
 export interface ShellHeaderSearch {
-  placeholder: string
+  placeholder: I18nString
   value: string
   onChange: (value: string) => void
   /** Inline width in px (default 220). */
@@ -61,21 +63,21 @@ export interface ShellHeaderSearch {
 
 export interface ShellHeaderAction {
   key: string
-  label: string
+  label: I18nString
   icon?: ReactNode
   onClick?: () => void
   variant?: 'primary' | 'default' | 'subtle'
   disabled?: boolean
-  tooltip?: string
+  tooltip?: I18nString
   /** Always render icon-only (with tooltip), never showing the label. */
   iconOnly?: boolean
 }
 
 export interface ShellHeaderProps<T extends string = string> {
   /** Page title shown at the very start; the first thing to drop when narrow. */
-  title?: ReactNode
+  title?: I18nNode
   /** Status/count chip shown far left, already formatted (e.g. "6 · 1 error"). */
-  count?: ReactNode
+  count?: I18nNode
   /** Left selection control: PikkuSwitch when wide, a cycle button when narrow. */
   selection?: ShellHeaderSelection<T>
   /** Middle dropdown filters; overflow folds into a funnel → drawer. */
@@ -88,7 +90,7 @@ export interface ShellHeaderProps<T extends string = string> {
    *  have JSX buttons). Rendered after structured `actions`; not collapsed. */
   actionsNode?: ReactNode
   /** Heading for the collapsed-filters drawer (default "Filters"). */
-  filtersTitle?: string
+  filtersTitle?: I18nString
 }
 
 const GAP = 8
@@ -115,9 +117,11 @@ function partitionFilters(filters: ShellHeaderFilter[], visCount: number) {
   }
 }
 
-function filterDisplay(f: ShellHeaderFilter): string {
-  if (!f.options) return f.value
-  return f.options.find((o) => o.value === f.value)?.label ?? f.value
+// The display value is an option's already-translated label, or — with no
+// options — the raw filter value (an opaque value, hence asI18n, not English).
+function filterDisplay(f: ShellHeaderFilter): I18nString {
+  if (!f.options) return asI18n(f.value)
+  return f.options.find((o) => o.value === f.value)?.label ?? asI18n(f.value)
 }
 
 function FilterChip({ filter, withinPortal = true }: { filter: ShellHeaderFilter; withinPortal?: boolean }) {
@@ -158,6 +162,7 @@ function FilterChip({ filter, withinPortal = true }: { filter: ShellHeaderFilter
 }
 
 function CycleSwitch<T extends string>({ selection }: { selection: ShellHeaderSelection<T> }) {
+  const { t } = useI18n()
   const { options, value, onChange, ariaLabel } = selection
   const idx = Math.max(
     0,
@@ -171,7 +176,7 @@ function CycleSwitch<T extends string>({ selection }: { selection: ShellHeaderSe
       size="sm"
       leftSection={cur.icon}
       onClick={() => onChange(options[(idx + 1) % options.length]!.value)}
-      aria-label={`${ariaLabel}: ${cur.label}. Click to switch.`}
+      aria-label={t('shell_header.cycle_aria', { ariaLabel, label: cur.label })}
       styles={{ root: { flexShrink: 0 } }}
     >
       {cur.label}
@@ -214,6 +219,7 @@ function actionButton(a: ShellHeaderAction, mode: ActMode): ReactNode {
 }
 
 function ActionCluster({ actions, mode }: { actions: ShellHeaderAction[]; mode: ActMode }) {
+  const { t } = useI18n()
   if (mode !== 'compact') {
     return (
       <>
@@ -231,7 +237,7 @@ function ActionCluster({ actions, mode }: { actions: ShellHeaderAction[]; mode: 
       {rest.length > 0 && (
         <Menu position="bottom-end" withinPortal shadow="md">
           <Menu.Target>
-            <ActionIcon variant="default" size="lg" aria-label="More actions">
+            <ActionIcon variant="default" size="lg" aria-label={t('shell_header.more_actions')}>
               <MoreHorizontal size={18} />
             </ActionIcon>
           </Menu.Target>
@@ -256,8 +262,10 @@ export function ShellHeader<T extends string = string>({
   search,
   actions = [],
   actionsNode,
-  filtersTitle = 'Filters',
+  filtersTitle,
 }: ShellHeaderProps<T>) {
+  const { t } = useI18n()
+  const filtersLabel = filtersTitle ?? t('shell_header.filters')
   const { ref: sizeRef, width } = useElementSize()
   const measRef = useRef<Record<string, HTMLElement | null>>({})
   const [w, setW] = useState<Record<string, number> | null>(null)
@@ -314,8 +322,12 @@ export function ShellHeader<T extends string = string>({
     const { visible, hidden } = partitionFilters(filters, c.visCount)
     const showFunnel = hidden.length > 0 || (!!search && !c.searchInline)
     const parts: number[] = []
-    if (c.showTitle && title != null) parts.push(measure('title'))
-    if (count != null) parts.push(measure('count'))
+    // title + count are stacked in a column; the block is as wide as the wider of the two.
+    const titleBlock = Math.max(
+      c.showTitle && title != null ? measure('title') : 0,
+      count != null ? measure('count') : 0,
+    )
+    if (titleBlock > 0) parts.push(titleBlock)
     if (selection) parts.push(measure(c.selMode === 'switch' ? 'selSwitch' : 'selCycle'))
     visible.forEach((f) => parts.push(measure('filter:' + f.key)))
     if (showFunnel) parts.push(measure('funnel'))
@@ -363,7 +375,7 @@ export function ShellHeader<T extends string = string>({
         radius={0}
         py={0}
         px="xl"
-        h={50}
+        h={45}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -379,18 +391,18 @@ export function ShellHeader<T extends string = string>({
         w="100%"
         style={{ minWidth: 0 }}
       >
-        <Group wrap="nowrap" gap={GAP} align="center" style={{ flexShrink: 0 }}>
+        <Stack gap={2} justify="center" style={{ flexShrink: 0, minWidth: 0 }}>
           {chosen.showTitle && title != null && (
-            <Text component="div" fz="sm" fw={600} style={{ whiteSpace: 'nowrap' }}>
+            <Text component="div" fz="sm" fw={600} lh={1.2} style={{ whiteSpace: 'nowrap' }}>
               {title}
             </Text>
           )}
           {count != null && (
-            <Text component="div" fz="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
+            <Text component="div" fz="xs" c="dimmed" lh={1.2} style={{ whiteSpace: 'nowrap' }}>
               {count}
             </Text>
           )}
-        </Group>
+        </Stack>
 
         <Group wrap="nowrap" gap={GAP} align="center" style={{ flexShrink: 0, minWidth: 0 }}>
           {visible.map((f) => (
@@ -404,12 +416,12 @@ export function ShellHeader<T extends string = string>({
               offset={3}
               color="blue"
             >
-              <Tooltip label={filtersTitle}>
+              <Tooltip label={filtersLabel}>
                 <ActionIcon
                   variant={hiddenCount > 0 ? 'light' : 'default'}
                   size="lg"
                   onClick={() => setDrawerOpen(true)}
-                  aria-label={filtersTitle}
+                  aria-label={filtersLabel}
                 >
                   <ListFilter size={16} />
                 </ActionIcon>
@@ -496,7 +508,7 @@ export function ShellHeader<T extends string = string>({
         onClose={() => setDrawerOpen(false)}
         position="right"
         size="sm"
-        title={filtersTitle}
+        title={filtersLabel}
       >
         <Stack gap="md">
           {search && !searchInline && (
@@ -523,7 +535,7 @@ export function ShellHeader<T extends string = string>({
                 />
               ) : (
                 <Text fz="sm" c="dimmed">
-                  {f.value}
+                  {asI18n(f.value)}
                 </Text>
               )}
             </Stack>
