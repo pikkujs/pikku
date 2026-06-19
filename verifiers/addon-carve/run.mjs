@@ -79,6 +79,21 @@ const assertDbShake = (addonDir, owned) => {
     !/audit/i.test(sql),
     `owned-table SQL must NOT create 'auditLog':\n${sql}`
   )
+
+  // Services shake: the factory must require exactly `kysely` from the host —
+  // not the base services (auto-provided) nor any spurious parent service.
+  const services = readFileSync(join(addonDir, 'src/services.ts'), 'utf-8')
+  const parentServices = services.match(/async\s*\(_config,\s*\{([^}]*)\}/)?.[1]
+  assert.ok(
+    parentServices !== undefined,
+    `could not find the pikkuAddonServices factory:\n${services}`
+  )
+  assert.deepEqual(
+    parentServices.split(',').map((s) => s.trim()).filter(Boolean),
+    ['kysely'],
+    `addon must require exactly 'kysely' as a parent service:\n${services}`
+  )
+
   console.log(`[addon-carve] ✓ DB shake: addon owns exactly ${owned.join(', ')}`)
 }
 
