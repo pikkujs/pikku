@@ -309,6 +309,15 @@ export type PikkuCLIInput = {
     events?: PikkuScaffoldFeature
   }
 
+  /**
+   * Community-registry packages installed via `pikku fabric add`. The package
+   * source is copied into the project shadcn-style; each lands in
+   * `<addonDir>/<package-id>/`. `addonDir` defaults to `src/addons`.
+   */
+  addons?: {
+    addonDir?: string
+  }
+
   tests?: {
     outputDir?: string
   }
