@@ -20,6 +20,9 @@ async function makeValidProject(root: string) {
   await writeJson(join(root, 'pikku.config.json'), {
     srcDirectories: ['packages/functions/src'],
     outDir: 'packages/functions/.pikku',
+    scaffold: {
+      console: 'no-auth',
+    },
     clientFiles: {
       rpcMapDeclarationFile:
         'packages/functions-sdk/src/pikku/rpc-map.gen.d.ts',
@@ -240,6 +243,9 @@ describe('pikku fabric validate', () => {
         await writeJson(join(tmp, 'pikku.config.json'), {
           srcDirectories: ['packages/functions/src'],
           outDir: 'packages/functions/.pikku',
+          scaffold: {
+            console: 'no-auth',
+          },
         })
         const result = await runValidate(tmp)
         assert.strictEqual(result.ok, true) // info only
