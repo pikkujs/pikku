@@ -18,6 +18,7 @@ import { getPropertyValue } from '../utils/get-property-value.js'
 import { resolveIdentifier } from '../utils/resolve-identifier.js'
 import { resolveAddonName } from '../utils/resolve-addon-package.js'
 import { validateAuthSessionless } from '../utils/validate-auth-sessionless.js'
+import { extractServicesFromFunction } from '../utils/extract-services.js'
 
 // Track if we've warned about missing Config type to avoid duplicate warnings
 const configTypeWarningShown = new Set<string>()
@@ -924,7 +925,7 @@ export const addCLIRenderers: AddWiring = (
 ) => {
   if (!ts.isCallExpression(node)) return
 
-  const { expression, arguments: args, typeArguments } = node
+  const { expression, arguments: args } = node
 
   // Only handle pikkuCLIRender calls
   if (!ts.isIdentifier(expression) || expression.text !== 'pikkuCLIRender') {
@@ -944,30 +945,13 @@ export const addCLIRenderers: AddWiring = (
   const sourceFile = node.getSourceFile()
   const filePath = sourceFile.fileName
 
-  // Extract services from type parameters (second type param is Services)
-  const services: { optimized: boolean; services: string[] } = {
-    optimized: true,
-    services: [],
-  }
-
-  if (typeArguments && typeArguments.length >= 2) {
-    // Second type parameter is the Services type
-    const servicesTypeNode = typeArguments[1]
-    if (servicesTypeNode) {
-      const servicesType = typeChecker.getTypeFromTypeNode(servicesTypeNode)
-
-      // Extract property names from the Services type
-      const properties = servicesType.getProperties()
-      for (const prop of properties) {
-        services.services.push(prop.getName())
-      }
-
-      // If no specific services found, it might be using the full services object
-      if (properties.length === 0) {
-        services.optimized = false
-      }
-    }
-  }
+  // Renderer service usage is defined by the callback's first parameter shape,
+  // the same way function/auth service usage is tracked elsewhere in the inspector.
+  const renderFunc = args[0]
+  const services =
+    ts.isArrowFunction(renderFunc) || ts.isFunctionExpression(renderFunc)
+      ? extractServicesFromFunction(renderFunc)
+      : { optimized: true, services: [] }
 
   // Store renderer metadata
   inspectorState.cli.meta.renderers[pikkuFuncId] = {
