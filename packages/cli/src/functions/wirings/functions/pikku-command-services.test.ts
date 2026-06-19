@@ -36,6 +36,22 @@ describe('serializeServicesMap', () => {
     )
 
     assert.match(content, /'auth': true,/)
-    assert.match(content, /Pick<SingletonServices,[^>]*'auth'/)
+    assert.match(content, /Required<Pick<SingletonServices,[^>]*'auth'/)
+  })
+
+  test('upgrades picked required services from optional to required', () => {
+    const content = serializeServicesMap(
+      ['auth', 'kysely', 'todoStore'],
+      ['customWire'],
+      new Set(['kysely', 'customWire']),
+      [],
+      SERVICES_IMPORT,
+      WIRE_IMPORT,
+      [],
+      false
+    )
+
+    assert.match(content, /Required<Pick<SingletonServices,[^>]*'kysely'/)
+    assert.match(content, /Required<Pick<Services,[^>]*'customWire'/)
   })
 })

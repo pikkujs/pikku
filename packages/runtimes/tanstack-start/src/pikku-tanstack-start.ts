@@ -33,19 +33,21 @@ export function toTanStackStartAuthHandler(
 ): (context: TanStackStartAuthContext) => Promise<Response>
 export function toTanStackStartAuthHandler<
   I extends BetterAuthInstance,
-  S extends CoreSingletonServices = CoreSingletonServices,
+  C extends CoreConfig = CoreConfig,
+  S extends CoreSingletonServices<C> = CoreSingletonServices<C>,
 >(
   auth: PikkuBetterAuthFactory<I, S>,
-  createConfig: CreateConfig<CoreConfig> | undefined,
-  createSingletonServices: (config: CoreConfig) => Promise<S>
+  createConfig: CreateConfig<C> | undefined,
+  createSingletonServices: (config: C) => Promise<S>
 ): (context: TanStackStartAuthContext) => Promise<Response>
 export function toTanStackStartAuthHandler<
   I extends BetterAuthInstance,
-  S extends CoreSingletonServices = CoreSingletonServices,
+  C extends CoreConfig = CoreConfig,
+  S extends CoreSingletonServices<C> = CoreSingletonServices<C>,
 >(
   auth: BetterAuthRequestHandlerInput | PikkuBetterAuthFactory<I, S>,
-  createConfig?: CreateConfig<CoreConfig>,
-  createSingletonServices?: (config: CoreConfig) => Promise<S>
+  createConfig?: CreateConfig<C>,
+  createSingletonServices?: (config: C) => Promise<S>
 ): (context: TanStackStartAuthContext) => Promise<Response> {
   if (createConfig && !createSingletonServices) {
     throw new Error(
@@ -54,7 +56,7 @@ export function toTanStackStartAuthHandler<
   }
 
   if (createSingletonServices) {
-    const getAuth = createResolvedAuthGetter(
+    const getAuth = createResolvedAuthGetter<I, C, S>(
       auth as PikkuBetterAuthFactory<I, S>,
       createConfig,
       createSingletonServices
