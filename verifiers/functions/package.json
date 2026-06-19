@@ -25,6 +25,8 @@
     "@types/react": "^19",
     "@types/ws": "^8",
     "concurrently": "^9.2.1",
+    "react": "^19",
+    "react-dom": "^19",
     "tsx": "^4.21.0",
     "typescript": "^5.9"
   },
@@ -35,6 +37,6 @@
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'",
     "pikku": "pikku",
     "test": "pikku && tsc && npx tsx src/start.ts && node --import tsx --test src/tests/cli-json-output.assert.ts src/functions/trigger/trigger.assert.ts",
-    "test:coverage": "rm -rf coverage && npx --yes c8@11.0.0 --reporter=lcov --report-dir coverage --exclude '.pikku/**' --exclude 'src/tests/**' yarn test"
+    "test:coverage": "rm -rf coverage && yarn dlx c8@11.0.0 --reporter=lcov --report-dir coverage --exclude '.pikku/**' --exclude 'src/tests/**' yarn test"
   }
 }

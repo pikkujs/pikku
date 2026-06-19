@@ -159,16 +159,49 @@ describe('Functions Test Suite', () => {
 
     const updatedContent = fs.readFileSync(testFile, 'utf-8')
     assert.ok(
-      updatedContent.includes('./utils'),
-      'Should replace "../../functions/src/" with "./"'
+      updatedContent.includes('./src/utils'),
+      'Should rewrite root imports to the merged src directory'
     )
     assert.ok(
-      updatedContent.includes('./lib'),
-      'Should replace "../functions/src/" with "./"'
+      updatedContent.includes('./src/lib'),
+      'Should rewrite root require references to the merged src directory'
     )
     assert.ok(
-      updatedContent.includes('../.pikku/config'),
-      'Should replace "../../functions/.pikku/" with "../.pikku/"'
+      updatedContent.includes('./.pikku/config'),
+      'Should rewrite functions/.pikku imports relative to the target root'
+    )
+  })
+
+  test('replaceFunctionReferences: preserves correct relative imports for nested nextjs auth routes', () => {
+    const testDir = path.join(tempRoot, 'replaceFunctionNestedNextjsTest')
+    const routeFile = path.join(
+      testDir,
+      'app',
+      'api',
+      'auth',
+      '[...all]',
+      'route.ts'
+    )
+    fs.mkdirSync(path.dirname(routeFile), { recursive: true })
+    fs.writeFileSync(
+      routeFile,
+      `
+        import { auth } from '../../../../../functions/src/auth.js';
+        import { createSingletonServices } from '../../../../../functions/src/services.js';
+      `,
+      'utf-8'
+    )
+
+    replaceFunctionReferences(testDir)
+
+    const updatedContent = fs.readFileSync(routeFile, 'utf-8')
+    assert.ok(
+      updatedContent.includes('../../../../src/auth.js'),
+      'Should rewrite auth imports relative to the nested route file'
+    )
+    assert.ok(
+      updatedContent.includes('../../../../src/services.js'),
+      'Should rewrite services imports relative to the nested route file'
     )
   })
 

@@ -24,7 +24,8 @@
     "kysely-postgres-js": "^3.0.0",
     "postgres": "^3.4.8",
     "tsx": "^4.21.0",
-    "typescript": "^5.9"
+    "typescript": "^5.9",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^24"

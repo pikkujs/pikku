@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "module": "NodeNext",
+    "target": "ESNext",
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "typeRoots": ["./node_modules/@types", "./types"],
+    "moduleResolution": "Node16",
+    "incremental": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", ".pikku/*", "types/**/*.d.ts"],
+  "exclude": ["node_modules"]
+}

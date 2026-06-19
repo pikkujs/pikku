@@ -19,9 +19,12 @@ const injectIntoUrl = (route: string, keys: Record<string, string>) => {
  * The `PikkuNextJS` class provides methods to interact with the Pikku framework in a Next.js environment,
  * including support for SSR requests, API requests, and action requests.
  */
-export class PikkuNextJS {
-  private singletonServices: CoreSingletonServices | undefined
-  private singletonServicesPromise: Promise<CoreSingletonServices> | undefined
+export class PikkuNextJS<
+  C extends CoreConfig = CoreConfig,
+  S extends CoreSingletonServices<C> = CoreSingletonServices<C>,
+> {
+  private singletonServices: S | undefined
+  private singletonServicesPromise: Promise<S> | undefined
 
   /**
    * Constructs a new instance of the `PikkuNextJS` class.
@@ -30,10 +33,8 @@ export class PikkuNextJS {
    * @param createSingletonServices - A function that creates singleton services for the application.
    */
   constructor(
-    private readonly createConfig: CreateConfig<CoreConfig> | undefined,
-    private readonly createSingletonServices: (
-      config: CoreConfig
-    ) => Promise<CoreSingletonServices>
+    private readonly createConfig: CreateConfig<C> | undefined,
+    private readonly createSingletonServices: (config: C) => Promise<S>
   ) {}
 
   /**
@@ -109,7 +110,7 @@ export class PikkuNextJS {
    *
    * @returns A promise that resolves to the singleton services.
    */
-  private async getSingletonServices(): Promise<CoreSingletonServices> {
+  private async getSingletonServices(): Promise<S> {
     if (this.singletonServices) {
       return this.singletonServices
     }
@@ -118,7 +119,7 @@ export class PikkuNextJS {
       this.singletonServicesPromise = (async () => {
         const config = this.createConfig
           ? await this.createConfig()
-          : ({} as CoreConfig)
+          : ({} as C)
         const singletonServices = await this.createSingletonServices(config)
         this.singletonServices = singletonServices
         return singletonServices

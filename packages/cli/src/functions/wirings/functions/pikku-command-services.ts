@@ -48,8 +48,9 @@ export const serializeServicesMap = (
 
   // When a pikkuBetterAuth factory is present, the generated `pikkuServices`
   // wrapper always injects a resolved `auth` singleton. Mark it required so
-  // RequiredSingletonServices keeps `auth` non-optional and stays assignable
-  // to a SingletonServices type that types `auth` from the factory's return.
+  // RequiredSingletonServices can mark `auth` as a required property and stay
+  // assignable to a SingletonServices type that types `auth` from the
+  // factory's return.
   if (authInjected) {
     usedServices.add('auth')
   }
@@ -97,11 +98,11 @@ export const serializeServicesMap = (
     '',
     '// Type exports',
     requiredSingletonServiceNames.length > 0
-      ? `export type RequiredSingletonServices = Pick<SingletonServices, ${requiredSingletonServiceNames.map((key) => `'${key}'`).join(' | ')}> & Partial<Omit<SingletonServices, ${requiredSingletonServiceNames.map((key) => `'${key}'`).join(' | ')}>>`
+      ? `export type RequiredSingletonServices = Required<Pick<SingletonServices, ${requiredSingletonServiceNames.map((key) => `'${key}'`).join(' | ')}>> & Partial<Omit<SingletonServices, ${requiredSingletonServiceNames.map((key) => `'${key}'`).join(' | ')}>>`
       : 'export type RequiredSingletonServices = Partial<SingletonServices>',
     '',
     requiredWireServiceNames.length > 0
-      ? `export type RequiredWireServices = Pick<Services, ${requiredWireServiceNames.map((key) => `'${key}'`).join(' | ')}> & Partial<Omit<Services, ${requiredWireServiceNames.map((key) => `'${key}'`).join(' | ')}>>`
+      ? `export type RequiredWireServices = Required<Pick<Services, ${requiredWireServiceNames.map((key) => `'${key}'`).join(' | ')}>> & Partial<Omit<Services, ${requiredWireServiceNames.map((key) => `'${key}'`).join(' | ')}>>`
       : 'export type RequiredWireServices = Partial<Services>',
     '',
     ...(addonRequiredParentServices.length > 0

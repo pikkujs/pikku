@@ -31,14 +31,15 @@
   },
   "dependencies": {
     "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/view": "^6.41.0",
     "@emotion/react": "^11.14.0",
-    "@mantine/code-highlight": "^8.3.8",
-    "@mantine/core": "^8.3.8",
-    "@mantine/dates": "^8.3.8",
-    "@mantine/dropzone": "^8.3.8",
-    "@mantine/hooks": "^8.3.8",
-    "@mantine/notifications": "^8.3.8",
-    "@mantine/spotlight": "^8.3.8",
+    "@mantine/code-highlight": "^8.3.18",
+    "@mantine/core": "^8.3.18",
+    "@mantine/dates": "^8.3.18",
+    "@mantine/dropzone": "^8.3.18",
+    "@mantine/hooks": "^8.3.18",
+    "@mantine/notifications": "^8.3.18",
+    "@mantine/spotlight": "^8.3.18",
     "@pikku/assistant-ui": "^0.12.6",
     "@pikku/core": "^0.12.32",
     "@pikku/fetch": "^0.12.3",
@@ -73,7 +74,7 @@
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
-    "@mantine/colors-generator": "^8.3.8",
+    "@mantine/colors-generator": "^8.3.18",
     "@pikku/addon-console": "^0.12.14",
     "@pikku/cli": "^0.12.36",
     "@pikku/websocket": "^0.12.1",
@@ -88,6 +89,6 @@
     "postcss-simple-vars": "^7",
     "react-router": "^7",
     "typescript": "^5",
-    "vite": "npm:rolldown-vite@7.3.1"
+    "vite": "^8.0.11"
   }
 }
