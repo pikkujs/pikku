@@ -9,6 +9,7 @@ export const FabricLinkInput = z.object({
 })
 
 export const FabricLinkOutput = z.object({
+  projectId: z.string(),
   projectSlug: z.string(),
   deploymentId: z.string(),
   stageId: z.string(),
@@ -75,7 +76,9 @@ export const FabricLink = pikkuSessionlessFunc({
       projectId: project.projectId,
       ...(apiUrlOverride ? { apiUrl: apiUrlOverride } : {}),
     })
-    console.log(`[fabric] linked ${project.projectSlug}`)
+    console.log(
+      `[fabric] linked ${project.projectSlug} projectId=${project.projectId}`
+    )
 
     const deploy = await rpc.invoke('deployByStageKind', {
       projectId: project.projectId,
@@ -87,6 +90,7 @@ export const FabricLink = pikkuSessionlessFunc({
     )
 
     return {
+      projectId: project.projectId,
       projectSlug: project.projectSlug,
       deploymentId: deploy.deploymentId,
       stageId: deploy.stageId,
