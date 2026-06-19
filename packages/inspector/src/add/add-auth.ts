@@ -203,7 +203,7 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
         const enabledProp = cookieCacheBlock.properties.find(
           (p) =>
             ts.isPropertyAssignment(p) &&
-            ts.isIdentifier(p.name) &&
+            (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name)) &&
             p.name.text === 'enabled'
         ) as ts.PropertyAssignment | undefined
         cookieCache =

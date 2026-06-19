@@ -322,7 +322,7 @@ function bundledModules(unitName: string): string[] {
   const inputs = meta.outputs![bundleKey]!.inputs ?? {}
   return Object.entries(inputs)
     .filter(([, v]) => (v.bytesInOutput ?? 0) > 0)
-    .map(([k]) => k)
+    .map(([k]) => k.replace(/\\/g, '/')) // normalize Windows paths for the regexes
 }
 
 const AI_SDK_RE = /@ai-sdk\/|\/node_modules\/ai\/|@pikku\/ai-vercel/

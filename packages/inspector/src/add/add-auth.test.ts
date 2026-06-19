@@ -151,6 +151,33 @@ describe('addAuth inspector', () => {
     }
   })
 
+  test('cookieCache: { "enabled": false } (string-literal key) is honoured', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-strkey-'))
+    const file = join(rootDir, 'auth.ts')
+
+    await writeFile(
+      file,
+      [
+        "import { pikkuBetterAuth } from '@pikku/better-auth'",
+        "import { betterAuth } from 'better-auth'",
+        'export const auth = pikkuBetterAuth(() =>',
+        '  betterAuth({',
+        '    session: { cookieCache: { "enabled": false } },',
+        '  })',
+        ')',
+      ].join('\n')
+    )
+
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      const state = await inspect(makeLogger(criticals), [file], { rootDir })
+      assert.equal(criticals.length, 0)
+      assert.equal(state.auth.definition?.cookieCache, false)
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
   test('extracts plugin ids from the betterAuth plugins array', async () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-plugins-'))
     const file = join(rootDir, 'auth.ts')
