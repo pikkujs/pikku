@@ -48,6 +48,54 @@ const BRAND_TYPES = `
 type Private<T> = T & { readonly __classification__?: 'private' }
 `
 
+// A complete-enough project: `pikku all` runs checkRequiredTypes (config +
+// service factories + session/service types) *before* the diagnostic gate, so
+// a bare functions file aborts early. Factories are typed with the explicit
+// @pikku/core factory types (no generated #pikku wrappers needed).
+const SERVICES_SRC = `
+import type {
+  CoreConfig,
+  CoreSingletonServices,
+  CoreServices,
+  CoreUserSession,
+  CreateConfig,
+  CreateSingletonServices,
+  CreateWireServices,
+} from '@pikku/core'
+import {
+  ConsoleLogger,
+  LocalVariablesService,
+  LocalSecretService,
+} from '@pikku/core/services'
+
+export interface Config extends CoreConfig {}
+export interface UserSession extends CoreUserSession {}
+export interface SingletonServices extends CoreSingletonServices<Config> {}
+export interface Services extends CoreServices<SingletonServices> {}
+
+export const createConfig: CreateConfig<Config> = async () => ({})
+
+export const createSingletonServices: CreateSingletonServices<
+  Config,
+  SingletonServices
+> = async (config) => {
+  const variables = new LocalVariablesService()
+  return {
+    config,
+    logger: new ConsoleLogger(),
+    variables,
+    secrets: new LocalSecretService(variables),
+    schema: {} as any,
+  }
+}
+
+export const createWireServices: CreateWireServices<
+  SingletonServices,
+  Services,
+  UserSession
+> = async () => ({})
+`
+
 async function createProject(functionSource: string): Promise<string> {
   const dir = await mkdtemp(join(TMP_PARENT, '.tmp-pii-gate-'))
   await writeFile(
@@ -73,6 +121,7 @@ async function createProject(functionSource: string): Promise<string> {
     })
   )
   await mkdir(join(dir, 'src'), { recursive: true })
+  await writeFile(join(dir, 'src', 'services.ts'), SERVICES_SRC)
   await writeFile(join(dir, 'src', 'funcs.ts'), functionSource)
   return dir
 }
