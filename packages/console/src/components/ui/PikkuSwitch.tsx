@@ -8,7 +8,7 @@ type SwitchTone = 'default' | 'green' | 'red' | 'yellow' | 'blue'
 export interface PikkuSwitchOption<T extends string> {
   value: T
   label: I18nString
-  icon: ReactNode
+  icon?: ReactNode
   tone?: SwitchTone
   'data-testid'?: string
 }
@@ -77,7 +77,7 @@ export function PikkuSwitch<T extends string>({
             title={option.label}
             data-testid={option['data-testid']}
           >
-            <span className={classes.icon}>{option.icon}</span>
+            {option.icon && <span className={classes.icon}>{option.icon}</span>}
             <span className={classes.label}>
               <span className={classes.labelInner}>{option.label}</span>
             </span>

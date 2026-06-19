@@ -4,22 +4,37 @@ import type { I18nNode } from '@pikku/react'
 import { ExternalLink } from 'lucide-react'
 import { useI18n } from '@pikku/react/i18n'
 import DocLink from '../ui/DocLink'
-import { ShellHeader } from '../ui/ShellHeader'
+import { ShellHeader, type ShellHeaderSearch, type ShellHeaderSelection } from '../ui/ShellHeader'
 import { usePageGate } from '../../context/PageGateContext'
 
-interface ListPageHeaderProps {
+interface ListPageHeaderProps<T extends string = string> {
   title: I18nNode
   description?: I18nNode
   docsHref?: string
   lead?: ReactNode
   filters?: ReactNode
   view?: ReactNode
+  // Structured controls participate in ShellHeader's measured collapse: the
+  // selection folds switch → cycle → drawer, and search folds into the drawer.
+  // Prefer these over the raw `filters`/`view` nodes (which ride the
+  // non-collapsing `actionsNode` escape hatch and overflow when narrow).
+  search?: ShellHeaderSearch
+  selection?: ShellHeaderSelection<T>
 }
 
 // Renders the shared ShellHeader bar: title (first to collapse) + description as
 // the count, with the page's existing filters/view/lead/docs controls passed
 // through on the right.
-export function ListPageHeader({ title, description, docsHref, lead, filters, view }: ListPageHeaderProps) {
+export function ListPageHeader<T extends string = string>({
+  title,
+  description,
+  docsHref,
+  lead,
+  filters,
+  view,
+  search,
+  selection,
+}: ListPageHeaderProps<T>) {
   const docsButton = docsHref ? <DocLink href={docsHref} /> : null
   const right =
     filters || view || lead || docsButton ? (
@@ -30,7 +45,9 @@ export function ListPageHeader({ title, description, docsHref, lead, filters, vi
         {docsButton}
       </>
     ) : undefined
-  return <ShellHeader title={title} count={description} actionsNode={right} />
+  return (
+    <ShellHeader title={title} count={description} search={search} selection={selection} actionsNode={right} />
+  )
 }
 
 interface PageContainerProps extends ComponentProps<typeof Container> {

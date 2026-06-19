@@ -283,7 +283,10 @@
     "description": "OAuth2 and API key credentials",
     "search_users": "Search users...",
     "search_credentials": "Search credentials...",
-    "select_user": "Select a user to view their credentials"
+    "select_user": "Select a user to view their credentials",
+    "tab_global": "Global",
+    "tab_users": "Users",
+    "tab_aria": "Credential scope"
   },
   "jobs": {
     "title": "Jobs",

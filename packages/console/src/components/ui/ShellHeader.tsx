@@ -1,13 +1,13 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import {
   ActionIcon,
+  Box,
   Button,
-  Drawer,
+  Collapse,
   Group,
   Indicator,
   Menu,
   Paper,
-  Select,
   Stack,
   Text,
   TextInput,
@@ -22,9 +22,10 @@ import { PikkuSwitch, type PikkuSwitchOption } from './PikkuSwitch'
 /* ============================================================================
    ShellHeader — one compact bar that replaces the tall title + action-bar
    block: selection on the left, filters in the middle, actions on the right.
-   Filters that don't fit collapse into a funnel → drawer (the text search is
-   the last to collapse); action labels fold to icons; the selection switch
-   becomes a single cycling button when narrow. All measured, not breakpointed.
+   Filters that don't fit collapse behind a funnel that slides them down as a
+   second toolbar row (the text search is the last to collapse); action labels
+   fold to icons; the selection switch becomes a single cycling button, then
+   folds into the row too, when narrow. All measured, not breakpointed.
    Props-only: every label/value is passed already-translated by the caller.
    ========================================================================== */
 
@@ -95,11 +96,16 @@ export interface ShellHeaderProps<T extends string = string> {
 
 const GAP = 8
 const SAFETY = 6
+// Every control in the bar is forced to this height so the switch, search,
+// funnel, filter chips and actions line up. Mantine `size` tokens are not
+// equal-height across Button/ActionIcon/TextInput, so height is set explicitly.
+const CONTROL_H = 32
 
-type SelMode = 'switch' | 'cycle'
+type SelMode = 'switch' | 'cycle' | 'drawer'
 type ActMode = 'label' | 'icon' | 'compact'
 interface Candidate {
   showTitle: boolean
+  showCount: boolean
   selMode: SelMode
   visCount: number
   searchInline: boolean
@@ -132,7 +138,7 @@ function FilterChip({ filter, withinPortal = true }: { filter: ShellHeaderFilter
       leftSection={filter.icon}
       rightSection={filter.options ? <ChevronDown size={13} /> : undefined}
       onClick={filter.options ? undefined : filter.onChange ? () => filter.onChange?.(filter.value) : undefined}
-      styles={{ root: { flexShrink: 0 }, label: { gap: 5 } }}
+      styles={{ root: { flexShrink: 0, height: CONTROL_H, minHeight: CONTROL_H }, label: { gap: 5 } }}
     >
       <Text span fz={11.5} c="dimmed">
         {filter.label}
@@ -177,7 +183,7 @@ function CycleSwitch<T extends string>({ selection }: { selection: ShellHeaderSe
       leftSection={cur.icon}
       onClick={() => onChange(options[(idx + 1) % options.length]!.value)}
       aria-label={t('shell_header.cycle_aria', { ariaLabel, label: cur.label })}
-      styles={{ root: { flexShrink: 0 } }}
+      styles={{ root: { flexShrink: 0, height: CONTROL_H, minHeight: CONTROL_H } }}
     >
       {cur.label}
     </Button>
@@ -196,7 +202,7 @@ function actionButton(a: ShellHeaderAction, mode: ActMode): ReactNode {
         leftSection={a.icon}
         onClick={a.onClick}
         disabled={a.disabled}
-        styles={{ root: { flexShrink: 0 } }}
+        styles={{ root: { flexShrink: 0, height: CONTROL_H, minHeight: CONTROL_H } }}
       >
         {a.label}
       </Button>
@@ -211,7 +217,7 @@ function actionButton(a: ShellHeaderAction, mode: ActMode): ReactNode {
   }
   return (
     <Tooltip key={a.key} label={a.tooltip ?? a.label}>
-      <ActionIcon variant={variant} size="lg" onClick={a.onClick} disabled={a.disabled} aria-label={a.label}>
+      <ActionIcon variant={variant} size={CONTROL_H} onClick={a.onClick} disabled={a.disabled} aria-label={a.label}>
         {a.icon}
       </ActionIcon>
     </Tooltip>
@@ -237,7 +243,7 @@ function ActionCluster({ actions, mode }: { actions: ShellHeaderAction[]; mode: 
       {rest.length > 0 && (
         <Menu position="bottom-end" withinPortal shadow="md">
           <Menu.Target>
-            <ActionIcon variant="default" size="lg" aria-label={t('shell_header.more_actions')}>
+            <ActionIcon variant="default" size={CONTROL_H} aria-label={t('shell_header.more_actions')}>
               <MoreHorizontal size={18} />
             </ActionIcon>
           </Menu.Target>
@@ -269,7 +275,7 @@ export function ShellHeader<T extends string = string>({
   const { ref: sizeRef, width } = useElementSize()
   const measRef = useRef<Record<string, HTMLElement | null>>({})
   const [w, setW] = useState<Record<string, number> | null>(null)
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [panelOpen, setPanelOpen] = useState(false)
   const searchWidth = search?.width ?? 220
 
   // Re-measure whenever the content that affects natural widths changes.
@@ -293,42 +299,52 @@ export function ShellHeader<T extends string = string>({
 
   // Build collapse candidates richest → poorest; pick the first that fits.
   const F = filters.length
-  const candidates: Candidate[] = [
-    { showTitle: false, selMode: 'switch', visCount: F, searchInline: true, actMode: 'label' },
-    { showTitle: false, selMode: 'switch', visCount: F, searchInline: true, actMode: 'icon' },
-  ]
+  const base = (over: Partial<Candidate>): Candidate => ({
+    showTitle: false,
+    showCount: false,
+    selMode: 'switch',
+    visCount: F,
+    searchInline: true,
+    actMode: 'label',
+    ...over,
+  })
+  // The whole text stack collapses first, as a unit: title goes, then the
+  // count/description, leaving no text at all before any control degrades.
+  const candidates: Candidate[] = []
+  if (title != null) candidates.push(base({ showTitle: true, showCount: count != null }))
+  if (count != null) candidates.push(base({ showCount: true }))
+  candidates.push(base({ actMode: 'label' }))
+  candidates.push(base({ actMode: 'icon' }))
   for (let n = F - 1; n >= 0; n--) {
-    candidates.push({ showTitle: false, selMode: 'switch', visCount: n, searchInline: true, actMode: 'icon' })
+    candidates.push(base({ visCount: n, actMode: 'icon' }))
   }
   if (search) {
-    candidates.push({ showTitle: false, selMode: 'switch', visCount: 0, searchInline: false, actMode: 'icon' })
-    candidates.push({ showTitle: false, selMode: 'cycle', visCount: 0, searchInline: false, actMode: 'icon' })
+    candidates.push(base({ visCount: 0, searchInline: false, actMode: 'icon' }))
+    candidates.push(base({ selMode: 'cycle', visCount: 0, searchInline: false, actMode: 'icon' }))
   } else {
-    candidates.push({ showTitle: false, selMode: 'cycle', visCount: 0, searchInline: true, actMode: 'icon' })
+    candidates.push(base({ selMode: 'cycle', visCount: 0, actMode: 'icon' }))
   }
-  candidates.push({
-    showTitle: false,
-    selMode: 'cycle',
-    visCount: 0,
-    searchInline: search ? false : true,
-    actMode: 'compact',
-  })
-  // Title is the very first thing to drop: the richest candidate keeps it,
-  // every poorer candidate hides it.
-  if (title != null) candidates.unshift({ ...candidates[0]!, showTitle: true })
+  candidates.push(base({ selMode: 'cycle', visCount: 0, searchInline: !search, actMode: 'compact' }))
+  // Mobile tier: the selection/view toggle also folds into the drawer, leaving
+  // the bar as just the funnel icon (+ actions) and the drawer as the catch-all.
+  if (selection) {
+    candidates.push(base({ selMode: 'drawer', visCount: 0, searchInline: false, actMode: 'icon' }))
+    candidates.push(base({ selMode: 'drawer', visCount: 0, searchInline: false, actMode: 'compact' }))
+  }
 
   const measure = (id: string) => (w?.[id] ?? 0)
   const candWidth = (c: Candidate): number => {
     const { visible, hidden } = partitionFilters(filters, c.visCount)
-    const showFunnel = hidden.length > 0 || (!!search && !c.searchInline)
+    const selInDrawer = !!selection && c.selMode === 'drawer'
+    const showFunnel = hidden.length > 0 || (!!search && !c.searchInline) || selInDrawer
     const parts: number[] = []
     // title + count are stacked in a column; the block is as wide as the wider of the two.
     const titleBlock = Math.max(
       c.showTitle && title != null ? measure('title') : 0,
-      count != null ? measure('count') : 0,
+      c.showCount && count != null ? measure('count') : 0,
     )
     if (titleBlock > 0) parts.push(titleBlock)
-    if (selection) parts.push(measure(c.selMode === 'switch' ? 'selSwitch' : 'selCycle'))
+    if (selection && !selInDrawer) parts.push(measure(c.selMode === 'switch' ? 'selSwitch' : 'selCycle'))
     visible.forEach((f) => parts.push(measure('filter:' + f.key)))
     if (showFunnel) parts.push(measure('funnel'))
     if (search && c.searchInline) parts.push(measure('search'))
@@ -338,7 +354,7 @@ export function ShellHeader<T extends string = string>({
     if (actionsNode != null) parts.push(measure('actNode'))
     const used = parts.filter((p) => p > 0)
     // selection carries an extra marginLeft (GAP) for right-side separation.
-    const extra = selection ? GAP : 0
+    const extra = selection && !selInDrawer ? GAP : 0
     return used.reduce((s, p) => s + p, 0) + GAP * Math.max(0, used.length - 1) + extra + SAFETY
   }
 
@@ -347,10 +363,15 @@ export function ShellHeader<T extends string = string>({
     chosen = candidates.find((c) => candWidth(c) <= width) ?? candidates[candidates.length - 1]!
   }
 
+  // Icon-less switches must show every label (the default only labels the active
+  // option, relying on icons to distinguish the rest).
+  const switchShowAllLabels = !!selection && !selection.options.some((o) => o.icon)
+
   const { visible, hidden } = partitionFilters(filters, chosen.visCount)
   const searchInline = chosen.searchInline && !!search
+  const selectionInDrawer = !!selection && chosen.selMode === 'drawer'
   const hiddenCount = hidden.length + (search && !searchInline ? 1 : 0)
-  const showFunnel = hiddenCount > 0
+  const showFunnel = hiddenCount > 0 || selectionInDrawer
 
   const searchField = search ? (
     <TextInput
@@ -359,7 +380,8 @@ export function ShellHeader<T extends string = string>({
       value={search.value}
       onChange={(e) => search.onChange(e.currentTarget.value)}
       w={searchWidth}
-      styles={{ root: { flexShrink: 0 } }}
+      size="sm"
+      styles={{ root: { flexShrink: 0 }, input: { height: CONTROL_H, minHeight: CONTROL_H } }}
     />
   ) : null
 
@@ -391,18 +413,20 @@ export function ShellHeader<T extends string = string>({
         w="100%"
         style={{ minWidth: 0 }}
       >
-        <Stack gap={2} justify="center" style={{ flexShrink: 0, minWidth: 0 }}>
-          {chosen.showTitle && title != null && (
-            <Text component="div" fz="sm" fw={600} lh={1.2} style={{ whiteSpace: 'nowrap' }}>
-              {title}
-            </Text>
-          )}
-          {count != null && (
-            <Text component="div" fz="xs" c="dimmed" lh={1.2} style={{ whiteSpace: 'nowrap' }}>
-              {count}
-            </Text>
-          )}
-        </Stack>
+        {((chosen.showTitle && title != null) || (chosen.showCount && count != null)) && (
+          <Stack gap={2} justify="center" style={{ flexShrink: 0, minWidth: 0 }}>
+            {chosen.showTitle && title != null && (
+              <Text component="div" fz="sm" fw={600} lh={1.2} style={{ whiteSpace: 'nowrap' }}>
+                {title}
+              </Text>
+            )}
+            {chosen.showCount && count != null && (
+              <Text component="div" fz="xs" c="dimmed" lh={1.2} style={{ whiteSpace: 'nowrap' }}>
+                {count}
+              </Text>
+            )}
+          </Stack>
+        )}
 
         <Group wrap="nowrap" gap={GAP} align="center" style={{ flexShrink: 0, minWidth: 0 }}>
           {visible.map((f) => (
@@ -418,10 +442,11 @@ export function ShellHeader<T extends string = string>({
             >
               <Tooltip label={filtersLabel}>
                 <ActionIcon
-                  variant={hiddenCount > 0 ? 'light' : 'default'}
-                  size="lg"
-                  onClick={() => setDrawerOpen(true)}
+                  variant={panelOpen || hiddenCount > 0 ? 'light' : 'default'}
+                  size={CONTROL_H}
+                  onClick={() => setPanelOpen((o) => !o)}
                   aria-label={filtersLabel}
+                  aria-expanded={panelOpen}
                 >
                   <ListFilter size={16} />
                 </ActionIcon>
@@ -429,7 +454,7 @@ export function ShellHeader<T extends string = string>({
             </Indicator>
           )}
           {searchInline && searchField}
-          {selection && (
+          {selection && !selectionInDrawer && (
             <div style={{ flexShrink: 0, marginLeft: GAP }}>
               {chosen.selMode === 'switch' ? (
                 <PikkuSwitch
@@ -437,6 +462,7 @@ export function ShellHeader<T extends string = string>({
                   value={selection.value}
                   onChange={selection.onChange}
                   options={selection.options}
+                  showAllLabels={switchShowAllLabels}
                 />
               ) : (
                 <CycleSwitch selection={selection} />
@@ -448,6 +474,42 @@ export function ShellHeader<T extends string = string>({
         </Group>
       </Group>
       </Paper>
+
+      {/* Overflow row — the funnel slides the collapsed controls down as a
+          second toolbar row, pushing the page content below it. */}
+      <Collapse in={panelOpen && showFunnel}>
+        <Box
+          px="xl"
+          py="xs"
+          style={{ borderBottom: '1px solid var(--mantine-color-default-border)' }}
+        >
+          <Group wrap="wrap" gap="sm" align="center">
+            {hidden.map((f) => (
+              <FilterChip key={f.key} filter={f} />
+            ))}
+            {search && !searchInline && (
+              <TextInput
+                placeholder={search.placeholder}
+                leftSection={<Search size={14} />}
+                value={search.value}
+                onChange={(e) => search.onChange(e.currentTarget.value)}
+                size="sm"
+                style={{ flex: '1 1 200px', minWidth: 0 }}
+                styles={{ input: { height: CONTROL_H, minHeight: CONTROL_H } }}
+              />
+            )}
+            {selection && selectionInDrawer && (
+              <PikkuSwitch
+                ariaLabel={selection.ariaLabel}
+                value={selection.value}
+                onChange={selection.onChange}
+                options={selection.options}
+                showAllLabels={switchShowAllLabels}
+              />
+            )}
+          </Group>
+        </Box>
+      </Collapse>
 
       {/* Hidden measurement layer — natural widths for the fit calculation. */}
       <div
@@ -485,6 +547,7 @@ export function ShellHeader<T extends string = string>({
               value={selection.value}
               onChange={() => {}}
               options={selection.options}
+              showAllLabels={switchShowAllLabels}
             />,
           )}
         {selection && measureNode('selCycle', <CycleSwitch selection={selection} />)}
@@ -494,54 +557,14 @@ export function ShellHeader<T extends string = string>({
         {actions.length > 0 && measureNode('actIcon', <ActionCluster actions={actions} mode="icon" />)}
         {actions.length > 0 && measureNode('actCompact', <ActionCluster actions={actions} mode="compact" />)}
         {actionsNode != null && measureNode('actNode', actionsNode)}
-        {(filters.length > 0 || search) &&
+        {(filters.length > 0 || search || selection) &&
           measureNode(
             'funnel',
-            <ActionIcon variant="light" size="lg">
+            <ActionIcon variant="light" size={CONTROL_H}>
               <ListFilter size={16} />
             </ActionIcon>,
           )}
       </div>
-
-      <Drawer
-        opened={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        position="right"
-        size="sm"
-        title={filtersLabel}
-      >
-        <Stack gap="md">
-          {search && !searchInline && (
-            <TextInput
-              placeholder={search.placeholder}
-              leftSection={<Search size={14} />}
-              value={search.value}
-              onChange={(e) => search.onChange(e.currentTarget.value)}
-              data-autofocus
-            />
-          )}
-          {hidden.map((f) => (
-            <Stack gap={4} key={f.key}>
-              <Text fz="sm" fw={600}>
-                {f.label}
-              </Text>
-              {f.options ? (
-                <Select
-                  data={f.options}
-                  value={f.value}
-                  onChange={(v) => v && f.onChange?.(v)}
-                  comboboxProps={{ withinPortal: false }}
-                  allowDeselect={false}
-                />
-              ) : (
-                <Text fz="sm" c="dimmed">
-                  {asI18n(f.value)}
-                </Text>
-              )}
-            </Stack>
-          ))}
-        </Stack>
-      </Drawer>
     </>
   )
 }
