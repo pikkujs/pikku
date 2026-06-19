@@ -63,6 +63,8 @@ import {
   FabricSmoke,
   renderSmoke,
 } from './functions/smoke.function.js'
+import { FabricPublish } from './functions/publish.function.js'
+import { FabricAdd } from './functions/add.function.js'
 
 export const fabricCommands = defineCLICommands({
   validate: pikkuCLICommand({
@@ -129,6 +131,27 @@ export const fabricCommands = defineCLICommands({
       apiUrl: {
         description: 'Override the fabric-api URL stored in fabric.config.json',
       },
+    },
+  }),
+  publish: pikkuCLICommand({
+    parameters: '[dir]',
+    func: FabricPublish,
+    description:
+      'Publish a package directory to the Fabric community registry (pack + upload)',
+    options: {
+      apiUrl: { description: 'Override the fabric-api URL for this call' },
+    },
+  }),
+  add: pikkuCLICommand({
+    parameters: '<id>',
+    func: FabricAdd,
+    description:
+      'Install a package from the Fabric community registry into the project',
+    options: {
+      dir: {
+        description: 'Install dir (overrides pikku.config.json addons.addonDir)',
+      },
+      apiUrl: { description: 'Override the fabric-api URL for this call' },
     },
   }),
   deploy: {
