@@ -640,93 +640,24 @@ function isPostgresAuthDatabase(options: {
   return options.database?.type === 'postgres'
 }
 
-function createScratchPostgresDatabaseName(prefix: string): string {
-  const random = Math.random().toString(36).slice(2, 10)
-  return `${prefix}_${Date.now().toString(36)}_${random}`.slice(0, 63)
-}
-
-function quotePgIdentifier(identifier: string): string {
-  return `"${identifier.replace(/"/g, '""')}"`
-}
-
-function withPostgresDatabase(
-  connectionString: string,
-  databaseName: string
-): string {
-  const url = new URL(connectionString)
-  url.pathname = `/${databaseName}`
-  return url.toString()
-}
-
-function getPostgresAdminConnectionString(connectionString: string): string {
-  return withPostgresDatabase(connectionString, 'postgres')
-}
-
+// The scratch database is a throwaway used only to compute the desired Better
+// Auth schema and the migration-covered schema for drift detection. We always
+// use an in-memory PGlite instance for it — PGlite is real Postgres, so the
+// introspection stays accurate, and it needs no `CREATEDB` privilege on the
+// target server. Creating a real database via `CREATE DATABASE` would require
+// elevated privileges that application roles (correctly) don't have, which made
+// `pikku db migrate` fail against managed/locked-down Postgres (error 42501).
 async function withScratchPostgresDatabase<T>(
-  resolved: ResolvedPostgresDb,
-  prefix: string,
+  _resolved: ResolvedPostgresDb,
+  _prefix: string,
   run: (scratchDb: PostgresQueryClient) => Promise<T>
 ): Promise<T> {
-  if (resolved.mode === 'pglite') {
-    const scratchDb = await createEmbeddedPostgres()
-    try {
-      return await run(pgliteAsClient(scratchDb))
-    } finally {
-      if (!scratchDb.closed) {
-        await scratchDb.close()
-      }
-    }
-  }
-
-  const { Client } = await import('pg')
-  const databaseName = createScratchPostgresDatabaseName(prefix)
-  const adminConnectionString = getPostgresAdminConnectionString(
-    resolved.connectionString!
-  )
-  const adminClient = new Client({ connectionString: adminConnectionString })
-  await adminClient.connect()
+  const scratchDb = await createEmbeddedPostgres()
   try {
-    await adminClient.query(
-      `CREATE DATABASE ${quotePgIdentifier(databaseName)}`
-    )
+    return await run(pgliteAsClient(scratchDb))
   } finally {
-    await adminClient.end()
-  }
-
-  const scratchConnectionString = withPostgresDatabase(
-    resolved.connectionString!,
-    databaseName
-  )
-
-  try {
-    const scratchClient = Object.assign(
-      new Client({ connectionString: scratchConnectionString }),
-      { __connectionString: scratchConnectionString }
-    )
-    await scratchClient.connect()
-    try {
-      return await run(scratchClient)
-    } finally {
-      await scratchClient.end()
-    }
-  } finally {
-    const cleanupClient = new Client({
-      connectionString: adminConnectionString,
-    })
-    await cleanupClient.connect()
-    try {
-      await cleanupClient.query(
-        `SELECT pg_terminate_backend(pid)
-         FROM pg_stat_activity
-         WHERE datname = $1
-           AND pid <> pg_backend_pid()`,
-        [databaseName]
-      )
-      await cleanupClient.query(
-        `DROP DATABASE IF EXISTS ${quotePgIdentifier(databaseName)}`
-      )
-    } finally {
-      await cleanupClient.end()
+    if (!scratchDb.closed) {
+      await scratchDb.close()
     }
   }
 }
@@ -753,22 +684,14 @@ async function desiredPostgresAuthSchema(
     resolved,
     'pikku_auth',
     async (scratchDb) => {
-      const { Pool } = await import('pg')
-      const kysely =
-        resolved.mode === 'url'
-          ? new Kysely<any>({
-              dialect: new PostgresDialect({
-                pool: new Pool({
-                  connectionString: scratchDb.__connectionString,
-                  max: 1,
-                }),
-              }),
-              plugins: [new CamelCasePlugin()],
-            })
-          : createPGliteKysely<any>({
-              db: scratchDb.__pglite!,
-              camelCase: true,
-            })
+      // The scratch DB is always an embedded PGlite instance (see
+      // withScratchPostgresDatabase), so drive Better Auth's migration codegen
+      // through the PGlite-backed Kysely regardless of how the app DB is
+      // configured.
+      const kysely = createPGliteKysely<any>({
+        db: scratchDb.__pglite!,
+        camelCase: true,
+      })
 
       try {
         const options = await loadAuthOptions({
