@@ -1,3 +1,11 @@
+## 0.12.42
+
+### Patch Changes
+
+- c16676f: Use an embedded PGlite instance for the Better Auth drift-detection scratch database in `pikku db migrate`, instead of issuing `CREATE DATABASE` against the target Postgres. Creating a real scratch database required the `CREATEDB` privilege, so `pikku db migrate` failed (error 42501) against managed or locked-down Postgres where the application role correctly lacks it. PGlite is real Postgres, so schema introspection stays accurate while needing no server privileges.
+- 33e7750: `pikku fabric link` now returns and logs the linked project's id (`projectId=<uuid>`) alongside its slug. Previously only the slug was emitted, forcing callers (and the e2e harness) to do a follow-up lookup to resolve the project id before operating on it (e.g. requesting a sandbox).
+- fda377d: Add `pikku fabric smoke` for clean-room Fabric validation and make its readiness checks work with localhost-bound dev servers.
+
 ## 0.12.41
 
 ### Patch Changes
