@@ -48,7 +48,7 @@
     "@pikku/schema-cfworker": "workspace:*",
     "@pikku/uws": "workspace:*",
     "ai": "^6.0.105",
-    "better-auth": "^1.6.18",
+    "better-auth": "^1.6.19",
     "better-sqlite3": "^12.10.0",
     "ioredis": "^5.10.0",
     "kysely": "^0.29.0",

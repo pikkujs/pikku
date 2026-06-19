@@ -8,3 +8,4 @@
 
 export * from './pikku-next.js'
 export * from './pikku-next-worker-rpc.js'
+export * from './better-auth.js'

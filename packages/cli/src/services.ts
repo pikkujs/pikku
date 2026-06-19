@@ -67,33 +67,20 @@ const logger = new CLILogger({ logLogo: false, silent: false })
 /**
  * Default CLI renderer that logs output using the logger
  */
-export const defaultCLIRenderer = pikkuCLIRender<
-  ForwardedLogMessage,
-  SingletonServices
->(({ logger }, data) => {
-  if (!data) return
-  const validLevels: ReadonlyArray<ForwardedLogMessage['level']> = [
-    'trace',
-    'debug',
-    'info',
-    'warn',
-    'error',
-  ]
-  if (!validLevels.includes(data.level)) return
-  logger[data.level]({ message: data.message, type: data.type })
-})
-
-// /**
-//  * Client-safe CLI renderer that outputs to console (no service dependencies)
-//  * This renderer can be used in CLI-over-channel clients
-//  */
-// export const clientCLIRenderer = pikkuCLIRender<ForwardedLogMessage>(
-//   ({ logger }, data) => {
-//     if (data) {
-//       logger[data.level]?.({ message: data.message, type: data.type } as any)
-//     }
-//   }
-// )
+export const defaultCLIRenderer = pikkuCLIRender<ForwardedLogMessage>(
+  (_services, data) => {
+    if (!data) return
+    const validLevels: ReadonlyArray<ForwardedLogMessage['level']> = [
+      'trace',
+      'debug',
+      'info',
+      'warn',
+      'error',
+    ]
+    if (!validLevels.includes(data.level)) return
+    logger[data.level]({ message: data.message, type: data.type })
+  }
+)
 
 export const createConfig: CreateConfig<Config, [PikkuCLIConfig]> = async (
   _variablesService,

@@ -11,13 +11,14 @@
     "@pikku/kysely": "workspace:^",
     "@pikku/schema-cfworker": "^0.12.2",
     "@pikku/templates-function-addon": "workspace:*",
-    "better-auth": "^1.6.18",
+    "better-auth": "^1.6.19",
     "eventsource": "^4.1.0",
     "kysely": "^0.29.0",
     "ws": "^8.19.0",
     "zod": "^4"
   },
   "devDependencies": {
+    "@aws-sdk/client-sqs": "^3.1000.0",
     "@modelcontextprotocol/sdk": "1.27.1",
     "@pikku/cli": "^0.12.42",
     "@pikku/cloudflare": "workspace:*",
@@ -30,6 +31,7 @@
     "@pikku/node-http-server": "workspace:*",
     "@pikku/schedule": "workspace:*",
     "@pikku/websocket": "^0.12.1",
+    "@types/aws-lambda": "^8.10.161",
     "@types/node": "^24",
     "@types/ws": "^8",
     "concurrently": "^9.2.1",
