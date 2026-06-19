@@ -5,6 +5,7 @@ import { pikkuSessionlessFunc, wireAddon } from '#pikku'
 wireAddon({ name: 'greeter', package: '@pikku/addon-greeter' })
 wireAddon({ name: 'farewell', package: '@pikku/addon-farewell' })
 wireAddon({ name: 'dbpost', package: '@pikku/addon-dbpost' })
+wireAddon({ name: 'notifyaddon', package: '@pikku/addon-notifyaddon' })
 
 export type ConsumeInput = { name: string }
 export type ConsumeOutput = { message: string }
@@ -31,5 +32,16 @@ export const consumeCreatePost = pikkuSessionlessFunc<
 >({
   func: async (_services, data, { rpc }) => {
     return await rpc.invoke('dbpost:createPost', data)
+  },
+})
+
+// The multi-service addon: uses kysely + two user-defined services, carved with
+// their types. The consumer is type-checked against its published surface.
+export const consumeNotify = pikkuSessionlessFunc<
+  { postId: string },
+  { sentAt: string }
+>({
+  func: async (_services, data, { rpc }) => {
+    return await rpc.invoke('notifyaddon:notifyAuthor', data)
   },
 })

@@ -22,8 +22,9 @@ import {
   symlinkSync,
   cpSync,
   readFileSync,
+  existsSync,
 } from 'node:fs'
-import { join, dirname, resolve } from 'node:path'
+import { join, dirname, resolve, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import assert from 'node:assert/strict'
 
@@ -47,12 +48,68 @@ const addons = [
   // DB addon: carves only `createPost` (touches `post` + `user`). The source DB
   // also has `auditLog` (used by the un-carved `writeAudit`) — it must NOT leak
   // into this addon's owned set.
-  { name: 'dbpost', names: 'createPost', ownedTables: ['post', 'user'] },
+  {
+    name: 'dbpost',
+    names: 'createPost',
+    ownedTables: ['post', 'user'],
+    services: ['kysely'],
+  },
+  // Multi-service addon: `notifyAuthor` uses `kysely` (post + user) AND two
+  // user-defined services (`email`, `clock`). The addon must require all three
+  // as parent services and copy each user service's type into its own surface.
+  {
+    name: 'notifyaddon',
+    names: 'notifyAuthor',
+    ownedTables: ['post', 'user'],
+    services: ['clock', 'email', 'kysely'],
+    serviceTypeFiles: ['email-service.ts', 'clock-service.ts'],
+  },
 ]
 
 // Assert a carved DB addon scoped itself to a STRICT SUBSET of the source DB —
 // tsc passing alone would also pass an un-shaken `Kysely<DB>`, so this is what
 // actually proves the shake.
+// Assert the carved factory requires EXACTLY the given parent services — base
+// services are auto-provided, so they must not appear; nothing spurious may.
+const assertServiceRequirement = (addonDir, services) => {
+  const src = readFileSync(join(addonDir, 'src/services.ts'), 'utf-8')
+  const parent = src.match(/async\s*\(_config,\s*\{([^}]*)\}/)?.[1]
+  assert.ok(parent !== undefined, `no pikkuAddonServices factory:\n${src}`)
+  assert.deepEqual(
+    parent.split(',').map((s) => s.trim()).filter(Boolean).sort(),
+    [...services].sort(),
+    `addon must require exactly ${services.join(', ')}:\n${src}`
+  )
+}
+
+// Assert each user-defined (non-base, non-kysely) service is declared on the
+// addon's SingletonServices AND its type file was copied in — the type-level
+// half of the service shake, which makes the factory destructure compile.
+const assertServiceShake = (addonDir, services, typeFiles) => {
+  const appTypes = readFileSync(
+    join(addonDir, 'types/application-types.d.ts'),
+    'utf-8'
+  )
+  for (const s of services) {
+    if (s === 'kysely') continue
+    assert.ok(
+      new RegExp(`\\b${s}:`).test(appTypes),
+      `expected SingletonServices to declare '${s}':\n${appTypes}`
+    )
+  }
+  for (const f of typeFiles ?? []) {
+    assert.ok(
+      existsSync(join(addonDir, 'types', f)),
+      `expected copied service type file types/${f}`
+    )
+  }
+  console.log(
+    `[addon-carve] ✓ service shake: addon declares ${services
+      .filter((s) => s !== 'kysely')
+      .join(', ')}`
+  )
+}
+
 const assertDbShake = (addonDir, owned) => {
   const scoped = readFileSync(
     join(addonDir, 'types/addon-db.gen.ts'),
@@ -70,7 +127,7 @@ const assertDbShake = (addonDir, owned) => {
   )
 
   const sql = readFileSync(
-    join(addonDir, 'db/sqlite/0001-dbpost.sql'),
+    join(addonDir, `db/sqlite/0001-${basename(addonDir)}.sql`),
     'utf-8'
   )
   assert.ok(/\bpost\b/.test(sql), `owned-table SQL must create 'post':\n${sql}`)
@@ -78,20 +135,6 @@ const assertDbShake = (addonDir, owned) => {
   assert.ok(
     !/audit/i.test(sql),
     `owned-table SQL must NOT create 'auditLog':\n${sql}`
-  )
-
-  // Services shake: the factory must require exactly `kysely` from the host —
-  // not the base services (auto-provided) nor any spurious parent service.
-  const services = readFileSync(join(addonDir, 'src/services.ts'), 'utf-8')
-  const parentServices = services.match(/async\s*\(_config,\s*\{([^}]*)\}/)?.[1]
-  assert.ok(
-    parentServices !== undefined,
-    `could not find the pikkuAddonServices factory:\n${services}`
-  )
-  assert.deepEqual(
-    parentServices.split(',').map((s) => s.trim()).filter(Boolean),
-    ['kysely'],
-    `addon must require exactly 'kysely' as a parent service:\n${services}`
   )
 
   console.log(`[addon-carve] ✓ DB shake: addon owns exactly ${owned.join(', ')}`)
@@ -104,7 +147,7 @@ rmSync(genDir, { recursive: true, force: true })
 mkdirSync(genDir, { recursive: true })
 mkdirSync(join(root, 'node_modules/@pikku'), { recursive: true })
 
-for (const { name, names, ownedTables } of addons) {
+for (const { name, names, ownedTables, services, serviceTypeFiles } of addons) {
   console.log(`\n[addon-carve] 2. carve addon '${name}' (--names ${names})`)
   run(
     'node',
@@ -114,6 +157,8 @@ for (const { name, names, ownedTables } of addons) {
 
   const addonDir = join(genDir, name)
   if (ownedTables) assertDbShake(addonDir, ownedTables)
+  if (services) assertServiceRequirement(addonDir, services)
+  if (serviceTypeFiles) assertServiceShake(addonDir, services, serviceTypeFiles)
 
   console.log(`[addon-carve] 3. build addon '${name}'`)
   run('node', [cli, 'all'], addonDir)

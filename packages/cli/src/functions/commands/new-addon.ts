@@ -14,6 +14,7 @@ import {
   generateScopedDbTypes,
 } from '../db/addon-assembly.js'
 import { carveDbAddon } from '../db/addon-db-carve.js'
+import { carveServiceTypes } from '../db/addon-service-carve.js'
 import {
   parseOpenAPISpec,
   computeContractHash,
@@ -876,61 +877,53 @@ const BASE_SERVICES = new Set([
 function carveServiceFiles(
   vars: AddonVars,
   requiredServices: string[]
-): { write: Record<string, string>; remove: string[]; unsupported: string[] } {
+): { write: Record<string, string>; remove: string[] } {
   const { name } = vars
-  const unsupported = [...new Set(requiredServices)].filter(
-    (s) => !BASE_SERVICES.has(s) && s !== 'kysely'
-  )
-
-  const write: Record<string, string> = {
-    'src/services.ts': generateAddonServices(requiredServices),
-    'types/application-types.d.ts': `import type {
-  CoreConfig,
-  CoreServices,
-  CoreSingletonServices,
-  CoreUserSession,
-} from '@pikku/core'
-
-export interface Config extends CoreConfig {}
-
-export interface UserSession extends CoreUserSession {}
-
-export interface SingletonServices extends CoreSingletonServices<Config> {}
-
-export interface Services extends CoreServices<SingletonServices> {}
-`,
-    'src/index.ts': `// Functions carved from the source project live in src/functions/.\n`,
-  }
-
   return {
-    write,
+    write: {
+      'src/services.ts': generateAddonServices(requiredServices),
+      'src/index.ts': `// Functions carved from the source project live in src/functions/.\n`,
+    },
     remove: [`src/${name}-api.service.ts`, `src/${name}.types.ts`],
-    unsupported,
   }
 }
 
 /**
- * application-types for a DB carve: kysely is declared scoped to the addon's
- * owned tables (`AddonDB`), so the bundled functions only ever see what the
- * addon owns — the type-level half of the DB shake.
+ * The addon's application-types. kysely (if used) is declared scoped to the
+ * addon's owned tables (`AddonDB`); each carved user service is declared with
+ * the same type it has in the source — so the bundled functions and the
+ * `pikkuAddonServices` factory type-check against exactly the carved surface.
  */
-function dbApplicationTypes(): string {
-  return `import type {
+function buildApplicationTypes(opts: {
+  hasKysely: boolean
+  imports: string[]
+  members: string[]
+}): string {
+  const imports = [
+    `import type {
   CoreConfig,
   CoreServices,
   CoreSingletonServices,
   CoreUserSession,
-} from '@pikku/core'
-import type { Kysely } from 'kysely'
-import type { AddonDB } from './addon-db.gen.js'
+} from '@pikku/core'`,
+  ]
+  const members: string[] = []
+  if (opts.hasKysely) {
+    imports.push(`import type { Kysely } from 'kysely'`)
+    imports.push(`import type { AddonDB } from './addon-db.gen.js'`)
+    members.push('  kysely: Kysely<AddonDB>')
+  }
+  imports.push(...opts.imports)
+  members.push(...opts.members)
+
+  const body = members.length > 0 ? `{\n${members.join('\n')}\n}` : '{}'
+  return `${imports.join('\n')}
 
 export interface Config extends CoreConfig {}
 
 export interface UserSession extends CoreUserSession {}
 
-export interface SingletonServices extends CoreSingletonServices<Config> {
-  kysely: Kysely<AddonDB>
-}
+export interface SingletonServices extends CoreSingletonServices<Config> ${body}
 
 export interface Services extends CoreServices<SingletonServices> {}
 `
@@ -1109,23 +1102,36 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
         }
       }
       const requiredServicesList = [...requiredServices]
-      const { write, remove, unsupported } = carveServiceFiles(
-        vars,
-        requiredServicesList
-      )
+      const { write, remove } = carveServiceFiles(vars, requiredServicesList)
       for (const path of remove) delete addonFiles[path]
       Object.assign(addonFiles, write)
-      if (unsupported.length > 0) {
+
+      // Shake the user-defined (non-base, non-kysely) services the bundled
+      // functions use: copy each one's type into the addon and declare it on
+      // SingletonServices, so the factory destructure type-checks.
+      const svc = state.program
+        ? carveServiceTypes(state.program, requiredServicesList)
+        : {
+            members: [],
+            imports: [],
+            files: {},
+            unsupported: requiredServicesList.filter(
+              (s) => !BASE_SERVICES.has(s) && s !== 'kysely'
+            ),
+          }
+      Object.assign(addonFiles, svc.files)
+      if (svc.unsupported.length > 0) {
         logger.warn(
-          `Carved functions use service(s) the addon can't auto-provide: ${unsupported.join(', ')}. ` +
-            `Wire them into src/services.ts before publishing.`
+          `Carved functions use service(s) the addon can't type from the source: ${svc.unsupported.join(', ')}. ` +
+            `Declare them on the addon's SingletonServices before publishing.`
         )
       }
 
       // DB shake: if the bundled functions use kysely, scope the addon to the
       // tables they actually own (compile-oracle) and ship the owned-table SQL +
       // scoped DB type. kysely is declared as a required parent service.
-      if (requiredServices.has('kysely')) {
+      const hasKysely = requiredServices.has('kysely')
+      if (hasKysely) {
         if (!state.program) {
           logger.error(
             'Cannot scope the DB addon: the inspector produced no TypeScript program.'
@@ -1161,7 +1167,6 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
           result.owned,
           "import type { DB } from './db.types.js'"
         )
-        addonFiles['types/application-types.d.ts'] = dbApplicationTypes()
 
         // kysely must resolve when the addon — and its consumer — compiles.
         const pkg = JSON.parse(addonFiles['package.json']!)
@@ -1173,6 +1178,13 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
           `Carved DB addon owns table(s): ${result.owned.join(', ') || '(none)'}`
         )
       }
+
+      // Unified application-types: kysely (scoped) + every carved user service.
+      addonFiles['types/application-types.d.ts'] = buildApplicationTypes({
+        hasKysely,
+        imports: svc.imports,
+        members: svc.members,
+      })
 
       const cfg = JSON.parse(addonFiles['pikku.config.json'])
       if (typeof cfg.addon === 'boolean' || !cfg.addon) cfg.addon = {}

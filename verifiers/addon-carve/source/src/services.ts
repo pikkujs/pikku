@@ -23,6 +23,8 @@ export const createSingletonServices = pikkuServices(async (config) => {
     secrets: new LocalSecretService(variables),
     // Typed only — the source project is inspected/codegen'd, never booted.
     kysely: new Kysely<DB>({ dialect: {} as any }),
+    email: { send: async () => {} },
+    clock: { now: () => new Date() },
   }
 })
 
