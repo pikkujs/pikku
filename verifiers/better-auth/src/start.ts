@@ -6,6 +6,7 @@ import './auth.wiring.js'
 import './me.http.js'
 
 import { fetch } from '@pikku/core'
+import { betterAuthStatelessSession } from '@pikku/better-auth'
 import { VERIFIER_OAUTH_PROVIDERS } from './providers.js'
 
 const BASE = 'http://localhost'
@@ -58,6 +59,26 @@ function extractSessionCookie(res: Response): string | null {
   return match && match[2] ? `${match[1]}=${match[2]}` : null
 }
 
+/**
+ * Build a full `Cookie` header from *every* Set-Cookie the response carried —
+ * crucially including `better-auth.session_data` (the signed {session,user}
+ * cookie cache), which `extractSessionCookie` deliberately ignores. The
+ * stateless middleware reads that cache cookie, so the round-trip test needs it.
+ */
+function extractAllCookies(res: Response): string {
+  // undici's Headers exposes getSetCookie() which returns each Set-Cookie as a
+  // discrete entry — the only reliable way to split multiple cookies, since a
+  // single comma-joined header is ambiguous (cookie values contain commas).
+  const entries =
+    typeof (res.headers as any).getSetCookie === 'function'
+      ? ((res.headers as any).getSetCookie() as string[])
+      : [res.headers.get('set-cookie') ?? '']
+  return entries
+    .map((c) => c.split(';')[0]) // keep just `name=value`
+    .filter((c) => c && !/=$/.test(c)) // drop cleared/empty cookies
+    .join('; ')
+}
+
 function signUp(email: string, password: string): Promise<Response> {
   return fetch(
     new Request(`${AUTH}/sign-up/email`, {
@@ -80,7 +101,7 @@ function signIn(email: string, password: string): Promise<Response> {
 
 async function main(): Promise<void> {
   const config = await createConfig()
-  await createSingletonServices(config)
+  const singletonServices = await createSingletonServices(config)
 
   console.log('\nBetter Auth Verifier')
   console.log('====================')
@@ -123,17 +144,64 @@ async function main(): Promise<void> {
   )
 
   await runTest(
-    'betterAuthSession middleware decodes cookie into pikku session',
+    'global session middleware decodes cookie into pikku session on /me',
     async () => {
       const signupRes = await signUp('dave@example.com', 'password123')
-      const cookie = extractSessionCookie(signupRes)
+      // cookieCache is enabled, so the CLI wires the *stateless* session
+      // middleware globally — it reads the signed `session_data` cache cookie,
+      // so the request must carry the full cookie set, not just session_token.
+      const cookie = extractAllCookies(signupRes)
       assertTruthy(cookie, 'session cookie')
 
       const res = await fetch(
-        new Request(`${BASE}/me`, { headers: { Cookie: cookie! } })
+        new Request(`${BASE}/me`, { headers: { Cookie: cookie } })
       )
       const body = (await res.json()) as any
-      assertTruthy(body?.userId, 'userId from betterAuthSession')
+      assertTruthy(body?.userId, 'userId from global session middleware')
+    }
+  )
+
+  await runTest(
+    'betterAuthStatelessSession verifies the cookie cache without the server',
+    async () => {
+      // Sign up, then read the session to learn the canonical user id.
+      const signupRes = await signUp('heidi@example.com', 'password123')
+      const cookieHeader = extractAllCookies(signupRes)
+      assertTruthy(
+        /better-auth\.session_data=/.test(cookieHeader),
+        'session_data (cookie cache) present — cookieCache must be enabled'
+      )
+
+      const sessionRes = await fetch(
+        new Request(`${AUTH}/get-session`, {
+          headers: { Cookie: cookieHeader },
+        })
+      )
+      const expectedUserId = ((await sessionRes.json()) as any)?.user?.id
+      assertTruthy(expectedUserId, 'user id from get-session')
+
+      // Drive the stateless middleware directly with the *same* cookie the
+      // server just wrote. This is the one fact inspection can't establish:
+      // does getCookieCache(secret) actually read what cookieCache writes?
+      const headers = new Headers({ cookie: cookieHeader })
+      let captured: any = null
+      const mw = betterAuthStatelessSession()
+      await mw(
+        singletonServices as any,
+        {
+          http: { request: { headers: () => headers } },
+          setSession: (s: any) => {
+            captured = s
+          },
+          session: undefined,
+        } as any,
+        async () => {}
+      )
+      assertEqual(
+        captured?.userId,
+        expectedUserId,
+        'stateless middleware populated session userId from the signed cookie'
+      )
     }
   )
 

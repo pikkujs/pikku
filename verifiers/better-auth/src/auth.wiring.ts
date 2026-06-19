@@ -24,6 +24,10 @@ export const auth = pikkuBetterAuth(async ({ secrets, variables, kysely }) => {
     baseURL: 'http://localhost',
     database: { db: kysely, type: 'sqlite' },
     emailAndPassword: { enabled: true },
+    // Sign the {session,user} snapshot into a cookie so the stateless session
+    // middleware (betterAuthStatelessSession) can verify it without the full
+    // server. The round-trip test in start.ts exercises exactly this cookie.
+    session: { cookieCache: { enabled: true } },
     socialProviders: {
       github: await secrets.getSecret('GITHUB_OAUTH'),
       google: await secrets.getSecret('GOOGLE_OAUTH'),
