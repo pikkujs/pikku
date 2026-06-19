@@ -29,9 +29,13 @@ describe('pikkuVersionsUpdate', () => {
     assert.match(warnings[0]!, /pikku versions init/)
   })
 
-  test('logs critical on FUNCTION_VERSION_MODIFIED drift and exits non-zero', async () => {
+  test('emits an error diagnostic on FUNCTION_VERSION_MODIFIED drift without exiting or saving', async () => {
     const warnings: string[] = []
-    const criticals: Array<{ code: string; message: string }> = []
+    const diagnostics: Array<{
+      severity: string
+      code: string
+      message: string
+    }> = []
     const exits: Array<string | number | null | undefined> = []
     const originalExit = process.exit
 
@@ -41,46 +45,44 @@ describe('pikkuVersionsUpdate', () => {
     }) as typeof process.exit
 
     try {
-      await assert.rejects(
-        () =>
-          (pikkuVersionsUpdate as any).func(
-            {
-              logger: {
-                warn: (msg: string) => warnings.push(msg),
-                diagnostic: ({ code, message }: { code: string; message: string }) =>
-                  criticals.push({ code, message }),
-                critical: (code: string, message: string) =>
-                  criticals.push({ code, message }),
-                hasCriticalErrors: () => criticals.length > 0,
-                debug: () => {},
-              },
-              config: { rootDir: '/tmp' },
-              getInspectorState: async () => ({
-                manifest: {
-                  initial: { manifestVersion: 1, contracts: {} },
-                  current: { manifestVersion: 1, contracts: {} },
-                  errors: [
-                    {
-                      code: ErrorCode.FUNCTION_VERSION_MODIFIED,
-                      message: 'published contract changed',
-                    },
-                  ],
+      await (pikkuVersionsUpdate as any).func(
+        {
+          logger: {
+            warn: (msg: string) => warnings.push(msg),
+            diagnostic: (d: {
+              severity: string
+              code: string
+              message: string
+            }) => diagnostics.push(d),
+            debug: () => {},
+          },
+          config: { rootDir: '/tmp' },
+          getInspectorState: async () => ({
+            manifest: {
+              initial: { manifestVersion: 1, contracts: {} },
+              current: { manifestVersion: 1, contracts: {} },
+              errors: [
+                {
+                  code: ErrorCode.FUNCTION_VERSION_MODIFIED,
+                  message: 'published contract changed',
                 },
-              }),
+              ],
             },
-            undefined,
-            {}
-          ),
-        /process\.exit called/
+          }),
+        },
+        undefined,
+        {}
       )
     } finally {
       process.exit = originalExit
     }
 
     assert.equal(warnings.length, 0)
-    assert.equal(criticals.length, 1)
-    assert.equal(criticals[0]!.code, ErrorCode.FUNCTION_VERSION_MODIFIED)
-    assert.equal(criticals[0]!.message, 'published contract changed')
-    assert.deepEqual(exits, [1])
+    // Contract drift is surfaced but non-blocking: no process.exit, no save.
+    assert.deepEqual(exits, [])
+    assert.equal(diagnostics.length, 1)
+    assert.equal(diagnostics[0]!.severity, 'error')
+    assert.equal(diagnostics[0]!.code, ErrorCode.FUNCTION_VERSION_MODIFIED)
+    assert.equal(diagnostics[0]!.message, 'published contract changed')
   })
 })

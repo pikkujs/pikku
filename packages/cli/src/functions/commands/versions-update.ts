@@ -17,11 +17,17 @@ export const pikkuVersionsUpdate = pikkuSessionlessFunc<void, void>({
       (e) => e.code === ErrorCode.FUNCTION_VERSION_MODIFIED
     )
     if (immutabilityErrors.length > 0) {
+      // A published contract changed without a version bump. We must not save
+      // (that would overwrite an immutable record), but a contract drift should
+      // not crash `pikku all` / the dev server. Surface it as an `error`
+      // diagnostic: printed always, blocking only under `--fail-on-error`.
+      // `pikku versions check` remains the hard deploy gate.
       for (const e of immutabilityErrors) {
-        logger.critical(ErrorCode.FUNCTION_VERSION_MODIFIED, e.message)
-      }
-      if (logger.hasCriticalErrors()) {
-        process.exit(1)
+        logger.diagnostic({
+          severity: 'error',
+          code: ErrorCode.FUNCTION_VERSION_MODIFIED,
+          message: e.message,
+        })
       }
       return
     }
