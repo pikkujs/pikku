@@ -56,4 +56,19 @@ describe('toTanStackStartAuthHandler', () => {
     assert.equal(serviceCalls, 1)
     assert.equal(authCalls, 1)
   })
+
+  test('rejects factory usage without singleton services', async () => {
+    assert.throws(
+      () =>
+        toTanStackStartAuthHandler(
+          async (_services: any) =>
+            ({
+              handler: async () => new Response('ok'),
+              api: {},
+            }) as any,
+          async () => ({} as any)
+        ),
+      /createSingletonServices is required/
+    )
+  })
 })

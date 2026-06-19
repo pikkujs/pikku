@@ -51,6 +51,12 @@ export const createResolvedAuthGetter = <
     )
   }
 
+  if (typeof auth === 'function') {
+    throw new Error(
+      'createSingletonServices is required when using a Pikku Better Auth factory'
+    )
+  }
+
   return async () => auth as I
 }
 

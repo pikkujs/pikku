@@ -48,6 +48,14 @@ async function waitForServer(url: string): Promise<void> {
   throw new Error(`Timed out waiting for ${url}`)
 }
 
+function waitForExit(child: ChildProcess): Promise<void> {
+  if (child.exitCode !== null || child.signalCode !== null) {
+    return Promise.resolve()
+  }
+
+  return new Promise((resolve) => child.once('exit', () => resolve()))
+}
+
 async function main(): Promise<void> {
   rmSync(DB_FILE, { force: true })
 
@@ -110,8 +118,19 @@ async function main(): Promise<void> {
 
     console.log('✓ Next Better Auth verifier passed')
   } finally {
-    child.kill('SIGTERM')
-    await new Promise((resolve) => child.once('exit', resolve))
+    if (child.exitCode === null && child.signalCode === null) {
+      const exited = waitForExit(child)
+      child.kill('SIGTERM')
+      await Promise.race([
+        exited,
+        new Promise<void>((resolve) => {
+          setTimeout(() => {
+            child.kill('SIGKILL')
+            resolve()
+          }, 5_000)
+        }),
+      ])
+    }
   }
 }
 

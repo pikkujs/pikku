@@ -23,21 +23,30 @@ while [[ $# -gt 0 ]]; do
 done
 
 pattern="src/*.test.ts"
-files=($(find src -type f -name "*.test.ts"))
+files=()
+while IFS= read -r file; do
+  files+=("$file")
+done < <(find src -type f -name "*.test.ts")
 
 if [ ${#files[@]} -eq 0 ]; then
   echo "No test files found matching pattern: $pattern"
   exit 0
 fi
 
-node_cmd="node --import tsx --test"
+node_cmd=(node --import tsx --test)
 
 if [ "$watch_mode" = true ]; then
-  node_cmd="$node_cmd --watch"
+  node_cmd+=(--watch)
 fi
 
 if [ "$coverage_mode" = true ]; then
-  node_cmd="$node_cmd --test-coverage-include=\"src/**/*.{ts,js}\" --test-coverage-exclude=\"**/dist/**\" --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info"
+  node_cmd+=(
+    "--test-coverage-include=src/**/*.{ts,js}"
+    "--test-coverage-exclude=**/dist/**"
+    --experimental-test-coverage
+    --test-reporter=lcov
+    --test-reporter-destination=lcov.info
+  )
 fi
 
-$node_cmd "${files[@]}"
+"${node_cmd[@]}" "${files[@]}"

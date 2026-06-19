@@ -4,17 +4,23 @@ import { pikkuBetterAuth } from '#pikku/auth/auth.types.js'
 
 let migrated: Promise<void> | undefined
 
-export const auth = pikkuBetterAuth(async ({ secrets, kysely }) => {
+export const auth = pikkuBetterAuth(async ({ secrets, variables, kysely }) => {
+  const frontendUrl =
+    (await variables.get('FRONTEND_URL')) ?? 'http://127.0.0.1:3120'
+
   const instance = betterAuth({
     secret: await secrets.getSecret('BETTER_AUTH_SECRET'),
-    baseURL: process.env.FRONTEND_URL ?? 'http://127.0.0.1:3120',
+    baseURL: frontendUrl,
     database: { db: kysely, type: 'sqlite' },
     emailAndPassword: { enabled: true },
   })
 
-  migrated ??= getMigrations(instance.options).then(({ runMigrations }) =>
-    runMigrations()
-  )
+  migrated ??= getMigrations(instance.options)
+    .then(({ runMigrations }) => runMigrations())
+    .catch((error) => {
+      migrated = undefined
+      throw error
+    })
   await migrated
 
   return instance

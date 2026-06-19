@@ -46,6 +46,12 @@ export function toNextJsAuthHandler<
   createConfig?: CreateConfig<CoreConfig>,
   createSingletonServices?: (config: CoreConfig) => Promise<S>
 ): ReturnType<typeof betterAuthToNextJsHandler> {
+  if (createConfig && !createSingletonServices) {
+    throw new Error(
+      'createSingletonServices is required when using a Pikku Better Auth factory'
+    )
+  }
+
   if (createSingletonServices) {
     const getAuth = createResolvedAuthGetter(
       auth as PikkuBetterAuthFactory<I, S>,

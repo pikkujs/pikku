@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { getAuthSession } from './auth-api.js'
+import { createResolvedAuthGetter, getAuthSession } from './auth-api.js'
 
 describe('getAuthSession', () => {
   test('reads a session from a direct Better Auth instance', async () => {
@@ -76,5 +76,18 @@ describe('getAuthSession', () => {
     assert.equal(configCalls, 2)
     assert.equal(serviceCalls, 2)
     assert.equal(authCalls, 2)
+  })
+
+  test('rejects auth factories without singleton services', async () => {
+    await assert.rejects(
+      async () =>
+        await createResolvedAuthGetter(async (_services: any) => {
+          return {
+            handler: async () => new Response(null, { status: 204 }),
+            api: { getSession: async () => null },
+          }
+        })(),
+      /createSingletonServices is required/
+    )
   })
 })

@@ -47,6 +47,12 @@ export function toTanStackStartAuthHandler<
   createConfig?: CreateConfig<CoreConfig>,
   createSingletonServices?: (config: CoreConfig) => Promise<S>
 ): (context: TanStackStartAuthContext) => Promise<Response> {
+  if (createConfig && !createSingletonServices) {
+    throw new Error(
+      'createSingletonServices is required when using a Pikku Better Auth factory'
+    )
+  }
+
   if (createSingletonServices) {
     const getAuth = createResolvedAuthGetter(
       auth as PikkuBetterAuthFactory<I, S>,

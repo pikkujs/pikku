@@ -67,6 +67,14 @@ async function getAvailablePort(): Promise<number> {
   })
 }
 
+function waitForExit(child: ReturnType<typeof spawn>): Promise<void> {
+  if (child.exitCode !== null || child.signalCode !== null) {
+    return Promise.resolve()
+  }
+
+  return new Promise((resolve) => child.once('exit', () => resolve()))
+}
+
 async function main(): Promise<void> {
   const frontendPort = await getAvailablePort()
   const backendPort = await getAvailablePort()
@@ -160,8 +168,8 @@ async function main(): Promise<void> {
     frontend.kill('SIGTERM')
     backend.kill('SIGTERM')
     await Promise.all([
-      new Promise((resolve) => frontend.once('exit', resolve)),
-      new Promise((resolve) => backend.once('exit', resolve)),
+      waitForExit(frontend),
+      waitForExit(backend),
     ])
     rmSync(DB_FILE, { force: true })
   }

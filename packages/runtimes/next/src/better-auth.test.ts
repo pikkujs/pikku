@@ -56,4 +56,19 @@ describe('toNextJsAuthHandler', () => {
     assert.equal(serviceCalls, 1)
     assert.equal(authCalls, 1)
   })
+
+  test('rejects factory usage without singleton services', () => {
+    assert.throws(
+      () =>
+        toNextJsAuthHandler(
+          async (_services: any) =>
+            ({
+              handler: async () => new Response('ok'),
+              api: {},
+            }) as any,
+          async () => ({} as any)
+        ),
+      /createSingletonServices is required/
+    )
+  })
 })

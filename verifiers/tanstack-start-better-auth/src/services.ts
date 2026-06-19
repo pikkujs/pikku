@@ -2,7 +2,11 @@ import {
   pikkuConfig,
   pikkuServices,
 } from '#pikku/function/pikku-function-types.gen.js'
-import { ConsoleLogger, LocalSecretService } from '@pikku/core/services'
+import {
+  ConsoleLogger,
+  LocalSecretService,
+  LocalVariablesService,
+} from '@pikku/core/services'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import Database from 'better-sqlite3'
 import { Kysely, SqliteDialect } from 'kysely'
@@ -18,13 +22,21 @@ const kysely = new Kysely<KyselyPikkuDB>({
   dialect: new SqliteDialect({ database }),
 })
 
-export const createConfig = pikkuConfig(async () => ({
-  port: Number(process.env.PORT ?? '3121'),
-  hostname: '127.0.0.1',
-}))
+export const createConfig = pikkuConfig(async () => {
+  const port = Number(process.env.PORT ?? '3121')
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+    throw new Error(`Invalid PORT: ${process.env.PORT}`)
+  }
+
+  return {
+    port,
+    hostname: '127.0.0.1',
+  }
+})
 
 export const createSingletonServices = pikkuServices(
   async (config, existingServices) => {
+    const variables = existingServices?.variables ?? new LocalVariablesService()
     const secrets = existingServices?.secrets ?? new LocalSecretService()
     const logger = new ConsoleLogger()
     const schema = new CFWorkerSchemaService(logger)
@@ -38,6 +50,7 @@ export const createSingletonServices = pikkuServices(
 
     const singletonServices = {
       config,
+      variables,
       secrets,
       logger,
       schema,
