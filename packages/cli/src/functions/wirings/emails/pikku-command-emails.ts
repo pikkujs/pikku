@@ -186,7 +186,14 @@ export async function generateEmailsArtifacts(
             () => ''
           ),
         ])
-        const variables = collectTemplateVariables([html, subject, text], locales, partials)
+        // layout.html wraps every template at render time (see serialize-emails),
+        // so include it as a discovery root or layout-only variables get dropped.
+        const layout = partials.layout ?? ''
+        const variables = collectTemplateVariables(
+          [html, subject, text, layout],
+          locales,
+          partials
+        )
         const hashes = Object.fromEntries(
           Object.entries(locales).map(([locale, strings]) => {
             const localePayload = stableStringify({

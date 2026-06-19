@@ -38,7 +38,7 @@ If `emailTemplatesDir` is unset the command is a no-op.
 
 ## Directory layout
 
-```
+```text
 emails/
   theme.json                 # brand tokens: appName, fonts, colors
   locales/

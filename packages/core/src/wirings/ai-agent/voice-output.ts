@@ -30,7 +30,7 @@ async function synthesizeAudio(
     speed?: number
     language?: string
   }
-): Promise<Uint8Array> {
+): Promise<{ bytes: Uint8Array; format: string }> {
   const result = await aiAgentRunner.generateSpeech?.({
     model: input.model,
     text: input.text,
@@ -45,7 +45,12 @@ async function synthesizeAudio(
       'voiceOutput requires an aiAgentRunner with generateSpeech support'
     )
   }
-  return result.audio.uint8Array
+  // Label chunks with the format the provider actually returned (config.format
+  // is only a request), falling back to the requested format then pcm16.
+  return {
+    bytes: result.audio.uint8Array,
+    format: result.audio.format || input.format || 'pcm16',
+  }
 }
 
 export const voiceOutput = (config?: {
@@ -84,8 +89,8 @@ export const voiceOutput = (config?: {
           return [
             {
               type: 'audio-delta' as const,
-              data: bufferToBase64(audio),
-              format: config?.format ?? 'pcm16',
+              data: bufferToBase64(audio.bytes),
+              format: audio.format,
             },
             { type: 'audio-done' as const },
             event,
@@ -121,8 +126,8 @@ export const voiceOutput = (config?: {
         event,
         {
           type: 'audio-delta' as const,
-          data: bufferToBase64(audio),
-          format: config?.format ?? 'pcm16',
+          data: bufferToBase64(audio.bytes),
+          format: audio.format,
         },
       ]
     },

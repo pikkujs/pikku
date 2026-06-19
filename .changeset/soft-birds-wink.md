@@ -1,7 +1,7 @@
 ---
 '@pikku/core': patch
 '@pikku/ai-vercel': patch
-'@pikku/ai-voice': patch
+'@pikku/ai-voice': major
 ---
 
 Extend `aiAgentRunner` with AI SDK-style media methods for transcription, speech, image generation, embeddings, and reranking.
