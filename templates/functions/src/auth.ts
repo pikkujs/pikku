@@ -37,6 +37,9 @@ export const auth = pikkuBetterAuth(
       secret: BETTER_AUTH_SECRET,
       database: { db: kysely, type: 'sqlite' },
       emailAndPassword: { enabled: true },
+      // Enables the stateless session middleware split (CLI detects this), so
+      // non-auth workers skip bundling the full better-auth server.
+      session: { cookieCache: { enabled: true } },
       socialProviders: {
         ...(GITHUB_OAUTH ? { github: GITHUB_OAUTH } : {}),
       },

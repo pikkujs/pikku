@@ -24,6 +24,8 @@ export const auth = pikkuBetterAuth(async ({ secrets, variables, kysely }) => {
     baseURL: 'http://localhost',
     database: { db: kysely, type: 'sqlite' },
     emailAndPassword: { enabled: true },
+    // Drives the CLI to wire the stateless session middleware (see start.ts).
+    session: { cookieCache: { enabled: true } },
     socialProviders: {
       github: await secrets.getSecret('GITHUB_OAUTH'),
       google: await secrets.getSecret('GOOGLE_OAUTH'),

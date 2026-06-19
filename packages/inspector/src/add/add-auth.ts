@@ -188,11 +188,29 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
   // Find the inner betterAuth({...}) call to read providers/basePath/credentials.
   let basePath = DEFAULT_BASE_PATH
   let hasCredentials = false
+  let cookieCache = false
   const betterAuthCall = findBetterAuthCall(factory)
   const config = betterAuthCall?.arguments[0]
 
   if (config && ts.isObjectLiteralExpression(config)) {
     basePath = readStringProp(config, 'basePath') ?? DEFAULT_BASE_PATH
+
+    // Detect `session.cookieCache.enabled` → drives the stateless middleware split.
+    const session = readObjectProp(config, 'session')
+    if (session) {
+      const cookieCacheBlock = readObjectProp(session, 'cookieCache')
+      if (cookieCacheBlock) {
+        const enabledProp = cookieCacheBlock.properties.find(
+          (p) =>
+            ts.isPropertyAssignment(p) &&
+            (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name)) &&
+            p.name.text === 'enabled'
+        ) as ts.PropertyAssignment | undefined
+        cookieCache =
+          !enabledProp ||
+          enabledProp.initializer.kind !== ts.SyntaxKind.FalseKeyword
+      }
+    }
 
     const emailAndPassword = readObjectProp(config, 'emailAndPassword')
     if (emailAndPassword) {
@@ -244,6 +262,7 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
     sourceFile,
     basePath,
     hasCredentials,
+    cookieCache,
     plugins: [...state.auth.plugins],
     services,
   }

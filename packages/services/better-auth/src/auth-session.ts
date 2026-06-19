@@ -20,8 +20,14 @@ type VerifiedApiKey = { valid: boolean; error: unknown; key: any }
 type BetterAuthSessionOptions = {
   /**
    * Map a human/cookie/bearer session (from `getSession`) to the app session.
+   * Receives the singleton `services` so callers can enrich the session from
+   * their own data (e.g. look up org membership) instead of returning only
+   * what better-auth knows. May be async. Mirrors `apiKey.mapKey`.
    */
-  mapSession?: (result: BetterAuthSessionResult) => CoreUserSession
+  mapSession?: (
+    result: BetterAuthSessionResult,
+    services: CoreServices
+  ) => CoreUserSession | Promise<CoreUserSession>
   /**
    * Resolve machine (API key) callers statelessly. When the configured header
    * is present the middleware calls `verifyApiKey` and, if valid, maps the
@@ -106,7 +112,7 @@ export const betterAuthSession = (
         if (result?.user) {
           setSession(
             mapSession
-              ? mapSession(result)
+              ? await mapSession(result, services as CoreServices)
               : ({ userId: result.user.id } as CoreUserSession)
           )
         }

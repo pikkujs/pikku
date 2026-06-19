@@ -102,6 +102,10 @@ interface BundleUnitOptions {
   platform?: 'node' | 'neutral' | 'browser'
   format?: 'esm' | 'cjs'
   noRequireShim?: boolean
+  /** Emit a `.js.map` sourcemap next to the bundle (debug-only). Default false. */
+  sourcemap?: boolean
+  /** Persist esbuild's metafile to `metafile.json` (debug-only). Default false. */
+  emitMetafile?: boolean
 }
 
 /**
@@ -123,6 +127,8 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     define,
     platform,
     format,
+    sourcemap,
+    emitMetafile,
   } = options
 
   await mkdir(unitOutputDir, { recursive: true })
@@ -181,7 +187,7 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     target: 'es2022',
     outfile: bundlePath,
     minify: false,
-    sourcemap: true,
+    sourcemap: sourcemap ?? false,
     logLevel: 'warning',
     loader: { '.ts': 'ts' },
     external: externals ?? ['node:*'],
@@ -190,9 +196,12 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     plugins: [createDeadModuleStubPlugin(deadPatterns)],
   })
 
-  // Write metafile
-  const metafileJson = JSON.stringify(result.metafile, null, 2)
-  await writeFile(metafilePath, metafileJson, 'utf-8')
+  // Always produced in-memory (drives dependency extraction); only persisted
+  // when requested — it's large (~1.6MB/unit) and never needed at runtime.
+  if (emitMetafile) {
+    const metafileJson = JSON.stringify(result.metafile, null, 2)
+    await writeFile(metafilePath, metafileJson, 'utf-8')
+  }
 
   // Extract dependencies and generate minimal package.json
   const { exactDependencies, exactOptionalDependencies } =
@@ -282,6 +291,8 @@ export async function bundleUnits(
     platform?: 'node' | 'neutral' | 'browser'
     format?: 'esm' | 'cjs'
     noRequireShim?: boolean
+    sourcemap?: boolean
+    emitMetafile?: boolean
     resolveOutputDir?: (unit: DeploymentUnit, baseOutputDir: string) => string
   }
 ): Promise<BundleOutput> {

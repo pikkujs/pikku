@@ -189,4 +189,52 @@ describe('serializeAuthGen', () => {
     // The inline form would trip PKU111 (schema must be an identifier).
     assert.doesNotMatch(out, /schema: z\.string\(\),/)
   })
+
+  describe('cookieCache → stateless session middleware split', () => {
+    const statelessDef = def({ cookieCache: true })
+
+    test('without cookieCache the middleware stays in the wiring file (no split)', () => {
+      const out = gen(['github'])
+      assert.equal(out.middleware, undefined)
+      assert.match(
+        out.wiring,
+        /addHTTPMiddleware\('\*', \[betterAuthSession\(\)\]\)/
+      )
+    })
+
+    test('with cookieCache the wiring file drops the session middleware', () => {
+      const out = gen(['github'], statelessDef)
+      assert.doesNotMatch(out.wiring, /addHTTPMiddleware/)
+      assert.doesNotMatch(out.wiring, /betterAuthSession/)
+    })
+
+    test('with cookieCache the wiring file keeps handler + routes + auth.wiring import', () => {
+      const out = gen(['github'], statelessDef)
+      // The full server stays here — only the auth unit bundles this file.
+      assert.match(
+        out.wiring,
+        /import { createAuthHandler } from '@pikku\/better-auth'/
+      )
+      assert.match(out.wiring, /import '\.\.\/src\/auth\.js'/)
+      assert.match(out.wiring, /wireHTTPRoutes\(/)
+      assert.match(out.wiring, /getAuthCatchAll:/)
+    })
+
+    test('with cookieCache a separate middleware file registers the stateless verifier', () => {
+      const out = gen(['github'], statelessDef)
+      assert.ok(out.middleware, 'middleware file should be emitted')
+      const mw = out.middleware!
+      assert.match(
+        mw,
+        /import { betterAuthStatelessSession } from '@pikku\/better-auth'/
+      )
+      assert.match(
+        mw,
+        /addHTTPMiddleware\('\*', \[betterAuthStatelessSession\(\)\]\)/
+      )
+      // Critically: it must NOT pull the full better-auth server in.
+      assert.doesNotMatch(mw, /import '\.\.\/src\/auth\.js'/)
+      assert.doesNotMatch(mw, /createAuthHandler/)
+    })
+  })
 })

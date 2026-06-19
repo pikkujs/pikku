@@ -268,6 +268,11 @@ export const createSingletonServices: CreateSingletonServices<
         config.authFile
           ? path.join(path.dirname(config.authFile), 'auth-secrets.gen.ts')
           : undefined,
+        // Stateless-session split: middleware-only file nothing imports, so it's
+        // unreachable via the import graph — add it explicitly to get inspected.
+        config.authFile
+          ? path.join(path.dirname(config.authFile), 'auth-middleware.gen.ts')
+          : undefined,
       ]
       for (const file of scaffoldFiles) {
         if (file && !wiringFiles.includes(file) && existsSync(file)) {

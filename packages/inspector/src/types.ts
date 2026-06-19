@@ -318,6 +318,9 @@ export interface AuthDefinition {
    *  `auth-meta.gen.json` so the console SSO page can show which plugins are
    *  enabled. */
   plugins: string[]
+  /** Whether `session.cookieCache` is enabled — drives the stateless session
+   * middleware split in the auth codegen. Absent/false ⇒ stateful middleware. */
+  cookieCache?: boolean
   /**
    * Singleton services the generated auth handler must have available at
    * runtime — the services the `pikkuBetterAuth` factory reaches for (either
