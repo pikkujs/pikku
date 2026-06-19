@@ -1,49 +1,98 @@
 import ts from 'typescript'
 
 /**
- * Kysely reports an unsatisfied table key as TS2345 "Argument of type 'string'
- * is not assignable to parameter of type 'TableExpressionOrList<…>'". The message
- * widens the literal to `string`, so it never names the table — but the diagnostic
- * span points exactly at the offending string-literal argument. We read the table
- * name from the source span instead of parsing the message.
+ * Kysely entry points that take a DB table name as their first argument. When a
+ * table key is absent from the typed DB, calling one of these with a string
+ * literal produces a TS2345 — but the *message* varies (`selectFrom` widens to
+ * `string` and prints `TableExpressionOrList`; `insertInto` prints the literal
+ * against `never`). So we identify a missing table structurally — a string
+ * literal at argument 0 of one of these calls — not by parsing the message.
+ *
+ * `with`/`withRecursive` are excluded on purpose: their first argument is a CTE
+ * alias, not a DB table.
  */
-const TABLE_ARG_TYPE = 'TableExpressionOrList'
+const TABLE_METHODS = new Set([
+  'selectFrom',
+  'insertInto',
+  'replaceInto',
+  'updateTable',
+  'deleteFrom',
+  'mergeInto',
+  'innerJoin',
+  'leftJoin',
+  'rightJoin',
+  'fullJoin',
+  'crossJoin',
+])
 
-function findStringLiteralAt(
+function deepestNodeAt(
   sourceFile: ts.SourceFile,
   position: number
-): string | null {
-  let match: string | null = null
+): ts.Node | null {
+  let found: ts.Node | null = null
   const visit = (node: ts.Node): void => {
     if (position < node.getStart(sourceFile) || position >= node.getEnd()) {
       return
     }
-    if (ts.isStringLiteralLike(node)) {
-      match = node.text
-      return
-    }
+    found = node
     node.forEachChild(visit)
   }
   visit(sourceFile)
-  return match
+  return found
+}
+
+function tableMethodName(call: ts.CallExpression): string | null {
+  const callee = call.expression
+  if (ts.isPropertyAccessExpression(callee)) return callee.name.text
+  if (ts.isElementAccessExpression(callee) && ts.isStringLiteralLike(callee.argumentExpression)) {
+    return callee.argumentExpression.text
+  }
+  return null
+}
+
+function stripAlias(literal: string): string {
+  return literal.split(/\s+as\s+/i)[0]!.trim()
 }
 
 /**
- * Extract the set of table names that a kysely program references but whose
- * keys are absent from the current DB type. Pair with a program typed as
- * `Kysely<Pick<DB, never>>` (or a partial set) and the result is exactly the
- * tables still missing. Generalizes for free across selectFrom/insertInto/
- * updateTable/deleteFrom/innerJoin/etc. — they all emit the same TS2345.
+ * If `position` lands on a string literal that is argument 0 of a kysely
+ * table-entry method, return the referenced table name (alias stripped).
+ * Otherwise null — which excludes column references (arg 1+), `.where(...)`
+ * predicates, CTE names, and any other string literal.
  */
-function isMissingTableDiagnostic(d: ts.Diagnostic): boolean {
-  if (d.code !== 2345) return false
-  const message = ts.flattenDiagnosticMessageText(d.messageText, '\n')
-  return message.includes(TABLE_ARG_TYPE)
+function tableArgAt(sourceFile: ts.SourceFile, position: number): string | null {
+  const node = deepestNodeAt(sourceFile, position)
+  if (!node || !ts.isStringLiteralLike(node)) return null
+
+  // Direct: selectFrom('table')
+  const parent = node.parent
+  if (parent && ts.isCallExpression(parent) && parent.arguments[0] === node) {
+    const method = tableMethodName(parent)
+    if (method && TABLE_METHODS.has(method)) return stripAlias(node.text)
+    return null
+  }
+
+  // List form: selectFrom(['a', 'b'])
+  if (parent && ts.isArrayLiteralExpression(parent)) {
+    const call = parent.parent
+    if (call && ts.isCallExpression(call) && call.arguments[0] === parent) {
+      const method = tableMethodName(call)
+      if (method && TABLE_METHODS.has(method)) return stripAlias(node.text)
+    }
+  }
+
+  return null
+}
+
+function isMissingTableDiagnostic(d: ts.Diagnostic): string | null {
+  if (d.code !== 2345 || !d.file || d.start === undefined) return null
+  return tableArgAt(d.file, d.start)
 }
 
 /**
  * Pure collector over diagnostics — extracted so it can be unit-tested with
- * synthesized diagnostics, independent of how the program was built.
+ * synthesized diagnostics over a real source file, independent of how the
+ * program was built.
  */
 export function collectMissingTables(
   diagnostics: readonly ts.Diagnostic[],
@@ -51,11 +100,8 @@ export function collectMissingTables(
 ): Set<string> {
   const missing = new Set<string>()
   for (const diagnostic of diagnostics) {
-    if (!isMissingTableDiagnostic(diagnostic)) continue
-    const file = diagnostic.file
-    if (!file || diagnostic.start === undefined) continue
-    if (!fileNames.has(file.fileName)) continue
-    const table = findStringLiteralAt(file, diagnostic.start)
+    if (!diagnostic.file || !fileNames.has(diagnostic.file.fileName)) continue
+    const table = isMissingTableDiagnostic(diagnostic)
     if (table) missing.add(table)
   }
   return missing
@@ -107,7 +153,7 @@ export function discoverOwnedTables(
       (d) =>
         d.file !== undefined &&
         fileNames.has(d.file.fileName) &&
-        !isMissingTableDiagnostic(d)
+        isMissingTableDiagnostic(d) === null
     )
 
   return { owned: [...owned].sort(), residual }

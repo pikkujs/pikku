@@ -6,13 +6,14 @@ import {
   discoverOwnedTables,
 } from './addon-table-discovery.js'
 
-// Shapes the diagnostics exactly as the compile-oracle spike proved real kysely
-// emits them: code 2345, message naming TableExpressionOrList, span on the
-// string-literal table argument (the message itself never names the table).
+// A real source file so the extractor can inspect AST structure. Tables appear
+// at argument 0 of table-entry methods; the column ref is argument 0 of
+// `.where(...)` (not a table method) and must NOT be collected.
 const FILE = 'addon.ts'
 const SRC = [
   `await kysely.selectFrom('organization').selectAll().execute()`,
-  `await kysely.selectFrom('project').selectAll().execute()`,
+  `await kysely.insertInto('project').values({}).execute()`,
+  `await kysely.selectFrom('organization').where('organization.id', '=', '1').execute()`,
 ].join('\n')
 
 const sourceFile = ts.createSourceFile(
@@ -22,35 +23,43 @@ const sourceFile = ts.createSourceFile(
   /* setParentNodes */ true
 )
 
-const tableDiag = (table: string): ts.Diagnostic => ({
+// Diagnostics are shaped as the probe proved kysely emits them: TS2345 with the
+// span on the offending string-literal argument. The message text is irrelevant
+// to the structural extractor, so we don't bother matching it.
+const diagAt = (literal: string): ts.Diagnostic => ({
   file: sourceFile,
-  start: SRC.indexOf(`'${table}'`),
-  length: table.length + 2,
+  start: SRC.indexOf(`'${literal}'`),
+  length: literal.length + 2,
   code: 2345,
   category: ts.DiagnosticCategory.Error,
-  messageText:
-    `Argument of type 'string' is not assignable to parameter of type ` +
-    `'TableExpressionOrList<EmptyDB, never>'.`,
+  messageText: `Argument of type 'string' is not assignable.`,
 })
 
 describe('collectMissingTables', () => {
-  test('reads the table name from the diagnostic span, not the message', () => {
+  test('reads tables from selectFrom and insertInto arg-0 spans', () => {
     const missing = collectMissingTables(
-      [tableDiag('organization'), tableDiag('project')],
+      [diagAt('organization'), diagAt('project')],
       new Set([FILE])
     )
     assert.deepEqual([...missing].sort(), ['organization', 'project'])
   })
 
+  test('ignores a column reference (arg 1 of .where)', () => {
+    const missing = collectMissingTables([diagAt('organization.id')], new Set([
+      FILE,
+    ]))
+    assert.equal(missing.size, 0)
+  })
+
   test('ignores diagnostics from other files', () => {
-    const missing = collectMissingTables([tableDiag('organization')], new Set([
+    const missing = collectMissingTables([diagAt('organization')], new Set([
       'somewhere-else.ts',
     ]))
     assert.equal(missing.size, 0)
   })
 
-  test('ignores unrelated diagnostics (wrong code or message)', () => {
-    const notTableArg: ts.Diagnostic = {
+  test('ignores non-2345 diagnostics', () => {
+    const notArg: ts.Diagnostic = {
       file: sourceFile,
       start: SRC.indexOf(`'organization'`),
       length: 14,
@@ -58,18 +67,15 @@ describe('collectMissingTables', () => {
       category: ts.DiagnosticCategory.Error,
       messageText: `Cannot find name 'kysely'.`,
     }
-    const missing = collectMissingTables([notTableArg], new Set([FILE]))
-    assert.equal(missing.size, 0)
+    assert.equal(collectMissingTables([notArg], new Set([FILE])).size, 0)
   })
 })
 
 describe('discoverOwnedTables (fixpoint)', () => {
-  // buildProgram reports every still-unowned table as missing; once a table is
-  // in the owned set it resolves. The loop must converge on the full set.
   const ALL = ['organization', 'project']
   const buildProgram = (owned: string[]): ts.Program => {
     const ownedSet = new Set(owned)
-    const diagnostics = ALL.filter((t) => !ownedSet.has(t)).map(tableDiag)
+    const diagnostics = ALL.filter((t) => !ownedSet.has(t)).map(diagAt)
     return {
       getSemanticDiagnostics: () => diagnostics,
     } as unknown as ts.Program
