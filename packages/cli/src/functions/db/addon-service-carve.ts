@@ -21,15 +21,15 @@ export interface ServiceCarveResult {
   unsupported: string[]
 }
 
-/** The source project's `SingletonServices` interface (its body members are the user services). */
+/** The source project's `SingletonServices` interface + the file declaring it (body members are the user services). */
 function findSingletonServices(
   program: ts.Program
-): ts.InterfaceDeclaration | null {
+): { decl: ts.InterfaceDeclaration; sourceFile: ts.SourceFile } | null {
   for (const sf of program.getSourceFiles()) {
     if (sf.fileName.includes('/node_modules/')) continue
     for (const st of sf.statements) {
       if (ts.isInterfaceDeclaration(st) && st.name.text === 'SingletonServices') {
-        return st
+        return { decl: st, sourceFile: sf }
       }
     }
   }
@@ -137,11 +137,11 @@ export function carveServiceTypes(
     result.unsupported = [...wanted]
     return result
   }
-  const appTypesFile = singleton.getSourceFile()
+  const { decl, sourceFile: appTypesFile } = singleton
   const imports = importMap(appTypesFile)
   const importByModule = new Map<string, Set<string>>()
 
-  for (const member of singleton.members) {
+  for (const member of decl.members) {
     if (
       !ts.isPropertySignature(member) ||
       !member.type ||

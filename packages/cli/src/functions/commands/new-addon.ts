@@ -1120,11 +1120,16 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
             ),
           }
       Object.assign(addonFiles, svc.files)
+      // Gate (mirrors the raw-SQL gate): a service whose type can't be carved
+      // from the source would leave the factory destructuring an undeclared
+      // service — a non-compiling addon. Refuse rather than ship it broken.
       if (svc.unsupported.length > 0) {
-        logger.warn(
+        logger.error(
           `Carved functions use service(s) the addon can't type from the source: ${svc.unsupported.join(', ')}. ` +
-            `Declare them on the addon's SingletonServices before publishing.`
+            `Their types resolve through an external package or a sibling-imported file, which the carve can't copy cleanly. ` +
+            `Declare them on the addon's SingletonServices manually, or exclude the functions using them.`
         )
+        process.exit(1)
       }
 
       // DB shake: if the bundled functions use kysely, scope the addon to the
