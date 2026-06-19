@@ -12,15 +12,61 @@ function sha256(input: string) {
   return createHash('sha256').update(input).digest('hex')
 }
 
-function extractVariables(...sources: string[]) {
+function resolveLocaleString(
+  strings: Record<string, unknown>,
+  dottedPath: string
+): string | undefined {
+  let current: unknown = strings
+  for (const segment of dottedPath.split('.')) {
+    if (!current || typeof current !== 'object' || !(segment in current)) return undefined
+    current = (current as Record<string, unknown>)[segment]
+  }
+  return typeof current === 'string' ? current : undefined
+}
+
+// Variables a template actually references — scoped to the locale keys and
+// partials it uses (transitively), not every string in the shared locale file.
+function collectTemplateVariables(
+  rootSources: string[],
+  locales: Record<string, Record<string, unknown>>,
+  partials: Record<string, string>
+) {
   const variables = new Set<string>()
-  for (const source of sources) {
+  const visited = new Set<string>()
+  const queue = [...rootSources]
+  while (queue.length > 0) {
+    const source = queue.shift()
+    if (!source) continue
     for (const match of source.matchAll(/\{\{\s*([^}]+?)\s*\}\}/g)) {
       const key = String(match[1]).trim()
-      if (!key || key === 'content' || key.startsWith('>')) continue
+      if (!key) continue
+      if (key.startsWith('>')) {
+        const name = key.slice(1).trim()
+        if (!visited.has(`partial:${name}`)) {
+          visited.add(`partial:${name}`)
+          if (partials[name]) queue.push(partials[name])
+        }
+        continue
+      }
       const rootKey = key.split('.')[0]
-      if (rootKey === 't' || rootKey === 'theme' || rootKey === 'locale') continue
-      if (rootKey === 'subject') continue
+      if (
+        rootKey === 'content' ||
+        rootKey === 'subject' ||
+        rootKey === 'theme' ||
+        rootKey === 'locale'
+      ) {
+        continue
+      }
+      if (rootKey === 't') {
+        const path = key.split('.').slice(1).join('.')
+        if (!path || visited.has(`t:${path}`)) continue
+        visited.add(`t:${path}`)
+        for (const strings of Object.values(locales)) {
+          const resolved = resolveLocaleString(strings, path)
+          if (resolved) queue.push(resolved)
+        }
+        continue
+      }
       variables.add(rootKey)
     }
   }
@@ -40,19 +86,6 @@ function stableStringify(value: unknown): string {
       .join(',')}}`
   }
   return JSON.stringify(value)
-}
-
-function collectStringLeaves(value: unknown): string[] {
-  if (typeof value === 'string') {
-    return [value]
-  }
-  if (Array.isArray(value)) {
-    return value.flatMap((item) => collectStringLeaves(item))
-  }
-  if (value && typeof value === 'object') {
-    return Object.values(value).flatMap((nested) => collectStringLeaves(nested))
-  }
-  return []
 }
 
 export const pikkuEmails = pikkuSessionlessFunc<void, boolean | undefined>({
@@ -153,16 +186,7 @@ export async function generateEmailsArtifacts(
             () => ''
           ),
         ])
-        const localeSources = Object.values(locales).flatMap((strings) =>
-          collectStringLeaves(strings)
-        )
-        const variables = extractVariables(
-          html,
-          subject,
-          text,
-          ...Object.values(partials),
-          ...localeSources
-        )
+        const variables = collectTemplateVariables([html, subject, text], locales, partials)
         const hashes = Object.fromEntries(
           Object.entries(locales).map(([locale, strings]) => {
             const localePayload = stableStringify({
