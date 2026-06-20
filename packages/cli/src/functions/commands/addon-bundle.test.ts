@@ -51,6 +51,26 @@ describe('selectBundledFunctions', () => {
     assert.deepEqual(matched, [])
     assert.deepEqual(skipped, ['ghost'])
   })
+
+  test("excludes internal 'pikku'-tagged scaffold (e.g. remoteRPCHandler)", () => {
+    const { matched, skipped } = selectBundledFunctions({
+      getCoinList: {
+        name: 'getCoinList',
+        sourceFile: '/p/src/functions/get-coin-list.function.ts',
+      },
+      remoteRPCHandler: {
+        name: 'remoteRPCHandler',
+        tags: ['pikku'],
+        sourceFile: '/p/src/scaffold/rpc-remote.gen.ts',
+      },
+    })
+    assert.deepEqual(
+      matched.map((m) => m.id),
+      ['getCoinList']
+    )
+    // Not a user function the carve failed to copy — silently dropped, not warned.
+    assert.deepEqual(skipped, [])
+  })
 })
 
 describe('assignBundlePaths', () => {

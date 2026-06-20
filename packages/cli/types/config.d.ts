@@ -176,6 +176,20 @@ export type PikkuCLIInput = {
       }
   addonName?: string
 
+  /**
+   * Presentation metadata for a runnable source project destined to become an
+   * addon. Ignored by `pikku dev`/codegen — `pikku new addon --carve` lifts it
+   * into the carved addon's `addon` block. Lets a project carry addon metadata
+   * without the `addon` key, which would switch codegen into addon/IoC mode and
+   * stop the project running under `pikku dev`.
+   */
+  node?: {
+    categories?: string[]
+    icon?: string
+    displayName?: string
+    description?: string
+  }
+
   configDir: string
   tsconfig: string
 

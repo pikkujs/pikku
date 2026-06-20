@@ -30,6 +30,13 @@ export function selectBundledFunctions(
 
   for (const [id, m] of Object.entries(meta)) {
     const name = m.name ?? id
+    // Internal framework functions (the auto-generated remote-RPC scaffold) are
+    // tagged 'pikku'. They must never be carved: in addon (IoC) mode the addon's
+    // pikku-types.gen.ts exports no wireHTTP/wireQueueWorker, so the bundled
+    // scaffold would fail to compile.
+    if (m.tags?.includes('pikku')) {
+      continue
+    }
     if (!m.sourceFile) {
       skipped.push(name)
       continue
