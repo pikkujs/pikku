@@ -29,11 +29,11 @@ export const createSingletonServices = pikkuAddonServices(
       )
     }
     const metaService = existingMetaService
-    const registryUrl =
-      (await variables.get('REGISTRY_URL')) ?? 'https://pikku-registry.fly.dev'
+    const fabricApiUrl =
+      (await variables.get('FABRIC_API_URL')) ?? 'https://api.pikkufabric.com'
 
     const wiringService = new WiringService(metaService)
-    const addonService = new AddonService(registryUrl)
+    const addonService = new AddonService(fabricApiUrl)
     await addonService.init()
     const oauthService = new OAuthService()
 
