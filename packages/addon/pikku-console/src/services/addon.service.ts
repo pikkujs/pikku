@@ -44,10 +44,12 @@ export type AddonMeta = AddonPackageInfo
 export type AddonDetail = AddonPackageInfo
 
 export class AddonService {
-  constructor(private registryUrl: string) {}
+  constructor(private fabricApiUrl: string) {}
 
   async readAddonsMeta(): Promise<AddonMeta[]> {
-    const response = await fetch(`${this.registryUrl}/api/packages?limit=500`)
+    const response = await fetch(
+      `${this.fabricApiUrl}/registry/packages?limit=500`
+    )
     if (!response.ok) {
       throw new Error(`Registry returned ${response.status}`)
     }
@@ -57,7 +59,7 @@ export class AddonService {
 
   async readAddon(id: string): Promise<AddonDetail | null> {
     const response = await fetch(
-      `${this.registryUrl}/api/packages/${encodeURIComponent(id)}`
+      `${this.fabricApiUrl}/registry/packages/${encodeURIComponent(id)}`
     )
     if (!response.ok) return null
     const text = await response.text()

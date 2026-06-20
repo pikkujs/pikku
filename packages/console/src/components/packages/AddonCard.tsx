@@ -1,0 +1,205 @@
+import React, { useState } from 'react'
+import {
+  Card,
+  Group,
+  Text,
+  Badge,
+  Button,
+  ThemeIcon,
+  Stack,
+} from '@pikku/mantine/core'
+import { asI18n } from '@pikku/react'
+import { useI18n } from '@pikku/react/i18n'
+import { Check, Plus, ShieldCheck, FunctionSquare, Bot } from 'lucide-react'
+import type { PackageMeta } from '../../pages/PackagesPage'
+import {
+  getCategoryMeta,
+  addonPrimaryCategory,
+  isOfficialAddon,
+} from './addonCategoryMeta'
+import { AddonStatChip } from './AddonStatChip'
+
+interface AddonCardProps {
+  addon: PackageMeta
+  installed: boolean
+  installing: boolean
+  editable: boolean
+  onOpen: (addon: PackageMeta) => void
+  onInstall: (addon: PackageMeta) => void
+}
+
+export const AddonCard: React.FC<AddonCardProps> = ({
+  addon,
+  installed,
+  installing,
+  editable,
+  onOpen,
+  onInstall,
+}) => {
+  const { t } = useI18n()
+  const [hovered, setHovered] = useState(false)
+  const category = addonPrimaryCategory(addon)
+  const { icon: CategoryIcon, color } = getCategoryMeta(category)
+  const official = isOfficialAddon(addon.name)
+  const functionCount = Object.keys(addon.functions ?? {}).length
+  const agentCount = Object.keys(addon.agents ?? {}).length
+  const iconSrc = addon.icon
+    ? addon.icon.startsWith('<')
+      ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(addon.icon)}`
+      : addon.icon
+    : null
+
+  return (
+    <Card
+      withBorder
+      radius="md"
+      padding={0}
+      onClick={() => onOpen(addon)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        cursor: 'pointer',
+        display: 'flex',
+        flexDirection: 'column',
+        transform: hovered ? 'translateY(-2px)' : 'none',
+        boxShadow: hovered ? 'var(--mantine-shadow-md)' : undefined,
+        borderColor: hovered
+          ? 'var(--mantine-color-default-border)'
+          : undefined,
+        transition: 'transform 140ms ease, box-shadow 140ms ease',
+      }}
+    >
+      <Stack gap="sm" p="md" style={{ flex: 1 }}>
+        <Group gap="sm" wrap="nowrap" align="flex-start">
+          {iconSrc ? (
+            <img
+              src={iconSrc}
+              width={44}
+              height={44}
+              alt={addon.displayName}
+              style={{
+                objectFit: 'contain',
+                borderRadius: 10,
+                display: 'block',
+              }}
+            />
+          ) : (
+            <ThemeIcon size={44} radius="md" variant="light" color={color}>
+              <CategoryIcon size={22} />
+            </ThemeIcon>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Text fw={600} size="sm" truncate>
+              {asI18n(addon.displayName || addon.name)}
+            </Text>
+            <Text size="xs" c="dimmed" ff="monospace" truncate>
+              {asI18n(addon.name)}
+            </Text>
+          </div>
+          {official ? (
+            <Badge
+              size="sm"
+              variant="light"
+              color="blue"
+              leftSection={<ShieldCheck size={11} />}
+              style={{ flexShrink: 0 }}
+            >
+              {t('packages.official')}
+            </Badge>
+          ) : (
+            <Badge
+              size="sm"
+              variant="light"
+              color="gray"
+              style={{ flexShrink: 0 }}
+            >
+              {t('packages.community')}
+            </Badge>
+          )}
+        </Group>
+
+        {addon.description && (
+          <Text
+            size="sm"
+            c="dimmed"
+            lineClamp={2}
+            style={{ minHeight: '2.6em' }}
+          >
+            {asI18n(addon.description)}
+          </Text>
+        )}
+
+        {(addon.tags ?? []).length > 0 && (
+          <Group gap={6}>
+            {addon.tags.slice(0, 3).map((tag) => (
+              <Badge
+                key={tag}
+                size="sm"
+                variant="light"
+                color="gray"
+                tt="none"
+                ff="monospace"
+                fw={400}
+              >
+                {asI18n(tag)}
+              </Badge>
+            ))}
+          </Group>
+        )}
+      </Stack>
+
+      <Group
+        justify="space-between"
+        wrap="nowrap"
+        px="md"
+        py="sm"
+        style={{
+          borderTop: '1px solid var(--mantine-color-default-border)',
+          background: 'var(--mantine-color-default-hover)',
+        }}
+      >
+        <Group gap="lg" wrap="nowrap">
+          <AddonStatChip icon={FunctionSquare} value={functionCount} />
+          <AddonStatChip icon={Bot} value={agentCount} />
+        </Group>
+        {installed ? (
+          <Button
+            size="xs"
+            variant="light"
+            color="green"
+            leftSection={<Check size={13} />}
+            onClick={(e) => {
+              e.stopPropagation()
+              onOpen(addon)
+            }}
+          >
+            {t('packages.added')}
+          </Button>
+        ) : editable ? (
+          <Button
+            size="xs"
+            leftSection={<Plus size={13} />}
+            loading={installing}
+            onClick={(e) => {
+              e.stopPropagation()
+              onInstall(addon)
+            }}
+          >
+            {t('packages.add')}
+          </Button>
+        ) : (
+          <Button
+            size="xs"
+            variant="default"
+            onClick={(e) => {
+              e.stopPropagation()
+              onOpen(addon)
+            }}
+          >
+            {t('packages.view')}
+          </Button>
+        )}
+      </Group>
+    </Card>
+  )
+}

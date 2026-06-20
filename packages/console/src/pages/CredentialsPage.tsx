@@ -1,6 +1,4 @@
 import React, { useState } from 'react'
-import { Group, SegmentedControl, TextInput } from '@pikku/mantine/core'
-import { Search } from 'lucide-react'
 import { useSearchParams } from '../router'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -9,18 +7,17 @@ import { CredentialsOverviewTab } from '../components/tabs/CredentialsOverviewTa
 import { CredentialUsersTab } from '../components/tabs/CredentialUsersTab'
 import { useI18n } from '@pikku/react/i18n'
 
-const TABS = [
-  { value: 'credentials', label: 'Global' },
-  { value: 'users', label: 'Users' },
-]
+type CredentialsTab = 'credentials' | 'users'
 
 export const CredentialsPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
   const { t } = useI18n()
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
-  const tab = searchParams.get('tab') || 'credentials'
+  const rawTab = searchParams.get('tab')
+  const tab: CredentialsTab =
+    rawTab === 'users' || rawTab === 'credentials' ? rawTab : 'credentials'
 
-  const handleTabChange = (value: string) => {
+  const handleTabChange = (value: CredentialsTab) => {
     setSearchQuery('')
     setSearchParams({ tab: value })
   }
@@ -33,24 +30,21 @@ export const CredentialsPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emp
             title={t('credentials.title')}
             description={t('credentials.description')}
             docsHref="https://pikku.dev/docs/core-features/credentials"
-            filters={
-              <Group gap="sm" wrap="nowrap">
-                <TextInput
-                  placeholder={tab === 'users' ? t('credentials.search_users') : t('credentials.search_credentials')}
-                  leftSection={<Search size={14} />}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  size="xs"
-                  style={{ width: 240 }}
-                />
-                <SegmentedControl
-                  size="xs"
-                  value={tab}
-                  onChange={handleTabChange}
-                  data={TABS}
-                />
-              </Group>
-            }
+            search={{
+              placeholder: tab === 'users' ? t('credentials.search_users') : t('credentials.search_credentials'),
+              value: searchQuery,
+              onChange: setSearchQuery,
+              width: 240,
+            }}
+            selection={{
+              ariaLabel: t('credentials.tab_aria'),
+              value: tab,
+              onChange: handleTabChange,
+              options: [
+                { value: 'credentials', label: t('credentials.tab_global') },
+                { value: 'users', label: t('credentials.tab_users') },
+              ],
+            }}
           />
         }
         emptyPanelMessage={t('credentials.select_user')}

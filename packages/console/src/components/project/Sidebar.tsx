@@ -53,123 +53,51 @@ export interface NavSection {
   items: NavItem[]
 }
 
-export const DEFAULT_NAV_SECTIONS: NavSection[] = [
-  {
-    title: asI18n('Run'),
-    items: [
-      {
-        label: asI18n('Functions'),
-        href: '/functions',
-        icon: FunctionSquare,
-        matchPrefix: '/functions',
-      },
-      {
-        label: asI18n('Workflows'),
-        href: '/workflow',
-        icon: GitBranch,
-        matchPrefix: '/workflow',
-      },
-      {
-        label: asI18n('Agents'),
-        href: '/agents',
-        icon: Bot,
-        matchPrefix: '/agents',
-      },
-      {
-        label: asI18n('Tests'),
-        href: '/tests',
-        icon: FlaskConical,
-        matchPrefix: '/tests',
-      },
-    ],
-  },
-  {
-    title: asI18n('Data'),
-    items: [
-      {
-        label: asI18n('Database'),
-        href: '/database',
-        icon: Database,
-        matchPrefix: '/database',
-      },
-      {
-        label: asI18n('APIs'),
-        href: '/apis',
-        icon: Globe,
-        matchPrefix: '/apis',
-      },
-      {
-        label: asI18n('Jobs'),
-        href: '/jobs',
-        icon: Clock,
-        matchPrefix: '/jobs',
-      },
-      {
-        label: asI18n('Runtime'),
-        href: '/runtime',
-        icon: Server,
-        matchPrefix: '/runtime',
-      },
-      {
-        label: asI18n('Emails'),
-        href: '/emails',
-        icon: Mail,
-        matchPrefix: '/emails',
-      },
-    ],
-  },
-  {
-    title: asI18n('Config'),
-    items: [
-      {
-        label: asI18n('Secrets'),
-        href: '/secrets',
-        icon: KeyRound,
-        matchPrefix: '/secrets',
-      },
-      {
-        label: asI18n('Environment Variables'),
-        href: '/variables',
-        icon: Variable,
-        matchPrefix: '/variables',
-      },
-      {
-        label: asI18n('Addons'),
-        href: '/addons',
-        icon: Package,
-        matchPrefix: '/addons',
-      },
-    ],
-  },
-  {
-    title: asI18n('Users'),
-    items: [
-      {
-        label: asI18n('OAuth'),
-        href: '/users',
-        icon: Users,
-        matchPrefix: '/users',
-      },
-      {
-        label: asI18n('Credentials'),
-        href: '/credentials',
-        icon: KeyRound,
-        matchPrefix: '/credentials',
-      },
-    ],
-  },
-  {
-    title: asI18n(''),
-    items: [
-      {
-        label: asI18n('Changes'),
-        href: '/changes',
-        icon: GitCompare,
-        matchPrefix: '/changes',
-      },
-    ],
-  },
-]
+// Built via a hook so the default nav labels go through t(). Callers can still
+// pass their own `sections` prop with already-translated labels.
+export function useDefaultNavSections(): NavSection[] {
+  const { t } = useI18n()
+  return [
+    {
+      title: t('nav.run'),
+      items: [
+        { label: t('nav.functions'), href: '/functions', icon: FunctionSquare, matchPrefix: '/functions' },
+        { label: t('nav.workflows'), href: '/workflow', icon: GitBranch, matchPrefix: '/workflow' },
+        { label: t('nav.agents'), href: '/agents', icon: Bot, matchPrefix: '/agents' },
+        { label: t('nav.tests'), href: '/tests', icon: FlaskConical, matchPrefix: '/tests' },
+      ],
+    },
+    {
+      title: t('nav.data'),
+      items: [
+        { label: t('nav.database'), href: '/database', icon: Database, matchPrefix: '/database' },
+        { label: t('nav.apis'), href: '/apis', icon: Globe, matchPrefix: '/apis' },
+        { label: t('nav.jobs'), href: '/jobs', icon: Clock, matchPrefix: '/jobs' },
+        { label: t('nav.runtime'), href: '/runtime', icon: Server, matchPrefix: '/runtime' },
+        { label: t('nav.emails'), href: '/emails', icon: Mail, matchPrefix: '/emails' },
+      ],
+    },
+    {
+      title: t('nav.config'),
+      items: [
+        { label: t('nav.secrets'), href: '/secrets', icon: KeyRound, matchPrefix: '/secrets' },
+        { label: t('nav.env_vars'), href: '/variables', icon: Variable, matchPrefix: '/variables' },
+        { label: t('nav.addons'), href: '/addons', icon: Package, matchPrefix: '/addons' },
+      ],
+    },
+    {
+      title: t('nav.users'),
+      items: [
+        { label: t('nav.oauth'), href: '/users', icon: Users, matchPrefix: '/users' },
+        { label: t('nav.credentials'), href: '/credentials', icon: KeyRound, matchPrefix: '/credentials' },
+      ],
+    },
+    {
+      title: asI18n(''),
+      items: [{ label: t('nav.changes'), href: '/changes', icon: GitCompare, matchPrefix: '/changes' }],
+    },
+  ]
+}
 
 export interface SidebarBranding {
   logo: React.ReactNode
@@ -214,12 +142,14 @@ export const SIDEBAR_COLLAPSED_WIDTH = COLLAPSED_WIDTH
 export const SIDEBAR_EXPANDED_WIDTH = EXPANDED_WIDTH
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  sections = DEFAULT_NAV_SECTIONS,
+  sections: sectionsProp,
   branding = DEFAULT_BRANDING,
   footer,
 }) => {
   const Link = useLink()
   const { t } = useI18n()
+  const defaultSections = useDefaultNavSections()
+  const sections = sectionsProp ?? defaultSections
   const theme = useMantineTheme()
   const { pathname } = useLocation()
   const { refresh, loading: metaLoading } = usePikkuMeta()

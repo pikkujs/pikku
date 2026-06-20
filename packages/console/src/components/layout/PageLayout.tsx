@@ -4,63 +4,49 @@ import type { I18nNode } from '@pikku/react'
 import { ExternalLink } from 'lucide-react'
 import { useI18n } from '@pikku/react/i18n'
 import DocLink from '../ui/DocLink'
+import { ShellHeader, type ShellHeaderSearch, type ShellHeaderSelection } from '../ui/ShellHeader'
 import { usePageGate } from '../../context/PageGateContext'
 
-interface ListPageHeaderProps {
+interface ListPageHeaderProps<T extends string = string> {
   title: I18nNode
   description?: I18nNode
   docsHref?: string
   lead?: ReactNode
   filters?: ReactNode
   view?: ReactNode
+  // Structured controls participate in ShellHeader's measured collapse: the
+  // selection folds switch → cycle → drawer, and search folds into the drawer.
+  // Prefer these over the raw `filters`/`view` nodes (which ride the
+  // non-collapsing `actionsNode` escape hatch and overflow when narrow).
+  search?: ShellHeaderSearch
+  selection?: ShellHeaderSelection<T>
 }
 
-export function ListPageHeader({ title, description, docsHref, lead, filters, view }: ListPageHeaderProps) {
+// Renders the shared ShellHeader bar: title (first to collapse) + description as
+// the count, with the page's existing filters/view/lead/docs controls passed
+// through on the right.
+export function ListPageHeader<T extends string = string>({
+  title,
+  description,
+  docsHref,
+  lead,
+  filters,
+  view,
+  search,
+  selection,
+}: ListPageHeaderProps<T>) {
   const docsButton = docsHref ? <DocLink href={docsHref} /> : null
-
-  const titleStack = (
-    <Stack gap={2} style={{ minWidth: 0, flex: 1 }}>
-      <Text fw={600} size="xl" c="var(--app-text)" truncate style={{ minWidth: 0 }}>
-        {title}
-      </Text>
-      {description != null &&
-        (typeof description === 'string' ? (
-          <Text size="md" c="dimmed">
-            {description}
-          </Text>
-        ) : (
-          <Text size="md" c="dimmed" component="div">
-            {description}
-          </Text>
-        ))}
-    </Stack>
-  )
-
-  return (
-    <>
-      {/* Wide: single row — title | filters | view | lead | docs */}
-      <Group justify="space-between" align="center" wrap="nowrap" gap="md" visibleFrom="lg">
-        {titleStack}
-        {filters && <Group gap="sm" wrap="nowrap" style={{ flexShrink: 0 }}>{filters}</Group>}
-        {view && <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>{view}</Group>}
-        {lead && <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>{lead}</Group>}
+  const right =
+    filters || view || lead || docsButton ? (
+      <>
+        {filters}
+        {view}
+        {lead}
         {docsButton}
-      </Group>
-
-      {/* Narrow: [title | lead | docs] then [filters | view] */}
-      <Stack gap="xs" hiddenFrom="lg">
-        <Group justify="space-between" align="center" wrap="nowrap" gap="md">
-          {titleStack}
-          <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>
-            {lead}
-            {docsButton}
-          </Group>
-        </Group>
-        {(filters || view) && (
-          <PageActionBar filters={filters} view={view} />
-        )}
-      </Stack>
-    </>
+      </>
+    ) : undefined
+  return (
+    <ShellHeader title={title} count={description} search={search} selection={selection} actionsNode={right} />
   )
 }
 
@@ -87,19 +73,13 @@ export function PageContainer({
   const gate = usePageGate()
   const body = loading ?? emptyState ?? gate ?? children
 
-  const content = header ? (
-    <Stack gap={contentGap ?? 'md'} style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
-      {header}
-      {body}
-    </Stack>
-  ) : (
-    body
-  )
-
-  return (
+  // When a header is present it renders as a full-bleed bar above the body, and
+  // the body runs full-width so both share one gutter (the ShellHeader pattern).
+  const hasHeader = header != null
+  const bodyContainer = (
     <Container
-      size={fullWidth ? undefined : 'lg'}
-      fluid={fullWidth}
+      size={hasHeader || fullWidth ? undefined : 'lg'}
+      fluid={hasHeader || fullWidth}
       py={noPadding ? 0 : 'xl'}
       px={noPadding ? 0 : 'xl'}
       {...props}
@@ -113,8 +93,17 @@ export function PageContainer({
         ...style,
       }}
     >
-      {content}
+      {body}
     </Container>
+  )
+
+  if (!hasHeader) return bodyContainer
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0 }}>
+      {header}
+      {bodyContainer}
+    </div>
   )
 }
 
