@@ -370,6 +370,13 @@
   "apis": {
     "title": "APIs",
     "description": "Browse HTTP routes, channels, MCP servers, and CLI surfaces",
+    "tab_aria": "API type",
+    "tab": {
+      "http": "HTTP",
+      "channels": "Channels",
+      "mcp": "MCP",
+      "cli": "CLI"
+    },
     "search": {
       "http": "Search routes...",
       "channels": "Search channels...",

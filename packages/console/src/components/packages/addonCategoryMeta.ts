@@ -1,3 +1,4 @@
+import type { ComponentType } from 'react'
 import {
   Package,
   KeyRound,
@@ -15,7 +16,7 @@ import {
 import type { PackageMeta } from '../../pages/PackagesPage'
 
 export interface CategoryMeta {
-  icon: React.ComponentType<{ size?: number }>
+  icon: ComponentType<{ size?: number }>
   color: string
 }
 

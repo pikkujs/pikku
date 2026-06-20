@@ -164,8 +164,19 @@ const InstalledList: React.FC<{
   )
 }
 
-const deriveNamespace = (packageName: string) =>
-  packageName.replace('@pikku/addon-', '').replace(/^@.*\//, '')
+const deriveNamespace = (packageName: string) => {
+  const base = packageName
+    .replace('@pikku/addon-', '')
+    .replace(/^@[^/]+\//, '')
+    .toLowerCase()
+  const namespace = base.replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '')
+  if (!namespace) {
+    throw new Error(
+      `Unable to derive namespace from package name: ${packageName}`
+    )
+  }
+  return namespace
+}
 
 const CommunityList: React.FC<{
   searchQuery: string

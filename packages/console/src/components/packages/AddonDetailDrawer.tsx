@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Drawer,
   Tabs,
@@ -84,6 +84,10 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
   const rpc = usePikkuRPC()
   const [tab, setTab] = useState<string | null>('overview')
 
+  useEffect(() => {
+    if (addon) setTab('overview')
+  }, [addon?.id])
+
   const { data: pkg } = useQuery<CommunityPackage | null>({
     queryKey: ['addon', 'community', addon?.id],
     queryFn: async () =>
@@ -134,12 +138,16 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
     },
   ]
 
+  const displayName = pkg?.displayName ?? addon?.displayName ?? addon?.name
+  const description = pkg?.description ?? addon?.description
+  const tags = pkg?.tags ?? addon?.tags ?? []
   const author = pkg?.author ?? addon?.author
   const version = pkg?.version ?? addon?.version
+  const iconRaw = pkg?.icon ?? addon?.icon
   const iconSrc =
-    addon?.icon && addon.icon.startsWith('<')
-      ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(addon.icon)}`
-      : addon?.icon
+    iconRaw && iconRaw.startsWith('<')
+      ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(iconRaw)}`
+      : iconRaw
 
   return (
     <Drawer
@@ -184,7 +192,7 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
               <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>
                 <Group gap="xs" align="center">
                   <Title order={3} fw={700}>
-                    {asI18n(addon.displayName || addon.name)}
+                    {asI18n(displayName || addon.name)}
                   </Title>
                   {official ? (
                     <Badge
@@ -207,15 +215,15 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
               </Stack>
             </Group>
 
-            {addon.description && (
+            {description && (
               <Text size="sm" c="dimmed" mt="md">
-                {asI18n(addon.description)}
+                {asI18n(description)}
               </Text>
             )}
 
-            {(addon.tags ?? []).length > 0 && (
+            {tags.length > 0 && (
               <Group gap={6} mt="sm">
-                {addon.tags.map((tag) => (
+                {tags.map((tag) => (
                   <Badge
                     key={tag}
                     size="sm"

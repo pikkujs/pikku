@@ -8,7 +8,6 @@ import { HttpTab } from '../components/tabs/HttpTab'
 import { ChannelsTab } from '../components/tabs/ChannelsTab'
 import { McpTab } from '../components/tabs/McpTab'
 import { CliTab } from '../components/tabs/CliTab'
-import { asI18n } from '@pikku/react'
 import { useI18n } from '@pikku/react/i18n'
 
 type ApisTab = 'http' | 'channels' | 'mcp' | 'cli'
@@ -30,7 +29,14 @@ const ApisPageInner: React.FC<ApisPageProps> = ({ httpHero, channelsHero, mcpHer
   const { t } = useI18n()
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
-  const tab = (searchParams.get('tab') || 'http') as ApisTab
+  const rawTab = searchParams.get('tab')
+  const tab: ApisTab =
+    rawTab === 'http' ||
+    rawTab === 'channels' ||
+    rawTab === 'mcp' ||
+    rawTab === 'cli'
+      ? rawTab
+      : 'http'
 
   const handleTabChange = (value: ApisTab) => {
     setSearchQuery('')
@@ -65,14 +71,14 @@ const ApisPageInner: React.FC<ApisPageProps> = ({ httpHero, channelsHero, mcpHer
               width: 240,
             }}
             selection={{
-              ariaLabel: asI18n('API type'),
+              ariaLabel: t('apis.tab_aria'),
               value: tab,
               onChange: handleTabChange,
               options: [
-                { value: 'http', label: asI18n('HTTP') },
-                { value: 'channels', label: asI18n('Channels') },
-                { value: 'mcp', label: asI18n('MCP') },
-                { value: 'cli', label: asI18n('CLI') },
+                { value: 'http', label: t('apis.tab.http') },
+                { value: 'channels', label: t('apis.tab.channels') },
+                { value: 'mcp', label: t('apis.tab.mcp') },
+                { value: 'cli', label: t('apis.tab.cli') },
               ],
             }}
           />

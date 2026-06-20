@@ -169,7 +169,13 @@ export const FunctionTabbedPanel: React.FC<FunctionDetailsFormProps> = ({
           />
         )}
         {canEdit && !editing && (
-          <ActionIcon variant="subtle" size="sm" onClick={() => setEditing(true)} title={t('functions.edit_function')}>
+          <ActionIcon
+            variant="subtle"
+            size="sm"
+            onClick={() => setEditing(true)}
+            title={t('functions.edit_function')}
+            aria-label={t('functions.edit_function')}
+          >
             <Pencil size={14} />
           </ActionIcon>
         )}

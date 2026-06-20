@@ -2,11 +2,9 @@ import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import {
   ActionIcon,
   Box,
-  Button,
   Collapse,
   Group,
   Indicator,
-  Menu,
   Paper,
   Stack,
   Text,
@@ -14,10 +12,30 @@ import {
   Tooltip,
 } from '@pikku/mantine/core'
 import { useElementSize } from '@mantine/hooks'
-import { asI18n, type I18nNode, type I18nString } from '@pikku/react'
 import { useI18n } from '@pikku/react/i18n'
-import { ChevronDown, ListFilter, MoreHorizontal, Search } from 'lucide-react'
-import { PikkuSwitch, type PikkuSwitchOption } from './PikkuSwitch'
+import { ListFilter, Search } from 'lucide-react'
+import { PikkuSwitch } from './PikkuSwitch'
+import { FilterChip } from './FilterChip'
+import { CycleSwitch } from './CycleSwitch'
+import { ActionCluster } from './ActionCluster'
+import {
+  CONTROL_H,
+  GAP,
+  SAFETY,
+  filterDisplay,
+  partitionFilters,
+  type Candidate,
+  type ShellHeaderProps,
+} from './shellHeaderShared'
+
+export type {
+  ShellHeaderProps,
+  ShellHeaderSelection,
+  ShellHeaderFilter,
+  ShellHeaderFilterOption,
+  ShellHeaderSearch,
+  ShellHeaderAction,
+} from './shellHeaderShared'
 
 /* ============================================================================
    ShellHeader — one compact bar that replaces the tall title + action-bar
@@ -29,238 +47,7 @@ import { PikkuSwitch, type PikkuSwitchOption } from './PikkuSwitch'
    Props-only: every label/value is passed already-translated by the caller.
    ========================================================================== */
 
-export interface ShellHeaderSelection<T extends string> {
-  ariaLabel: I18nString
-  value: T
-  onChange: (value: T) => void
-  options: Array<PikkuSwitchOption<T>>
-}
-
-export interface ShellHeaderFilterOption {
-  value: string
-  label: I18nString
-}
-
-export interface ShellHeaderFilter {
-  key: string
-  /** Field name, e.g. "Status". */
-  label: I18nString
-  /** With `options`: the selected option's value (a key). Without: a display value. */
-  value: string
-  options?: ShellHeaderFilterOption[]
-  onChange?: (value: string) => void
-  icon?: ReactNode
-  /** Higher priority stays inline longer when space runs out (default 0). */
-  priority?: number
-}
-
-export interface ShellHeaderSearch {
-  placeholder: I18nString
-  value: string
-  onChange: (value: string) => void
-  /** Inline width in px (default 220). */
-  width?: number
-}
-
-export interface ShellHeaderAction {
-  key: string
-  label: I18nString
-  icon?: ReactNode
-  onClick?: () => void
-  variant?: 'primary' | 'default' | 'subtle'
-  disabled?: boolean
-  tooltip?: I18nString
-  /** Always render icon-only (with tooltip), never showing the label. */
-  iconOnly?: boolean
-}
-
-export interface ShellHeaderProps<T extends string = string> {
-  /** Page title shown at the very start; the first thing to drop when narrow. */
-  title?: I18nNode
-  /** Status/count chip shown far left, already formatted (e.g. "6 · 1 error"). */
-  count?: I18nNode
-  /** Left selection control: PikkuSwitch when wide, a cycle button when narrow. */
-  selection?: ShellHeaderSelection<T>
-  /** Middle dropdown filters; overflow folds into a funnel → drawer. */
-  filters?: ShellHeaderFilter[]
-  /** Text filter; the last thing to fold into the drawer. */
-  search?: ShellHeaderSearch
-  /** Right-side actions; labels fold to icons, secondaries to a menu when narrow. */
-  actions?: ShellHeaderAction[]
-  /** Pre-rendered right-side controls (escape hatch for callers that already
-   *  have JSX buttons). Rendered after structured `actions`; not collapsed. */
-  actionsNode?: ReactNode
-  /** Heading for the collapsed-filters drawer (default "Filters"). */
-  filtersTitle?: I18nString
-}
-
-const GAP = 8
-const SAFETY = 6
-// Every control in the bar is forced to this height so the switch, search,
-// funnel, filter chips and actions line up. Mantine `size` tokens are not
-// equal-height across Button/ActionIcon/TextInput, so height is set explicitly.
-const CONTROL_H = 32
-
-type SelMode = 'switch' | 'cycle' | 'drawer'
-type ActMode = 'label' | 'icon' | 'compact'
-interface Candidate {
-  showTitle: boolean
-  showCount: boolean
-  selMode: SelMode
-  visCount: number
-  searchInline: boolean
-  actMode: ActMode
-}
-
-/* Keep the `visCount` highest-priority filters; return both sets in source order. */
-function partitionFilters(filters: ShellHeaderFilter[], visCount: number) {
-  const order = filters.map((_, i) => i)
-  order.sort((a, b) => (filters[b]!.priority ?? 0) - (filters[a]!.priority ?? 0) || a - b)
-  const keep = new Set(order.slice(0, visCount))
-  return {
-    visible: filters.filter((_, i) => keep.has(i)),
-    hidden: filters.filter((_, i) => !keep.has(i)),
-  }
-}
-
-// The display value is an option's already-translated label, or — with no
-// options — the raw filter value (an opaque value, hence asI18n, not English).
-function filterDisplay(f: ShellHeaderFilter): I18nString {
-  if (!f.options) return asI18n(f.value)
-  return f.options.find((o) => o.value === f.value)?.label ?? asI18n(f.value)
-}
-
-function FilterChip({ filter, withinPortal = true }: { filter: ShellHeaderFilter; withinPortal?: boolean }) {
-  const target = (
-    <Button
-      variant="default"
-      size="sm"
-      leftSection={filter.icon}
-      rightSection={filter.options ? <ChevronDown size={13} /> : undefined}
-      onClick={filter.options ? undefined : filter.onChange ? () => filter.onChange?.(filter.value) : undefined}
-      styles={{ root: { flexShrink: 0, height: CONTROL_H, minHeight: CONTROL_H }, label: { gap: 5 } }}
-    >
-      <Text span fz={11.5} c="dimmed">
-        {filter.label}
-      </Text>
-      <Text span fz={12.5} fw={600}>
-        {filterDisplay(filter)}
-      </Text>
-    </Button>
-  )
-  if (!filter.options) return target
-  return (
-    <Menu position="bottom-start" withinPortal={withinPortal} shadow="md">
-      <Menu.Target>{target}</Menu.Target>
-      <Menu.Dropdown>
-        {filter.options.map((o) => (
-          <Menu.Item
-            key={o.value}
-            fw={o.value === filter.value ? 600 : 400}
-            onClick={() => filter.onChange?.(o.value)}
-          >
-            {o.label}
-          </Menu.Item>
-        ))}
-      </Menu.Dropdown>
-    </Menu>
-  )
-}
-
-function CycleSwitch<T extends string>({ selection }: { selection: ShellHeaderSelection<T> }) {
-  const { t } = useI18n()
-  const { options, value, onChange, ariaLabel } = selection
-  const idx = Math.max(
-    0,
-    options.findIndex((o) => o.value === value),
-  )
-  const cur = options[idx]
-  if (!cur) return null
-  return (
-    <Button
-      variant="default"
-      size="sm"
-      leftSection={cur.icon}
-      onClick={() => onChange(options[(idx + 1) % options.length]!.value)}
-      aria-label={t('shell_header.cycle_aria', { ariaLabel, label: cur.label })}
-      styles={{ root: { flexShrink: 0, height: CONTROL_H, minHeight: CONTROL_H } }}
-    >
-      {cur.label}
-    </Button>
-  )
-}
-
-function actionButton(a: ShellHeaderAction, mode: ActMode): ReactNode {
-  const variant = a.variant === 'primary' ? 'filled' : a.variant === 'subtle' ? 'subtle' : 'default'
-  const effectiveMode: ActMode = a.iconOnly && a.icon ? 'icon' : mode
-  if (effectiveMode === 'label' || !a.icon) {
-    const btn = (
-      <Button
-        key={a.key}
-        variant={variant}
-        size="sm"
-        leftSection={a.icon}
-        onClick={a.onClick}
-        disabled={a.disabled}
-        styles={{ root: { flexShrink: 0, height: CONTROL_H, minHeight: CONTROL_H } }}
-      >
-        {a.label}
-      </Button>
-    )
-    return a.tooltip ? (
-      <Tooltip key={a.key} label={a.tooltip}>
-        {btn}
-      </Tooltip>
-    ) : (
-      btn
-    )
-  }
-  return (
-    <Tooltip key={a.key} label={a.tooltip ?? a.label}>
-      <ActionIcon variant={variant} size={CONTROL_H} onClick={a.onClick} disabled={a.disabled} aria-label={a.label}>
-        {a.icon}
-      </ActionIcon>
-    </Tooltip>
-  )
-}
-
-function ActionCluster({ actions, mode }: { actions: ShellHeaderAction[]; mode: ActMode }) {
-  const { t } = useI18n()
-  if (mode !== 'compact') {
-    return (
-      <>
-        {actions.map((a) => actionButton(a, mode))}
-      </>
-    )
-  }
-  // compact: primaries (and icon-only actions) stay as icons, the rest collapse
-  // into a kebab menu.
-  const primary = actions.filter((a) => a.variant === 'primary' || a.iconOnly)
-  const rest = actions.filter((a) => a.variant !== 'primary' && !a.iconOnly)
-  return (
-    <>
-      {primary.map((a) => actionButton(a, 'icon'))}
-      {rest.length > 0 && (
-        <Menu position="bottom-end" withinPortal shadow="md">
-          <Menu.Target>
-            <ActionIcon variant="default" size={CONTROL_H} aria-label={t('shell_header.more_actions')}>
-              <MoreHorizontal size={18} />
-            </ActionIcon>
-          </Menu.Target>
-          <Menu.Dropdown>
-            {rest.map((a) => (
-              <Menu.Item key={a.key} leftSection={a.icon} onClick={a.onClick} disabled={a.disabled}>
-                {a.label}
-              </Menu.Item>
-            ))}
-          </Menu.Dropdown>
-        </Menu>
-      )}
-    </>
-  )
-}
-
-export function ShellHeader<T extends string = string>({
+export const ShellHeader = <T extends string = string>({
   title,
   count,
   selection,
@@ -269,7 +56,7 @@ export function ShellHeader<T extends string = string>({
   actions = [],
   actionsNode,
   filtersTitle,
-}: ShellHeaderProps<T>) {
+}: ShellHeaderProps<T>) => {
   const { t } = useI18n()
   const filtersLabel = filtersTitle ?? t('shell_header.filters')
   const { ref: sizeRef, width } = useElementSize()

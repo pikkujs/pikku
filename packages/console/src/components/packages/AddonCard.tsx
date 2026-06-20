@@ -17,6 +17,7 @@ import {
   addonPrimaryCategory,
   isOfficialAddon,
 } from './addonCategoryMeta'
+import { AddonStatChip } from './AddonStatChip'
 
 interface AddonCardProps {
   addon: PackageMeta
@@ -26,18 +27,6 @@ interface AddonCardProps {
   onOpen: (addon: PackageMeta) => void
   onInstall: (addon: PackageMeta) => void
 }
-
-const StatChip: React.FC<{
-  icon: React.ComponentType<{ size?: number; color?: string }>
-  value: number
-}> = ({ icon: Icon, value }) => (
-  <Group gap={5} wrap="nowrap">
-    <Icon size={13} color="var(--mantine-color-dimmed)" />
-    <Text size="sm" ff="monospace" c="dimmed">
-      {asI18n(String(value))}
-    </Text>
-  </Group>
-)
 
 export const AddonCard: React.FC<AddonCardProps> = ({
   addon,
@@ -170,8 +159,8 @@ export const AddonCard: React.FC<AddonCardProps> = ({
         }}
       >
         <Group gap="lg" wrap="nowrap">
-          <StatChip icon={FunctionSquare} value={functionCount} />
-          <StatChip icon={Bot} value={agentCount} />
+          <AddonStatChip icon={FunctionSquare} value={functionCount} />
+          <AddonStatChip icon={Bot} value={agentCount} />
         </Group>
         {installed ? (
           <Button

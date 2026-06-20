@@ -13,7 +13,9 @@ export const CredentialsPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emp
   const { t } = useI18n()
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
-  const tab = (searchParams.get('tab') || 'credentials') as CredentialsTab
+  const rawTab = searchParams.get('tab')
+  const tab: CredentialsTab =
+    rawTab === 'users' || rawTab === 'credentials' ? rawTab : 'credentials'
 
   const handleTabChange = (value: CredentialsTab) => {
     setSearchQuery('')
