@@ -1,0 +1,9 @@
+{
+  "name": "@pikku/verifiers-addon-registry",
+  "type": "module",
+  "private": true,
+  "description": "Round-trips an addon through `npm pack` and installs it into a separate consumer to prove the registry publish/install artifact works",
+  "scripts": {
+    "test": "node run.mjs"
+  }
+}

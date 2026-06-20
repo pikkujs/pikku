@@ -6786,6 +6786,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/verifiers-addon-registry@workspace:verifiers/addon-registry":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-addon-registry@workspace:verifiers/addon-registry"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/verifiers-addon@workspace:verifiers/addon":
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-addon@workspace:verifiers/addon"

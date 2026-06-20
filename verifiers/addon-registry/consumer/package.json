@@ -1,0 +1,19 @@
+{
+  "name": "@pikku/verifier-registry-consumer",
+  "type": "module",
+  "private": true,
+  "imports": {
+    "#pikku": "./.pikku/pikku-types.gen.ts",
+    "#pikku/*": "./.pikku/*"
+  },
+  "dependencies": {
+    "@pikku/core": "*",
+    "@pikku/verifier-registry-addon": "*"
+  },
+  "devDependencies": {
+    "@pikku/cli": "*",
+    "@types/node": "^24",
+    "typescript": "^5.9",
+    "zod": "^4"
+  }
+}
