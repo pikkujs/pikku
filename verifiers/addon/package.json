@@ -14,12 +14,13 @@
   "devDependencies": {
     "@pikku/cli": "workspace:*",
     "@types/node": "^24",
+    "tsx": "^4.21.0",
     "typescript": "^5.9",
     "zod": "^4"
   },
   "scripts": {
     "tsc": "tsc --noEmit",
-    "test": "(pikku || true) && tsc --noEmit",
+    "test": "pikku && tsc --noEmit && npx tsx src/contracts.assert.ts",
     "ncu": "npx npm-check-updates",
     "ncu:pikku": "npx npm-check-updates -f '/@pikku/.*/'"
   }

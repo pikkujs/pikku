@@ -13,7 +13,10 @@ import { resolveIdentifier } from '../utils/resolve-identifier.js'
 import { extractFunctionName } from '../utils/extract-function-name.js'
 import { getPropertyAssignmentInitializer } from '../utils/type-utils.js'
 import { resolveAddonName } from '../utils/resolve-addon-package.js'
-import { resolveImportedAddonContract } from '../utils/resolve-addon-contract.js'
+import {
+  resolveRefContract,
+  type RefContractResolution,
+} from '../utils/resolve-ref-contract.js'
 import { getExportedVariableName } from '../utils/get-exported-variable-name.js'
 
 interface GroupConfig {
@@ -175,6 +178,15 @@ function processRoutes(
 
     for (const prop of node.properties) {
       if (ts.isPropertyAssignment(prop)) {
+        const ref = resolveRefContract(
+          prop.initializer,
+          'refHTTP',
+          state.exportedContracts.addonHttp
+        )
+        if (ref) {
+          processRefHTTPContract(ref, parentConfig, state, logger, sourceFile)
+          continue
+        }
         processRoutes(
           prop.initializer,
           parentConfig,
@@ -188,33 +200,46 @@ function processRoutes(
     return
   }
 
+  if (ts.isCallExpression(node)) {
+    const ref = resolveRefContract(
+      node,
+      'refHTTP',
+      state.exportedContracts.addonHttp
+    )
+    if (ref) {
+      processRefHTTPContract(ref, parentConfig, state, logger, sourceFile)
+    }
+    return
+  }
+
   if (ts.isIdentifier(node)) {
     const resolved = resolveIdentifier(node, checker, ['defineHTTPRoutes'])
     if (resolved) {
       processRoutes(resolved, parentConfig, state, checker, logger, sourceFile)
-      return
     }
-
-    const addonContract = resolveImportedAddonContract(
-      node,
-      checker,
-      state.rpc.wireAddonDeclarations,
-      state.exportedContracts.addonHttp
-    )
-    if (!addonContract) return
-
-    processExportedRouteMap(
-      addonContract.routes,
-      mergeConfigs(parentConfig, {
-        basePath: addonContract.basePath || '',
-        tags: addonContract.tags || [],
-        auth: addonContract.auth,
-      }),
-      state,
-      logger,
-      sourceFile
-    )
   }
+}
+
+function processRefHTTPContract(
+  ref: RefContractResolution<ExportedHTTPRoutesGroupMeta>,
+  parentConfig: GroupConfig,
+  state: InspectorState,
+  logger: InspectorLogger,
+  sourceFile: ts.SourceFile
+): void {
+  const basePath =
+    ref.basePath !== undefined ? ref.basePath : ref.contract.basePath || ''
+  processExportedRouteMap(
+    ref.contract.routes,
+    mergeConfigs(parentConfig, {
+      basePath,
+      tags: ref.contract.tags || [],
+      auth: ref.contract.auth,
+    }),
+    state,
+    logger,
+    sourceFile
+  )
 }
 
 function processExportedRouteMap(
@@ -410,10 +435,9 @@ function serializeHTTPRouteConfig(
   return {
     auth: getPropertyValue(obj, 'auth') as boolean | undefined,
     contentType: getPropertyValue(obj, 'contentType') as string | undefined,
-    headers: (getPropertyValue(
-      obj,
-      'headers'
-    ) as unknown as Record<string, string>) || undefined,
+    headers:
+      (getPropertyValue(obj, 'headers') as unknown as Record<string, string>) ||
+      undefined,
     method,
     route,
     sse: getPropertyValue(obj, 'sse') as boolean | undefined,

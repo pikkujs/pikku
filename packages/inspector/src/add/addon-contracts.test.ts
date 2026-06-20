@@ -36,8 +36,8 @@ describe('addon contract metadata', () => {
         'export const subscribeTodo = pikkuSessionlessFunc({ func: async () => ({ ok: true }) })',
         'export const runSync = pikkuSessionlessFunc({ func: async () => ({ ok: true }) })',
         "export const httpRoutes = defineHTTPRoutes({ basePath: '/todos', routes: { list: { method: 'get', route: '/', func: listTodos } } })",
-        "export const channelRoutes = defineChannelRoutes({ subscribe: { func: subscribeTodo } })",
-        "export const cliCommands = defineCLICommands({ sync: { func: runSync, options: {} } })",
+        'export const channelRoutes = defineChannelRoutes({ subscribe: { func: subscribeTodo } })',
+        'export const cliCommands = defineCLICommands({ sync: { func: runSync, options: {} } })',
       ].join('\n')
     )
 
@@ -60,8 +60,8 @@ describe('addon contract metadata', () => {
     }
   })
 
-  test('resolves imported addon contracts through wireAddon metadata', async () => {
-    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-addon-contracts-app-'))
+  test('expands addon contracts referenced via refHTTP/refChannel/refCLI', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-addon-refs-app-'))
     const nodeModulesDir = join(rootDir, 'node_modules', '@test', 'addon')
     const appFile = join(rootDir, 'app.ts')
 
@@ -79,15 +79,12 @@ describe('addon contract metadata', () => {
       JSON.stringify({ name: '@test/addon', type: 'module' }, null, 2)
     )
     await writeFile(
-      join(nodeModulesDir, 'index.d.ts'),
-      [
-        'export declare const httpRoutes: any',
-        'export declare const cliCommands: any',
-        'export declare const channelRoutes: any',
-      ].join('\n')
-    )
-    await writeFile(
-      join(nodeModulesDir, '.pikku', 'function', 'pikku-functions-meta.gen.json'),
+      join(
+        nodeModulesDir,
+        '.pikku',
+        'function',
+        'pikku-functions-meta.gen.json'
+      ),
       JSON.stringify(
         {
           listTodos: {
@@ -114,7 +111,12 @@ describe('addon contract metadata', () => {
       )
     )
     await writeFile(
-      join(nodeModulesDir, '.pikku', 'http', 'pikku-http-contracts-meta.gen.json'),
+      join(
+        nodeModulesDir,
+        '.pikku',
+        'http',
+        'pikku-http-contracts-meta.gen.json'
+      ),
       JSON.stringify(
         {
           httpRoutes: {
@@ -133,7 +135,12 @@ describe('addon contract metadata', () => {
       )
     )
     await writeFile(
-      join(nodeModulesDir, '.pikku', 'cli', 'pikku-cli-contracts-meta.gen.json'),
+      join(
+        nodeModulesDir,
+        '.pikku',
+        'cli',
+        'pikku-cli-contracts-meta.gen.json'
+      ),
       JSON.stringify(
         {
           cliCommands: {
@@ -149,7 +156,12 @@ describe('addon contract metadata', () => {
       )
     )
     await writeFile(
-      join(nodeModulesDir, '.pikku', 'channel', 'pikku-channel-contracts-meta.gen.json'),
+      join(
+        nodeModulesDir,
+        '.pikku',
+        'channel',
+        'pikku-channel-contracts-meta.gen.json'
+      ),
       JSON.stringify(
         {
           channelRoutes: {
@@ -170,28 +182,38 @@ describe('addon contract metadata', () => {
         "import { wireHTTPRoutes } from '@pikku/core/http'",
         "import { wireChannel } from '@pikku/core/channel'",
         "import { wireCLI } from '@pikku/core/cli'",
-        "import { httpRoutes, cliCommands, channelRoutes } from '@test/addon'",
+        'declare const refHTTP: (name: string) => any',
+        'declare const refChannel: (name: string) => any',
+        'declare const refCLI: (name: string) => any',
         "wireAddon({ name: 'addon', package: '@test/addon' })",
-        "wireHTTPRoutes({ basePath: '/api', routes: { addon: httpRoutes } })",
-        "wireChannel({ name: 'live', route: '/live', auth: false, onMessageWiring: { action: channelRoutes } })",
-        "wireCLI({ program: 'app', commands: { ...cliCommands } })",
+        "wireHTTPRoutes({ basePath: '/api', routes: { keep: refHTTP('addon:httpRoutes'), moved: refHTTP('addon:httpRoutes', { basePath: '/ext' }) } })",
+        "wireChannel({ name: 'live', route: '/live', auth: false, onMessageWiring: { action: refChannel('addon:channelRoutes') } })",
+        "wireCLI({ program: 'app', commands: { ...refCLI('addon:cliCommands') } })",
       ].join('\n')
     )
 
     try {
       const state = await inspect(logger, [appFile], { rootDir })
-      assert.equal(
-        state.http.meta.get['/api/addon/todos']?.packageName,
-        '@test/addon'
-      )
-      assert.equal(
-        state.channels.meta.live?.messageWirings.action?.subscribe?.packageName,
-        '@test/addon'
-      )
-      assert.equal(
-        state.cli.meta.programs.app?.commands.sync?.packageName,
-        '@test/addon'
-      )
+
+      // Default: the addon contract's own basePath ('/addon') is preserved —
+      // the cosmetic slot key ('keep') does not affect the path.
+      const httpEntry = state.http.meta.get['/api/addon/todos']
+      assert.equal(httpEntry?.packageName, '@test/addon')
+      assert.equal(httpEntry?.pikkuFuncId, 'addon:listTodos')
+
+      // Override: the second-arg basePath ('/ext') replaces the addon's own.
+      const overridden = state.http.meta.get['/api/ext/todos']
+      assert.equal(overridden?.packageName, '@test/addon')
+      assert.equal(overridden?.pikkuFuncId, 'addon:listTodos')
+
+      const channelEntry =
+        state.channels.meta.live?.messageWirings.action?.subscribe
+      assert.equal(channelEntry?.packageName, '@test/addon')
+      assert.equal(channelEntry?.pikkuFuncId, 'addon:subscribeTodo')
+
+      const cliEntry = state.cli.meta.programs.app?.commands.sync
+      assert.equal(cliEntry?.packageName, '@test/addon')
+      assert.equal(cliEntry?.pikkuFuncId, 'addon:runSync')
     } finally {
       await rm(rootDir, { recursive: true, force: true })
     }

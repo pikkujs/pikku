@@ -10,6 +10,7 @@
     "src/*",
     "types/**/*",
     ".pikku/**/*",
-    "src/function/addon.functions.ts"
+    "src/function/addon.functions.ts",
+    "src/function/addon.wiring.ts"
   ]
 }

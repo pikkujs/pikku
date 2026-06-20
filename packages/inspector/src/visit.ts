@@ -3,6 +3,7 @@ import { addFileWithFactory } from './add/add-file-with-factory.js'
 import { addFileExtendsCoreType } from './add/add-file-extends-core-type.js'
 import { addHTTPRoute } from './add/add-http-route.js'
 import { addHTTPRoutes } from './add/add-http-routes.js'
+import { checkAddonBans } from './add/add-addon-bans.js'
 import { addSchedule } from './add/add-schedule.js'
 import { addTrigger } from './add/add-trigger.js'
 import { addQueueWorker } from './add/add-queue-worker.js'
@@ -109,6 +110,8 @@ export const visitRoutes = (
   const nextOptions = ts.isSourceFile(node)
     ? { ...options, sourceFile: node }
     : options
+
+  checkAddonBans(logger, node, checker, state, nextOptions)
 
   addFunctions(logger, node, checker, state, nextOptions)
   addAuth(logger, node, checker, state, nextOptions)

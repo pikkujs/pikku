@@ -17,6 +17,7 @@ export const pikkuCommandHTTP = pikkuSessionlessFunc<void, boolean | undefined>(
         httpWiringMetaFile,
         httpWiringMetaJsonFile,
         httpContractsMetaJsonFile,
+        httpContractsMetaFile,
         packageMappings,
         schema,
       } = config
@@ -69,6 +70,25 @@ export const pikkuCommandHTTP = pikkuSessionlessFunc<void, boolean | undefined>(
         httpContractsMetaJsonFile,
         JSON.stringify(exportedContracts.http, null, 2)
       )
+
+      if (hasHTTPContracts) {
+        const contractsJsonImportPath = getFileImportRelativePath(
+          httpContractsMetaFile,
+          httpContractsMetaJsonFile,
+          packageMappings
+        )
+        const supportsImportAttributes =
+          schema?.supportsImportAttributes ?? false
+        const contractsImportStatement = supportsImportAttributes
+          ? `import contractsMeta from '${contractsJsonImportPath}' with { type: 'json' }`
+          : `import contractsMeta from '${contractsJsonImportPath}'`
+
+        await writeFileInDir(
+          logger,
+          httpContractsMetaFile,
+          `${contractsImportStatement}\nexport default contractsMeta`
+        )
+      }
 
       if (Object.keys(http.meta).length > 0) {
         const jsonImportPath = getFileImportRelativePath(

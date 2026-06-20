@@ -19,11 +19,13 @@ export const pikkuCommandChannels = pikkuSessionlessFunc<
       channelsWiringMetaFile,
       channelsWiringMetaJsonFile,
       channelContractsMetaJsonFile,
+      channelContractsMetaFile,
       packageMappings,
       schema,
     } = config
     const { channels, exportedContracts } = visitState
-    const hasChannelContracts = Object.keys(exportedContracts.channel).length > 0
+    const hasChannelContracts =
+      Object.keys(exportedContracts.channel).length > 0
 
     if (
       (channels.files.size === 0 || Object.keys(channels.meta).length === 0) &&
@@ -71,6 +73,24 @@ export const pikkuCommandChannels = pikkuSessionlessFunc<
       channelContractsMetaJsonFile,
       JSON.stringify(exportedContracts.channel, null, 2)
     )
+
+    if (hasChannelContracts) {
+      const contractsJsonImportPath = getFileImportRelativePath(
+        channelContractsMetaFile,
+        channelContractsMetaJsonFile,
+        packageMappings
+      )
+      const supportsImportAttributes = schema?.supportsImportAttributes ?? false
+      const contractsImportStatement = supportsImportAttributes
+        ? `import contractsMeta from '${contractsJsonImportPath}' with { type: 'json' }`
+        : `import contractsMeta from '${contractsJsonImportPath}'`
+
+      await writeFileInDir(
+        logger,
+        channelContractsMetaFile,
+        `${contractsImportStatement}\nexport default contractsMeta`
+      )
+    }
 
     if (Object.keys(channels.meta).length > 0) {
       const jsonImportPath = getFileImportRelativePath(

@@ -16,6 +16,7 @@ export const pikkuCLI = pikkuSessionlessFunc<void, boolean | undefined>({
       cliWiringMetaFile,
       cliWiringMetaJsonFile,
       cliContractsMetaJsonFile,
+      cliContractsMetaFile,
       packageMappings,
       schema,
     } = config
@@ -68,6 +69,24 @@ export const pikkuCLI = pikkuSessionlessFunc<void, boolean | undefined>({
       cliContractsMetaJsonFile,
       JSON.stringify(exportedContracts.cli, null, 2)
     )
+
+    if (hasCLIContracts) {
+      const contractsJsonImportPath = getFileImportRelativePath(
+        cliContractsMetaFile,
+        cliContractsMetaJsonFile,
+        packageMappings
+      )
+      const supportsImportAttributes = schema?.supportsImportAttributes ?? false
+      const contractsImportStatement = supportsImportAttributes
+        ? `import contractsMeta from '${contractsJsonImportPath}' with { type: 'json' }`
+        : `import contractsMeta from '${contractsJsonImportPath}'`
+
+      await writeFileInDir(
+        logger,
+        cliContractsMetaFile,
+        `${contractsImportStatement}\nexport default contractsMeta`
+      )
+    }
 
     if (Object.keys(cli.meta).length > 0) {
       const jsonImportPath = getFileImportRelativePath(

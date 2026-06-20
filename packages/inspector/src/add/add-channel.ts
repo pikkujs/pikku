@@ -22,7 +22,7 @@ import { resolveFunctionMeta } from '../utils/resolve-function-meta.js'
 import { resolveAddonName } from '../utils/resolve-addon-package.js'
 import { validateAuthSessionless } from '../utils/validate-auth-sessionless.js'
 import { getExportedVariableName } from '../utils/get-exported-variable-name.js'
-import { resolveImportedAddonContract } from '../utils/resolve-addon-contract.js'
+import { resolveRefContract } from '../utils/resolve-ref-contract.js'
 
 /**
  * Safely get the "initializer" expression of a property-like AST node:
@@ -185,22 +185,21 @@ export function addMessagesRoutes(
       ])
       if (resolved && ts.isObjectLiteralExpression(resolved)) {
         chanInit = resolved
-      } else {
-        const addonContract = resolveImportedAddonContract(
-          chanInit,
-          checker,
-          state.rpc.wireAddonDeclarations,
-          state.exportedContracts.addonChannel
-        )
-        if (addonContract) {
-          const channelKey = getObjectPropertyName(chanElem.name)
-          if (!channelKey) continue
-          result[channelKey] = {
-            ...addonContract,
-          }
-          continue
-        }
       }
+    }
+
+    const refContract = resolveRefContract(
+      chanInit,
+      'refChannel',
+      state.exportedContracts.addonChannel
+    )
+    if (refContract) {
+      const refChannelKey = getObjectPropertyName(chanElem.name)
+      if (!refChannelKey) continue
+      result[refChannelKey] = {
+        ...refContract.contract,
+      }
+      continue
     }
 
     if (!ts.isObjectLiteralExpression(chanInit)) continue
@@ -582,12 +581,8 @@ export const addChannel: AddWiring = (
     const exportName = getExportedVariableName(node, options.sourceFile)
     const [firstArg] = node.arguments
     if (exportName && firstArg && ts.isObjectLiteralExpression(firstArg)) {
-      state.exportedContracts.channel[exportName] = extractExportedChannelRoutes(
-        logger,
-        firstArg,
-        state,
-        checker
-      )
+      state.exportedContracts.channel[exportName] =
+        extractExportedChannelRoutes(logger, firstArg, state, checker)
     }
     return
   }

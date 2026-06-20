@@ -469,13 +469,15 @@ export function registerHTTPRouteMeta({
     return
   }
 
-  computeInputTypes(
-    state.http.metaInputTypes,
-    method,
-    fnMeta.inputs?.[0] || null,
-    [],
-    params
-  )
+  if (!route.func.packageName) {
+    computeInputTypes(
+      state.http.metaInputTypes,
+      method,
+      fnMeta.inputs?.[0] || null,
+      [],
+      params
+    )
+  }
 
   state.serviceAggregation.usedFunctions.add(funcName)
   state.http.files.add(sourceFile.fileName)

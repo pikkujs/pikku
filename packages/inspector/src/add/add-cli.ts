@@ -20,22 +20,10 @@ import { resolveAddonName } from '../utils/resolve-addon-package.js'
 import { validateAuthSessionless } from '../utils/validate-auth-sessionless.js'
 import { extractServicesFromFunction } from '../utils/extract-services.js'
 import { getExportedVariableName } from '../utils/get-exported-variable-name.js'
-import { resolveImportedAddonContract } from '../utils/resolve-addon-contract.js'
+import { resolveRefContract } from '../utils/resolve-ref-contract.js'
 
 // Track if we've warned about missing Config type to avoid duplicate warnings
 const configTypeWarningShown = new Set<string>()
-
-const resolveAddonCommands = (
-  identifier: ts.Identifier,
-  typeChecker: TypeChecker,
-  inspectorState: InspectorState
-): Record<string, CLICommandMeta> | null =>
-  resolveImportedAddonContract(
-    identifier,
-    typeChecker,
-    inspectorState.rpc.wireAddonDeclarations,
-    inspectorState.exportedContracts.addonCli
-  )
 
 /**
  * Adds CLI command metadata to the inspector state
@@ -247,14 +235,14 @@ function processCommands(
           programTags
         )
         Object.assign(commands, spreadCommands)
-      } else if (ts.isIdentifier(prop.expression)) {
-        const addonCommands = resolveAddonCommands(
+      } else {
+        const refCommands = resolveRefContract(
           prop.expression,
-          typeChecker,
-          inspectorState
+          'refCLI',
+          inspectorState.exportedContracts.addonCli
         )
-        if (addonCommands) {
-          Object.assign(commands, addonCommands)
+        if (refCommands) {
+          Object.assign(commands, refCommands.contract)
         }
       }
       continue
@@ -553,15 +541,6 @@ function processCommand(
             if (subCommand) {
               meta.subcommands[subName] = subCommand
             }
-          }
-        } else if (ts.isIdentifier(prop.initializer)) {
-          const addonCommands = resolveAddonCommands(
-            prop.initializer,
-            typeChecker,
-            inspectorState
-          )
-          if (addonCommands) {
-            meta.subcommands = { ...addonCommands }
           }
         }
         break
