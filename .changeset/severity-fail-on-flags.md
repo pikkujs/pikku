@@ -1,6 +1,6 @@
 ---
-'@pikku/inspector': minor
-'@pikku/cli': minor
+'@pikku/inspector': patch
+'@pikku/cli': patch
 ---
 
 Add a severity model for coded diagnostics so security findings can surface without blocking the dev server.
