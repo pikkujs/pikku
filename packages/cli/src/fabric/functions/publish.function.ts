@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { readFile } from 'node:fs/promises'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
@@ -48,20 +48,19 @@ export const FabricPublish = pikkuSessionlessFunc({
     if (!pkg.name || !pkg.version)
       throw new Error('package.json must have a name and version')
 
-    // Pack the directory into a gzipped tar (artifact). Excludes are the usual
-    // build/VCS noise; everything else ships so consumers can copy it in.
-    const artifactPath = join(tmpdir(), `pikku-publish-${Date.now()}.tgz`)
-    execFileSync('tar', [
-      '-czf',
-      artifactPath,
-      '-C',
-      packageDir,
-      '--exclude=node_modules',
-      '--exclude=.git',
-      '--exclude=dist',
-      '.',
-    ])
-    const artifact = readFileSync(artifactPath)
+    // Pack via `npm pack` so the artifact honours the package's `files` field
+    // (ship src/.pikku/types, not build/VCS noise) and matches the layout a
+    // normal install produces. npm nests contents under `package/`; the
+    // registry ingestion and `pikku fabric add` both handle that prefix.
+    const packDir = join(tmpdir(), `pikku-publish-${Date.now()}`)
+    mkdirSync(packDir, { recursive: true })
+    const packOut = execFileSync(
+      'npm',
+      ['pack', '--json', '--pack-destination', packDir],
+      { cwd: packageDir, encoding: 'utf8' }
+    )
+    const tgzName = JSON.parse(packOut)[0].filename
+    const artifact = readFileSync(join(packDir, tgzName))
 
     const headers = {
       authorization: `Bearer ${ctx.token}`,
