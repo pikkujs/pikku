@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { readFile, mkdir, rm, writeFile } from 'node:fs/promises'
+import { readFile, mkdir, rm, writeFile, rename } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { dirname, isAbsolute, join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -18,33 +18,25 @@ export const FabricAddOutput = z.object({
   path: z.string(),
 })
 
-const DEFAULT_ADDON_DIR = 'src/addons'
-
-/** Walk up from cwd to find pikku.config.json and read its addons.addonDir. */
-async function resolveAddonDir(): Promise<string> {
+/** Walk up from cwd to find the project root (the dir with package.json). */
+function resolveProjectRoot(): string {
   let dir = process.cwd()
   while (true) {
-    const candidate = join(dir, 'pikku.config.json')
-    if (existsSync(candidate)) {
-      const cfg = JSON.parse(await readFile(candidate, 'utf8')) as {
-        rootDir?: string
-        addons?: { addonDir?: string }
-      }
-      const addonDir = cfg.addons?.addonDir ?? DEFAULT_ADDON_DIR
-      return isAbsolute(addonDir) ? addonDir : join(dir, addonDir)
-    }
+    if (existsSync(join(dir, 'package.json'))) return dir
     const parent = dirname(dir)
-    if (parent === dir) return join(process.cwd(), DEFAULT_ADDON_DIR)
+    if (parent === dir) return process.cwd()
     dir = parent
   }
 }
 
 /**
- * Install a community-registry package into the project. Resolves a presigned
- * download URL (public — no auth needed), fetches the artifact, and extracts it
- * shadcn-style into `<addonDir>/<id>/` so the source is copied into the
- * codebase. `addonDir` comes from pikku.config.json `addons.addonDir`
- * (default `src/addons`), or `--dir`.
+ * Install a community-registry package into the project's `node_modules` so it
+ * resolves by package name — the location `wireAddon({ package })` looks it up
+ * (`require.resolve('<package>/.pikku/...')`). Resolves a presigned download URL
+ * (public — no auth), fetches the artifact, and unpacks it into
+ * `<root>/node_modules/<package-name>/`. The package name comes from the
+ * artifact's own package.json (npm-pack nests contents under `package/`, which
+ * `--strip-components=1` removes). `--dir` overrides the node_modules root.
  */
 export const FabricAdd = pikkuSessionlessFunc({
   description:
@@ -69,22 +61,40 @@ export const FabricAdd = pikkuSessionlessFunc({
     if (!dl.ok) throw new Error(`artifact fetch failed → ${dl.status}`)
     const artifact = Buffer.from(await dl.arrayBuffer())
 
-    // 3. extract into <addonDir>/<id> (replace any prior copy)
-    const baseDir = dir
+    // 3. unpack into a staging dir *inside* the install root (so the final
+    //    move is same-filesystem — no EXDEV), stripping the npm `package/`
+    //    prefix. The root is known up front; the package subdir isn't (its
+    //    name lives in the artifact's package.json).
+    const root = dir
       ? isAbsolute(dir)
         ? dir
         : join(process.cwd(), dir)
-      : await resolveAddonDir()
-    const target = join(baseDir, id)
-    await rm(target, { recursive: true, force: true })
-    await mkdir(target, { recursive: true })
-
+      : join(resolveProjectRoot(), 'node_modules')
+    const staging = join(root, `.pikku-add-${id}-${Date.now()}`)
+    await mkdir(staging, { recursive: true })
     const tmp = join(tmpdir(), `pikku-add-${Date.now()}.tgz`)
     await writeFile(tmp, artifact)
-    execFileSync('tar', ['-xzf', tmp, '-C', target])
-    await rm(tmp, { force: true })
+    try {
+      execFileSync('tar', ['-xzf', tmp, '-C', staging, '--strip-components=1'])
+      await rm(tmp, { force: true })
 
-    console.log(`[fabric] installed ${id} → ${target}`)
-    return { id, path: target }
+      // 4. read the package name and move into <root>/<name>
+      const pkg = JSON.parse(
+        await readFile(join(staging, 'package.json'), 'utf8')
+      ) as { name?: string }
+      if (!pkg.name)
+        throw new Error('artifact package.json is missing a "name" field')
+
+      const target = join(root, ...pkg.name.split('/'))
+      await rm(target, { recursive: true, force: true })
+      await mkdir(dirname(target), { recursive: true })
+      await rename(staging, target)
+
+      console.log(`[fabric] installed ${pkg.name} → ${target}`)
+      return { id, path: target }
+    } finally {
+      await rm(staging, { recursive: true, force: true })
+      await rm(tmp, { force: true })
+    }
   },
 })

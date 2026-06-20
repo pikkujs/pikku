@@ -1,13 +1,15 @@
 /**
  * Registry pack/install round-trip verifier.
  *
- * Proves the artifact produced by `npm pack` (the same shape the registry
- * publish flow ships) installs into a *separate* consumer project and runs:
- *   1. `pikku all` + build the source addon
- *   2. `npm pack` the addon → tgz
- *   3. extract the tgz into consumer/node_modules/<addon> (simulates install)
+ * Mirrors the real registry flow without the network: `pikku fabric publish`
+ * packs with `npm pack`, and `pikku fabric add` extracts into
+ * `node_modules/<name>` with `--strip-components=1` (the location
+ * `wireAddon({ package })` resolves). This harness does the same locally:
+ *   1. `pikku all` on the source addon
+ *   2. `npm pack` the addon → tgz                          (publish artifact)
+ *   3. extract into consumer/node_modules/<name>, strip 1  (add install)
  *   4. `pikku all` + `tsc --noEmit` in the consumer
- *   5. invoke the addon's function over RPC and assert the result
+ *   5. invoke consumeHello → rpc.invoke('ext:hello') and assert the result
  */
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, rmSync, readdirSync } from 'node:fs'
