@@ -30,18 +30,18 @@ async function main(): Promise<void> {
   const baseSingletonServices = await createSingletonServices(config)
   const singletonServices = { ...baseSingletonServices, logger }
 
-  // Invoke the addon installed from the npm-pack artifact. `packageName`
-  // targets the addon's namespaced registry — the same resolution that
-  // `rpc.invoke('ext:hello')` performs for a wired addon.
+  // Invoke the consumer's own `consumeHello`, whose body calls
+  // `rpc.invoke('ext:hello')`. This exercises the full chain: the `ext:`
+  // namespace mapping that `wireAddon` registers → the addon installed from
+  // the npm-pack artifact → its NoopService and host-logger usage.
   const result = await runPikkuFunc<
     { name: string; greeting?: string },
     { message: string; timestamp: number; noopCalls: number }
-  >('rpc', 'hello', 'hello', {
+  >('rpc', 'consumeHello', 'consumeHello', {
     singletonServices,
     createWireServices,
     data: () => ({ name: 'Test', greeting: 'Hello' }),
     wire: {},
-    packageName: '@pikku/verifier-registry-addon',
   })
 
   let passed = true
