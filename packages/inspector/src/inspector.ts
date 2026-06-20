@@ -256,9 +256,16 @@ export const inspect = async (
   const rootDir = options.rootDir || findCommonAncestor(routeFiles)
 
   const startSourceFiles = performance.now()
+  // node_modules under rootDir (e.g. a locally-installed addon) is a
+  // dependency, not project source — scanning it double-counts the addon's
+  // own application types (CoreConfig/Services/SingletonServices).
   const sourceFiles = program
     .getSourceFiles()
-    .filter((sf) => sf.fileName.startsWith(rootDir))
+    .filter(
+      (sf) =>
+        sf.fileName.startsWith(rootDir) &&
+        !sf.fileName.includes('/node_modules/')
+    )
   logger.debug(
     `Got source files in ${(performance.now() - startSourceFiles).toFixed(2)}ms`
   )

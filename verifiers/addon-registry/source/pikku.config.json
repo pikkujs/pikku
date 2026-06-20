@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": ["src", "types"],
+  "outDir": "./.pikku",
+  "addon": true,
+  "node": {
+    "displayName": "Registry Verifier Addon",
+    "description": "Hermetic addon used to verify the registry pack/install round-trip",
+    "categories": ["Utility"]
+  }
+}
