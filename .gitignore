@@ -140,3 +140,8 @@ typings/
 # Bun build cache
 *.bun-build
 packages/cli/release/
+
+# better-auth dev sqlite artifacts from verifier runs
+**/.better-auth*.sqlite
+**/.better-auth*.sqlite-shm
+**/.better-auth*.sqlite-wal
