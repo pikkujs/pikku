@@ -309,6 +309,18 @@ export type PikkuCLIInput = {
     events?: PikkuScaffoldFeature
   }
 
+  /**
+   * Community-registry addons installed via `pikku fabric addon add`. The
+   * source is copied into the project shadcn-style; each lands in
+   * `<addonDir>/<name>/` and the dir is registered as a yarn workspace so
+   * `wireAddon({ package })` resolves it by name. `addonDir` defaults to
+   * `addons` (top-level, outside the app's TS scan). Install provenance is
+   * tracked in pikku-addons.json.
+   */
+  addons?: {
+    addonDir?: string
+  }
+
   tests?: {
     outputDir?: string
   }

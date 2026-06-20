@@ -1,0 +1,36 @@
+{
+  "name": "@pikku/verifier-registry-addon",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "imports": {
+    "#pikku": "./.pikku/pikku-types.gen.ts",
+    "#pikku/*": "./.pikku/*"
+  },
+  "exports": {
+    "./.pikku/*": "./.pikku/*",
+    "./.pikku/pikku-metadata.gen.json": "./.pikku/pikku-metadata.gen.json",
+    "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js": {
+      "types": "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
+    }
+  },
+  "files": [
+    "src",
+    "types",
+    ".pikku"
+  ],
+  "scripts": {
+    "prebuild": "pikku all",
+    "pikku": "pikku all"
+  },
+  "peerDependencies": {
+    "@pikku/core": "*",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@pikku/cli": "*",
+    "@pikku/core": "*",
+    "typescript": "^5.9",
+    "zod": "^4"
+  }
+}
