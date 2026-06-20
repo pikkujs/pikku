@@ -62,6 +62,50 @@ async function readTextSafe(path: string): Promise<string | null> {
   }
 }
 
+// Minimum @pikku/* versions Fabric requires. The pikku packages are versioned
+// independently (e.g. @pikku/cli moves faster than @pikku/core), so this is a
+// per-package floor map, not a single number. Only listed packages are
+// enforced — others are skipped to avoid false positives on packages with
+// their own (lower) version lines. Bump these as the supported floor moves.
+//   - @pikku/cli  < 0.12.43 ships a `pikku dev` that hangs without ever
+//     listening (the sandbox never serves routes).
+//   - @pikku/core mismatches split pikkuState into duplicate copies, so app
+//     and console routes 404; pin the floor that matches the runtime.
+const PIKKU_MIN_VERSIONS: Record<string, string> = {
+  '@pikku/cli': '0.12.43',
+  '@pikku/core': '0.12.34',
+}
+
+type Semver = [number, number, number]
+
+// Pull major.minor.patch from a spec, ignoring range prefixes (^ ~ >=),
+// npm: aliases, and pre-release/build suffixes. null if no semver is present
+// (file:, workspace:, *, latest — resolved only at install time).
+function parseSemver(spec: string): Semver | null {
+  const m = spec.match(/(\d+)\.(\d+)\.(\d+)/)
+  if (!m) return null
+  return [parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10)]
+}
+
+function semverLt(a: Semver, b: Semver): boolean {
+  for (let i = 0; i < 3; i++) {
+    if (a[i] !== b[i]) return a[i] < b[i]
+  }
+  return false
+}
+
+// Fall back to the installed version when the spec carries no semver
+// (file:/workspace:/* deps resolve to a concrete version on disk).
+async function installedSemver(
+  root: string,
+  pkg: string
+): Promise<Semver | null> {
+  const j = await readJsonSafe<{ version?: string }>(
+    join(root, 'node_modules', pkg, 'package.json')
+  )
+  return j?.version ? parseSemver(j.version) : null
+}
+
 // PostgreSQL-specific syntax that won't work on SQLite/libSQL (Turso)
 const POSTGRES_SQL_PATTERNS: Array<{ re: RegExp; label: string }> = [
   {
@@ -271,6 +315,70 @@ export async function runValidate(
           `Vendor file missing for ${pkg}: ${relPath}`,
           absPath,
           `Run \`pikku pack\` in the pikku source repo and copy the output to ${relPath}`
+        )
+      }
+    }
+  }
+
+  // ── @pikku/* minimum versions ──────────────────────────────────────────
+  // Scan every workspace manifest for @pikku/* deps below the required floor.
+  // A stale @pikku/cli hangs `pikku dev`; a stale @pikku/core duplicates
+  // pikkuState and 404s every route — both are hard blockers, so error.
+  {
+    const manifestPaths = [rootPkgPath]
+    for (const group of ['packages', 'apps']) {
+      const groupDir = join(root, group)
+      if (!existsSync(groupDir)) continue
+      try {
+        for (const d of await readdir(groupDir, { withFileTypes: true })) {
+          if (d.isDirectory()) {
+            manifestPaths.push(join(groupDir, d.name, 'package.json'))
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    type SeenPikku = { version: Semver; manifest: string; spec: string }
+    const lowestByPkg = new Map<string, SeenPikku>()
+    for (const mPath of manifestPaths) {
+      const m = await readJsonSafe<{
+        dependencies?: Record<string, string>
+        devDependencies?: Record<string, string>
+        peerDependencies?: Record<string, string>
+      }>(mPath)
+      if (!m) continue
+      const deps = {
+        ...m.dependencies,
+        ...m.devDependencies,
+        ...m.peerDependencies,
+      }
+      for (const [pkg, spec] of Object.entries(deps)) {
+        if (!pkg.startsWith('@pikku/') || !(pkg in PIKKU_MIN_VERSIONS)) continue
+        if (typeof spec !== 'string') continue
+        const version = parseSemver(spec) ?? (await installedSemver(root, pkg))
+        if (!version) continue
+        const prev = lowestByPkg.get(pkg)
+        if (!prev || semverLt(version, prev.version)) {
+          lowestByPkg.set(pkg, { version, manifest: mPath, spec })
+        }
+      }
+    }
+
+    for (const [pkg, seen] of lowestByPkg) {
+      const floorStr = PIKKU_MIN_VERSIONS[pkg]
+      const floor = parseSemver(floorStr)
+      if (floor && semverLt(seen.version, floor)) {
+        e(
+          `pikku-version-below-min-${pkg.replace(/[@/]/g, '-')}`,
+          `${pkg} is ${seen.version.join('.')} (spec "${seen.spec}") — Fabric requires >= ${floorStr}`,
+          seen.manifest,
+          lines(
+            `Bump ${pkg} to ^${floorStr} (or newer) and reinstall:`,
+            `  yarn up ${pkg}@^${floorStr}`,
+            'Then run `yarn install` and re-run `pikku fabric validate`.'
+          )
         )
       }
     }
