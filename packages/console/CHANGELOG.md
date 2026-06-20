@@ -1,3 +1,15 @@
+## 0.12.22
+
+### Patch Changes
+
+- 5283434: Redesign the Addons → Community tab as a card gallery: a hero banner, a category rail derived from addon metadata, a sort bar, and addon cards (category icon, publisher badge, tags, function/agent stats, install action). Selecting a card opens a right-hand detail drawer with an Overview ("What's included" surface tiles + publisher) and Functions tab, replacing the full-page navigation. Installed and APIs tabs are unchanged.
+
+  The community catalog now reads from the Fabric registry API (`FABRIC_API_URL`, default `https://api.pikkufabric.com`) via `/registry/packages` instead of the standalone registry.
+
+- 5283434: Add `ShellHeader`: a responsive single-bar page header that replaces the tall title + action-bar block. Title (first to collapse) and count on the left; filters, search, selection switch and actions on the right. Filters that don't fit collapse into a funnel → drawer (search is the last to fold), action labels degrade to icons, and the selection switch becomes a cycling button when narrow — all measured, not breakpointed. Also exports `PikkuSwitch`/`PikkuSwitchOption`.
+- Updated dependencies [6bca38f]
+  - @pikku/core@0.12.35
+
 ## 0.12.21
 
 ### Patch Changes
