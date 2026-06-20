@@ -145,3 +145,7 @@ packages/cli/release/
 **/.better-auth*.sqlite
 **/.better-auth*.sqlite-shm
 **/.better-auth*.sqlite-wal
+
+# addon-registry verifier install artifacts (shadcn copy + provenance)
+verifiers/addon-registry/consumer/addons/
+verifiers/addon-registry/consumer/pikku-addons.json
