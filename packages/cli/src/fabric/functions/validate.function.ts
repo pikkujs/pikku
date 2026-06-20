@@ -388,7 +388,11 @@ export async function runValidate(
   const fnDir = join(root, 'packages', 'functions')
 
   // Read local workspace package names for app dependency checks
-  type PkgWithName = { name?: string; dependencies?: Record<string, string> }
+  type PkgWithName = {
+    name?: string
+    dependencies?: Record<string, string>
+    devDependencies?: Record<string, string>
+  }
   const functionsSdkPkgName = (
     await readJsonSafe<PkgWithName>(
       join(root, 'packages', 'functions-sdk', 'package.json')
@@ -823,6 +827,19 @@ export async function runValidate(
           `apps/${name} does not depend on ${componentsPkgName}`,
           join(appPath, 'package.json'),
           `Add "${componentsPkgName}: workspace:*" to apps/${name}/package.json dependencies`
+        )
+      }
+
+      // The scaffolded dev vite config (generate-frontend-runtime) imports
+      // @babel/core to tag JSX with data-om-id for alt-click design editing.
+      // It resolves transitively via @vitejs/plugin-react, but that's a silent
+      // dependency — declare it explicitly so the resolution can't drift away.
+      if (!appPkg.devDependencies?.['@babel/core']) {
+        w(
+          `app-missing-babel-core-${name}`,
+          `apps/${name} does not declare @babel/core — the dev runtime needs it to instrument JSX (data-om-id) for design alt-click`,
+          join(appPath, 'package.json'),
+          `Add "@babel/core": "^7.26.0" to apps/${name}/package.json devDependencies`
         )
       }
     }
