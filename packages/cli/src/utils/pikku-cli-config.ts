@@ -186,6 +186,18 @@ const _getPikkuCLIConfig = async (
         'pikku-http-wirings-meta.gen.json'
       )
     }
+    if (!result.httpContractsMetaJsonFile) {
+      result.httpContractsMetaJsonFile = join(
+        httpDir,
+        'pikku-http-contracts-meta.gen.json'
+      )
+    }
+    if (!result.httpContractsMetaFile) {
+      result.httpContractsMetaFile = join(
+        httpDir,
+        'pikku-http-contracts-meta.gen.ts'
+      )
+    }
     if (!result.httpMapDeclarationFile) {
       result.httpMapDeclarationFile = join(
         httpDir,
@@ -219,6 +231,18 @@ const _getPikkuCLIConfig = async (
       result.channelsWiringMetaJsonFile = join(
         channelDir,
         'pikku-channels-meta.gen.json'
+      )
+    }
+    if (!result.channelContractsMetaJsonFile) {
+      result.channelContractsMetaJsonFile = join(
+        channelDir,
+        'pikku-channel-contracts-meta.gen.json'
+      )
+    }
+    if (!result.channelContractsMetaFile) {
+      result.channelContractsMetaFile = join(
+        channelDir,
+        'pikku-channel-contracts-meta.gen.ts'
       )
     }
     if (!result.channelsMapDeclarationFile) {
@@ -531,6 +555,18 @@ const _getPikkuCLIConfig = async (
       result.cliWiringMetaJsonFile = join(
         cliDir,
         'pikku-cli-wirings-meta.gen.json'
+      )
+    }
+    if (!result.cliContractsMetaJsonFile) {
+      result.cliContractsMetaJsonFile = join(
+        cliDir,
+        'pikku-cli-contracts-meta.gen.json'
+      )
+    }
+    if (!result.cliContractsMetaFile) {
+      result.cliContractsMetaFile = join(
+        cliDir,
+        'pikku-cli-contracts-meta.gen.ts'
       )
     }
     if (!result.cliBootstrapFile) {

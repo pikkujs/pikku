@@ -1,5 +1,6 @@
 import * as ts from 'typescript'
 import { performance } from 'perf_hooks'
+import { resolve } from 'path'
 import { visitSetup, visitRoutes } from './visit.js'
 import { TypesMap } from './types-map.js'
 import type {
@@ -216,6 +217,14 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     openAPISpec: null,
     diagnostics: [],
     addonFunctions: {},
+    exportedContracts: {
+      http: {},
+      cli: {},
+      channel: {},
+      addonHttp: {},
+      addonCli: {},
+      addonChannel: {},
+    },
     program: null,
   }
 }
@@ -225,6 +234,7 @@ export const inspect = async (
   routeFiles: string[],
   options: InspectorOptions = {}
 ): Promise<InspectorState> => {
+  const normalizedRouteFiles = routeFiles.map((file) => resolve(file))
   const compilerOptions: ts.CompilerOptions = {
     target: ts.ScriptTarget.ESNext,
     module: ts.ModuleKind.Node16,
@@ -237,13 +247,13 @@ export const inspect = async (
   }
   const startProgram = performance.now()
   const program = ts.createProgram(
-    routeFiles,
+    normalizedRouteFiles,
     compilerOptions,
     undefined, // host
     options.oldProgram
   )
   logger.debug(
-    `Created program in ${(performance.now() - startProgram).toFixed(0)}ms (${routeFiles.length} files${options.oldProgram ? ', incremental' : ''})`
+    `Created program in ${(performance.now() - startProgram).toFixed(0)}ms (${normalizedRouteFiles.length} files${options.oldProgram ? ', incremental' : ''})`
   )
 
   const startChecker = performance.now()
@@ -253,7 +263,7 @@ export const inspect = async (
   )
 
   // Use provided rootDir or infer from source files
-  const rootDir = options.rootDir || findCommonAncestor(routeFiles)
+  const rootDir = options.rootDir || findCommonAncestor(normalizedRouteFiles)
 
   const startSourceFiles = performance.now()
   // node_modules under rootDir (e.g. a locally-installed addon) is a
@@ -275,8 +285,9 @@ export const inspect = async (
   // First sweep: add all functions
   const startSetup = performance.now()
   for (const sourceFile of sourceFiles) {
+    const sourceOptions = { ...options, sourceFile }
     ts.forEachChild(sourceFile, (child) =>
-      visitSetup(logger, checker, child, state, options)
+      visitSetup(logger, checker, child, state, sourceOptions)
     )
   }
   logger.debug(
@@ -290,8 +301,9 @@ export const inspect = async (
     // Second sweep: add all transports
     const startRoutes = performance.now()
     for (const sourceFile of sourceFiles) {
+      const sourceOptions = { ...options, sourceFile }
       ts.forEachChild(sourceFile, (child) =>
-        visitRoutes(logger, checker, child, state, options)
+        visitRoutes(logger, checker, child, state, sourceOptions)
       )
     }
     logger.debug(

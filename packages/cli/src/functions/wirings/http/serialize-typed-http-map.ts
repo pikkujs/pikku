@@ -103,6 +103,18 @@ function generateHTTPWirings(
 
       const resolved = resolvedIOTypes[pikkuFuncId]
       if (!resolved) {
+        if (meta.packageName) {
+          // Addon functions aren't in the consumer's local resolvedIOTypes, but
+          // their real types are reachable through the generated FlattenedRPCMap
+          // (the addon's RPC map is merged in under its namespace). Adding these
+          // to requiredTypes triggers the FlattenedRPCMap import below.
+          const inputType = `FlattenedRPCMap['${pikkuFuncId}']['input']`
+          const outputType = `FlattenedRPCMap['${pikkuFuncId}']['output']`
+          requiredTypes.add(inputType)
+          requiredTypes.add(outputType)
+          routesObj[route][method] = { inputType, outputType }
+          continue
+        }
         throw new Error(
           `Function ${pikkuFuncId} not found in resolvedIOTypes. Please check your configuration.`
         )

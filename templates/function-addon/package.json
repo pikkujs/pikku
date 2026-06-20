@@ -11,6 +11,10 @@
       "types": "./dist/src/types.d.ts",
       "import": "./dist/src/types.js"
     },
+    "./contracts": {
+      "types": "./dist/src/functions/hello.contracts.d.ts",
+      "import": "./dist/src/functions/hello.contracts.js"
+    },
     "./.pikku/*": "./.pikku/*",
     "./.pikku/pikku-metadata.gen.json": "./.pikku/pikku-metadata.gen.json",
     "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js": {
@@ -23,7 +27,7 @@
   ],
   "scripts": {
     "prebuild": "pikku all",
-    "build": "tsc && cp -r .pikku dist/",
+    "build": "tsc && cp -r .pikku dist/ && cp -r types dist/",
     "pikku": "pikku all"
   },
   "peerDependencies": {

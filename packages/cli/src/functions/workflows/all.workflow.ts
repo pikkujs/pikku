@@ -273,6 +273,13 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         )
       }
     }
+    if (config.addon) {
+      await Promise.all([
+        workflow.do('HTTP', 'pikkuCommandHTTP', null),
+        workflow.do('Channels', 'pikkuCommandChannels', null),
+        workflow.do('CLI', 'pikkuCLI', null),
+      ])
+    }
 
     const hasFunctionRegistrations = await workflow.do(
       'Functions',

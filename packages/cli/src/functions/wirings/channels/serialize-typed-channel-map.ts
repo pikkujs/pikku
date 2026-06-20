@@ -1,5 +1,6 @@
 import type { ChannelsMeta } from '@pikku/core/channel'
 import { serializeImportMap } from '../../../utils/serialize-import-map.js'
+import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import type { TypesMap } from '@pikku/inspector'
 import { generateCustomTypes, resolveFunctionMeta } from '@pikku/inspector'
 import type { FunctionsMeta } from '@pikku/core'
@@ -12,9 +13,12 @@ export const serializeTypedChannelsMap = (
   typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
   addonFunctions: Record<string, FunctionsMeta>,
-  channelsMeta: ChannelsMeta
+  channelsMeta: ChannelsMeta,
+  rpcInternalMapDeclarationFile: string
 ): string => {
   const { channels, requiredTypes } = generateChannels(
+    logger,
+    typesMap,
     functionsMeta,
     addonFunctions,
     channelsMeta
@@ -27,6 +31,17 @@ export const serializeTypedChannelsMap = (
     }
   })
 
+  const needsFlattenedRPCMap = Array.from(requiredTypes).some((t) =>
+    t.includes('FlattenedRPCMap')
+  )
+  if (needsFlattenedRPCMap) {
+    for (const t of Array.from(requiredTypes)) {
+      if (t.includes('FlattenedRPCMap')) {
+        requiredTypes.delete(t)
+      }
+    }
+  }
+
   const imports = serializeImportMap(
     logger,
     relativeToPath,
@@ -34,6 +49,9 @@ export const serializeTypedChannelsMap = (
     typesMap,
     requiredTypes
   )
+  const rpcMapImport = needsFlattenedRPCMap
+    ? `import type { FlattenedRPCMap } from '${getFileImportRelativePath(relativeToPath, rpcInternalMapDeclarationFile, packageMappings)}'`
+    : ''
   const serializedCustomTypes = generateCustomTypes(typesMap, requiredTypes)
 
   return `/**
@@ -41,6 +59,7 @@ export const serializeTypedChannelsMap = (
  */
 
 ${imports}
+${rpcMapImport}
 ${serializedCustomTypes}
 
 interface ChannelHandler<I, O> {
@@ -67,6 +86,8 @@ export type ChannelWiringHandlerOf<
 }
 
 function generateChannels(
+  logger: Logger,
+  typesMap: TypesMap,
   functionsMeta: FunctionsMeta,
   addonFunctions: Record<string, FunctionsMeta>,
   channelsMeta: ChannelsMeta
@@ -107,11 +128,15 @@ function generateChannels(
       const inputTypes = func.inputs || null
       const outputTypes = func.outputs || null
       channelsObject[name].message = {
-        inputs: inputTypes,
-        outputs: outputTypes,
+        inputs: normalizeTypes(logger, typesMap, inputTypes),
+        outputs: normalizeTypes(logger, typesMap, outputTypes),
       }
-      inputTypes?.forEach((type) => requiredTypes.add(type))
-      outputTypes?.forEach((type) => requiredTypes.add(type))
+      channelsObject[name].message.inputs?.forEach((type) =>
+        requiredTypes.add(type)
+      )
+      channelsObject[name].message.outputs?.forEach((type) =>
+        requiredTypes.add(type)
+      )
     }
 
     for (const [key, route] of Object.entries(messageWirings)) {
@@ -119,6 +144,19 @@ function generateChannels(
         channelsObject[name].routes[key] = {}
       }
       for (const [method, { pikkuFuncId }] of Object.entries(route)) {
+        // Addon functions are namespaced ('ns:fn') and their types aren't in
+        // the consumer's local typesMap, but are reachable via FlattenedRPCMap.
+        if (pikkuFuncId.includes(':')) {
+          const inputType = `FlattenedRPCMap['${pikkuFuncId}']['input']`
+          const outputType = `FlattenedRPCMap['${pikkuFuncId}']['output']`
+          channelsObject[name].routes[key][method] = {
+            inputTypes: [inputType],
+            outputTypes: [outputType],
+          }
+          requiredTypes.add(inputType)
+          requiredTypes.add(outputType)
+          continue
+        }
         const func = resolveFunctionMeta(state, pikkuFuncId)
         if (!func) {
           throw new Error(
@@ -128,11 +166,15 @@ function generateChannels(
         const inputTypes = func.inputs || null
         const outputTypes = func.outputs || null
         channelsObject[name].routes[key][method] = {
-          inputTypes,
-          outputTypes,
+          inputTypes: normalizeTypes(logger, typesMap, inputTypes),
+          outputTypes: normalizeTypes(logger, typesMap, outputTypes),
         }
-        inputTypes?.forEach((type) => requiredTypes.add(type))
-        outputTypes?.forEach((type) => requiredTypes.add(type))
+        channelsObject[name].routes[key][method].inputTypes?.forEach((type) =>
+          requiredTypes.add(type)
+        )
+        channelsObject[name].routes[key][method].outputTypes?.forEach((type) =>
+          requiredTypes.add(type)
+        )
       }
     }
   }
@@ -177,4 +219,36 @@ function generateChannels(
 // Utility to format type arrays
 function formatTypeArray(types: string[] | null): string {
   return types ? types.join(' | ') : 'null'
+}
+
+function normalizeTypes(
+  logger: Logger,
+  typesMap: TypesMap,
+  types: string[] | null
+): string[] | null {
+  if (!types || types.length === 0) return types
+
+  const resolved = types.filter((type) => hasType(typesMap, type))
+
+  if (resolved.length > 0) {
+    return resolved
+  }
+
+  logger.warn(
+    `Channel type '${types.join(' | ')}' not found in local typesMap, falling back to unknown`
+  )
+  return ['unknown']
+}
+
+function hasType(typesMap: TypesMap, type: string): boolean {
+  if (['void', 'never', 'unknown', 'null', 'undefined'].includes(type)) {
+    return true
+  }
+
+  try {
+    typesMap.getTypeMeta(type)
+    return true
+  } catch {
+    return false
+  }
 }

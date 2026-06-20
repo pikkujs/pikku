@@ -4,10 +4,18 @@ import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeFunctionTypes } from './serialize-function-types.js'
+import { serializeAddonRefs } from './serialize-addon-refs.js'
 
-export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
+export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
+  { bootstrap?: boolean },
+  void
+>({
   func: async ({ logger, config, getInspectorState }, data) => {
-    const visitState = await getInspectorState(false, true, data?.bootstrap ?? false)
+    const visitState = await getInspectorState(
+      false,
+      true,
+      data?.bootstrap ?? false
+    )
     const {
       functionTypesFile,
       packageMappings,
@@ -52,7 +60,13 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<{ bootstrap?: boolea
       typeof config.addon === 'object' ? config.addon?.categories : undefined
     )
 
-    await writeFileInDir(logger, functionTypesFile, content)
+    const addonRefs = serializeAddonRefs({
+      addonHttp: visitState.exportedContracts.addonHttp,
+      addonChannel: visitState.exportedContracts.addonChannel,
+      addonCli: visitState.exportedContracts.addonCli,
+    })
+
+    await writeFileInDir(logger, functionTypesFile, `${content}\n${addonRefs}`)
   },
   middleware: [
     logCommandInfoAndTime({

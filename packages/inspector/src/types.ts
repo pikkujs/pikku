@@ -1,5 +1,5 @@
 import type * as ts from 'typescript'
-import type { ChannelsMeta } from '@pikku/core/channel'
+import type { ChannelMessageMeta, ChannelsMeta } from '@pikku/core/channel'
 import type { GatewaysMeta } from '@pikku/core/gateway'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
 import type { ScheduledTasksMeta } from '@pikku/core/scheduler'
@@ -13,6 +13,7 @@ import type {
 } from '@pikku/core/mcp'
 import type { AIAgentMeta } from '@pikku/core/ai-agent'
 import type { CLIMeta } from '@pikku/core/cli'
+import type { CLICommandMeta } from '@pikku/core/cli'
 import type { NodesMeta } from '@pikku/core/node'
 import type { SecretDefinitions } from '@pikku/core/secret'
 import type { CredentialDefinitions } from '@pikku/core/credential'
@@ -105,6 +106,67 @@ export interface InspectorFunctionState {
 export interface InspectorChannelState {
   meta: ChannelsMeta
   files: Set<string>
+}
+
+export interface ExportedHTTPRouteFunctionMeta {
+  pikkuFuncId: string
+  packageName?: string
+}
+
+export interface ExportedHTTPRouteConfigMeta {
+  method: string
+  route: string
+  func: ExportedHTTPRouteFunctionMeta
+  auth?: boolean
+  tags?: string[]
+  sse?: boolean
+  contentType?: string
+  timeout?: number
+  headers?: Record<string, string>
+}
+
+export interface ExportedHTTPRoutesGroupMeta {
+  basePath?: string
+  tags?: string[]
+  auth?: boolean
+  routes: ExportedHTTPRouteMapMeta
+}
+
+export type ExportedHTTPRouteEntryMeta =
+  | ExportedHTTPRouteConfigMeta
+  | ExportedHTTPRoutesGroupMeta
+  | ExportedHTTPRouteMapMeta
+
+export interface ExportedHTTPRouteMapMeta {
+  [key: string]: ExportedHTTPRouteEntryMeta
+}
+
+export type ExportedHTTPContractsMeta = Record<
+  string,
+  ExportedHTTPRoutesGroupMeta
+>
+
+export interface ExportedChannelRouteMeta extends ChannelMessageMeta {
+  auth?: boolean
+}
+
+export type ExportedChannelContractsMeta = Record<
+  string,
+  Record<string, ExportedChannelRouteMeta>
+>
+
+export type ExportedCLIContractsMeta = Record<
+  string,
+  Record<string, CLICommandMeta>
+>
+
+export interface InspectorExportedContractsState {
+  http: ExportedHTTPContractsMeta
+  cli: ExportedCLIContractsMeta
+  channel: ExportedChannelContractsMeta
+  addonHttp: Record<string, ExportedHTTPContractsMeta>
+  addonCli: Record<string, ExportedCLIContractsMeta>
+  addonChannel: Record<string, ExportedChannelContractsMeta>
 }
 
 export interface InspectorMiddlewareDefinition {
@@ -214,6 +276,7 @@ export type InspectorOptions = Partial<{
   setupOnly: boolean
   rootDir: string
   isAddon: boolean
+  sourceFile: ts.SourceFile
   types: Partial<{
     configFileType: string
     userSessionType: string
@@ -485,5 +548,6 @@ export interface InspectorState {
   openAPISpec: Record<string, any> | null
   diagnostics: InspectorDiagnostic[]
   addonFunctions: Record<string, FunctionsMeta> // namespace -> addon's function metadata
+  exportedContracts: InspectorExportedContractsState
   program: ts.Program | null // Retained for incremental re-inspection
 }

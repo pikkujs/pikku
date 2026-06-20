@@ -22,6 +22,8 @@ export interface PikkuCLICoreOutputFiles {
   httpWiringsFile: string
   httpWiringMetaFile: string
   httpWiringMetaJsonFile: string
+  httpContractsMetaJsonFile: string
+  httpContractsMetaFile: string
   httpMapDeclarationFile: string
   httpTypesFile: string
 
@@ -32,6 +34,8 @@ export interface PikkuCLICoreOutputFiles {
   channelsWiringFile: string
   channelsWiringMetaFile: string
   channelsWiringMetaJsonFile: string
+  channelContractsMetaJsonFile: string
+  channelContractsMetaFile: string
   channelsMapDeclarationFile: string
   channelsTypesFile: string
 
@@ -100,6 +104,8 @@ export interface PikkuCLICoreOutputFiles {
   cliWiringsFile: string
   cliWiringMetaFile: string
   cliWiringMetaJsonFile: string
+  cliContractsMetaJsonFile: string
+  cliContractsMetaFile: string
   cliBootstrapFile: string
   cliTypesFile: string
 

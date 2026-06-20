@@ -13,7 +13,11 @@ import {
   getPropertyAssignmentInitializer,
   extractTypeKeys,
 } from '../utils/type-utils.js'
-import type { AddWiring, InspectorState } from '../types.js'
+import type {
+  AddWiring,
+  ExportedHTTPRouteConfigMeta,
+  InspectorState,
+} from '../types.js'
 import { resolveHTTPMiddlewareFromObject } from '../utils/middleware.js'
 import { resolveHTTPPermissionsFromObject } from '../utils/permissions.js'
 import { extractWireNames } from '../utils/post-process.js'
@@ -33,6 +37,16 @@ export interface RegisterHTTPRouteParams {
   obj: ts.ObjectLiteralExpression
   state: InspectorState
   checker: ts.TypeChecker
+  logger: InspectorLogger
+  sourceFile: ts.SourceFile
+  basePath?: string
+  inheritedTags?: string[]
+  inheritedAuth?: boolean
+}
+
+export interface RegisterHTTPRouteMetaParams {
+  route: ExportedHTTPRouteConfigMeta
+  state: InspectorState
   logger: InspectorLogger
   sourceFile: ts.SourceFile
   basePath?: string
@@ -417,6 +431,66 @@ export function registerHTTPRoute({
     permissions,
     sse: sse ? true : undefined,
     headersSchemaName,
+    groupBasePath: basePath || undefined,
+  }
+}
+
+export function registerHTTPRouteMeta({
+  route,
+  state,
+  logger,
+  sourceFile,
+  basePath = '',
+  inheritedTags = [],
+  inheritedAuth,
+}: RegisterHTTPRouteMetaParams): void {
+  const method = route.method.toLowerCase()
+  const fullRoute = basePath + route.route
+  const tags = [...inheritedTags, ...(route.tags || [])]
+  const funcName = route.func.pikkuFuncId
+  const fnMeta = resolveFunctionMeta(state, funcName)
+
+  if (!fnMeta) {
+    logger.critical(
+      ErrorCode.FUNCTION_METADATA_NOT_FOUND,
+      `No function metadata found for '${funcName}'.`
+    )
+    return
+  }
+
+  let params: string[] = []
+  try {
+    const keys = pathToRegexp(fullRoute).keys
+    params = keys.filter((k) => k.type === 'param').map((k) => k.name)
+  } catch (error) {
+    logger.error(
+      `Failed to parse route '${fullRoute}': ${error instanceof Error ? error.message : error}`
+    )
+    return
+  }
+
+  if (!route.func.packageName) {
+    computeInputTypes(
+      state.http.metaInputTypes,
+      method,
+      fnMeta.inputs?.[0] || null,
+      [],
+      params
+    )
+  }
+
+  state.serviceAggregation.usedFunctions.add(funcName)
+  state.http.files.add(sourceFile.fileName)
+  state.http.meta[method][fullRoute] = {
+    pikkuFuncId: funcName,
+    ...(route.func.packageName && { packageName: route.func.packageName }),
+    route: fullRoute,
+    sourceFile: sourceFile.fileName,
+    method: method as HTTPMethod,
+    params: params.length > 0 ? params : undefined,
+    inputTypes: undefined,
+    tags: tags.length > 0 ? tags : undefined,
+    sse: route.sse ? true : undefined,
     groupBasePath: basePath || undefined,
   }
 }
