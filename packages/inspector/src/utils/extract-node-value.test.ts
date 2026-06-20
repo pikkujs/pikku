@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test'
 import { strict as assert } from 'node:assert'
 import * as ts from 'typescript'
-import { extractDescription } from './extract-node-value'
+import { extractDescription, extractStringLiteral } from './extract-node-value'
 
 const createChecker = (source: string) => {
   const sourceFile = ts.createSourceFile(
@@ -65,5 +65,53 @@ describe('extractDescription', () => {
   test('returns null for non-object node', () => {
     const { checker, sourceFile } = createChecker(`const x = 42`)
     assert.equal(extractDescription(sourceFile, checker), null)
+  })
+})
+
+describe('extractStringLiteral — concatenation/template symmetry', () => {
+  const findInitializer = (node: ts.Node): ts.Expression | undefined => {
+    if (ts.isVariableDeclaration(node) && node.initializer) {
+      return node.initializer
+    }
+    let result: ts.Expression | undefined
+    ts.forEachChild(node, (child) => {
+      if (!result) result = findInitializer(child)
+    })
+    return result
+  }
+
+  test('a `+` operand that cannot be statically resolved becomes a ${...} placeholder', () => {
+    const { checker, sourceFile } = createChecker(
+      `const x = 'Enrich event ' + (event.id ?? event.name)`
+    )
+    const init = findInitializer(sourceFile)!
+    assert.equal(
+      extractStringLiteral(init, checker),
+      'Enrich event ${event.id ?? event.name}'
+    )
+  })
+
+  test('`+` concatenation and template literal produce the same display string', () => {
+    const concat = createChecker(
+      `const x = 'Enrich event ' + (event.id ?? event.name)`
+    )
+    const template = createChecker(
+      'const x = `Enrich event ${event.id ?? event.name}`'
+    )
+    const concatValue = extractStringLiteral(
+      findInitializer(concat.sourceFile)!,
+      concat.checker
+    )
+    const templateValue = extractStringLiteral(
+      findInitializer(template.sourceFile)!,
+      template.checker
+    )
+    assert.equal(concatValue, templateValue)
+  })
+
+  test('still resolves fully-static concatenation exactly', () => {
+    const { checker, sourceFile } = createChecker(`const x = 'a' + 'b' + 'c'`)
+    const init = findInitializer(sourceFile)!
+    assert.equal(extractStringLiteral(init, checker), 'abc')
   })
 })
