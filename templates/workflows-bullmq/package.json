@@ -23,7 +23,7 @@
     "typescript": "^5.9"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.44",
+    "@pikku/cli": "^0.12.45",
     "@types/node": "^24"
   },
   "exports": {
