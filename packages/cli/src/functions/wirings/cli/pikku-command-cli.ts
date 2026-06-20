@@ -30,38 +30,40 @@ export const pikkuCLI = pikkuSessionlessFunc<void, boolean | undefined>({
       return undefined
     }
 
-    if (cli.files.size > 0 && Object.keys(cli.meta).length > 0) {
-      await writeFileInDir(
-        logger,
+    // The bootstrap imports cliWiringsFile and cliWiringMetaFile whenever this
+    // command reports CLI as active (truthy return), so both must always be
+    // written once past the guard above — including the contracts-only case
+    // where there are no local wireCLI source files (cli.files is empty).
+    // Skipping either leaves the bootstrap importing a file that was never
+    // generated and the per-unit deploy bundle fails.
+    await writeFileInDir(
+      logger,
+      cliWiringsFile,
+      serializeFileImports(
+        'wireCLI',
         cliWiringsFile,
-        serializeFileImports(
-          'wireCLI',
-          cliWiringsFile,
-          cli.files,
-          packageMappings
-        )
+        cli.files,
+        packageMappings
       )
-    }
+    )
 
-    if (Object.keys(cli.meta).length > 0) {
-      const minimalMeta = stripVerboseFields(cli.meta)
+    const minimalMeta = stripVerboseFields(cli.meta)
+    await writeFileInDir(
+      logger,
+      cliWiringMetaJsonFile,
+      JSON.stringify(minimalMeta, null, 2)
+    )
+
+    if (hasVerboseFields(cli.meta)) {
+      const verbosePath = cliWiringMetaJsonFile.replace(
+        /\.gen\.json$/,
+        '-verbose.gen.json'
+      )
       await writeFileInDir(
         logger,
-        cliWiringMetaJsonFile,
-        JSON.stringify(minimalMeta, null, 2)
+        verbosePath,
+        JSON.stringify(cli.meta, null, 2)
       )
-
-      if (hasVerboseFields(cli.meta)) {
-        const verbosePath = cliWiringMetaJsonFile.replace(
-          /\.gen\.json$/,
-          '-verbose.gen.json'
-        )
-        await writeFileInDir(
-          logger,
-          verbosePath,
-          JSON.stringify(cli.meta, null, 2)
-        )
-      }
     }
 
     await writeFileInDir(
@@ -88,24 +90,22 @@ export const pikkuCLI = pikkuSessionlessFunc<void, boolean | undefined>({
       )
     }
 
-    if (Object.keys(cli.meta).length > 0) {
-      const jsonImportPath = getFileImportRelativePath(
-        cliWiringMetaFile,
-        cliWiringMetaJsonFile,
-        packageMappings
-      )
+    const jsonImportPath = getFileImportRelativePath(
+      cliWiringMetaFile,
+      cliWiringMetaJsonFile,
+      packageMappings
+    )
 
-      const supportsImportAttributes = schema?.supportsImportAttributes ?? false
-      const importStatement = supportsImportAttributes
-        ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
-        : `import metaData from '${jsonImportPath}'`
+    const supportsImportAttributes = schema?.supportsImportAttributes ?? false
+    const importStatement = supportsImportAttributes
+      ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
+      : `import metaData from '${jsonImportPath}'`
 
-      await writeFileInDir(
-        logger,
-        cliWiringMetaFile,
-        `import { pikkuState } from '@pikku/core/internal'\nimport { CLIMeta } from '@pikku/core/cli'\n${importStatement}\npikkuState(null, 'cli', 'meta', metaData as CLIMeta)`
-      )
-    }
+    await writeFileInDir(
+      logger,
+      cliWiringMetaFile,
+      `import { pikkuState } from '@pikku/core/internal'\nimport { CLIMeta } from '@pikku/core/cli'\n${importStatement}\npikkuState(null, 'cli', 'meta', metaData as CLIMeta)`
+    )
 
     return true
   },

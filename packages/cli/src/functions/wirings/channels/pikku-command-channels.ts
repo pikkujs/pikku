@@ -34,38 +34,40 @@ export const pikkuCommandChannels = pikkuSessionlessFunc<
       return undefined
     }
 
-    if (channels.files.size > 0 && Object.keys(channels.meta).length > 0) {
-      await writeFileInDir(
-        logger,
+    // The bootstrap imports channelsWiringFile and channelsWiringMetaFile
+    // whenever this command reports channels as active (truthy return), so both
+    // must always be written once past the guard above — including the
+    // contracts-only case where there are no local channel source files
+    // (channels.files is empty). Skipping either leaves the bootstrap importing
+    // a file that was never generated and the per-unit deploy bundle fails.
+    await writeFileInDir(
+      logger,
+      channelsWiringFile,
+      serializeFileImports(
+        'addChannel',
         channelsWiringFile,
-        serializeFileImports(
-          'addChannel',
-          channelsWiringFile,
-          channels.files,
-          packageMappings
-        )
+        channels.files,
+        packageMappings
       )
-    }
+    )
 
-    if (Object.keys(channels.meta).length > 0) {
-      const minimalMeta = stripVerboseFields(channels.meta)
+    const minimalMeta = stripVerboseFields(channels.meta)
+    await writeFileInDir(
+      logger,
+      channelsWiringMetaJsonFile,
+      JSON.stringify(minimalMeta, null, 2)
+    )
+
+    if (hasVerboseFields(channels.meta)) {
+      const verbosePath = channelsWiringMetaJsonFile.replace(
+        /\.gen\.json$/,
+        '-verbose.gen.json'
+      )
       await writeFileInDir(
         logger,
-        channelsWiringMetaJsonFile,
-        JSON.stringify(minimalMeta, null, 2)
+        verbosePath,
+        JSON.stringify(channels.meta, null, 2)
       )
-
-      if (hasVerboseFields(channels.meta)) {
-        const verbosePath = channelsWiringMetaJsonFile.replace(
-          /\.gen\.json$/,
-          '-verbose.gen.json'
-        )
-        await writeFileInDir(
-          logger,
-          verbosePath,
-          JSON.stringify(channels.meta, null, 2)
-        )
-      }
     }
 
     await writeFileInDir(
@@ -92,23 +94,21 @@ export const pikkuCommandChannels = pikkuSessionlessFunc<
       )
     }
 
-    if (Object.keys(channels.meta).length > 0) {
-      const jsonImportPath = getFileImportRelativePath(
-        channelsWiringMetaFile,
-        channelsWiringMetaJsonFile,
-        packageMappings
-      )
-      const supportsImportAttributes = schema?.supportsImportAttributes ?? false
-      const importStatement = supportsImportAttributes
-        ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
-        : `import metaData from '${jsonImportPath}'`
+    const jsonImportPath = getFileImportRelativePath(
+      channelsWiringMetaFile,
+      channelsWiringMetaJsonFile,
+      packageMappings
+    )
+    const supportsImportAttributes = schema?.supportsImportAttributes ?? false
+    const importStatement = supportsImportAttributes
+      ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
+      : `import metaData from '${jsonImportPath}'`
 
-      await writeFileInDir(
-        logger,
-        channelsWiringMetaFile,
-        `import { pikkuState } from '@pikku/core/internal'\nimport type { ChannelsMeta } from '@pikku/core/channel'\n${importStatement}\npikkuState(null, 'channel', 'meta', metaData as ChannelsMeta)`
-      )
-    }
+    await writeFileInDir(
+      logger,
+      channelsWiringMetaFile,
+      `import { pikkuState } from '@pikku/core/internal'\nimport type { ChannelsMeta } from '@pikku/core/channel'\n${importStatement}\npikkuState(null, 'channel', 'meta', metaData as ChannelsMeta)`
+    )
 
     return true
   },
