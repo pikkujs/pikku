@@ -1,3 +1,23 @@
+## 0.12.22
+
+### Patch Changes
+
+- 06234a9: Fix DSL `Promise.all` fanout silently failing to register its child RPC (causing a runtime "Function not found").
+
+  Two distinct causes are addressed:
+  - A fanout/group captured into a variable (`const results = await Promise.all(array.map(e => workflow.do(...)))`) was dropped entirely, because the `const`-declaration path had no `Promise.all` branch — fanout handling only ran on the bare/assignment path. The declaration path now extracts fanout and parallel groups too.
+  - `extractStringLiteral` threw on a `+` concatenation with a non-static operand (e.g. `'Enrich ' + (e.id ?? e.name)`), unlike a template literal (`` `Enrich ${e.id ?? e.name}` ``) which never threw. The throw was uncaught while scanning workflow invocations and aborted the run. The `+` branch now falls back to `${...}` placeholders to match template literals, and a step's cosmetic display name can no longer block RPC registration.
+
+- 8e72c93: Exclude `node_modules` from inspector source scanning. A locally-installed addon (under the project's `node_modules`) is a dependency, not project source — scanning it double-counted the addon's own application types (`CoreConfig`/`CoreServices`/`CoreSingletonServices`) and failed `pikku all` with "More than one … found". Addons still contribute via their generated metadata, not by being re-scanned as source.
+- 6645e7a: Add a severity model for coded diagnostics so security findings can surface without blocking the dev server.
+  - `InspectorLogger` gains `diagnostic({ severity, code, message })` (`severity: 'warn' | 'error' | 'critical'`). `critical(code, message)` is now sugar for `diagnostic({ severity: 'critical', ... })`.
+  - The CLI fails the build only on `critical` diagnostics by default. New global flags `--fail-on-error` and `--fail-on-warn` (implies `--fail-on-error`) opt into stricter gating; `--fail-on-critical` is always on.
+  - Data-classification leaks (`PKU910`) are now emitted at `error` severity instead of `critical`. They are still printed, but no longer abort `pikku all` / the dev server — pass `--fail-on-error` (e.g. at deploy) to make them blocking and recommend a fix.
+  - Contract-immutability drift (`PKU861`) during `pikku versions update` (run inside `pikku all`) no longer calls `process.exit(1)`. It is surfaced as an `error` diagnostic and skips saving the manifest, so a stale baseline can't crash-loop the dev server. `pikku versions check` remains the hard gate, and `--fail-on-error` makes `pikku all` block on it at deploy.
+
+- Updated dependencies [6bca38f]
+  - @pikku/core@0.12.35
+
 ## 0.12.21
 
 ### Patch Changes

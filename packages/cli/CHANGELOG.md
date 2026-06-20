@@ -1,3 +1,40 @@
+## 0.12.44
+
+### Patch Changes
+
+- d64fbd9: db migrate: stub secrets during Better Auth schema introspection. The drift check
+  loads the app's auth factory only to derive the table/column shape, so it no longer
+  requires the app's real secrets (e.g. `BETTER_AUTH_SECRET`) to be present in the
+  environment — a fake secret service resolves every key to a placeholder.
+- 8e72c93: `pikku fabric publish` now packs with `npm pack` (honouring the package's `files` field and matching a normal install's layout) instead of a hand-rolled tar. `pikku fabric add` installs the artifact into the project's `node_modules/<package-name>/` — the location `wireAddon({ package })` resolves via `require.resolve` — stripping npm's `package/` prefix, instead of copying source into `src/addons/<id>/` where it could not be wired.
+- 8e72c93: Add `pikku fabric publish [dir]` and `pikku fabric add <id>` for the Fabric community registry. `publish` packs a package directory into an artifact and uploads it via a short-lived presigned URL (authenticated; attributed to the publisher's org or person). `add` resolves a public presigned download and copies the package source shadcn-style into `addons.addonDir` (new `pikku.config.json` config, default `src/addons`).
+- d0f5648: fix(cli): dev sqlite dialect now reads `INSERT ... RETURNING` rows. The node:sqlite-backed dialect set `reader` from `stmt.reader`, which node:sqlite always leaves undefined, so kysely ran returning-inserts via `.run()` and dropped the rows — breaking better-auth sign-up (it inserts a row and reads it back) with "Failed to create user". `reader` is now derived from the SQL (`SELECT` or `RETURNING`).
+
+  feat(fabric-validate): warn when a better-auth `createAuthClient` baseURL omits the `/auth` segment. The Fabric edge (and the sandbox Caddy) keep the `/api` prefix for the better-auth unit, so the DEFAULT server basePath `/api/auth` is correct and needs no override. The real footgun is the client: better-auth appends the endpoint to baseURL verbatim, so a bare `/api` baseURL yields `/api/sign-in/email` (no `/auth`) and 404s. `pikku fabric validate` now warns and suggests `baseURL: \`${apiUrl()}/auth\``.
+
+- b674ca7: fabric validate: enforce minimum @pikku/\* versions. `pikku fabric validate` now
+  scans every workspace manifest and errors when a gated @pikku package is below
+  the required floor (per-package, since the packages version independently). A
+  stale @pikku/cli ships a `pikku dev` that hangs without ever listening, and a
+  mismatched @pikku/core splits pikkuState into duplicate copies so app/console
+  routes 404 — both are hard blockers for a Fabric sandbox, so they fail validate
+  with a bump-and-reinstall fix hint.
+- 6bca38f: docs(skills): add the `pikku-emails` skill documenting file-based email templates — directory layout, templating syntax, per-template typed variables, `pikku emails generate`, and rendering/sending through an EmailService.
+- 6bca38f: fix(emails): scope generated template variables to each template. The email codegen fed every string in the shared locale file into every template's variable list, so a variable interpolated by one template's locale string (e.g. `inviterName` in an invitation subject) leaked into the typed `data` of unrelated templates. Variables are now collected only from the locale keys and partials each template actually references (transitively).
+- 6645e7a: Add a severity model for coded diagnostics so security findings can surface without blocking the dev server.
+  - `InspectorLogger` gains `diagnostic({ severity, code, message })` (`severity: 'warn' | 'error' | 'critical'`). `critical(code, message)` is now sugar for `diagnostic({ severity: 'critical', ... })`.
+  - The CLI fails the build only on `critical` diagnostics by default. New global flags `--fail-on-error` and `--fail-on-warn` (implies `--fail-on-error`) opt into stricter gating; `--fail-on-critical` is always on.
+  - Data-classification leaks (`PKU910`) are now emitted at `error` severity instead of `critical`. They are still printed, but no longer abort `pikku all` / the dev server — pass `--fail-on-error` (e.g. at deploy) to make them blocking and recommend a fix.
+  - Contract-immutability drift (`PKU861`) during `pikku versions update` (run inside `pikku all`) no longer calls `process.exit(1)`. It is surfaced as an `error` diagnostic and skips saving the manifest, so a stale baseline can't crash-loop the dev server. `pikku versions check` remains the hard gate, and `--fail-on-error` makes `pikku all` block on it at deploy.
+
+- 02a4499: `pikku fabric validate` now flags a missing `scaffold.console` in `pikku.config.json`. Without it the console addon's introspection RPCs (`console:getFunctionsMeta`, `console:getAllMeta`, …) are never scaffolded, so tools that introspect a running app (e.g. the Fabric sandbox builder) hit 404s and show no functions. The fix hint suggests `"console": "no-auth"` (or `"auth"`).
+- Updated dependencies [06234a9]
+- Updated dependencies [8e72c93]
+- Updated dependencies [6645e7a]
+- Updated dependencies [6bca38f]
+  - @pikku/inspector@0.12.22
+  - @pikku/core@0.12.35
+
 ## 0.12.43
 
 ### Patch Changes

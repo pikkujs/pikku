@@ -1,3 +1,14 @@
+## 0.12.15
+
+### Patch Changes
+
+- 5283434: Redesign the Addons → Community tab as a card gallery: a hero banner, a category rail derived from addon metadata, a sort bar, and addon cards (category icon, publisher badge, tags, function/agent stats, install action). Selecting a card opens a right-hand detail drawer with an Overview ("What's included" surface tiles + publisher) and Functions tab, replacing the full-page navigation. Installed and APIs tabs are unchanged.
+
+  The community catalog now reads from the Fabric registry API (`FABRIC_API_URL`, default `https://api.pikkufabric.com`) via `/registry/packages` instead of the standalone registry.
+
+- Updated dependencies [6bca38f]
+  - @pikku/core@0.12.35
+
 ## 0.12.14
 
 ### Patch Changes
