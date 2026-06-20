@@ -6787,6 +6787,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/verifiers-addon-carve@workspace:verifiers/addon-carve":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-addon-carve@workspace:verifiers/addon-carve"
+  dependencies:
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/verifiers-addon-registry@workspace:verifiers/addon-registry":
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-addon-registry@workspace:verifiers/addon-registry"
