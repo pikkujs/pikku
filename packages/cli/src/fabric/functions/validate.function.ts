@@ -402,54 +402,15 @@ export async function runValidate(
       }
     }
 
-    // ── better-auth path vs Fabric's /api-stripping edge ───────────────────
-    // Fabric's sandbox (and prod edge) proxy `/api/*` to the app with the
-    // `/api` prefix STRIPPED. App HTTP routes are registered WITHOUT `/api`
-    // (e.g. /public/*, /rpc/*), so a client call to /api/public/x arrives as
-    // /public/x and matches. better-auth's DEFAULT basePath is `/api/auth`,
-    // which keeps the `/api` segment — after the strip it arrives as /auth/*
-    // and never matches the registered /api/auth/* route, so every auth
-    // request 404s and login/sign-up silently break. The server basePath must
-    // drop `/api` (e.g. `/auth`) and the client must add it back (`/api/auth`).
-    const wiringsDir = join(fnDir, 'src', 'wirings')
-    if (existsSync(wiringsDir)) {
-      try {
-        const wiringFiles = (await readdir(wiringsDir)).filter((f) =>
-          f.endsWith('.ts')
-        )
-        for (const f of wiringFiles) {
-          const text = await readTextSafe(join(wiringsDir, f))
-          if (!text) continue
-          const usesBetterAuth =
-            /\bpikkuBetterAuth\b/.test(text) || /\bbetterAuth\s*\(/.test(text)
-          if (!usesBetterAuth) continue
-          const basePath = text.match(
-            /basePath\s*:\s*['"`]([^'"`]+)['"`]/
-          )?.[1]
-          if (!basePath || /^\/api(\/|$)/.test(basePath)) {
-            e(
-              'better-auth-basepath-api-prefix',
-              basePath
-                ? `better-auth basePath "${basePath}" keeps the /api prefix — Fabric strips /api at the edge before proxying, so auth routes arrive without it and every /api/auth/* request 404s (login/sign-up break)`
-                : 'better-auth basePath is not set, so it defaults to /api/auth — Fabric strips /api at the edge before proxying, so auth routes arrive as /auth/* and every /api/auth/* request 404s (login/sign-up break)',
-              join(wiringsDir, f),
-              lines(
-                'Set a basePath WITHOUT the /api prefix so it survives the edge strip:',
-                "  betterAuth({ basePath: '/auth', ... })",
-                'and point the auth client at /api/auth so /api/auth/* → (strip) → /auth/*:',
-                "  createAuthClient({ baseURL: `${apiUrl()}/auth` })  // resolves to /api/auth"
-              )
-            )
-          }
-        }
-      } catch {
-        // readdir failure — skip
-      }
-    }
-
-    // The matching client side: createAuthClient's baseURL must include the
-    // `/auth` segment, otherwise the client calls /api/sign-in/email which the
-    // server (mounted under /auth) never serves.
+    // ── better-auth client baseURL must include the /auth segment ──────────
+    // The Fabric deploy edge keeps the /api prefix for the better-auth unit
+    // (it registers /api/auth/*) and strips /api only for the other units; the
+    // sandbox Caddy mirrors that with a non-stripping /api/auth/* handler. So
+    // the DEFAULT basePath (/api/auth) is the CORRECT server config — do NOT
+    // override it. The real footgun is the client: better-auth appends the
+    // endpoint to baseURL verbatim, so a bare /api baseURL yields
+    // /api/sign-in/email (no /auth) and 404s. The client baseURL must resolve
+    // to /api/auth.
     const appsDir = join(root, 'apps')
     if (existsSync(appsDir)) {
       try {
