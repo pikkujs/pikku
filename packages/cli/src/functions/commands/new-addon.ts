@@ -1222,10 +1222,10 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       // metadata under a `node` block in pikku.config.json — a key `pikku dev`
       // and the codegen ignore, so it stays a runnable normal project — and the
       // carve lifts it into the `addon` block the node-meta codegen reads. Source
-      // `node` wins over the flag-derived defaults; `carve: true` marks it.
+      // `node` wins over the flag-derived defaults.
       const cfg = JSON.parse(addonFiles['pikku.config.json'])
       if (typeof cfg.addon !== 'object' || !cfg.addon) cfg.addon = {}
-      cfg.addon = { ...cfg.addon, ...sourceNodeMeta, carve: true }
+      cfg.addon = { ...cfg.addon, ...sourceNodeMeta }
       addonFiles['pikku.config.json'] = JSON.stringify(cfg, null, 2)
 
       // Ship the icon the metadata points at — the source keeps it at the
