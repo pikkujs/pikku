@@ -34,14 +34,21 @@ export const PikkuRPCContext = createContext<PikkuRPCInstance | null>(null)
 export const PikkuHTTPProvider: React.FC<{
   children: React.ReactNode
   serverUrl?: string
-}> = ({ children, serverUrl }) => {
+  /**
+   * Fetch credentials mode for the underlying instance (also used by
+   * usePikkuSSE). Defaults to 'include' for the same-origin cookie-auth flow.
+   * Set to 'omit'/'same-origin' for cross-origin bearer-token setups, where
+   * 'include' + wildcard CORS is rejected by the browser at preflight.
+   */
+  credentials?: RequestCredentials
+}> = ({ children, serverUrl, credentials = 'include' }) => {
   const resolvedUrl = serverUrl ?? getServerUrl()
   const pikkuInstance = useMemo(() => {
     return pikku({
       serverUrl: resolvedUrl,
-      credentials: 'include',
+      credentials,
     })
-  }, [resolvedUrl])
+  }, [resolvedUrl, credentials])
   return (
     <PikkuInstanceContext.Provider value={pikkuInstance}>
       <PikkuHTTPContext.Provider value={pikkuInstance.fetch}>
