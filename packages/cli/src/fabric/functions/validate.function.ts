@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { readFile, readdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { createRequire } from 'node:module'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { added, changed, removed, dim } from '../lib/output.js'
 
@@ -61,6 +62,38 @@ async function readTextSafe(path: string): Promise<string | null> {
     return null
   }
 }
+
+// List .ts/.tsx source files under a directory (skips node_modules). Used to
+// scan an app for raw @mantine/core imports and i18n usage.
+async function listSourceFiles(dir: string): Promise<string[]> {
+  if (!existsSync(dir)) return []
+  try {
+    return (await readdir(dir, { recursive: true }))
+      .filter(
+        (f): f is string =>
+          typeof f === 'string' &&
+          (f.endsWith('.ts') || f.endsWith('.tsx')) &&
+          !f.includes('node_modules')
+      )
+      .map((f) => join(dir, f))
+  } catch {
+    return []
+  }
+}
+
+// Module-singleton-sensitive packages: a SECOND physical copy splits
+// module-level state. The TanStack Start dev server registers its SSR
+// middleware on one copy of @tanstack/start-plugin-core while the config hook
+// reads another, so the frontend serves "Cannot GET /" (404). React/react-dom
+// duplicates break hooks. This is a workspace-hoisting artifact, not a version
+// mismatch — `resolutions` pins do NOT collapse it. Curated, not exhaustive:
+// most duplicate deps are harmless, so only these are checked.
+const SINGLETON_SENSITIVE_PKGS = [
+  'vite',
+  '@tanstack/start-plugin-core',
+  'react',
+  'react-dom',
+]
 
 // Minimum @pikku/* versions Fabric requires. The pikku packages are versioned
 // independently (e.g. @pikku/cli moves faster than @pikku/core), so this is a
@@ -841,6 +874,126 @@ export async function runValidate(
           join(appPath, 'package.json'),
           `Add "@babel/core": "^7.26.0" to apps/${name}/package.json devDependencies`
         )
+      }
+
+      // ── i18n + @pikku/mantine convergence (React frontend apps) ──────────
+      // Every frontend converges onto the canonical starter-template stack:
+      // i18n everywhere + components imported from @pikku/mantine/core (whose
+      // I18nNode-typed props make untranslated strings a compile error). A raw
+      // @mantine/core component import bypasses that gate, so hardcoded copy
+      // ships untranslated.
+      const appAllDeps = {
+        ...appPkg.dependencies,
+        ...appPkg.devDependencies,
+      }
+      const isReactFrontend = !!(
+        appAllDeps['@mantine/core'] ||
+        appAllDeps['@pikku/mantine'] ||
+        appAllDeps['react']
+      )
+      if (isReactFrontend) {
+        const srcFiles = await listSourceFiles(join(appPath, 'src'))
+        let usesT = false
+        const rawMantineFiles: string[] = []
+        for (const file of srcFiles) {
+          const text = await readTextSafe(file)
+          if (!text) continue
+          if (/\b(?:useI18n|useTranslation)\s*\(/.test(text)) usesT = true
+          // component import from @mantine/core — the trailing quote excludes
+          // the `@mantine/core/styles.css` side-effect import and @mantine/hooks
+          if (/from\s+['"]@mantine\/core['"]/.test(text)) {
+            rawMantineFiles.push(file.slice(appPath.length + 1))
+          }
+        }
+
+        const hasI18nDeps = !!(
+          appAllDeps['i18next'] && appAllDeps['react-i18next']
+        )
+        if (!hasI18nDeps) {
+          e(
+            `app-missing-i18n-${name}`,
+            `apps/${name} has no i18n stack — every Fabric frontend must be translatable`,
+            join(appPath, 'package.json'),
+            lines(
+              'Add the canonical single-namespace i18n stack:',
+              '1. deps: "i18next" + "react-i18next".',
+              '2. src/i18n config.ts with a single nested-key `translation` namespace (import.meta.glob auto-registers locale json).',
+              '3. Route every user-visible string through `useI18n()` t() from "@pikku/react/i18n".',
+              'Reference: templates/starter-template/apps/app/src/i18n.'
+            )
+          )
+        } else if (!usesT && srcFiles.length > 0) {
+          w(
+            `app-i18n-unused-${name}`,
+            `apps/${name} declares i18next but no component calls useI18n()/useTranslation() — strings are not actually translated`,
+            appPath,
+            'Wrap user-visible strings in t() from useI18n() ("@pikku/react/i18n").'
+          )
+        }
+
+        if (!appAllDeps['@pikku/mantine'] && appAllDeps['@mantine/core']) {
+          e(
+            `app-missing-pikku-mantine-${name}`,
+            `apps/${name} uses @mantine/core but not @pikku/mantine — components bypass the i18n-typed compile gate`,
+            join(appPath, 'package.json'),
+            'Add "@pikku/mantine": "^0.12.5" and import components from "@pikku/mantine/core" (a drop-in for @mantine/core with I18nNode-typed string props).'
+          )
+        }
+        if (rawMantineFiles.length > 0) {
+          e(
+            `app-raw-mantine-imports-${name}`,
+            `apps/${name} imports components from "@mantine/core" directly in ${rawMantineFiles.length} file(s) — this bypasses the @pikku/mantine i18n gate, so untranslated strings compile silently`,
+            join(appPath, 'src'),
+            lines(
+              `Swap 'from "@mantine/core"' → 'from "@pikku/mantine/core"' in:`,
+              ...rawMantineFiles.slice(0, 10).map((f) => `  - ${f}`),
+              ...(rawMantineFiles.length > 10
+                ? [`  …and ${rawMantineFiles.length - 10} more`]
+                : []),
+              'Keep "@mantine/core/styles.css", @mantine/hooks and @mantine/notifications imports as-is.'
+            )
+          )
+        }
+      }
+    }
+
+    // ── singleton-sensitive deps must resolve to ONE physical copy ─────────
+    // A second physical copy of a peer-virtualized lib (or React) splits
+    // module-level state and breaks TanStack Start dev SSR — the perauset
+    // "Cannot GET /" 404. Invariant: one resolved install dir per package
+    // across {app, root}. Best-effort: needs node_modules installed; anything
+    // unresolvable is skipped.
+    for (const name of appEntries) {
+      const appPath = join(appsDir, name)
+      if (!existsSync(join(appPath, 'package.json'))) continue
+      for (const pkg of SINGLETON_SENSITIVE_PKGS) {
+        const installDirs = new Set<string>()
+        for (const base of [appPath, root]) {
+          try {
+            const resolved = createRequire(
+              join(base, 'package.json')
+            ).resolve(pkg)
+            const esc = pkg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+            const m = resolved.match(
+              new RegExp(`^(.*[\\\\/]node_modules[\\\\/]${esc})[\\\\/]`)
+            )
+            if (m) installDirs.add(m[1])
+          } catch {
+            // not resolvable from this base — skip
+          }
+        }
+        if (installDirs.size > 1) {
+          e(
+            `dup-physical-copy-${name}-${pkg.replace(/[@/]/g, '-')}`,
+            `apps/${name}: "${pkg}" resolves to ${installDirs.size} distinct physical copies — a module-singleton split (breaks TanStack Start dev SSR → frontend 404)`,
+            appPath,
+            lines(
+              `"${pkg}" is installed more than once (e.g. one hoisted to the repo root and one nested under apps/${name}).`,
+              `Declare "${pkg}" in exactly ONE workspace manifest (the root OR apps/${name}, not both), delete yarn.lock, and reinstall so it hoists to a single copy.`,
+              '`resolutions` version-pins do NOT collapse a peer-virtualized duplicate.'
+            )
+          )
+        }
       }
     }
   }
