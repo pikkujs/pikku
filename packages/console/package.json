@@ -25,7 +25,7 @@
     "dev": "vite --port 7070",
     "build": "yarn generate && vite build",
     "preview": "vite preview",
-    "generate": "cd backend && pikku all",
+    "generate": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide && cd backend && pikku all",
     "lint": "tsc --noEmit",
     "prepublishOnly": "echo 'Source-only package — no build needed'"
   },
