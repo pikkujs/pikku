@@ -60,7 +60,7 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
       { value: 'functions', label: m.packages_sort_functions() },
       { value: 'agents', label: m.packages_sort_agents() },
     ],
-    [t]
+    []
   )
 
   const filtered = useMemo(() => {
