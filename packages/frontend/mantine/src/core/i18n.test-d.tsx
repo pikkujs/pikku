@@ -20,6 +20,18 @@ import type { I18nString } from '@pikku/react'
 
 declare const t: (k: string) => I18nString
 
+// ── Paraglide brand parity ───────────────────────────────────────────────────
+// I18nString must stay structurally identical to Paraglide JS's `LocalizedString`
+// brand so a `m()` message satisfies the gate with no wrapper. If Paraglide ever
+// renames the brand literal, the assignments below break loudly here.
+type ParaglideLocalizedString = string & { readonly __brand: 'LocalizedString' }
+declare const m: (args?: Record<string, never>) => ParaglideLocalizedString
+const _brand_ltr: I18nString = m() // LocalizedString → I18nString
+const _brand_rtl: ParaglideLocalizedString = asI18n('x') // I18nString → LocalizedString
+const _ok_paraglide_child = <Text>{m()}</Text> // flows through the gate natively
+// @ts-expect-error — a different brand literal must NOT satisfy I18nString
+const _bad_brand: I18nString = '' as string & { readonly __brand: 'Other' }
+
 // ── positives: branded text + JSX structure compile ──────────────────────────
 const _ok_button = <Button onClick={() => {}}>{t('save')}</Button>
 const _ok_button_jsx = (
@@ -127,6 +139,10 @@ const _bad_menu_item = <Menu.Item>Rename</Menu.Item>
 const _bad_tab = <Tabs.Tab value="a">First</Tabs.Tab>
 
 void [
+  _brand_ltr,
+  _brand_rtl,
+  _ok_paraglide_child,
+  _bad_brand,
   _ok_button,
   _ok_button_jsx,
   _ok_poly,
