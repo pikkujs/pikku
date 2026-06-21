@@ -571,6 +571,29 @@ describe('addAuth inspector', () => {
     }
   })
 
+  test('a route-scoped addHTTPMiddleware registration does NOT set the flag', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-scoped-'))
+    const file = join(rootDir, 'middleware.ts')
+    await writeFile(
+      file,
+      [
+        "import { addHTTPMiddleware } from '#pikku'",
+        "import { betterAuthStatelessSession } from '@pikku/better-auth'",
+        "addHTTPMiddleware('/api/admin/*', [betterAuthStatelessSession()])",
+      ].join('\n')
+    )
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      const state = await inspect(makeLogger(criticals), [file], { rootDir })
+      assert.ok(
+        !state.auth.userStatelessSession,
+        'a route-scoped registration must not suppress the global generated middleware'
+      )
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
   test('betterAuthStatelessSession in a .gen.ts file does NOT set the flag', async () => {
     const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-genonly-'))
     const file = join(rootDir, 'auth-middleware.gen.ts')
