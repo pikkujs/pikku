@@ -12,7 +12,8 @@ import {
   Tooltip,
 } from '@pikku/mantine/core'
 import { useElementSize } from '@mantine/hooks'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { ListFilter, Search } from 'lucide-react'
 import { PikkuSwitch } from './PikkuSwitch'
 import { FilterChip } from './FilterChip'
@@ -57,8 +58,8 @@ export const ShellHeader = <T extends string = string>({
   actionsNode,
   filtersTitle,
 }: ShellHeaderProps<T>) => {
-  const { t } = useI18n()
-  const filtersLabel = filtersTitle ?? t('shell_header.filters')
+  useLocale()
+  const filtersLabel = filtersTitle ?? m.shell_header_filters()
   const { ref: sizeRef, width } = useElementSize()
   const measRef = useRef<Record<string, HTMLElement | null>>({})
   const [w, setW] = useState<Record<string, number> | null>(null)

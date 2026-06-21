@@ -9,7 +9,8 @@ import {
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import type { I18nNode } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { Sparkles, Package, Building2, ShieldCheck } from 'lucide-react'
 
 interface CommunityHeroProps {
@@ -39,7 +40,7 @@ export const CommunityHero: React.FC<CommunityHeroProps> = ({
   publisherCount,
   officialCount,
 }) => {
-  const { t } = useI18n()
+  useLocale()
   return (
     <Paper
       withBorder
@@ -62,33 +63,33 @@ export const CommunityHero: React.FC<CommunityHeroProps> = ({
             c="blue"
             style={{ letterSpacing: '0.06em' }}
           >
-            {t('packages.community_eyebrow')}
+            {m.packages_community_eyebrow()}
           </Text>
         </Group>
 
         <Title order={2} fw={700} lh={1.15}>
-          {t('packages.community_headline')}
+          {m.packages_community_headline()}
         </Title>
 
         <Text size="sm" c="dimmed">
-          {t('packages.community_subtext')}
+          {m.packages_community_subtext()}
         </Text>
 
         <Group gap="xl" mt={4}>
           <HeroStat
             icon={Package}
             value={addonCount}
-            label={t('packages.stat_addons')}
+            label={m.packages_stat_addons()}
           />
           <HeroStat
             icon={Building2}
             value={publisherCount}
-            label={t('packages.stat_publishers')}
+            label={m.packages_stat_publishers()}
           />
           <HeroStat
             icon={ShieldCheck}
             value={officialCount}
-            label={t('packages.stat_official')}
+            label={m.packages_stat_official()}
           />
         </Group>
       </Stack>

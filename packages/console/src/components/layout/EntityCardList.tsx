@@ -3,7 +3,8 @@ import type { ReactNode } from 'react'
 import { Box, Text, Stack, Group, Skeleton } from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { EmptyStatePlaceholder } from './EmptyStatePlaceholder'
 import { Boxes } from 'lucide-react'
 import { toEnglishName } from '../../lib/strings'
@@ -32,7 +33,7 @@ function EntityCard({
   metricSlot?: (name: string) => ReactNode
 }) {
   const [hovered, setHovered] = useState(false)
-  const { t } = useI18n()
+  useLocale()
   return (
     <Box
       onClick={() => onOpen(item.name)}
@@ -80,7 +81,7 @@ function EntityCard({
           </Group>
         </Group>
         <Text size="xs" c={item.description ? 'dimmed' : 'var(--mantine-color-placeholder)'} lineClamp={2} fs={item.description ? undefined : 'italic'}>
-          {item.description ? asI18n(item.description) : t('entity_card.no_description')}
+          {item.description ? asI18n(item.description) : m.entity_card_no_description()}
         </Text>
       </Stack>
       {metricSlot && <Box style={{ flexShrink: 0 }}>{metricSlot(item.name)}</Box>}
@@ -111,7 +112,7 @@ export const EntityCardList: React.FC<EntityCardListProps> = ({
   icon = Boxes,
   metricSlot,
 }) => {
-  const { t } = useI18n()
+  useLocale()
 
   if (loading) {
     return (
@@ -128,7 +129,7 @@ export const EntityCardList: React.FC<EntityCardListProps> = ({
       <EmptyStatePlaceholder
         icon={icon}
         hero={emptyHero}
-        title={emptyTitle ?? t('entity_card_list.empty_title')}
+        title={emptyTitle ?? m.entity_card_list_empty_title()}
         description={emptyDescription}
         docsHref={docsHref}
       />

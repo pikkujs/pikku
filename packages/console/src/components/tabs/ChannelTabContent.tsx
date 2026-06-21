@@ -11,7 +11,8 @@ import {
 import { ChannelDetailView } from '../channel/ChannelDetailView'
 import { ListDetailLayout } from '../ui/ListDetailLayout'
 import type { ChannelMeta } from '@pikku/core/channel'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 
 const ChannelTabInner: React.FC<{
   channelName: string
@@ -62,7 +63,7 @@ export const ChannelTabContent: React.FC<ChannelTabContentProps> = ({ searchQuer
   const [searchParams] = useSearchParams()
   const channelName = searchParams.get('id') || ''
   const { meta } = usePikkuMeta()
-  const { t } = useI18n()
+  useLocale()
 
   const allChannelsMeta = meta.channelsMeta || {}
   const channelNames = Object.keys(allChannelsMeta)
@@ -74,8 +75,8 @@ export const ChannelTabContent: React.FC<ChannelTabContentProps> = ({ searchQuer
       <EmptyStatePlaceholder
         icon={Radio}
         hero={emptyHero}
-        title={t('channels.empty_title')}
-        description={t('channels.empty_description')}
+        title={m.channels_empty_title()}
+        description={m.channels_empty_description()}
         docsHref="https://pikku.dev/docs/core-features/channels"
       />
     )

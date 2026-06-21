@@ -1,7 +1,8 @@
 import React, { useCallback } from 'react'
 import { Stack, Group, Text, Box, Button, Loader } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { GitBranch, Play } from 'lucide-react'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { SchemaForm } from '../ui/SchemaForm'
@@ -122,7 +123,7 @@ const WorkflowStepTabbedPanel: React.FC<{
 const NewWorkflowRunForm: React.FC<{ workflowId: string }> = ({
   workflowId,
 }) => {
-  const { t } = useI18n()
+  useLocale()
   const runContext = useWorkflowRunContextSafe()
   const startMutation = useStartWorkflowRun()
   const { schema: effectiveSchema, isLoading } = useWorkflowInputSchema()
@@ -161,7 +162,7 @@ const NewWorkflowRunForm: React.FC<{ workflowId: string }> = ({
             onClick={() => handleSubmit({})}
             loading={startMutation.isPending}
           >
-            {t('workflows.run')}
+            {m.workflows_run()}
           </Button>
         </Group>
       )}

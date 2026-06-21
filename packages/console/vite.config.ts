@@ -1,9 +1,15 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { paraglideVitePlugin } from '@inlang/paraglide-js'
 import path from 'path'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    // Compile messages/*.json → src/paraglide so `m`/`mKey` resolve, with HMR
+    // on message edits. Must run first.
+    paraglideVitePlugin({ project: './project.inlang', outdir: './src/paraglide' }),
+    react(),
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
@@ -11,10 +17,6 @@ export default defineConfig({
       '@pikku/mantine/core': path.resolve(
         __dirname,
         '../frontend/mantine/src/core/index.ts'
-      ),
-      '@pikku/react/i18n': path.resolve(
-        __dirname,
-        '../frontend/react/src/i18n.tsx'
       ),
       '@pikku/react': path.resolve(__dirname, '../frontend/react/src/index.ts'),
     },

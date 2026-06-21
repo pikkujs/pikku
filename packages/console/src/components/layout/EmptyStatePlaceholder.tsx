@@ -1,7 +1,8 @@
 import React from 'react'
 import { Stack, Text, Anchor } from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import classes from '../ui/console.module.css'
 import { CommandChip } from '../ui/CommandChip'
 
@@ -22,7 +23,7 @@ export const EmptyStatePlaceholder: React.FC<EmptyStatePlaceholderProps> = ({
   code,
   docsHref,
 }) => {
-  const { t } = useI18n()
+  useLocale()
   return (
     <Stack
       align="center"
@@ -49,7 +50,7 @@ export const EmptyStatePlaceholder: React.FC<EmptyStatePlaceholderProps> = ({
         size="sm"
         c="dimmed"
       >
-        {t('empty_state.how_it_works')}
+        {m.empty_state_how_it_works()}
       </Anchor>
     </Stack>
   )

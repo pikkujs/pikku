@@ -2,7 +2,8 @@ import React, { useMemo } from 'react'
 import { Text, Group } from '@pikku/mantine/core'
 import { Layers } from 'lucide-react'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -21,7 +22,7 @@ const MiddlewareTable: React.FC<{
   loading?: boolean
 }> = ({ items, loading }) => {
   const { openMiddleware } = usePanelContext()
-  const { t } = useI18n()
+  useLocale()
 
   const columns = useMemo(
     () => [
@@ -80,12 +81,12 @@ const MiddlewareTable: React.FC<{
       columns={columns}
       getKey={(item) => item.id}
       onRowClick={(item) => openMiddleware(item.id, item.data)}
-      searchPlaceholder={t('middleware.search_placeholder')}
+      searchPlaceholder={m.middleware_search_placeholder()}
       searchFilter={(item, q) =>
         item.name.toLowerCase().includes(q) ||
         item.data?.description?.toLowerCase().includes(q)
       }
-      emptyMessage={t('middleware.empty_message')}
+      emptyMessage={m.middleware_empty_message()}
       loading={loading}
     />
   )
@@ -93,7 +94,7 @@ const MiddlewareTable: React.FC<{
 
 export const MiddlewarePage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
-  const { t } = useI18n()
+  useLocale()
 
   const items = useMemo((): MiddlewareItem[] => {
     if (!meta.middlewareGroupsMeta) return []
@@ -113,9 +114,9 @@ export const MiddlewarePage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title={t('middleware.title')} description={t('middleware.description')} />}
+        header={<ListPageHeader title={m.middleware_title()} description={m.middleware_description()} />}
         hidePanel={!loading && items.length === 0}
-        emptyPanelMessage={t('middleware.select_item')}
+        emptyPanelMessage={m.middleware_select_item()}
       >
         <MiddlewareTable items={items} loading={loading} />
       </ResizablePanelLayout>

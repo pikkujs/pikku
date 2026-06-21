@@ -17,7 +17,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import classes from '../ui/console.module.css'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 
 interface CredentialMeta {
   name: string
@@ -77,15 +78,15 @@ export const CredentialsOverviewTab: React.FC<{ searchQuery?: string; emptyHero?
     enabled: allCredentials.length > 0,
   })
 
-  const { t } = useI18n()
+  useLocale()
 
   if (allCredentials.length === 0) {
     return (
       <EmptyStatePlaceholder
         icon={KeyRound}
         hero={emptyHero}
-        title={t('credentials.empty_title')}
-        description={t('credentials.empty_description')}
+        title={m.credentials_empty_title()}
+        description={m.credentials_empty_description()}
         docsHref="https://pikku.dev/docs/core-features/credentials"
       />
     )
@@ -110,7 +111,7 @@ const CredentialCard: React.FC<{
   credential: CredentialMeta
   isConnected: boolean
 }> = ({ credential, isConnected }) => {
-  const { t } = useI18n()
+  useLocale()
   const rpc = usePikkuRPC()
   const queryClient = useQueryClient()
 
@@ -162,7 +163,7 @@ const CredentialCard: React.FC<{
           variant="light"
           color={credential.isOAuth2 ? 'violet' : 'blue'}
         >
-          {credential.isOAuth2 ? t('credentials.type_oauth2') : t('credentials.type_api_key')}
+          {credential.isOAuth2 ? m.credentials_type_oauth2() : m.credentials_type_api_key()}
         </Badge>
 
         <Group gap={6} mt={4}>
@@ -174,14 +175,14 @@ const CredentialCard: React.FC<{
                 color="var(--mantine-color-teal-6)"
               />
               <Text size="sm" c="teal.6">
-                {t('credentials.connected')}
+                {m.credentials_connected()}
               </Text>
             </>
           ) : (
             <>
               <Circle size={8} color="var(--mantine-color-gray-5)" />
               <Text size="sm" c="dimmed">
-                {t('credentials.not_connected')}
+                {m.credentials_not_connected()}
               </Text>
             </>
           )}
@@ -197,7 +198,7 @@ const CredentialCard: React.FC<{
                   onClick={() => connectMutation.mutate()}
                   loading={connectMutation.isPending}
                 >
-                  {t('credentials.reconnect')}
+                  {m.credentials_reconnect()}
                 </Button>
                 <Button
                   size="compact-xs"
@@ -206,7 +207,7 @@ const CredentialCard: React.FC<{
                   onClick={() => disconnectMutation.mutate()}
                   loading={disconnectMutation.isPending}
                 >
-                  {t('credentials.disconnect')}
+                  {m.credentials_disconnect()}
                 </Button>
               </Group>
             ) : (
@@ -216,7 +217,7 @@ const CredentialCard: React.FC<{
                 loading={connectMutation.isPending}
                 leftSection={<Link2 size={12} />}
               >
-                {t('credentials.connect')}
+                {m.credentials_connect()}
               </Button>
             )}
           </Box>

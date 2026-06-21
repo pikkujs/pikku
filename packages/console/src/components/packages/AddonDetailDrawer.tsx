@@ -16,7 +16,8 @@ import {
   Avatar,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { useQuery } from '@tanstack/react-query'
 import {
   Check,
@@ -80,7 +81,7 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
   onClose,
   onInstall,
 }) => {
-  const { t } = useI18n()
+  useLocale()
   const rpc = usePikkuRPC()
   const [tab, setTab] = useState<string | null>('overview')
 
@@ -108,32 +109,32 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
   const surface = [
     {
       icon: FunctionSquare,
-      label: t('packages.surface_functions'),
+      label: m.packages_surface_functions(),
       value: fnNames.length,
     },
     {
       icon: Globe,
-      label: t('packages.surface_http'),
+      label: m.packages_surface_http(),
       value: countHttpRoutes(pkg?.httpRoutes),
     },
     {
       icon: Radio,
-      label: t('packages.surface_channels'),
+      label: m.packages_surface_channels(),
       value: Object.keys(pkg?.channels ?? {}).length,
     },
     {
       icon: KeyRound,
-      label: t('packages.surface_secrets'),
+      label: m.packages_surface_secrets(),
       value: Object.keys(pkg?.secrets ?? {}).length,
     },
     {
       icon: Settings2,
-      label: t('packages.surface_variables'),
+      label: m.packages_surface_variables(),
       value: Object.keys(pkg?.variables ?? {}).length,
     },
     {
       icon: Bot,
-      label: t('packages.surface_agents'),
+      label: m.packages_surface_agents(),
       value: Object.keys(pkg?.agents ?? addon?.agents ?? {}).length,
     },
   ]
@@ -159,7 +160,7 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
         addon ? (
           <Group gap={6} wrap="nowrap">
             <Text size="sm" c="dimmed" ff="monospace">
-              {t('packages.community')}
+              {m.packages_community()}
             </Text>
             <Text size="sm" c="dimmed">
               {asI18n('/')}
@@ -201,11 +202,11 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
                       color="blue"
                       leftSection={<ShieldCheck size={11} />}
                     >
-                      {t('packages.official')}
+                      {m.packages_official()}
                     </Badge>
                   ) : (
                     <Badge size="sm" variant="light" color="gray">
-                      {t('packages.community')}
+                      {m.packages_community()}
                     </Badge>
                   )}
                 </Group>
@@ -247,7 +248,7 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
                   leftSection={<Check size={15} />}
                   disabled
                 >
-                  {t('packages.added_to_project')}
+                  {m.packages_added_to_project()}
                 </Button>
               ) : (
                 editable && (
@@ -256,7 +257,7 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
                     loading={installing}
                     onClick={() => onInstall(addon)}
                   >
-                    {t('packages.add_to_project')}
+                    {m.packages_add_to_project()}
                   </Button>
                 )
               )}
@@ -268,7 +269,7 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
                 variant="default"
                 leftSection={<ExternalLink size={15} />}
               >
-                {t('packages.docs')}
+                {m.packages_docs()}
               </Button>
             </Group>
 
@@ -277,7 +278,7 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
             <Group gap="xl">
               <Stack gap={2}>
                 <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-                  {t('packages.meta_version')}
+                  {m.packages_meta_version()}
                 </Text>
                 <Text size="sm" ff="monospace">
                   {asI18n(version ?? '—')}
@@ -286,7 +287,7 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
               {pkg?.license && (
                 <Stack gap={2}>
                   <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-                    {t('packages.meta_license')}
+                    {m.packages_meta_license()}
                   </Text>
                   <Text size="sm">{asI18n(pkg.license)}</Text>
                 </Stack>
@@ -294,7 +295,7 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
               {author && (
                 <Stack gap={2}>
                   <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-                    {t('packages.meta_author')}
+                    {m.packages_meta_author()}
                   </Text>
                   <Text size="sm">{asI18n(author)}</Text>
                 </Stack>
@@ -316,17 +317,17 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
                 }}
               >
                 <Tabs.Tab value="overview">
-                  {t('packages.tab_overview')}
+                  {m.packages_tab_overview()}
                 </Tabs.Tab>
                 <Tabs.Tab value="functions">
-                  {asI18n(`${t('packages.tab_functions')} (${fnNames.length})`)}
+                  {asI18n(`${m.packages_tab_functions()} (${fnNames.length})`)}
                 </Tabs.Tab>
               </Tabs.List>
             </Box>
 
             <Tabs.Panel value="overview" p="lg">
               <Text size="xs" c="dimmed" tt="uppercase" fw={700} mb="sm">
-                {t('packages.whats_included')}
+                {m.packages_whats_included()}
               </Text>
               <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="sm">
                 {surface.map((s) => (
@@ -347,7 +348,7 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
                 mt="xl"
                 mb="sm"
               >
-                {t('packages.published_by')}
+                {m.packages_published_by()}
               </Text>
               <Group gap="md" wrap="nowrap">
                 <Avatar radius="md" color={official ? 'blue' : 'gray'}>
@@ -370,7 +371,7 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
             <Tabs.Panel value="functions" p="lg">
               {fnNames.length === 0 ? (
                 <Text size="sm" c="dimmed">
-                  {t('packages.no_functions')}
+                  {m.packages_no_functions()}
                 </Text>
               ) : (
                 <Stack

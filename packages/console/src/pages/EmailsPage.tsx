@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { asI18n } from '@pikku/react'
 import type { RJSFSchema } from '@rjsf/utils'
 import {
@@ -71,7 +72,7 @@ function buildVariablesSchema(variables: string[]): RJSFSchema {
 }
 
 export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.ReactNode }> = ({ hero, headerRight }) => {
-  const { t } = useI18n()
+  useLocale()
   const { meta, loading } = usePikkuMeta()
   const [searchParams, setSearchParams] = useSearchParams()
   const [previewInput, setPreviewInput] = useState<
@@ -168,7 +169,7 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
   if (loading) {
     return (
       <PanelProvider>
-        <ResizablePanelLayout hidePanel header={<ListPageHeader title={t('emails.title')} description={t('emails.description')} />}>
+        <ResizablePanelLayout hidePanel header={<ListPageHeader title={m.emails_title()} description={m.emails_description()} />}>
           <Center h="100%">
             <Loader />
           </Center>
@@ -180,12 +181,12 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
   if (templateNames.length === 0) {
     return (
       <PanelProvider>
-        <ResizablePanelLayout hidePanel header={<ListPageHeader title={t('emails.title')} description={t('emails.description')} />}>
+        <ResizablePanelLayout hidePanel header={<ListPageHeader title={m.emails_title()} description={m.emails_description()} />}>
           <EmptyStatePlaceholder
             icon={Mail}
             hero={hero}
-            title={t('emails.no_templates_title')}
-            description={t('emails.no_templates_description')}
+            title={m.emails_no_templates_title()}
+            description={m.emails_no_templates_description()}
             code="pikku emails generate"
             docsHref={EMAIL_DOCS_HREF}
           />
@@ -231,8 +232,8 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
         hidePanel
         header={
           <ListPageHeader
-            title={t('emails.title')}
-            description={t('emails.description')}
+            title={m.emails_title()}
+            description={m.emails_description()}
             lead={headerRight}
           />
         }
@@ -313,7 +314,7 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
                 <Stack gap="sm" style={{ minWidth: 0 }}>
                   <Group justify="space-between" wrap="nowrap">
                     <Text size="sm" c="dimmed">
-                      {t('emails.editing_template_prefix')}<Code>templates/{selectedTemplate}.html</Code>{t('emails.editing_template_suffix')}
+                      {m.emails_editing_template_prefix()}<Code>templates/{selectedTemplate}.html</Code>{m.emails_editing_template_suffix()}
                     </Text>
                     <Button
                       size="xs"
@@ -327,7 +328,7 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
                         })
                       }
                     >
-                      {t('common.save')}
+                      {m.common_save()}
                     </Button>
                   </Group>
                   {updateEmailTemplate.isError ? (
@@ -351,7 +352,7 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
                   <Code block>{preview.data.text}</Code>
                 ) : (
                   <Text size="sm" c="dimmed" ta="center" py="xl">
-                    {t('emails.no_text_version')}
+                    {m.emails_no_text_version()}
                   </Text>
                 )
               ) : (
@@ -393,7 +394,7 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
             </Popover.Target>
             <Popover.Dropdown p={0}>
               <TextInput
-                placeholder={t('emails.search_templates')}
+                placeholder={m.emails_search_templates()}
                 leftSection={<Search size={14} />}
                 value={selectorSearch}
                 onChange={(e) => setSelectorSearch(e.currentTarget.value)}
@@ -416,7 +417,7 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
                       </div>
                     </UnstyledButton>
                   ))}
-                  {filteredTemplateItems.length === 0 && <Text size="sm" c="dimmed" ta="center" py="md">{t('common.no_results')}</Text>}
+                  {filteredTemplateItems.length === 0 && <Text size="sm" c="dimmed" ta="center" py="md">{m.common_no_results()}</Text>}
                 </Stack>
               </ScrollArea.Autosize>
             </Popover.Dropdown>
@@ -427,12 +428,12 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
               <SchemaForm
                 key={`${selectedTemplate}:${selectedLocale}`}
                 schema={schema}
-                submitLabel={t('emails.render_preview')}
+                submitLabel={m.emails_render_preview()}
                 onSubmit={(formData) => setPreviewInput(formData ?? {})}
               />
               <Divider />
               <Stack gap="xs">
-                <Text fw={600}>{t('emails.template_details')}</Text>
+                <Text fw={600}>{m.emails_template_details()}</Text>
                 <Group gap="xs">
                   <Badge variant="light">{asI18n(`${selectedMeta.variables.length} variables`)}</Badge>
                   <Badge variant="light">{asI18n(`${Object.keys(selectedMeta.locales).length} locales`)}</Badge>

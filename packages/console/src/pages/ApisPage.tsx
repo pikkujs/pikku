@@ -8,7 +8,8 @@ import { HttpTab } from '../components/tabs/HttpTab'
 import { ChannelsTab } from '../components/tabs/ChannelsTab'
 import { McpTab } from '../components/tabs/McpTab'
 import { CliTab } from '../components/tabs/CliTab'
-import { useI18n } from '@pikku/react/i18n'
+import { m, mKey } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 
 type ApisTab = 'http' | 'channels' | 'mcp' | 'cli'
 
@@ -26,7 +27,7 @@ type ApisPageProps = {
 }
 
 const ApisPageInner: React.FC<ApisPageProps> = ({ httpHero, channelsHero, mcpHero }) => {
-  const { t } = useI18n()
+  useLocale()
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
   const rawTab = searchParams.get('tab')
@@ -61,29 +62,29 @@ const ApisPageInner: React.FC<ApisPageProps> = ({ httpHero, channelsHero, mcpHer
       <ResizablePanelLayout
         header={
           <ListPageHeader
-            title={t('apis.title')}
-            description={t('apis.description')}
+            title={m.apis_title()}
+            description={m.apis_description()}
             docsHref="https://pikku.dev/docs/wiring/http"
             search={{
-              placeholder: t(SEARCH_PLACEHOLDER_KEY[tab]),
+              placeholder: mKey(SEARCH_PLACEHOLDER_KEY[tab]),
               value: searchQuery,
               onChange: setSearchQuery,
               width: 240,
             }}
             selection={{
-              ariaLabel: t('apis.tab_aria'),
+              ariaLabel: m.apis_tab_aria(),
               value: tab,
               onChange: handleTabChange,
               options: [
-                { value: 'http', label: t('apis.tab.http') },
-                { value: 'channels', label: t('apis.tab.channels') },
-                { value: 'mcp', label: t('apis.tab.mcp') },
-                { value: 'cli', label: t('apis.tab.cli') },
+                { value: 'http', label: m.apis_tab_http() },
+                { value: 'channels', label: m.apis_tab_channels() },
+                { value: 'mcp', label: m.apis_tab_mcp() },
+                { value: 'cli', label: m.apis_tab_cli() },
               ],
             }}
           />
         }
-        emptyPanelMessage={t('common.select_item')}
+        emptyPanelMessage={m.common_select_item()}
       >
         {renderTab()}
       </ResizablePanelLayout>

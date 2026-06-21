@@ -13,7 +13,8 @@ import {
   Progress,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { CodeHighlight } from '@mantine/code-highlight'
 import { CheckCheck, FunctionSquare, LayoutList, Pencil } from 'lucide-react'
 import { useFunctionMeta, useSchema } from '../../../hooks/useWirings'
@@ -88,7 +89,7 @@ export const FunctionHeader: React.FC<FunctionDetailsFormProps> = ({
   functionName,
   metadata: passedMetadata,
 }) => {
-  const { t } = useI18n()
+  useLocale()
   const { data: fetchedMeta } = useFunctionMeta(functionName)
   const meta = passedMetadata || fetchedMeta || {}
 
@@ -101,7 +102,7 @@ export const FunctionHeader: React.FC<FunctionDetailsFormProps> = ({
         </Text>
       </Group>
       <Text size="sm" c="dimmed" mt={4}>
-        {meta.summary ? asI18n(meta.summary) : t('functions.no_summary')}
+        {meta.summary ? asI18n(meta.summary) : m.functions_no_summary()}
       </Text>
     </Box>
   )
@@ -111,7 +112,7 @@ export const FunctionTestsPanel: React.FC<FunctionDetailsFormProps> = ({
   functionName,
   metadata: passedMetadata,
 }) => {
-  const { t } = useI18n()
+  useLocale()
   const { data: fetchedMeta, isLoading } = useFunctionMeta(functionName)
   const meta = passedMetadata || fetchedMeta || {}
 
@@ -124,7 +125,7 @@ export const FunctionTestsPanel: React.FC<FunctionDetailsFormProps> = ({
   }
 
   if (!meta.tests) {
-    return <Text c="dimmed">{t('functions.no_test_data')}</Text>
+    return <Text c="dimmed">{m.functions_no_test_data()}</Text>
   }
 
   return (
@@ -140,7 +141,7 @@ export const FunctionTabbedPanel: React.FC<FunctionDetailsFormProps> = ({
   functionName,
   metadata: passedMetadata,
 }) => {
-  const { t } = useI18n()
+  useLocale()
   const [tab, setTab] = useState<'overview' | 'tests'>('overview')
   const [editing, setEditing] = useState(false)
   const { activePanel, panels, closePanel, goBack } = usePanelContext()
@@ -158,13 +159,13 @@ export const FunctionTabbedPanel: React.FC<FunctionDetailsFormProps> = ({
       >
         {!editing && (
           <PikkuSwitch
-            ariaLabel={t('functions.panel_sections')}
+            ariaLabel={m.functions_panel_sections()}
             value={tab}
             onChange={setTab}
             showAllLabels
             options={[
-              { value: 'overview', label: t('functions.tab_overview'), icon: <LayoutList size={15} /> },
-              { value: 'tests', label: t('functions.tab_tests'), icon: <CheckCheck size={15} /> },
+              { value: 'overview', label: m.functions_tab_overview(), icon: <LayoutList size={15} /> },
+              { value: 'tests', label: m.functions_tab_tests(), icon: <CheckCheck size={15} /> },
             ]}
           />
         )}
@@ -173,8 +174,8 @@ export const FunctionTabbedPanel: React.FC<FunctionDetailsFormProps> = ({
             variant="subtle"
             size="sm"
             onClick={() => setEditing(true)}
-            title={t('functions.edit_function')}
-            aria-label={t('functions.edit_function')}
+            title={m.functions_edit_function()}
+            aria-label={m.functions_edit_function()}
           >
             <Pencil size={14} />
           </ActionIcon>
@@ -209,7 +210,7 @@ function FunctionTestsSection({
   sourceFile?: string
   exportedName?: string
 }) {
-  const { t } = useI18n()
+  useLocale()
   const missedLines = Array.isArray(tests.missedLines) ? tests.missedLines : []
   const { data: source, isLoading: isSourceLoading } = useFunctionSource(
     sourceFile,
@@ -240,8 +241,8 @@ function FunctionTestsSection({
             </Badge>
             <Text size="sm" c="dimmed">
               {tests.scenarios?.length === 0
-                ? t('functions.linked_scenarios_none')
-                : t('functions.linked_scenarios_count', { count: tests.scenarios?.length ?? 0 })}
+                ? m.functions_linked_scenarios_none()
+                : m.functions_linked_scenarios_count({ count: tests.scenarios?.length ?? 0 })}
             </Text>
           </Group>
           <Progress
@@ -270,16 +271,16 @@ function FunctionTestsSection({
             lts="0.12em"
             c="dimmed"
           >
-            {t('functions.scenarios_heading')}
+            {m.functions_scenarios_heading()}
           </Text>
           <Text ff="monospace" size="xs" c="dimmed">
-            {t('functions.scenarios_linked_count', { count: tests.scenarios?.length ?? 0 })}
+            {m.functions_scenarios_linked_count({ count: tests.scenarios?.length ?? 0 })}
           </Text>
         </Group>
         {!tests.scenarios || tests.scenarios.length === 0 ? (
           <Paper withBorder radius="lg" p="md" bg="rgba(248,113,113,0.08)">
             <Text size="sm" c="dimmed">
-              {t('functions.no_scenarios_linked')}
+              {m.functions_no_scenarios_linked()}
             </Text>
           </Paper>
         ) : (
@@ -293,7 +294,7 @@ function FunctionTestsSection({
                         variant="light"
                         color={scenario.status === 'fail' ? 'red' : 'green'}
                       >
-                        {scenario.status === 'fail' ? t('functions.scenario_failing') : t('functions.scenario_passing')}
+                        {scenario.status === 'fail' ? m.functions_scenario_failing() : m.functions_scenario_passing()}
                       </Badge>
                       <Text ff="monospace" size="sm" fw={600} c="white">
                         {asI18n(scenario.scenarioName)}
@@ -337,18 +338,18 @@ function FunctionTestsSection({
             lts="0.12em"
             c="dimmed"
           >
-            {t('functions.coverage_gaps')}
+            {m.functions_coverage_gaps()}
           </Text>
           <Text ff="monospace" size="xs" c="dimmed">
             {missedLines.length === 0
-              ? t('functions.coverage_clean')
-              : t('functions.coverage_uncovered_count', { count: missedLines.length })}
+              ? m.functions_coverage_clean()
+              : m.functions_coverage_uncovered_count({ count: missedLines.length })}
           </Text>
         </Group>
         {missedLines.length === 0 ? (
           <Paper withBorder radius="lg" p="md" bg="rgba(52,211,153,0.08)">
             <Text size="sm" c="dimmed">
-              {t('functions.coverage_all_covered')}
+              {m.functions_coverage_all_covered()}
             </Text>
           </Paper>
         ) : isSourceLoading ? (
@@ -397,7 +398,7 @@ function FunctionTestsSection({
                     {asI18n(String(line))}
                   </Text>
                   <Text ff="monospace" size="sm" c="white">
-                    {t('functions.coverage_branch_not_exercised', { line })}
+                    {m.functions_coverage_branch_not_exercised({ line })}
                   </Text>
                 </Group>
               ))}
@@ -514,14 +515,14 @@ export const FunctionInput: React.FC<FunctionDetailsFormProps> = ({
   functionName,
   metadata = {},
 }) => {
-  const { t } = useI18n()
+  useLocale()
   const { data: fetchedMeta } = useFunctionMeta(functionName)
   const meta = metadata?.inputSchemaName ? metadata : fetchedMeta || {}
   const inputSchemaName = meta?.inputSchemaName
   const { data: schema, isLoading, error } = useSchema(inputSchemaName)
 
   if (!inputSchemaName) {
-    return <Text c="dimmed">{t('functions.no_input_schema')}</Text>
+    return <Text c="dimmed">{m.functions_no_input_schema()}</Text>
   }
 
   if (isLoading) {
@@ -533,11 +534,11 @@ export const FunctionInput: React.FC<FunctionDetailsFormProps> = ({
   }
 
   if (error) {
-    return <Text c="red">{t('functions.schema_load_error', { message: error.message })}</Text>
+    return <Text c="red">{m.functions_schema_load_error({ message: error.message })}</Text>
   }
 
   if (!schema) {
-    return <Text c="dimmed">{t('functions.schema_not_found', { name: inputSchemaName })}</Text>
+    return <Text c="dimmed">{m.functions_schema_not_found({ name: inputSchemaName })}</Text>
   }
 
   return <SchemaViewer schema={schema} />
@@ -547,14 +548,14 @@ export const FunctionOutput: React.FC<FunctionDetailsFormProps> = ({
   functionName,
   metadata = {},
 }) => {
-  const { t } = useI18n()
+  useLocale()
   const { data: fetchedMeta } = useFunctionMeta(functionName)
   const meta = metadata?.outputSchemaName ? metadata : fetchedMeta || {}
   const outputSchemaName = meta?.outputSchemaName
   const { data: schema, isLoading, error } = useSchema(outputSchemaName)
 
   if (!outputSchemaName) {
-    return <Text c="dimmed">{t('functions.no_output_schema')}</Text>
+    return <Text c="dimmed">{m.functions_no_output_schema()}</Text>
   }
 
   if (isLoading) {
@@ -566,11 +567,11 @@ export const FunctionOutput: React.FC<FunctionDetailsFormProps> = ({
   }
 
   if (error) {
-    return <Text c="red">{t('functions.schema_load_error', { message: error.message })}</Text>
+    return <Text c="red">{m.functions_schema_load_error({ message: error.message })}</Text>
   }
 
   if (!schema) {
-    return <Text c="dimmed">{t('functions.schema_not_found', { name: outputSchemaName })}</Text>
+    return <Text c="dimmed">{m.functions_schema_not_found({ name: outputSchemaName })}</Text>
   }
 
   return <SchemaViewer schema={schema} />

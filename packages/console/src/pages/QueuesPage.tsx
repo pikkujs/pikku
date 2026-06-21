@@ -2,7 +2,8 @@ import React, { useMemo } from 'react'
 import { Text } from '@pikku/mantine/core'
 import { ListOrdered } from 'lucide-react'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -22,7 +23,7 @@ const QueuesTable: React.FC<{
   loading?: boolean
 }> = ({ items, loading }) => {
   const { openQueue } = usePanelContext()
-  const { t } = useI18n()
+  useLocale()
 
   const columns = useMemo(
     () => [
@@ -68,13 +69,13 @@ const QueuesTable: React.FC<{
       columns={columns}
       getKey={(item) => item.name}
       onRowClick={(item) => openQueue(item.name, item.data)}
-      searchPlaceholder={t('queues.search_placeholder')}
+      searchPlaceholder={m.queues_search_placeholder()}
       searchFilter={(item, q) =>
         item.name.toLowerCase().includes(q) ||
         item.handler?.toLowerCase().includes(q) ||
         false
       }
-      emptyMessage={t('queues.empty_message')}
+      emptyMessage={m.queues_empty_message()}
       loading={loading}
     />
   )
@@ -82,7 +83,7 @@ const QueuesTable: React.FC<{
 
 export const QueuesPage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
-  const { t } = useI18n()
+  useLocale()
 
   const items = useMemo((): QueueItem[] => {
     if (!meta.queueMeta) return []
@@ -99,9 +100,9 @@ export const QueuesPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title={t('queues.title')} description={t('queues.description')} />}
+        header={<ListPageHeader title={m.queues_title()} description={m.queues_description()} />}
         hidePanel={!loading && items.length === 0}
-        emptyPanelMessage={t('queues.select_item')}
+        emptyPanelMessage={m.queues_select_item()}
       >
         <QueuesTable items={items} loading={loading} />
       </ResizablePanelLayout>

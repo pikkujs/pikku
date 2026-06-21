@@ -7,13 +7,14 @@ import {
   Button,
   ThemeIcon,
 } from '@pikku/mantine/core'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { Package, ArrowRight } from 'lucide-react'
 
 const PUBLISH_DOCS_HREF = 'https://pikku.dev/docs/external-packages'
 
 export const PublishCta: React.FC = () => {
-  const { t } = useI18n()
+  useLocale()
   return (
     <Paper withBorder radius="md" p="lg" style={{ borderStyle: 'dashed' }}>
       <Group gap="md" wrap="nowrap">
@@ -22,10 +23,10 @@ export const PublishCta: React.FC = () => {
         </ThemeIcon>
         <Stack gap={2} style={{ flex: 1, minWidth: 0 }}>
           <Text fw={600} size="sm">
-            {t('packages.publish_title')}
+            {m.packages_publish_title()}
           </Text>
           <Text size="sm" c="dimmed">
-            {t('packages.publish_subtext')}
+            {m.packages_publish_subtext()}
           </Text>
         </Stack>
         <Button
@@ -36,7 +37,7 @@ export const PublishCta: React.FC = () => {
           variant="default"
           rightSection={<ArrowRight size={14} />}
         >
-          {t('packages.publish_cta')}
+          {m.packages_publish_cta()}
         </Button>
       </Group>
     </Paper>

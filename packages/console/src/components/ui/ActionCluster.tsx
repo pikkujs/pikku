@@ -1,7 +1,8 @@
 import React, { type ReactNode } from 'react'
 import { ActionIcon, Button, Menu, Tooltip } from '@pikku/mantine/core'
 import { MoreHorizontal } from 'lucide-react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import {
   CONTROL_H,
   type ActMode,
@@ -48,7 +49,7 @@ type ActionClusterProps = {
 }
 
 export const ActionCluster: React.FC<ActionClusterProps> = ({ actions, mode }) => {
-  const { t } = useI18n()
+  useLocale()
   if (mode !== 'compact') {
     return <>{actions.map((a) => actionButton(a, mode))}</>
   }
@@ -62,7 +63,7 @@ export const ActionCluster: React.FC<ActionClusterProps> = ({ actions, mode }) =
       {rest.length > 0 && (
         <Menu position="bottom-end" withinPortal shadow="md">
           <Menu.Target>
-            <ActionIcon variant="default" size={CONTROL_H} aria-label={t('shell_header.more_actions')}>
+            <ActionIcon variant="default" size={CONTROL_H} aria-label={m.shell_header_more_actions()}>
               <MoreHorizontal size={18} />
             </ActionIcon>
           </Menu.Target>

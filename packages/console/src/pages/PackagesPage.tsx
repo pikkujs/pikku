@@ -13,7 +13,8 @@ import {
   Loader,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m, mKey } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { Package, Globe, Search } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
@@ -124,7 +125,7 @@ const InstalledList: React.FC<{
   emptyHero?: React.ReactNode
 }> = ({ searchQuery, onSelect, emptyHero }) => {
   const rpc = usePikkuRPC()
-  const { t } = useI18n()
+  useLocale()
 
   const { data, isLoading } = useQuery({
     queryKey: ['installed-addons'],
@@ -157,7 +158,7 @@ const InstalledList: React.FC<{
       columns={columns}
       getKey={(item) => item.namespace}
       onRowClick={(item) => onSelect(item.packageName, 'installed')}
-      emptyMessage={t('packages.installed_empty_message')}
+      emptyMessage={m.packages_installed_empty_message()}
       loading={isLoading}
       emptyHero={emptyHero}
     />
@@ -182,7 +183,7 @@ const CommunityList: React.FC<{
   searchQuery: string
 }> = ({ searchQuery }) => {
   const rpc = usePikkuRPC()
-  const { t } = useI18n()
+  useLocale()
   const editable = useConsoleEditable()
   const queryClient = useQueryClient()
 
@@ -237,8 +238,8 @@ const CommunityList: React.FC<{
     return (
       <EmptyStatePlaceholder
         icon={Package}
-        title={t('packages.registry_unavailable_title')}
-        description={t('packages.registry_unavailable_description')}
+        title={m.packages_registry_unavailable_title()}
+        description={m.packages_registry_unavailable_description()}
         docsHref="https://pikku.dev/docs/external-packages"
       />
     )
@@ -330,7 +331,7 @@ const ApisList: React.FC<{
   onSelect: (id: string, source: 'installed' | 'community' | 'api') => void
 }> = ({ searchQuery, onSelect }) => {
   const rpc = usePikkuRPC()
-  const { t } = useI18n()
+  useLocale()
 
   const { data, isLoading } = useQuery({
     queryKey: ['openapis'],
@@ -366,8 +367,8 @@ const ApisList: React.FC<{
       columns={API_COLUMNS}
       getKey={(item) => item.name}
       onRowClick={(item) => onSelect(item.name, 'api' as any)}
-      emptyTitle={t('packages.no_apis_title')}
-      emptyDescription={t('packages.no_apis_description')}
+      emptyTitle={m.packages_no_apis_title()}
+      emptyDescription={m.packages_no_apis_description()}
       loading={isLoading}
     />
   )
@@ -391,7 +392,7 @@ const PackagesList: React.FC<{
 }> = ({ onSelect, emptyHero }) => {
   const [tab, setTab] = useState<string>('installed')
   const [searchQuery, setSearchQuery] = useState('')
-  const { t } = useI18n()
+  useLocale()
 
   const handleTabChange = (value: string) => {
     setSearchQuery('')
@@ -403,13 +404,13 @@ const PackagesList: React.FC<{
       hidePanel
       header={
         <ListPageHeader
-          title={t('packages.title')}
-          description={t('packages.description')}
+          title={m.packages_title()}
+          description={m.packages_description()}
           docsHref="https://pikku.dev/docs/external-packages"
           filters={
             <Group gap="sm" wrap="nowrap">
               <TextInput
-                placeholder={t(SEARCH_PLACEHOLDER[tab])}
+                placeholder={mKey(SEARCH_PLACEHOLDER[tab])}
                 leftSection={<Search size={14} />}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}

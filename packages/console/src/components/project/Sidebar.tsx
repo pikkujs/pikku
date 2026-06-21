@@ -13,7 +13,8 @@ import {
 } from '@pikku/mantine/core'
 import type { I18nNode, I18nString } from '@pikku/react'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { useLocalStorage } from '@mantine/hooks'
 import {
   FunctionSquare,
@@ -56,45 +57,45 @@ export interface NavSection {
 // Built via a hook so the default nav labels go through t(). Callers can still
 // pass their own `sections` prop with already-translated labels.
 export function useDefaultNavSections(): NavSection[] {
-  const { t } = useI18n()
+  useLocale()
   return [
     {
-      title: t('nav.run'),
+      title: m.nav_run(),
       items: [
-        { label: t('nav.functions'), href: '/functions', icon: FunctionSquare, matchPrefix: '/functions' },
-        { label: t('nav.workflows'), href: '/workflow', icon: GitBranch, matchPrefix: '/workflow' },
-        { label: t('nav.agents'), href: '/agents', icon: Bot, matchPrefix: '/agents' },
-        { label: t('nav.tests'), href: '/tests', icon: FlaskConical, matchPrefix: '/tests' },
+        { label: m.nav_functions(), href: '/functions', icon: FunctionSquare, matchPrefix: '/functions' },
+        { label: m.nav_workflows(), href: '/workflow', icon: GitBranch, matchPrefix: '/workflow' },
+        { label: m.nav_agents(), href: '/agents', icon: Bot, matchPrefix: '/agents' },
+        { label: m.nav_tests(), href: '/tests', icon: FlaskConical, matchPrefix: '/tests' },
       ],
     },
     {
-      title: t('nav.data'),
+      title: m.nav_data(),
       items: [
-        { label: t('nav.database'), href: '/database', icon: Database, matchPrefix: '/database' },
-        { label: t('nav.apis'), href: '/apis', icon: Globe, matchPrefix: '/apis' },
-        { label: t('nav.jobs'), href: '/jobs', icon: Clock, matchPrefix: '/jobs' },
-        { label: t('nav.runtime'), href: '/runtime', icon: Server, matchPrefix: '/runtime' },
-        { label: t('nav.emails'), href: '/emails', icon: Mail, matchPrefix: '/emails' },
+        { label: m.nav_database(), href: '/database', icon: Database, matchPrefix: '/database' },
+        { label: m.nav_apis(), href: '/apis', icon: Globe, matchPrefix: '/apis' },
+        { label: m.nav_jobs(), href: '/jobs', icon: Clock, matchPrefix: '/jobs' },
+        { label: m.nav_runtime(), href: '/runtime', icon: Server, matchPrefix: '/runtime' },
+        { label: m.nav_emails(), href: '/emails', icon: Mail, matchPrefix: '/emails' },
       ],
     },
     {
-      title: t('nav.config'),
+      title: m.nav_config(),
       items: [
-        { label: t('nav.secrets'), href: '/secrets', icon: KeyRound, matchPrefix: '/secrets' },
-        { label: t('nav.env_vars'), href: '/variables', icon: Variable, matchPrefix: '/variables' },
-        { label: t('nav.addons'), href: '/addons', icon: Package, matchPrefix: '/addons' },
+        { label: m.nav_secrets(), href: '/secrets', icon: KeyRound, matchPrefix: '/secrets' },
+        { label: m.nav_env_vars(), href: '/variables', icon: Variable, matchPrefix: '/variables' },
+        { label: m.nav_addons(), href: '/addons', icon: Package, matchPrefix: '/addons' },
       ],
     },
     {
-      title: t('nav.users'),
+      title: m.nav_users(),
       items: [
-        { label: t('nav.oauth'), href: '/users', icon: Users, matchPrefix: '/users' },
-        { label: t('nav.credentials'), href: '/credentials', icon: KeyRound, matchPrefix: '/credentials' },
+        { label: m.nav_oauth(), href: '/users', icon: Users, matchPrefix: '/users' },
+        { label: m.nav_credentials(), href: '/credentials', icon: KeyRound, matchPrefix: '/credentials' },
       ],
     },
     {
       title: asI18n(''),
-      items: [{ label: t('nav.changes'), href: '/changes', icon: GitCompare, matchPrefix: '/changes' }],
+      items: [{ label: m.nav_changes(), href: '/changes', icon: GitCompare, matchPrefix: '/changes' }],
     },
   ]
 }
@@ -147,7 +148,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   footer,
 }) => {
   const Link = useLink()
-  const { t } = useI18n()
+  useLocale()
   const defaultSections = useDefaultNavSections()
   const sections = sectionsProp ?? defaultSections
   const theme = useMantineTheme()
@@ -215,7 +216,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </Link>
         </Tooltip>
         {!collapsed && (
-          <Tooltip label={t('sidebar.search')}>
+          <Tooltip label={m.sidebar_search()}>
             <ActionIcon
               variant="subtle"
               size="sm"
@@ -311,7 +312,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <Divider mx="sm" />
         <Stack gap={2} px={6} py={4}>
           <Tooltip
-            label={t('sidebar.refreshMetadata')}
+            label={m.sidebar_refresh_metadata()}
             position="right"
             disabled={!collapsed}
           >
@@ -338,11 +339,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     : undefined
                 }
               />
-              {!collapsed && <Text size="sm">{t('sidebar.refresh')}</Text>}
+              {!collapsed && <Text size="sm">{m.sidebar_refresh()}</Text>}
             </UnstyledButton>
           </Tooltip>
           <Tooltip
-            label={colorScheme === 'dark' ? t('sidebar.switchToLight') : t('sidebar.switchToDark')}
+            label={colorScheme === 'dark' ? m.sidebar_switch_to_light() : m.sidebar_switch_to_dark()}
             position="right"
           >
             <UnstyledButton
@@ -359,11 +360,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }}
             >
               {colorScheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-              {!collapsed && <Text size="sm">{colorScheme === 'dark' ? t('sidebar.lightMode') : t('sidebar.darkMode')}</Text>}
+              {!collapsed && <Text size="sm">{colorScheme === 'dark' ? m.sidebar_light_mode() : m.sidebar_dark_mode()}</Text>}
             </UnstyledButton>
           </Tooltip>
           <Tooltip
-            label={collapsed ? t('sidebar.expand') : t('sidebar.collapse')}
+            label={collapsed ? m.sidebar_expand() : m.sidebar_collapse()}
             position="right"
             disabled={!collapsed}
           >
@@ -385,7 +386,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               ) : (
                 <PanelLeftClose size={18} />
               )}
-              {!collapsed && <Text size="sm">{t('sidebar.collapse')}</Text>}
+              {!collapsed && <Text size="sm">{m.sidebar_collapse()}</Text>}
             </UnstyledButton>
           </Tooltip>
         </Stack>

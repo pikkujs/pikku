@@ -10,7 +10,8 @@ import {
   ThemeIcon,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { Search, SlidersHorizontal } from 'lucide-react'
 import type { PackageMeta } from '../../pages/PackagesPage'
 import { CommunityHero } from './CommunityHero'
@@ -46,7 +47,7 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
   installingName,
   onInstall,
 }) => {
-  const { t } = useI18n()
+  useLocale()
   const [category, setCategory] = useState('all')
   const [sort, setSort] = useState<SortKey>('name')
   const [selected, setSelected] = useState<PackageMeta | null>(null)
@@ -55,9 +56,9 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
 
   const sortData = useMemo(
     () => [
-      { value: 'name', label: t('packages.sort_name') },
-      { value: 'functions', label: t('packages.sort_functions') },
-      { value: 'agents', label: t('packages.sort_agents') },
+      { value: 'name', label: m.packages_sort_name() },
+      { value: 'functions', label: m.packages_sort_functions() },
+      { value: 'agents', label: m.packages_sort_agents() },
     ],
     [t]
   )
@@ -100,8 +101,8 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
   const heading =
     category === 'all'
       ? searchQuery.trim()
-        ? t('packages.results')
-        : t('packages.all_addons')
+        ? m.packages_results()
+        : m.packages_all_addons()
       : asI18n(categories.find((c) => c.id === category)?.label ?? category)
 
   return (
@@ -156,10 +157,10 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
                 <Search size={22} />
               </ThemeIcon>
               <Text fw={600} size="sm">
-                {t('packages.no_matches')}
+                {m.packages_no_matches()}
               </Text>
               <Text size="sm" c="dimmed">
-                {t('packages.no_matches_hint')}
+                {m.packages_no_matches_hint()}
               </Text>
             </Stack>
           ) : (

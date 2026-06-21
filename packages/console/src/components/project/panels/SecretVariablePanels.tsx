@@ -19,7 +19,8 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { PikkuBadge } from '../../ui/PikkuBadge'
 import { SectionLabel } from './shared/SectionLabel'
 import { SchemaSection } from './shared/SchemaSection'
@@ -42,7 +43,7 @@ export const SecretConfiguration: React.FC<SecretPanelProps> = ({
   secretId,
   metadata = {},
 }) => {
-  const { t } = useI18n()
+  useLocale()
   const isOAuth2 = !!metadata?.oauth2
 
   return (
@@ -64,17 +65,17 @@ export const SecretConfiguration: React.FC<SecretPanelProps> = ({
       <Group gap="xs">
         {isOAuth2 ? (
           <PikkuBadge type="label" color="gray">
-            {t('secret_config.oauth2')}
+            {m.secret_config_oauth2()}
           </PikkuBadge>
         ) : (
           <PikkuBadge type="label" color="gray">
-            {t('secret_config.secret')}
+            {m.secret_config_secret()}
           </PikkuBadge>
         )}
       </Group>
 
       <Box>
-        <SectionLabel>{t('secret_config.secret_id')}</SectionLabel>
+        <SectionLabel>{m.secret_config_secret_id()}</SectionLabel>
         <Code>{metadata?.secretId}</Code>
       </Box>
 
@@ -82,13 +83,13 @@ export const SecretConfiguration: React.FC<SecretPanelProps> = ({
         <>
           {metadata.oauth2.tokenSecretId && (
             <Box>
-              <SectionLabel>{t('secret_config.token_secret_id')}</SectionLabel>
+              <SectionLabel>{m.secret_config_token_secret_id()}</SectionLabel>
               <Code>{metadata.oauth2.tokenSecretId}</Code>
             </Box>
           )}
           {metadata.oauth2.authorizationUrl && (
             <Box>
-              <SectionLabel>{t('secret_config.authorization_url')}</SectionLabel>
+              <SectionLabel>{m.secret_config_authorization_url()}</SectionLabel>
               <Text size="sm" ff="monospace">
                 {asI18n(metadata.oauth2.authorizationUrl)}
               </Text>
@@ -96,7 +97,7 @@ export const SecretConfiguration: React.FC<SecretPanelProps> = ({
           )}
           {metadata.oauth2.tokenUrl && (
             <Box>
-              <SectionLabel>{t('secret_config.token_url')}</SectionLabel>
+              <SectionLabel>{m.secret_config_token_url()}</SectionLabel>
               <Text size="sm" ff="monospace">
                 {asI18n(metadata.oauth2.tokenUrl)}
               </Text>
@@ -104,7 +105,7 @@ export const SecretConfiguration: React.FC<SecretPanelProps> = ({
           )}
           {metadata.oauth2.scopes?.length > 0 && (
             <Box>
-              <SectionLabel>{t('secret_config.scopes')}</SectionLabel>
+              <SectionLabel>{m.secret_config_scopes()}</SectionLabel>
               <Group gap={6}>
                 {metadata.oauth2.scopes.map((scope: string) => (
                   <PikkuBadge key={scope} type="label" color="gray">
@@ -117,7 +118,7 @@ export const SecretConfiguration: React.FC<SecretPanelProps> = ({
         </>
       )}
 
-      <SchemaSection label={t('secret_config.fields')} schemaName={metadata?.schema} />
+      <SchemaSection label={m.secret_config_fields()} schemaName={metadata?.schema} />
 
       {metadata?.installed !== false && (
         <>
@@ -138,7 +139,7 @@ export const SecretConfiguration: React.FC<SecretPanelProps> = ({
 const OAuthConnectionSection: React.FC<{
   credentialName: string
 }> = ({ credentialName }) => {
-  const { t } = useI18n()
+  useLocale()
   const queryClient = useQueryClient()
   const popupRef = useRef<Window | null>(null)
   const { data: status, isLoading: statusLoading } = useOAuthStatus(
@@ -188,7 +189,7 @@ const OAuthConnectionSection: React.FC<{
 
   return (
     <Box>
-      <SectionLabel>{t('oauth_connection.title')}</SectionLabel>
+      <SectionLabel>{m.oauth_connection_title()}</SectionLabel>
       <Stack gap="sm">
         {statusLoading ? (
           <Loader size="sm" />
@@ -196,11 +197,11 @@ const OAuthConnectionSection: React.FC<{
           <Stack gap="xs">
             <Group gap="xs">
               <PikkuBadge type="label" color="green">
-                {t('oauth_connection.connected')}
+                {m.oauth_connection_connected()}
               </PikkuBadge>
               {status.hasRefreshToken && (
                 <PikkuBadge type="label" color="gray">
-                  {t('oauth_connection.has_refresh_token')}
+                  {m.oauth_connection_has_refresh_token()}
                 </PikkuBadge>
               )}
             </Group>
@@ -216,19 +217,19 @@ const OAuthConnectionSection: React.FC<{
           </Stack>
         ) : (
           <PikkuBadge type="label" color="gray">
-            {t('oauth_connection.not_connected')}
+            {m.oauth_connection_not_connected()}
           </PikkuBadge>
         )}
 
         {connectMutation.isError && (
           <Alert icon={<AlertTriangle size={16} />} color="red" variant="light">
-            {t('oauth_connection.failed_to_connect')}
+            {m.oauth_connection_failed_to_connect()}
           </Alert>
         )}
 
         {disconnectMutation.isError && (
           <Alert icon={<AlertTriangle size={16} />} color="red" variant="light">
-            {t('oauth_connection.failed_to_disconnect')}
+            {m.oauth_connection_failed_to_disconnect()}
           </Alert>
         )}
 
@@ -254,7 +255,7 @@ const OAuthConnectionSection: React.FC<{
 
         {testTokenMutation.isError && (
           <Alert icon={<AlertTriangle size={16} />} color="red" variant="light">
-            {t('oauth_connection.failed_to_test_token')}
+            {m.oauth_connection_failed_to_test_token()}
           </Alert>
         )}
 
@@ -268,7 +269,7 @@ const OAuthConnectionSection: React.FC<{
               loading={connectMutation.isPending}
               onClick={handleConnect}
             >
-              {t('oauth_connection.connect')}
+              {m.oauth_connection_connect()}
             </Button>
           ) : (
             <>
@@ -279,7 +280,7 @@ const OAuthConnectionSection: React.FC<{
                 loading={testTokenMutation.isPending}
                 onClick={handleTestToken}
               >
-                {t('oauth_connection.test_token')}
+                {m.oauth_connection_test_token()}
               </Button>
               <Button
                 variant="light"
@@ -289,7 +290,7 @@ const OAuthConnectionSection: React.FC<{
                 loading={disconnectMutation.isPending}
                 onClick={handleDisconnect}
               >
-                {t('oauth_connection.disconnect')}
+                {m.oauth_connection_disconnect()}
               </Button>
             </>
           )}
@@ -308,7 +309,7 @@ export const VariableConfiguration: React.FC<VariablePanelProps> = ({
   variableId,
   metadata = {},
 }) => {
-  const { t } = useI18n()
+  useLocale()
   return (
     <Stack gap="lg">
       <Box>
@@ -327,16 +328,16 @@ export const VariableConfiguration: React.FC<VariablePanelProps> = ({
 
       <Group gap="xs">
         <PikkuBadge type="label" color="teal">
-          {t('variable_config.variable')}
+          {m.variable_config_variable()}
         </PikkuBadge>
       </Group>
 
       <Box>
-        <SectionLabel>{t('variable_config.variable_id')}</SectionLabel>
+        <SectionLabel>{m.variable_config_variable_id()}</SectionLabel>
         <Code>{metadata?.variableId}</Code>
       </Box>
 
-      <SchemaSection label={t('variable_config.fields')} schemaName={metadata?.schema} />
+      <SchemaSection label={m.variable_config_fields()} schemaName={metadata?.schema} />
 
       {metadata?.installed !== false && (
         <VariableValueEditor

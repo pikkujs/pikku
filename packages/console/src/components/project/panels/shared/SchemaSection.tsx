@@ -1,7 +1,8 @@
 import React from 'react'
 import { Box, Loader, Text } from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { useSchema } from '../../../../hooks/useWirings'
 import { SchemaViewer } from '../../../ui/SchemaViewer'
 import { SectionLabel } from './SectionLabel'
@@ -10,7 +11,7 @@ export const SchemaSection: React.FC<{
   label?: I18nNode
   schemaName?: string | null
 }> = ({ label, schemaName }) => {
-  const { t } = useI18n()
+  useLocale()
   const { data: schema, isLoading } = useSchema(schemaName)
 
   if (!schemaName) return null
@@ -24,7 +25,7 @@ export const SchemaSection: React.FC<{
         <SchemaViewer schema={schema} />
       ) : (
         <Text size="sm" c="dimmed">
-          {t('common.no_schema')}
+          {m.common_no_schema()}
         </Text>
       )}
     </Box>

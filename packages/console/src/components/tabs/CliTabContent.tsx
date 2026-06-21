@@ -17,7 +17,8 @@ import { PanelProvider } from '../../context/PanelContext'
 import { CliHelpText } from '../cli/CliHelpText'
 import classes from '../ui/console.module.css'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 
 const countCommands = (commands: Record<string, any>): number => {
   let count = 0
@@ -33,7 +34,7 @@ const CliPageInner: React.FC<{
   cliRenderers: Record<string, any>
   searchQuery: string
 }> = ({ programs, cliRenderers, searchQuery }) => {
-  const { t } = useI18n()
+  useLocale()
   const [activeProgramId, setActiveProgramId] = useState<string>(
     programs[0]?.wireId || ''
   )
@@ -154,7 +155,7 @@ const CliPageInner: React.FC<{
                     {prog.wireId}
                   </Text>
                   <Badge size="sm" variant="light" color="cyan" ff="monospace">
-                    {t('cli.badge_label')}
+                    {m.cli_badge_label()}
                   </Badge>
                 </UnstyledButton>
 
@@ -249,7 +250,7 @@ const CliPageInner: React.FC<{
             }
           >
             {({ copied, copy }) => (
-              <Tooltip label={copied ? t('common.copied') : t('common.copy')}>
+              <Tooltip label={copied ? m.common_copied() : m.common_copy()}>
                 <ActionIcon
                   variant="subtle"
                   color={copied ? 'teal' : 'gray'}
@@ -282,7 +283,7 @@ const CliPageInner: React.FC<{
             />
           ) : (
             <Text c="dimmed" ff="monospace" size="sm">
-              {t('cli.no_programs')}
+              {m.cli_no_programs()}
             </Text>
           )}
         </Box>
@@ -295,15 +296,15 @@ type CliTabContentProps = { searchQuery: string }
 
 export const CliTabContent: React.FC<CliTabContentProps> = ({ searchQuery }) => {
   const { meta } = usePikkuMeta()
-  const { t } = useI18n()
+  useLocale()
   const programs = meta.cliMeta || []
 
   if (programs.length === 0) {
     return (
       <EmptyStatePlaceholder
         icon={Terminal}
-        title={t('cli.empty_title')}
-        description={t('cli.empty_description')}
+        title={m.cli_empty_title()}
+        description={m.cli_empty_description()}
         docsHref="https://pikku.dev/docs/core-features/cli"
       />
     )

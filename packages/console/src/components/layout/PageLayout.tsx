@@ -2,7 +2,8 @@ import type { ComponentProps, ReactNode } from 'react'
 import { ActionIcon, Box, Container, Group, Stack, Text, Title, Tooltip } from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
 import { ExternalLink } from 'lucide-react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import DocLink from '../ui/DocLink'
 import { ShellHeader, type ShellHeaderSearch, type ShellHeaderSelection } from '../ui/ShellHeader'
 import { usePageGate } from '../../context/PageGateContext'
@@ -115,7 +116,7 @@ interface PageHeaderProps {
 }
 
 export function PageHeader({ title, subtitle, actions, docsHref }: PageHeaderProps) {
-  const { t } = useI18n()
+  useLocale()
   return (
     <Stack gap={4} style={{ marginBottom: 'var(--mantine-spacing-xl)' }}>
       <Group justify="space-between" align="center" wrap="nowrap" gap="md">
@@ -125,7 +126,7 @@ export function PageHeader({ title, subtitle, actions, docsHref }: PageHeaderPro
         <Group gap="xs" wrap="nowrap" align="center" style={{ flexShrink: 0 }}>
           {actions && <PageHeaderControls>{actions}</PageHeaderControls>}
           {docsHref && (
-            <Tooltip label={t('common.docs_link')}>
+            <Tooltip label={m.common_docs_link()}>
               <ActionIcon
                 component="a"
                 href={docsHref}

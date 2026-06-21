@@ -16,7 +16,8 @@ import {
 } from '@pikku/mantine/core'
 import { GitCompare, ChevronRight, ChevronDown, FolderOpen } from 'lucide-react'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { useSearchParams } from '../router'
 import { PanelProvider } from '../context/PanelContext'
@@ -223,7 +224,7 @@ const FieldDiff: React.FC<{
   ours?: Record<string, unknown>
   base?: Record<string, unknown>
 }> = ({ ours, base }) => {
-  const { t } = useI18n()
+  useLocale()
   const allKeys = Array.from(
     new Set([...Object.keys(ours ?? {}), ...Object.keys(base ?? {})])
   ).sort()
@@ -251,7 +252,7 @@ const FieldDiff: React.FC<{
           tt="uppercase"
           style={{ width: 180, padding: '6px 12px' }}
         >
-          {t('changes.field')}
+          {m.changes_field()}
         </Text>
         <Text
           size="sm"
@@ -264,7 +265,7 @@ const FieldDiff: React.FC<{
             borderLeft: '1px solid var(--app-row-border)',
           }}
         >
-          {t('changes.base')}
+          {m.changes_base()}
         </Text>
         <Text
           size="sm"
@@ -277,7 +278,7 @@ const FieldDiff: React.FC<{
             borderLeft: '1px solid var(--app-row-border)',
           }}
         >
-          {t('changes.ours')}
+          {m.changes_ours()}
         </Text>
       </Group>
       {allKeys.map((key) => {
@@ -389,13 +390,13 @@ const CategoryPanel: React.FC<{
   entries: DiffEntry[]
   category: string
 }> = ({ entries, category }) => {
-  const { t } = useI18n()
+  useLocale()
   const visible = entries.filter((e) => e.status !== 'unchanged')
   if (visible.length === 0) {
     return (
       <Center p="xl">
         <Text size="sm" c="dimmed">
-          {t('changes.no_changes_in_category')}
+          {m.changes_no_changes_in_category()}
         </Text>
       </Center>
     )
@@ -472,7 +473,7 @@ const DiffSummaryBar: React.FC<{ diff: StateDiff }> = ({ diff }) => {
 }
 
 const DiffView: React.FC<{ diff: StateDiff }> = ({ diff }) => {
-  const { t } = useI18n()
+  useLocale()
   const tabs = useMemo(() => {
     return Object.entries(diff.categories)
       .map(([key, cat]) => ({
@@ -498,7 +499,7 @@ const DiffView: React.FC<{ diff: StateDiff }> = ({ diff }) => {
     return (
       <Center p="xl">
         <Text size="sm" c="dimmed">
-          {t('changes.no_changes')}
+          {m.changes_no_changes()}
         </Text>
       </Center>
     )
@@ -564,7 +565,7 @@ const DiffView: React.FC<{ diff: StateDiff }> = ({ diff }) => {
 }
 
 export const ChangesPage: React.FC = () => {
-  const { t } = useI18n()
+  useLocale()
   const [searchParams] = useSearchParams()
   const queryBase = searchParams.get('base')
   const queryOurs = searchParams.get('ours')
@@ -619,8 +620,8 @@ export const ChangesPage: React.FC = () => {
         hidePanel
         header={
           <ListPageHeader
-            title={t('changes.title')}
-            description={t('changes.description')}
+            title={m.changes_title()}
+            description={m.changes_description()}
             lead={
               <Group gap="sm" wrap="nowrap">
                 <TextInput
@@ -648,7 +649,7 @@ export const ChangesPage: React.FC = () => {
                   onClick={apply}
                   disabled={draftPath.trim() === (activePath ?? '')}
                 >
-                  {t('changes.compare')}
+                  {m.changes_compare()}
                 </Button>
               </Group>
             }
@@ -662,8 +663,8 @@ export const ChangesPage: React.FC = () => {
           {!activePath && (
             <EmptyStatePlaceholder
               icon={GitCompare}
-              title={t('changes.no_base_path_title')}
-              description={t('changes.no_base_path_description')}
+              title={m.changes_no_base_path_title()}
+              description={m.changes_no_base_path_description()}
               docsHref="https://pikku.dev/docs"
             />
           )}

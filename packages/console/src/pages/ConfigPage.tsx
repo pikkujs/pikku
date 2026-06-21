@@ -6,7 +6,8 @@ import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { SecretsTab } from '../components/tabs/SecretsTab'
 import { VariablesTab } from '../components/tabs/VariablesTab'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 
 const TABS = [
   { value: 'secrets', label: 'Secrets' },
@@ -14,7 +15,7 @@ const TABS = [
 ]
 
 export const ConfigPage: React.FC = () => {
-  const { t } = useI18n()
+  useLocale()
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = searchParams.get('tab') || 'secrets'
 
@@ -27,11 +28,11 @@ export const ConfigPage: React.FC = () => {
       <ResizablePanelLayout
         header={
           <Stack gap="md">
-            <ListPageHeader title={t('config.title')} description={t('config.description')} />
+            <ListPageHeader title={m.config_title()} description={m.config_description()} />
             <SegmentedControl size="xs" value={tab} onChange={handleTabChange} data={TABS} />
           </Stack>
         }
-        emptyPanelMessage={t('common.select_item')}
+        emptyPanelMessage={m.common_select_item()}
       >
         {tab === 'variables' ? <VariablesTab /> : <SecretsTab />}
       </ResizablePanelLayout>

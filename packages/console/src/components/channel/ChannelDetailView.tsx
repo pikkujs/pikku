@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react'
 import { Box, Text, Group, Badge, Tabs } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import type { ChannelMeta } from '@pikku/core/channel'
 import { usePanelContext } from '../../context/PanelContext'
 import {
@@ -78,7 +79,7 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
   selected,
 }) => {
   const { navigateInPanel } = usePanelContext()
-  const { t } = useI18n()
+  useLocale()
   const selectedData = getSelectedMeta(channel, selected)
   const funcId = selectedData?.pikkuFuncId
   const { data: funcMeta } = useFunctionMeta(funcId ?? '')
@@ -119,7 +120,7 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
         </Box>
         <Group gap={6}>
           <Badge size="sm" variant="light" color="cyan">
-            {t('channel.badge.channel')}
+            {m.channel_badge_channel()}
           </Badge>
           {selected?.type === 'action' && (
             <Badge size="sm" variant="light" color="violet">
@@ -136,10 +137,10 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
       <Box className={classes.flexRow} style={{ flex: 1, minHeight: 0 }}>
         {/* Left: metadata + schema */}
         <Box className={classes.splitLeft}>
-          <SectionLabel>{t('channel.section.handler')}</SectionLabel>
+          <SectionLabel>{m.channel_section_handler()}</SectionLabel>
 
           {funcId && (
-            <MetaRow label={t('channel.meta.function')}>
+            <MetaRow label={m.channel_meta_function()}>
               <Text
                 size="sm"
                 fw={600}
@@ -160,26 +161,26 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
             </MetaRow>
           )}
 
-          <MetaRow label={t('channel.meta.channel')}>
+          <MetaRow label={m.channel_meta_channel()}>
             <Text size="sm" ff="monospace" c="var(--app-meta-value)">
               {asI18n(channelName)}
             </Text>
           </MetaRow>
 
           {selected?.type === 'handler' && (
-            <MetaRow label={t('channel.meta.type')}>
+            <MetaRow label={m.channel_meta_type()}>
               <Text size="sm" ff="monospace" c="var(--app-meta-value)">
                 {selected.handler === 'connect'
-                  ? t('channel.type.connect')
+                  ? m.channel_type_connect()
                   : selected.handler === 'disconnect'
-                    ? t('channel.type.disconnect')
-                    : t('channel.type.receive')}
+                    ? m.channel_type_disconnect()
+                    : m.channel_type_receive()}
               </Text>
             </MetaRow>
           )}
 
           {selected?.type === 'action' && (
-            <MetaRow label={t('channel.meta.routing')}>
+            <MetaRow label={m.channel_meta_routing()}>
               <Box
                 style={{
                   background: 'var(--app-code-bg)',
@@ -203,7 +204,7 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
           )}
 
           {funcMeta?.services && funcMeta.services.services.length > 0 && (
-            <MetaRow label={t('channel.meta.services')}>
+            <MetaRow label={m.channel_meta_services()}>
               <Group gap={4}>
                 {funcMeta.services.services.map((svc: string) => (
                   <ServiceBadge key={svc}>{asI18n(svc)}</ServiceBadge>
@@ -214,7 +215,7 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
 
           {selectedData?.meta?.middleware &&
             selectedData.meta.middleware.length > 0 && (
-              <MetaRow label={t('channel.meta.middleware')}>
+              <MetaRow label={m.channel_meta_middleware()}>
                 <Group gap={4}>
                   {selectedData.meta.middleware.map((mw: any, i: number) => (
                     <Badge key={i} size="sm" variant="light" color="gray">
@@ -226,7 +227,7 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
             )}
 
           {channel.tags && channel.tags.length > 0 && (
-            <MetaRow label={t('channel.meta.tags')}>
+            <MetaRow label={m.channel_meta_tags()}>
               <Group gap={4}>
                 {channel.tags.map((tag: string, i: number) => (
                   <TagBadge key={i}>{asI18n(tag)}</TagBadge>
@@ -237,14 +238,14 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
 
           {inputSchemaName && (
             <>
-              <SectionLabel>{t('channel.section.input')}</SectionLabel>
+              <SectionLabel>{m.channel_section_input()}</SectionLabel>
               <SchemaSection schemaName={inputSchemaName} />
             </>
           )}
 
           {outputSchemaName && (
             <>
-              <SectionLabel>{t('channel.section.output')}</SectionLabel>
+              <SectionLabel>{m.channel_section_output()}</SectionLabel>
               <SchemaSection schemaName={outputSchemaName} />
             </>
           )}
@@ -270,8 +271,8 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
           >
             <Tabs.List>
               <Tabs.Tab value="pikku-ws">{asI18n('pikku-ws')}</Tabs.Tab>
-              <Tabs.Tab value="raw-ws">{t('channel.tab.rawWs')}</Tabs.Tab>
-              <Tabs.Tab value="cli">{t('channel.tab.cli')}</Tabs.Tab>
+              <Tabs.Tab value="raw-ws">{m.channel_tab_raw_ws()}</Tabs.Tab>
+              <Tabs.Tab value="cli">{m.channel_tab_cli()}</Tabs.Tab>
             </Tabs.List>
             <Tabs.Panel
               value="pikku-ws"
@@ -283,7 +284,7 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
                 <CopyableCode code={snippet} language="typescript" />
               ) : (
                 <Text size="sm" c="dimmed">
-                  {t('channel.empty.selectHandler')}
+                  {m.channel_empty_select_handler()}
                 </Text>
               )}
             </Tabs.Panel>
@@ -305,7 +306,7 @@ export const ChannelDetailView: React.FC<ChannelDetailViewProps> = ({
               p="sm"
             >
               <Text size="sm" c="dimmed">
-                {t('channel.empty.cliNotAvailable')}
+                {m.channel_empty_cli_not_available()}
               </Text>
             </Tabs.Panel>
           </Tabs>

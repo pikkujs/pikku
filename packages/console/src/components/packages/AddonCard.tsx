@@ -9,7 +9,8 @@ import {
   Stack,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { Check, Plus, ShieldCheck, FunctionSquare, Bot } from 'lucide-react'
 import type { PackageMeta } from '../../pages/PackagesPage'
 import {
@@ -36,7 +37,7 @@ export const AddonCard: React.FC<AddonCardProps> = ({
   onOpen,
   onInstall,
 }) => {
-  const { t } = useI18n()
+  useLocale()
   const [hovered, setHovered] = useState(false)
   const category = addonPrimaryCategory(addon)
   const { icon: CategoryIcon, color } = getCategoryMeta(category)
@@ -104,7 +105,7 @@ export const AddonCard: React.FC<AddonCardProps> = ({
               leftSection={<ShieldCheck size={11} />}
               style={{ flexShrink: 0 }}
             >
-              {t('packages.official')}
+              {m.packages_official()}
             </Badge>
           ) : (
             <Badge
@@ -113,7 +114,7 @@ export const AddonCard: React.FC<AddonCardProps> = ({
               color="gray"
               style={{ flexShrink: 0 }}
             >
-              {t('packages.community')}
+              {m.packages_community()}
             </Badge>
           )}
         </Group>
@@ -173,7 +174,7 @@ export const AddonCard: React.FC<AddonCardProps> = ({
               onOpen(addon)
             }}
           >
-            {t('packages.added')}
+            {m.packages_added()}
           </Button>
         ) : editable ? (
           <Button
@@ -185,7 +186,7 @@ export const AddonCard: React.FC<AddonCardProps> = ({
               onInstall(addon)
             }}
           >
-            {t('packages.add')}
+            {m.packages_add()}
           </Button>
         ) : (
           <Button
@@ -196,7 +197,7 @@ export const AddonCard: React.FC<AddonCardProps> = ({
               onOpen(addon)
             }}
           >
-            {t('packages.view')}
+            {m.packages_view()}
           </Button>
         )}
       </Group>

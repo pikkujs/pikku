@@ -1,12 +1,13 @@
 import React from 'react'
 import { Text } from '@pikku/mantine/core'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 
 export const EmptyState: React.FC = () => {
-  const { t } = useI18n()
+  useLocale()
   return (
     <Text c="dimmed" size="sm" ta="center">
-      {t('common.not_available')}
+      {m.common_not_available()}
     </Text>
   )
 }

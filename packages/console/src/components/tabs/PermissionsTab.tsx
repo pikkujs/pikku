@@ -6,7 +6,8 @@ import { usePanelContext } from '../../context/PanelContext'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 
 interface PermissionItem {
   id: string
@@ -16,7 +17,7 @@ interface PermissionItem {
 
 export const PermissionsTab: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
   const { meta, loading } = usePikkuMeta()
-  const { t } = useI18n()
+  useLocale()
   const { openPermission } = usePanelContext()
 
   const allItems = useMemo((): PermissionItem[] => {
@@ -101,7 +102,7 @@ export const PermissionsTab: React.FC<{ searchQuery: string }> = ({ searchQuery 
       columns={columns}
       getKey={(item) => item.id}
       onRowClick={(item) => openPermission(item.id, item.data)}
-      emptyMessage={t('permissions.empty_message')}
+      emptyMessage={m.permissions_empty_message()}
       loading={loading}
     />
   )

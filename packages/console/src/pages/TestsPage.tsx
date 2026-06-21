@@ -15,7 +15,8 @@ import {
   TextInput,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { FlaskConical, Play, Search } from 'lucide-react'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
@@ -354,7 +355,7 @@ const ScenariosView: React.FC<ScenariosViewProps> = ({
   groupBy,
   statusFilter,
 }) => {
-  const { t } = useI18n()
+  useLocale()
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
     return scenarios.filter((s) => {
@@ -429,7 +430,7 @@ const ScenariosView: React.FC<ScenariosViewProps> = ({
     return (
       <Center py="xl">
         <Text c="dimmed" size="sm">
-          {t('tests.no_scenarios_match')}
+          {m.tests_no_scenarios_match()}
         </Text>
       </Center>
     )
@@ -467,7 +468,7 @@ type TestStreamEvent =
 
 
 export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseCoverage }) => {
-  const { t } = useI18n()
+  useLocale()
   const { meta, loading, refresh } = usePikkuMeta()
   const rpc = usePikkuRPC()
   const subscribeToSSE = usePikkuSSE()
@@ -578,11 +579,11 @@ export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseC
 
   const header = (
     <ListPageHeader
-      title={t('tests.title')}
+      title={m.tests_title()}
       description={
         report?.generatedAt
           ? asI18n(`Last run: ${formatTestDate(report.generatedAt)}`)
-          : t('tests.description')
+          : m.tests_description()
       }
       lead={
         showRunButton ? (
@@ -596,7 +597,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseC
               disabled={running}
               loading={running}
             >
-              {running ? t('tests.running') : t('tests.run_tests')}
+              {running ? m.tests_running() : m.tests_run_tests()}
             </Button>
             {onIncreaseCoverage && (
               <Button
@@ -607,7 +608,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseC
                 disabled={running || coverageLoading || !rpc}
                 loading={coverageLoading}
               >
-                {t('tests.increase_coverage')}
+                {m.tests_increase_coverage()}
               </Button>
             )}
           </Group>
@@ -615,7 +616,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseC
       }
       filters={
         <TextInput
-          placeholder={t('tests.search_placeholder')}
+          placeholder={m.tests_search_placeholder()}
           leftSection={<Search size={14} />}
           value={search}
           onChange={(e) => setSearch(e.currentTarget.value)}
@@ -669,7 +670,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseC
         {runError && (
           <Alert
             color="red"
-            title={t('tests.test_run_failed')}
+            title={m.tests_test_run_failed()}
             withCloseButton
             onClose={() => setRunError(null)}
             m="md"
@@ -688,8 +689,8 @@ export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseC
         ) : !report || scenarios.length === 0 ? (
           <EmptyStatePlaceholder
             icon={FlaskConical}
-            title={t('tests.empty_title')}
-            description={t('tests.empty_description')}
+            title={m.tests_empty_title()}
+            description={m.tests_empty_description()}
             docsHref="https://pikku.dev/docs/core-features/testing"
           />
         ) : (

@@ -3,7 +3,8 @@ import { Text, Badge, Group, UnstyledButton, TextInput } from '@pikku/mantine/co
 import { FunctionSquare, Search } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
@@ -57,7 +58,7 @@ const FunctionsList: React.FC<{
   testsByFunction?: Record<string, FunctionTestData>
   emptyHero?: React.ReactNode
 }> = ({ functions, extraColumns = [], testsByFunction, emptyHero }) => {
-  const { t } = useI18n()
+  useLocale()
   const { openFunction } = usePanelContext()
   const { functionUsedBy } = usePikkuMeta()
   const hasTestsColumn = useMemo(
@@ -241,7 +242,7 @@ const FunctionsList: React.FC<{
       onRowClick={(func) =>
         openFunction(func.pikkuFuncName || func.pikkuFuncId, func)
       }
-      emptyMessage={t('functions.empty_message')}
+      emptyMessage={m.functions_empty_message()}
       emptyHero={emptyHero}
     />
   )
@@ -253,7 +254,7 @@ export const FunctionsPage: React.FC<{
   testsByFunction?: Record<string, FunctionTestData>
   emptyHero?: React.ReactNode
 }> = ({ extraColumns, headerRight, testsByFunction, emptyHero }) => {
-  const { t } = useI18n()
+  useLocale()
   const rpc = usePikkuRPC()
   const [searchQuery, setSearchQuery] = useState('')
   const [showPikkuFunctions, setShowPikkuFunctions] = useState(false)
@@ -285,13 +286,13 @@ export const FunctionsPage: React.FC<{
       <ResizablePanelLayout
         header={
           <ListPageHeader
-            title={t('functions.title')}
-            description={t('functions.description')}
+            title={m.functions_title()}
+            description={m.functions_description()}
             docsHref="https://pikku.dev/docs/core-features/functions"
             filters={
               <Group gap="sm" wrap="nowrap">
                 <TextInput
-                  placeholder={t('functions.search_placeholder')}
+                  placeholder={m.functions_search_placeholder()}
                   leftSection={<Search size={14} />}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -301,14 +302,14 @@ export const FunctionsPage: React.FC<{
                 <PikkuToggle
                   checked={showPikkuFunctions}
                   onChange={setShowPikkuFunctions}
-                  tooltip={t('common.show_pikku_internals')}
+                  tooltip={m.common_show_pikku_internals()}
                 />
                 {headerRight}
               </Group>
             }
           />
         }
-        emptyPanelMessage={t('functions.select_function')}
+        emptyPanelMessage={m.functions_select_function()}
         hidePanel={isLoading || !rawFunctions || (rawFunctions as unknown as any[]).length === 0}
       >
         <FunctionsList

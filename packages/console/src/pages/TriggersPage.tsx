@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react'
 import { Text } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { Zap } from 'lucide-react'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
@@ -21,7 +22,7 @@ const TriggersTable: React.FC<{
   loading?: boolean
 }> = ({ pairs, loading }) => {
   const { openTriggerSource, openTrigger } = usePanelContext()
-  const { t } = useI18n()
+  useLocale()
 
   const columns = useMemo(
     () => [
@@ -89,13 +90,13 @@ const TriggersTable: React.FC<{
         if (pair.source) openTriggerSource(pair.name, pair.source)
         else if (pair.trigger) openTrigger(pair.name, pair.trigger)
       }}
-      searchPlaceholder={t('triggers.search_placeholder')}
+      searchPlaceholder={m.triggers_search_placeholder()}
       searchFilter={(pair, q) =>
         pair.name.toLowerCase().includes(q) ||
         pair.source?.pikkuFuncId?.toLowerCase().includes(q) ||
         pair.trigger?.pikkuFuncId?.toLowerCase().includes(q)
       }
-      emptyMessage={t('triggers.empty_message')}
+      emptyMessage={m.triggers_empty_message()}
       loading={loading}
     />
   )
@@ -103,7 +104,7 @@ const TriggersTable: React.FC<{
 
 export const TriggersPage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
-  const { t } = useI18n()
+  useLocale()
 
   const pairs = useMemo((): TriggerPair[] => {
     const names = new Set<string>()
@@ -123,9 +124,9 @@ export const TriggersPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title={t('triggers.title')} description={t('triggers.description')} />}
+        header={<ListPageHeader title={m.triggers_title()} description={m.triggers_description()} />}
         hidePanel={!loading && pairs.length === 0}
-        emptyPanelMessage={t('triggers.select_item')}
+        emptyPanelMessage={m.triggers_select_item()}
       >
         <TriggersTable pairs={pairs} loading={loading} />
       </ResizablePanelLayout>

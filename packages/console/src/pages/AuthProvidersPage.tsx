@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react'
 import { Group, Text, Badge, TextInput } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { KeyRound, Search } from 'lucide-react'
 import { PanelProvider } from '../context/PanelContext'
 import { usePanelContext } from '../context/PanelContext'
@@ -219,7 +220,7 @@ const AuthProvidersTable: React.FC<{ searchQuery: string }> = ({
   searchQuery,
 }) => {
   const { openAuthProvider } = usePanelContext()
-  const { t } = useI18n()
+  useLocale()
   const { meta } = useAuthProviders()
 
   const configuredCallbackIds = useMemo(
@@ -245,7 +246,7 @@ const AuthProvidersTable: React.FC<{ searchQuery: string }> = ({
             <Text fw={500}>{asI18n(p.name)}</Text>
             {p.featured && (
               <Badge size="xs" variant="light" color="blue">
-                {t('auth_providers.popular')}
+                {m.auth_providers_popular()}
               </Badge>
             )}
           </Group>
@@ -282,7 +283,7 @@ const AuthProvidersTable: React.FC<{ searchQuery: string }> = ({
         ),
       },
     ],
-    [t, meta]
+    [meta]
   )
 
   return (
@@ -304,7 +305,7 @@ const AuthProvidersTable: React.FC<{ searchQuery: string }> = ({
           <AuthPluginsBar plugins={meta.plugins} />
         ) : undefined
       }
-      emptyMessage={t('auth_providers.empty_message')}
+      emptyMessage={m.auth_providers_empty_message()}
     />
   )
 }
@@ -313,19 +314,19 @@ const AuthProvidersTable: React.FC<{ searchQuery: string }> = ({
 
 export const AuthProvidersPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('')
-  const { t } = useI18n()
+  useLocale()
 
   return (
     <PanelProvider>
       <ResizablePanelLayout
         header={
           <ListPageHeader
-            title={t('auth_providers.title')}
-            description={t('auth_providers.description')}
+            title={m.auth_providers_title()}
+            description={m.auth_providers_description()}
             docsHref="https://www.better-auth.com/docs/concepts/oauth"
             filters={
               <TextInput
-                placeholder={t('auth_providers.search_placeholder')}
+                placeholder={m.auth_providers_search_placeholder()}
                 leftSection={<Search size={14} />}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -335,7 +336,7 @@ export const AuthProvidersPage: React.FC = () => {
             }
           />
         }
-        emptyPanelMessage={t('auth_providers.select_provider')}
+        emptyPanelMessage={m.auth_providers_select_provider()}
       >
         <AuthProvidersTable searchQuery={searchQuery} />
       </ResizablePanelLayout>

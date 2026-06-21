@@ -2,7 +2,8 @@ import React, { useMemo } from 'react'
 import { Text } from '@pikku/mantine/core'
 import { Server } from 'lucide-react'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -18,7 +19,7 @@ interface ServiceItem {
 
 export const ServicesPage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
-  const { t } = useI18n()
+  useLocale()
 
   const columns = useMemo(
     () => [
@@ -65,7 +66,7 @@ export const ServicesPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title={t('services.title')} description={t('services.description')} />}
+        header={<ListPageHeader title={m.services_title()} description={m.services_description()} />}
         hidePanel
       >
         <TableListPage
@@ -76,12 +77,12 @@ export const ServicesPage: React.FC = () => {
           columns={columns}
           getKey={(item) => item.name}
           onRowClick={() => {}}
-          searchPlaceholder={t('services.search_placeholder')}
+          searchPlaceholder={m.services_search_placeholder()}
           searchFilter={(item, q) =>
             item.name.toLowerCase().includes(q) ||
             item.functions.some((f) => f.toLowerCase().includes(q))
           }
-          emptyMessage={t('services.empty_message')}
+          emptyMessage={m.services_empty_message()}
           loading={loading}
         />
       </ResizablePanelLayout>

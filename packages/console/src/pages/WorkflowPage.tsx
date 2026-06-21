@@ -2,7 +2,8 @@ import React, { Suspense, useContext, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Group, TextInput, Center, Loader } from '@pikku/mantine/core'
 import { GitBranch, Search } from 'lucide-react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { WorkflowTabContent } from '../components/tabs/WorkflowTabContent'
 import { PanelProvider } from '../context/PanelContext'
@@ -34,7 +35,7 @@ const WorkflowPageInner: React.FC<{
   immersiveDetail = false,
   icon = GitBranch,
 }) => {
-  const { t } = useI18n()
+  useLocale()
   const { workflowId, navigateTo } = useConsoleNavigator()
   const { meta, loading } = usePikkuMeta()
   const { data: aiWorkflows } = useAIWorkflows()
@@ -104,13 +105,13 @@ const WorkflowPageInner: React.FC<{
         hidePanel
         header={
           <ListPageHeader
-            title={t('workflows.title')}
-            description={t('workflows.description')}
+            title={m.workflows_title()}
+            description={m.workflows_description()}
             docsHref="https://pikku.dev/docs/wiring/workflows"
             filters={
               <Group gap="sm" wrap="nowrap">
                 <TextInput
-                  placeholder={t('workflows.search_placeholder')}
+                  placeholder={m.workflows_search_placeholder()}
                   leftSection={<Search size={14} />}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -129,8 +130,8 @@ const WorkflowPageInner: React.FC<{
           loading={loading}
           icon={icon}
           emptyHero={emptyHero}
-          emptyTitle={t('workflows.empty_title')}
-          emptyDescription={t('workflows.empty_description')}
+          emptyTitle={m.workflows_empty_title()}
+          emptyDescription={m.workflows_empty_description()}
           docsHref="https://pikku.dev/docs/wiring/workflows"
           metricSlot={metricSlot}
         />

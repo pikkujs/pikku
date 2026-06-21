@@ -2,11 +2,12 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Container, Stack, Text, Button, Alert, Loader } from '@pikku/mantine/core'
 import { CheckCircle, AlertTriangle, X } from 'lucide-react'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
 
 export const OAuthCallbackPage: React.FC = () => {
-  const { t } = useI18n()
+  useLocale()
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>(
     'loading'
   )
@@ -71,7 +72,7 @@ export const OAuthCallbackPage: React.FC = () => {
         {status === 'loading' && (
           <>
             <Loader size="lg" />
-            <Text size="lg">{t('oauth_callback.loading')}</Text>
+            <Text size="lg">{m.oauth_callback_loading()}</Text>
           </>
         )}
 
@@ -79,17 +80,17 @@ export const OAuthCallbackPage: React.FC = () => {
           <>
             <CheckCircle size={48} color="var(--mantine-color-green-6)" />
             <Text size="lg" fw={600}>
-              {t('oauth_callback.success_title')}
+              {m.oauth_callback_success_title()}
             </Text>
             <Text size="sm" c="dimmed" ta="center">
-              {t('oauth_callback.success_description')}
+              {m.oauth_callback_success_description()}
             </Text>
             <Button
               variant="light"
               leftSection={<X size={16} />}
               onClick={() => window.close()}
             >
-              {t('oauth_callback.close_window')}
+              {m.oauth_callback_close_window()}
             </Button>
           </>
         )}
@@ -109,7 +110,7 @@ export const OAuthCallbackPage: React.FC = () => {
               leftSection={<X size={16} />}
               onClick={() => window.close()}
             >
-              {t('oauth_callback.close_window')}
+              {m.oauth_callback_close_window()}
             </Button>
           </>
         )}

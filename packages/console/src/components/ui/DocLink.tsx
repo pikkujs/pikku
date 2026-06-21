@@ -1,15 +1,16 @@
 import { Button, Tooltip } from '@pikku/mantine/core'
 import { ExternalLink } from 'lucide-react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 
 type DocLinkProps = {
   href: string
 }
 
 const DocLink: React.FC<DocLinkProps> = ({ href }) => {
-  const { t } = useI18n()
+  useLocale()
   return (
-    <Tooltip label={t('common.docs_link')}>
+    <Tooltip label={m.common_docs_link()}>
       <Button
         component="a"
         href={href}

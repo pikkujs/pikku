@@ -6,7 +6,8 @@ import { usePanelContext } from '../../context/PanelContext'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 
 interface MiddlewareItem {
   id: string
@@ -16,7 +17,7 @@ interface MiddlewareItem {
 
 export const MiddlewareTab: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
   const { meta, loading } = usePikkuMeta()
-  const { t } = useI18n()
+  useLocale()
   const { openMiddleware } = usePanelContext()
 
   const allItems = useMemo((): MiddlewareItem[] => {
@@ -101,7 +102,7 @@ export const MiddlewareTab: React.FC<{ searchQuery: string }> = ({ searchQuery }
       columns={columns}
       getKey={(item) => item.id}
       onRowClick={(item) => openMiddleware(item.id, item.data)}
-      emptyMessage={t('middleware.empty_message')}
+      emptyMessage={m.middleware_empty_message()}
       loading={loading}
     />
   )

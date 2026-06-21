@@ -2,7 +2,8 @@ import React, { useMemo } from 'react'
 import { Text } from '@pikku/mantine/core'
 import { Clock } from 'lucide-react'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -22,7 +23,7 @@ const SchedulersTable: React.FC<{
   loading?: boolean
 }> = ({ items, loading }) => {
   const { openScheduler } = usePanelContext()
-  const { t } = useI18n()
+  useLocale()
 
   const columns = useMemo(
     () => [
@@ -64,14 +65,14 @@ const SchedulersTable: React.FC<{
       columns={columns}
       getKey={(item) => item.name}
       onRowClick={(item) => openScheduler(item.name, item.data)}
-      searchPlaceholder={t('schedulers.search_placeholder')}
+      searchPlaceholder={m.schedulers_search_placeholder()}
       searchFilter={(item, q) =>
         item.name.toLowerCase().includes(q) ||
         item.handler?.toLowerCase().includes(q) ||
         item.schedule?.toLowerCase().includes(q) ||
         false
       }
-      emptyMessage={t('schedulers.empty_message')}
+      emptyMessage={m.schedulers_empty_message()}
       loading={loading}
     />
   )
@@ -79,7 +80,7 @@ const SchedulersTable: React.FC<{
 
 export const SchedulersPage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
-  const { t } = useI18n()
+  useLocale()
 
   const items = useMemo((): SchedulerItem[] => {
     if (!meta.schedulerMeta) return []
@@ -96,9 +97,9 @@ export const SchedulersPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title={t('schedulers.title')} description={t('schedulers.description')} />}
+        header={<ListPageHeader title={m.schedulers_title()} description={m.schedulers_description()} />}
         hidePanel={!loading && items.length === 0}
-        emptyPanelMessage={t('schedulers.select_item')}
+        emptyPanelMessage={m.schedulers_select_item()}
       >
         <SchedulersTable items={items} loading={loading} />
       </ResizablePanelLayout>

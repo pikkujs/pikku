@@ -1,7 +1,8 @@
 import React from 'react'
 import { Box, NavLink, Text, ThemeIcon } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { useI18n } from '@pikku/react/i18n'
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
 import { Package } from 'lucide-react'
 import { getCategoryMeta, type CategoryBucket } from './addonCategoryMeta'
 
@@ -18,7 +19,7 @@ export const CategoryRail: React.FC<CategoryRailProps> = ({
   total,
   onPick,
 }) => {
-  const { t } = useI18n()
+  useLocale()
   return (
     <Box
       component="nav"
@@ -33,12 +34,12 @@ export const CategoryRail: React.FC<CategoryRailProps> = ({
         mb={6}
         style={{ letterSpacing: '0.06em' }}
       >
-        {t('packages.browse')}
+        {m.packages_browse()}
       </Text>
 
       <NavLink
         active={active === 'all'}
-        label={t('packages.all_addons')}
+        label={m.packages_all_addons()}
         leftSection={
           <ThemeIcon size={22} radius="sm" variant="light" color="gray">
             <Package size={14} />
