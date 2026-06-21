@@ -650,6 +650,15 @@ export class CloudflareProviderAdapter {
     return ['node:*', 'cloudflare:*', 'uWebSockets.js']
   }
 
+  getStubModules(): string[] {
+    // CF Workers use a libsql/Turso Kysely dialect; the `postgres` driver and
+    // its `kysely-postgres-js` dialect are only reached on a `postgres://` URL,
+    // which CF never has. Stub them so the (~130KB) Postgres driver doesn't
+    // ship in every worker bundle. The postgres branch is URL-gated at runtime
+    // and never taken on CF, so the empty stub is never executed.
+    return ['^postgres$', '^kysely-postgres-js$']
+  }
+
   getAliases(): Record<string, string> {
     // Map every node builtin to its `node:`-prefixed form. CF's
     // nodejs_compat_v2 only resolves prefixed imports.

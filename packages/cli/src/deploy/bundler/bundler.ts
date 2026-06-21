@@ -106,6 +106,8 @@ interface BundleUnitOptions {
   sourcemap?: boolean
   /** Persist esbuild's metafile to `metafile.json` (debug-only). Default false. */
   emitMetafile?: boolean
+  /** Regex sources for modules to stub to `export {}` (provider runtime never runs them). */
+  stubModules?: string[]
 }
 
 /**
@@ -129,6 +131,7 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     format,
     sourcemap,
     emitMetafile,
+    stubModules,
   } = options
 
   await mkdir(unitOutputDir, { recursive: true })
@@ -138,8 +141,14 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
   const packageJsonPath = join(unitOutputDir, PACKAGE_JSON_FILENAME)
   const exactDependenciesPath = join(unitOutputDir, EXACT_DEPENDENCIES_FILENAME)
 
-  // Determine which gen files to stub based on per-unit service requirements
+  // Determine which gen files to stub based on per-unit service requirements,
+  // plus any provider-supplied module stubs (modules the provider's runtime
+  // never executes — e.g. the `postgres` driver on CF Workers, which use a
+  // libsql/Turso dialect; the postgres branch is URL-gated and never taken).
   const deadPatterns = await getDeadGenFilePatterns(unitOutputDir)
+  for (const source of stubModules ?? []) {
+    deadPatterns.push(new RegExp(source))
+  }
 
   // Run esbuild — inline everything into a self-contained bundle.
   // Only Node built-ins are kept external (CF Workers provides them).
@@ -297,6 +306,7 @@ export async function bundleUnits(
     noRequireShim?: boolean
     sourcemap?: boolean
     emitMetafile?: boolean
+    stubModules?: string[]
     resolveOutputDir?: (unit: DeploymentUnit, baseOutputDir: string) => string
   }
 ): Promise<BundleOutput> {

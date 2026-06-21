@@ -90,6 +90,14 @@ export interface ProviderAdapter {
   getExternals?(): string[]
 
   /**
+   * Regex sources for modules to stub to `export {}` during bundling — modules
+   * this provider's runtime never executes (e.g. the `postgres` driver on CF
+   * Workers, which use a libsql/Turso dialect). Unlike `getExternals`, a stub
+   * removes the bytes entirely rather than leaving a runtime import to resolve.
+   */
+  getStubModules?(): string[]
+
+  /**
    * Module aliases for esbuild bundling (e.g. { crypto: 'node:crypto' }).
    * Used to remap bare imports to platform-compatible paths.
    */

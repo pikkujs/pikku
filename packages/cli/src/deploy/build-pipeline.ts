@@ -151,6 +151,7 @@ export async function runBuildPipeline(options: {
       providerDir,
       {
         externals: provider.getExternals?.(),
+        stubModules: provider.getStubModules?.(),
         aliases: provider.getAliases?.(),
         define: provider.getDefine?.(),
         platform: provider.getPlatform?.(),
@@ -305,6 +306,7 @@ export async function runBuildPipeline(options: {
         providerDir,
         {
           externals: provider.getExternals?.(),
+          stubModules: provider.getStubModules?.(),
           aliases: provider.getAliases?.(),
           define: provider.getDefine?.(),
           platform: provider.getPlatform?.(),
