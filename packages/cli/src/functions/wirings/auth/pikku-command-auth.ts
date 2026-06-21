@@ -1,4 +1,6 @@
 import { join, dirname } from 'node:path'
+import { existsSync } from 'node:fs'
+import { rm } from 'node:fs/promises'
 import { pikkuSessionlessFunc } from '#pikku'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
@@ -41,9 +43,15 @@ export const pikkuAuth = pikkuSessionlessFunc<void, void>({
     await writeFileInDir(logger, secretsFile, secrets)
 
     // Stateless split: session middleware in its own file (see serializeAuthGen).
+    // Skip it when the project registers its own betterAuthStatelessSession — the
+    // generated default-map one would run first and pre-empt the user's custom
+    // mapSession (pikkujs/pikku#754). Remove a stale file so it can't linger and
+    // double-register.
     const middlewareFile = join(dirname(authFile), 'auth-middleware.gen.ts')
-    if (middleware) {
+    if (middleware && !state.auth.userStatelessSession) {
       await writeFileInDir(logger, middlewareFile, middleware)
+    } else if (existsSync(middlewareFile)) {
+      await rm(middlewareFile, { force: true })
     }
 
     // Static metadata of the enabled providers/plugins for the console SSO page,

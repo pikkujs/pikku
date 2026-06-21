@@ -522,4 +522,75 @@ describe('addAuth inspector', () => {
       await rm(rootDir, { recursive: true, force: true })
     }
   })
+
+  test('user-registered betterAuthStatelessSession sets userStatelessSession', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-stateless-'))
+    const file = join(rootDir, 'middleware.ts')
+    await writeFile(
+      file,
+      [
+        "import { addHTTPMiddleware } from '#pikku'",
+        "import { betterAuthStatelessSession } from '@pikku/better-auth'",
+        "addHTTPMiddleware('*', [",
+        '  betterAuthStatelessSession({',
+        '    mapSession: (r: any) => ({ userId: r.user.id, role: r.user.role }),',
+        '  }),',
+        '])',
+      ].join('\n')
+    )
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      const state = await inspect(makeLogger(criticals), [file], { rootDir })
+      assert.equal(state.auth.userStatelessSession, true)
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test('a standalone betterAuthStatelessSession() call (not a registration) does NOT set the flag', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-standalone-'))
+    const file = join(rootDir, 'start.ts')
+    await writeFile(
+      file,
+      [
+        "import { betterAuthStatelessSession } from '@pikku/better-auth'",
+        '// harness use, not a global registration',
+        'const mw = betterAuthStatelessSession()',
+        'void mw',
+      ].join('\n')
+    )
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      const state = await inspect(makeLogger(criticals), [file], { rootDir })
+      assert.ok(
+        !state.auth.userStatelessSession,
+        'a bare call must not count as a registration'
+      )
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test('betterAuthStatelessSession in a .gen.ts file does NOT set the flag', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-genonly-'))
+    const file = join(rootDir, 'auth-middleware.gen.ts')
+    await writeFile(
+      file,
+      [
+        "import { addHTTPMiddleware } from '#pikku'",
+        "import { betterAuthStatelessSession } from '@pikku/better-auth'",
+        "addHTTPMiddleware('*', [betterAuthStatelessSession()])",
+      ].join('\n')
+    )
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      const state = await inspect(makeLogger(criticals), [file], { rootDir })
+      assert.ok(
+        !state.auth.userStatelessSession,
+        'generated file must not self-trigger the skip'
+      )
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
 })
