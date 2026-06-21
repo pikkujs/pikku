@@ -296,8 +296,8 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
             )}
           </Box>
 
-          <Box style={{ flex: 1, minHeight: 0, overflow: 'auto' }} p="md">
-            <Stack gap="md">
+          <Box style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto' }} p="md">
+            <Stack gap="md" style={{ minWidth: 0 }}>
               {preview.isLoading ? <Center py="xl"><Loader /></Center> : null}
               {preview.error ? (
                 <Alert color="red" icon={<AlertTriangle size={16} />}>
@@ -310,7 +310,7 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
                 </Alert>
               ) : null}
               {previewMode === 'html' ? (
-                <Stack gap="sm">
+                <Stack gap="sm" style={{ minWidth: 0 }}>
                   <Group justify="space-between" wrap="nowrap">
                     <Text size="sm" c="dimmed">
                       {t('emails.editing_template_prefix')}<Code>templates/{selectedTemplate}.html</Code>{t('emails.editing_template_suffix')}
@@ -337,9 +337,10 @@ export const EmailsPage: React.FC<{ hero?: React.ReactNode; headerRight?: React.
                         : 'Failed to save email template')}
                     </Alert>
                   ) : null}
-                  <Box style={{ border: '1px solid var(--app-row-border)', borderRadius: 8, overflow: 'hidden' }}>
+                  <Box style={{ border: '1px solid var(--app-row-border)', borderRadius: 8, overflow: 'hidden', width: '100%', minWidth: 0 }}>
                     <CodeMirror
                       value={editorValue}
+                      width="100%"
                       height="600px"
                       onChange={(value) => setEditorValue(value)}
                     />
