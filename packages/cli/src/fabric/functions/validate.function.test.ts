@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { runValidate, renderValidate } from './validate-core.js'
+import { runValidate as runLiveValidate } from './validate.function.js'
 
 async function makeTmp() {
   return mkdtemp(join(tmpdir(), 'pikku-validate-'))
@@ -977,5 +978,84 @@ describe('pikku fabric validate', () => {
         lines.some((l) => l.includes('packages/functions/src/services.ts'))
       )
     })
+  })
+})
+
+describe('better-auth stateless session (live validate.function)', () => {
+  const authFile = (cookieCache: boolean) =>
+    `import { betterAuth } from 'better-auth'
+import { pikkuBetterAuth } from '#pikku/pikku-types.gen.js'
+export const auth = pikkuBetterAuth(async ({ kysely, secrets }) => {
+  const BETTER_AUTH_SECRET = await secrets.getSecret('BETTER_AUTH_SECRET')
+  return betterAuth({
+    secret: BETTER_AUTH_SECRET,
+    database: { db: kysely as any, type: 'sqlite' },
+    emailAndPassword: { enabled: true },
+    ${cookieCache ? 'session: { cookieCache: { enabled: true } },' : ''}
+  })
+})
+`
+
+  test('cookieCache disabled → warns better-auth-stateless-session-disabled', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'wirings', 'auth.wiring.ts'),
+        authFile(false),
+        'utf8'
+      )
+      const result = await runLiveValidate(tmp)
+      const ids = result.findings.map((f) => f.id)
+      assert.ok(
+        ids.includes('better-auth-stateless-session-disabled'),
+        `expected warn, got: ${JSON.stringify(ids)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('cookieCache enabled → no stateless-session warning', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'wirings', 'auth.wiring.ts'),
+        authFile(true),
+        'utf8'
+      )
+      const result = await runLiveValidate(tmp)
+      const ids = result.findings.map((f) => f.id)
+      assert.ok(
+        !ids.includes('better-auth-stateless-session-disabled'),
+        `unexpected warn: ${JSON.stringify(ids)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('global stateful betterAuthSession → warns better-auth-stateful-session-global', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await writeFile(
+        join(tmp, 'packages', 'functions', 'src', 'wirings', 'middleware.ts'),
+        `import { addHTTPMiddleware } from '#pikku'
+import { betterAuthSession } from '@pikku/better-auth'
+addHTTPMiddleware('*', [betterAuthSession()])
+`,
+        'utf8'
+      )
+      const result = await runLiveValidate(tmp)
+      const ids = result.findings.map((f) => f.id)
+      assert.ok(
+        ids.includes('better-auth-stateful-session-global'),
+        `expected warn, got: ${JSON.stringify(ids)}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
   })
 })

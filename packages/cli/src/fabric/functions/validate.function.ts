@@ -589,6 +589,65 @@ export async function runValidate(
       }
     }
 
+    // ── better-auth stateless session (unit tree-shaking) ──────────────────
+    // Without `session.cookieCache`, the CLI wires the STATEFUL betterAuthSession
+    // bridge globally — every non-auth unit then bundles the full better-auth
+    // server (~2.5MB each), bloating bundles and the serial deploy uploads.
+    // Enabling cookieCache splits out a lean betterAuthStatelessSession that
+    // verifies the signed cookie, so only the auth unit carries the server. A
+    // hand-written global betterAuthSession defeats it the same way.
+    const fnSrcDir = join(fnDir, 'src')
+    if (existsSync(fnSrcDir)) {
+      try {
+        const srcFiles = (
+          (await readdir(fnSrcDir, { recursive: true })) as string[]
+        ).filter(
+          (f) =>
+            typeof f === 'string' &&
+            (f.endsWith('.ts') || f.endsWith('.tsx')) &&
+            !f.endsWith('.gen.ts') &&
+            !f.includes('node_modules')
+        )
+        for (const rel of srcFiles) {
+          const full = join(fnSrcDir, rel)
+          const text = await readTextSafe(full)
+          if (!text) continue
+          // 1) better-auth config without cookieCache enabled.
+          if (
+            /\bpikkuBetterAuth\s*\(/.test(text) &&
+            /\bbetterAuth\s*\(/.test(text)
+          ) {
+            const cookieCacheDisabled =
+              !/cookieCache/.test(text) ||
+              /cookieCache\s*:\s*\{[^}]*enabled\s*:\s*false/.test(text)
+            if (cookieCacheDisabled) {
+              w(
+                'better-auth-stateless-session-disabled',
+                'better-auth config does not enable session.cookieCache — every non-auth unit bundles the full better-auth server (~2.5MB each), bloating bundles and the serial deploy uploads',
+                full,
+                'Add `session: { cookieCache: { enabled: true } }` to the betterAuth({...}) config so the CLI splits out betterAuthStatelessSession (pikku #737)'
+              )
+            }
+          }
+          // 2) hand-written global stateful betterAuthSession bridge.
+          if (
+            /addHTTPMiddleware\s*\(\s*['"`]\*['"`]/.test(text) &&
+            /\bbetterAuthSession\s*\(/.test(text) &&
+            !/betterAuthStatelessSession/.test(text)
+          ) {
+            w(
+              'better-auth-stateful-session-global',
+              'a global addHTTPMiddleware registers the stateful betterAuthSession bridge — it pulls the full better-auth server into every unit, defeating stateless tree-shaking',
+              full,
+              'Switch to betterAuthStatelessSession (requires session.cookieCache). A custom mapSession is currently pre-empted by the CLI-generated stateless middleware — see pikku #754'
+            )
+          }
+        }
+      } catch {
+        // readdir failure — skip
+      }
+    }
+
     // Database layout is declared by pikku.config.json db.engine.
     const migrationsDir = join(
       root,
