@@ -1059,3 +1059,164 @@ addHTTPMiddleware('*', [betterAuthSession()])
     }
   })
 })
+
+describe('i18n + @pikku/mantine convergence — Paraglide (live validate.function)', () => {
+  // Scaffold an apps/web react frontend with the given package deps + src file,
+  // optionally wiring the full Paraglide stack (messages/ + project.inlang/).
+  const makeApp = async (
+    root: string,
+    opts: {
+      deps: Record<string, string>
+      srcFile?: { name: string; body: string }
+      paraglideWired?: boolean
+    }
+  ) => {
+    const app = join(root, 'apps', 'web')
+    await mkdir(join(app, 'src'), { recursive: true })
+    await writeJson(join(app, 'package.json'), {
+      name: 'web',
+      dependencies: opts.deps,
+    })
+    if (opts.srcFile) {
+      const dest = join(app, 'src', opts.srcFile.name)
+      await mkdir(join(dest, '..'), { recursive: true })
+      await writeFile(dest, opts.srcFile.body, 'utf8')
+    }
+    if (opts.paraglideWired) {
+      await mkdir(join(app, 'messages'), { recursive: true })
+      await writeJson(join(app, 'messages', 'en.json'), { hello: 'Hello' })
+      await mkdir(join(app, 'project.inlang'), { recursive: true })
+      await writeJson(join(app, 'project.inlang', 'settings.json'), {
+        baseLocale: 'en',
+        locales: ['en'],
+      })
+    }
+  }
+  const PARAGLIDE_DEPS = {
+    react: '^19.0.0',
+    '@pikku/mantine': '^0.12.5',
+    '@inlang/paraglide-js': '^2.20.0',
+  }
+
+  test('residual i18next dep → error app-legacy-i18next-dep-web', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await makeApp(tmp, {
+        deps: { react: '^19.0.0', i18next: '^23.0.0', 'react-i18next': '^15.0.0' },
+        paraglideWired: true,
+      })
+      const result = await runLiveValidate(tmp)
+      const f = result.findings.find((f) => f.id === 'app-legacy-i18next-dep-web')
+      assert.ok(f, `expected app-legacy-i18next-dep-web, got: ${JSON.stringify(result.findings.map((x) => x.id))}`)
+      assert.strictEqual(f!.severity, 'error')
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('residual useTranslation()/useI18n() call → error app-legacy-i18n-usage-web', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await makeApp(tmp, {
+        deps: PARAGLIDE_DEPS,
+        paraglideWired: true,
+        srcFile: {
+          name: 'Page.tsx',
+          body: `import { useTranslation } from 'react-i18next'\nexport const Page = () => { const { t } = useTranslation(); return t('a.b') }\n`,
+        },
+      })
+      const result = await runLiveValidate(tmp)
+      const f = result.findings.find((f) => f.id === 'app-legacy-i18n-usage-web')
+      assert.ok(f, `expected app-legacy-i18n-usage-web, got: ${JSON.stringify(result.findings.map((x) => x.id))}`)
+      assert.strictEqual(f!.severity, 'error')
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('missing @inlang/paraglide-js → error app-missing-paraglide-web', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await makeApp(tmp, {
+        deps: { react: '^19.0.0', '@pikku/mantine': '^0.12.5' },
+      })
+      const result = await runLiveValidate(tmp)
+      const f = result.findings.find((f) => f.id === 'app-missing-paraglide-web')
+      assert.ok(f, `expected app-missing-paraglide-web, got: ${JSON.stringify(result.findings.map((x) => x.id))}`)
+      assert.strictEqual(f!.severity, 'error')
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('paraglide dep but no messages/ → error app-paraglide-not-wired-web', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await makeApp(tmp, { deps: PARAGLIDE_DEPS }) // no paraglideWired
+      const result = await runLiveValidate(tmp)
+      const f = result.findings.find((f) => f.id === 'app-paraglide-not-wired-web')
+      assert.ok(f, `expected app-paraglide-not-wired-web, got: ${JSON.stringify(result.findings.map((x) => x.id))}`)
+      assert.strictEqual(f!.severity, 'error')
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('full Paraglide stack + m usage → no i18n/mantine errors', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await makeApp(tmp, {
+        deps: PARAGLIDE_DEPS,
+        paraglideWired: true,
+        srcFile: {
+          name: 'Page.tsx',
+          body: `import { m } from '@/i18n/messages'\nimport { Button } from '@pikku/mantine/core'\nexport const Page = () => <Button>{m.hello()}</Button>\n`,
+        },
+      })
+      const result = await runLiveValidate(tmp)
+      const i18nErrors = result.findings.filter(
+        (f) =>
+          f.severity === 'error' &&
+          (f.id.startsWith('app-legacy-i18n') ||
+            f.id.startsWith('app-missing-paraglide') ||
+            f.id.startsWith('app-paraglide-not-wired') ||
+            f.id.startsWith('app-raw-mantine') ||
+            f.id.startsWith('app-missing-pikku-mantine'))
+      )
+      assert.strictEqual(
+        i18nErrors.length,
+        0,
+        `unexpected i18n/mantine errors: ${JSON.stringify(i18nErrors.map((x) => x.id))}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  test('scaffold src/i18n/config.ts comment mentioning useTranslation is not flagged legacy', async () => {
+    const tmp = await makeTmp()
+    try {
+      await makeValidProject(tmp)
+      await makeApp(tmp, {
+        deps: PARAGLIDE_DEPS,
+        paraglideWired: true,
+        srcFile: {
+          name: 'i18n/config.ts',
+          body: `// the codemod injects useLocale() wherever const { t } = useTranslation() lived\nexport const useLocale = () => 'en'\n`,
+        },
+      })
+      const result = await runLiveValidate(tmp)
+      assert.ok(
+        !result.findings.some((f) => f.id === 'app-legacy-i18n-usage-web'),
+        `scaffold comment wrongly flagged: ${JSON.stringify(result.findings.map((x) => x.id))}`
+      )
+    } finally {
+      await rm(tmp, { recursive: true, force: true })
+    }
+  })
+})
