@@ -937,10 +937,11 @@ export async function runValidate(
 
       // ── i18n + @pikku/mantine convergence (React frontend apps) ──────────
       // Every frontend converges onto the canonical starter-template stack:
-      // i18n everywhere + components imported from @pikku/mantine/core (whose
-      // I18nNode-typed props make untranslated strings a compile error). A raw
-      // @mantine/core component import bypasses that gate, so hardcoded copy
-      // ships untranslated.
+      // Paraglide JS (inlang) for translation + components imported from
+      // @pikku/mantine/core (whose I18nNode-typed props make untranslated
+      // strings a compile error). A raw @mantine/core import bypasses that gate.
+      // The i18next → Paraglide cutover is hard (no back-compat), so a residual
+      // i18next dep or useTranslation()/useI18n() call is an error.
       const appAllDeps = {
         ...appPkg.dependencies,
         ...appPkg.devDependencies,
@@ -952,41 +953,113 @@ export async function runValidate(
       )
       if (isReactFrontend) {
         const srcFiles = await listSourceFiles(join(appPath, 'src'))
-        let usesT = false
+        let usesMessages = false
         const rawMantineFiles: string[] = []
+        const legacyI18nFiles: string[] = []
         for (const file of srcFiles) {
           const text = await readTextSafe(file)
           if (!text) continue
-          if (/\b(?:useI18n|useTranslation)\s*\(/.test(text)) usesT = true
+          const rel = file.slice(appPath.length + 1)
+          const norm = rel.replace(/\\/g, '/')
+          // Paraglide usage: the reactive useLocale() hook or an import from the
+          // local `@/i18n` scaffold (messages `m`, mKey/mList) — either means
+          // strings flow through compiled messages.
+          if (
+            /\buseLocale\s*\(/.test(text) ||
+            /from\s+['"]@\/i18n(?:\/[\w-]+)?['"]/.test(text)
+          ) {
+            usesMessages = true
+          }
+          // Legacy i18next/react-i18next/@pikku/react-i18n markers — removed by
+          // the cutover. The scaffold's own config.ts names these in comments,
+          // so skip src/i18n/ and match imports/hook calls, not bare words.
+          if (
+            !/(?:^|\/)i18n\//.test(norm) &&
+            (/from\s+['"](?:react-i18next|i18next|@pikku\/react\/i18n)['"]/.test(
+              text
+            ) ||
+              /\buseTranslation\s*\(/.test(text) ||
+              /\buseI18n\s*\(/.test(text))
+          ) {
+            legacyI18nFiles.push(rel)
+          }
           // component import from @mantine/core — the trailing quote excludes
           // the `@mantine/core/styles.css` side-effect import and @mantine/hooks
           if (/from\s+['"]@mantine\/core['"]/.test(text)) {
-            rawMantineFiles.push(file.slice(appPath.length + 1))
+            rawMantineFiles.push(rel)
           }
         }
 
-        const hasI18nDeps = !!(
-          appAllDeps['i18next'] && appAllDeps['react-i18next']
+        const hasParaglideDep = !!appAllDeps['@inlang/paraglide-js']
+        const hasMessagesDir = existsSync(join(appPath, 'messages'))
+        const hasInlangProject = existsSync(
+          join(appPath, 'project.inlang', 'settings.json')
         )
-        if (!hasI18nDeps) {
+        const hasLegacyI18nDeps = !!(
+          appAllDeps['i18next'] || appAllDeps['react-i18next']
+        )
+
+        // 1) i18next must be fully removed — hard cutover to Paraglide.
+        if (hasLegacyI18nDeps) {
           e(
-            `app-missing-i18n-${name}`,
-            `apps/${name} has no i18n stack — every Fabric frontend must be translatable`,
+            `app-legacy-i18next-dep-${name}`,
+            `apps/${name} still depends on i18next/react-i18next — Fabric migrated to Paraglide JS (inlang); the i18next stack must be removed`,
             join(appPath, 'package.json'),
             lines(
-              'Add the canonical single-namespace i18n stack:',
-              '1. deps: "i18next" + "react-i18next".',
-              '2. src/i18n config.ts with a single nested-key `translation` namespace (import.meta.glob auto-registers locale json).',
-              '3. Route every user-visible string through `useI18n()` t() from "@pikku/react/i18n".',
-              'Reference: templates/starter-template/apps/app/src/i18n.'
+              'Remove "i18next", "react-i18next" and "i18next-browser-languagedetector".',
+              'Add "@inlang/paraglide-js" (devDependencies) and the src/i18n scaffold.',
+              'Reference: templates/starter-template/apps/app.'
             )
           )
-        } else if (!usesT && srcFiles.length > 0) {
+        }
+        if (legacyI18nFiles.length > 0) {
+          e(
+            `app-legacy-i18n-usage-${name}`,
+            `apps/${name} still calls useTranslation()/useI18n() or imports i18next in ${legacyI18nFiles.length} file(s) — these are removed by the Paraglide cutover`,
+            join(appPath, 'src'),
+            lines(
+              'Convert legacy i18n usage to Paraglide in:',
+              ...legacyI18nFiles.slice(0, 10).map((f) => `  - ${f}`),
+              ...(legacyI18nFiles.length > 10
+                ? [`  …and ${legacyI18nFiles.length - 10} more`]
+                : []),
+              "Replace `const { t } = useTranslation()` with `useLocale()` from '@/i18n/config',",
+              "and `t('a.b')` with `m.a_b()` from '@/i18n/messages'."
+            )
+          )
+        }
+
+        // 2) Paraglide must be present and wired (messages + inlang project).
+        if (!hasParaglideDep) {
+          e(
+            `app-missing-paraglide-${name}`,
+            `apps/${name} has no Paraglide i18n stack — every Fabric frontend must be translatable`,
+            join(appPath, 'package.json'),
+            lines(
+              'Add the canonical Paraglide stack:',
+              '1. devDep: "@inlang/paraglide-js".',
+              '2. messages/<locale>.json + project.inlang/settings.json (snake_case keys).',
+              '3. src/i18n scaffold: config.ts (useLocale), messages.ts (branded `m`), ident.ts.',
+              '4. vite.config: paraglideVitePlugin({ project: "./project.inlang", outdir: "./src/paraglide" }).',
+              'Route every user-visible string through `m.*()`; reference templates/starter-template/apps/app/src/i18n.'
+            )
+          )
+        } else if (!hasMessagesDir || !hasInlangProject) {
+          e(
+            `app-paraglide-not-wired-${name}`,
+            `apps/${name} declares @inlang/paraglide-js but is missing ${!hasMessagesDir ? 'messages/' : 'project.inlang/settings.json'} — Paraglide cannot compile`,
+            appPath,
+            lines(
+              'Paraglide compiles `messages/<locale>.json` against `project.inlang/settings.json`.',
+              'Create both (snake_case keys) — the generated src/paraglide/ output is gitignored.'
+            )
+          )
+        } else if (!usesMessages && srcFiles.length > 0) {
           w(
             `app-i18n-unused-${name}`,
-            `apps/${name} declares i18next but no component calls useI18n()/useTranslation() — strings are not actually translated`,
+            `apps/${name} ships Paraglide but no component imports from @/i18n or calls useLocale() — strings are not actually translated`,
             appPath,
-            'Wrap user-visible strings in t() from useI18n() ("@pikku/react/i18n").'
+            "Route user-visible strings through `m.*()` from '@/i18n/messages' and subscribe via `useLocale()`."
           )
         }
 
