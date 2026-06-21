@@ -103,7 +103,7 @@ Enabling `session: { cookieCache: { enabled: true } }` makes the CLI split out a
 
 **Do NOT also hand-write a global `addHTTPMiddleware('*', [betterAuthSession()])`** — that re-drags the stateful server into every unit and defeats the split (validate flags it as `better-auth-stateful-session-global`). The generated middleware is enough.
 
-**Custom session fields (`role`, `locale`, …):** the generated stateless middleware uses the default map (`{ userId }` only). A hand-written `betterAuthStatelessSession({ mapSession })` is currently **pre-empted** by the generated one (it runs first and sets the session, so the custom one short-circuits) — see pikkujs/pikku#754. Until that's resolved, apps needing a custom `mapSession` keep the stateful `betterAuthSession({ mapSession })` (no cookieCache) and accept the larger bundles.
+**Custom session fields (`role`, `locale`, …):** the generated stateless middleware uses the default map (`{ userId }` only). To use a custom map, register your own `betterAuthStatelessSession({ mapSession })` **globally** — `addHTTPMiddleware('*', [...])` or `addGlobalMiddleware([...])`. The CLI detects a global user registration and skips generating its own (pikkujs/pikku#754), so you keep cookieCache's lean bundles *and* your custom fields. A route-scoped registration (`addHTTPMiddleware('/some/path', [...])`) does not count — the generated global middleware is still emitted.
 
 ### 2. Production database adapter
 

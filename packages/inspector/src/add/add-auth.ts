@@ -100,20 +100,28 @@ const readPluginId = (el: ts.Expression): string | undefined => {
 }
 
 /**
- * True when `node` sits inside an `addHTTPMiddleware(...)` or
- * `addGlobalMiddleware(...)` call — i.e. it is an actual global middleware
- * registration, not a bare standalone call.
+ * True when `node` sits inside a GLOBAL middleware registration — i.e. an actual
+ * global registration, not a bare standalone call or a route-scoped one.
+ *
+ * `addGlobalMiddleware(...)` is always global. `addHTTPMiddleware` is global only
+ * in its array form (`addHTTPMiddleware([...])`) or with the `'*'` wildcard
+ * pattern; a specific route pattern (`addHTTPMiddleware('/api/admin/*', [...])`)
+ * scopes the middleware to that route and must NOT count as a global stateless
+ * registration (#754).
  */
 const isInsideGlobalMiddlewareRegistration = (node: ts.Node): boolean => {
   let parent: ts.Node | undefined = node.parent
   while (parent) {
-    if (
-      ts.isCallExpression(parent) &&
-      ts.isIdentifier(parent.expression) &&
-      (parent.expression.text === 'addHTTPMiddleware' ||
-        parent.expression.text === 'addGlobalMiddleware')
-    ) {
-      return true
+    if (ts.isCallExpression(parent) && ts.isIdentifier(parent.expression)) {
+      const fn = parent.expression.text
+      if (fn === 'addGlobalMiddleware') return true
+      if (fn === 'addHTTPMiddleware') {
+        const first = parent.arguments[0]
+        if (!first) return false
+        // String first arg → route pattern (global only when '*'); otherwise
+        // the array form, which is global.
+        return ts.isStringLiteral(first) ? first.text === '*' : true
+      }
     }
     parent = parent.parent
   }
