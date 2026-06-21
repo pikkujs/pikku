@@ -21,6 +21,8 @@ jobs:
           node-version: 22
       - name: Check published deps for workspace protocol
         run: node scripts/check-no-workspace-protocol.mjs
+      - name: Check no publish-time CLI rebuild
+        run: node scripts/check-no-publish-time-cli-rebuild.mjs
 
   build:
     name: Build
