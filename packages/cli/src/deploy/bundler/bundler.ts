@@ -186,7 +186,11 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     metafile: true,
     target: 'es2022',
     outfile: bundlePath,
-    minify: false,
+    // Minify every deploy bundle — esbuild output ships straight to the runtime
+    // (CF Workers / container), tsc is never the bundler. keepNames preserves
+    // Function.name / constructor.name so name-based reflection still works.
+    minify: true,
+    keepNames: true,
     sourcemap: sourcemap ?? false,
     logLevel: 'warning',
     loader: { '.ts': 'ts' },
