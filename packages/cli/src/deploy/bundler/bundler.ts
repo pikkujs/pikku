@@ -36,6 +36,22 @@ const SERVICE_GEN_FILE_MAP: Record<string, RegExp> = {
 }
 
 /**
+ * Mapping of service name -> npm module patterns to stub when the service is
+ * NOT required by a deployment unit. Unlike SERVICE_GEN_FILE_MAP these are
+ * external packages, not gen files: a unit that doesn't wire the service never
+ * executes the code path that imports them, so replacing them with `export {}`
+ * keeps their (often large) trees out of the bundle.
+ *
+ * The AI SDKs (@pikku/ai-vercel + @ai-sdk/* + `ai`, ~3MB) are only constructed
+ * when `aiAgentRunner` is wired (agent units). Every non-agent unit stubs them.
+ * The shared services factory must guard the runner construction behind a
+ * defined-check on the dynamic import so a stubbed unit simply skips it.
+ */
+const SERVICE_MODULE_MAP: Record<string, RegExp[]> = {
+  aiAgentRunner: [/^@pikku\/ai-vercel/, /^@ai-sdk\//, /^ai$/],
+}
+
+/**
  * Read the per-unit pikku-services.gen.ts and return the set of gen file
  * patterns that should be stubbed (because their service is not required).
  */
@@ -52,8 +68,13 @@ async function getDeadGenFilePatterns(
     if (match) {
       for (const line of match[1].split('\n')) {
         const kv = line.match(/'([^']+)':\s*false/)
-        if (kv && SERVICE_GEN_FILE_MAP[kv[1]]) {
-          patterns.push(SERVICE_GEN_FILE_MAP[kv[1]])
+        if (!kv) continue
+        const service = kv[1]
+        if (SERVICE_GEN_FILE_MAP[service]) {
+          patterns.push(SERVICE_GEN_FILE_MAP[service])
+        }
+        if (SERVICE_MODULE_MAP[service]) {
+          patterns.push(...SERVICE_MODULE_MAP[service])
         }
       }
     }
