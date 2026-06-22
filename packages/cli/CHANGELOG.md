@@ -1,3 +1,84 @@
+## 0.12.46
+
+### Patch Changes
+
+- 5fe3f47: fix(better-auth): skip the auto-generated stateless session middleware when the
+  project registers its own. Closes #754.
+
+  With `session.cookieCache` enabled the CLI generates a global
+  `betterAuthStatelessSession()` using the default `{ userId }` map. Because session
+  middleware short-circuits once a session is set (`if (session) next()`) and the
+  generated file is imported before user wirings, that default-map middleware ran
+  first and **pre-empted** a project's own `betterAuthStatelessSession({ mapSession })`
+  — silently dropping custom session fields (`role`, `locale`, …).
+
+  The inspector now detects a user-owned global registration (a
+  `betterAuthStatelessSession(...)` call inside `addGlobalMiddleware` or the global
+  form of `addHTTPMiddleware` — the array form or the `'*'` pattern, not a
+  route-scoped `addHTTPMiddleware('/path', …)`; ignoring `.gen.ts` files and bare
+  standalone calls) and
+  sets `state.auth.userStatelessSession`. When set, the CLI skips writing
+  `auth-middleware.gen.ts` (and removes a stale one) so the project's own middleware
+  — with its custom `mapSession` — is the only one registered. Projects without a
+  custom map are unaffected: the default middleware is still generated.
+
+- ef473b4: `pikku fabric validate`: warn when a frontend `apps/<name>` does not declare
+  `@babel/core` in its devDependencies. The scaffolded dev vite config (from
+  generate-frontend-runtime) imports `@babel/core` to tag JSX with `data-om-id`
+  for design alt-click editing; it only resolves transitively via
+  `@vitejs/plugin-react`, so declaring it explicitly stops that resolution from
+  silently drifting away and breaking the instrumentation.
+- 67ef7b7: `pikku fabric validate`: convergence checks for the canonical frontend stack. Every React app must ship **Paraglide JS** (inlang) for i18n — `@inlang/paraglide-js` plus a wired `messages/<locale>.json` + `project.inlang/settings.json`, with strings routed through `m.*()` / `useLocale()` from the `@/i18n` scaffold. The i18next → Paraglide cutover is hard (no back-compat): a residual `i18next`/`react-i18next` dependency, or a leftover `useTranslation()`/`useI18n()` call or `i18next` import, is now an error. Apps must still import Mantine components from `@pikku/mantine/core` (not raw `@mantine/core`, which bypasses the i18n-typed compile gate), and each module-singleton-sensitive dep (vite, @tanstack/start-plugin-core, react, react-dom) must resolve to a single physical copy (a second copy splits TanStack Start dev SSR and 404s the frontend).
+- 6b70ec4: feat(fabric-validate): warn when better-auth units won't tree-shake. `pikku
+fabric validate` now flags two anti-patterns that force every non-auth unit to
+  bundle the full better-auth server (~2.5MB each, bloating bundles and the serial
+  deploy uploads): (1) a `pikkuBetterAuth` config that doesn't enable
+  `session.cookieCache` — fix by adding `session: { cookieCache: { enabled: true } }`
+  so the CLI splits out the lean `betterAuthStatelessSession`; and (2) a
+  hand-written global `addHTTPMiddleware('*', [betterAuthSession()])` that pulls the
+  stateful bridge into every unit. Both are `warn` severity. Note: a custom
+  `mapSession` is currently pre-empted by the generated stateless middleware
+  (pikkujs/pikku#754), so the stateful workaround stays valid until that's resolved.
+- 33157b9: perf(deploy): minify every deploy bundle (~50% smaller workers)
+
+  The per-unit deploy bundler ran esbuild with `minify: false` — the unminified
+  output shipped straight to the runtime (CF Workers / server container), even
+  though tsc/esbuild, not the runtime, does the bundling. Enabling `minify: true`
+  halves every unit's `bundle.js` (e.g. a DB-backed HTTP unit 1205KB → 722KB,
+  auth-handler 2167KB → 1067KB), which directly cuts the serial CF upload time on
+  deploy. `keepNames: true` preserves `Function.name` / `constructor.name` so any
+  name-based reflection keeps working. Verified against the cloudflare deploy
+  verifier: 21/21 checks pass, total unit bytes 50.3MB → 29.0MB.
+
+- 3ba12ca: Stop consumed-addon parent services from polluting every per-unit deploy bundle, and stub the AI SDKs out of non-agent units.
+
+  `aggregateRequiredServices` added `addonRequiredParentServices` (the services a consumed addon needs from its parent — e.g. `aiAgentRunner`, `deploymentService`, `metaService`) to **every** unit's `requiredServices` unconditionally. For any project that consumes an addon, this marked those services required on all units, so the per-unit service tree-shaking (and the gen-file/module stubs that key off the `false` flags) never fired — every unit shipped the full set. These parent services are now added only to units that actually deploy an addon function (its `pikkuFuncId` appears in `usedFunctions`); a unit that only calls the addon over RPC, or never touches it, no longer carries them.
+
+  On the back of the now-honest flags, the bundler stubs the AI SDK packages (`@pikku/ai-vercel`, `@ai-sdk/*`, `ai`) out of any unit where `aiAgentRunner` is not required, via a new service→module stub map alongside the existing gen-file stub map. The shared services factory must guard runner construction behind a defined-check on the dynamic import so a stubbed unit simply skips building the runner.
+
+- 5905864: perf(deploy): stub the Postgres driver out of Cloudflare worker bundles
+
+  Templates construct their Kysely instance from `DATABASE_URL`, branching on the
+  URL scheme: a `postgres://` URL pulls in `postgres` + `kysely-postgres-js`, any
+  other URL uses the libsql/Turso dialect. On Cloudflare the URL is always libsql,
+  so the Postgres branch is never taken — yet esbuild still inlined the Postgres
+  driver (~40KB+) into every worker bundle as dead weight.
+
+  Adds a `getStubModules()` provider hook (mirroring `getExternals()`): regex
+  sources for modules the provider's runtime never executes, stubbed to `export {}`
+  during bundling. The Cloudflare adapter returns `^postgres$` + `^kysely-postgres-js$`.
+  Unlike `getExternals`, a stub removes the bytes entirely instead of leaving a
+  bare runtime import to resolve. Applied to worker units only (the server
+  container keeps Postgres, since it's a real Node process that may use it).
+  Verified: cloudflare deploy verifier 21/21; a `postgres` import bundles to 48
+  bytes (was 38,032) once stubbed.
+
+- Updated dependencies [5fe3f47]
+- Updated dependencies [3ba12ca]
+- Updated dependencies [5905864]
+  - @pikku/inspector@0.12.24
+  - @pikku/deploy-cloudflare@0.12.4
+
 ## 0.12.45
 
 ### Patch Changes

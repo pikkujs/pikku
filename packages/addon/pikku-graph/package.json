@@ -1,6 +1,6 @@
 {
   "name": "@pikku/addon-graph",
-  "version": "0.12.3",
+  "version": "0.12.4",
   "type": "module",
   "imports": {
     "#pikku": {
@@ -31,7 +31,7 @@
     "zod": "^4"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.22",
+    "@pikku/cli": "^0.12.46",
     "@pikku/core": "*",
     "typescript": "^5.9.3",
     "zod": "^4"
