@@ -1,3 +1,15 @@
+## 0.12.23
+
+### Patch Changes
+
+- e11a963: PikkuHTTPProvider: add a `credentials` prop (default `'include'`) that flows
+  through to the underlying pikku instance, including the `usePikkuSSE` fetch.
+  Cross-origin bearer-token setups (e.g. Fabric's sandbox runtime, served behind
+  wildcard CORS without `Access-Control-Allow-Credentials`) can now pass
+  `credentials="omit"` so the SSE/HTTP fetch isn't rejected at the CORS preflight.
+  Same-origin cookie-auth consumers are unaffected by the default.
+- 7be656f: Fix the email HTML tab overflowing its parent: CodeMirror had no width constraint, so long lines sized the editor to content and grew the preview panel past its container. Set CodeMirror `width="100%"` and add `minWidth: 0` down the flex chain so the editor scrolls internally instead of widening the layout.
+
 ## 0.12.22
 
 ### Patch Changes

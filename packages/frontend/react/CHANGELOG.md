@@ -1,5 +1,12 @@
 # @pikku/react
 
+## 0.12.4
+
+### Patch Changes
+
+- 68c69b5: **Breaking:** removed the react-i18next shim. The `@pikku/react/i18n` subpath export (`useI18n()`, `I18nProvider`) and the `i18next`/`react-i18next` peer dependencies are gone. `@pikku/react` now contributes only the i18n _brand_ (`I18nString`, `I18nNode`, `asI18n`) from the package root; apps own their reactive locale store via a Paraglide JS scaffold (`m()` / `useLocale()`). Migrate `const { t } = useI18n()` call sites to Paraglide's `m`. The brand is structurally Paraglide's `LocalizedString`, so `m()` satisfies the `@pikku/mantine` gate natively.
+- 15bf10a: `I18nString` is now branded with the string literal `'LocalizedString'` (`string & { readonly __brand: 'LocalizedString' }`) instead of an internal `unique symbol`. This makes it **structurally identical to Paraglide JS's `LocalizedString`**, so a Paraglide `m()` message satisfies the brand — and the `@pikku/mantine` i18n gate — natively, with no wrapper and with full per-message tree-shaking. Backward compatible: `asI18n()` / `t()` still produce `I18nString`, and bare `string` is still rejected by the gate (it has no `__brand`). A new type-level test in `@pikku/mantine` pins the brand literal so a future Paraglide rename fails loudly.
+
 ## 0.12.3
 
 ### Patch Changes

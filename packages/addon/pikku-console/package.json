@@ -1,6 +1,6 @@
 {
   "name": "@pikku/addon-console",
-  "version": "0.12.16",
+  "version": "0.12.17",
   "type": "module",
   "imports": {
     "#pikku": {
@@ -39,7 +39,7 @@
     "@pikku/core": "^0.12.35"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.45",
+    "@pikku/cli": "^0.12.46",
     "@pikku/core": "^0.12.35",
     "oauth2-mock-server": "^7.1.1",
     "typescript": "^5.9"

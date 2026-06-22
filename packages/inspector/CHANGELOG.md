@@ -1,3 +1,33 @@
+## 0.12.24
+
+### Patch Changes
+
+- 5fe3f47: fix(better-auth): skip the auto-generated stateless session middleware when the
+  project registers its own. Closes #754.
+
+  With `session.cookieCache` enabled the CLI generates a global
+  `betterAuthStatelessSession()` using the default `{ userId }` map. Because session
+  middleware short-circuits once a session is set (`if (session) next()`) and the
+  generated file is imported before user wirings, that default-map middleware ran
+  first and **pre-empted** a project's own `betterAuthStatelessSession({ mapSession })`
+  — silently dropping custom session fields (`role`, `locale`, …).
+
+  The inspector now detects a user-owned global registration (a
+  `betterAuthStatelessSession(...)` call inside `addGlobalMiddleware` or the global
+  form of `addHTTPMiddleware` — the array form or the `'*'` pattern, not a
+  route-scoped `addHTTPMiddleware('/path', …)`; ignoring `.gen.ts` files and bare
+  standalone calls) and
+  sets `state.auth.userStatelessSession`. When set, the CLI skips writing
+  `auth-middleware.gen.ts` (and removes a stale one) so the project's own middleware
+  — with its custom `mapSession` — is the only one registered. Projects without a
+  custom map are unaffected: the default middleware is still generated.
+
+- 3ba12ca: Stop consumed-addon parent services from polluting every per-unit deploy bundle, and stub the AI SDKs out of non-agent units.
+
+  `aggregateRequiredServices` added `addonRequiredParentServices` (the services a consumed addon needs from its parent — e.g. `aiAgentRunner`, `deploymentService`, `metaService`) to **every** unit's `requiredServices` unconditionally. For any project that consumes an addon, this marked those services required on all units, so the per-unit service tree-shaking (and the gen-file/module stubs that key off the `false` flags) never fired — every unit shipped the full set. These parent services are now added only to units that actually deploy an addon function (its `pikkuFuncId` appears in `usedFunctions`); a unit that only calls the addon over RPC, or never touches it, no longer carries them.
+
+  On the back of the now-honest flags, the bundler stubs the AI SDK packages (`@pikku/ai-vercel`, `@ai-sdk/*`, `ai`) out of any unit where `aiAgentRunner` is not required, via a new service→module stub map alongside the existing gen-file stub map. The shared services factory must guard runner construction behind a defined-check on the dynamic import so a stubbed unit simply skips building the runner.
+
 ## 0.12.23
 
 ### Patch Changes
