@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite'
 import {
   copyFileSync,
+  existsSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
@@ -30,13 +31,20 @@ export function createDbUtils(options: {
       const base = join(scratchDir, 'base.db')
       const db = new DatabaseSync(base)
       try {
-        const migrations = readdirSync(options.migrationsDir)
-          .filter((f) => f.endsWith('.sql'))
-          .sort()
-        for (const file of migrations) {
-          db.exec(readFileSync(join(options.migrationsDir, file), 'utf8'))
+        // migrationsDir/seedFile are optional: a project without a db (or whose
+        // engine dir/seed is absent) still gets a usable empty base db rather
+        // than crashing on scandir('').
+        if (options.migrationsDir && existsSync(options.migrationsDir)) {
+          const migrations = readdirSync(options.migrationsDir)
+            .filter((f) => f.endsWith('.sql'))
+            .sort()
+          for (const file of migrations) {
+            db.exec(readFileSync(join(options.migrationsDir, file), 'utf8'))
+          }
         }
-        db.exec(readFileSync(options.seedFile, 'utf8'))
+        if (options.seedFile && existsSync(options.seedFile)) {
+          db.exec(readFileSync(options.seedFile, 'utf8'))
+        }
       } finally {
         db.close()
       }

@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process'
 import { pikkuSessionlessFunc } from '#pikku'
 import { NotFoundError } from '@pikku/core'
 import type { FunctionCoverageReport } from './get-function-coverage.function.js'
+import { resolveFunctionsDir } from '../lib/function-tests-paths.js'
 
 function findBin(name: string, searchFrom: string): string {
   let dir = searchFrom
@@ -31,7 +32,7 @@ export const runFunctionTests = pikkuSessionlessFunc<
       throw new Error('Meta service is not configured. Ensure the console addon is set up with a MetaService.')
     }
 
-    const functionsDir = join(metaService.basePath, '..')
+    const functionsDir = resolveFunctionsDir(metaService.basePath)
     const ftestDir = join(functionsDir, 'tests')
     if (!existsSync(ftestDir)) {
       throw new NotFoundError(
