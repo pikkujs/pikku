@@ -1,24 +1,24 @@
+import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import test from 'node:test'
 
-import { getServerUrl, setServerUrl } from './serverUrl.ts'
+import { getServerUrl, setServerUrl } from './serverUrl.js'
 
 class MemoryStorage {
-  values = new Map()
+  values = new Map<string, string>()
 
-  getItem(key) {
+  getItem(key: string): string | null {
     return this.values.get(key) ?? null
   }
 
-  setItem(key, value) {
+  setItem(key: string, value: string): void {
     this.values.set(key, value)
   }
 }
 
-const originalWindow = globalThis.window
-const originalLocalStorage = globalThis.localStorage
+const originalWindow = (globalThis as any).window
+const originalLocalStorage = (globalThis as any).localStorage
 
-const installBrowserState = (url) => {
+const installBrowserState = (url: string): MemoryStorage => {
   const storage = new MemoryStorage()
   Object.defineProperty(globalThis, 'window', {
     configurable: true,

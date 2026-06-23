@@ -1,7 +1,7 @@
+import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import test from 'node:test'
 
-import { getTestStreamErrorMessage } from './testsStreamError.ts'
+import { getTestStreamErrorMessage } from './testsStreamError.js'
 
 test('prefers the structured message field when present', () => {
   assert.equal(
