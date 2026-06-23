@@ -1,6 +1,6 @@
 ---
 '@pikku/addon-console': patch
-'@pikku/cli': minor
+'@pikku/cli': patch
 '@pikku/cucumber': patch
 ---
 
