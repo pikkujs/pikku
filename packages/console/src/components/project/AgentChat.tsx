@@ -47,7 +47,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { useAgentPlayground } from '../../context/AgentPlaygroundContext'
-import { getServerUrl } from '../../context/PikkuRpcProvider'
+import { getServerUrl } from '../../context/serverUrl'
 import classes from '../ui/console.module.css'
 
 const ToolCallDisplay: React.FC<{

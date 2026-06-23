@@ -1,27 +1,7 @@
 import { createContext, useContext, useMemo } from 'react'
 
 import { pikku } from '../pikku/http'
-
-const STORAGE_KEY = 'pikku-server-url'
-const DEFAULT_SERVER_URL = 'http://localhost:4002'
-
-export const getServerUrl = (): string => {
-  try {
-    const params = new URLSearchParams(window.location.search)
-    const serverParam = params.get('server')
-    if (serverParam) {
-      localStorage.setItem(STORAGE_KEY, serverParam)
-      return serverParam
-    }
-    return localStorage.getItem(STORAGE_KEY) || DEFAULT_SERVER_URL
-  } catch {
-    return DEFAULT_SERVER_URL
-  }
-}
-
-export const setServerUrl = (url: string) => {
-  localStorage.setItem(STORAGE_KEY, url)
-}
+import { getServerUrl } from './serverUrl'
 
 type PikkuInstance = ReturnType<typeof pikku>
 type PikkuHTTP = PikkuInstance['fetch']

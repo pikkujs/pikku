@@ -56,9 +56,8 @@ export {
   usePikkuHTTP,
   usePikkuRPC,
   usePikkuSSE,
-  getServerUrl,
-  setServerUrl,
 } from './context/PikkuRpcProvider'
+export { getServerUrl, setServerUrl } from './context/serverUrl'
 export { pikku } from './pikku/http'
 export { PikkuMetaProvider, usePikkuMeta } from './context/PikkuMetaContext'
 export {
