@@ -31,7 +31,7 @@ import { RunsPanel } from '../components/layout/RunsPanel'
 import { AgentChat } from '../components/project/AgentChat'
 import { useDeleteAgentThread } from '../hooks/useAgentRuns'
 import { useAgentCredentials } from '../hooks/useAgentCredentials'
-import { getServerUrl } from '../context/PikkuRpcProvider'
+import { getServerUrl } from '../context/serverUrl'
 
 const CredentialPrompt: React.FC<{
   requirements: Array<{

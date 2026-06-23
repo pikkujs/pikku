@@ -12,7 +12,7 @@ import {
   Alert,
 } from '@pikku/mantine/core'
 import { AlertTriangle } from 'lucide-react'
-import { getServerUrl, setServerUrl } from '../../context/PikkuRpcProvider'
+import { getServerUrl, setServerUrl } from '../../context/serverUrl'
 import { m, mKey } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { asI18n } from '@pikku/react'
