@@ -26,6 +26,7 @@ import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import classes from '../components/ui/console.module.css'
 import LiveRunView, { type CucumberStatus, type LiveScenario, type LiveStep } from './LiveRunView'
+import { getTestStreamErrorMessage, type TestStreamErrorEvent } from './testsStreamError'
 
 type RunPhase = 'idle' | 'pending' | 'running'
 type GroupBy = 'feature' | 'function'
@@ -464,7 +465,7 @@ type TestStreamEvent =
   | { type: 'step'; scenarioId: string; step: string; status: CucumberStatus; duration: number; message?: string }
   | { type: 'scenario-done'; id: string; name: string; status: CucumberStatus }
   | { type: 'done'; coverage: CoverageReport | null }
-  | { type: 'error'; message: string }
+  | TestStreamErrorEvent
 
 
 export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseCoverage }) => {
@@ -546,7 +547,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseC
         } else if (event.type === 'error') {
           sseRef.current?.close()
           sseRef.current = null
-          setRunError(event.message)
+          setRunError(getTestStreamErrorMessage(event))
           setLiveScenarios([])
           setRunPhase('idle')
         }
@@ -576,6 +577,10 @@ export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseC
   }
 
   const running = runPhase !== 'idle'
+  const emptyStateDescription =
+    runError?.toLowerCase().includes('no function-test harness found')
+      ? asI18n('Initialize the function-test harness, then run tests again.')
+      : m.tests_empty_description()
 
   const header = (
     <ListPageHeader
@@ -589,6 +594,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseC
         showRunButton ? (
           <Group gap="xs">
             <Button
+              type="button"
               size="xs"
               leftSection={
                 running ? <Loader size={12} color="white" /> : <Play size={14} />
@@ -601,6 +607,7 @@ export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseC
             </Button>
             {onIncreaseCoverage && (
               <Button
+                type="button"
                 size="xs"
                 variant="default"
                 leftSection={<FlaskConical size={14} />}
@@ -690,7 +697,8 @@ export const TestsPage: React.FC<TestsPageProps> = ({ showRunButton, onIncreaseC
           <EmptyStatePlaceholder
             icon={FlaskConical}
             title={m.tests_empty_title()}
-            description={m.tests_empty_description()}
+            description={emptyStateDescription}
+            code="pikku tests init"
             docsHref="https://pikku.dev/docs/core-features/testing"
           />
         ) : (

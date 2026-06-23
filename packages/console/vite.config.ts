@@ -27,6 +27,8 @@ export default defineConfig({
     proxy: {
       '/rpc': { target: 'http://localhost:7103', changeOrigin: true },
       '/api': { target: 'http://localhost:7103', changeOrigin: true },
+      '/function-tests': { target: 'http://localhost:7103', changeOrigin: true },
+      '/workflow-run': { target: 'http://localhost:7103', changeOrigin: true },
     },
   },
   build: {
