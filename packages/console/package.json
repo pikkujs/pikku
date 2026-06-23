@@ -1,6 +1,6 @@
 {
   "name": "@pikku/console",
-  "version": "0.12.22",
+  "version": "0.12.23",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -74,8 +74,8 @@
   "devDependencies": {
     "@inlang/paraglide-js": "^2.20.0",
     "@mantine/colors-generator": "^8.3.18",
-    "@pikku/addon-console": "^0.12.15",
-    "@pikku/cli": "^0.12.44",
+    "@pikku/addon-console": "^0.12.17",
+    "@pikku/cli": "^0.12.46",
     "@pikku/websocket": "^0.12.1",
     "@types/chroma-js": "^3",
     "@types/lodash": "^4",
