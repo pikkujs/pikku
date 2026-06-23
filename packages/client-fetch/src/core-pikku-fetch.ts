@@ -254,6 +254,8 @@ export class CorePikkuFetch {
             handler(parsed)
           }
         }
+        // Clean EOF before caller called close() = unexpected stream termination.
+        if (!closed) throw new Error('SSE stream closed unexpectedly')
       } catch (err) {
         if (!closed) onError?.(err)
       }
