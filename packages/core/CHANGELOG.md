@@ -1,3 +1,11 @@
+## 0.12.36
+
+### Patch Changes
+
+- f6adc1c: LocalMetaService.getEmailMeta no longer caches — it reads the generated
+  pikku-emails-meta.gen.json fresh on each call (a local JSON read is cheap),
+  so newly-generated email templates surface without restarting the process.
+
 ## 0.12.35
 
 ### Patch Changes

@@ -1,3 +1,13 @@
+## 0.12.24
+
+### Patch Changes
+
+- 5783ff5: Extract `getServerUrl`/`setServerUrl` into a standalone, unit-tested `serverUrl` module (now defaults to the current origin instead of hardcoded localhost) and move test-stream error handling into a tested `testsStreamError` helper. Adds a clearer empty state + `pikku tests init` hint when no function-test harness is found, and proxies `/function-tests` and `/workflow-run` in the console dev server.
+- Updated dependencies [f6adc1c]
+- Updated dependencies [ade6f0b]
+  - @pikku/core@0.12.36
+  - @pikku/fetch@0.12.4
+
 ## 0.12.23
 
 ### Patch Changes
