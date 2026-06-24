@@ -43,7 +43,7 @@ export const addGateway: AddWiring = (
 
   const nameValue = getPropertyValue(obj, 'name') as string | null
   const typeValue = getPropertyValue(obj, 'type') as GatewayTransportType | null
-  const routeValue = getPropertyValue(obj, 'route') as string | undefined
+  const routeValue = getPropertyValue(obj, 'route') as string | null
   const platformValue = getPropertyValue(obj, 'platform') as string | null
   const authValue = getPropertyValue(obj, 'auth')
   const { disabled, tags, summary, description, errors } =
@@ -96,7 +96,7 @@ export const addGateway: AddWiring = (
     ...(packageName && { packageName }),
     name: nameValue,
     type: typeValue,
-    route: routeValue,
+    ...(routeValue && { route: routeValue }),
     ...(platformValue && { platform: platformValue }),
     ...(typeof authValue === 'boolean' && { auth: authValue }),
     gateway: true,
