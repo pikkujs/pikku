@@ -327,7 +327,10 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       }
 
       if (gateways) {
-        allImports.push(config.gatewaysWiringFile)
+        allImports.push(
+          config.gatewaysWiringMetaFile,
+          config.gatewaysWiringFile
+        )
       }
 
       await workflow.do('MCP JSON', 'pikkuMCPJSON', null)

@@ -2,7 +2,9 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { WiringService } from './wiring.service.js'
 
-const makeMetaService = (overrides: Record<string, () => Promise<unknown>> = {}) => ({
+const makeMetaService = (
+  overrides: Record<string, () => Promise<unknown>> = {}
+) => ({
   readFile: async (_path: string) => null,
   getFunctionsMeta: async () => ({}),
   getHttpMeta: async () => ({}),
@@ -12,6 +14,7 @@ const makeMetaService = (overrides: Record<string, () => Promise<unknown>> = {})
   getSchedulerMeta: async () => ({}),
   getRpcMeta: async () => ({}),
   getMcpMeta: async () => ({}),
+  getGatewayMeta: async () => ({}),
   getWorkflowMeta: async () => ({}),
   getTriggerMeta: async () => ({}),
   getTriggerSourceMeta: async () => ({}),

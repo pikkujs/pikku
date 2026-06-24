@@ -26,6 +26,7 @@ import type {
   PermissionMetadata,
 } from '../types/core.types.js'
 import type { AIAgentMeta } from '../wirings/ai-agent/ai-agent.types.js'
+import type { GatewaysMeta } from '../wirings/gateway/gateway.types.js'
 
 // Re-export core types for consumers
 export type {
@@ -166,6 +167,7 @@ export interface MetaService {
   getQueueMeta(): Promise<QueueWorkersMeta>
   getCliMeta(): Promise<CLIMeta>
   getMcpMeta(): Promise<MCPMeta>
+  getGatewayMeta(): Promise<GatewaysMeta>
   getRpcMeta(): Promise<RPCMetaRecord>
   getWorkflowMeta(): Promise<WorkflowsMeta>
   getTriggerMeta(): Promise<TriggerMeta>
@@ -203,6 +205,7 @@ export class LocalMetaService implements MetaService {
   private queueMetaCache: QueueWorkersMeta | null = null
   private cliMetaCache: CLIMeta | null = null
   private mcpMetaCache: MCPMeta | null = null
+  private gatewayMetaCache: GatewaysMeta | null = null
   private rpcMetaCache: RPCMetaRecord | null = null
   private workflowMetaCache: WorkflowsMeta | null = null
   private triggerMetaCache: TriggerMeta | null = null
@@ -252,6 +255,7 @@ export class LocalMetaService implements MetaService {
     this.queueMetaCache = null
     this.cliMetaCache = null
     this.mcpMetaCache = null
+    this.gatewayMetaCache = null
     this.rpcMetaCache = null
     this.workflowMetaCache = null
     this.triggerMetaCache = null
@@ -355,6 +359,17 @@ export class LocalMetaService implements MetaService {
       this.mcpMetaCache = { resources: {}, tools: {}, prompts: {} }
     }
     return this.mcpMetaCache!
+  }
+
+  async getGatewayMeta(): Promise<GatewaysMeta> {
+    if (this.gatewayMetaCache) return this.gatewayMetaCache
+
+    const content = await this.readMetaJson(
+      'gateway',
+      'pikku-gateway-wirings-meta'
+    )
+    this.gatewayMetaCache = content ? JSON.parse(content) : {}
+    return this.gatewayMetaCache!
   }
 
   async getRpcMeta(): Promise<RPCMetaRecord> {

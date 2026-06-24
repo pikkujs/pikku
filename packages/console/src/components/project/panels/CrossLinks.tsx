@@ -11,6 +11,7 @@ const TYPE_HREF: Record<string, string> = {
   http: '/apis?tab=http',
   channel: '/apis?tab=channels',
   mcp: '/apis?tab=mcp',
+  gateway: '/apis?tab=gateways',
   cli: '/apis?tab=cli',
   rpc: '/apis?tab=http',
   scheduler: '/jobs?tab=schedulers',

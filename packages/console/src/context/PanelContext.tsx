@@ -10,6 +10,7 @@ export type PanelType =
   | 'queue'
   | 'cli'
   | 'mcp'
+  | 'gateway'
   | 'workflowStep'
   | 'workflow'
   | 'trigger'
@@ -53,6 +54,7 @@ interface PanelContextType {
   openQueue: (queueId: string, metadata?: any) => void
   openCLI: (cliId: string, metadata?: any) => void
   openMCP: (mcpId: string, metadata?: any) => void
+  openGateway: (gatewayId: string, metadata?: any) => void
   openWorkflowStep: (stepId: string, stepType: string, metadata?: any) => void
   openWorkflow: (workflowId: string, metadata?: any) => void
   openTrigger: (triggerId: string, metadata?: any) => void
@@ -172,6 +174,13 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({ children }) => {
   const openMCP = useCallback(
     (mcpId: string, metadata?: any) => {
       openPanelGeneric('mcp', mcpId, mcpId, metadata)
+    },
+    [openPanelGeneric]
+  )
+
+  const openGateway = useCallback(
+    (gatewayId: string, metadata?: any) => {
+      openPanelGeneric('gateway', gatewayId, metadata?.name || gatewayId, metadata)
     },
     [openPanelGeneric]
   )
@@ -382,6 +391,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({ children }) => {
         openQueue,
         openCLI,
         openMCP,
+        openGateway,
         openWorkflowStep,
         openWorkflow,
         openTrigger,

@@ -29,6 +29,8 @@ export interface PikkuCLICoreOutputFiles {
 
   // Gateways
   gatewaysWiringFile: string
+  gatewaysWiringMetaFile: string
+  gatewaysWiringMetaJsonFile: string
 
   // Channels
   channelsWiringFile: string

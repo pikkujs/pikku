@@ -140,6 +140,8 @@ export type GatewayMeta = CommonWireMeta & {
   name: string
   type: GatewayTransportType
   route?: string
+  platform?: string
+  auth?: boolean
   gateway: true
 }
 
