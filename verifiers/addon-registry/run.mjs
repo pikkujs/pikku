@@ -95,6 +95,7 @@ writeFileSync(
 console.log(`  recorded pikku-addons.json (${ADDON_PKG}@${version})`)
 
 // 4. Build + type-check the consumer against the linked addon
+rmSync(join(consumerDir, '.pikku'), { recursive: true, force: true })
 run('consumer: pikku all', 'node', [PIKKU, 'all'], consumerDir)
 run('consumer: tsc --noEmit', TSC, ['--noEmit', '-p', 'tsconfig.json'], consumerDir)
 
