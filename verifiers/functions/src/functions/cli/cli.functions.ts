@@ -89,8 +89,8 @@ export const createUser = pikkuFunc<
     created: string
   }
 >({
-  func: async (services, { username, email, admin }) => {
-    services.logger.info(`Creating user: ${username}`)
+  func: async ({ logger }, { username, email, admin }) => {
+    logger.info(`Creating user: ${username}`)
 
     return {
       id: Math.floor(Math.random() * 10000),
@@ -150,8 +150,8 @@ export const processFile = pikkuFunc<
     size: number
   }
 >({
-  func: async (services, { path, action, backup }) => {
-    services.logger.info(`Processing file: ${path} with action: ${action}`)
+  func: async ({ logger }, { path, action, backup }) => {
+    logger.info(`Processing file: ${path} with action: ${action}`)
 
     // Mock file processing
     return {

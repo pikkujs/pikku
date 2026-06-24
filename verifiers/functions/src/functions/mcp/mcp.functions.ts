@@ -8,8 +8,8 @@ import {
 export const sayHello = pikkuMCPToolFunc<{ name?: string }>({
   description: 'Greet someone with a friendly hello message',
   tags: ['greeting', 'hello', 'demo'],
-  func: async (services, { name = 'World' }, {}) => {
-    services.logger.info(`Saying hello to: ${name}`)
+  func: async ({ logger }, { name = 'World' }, {}) => {
+    logger.info(`Saying hello to: ${name}`)
 
     return [
       {
@@ -22,7 +22,7 @@ export const sayHello = pikkuMCPToolFunc<{ name?: string }>({
 
 export const disableTool = pikkuMCPToolFunc<{ name: string }>({
   description: 'Disable a tool by name',
-  func: async (services, { name }, { mcp }) => {
+  func: async ({}, { name }, { mcp }) => {
     const changed = await mcp.enableTools({ [name]: false })
     if (changed) {
       return [
@@ -50,7 +50,7 @@ export const calculate = pikkuMCPToolFunc<{
   description:
     'Perform basic mathematical operations (add, subtract, multiply, divide)',
   tags: ['math', 'calculator', 'arithmetic'],
-  func: async ({ logger }, { operation, a, b }, wire) => {
+  func: async ({ logger }, { operation, a, b }, {}) => {
     logger.info(`Calculating: ${a} ${operation} ${b}`)
 
     let result: number
@@ -139,7 +139,7 @@ export const getUserInfo = pikkuMCPResourceFunc<{ userId: string }>(
  * A progress enhancement example prompt that shows how to create dynamic prompts with arguments
  */
 export const staticPromptGenerator = pikkuMCPPromptFunc<unknown>(
-  async (services, data, wire) => {
+  async ({}, _data, {}) => {
     return [
       {
         role: 'user',
@@ -159,8 +159,8 @@ export const dynamicPromptGenerator = pikkuMCPPromptFunc<{
   topic: string
   complexity: 'beginner' | 'intermediate' | 'advanced'
   includeExamples?: string
-}>(async (services, { topic, complexity, includeExamples = false }, wire) => {
-  services.logger.info(
+}>(async ({ logger }, { topic, complexity, includeExamples = false }, {}) => {
+  logger.info(
     `Generating progressive enhancement content for: ${topic} (${complexity})`
   )
 
