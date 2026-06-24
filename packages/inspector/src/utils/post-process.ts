@@ -661,6 +661,14 @@ export function computeDiagnostics(state: InspectorState): void {
   const diagnostics: InspectorDiagnostic[] = []
 
   for (const [id, meta] of Object.entries(state.functions.meta)) {
+    // Skip framework-synthesized functions: generated wrappers (auth.gen.ts's
+    // opaque authHandler, the cli channel's raw dispatcher) and synthetic route
+    // bridges that reference addon functions (id `http:<method>:<route>`, no
+    // source file). The user can't edit any of these, so a destructure lint
+    // meant to nudge them about their own code must not fail the build over them.
+    if (!meta.sourceFile || meta.sourceFile.endsWith('.gen.ts')) {
+      continue
+    }
     if (meta.services && !meta.services.optimized) {
       diagnostics.push({
         code: ErrorCode.SERVICES_NOT_DESTRUCTURED,
