@@ -3,9 +3,8 @@ import { functionMiddleware } from '../middleware/function.js'
 import { functionPermission } from '../permissions/function.js'
 
 export const channelSendFunction = pikkuVoidFunc({
-  func: async ({ logger }, _input, wire) => {
+  func: async ({ logger }, _input, { channel }: any) => {
     logger.info({ type: 'function', name: 'channelSend', phase: 'execute' })
-    const channel = (wire as any).channel
     if (channel) {
       await channel.send({ type: 'test-response' })
     }

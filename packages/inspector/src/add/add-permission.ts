@@ -1,4 +1,5 @@
 import * as ts from 'typescript'
+import type { FunctionWiresMeta } from '@pikku/core'
 import type { AddWiring, InspectorState } from '../types.js'
 import {
   extractFunctionName,
@@ -195,7 +196,11 @@ export const addPermission: AddWiring = (logger, node, checker, state) => {
     }
 
     const services = extractServicesFromFunction(actualHandler)
-    const wires = extractUsedWires(actualHandler, 1)
+    // pikkuAuth's handler is (services, session) — its second parameter is the
+    // resolved user session, NOT a wires bag, so it must not be analyzed (or
+    // flagged) as a non-destructured wires parameter. pikkuAuth exposes no
+    // user-facing wires parameter.
+    const wires: FunctionWiresMeta = { optimized: true, wires: [] }
     let { pikkuFuncId, exportedName } = extractFunctionName(
       node,
       checker,
