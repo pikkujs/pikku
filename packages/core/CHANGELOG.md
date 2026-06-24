@@ -1,3 +1,10 @@
+## 0.12.37
+
+### Patch Changes
+
+- ae7fc5d: Include gateway platform and auth fields in inspected gateway metadata.
+- fa7a09c: Add gateway metadata generation and display enabled gateways in the console.
+
 ## 0.12.36
 
 ### Patch Changes
