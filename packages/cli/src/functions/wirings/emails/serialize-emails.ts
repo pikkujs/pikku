@@ -183,6 +183,8 @@ export function renderEmailTemplate<TName extends EmailTemplateName>(
         subject,
       }).trim()
     : undefined
+  const hash = (template.hashes[locale]?.contentHash ??
+    '') as RenderedEmail<TName>['hash']
 
   return {
     name: input.name,
@@ -191,9 +193,8 @@ export function renderEmailTemplate<TName extends EmailTemplateName>(
     html,
     ...(text ? { text } : {}),
     variables: template.variables,
-    hash: template.hashes[locale]?.contentHash ?? '',
-  } as RenderedEmail<TName>
+    hash,
+  }
 }
 `
 }
-
