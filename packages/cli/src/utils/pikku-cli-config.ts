@@ -216,6 +216,18 @@ const _getPikkuCLIConfig = async (
         'pikku-gateway-wirings.gen.ts'
       )
     }
+    if (!result.gatewaysWiringMetaFile) {
+      result.gatewaysWiringMetaFile = join(
+        gatewayDir,
+        'pikku-gateway-wirings-meta.gen.ts'
+      )
+    }
+    if (!result.gatewaysWiringMetaJsonFile) {
+      result.gatewaysWiringMetaJsonFile = join(
+        gatewayDir,
+        'pikku-gateway-wirings-meta.gen.json'
+      )
+    }
 
     // Channels/WebSocket
     if (!result.channelsWiringFile) {

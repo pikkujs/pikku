@@ -43,6 +43,7 @@ import {
   TriggerConfiguration,
   TriggerSourceConfiguration,
 } from '../project/panels/WiringPanels'
+import { GatewayConfiguration } from '../project/panels/GatewayConfiguration'
 import { MiddlewareConfiguration } from '../project/panels/MiddlewarePanels'
 import { PermissionConfiguration } from '../project/panels/PermissionsPanels'
 import { AgentConfiguration } from '../project/panels/AgentPanels'
@@ -355,6 +356,22 @@ export const createPanelChildren = (panelData: PanelData): PanelChild[] => {
           content: (
             <Box px="md">
               <McpConfiguration
+                wireId={panelData.id}
+                metadata={panelData.metadata}
+              />
+            </Box>
+          ),
+        },
+      ]
+
+    case 'gateway':
+      return [
+        {
+          id: 'configuration',
+          title: 'Configuration',
+          content: (
+            <Box px="md">
+              <GatewayConfiguration
                 wireId={panelData.id}
                 metadata={panelData.metadata}
               />

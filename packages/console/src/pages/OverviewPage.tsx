@@ -21,6 +21,7 @@ import {
   Clock,
   ListOrdered,
   Mail,
+  Network,
 } from 'lucide-react'
 import type { I18nString } from '@pikku/react'
 import { m } from '@/i18n/messages'
@@ -140,6 +141,12 @@ export const OverviewPage: React.FC = () => {
       count: counts.mcpTools,
       icon: Cpu,
       href: '/apis?tab=mcp',
+    },
+    {
+      label: m.overview_gateways(),
+      count: counts.gateways,
+      icon: Network,
+      href: '/apis?tab=gateways',
     },
     {
       label: m.overview_cli_commands(),

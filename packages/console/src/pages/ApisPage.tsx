@@ -8,25 +8,33 @@ import { HttpTab } from '../components/tabs/HttpTab'
 import { ChannelsTab } from '../components/tabs/ChannelsTab'
 import { McpTab } from '../components/tabs/McpTab'
 import { CliTab } from '../components/tabs/CliTab'
+import { GatewaysTab } from '../components/tabs/GatewaysTab'
 import { m, mKey } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 
-type ApisTab = 'http' | 'channels' | 'mcp' | 'cli'
+type ApisTab = 'http' | 'channels' | 'mcp' | 'cli' | 'gateways'
 
 const SEARCH_PLACEHOLDER_KEY: Record<ApisTab, string> = {
   http: 'apis.search.http',
   channels: 'apis.search.channels',
   mcp: 'apis.search.mcp',
   cli: 'apis.search.cli',
+  gateways: 'apis.search.gateways',
 }
 
 type ApisPageProps = {
   httpHero?: React.ReactNode
   channelsHero?: React.ReactNode
   mcpHero?: React.ReactNode
+  gatewaysHero?: React.ReactNode
 }
 
-const ApisPageInner: React.FC<ApisPageProps> = ({ httpHero, channelsHero, mcpHero }) => {
+const ApisPageInner: React.FC<ApisPageProps> = ({
+  httpHero,
+  channelsHero,
+  mcpHero,
+  gatewaysHero,
+}) => {
   useLocale()
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
@@ -35,7 +43,8 @@ const ApisPageInner: React.FC<ApisPageProps> = ({ httpHero, channelsHero, mcpHer
     rawTab === 'http' ||
     rawTab === 'channels' ||
     rawTab === 'mcp' ||
-    rawTab === 'cli'
+    rawTab === 'cli' ||
+    rawTab === 'gateways'
       ? rawTab
       : 'http'
 
@@ -52,6 +61,8 @@ const ApisPageInner: React.FC<ApisPageProps> = ({ httpHero, channelsHero, mcpHer
         return <McpTab searchQuery={searchQuery} emptyHero={mcpHero} />
       case 'cli':
         return <CliTab searchQuery={searchQuery} />
+      case 'gateways':
+        return <GatewaysTab searchQuery={searchQuery} emptyHero={gatewaysHero} />
       default:
         return <HttpTab searchQuery={searchQuery} emptyHero={httpHero} />
     }
@@ -80,6 +91,7 @@ const ApisPageInner: React.FC<ApisPageProps> = ({ httpHero, channelsHero, mcpHer
                 { value: 'channels', label: m.apis_tab_channels() },
                 { value: 'mcp', label: m.apis_tab_mcp() },
                 { value: 'cli', label: m.apis_tab_cli() },
+                { value: 'gateways', label: m.apis_tab_gateways() },
               ],
             }}
           />

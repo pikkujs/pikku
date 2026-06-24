@@ -56,6 +56,7 @@ export const SettingsPage: React.FC = () => {
               <MetaStat label={m.settings_stat_http_routes()} count={counts.httpRoutes} />
               <MetaStat label={m.settings_stat_channels()} count={counts.channels} />
               <MetaStat label={m.settings_stat_mcp_tools()} count={counts.mcpTools} />
+              <MetaStat label={m.settings_stat_gateways()} count={counts.gateways} />
               <MetaStat label={m.settings_stat_cli_commands()} count={counts.cliCommands} />
               <MetaStat label={m.settings_stat_schedulers()} count={counts.schedulers} />
               <MetaStat label={m.settings_stat_queues()} count={counts.queues} />

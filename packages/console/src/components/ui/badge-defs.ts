@@ -64,6 +64,7 @@ export const wiringTypeDefs: Record<string, EnumBadgeDef> = {
   http: { color: 'green', label: 'HTTP' },
   channel: { color: 'cyan', label: 'Channel' },
   mcp: { color: 'orange', label: 'MCP' },
+  gateway: { color: 'teal', label: 'Gateway' },
   cli: { color: 'teal', label: 'CLI' },
   rpc: { color: 'indigo', label: 'RPC' },
   scheduler: { color: 'yellow', label: 'Scheduler' },
