@@ -1,3 +1,12 @@
+## 0.12.25
+
+### Patch Changes
+
+- fa7a09c: Add gateway metadata generation and display enabled gateways in the console.
+- Updated dependencies [ae7fc5d]
+- Updated dependencies [fa7a09c]
+  - @pikku/core@0.12.37
+
 ## 0.12.24
 
 ### Patch Changes

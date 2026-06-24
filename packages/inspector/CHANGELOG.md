@@ -1,3 +1,30 @@
+## 0.12.25
+
+### Patch Changes
+
+- b6ba601: fix(lint): don't flag pikkuAuth's session param as a non-destructured wire
+
+  `pikkuAuth`'s handler is `(services, session)` — the second parameter is the
+  resolved user session, not a wires bag. The inspector was extracting "wires"
+  from that parameter (`extractUsedWires(handler, 1)`), so a permission like
+  `pikkuAuth(async ({ logger }, session) => !!session)` tripped
+  `wiresNotDestructured` even though `session` cannot be destructured. pikkuAuth
+  exposes no user-facing wires parameter, so no wires meta is recorded for it.
+
+- ae7fc5d: Include gateway platform and auth fields in inspected gateway metadata.
+- decdad5: fix(lint): don't fail the build on framework-synthesized functions
+
+  The `servicesNotDestructured`/`wiresNotDestructured` defaults (`error`) were
+  tripping on functions the user can't edit: generated `.gen.ts` wrappers (the
+  opaque `authHandler`, the cli channel raw dispatcher) and synthetic route→addon
+  bridges (`http:<method>:<route>`, no source file). `computeDiagnostics` now skips
+  any function without a real, non-generated source file, so the lint only nudges
+  hand-written user code. Also destructures the CLI's own `all` command.
+
+- Updated dependencies [ae7fc5d]
+- Updated dependencies [fa7a09c]
+  - @pikku/core@0.12.37
+
 ## 0.12.24
 
 ### Patch Changes

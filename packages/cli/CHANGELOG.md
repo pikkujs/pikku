@@ -1,3 +1,38 @@
+## 0.12.48
+
+### Patch Changes
+
+- b6ba601: fix(lint): don't flag pikkuAuth's session param as a non-destructured wire
+
+  `pikkuAuth`'s handler is `(services, session)` — the second parameter is the
+  resolved user session, not a wires bag. The inspector was extracting "wires"
+  from that parameter (`extractUsedWires(handler, 1)`), so a permission like
+  `pikkuAuth(async ({ logger }, session) => !!session)` tripped
+  `wiresNotDestructured` even though `session` cannot be destructured. pikkuAuth
+  exposes no user-facing wires parameter, so no wires meta is recorded for it.
+
+- cac0380: Fix generated email renderer hash typing for generic template names.
+- fa7a09c: Add gateway metadata generation and display enabled gateways in the console.
+- 1de0ea4: Default `servicesNotDestructured` and `wiresNotDestructured` lint rules to `'error'`
+
+  Both rules now fail the build by default. A non-destructured `services`/`wire` param hides which services/transports a function uses (defeating tree-shaking) and usually masks a missing type behind a cast that silently drifts. The whole `wire` is never genuinely needed — destructure the transport you use (`{ rpc }`, `{ http }`, `{ channel }`). Projects can override either rule to `'warn'`/`'off'` in `pikku.config.json`.
+
+- decdad5: fix(lint): don't fail the build on framework-synthesized functions
+
+  The `servicesNotDestructured`/`wiresNotDestructured` defaults (`error`) were
+  tripping on functions the user can't edit: generated `.gen.ts` wrappers (the
+  opaque `authHandler`, the cli channel raw dispatcher) and synthetic route→addon
+  bridges (`http:<method>:<route>`, no source file). `computeDiagnostics` now skips
+  any function without a real, non-generated source file, so the lint only nudges
+  hand-written user code. Also destructures the CLI's own `all` command.
+
+- Updated dependencies [b6ba601]
+- Updated dependencies [ae7fc5d]
+- Updated dependencies [fa7a09c]
+- Updated dependencies [decdad5]
+  - @pikku/inspector@0.12.25
+  - @pikku/core@0.12.37
+
 ## 0.12.47
 
 ### Patch Changes
