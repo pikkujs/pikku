@@ -112,13 +112,16 @@ export type CoreGateway<
   PikkuFunctionConfig = CorePikkuFunctionConfig<any, any>,
   PikkuPermission extends CorePikkuPermission = CorePikkuPermission,
   PikkuMiddleware extends CorePikkuMiddleware = CorePikkuMiddleware,
-> = {
+> = Partial<
+  Pick<CommonWireMeta, 'title' | 'summary' | 'description' | 'errors'>
+> & {
   /** Unique name for this gateway */
   name: string
   /** Transport type */
   type: GatewayTransportType
   /** HTTP route for webhook/websocket types */
   route?: string
+  platform?: string
   /** The gateway adapter (parse inbound, send outbound) */
   adapter: GatewayAdapter
   /** The handler function that processes parsed messages */
