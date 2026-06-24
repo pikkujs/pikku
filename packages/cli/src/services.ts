@@ -48,7 +48,11 @@ const DIAGNOSTIC_CODE_TO_LINT_KEY: Record<
 }
 
 // Default severity for each lint rule when not explicitly configured.
-// 'error' routes through logger.critical and always fails the build.
+// 'error' routes through logger.critical and always fails the build. Both
+// default to 'error': a non-destructured services/wire param hides which
+// services/transports a function uses (defeating tree-shaking) and usually masks
+// a missing type behind a cast. The whole `wire` is never genuinely needed —
+// destructure the transport you use (`{ rpc }`, `{ http }`, `{ channel }`).
 const LINT_DEFAULTS: NonNullable<PikkuCLIConfig['lint']> = {
   servicesNotDestructured: 'error',
   wiresNotDestructured: 'error',
