@@ -5,7 +5,7 @@ export const ultimateAgent = pikkuAIAgent({
   name: 'ultimate-agent',
   description:
     'Workflow architect — has access to all tools and is responsible for creating and executing workflows',
-  instructions:
+  goal:
     'You are a workflow architect. Your primary job is to create, save, and execute workflows that chain tools together. ' +
     'You have access to todo management, email, and a rich set of graph utility tools (sleep, math, string transforms, array operations, data manipulation). ' +
     'When asked to create a workflow, design it with clear node names and proper data wiring between steps. ' +

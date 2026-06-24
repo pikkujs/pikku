@@ -18,6 +18,7 @@ export type PikkuConsoleSetVariableInput = {
   value: unknown
 }
 export type PikkuConsoleSetVariableOutput = { success: boolean }
+export type RemoteRPCHandlerInput = { rpcName: string; data?: unknown }
 export type RpcCallerInput = { rpcName: string; data?: unknown }
 
 interface RPCHandler<I, O> {
