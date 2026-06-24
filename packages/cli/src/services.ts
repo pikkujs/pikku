@@ -47,13 +47,20 @@ const DIAGNOSTIC_CODE_TO_LINT_KEY: Record<
   [ErrorCode.WIRES_NOT_DESTRUCTURED]: 'wiresNotDestructured',
 }
 
+// Default severity for each lint rule when not explicitly configured.
+// 'error' routes through logger.critical and always fails the build.
+const LINT_DEFAULTS: NonNullable<PikkuCLIConfig['lint']> = {
+  servicesNotDestructured: 'error',
+  wiresNotDestructured: 'error',
+}
+
 function processDiagnostics(
   diagnostics: InspectorDiagnostic[],
   lint?: PikkuCLIConfig['lint']
 ): void {
   for (const diagnostic of diagnostics) {
     const lintKey = DIAGNOSTIC_CODE_TO_LINT_KEY[diagnostic.code]
-    const severity = lintKey ? (lint?.[lintKey] ?? 'off') : 'off'
+    const severity = lintKey ? (lint?.[lintKey] ?? LINT_DEFAULTS[lintKey] ?? 'off') : 'off'
     if (severity === 'error') {
       logger.critical(diagnostic.code as ErrorCode, diagnostic.message)
     } else if (severity === 'warn') {
