@@ -618,6 +618,10 @@ describe('pikku fabric validate', () => {
           ),
           'expected missing-ai-sdk-openai-compatible'
         )
+        assert.ok(
+          result.findings.some((f) => f.id === 'missing-ai-sdk-core'),
+          'expected missing-ai-sdk-core'
+        )
       } finally {
         await rm(tmp, { recursive: true, force: true })
       }
@@ -632,7 +636,8 @@ describe('pikku fabric validate', () => {
           !result.findings.some(
             (f) =>
               f.id === 'missing-ai-vercel' ||
-              f.id === 'missing-ai-sdk-openai-compatible'
+              f.id === 'missing-ai-sdk-openai-compatible' ||
+              f.id === 'missing-ai-sdk-core'
           )
         )
       } finally {

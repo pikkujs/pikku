@@ -652,6 +652,17 @@ export async function runValidate(
           'Run `yarn add @ai-sdk/openai-compatible` in packages/functions — must be in dependencies, not devDependencies'
         )
       }
+      // `ai` is a peer dep of @pikku/ai-vercel — not auto-installed. Without it
+      // `pikku dev` can't construct the agent runner and agents 503 with
+      // AIProviderNotConfiguredError.
+      if (!fnPkg?.dependencies?.['ai']) {
+        e(
+          'missing-ai-sdk-core',
+          'Project declares agent units but `ai` (the Vercel AI SDK) is not in packages/functions dependencies — it is a peer dependency of @pikku/ai-vercel and is not installed automatically',
+          fnPkgPath,
+          'Run `yarn add ai` in packages/functions — must be in dependencies, not devDependencies'
+        )
+      }
     }
 
     // services.ts
