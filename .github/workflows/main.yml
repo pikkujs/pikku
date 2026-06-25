@@ -26,6 +26,11 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      # Templates prerender better-auth during `build:templates`; it now requires
+      # BETTER_AUTH_SECRET (mapSession assertion errors no longer swallowed).
+      # Build-only dummy, ≥32 chars — never a real secret.
+      BETTER_AUTH_SECRET: ci-build-only-better-auth-secret-not-real
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
