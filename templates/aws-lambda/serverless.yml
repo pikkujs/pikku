@@ -18,6 +18,9 @@ provider:
   environment:
     NODE_OPTIONS: --enable-source-maps
     NODE_ENV: production
+    # better-auth reads this at runtime; serverless-offline only injects declared
+    # env vars (not the parent shell), so map it through from the deploy env.
+    BETTER_AUTH_SECRET: ${env:BETTER_AUTH_SECRET, ''}
 
 functions:
   http:
