@@ -5,9 +5,26 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [
+    {
+      name: 'pikku-generated-client-resolver',
+      resolveId(source, importer) {
+        if (
+          importer?.includes('/src/pikku/') &&
+          source.match(/^\.\/pikku-(fetch|rpc)\.gen\.js$/)
+        ) {
+          return path.resolve(
+            path.dirname(importer),
+            source.replace(/\.js$/, '.ts')
+          )
+        }
+      },
+    },
     // Compile messages/*.json → src/paraglide so `m`/`mKey` resolve, with HMR
     // on message edits. Must run first.
-    paraglideVitePlugin({ project: './project.inlang', outdir: './src/paraglide' }),
+    paraglideVitePlugin({
+      project: './project.inlang',
+      outdir: './src/paraglide',
+    }),
     react(),
   ],
   resolve: {
@@ -27,7 +44,10 @@ export default defineConfig({
     proxy: {
       '/rpc': { target: 'http://localhost:7103', changeOrigin: true },
       '/api': { target: 'http://localhost:7103', changeOrigin: true },
-      '/function-tests': { target: 'http://localhost:7103', changeOrigin: true },
+      '/function-tests': {
+        target: 'http://localhost:7103',
+        changeOrigin: true,
+      },
       '/workflow-run': { target: 'http://localhost:7103', changeOrigin: true },
     },
   },
