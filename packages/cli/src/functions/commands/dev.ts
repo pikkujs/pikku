@@ -35,6 +35,7 @@ import {
   type ResolvedDb,
 } from '../db/local-db.js'
 import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
+import { createDevAIAgentRunner } from './dev-ai-runner.js'
 
 export const dev = pikkuSessionlessFunc<
   { port?: string; watch?: boolean; hmr?: boolean },
@@ -241,8 +242,18 @@ export const dev = pikkuSessionlessFunc<
     // can read runs in dev without projects having to wire their own backing
     // store.
     const devLogger = new ConsoleLogger()
+    // Deployed agent units get their runner from the bundler; the dev server
+    // has no equivalent, so construct one from env or agents 503 with
+    // AIProviderNotConfiguredError. The template forwards injected services
+    // (`...existingServices`) so this reaches getSingletonServices().
+    const aiAgentRunner = await createDevAIAgentRunner({
+      logger,
+      projectRoot: config.rootDir,
+      variables,
+    })
     const inMemoryServices = {
       logger: devLogger,
+      ...(aiAgentRunner ? { aiAgentRunner } : {}),
       emailService: new LocalEmailService(),
       metaService: new LocalMetaService(pikkuDir),
       schedulerService,
