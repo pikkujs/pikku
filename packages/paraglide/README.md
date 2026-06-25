@@ -25,13 +25,14 @@ generates `src/i18n/i18n-enum.gen.ts`:
 import { m } from './messages.js'
 import type { I18nString } from '@pikku/react'
 
-export type EnumI18n<E extends string> = Record<E, () => I18nString>
+export type I18nMessage = () => I18nString
+export type EnumLabel<E extends string> = Record<E, I18nMessage>
 
 export const health = {
   idle: m.enum__health__idle,
   backlogged: m.enum__health__backlogged,
   flowing: m.enum__health__flowing,
-} satisfies EnumI18n<'idle' | 'backlogged' | 'flowing'>
+} satisfies EnumLabel<'idle' | 'backlogged' | 'flowing'>
 export type HealthKey = keyof typeof health
 ```
 
@@ -42,9 +43,40 @@ import { health } from './i18n/i18n-enum.gen.js'
 const label = health[value]() // value: HealthKey
 ```
 
-Because the value is a `() => I18nString` thunk, the label resolves at call time and
-tracks the active locale. Because the map is keyed by the member union, adding a new
-enum member is a type error until the catalog has its `enum__health__<member>` entry.
+Because the value is an `I18nMessage` (a `() => I18nString` accessor), the label resolves
+at call time and tracks the active locale. Because the map is keyed by the member union,
+adding a new enum member is a type error until the catalog has its
+`enum__health__<member>` entry.
+
+## Reconciliation against the database
+
+The database is the real source of truth for what an enum can be. When you point the
+generator at the pikku CLI's generated DB enums module (`enums.gen.ts` — Postgres native
+enums and SQLite `CHECK (col IN (…))` constraints alike), each catalog group whose member
+set **exactly matches** a DB enum is typed against that enum:
+
+```ts
+import type { HealthStatus } from '#pikku/db/enums.gen'
+
+export const health = {
+  idle: m.enum__health__idle,
+  // …
+} satisfies EnumLabel<HealthStatus> // ← the DB enum, not the catalog union
+```
+
+`EnumLabel<HealthStatus>` is `Record<HealthStatus, …>`, so the label map **is** the
+reconciliation — no separate assertion:
+
+- catalog drops a DB member, or `en.json` is missing the key → the `m.enum__…` reference
+  or the `Record` exhaustiveness fails `tsc`, naming the gap;
+- a DB enum that has **no** catalog group → by default a label map is generated for it
+  referencing `enum__<table>_<column>__<member>` keys, so `tsc` tells you exactly which
+  keys to add (set `unmatchedDbEnums: 'warn'` to only report instead);
+- a group with a member the DB doesn't have (a derived UI state) → a drift warning
+  suggesting you make it a standalone message rather than an enum member.
+
+Defining a label for an enum that's never rendered costs nothing — Paraglide compiles
+only the messages actually referenced, so unused labels are tree-shaken away.
 
 ### Member naming
 
@@ -66,15 +98,22 @@ export default defineConfig({
     paraglideEnums({
       catalog: './messages/en.json',
       outFile: './src/i18n/i18n-enum.gen.ts',
+      // optional: reconcile against the DB enum columns
+      enumsFile: './packages/functions/.pikku/db/enums.gen.ts',
     }),
   ],
 })
 ```
+
+`enumsImport` (the specifier the generated file uses to import the DB types) defaults to a
+relative path from `outFile` to `enumsFile`; pass it explicitly to use a package mapping
+like `#pikku/db/enums.gen`.
 
 ## CLI
 
 For CI / non-Vite flows, run right after `paraglide-js compile`:
 
 ```sh
-paraglide-enums ./messages/en.json ./src/i18n/i18n-enum.gen.ts
+# paraglide-enums <catalog.json> <out.gen.ts> [messagesImport] [enums.gen.ts]
+paraglide-enums ./messages/en.json ./src/i18n/i18n-enum.gen.ts ./messages.js ./packages/functions/.pikku/db/enums.gen.ts
 ```
