@@ -94,8 +94,10 @@ export function generateEnumsSource(keys: string[], options: GenerateEnumsOption
     `// Source of truth: the \`${opts.prefix}${opts.separator}*\` keys in the message catalog.\n` +
     `import { m } from '${opts.messagesImport}'\n` +
     `import type { I18nString } from '${opts.i18nImport}'\n\n` +
+    `/** A message accessor — call it at render time so the label tracks the active locale. */\n` +
+    `export type I18nMessage = () => I18nString\n` +
     `/** A static, exhaustive map from an enum member to its branded i18n label. */\n` +
-    `export type EnumI18n<E extends string> = Record<E, () => I18nString>\n`
+    `export type EnumI18n<E extends string> = Record<E, I18nMessage>\n`
 
   if (groups.length === 0) {
     return `${header}\n// No \`${opts.prefix}${opts.separator}*\` keys found in the catalog.\n`
