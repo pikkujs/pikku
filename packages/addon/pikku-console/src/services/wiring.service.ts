@@ -3,6 +3,7 @@ import type { ChannelMeta as CoreChannelMeta } from '@pikku/core/channel'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { resolveFunctionsDir } from '../lib/function-tests-paths.js'
 import type {
   FunctionsMeta,
   AgentsMeta,
@@ -586,9 +587,29 @@ async function loadFunctionTests(
     // ignore — no config or unreadable
   }
 
+  // Canonical harness layout, anchored on the SAME functions dir the run
+  // handlers and `pikku tests coverage` write to (see function-tests-paths.ts):
+  // `<functionsDir>/tests/.coverage/function-coverage.json` and
+  // `<functionsDir>/tests/tests/reports/cucumber-report.html`.
+  const basePath =
+    metaSource &&
+    typeof metaSource === 'object' &&
+    'basePath' in metaSource &&
+    typeof metaSource.basePath === 'string'
+      ? metaSource.basePath
+      : typeof metaSource === 'string'
+        ? metaSource
+        : null
+  const functionsDir = basePath ? resolveFunctionsDir(basePath) : null
+
+  // Relative fallbacks for non-standard layouts / `tests.outputDir` overrides.
   const coverageCandidates = testsOutputDir
-    ? [`../${testsOutputDir}/coverage/function-coverage.json`]
+    ? [
+        `../${testsOutputDir}/.coverage/function-coverage.json`,
+        `../${testsOutputDir}/coverage/function-coverage.json`,
+      ]
     : [
+        '../tests/.coverage/function-coverage.json',
         '../function-tests/coverage/function-coverage.json',
         'function-tests/coverage/function-coverage.json',
       ]
@@ -598,11 +619,17 @@ async function loadFunctionTests(
         `../${testsOutputDir}/reports/cucumber-report.html`,
       ]
     : [
+        '../tests/tests/reports/cucumber-report.html',
         '../function-tests/tests/reports/cucumber-report.html',
         'function-tests/tests/reports/cucumber-report.html',
       ]
 
   const coverageContent =
+    (functionsDir
+      ? await readOptionalFile(
+          join(functionsDir, 'tests', '.coverage', 'function-coverage.json')
+        )
+      : null) ??
     (
       await Promise.all(
         coverageCandidates.map((path) => readOptionalMetaFile(metaSource, path))
@@ -611,6 +638,17 @@ async function loadFunctionTests(
     null
 
   const cucumberHtml =
+    (functionsDir
+      ? await readOptionalFile(
+          join(
+            functionsDir,
+            'tests',
+            'tests',
+            'reports',
+            'cucumber-report.html'
+          )
+        )
+      : null) ??
     (
       await Promise.all(
         cucumberCandidates.map((path) => readOptionalMetaFile(metaSource, path))
