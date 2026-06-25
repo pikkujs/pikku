@@ -7,6 +7,13 @@ on:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
+# better-auth now throws on a missing BETTER_AUTH_SECRET (mapSession errors no
+# longer swallowed), so every job that builds/prerenders/runs a template needs
+# it present. Inherited by all jobs (build, templates, verifiers, e2e) and by
+# spawned bundles via process.env. Build-only dummy, ≥32 chars — never a real secret.
+env:
+  BETTER_AUTH_SECRET: ci-build-only-better-auth-secret-not-real
+
 jobs:
   validate-deps:
     name: Validate Package Deps
@@ -26,11 +33,6 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      # Templates prerender better-auth during `build:templates`; it now requires
-      # BETTER_AUTH_SECRET (mapSession assertion errors no longer swallowed).
-      # Build-only dummy, ≥32 chars — never a real secret.
-      BETTER_AUTH_SECRET: ci-build-only-better-auth-secret-not-real
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
