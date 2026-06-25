@@ -144,6 +144,10 @@ export const streamFunctionTests = pikkuSessionlessFunc<null, TestStreamEvent>({
           'tests/tests/features/**/*.feature',
           '--format',
           'message',
+          // Also persist the HTML report so scenarios survive past the live
+          // run — readAllMeta() parses it to attach tests to each function.
+          '--format',
+          'html:tests/tests/reports/cucumber-report.html',
         ],
         { cwd: functionsDir, env: spawnEnv, stdio: ['ignore', 'pipe', 'pipe'] }
       )
