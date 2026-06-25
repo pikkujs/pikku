@@ -153,6 +153,19 @@ case "$TEMPLATE_NAME" in
         ;;
 esac
 
+# Cloudflare workers run in workerd, which reads secrets from the `env` binding,
+# not the host process.env. wrangler dev loads `.dev.vars` into that binding, so
+# write the build-only better-auth secret there for the test run (dev-only file,
+# never committed). Non-CF templates read process.env directly and skip this.
+case "$TEMPLATE_NAME" in
+    cloudflare-workers|cloudflare-websocket)
+        if [ -n "$BETTER_AUTH_SECRET" ]; then
+            log_info "Writing .dev.vars for $TEMPLATE_NAME (wrangler env binding)..."
+            echo "BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET" > .dev.vars
+        fi
+        ;;
+esac
+
 # Run tests
 log_info "Running tests..."
 if [ -n "$TEMPLATE_V8_COVERAGE_DIR" ]; then
