@@ -23,6 +23,10 @@ async function makeValidProject(root: string) {
     outDir: 'packages/functions/.pikku',
     scaffold: {
       console: 'no-auth',
+      rpc: true,
+      agent: 'no-auth',
+      workflow: 'no-auth',
+      events: true,
     },
     clientFiles: {
       rpcMapDeclarationFile:
@@ -82,7 +86,7 @@ async function makeValidProject(root: string) {
   })
   await writeFile(
     join(root, '.gitignore'),
-    '.pikku\n.pikku-runtime\n.opencode\n*.gen.ts\n*.gen.js\n',
+    '.pikku\n.pikku-runtime\n.opencode\n__fabric_scaffold.vite.config.mjs\n*.gen.ts\n*.gen.js\n',
     'utf8'
   )
 }
@@ -237,6 +241,58 @@ describe('pikku fabric validate', () => {
       }
     })
 
+    test('empty scaffold → error for console/rpc/agent/workflow, warn for events', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'pikku.config.json'), {
+          srcDirectories: ['packages/functions/src'],
+          outDir: 'packages/functions/.pikku',
+          scaffold: {
+            pikkuDir: 'packages/functions/src/scaffold',
+            // console/rpc/agent/workflow/events all omitted
+          },
+          clientFiles: {
+            rpcMapDeclarationFile:
+              'packages/functions-sdk/src/pikku/rpc-map.gen.d.ts',
+          },
+        })
+        const result = await runLiveValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const byId = (id: string) => result.findings.find((f) => f.id === id)
+        for (const key of ['console', 'rpc', 'agent', 'workflow']) {
+          const f = byId(`pikku-config-no-scaffold-${key}`)
+          assert.ok(f, `expected error for scaffold.${key}`)
+          assert.strictEqual(f!.severity, 'error')
+        }
+        const events = byId('pikku-config-no-scaffold-events')
+        assert.ok(events, 'expected events finding')
+        assert.strictEqual(events!.severity, 'warn')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('full canonical scaffold → no scaffold findings', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp) // console/rpc/agent/workflow/events all set
+        const result = await runLiveValidate(tmp)
+        assert.ok(
+          !result.findings.some((f) =>
+            f.id.startsWith('pikku-config-no-scaffold-')
+          ),
+          `unexpected scaffold findings: ${JSON.stringify(
+            result.findings
+              .filter((f) => f.id.startsWith('pikku-config-no-scaffold-'))
+              .map((f) => f.id)
+          )}`
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
     test('missing clientFiles → info (not an error)', async () => {
       const tmp = await makeTmp()
       try {
@@ -246,6 +302,7 @@ describe('pikku fabric validate', () => {
           outDir: 'packages/functions/.pikku',
           scaffold: {
             console: 'no-auth',
+            agent: 'no-auth',
           },
         })
         const result = await runValidate(tmp)
@@ -255,6 +312,84 @@ describe('pikku fabric validate', () => {
         )
         assert.ok(finding)
         assert.strictEqual(finding!.severity, 'info')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('.gitignore generated/runtime artifacts', () => {
+    test('missing entries → warn listing them', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        // .gitignore without .opencode, .pikku-runtime, the scaffold vite config
+        await writeFile(
+          join(tmp, '.gitignore'),
+          '.pikku\n*.gen.ts\n*.gen.js\n',
+          'utf8'
+        )
+        const result = await runLiveValidate(tmp)
+        const finding = result.findings.find(
+          (f) => f.id === 'gitignore-missing-generated'
+        )
+        assert.ok(finding)
+        assert.strictEqual(finding!.severity, 'warn') // warn — does not block ok
+        assert.ok(finding!.message.includes('.opencode'))
+        assert.ok(finding!.message.includes('.pikku-runtime'))
+        assert.ok(finding!.message.includes('__fabric_scaffold.vite.config.mjs'))
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('missing .pikku and gen-file ignore → flagged', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          join(tmp, '.gitignore'),
+          '.opencode\n.pikku-runtime\n__fabric_scaffold.vite.config.mjs\n',
+          'utf8'
+        )
+        const result = await runLiveValidate(tmp)
+        const finding = result.findings.find(
+          (f) => f.id === 'gitignore-missing-generated'
+        )
+        assert.ok(finding)
+        assert.ok(finding!.message.includes('.pikku'))
+        assert.ok(finding!.message.includes('*.gen.*'))
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('*.gen.* glob satisfies the gen-file requirement', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeFile(
+          join(tmp, '.gitignore'),
+          '.opencode\n.pikku\n.pikku-runtime\n__fabric_scaffold.vite.config.mjs\n*.gen.*\n',
+          'utf8'
+        )
+        const result = await runLiveValidate(tmp)
+        assert.ok(
+          !result.findings.some((f) => f.id === 'gitignore-missing-generated')
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('canonical .gitignore (gen.ts + gen.js pair) → no finding', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp) // writes the canonical .gitignore
+        const result = await runLiveValidate(tmp)
+        assert.ok(
+          !result.findings.some((f) => f.id === 'gitignore-missing-generated')
+        )
       } finally {
         await rm(tmp, { recursive: true, force: true })
       }

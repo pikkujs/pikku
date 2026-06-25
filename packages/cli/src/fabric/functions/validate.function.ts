@@ -238,6 +238,13 @@ export async function runValidate(
     srcDirectories?: unknown
     outDir?: unknown
     clientFiles?: unknown
+    scaffold?: {
+      console?: unknown
+      rpc?: unknown
+      agent?: unknown
+      workflow?: unknown
+      events?: unknown
+    }
     db?: {
       engine?: 'sqlite' | 'postgres'
     }
@@ -294,8 +301,114 @@ export async function runValidate(
         )
       )
     }
+    // Each scaffold key gates generation of a public surface the Fabric console
+    // calls. Missing one means those endpoints are never generated, so the
+    // console 404s even though the functions/agents/workflows are wired. The
+    // generated file paths auto-derive from the flag (see pikku-cli-config), so
+    // setting the flag is sufficient. console/rpc/agent/workflow gate HTTP/RPC
+    // endpoints the console hits directly → error; events gates the realtime
+    // channel (feature-dependent, no template ships it yet) → warn.
+    const REQUIRED_SCAFFOLD: Array<{
+      key: 'console' | 'rpc' | 'agent' | 'workflow' | 'events'
+      severity: 'error' | 'warn'
+      surface: string
+      value: string
+    }> = [
+      {
+        key: 'console',
+        severity: 'error',
+        surface:
+          'app introspection (console:getFunctionsMeta and friends) — the sandbox builder shows no functions',
+        value: '"no-auth"',
+      },
+      {
+        key: 'rpc',
+        severity: 'error',
+        surface: 'the generic /rpc/:name endpoint',
+        value: 'true',
+      },
+      {
+        key: 'agent',
+        severity: 'error',
+        surface:
+          'the agent endpoints (/rpc/agent/:agentName) — the agent playground 404s',
+        value: '"no-auth"',
+      },
+      {
+        key: 'workflow',
+        severity: 'error',
+        surface:
+          'the workflow endpoints (/workflow/:workflowName/start) — triggering a workflow 404s',
+        value: '"no-auth"',
+      },
+      {
+        key: 'events',
+        severity: 'warn',
+        surface: 'the realtime events channel',
+        value: 'true',
+      },
+    ]
+    for (const s of REQUIRED_SCAFFOLD) {
+      if (pikkuConfig.scaffold?.[s.key]) continue
+      const report = s.severity === 'error' ? e : w
+      report(
+        `pikku-config-no-scaffold-${s.key}`,
+        `pikku.config.json scaffold is missing "${s.key}" — ${s.surface} is never generated, so the Fabric console 404s for it`,
+        pikkuConfigPath,
+        lines(
+          `Add "${s.key}" to the scaffold block in pikku.config.json:`,
+          '"scaffold": {',
+          '  "pikkuDir": "packages/functions/src/scaffold",',
+          `  "${s.key}": ${s.value}`,
+          '}',
+          'Then re-run codegen (`pikku all`) and restart the dev server.'
+        )
+      )
+    }
   }
   const dbEngine = pikkuConfig?.db?.engine ?? 'sqlite'
+
+  // ── .gitignore must ignore generated/runtime artifacts ─────────────────
+  // These are regenerated on every dev boot / scaffold / codegen. Committing
+  // them lets a stale copy shadow the freshly generated one — a committed
+  // __fabric_scaffold.vite.config.mjs or .pikku-runtime breaks the sandbox dev
+  // server — and pollutes diffs. Tolerate trailing/leading slashes.
+  {
+    const requiredIgnores = [
+      '.opencode',
+      '.pikku',
+      '.pikku-runtime',
+      '__fabric_scaffold.vite.config.mjs',
+    ]
+    const gitignorePath = join(root, '.gitignore')
+    const gitignoreText = await readTextSafe(gitignorePath)
+    const norm = (s: string): string => s.replace(/^\//, '').replace(/\/$/, '')
+    const ignored = new Set(
+      (gitignoreText ?? '')
+        .split('\n')
+        .map((l) => norm(l.trim()))
+        .filter(Boolean)
+    )
+    const missing = requiredIgnores.filter((entry) => !ignored.has(norm(entry)))
+    // Generated files: accept a single `*.gen.*` glob or the explicit
+    // `*.gen.ts` + `*.gen.js` pair (the canonical scaffold uses the pair).
+    const genIgnored =
+      ignored.has('*.gen.*') ||
+      (ignored.has('*.gen.ts') && ignored.has('*.gen.js'))
+    if (!genIgnored) missing.push('*.gen.*')
+    if (missing.length > 0) {
+      w(
+        'gitignore-missing-generated',
+        `.gitignore does not ignore Fabric generated/runtime artifacts: ${missing.join(', ')} — committing them lets a stale copy shadow the freshly generated one (e.g. a committed __fabric_scaffold.vite.config.mjs or .pikku-runtime breaks the sandbox dev server)`,
+        gitignorePath,
+        lines(
+          'Add these entries to .gitignore:',
+          ...missing.map((entry) => `  ${entry}`),
+          'They are regenerated on every dev boot / scaffold / codegen and must never be committed.'
+        )
+      )
+    }
+  }
 
   // ── root package.json ──────────────────────────────────────────────────
   type RootPkg = {
