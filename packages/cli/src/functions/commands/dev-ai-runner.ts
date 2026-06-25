@@ -39,12 +39,20 @@ export async function createDevAIAgentRunner({
   projectRoot: string
   variables: VariablesService
 }): Promise<AIAgentRunnerService | undefined> {
-  const baseURL =
-    (await variables.get('OPENAI_BASE_URL')) ??
-    (await variables.get('LITELLM_PROXY_URL'))
-  const apiKey =
-    (await variables.get('OPENAI_API_KEY')) ??
-    (await variables.get('LITELLM_API_KEY'))
+  // Pair the URL with its matching key — coalescing each var independently could
+  // combine an OPENAI_BASE_URL with a LITELLM_API_KEY (or vice versa) and
+  // misroute or 401 every call. Take a complete OpenAI pair first, else LiteLLM.
+  const openAIBaseURL = await variables.get('OPENAI_BASE_URL')
+  const openAIApiKey = await variables.get('OPENAI_API_KEY')
+  const liteLLMBaseURL = await variables.get('LITELLM_PROXY_URL')
+  const liteLLMApiKey = await variables.get('LITELLM_API_KEY')
+
+  const [baseURL, apiKey] =
+    openAIBaseURL && openAIApiKey
+      ? [openAIBaseURL, openAIApiKey]
+      : liteLLMBaseURL && liteLLMApiKey
+        ? [liteLLMBaseURL, liteLLMApiKey]
+        : [undefined, undefined]
 
   if (!baseURL || !apiKey) {
     logger.debug(
@@ -69,7 +77,7 @@ export async function createDevAIAgentRunner({
     ))
   } catch (error) {
     logger.warn(
-      `pikku dev: AI provider env is set but the AI SDK packages could not be loaded (install @pikku/ai-vercel and @ai-sdk/openai-compatible) — AI agents disabled: ${
+      `pikku dev: AI provider env is set but the AI SDK packages could not be loaded (install @pikku/ai-vercel, @ai-sdk/openai-compatible, and ai) — AI agents disabled: ${
         error instanceof Error ? error.message : String(error)
       }`
     )

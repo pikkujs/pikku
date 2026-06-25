@@ -246,11 +246,17 @@ export const dev = pikkuSessionlessFunc<
     // has no equivalent, so construct one from env or agents 503 with
     // AIProviderNotConfiguredError. The template forwards injected services
     // (`...existingServices`) so this reaches getSingletonServices().
-    const aiAgentRunner = await createDevAIAgentRunner({
-      logger,
-      projectRoot: config.rootDir,
-      variables,
-    })
+    // Only when the project declares agents — otherwise the runner's
+    // missing-SDK warning fires spuriously for projects with global AI env.
+    const hasAgents =
+      Object.keys(inspectorState.agents.agentsMeta).length > 0
+    const aiAgentRunner = hasAgents
+      ? await createDevAIAgentRunner({
+          logger,
+          projectRoot: config.rootDir,
+          variables,
+        })
+      : undefined
     const inMemoryServices = {
       logger: devLogger,
       ...(aiAgentRunner ? { aiAgentRunner } : {}),
