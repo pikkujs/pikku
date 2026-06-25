@@ -28,9 +28,9 @@ test('an exact value-set match types the group against the DB enum', () => {
   assert.match(src, /export const dietary = \{[\s\S]*?\} satisfies EnumLabel<ParticipantDietaryTag>/)
   // imports only the type it actually used
   assert.match(src, /import type \{ ParticipantDietaryTag \} from '#pikku\/db\/enums\.gen'/)
-  // EnumLabel is the canonical type; EnumI18n is a deprecated alias
   assert.match(src, /export type EnumLabel<E extends string> = Record<E, I18nMessage>/)
-  assert.match(src, /@deprecated use `EnumLabel`/)
+  // no deprecated alias — this is a new feature
+  assert.doesNotMatch(src, /EnumI18n/)
 })
 
 test('a non-DB group (no overlap) stays catalog-typed and warns nothing', () => {
