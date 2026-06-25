@@ -17,6 +17,7 @@ import { BrowserRouter } from 'react-router'
 import { QueryClientProvider } from './context/QueryClientProvider'
 import { ThemeProvider } from './context/ThemeProvider'
 import { PikkuHTTPProvider, PikkuRPCProvider } from './context/PikkuRpcProvider'
+import { AuthProvider } from './context/AuthContext'
 import { ConsoleRouterProvider } from './router'
 import { reactRouterAdapter } from './adapters/react-router'
 import { App } from './App'
@@ -40,7 +41,9 @@ createRoot(document.getElementById('root')!).render(
             <CodeHighlightAdapterProvider adapter={highlightJsAdapter}>
               <PikkuHTTPProvider>
                 <PikkuRPCProvider>
-                  <App />
+                  <AuthProvider>
+                    <App />
+                  </AuthProvider>
                 </PikkuRPCProvider>
               </PikkuHTTPProvider>
             </CodeHighlightAdapterProvider>

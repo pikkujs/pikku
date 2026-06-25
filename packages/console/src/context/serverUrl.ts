@@ -48,3 +48,7 @@ export const getServerUrl = (): string => {
 export const setServerUrl = (url: string) => {
   localStorage.setItem(STORAGE_KEY, normalizeServerUrl(url))
 }
+
+// Better Auth's default base path. Pikku backends mount Better Auth here, and
+// the sandbox Caddy preserves `/api/auth/*` to match it.
+export const AUTH_BASE_PATH = '/api/auth'
