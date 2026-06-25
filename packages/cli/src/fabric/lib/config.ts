@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { homedir } from 'node:os'
 
-const DEFAULT_API_URL = 'http://localhost:7103'
+const DEFAULT_API_URL = 'https://api.pikkufabric.com'
 
 /**
  * `pikkufabric.config.json` lives next to `pikku.config.json` in the project
