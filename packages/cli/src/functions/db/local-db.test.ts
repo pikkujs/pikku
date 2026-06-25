@@ -213,6 +213,13 @@ test('codegen types a SQLite CHECK (col IN (…)) column as a string-literal uni
 
   const schema = readFileSync(resolved.schemaFile, 'utf8')
   assert.match(schema, /status:[^\n]*'enquiry' \| 'reserved' \| 'confirmed'/)
+
+  // bare-union enums module — independent of the wrapped DB interface
+  const enums = readFileSync(resolved.enumsFile, 'utf8')
+  assert.match(
+    enums,
+    /export type BookingStatus = 'enquiry' \| 'reserved' \| 'confirmed'/
+  )
 })
 
 test('migrateAndCodegen is a no-op on second run', async () => {
