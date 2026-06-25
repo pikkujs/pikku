@@ -45,7 +45,6 @@ export type BookingStatusKey = keyof typeof bookingStatus
 - Each value is an `I18nMessage` — a `() => I18nString` accessor. **Call it at render time** so the label tracks the active locale.
 - App code: `import { bookingStatus } from './i18n/i18n-enum.gen'` then `bookingStatus[value]()`.
 - For an open server value, gate it: `value in bookingStatus ? bookingStatus[value as BookingStatusKey]() : asI18n(value)`.
-- `EnumI18n` is a **deprecated alias** of `EnumLabel`; use `EnumLabel`.
 
 ### Module-scope hazard — store the accessor, don't call it
 
