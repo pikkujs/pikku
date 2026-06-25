@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cli",
-  "version": "0.12.49",
+  "version": "0.12.50",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
   "imports": {
@@ -27,7 +27,7 @@
   "dependencies": {
     "@electric-sql/pglite": "^0.5.1",
     "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.1",
-    "@pikku/better-auth": "^0.12.10",
+    "@pikku/better-auth": "^0.12.11",
     "@pikku/core": "^0.12.37",
     "@pikku/deploy-cloudflare": "^0.12.4",
     "@pikku/fetch": "^0.12.4",

@@ -1,3 +1,76 @@
+## 0.12.50
+
+### Patch Changes
+
+- dac22cd: fix(cli): default Fabric API URL to production
+
+  The fabric CLI defaulted `DEFAULT_API_URL` to `http://localhost:7103`, so
+  `pikku fabric login` / `pikku fabric addon publish` hit a local backend
+  out of the box — producing confusing "Code not found" / 404 errors for
+  anyone not running fabric-api locally. Default to
+  `https://api.pikkufabric.com`; local dev opts in via `FABRIC_API_URL` or
+  `pikkufabric.config.json` (both rank above the default in the resolution
+  order, so nothing changes for core devs).
+
+- a1acc23: fix(console): make the Tests tab show scenarios after a run
+
+  The Tests tab renders scenarios from `meta.functions[].tests.scenarios`, which
+  `readAllMeta()` builds by reading the function-tests harness's coverage JSON and
+  Cucumber HTML report. Three drifts left every function with `tests: undefined`:
+  - **`loadFunctionTests` looked in the wrong place.** It probed
+    `function-tests/coverage/function-coverage.json` and
+    `function-tests/tests/reports/cucumber-report.html`, but the harness (and
+    `pikku tests coverage`) actually write `tests/.coverage/function-coverage.json`
+    and `tests/tests/reports/cucumber-report.html`. It now anchors on
+    `resolveFunctionsDir(metaService.basePath)` — the same single source of truth
+    the run handlers and coverage writer use — and keeps the old relative paths as
+    a fallback.
+  - **The console "Run tests" stream never wrote the HTML report.** It ran
+    Cucumber with `--format message` only (for the live view), so scenarios
+    vanished once the run finished. It now also emits
+    `html:tests/tests/reports/cucumber-report.html`.
+  - **`pikku tests coverage` had the same gap** — no `--format`, so no report.
+    It now writes the HTML report alongside the default progress output.
+
+- 49cba1e: fix(cli): auto-construct the AI agent runner in `pikku dev`
+
+  Deployed agent units get their `aiAgentRunner` wired by the bundler, but the dev
+  server had no equivalent — so agents run against `pikku dev` (e.g. in a fabric
+  sandbox) threw `AIProviderNotConfiguredError` and surfaced as a 503. The dev
+  command now builds a `VercelAIAgentRunner` from env when an OpenAI-compatible
+  base URL + key are present (`OPENAI_BASE_URL`/`OPENAI_API_KEY`, falling back to
+  `LITELLM_PROXY_URL`/`LITELLM_API_KEY`) and injects it into the singleton
+  services. `@pikku/ai-vercel` + `@ai-sdk/openai-compatible` are resolved from the
+  project's `node_modules` (so they share the project's `ai` version) and loaded
+  dynamically; when the env or packages are absent the runner is simply omitted
+  and the clear downstream error is preserved.
+
+- 44f77c4: feat(deploy): server-target container image uses `FROM node:26` (full)
+
+  The generated `SERVER_DOCKERFILE` for `target: 'server'` units now builds on
+  the full `node:26` image instead of `node:22-slim`. A server container is a
+  real Node runtime that may pull externalised deps with native addons; the slim
+  image lacks the build toolchain (python3/make/g++), so any dep that compiles
+  from source at `npm install` time would fail. The full image carries the
+  toolchain and bumps the runtime to Node 26.
+
+- 11bcae0: db codegen: type SQLite `CHECK (col IN ('a','b',…))` columns as string-literal
+  unions, and emit a standalone bare-enums module for both dialects.
+
+  SQLite has no native enums, but a column-level `CHECK … IN (…)` constraint is an
+  enum by another name — the introspector now parses it from the table DDL and the
+  generated Kysely schema types the column as `'a' | 'b' | …` instead of `string`
+  (mirroring how Postgres enum columns are typed). Only the positive `col IN (…)`
+  form is recognised; `NOT IN`, ranges, and boolean expressions stay `string`.
+
+  Also emits `.pikku/db/enums.gen.ts` — bare `export type <Table><Column>` unions
+  for every enum column (Postgres native enums and SQLite CHECK alike), independent
+  of the wrapped `ColumnType<Private<…>>` DB interface. Callers (and i18n catalog
+  reconciliation) can import a clean union without unwrapping.
+
+- Updated dependencies [7d959ed]
+  - @pikku/better-auth@0.12.11
+
 ## 0.12.49
 
 ### Patch Changes
