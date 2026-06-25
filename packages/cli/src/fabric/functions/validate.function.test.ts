@@ -3,8 +3,11 @@ import assert from 'node:assert'
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { runValidate, renderValidate } from './validate-core.js'
-import { runValidate as runLiveValidate } from './validate.function.js'
+import {
+  runValidate,
+  renderValidate,
+  runValidate as runLiveValidate,
+} from './validate.function.js'
 
 async function makeTmp() {
   return mkdtemp(join(tmpdir(), 'pikku-validate-'))
@@ -52,6 +55,10 @@ async function makeValidProject(root: string) {
   })
   await writeJson(join(root, 'packages', 'functions', 'package.json'), {
     type: 'module',
+    imports: {
+      '#pikku': './.pikku/pikku-types.gen.ts',
+      '#pikku/*': './.pikku/*',
+    },
     dependencies: {
       '@pikku/schema-cfworker': '^0.12.0',
       '@pikku/kysely': '^0.12.0',
@@ -70,11 +77,16 @@ async function makeValidProject(root: string) {
   await mkdir(join(root, 'packages', 'functions-sdk', 'src', 'pikku'), {
     recursive: true,
   })
-  await mkdir(join(root, 'packages', 'functions', 'db', 'sqlite'), {
+  await mkdir(join(root, 'db', 'sqlite'), {
     recursive: true,
   })
   await writeFile(
-    join(root, 'packages', 'functions', 'db', 'sqlite-seed.sql'),
+    join(root, 'db', 'sqlite', '0001-init.sql'),
+    'CREATE TABLE audit (eventId TEXT PRIMARY KEY);\n',
+    'utf8'
+  )
+  await writeFile(
+    join(root, 'db', 'sqlite-seed.sql'),
     '-- seed data\n',
     'utf8'
   )
@@ -86,7 +98,7 @@ async function makeValidProject(root: string) {
   })
   await writeFile(
     join(root, '.gitignore'),
-    '.pikku\n.pikku-runtime\n.opencode\n__fabric_scaffold.vite.config.mjs\n*.gen.ts\n*.gen.js\n',
+    '.pikku\n.pikku-runtime\n.opencode\n.reports\n__fabric_scaffold.vite.config.mjs\n*.gen.ts\n*.gen.js\n',
     'utf8'
   )
 }
@@ -302,7 +314,10 @@ describe('pikku fabric validate', () => {
           outDir: 'packages/functions/.pikku',
           scaffold: {
             console: 'no-auth',
+            rpc: true,
             agent: 'no-auth',
+            workflow: 'no-auth',
+            events: true,
           },
         })
         const result = await runValidate(tmp)
@@ -370,7 +385,7 @@ describe('pikku fabric validate', () => {
         await makeValidProject(tmp)
         await writeFile(
           join(tmp, '.gitignore'),
-          '.opencode\n.pikku\n.pikku-runtime\n__fabric_scaffold.vite.config.mjs\n*.gen.*\n',
+          '.opencode\n.pikku\n.pikku-runtime\n.reports\n__fabric_scaffold.vite.config.mjs\n*.gen.*\n',
           'utf8'
         )
         const result = await runLiveValidate(tmp)
@@ -489,6 +504,7 @@ describe('pikku fabric validate', () => {
       try {
         await makeValidProject(tmp)
         await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
+          imports: { '#pikku': './.pikku/pikku-types.gen.ts' },
           dependencies: {
             '@pikku/cloudflare': '^0.12.6',
             '@pikku/schema-cfworker': '^0.12.0',
@@ -523,6 +539,102 @@ describe('pikku fabric validate', () => {
         )
         assert.ok(finding)
         assert.strictEqual(finding!.severity, 'error')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('missing @pikku/schema-cfworker → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
+          type: 'module',
+          imports: { '#pikku': './.pikku/pikku-types.gen.ts' },
+          dependencies: { '@pikku/kysely': '^0.12.0' }, // schema-cfworker omitted
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const finding = result.findings.find(
+          (f) => f.id === 'missing-schema-cfworker'
+        )
+        assert.ok(finding)
+        assert.strictEqual(finding!.severity, 'error')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('missing @pikku/kysely → error', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
+          type: 'module',
+          imports: { '#pikku': './.pikku/pikku-types.gen.ts' },
+          dependencies: { '@pikku/schema-cfworker': '^0.12.0' }, // kysely omitted
+        })
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        const finding = result.findings.find(
+          (f) => f.id === 'missing-pikku-kysely'
+        )
+        assert.ok(finding)
+        assert.strictEqual(finding!.severity, 'error')
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('agent units declared but @pikku/ai-vercel / @ai-sdk/openai-compatible missing → errors', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        // declare an agent via the generated agent meta, but omit the AI deps
+        await mkdir(
+          join(tmp, 'packages', 'functions', '.pikku', 'agent'),
+          { recursive: true }
+        )
+        await writeJson(
+          join(
+            tmp,
+            'packages',
+            'functions',
+            '.pikku',
+            'agent',
+            'pikku-agent-wirings-meta.gen.json'
+          ),
+          { agentsMeta: { bookingAgent: {} } }
+        )
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        assert.ok(
+          result.findings.some((f) => f.id === 'missing-ai-vercel'),
+          'expected missing-ai-vercel'
+        )
+        assert.ok(
+          result.findings.some(
+            (f) => f.id === 'missing-ai-sdk-openai-compatible'
+          ),
+          'expected missing-ai-sdk-openai-compatible'
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('no agent units → no AI dep errors', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp) // no agent meta written
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some(
+            (f) =>
+              f.id === 'missing-ai-vercel' ||
+              f.id === 'missing-ai-sdk-openai-compatible'
+          )
+        )
       } finally {
         await rm(tmp, { recursive: true, force: true })
       }
@@ -620,7 +732,7 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        const migrDir = join(tmp, 'packages', 'functions', 'db', 'sqlite')
+        const migrDir = join(tmp, 'db', 'sqlite')
         await mkdir(migrDir, { recursive: true })
         await writeFile(
           join(migrDir, '0001-init.sql'),
@@ -648,7 +760,7 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        const migrDir = join(tmp, 'packages', 'functions', 'db', 'sqlite')
+        const migrDir = join(tmp, 'db', 'sqlite')
         await mkdir(migrDir, { recursive: true })
         await writeFile(join(migrDir, '0001-init.sql'), 'SELECT 1;', 'utf8')
         await writeFile(join(migrDir, '0003-skip.sql'), 'SELECT 1;', 'utf8') // 0002 missing
@@ -666,7 +778,7 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        const migrDir = join(tmp, 'packages', 'functions', 'db', 'sqlite')
+        const migrDir = join(tmp, 'db', 'sqlite')
         await mkdir(migrDir, { recursive: true })
         await writeFile(
           join(migrDir, '0001-init.sql'),
@@ -690,7 +802,7 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        const migrDir = join(tmp, 'packages', 'functions', 'db', 'sqlite')
+        const migrDir = join(tmp, 'db', 'sqlite')
         await mkdir(migrDir, { recursive: true })
         await writeFile(
           join(migrDir, '0001-init.sql'),
@@ -715,7 +827,7 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        const migrDir = join(tmp, 'packages', 'functions', 'db', 'sqlite')
+        const migrDir = join(tmp, 'db', 'sqlite')
         await mkdir(migrDir, { recursive: true })
         await writeFile(
           join(migrDir, '0001-init.sql'),
@@ -738,7 +850,7 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        const migrDir = join(tmp, 'packages', 'functions', 'db', 'sqlite')
+        const migrDir = join(tmp, 'db', 'sqlite')
         await mkdir(migrDir, { recursive: true })
         await writeFile(
           join(migrDir, '0001-init.sql'),
@@ -762,7 +874,7 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await rm(join(tmp, 'packages', 'functions', 'db', 'sqlite-seed.sql'), {
+        await rm(join(tmp, 'db', 'sqlite-seed.sql'), {
           force: true,
         })
         const result = await runValidate(tmp)
@@ -779,7 +891,7 @@ describe('pikku fabric validate', () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        await rm(join(tmp, 'packages', 'functions', 'db', 'sqlite'), {
+        await rm(join(tmp, 'db', 'sqlite'), {
           recursive: true,
           force: true,
         })

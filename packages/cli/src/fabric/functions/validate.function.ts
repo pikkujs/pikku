@@ -378,6 +378,7 @@ export async function runValidate(
       '.opencode',
       '.pikku',
       '.pikku-runtime',
+      '.reports',
       '__fabric_scaffold.vite.config.mjs',
     ]
     const gitignorePath = join(root, '.gitignore')
@@ -605,6 +606,50 @@ export async function runValidate(
           '@pikku/kysely-postgres is in packages/functions dependencies — Fabric uses SQLite/libSQL (Turso), not PostgreSQL',
           fnPkgPath,
           'Remove @pikku/kysely-postgres and use @pikku/kysely-sqlite with LibsqlWebDialect instead'
+        )
+      }
+
+      // CF worker runtime deps — must be in dependencies (not dev), every
+      // worker entry resolves them at deploy time.
+      if (!fnPkg.dependencies?.['@pikku/schema-cfworker']) {
+        e(
+          'missing-schema-cfworker',
+          '@pikku/schema-cfworker is not in packages/functions dependencies — every Cloudflare worker entry requires it',
+          fnPkgPath,
+          'Run `yarn add @pikku/schema-cfworker` in packages/functions — must be in dependencies, not devDependencies'
+        )
+      }
+      if (!fnPkg.dependencies?.['@pikku/kysely']) {
+        e(
+          'missing-pikku-kysely',
+          '@pikku/kysely is not in packages/functions dependencies — every Cloudflare worker entry requires it (KyselySecretService)',
+          fnPkgPath,
+          'Run `yarn add @pikku/kysely` in packages/functions — must be in dependencies, not devDependencies'
+        )
+      }
+    }
+
+    // Agent units require the AI SDK deps explicitly (not CI-injected). Gate on
+    // the generated agent meta so non-agent projects aren't flagged.
+    const agentMeta = await readJsonSafe<{
+      agentsMeta?: Record<string, unknown>
+    }>(join(fnDir, '.pikku', 'agent', 'pikku-agent-wirings-meta.gen.json'))
+    if (agentMeta && Object.keys(agentMeta.agentsMeta ?? {}).length > 0) {
+      const fnPkgPath = join(fnDir, 'package.json')
+      if (!fnPkg?.dependencies?.['@pikku/ai-vercel']) {
+        e(
+          'missing-ai-vercel',
+          'Project declares agent units but @pikku/ai-vercel is not in packages/functions dependencies',
+          fnPkgPath,
+          'Run `yarn add @pikku/ai-vercel` in packages/functions — must be in dependencies, not devDependencies'
+        )
+      }
+      if (!fnPkg?.dependencies?.['@ai-sdk/openai-compatible']) {
+        e(
+          'missing-ai-sdk-openai-compatible',
+          'Project declares agent units but @ai-sdk/openai-compatible is not in packages/functions dependencies',
+          fnPkgPath,
+          'Run `yarn add @ai-sdk/openai-compatible` in packages/functions — must be in dependencies, not devDependencies'
         )
       }
     }
