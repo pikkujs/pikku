@@ -13,6 +13,12 @@ export interface ColumnInfo {
    * name used to resolve its values. Undefined on SQLite (no native enums).
    */
   udtName?: string
+  /**
+   * String-literal enum values for this column, when known. On SQLite (no native
+   * enums) these come from a `CHECK (col IN ('a','b',…))` constraint — the CHECK
+   * *is* the enum definition. Typed as a union, mirroring a Postgres enum column.
+   */
+  enumValues?: string[]
 }
 
 export interface ForeignKeyInfo {

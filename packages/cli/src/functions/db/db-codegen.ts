@@ -226,11 +226,14 @@ function emitInterface(
         }
       }
 
-      // A Postgres enum column reports `type` as 'USER-DEFINED'; its real values
-      // come from `udtName`. Type it as a union of string literals — only when
-      // no explicit `tsType`/`kind` overrides it. This reuses the `tsType`
-      // plumbing, so it flows through both the public and classified branches.
-      const enumValues = col.udtName ? enumByName.get(col.udtName) : undefined
+      // Enum columns are typed as a union of string literals — only when no
+      // explicit `tsType`/`kind` overrides it. This reuses the `tsType` plumbing,
+      // so it flows through both the public and classified branches. Values come
+      // from a Postgres enum (`type` is 'USER-DEFINED', real values via `udtName`)
+      // or, on SQLite, from a `CHECK (col IN (…))` constraint the introspector
+      // parsed onto `col.enumValues`.
+      const enumValues =
+        col.enumValues ?? (col.udtName ? enumByName.get(col.udtName) : undefined)
       const enumUnion =
         enumValues && enumValues.length > 0
           ? enumValues.map((v) => `'${escapeTsString(v)}'`).join(' | ')

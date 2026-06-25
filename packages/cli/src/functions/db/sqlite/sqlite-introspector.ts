@@ -33,6 +33,7 @@ export class SqliteIntrospector implements DbIntrospector {
     const rows = this.db
       .prepare(`PRAGMA table_xinfo(${escaped})`)
       .all() as unknown as SqliteColumnRow[]
+    const enumsByColumn = this.parseCheckEnums(table)
     return rows
       .filter((c) => c.hidden !== 1)
       .map((c) => ({
@@ -42,7 +43,34 @@ export class SqliteIntrospector implements DbIntrospector {
         pk: c.pk > 0,
         defaultValue: c.dflt_value != null ? String(c.dflt_value) : null,
         generated: c.hidden === 2 || c.hidden === 3,
+        enumValues: enumsByColumn.get(c.name),
       }))
+  }
+
+  /**
+   * SQLite has no native enums, but a `CHECK (col IN ('a','b',…))` constraint is
+   * an enum by another name. Parse the table's stored `CREATE TABLE` DDL and map
+   * each constrained column to its allowed values so codegen can type it as a
+   * union. Only the positive `col IN (…)` form is recognised (the convention);
+   * `NOT IN`, ranges, and boolean expressions are left as plain `string`.
+   */
+  private parseCheckEnums(table: string): Map<string, string[]> {
+    const out = new Map<string, string[]>()
+    const row = this.db
+      .prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?`)
+      .get(table) as { sql: string | null } | undefined
+    const ddl = row?.sql
+    if (!ddl) return out
+    const checkIn = /CHECK\s*\(\s*"?(\w+)"?\s+IN\s*\(([^)]*)\)/gi
+    let m: RegExpExecArray | null
+    while ((m = checkIn.exec(ddl))) {
+      const column = m[1]
+      const values = [...m[2].matchAll(/'((?:[^']|'')*)'/g)].map((q) =>
+        q[1].replace(/''/g, "'")
+      )
+      if (values.length > 0) out.set(column, values)
+    }
+    return out
   }
 
   async getForeignKeys(table: string): Promise<ForeignKeyInfo[]> {
