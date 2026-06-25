@@ -54,6 +54,7 @@
     "@tanstack/react-virtual": "^3.13.12",
     "@uiw/react-codemirror": "^4.25.9",
     "allotment": "^1.20.2",
+    "better-auth": "^1.6.19",
     "chroma-js": "^3.1.2",
     "clsx": "^2.1.1",
     "cronstrue": "^3.12.0",

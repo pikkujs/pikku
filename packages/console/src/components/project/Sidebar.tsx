@@ -37,9 +37,13 @@ import {
   Users,
   Sun,
   Moon,
+  UserCog,
 } from 'lucide-react'
+import { useState } from 'react'
 import { spotlight } from '@mantine/spotlight'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
+import { useOptionalAuth } from '../../context/AuthContext'
+import { ImpersonateDrawer } from '../auth/ImpersonateDrawer'
 import css from '../ui/console.module.css'
 
 export interface NavItem {
@@ -89,7 +93,8 @@ export function useDefaultNavSections(): NavSection[] {
     {
       title: m.nav_users(),
       items: [
-        { label: m.nav_oauth(), href: '/users', icon: Users, matchPrefix: '/users' },
+        { label: m.nav_users(), href: '/users', icon: Users, matchPrefix: '/users' },
+        { label: m.nav_oauth(), href: '/auth-providers', icon: KeyRound, matchPrefix: '/auth-providers' },
         { label: m.nav_credentials(), href: '/credentials', icon: KeyRound, matchPrefix: '/credentials' },
       ],
     },
@@ -159,6 +164,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     defaultValue: false,
   })
   const { colorScheme, toggleColorScheme } = useMantineColorScheme()
+  const auth = useOptionalAuth()
+  // Show impersonation only to an admin session (or when already impersonating).
+  const canImpersonate = !!auth && (auth.isAdmin || !!auth.impersonatedBy)
+  const [impersonateOpen, setImpersonateOpen] = useState(false)
 
   const sidebarWidth = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH
 
@@ -311,6 +320,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <Box className={css.noShrink}>
         <Divider mx="sm" />
         <Stack gap={2} px={6} py={4}>
+          {canImpersonate && (
+            <Tooltip
+              label={m.impersonate_button()}
+              position="right"
+              disabled={!collapsed}
+            >
+              <UnstyledButton
+                onClick={() => setImpersonateOpen(true)}
+                px={collapsed ? 0 : 10}
+                py={8}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: collapsed ? 'center' : 'flex-start',
+                  gap: 10,
+                  borderRadius: 6,
+                  color: 'var(--mantine-color-dimmed)',
+                }}
+              >
+                <UserCog size={18} />
+                {!collapsed && <Text size="sm">{m.impersonate_button()}</Text>}
+              </UnstyledButton>
+            </Tooltip>
+          )}
           <Tooltip
             label={m.sidebar_refresh_metadata()}
             position="right"
@@ -391,6 +424,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </Tooltip>
         </Stack>
       </Box>
+
+      {canImpersonate && (
+        <ImpersonateDrawer
+          opened={impersonateOpen}
+          onClose={() => setImpersonateOpen(false)}
+        />
+      )}
     </Box>
   )
 }
