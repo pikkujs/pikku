@@ -32,6 +32,7 @@ export type CorePikkuFetchOptions = {
  */
 export class CorePikkuFetch {
   private authHeaders: AuthHeaders = {}
+  private extraHeaders: Record<string, string> = {}
 
   /**
    * Constructs a new instance of the `CorePikkuFetch` class.
@@ -50,6 +51,7 @@ export class CorePikkuFetch {
   private getHeaders(): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      ...this.extraHeaders,
     }
     if (this.authHeaders.jwt) {
       headers.Authorization = `Bearer ${this.authHeaders.jwt}`
@@ -57,6 +59,14 @@ export class CorePikkuFetch {
       headers['X-API-KEY'] = this.authHeaders.apiKey
     }
     return headers
+  }
+
+  public setHeader(name: string, value: string | null): void {
+    if (value === null) {
+      delete this.extraHeaders[name]
+    } else {
+      this.extraHeaders[name] = value
+    }
   }
 
   /**
