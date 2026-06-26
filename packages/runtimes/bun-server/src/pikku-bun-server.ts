@@ -23,7 +23,16 @@ export type BunServerConfig = CoreConfig & {
   healthCheckPath?: string
 }
 
-export type PikkuBunServerOptions = RunHTTPWiringOptions
+export type PikkuBunServerOptions = RunHTTPWiringOptions & {
+  /**
+   * Event hub backing channel pub/sub. Inject the SAME instance passed to
+   * `createSingletonServices` so functions and the WebSocket transport share
+   * one hub — otherwise a function's `eventHub.publish(...)` goes to a
+   * different hub than the one holding the live sockets and never reaches
+   * connected clients. Defaults to a fresh `BunEventHubService`.
+   */
+  eventHub?: BunEventHubService
+}
 
 type WsData = { channelHandler: PikkuLocalChannelHandler }
 
@@ -49,13 +58,18 @@ const isSerializable = (data: unknown): boolean =>
  */
 export class PikkuBunServer {
   private server: BunServer<WsData> | null = null
-  private readonly eventHub = new BunEventHubService()
+  private readonly eventHub: BunEventHubService
+  private readonly options: RunHTTPWiringOptions
 
   constructor(
     private readonly config: BunServerConfig,
     private readonly logger: Logger,
-    private readonly options: PikkuBunServerOptions = {}
-  ) {}
+    options: PikkuBunServerOptions = {}
+  ) {
+    const { eventHub, ...httpOptions } = options
+    this.eventHub = eventHub ?? new BunEventHubService()
+    this.options = httpOptions
+  }
 
   public async init(): Promise<void> {
     compileAllSchemas(this.logger)
