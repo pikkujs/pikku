@@ -18,6 +18,7 @@ import { QueryClientProvider } from './context/QueryClientProvider'
 import { ThemeProvider } from './context/ThemeProvider'
 import { PikkuHTTPProvider, PikkuRPCProvider } from './context/PikkuRpcProvider'
 import { AuthProvider } from './context/AuthContext'
+import { ImpersonationProvider } from './context/ImpersonationContext'
 import { ConsoleRouterProvider } from './router'
 import { reactRouterAdapter } from './adapters/react-router'
 import { App } from './App'
@@ -42,7 +43,9 @@ createRoot(document.getElementById('root')!).render(
               <PikkuHTTPProvider>
                 <PikkuRPCProvider>
                   <AuthProvider>
-                    <App />
+                    <ImpersonationProvider>
+                      <App />
+                    </ImpersonationProvider>
                   </AuthProvider>
                 </PikkuRPCProvider>
               </PikkuHTTPProvider>

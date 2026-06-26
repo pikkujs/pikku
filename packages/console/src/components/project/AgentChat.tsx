@@ -48,6 +48,10 @@ import remarkGfm from 'remark-gfm'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { useAgentPlayground } from '../../context/AgentPlaygroundContext'
 import { getServerUrl } from '../../context/serverUrl'
+import {
+  useOptionalImpersonation,
+  IMPERSONATE_HEADER,
+} from '../../context/ImpersonationContext'
 import classes from '../ui/console.module.css'
 
 const ToolCallDisplay: React.FC<{
@@ -459,6 +463,15 @@ export const AgentChat: React.FC<{
   const serverUrl = getServerUrl()
   const api = `${serverUrl}/rpc/agent`
 
+  const impersonation = useOptionalImpersonation()
+  const headers = useMemo(
+    () =>
+      impersonation?.target
+        ? { [IMPERSONATE_HEADER]: impersonation.target.id }
+        : undefined,
+    [impersonation?.target]
+  )
+
   const fallbackThreadId = useMemo(() => crypto.randomUUID(), [])
   const effectiveThreadId = threadId ?? fallbackThreadId
 
@@ -471,6 +484,7 @@ export const AgentChat: React.FC<{
     onFinish: onStreamDone,
     model,
     temperature,
+    headers,
   }
 
   const streamingHook = usePikkuAgentRuntime(runtimeOptions)

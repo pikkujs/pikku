@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
   Table,
   Group,
@@ -18,21 +18,19 @@ import { PageContainer, ListPageHeader } from '../components/layout/PageLayout'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { asI18n } from '@pikku/react'
-import { useAuth, type AuthUser } from '../context/AuthContext'
+import { useAuth } from '../context/AuthContext'
+import { useImpersonation } from '../context/ImpersonationContext'
 
 export const AdminUsersPage: React.FC = () => {
   useLocale()
-  const { listUsers, impersonate, user: currentUser } = useAuth()
+  const { listUsers, user: currentUser } = useAuth()
+  const { setTarget, target } = useImpersonation()
   const [search, setSearch] = useState('')
   const [debounced] = useDebouncedValue(search, 250)
 
   const usersQuery = useQuery({
     queryKey: ['admin-users', debounced],
     queryFn: () => listUsers(debounced || undefined),
-  })
-
-  const impersonateMutation = useMutation({
-    mutationFn: (userId: string) => impersonate(userId),
   })
 
   const users = usersQuery.data ?? []
@@ -52,19 +50,6 @@ export const AdminUsersPage: React.FC = () => {
         />
       }
     >
-      {impersonateMutation.error && (
-        <Alert
-          icon={<AlertTriangle size={16} />}
-          color="red"
-          variant="light"
-          mb="md"
-        >
-          <Text size="sm">
-            {asI18n((impersonateMutation.error as Error).message)}
-          </Text>
-        </Alert>
-      )}
-
       {usersQuery.isLoading ? (
         <Center py="xl">
           <Loader />
@@ -131,17 +116,27 @@ export const AdminUsersPage: React.FC = () => {
                   </Text>
                 </Table.Td>
                 <Table.Td>
-                  {u.id !== currentUser?.id && (
-                    <Button
-                      size="compact-sm"
-                      variant="subtle"
-                      leftSection={<UserCog size={14} />}
-                      loading={impersonateMutation.isPending}
-                      onClick={() => impersonateMutation.mutate(u.id)}
-                    >
-                      {m.impersonate_button()}
-                    </Button>
-                  )}
+                  {u.id !== currentUser?.id &&
+                    (target?.id === u.id ? (
+                      <Button
+                        size="compact-sm"
+                        variant="light"
+                        color="yellow"
+                        leftSection={<UserCog size={14} />}
+                        onClick={() => setTarget(null)}
+                      >
+                        {m.impersonate_stop()}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="compact-sm"
+                        variant="subtle"
+                        leftSection={<UserCog size={14} />}
+                        onClick={() => setTarget(u)}
+                      >
+                        {m.impersonate_button()}
+                      </Button>
+                    ))}
                 </Table.Td>
               </Table.Tr>
             ))}

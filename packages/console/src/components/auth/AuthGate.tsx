@@ -11,7 +11,7 @@ import { NotAuthorized } from './NotAuthorized'
 export const AuthGate: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { loading, user, isAdmin, impersonatedBy } = useAuth()
+  const { loading, user, isAdmin } = useAuth()
 
   if (loading) {
     return (
@@ -25,10 +25,7 @@ export const AuthGate: React.FC<{ children: React.ReactNode }> = ({
     return <LoginScreen />
   }
 
-  // An impersonation session is admin-authorized by construction (only an admin
-  // can create one), so let it through even though the impersonated user may not
-  // be an admin — otherwise impersonating a normal user would lock the console.
-  if (!isAdmin && !impersonatedBy) {
+  if (!isAdmin) {
     return <NotAuthorized />
   }
 

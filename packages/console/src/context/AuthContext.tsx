@@ -1,10 +1,10 @@
-import { createContext, useContext, useMemo } from 'react'
+import { createContext, useContext, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createConsoleAuthClient,
   type ConsoleAuthClient,
 } from '../lib/auth-client'
-import { getServerUrl } from './serverUrl'
+import { getServerUrl, setServerUrl as persistServerUrl } from './serverUrl'
 
 export interface AuthUser {
   id: string
@@ -23,15 +23,15 @@ export interface AuthContextValue {
   loading: boolean
   /** True once a session has been resolved (success or not). */
   isAdmin: boolean
-  /** The admin user id when the current session is an impersonation, else null. */
-  impersonatedBy: string | null
+  /** The pikku instance URL auth + RPC/meta point at (persisted in localStorage). */
+  serverUrl: string
+  /** Persist a new instance URL; rebuilds the auth client + refetches the session. */
+  setServerUrl: (url: string) => void
   refetchSession: () => Promise<unknown>
-  signIn: (email: string, password: string) => Promise<void>
+  /** Sign in. Pass `nextServerUrl` to switch instance and authenticate against it in one step. */
+  signIn: (email: string, password: string, nextServerUrl?: string) => Promise<void>
   signOut: () => Promise<void>
   listUsers: (search?: string) => Promise<AuthUser[]>
-  /** Impersonate a user, then reload so all RPC/meta refetch as them. */
-  impersonate: (userId: string) => Promise<void>
-  stopImpersonating: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -42,15 +42,15 @@ export const AuthProvider: React.FC<{
   children: React.ReactNode
   serverUrl?: string
 }> = ({ children, serverUrl }) => {
-  const resolvedUrl = serverUrl ?? getServerUrl()
+  const [activeUrl, setActiveUrl] = useState(serverUrl ?? getServerUrl())
   const queryClient = useQueryClient()
   const client = useMemo(
-    () => createConsoleAuthClient(resolvedUrl),
-    [resolvedUrl]
+    () => createConsoleAuthClient(activeUrl),
+    [activeUrl]
   )
 
   const sessionQuery = useQuery({
-    queryKey: [...SESSION_QUERY_KEY, resolvedUrl],
+    queryKey: [...SESSION_QUERY_KEY, activeUrl],
     queryFn: async () => {
       const { data, error } = await client.getSession()
       if (error) {
@@ -64,24 +64,38 @@ export const AuthProvider: React.FC<{
   const value = useMemo<AuthContextValue>(() => {
     const session = sessionQuery.data ?? null
     const user = (session?.user as AuthUser | undefined) ?? null
-    const impersonatedBy =
-      (session?.session as { impersonatedBy?: string | null } | undefined)
-        ?.impersonatedBy ?? null
 
     const refetchSession = () =>
       queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY })
+
+    const setServerUrl = (url: string) => {
+      persistServerUrl(url)
+      setActiveUrl(url.trim().replace(/\/+$/, ''))
+    }
 
     return {
       client,
       user,
       loading: sessionQuery.isLoading,
       isAdmin: user?.role === 'admin',
-      impersonatedBy,
+      serverUrl: activeUrl,
+      setServerUrl,
       refetchSession,
-      signIn: async (email, password) => {
-        const { error } = await client.signIn.email({ email, password })
+      signIn: async (email, password, nextServerUrl) => {
+        // When switching instance, authenticate against a fresh client for the
+        // target URL synchronously (the memoized `client` only rebuilds next
+        // render), then persist so the session query refetches against it.
+        const normalizedNext = nextServerUrl?.trim().replace(/\/+$/, '')
+        const switching = !!normalizedNext && normalizedNext !== activeUrl
+        const authClient = switching
+          ? createConsoleAuthClient(normalizedNext!)
+          : client
+        const { error } = await authClient.signIn.email({ email, password })
         if (error) {
           throw new Error(error.message ?? 'Sign in failed')
+        }
+        if (switching) {
+          setServerUrl(normalizedNext!)
         }
         await refetchSession()
       },
@@ -106,22 +120,6 @@ export const AuthProvider: React.FC<{
           throw new Error(error.message ?? 'Failed to list users')
         }
         return (data?.users ?? []) as AuthUser[]
-      },
-      impersonate: async (userId) => {
-        const { error } = await client.admin.impersonateUser({ userId })
-        if (error) {
-          throw new Error(error.message ?? 'Failed to impersonate user')
-        }
-        // Reload so the Pikku RPC/meta layer re-fetches under the new session
-        // cookie — the whole console now runs as the impersonated user.
-        window.location.reload()
-      },
-      stopImpersonating: async () => {
-        const { error } = await client.admin.stopImpersonating()
-        if (error) {
-          throw new Error(error.message ?? 'Failed to stop impersonating')
-        }
-        window.location.reload()
       },
     }
   }, [client, sessionQuery.data, sessionQuery.isLoading, queryClient])

@@ -19,12 +19,13 @@ import { useAuth } from '../../context/AuthContext'
 
 export const LoginScreen: React.FC = () => {
   useLocale()
-  const { signIn } = useAuth()
+  const { signIn, serverUrl } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [instanceUrl, setInstanceUrl] = useState(serverUrl)
 
   const mutation = useMutation({
-    mutationFn: () => signIn(email, password),
+    mutationFn: () => signIn(email, password, instanceUrl),
   })
 
   return (
@@ -64,6 +65,14 @@ export const LoginScreen: React.FC = () => {
               </Alert>
             )}
 
+            <TextInput
+              label={m.auth_instance_url()}
+              description={m.auth_instance_url_help()}
+              value={instanceUrl}
+              onChange={(e) => setInstanceUrl(e.currentTarget.value)}
+              placeholder={m.auth_instance_url_placeholder()}
+              required
+            />
             <TextInput
               label={m.auth_email()}
               type="email"
