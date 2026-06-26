@@ -33,7 +33,8 @@ export const pikkuAuth = pikkuSessionlessFunc<void, void>({
       state.auth.providers,
       authFile,
       typesDeclarationFile,
-      packageMappings ?? {}
+      packageMappings ?? {},
+      state.auth.hasUserSessionMiddleware ?? false
     )
     // The secrets file sits alongside authFile so re-inspection rediscovers it.
     // It is kept separate from the wiring file because the CLI forbids Zod

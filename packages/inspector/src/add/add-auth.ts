@@ -168,6 +168,20 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
     state.auth.userStatelessSession = true
   }
 
+  // Same rule for the stateful variant: a user-registered global
+  // betterAuthSession(...) (custom mapSession/impersonation/apiKey) means the CLI
+  // must NOT auto-generate its own default one — the generated one runs first and
+  // pre-empts the user's via the `if (session) next()` short-circuit. Stateful
+  // analogue of the betterAuthStatelessSession skip above.
+  if (
+    ts.isIdentifier(expression) &&
+    expression.text === 'betterAuthSession' &&
+    !node.getSourceFile().fileName.endsWith('.gen.ts') &&
+    isInsideGlobalMiddlewareRegistration(node)
+  ) {
+    state.auth.hasUserSessionMiddleware = true
+  }
+
   if (!ts.isIdentifier(expression) || expression.text !== 'pikkuBetterAuth')
     return
 
