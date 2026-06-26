@@ -148,10 +148,18 @@ const root = process.env.PROJECT_ROOT;
 const pkgPath = 'package.json';
 const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
 
-const files = execSync(
-  'find ' + root + '/packages -name package.json -not -path \"*/node_modules/*\" -maxdepth 4',
-  { encoding: 'utf8' }
-).trim().split('\n').filter(Boolean);
+// Scan every workspace member dir for @pikku/* packages. 'templates' must be
+// included alongside 'packages' so workspace-only deps that live under
+// templates/ (e.g. @pikku/templates-function-addon) also get a local path —
+// otherwise their 'workspace:*' specifier survives and bun, lacking a workspace,
+// fails to resolve it.
+const dirs = ['packages', 'templates'];
+const files = dirs.flatMap((d) =>
+  execSync(
+    'find ' + root + '/' + d + ' -name package.json -not -path \"*/node_modules/*\" -maxdepth 4',
+    { encoding: 'utf8' }
+  ).trim().split('\n').filter(Boolean)
+);
 
 const localPaths = {};
 for (const f of files) {
@@ -173,6 +181,26 @@ for (const dt of depTypes) {
     }
   }
 }
+
+// Drop entries duplicated across dependency types. A package present in both
+// 'dependencies' and 'devDependencies' makes bun's file: linker emit a broken
+// self-referential symlink (package.json -> package.json), so the package can't
+// be resolved by tsc or the runtime. Keep the 'dependencies' copy.
+for (const dt of ['devDependencies', 'peerDependencies']) {
+  if (pkg.dependencies && pkg[dt]) {
+    for (const name of Object.keys(pkg[dt])) {
+      if (name in pkg.dependencies) {
+        delete pkg[dt][name];
+      }
+    }
+  }
+}
+
+// Force every @pikku/* package — including transitive ones pulled in via
+// published version ranges (^0.12.x) by the file:-linked packages — to resolve
+// to the in-repo copy. Without yarn's global 'link --all', bun would otherwise
+// fetch those ranges from npm, which fails for versions not yet published.
+pkg.overrides = Object.assign({}, pkg.overrides, localPaths);
 
 fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
 console.log('Replaced ' + Object.keys(localPaths).length + ' @pikku/* entries with file: paths');

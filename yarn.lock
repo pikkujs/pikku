@@ -5778,6 +5778,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/bun-server@npm:^0.12.0, @pikku/bun-server@workspace:*, @pikku/bun-server@workspace:packages/runtimes/bun-server":
+  version: 0.0.0-use.local
+  resolution: "@pikku/bun-server@workspace:packages/runtimes/bun-server"
+  dependencies:
+    "@types/bun": "npm:latest"
+    typescript: "npm:^5.9.3"
+  peerDependencies:
+    "@pikku/core": ^0.12.9
+  languageName: unknown
+  linkType: soft
+
 "@pikku/cli@npm:*, @pikku/cli@npm:^0.12.0, @pikku/cli@npm:^0.12.1, @pikku/cli@npm:^0.12.46, @pikku/cli@npm:^0.12.48, @pikku/cli@npm:^0.12.50, @pikku/cli@npm:^0.12.53, @pikku/cli@workspace:*, @pikku/cli@workspace:packages/cli":
   version: 0.0.0-use.local
   resolution: "@pikku/cli@workspace:packages/cli"
@@ -5907,11 +5918,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/core@npm:*, @pikku/core@npm:^0.12.0, @pikku/core@npm:^0.12.1, @pikku/core@npm:^0.12.15, @pikku/core@npm:^0.12.2, @pikku/core@npm:^0.12.21, @pikku/core@npm:^0.12.24, @pikku/core@npm:^0.12.26, @pikku/core@npm:^0.12.3, @pikku/core@npm:^0.12.30, @pikku/core@npm:^0.12.34, @pikku/core@npm:^0.12.37, @pikku/core@npm:^0.12.9, @pikku/core@workspace:*, @pikku/core@workspace:packages/core":
+"@pikku/core@npm:*, @pikku/core@npm:^0.12.0, @pikku/core@npm:^0.12.1, @pikku/core@npm:^0.12.15, @pikku/core@npm:^0.12.2, @pikku/core@npm:^0.12.20, @pikku/core@npm:^0.12.21, @pikku/core@npm:^0.12.24, @pikku/core@npm:^0.12.26, @pikku/core@npm:^0.12.3, @pikku/core@npm:^0.12.30, @pikku/core@npm:^0.12.34, @pikku/core@npm:^0.12.37, @pikku/core@npm:^0.12.9, @pikku/core@workspace:*, @pikku/core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@pikku/core@workspace:packages/core"
   dependencies:
     "@standard-schema/spec": "npm:^1.1.0"
+    "@types/json-schema": "npm:^7.0.15"
     "@types/node": "npm:^24.11.0"
     cookie: "npm:^1.1.1"
     json-schema: "npm:^0.4.0"
@@ -6137,6 +6149,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/kysely-bun-sqlite@workspace:packages/services/kysely-bun-sqlite":
+  version: 0.0.0-use.local
+  resolution: "@pikku/kysely-bun-sqlite@workspace:packages/services/kysely-bun-sqlite"
+  dependencies:
+    "@pikku/kysely": "npm:^0.12.0"
+    "@pikku/kysely-sqlite": "npm:^0.12.0"
+    "@types/bun": "npm:latest"
+    kysely: "npm:^0.29.0"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/kysely-mysql@workspace:*, @pikku/kysely-mysql@workspace:packages/services/kysely-mysql":
   version: 0.0.0-use.local
   resolution: "@pikku/kysely-mysql@workspace:packages/services/kysely-mysql"
@@ -6176,7 +6200,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/kysely-sqlite@npm:^0.12.6, @pikku/kysely-sqlite@workspace:*, @pikku/kysely-sqlite@workspace:packages/services/kysely-sqlite":
+"@pikku/kysely-sqlite@npm:^0.12.0, @pikku/kysely-sqlite@npm:^0.12.6, @pikku/kysely-sqlite@workspace:*, @pikku/kysely-sqlite@workspace:packages/services/kysely-sqlite":
   version: 0.0.0-use.local
   resolution: "@pikku/kysely-sqlite@workspace:packages/services/kysely-sqlite"
   dependencies:
@@ -6187,7 +6211,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/kysely@npm:^0.12.16, @pikku/kysely@workspace:*, @pikku/kysely@workspace:^, @pikku/kysely@workspace:packages/services/kysely":
+"@pikku/kysely@npm:^0.12.0, @pikku/kysely@npm:^0.12.16, @pikku/kysely@workspace:*, @pikku/kysely@workspace:^, @pikku/kysely@workspace:packages/services/kysely":
   version: 0.0.0-use.local
   resolution: "@pikku/kysely@workspace:packages/services/kysely"
   dependencies:
@@ -6560,6 +6584,19 @@ __metadata:
     "@types/node": "npm:^24"
     tslib: "npm:^2.8.1"
     tsx: "npm:^4.21.0"
+    typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/templates-bun@workspace:templates/bun":
+  version: 0.0.0-use.local
+  resolution: "@pikku/templates-bun@workspace:templates/bun"
+  dependencies:
+    "@pikku/bun-server": "npm:^0.12.0"
+    "@pikku/core": "npm:^0.12.20"
+    "@pikku/schedule": "npm:^0.12.2"
+    "@types/bun": "npm:latest"
+    tslib: "npm:^2.8.1"
     typescript: "npm:^5.9"
   languageName: unknown
   linkType: soft
@@ -6949,6 +6986,22 @@ __metadata:
     kysely: "npm:^0.29.0"
     tsx: "npm:^4.21.0"
     typescript: "npm:^5.9"
+  languageName: unknown
+  linkType: soft
+
+"@pikku/verifiers-bun-server@workspace:verifiers/bun-server":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-bun-server@workspace:verifiers/bun-server"
+  dependencies:
+    "@pikku/bun-server": "workspace:*"
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
+    "@pikku/schema-cfworker": "workspace:*"
+    "@types/node": "npm:^24"
+    "@types/ws": "npm:^8"
+    tsx: "npm:^4.21.0"
+    typescript: "npm:^5.9"
+    ws: "npm:^8.19.0"
   languageName: unknown
   linkType: soft
 
@@ -11255,6 +11308,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/bun@npm:latest":
+  version: 1.3.14
+  resolution: "@types/bun@npm:1.3.14"
+  dependencies:
+    bun-types: "npm:1.3.14"
+  checksum: 10/bdd178c546029358db5ce0f3953edcb4effb15f6f138f5cfdafd6c23d2b4662d3c950fcfdf3d31dc9f461056d5d85a01fcdc36a370bbd584fc44f826648b5886
+  languageName: node
+  linkType: hard
+
 "@types/chai@npm:^5.2.2":
   version: 5.2.3
   resolution: "@types/chai@npm:5.2.3"
@@ -13507,6 +13569,15 @@ __metadata:
     tslib: "npm:2.8.1"
     uuid: "npm:11.1.0"
   checksum: 10/53d34676b3ffacc7219af000dbe7e261737e840cdaddd4103e47e29547376667d49c78d6b4641e4b4c265eda7faf0f33dd4e20ff0bd3eee96c4dc025b5b321f1
+  languageName: node
+  linkType: hard
+
+"bun-types@npm:1.3.14":
+  version: 1.3.14
+  resolution: "bun-types@npm:1.3.14"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10/8c5d7edf6622c6efbbca210e7efc903385ab5057db6a7b9137d84713b2ec213e52a9269e79fd18a9f48fb6acd5f5ced104d7afb08319c39ff1ebd8abf744ec5c
   languageName: node
   linkType: hard
 
