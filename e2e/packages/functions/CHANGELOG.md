@@ -1,5 +1,12 @@
 # @pikku/e2e-functions
 
+## 0.0.8
+
+### Patch Changes
+
+- Updated dependencies [a3f55de]
+  - @pikku/better-auth@0.12.12
+
 ## 0.0.7
 
 ### Patch Changes
