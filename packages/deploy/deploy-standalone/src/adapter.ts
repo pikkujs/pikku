@@ -7,10 +7,21 @@
  *   ├── bundle.js            # esbuild bundle (all deps inlined)
  *   ├── config/              # user config (env, secrets, etc.)
  *
- * Uses `@pikku/node-http-server` (pure JS, node:http) — same server
- * `pikku dev` and the container deploy entry use, so all three share
- * one HTTP path. Run with `node bundle.js`.
+ * Two runtimes, selected via `--runtime`:
+ *
+ * - `node` (default): uses `@pikku/node-http-server` (pure JS, node:http) —
+ *   the same server `pikku dev` and the container deploy entry use, so all
+ *   three share one HTTP path. Ships `bundle.js`; run with `node bundle.js`.
+ * - `bun`: uses `@pikku/bun-server` (Bun.serve, native WebSockets) and
+ *   compiles the bundle into a single self-contained executable via
+ *   `bun build --compile`. No runtime needed on the target host.
  */
+
+export type StandaloneRuntime = 'node' | 'bun'
+
+export interface StandaloneProviderAdapterOptions {
+  runtime?: StandaloneRuntime
+}
 
 type DeploymentHandler =
   | {
@@ -46,8 +57,20 @@ export class StandaloneProviderAdapter {
   readonly name = 'standalone'
   readonly deployDirName = 'standalone'
   readonly singleUnit = true
+  readonly runtime: StandaloneRuntime
+
+  constructor(options: StandaloneProviderAdapterOptions = {}) {
+    this.runtime = options.runtime ?? 'node'
+  }
 
   generateEntrySource(ctx: EntryGenerationContext): string {
+    if (this.runtime === 'bun') {
+      return this.generateBunEntrySource(ctx)
+    }
+    return this.generateNodeEntrySource(ctx)
+  }
+
+  private generateNodeEntrySource(ctx: EntryGenerationContext): string {
     return [
       `// Generated standalone entry — all functions in one process`,
       `import { LocalEventHubService } from '@pikku/core/channel/local'`,
@@ -111,6 +134,58 @@ export class StandaloneProviderAdapter {
     ].join('\n')
   }
 
+  private generateBunEntrySource(ctx: EntryGenerationContext): string {
+    return [
+      `// Generated standalone entry (bun runtime) — all functions in one process`,
+      `import { ConsoleLogger, InMemoryQueueService, InMemoryTriggerService, InMemoryWorkflowService } from '@pikku/core/services'`,
+      `import { pikkuState } from '@pikku/core/internal'`,
+      `import { InMemorySchedulerService } from '@pikku/schedule'`,
+      `import { PikkuBunServer, BunEventHubService } from '@pikku/bun-server'`,
+      ``,
+      ctx.configImport,
+      ctx.servicesImport,
+      ctx.singletonServicesImport,
+      `import '${ctx.bootstrapPath}'`,
+      ``,
+      `const logger = new ConsoleLogger()`,
+      `const port = parseInt(process.env.PORT || '3000', 10)`,
+      `const hostname = process.env.HOST || '0.0.0.0'`,
+      ``,
+      `async function main() {`,
+      `  const config = await ${ctx.configVar}()`,
+      `  const schedulerService = new InMemorySchedulerService()`,
+      `  const queueService = new InMemoryQueueService()`,
+      `  const workflowService = new InMemoryWorkflowService()`,
+      `  const triggerService = new InMemoryTriggerService()`,
+      `  const eventHub = new BunEventHubService()`,
+      `  workflowService.rewireQueueWorkers()`,
+      `  const singletonServices = await ${ctx.servicesVar}(config, {`,
+      `    logger,`,
+      `    schedulerService,`,
+      `    queueService,`,
+      `    workflowService,`,
+      `    workflowRunService: workflowService,`,
+      `    triggerService,`,
+      `    eventHub,`,
+      `  })`,
+      `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
+      ``,
+      `  const server = new PikkuBunServer({ ...config, port, hostname }, logger, { eventHub })`,
+      `  await server.init()`,
+      `  await schedulerService.start()`,
+      `  await triggerService.start()`,
+      `  server.enableExitOnSignals()`,
+      `  await server.start()`,
+      `}`,
+      ``,
+      `main().catch((err) => {`,
+      `  logger.error('Fatal: ' + err.message)`,
+      `  process.exit(1)`,
+      `})`,
+      ``,
+    ].join('\n')
+  }
+
   generateUnitConfigs(): Map<string, string> {
     return new Map()
   }
@@ -124,7 +199,7 @@ export class StandaloneProviderAdapter {
   }
 
   getExternals(): string[] {
-    return [
+    const externals = [
       'node:*',
       'child_process',
       'crypto',
@@ -147,6 +222,12 @@ export class StandaloneProviderAdapter {
       'cluster',
       'worker_threads',
     ]
+    if (this.runtime === 'bun') {
+      // Bun-native builtins are provided by the runtime and resolved by
+      // `bun build --compile` — leave them as imports rather than inlining.
+      externals.push('bun', 'bun:*', 'bun:sqlite', 'bun:ffi')
+    }
+    return externals
   }
 
   getPlatform(): 'node' {
@@ -192,6 +273,37 @@ export class StandaloneProviderAdapter {
       )
     }
     logger.info(`Bundle: ${join(outDir, 'bundle.js')}`)
+
+    // --- 2b. bun runtime: compile the bundle into a self-contained binary ---
+    if (this.runtime === 'bun') {
+      const { execFileSync } = await import('node:child_process')
+      const binaryPath = join(outDir, appName)
+      try {
+        execFileSync(
+          'bun',
+          [
+            'build',
+            '--compile',
+            '--minify',
+            `--outfile=${binaryPath}`,
+            join(outDir, 'bundle.js'),
+          ],
+          { stdio: 'pipe' }
+        )
+        logger.info(`Binary: ${binaryPath}`)
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e)
+        return {
+          success: false,
+          errors: [
+            {
+              step: 'compile',
+              error: `bun build --compile failed (is bun installed?): ${message}`,
+            },
+          ],
+        }
+      }
+    }
 
     // --- 3. config/ — empty template with .env example ---
     const configDir = join(outDir, 'config')

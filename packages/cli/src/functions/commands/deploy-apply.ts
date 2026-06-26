@@ -101,7 +101,8 @@ export async function resolveProvider(
   config?: {
     deploy?: { providers: Record<string, string>; defaultProvider?: string }
   },
-  providerName?: string
+  providerName?: string,
+  options?: { runtime?: string }
 ): Promise<ProviderAdapter> {
   const name = providerName ?? config?.deploy?.defaultProvider ?? 'cloudflare'
 
@@ -125,10 +126,10 @@ export async function resolveProvider(
   try {
     const mod = await import(packageName)
     if (typeof mod.createAdapter === 'function') {
-      return mod.createAdapter()
+      return mod.createAdapter(options)
     }
     if (typeof mod[adapterExportName] === 'function') {
-      return new mod[adapterExportName]()
+      return new mod[adapterExportName](options)
     }
     throw new Error(
       `Deploy provider '${packageName}' does not export createAdapter() or ${adapterExportName}`
@@ -228,6 +229,7 @@ export const deployApply = pikkuSessionlessFunc<
   {
     fromPlan?: boolean
     provider?: string
+    runtime?: string
     resultFile?: string
     debugArtifacts?: boolean
   },
@@ -235,7 +237,9 @@ export const deployApply = pikkuSessionlessFunc<
 >({
   func: async ({ logger, config, getInspectorState }, data) => {
     const projectDir = config.rootDir
-    const provider = await resolveProvider(config, data?.provider)
+    const provider = await resolveProvider(config, data?.provider, {
+      runtime: data?.runtime,
+    })
     const fromPlan = data?.fromPlan ?? false
     const resultFile = data?.resultFile
 

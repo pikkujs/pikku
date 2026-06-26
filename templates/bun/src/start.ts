@@ -1,4 +1,4 @@
-import { PikkuBunServer } from '@pikku/bun-server'
+import { PikkuBunServer, BunEventHubService } from '@pikku/bun-server'
 import { InMemorySchedulerService } from '@pikku/schedule'
 import {
   createConfig,
@@ -10,13 +10,16 @@ async function main(): Promise<void> {
   try {
     const config = await createConfig()
     const schedulerService = new InMemorySchedulerService()
+    const eventHub = new BunEventHubService()
     const singletonServices = await createSingletonServices(config, {
       schedulerService,
+      eventHub,
     })
 
     const appServer = new PikkuBunServer(
       { ...config, port: 4002, hostname: 'localhost' },
-      singletonServices.logger
+      singletonServices.logger,
+      { eventHub }
     )
     appServer.enableExitOnSignals()
     await appServer.init()

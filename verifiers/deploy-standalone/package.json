@@ -6,7 +6,7 @@
     "pikku": "echo 'skip'",
     "tsc": "echo 'skip'",
     "build": "echo 'skip'",
-    "test": "npx tsx test-deploy.ts"
+    "test": "npx tsx test-deploy.ts && npx tsx test-deploy-bun.ts"
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
