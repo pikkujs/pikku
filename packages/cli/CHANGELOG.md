@@ -1,3 +1,30 @@
+## 0.12.53
+
+### Patch Changes
+
+- 14ee8e4: fix(react-query): usePikkuInfiniteQuery feeds the page cursor back as `cursor`
+
+  The generated `usePikkuInfiniteQuery` injected the next-page cursor into the
+  request under the key `nextCursor`, but a list function built with
+  `pikkuListFunc` accepts the cursor as `cursor` (the `ListInput` field) and only
+  returns `nextCursor` on the output. So every page re-sent `cursor: undefined`
+  and the hook re-fetched page 1 forever. Feed `pageParam` back in as `cursor`
+  (and omit `cursor` from the caller's `data` arg) so it lines up with
+  `ListInput`/`ListOutput`. The output read in `getNextPageParam` is unchanged.
+
+- 2989738: docs(skills): add negative-trigger scoping to the two n8n skills
+
+  `pikku-n8n-addon-map` and `pikku-n8n-code-translate` were the only
+  non-deprecated skills whose descriptions had no "DO NOT TRIGGER when:"
+  clause, so an agent could load the wrong one (or load either for plain
+  hand-written code). Each description now scopes itself out of the other's
+  territory: integration/service stubs → addon-map, Code node stubs →
+  code-translate, and neither fires when no n8n-generated stub is involved.
+
+- Updated dependencies [e6bb2d6]
+  - @pikku/node-http-server@0.12.3
+  - @pikku/deploy-cloudflare@0.12.6
+
 ## 0.12.52
 
 ### Patch Changes
