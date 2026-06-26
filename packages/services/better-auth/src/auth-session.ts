@@ -5,6 +5,10 @@ import type {
 } from '@pikku/core'
 import { pikkuMiddleware } from '@pikku/core'
 import type { BetterAuthInstance } from './define-auth.js'
+import {
+  resolveImpersonatedSession,
+  type ImpersonationOptions,
+} from './auth-session-impersonation.js'
 
 type BetterAuthSessionResult = { user: any; session: any }
 
@@ -28,14 +32,7 @@ type BetterAuthSessionOptions = {
     result: BetterAuthSessionResult,
     services: CoreServices
   ) => CoreUserSession | Promise<CoreUserSession>
-  impersonation?: {
-    header?: string
-    canImpersonate?: (
-      result: BetterAuthSessionResult,
-      services: CoreServices
-    ) => boolean | Promise<boolean>
-    loadUser: (userId: string, services: CoreServices) => any | Promise<any>
-  }
+  impersonation?: ImpersonationOptions
   /**
    * Resolve machine (API key) callers statelessly. When the configured header
    * is present the middleware calls `verifyApiKey` and, if valid, maps the
@@ -67,23 +64,21 @@ export const betterAuthSession = (
 ): CorePikkuMiddleware => {
   const { mapSession, apiKey, impersonation } = options
   const apiKeyHeader = apiKey?.header ?? 'x-api-key'
-  const impersonateHeader =
-    impersonation?.header ?? 'x-pikku-impersonate-user-id'
-  const canImpersonate =
-    impersonation?.canImpersonate ??
-    ((result: BetterAuthSessionResult) => result.user?.role === 'admin')
 
   return pikkuMiddleware(
     async (services, { http, setSession, session }, next) => {
       if (!http?.request || !setSession || session) {
         return next()
       }
+      // Capture the narrowed request so deferred closures (the impersonation
+      // header reader below) keep the non-null type.
+      const request = http.request
 
       // --- Machine path: stateless API key resolution -----------------------
       // Handled before getSession because getSession would otherwise return a
       // metadata-less mock session for the same key, masking the scoped one.
       if (apiKey) {
-        const rawKey = http.request.header(apiKeyHeader)
+        const rawKey = request.header(apiKeyHeader)
         if (rawKey) {
           try {
             const auth = (await (services as any).auth()) as BetterAuthInstance
@@ -112,55 +107,48 @@ export const betterAuthSession = (
       }
 
       // --- Human path: cookie / bearer session ------------------------------
+      // Read the session in its own try: a genuine getSession failure (DB down,
+      // bad secret) must surface, not silently degrade to anonymous. The normal
+      // "not logged in" path returns null here — it does not throw.
+      let result: BetterAuthSessionResult | null
       try {
         const auth = (await (services as any).auth()) as BetterAuthInstance
         // getSession only needs the request headers — build them directly
         // instead of going through toWebRequest(), which (for a POST) would
         // otherwise read the single-use request body just to discard it,
         // starving the route handler that actually needs it.
-        const result = (await auth.api.getSession({
-          headers: new Headers(http.request.headers()),
+        result = (await auth.api.getSession({
+          headers: new Headers(request.headers()),
         })) as BetterAuthSessionResult | null
-
-        if (result?.user) {
-          if (impersonation) {
-            const targetId = http.request.header(impersonateHeader)
-            if (
-              targetId &&
-              targetId !== result.user.id &&
-              (await canImpersonate(result, services as CoreServices))
-            ) {
-              const targetUser = await impersonation.loadUser(
-                targetId,
-                services as CoreServices
-              )
-              if (targetUser) {
-                services.logger?.info(
-                  `better-auth impersonation: ${result.user.id} running as ${targetId}`
-                )
-                setSession(
-                  mapSession
-                    ? await mapSession(
-                        { user: targetUser, session: result.session },
-                        services as CoreServices
-                      )
-                    : ({ userId: targetUser.id } as CoreUserSession)
-                )
-                return next()
-              }
-              services.logger?.warn(
-                `better-auth impersonation: target user ${targetId} not found; running as ${result.user.id}`
-              )
-            }
-          }
-          setSession(
-            mapSession
-              ? await mapSession(result, services as CoreServices)
-              : ({ userId: result.user.id } as CoreUserSession)
-          )
-        }
       } catch (e: any) {
-        services.logger?.warn(`better-auth session read failed: ${e?.message}`)
+        services.logger?.error(
+          `better-auth getSession failed: ${e?.message ?? e}`
+        )
+        throw e
+      }
+
+      // mapSession / impersonation hooks are caller code — let their errors
+      // propagate (a thrown claim assertion is a deliberate signal, not a reason
+      // to silently fall back to anonymous and serve a baffling 403).
+      if (result?.user) {
+        if (impersonation) {
+          const impersonated = await resolveImpersonatedSession(
+            result,
+            impersonation,
+            services as CoreServices,
+            (name) => request.header(name),
+            mapSession
+          )
+          if (impersonated) {
+            setSession(impersonated)
+            return next()
+          }
+        }
+        setSession(
+          mapSession
+            ? await mapSession(result, services as CoreServices)
+            : ({ userId: result.user.id } as CoreUserSession)
+        )
       }
 
       return next()
