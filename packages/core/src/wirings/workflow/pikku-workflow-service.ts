@@ -121,6 +121,25 @@ export class WorkflowSuspendedException extends Error {
 }
 
 /**
+ * Thrown when a step (or the orchestrator) could not be enqueued — the queue
+ * itself failed (e.g. pg-boss is momentarily down), NOT the step's own logic.
+ * This is transient infrastructure failure: the run is left untouched (the step
+ * stays `pending`, the run stays running) and the orchestrator job is rethrown
+ * so the queue redelivers it and the workflow replays from its snapshot. Treat
+ * it as non-terminal — never mark the run `failed` for it.
+ */
+export class WorkflowDispatchException extends Error {
+  constructor(
+    public readonly runId: string,
+    public readonly stepName: string,
+    options?: { cause?: unknown }
+  ) {
+    super(`Failed to dispatch workflow step '${stepName}' (run ${runId})`, options)
+    this.name = 'WorkflowDispatchException'
+  }
+}
+
+/**
  * Error class for workflow not found
  */
 export class WorkflowNotFoundError extends PikkuError {
@@ -795,9 +814,17 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       const run = await this.getRun(runId)
       workflowName = run?.workflow
     }
-    await queueService.add(this.getOrchestratorQueueName(workflowName), {
-      runId,
-    })
+    // Carry an explicit retry policy on the orchestrator job too. Orchestrator
+    // runs are idempotent (they replay from the snapshot, returning cached step
+    // results), so redelivery is always safe — and it's what lets a transient
+    // dispatch/infra failure recover: the job is rethrown and retried instead of
+    // the run hanging. Passing `attempts` per-job overrides the queue default, so
+    // this holds even when the orchestrator queue is configured `retry_limit 0`.
+    await queueService.add(
+      this.getOrchestratorQueueName(workflowName),
+      { runId },
+      this.resolveStepJobOptions()
+    )
   }
 
   /**
@@ -920,11 +947,19 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       )
       return false
     }
-    await getSingletonServices()!.queueService!.add(
-      this.getStepWorkerQueueName(rpcName),
-      JSON.parse(JSON.stringify({ runId, stepName, rpcName, data })),
-      this.resolveStepJobOptions(stepOptions)
-    )
+    try {
+      await getSingletonServices()!.queueService!.add(
+        this.getStepWorkerQueueName(rpcName),
+        JSON.parse(JSON.stringify({ runId, stepName, rpcName, data })),
+        this.resolveStepJobOptions(stepOptions)
+      )
+    } catch (cause) {
+      // The queue is down/unreachable — NOT a step failure. Surface it as a
+      // transient dispatch error so the caller leaves the step `pending` and the
+      // orchestrator job is retried (replayed from snapshot) rather than the run
+      // being marked failed. `add` already throws on failure in every adapter.
+      throw new WorkflowDispatchException(runId, stepName, { cause })
+    }
     return true
   }
 
@@ -1037,7 +1072,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         if (
           error.name !== 'WorkflowAsyncException' &&
           error.name !== 'WorkflowCancelledException' &&
-          error.name !== 'WorkflowSuspendedException'
+          error.name !== 'WorkflowSuspendedException' &&
+          // Transient queue failure — leave the run resumable, don't fail it.
+          error.name !== 'WorkflowDispatchException'
         ) {
           await this.updateRunStatus(runId, 'failed', undefined, {
             name: error.name,
@@ -1048,6 +1085,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
             `Workflow ${name} (run ${runId}) failed:`,
             error
           )
+          throw error
+        }
+        if (error.name === 'WorkflowDispatchException') {
+          // Rethrow so the caller (poll loop / starter) sees the transient
+          // failure; the run stays running and can be resumed.
           throw error
         }
       } finally {
@@ -1459,6 +1501,17 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         return
       }
 
+      if (error.name === 'WorkflowDispatchException') {
+        // Transient: the queue was unreachable, not a workflow failure. Leave the
+        // run running and rethrow so the orchestrator job is redelivered and the
+        // workflow replays from its snapshot. Do NOT mark the run failed.
+        getSingletonServices()!.logger.warn(
+          `Workflow run ${runId} could not dispatch a step (queue unavailable); leaving run for orchestrator retry`,
+          error
+        )
+        throw error
+      }
+
       await this.updateRunStatus(runId, 'failed', undefined, {
         message: error.message,
         stack: error.stack,
@@ -1533,11 +1586,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       throw new WorkflowAsyncException(runId, stepName)
     }
 
-    // Step is pending - schedule it
-    await this.setStepScheduled(stepState.stepId)
-
     // Hand off to subclass-overridable transport. Default behavior enqueues
     // via the queue service; DO-style subclasses RPC to a step worker.
+    // Dispatch BEFORE marking the step `scheduled`: if the queue is down,
+    // dispatchStep throws WorkflowDispatchException and the step stays `pending`,
+    // so the orchestrator's next replay re-dispatches it. Marking `scheduled`
+    // first would strand the step (replay sees `scheduled`, pauses, never
+    // re-enqueues the job that was never created).
     const dispatched = await this.dispatchStep(
       runId,
       stepName,
@@ -1546,6 +1601,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       resolvedStepOptions
     )
     if (dispatched) {
+      await this.setStepScheduled(stepState.stepId)
       throw new WorkflowAsyncException(runId, stepName)
     }
 
@@ -1760,18 +1816,19 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       throw new WorkflowAsyncException(runId, stepName)
     }
 
-    // Step is pending - schedule it
-    await this.setStepScheduled(stepState.stepId)
-
     // Hand off to subclass-overridable transport. Default behavior schedules
     // a delayed sleeper RPC via the scheduler service; DO-style subclasses
-    // override to use native timer primitives (e.g. setAlarm).
-    const scheduled = await this.scheduleSleep(
-      runId,
-      stepState.stepId,
-      duration
-    )
+    // override to use native timer primitives (e.g. setAlarm). Schedule BEFORE
+    // marking `scheduled` so a scheduler outage leaves the step `pending` for
+    // re-scheduling on replay instead of stranding it (see rpcStep).
+    let scheduled: boolean
+    try {
+      scheduled = await this.scheduleSleep(runId, stepState.stepId, duration)
+    } catch (cause) {
+      throw new WorkflowDispatchException(runId, stepName, { cause })
+    }
     if (scheduled) {
+      await this.setStepScheduled(stepState.stepId)
       throw new WorkflowAsyncException(runId, stepName)
     }
 
