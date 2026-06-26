@@ -1,3 +1,9 @@
+## 0.12.5
+
+### Patch Changes
+
+- 6f06813: Add `CorePikkuFetch.setHeader(name, value)` to set or clear an arbitrary request header (passing `null` removes it). Enables per-client headers such as admin impersonation (`x-pikku-impersonate-user-id`) without subclassing the fetch client.
+
 ## 0.12.4
 
 ### Patch Changes
