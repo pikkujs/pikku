@@ -2,6 +2,7 @@ import {
   type PikkuWorkflowService,
   WorkflowAsyncException,
   WorkflowSuspendedException,
+  DEFAULT_STEP_RETRIES,
 } from '../pikku-workflow-service.js'
 import type { GraphWireState, PikkuGraphWire } from './workflow-graph.types.js'
 import { pikkuState, getSingletonServices } from '../../../pikku-state.js'
@@ -327,8 +328,10 @@ async function queueGraphNode(
   input: any,
   nodeConfig?: { retries?: number; retryDelay?: string | number }
 ): Promise<void> {
+  // Default to the workflow-wide retry policy when the node sets none, so the
+  // persisted step retries match the queue `attempts` (see resolveStepJobOptions).
   const stepOptions = {
-    retries: nodeConfig?.retries ?? 0,
+    retries: nodeConfig?.retries ?? DEFAULT_STEP_RETRIES,
     retryDelay: nodeConfig?.retryDelay,
   }
   await workflowService.insertStepState(
