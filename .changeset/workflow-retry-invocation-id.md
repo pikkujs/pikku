@@ -26,3 +26,14 @@ invocation gets a stable idempotency key.
 - **queue-bullmq**: `mapPikkuJobToBull` now maps `backoff` (previously dropped,
   so a step's backoff silently never applied on Redis), and `registerQueues`
   throws a clear error when no logger is available (matching queue-pg-boss).
+- **Dispatch failures are recoverable, not fatal.** A step is now marked
+  `scheduled` only *after* it is successfully handed to its transport (queue or
+  scheduler) — a failed hand-off leaves it `pending` so a replay re-dispatches
+  it, instead of stranding it in `scheduled` (replay would pause forever on a
+  job that was never enqueued). A transport outage (e.g. pg-boss momentarily
+  down) is surfaced as a new `WorkflowDispatchException`, which the orchestrator
+  treats as transient: the run is left running and the orchestrator job is
+  rethrown for redelivery (it replays idempotently from the snapshot) rather
+  than the whole run being marked `failed`. The orchestrator job now also
+  carries its own retry policy, so this holds even when the orchestrator queue
+  is configured `retry_limit 0`. A genuine step error still fails the run.

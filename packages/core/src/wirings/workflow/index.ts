@@ -5,6 +5,7 @@ export {
   PikkuWorkflowService,
   WorkflowCancelledException,
   WorkflowSuspendedException,
+  WorkflowDispatchException,
   WorkflowNotFoundError,
   WorkflowRunNotFoundError,
   DEFAULT_STEP_RETRIES,
