@@ -1,4 +1,4 @@
-import { Database } from 'bun:sqlite'
+import { Database, type SQLQueryBindings } from 'bun:sqlite'
 import type {
   SqliteRuntime,
   SyncSqliteChanges,
@@ -17,19 +17,23 @@ class BunSqliteStatement implements SyncSqliteStatement {
   }
 
   all(...parameters: unknown[]): unknown[] {
-    return this.stmt.all(...parameters) as unknown[]
+    return this.stmt.all(...(parameters as SQLQueryBindings[])) as unknown[]
   }
 
   get(...parameters: unknown[]): unknown | null {
-    return (this.stmt.get(...parameters) as unknown) ?? null
+    return (
+      (this.stmt.get(...(parameters as SQLQueryBindings[])) as unknown) ?? null
+    )
   }
 
   iterate(...parameters: unknown[]): IterableIterator<unknown> {
-    return this.stmt.iterate(...parameters) as IterableIterator<unknown>
+    return this.stmt.iterate(
+      ...(parameters as SQLQueryBindings[])
+    ) as IterableIterator<unknown>
   }
 
   run(...parameters: unknown[]): SyncSqliteChanges {
-    const result = this.stmt.run(...parameters)
+    const result = this.stmt.run(...(parameters as SQLQueryBindings[]))
     return {
       changes: result.changes,
       lastInsertRowid: result.lastInsertRowid,

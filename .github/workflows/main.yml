@@ -96,6 +96,7 @@ jobs:
             variables,
             functions,
             hmr,
+            dev-bun,
             deploy-cloudflare,
             deploy-serverless,
             deploy-azure,

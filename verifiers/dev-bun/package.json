@@ -1,0 +1,16 @@
+{
+  "name": "@pikku/verifiers-dev-bun",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "pikku": "echo 'skip'",
+    "tsc": "echo 'skip'",
+    "build": "echo 'skip'",
+    "test": "npx tsx test-dev-bun.ts"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@types/node": "^24",
+    "typescript": "^5.9"
+  }
+}
