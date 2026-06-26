@@ -29,6 +29,17 @@ export interface EntryGenerationContext {
   singletonServicesImport: string
   /** Type expression for Partial<SingletonServices> (or fallback) */
   servicesType: string
+  /**
+   * `import mcpJson from '…/mcp.gen.json' with { type: 'json' }` when the unit
+   * has a non-empty mcp.gen.json, else ''. Pair with `mcpServerOption`.
+   */
+  mcpImport: string
+  /**
+   * `'mcpJson, '` to splice into the PikkuNodeHTTPServer *third* (options) arg —
+   * the server reads `this.options.mcpJson`, NOT the first config arg — so it
+   * mounts /mcp. Else ''. Empty is safe — trailing commas are valid.
+   */
+  mcpServerOption: string
 }
 
 export interface ProviderAdapter {

@@ -1,5 +1,6 @@
 import { basename, join, relative } from 'node:path'
 import { readFile } from 'node:fs/promises'
+import { existsSync, readFileSync } from 'node:fs'
 
 import { pikkuSessionlessFunc } from '#pikku'
 import type {
@@ -56,6 +57,38 @@ export function getEntryContext(
     ? `Partial<${singletonServicesType.type}>`
     : 'Record<string, unknown>'
 
+  // MCP: when the unit's .pikku has a non-empty mcp.gen.json, import it and pass
+  // it to the generated server so PikkuNodeHTTPServer mounts /mcp. Without this
+  // the deployed bundle never serves MCP even though the dev server does.
+  let mcpImport = ''
+  let mcpServerOption = ''
+  const mcpJsonAbs = join(pikkuDir, 'mcp', 'mcp.gen.json')
+  if (existsSync(mcpJsonAbs)) {
+    let hasMcp = false
+    try {
+      const parsed = JSON.parse(readFileSync(mcpJsonAbs, 'utf-8')) as {
+        tools?: unknown[]
+        resources?: unknown[]
+        prompts?: unknown[]
+      }
+      hasMcp =
+        (parsed.tools?.length ?? 0) +
+          (parsed.resources?.length ?? 0) +
+          (parsed.prompts?.length ?? 0) >
+        0
+    } catch (err) {
+      console.warn(
+        `[pikku] could not parse ${mcpJsonAbs} — skipping MCP mount: ${err instanceof Error ? err.message : String(err)}`
+      )
+    }
+    if (hasMcp) {
+      const rel = relative(unitDir, mcpJsonAbs).replace(/\\/g, '/')
+      const relImport = rel.startsWith('.') ? rel : `./${rel}`
+      mcpImport = `import mcpJson from '${relImport}' with { type: 'json' }`
+      mcpServerOption = 'mcpJson, '
+    }
+  }
+
   return {
     unit,
     unitDir,
@@ -66,6 +99,8 @@ export function getEntryContext(
     servicesVar: singletonServicesFactory.variable,
     singletonServicesImport,
     servicesType,
+    mcpImport,
+    mcpServerOption,
   }
 }
 

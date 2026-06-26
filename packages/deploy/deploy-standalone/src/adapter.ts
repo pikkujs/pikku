@@ -51,6 +51,8 @@ interface EntryGenerationContext {
   servicesVar: string
   singletonServicesImport: string
   servicesType: string
+  mcpImport: string
+  mcpServerOption: string
 }
 
 export class StandaloneProviderAdapter {
@@ -84,6 +86,7 @@ export class StandaloneProviderAdapter {
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
+      ctx.mcpImport,
       `import '${ctx.bootstrapPath}'`,
       ``,
       `const logger = new ConsoleLogger()`,
@@ -114,7 +117,7 @@ export class StandaloneProviderAdapter {
       `    { ...config, port, hostname },`,
       `    logger,`,
       `    {`,
-      `      configureServer: (httpServer) => {`,
+      `      ${ctx.mcpServerOption}configureServer: (httpServer) => {`,
       `        pikkuWebsocketHandler({ server: httpServer, wss, logger })`,
       `      },`,
       `    }`,
