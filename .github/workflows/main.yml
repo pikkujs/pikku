@@ -75,7 +75,7 @@ jobs:
   #         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
   verifiers:
-    name: Verifiers (${{ matrix.verifier }})
+    name: Verifiers (${{ matrix.verifier }}, ${{ matrix.package-manager }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: build
@@ -101,7 +101,9 @@ jobs:
             deploy-azure,
             deploy-standalone,
             better-auth,
+            bun-server,
           ]
+        package-manager: [yarn, bun]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -109,7 +111,7 @@ jobs:
         if: matrix.verifier == 'binary'
         with:
           bun-version: latest
-      - run: cd verifiers/${{ matrix.verifier }} && yarn test
+      - run: cd verifiers/${{ matrix.verifier }} && ${{ matrix.package-manager == 'bun' && 'bun run' || 'yarn' }} test
 
   templates:
     name: Templates (${{ matrix.version }}, ${{ matrix.template }}, ${{ matrix.package-manager }})
@@ -167,8 +169,11 @@ jobs:
         with:
           node-version: ${{ matrix.version }}
       - name: Test template
-        timeout-minutes: 2
-        run: ./scripts/test-template.sh ${{ matrix.template }} ${{ github.ref_name }}
+        timeout-minutes: 5
+        run: ./scripts/test-template.sh "$TEMPLATE_NAME" "$TEMPLATE_VERSION"
+        env:
+          TEMPLATE_NAME: ${{ matrix.template }}
+          TEMPLATE_VERSION: ${{ github.ref_name }}
     env:
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
       DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_workspace_starter
@@ -194,8 +199,11 @@ jobs:
         with:
           node-version: ${{ matrix.version }}
       - name: Test template
-        timeout-minutes: 2
-        run: ./scripts/test-template.sh ${{ matrix.template }} ${{ github.ref_name }}
+        timeout-minutes: 5
+        run: ./scripts/test-template.sh "$TEMPLATE_NAME" "$TEMPLATE_VERSION"
+        env:
+          TEMPLATE_NAME: ${{ matrix.template }}
+          TEMPLATE_VERSION: ${{ github.ref_name }}
     env:
       SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

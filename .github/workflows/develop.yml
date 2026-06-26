@@ -63,7 +63,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install native build tools
-        run: apt-get update && apt-get install -y build-essential python3
+        run: apt-get update && apt-get install -y build-essential python3 unzip
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/e2e-codegen
       - name: Run e2e tests
@@ -88,7 +88,7 @@ jobs:
   #         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
   verifiers:
-    name: Verifiers (${{ matrix.verifier }})
+    name: Verifiers (${{ matrix.verifier }}, ${{ matrix.package-manager }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: build
@@ -113,11 +113,13 @@ jobs:
             deploy-azure,
             deploy-standalone,
             better-auth,
+            bun-server,
           ]
+        package-manager: [yarn, bun]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      - run: cd verifiers/${{ matrix.verifier }} && yarn test
+      - run: cd verifiers/${{ matrix.verifier }} && ${{ matrix.package-manager == 'bun' && 'bun run' || 'yarn' }} test
 
   verifier-coverage:
     name: Verifier Coverage
@@ -225,17 +227,36 @@ jobs:
             remote-rpc-pg,
             remote-rpc-redis,
             ai-postgres,
+            bun,
           ]
-        package-manager: [yarn]
+        package-manager: [yarn, bun]
+        exclude:
+          - package-manager: bun
+            template: uws
+          - package-manager: bun
+            template: aws-lambda
+          - package-manager: bun
+            template: aws-lambda-websocket
+          - package-manager: bun
+            template: cloudflare-workers
+          - package-manager: bun
+            template: cloudflare-websocket
+          - package-manager: bun
+            template: nextjs
+          - package-manager: bun
+            template: nextjs-full
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.version }}
       - name: Test template
-        timeout-minutes: 2
-        run: ./scripts/test-template.sh ${{ matrix.template }} ${{ github.ref_name }}
+        timeout-minutes: 5
+        run: ./scripts/test-template.sh "$TEMPLATE_NAME" "$TEMPLATE_VERSION" "$PACKAGE_MANAGER"
         env:
+          TEMPLATE_NAME: ${{ matrix.template }}
+          TEMPLATE_VERSION: ${{ github.ref_name }}
+          PACKAGE_MANAGER: ${{ matrix.package-manager }}
           TEMPLATE_V8_COVERAGE_DIR: ${{ runner.temp }}/template-coverage/${{ matrix.template }}/raw
       - name: Generate template coverage report
         if: always()
@@ -283,7 +304,7 @@ jobs:
         with:
           node-version: ${{ matrix.version }}
       - name: Test template
-        timeout-minutes: 2
+        timeout-minutes: 5
         run: ./scripts/test-template.sh ${{ matrix.template }} ${{ github.ref_name }}
         env:
           TEMPLATE_V8_COVERAGE_DIR: ${{ runner.temp }}/template-coverage/${{ matrix.template }}/raw

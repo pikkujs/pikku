@@ -128,13 +128,28 @@ export HELLO_WORLD_URL_PREFIX
 export TODO_APP_URL="$HELLO_WORLD_URL_PREFIX"
 export WS_PATH
 
+# Recursively terminate a process and all of its descendants. `kill $PID`
+# alone only signals the direct child: yarn forwards SIGTERM to its spawned
+# `tsx` server, but `bun run` does not, leaving the real server orphaned. An
+# orphan inherits this step's stdout pipe and keeps it open, so CI hangs until
+# the job times out. Walking the tree with `pgrep -P` (portable on macOS and
+# Linux) guarantees the server is gone regardless of package manager.
+kill_tree() {
+    local pid="$1"
+    local child
+    for child in $(pgrep -P "$pid" 2>/dev/null); do
+        kill_tree "$child"
+    done
+    kill "$pid" 2>/dev/null || true
+}
+
 # -------- START SERVER --------
 if $NO_START; then
     echo "Skipping server start (--no-start), assuming external server at $HELLO_WORLD_URL_PREFIX"
 else
     echo "Starting server: $SERVER_CMD"
     bash -c "$SERVER_CMD" & SERVER_PID=$!
-    trap "kill $SERVER_PID 2>/dev/null || true" EXIT
+    trap "kill_tree $SERVER_PID" EXIT
 fi
 
 # -------- WAIT FOR SERVER TO BE READY --------
