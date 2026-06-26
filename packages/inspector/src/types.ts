@@ -502,6 +502,12 @@ export interface InspectorState {
      *  own default-map stateless middleware, which would otherwise pre-empt the
      *  user's custom mapSession (pikkujs/pikku#754). */
     userStatelessSession?: boolean
+    /** True when a user (non-generated) file already registers a global
+     *  `betterAuthSession(...)`. The CLI then skips auto-generating its own
+     *  default stateful middleware, which would otherwise run first and pre-empt
+     *  the user's config (mapSession/impersonation/apiKey). Stateful analogue of
+     *  `userStatelessSession`. */
+    hasUserSessionMiddleware?: boolean
   }
   secrets: {
     definitions: SecretDefinitions
