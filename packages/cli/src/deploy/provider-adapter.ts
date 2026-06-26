@@ -68,6 +68,20 @@ export interface ProviderAdapter {
   generateEntrySource(ctx: EntryGenerationContext): string
 
   /**
+   * Generate the entry file source for a `target: 'server'` (container) unit.
+   *
+   * Optional. When a provider implements it, the deploy pipeline uses it
+   * instead of the provider-agnostic `generateServerEntrySource`, so the
+   * provider can inject the SAME platform services (kysely, secrets, …) into
+   * the container that it injects into its serverless workers — sourcing the
+   * bindings from `process.env` instead of a runtime `env` object. When
+   * omitted, the pipeline falls back to the generic generator (no platform
+   * injection), which is correct for providers whose containers carry no
+   * platform services.
+   */
+  generateServerEntrySource?(ctx: EntryGenerationContext): string
+
+  /**
    * Generate provider-specific config files per unit (e.g. wrangler.toml).
    * Returns a map of filename → content to write into the unit directory.
    */

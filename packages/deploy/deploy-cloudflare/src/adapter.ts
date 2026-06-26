@@ -269,6 +269,98 @@ export class CloudflareProviderAdapter {
   }
 
   /**
+   * Generate the Node container entry for `target: 'server'` units.
+   *
+   * The generic `generateServerEntrySource` boots the user's
+   * `createSingletonServices(config)` with NO platform injection, so a
+   * container that relies on a platform-provided service (kysely from
+   * `DATABASE_URL`, secrets from `PIKKU_SECRET_KEK`, …) 500s on first access.
+   *
+   * This override runs the SAME contributor-driven `createPlatformServices`
+   * the serverless workers use, but sources bindings from `process.env`
+   * instead of a CF `env` object, and merges the result into
+   * `createSingletonServices` the same way `setupServices` does on the worker.
+   * The CF-runtime service blocks (queue/workflow/AI) are intentionally
+   * omitted — those are Worker bindings a Node container never has; only the
+   * env-portable contributors run.
+   */
+  generateServerEntrySource(ctx: EntryGenerationContext): string {
+    const platform = this.resolvePlatformImports(ctx.unit)
+
+    const lines: string[] = [
+      `// Generated server (container) entry for "${ctx.unit.name}" (${ctx.unit.role})`,
+      `import { PikkuNodeHTTPServer } from '@pikku/node-http-server'`,
+      `import { pikkuState } from '@pikku/core/internal'`,
+      `import { JsonConsoleLogger, LocalVariablesService, LocalSecretService } from '@pikku/core/services'`,
+      `import { CFWorkerSchemaService } from '@pikku/schema-cfworker'`,
+      ...this.contributorImports(platform),
+      ctx.configImport,
+      ctx.servicesImport,
+      ctx.singletonServicesImport,
+      `import '${ctx.bootstrapPath}'`,
+      ``,
+      ...this.generateServerPlatformServicesBlock(ctx, platform),
+      ``,
+      `const PORT = Number(process.env.PORT ?? 8080)`,
+      `const HOST = process.env.HOST ?? '0.0.0.0'`,
+      ``,
+      `async function main(): Promise<void> {`,
+      `  const env = process.env as Record<string, string | undefined>`,
+      `  const variables = new LocalVariablesService(env)`,
+      `  const config = await ${ctx.configVar}(variables)`,
+      `  const platformServices = await createPlatformServices(env)`,
+      `  const singletonServices = await ${ctx.servicesVar}(config, {`,
+      `    variables,`,
+      `    secrets: new LocalSecretService(variables),`,
+      `    ...platformServices,`,
+      `  })`,
+      `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
+      ``,
+      `  const server = new PikkuNodeHTTPServer(`,
+      `    { ...config, hostname: HOST, port: PORT, healthCheckPath: '/__pikku/health' },`,
+      `    singletonServices.logger`,
+      `  )`,
+      `  server.enableExitOnSignals()`,
+      `  await server.init()`,
+      `  await server.start()`,
+      `}`,
+      ``,
+      `main().catch((err) => {`,
+      `  console.error('pikku-server: fatal', err)`,
+      `  process.exit(1)`,
+      `})`,
+      ``,
+    ]
+
+    return lines.join('\n')
+  }
+
+  /**
+   * `createPlatformServices` for the Node container entry: logger + schema +
+   * the env-portable contributors only. Unlike the worker block this omits the
+   * CF queue/workflow/AI service constructors — a container has no such
+   * bindings, and importing `@pikku/cloudflare/*` into a Node bundle would pull
+   * Worker-only code. `env` is `process.env`, so contributors gated on
+   * `env.DATABASE_URL` / `env.PIKKU_SECRET_KEK` wire kysely + secrets exactly as
+   * they do on the worker.
+   */
+  private generateServerPlatformServicesBlock(
+    ctx: EntryGenerationContext,
+    platform: PlatformImports
+  ): string[] {
+    return [
+      `const createPlatformServices = async (env: Record<string, string | undefined>): Promise<${ctx.servicesType}> => {`,
+      `  const services: ${ctx.servicesType} = {}`,
+      `  const logger = new JsonConsoleLogger()`,
+      `  services.logger = logger`,
+      `  services.schema = new CFWorkerSchemaService(logger)`,
+      ...this.contributorLines(ctx, platform, false),
+      `  return services`,
+      `}`,
+    ]
+  }
+
+  /**
    * Generates entry source for function/workflow-step units.
    * Produces a combined export object with fetch/queue/scheduled handlers
    * based on the unit's handlers array.

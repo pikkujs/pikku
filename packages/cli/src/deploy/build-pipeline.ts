@@ -280,7 +280,8 @@ export async function runBuildPipeline(options: {
       const ctx = getEntryContext(unitDir, pikkuDir, unit, inspectorState)
       const source =
         unit.target === 'server'
-          ? generateServerEntrySource(ctx as never)
+          ? (provider.generateServerEntrySource?.(ctx as never) ??
+            generateServerEntrySource(ctx as never))
           : provider.generateEntrySource(ctx as never)
 
       await writeFile(entryPath, source, 'utf-8')
