@@ -7,7 +7,9 @@ export {
   WorkflowSuspendedException,
   WorkflowNotFoundError,
   WorkflowRunNotFoundError,
+  DEFAULT_STEP_RETRIES,
 } from './pikku-workflow-service.js'
+export { deriveInvocationId, uuidv5 } from './workflow-invocation-id.js'
 
 // Internal registration functions (used by generated code)
 export { addWorkflow } from './dsl/workflow-runner.js'
