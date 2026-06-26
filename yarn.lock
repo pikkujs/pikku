@@ -5880,6 +5880,7 @@ __metadata:
     "@uiw/react-codemirror": "npm:^4.25.9"
     "@vitejs/plugin-react": "npm:^6"
     allotment: "npm:^1.20.2"
+    better-auth: "npm:^1.6.19"
     chroma-js: "npm:^3.1.2"
     clsx: "npm:^2.1.1"
     cronstrue: "npm:^3.12.0"
