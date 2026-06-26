@@ -101,9 +101,14 @@ Enabling `session: { cookieCache: { enabled: true } }` makes the CLI split out a
 
 **Tradeoff:** server-side session revocation isn't seen until the cookie cache expires (sign-out is still immediate — it deletes the cookie).
 
-**Do NOT also hand-write a global `addHTTPMiddleware('*', [betterAuthSession()])`** — that re-drags the stateful server into every unit and defeats the split (validate flags it as `better-auth-stateful-session-global`). The generated middleware is enough.
+**Don't add a redundant default `addHTTPMiddleware('*', [betterAuthSession()])`** — with cookieCache on, that re-drags the stateful server into every unit and defeats the split (validate flags it as `better-auth-stateful-session-global`). If you don't need to customize the session, the generated middleware is enough.
 
-**Custom session fields (`role`, `locale`, …):** the generated stateless middleware uses the default map (`{ userId }` only). To use a custom map, register your own `betterAuthStatelessSession({ mapSession })` **globally** — `addHTTPMiddleware('*', [...])` or `addGlobalMiddleware([...])`. The CLI detects a global user registration and skips generating its own (pikkujs/pikku#754), so you keep cookieCache's lean bundles *and* your custom fields. A route-scoped registration (`addHTTPMiddleware('/some/path', [...])`) does not count — the generated global middleware is still emitted.
+**Customizing the session bridge (`mapSession`, `impersonation`, `apiKey`, …):** you do NOT chain a second middleware on top of the generated one — register your OWN global session middleware and the CLI steps aside (it stops generating its default). This works on both paths and is detected the same way:
+
+- **Stateless (cookieCache on):** register `betterAuthStatelessSession({ mapSession })` **globally** — `addHTTPMiddleware('*', [...])` or `addGlobalMiddleware([...])`. The CLI sees the global registration and skips emitting `auth-middleware.gen.ts` (pikkujs/pikku#754), so you keep cookieCache's lean bundles *and* your custom fields.
+- **Stateful (cookieCache off):** register `betterAuthSession({ mapSession, impersonation })` **globally**. The CLI detects it (`hasUserSessionMiddleware`) and omits its own `addHTTPMiddleware('*', [betterAuthSession()])` from `auth.gen.ts` — so there's exactly one session bridge in the chain, yours.
+
+In both cases a **route-scoped** registration (`addHTTPMiddleware('/some/path', [...])`) does NOT count — only a global one suppresses the generated default. The generated middleware in a `.gen.ts` file is also ignored by the detector, so regeneration never self-suppresses.
 
 ### 2. Production database adapter
 

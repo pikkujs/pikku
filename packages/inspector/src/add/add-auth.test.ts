@@ -616,4 +616,54 @@ describe('addAuth inspector', () => {
       await rm(rootDir, { recursive: true, force: true })
     }
   })
+
+  test('user-registered global betterAuthSession sets hasUserSessionMiddleware', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-session-'))
+    const file = join(rootDir, 'middleware.ts')
+    await writeFile(
+      file,
+      [
+        "import { addHTTPMiddleware } from '#pikku'",
+        "import { betterAuthSession } from '@pikku/better-auth'",
+        "addHTTPMiddleware('*', [",
+        '  betterAuthSession({',
+        '    impersonation: { loadUser: (id: string) => ({ id }) },',
+        '  }),',
+        '])',
+      ].join('\n')
+    )
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      const state = await inspect(makeLogger(criticals), [file], { rootDir })
+      assert.equal(state.auth.hasUserSessionMiddleware, true)
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
+
+  test('betterAuthSession in a .gen.ts file does NOT set hasUserSessionMiddleware', async () => {
+    // Critical: the CLI's own auth.gen.ts contains addHTTPMiddleware('*',
+    // [betterAuthSession()]). It must not count as a user registration, or it
+    // would suppress itself and leave the chain with no session middleware.
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-add-auth-session-gen-'))
+    const file = join(rootDir, 'auth.gen.ts')
+    await writeFile(
+      file,
+      [
+        "import { addHTTPMiddleware } from '#pikku'",
+        "import { betterAuthSession } from '@pikku/better-auth'",
+        "addHTTPMiddleware('*', [betterAuthSession()])",
+      ].join('\n')
+    )
+    const criticals: Array<{ code: ErrorCode; message: string }> = []
+    try {
+      const state = await inspect(makeLogger(criticals), [file], { rootDir })
+      assert.ok(
+        !state.auth.hasUserSessionMiddleware,
+        'generated file must not self-trigger the skip'
+      )
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
 })
