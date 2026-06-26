@@ -139,6 +139,11 @@ typings/
 
 # Claude Code worktrees
 .claude/worktrees/
+.claude/scheduled_tasks.lock
+
+# Bun lockfile — repo is yarn-based; bun is only used to run `bun test` against
+# the yarn-installed node_modules, so its lockfile is not tracked.
+bun.lock
 
 # Bun build cache
 *.bun-build

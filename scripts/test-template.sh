@@ -30,17 +30,28 @@ TEST_APP_DIR="$PROJECT_ROOT/../test-app"
 # Parse arguments
 TEMPLATE_NAME="$1"
 VERSION="${2:-}"
+PACKAGE_MANAGER="${3:-yarn}"
+
+case "$PACKAGE_MANAGER" in
+    yarn|bun)
+        ;;
+    *)
+        log_error "Unsupported package manager: $PACKAGE_MANAGER"
+        log_error "Supported package managers: yarn, bun"
+        exit 1
+        ;;
+esac
 
 # Show usage if no template provided
 if [ -z "$TEMPLATE_NAME" ]; then
-    log_error "Usage: $0 <template-name> [version/branch-name]"
+    log_error "Usage: $0 <template-name> [version/branch-name] [package-manager]"
     echo ""
     echo "Available templates:"
     ls -1 "$TEMPLATES_DIR" | sed 's/^/  - /'
     echo ""
     echo "Examples:"
-    echo "  $0 workflows-bullmq              # Uses current branch"
-    echo "  $0 express-middleware main       # Uses specific branch"
+    echo "  $0 workflows-bullmq              # Uses current branch, yarn"
+    echo "  $0 express-middleware main bun   # Uses specific branch, bun"
     exit 1
 fi
 
@@ -61,6 +72,7 @@ fi
 
 log_info "Testing template: $TEMPLATE_NAME"
 log_info "Version/branch: $VERSION"
+log_info "Package manager: $PACKAGE_MANAGER"
 
 # Clean up existing test-app directory
 if [ -d "$TEST_APP_DIR" ]; then
@@ -72,13 +84,28 @@ fi
 log_info "Creating test app from template..."
 cd "$PROJECT_ROOT/packages/create"
 
-if ! node ./dist/index.js \
-    --template "$TEMPLATE_NAME" \
-    --version "$VERSION" \
-    --name ../../../test-app \
-    --install \
-    --package-manager yarn \
-    --yarn-link "$PROJECT_ROOT"; then
+if [ "$PACKAGE_MANAGER" = "yarn" ]; then
+    CREATE_ARGS=(
+        --template "$TEMPLATE_NAME"
+        --version "$VERSION"
+        --name ../../../test-app
+        --install
+        --package-manager yarn
+        --yarn-link "$PROJECT_ROOT"
+    )
+else
+    # For non-yarn: scaffold only so we can patch overrides
+    # before the package manager resolves deps from npm.
+    CREATE_ARGS=(
+        --template "$TEMPLATE_NAME"
+        --version "$VERSION"
+        --name ../../../test-app
+        --package-manager "$PACKAGE_MANAGER"
+        --skip-install
+    )
+fi
+
+if ! node ./dist/index.js "${CREATE_ARGS[@]}"; then
     log_error "Failed to create test app from template"
     exit 1
 fi
@@ -89,36 +116,165 @@ log_success "Test app created successfully"
 log_info "Setting up and testing the app..."
 cd "$TEST_APP_DIR"
 
-# Link packages
-# create-pikku already ran `yarn link --all --private ../pikku`, but the
-# postinstall (`pikku all`) ran during the install BEFORE that link applied,
-# so any subsequent `pikku ...` invocation can pick up the npm-published
-# CLI instead of the in-repo one. Re-link here to force the in-repo @pikku/*
-# packages for everything that follows (notably `pikku all --target ...`).
-log_info "Re-linking Pikku packages..."
-if ! yarn link -A "$PROJECT_ROOT"; then
-    log_error "Failed to link Pikku packages"
-    exit 1
-fi
-
-# Install dependencies (refreshes node_modules with the linked packages)
-log_info "Installing dependencies..."
-if ! yarn install; then
-    log_error "Failed to install dependencies"
-    exit 1
-fi
-
-# Replace duplicate copies of packages that use #private class fields with
-# symlinks to the monorepo's copy. With yarn portals, the portal's dependencies
-# resolve from the monorepo's node_modules while the test-app installs its own
-# copy, causing TypeScript to see two incompatible versions (TS2345).
-log_info "Deduplicating portal-conflicting packages..."
-for pkg in kysely fastify fastify-plugin; do
-    if [ -d "node_modules/$pkg" ] && [ -d "$PROJECT_ROOT/node_modules/$pkg" ]; then
-        rm -rf "node_modules/$pkg"
-        ln -s "$(cd "$PROJECT_ROOT/node_modules/$pkg" && pwd)" "node_modules/$pkg"
+if [ "$PACKAGE_MANAGER" = "yarn" ]; then
+    # Link packages
+    # create-pikku already ran `yarn link --all --private ../pikku`, but the
+    # postinstall (`pikku all`) ran during the install BEFORE that link applied,
+    # so any subsequent `pikku ...` invocation can pick up the npm-published
+    # CLI instead of the in-repo one. Re-link here to force the in-repo @pikku/*
+    # packages for everything that follows (notably `pikku all --target ...`).
+    log_info "Re-linking Pikku packages..."
+    if ! yarn link -A "$PROJECT_ROOT"; then
+        log_error "Failed to link Pikku packages"
+        exit 1
     fi
-done
+
+    # Install dependencies (refreshes node_modules with the linked packages)
+    log_info "Installing dependencies..."
+    if ! yarn install; then
+        log_error "Failed to install dependencies"
+        exit 1
+    fi
+
+    # Replace duplicate copies of packages that use #private class fields with
+    # symlinks to the monorepo's copy. With yarn portals, the portal's dependencies
+    # resolve from the monorepo's node_modules while the test-app installs its own
+    # copy, causing TypeScript to see two incompatible versions (TS2345).
+    log_info "Deduplicating portal-conflicting packages..."
+    for pkg in kysely fastify fastify-plugin; do
+        if [ -d "node_modules/$pkg" ] && [ -d "$PROJECT_ROOT/node_modules/$pkg" ]; then
+            rm -rf "node_modules/$pkg"
+            ln -s "$(cd "$PROJECT_ROOT/node_modules/$pkg" && pwd)" "node_modules/$pkg"
+        fi
+    done
+else
+    log_info "Patching package.json with file: paths for @pikku/* packages..."
+    PROJECT_ROOT="$PROJECT_ROOT" node -e "
+const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
+
+const root = process.env.PROJECT_ROOT;
+const pkgPath = 'package.json';
+const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+
+// Scan every workspace member dir for @pikku/* packages. 'templates' must be
+// included alongside 'packages' so workspace-only deps that live under
+// templates/ (e.g. @pikku/templates-function-addon) also get a local path —
+// otherwise their 'workspace:*' specifier survives and bun, lacking a workspace,
+// fails to resolve it.
+const dirs = ['packages', 'templates'];
+const files = dirs.flatMap((d) =>
+  execSync(
+    'find ' + root + '/' + d + ' -name package.json -not -path \"*/node_modules/*\" -maxdepth 4',
+    { encoding: 'utf8' }
+  ).trim().split('\n').filter(Boolean)
+);
+
+const localPaths = {};
+const peerNames = new Set();
+for (const f of files) {
+  try {
+    const p = JSON.parse(fs.readFileSync(f, 'utf8'));
+    if (p.name && p.name.startsWith('@pikku/')) {
+      localPaths[p.name] = 'file:' + path.dirname(f);
+      for (const peer of Object.keys(p.peerDependencies || {})) {
+        peerNames.add(peer);
+      }
+    }
+  } catch {}
+}
+
+// bun symlinks each file:-linked @pikku/* package to its in-repo location, so
+// tsc resolves that package's peer deps (e.g. fastify) from the monorepo's
+// node_modules — a different physical copy than the app's own. Two copies of
+// fastify means two FastifyInstance type identities, so app.register() reports
+// 'no overload matches'. Pin every non-@pikku peer that exists in the monorepo
+// root to that single copy so the app and the linked plugins share one.
+const peerOverrides = {};
+for (const peer of peerNames) {
+  if (peer.startsWith('@pikku/')) continue;
+  const rootCopy = path.join(root, 'node_modules', peer);
+  if (fs.existsSync(rootCopy)) {
+    peerOverrides[peer] = 'file:' + rootCopy;
+  }
+}
+
+const depTypes = ['dependencies', 'devDependencies', 'peerDependencies'];
+for (const dt of depTypes) {
+  if (pkg[dt]) {
+    for (const [name, ver] of Object.entries(pkg[dt])) {
+      if (localPaths[name]) {
+        pkg[dt][name] = localPaths[name];
+      }
+    }
+  }
+}
+
+// Drop entries duplicated across dependency types. A package present in both
+// 'dependencies' and 'devDependencies' makes bun's file: linker emit a broken
+// self-referential symlink (package.json -> package.json), so the package can't
+// be resolved by tsc or the runtime. Keep the 'dependencies' copy.
+for (const dt of ['devDependencies', 'peerDependencies']) {
+  if (pkg.dependencies && pkg[dt]) {
+    for (const name of Object.keys(pkg[dt])) {
+      if (name in pkg.dependencies) {
+        delete pkg[dt][name];
+      }
+    }
+  }
+}
+
+// Force every @pikku/* package — including transitive ones pulled in via
+// published version ranges (^0.12.x) by the file:-linked packages — to resolve
+// to the in-repo copy. Without yarn's global 'link --all', bun would otherwise
+// fetch those ranges from npm, which fails for versions not yet published.
+pkg.overrides = Object.assign({}, pkg.overrides, peerOverrides, localPaths);
+
+fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+console.log('Replaced ' + Object.keys(localPaths).length + ' @pikku/* entries with file: paths');
+console.log('Pinned ' + Object.keys(peerOverrides).length + ' shared peer deps to the monorepo copy');
+"
+
+    log_info "Ensuring TypeScript declarations exist for @pikku/* file: deps..."
+    for pkg_path in $(node -e "
+const fs = require('fs');
+const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+const all = {...(pkg.dependencies||{}), ...(pkg.devDependencies||{})};
+Object.entries(all)
+  .filter(([n,v]) => n.startsWith('@pikku/') && typeof v === 'string' && v.startsWith('file:'))
+  .forEach(([n,v]) => console.log(v.replace('file:', '')));
+" 2>/dev/null); do
+        if [ -d "$pkg_path" ] && [ ! -f "$pkg_path/dist/index.d.ts" ]; then
+            log_info "Rebuilding $pkg_path (dist/index.d.ts missing)..."
+            (cd "$pkg_path" && yarn build 2>/dev/null) || log_warning "Build failed for $pkg_path"
+        fi
+    done
+
+    log_info "Installing dependencies..."
+    if ! "$PACKAGE_MANAGER" install; then
+        log_error "Failed to install dependencies"
+        exit 1
+    fi
+
+    log_info "Checking @pikku package installation..."
+    for pkg in schedule modelcontextprotocol; do
+        pkg_dir=$(find node_modules/@pikku -maxdepth 1 -name "$pkg" -type d -o -name "$pkg" -type l 2>/dev/null | head -1)
+        if [ -n "$pkg_dir" ]; then
+            if [ -f "$pkg_dir/dist/index.d.ts" ]; then
+                log_success "@pikku/$pkg: dist/index.d.ts exists"
+            else
+                log_warning "@pikku/$pkg: dist/index.d.ts MISSING (root: $(ls $pkg_dir/ 2>/dev/null | tr '\n' ' '); dist/: $(ls $pkg_dir/dist/ 2>/dev/null | tr '\n' ' '))"
+            fi
+        fi
+    done
+
+    log_info "Running pikku codegen..."
+    if ! "$PACKAGE_MANAGER" run pikku; then
+        log_error "Pikku codegen failed"
+        exit 1
+    fi
+fi
 
 # Serverless-target templates: re-run codegen with --target serverless so
 # server-only functions (e.g. those depending on metaService → node:fs) are
@@ -127,11 +283,18 @@ done
 case "$TEMPLATE_NAME" in
     aws-lambda|aws-lambda-websocket|cloudflare-workers|cloudflare-websocket|nextjs|nextjs-full)
         log_info "Regenerating with --target serverless for $TEMPLATE_NAME..."
-        # `yarn pikku all` would treat `all` as a yarn subcommand; use `yarn run`
-        # with `--` to forward args to the script verbatim.
-        if ! yarn run pikku -- all --target serverless; then
-            log_error "pikku all --target serverless failed"
-            exit 1
+        if [ "$PACKAGE_MANAGER" = "yarn" ]; then
+            # `yarn pikku all` would treat `all` as a yarn subcommand; use `yarn run`
+            # with `--` to forward args to the script verbatim.
+            if ! yarn run pikku -- all --target serverless; then
+                log_error "pikku all --target serverless failed"
+                exit 1
+            fi
+        else
+            if ! "$PACKAGE_MANAGER" run pikku all --target serverless; then
+                log_error "pikku all --target serverless failed"
+                exit 1
+            fi
         fi
         ;;
 esac
@@ -140,13 +303,13 @@ esac
 log_info "Building the app..."
 case "$TEMPLATE_NAME" in
     nextjs|nextjs-full)
-        if ! yarn run build; then
+        if ! "$PACKAGE_MANAGER" run build; then
             log_error "Build failed"
             exit 1
         fi
         ;;
     *)
-        if ! yarn run tsc; then
+        if ! "$PACKAGE_MANAGER" run tsc; then
             log_error "TypeScript compilation failed"
             exit 1
         fi
@@ -168,12 +331,12 @@ esac
 
 # Run tests
 log_info "Running tests..."
-if [ -n "$TEMPLATE_V8_COVERAGE_DIR" ]; then
+if [ "$PACKAGE_MANAGER" = "yarn" ] && [ -n "$TEMPLATE_V8_COVERAGE_DIR" ]; then
     if ! NODE_V8_COVERAGE="$TEMPLATE_V8_COVERAGE_DIR" yarn run test; then
         log_error "Tests failed"
         exit 1
     fi
-elif ! yarn run test; then
+elif ! "$PACKAGE_MANAGER" run test; then
     log_error "Tests failed"
     exit 1
 fi
