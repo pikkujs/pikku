@@ -165,8 +165,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   })
   const { colorScheme, toggleColorScheme } = useMantineColorScheme()
   const auth = useOptionalAuth()
-  // Show impersonation only to an admin session (or when already impersonating).
-  const canImpersonate = !!auth && (auth.isAdmin || !!auth.impersonatedBy)
+  const canImpersonate = !!auth?.isAdmin
   const [impersonateOpen, setImpersonateOpen] = useState(false)
 
   const sidebarWidth = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH

@@ -1,22 +1,15 @@
-import { useMutation } from '@tanstack/react-query'
 import { Group, Text, Button, Box } from '@pikku/mantine/core'
 import { UserCog } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
-import { useOptionalAuth } from '../../context/AuthContext'
+import { useOptionalImpersonation } from '../../context/ImpersonationContext'
 
-/**
- * Fixed banner shown only while the session is an impersonation. Renders nothing
- * when there is no AuthProvider (e.g. inside Fabric) or no active impersonation.
- */
 export const ImpersonationBanner: React.FC = () => {
   useLocale()
-  const auth = useOptionalAuth()
-  const mutation = useMutation({
-    mutationFn: () => auth!.stopImpersonating(),
-  })
+  const impersonation = useOptionalImpersonation()
+  const target = impersonation?.target
 
-  if (!auth?.impersonatedBy || !auth.user) {
+  if (!target) {
     return null
   }
 
@@ -37,14 +30,13 @@ export const ImpersonationBanner: React.FC = () => {
       <Group justify="center" gap="sm">
         <UserCog size={16} />
         <Text size="sm" fw={500}>
-          {m.impersonate_banner({ email: auth.user.email })}
+          {m.impersonate_banner({ email: target.email })}
         </Text>
         <Button
           size="compact-xs"
           variant="filled"
           color="dark"
-          loading={mutation.isPending}
-          onClick={() => mutation.mutate()}
+          onClick={() => impersonation!.clear()}
         >
           {m.impersonate_stop()}
         </Button>

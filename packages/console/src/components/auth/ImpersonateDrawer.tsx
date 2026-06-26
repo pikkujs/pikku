@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
   Drawer,
   Stack,
@@ -19,13 +19,15 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { asI18n } from '@pikku/react'
 import { useAuth, type AuthUser } from '../../context/AuthContext'
+import { useImpersonation } from '../../context/ImpersonationContext'
 
 export const ImpersonateDrawer: React.FC<{
   opened: boolean
   onClose: () => void
 }> = ({ opened, onClose }) => {
   useLocale()
-  const { listUsers, impersonate, user: currentUser } = useAuth()
+  const { listUsers, user: currentUser } = useAuth()
+  const { setTarget, target } = useImpersonation()
   const [search, setSearch] = useState('')
   const [debounced] = useDebouncedValue(search, 250)
 
@@ -35,12 +37,12 @@ export const ImpersonateDrawer: React.FC<{
     enabled: opened,
   })
 
-  const impersonateMutation = useMutation({
-    mutationFn: (userId: string) => impersonate(userId),
-  })
-
-  // Don't offer to impersonate yourself.
   const users = (usersQuery.data ?? []).filter((u) => u.id !== currentUser?.id)
+
+  const select = (u: AuthUser) => {
+    setTarget(u)
+    onClose()
+  }
 
   return (
     <Drawer
@@ -57,14 +59,6 @@ export const ImpersonateDrawer: React.FC<{
           onChange={(e) => setSearch(e.currentTarget.value)}
           autoFocus
         />
-
-        {impersonateMutation.error && (
-          <Alert icon={<AlertTriangle size={16} />} color="red" variant="light">
-            <Text size="sm">
-              {asI18n((impersonateMutation.error as Error).message)}
-            </Text>
-          </Alert>
-        )}
 
         {usersQuery.isLoading ? (
           <Center py="xl">
@@ -84,8 +78,8 @@ export const ImpersonateDrawer: React.FC<{
               <UserRow
                 key={u.id}
                 user={u}
-                disabled={impersonateMutation.isPending}
-                onClick={() => impersonateMutation.mutate(u.id)}
+                active={target?.id === u.id}
+                onClick={() => select(u)}
               />
             ))}
           </Stack>
@@ -97,16 +91,17 @@ export const ImpersonateDrawer: React.FC<{
 
 const UserRow: React.FC<{
   user: AuthUser
-  disabled: boolean
+  active: boolean
   onClick: () => void
-}> = ({ user, disabled, onClick }) => (
+}> = ({ user, active, onClick }) => (
   <UnstyledButton
     onClick={onClick}
-    disabled={disabled}
     p="xs"
     style={{
       borderRadius: 6,
-      opacity: disabled ? 0.5 : 1,
+      backgroundColor: active
+        ? 'var(--mantine-color-yellow-light)'
+        : undefined,
     }}
   >
     <Group gap="sm" wrap="nowrap">
