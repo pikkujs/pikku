@@ -8,6 +8,7 @@
   "type": "module",
   "scripts": {
     "tsc": "tsc",
+    "test": "bash run-tests.sh",
     "ncu": "npx npm-check-updates",
     "build": "tsc -b",
     "release": "npm run build && npm test",

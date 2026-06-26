@@ -295,8 +295,15 @@ export type WorkflowStepMeta =
 export interface WorkflowStepWire {
   /** The workflow run ID */
   runId: string
-  /** The unique step ID */
+  /** The unique step ID (minted fresh per attempt — NOT stable across retries) */
   stepId: string
+  /**
+   * Stable identity of this step invocation — the idempotency / dedupe key.
+   * Identical across every retry of the same call (derived from runId + step
+   * name), so a step can `ON CONFLICT (invocationId)` or pass it as an external
+   * idempotency key and have retries collapse onto the first attempt.
+   */
+  invocationId: string
   /** Current attempt number (1-indexed, increments on retry) */
   attemptCount: number
 }

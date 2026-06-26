@@ -69,6 +69,17 @@ import type { WorkflowService } from '../../services/workflow-service.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
 import { RPCNotFoundError } from '../rpc/rpc-runner.js'
 import { ChildWorkflowStartedException } from './graph/graph-runner.js'
+import { deriveInvocationId } from './workflow-invocation-id.js'
+import type { JobOptions } from '../queue/queue.types.js'
+
+/**
+ * Default number of retries for a workflow step when none is specified. The
+ * workflow — not the queue — owns retry policy; a step inherits this unless it
+ * sets its own `retries` (including `retries: 0` to opt out entirely). Picked >0
+ * so a transient failure (a DB blip, a downstream restart, a deploy) is ridden
+ * out by default; safe because every step gets a stable `invocationId` to dedupe on.
+ */
+export const DEFAULT_STEP_RETRIES = 5
 
 /**
  * Exception thrown when workflow needs to pause for async step
@@ -789,6 +800,31 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     })
   }
 
+  /**
+   * Resolve a step's retry policy into queue job options. The workflow is the
+   * sole source of truth for retries: an explicitly-set `retries` (including 0)
+   * is always honored, an unset one defaults to {@link DEFAULT_STEP_RETRIES},
+   * and we ALWAYS pass `attempts` so the queue can never fall back to its own
+   * default — which would re-run a step the workflow said not to retry. Backoff
+   * defaults to exponential whenever there's at least one retry, so retries ride
+   * out a transient outage instead of firing instantly.
+   */
+  protected resolveStepJobOptions(
+    stepOptions?: WorkflowStepOptions
+  ): JobOptions {
+    const retries = stepOptions?.retries ?? DEFAULT_STEP_RETRIES
+    const retryDelay = stepOptions?.retryDelay
+    const backoff =
+      typeof retryDelay === 'number'
+        ? { type: 'fixed', delay: retryDelay }
+        : retryDelay === 'exponential'
+          ? 'exponential'
+          : retries > 0
+            ? 'exponential'
+            : undefined
+    return { attempts: retries + 1, ...(backoff ? { backoff } : {}) }
+  }
+
   public async queueStepWorker(
     runId: string,
     stepName: string,
@@ -797,29 +833,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepOptions?: WorkflowStepOptions
   ): Promise<void> {
     const queueService = this.verifyQueueService()
-    const retries = stepOptions?.retries ?? 0
-    const retryDelay = stepOptions?.retryDelay
     await queueService.add(
       this.getStepWorkerQueueName(rpcName),
-      JSON.parse(
-        JSON.stringify({
-          runId,
-          stepName,
-          rpcName,
-          data,
-        })
-      ),
-      retries > 0 || retryDelay
-        ? {
-            attempts: retries + 1,
-            backoff:
-              typeof retryDelay === 'number'
-                ? { type: 'fixed', delay: retryDelay }
-                : retryDelay === 'exponential'
-                  ? 'exponential'
-                  : undefined,
-          }
-        : undefined
+      JSON.parse(JSON.stringify({ runId, stepName, rpcName, data })),
+      this.resolveStepJobOptions(stepOptions)
     )
   }
 
@@ -903,27 +920,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       )
       return false
     }
-    const retries = stepOptions?.retries ?? 0
-    const retryDelay = stepOptions?.retryDelay
     await getSingletonServices()!.queueService!.add(
       this.getStepWorkerQueueName(rpcName),
-      JSON.parse(
-        JSON.stringify({
-          runId,
-          stepName,
-          rpcName,
-          data,
-        })
-      ),
-      {
-        attempts: retries + 1,
-        backoff:
-          typeof retryDelay === 'number'
-            ? { type: 'fixed', delay: retryDelay }
-            : retryDelay === 'exponential'
-              ? 'exponential'
-              : undefined,
-      }
+      JSON.parse(JSON.stringify({ runId, stepName, rpcName, data })),
+      this.resolveStepJobOptions(stepOptions)
     )
     return true
   }
@@ -1393,6 +1393,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
               workflowStep: {
                 runId,
                 stepId: stepState.stepId,
+                invocationId: deriveInvocationId(runId, stepName),
                 attemptCount: stepState.attemptCount,
               },
             })
@@ -1424,7 +1425,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         // Store error and mark failed
         await this.setStepError(stepState.stepId, error)
 
-        const maxAttempts = (stepState.retries ?? 0) + 1
+        const maxAttempts = (stepState.retries ?? DEFAULT_STEP_RETRIES) + 1
         const retriesExhausted = stepState.attemptCount >= maxAttempts
 
         if (retriesExhausted) {
@@ -1486,6 +1487,14 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     rpcService: any,
     stepOptions?: WorkflowStepOptions
   ): Promise<any> {
+    // Resolve the retry policy ONCE here so the value persisted on the step
+    // (which drives `retriesExhausted`) is the same one the queue dispatch turns
+    // into `attempts`. Without this the queue could retry N times while the
+    // engine thinks retries are already exhausted (or vice-versa).
+    const resolvedStepOptions: WorkflowStepOptions = {
+      retries: stepOptions?.retries ?? DEFAULT_STEP_RETRIES,
+      retryDelay: stepOptions?.retryDelay,
+    }
     // Check if step already exists
     let stepState: StepState
     try {
@@ -1497,7 +1506,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         stepName,
         rpcName,
         data,
-        stepOptions
+        resolvedStepOptions
       )
     }
 
@@ -1534,7 +1543,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       stepName,
       rpcName,
       data,
-      stepOptions
+      resolvedStepOptions
     )
     if (dispatched) {
       throw new WorkflowAsyncException(runId, stepName)
@@ -1542,8 +1551,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
     {
       // Inline (no transport available) - execute locally with retry loop
-      const retries = stepOptions?.retries ?? 0
-      const retryDelay = stepOptions?.retryDelay
+      const retries = resolvedStepOptions.retries ?? this.getConfig().retries
+      const retryDelay = resolvedStepOptions.retryDelay
       let currentStepState = stepState
 
       while (true) {
@@ -1592,6 +1601,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
               workflowStep: {
                 runId,
                 stepId: currentStepState.stepId,
+                invocationId: deriveInvocationId(runId, stepName),
                 attemptCount: currentStepState.attemptCount,
               },
             })
@@ -1900,7 +1910,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     const singletonServices = getSingletonServices()
     const workflow = singletonServices.config?.workflow
     return {
-      retries: workflow?.retries ?? 0,
+      retries: workflow?.retries ?? DEFAULT_STEP_RETRIES,
       retryDelay: workflow?.retryDelay ?? 0,
       orchestratorQueueName:
         workflow?.orchestratorQueueName ?? 'pikku-workflow-orchestrator',

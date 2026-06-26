@@ -19,6 +19,15 @@ export const mapPikkuJobToBull = (options?: JobOptions): JobsOptions => {
     bullOptions.attempts = options.attempts
   }
 
+  // Map retry backoff. BullMQ accepts `{ type, delay }`; our `delay` is in ms,
+  // which is what BullMQ expects too (unlike pg-boss, which uses seconds).
+  if (options?.backoff !== undefined) {
+    bullOptions.backoff =
+      typeof options.backoff === 'string'
+        ? { type: options.backoff }
+        : { type: options.backoff.type, delay: options.backoff.delay }
+  }
+
   if (options?.removeOnComplete !== undefined) {
     bullOptions.removeOnComplete = options.removeOnComplete
   }

@@ -10,6 +10,7 @@ import {
 import type { WorkflowRuntimeMeta } from '../workflow.types.js'
 import { pikkuState } from '../../../pikku-state.js'
 import { RPCNotFoundError } from '../../rpc/rpc-runner.js'
+import { DEFAULT_STEP_RETRIES } from '../pikku-workflow-service.js'
 
 describe('graph-runner bugs', () => {
   test('continueGraph should NOT mark workflow completed while nodes are still running', async () => {
@@ -618,9 +619,14 @@ describe('graph-runner bugs', () => {
     const cJob = enqueued.find((e) => e.data?.stepName === 'c')
     assert.ok(cJob, 'node c should have been enqueued')
     assert.equal(
-      cJob!.options,
-      undefined,
-      'no retries → no queue options (preserves prior queue defaults)'
+      cJob!.options?.attempts,
+      DEFAULT_STEP_RETRIES + 1,
+      'no retries → workflow default (5) + 1 attempt; queue never decides retries'
+    )
+    assert.equal(
+      cJob!.options?.backoff,
+      'exponential',
+      'default retries get exponential backoff so they ride out transient outages'
     )
   })
 })
