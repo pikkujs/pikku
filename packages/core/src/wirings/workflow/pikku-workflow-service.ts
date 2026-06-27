@@ -1509,17 +1509,14 @@ export abstract class PikkuWorkflowService implements WorkflowService {
               )
             }
           } else {
-            result = await rpcService.rpcWithWire(rpcName, data, {
-              workflowStep: {
-                runId,
-                stepId: stepState.stepId,
-                invocationId: deriveInvocationId(runId, stepName),
-                attemptCount: stepState.attemptCount,
-                fromInvocationId: stepState.fromStepName
-                  ? deriveInvocationId(runId, stepState.fromStepName)
-                  : undefined,
-              },
-            })
+            result = await this.invokeStepRpc(
+              runId,
+              stepName,
+              stepState,
+              rpcName,
+              data,
+              rpcService
+            )
           }
         }
 
@@ -1613,6 +1610,82 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     return getSingletonServices()!.queueService!
   }
 
+  /**
+   * Invoke a step's RPC with the workflow-step wire (step identity + provenance).
+   * Identical for the queue executor and the inline executor — the only thing
+   * that differs between transports is who calls it, not the call itself.
+   */
+  private async invokeStepRpc(
+    runId: string,
+    stepName: string,
+    stepState: StepState,
+    rpcName: string,
+    data: any,
+    rpcService: any
+  ): Promise<any> {
+    return rpcService.rpcWithWire(rpcName, data, {
+      workflowStep: {
+        runId,
+        stepId: stepState.stepId,
+        invocationId: deriveInvocationId(runId, stepName),
+        attemptCount: stepState.attemptCount,
+        fromInvocationId: stepState.fromStepName
+          ? deriveInvocationId(runId, stepState.fromStepName)
+          : undefined,
+      },
+    })
+  }
+
+  /**
+   * Inline (straight-through) step execution with an in-process retry loop —
+   * shared by inline RPC steps and inline function steps. Same scaffolding
+   * (running → result, or fail → retry-attempt → backoff → retry) wrapped
+   * around a step-specific `doWork` body. Stays O(K): no suspend/replay.
+   *
+   * `onError` is an optional hook for terminal errors that must NOT retry
+   * (e.g. RPC-not-found → suspend the run for redeploy). If it throws, the
+   * loop exits immediately without recording a step error or retrying.
+   */
+  private async runInlineRetryLoop(
+    stepState: StepState,
+    retries: number,
+    retryDelay: WorkflowStepOptions['retryDelay'],
+    doWork: (currentStepState: StepState) => Promise<any>,
+    onError?: (error: any) => Promise<void>
+  ): Promise<any> {
+    let currentStepState = stepState
+    while (true) {
+      try {
+        await this.setStepRunning(currentStepState.stepId)
+        const result = await doWork(currentStepState)
+        await this.setStepResult(currentStepState.stepId, result)
+        return result
+      } catch (error: any) {
+        if (onError) await onError(error)
+
+        // Record the error (marks step as failed)
+        await this.setStepError(currentStepState.stepId, error)
+
+        if (currentStepState.attemptCount < retries) {
+          // Create a new pending retry attempt, then back off if configured.
+          currentStepState = await this.createRetryAttempt(
+            currentStepState.stepId,
+            'pending'
+          )
+          if (retryDelay) {
+            await new Promise((resolve) =>
+              setTimeout(resolve, getDurationInMilliseconds(retryDelay))
+            )
+          }
+          // Continue loop to retry
+        } else {
+          // No more retries, fail the workflow
+          throw error
+        }
+      }
+    }
+  }
+
   private async rpcStep(
     runId: string,
     logicalStepName: string,
@@ -1691,102 +1764,70 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       throw new WorkflowAsyncException(runId, stepName)
     }
 
-    {
-      // Inline (no transport available) - execute locally with retry loop
-      const retries = resolvedStepOptions.retries ?? this.getConfig().retries
-      const retryDelay = resolvedStepOptions.retryDelay
-      let currentStepState = stepState
+    // Inline (no transport available) - execute locally with the shared retry
+    // loop. The body resolves to a sub-workflow result or a plain RPC result.
+    const retries = resolvedStepOptions.retries ?? this.getConfig().retries
+    const retryDelay = resolvedStepOptions.retryDelay
 
-      while (true) {
-        try {
-          await this.setStepRunning(currentStepState.stepId)
-          // Check if the name refers to a workflow
-          const workflowMeta = pikkuState(null, 'workflows', 'meta')[rpcName]
-          let result: any
-          if (workflowMeta) {
-            const childWire = {
-              type: 'workflow',
-              id: rpcName,
-              parentRunId: runId,
-              pikkuUserId: rpcService.wire?.pikkuUserId,
-            }
-            const { runId: childRunId } = await this.startWorkflow(
-              rpcName,
-              data,
-              childWire,
-              rpcService,
-              { inline: true }
-            )
-            await this.setStepChildRunId(currentStepState.stepId, childRunId)
-            // Poll until child workflow completes
-            while (true) {
-              const childRun = await this.getRun(childRunId)
-              if (!childRun) {
-                throw new WorkflowRunNotFoundError(childRunId)
-              }
-              if (WORKFLOW_END_STATES.has(childRun.status)) {
-                if (childRun.status === 'failed') {
-                  throw new Error(
-                    childRun.error?.message || 'Sub-workflow failed'
-                  )
-                }
-                if (childRun.status === 'cancelled') {
-                  throw new Error('Sub-workflow was cancelled')
-                }
-                result = childRun.output
-                break
-              }
-              await new Promise((resolve) => setTimeout(resolve, 500))
-            }
-          } else {
-            result = await rpcService.rpcWithWire(rpcName, data, {
-              workflowStep: {
-                runId,
-                stepId: currentStepState.stepId,
-                invocationId: deriveInvocationId(runId, stepName),
-                attemptCount: currentStepState.attemptCount,
-                fromInvocationId: currentStepState.fromStepName
-                  ? deriveInvocationId(runId, currentStepState.fromStepName)
-                  : undefined,
-              },
-            })
+    return this.runInlineRetryLoop(
+      stepState,
+      retries,
+      retryDelay,
+      async (currentStepState) => {
+        // Check if the name refers to a workflow
+        const workflowMeta = pikkuState(null, 'workflows', 'meta')[rpcName]
+        if (workflowMeta) {
+          const childWire = {
+            type: 'workflow',
+            id: rpcName,
+            parentRunId: runId,
+            pikkuUserId: rpcService.wire?.pikkuUserId,
           }
-          await this.setStepResult(currentStepState.stepId, result)
-          return result
-        } catch (error: any) {
-          if (error instanceof RPCNotFoundError) {
-            await this.updateRunStatus(runId, 'suspended', undefined, {
-              message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
-              code: 'RPC_NOT_FOUND',
-            })
-            throw error
-          }
-
-          // Record the error (marks step as failed)
-          await this.setStepError(currentStepState.stepId, error)
-
-          // Check if we should retry
-          if (currentStepState.attemptCount < retries) {
-            // Create a new pending retry attempt
-            currentStepState = await this.createRetryAttempt(
-              currentStepState.stepId,
-              'pending'
-            )
-
-            // Wait for retry delay if specified
-            if (retryDelay) {
-              await new Promise((resolve) =>
-                setTimeout(resolve, getDurationInMilliseconds(retryDelay))
-              )
+          const { runId: childRunId } = await this.startWorkflow(
+            rpcName,
+            data,
+            childWire,
+            rpcService,
+            { inline: true }
+          )
+          await this.setStepChildRunId(currentStepState.stepId, childRunId)
+          // Poll until child workflow completes
+          while (true) {
+            const childRun = await this.getRun(childRunId)
+            if (!childRun) {
+              throw new WorkflowRunNotFoundError(childRunId)
             }
-            // Continue loop to retry
-          } else {
-            // No more retries, fail the workflow
-            throw error
+            if (WORKFLOW_END_STATES.has(childRun.status)) {
+              if (childRun.status === 'failed') {
+                throw new Error(childRun.error?.message || 'Sub-workflow failed')
+              }
+              if (childRun.status === 'cancelled') {
+                throw new Error('Sub-workflow was cancelled')
+              }
+              return childRun.output
+            }
+            await new Promise((resolve) => setTimeout(resolve, 500))
           }
         }
+        return this.invokeStepRpc(
+          runId,
+          stepName,
+          currentStepState,
+          rpcName,
+          data,
+          rpcService
+        )
+      },
+      async (error) => {
+        if (error instanceof RPCNotFoundError) {
+          await this.updateRunStatus(runId, 'suspended', undefined, {
+            message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
+            code: 'RPC_NOT_FOUND',
+          })
+          throw error
+        }
       }
-    }
+    )
   }
 
   private async inlineStep(
@@ -1821,44 +1862,14 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     // Execute inline function
     const retries = stepOptions?.retries ?? this.getConfig().retries
     const retryDelay = stepOptions?.retryDelay ?? this.getConfig().retryDelay
-    let currentStepState = stepState
 
     // Check if we're running inline (in-memory) or remote (queue-based)
     if (this.isInline(runId)) {
-      // Inline mode - execute with retry loop
-      while (true) {
-        try {
-          await this.setStepRunning(currentStepState.stepId)
-          const result = await fn()
-          await this.setStepResult(currentStepState.stepId, result)
-          return result
-        } catch (error: any) {
-          // Record the error (marks step as failed)
-          await this.setStepError(currentStepState.stepId, error)
-
-          // Check if we should retry
-          if (currentStepState.attemptCount < retries) {
-            // Create a new pending retry attempt
-            currentStepState = await this.createRetryAttempt(
-              currentStepState.stepId,
-              'pending'
-            )
-
-            // Wait for retry delay if specified
-            if (retryDelay) {
-              await new Promise((resolve) =>
-                setTimeout(resolve, getDurationInMilliseconds(retryDelay))
-              )
-            }
-            // Continue loop to retry
-          } else {
-            // No more retries, fail the workflow
-            throw error
-          }
-        }
-      }
+      // Inline mode - execute with the shared in-process retry loop.
+      return this.runInlineRetryLoop(stepState, retries, retryDelay, () => fn())
     } else {
-      // Remote mode - use queue-based retry
+      // Remote mode - single attempt, then suspend for orchestrator-driven retry.
+      let currentStepState = stepState
       try {
         await this.setStepRunning(currentStepState.stepId)
         const result = await fn()
