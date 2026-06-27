@@ -10,8 +10,15 @@ import { useSearchParams } from '../router'
 import {
   useWorkflowRun,
   useWorkflowRunSteps,
+  useWorkflowRunHistory,
   useWorkflowVersion,
 } from '../hooks/useWorkflowRuns'
+import {
+  buildRunTimeline,
+  reconstructStateAt,
+  type RunTimeline,
+  type ReconstructedRunState,
+} from '@pikku/core/workflow'
 
 interface WorkflowRunContextType {
   selectedRunId: string | null
@@ -25,6 +32,13 @@ interface WorkflowRunContextType {
   historicalLoading: boolean
   isCreatingRun: boolean
   setIsCreatingRun: (creating: boolean) => void
+  /** Ordered event stream for the selected run (empty until history loads). */
+  timeline: RunTimeline
+  /** Time-travel cursor: a timeline seq, or null when following the live tail. */
+  timelineSeq: number | null
+  setTimelineSeq: (seq: number | null) => void
+  /** Run state reconstructed at `timelineSeq`; null while live. */
+  reconstructed: ReconstructedRunState | null
 }
 
 const WorkflowRunContext = createContext<WorkflowRunContextType | undefined>(
@@ -89,9 +103,14 @@ export const WorkflowRunProvider: React.FC<WorkflowRunProviderProps> = ({
     useWorkflowRun(selectedRunId)
   const { data: querySteps, isLoading: stepsLoading } =
     useWorkflowRunSteps(selectedRunId)
+  const { data: queryHistory } = useWorkflowRunHistory(selectedRunId)
 
   const runData = queryRunData
   const steps = querySteps
+
+  // Time-travel cursor — null follows the live tail; a number pins the canvas
+  // to the run's reconstructed state at that timeline event.
+  const [timelineSeq, setTimelineSeqState] = useState<number | null>(null)
 
   const setSelectedRunId = useCallback(
     (id: string | null) => {
@@ -127,21 +146,81 @@ export const WorkflowRunProvider: React.FC<WorkflowRunProviderProps> = ({
     [workflowNodes]
   )
 
-  const stepStates = useMemo(() => {
+  const resolveNodeId = useCallback(
+    (stepName: string): string =>
+      stepNameToNodeId.get(stepName) ??
+      (stepNameToNodeId as any).__templatePatterns?.find(
+        ([_, regex]: [string, RegExp]) => regex.test(stepName)
+      )?.[0] ??
+      stepName,
+    [stepNameToNodeId]
+  )
+
+  // RPC serializes the step lifecycle Dates as ISO strings; the timeline fold
+  // sorts on `.getTime()`, so rehydrate them before building.
+  const timeline = useMemo<RunTimeline>(() => {
+    if (!queryHistory || !Array.isArray(queryHistory)) return []
+    const toDate = (v: unknown) => (v ? new Date(v as string) : undefined)
+    const rehydrated = queryHistory.map((h: any) => ({
+      ...h,
+      createdAt: new Date(h.createdAt),
+      updatedAt: new Date(h.updatedAt ?? h.createdAt),
+      scheduledAt: toDate(h.scheduledAt),
+      runningAt: toDate(h.runningAt),
+      succeededAt: toDate(h.succeededAt),
+      failedAt: toDate(h.failedAt),
+    }))
+    return buildRunTimeline(rehydrated as any)
+  }, [queryHistory])
+
+  // Reset the cursor to live whenever the selected run changes.
+  useEffect(() => {
+    setTimelineSeqState(null)
+  }, [selectedRunId])
+
+  const setTimelineSeq = useCallback(
+    (seq: number | null) => {
+      if (seq === null) {
+        setTimelineSeqState(null)
+        return
+      }
+      const max = timeline.length - 1
+      setTimelineSeqState(Math.max(0, Math.min(seq, max)))
+    },
+    [timeline.length]
+  )
+
+  const reconstructed = useMemo<ReconstructedRunState | null>(
+    () =>
+      timelineSeq === null || timeline.length === 0
+        ? null
+        : reconstructStateAt(timeline, timelineSeq),
+    [timeline, timelineSeq]
+  )
+
+  // Live step states (from the polled steps query) drive the canvas by default.
+  const liveStepStates = useMemo(() => {
     const map = new Map<string, any>()
     if (steps && Array.isArray(steps)) {
       for (const step of steps) {
-        const nodeId =
-          stepNameToNodeId.get(step.stepName) ??
-          (stepNameToNodeId as any).__templatePatterns?.find(
-            ([_, regex]: [string, RegExp]) => regex.test(step.stepName)
-          )?.[0] ??
-          step.stepName
-        map.set(nodeId, step)
+        map.set(resolveNodeId(step.stepName), step)
       }
     }
     return map
-  }, [steps, stepNameToNodeId])
+  }, [steps, resolveNodeId])
+
+  // While scrubbing, the reconstructed state overrides live so the canvas
+  // re-colors to the chosen point in time.
+  const reconstructedStepStates = useMemo(() => {
+    if (!reconstructed) return null
+    const map = new Map<string, any>()
+    for (const step of reconstructed.steps) {
+      map.set(resolveNodeId(step.stepName), step)
+    }
+    return map
+  }, [reconstructed, resolveNodeId])
+
+  const stepStates = reconstructedStepStates ?? liveStepStates
 
   const isRunActive = runData?.status === 'running'
   const isLoading = runLoading || stepsLoading
@@ -176,6 +255,10 @@ export const WorkflowRunProvider: React.FC<WorkflowRunProviderProps> = ({
         historicalLoading,
         isCreatingRun,
         setIsCreatingRun,
+        timeline,
+        timelineSeq,
+        setTimelineSeq,
+        reconstructed,
       }}
     >
       {children}

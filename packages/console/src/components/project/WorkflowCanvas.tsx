@@ -21,7 +21,13 @@ import {
   Stack,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { AlertTriangle, History, ChevronDown, Search, Check } from 'lucide-react'
+import {
+  AlertTriangle,
+  History,
+  ChevronDown,
+  Search,
+  Check,
+} from 'lucide-react'
 import {
   CanvasDrawerProvider,
   useCanvasDrawerContext,
@@ -37,6 +43,7 @@ import {
 import { usePanelContext } from '../../context/PanelContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { createCanvasDrawerContent } from '../canvas-drawer/CanvasDrawerFactory'
+import { WorkflowTimelineDrawer } from './WorkflowTimelineDrawer'
 import { useWorkflowRuns } from '../../hooks/useWorkflowRuns'
 import { RunsPanel, type RunItem } from '../layout/RunsPanel'
 import { WiringNode } from './nodes/WiringNode'
@@ -234,7 +241,9 @@ const WorkflowRunsPanel: React.FC<{
     if (!search) return items
     const q = search.toLowerCase()
     return items.filter(
-      (i) => i.name.toLowerCase().includes(q) || i.description?.toLowerCase().includes(q)
+      (i) =>
+        i.name.toLowerCase().includes(q) ||
+        i.description?.toLowerCase().includes(q)
     )
   }, [items, search])
 
@@ -288,7 +297,16 @@ const WorkflowRunsPanel: React.FC<{
           }}
           onClick={() => setSelectorOpen((o) => !o)}
         >
-          <Text size="sm" fw={600} style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Text
+            size="sm"
+            fw={600}
+            style={{
+              flex: 1,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
             {asI18n(workflowName)}
           </Text>
           <ChevronDown size={14} style={{ flexShrink: 0 }} />
@@ -445,7 +463,14 @@ const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
         emptyPanelMessage={asI18n('Select a node to view its details')}
         runsPanel={runsPanel}
       >
-        <Box style={{ height: '100%', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+        <Box
+          style={{
+            height: '100%',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
           {isComplex && (
             <Alert
               icon={<AlertTriangle size={16} />}
@@ -455,7 +480,9 @@ const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
               style={{ flexShrink: 0 }}
             >
               <Text size="sm">
-                {asI18n('This is a complex workflow. The visual representation may not be accurate.')}
+                {asI18n(
+                  'This is a complex workflow. The visual representation may not be accurate.'
+                )}
               </Text>
             </Alert>
           )}
@@ -468,7 +495,9 @@ const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
               style={{ flexShrink: 0 }}
             >
               <Text size="sm">
-                {asI18n('Viewing historical version — workflow definition has changed since this run')}
+                {asI18n(
+                  'Viewing historical version — workflow definition has changed since this run'
+                )}
               </Text>
             </Alert>
           )}
@@ -478,6 +507,7 @@ const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
               onPaneClick={handlePaneClick}
             />
           </Box>
+          <WorkflowTimelineDrawer />
         </Box>
       </ThreePaneLayout>
       {canvasDrawer && (
