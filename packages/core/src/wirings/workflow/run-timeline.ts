@@ -74,24 +74,28 @@ export function buildRunTimeline(history: HistoryEntry[]): RunTimeline {
       type: 'pending',
       fromStepName: entry.fromStepName,
     })
+    // Intermediate events are optional enrichment — emit only if the backend
+    // recorded their timestamp.
     if (entry.scheduledAt) {
       raw.push({ ...base, at: entry.scheduledAt, type: 'scheduled' })
     }
     if (entry.runningAt) {
       raw.push({ ...base, at: entry.runningAt, type: 'running' })
     }
-    if (entry.succeededAt) {
+    // The terminal event is driven by the row's authoritative status (the
+    // lifecycle timestamps aren't populated by every backend — Kysely leaves
+    // them null), falling back to updatedAt when the specific stamp is absent.
+    if (entry.status === 'succeeded') {
       raw.push({
         ...base,
-        at: entry.succeededAt,
+        at: entry.succeededAt ?? entry.updatedAt,
         type: 'succeeded',
         result: entry.result,
       })
-    }
-    if (entry.failedAt) {
+    } else if (entry.status === 'failed') {
       raw.push({
         ...base,
-        at: entry.failedAt,
+        at: entry.failedAt ?? entry.updatedAt,
         type: 'failed',
         error: entry.error,
       })

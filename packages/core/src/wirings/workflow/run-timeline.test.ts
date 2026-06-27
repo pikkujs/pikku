@@ -91,6 +91,29 @@ describe('buildRunTimeline', () => {
       undefined
     )
   })
+
+  test('terminal event is driven by status, not lifecycle timestamps', () => {
+    // Kysely leaves succeededAt/runningAt null but the row's status + result
+    // are authoritative — the terminal event must still fire (off updatedAt).
+    const noStamps = {
+      stepId: 's-1',
+      stepName: 'begin',
+      status: 'succeeded',
+      attemptCount: 1,
+      result: { ok: 1 },
+      createdAt: T(0),
+      updatedAt: T(5),
+    } as HistoryEntry
+    const tl = buildRunTimeline([noStamps])
+    assert.deepEqual(
+      tl.map((e) => e.type),
+      ['pending', 'succeeded']
+    )
+    const succeeded = tl.find((e) => e.type === 'succeeded')!
+    assert.equal(succeeded.at.getTime(), T(5).getTime(), 'falls back to updatedAt')
+    assert.deepEqual(succeeded.result, { ok: 1 })
+    assert.deepEqual(reconstructFinalState(tl).results, { begin: { ok: 1 } })
+  })
 })
 
 describe('reconstructStateAt', () => {
