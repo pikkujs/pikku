@@ -50,7 +50,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install native build tools
-        run: apt-get update && apt-get install -y build-essential python3
+        run: apt-get update && apt-get install -y build-essential python3 unzip
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/e2e-codegen
       - name: Run e2e tests
