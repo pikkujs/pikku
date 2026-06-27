@@ -86,7 +86,10 @@ describe('buildRunTimeline', () => {
     const tl = buildRunTimeline([ok('next', 5, { from: 'begin' })])
     const created = tl.find((e) => e.type === 'pending')!
     assert.equal(created.fromStepName, 'begin')
-    assert.equal(tl.find((e) => e.type === 'succeeded')!.fromStepName, undefined)
+    assert.equal(
+      tl.find((e) => e.type === 'succeeded')!.fromStepName,
+      undefined
+    )
   })
 })
 
