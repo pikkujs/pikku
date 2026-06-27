@@ -705,20 +705,26 @@ async function executeGraphNodeInline(
   runId: string,
   graphName: string,
   nodeId: string,
+  instanceKey: string,
   input: any,
-  nodes: Record<string, any>
+  nodes: Record<string, any>,
+  fromStepName?: string
 ): Promise<void> {
   const node = nodes[nodeId]
   if (!node) return
 
   const rpcName = node.rpcName
 
+  // Persist under the physical instance key (node, node#1 … for revisits) and
+  // record the predecessor — same as the queued path (queueGraphNode), so an
+  // inline graph run stores identical step rows + provenance.
   const stepState = await workflowService.insertStepState(
     runId,
-    nodeId,
+    instanceKey,
     rpcName,
     input,
-    { retries: node.retries ?? 0, retryDelay: node.retryDelay }
+    { retries: node.retries ?? 0, retryDelay: node.retryDelay },
+    fromStepName
   )
 
   await workflowService.setStepRunning(stepState.stepId)
@@ -811,8 +817,10 @@ async function executeGraphNodeInline(
             runId,
             graphName,
             errorNodeId,
+            errorNodeId,
             { error: { message: (error as Error).message } },
-            nodes
+            nodes,
+            nodeId
           )
         )
       )
@@ -831,20 +839,22 @@ async function continueGraphInline(
   triggerInput: any,
   entryNodeIds: string[]
 ): Promise<void> {
+  // Drive the run to completion in-process using the SAME planner as the queued
+  // path (continueGraph): each loop plans the next wave of transitions, executes
+  // them inline (vs queueGraphNode dispatch), then re-plans. Sharing the planner
+  // gives the inline path joins, cycle revisits and fromStepName provenance
+  // identical to the queue — instead of a second, weaker traversal.
   while (true) {
     const {
-      completedNodeIds: rawCompleted,
       failedNodeIds: rawFailed,
-      branchKeys: rawBranch,
+      branchKeys: branchByStep,
+      completedNodeIds: rawCompleted,
     } = await workflowService.getCompletedGraphState(runId)
-    const completedNodeIds = remapStepNamesToNodeIds(
-      rawCompleted,
-      nodes,
-      graphName
-    )
-    const completedNodeIdSet = new Set(completedNodeIds)
+    // Validate step/branch names map to unambiguous nodes (planning keys
+    // physically; these calls only surface ambiguous template configs).
+    remapStepNamesToNodeIds(rawCompleted, nodes, graphName)
+    remapBranchKeys(branchByStep, nodes, graphName)
     const failedNodeIds = remapStepNamesToNodeIds(rawFailed, nodes, graphName)
-    const branchKeys = remapBranchKeys(rawBranch, nodes, graphName)
 
     if (failedNodeIds.length > 0) {
       const failedNode = failedNodeIds[0]!
@@ -856,46 +866,31 @@ async function continueGraphInline(
       return
     }
 
-    const candidateNodes = new Set<string>()
-
-    for (const nodeId of completedNodeIds) {
-      const node = nodes[nodeId]
-      if (!node?.next) continue
-
-      const nextNodes = resolveNextFromConfig(node.next, branchKeys[nodeId])
-      for (const nextNode of nextNodes) {
-        candidateNodes.add(nextNode)
-      }
-    }
-
-    for (const entryId of entryNodeIds) {
-      candidateNodes.add(entryId)
-    }
-
-    if (candidateNodes.size === 0 && completedNodeIds.length > 0) {
-      await workflowService.updateRunStatus(runId, 'completed')
+    const run = await workflowService.getRun(runId)
+    if (run?.status === 'suspended') {
       return
     }
 
-    const unstartedNodes = await workflowService.getNodesWithoutSteps(runId, [
-      ...candidateNodes,
-    ])
+    const instances = await workflowService.getStepInstances(runId)
+    const plan = planGraphTransitions(
+      nodes,
+      instances,
+      branchByStep,
+      entryNodeIds,
+      graphName
+    )
 
-    const nodesToExecute = unstartedNodes.filter((nodeId) => {
-      const node = nodes[nodeId]
-      return node && areDependenciesSatisfied(node, completedNodeIdSet)
-    })
-
-    if (nodesToExecute.length === 0) {
-      if (completedNodeIds.length > 0 && unstartedNodes.length === 0) {
+    if (plan.toFire.length === 0) {
+      if (!plan.hasInFlight && !plan.blockedWaiting) {
         await workflowService.updateRunStatus(runId, 'completed')
       }
       return
     }
 
+    let executed = 0
     await Promise.all(
-      nodesToExecute.map(async (nodeId) => {
-        const node = nodes[nodeId]
+      plan.toFire.map(async (fire) => {
+        const node = nodes[fire.logical]
         if (!node?.rpcName) return
 
         const referencedNodeIds = extractReferencedNodeIds(node.input).filter(
@@ -905,21 +900,25 @@ async function continueGraphInline(
           runId,
           referencedNodeIds
         )
-
         const nodeResults = { trigger: triggerInput, ...fetchedResults }
         const resolvedInput = resolveSerializedInput(node.input, nodeResults)
 
+        executed++
         await executeGraphNodeInline(
           workflowService,
           rpcService,
           runId,
           graphName,
-          nodeId,
+          fire.logical,
+          fire.instanceKey,
           resolvedInput,
-          nodes
+          nodes,
+          fire.fromStepName
         )
       })
     )
+    // Nothing executable fired (e.g. nodes without an rpcName) → can't progress.
+    if (executed === 0) return
   }
 }
 
@@ -1001,6 +1000,7 @@ export async function runWorkflowGraph(
               rpcService,
               runId,
               graphName,
+              nodeId,
               nodeId,
               resolvedInput,
               nodes

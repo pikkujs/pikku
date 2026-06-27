@@ -416,6 +416,78 @@ describe('graph-runner bugs', () => {
     delete metaState['testInlineFailure']
   })
 
+  test('inline graph revisits a cyclic node and records the walked path via fromStepName', async () => {
+    const ws = new InMemoryWorkflowService()
+
+    // attempt loops back to itself via `again` until it converges to `done`.
+    const mockRpcService = {
+      rpcWithWire: async (rpcName: string, _data: any, wire: any) => {
+        if (rpcName === 'cyclicBegin') return { attempts: 3 }
+        if (rpcName === 'cyclicAttempt') {
+          const state = await wire.graph.getState()
+          const count = ((state.count as number) ?? 0) + 1
+          await wire.graph.setState('count', count)
+          wire.graph.branch(count >= 3 ? 'done' : 'again')
+          return { count }
+        }
+        if (rpcName === 'cyclicFinish') return { ok: true }
+        return {}
+      },
+    }
+
+    const metaState = pikkuState(null, 'workflows', 'meta')
+    metaState['testInlineCyclic'] = {
+      name: 'testInlineCyclic',
+      pikkuFuncId: 'testInlineCyclic',
+      source: 'graph',
+      entryNodeIds: ['begin'],
+      graphHash: 'inline-cyclic-hash',
+      nodes: {
+        begin: { nodeId: 'begin', rpcName: 'cyclicBegin', next: 'attempt' },
+        attempt: {
+          nodeId: 'attempt',
+          rpcName: 'cyclicAttempt',
+          next: { again: 'attempt', done: 'finish' },
+        },
+        finish: { nodeId: 'finish', rpcName: 'cyclicFinish' },
+      },
+    }
+
+    const { runId } = await runWorkflowGraph(
+      ws,
+      'testInlineCyclic',
+      {},
+      mockRpcService,
+      true
+    )
+
+    const run = await ws.getRun(runId)
+    assert.equal(run?.status, 'completed')
+
+    // The self-cycle produced three ordinal instances of `attempt`.
+    const instances = await ws.getStepInstances(runId)
+    const names = instances.map((i) => i.stepName).sort()
+    assert.ok(
+      names.includes('attempt') &&
+        names.includes('attempt#1') &&
+        names.includes('attempt#2'),
+      `expected attempt/attempt#1/attempt#2, got ${JSON.stringify(names)}`
+    )
+
+    // Walk the fromStepName chain back from the terminal node — inline now
+    // records provenance identical to the queued path.
+    const from = new Map(instances.map((i) => [i.stepName, i.fromStepName]))
+    const path: string[] = []
+    let cursor: string | undefined = 'finish'
+    while (cursor) {
+      path.unshift(cursor)
+      cursor = from.get(cursor) ?? undefined
+    }
+    assert.deepEqual(path, ['begin', 'attempt', 'attempt#1', 'attempt#2', 'finish'])
+
+    delete metaState['testInlineCyclic']
+  })
+
   test('executeGraphStep should throw after queueing onError nodes', async () => {
     const ws = new InMemoryWorkflowService()
 
