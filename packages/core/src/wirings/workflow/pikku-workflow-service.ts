@@ -1134,7 +1134,44 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
   }
 
+  // Per-run, per-replay ordinal counters (runId → stepName → count).
+  private stepOrdinals = new Map<string, Map<string, number>>()
+
+  private resetStepOrdinals(runId: string): void {
+    this.stepOrdinals.set(runId, new Map())
+  }
+
+  /**
+   * Physical, replay-stable key for the Nth reach of `logicalStepName` in a run:
+   * bare name for the first reach (ordinal 0, unchanged behavior), `name#N` for
+   * repeats — so the same literal step name can be invoked multiple times without
+   * the rows clobbering. Deterministic given a deterministic DSL body.
+   */
+  private nextStepKey(runId: string, logicalStepName: string): string {
+    let perRun = this.stepOrdinals.get(runId)
+    if (!perRun) {
+      perRun = new Map()
+      this.stepOrdinals.set(runId, perRun)
+    }
+    const ordinal = perRun.get(logicalStepName) ?? 0
+    perRun.set(logicalStepName, ordinal + 1)
+    return ordinal === 0 ? logicalStepName : `${logicalStepName}#${ordinal}`
+  }
+
   public async runWorkflowJob(runId: string, rpcService: any): Promise<void> {
+    // Fresh ordinal counters per replay so step keys are deterministic.
+    this.resetStepOrdinals(runId)
+    try {
+      await this.runWorkflowJobInner(runId, rpcService)
+    } finally {
+      this.stepOrdinals.delete(runId)
+    }
+  }
+
+  private async runWorkflowJobInner(
+    runId: string,
+    rpcService: any
+  ): Promise<void> {
     const run = await this.getRun(runId)
     if (!run) {
       throw new WorkflowRunNotFoundError(runId)
@@ -1534,12 +1571,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
   private async rpcStep(
     runId: string,
-    stepName: string,
+    logicalStepName: string,
     rpcName: string,
     data: any,
     rpcService: any,
     stepOptions?: WorkflowStepOptions
   ): Promise<any> {
+    const stepName = this.nextStepKey(runId, logicalStepName)
     // Resolve the retry policy ONCE here so the value persisted on the step
     // (which drives `retriesExhausted`) is the same one the queue dispatch turns
     // into `attempts`. Without this the queue could retry N times while the
@@ -1702,10 +1740,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
   private async inlineStep(
     runId: string,
-    stepName: string,
+    logicalStepName: string,
     fn: Function,
     stepOptions?: WorkflowStepOptions
   ): Promise<any> {
+    const stepName = this.nextStepKey(runId, logicalStepName)
     // Check if step already exists
     let stepState: StepState
     try {
@@ -1794,7 +1833,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
   }
 
-  private async sleepStep(runId: string, stepName: string, duration: number) {
+  private async sleepStep(
+    runId: string,
+    logicalStepName: string,
+    duration: number
+  ) {
+    const stepName = this.nextStepKey(runId, logicalStepName)
     // Check if step already exists
     let stepState: StepState
     try {
@@ -1855,7 +1899,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   private async suspendStep(runId: string, reason: string): Promise<void> {
-    const suspendStepName = this.getSuspendStepName(reason)
+    const suspendStepName = this.nextStepKey(
+      runId,
+      this.getSuspendStepName(reason)
+    )
     await this.withStepLock(runId, suspendStepName, async () => {
       let stepState: StepState
       try {
