@@ -5,6 +5,7 @@ import {
   type WorkflowRun,
   type WorkflowRunWire,
   type StepState,
+  type StepStatus,
   type WorkflowStatus,
   type WorkflowVersionStatus,
 } from '@pikku/core/workflow'
@@ -41,6 +42,7 @@ interface WorkflowStepDoc {
   branchTaken: string | null
   retries: number | null
   retryDelay: string | null
+  fromStepName?: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -172,7 +174,8 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     stepName: string,
     rpcName: string | null,
     data: any,
-    stepOptions?: { retries?: number; retryDelay?: string | number }
+    stepOptions?: { retries?: number; retryDelay?: string | number },
+    fromStepName?: string
   ): Promise<StepState> {
     const stepId = crypto.randomUUID()
     const now = new Date()
@@ -189,6 +192,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
       branchTaken: null,
       retries: stepOptions?.retries ?? null,
       retryDelay: stepOptions?.retryDelay?.toString() ?? null,
+      fromStepName: fromStepName ?? null,
       createdAt: now,
       updatedAt: now,
     })
@@ -203,6 +207,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
       attemptCount: 1,
       retries: stepOptions?.retries,
       retryDelay: stepOptions?.retryDelay?.toString(),
+      fromStepName,
       createdAt: now,
       updatedAt: now,
     }
@@ -232,6 +237,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
       attemptCount,
       retries: row.retries != null ? Number(row.retries) : undefined,
       retryDelay: row.retryDelay ?? undefined,
+      fromStepName: row.fromStepName ?? undefined,
       createdAt: new Date(row.createdAt),
       updatedAt: new Date(row.updatedAt),
     }
@@ -427,6 +433,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
       attemptCount,
       retries: row.retries != null ? Number(row.retries) : undefined,
       retryDelay: row.retryDelay ?? undefined,
+      fromStepName: row.fromStepName ?? undefined,
       createdAt: new Date(row.createdAt),
       updatedAt: new Date(row.updatedAt),
     }
@@ -498,6 +505,20 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
 
     const existingStepNames = new Set(result.map((r) => r.stepName))
     return nodeIds.filter((id) => !existingStepNames.has(id))
+  }
+
+  async getStepInstances(runId: string): Promise<
+    Array<{ stepName: string; status: StepStatus; fromStepName?: string }>
+  > {
+    const rows = await this.steps
+      .find({ workflowRunId: runId })
+      .project({ stepName: 1, status: 1, fromStepName: 1 })
+      .toArray()
+    return rows.map((r: any) => ({
+      stepName: r.stepName,
+      status: r.status as StepStatus,
+      fromStepName: r.fromStepName ?? undefined,
+    }))
   }
 
   async getNodeResults(

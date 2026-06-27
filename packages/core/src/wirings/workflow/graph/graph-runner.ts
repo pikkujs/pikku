@@ -29,6 +29,13 @@ function buildTemplateRegex(nodeId: string): RegExp | null {
   return new RegExp(`^${escaped}$`)
 }
 
+/** Strip a trailing revisit ordinal (`node#2` → `node`); leaves other names as-is. */
+function stripInstanceOrdinal(name: string): string {
+  const hash = name.lastIndexOf('#')
+  if (hash <= 0) return name
+  return /^\d+$/.test(name.slice(hash + 1)) ? name.slice(0, hash) : name
+}
+
 function remapStepNamesToNodeIds(
   stepNames: string[],
   nodes: Record<string, any>,
@@ -39,12 +46,14 @@ function remapStepNamesToNodeIds(
     const regex = buildTemplateRegex(nodeId)
     if (regex) templatePatterns.set(nodeId, regex)
   }
-  if (templatePatterns.size === 0) return stepNames
   return stepNames.map((name) => {
     if (nodes[name]) return name
+    // Revisit instance (`node#N`) maps to its logical node.
+    const base = stripInstanceOrdinal(name)
+    if (base !== name && nodes[base]) return base
     const matches: string[] = []
     for (const [nodeId, regex] of templatePatterns) {
-      if (regex.test(name)) matches.push(nodeId)
+      if (regex.test(base)) matches.push(nodeId)
     }
     if (matches.length > 1) {
       throw new Error(
@@ -56,6 +65,122 @@ function remapStepNamesToNodeIds(
     }
     return name
   })
+}
+
+const ENTRY_FROM = '__entry__'
+
+/** Whether `target` can reach `source` over `next` edges — i.e. an edge
+ *  source→target closes a cycle (a back-edge), vs a plain forward edge. */
+function closesCycle(
+  source: string,
+  target: string,
+  nodes: Record<string, any>
+): boolean {
+  const seen = new Set<string>()
+  const stack = [target]
+  while (stack.length) {
+    const cur = stack.pop()!
+    if (cur === source) return true
+    if (seen.has(cur)) continue
+    seen.add(cur)
+    for (const next of normalizeNodeTargets(nodes[cur]?.next)) stack.push(next)
+  }
+  return false
+}
+
+/**
+ * Decide which next steps to fire this tick. Two kinds of edge:
+ *  - forward edge → node-once: fire the target only if it has no instance yet,
+ *    so converging edges (joins) collapse to a single run (unchanged behavior).
+ *  - back-edge (target can reach the source, closing a cycle) → revisit: fire a
+ *    fresh ordinal instance (`target#1`, …), edge-once on `from → target` so it
+ *    doesn't re-fire every tick. Cycles terminate when branch routing stops
+ *    looping back; a node always records the predecessor it was reached from.
+ */
+function planGraphTransitions(
+  nodes: Record<string, any>,
+  instances: Array<{ stepName: string; status: string; fromStepName?: string }>,
+  branchByStep: Record<string, string>,
+  entryNodeIds: string[],
+  graphName: string
+): {
+  toFire: Array<{ logical: string; instanceKey: string; fromStepName?: string }>
+  hasInFlight: boolean
+  blockedWaiting: boolean
+} {
+  const toLogical = (name: string) =>
+    remapStepNamesToNodeIds([name], nodes, graphName)[0]!
+
+  const countByLogical: Record<string, number> = {}
+  const consumed = new Set<string>()
+  for (const inst of instances) {
+    const logical = toLogical(inst.stepName)
+    countByLogical[logical] = (countByLogical[logical] ?? 0) + 1
+    consumed.add(`${inst.fromStepName ?? ENTRY_FROM}->${logical}`)
+  }
+
+  const completed = instances.filter((i) => i.status === 'succeeded')
+  const completedLogical = new Set(completed.map((i) => toLogical(i.stepName)))
+
+  // Available edges: entry edges + each completed instance's resolved `next`.
+  const edges: Array<{
+    from?: string
+    fromKey: string
+    fromLogical?: string
+    target: string
+  }> = []
+  for (const entryId of entryNodeIds) {
+    edges.push({ fromKey: ENTRY_FROM, target: entryId })
+  }
+  for (const inst of completed) {
+    const fromLogical = toLogical(inst.stepName)
+    const node = nodes[fromLogical]
+    if (!node?.next) continue
+    for (const target of resolveNextFromConfig(
+      node.next,
+      branchByStep[inst.stepName]
+    )) {
+      edges.push({ from: inst.stepName, fromKey: inst.stepName, fromLogical, target })
+    }
+  }
+
+  const toFire: Array<{
+    logical: string
+    instanceKey: string
+    fromStepName?: string
+  }> = []
+  let blockedWaiting = false
+  for (const edge of edges) {
+    const target = edge.target
+    const edgeKey = `${edge.fromKey}->${target}`
+    if (consumed.has(edgeKey)) continue
+    const visits = countByLogical[target] ?? 0
+    const isBackEdge =
+      edge.fromLogical !== undefined &&
+      closesCycle(edge.fromLogical, target, nodes)
+    // Forward edge into an already-started node = a join; node-once.
+    if (!isBackEdge && visits > 0) {
+      consumed.add(edgeKey)
+      continue
+    }
+    if (!areDependenciesSatisfied(nodes[target] ?? {}, completedLogical)) {
+      blockedWaiting = true
+      continue
+    }
+    toFire.push({
+      logical: target,
+      instanceKey: visits === 0 ? target : `${target}#${visits}`,
+      fromStepName: edge.from,
+    })
+    countByLogical[target] = visits + 1
+    consumed.add(edgeKey)
+  }
+
+  return {
+    toFire,
+    hasInFlight: instances.some((i) => i.status !== 'succeeded'),
+    blockedWaiting,
+  }
 }
 
 function remapBranchKeys(
@@ -326,7 +451,8 @@ async function queueGraphNode(
   nodeId: string,
   rpcName: string,
   input: any,
-  nodeConfig?: { retries?: number; retryDelay?: string | number }
+  nodeConfig?: { retries?: number; retryDelay?: string | number },
+  fromStepName?: string
 ): Promise<void> {
   // Default to the workflow-wide retry policy when the node sets none, so the
   // persisted step retries match the queue `attempts` (see resolveStepJobOptions).
@@ -339,14 +465,16 @@ async function queueGraphNode(
     nodeId,
     rpcName,
     input,
-    stepOptions
+    stepOptions,
+    fromStepName
   )
   await workflowService.queueStepWorker(
     runId,
     nodeId,
     rpcName,
     input,
-    stepOptions
+    stepOptions,
+    fromStepName
   )
 }
 
@@ -367,16 +495,13 @@ export async function continueGraph(
   const {
     completedNodeIds: rawCompleted,
     failedNodeIds: rawFailed,
-    branchKeys: rawBranch,
+    branchKeys: branchByStep,
   } = await workflowService.getCompletedGraphState(runId)
-  const completedNodeIds = remapStepNamesToNodeIds(
-    rawCompleted,
-    nodes,
-    graphName
-  )
-  const completedNodeIdSet = new Set(completedNodeIds)
+  // Validate step/branch names map to unambiguous nodes (planning keys
+  // physically; these calls only surface ambiguous template configs).
+  remapStepNamesToNodeIds(rawCompleted, nodes, graphName)
+  remapBranchKeys(branchByStep, nodes, graphName)
   const failedNodeIds = remapStepNamesToNodeIds(rawFailed, nodes, graphName)
-  const branchKeys = remapBranchKeys(rawBranch, nodes, graphName)
 
   if (failedNodeIds.length > 0) {
     const failedNode = failedNodeIds[0]!
@@ -393,44 +518,18 @@ export async function continueGraph(
     return
   }
 
-  const candidateNodes = new Set<string>()
+  const instances = await workflowService.getStepInstances(runId)
+  const plan = planGraphTransitions(
+    nodes,
+    instances,
+    branchByStep,
+    meta.entryNodeIds ?? [],
+    graphName
+  )
 
-  for (const nodeId of completedNodeIds) {
-    const node = nodes[nodeId]
-    if (!node?.next) continue
-
-    const nextNodes = resolveNextFromConfig(node.next, branchKeys[nodeId])
-    for (const nextNode of nextNodes) {
-      candidateNodes.add(nextNode)
-    }
-  }
-
-  for (const entryId of meta.entryNodeIds ?? []) {
-    candidateNodes.add(entryId)
-  }
-
-  if (candidateNodes.size === 0 && completedNodeIds.length > 0) {
-    await workflowService.updateRunStatus(runId, 'completed')
-    return
-  }
-
-  const unstartedNodes = await workflowService.getNodesWithoutSteps(runId, [
-    ...candidateNodes,
-  ])
-
-  const nodesToQueue = unstartedNodes.filter((nodeId) => {
-    const node = nodes[nodeId]
-    return node && areDependenciesSatisfied(node, completedNodeIdSet)
-  })
-
-  if (nodesToQueue.length === 0) {
-    const allRpcNodes = Object.entries(nodes)
-      .filter(([_, n]) => n.rpcName)
-      .map(([id]) => id)
-    const allRpcCompleted = allRpcNodes.every((id) =>
-      completedNodeIdSet.has(id)
-    )
-    if (allRpcCompleted) {
+  if (plan.toFire.length === 0) {
+    // Nothing left to fire and nothing running/blocked → the run is done.
+    if (!plan.hasInFlight && !plan.blockedWaiting) {
       await workflowService.updateRunStatus(runId, 'completed')
     }
     return
@@ -439,8 +538,8 @@ export async function continueGraph(
   const run = await workflowService.getRun(runId)
   const triggerInput = run?.input
 
-  for (const nodeId of nodesToQueue) {
-    const node = nodes[nodeId]
+  for (const fire of plan.toFire) {
+    const node = nodes[fire.logical]
     if (!node?.rpcName) continue
 
     const referencedNodeIds = extractReferencedNodeIds(node.input).filter(
@@ -450,7 +549,6 @@ export async function continueGraph(
       runId,
       referencedNodeIds
     )
-
     const nodeResults = { trigger: triggerInput, ...fetchedResults }
     const resolvedInput = resolveSerializedInput(node.input, nodeResults)
 
@@ -458,10 +556,11 @@ export async function continueGraph(
       workflowService,
       runId,
       graphName,
-      nodeId,
+      fire.instanceKey,
       node.rpcName,
       resolvedInput,
-      node
+      node,
+      fire.fromStepName
     )
   }
 }

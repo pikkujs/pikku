@@ -14,6 +14,8 @@ export interface WorkflowStepInput {
   stepName: string
   rpcName: string
   data: unknown
+  /** Predecessor step name (the walked transition); undefined for entry steps. */
+  fromStepName?: string
 }
 
 export interface PikkuWorkflowOrchestratorInput {

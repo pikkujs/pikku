@@ -2,6 +2,10 @@
 '@pikku/core': patch
 '@pikku/queue-pg-boss': patch
 '@pikku/queue-bullmq': patch
+'@pikku/kysely': patch
+'@pikku/redis': patch
+'@pikku/mongodb': patch
+'@pikku/cloudflare': patch
 ---
 
 feat(workflow): workflow-owned step retries + stable invocationId
@@ -44,3 +48,19 @@ invocation gets a stable idempotency key.
   keeps the bare name, so existing rows, graph-node matching and `invocationId`s
   are unchanged. Ordinals are derived deterministically from DSL execution order
   and reset each replay.
+- **Step provenance (`fromStepName`) + graph cycles.** Every step now records
+  the predecessor it was scheduled from (`fromStepName`; entry steps have none),
+  persisted on the step row across all stores (in-memory, kysely, redis,
+  mongodb, cloudflare DO) and carried in the queued payload. The DSL wire
+  exposes the derived `fromInvocationId` (`uuidv5(runId:fromStepName)`) so
+  consumers get the stable predecessor key without a second persisted id —
+  `fromStepName` is the source of truth (it is replay-deterministic; `stepId`,
+  minted per row, is not). This makes the walked path reconstructable even when
+  a node is reached more than once: in `a → b → a → c` the second `a` is a
+  distinct ordinal instance (`a#1`) whose `fromStepName` is `b`.
+  The graph runner now supports **cycles**: a forward edge into an
+  already-started node still collapses to a single run (joins/diamonds are
+  unchanged), but a *back-edge* — one whose target can reach its source — fires
+  a fresh ordinal instance, so a node can loop back to itself. Termination is
+  the graph's responsibility (branch routing must converge); the engine enforces
+  no visit cap.
