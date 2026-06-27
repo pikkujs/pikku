@@ -70,6 +70,12 @@ import { PikkuError, addError } from '../../errors/error-handler.js'
 import { RPCNotFoundError } from '../rpc/rpc-runner.js'
 import { ChildWorkflowStartedException } from './graph/graph-runner.js'
 import { deriveInvocationId } from './workflow-invocation-id.js'
+import {
+  buildRunTimeline,
+  reconstructStateAt,
+  type RunTimeline,
+  type ReconstructedRunState,
+} from './run-timeline.js'
 import type { JobOptions } from '../queue/queue.types.js'
 
 /**
@@ -451,6 +457,33 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         ? { message: run.error.message ?? 'Unknown error' }
         : undefined,
     }
+  }
+
+  /**
+   * Build the run's time-travel event stream from durable history.
+   * @param id - Run ID
+   * @returns Ordered timeline, or null if the run doesn't exist
+   */
+  public async getRunTimeline(id: string): Promise<RunTimeline | null> {
+    const run = await this.getRun(id)
+    if (!run) return null
+    return buildRunTimeline(await this.getRunHistory(id))
+  }
+
+  /**
+   * Reconstruct the run's state at a point in its timeline.
+   * @param id - Run ID
+   * @param at - A seq index (inclusive) or a Date (inclusive); omit for the
+   *             final state.
+   * @returns Reconstructed state, or null if the run doesn't exist
+   */
+  public async reconstructRunStateAt(
+    id: string,
+    at?: number | Date
+  ): Promise<ReconstructedRunState | null> {
+    const timeline = await this.getRunTimeline(id)
+    if (!timeline) return null
+    return reconstructStateAt(timeline, at ?? timeline.length - 1)
   }
 
   /**
