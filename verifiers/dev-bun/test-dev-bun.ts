@@ -12,7 +12,8 @@
  * Skipped (not failed) when `bun` is not on PATH.
  */
 
-import { execSync, execFileSync, spawn } from 'child_process'
+import { execFileSync, spawn } from 'child_process'
+import { rmSync } from 'fs'
 import { join } from 'path'
 
 const FUNCTIONS_DIR = join(process.cwd(), '..', '..', 'templates', 'functions')
@@ -36,8 +37,12 @@ if (!hasBun()) {
 }
 
 console.log('Setting up: pikku codegen for templates/functions...')
-execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_DIR, stdio: 'pipe' })
-execSync(`node ${PIKKU_BIN}`, {
+rmSync(join(FUNCTIONS_DIR, '.deploy'), { recursive: true, force: true })
+rmSync(join(FUNCTIONS_DIR, 'src', 'scaffold'), {
+  recursive: true,
+  force: true,
+})
+execFileSync('node', [PIKKU_BIN], {
   cwd: FUNCTIONS_DIR,
   stdio: 'pipe',
   timeout: 120_000,

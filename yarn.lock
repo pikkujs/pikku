@@ -7056,6 +7056,7 @@ __metadata:
   dependencies:
     "@pikku/cli": "workspace:*"
     "@types/node": "npm:^24"
+    tsx: "npm:^4"
     typescript: "npm:^5.9"
   languageName: unknown
   linkType: soft
@@ -23982,6 +23983,21 @@ __metadata:
   version: 2.8.1
   resolution: "tslib@npm:2.8.1"
   checksum: 10/3e2e043d5c2316461cb54e5c7fe02c30ef6dccb3384717ca22ae5c6b5bc95232a6241df19c622d9c73b809bea33b187f6dbc73030963e29950c2141bc32a79f7
+  languageName: node
+  linkType: hard
+
+"tsx@npm:^4":
+  version: 4.22.4
+  resolution: "tsx@npm:4.22.4"
+  dependencies:
+    esbuild: "npm:~0.28.0"
+    fsevents: "npm:~2.3.3"
+  dependenciesMeta:
+    fsevents:
+      optional: true
+  bin:
+    tsx: dist/cli.mjs
+  checksum: 10/9d6e7e9d1158eb84327d822720a2053bcfd972f8988e4789041bac5a767fc394ef302b1ff7e1d3dfbee391a0b03bd3dbb02cd302387729baf1dc7b9dce93b3ba
   languageName: node
   linkType: hard
 

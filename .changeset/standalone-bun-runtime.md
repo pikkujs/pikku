@@ -1,7 +1,7 @@
 ---
-'@pikku/deploy-standalone': minor
-'@pikku/bun-server': minor
-'@pikku/cli': minor
+'@pikku/deploy-standalone': patch
+'@pikku/bun-server': patch
+'@pikku/cli': patch
 ---
 
 feat(deploy): standalone provider can target the bun runtime
