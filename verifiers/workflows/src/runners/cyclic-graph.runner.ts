@@ -18,6 +18,7 @@
  */
 
 import type { PikkuWorkflowService } from '@pikku/core/workflow'
+import { rpcService } from '@pikku/core/rpc'
 
 import { createConfig, createSingletonServices } from '../services.js'
 
@@ -36,6 +37,7 @@ function parseBackend(): Backend {
 
 async function setup(backend: Backend): Promise<{
   workflowService: PikkuWorkflowService
+  singletonServices: any
   registerQueues: () => Promise<unknown>
   cleanup: () => Promise<void>
 }> {
@@ -61,7 +63,7 @@ async function setup(backend: Backend): Promise<{
     const workflowService = new KyselyWorkflowService(db)
     await workflowService.init()
 
-    await createSingletonServices(config, {
+    const singletonServices = await createSingletonServices(config, {
       queueService: pgBossFactory.getQueueService(),
       schedulerService: pgBossFactory.getSchedulerService(),
       workflowService,
@@ -69,6 +71,7 @@ async function setup(backend: Backend): Promise<{
 
     return {
       workflowService,
+      singletonServices,
       registerQueues: () => pgBossFactory.getQueueWorkers().registerQueues(),
       cleanup: async () => {
         await workflowService.close()
@@ -86,7 +89,7 @@ async function setup(backend: Backend): Promise<{
   const workflowService = new RedisWorkflowService(undefined)
   await workflowService.init()
 
-  await createSingletonServices(config, {
+  const singletonServices = await createSingletonServices(config, {
     queueService: bullFactory.getQueueService(),
     schedulerService: bullFactory.getSchedulerService(),
     workflowService,
@@ -95,6 +98,7 @@ async function setup(backend: Backend): Promise<{
   const queueWorkers = bullFactory.getQueueWorkers()
   return {
     workflowService,
+    singletonServices,
     registerQueues: () => queueWorkers.registerQueues(),
     cleanup: async () => {
       await queueWorkers.close()
@@ -109,16 +113,104 @@ function assert(condition: boolean, message: string): void {
   if (!condition) throw new AssertionFailed(message)
 }
 
+type HistoryStep = {
+  stepName: string
+  status: string
+  result?: any
+  attemptCount: number
+  fromStepName?: string
+}
+
+// The full, transport-independent node state a `graphCyclicRetry { attempts: 3 }`
+// run must produce: every node present, succeeded, with the exact result and the
+// exact predecessor it was reached from. Inline and queued runs must match this
+// to the letter — that is the whole point of the equivalence test below.
+const EXPECTED_NODES: Record<
+  string,
+  { from: string | undefined; result: any }
+> = {
+  begin: { from: undefined, result: { attempts: 3 } },
+  attempt: { from: 'begin', result: { count: 1, target: 3 } },
+  'attempt#1': { from: 'attempt', result: { count: 2, target: 3 } },
+  'attempt#2': { from: 'attempt#1', result: { count: 3, target: 3 } },
+  finish: { from: 'attempt#2', result: { ok: true, loops: 3 } },
+}
+
+// Normalize a run's history into a sorted, comparable shape (drops per-run noise
+// like stepId/runId/timestamps, keeps the node-correctness fields).
+function normalizeNodes(steps: HistoryStep[]) {
+  return steps
+    .map((s) => ({
+      stepName: s.stepName,
+      status: s.status,
+      from: s.fromStepName ?? undefined,
+      result: s.result,
+    }))
+    .sort((a, b) => a.stepName.localeCompare(b.stepName))
+}
+
+// Assert EVERY node is correct — not just the path: presence, no extras, status,
+// single attempt (no retries in this graph), result payload, and provenance.
+function assertAllNodesCorrect(steps: HistoryStep[]): void {
+  const byName = new Map(steps.map((s) => [s.stepName, s]))
+  const expectedNames = Object.keys(EXPECTED_NODES).sort()
+  const actualNames = steps.map((s) => s.stepName).sort()
+  assert(
+    JSON.stringify(actualNames) === JSON.stringify(expectedNames),
+    `node set mismatch — expected ${JSON.stringify(expectedNames)}, got ${JSON.stringify(actualNames)}`
+  )
+
+  for (const [name, expected] of Object.entries(EXPECTED_NODES)) {
+    const node = byName.get(name)!
+    assert(
+      node.status === 'succeeded',
+      `node '${name}' status — expected succeeded, got ${node.status}`
+    )
+    assert(
+      node.attemptCount === 1,
+      `node '${name}' attemptCount — expected 1, got ${node.attemptCount}`
+    )
+    assert(
+      (node.fromStepName ?? undefined) === expected.from,
+      `node '${name}' fromStepName — expected ${expected.from}, got ${node.fromStepName}`
+    )
+    assert(
+      JSON.stringify(node.result) === JSON.stringify(expected.result),
+      `node '${name}' result — expected ${JSON.stringify(expected.result)}, got ${JSON.stringify(node.result)}`
+    )
+  }
+
+  // The provenance chain reconstructs the exact walked path, cycle included.
+  const from = new Map(steps.map((s) => [s.stepName, s.fromStepName ?? undefined]))
+  const path: string[] = []
+  let cursor: string | undefined = 'finish'
+  while (cursor) {
+    path.unshift(cursor)
+    cursor = from.get(cursor)
+  }
+  assert(
+    JSON.stringify(path) ===
+      JSON.stringify(['begin', 'attempt', 'attempt#1', 'attempt#2', 'finish']),
+    `reconstructed path mismatch, got ${JSON.stringify(path)}`
+  )
+}
+
 async function main(): Promise<void> {
   const backend = parseBackend()
   console.log(`=== Cyclic Graph Runner (${backend}) ===\n`)
 
-  const { workflowService, registerQueues, cleanup } = await setup(backend)
+  const { workflowService, singletonServices, registerQueues, cleanup } =
+    await setup(backend)
   await registerQueues()
+
+  // Inline graph execution runs the nodes in-process, so it needs a real RPC
+  // service (the queued path rebuilds one inside each worker).
+  const rpc = rpcService.getContextRPCService(singletonServices, {})
 
   const results: Array<{ name: string; ok: boolean; error?: string }> = []
 
-  async function runToTerminal(
+  // Start QUEUED (default): step execution happens in the queue workers; poll.
+  async function runQueued(
     name: string,
     input: unknown
   ): Promise<{ status: string; runId: string }> {
@@ -148,6 +240,23 @@ async function main(): Promise<void> {
     }
   }
 
+  // Start INLINE: the whole graph runs straight-through in-process (no queue),
+  // so startWorkflow returns only once the run has reached a terminal state.
+  async function runInline(
+    name: string,
+    input: unknown
+  ): Promise<{ status: string; runId: string }> {
+    const { runId } = await workflowService.startWorkflow(
+      name,
+      input,
+      { type: 'test' },
+      rpc,
+      { inline: true }
+    )
+    const run = await workflowService.getRun(runId)
+    return { status: run?.status ?? 'unknown', runId }
+  }
+
   async function test(name: string, fn: () => Promise<void>): Promise<void> {
     const start = Date.now()
     try {
@@ -160,51 +269,46 @@ async function main(): Promise<void> {
     }
   }
 
+  let queuedNodes: ReturnType<typeof normalizeNodes> | null = null
+
   await test(
-    'cyclic node revisits as ordinal instances and the fromStepName chain reconstructs the path',
+    'QUEUED cyclic graph: every node is correct (status, result, provenance)',
     async () => {
-      const { status, runId } = await runToTerminal('graphCyclicRetry', {
+      const { status, runId } = await runQueued('graphCyclicRetry', {
         attempts: 3,
       })
       assert(status === 'completed', `expected completed, got ${status}`)
+      const steps = (await workflowService.getRunHistory(runId)) as HistoryStep[]
+      assertAllNodesCorrect(steps)
+      queuedNodes = normalizeNodes(steps)
+    }
+  )
 
-      const steps = await workflowService.getRunHistory(runId)
-      const from = new Map(
-        steps.map((s: any) => [s.stepName, s.fromStepName ?? undefined])
-      )
+  await test(
+    'INLINE cyclic graph: every node is correct (proves inline supports cycles)',
+    async () => {
+      const { status, runId } = await runInline('graphCyclicRetry', {
+        attempts: 3,
+      })
+      assert(status === 'completed', `expected completed, got ${status}`)
+      const steps = (await workflowService.getRunHistory(runId)) as HistoryStep[]
+      assertAllNodesCorrect(steps)
+    }
+  )
 
-      // The self-cycle produced three ordinal instances of `attempt`.
-      const stepNames = steps.map((s: any) => s.stepName).sort()
+  await test(
+    'INLINE and QUEUED produce byte-identical node state (transport independence)',
+    async () => {
+      assert(queuedNodes !== null, 'queued run did not record node state')
+      const { status, runId } = await runInline('graphCyclicRetry', {
+        attempts: 3,
+      })
+      assert(status === 'completed', `expected completed, got ${status}`)
+      const steps = (await workflowService.getRunHistory(runId)) as HistoryStep[]
+      const inlineNodes = normalizeNodes(steps)
       assert(
-        stepNames.includes('attempt') &&
-          stepNames.includes('attempt#1') &&
-          stepNames.includes('attempt#2'),
-        `expected attempt/attempt#1/attempt#2, got ${JSON.stringify(stepNames)}`
-      )
-
-      // Each step records its predecessor; the entry has none.
-      assert(
-        from.get('begin') === undefined,
-        `entry step must have no predecessor, got ${from.get('begin')}`
-      )
-
-      // Walk back from the terminal node — the cycle is fully reconstructable.
-      const path: string[] = []
-      let cursor: string | undefined = 'finish'
-      while (cursor) {
-        path.unshift(cursor)
-        cursor = from.get(cursor)
-      }
-      assert(
-        JSON.stringify(path) ===
-          JSON.stringify([
-            'begin',
-            'attempt',
-            'attempt#1',
-            'attempt#2',
-            'finish',
-          ]),
-        `reconstructed path mismatch, got ${JSON.stringify(path)}`
+        JSON.stringify(inlineNodes) === JSON.stringify(queuedNodes),
+        `inline vs queued node state diverged\n  inline: ${JSON.stringify(inlineNodes)}\n  queued: ${JSON.stringify(queuedNodes)}`
       )
     }
   )

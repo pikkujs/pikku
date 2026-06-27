@@ -38,6 +38,7 @@
     "test:retry-idempotency:pg": "npx tsx src/runners/retry-idempotency.runner.ts --pg",
     "test:retry-idempotency:redis": "npx tsx src/runners/retry-idempotency.runner.ts --redis",
     "test:cyclic-graph:pg": "npx tsx src/runners/cyclic-graph.runner.ts --pg",
-    "test:cyclic-graph:redis": "npx tsx src/runners/cyclic-graph.runner.ts --redis"
+    "test:cyclic-graph:redis": "npx tsx src/runners/cyclic-graph.runner.ts --redis",
+    "test:db": "pikku && npx tsx src/runners/cyclic-graph.runner.ts --redis && npx tsx src/runners/cyclic-graph.runner.ts --pg && npx tsx src/runners/retry-idempotency.runner.ts --redis && npx tsx src/runners/retry-idempotency.runner.ts --pg"
   }
 }
