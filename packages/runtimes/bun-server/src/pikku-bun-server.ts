@@ -85,7 +85,7 @@ export class PikkuBunServer {
       hostname: config.hostname,
 
       fetch: async (req, server) => {
-        if (req.headers.get('upgrade') === 'websocket') {
+        if (req.headers.get('upgrade')?.toLowerCase() === 'websocket') {
           const pikkuReq = new PikkuFetchHTTPRequest(req)
           const pikkuRes = new PikkuFetchHTTPResponse()
           const channelHandler = await runLocalChannel({
