@@ -63,7 +63,8 @@
     "benchmark:baseline:express": "tsx benchmarks/bench-baseline-express.ts",
     "benchmark:baseline:fastify": "tsx benchmarks/bench-baseline-fastify.ts",
     "benchmark:baseline:uws": "tsx benchmarks/bench-baseline-uws.ts",
-    "benchmark:flame": "npx 0x -- npx tsx benchmarks/bench-express.ts --flame"
+    "benchmark:flame": "npx 0x -- npx tsx benchmarks/bench-express.ts --flame",
+    "benchmark:workflow": "tsx benchmarks/bench-workflow.ts"
   },
   "packageManager": "yarn@4.10.3",
   "devDependencies": {
