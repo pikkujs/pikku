@@ -1,5 +1,5 @@
 ---
-'@pikku/cli': minor
+'@pikku/cli': patch
 ---
 
 feat(dev): `pikku dev` serves over the bun runtime when the CLI runs under bun
