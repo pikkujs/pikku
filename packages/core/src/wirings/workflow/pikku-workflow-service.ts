@@ -501,14 +501,16 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepName: string,
     rpcName: string | null,
     data: any,
-    stepOptions?: WorkflowStepOptions
+    stepOptions?: WorkflowStepOptions,
+    fromStepName?: string
   ): Promise<StepState> {
     const step = await this.insertStepStateImpl(
       runId,
       stepName,
       rpcName,
       data,
-      stepOptions
+      stepOptions,
+      fromStepName
     )
     await this.safeMirror(() =>
       this.mirror!.insertStepState(runId, { ...step, stepName, rpcName, data })
@@ -521,7 +523,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepName: string,
     rpcName: string | null,
     data: any,
-    stepOptions?: WorkflowStepOptions
+    stepOptions?: WorkflowStepOptions,
+    fromStepName?: string
   ): Promise<StepState>
 
   /**
@@ -694,6 +697,20 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   ): Promise<string[]>
 
   /**
+   * List every step instance of a run (any status) with its predecessor.
+   * Drives bounded graph revisits: the runner counts instances per logical node
+   * and treats each `fromStepName → node` as a once-fired transition.
+   * @param runId - Run ID
+   */
+  abstract getStepInstances(runId: string): Promise<
+    Array<{
+      stepName: string
+      status: StepStatus
+      fromStepName?: string
+    }>
+  >
+
+  /**
    * Get results for specific nodes
    * @param runId - Run ID
    * @param nodeIds - Node IDs to fetch results for
@@ -857,12 +874,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepName: string,
     rpcName: string,
     data: any,
-    stepOptions?: WorkflowStepOptions
+    stepOptions?: WorkflowStepOptions,
+    fromStepName?: string
   ): Promise<void> {
     const queueService = this.verifyQueueService()
     await queueService.add(
       this.getStepWorkerQueueName(rpcName),
-      JSON.parse(JSON.stringify({ runId, stepName, rpcName, data })),
+      JSON.parse(JSON.stringify({ runId, stepName, rpcName, data, fromStepName })),
       this.resolveStepJobOptions(stepOptions)
     )
   }
@@ -921,7 +939,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepName: string,
     rpcName: string,
     data: unknown,
-    stepOptions?: WorkflowStepOptions
+    stepOptions?: WorkflowStepOptions,
+    fromStepName?: string
   ): Promise<boolean> {
     // Step execution is decided purely by the function's `inline` flag (default
     // true). Only a function explicitly marked `inline: false` dispatches via
@@ -950,7 +969,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     try {
       await getSingletonServices()!.queueService!.add(
         this.getStepWorkerQueueName(rpcName),
-        JSON.parse(JSON.stringify({ runId, stepName, rpcName, data })),
+        JSON.parse(
+          JSON.stringify({ runId, stepName, rpcName, data, fromStepName })
+        ),
         this.resolveStepJobOptions(stepOptions)
       )
     } catch (cause) {
@@ -1136,9 +1157,18 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
   // Per-run, per-replay ordinal counters (runId → stepName → count).
   private stepOrdinals = new Map<string, Map<string, number>>()
+  // Previous step key reached in the current DSL walk (runId → stepName), so a
+  // new step records where it came from. Rebuilt each replay alongside ordinals.
+  private stepLineage = new Map<string, string>()
 
   private resetStepOrdinals(runId: string): void {
     this.stepOrdinals.set(runId, new Map())
+    this.stepLineage.delete(runId)
+  }
+
+  /** The step the DSL walk last reached (the predecessor for the next step). */
+  private lastStepName(runId: string): string | undefined {
+    return this.stepLineage.get(runId)
   }
 
   /**
@@ -1155,7 +1185,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
     const ordinal = perRun.get(logicalStepName) ?? 0
     perRun.set(logicalStepName, ordinal + 1)
-    return ordinal === 0 ? logicalStepName : `${logicalStepName}#${ordinal}`
+    const stepName =
+      ordinal === 0 ? logicalStepName : `${logicalStepName}#${ordinal}`
+    this.stepLineage.set(runId, stepName)
+    return stepName
   }
 
   public async runWorkflowJob(runId: string, rpcService: any): Promise<void> {
@@ -1414,17 +1447,25 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         const isGraphWorkflow =
           workflowMeta?.source === 'graph' ||
           workflowMeta?.source === 'dynamic-workflow'
-        if (
-          isGraphWorkflow &&
-          workflowMeta?.nodes &&
-          stepName in workflowMeta.nodes
-        ) {
+        // Map the physical step key back to its logical node: a revisit instance
+        // is `node#N` (ordinal), which isn't a literal key in `nodes`.
+        let graphNodeId: string | undefined
+        if (isGraphWorkflow && workflowMeta?.nodes) {
+          if (stepName in workflowMeta.nodes) {
+            graphNodeId = stepName
+          } else {
+            const hash = stepName.lastIndexOf('#')
+            const base = hash > 0 ? stepName.slice(0, hash) : undefined
+            if (base && base in workflowMeta.nodes) graphNodeId = base
+          }
+        }
+        if (graphNodeId) {
           result = await executeGraphStep(
             this,
             rpcService,
             runId,
             stepState.stepId,
-            stepName,
+            graphNodeId,
             rpcName,
             data,
             run.workflow
@@ -1474,6 +1515,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
                 stepId: stepState.stepId,
                 invocationId: deriveInvocationId(runId, stepName),
                 attemptCount: stepState.attemptCount,
+                fromInvocationId: stepState.fromStepName
+                  ? deriveInvocationId(runId, stepState.fromStepName)
+                  : undefined,
               },
             })
           }
@@ -1577,6 +1621,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     rpcService: any,
     stepOptions?: WorkflowStepOptions
   ): Promise<any> {
+    // Capture the predecessor before nextStepKey advances the lineage to us.
+    const fromStepName = this.lastStepName(runId)
     const stepName = this.nextStepKey(runId, logicalStepName)
     // Resolve the retry policy ONCE here so the value persisted on the step
     // (which drives `retriesExhausted`) is the same one the queue dispatch turns
@@ -1597,7 +1643,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         stepName,
         rpcName,
         data,
-        resolvedStepOptions
+        resolvedStepOptions,
+        fromStepName
       )
     }
 
@@ -1636,7 +1683,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       stepName,
       rpcName,
       data,
-      resolvedStepOptions
+      resolvedStepOptions,
+      fromStepName
     )
     if (dispatched) {
       await this.setStepScheduled(stepState.stepId)
@@ -1697,6 +1745,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
                 stepId: currentStepState.stepId,
                 invocationId: deriveInvocationId(runId, stepName),
                 attemptCount: currentStepState.attemptCount,
+                fromInvocationId: currentStepState.fromStepName
+                  ? deriveInvocationId(runId, currentStepState.fromStepName)
+                  : undefined,
               },
             })
           }
@@ -1744,6 +1795,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     fn: Function,
     stepOptions?: WorkflowStepOptions
   ): Promise<any> {
+    const fromStepName = this.lastStepName(runId)
     const stepName = this.nextStepKey(runId, logicalStepName)
     // Check if step already exists
     let stepState: StepState
@@ -1756,7 +1808,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         stepName,
         null,
         null,
-        stepOptions
+        stepOptions,
+        fromStepName
       )
     }
 
@@ -1838,6 +1891,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     logicalStepName: string,
     duration: number
   ) {
+    const fromStepName = this.lastStepName(runId)
     const stepName = this.nextStepKey(runId, logicalStepName)
     // Check if step already exists
     let stepState: StepState
@@ -1845,9 +1899,14 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       stepState = await this.getStepState(runId, stepName)
     } catch {
       // Step doesn't exist - create it (sleep step, no RPC)
-      stepState = await this.insertStepState(runId, stepName, null, {
-        duration,
-      })
+      stepState = await this.insertStepState(
+        runId,
+        stepName,
+        null,
+        { duration },
+        undefined,
+        fromStepName
+      )
     }
 
     if (stepState.status === 'succeeded') {
@@ -1899,6 +1958,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   private async suspendStep(runId: string, reason: string): Promise<void> {
+    const fromStepName = this.lastStepName(runId)
     const suspendStepName = this.nextStepKey(
       runId,
       this.getSuspendStepName(reason)
@@ -1914,7 +1974,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           'pikkuWorkflowSuspend',
           {
             reason,
-          }
+          },
+          undefined,
+          fromStepName
         )
       }
       if (!stepState.stepId) {
@@ -1924,7 +1986,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           'pikkuWorkflowSuspend',
           {
             reason,
-          }
+          },
+          undefined,
+          fromStepName
         )
       }
 

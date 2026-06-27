@@ -7,6 +7,7 @@ import type {
   WorkflowRunService,
   WorkflowRunWire,
   StepState,
+  StepStatus,
   WorkflowStatus,
   WorkflowVersionStatus,
   WorkflowStepOptions,
@@ -140,7 +141,8 @@ export class InMemoryWorkflowService
     stepName: string,
     rpcName: string | null,
     data: any,
-    stepOptions?: WorkflowStepOptions
+    stepOptions?: WorkflowStepOptions,
+    fromStepName?: string
   ): Promise<StepState> {
     const stepId = randomUUID()
     const now = new Date()
@@ -151,6 +153,7 @@ export class InMemoryWorkflowService
       attemptCount: 1,
       retries: stepOptions?.retries,
       retryDelay: stepOptions?.retryDelay,
+      fromStepName,
       createdAt: now,
       updatedAt: now,
       stepName,
@@ -281,6 +284,7 @@ export class InMemoryWorkflowService
       attemptCount: failedStep.attemptCount + 1,
       retries: failedStep.retries,
       retryDelay: failedStep.retryDelay,
+      fromStepName: failedStep.fromStepName,
       createdAt: now,
       updatedAt: now,
       stepName: stepName,
@@ -443,6 +447,26 @@ export class InMemoryWorkflowService
       }
     }
     return nodeIds.filter((id) => !existingSteps.has(id))
+  }
+
+  async getStepInstances(runId: string): Promise<
+    Array<{ stepName: string; status: StepStatus; fromStepName?: string }>
+  > {
+    const prefix = `${runId}:`
+    const instances: Array<{
+      stepName: string
+      status: StepStatus
+      fromStepName?: string
+    }> = []
+    for (const [key, step] of this.steps.entries()) {
+      if (!key.startsWith(prefix)) continue
+      instances.push({
+        stepName: key.substring(prefix.length),
+        status: step.status,
+        fromStepName: step.fromStepName,
+      })
+    }
+    return instances
   }
 
   async getNodeResults(

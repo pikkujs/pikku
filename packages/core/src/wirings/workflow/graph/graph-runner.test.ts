@@ -241,6 +241,84 @@ describe('graph-runner bugs', () => {
     assert.deepEqual(queuedNodes, ['c'])
   })
 
+  test('continueGraph revisits a cyclic node and records the walked path via fromStepName', async () => {
+    const ws = new InMemoryWorkflowService()
+    const queued: Array<{ stepName: string; fromStepName?: string }> = []
+
+    pikkuState(null, 'package', 'singletonServices', {
+      queueService: {
+        add: async (_queueName: string, data: any) => {
+          if (data?.stepName) {
+            queued.push({
+              stepName: data.stepName,
+              fromStepName: data.fromStepName,
+            })
+          }
+        },
+      },
+    } as any)
+
+    // start → a, where a loops back through b once, then exits to c:
+    //   start → a --retry--> b → a --done--> c
+    const meta: WorkflowRuntimeMeta = {
+      name: 'testCyclicGraph',
+      pikkuFuncId: 'testCyclicGraph',
+      source: 'graph',
+      entryNodeIds: ['start'],
+      graphHash: 'cyclic-hash',
+      nodes: {
+        start: { nodeId: 'start', rpcName: 'doStart', next: 'a' },
+        a: { nodeId: 'a', rpcName: 'doA', next: { retry: 'b', done: 'c' } },
+        b: { nodeId: 'b', rpcName: 'doB', next: 'a' },
+        c: { nodeId: 'c', rpcName: 'doC' },
+      },
+    }
+
+    const runId = await ws.createRun('testCyclicGraph', {}, false, 'cyclic-hash', {
+      type: 'test',
+    })
+
+    // Succeed a queued step (taking an optional branch), then advance the graph.
+    const advance = async (stepName: string, branch?: string) => {
+      const step = await ws.getStepState(runId, stepName)
+      await ws.setStepRunning(step.stepId)
+      if (branch) await ws.setBranchTaken(step.stepId, branch)
+      await ws.setStepResult(step.stepId, { ok: true })
+      await continueGraph(ws, runId, 'testCyclicGraph', meta)
+    }
+
+    await continueGraph(ws, runId, 'testCyclicGraph', meta) // fire entry
+    await advance('start')
+    await advance('a', 'retry') // a → b (b reaches a, but first visit ⇒ bare 'b')
+    await advance('b') // b → a revisit ⇒ a#1
+    await advance('a#1', 'done') // a#1 → c (forward edge, terminal)
+    await advance('c')
+
+    // Each step records the predecessor it was reached from; the cyclic
+    // revisit is a fresh ordinal instance (a#1) with its own provenance.
+    assert.deepEqual(queued, [
+      { stepName: 'start', fromStepName: undefined },
+      { stepName: 'a', fromStepName: 'start' },
+      { stepName: 'b', fromStepName: 'a' },
+      { stepName: 'a#1', fromStepName: 'b' },
+      { stepName: 'c', fromStepName: 'a#1' },
+    ])
+
+    const run = await ws.getRun(runId)
+    assert.equal(run?.status, 'completed')
+
+    // Reconstruct the walked path purely from the fromStepName chain.
+    const instances = await ws.getStepInstances(runId)
+    const from = new Map(instances.map((i) => [i.stepName, i.fromStepName]))
+    const path: string[] = []
+    let cursor: string | undefined = 'c'
+    while (cursor) {
+      path.unshift(cursor)
+      cursor = from.get(cursor) ?? undefined
+    }
+    assert.deepEqual(path, ['start', 'a', 'b', 'a#1', 'c'])
+  })
+
   test('inline graph should execute converging next node only once', async () => {
     const ws = new InMemoryWorkflowService()
     let cCalls = 0

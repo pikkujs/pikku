@@ -134,6 +134,9 @@ export interface StepState {
   retries?: number
   /** Delay between retries */
   retryDelay?: string | number
+  /** Step name of the predecessor that scheduled this step (the transition/edge
+   *  walked to reach it); undefined for entry steps. Reconstructs the path. */
+  fromStepName?: string
   /** Creation timestamp */
   createdAt: Date
   /** Last update timestamp */
@@ -360,6 +363,8 @@ export type WorkflowStepInput = {
   stepName: string
   rpcName: string
   data: any
+  /** Predecessor step name (the walked transition); undefined for entry steps. */
+  fromStepName?: string
 }
 
 export type WorkflowOrchestratorInput = {

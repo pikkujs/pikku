@@ -5,6 +5,7 @@ import {
   type WorkflowRun,
   type WorkflowRunWire,
   type StepState,
+  type StepStatus,
   type WorkflowStatus,
   type WorkflowVersionStatus,
 } from '@pikku/core/workflow'
@@ -306,7 +307,8 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     stepName: string,
     rpcName: string,
     data: any,
-    stepOptions?: { retries?: number; retryDelay?: string | number }
+    stepOptions?: { retries?: number; retryDelay?: string | number },
+    fromStepName?: string
   ): Promise<StepState> {
     const now = Date.now()
     const stepId = `${runId}:${stepName}:${now}`
@@ -328,6 +330,10 @@ export class RedisWorkflowService extends PikkuWorkflowService {
 
     if (stepOptions?.retryDelay !== undefined) {
       fields.retryDelay = stepOptions.retryDelay.toString()
+    }
+
+    if (fromStepName !== undefined) {
+      fields.fromStepName = fromStepName
     }
 
     await this.redis.hmset(key, fields)
@@ -353,6 +359,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
         stepOptions?.retryDelay !== undefined
           ? stepOptions.retryDelay.toString()
           : undefined,
+      fromStepName,
       createdAt: new Date(now),
       updatedAt: new Date(now),
     }
@@ -376,6 +383,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       attemptCount: Number(data.attemptCount || 1),
       retries: data.retries ? Number(data.retries) : undefined,
       retryDelay: data.retryDelay,
+      fromStepName: data.fromStepName || undefined,
       createdAt: new Date(Number(data.createdAt!)),
       updatedAt: new Date(Number(data.updatedAt!)),
     }
@@ -743,6 +751,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       attemptCount: newAttemptCount,
       retries: retries,
       retryDelay: retryDelay,
+      fromStepName: data.fromStepName || undefined,
       createdAt: new Date(Number(data.createdAt!)),
       updatedAt: new Date(now),
     }
@@ -825,6 +834,44 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     }
 
     return result
+  }
+
+  async getStepInstances(runId: string): Promise<
+    Array<{ stepName: string; status: StepStatus; fromStepName?: string }>
+  > {
+    const instances: Array<{
+      stepName: string
+      status: StepStatus
+      fromStepName?: string
+    }> = []
+    const pattern = `${this.keyPrefix}:step:${runId}:*`
+    let cursor = '0'
+    do {
+      const [newCursor, foundKeys] = await this.redis.scan(
+        cursor,
+        'MATCH',
+        pattern,
+        'COUNT',
+        100
+      )
+      cursor = newCursor
+      for (const key of foundKeys) {
+        const [status, fromStepName] = await this.redis.hmget(
+          key,
+          'status',
+          'fromStepName'
+        )
+        const parts = key.split(':')
+        const stepIndex = parts.lastIndexOf('step')
+        if (stepIndex === -1 || parts[stepIndex + 1] !== runId) continue
+        instances.push({
+          stepName: parts.slice(stepIndex + 2).join(':'),
+          status: status as StepStatus,
+          fromStepName: fromStepName || undefined,
+        })
+      }
+    } while (cursor !== '0')
+    return instances
   }
 
   async getNodeResults(

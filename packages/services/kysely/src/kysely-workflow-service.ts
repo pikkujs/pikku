@@ -5,6 +5,7 @@ import {
   type WorkflowRun,
   type WorkflowRunWire,
   type StepState,
+  type StepStatus,
   type WorkflowStatus,
   type WorkflowVersionStatus,
 } from '@pikku/core/workflow'
@@ -79,6 +80,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       .addColumn('branch_taken', 'text')
       .addColumn('retries', 'integer')
       .addColumn('retry_delay', 'text')
+      .addColumn('from_step_name', 'text')
       .addColumn('created_at', 'timestamp', (col) =>
         col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
       )
@@ -90,6 +92,15 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         'step_name',
       ])
       .execute()
+
+    // Additive: backfill the column on tables created before from_step_name.
+    await this.db.schema
+      .alterTable('workflow_step')
+      .addColumn('from_step_name', 'text')
+      .execute()
+      .catch(() => {
+        // Column already exists (fresh tables include it above) — nothing to do.
+      })
 
     await this.db.schema
       .createTable('workflow_step_history')
@@ -196,7 +207,8 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     stepName: string,
     rpcName: string | null,
     data: any,
-    stepOptions?: { retries?: number; retryDelay?: string | number }
+    stepOptions?: { retries?: number; retryDelay?: string | number },
+    fromStepName?: string
   ): Promise<StepState> {
     const stepId = crypto.randomUUID()
     const now = new Date()
@@ -212,6 +224,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         status: 'pending',
         retries: stepOptions?.retries ?? null,
         retryDelay: stepOptions?.retryDelay?.toString() ?? null,
+        fromStepName: fromStepName ?? null,
         createdAt: now,
         updatedAt: now,
       })
@@ -227,6 +240,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       attemptCount: 1,
       retries: stepOptions?.retries,
       retryDelay: stepOptions?.retryDelay?.toString(),
+      fromStepName,
       createdAt: now,
       updatedAt: now,
     }
@@ -242,6 +256,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         's.error',
         's.retries',
         's.retryDelay',
+        's.fromStepName',
         's.createdAt',
         's.updatedAt',
       ])
@@ -274,6 +289,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       attemptCount: Number(row.attemptCount),
       retries: row.retries != null ? Number(row.retries) : undefined,
       retryDelay: row.retryDelay ?? undefined,
+      fromStepName: row.fromStepName ?? undefined,
       createdAt: new Date(row.createdAt),
       updatedAt: new Date(row.updatedAt),
     }
@@ -467,6 +483,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         's.error',
         's.retries',
         's.retryDelay',
+        's.fromStepName',
         's.createdAt',
         's.updatedAt',
       ])
@@ -492,6 +509,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       attemptCount: Number(row.attemptCount),
       retries: row.retries != null ? Number(row.retries) : undefined,
       retryDelay: row.retryDelay ?? undefined,
+      fromStepName: row.fromStepName ?? undefined,
       createdAt: new Date(row.createdAt),
       updatedAt: new Date(row.updatedAt),
     }
@@ -566,6 +584,21 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
 
     const existingStepNames = new Set(result.map((r) => r.stepName))
     return nodeIds.filter((id) => !existingStepNames.has(id))
+  }
+
+  async getStepInstances(runId: string): Promise<
+    Array<{ stepName: string; status: StepStatus; fromStepName?: string }>
+  > {
+    const rows = await this.db
+      .selectFrom('workflowStep')
+      .select(['stepName', 'status', 'fromStepName'])
+      .where('workflowRunId', '=', runId)
+      .execute()
+    return rows.map((r) => ({
+      stepName: r.stepName,
+      status: r.status as StepStatus,
+      fromStepName: r.fromStepName ?? undefined,
+    }))
   }
 
   async getNodeResults(

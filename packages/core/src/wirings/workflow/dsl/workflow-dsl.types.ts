@@ -311,6 +311,12 @@ export interface WorkflowStepWire {
   invocationId: string
   /** Current attempt number (1-indexed, increments on retry) */
   attemptCount: number
+  /**
+   * Invocation ID of the predecessor step this one was reached from (the walked
+   * transition/edge). Undefined for entry steps. Lets a step know its origin —
+   * e.g. in a cyclic graph `a → b → a → c`, the second `a` carries `b`'s id.
+   */
+  fromInvocationId?: string
 }
 
 /**
