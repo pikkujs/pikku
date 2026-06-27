@@ -429,6 +429,8 @@ export class RedisWorkflowService extends PikkuWorkflowService {
         allHistoryEntries.push({
           stepId: entry.stepId,
           stepName: entry.stepName,
+          // Provenance lives on the step row, not the per-attempt history entry.
+          fromStepName: stepData.fromStepName || undefined,
           status: entry.status,
           result: entry.result ? JSON.parse(entry.result) : undefined,
           error: entry.error ? JSON.parse(entry.error) : undefined,
