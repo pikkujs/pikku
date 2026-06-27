@@ -313,6 +313,66 @@ async function main(): Promise<void> {
     }
   )
 
+  await test(
+    'TIMELINE time-travel reconstructs run state at any point (cycle included)',
+    async () => {
+      const { status, runId } = await runInline('graphCyclicRetry', {
+        attempts: 3,
+      })
+      assert(status === 'completed', `expected completed, got ${status}`)
+
+      // Final state: the reconstructed path + results must match EXPECTED_NODES
+      // exactly — same durable history the provenance test reads, now folded.
+      const final = await workflowService.reconstructRunStateAt(runId)
+      assert(final !== null, 'reconstructRunStateAt returned null for a real run')
+      assert(
+        JSON.stringify(final!.path) ===
+          JSON.stringify(['begin', 'attempt', 'attempt#1', 'attempt#2', 'finish']),
+        `final path mismatch, got ${JSON.stringify(final!.path)}`
+      )
+      for (const [name, expected] of Object.entries(EXPECTED_NODES)) {
+        assert(
+          JSON.stringify(final!.results[name]) === JSON.stringify(expected.result),
+          `final result for '${name}' mismatch — expected ${JSON.stringify(expected.result)}, got ${JSON.stringify(final!.results[name])}`
+        )
+      }
+
+      // Time-travel: rewind to the instant the 2nd cycle pass (attempt#1) is
+      // created. begin + attempt have succeeded; attempt#1 is freshly pending;
+      // attempt#2 and finish do not exist yet.
+      const timeline = await workflowService.getRunTimeline(runId)
+      assert(timeline !== null, 'getRunTimeline returned null for a real run')
+      const created = timeline!.find(
+        (e) => e.type === 'pending' && e.stepName === 'attempt#1'
+      )
+      assert(created !== undefined, 'no created event for attempt#1')
+      const mid = await workflowService.reconstructRunStateAt(runId, created!.seq)
+      assert(
+        JSON.stringify(mid!.path) ===
+          JSON.stringify(['begin', 'attempt', 'attempt#1']),
+        `mid-run path mismatch, got ${JSON.stringify(mid!.path)}`
+      )
+      const attempt1 = mid!.steps.find((s) => s.stepName === 'attempt#1')!
+      assert(
+        attempt1.status === 'pending',
+        `attempt#1 should be pending mid-run, got ${attempt1.status}`
+      )
+      assert(
+        mid!.phase === 'running',
+        `mid-run phase should be running, got ${mid!.phase}`
+      )
+      assert(
+        mid!.results.begin !== undefined && mid!.results.attempt !== undefined,
+        'begin + attempt results must be in the replay cache mid-run'
+      )
+      assert(
+        mid!.results['attempt#1'] === undefined &&
+          mid!.results.finish === undefined,
+        'future steps must NOT be in the replay cache mid-run'
+      )
+    }
+  )
+
   console.log('\n=== Summary ===')
   const passed = results.filter((r) => r.ok).length
   const failed = results.filter((r) => !r.ok).length
