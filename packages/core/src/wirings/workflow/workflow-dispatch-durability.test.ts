@@ -55,7 +55,10 @@ describe('dispatch durability: a transient queue failure is recoverable', () => 
     assert.notEqual(runAfterFail?.status, 'failed', 'run is not failed by a queue blip')
 
     // Queue recovers → replaying the step now dispatches (pauses via async exception)
-    // and the step transitions to `scheduled`.
+    // and the step transitions to `scheduled`. A real replay runs through
+    // runWorkflowJob which resets the ordinal counter; simulate that so the
+    // second reach resolves to the same step key, not the next ordinal.
+    ;(ws as any).resetStepOrdinals(runId)
     queueUp = true
     await assert.rejects(
       (ws as any).rpcStep(runId, 'thing', 'doThing', {}, {}),

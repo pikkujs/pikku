@@ -37,3 +37,10 @@ invocation gets a stable idempotency key.
   than the whole run being marked `failed`. The orchestrator job now also
   carries its own retry policy, so this holds even when the orchestrator queue
   is configured `retry_limit 0`. A genuine step error still fails the run.
+- **Same step name can be invoked multiple times in one run.** Step rows are now
+  keyed per *invocation*: the Nth reach of a step name in a replay resolves to a
+  physical key (`name` for the first, `name#N` for repeats), so a literal
+  duplicate name no longer clobbers the earlier step's state. The first reach
+  keeps the bare name, so existing rows, graph-node matching and `invocationId`s
+  are unchanged. Ordinals are derived deterministically from DSL execution order
+  and reset each replay.
