@@ -1,3 +1,44 @@
+## 0.12.54
+
+### Patch Changes
+
+- 5d25125: feat(dev): `pikku dev` serves over the bun runtime when the CLI runs under bun
+
+  When the Pikku CLI itself runs under bun (e.g. the compiled `brew install`
+  binary), `pikku dev` now serves over `@pikku/bun-server` (native `Bun.serve`
+  WebSockets) instead of the node http server + `ws` package. The bun server is
+  dynamically imported and gated on `typeof Bun !== 'undefined'`, so a node-run
+  CLI is unaffected and keeps using `@pikku/node-http-server`. The dev server
+  shares one `BunEventHubService` between the singleton services and the
+  WebSocket transport so channel broadcasts reach connected sockets.
+
+- e443e94: feat(deploy): standalone provider can target the bun runtime
+
+  `pikku deploy plan|apply --provider standalone --runtime bun` now generates a
+  `@pikku/bun-server` entry (native `Bun.serve` WebSockets, no `ws` package) and
+  compiles the bundle into a single self-contained executable via
+  `bun build --compile` — no runtime needed on the target host. The default
+  remains `--runtime node`, which is unchanged (ships `bundle.js`, run with
+  `node bundle.js`).
+
+  `PikkuBunServer` now accepts an injectable `eventHub` in its options. Inject the
+  same `BunEventHubService` you pass to `createSingletonServices` so functions and
+  the WebSocket transport share one hub — otherwise a function's
+  `eventHub.publish(...)` targets a different hub than the one holding the live
+  sockets and broadcasts never reach connected clients. The standalone bun entry
+  and the `bun` template now wire this shared hub, fixing cross-connection /
+  cross-transport channel pub-sub on bun.
+
+  Also removes the unused `@yao-pkg/pkg` dependency and its stale type shim from
+  `@pikku/deploy-standalone` (the pkg-based binary path was dropped in #489).
+
+- Updated dependencies [d5c3c85]
+- Updated dependencies [e443e94]
+- Updated dependencies [92cd5b1]
+  - @pikku/bun-server@0.12.1
+  - @pikku/core@0.12.38
+  - @pikku/kysely@0.12.17
+
 ## 0.12.53
 
 ### Patch Changes

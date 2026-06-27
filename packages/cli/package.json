@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cli",
-  "version": "0.12.53",
+  "version": "0.12.54",
   "author": "yasser.fadl@gmail.com",
   "license": "BUSL-1.1",
   "imports": {
@@ -28,12 +28,12 @@
     "@electric-sql/pglite": "^0.5.1",
     "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.1",
     "@pikku/better-auth": "^0.12.12",
-    "@pikku/bun-server": "^0.12.0",
-    "@pikku/core": "^0.12.37",
+    "@pikku/bun-server": "^0.12.1",
+    "@pikku/core": "^0.12.38",
     "@pikku/deploy-cloudflare": "^0.12.6",
     "@pikku/fetch": "^0.12.5",
     "@pikku/inspector": "^0.12.26",
-    "@pikku/kysely": "^0.12.16",
+    "@pikku/kysely": "^0.12.17",
     "@pikku/kysely-node-sqlite": "^0.12.2",
     "@pikku/node-http-server": "^0.12.3",
     "@pikku/openapi-parser": "^0.12.10",
