@@ -35,7 +35,10 @@ const arg = (flag: string, fallback: number): number => {
   const i = process.argv.indexOf(flag)
   if (i === -1 || i + 1 >= process.argv.length) return fallback
   const v = Number(process.argv[i + 1])
-  return Number.isFinite(v) ? v : fallback
+  if (!Number.isInteger(v) || v <= 0) {
+    throw new Error(`${flag} must be a positive integer`)
+  }
+  return v
 }
 
 const MODE: Mode = process.argv.includes('--queue')
