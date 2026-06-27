@@ -24,6 +24,7 @@ export class InMemoryQueueService implements QueueService {
     const jobId = `inmem-${++this.jobCounter}`
     const maxAttempts = Math.max(1, options?.attempts ?? 1)
     let attemptsMade = 0
+    const createdAt = new Date()
 
     const runAttempt = async () => {
       attemptsMade++
@@ -32,7 +33,7 @@ export class InMemoryQueueService implements QueueService {
         queueName,
         data,
         status: () => 'active',
-        metadata: () => ({ attemptsMade, maxAttempts, createdAt: new Date() }),
+        metadata: () => ({ attemptsMade, maxAttempts, createdAt }),
         pikkuUserId: options?.pikkuUserId,
       }
       try {
@@ -61,8 +62,12 @@ export class InMemoryQueueService implements QueueService {
     backoff: JobOptions['backoff'],
     attemptsMade: number
   ): number {
-    if (backoff === 'exponential' || (backoff as any)?.type === 'exponential') {
-      return Math.min(2 ** (attemptsMade - 1) * 50, 2000)
+    const baseDelay = typeof backoff === 'object' ? (backoff.delay ?? 50) : 50
+    if (
+      backoff === 'exponential' ||
+      (typeof backoff === 'object' && backoff?.type === 'exponential')
+    ) {
+      return Math.min(2 ** (attemptsMade - 1) * baseDelay, 2000)
     }
     if (typeof backoff === 'object' && backoff?.type === 'fixed') {
       return backoff.delay ?? 50
