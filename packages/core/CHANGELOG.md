@@ -1,3 +1,28 @@
+## 0.12.39
+
+### Patch Changes
+
+- 4be205f: Dedupe DSL step execution: extract a shared `invokeStepRpc` (step RPC + provenance wire, used by both the queue and inline executors) and a shared `runInlineRetryLoop` (the in-process running→result→retry scaffolding, used by inline RPC steps and inline function steps). No behavior change — the inline path stays straight-through O(K); the queue path keeps its suspend/replay model.
+- 2c55e13: fix(queue): `InMemoryQueueService` redelivers failed jobs up to `options.attempts` with backoff
+
+  Previously the in-memory queue ran each job once and dropped it on failure, so a
+  transiently-failing workflow step dispatched via `inline: false` would stall the
+  run forever (the orchestrator was never resumed). It now honors the `attempts`
+  and `backoff` already produced by the workflow step job options, redelivering on
+  failure — matching pg-boss/bullmq semantics so local/dev runs recover from
+  transient step failures exactly as production does.
+
+- c745c26: fix(workflow): inline graph runs use the same transition planner as the queue
+
+  `continueGraphInline` had its own, weaker graph traversal that couldn't revisit a
+  node (no cycles) and never recorded `fromStepName`, so an inline-run graph stored
+  different step state than the same graph run through a queue. It now uses the
+  shared `planGraphTransitions` planner — inline graphs get joins, cycle revisits
+  (`node`, `node#1`, …) and step provenance identical to the queued path, and the
+  duplicate traversal logic is removed.
+
+- 57900b5: Add workflow run time-travel. A run's durable history (`getRunHistory`) is one row per step attempt with lifecycle timestamps; `buildRunTimeline(history)` explodes those into a flat, chronologically-ordered event stream and `reconstructStateAt(timeline, at)` folds it up to any point — a seq index or a `Date` — to recover what the run "knew" then: per-step status, the accumulated step-result cache, the walked path (via `fromStepName`), and a derived phase. These are pure, transport-independent functions (same fold for Redis/Kysely/in-memory), exported from `@pikku/core/workflow` alongside `reconstructFinalState`. `PikkuWorkflowService` gains `getRunTimeline(id)` and `reconstructRunStateAt(id, at?)` that wrap them over a run's history, inherited by every backend. Correctly handles retries (a retry's created event reopens the step and clears the prior outcome) and graph cycles (revisit ordinals are distinct path entries).
+
 ## 0.12.38
 
 ### Patch Changes
