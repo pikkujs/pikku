@@ -565,14 +565,21 @@ export async function continueGraph(
   }
 }
 
-export async function executeGraphStep(
+/**
+ * Invoke a graph node's RPC with the graph + workflow wires, capturing any
+ * branch the node selects and persisting it. Shared by the queued
+ * (executeGraphStep) and inline (executeGraphNodeInline) executors so both build
+ * the wire and record the branch identically — only their child-workflow and
+ * onError handling differs around this call.
+ */
+async function invokeGraphNodeRpc(
   workflowService: PikkuWorkflowService,
   rpcService: any,
   runId: string,
   stepId: string,
   nodeId: string,
   rpcName: string,
-  data: any,
+  input: any,
   graphName: string
 ): Promise<any> {
   const wireState: GraphWireState = {}
@@ -588,6 +595,28 @@ export async function executeGraphStep(
     getState: () => workflowService.getRunState(runId),
   }
 
+  const result = await rpcService.rpcWithWire(rpcName, input, {
+    graph: graphWire,
+    workflow: workflowService.createWorkflowWire(graphName, runId, rpcService),
+  })
+
+  if (wireState.branchKey) {
+    await workflowService.setBranchTaken(stepId, wireState.branchKey)
+  }
+
+  return result
+}
+
+export async function executeGraphStep(
+  workflowService: PikkuWorkflowService,
+  rpcService: any,
+  runId: string,
+  stepId: string,
+  nodeId: string,
+  rpcName: string,
+  data: any,
+  graphName: string
+): Promise<any> {
   try {
     let result: any
 
@@ -622,18 +651,16 @@ export async function executeGraphStep(
         throw new ChildWorkflowStartedException(runId, stepId, childRunId)
       }
     } else {
-      result = await rpcService.rpcWithWire(rpcName, data, {
-        graph: graphWire,
-        workflow: workflowService.createWorkflowWire(
-          graphName,
-          runId,
-          rpcService
-        ),
-      })
-    }
-
-    if (wireState.branchKey) {
-      await workflowService.setBranchTaken(stepId, wireState.branchKey)
+      result = await invokeGraphNodeRpc(
+        workflowService,
+        rpcService,
+        runId,
+        stepId,
+        nodeId,
+        rpcName,
+        data,
+        graphName
+      )
     }
 
     return result
@@ -729,19 +756,6 @@ async function executeGraphNodeInline(
 
   await workflowService.setStepRunning(stepState.stepId)
 
-  const wireState: GraphWireState = {}
-  const graphWire: PikkuGraphWire = {
-    runId,
-    graphName,
-    nodeId,
-    branch: (key: string) => {
-      wireState.branchKey = key
-    },
-    setState: (name: string, value: unknown) =>
-      workflowService.updateRunState(runId, name, value),
-    getState: () => workflowService.getRunState(runId),
-  }
-
   try {
     let result: any
 
@@ -770,20 +784,15 @@ async function executeGraphNodeInline(
       }
       result = childRun?.output
     } else {
-      result = await rpcService.rpcWithWire(rpcName, input, {
-        graph: graphWire,
-        workflow: workflowService.createWorkflowWire(
-          graphName,
-          runId,
-          rpcService
-        ),
-      })
-    }
-
-    if (wireState.branchKey) {
-      await workflowService.setBranchTaken(
+      result = await invokeGraphNodeRpc(
+        workflowService,
+        rpcService,
+        runId,
         stepState.stepId,
-        wireState.branchKey
+        nodeId,
+        rpcName,
+        input,
+        graphName
       )
     }
 
