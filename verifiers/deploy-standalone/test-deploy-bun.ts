@@ -10,8 +10,9 @@
  * PATH, so the entry-generation assertions still run on a bun-less host.
  */
 
-import { execSync, execFileSync, spawn } from 'child_process'
-import { readFileSync, existsSync, readdirSync, statSync } from 'fs'
+import { execFileSync, spawn } from 'child_process'
+import { readFileSync, existsSync, readdirSync, statSync, rmSync } from 'fs'
+import { connect } from 'net'
 import { join } from 'path'
 
 const FUNCTIONS_DIR = join(process.cwd(), '..', '..', 'templates', 'functions')
@@ -33,14 +34,29 @@ const BUN_AVAILABLE = hasBun()
 console.log(
   'Setting up: running pikku codegen + deploy plan (standalone, bun)...'
 )
-execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_DIR, stdio: 'pipe' })
-execSync(`node ${PIKKU_BIN}`, {
+rmSync(join(FUNCTIONS_DIR, '.deploy'), { recursive: true, force: true })
+rmSync(join(FUNCTIONS_DIR, 'src', 'scaffold'), {
+  recursive: true,
+  force: true,
+})
+execFileSync('node', [PIKKU_BIN], {
   cwd: FUNCTIONS_DIR,
   stdio: 'pipe',
   timeout: 60_000,
 })
-execSync(
-  `node ${PIKKU_BIN} deploy plan --provider standalone --runtime bun --result-file .deploy/standalone/plan-result.json`,
+execFileSync(
+  'node',
+  [
+    PIKKU_BIN,
+    'deploy',
+    'plan',
+    '--provider',
+    'standalone',
+    '--runtime',
+    'bun',
+    '--result-file',
+    '.deploy/standalone/plan-result.json',
+  ],
   {
     cwd: FUNCTIONS_DIR,
     stdio: 'pipe',
@@ -75,7 +91,7 @@ async function check(name: string, fn: () => void | Promise<void>) {
 const unitDirs = getUnitDirs()
 const unitName = unitDirs[0]
 
-check('exactly 1 unit (singleUnit mode)', () => {
+await check('exactly 1 unit (singleUnit mode)', () => {
   if (unitDirs.length !== 1)
     throw new Error(
       `Expected 1, got ${unitDirs.length}: ${unitDirs.join(', ')}`
@@ -83,7 +99,7 @@ check('exactly 1 unit (singleUnit mode)', () => {
 })
 
 // --- Entry targets the bun server, not the node http server ---
-check('entry: PikkuBunServer (not PikkuNodeHTTPServer)', () => {
+await check('entry: PikkuBunServer (not PikkuNodeHTTPServer)', () => {
   const e = readText(join(DEPLOY_DIR, unitName, 'entry.ts'))
   if (!e.includes('PikkuBunServer'))
     throw new Error(
@@ -92,17 +108,17 @@ check('entry: PikkuBunServer (not PikkuNodeHTTPServer)', () => {
   if (e.includes('PikkuNodeHTTPServer'))
     throw new Error('Unexpected PikkuNodeHTTPServer in bun entry')
 })
-check("entry: imports '@pikku/bun-server'", () => {
+await check("entry: imports '@pikku/bun-server'", () => {
   const e = readText(join(DEPLOY_DIR, unitName, 'entry.ts'))
   if (!e.includes("from '@pikku/bun-server'"))
     throw new Error('Missing @pikku/bun-server import')
 })
-check('entry: no node ws wiring (native bun websockets)', () => {
+await check('entry: no node ws wiring (native bun websockets)', () => {
   const e = readText(join(DEPLOY_DIR, unitName, 'entry.ts'))
   if (e.includes("from 'ws'") || e.includes('WebSocketServer'))
     throw new Error('bun entry should not wire the node ws package')
 })
-check('entry: bootstrap import + main()', () => {
+await check('entry: bootstrap import + main()', () => {
   const e = readText(join(DEPLOY_DIR, unitName, 'entry.ts'))
   if (!e.includes('pikku-bootstrap.gen')) throw new Error('Missing bootstrap')
   if (!e.includes('async function main')) throw new Error('Missing main()')
@@ -115,6 +131,9 @@ check('entry: bootstrap import + main()', () => {
 // ---------------------------------------------------------------------------
 
 const port = 4098
+// Probe over loopback; binding stays 0.0.0.0 (HOST below) but fetching
+// 0.0.0.0 as a client target is unreliable on macOS/Windows.
+const clientHost = '127.0.0.1'
 const binaryPath = join(DEPLOY_DIR, unitName, 'server')
 
 let serverProc: ReturnType<typeof spawn> | null = null
@@ -155,7 +174,7 @@ async function startBinary(): Promise<void> {
     // auth/DB so the probe doesn't hang when a request happens to 500.
     const interval = setInterval(async () => {
       try {
-        await fetch(`http://0.0.0.0:${port}/todos`)
+        await fetch(`http://${clientHost}:${port}/todos`)
         clearInterval(interval)
         clearTimeout(timeout)
         resolve()
@@ -191,7 +210,7 @@ if (!BUN_AVAILABLE) {
       await startBinary()
 
       await check('runtime: GET /todos returns array', async () => {
-        const res = await fetch(`http://0.0.0.0:${port}/todos`)
+        const res = await fetch(`http://${clientHost}:${port}/todos`)
         if (!res.ok) throw new Error(`Status ${res.status}`)
         const body = (await res.json()) as Record<string, unknown>
         if (!body.todos)
@@ -199,7 +218,7 @@ if (!BUN_AVAILABLE) {
       })
 
       await check('runtime: POST /rpc/greet returns greeting', async () => {
-        const res = await fetch(`http://0.0.0.0:${port}/rpc/greet`, {
+        const res = await fetch(`http://${clientHost}:${port}/rpc/greet`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -226,7 +245,7 @@ if (!BUN_AVAILABLE) {
         'runtime: WS broadcast — HTTP publish reaches subscribed socket',
         async () => {
           const title = `BUN_BROADCAST_${port}`
-          const ws = new WebSocket(`ws://0.0.0.0:${port}/`)
+          const ws = new WebSocket(`ws://${clientHost}:${port}/`)
           const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
           try {
             await new Promise<void>((resolve, reject) => {
@@ -272,7 +291,7 @@ if (!BUN_AVAILABLE) {
             )
             await sleep(300)
 
-            const res = await fetch(`http://0.0.0.0:${port}/todos`, {
+            const res = await fetch(`http://${clientHost}:${port}/todos`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ title, priority: 'low', tags: [] }),
@@ -286,6 +305,49 @@ if (!BUN_AVAILABLE) {
             } catch {
               /* ignore */
             }
+          }
+        }
+      )
+
+      // The Upgrade header token is case-insensitive (RFC 6455 §4.2.1). A raw
+      // handshake with `Upgrade: WebSocket` must still switch protocols — the
+      // ws-library test above only exercises the lowercase form clients send.
+      await check(
+        'runtime: WS upgrade with capitalized Upgrade header (101)',
+        async () => {
+          const statusLine = await new Promise<string>((resolve, reject) => {
+            const socket = connect(port, clientHost, () => {
+              socket.write(
+                [
+                  'GET / HTTP/1.1',
+                  `Host: ${clientHost}:${port}`,
+                  'Upgrade: WebSocket',
+                  'Connection: Upgrade',
+                  'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==',
+                  'Sec-WebSocket-Version: 13',
+                  '',
+                  '',
+                ].join('\r\n')
+              )
+            })
+            const timer = setTimeout(() => {
+              socket.destroy()
+              reject(new Error('Raw upgrade timeout (5s)'))
+            }, 5000)
+            socket.once('data', (d) => {
+              clearTimeout(timer)
+              socket.destroy()
+              resolve(d.toString().split('\r\n')[0] ?? '')
+            })
+            socket.once('error', (e) => {
+              clearTimeout(timer)
+              reject(e)
+            })
+          })
+          if (!statusLine.includes('101')) {
+            throw new Error(
+              `Expected 101 Switching Protocols, got: ${statusLine}`
+            )
           }
         }
       )
