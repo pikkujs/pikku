@@ -264,7 +264,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     if (latestHistory.length > 0) {
       await this.stepHistory.updateOne(
         { _id: latestHistory[0]!._id },
-        { $set: { status: 'running' } }
+        { $set: { status: 'running', runningAt: new Date() } }
       )
     }
   }
@@ -359,7 +359,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     if (latestHistory.length > 0) {
       await this.stepHistory.updateOne(
         { _id: latestHistory[0]!._id },
-        { $set: { status: 'succeeded', result } }
+        { $set: { status: 'succeeded', result, succeededAt: new Date() } }
       )
     }
   }
@@ -395,7 +395,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     if (latestHistory.length > 0) {
       await this.stepHistory.updateOne(
         { _id: latestHistory[0]!._id },
-        { $set: { status: 'failed', error: serializedError } }
+        { $set: { status: 'failed', error: serializedError, failedAt: new Date() } }
       )
     }
   }
