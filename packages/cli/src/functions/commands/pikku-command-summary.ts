@@ -1,5 +1,10 @@
 import { pikkuSessionlessFunc } from '#pikku'
+import { PikkuError } from '@pikku/core'
 import { CommandSummary } from '../../utils/command-summary.js'
+
+// A blocking-diagnostics failure is expected (the gate did its job) — throw a
+// PikkuError so the workflow runner logs the message alone, not a stack trace.
+class PikkuInspectionFailedError extends PikkuError {}
 
 export const pikkuSummary = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, getInspectorState }) => {
@@ -73,7 +78,9 @@ export const pikkuSummary = pikkuSessionlessFunc<void, void>({
 
     if (logger.hasBlockingDiagnostics()) {
       const severities = logger.blockingSeverities().join(', ')
-      throw new Error(`Pikku inspection failed due to ${severities} diagnostics`)
+      throw new PikkuInspectionFailedError(
+        `Pikku inspection failed due to ${severities} diagnostics`
+      )
     }
   },
 })

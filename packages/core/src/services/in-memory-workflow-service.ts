@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto'
 import { PikkuWorkflowService } from '../wirings/workflow/pikku-workflow-service.js'
+import { isExpectedError } from '../errors/error-handler.js'
 import type { SerializedError } from '../types/core.types.js'
 import type {
   WorkflowPlannedStep,
@@ -230,6 +231,7 @@ export class InMemoryWorkflowService
           name: error.name,
           message: error.message,
           stack: error.stack,
+          expected: isExpectedError(error),
         }
         step.failedAt = new Date()
         step.updatedAt = new Date()

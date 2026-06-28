@@ -558,5 +558,9 @@ export interface SerializedError {
   message: string
   stack?: string
   code?: string
+  // True when the original error was a deliberate, expected failure (a
+  // PikkuError). Survives the step-boundary rehydration so the workflow runner
+  // can log the message alone instead of a stack trace. See isExpectedError.
+  expected?: boolean
   [key: string]: any
 }
