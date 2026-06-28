@@ -66,7 +66,11 @@ import {
   runFromMeta,
 } from './graph/graph-runner.js'
 import type { WorkflowService } from '../../services/workflow-service.js'
-import { PikkuError, addError } from '../../errors/error-handler.js'
+import {
+  PikkuError,
+  addError,
+  isExpectedError,
+} from '../../errors/error-handler.js'
 import { RPCNotFoundError } from '../rpc/rpc-runner.js'
 import { ChildWorkflowStartedException } from './graph/graph-runner.js'
 import { deriveInvocationId } from './workflow-invocation-id.js'
@@ -640,6 +644,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       message: error.message,
       stack: error.stack,
       code: (error as any).code,
+      expected: isExpectedError(error),
     }
     await this.safeMirror(() => this.mirror!.setStepError(stepId, serialized))
   }
@@ -1135,9 +1140,14 @@ export abstract class PikkuWorkflowService implements WorkflowService {
             message: error.message,
             stack: error.stack,
           })
+          // An expected failure (a PikkuError, e.g. a build gate tripping) —
+          // its message is the whole story, so don't dump the stack. The
+          // `expected` flag survives the step-boundary rehydration that strips
+          // the class. Anything else is an uncaught/unexpected error: log it in
+          // full so the trace is there to debug.
           getSingletonServices()!.logger.error(
             `Workflow ${name} (run ${runId}) failed:`,
-            error
+            isExpectedError(error) ? error.message : error
           )
           throw error
         }

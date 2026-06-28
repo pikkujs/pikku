@@ -17,6 +17,16 @@ export class PikkuError extends Error {
 }
 
 /**
+ * Whether an error is a deliberate, expected failure rather than an uncaught
+ * bug. A `PikkuError` always counts; so does any error carrying `expected:
+ * true` — used to keep the marker alive when an error is serialized across a
+ * workflow step boundary and rehydrated as a plain `Error`. Callers log the
+ * message alone for expected errors and the full stack for everything else.
+ */
+export const isExpectedError = (error: unknown): boolean =>
+  error instanceof PikkuError || (error as any)?.expected === true
+
+/**
  * Interface for error details.
  */
 export interface ErrorDetails {

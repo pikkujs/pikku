@@ -1,4 +1,5 @@
 import { NotFoundError } from '../../errors/errors.js'
+import { isExpectedError } from '../../errors/error-handler.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import type {
@@ -543,10 +544,12 @@ export async function executeCLI({
       throw error
     }
 
-    // Wrap other errors in CLIError
-    console.error('Error:', error)
+    // An expected failure (a deliberate PikkuError, e.g. a build gate
+    // tripping) — its message says everything, so print that alone. Anything
+    // else is an uncaught error: log the object so its stack shows.
+    console.error('Error:', isExpectedError(error) ? error.message : error)
 
-    // Show stack trace in verbose mode
+    // Show stack trace in verbose mode (even for expected errors).
     if (args.includes('--verbose') || args.includes('-v')) {
       console.error('Stack trace:', error.stack)
     }

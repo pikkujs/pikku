@@ -1,6 +1,7 @@
 import chalk from 'chalk'
 import type { Logger } from '@pikku/core/services'
 import { LogLevel } from '@pikku/core/services'
+import { isExpectedError } from '@pikku/core'
 import type {
   ErrorCode,
   DiagnosticSeverity,
@@ -165,7 +166,15 @@ export class CLILogger implements Logger {
   ) {
     if (this.level > LogLevel.error) return
     if (message instanceof Error) {
-      this.emit('error', message.stack ?? message.message)
+      // An expected failure (a deliberate PikkuError, e.g. a build gate
+      // tripping) — its message says everything, so don't dump the stack.
+      // Anything else is an uncaught error: show the full trace to debug it.
+      this.emit(
+        'error',
+        isExpectedError(message)
+          ? message.message
+          : (message.stack ?? message.message)
+      )
       return
     }
     const msg = typeof message === 'string' ? message : message.message
