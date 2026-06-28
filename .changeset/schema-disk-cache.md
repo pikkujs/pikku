@@ -20,7 +20,9 @@ the cold first pass drops by ~3.4s in practice (it also primes the in-memory
 cache for the re-inspect passes). Zod schemas are still regenerated every run
 (already ~1ms each). Output is byte-identical to a cold run (verified across the
 full generated tree). The key is derived from the same content the in-memory
-cache uses, so any type change busts it; bump `SCHEMA_CACHE_VERSION` to
-invalidate all caches on a format change.
+cache uses, so any type change busts it. It also folds in the `@pikku/inspector`
+package version, so upgrading the inspector (the channel a schema-format change
+ships through) auto-invalidates every cache; `SCHEMA_CACHE_VERSION` remains a
+manual lever for in-development format changes between releases.
 
 Opt-out: omit `schemaConfig.cacheDir` (the CLI sets it by default).
