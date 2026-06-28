@@ -21,6 +21,9 @@ const PIKKU_NODE_MODULES = resolve(REPO_ROOT, 'node_modules')
 const PROJECT_DIR = resolve(os.tmpdir(), 'pikku-codegen-perf')
 const FUNCTION_COUNT = 500
 const THRESHOLD_MS = 30_000
+// Each post-codegen re-inspection must stay under this fraction of the initial
+// inspection — guards against re-inspections re-walking all unchanged files.
+const REINSPECT_MAX_RATIO = 0.5
 
 // ── project scaffold ──────────────────────────────────────────────────────────
 
@@ -226,19 +229,39 @@ function schedulerWiringFile(count: number): string {
 
 // ── runner ────────────────────────────────────────────────────────────────────
 
-function runAll(): number {
+function runAll(timing = false): { ms: number; stdout: string } {
   const start = performance.now()
   const result = spawnSync(PIKKU_BIN, ['all'], {
     cwd: PROJECT_DIR,
     timeout: 120_000,
-    env: { ...process.env, NODE_OPTIONS: '--max-old-space-size=4096' },
+    env: {
+      ...process.env,
+      NODE_OPTIONS: '--max-old-space-size=4096',
+      ...(timing ? { PIKKU_TIMING: '1' } : {}),
+    },
   })
   if (result.status !== 0) {
     throw new Error(
       result.stderr?.toString() ?? result.error?.message ?? 'pikku all failed'
     )
   }
-  return performance.now() - start
+  return {
+    ms: performance.now() - start,
+    stdout: result.stdout?.toString() ?? '',
+  }
+}
+
+/**
+ * Parse the per-step timing table emitted by `pikku all` under PIKKU_TIMING.
+ * Lines look like: `[TIMING]   1234ms  Re-inspect after workflows`
+ */
+function parseStepTimings(stdout: string): Map<string, number> {
+  const steps = new Map<string, number>()
+  for (const line of stdout.split('\n')) {
+    const m = line.match(/\[TIMING\]\s+(\d+)ms\s+(.+?)\s*$/)
+    if (m) steps.set(m[2], parseInt(m[1], 10))
+  }
+  return steps
 }
 
 // ── main ──────────────────────────────────────────────────────────────────────
@@ -283,16 +306,62 @@ async function main() {
 
   // timed run
   process.stdout.write(`Running pikku all on ${FUNCTION_COUNT} functions ... `)
-  const ms = runAll()
+  const { ms } = runAll()
   const rounded = Math.round(ms)
   console.log(`${rounded}ms`)
 
+  let failed = false
+
   if (ms > THRESHOLD_MS) {
     console.error(`FAIL: ${rounded}ms exceeds ${THRESHOLD_MS}ms threshold`)
-    process.exit(1)
+    failed = true
+  } else {
+    console.log(`PASS: ${rounded}ms <= ${THRESHOLD_MS}ms`)
   }
 
-  console.log(`PASS: ${rounded}ms <= ${THRESHOLD_MS}ms`)
+  // ── structural gate ──────────────────────────────────────────────────────
+  // A flat wall-clock ceiling can't catch "3x-redundant but still under budget"
+  // work. `pikku all` runs the inspector once up-front, then re-inspects after
+  // codegen produces new wirings. Those re-inspections should only need to pick
+  // up the handful of generated files — NOT redo the full per-function type
+  // resolution from the initial pass. Assert each re-inspect stays a small
+  // fraction of the initial inspection so a regression to full re-walks fails.
+  const steps = parseStepTimings(runAll(true).stdout)
+  const initial = steps.get('Generate function types')
+  const reinspects = [...steps.entries()].filter(([name]) =>
+    name.startsWith('Re-inspect')
+  )
+
+  if (initial && reinspects.length > 0) {
+    console.log(`\nInspector pass timings:`)
+    console.log(`  ${String(initial).padStart(6)}ms  Generate function types (initial)`)
+    for (const [name, dur] of reinspects) {
+      console.log(`  ${String(dur).padStart(6)}ms  ${name}`)
+    }
+
+    const worst = reinspects.reduce((a, b) => (b[1] > a[1] ? b : a))
+    const ratio = worst[1] / initial
+    if (ratio > REINSPECT_MAX_RATIO) {
+      console.error(
+        `\nFAIL: re-inspection "${worst[0]}" took ${worst[1]}ms — ` +
+          `${(ratio * 100).toFixed(0)}% of the ${initial}ms initial inspection ` +
+          `(max ${REINSPECT_MAX_RATIO * 100}%). Re-inspections are re-walking ` +
+          `unchanged files instead of only the generated ones.`
+      )
+      failed = true
+    } else {
+      console.log(
+        `\nPASS: worst re-inspection "${worst[0]}" is ${(ratio * 100).toFixed(0)}% ` +
+          `of initial (<= ${REINSPECT_MAX_RATIO * 100}%)`
+      )
+    }
+  } else {
+    console.warn(
+      `\nWARN: could not find inspector pass timings — skipping structural gate`
+    )
+  }
+
+  if (failed) process.exit(1)
 }
 
 main().catch((err) => {

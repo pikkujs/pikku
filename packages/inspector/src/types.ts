@@ -294,6 +294,12 @@ export type InspectorOptions = Partial<{
   tags: string[]
   manifest: VersionManifest
   oldProgram: ts.Program | undefined
+  /**
+   * Run the data-classification leak scan (Private/Pii/Secret brands in function
+   * return types). Off by default — it forces return-type inference on every
+   * function, which is expensive. Enabled via `pikku all --security`.
+   */
+  classificationCheck: boolean
 }>
 
 export interface InspectorLogger {

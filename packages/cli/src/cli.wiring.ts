@@ -106,6 +106,11 @@ wireCLI({
       default: false,
       short: 'j',
     },
+    security: {
+      description:
+        'Run the data-classification security lint (scans function return types for Private/Pii/Secret leaks). Off by default — it forces expensive return-type inference on every function. Combine with --fail-on-error to gate a build/CI.',
+      default: false,
+    },
     failOnError: {
       description:
         'Fail the build on error-severity diagnostics (e.g. data-classification leaks). Default: only critical diagnostics fail.',

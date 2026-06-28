@@ -342,6 +342,15 @@ export type PikkuCLIInput = {
 
   verboseMeta?: boolean
 
+  /**
+   * Run the data-classification security lint (scans function return types for
+   * Private/Pii/Secret leaks). Off by default — it forces expensive return-type
+   * inference on every function and is not part of codegen. Enable here to always
+   * run it, or per-invocation via `pikku all --security`. Pair with
+   * `failOnError` to gate a build/CI on leaks.
+   */
+  security?: boolean
+
   lint?: {
     servicesNotDestructured?: 'off' | 'warn' | 'error'
     wiresNotDestructured?: 'off' | 'warn' | 'error'

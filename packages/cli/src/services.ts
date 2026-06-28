@@ -316,6 +316,10 @@ export const createSingletonServices: CreateSingletonServices<
           wireServicesFactoryType: config.wireServicesFactoryType,
         },
         tags: config.tags,
+        // Opt-in security lint (`--security`): scans function return types for
+        // data-classification leaks. Off by default — it's the dominant codegen
+        // cost. Never runs during a plain `pikku all`.
+        classificationCheck: !setupOnly && !!config.security,
         schemaConfig: !setupOnly
           ? {
               tsconfig: config.tsconfig,
