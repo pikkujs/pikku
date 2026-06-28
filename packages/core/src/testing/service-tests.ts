@@ -320,6 +320,71 @@ export function defineServiceTests(config: ServiceTestConfig): void {
         assert.equal(retried.result, undefined)
       })
 
+      test('getRunStatus reports per-step duration and attempts', async () => {
+        const runId = await service.createRun(
+          'status-timing-workflow',
+          {},
+          false,
+          'hash-timing',
+          wire
+        )
+        const step = await service.insertStepState(
+          runId,
+          'timed-step',
+          'myRpc',
+          {}
+        )
+        await service.setStepRunning(step.stepId)
+        await service.setStepResult(step.stepId, { ok: true })
+
+        const status = await service.getRunStatus(runId)
+        assert.ok(status)
+        const timed = status.steps.find((s) => s.name === 'timed-step')
+        assert.ok(timed, 'step appears in run status')
+        // running→succeeded must stamp runningAt/succeededAt so a duration is
+        // computable. Regression guard: the kysely store previously updated
+        // only the status on transitions, leaving the timestamps null and
+        // duration permanently undefined.
+        assert.ok(
+          timed.duration !== undefined,
+          'duration is computed from stamped transition timestamps'
+        )
+        assert.ok(timed.duration >= 0, 'duration is non-negative')
+        assert.equal(timed.attempts, 1, 'single attempt')
+      })
+
+      test('getRunStatus surfaces retried attempt count', async () => {
+        const runId = await service.createRun(
+          'status-retry-workflow',
+          {},
+          false,
+          'hash-retry-status',
+          wire
+        )
+        const step = await service.insertStepState(
+          runId,
+          'flaky-step',
+          'myRpc',
+          {},
+          { retries: 2 }
+        )
+        await service.setStepRunning(step.stepId)
+        await service.setStepError(step.stepId, new Error('first try'))
+        // Guarantee the retry's history row sorts after the failed attempt so
+        // getRunStatus picks the latest attempt (it tie-breaks on timestamps).
+        await new Promise((resolve) => setTimeout(resolve, 5))
+        const retry = await service.createRetryAttempt(step.stepId, 'pending')
+        await service.setStepRunning(retry.stepId)
+        await service.setStepResult(retry.stepId, { ok: true })
+
+        const status = await service.getRunStatus(runId)
+        assert.ok(status)
+        const flaky = status.steps.find((s) => s.name === 'flaky-step')
+        assert.ok(flaky, 'retried step collapses to a single status entry')
+        assert.equal(flaky.status, 'succeeded', 'latest attempt wins')
+        assert.equal(flaky.attempts, 2, 'attempt count surfaces in status')
+      })
+
       test('getNodesWithoutSteps', async () => {
         const runId = await service.createRun(
           'graph-workflow',
