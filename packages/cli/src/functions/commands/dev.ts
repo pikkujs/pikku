@@ -49,6 +49,12 @@ export const dev = pikkuSessionlessFunc<
   ) => {
     const resolvedPort = parseInt(port || '3000', 10)
     const hostname = 'localhost'
+    // Bind on IPv4 loopback explicitly. Under Bun, hostname 'localhost' resolves
+    // to IPv6 [::1] only, so a 127.0.0.1 proxy (e.g. the sandbox Caddy) can't
+    // reach it. '127.0.0.1' binds IPv4 on both Node and Bun (Node otherwise
+    // relies on --dns-result-order=ipv4first for the same effect). `hostname`
+    // stays 'localhost' for the user-facing content URL below.
+    const bindHostname = '127.0.0.1'
     const enableWatch = watch !== false
     const enableHmr = hmr !== false
     const watchDirectories = [
@@ -307,7 +313,7 @@ export const dev = pikkuSessionlessFunc<
       pikkuServer = new bun.mod.PikkuBunServer(
         {
           ...userConfig,
-          hostname,
+          hostname: bindHostname,
           port: resolvedPort,
           content: localContentConfig,
         },
@@ -319,7 +325,7 @@ export const dev = pikkuSessionlessFunc<
       pikkuServer = new PikkuNodeHTTPServer(
         {
           ...userConfig,
-          hostname,
+          hostname: bindHostname,
           port: resolvedPort,
           content: localContentConfig,
         },
