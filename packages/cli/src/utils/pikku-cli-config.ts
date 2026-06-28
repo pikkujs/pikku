@@ -302,7 +302,7 @@ const _getPikkuCLIConfig = async (
       ? scaffoldDir
       : join(result.rootDir, scaffoldDir)
 
-    if (!result.remoteRpcWorkersFile) {
+    if (result.scaffold?.remoteRpc && !result.remoteRpcWorkersFile) {
       result.remoteRpcWorkersFile = join(
         resolvedScaffoldDir,
         'rpc-remote.gen.ts'

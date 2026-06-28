@@ -49,8 +49,9 @@ export interface PikkuCLICoreOutputFiles {
   // RPC Exposed
   rpcMapDeclarationFile: string
 
-  // Remote RPC workers (auto-derived)
-  remoteRpcWorkersFile: string
+  // Remote RPC workers (derived from scaffold.pikkuDir when scaffold.remoteRpc is enabled).
+  // Optional: left undefined when scaffold.remoteRpc is not enabled, so consumers must guard.
+  remoteRpcWorkersFile?: string
 
   // Feature-generated files (derived from scaffold.pikkuDir when enabled)
   publicRpcFile: string
@@ -315,6 +316,7 @@ export type PikkuCLIInput = {
     agent?: PikkuScaffoldFeature
     workflow?: PikkuScaffoldFeature
     events?: PikkuScaffoldFeature
+    remoteRpc?: PikkuScaffoldFeature
   }
 
   /**
