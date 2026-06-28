@@ -545,9 +545,14 @@ export async function executeCLI({
     }
 
     // An expected failure (a deliberate PikkuError, e.g. a build gate
-    // tripping) — its message says everything, so print that alone. Anything
-    // else is an uncaught error: log the object so its stack shows.
-    console.error('Error:', isExpectedError(error) ? error.message : error)
+    // tripping) — its message says everything, so print that alone (no
+    // `Error:` prefix). Anything else is an uncaught error: log the object so
+    // its stack shows.
+    if (isExpectedError(error)) {
+      console.error(error.message)
+    } else {
+      console.error('Error:', error)
+    }
 
     // Show stack trace in verbose mode (even for expected errors).
     if (args.includes('--verbose') || args.includes('-v')) {
