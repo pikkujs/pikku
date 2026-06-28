@@ -229,7 +229,20 @@ function schedulerWiringFile(count: number): string {
 
 // ── runner ────────────────────────────────────────────────────────────────────
 
+// pikku persists generated TS schemas under node_modules/.cache/pikku across
+// runs. This benchmark measures *cold* codegen (the worst case the threshold
+// and structural gate are about), so clear that cache before every run —
+// otherwise a warm run skips schema generation, shrinking the initial pass and
+// inflating the re-inspect ratio.
+function clearSchemaCache(): void {
+  rmSync(resolve(PROJECT_DIR, 'node_modules', '.cache', 'pikku'), {
+    recursive: true,
+    force: true,
+  })
+}
+
 function runAll(timing = false): { ms: number; stdout: string } {
+  clearSchemaCache()
   const start = performance.now()
   const result = spawnSync(PIKKU_BIN, ['all'], {
     cwd: PROJECT_DIR,
