@@ -47,6 +47,11 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         'pikkuFunctionTypesSplit',
         { bootstrap: true }
       )
+      // Pre-write a stub auth.types.ts (if the project uses better-auth) so the
+      // pikkuBetterAuth re-export resolves before any user file is imported.
+      await workflow.do('Bootstrap auth types', 'pikkuAuth', {
+        bootstrap: true,
+      })
       await workflow.do('Bootstrap function types', 'pikkuFunctionTypes', {
         bootstrap: true,
       })
@@ -173,7 +178,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         'pikkuSecretDefinitionTypes',
         null
       ),
-      workflow.do('Auth', 'pikkuAuth', null),
+      workflow.do('Auth', 'pikkuAuth', {}),
       workflow.do('Secrets', 'pikkuSecrets', null),
       workflow.do('Credentials', 'pikkuCredentials', null),
       workflow.do(

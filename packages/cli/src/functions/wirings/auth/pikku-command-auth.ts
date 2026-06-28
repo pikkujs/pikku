@@ -5,11 +5,15 @@ import { pikkuSessionlessFunc } from '#pikku'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeAuthGen } from './serialize-auth-gen.js'
-import { serializeAuthTypes } from './serialize-auth-types.js'
+import {
+  serializeAuthTypes,
+  serializeAuthTypesBootstrap,
+} from './serialize-auth-types.js'
 import { serializeAuthMeta } from './serialize-auth-meta.js'
+import { projectDeclaresBetterAuth } from '../../../utils/detect-better-auth.js'
 
-export const pikkuAuth = pikkuSessionlessFunc<void, void>({
-  func: async ({ logger, config, getInspectorState }) => {
+export const pikkuAuth = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
+  func: async ({ logger, config, getInspectorState }, data) => {
     const {
       authFile,
       authTypesFile,
@@ -21,6 +25,24 @@ export const pikkuAuth = pikkuSessionlessFunc<void, void>({
       packageMappings,
     } = config
     if (!authFile) return
+
+    // Bootstrap pass: the inspector hasn't run, so the typed wrapper can't be
+    // built. If the project uses better-auth, pre-write a stub auth.types.ts so
+    // the `pikkuBetterAuth` re-export resolves during the first full inspect /
+    // a standalone `pikku db generate`. The typed wrapper replaces it later.
+    if (data?.bootstrap) {
+      if (
+        authTypesFile &&
+        (await projectDeclaresBetterAuth(
+          config.rootDir,
+          config.srcDirectories,
+          config.ignoreFiles
+        ))
+      ) {
+        await writeFileInDir(logger, authTypesFile, serializeAuthTypesBootstrap())
+      }
+      return
+    }
 
     const state = await getInspectorState()
     // Only generate when the project declares auth via `pikkuBetterAuth`. Gating on
