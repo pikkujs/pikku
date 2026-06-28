@@ -426,7 +426,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     // Build step summaries from history (latest attempt per step)
     const stepMap = new Map<
       string,
-      { status: StepStatus; startedAt?: Date; completedAt?: Date }
+      { status: StepStatus; startedAt?: Date; completedAt?: Date; attempts: number }
     >()
     for (const step of history) {
       const existing = stepMap.get(step.stepName)
@@ -435,6 +435,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           status: step.status,
           startedAt: step.runningAt ?? step.createdAt,
           completedAt: step.succeededAt ?? step.failedAt,
+          attempts: step.attemptCount,
         })
       }
     }
@@ -446,6 +447,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         s.startedAt && s.completedAt
           ? s.completedAt.getTime() - s.startedAt.getTime()
           : undefined,
+      attempts: s.attempts,
     }))
 
     return {

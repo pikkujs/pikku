@@ -164,6 +164,8 @@ export interface WorkflowRunStatus {
     name: string
     status: StepStatus
     duration?: number
+    /** Number of attempts for this step (1 = first try; > 1 means it retried). */
+    attempts?: number
   }>
   output?: unknown
   error?: { message: string }
