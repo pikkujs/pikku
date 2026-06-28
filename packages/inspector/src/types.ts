@@ -287,6 +287,13 @@ export type InspectorOptions = Partial<{
     tsconfig: string
     schemasFromTypes?: string[]
     schema?: { additionalProperties?: boolean }
+    /**
+     * Directory for the on-disk TS-schema cache. When set, generated TS schemas
+     * are persisted here keyed by a hash of the custom-types content, so a warm
+     * `pikku all` whose function types are unchanged skips ts-json-schema-generator
+     * entirely (the single largest cold-run cost). Omit to disable disk caching.
+     */
+    cacheDir?: string
   }
   openAPI: {
     additionalInfo: OpenAPISpecInfo

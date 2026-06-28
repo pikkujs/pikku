@@ -325,6 +325,10 @@ export const createSingletonServices: CreateSingletonServices<
               tsconfig: config.tsconfig,
               schemasFromTypes: config.schemasFromTypes,
               schema: config.schema,
+              // Persist generated TS schemas under node_modules/.cache (gitignored
+              // by convention) so a warm `pikku all` with unchanged function types
+              // skips ts-json-schema-generator — the largest cold-run cost.
+              cacheDir: path.join(rootDir, 'node_modules', '.cache', 'pikku'),
             }
           : undefined,
         openAPI:
