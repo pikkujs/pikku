@@ -319,7 +319,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     if (latestHistory) {
       await this.db
         .updateTable('workflowStepHistory')
-        .set({ status: 'running' })
+        .set({ status: 'running', runningAt: new Date() })
         .where('historyId', '=', latestHistory.historyId)
         .execute()
     }
@@ -417,7 +417,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     if (latestHistory) {
       await this.db
         .updateTable('workflowStepHistory')
-        .set({ status: 'succeeded', result: resultJson })
+        .set({ status: 'succeeded', result: resultJson, succeededAt: new Date() })
         .where('historyId', '=', latestHistory.historyId)
         .execute()
     }
@@ -456,7 +456,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     if (latestHistory) {
       await this.db
         .updateTable('workflowStepHistory')
-        .set({ status: 'failed', error: errorJson })
+        .set({ status: 'failed', error: errorJson, failedAt: new Date() })
         .where('historyId', '=', latestHistory.historyId)
         .execute()
     }
