@@ -276,6 +276,13 @@ export const inspect = async (
         sf.fileName.startsWith(rootDir) &&
         !sf.fileName.includes('/node_modules/')
     )
+    // Sort by file name so the sweeps populate state in a stable order. The
+    // program's own file order depends on glob + import-graph resolution, which
+    // varies run to run — leaving generated meta keys (and anything serialized
+    // in insertion order) non-reproducible across identical `pikku all` runs.
+    .sort((a, b) =>
+      a.fileName < b.fileName ? -1 : a.fileName > b.fileName ? 1 : 0
+    )
   logger.debug(
     `Got source files in ${(performance.now() - startSourceFiles).toFixed(2)}ms`
   )

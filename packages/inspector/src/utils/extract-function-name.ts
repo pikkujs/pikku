@@ -1,6 +1,24 @@
 import * as ts from 'typescript'
-import { randomUUID } from 'crypto'
+import { createHash } from 'crypto'
+import { relative } from 'path'
 import { formatVersionedId } from '@pikku/core'
+
+/**
+ * Deterministic placeholder id for an anonymous/unnamed pikku function or
+ * permission. Derived from the call expression's source location (relative path
+ * + start position) so `pikku all` produces byte-identical output across runs —
+ * a `randomUUID()` here made generated meta non-reproducible. Still `__temp_`
+ * prefixed so downstream resolution (which keys off that prefix) is unchanged.
+ */
+function tempFuncId(callExpr: ts.Node, rootDir: string): string {
+  const sourceFile = callExpr.getSourceFile()
+  const relPath = relative(rootDir, sourceFile.fileName)
+  const hash = createHash('sha1')
+    .update(`${relPath}:${callExpr.getStart()}`)
+    .digest('hex')
+    .slice(0, 16)
+  return `__temp_${hash}`
+}
 
 export type ExtractedFunctionName = {
   pikkuFuncId: string
@@ -126,7 +144,7 @@ export function extractFunctionName(
               }
 
               if (!result.pikkuFuncId) {
-                result.pikkuFuncId = `__temp_${randomUUID()}`
+                result.pikkuFuncId = tempFuncId(callExpr, rootDir)
               }
 
               populateNameByPriority(result)
@@ -440,7 +458,7 @@ export function extractFunctionName(
   } else if (result.exportedName) {
     result.pikkuFuncId = result.exportedName
   } else {
-    result.pikkuFuncId = `__temp_${randomUUID()}`
+    result.pikkuFuncId = tempFuncId(callExpr, rootDir)
   }
 
   if (result.version !== null) {
