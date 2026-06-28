@@ -43,9 +43,11 @@ export async function saveSchemas(
     })
   )
 
-  const availableSchemas = Array.from(requiredSchemas).filter(
-    (schema) => schemas[schema]
-  )
+  // Sort so register.gen.ts is byte-identical across runs — requiredSchemas is
+  // a Set in (nondeterministic) traversal-insertion order.
+  const availableSchemas = Array.from(requiredSchemas)
+    .filter((schema) => schemas[schema])
+    .sort()
 
   const packageNameArg = packageName ? `, '${packageName}'` : ''
 

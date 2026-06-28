@@ -100,6 +100,28 @@ export const visitSetup = (
   )
 }
 
+// Register every pikku function before transports/wirings are resolved, so that
+// resolution (e.g. a channel handler referencing a function defined in another
+// file) is independent of source-file traversal order. Runs between visitSetup
+// and visitRoutes.
+export const visitFunctions = (
+  logger: InspectorLogger,
+  checker: ts.TypeChecker,
+  node: ts.Node,
+  state: InspectorState,
+  options: InspectorOptions
+) => {
+  const nextOptions = ts.isSourceFile(node)
+    ? { ...options, sourceFile: node }
+    : options
+
+  addFunctions(logger, node, checker, state, nextOptions)
+
+  ts.forEachChild(node, (child) =>
+    visitFunctions(logger, checker, child, state, nextOptions)
+  )
+}
+
 export const visitRoutes = (
   logger: InspectorLogger,
   checker: ts.TypeChecker,
@@ -113,7 +135,9 @@ export const visitRoutes = (
 
   checkAddonBans(logger, node, checker, state, nextOptions)
 
-  addFunctions(logger, node, checker, state, nextOptions)
+  // NOTE: addFunctions runs in its own earlier pass (visitFunctions) so that
+  // every function is registered before any wiring (channels, CLI, etc.)
+  // resolves it — wiring resolution must not depend on source-file order.
   addAuth(logger, node, checker, state, nextOptions)
   addSecret(logger, node, checker, state, nextOptions)
   addCredential(logger, node, checker, state, nextOptions)
