@@ -119,8 +119,12 @@ export type FunctionRuntimeMeta = {
   readonly?: boolean
   deploy?: 'serverless' | 'server' | 'auto'
   sessionless?: boolean
-  /** When false, workflow steps calling this function are dispatched via the queue. Defaults to true (inline). */
-  inline?: boolean
+  /** When true, workflow steps calling this function are dispatched via the queue. No queue service configured is a hard error. */
+  workflowQueued?: boolean
+  /** Retry count when this function is used as a workflow step. */
+  workflowRetries?: number
+  /** Timeout when this function is used as a workflow step (e.g. '30s', '5m'). */
+  workflowTimeout?: string
   version?: number
   approvalRequired?: boolean
   approvalDescription?: string

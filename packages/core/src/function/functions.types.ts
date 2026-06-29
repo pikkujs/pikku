@@ -295,8 +295,12 @@ export type CorePikkuFunctionConfig<
   readonly?: boolean
   deploy?: 'serverless' | 'server' | 'auto'
   approvalRequired?: boolean
-  /** When false, workflow steps calling this function are dispatched via the queue instead of running inline. Defaults to true (inline). */
-  inline?: boolean
+  /** When true, workflow steps calling this function are dispatched via the queue. No queue service configured is a hard error. Defaults to false (inline). */
+  workflowQueued?: boolean
+  /** Number of retry attempts when this function is used as a workflow step. */
+  workflowRetries?: number
+  /** Timeout for this function when used as a workflow step (e.g. '30s', '5m'). */
+  workflowTimeout?: string
   audit?:
     | boolean
     | {

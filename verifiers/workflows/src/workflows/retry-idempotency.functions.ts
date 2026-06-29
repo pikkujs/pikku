@@ -1,7 +1,7 @@
 /**
  * UNHAPPY-PATH workflows for retry + idempotency.
  *
- * Steps are `inline: false` so they dispatch through the real queue (pg-boss /
+ * Steps are `workflowQueued: true` so they dispatch through the real queue (pg-boss /
  * bullmq) and are retried by queue redelivery — the durability path. Each step
  * records its `invocationId` / `stepId` / `attemptCount` into the shared tracker
  * so the runner can assert exactly what happened under failure.
@@ -18,7 +18,7 @@ export const flakyStep = pikkuSessionlessFunc<
   { trackerKey: string; failTimes: number },
   { ok: boolean }
 >({
-  inline: false,
+  workflowQueued: true,
   func: async ({ logger }, data, { workflowStep }) => {
     tracker.record(data.trackerKey, {
       invocationId: workflowStep!.invocationId,
@@ -45,7 +45,7 @@ export const idempotentStep = pikkuSessionlessFunc<
   { trackerKey: string; failTimes: number },
   { ok: boolean }
 >({
-  inline: false,
+  workflowQueued: true,
   func: async ({ logger }, data, { workflowStep }) => {
     const invocationId = workflowStep!.invocationId
     tracker.record(data.trackerKey, {

@@ -87,8 +87,6 @@ export interface NodeOptions {
   retryDelay?: string
   /** Timeout for node execution (e.g., '30s', '5m') */
   timeout?: string
-  /** If true, execute via queue (async). Default: false (inline) */
-  async?: boolean
 }
 
 /**

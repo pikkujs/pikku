@@ -5,13 +5,13 @@ import { InMemoryWorkflowService } from '../../services/in-memory-workflow-servi
 import { pikkuState } from '../../pikku-state.js'
 import { WorkflowDispatchException } from './pikku-workflow-service.js'
 
-// Register an `inline: false` function so the workflow's `do()` routes the step
-// through the queue (dispatchStep) instead of running it inline.
+// Register a `workflowQueued: true` function so the workflow's `do()` routes
+// the step through the queue (dispatchStep) instead of running it inline.
 function registerDispatchedFn(rpcName: string): void {
   const funcId = `fn:${rpcName}`
   pikkuState(null, 'rpc', 'meta', { [rpcName]: funcId } as any)
   pikkuState(null, 'function', 'meta', {
-    [funcId]: { inline: false },
+    [funcId]: { workflowQueued: true },
   } as any)
 }
 
