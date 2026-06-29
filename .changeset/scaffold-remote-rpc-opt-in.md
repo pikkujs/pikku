@@ -1,5 +1,5 @@
 ---
-'@pikku/cli': minor
+'@pikku/cli': patch
 ---
 
 feat(cli): gate the remote internal RPC scaffold behind `scaffold.remoteRpc`
