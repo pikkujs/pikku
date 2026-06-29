@@ -6,6 +6,10 @@ import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { resolveApiContext } from '../lib/config.js'
+import {
+  renderAddonVerify,
+  type FabricAddonVerifyOutput,
+} from './addon-verify.function.js'
 
 export const FabricPublishInput = z.object({
   dir: z.string().optional(),
@@ -32,7 +36,17 @@ export const FabricPublish = pikkuSessionlessFunc({
   description: 'Publish a package directory to the Fabric community registry.',
   input: FabricPublishInput,
   output: FabricPublishOutput,
-  func: async (_services, { dir, apiUrl: apiUrlOverride }) => {
+  func: async (_services, { dir, apiUrl: apiUrlOverride }, { rpc }) => {
+    const verification = (await rpc.invoke('FabricAddonVerify', {
+      dir,
+    })) as FabricAddonVerifyOutput
+    renderAddonVerify(verification)
+    if (!verification.ok) {
+      throw new Error(
+        'Addon verification failed — fix the errors above before publishing.'
+      )
+    }
+
     const ctx = await resolveApiContext({ apiUrlOverride })
     if (!ctx.token)
       throw new Error('Not logged in. Run `pikku fabric login` first.')
@@ -72,7 +86,8 @@ export const FabricPublish = pikkuSessionlessFunc({
         headers,
         body: JSON.stringify(body),
       })
-      if (!r.ok) throw new Error(`POST ${path} → ${r.status}: ${await r.text()}`)
+      if (!r.ok)
+        throw new Error(`POST ${path} → ${r.status}: ${await r.text()}`)
       return r.json() as Promise<any>
     }
 
