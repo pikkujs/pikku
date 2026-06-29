@@ -69,9 +69,12 @@ export class LocalEventHubService<
       if (channelId === toChannelId) continue // Skip sending to the sender
       const channel = this.channels.get(toChannelId)
       if (channel) {
-        channel.send(data, isBinary)
-      } else {
-        // TODO: Websocket is closed, remove the channel from the topic
+        try {
+          channel.send(data, isBinary)
+        } catch {
+          // Channel closed (e.g. SSE ReadableStream controller already closed on browser disconnect) — clean up
+          this.onChannelClosed(toChannelId)
+        }
       }
     }
   }
