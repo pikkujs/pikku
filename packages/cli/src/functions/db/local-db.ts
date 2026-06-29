@@ -95,7 +95,7 @@ export function resolveDb(
   const base = (sub: string): ResolvedDbBase => ({
     rootDir,
     migrationsDir: resolveAgainst(rootDir, sub),
-    schemaFile: join(outDir, 'db', 'schema.d.ts'),
+    schemaFile: join(outDir, 'db', 'schema.gen.d.ts'),
     coercionFile: join(outDir, 'db', 'coercion.gen.ts'),
     manifestFile: join(outDir, 'db', 'classification.gen.ts'),
     classificationMapFile: join(outDir, 'db', 'classification-map.gen.d.ts'),

@@ -28,7 +28,7 @@ function makeLogger() {
 
 /**
  * Inline Private<T>/Pii<T>/Secret<T> definitions that the test source files use.
- * Mirrors what schema.d.ts emits so the TypeScript program sees the correct
+ * Mirrors what schema.gen.d.ts emits so the TypeScript program sees the correct
  * structural brand type even without @pikku/core being importable from /tmp.
  */
 // Optional `__classification__?` mirrors what @pikku/core and `pikku db migrate`
@@ -50,7 +50,10 @@ async function runInspect(sourceCode: string) {
   try {
     // The data-classification leak scan is opt-in (off by default to keep it
     // off the `pikku all` hot path); these tests exercise it, so enable it.
-    await inspect(logger, [file], { rootDir: tmpDir, classificationCheck: true })
+    await inspect(logger, [file], {
+      rootDir: tmpDir,
+      classificationCheck: true,
+    })
   } finally {
     await rm(tmpDir, { recursive: true, force: true })
   }

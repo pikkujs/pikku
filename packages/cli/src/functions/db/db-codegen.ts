@@ -233,7 +233,8 @@ function emitInterface(
       // or, on SQLite, from a `CHECK (col IN (…))` constraint the introspector
       // parsed onto `col.enumValues`.
       const enumValues =
-        col.enumValues ?? (col.udtName ? enumByName.get(col.udtName) : undefined)
+        col.enumValues ??
+        (col.udtName ? enumByName.get(col.udtName) : undefined)
       const enumUnion =
         enumValues && enumValues.length > 0
           ? enumValues.map((v) => `'${escapeTsString(v)}'`).join(' | ')
@@ -448,14 +449,14 @@ export interface CodegenResult {
   /**
    * Per-interface, per-field zod `format` overrides for the zod codegen. Keyed
    * by interface name (PascalCase) and field name (camelCase), matching the
-   * shapes the zod emitter parses out of `schema.d.ts`.
+   * shapes the zod emitter parses out of `schema.gen.d.ts`.
    */
   zodFormats: Record<string, Record<string, ZodFormat>>
 }
 
 /**
  * Introspect `introspector` and emit:
- *   - `schema.d.ts`            Kysely DB type with classification brands
+ *   - `schema.gen.d.ts`        Kysely DB type with classification brands
  *   - `coercion.gen.ts`        Runtime CoercionMap for date/bool/json coercion
  *   - `classification.gen.ts`  Data-classification manifest (when manifestFile set)
  */
@@ -477,7 +478,8 @@ function emitEnumsModule(
     const tablePart = pascal(snakeToCamel(bareTableName(t.name)))
     for (const col of t.columns) {
       const values =
-        col.enumValues ?? (col.udtName ? enumByName.get(col.udtName) : undefined)
+        col.enumValues ??
+        (col.udtName ? enumByName.get(col.udtName) : undefined)
       if (!values || values.length === 0) continue
       const name = `${tablePart}${pascal(snakeToCamel(col.name))}`
       if (seen.has(name)) continue
@@ -526,7 +528,7 @@ export async function generateSchemaTypes(
     enumByName.set(`${e.schema}.${e.name}`, e.values)
   }
 
-  // ── schema.d.ts ─────────────────────────────────────────────────────────────
+  // ── schema.gen.d.ts ──────────────────────────────────────────────────────────
   const warnings: string[] = []
   const zodFormats: Record<string, Record<string, ZodFormat>> = {}
   const interfaces = tables

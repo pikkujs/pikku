@@ -15,7 +15,7 @@ db/annotations.ts                     ← you author this (satisfies DbClassific
 db/annotations.gen.json                ← compiled sidecar (the machine-readable form)
    │  loadAnnotations()                (annotation-parser.ts)
    ▼
-AnnotationMap  ── generateSchemaTypes() (db-codegen.ts) ──► .pikku/db/schema.d.ts
+AnnotationMap  ── generateSchemaTypes() (db-codegen.ts) ──► .pikku/db/schema.gen.d.ts
                                                             .pikku/db/coercion.gen.ts
                                                             .pikku/db/classification.gen.ts
                                                             .pikku/db/classification-map.gen.d.ts  ← the ColumnEntry type you author against
@@ -29,8 +29,8 @@ Key files (all under `packages/cli/src/functions/db/`):
 | `annotation-parser.ts` | `ColAnnotation` shape; `loadAnnotations()` reads + validates the sidecar |
 | `db-introspector.ts` | dialect-agnostic `ColumnInfo` / `EnumInfo` interfaces |
 | `postgres/postgres-introspector.ts`, `sqlite/…` | per-dialect introspection |
-| `db-codegen.ts` | `schema.d.ts` typing, coercion map, manifest, **owns snake→Pascal/camel name mapping** |
-| `zod-codegen.ts` | parses `schema.d.ts` textually → `zod.gen.ts`; **owns the canonical `ZOD_FORMATS` map** |
+| `db-codegen.ts` | `schema.gen.d.ts` typing, coercion map, manifest, **owns snake→Pascal/camel name mapping** |
+| `zod-codegen.ts` | parses `schema.gen.d.ts` textually → `zod.gen.ts`; **owns the canonical `ZOD_FORMATS` map** |
 | `coercion-plugin.ts` | runtime Kysely plugin; `ColumnKind` + `fromDb()` coercion |
 
 ## Two axes: what changes the *type* vs only the *validator*
@@ -39,11 +39,11 @@ This distinction drives every extension decision.
 
 - **`kind` / `tsType` / enum / real-PG-type** change the **TypeScript type**
   (`Date`, `Uuid`, `'a' | 'b'`, `string[]`). The zod codegen detects these by
-  reading the type string out of `schema.d.ts` — so a new type needs a textual
+  reading the type string out of `schema.gen.d.ts` — so a new type needs a textual
   signal there (a named alias like `Uuid`, or a recognizable shape like a
   literal union).
 - **`format`** leaves the TS type as `string` and only refines the zod
-  validator (`z.email()`). There is nothing in `schema.d.ts` to key off, so it
+  validator (`z.email()`). There is nothing in `schema.gen.d.ts` to key off, so it
   travels as a **structured hint** from `db-codegen` → `zod-codegen`
   (`CodegenResult.zodFormats`), not via the type string.
 
@@ -144,7 +144,7 @@ decimal. Pattern mirrors how enum/uuid/timestamp already work.
 
 ## Gotchas / invariants
 
-- **`zod-codegen` parses `schema.d.ts` textually**, not via the type checker.
+- **`zod-codegen` parses `schema.gen.d.ts` textually**, not via the type checker.
   Anything it must recognize has to be a literal alias name or a parseable
   shape. Keep `INTERFACE_RE`/`FIELD_RE` and the splitters in mind.
 - **`db-codegen` owns name mapping** (snake → Pascal interface, snake → camel
@@ -158,5 +158,5 @@ decimal. Pattern mirrors how enum/uuid/timestamp already work.
   needs no coercion (like `uuid`) must be excluded from the coercion map in
   `db-codegen` *and* handled defensively in `fromDb()`.
 - **Keep `@pikku/core`'s `data-classification.ts` in lockstep** with the brand
-  aliases emitted in the `schema.d.ts` header (`Private`/`Pii`/`Secret` use an
+  aliases emitted in the `schema.gen.d.ts` header (`Private`/`Pii`/`Secret` use an
   optional `__classification__?` marker so plain values stay assignable).
