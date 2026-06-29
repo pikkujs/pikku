@@ -147,6 +147,7 @@ export const fabricCommands = defineCLICommands({
       publish: pikkuCLICommand({
         parameters: '[dir]',
         func: FabricPublish,
+        render: renderAddonVerify,
         description:
           'Publish the addon in this directory to the community registry (pack + upload)',
         options: {
