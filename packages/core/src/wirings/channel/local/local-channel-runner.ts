@@ -4,7 +4,11 @@ import { closeWireServices } from '../../../utils.js'
 import { processMessageHandlers } from '../channel-handler.js'
 import type { CoreChannel, RunChannelOptions } from '../channel.types.js'
 import { PikkuLocalChannelHandler } from './local-channel-handler.js'
-import type { PikkuRawWire, WireServices } from '../../../types/core.types.js'
+import type {
+  PikkuRawWire,
+  PikkuWire,
+  WireServices,
+} from '../../../types/core.types.js'
 import { isProduction } from '../../../env.js'
 import { getErrorResponse } from '../../../errors/error-handler.js'
 import { handleHTTPError } from '../../../handle-error.js'
@@ -46,7 +50,7 @@ const runUpgradeMiddleware = async (
       {
         http,
         ...createMiddlewareSessionWireProps(userSession),
-      },
+      } as unknown as PikkuWire,
       middleware
     )
   }
