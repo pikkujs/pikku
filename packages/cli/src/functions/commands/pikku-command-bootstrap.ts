@@ -23,7 +23,7 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
       stateBeforeBootstrap.rpc?.wireAddonFiles ?? []
     ).map(
       (to) =>
-        `import '${getFileImportRelativePath(config.bootstrapFile, to, config.packageMappings)}'`
+        `import '${getFileImportRelativePath(config.bootstrapFile, to, config.packageMappings, config.forceRelativeImports)}'`
     )
 
     const localImportTargets = Array.from(
@@ -46,7 +46,7 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
 
     const localImports = safeLocalImportTargets.map(
       (to) =>
-        `import '${getFileImportRelativePath(config.bootstrapFile, to, config.packageMappings)}'`
+        `import '${getFileImportRelativePath(config.bootstrapFile, to, config.packageMappings, config.forceRelativeImports)}'`
     )
     const addonImports = addonBootstraps.map(
       (packagePath) => `import '${packagePath}'`

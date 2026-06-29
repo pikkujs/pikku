@@ -3,7 +3,11 @@ import { relative, dirname, resolve } from 'path'
 export const getFileImportRelativePath = (
   from: string,
   to: string,
-  packageMappings: Record<string, string>
+  packageMappings: Record<string, string>,
+  /** When true, packageMappings are never applied — always emit relative paths.
+   *  Use for generated files that live outside the workspace (e.g. .deploy/)
+   *  where package-name imports can't be resolved by the bundler. */
+  forceRelative = false
 ): string => {
   let filePath = relative(dirname(from), to)
   if (!/^\.+\//.test(filePath)) {
@@ -52,7 +56,7 @@ export const getFileImportRelativePath = (
   }
 
   // Only apply packageMappings if files are not in the same package
-  if (!inSamePackage) {
+  if (!inSamePackage && !forceRelative) {
     for (const [path, packageName] of Object.entries(packageMappings)) {
       if (path === '.') continue
       if (absolutePath.includes(path)) {

@@ -297,6 +297,7 @@ export async function generatePerUnitCodegen(
             `--stateInput=${stateFilePath}`,
             `--names=${namesArg}`,
             `--outDir=${unitPikkuDir}`,
+            '--force-relative-imports',
             '--silent',
           ],
           {

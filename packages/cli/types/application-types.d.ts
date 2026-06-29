@@ -14,6 +14,11 @@ import type { DevServerRunner } from '../src/server/dev-server-runner.interface.
 export interface Config extends CoreConfig<PikkuCLIConfig> {
   // Preloaded inspector state from stateInput file (if provided)
   preloadedInspectorState?: Omit<InspectorState, 'typesLookup'>
+  /** When true, generated imports use relative paths even when packageMappings
+   *  would normally apply. Used by per-unit deploy codegen (--force-relative-imports)
+   *  so .deploy/ bootstrap files don't emit package-name imports that the bundler
+   *  can't resolve from outside the workspace. */
+  forceRelativeImports?: boolean
 }
 
 export interface SingletonServices extends CoreSingletonServices<Config> {

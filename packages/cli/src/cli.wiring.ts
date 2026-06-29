@@ -210,6 +210,11 @@ wireCLI({
           description:
             'Exclude functions by deploy target (comma-separated: serverless, server)',
         },
+        forceRelativeImports: {
+          description:
+            'Emit relative imports even when packageMappings would apply (used by per-unit deploy codegen)',
+          default: false,
+        },
       },
     }),
     bootstrap: pikkuCLICommand({

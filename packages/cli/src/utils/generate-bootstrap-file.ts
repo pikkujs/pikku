@@ -9,7 +9,11 @@ export const generateBootstrapFile = async (
   bootstrapFile: string,
   specificImports: string[],
   schemas?: boolean,
-  hasMiddleware?: boolean
+  hasMiddleware?: boolean,
+  /** Use relative imports even when packageMappings would normally apply.
+   *  Set to true for per-unit deploy bootstrap files that live outside the
+   *  workspace (e.g. .deploy/) where package-name imports can't be resolved. */
+  forceRelative = false
 ) => {
   // Common imports that every bootstrap file needs
   const commonImports: string[] = []
@@ -39,7 +43,7 @@ export const generateBootstrapFile = async (
     allImports
       .map(
         (to) =>
-          `import '${getFileImportRelativePath(bootstrapFile, to, config.packageMappings)}'`
+          `import '${getFileImportRelativePath(bootstrapFile, to, config.packageMappings, forceRelative)}'`
       )
       .sort((to) => (to.includes('meta') ? -1 : 1)) // Ensure meta files are at the top
       .join('\n')
