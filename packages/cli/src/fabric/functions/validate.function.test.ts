@@ -101,6 +101,12 @@ async function makeValidProject(root: string) {
     '.pikku\n.pikku-runtime\n.opencode\n.reports\n__fabric_scaffold.vite.config.mjs\n*.gen.ts\n*.gen.js\n',
     'utf8'
   )
+  // required by validate: db/annotations.ts + knowledge/*.md
+  await writeFile(join(root, 'db', 'annotations.ts'), '// db annotations\n', 'utf8')
+  await mkdir(join(root, 'knowledge'), { recursive: true })
+  await writeFile(join(root, 'knowledge', 'design-language.md'), '# Design Language\n', 'utf8')
+  await writeFile(join(root, 'knowledge', 'security.md'), '# Security\n', 'utf8')
+  await writeFile(join(root, 'knowledge', 'technology.md'), '# Technology\n', 'utf8')
 }
 
 describe('pikku fabric validate', () => {
