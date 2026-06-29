@@ -1,4 +1,4 @@
-import { Database, type SQLQueryBindings } from 'bun:sqlite'
+import { Database } from 'bun:sqlite'
 import type {
   SqliteRuntime,
   SyncSqliteChanges,
@@ -17,23 +17,19 @@ class BunSqliteStatement implements SyncSqliteStatement {
   }
 
   all(...parameters: unknown[]): unknown[] {
-    return this.stmt.all(...(parameters as SQLQueryBindings[])) as unknown[]
+    return this.stmt.all(...parameters) as unknown[]
   }
 
   get(...parameters: unknown[]): unknown | null {
-    return (
-      (this.stmt.get(...(parameters as SQLQueryBindings[])) as unknown) ?? null
-    )
+    return (this.stmt.get(...parameters) as unknown) ?? null
   }
 
   iterate(...parameters: unknown[]): IterableIterator<unknown> {
-    return this.stmt.iterate(
-      ...(parameters as SQLQueryBindings[])
-    ) as IterableIterator<unknown>
+    return this.stmt.iterate(...parameters) as IterableIterator<unknown>
   }
 
   run(...parameters: unknown[]): SyncSqliteChanges {
-    const result = this.stmt.run(...(parameters as SQLQueryBindings[]))
+    const result = this.stmt.run(...parameters)
     return {
       changes: result.changes,
       lastInsertRowid: result.lastInsertRowid,
@@ -45,15 +41,6 @@ class BunSqliteDatabase implements SyncSqliteDatabase {
   constructor(private readonly db: Database) {}
 
   exec(sql: string): void {
-    // bun:sqlite throws "no valid SQL statement" on comment-only/empty input
-    // (e.g. a placeholder seed.sql); node:sqlite silently no-ops. Match node's
-    // tolerance by skipping when nothing executable remains after stripping
-    // comments. The original `sql` is still exec'd verbatim when non-empty.
-    const executable = sql
-      .replace(/--[^\n]*/g, '')
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .trim()
-    if (executable.length === 0) return
     this.db.exec(sql)
   }
 

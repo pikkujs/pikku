@@ -2,8 +2,7 @@ import React, { useMemo } from 'react'
 import { Text, Stack } from '@pikku/mantine/core'
 import { Globe } from 'lucide-react'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider } from '../context/PanelContext'
 import { usePanelContext } from '../context/PanelContext'
@@ -17,7 +16,7 @@ const HttpTable: React.FC<{
   loading?: boolean
 }> = ({ routes, loading }) => {
   const { openHTTPWire } = usePanelContext()
-  useLocale()
+  const { t } = useI18n()
 
   const columns = useMemo(
     () => [
@@ -59,21 +58,21 @@ const HttpTable: React.FC<{
       onRowClick={(route) =>
         openHTTPWire(`http::${route.method}::${route.route}`, route)
       }
-      searchPlaceholder={m.http_search_placeholder()}
+      searchPlaceholder={t('http.search_placeholder')}
       searchFilter={(route, q) =>
         route.route?.toLowerCase().includes(q) ||
         route.pikkuFuncId?.toLowerCase().includes(q) ||
         route.method?.toLowerCase().includes(q)
       }
-      emptyMessage={m.http_empty_message()}
+      emptyMessage={t('http.empty_message')}
       loading={loading}
       description={
         <Stack gap={2}>
           <Text size="sm" fw={500}>
-            {m.http_description_heading()}
+            {t('http.description_heading')}
           </Text>
           <Text size="sm" c="dimmed">
-            {m.http_description_body()}
+            {t('http.description_body')}
           </Text>
         </Stack>
       }
@@ -83,7 +82,7 @@ const HttpTable: React.FC<{
 
 export const HttpPage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
-  useLocale()
+  const { t } = useI18n()
 
   const routes = useMemo(() => {
     if (!meta.httpMeta) return []
@@ -93,10 +92,10 @@ export const HttpPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title={m.http_title()} description={m.http_description()} />
+        header={<ListPageHeader title={t('http.title')} description={t('http.description')} />
         }
         hidePanel={!loading && routes.length === 0}
-        emptyPanelMessage={m.http_select_route()}
+        emptyPanelMessage={t('http.select_route')}
       >
         <HttpTable routes={routes} loading={loading} />
       </ResizablePanelLayout>

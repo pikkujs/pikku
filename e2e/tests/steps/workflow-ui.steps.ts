@@ -51,108 +51,50 @@ Then(
   }
 )
 
-// Reads the first child with an inline background colour and returns its
-// computed rgb — '' when nothing is coloured (an unreached/pending node).
-async function readCanvasNodeColor(
-  world: AgentWorld,
-  nodeLabel: string
-): Promise<string> {
-  const node = world.page
-    .locator('.react-flow__node')
-    .filter({ hasText: nodeLabel })
-    .first()
-  await expect(node).toBeVisible({ timeout: 5_000 })
-  return node.evaluate((el) => {
-    const allEls = el.querySelectorAll('*')
-    for (const child of allEls) {
-      const bg = (child as HTMLElement).style.backgroundColor
-      if (bg && bg !== 'transparent' && !bg.includes('0, 0, 0, 0')) {
-        return window.getComputedStyle(child as HTMLElement).backgroundColor
-      }
-    }
-    return ''
-  })
-}
-
-function classifyColor(
-  bgColor: string
-): { green: boolean; red: boolean; gray: boolean } | null {
-  const match = bgColor.match(
-    /^rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+\s*)?\)$/
-  )
-  if (!match) return null
-  const [, rs, gs, bs] = match
-  const r = Number(rs),
-    g = Number(gs),
-    b = Number(bs)
-  return {
-    green: g > r && g > b,
-    red: r > g && r > b,
-    gray: Math.abs(r - g) < 30 && Math.abs(g - b) < 30,
-  }
-}
-
 Then(
   'the canvas node {string} should be {string}',
   async function (this: AgentWorld, nodeLabel: string, expectedColor: string) {
-    const bgColor = await readCanvasNodeColor(this, nodeLabel)
-    const c = classifyColor(bgColor)
-    if (!c) {
+    const node = this.page
+      .locator('.react-flow__node')
+      .filter({ hasText: nodeLabel })
+      .first()
+    await expect(node).toBeVisible({ timeout: 5_000 })
+
+    const bgColor = await node.evaluate((el) => {
+      const allEls = el.querySelectorAll('*')
+      for (const child of allEls) {
+        const bg = (child as HTMLElement).style.backgroundColor
+        if (bg && bg !== 'transparent' && !bg.includes('0, 0, 0, 0')) {
+          return window.getComputedStyle(child as HTMLElement).backgroundColor
+        }
+      }
+      return ''
+    })
+
+    const match = bgColor.match(
+      /^rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+\s*)?\)$/
+    )
+    if (!match) {
       throw new Error(
         `Canvas node "${nodeLabel}" has no rgb background: "${bgColor}"`
       )
     }
+    const [, rs, gs, bs] = match
+    const r = Number(rs),
+      g = Number(gs),
+      b = Number(bs)
+
     if (expectedColor === 'green') {
-      expect(c.green, `Expected green but got ${bgColor}`).toBeTruthy()
+      expect(g > r && g > b, `Expected green but got ${bgColor}`).toBeTruthy()
     } else if (expectedColor === 'red') {
-      expect(c.red, `Expected red but got ${bgColor}`).toBeTruthy()
+      expect(r > g && r > b, `Expected red but got ${bgColor}`).toBeTruthy()
     } else if (expectedColor === 'gray') {
-      expect(c.gray, `Expected gray but got ${bgColor}`).toBeTruthy()
+      expect(
+        Math.abs(r - g) < 30 && Math.abs(g - b) < 30,
+        `Expected gray but got ${bgColor}`
+      ).toBeTruthy()
     } else {
       throw new Error(`Unknown expected color: "${expectedColor}"`)
     }
   }
 )
-
-Then(
-  'the canvas node {string} should not be {string}',
-  async function (this: AgentWorld, nodeLabel: string, color: string) {
-    const bgColor = await readCanvasNodeColor(this, nodeLabel)
-    const c = classifyColor(bgColor)
-    // No coloured background → the node is unreached at this point in time,
-    // which trivially satisfies "is not <color>".
-    if (!c) return
-    if (color === 'green') {
-      expect(c.green, `Expected NOT green but got ${bgColor}`).toBeFalsy()
-    } else if (color === 'red') {
-      expect(c.red, `Expected NOT red but got ${bgColor}`).toBeFalsy()
-    } else {
-      throw new Error(`Unknown color: "${color}"`)
-    }
-  }
-)
-
-Then(
-  'the timeline drawer should be visible',
-  async function (this: AgentWorld) {
-    await expect(
-      this.page.getByTestId('workflow-timeline')
-    ).toBeVisible({ timeout: 10_000 })
-  }
-)
-
-When(
-  'I scrub the timeline to step {string}',
-  async function (this: AgentWorld, stepName: string) {
-    const timeline = this.page.getByTestId('workflow-timeline')
-    await timeline.locator(`[data-step="${stepName}"]`).first().click()
-    // Let the context reconstruct + the canvas re-colour.
-    await this.page.waitForTimeout(800)
-  }
-)
-
-When('I follow the live timeline', async function (this: AgentWorld) {
-  const timeline = this.page.getByTestId('workflow-timeline')
-  await timeline.getByRole('button', { name: 'Follow live' }).click()
-  await this.page.waitForTimeout(800)
-})

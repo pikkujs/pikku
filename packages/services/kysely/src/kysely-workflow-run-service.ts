@@ -192,7 +192,6 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
       .select([
         's.workflowStepId',
         's.stepName',
-        's.fromStepName',
         's.retries',
         's.retryDelay',
         'h.status',
@@ -216,7 +215,6 @@ export class KyselyWorkflowRunService implements WorkflowRunService {
       return {
         stepId,
         stepName: row.stepName,
-        fromStepName: row.fromStepName ?? undefined,
         status: row.status as StepState['status'],
         result: parseJson(row.result),
         error: parseJson(row.error),

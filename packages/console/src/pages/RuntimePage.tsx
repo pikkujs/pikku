@@ -8,8 +8,7 @@ import { ListPageHeader } from '../components/layout/PageLayout'
 import { ServicesTab } from '../components/tabs/ServicesTab'
 import { MiddlewareTab } from '../components/tabs/MiddlewareTab'
 import { PermissionsTab } from '../components/tabs/PermissionsTab'
-import { m, mKey } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 
 const TABS = [
   { value: 'services', label: 'Services' },
@@ -24,7 +23,7 @@ const SEARCH_PLACEHOLDER_KEY: Record<string, string> = {
 }
 
 export const RuntimePage: React.FC = () => {
-  useLocale()
+  const { t } = useI18n()
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
   const tab = searchParams.get('tab') || 'services'
@@ -50,12 +49,12 @@ export const RuntimePage: React.FC = () => {
       <ResizablePanelLayout
         header={
           <ListPageHeader
-            title={m.runtime_title()}
-            description={m.runtime_description()}
+            title={t('runtime.title')}
+            description={t('runtime.description')}
             filters={
               <Group gap="sm" wrap="nowrap">
                 <TextInput
-                  placeholder={mKey(SEARCH_PLACEHOLDER_KEY[tab])}
+                  placeholder={t(SEARCH_PLACEHOLDER_KEY[tab])}
                   leftSection={<Search size={14} />}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -72,7 +71,7 @@ export const RuntimePage: React.FC = () => {
             }
           />
         }
-        emptyPanelMessage={m.common_select_item()}
+        emptyPanelMessage={t('common.select_item')}
       >
         {renderTab()}
       </ResizablePanelLayout>

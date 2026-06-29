@@ -52,21 +52,14 @@ function createEmptyProvider(): DeployProvider {
 }
 
 export const deployPlan = pikkuSessionlessFunc<
-  {
-    resultFile?: string
-    provider?: string
-    runtime?: string
-    debugArtifacts?: boolean
-  },
+  { resultFile?: string; provider?: string; debugArtifacts?: boolean },
   void
 >({
   func: async ({ logger, config, getInspectorState }, data) => {
     const projectDir = config.rootDir
     const inspectorState = await getInspectorState(true)
     const projectId = await resolveProjectId(projectDir)
-    const provider = await resolveProvider(config, data?.provider, {
-      runtime: data?.runtime,
-    })
+    const provider = await resolveProvider(config, data?.provider)
 
     const result = await runBuildPipeline({
       projectDir,
@@ -74,7 +67,6 @@ export const deployPlan = pikkuSessionlessFunc<
       provider,
       inspectorState,
       serverlessIncompatible: config.deploy?.serverlessIncompatible,
-      defaultTarget: config.deploy?.defaultTarget,
       getEntryContext,
       outDir: config.outDir,
       debugArtifacts: data?.debugArtifacts ?? false,

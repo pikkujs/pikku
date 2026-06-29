@@ -386,22 +386,6 @@ function extractVariableDeclaration(
         return step
       }
     }
-
-    // Promise.all fanout/group captured into a variable
-    // (const results = await Promise.all(array.map(...)))
-    if (isParallelFanout(call) || isParallelGroup(call)) {
-      const step = isParallelFanout(call)
-        ? extractParallelFanout(call, context)
-        : extractParallelGroup(call, context)
-      if (step) {
-        const type = context.checker.getTypeAtLocation(decl)
-        context.outputVars.set(varName, { type, node: decl })
-        if (isArrayType(type, context.checker)) {
-          context.arrayVars.add(varName)
-        }
-        return step
-      }
-    }
   }
 
   // Check for array.filter(...)

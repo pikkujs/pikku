@@ -3,7 +3,6 @@ import type { ChannelMeta as CoreChannelMeta } from '@pikku/core/channel'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { resolveFunctionsDir } from '../lib/function-tests-paths.js'
 import type {
   FunctionsMeta,
   AgentsMeta,
@@ -23,7 +22,6 @@ import type {
   PermissionDefinitionMeta,
   EmailsMeta,
 } from '@pikku/core/services'
-import type { GatewaysMeta } from '@pikku/core/gateway'
 
 export type {
   FunctionsMeta,
@@ -189,23 +187,6 @@ export interface McpItemMeta {
   outputSchemaName?: string
 }
 
-export interface GatewayItemMeta {
-  pikkuFuncId: string
-  name: string
-  type: 'webhook' | 'websocket' | 'listener'
-  route?: string
-  platform?: string
-  packageName?: string
-  summary?: string
-  description?: string
-  tags?: string[]
-  errors?: string[]
-  auth?: boolean
-  gateway: true
-  middleware?: MiddlewareMeta[]
-  permissions?: PermissionMeta[]
-}
-
 export interface TriggerMeta {
   pikkuFuncId: string
   name: string
@@ -230,7 +211,6 @@ export interface MetaCounts {
   httpRoutes: number
   channels: number
   mcpTools: number
-  gateways: number
   schedulers: number
   queues: number
   cliCommands: number
@@ -280,7 +260,6 @@ export interface PikkuMetaState {
   schedulerMeta: Record<string, SchedulerTaskMeta>
   rpcMeta: Record<string, RpcMeta>
   mcpMeta: McpItemMeta[]
-  gatewayMeta: GatewayItemMeta[]
   workflows: WorkflowsMeta
   triggerMeta: Record<string, TriggerMeta>
   triggerSourceMeta: Record<string, TriggerSourceMeta>
@@ -573,43 +552,18 @@ async function loadFunctionTests(
 ): Promise<Record<string, FunctionTestData>> {
   let testsOutputDir: string | null = null
   try {
-    const configContent = await readOptionalMetaFile(
-      metaSource,
-      '../pikku.config.json'
-    )
+    const configContent = await readOptionalMetaFile(metaSource, '../pikku.config.json')
     if (configContent) {
-      const pikkuConfig = parseJsonOrNull(configContent) as {
-        tests?: { outputDir?: string }
-      } | null
+      const pikkuConfig = parseJsonOrNull(configContent) as { tests?: { outputDir?: string } } | null
       testsOutputDir = pikkuConfig?.tests?.outputDir ?? null
     }
   } catch {
     // ignore — no config or unreadable
   }
 
-  // Canonical harness layout, anchored on the SAME functions dir the run
-  // handlers and `pikku tests coverage` write to (see function-tests-paths.ts):
-  // `<functionsDir>/tests/.coverage/function-coverage.json` and
-  // `<functionsDir>/tests/tests/reports/cucumber-report.html`.
-  const basePath =
-    metaSource &&
-    typeof metaSource === 'object' &&
-    'basePath' in metaSource &&
-    typeof metaSource.basePath === 'string'
-      ? metaSource.basePath
-      : typeof metaSource === 'string'
-        ? metaSource
-        : null
-  const functionsDir = basePath ? resolveFunctionsDir(basePath) : null
-
-  // Relative fallbacks for non-standard layouts / `tests.outputDir` overrides.
   const coverageCandidates = testsOutputDir
-    ? [
-        `../${testsOutputDir}/.coverage/function-coverage.json`,
-        `../${testsOutputDir}/coverage/function-coverage.json`,
-      ]
+    ? [`../${testsOutputDir}/coverage/function-coverage.json`]
     : [
-        '../tests/.coverage/function-coverage.json',
         '../function-tests/coverage/function-coverage.json',
         'function-tests/coverage/function-coverage.json',
       ]
@@ -619,17 +573,11 @@ async function loadFunctionTests(
         `../${testsOutputDir}/reports/cucumber-report.html`,
       ]
     : [
-        '../tests/tests/reports/cucumber-report.html',
         '../function-tests/tests/reports/cucumber-report.html',
         'function-tests/tests/reports/cucumber-report.html',
       ]
 
   const coverageContent =
-    (functionsDir
-      ? await readOptionalFile(
-          join(functionsDir, 'tests', '.coverage', 'function-coverage.json')
-        )
-      : null) ??
     (
       await Promise.all(
         coverageCandidates.map((path) => readOptionalMetaFile(metaSource, path))
@@ -638,17 +586,6 @@ async function loadFunctionTests(
     null
 
   const cucumberHtml =
-    (functionsDir
-      ? await readOptionalFile(
-          join(
-            functionsDir,
-            'tests',
-            'tests',
-            'reports',
-            'cucumber-report.html'
-          )
-        )
-      : null) ??
     (
       await Promise.all(
         cucumberCandidates.map((path) => readOptionalMetaFile(metaSource, path))
@@ -723,7 +660,6 @@ export class WiringService {
       schedulerMeta,
       rpcMetaRaw,
       mcpMetaRaw,
-      gatewayMetaRaw,
       workflows,
       triggerMeta,
       triggerSourceMeta,
@@ -743,7 +679,6 @@ export class WiringService {
       this.metaService.getSchedulerMeta(),
       this.metaService.getRpcMeta(),
       this.metaService.getMcpMeta(),
-      this.metaService.getGatewayMeta(),
       this.metaService.getWorkflowMeta(),
       this.metaService.getTriggerMeta(),
       this.metaService.getTriggerSourceMeta(),
@@ -797,11 +732,6 @@ export class WiringService {
         mcpMeta.push({ ...item, method: 'prompt' } as McpItemMeta)
       }
     }
-
-    const gatewayMeta = Object.values(
-      (gatewayMetaRaw || {}) as GatewaysMeta
-    ) as GatewayItemMeta[]
-    gatewayMeta.sort((a, b) => a.name.localeCompare(b.name))
 
     const rpcMeta: Record<string, RpcMeta> = {}
     for (const [name, value] of Object.entries(rpcMetaRaw)) {
@@ -876,16 +806,6 @@ export class WiringService {
           type: 'mcp',
           id: item.wireId || item.name || '',
           name: `${item.method}: ${item.name || item.wireId}`,
-        })
-      }
-    }
-
-    for (const item of gatewayMeta) {
-      if (item.pikkuFuncId) {
-        getOrCreate(item.pikkuFuncId).transports.push({
-          type: 'gateway',
-          id: item.name,
-          name: `${item.type}: ${item.name}`,
         })
       }
     }
@@ -997,7 +917,6 @@ export class WiringService {
       httpRoutes: httpMeta.length,
       channels: Object.keys(channelsMeta).length,
       mcpTools: mcpMeta.filter((i) => i.method === 'tool').length,
-      gateways: gatewayMeta.length,
       schedulers: Object.keys(schedulerMeta).length,
       queues: Object.keys(queueMeta).length,
       cliCommands: cliCommandCount,
@@ -1020,7 +939,6 @@ export class WiringService {
       schedulerMeta: schedulerMeta as unknown as AllMeta['schedulerMeta'],
       rpcMeta,
       mcpMeta,
-      gatewayMeta,
       workflows,
       triggerMeta: triggerMeta as unknown as AllMeta['triggerMeta'],
       triggerSourceMeta:

@@ -1,7 +1,6 @@
 import * as ts from 'typescript'
 import { performance } from 'perf_hooks'
-import { resolve } from 'path'
-import { visitSetup, visitFunctions, visitRoutes } from './visit.js'
+import { visitSetup, visitRoutes } from './visit.js'
 import { TypesMap } from './types-map.js'
 import type {
   InspectorState,
@@ -217,14 +216,6 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     openAPISpec: null,
     diagnostics: [],
     addonFunctions: {},
-    exportedContracts: {
-      http: {},
-      cli: {},
-      channel: {},
-      addonHttp: {},
-      addonCli: {},
-      addonChannel: {},
-    },
     program: null,
   }
 }
@@ -234,7 +225,6 @@ export const inspect = async (
   routeFiles: string[],
   options: InspectorOptions = {}
 ): Promise<InspectorState> => {
-  const normalizedRouteFiles = routeFiles.map((file) => resolve(file))
   const compilerOptions: ts.CompilerOptions = {
     target: ts.ScriptTarget.ESNext,
     module: ts.ModuleKind.Node16,
@@ -247,13 +237,13 @@ export const inspect = async (
   }
   const startProgram = performance.now()
   const program = ts.createProgram(
-    normalizedRouteFiles,
+    routeFiles,
     compilerOptions,
     undefined, // host
     options.oldProgram
   )
   logger.debug(
-    `Created program in ${(performance.now() - startProgram).toFixed(0)}ms (${normalizedRouteFiles.length} files${options.oldProgram ? ', incremental' : ''})`
+    `Created program in ${(performance.now() - startProgram).toFixed(0)}ms (${routeFiles.length} files${options.oldProgram ? ', incremental' : ''})`
   )
 
   const startChecker = performance.now()
@@ -263,27 +253,18 @@ export const inspect = async (
   )
 
   // Use provided rootDir or infer from source files
-  const rootDir = options.rootDir || findCommonAncestor(normalizedRouteFiles)
+  const rootDir = options.rootDir || findCommonAncestor(routeFiles)
 
   const startSourceFiles = performance.now()
   // node_modules under rootDir (e.g. a locally-installed addon) is a
   // dependency, not project source — scanning it double-counts the addon's
   // own application types (CoreConfig/Services/SingletonServices).
-  // Sort by file name so the sweeps populate state in a stable order. The
-  // program's own file order depends on glob + import-graph resolution, which
-  // varies run to run — leaving generated meta keys (and anything serialized
-  // in insertion order) non-reproducible across identical `pikku all` runs.
-  // Safe because function registration is a dedicated pass (visitFunctions)
-  // that completes before any order-sensitive wiring resolution in visitRoutes.
   const sourceFiles = program
     .getSourceFiles()
     .filter(
       (sf) =>
         sf.fileName.startsWith(rootDir) &&
         !sf.fileName.includes('/node_modules/')
-    )
-    .sort((a, b) =>
-      a.fileName < b.fileName ? -1 : a.fileName > b.fileName ? 1 : 0
     )
   logger.debug(
     `Got source files in ${(performance.now() - startSourceFiles).toFixed(2)}ms`
@@ -294,9 +275,8 @@ export const inspect = async (
   // First sweep: add all functions
   const startSetup = performance.now()
   for (const sourceFile of sourceFiles) {
-    const sourceOptions = { ...options, sourceFile }
     ts.forEachChild(sourceFile, (child) =>
-      visitSetup(logger, checker, child, state, sourceOptions)
+      visitSetup(logger, checker, child, state, options)
     )
   }
   logger.debug(
@@ -307,25 +287,11 @@ export const inspect = async (
   await loadAddonFunctionsMeta(logger, state)
 
   if (!options.setupOnly) {
-    // Function sweep: register every function before transports/wirings resolve
-    // them, so resolution doesn't depend on source-file order.
-    const startFunctions = performance.now()
-    for (const sourceFile of sourceFiles) {
-      const sourceOptions = { ...options, sourceFile }
-      ts.forEachChild(sourceFile, (child) =>
-        visitFunctions(logger, checker, child, state, sourceOptions)
-      )
-    }
-    logger.debug(
-      `Visit functions phase completed in ${(performance.now() - startFunctions).toFixed(0)}ms`
-    )
-
-    // Transport sweep: add all transports/wirings
+    // Second sweep: add all transports
     const startRoutes = performance.now()
     for (const sourceFile of sourceFiles) {
-      const sourceOptions = { ...options, sourceFile }
       ts.forEachChild(sourceFile, (child) =>
-        visitRoutes(logger, checker, child, state, sourceOptions)
+        visitRoutes(logger, checker, child, state, options)
       )
     }
     logger.debug(

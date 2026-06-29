@@ -11,66 +11,48 @@ export const pikkuChannels = pikkuVoidFunc({
       channelsWiringFile,
       channelsWiringMetaFile,
       channelsWiringMetaJsonFile,
-      channelContractsMetaJsonFile,
       packageMappings,
       schema,
     } = config
-    const { channels, exportedContracts } = visitState
-    const hasChannelContracts = Object.keys(exportedContracts.channel).length > 0
+    const { channels } = visitState
 
-    if (
-      (channels.files.size === 0 || Object.keys(channels.meta).length === 0) &&
-      !hasChannelContracts
-    ) {
+    if (channels.files.size === 0 || Object.keys(channels.meta).length === 0) {
       return
-    }
-
-    if (channels.files.size > 0 && Object.keys(channels.meta).length > 0) {
-      await writeFileInDir(
-        logger,
-        channelsWiringFile,
-        serializeFileImports(
-          'addChannel',
-          channelsWiringFile,
-          channels.files,
-          packageMappings
-        )
-      )
-    }
-
-    if (Object.keys(channels.meta).length > 0) {
-      await writeFileInDir(
-        logger,
-        channelsWiringMetaJsonFile,
-        JSON.stringify(channels.meta, null, 2)
-      )
     }
 
     await writeFileInDir(
       logger,
-      channelContractsMetaJsonFile,
-      JSON.stringify(exportedContracts.channel, null, 2)
-    )
-
-    if (Object.keys(channels.meta).length > 0) {
-      const jsonImportPath = getFileImportRelativePath(
-        channelsWiringMetaFile,
-        channelsWiringMetaJsonFile,
+      channelsWiringFile,
+      serializeFileImports(
+        'addChannel',
+        channelsWiringFile,
+        channels.files,
         packageMappings
       )
+    )
 
-      const supportsImportAttributes =
-        schema?.supportsImportAttributes ?? false
-      const importStatement = supportsImportAttributes
-        ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
-        : `import metaData from '${jsonImportPath}'`
+    await writeFileInDir(
+      logger,
+      channelsWiringMetaJsonFile,
+      JSON.stringify(channels.meta, null, 2)
+    )
 
-      await writeFileInDir(
-        logger,
-        channelsWiringMetaFile,
-        `import { pikkuState } from '@pikku/core/internal'\nimport { ChannelsMeta } from '@pikku/core/channel'\n${importStatement}\npikkuState(null, 'channel', 'meta', metaData as ChannelsMeta)`
-      )
-    }
+    const jsonImportPath = getFileImportRelativePath(
+      channelsWiringMetaFile,
+      channelsWiringMetaJsonFile,
+      packageMappings
+    )
+
+    const supportsImportAttributes = schema?.supportsImportAttributes ?? false
+    const importStatement = supportsImportAttributes
+      ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
+      : `import metaData from '${jsonImportPath}'`
+
+    await writeFileInDir(
+      logger,
+      channelsWiringMetaFile,
+      `import { pikkuState } from '@pikku/core/internal'\nimport { ChannelsMeta } from '@pikku/core/channel'\n${importStatement}\npikkuState(null, 'channel', 'meta', metaData as ChannelsMeta)`
+    )
   },
   middleware: [
     logCommandInfoAndTime({

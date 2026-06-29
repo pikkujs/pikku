@@ -40,7 +40,6 @@ interface ResolvedDbBase {
   schemaJsonFile: string
   classificationsFile: string
   classificationsGenJsonFile: string
-  enumsFile: string
   zodFile: string
   camelCase: boolean
 }
@@ -100,7 +99,6 @@ export function resolveDb(
     manifestFile: join(outDir, 'db', 'classification.gen.ts'),
     classificationMapFile: join(outDir, 'db', 'classification-map.gen.d.ts'),
     schemaJsonFile: join(outDir, 'db', 'pikku-db-schema.gen.json'),
-    enumsFile: join(outDir, 'db', 'enums.gen.ts'),
     classificationsFile: join(rootDir, 'db', 'annotations.ts'),
     // Compiled sidecar lives beside the authored annotations.ts in db/ — this is
     // where both consumers read it: the codegen's loadAnnotations() and the
@@ -291,7 +289,6 @@ export async function migrateAndCodegen(
         manifestFile: resolved.manifestFile,
         classificationMapFile: resolved.classificationMapFile,
         schemaJsonFile: resolved.schemaJsonFile,
-        enumsFile: resolved.enumsFile,
         camelCase: resolved.camelCase,
         rootDir: resolved.rootDir,
         dialect: 'sqlite',
@@ -312,7 +309,6 @@ export async function migrateAndCodegen(
           manifestFile: resolved.manifestFile,
           classificationMapFile: resolved.classificationMapFile,
           schemaJsonFile: resolved.schemaJsonFile,
-          enumsFile: resolved.enumsFile,
           camelCase: resolved.camelCase,
           rootDir: resolved.rootDir,
           dialect: 'postgres',

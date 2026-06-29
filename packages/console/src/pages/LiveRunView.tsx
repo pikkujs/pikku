@@ -10,8 +10,7 @@ import {
   Text,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 
 const GHERKIN_KEYWORDS = ['Given', 'When', 'Then', 'And', 'But']
 
@@ -64,14 +63,14 @@ export type LiveScenario = {
 type LiveRunViewProps = { scenarios: LiveScenario[] }
 
 const LiveRunView: React.FC<LiveRunViewProps> = ({ scenarios }) => {
-  useLocale()
+  const { t } = useI18n()
 
   if (scenarios.length === 0) {
     return (
       <Center h="100%">
         <Stack align="center" gap="xs">
           <Loader size="sm" />
-          <Text size="sm" c="dimmed">{m.live_run_running()}</Text>
+          <Text size="sm" c="dimmed">{t('live_run.running')}</Text>
         </Stack>
       </Center>
     )

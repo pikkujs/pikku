@@ -7,8 +7,7 @@ import { usePanelContext } from '../../context/PanelContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { TableListPage } from '../layout/TableListPage'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 
 type QueueDepths = Record<
   string,
@@ -21,7 +20,7 @@ export const QueuesTab: React.FC<{
 }> = ({ searchQuery, emptyHero }) => {
   const { meta } = usePikkuMeta()
   const rpc = usePikkuRPC()
-  useLocale()
+  const { t } = useI18n()
   const { openQueue } = usePanelContext()
 
   const { data: depths } = useQuery<QueueDepths>({
@@ -133,7 +132,7 @@ export const QueuesTab: React.FC<{
       columns={columns}
       getKey={(item) => item.name}
       onRowClick={(item) => openQueue(item.wireId || item.name, item)}
-      emptyMessage={m.queues_empty_message()}
+      emptyMessage={t('queues.empty_message')}
       emptyHero={emptyHero}
     />
   )

@@ -1,6 +1,6 @@
 {
   "name": "@pikku/react",
-  "version": "0.12.4",
+  "version": "0.12.3",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "type": "module",
@@ -10,6 +10,10 @@
     ".": {
       "import": "./dist/esm/index.js",
       "require": "./dist/cjs/index.js"
+    },
+    "./i18n": {
+      "import": "./dist/esm/i18n.js",
+      "require": "./dist/cjs/i18n.js"
     }
   },
   "scripts": {
@@ -23,14 +27,26 @@
     "@pikku/fetch": "^0.12.3"
   },
   "peerDependencies": {
+    "i18next": "^23 || ^24 || ^25",
     "react": "^18 || ^19",
-    "react-dom": "^18 || ^19"
+    "react-dom": "^18 || ^19",
+    "react-i18next": "^14 || ^15"
+  },
+  "peerDependenciesMeta": {
+    "i18next": {
+      "optional": true
+    },
+    "react-i18next": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "i18next": "^25",
     "react": "^19",
     "react-dom": "^19",
+    "react-i18next": "^15",
     "typescript": "^5.9"
   }
 }

@@ -10,8 +10,7 @@ import { ListPageHeader } from '../components/layout/PageLayout'
 import { EntityCardList } from '../components/layout/EntityCardList'
 import type { EntityCardItem } from '../components/layout/EntityCardList'
 import { useState } from 'react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 
 export interface AgentExtraColumn {
   label: string
@@ -26,7 +25,7 @@ export const AgentsPage: React.FC<{
   metricSlot?: (name: string) => ReactNode
 }> = ({ onOpen, headerRight, emptyHero, metricSlot }) => {
   const navigate = useNavigate()
-  useLocale()
+  const { t } = useI18n()
   const { meta, loading } = usePikkuMeta()
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -77,13 +76,13 @@ export const AgentsPage: React.FC<{
         hidePanel
         header={
           <ListPageHeader
-            title={m.agents_title()}
-            description={m.agents_description()}
+            title={t('agents.title')}
+            description={t('agents.description')}
             docsHref="https://pikku.dev/docs/wiring/ai-agents"
             filters={
               <Group gap="sm" wrap="nowrap">
                 <TextInput
-                  placeholder={m.agents_search_placeholder()}
+                  placeholder={t('agents.search_placeholder')}
                   leftSection={<Search size={14} />}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -102,8 +101,8 @@ export const AgentsPage: React.FC<{
           loading={loading}
           icon={Bot}
           emptyHero={emptyHero}
-          emptyTitle={m.agents_empty_title()}
-          emptyDescription={m.agents_empty_description()}
+          emptyTitle={t('agents.empty_title')}
+          emptyDescription={t('agents.empty_description')}
           docsHref="https://pikku.dev/docs/wiring/ai-agents"
           metricSlot={metricSlot}
         />

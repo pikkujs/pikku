@@ -1,0 +1,20 @@
+{
+  "name": "@pikku/verifiers-addon-carve-source",
+  "type": "module",
+  "private": true,
+  "description": "Source project: functions carved into addons",
+  "imports": {
+    "#pikku": "./.pikku/pikku-types.gen.ts",
+    "#pikku/*": "./.pikku/*"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*",
+    "kysely": "^0.29.2"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@types/node": "^24",
+    "typescript": "^5.9",
+    "zod": "^4"
+  }
+}

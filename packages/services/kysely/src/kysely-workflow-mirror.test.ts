@@ -103,29 +103,6 @@ describe('KyselyWorkflowMirror — step lifecycle', () => {
     assert.equal(history[0]!.status, 'pending')
   })
 
-  test('getRunHistory surfaces step provenance (fromStepName)', async () => {
-    // The mirror persists fromStepName and getRunHistory reads it back, so the
-    // run history reconstructs the walked path (entry has none, the next step
-    // records its predecessor).
-    await seedStep(STEP_ID, 'begin')
-    await mirror.insertStepState(RUN_ID, {
-      stepId: `${STEP_ID}-2`,
-      stepName: 'next',
-      rpcName: 'rpc.fn',
-      data: { x: 2 },
-      status: 'pending',
-      attemptCount: 1,
-      fromStepName: 'begin',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    } as any)
-
-    const history = await runService.getRunHistory(RUN_ID)
-    const from = new Map(history.map((h) => [h.stepName, h.fromStepName]))
-    assert.equal(from.get('begin'), undefined, 'entry step has no predecessor')
-    assert.equal(from.get('next'), 'begin', 'next records its predecessor')
-  })
-
   test('running → succeeded updates the in-place history row', async () => {
     await seedStep()
     await mirror.setStepRunning(STEP_ID)

@@ -340,15 +340,9 @@ export function filterInspectorState(
       ? new Set(filters.excludeTarget)
       : null
     const incompatible = new Set(filters.serverlessIncompatible ?? [])
-    const defaultTarget = filters.defaultTarget ?? 'serverless'
     keptByDeploy = new Set<string>()
     for (const [funcId, funcMeta] of Object.entries(state.functions.meta)) {
-      const target = resolveDeployTarget(
-        funcMeta as any,
-        incompatible,
-        funcId,
-        defaultTarget
-      )
+      const target = resolveDeployTarget(funcMeta as any, incompatible, funcId)
       if (allowed && !allowed.has(target)) continue
       if (excluded && excluded.has(target)) continue
       keptByDeploy.add(funcId)

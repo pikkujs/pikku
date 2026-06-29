@@ -1,8 +1,7 @@
 import React from 'react'
 import { Box, Text } from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import classes from './console.module.css'
 
 export interface ListDetailLayoutProps {
@@ -24,9 +23,9 @@ export const ListDetailLayout: React.FC<ListDetailLayoutProps> = ({
   listWidth,
   height,
 }) => {
-  useLocale()
+  const { t } = useI18n()
   const showDetail = !collapsible || hasSelection
-  const msg = emptyMessage ?? m.common_select_item()
+  const msg = emptyMessage ?? t('common.select_item')
 
   return (
     <Box

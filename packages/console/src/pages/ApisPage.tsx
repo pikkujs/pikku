@@ -1,5 +1,6 @@
 import React, { Suspense, useState } from 'react'
-import { Center, Loader } from '@pikku/mantine/core'
+import { Center, Loader, Group, SegmentedControl, TextInput } from '@pikku/mantine/core'
+import { Search } from 'lucide-react'
 import { useSearchParams } from '../router'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -8,47 +9,35 @@ import { HttpTab } from '../components/tabs/HttpTab'
 import { ChannelsTab } from '../components/tabs/ChannelsTab'
 import { McpTab } from '../components/tabs/McpTab'
 import { CliTab } from '../components/tabs/CliTab'
-import { GatewaysTab } from '../components/tabs/GatewaysTab'
-import { m, mKey } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 
-type ApisTab = 'http' | 'channels' | 'mcp' | 'cli' | 'gateways'
+const TABS = [
+  { value: 'http', label: 'HTTP' },
+  { value: 'channels', label: 'Channels' },
+  { value: 'mcp', label: 'MCP' },
+  { value: 'cli', label: 'CLI' },
+]
 
-const SEARCH_PLACEHOLDER_KEY: Record<ApisTab, string> = {
+const SEARCH_PLACEHOLDER_KEY: Record<string, string> = {
   http: 'apis.search.http',
   channels: 'apis.search.channels',
   mcp: 'apis.search.mcp',
   cli: 'apis.search.cli',
-  gateways: 'apis.search.gateways',
 }
 
 type ApisPageProps = {
   httpHero?: React.ReactNode
   channelsHero?: React.ReactNode
   mcpHero?: React.ReactNode
-  gatewaysHero?: React.ReactNode
 }
 
-const ApisPageInner: React.FC<ApisPageProps> = ({
-  httpHero,
-  channelsHero,
-  mcpHero,
-  gatewaysHero,
-}) => {
-  useLocale()
+const ApisPageInner: React.FC<ApisPageProps> = ({ httpHero, channelsHero, mcpHero }) => {
+  const { t } = useI18n()
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
-  const rawTab = searchParams.get('tab')
-  const tab: ApisTab =
-    rawTab === 'http' ||
-    rawTab === 'channels' ||
-    rawTab === 'mcp' ||
-    rawTab === 'cli' ||
-    rawTab === 'gateways'
-      ? rawTab
-      : 'http'
+  const tab = searchParams.get('tab') || 'http'
 
-  const handleTabChange = (value: ApisTab) => {
+  const handleTabChange = (value: string) => {
     setSearchQuery('')
     setSearchParams({ tab: value })
   }
@@ -61,8 +50,6 @@ const ApisPageInner: React.FC<ApisPageProps> = ({
         return <McpTab searchQuery={searchQuery} emptyHero={mcpHero} />
       case 'cli':
         return <CliTab searchQuery={searchQuery} />
-      case 'gateways':
-        return <GatewaysTab searchQuery={searchQuery} emptyHero={gatewaysHero} />
       default:
         return <HttpTab searchQuery={searchQuery} emptyHero={httpHero} />
     }
@@ -73,30 +60,30 @@ const ApisPageInner: React.FC<ApisPageProps> = ({
       <ResizablePanelLayout
         header={
           <ListPageHeader
-            title={m.apis_title()}
-            description={m.apis_description()}
+            title={t('apis.title')}
+            description={t('apis.description')}
             docsHref="https://pikku.dev/docs/wiring/http"
-            search={{
-              placeholder: mKey(SEARCH_PLACEHOLDER_KEY[tab]),
-              value: searchQuery,
-              onChange: setSearchQuery,
-              width: 240,
-            }}
-            selection={{
-              ariaLabel: m.apis_tab_aria(),
-              value: tab,
-              onChange: handleTabChange,
-              options: [
-                { value: 'http', label: m.apis_tab_http() },
-                { value: 'channels', label: m.apis_tab_channels() },
-                { value: 'mcp', label: m.apis_tab_mcp() },
-                { value: 'cli', label: m.apis_tab_cli() },
-                { value: 'gateways', label: m.apis_tab_gateways() },
-              ],
-            }}
+            filters={
+              <Group gap="sm" wrap="nowrap">
+                <TextInput
+                  placeholder={t(SEARCH_PLACEHOLDER_KEY[tab])}
+                  leftSection={<Search size={14} />}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  size="xs"
+                  style={{ width: 240 }}
+                />
+                <SegmentedControl
+                  size="xs"
+                  value={tab}
+                  onChange={handleTabChange}
+                  data={TABS}
+                />
+              </Group>
+            }
           />
         }
-        emptyPanelMessage={m.common_select_item()}
+        emptyPanelMessage={t('common.select_item')}
       >
         {renderTab()}
       </ResizablePanelLayout>

@@ -3,7 +3,6 @@ import { isVersionedId, formatVersionedId, parseVersionedId } from '@pikku/core'
 import type { SerializedWorkflowGraph } from './workflow-graph.types.js'
 import { canonicalJSON, hashString } from '../../hash.js'
 import { convertDslToGraph } from './convert-dsl-to-graph.js'
-import { deriveWorkflowPlan } from '../derive-workflow-plan.js'
 import type { InspectorState } from '../../../types.js'
 
 export function finalizeWorkflows(state: InspectorState): void {
@@ -15,20 +14,6 @@ export function finalizeWorkflows(state: InspectorState): void {
     stampVersionsOnGraph(graph, functionsMeta)
     computeStepHashes(graph, functionsMeta)
     graph.graphHash = computeGraphHash(graph)
-    // Predictable (loopless) DSL workflows carry their full step list so a UI
-    // can render the skeleton up front without executing the run. Only DSL is
-    // gated: a complex workflow's step tree is incomplete (inline JS branches
-    // aren't captured) and flattens loops into plain steps, so its plan would
-    // lie about determinism.
-    if (graph.source === 'dsl') {
-      const { deterministic, plannedSteps } = deriveWorkflowPlan(meta.steps)
-      graph.deterministic = deterministic
-      // Omit an empty list — a deterministic workflow with no plannedSteps is
-      // simply one with no named steps (e.g. a bare return).
-      if (plannedSteps?.length) {
-        graph.plannedSteps = plannedSteps
-      }
-    }
     workflows.graphMeta[name] = graph
   }
 

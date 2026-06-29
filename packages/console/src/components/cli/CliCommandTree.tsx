@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Box, Stack, TextInput, NavLink, Text, ScrollArea } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { Search } from 'lucide-react'
 import css from '../ui/console.module.css'
 
@@ -125,7 +124,7 @@ export const CliCommandTree: React.FC<CliCommandTreeProps> = ({
   onSelect,
 }) => {
   const [search, setSearch] = useState('')
-  useLocale()
+  const { t } = useI18n()
 
   const tree = useMemo(
     () => buildTree(program.commands, []),
@@ -147,7 +146,7 @@ export const CliCommandTree: React.FC<CliCommandTreeProps> = ({
         }}
       >
         <TextInput
-          placeholder={m.cli_search_placeholder()}
+          placeholder={t('cli.search.placeholder')}
           leftSection={<Search size={14} />}
           size="sm"
           value={search}
@@ -166,7 +165,7 @@ export const CliCommandTree: React.FC<CliCommandTreeProps> = ({
         ))}
         {search && filtered.length === 0 && (
           <Text size="sm" c="dimmed" ta="center" py="md">
-            {m.cli_search_no_match({ query: search })}
+            {t('cli.search.noMatch', { query: search })}
           </Text>
         )}
       </ScrollArea>

@@ -45,7 +45,6 @@ const EMPTY_META: PikkuMetaState = {
   schedulerMeta: {},
   rpcMeta: {},
   mcpMeta: [],
-  gatewayMeta: [],
   workflows: {},
   triggerMeta: {},
   triggerSourceMeta: {},
@@ -69,7 +68,6 @@ const EMPTY_COUNTS: MetaCounts = {
   httpRoutes: 0,
   channels: 0,
   mcpTools: 0,
-  gateways: 0,
   schedulers: 0,
   queues: 0,
   cliCommands: 0,
@@ -99,7 +97,6 @@ export const PikkuMetaProvider: React.FC<{
     setError(null)
     try {
       const allMeta = await rpc.invoke('console:getAllMeta')
-      const gatewayMeta = allMeta.gatewayMeta ?? []
       setMeta({
         functions: allMeta.functions,
         httpMeta: allMeta.httpMeta,
@@ -110,7 +107,6 @@ export const PikkuMetaProvider: React.FC<{
         schedulerMeta: allMeta.schedulerMeta,
         rpcMeta: allMeta.rpcMeta,
         mcpMeta: allMeta.mcpMeta,
-        gatewayMeta,
         workflows: allMeta.workflows,
         triggerMeta: allMeta.triggerMeta,
         triggerSourceMeta: allMeta.triggerSourceMeta,
@@ -122,11 +118,7 @@ export const PikkuMetaProvider: React.FC<{
         credentialsMeta: allMeta.credentialsMeta ?? {},
         variablesMeta: allMeta.variablesMeta,
       })
-      setCounts({
-        ...EMPTY_COUNTS,
-        ...allMeta.counts,
-        gateways: allMeta.counts.gateways ?? gatewayMeta.length,
-      })
+      setCounts(allMeta.counts)
       setServerFunctionUsedBy(allMeta.functionUsedBy)
     } catch (e: any) {
       setError(e.message || 'Failed to load metadata')

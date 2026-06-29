@@ -199,29 +199,6 @@ test('migrateAndCodegen applies pending migrations and writes schema.d.ts', asyn
   }
 })
 
-test('codegen types a SQLite CHECK (col IN (…)) column as a string-literal union', async () => {
-  writeFileSync(
-    join(root, 'db', 'sqlite', '0002-status.sql'),
-    `CREATE TABLE booking (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  status TEXT NOT NULL CHECK (status IN ('enquiry', 'reserved', 'confirmed'))
-);
-`
-  )
-  const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
-  await migrateAndCodegen(resolved)
-
-  const schema = readFileSync(resolved.schemaFile, 'utf8')
-  assert.match(schema, /status:[^\n]*'enquiry' \| 'reserved' \| 'confirmed'/)
-
-  // bare-union enums module — independent of the wrapped DB interface
-  const enums = readFileSync(resolved.enumsFile, 'utf8')
-  assert.match(
-    enums,
-    /export type BookingStatus = 'enquiry' \| 'reserved' \| 'confirmed'/
-  )
-})
-
 test('migrateAndCodegen is a no-op on second run', async () => {
   const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
   await migrateAndCodegen(resolved)

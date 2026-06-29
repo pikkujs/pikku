@@ -913,12 +913,7 @@ export const addFunctions: AddWiring = (
   //   secret  → never returned by any exposed function (sessioned or not)
   //   private → only visible to authenticated (sessioned) users; ok for pikkuFunc
   //   public  → safe for sessionless functions
-  // Opt-in only: inferring every handler's return type (getReturnTypeOfSignature)
-  // is the single most expensive checker operation and dominates `pikku all`
-  // wall-clock. The classification leak scan is a security lint, not codegen, so
-  // it runs ONLY when explicitly requested (`pikku all --security`) — see the
-  // classificationCheck option. Default codegen skips it entirely.
-  if (options.classificationCheck) {
+  {
     const sig = checker.getSignatureFromDeclaration(handler)
     if (sig) {
       const rawRet = checker.getReturnTypeOfSignature(sig)

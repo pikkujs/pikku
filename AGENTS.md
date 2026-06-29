@@ -216,14 +216,6 @@ This ensures:
 - All dependencies are correctly linked and installed
 - Tests run in the correct environment
 
-## Git Workflow
-
-**Never run `git stash`.** Multiple agents work this checkout concurrently, so the worktree is routinely dirty with changes you did not make. `git stash` is global to the worktree — it sweeps up every other agent's uncommitted work, not just yours, and silently breaks them.
-
-- To rebase/pull with a dirty tree, do NOT stash. Either commit only your own files first (`git add <your files> && git commit`), or rebase a branch that contains just your commits — leave everyone else's working-tree changes untouched.
-- Only ever `git add` the specific files you changed. Never `git add -A`/`git add .` — you'll stage other agents' work.
-- Before amending or force-anything, confirm HEAD is your commit; never force-push shared `main`.
-
 ## Workspace Structure
 
 This is a Yarn workspace monorepo with:

@@ -10,7 +10,6 @@ import {
 import type { WorkflowRuntimeMeta } from '../workflow.types.js'
 import { pikkuState } from '../../../pikku-state.js'
 import { RPCNotFoundError } from '../../rpc/rpc-runner.js'
-import { DEFAULT_STEP_RETRIES } from '../pikku-workflow-service.js'
 
 describe('graph-runner bugs', () => {
   test('continueGraph should NOT mark workflow completed while nodes are still running', async () => {
@@ -241,84 +240,6 @@ describe('graph-runner bugs', () => {
     assert.deepEqual(queuedNodes, ['c'])
   })
 
-  test('continueGraph revisits a cyclic node and records the walked path via fromStepName', async () => {
-    const ws = new InMemoryWorkflowService()
-    const queued: Array<{ stepName: string; fromStepName?: string }> = []
-
-    pikkuState(null, 'package', 'singletonServices', {
-      queueService: {
-        add: async (_queueName: string, data: any) => {
-          if (data?.stepName) {
-            queued.push({
-              stepName: data.stepName,
-              fromStepName: data.fromStepName,
-            })
-          }
-        },
-      },
-    } as any)
-
-    // start → a, where a loops back through b once, then exits to c:
-    //   start → a --retry--> b → a --done--> c
-    const meta: WorkflowRuntimeMeta = {
-      name: 'testCyclicGraph',
-      pikkuFuncId: 'testCyclicGraph',
-      source: 'graph',
-      entryNodeIds: ['start'],
-      graphHash: 'cyclic-hash',
-      nodes: {
-        start: { nodeId: 'start', rpcName: 'doStart', next: 'a' },
-        a: { nodeId: 'a', rpcName: 'doA', next: { retry: 'b', done: 'c' } },
-        b: { nodeId: 'b', rpcName: 'doB', next: 'a' },
-        c: { nodeId: 'c', rpcName: 'doC' },
-      },
-    }
-
-    const runId = await ws.createRun('testCyclicGraph', {}, false, 'cyclic-hash', {
-      type: 'test',
-    })
-
-    // Succeed a queued step (taking an optional branch), then advance the graph.
-    const advance = async (stepName: string, branch?: string) => {
-      const step = await ws.getStepState(runId, stepName)
-      await ws.setStepRunning(step.stepId)
-      if (branch) await ws.setBranchTaken(step.stepId, branch)
-      await ws.setStepResult(step.stepId, { ok: true })
-      await continueGraph(ws, runId, 'testCyclicGraph', meta)
-    }
-
-    await continueGraph(ws, runId, 'testCyclicGraph', meta) // fire entry
-    await advance('start')
-    await advance('a', 'retry') // a → b (b reaches a, but first visit ⇒ bare 'b')
-    await advance('b') // b → a revisit ⇒ a#1
-    await advance('a#1', 'done') // a#1 → c (forward edge, terminal)
-    await advance('c')
-
-    // Each step records the predecessor it was reached from; the cyclic
-    // revisit is a fresh ordinal instance (a#1) with its own provenance.
-    assert.deepEqual(queued, [
-      { stepName: 'start', fromStepName: undefined },
-      { stepName: 'a', fromStepName: 'start' },
-      { stepName: 'b', fromStepName: 'a' },
-      { stepName: 'a#1', fromStepName: 'b' },
-      { stepName: 'c', fromStepName: 'a#1' },
-    ])
-
-    const run = await ws.getRun(runId)
-    assert.equal(run?.status, 'completed')
-
-    // Reconstruct the walked path purely from the fromStepName chain.
-    const instances = await ws.getStepInstances(runId)
-    const from = new Map(instances.map((i) => [i.stepName, i.fromStepName]))
-    const path: string[] = []
-    let cursor: string | undefined = 'c'
-    while (cursor) {
-      path.unshift(cursor)
-      cursor = from.get(cursor) ?? undefined
-    }
-    assert.deepEqual(path, ['start', 'a', 'b', 'a#1', 'c'])
-  })
-
   test('inline graph should execute converging next node only once', async () => {
     const ws = new InMemoryWorkflowService()
     let cCalls = 0
@@ -414,78 +335,6 @@ describe('graph-runner bugs', () => {
     )
 
     delete metaState['testInlineFailure']
-  })
-
-  test('inline graph revisits a cyclic node and records the walked path via fromStepName', async () => {
-    const ws = new InMemoryWorkflowService()
-
-    // attempt loops back to itself via `again` until it converges to `done`.
-    const mockRpcService = {
-      rpcWithWire: async (rpcName: string, _data: any, wire: any) => {
-        if (rpcName === 'cyclicBegin') return { attempts: 3 }
-        if (rpcName === 'cyclicAttempt') {
-          const state = await wire.graph.getState()
-          const count = ((state.count as number) ?? 0) + 1
-          await wire.graph.setState('count', count)
-          wire.graph.branch(count >= 3 ? 'done' : 'again')
-          return { count }
-        }
-        if (rpcName === 'cyclicFinish') return { ok: true }
-        return {}
-      },
-    }
-
-    const metaState = pikkuState(null, 'workflows', 'meta')
-    metaState['testInlineCyclic'] = {
-      name: 'testInlineCyclic',
-      pikkuFuncId: 'testInlineCyclic',
-      source: 'graph',
-      entryNodeIds: ['begin'],
-      graphHash: 'inline-cyclic-hash',
-      nodes: {
-        begin: { nodeId: 'begin', rpcName: 'cyclicBegin', next: 'attempt' },
-        attempt: {
-          nodeId: 'attempt',
-          rpcName: 'cyclicAttempt',
-          next: { again: 'attempt', done: 'finish' },
-        },
-        finish: { nodeId: 'finish', rpcName: 'cyclicFinish' },
-      },
-    }
-
-    const { runId } = await runWorkflowGraph(
-      ws,
-      'testInlineCyclic',
-      {},
-      mockRpcService,
-      true
-    )
-
-    const run = await ws.getRun(runId)
-    assert.equal(run?.status, 'completed')
-
-    // The self-cycle produced three ordinal instances of `attempt`.
-    const instances = await ws.getStepInstances(runId)
-    const names = instances.map((i) => i.stepName).sort()
-    assert.ok(
-      names.includes('attempt') &&
-        names.includes('attempt#1') &&
-        names.includes('attempt#2'),
-      `expected attempt/attempt#1/attempt#2, got ${JSON.stringify(names)}`
-    )
-
-    // Walk the fromStepName chain back from the terminal node — inline now
-    // records provenance identical to the queued path.
-    const from = new Map(instances.map((i) => [i.stepName, i.fromStepName]))
-    const path: string[] = []
-    let cursor: string | undefined = 'finish'
-    while (cursor) {
-      path.unshift(cursor)
-      cursor = from.get(cursor) ?? undefined
-    }
-    assert.deepEqual(path, ['begin', 'attempt', 'attempt#1', 'attempt#2', 'finish'])
-
-    delete metaState['testInlineCyclic']
   })
 
   test('executeGraphStep should throw after queueing onError nodes', async () => {
@@ -769,14 +618,9 @@ describe('graph-runner bugs', () => {
     const cJob = enqueued.find((e) => e.data?.stepName === 'c')
     assert.ok(cJob, 'node c should have been enqueued')
     assert.equal(
-      cJob!.options?.attempts,
-      DEFAULT_STEP_RETRIES + 1,
-      'no retries → workflow default (5) + 1 attempt; queue never decides retries'
-    )
-    assert.equal(
-      cJob!.options?.backoff,
-      'exponential',
-      'default retries get exponential backoff so they ride out transient outages'
+      cJob!.options,
+      undefined,
+      'no retries → no queue options (preserves prior queue defaults)'
     )
   })
 })

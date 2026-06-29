@@ -1,8 +1,7 @@
 import React, { useMemo } from 'react'
 import { Box, Text, Group, Tabs } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { useFunctionMeta, useSchema } from '../../hooks/useWirings'
 import { usePanelContext } from '../../context/PanelContext'
 import { SchemaSection } from '../project/panels/shared/SchemaSection'
@@ -34,7 +33,7 @@ export const HttpTabbedPanel: React.FC<HttpTabbedPanelProps> = ({
   const outputSchemaName = funcMeta?.outputSchemaName
   const { data: inputSchema } = useSchema(inputSchemaName)
 
-  useLocale()
+  const { t } = useI18n()
   const method = (metadata?.method || 'GET').toUpperCase()
   const route = metadata?.route || '/'
   const funcId = metadata?.pikkuFuncId
@@ -79,10 +78,10 @@ export const HttpTabbedPanel: React.FC<HttpTabbedPanelProps> = ({
 
       <Box className={classes.flexRow}>
         <Box className={classes.splitLeft}>
-          <SectionLabel>{m.http_section_handler()}</SectionLabel>
+          <SectionLabel>{t('http.section.handler')}</SectionLabel>
 
           {funcId && (
-            <MetaRow label={m.http_meta_function()}>
+            <MetaRow label={t('http.meta.function')}>
               <Text
                 size="sm"
                 fw={600}
@@ -99,15 +98,15 @@ export const HttpTabbedPanel: React.FC<HttpTabbedPanelProps> = ({
           )}
 
           {metadata?.sse && (
-            <MetaRow label={m.http_meta_transport()}>
+            <MetaRow label={t('http.meta.transport')}>
               <Text size="sm" c="gray.4">
-                {m.http_transport_sse()}
+                {t('http.transport.sse')}
               </Text>
             </MetaRow>
           )}
 
           {metadata?.middleware && metadata.middleware.length > 0 && (
-            <MetaRow label={m.http_meta_middleware()}>
+            <MetaRow label={t('http.meta.middleware')}>
               <Group gap={4}>
                 {metadata.middleware.map((mw: any, i: number) => (
                   <LinkedBadge key={i} item={mw} kind="middleware" />
@@ -117,7 +116,7 @@ export const HttpTabbedPanel: React.FC<HttpTabbedPanelProps> = ({
           )}
 
           {metadata?.permissions && metadata.permissions.length > 0 && (
-            <MetaRow label={m.http_meta_permissions()}>
+            <MetaRow label={t('http.meta.permissions')}>
               <Group gap={4}>
                 {metadata.permissions.map((p: any, i: number) => (
                   <LinkedBadge key={i} item={p} kind="permission" />
@@ -127,7 +126,7 @@ export const HttpTabbedPanel: React.FC<HttpTabbedPanelProps> = ({
           )}
 
           {funcMeta?.services && funcMeta.services.services.length > 0 && (
-            <MetaRow label={m.http_meta_services()}>
+            <MetaRow label={t('http.meta.services')}>
               <Group gap={4}>
                 {funcMeta.services.services.map((svc: string) => (
                   <PikkuBadge
@@ -143,14 +142,14 @@ export const HttpTabbedPanel: React.FC<HttpTabbedPanelProps> = ({
 
           {inputSchemaName && (
             <>
-              <SectionLabel>{m.http_section_input_schema()}</SectionLabel>
+              <SectionLabel>{t('http.section.inputSchema')}</SectionLabel>
               <SchemaSection schemaName={inputSchemaName} />
             </>
           )}
 
           {outputSchemaName && (
             <>
-              <SectionLabel>{m.http_section_output_schema()}</SectionLabel>
+              <SectionLabel>{t('http.section.outputSchema')}</SectionLabel>
               <SchemaSection schemaName={outputSchemaName} />
             </>
           )}

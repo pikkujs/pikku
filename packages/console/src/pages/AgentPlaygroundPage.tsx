@@ -15,8 +15,7 @@ import {
   UnstyledButton,
   ScrollArea,
 } from '@pikku/mantine/core'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { asI18n } from '@pikku/react'
 import { KeyRound, Link2, ChevronDown, Search, Check, Bot } from 'lucide-react'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
@@ -31,7 +30,7 @@ import { RunsPanel } from '../components/layout/RunsPanel'
 import { AgentChat } from '../components/project/AgentChat'
 import { useDeleteAgentThread } from '../hooks/useAgentRuns'
 import { useAgentCredentials } from '../hooks/useAgentCredentials'
-import { getServerUrl } from '../context/serverUrl'
+import { getServerUrl } from '../context/PikkuRpcProvider'
 
 const CredentialPrompt: React.FC<{
   requirements: Array<{
@@ -42,7 +41,7 @@ const CredentialPrompt: React.FC<{
   }>
   onRefresh: () => void
 }> = ({ requirements, onRefresh }) => {
-  useLocale()
+  const { t } = useI18n()
   const serverUrl = getServerUrl()
   const missing = requirements.filter((r) => !r.connected)
 
@@ -67,10 +66,10 @@ const CredentialPrompt: React.FC<{
         <Stack gap="md" align="center">
           <KeyRound size={32} color="var(--mantine-color-orange-6)" />
           <Text fw={600} size="lg" ta="center">
-            {m.agent_playground_connect_accounts()}
+            {t('agent_playground.connect_accounts')}
           </Text>
           <Text size="sm" c="dimmed" ta="center">
-            {m.agent_playground_credentials_required()}
+            {t('agent_playground.credentials_required')}
           </Text>
           <Stack gap="xs" w="100%">
             {missing.map((req) => (
@@ -94,7 +93,7 @@ const CredentialPrompt: React.FC<{
                   variant="light"
                   onClick={() => handleConnect(req.credentialName)}
                 >
-                  {m.agent_playground_connect()}
+                  {t('agent_playground.connect')}
                 </Button>
               </Group>
             ))}
@@ -111,7 +110,7 @@ const AgentPlaygroundInner: React.FC<{
   agentItems: { name: string; description?: string }[]
   onAgentSelect: (name: string) => void
 }> = ({ agentId, agentData, agentItems, onAgentSelect }) => {
-  useLocale()
+  const { t } = useI18n()
   const { openAgent } = usePanelContext()
   const { threadId, setThreadId, threads, createNewThread, refetchThreads } =
     useAgentPlayground()
@@ -187,7 +186,7 @@ const AgentPlaygroundInner: React.FC<{
       </Popover.Target>
       <Popover.Dropdown p={0}>
         <TextInput
-          placeholder={m.agent_playground_search_agents()}
+          placeholder={t('agent_playground.search_agents')}
           leftSection={<Search size={14} />}
           value={search}
           onChange={(e) => setSearch(e.currentTarget.value)}
@@ -236,7 +235,7 @@ const AgentPlaygroundInner: React.FC<{
             ))}
             {filteredItems.length === 0 && (
               <Text size="sm" c="dimmed" ta="center" py="md">
-                {m.common_no_results()}
+                {t('common.no_results')}
               </Text>
             )}
           </Stack>
@@ -253,8 +252,8 @@ const AgentPlaygroundInner: React.FC<{
       onSelect={setThreadId}
       onClear={() => setThreadId(null)}
       onNewClick={createNewThread}
-      newButtonLabel={m.agent_playground_new_conversation()}
-      emptyMessage={m.agent_playground_no_conversations()}
+      newButtonLabel={t('agent_playground.new_conversation')}
+      emptyMessage={t('agent_playground.no_conversations')}
       statusFilters={[]}
       header={selector}
       onDelete={handleDelete}
@@ -265,7 +264,7 @@ const AgentPlaygroundInner: React.FC<{
     <ThreePaneLayout
       runsPanel={runsPanel}
       runsPanelVisible
-      emptyPanelMessage={m.agent_playground_panel_message()}
+      emptyPanelMessage={t('agent_playground.panel_message')}
     >
       <Box style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         <Box
@@ -302,7 +301,7 @@ const AgentPlaygroundInner: React.FC<{
 }
 
 export const AgentPlaygroundPage: React.FC = () => {
-  useLocale()
+  const { t } = useI18n()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const agentId = searchParams.get('id') || ''
@@ -336,8 +335,8 @@ export const AgentPlaygroundPage: React.FC = () => {
     return (
       <EmptyStatePlaceholder
         icon={Bot}
-        title={agentId ? asI18n(`Agent "${agentId}" not found`) : m.agent_playground_no_agent_selected()}
-        description={agentId ? m.agent_playground_agent_not_found_description() : m.agent_playground_select_agent_description()}
+        title={agentId ? asI18n(`Agent "${agentId}" not found`) : t('agent_playground.no_agent_selected')}
+        description={agentId ? t('agent_playground.agent_not_found_description') : t('agent_playground.select_agent_description')}
         docsHref="https://pikku.dev/docs/core-features/agents"
       />
     )

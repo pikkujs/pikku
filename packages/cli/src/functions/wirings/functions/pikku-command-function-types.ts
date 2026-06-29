@@ -3,7 +3,6 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializePikkuTypesHub } from './serialize-pikku-types-hub.js'
-import { projectDeclaresBetterAuth } from '../../../utils/detect-better-auth.js'
 
 export const pikkuFunctionTypes = pikkuSessionlessFunc<
   { bootstrap?: boolean },
@@ -43,21 +42,11 @@ export const pikkuFunctionTypes = pikkuSessionlessFunc<
     // Skip inspector state entirely during cold bootstrap: .pikku doesn't exist
     // yet, so a full inspect would runtime-import user files that themselves
     // import `.pikku/pikku-types.gen.js` — deadlocking before this step can
-    // write that very file. During bootstrap we instead detect auth with a
-    // cheap AST-free source scan (the `pikkuAuth` bootstrap pass writes a stub
-    // auth.types.ts off the same signal), so the hub re-exports it from the
-    // start — otherwise the first full inspect / `pikku db generate` crashes
-    // importing the user's auth file before the post-inspect pass can add it.
+    // write that very file. The auth re-export is added on the later
+    // post-inspect pass (where .pikku already exists) instead.
     const state = data?.bootstrap ? null : await getInspectorState()
-    const hasAuth = data?.bootstrap
-      ? await projectDeclaresBetterAuth(
-          config.rootDir,
-          config.srcDirectories,
-          config.ignoreFiles
-        )
-      : !!state?.auth.definition
     const authTypesImportPath =
-      authTypesFile && hasAuth
+      authTypesFile && state?.auth.definition
         ? getFileImportRelativePath(typesFile, authTypesFile, packageMappings)
         : null
 

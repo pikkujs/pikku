@@ -6,11 +6,10 @@ import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { ProjectVariables } from '../components/project/ProjectVariables'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 
 const VariablesPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
-  useLocale()
+  const { t } = useI18n()
   const { meta, loading } = usePikkuMeta()
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -43,13 +42,13 @@ const VariablesPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({ empty
     <ResizablePanelLayout
       header={
         <ListPageHeader
-          title={m.variables_title()}
-          description={m.variables_description()}
+          title={t('variables.title')}
+          description={t('variables.description')}
           docsHref="https://pikku.dev/docs/core-features/variables"
           filters={
             <Group gap="sm" wrap="nowrap">
               <TextInput
-                placeholder={m.variables_search_placeholder()}
+                placeholder={t('variables.search_placeholder')}
                 leftSection={<Search size={14} />}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -60,7 +59,7 @@ const VariablesPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({ empty
           }
         />
       }
-      emptyPanelMessage={m.variables_select_item()}
+      emptyPanelMessage={t('variables.select_item')}
     >
       <ProjectVariables variables={variables} loading={loading} emptyHero={emptyHero} />
     </ResizablePanelLayout>

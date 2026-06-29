@@ -29,17 +29,6 @@ export interface EntryGenerationContext {
   singletonServicesImport: string
   /** Type expression for Partial<SingletonServices> (or fallback) */
   servicesType: string
-  /**
-   * `import mcpJson from '…/mcp.gen.json' with { type: 'json' }` when the unit
-   * has a non-empty mcp.gen.json, else ''. Pair with `mcpServerOption`.
-   */
-  mcpImport: string
-  /**
-   * `'mcpJson, '` to splice into the PikkuNodeHTTPServer *third* (options) arg —
-   * the server reads `this.options.mcpJson`, NOT the first config arg — so it
-   * mounts /mcp. Else ''. Empty is safe — trailing commas are valid.
-   */
-  mcpServerOption: string
 }
 
 export interface ProviderAdapter {
@@ -79,20 +68,6 @@ export interface ProviderAdapter {
   generateEntrySource(ctx: EntryGenerationContext): string
 
   /**
-   * Generate the entry file source for a `target: 'server'` (container) unit.
-   *
-   * Optional. When a provider implements it, the deploy pipeline uses it
-   * instead of the provider-agnostic `generateServerEntrySource`, so the
-   * provider can inject the SAME platform services (kysely, secrets, …) into
-   * the container that it injects into its serverless workers — sourcing the
-   * bindings from `process.env` instead of a runtime `env` object. When
-   * omitted, the pipeline falls back to the generic generator (no platform
-   * injection), which is correct for providers whose containers carry no
-   * platform services.
-   */
-  generateServerEntrySource?(ctx: EntryGenerationContext): string
-
-  /**
    * Generate provider-specific config files per unit (e.g. wrangler.toml).
    * Returns a map of filename → content to write into the unit directory.
    */
@@ -113,14 +88,6 @@ export interface ProviderAdapter {
    * Defaults to ['node:*'] if not provided.
    */
   getExternals?(): string[]
-
-  /**
-   * Regex sources for modules to stub to `export {}` during bundling — modules
-   * this provider's runtime never executes (e.g. the `postgres` driver on CF
-   * Workers, which use a libsql/Turso dialect). Unlike `getExternals`, a stub
-   * removes the bytes entirely rather than leaving a runtime import to resolve.
-   */
-  getStubModules?(): string[]
 
   /**
    * Module aliases for esbuild bundling (e.g. { crypto: 'node:crypto' }).

@@ -1,8 +1,7 @@
 import React, { useState } from 'react'
 import { Box, Text, Table, Badge } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { schemaTypeColor } from './badge-defs'
 
@@ -121,11 +120,11 @@ const PropertyRows: React.FC<{
 )
 
 export const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema }) => {
-  useLocale()
+  const { t } = useI18n()
   if (!schema || typeof schema !== 'object') {
     return (
       <Text c="dimmed" size="sm">
-        {m.schema_viewer_no_schema()}
+        {t('schema_viewer.no_schema')}
       </Text>
     )
   }

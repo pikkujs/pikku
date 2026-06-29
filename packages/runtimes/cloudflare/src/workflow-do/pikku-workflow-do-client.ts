@@ -1,10 +1,7 @@
 import type { DurableObjectNamespace } from '@cloudflare/workers-types'
 import type { SerializedError } from '@pikku/core'
 import type { WorkflowService } from '@pikku/core'
-import { buildRunTimeline, reconstructStateAt } from '@pikku/core/workflow'
 import type {
-  RunTimeline,
-  ReconstructedRunState,
   StepState,
   WorkflowPlannedStep,
   WorkflowRun,
@@ -91,21 +88,6 @@ export class PikkuWorkflowDoClient implements WorkflowService {
     runId: string
   ): Promise<Array<StepState & { stepName: string }>> {
     return this.getStub(runId).getRunHistory()
-  }
-
-  async getRunTimeline(id: string): Promise<RunTimeline | null> {
-    const run = await this.getRun(id)
-    if (!run) return null
-    return buildRunTimeline(await this.getRunHistory(id))
-  }
-
-  async reconstructRunStateAt(
-    id: string,
-    at?: number | Date
-  ): Promise<ReconstructedRunState | null> {
-    const timeline = await this.getRunTimeline(id)
-    if (!timeline) return null
-    return reconstructStateAt(timeline, at ?? timeline.length - 1)
   }
 
   async updateRunStatus(

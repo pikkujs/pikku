@@ -35,8 +35,7 @@
     "build:verifiers": "yarn workspaces foreach -p -A --include 'verifiers/**' run build",
     "build": "yarn build:packages && yarn pikku && yarn build:addons && yarn build:templates",
     "check:workspace-protocol": "node scripts/check-no-workspace-protocol.mjs",
-    "check:no-publish-rebuild": "node scripts/check-no-publish-time-cli-rebuild.mjs",
-    "release": "yarn check:workspace-protocol && yarn check:no-publish-rebuild && yarn build:packages && yarn pikku && yarn build:addons && yarn build:console && npx changeset publish",
+    "release": "yarn check:workspace-protocol && yarn build:packages && yarn pikku && yarn build:addons && yarn build:console && npx changeset publish",
     "ncu": "yarn workspaces foreach -p -A run ncu",
     "ncu:pikku": "yarn workspaces foreach -p -A run ncu -f '/@pikku/.*/'",
     "test:verifiers": "yarn workspaces foreach -A --include 'verifiers/**' --exclude '@pikku/verifiers-deploy-azure' run test",
@@ -45,7 +44,6 @@
     "test:e2e:ai": "yarn workspace @pikku/e2e test:ai",
     "test": "yarn workspaces foreach -A --exclude '@pikku/templates-*' --exclude '@pikku/verifiers-*' --exclude '@pikku/addon-console' --exclude '@pikku/console' --exclude '@pikku/e2e' run test",
     "test:coverage": "yarn workspaces foreach -A run test:coverage",
-    "test:bun": "bun test packages/core/src packages/openapi-parser/src packages/openapi-to-zod-schema/src packages/pikku/src packages/runtimes/cloudflare/src packages/schedule/src packages/services/kysely-bun-sqlite/src",
     "lint": "npx --yes oxlint@latest",
     "prettier": "npx --yes prettier . --write --log-level warn",
     "typedoc": "npx --yes typedoc --tsconfig tsconfig.typedoc.json",
@@ -63,8 +61,7 @@
     "benchmark:baseline:express": "tsx benchmarks/bench-baseline-express.ts",
     "benchmark:baseline:fastify": "tsx benchmarks/bench-baseline-fastify.ts",
     "benchmark:baseline:uws": "tsx benchmarks/bench-baseline-uws.ts",
-    "benchmark:flame": "npx 0x -- npx tsx benchmarks/bench-express.ts --flame",
-    "benchmark:workflow": "tsx benchmarks/bench-workflow.ts"
+    "benchmark:flame": "npx 0x -- npx tsx benchmarks/bench-express.ts --flame"
   },
   "packageManager": "yarn@4.10.3",
   "devDependencies": {

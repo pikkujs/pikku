@@ -22,22 +22,16 @@ export interface PikkuCLICoreOutputFiles {
   httpWiringsFile: string
   httpWiringMetaFile: string
   httpWiringMetaJsonFile: string
-  httpContractsMetaJsonFile: string
-  httpContractsMetaFile: string
   httpMapDeclarationFile: string
   httpTypesFile: string
 
   // Gateways
   gatewaysWiringFile: string
-  gatewaysWiringMetaFile: string
-  gatewaysWiringMetaJsonFile: string
 
   // Channels
   channelsWiringFile: string
   channelsWiringMetaFile: string
   channelsWiringMetaJsonFile: string
-  channelContractsMetaJsonFile: string
-  channelContractsMetaFile: string
   channelsMapDeclarationFile: string
   channelsTypesFile: string
 
@@ -49,9 +43,8 @@ export interface PikkuCLICoreOutputFiles {
   // RPC Exposed
   rpcMapDeclarationFile: string
 
-  // Remote RPC workers (derived from scaffold.pikkuDir when scaffold.remoteRpc is enabled).
-  // Optional: left undefined when scaffold.remoteRpc is not enabled, so consumers must guard.
-  remoteRpcWorkersFile?: string
+  // Remote RPC workers (auto-derived)
+  remoteRpcWorkersFile: string
 
   // Feature-generated files (derived from scaffold.pikkuDir when enabled)
   publicRpcFile: string
@@ -107,8 +100,6 @@ export interface PikkuCLICoreOutputFiles {
   cliWiringsFile: string
   cliWiringMetaFile: string
   cliWiringMetaJsonFile: string
-  cliContractsMetaJsonFile: string
-  cliContractsMetaFile: string
   cliBootstrapFile: string
   cliTypesFile: string
 
@@ -184,6 +175,20 @@ export type PikkuCLIInput = {
         }
       }
   addonName?: string
+
+  /**
+   * Presentation metadata for a runnable source project destined to become an
+   * addon. Ignored by `pikku dev`/codegen — `pikku new addon --carve` lifts it
+   * into the carved addon's `addon` block. Lets a project carry addon metadata
+   * without the `addon` key, which would switch codegen into addon/IoC mode and
+   * stop the project running under `pikku dev`.
+   */
+  node?: {
+    categories?: string[]
+    icon?: string
+    displayName?: string
+    description?: string
+  }
 
   configDir: string
   tsconfig: string
@@ -316,16 +321,12 @@ export type PikkuCLIInput = {
     agent?: PikkuScaffoldFeature
     workflow?: PikkuScaffoldFeature
     events?: PikkuScaffoldFeature
-    remoteRpc?: PikkuScaffoldFeature
   }
 
   /**
-   * Community-registry addons installed via `pikku fabric addon add`. The
+   * Community-registry packages installed via `pikku fabric add`. The package
    * source is copied into the project shadcn-style; each lands in
-   * `<addonDir>/<name>/` and the dir is registered as a yarn workspace so
-   * `wireAddon({ package })` resolves it by name. `addonDir` defaults to
-   * `addons` (top-level, outside the app's TS scan). Install provenance is
-   * tracked in pikku-addons.json.
+   * `<addonDir>/<package-id>/`. `addonDir` defaults to `src/addons`.
    */
   addons?: {
     addonDir?: string
@@ -343,15 +344,6 @@ export type PikkuCLIInput = {
   stateInput?: string
 
   verboseMeta?: boolean
-
-  /**
-   * Run the data-classification security lint (scans function return types for
-   * Private/Pii/Secret leaks). Off by default — it forces expensive return-type
-   * inference on every function and is not part of codegen. Enable here to always
-   * run it, or per-invocation via `pikku all --security`. Pair with
-   * `failOnError` to gate a build/CI on leaks.
-   */
-  security?: boolean
 
   lint?: {
     servicesNotDestructured?: 'off' | 'warn' | 'error'
@@ -372,12 +364,6 @@ export type PikkuCLIInput = {
     providers: Record<string, string>
     defaultProvider?: string
     serverlessIncompatible?: string[]
-    /**
-     * Default deploy target for functions that don't declare an explicit
-     * `deploy` flag and don't use a serverless-incompatible service.
-     * Defaults to 'serverless'.
-     */
-    defaultTarget?: 'serverless' | 'server'
   }
 
   /** Named filter presets keyed by name, used via CLI --filter <name>. */

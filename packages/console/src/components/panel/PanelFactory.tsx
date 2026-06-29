@@ -1,8 +1,7 @@
 import React, { useCallback } from 'react'
 import { Stack, Group, Text, Box, Button, Loader } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { GitBranch, Play } from 'lucide-react'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { SchemaForm } from '../ui/SchemaForm'
@@ -43,7 +42,6 @@ import {
   TriggerConfiguration,
   TriggerSourceConfiguration,
 } from '../project/panels/WiringPanels'
-import { GatewayConfiguration } from '../project/panels/GatewayConfiguration'
 import { MiddlewareConfiguration } from '../project/panels/MiddlewarePanels'
 import { PermissionConfiguration } from '../project/panels/PermissionsPanels'
 import { AgentConfiguration } from '../project/panels/AgentPanels'
@@ -124,7 +122,7 @@ const WorkflowStepTabbedPanel: React.FC<{
 const NewWorkflowRunForm: React.FC<{ workflowId: string }> = ({
   workflowId,
 }) => {
-  useLocale()
+  const { t } = useI18n()
   const runContext = useWorkflowRunContextSafe()
   const startMutation = useStartWorkflowRun()
   const { schema: effectiveSchema, isLoading } = useWorkflowInputSchema()
@@ -163,7 +161,7 @@ const NewWorkflowRunForm: React.FC<{ workflowId: string }> = ({
             onClick={() => handleSubmit({})}
             loading={startMutation.isPending}
           >
-            {m.workflows_run()}
+            {t('workflows.run')}
           </Button>
         </Group>
       )}
@@ -356,22 +354,6 @@ export const createPanelChildren = (panelData: PanelData): PanelChild[] => {
           content: (
             <Box px="md">
               <McpConfiguration
-                wireId={panelData.id}
-                metadata={panelData.metadata}
-              />
-            </Box>
-          ),
-        },
-      ]
-
-    case 'gateway':
-      return [
-        {
-          id: 'configuration',
-          title: 'Configuration',
-          content: (
-            <Box px="md">
-              <GatewayConfiguration
                 wireId={panelData.id}
                 metadata={panelData.metadata}
               />

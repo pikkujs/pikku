@@ -4,12 +4,12 @@ import assert from 'node:assert/strict'
 import { PgBossQueueWorkers } from './pg-boss-queue-worker.js'
 
 describe('PgBossQueueWorkers', () => {
-  test('requires a logger (explicit or from singleton services)', async () => {
+  test('requires setJobRunner before registerQueues', async () => {
     const workers = new PgBossQueueWorkers({} as any)
 
     await assert.rejects(() => workers.registerQueues(), {
       message:
-        'Logger is required for registerQueues — pass it explicitly or ensure singleton services are initialized first',
+        'PgBossQueueWorkers requires setJobRunner() before registerQueues()',
     })
   })
 })

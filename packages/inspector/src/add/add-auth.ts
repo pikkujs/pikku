@@ -100,35 +100,6 @@ const readPluginId = (el: ts.Expression): string | undefined => {
 }
 
 /**
- * True when `node` sits inside a GLOBAL middleware registration — i.e. an actual
- * global registration, not a bare standalone call or a route-scoped one.
- *
- * `addGlobalMiddleware(...)` is always global. `addHTTPMiddleware` is global only
- * in its array form (`addHTTPMiddleware([...])`) or with the `'*'` wildcard
- * pattern; a specific route pattern (`addHTTPMiddleware('/api/admin/*', [...])`)
- * scopes the middleware to that route and must NOT count as a global stateless
- * registration (#754).
- */
-const isInsideGlobalMiddlewareRegistration = (node: ts.Node): boolean => {
-  let parent: ts.Node | undefined = node.parent
-  while (parent) {
-    if (ts.isCallExpression(parent) && ts.isIdentifier(parent.expression)) {
-      const fn = parent.expression.text
-      if (fn === 'addGlobalMiddleware') return true
-      if (fn === 'addHTTPMiddleware') {
-        const first = parent.arguments[0]
-        if (!first) return false
-        // String first arg → route pattern (global only when '*'); otherwise
-        // the array form, which is global.
-        return ts.isStringLiteral(first) ? first.text === '*' : true
-      }
-    }
-    parent = parent.parent
-  }
-  return false
-}
-
-/**
  * Detects `pikkuBetterAuth((services) => betterAuth({...}))` calls.
  *
  * `pikkuBetterAuth` is pure: it wraps a factory that returns a configured better-auth
@@ -151,37 +122,6 @@ export const addAuth: AddWiring = (logger, node, _checker, state) => {
   if (!ts.isCallExpression(node)) return
 
   const expression = node.expression
-
-  // A user-registered stateless session middleware (custom mapSession) means the
-  // CLI must NOT auto-generate its own default-map one — the generated one runs
-  // first and pre-empts the user's via the `if (session) next()` short-circuit
-  // (pikkujs/pikku#754). Only a GLOBAL registration counts (inside
-  // addHTTPMiddleware/addGlobalMiddleware) — a bare betterAuthStatelessSession()
-  // call (e.g. a test harness) is not a registration. Ignore generated files so
-  // the emitted middleware can't self-trigger the skip.
-  if (
-    ts.isIdentifier(expression) &&
-    expression.text === 'betterAuthStatelessSession' &&
-    !node.getSourceFile().fileName.endsWith('.gen.ts') &&
-    isInsideGlobalMiddlewareRegistration(node)
-  ) {
-    state.auth.userStatelessSession = true
-  }
-
-  // Same rule for the stateful variant: a user-registered global
-  // betterAuthSession(...) (custom mapSession/impersonation/apiKey) means the CLI
-  // must NOT auto-generate its own default one — the generated one runs first and
-  // pre-empts the user's via the `if (session) next()` short-circuit. Stateful
-  // analogue of the betterAuthStatelessSession skip above.
-  if (
-    ts.isIdentifier(expression) &&
-    expression.text === 'betterAuthSession' &&
-    !node.getSourceFile().fileName.endsWith('.gen.ts') &&
-    isInsideGlobalMiddlewareRegistration(node)
-  ) {
-    state.auth.hasUserSessionMiddleware = true
-  }
-
   if (!ts.isIdentifier(expression) || expression.text !== 'pikkuBetterAuth')
     return
 

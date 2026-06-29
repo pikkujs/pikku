@@ -37,8 +37,8 @@ export function extractStringLiteral(
     node.operatorToken.kind === ts.SyntaxKind.PlusToken
   ) {
     return (
-      extractConcatOperand(node.left, checker) +
-      extractConcatOperand(node.right, checker)
+      extractStringLiteral(node.left, checker) +
+      extractStringLiteral(node.right, checker)
     )
   }
 
@@ -57,23 +57,6 @@ export function extractStringLiteral(
   }
 
   throw new Error('Unable to extract string literal from node')
-}
-
-/**
- * Resolve one operand of a `+` string concatenation.
- *
- * An operand that can't be statically resolved (e.g. `a ?? b`) becomes a
- * `${...}` placeholder rather than throwing — mirroring the TemplateExpression
- * branch above, so `'x ' + expr` and `` `x ${expr}` `` produce the same string.
- * This keeps an unresolvable display name from aborting the whole extraction.
- */
-function extractConcatOperand(node: ts.Node, checker: ts.TypeChecker): string {
-  try {
-    return extractStringLiteral(node, checker)
-  } catch {
-    const inner = ts.isParenthesizedExpression(node) ? node.expression : node
-    return '${' + inner.getText() + '}'
-  }
 }
 
 /**

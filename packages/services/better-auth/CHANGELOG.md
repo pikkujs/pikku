@@ -1,51 +1,5 @@
 # @pikku/better-auth
 
-## 0.12.12
-
-### Patch Changes
-
-- a3f55de: Add an optional `impersonation` config to `betterAuthSession` (and the stateless variant). When configured, a request carrying the impersonation header (default `x-pikku-impersonate-user-id`) and passing the `canImpersonate` gate resolves the session as the target user via `loadUser`; unknown targets fall back to the real caller with a warning, self-impersonation is a no-op, and the header is inert when impersonation is not configured. Lets an admin act as another user without a bespoke middleware.
-
-## 0.12.11
-
-### Patch Changes
-
-- 7d959ed: fix(better-auth): stop swallowing `mapSession` assertion errors
-
-  `betterAuthSession` and `betterAuthStatelessSession` wrapped the session **read**
-  and the caller's **`mapSession`** call in one `try/catch` that downgraded any
-  throw to a `logger.warn` and continued with no session. So a `mapSession` that
-  deliberately throws — e.g. asserting a required `role` claim is present — was
-  silently caught, leaving the request unauthenticated and producing a baffling
-  403 on every gated route (the symptom: the user's role shows correctly in a
-  direct `/get-session` read, yet authorized RPCs all 403).
-
-  The read now lives in its own `try` (a genuine `getSession`/cookie failure is
-  logged at `error` and re-thrown rather than masked), and `mapSession` runs
-  outside it so its errors propagate. No more silent "no session".
-
-## 0.12.10
-
-### Patch Changes
-
-- 7c0b318: feat(better-auth): rewrite auth cookies for cross-site (iframe) use when
-  `AUTH_COOKIE_CROSS_SITE` is set.
-
-  When an app runs embedded in a cross-site iframe (e.g. a preview where the
-  top-level page and the app are different sites), a `SameSite=Lax` session cookie
-  is silently dropped by the browser — sign-in "succeeds" but the next request
-  arrives with no cookie, so the session never sticks.
-
-  `createAuthHandler` now rewrites every `Set-Cookie` on the auth response to
-  `SameSite=None; Secure; Partitioned` when `process.env.AUTH_COOKIE_CROSS_SITE`
-  is `true`/`1`. This is the single point every better-auth cookie flows through
-  (sign-in/up/out, OAuth callbacks, refresh — the session middlewares only read
-  cookies), so no per-app config is needed. Only the embedding runtime sets the
-  flag; deployed apps never do and keep the tighter `SameSite=Lax` default.
-
-- Updated dependencies [f6adc1c]
-  - @pikku/core@0.12.36
-
 ## 0.12.9
 
 ### Patch Changes

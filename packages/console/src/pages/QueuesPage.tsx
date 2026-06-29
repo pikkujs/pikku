@@ -2,8 +2,7 @@ import React, { useMemo } from 'react'
 import { Text } from '@pikku/mantine/core'
 import { ListOrdered } from 'lucide-react'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -23,7 +22,7 @@ const QueuesTable: React.FC<{
   loading?: boolean
 }> = ({ items, loading }) => {
   const { openQueue } = usePanelContext()
-  useLocale()
+  const { t } = useI18n()
 
   const columns = useMemo(
     () => [
@@ -69,13 +68,13 @@ const QueuesTable: React.FC<{
       columns={columns}
       getKey={(item) => item.name}
       onRowClick={(item) => openQueue(item.name, item.data)}
-      searchPlaceholder={m.queues_search_placeholder()}
+      searchPlaceholder={t('queues.search_placeholder')}
       searchFilter={(item, q) =>
         item.name.toLowerCase().includes(q) ||
         item.handler?.toLowerCase().includes(q) ||
         false
       }
-      emptyMessage={m.queues_empty_message()}
+      emptyMessage={t('queues.empty_message')}
       loading={loading}
     />
   )
@@ -83,7 +82,7 @@ const QueuesTable: React.FC<{
 
 export const QueuesPage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
-  useLocale()
+  const { t } = useI18n()
 
   const items = useMemo((): QueueItem[] => {
     if (!meta.queueMeta) return []
@@ -100,9 +99,9 @@ export const QueuesPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title={m.queues_title()} description={m.queues_description()} />}
+        header={<ListPageHeader title={t('queues.title')} description={t('queues.description')} />}
         hidePanel={!loading && items.length === 0}
-        emptyPanelMessage={m.queues_select_item()}
+        emptyPanelMessage={t('queues.select_item')}
       >
         <QueuesTable items={items} loading={loading} />
       </ResizablePanelLayout>

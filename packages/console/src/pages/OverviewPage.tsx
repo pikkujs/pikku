@@ -21,11 +21,9 @@ import {
   Clock,
   ListOrdered,
   Mail,
-  Network,
 } from 'lucide-react'
 import type { I18nString } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PageContainer, ListPageHeader } from '../components/layout/PageLayout'
 
@@ -94,7 +92,7 @@ const StatCard: React.FC<StatCardProps> = ({
 }
 
 export const OverviewPage: React.FC = () => {
-  useLocale()
+  const { t } = useI18n()
   const { counts, loading } = usePikkuMeta()
 
   if (loading) {
@@ -107,67 +105,61 @@ export const OverviewPage: React.FC = () => {
 
   const stats: StatCardProps[] = [
     {
-      label: m.overview_functions(),
+      label: t('overview.functions'),
       count: counts.functions,
       icon: FunctionSquare,
       href: '/functions',
     },
     {
-      label: m.overview_workflows(),
+      label: t('overview.workflows'),
       count: counts.workflows,
       icon: GitBranch,
       href: '/workflow',
     },
     {
-      label: m.overview_agents(),
+      label: t('overview.agents'),
       count: counts.agents,
       icon: Bot,
       href: '/agents',
     },
     {
-      label: m.overview_http_routes(),
+      label: t('overview.http_routes'),
       count: counts.httpRoutes,
       icon: Globe,
       href: '/apis?tab=http',
     },
     {
-      label: m.overview_channels(),
+      label: t('overview.channels'),
       count: counts.channels,
       icon: Radio,
       href: '/apis?tab=channels',
     },
     {
-      label: m.overview_mcp_tools(),
+      label: t('overview.mcp_tools'),
       count: counts.mcpTools,
       icon: Cpu,
       href: '/apis?tab=mcp',
     },
     {
-      label: m.overview_gateways(),
-      count: counts.gateways,
-      icon: Network,
-      href: '/apis?tab=gateways',
-    },
-    {
-      label: m.overview_cli_commands(),
+      label: t('overview.cli_commands'),
       count: counts.cliCommands,
       icon: Terminal,
       href: '/apis?tab=cli',
     },
     {
-      label: m.overview_schedulers(),
+      label: t('overview.schedulers'),
       count: counts.schedulers,
       icon: Clock,
       href: '/jobs?tab=schedulers',
     },
     {
-      label: m.overview_queues(),
+      label: t('overview.queues'),
       count: counts.queues,
       icon: ListOrdered,
       href: '/jobs?tab=queues',
     },
     {
-      label: m.overview_emails(),
+      label: t('overview.emails'),
       count: counts.emails,
       icon: Mail,
       href: '/emails',
@@ -176,7 +168,7 @@ export const OverviewPage: React.FC = () => {
 
   return (
     <PageContainer>
-      <ListPageHeader title={m.overview_title()} description={m.overview_description()} />
+      <ListPageHeader title={t('overview.title')} description={t('overview.description')} />
       <SimpleGrid cols={{ base: 1, xs: 2, sm: 3, md: 4 }} spacing="md">
         {stats.map((stat) => (
           <StatCard key={String(stat.label)} {...stat} />

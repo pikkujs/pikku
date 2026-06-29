@@ -6,7 +6,6 @@
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",
   "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "type": "module",
   "scripts": {
     "tsc": "tsc",
@@ -31,10 +30,6 @@
     "node": ">=18"
   },
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
-    }
+    ".": "./dist/index.js"
   }
 }

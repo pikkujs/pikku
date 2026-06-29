@@ -4,7 +4,6 @@ import { spawn } from 'node:child_process'
 import { pikkuSessionlessFunc } from '#pikku'
 import { NotFoundError } from '@pikku/core'
 import type { FunctionCoverageReport } from './get-function-coverage.function.js'
-import { resolveFunctionsDir } from '../lib/function-tests-paths.js'
 
 function findBin(name: string, searchFrom: string): string {
   let dir = searchFrom
@@ -80,7 +79,7 @@ export const streamFunctionTests = pikkuSessionlessFunc<null, TestStreamEvent>({
       return
     }
 
-    const functionsDir = resolveFunctionsDir(metaService.basePath)
+    const functionsDir = join(metaService.basePath, '..')
     const ftestDir = join(functionsDir, 'tests')
     if (!existsSync(ftestDir)) {
       throw new NotFoundError(
@@ -144,10 +143,6 @@ export const streamFunctionTests = pikkuSessionlessFunc<null, TestStreamEvent>({
           'tests/tests/features/**/*.feature',
           '--format',
           'message',
-          // Also persist the HTML report so scenarios survive past the live
-          // run — readAllMeta() parses it to attach tests to each function.
-          '--format',
-          'html:tests/tests/reports/cucumber-report.html',
         ],
         { cwd: functionsDir, env: spawnEnv, stdio: ['ignore', 'pipe', 'pipe'] }
       )

@@ -11,7 +11,7 @@
 .item {
   display: inline-flex;
   align-items: center;
-  height: 27px;
+  height: 26px;
   padding: 0 8px;
   border: 0;
   border-radius: 7px;
@@ -71,9 +71,4 @@
   grid-template-columns: 1fr;
   opacity: 1;
   margin-left: 6px;
-}
-
-/* Icon-less options: no leading gap before the label. */
-.item:not(:has(.icon)) .label {
-  margin-left: 0;
 }

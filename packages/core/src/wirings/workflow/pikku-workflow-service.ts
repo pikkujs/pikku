@@ -66,30 +66,9 @@ import {
   runFromMeta,
 } from './graph/graph-runner.js'
 import type { WorkflowService } from '../../services/workflow-service.js'
-import {
-  PikkuError,
-  addError,
-  isExpectedError,
-} from '../../errors/error-handler.js'
+import { PikkuError, addError } from '../../errors/error-handler.js'
 import { RPCNotFoundError } from '../rpc/rpc-runner.js'
 import { ChildWorkflowStartedException } from './graph/graph-runner.js'
-import { deriveInvocationId } from './workflow-invocation-id.js'
-import {
-  buildRunTimeline,
-  reconstructStateAt,
-  type RunTimeline,
-  type ReconstructedRunState,
-} from './run-timeline.js'
-import type { JobOptions } from '../queue/queue.types.js'
-
-/**
- * Default number of retries for a workflow step when none is specified. The
- * workflow — not the queue — owns retry policy; a step inherits this unless it
- * sets its own `retries` (including `retries: 0` to opt out entirely). Picked >0
- * so a transient failure (a DB blip, a downstream restart, a deploy) is ridden
- * out by default; safe because every step gets a stable `invocationId` to dedupe on.
- */
-export const DEFAULT_STEP_RETRIES = 5
 
 /**
  * Exception thrown when workflow needs to pause for async step
@@ -127,25 +106,6 @@ export class WorkflowSuspendedException extends Error {
   ) {
     super(reason || 'Workflow suspended')
     this.name = 'WorkflowSuspendedException'
-  }
-}
-
-/**
- * Thrown when a step (or the orchestrator) could not be enqueued — the queue
- * itself failed (e.g. pg-boss is momentarily down), NOT the step's own logic.
- * This is transient infrastructure failure: the run is left untouched (the step
- * stays `pending`, the run stays running) and the orchestrator job is rethrown
- * so the queue redelivers it and the workflow replays from its snapshot. Treat
- * it as non-terminal — never mark the run `failed` for it.
- */
-export class WorkflowDispatchException extends Error {
-  constructor(
-    public readonly runId: string,
-    public readonly stepName: string,
-    options?: { cause?: unknown }
-  ) {
-    super(`Failed to dispatch workflow step '${stepName}' (run ${runId})`, options)
-    this.name = 'WorkflowDispatchException'
   }
 }
 
@@ -426,7 +386,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     // Build step summaries from history (latest attempt per step)
     const stepMap = new Map<
       string,
-      { status: StepStatus; startedAt?: Date; completedAt?: Date; attempts: number }
+      { status: StepStatus; startedAt?: Date; completedAt?: Date }
     >()
     for (const step of history) {
       const existing = stepMap.get(step.stepName)
@@ -435,7 +395,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           status: step.status,
           startedAt: step.runningAt ?? step.createdAt,
           completedAt: step.succeededAt ?? step.failedAt,
-          attempts: step.attemptCount,
         })
       }
     }
@@ -447,7 +406,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         s.startedAt && s.completedAt
           ? s.completedAt.getTime() - s.startedAt.getTime()
           : undefined,
-      attempts: s.attempts,
     }))
 
     return {
@@ -463,33 +421,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         ? { message: run.error.message ?? 'Unknown error' }
         : undefined,
     }
-  }
-
-  /**
-   * Build the run's time-travel event stream from durable history.
-   * @param id - Run ID
-   * @returns Ordered timeline, or null if the run doesn't exist
-   */
-  public async getRunTimeline(id: string): Promise<RunTimeline | null> {
-    const run = await this.getRun(id)
-    if (!run) return null
-    return buildRunTimeline(await this.getRunHistory(id))
-  }
-
-  /**
-   * Reconstruct the run's state at a point in its timeline.
-   * @param id - Run ID
-   * @param at - A seq index (inclusive) or a Date (inclusive); omit for the
-   *             final state.
-   * @returns Reconstructed state, or null if the run doesn't exist
-   */
-  public async reconstructRunStateAt(
-    id: string,
-    at?: number | Date
-  ): Promise<ReconstructedRunState | null> {
-    const timeline = await this.getRunTimeline(id)
-    if (!timeline) return null
-    return reconstructStateAt(timeline, at ?? timeline.length - 1)
   }
 
   /**
@@ -540,16 +471,14 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepName: string,
     rpcName: string | null,
     data: any,
-    stepOptions?: WorkflowStepOptions,
-    fromStepName?: string
+    stepOptions?: WorkflowStepOptions
   ): Promise<StepState> {
     const step = await this.insertStepStateImpl(
       runId,
       stepName,
       rpcName,
       data,
-      stepOptions,
-      fromStepName
+      stepOptions
     )
     await this.safeMirror(() =>
       this.mirror!.insertStepState(runId, { ...step, stepName, rpcName, data })
@@ -562,8 +491,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepName: string,
     rpcName: string | null,
     data: any,
-    stepOptions?: WorkflowStepOptions,
-    fromStepName?: string
+    stepOptions?: WorkflowStepOptions
   ): Promise<StepState>
 
   /**
@@ -646,7 +574,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       message: error.message,
       stack: error.stack,
       code: (error as any).code,
-      expected: isExpectedError(error),
     }
     await this.safeMirror(() => this.mirror!.setStepError(stepId, serialized))
   }
@@ -735,20 +662,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     runId: string,
     nodeIds: string[]
   ): Promise<string[]>
-
-  /**
-   * List every step instance of a run (any status) with its predecessor.
-   * Drives bounded graph revisits: the runner counts instances per logical node
-   * and treats each `fromStepName → node` as a once-fired transition.
-   * @param runId - Run ID
-   */
-  abstract getStepInstances(runId: string): Promise<
-    Array<{
-      stepName: string
-      status: StepStatus
-      fromStepName?: string
-    }>
-  >
 
   /**
    * Get results for specific nodes
@@ -871,42 +784,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       const run = await this.getRun(runId)
       workflowName = run?.workflow
     }
-    // Carry an explicit retry policy on the orchestrator job too. Orchestrator
-    // runs are idempotent (they replay from the snapshot, returning cached step
-    // results), so redelivery is always safe — and it's what lets a transient
-    // dispatch/infra failure recover: the job is rethrown and retried instead of
-    // the run hanging. Passing `attempts` per-job overrides the queue default, so
-    // this holds even when the orchestrator queue is configured `retry_limit 0`.
-    await queueService.add(
-      this.getOrchestratorQueueName(workflowName),
-      { runId },
-      this.resolveStepJobOptions()
-    )
-  }
-
-  /**
-   * Resolve a step's retry policy into queue job options. The workflow is the
-   * sole source of truth for retries: an explicitly-set `retries` (including 0)
-   * is always honored, an unset one defaults to {@link DEFAULT_STEP_RETRIES},
-   * and we ALWAYS pass `attempts` so the queue can never fall back to its own
-   * default — which would re-run a step the workflow said not to retry. Backoff
-   * defaults to exponential whenever there's at least one retry, so retries ride
-   * out a transient outage instead of firing instantly.
-   */
-  protected resolveStepJobOptions(
-    stepOptions?: WorkflowStepOptions
-  ): JobOptions {
-    const retries = stepOptions?.retries ?? DEFAULT_STEP_RETRIES
-    const retryDelay = stepOptions?.retryDelay
-    const backoff =
-      typeof retryDelay === 'number'
-        ? { type: 'fixed', delay: retryDelay }
-        : retryDelay === 'exponential'
-          ? 'exponential'
-          : retries > 0
-            ? 'exponential'
-            : undefined
-    return { attempts: retries + 1, ...(backoff ? { backoff } : {}) }
+    await queueService.add(this.getOrchestratorQueueName(workflowName), {
+      runId,
+    })
   }
 
   public async queueStepWorker(
@@ -914,14 +794,32 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepName: string,
     rpcName: string,
     data: any,
-    stepOptions?: WorkflowStepOptions,
-    fromStepName?: string
+    stepOptions?: WorkflowStepOptions
   ): Promise<void> {
     const queueService = this.verifyQueueService()
+    const retries = stepOptions?.retries ?? 0
+    const retryDelay = stepOptions?.retryDelay
     await queueService.add(
       this.getStepWorkerQueueName(rpcName),
-      JSON.parse(JSON.stringify({ runId, stepName, rpcName, data, fromStepName })),
-      this.resolveStepJobOptions(stepOptions)
+      JSON.parse(
+        JSON.stringify({
+          runId,
+          stepName,
+          rpcName,
+          data,
+        })
+      ),
+      retries > 0 || retryDelay
+        ? {
+            attempts: retries + 1,
+            backoff:
+              typeof retryDelay === 'number'
+                ? { type: 'fixed', delay: retryDelay }
+                : retryDelay === 'exponential'
+                  ? 'exponential'
+                  : undefined,
+          }
+        : undefined
     )
   }
 
@@ -979,8 +877,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepName: string,
     rpcName: string,
     data: unknown,
-    stepOptions?: WorkflowStepOptions,
-    fromStepName?: string
+    stepOptions?: WorkflowStepOptions
   ): Promise<boolean> {
     // Step execution is decided purely by the function's `inline` flag (default
     // true). Only a function explicitly marked `inline: false` dispatches via
@@ -1006,21 +903,28 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       )
       return false
     }
-    try {
-      await getSingletonServices()!.queueService!.add(
-        this.getStepWorkerQueueName(rpcName),
-        JSON.parse(
-          JSON.stringify({ runId, stepName, rpcName, data, fromStepName })
-        ),
-        this.resolveStepJobOptions(stepOptions)
-      )
-    } catch (cause) {
-      // The queue is down/unreachable — NOT a step failure. Surface it as a
-      // transient dispatch error so the caller leaves the step `pending` and the
-      // orchestrator job is retried (replayed from snapshot) rather than the run
-      // being marked failed. `add` already throws on failure in every adapter.
-      throw new WorkflowDispatchException(runId, stepName, { cause })
-    }
+    const retries = stepOptions?.retries ?? 0
+    const retryDelay = stepOptions?.retryDelay
+    await getSingletonServices()!.queueService!.add(
+      this.getStepWorkerQueueName(rpcName),
+      JSON.parse(
+        JSON.stringify({
+          runId,
+          stepName,
+          rpcName,
+          data,
+        })
+      ),
+      {
+        attempts: retries + 1,
+        backoff:
+          typeof retryDelay === 'number'
+            ? { type: 'fixed', delay: retryDelay }
+            : retryDelay === 'exponential'
+              ? 'exponential'
+              : undefined,
+      }
+    )
     return true
   }
 
@@ -1133,29 +1037,17 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         if (
           error.name !== 'WorkflowAsyncException' &&
           error.name !== 'WorkflowCancelledException' &&
-          error.name !== 'WorkflowSuspendedException' &&
-          // Transient queue failure — leave the run resumable, don't fail it.
-          error.name !== 'WorkflowDispatchException'
+          error.name !== 'WorkflowSuspendedException'
         ) {
           await this.updateRunStatus(runId, 'failed', undefined, {
             name: error.name,
             message: error.message,
             stack: error.stack,
           })
-          // An expected failure (a PikkuError, e.g. a build gate tripping) —
-          // its message is the whole story, so don't dump the stack. The
-          // `expected` flag survives the step-boundary rehydration that strips
-          // the class. Anything else is an uncaught/unexpected error: log it in
-          // full so the trace is there to debug.
           getSingletonServices()!.logger.error(
             `Workflow ${name} (run ${runId}) failed:`,
-            isExpectedError(error) ? error.message : error
+            error
           )
-          throw error
-        }
-        if (error.name === 'WorkflowDispatchException') {
-          // Rethrow so the caller (poll loop / starter) sees the transient
-          // failure; the run stays running and can be resumed.
           throw error
         }
       } finally {
@@ -1200,56 +1092,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
   }
 
-  // Per-run, per-replay ordinal counters (runId → stepName → count).
-  private stepOrdinals = new Map<string, Map<string, number>>()
-  // Previous step key reached in the current DSL walk (runId → stepName), so a
-  // new step records where it came from. Rebuilt each replay alongside ordinals.
-  private stepLineage = new Map<string, string>()
-
-  private resetStepOrdinals(runId: string): void {
-    this.stepOrdinals.set(runId, new Map())
-    this.stepLineage.delete(runId)
-  }
-
-  /** The step the DSL walk last reached (the predecessor for the next step). */
-  private lastStepName(runId: string): string | undefined {
-    return this.stepLineage.get(runId)
-  }
-
-  /**
-   * Physical, replay-stable key for the Nth reach of `logicalStepName` in a run:
-   * bare name for the first reach (ordinal 0, unchanged behavior), `name#N` for
-   * repeats — so the same literal step name can be invoked multiple times without
-   * the rows clobbering. Deterministic given a deterministic DSL body.
-   */
-  private nextStepKey(runId: string, logicalStepName: string): string {
-    let perRun = this.stepOrdinals.get(runId)
-    if (!perRun) {
-      perRun = new Map()
-      this.stepOrdinals.set(runId, perRun)
-    }
-    const ordinal = perRun.get(logicalStepName) ?? 0
-    perRun.set(logicalStepName, ordinal + 1)
-    const stepName =
-      ordinal === 0 ? logicalStepName : `${logicalStepName}#${ordinal}`
-    this.stepLineage.set(runId, stepName)
-    return stepName
-  }
-
   public async runWorkflowJob(runId: string, rpcService: any): Promise<void> {
-    // Fresh ordinal counters per replay so step keys are deterministic.
-    this.resetStepOrdinals(runId)
-    try {
-      await this.runWorkflowJobInner(runId, rpcService)
-    } finally {
-      this.stepOrdinals.delete(runId)
-    }
-  }
-
-  private async runWorkflowJobInner(
-    runId: string,
-    rpcService: any
-  ): Promise<void> {
     const run = await this.getRun(runId)
     if (!run) {
       throw new WorkflowRunNotFoundError(runId)
@@ -1492,25 +1335,17 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         const isGraphWorkflow =
           workflowMeta?.source === 'graph' ||
           workflowMeta?.source === 'dynamic-workflow'
-        // Map the physical step key back to its logical node: a revisit instance
-        // is `node#N` (ordinal), which isn't a literal key in `nodes`.
-        let graphNodeId: string | undefined
-        if (isGraphWorkflow && workflowMeta?.nodes) {
-          if (stepName in workflowMeta.nodes) {
-            graphNodeId = stepName
-          } else {
-            const hash = stepName.lastIndexOf('#')
-            const base = hash > 0 ? stepName.slice(0, hash) : undefined
-            if (base && base in workflowMeta.nodes) graphNodeId = base
-          }
-        }
-        if (graphNodeId) {
+        if (
+          isGraphWorkflow &&
+          workflowMeta?.nodes &&
+          stepName in workflowMeta.nodes
+        ) {
           result = await executeGraphStep(
             this,
             rpcService,
             runId,
             stepState.stepId,
-            graphNodeId,
+            stepName,
             rpcName,
             data,
             run.workflow
@@ -1554,14 +1389,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
               )
             }
           } else {
-            result = await this.invokeStepRpc(
-              runId,
-              stepName,
-              stepState,
-              rpcName,
-              data,
-              rpcService
-            )
+            result = await rpcService.rpcWithWire(rpcName, data, {
+              workflowStep: {
+                runId,
+                stepId: stepState.stepId,
+                attemptCount: stepState.attemptCount,
+              },
+            })
           }
         }
 
@@ -1590,7 +1424,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         // Store error and mark failed
         await this.setStepError(stepState.stepId, error)
 
-        const maxAttempts = (stepState.retries ?? DEFAULT_STEP_RETRIES) + 1
+        const maxAttempts = (stepState.retries ?? 0) + 1
         const retriesExhausted = stepState.attemptCount >= maxAttempts
 
         if (retriesExhausted) {
@@ -1624,17 +1458,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         return
       }
 
-      if (error.name === 'WorkflowDispatchException') {
-        // Transient: the queue was unreachable, not a workflow failure. Leave the
-        // run running and rethrow so the orchestrator job is redelivered and the
-        // workflow replays from its snapshot. Do NOT mark the run failed.
-        getSingletonServices()!.logger.warn(
-          `Workflow run ${runId} could not dispatch a step (queue unavailable); leaving run for orchestrator retry`,
-          error
-        )
-        throw error
-      }
-
       await this.updateRunStatus(runId, 'failed', undefined, {
         message: error.message,
         stack: error.stack,
@@ -1655,101 +1478,14 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     return getSingletonServices()!.queueService!
   }
 
-  /**
-   * Invoke a step's RPC with the workflow-step wire (step identity + provenance).
-   * Identical for the queue executor and the inline executor — the only thing
-   * that differs between transports is who calls it, not the call itself.
-   */
-  private async invokeStepRpc(
-    runId: string,
-    stepName: string,
-    stepState: StepState,
-    rpcName: string,
-    data: any,
-    rpcService: any
-  ): Promise<any> {
-    return rpcService.rpcWithWire(rpcName, data, {
-      workflowStep: {
-        runId,
-        stepId: stepState.stepId,
-        invocationId: deriveInvocationId(runId, stepName),
-        attemptCount: stepState.attemptCount,
-        fromInvocationId: stepState.fromStepName
-          ? deriveInvocationId(runId, stepState.fromStepName)
-          : undefined,
-      },
-    })
-  }
-
-  /**
-   * Inline (straight-through) step execution with an in-process retry loop —
-   * shared by inline RPC steps and inline function steps. Same scaffolding
-   * (running → result, or fail → retry-attempt → backoff → retry) wrapped
-   * around a step-specific `doWork` body. Stays O(K): no suspend/replay.
-   *
-   * `onError` is an optional hook for terminal errors that must NOT retry
-   * (e.g. RPC-not-found → suspend the run for redeploy). If it throws, the
-   * loop exits immediately without recording a step error or retrying.
-   */
-  private async runInlineRetryLoop(
-    stepState: StepState,
-    retries: number,
-    retryDelay: WorkflowStepOptions['retryDelay'],
-    doWork: (currentStepState: StepState) => Promise<any>,
-    onError?: (error: any) => Promise<void>
-  ): Promise<any> {
-    let currentStepState = stepState
-    while (true) {
-      try {
-        await this.setStepRunning(currentStepState.stepId)
-        const result = await doWork(currentStepState)
-        await this.setStepResult(currentStepState.stepId, result)
-        return result
-      } catch (error: any) {
-        if (onError) await onError(error)
-
-        // Record the error (marks step as failed)
-        await this.setStepError(currentStepState.stepId, error)
-
-        if (currentStepState.attemptCount < retries) {
-          // Create a new pending retry attempt, then back off if configured.
-          currentStepState = await this.createRetryAttempt(
-            currentStepState.stepId,
-            'pending'
-          )
-          if (retryDelay) {
-            await new Promise((resolve) =>
-              setTimeout(resolve, getDurationInMilliseconds(retryDelay))
-            )
-          }
-          // Continue loop to retry
-        } else {
-          // No more retries, fail the workflow
-          throw error
-        }
-      }
-    }
-  }
-
   private async rpcStep(
     runId: string,
-    logicalStepName: string,
+    stepName: string,
     rpcName: string,
     data: any,
     rpcService: any,
     stepOptions?: WorkflowStepOptions
   ): Promise<any> {
-    // Capture the predecessor before nextStepKey advances the lineage to us.
-    const fromStepName = this.lastStepName(runId)
-    const stepName = this.nextStepKey(runId, logicalStepName)
-    // Resolve the retry policy ONCE here so the value persisted on the step
-    // (which drives `retriesExhausted`) is the same one the queue dispatch turns
-    // into `attempts`. Without this the queue could retry N times while the
-    // engine thinks retries are already exhausted (or vice-versa).
-    const resolvedStepOptions: WorkflowStepOptions = {
-      retries: stepOptions?.retries ?? DEFAULT_STEP_RETRIES,
-      retryDelay: stepOptions?.retryDelay,
-    }
     // Check if step already exists
     let stepState: StepState
     try {
@@ -1761,8 +1497,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         stepName,
         rpcName,
         data,
-        resolvedStepOptions,
-        fromStepName
+        stepOptions
       )
     }
 
@@ -1789,100 +1524,122 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       throw new WorkflowAsyncException(runId, stepName)
     }
 
+    // Step is pending - schedule it
+    await this.setStepScheduled(stepState.stepId)
+
     // Hand off to subclass-overridable transport. Default behavior enqueues
     // via the queue service; DO-style subclasses RPC to a step worker.
-    // Dispatch BEFORE marking the step `scheduled`: if the queue is down,
-    // dispatchStep throws WorkflowDispatchException and the step stays `pending`,
-    // so the orchestrator's next replay re-dispatches it. Marking `scheduled`
-    // first would strand the step (replay sees `scheduled`, pauses, never
-    // re-enqueues the job that was never created).
     const dispatched = await this.dispatchStep(
       runId,
       stepName,
       rpcName,
       data,
-      resolvedStepOptions,
-      fromStepName
+      stepOptions
     )
     if (dispatched) {
-      await this.setStepScheduled(stepState.stepId)
       throw new WorkflowAsyncException(runId, stepName)
     }
 
-    // Inline (no transport available) - execute locally with the shared retry
-    // loop. The body resolves to a sub-workflow result or a plain RPC result.
-    const retries = resolvedStepOptions.retries ?? this.getConfig().retries
-    const retryDelay = resolvedStepOptions.retryDelay
+    {
+      // Inline (no transport available) - execute locally with retry loop
+      const retries = stepOptions?.retries ?? 0
+      const retryDelay = stepOptions?.retryDelay
+      let currentStepState = stepState
 
-    return this.runInlineRetryLoop(
-      stepState,
-      retries,
-      retryDelay,
-      async (currentStepState) => {
-        // Check if the name refers to a workflow
-        const workflowMeta = pikkuState(null, 'workflows', 'meta')[rpcName]
-        if (workflowMeta) {
-          const childWire = {
-            type: 'workflow',
-            id: rpcName,
-            parentRunId: runId,
-            pikkuUserId: rpcService.wire?.pikkuUserId,
-          }
-          const { runId: childRunId } = await this.startWorkflow(
-            rpcName,
-            data,
-            childWire,
-            rpcService,
-            { inline: true }
-          )
-          await this.setStepChildRunId(currentStepState.stepId, childRunId)
-          // Poll until child workflow completes
-          while (true) {
-            const childRun = await this.getRun(childRunId)
-            if (!childRun) {
-              throw new WorkflowRunNotFoundError(childRunId)
+      while (true) {
+        try {
+          await this.setStepRunning(currentStepState.stepId)
+          // Check if the name refers to a workflow
+          const workflowMeta = pikkuState(null, 'workflows', 'meta')[rpcName]
+          let result: any
+          if (workflowMeta) {
+            const childWire = {
+              type: 'workflow',
+              id: rpcName,
+              parentRunId: runId,
+              pikkuUserId: rpcService.wire?.pikkuUserId,
             }
-            if (WORKFLOW_END_STATES.has(childRun.status)) {
-              if (childRun.status === 'failed') {
-                throw new Error(childRun.error?.message || 'Sub-workflow failed')
+            const { runId: childRunId } = await this.startWorkflow(
+              rpcName,
+              data,
+              childWire,
+              rpcService,
+              { inline: true }
+            )
+            await this.setStepChildRunId(currentStepState.stepId, childRunId)
+            // Poll until child workflow completes
+            while (true) {
+              const childRun = await this.getRun(childRunId)
+              if (!childRun) {
+                throw new WorkflowRunNotFoundError(childRunId)
               }
-              if (childRun.status === 'cancelled') {
-                throw new Error('Sub-workflow was cancelled')
+              if (WORKFLOW_END_STATES.has(childRun.status)) {
+                if (childRun.status === 'failed') {
+                  throw new Error(
+                    childRun.error?.message || 'Sub-workflow failed'
+                  )
+                }
+                if (childRun.status === 'cancelled') {
+                  throw new Error('Sub-workflow was cancelled')
+                }
+                result = childRun.output
+                break
               }
-              return childRun.output
+              await new Promise((resolve) => setTimeout(resolve, 500))
             }
-            await new Promise((resolve) => setTimeout(resolve, 500))
+          } else {
+            result = await rpcService.rpcWithWire(rpcName, data, {
+              workflowStep: {
+                runId,
+                stepId: currentStepState.stepId,
+                attemptCount: currentStepState.attemptCount,
+              },
+            })
           }
-        }
-        return this.invokeStepRpc(
-          runId,
-          stepName,
-          currentStepState,
-          rpcName,
-          data,
-          rpcService
-        )
-      },
-      async (error) => {
-        if (error instanceof RPCNotFoundError) {
-          await this.updateRunStatus(runId, 'suspended', undefined, {
-            message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
-            code: 'RPC_NOT_FOUND',
-          })
-          throw error
+          await this.setStepResult(currentStepState.stepId, result)
+          return result
+        } catch (error: any) {
+          if (error instanceof RPCNotFoundError) {
+            await this.updateRunStatus(runId, 'suspended', undefined, {
+              message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
+              code: 'RPC_NOT_FOUND',
+            })
+            throw error
+          }
+
+          // Record the error (marks step as failed)
+          await this.setStepError(currentStepState.stepId, error)
+
+          // Check if we should retry
+          if (currentStepState.attemptCount < retries) {
+            // Create a new pending retry attempt
+            currentStepState = await this.createRetryAttempt(
+              currentStepState.stepId,
+              'pending'
+            )
+
+            // Wait for retry delay if specified
+            if (retryDelay) {
+              await new Promise((resolve) =>
+                setTimeout(resolve, getDurationInMilliseconds(retryDelay))
+              )
+            }
+            // Continue loop to retry
+          } else {
+            // No more retries, fail the workflow
+            throw error
+          }
         }
       }
-    )
+    }
   }
 
   private async inlineStep(
     runId: string,
-    logicalStepName: string,
+    stepName: string,
     fn: Function,
     stepOptions?: WorkflowStepOptions
   ): Promise<any> {
-    const fromStepName = this.lastStepName(runId)
-    const stepName = this.nextStepKey(runId, logicalStepName)
     // Check if step already exists
     let stepState: StepState
     try {
@@ -1894,8 +1651,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         stepName,
         null,
         null,
-        stepOptions,
-        fromStepName
+        stepOptions
       )
     }
 
@@ -1907,14 +1663,44 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     // Execute inline function
     const retries = stepOptions?.retries ?? this.getConfig().retries
     const retryDelay = stepOptions?.retryDelay ?? this.getConfig().retryDelay
+    let currentStepState = stepState
 
     // Check if we're running inline (in-memory) or remote (queue-based)
     if (this.isInline(runId)) {
-      // Inline mode - execute with the shared in-process retry loop.
-      return this.runInlineRetryLoop(stepState, retries, retryDelay, () => fn())
+      // Inline mode - execute with retry loop
+      while (true) {
+        try {
+          await this.setStepRunning(currentStepState.stepId)
+          const result = await fn()
+          await this.setStepResult(currentStepState.stepId, result)
+          return result
+        } catch (error: any) {
+          // Record the error (marks step as failed)
+          await this.setStepError(currentStepState.stepId, error)
+
+          // Check if we should retry
+          if (currentStepState.attemptCount < retries) {
+            // Create a new pending retry attempt
+            currentStepState = await this.createRetryAttempt(
+              currentStepState.stepId,
+              'pending'
+            )
+
+            // Wait for retry delay if specified
+            if (retryDelay) {
+              await new Promise((resolve) =>
+                setTimeout(resolve, getDurationInMilliseconds(retryDelay))
+              )
+            }
+            // Continue loop to retry
+          } else {
+            // No more retries, fail the workflow
+            throw error
+          }
+        }
+      }
     } else {
-      // Remote mode - single attempt, then suspend for orchestrator-driven retry.
-      let currentStepState = stepState
+      // Remote mode - use queue-based retry
       try {
         await this.setStepRunning(currentStepState.stepId)
         const result = await fn()
@@ -1942,27 +1728,16 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
   }
 
-  private async sleepStep(
-    runId: string,
-    logicalStepName: string,
-    duration: number
-  ) {
-    const fromStepName = this.lastStepName(runId)
-    const stepName = this.nextStepKey(runId, logicalStepName)
+  private async sleepStep(runId: string, stepName: string, duration: number) {
     // Check if step already exists
     let stepState: StepState
     try {
       stepState = await this.getStepState(runId, stepName)
     } catch {
       // Step doesn't exist - create it (sleep step, no RPC)
-      stepState = await this.insertStepState(
-        runId,
-        stepName,
-        null,
-        { duration },
-        undefined,
-        fromStepName
-      )
+      stepState = await this.insertStepState(runId, stepName, null, {
+        duration,
+      })
     }
 
     if (stepState.status === 'succeeded') {
@@ -1975,19 +1750,18 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       throw new WorkflowAsyncException(runId, stepName)
     }
 
+    // Step is pending - schedule it
+    await this.setStepScheduled(stepState.stepId)
+
     // Hand off to subclass-overridable transport. Default behavior schedules
     // a delayed sleeper RPC via the scheduler service; DO-style subclasses
-    // override to use native timer primitives (e.g. setAlarm). Schedule BEFORE
-    // marking `scheduled` so a scheduler outage leaves the step `pending` for
-    // re-scheduling on replay instead of stranding it (see rpcStep).
-    let scheduled: boolean
-    try {
-      scheduled = await this.scheduleSleep(runId, stepState.stepId, duration)
-    } catch (cause) {
-      throw new WorkflowDispatchException(runId, stepName, { cause })
-    }
+    // override to use native timer primitives (e.g. setAlarm).
+    const scheduled = await this.scheduleSleep(
+      runId,
+      stepState.stepId,
+      duration
+    )
     if (scheduled) {
-      await this.setStepScheduled(stepState.stepId)
       throw new WorkflowAsyncException(runId, stepName)
     }
 
@@ -2014,11 +1788,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   private async suspendStep(runId: string, reason: string): Promise<void> {
-    const fromStepName = this.lastStepName(runId)
-    const suspendStepName = this.nextStepKey(
-      runId,
-      this.getSuspendStepName(reason)
-    )
+    const suspendStepName = this.getSuspendStepName(reason)
     await this.withStepLock(runId, suspendStepName, async () => {
       let stepState: StepState
       try {
@@ -2030,9 +1800,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           'pikkuWorkflowSuspend',
           {
             reason,
-          },
-          undefined,
-          fromStepName
+          }
         )
       }
       if (!stepState.stepId) {
@@ -2042,9 +1810,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           'pikkuWorkflowSuspend',
           {
             reason,
-          },
-          undefined,
-          fromStepName
+          }
         )
       }
 
@@ -2134,7 +1900,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     const singletonServices = getSingletonServices()
     const workflow = singletonServices.config?.workflow
     return {
-      retries: workflow?.retries ?? DEFAULT_STEP_RETRIES,
+      retries: workflow?.retries ?? 0,
       retryDelay: workflow?.retryDelay ?? 0,
       orchestratorQueueName:
         workflow?.orchestratorQueueName ?? 'pikku-workflow-orchestrator',

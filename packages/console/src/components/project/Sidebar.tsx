@@ -13,8 +13,7 @@ import {
 } from '@pikku/mantine/core'
 import type { I18nNode, I18nString } from '@pikku/react'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { useLocalStorage } from '@mantine/hooks'
 import {
   FunctionSquare,
@@ -37,13 +36,9 @@ import {
   Users,
   Sun,
   Moon,
-  UserCog,
 } from 'lucide-react'
-import { useState } from 'react'
 import { spotlight } from '@mantine/spotlight'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
-import { useOptionalAuth } from '../../context/AuthContext'
-import { ImpersonateDrawer } from '../auth/ImpersonateDrawer'
 import css from '../ui/console.module.css'
 
 export interface NavItem {
@@ -58,52 +53,123 @@ export interface NavSection {
   items: NavItem[]
 }
 
-// Built via a hook so the default nav labels go through t(). Callers can still
-// pass their own `sections` prop with already-translated labels.
-export function useDefaultNavSections(): NavSection[] {
-  useLocale()
-  return [
-    {
-      title: m.nav_run(),
-      items: [
-        { label: m.nav_functions(), href: '/functions', icon: FunctionSquare, matchPrefix: '/functions' },
-        { label: m.nav_workflows(), href: '/workflow', icon: GitBranch, matchPrefix: '/workflow' },
-        { label: m.nav_agents(), href: '/agents', icon: Bot, matchPrefix: '/agents' },
-        { label: m.nav_tests(), href: '/tests', icon: FlaskConical, matchPrefix: '/tests' },
-      ],
-    },
-    {
-      title: m.nav_data(),
-      items: [
-        { label: m.nav_database(), href: '/database', icon: Database, matchPrefix: '/database' },
-        { label: m.nav_apis(), href: '/apis', icon: Globe, matchPrefix: '/apis' },
-        { label: m.nav_jobs(), href: '/jobs', icon: Clock, matchPrefix: '/jobs' },
-        { label: m.nav_runtime(), href: '/runtime', icon: Server, matchPrefix: '/runtime' },
-        { label: m.nav_emails(), href: '/emails', icon: Mail, matchPrefix: '/emails' },
-      ],
-    },
-    {
-      title: m.nav_config(),
-      items: [
-        { label: m.nav_secrets(), href: '/secrets', icon: KeyRound, matchPrefix: '/secrets' },
-        { label: m.nav_env_vars(), href: '/variables', icon: Variable, matchPrefix: '/variables' },
-        { label: m.nav_addons(), href: '/addons', icon: Package, matchPrefix: '/addons' },
-      ],
-    },
-    {
-      title: m.nav_users(),
-      items: [
-        { label: m.nav_users(), href: '/users', icon: Users, matchPrefix: '/users' },
-        { label: m.nav_oauth(), href: '/auth-providers', icon: KeyRound, matchPrefix: '/auth-providers' },
-        { label: m.nav_credentials(), href: '/credentials', icon: KeyRound, matchPrefix: '/credentials' },
-      ],
-    },
-    {
-      title: asI18n(''),
-      items: [{ label: m.nav_changes(), href: '/changes', icon: GitCompare, matchPrefix: '/changes' }],
-    },
-  ]
-}
+export const DEFAULT_NAV_SECTIONS: NavSection[] = [
+  {
+    title: asI18n('Run'),
+    items: [
+      {
+        label: asI18n('Functions'),
+        href: '/functions',
+        icon: FunctionSquare,
+        matchPrefix: '/functions',
+      },
+      {
+        label: asI18n('Workflows'),
+        href: '/workflow',
+        icon: GitBranch,
+        matchPrefix: '/workflow',
+      },
+      {
+        label: asI18n('Agents'),
+        href: '/agents',
+        icon: Bot,
+        matchPrefix: '/agents',
+      },
+      {
+        label: asI18n('Tests'),
+        href: '/tests',
+        icon: FlaskConical,
+        matchPrefix: '/tests',
+      },
+    ],
+  },
+  {
+    title: asI18n('Data'),
+    items: [
+      {
+        label: asI18n('Database'),
+        href: '/database',
+        icon: Database,
+        matchPrefix: '/database',
+      },
+      {
+        label: asI18n('APIs'),
+        href: '/apis',
+        icon: Globe,
+        matchPrefix: '/apis',
+      },
+      {
+        label: asI18n('Jobs'),
+        href: '/jobs',
+        icon: Clock,
+        matchPrefix: '/jobs',
+      },
+      {
+        label: asI18n('Runtime'),
+        href: '/runtime',
+        icon: Server,
+        matchPrefix: '/runtime',
+      },
+      {
+        label: asI18n('Emails'),
+        href: '/emails',
+        icon: Mail,
+        matchPrefix: '/emails',
+      },
+    ],
+  },
+  {
+    title: asI18n('Config'),
+    items: [
+      {
+        label: asI18n('Secrets'),
+        href: '/secrets',
+        icon: KeyRound,
+        matchPrefix: '/secrets',
+      },
+      {
+        label: asI18n('Environment Variables'),
+        href: '/variables',
+        icon: Variable,
+        matchPrefix: '/variables',
+      },
+      {
+        label: asI18n('Addons'),
+        href: '/addons',
+        icon: Package,
+        matchPrefix: '/addons',
+      },
+    ],
+  },
+  {
+    title: asI18n('Users'),
+    items: [
+      {
+        label: asI18n('OAuth'),
+        href: '/users',
+        icon: Users,
+        matchPrefix: '/users',
+      },
+      {
+        label: asI18n('Credentials'),
+        href: '/credentials',
+        icon: KeyRound,
+        matchPrefix: '/credentials',
+      },
+    ],
+  },
+  {
+    title: asI18n(''),
+    items: [
+      {
+        label: asI18n('Changes'),
+        href: '/changes',
+        icon: GitCompare,
+        matchPrefix: '/changes',
+      },
+    ],
+  },
+]
 
 export interface SidebarBranding {
   logo: React.ReactNode
@@ -148,14 +214,12 @@ export const SIDEBAR_COLLAPSED_WIDTH = COLLAPSED_WIDTH
 export const SIDEBAR_EXPANDED_WIDTH = EXPANDED_WIDTH
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  sections: sectionsProp,
+  sections = DEFAULT_NAV_SECTIONS,
   branding = DEFAULT_BRANDING,
   footer,
 }) => {
   const Link = useLink()
-  useLocale()
-  const defaultSections = useDefaultNavSections()
-  const sections = sectionsProp ?? defaultSections
+  const { t } = useI18n()
   const theme = useMantineTheme()
   const { pathname } = useLocation()
   const { refresh, loading: metaLoading } = usePikkuMeta()
@@ -164,9 +228,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     defaultValue: false,
   })
   const { colorScheme, toggleColorScheme } = useMantineColorScheme()
-  const auth = useOptionalAuth()
-  const canImpersonate = !!auth?.isAdmin
-  const [impersonateOpen, setImpersonateOpen] = useState(false)
 
   const sidebarWidth = collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH
 
@@ -224,7 +285,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </Link>
         </Tooltip>
         {!collapsed && (
-          <Tooltip label={m.sidebar_search()}>
+          <Tooltip label={t('sidebar.search')}>
             <ActionIcon
               variant="subtle"
               size="sm"
@@ -319,32 +380,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <Box className={css.noShrink}>
         <Divider mx="sm" />
         <Stack gap={2} px={6} py={4}>
-          {canImpersonate && (
-            <Tooltip
-              label={m.impersonate_button()}
-              position="right"
-              disabled={!collapsed}
-            >
-              <UnstyledButton
-                onClick={() => setImpersonateOpen(true)}
-                px={collapsed ? 0 : 10}
-                py={8}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: collapsed ? 'center' : 'flex-start',
-                  gap: 10,
-                  borderRadius: 6,
-                  color: 'var(--mantine-color-dimmed)',
-                }}
-              >
-                <UserCog size={18} />
-                {!collapsed && <Text size="sm">{m.impersonate_button()}</Text>}
-              </UnstyledButton>
-            </Tooltip>
-          )}
           <Tooltip
-            label={m.sidebar_refresh_metadata()}
+            label={t('sidebar.refreshMetadata')}
             position="right"
             disabled={!collapsed}
           >
@@ -371,11 +408,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     : undefined
                 }
               />
-              {!collapsed && <Text size="sm">{m.sidebar_refresh()}</Text>}
+              {!collapsed && <Text size="sm">{t('sidebar.refresh')}</Text>}
             </UnstyledButton>
           </Tooltip>
           <Tooltip
-            label={colorScheme === 'dark' ? m.sidebar_switch_to_light() : m.sidebar_switch_to_dark()}
+            label={colorScheme === 'dark' ? t('sidebar.switchToLight') : t('sidebar.switchToDark')}
             position="right"
           >
             <UnstyledButton
@@ -392,11 +429,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }}
             >
               {colorScheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-              {!collapsed && <Text size="sm">{colorScheme === 'dark' ? m.sidebar_light_mode() : m.sidebar_dark_mode()}</Text>}
+              {!collapsed && <Text size="sm">{colorScheme === 'dark' ? t('sidebar.lightMode') : t('sidebar.darkMode')}</Text>}
             </UnstyledButton>
           </Tooltip>
           <Tooltip
-            label={collapsed ? m.sidebar_expand() : m.sidebar_collapse()}
+            label={collapsed ? t('sidebar.expand') : t('sidebar.collapse')}
             position="right"
             disabled={!collapsed}
           >
@@ -418,18 +455,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               ) : (
                 <PanelLeftClose size={18} />
               )}
-              {!collapsed && <Text size="sm">{m.sidebar_collapse()}</Text>}
+              {!collapsed && <Text size="sm">{t('sidebar.collapse')}</Text>}
             </UnstyledButton>
           </Tooltip>
         </Stack>
       </Box>
-
-      {canImpersonate && (
-        <ImpersonateDrawer
-          opened={impersonateOpen}
-          onClose={() => setImpersonateOpen(false)}
-        />
-      )}
     </Box>
   )
 }

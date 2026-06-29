@@ -13,8 +13,7 @@ import {
   ActionIcon,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { Search, ChevronDown, Check, ExternalLink } from 'lucide-react'
 import classes from '../ui/console.module.css'
 
@@ -49,7 +48,7 @@ export const DetailPageHeader: React.FC<DetailPageHeaderProps> = ({
   rightSection,
 }) => {
   const Link = useLink()
-  useLocale()
+  const { t } = useI18n()
   const [opened, setOpened] = useState(false)
   const [search, setSearch] = useState('')
 
@@ -97,7 +96,7 @@ export const DetailPageHeader: React.FC<DetailPageHeaderProps> = ({
       {currentItem && !items && (
         <>
           <Text size="md" c="dimmed">
-            {m.detail_header_separator()}
+            {t('detail_header.separator')}
           </Text>
           <Text size="md" fw={500}>
             {asI18n(currentItem)}
@@ -108,7 +107,7 @@ export const DetailPageHeader: React.FC<DetailPageHeaderProps> = ({
       {currentItem && items && onItemSelect && (
         <>
           <Text size="md" c="dimmed">
-            {m.detail_header_separator()}
+            {t('detail_header.separator')}
           </Text>
           <Popover
             opened={opened}
@@ -186,7 +185,7 @@ export const DetailPageHeader: React.FC<DetailPageHeaderProps> = ({
                   ))}
                   {filtered.length === 0 && (
                     <Text size="sm" c="dimmed" ta="center" py="md">
-                      {m.detail_header_no_results()}
+                      {t('detail_header.no_results')}
                     </Text>
                   )}
                 </Stack>

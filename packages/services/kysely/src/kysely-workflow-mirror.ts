@@ -79,7 +79,6 @@ export class KyselyWorkflowMirror implements WorkflowRunMirror {
       .addColumn('branch_taken', 'text')
       .addColumn('retries', 'integer')
       .addColumn('retry_delay', 'text')
-      .addColumn('from_step_name', 'text')
       .addColumn('created_at', 'timestamp', (col) =>
         col.defaultTo(sql`CURRENT_TIMESTAMP`).notNull()
       )
@@ -91,15 +90,6 @@ export class KyselyWorkflowMirror implements WorkflowRunMirror {
         'step_name',
       ])
       .execute()
-
-    // Additive: backfill the column on mirror tables created before from_step_name.
-    await this.db.schema
-      .alterTable('workflow_step')
-      .addColumn('from_step_name', 'text')
-      .execute()
-      .catch(() => {
-        // Column already exists (fresh tables include it above) — nothing to do.
-      })
 
     await this.db.schema
       .createTable('workflow_step_history')
@@ -212,7 +202,6 @@ export class KyselyWorkflowMirror implements WorkflowRunMirror {
         status: step.status,
         retries: step.retries ?? null,
         retryDelay: step.retryDelay?.toString() ?? null,
-        fromStepName: step.fromStepName ?? null,
         createdAt: now,
         updatedAt: now,
       })

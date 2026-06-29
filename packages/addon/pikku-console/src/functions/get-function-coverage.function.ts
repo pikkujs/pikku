@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { pikkuSessionlessFunc } from '#pikku'
-import { functionCoveragePath } from '../lib/function-tests-paths.js'
 
 export type CoverageStatus = 'covered' | 'partial' | 'uncovered' | 'unknown'
 
@@ -40,7 +40,13 @@ export const getFunctionCoverage = pikkuSessionlessFunc<
   auth: false,
   func: async ({ metaService }) => {
     if (!metaService?.basePath) return null
-    const coveragePath = functionCoveragePath(metaService.basePath)
+    const coveragePath = join(
+      metaService.basePath,
+      '..',
+      'function-tests',
+      'coverage',
+      'function-coverage.json'
+    )
     try {
       const content = await readFile(coveragePath, 'utf-8')
       return JSON.parse(content) as FunctionCoverageReport

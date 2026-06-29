@@ -2,8 +2,7 @@ import React, { useState, useMemo } from 'react'
 import { Text } from '@pikku/mantine/core'
 import { Cpu } from 'lucide-react'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider } from '../context/PanelContext'
 import { usePanelContext } from '../context/PanelContext'
@@ -24,7 +23,7 @@ const McpTable: React.FC<{
   loading?: boolean
 }> = ({ items, loading }) => {
   const { openMCP } = usePanelContext()
-  useLocale()
+  const { t } = useI18n()
   const [filter, setFilter] = useState('all')
 
   const filtered = useMemo(() => {
@@ -74,13 +73,13 @@ const McpTable: React.FC<{
       onRowClick={(item) =>
         openMCP(`mcp::${item.method}::${item.wireId || item.name}`, item)
       }
-      searchPlaceholder={m.mcp_search_placeholder()}
+      searchPlaceholder={t('mcp.search_placeholder')}
       searchFilter={(item, q) =>
         item.name?.toLowerCase().includes(q) ||
         item.pikkuFuncId?.toLowerCase().includes(q) ||
         item.method?.toLowerCase().includes(q)
       }
-      emptyMessage={m.mcp_empty_message()}
+      emptyMessage={t('mcp.empty_message')}
       loading={loading}
     />
   )
@@ -88,7 +87,7 @@ const McpTable: React.FC<{
 
 export const McpPage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
-  useLocale()
+  const { t } = useI18n()
 
   const items = useMemo(() => {
     if (!meta.mcpMeta) return []
@@ -100,9 +99,9 @@ export const McpPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title={m.mcp_title()} description={m.mcp_description()} />}
+        header={<ListPageHeader title={t('mcp.title')} description={t('mcp.description')} />}
         hidePanel={!loading && items.length === 0}
-        emptyPanelMessage={m.mcp_select_entry()}
+        emptyPanelMessage={t('mcp.select_entry')}
       >
         <McpTable items={items} loading={loading} />
       </ResizablePanelLayout>

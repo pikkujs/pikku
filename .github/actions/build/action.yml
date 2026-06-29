@@ -82,10 +82,10 @@ runs:
       with:
         name: build-output
         path: |
-          packages/**/dist/**
-          packages/**/bin/**
-          templates/**/.pikku/**
-          templates/**/dist/**
+          packages/**/dist
+          packages/**/bin
+          templates/**/.pikku
+          templates/**/dist
         include-hidden-files: true
         retention-days: 1
 

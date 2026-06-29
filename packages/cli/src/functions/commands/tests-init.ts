@@ -93,34 +93,6 @@ registerCommonSteps({ Given, When, Then })
 `
 }
 
-function starterFeature(): string {
-  return `Feature: Example function test
-
-  Starter scenario created by \`pikku tests init\`. It uses only the built-in
-  pikku/cucumber steps (no custom step code) and passes out of the box, so the
-  Run-tests button and coverage report work immediately. Replace it with real
-  scenarios that call your RPCs — see the commented example at the bottom.
-
-  Scenario: the function-test harness is wired up
-    Given the data "example" is:
-      | hello | world |
-    Then the data "example" is not empty
-
-  # Real example — call one of your RPCs and assert the outcome. Uncomment and
-  # adapt (run \`pikku meta\` to list versioned RPC names and input schemas):
-  #
-  # Scenario: an anonymous user cannot reach a protected RPC
-  #   When an anonymous user calls "yourProtectedRpc"
-  #   Then the call fails with "Unauthorized"
-  #
-  # Scenario: a public RPC returns data
-  #   When an anonymous user calls "yourPublicRpc" with:
-  #     | someField | someValue |
-  #   Then the call succeeds
-  #   And the result has "id"
-`
-}
-
 function worldTs(): string {
   return `import { World, setWorldConstructor } from '@cucumber/cucumber'
 import { createFunctionWorld } from '@pikku/cucumber'
@@ -138,9 +110,7 @@ function servicesTs(
   configVar: string,
   servicesVar: string,
   repoRootRel: string,
-  hasDb: boolean,
-  migrationsRel: string,
-  seedRel: string
+  hasDb: boolean
 ): string {
   if (!hasDb) {
     return `import { createDbUtils, type StubTracker } from '@pikku/cucumber'
@@ -173,8 +143,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const repoRoot = (p: string) => resolve(__dirname, '${repoRootRel}', p)
 
 export const db = createDbUtils({
-  migrationsDir: repoRoot('${migrationsRel}'),
-  seedFile: repoRoot('${seedRel}'),
+  migrationsDir: repoRoot('db/migrations'),
+  seedFile: repoRoot('db/seed.sql'),
 })
 
 type StubKysely = ReturnType<typeof createNodeSqliteKysely<DB>>
@@ -282,31 +252,10 @@ export const pikkuTestsInit = pikkuSessionlessFunc<{ force?: boolean }, void>({
     const schemaImport = toJs(rel(schemaFile))
     const coercionImport = toJs(rel(coercionFile))
     const repoRootRel = relative(supportDir, config.rootDir)
-    // Engine-aware db layout: stages live under db/sqlite or db/postgres with a
-    // matching db/<engine>-seed.sql (see the deploy convention). Pick whichever
-    // engine the project actually ships migrations for.
-    const engine = existsSync(join(config.rootDir, 'db', 'sqlite'))
-      ? 'sqlite'
-      : existsSync(join(config.rootDir, 'db', 'postgres'))
-        ? 'postgres'
-        : null
-    // Only sqlite runs in the harness today (node:sqlite); postgres falls back
-    // to stubbed services until a pglite-backed harness lands.
-    const hasDb = engine === 'sqlite'
-    const migrationsRel = engine ? `db/${engine}` : ''
-    const seedRel = engine ? `db/${engine}-seed.sql` : ''
-    if (engine === 'postgres') {
-      logger.info(
-        'Note: Postgres function-test harness support is not wired yet (the harness runs on node:sqlite). Tracking in pikkujs/pikku#758 — the scaffold falls back to stubbed services.'
-      )
-    }
+    const hasDb = existsSync(join(config.rootDir, 'db', 'migrations'))
 
     const files: Array<[string, string]> = [
       [join(ftestDir, '.env.test'), envTest()],
-      // Empty lockfile so Yarn Berry treats tests/ as a standalone project
-      // rather than expecting it in the parent repo's workspaces (the harness
-      // is intentionally outside the workspace graph).
-      [join(ftestDir, 'yarn.lock'), ''],
       [join(ftestDir, 'package.json'), packageJson()],
       [join(ftestDir, 'tsconfig.json'), tsconfig()],
       [join(ftestDir, 'tests', 'cucumber.mjs'), cucumberMjs()],
@@ -322,12 +271,10 @@ export const pikkuTestsInit = pikkuSessionlessFunc<{ force?: boolean }, void>({
           pikkuConfigFactory.variable,
           singletonServicesFactory.variable,
           repoRootRel,
-          hasDb,
-          migrationsRel,
-          seedRel
+          hasDb
         ),
       ],
-      [join(ftestDir, 'tests', 'features', 'example.feature'), starterFeature()],
+      [join(ftestDir, 'tests', 'features', '.gitkeep'), ''],
     ]
 
     for (const [filePath, content] of files) {
@@ -338,9 +285,7 @@ export const pikkuTestsInit = pikkuSessionlessFunc<{ force?: boolean }, void>({
 
     logger.info('\nFunction test harness initialized.')
     logger.info('Next steps:')
-    logger.info('  1. Install deps in tests/ and run: yarn test')
-    logger.info(
-      '  2. Edit tests/tests/features/example.feature — add scenarios that call your RPCs'
-    )
+    logger.info('  1. Add your first .feature file under tests/features/')
+    logger.info('  2. Install @pikku/cucumber and run: yarn test')
   },
 })

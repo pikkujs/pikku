@@ -84,10 +84,6 @@ export enum ErrorCode {
 
   // Data classification errors
   PII_IN_OUTPUT = 'PKU910',
-
-  // Addon authoring errors
-  ADDON_WIRING_NOT_ALLOWED = 'PKU920',
-  ADDON_CONTRACT_HANDLERS_NOT_ALLOWED = 'PKU921',
 }
 
 /**

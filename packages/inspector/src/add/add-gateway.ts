@@ -43,9 +43,7 @@ export const addGateway: AddWiring = (
 
   const nameValue = getPropertyValue(obj, 'name') as string | null
   const typeValue = getPropertyValue(obj, 'type') as GatewayTransportType | null
-  const routeValue = getPropertyValue(obj, 'route') as string | null
-  const platformValue = getPropertyValue(obj, 'platform') as string | null
-  const authValue = getPropertyValue(obj, 'auth')
+  const routeValue = getPropertyValue(obj, 'route') as string | undefined
   const { disabled, tags, summary, description, errors } =
     getCommonWireMetaData(obj, 'Gateway', nameValue, logger, checker)
 
@@ -96,9 +94,7 @@ export const addGateway: AddWiring = (
     ...(packageName && { packageName }),
     name: nameValue,
     type: typeValue,
-    ...(routeValue && { route: routeValue }),
-    ...(platformValue && { platform: platformValue }),
-    ...(typeof authValue === 'boolean' && { auth: authValue }),
+    route: routeValue,
     gateway: true,
     summary,
     description,

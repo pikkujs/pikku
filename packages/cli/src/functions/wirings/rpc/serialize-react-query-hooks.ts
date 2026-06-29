@@ -97,15 +97,15 @@ type InfiniteOpts<Name extends PaginatedKeys> = Omit<
 
 export const usePikkuInfiniteQuery = <Name extends PaginatedKeys>(
   name: Name,
-  data: Omit<FlattenedRPCMap[Name]['input'], 'cursor'>,
+  data: Omit<FlattenedRPCMap[Name]['input'], 'nextCursor'>,
   options?: InfiniteOpts<Name>
 ) => {
   const rpc = usePikkuRPC<{ invoke: RPCInvoke }>()
   return useInfiniteQuery({
     queryKey: [name, data] as const,
-    queryFn: ({ pageParam }: { pageParam: string | undefined }) => rpc.invoke(name, { ...data, cursor: pageParam } as unknown as FlattenedRPCMap[Name]['input']),
+    queryFn: ({ pageParam }: { pageParam: string | undefined }) => rpc.invoke(name, { ...data, nextCursor: pageParam } as unknown as FlattenedRPCMap[Name]['input']),
     initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage: FlattenedRPCMap[Name]['output']) => (lastPage as { nextCursor?: string | null }).nextCursor ?? undefined,
+    getNextPageParam: (lastPage: FlattenedRPCMap[Name]['output']) => (lastPage as { nextCursor?: string }).nextCursor ?? undefined,
     ...options,
   })
 }

@@ -16,20 +16,6 @@ import {
   getPropertyValue,
 } from '../utils/get-property-value.js'
 import { extractDSLWorkflow } from '../utils/workflow/dsl/extract-dsl-workflow.js'
-import { getSourceText } from '../utils/workflow/dsl/patterns.js'
-
-/**
- * Extract a workflow step's display name without letting a non-static name
- * (e.g. a function call) abort the scan. The step name is cosmetic, so a
- * resolution failure must never prevent the RPC from being registered.
- */
-function extractStepName(node: ts.Node, checker: ts.TypeChecker): string {
-  try {
-    return extractStringLiteral(node, checker)
-  } catch {
-    return getSourceText(node)
-  }
-}
 
 /**
  * Recursively check if any step has inline type (non-serializable)
@@ -113,7 +99,7 @@ function getWorkflowInvocations(
           const optionsArg =
             args.length >= 4 ? args[args.length - 1] : undefined
 
-          const stepName = extractStepName(stepNameArg, checker)
+          const stepName = extractStringLiteral(stepNameArg, checker)
           const description =
             extractDescription(optionsArg, checker) ?? undefined
 
@@ -140,7 +126,7 @@ function getWorkflowInvocations(
           const stepNameArg = args[0]
           const durationArg = args[1]
 
-          const stepName = extractStepName(stepNameArg, checker)
+          const stepName = extractStringLiteral(stepNameArg, checker)
           const duration = extractDuration(durationArg, checker)
 
           steps.push({

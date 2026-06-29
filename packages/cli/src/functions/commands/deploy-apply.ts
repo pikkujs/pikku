@@ -1,6 +1,5 @@
 import { basename, join, relative } from 'node:path'
 import { readFile } from 'node:fs/promises'
-import { existsSync, readFileSync } from 'node:fs'
 
 import { pikkuSessionlessFunc } from '#pikku'
 import type {
@@ -57,38 +56,6 @@ export function getEntryContext(
     ? `Partial<${singletonServicesType.type}>`
     : 'Record<string, unknown>'
 
-  // MCP: when the unit's .pikku has a non-empty mcp.gen.json, import it and pass
-  // it to the generated server so PikkuNodeHTTPServer mounts /mcp. Without this
-  // the deployed bundle never serves MCP even though the dev server does.
-  let mcpImport = ''
-  let mcpServerOption = ''
-  const mcpJsonAbs = join(pikkuDir, 'mcp', 'mcp.gen.json')
-  if (existsSync(mcpJsonAbs)) {
-    let hasMcp = false
-    try {
-      const parsed = JSON.parse(readFileSync(mcpJsonAbs, 'utf-8')) as {
-        tools?: unknown[]
-        resources?: unknown[]
-        prompts?: unknown[]
-      }
-      hasMcp =
-        (parsed.tools?.length ?? 0) +
-          (parsed.resources?.length ?? 0) +
-          (parsed.prompts?.length ?? 0) >
-        0
-    } catch (err) {
-      console.warn(
-        `[pikku] could not parse ${mcpJsonAbs} — skipping MCP mount: ${err instanceof Error ? err.message : String(err)}`
-      )
-    }
-    if (hasMcp) {
-      const rel = relative(unitDir, mcpJsonAbs).replace(/\\/g, '/')
-      const relImport = rel.startsWith('.') ? rel : `./${rel}`
-      mcpImport = `import mcpJson from '${relImport}' with { type: 'json' }`
-      mcpServerOption = 'mcpJson, '
-    }
-  }
-
   return {
     unit,
     unitDir,
@@ -99,8 +66,6 @@ export function getEntryContext(
     servicesVar: singletonServicesFactory.variable,
     singletonServicesImport,
     servicesType,
-    mcpImport,
-    mcpServerOption,
   }
 }
 
@@ -136,8 +101,7 @@ export async function resolveProvider(
   config?: {
     deploy?: { providers: Record<string, string>; defaultProvider?: string }
   },
-  providerName?: string,
-  options?: { runtime?: string }
+  providerName?: string
 ): Promise<ProviderAdapter> {
   const name = providerName ?? config?.deploy?.defaultProvider ?? 'cloudflare'
 
@@ -161,10 +125,10 @@ export async function resolveProvider(
   try {
     const mod = await import(packageName)
     if (typeof mod.createAdapter === 'function') {
-      return mod.createAdapter(options)
+      return mod.createAdapter()
     }
     if (typeof mod[adapterExportName] === 'function') {
-      return new mod[adapterExportName](options)
+      return new mod[adapterExportName]()
     }
     throw new Error(
       `Deploy provider '${packageName}' does not export createAdapter() or ${adapterExportName}`
@@ -264,7 +228,6 @@ export const deployApply = pikkuSessionlessFunc<
   {
     fromPlan?: boolean
     provider?: string
-    runtime?: string
     resultFile?: string
     debugArtifacts?: boolean
   },
@@ -272,9 +235,7 @@ export const deployApply = pikkuSessionlessFunc<
 >({
   func: async ({ logger, config, getInspectorState }, data) => {
     const projectDir = config.rootDir
-    const provider = await resolveProvider(config, data?.provider, {
-      runtime: data?.runtime,
-    })
+    const provider = await resolveProvider(config, data?.provider)
     const fromPlan = data?.fromPlan ?? false
     const resultFile = data?.resultFile
 
@@ -311,7 +272,6 @@ export const deployApply = pikkuSessionlessFunc<
       provider,
       inspectorState,
       serverlessIncompatible: config.deploy?.serverlessIncompatible,
-      defaultTarget: config.deploy?.defaultTarget,
       getEntryContext,
       outDir: config.outDir,
       debugArtifacts: data?.debugArtifacts ?? false,

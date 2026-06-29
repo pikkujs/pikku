@@ -19,8 +19,6 @@ import { resolveIdentifier } from '../utils/resolve-identifier.js'
 import { resolveAddonName } from '../utils/resolve-addon-package.js'
 import { validateAuthSessionless } from '../utils/validate-auth-sessionless.js'
 import { extractServicesFromFunction } from '../utils/extract-services.js'
-import { getExportedVariableName } from '../utils/get-exported-variable-name.js'
-import { resolveRefContract } from '../utils/resolve-ref-contract.js'
 
 // Track if we've warned about missing Config type to avoid duplicate warnings
 const configTypeWarningShown = new Set<string>()
@@ -36,25 +34,6 @@ export const addCLI: AddWiring = (
   options
 ) => {
   if (!ts.isCallExpression(node)) return
-  if (
-    ts.isIdentifier(node.expression) &&
-    node.expression.text === 'defineCLICommands'
-  ) {
-    const exportName = getExportedVariableName(node, options.sourceFile)
-    const [firstArg] = node.arguments
-    if (exportName && firstArg && ts.isObjectLiteralExpression(firstArg)) {
-      inspectorState.exportedContracts.cli[exportName] = processCommands(
-        logger,
-        firstArg,
-        node.getSourceFile(),
-        typeChecker,
-        exportName,
-        inspectorState,
-        options
-      )
-    }
-    return
-  }
   // Check if this is a wireCLI call
   if (!node || !node.expression) {
     return
@@ -235,15 +214,6 @@ function processCommands(
           programTags
         )
         Object.assign(commands, spreadCommands)
-      } else {
-        const refCommands = resolveRefContract(
-          prop.expression,
-          'refCLI',
-          inspectorState.exportedContracts.addonCli
-        )
-        if (refCommands) {
-          Object.assign(commands, refCommands.contract)
-        }
       }
       continue
     }

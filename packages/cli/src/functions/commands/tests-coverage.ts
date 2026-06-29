@@ -220,12 +220,6 @@ export const pikkuTestsCoverage = pikkuSessionlessFunc<
           '--require',
           'tests/tests/support/**/*.ts',
           'tests/tests/features/**/*.feature',
-          '--format',
-          'progress',
-          // Persist the HTML report so the console can parse scenarios back out
-          // of it (readAllMeta attaches them per function).
-          '--format',
-          'html:tests/tests/reports/cucumber-report.html',
         ],
         { cwd: functionsDir, stdio: 'inherit', env: spawnEnv }
       )

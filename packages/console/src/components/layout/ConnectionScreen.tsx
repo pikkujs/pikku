@@ -12,9 +12,8 @@ import {
   Alert,
 } from '@pikku/mantine/core'
 import { AlertTriangle } from 'lucide-react'
-import { getServerUrl, setServerUrl } from '../../context/serverUrl'
-import { m, mKey } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { getServerUrl, setServerUrl } from '../../context/PikkuRpcProvider'
+import { useI18n } from '@pikku/react/i18n'
 import { asI18n } from '@pikku/react'
 
 function getErrorGuidance(
@@ -62,7 +61,7 @@ function getErrorGuidance(
 }
 
 export const ConnectionScreen: React.FC<{ error: string }> = ({ error }) => {
-  useLocale()
+  const { t } = useI18n()
   const [url, setUrl] = useState(getServerUrl)
   const guidance = getErrorGuidance(error, url)
 
@@ -85,7 +84,7 @@ export const ConnectionScreen: React.FC<{ error: string }> = ({ error }) => {
               />
             </Center>
             <Text size="xl" fw={500} ta="center" mt="xs">
-              {m.connection_title()}
+              {t('connection.title')}
             </Text>
           </Box>
 
@@ -93,21 +92,21 @@ export const ConnectionScreen: React.FC<{ error: string }> = ({ error }) => {
             icon={<AlertTriangle size={16} />}
             color="red"
             variant="light"
-            title={mKey(guidance.titleKey)}
+            title={t(guidance.titleKey)}
             w="100%"
           >
             <Text size="sm">{asI18n(guidance.hint)}</Text>
           </Alert>
 
           <TextInput
-            label={m.connection_server_url_label()}
+            label={t('connection.server_url_label')}
             value={url}
             onChange={(e) => setUrl(e.currentTarget.value)}
             w="100%"
           />
 
           <Button fullWidth variant="default" onClick={handleReconnect}>
-            {m.connection_reconnect()}
+            {t('connection.reconnect')}
           </Button>
         </Stack>
       </Paper>

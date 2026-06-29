@@ -1,8 +1,7 @@
 import React from 'react'
 import { Button, Tooltip } from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 
 interface PikkuToggleProps {
   checked: boolean
@@ -15,8 +14,8 @@ export const PikkuToggle: React.FC<PikkuToggleProps> = ({
   onChange,
   tooltip,
 }) => {
-  useLocale()
-  const label = tooltip ?? m.common_show_pikku_internals()
+  const { t } = useI18n()
+  const label = tooltip ?? t('common.show_pikku_internals')
   return (
     <Tooltip label={label} withArrow>
       <Button

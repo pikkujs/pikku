@@ -135,24 +135,15 @@ const createWireServices = pikkuWireServices(
 
 ### Using Services in Functions
 
-**Every service must be declared in `SingletonServices` (or `Services`) in `application-types.d.ts`.** Never access a service via a body-level cast (`services as typeof services & { myService: MyService }`) — that means the type is missing. Add the import and the field to `SingletonServices`, then destructure inline in the function signature. The inspector emits `SERVICES_NOT_DESTRUCTURED` and tree-shaking breaks when the first param is a plain identifier rather than an object pattern.
+Functions destructure services from the first parameter:
 
 ```typescript
-// ✅ Correct — inline destructure, no cast
 const getUser = pikkuFunc({
   title: 'Get User',
   func: async ({ db, logger, jwt }, { userId }) => {
     logger.info('Fetching user', { userId })
     const user = await db.getUser(userId)
     return { user }
-  },
-})
-
-// ❌ Wrong — named param + body cast; inspector warns + tree-shaking breaks
-const getUser = pikkuFunc({
-  func: async (services, { userId }) => {
-    const { db } = services as typeof services & { db: DbService }
-    // ...
   },
 })
 ```

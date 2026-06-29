@@ -237,32 +237,4 @@ describe('serializeAuthGen', () => {
       assert.doesNotMatch(mw, /createAuthHandler/)
     })
   })
-
-  describe('user-registered global betterAuthSession → CLI steps aside', () => {
-    const genSkip = (providers: string[], d: AuthDefinition = def()) =>
-      serializeAuthGen(d, providers, AUTH_FILE, TYPES_FILE, {}, true)
-
-    test('drops the generated stateful session middleware (no double-register)', () => {
-      const out = genSkip(['github'])
-      assert.doesNotMatch(out.wiring, /addHTTPMiddleware/)
-      assert.doesNotMatch(out.wiring, /betterAuthSession/)
-    })
-
-    test('still keeps the handler, routes and createAuthHandler import', () => {
-      const out = genSkip(['github'])
-      assert.match(
-        out.wiring,
-        /import { createAuthHandler } from '@pikku\/better-auth'/
-      )
-      assert.match(out.wiring, /wireHTTPRoutes\(/)
-      assert.match(out.wiring, /getAuthCatchAll:/)
-    })
-
-    test('by default (no user registration) the middleware is still generated', () => {
-      assert.match(
-        genWiring(['github']),
-        /addHTTPMiddleware\('\*', \[betterAuthSession\(\)\]\)/
-      )
-    })
-  })
 })

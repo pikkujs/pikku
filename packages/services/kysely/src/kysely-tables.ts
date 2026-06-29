@@ -51,7 +51,6 @@ export interface WorkflowStepTable {
   branchTaken: string | null
   retries: number | null
   retryDelay: string | null
-  fromStepName: string | null
   createdAt: Generated<Date>
   updatedAt: Generated<Date>
 }

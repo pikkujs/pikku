@@ -35,17 +35,3 @@ Feature: Workflow Console UI
     Then the workflow should be cancelled
     When I open the workflow "dslCancellationWorkflow" in the console
     Then the run status should show "Cancelled"
-
-  Scenario: Timeline scrubbing time-travels the canvas
-    When I run the "dslSequentialWorkflow" workflow with:
-      | value | name         |
-      | 5     | UITimeTravel |
-    Then the workflow should complete successfully
-    When I open the workflow "dslSequentialWorkflow" in the console
-    Then the timeline drawer should be visible
-    And the canvas node "sendNotification" should be "green"
-    When I scrub the timeline to step "Double value"
-    Then the canvas node "doubleValue" should be "green"
-    And the canvas node "sendNotification" should not be "green"
-    When I follow the live timeline
-    Then the canvas node "sendNotification" should be "green"

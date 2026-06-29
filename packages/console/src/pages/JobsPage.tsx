@@ -8,8 +8,7 @@ import { ListPageHeader } from '../components/layout/PageLayout'
 import { SchedulersTab } from '../components/tabs/SchedulersTab'
 import { QueuesTab } from '../components/tabs/QueuesTab'
 import { TriggersTab } from '../components/tabs/TriggersTab'
-import { m, mKey } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 
 const TABS = [
   { value: 'schedulers', label: 'Schedulers' },
@@ -34,7 +33,7 @@ export const JobsPage: React.FC<JobsPageProps> = ({
   triggersHero,
   schedulersHero,
 }) => {
-  useLocale()
+  const { t } = useI18n()
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
   const tab = searchParams.get('tab') || 'schedulers'
@@ -60,13 +59,13 @@ export const JobsPage: React.FC<JobsPageProps> = ({
       <ResizablePanelLayout
         header={
           <ListPageHeader
-            title={m.jobs_title()}
-            description={m.jobs_description()}
+            title={t('jobs.title')}
+            description={t('jobs.description')}
             docsHref="https://pikku.dev/docs/wiring/scheduled-tasks"
             filters={
               <Group gap="sm" wrap="nowrap">
                 <TextInput
-                  placeholder={mKey(SEARCH_PLACEHOLDER_KEY[tab])}
+                  placeholder={t(SEARCH_PLACEHOLDER_KEY[tab])}
                   leftSection={<Search size={14} />}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -83,7 +82,7 @@ export const JobsPage: React.FC<JobsPageProps> = ({
             }
           />
         }
-        emptyPanelMessage={m.common_select_item()}
+        emptyPanelMessage={t('common.select_item')}
       >
         {renderTab()}
       </ResizablePanelLayout>

@@ -156,8 +156,7 @@ export class PikkuWorkflowDoService<
     stepName: string,
     rpcName: string | null,
     data: any,
-    stepOptions?: WorkflowStepOptions,
-    fromStepName?: string
+    stepOptions?: WorkflowStepOptions
   ): Promise<StepState> {
     this.assertOwn(runId)
     const stepId = crypto.randomUUID()
@@ -171,7 +170,6 @@ export class PikkuWorkflowDoService<
       attemptCount: 1,
       retries: stepOptions?.retries,
       retryDelay: stepOptions?.retryDelay,
-      fromStepName,
       createdAt: now,
       updatedAt: now,
     }
@@ -366,30 +364,6 @@ export class PikkuWorkflowDoService<
       if (!existing) result.push(id)
     }
     return result
-  }
-
-  async getStepInstances(runId: string): Promise<
-    Array<{ stepName: string; status: StepStatus; fromStepName?: string }>
-  > {
-    this.assertOwn(runId)
-    const order = (await this.storage.get<string[]>(KEY_STEP_ORDER)) ?? []
-    if (order.length === 0) return []
-    const records = await this.storage.get<DoStepRecord>(order.map(stepKey))
-    const instances: Array<{
-      stepName: string
-      status: StepStatus
-      fromStepName?: string
-    }> = []
-    for (const id of order) {
-      const s = records.get(stepKey(id))
-      if (!s) continue
-      instances.push({
-        stepName: s.stepName,
-        status: s.status,
-        fromStepName: s.fromStepName,
-      })
-    }
-    return instances
   }
 
   async getNodeResults(
@@ -682,7 +656,6 @@ function toStepState(s: DoStepRecord): StepState & { stepName: string } {
     attemptCount: s.attemptCount,
     retries: s.retries,
     retryDelay: s.retryDelay,
-    fromStepName: s.fromStepName,
     childRunId: s.childRunId,
     createdAt: new Date(s.createdAt),
     updatedAt: new Date(s.updatedAt),

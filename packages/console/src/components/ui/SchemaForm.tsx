@@ -4,8 +4,7 @@ import validator from '@rjsf/validator-ajv8'
 import type { RJSFSchema, UiSchema } from '@rjsf/utils'
 import { Button, Group } from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { Play } from 'lucide-react'
 
 const buildDefaults = (schema: RJSFSchema): any => {
@@ -52,8 +51,8 @@ export const SchemaForm: React.FC<SchemaFormProps> = ({
   readOnly,
   children,
 }) => {
-  useLocale()
-  const resolvedSubmitLabel = submitLabel ?? m.common_run()
+  const { t } = useI18n()
+  const resolvedSubmitLabel = submitLabel ?? t('common.run')
   const [formData, setFormData] = useState<any>(() => {
     const defaults = buildDefaults(schema)
     return { ...defaults, ...initialData }

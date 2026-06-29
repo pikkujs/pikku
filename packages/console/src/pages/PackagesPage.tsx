@@ -8,22 +8,15 @@ import {
   Badge,
   TextInput,
   SegmentedControl,
-  Box,
-  Center,
-  Loader,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { m, mKey } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { Package, Globe, Search } from 'lucide-react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
-import { useConsoleEditable } from '../context/ConsoleEditableContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { TableListPage } from '../components/layout/TableListPage'
-import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
-import { CommunityGallery } from '../components/packages/CommunityGallery'
 import { PanelProvider } from '../context/PanelContext'
 
 export interface PackageMeta {
@@ -74,6 +67,52 @@ const PackageIcon: React.FC<{ icon?: string; name: string }> = ({
   )
 }
 
+const COMMUNITY_COLUMNS = (installedNames: Set<string>, t: (key: string) => any) => [
+  {
+    key: 'package',
+    header: 'PACKAGE',
+    render: (item: PackageMeta) => (
+      <Group gap="sm" wrap="nowrap">
+        <PackageIcon icon={item.icon} name={item.displayName} />
+        <div>
+          <Group gap="xs" wrap="nowrap">
+            <Text fw={500} size="sm">
+              {asI18n(item.displayName || item.name)}
+            </Text>
+            <Badge size="sm" variant="light" color="gray">
+              {asI18n(`v${item.version}`)}
+            </Badge>
+            {installedNames.has(item.name) && (
+              <Badge size="sm" variant="light" color="green">
+                {t('packages.installed')}
+              </Badge>
+            )}
+          </Group>
+          {item.description && (
+            <Text size="sm" c="dimmed" truncate style={{ maxWidth: 400 }}>
+              {asI18n(item.description)}
+            </Text>
+          )}
+        </div>
+      </Group>
+    ),
+  },
+  {
+    key: 'functions',
+    header: 'FUNCTIONS',
+    render: (item: PackageMeta) => (
+      <Text size="sm">{asI18n(String(Object.keys(item.functions ?? {}).length))}</Text>
+    ),
+  },
+  {
+    key: 'agents',
+    header: 'AGENTS',
+    render: (item: PackageMeta) => (
+      <Text size="sm">{asI18n(String(Object.keys(item.agents ?? {}).length))}</Text>
+    ),
+  },
+]
+
 const INSTALLED_COLUMNS = () => [
   {
     key: 'addon',
@@ -113,9 +152,7 @@ const INSTALLED_COLUMNS = () => [
   {
     key: 'agents',
     header: 'AGENTS',
-    render: (item: InstalledAddon) => (
-      <Text size="sm">{asI18n(String(item.agentCount))}</Text>
-    ),
+    render: (item: InstalledAddon) => <Text size="sm">{asI18n(String(item.agentCount))}</Text>,
   },
 ]
 
@@ -125,7 +162,7 @@ const InstalledList: React.FC<{
   emptyHero?: React.ReactNode
 }> = ({ searchQuery, onSelect, emptyHero }) => {
   const rpc = usePikkuRPC()
-  useLocale()
+  const { t } = useI18n()
 
   const { data, isLoading } = useQuery({
     queryKey: ['installed-addons'],
@@ -158,34 +195,19 @@ const InstalledList: React.FC<{
       columns={columns}
       getKey={(item) => item.namespace}
       onRowClick={(item) => onSelect(item.packageName, 'installed')}
-      emptyMessage={m.packages_installed_empty_message()}
+      emptyMessage={t('packages.installed_empty_message')}
       loading={isLoading}
       emptyHero={emptyHero}
     />
   )
 }
 
-const deriveNamespace = (packageName: string) => {
-  const base = packageName
-    .replace('@pikku/addon-', '')
-    .replace(/^@[^/]+\//, '')
-    .toLowerCase()
-  const namespace = base.replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '')
-  if (!namespace) {
-    throw new Error(
-      `Unable to derive namespace from package name: ${packageName}`
-    )
-  }
-  return namespace
-}
-
 const CommunityList: React.FC<{
   searchQuery: string
-}> = ({ searchQuery }) => {
+  onSelect: (id: string, source: 'installed' | 'community') => void
+}> = ({ searchQuery, onSelect }) => {
   const rpc = usePikkuRPC()
-  useLocale()
-  const editable = useConsoleEditable()
-  const queryClient = useQueryClient()
+  const { t } = useI18n()
 
   const { data, isLoading } = useQuery({
     queryKey: ['addons'],
@@ -206,57 +228,39 @@ const CommunityList: React.FC<{
     staleTime: 60 * 1000,
   })
 
-  const installMutation = useMutation({
-    mutationFn: async (addon: PackageMeta) =>
-      rpc.invoke('console:installAddon', {
-        packageName: addon.name,
-        namespace: deriveNamespace(addon.name),
-        version: addon.version,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['installed-addons'] })
-      queryClient.invalidateQueries({ queryKey: ['allMeta'] })
-    },
-  })
-
   const installedNames = useMemo(
     () => new Set((installedAddons ?? []).map((a) => a.packageName)),
     [installedAddons]
   )
 
-  if (isLoading) {
-    return (
-      <Box style={{ flex: 1, minHeight: 0 }}>
-        <Center h="100%">
-          <Loader />
-        </Center>
-      </Box>
+  const filtered = useMemo(() => {
+    if (!searchQuery) return data ?? []
+    const q = searchQuery.toLowerCase()
+    return (data ?? []).filter(
+      (item) =>
+        item.displayName?.toLowerCase().includes(q) ||
+        item.name?.toLowerCase().includes(q) ||
+        item.description?.toLowerCase().includes(q)
     )
-  }
+  }, [data, searchQuery])
 
-  if (!data || data.length === 0) {
-    return (
-      <EmptyStatePlaceholder
-        icon={Package}
-        title={m.packages_registry_unavailable_title()}
-        description={m.packages_registry_unavailable_description()}
-        docsHref="https://pikku.dev/docs/external-packages"
-      />
-    )
-  }
+  const columns = useMemo(
+    () => COMMUNITY_COLUMNS(installedNames, t),
+    [installedNames, t]
+  )
 
   return (
-    <CommunityGallery
-      addons={data}
-      searchQuery={searchQuery}
-      installedNames={installedNames}
-      editable={editable}
-      installingName={
-        installMutation.isPending
-          ? (installMutation.variables?.name ?? null)
-          : null
-      }
-      onInstall={(addon) => installMutation.mutate(addon)}
+    <TableListPage
+      title="Community Addons"
+      icon={Package}
+      docsHref="https://pikku.dev/docs/external-packages"
+      data={filtered}
+      columns={columns}
+      getKey={(item) => item.id}
+      onRowClick={(item) => onSelect(item.id, 'community')}
+      emptyTitle={t('packages.registry_unavailable_title')}
+      emptyDescription={t('packages.registry_unavailable_description')}
+      loading={isLoading}
     />
   )
 }
@@ -313,16 +317,12 @@ const API_COLUMNS = [
   {
     key: 'provider',
     header: 'PROVIDER',
-    render: (item: OpenApiEntry) => (
-      <Text size="sm">{asI18n(item.provider)}</Text>
-    ),
+    render: (item: OpenApiEntry) => <Text size="sm">{asI18n(item.provider)}</Text>,
   },
   {
     key: 'operations',
     header: 'OPS',
-    render: (item: any) => (
-      <Text size="sm">{asI18n(String(item.totalOperations ?? '-'))}</Text>
-    ),
+    render: (item: any) => <Text size="sm">{asI18n(String(item.totalOperations ?? '-'))}</Text>,
   },
 ]
 
@@ -331,7 +331,7 @@ const ApisList: React.FC<{
   onSelect: (id: string, source: 'installed' | 'community' | 'api') => void
 }> = ({ searchQuery, onSelect }) => {
   const rpc = usePikkuRPC()
-  useLocale()
+  const { t } = useI18n()
 
   const { data, isLoading } = useQuery({
     queryKey: ['openapis'],
@@ -367,8 +367,8 @@ const ApisList: React.FC<{
       columns={API_COLUMNS}
       getKey={(item) => item.name}
       onRowClick={(item) => onSelect(item.name, 'api' as any)}
-      emptyTitle={m.packages_no_apis_title()}
-      emptyDescription={m.packages_no_apis_description()}
+      emptyTitle={t('packages.no_apis_title')}
+      emptyDescription={t('packages.no_apis_description')}
       loading={isLoading}
     />
   )
@@ -392,7 +392,7 @@ const PackagesList: React.FC<{
 }> = ({ onSelect, emptyHero }) => {
   const [tab, setTab] = useState<string>('installed')
   const [searchQuery, setSearchQuery] = useState('')
-  useLocale()
+  const { t } = useI18n()
 
   const handleTabChange = (value: string) => {
     setSearchQuery('')
@@ -404,13 +404,13 @@ const PackagesList: React.FC<{
       hidePanel
       header={
         <ListPageHeader
-          title={m.packages_title()}
-          description={m.packages_description()}
+          title={t('packages.title')}
+          description={t('packages.description')}
           docsHref="https://pikku.dev/docs/external-packages"
           filters={
             <Group gap="sm" wrap="nowrap">
               <TextInput
-                placeholder={mKey(SEARCH_PLACEHOLDER[tab])}
+                placeholder={t(SEARCH_PLACEHOLDER[tab])}
                 leftSection={<Search size={14} />}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -429,23 +429,17 @@ const PackagesList: React.FC<{
       }
     >
       {tab === 'installed' ? (
-        <InstalledList
-          searchQuery={searchQuery}
-          onSelect={onSelect}
-          emptyHero={emptyHero}
-        />
+        <InstalledList searchQuery={searchQuery} onSelect={onSelect} emptyHero={emptyHero} />
       ) : tab === 'apis' ? (
         <ApisList searchQuery={searchQuery} onSelect={onSelect} />
       ) : (
-        <CommunityList searchQuery={searchQuery} />
+        <CommunityList searchQuery={searchQuery} onSelect={onSelect} />
       )}
     </ResizablePanelLayout>
   )
 }
 
-const PackagesPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({
-  emptyHero,
-}) => {
+const PackagesPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedId = searchParams.get('id')
   const source = (searchParams.get('source') ?? 'community') as
@@ -471,9 +465,7 @@ const PackagesPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({
   )
 }
 
-export const PackagesPage: React.FC<{ emptyHero?: React.ReactNode }> = ({
-  emptyHero,
-}) => {
+export const PackagesPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
   return (
     <PanelProvider>
       <PackagesPageContent emptyHero={emptyHero} />

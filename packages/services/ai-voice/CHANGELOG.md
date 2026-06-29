@@ -1,18 +1,5 @@
 # @pikku/ai-voice
 
-## 0.12.2
-
-### Patch Changes
-
-- 6bca38f: Extend `aiAgentRunner` with AI SDK-style media methods for transcription, speech, image generation, embeddings, and reranking.
-
-  Move `voiceInput` and `voiceOutput` into `@pikku/core/ai-agent`, backed by the injected `aiAgentRunner`.
-
-  Deprecate `@pikku/ai-voice` and strip its exports.
-
-- Updated dependencies [6bca38f]
-  - @pikku/core@0.12.35
-
 ## 0.12.1
 
 ### Patch Changes

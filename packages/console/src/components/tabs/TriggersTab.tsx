@@ -5,8 +5,7 @@ import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
 import { TableListPage } from '../layout/TableListPage'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 
 interface TriggerPair {
   name: string
@@ -73,7 +72,7 @@ export const TriggersTab: React.FC<{
   emptyHero?: React.ReactNode
 }> = ({ searchQuery, emptyHero }) => {
   const { meta } = usePikkuMeta()
-  useLocale()
+  const { t } = useI18n()
   const { openTrigger } = usePanelContext()
 
   const allPairs = useMemo((): TriggerPair[] => {
@@ -111,7 +110,7 @@ export const TriggersTab: React.FC<{
       columns={columns}
       getKey={(item) => item.name}
       onRowClick={(item) => openTrigger(item.name, item.trigger)}
-      emptyMessage={m.triggers_empty_message()}
+      emptyMessage={t('triggers.empty_message')}
       emptyHero={emptyHero}
     />
   )

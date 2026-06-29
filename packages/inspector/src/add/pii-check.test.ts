@@ -48,9 +48,7 @@ async function runInspect(sourceCode: string) {
   await writeFile(file, sourceCode)
   const { logger, criticals } = makeLogger()
   try {
-    // The data-classification leak scan is opt-in (off by default to keep it
-    // off the `pikku all` hot path); these tests exercise it, so enable it.
-    await inspect(logger, [file], { rootDir: tmpDir, classificationCheck: true })
+    await inspect(logger, [file], { rootDir: tmpDir })
   } finally {
     await rm(tmpDir, { recursive: true, force: true })
   }

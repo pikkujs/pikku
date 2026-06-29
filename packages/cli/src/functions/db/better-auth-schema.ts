@@ -4,7 +4,7 @@ import { readdirSync, statSync, readFileSync, existsSync } from 'node:fs'
 import { join, extname, dirname } from 'node:path'
 import type { Kysely } from 'kysely'
 import { PIKKU_BETTER_AUTH } from '@pikku/better-auth'
-import { LocalVariablesService } from '@pikku/core/services'
+import { LocalSecretService, LocalVariablesService } from '@pikku/core/services'
 import { loadUserModule } from '../commands/load-user-project.js'
 
 type AuthFactoryLike = (services: unknown) => unknown
@@ -107,23 +107,9 @@ async function loadAuthFactory(
   return null
 }
 
-// Schema-only auth introspection never executes auth — it just reads the Better
-// Auth options to derive the table/column shape. Secret *values* don't affect the
-// schema, so we hand the factory a fake secret service that resolves every key to
-// a placeholder. This keeps `pikku db migrate`'s drift check from requiring the
-// app's real secrets (BETTER_AUTH_SECRET etc.) to be present in the environment.
-function fakeSecretService() {
-  const placeholder = 'schema-introspection-only'
-  return {
-    getSecret: async () => placeholder,
-    hasSecret: async () => true,
-    setSecret: async () => {},
-  }
-}
-
 function schemaServicesStub(kysely: Kysely<any>, logger: unknown) {
   const variables = new LocalVariablesService()
-  const secrets = fakeSecretService()
+  const secrets = new LocalSecretService(variables)
   const base: Record<string, unknown> = {
     kysely,
     logger,

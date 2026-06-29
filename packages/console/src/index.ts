@@ -32,7 +32,7 @@ export {
 // Sidebar
 export {
   Sidebar,
-  useDefaultNavSections,
+  DEFAULT_NAV_SECTIONS,
   SIDEBAR_COLLAPSED_WIDTH,
   SIDEBAR_EXPANDED_WIDTH,
 } from './components/project/Sidebar'
@@ -56,8 +56,9 @@ export {
   usePikkuHTTP,
   usePikkuRPC,
   usePikkuSSE,
+  getServerUrl,
+  setServerUrl,
 } from './context/PikkuRpcProvider'
-export { getServerUrl, setServerUrl } from './context/serverUrl'
 export { pikku } from './pikku/http'
 export { PikkuMetaProvider, usePikkuMeta } from './context/PikkuMetaContext'
 export {
@@ -71,17 +72,6 @@ export type {
 } from './context/ConsoleNavigatorContext'
 
 // Shared UI Components
-export { PikkuSwitch } from './components/ui/PikkuSwitch'
-export type { PikkuSwitchOption } from './components/ui/PikkuSwitch'
-export { ShellHeader } from './components/ui/ShellHeader'
-export type {
-  ShellHeaderProps,
-  ShellHeaderSelection,
-  ShellHeaderFilter,
-  ShellHeaderFilterOption,
-  ShellHeaderSearch,
-  ShellHeaderAction,
-} from './components/ui/ShellHeader'
 export { MetaRow } from './components/ui/MetaRow'
 export type { MetaRowProps } from './components/ui/MetaRow'
 export { SectionLabel } from './components/ui/SectionLabel'

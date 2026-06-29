@@ -1,5 +1,5 @@
 import type * as ts from 'typescript'
-import type { ChannelMessageMeta, ChannelsMeta } from '@pikku/core/channel'
+import type { ChannelsMeta } from '@pikku/core/channel'
 import type { GatewaysMeta } from '@pikku/core/gateway'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
 import type { ScheduledTasksMeta } from '@pikku/core/scheduler'
@@ -13,7 +13,6 @@ import type {
 } from '@pikku/core/mcp'
 import type { AIAgentMeta } from '@pikku/core/ai-agent'
 import type { CLIMeta } from '@pikku/core/cli'
-import type { CLICommandMeta } from '@pikku/core/cli'
 import type { NodesMeta } from '@pikku/core/node'
 import type { SecretDefinitions } from '@pikku/core/secret'
 import type { CredentialDefinitions } from '@pikku/core/credential'
@@ -106,67 +105,6 @@ export interface InspectorFunctionState {
 export interface InspectorChannelState {
   meta: ChannelsMeta
   files: Set<string>
-}
-
-export interface ExportedHTTPRouteFunctionMeta {
-  pikkuFuncId: string
-  packageName?: string
-}
-
-export interface ExportedHTTPRouteConfigMeta {
-  method: string
-  route: string
-  func: ExportedHTTPRouteFunctionMeta
-  auth?: boolean
-  tags?: string[]
-  sse?: boolean
-  contentType?: string
-  timeout?: number
-  headers?: Record<string, string>
-}
-
-export interface ExportedHTTPRoutesGroupMeta {
-  basePath?: string
-  tags?: string[]
-  auth?: boolean
-  routes: ExportedHTTPRouteMapMeta
-}
-
-export type ExportedHTTPRouteEntryMeta =
-  | ExportedHTTPRouteConfigMeta
-  | ExportedHTTPRoutesGroupMeta
-  | ExportedHTTPRouteMapMeta
-
-export interface ExportedHTTPRouteMapMeta {
-  [key: string]: ExportedHTTPRouteEntryMeta
-}
-
-export type ExportedHTTPContractsMeta = Record<
-  string,
-  ExportedHTTPRoutesGroupMeta
->
-
-export interface ExportedChannelRouteMeta extends ChannelMessageMeta {
-  auth?: boolean
-}
-
-export type ExportedChannelContractsMeta = Record<
-  string,
-  Record<string, ExportedChannelRouteMeta>
->
-
-export type ExportedCLIContractsMeta = Record<
-  string,
-  Record<string, CLICommandMeta>
->
-
-export interface InspectorExportedContractsState {
-  http: ExportedHTTPContractsMeta
-  cli: ExportedCLIContractsMeta
-  channel: ExportedChannelContractsMeta
-  addonHttp: Record<string, ExportedHTTPContractsMeta>
-  addonCli: Record<string, ExportedCLIContractsMeta>
-  addonChannel: Record<string, ExportedChannelContractsMeta>
 }
 
 export interface InspectorMiddlewareDefinition {
@@ -263,10 +201,6 @@ export type InspectorFilters = {
   // to 'server'. Sourced from `pikku.config.json` →
   // `deploy.serverlessIncompatible`. Used only when deploy filters are set.
   serverlessIncompatible?: string[]
-  // Default deploy target for functions without an explicit `deploy` flag.
-  // Sourced from `pikku.config.json` → `deploy.defaultTarget`. Used only
-  // when deploy filters are set. Defaults to 'serverless'.
-  defaultTarget?: 'serverless' | 'server'
 }
 
 export type AddonConfig = {
@@ -280,7 +214,6 @@ export type InspectorOptions = Partial<{
   setupOnly: boolean
   rootDir: string
   isAddon: boolean
-  sourceFile: ts.SourceFile
   types: Partial<{
     configFileType: string
     userSessionType: string
@@ -291,13 +224,6 @@ export type InspectorOptions = Partial<{
     tsconfig: string
     schemasFromTypes?: string[]
     schema?: { additionalProperties?: boolean }
-    /**
-     * Directory for the on-disk TS-schema cache. When set, generated TS schemas
-     * are persisted here keyed by a hash of the custom-types content, so a warm
-     * `pikku all` whose function types are unchanged skips ts-json-schema-generator
-     * entirely (the single largest cold-run cost). Omit to disable disk caching.
-     */
-    cacheDir?: string
   }
   openAPI: {
     additionalInfo: OpenAPISpecInfo
@@ -305,12 +231,6 @@ export type InspectorOptions = Partial<{
   tags: string[]
   manifest: VersionManifest
   oldProgram: ts.Program | undefined
-  /**
-   * Run the data-classification leak scan (Private/Pii/Secret brands in function
-   * return types). Off by default — it forces return-type inference on every
-   * function, which is expensive. Enabled via `pikku all --security`.
-   */
-  classificationCheck: boolean
 }>
 
 export interface InspectorLogger {
@@ -514,17 +434,6 @@ export interface InspectorState {
      *  codebase, if any. The CLI generates the `/auth/*` HTTP wiring from it.
      *  More than one `pikkuBetterAuth` is a critical error. */
     definition: AuthDefinition | null
-    /** True when a user (non-generated) file already registers
-     *  `betterAuthStatelessSession(...)`. The CLI then skips auto-generating its
-     *  own default-map stateless middleware, which would otherwise pre-empt the
-     *  user's custom mapSession (pikkujs/pikku#754). */
-    userStatelessSession?: boolean
-    /** True when a user (non-generated) file already registers a global
-     *  `betterAuthSession(...)`. The CLI then skips auto-generating its own
-     *  default stateful middleware, which would otherwise run first and pre-empt
-     *  the user's config (mapSession/impersonation/apiKey). Stateful analogue of
-     *  `userStatelessSession`. */
-    hasUserSessionMiddleware?: boolean
   }
   secrets: {
     definitions: SecretDefinitions
@@ -576,6 +485,5 @@ export interface InspectorState {
   openAPISpec: Record<string, any> | null
   diagnostics: InspectorDiagnostic[]
   addonFunctions: Record<string, FunctionsMeta> // namespace -> addon's function metadata
-  exportedContracts: InspectorExportedContractsState
   program: ts.Program | null // Retained for incremental re-inspection
 }

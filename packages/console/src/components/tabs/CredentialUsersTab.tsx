@@ -8,8 +8,7 @@ import { usePanelContext } from '../../context/PanelContext'
 import { useQuery } from '@tanstack/react-query'
 import { TableListPage } from '../layout/TableListPage'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 
 interface CredentialMeta {
   name: string
@@ -34,7 +33,7 @@ interface UserRow {
 export const CredentialUsersTab: React.FC<{ searchQuery?: string }> = ({ searchQuery = '' }) => {
   const { meta, loading: metaLoading } = usePikkuMeta()
   const rpc = usePikkuRPC()
-  useLocale()
+  const { t } = useI18n()
   const { openCredentialUser } = usePanelContext()
 
   const allCredentials = useMemo(() => {
@@ -152,8 +151,8 @@ export const CredentialUsersTab: React.FC<{ searchQuery?: string }> = ({ searchQ
     return (
       <EmptyStatePlaceholder
         icon={Users}
-        title={m.credential_users_empty_title()}
-        description={m.credential_users_empty_description()}
+        title={t('credential_users.empty_title')}
+        description={t('credential_users.empty_description')}
         docsHref="https://pikku.dev/docs/core-features/credentials"
       />
     )
@@ -177,7 +176,7 @@ export const CredentialUsersTab: React.FC<{ searchQuery?: string }> = ({ searchQ
           })),
         })
       }
-      emptyMessage={m.credential_users_empty_message()}
+      emptyMessage={t('credential_users.empty_message')}
     />
   )
 }

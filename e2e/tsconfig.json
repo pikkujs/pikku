@@ -15,5 +15,6 @@
       "@pikku/e2e-functions": ["./packages/functions"]
     }
   },
+  "files": [],
   "include": [".pikku/**/*.ts", "src/*.ts", "src/**/*.ts", "bin/**/*.ts"]
 }

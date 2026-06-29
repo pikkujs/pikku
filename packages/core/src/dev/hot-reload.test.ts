@@ -32,11 +32,6 @@ const ensureRecursiveWatchAvailable = async (
   t: TestContext,
   dir: string
 ): Promise<boolean> => {
-  if ('bun' in process.versions) {
-    t.skip('tsx esm dynamic reload not supported under bun')
-    return false
-  }
-
   if (process.platform === 'darwin') {
     t.skip('recursive fs.watch is unreliable on darwin')
     return false

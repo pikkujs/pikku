@@ -1,7 +1,6 @@
 import { cors } from '@pikku/core/middleware'
 import { addHTTPMiddleware } from '@pikku/core/http'
 import type { CoreSingletonServices, CorePikkuMiddleware } from '@pikku/core'
-import { betterAuthSession } from '@pikku/better-auth'
 
 const setSessionFromHeader: CorePikkuMiddleware = async (
   _services,
@@ -36,22 +35,10 @@ const loadCredentials: CorePikkuMiddleware = async (services, wire, next) => {
   await next()
 }
 
-// Registered before the generated betterAuthSession (import order) so the
-// impersonation overlay wins; the generated one then skips (session already set).
-const impersonationSession = betterAuthSession({
-  impersonation: {
-    loadUser: (userId, services) =>
-      (services as CoreSingletonServices & { kysely: any }).kysely
-        .selectFrom('user')
-        .where('id', '=', userId)
-        .select(['id'])
-        .executeTakeFirst(),
-  },
-})
-
+// The Better Auth session-bridge middleware (betterAuthSession) is registered
+// globally by the generated auth.gen.ts, so it is not added here.
 addHTTPMiddleware('*', [
   cors({ origin: true, credentials: true }),
-  impersonationSession,
   setSessionFromHeader,
   loadCredentials,
 ])

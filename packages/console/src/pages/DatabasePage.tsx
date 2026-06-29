@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, memo } from 'react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { Box, Center, ActionIcon, Loader, Text, Group, Tooltip, SegmentedControl, TextInput, useMantineColorScheme } from '@pikku/mantine/core'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -469,7 +468,7 @@ function DatabaseCanvas({
   classificationFilter: ClassificationFilter
   search: string
 }) {
-  useLocale()
+  const { t } = useI18n()
   const { colorScheme } = useMantineColorScheme()
   const isDark = colorScheme === 'dark'
   const [nodes, setNodes, onNodesChange] = useNodesState([])
@@ -543,8 +542,8 @@ function DatabaseCanvas({
     return (
       <EmptyStatePlaceholder
         icon={DatabaseIcon}
-        title={m.database_no_db_title()}
-        description={m.database_no_db_description()}
+        title={t('database.no_db_title')}
+        description={t('database.no_db_description')}
         docsHref="https://pikku.dev/docs/core-features/database"
       />
     )
@@ -554,8 +553,8 @@ function DatabaseCanvas({
     return (
       <EmptyStatePlaceholder
         icon={DatabaseIcon}
-        title={hideInternal ? m.database_no_visible_tables() : m.database_no_tables_found()}
-        description={hideInternal ? m.database_no_visible_tables_description() : undefined}
+        title={hideInternal ? t('database.no_visible_tables') : t('database.no_tables_found')}
+        description={hideInternal ? t('database.no_visible_tables_description') : undefined}
         docsHref="https://pikku.dev/docs/core-features/database"
       />
     )
@@ -622,7 +621,7 @@ const DatabasePageLayout: React.FC<{ header: React.ReactNode; children: React.Re
 }
 
 function DatabasePageInner() {
-  useLocale()
+  const { t } = useI18n()
   const rpc = usePikkuRPC()
   const [hideInternal, setHideInternal] = useState(true)
   const [classificationFilter, setClassificationFilter] = useState<ClassificationFilter>('all')
@@ -637,13 +636,13 @@ function DatabasePageInner() {
 
   const header = (
     <ListPageHeader
-      title={m.database_title()}
-      description={m.database_description()}
+      title={t('database.title')}
+      description={t('database.description')}
       view={
         <Group gap="xs" wrap="nowrap">
           <TextInput
             size="xs"
-            placeholder={m.database_search_placeholder()}
+            placeholder={t('database.search_placeholder')}
             leftSection={<Search size={12} />}
             value={search}
             onChange={(e) => setSearch(e.currentTarget.value)}
@@ -664,9 +663,9 @@ function DatabasePageInner() {
           <PikkuToggle
             checked={!hideInternal}
             onChange={(v) => setHideInternal(!v)}
-            tooltip={m.database_show_internal_tables()}
+            tooltip={t('database.show_internal_tables')}
           />
-          <Tooltip label={m.common_refresh()}>
+          <Tooltip label={t('common.refresh')}>
             <ActionIcon
               variant="subtle"
               color="gray"
@@ -689,8 +688,8 @@ function DatabasePageInner() {
           {error ? (
             <EmptyStatePlaceholder
               icon={DatabaseIcon}
-              title={m.database_setup_title()}
-              description={m.database_setup_description()}
+              title={t('database.setup_title')}
+              description={t('database.setup_description')}
               code="pikku db migrate"
               docsHref="https://pikku.dev/docs/core-features/database"
             />

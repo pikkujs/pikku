@@ -1,6 +1,6 @@
 ---
 name: pikku-n8n-addon-map
-description: 'Use when mapping n8n integration stubs (gmailTool, slackTool, googleSheetsTool, plain gmail/slack action nodes, etc.) emitted by @pikku/n8n-import to real `@pikku/addon-*` functions. Triggered when the user points at a `<workflow>.integrations.json` manifest produced by `pikku-n8n-import`, says ''map the n8n integrations'', ''wire up the gmail/slack stubs'', ''replace these stubs with addon refs'', or opens a stub file generated from an n8n integration node (the stub''s JSDoc says `STUB — generated from n8n node "..." (type "n8n-nodes-base.<service>...")`). For n8n **Code** node stubs use `pikku-n8n-code-translate` instead. DO NOT TRIGGER when: the stub is an n8n Code node (use pikku-n8n-code-translate), or no n8n-generated stub/manifest is involved (use pikku-addon for hand-written addon wiring).'
+description: 'Use when mapping n8n integration stubs (gmailTool, slackTool, googleSheetsTool, plain gmail/slack action nodes, etc.) emitted by @pikku/n8n-import to real `@pikku/addon-*` functions. Triggered when the user points at a `<workflow>.integrations.json` manifest produced by `pikku-n8n-import`, says ''map the n8n integrations'', ''wire up the gmail/slack stubs'', ''replace these stubs with addon refs'', or opens a stub file generated from an n8n integration node (the stub''s JSDoc says `STUB — generated from n8n node "..." (type "n8n-nodes-base.<service>...")`). For n8n **Code** node stubs use `pikku-n8n-code-translate` instead.'
 metadata:
   version: 1.0.0
 ---

@@ -20,22 +20,11 @@ function coerce(v: unknown): unknown {
   return v
 }
 
-// A statement returns rows when it is a SELECT or carries a RETURNING clause.
-// node:sqlite's StatementSync has no `reader` flag (always undefined), so without
-// this kysely would run INSERT ... RETURNING via `.run()` and drop the returned
-// rows — which breaks better-auth sign-up (it inserts and expects the row back).
-function isReaderSql(sql: string): boolean {
-  return /^\s*select/i.test(sql) || /\breturning\b/i.test(sql)
-}
-
 class RuntimeSqliteStatement implements SqliteStatement {
   readonly reader: boolean
 
-  constructor(
-    private readonly stmt: SyncSqliteStatement,
-    reader: boolean
-  ) {
-    this.reader = reader
+  constructor(private readonly stmt: SyncSqliteStatement) {
+    this.reader = Boolean(stmt.reader)
   }
 
   all(parameters: ReadonlyArray<unknown>): unknown[] {
@@ -64,8 +53,7 @@ class RuntimeSqliteDatabase implements SqliteDatabase {
   constructor(private readonly db: SyncSqliteDatabase) {}
 
   prepare(sql: string): SqliteStatement {
-    const stmt = this.db.prepare(sql)
-    return new RuntimeSqliteStatement(stmt, Boolean(stmt.reader) || isReaderSql(sql))
+    return new RuntimeSqliteStatement(this.db.prepare(sql))
   }
 
   close(): void {

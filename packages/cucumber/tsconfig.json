@@ -5,8 +5,7 @@
     "module": "Node18",
     "outDir": "dist",
     "target": "esnext",
-    "declaration": true,
-    "types": ["node"]
+    "declaration": true
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules"],

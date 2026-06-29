@@ -1,7 +1,5 @@
 import './styles'
-// Side-effect import: detects the initial locale (localStorage → <html lang>)
-// on load. Components subscribe reactively via useLocale() from '@/i18n/config'.
-import './i18n/config'
+import i18n from './i18n/setup'
 
 // Set favicon dynamically to handle non-root base paths
 const favicon =
@@ -17,11 +15,10 @@ import { BrowserRouter } from 'react-router'
 import { QueryClientProvider } from './context/QueryClientProvider'
 import { ThemeProvider } from './context/ThemeProvider'
 import { PikkuHTTPProvider, PikkuRPCProvider } from './context/PikkuRpcProvider'
-import { AuthProvider } from './context/AuthContext'
-import { ImpersonationProvider } from './context/ImpersonationContext'
 import { ConsoleRouterProvider } from './router'
 import { reactRouterAdapter } from './adapters/react-router'
 import { App } from './App'
+import { I18nProvider } from '@pikku/react/i18n'
 import {
   CodeHighlightAdapterProvider,
   createHighlightJsAdapter,
@@ -33,26 +30,24 @@ const highlightJsAdapter = createHighlightJsAdapter(hljs)
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter
-      basename={import.meta.env.BASE_URL.replace(/\/$/, '') || undefined}
-    >
-      <ConsoleRouterProvider value={reactRouterAdapter}>
-        <QueryClientProvider>
-          <ThemeProvider locale="en">
-            <CodeHighlightAdapterProvider adapter={highlightJsAdapter}>
-              <PikkuHTTPProvider>
-                <PikkuRPCProvider>
-                  <AuthProvider>
-                    <ImpersonationProvider>
-                      <App />
-                    </ImpersonationProvider>
-                  </AuthProvider>
-                </PikkuRPCProvider>
-              </PikkuHTTPProvider>
-            </CodeHighlightAdapterProvider>
-          </ThemeProvider>
-        </QueryClientProvider>
-      </ConsoleRouterProvider>
-    </BrowserRouter>
+    <I18nProvider i18n={i18n}>
+      <BrowserRouter
+        basename={import.meta.env.BASE_URL.replace(/\/$/, '') || undefined}
+      >
+        <ConsoleRouterProvider value={reactRouterAdapter}>
+          <QueryClientProvider>
+            <ThemeProvider locale="en">
+              <CodeHighlightAdapterProvider adapter={highlightJsAdapter}>
+                <PikkuHTTPProvider>
+                  <PikkuRPCProvider>
+                    <App />
+                  </PikkuRPCProvider>
+                </PikkuHTTPProvider>
+              </CodeHighlightAdapterProvider>
+            </ThemeProvider>
+          </QueryClientProvider>
+        </ConsoleRouterProvider>
+      </BrowserRouter>
+    </I18nProvider>
   </StrictMode>
 )

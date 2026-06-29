@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { Group, TextInput } from '@pikku/mantine/core'
 import { Mail, Search } from 'lucide-react'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -23,7 +22,7 @@ export const EmailsOverview: React.FC<EmailsOverviewProps> = ({
   onSelect,
   headerRight,
 }) => {
-  useLocale()
+  const { t } = useI18n()
   const [searchQuery, setSearchQuery] = useState('')
 
   const allItems = useMemo((): EntityCardItem[] =>
@@ -50,13 +49,13 @@ export const EmailsOverview: React.FC<EmailsOverviewProps> = ({
       hidePanel
       header={
         <ListPageHeader
-          title={m.emails_title()}
-          description={m.emails_description()}
+          title={t('emails.title')}
+          description={t('emails.description')}
           docsHref={EMAIL_DOCS_HREF}
           filters={
             <Group gap="sm" wrap="nowrap">
               <TextInput
-                placeholder={m.emails_search_placeholder()}
+                placeholder={t('emails.search_placeholder')}
                 leftSection={<Search size={14} />}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -73,7 +72,7 @@ export const EmailsOverview: React.FC<EmailsOverviewProps> = ({
         items={items}
         onOpen={onSelect}
         icon={Mail}
-        emptyTitle={m.emails_empty_title()}
+        emptyTitle={t('emails.empty_title')}
         docsHref={EMAIL_DOCS_HREF}
       />
     </ResizablePanelLayout>

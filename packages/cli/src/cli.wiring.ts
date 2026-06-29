@@ -48,7 +48,6 @@ import {
   enableAgent,
   enableWorkflow,
   enableEvents,
-  enableRemoteRpc,
 } from './functions/commands/enable.js'
 import { pikkuRealtime } from './functions/wirings/realtime/pikku-command-realtime.js'
 import { binary } from './functions/commands/binary.js'
@@ -106,11 +105,6 @@ wireCLI({
       description: 'Alias for --output json',
       default: false,
       short: 'j',
-    },
-    security: {
-      description:
-        'Run the data-classification security lint (scans function return types for Private/Pii/Secret leaks). Off by default — it forces expensive return-type inference on every function. Combine with --fail-on-error to gate a build/CI.',
-      default: false,
     },
     failOnError: {
       description:
@@ -468,17 +462,6 @@ wireCLI({
             },
           },
         }),
-        'remote-rpc': pikkuCLICommand({
-          func: enableRemoteRpc,
-          description:
-            'Enable the remote internal RPC queue worker + HTTP endpoint (scaffolds rpc-remote.gen.ts)',
-          options: {
-            noAuth: {
-              description: 'Disable auth requirement',
-              default: false,
-            },
-          },
-        }),
       },
     },
     new: {
@@ -591,6 +574,11 @@ wireCLI({
                 'Convert snake_case property names to camelCase in generated Zod schemas',
               default: false,
             },
+            carve: {
+              description:
+                'Bundle the project functions in scope (use the global --filter/--tags/--names to select which) into the addon',
+              default: false,
+            },
           },
         }),
       },
@@ -673,11 +661,6 @@ wireCLI({
               default: 'cloudflare',
               short: 'p',
             },
-            runtime: {
-              description:
-                'Server runtime for the standalone provider: node (bundle.js) or bun (compiled executable)',
-              default: 'node',
-            },
             resultFile: {
               description:
                 'Write structured JSON plan result to this file path',
@@ -692,11 +675,6 @@ wireCLI({
               description: 'Deployment provider (cloudflare, aws)',
               default: 'cloudflare',
               short: 'p',
-            },
-            runtime: {
-              description:
-                'Server runtime for the standalone provider: node (bundle.js) or bun (compiled executable)',
-              default: 'node',
             },
             fromPlan: {
               description:

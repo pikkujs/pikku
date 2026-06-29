@@ -7,9 +7,6 @@ import {
 } from '@playwright/test'
 import { randomUUID } from 'crypto'
 import { config } from './types.js'
-import { ADMIN_USER, type SeedUser } from '../../src/auth-fixtures.js'
-
-const IMPERSONATE_HEADER = 'x-pikku-impersonate-user-id'
 
 export class AgentWorld extends World {
   browser!: Browser
@@ -18,9 +15,6 @@ export class AgentWorld extends World {
 
   /** Unique thread per scenario */
   threadId: string = randomUUID()
-
-  /** Requests seen since recordRequests() was called, with their impersonate header. */
-  recorded: { url: string; impersonate: string | null }[] = []
 
   async openBrowser() {
     const headed = process.env.HEADED === '1' || process.env.HEADED === 'true'
@@ -40,31 +34,6 @@ export class AgentWorld extends World {
   async closeBrowser() {
     await this.context?.close()
     await this.browser?.close()
-  }
-
-  // Sign in through the LoginScreen UI so the AuthGate lets the console render.
-  async login(user: SeedUser = ADMIN_USER) {
-    await this.page.goto(config.consoleUrl)
-    const instance = this.page.locator('input').first()
-    await instance.waitFor({ state: 'visible' })
-    await instance.fill(config.apiUrl)
-    await this.page.locator('input[type="email"]').fill(user.email)
-    await this.page.locator('input[type="password"]').fill(user.password)
-    await this.page.locator('button[type="submit"]').click()
-    await this.page
-      .locator('input[type="password"]')
-      .waitFor({ state: 'detached' })
-  }
-
-  // Start recording outgoing requests + their impersonation header.
-  recordRequests() {
-    this.recorded = []
-    this.page.on('request', (req) => {
-      this.recorded.push({
-        url: req.url(),
-        impersonate: req.headers()[IMPERSONATE_HEADER] ?? null,
-      })
-    })
   }
 
   /**

@@ -295,28 +295,10 @@ export type WorkflowStepMeta =
 export interface WorkflowStepWire {
   /** The workflow run ID */
   runId: string
-  /**
-   * The step row ID. Whether it stays the same or is minted fresh per attempt is
-   * STORE-SPECIFIC (in-memory mints a new one each attempt; the SQL store reuses
-   * the row) — do NOT use it as a dedupe key. Use `invocationId`.
-   */
+  /** The unique step ID */
   stepId: string
-  /**
-   * Stable identity of this step invocation — the idempotency / dedupe key.
-   * Identical across every retry of the same call (derived from runId + step
-   * name) regardless of storage backend, so a step can `ON CONFLICT (invocationId)`
-   * or pass it as an external idempotency key and have retries collapse onto the
-   * first attempt.
-   */
-  invocationId: string
   /** Current attempt number (1-indexed, increments on retry) */
   attemptCount: number
-  /**
-   * Invocation ID of the predecessor step this one was reached from (the walked
-   * transition/edge). Undefined for entry steps. Lets a step know its origin —
-   * e.g. in a cyclic graph `a → b → a → c`, the second `a` carries `b`'s id.
-   */
-  fromInvocationId?: string
 }
 
 /**

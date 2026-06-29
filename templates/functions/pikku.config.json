@@ -29,7 +29,6 @@
     "workflow": "no-auth",
     "console": "no-auth",
     "events": "no-auth",
-    "remoteRpc": "no-auth",
     "pikkuDir": "pikku"
   },
   "cli": {

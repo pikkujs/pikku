@@ -108,11 +108,7 @@ export type FlowType =
   | 'set'
 
 // Import and re-export context types from core
-import type {
-  ContextVariable,
-  WorkflowContext,
-  WorkflowPlannedStep,
-} from '@pikku/core/workflow'
+import type { ContextVariable, WorkflowContext } from '@pikku/core/workflow'
 
 export type { ContextVariable, WorkflowContext }
 
@@ -206,19 +202,6 @@ export interface SerializedWorkflowGraph {
   entryNodeIds: string[]
   /** Hash of graph topology (nodes, edges, input mappings) */
   graphHash?: string
-  /**
-   * True when the exact executed step sequence is known up front: a loopless
-   * DSL workflow with no branches/switches. Lets a UI render the run as a fixed
-   * pipeline. Loops (fanout) → omitted; branchy-but-loopless → false.
-   */
-  deterministic?: boolean
-  /**
-   * Every named step the workflow can run, in source order — so a frontend can
-   * render the step skeleton before the run starts. Populated for any loopless
-   * DSL workflow (a branchy one lists all possible steps); omitted when the step
-   * count is runtime-dependent (any fanout).
-   */
-  plannedSteps?: WorkflowPlannedStep[]
   /** Wire entry points (HTTP, channel, queue, etc.) that trigger this workflow */
   wires?: WorkflowWires
 }

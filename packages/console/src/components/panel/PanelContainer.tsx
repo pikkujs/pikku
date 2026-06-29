@@ -2,8 +2,7 @@ import React, { useMemo } from 'react'
 import { Box, Center, Stack, Text } from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { usePanelContext } from '../../context/PanelContext'
 import { createPanelChildren } from './PanelFactory'
 import { SidePanel, SidePanelContent, SidePanelHeader } from './SidePanel'
@@ -14,7 +13,7 @@ interface PanelContainerProps {
 
 export const PanelContainer: React.FC<PanelContainerProps> = ({ emptyMessage }) => {
   const { panels, activePanel, closePanel, goBack } = usePanelContext()
-  useLocale()
+  const { t } = useI18n()
 
   const activePanelData = activePanel ? panels.get(activePanel) : null
 
@@ -26,7 +25,7 @@ export const PanelContainer: React.FC<PanelContainerProps> = ({ emptyMessage }) 
     return (
       <Center h="100%" p="xl">
         <Text c="dimmed" ta="center">
-          {emptyMessage ?? m.panel_select_item()}
+          {emptyMessage ?? t('panel.select_item')}
         </Text>
       </Center>
     )

@@ -18,28 +18,15 @@ export const pikkuCommandChannels = pikkuSessionlessFunc<
       channelsWiringFile,
       channelsWiringMetaFile,
       channelsWiringMetaJsonFile,
-      channelContractsMetaJsonFile,
-      channelContractsMetaFile,
       packageMappings,
       schema,
     } = config
-    const { channels, exportedContracts } = visitState
-    const hasChannelContracts =
-      Object.keys(exportedContracts.channel).length > 0
+    const { channels } = visitState
 
-    if (
-      (channels.files.size === 0 || Object.keys(channels.meta).length === 0) &&
-      !hasChannelContracts
-    ) {
+    if (channels.files.size === 0 || Object.keys(channels.meta).length === 0) {
       return undefined
     }
 
-    // The bootstrap imports channelsWiringFile and channelsWiringMetaFile
-    // whenever this command reports channels as active (truthy return), so both
-    // must always be written once past the guard above — including the
-    // contracts-only case where there are no local channel source files
-    // (channels.files is empty). Skipping either leaves the bootstrap importing
-    // a file that was never generated and the per-unit deploy bundle fails.
     await writeFileInDir(
       logger,
       channelsWiringFile,
@@ -51,6 +38,7 @@ export const pikkuCommandChannels = pikkuSessionlessFunc<
       )
     )
 
+    // Write minimal JSON (runtime-only fields)
     const minimalMeta = stripVerboseFields(channels.meta)
     await writeFileInDir(
       logger,
@@ -58,6 +46,7 @@ export const pikkuCommandChannels = pikkuSessionlessFunc<
       JSON.stringify(minimalMeta, null, 2)
     )
 
+    // Write verbose JSON only if it has additional fields
     if (hasVerboseFields(channels.meta)) {
       const verbosePath = channelsWiringMetaJsonFile.replace(
         /\.gen\.json$/,
@@ -70,30 +59,7 @@ export const pikkuCommandChannels = pikkuSessionlessFunc<
       )
     }
 
-    await writeFileInDir(
-      logger,
-      channelContractsMetaJsonFile,
-      JSON.stringify(exportedContracts.channel, null, 2)
-    )
-
-    if (hasChannelContracts) {
-      const contractsJsonImportPath = getFileImportRelativePath(
-        channelContractsMetaFile,
-        channelContractsMetaJsonFile,
-        packageMappings
-      )
-      const supportsImportAttributes = schema?.supportsImportAttributes ?? false
-      const contractsImportStatement = supportsImportAttributes
-        ? `import contractsMeta from '${contractsJsonImportPath}' with { type: 'json' }`
-        : `import contractsMeta from '${contractsJsonImportPath}'`
-
-      await writeFileInDir(
-        logger,
-        channelContractsMetaFile,
-        `${contractsImportStatement}\nexport default contractsMeta`
-      )
-    }
-
+    // Generate TypeScript file that imports the minimal JSON
     const jsonImportPath = getFileImportRelativePath(
       channelsWiringMetaFile,
       channelsWiringMetaJsonFile,

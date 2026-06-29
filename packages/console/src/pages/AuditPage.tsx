@@ -3,23 +3,22 @@ import { ShieldCheck } from 'lucide-react'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { Stack } from '@pikku/mantine/core'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 
 export const AuditPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
-  useLocale()
+  const { t } = useI18n()
   return (
     <Stack gap={0} style={{ height: '100%' }}>
       <ListPageHeader
-        title={m.audit_title()}
-        description={m.audit_description()}
+        title={t('audit.title')}
+        description={t('audit.description')}
         docsHref="https://pikku.dev/docs"
       />
       <EmptyStatePlaceholder
         icon={ShieldCheck}
         hero={emptyHero}
-        title={m.audit_empty_title()}
-        description={m.audit_empty_description()}
+        title={t('audit.empty_title')}
+        description={t('audit.empty_description')}
         docsHref="https://pikku.dev/docs"
       />
     </Stack>

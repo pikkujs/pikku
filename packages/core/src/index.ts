@@ -93,7 +93,6 @@ export type {
 export { runQueueJob } from './wirings/queue/queue-runner.js'
 export { runScheduledTask } from './wirings/scheduler/scheduler-runner.js'
 export { NotFoundError } from './errors/errors.js'
-export { PikkuError, isExpectedError } from './errors/error-handler.js'
 export type { EventHubService } from './wirings/channel/eventhub-service.js'
 export type { QueueService } from './wirings/queue/queue.types.js'
 export type { JWTService } from './services/jwt-service.js'

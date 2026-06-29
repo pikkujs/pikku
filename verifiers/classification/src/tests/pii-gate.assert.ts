@@ -2,13 +2,10 @@
  * Verifies the diagnostic-severity build gate end-to-end through the real CLI.
  *
  * PKU910 (a sessionless function exposing a Private-classified field) is emitted
- * at `error` severity. The data-classification scan is opt-in (it forces
- * expensive return-type inference on every function), so every run here passes
- * `--security` to enable it. With the scan on, the gate still only fails on
- * `critical`, so `pikku all --security` must exit 0 (the dev server keeps
- * starting) while printing the finding. Adding `--fail-on-error` (e.g. at
- * deploy) must turn the same finding into a non-zero exit so leaks become
- * blocking-with-a-recommendation.
+ * at `error` severity. By default the gate only fails on `critical`, so
+ * `pikku all` must still exit 0 (the dev server keeps starting) while printing
+ * the finding. Passing `--fail-on-error` (e.g. at deploy) must turn the same
+ * finding into a non-zero exit so leaks become blocking-with-a-recommendation.
  *
  * The temp project is created *inside the repo tree* so `@pikku/core` resolves
  * via upward node_modules traversal — a bare /tmp project cannot resolve the
@@ -34,8 +31,7 @@ function runPikkuAll(
   dir: string,
   extraArgs: string[] = []
 ): { exitCode: number; output: string } {
-  // The classification scan is opt-in; --security turns it on for every run.
-  const res = spawnSync('node', [PIKKU_BIN, 'all', '--security', ...extraArgs], {
+  const res = spawnSync('node', [PIKKU_BIN, 'all', ...extraArgs], {
     cwd: dir,
     timeout: 60_000,
     encoding: 'utf8',

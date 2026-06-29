@@ -6,11 +6,10 @@ import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { ProjectSecrets } from '../components/project/ProjectSecrets'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 
 const SecretsPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
-  useLocale()
+  const { t } = useI18n()
   const { meta, loading } = usePikkuMeta()
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -44,13 +43,13 @@ const SecretsPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHe
     <ResizablePanelLayout
       header={
         <ListPageHeader
-          title={m.secrets_title()}
-          description={m.secrets_description()}
+          title={t('secrets.title')}
+          description={t('secrets.description')}
           docsHref="https://pikku.dev/docs/core-features/secrets"
           filters={
             <Group gap="sm" wrap="nowrap">
               <TextInput
-                placeholder={m.secrets_search_placeholder()}
+                placeholder={t('secrets.search_placeholder')}
                 leftSection={<Search size={14} />}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -61,7 +60,7 @@ const SecretsPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHe
           }
         />
       }
-      emptyPanelMessage={m.secrets_select_item()}
+      emptyPanelMessage={t('secrets.select_item')}
     >
       <ProjectSecrets secrets={secrets} loading={loading} emptyHero={emptyHero} />
     </ResizablePanelLayout>

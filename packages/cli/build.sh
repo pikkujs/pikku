@@ -14,34 +14,14 @@ rm -rf -- .pikku dist
 # release and still uses @pikku/auth-js (matching the install below).
 echo "Bootstrapping with published @pikku/cli..."
 : "${PIKKU_CLI_VERSION:=0.12.35}"
-: "${PIKKU_AUTH_JS_VERSION:=0.12.5}"
-: "${PIKKU_BETTER_AUTH_VERSION:=0.12.12}"
 _bootstrap_dir=$(mktemp -d)
 trap 'rm -rf "$_bootstrap_dir"' EXIT
 # The published bootstrap CLI's own auth codegen imports the auth package at
 # module load, so it must be installed alongside it. This stays @pikku/auth-js
 # until a CLI release that imports @pikku/better-auth is published, after which
 # this should flip to "@pikku/better-auth".
-#
-# The `overrides` neutralises an unconverted `workspace:*` specifier that can
-# leak into a published @pikku/cli manifest (e.g. @pikku/cli@0.12.36 shipped
-# `@pikku/better-auth: workspace:*`, which npm cannot resolve). Declaring the
-# bootstrap deps in a package.json is what lets the override apply during
-# resolution — npm ignores `overrides` for packages passed as install args.
-cat > "$_bootstrap_dir/package.json" <<JSON
-{
-  "name": "pikku-bootstrap",
-  "private": true,
-  "dependencies": {
-    "@pikku/cli": "${PIKKU_CLI_VERSION}",
-    "@pikku/auth-js": "${PIKKU_AUTH_JS_VERSION}"
-  },
-  "overrides": {
-    "@pikku/better-auth": "${PIKKU_BETTER_AUTH_VERSION}"
-  }
-}
-JSON
-(cd "$_bootstrap_dir" && npm install --no-save --no-package-lock)
+npm install --prefix "$_bootstrap_dir" --no-save --no-package-lock \
+  "@pikku/cli@${PIKKU_CLI_VERSION}" "@pikku/auth-js"
 "$_bootstrap_dir/node_modules/.bin/pikku"
 rm -rf "$_bootstrap_dir"
 
@@ -104,12 +84,7 @@ yarn tsc -b
 
 # Copy schema file
 echo "Copying schema file..."
-schema_src=$(find .pikku/schemas -maxdepth 2 -name "PikkuCLIConfig.schema.json" | head -1)
-if [ -n "$schema_src" ]; then
-  cp "$schema_src" cli.schema.json
-else
-  echo "Warning: PikkuCLIConfig.schema.json not found, skipping schema copy"
-fi
+cp .pikku/schemas/schemas/PikkuCLIConfig.schema.json cli.schema.json
 
 echo "Copying console app..."
 rm -rf console-app
@@ -152,7 +127,7 @@ await updateCheck
 process.exit(0)
 ENTRY
 
-  for target in bun-linux-x64 bun-linux-arm64 bun-darwin-x64 bun-darwin-arm64 bun-windows-x64; do
+  for target in bun-linux-x64 bun-linux-arm64 bun-darwin-x64 bun-darwin-arm64; do
     suffix="${target#bun-}"
     echo "  → $target"
     bun build --compile "--target=$target" "--outfile=release/binaries/pikku-$suffix" dist/bin/pikku-bin.mjs

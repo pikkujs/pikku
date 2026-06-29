@@ -38,7 +38,7 @@ const DEFAULT_TEMPLATE = 'starter-template'
 const DEFAULT_PROJECT_NAME = 'my-app'
 const DEFAULT_FABRIC_APP = 'react-vite-mantine'
 
-const packageManagers = ['npm', 'yarn', 'pnpm', 'bun'] as const
+const packageManagers = ['npm', 'yarn', 'pnpm'] as const
 
 const templates = [
   {
@@ -112,11 +112,6 @@ const templates = [
     supports: ['queue'],
   },
   {
-    template: 'bun',
-    description: 'A Bun (Bun.serve) template',
-    supports: ['http', 'channel', 'scheduled'],
-  },
-  {
     template: 'uws',
     description: 'A uWebSockets.js template',
     supports: ['http', 'channel', 'scheduled'],
@@ -178,7 +173,6 @@ interface CliOptions {
   template: string
   version: string
   install: boolean
-  skipInstall?: boolean
   packageManager: PackageManager
   yarnLink?: string
   stackblitz?: boolean
@@ -192,10 +186,6 @@ program
   .option('-v, --version <version>', 'Version')
   .option('-n, --name <name>', 'Project name')
   .option('-i, --install', 'Install dependencies')
-  .option(
-    '--skip-install',
-    'Skip installing dependencies (useful when the caller will run install manually)'
-  )
   .option('-p, --package-manager <packageManager>', 'Package manager')
   .option('--yarn-link <link>', 'Yarn link (for local pikku development)')
   .option('--stackblitz', 'Add StackBlitz configuration')
@@ -470,12 +460,9 @@ async function run() {
                 },
               ],
             })
-          : template === 'bun'
-            ? 'bun'
-            : 'npm')
+          : 'npm')
 
-  const install =
-    !cliOptions.skipInstall && (cliOptions.install || !cliOptions.variations)
+  const install = cliOptions.install || !cliOptions.variations
 
   const selectedOptions: CliOptions = {
     name,

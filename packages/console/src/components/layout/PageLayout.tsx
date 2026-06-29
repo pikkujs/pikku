@@ -2,52 +2,65 @@ import type { ComponentProps, ReactNode } from 'react'
 import { ActionIcon, Box, Container, Group, Stack, Text, Title, Tooltip } from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
 import { ExternalLink } from 'lucide-react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import DocLink from '../ui/DocLink'
-import { ShellHeader, type ShellHeaderSearch, type ShellHeaderSelection } from '../ui/ShellHeader'
 import { usePageGate } from '../../context/PageGateContext'
 
-interface ListPageHeaderProps<T extends string = string> {
+interface ListPageHeaderProps {
   title: I18nNode
   description?: I18nNode
   docsHref?: string
   lead?: ReactNode
   filters?: ReactNode
   view?: ReactNode
-  // Structured controls participate in ShellHeader's measured collapse: the
-  // selection folds switch → cycle → drawer, and search folds into the drawer.
-  // Prefer these over the raw `filters`/`view` nodes (which ride the
-  // non-collapsing `actionsNode` escape hatch and overflow when narrow).
-  search?: ShellHeaderSearch
-  selection?: ShellHeaderSelection<T>
 }
 
-// Renders the shared ShellHeader bar: title (first to collapse) + description as
-// the count, with the page's existing filters/view/lead/docs controls passed
-// through on the right.
-export function ListPageHeader<T extends string = string>({
-  title,
-  description,
-  docsHref,
-  lead,
-  filters,
-  view,
-  search,
-  selection,
-}: ListPageHeaderProps<T>) {
+export function ListPageHeader({ title, description, docsHref, lead, filters, view }: ListPageHeaderProps) {
   const docsButton = docsHref ? <DocLink href={docsHref} /> : null
-  const right =
-    filters || view || lead || docsButton ? (
-      <>
-        {filters}
-        {view}
-        {lead}
-        {docsButton}
-      </>
-    ) : undefined
+
+  const titleStack = (
+    <Stack gap={2} style={{ minWidth: 0, flex: 1 }}>
+      <Text fw={600} size="xl" c="var(--app-text)" truncate style={{ minWidth: 0 }}>
+        {title}
+      </Text>
+      {description != null &&
+        (typeof description === 'string' ? (
+          <Text size="md" c="dimmed">
+            {description}
+          </Text>
+        ) : (
+          <Text size="md" c="dimmed" component="div">
+            {description}
+          </Text>
+        ))}
+    </Stack>
+  )
+
   return (
-    <ShellHeader title={title} count={description} search={search} selection={selection} actionsNode={right} />
+    <>
+      {/* Wide: single row — title | filters | view | lead | docs */}
+      <Group justify="space-between" align="center" wrap="nowrap" gap="md" visibleFrom="lg">
+        {titleStack}
+        {filters && <Group gap="sm" wrap="nowrap" style={{ flexShrink: 0 }}>{filters}</Group>}
+        {view && <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>{view}</Group>}
+        {lead && <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>{lead}</Group>}
+        {docsButton}
+      </Group>
+
+      {/* Narrow: [title | lead | docs] then [filters | view] */}
+      <Stack gap="xs" hiddenFrom="lg">
+        <Group justify="space-between" align="center" wrap="nowrap" gap="md">
+          {titleStack}
+          <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>
+            {lead}
+            {docsButton}
+          </Group>
+        </Group>
+        {(filters || view) && (
+          <PageActionBar filters={filters} view={view} />
+        )}
+      </Stack>
+    </>
   )
 }
 
@@ -74,13 +87,19 @@ export function PageContainer({
   const gate = usePageGate()
   const body = loading ?? emptyState ?? gate ?? children
 
-  // When a header is present it renders as a full-bleed bar above the body, and
-  // the body runs full-width so both share one gutter (the ShellHeader pattern).
-  const hasHeader = header != null
-  const bodyContainer = (
+  const content = header ? (
+    <Stack gap={contentGap ?? 'md'} style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+      {header}
+      {body}
+    </Stack>
+  ) : (
+    body
+  )
+
+  return (
     <Container
-      size={hasHeader || fullWidth ? undefined : 'lg'}
-      fluid={hasHeader || fullWidth}
+      size={fullWidth ? undefined : 'lg'}
+      fluid={fullWidth}
       py={noPadding ? 0 : 'xl'}
       px={noPadding ? 0 : 'xl'}
       {...props}
@@ -94,17 +113,8 @@ export function PageContainer({
         ...style,
       }}
     >
-      {body}
+      {content}
     </Container>
-  )
-
-  if (!hasHeader) return bodyContainer
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0 }}>
-      {header}
-      {bodyContainer}
-    </div>
   )
 }
 
@@ -116,7 +126,7 @@ interface PageHeaderProps {
 }
 
 export function PageHeader({ title, subtitle, actions, docsHref }: PageHeaderProps) {
-  useLocale()
+  const { t } = useI18n()
   return (
     <Stack gap={4} style={{ marginBottom: 'var(--mantine-spacing-xl)' }}>
       <Group justify="space-between" align="center" wrap="nowrap" gap="md">
@@ -126,7 +136,7 @@ export function PageHeader({ title, subtitle, actions, docsHref }: PageHeaderPro
         <Group gap="xs" wrap="nowrap" align="center" style={{ flexShrink: 0 }}>
           {actions && <PageHeaderControls>{actions}</PageHeaderControls>}
           {docsHref && (
-            <Tooltip label={m.common_docs_link()}>
+            <Tooltip label={t('common.docs_link')}>
               <ActionIcon
                 component="a"
                 href={docsHref}

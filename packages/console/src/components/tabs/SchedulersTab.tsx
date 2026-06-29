@@ -7,8 +7,7 @@ import { usePanelContext } from '../../context/PanelContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { TableListPage } from '../layout/TableListPage'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 
 type RunEntry = {
   timestamp: number
@@ -59,7 +58,7 @@ export const SchedulersTab: React.FC<{
 }> = ({ searchQuery, emptyHero }) => {
   const { meta } = usePikkuMeta()
   const rpc = usePikkuRPC()
-  useLocale()
+  const { t } = useI18n()
   const { openScheduler } = usePanelContext()
 
   const { data: history = {} } = useQuery<SchedulerHistory>({
@@ -160,7 +159,7 @@ export const SchedulersTab: React.FC<{
       columns={columns}
       getKey={(item) => item.name}
       onRowClick={(item) => openScheduler(item.wireId || item.name, item)}
-      emptyMessage={m.schedulers_empty_message()}
+      emptyMessage={t('schedulers.empty_message')}
       emptyHero={emptyHero}
     />
   )

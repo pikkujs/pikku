@@ -8,10 +8,6 @@ import type {
   WorkflowStatus,
   WorkflowVersionStatus,
 } from '../wirings/workflow/workflow.types.js'
-import type {
-  RunTimeline,
-  ReconstructedRunState,
-} from '../wirings/workflow/run-timeline.js'
 
 /**
  * Interface for workflow orchestration
@@ -33,11 +29,6 @@ export interface WorkflowService {
   getRun(id: string): Promise<WorkflowRun | null>
   getRunStatus(id: string): Promise<WorkflowRunStatus | null>
   getRunHistory(runId: string): Promise<Array<StepState & { stepName: string }>>
-  getRunTimeline(id: string): Promise<RunTimeline | null>
-  reconstructRunStateAt(
-    id: string,
-    at?: number | Date
-  ): Promise<ReconstructedRunState | null>
   updateRunStatus(
     id: string,
     status: WorkflowStatus,

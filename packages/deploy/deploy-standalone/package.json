@@ -1,11 +1,14 @@
 {
   "name": "@pikku/deploy-standalone",
-  "version": "0.12.5",
+  "version": "0.12.3",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc -b",
     "tsc": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@yao-pkg/pkg": "^6.3.0"
   },
   "devDependencies": {
     "typescript": "^5.9"

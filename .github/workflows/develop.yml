@@ -9,13 +9,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# better-auth now throws on a missing BETTER_AUTH_SECRET (mapSession errors no
-# longer swallowed), so every job that builds/prerenders/runs a template needs
-# it present. Inherited by all jobs (build, templates, verifiers, e2e) and by
-# spawned bundles via process.env. Build-only dummy, ≥32 chars — never a real secret.
-env:
-  BETTER_AUTH_SECRET: ci-build-only-better-auth-secret-not-real
-
 jobs:
   validate-deps:
     name: Validate Package Deps
@@ -28,8 +21,6 @@ jobs:
           node-version: 22
       - name: Check published deps for workspace protocol
         run: node scripts/check-no-workspace-protocol.mjs
-      - name: Check no publish-time CLI rebuild
-        run: node scripts/check-no-publish-time-cli-rebuild.mjs
 
   build:
     name: Build
@@ -63,7 +54,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install native build tools
-        run: apt-get update && apt-get install -y build-essential python3 unzip
+        run: apt-get update && apt-get install -y build-essential python3
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/e2e-codegen
       - name: Run e2e tests
@@ -88,7 +79,7 @@ jobs:
   #         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
   verifiers:
-    name: Verifiers (${{ matrix.verifier }}, ${{ matrix.package-manager }})
+    name: Verifiers (${{ matrix.verifier }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: build
@@ -108,77 +99,16 @@ jobs:
             variables,
             functions,
             hmr,
-            dev-bun,
             deploy-cloudflare,
             deploy-serverless,
             deploy-azure,
             deploy-standalone,
             better-auth,
-            bun-server,
           ]
-        package-manager: [yarn, bun]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      - run: cd verifiers/${{ matrix.verifier }} && ${{ matrix.package-manager == 'bun' && 'bun run' || 'yarn' }} test
-
-  verifiers-binary:
-    name: Binary (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
-    needs: build
-    strategy:
-      fail-fast: false
-      matrix:
-        # windows-latest excluded: its pre-installed global Yarn 1.22 shadows
-        # Corepack's Yarn 4 in the shared setup action, breaking `yarn install`.
-        # The pikku-windows-x64.exe is still cross-compiled and published on each
-        # release (see packages/cli/build.sh).
-        os: [ubuntu-latest, macos-latest]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - name: Run binary verifier
-        shell: bash
-        run: cd verifiers/binary && yarn test
-
-  # The workflow verifier's pg/redis runners need real queue + storage backends,
-  # so they can't run in the plain `verifiers` job. This job gives them Postgres
-  # (KyselyWorkflowService + pg-boss) and Redis (RedisWorkflowService + bullmq)
-  # and asserts every node's state — provenance + cycles — on both transports.
-  verifiers-workflows-db:
-    name: Verifiers (workflows, db-backed)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: build
-    services:
-      redis:
-        image: redis
-        ports:
-          - 6379:6379
-      postgres:
-        image: postgres
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: pikku_queue
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
-      - run: cd verifiers/workflows && yarn test:db
-    env:
-      DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_queue
-      REDIS_URL: redis://localhost:6379
+      - run: cd verifiers/${{ matrix.verifier }} && yarn test
 
   verifier-coverage:
     name: Verifier Coverage
@@ -286,36 +216,17 @@ jobs:
             remote-rpc-pg,
             remote-rpc-redis,
             ai-postgres,
-            bun,
           ]
-        package-manager: [yarn, bun]
-        exclude:
-          - package-manager: bun
-            template: uws
-          - package-manager: bun
-            template: aws-lambda
-          - package-manager: bun
-            template: aws-lambda-websocket
-          - package-manager: bun
-            template: cloudflare-workers
-          - package-manager: bun
-            template: cloudflare-websocket
-          - package-manager: bun
-            template: nextjs
-          - package-manager: bun
-            template: nextjs-full
+        package-manager: [yarn]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.version }}
       - name: Test template
-        timeout-minutes: 5
-        run: ./scripts/test-template.sh "$TEMPLATE_NAME" "$TEMPLATE_VERSION" "$PACKAGE_MANAGER"
+        timeout-minutes: 2
+        run: ./scripts/test-template.sh ${{ matrix.template }} ${{ github.ref_name }}
         env:
-          TEMPLATE_NAME: ${{ matrix.template }}
-          TEMPLATE_VERSION: ${{ github.ref_name }}
-          PACKAGE_MANAGER: ${{ matrix.package-manager }}
           TEMPLATE_V8_COVERAGE_DIR: ${{ runner.temp }}/template-coverage/${{ matrix.template }}/raw
       - name: Generate template coverage report
         if: always()
@@ -363,7 +274,7 @@ jobs:
         with:
           node-version: ${{ matrix.version }}
       - name: Test template
-        timeout-minutes: 5
+        timeout-minutes: 2
         run: ./scripts/test-template.sh ${{ matrix.template }} ${{ github.ref_name }}
         env:
           TEMPLATE_V8_COVERAGE_DIR: ${{ runner.temp }}/template-coverage/${{ matrix.template }}/raw

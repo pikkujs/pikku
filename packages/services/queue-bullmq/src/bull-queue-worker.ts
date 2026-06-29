@@ -141,12 +141,7 @@ export class BullQueueWorkers implements QueueWorkers {
    * Scan state and register all compatible processors
    */
   async registerQueues(): Promise<Record<string, ConfigValidationResult[]>> {
-    const logger = pikkuState(null, 'package', 'singletonServices')?.logger
-    if (!logger) {
-      throw new Error(
-        'Logger is required for registerQueues — pass it explicitly or ensure singleton services are initialized first'
-      )
-    }
+    const logger = pikkuState(null, 'package', 'singletonServices')!.logger
 
     return await registerQueueWorkers(
       this.configMappings,

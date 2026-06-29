@@ -12,7 +12,6 @@ import {
   Clock,
   ListOrdered,
   Bot,
-  Network,
 } from 'lucide-react'
 import { usePikkuMeta } from '../../context/PikkuMetaContext'
 
@@ -26,7 +25,6 @@ const TYPE_CONFIG: Record<
   channel: { icon: Radio, color: 'cyan', href: '/apis?tab=channels' },
   mcp: { icon: Cpu, color: 'orange', href: '/apis?tab=mcp' },
   cli: { icon: Terminal, color: 'teal', href: '/apis?tab=cli' },
-  gateway: { icon: Network, color: 'teal', href: '/apis?tab=gateways' },
   scheduler: { icon: Clock, color: 'yellow', href: '/jobs?tab=schedulers' },
   queue: { icon: ListOrdered, color: 'pink', href: '/jobs?tab=queues' },
   agent: { icon: Bot, color: 'grape', href: '/agents' },
@@ -91,16 +89,6 @@ export const SpotlightSearch: React.FC = () => {
         description: `MCP ${item.method || ''}`,
         leftSection: <Cpu size={16} />,
         onClick: () => navigate('/apis?tab=mcp'),
-      })
-    })
-
-    meta.gatewayMeta?.forEach((gateway: any) => {
-      items.push({
-        id: `gateway-${gateway.name}`,
-        label: gateway.name,
-        description: `Gateway ${gateway.type || ''}${gateway.platform ? ` (${gateway.platform})` : ''}`,
-        leftSection: <Network size={16} />,
-        onClick: () => navigate('/apis?tab=gateways'),
       })
     })
 

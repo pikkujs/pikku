@@ -1,24 +1,26 @@
 import React, { useState } from 'react'
+import { Group, SegmentedControl, TextInput } from '@pikku/mantine/core'
+import { Search } from 'lucide-react'
 import { useSearchParams } from '../router'
 import { PanelProvider } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
 import { CredentialsOverviewTab } from '../components/tabs/CredentialsOverviewTab'
 import { CredentialUsersTab } from '../components/tabs/CredentialUsersTab'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 
-type CredentialsTab = 'credentials' | 'users'
+const TABS = [
+  { value: 'credentials', label: 'Global' },
+  { value: 'users', label: 'Users' },
+]
 
 export const CredentialsPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emptyHero }) => {
-  useLocale()
+  const { t } = useI18n()
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
-  const rawTab = searchParams.get('tab')
-  const tab: CredentialsTab =
-    rawTab === 'users' || rawTab === 'credentials' ? rawTab : 'credentials'
+  const tab = searchParams.get('tab') || 'credentials'
 
-  const handleTabChange = (value: CredentialsTab) => {
+  const handleTabChange = (value: string) => {
     setSearchQuery('')
     setSearchParams({ tab: value })
   }
@@ -28,27 +30,30 @@ export const CredentialsPage: React.FC<{ emptyHero?: React.ReactNode }> = ({ emp
       <ResizablePanelLayout
         header={
           <ListPageHeader
-            title={m.credentials_title()}
-            description={m.credentials_description()}
+            title={t('credentials.title')}
+            description={t('credentials.description')}
             docsHref="https://pikku.dev/docs/core-features/credentials"
-            search={{
-              placeholder: tab === 'users' ? m.credentials_search_users() : m.credentials_search_credentials(),
-              value: searchQuery,
-              onChange: setSearchQuery,
-              width: 240,
-            }}
-            selection={{
-              ariaLabel: m.credentials_tab_aria(),
-              value: tab,
-              onChange: handleTabChange,
-              options: [
-                { value: 'credentials', label: m.credentials_tab_global() },
-                { value: 'users', label: m.credentials_tab_users() },
-              ],
-            }}
+            filters={
+              <Group gap="sm" wrap="nowrap">
+                <TextInput
+                  placeholder={tab === 'users' ? t('credentials.search_users') : t('credentials.search_credentials')}
+                  leftSection={<Search size={14} />}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  size="xs"
+                  style={{ width: 240 }}
+                />
+                <SegmentedControl
+                  size="xs"
+                  value={tab}
+                  onChange={handleTabChange}
+                  data={TABS}
+                />
+              </Group>
+            }
           />
         }
-        emptyPanelMessage={m.credentials_select_user()}
+        emptyPanelMessage={t('credentials.select_user')}
         hidePanel={tab === 'credentials'}
       >
         {tab === 'users' ? (

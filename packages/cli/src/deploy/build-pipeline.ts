@@ -74,7 +74,6 @@ export async function runBuildPipeline(options: {
   provider: ProviderAdapter
   inspectorState: InspectorState
   serverlessIncompatible?: string[]
-  defaultTarget?: 'serverless' | 'server'
   getEntryContext: (
     unitDir: string,
     pikkuDir: string,
@@ -104,7 +103,6 @@ export async function runBuildPipeline(options: {
   const manifest = analyzeDeployment(inspectorState, {
     projectId,
     serverlessIncompatible: options.serverlessIncompatible,
-    defaultTarget: options.defaultTarget,
     workflowQueues,
   })
 
@@ -153,7 +151,6 @@ export async function runBuildPipeline(options: {
       providerDir,
       {
         externals: provider.getExternals?.(),
-        stubModules: provider.getStubModules?.(),
         aliases: provider.getAliases?.(),
         define: provider.getDefine?.(),
         platform: provider.getPlatform?.(),
@@ -282,8 +279,7 @@ export async function runBuildPipeline(options: {
       const ctx = getEntryContext(unitDir, pikkuDir, unit, inspectorState)
       const source =
         unit.target === 'server'
-          ? (provider.generateServerEntrySource?.(ctx as never) ??
-            generateServerEntrySource(ctx as never))
+          ? generateServerEntrySource(ctx as never)
           : provider.generateEntrySource(ctx as never)
 
       await writeFile(entryPath, source, 'utf-8')
@@ -309,7 +305,6 @@ export async function runBuildPipeline(options: {
         providerDir,
         {
           externals: provider.getExternals?.(),
-          stubModules: provider.getStubModules?.(),
           aliases: provider.getAliases?.(),
           define: provider.getDefine?.(),
           platform: provider.getPlatform?.(),

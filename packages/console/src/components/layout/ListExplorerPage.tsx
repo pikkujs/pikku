@@ -11,8 +11,7 @@ import {
 } from '@pikku/mantine/core'
 import type { I18nNode, I18nString } from '@pikku/react'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { Search } from 'lucide-react'
 import classes from '../ui/console.module.css'
 import { Tree } from '../ui/Tree'
@@ -95,7 +94,7 @@ export const ListExplorerPage: React.FC<ListExplorerPageProps> = ({
   panelMessage,
 }) => {
   const [searchQuery, setSearchQuery] = useState('')
-  useLocale()
+  const { t } = useI18n()
 
   const filteredData = useMemo(() => {
     const query = searchQuery.toLowerCase()
@@ -117,7 +116,7 @@ export const ListExplorerPage: React.FC<ListExplorerPageProps> = ({
     <PanelProvider>
       <ResizablePanelLayout
         header={header}
-        emptyPanelMessage={panelMessage ?? m.list_explorer_select_item()}
+        emptyPanelMessage={panelMessage ?? t('list_explorer.select_item')}
       >
         <Stack gap={0} className={classes.flexColumn}>
           <Box
@@ -129,7 +128,7 @@ export const ListExplorerPage: React.FC<ListExplorerPageProps> = ({
           >
             <Group gap="md" wrap="nowrap">
               <TextInput
-                placeholder={searchPlaceholder ?? m.common_search()}
+                placeholder={searchPlaceholder ?? t('common.search')}
                 leftSection={<Search size={16} />}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -154,7 +153,7 @@ export const ListExplorerPage: React.FC<ListExplorerPageProps> = ({
                 <Text c="dimmed" ta="center">
                   {searchQuery
                     ? asI18n(`No results found for "${searchQuery}"`)
-                    : (emptyMessage ?? m.common_no_items())}
+                    : (emptyMessage ?? t('common.no_items'))}
                 </Text>
               </Box>
             ) : (

@@ -36,22 +36,6 @@ const SERVICE_GEN_FILE_MAP: Record<string, RegExp> = {
 }
 
 /**
- * Mapping of service name -> npm module patterns to stub when the service is
- * NOT required by a deployment unit. Unlike SERVICE_GEN_FILE_MAP these are
- * external packages, not gen files: a unit that doesn't wire the service never
- * executes the code path that imports them, so replacing them with `export {}`
- * keeps their (often large) trees out of the bundle.
- *
- * The AI SDKs (@pikku/ai-vercel + @ai-sdk/* + `ai`, ~3MB) are only constructed
- * when `aiAgentRunner` is wired (agent units). Every non-agent unit stubs them.
- * The shared services factory must guard the runner construction behind a
- * defined-check on the dynamic import so a stubbed unit simply skips it.
- */
-const SERVICE_MODULE_MAP: Record<string, RegExp[]> = {
-  aiAgentRunner: [/^@pikku\/ai-vercel/, /^@ai-sdk\//, /^ai$/],
-}
-
-/**
  * Read the per-unit pikku-services.gen.ts and return the set of gen file
  * patterns that should be stubbed (because their service is not required).
  */
@@ -68,13 +52,8 @@ async function getDeadGenFilePatterns(
     if (match) {
       for (const line of match[1].split('\n')) {
         const kv = line.match(/'([^']+)':\s*false/)
-        if (!kv) continue
-        const service = kv[1]
-        if (SERVICE_GEN_FILE_MAP[service]) {
-          patterns.push(SERVICE_GEN_FILE_MAP[service])
-        }
-        if (SERVICE_MODULE_MAP[service]) {
-          patterns.push(...SERVICE_MODULE_MAP[service])
+        if (kv && SERVICE_GEN_FILE_MAP[kv[1]]) {
+          patterns.push(SERVICE_GEN_FILE_MAP[kv[1]])
         }
       }
     }
@@ -127,8 +106,6 @@ interface BundleUnitOptions {
   sourcemap?: boolean
   /** Persist esbuild's metafile to `metafile.json` (debug-only). Default false. */
   emitMetafile?: boolean
-  /** Regex sources for modules to stub to `export {}` (provider runtime never runs them). */
-  stubModules?: string[]
 }
 
 /**
@@ -152,7 +129,6 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     format,
     sourcemap,
     emitMetafile,
-    stubModules,
   } = options
 
   await mkdir(unitOutputDir, { recursive: true })
@@ -162,14 +138,8 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
   const packageJsonPath = join(unitOutputDir, PACKAGE_JSON_FILENAME)
   const exactDependenciesPath = join(unitOutputDir, EXACT_DEPENDENCIES_FILENAME)
 
-  // Determine which gen files to stub based on per-unit service requirements,
-  // plus any provider-supplied module stubs (modules the provider's runtime
-  // never executes — e.g. the `postgres` driver on CF Workers, which use a
-  // libsql/Turso dialect; the postgres branch is URL-gated and never taken).
+  // Determine which gen files to stub based on per-unit service requirements
   const deadPatterns = await getDeadGenFilePatterns(unitOutputDir)
-  for (const source of stubModules ?? []) {
-    deadPatterns.push(new RegExp(source))
-  }
 
   // Run esbuild — inline everything into a self-contained bundle.
   // Only Node built-ins are kept external (CF Workers provides them).
@@ -216,11 +186,7 @@ async function bundleUnit(options: BundleUnitOptions): Promise<BundleResult> {
     metafile: true,
     target: 'es2022',
     outfile: bundlePath,
-    // Minify every deploy bundle — esbuild output ships straight to the runtime
-    // (CF Workers / container), tsc is never the bundler. keepNames preserves
-    // Function.name / constructor.name so name-based reflection still works.
-    minify: true,
-    keepNames: true,
+    minify: false,
     sourcemap: sourcemap ?? false,
     logLevel: 'warning',
     loader: { '.ts': 'ts' },
@@ -327,7 +293,6 @@ export async function bundleUnits(
     noRequireShim?: boolean
     sourcemap?: boolean
     emitMetafile?: boolean
-    stubModules?: string[]
     resolveOutputDir?: (unit: DeploymentUnit, baseOutputDir: string) => string
   }
 ): Promise<BundleOutput> {

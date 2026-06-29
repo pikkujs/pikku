@@ -317,23 +317,9 @@ export function aggregateRequiredServices(
     requiredServices.add('eventHub')
   }
 
-  // 7. Services that consumed addons need from the parent project.
-  // These are required ONLY by units that actually deploy an addon function;
-  // a unit that merely calls the addon over RPC (or never touches it) must not
-  // carry them, or every per-unit bundle would over-include the addon's
-  // parent-service dependencies (e.g. aiAgentRunner, deploymentService) and
-  // defeat per-unit tree-shaking.
-  const addonFuncIds = new Set<string>()
-  for (const fns of Object.values(state.addonFunctions ?? {})) {
-    for (const id of Object.keys(fns)) addonFuncIds.add(id)
-  }
-  const unitDeploysAddonFn = [...usedFunctions].some((fn) =>
-    addonFuncIds.has(fn)
-  )
-  if (unitDeploysAddonFn) {
-    for (const service of state.addonRequiredParentServices ?? []) {
-      requiredServices.add(service)
-    }
+  // 7. Services that addons need from the parent project
+  for (const service of state.addonRequiredParentServices ?? []) {
+    requiredServices.add(service)
   }
 }
 
@@ -661,14 +647,6 @@ export function computeDiagnostics(state: InspectorState): void {
   const diagnostics: InspectorDiagnostic[] = []
 
   for (const [id, meta] of Object.entries(state.functions.meta)) {
-    // Skip framework-synthesized functions: generated wrappers (auth.gen.ts's
-    // opaque authHandler, the cli channel's raw dispatcher) and synthetic route
-    // bridges that reference addon functions (id `http:<method>:<route>`, no
-    // source file). The user can't edit any of these, so a destructure lint
-    // meant to nudge them about their own code must not fail the build over them.
-    if (!meta.sourceFile || meta.sourceFile.endsWith('.gen.ts')) {
-      continue
-    }
     if (meta.services && !meta.services.optimized) {
       diagnostics.push({
         code: ErrorCode.SERVICES_NOT_DESTRUCTURED,

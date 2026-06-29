@@ -291,8 +291,8 @@ async function startServer(): Promise<ReturnType<typeof spawn>> {
   // Wait for ready
   await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(
-      () => reject(new Error('Server start timeout (10s)')),
-      10000
+      () => reject(new Error('Server start timeout (5s)')),
+      5000
     )
     const interval = setInterval(async () => {
       try {

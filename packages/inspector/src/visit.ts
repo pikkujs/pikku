@@ -3,7 +3,6 @@ import { addFileWithFactory } from './add/add-file-with-factory.js'
 import { addFileExtendsCoreType } from './add/add-file-extends-core-type.js'
 import { addHTTPRoute } from './add/add-http-route.js'
 import { addHTTPRoutes } from './add/add-http-routes.js'
-import { checkAddonBans } from './add/add-addon-bans.js'
 import { addSchedule } from './add/add-schedule.js'
 import { addTrigger } from './add/add-trigger.js'
 import { addQueueWorker } from './add/add-queue-worker.js'
@@ -100,28 +99,6 @@ export const visitSetup = (
   )
 }
 
-// Register every pikku function before transports/wirings are resolved, so that
-// resolution (e.g. a channel handler referencing a function defined in another
-// file) is independent of source-file traversal order. Runs between visitSetup
-// and visitRoutes.
-export const visitFunctions = (
-  logger: InspectorLogger,
-  checker: ts.TypeChecker,
-  node: ts.Node,
-  state: InspectorState,
-  options: InspectorOptions
-) => {
-  const nextOptions = ts.isSourceFile(node)
-    ? { ...options, sourceFile: node }
-    : options
-
-  addFunctions(logger, node, checker, state, nextOptions)
-
-  ts.forEachChild(node, (child) =>
-    visitFunctions(logger, checker, child, state, nextOptions)
-  )
-}
-
 export const visitRoutes = (
   logger: InspectorLogger,
   checker: ts.TypeChecker,
@@ -129,35 +106,27 @@ export const visitRoutes = (
   state: InspectorState,
   options: InspectorOptions
 ) => {
-  const nextOptions = ts.isSourceFile(node)
-    ? { ...options, sourceFile: node }
-    : options
+  addFunctions(logger, node, checker, state, options)
+  addAuth(logger, node, checker, state, options)
+  addSecret(logger, node, checker, state, options)
+  addCredential(logger, node, checker, state, options)
+  addVariable(logger, node, checker, state, options)
 
-  checkAddonBans(logger, node, checker, state, nextOptions)
-
-  // NOTE: addFunctions runs in its own earlier pass (visitFunctions) so that
-  // every function is registered before any wiring (channels, CLI, etc.)
-  // resolves it — wiring resolution must not depend on source-file order.
-  addAuth(logger, node, checker, state, nextOptions)
-  addSecret(logger, node, checker, state, nextOptions)
-  addCredential(logger, node, checker, state, nextOptions)
-  addVariable(logger, node, checker, state, nextOptions)
-
-  addHTTPRoute(logger, node, checker, state, nextOptions)
-  addHTTPRoutes(logger, node, checker, state, nextOptions)
-  addSchedule(logger, node, checker, state, nextOptions)
-  addTrigger(logger, node, checker, state, nextOptions)
-  addQueueWorker(logger, node, checker, state, nextOptions)
-  addChannel(logger, node, checker, state, nextOptions)
-  addGateway(logger, node, checker, state, nextOptions)
-  addCLI(logger, node, checker, state, nextOptions)
-  addCLIRenderers(logger, node, checker, state, nextOptions)
-  addMCPResource(logger, node, checker, state, nextOptions)
-  addMCPPrompt(logger, node, checker, state, nextOptions)
-  addWorkflowGraph(logger, node, checker, state, nextOptions)
-  addAIAgent(logger, node, checker, state, nextOptions)
+  addHTTPRoute(logger, node, checker, state, options)
+  addHTTPRoutes(logger, node, checker, state, options)
+  addSchedule(logger, node, checker, state, options)
+  addTrigger(logger, node, checker, state, options)
+  addQueueWorker(logger, node, checker, state, options)
+  addChannel(logger, node, checker, state, options)
+  addGateway(logger, node, checker, state, options)
+  addCLI(logger, node, checker, state, options)
+  addCLIRenderers(logger, node, checker, state, options)
+  addMCPResource(logger, node, checker, state, options)
+  addMCPPrompt(logger, node, checker, state, options)
+  addWorkflowGraph(logger, node, checker, state, options)
+  addAIAgent(logger, node, checker, state, options)
 
   ts.forEachChild(node, (child) =>
-    visitRoutes(logger, checker, child, state, nextOptions)
+    visitRoutes(logger, checker, child, state, options)
   )
 }

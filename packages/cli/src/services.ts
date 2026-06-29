@@ -47,24 +47,13 @@ const DIAGNOSTIC_CODE_TO_LINT_KEY: Record<
   [ErrorCode.WIRES_NOT_DESTRUCTURED]: 'wiresNotDestructured',
 }
 
-// Default severity for each lint rule when not explicitly configured.
-// 'error' routes through logger.critical and always fails the build. Both
-// default to 'error': a non-destructured services/wire param hides which
-// services/transports a function uses (defeating tree-shaking) and usually masks
-// a missing type behind a cast. The whole `wire` is never genuinely needed —
-// destructure the transport you use (`{ rpc }`, `{ http }`, `{ channel }`).
-const LINT_DEFAULTS: NonNullable<PikkuCLIConfig['lint']> = {
-  servicesNotDestructured: 'error',
-  wiresNotDestructured: 'error',
-}
-
 function processDiagnostics(
   diagnostics: InspectorDiagnostic[],
   lint?: PikkuCLIConfig['lint']
 ): void {
   for (const diagnostic of diagnostics) {
     const lintKey = DIAGNOSTIC_CODE_TO_LINT_KEY[diagnostic.code]
-    const severity = lintKey ? (lint?.[lintKey] ?? LINT_DEFAULTS[lintKey] ?? 'off') : 'off'
+    const severity = lintKey ? (lint?.[lintKey] ?? 'off') : 'off'
     if (severity === 'error') {
       logger.critical(diagnostic.code as ErrorCode, diagnostic.message)
     } else if (severity === 'warn') {
@@ -316,19 +305,11 @@ export const createSingletonServices: CreateSingletonServices<
           wireServicesFactoryType: config.wireServicesFactoryType,
         },
         tags: config.tags,
-        // Opt-in security lint (`--security`): scans function return types for
-        // data-classification leaks. Off by default — it's the dominant codegen
-        // cost. Never runs during a plain `pikku all`.
-        classificationCheck: !setupOnly && !!config.security,
         schemaConfig: !setupOnly
           ? {
               tsconfig: config.tsconfig,
               schemasFromTypes: config.schemasFromTypes,
               schema: config.schema,
-              // Persist generated TS schemas under node_modules/.cache (gitignored
-              // by convention) so a warm `pikku all` with unchanged function types
-              // skips ts-json-schema-generator — the largest cold-run cost.
-              cacheDir: path.join(rootDir, 'node_modules', '.cache', 'pikku'),
             }
           : undefined,
         openAPI:

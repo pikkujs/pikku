@@ -2,8 +2,7 @@ import React from 'react'
 import { Text, Box, Group, Divider, Table, Anchor, Badge } from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { useLink } from '../../../../router'
 import { usePikkuMeta } from '../../../../context/PikkuMetaContext'
 import { usePanelContext } from '../../../../context/PanelContext'
@@ -44,7 +43,6 @@ const TYPE_HREF: Record<string, string> = {
   http: '/apis?tab=http',
   channel: '/apis?tab=channels',
   mcp: '/apis?tab=mcp',
-  gateway: '/apis?tab=gateways',
   cli: '/apis?tab=cli',
   rpc: '/apis?tab=http',
   scheduler: '/jobs?tab=schedulers',
@@ -78,7 +76,7 @@ const FunctionValue: React.FC<{ pikkuFuncId: string }> = ({ pikkuFuncId }) => {
 const WiredToSection: React.FC<{ functionName: string }> = ({
   functionName,
 }) => {
-  useLocale()
+  const { t } = useI18n()
   const Link = useLink()
   const { functionUsedBy } = usePikkuMeta()
   const usedBy = functionUsedBy.get(functionName)
@@ -88,7 +86,7 @@ const WiredToSection: React.FC<{ functionName: string }> = ({
 
   return (
     <Box>
-      <SectionLabel>{m.common_details_wired_to({ count: allWirings.length })}</SectionLabel>
+      <SectionLabel>{t('common_details.wired_to', { count: allWirings.length })}</SectionLabel>
       <Table verticalSpacing={4} horizontalSpacing="xs">
         <Table.Thead>
           <Table.Tr>
@@ -150,7 +148,7 @@ export const CommonDetails: React.FC<CommonDetailsProps> = ({
   outputSchemaName,
   children,
 }) => {
-  useLocale()
+  const { t } = useI18n()
   const hasSchemas = !!(inputSchemaName || outputSchemaName)
   const filteredWires = wires?.wires.filter((w) => !SESSION_WIRES.has(w)) || []
   const hasSession = wires?.wires.some((w) => SESSION_WIRES.has(w)) || false
@@ -158,7 +156,7 @@ export const CommonDetails: React.FC<CommonDetailsProps> = ({
   return (
     <>
       {description != null && description !== '' && (
-        <MetaRow label={m.common_details_description()} labelWidth={90}>
+        <MetaRow label={t('common_details.description')} labelWidth={90}>
           <Text size="sm" c="var(--app-meta-value)">
             {asI18n(description)}
           </Text>
@@ -166,13 +164,13 @@ export const CommonDetails: React.FC<CommonDetailsProps> = ({
       )}
 
       {pikkuFuncId && (
-        <MetaRow label={functionLinkLabel ?? m.common_details_function()} labelWidth={90}>
+        <MetaRow label={functionLinkLabel ?? t('common_details.function')} labelWidth={90}>
           <FunctionValue pikkuFuncId={pikkuFuncId} />
         </MetaRow>
       )}
 
       {services && services.length > 0 && (
-        <MetaRow label={m.common_details_services()} labelWidth={90}>
+        <MetaRow label={t('common_details.services')} labelWidth={90}>
           <Group gap={4}>
             {services.map((svc: string) => (
               <ServiceBadge key={svc}>{asI18n(svc)}</ServiceBadge>
@@ -182,7 +180,7 @@ export const CommonDetails: React.FC<CommonDetailsProps> = ({
       )}
 
       {wires && wires.wires.length > 0 && (
-        <MetaRow label={m.common_details_wires()} labelWidth={90}>
+        <MetaRow label={t('common_details.wires')} labelWidth={90}>
           <Group gap={4}>
             {hasSession && <PikkuBadge type="flag" flag="session" />}
             {filteredWires.map((w: string) => (
@@ -193,7 +191,7 @@ export const CommonDetails: React.FC<CommonDetailsProps> = ({
       )}
 
       {middleware && middleware.length > 0 && (
-        <MetaRow label={m.common_details_middleware()} labelWidth={90}>
+        <MetaRow label={t('common_details.middleware')} labelWidth={90}>
           <Group gap={4}>
             {middleware.map((mw: any, i: number) => (
               <LinkedBadge key={i} item={mw} kind="middleware" />
@@ -203,7 +201,7 @@ export const CommonDetails: React.FC<CommonDetailsProps> = ({
       )}
 
       {permissions && permissions.length > 0 && (
-        <MetaRow label={m.common_details_permissions()} labelWidth={90}>
+        <MetaRow label={t('common_details.permissions')} labelWidth={90}>
           <Group gap={4}>
             {permissions.map((perm: any, i: number) => (
               <LinkedBadge key={i} item={perm} kind="permission" />
@@ -213,7 +211,7 @@ export const CommonDetails: React.FC<CommonDetailsProps> = ({
       )}
 
       {tags && tags.length > 0 && (
-        <MetaRow label={m.common_details_tags()} labelWidth={90}>
+        <MetaRow label={t('common_details.tags')} labelWidth={90}>
           <Group gap={4}>
             {tags.map((tag: string, i: number) => (
               <TagBadge key={i}>{asI18n(tag)}</TagBadge>
@@ -223,7 +221,7 @@ export const CommonDetails: React.FC<CommonDetailsProps> = ({
       )}
 
       {errors && errors.length > 0 && (
-        <MetaRow label={m.common_details_errors()} labelWidth={90}>
+        <MetaRow label={t('common_details.errors')} labelWidth={90}>
           <Group gap={4}>
             {errors.map((err: string, i: number) => (
               <Badge key={i} size="sm" color="red" variant="light">
@@ -239,8 +237,8 @@ export const CommonDetails: React.FC<CommonDetailsProps> = ({
       {hasSchemas && (
         <>
           <Divider mt="sm" />
-          <SchemaSection label={m.common_details_input()} schemaName={inputSchemaName} />
-          <SchemaSection label={m.common_details_output()} schemaName={outputSchemaName} />
+          <SchemaSection label={t('common_details.input')} schemaName={inputSchemaName} />
+          <SchemaSection label={t('common_details.output')} schemaName={outputSchemaName} />
         </>
       )}
 

@@ -10,14 +10,13 @@ import { GitBranch } from 'lucide-react'
 import { useConsoleNavigator } from '../../context/ConsoleNavigatorContext'
 import { EmptyStatePlaceholder } from '../layout/EmptyStatePlaceholder'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 
 export const WorkflowTabContent: React.FC<{ immersiveDetail?: boolean }> = ({
   immersiveDetail = false,
 }) => {
   const { workflowId, navigateTo } = useConsoleNavigator()
-  useLocale()
+  const { t } = useI18n()
   const rpc = usePikkuRPC()
   const { data: workflow, isLoading } = useQuery({
     queryKey: ['workflow-meta-by-id', workflowId],
@@ -48,8 +47,8 @@ export const WorkflowTabContent: React.FC<{ immersiveDetail?: boolean }> = ({
     return (
       <EmptyStatePlaceholder
         icon={GitBranch}
-        title={workflowId ? asI18n(`Workflow "${workflowId}" not found`) : m.workflows_empty_title()}
-        description={workflowId ? m.workflows_not_found_description() : m.workflows_empty_description()}
+        title={workflowId ? asI18n(`Workflow "${workflowId}" not found`) : t('workflows.empty_title')}
+        description={workflowId ? t('workflows.not_found_description') : t('workflows.empty_description')}
         docsHref="https://pikku.dev/docs/core-features/workflows"
       />
     )

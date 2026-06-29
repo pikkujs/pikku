@@ -17,8 +17,7 @@ import {
   TypographyStylesProvider,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import styles from '../components/ui/console.module.css'
 import {
   Package,
@@ -177,7 +176,7 @@ const HttpRoutesTab: React.FC<{
       })
     }
   }
-  useLocale()
+  const { t } = useI18n()
   return (
     <ReadOnlyTable
       headers={['METHOD', 'ROUTE', '']}
@@ -188,7 +187,7 @@ const HttpRoutesTab: React.FC<{
         </Text>,
         r.sse ? (
           <Badge key="s" size="sm" variant="light" color="teal">
-            {m.package_detail_sse()}
+            {t('package_detail.sse')}
           </Badge>
         ) : null,
       ])}
@@ -293,7 +292,7 @@ export const PackageDetailPage: React.FC<{
   const rpc = usePikkuRPC()
   const editable = useConsoleEditable()
   const queryClient = useQueryClient()
-  useLocale()
+  const { t } = useI18n()
   const [activeTab, setActiveTab] = React.useState<string | null>(null)
 
   const { data: installedAddons } = useQuery<
@@ -480,7 +479,7 @@ export const PackageDetailPage: React.FC<{
             {api.totalOperations > 0 && (
               <Box>
                 <Text size="sm" fw={600} c="dimmed" tt="uppercase" mb={4}>
-                  {m.package_detail_operations({ count: api.totalOperations })}
+                  {t('package_detail.operations', { count: api.totalOperations })}
                 </Text>
                 <Group gap={6}>
                   {api.opsGet > 0 && (
@@ -515,7 +514,7 @@ export const PackageDetailPage: React.FC<{
             {api.servers?.length > 0 && (
               <Box>
                 <Text size="sm" fw={600} c="dimmed" tt="uppercase" mb={4}>
-                  {m.package_detail_servers()}
+                  {t('package_detail.servers')}
                 </Text>
                 {api.servers.map((s: string) => (
                   <Code key={s} block style={{ fontSize: '12px' }}>
@@ -528,7 +527,7 @@ export const PackageDetailPage: React.FC<{
             {api.securitySchemes?.length > 0 && (
               <Box>
                 <Text size="sm" fw={600} c="dimmed" tt="uppercase" mb={4}>
-                  {m.package_detail_authentication()}
+                  {t('package_detail.authentication')}
                 </Text>
                 <Group gap={6}>
                   {api.securitySchemes.map((s: string) => (
@@ -543,7 +542,7 @@ export const PackageDetailPage: React.FC<{
             {api.contentTypes?.length > 0 && (
               <Box>
                 <Text size="sm" fw={600} c="dimmed" tt="uppercase" mb={4}>
-                  {m.package_detail_content_types()}
+                  {t('package_detail.content_types')}
                 </Text>
                 <Group gap={6}>
                   {api.contentTypes.map((c: string) => (
@@ -565,7 +564,7 @@ export const PackageDetailPage: React.FC<{
                   target="_blank"
                   leftSection={<BookOpen size={13} />}
                 >
-                  {m.package_detail_openapi_json()}
+                  {t('package_detail.openapi_json')}
                 </Button>
               )}
               {api.swaggerYamlUrl && (
@@ -577,7 +576,7 @@ export const PackageDetailPage: React.FC<{
                   target="_blank"
                   leftSection={<BookOpen size={13} />}
                 >
-                  {m.package_detail_openapi_yaml()}
+                  {t('package_detail.openapi_yaml')}
                 </Button>
               )}
               {editable && (
@@ -607,14 +606,14 @@ export const PackageDetailPage: React.FC<{
                     })
                   }}
                 >
-                  {m.package_detail_generate_install_addon()}
+                  {t('package_detail.generate_install_addon')}
                 </Button>
               )}
             </Group>
 
             {installOpenapiMutation.isSuccess && (
               <Alert color="green" icon={<Check size={16} />}>
-                {m.package_detail_addon_installed_success()}
+                {t('package_detail.addon_installed_success')}
               </Alert>
             )}
             {installOpenapiMutation.error && (
@@ -650,7 +649,7 @@ export const PackageDetailPage: React.FC<{
         hidePanel
       >
         <Box p="xl">
-          <Text c="dimmed">{m.package_detail_not_found()}</Text>
+          <Text c="dimmed">{t('package_detail.not_found')}</Text>
         </Box>
       </ResizablePanelLayout>
     )
@@ -700,10 +699,10 @@ export const PackageDetailPage: React.FC<{
   const showPanel = panelTabs.includes(currentTab)
   const emptyPanelMessage =
     currentTab === 'secrets'
-      ? m.package_detail_select_secret()
+      ? t('package_detail.select_secret')
       : currentTab === 'variables'
-        ? m.package_detail_select_variable()
-        : m.package_detail_select_function()
+        ? t('package_detail.select_variable')
+        : t('package_detail.select_function')
 
   return (
     <ResizablePanelLayout
@@ -814,7 +813,7 @@ export const PackageDetailPage: React.FC<{
                           leftSection={<Check size={13} />}
                           disabled
                         >
-                          {m.package_detail_installed()}
+                          {t('package_detail.installed')}
                         </Button>
                       )
                     }
@@ -833,7 +832,7 @@ export const PackageDetailPage: React.FC<{
                           })
                         }
                       >
-                        {m.package_detail_install()}
+                        {t('package_detail.install')}
                       </Button>
                     )
                   })()}
@@ -866,7 +865,7 @@ export const PackageDetailPage: React.FC<{
               <Tabs.List style={{ borderBottom: 'none' }}>
                 {pkg.readme && (
                   <Tabs.Tab value="readme" leftSection={<BookOpen size={14} />}>
-                    {m.package_detail_tab_readme()}
+                    {t('package_detail.tab_readme')}
                   </Tabs.Tab>
                 )}
                 {functionList.length > 0 && (

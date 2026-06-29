@@ -1,7 +1,5 @@
 import { Routes, Route, Navigate, Outlet } from 'react-router'
 import { AppLayout } from './components/layout/AppLayout'
-import { AuthGate } from './components/auth/AuthGate'
-import { ImpersonationBanner } from './components/auth/ImpersonationBanner'
 import { NotFoundTitle } from './components/NotFoundTitle'
 
 import { OverviewPage } from './pages/OverviewPage'
@@ -18,7 +16,7 @@ import { AgentPlaygroundPage } from './pages/AgentPlaygroundPage'
 import { OAuthCallbackPage } from './pages/OAuthCallbackPage'
 import { PackagesPage } from './pages/PackagesPage'
 import { CredentialsPage } from './pages/CredentialsPage'
-import { AdminUsersPage } from './pages/AdminUsersPage'
+import { OSSUsersPage } from './pages/OSSUsersPage'
 import { RenderWorkflowPage } from './pages/RenderWorkflowPage'
 import { ChangesPage } from './pages/ChangesPage'
 import { TestsPage } from './pages/TestsPage'
@@ -32,12 +30,9 @@ export const App: React.FC = () => {
       <Route path="/render/workflow" element={<RenderWorkflowPage />} />
       <Route
         element={
-          <AuthGate>
-            <ImpersonationBanner />
-            <AppLayout>
-              <Outlet />
-            </AppLayout>
-          </AuthGate>
+          <AppLayout>
+            <Outlet />
+          </AppLayout>
         }
       >
         <Route path="/" element={<Navigate to="/overview" replace />} />
@@ -57,7 +52,7 @@ export const App: React.FC = () => {
         <Route path="/variables" element={<VariablesPage />} />
         <Route path="/config" element={<Navigate to="/secrets" replace />} />
         <Route path="/credentials" element={<CredentialsPage />} />
-        <Route path="/users" element={<AdminUsersPage />} />
+        <Route path="/users" element={<OSSUsersPage />} />
         <Route path="/auth-providers" element={<AuthProvidersPage />} />
         <Route path="/addons" element={<PackagesPage />} />
         <Route path="*" element={<NotFoundTitle />} />

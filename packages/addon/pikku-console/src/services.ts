@@ -29,11 +29,11 @@ export const createSingletonServices = pikkuAddonServices(
       )
     }
     const metaService = existingMetaService
-    const fabricApiUrl =
-      (await variables.get('FABRIC_API_URL')) ?? 'https://api.pikkufabric.com'
+    const registryUrl =
+      (await variables.get('REGISTRY_URL')) ?? 'https://pikku-registry.fly.dev'
 
     const wiringService = new WiringService(metaService)
-    const addonService = new AddonService(fabricApiUrl)
+    const addonService = new AddonService(registryUrl)
     await addonService.init()
     const oauthService = new OAuthService()
 
@@ -43,21 +43,13 @@ export const createSingletonServices = pikkuAddonServices(
     let dbSchemaService: DbSchemaService | null = null
     if (metaBasePath) {
       const { dirname } = await import('node:path')
+      const codeEditPath = './services/code-edit.service.js'
+      const { CodeEditService } = await import(codeEditPath)
       const projectRoot = dirname(metaBasePath)
+      codeEditService = new CodeEditService(projectRoot)
       stateDiffService = new StateDiffService(projectRoot)
+
       dbSchemaService = new DbSchemaService(metaService)
-      // code-edit.service pulls in the TypeScript compiler and is deliberately a
-      // lazy, separately-bundled module. Self-contained bundles (e.g. the sandbox
-      // orchestrator standalone artifact) don't ship it, so a failed import must
-      // degrade to a null codeEditService — never crash every console RPC. The
-      // update-* edit functions already guard on `if (!codeEditService) throw`.
-      try {
-        const codeEditPath = './services/code-edit.service.js'
-        const { CodeEditService } = await import(codeEditPath)
-        codeEditService = new CodeEditService(projectRoot)
-      } catch {
-        // codeEditService stays null; write-time edit ops report it unavailable.
-      }
     }
 
     return {

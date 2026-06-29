@@ -14,36 +14,36 @@ import { pikkuMiddleware } from '#pikku'
  * - Scheduler: {} (empty object)
  */
 export const loggingMiddleware = pikkuMiddleware(
-  async ({ logger }, { http, channel, mcp, rpc, cli }, next) => {
+  async (services, wire, next) => {
     const start = Date.now()
 
     // Determine the wire type for better logging
     let wireType = 'unknown'
-    if (http) {
-      wireType = `HTTP ${http.request?.method()?.toUpperCase()} ${http.request?.path()}`
-    } else if (channel) {
-      wireType = `Channel ${channel.channelId}`
-    } else if (mcp) {
+    if (wire.http) {
+      wireType = `HTTP ${wire.http.request?.method()?.toUpperCase()} ${wire.http.request?.path()}`
+    } else if (wire.channel) {
+      wireType = `Channel ${wire.channel.channelId}`
+    } else if (wire.mcp) {
       wireType = 'MCP'
-    } else if (rpc) {
+    } else if (wire.rpc) {
       wireType = 'RPC'
-    } else if (cli) {
-      wireType = `CLI ${cli.command.join(' ')}`
+    } else if (wire.cli) {
+      wireType = `CLI ${wire.cli.command.join(' ')}`
     } else {
       wireType = 'Queue/Scheduler'
     }
 
-    logger.info(`[${wireType}] Function execution started`)
+    services.logger.info(`[${wireType}] Function execution started`)
 
     try {
       await next()
       const duration = Date.now() - start
-      logger.info(
+      services.logger.info(
         `[${wireType}] Function execution completed successfully in ${duration}ms`
       )
     } catch (error) {
       const duration = Date.now() - start
-      logger.error(
+      services.logger.error(
         `[${wireType}] Function execution failed after ${duration}ms:`,
         error
       )

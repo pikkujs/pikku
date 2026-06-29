@@ -1,11 +1,20 @@
 import { existsSync } from 'fs'
 import { join } from 'path'
-import { mkdir, writeFile } from 'fs/promises'
+import { mkdir, readFile, writeFile } from 'fs/promises'
 import {
   createEmptyManifest,
   saveManifest,
 } from '../../utils/contract-versions.js'
+import ts from 'typescript'
 import { pikkuSessionlessFunc } from '#pikku'
+import { assignBundlePaths, selectBundledFunctions } from './addon-bundle.js'
+import { checkRawSqlOwnership } from '../db/addon-table-discovery.js'
+import {
+  generateAddonServices,
+  generateScopedDbTypes,
+} from '../db/addon-assembly.js'
+import { carveDbAddon } from '../db/addon-db-carve.js'
+import { carveServiceTypes } from '../db/addon-service-carve.js'
 import {
   parseOpenAPISpec,
   computeContractHash,
@@ -133,14 +142,16 @@ function getAddonFiles(
           types: './dist/src/index.d.ts',
           import: './dist/src/index.js',
         },
-        './.pikku/*': './dist/.pikku/*',
-        './.pikku/pikku-metadata.gen.json':
-          './dist/.pikku/pikku-metadata.gen.json',
+        // `.pikku` is exported from source (not dist): its gen files import
+        // sibling `../types/*.d.ts`, which tsc never emits into dist — so a
+        // dist-rooted `.pikku` would dangle for any consumer that compiles it.
+        './.pikku/*': './.pikku/*',
+        './.pikku/pikku-metadata.gen.json': './.pikku/pikku-metadata.gen.json',
         './.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js': {
-          types: './dist/.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts',
+          types: './.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts',
         },
       },
-      files: ['dist'],
+      files: ['dist', '.pikku', 'types'],
       scripts: {
         prepublishOnly: 'yarn build',
         prebuild: 'pikku all',
@@ -170,8 +181,11 @@ function getAddonFiles(
       tsconfig: './tsconfig.json',
       srcDirectories: ['src', 'types'],
       outDir: './.pikku',
-      addon: true,
-      node: {
+      // Presentation metadata lives under `addon` (an object) — the node-meta
+      // codegen reads `config.addon` (`typeof addon === 'object' ? addon : …`),
+      // so a boolean `addon: true` with a sibling `node` block would leave the
+      // generated package metadata empty.
+      addon: {
         displayName,
         description,
         categories: [category],
@@ -846,6 +860,78 @@ async function writeFiles(
   return written
 }
 
+/** Base services the host always provides; never re-declared by the addon. */
+const BASE_SERVICES = new Set([
+  'config',
+  'logger',
+  'variables',
+  'secrets',
+  'schema',
+])
+
+/**
+ * Carve mode replaces the API-client scaffold (`{name}-api.service.ts`,
+ * the service it constructs, the `{name}.types.ts` Zod stub) with a
+ * `pikkuAddonServices` factory derived from what the bundled functions
+ * actually destructure. Base services are auto-provided; any non-base service
+ * (e.g. `kysely`) becomes a required parent service. Returns the files to
+ * overwrite and the scaffold files to drop.
+ */
+function carveServiceFiles(
+  vars: AddonVars,
+  requiredServices: string[]
+): { write: Record<string, string>; remove: string[] } {
+  const { name } = vars
+  return {
+    write: {
+      'src/services.ts': generateAddonServices(requiredServices),
+      'src/index.ts': `// Functions carved from the source project live in src/functions/.\n`,
+    },
+    remove: [`src/${name}-api.service.ts`, `src/${name}.types.ts`],
+  }
+}
+
+/**
+ * The addon's application-types. kysely (if used) is declared scoped to the
+ * addon's owned tables (`AddonDB`); each carved user service is declared with
+ * the same type it has in the source — so the bundled functions and the
+ * `pikkuAddonServices` factory type-check against exactly the carved surface.
+ */
+function buildApplicationTypes(opts: {
+  hasKysely: boolean
+  imports: string[]
+  members: string[]
+}): string {
+  const imports = [
+    `import type {
+  CoreConfig,
+  CoreServices,
+  CoreSingletonServices,
+  CoreUserSession,
+} from '@pikku/core'`,
+  ]
+  const members: string[] = []
+  if (opts.hasKysely) {
+    imports.push(`import type { Kysely } from 'kysely'`)
+    imports.push(`import type { AddonDB } from './addon-db.gen.js'`)
+    members.push('  kysely: Kysely<AddonDB>')
+  }
+  imports.push(...opts.imports)
+  members.push(...opts.members)
+
+  const body = members.length > 0 ? `{\n${members.join('\n')}\n}` : '{}'
+  return `${imports.join('\n')}
+
+export interface Config extends CoreConfig {}
+
+export interface UserSession extends CoreUserSession {}
+
+export interface SingletonServices extends CoreSingletonServices<Config> ${body}
+
+export interface Services extends CoreServices<SingletonServices> {}
+`
+}
+
 export const pikkuNewAddon = pikkuSessionlessFunc<
   {
     name: string
@@ -861,11 +947,12 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
     openapi?: string
     mcp?: boolean
     camelCase?: boolean
+    carve?: boolean
   },
   void
 >({
   func: async (
-    { logger, config },
+    { logger, config, getInspectorState },
     {
       name,
       displayName,
@@ -880,6 +967,7 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
       openapi,
       mcp = false,
       camelCase = false,
+      carve = false,
     }
   ) => {
     name = sanitizeAddonName(name)
@@ -963,6 +1051,219 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
         ...(camelCase ? { camelCase: true } : {}),
       }
       addonFiles['pikku.config.json'] = JSON.stringify(config, null, 2)
+    }
+
+    // Carve: bundle the project's functions into the addon. Which functions are
+    // in scope is pikku's call, not ours — `getInspectorState()` returns the
+    // state already narrowed by the global `--filter`/`--tags`/`--names` flags,
+    // so we just bundle whatever's left.
+    if (carve) {
+      const state = await getInspectorState()
+      const meta = state.functions.meta ?? {}
+
+      // Presentation metadata the source project may carry under `node` in
+      // pikku.config.json (a key `pikku dev`/codegen ignore). Read it raw — the
+      // parsed CLI config drops keys it doesn't model.
+      let sourceNodeMeta: Record<string, unknown> = {}
+      try {
+        const raw = JSON.parse(
+          await readFile(join(config.rootDir, 'pikku.config.json'), 'utf-8')
+        )
+        if (raw?.node && typeof raw.node === 'object') sourceNodeMeta = raw.node
+      } catch {
+        // no source pikku.config.json metadata — fall back to flags/defaults
+      }
+      const { matched, skipped } = selectBundledFunctions(meta)
+      if (matched.length === 0) {
+        logger.error(
+          'No functions to carve. Narrow the project with --filter/--tags/--names so there is something to bundle.'
+        )
+        process.exit(1)
+      }
+
+      const bundled = assignBundlePaths(matched)
+      for (const { destPath, sourceFile } of bundled) {
+        try {
+          addonFiles[destPath] = await readFile(sourceFile, 'utf-8')
+        } catch {
+          logger.error(`Could not read bundled function source: ${sourceFile}`)
+          process.exit(1)
+        }
+      }
+
+      // Gate: a bundled function that builds queries with raw SQL has table
+      // ownership the type oracle can't determine — refuse rather than ship an
+      // addon silently missing its tables. Report against the original source.
+      const rawSqlErrors = checkRawSqlOwnership(
+        bundled.map(({ sourceFile, destPath }) =>
+          ts.createSourceFile(
+            sourceFile,
+            addonFiles[destPath]!,
+            ts.ScriptTarget.Latest,
+            /* setParentNodes */ true
+          )
+        )
+      )
+      if (rawSqlErrors.length > 0) {
+        for (const e of rawSqlErrors) logger.error(e)
+        process.exit(1)
+      }
+
+      // Derive the addon's service contract from what the bundled functions
+      // actually use, and replace the API-client scaffold with it.
+      const requiredServices = new Set<string>()
+      for (const fn of matched) {
+        for (const s of meta[fn.id]?.services?.services ?? []) {
+          requiredServices.add(s)
+        }
+      }
+      const requiredServicesList = [...requiredServices]
+      const { write, remove } = carveServiceFiles(vars, requiredServicesList)
+      for (const path of remove) delete addonFiles[path]
+      Object.assign(addonFiles, write)
+
+      // Shake the user-defined (non-base, non-kysely) services the bundled
+      // functions use: copy each one's type into the addon and declare it on
+      // SingletonServices, so the factory destructure type-checks.
+      const svc = state.program
+        ? carveServiceTypes(state.program, requiredServicesList)
+        : {
+            members: [],
+            imports: [],
+            files: {},
+            packages: [],
+            unsupported: requiredServicesList.filter(
+              (s) => !BASE_SERVICES.has(s) && s !== 'kysely'
+            ),
+          }
+      Object.assign(addonFiles, svc.files)
+      // A package-typed service is re-imported from its package, which must
+      // resolve when the addon — and its consumer — compiles.
+      if (svc.packages.length > 0) {
+        const pkg = JSON.parse(addonFiles['package.json']!)
+        for (const p of svc.packages) {
+          pkg.peerDependencies = { ...pkg.peerDependencies, [p]: '*' }
+          pkg.devDependencies = { ...pkg.devDependencies, [p]: '*' }
+        }
+        addonFiles['package.json'] = JSON.stringify(pkg, null, 2)
+      }
+      // Gate (mirrors the raw-SQL gate): a service whose type can't be carved
+      // from the source would leave the factory destructuring an undeclared
+      // service — a non-compiling addon. Refuse rather than ship it broken.
+      if (svc.unsupported.length > 0) {
+        logger.error(
+          `Carved functions use service(s) the addon can't type from the source: ${svc.unsupported.join(', ')}. ` +
+            `Their types resolve through a sibling-imported local file, which the carve can't copy cleanly. ` +
+            `Declare them on the addon's SingletonServices manually, or exclude the functions using them.`
+        )
+        process.exit(1)
+      }
+
+      // DB shake: if the bundled functions use kysely, scope the addon to the
+      // tables they actually own (compile-oracle) and ship the owned-table SQL +
+      // scoped DB type. kysely is declared as a required parent service.
+      const hasKysely = requiredServices.has('kysely')
+      if (hasKysely) {
+        if (!state.program) {
+          logger.error(
+            'Cannot scope the DB addon: the inspector produced no TypeScript program.'
+          )
+          process.exit(1)
+        }
+        const carved = carveDbAddon({
+          addonName: name,
+          engine: 'sqlite', // TODO: derive the engine from the project config
+          program: state.program,
+          functionFiles: matched.map((f) => f.sourceFile),
+          requiredServices: requiredServicesList,
+          dbTypeName: 'DB', // TODO: discover the kysely DB type, don't assume `DB`
+        })
+        if ('error' in carved) {
+          logger.error(carved.error)
+          process.exit(1)
+        }
+        const { result, dbTypesContent } = carved
+        if (result.errors.length > 0) {
+          for (const e of result.errors) logger.error(e)
+          process.exit(1)
+        }
+        for (const w of result.warnings) logger.warn(w)
+
+        // Keep the scoped DB type in `types/` (not `.pikku/`, which `pikku all`
+        // owns and would clobber). It and db.types ship with the addon.
+        const dbFiles = { ...result.files }
+        delete dbFiles['.pikku/addon-db.gen.ts']
+        Object.assign(addonFiles, dbFiles)
+        addonFiles['types/db.types.ts'] = dbTypesContent
+        addonFiles['types/addon-db.gen.ts'] = generateScopedDbTypes(
+          result.owned,
+          "import type { DB } from './db.types.js'"
+        )
+
+        // kysely must resolve when the addon — and its consumer — compiles.
+        const pkg = JSON.parse(addonFiles['package.json']!)
+        pkg.peerDependencies = { ...pkg.peerDependencies, kysely: '*' }
+        pkg.devDependencies = { ...pkg.devDependencies, kysely: '*' }
+        addonFiles['package.json'] = JSON.stringify(pkg, null, 2)
+
+        logger.info(
+          `Carved DB addon owns table(s): ${result.owned.join(', ') || '(none)'}`
+        )
+      }
+
+      // Unified application-types: kysely (scoped) + every carved user service.
+      addonFiles['types/application-types.d.ts'] = buildApplicationTypes({
+        hasKysely,
+        imports: svc.imports,
+        members: svc.members,
+      })
+
+      // Finalize the addon metadata. A source project carries its presentation
+      // metadata under a `node` block in pikku.config.json — a key `pikku dev`
+      // and the codegen ignore, so it stays a runnable normal project — and the
+      // carve lifts it into the `addon` block the node-meta codegen reads. Source
+      // `node` wins over the flag-derived defaults.
+      const cfg = JSON.parse(addonFiles['pikku.config.json'])
+      if (typeof cfg.addon !== 'object' || !cfg.addon) cfg.addon = {}
+      cfg.addon = { ...cfg.addon, ...sourceNodeMeta }
+      addonFiles['pikku.config.json'] = JSON.stringify(cfg, null, 2)
+
+      // Ship the icon the metadata points at — the source keeps it at the
+      // project root; without copying it the addon's `addon.icon` path dangles.
+      if (typeof cfg.addon.icon === 'string') {
+        const iconBase = cfg.addon.icon.replace(/^\.\//, '')
+        try {
+          addonFiles[iconBase] = await readFile(
+            join(config.rootDir, iconBase),
+            'utf-8'
+          )
+        } catch {
+          logger.warn(
+            `Addon icon '${iconBase}' not found in the source project; the addon's icon path will dangle.`
+          )
+        }
+      }
+
+      // Re-export the carved functions from the package root so the documented
+      // `import { fn } from '@pikku/addon-<name>'` entrypoint resolves. The
+      // consumer's generated wiring imports each function by its own module
+      // path, but external code uses the root export (and `exports['.']` points
+      // at it) — a placeholder index would break that.
+      addonFiles['src/index.ts'] =
+        bundled
+          .map(({ destPath }, i) => {
+            const spec =
+              './' + destPath.replace(/^src\//, '').replace(/\.tsx?$/, '.js')
+            return `export { ${matched[i]!.name} } from '${spec}'`
+          })
+          .join('\n') + '\n'
+
+      logger.info(
+        `Bundled ${bundled.length} function(s) into the addon` +
+          (skipped.length > 0
+            ? `; skipped ${skipped.length} without a source file (${skipped.join(', ')})`
+            : '')
+      )
     }
 
     const written = await writeFiles(addonDir, addonFiles)

@@ -1,6 +1,6 @@
 {
   "name": "@pikku/cloudflare",
-  "version": "0.12.11",
+  "version": "0.12.10",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",
@@ -35,15 +35,15 @@
     "kysely-d1": "^0.4.0"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.38",
-    "@pikku/kysely": "^0.12.17",
+    "@pikku/core": "^0.12.30",
+    "@pikku/kysely": "^0.12.16",
     "kysely": "^0.29.0"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.16.17",
     "@cloudflare/workers-types": "^4.20260317.1",
-    "@pikku/core": "^0.12.38",
-    "@pikku/kysely": "^0.12.17",
+    "@pikku/core": "^0.12.34",
+    "@pikku/kysely": "^0.12.16",
     "@vitest/runner": "^4.1.9",
     "@vitest/snapshot": "^4.1.9",
     "kysely": "^0.29.0",

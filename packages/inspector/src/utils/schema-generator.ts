@@ -1,6 +1,4 @@
 import * as ts from 'typescript'
-import { createHash } from 'crypto'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { dirname, join, resolve } from 'path'
 import { createGenerator, RootlessError } from 'ts-json-schema-generator'
 import { register } from 'tsx/esm/api'
@@ -75,74 +73,6 @@ let cachedParsedConfig: ts.ParsedCommandLine | undefined
 let cachedTsconfigPath: string | undefined
 let cachedCustomTypesContent: string | undefined
 let cachedTSSchemas: Record<string, JSONValue> | undefined
-
-const SCHEMA_CACHE_VERSION = 1
-
-// This package's own version — folded into the cache key so that upgrading
-// @pikku/inspector (the channel through which a schema-format change ships)
-// auto-invalidates every on-disk cache, without relying on someone remembering
-// to bump SCHEMA_CACHE_VERSION. Read once; falls back to the constant if the
-// package.json can't be located (e.g. an unexpected bundling layout).
-const inspectorVersion: string = (() => {
-  try {
-    const pkgUrl = new URL('../../package.json', import.meta.url)
-    const pkg = JSON.parse(readFileSync(pkgUrl, 'utf-8'))
-    return typeof pkg.version === 'string' ? pkg.version : `v${SCHEMA_CACHE_VERSION}`
-  } catch {
-    return `v${SCHEMA_CACHE_VERSION}`
-  }
-})()
-
-// Key the TS-schema cache on everything that affects its output: the generated
-// custom-types source, the generator options that change schema shape, and the
-// inspector version (schema-format changes ship with a version bump).
-function tsSchemaCacheKey(
-  customTypesContent: string,
-  config: { schemasFromTypes?: string[]; schema?: { additionalProperties?: boolean } }
-): string {
-  return createHash('sha1')
-    .update(`v${SCHEMA_CACHE_VERSION}\0`)
-    .update(`pkg:${inspectorVersion}\0`)
-    .update(`ap:${config.schema?.additionalProperties ? 1 : 0}\0`)
-    .update(`ft:${(config.schemasFromTypes ?? []).join(',')}\0`)
-    .update(customTypesContent)
-    .digest('hex')
-}
-
-function schemaCacheFile(cacheDir: string): string {
-  return join(cacheDir, 'ts-schemas.json')
-}
-
-function readDiskTSSchemas(
-  logger: InspectorLogger,
-  cacheDir: string,
-  key: string
-): Record<string, JSONValue> | null {
-  const file = schemaCacheFile(cacheDir)
-  if (!existsSync(file)) return null
-  try {
-    const parsed = JSON.parse(readFileSync(file, 'utf-8'))
-    if (parsed?.key === key && parsed.schemas) return parsed.schemas
-  } catch (e) {
-    logger.debug(`Ignoring unreadable TS-schema cache: ${(e as Error).message}`)
-  }
-  return null
-}
-
-function writeDiskTSSchemas(
-  logger: InspectorLogger,
-  cacheDir: string,
-  key: string,
-  schemas: Record<string, JSONValue>
-): void {
-  const file = schemaCacheFile(cacheDir)
-  try {
-    mkdirSync(dirname(file), { recursive: true })
-    writeFileSync(file, JSON.stringify({ key, schemas }))
-  } catch (e) {
-    logger.debug(`Failed to persist TS-schema cache: ${(e as Error).message}`)
-  }
-}
 
 function createProgramWithVirtualFile(
   tsconfig: string,
@@ -564,7 +494,6 @@ export async function generateAllSchemas(
     tsconfig: string
     schemasFromTypes?: string[]
     schema?: { additionalProperties?: boolean }
-    cacheDir?: string
   },
   state: InspectorState
 ): Promise<Record<string, JSONValue>> {
@@ -580,26 +509,9 @@ export async function generateAllSchemas(
     requiredTypes
   )
 
-  // Fast path: same process, types unchanged — reuse the in-memory result.
   if (cachedTSSchemas && cachedCustomTypesContent === customTypesContent) {
     logger.debug('Reusing cached TS schemas (types unchanged)')
     return { ...cachedTSSchemas, ...zodSchemas }
-  }
-
-  // Disk path: a prior `pikku all` left a cache whose key matches the current
-  // custom types — load it and skip ts-json-schema-generator (the dominant
-  // cold-run cost). Zod schemas are always regenerated (cheap, ~1ms/schema).
-  const cacheKey = config.cacheDir
-    ? tsSchemaCacheKey(customTypesContent, config)
-    : null
-  if (config.cacheDir && cacheKey) {
-    const disk = readDiskTSSchemas(logger, config.cacheDir, cacheKey)
-    if (disk) {
-      logger.debug('Reusing on-disk TS schemas (types unchanged across runs)')
-      cachedCustomTypesContent = customTypesContent
-      cachedTSSchemas = disk
-      return { ...disk, ...zodSchemas }
-    }
   }
 
   const tsSchemas = generateTSSchemas(
@@ -616,10 +528,6 @@ export async function generateAllSchemas(
 
   cachedCustomTypesContent = customTypesContent
   cachedTSSchemas = tsSchemas
-
-  if (config.cacheDir && cacheKey) {
-    writeDiskTSSchemas(logger, config.cacheDir, cacheKey, tsSchemas)
-  }
 
   return { ...tsSchemas, ...zodSchemas }
 }

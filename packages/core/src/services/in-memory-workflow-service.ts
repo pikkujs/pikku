@@ -1,6 +1,5 @@
 import { randomUUID } from 'crypto'
 import { PikkuWorkflowService } from '../wirings/workflow/pikku-workflow-service.js'
-import { isExpectedError } from '../errors/error-handler.js'
 import type { SerializedError } from '../types/core.types.js'
 import type {
   WorkflowPlannedStep,
@@ -8,7 +7,6 @@ import type {
   WorkflowRunService,
   WorkflowRunWire,
   StepState,
-  StepStatus,
   WorkflowStatus,
   WorkflowVersionStatus,
   WorkflowStepOptions,
@@ -142,8 +140,7 @@ export class InMemoryWorkflowService
     stepName: string,
     rpcName: string | null,
     data: any,
-    stepOptions?: WorkflowStepOptions,
-    fromStepName?: string
+    stepOptions?: WorkflowStepOptions
   ): Promise<StepState> {
     const stepId = randomUUID()
     const now = new Date()
@@ -154,7 +151,6 @@ export class InMemoryWorkflowService
       attemptCount: 1,
       retries: stepOptions?.retries,
       retryDelay: stepOptions?.retryDelay,
-      fromStepName,
       createdAt: now,
       updatedAt: now,
       stepName,
@@ -231,7 +227,6 @@ export class InMemoryWorkflowService
           name: error.name,
           message: error.message,
           stack: error.stack,
-          expected: isExpectedError(error),
         }
         step.failedAt = new Date()
         step.updatedAt = new Date()
@@ -286,7 +281,6 @@ export class InMemoryWorkflowService
       attemptCount: failedStep.attemptCount + 1,
       retries: failedStep.retries,
       retryDelay: failedStep.retryDelay,
-      fromStepName: failedStep.fromStepName,
       createdAt: now,
       updatedAt: now,
       stepName: stepName,
@@ -449,26 +443,6 @@ export class InMemoryWorkflowService
       }
     }
     return nodeIds.filter((id) => !existingSteps.has(id))
-  }
-
-  async getStepInstances(runId: string): Promise<
-    Array<{ stepName: string; status: StepStatus; fromStepName?: string }>
-  > {
-    const prefix = `${runId}:`
-    const instances: Array<{
-      stepName: string
-      status: StepStatus
-      fromStepName?: string
-    }> = []
-    for (const [key, step] of this.steps.entries()) {
-      if (!key.startsWith(prefix)) continue
-      instances.push({
-        stepName: key.substring(prefix.length),
-        status: step.status,
-        fromStepName: step.fromStepName,
-      })
-    }
-    return instances
   }
 
   async getNodeResults(

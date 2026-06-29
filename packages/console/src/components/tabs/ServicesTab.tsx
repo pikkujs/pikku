@@ -5,8 +5,7 @@ import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 
 interface ServiceItem {
   name: string
@@ -32,7 +31,7 @@ const COLUMNS = [
 
 export const ServicesTab: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
   const { meta, loading } = usePikkuMeta()
-  useLocale()
+  const { t } = useI18n()
 
   const allServices = useMemo((): ServiceItem[] => {
     const serviceMap = new Map<
@@ -76,7 +75,7 @@ export const ServicesTab: React.FC<{ searchQuery: string }> = ({ searchQuery }) 
       columns={COLUMNS}
       getKey={(item) => item.name}
       onRowClick={() => {}}
-      emptyMessage={m.services_empty_message()}
+      emptyMessage={t('services.empty_message')}
       loading={loading}
     />
   )

@@ -5,14 +5,13 @@ import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 
 type McpTabProps = { searchQuery: string; emptyHero?: React.ReactNode }
 
 export const McpTab: React.FC<McpTabProps> = ({ searchQuery, emptyHero }) => {
   const { meta } = usePikkuMeta()
-  useLocale()
+  const { t } = useI18n()
   const { openMCP } = usePanelContext()
 
   const items = useMemo(() => {
@@ -64,13 +63,13 @@ export const McpTab: React.FC<McpTabProps> = ({ searchQuery, emptyHero }) => {
       onRowClick={(item) =>
         openMCP(`mcp::${item.method}::${item.wireId || item.name}`, item)
       }
-      searchPlaceholder={m.mcp_search_placeholder()}
+      searchPlaceholder={t('mcp.search_placeholder')}
       searchFilter={(item, q) =>
         item.name?.toLowerCase().includes(q) ||
         item.pikkuFuncId?.toLowerCase().includes(q) ||
         item.method?.toLowerCase().includes(q)
       }
-      emptyMessage={m.mcp_empty_message()}
+      emptyMessage={t('mcp.empty_message')}
       emptyHero={emptyHero}
       externalSearch={searchQuery}
     />

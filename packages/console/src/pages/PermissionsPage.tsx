@@ -2,8 +2,7 @@ import React, { useMemo } from 'react'
 import { Text, Group } from '@pikku/mantine/core'
 import { Shield } from 'lucide-react'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
 import { PanelProvider, usePanelContext } from '../context/PanelContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
@@ -22,7 +21,7 @@ const PermissionsTable: React.FC<{
   loading?: boolean
 }> = ({ items, loading }) => {
   const { openPermission } = usePanelContext()
-  useLocale()
+  const { t } = useI18n()
 
   const columns = useMemo(
     () => [
@@ -81,12 +80,12 @@ const PermissionsTable: React.FC<{
       columns={columns}
       getKey={(item) => item.id}
       onRowClick={(item) => openPermission(item.id, item.data)}
-      searchPlaceholder={m.permissions_search_placeholder()}
+      searchPlaceholder={t('permissions.search_placeholder')}
       searchFilter={(item, q) =>
         item.name.toLowerCase().includes(q) ||
         item.data?.description?.toLowerCase().includes(q)
       }
-      emptyMessage={m.permissions_empty_message()}
+      emptyMessage={t('permissions.empty_message')}
       loading={loading}
     />
   )
@@ -94,7 +93,7 @@ const PermissionsTable: React.FC<{
 
 export const PermissionsPage: React.FC = () => {
   const { meta, loading } = usePikkuMeta()
-  useLocale()
+  const { t } = useI18n()
 
   const items = useMemo((): PermissionItem[] => {
     if (!meta.permissionsGroupsMeta) return []
@@ -116,9 +115,9 @@ export const PermissionsPage: React.FC = () => {
   return (
     <PanelProvider>
       <ResizablePanelLayout
-        header={<ListPageHeader title={m.permissions_title()} description={m.permissions_description()} />}
+        header={<ListPageHeader title={t('permissions.title')} description={t('permissions.description')} />}
         hidePanel={!loading && items.length === 0}
-        emptyPanelMessage={m.permissions_select_item()}
+        emptyPanelMessage={t('permissions.select_item')}
       >
         <PermissionsTable items={items} loading={loading} />
       </ResizablePanelLayout>

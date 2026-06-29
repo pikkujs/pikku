@@ -15,27 +15,16 @@ export const pikkuCLI = pikkuSessionlessFunc<void, boolean | undefined>({
       cliWiringsFile,
       cliWiringMetaFile,
       cliWiringMetaJsonFile,
-      cliContractsMetaJsonFile,
-      cliContractsMetaFile,
       packageMappings,
       schema,
     } = config
-    const { cli, exportedContracts } = visitState
-    const hasCLIContracts = Object.keys(exportedContracts.cli).length > 0
+    const { cli } = visitState
 
-    if (
-      (cli.files.size === 0 || Object.keys(cli.meta).length === 0) &&
-      !hasCLIContracts
-    ) {
+    if (cli.files.size === 0 || Object.keys(cli.meta).length === 0) {
       return undefined
     }
 
-    // The bootstrap imports cliWiringsFile and cliWiringMetaFile whenever this
-    // command reports CLI as active (truthy return), so both must always be
-    // written once past the guard above — including the contracts-only case
-    // where there are no local wireCLI source files (cli.files is empty).
-    // Skipping either leaves the bootstrap importing a file that was never
-    // generated and the per-unit deploy bundle fails.
+    // Generate CLI wirings file
     await writeFileInDir(
       logger,
       cliWiringsFile,
@@ -47,6 +36,7 @@ export const pikkuCLI = pikkuSessionlessFunc<void, boolean | undefined>({
       )
     )
 
+    // Write minimal JSON (runtime-only fields)
     const minimalMeta = stripVerboseFields(cli.meta)
     await writeFileInDir(
       logger,
@@ -54,6 +44,7 @@ export const pikkuCLI = pikkuSessionlessFunc<void, boolean | undefined>({
       JSON.stringify(minimalMeta, null, 2)
     )
 
+    // Write verbose JSON only if it has additional fields
     if (hasVerboseFields(cli.meta)) {
       const verbosePath = cliWiringMetaJsonFile.replace(
         /\.gen\.json$/,
@@ -63,30 +54,6 @@ export const pikkuCLI = pikkuSessionlessFunc<void, boolean | undefined>({
         logger,
         verbosePath,
         JSON.stringify(cli.meta, null, 2)
-      )
-    }
-
-    await writeFileInDir(
-      logger,
-      cliContractsMetaJsonFile,
-      JSON.stringify(exportedContracts.cli, null, 2)
-    )
-
-    if (hasCLIContracts) {
-      const contractsJsonImportPath = getFileImportRelativePath(
-        cliContractsMetaFile,
-        cliContractsMetaJsonFile,
-        packageMappings
-      )
-      const supportsImportAttributes = schema?.supportsImportAttributes ?? false
-      const contractsImportStatement = supportsImportAttributes
-        ? `import contractsMeta from '${contractsJsonImportPath}' with { type: 'json' }`
-        : `import contractsMeta from '${contractsJsonImportPath}'`
-
-      await writeFileInDir(
-        logger,
-        cliContractsMetaFile,
-        `${contractsImportStatement}\nexport default contractsMeta`
       )
     }
 

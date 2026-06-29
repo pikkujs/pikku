@@ -59,7 +59,10 @@ import {
   FabricValidate,
   renderValidate,
 } from './functions/validate.function.js'
-import { FabricSmoke, renderSmoke } from './functions/smoke.function.js'
+import {
+  FabricSmoke,
+  renderSmoke,
+} from './functions/smoke.function.js'
 import { FabricPublish } from './functions/publish.function.js'
 import { FabricAdd } from './functions/add.function.js'
 
@@ -130,33 +133,27 @@ export const fabricCommands = defineCLICommands({
       },
     },
   }),
-  addon: {
-    description: 'Publish and install Fabric community-registry addons',
-    subcommands: {
-      publish: pikkuCLICommand({
-        parameters: '[dir]',
-        func: FabricPublish,
-        description:
-          'Publish the addon in this directory to the community registry (pack + upload)',
-        options: {
-          apiUrl: { description: 'Override the fabric-api URL for this call' },
-        },
-      }),
-      add: pikkuCLICommand({
-        parameters: '<id>',
-        func: FabricAdd,
-        description:
-          'Install an addon from the community registry into addons/ (shadcn-style)',
-        options: {
-          dir: {
-            description:
-              'Addon dir (overrides pikku.config.json addons.addonDir, default addons/)',
-          },
-          apiUrl: { description: 'Override the fabric-api URL for this call' },
-        },
-      }),
+  publish: pikkuCLICommand({
+    parameters: '[dir]',
+    func: FabricPublish,
+    description:
+      'Publish a package directory to the Fabric community registry (pack + upload)',
+    options: {
+      apiUrl: { description: 'Override the fabric-api URL for this call' },
     },
-  },
+  }),
+  add: pikkuCLICommand({
+    parameters: '<id>',
+    func: FabricAdd,
+    description:
+      'Install a package from the Fabric community registry into the project',
+    options: {
+      dir: {
+        description: 'Install dir (overrides pikku.config.json addons.addonDir)',
+      },
+      apiUrl: { description: 'Override the fabric-api URL for this call' },
+    },
+  }),
   deploy: {
     description: 'Plan and apply deploys for a named branch or production',
     subcommands: {

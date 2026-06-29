@@ -6,11 +6,7 @@ import { serializeTypedChannelsMap } from './serialize-typed-channel-map.js'
 export const pikkuChannelsMap = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
     const state = await getInspectorState()
-    const {
-      channelsMapDeclarationFile,
-      packageMappings,
-      rpcInternalMapDeclarationFile,
-    } = config
+    const { channelsMapDeclarationFile, packageMappings } = config
 
     const content = serializeTypedChannelsMap(
       logger,
@@ -19,8 +15,7 @@ export const pikkuChannelsMap = pikkuSessionlessFunc<void, void>({
       state.functions.typesMap,
       state.functions.meta,
       state.addonFunctions,
-      state.channels.meta,
-      rpcInternalMapDeclarationFile
+      state.channels.meta
     )
     await writeFileInDir(logger, channelsMapDeclarationFile, content)
   },

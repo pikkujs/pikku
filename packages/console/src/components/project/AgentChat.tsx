@@ -16,8 +16,7 @@ import {
   TypographyStylesProvider,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import {
   ThreadPrimitive,
   MessagePrimitive,
@@ -47,11 +46,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { PikkuBadge } from '../ui/PikkuBadge'
 import { useAgentPlayground } from '../../context/AgentPlaygroundContext'
-import { getServerUrl } from '../../context/serverUrl'
-import {
-  useOptionalImpersonation,
-  IMPERSONATE_HEADER,
-} from '../../context/ImpersonationContext'
+import { getServerUrl } from '../../context/PikkuRpcProvider'
 import classes from '../ui/console.module.css'
 
 const ToolCallDisplay: React.FC<{
@@ -64,7 +59,7 @@ const ToolCallDisplay: React.FC<{
   addResult?: (result: unknown) => void
 }> = ({ toolCallId, toolName, args, result, status, addResult }) => {
   const [opened, setOpened] = useState(false)
-  useLocale()
+  const { t } = useI18n()
   const { handleApproval, pendingApprovals } = usePikkuApproval()
 
   const credentialPayload = (() => {
@@ -132,7 +127,7 @@ const ToolCallDisplay: React.FC<{
         <Group gap="xs" mb="xs">
           <ShieldAlert size={14} color="var(--mantine-color-orange-6)" />
           <Text size="xs" fw={600}>
-            {m.agent_approval_required()}
+            {t('agent.approval.required')}
           </Text>
         </Group>
         {approvalReason && (
@@ -141,7 +136,7 @@ const ToolCallDisplay: React.FC<{
           </Text>
         )}
         <Box component="p" style={{ fontSize: 'var(--mantine-font-size-xs)', color: 'var(--mantine-color-dimmed)', margin: '0 0 4px' }}>
-          {m.agent_approval_agent_wants_to_call()} <Code>{asI18n(toolName)}</Code>
+          {t('agent.approval.agentWantsToCall')} <Code>{asI18n(toolName)}</Code>
         </Box>
         <Code block style={{ fontSize: 11, marginBottom: 8 }}>
           {asI18n(JSON.stringify(displayArgs, null, 2))}
@@ -153,10 +148,10 @@ const ToolCallDisplay: React.FC<{
             variant="light"
             onClick={handleApprove}
           >
-            {m.agent_approval_approve()}
+            {t('agent.approval.approve')}
           </Button>
           <Button size="xs" color="red" variant="light" onClick={handleDeny}>
-            {m.agent_approval_deny()}
+            {t('agent.approval.deny')}
           </Button>
         </Group>
       </Paper>
@@ -175,7 +170,7 @@ const ToolCallDisplay: React.FC<{
             type="label"
             color={responded === 'approved' ? 'green' : 'red'}
           >
-            {responded === 'approved' ? m.agent_status_approved() : m.agent_status_denied()}
+            {responded === 'approved' ? t('agent.status.approved') : t('agent.status.denied')}
           </PikkuBadge>
         </Group>
       </Paper>
@@ -233,20 +228,20 @@ const ToolCallDisplay: React.FC<{
             {asI18n(toolName)}
           </Text>
           <PikkuBadge type="label" color="orange">
-            {m.agent_credential_required()}
+            {t('agent.credential.required')}
           </PikkuBadge>
         </Group>
         <Box component="p" style={{ fontSize: 'var(--mantine-font-size-sm)', margin: '0 0 var(--mantine-spacing-xs)' }}>
-          {m.agent_credential_action_requires()}{' '}
+          {t('agent.credential.actionRequires')}{' '}
           <strong>{asI18n(cred?.credentialName ?? 'OAuth')}</strong>{' '}
-          {m.agent_credential_to_be_connected()}
+          {t('agent.credential.toBeConnected')}
         </Box>
         <Group gap="xs">
           <Button size="xs" variant="light" onClick={handleConnect}>
             {asI18n(`Connect ${cred?.credentialName ?? 'OAuth'}`)}
           </Button>
           <Button size="xs" color="gray" variant="light" onClick={handleIgnore}>
-            {m.agent_credential_ignore()}
+            {t('agent.credential.ignore')}
           </Button>
         </Group>
       </Paper>
@@ -265,7 +260,7 @@ const ToolCallDisplay: React.FC<{
             type="label"
             color={responded === 'approved' ? 'green' : 'gray'}
           >
-            {responded === 'approved' ? m.agent_credential_connected() : m.agent_credential_ignored()}
+            {responded === 'approved' ? t('agent.credential.connected') : t('agent.credential.ignored')}
           </PikkuBadge>
         </Group>
       </Paper>
@@ -287,17 +282,17 @@ const ToolCallDisplay: React.FC<{
           {status.type === 'running' && <Loader size={10} />}
           {status.type === 'error' && (
             <PikkuBadge type="label" color="red">
-              {m.agent_toolcall_error()}
+              {t('agent.toolcall.error')}
             </PikkuBadge>
           )}
           {status.type === 'denied' && (
             <PikkuBadge type="label" color="red">
-              {m.agent_toolcall_denied()}
+              {t('agent.toolcall.denied')}
             </PikkuBadge>
           )}
           {status.type === 'completed' && (
             <PikkuBadge type="label" color="green">
-              {m.agent_toolcall_done()}
+              {t('agent.toolcall.done')}
             </PikkuBadge>
           )}
         </Group>
@@ -305,7 +300,7 @@ const ToolCallDisplay: React.FC<{
       <Collapse in={opened}>
         <Stack gap={4} mt="xs">
           <Text size="xs" c="dimmed">
-            {m.agent_toolcall_arguments()}
+            {t('agent.toolcall.arguments')}
           </Text>
           <Code block style={{ fontSize: 11 }}>
             {asI18n(JSON.stringify(displayArgs, null, 2))}
@@ -313,7 +308,7 @@ const ToolCallDisplay: React.FC<{
           {result !== undefined && (
             <>
               <Text size="xs" c="dimmed">
-                {m.agent_toolcall_result()}
+                {t('agent.toolcall.result')}
               </Text>
               <Code block style={{ fontSize: 11 }}>
                 {asI18n(typeof result === 'string'
@@ -329,13 +324,13 @@ const ToolCallDisplay: React.FC<{
 }
 
 const UserMessage: React.FC = () => {
-  useLocale()
+  const { t } = useI18n()
   return (
     <Box className={classes.chatMessageRight}>
       <Box maw="80%">
         <Group gap={6} mb={4}>
           <Text size="xs" c="dimmed">
-            {m.agent_message_you()}
+            {t('agent.message.you')}
           </Text>
           <User size={14} color="var(--mantine-color-dimmed)" />
         </Group>
@@ -360,14 +355,14 @@ const UserMessage: React.FC = () => {
 }
 
 const AssistantMessage: React.FC = () => {
-  useLocale()
+  const { t } = useI18n()
   return (
     <Box data-testid="assistant-block" className={classes.chatMessageLeft}>
       <Box maw="80%">
         <Group gap={6} mb={4}>
           <Bot size={14} color="var(--mantine-color-dimmed)" />
           <Text size="xs" c="dimmed">
-            {m.agent_message_assistant()}
+            {t('agent.message.assistant')}
           </Text>
         </Group>
         <Paper p="sm" radius="md" bg="var(--mantine-color-default-hover)">
@@ -400,7 +395,7 @@ const AssistantMessage: React.FC = () => {
               <Group gap="xs" mt="xs">
                 <Loader size={12} />
                 <Text size="sm" c="dimmed">
-                  {m.agent_message_thinking()}
+                  {t('agent.message.thinking')}
                 </Text>
               </Group>
             </ThreadPrimitive.If>
@@ -412,7 +407,7 @@ const AssistantMessage: React.FC = () => {
 }
 
 const AgentComposer: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
-  useLocale()
+  const { t } = useI18n()
   return (
     <Box py="sm" pb="md">
       <Container size="md">
@@ -422,7 +417,7 @@ const AgentComposer: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
             <ComposerPrimitive.Input
               className={composerStyles.composerInput}
               placeholder={
-                disabled ? m.agent_composer_approval_placeholder() : m.agent_composer_message_placeholder()
+                disabled ? t('agent.composer.approvalPlaceholder') : t('agent.composer.messagePlaceholder')
               }
               rows={1}
               disabled={disabled ?? false}
@@ -445,7 +440,7 @@ const AgentComposer: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
 export const AgentChat: React.FC<{
   streaming?: boolean
 }> = ({ streaming = false }) => {
-  useLocale()
+  const { t } = useI18n()
   const {
     agentId,
     threadId,
@@ -463,15 +458,6 @@ export const AgentChat: React.FC<{
   const serverUrl = getServerUrl()
   const api = `${serverUrl}/rpc/agent`
 
-  const impersonation = useOptionalImpersonation()
-  const headers = useMemo(
-    () =>
-      impersonation?.target
-        ? { [IMPERSONATE_HEADER]: impersonation.target.id }
-        : undefined,
-    [impersonation?.target]
-  )
-
   const fallbackThreadId = useMemo(() => crypto.randomUUID(), [])
   const effectiveThreadId = threadId ?? fallbackThreadId
 
@@ -484,7 +470,6 @@ export const AgentChat: React.FC<{
     onFinish: onStreamDone,
     model,
     temperature,
-    headers,
   }
 
   const streamingHook = usePikkuAgentRuntime(runtimeOptions)
@@ -518,8 +503,8 @@ export const AgentChat: React.FC<{
                           />
                           <Text c="dimmed" ta="center">
                             {threadId
-                              ? m.agent_empty_send_message()
-                              : m.agent_empty_start_conversation()}
+                              ? t('agent.empty.sendMessage')
+                              : t('agent.empty.startConversation')}
                           </Text>
                         </Stack>
                       </Center>

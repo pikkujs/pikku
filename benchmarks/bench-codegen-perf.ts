@@ -21,21 +21,6 @@ const PIKKU_NODE_MODULES = resolve(REPO_ROOT, 'node_modules')
 const PROJECT_DIR = resolve(os.tmpdir(), 'pikku-codegen-perf')
 const FUNCTION_COUNT = 500
 const THRESHOLD_MS = 30_000
-// Each post-codegen re-inspection must stay under this absolute budget. A flat
-// ms ceiling (not a ratio to the initial pass) keeps the gate runner-independent.
-// The initial pass is CPU-bound — full per-function type resolution + schema
-// generation — and swings ~2x with runner speed; an incremental re-inspect is
-// I/O/AST-bound (reuses the prior ts.Program + the on-disk schema cache) and
-// stays ~stable (~2s for 500 fns) across slow and fast runners alike. A
-// regression that breaks that incremental reuse makes a re-inspect redo the full
-// resolution + schema gen, ballooning it to several seconds — well past this
-// ceiling on any runner. (A ratio gate flaked here: a fast runner shrinks the
-// CPU-bound denominator while the I/O-bound numerator holds, inflating the ratio
-// past the threshold with no actual regression.)
-const REINSPECT_MAX_MS = 4500
-// Sample the timed inspection a few times and judge the best (lowest) re-inspect,
-// so a one-off GC/IO stall on a CI runner can't flake the gate.
-const REINSPECT_SAMPLES = 3
 
 // ── project scaffold ──────────────────────────────────────────────────────────
 
@@ -241,52 +226,19 @@ function schedulerWiringFile(count: number): string {
 
 // ── runner ────────────────────────────────────────────────────────────────────
 
-// pikku persists generated TS schemas under node_modules/.cache/pikku across
-// runs. This benchmark measures *cold* codegen (the worst case the threshold
-// and structural gate are about), so clear that cache before every run —
-// otherwise a warm run skips schema generation, shrinking the initial pass and
-// inflating the re-inspect ratio.
-function clearSchemaCache(): void {
-  rmSync(resolve(PROJECT_DIR, 'node_modules', '.cache', 'pikku'), {
-    recursive: true,
-    force: true,
-  })
-}
-
-function runAll(timing = false): { ms: number; stdout: string } {
-  clearSchemaCache()
+function runAll(): number {
   const start = performance.now()
   const result = spawnSync(PIKKU_BIN, ['all'], {
     cwd: PROJECT_DIR,
     timeout: 120_000,
-    env: {
-      ...process.env,
-      NODE_OPTIONS: '--max-old-space-size=4096',
-      ...(timing ? { PIKKU_TIMING: '1' } : {}),
-    },
+    env: { ...process.env, NODE_OPTIONS: '--max-old-space-size=4096' },
   })
   if (result.status !== 0) {
     throw new Error(
       result.stderr?.toString() ?? result.error?.message ?? 'pikku all failed'
     )
   }
-  return {
-    ms: performance.now() - start,
-    stdout: result.stdout?.toString() ?? '',
-  }
-}
-
-/**
- * Parse the per-step timing table emitted by `pikku all` under PIKKU_TIMING.
- * Lines look like: `[TIMING]   1234ms  Re-inspect after workflows`
- */
-function parseStepTimings(stdout: string): Map<string, number> {
-  const steps = new Map<string, number>()
-  for (const line of stdout.split('\n')) {
-    const m = line.match(/\[TIMING\]\s+(\d+)ms\s+(.+?)\s*$/)
-    if (m) steps.set(m[2], parseInt(m[1], 10))
-  }
-  return steps
+  return performance.now() - start
 }
 
 // ── main ──────────────────────────────────────────────────────────────────────
@@ -331,71 +283,16 @@ async function main() {
 
   // timed run
   process.stdout.write(`Running pikku all on ${FUNCTION_COUNT} functions ... `)
-  const { ms } = runAll()
+  const ms = runAll()
   const rounded = Math.round(ms)
   console.log(`${rounded}ms`)
 
-  let failed = false
-
   if (ms > THRESHOLD_MS) {
     console.error(`FAIL: ${rounded}ms exceeds ${THRESHOLD_MS}ms threshold`)
-    failed = true
-  } else {
-    console.log(`PASS: ${rounded}ms <= ${THRESHOLD_MS}ms`)
+    process.exit(1)
   }
 
-  // ── structural gate ──────────────────────────────────────────────────────
-  // A flat wall-clock ceiling can't catch "3x-redundant but still under budget"
-  // work. `pikku all` runs the inspector once up-front, then re-inspects after
-  // codegen produces new wirings. Those re-inspections should only need to pick
-  // up the handful of generated files — NOT redo the full per-function type
-  // resolution from the initial pass. Assert the worst re-inspect stays under an
-  // absolute ms ceiling so a regression to full re-walks fails (see
-  // REINSPECT_MAX_MS for why an absolute budget, not a ratio, is runner-stable).
-  const samples = Array.from({ length: REINSPECT_SAMPLES }, () => {
-    const steps = parseStepTimings(runAll(true).stdout)
-    const initial = steps.get('Generate function types') ?? 0
-    const reinspects = [...steps.entries()].filter(([name]) =>
-      name.startsWith('Re-inspect')
-    )
-    const worst = reinspects.length
-      ? reinspects.reduce((a, b) => (b[1] > a[1] ? b : a))
-      : null
-    return { initial, reinspects, worst }
-  }).filter((s): s is { initial: number; reinspects: [string, number][]; worst: [string, number] } => s.worst !== null)
-
-  if (samples.length > 0) {
-    // Best (lowest worst-reinspect) sample — a transient stall can only push a
-    // sample up, never down, so the minimum reflects the true incremental cost.
-    const best = samples.reduce((a, b) => (b.worst[1] < a.worst[1] ? b : a))
-    const [worstName, worstMs] = best.worst
-    const ratioPct = best.initial ? ((worstMs / best.initial) * 100).toFixed(0) : '?'
-    console.log(`\nInspector pass timings (best of ${samples.length}):`)
-    console.log(`  ${String(best.initial).padStart(6)}ms  Generate function types (initial)`)
-    for (const [name, dur] of best.reinspects) {
-      console.log(`  ${String(dur).padStart(6)}ms  ${name}`)
-    }
-    if (worstMs > REINSPECT_MAX_MS) {
-      console.error(
-        `\nFAIL: re-inspection "${worstName}" took ${worstMs}ms ` +
-          `(> ${REINSPECT_MAX_MS}ms ceiling; ${ratioPct}% of the ${best.initial}ms ` +
-          `initial pass). Re-inspections are redoing full per-function resolution ` +
-          `instead of reusing the incremental program + schema cache.`
-      )
-      failed = true
-    } else {
-      console.log(
-        `\nPASS: worst re-inspection "${worstName}" is ${worstMs}ms ` +
-          `(<= ${REINSPECT_MAX_MS}ms ceiling; ${ratioPct}% of initial)`
-      )
-    }
-  } else {
-    console.warn(
-      `\nWARN: could not find inspector pass timings — skipping structural gate`
-    )
-  }
-
-  if (failed) process.exit(1)
+  console.log(`PASS: ${rounded}ms <= ${THRESHOLD_MS}ms`)
 }
 
 main().catch((err) => {

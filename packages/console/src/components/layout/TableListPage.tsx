@@ -10,8 +10,7 @@ import {
 } from '@pikku/mantine/core'
 import type { I18nNode, I18nString } from '@pikku/react'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { Search } from 'lucide-react'
 import { EmptyStatePlaceholder } from './EmptyStatePlaceholder'
 import { usePageGate } from '../../context/PageGateContext'
@@ -67,7 +66,7 @@ export const TableListPage = <T,>({
   headerRight,
 }: TableListPageProps<T>) => {
   const gate = usePageGate()
-  useLocale()
+  const { t } = useI18n()
   const [internalSearch, setInternalSearch] = useState('')
   const searchQuery = externalSearch !== undefined ? externalSearch : internalSearch
 
@@ -130,7 +129,7 @@ export const TableListPage = <T,>({
         >
           {searchFilter && externalSearch === undefined && (
             <TextInput
-              placeholder={searchPlaceholder ?? m.common_search()}
+              placeholder={searchPlaceholder ?? t('common.search')}
               leftSection={<Search size={14} />}
               value={internalSearch}
               onChange={(e) => setInternalSearch(e.target.value)}
@@ -146,7 +145,7 @@ export const TableListPage = <T,>({
           <Text c="dimmed" ta="center">
             {searchQuery
               ? asI18n(`No results found for "${searchQuery}"`)
-              : (emptyMessage ?? m.common_no_items())}
+              : (emptyMessage ?? t('common.no_items'))}
           </Text>
         </Box>
       ) : (

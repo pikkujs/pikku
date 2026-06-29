@@ -1,0 +1,15 @@
+{
+  "name": "@pikku/verifiers-addon-carve",
+  "type": "module",
+  "private": true,
+  "description": "Verifier: carve addons from one project and consume them in another",
+  "scripts": {
+    "test": "node run.mjs",
+    "clean": "rm -rf generated source/.pikku consumer/.pikku"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@pikku/core": "workspace:*",
+    "typescript": "^5.9"
+  }
+}

@@ -5,14 +5,13 @@ import { usePikkuMeta } from '../../context/PikkuMetaContext'
 import { usePanelContext } from '../../context/PanelContext'
 import { TableListPage } from '../layout/TableListPage'
 import { PikkuBadge } from '../ui/PikkuBadge'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 
 type HttpTabProps = { searchQuery: string; emptyHero?: React.ReactNode }
 
 export const HttpTab: React.FC<HttpTabProps> = ({ searchQuery, emptyHero }) => {
   const { meta } = usePikkuMeta()
-  useLocale()
+  const { t } = useI18n()
   const { openHTTPWire } = usePanelContext()
 
   const routes = useMemo(() => {
@@ -60,13 +59,13 @@ export const HttpTab: React.FC<HttpTabProps> = ({ searchQuery, emptyHero }) => {
       onRowClick={(route) =>
         openHTTPWire(`http::${route.method}::${route.route}`, route)
       }
-      searchPlaceholder={m.http_search_placeholder()}
+      searchPlaceholder={t('http.search_placeholder')}
       searchFilter={(route, q) =>
         route.route?.toLowerCase().includes(q) ||
         route.pikkuFuncId?.toLowerCase().includes(q) ||
         route.method?.toLowerCase().includes(q)
       }
-      emptyMessage={m.http_empty_message()}
+      emptyMessage={t('http.empty_message')}
       emptyHero={emptyHero}
       externalSearch={searchQuery}
     />

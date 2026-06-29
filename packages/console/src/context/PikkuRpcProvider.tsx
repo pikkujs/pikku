@@ -1,7 +1,27 @@
 import { createContext, useContext, useMemo } from 'react'
 
 import { pikku } from '../pikku/http'
-import { getServerUrl } from './serverUrl'
+
+const STORAGE_KEY = 'pikku-server-url'
+const DEFAULT_SERVER_URL = 'http://localhost:4002'
+
+export const getServerUrl = (): string => {
+  try {
+    const params = new URLSearchParams(window.location.search)
+    const serverParam = params.get('server')
+    if (serverParam) {
+      localStorage.setItem(STORAGE_KEY, serverParam)
+      return serverParam
+    }
+    return localStorage.getItem(STORAGE_KEY) || DEFAULT_SERVER_URL
+  } catch {
+    return DEFAULT_SERVER_URL
+  }
+}
+
+export const setServerUrl = (url: string) => {
+  localStorage.setItem(STORAGE_KEY, url)
+}
 
 type PikkuInstance = ReturnType<typeof pikku>
 type PikkuHTTP = PikkuInstance['fetch']
@@ -14,21 +34,14 @@ export const PikkuRPCContext = createContext<PikkuRPCInstance | null>(null)
 export const PikkuHTTPProvider: React.FC<{
   children: React.ReactNode
   serverUrl?: string
-  /**
-   * Fetch credentials mode for the underlying instance (also used by
-   * usePikkuSSE). Defaults to 'include' for the same-origin cookie-auth flow.
-   * Set to 'omit'/'same-origin' for cross-origin bearer-token setups, where
-   * 'include' + wildcard CORS is rejected by the browser at preflight.
-   */
-  credentials?: RequestCredentials
-}> = ({ children, serverUrl, credentials = 'include' }) => {
+}> = ({ children, serverUrl }) => {
   const resolvedUrl = serverUrl ?? getServerUrl()
   const pikkuInstance = useMemo(() => {
     return pikku({
       serverUrl: resolvedUrl,
-      credentials,
+      credentials: 'include',
     })
-  }, [resolvedUrl, credentials])
+  }, [resolvedUrl])
   return (
     <PikkuInstanceContext.Provider value={pikkuInstance}>
       <PikkuHTTPContext.Provider value={pikkuInstance.fetch}>

@@ -1,18 +1,12 @@
 import type { ReactElement, ReactPortal } from 'react'
 
+declare const _i18nBrand: unique symbol
+
 /**
- * A string that has been through i18n. Structurally identical to Paraglide JS's
- * `LocalizedString` (`string & { readonly __brand: 'LocalizedString' }`), so a
- * Paraglide `m()` message satisfies this brand — and the `@pikku/mantine` gate —
- * natively, with no wrapper. Also produced by `t()` / `asI18n()`. Compile-time
- * brand only: at runtime this is just a string.
- *
- * The brand is the string literal `'LocalizedString'`, not a `unique symbol`, on
- * purpose: matching Paraglide's public brand is what lets `m()` flow into gated
- * props directly. It still blocks bare `string` (which has no `__brand`), so the
- * gate is unchanged; only deliberately-cast values (`asI18n`) get through.
+ * A plain string that has been explicitly passed through `t()` or `asI18n()`.
+ * Compile-time brand only — at runtime this is just a string.
  */
-export type I18nString = string & { readonly __brand: 'LocalizedString' }
+export type I18nString = string & { readonly [_i18nBrand]: true }
 
 /**
  * Drop-in for `ReactNode` in props that should carry translated text: anything

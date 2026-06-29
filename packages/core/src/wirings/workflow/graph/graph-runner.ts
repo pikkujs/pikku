@@ -2,7 +2,6 @@ import {
   type PikkuWorkflowService,
   WorkflowAsyncException,
   WorkflowSuspendedException,
-  DEFAULT_STEP_RETRIES,
 } from '../pikku-workflow-service.js'
 import type { GraphWireState, PikkuGraphWire } from './workflow-graph.types.js'
 import { pikkuState, getSingletonServices } from '../../../pikku-state.js'
@@ -29,13 +28,6 @@ function buildTemplateRegex(nodeId: string): RegExp | null {
   return new RegExp(`^${escaped}$`)
 }
 
-/** Strip a trailing revisit ordinal (`node#2` → `node`); leaves other names as-is. */
-function stripInstanceOrdinal(name: string): string {
-  const hash = name.lastIndexOf('#')
-  if (hash <= 0) return name
-  return /^\d+$/.test(name.slice(hash + 1)) ? name.slice(0, hash) : name
-}
-
 function remapStepNamesToNodeIds(
   stepNames: string[],
   nodes: Record<string, any>,
@@ -46,14 +38,12 @@ function remapStepNamesToNodeIds(
     const regex = buildTemplateRegex(nodeId)
     if (regex) templatePatterns.set(nodeId, regex)
   }
+  if (templatePatterns.size === 0) return stepNames
   return stepNames.map((name) => {
     if (nodes[name]) return name
-    // Revisit instance (`node#N`) maps to its logical node.
-    const base = stripInstanceOrdinal(name)
-    if (base !== name && nodes[base]) return base
     const matches: string[] = []
     for (const [nodeId, regex] of templatePatterns) {
-      if (regex.test(base)) matches.push(nodeId)
+      if (regex.test(name)) matches.push(nodeId)
     }
     if (matches.length > 1) {
       throw new Error(
@@ -65,122 +55,6 @@ function remapStepNamesToNodeIds(
     }
     return name
   })
-}
-
-const ENTRY_FROM = '__entry__'
-
-/** Whether `target` can reach `source` over `next` edges — i.e. an edge
- *  source→target closes a cycle (a back-edge), vs a plain forward edge. */
-function closesCycle(
-  source: string,
-  target: string,
-  nodes: Record<string, any>
-): boolean {
-  const seen = new Set<string>()
-  const stack = [target]
-  while (stack.length) {
-    const cur = stack.pop()!
-    if (cur === source) return true
-    if (seen.has(cur)) continue
-    seen.add(cur)
-    for (const next of normalizeNodeTargets(nodes[cur]?.next)) stack.push(next)
-  }
-  return false
-}
-
-/**
- * Decide which next steps to fire this tick. Two kinds of edge:
- *  - forward edge → node-once: fire the target only if it has no instance yet,
- *    so converging edges (joins) collapse to a single run (unchanged behavior).
- *  - back-edge (target can reach the source, closing a cycle) → revisit: fire a
- *    fresh ordinal instance (`target#1`, …), edge-once on `from → target` so it
- *    doesn't re-fire every tick. Cycles terminate when branch routing stops
- *    looping back; a node always records the predecessor it was reached from.
- */
-function planGraphTransitions(
-  nodes: Record<string, any>,
-  instances: Array<{ stepName: string; status: string; fromStepName?: string }>,
-  branchByStep: Record<string, string>,
-  entryNodeIds: string[],
-  graphName: string
-): {
-  toFire: Array<{ logical: string; instanceKey: string; fromStepName?: string }>
-  hasInFlight: boolean
-  blockedWaiting: boolean
-} {
-  const toLogical = (name: string) =>
-    remapStepNamesToNodeIds([name], nodes, graphName)[0]!
-
-  const countByLogical: Record<string, number> = {}
-  const consumed = new Set<string>()
-  for (const inst of instances) {
-    const logical = toLogical(inst.stepName)
-    countByLogical[logical] = (countByLogical[logical] ?? 0) + 1
-    consumed.add(`${inst.fromStepName ?? ENTRY_FROM}->${logical}`)
-  }
-
-  const completed = instances.filter((i) => i.status === 'succeeded')
-  const completedLogical = new Set(completed.map((i) => toLogical(i.stepName)))
-
-  // Available edges: entry edges + each completed instance's resolved `next`.
-  const edges: Array<{
-    from?: string
-    fromKey: string
-    fromLogical?: string
-    target: string
-  }> = []
-  for (const entryId of entryNodeIds) {
-    edges.push({ fromKey: ENTRY_FROM, target: entryId })
-  }
-  for (const inst of completed) {
-    const fromLogical = toLogical(inst.stepName)
-    const node = nodes[fromLogical]
-    if (!node?.next) continue
-    for (const target of resolveNextFromConfig(
-      node.next,
-      branchByStep[inst.stepName]
-    )) {
-      edges.push({ from: inst.stepName, fromKey: inst.stepName, fromLogical, target })
-    }
-  }
-
-  const toFire: Array<{
-    logical: string
-    instanceKey: string
-    fromStepName?: string
-  }> = []
-  let blockedWaiting = false
-  for (const edge of edges) {
-    const target = edge.target
-    const edgeKey = `${edge.fromKey}->${target}`
-    if (consumed.has(edgeKey)) continue
-    const visits = countByLogical[target] ?? 0
-    const isBackEdge =
-      edge.fromLogical !== undefined &&
-      closesCycle(edge.fromLogical, target, nodes)
-    // Forward edge into an already-started node = a join; node-once.
-    if (!isBackEdge && visits > 0) {
-      consumed.add(edgeKey)
-      continue
-    }
-    if (!areDependenciesSatisfied(nodes[target] ?? {}, completedLogical)) {
-      blockedWaiting = true
-      continue
-    }
-    toFire.push({
-      logical: target,
-      instanceKey: visits === 0 ? target : `${target}#${visits}`,
-      fromStepName: edge.from,
-    })
-    countByLogical[target] = visits + 1
-    consumed.add(edgeKey)
-  }
-
-  return {
-    toFire,
-    hasInFlight: instances.some((i) => i.status !== 'succeeded'),
-    blockedWaiting,
-  }
 }
 
 function remapBranchKeys(
@@ -451,13 +325,10 @@ async function queueGraphNode(
   nodeId: string,
   rpcName: string,
   input: any,
-  nodeConfig?: { retries?: number; retryDelay?: string | number },
-  fromStepName?: string
+  nodeConfig?: { retries?: number; retryDelay?: string | number }
 ): Promise<void> {
-  // Default to the workflow-wide retry policy when the node sets none, so the
-  // persisted step retries match the queue `attempts` (see resolveStepJobOptions).
   const stepOptions = {
-    retries: nodeConfig?.retries ?? DEFAULT_STEP_RETRIES,
+    retries: nodeConfig?.retries ?? 0,
     retryDelay: nodeConfig?.retryDelay,
   }
   await workflowService.insertStepState(
@@ -465,16 +336,14 @@ async function queueGraphNode(
     nodeId,
     rpcName,
     input,
-    stepOptions,
-    fromStepName
+    stepOptions
   )
   await workflowService.queueStepWorker(
     runId,
     nodeId,
     rpcName,
     input,
-    stepOptions,
-    fromStepName
+    stepOptions
   )
 }
 
@@ -495,13 +364,16 @@ export async function continueGraph(
   const {
     completedNodeIds: rawCompleted,
     failedNodeIds: rawFailed,
-    branchKeys: branchByStep,
+    branchKeys: rawBranch,
   } = await workflowService.getCompletedGraphState(runId)
-  // Validate step/branch names map to unambiguous nodes (planning keys
-  // physically; these calls only surface ambiguous template configs).
-  remapStepNamesToNodeIds(rawCompleted, nodes, graphName)
-  remapBranchKeys(branchByStep, nodes, graphName)
+  const completedNodeIds = remapStepNamesToNodeIds(
+    rawCompleted,
+    nodes,
+    graphName
+  )
+  const completedNodeIdSet = new Set(completedNodeIds)
   const failedNodeIds = remapStepNamesToNodeIds(rawFailed, nodes, graphName)
+  const branchKeys = remapBranchKeys(rawBranch, nodes, graphName)
 
   if (failedNodeIds.length > 0) {
     const failedNode = failedNodeIds[0]!
@@ -518,18 +390,44 @@ export async function continueGraph(
     return
   }
 
-  const instances = await workflowService.getStepInstances(runId)
-  const plan = planGraphTransitions(
-    nodes,
-    instances,
-    branchByStep,
-    meta.entryNodeIds ?? [],
-    graphName
-  )
+  const candidateNodes = new Set<string>()
 
-  if (plan.toFire.length === 0) {
-    // Nothing left to fire and nothing running/blocked → the run is done.
-    if (!plan.hasInFlight && !plan.blockedWaiting) {
+  for (const nodeId of completedNodeIds) {
+    const node = nodes[nodeId]
+    if (!node?.next) continue
+
+    const nextNodes = resolveNextFromConfig(node.next, branchKeys[nodeId])
+    for (const nextNode of nextNodes) {
+      candidateNodes.add(nextNode)
+    }
+  }
+
+  for (const entryId of meta.entryNodeIds ?? []) {
+    candidateNodes.add(entryId)
+  }
+
+  if (candidateNodes.size === 0 && completedNodeIds.length > 0) {
+    await workflowService.updateRunStatus(runId, 'completed')
+    return
+  }
+
+  const unstartedNodes = await workflowService.getNodesWithoutSteps(runId, [
+    ...candidateNodes,
+  ])
+
+  const nodesToQueue = unstartedNodes.filter((nodeId) => {
+    const node = nodes[nodeId]
+    return node && areDependenciesSatisfied(node, completedNodeIdSet)
+  })
+
+  if (nodesToQueue.length === 0) {
+    const allRpcNodes = Object.entries(nodes)
+      .filter(([_, n]) => n.rpcName)
+      .map(([id]) => id)
+    const allRpcCompleted = allRpcNodes.every((id) =>
+      completedNodeIdSet.has(id)
+    )
+    if (allRpcCompleted) {
       await workflowService.updateRunStatus(runId, 'completed')
     }
     return
@@ -538,8 +436,8 @@ export async function continueGraph(
   const run = await workflowService.getRun(runId)
   const triggerInput = run?.input
 
-  for (const fire of plan.toFire) {
-    const node = nodes[fire.logical]
+  for (const nodeId of nodesToQueue) {
+    const node = nodes[nodeId]
     if (!node?.rpcName) continue
 
     const referencedNodeIds = extractReferencedNodeIds(node.input).filter(
@@ -549,6 +447,7 @@ export async function continueGraph(
       runId,
       referencedNodeIds
     )
+
     const nodeResults = { trigger: triggerInput, ...fetchedResults }
     const resolvedInput = resolveSerializedInput(node.input, nodeResults)
 
@@ -556,30 +455,22 @@ export async function continueGraph(
       workflowService,
       runId,
       graphName,
-      fire.instanceKey,
+      nodeId,
       node.rpcName,
       resolvedInput,
-      node,
-      fire.fromStepName
+      node
     )
   }
 }
 
-/**
- * Invoke a graph node's RPC with the graph + workflow wires, capturing any
- * branch the node selects and persisting it. Shared by the queued
- * (executeGraphStep) and inline (executeGraphNodeInline) executors so both build
- * the wire and record the branch identically — only their child-workflow and
- * onError handling differs around this call.
- */
-async function invokeGraphNodeRpc(
+export async function executeGraphStep(
   workflowService: PikkuWorkflowService,
   rpcService: any,
   runId: string,
   stepId: string,
   nodeId: string,
   rpcName: string,
-  input: any,
+  data: any,
   graphName: string
 ): Promise<any> {
   const wireState: GraphWireState = {}
@@ -595,28 +486,6 @@ async function invokeGraphNodeRpc(
     getState: () => workflowService.getRunState(runId),
   }
 
-  const result = await rpcService.rpcWithWire(rpcName, input, {
-    graph: graphWire,
-    workflow: workflowService.createWorkflowWire(graphName, runId, rpcService),
-  })
-
-  if (wireState.branchKey) {
-    await workflowService.setBranchTaken(stepId, wireState.branchKey)
-  }
-
-  return result
-}
-
-export async function executeGraphStep(
-  workflowService: PikkuWorkflowService,
-  rpcService: any,
-  runId: string,
-  stepId: string,
-  nodeId: string,
-  rpcName: string,
-  data: any,
-  graphName: string
-): Promise<any> {
   try {
     let result: any
 
@@ -651,16 +520,18 @@ export async function executeGraphStep(
         throw new ChildWorkflowStartedException(runId, stepId, childRunId)
       }
     } else {
-      result = await invokeGraphNodeRpc(
-        workflowService,
-        rpcService,
-        runId,
-        stepId,
-        nodeId,
-        rpcName,
-        data,
-        graphName
-      )
+      result = await rpcService.rpcWithWire(rpcName, data, {
+        graph: graphWire,
+        workflow: workflowService.createWorkflowWire(
+          graphName,
+          runId,
+          rpcService
+        ),
+      })
+    }
+
+    if (wireState.branchKey) {
+      await workflowService.setBranchTaken(stepId, wireState.branchKey)
     }
 
     return result
@@ -732,29 +603,36 @@ async function executeGraphNodeInline(
   runId: string,
   graphName: string,
   nodeId: string,
-  instanceKey: string,
   input: any,
-  nodes: Record<string, any>,
-  fromStepName?: string
+  nodes: Record<string, any>
 ): Promise<void> {
   const node = nodes[nodeId]
   if (!node) return
 
   const rpcName = node.rpcName
 
-  // Persist under the physical instance key (node, node#1 … for revisits) and
-  // record the predecessor — same as the queued path (queueGraphNode), so an
-  // inline graph run stores identical step rows + provenance.
   const stepState = await workflowService.insertStepState(
     runId,
-    instanceKey,
+    nodeId,
     rpcName,
     input,
-    { retries: node.retries ?? 0, retryDelay: node.retryDelay },
-    fromStepName
+    { retries: node.retries ?? 0, retryDelay: node.retryDelay }
   )
 
   await workflowService.setStepRunning(stepState.stepId)
+
+  const wireState: GraphWireState = {}
+  const graphWire: PikkuGraphWire = {
+    runId,
+    graphName,
+    nodeId,
+    branch: (key: string) => {
+      wireState.branchKey = key
+    },
+    setState: (name: string, value: unknown) =>
+      workflowService.updateRunState(runId, name, value),
+    getState: () => workflowService.getRunState(runId),
+  }
 
   try {
     let result: any
@@ -784,15 +662,20 @@ async function executeGraphNodeInline(
       }
       result = childRun?.output
     } else {
-      result = await invokeGraphNodeRpc(
-        workflowService,
-        rpcService,
-        runId,
+      result = await rpcService.rpcWithWire(rpcName, input, {
+        graph: graphWire,
+        workflow: workflowService.createWorkflowWire(
+          graphName,
+          runId,
+          rpcService
+        ),
+      })
+    }
+
+    if (wireState.branchKey) {
+      await workflowService.setBranchTaken(
         stepState.stepId,
-        nodeId,
-        rpcName,
-        input,
-        graphName
+        wireState.branchKey
       )
     }
 
@@ -826,10 +709,8 @@ async function executeGraphNodeInline(
             runId,
             graphName,
             errorNodeId,
-            errorNodeId,
             { error: { message: (error as Error).message } },
-            nodes,
-            nodeId
+            nodes
           )
         )
       )
@@ -848,22 +729,20 @@ async function continueGraphInline(
   triggerInput: any,
   entryNodeIds: string[]
 ): Promise<void> {
-  // Drive the run to completion in-process using the SAME planner as the queued
-  // path (continueGraph): each loop plans the next wave of transitions, executes
-  // them inline (vs queueGraphNode dispatch), then re-plans. Sharing the planner
-  // gives the inline path joins, cycle revisits and fromStepName provenance
-  // identical to the queue — instead of a second, weaker traversal.
   while (true) {
     const {
-      failedNodeIds: rawFailed,
-      branchKeys: branchByStep,
       completedNodeIds: rawCompleted,
+      failedNodeIds: rawFailed,
+      branchKeys: rawBranch,
     } = await workflowService.getCompletedGraphState(runId)
-    // Validate step/branch names map to unambiguous nodes (planning keys
-    // physically; these calls only surface ambiguous template configs).
-    remapStepNamesToNodeIds(rawCompleted, nodes, graphName)
-    remapBranchKeys(branchByStep, nodes, graphName)
+    const completedNodeIds = remapStepNamesToNodeIds(
+      rawCompleted,
+      nodes,
+      graphName
+    )
+    const completedNodeIdSet = new Set(completedNodeIds)
     const failedNodeIds = remapStepNamesToNodeIds(rawFailed, nodes, graphName)
+    const branchKeys = remapBranchKeys(rawBranch, nodes, graphName)
 
     if (failedNodeIds.length > 0) {
       const failedNode = failedNodeIds[0]!
@@ -875,31 +754,46 @@ async function continueGraphInline(
       return
     }
 
-    const run = await workflowService.getRun(runId)
-    if (run?.status === 'suspended') {
+    const candidateNodes = new Set<string>()
+
+    for (const nodeId of completedNodeIds) {
+      const node = nodes[nodeId]
+      if (!node?.next) continue
+
+      const nextNodes = resolveNextFromConfig(node.next, branchKeys[nodeId])
+      for (const nextNode of nextNodes) {
+        candidateNodes.add(nextNode)
+      }
+    }
+
+    for (const entryId of entryNodeIds) {
+      candidateNodes.add(entryId)
+    }
+
+    if (candidateNodes.size === 0 && completedNodeIds.length > 0) {
+      await workflowService.updateRunStatus(runId, 'completed')
       return
     }
 
-    const instances = await workflowService.getStepInstances(runId)
-    const plan = planGraphTransitions(
-      nodes,
-      instances,
-      branchByStep,
-      entryNodeIds,
-      graphName
-    )
+    const unstartedNodes = await workflowService.getNodesWithoutSteps(runId, [
+      ...candidateNodes,
+    ])
 
-    if (plan.toFire.length === 0) {
-      if (!plan.hasInFlight && !plan.blockedWaiting) {
+    const nodesToExecute = unstartedNodes.filter((nodeId) => {
+      const node = nodes[nodeId]
+      return node && areDependenciesSatisfied(node, completedNodeIdSet)
+    })
+
+    if (nodesToExecute.length === 0) {
+      if (completedNodeIds.length > 0 && unstartedNodes.length === 0) {
         await workflowService.updateRunStatus(runId, 'completed')
       }
       return
     }
 
-    let executed = 0
     await Promise.all(
-      plan.toFire.map(async (fire) => {
-        const node = nodes[fire.logical]
+      nodesToExecute.map(async (nodeId) => {
+        const node = nodes[nodeId]
         if (!node?.rpcName) return
 
         const referencedNodeIds = extractReferencedNodeIds(node.input).filter(
@@ -909,25 +803,21 @@ async function continueGraphInline(
           runId,
           referencedNodeIds
         )
+
         const nodeResults = { trigger: triggerInput, ...fetchedResults }
         const resolvedInput = resolveSerializedInput(node.input, nodeResults)
 
-        executed++
         await executeGraphNodeInline(
           workflowService,
           rpcService,
           runId,
           graphName,
-          fire.logical,
-          fire.instanceKey,
+          nodeId,
           resolvedInput,
-          nodes,
-          fire.fromStepName
+          nodes
         )
       })
     )
-    // Nothing executable fired (e.g. nodes without an rpcName) → can't progress.
-    if (executed === 0) return
   }
 }
 
@@ -1009,7 +899,6 @@ export async function runWorkflowGraph(
               rpcService,
               runId,
               graphName,
-              nodeId,
               nodeId,
               resolvedInput,
               nodes

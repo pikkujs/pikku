@@ -13,8 +13,7 @@ import {
 } from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { Check, Plus, X } from 'lucide-react'
 import classes from '../ui/console.module.css'
 
@@ -62,7 +61,7 @@ const RunRow: React.FC<{
 }> = ({ run, selected, onSelect, onDelete }) => {
   const [confirming, setConfirming] = useState(false)
   const [hovered, setHovered] = useState(false)
-  useLocale()
+  const { t } = useI18n()
 
   if (confirming) {
     return (
@@ -75,7 +74,7 @@ const RunRow: React.FC<{
         }}
       >
         <Text size="sm" fw={500} mb={6}>
-          {m.runs_panel_delete_confirm()}
+          {t('runs_panel.delete_confirm')}
         </Text>
         <Group gap="xs">
           <Button
@@ -87,7 +86,7 @@ const RunRow: React.FC<{
               setConfirming(false)
             }}
           >
-            {m.common_yes()}
+            {t('common.yes')}
           </Button>
           <Button
             size="compact-xs"
@@ -95,7 +94,7 @@ const RunRow: React.FC<{
             leftSection={<X size={12} />}
             onClick={() => setConfirming(false)}
           >
-            {m.common_no()}
+            {t('common.no')}
           </Button>
         </Group>
       </Box>
@@ -150,7 +149,7 @@ const RunRow: React.FC<{
               e.stopPropagation()
               setConfirming(true)
             }}
-            title={m.runs_panel_delete_run()}
+            title={t('runs_panel.delete_run')}
           >
             <X size={16} />
           </ActionIcon>
@@ -176,7 +175,7 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
   header,
 }) => {
   const [statusFilter, setStatusFilter] = useState('all')
-  useLocale()
+  const { t } = useI18n()
 
   const filteredRuns = useMemo(() => {
     if (statusFilter === 'all') return runs
@@ -189,7 +188,7 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
   }
 
   const segmentData = [
-    { value: 'all', label: m.runs_panel_filter_all() },
+    { value: 'all', label: t('runs_panel.filter_all') },
     ...statusFilters.map((s) => ({
       value: s,
       label: asI18n(s.charAt(0).toUpperCase() + s.slice(1)),
@@ -231,7 +230,7 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
             <Group gap="xs">
               <Plus size={16} color="var(--mantine-color-primary-6)" />
               <Text size="sm" fw={500} c="primary">
-                {newButtonLabel ?? m.runs_panel_new()}
+                {newButtonLabel ?? t('runs_panel.new')}
               </Text>
             </Group>
           </Box>
@@ -242,7 +241,7 @@ export const RunsPanel: React.FC<RunsPanelProps> = ({
           </Box>
         ) : filteredRuns.length === 0 ? (
           <Text size="sm" c="dimmed" ta="center" py="md">
-            {emptyMessage ?? m.runs_panel_empty()}
+            {emptyMessage ?? t('runs_panel.empty')}
           </Text>
         ) : (
           <Stack gap={0}>

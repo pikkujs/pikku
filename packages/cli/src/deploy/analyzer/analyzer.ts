@@ -43,12 +43,6 @@ export interface AnalyzerOptions {
   /** Services that can't run serverless — functions using them get target: 'server' */
   serverlessIncompatible?: string[]
   /**
-   * Default deploy target for functions without an explicit `deploy` flag
-   * and no serverless-incompatible service. Sourced from `pikku.config.json`
-   * → `deploy.defaultTarget`. Defaults to 'serverless'.
-   */
-  defaultTarget?: 'serverless' | 'server'
-  /**
    * When `true` (default), the analyzer synthesizes a per-workflow
    * orchestrator queue + a per-step queue, plus the matching producer
    * bindings, so providers whose workflow runtime fans out via queues
@@ -70,7 +64,6 @@ export function analyzeDeployment(
   options: AnalyzerOptions
 ): DeploymentManifest {
   const serverlessIncompatible = new Set(options.serverlessIncompatible ?? [])
-  const defaultTarget = options.defaultTarget ?? 'serverless'
   const workflowQueues = options.workflowQueues ?? true
   const units: DeploymentUnit[] = []
   const queues: QueueDefinition[] = []
@@ -199,12 +192,7 @@ export function analyzeDeployment(
     units.push({
       name: toSafeKebab(funcId),
       role: 'function',
-      target: resolveDeployTarget(
-        funcMeta,
-        serverlessIncompatible,
-        funcId,
-        defaultTarget
-      ),
+      target: resolveDeployTarget(funcMeta, serverlessIncompatible, funcId),
       functionIds: [funcId],
       services: collectServicesForFunction(funcMeta),
       dependsOn: [],
@@ -388,8 +376,7 @@ export function analyzeDeployment(
             target: resolveDeployTarget(
               funcMeta,
               serverlessIncompatible,
-              funcId,
-              defaultTarget
+              funcId
             ),
             functionIds: [funcId],
             services: collectServicesForFunction(funcMeta),

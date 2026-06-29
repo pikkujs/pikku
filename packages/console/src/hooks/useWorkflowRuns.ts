@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { usePikkuRPC } from '../context/PikkuRpcProvider'
-import { usePikkuImpersonatedRPC } from '../context/ImpersonationContext'
 
 export interface WorkflowRunData {
   runId: string
@@ -118,7 +117,7 @@ export function useWorkflowVersion(
 }
 
 export function useStartWorkflowRun() {
-  const rpc = usePikkuImpersonatedRPC()
+  const rpc = usePikkuRPC()
   const queryClient = useQueryClient()
 
   return useMutation({

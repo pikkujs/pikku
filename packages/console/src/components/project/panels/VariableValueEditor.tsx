@@ -13,8 +13,7 @@ import {
   ActionIcon,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { m } from '@/i18n/messages'
-import { useLocale } from '@/i18n/config'
+import { useI18n } from '@pikku/react/i18n'
 import { Save, AlertTriangle, CheckCircle, Eye, Pencil } from 'lucide-react'
 import { useVariableValue, useSetVariable } from '../../../hooks/useVariables'
 import { useSchema } from '../../../hooks/useWirings'
@@ -31,7 +30,7 @@ export const VariableValueEditor: React.FC<VariableValueEditorProps> = ({
   variableId,
   schemaName,
 }) => {
-  useLocale()
+  const { t } = useI18n()
   const editable = useConsoleEditable()
   const [retrieved, setRetrieved] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -102,14 +101,14 @@ export const VariableValueEditor: React.FC<VariableValueEditorProps> = ({
   if (!retrieved) {
     return (
       <Box>
-        <SectionLabel>{m.variable_editor_variable_value()}</SectionLabel>
+        <SectionLabel>{t('variable_editor.variable_value')}</SectionLabel>
         <Button
           variant="light"
           leftSection={<Eye size={16} />}
           onClick={() => setRetrieved(true)}
           size="sm"
         >
-          {m.variable_editor_retrieve_variable_value()}
+          {t('variable_editor.retrieve_variable_value')}
         </Button>
       </Box>
     )
@@ -118,7 +117,7 @@ export const VariableValueEditor: React.FC<VariableValueEditorProps> = ({
   if (variableLoading) {
     return (
       <Box>
-        <SectionLabel>{m.variable_editor_variable_value()}</SectionLabel>
+        <SectionLabel>{t('variable_editor.variable_value')}</SectionLabel>
         <Loader size="sm" />
       </Box>
     )
@@ -129,14 +128,14 @@ export const VariableValueEditor: React.FC<VariableValueEditorProps> = ({
   return (
     <Stack gap="sm">
       <Group justify="space-between" align="center">
-        <SectionLabel>{m.variable_editor_variable_value()}</SectionLabel>
+        <SectionLabel>{t('variable_editor.variable_value')}</SectionLabel>
         <Group gap="xs" align="center">
           {!editing && editable && (
             <ActionIcon
               variant="subtle"
               size="sm"
               onClick={() => setEditing(true)}
-              title={m.variable_editor_edit_variable_value()}
+              title={t('variable_editor.edit_variable_value')}
             >
               <Pencil size={14} />
             </ActionIcon>
@@ -146,8 +145,8 @@ export const VariableValueEditor: React.FC<VariableValueEditorProps> = ({
               value={effectiveMode}
               onChange={setMode}
               data={[
-                { label: m.variable_editor_form(), value: 'form' },
-                { label: m.variable_editor_json(), value: 'json' },
+                { label: t('variable_editor.form'), value: 'form' },
+                { label: t('variable_editor.json'), value: 'json' },
               ]}
               size="sm"
               style={{ width: 'auto' }}
@@ -164,13 +163,13 @@ export const VariableValueEditor: React.FC<VariableValueEditorProps> = ({
 
       {setVariableMutation.isError && (
         <Alert icon={<AlertTriangle size={16} />} color="red" variant="light">
-          {m.variable_editor_failed_to_save_variable()}
+          {t('variable_editor.failed_to_save_variable')}
         </Alert>
       )}
 
       {!variableData?.exists && !editing && (
         <Text size="sm" c="dimmed">
-          {m.variable_editor_no_value_set()}
+          {t('variable_editor.no_value_set')}
         </Text>
       )}
 
@@ -207,19 +206,19 @@ export const VariableValueEditor: React.FC<VariableValueEditorProps> = ({
               schema={schema as any}
               onSubmit={handleFormSubmit}
               submitting={setVariableMutation.isPending}
-              submitLabel={m.variable_editor_save()}
+              submitLabel={t('variable_editor.save')}
               initialData={currentValue ?? undefined}
             >
               <Group mt="sm" gap="xs" justify="flex-end">
                 <Button variant="subtle" onClick={() => setEditing(false)}>
-                  {m.variable_editor_cancel()}
+                  {t('variable_editor.cancel')}
                 </Button>
                 <Button
                   type="submit"
                   leftSection={<Save size={16} />}
                   loading={setVariableMutation.isPending}
                 >
-                  {m.variable_editor_save()}
+                  {t('variable_editor.save')}
                 </Button>
               </Group>
             </SchemaForm>
@@ -231,7 +230,7 @@ export const VariableValueEditor: React.FC<VariableValueEditorProps> = ({
                   setJsonValue(e.currentTarget.value)
                   setJsonError(null)
                 }}
-                placeholder={m.variable_editor_json_placeholder()}
+                placeholder={t('variable_editor.json_placeholder')}
                 autosize
                 minRows={4}
                 maxRows={12}
@@ -250,14 +249,14 @@ export const VariableValueEditor: React.FC<VariableValueEditorProps> = ({
               )}
               <Group gap="xs" justify="flex-end">
                 <Button variant="subtle" onClick={() => setEditing(false)}>
-                  {m.variable_editor_cancel()}
+                  {t('variable_editor.cancel')}
                 </Button>
                 <Button
                   leftSection={<Save size={16} />}
                   loading={setVariableMutation.isPending}
                   onClick={handleJsonSubmit}
                 >
-                  {m.variable_editor_save()}
+                  {t('variable_editor.save')}
                 </Button>
               </Group>
             </Stack>

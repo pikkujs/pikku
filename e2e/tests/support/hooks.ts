@@ -132,8 +132,6 @@ Before('@console', async function (this: AgentWorld) {
     }),
   ])
   await this.openBrowser()
-  await this.login()
-  this.recordRequests()
 })
 
 After(

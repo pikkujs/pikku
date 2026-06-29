@@ -5,26 +5,9 @@ export {
   PikkuWorkflowService,
   WorkflowCancelledException,
   WorkflowSuspendedException,
-  WorkflowDispatchException,
   WorkflowNotFoundError,
   WorkflowRunNotFoundError,
-  DEFAULT_STEP_RETRIES,
 } from './pikku-workflow-service.js'
-export { deriveInvocationId, uuidv5 } from './workflow-invocation-id.js'
-
-// Time-travel: reconstruct run state at any point from durable history
-export {
-  buildRunTimeline,
-  reconstructStateAt,
-  reconstructFinalState,
-} from './run-timeline.js'
-export type {
-  RunTimeline,
-  RunTimelineEvent,
-  ReconstructedRunState,
-  ReconstructedStep,
-  RunPhase,
-} from './run-timeline.js'
 
 // Internal registration functions (used by generated code)
 export { addWorkflow } from './dsl/workflow-runner.js'

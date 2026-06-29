@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth'
 import { getMigrations } from 'better-auth/db/migration'
-import { admin, bearer } from 'better-auth/plugins'
+import { bearer } from 'better-auth/plugins'
 import { pikkuBetterAuth } from '#pikku/pikku-types.gen.js'
 
 /**
@@ -21,14 +21,9 @@ import { pikkuBetterAuth } from '#pikku/pikku-types.gen.js'
 let migrated: Promise<void> | undefined
 
 export const auth = pikkuBetterAuth(async ({ secrets, variables, kysely }) => {
-  const baseURL = (await variables.get('API_URL')) ?? 'http://localhost:4077'
-  const consoleURL =
-    (await variables.get('CONSOLE_URL')) ?? 'http://localhost:7071'
   const instance = betterAuth({
     secret: await secrets.getSecret('BETTER_AUTH_SECRET'),
-    baseURL,
-    // Console signs in cross-origin; without this better-auth rejects the POST.
-    trustedOrigins: [baseURL, consoleURL],
+    baseURL: (await variables.get('API_URL')) ?? 'http://localhost:4077',
     database: { db: kysely, type: 'sqlite' },
     emailAndPassword: {
       enabled: true,
@@ -39,8 +34,7 @@ export const auth = pikkuBetterAuth(async ({ secrets, variables, kysely }) => {
     socialProviders: {
       github: await secrets.getSecret('GITHUB_OAUTH'),
     },
-    // admin: role/banned session fields + listUsers/impersonation endpoints.
-    plugins: [bearer(), admin()],
+    plugins: [bearer()],
   })
 
   migrated ??= getMigrations(instance.options).then(({ runMigrations }) =>
