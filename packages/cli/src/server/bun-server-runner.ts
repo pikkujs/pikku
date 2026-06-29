@@ -10,6 +10,7 @@
 import type { EventHubService } from '@pikku/core'
 import type { Logger } from '@pikku/core/services'
 import type { BunEventHubService } from '@pikku/bun-server'
+import type * as BunServer from '@pikku/bun-server'
 
 import type {
   DevServerRunner,
@@ -18,7 +19,7 @@ import type {
 } from './dev-server-runner.interface.js'
 
 export class BunServerRunner implements DevServerRunner {
-  private mod?: typeof import('@pikku/bun-server')
+  private mod?: typeof BunServer
   private eventHub?: BunEventHubService
 
   async createEventHub(): Promise<EventHubService<any>> {
