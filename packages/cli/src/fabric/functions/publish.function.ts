@@ -78,7 +78,7 @@ export const FabricPublish = pikkuSessionlessFunc({
 
     // 1. presigned upload URL (short-lived)
     const { uploadUrl, artifactKey } = await post(
-      '/registry/packages/publish-url',
+      '/registry/addons/publish-url',
       { packageName: pkg.name, version: pkg.version }
     )
 
@@ -89,7 +89,7 @@ export const FabricPublish = pikkuSessionlessFunc({
       throw new Error(`upload failed → ${put.status}: ${await put.text()}`)
 
     // 3. finalize — server reads the artifact back, extracts meta, indexes it
-    const entry = await post('/registry/packages/publish', { artifactKey })
+    const entry = await post('/registry/addons/publish', { artifactKey })
 
     const publisher: string | null = entry.publisher?.name ?? null
     console.log(
