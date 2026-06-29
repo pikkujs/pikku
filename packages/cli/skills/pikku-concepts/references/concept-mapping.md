@@ -1,6 +1,25 @@
 # Concept Mapping: Generic Backend → Pikku
 
-Side-by-side code examples showing how common backend patterns translate to Pikku.
+Authoritative mapping table plus side-by-side code examples showing how common backend patterns translate to Pikku.
+
+## Quick Reference Table
+
+| Generic Backend Concept                 | Pikku Equivalent                                                | Skill             |
+| --------------------------------------- | --------------------------------------------------------------- | ----------------- |
+| **Controller / Route Handler**          | `pikkuFunc` / `pikkuSessionlessFunc`                            | `pikku-concepts`  |
+| **Route definition** (`GET /users/:id`) | `wireHTTP({ route, method, func })`                             | `pikku-http`      |
+| **Middleware** (Express/Koa-style)      | `pikkuMiddleware`                                               | `pikku-security`  |
+| **Auth Guard / Auth Middleware**        | `authBearer()` / `authCookie()` / `authApiKey()`                | `pikku-security`  |
+| **Authorization / Permissions**         | `pikkuPermission` / `pikkuAuth`                                 | `pikku-security`  |
+| **DTO / Request Validation**            | Standard Schema (Zod, Valibot, ArkType)                         | `pikku-concepts`  |
+| **Dependency Injection**                | `pikkuServices` (singleton) + `pikkuWireServices` (per-request) | `pikku-services`  |
+| **WebSocket handlers**                  | `wireChannel`                                                   | `pikku-websocket` |
+| **Job Queue workers**                   | `wireQueueWorker`                                               | `pikku-queue`     |
+| **Cron / Scheduled tasks**              | `wireScheduler`                                                 | `pikku-cron`      |
+| **Module / Feature grouping**           | Tags + wiring files                                             | `pikku-concepts`  |
+| **Error handling**                      | Throw typed errors (`NotFoundError`, `ForbiddenError`)          | `pikku-concepts`  |
+| **Type-safe API client**                | `npx pikku prebuild` generates clients                          | `pikku-concepts`  |
+| **Secrets / Config**                    | `wireSecret`, `wireVariable`, `services.variables`              | `pikku-config`    |
 
 ## Route Handler / Controller → pikkuFunc
 
@@ -21,14 +40,17 @@ class TodoController {
 **Pikku:**
 
 ```typescript
-// Function knows nothing about HTTP
-const createTodo = pikkuSessionlessFunc<CreateTodoInput, TodoOutput>(
-  async ({ todoStore, logger }, { title, priority }) => {
+// Function knows nothing about HTTP.
+// input/output are Zod schemas; the data + return types are inferred from them.
+const createTodo = pikkuSessionlessFunc({
+  input: CreateTodoInput,
+  output: TodoOutput,
+  func: async ({ todoStore, logger }, { title, priority }) => {
     const todo = todoStore.createTodo(title, priority)
     logger.info(`Created todo: ${todo.id}`)
     return { todo }
-  }
-)
+  },
+})
 
 // Wiring (separate file) - grouped with defineHTTPRoutes
 export const todoRoutes = defineHTTPRoutes({
@@ -68,13 +90,15 @@ async getUser(req: Request, res: Response) {
 **Pikku:**
 
 ```typescript
-// All sources merged into a single typed `data` object
-const getUser = pikkuSessionlessFunc<
-  { id: string; fields?: string },
-  UserOutput
->(async (services, { id, fields }) => {
-  // id comes from route param, fields from query - function doesn't care
-  return { user: await services.db.getUser(id, fields) }
+// All sources merged into a single typed `data` object.
+// input/output are Zod schemas; the data + return types are inferred from them.
+const getUser = pikkuSessionlessFunc({
+  input: z.object({ id: z.string(), fields: z.string().optional() }),
+  output: UserOutput,
+  func: async (services, { id, fields }) => {
+    // id comes from route param, fields from query - function doesn't care
+    return { user: await services.db.getUser(id, fields) }
+  },
 })
 
 wireHTTP({ method: 'get', route: '/users/:id', func: getUser, auth: false })

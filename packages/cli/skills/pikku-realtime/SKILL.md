@@ -16,16 +16,13 @@ Use this skill as an execution checklist, not reference material.
 4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
 5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
-Most realtime UI is just typed pub/sub: a server pushes `todo-created`, the
-client renders it. Pikku's realtime feature ships exactly that, two ways:
+Most realtime UI is just typed pub/sub: a server pushes `todo-created`, the client
+renders it. Pikku ships exactly that, two ways — both use the same `EventHubService`
+and the same publish call, so choose by transport, not by code shape:
 
 - **WebSocket** at `/events` — one connection, many topic subscriptions.
-- **SSE** at `GET /events/:topic` — one connection per topic, auto-cleanup
-  on disconnect. Good for environments where WebSocket is blocked or for
-  trivially streaming one topic.
-
-Both transports use the same `EventHubService` and the same publish call.
-Choose by transport, not by code shape.
+- **SSE** at `GET /events/:topic` — one connection per topic, auto-cleanup on
+  disconnect. Good when WebSocket is blocked or for trivially streaming one topic.
 
 ## 1. Declare your topics
 
@@ -41,28 +38,24 @@ export type EventHubTopics = {
 }
 ```
 
-Reference it in `application-types.d.ts`:
+Reference it in `application-types.d.ts` and instantiate it in `services.ts`:
 
 ```ts
+// application-types.d.ts
 import type { EventHubService } from '@pikku/core/channel'
 import type { EventHubTopics } from './eventhub-topics.js'
 
 export interface SingletonServices extends CoreSingletonServices<Config> {
   eventHub?: EventHubService<EventHubTopics>
-  // ...
 }
-```
 
-And instantiate it in `services.ts`:
-
-```ts
+// services.ts
 import { LocalEventHubService } from '@pikku/core/channel'
-// ...
 const eventHub = new LocalEventHubService<EventHubTopics>()
 ```
 
-(For multi-instance deployments use `CloudflareEventHubService` /
-`LambdaEventHubService` / `UWSEventHubService` instead — same interface.)
+For multi-instance deployments use `CloudflareEventHubService` /
+`LambdaEventHubService` / `UWSEventHubService` instead — same interface.
 
 ## 2. Enable the server side
 
@@ -71,14 +64,12 @@ yarn pikku enable events           # auth required by default
 yarn pikku enable events --noAuth  # public events
 ```
 
-This sets `scaffold.events` in `pikku.config.json`. The next `pikku all`
-generates `events.gen.ts` in your scaffold dir, which wires:
+This sets `scaffold.events` in `pikku.config.json`. The next `pikku all` generates
+`events.gen.ts` in your scaffold dir, wiring (using whatever `eventHub` is in your
+singletons — you write neither by hand):
 
 - A WebSocket channel at `/events` handling `{action: 'subscribe' | 'unsubscribe', topic}` messages.
 - An SSE handler at `GET /events/:topic`.
-
-You don't write either by hand. They use whatever `eventHub` service is
-in your singletons.
 
 ## 3. Generate the typed client
 
@@ -87,7 +78,6 @@ Add to `pikku.config.json`:
 ```jsonc
 {
   "clientFiles": {
-    // ...
     "realtimeFile": "packages/sdk/src/pikku/realtime.gen.ts",
     // Optional: full type inference for subscribe/unsubscribe
     "realtimeEventHubTopicsImport": "../../../functions/types/eventhub-topics.js#EventHubTopics",
@@ -95,8 +85,8 @@ Add to `pikku.config.json`:
 }
 ```
 
-Run `pikku all` (or `pikku realtime` to regenerate just this file). The
-generated file exports two surfaces:
+Run `pikku all` (or `pikku realtime` to regenerate just this file). The generated
+file exports two surfaces:
 
 ```ts
 export class PikkuRealtime {
@@ -112,13 +102,15 @@ export function subscribeToTopicViaSSE<K extends keyof EventHubTopics>(
 ```
 
 Without `realtimeEventHubTopicsImport`, the client falls back to
-`Record<string, unknown>` — usable but untyped. Set the import for full
-typed subscribe/unsubscribe.
+`Record<string, unknown>` — usable but untyped. Set the import for full typed
+subscribe/unsubscribe.
 
 ## 4. Publish events from a function
 
-The `/events` channel listens for client subscriptions; the eventHub fans
-out publishes. Functions publish like this:
+The `/events` channel listens for client subscriptions; the eventHub fans out
+publishes. Envelope the payload with `topic` so the client dispatcher works; the
+`null` channelId means "broadcast to all subscribers" (pass a specific channel id
+to exclude/include a single connection):
 
 ```ts
 import { pikkuFunc } from '#pikku'
@@ -128,47 +120,35 @@ export const createTodo = pikkuFunc({
   output: CreateTodoOutput,
   func: async ({ kysely, eventHub }, data) => {
     const todo = await kysely
-      .insertInto('todos')
-      .values(data)
-      .returningAll()
+      .insertInto('todos').values(data).returningAll()
       .executeTakeFirstOrThrow()
 
     if (eventHub) {
-      // Envelope the payload with `topic` so the client dispatcher works.
       await eventHub.publish('todo-created', null, {
         topic: 'todo-created',
         data: { todo },
       })
     }
-
     return { id: todo.id }
   },
 })
 ```
 
-The `null` channelId means "broadcast to all subscribers." Pass a
-specific channel id to exclude/include a single connection.
-
 A thin helper removes the duplication:
 
 ```ts
 async function publishEvent<K extends keyof EventHubTopics>(
-  hub: EventHubService<EventHubTopics>,
-  topic: K,
-  data: EventHubTopics[K]
+  hub: EventHubService<EventHubTopics>, topic: K, data: EventHubTopics[K]
 ) {
   return hub.publish(topic, null, { topic, data })
 }
-
-// usage:
-await publishEvent(eventHub, 'todo-created', { todo })
+// usage: await publishEvent(eventHub, 'todo-created', { todo })
 ```
 
 ## 5. Wire it up — share fetch with PikkuRPC
 
-`PikkuRealtime` mirrors `PikkuRPC`: it wraps the same `PikkuFetch`, so
-server URL + auth are configured **once** and shared across HTTP, RPC,
-and realtime transports.
+`PikkuRealtime` mirrors `PikkuRPC`: it wraps the same `PikkuFetch`, so server URL +
+auth are configured **once** and shared across HTTP, RPC, and realtime transports.
 
 ```tsx
 import { createPikku, PikkuProvider } from '@pikku/react'
@@ -185,9 +165,7 @@ const pikku = createPikku(
 // pikku.fetch / pikku.rpc / pikku.realtime — all share the same fetch.
 
 createRoot(document.getElementById('root')!).render(
-  <PikkuProvider pikku={pikku}>
-    <App />
-  </PikkuProvider>
+  <PikkuProvider pikku={pikku}><App /></PikkuProvider>
 )
 ```
 
@@ -200,64 +178,38 @@ realtime.setPikkuFetch(pikku.fetch) // inherits serverUrl + auth
 
 ## 6. Subscribe from React
 
+Subscribe inside `useEffect` (never the render path, or you create a subscription
+per render). `subscribe` returns an unsubscribe function; SSE's `subscribeToTopic`
+returns a handle with `close()`:
+
 ```tsx
 import { useEffect, useState } from 'react'
 
 function TodoList() {
-  const { realtime } = usePikku() // assuming you expose a hook over your context
+  const { realtime } = usePikku() // a hook over your context
   const [todos, setTodos] = useState<Todo[]>([])
 
   useEffect(() => {
-    const off = realtime.subscribe('todo-created', ({ todo }) => {
-      setTodos((prev) => [...prev, todo])
-    })
+    // WebSocket multi-topic:
+    const off = realtime.subscribe('todo-created', ({ todo }) =>
+      setTodos((prev) => [...prev, todo]))
     return off
+
+    // Single-topic SSE (auto-cleanup on close) instead:
+    // const sub = realtime.subscribeToTopic('todo-created', ({ todo }) =>
+    //   setTodos((prev) => [...prev, todo]))
+    // return () => sub.close()
   }, [realtime])
 
-  return (
-    <ul>
-      {todos.map((t) => (
-        <li key={t.id}>{t.title}</li>
-      ))}
-    </ul>
-  )
+  return <ul>{todos.map((t) => <li key={t.id}>{t.title}</li>)}</ul>
 }
 ```
 
-Single-topic SSE (auto-cleanup on close):
+## Other SSE / WebSocket routes
 
-```tsx
-useEffect(() => {
-  const sub = realtime.subscribeToTopic('todo-created', ({ todo }) => {
-    setTodos((prev) => [...prev, todo])
-  })
-  return () => sub.close()
-}, [realtime])
-```
-
-## Subscribing to other SSE / WebSocket routes
-
-Same client also handles generic SSE + channel routes — use the path,
-the base URL is inherited from PikkuFetch:
-
-```ts
-// Any sse: true HTTP route
-const sub = realtime.subscribeToSSE<{ progress: number }>(
-  `/workflow-run/${runId}/stream`,
-  (event) => setProgress(event.progress)
-)
-// later: sub.close()
-
-// Any wireChannel — open a raw socket, wrap in PikkuWebSocket for typed I/O
-const ws = realtime.connectToChannel('/ws/kanban')
-const typed = new PikkuWebSocket<'kanban-live'>(ws)
-typed.getRoute('command').subscribe('message', (data) => {
-  /* ... */
-})
-```
-
-Discover what's available with `pikku meta clients --json` — `channels`
-and any HTTP `sse: true` routes are listed there.
+The same client also subscribes to generic `sse: true` routes and raw `wireChannel`
+sockets (`subscribeToSSE`, `connectToChannel`). See
+[references/other-routes.md](references/other-routes.md).
 
 ## When to pick which transport
 
@@ -268,18 +220,17 @@ and any HTTP `sse: true` routes are listed there.
 | Bidirectional (client also sends messages) | **PikkuRealtime**             |
 | WebSockets blocked by infra                | **subscribeToTopicViaSSE**    |
 
-Both auto-clean on the server (the eventHub's `onChannelClosed` hook
-unsubscribes all topics for the dead channel id). Don't write manual
-cleanup unless you're unsubscribing partway through a session.
+Both auto-clean on the server (the eventHub's `onChannelClosed` hook unsubscribes
+all topics for the dead channel id). Don't write manual cleanup unless you're
+unsubscribing partway through a session.
 
 ## What NOT to do
 
-- Don't call `eventHub.publish(topic, ..., rawData)` without the
-  `{topic, data}` envelope — clients use `topic` to dispatch handlers.
-- Don't create your own `/events` channel by hand — `pikku enable events`
-  already does it correctly with disconnect cleanup.
-- Don't subscribe inside the render path — use `useEffect`. Otherwise
-  you'll create a subscription per render.
-- Don't subscribe to topics that don't exist in `EventHubTopics`. The
-  generated client's types prevent it; if you find yourself reaching for
-  `as any` to subscribe to a string, declare the topic first.
+- Don't call `eventHub.publish(topic, ..., rawData)` without the `{topic, data}`
+  envelope — clients use `topic` to dispatch handlers.
+- Don't create your own `/events` channel by hand — `pikku enable events` already
+  does it correctly with disconnect cleanup.
+- Don't subscribe inside the render path — use `useEffect`.
+- Don't subscribe to topics that don't exist in `EventHubTopics`. The generated
+  client's types prevent it; if you reach for `as any` to subscribe to a string,
+  declare the topic first.

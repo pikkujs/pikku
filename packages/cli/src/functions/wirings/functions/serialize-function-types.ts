@@ -387,26 +387,14 @@ export type PikkuFunctionConfigWithSchema<
  * Creates a Pikku function that can be either session-aware or sessionless.
  * This is the main function wrapper for creating API endpoints.
  *
- * Supports two patterns:
- * 1. Generic types: \`pikkuFunc<Input, Output>({ func: ... })\`
- * 2. Zod schemas: \`pikkuFunc({ input: z.object(...), output: z.object(...), func: ... })\`
+ * Define the input and output with Zod schemas — the function's types are
+ * inferred from them, and the schemas double as runtime validation.
  *
- * @template In - Input type for the function (inferred from schema if provided)
- * @template Out - Output type for the function (inferred from schema if provided)
- * @param func - Function definition, either direct function or configuration object
+ * @param config - Function definition with \`input\`/\`output\` Zod schemas and \`func\`.
  * @returns The normalized configuration object
  *
  * @example
  * \`\`\`typescript
- * // Pattern 1: Using generic types
- * const createUser = pikkuFunc<{name: string, email: string}, {id: number}>({
- *   func: async ({db}, input) => {
- *     const user = await db.users.create(input)
- *     return { id: user.id }
- *   }
- * })
- *
- * // Pattern 2: Using Zod schemas (types inferred automatically)
  * const createUserInput = z.object({ name: z.string(), email: z.string() })
  * const createUserOutput = z.object({ id: z.number() })
  *
@@ -498,25 +486,14 @@ export type PikkuFunctionSessionlessConfigWithSchema<
  * Creates a sessionless Pikku function that doesn't require user authentication.
  * Use this for public endpoints, webhooks, or background tasks.
  *
- * Supports two patterns:
- * 1. Generic types: \`pikkuSessionlessFunc<Input, Output>({ func: ... })\`
- * 2. Zod schemas: \`pikkuSessionlessFunc({ input: z.object(...), func: ... })\`
+ * Define the input and output with Zod schemas — the function's types are
+ * inferred from them, and the schemas double as runtime validation.
  *
- * @template In - Input type for the function (inferred from schema if provided)
- * @template Out - Output type for the function (inferred from schema if provided)
- * @param func - Function definition, either direct function or configuration object
+ * @param config - Function definition with \`input\`/\`output\` Zod schemas and \`func\`.
  * @returns The normalized configuration object
  *
  * @example
  * \`\`\`typescript
- * // Pattern 1: Using generic types
- * const healthCheck = pikkuSessionlessFunc<void, {status: string}>({
- *   func: async ({logger}) => {
- *     return { status: 'healthy' }
- *   }
- * })
- *
- * // Pattern 2: Using Zod schemas
  * const greetInput = z.object({ name: z.string() })
  * const greetOutput = z.object({ message: z.string() })
  *

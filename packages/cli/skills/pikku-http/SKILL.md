@@ -34,67 +34,14 @@ Follow existing patterns you find (naming, tag usage, file organization). See `p
 
 ## API Reference
 
-### `wireHTTP(config)`
+- `wireHTTP(config)` (from `@pikku/core/http`) — wire one function to one endpoint.
+- `defineHTTPRoutes(config)` + `wireHTTPRoutes(config)` (from `.pikku/pikku-types.gen.js`) — group routes with shared config; composable/nestable.
 
-Wire a single function to an HTTP endpoint.
+Function input/output types come from the function's own `input:`/`output:` zod schemas — never declared in the wiring. Route `:params`, query params, and body are merged into the function's `data` arg (see Data Flow).
 
-```typescript
-import { wireHTTP } from '@pikku/core/http'
+Config cascading across groups: `basePath` concatenates down the chain, `tags` merge (union), `auth` child overrides parent.
 
-wireHTTP({
-  method: 'get' | 'post' | 'put' | 'patch' | 'delete' | 'head',
-  route: string,          // e.g. '/books/:bookId' — :params become data fields
-  func: PikkuFunc,        // The function to call
-  auth?: boolean,         // Override default auth (true = require session)
-  tags?: string[],        // For grouping, middleware targeting
-  permissions?: Record<string, PikkuPermission | PikkuPermission[]>,
-  middleware?: PikkuMiddleware[],
-  sse?: boolean,          // Enable Server-Sent Events
-  contentType?: 'xml' | 'json',  // Response content type
-  timeout?: number,       // Request timeout in ms
-  headers?: HTTPHeadersSchema,   // Expected headers schema
-  docs?: HTTPRouteDocsConfig,    // OpenAPI docs config
-})
-```
-
-### `defineHTTPRoutes(config)` + `wireHTTPRoutes(config)`
-
-Group routes with shared configuration. Groups are composable and nestable.
-
-```typescript
-import { defineHTTPRoutes, wireHTTPRoutes } from '.pikku/pikku-types.gen.js'
-
-const routes = defineHTTPRoutes({
-  basePath?: string,       // Prepended to all route paths
-  tags?: string[],         // Applied to all routes in group
-  auth?: boolean,          // Default auth for all routes (overridable per-route)
-  middleware?: PikkuMiddleware[],
-  routes: {
-    [key: string]: {
-      method: string,
-      route: string,
-      func: PikkuFunc,
-      auth?: boolean,      // Override group auth
-      permissions?: Record<string, PikkuPermission | PikkuPermission[]>,
-      middleware?: PikkuMiddleware[],
-    }
-  }
-})
-
-wireHTTPRoutes({
-  basePath?: string,       // Top-level prefix (e.g. '/api/v1')
-  middleware?: PikkuMiddleware[],
-  routes: {
-    [key: string]: ReturnType<typeof defineHTTPRoutes>,
-  }
-})
-```
-
-Config cascading rules:
-
-- `basePath` — concatenates down the chain
-- `tags` — merge (union)
-- `auth` — child overrides parent
+For the full option tables (every `wireHTTP` field, the `defineHTTPRoutes`/`wireHTTPRoutes` config shape), read `references/http-options.md`.
 
 ### `addHTTPMiddleware(pattern, middlewares)`
 
@@ -137,7 +84,7 @@ wireHTTP({
 const booksRoutes = defineHTTPRoutes({
   tags: ['books'],
   routes: {
-    list: { method: 'get', route: '/books', func: listBooks, auth: false },
+    list: { method: 'get', route: '/books', func: listBooks, auth: false }, // per-route override
     get: { method: 'get', route: '/books/:bookId', func: getBook },
     create: { method: 'post', route: '/books', func: createBook },
     delete: { method: 'delete', route: '/books/:bookId', func: deleteBook },
@@ -145,24 +92,19 @@ const booksRoutes = defineHTTPRoutes({
 })
 
 const todosRoutes = defineHTTPRoutes({
-  auth: false,
+  auth: false, // group-level default, overridable per-route
   tags: ['todos'],
   routes: {
     list: { method: 'get', route: '/todos', func: listTodos },
-    create: { method: 'post', route: '/todos', func: createTodo },
-    get: { method: 'get', route: '/todos/:id', func: getTodo },
   },
 })
 
 wireHTTPRoutes({
   basePath: '/api/v1',
   middleware: [cors()],
-  routes: {
-    books: booksRoutes,
-    todos: todosRoutes,
-  },
+  routes: { books: booksRoutes, todos: todosRoutes },
 })
-// Results in: GET /api/v1/books, POST /api/v1/books, etc.
+// Results in: GET /api/v1/books, POST /api/v1/books, GET /api/v1/todos, etc.
 ```
 
 ### Auth & Permissions
@@ -258,60 +200,27 @@ const deleted = await pikkuFetch.delete('/api/v1/books/:bookId', {
 
 ## Complete Example
 
+Functions live in their own files (one per file) and supply behavior + `permissions`; the wiring file imports them and wires routes. Sessionless funcs need no session; `pikkuFunc` does.
+
 ```typescript
 // functions/books.functions.ts
 import { pikkuFunc, pikkuSessionlessFunc } from '#pikku'
 
 export const listBooks = pikkuSessionlessFunc({
   title: 'List Books',
-  func: async ({ db }, { limit }) => {
-    return { books: await db.listBooks(limit) }
-  },
+  func: async ({ db }, { limit }) => ({ books: await db.listBooks(limit) }),
 })
 
 export const getBook = pikkuFunc({
   title: 'Get Book',
   description: 'Retrieve a book by ID',
-  func: async ({ db }, { bookId }) => {
-    return await db.getBook(bookId)
-  },
+  func: async ({ db }, { bookId }) => await db.getBook(bookId),
   permissions: { user: isAuthenticated },
 })
 
-export const createBook = pikkuFunc({
-  title: 'Create Book',
-  func: async ({ db }, { title, author }) => {
-    return await db.createBook({ title, author })
-  },
-})
-
-export const deleteBook = pikkuFunc({
-  title: 'Delete Book',
-  func: async ({ db }, { bookId }) => {
-    await db.deleteBook(bookId)
-    return { deleted: true }
-  },
-})
-
-// wirings/books.http.ts
-import { defineHTTPRoutes, wireHTTPRoutes } from '.pikku/pikku-types.gen.js'
+// wirings/books.http.ts — same defineHTTPRoutes/wireHTTPRoutes shape as the Route Groups example above
 import { addHTTPMiddleware } from '@pikku/core/http'
 import { cors, authBearer } from '@pikku/core/middleware'
-
-const booksRoutes = defineHTTPRoutes({
-  tags: ['books'],
-  routes: {
-    list: { method: 'get', route: '/books', func: listBooks, auth: false },
-    get: { method: 'get', route: '/books/:bookId', func: getBook },
-    create: { method: 'post', route: '/books', func: createBook },
-    delete: { method: 'delete', route: '/books/:bookId', func: deleteBook },
-  },
-})
-
-wireHTTPRoutes({
-  basePath: '/api',
-  routes: { books: booksRoutes },
-})
 
 addHTTPMiddleware('*', [cors(), authBearer()])
 ```
