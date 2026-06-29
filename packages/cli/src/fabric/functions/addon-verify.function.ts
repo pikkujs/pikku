@@ -27,12 +27,16 @@ export type FabricAddonVerifyOutput = z.infer<
   typeof FabricAddonVerifyOutputSchema
 >
 
-async function readJsonSafe<T>(path: string): Promise<T | null> {
-  if (!existsSync(path)) return null
+type JsonResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; reason: 'missing' | 'invalid' }
+
+async function readJsonSafe<T>(path: string): Promise<JsonResult<T>> {
+  if (!existsSync(path)) return { ok: false, reason: 'missing' }
   try {
-    return JSON.parse(await readFile(path, 'utf8')) as T
+    return { ok: true, value: JSON.parse(await readFile(path, 'utf8')) as T }
   } catch {
-    return null
+    return { ok: false, reason: 'invalid' }
   }
 }
 
@@ -57,16 +61,22 @@ export const FabricAddonVerify = pikkuSessionlessFunc({
     })
 
     // 1. package.json
-    const pkg = await readJsonSafe<{
+    const pkgResult = await readJsonSafe<{
       name?: string
       version?: string
       files?: string[]
     }>(join(addonDir, 'package.json'))
-    if (!pkg) {
-      checks.push(fail('package.json', 'not found'))
+    if (!pkgResult.ok) {
+      checks.push(
+        fail(
+          'package.json',
+          pkgResult.reason === 'missing' ? 'not found' : 'invalid JSON'
+        )
+      )
       return { ok: false, addonDir, checks }
     }
     checks.push(pass('package.json'))
+    const pkg = pkgResult.value
 
     if (!pkg.name) checks.push(fail('package name', 'missing name field'))
     else checks.push(pass('package name', pkg.name))
@@ -75,19 +85,29 @@ export const FabricAddonVerify = pikkuSessionlessFunc({
       checks.push(fail('package version', 'missing version field'))
     else checks.push(pass('package version', pkg.version))
 
-    if (!pkg.files?.includes('dist')) {
-      checks.push(fail('files field', 'must include "dist"'))
+    const hasDistInFiles = pkg.files?.some(
+      (f) => f === 'dist' || f === 'dist/' || f.startsWith('dist/')
+    )
+    if (!hasDistInFiles) {
+      checks.push(
+        fail('files field', 'must include "dist" (or "dist/", "dist/**/*")')
+      )
     } else {
       checks.push(pass('files field', '"dist" included'))
     }
 
     // 2. pikku.config.json with addon: true
-    const pikkuConfig = await readJsonSafe<{ addon?: boolean }>(
+    const pikkuConfigResult = await readJsonSafe<{ addon?: boolean }>(
       join(addonDir, 'pikku.config.json')
     )
-    if (!pikkuConfig) {
-      checks.push(fail('pikku.config.json', 'not found'))
-    } else if (!pikkuConfig.addon) {
+    if (!pikkuConfigResult.ok) {
+      checks.push(
+        fail(
+          'pikku.config.json',
+          pikkuConfigResult.reason === 'missing' ? 'not found' : 'invalid JSON'
+        )
+      )
+    } else if (!pikkuConfigResult.value.addon) {
       checks.push(fail('pikku.config.json', 'addon: true not set'))
     } else {
       checks.push(pass('pikku.config.json', 'addon: true'))
@@ -126,10 +146,12 @@ export const FabricAddonVerify = pikkuSessionlessFunc({
     checks.push(pass('dist/.pikku/'))
 
     // 5. At least one exported function
-    const funcsMeta = await readJsonSafe<Record<string, unknown>>(
+    const funcsMetaResult = await readJsonSafe<Record<string, unknown>>(
       join(distPikku, 'function', 'pikku-functions-meta.gen.json')
     )
-    const funcCount = funcsMeta ? Object.keys(funcsMeta).length : 0
+    const funcCount = funcsMetaResult.ok
+      ? Object.keys(funcsMetaResult.value).length
+      : 0
     if (funcCount === 0) {
       checks.push(
         fail(
@@ -160,10 +182,12 @@ export const FabricAddonVerify = pikkuSessionlessFunc({
     }
 
     // 8. icon (advisory)
-    const consoleMeta = await readJsonSafe<{ package?: { icon?: string } }>(
-      join(distPikku, 'console', 'pikku-addon-meta.gen.json')
-    )
-    const icon = consoleMeta?.package?.icon
+    const consoleMetaResult = await readJsonSafe<{
+      package?: { icon?: string }
+    }>(join(distPikku, 'console', 'pikku-addon-meta.gen.json'))
+    const icon = consoleMetaResult.ok
+      ? consoleMetaResult.value.package?.icon
+      : undefined
     if (!icon) {
       checks.push({ name: 'icon', ok: true, detail: 'none (optional)' })
     } else {
