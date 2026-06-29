@@ -39,6 +39,10 @@ export class InMemoryWorkflowService
   extends PikkuWorkflowService
   implements WorkflowRunService
 {
+  constructor() {
+    super({ wireQueues: false })
+  }
+
   private sleepTimers = new Set<ReturnType<typeof setTimeout>>()
   private runs = new Map<string, WorkflowRun>()
   private steps = new Map<string, StepState>() // keyed by `${runId}:${stepName}`
@@ -451,7 +455,9 @@ export class InMemoryWorkflowService
     return nodeIds.filter((id) => !existingSteps.has(id))
   }
 
-  async getStepInstances(runId: string): Promise<
+  async getStepInstances(
+    runId: string
+  ): Promise<
     Array<{ stepName: string; status: StepStatus; fromStepName?: string }>
   > {
     const prefix = `${runId}:`

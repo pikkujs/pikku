@@ -60,7 +60,6 @@ export const serve = pikkuSessionlessFunc<
     await loadUserBootstrap(pikkuDir)
 
     const workflowService = new InMemoryWorkflowService()
-    workflowService.rewireQueueWorkers()
 
     const configModule = await loadUserModule(pikkuConfigFactory.file)
     const servicesModule = await loadUserModule(singletonServicesFactory.file)
