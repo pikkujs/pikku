@@ -199,6 +199,29 @@ export async function loadAddonFunctionsMeta(
       } catch {
         // No variables meta — that's fine
       }
+      // Load addon serverlessIncompatible service names from pikku-addon-meta.gen.json
+      try {
+        const addonMetaPath = require.resolve(
+          `${decl.package}/.pikku/console/pikku-addon-meta.gen.json`
+        )
+        const addonMetaRaw = await readFile(addonMetaPath, 'utf-8')
+        const addonMeta = JSON.parse(addonMetaRaw)
+        if (
+          Array.isArray(addonMeta.serverlessIncompatible) &&
+          addonMeta.serverlessIncompatible.length > 0
+        ) {
+          state.addonServerlessIncompatible.set(
+            namespace,
+            addonMeta.serverlessIncompatible
+          )
+          logger.debug(
+            `Addon '${namespace}' marks [${addonMeta.serverlessIncompatible.join(', ')}] as serverless-incompatible`
+          )
+        }
+      } catch {
+        // No addon meta or no serverlessIncompatible declared — that's fine
+      }
+
       // Load addon required parent services from pikku-services.gen
       try {
         const servicesGenPath = require.resolve(
