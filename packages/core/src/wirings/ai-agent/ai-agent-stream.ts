@@ -512,7 +512,7 @@ function handleApprovals(
         reason: err.reason,
         runId,
       }
-      channel.send(approvalEvent as any)
+      channel.send(approvalEvent)
     }
     channel.send({ type: 'done' })
     channel.close()

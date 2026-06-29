@@ -1,16 +1,27 @@
-import {
+import React, {
   createContext,
+  useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
-  useCallback,
 } from 'react'
+import { HttpAgent } from '@ag-ui/client'
+import type {
+  RunAgentInput,
+  BaseEvent,
+  CustomEvent as AgUiCustomEvent,
+} from '@ag-ui/client'
+import type { Observable } from 'rxjs'
+import { useAgUiRuntime } from '@assistant-ui/react-ag-ui'
 import {
   useLocalRuntime,
   type ChatModelAdapter,
   type ThreadMessageLike,
 } from '@assistant-ui/react'
+
+// ========== Public types ==========
 
 export interface PikkuAgentRuntimeOptions {
   api: string
@@ -53,168 +64,7 @@ export const PikkuApprovalContext = createContext<PikkuApprovalContextValue>({
 
 export const usePikkuApproval = () => useContext(PikkuApprovalContext)
 
-async function* parseSSEStream(
-  reader: ReadableStreamDefaultReader<Uint8Array>
-) {
-  const decoder = new TextDecoder()
-  let buffer = ''
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split('\n')
-    buffer = lines.pop()!
-
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        const data = line.slice(6)
-        if (data) {
-          try {
-            yield JSON.parse(data)
-          } catch {
-            // skip unparseable lines
-          }
-        }
-      }
-    }
-  }
-}
-
-type ToolCall = {
-  type: 'tool-call'
-  toolCallId: string
-  toolName: string
-  args: Record<string, unknown>
-  result?: string
-  isError?: boolean
-}
-
-type StructuredPart =
-  | {
-      type: 'generative-ui'
-      spec: unknown
-    }
-  | {
-      type: 'data'
-      name: string
-      data: unknown
-    }
-
-/**
- * Shared helper: consume an SSE stream and populate text/toolCalls.
- * Returns an array of PendingApprovals when the stream requests them, or empty when done.
- */
-async function processStream(
-  reader: ReadableStreamDefaultReader<Uint8Array>,
-  text: { value: string },
-  toolCalls: ToolCall[],
-  structuredParts: StructuredPart[],
-  yieldContent: () => void,
-  onFinish?: () => void
-): Promise<PendingApproval[]> {
-  const pendingApprovals: PendingApproval[] = []
-
-  for await (const event of parseSSEStream(reader)) {
-    switch (event.type) {
-      case 'text-delta':
-        text.value += event.text
-        break
-      case 'tool-call': {
-        let parsedArgs = event.args
-        if (typeof event.args === 'string') {
-          try {
-            parsedArgs = JSON.parse(event.args)
-          } catch {
-            parsedArgs = {}
-          }
-        }
-        toolCalls.push({
-          type: 'tool-call',
-          toolCallId: event.toolCallId,
-          toolName: event.toolName,
-          args: parsedArgs,
-        })
-        break
-      }
-      case 'tool-result': {
-        // Skip tool-results that contain __approvalRequired
-        const resultObj = typeof event.result === 'object' ? event.result : null
-        if (resultObj && '__approvalRequired' in resultObj) {
-          break
-        }
-        const tc = toolCalls.find((t) => t.toolCallId === event.toolCallId)
-        if (tc) {
-          tc.result =
-            typeof event.result === 'string'
-              ? event.result
-              : JSON.stringify(event.result)
-          if (event.isError) {
-            tc.isError = true
-          }
-        }
-        break
-      }
-      case 'generative-ui': {
-        const nextPart = {
-          type: 'generative-ui' as const,
-          spec: event.spec,
-        }
-        const existingIndex = structuredParts.findIndex(
-          (part) => part.type === 'generative-ui'
-        )
-        if (existingIndex === -1) structuredParts.push(nextPart)
-        else structuredParts[existingIndex] = nextPart
-        break
-      }
-      case 'data': {
-        const nextPart = {
-          type: 'data' as const,
-          name: event.name,
-          data: event.data,
-        }
-        const existingIndex = structuredParts.findIndex(
-          (part) => part.type === 'data' && part.name === event.name
-        )
-        if (existingIndex === -1) structuredParts.push(nextPart)
-        else structuredParts[existingIndex] = nextPart
-        break
-      }
-      case 'approval-request':
-        pendingApprovals.push({
-          toolCallId: event.toolCallId,
-          toolName: event.toolName,
-          args: event.args,
-          reason: event.reason,
-          runId: event.runId,
-          type: 'approval-request',
-        })
-        break
-      case 'credential-request':
-        pendingApprovals.push({
-          toolCallId: event.toolCallId,
-          toolName: event.toolName,
-          args: event.args,
-          runId: event.runId,
-          type: 'credential-request',
-          credentialName: event.credentialName,
-          credentialType: event.credentialType,
-          connectUrl: event.connectUrl,
-        })
-        break
-      case 'error':
-        text.value += `\n\nError: ${event.message || event.errorText || 'Unknown error'}`
-        break
-      case 'done':
-        onFinish?.()
-        continue
-    }
-    yieldContent()
-  }
-
-  return pendingApprovals
-}
+// ========== Utility functions ==========
 
 export function isDeniedResult(result: unknown): boolean {
   if (result == null) return false
@@ -276,341 +126,6 @@ export function resolvePikkuToolStatus(
   if (typeof result === 'string' && result.startsWith('Error:'))
     return { type: 'error' }
   return { type: 'completed' }
-}
-
-function buildRichContent(
-  text: { value: string },
-  structuredParts: StructuredPart[],
-  toolCalls: ToolCall[]
-): any[] {
-  const content: any[] = []
-  if (text.value) content.push({ type: 'text' as const, text: text.value })
-  content.push(...structuredParts)
-  content.push(...toolCalls)
-  return content
-}
-
-function buildContentFromAgentResult(result: unknown): any[] {
-  const content: any[] = []
-
-  if (typeof result === 'string') {
-    if (result) content.push({ type: 'text' as const, text: result })
-    return content
-  }
-
-  if (!result || typeof result !== 'object') return content
-
-  const record = result as Record<string, unknown>
-  if (typeof record.text === 'string' && record.text) {
-    content.push({ type: 'text' as const, text: record.text })
-  }
-  if (record.ui != null) {
-    content.push({ type: 'generative-ui' as const, spec: record.ui })
-  }
-
-  return content
-}
-
-function createPikkuStreamingAdapter(
-  optionsRef: React.RefObject<PikkuAgentRuntimeOptions>,
-  pendingApprovalsRef: React.RefObject<PendingApproval[]>,
-  approvalDecisionsRef: React.RefObject<
-    { toolCallId: string; approved: boolean }[]
-  >,
-  setPendingApprovalsRef: React.RefObject<
-    (approvals: PendingApproval[]) => void
-  >,
-  onFinishRef: React.RefObject<(() => void) | undefined>
-): ChatModelAdapter {
-  return {
-    async *run({ messages, abortSignal }) {
-      const opts = optionsRef.current!
-
-      // Check if this run() is a continuation after approval decisions.
-      // assistant-ui calls run() again after addResult provides tool results for ALL tool calls.
-      const pendingApprovals = pendingApprovalsRef.current
-      if (pendingApprovals.length > 0) {
-        // Read the decisions accumulated by handleApproval() from click handlers.
-        const decisions = approvalDecisionsRef.current
-        approvalDecisionsRef.current = []
-
-        if (decisions.length === 0) {
-          // No decisions set — shouldn't happen if composer is disabled.
-          return
-        }
-
-        // Clear pending approvals state
-        pendingApprovalsRef.current = []
-        setPendingApprovalsRef.current([])
-
-        // Send /resume for each decision sequentially.
-        // All but the last resume will return quickly (just tool-result + done).
-        // The last resume triggers continuation (next LLM step).
-        let lastText = { value: '' }
-        let lastToolCalls: ToolCall[] = []
-        let lastStructuredParts: StructuredPart[] = []
-        let nextApprovals: PendingApproval[] = []
-
-        for (let i = 0; i < decisions.length; i++) {
-          const decision = decisions[i]
-          // Find the runId from the matching pending approval
-          const matchingApproval = pendingApprovals.find(
-            (p) => p.toolCallId === decision.toolCallId
-          )
-          const runId = matchingApproval?.runId ?? pendingApprovals[0]?.runId
-
-          const resumeResponse = await fetch(
-            `${opts.api}/${opts.agentName}/resume`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                ...opts.headers,
-              },
-              body: JSON.stringify({
-                runId,
-                toolCallId: decision.toolCallId,
-                approved: decision.approved,
-              }),
-              signal: abortSignal,
-              credentials: opts.credentials,
-            }
-          )
-
-          if (!resumeResponse.ok || !resumeResponse.body) {
-            const errorText = resumeResponse.body
-              ? await resumeResponse.text().catch(() => '')
-              : ''
-            throw new Error(
-              `Resume failed: ${resumeResponse.status}${errorText ? ` - ${errorText}` : ''}`
-            )
-          }
-
-          const text = { value: '' }
-          const toolCalls: ToolCall[] = []
-          const structuredParts: StructuredPart[] = []
-          const reader = resumeResponse.body.getReader()
-          const streamApprovals = await processStream(
-            reader,
-            text,
-            toolCalls,
-            structuredParts,
-            () => {},
-            i === decisions.length - 1
-              ? (onFinishRef.current ?? undefined)
-              : undefined
-          )
-
-          // Keep the last resume's output (it has continuation content)
-          lastText = text
-          lastToolCalls = toolCalls
-          lastStructuredParts = structuredParts
-          if (streamApprovals.length > 0) {
-            nextApprovals = streamApprovals
-          }
-        }
-
-        // Build content from the last resume's output
-        const content = buildRichContent(
-          lastText,
-          lastStructuredParts,
-          lastToolCalls
-        )
-
-        if (nextApprovals.length > 0) {
-          // More approvals from continuation — show them
-          pendingApprovalsRef.current = nextApprovals
-          setPendingApprovalsRef.current(nextApprovals)
-
-          // Add approval tool calls to content
-          for (const approval of nextApprovals) {
-            const approvalToolCall: ToolCall = {
-              type: 'tool-call',
-              toolCallId: approval.toolCallId,
-              toolName: approval.toolName,
-              args: {
-                ...(typeof approval.args === 'object' && approval.args !== null
-                  ? (approval.args as Record<string, unknown>)
-                  : {}),
-                ...(approval.reason
-                  ? { __approvalReason: approval.reason }
-                  : {}),
-              },
-            }
-            const idx = lastToolCalls.findIndex(
-              (tc) => tc.toolCallId === approval.toolCallId && !tc.result
-            )
-            if (idx !== -1) {
-              lastToolCalls[idx] = approvalToolCall
-            } else {
-              lastToolCalls.push(approvalToolCall)
-            }
-          }
-
-          const updatedContent = buildRichContent(
-            lastText,
-            lastStructuredParts,
-            lastToolCalls
-          )
-          yield {
-            content: updatedContent,
-            status: {
-              type: 'requires-action' as const,
-              reason: 'tool-calls' as const,
-            },
-          }
-        } else if (content.length > 0) {
-          yield { content }
-        }
-        return
-      }
-
-      // Normal flow: new user message → stream
-      const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')
-      if (!lastUserMsg) return
-
-      let messageText = ''
-      if (lastUserMsg.content) {
-        for (const part of lastUserMsg.content) {
-          if ('text' in part && part.type === 'text') {
-            messageText += (part as { text: string }).text
-          }
-        }
-      }
-
-      let response: Response
-      try {
-        response = await fetch(`${opts.api}/${opts.agentName}/stream`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...opts.headers },
-          body: JSON.stringify({
-            agentName: opts.agentName,
-            message: messageText,
-            threadId: opts.threadId,
-            resourceId: opts.resourceId,
-            model: opts.model,
-            temperature: opts.temperature,
-            ...(opts.context ? { context: opts.context } : {}),
-          }),
-          signal: abortSignal,
-          credentials: opts.credentials,
-        })
-      } catch (e: any) {
-        const msg = e?.message || 'Unknown error'
-        let errorText = 'Failed to connect to the agent.'
-        if (
-          msg.includes('Failed to fetch') ||
-          msg.includes('NetworkError') ||
-          msg.includes('CORS')
-        ) {
-          errorText =
-            'Unable to reach the agent server. The deployment may be down or the URL may be incorrect.'
-        } else if (msg.includes('abort')) {
-          return
-        }
-        yield { content: [{ type: 'text' as const, text: `⚠️ ${errorText}` }] }
-        return
-      }
-
-      if (!response.ok || !response.body) {
-        let errorText = `Request failed (${response.status}).`
-        if (response.status === 401 || response.status === 403) {
-          errorText = 'Authentication error.'
-        } else if (response.status === 404) {
-          errorText =
-            'Agent not found — the agent may not be configured for this project.'
-        } else if (response.status === 502 || response.status === 503) {
-          errorText =
-            'The agent server is currently unavailable. Try again in a moment.'
-        } else if (response.status === 429) {
-          errorText = 'Rate limited — too many requests. Please wait a moment.'
-        }
-        yield { content: [{ type: 'text' as const, text: `⚠️ ${errorText}` }] }
-        return
-      }
-
-      const text = { value: '' }
-      const toolCalls: ToolCall[] = []
-      const structuredParts: StructuredPart[] = []
-      let pendingContent: any[] | null = null
-      const yieldContent = () => {
-        const content = buildRichContent(text, structuredParts, toolCalls)
-        if (content.length > 0) pendingContent = content
-      }
-
-      const reader = response.body.getReader()
-      const approvals = await processStream(
-        reader,
-        text,
-        toolCalls,
-        structuredParts,
-        yieldContent,
-        onFinishRef.current ?? undefined
-      )
-
-      if (approvals.length === 0) {
-        // No approval needed — yield final content and done
-        if (pendingContent) {
-          yield { content: pendingContent }
-        }
-        return
-      }
-
-      // Approvals requested: store them for the next run() call
-      pendingApprovalsRef.current = approvals
-      setPendingApprovalsRef.current(approvals)
-
-      // Each approval tool call needs to be shown without a result
-      // so assistant-ui renders them as requires-action
-      for (const approval of approvals) {
-        const approvalToolCall: ToolCall = {
-          type: 'tool-call',
-          toolCallId: approval.toolCallId,
-          toolName: approval.toolName,
-          args: {
-            ...(typeof approval.args === 'object' && approval.args !== null
-              ? (approval.args as Record<string, unknown>)
-              : {}),
-            ...(approval.reason ? { __approvalReason: approval.reason } : {}),
-          },
-        }
-
-        // Replace the existing tool call (if any) with the approval version
-        const parentIdx = toolCalls.findIndex(
-          (tc) => tc.toolCallId === approval.toolCallId && !tc.result
-        )
-        if (parentIdx !== -1) {
-          toolCalls[parentIdx] = approvalToolCall
-        } else {
-          toolCalls.push(approvalToolCall)
-        }
-      }
-
-      // Remove any forwarded sub-agent tool calls that duplicate approval tool names
-      const approvalToolCallIds = new Set(approvals.map((a) => a.toolCallId))
-      const approvalToolNames = new Set(approvals.map((a) => a.toolName))
-      for (let i = toolCalls.length - 1; i >= 0; i--) {
-        if (
-          approvalToolNames.has(toolCalls[i].toolName) &&
-          !approvalToolCallIds.has(toolCalls[i].toolCallId)
-        ) {
-          toolCalls.splice(i, 1)
-        }
-      }
-
-      const content = buildRichContent(text, structuredParts, toolCalls)
-      yield {
-        content,
-        status: {
-          type: 'requires-action' as const,
-          reason: 'tool-calls' as const,
-        },
-      }
-      // Generator returns here. assistant-ui will show the approval UI for each tool call.
-      // When the user clicks Approve/Deny on ALL tools → handleApproval accumulates decisions →
-      // addResult for each → run() is called again when all have results.
-    },
-  }
 }
 
 export const convertDbMessages = (dbMessages: any[]): ThreadMessageLike[] => {
@@ -728,65 +243,353 @@ export const convertDbMessages = (dbMessages: any[]): ThreadMessageLike[] => {
   return result
 }
 
+// ========== PikkuAgent ==========
+
+type PendingResume = {
+  runId: string
+  toolCallId: string
+  approved: boolean
+}
+
+function extractLastUserMessage(messages: RunAgentInput['messages']): string {
+  const lastUser = [...messages].reverse().find((m) => m.role === 'user')
+  if (!lastUser) return ''
+  const content = lastUser.content
+  if (typeof content === 'string') return content
+  if (Array.isArray(content)) {
+    return content
+      .filter((p: any) => p.type === 'text')
+      .map((p: any) => (p.text as string) ?? '')
+      .join('')
+  }
+  return ''
+}
+
+class PikkuAgent extends HttpAgent {
+  private pikkuOpts: PikkuAgentRuntimeOptions
+  private _pendingResume: PendingResume | null = null
+  private _currentResume: PendingResume | null = null
+
+  constructor(opts: PikkuAgentRuntimeOptions) {
+    super({
+      url: `${opts.api}/${opts.agentName}/stream`,
+      threadId: opts.threadId,
+    })
+    this.pikkuOpts = opts
+  }
+
+  updateOpts(opts: PikkuAgentRuntimeOptions) {
+    this.pikkuOpts = opts
+  }
+
+  queueResume(data: PendingResume) {
+    this._pendingResume = data
+  }
+
+  run(input: RunAgentInput): Observable<BaseEvent> {
+    const resume = this._pendingResume
+    this._pendingResume = null
+    this._currentResume = resume
+    this.url = resume
+      ? `${this.pikkuOpts.api}/${this.pikkuOpts.agentName}/resume`
+      : `${this.pikkuOpts.api}/${this.pikkuOpts.agentName}/stream`
+    return super.run(input)
+  }
+
+  protected requestInit(input: RunAgentInput): RequestInit {
+    const base = super.requestInit(input)
+    const resume = this._currentResume
+    const opts = this.pikkuOpts
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'text/event-stream',
+      ...opts.headers,
+    }
+
+    if (resume) {
+      return {
+        ...base,
+        headers,
+        credentials: opts.credentials,
+        body: JSON.stringify(resume),
+      }
+    }
+
+    return {
+      ...base,
+      headers,
+      credentials: opts.credentials,
+      body: JSON.stringify({
+        agentName: opts.agentName,
+        message: extractLastUserMessage(input.messages),
+        threadId: opts.threadId,
+        resourceId: opts.resourceId,
+        model: opts.model,
+        temperature: opts.temperature,
+        ...(opts.context ? { context: opts.context } : {}),
+      }),
+    }
+  }
+}
+
+// ========== usePikkuAgentRuntime ==========
+
 export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
   const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>(
     []
   )
 
-  const optionsRef = useRef(options)
-  optionsRef.current = options
-
   const onFinishRef = useRef(options.onFinish)
   onFinishRef.current = options.onFinish
 
-  const pendingApprovalsRef = useRef<PendingApproval[]>([])
-  const approvalDecisionsRef = useRef<
-    { toolCallId: string; approved: boolean }[]
-  >([])
-
-  const setPendingApprovalsRef = useRef(setPendingApprovals)
-  setPendingApprovalsRef.current = setPendingApprovals
-
-  const adapter = useMemo(
-    () =>
-      createPikkuStreamingAdapter(
-        optionsRef,
-        pendingApprovalsRef,
-        approvalDecisionsRef,
-        setPendingApprovalsRef,
-        onFinishRef
-      ),
+  const agent = useMemo(
+    () => new PikkuAgent(options),
+    // agent is intentionally created once; opts are synced via updateOpts
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   )
 
-  const initialMessages = useMemo(
-    () =>
-      options.initialMessages
-        ? convertDbMessages(options.initialMessages)
-        : undefined,
-    [options.initialMessages]
-  )
+  agent.updateOpts(options)
 
-  const runtime = useLocalRuntime(adapter, { initialMessages })
+  useEffect(() => {
+    const { unsubscribe } = agent.subscribe({
+      onCustomEvent: ({ event }) => {
+        const e = event as AgUiCustomEvent
+        if (e.name === 'pikku:approval-request') {
+          const v = e.value as any
+          setPendingApprovals((prev) => [
+            ...prev,
+            {
+              toolCallId: v.toolCallId,
+              toolName: v.toolName,
+              args: v.args,
+              reason: v.reason,
+              runId: v.runId ?? '',
+              type: 'approval-request' as const,
+            },
+          ])
+        } else if (e.name === 'pikku:credential-request') {
+          const v = e.value as any
+          setPendingApprovals((prev) => [
+            ...prev,
+            {
+              toolCallId: v.toolCallId,
+              toolName: v.toolName,
+              args: v.args,
+              runId: v.runId ?? '',
+              type: 'credential-request' as const,
+              credentialName: v.credentialName,
+              credentialType: v.credentialType,
+              connectUrl: v.connectUrl,
+            },
+          ])
+        }
+      },
+      onRunFinalized: () => {
+        onFinishRef.current?.()
+      },
+    })
+    return unsubscribe
+  }, [agent])
 
-  // handleApproval is called from the Approve/Deny button click handler.
-  // It accumulates the decision in the ref. assistant-ui will call run()
-  // when ALL tool calls have results (via addResult).
+  const runtime = useAgUiRuntime({ agent })
+
   const handleApproval = useCallback(
     (toolCallId: string, approved: boolean) => {
-      approvalDecisionsRef.current.push({ toolCallId, approved })
+      const approval = pendingApprovals.find((p) => p.toolCallId === toolCallId)
+      if (!approval) return
+      setPendingApprovals([])
+      agent.queueResume({ runId: approval.runId, toolCallId, approved })
+      agent.runAgent()
     },
-    []
+    [agent, pendingApprovals]
   )
-
-  const isAwaitingApproval = pendingApprovals.length > 0
 
   return {
     runtime,
     pendingApprovals,
-    isAwaitingApproval,
+    isAwaitingApproval: pendingApprovals.length > 0,
     handleApproval,
   }
+}
+
+// ========== usePikkuAgentNonStreamingRuntime ==========
+
+type ToolCall = {
+  type: 'tool-call'
+  toolCallId: string
+  toolName: string
+  args: Record<string, unknown>
+  result?: string
+  isError?: boolean
+}
+
+type StructuredPart =
+  | { type: 'generative-ui'; spec: unknown }
+  | { type: 'data'; name: string; data: unknown }
+
+async function* parseSSEStream(
+  reader: ReadableStreamDefaultReader<Uint8Array>
+) {
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop()!
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = line.slice(6)
+        if (data) {
+          try {
+            yield JSON.parse(data)
+          } catch {
+            // skip unparseable lines
+          }
+        }
+      }
+    }
+  }
+}
+
+async function processNonStreamingStream(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  text: { value: string },
+  toolCalls: ToolCall[],
+  structuredParts: StructuredPart[],
+  yieldContent: () => void,
+  onFinish?: () => void
+): Promise<PendingApproval[]> {
+  const pendingApprovals: PendingApproval[] = []
+
+  for await (const event of parseSSEStream(reader)) {
+    switch (event.type) {
+      case 'text-delta':
+        text.value += event.text
+        break
+      case 'tool-call': {
+        let parsedArgs = event.args
+        if (typeof event.args === 'string') {
+          try {
+            parsedArgs = JSON.parse(event.args)
+          } catch {
+            parsedArgs = {}
+          }
+        }
+        toolCalls.push({
+          type: 'tool-call',
+          toolCallId: event.toolCallId,
+          toolName: event.toolName,
+          args: parsedArgs,
+        })
+        break
+      }
+      case 'tool-result': {
+        const resultObj = typeof event.result === 'object' ? event.result : null
+        if (resultObj && '__approvalRequired' in resultObj) {
+          break
+        }
+        const tc = toolCalls.find((t) => t.toolCallId === event.toolCallId)
+        if (tc) {
+          tc.result =
+            typeof event.result === 'string'
+              ? event.result
+              : JSON.stringify(event.result)
+          if (event.isError) {
+            tc.isError = true
+          }
+        }
+        break
+      }
+      case 'generative-ui': {
+        const nextPart = { type: 'generative-ui' as const, spec: event.spec }
+        const existingIndex = structuredParts.findIndex(
+          (part) => part.type === 'generative-ui'
+        )
+        if (existingIndex === -1) structuredParts.push(nextPart)
+        else structuredParts[existingIndex] = nextPart
+        break
+      }
+      case 'data': {
+        const nextPart = {
+          type: 'data' as const,
+          name: event.name,
+          data: event.data,
+        }
+        const existingIndex = structuredParts.findIndex(
+          (part) => part.type === 'data' && part.name === event.name
+        )
+        if (existingIndex === -1) structuredParts.push(nextPart)
+        else structuredParts[existingIndex] = nextPart
+        break
+      }
+      case 'approval-request':
+        pendingApprovals.push({
+          toolCallId: event.toolCallId,
+          toolName: event.toolName,
+          args: event.args,
+          reason: event.reason,
+          runId: event.runId ?? '',
+          type: 'approval-request',
+        })
+        break
+      case 'credential-request':
+        pendingApprovals.push({
+          toolCallId: event.toolCallId,
+          toolName: event.toolName,
+          args: event.args,
+          runId: event.runId,
+          type: 'credential-request',
+          credentialName: event.credentialName,
+          credentialType: event.credentialType,
+          connectUrl: event.connectUrl,
+        })
+        break
+      case 'error':
+        text.value += `\n\nError: ${event.message || event.errorText || 'Unknown error'}`
+        break
+      case 'done':
+        onFinish?.()
+        continue
+    }
+    yieldContent()
+  }
+
+  return pendingApprovals
+}
+
+function buildRichContent(
+  text: { value: string },
+  structuredParts: StructuredPart[],
+  toolCalls: ToolCall[]
+): any[] {
+  const content: any[] = []
+  if (text.value) content.push({ type: 'text' as const, text: text.value })
+  content.push(...structuredParts)
+  content.push(...toolCalls)
+  return content
+}
+
+function buildContentFromAgentResult(result: unknown): any[] {
+  const content: any[] = []
+  if (typeof result === 'string') {
+    if (result) content.push({ type: 'text' as const, text: result })
+    return content
+  }
+  if (!result || typeof result !== 'object') return content
+  const record = result as Record<string, unknown>
+  if (typeof record.text === 'string' && record.text) {
+    content.push({ type: 'text' as const, text: record.text })
+  }
+  if (record.ui != null) {
+    content.push({ type: 'generative-ui' as const, spec: record.ui })
+  }
+  return content
 }
 
 function createPikkuNonStreamingAdapter(
@@ -804,7 +607,6 @@ function createPikkuNonStreamingAdapter(
     async *run({ messages, abortSignal }) {
       const opts = optionsRef.current!
 
-      // Continuation after approval decisions
       const pendingApprovals = pendingApprovalsRef.current
       if (pendingApprovals.length > 0) {
         const decisions = approvalDecisionsRef.current
@@ -815,7 +617,6 @@ function createPikkuNonStreamingAdapter(
         pendingApprovalsRef.current = []
         setPendingApprovalsRef.current([])
 
-        // Resume uses SSE (same as streaming mode)
         let lastText = { value: '' }
         let lastToolCalls: ToolCall[] = []
         let lastStructuredParts: StructuredPart[] = []
@@ -859,7 +660,7 @@ function createPikkuNonStreamingAdapter(
           const toolCalls: ToolCall[] = []
           const structuredParts: StructuredPart[] = []
           const reader = resumeResponse.body.getReader()
-          const streamApprovals = await processStream(
+          const streamApprovals = await processNonStreamingStream(
             reader,
             text,
             toolCalls,
@@ -930,7 +731,6 @@ function createPikkuNonStreamingAdapter(
         return
       }
 
-      // Normal flow: new user message → non-streaming POST
       const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')
       if (!lastUserMsg) return
 
@@ -996,7 +796,6 @@ function createPikkuNonStreamingAdapter(
         return
       }
 
-      // No approvals — yield complete content
       onFinishRef.current?.()
       const content = buildContentFromAgentResult(json.result)
       if (content.length > 0) {
@@ -1056,12 +855,10 @@ export function usePikkuAgentNonStreamingRuntime(
     []
   )
 
-  const isAwaitingApproval = pendingApprovals.length > 0
-
   return {
     runtime,
     pendingApprovals,
-    isAwaitingApproval,
+    isAwaitingApproval: pendingApprovals.length > 0,
     handleApproval,
   }
 }
