@@ -285,7 +285,10 @@ export type PikkuWire<
   MCPTools extends string | never = never,
   TypedWorkflow extends PikkuWorkflowWire | never = PikkuWorkflowWire,
   TriggerOutput = unknown,
-> = Partial<{
+> = {
+  /** Always present — lazily initialised on first access for every function invocation */
+  rpc: TypedRPC
+} & Partial<{
   wireType: PikkuWiringTypes
   wireId: string
   /** Trace ID for distributed tracing — propagated across remote RPC calls via x-trace-id header */
@@ -294,7 +297,6 @@ export type PikkuWire<
   functionId: string
   http: PikkuHTTP<In>
   mcp: PikkuMCP<MCPTools>
-  rpc: TypedRPC
   channel: [IsChannel] extends [null]
     ? PikkuChannel<unknown, Out>
     : PikkuChannel<unknown, Out> | undefined

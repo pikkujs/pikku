@@ -136,16 +136,14 @@ export class ContextAwareRPCService {
     funcName: string,
     data: In
   ): Promise<Out> {
-    const rpcDepth = this.wire.rpc?.depth || 0
+    const rpcDepth = this.wire.rpc.depth
     const updatedWire: PikkuWire = {
       ...this.wire,
-      rpc: this.wire.rpc
-        ? {
-            ...this.wire.rpc,
-            depth: rpcDepth + 1,
-            global: false,
-          }
-        : undefined,
+      rpc: {
+        ...this.wire.rpc,
+        depth: rpcDepth + 1,
+        global: false,
+      },
     }
 
     // Check addon namespace first (e.g. 'stripe:createCharge')
@@ -250,17 +248,15 @@ export class ContextAwareRPCService {
     data: In,
     wire: PikkuWire
   ): Promise<Out> {
-    const rpcDepth = this.wire.rpc?.depth || 0
+    const rpcDepth = this.wire.rpc.depth
     const mergedWire: PikkuWire = {
       ...this.wire,
       ...wire,
-      rpc: this.wire.rpc
-        ? {
-            ...this.wire.rpc,
-            depth: rpcDepth + 1,
-            global: false,
-          }
-        : undefined,
+      rpc: {
+        ...this.wire.rpc,
+        depth: rpcDepth + 1,
+        global: false,
+      },
     }
 
     if (rpcName.includes(':')) {
