@@ -62,7 +62,11 @@ import {
 import { FabricSmoke, renderSmoke } from './functions/smoke.function.js'
 import { FabricPublish } from './functions/publish.function.js'
 import { FabricAdd } from './functions/add.function.js'
-import { FabricAddonVerify } from './functions/addon-verify.function.js'
+import {
+  FabricAddonVerify,
+  renderAddonVerify,
+} from './functions/addon-verify.function.js'
+import { removed } from './lib/output.js'
 
 export const fabricCommands = defineCLICommands({
   validate: pikkuCLICommand({
@@ -139,26 +143,7 @@ export const fabricCommands = defineCLICommands({
         func: FabricAddonVerify,
         description:
           'Verify an addon directory is correctly built and ready to publish',
-        render: (result) => {
-          const tick = '✓'
-          const cross = '✗'
-          console.log(
-            `\nAddon: ${result.packageName ?? '(unknown)'}@${result.version ?? '?'}`
-          )
-          console.log(`Dir:   ${result.addonDir}\n`)
-          for (const c of result.checks) {
-            const icon = c.ok ? tick : cross
-            const detail = c.detail ? `  ${c.detail}` : ''
-            console.log(`  ${icon} ${c.name}${detail}`)
-          }
-          console.log('')
-          if (result.ok) {
-            console.log('  Ready to publish.')
-          } else {
-            console.log('  Fix the errors above before publishing.')
-            process.exitCode = 1
-          }
-        },
+        render: renderAddonVerify,
       }),
       publish: pikkuCLICommand({
         parameters: '[dir]',

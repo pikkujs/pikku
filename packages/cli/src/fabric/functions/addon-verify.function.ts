@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
+import { added, removed, dim } from '../lib/output.js'
 
 const CheckSchema = z.object({
   name: z.string(),
@@ -15,7 +16,10 @@ export const FabricAddonVerifyInput = z.object({
   dir: z.string().optional(),
 })
 
-export const FabricAddonVerifyOutput = z.object({
+export type FabricAddonVerifyOutput = z.infer<
+  typeof FabricAddonVerifyOutputSchema
+>
+const FabricAddonVerifyOutputSchema = z.object({
   ok: z.boolean(),
   addonDir: z.string(),
   packageName: z.string().optional(),
@@ -36,7 +40,7 @@ export const FabricAddonVerify = pikkuSessionlessFunc({
   description:
     'Verify an addon directory is correctly built and ready to publish',
   input: FabricAddonVerifyInput,
-  output: FabricAddonVerifyOutput,
+  output: FabricAddonVerifyOutputSchema,
   func: async (_services, { dir }) => {
     const addonDir = resolve(dir ?? process.cwd())
     const checks: Check[] = []
@@ -170,3 +174,23 @@ export const FabricAddonVerify = pikkuSessionlessFunc({
     return { ok, addonDir, packageName: pkg.name, version: pkg.version, checks }
   },
 })
+
+export function renderAddonVerify(result: FabricAddonVerifyOutput): void {
+  console.log(
+    `\n${dim('Addon:')} ${result.packageName ?? '(unknown)'}@${result.version ?? '?'}`
+  )
+  console.log(`${dim('Dir:  ')} ${result.addonDir}\n`)
+  for (const c of result.checks) {
+    const icon = c.ok ? added('✓') : removed('✗')
+    const label = c.ok ? c.name : removed(c.name)
+    const detail = c.detail ? `  ${dim(c.detail)}` : ''
+    console.log(`  ${icon} ${label}${detail}`)
+  }
+  console.log('')
+  if (result.ok) {
+    console.log(added('  Ready to publish.'))
+  } else {
+    console.log(removed('  Fix the errors above before publishing.'))
+    process.exitCode = 1
+  }
+}
