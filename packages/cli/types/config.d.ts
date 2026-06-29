@@ -178,6 +178,7 @@ export type PikkuCLIInput = {
         icon?: string
         displayName?: string
         description?: string
+        serverlessIncompatible?: string[]
         openapi?: {
           version: string
           hash: string

@@ -84,3 +84,42 @@ test('parseCLIFilters omits defaultTarget when no target filter is set', () => {
   )
   assert.strictEqual(filters.defaultTarget, undefined)
 })
+
+test('parseCLIFilters merges addon.serverlessIncompatible with deploy.serverlessIncompatible', () => {
+  const filters = parse(
+    { target: 'serverless' },
+    {
+      deploy: { serverlessIncompatible: ['DbService'] },
+      addon: { serverlessIncompatible: ['FfmpegService'] },
+    }
+  )
+  assert.deepStrictEqual(filters.serverlessIncompatible, [
+    'DbService',
+    'FfmpegService',
+  ])
+})
+
+test('parseCLIFilters uses addon.serverlessIncompatible alone when no deploy config', () => {
+  const filters = parse(
+    { target: 'server' },
+    { addon: { serverlessIncompatible: ['HumanDesignService'] } }
+  )
+  assert.deepStrictEqual(filters.serverlessIncompatible, ['HumanDesignService'])
+})
+
+test('parseCLIFilters ignores addon.serverlessIncompatible when addon is boolean true', () => {
+  const filters = parse({ target: 'serverless' }, { addon: true })
+  assert.strictEqual(filters.serverlessIncompatible, undefined)
+})
+
+test('parseCLIFilters does not set serverlessIncompatible when no target filter is active', () => {
+  // serverlessIncompatible should only appear when --target / --exclude-target is set
+  const filters = parse(
+    { tags: 'api' },
+    {
+      deploy: { serverlessIncompatible: ['DbService'] },
+      addon: { serverlessIncompatible: ['FfmpegService'] },
+    }
+  )
+  assert.strictEqual(filters.serverlessIncompatible, undefined)
+})
