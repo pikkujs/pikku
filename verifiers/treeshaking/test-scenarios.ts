@@ -171,7 +171,7 @@ export const scenarios: TestScenario[] = [
     name: 'Wire: queue',
     filter: '--wires=queue',
     expectedSingletonServices: ['email', 'logger', 'notification', 'secrets'],
-    expectedWireServices: ['userContext'],
+    expectedWireServices: [],
     description: 'Only queue worker services should be included',
     expectedGeneratedFiles: {
       bootstrap: {
@@ -219,7 +219,7 @@ export const scenarios: TestScenario[] = [
     name: 'HTTP Method: GET',
     filter: '--httpMethods=GET',
     expectedSingletonServices: ['email', 'logger', 'notification', 'secrets'],
-    expectedWireServices: ['userContext'],
+    expectedWireServices: [],
     description: 'No GET routes exist, only email/logger from session creation',
   },
 
@@ -249,7 +249,7 @@ export const scenarios: TestScenario[] = [
       'secrets',
       'storage',
     ],
-    expectedWireServices: ['userContext', 'userPreferences'],
+    expectedWireServices: ['userPreferences'],
     description: 'Only payment routes',
   },
   {
@@ -288,7 +288,7 @@ export const scenarios: TestScenario[] = [
     name: 'Directory: src/nonexistent',
     filter: '--directories=src/nonexistent',
     expectedSingletonServices: ['email', 'logger', 'notification', 'secrets'],
-    expectedWireServices: ['userContext'],
+    expectedWireServices: [],
     description:
       'No wirings in nonexistent directory, only email/logger from session creation',
   },
