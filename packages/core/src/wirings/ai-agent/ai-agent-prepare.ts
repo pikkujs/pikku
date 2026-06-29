@@ -1,4 +1,4 @@
-import type { PikkuWire, CoreUserSession } from '../../types/core.types.js'
+import type { PikkuRawWire, CoreUserSession } from '../../types/core.types.js'
 import type {
   CoreAIAgent,
   AIAgentInput,
@@ -397,7 +397,7 @@ export async function buildToolDefs(
         needsApproval: needsApproval || undefined,
         approvalDescriptionFn,
         execute: async (toolInput: unknown) => {
-          const wire: PikkuWire = params.sessionService
+          const wire: PikkuRawWire = params.sessionService
             ? { ...createMiddlewareSessionWireProps(params.sessionService) }
             : {}
           const rpcService = new ContextAwareRPCService(

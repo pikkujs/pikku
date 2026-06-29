@@ -1,6 +1,6 @@
 import type {
   CoreUserSession,
-  PikkuWire,
+  PikkuRawWire,
   WireServices,
 } from '../../../types/core.types.js'
 import { closeWireServices } from '../../../utils.js'
@@ -120,7 +120,7 @@ export const runChannelConnect = async ({
     channel.getState = () => channelStore.getState(channelId) as any
     channel.clearState = () => channelStore.clearState(channelId)
 
-    const wire: PikkuWire = {
+    const wire: PikkuRawWire = {
       channel,
       ...createMiddlewareSessionWireProps(userSession),
     }
@@ -216,7 +216,7 @@ export const runChannelDisconnect = async ({
     }
   }
 
-  const wire: PikkuWire = {
+  const wire: PikkuRawWire = {
     channel,
     ...createMiddlewareSessionWireProps(userSession),
   }
@@ -288,7 +288,7 @@ export const runChannelMessage = async (
     }
   }
 
-  const wire: PikkuWire = {
+  const wire: PikkuRawWire = {
     channel,
     ...createMiddlewareSessionWireProps(userSession),
   }

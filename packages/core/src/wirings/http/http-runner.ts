@@ -18,7 +18,7 @@ import type {
   CorePikkuMiddleware,
   CorePikkuMiddlewareGroup,
   WireServices,
-  PikkuWire,
+  PikkuRawWire,
   PikkuWiringTypes,
 } from '../../types/core.types.js'
 import { NotFoundError } from '../../errors/errors.js'
@@ -408,7 +408,7 @@ const executeRoute = async (
     }
   }
 
-  const wire: PikkuWire = {
+  const wire: PikkuRawWire = {
     traceId: requestId,
     http,
     channel,
@@ -586,7 +586,7 @@ export const fetchData = async <In, Out>(
       if (apiType.toLowerCase() === 'options') {
         const httpGroups = pikkuState(null, 'middleware', 'httpGroup')
         const globalMiddleware = httpGroups['*']
-        const wire: PikkuWire = { http: http! }
+        const wire: PikkuRawWire = { http: http! }
         if (globalMiddleware) {
           await runMiddleware(
             singletonServices,

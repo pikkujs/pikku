@@ -1,7 +1,7 @@
 import type {
   CoreSingletonServices,
   CorePikkuMiddleware,
-  PikkuWire,
+  PikkuRawWire,
   MiddlewareMetadata,
 } from '../../types/core.types.js'
 import type { CoreChannel, ChannelMessageMeta } from './channel.types.js'
@@ -73,7 +73,7 @@ export const runChannelLifecycleWithMiddleware = async ({
     }
   )
 
-  let wire: PikkuWire = { channel }
+  let wire: PikkuRawWire = { channel }
   if (allChannelMiddleware.length > 0) {
     wire = wrapChannelWithMiddleware(wire, services, allChannelMiddleware)
   }

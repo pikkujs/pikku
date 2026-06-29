@@ -1,4 +1,4 @@
-import type { PikkuWire } from '../../types/core.types.js'
+import type { PikkuRawWire } from '../../types/core.types.js'
 import type {
   CoreTrigger,
   CoreTriggerSource,
@@ -99,7 +99,7 @@ export async function setupTrigger<TInput = unknown, TOutput = unknown>({
     )
   }
 
-  const wire: PikkuWire = {
+  const wire: PikkuRawWire = {
     trigger: {
       invoke: (data: unknown) => {
         singletonServices.logger.info(`Trigger fired: ${name}`)
