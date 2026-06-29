@@ -19,6 +19,7 @@ import type {
   CorePikkuMiddlewareGroup,
   WireServices,
   PikkuRawWire,
+  PikkuWire,
   PikkuWiringTypes,
 } from '../../types/core.types.js'
 import { NotFoundError } from '../../errors/errors.js'
@@ -586,7 +587,7 @@ export const fetchData = async <In, Out>(
       if (apiType.toLowerCase() === 'options') {
         const httpGroups = pikkuState(null, 'middleware', 'httpGroup')
         const globalMiddleware = httpGroups['*']
-        const wire: PikkuRawWire = { http: http! }
+        const wire = { http: http! } as unknown as PikkuWire
         if (globalMiddleware) {
           await runMiddleware(
             singletonServices,

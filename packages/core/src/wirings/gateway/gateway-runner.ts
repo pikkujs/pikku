@@ -404,7 +404,12 @@ export const createListenerMessageHandler = (
     }
 
     if (allMiddleware.length > 0) {
-      await runMiddleware(singletonServices, wire, allMiddleware, exec)
+      await runMiddleware(
+        singletonServices,
+        wire as unknown as PikkuWire,
+        allMiddleware,
+        exec
+      )
     } else {
       await exec()
     }
