@@ -175,7 +175,10 @@ export const FabricAddonVerify = pikkuSessionlessFunc({
   },
 })
 
-export function renderAddonVerify(result: FabricAddonVerifyOutput): void {
+export function renderAddonVerify(
+  _s: unknown,
+  result: FabricAddonVerifyOutput
+): void {
   console.log(
     `\n${dim('Addon:')} ${result.packageName ?? '(unknown)'}@${result.version ?? '?'}`
   )
