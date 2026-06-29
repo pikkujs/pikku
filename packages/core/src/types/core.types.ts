@@ -178,8 +178,7 @@ export type JSONValue =
 /**
  * Utility type for making certain keys required and leaving the rest as optional.
  */
-export type PickRequired<T, K extends keyof T> = Required<Pick<T, K>> &
-  Omit<T, K>
+export type PickRequired<T, K extends keyof T> = T & Required<Pick<T, K>>
 
 /**
  * Utility type for making certain keys optional while keeping the rest required.
@@ -348,7 +347,7 @@ export type CorePikkuMiddleware<
   UserSession extends CoreUserSession = CoreUserSession,
 > = (
   services: SingletonServices,
-  wires: PikkuRawWire,
+  wires: PikkuWire,
   next: () => Promise<void>
 ) => Promise<void>
 
