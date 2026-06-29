@@ -72,7 +72,7 @@ async function setup(
 
   const introspector = new PostgresIntrospector(client)
   const result = await generateSchemaTypes(introspector, {
-    outFile: join(outDir, 'schema.d.ts'),
+    outFile: join(outDir, 'schema.gen.d.ts'),
     coercionFile: join(outDir, 'coercion.gen.ts'),
     manifestFile: join(outDir, 'classification.gen.ts'),
     classificationMapFile: join(outDir, 'classification-map.gen.d.ts'),
@@ -107,7 +107,7 @@ describe('DB codegen (Postgres) — classification brands', () => {
       await rm(rootDir, { recursive: true, force: true })
     })
 
-    const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
+    const schema = await readFile(join(outDir, 'schema.gen.d.ts'), 'utf-8')
     assert.match(schema, /Private<string>/, 'email should be Private<string>')
   })
 
@@ -130,7 +130,7 @@ describe('DB codegen (Postgres) — classification brands', () => {
       await rm(rootDir, { recursive: true, force: true })
     })
 
-    const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
+    const schema = await readFile(join(outDir, 'schema.gen.d.ts'), 'utf-8')
     assert.match(schema, /Secret<string>/, 'token should be Secret<string>')
   })
 
@@ -150,7 +150,7 @@ describe('DB codegen (Postgres) — classification brands', () => {
       await rm(rootDir, { recursive: true, force: true })
     })
 
-    const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
+    const schema = await readFile(join(outDir, 'schema.gen.d.ts'), 'utf-8')
     assert.match(
       schema,
       /Private<string>/,
@@ -182,7 +182,7 @@ describe('DB codegen (Postgres) — classification brands', () => {
       await rm(rootDir, { recursive: true, force: true })
     })
 
-    const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
+    const schema = await readFile(join(outDir, 'schema.gen.d.ts'), 'utf-8')
     // Extract just the Posts interface block to avoid matching sql_migrations
     // (the internal tracking table has unannotated columns that default to Private)
     const postsBlock = schema.match(/export interface Posts \{[^}]+\}/)
@@ -262,7 +262,7 @@ describe('DB codegen (Postgres) — classification brands', () => {
       await rm(rootDir, { recursive: true, force: true })
     })
 
-    const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
+    const schema = await readFile(join(outDir, 'schema.gen.d.ts'), 'utf-8')
     assert.match(
       schema,
       /Private<string>/,
@@ -331,7 +331,7 @@ describe('DB codegen (Postgres) — classification brands', () => {
       await rm(rootDir, { recursive: true, force: true })
     })
 
-    const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
+    const schema = await readFile(join(outDir, 'schema.gen.d.ts'), 'utf-8')
     assert.match(schema, /boolean/, 'BOOLEAN column should map to boolean')
   })
 
@@ -359,7 +359,7 @@ describe('DB codegen (Postgres) — classification brands', () => {
       await rm(rootDir, { recursive: true, force: true })
     })
 
-    const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
+    const schema = await readFile(join(outDir, 'schema.gen.d.ts'), 'utf-8')
     assert.match(schema, /export type Uuid = string/, 'emits the Uuid alias')
     const thingsBlock = schema.match(/export interface Things \{[^}]+\}/)
     assert.ok(thingsBlock, 'Things interface should exist')
@@ -391,7 +391,7 @@ describe('DB codegen (Postgres) — classification brands', () => {
       await rm(rootDir, { recursive: true, force: true })
     })
 
-    const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
+    const schema = await readFile(join(outDir, 'schema.gen.d.ts'), 'utf-8')
     const accountsBlock = schema.match(/export interface Accounts \{[^}]+\}/)
     assert.ok(accountsBlock, 'Accounts interface should exist')
     assert.match(
@@ -420,7 +420,7 @@ describe('DB codegen (Postgres) — classification brands', () => {
       await rm(rootDir, { recursive: true, force: true })
     })
 
-    const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
+    const schema = await readFile(join(outDir, 'schema.gen.d.ts'), 'utf-8')
     const eventsBlock = schema.match(/export interface Events \{[^}]+\}/)
     assert.ok(eventsBlock, 'Events interface should exist')
     assert.match(
@@ -449,7 +449,7 @@ describe('DB codegen (Postgres) — classification brands', () => {
       await rm(rootDir, { recursive: true, force: true })
     })
 
-    const schema = await readFile(join(outDir, 'schema.d.ts'), 'utf-8')
+    const schema = await readFile(join(outDir, 'schema.gen.d.ts'), 'utf-8')
     assert.match(
       schema,
       /export interface InstitutionsCountry \{/,

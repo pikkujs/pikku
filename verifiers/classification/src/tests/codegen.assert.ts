@@ -1,6 +1,6 @@
 /**
  * Verifies that `pikku db migrate` emits correct Private<T>/Secret<T> brands
- * in schema.d.ts and a well-formed classification.gen.ts manifest.
+ * in schema.gen.d.ts and a well-formed classification.gen.ts manifest.
  *
  * Classification + type info is authored in `db/annotations.ts` (the single
  * source) — there is no SQL-comment annotation path anymore.
@@ -98,7 +98,9 @@ describe('DB codegen — classification brands', () => {
         );
       `,
       },
-      { users: { email: { security: 'private', classification: 'fake:email' } } }
+      {
+        users: { email: { security: 'private', classification: 'fake:email' } },
+      }
     )
     t.after(() => rm(dir, { recursive: true, force: true }))
 
@@ -106,7 +108,7 @@ describe('DB codegen — classification brands', () => {
     assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
 
     const schema = await readFile(
-      join(dir, '.pikku', 'db', 'schema.d.ts'),
+      join(dir, '.pikku', 'db', 'schema.gen.d.ts'),
       'utf-8'
     )
     assert.match(schema, /Private<string>/, 'email should be Private<string>')
@@ -135,7 +137,7 @@ describe('DB codegen — classification brands', () => {
     assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
 
     const schema = await readFile(
-      join(dir, '.pikku', 'db', 'schema.d.ts'),
+      join(dir, '.pikku', 'db', 'schema.gen.d.ts'),
       'utf-8'
     )
     assert.match(schema, /Secret<string>/)
@@ -166,7 +168,7 @@ describe('DB codegen — classification brands', () => {
     assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
 
     const schema = await readFile(
-      join(dir, '.pikku', 'db', 'schema.d.ts'),
+      join(dir, '.pikku', 'db', 'schema.gen.d.ts'),
       'utf-8'
     )
     // The type aliases Private<T>/Pii<T>/Secret<T> are always emitted in the header.
@@ -203,7 +205,7 @@ describe('DB codegen — classification brands', () => {
     assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
 
     const schema = await readFile(
-      join(dir, '.pikku', 'db', 'schema.d.ts'),
+      join(dir, '.pikku', 'db', 'schema.gen.d.ts'),
       'utf-8'
     )
     assert.match(
@@ -225,7 +227,11 @@ describe('DB codegen — classification brands', () => {
       },
       {
         events: {
-          created_at: { security: 'private', classification: 'keep', kind: 'date' },
+          created_at: {
+            security: 'private',
+            classification: 'keep',
+            kind: 'date',
+          },
         },
       }
     )
@@ -235,7 +241,7 @@ describe('DB codegen — classification brands', () => {
     assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
 
     const schema = await readFile(
-      join(dir, '.pikku', 'db', 'schema.d.ts'),
+      join(dir, '.pikku', 'db', 'schema.gen.d.ts'),
       'utf-8'
     )
     // kind: 'date' makes it Date; private classification makes it Private<Date>.
@@ -264,10 +270,14 @@ describe('DB codegen — classification brands', () => {
     assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
 
     const schema = await readFile(
-      join(dir, '.pikku', 'db', 'schema.d.ts'),
+      join(dir, '.pikku', 'db', 'schema.gen.d.ts'),
       'utf-8'
     )
-    assert.match(schema, /string\[\]/, 'tsType override should surface as string[]')
+    assert.match(
+      schema,
+      /string\[\]/,
+      'tsType override should surface as string[]'
+    )
   })
 
   test('kind: uuid types as Uuid and emits z.uuid() in zod', async (t) => {
@@ -293,15 +303,23 @@ describe('DB codegen — classification brands', () => {
     assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
 
     const schema = await readFile(
-      join(dir, '.pikku', 'db', 'schema.d.ts'),
+      join(dir, '.pikku', 'db', 'schema.gen.d.ts'),
       'utf-8'
     )
     assert.match(schema, /export type Uuid = string/, 'emits the Uuid alias')
     assert.match(schema, /id: Uuid/, 'id column types as Uuid')
 
     const zod = await readFile(join(dir, '.pikku', 'db', 'zod.gen.ts'), 'utf-8')
-    assert.match(zod, /id: z\.uuid\(\)/, 'zod emits z.uuid() for the uuid column')
-    assert.match(zod, /email: z\.string\(\)/, 'plain text column stays z.string()')
+    assert.match(
+      zod,
+      /id: z\.uuid\(\)/,
+      'zod emits z.uuid() for the uuid column'
+    )
+    assert.match(
+      zod,
+      /email: z\.string\(\)/,
+      'plain text column stays z.string()'
+    )
   })
 
   test('format: email refines the zod schema to z.email()', async (t) => {
@@ -329,14 +347,26 @@ describe('DB codegen — classification brands', () => {
 
     // The TS type is unchanged by a format — it stays a plain string.
     const schema = await readFile(
-      join(dir, '.pikku', 'db', 'schema.d.ts'),
+      join(dir, '.pikku', 'db', 'schema.gen.d.ts'),
       'utf-8'
     )
-    assert.doesNotMatch(schema, /Email/, 'format must not introduce a named type')
+    assert.doesNotMatch(
+      schema,
+      /Email/,
+      'format must not introduce a named type'
+    )
 
     const zod = await readFile(join(dir, '.pikku', 'db', 'zod.gen.ts'), 'utf-8')
-    assert.match(zod, /email: z\.email\(\)/, 'zod emits z.email() for the format')
-    assert.match(zod, /name: z\.string\(\)/, 'unformatted column stays z.string()')
+    assert.match(
+      zod,
+      /email: z\.email\(\)/,
+      'zod emits z.email() for the format'
+    )
+    assert.match(
+      zod,
+      /name: z\.string\(\)/,
+      'unformatted column stays z.string()'
+    )
   })
 
   test('format on a non-string (kind: date) column is ignored with a warning', async (t) => {
@@ -368,7 +398,11 @@ describe('DB codegen — classification brands', () => {
 
     const zod = await readFile(join(dir, '.pikku', 'db', 'zod.gen.ts'), 'utf-8')
     assert.match(zod, /createdAt: z\.date\(\)/, 'date kind wins; no z.email()')
-    assert.doesNotMatch(zod, /z\.email\(\)/, 'the ignored format is not emitted')
+    assert.doesNotMatch(
+      zod,
+      /z\.email\(\)/,
+      'the ignored format is not emitted'
+    )
   })
 
   test('applies annotations to columns added via ALTER TABLE', async (t) => {
@@ -397,7 +431,7 @@ describe('DB codegen — classification brands', () => {
     assert.equal(exitCode, 0, `pikku db migrate failed:\n${output}`)
 
     const schema = await readFile(
-      join(dir, '.pikku', 'db', 'schema.d.ts'),
+      join(dir, '.pikku', 'db', 'schema.gen.d.ts'),
       'utf-8'
     )
     assert.match(
@@ -524,7 +558,7 @@ describe('DB codegen — classification brands', () => {
     assert.equal(exitCode, 0)
 
     const schema = await readFile(
-      join(dir, '.pikku', 'db', 'schema.d.ts'),
+      join(dir, '.pikku', 'db', 'schema.gen.d.ts'),
       'utf-8'
     )
     // The pattern must be ColumnType<Private<string>, string, string>

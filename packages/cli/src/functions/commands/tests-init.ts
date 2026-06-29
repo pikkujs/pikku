@@ -269,8 +269,8 @@ export const pikkuTestsInit = pikkuSessionlessFunc<{ force?: boolean }, void>({
     const configImport = toJs(rel(pikkuConfigFactory.file))
     const servicesImport = toJs(rel(singletonServicesFactory.file))
     // coercion/schema may live under outDir/db (new default) or rootDir/db (legacy)
-    const schemaInOutDir = join(config.outDir, 'db', 'schema.d.ts')
-    const schemaInRootDir = join(config.rootDir, 'db', 'schema.d.ts')
+    const schemaInOutDir = join(config.outDir, 'db', 'schema.gen.d.ts')
+    const schemaInRootDir = join(config.rootDir, 'db', 'schema.gen.d.ts')
     const schemaFile = existsSync(schemaInOutDir)
       ? schemaInOutDir
       : schemaInRootDir
@@ -327,7 +327,10 @@ export const pikkuTestsInit = pikkuSessionlessFunc<{ force?: boolean }, void>({
           seedRel
         ),
       ],
-      [join(ftestDir, 'tests', 'features', 'example.feature'), starterFeature()],
+      [
+        join(ftestDir, 'tests', 'features', 'example.feature'),
+        starterFeature(),
+      ],
     ]
 
     for (const [filePath, content] of files) {
