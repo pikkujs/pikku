@@ -152,7 +152,7 @@ await updateCheck
 process.exit(0)
 ENTRY
 
-  for target in bun-linux-x64 bun-linux-arm64 bun-darwin-x64 bun-darwin-arm64; do
+  for target in bun-linux-x64 bun-linux-arm64 bun-darwin-x64 bun-darwin-arm64 bun-windows-x64; do
     suffix="${target#bun-}"
     echo "  → $target"
     bun build --compile "--target=$target" "--outfile=release/binaries/pikku-$suffix" dist/bin/pikku-bin.mjs
