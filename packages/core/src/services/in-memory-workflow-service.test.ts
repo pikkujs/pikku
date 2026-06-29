@@ -366,7 +366,7 @@ describe('InMemoryWorkflowService', () => {
   })
 
   describe('queue worker registration', () => {
-    test('rewireQueueWorkers registers workflow queues added after construction', () => {
+    test('wireQueueWorkers registers workflow queues added after construction', () => {
       const stepQueue = 'wf-step-regression-enrich'
       const orchQueue = 'wf-orchestrator-regression-onboarding'
 
@@ -385,7 +385,7 @@ describe('InMemoryWorkflowService', () => {
       assert.strictEqual(getQueueWorkers().has(stepQueue), false)
       assert.strictEqual(getQueueWorkers().has(orchQueue), false)
 
-      ws.rewireQueueWorkers()
+      ws.wireQueueWorkers()
 
       assert.strictEqual(getQueueWorkers().has(stepQueue), true)
       assert.strictEqual(getQueueWorkers().has(orchQueue), true)
