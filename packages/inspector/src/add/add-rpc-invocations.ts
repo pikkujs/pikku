@@ -1,5 +1,16 @@
 import * as ts from 'typescript'
 import type { InspectorState, InspectorLogger } from '../types.js'
+import { ErrorCode } from '../error-codes.js'
+
+function hasTypeCast(node: ts.Node): boolean {
+  return ts.isAsExpression(node) || ts.isTypeAssertionExpression(node)
+}
+
+function findCastArg(
+  args: ts.NodeArray<ts.Expression>
+): ts.Expression | undefined {
+  return args.find(hasTypeCast)
+}
 
 /**
  * Helper to extract namespace from a namespaced function reference like 'ext:hello'
@@ -67,6 +78,21 @@ export function addRPCInvocations(
       ts.isIdentifier(expression.expression) &&
       expression.expression.text === 'rpc'
     ) {
+      if (hasTypeCast(node.parent)) {
+        logger.critical(
+          ErrorCode.RPC_INVOCATION_TYPE_CAST,
+          `rpc.invoke() result is type-cast — remove the 'as' expression and rely on Pikku's generated types`
+        )
+      }
+
+      const castArg = findCastArg(args)
+      if (castArg) {
+        logger.critical(
+          ErrorCode.RPC_INVOCATION_TYPE_CAST,
+          `rpc.invoke() has a type cast on an argument — remove the 'as' expression and rely on Pikku's generated types`
+        )
+      }
+
       const [firstArg] = args
       if (firstArg) {
         if (ts.isStringLiteral(firstArg)) {
