@@ -79,7 +79,12 @@ export const pikkuNodesMeta = pikkuSessionlessFunc<void, boolean | undefined>({
 
     const packageIcon = await loadIcon(addonMeta?.icon, rootDir, logger)
 
-    const metaData = {
+    const serverlessIncompatible =
+      addonMeta && 'serverlessIncompatible' in addonMeta
+        ? (addonMeta as any).serverlessIncompatible
+        : undefined
+
+    const metaData: Record<string, any> = {
       nodes: outputMeta,
       secrets: secretsMeta,
       package: {
@@ -88,6 +93,10 @@ export const pikkuNodesMeta = pikkuSessionlessFunc<void, boolean | undefined>({
         icon: packageIcon,
         categories: addonMeta?.categories,
       },
+    }
+
+    if (serverlessIncompatible && serverlessIncompatible.length > 0) {
+      metaData.serverlessIncompatible = serverlessIncompatible
     }
 
     if (addonMetaJsonFile && (config.scaffold?.console || config.addon)) {

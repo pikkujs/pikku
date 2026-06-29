@@ -44,6 +44,7 @@ export function parseCLIFilters(
       serverlessIncompatible?: string[]
       defaultTarget?: 'serverless' | 'server'
     }
+    addon?: boolean | { serverlessIncompatible?: string[] }
     namedFilters?: Record<string, InspectorFilters>
   }
 ): CLIFilters {
@@ -138,7 +139,15 @@ export function parseCLIFilters(
     '--exclude-target'
   )
   if (filters.target || filters.excludeTarget) {
-    filters.serverlessIncompatible = cliConfig?.deploy?.serverlessIncompatible
+    const addonIncompatible =
+      cliConfig?.addon && typeof cliConfig.addon === 'object'
+        ? (cliConfig.addon.serverlessIncompatible ?? [])
+        : []
+    const merged = [
+      ...(cliConfig?.deploy?.serverlessIncompatible ?? []),
+      ...addonIncompatible,
+    ]
+    filters.serverlessIncompatible = merged.length > 0 ? merged : undefined
     filters.defaultTarget = cliConfig?.deploy?.defaultTarget
   }
 

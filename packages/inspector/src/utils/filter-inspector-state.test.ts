@@ -3,7 +3,11 @@ import { strict as assert } from 'node:assert'
 import { filterInspectorState } from './filter-inspector-state.js'
 import type { InspectorState, InspectorFilters } from '../types.js'
 import type { SerializableInspectorState } from './serialize-inspector-state.js'
-import { deserializeInspectorState } from './serialize-inspector-state.js'
+import {
+  deserializeInspectorState,
+  serializeInspectorState,
+} from './serialize-inspector-state.js'
+import { getInitialInspectorState } from '../inspector.js'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -1546,5 +1550,110 @@ describe('filterInspectorState exclude filters', () => {
 
     assert.ok(result.http.meta.post['/api/users'])
     assert.ok(!result.http.meta.get['/admin/settings'])
+  })
+})
+
+describe('addonServerlessIncompatible scoping', () => {
+  // Service names inside addons are scoped to that addon's namespace.
+  // 'FfmpegService' in addon A is unrelated to 'FfmpegService' in the app or
+  // another addon. The state.addonServerlessIncompatible map must NOT be
+  // merged into the global filter — it is intentionally kept separate.
+
+  test('addon serverlessIncompatible does not bleed into app-level function resolution', () => {
+    const state = createMockInspectorState()
+
+    // App function uses a service named 'FfmpegService' (e.g. its own service,
+    // unrelated to any addon's FfmpegService).
+    ;(state.functions.meta as any).getUsers.services = {
+      services: ['FfmpegService'],
+    }
+
+    // An addon declares FfmpegService as serverless-incompatible for ITS namespace.
+    ;(state as any).addonServerlessIncompatible = new Map([
+      ['ffmpeg', ['FfmpegService']],
+    ])
+
+    // Filter: only keep serverless functions. The filters object does NOT
+    // include serverlessIncompatible — that's app-level config only.
+    const filters: InspectorFilters = {
+      target: ['serverless'],
+    }
+
+    const result = filterInspectorState(state, filters, mockLogger)
+
+    // The app's getUsers function must survive — the addon's scoped
+    // serverlessIncompatible should have no effect on app-level resolution.
+    assert.ok(
+      result.http.meta.get['/api/users'],
+      'app function using same-named service as addon should not be pruned by addon scoping'
+    )
+  })
+
+  test('app-level serverlessIncompatible in filters still prunes matching app functions', () => {
+    const state = createMockInspectorState()
+
+    ;(state.functions.meta as any).getUsers.services = {
+      services: ['HeavyService'],
+    }
+    ;(state as any).addonServerlessIncompatible = new Map([
+      ['some-addon', ['HeavyService']],
+    ])
+
+    // The APP explicitly declares HeavyService incompatible via filters.
+    const filters: InspectorFilters = {
+      target: ['serverless'],
+      serverlessIncompatible: ['HeavyService'],
+    }
+
+    const result = filterInspectorState(state, filters, mockLogger)
+
+    // App explicitly opted in via filters.serverlessIncompatible → pruned.
+    assert.ok(
+      !result.http.meta.get['/api/users'],
+      'app function should be pruned when app explicitly lists service in filters.serverlessIncompatible'
+    )
+  })
+})
+
+describe('addonServerlessIncompatible serialization roundtrip', () => {
+  // Uses getInitialInspectorState to guarantee all Map fields are initialized —
+  // the lightweight mock in createMockInspectorState() omits fields like
+  // schemaLookup that serializeInspectorState needs.
+
+  test('Map serializes to Array<[string, string[]]> and back', () => {
+    const state = getInitialInspectorState('/test')
+    state.addonServerlessIncompatible = new Map([
+      ['ffmpeg', ['FfmpegService', 'FfprobeService']],
+      ['humandesign', ['HumanDesignService']],
+    ])
+
+    const serialized = serializeInspectorState(state)
+    assert.deepStrictEqual(serialized.addonServerlessIncompatible, [
+      ['ffmpeg', ['FfmpegService', 'FfprobeService']],
+      ['humandesign', ['HumanDesignService']],
+    ])
+
+    const restored = deserializeInspectorState(serialized)
+    assert.ok(restored.addonServerlessIncompatible instanceof Map)
+    assert.deepStrictEqual(restored.addonServerlessIncompatible.get('ffmpeg'), [
+      'FfmpegService',
+      'FfprobeService',
+    ])
+    assert.deepStrictEqual(
+      restored.addonServerlessIncompatible.get('humandesign'),
+      ['HumanDesignService']
+    )
+  })
+
+  test('empty Map serializes and restores correctly', () => {
+    const state = getInitialInspectorState('/test')
+    // addonServerlessIncompatible is already an empty Map from getInitialInspectorState
+
+    const serialized = serializeInspectorState(state)
+    assert.deepStrictEqual(serialized.addonServerlessIncompatible, [])
+
+    const restored = deserializeInspectorState(serialized)
+    assert.ok(restored.addonServerlessIncompatible instanceof Map)
+    assert.strictEqual(restored.addonServerlessIncompatible.size, 0)
   })
 })
