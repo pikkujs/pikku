@@ -346,7 +346,7 @@ export async function runWorkspaceValidate(
           'db-types-hand-edited',
           'src/types/db.types.ts contains inline type definitions — it should only re-export from .pikku',
           dbTypesPath,
-          "Replace the file with a single line: export type { DB } from '../../.pikku/db/schema.js' then regenerate"
+          "Replace the file with a single line: export type { DB } from '../../.pikku/db/schema.gen.js' then regenerate"
         )
       }
     }

@@ -162,7 +162,7 @@ test('resolveDb uses custom runtimeDir for local PGlite postgres', () => {
   assert.equal(resolved.pgliteDir, join(root, 'custom-runtime', 'dev-postgres'))
 })
 
-test('migrateAndCodegen applies pending migrations and writes schema.d.ts', async () => {
+test('migrateAndCodegen applies pending migrations and writes schema.gen.d.ts', async () => {
   const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
   assert.equal(resolved.dialect, 'sqlite')
   const { migrate, codegen, zod } = await migrateAndCodegen(resolved)

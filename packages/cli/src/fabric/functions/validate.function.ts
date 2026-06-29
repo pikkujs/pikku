@@ -786,9 +786,7 @@ export async function runValidate(
     const appsDir = join(root, 'apps')
     if (existsSync(appsDir)) {
       try {
-        const appFiles = (
-          await readdir(appsDir, { recursive: true })
-        ).filter(
+        const appFiles = (await readdir(appsDir, { recursive: true })).filter(
           (f) =>
             typeof f === 'string' &&
             (f.endsWith('.ts') || f.endsWith('.tsx')) &&
@@ -802,12 +800,16 @@ export async function runValidate(
           )?.[1]
           // Heuristic: flag a bare /api baseURL with no /auth segment anywhere
           // near the client config.
-          if (baseURL && /['"`]\/api['"`]/.test(baseURL) && !/auth/i.test(baseURL)) {
+          if (
+            baseURL &&
+            /['"`]\/api['"`]/.test(baseURL) &&
+            !/auth/i.test(baseURL)
+          ) {
             w(
               'better-auth-client-baseurl-missing-auth',
               `createAuthClient baseURL is ${baseURL.trim()} — it omits the /auth segment, so the client calls /api/sign-in/email instead of /api/auth/sign-in/email and auth 404s`,
               join(appsDir, rel),
-              "Append the auth basePath: baseURL: `${apiUrl()}/auth` (resolving to /api/auth)"
+              'Append the auth basePath: baseURL: `${apiUrl()}/auth` (resolving to /api/auth)'
             )
           }
         }
@@ -1026,7 +1028,7 @@ export async function runValidate(
           'db-types-hand-edited',
           'src/types/db.types.ts contains inline type definitions — it should only re-export from .pikku',
           dbTypesPath,
-          "Replace the file with a single line: export type { DB } from '../../.pikku/db/schema.js' then run `yarn db:types` to regenerate"
+          "Replace the file with a single line: export type { DB } from '../../.pikku/db/schema.gen.js' then run `yarn db:types` to regenerate"
         )
       }
     }
@@ -1329,9 +1331,9 @@ export async function runValidate(
         const installDirs = new Set<string>()
         for (const base of [appPath, root]) {
           try {
-            const resolved = createRequire(
-              join(base, 'package.json')
-            ).resolve(pkg)
+            const resolved = createRequire(join(base, 'package.json')).resolve(
+              pkg
+            )
             const esc = pkg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
             const m = resolved.match(
               new RegExp(`^(.*[\\\\/]node_modules[\\\\/]${esc})[\\\\/]`)
