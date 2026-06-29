@@ -363,7 +363,7 @@ export const dev = pikkuSessionlessFunc<
             try {
               const start = Date.now()
               await runAllWithCommandState()
-              workflowService.rewireQueueWorkers()
+              workflowService.wireQueueWorkers()
               logger.info({
                 message: `✓ Generated in ${Date.now() - start}ms`,
                 type: 'timing',

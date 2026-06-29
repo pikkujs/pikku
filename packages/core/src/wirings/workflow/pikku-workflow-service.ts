@@ -250,16 +250,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
   }
 
-  public rewireQueueWorkers(): void {
-    this.wireQueueWorkers()
-  }
-
   /**
    * Wire the queue-based orchestrator/step/sleeper workers.
    * Subclasses that orchestrate without queues (e.g. Durable Objects) should
    * pass `wireQueues: false` to the base constructor and skip this entirely.
+   * Call this explicitly after adding addons dynamically.
    */
-  protected wireQueueWorkers(): void {
+  public wireQueueWorkers(): void {
     const functions = pikkuState(null, 'function', 'functions')
     const functionsMeta = pikkuState(null, 'function', 'meta')
 
