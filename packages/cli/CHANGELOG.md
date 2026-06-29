@@ -1,3 +1,96 @@
+## 0.12.56
+
+### Patch Changes
+
+- 80141af: feat(cli): native Bun.build bundler + runtime DI split for deploy & dev
+
+  Deploys and `pikku dev` now use a runtime-appropriate implementation chosen once
+  via dependency injection, instead of inline `typeof Bun` checks.
+  - **Bundler**: a `Bundler` interface with a shared `BaseBundler` (dead-module
+    stubbing, dependency extraction, package.json + hashing) and two backends —
+    `NodeBundler` (esbuild) and `BunBundler` (native `Bun.build`). Under bun the
+    deploy bundle now resolves bun's `.bun` store / per-workspace symlinks natively
+    (esbuild's `nodePaths` walk assumes a hoisted root and failed there). Bun's
+    metafile omits external imports, so externals are captured via the resolve
+    plugin to drive per-unit dependency extraction. Full identifier minification is
+    used under bun (safe — pikku's error→status reflection compares same-class
+    instances and workflow exceptions hardcode `.name`).
+  - **Dev server**: a `DevServerRunner` interface with `NodeServerRunner`
+    (`@pikku/node-http-server` + `ws`) and `BunServerRunner` (`@pikku/bun-server`),
+    each also supplying the runtime's EventHub.
+  - The runtime is resolved once in `services.ts`; `bundler` and `devServerRunner`
+    are injected singletons. No `typeof Bun` branches remain in the pipeline or the
+    dev command.
+  - Also removes a redundant `as` cast on an `rpc.invoke()` result (PKU940) now
+    that the generated map types the output.
+
+- c4505d6: build(cli): publish a Windows binary on each release
+
+  The native binary build now compiles a `bun-windows-x64` target alongside the
+  existing linux/darwin x64+arm64 builds, producing `pikku-windows-x64.exe`. The
+  release job already globs `release/binaries/*` and uploads everything to the
+  GitHub release, so the Windows binary is attached to every CLI release with no
+  further CI changes.
+
+- 66d43d1: Add `deploy.defaultTarget` to `pikku.config.json` to override the default deploy target ('serverless') for functions without an explicit `deploy` flag.
+- d8c34fa: feat(inspector): warn (non-blocking) when a JSON/JSONB column has no concrete tsType
+
+  DB codegen typed every JSON/JSONB column as `unknown` unless a `tsType`
+  annotation was set, silently erasing type-safety at every call site. The
+  codegen now emits a non-blocking warning (via the existing `warnings[]`
+  channel) whenever a JSON/JSONB column resolves to `unknown`/`any` — including
+  when it is only annotated `kind: 'json'`, or explicitly `tsType: 'unknown'`
+  (allowed but discouraged). The message names the column, the resolved type, and
+  the exact annotation to add, so it is actionable by a developer or an AI. A
+  concrete `tsType` (e.g. `TicketSpec`) silences it.
+
+- 47f5b35: docs(skills): trim always-loaded skill context by splitting bulky reference material on demand
+
+  The `skill` tool injects the whole `SKILL.md` into the agent's context on every
+  load, so large rarely-needed reference blocks were paid for on every invocation.
+  Carved the nine heaviest skills: kept the Agent Operating Procedure, decision
+  rules, common-path guidance and one canonical example inline; moved exhaustive
+  option tables, full API/manifest references, and off-common-path recipes into
+  `references/*.md` that the agent reads on demand, each linked by an explicit
+  pointer line so no knowledge becomes invisible. Net knowledge loss is zero —
+  only location and verbosity changed.
+  - pikku-testing 636→328 (cucumber/BDD reference split out)
+  - pikku-workflow 334→168 (also reconciled a substantial drift between the OSS
+    and bundled copies — merged the union of unique facts before deduping)
+  - pikku-services 293→210, pikku-http 318→226, pikku-addon 331→238,
+    pikku-middleware 283→226, pikku-realtime 286→236, pikku-cli 281→195,
+    pikku-concepts 286→229 (wired the previously-dead `concept-mapping.md`)
+
+  Also makes Zod the only _documented_ function form: the generic
+  `pikkuFunc<In,Out>` overload still exists in code but is dropped from the
+  generated function-type JSDoc and the concept skills, so generated scaffolds and
+  docs show only the `input:`/`output:` Zod-schema form.
+
+- ba1ab08: refactor(workflow): replace `inline: false` with `workflowQueued: true` on function meta
+
+  The per-function workflow dispatch flag has been renamed from the confusing
+  negative `inline: false` to the explicit positive `workflowQueued: true`.
+  Two companion fields are also added: `workflowRetries` and `workflowTimeout`
+  as function-level equivalents of the per-call-site `NodeOptions` fields.
+
+  **Breaking change (patch — flag was undocumented):** rename `inline: false`
+  to `workflowQueued: true` on any `pikkuSessionlessFunc` / `pikkuFunc` that
+  dispatches its workflow steps via the queue.
+
+  **Behaviour change:** a step marked `workflowQueued: true` now throws if no
+  queue service is configured, instead of silently falling back to inline
+  execution.
+
+  **Bug fix:** `post-process.ts` was registering `wf-step-*` queues for every
+  workflow step node; it now only registers them for steps that are actually
+  `workflowQueued: true`, avoiding spurious queue resource allocation.
+
+- Updated dependencies [66d43d1]
+- Updated dependencies [a8c9e6d]
+- Updated dependencies [ba1ab08]
+  - @pikku/inspector@0.12.28
+  - @pikku/core@0.12.40
+
 ## 0.12.55
 
 ### Patch Changes
