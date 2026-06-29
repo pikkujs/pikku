@@ -1,7 +1,7 @@
 import type {
   CoreSingletonServices,
   MiddlewareMetadata,
-  PikkuWire,
+  PikkuRawWire,
 } from '../../types/core.types.js'
 import type { CorePikkuChannelMiddleware } from './channel.types.js'
 import { pikkuState } from '../../pikku-state.js'
@@ -87,10 +87,10 @@ export const combineChannelMiddleware = (
 }
 
 export function wrapChannelWithMiddleware<Out>(
-  wire: PikkuWire,
+  wire: PikkuRawWire,
   services: CoreSingletonServices,
   middlewares: readonly CorePikkuChannelMiddleware[]
-): PikkuWire {
+): PikkuRawWire {
   if (middlewares.length === 0 || !wire.channel) return wire
 
   const channel = wire.channel

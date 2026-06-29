@@ -1,4 +1,8 @@
-import type { CoreServices, PikkuWire } from '../../types/core.types.js'
+import type {
+  CoreServices,
+  PikkuWire,
+  PikkuRawWire,
+} from '../../types/core.types.js'
 import type { SessionService } from '../../services/user-session-service.js'
 import type { CoreUserSession } from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
@@ -100,7 +104,7 @@ const resolvePikkuFunction = (
 export class ContextAwareRPCService {
   constructor(
     private services: CoreServices,
-    private wire: PikkuWire,
+    private wire: PikkuRawWire,
     private options: {
       requiresAuth?: boolean
       sessionService?: SessionService<CoreUserSession>
@@ -136,14 +140,8 @@ export class ContextAwareRPCService {
     funcName: string,
     data: In
   ): Promise<Out> {
-    const rpcDepth = this.wire.rpc.depth
-    const updatedWire: PikkuWire = {
+    const updatedWire: PikkuRawWire = {
       ...this.wire,
-      rpc: {
-        ...this.wire.rpc,
-        depth: rpcDepth + 1,
-        global: false,
-      },
     }
 
     // Check addon namespace first (e.g. 'stripe:createCharge')
@@ -207,7 +205,7 @@ export class ContextAwareRPCService {
   private async invokeAddonFunction<In = any, Out = any>(
     namespacedFunction: string,
     data: In,
-    wire: PikkuWire
+    wire: PikkuRawWire
   ): Promise<Out> {
     // Resolve namespace to package name
     const resolved = resolveNamespace(namespacedFunction)
@@ -246,17 +244,11 @@ export class ContextAwareRPCService {
   public async rpcWithWire<In = any, Out = any>(
     rpcName: string,
     data: In,
-    wire: PikkuWire
+    wire: PikkuRawWire
   ): Promise<Out> {
-    const rpcDepth = this.wire.rpc.depth
-    const mergedWire: PikkuWire = {
+    const mergedWire: PikkuRawWire = {
       ...this.wire,
       ...wire,
-      rpc: {
-        ...this.wire.rpc,
-        depth: rpcDepth + 1,
-        global: false,
-      },
     }
 
     if (rpcName.includes(':')) {
@@ -434,7 +426,7 @@ export class PikkuRPCService<
   // Convenience function for initializing
   getContextRPCService(
     services: Services,
-    wire: PikkuWire,
+    wire: PikkuRawWire,
     requiresAuthOrOptions?:
       | boolean
       | {
@@ -452,7 +444,7 @@ export class PikkuRPCService<
         : { requiresAuth: requiresAuthOrOptions }
     const serviceRPC = new ContextAwareRPCService(
       services,
-      wire,
+      wire as PikkuWire,
       options,
       packageName
     )

@@ -11,6 +11,7 @@ import type {
   CorePikkuMiddleware,
   PikkuWiringTypes,
   PikkuWire,
+  PikkuRawWire,
   MiddlewareMetadata,
   PermissionMetadata,
   CoreSingletonServices,
@@ -37,7 +38,7 @@ import { rpcService } from '../wirings/rpc/rpc-runner.js'
 import { closeWireServices } from '../utils.js'
 
 async function resolveSession(
-  wire: PikkuWire,
+  wire: PikkuRawWire,
   singletonServices: CoreSingletonServices,
   sessionService?: SessionService<CoreUserSession>
 ): Promise<void> {
@@ -234,7 +235,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
     wirePermissions?: CorePermissionGroup | CorePikkuPermission[]
     coerceDataFromSchema?: boolean
     tags?: string[]
-    wire: PikkuWire
+    wire: PikkuRawWire
     sessionService?: SessionService<CoreUserSession>
     credentialWireService?: PikkuCredentialWireService
     packageName?: string | null

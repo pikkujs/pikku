@@ -4,7 +4,7 @@ import { closeWireServices } from '../../../utils.js'
 import { processMessageHandlers } from '../channel-handler.js'
 import type { CoreChannel, RunChannelOptions } from '../channel.types.js'
 import { PikkuLocalChannelHandler } from './local-channel-handler.js'
-import type { PikkuWire, WireServices } from '../../../types/core.types.js'
+import type { PikkuRawWire, WireServices } from '../../../types/core.types.js'
 import { isProduction } from '../../../env.js'
 import { getErrorResponse } from '../../../errors/error-handler.js'
 import { handleHTTPError } from '../../../handle-error.js'
@@ -123,7 +123,7 @@ export const runLocalChannel = async ({
         singletonServices.logger
       )
       const channel = channelHandler.getChannel()
-      const wire: PikkuWire = {
+      const wire: PikkuRawWire = {
         channel,
         ...createMiddlewareSessionWireProps(userSession),
       }

@@ -1,4 +1,4 @@
-import type { PikkuWire } from '../../types/core.types.js'
+import type { PikkuRawWire } from '../../types/core.types.js'
 import type { CoreQueueWorker, QueueJob, PikkuQueue } from './queue.types.js'
 import type {
   CorePikkuFunctionConfig,
@@ -156,7 +156,7 @@ export async function runQueueJob({
   try {
     logger.info(`Processing job ${job.id} in queue ${job.queueName}`)
 
-    const wire: PikkuWire = {
+    const wire: PikkuRawWire = {
       traceId: resolvedTraceId,
       queue,
     }

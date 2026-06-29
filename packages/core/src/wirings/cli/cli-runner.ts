@@ -19,7 +19,7 @@ import type {
   CoreSingletonServices,
   CoreServices,
   CreateWireServices,
-  PikkuWire,
+  PikkuRawWire,
   CreateConfig,
   CreateSingletonServices,
 } from '../../types/core.types.js'
@@ -356,7 +356,7 @@ export async function runCLICommand({
     singletonServices.sessionStore
   )
 
-  const wire: PikkuWire = {
+  const wire: PikkuRawWire = {
     cli: {
       program,
       command: commandPath,

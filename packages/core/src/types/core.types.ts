@@ -179,7 +179,7 @@ export type JSONValue =
  * Utility type for making certain keys required and leaving the rest as optional.
  */
 export type PickRequired<T, K extends keyof T> = Required<Pick<T, K>> &
-  Partial<T>
+  Omit<T, K>
 
 /**
  * Utility type for making certain keys optional while keeping the rest required.
@@ -336,6 +336,11 @@ export type PikkuWire<
 }>
 
 /**
+ * Wire object as constructed by runners, before rpc is lazily added by the function runner.
+ */
+export type PikkuRawWire = Omit<PikkuWire, 'rpc'>
+
+/**
  * A function that can wrap an wire and be called before or after
  */
 export type CorePikkuMiddleware<
@@ -343,7 +348,7 @@ export type CorePikkuMiddleware<
   UserSession extends CoreUserSession = CoreUserSession,
 > = (
   services: SingletonServices,
-  wires: PikkuWire<unknown, unknown, false, UserSession>,
+  wires: PikkuRawWire,
   next: () => Promise<void>
 ) => Promise<void>
 
@@ -529,7 +534,7 @@ export type CreateWireServices<
   UserSession extends CoreUserSession = CoreUserSession,
 > = (
   services: SingletonServices,
-  wire: PikkuWire<unknown, unknown, false, UserSession>
+  wire: PikkuRawWire
 ) => Promise<WireServices<Services, SingletonServices>>
 
 /**

@@ -1,6 +1,6 @@
-import type { PikkuWire } from '../types/core.types.js'
+import type { PikkuRawWire } from '../types/core.types.js'
 
-export type PikkuUserIdResolver = (wire: PikkuWire) => string | undefined
+export type PikkuUserIdResolver = (wire: PikkuRawWire) => string | undefined
 
 export const defaultPikkuUserIdResolver: PikkuUserIdResolver = (wire) => {
   // Explicit pikkuUserId on wire (set by earlier middleware or runner)

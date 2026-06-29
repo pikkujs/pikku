@@ -10,6 +10,7 @@ import type {
 } from './gateway.types.js'
 import type {
   PikkuWire,
+  PikkuRawWire,
   CorePikkuMiddleware,
   CoreSingletonServices,
 } from '../../types/core.types.js'
@@ -381,7 +382,7 @@ export const createListenerMessageHandler = (
     const parsed = adapter.parse(rawData)
     if (!parsed) return
 
-    const wire: PikkuWire = {}
+    const wire: PikkuRawWire = {}
     const gateway: PikkuGateway = {
       gatewayName: name,
       senderId: parsed.senderId,
