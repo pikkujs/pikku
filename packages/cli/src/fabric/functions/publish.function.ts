@@ -6,7 +6,6 @@ import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { resolveApiContext } from '../lib/config.js'
-import { renderAddonVerify } from './addon-verify.function.js'
 
 export const FabricPublishInput = z.object({
   dir: z.string().optional(),
@@ -33,9 +32,9 @@ export const FabricPublish = pikkuSessionlessFunc({
   description: 'Publish a package directory to the Fabric community registry.',
   input: FabricPublishInput,
   output: FabricPublishOutput,
-  func: async (_services, { dir, apiUrl: apiUrlOverride }, { rpc }) => {
+  func: async (_services, { dir, apiUrl: apiUrlOverride }, { rpc, cli }) => {
     const verification = await rpc.invoke('FabricAddonVerify', { dir })
-    renderAddonVerify(undefined, verification)
+    await cli?.channel.send(verification)
     if (!verification.ok) {
       throw new Error(
         'Addon verification failed — fix the errors above before publishing.'
