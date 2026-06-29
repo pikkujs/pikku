@@ -246,6 +246,24 @@ function emitInterface(
           ? { kind: typingKind, tsType: effectiveTsType }
           : null
 
+      // JSON/JSONB columns carry no inherent TypeScript shape — without a
+      // concrete `tsType` they degrade to `unknown`, erasing type-safety at
+      // every call site. Warn (non-blocking) so an AI or developer can give the
+      // column a real type. An explicit `tsType: 'unknown'`/`'any'` is allowed
+      // (the developer has acknowledged it) but is still flagged as discouraged.
+      const isJsonColumn =
+        col.type.toUpperCase().includes('JSON') || ann?.kind === 'json'
+      if (isJsonColumn) {
+        const resolved = selectBase(typeAnn, col)
+        if (resolved === 'unknown' || resolved === 'any') {
+          warnings.push(
+            `Column "${bare}.${col.name}" is ${col.type} and will be typed as ` +
+              `\`${resolved}\` — JSON/JSONB columns need a concrete TypeScript type. ` +
+              `In db/annotations.ts add: "${col.name}": { kind: 'json', tsType: 'YourType' }.`
+          )
+        }
+      }
+
       // A `format` validator refines the zod schema only and keeps the TS type
       // as `string`. It therefore applies only when the resolved select base is
       // plain `string`; on anything else (Date/Uuid/boolean/enum/unknown via
