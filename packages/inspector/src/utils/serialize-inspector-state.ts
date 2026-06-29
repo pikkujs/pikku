@@ -52,6 +52,12 @@ export interface SerializableInspectorState {
       { variable: string; type: string | null; typePath: string | null }[],
     ]
   >
+  serverLifecycleFactories: Array<
+    [
+      string,
+      { variable: string; type: string | null; typePath: string | null }[],
+    ]
+  >
   filesAndMethods: InspectorState['filesAndMethods']
   filesAndMethodsErrors: Array<
     [
@@ -313,6 +319,9 @@ export function serializeInspectorState(
     wireServicesMeta: Array.from(state.wireServicesMeta.entries()),
     addonRequiredParentServices: state.addonRequiredParentServices,
     configFactories: Array.from(state.configFactories.entries()),
+    serverLifecycleFactories: Array.from(
+      state.serverLifecycleFactories.entries()
+    ),
     filesAndMethods: state.filesAndMethods,
     filesAndMethodsErrors: Array.from(
       state.filesAndMethodsErrors.entries()
@@ -492,6 +501,7 @@ export function deserializeInspectorState(
     wireServicesMeta: new Map(data.wireServicesMeta),
     addonRequiredParentServices: data.addonRequiredParentServices || [],
     configFactories: new Map(data.configFactories),
+    serverLifecycleFactories: new Map(data.serverLifecycleFactories),
     filesAndMethods: data.filesAndMethods,
     filesAndMethodsErrors: new Map(
       data.filesAndMethodsErrors.map(([key, entries]) => [

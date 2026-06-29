@@ -87,6 +87,12 @@ export const visitSetup = (
   )
 
   addFileWithFactory(node, checker, state.configFactories, 'CreateConfig')
+  addFileWithFactory(
+    node,
+    checker,
+    state.serverLifecycleFactories,
+    'ServerLifecycle'
+  )
 
   addRPCInvocations(node, state, logger)
   addWireAddon(node, state, logger)

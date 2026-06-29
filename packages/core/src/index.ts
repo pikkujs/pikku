@@ -12,6 +12,7 @@ export type {
   CoreSingletonServices,
   CoreUserSession,
   CreateConfig,
+  ServerLifecycle,
   FunctionMeta,
   FunctionRuntimeMeta,
   FunctionServicesMeta,
@@ -187,7 +188,11 @@ export {
   addGlobalPermission,
   checkAuthPermissions,
 } from './permissions.js'
-export { isSerializable, stopSingletonServices } from './utils.js'
+export {
+  isSerializable,
+  stopSingletonServices,
+  pikkuServerLifecycle,
+} from './utils.js'
 export {
   getSingletonServices,
   getCreateWireServices,

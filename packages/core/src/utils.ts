@@ -1,5 +1,9 @@
 import type { Logger } from './services/logger.js'
-import type { WireServices } from './types/core.types.js'
+import type {
+  CoreSingletonServices,
+  ServerLifecycle,
+  WireServices,
+} from './types/core.types.js'
 import { getSingletonServices, getAllPackageStates } from './pikku-state.js'
 
 export const closeWireServices = async (
@@ -127,3 +131,10 @@ export const stopSingletonServices = async (): Promise<void> => {
     await stopService(logger, name, service)
   }
 }
+
+/** Wrap server lifecycle hooks so the inspector can discover them. */
+export const pikkuServerLifecycle = <
+  SS extends CoreSingletonServices = CoreSingletonServices,
+>(
+  lifecycle: ServerLifecycle<SS>
+): ServerLifecycle<SS> => lifecycle

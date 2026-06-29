@@ -9,9 +9,7 @@ import {
 import type { AgentWorld } from './world.js'
 import { randomUUID } from 'crypto'
 import { spawn, type ChildProcess } from 'child_process'
-import { createServer, type Server } from 'http'
-import { createReadStream, existsSync, statSync } from 'fs'
-import { resolve, dirname, join, extname } from 'path'
+import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { config } from './types.js'
 
@@ -19,39 +17,6 @@ import { config } from './types.js'
 setDefaultTimeout(config.responseTimeout)
 
 let backendProcess: ChildProcess | undefined
-let consoleServer: Server | undefined
-
-const MIME_TYPES: Record<string, string> = {
-  '.html': 'text/html',
-  '.js': 'application/javascript',
-  '.css': 'text/css',
-  '.json': 'application/json',
-  '.png': 'image/png',
-  '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon',
-  '.woff': 'font/woff',
-  '.woff2': 'font/woff2',
-}
-
-function startConsoleServer(distDir: string, port: number): Promise<Server> {
-  return new Promise((resolve, reject) => {
-    const server = createServer((req, res) => {
-      let filePath = join(distDir, req.url === '/' ? 'index.html' : req.url!)
-      // SPA fallback: serve index.html for non-file paths
-      if (!existsSync(filePath) || !statSync(filePath).isFile()) {
-        filePath = join(distDir, 'index.html')
-      }
-      const ext = extname(filePath)
-      res.setHeader(
-        'Content-Type',
-        MIME_TYPES[ext] || 'application/octet-stream'
-      )
-      createReadStream(filePath).pipe(res)
-    })
-    server.listen(port, () => resolve(server))
-    server.on('error', reject)
-  })
-}
 
 BeforeAll(async function () {
   const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -59,21 +24,18 @@ BeforeAll(async function () {
   const backendPort = new URL(config.apiUrl).port
   const consolePort = Number(new URL(config.consoleUrl).port)
 
-  // Start the console UI static server (only needed for @console scenarios, but
-  // BeforeAll cannot inspect tags so we start it if the dist exists)
-  const consoleDist = resolve(projectDir, '../packages/console/dist')
-  if (existsSync(consoleDist)) {
-    consoleServer = await startConsoleServer(consoleDist, consolePort)
-    console.log(`[console] serving ${consoleDist} on port ${consolePort}`)
-  }
-
-  // Start the backend API server
-  backendProcess = spawn('npx', ['tsx', 'bin/start.ts'], {
-    cwd: projectDir,
-    env: { ...process.env, PORT: backendPort },
-    stdio: 'pipe',
-    detached: true,
-  })
+  // Start the backend + console via pikku serve --console <port>
+  // pikkuOnStart in src/lifecycle.ts handles mock OAuth + user seeding
+  backendProcess = spawn(
+    'npx',
+    ['pikku', 'serve', '--port', backendPort, '--console', String(consolePort)],
+    {
+      cwd: projectDir,
+      env: { ...process.env, API_URL: config.apiUrl },
+      stdio: 'pipe',
+      detached: true,
+    }
+  )
 
   backendProcess.stderr?.on('data', (d: Buffer) =>
     process.stderr.write(`[backend] ${d}`)
@@ -108,12 +70,7 @@ AfterAll(async function () {
     }
     backendProcess = undefined
   }
-  if (consoleServer) {
-    consoleServer.close()
-    consoleServer = undefined
-  }
-  const { stopMockOAuthServer } = await import('./mock-oauth-server.js')
-  stopMockOAuthServer()
+  // Mock OAuth and user seeding teardown is handled by pikkuOnStop in src/lifecycle.ts
 })
 
 Before('@console', async function (this: AgentWorld) {

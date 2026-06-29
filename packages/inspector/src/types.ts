@@ -381,6 +381,12 @@ export interface InspectorFilesAndMethods {
     type: string
     typePath: string
   }
+  serverLifecycleFactory?: {
+    file: string
+    variable: string
+    type: string
+    typePath: string
+  }
 }
 
 export interface InspectorDiagnostic {
@@ -436,6 +442,7 @@ export interface InspectorState {
   wireServicesMeta: Map<string, string[]> // variable name -> singleton services consumed
   addonRequiredParentServices: string[] // services an addon needs from the parent (extracted from pikkuAddonServices 2nd param)
   configFactories: PathToNameAndType
+  serverLifecycleFactories: PathToNameAndType
   filesAndMethods: InspectorFilesAndMethods
   filesAndMethodsErrors: Map<string, PathToNameAndType>
   typesLookup: Map<string, ts.Type[]> // Lookup for types by name (e.g., function input types, Config type)
