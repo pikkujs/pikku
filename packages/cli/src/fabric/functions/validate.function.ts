@@ -244,6 +244,7 @@ export async function runValidate(
       agent?: unknown
       workflow?: unknown
       events?: unknown
+      remoteRpc?: unknown
     }
     db?: {
       engine?: 'sqlite' | 'postgres'

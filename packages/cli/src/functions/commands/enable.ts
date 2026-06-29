@@ -3,7 +3,13 @@ import { join } from 'path'
 import { pikkuVoidFunc } from '#pikku'
 import type { PikkuScaffoldFeature } from '../../../types/config.js'
 
-type Feature = 'rpc' | 'console' | 'agent' | 'workflow' | 'events'
+type Feature =
+  | 'rpc'
+  | 'console'
+  | 'agent'
+  | 'workflow'
+  | 'events'
+  | 'remoteRpc'
 
 const FEATURE_DEFAULTS: Record<Feature, 'auth' | 'no-auth'> = {
   rpc: 'auth',
@@ -11,6 +17,7 @@ const FEATURE_DEFAULTS: Record<Feature, 'auth' | 'no-auth'> = {
   console: 'no-auth',
   workflow: 'auth',
   events: 'auth',
+  remoteRpc: 'no-auth',
 }
 
 async function enableFeature(
@@ -64,4 +71,9 @@ export const enableWorkflow = pikkuVoidFunc({
 export const enableEvents = pikkuVoidFunc({
   func: async ({ logger, config }, data: any) =>
     enableFeature('events', logger, config, data),
+})
+
+export const enableRemoteRpc = pikkuVoidFunc({
+  func: async ({ logger, config }, data: any) =>
+    enableFeature('remoteRpc', logger, config, data),
 })

@@ -48,6 +48,7 @@ import {
   enableAgent,
   enableWorkflow,
   enableEvents,
+  enableRemoteRpc,
 } from './functions/commands/enable.js'
 import { pikkuRealtime } from './functions/wirings/realtime/pikku-command-realtime.js'
 import { binary } from './functions/commands/binary.js'
@@ -460,6 +461,17 @@ wireCLI({
           func: enableEvents,
           description:
             'Enable the realtime events channel + SSE stream (scaffolds events.gen.ts)',
+          options: {
+            noAuth: {
+              description: 'Disable auth requirement',
+              default: false,
+            },
+          },
+        }),
+        'remote-rpc': pikkuCLICommand({
+          func: enableRemoteRpc,
+          description:
+            'Enable the remote internal RPC queue worker + HTTP endpoint (scaffolds rpc-remote.gen.ts)',
           options: {
             noAuth: {
               description: 'Disable auth requirement',
