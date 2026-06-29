@@ -381,10 +381,6 @@ export async function runValidate(
       '.pikku-runtime',
       '.reports',
       '__fabric_scaffold.vite.config.mjs',
-      'db/annotations.ts',
-      'knowledge/design-language.md',
-      'knowledge/security.md',
-      'knowledge/technology.md',
     ]
     const gitignorePath = join(root, '.gitignore')
     const gitignoreText = await readTextSafe(gitignorePath)
@@ -411,6 +407,28 @@ export async function runValidate(
           'Add these entries to .gitignore:',
           ...missing.map((entry) => `  ${entry}`),
           'They are regenerated on every dev boot / scaffold / codegen and must never be committed.'
+        )
+      )
+    }
+  }
+
+  // ── required project files ────────────────────────────────────────────
+  // These files must exist and be committed — they are seeded from the sandbox
+  // but belong to the project so the AI agent can read and update them.
+  for (const relPath of [
+    'db/annotations.ts',
+    'knowledge/design-language.md',
+    'knowledge/security.md',
+    'knowledge/technology.md',
+  ]) {
+    if (!existsSync(join(root, relPath))) {
+      w(
+        `missing-required-file-${relPath.replace(/[^a-z0-9]/gi, '-')}`,
+        `${relPath} is missing — this file must be committed to the project`,
+        join(root, relPath),
+        lines(
+          `Create ${relPath} and commit it.`,
+          'The starter-template ships a stub you can copy as a starting point.'
         )
       )
     }
