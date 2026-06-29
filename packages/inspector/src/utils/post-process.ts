@@ -290,10 +290,17 @@ export function aggregateRequiredServices(
       }
     }
 
-    // Per-step queues
+    // Per-step queues — only for steps explicitly marked workflowQueued: true
     for (const node of Object.values(graph.nodes)) {
       if (!('rpcName' in node) || !node.rpcName) continue
       const rpcName = node.rpcName as string
+      const funcId =
+        state.rpc?.internalMeta?.[rpcName] ??
+        state.rpc?.exposedMeta?.[rpcName] ??
+        rpcName
+      const funcMeta = (state.functions.meta[funcId] ??
+        state.functions.meta[rpcName]) as { workflowQueued?: boolean }
+      if (funcMeta?.workflowQueued !== true) continue
       const stepQueueName = `wf-step-${toKebab(rpcName)}`
       if (!state.queueWorkers.meta[stepQueueName]) {
         state.queueWorkers.meta[stepQueueName] = {

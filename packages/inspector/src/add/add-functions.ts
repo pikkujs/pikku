@@ -392,7 +392,9 @@ export const addFunctions: AddWiring = (
   let deploy: 'serverless' | 'server' | 'auto' | undefined
   let approvalRequired: boolean | undefined
   let approvalDescription: string | undefined
-  let inline: boolean | undefined
+  let workflowQueued: boolean | undefined
+  let workflowRetries: number | undefined
+  let workflowTimeout: string | undefined
   let version: number | undefined
   let objectNode: ts.ObjectLiteralExpression | undefined
   let nodeDisplayName: string | null = null
@@ -488,7 +490,9 @@ export const addFunctions: AddWiring = (
     approvalRequired = getPropertyValue(firstArg, 'approvalRequired') as
       | boolean
       | undefined
-    inline = getPropertyValue(firstArg, 'inline') as boolean | undefined
+    workflowQueued = getPropertyValue(firstArg, 'workflowQueued') as boolean | undefined
+    workflowRetries = getPropertyValue(firstArg, 'workflowRetries') as number | undefined
+    workflowTimeout = getPropertyValue(firstArg, 'workflowTimeout') as string | undefined
 
     // Extract approvalDescription identifier reference
     for (const prop of firstArg.properties) {
@@ -1027,7 +1031,9 @@ export const addFunctions: AddWiring = (
     deploy: deploy || undefined,
     approvalRequired: approvalRequired || undefined,
     approvalDescription: approvalDescription || undefined,
-    inline: inline === false ? false : undefined,
+    workflowQueued: workflowQueued === true ? true : undefined,
+    workflowRetries: workflowRetries ?? undefined,
+    workflowTimeout: workflowTimeout ?? undefined,
     implementationHash,
     version,
     title,

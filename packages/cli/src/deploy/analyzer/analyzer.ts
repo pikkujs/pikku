@@ -520,11 +520,11 @@ function buildWorkflows(
 
       const stepUnitName = toSafeKebab(node.rpcName)
       // Step dispatch is decided per-function: a step runs inline unless its
-      // function opts out with `inline: false` (then it dispatches via queue).
+      // function is marked `workflowQueued: true` (then it dispatches via queue).
       const stepFuncId = rpcMeta[node.rpcName] ?? node.rpcName
       const stepFuncMeta =
         functionsMeta[stepFuncId] ?? functionsMeta[node.rpcName]
-      const isInline = stepFuncMeta?.inline !== false
+      const isInline = stepFuncMeta?.workflowQueued !== true
 
       steps.push({
         name: node.stepName ?? nodeId,

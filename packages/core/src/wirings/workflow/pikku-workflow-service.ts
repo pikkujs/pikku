@@ -982,29 +982,22 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepOptions?: WorkflowStepOptions,
     fromStepName?: string
   ): Promise<boolean> {
-    // Step execution is decided purely by the function's `inline` flag (default
-    // true). Only a function explicitly marked `inline: false` dispatches via
-    // the queue. The run-level inline state is intentionally NOT consulted
-    // here: default steps run inline even inside a queue-dispatched run, so a
-    // normally-started workflow executes its steps in one orchestrator-worker
-    // pass instead of one queue round-trip per step.
+    // Step execution is decided purely by the function's `workflowQueued` flag
+    // (default false). Only a function explicitly marked `workflowQueued: true`
+    // dispatches via the queue. If the queue service is not configured that is
+    // a hard error — there is no inline fallback.
     const functionsMeta = pikkuState(null, 'function', 'meta')
     const rpcFuncId = pikkuState(null, 'rpc', 'meta')[rpcName]
     const rpcMeta =
       typeof rpcFuncId === 'string' ? functionsMeta[rpcFuncId] : undefined
-    const forceQueue = rpcMeta?.inline === false
+    const forceQueue = rpcMeta?.workflowQueued === true
     if (!forceQueue) {
       return false
     }
-    // The function opted out of inline execution (`inline: false`) but no queue
-    // service is configured to dispatch it. Fall back to inline so the workflow
-    // still progresses, but warn loudly — silently swallowing this hides a real
-    // misconfiguration (the step won't get its own worker/retry isolation).
     if (!getSingletonServices()?.queueService) {
-      getSingletonServices()?.logger.warn(
-        `Workflow step '${stepName}' (function '${rpcName}') is marked 'inline: false' but no queue service is configured — running it inline instead of dispatching to a queue.`
+      throw new Error(
+        `Workflow step '${stepName}' (function '${rpcName}') is marked 'workflowQueued: true' but no queue service is configured.`
       )
-      return false
     }
     try {
       await getSingletonServices()!.queueService!.add(

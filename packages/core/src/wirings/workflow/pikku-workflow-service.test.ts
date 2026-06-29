@@ -126,19 +126,19 @@ describe('pikku-workflow-service run-level inline', () => {
 describe('pikku-workflow-service per-function step dispatch', () => {
   // Expose the protected dispatchStep so we can assert the dispatch decision
   // in isolation: a step queues only when its function opts out of inline
-  // execution (inline: false).
+  // execution (workflowQueued: true).
   class TestWorkflowService extends InMemoryWorkflowService {
     public callDispatchStep(rpcName: string) {
       return this.dispatchStep('run-1', 'step-1', rpcName, {})
     }
   }
 
-  const setupFunction = (rpcName: string, inline?: boolean) => {
+  const setupFunction = (rpcName: string, workflowQueued?: boolean) => {
     pikkuState(null, 'rpc', 'meta')[rpcName] = rpcName as any
     pikkuState(null, 'function', 'meta')[rpcName] = {
       pikkuFuncId: rpcName,
       sessionless: true,
-      ...(inline === undefined ? {} : { inline }),
+      ...(workflowQueued === undefined ? {} : { workflowQueued }),
     } as any
   }
 
@@ -166,7 +166,7 @@ describe('pikku-workflow-service per-function step dispatch', () => {
     cleanup('defaultInlineStep')
   })
 
-  test('inline: false step IS dispatched to the queue when a queueService exists', async () => {
+  test('workflowQueued: true step IS dispatched to the queue when a queueService exists', async () => {
     const ws = new TestWorkflowService()
     let queued = false
     pikkuState(null, 'package', 'singletonServices', {
@@ -178,36 +178,25 @@ describe('pikku-workflow-service per-function step dispatch', () => {
       },
     } as any)
 
-    setupFunction('queuedStep', false)
+    setupFunction('queuedStep', true)
     const dispatched = await ws.callDispatchStep('queuedStep')
-    assert.equal(dispatched, true, 'inline:false step should dispatch')
-    assert.equal(queued, true, 'inline:false step should queue')
+    assert.equal(dispatched, true, 'workflowQueued step should dispatch')
+    assert.equal(queued, true, 'workflowQueued step should queue')
     cleanup('queuedStep')
   })
 
-  test('inline: false step warns and runs inline when no queueService is configured', async () => {
+  test('workflowQueued: true step throws when no queueService is configured', async () => {
     const ws = new TestWorkflowService()
-    let warned = false
     pikkuState(null, 'package', 'singletonServices', {
-      logger: {
-        error() {},
-        info() {},
-        warn: () => {
-          warned = true
-        },
-        debug() {},
-      },
+      logger: { error() {}, info() {}, warn() {}, debug() {} },
       // no queueService
     } as any)
 
-    setupFunction('queuedStepNoQueue', false)
-    const dispatched = await ws.callDispatchStep('queuedStepNoQueue')
-    assert.equal(
-      dispatched,
-      false,
-      'falls back to inline when no queue service'
+    setupFunction('queuedStepNoQueue', true)
+    await assert.rejects(
+      () => ws.callDispatchStep('queuedStepNoQueue'),
+      /workflowQueued: true.*no queue service/i
     )
-    assert.equal(warned, true, 'should warn about the misconfiguration')
     cleanup('queuedStepNoQueue')
   })
 })

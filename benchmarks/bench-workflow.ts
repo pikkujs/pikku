@@ -51,7 +51,7 @@ const STEPS = arg('--steps', MODE === 'inline' ? 20 : 16)
 
 const WORKFLOW_NAME = 'benchWorkflow'
 const STEP_RPC = 'benchStep' // default → runs inline
-const STEP_QUEUED_RPC = 'benchStepQueued' // inline: false → dispatched to the queue
+const STEP_QUEUED_RPC = 'benchStepQueued' // workflowQueued: true → dispatched to the queue
 
 // Per-step attempt counter, keyed by the run-stable `${wfId}:${stepIdx}`. The
 // step throws while its count is within its assigned `failTimes`, then succeeds
@@ -94,14 +94,14 @@ const flakyStep = async (
   return randomPayload(data.stepIdx + count)
 }
 
-const mkStepMeta = (funcId: string, inline?: boolean) =>
+const mkStepMeta = (funcId: string, workflowQueued?: boolean) =>
   ({
     pikkuFuncId: funcId,
     sessionless: true,
     permissions: [],
     inputSchemaName: null,
     outputSchemaName: null,
-    ...(inline === undefined ? {} : { inline }),
+    ...(workflowQueued === true ? { workflowQueued: true } : {}),
   }) as any
 
 function registerEngine(mode: Mode) {
@@ -124,11 +124,11 @@ function registerEngine(mode: Mode) {
   pikkuState(null, 'function', 'meta')[STEP_RPC] = mkStepMeta(STEP_RPC)
   addFunction(STEP_RPC, { func: flakyStep } as any)
 
-  // Same logic, but `inline: false` so it dispatches to the queue (mixed mode).
+  // Same logic, but `workflowQueued: true` so it dispatches to the queue (mixed mode).
   pikkuState(null, 'rpc', 'meta')[STEP_QUEUED_RPC] = STEP_QUEUED_RPC as any
   pikkuState(null, 'function', 'meta')[STEP_QUEUED_RPC] = mkStepMeta(
     STEP_QUEUED_RPC,
-    false
+    true
   )
   addFunction(STEP_QUEUED_RPC, { func: flakyStep } as any)
 

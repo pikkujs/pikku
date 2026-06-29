@@ -1068,10 +1068,10 @@ export function filterInspectorState(
   }
 
   // Step dispatch is decided purely per-function: a workflow step runs via the
-  // queue only when its function opts out of inline execution (inline: false).
-  // Such a unit needs workflowService + queueService injected even though the
-  // function itself doesn't reference them. Check the ORIGINAL graph meta
-  // (before filtering pruned it).
+  // queue only when its function is marked `workflowQueued: true`. Such a unit
+  // needs workflowService + queueService injected even though the function
+  // itself doesn't reference them. Check the ORIGINAL graph meta (before
+  // filtering pruned it).
   const survivingFuncIds = new Set(Object.keys(filteredState.functions.meta))
   const resolveFuncId = (rpcName: string): string =>
     filteredState.rpc.internalMeta[rpcName] ??
@@ -1087,8 +1087,8 @@ export function filterInspectorState(
       if (!survivingFuncIds.has(funcId) && !survivingFuncIds.has(rpcName))
         continue
       const funcMeta = (filteredState.functions.meta[funcId] ??
-        filteredState.functions.meta[rpcName]) as { inline?: boolean }
-      if (funcMeta?.inline === false) {
+        filteredState.functions.meta[rpcName]) as { workflowQueued?: boolean }
+      if (funcMeta?.workflowQueued === true) {
         filteredState.serviceAggregation.requiredServices.add('workflowService')
         filteredState.serviceAggregation.requiredServices.add('queueService')
       }
