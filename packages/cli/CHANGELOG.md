@@ -1,3 +1,150 @@
+## 0.12.55
+
+### Patch Changes
+
+- 49f738b: Fix `pikkuBetterAuth` codegen fragility on cold bootstrap. The `#pikku` hub
+  re-exported `auth/auth.types.js` only after a full inspect, so a cold
+  `pikku bootstrap` followed by `pikku db generate` (or the first full inspect)
+  crashed importing the user's auth file with `does not provide an export named
+'pikkuBetterAuth'`. Bootstrap now detects `pikkuBetterAuth(...)` via a cheap
+  AST-free source scan and pre-writes a stub `auth.types.ts` (raw re-export from
+  `@pikku/better-auth`) so the import resolves immediately; the typed wrapper still
+  overwrites it on the post-inspect pass.
+- 9269567: Fix two `pikku dev`/`pikku db seed` failures under the Bun runtime.
+  - **IPv4 bind:** `pikku dev` passed `hostname: 'localhost'`, which `Bun.serve`
+    resolves to IPv6 `[::1]` only — unreachable from an IPv4 `127.0.0.1` reverse
+    proxy. Both the Bun and Node dev servers now bind explicit `127.0.0.1`
+    (works on both runtimes; Node previously relied on `--dns-result-order=ipv4first`).
+    The user-facing content URL still shows `localhost`.
+  - **Seed tolerance:** the Bun sqlite runtime's `exec` threw
+    `no valid SQL statement` on comment-only/empty input (e.g. a placeholder
+    `seed.sql`), whereas `node:sqlite` silently no-ops. It now skips when nothing
+    executable remains after stripping comments; real SQL still runs verbatim.
+
+- 41ff485: fix(inspector): register functions in a dedicated pass before wiring resolution
+
+  The deterministic-codegen change sorted `program.getSourceFiles()` so generated
+  output is byte-identical across runs. But function registration (`addFunctions`)
+  ran in the same sweep as wiring resolution (`visitRoutes`), so once traversal
+  became alphabetical, a wiring file could be visited before the file that defines
+  the function it references — e.g. an addon contract (`hello.contracts.ts`)
+  before `hello.functions.ts` — producing a spurious `PKU559` ("No function
+  metadata found for channel handler").
+
+  Function registration now runs in its own pass (`visitFunctions`) over the
+  sorted files, completing before any transport/wiring resolution, so resolution
+  no longer depends on source-file order. Also sort the `register.gen.ts` schema
+  imports (driven by a `Set`) so that file is stable too, and opt the PII-check
+  tests into the now-opt-in classification scan.
+
+- 061c717: fix(cli): log just the message for expected failures, keep the stack for uncaught errors
+
+  A deliberate, expected failure — e.g. `pikku all` aborting because a build gate
+  (blocking diagnostics) tripped — was dumping a full workflow stack trace, burying
+  the one line that matters. Errors are now classified: a `PikkuError` (or any error
+  carrying an `expected` marker) prints its message alone, while a genuinely uncaught
+  error still prints the full stack so it can be debugged.
+  - New `isExpectedError(error)` helper (exported from `@pikku/core`): true for a
+    `PikkuError` or an error flagged `expected`.
+  - The `expected` flag is threaded through `SerializedError` and the in-memory
+    workflow step store so it survives the step-boundary rehydration that strips the
+    error's class.
+  - The CLI runner's top-level catch, the `CLILogger`, and the workflow runner's
+    failure log all honour it.
+  - The blocking-diagnostics abort now throws a `PikkuError` subclass so it is
+    treated as expected.
+
+- 6367f47: feat(cli): gate the remote internal RPC scaffold behind `scaffold.remoteRpc`
+
+  The remote internal RPC handler (`rpc-remote.gen.ts` — a `pikku-remote-internal-rpc`
+  queue worker plus a `/remote/rpc/:rpcName` HTTP endpoint) was generated for
+  **every** project unconditionally, because `remoteRpcWorkersFile` defaulted to
+  `<scaffoldDir>/rpc-remote.gen.ts` with no guard. Projects that never invoke RPCs
+  across a deployable boundary (the call resolves inline, or service-to-service
+  goes through a generated `PikkuRPC`/`PikkuFetch` HTTP client) ended up
+  registering an idle queue worker they never dispatch to.
+
+  Remote RPC is now an opt-in scaffold feature, consistent with `rpc`, `agent`,
+  `workflow`, `console`, and `events`:
+
+  ```jsonc
+  // pikku.config.json
+  "scaffold": { "remoteRpc": "no-auth" }
+  ```
+
+  or via the CLI: `pikku enable remote-rpc`.
+
+  When `scaffold.remoteRpc` is unset, `remoteRpcWorkersFile` is left undefined and
+  `pikkuRemoteRPC` skips generation (same guard the other scaffolds already use) —
+  no `pikku-remote-internal-rpc` queue worker, no `/remote/rpc/:rpcName` endpoint.
+
+  **Migration:** projects that rely on pikku's cross-deployable remote RPC
+  transport must add `"scaffold": { "remoteRpc": "no-auth" }` (or run
+  `pikku enable remote-rpc`) to keep the handler. The `remote-rpc-pg` /
+  `remote-rpc-redis` templates (via the shared `functions` template) are updated
+  accordingly.
+
+- e6fd12b: perf(inspector,cli): persist generated TS schemas to disk across runs
+
+  `generateAllSchemas` already cached its `ts-json-schema-generator` output
+  in-memory (keyed by the generated custom-types content), so the 2nd and 3rd
+  inspector passes within a single `pikku all` were near-free. But the cache
+  never survived the process, so every fresh `pikku all` paid the full cold cost
+  of building a second TS program + running ts-json-schema-generator — on a
+  331-function project that's ~2.2s, the single largest line item of a run.
+
+  The cache is now also persisted to disk (`node_modules/.cache/pikku/ts-schemas.json`,
+  gitignored by convention), keyed by a hash of the custom-types content plus the
+  generator options that affect output. A warm `pikku all` whose function types
+  are unchanged loads the schemas from disk and skips schema generation entirely;
+  the cold first pass drops by ~3.4s in practice (it also primes the in-memory
+  cache for the re-inspect passes). Zod schemas are still regenerated every run
+  (already ~1ms each). Output is byte-identical to a cold run (verified across the
+  full generated tree). The key is derived from the same content the in-memory
+  cache uses, so any type change busts it. It also folds in the `@pikku/inspector`
+  package version, so upgrading the inspector (the channel a schema-format change
+  ships through) auto-invalidates every cache; `SCHEMA_CACHE_VERSION` remains a
+  manual lever for in-development format changes between releases.
+
+  Opt-out: omit `schemaConfig.cacheDir` (the CLI sets it by default).
+
+- 244d892: perf(cli,inspector): make the data-classification scan opt-in (`pikku all --security`)
+
+  `pikku all` was spending the bulk of its wall-clock on the data-classification
+  leak check. For every function, on every inspector pass, it called
+  `checker.getReturnTypeOfSignature` to infer the handler's return type and scan it
+  for `Private`/`Pii`/`Secret` brands — the single most expensive type-checker
+  operation. On a 331-function project that was ~7.3s (≈half the total), repeated
+  across all three inspector passes, even though the scan only emits diagnostics
+  and never affects generated output.
+
+  The scan is a security lint, not codegen, so it's now **off by default** and gated
+  behind a new `--security` flag (or `security: true` in the config). A plain
+  `pikku all` skips return-type inference entirely; run `pikku all --security`
+  (optionally with `--fail-on-error`) in CI/pre-deploy to enforce it. On the
+  331-function project this cut `pikku all` from ~15.3s to ~9.6s.
+
+  Also: the `all` command now reads back the run's recorded per-step durations and,
+  under `PIKKU_TIMING=1`, prints a slowest-first timing table — making it easy to
+  see where codegen time goes without adding any hot-path instrumentation.
+
+- 04604fa: Mount /mcp in generated server/standalone entries when the unit has a non-empty mcp.gen.json. Previously only the dev server (`tsx src/server.ts`) mounted MCP; the deployed bundle (`pikku deploy plan`) never imported mcp.gen.json or passed `mcpJson` to `PikkuNodeHTTPServer`, so MCP tools/resources/prompts silently never served in production or standalone runtimes.
+- Updated dependencies [4be205f]
+- Updated dependencies [41ff485]
+- Updated dependencies [d2078c8]
+- Updated dependencies [061c717]
+- Updated dependencies [5c0ff0f]
+- Updated dependencies [2c55e13]
+- Updated dependencies [c745c26]
+- Updated dependencies [e6fd12b]
+- Updated dependencies [244d892]
+- Updated dependencies [940c253]
+- Updated dependencies [57900b5]
+- Updated dependencies [72694f6]
+  - @pikku/core@0.12.39
+  - @pikku/inspector@0.12.27
+  - @pikku/kysely@0.12.18
+
 ## 0.12.54
 
 ### Patch Changes
