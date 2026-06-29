@@ -13,8 +13,8 @@ import type { InspectorState } from '@pikku/inspector'
 import { analyzeDeployment } from './analyzer/index.js'
 import type { DeploymentManifest } from './analyzer/manifest.js'
 import { generatePerUnitCodegen } from './codegen/per-unit-codegen.js'
-import { bundleUnits } from './bundler/index.js'
-import type { BundleResult } from './bundler/index.js'
+import type { Bundler } from './bundler/bundler.interface.js'
+import type { BundleResult } from './bundler/types.js'
 import type { ProviderAdapter } from './provider-adapter.js'
 import {
   generateServerEntrySource,
@@ -86,6 +86,8 @@ export async function runBuildPipeline(options: {
   /** Emit sourcemaps + per-unit `metafile.json` (debug-only). Default false. */
   debugArtifacts?: boolean
   logger: BuildLogger
+  /** Runtime-specific bundler (esbuild for node, Bun.build for bun). */
+  bundler: Bundler
 }): Promise<BuildPipelineResult> {
   const {
     projectDir,
@@ -95,6 +97,7 @@ export async function runBuildPipeline(options: {
     getEntryContext,
     debugArtifacts,
     logger,
+    bundler,
   } = options
   const deployDir = options.deployDir ?? join(projectDir, '.deploy')
   const providerDir = join(deployDir, provider.deployDirName)
@@ -146,7 +149,7 @@ export async function runBuildPipeline(options: {
     const entryFiles = new Map<string, string>()
     entryFiles.set(unitName, entryPath)
 
-    const bundleResult = await bundleUnits(
+    const bundleResult = await bundler.bundleUnits(
       projectDir,
       manifest,
       entryFiles,
@@ -302,7 +305,7 @@ export async function runBuildPipeline(options: {
         ...manifest,
         units: manifest.units.filter((u) => u.target !== 'server'),
       }
-      const result = await bundleUnits(
+      const result = await bundler.bundleUnits(
         projectDir,
         serverlessManifestForBundle,
         serverlessEntryFiles,
@@ -334,7 +337,7 @@ export async function runBuildPipeline(options: {
         ...manifest,
         units: manifest.units.filter((u) => u.target === 'server'),
       }
-      const result = await bundleUnits(
+      const result = await bundler.bundleUnits(
         projectDir,
         serverManifestForBundle,
         serverEntryFiles,

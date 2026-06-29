@@ -19,14 +19,10 @@ import {
 import { stopSingletonServices } from '@pikku/core'
 import { pikkuState } from '@pikku/core/internal'
 import { LocalMetaService } from '@pikku/core/services/local-meta'
-import { LocalEventHubService } from '@pikku/core/channel/local'
 import {
   LocalContent,
   type LocalContentConfig,
 } from '@pikku/core/services/local-content'
-import { pikkuWebsocketHandler } from '@pikku/ws'
-import { PikkuNodeHTTPServer } from '@pikku/node-http-server'
-import { WebSocketServer } from 'ws'
 import { InMemorySchedulerService } from '@pikku/schedule'
 import {
   resolveDb,
@@ -43,7 +39,7 @@ export const dev = pikkuSessionlessFunc<
 >({
   remote: true,
   func: async (
-    { logger, config, getInspectorState, variables },
+    { logger, config, getInspectorState, variables, devServerRunner },
     { port, watch, hmr },
     { rpc }
   ) => {
@@ -262,20 +258,10 @@ export const dev = pikkuSessionlessFunc<
           variables,
         })
       : undefined
-    // When the CLI itself runs under bun (e.g. the compiled brew binary), serve
-    // over @pikku/bun-server (native Bun.serve WebSockets) instead of the node
-    // http server + ws package. The bun runtime is dynamically imported so a
-    // node-run CLI never loads it. The same BunEventHubService instance is
-    // shared with the singleton services so function-side broadcasts reach the
-    // sockets the transport holds.
-    const isBun = typeof (globalThis as { Bun?: unknown }).Bun !== 'undefined'
-    const bun = isBun
-      ? await (async () => {
-          const mod = await import('@pikku/bun-server')
-          return { mod, eventHub: new mod.BunEventHubService() }
-        })()
-      : null
-    const eventHub = bun ? bun.eventHub : new LocalEventHubService()
+    // The dev server runner (node http+ws, or bun-server) is resolved by DI in
+    // services.ts. Its EventHub is shared into the singleton services so
+    // function-side broadcasts reach the sockets the transport holds.
+    const eventHub = await devServerRunner.createEventHub()
     const inMemoryServices = {
       logger: devLogger,
       ...(aiAgentRunner ? { aiAgentRunner } : {}),
@@ -303,40 +289,15 @@ export const dev = pikkuSessionlessFunc<
       getInspectorState,
     })
 
-    let wss: WebSocketServer | undefined
-    let pikkuServer: {
-      init(): Promise<void>
-      start(): Promise<void>
-      stop(): Promise<void>
-    }
-    if (bun) {
-      pikkuServer = new bun.mod.PikkuBunServer(
-        {
-          ...userConfig,
-          hostname: bindHostname,
-          port: resolvedPort,
-          content: localContentConfig,
-        },
-        logger,
-        { eventHub: bun.eventHub }
-      )
-    } else {
-      wss = new WebSocketServer({ noServer: true })
-      pikkuServer = new PikkuNodeHTTPServer(
-        {
-          ...userConfig,
-          hostname: bindHostname,
-          port: resolvedPort,
-          content: localContentConfig,
-        },
-        logger,
-        {
-          configureServer: (httpServer) => {
-            pikkuWebsocketHandler({ server: httpServer, wss: wss!, logger })
-          },
-        }
-      )
-    }
+    const pikkuServer = devServerRunner.createServer(
+      {
+        ...userConfig,
+        hostname: bindHostname,
+        port: resolvedPort,
+        content: localContentConfig,
+      },
+      logger
+    )
 
     await pikkuServer.init()
     await schedulerService.start()
@@ -351,11 +312,6 @@ export const dev = pikkuSessionlessFunc<
         await stopSingletonServices()
         await configWatcher?.close()
         await watcher?.close()
-        if (wss) {
-          await new Promise<void>((resolve, reject) =>
-            wss!.close((err) => (err ? reject(err) : resolve()))
-          )
-        }
         await pikkuServer.stop()
       } finally {
         process.exit(0)

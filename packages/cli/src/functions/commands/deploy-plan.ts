@@ -60,7 +60,7 @@ export const deployPlan = pikkuSessionlessFunc<
   },
   void
 >({
-  func: async ({ logger, config, getInspectorState }, data) => {
+  func: async ({ logger, config, getInspectorState, bundler }, data) => {
     const projectDir = config.rootDir
     const inspectorState = await getInspectorState(true)
     const projectId = await resolveProjectId(projectDir)
@@ -79,6 +79,7 @@ export const deployPlan = pikkuSessionlessFunc<
       outDir: config.outDir,
       debugArtifacts: data?.debugArtifacts ?? false,
       logger,
+      bundler,
     })
 
     if (result.manifest.units.length === 0) {
