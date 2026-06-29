@@ -144,7 +144,10 @@ export class WorkflowDispatchException extends Error {
     public readonly stepName: string,
     options?: { cause?: unknown }
   ) {
-    super(`Failed to dispatch workflow step '${stepName}' (run ${runId})`, options)
+    super(
+      `Failed to dispatch workflow step '${stepName}' (run ${runId})`,
+      options
+    )
     this.name = 'WorkflowDispatchException'
   }
 }
@@ -182,6 +185,16 @@ export class WorkflowRunFailedError extends PikkuError {
 addError(WorkflowRunFailedError, {
   status: 422,
   message: 'Workflow run failed.',
+})
+
+export class WorkflowRunCancelledError extends PikkuError {
+  constructor() {
+    super('Workflow was cancelled')
+  }
+}
+addError(WorkflowRunCancelledError, {
+  status: 409,
+  message: 'Workflow was cancelled.',
 })
 
 export class WorkflowServiceNotInitialized extends Error {}
@@ -266,7 +279,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       func: { func: unknown },
       queueName: string
     ) => {
-      if (functions.has(funcId)) return
+      if (functions.has(funcId)) {
+        if (!functionsMeta[funcId]) {
+          functionsMeta[funcId] = mkMeta(funcId)
+        }
+        return
+      }
       addFunction(funcId, func as never)
       if (!queueMeta[queueName]) {
         queueMeta[queueName] = { pikkuFuncId: funcId, name: queueName }
@@ -426,7 +444,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     // Build step summaries from history (latest attempt per step)
     const stepMap = new Map<
       string,
-      { status: StepStatus; startedAt?: Date; completedAt?: Date; attempts: number }
+      {
+        status: StepStatus
+        startedAt?: Date
+        completedAt?: Date
+        attempts: number
+      }
     >()
     for (const step of history) {
       const existing = stepMap.get(step.stepName)
@@ -920,7 +943,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     const queueService = this.verifyQueueService()
     await queueService.add(
       this.getStepWorkerQueueName(rpcName),
-      JSON.parse(JSON.stringify({ runId, stepName, rpcName, data, fromStepName })),
+      JSON.parse(
+        JSON.stringify({ runId, stepName, rpcName, data, fromStepName })
+      ),
       this.resolveStepJobOptions(stepOptions)
     )
   }
@@ -1185,7 +1210,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           throw new WorkflowRunFailedError(run.error?.message)
         }
         if (run.status === 'cancelled') {
-          throw new Error('Workflow was cancelled')
+          throw new WorkflowRunCancelledError()
         }
         return run.output
       }
@@ -1837,7 +1862,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
             }
             if (WORKFLOW_END_STATES.has(childRun.status)) {
               if (childRun.status === 'failed') {
-                throw new Error(childRun.error?.message || 'Sub-workflow failed')
+                throw new Error(
+                  childRun.error?.message || 'Sub-workflow failed'
+                )
               }
               if (childRun.status === 'cancelled') {
                 throw new Error('Sub-workflow was cancelled')

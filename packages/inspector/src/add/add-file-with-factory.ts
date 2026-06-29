@@ -10,6 +10,7 @@ const wrapperFunctionMap: Record<string, string> = {
   pikkuAddonServices: 'CreateSingletonServices',
   pikkuWireServices: 'CreateWireServices',
   pikkuAddonWireServices: 'CreateWireServices',
+  pikkuServerLifecycle: 'ServerLifecycle',
 }
 
 export const addFileWithFactory = (

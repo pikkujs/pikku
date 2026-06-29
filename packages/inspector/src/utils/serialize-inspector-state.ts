@@ -53,6 +53,12 @@ export interface SerializableInspectorState {
       { variable: string; type: string | null; typePath: string | null }[],
     ]
   >
+  serverLifecycleFactories: Array<
+    [
+      string,
+      { variable: string; type: string | null; typePath: string | null }[],
+    ]
+  >
   filesAndMethods: InspectorState['filesAndMethods']
   filesAndMethodsErrors: Array<
     [
@@ -317,6 +323,9 @@ export function serializeInspectorState(
       state.addonServerlessIncompatible.entries()
     ),
     configFactories: Array.from(state.configFactories.entries()),
+    serverLifecycleFactories: Array.from(
+      state.serverLifecycleFactories.entries()
+    ),
     filesAndMethods: state.filesAndMethods,
     filesAndMethodsErrors: Array.from(
       state.filesAndMethodsErrors.entries()
@@ -499,6 +508,7 @@ export function deserializeInspectorState(
       data.addonServerlessIncompatible || []
     ),
     configFactories: new Map(data.configFactories),
+    serverLifecycleFactories: new Map(data.serverLifecycleFactories),
     filesAndMethods: data.filesAndMethods,
     filesAndMethodsErrors: new Map(
       data.filesAndMethodsErrors.map(([key, entries]) => [
