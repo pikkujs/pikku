@@ -616,6 +616,41 @@ export async function runValidate(
           'Add to "imports": { "#pikku": "./.pikku/pikku-types.gen.ts", "#pikku/*": "./.pikku/*" }'
         )
       }
+      if (!fnPkg.imports?.['#pikku/*']) {
+        e(
+          'functions-pkg-missing-pikku-wildcard-import',
+          'packages/functions/package.json is missing "#pikku/*" in "imports" — wiring files that import e.g. "#pikku/pikku-types.gen.js" fail at runtime with "Cannot find module"',
+          fnPkgPath,
+          'Add to "imports": { "#pikku": "./.pikku/pikku-types.gen.ts", "#pikku/*": "./.pikku/*" }'
+        )
+      }
+
+      // .pikku/pikku-types.gen.js wrapper — the sandbox runs `pikku dev` via
+      // bare Node.js (no tsx), which cannot load .ts files. Every .gen.ts in
+      // .pikku/ needs a matching .gen.js wrapper. The sandbox entrypoint creates
+      // these during provisioning but NOT on subsequent restarts after agent
+      // edits — so after any restart pikku dev crashes with
+      // "Cannot find module '#pikku/pikku-types.gen.js'". Run `pikku fabric smoke`
+      // to test locally; the smoke command recreates the wrappers automatically.
+      {
+        const pikkuGenDir = join(fnDir, '.pikku')
+        const typesGenTs = join(pikkuGenDir, 'pikku-types.gen.ts')
+        const typesGenJs = join(pikkuGenDir, 'pikku-types.gen.js')
+        if (existsSync(typesGenTs) && !existsSync(typesGenJs)) {
+          e(
+            'pikku-types-js-wrapper-missing',
+            'packages/functions/.pikku/pikku-types.gen.js is missing — the sandbox runs pikku dev via bare Node.js, which cannot load .ts files; without the .js wrapper it crashes with "Cannot find module \'#pikku/pikku-types.gen.js\'" on every restart',
+            typesGenTs,
+            lines(
+              'Create packages/functions/.pikku/pikku-types.gen.js:',
+              "  import './pikku-types.gen.ts';",
+              "  export * from './pikku-types.gen.ts';",
+              'Or run `pikku fabric smoke` to test the full boot locally (it creates the wrappers).',
+              'This file is gitignored — it must be recreated after every `pikku all` run.'
+            )
+          )
+        }
+      }
 
       const fnAllDeps = {
         ...fnPkg.dependencies,
