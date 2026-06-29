@@ -4,7 +4,6 @@ import {
   Center,
   Loader,
   Text,
-  SegmentedControl,
   Stack,
   Paper,
   Group,
@@ -116,7 +115,6 @@ const AgentPlaygroundInner: React.FC<{
   const { threadId, setThreadId, threads, createNewThread, refetchThreads } =
     useAgentPlayground()
   const deleteThread = useDeleteAgentThread()
-  const [streaming, setStreaming] = useState(false)
   const [selectorOpen, setSelectorOpen] = useState(false)
   const [search, setSearch] = useState('')
   const {
@@ -268,24 +266,6 @@ const AgentPlaygroundInner: React.FC<{
       emptyPanelMessage={m.agent_playground_panel_message()}
     >
       <Box style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <Box
-          px="md"
-          py="xs"
-          style={{
-            borderBottom: '1px solid var(--mantine-color-default-border)',
-            flexShrink: 0,
-          }}
-        >
-          <SegmentedControl
-            size="xs"
-            value={streaming ? 'stream' : 'normal'}
-            onChange={(v) => setStreaming(v === 'stream')}
-            data={[
-              { label: 'Normal', value: 'normal' },
-              { label: 'Stream', value: 'stream' },
-            ]}
-          />
-        </Box>
         <Box style={{ flex: 1, minHeight: 0 }}>
           {!credLoading && !allConnected ? (
             <CredentialPrompt
@@ -293,7 +273,7 @@ const AgentPlaygroundInner: React.FC<{
               onRefresh={refetchCreds}
             />
           ) : (
-            <AgentChat key={`${threadId}-${streaming}`} streaming={streaming} />
+            <AgentChat key={threadId} />
           )}
         </Box>
       </Box>

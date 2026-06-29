@@ -25,7 +25,6 @@ import {
 } from '@assistant-ui/react'
 import {
   usePikkuAgentRuntime,
-  usePikkuAgentNonStreamingRuntime,
   PikkuApprovalContext,
   usePikkuApproval,
   resolvePikkuToolStatus,
@@ -442,9 +441,7 @@ const AgentComposer: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
   )
 }
 
-export const AgentChat: React.FC<{
-  streaming?: boolean
-}> = ({ streaming = false }) => {
+export const AgentChat: React.FC = () => {
   useLocale()
   const {
     agentId,
@@ -487,11 +484,8 @@ export const AgentChat: React.FC<{
     headers,
   }
 
-  const streamingHook = usePikkuAgentRuntime(runtimeOptions)
-  const nonStreamingHook = usePikkuAgentNonStreamingRuntime(runtimeOptions)
-
   const { runtime, isAwaitingApproval, pendingApprovals, handleApproval } =
-    streaming ? streamingHook : nonStreamingHook
+    usePikkuAgentRuntime(runtimeOptions)
 
   return (
     <PikkuApprovalContext.Provider value={{ pendingApprovals, handleApproval }}>
