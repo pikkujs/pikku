@@ -10,10 +10,11 @@ import {
 } from './pikku-workflow-service.js'
 
 describe('pikku-workflow-service worker registration', () => {
-  test('registers sleeper function metadata', () => {
+  test('registers sleeper function metadata after rewireQueueWorkers', () => {
     resetPikkuState()
 
-    new InMemoryWorkflowService()
+    const ws = new InMemoryWorkflowService()
+    ws.rewireQueueWorkers()
 
     const functionMeta = pikkuState(null, 'function', 'meta')
     assert.deepEqual(functionMeta.pikkuWorkflowSleeper, {
