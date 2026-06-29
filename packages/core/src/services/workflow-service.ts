@@ -18,6 +18,7 @@ import type {
  * Handles workflow execution, replay, orchestration logic, and run-level state
  */
 export interface WorkflowService {
+  rewireQueueWorkers?(): void
   // Run-level state operations
   createRun(
     workflowName: string,
