@@ -16,6 +16,7 @@ import { watch } from './functions/commands/watch.js'
 import { consoleCommand } from './functions/commands/console.js'
 import { login, logout, whoami } from './functions/commands/login.js'
 import { dev } from './functions/commands/dev.js'
+import { serve } from './functions/commands/serve.js'
 import { dbMigrate } from './functions/commands/db-migrate.js'
 import { dbGenerate } from './functions/commands/db-generate.js'
 import { dbSeed } from './functions/commands/db-seed.js'
@@ -247,6 +248,26 @@ wireCLI({
         hmr: {
           description: 'Enable hot module reload',
           default: true,
+        },
+        console: {
+          description:
+            'Also serve the Pikku Console UI (optionally specify port, default 51442)',
+        },
+      },
+    }),
+    serve: pikkuCLICommand({
+      func: serve,
+      description:
+        'Start a server using the bundled bun or node runner (no watch, no codegen)',
+      options: {
+        port: {
+          description: 'Port for the server',
+          default: '3000',
+          short: 'p',
+        },
+        console: {
+          description:
+            'Also serve the Pikku Console UI (optionally specify port, default 51442)',
         },
       },
     }),

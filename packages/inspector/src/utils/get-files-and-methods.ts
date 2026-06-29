@@ -19,6 +19,7 @@ export type FilesAndMethods = {
   pikkuConfigFactory: Meta
   singletonServicesFactory: Meta
   wireServicesFactory: Meta
+  serverLifecycleFactory: Meta
 }
 
 export type FilesAndMethodsErrors = Map<string, PathToNameAndType>
@@ -92,6 +93,7 @@ export const getFilesAndMethods = (
     wireServicesFactories,
     singletonServicesFactories,
     configFactories,
+    serverLifecycleFactories,
   }: InspectorState,
   {
     configFileType,
@@ -144,6 +146,10 @@ export const getFilesAndMethods = (
       wireServicesFactories,
       wireServicesFactoryType,
       errors
+    ),
+    serverLifecycleFactory: getMetaTypes(
+      'ServerLifecycle',
+      serverLifecycleFactories
     ),
   }
 

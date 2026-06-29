@@ -33,6 +33,7 @@ describe('getPikkuFilesAndMethods', () => {
       configFactories: new Map([
         ['config-factory.ts', makeEntry('CoreConfig')],
       ]),
+      serverLifecycleFactories: new Map(),
     }
 
     const result = await getPikkuFilesAndMethods(state)
@@ -54,6 +55,7 @@ describe('getPikkuFilesAndMethods', () => {
       wireServicesFactories: new Map(),
       singletonServicesFactories: new Map(),
       configFactories: new Map(),
+      serverLifecycleFactories: new Map(),
     }
 
     await assert.rejects(() => getPikkuFilesAndMethods(emptyState), {

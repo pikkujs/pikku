@@ -63,6 +63,7 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
     addonRequiredParentServices: [],
     addonServerlessIncompatible: new Map(),
     configFactories: new Map(),
+    serverLifecycleFactories: new Map(),
     filesAndMethods: {},
     filesAndMethodsErrors: new Map(),
     typesLookup: new Map(),

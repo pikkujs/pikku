@@ -544,6 +544,16 @@ export type CreateConfig<
   RemainingArgs extends any[] = unknown[],
 > = (variables?: VariablesService, ...args: RemainingArgs) => Promise<Config>
 
+/** Server lifecycle hooks for startup and shutdown phases. */
+export type ServerLifecycle<
+  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
+> = {
+  beforeStart?: (services: SingletonServices) => void | Promise<void>
+  afterStart?: (services: SingletonServices) => void | Promise<void>
+  beforeStop?: (services: SingletonServices) => void | Promise<void>
+  afterStop?: (services: SingletonServices) => void | Promise<void>
+}
+
 /**
  * Represents the documentation for a route, including summary, description, tags, and errors.
  */

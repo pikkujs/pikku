@@ -32,15 +32,16 @@ import {
 } from '../db/local-db.js'
 import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
 import { createDevAIAgentRunner } from './dev-ai-runner.js'
+import { startConsoleServer } from './serve-console.js'
 
 export const dev = pikkuSessionlessFunc<
-  { port?: string; watch?: boolean; hmr?: boolean },
+  { port?: string; watch?: boolean; hmr?: boolean; console?: string | boolean },
   void
 >({
   remote: true,
   func: async (
     { logger, config, getInspectorState, variables, devServerRunner },
-    { port, watch, hmr },
+    { port, watch, hmr, console: consoleFlag },
     { rpc }
   ) => {
     const resolvedPort = parseInt(port || '3000', 10)
@@ -179,8 +180,6 @@ export const dev = pikkuSessionlessFunc<
 
     await loadUserBootstrap(pikkuDir)
 
-    workflowService.rewireQueueWorkers()
-
     const configModule = await loadUserModule(pikkuConfigFactory.file)
     const servicesModule = await loadUserModule(singletonServicesFactory.file)
     const userCreateConfig = configModule[pikkuConfigFactory.variable]
@@ -284,10 +283,15 @@ export const dev = pikkuSessionlessFunc<
       ...inMemoryServices,
       getInspectorState,
     })
-    pikkuState(null, 'package', 'singletonServices', {
-      ...singletonServices,
-      getInspectorState,
-    })
+    const resolvedServices = { ...singletonServices, getInspectorState }
+    pikkuState(null, 'package', 'singletonServices', resolvedServices)
+
+    const { serverLifecycleFactory } = inspectorState.filesAndMethods
+    const loadLifecycle = async () => {
+      if (!serverLifecycleFactory) return undefined
+      const m = await loadUserModule(serverLifecycleFactory.file)
+      return m[serverLifecycleFactory.variable]
+    }
 
     const pikkuServer = devServerRunner.createServer(
       {
@@ -299,9 +303,16 @@ export const dev = pikkuSessionlessFunc<
       logger
     )
 
+    const lifecycle = await loadLifecycle()
+
     await pikkuServer.init()
-    await schedulerService.start()
+    await lifecycle?.beforeStart?.(resolvedServices)
     await pikkuServer.start()
+    await lifecycle?.afterStart?.(resolvedServices)
+
+    const consoleServer = consoleFlag
+      ? await startConsoleServer(consoleFlag, hostname, logger)
+      : undefined
 
     let configWatcher: FSWatcher | undefined
     let watcher: FSWatcher | undefined
@@ -309,10 +320,13 @@ export const dev = pikkuSessionlessFunc<
     process.once('SIGINT', async () => {
       logger.info('Stopping dev server...')
       try {
+        await lifecycle?.beforeStop?.(resolvedServices)
         await stopSingletonServices()
         await configWatcher?.close()
         await watcher?.close()
         await pikkuServer.stop()
+        consoleServer?.close()
+        await lifecycle?.afterStop?.(resolvedServices)
       } finally {
         process.exit(0)
       }
