@@ -1,4 +1,4 @@
-import type { PikkuWire } from '../../types/core.types.js'
+import type { PikkuRawWire } from '../../types/core.types.js'
 import type {
   CoreMCPResource,
   CoreMCPPrompt,
@@ -217,7 +217,7 @@ async function runMCPPikkuFunc(
     const mcpSessionService = new PikkuSessionService(
       singletonServices.sessionStore
     )
-    const wire: PikkuWire = {
+    const wire: PikkuRawWire = {
       mcp: mcpWire,
       ...createMiddlewareSessionWireProps(mcpSessionService),
     }

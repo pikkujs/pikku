@@ -1,4 +1,4 @@
-import type { PikkuWire, CoreUserSession } from '../../types/core.types.js'
+import type { PikkuRawWire, CoreUserSession } from '../../types/core.types.js'
 import type { CoreScheduledTask } from './scheduler.types.js'
 import { getErrorResponse, PikkuError } from '../../errors/error-handler.js'
 import {
@@ -97,7 +97,7 @@ export async function runScheduledTask({
   }
 
   // Create the scheduled task wire object
-  const wire: PikkuWire = {
+  const wire: PikkuRawWire = {
     traceId: resolvedTraceId,
     scheduledTask: {
       name,

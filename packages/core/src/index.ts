@@ -28,6 +28,7 @@ export type {
   PickRequired,
   PikkuAIMiddlewareHooks,
   PikkuWire,
+  PikkuRawWire,
   PikkuWiringTypes,
   RequireAtLeastOne,
   SerializedError,

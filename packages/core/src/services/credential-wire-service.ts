@@ -1,6 +1,6 @@
 import type { CredentialService } from './credential-service.js'
 import { defaultPikkuUserIdResolver } from './pikku-user-id.js'
-import type { PikkuWire } from '../types/core.types.js'
+import type { PikkuRawWire } from '../types/core.types.js'
 
 export class PikkuCredentialWireService {
   private credentials: Record<string, unknown> = {}
@@ -9,7 +9,7 @@ export class PikkuCredentialWireService {
 
   constructor(
     private credentialService?: CredentialService,
-    private wire?: PikkuWire
+    private wire?: PikkuRawWire
   ) {}
 
   set(name: string, value: unknown): void {
