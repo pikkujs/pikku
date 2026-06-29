@@ -6,6 +6,14 @@ function hasTypeCast(node: ts.Node): boolean {
   return ts.isAsExpression(node) || ts.isTypeAssertionExpression(node)
 }
 
+function outerParent(node: ts.Node): ts.Node {
+  let p = node.parent
+  while (p && (ts.isAwaitExpression(p) || ts.isParenthesizedExpression(p))) {
+    p = p.parent
+  }
+  return p
+}
+
 function findCastArg(
   args: ts.NodeArray<ts.Expression>
 ): ts.Expression | undefined {
@@ -78,7 +86,7 @@ export function addRPCInvocations(
       ts.isIdentifier(expression.expression) &&
       expression.expression.text === 'rpc'
     ) {
-      if (hasTypeCast(node.parent)) {
+      if (hasTypeCast(outerParent(node))) {
         logger.critical(
           ErrorCode.RPC_INVOCATION_TYPE_CAST,
           `rpc.invoke() result is type-cast — remove the 'as' expression and rely on Pikku's generated types`

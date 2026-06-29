@@ -89,7 +89,6 @@ export enum ErrorCode {
   ADDON_WIRING_NOT_ALLOWED = 'PKU920',
   ADDON_CONTRACT_HANDLERS_NOT_ALLOWED = 'PKU921',
 
-  // RPC safety errors
   RPC_INVOCATION_TYPE_CAST = 'PKU940',
 }
 
