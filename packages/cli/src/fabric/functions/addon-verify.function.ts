@@ -60,7 +60,6 @@ export const FabricAddonVerify = pikkuSessionlessFunc({
       detail,
     })
 
-    // 1. package.json
     const pkgResult = await readJsonSafe<{
       name?: string
       version?: string
@@ -96,7 +95,6 @@ export const FabricAddonVerify = pikkuSessionlessFunc({
       checks.push(pass('files field', '"dist" included'))
     }
 
-    // 2. pikku.config.json with addon: true
     const pikkuConfigResult = await readJsonSafe<{ addon?: boolean }>(
       join(addonDir, 'pikku.config.json')
     )
@@ -113,7 +111,6 @@ export const FabricAddonVerify = pikkuSessionlessFunc({
       checks.push(pass('pikku.config.json', 'addon: true'))
     }
 
-    // 3. dist/ built
     if (!existsSync(join(addonDir, 'dist'))) {
       checks.push(fail('dist/', 'not found — run build first'))
       return {
@@ -126,7 +123,6 @@ export const FabricAddonVerify = pikkuSessionlessFunc({
     }
     checks.push(pass('dist/'))
 
-    // 4. dist/.pikku/ (generated metadata)
     const distPikku = join(addonDir, 'dist', '.pikku')
     if (!existsSync(distPikku)) {
       checks.push(
@@ -145,7 +141,6 @@ export const FabricAddonVerify = pikkuSessionlessFunc({
     }
     checks.push(pass('dist/.pikku/'))
 
-    // 5. At least one exported function
     const funcsMetaResult = await readJsonSafe<Record<string, unknown>>(
       join(distPikku, 'function', 'pikku-functions-meta.gen.json')
     )
@@ -168,20 +163,17 @@ export const FabricAddonVerify = pikkuSessionlessFunc({
       )
     }
 
-    // 6. JSON schemas (advisory — addons without custom types have none)
     const schemasDir = join(distPikku, 'schemas', 'schemas')
     checks.push(
       pass('schemas dir', existsSync(schemasDir) ? 'present' : 'empty (ok)')
     )
 
-    // 7. README
     if (!existsSync(join(addonDir, 'README.md'))) {
       checks.push(fail('README.md', 'missing'))
     } else {
       checks.push(pass('README.md'))
     }
 
-    // 8. icon (advisory)
     const consoleMetaResult = await readJsonSafe<{
       package?: { icon?: string }
     }>(join(distPikku, 'console', 'pikku-addon-meta.gen.json'))
