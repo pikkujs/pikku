@@ -49,7 +49,15 @@ export const betterAuthStatelessSession = (
       // below keeps the non-null type.
       const request = http.request
 
-      const secret = await (services as any).secrets?.getSecret(secretId)
+      let secret: string | undefined
+      try {
+        secret = await (services as any).secrets?.getSecret(secretId)
+      } catch {
+        services.logger?.error(
+          `betterAuthStatelessSession: secret '${secretId}' not found — session middleware skipped. Ensure ${secretId} is configured.`
+        )
+        return next()
+      }
       if (!secret) {
         return next()
       }
