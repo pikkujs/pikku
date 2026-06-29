@@ -102,4 +102,34 @@ describe('resolveDeployTarget', () => {
       'server'
     )
   })
+
+  test('defaultTarget: server overrides the serverless default', () => {
+    assert.strictEqual(
+      resolveDeployTarget({}, new Set(), '<unknown>', 'server'),
+      'server'
+    )
+  })
+
+  test('explicit deploy flag wins over defaultTarget', () => {
+    assert.strictEqual(
+      resolveDeployTarget({ deploy: 'serverless' }, new Set(), 'fn', 'server'),
+      'serverless'
+    )
+    assert.strictEqual(
+      resolveDeployTarget({ deploy: 'server' }, new Set(), 'fn', 'serverless'),
+      'server'
+    )
+  })
+
+  test('serverlessIncompatible still forces server regardless of defaultTarget', () => {
+    assert.strictEqual(
+      resolveDeployTarget(
+        { services: { services: ['metaService'] } as any },
+        new Set(['metaService']),
+        'fn',
+        'serverless'
+      ),
+      'server'
+    )
+  })
 })

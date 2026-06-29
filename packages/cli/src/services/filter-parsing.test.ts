@@ -67,3 +67,20 @@ test('parseCLIFilters validates target and excludeTarget values', () => {
   assert.deepStrictEqual(filters.excludeTarget, ['server'])
   assert.deepStrictEqual(filters.serverlessIncompatible, ['db'])
 })
+
+test('parseCLIFilters threads deploy.defaultTarget when a target filter is set', () => {
+  const filters = parse(
+    { target: 'server' },
+    { deploy: { providers: {}, defaultTarget: 'server' } }
+  )
+  assert.deepStrictEqual(filters.target, ['server'])
+  assert.strictEqual(filters.defaultTarget, 'server')
+})
+
+test('parseCLIFilters omits defaultTarget when no target filter is set', () => {
+  const filters = parse(
+    { tags: 'api' },
+    { deploy: { providers: {}, defaultTarget: 'server' } }
+  )
+  assert.strictEqual(filters.defaultTarget, undefined)
+})

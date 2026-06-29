@@ -263,6 +263,10 @@ export type InspectorFilters = {
   // to 'server'. Sourced from `pikku.config.json` →
   // `deploy.serverlessIncompatible`. Used only when deploy filters are set.
   serverlessIncompatible?: string[]
+  // Default deploy target for functions without an explicit `deploy` flag.
+  // Sourced from `pikku.config.json` → `deploy.defaultTarget`. Used only
+  // when deploy filters are set. Defaults to 'serverless'.
+  defaultTarget?: 'serverless' | 'server'
 }
 
 export type AddonConfig = {

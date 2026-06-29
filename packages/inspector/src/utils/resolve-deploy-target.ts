@@ -29,7 +29,8 @@ export class IncompatibleDeployTargetError extends Error {
  *      - throw if the function explicitly declares `deploy: 'serverless'`
  *      - otherwise target is 'server'
  *   2. Explicit `funcMeta.deploy: 'serverless' | 'server'`
- *   3. Default 'serverless'
+ *   3. `defaultTarget` (sourced from `pikku.config.json` →
+ *      `deploy.defaultTarget`, falling back to 'serverless')
  *
  * Used both by the per-unit deploy analyzer (when bucketing functions
  * into deployment units) and by `filterInspectorState` (when
@@ -39,7 +40,8 @@ export class IncompatibleDeployTargetError extends Error {
 export function resolveDeployTarget(
   funcMeta: Pick<FunctionMeta, 'deploy' | 'services'>,
   serverlessIncompatible: Set<string>,
-  functionName = '<unknown>'
+  functionName = '<unknown>',
+  defaultTarget: 'serverless' | 'server' = 'serverless'
 ): 'serverless' | 'server' {
   // Service compatibility wins over the explicit flag — a serverless
   // bundle of a function that needs (e.g.) node:fs would crash at runtime.
@@ -59,5 +61,5 @@ export function resolveDeployTarget(
 
   if (funcMeta.deploy === 'server') return 'server'
   if (funcMeta.deploy === 'serverless') return 'serverless'
-  return 'serverless'
+  return defaultTarget
 }
