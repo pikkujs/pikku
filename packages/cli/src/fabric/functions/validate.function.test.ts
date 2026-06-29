@@ -85,11 +85,7 @@ async function makeValidProject(root: string) {
     'CREATE TABLE audit (eventId TEXT PRIMARY KEY);\n',
     'utf8'
   )
-  await writeFile(
-    join(root, 'db', 'sqlite-seed.sql'),
-    '-- seed data\n',
-    'utf8'
-  )
+  await writeFile(join(root, 'db', 'sqlite-seed.sql'), '-- seed data\n', 'utf8')
   await mkdir(join(root, 'packages', 'mantine-theme'), {
     recursive: true,
   })
@@ -101,11 +97,27 @@ async function makeValidProject(root: string) {
     '.pikku\n.pikku-runtime\n.opencode\n.reports\n__fabric_scaffold.vite.config.mjs\n*.gen.ts\n*.gen.js\n',
     'utf8'
   )
-  await writeFile(join(root, 'db', 'annotations.ts'), '// db annotations\n', 'utf8')
+  await writeFile(
+    join(root, 'db', 'annotations.ts'),
+    '// db annotations\n',
+    'utf8'
+  )
   await mkdir(join(root, 'knowledge'), { recursive: true })
-  await writeFile(join(root, 'knowledge', 'design-language.md'), '# Design Language\n', 'utf8')
-  await writeFile(join(root, 'knowledge', 'security.md'), '# Security\n', 'utf8')
-  await writeFile(join(root, 'knowledge', 'technology.md'), '# Technology\n', 'utf8')
+  await writeFile(
+    join(root, 'knowledge', 'design-language.md'),
+    '# Design Language\n',
+    'utf8'
+  )
+  await writeFile(
+    join(root, 'knowledge', 'security.md'),
+    '# Security\n',
+    'utf8'
+  )
+  await writeFile(
+    join(root, 'knowledge', 'technology.md'),
+    '# Technology\n',
+    'utf8'
+  )
 }
 
 describe('pikku fabric validate', () => {
@@ -357,7 +369,9 @@ describe('pikku fabric validate', () => {
         assert.strictEqual(finding!.severity, 'warn') // warn — does not block ok
         assert.ok(finding!.message.includes('.opencode'))
         assert.ok(finding!.message.includes('.pikku-runtime'))
-        assert.ok(finding!.message.includes('__fabric_scaffold.vite.config.mjs'))
+        assert.ok(
+          finding!.message.includes('__fabric_scaffold.vite.config.mjs')
+        )
       } finally {
         await rm(tmp, { recursive: true, force: true })
       }
@@ -509,7 +523,10 @@ describe('pikku fabric validate', () => {
       try {
         await makeValidProject(tmp)
         await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
-          imports: { '#pikku': './.pikku/pikku-types.gen.ts' },
+          imports: {
+            '#pikku': './.pikku/pikku-types.gen.ts',
+            '#pikku/*': './.pikku/*',
+          },
           dependencies: {
             '@pikku/cloudflare': '^0.12.6',
             '@pikku/schema-cfworker': '^0.12.0',
@@ -596,10 +613,9 @@ describe('pikku fabric validate', () => {
       try {
         await makeValidProject(tmp)
         // declare an agent via the generated agent meta, but omit the AI deps
-        await mkdir(
-          join(tmp, 'packages', 'functions', '.pikku', 'agent'),
-          { recursive: true }
-        )
+        await mkdir(join(tmp, 'packages', 'functions', '.pikku', 'agent'), {
+          recursive: true,
+        })
         await writeJson(
           join(
             tmp,
@@ -1360,12 +1376,21 @@ describe('i18n + @pikku/mantine convergence — Paraglide (live validate.functio
     try {
       await makeValidProject(tmp)
       await makeApp(tmp, {
-        deps: { react: '^19.0.0', i18next: '^23.0.0', 'react-i18next': '^15.0.0' },
+        deps: {
+          react: '^19.0.0',
+          i18next: '^23.0.0',
+          'react-i18next': '^15.0.0',
+        },
         paraglideWired: true,
       })
       const result = await runLiveValidate(tmp)
-      const f = result.findings.find((f) => f.id === 'app-legacy-i18next-dep-web')
-      assert.ok(f, `expected app-legacy-i18next-dep-web, got: ${JSON.stringify(result.findings.map((x) => x.id))}`)
+      const f = result.findings.find(
+        (f) => f.id === 'app-legacy-i18next-dep-web'
+      )
+      assert.ok(
+        f,
+        `expected app-legacy-i18next-dep-web, got: ${JSON.stringify(result.findings.map((x) => x.id))}`
+      )
       assert.strictEqual(f!.severity, 'error')
     } finally {
       await rm(tmp, { recursive: true, force: true })
@@ -1385,8 +1410,13 @@ describe('i18n + @pikku/mantine convergence — Paraglide (live validate.functio
         },
       })
       const result = await runLiveValidate(tmp)
-      const f = result.findings.find((f) => f.id === 'app-legacy-i18n-usage-web')
-      assert.ok(f, `expected app-legacy-i18n-usage-web, got: ${JSON.stringify(result.findings.map((x) => x.id))}`)
+      const f = result.findings.find(
+        (f) => f.id === 'app-legacy-i18n-usage-web'
+      )
+      assert.ok(
+        f,
+        `expected app-legacy-i18n-usage-web, got: ${JSON.stringify(result.findings.map((x) => x.id))}`
+      )
       assert.strictEqual(f!.severity, 'error')
     } finally {
       await rm(tmp, { recursive: true, force: true })
@@ -1401,8 +1431,13 @@ describe('i18n + @pikku/mantine convergence — Paraglide (live validate.functio
         deps: { react: '^19.0.0', '@pikku/mantine': '^0.12.5' },
       })
       const result = await runLiveValidate(tmp)
-      const f = result.findings.find((f) => f.id === 'app-missing-paraglide-web')
-      assert.ok(f, `expected app-missing-paraglide-web, got: ${JSON.stringify(result.findings.map((x) => x.id))}`)
+      const f = result.findings.find(
+        (f) => f.id === 'app-missing-paraglide-web'
+      )
+      assert.ok(
+        f,
+        `expected app-missing-paraglide-web, got: ${JSON.stringify(result.findings.map((x) => x.id))}`
+      )
       assert.strictEqual(f!.severity, 'error')
     } finally {
       await rm(tmp, { recursive: true, force: true })
@@ -1415,8 +1450,13 @@ describe('i18n + @pikku/mantine convergence — Paraglide (live validate.functio
       await makeValidProject(tmp)
       await makeApp(tmp, { deps: PARAGLIDE_DEPS }) // no paraglideWired
       const result = await runLiveValidate(tmp)
-      const f = result.findings.find((f) => f.id === 'app-paraglide-not-wired-web')
-      assert.ok(f, `expected app-paraglide-not-wired-web, got: ${JSON.stringify(result.findings.map((x) => x.id))}`)
+      const f = result.findings.find(
+        (f) => f.id === 'app-paraglide-not-wired-web'
+      )
+      assert.ok(
+        f,
+        `expected app-paraglide-not-wired-web, got: ${JSON.stringify(result.findings.map((x) => x.id))}`
+      )
       assert.strictEqual(f!.severity, 'error')
     } finally {
       await rm(tmp, { recursive: true, force: true })
