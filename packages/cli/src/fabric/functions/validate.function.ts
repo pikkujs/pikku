@@ -381,6 +381,10 @@ export async function runValidate(
       '.pikku-runtime',
       '.reports',
       '__fabric_scaffold.vite.config.mjs',
+      'db/annotations.ts',
+      'knowledge/design-language.md',
+      'knowledge/security.md',
+      'knowledge/technology.md',
     ]
     const gitignorePath = join(root, '.gitignore')
     const gitignoreText = await readTextSafe(gitignorePath)
