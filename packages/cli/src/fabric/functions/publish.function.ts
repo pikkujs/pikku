@@ -35,7 +35,7 @@ export const FabricPublish = pikkuSessionlessFunc({
   output: FabricPublishOutput,
   func: async (_services, { dir, apiUrl: apiUrlOverride }, { rpc }) => {
     const verification = await rpc.invoke('FabricAddonVerify', { dir })
-    renderAddonVerify(verification)
+    renderAddonVerify(undefined, verification)
     if (!verification.ok) {
       throw new Error(
         'Addon verification failed — fix the errors above before publishing.'

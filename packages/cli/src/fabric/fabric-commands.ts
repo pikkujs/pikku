@@ -66,7 +66,6 @@ import {
   FabricAddonVerify,
   renderAddonVerify,
 } from './functions/addon-verify.function.js'
-import { removed } from './lib/output.js'
 
 export const fabricCommands = defineCLICommands({
   validate: pikkuCLICommand({
