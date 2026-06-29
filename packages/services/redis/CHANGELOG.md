@@ -1,3 +1,16 @@
+## 0.12.9
+
+### Patch Changes
+
+- 5c0ff0f: Fix `getRunHistory` dropping step provenance (`fromStepName`). The value was persisted on the step row and used by the graph planner, but `getRunHistory` built its rows from the per-attempt history and never carried `fromStepName` through — so run history (and any timeline reconstructed from it) reported no predecessors. Redis and Kysely `getRunHistory` now return `fromStepName`. Also adds the missing `from_step_name` column (+ backfill) to the Kysely workflow mirror's `workflow_step` schema and persists it on mirror inserts, so a mirror-side history has identical provenance.
+- Updated dependencies [4be205f]
+- Updated dependencies [061c717]
+- Updated dependencies [2c55e13]
+- Updated dependencies [c745c26]
+- Updated dependencies [57900b5]
+- Updated dependencies [72694f6]
+  - @pikku/core@0.12.39
+
 ## 0.12.8
 
 ### Patch Changes

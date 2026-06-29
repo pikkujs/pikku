@@ -1,3 +1,84 @@
+## 0.12.27
+
+### Patch Changes
+
+- 41ff485: fix(inspector): register functions in a dedicated pass before wiring resolution
+
+  The deterministic-codegen change sorted `program.getSourceFiles()` so generated
+  output is byte-identical across runs. But function registration (`addFunctions`)
+  ran in the same sweep as wiring resolution (`visitRoutes`), so once traversal
+  became alphabetical, a wiring file could be visited before the file that defines
+  the function it references — e.g. an addon contract (`hello.contracts.ts`)
+  before `hello.functions.ts` — producing a spurious `PKU559` ("No function
+  metadata found for channel handler").
+
+  Function registration now runs in its own pass (`visitFunctions`) over the
+  sorted files, completing before any transport/wiring resolution, so resolution
+  no longer depends on source-file order. Also sort the `register.gen.ts` schema
+  imports (driven by a `Set`) so that file is stable too, and opt the PII-check
+  tests into the now-opt-in classification scan.
+
+- d2078c8: fix(inspector): make codegen output deterministic across runs
+
+  Two sources of non-reproducible `pikku all` output are fixed:
+  1. **Random placeholder ids.** Anonymous/unnamed functions and inline (non-exported) permissions were given a `__temp_${randomUUID()}` id, so a referenced-but-not-exported `pikkuPermission` const (e.g. `permissions: { admin: [requiresPlatformAdmin] }`) produced a fresh UUID in the generated meta on every run. The placeholder is now derived deterministically from the call expression's source location (relative path + start offset), still `__temp_`-prefixed so downstream name resolution is unchanged.
+  2. **Unstable file-traversal order.** The two inspector sweeps iterated `program.getSourceFiles()` in glob + import-graph order, which varies run to run, so meta keys (and anything serialized in insertion order) were emitted in a different order each time — making a plain `git diff` of generated files look like functions were appearing/vanishing when the set was identical. Source files are now sorted by file name before the sweeps.
+
+  Net effect: byte-identical generated output across repeated runs with no source changes (verified across the full `.pikku` tree of a 331-function project).
+
+- e6fd12b: perf(inspector,cli): persist generated TS schemas to disk across runs
+
+  `generateAllSchemas` already cached its `ts-json-schema-generator` output
+  in-memory (keyed by the generated custom-types content), so the 2nd and 3rd
+  inspector passes within a single `pikku all` were near-free. But the cache
+  never survived the process, so every fresh `pikku all` paid the full cold cost
+  of building a second TS program + running ts-json-schema-generator — on a
+  331-function project that's ~2.2s, the single largest line item of a run.
+
+  The cache is now also persisted to disk (`node_modules/.cache/pikku/ts-schemas.json`,
+  gitignored by convention), keyed by a hash of the custom-types content plus the
+  generator options that affect output. A warm `pikku all` whose function types
+  are unchanged loads the schemas from disk and skips schema generation entirely;
+  the cold first pass drops by ~3.4s in practice (it also primes the in-memory
+  cache for the re-inspect passes). Zod schemas are still regenerated every run
+  (already ~1ms each). Output is byte-identical to a cold run (verified across the
+  full generated tree). The key is derived from the same content the in-memory
+  cache uses, so any type change busts it. It also folds in the `@pikku/inspector`
+  package version, so upgrading the inspector (the channel a schema-format change
+  ships through) auto-invalidates every cache; `SCHEMA_CACHE_VERSION` remains a
+  manual lever for in-development format changes between releases.
+
+  Opt-out: omit `schemaConfig.cacheDir` (the CLI sets it by default).
+
+- 244d892: perf(cli,inspector): make the data-classification scan opt-in (`pikku all --security`)
+
+  `pikku all` was spending the bulk of its wall-clock on the data-classification
+  leak check. For every function, on every inspector pass, it called
+  `checker.getReturnTypeOfSignature` to infer the handler's return type and scan it
+  for `Private`/`Pii`/`Secret` brands — the single most expensive type-checker
+  operation. On a 331-function project that was ~7.3s (≈half the total), repeated
+  across all three inspector passes, even though the scan only emits diagnostics
+  and never affects generated output.
+
+  The scan is a security lint, not codegen, so it's now **off by default** and gated
+  behind a new `--security` flag (or `security: true` in the config). A plain
+  `pikku all` skips return-type inference entirely; run `pikku all --security`
+  (optionally with `--fail-on-error`) in CI/pre-deploy to enforce it. On the
+  331-function project this cut `pikku all` from ~15.3s to ~9.6s.
+
+  Also: the `all` command now reads back the run's recorded per-step durations and,
+  under `PIKKU_TIMING=1`, prints a slowest-first timing table — making it easy to
+  see where codegen time goes without adding any hot-path instrumentation.
+
+- 940c253: Populate `plannedSteps` and `deterministic` on serialized DSL workflow graphs. For a DSL workflow with no loops (fanout), the inspector now records every named step in source order, so a UI can render the run's step skeleton up front without executing it or hand-listing steps. `deterministic` is `true` only for a flat, loopless, branch-free workflow (exact sequence known ahead of time); a branchy-but-loopless workflow lists all possible steps with `deterministic: false`; any fanout makes the count runtime-dependent so neither field is emitted (just `deterministic: false`). Only `source: 'dsl'` workflows are planned — `complex` step trees omit inline branches and flatten loops, so their plans would misreport determinism. The runtime already threads these fields from workflow meta onto each run via `getRun`.
+- Updated dependencies [4be205f]
+- Updated dependencies [061c717]
+- Updated dependencies [2c55e13]
+- Updated dependencies [c745c26]
+- Updated dependencies [57900b5]
+- Updated dependencies [72694f6]
+  - @pikku/core@0.12.39
+
 ## 0.12.26
 
 ### Patch Changes

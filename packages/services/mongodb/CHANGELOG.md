@@ -1,5 +1,29 @@
 # @pikku/mongodb
 
+## 0.12.8
+
+### Patch Changes
+
+- 72694f6: feat(workflow): expose per-step attempt count + record running/succeeded/failed timestamps
+
+  `getRunStatus` now returns `attempts` (the latest attempt count) per step, so
+  consumers can show retry counts without a second history query. It already
+  computed `duration` from `runningAt`/`succeededAt`, but the kysely and mongodb
+  workflow stores only stamped those timestamps on the _insert_ path — the
+  `running` / `succeeded` / `failed` status transitions updated the history row's
+  status without setting `runningAt` / `succeededAt` / `failedAt`, so `duration`
+  was always undefined. The transitions now stamp the matching timestamp, so step
+  duration is populated for kysely- and mongodb-backed runs. (Redis already
+  stamped on transition.) A shared service-suite test guards both behaviours.
+
+- Updated dependencies [4be205f]
+- Updated dependencies [061c717]
+- Updated dependencies [2c55e13]
+- Updated dependencies [c745c26]
+- Updated dependencies [57900b5]
+- Updated dependencies [72694f6]
+  - @pikku/core@0.12.39
+
 ## 0.12.7
 
 ### Patch Changes
