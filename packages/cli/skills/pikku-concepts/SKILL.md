@@ -53,42 +53,32 @@ The function never imports Express, never reads `req.body`, never touches `ws.se
 
 ## Concept Mapping: Generic Backend → Pikku
 
-| Generic Backend Concept                 | Pikku Equivalent                                                | Skill             |
-| --------------------------------------- | --------------------------------------------------------------- | ----------------- |
-| **Controller / Route Handler**          | `pikkuFunc` / `pikkuSessionlessFunc`                            | (this skill)      |
-| **Route definition** (`GET /users/:id`) | `wireHTTP({ route, method, func })`                             | `pikku-http`      |
-| **Middleware** (Express/Koa-style)      | `pikkuMiddleware`                                               | `pikku-security`  |
-| **Auth Guard / Auth Middleware**        | `authBearer()` / `authCookie()` / `authApiKey()`                | `pikku-security`  |
-| **Authorization / Permissions**         | `pikkuPermission` / `pikkuAuth`                                 | `pikku-security`  |
-| **DTO / Request Validation**            | Standard Schema (Zod, Valibot, ArkType)                         | (this skill)      |
-| **Dependency Injection**                | `pikkuServices` (singleton) + `pikkuWireServices` (per-request) | `pikku-services`  |
-| **WebSocket handlers**                  | `wireChannel`                                                   | `pikku-websocket` |
-| **Job Queue workers**                   | `wireQueueWorker`                                               | `pikku-queue`     |
-| **Cron / Scheduled tasks**              | `wireScheduler`                                                 | `pikku-cron`      |
-| **Module / Feature grouping**           | Tags + wiring files                                             | (this skill)      |
-| **Error handling**                      | Throw typed errors (`NotFoundError`, `ForbiddenError`)          | (this skill)      |
-| **Type-safe API client**                | `npx pikku prebuild` generates clients                          | (this skill)      |
-| **Secrets / Config**                    | `wireSecret`, `wireVariable`, `services.variables`              | `pikku-config`    |
+Controllers/routes → `pikkuFunc`; middleware/auth/permissions → `pikku-security`; DI → `pikku-services`; transports (HTTP/WS/queue/cron) → their `wire*` + skill. For the full Generic Backend → Pikku mapping table (with side-by-side code examples), read `references/concept-mapping.md`.
 
 ## Functions
 
 Three main function types:
 
 ```typescript
-// Requires authentication — receives session in wire context
-const updateTodo = pikkuFunc<UpdateInput, TodoOutput>(
-  async (services, data, wire) => {
+// Requires authentication — receives session in wire context.
+// input/output are Zod schemas; the data + return types are inferred from them.
+const updateTodo = pikkuFunc({
+  input: UpdateTodoInput,
+  output: TodoOutput,
+  func: async (services, data, wire) => {
     const session = await wire.session.get()
     return services.todoStore.update(data.id, data)
-  }
-)
+  },
+})
 
 // No authentication required
-const listTodos = pikkuSessionlessFunc<ListInput, TodoListOutput>(
-  async (services, data) => {
+const listTodos = pikkuSessionlessFunc({
+  input: ListTodosInput,
+  output: TodoListOutput,
+  func: async (services, data) => {
     return { todos: services.todoStore.list(data.filters) }
-  }
-)
+  },
+})
 
 // No input or output (for scheduled tasks, lifecycle hooks)
 const cleanup = pikkuVoidFunc(async (services) => {
@@ -96,23 +86,7 @@ const cleanup = pikkuVoidFunc(async (services) => {
 })
 ```
 
-Config object form (recommended):
-
-```typescript
-const createTodo = pikkuSessionlessFunc({
-  title: 'Create Todo',
-  description: 'Create a new todo item',
-  input: CreateTodoInputSchema,
-  output: CreateTodoOutputSchema,
-  func: async ({ logger, todoStore }, { title, priority }) => {
-    const todo = todoStore.createTodo(title, priority)
-    logger.info(`Created todo: ${todo.id}`)
-    return { todo }
-  },
-})
-```
-
-Full config options:
+Services can be destructured inline in the `func` signature (e.g. `async ({ logger, todoStore }, { title }) => ...`). Full config options:
 
 ```typescript
 pikkuFunc({
@@ -243,33 +217,7 @@ expect(result.todos).toHaveLength(3)
 
 ## Available Packages
 
-### Runtime Adapters
-
-| Package                       | Use Case                              |
-| ----------------------------- | ------------------------------------- |
-| `@pikku/express-server`       | Express standalone server             |
-| `@pikku/express-middleware`   | Express as middleware in existing app |
-| `@pikku/fastify-server`       | Fastify standalone                    |
-| `@pikku/fastify-plugin`       | Fastify plugin                        |
-| `@pikku/next`                 | Next.js API routes                    |
-| `@pikku/aws-lambda`           | AWS Lambda handlers                   |
-| `@pikku/cloudflare`           | Cloudflare Workers                    |
-| `@pikku/uws-server`           | uWebSockets.js (high perf)            |
-| `@pikku/modelcontextprotocol` | MCP server                            |
-
-### Service Packages
-
-| Package                  | Provides                                             |
-| ------------------------ | ---------------------------------------------------- |
-| `@pikku/jose`            | JWT (sign/verify) via jose library                   |
-| `@pikku/schema-ajv`      | Schema validation via AJV                            |
-| `@pikku/schema-cfworker` | Schema validation for Cloudflare                     |
-| `@pikku/pino`            | Structured logging via Pino                          |
-| `@pikku/kysely`          | Type-safe SQL via Kysely (PostgreSQL, SQLite, MySQL) |
-| `@pikku/redis`           | Redis client                                         |
-| `@pikku/queue-bullmq`    | Job queues via BullMQ                                |
-| `@pikku/queue-pg-boss`   | Job queues via PgBoss                                |
-| `@pikku/aws-services`    | AWS SDK (SQS, DynamoDB, etc.)                        |
+Pikku ships runtime adapters (`@pikku/express-server`, `@pikku/fastify-server`, `@pikku/next`, `@pikku/aws-lambda`, `@pikku/cloudflare`, `@pikku/uws-server`, `@pikku/modelcontextprotocol`, ...) and service packages (`@pikku/jose`, `@pikku/schema-ajv`, `@pikku/pino`, `@pikku/kysely`, `@pikku/redis`, `@pikku/queue-bullmq`, `@pikku/queue-pg-boss`, ...). For the full list with use cases, read `references/packages.md`.
 
 ## Key Differences from Traditional Frameworks
 

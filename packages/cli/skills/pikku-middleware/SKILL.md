@@ -77,20 +77,17 @@ wireHTTP({
 
 ## Global Middleware (`addGlobalMiddleware`)
 
-`addGlobalMiddleware` registers middleware that runs before everything else — across every wire type: HTTP, Queue, Channel, Trigger, Scheduler, Workflow, Agent, CLI, MCP. Use it for cross-cutting concerns like telemetry that must wrap every invocation regardless of transport.
+Runs before everything else, across every wire type: HTTP, Queue, Channel, Trigger, Scheduler, Workflow, Agent, CLI, MCP. Use it for cross-cutting concerns (e.g. telemetry) that must wrap every invocation regardless of transport.
 
 ```typescript
 import { addGlobalMiddleware } from '@pikku/core'
 import { telemetryOuter, telemetryInner } from '@pikku/core/middleware'
 
-// Outer telemetry: wraps the full call (highest priority)
-addGlobalMiddleware([telemetryOuter({ environmentId: env.STAGE_ID })])
-
-// Inner telemetry: closest to the function body (lowest priority)
-addGlobalMiddleware([telemetryInner({ environmentId: env.STAGE_ID })])
+addGlobalMiddleware([telemetryOuter({ environmentId: env.STAGE_ID })])  // wraps the full call
+addGlobalMiddleware([telemetryInner({ environmentId: env.STAGE_ID })])  // closest to the function body
 ```
 
-`telemetryOuter` ships with `priority: 'highest'` and `telemetryInner` with `priority: 'lowest'` — so even if both are added in the same call, priority sorting places outer first regardless of array order.
+`telemetryOuter` ships with `priority: 'highest'`, `telemetryInner` with `priority: 'lowest'` — so priority sorting places outer first regardless of array/call order.
 
 ## HTTP & Prefix Middleware (`addHTTPMiddleware`)
 
@@ -165,15 +162,13 @@ const earlyMiddleware = pikkuMiddleware({
 })
 ```
 
-Within the same priority level, registration order is preserved. Priority is the primary sort key — use it when a middleware must run before or after others regardless of registration order (e.g. telemetry wrapping everything, session extraction before auth checks).
+Priority is the primary sort key; within the same level, registration order is preserved. Use priority when a middleware must run before/after others regardless of registration order (e.g. telemetry wrapping everything, session extraction before auth checks).
 
-## Common Patterns
+## Service-to-Service Bearer Auth (canonical pattern)
 
-### Service-to-Service Bearer Auth
+A server that exposes RPCs only to a trusted caller (e.g. an API calling a machine-agent). Auth lives in a tag middleware — NOT in the function body. Authorization/permission checks belong in the `permissions` field (see `pikku-permissions`), never inside `func`.
 
-The canonical pattern for a server that exposes RPCs only to a trusted caller (e.g. an API calling a machine-agent):
-
-**On the server (the service being called):**
+**On the server (the service being called):** tag the function, register a `pikkuMiddleware` that reads the `Authorization` header on that tag.
 
 ```typescript
 // lib/host-token.ts
@@ -217,63 +212,11 @@ export const myFunc = pikkuSessionlessFunc({
 })
 ```
 
-**On the client (the caller):**
+**On the client (the caller):** use the generated `RPCInvoke` type — never hand-write a `fetch` wrapper's types. See `references/middleware-patterns.md`.
 
-Use the generated `RPCInvoke` type from `.pikku/rpc/pikku-rpc-wirings-map.gen.d.ts` — never hand-write the input/output types:
+## More patterns
 
-```typescript
-import type { RPCInvoke } from '../../backends/my-service/.pikku/rpc/pikku-rpc-wirings-map.gen.d.js'
-
-export function getServiceRPC(baseUrl: string, token: string): RPCInvoke {
-  return async (name: string, data?: unknown) => {
-    const res = await fetch(`${baseUrl}/rpc/${String(name)}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ data: data ?? {} }),
-    })
-    if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      throw new Error(`rpc ${String(name)} failed: ${res.status} ${text}`)
-    }
-    return res.json()
-  } as RPCInvoke
-}
-```
-
-### Session-Setting Middleware
-
-```typescript
-const apiKeyAuth = pikkuMiddleware(async ({ kysely }, { http, setSession, session }, next) => {
-  if (session) return next()  // already authenticated
-
-  const header = http?.request?.header?.('x-api-key')
-  if (!header) return next()
-
-  const row = await kysely.selectFrom('apiKey').select('userId').where('key', '=', header).executeTakeFirst()
-  if (row) setSession?.({ userId: row.userId })
-
-  return next()
-})
-
-addTagMiddleware('api-key-auth', [apiKeyAuth])
-```
-
-Functions tagged `'api-key-auth'` with `auth: true` reject requests without a valid key; those with `auth: false` can inspect the session but won't reject.
-
-### Request Logging / Audit
-
-```typescript
-const auditLog = pikkuMiddleware(async ({ logger, db }, wire, next) => {
-  const start = Date.now()
-  await next()
-  await db.createAuditLog({ duration: Date.now() - start })
-})
-
-addHTTPMiddleware('/admin/*', [auditLog])
-```
+`references/middleware-patterns.md` covers the client-side `RPCInvoke` caller, session-setting middleware (set a session from an API key), and request logging / audit middleware.
 
 ## After Changes
 

@@ -102,65 +102,7 @@ export const createWireServices = pikkuAddonWireServices(
 npx pikku new addon
 ```
 
-### Package Structure
-
-```text
-my-addon/
-├── package.json               # Exports .pikku/* and dist/
-├── pikku.config.json          # addon: true + metadata
-├── tsconfig.json              # #pikku path mapping
-├── src/
-│   ├── services.ts            # createSingletonServices (required)
-│   └── functions/
-│       └── *.function.ts      # Function definitions
-├── types/
-│   └── application-types.d.ts # SingletonServices interface
-└── .pikku/                    # Generated (gitignored)
-```
-
-### pikku.config.json
-
-```json
-{
-  "tsconfig": "./tsconfig.json",
-  "srcDirectories": ["src", "types"],
-  "outDir": "./.pikku",
-  "addon": true,
-  "node": {
-    "displayName": "My Addon",
-    "description": "What this addon does",
-    "categories": ["General"]
-  }
-}
-```
-
-### package.json (key fields)
-
-```json
-{
-  "name": "@my-org/addon-todos",
-  "imports": {
-    "#pikku": "./.pikku/pikku-types.gen.ts",
-    "#pikku/*": "./.pikku/*"
-  },
-  "exports": {
-    ".": { "types": "./dist/src/index.d.ts", "import": "./dist/src/index.js" },
-    "./.pikku/*": "./.pikku/*",
-    "./.pikku/pikku-metadata.gen.json": "./.pikku/pikku-metadata.gen.json",
-    "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js": {
-      "types": "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
-    }
-  },
-  "files": ["dist", ".pikku"],
-  "peerDependencies": {
-    "@pikku/core": "*"
-  },
-  "scripts": {
-    "pikku": "pikku all",
-    "build": "tsc && cp -r .pikku dist/"
-  }
-}
-```
+This generates `package.json` (exports `.pikku/*` + `dist/`), `pikku.config.json` (`addon: true`), `tsconfig.json` (`#pikku` path mapping), `src/services.ts`, `src/functions/`, and `types/application-types.d.ts`. For the full file contents/exports you rarely hand-edit, read `references/addon-package-manifest.md`.
 
 ### Services
 
@@ -200,6 +142,13 @@ export const addTodo = pikkuSessionlessFunc({
     return todoStore.add(title)
   },
 })
+```
+
+Optional approval gating (e.g. for agent tools) — add `approvalRequired: true` plus an `approvalDescription` resolver:
+
+```typescript
+approvalRequired: true,
+approvalDescription: async (_services, { title }) => `Add a todo called "${title}"`,
 ```
 
 ### Build
@@ -251,6 +200,23 @@ wireHTTP({
 })
 ```
 
+Or batch multiple addon routes with `defineHTTPRoutes` + `wireHTTPRoutes`:
+
+```typescript
+import { wireHTTPRoutes, defineHTTPRoutes, addon } from '#pikku'
+
+const todoRoutes = defineHTTPRoutes({
+  tags: ['todos'],
+  auth: false,
+  routes: {
+    list: { method: 'get', route: '/todos', func: addon('todos:listTodos') },
+    add: { method: 'post', route: '/todos', func: addon('todos:addTodo') },
+  },
+})
+
+wireHTTPRoutes({ basePath: '/api', routes: { todos: todoRoutes } })
+```
+
 ### Use in AI Agents
 
 ```typescript
@@ -268,63 +234,5 @@ export const todoAgent = pikkuAIAgent({
     addon('todos:deleteTodo'),
   ],
   maxSteps: 5,
-})
-```
-
-## Complete Example
-
-```typescript
-// --- ADDON PACKAGE: @my-org/addon-todos ---
-
-// src/services.ts
-import { pikkuAddonServices } from '#pikku'
-
-export const createSingletonServices = pikkuAddonServices(async () => {
-  return { todoStore: new TodoStore() }
-})
-
-// src/functions/listTodos.function.ts
-export const listTodos = pikkuSessionlessFunc({
-  description: 'List all todos',
-  func: async ({ todoStore }) => {
-    return { todos: todoStore.list() }
-  },
-})
-
-// src/functions/addTodo.function.ts
-export const addTodo = pikkuSessionlessFunc({
-  description: 'Add a new todo',
-  approvalRequired: true,
-  approvalDescription: async (_services, { title }) => {
-    return `Add a todo called "${title}"`
-  },
-  input: z.object({ title: z.string() }),
-  output: z.object({ id: z.string(), title: z.string() }),
-  func: async ({ todoStore }, { title }) => {
-    return todoStore.add(title)
-  },
-})
-
-// --- CONSUMING PROJECT ---
-
-// wirings/addons.wirings.ts
-import { wireAddon } from '#pikku'
-wireAddon({ name: 'todos', package: '@my-org/addon-todos' })
-
-// wirings/api.http.ts
-import { wireHTTPRoutes, defineHTTPRoutes, addon } from '#pikku'
-
-const todoRoutes = defineHTTPRoutes({
-  tags: ['todos'],
-  auth: false,
-  routes: {
-    list: { method: 'get', route: '/todos', func: addon('todos:listTodos') },
-    add: { method: 'post', route: '/todos', func: addon('todos:addTodo') },
-  },
-})
-
-wireHTTPRoutes({
-  basePath: '/api',
-  routes: { todos: todoRoutes },
 })
 ```

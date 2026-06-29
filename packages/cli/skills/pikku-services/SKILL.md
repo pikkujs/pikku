@@ -18,7 +18,7 @@ Use this skill as an execution checklist, not reference material.
 4. Validate with the narrowest relevant command first, then run `pikku-verify` or `pikku all` when functions, wirings, schemas, or generated clients may have changed.
 5. If validation fails, fix the source cause and rerun validation. Do not paper over generated errors by editing generated files.
 
-Pikku uses factory functions for dependency injection. Singleton services are created once at startup. Wire services are created fresh per request/job/command.
+Pikku uses factory functions for dependency injection. Singleton services are created once at startup; wire services are created fresh per request/job/command. See `pikku-concepts` for the core mental model.
 
 ## Before You Start
 
@@ -27,47 +27,44 @@ pikku info functions --verbose   # See which services existing functions use
 pikku info tags --verbose        # Understand project organization
 ```
 
-See `pikku-concepts` for the core mental model.
-
 ## API Reference
 
-### `pikkuServices(factory)`
-
-Create singleton services — instantiated once at server startup.
+### `pikkuServices(factory)` — singleton services (created once at startup)
 
 ```typescript
 import { pikkuServices } from '#pikku'
+import { ConsoleLogger } from '@pikku/core/services'
+import { JoseJWTService } from '@pikku/jose'
 
-const createSingletonServices = pikkuServices(
+export const createSingletonServices = pikkuServices(
   async (config, existingServices?) => {
     // config: your CoreConfig object
     // existingServices: optional, for chaining factories
-    return {
-      config,
-      logger: Logger,
-      jwt: JWTService,
-      database: DatabasePool,
-      // ...any custom services
-    }
+    const logger = new ConsoleLogger()
+    const database = new DatabasePool(config.database)
+    await database.connect()
+    const jwt = new JoseJWTService(
+      async () => [{ id: 'my-key', value: config.jwtSecret }],
+      logger
+    )
+    return { config, logger, database, jwt, books: new BookService() }
   }
 )
 ```
 
-### `pikkuWireServices(factory)`
-
-Create per-request services — fresh instance for each HTTP request, queue job, CLI command, etc.
+### `pikkuWireServices(factory)` — per-request services (fresh per HTTP request, queue job, CLI command, etc.)
 
 ```typescript
 import { pikkuWireServices } from '#pikku'
 
-const createWireServices = pikkuWireServices(
+export const createWireServices = pikkuWireServices(
   async (singletonServices, wire) => {
     // singletonServices: all singleton services
     // wire: transport context (session, channel, etc.)
     // Pikku merges these with singleton services automatically
     return {
-      userSession: UserSessionService,
-      dbTransaction: DatabaseTransaction,
+      userSession: createUserSessionService(wire),
+      dbTransaction: new DatabaseTransaction(singletonServices.database),
     }
   }
 )
@@ -75,10 +72,9 @@ const createWireServices = pikkuWireServices(
 
 ### Auto-Generated Service Manifest
 
-After `npx pikku prebuild`, Pikku generates a manifest of which services are actually used:
+After `npx pikku prebuild`, Pikku generates `.pikku/pikku-services.gen.ts`, a manifest of which services are actually used by wired functions:
 
 ```typescript
-// .pikku/pikku-services.gen.ts (auto-generated)
 export const requiredSingletonServices = {
   database: true, // used by getUser, deleteUser
   audit: true, // used by deleteUser
@@ -95,47 +91,9 @@ export type RequiredSingletonServices = Pick<
 
 ## Usage Patterns
 
-### Basic Singleton Services
-
-```typescript
-const createSingletonServices = pikkuServices(
-  async (config, existingServices) => {
-    const logger = new ConsoleLogger()
-    const database = new DatabasePool(config.database)
-    await database.connect()
-
-    const jwt = new JoseJWTService(
-      async () => [{ id: 'my-key', value: JWT_SECRET }],
-      logger
-    )
-
-    return {
-      config,
-      logger,
-      database,
-      jwt,
-      books: new BookService(),
-    }
-  }
-)
-```
-
-### Per-Request Wire Services
-
-```typescript
-const createWireServices = pikkuWireServices(
-  async (singletonServices, wire) => {
-    return {
-      userSession: createUserSessionService(wire),
-      dbTransaction: new DatabaseTransaction(singletonServices.database),
-    }
-  }
-)
-```
-
 ### Using Services in Functions
 
-**Every service must be declared in `SingletonServices` (or `Services`) in `application-types.d.ts`.** Never access a service via a body-level cast (`services as typeof services & { myService: MyService }`) — that means the type is missing. Add the import and the field to `SingletonServices`, then destructure inline in the function signature. The inspector emits `SERVICES_NOT_DESTRUCTURED` and tree-shaking breaks when the first param is a plain identifier rather than an object pattern.
+**Every service must be declared in `SingletonServices` (or `Services`) in `application-types.d.ts`.** Never access a service via a body-level cast (`services as typeof services & { myService: MyService }`) — that means the type is missing. Add the import and the field to `SingletonServices`, then destructure inline in the function signature. The inspector emits `SERVICES_NOT_DESTRUCTURED` and tree-shaking breaks when the first param is a plain identifier rather than an object pattern. Never `new` a service inside a function — services arrive only via injection.
 
 ```typescript
 // ✅ Correct — inline destructure, no cast
@@ -143,8 +101,7 @@ const getUser = pikkuFunc({
   title: 'Get User',
   func: async ({ db, logger, jwt }, { userId }) => {
     logger.info('Fetching user', { userId })
-    const user = await db.getUser(userId)
-    return { user }
+    return { user: await db.getUser(userId) }
   },
 })
 
@@ -159,7 +116,7 @@ const getUser = pikkuFunc({
 
 ### Dynamic Import Optimization
 
-Use the generated manifest to conditionally import heavy dependencies:
+Use the generated manifest to conditionally import heavy dependencies — only the services actually wired get instantiated:
 
 ```typescript
 import { requiredSingletonServices } from '.pikku/pikku-services.gen.js'
@@ -184,38 +141,7 @@ const createSingletonServices = pikkuServices(async (config) => {
 
 ### Audit Wire Service
 
-`createInvocationAudit` creates a per-request `InvocationAuditLog` that buffers audit events in memory and flushes them as a batch when the function-runner calls `closeWireServices` at the end of the request. If `singletonServices.audit` is not configured (local dev without Fabric), it returns a no-op `DisabledInvocationAudit` — no crash, events are silently dropped.
-
-Pair with `createAuditedKysely` to auto-capture every Kysely query as an audit event.
-
-```typescript
-// services.ts
-import { createInvocationAudit } from '@pikku/core/services'
-import { createAuditedKysely } from '@pikku/kysely'
-
-export const createWireServices = pikkuWireServices(async (singletonServices, wire) => {
-  const audit = createInvocationAudit(singletonServices.audit, wire)
-  const kysely = singletonServices.kysely
-    ? createAuditedKysely(singletonServices.kysely, { audit })
-    : undefined
-  return { audit, ...(kysely ? { kysely } : {}) }
-})
-```
-
-The `audit` wire service is typed as `AuditLog` (from `@pikku/core`). Functions that emit custom events use it directly:
-
-```typescript
-const deleteUser = pikkuFunc({
-  func: async ({ audit }, { userId }) => {
-    await audit.audit({ type: 'user.deleted', actor_user_id: userId })
-    // ...
-  },
-})
-```
-
-`closeWireServices` (called automatically by the function-runner) invokes `audit.close()` → `singletonServices.audit.write(batch)` → platform-specific flush (e.g. CF Queue, libsql INSERT). No manual flushing needed.
-
-> **Fabric note:** Fabric provisions the audit queue and consumer worker automatically. The audit table schema is in `db/sqlite/0003-audit.sql` (starter-template). Run `pikku fabric validate` to confirm the migration is in place.
+`createInvocationAudit` + `createAuditedKysely` add per-request audit buffering that flushes on request close (no-op if `audit` is unconfigured). For the full pattern, no-op behavior, custom-event usage, and Fabric notes, read `references/audit-wire-service.md`.
 
 ### Built-in Services
 
@@ -240,22 +166,14 @@ import { JoseJWTService } from '@pikku/jose'
 // Custom service
 class TodoStore {
   private todos: Map<string, Todo> = new Map()
-
   async create(title: string, priority: string) {
     const todo = { id: crypto.randomUUID(), title, priority, completed: false }
     this.todos.set(todo.id, todo)
     return todo
   }
-
-  async get(id: string) {
-    return this.todos.get(id)
-  }
-  async list() {
-    return [...this.todos.values()]
-  }
-  async delete(id: string) {
-    this.todos.delete(id)
-  }
+  async get(id: string) { return this.todos.get(id) }
+  async list() { return [...this.todos.values()] }
+  async delete(id: string) { this.todos.delete(id) }
 }
 
 export const createSingletonServices = pikkuServices(async (config) => {
@@ -264,7 +182,6 @@ export const createSingletonServices = pikkuServices(async (config) => {
     async () => [{ id: 'my-key', value: config.jwtSecret }],
     logger
   )
-
   return {
     config,
     logger,

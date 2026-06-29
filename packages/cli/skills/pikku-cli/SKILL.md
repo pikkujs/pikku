@@ -172,110 +172,24 @@ wireCLI({
 
 ### Custom Renderers
 
+A renderer receives `(services, data)` where `data` is the func's output. Set `render` on `wireCLI` as the program-wide default; set `render` on a `pikkuCLICommand` to override it for that command.
+
 ```typescript
 const todoRenderer = pikkuCLIRender<{ todo: Todo }>((_services, { todo }) => {
   console.log(`✓ Created: ${todo.text} (priority: ${todo.priority})`)
 })
 
-const todosRenderer = pikkuCLIRender<{ todos: Todo[] }>(
-  (_services, { todos }) => {
-    todos.forEach((t, i) => {
-      const check = t.completed ? '✓' : ' '
-      console.log(`  ${i + 1}. ${t.text}  ${check}`)
-    })
-  }
-)
-
-// Default renderer for program, override per-command
 wireCLI({
   program: 'todos',
-  render: jsonRenderer,
+  render: jsonRenderer, // default for all commands
   commands: {
-    add: pikkuCLICommand({
-      func: createTodo,
-      render: todoRenderer, // Overrides jsonRenderer
-    }),
+    add: pikkuCLICommand({ func: createTodo, render: todoRenderer }), // overrides jsonRenderer
   },
 })
 ```
+
+The func's input is the positional `parameters` plus `options`, merged (e.g. `parameters: '<username> <email>'` + an `admin` option → func input `{ username, email, admin }`).
 
 ## Complete Example
 
-```typescript
-// functions/admin.functions.ts
-export const createUser = pikkuFunc({
-  title: 'Create User',
-  func: async ({ db }, { username, email, admin }) => {
-    const user = await db.createUser({
-      username,
-      email,
-      role: admin ? 'admin' : 'user',
-    })
-    return { user }
-  },
-})
-
-export const listUsers = pikkuSessionlessFunc({
-  title: 'List Users',
-  func: async ({ db }, { limit }) => {
-    return { users: await db.listUsers(limit || 50) }
-  },
-})
-
-export const deleteUser = pikkuFunc({
-  title: 'Delete User',
-  func: async ({ db }, { username }) => {
-    await db.deleteUser(username)
-    return { deleted: username }
-  },
-})
-
-// wirings/cli.wiring.ts
-const userRenderer = pikkuCLIRender<{ user: User }>((_services, { user }) => {
-  console.log(`Created user: ${user.username} (${user.email}) [${user.role}]`)
-})
-
-const usersRenderer = pikkuCLIRender<{ users: User[] }>(
-  (_services, { users }) => {
-    console.log(`Users (${users.length}):`)
-    users.forEach((u) =>
-      console.log(`  ${u.username} <${u.email}> [${u.role}]`)
-    )
-  }
-)
-
-wireCLI({
-  program: 'admin',
-  commands: {
-    user: {
-      description: 'User management',
-      subcommands: {
-        create: pikkuCLICommand({
-          parameters: '<username> <email>',
-          func: createUser,
-          render: userRenderer,
-          options: {
-            admin: {
-              description: 'Create as admin',
-              short: 'a',
-              default: false,
-            },
-          },
-        }),
-        list: pikkuCLICommand({
-          func: listUsers,
-          render: usersRenderer,
-          options: {
-            limit: { description: 'Max results', short: 'l' },
-          },
-        }),
-        delete: pikkuCLICommand({
-          parameters: '<username>',
-          func: deleteUser,
-          description: 'Delete a user',
-        }),
-      },
-    },
-  },
-})
-```
+For a full functions + renderers + nested-subcommand wiring walkthrough, see `references/complete-example.md`.
