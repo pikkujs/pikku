@@ -279,12 +279,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       func: { func: unknown },
       queueName: string
     ) => {
-      if (functions.has(funcId)) {
-        if (!functionsMeta[funcId]) {
-          functionsMeta[funcId] = mkMeta(funcId)
-        }
-        return
-      }
+      if (functions.has(funcId)) return
       addFunction(funcId, func as never)
       if (!queueMeta[queueName]) {
         queueMeta[queueName] = { pikkuFuncId: funcId, name: queueName }
