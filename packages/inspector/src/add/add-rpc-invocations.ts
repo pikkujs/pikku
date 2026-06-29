@@ -86,19 +86,26 @@ export function addRPCInvocations(
       ts.isIdentifier(expression.expression) &&
       expression.expression.text === 'rpc'
     ) {
-      if (hasTypeCast(outerParent(node))) {
-        logger.critical(
-          ErrorCode.RPC_INVOCATION_TYPE_CAST,
-          `rpc.invoke() result is type-cast — remove the 'as' expression and rely on Pikku's generated types`
-        )
-      }
+      // Skip PKU940 for generated files — they may contain intentional casts
+      // (e.g. the paginated useInfiniteQuery hook in pikku-react-query.gen.ts).
+      const sourceFileName = node.getSourceFile().fileName
+      const isGenerated =
+        sourceFileName.endsWith('.gen.ts') || sourceFileName.endsWith('.gen.js')
+      if (!isGenerated) {
+        if (hasTypeCast(outerParent(node))) {
+          logger.critical(
+            ErrorCode.RPC_INVOCATION_TYPE_CAST,
+            `rpc.invoke() result is type-cast — remove the 'as' expression and rely on Pikku's generated types`
+          )
+        }
 
-      const castArg = findCastArg(args)
-      if (castArg) {
-        logger.critical(
-          ErrorCode.RPC_INVOCATION_TYPE_CAST,
-          `rpc.invoke() has a type cast on an argument — remove the 'as' expression and rely on Pikku's generated types`
-        )
+        const castArg = findCastArg(args)
+        if (castArg) {
+          logger.critical(
+            ErrorCode.RPC_INVOCATION_TYPE_CAST,
+            `rpc.invoke() has a type cast on an argument — remove the 'as' expression and rely on Pikku's generated types`
+          )
+        }
       }
 
       const [firstArg] = args
