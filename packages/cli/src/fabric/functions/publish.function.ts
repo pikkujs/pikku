@@ -6,10 +6,7 @@ import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
 import { pikkuSessionlessFunc } from '../../../.pikku/pikku-types.gen.js'
 import { resolveApiContext } from '../lib/config.js'
-import {
-  renderAddonVerify,
-  type FabricAddonVerifyOutput,
-} from './addon-verify.function.js'
+import { renderAddonVerify } from './addon-verify.function.js'
 
 export const FabricPublishInput = z.object({
   dir: z.string().optional(),
@@ -37,9 +34,7 @@ export const FabricPublish = pikkuSessionlessFunc({
   input: FabricPublishInput,
   output: FabricPublishOutput,
   func: async (_services, { dir, apiUrl: apiUrlOverride }, { rpc }) => {
-    const verification = (await rpc.invoke('FabricAddonVerify', {
-      dir,
-    })) as FabricAddonVerifyOutput
+    const verification = await rpc.invoke('FabricAddonVerify', { dir })
     renderAddonVerify(verification)
     if (!verification.ok) {
       throw new Error(

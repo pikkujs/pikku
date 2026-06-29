@@ -16,16 +16,16 @@ export const FabricAddonVerifyInput = z.object({
   dir: z.string().optional(),
 })
 
-export type FabricAddonVerifyOutput = z.infer<
-  typeof FabricAddonVerifyOutputSchema
->
-const FabricAddonVerifyOutputSchema = z.object({
+export const FabricAddonVerifyOutputSchema = z.object({
   ok: z.boolean(),
   addonDir: z.string(),
   packageName: z.string().optional(),
   version: z.string().optional(),
   checks: z.array(CheckSchema),
 })
+export type FabricAddonVerifyOutput = z.infer<
+  typeof FabricAddonVerifyOutputSchema
+>
 
 async function readJsonSafe<T>(path: string): Promise<T | null> {
   if (!existsSync(path)) return null
