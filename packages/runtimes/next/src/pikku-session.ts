@@ -8,6 +8,7 @@ import type {
   CoreSingletonServices,
   CoreUserSession,
   CorePikkuMiddleware,
+  PikkuWire,
 } from '@pikku/core'
 
 /**
@@ -31,7 +32,7 @@ export const getSession = async <UserSession extends CoreUserSession>(
     {
       http: { request },
       ...createMiddlewareSessionWireProps(userSession),
-    },
+    } as unknown as PikkuWire,
     middleware as any
   )
   return userSession.get() as UserSession | undefined
