@@ -285,21 +285,19 @@ async function resolveVersion(
 }
 
 /**
- * Given an esbuild metafile, extracts all external packages and resolves
- * their versions from the project's dependency files.
+ * Resolves exact versions for a set of external package names.
  *
- * Returns a record of package name to exact version, suitable for
- * writing into a minimal package.json.
+ * Shared by both bundler backends: esbuild derives the set from its metafile
+ * (`extractExternalPackages`), while the Bun.build backend captures it via a
+ * resolve plugin (Bun's metafile does not record external imports).
  */
-export async function extractDependencies(
-  metafile: Metafile,
+export async function resolveExternalVersions(
+  externalPackages: Set<string>,
   projectDir: string
 ): Promise<{
   exactDependencies: Record<string, string>
   exactOptionalDependencies: Record<string, string>
 }> {
-  const externalPackages = extractExternalPackages(metafile)
-
   if (externalPackages.size === 0) {
     return { exactDependencies: {}, exactOptionalDependencies: {} }
   }
@@ -333,6 +331,20 @@ export async function extractDependencies(
   }
 
   return { exactDependencies, exactOptionalDependencies }
+}
+
+/**
+ * Given an esbuild metafile, extracts all external packages and resolves
+ * their versions from the project's dependency files.
+ */
+export async function extractDependencies(
+  metafile: Metafile,
+  projectDir: string
+): Promise<{
+  exactDependencies: Record<string, string>
+  exactOptionalDependencies: Record<string, string>
+}> {
+  return resolveExternalVersions(extractExternalPackages(metafile), projectDir)
 }
 
 /**

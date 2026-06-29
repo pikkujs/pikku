@@ -40,10 +40,7 @@ export const FabricLLMKey = pikkuSessionlessFunc({
     }
 
     const rpc = getFabricRPC({ apiUrl: ctx.apiUrl, token: ctx.token })
-    const result = (await rpc.invoke('getDeveloperLiteLLMKey', {})) as {
-      proxyUrl: string
-      apiKey: string
-    }
+    const result = await rpc.invoke('getDeveloperLiteLLMKey', {})
     const format: 'text' | 'env' | 'shell' | 'json' = shell
       ? 'shell'
       : env

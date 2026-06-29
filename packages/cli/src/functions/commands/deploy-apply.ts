@@ -270,7 +270,7 @@ export const deployApply = pikkuSessionlessFunc<
   },
   void
 >({
-  func: async ({ logger, config, getInspectorState }, data) => {
+  func: async ({ logger, config, getInspectorState, bundler }, data) => {
     const projectDir = config.rootDir
     const provider = await resolveProvider(config, data?.provider, {
       runtime: data?.runtime,
@@ -316,6 +316,7 @@ export const deployApply = pikkuSessionlessFunc<
       outDir: config.outDir,
       debugArtifacts: data?.debugArtifacts ?? false,
       logger,
+      bundler,
     })
 
     if (buildResult.manifest.units.length === 0) {

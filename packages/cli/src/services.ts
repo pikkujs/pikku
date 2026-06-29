@@ -37,6 +37,10 @@ import { existsSync } from 'fs'
 import { readFile, writeFile } from 'fs/promises'
 import { loadManifest } from './utils/contract-versions.js'
 import { join } from 'path'
+import { NodeBundler } from './deploy/bundler/node-bundler.js'
+import { BunBundler } from './deploy/bundler/bun-bundler.js'
+import { NodeServerRunner } from './server/node-server-runner.js'
+import { BunServerRunner } from './server/bun-server-runner.js'
 import { parseCLIFilters } from './utils/parse-cli-filters.js'
 
 const DIAGNOSTIC_CODE_TO_LINT_KEY: Record<
@@ -374,6 +378,11 @@ export const createSingletonServices: CreateSingletonServices<
 
   const workflowService = new InMemoryWorkflowService()
 
+  // Resolve the runtime ONCE here, then inject runtime-specific implementations.
+  // Keeping the check in this single place avoids `typeof Bun` branches leaking
+  // into the deploy pipeline / dev command.
+  const isBun = typeof (globalThis as { Bun?: unknown }).Bun !== 'undefined'
+
   return {
     config,
     logger,
@@ -382,6 +391,8 @@ export const createSingletonServices: CreateSingletonServices<
     audit: new NoopAuditService(),
     getInspectorState,
     workflowService,
+    bundler: isBun ? new BunBundler() : new NodeBundler(),
+    devServerRunner: isBun ? new BunServerRunner() : new NodeServerRunner(),
   }
 }
 
