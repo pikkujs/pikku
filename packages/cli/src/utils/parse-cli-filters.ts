@@ -40,7 +40,10 @@ function parseCommaSeparated(
 export function parseCLIFilters(
   data: any,
   cliConfig?: {
-    deploy?: { serverlessIncompatible?: string[] }
+    deploy?: {
+      serverlessIncompatible?: string[]
+      defaultTarget?: 'serverless' | 'server'
+    }
     namedFilters?: Record<string, InspectorFilters>
   }
 ): CLIFilters {
@@ -136,6 +139,7 @@ export function parseCLIFilters(
   )
   if (filters.target || filters.excludeTarget) {
     filters.serverlessIncompatible = cliConfig?.deploy?.serverlessIncompatible
+    filters.defaultTarget = cliConfig?.deploy?.defaultTarget
   }
 
   return filters

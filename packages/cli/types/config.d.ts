@@ -372,6 +372,12 @@ export type PikkuCLIInput = {
     providers: Record<string, string>
     defaultProvider?: string
     serverlessIncompatible?: string[]
+    /**
+     * Default deploy target for functions that don't declare an explicit
+     * `deploy` flag and don't use a serverless-incompatible service.
+     * Defaults to 'serverless'.
+     */
+    defaultTarget?: 'serverless' | 'server'
   }
 
   /** Named filter presets keyed by name, used via CLI --filter <name>. */
