@@ -154,7 +154,7 @@ export const serve = pikkuSessionlessFunc<
     })
     const resolvedServices = { ...singletonServices, getInspectorState }
     pikkuState(null, 'package', 'singletonServices', resolvedServices)
-    ;(resolvedServices.workflowService as any)?.rewireQueueWorkers?.()
+    resolvedServices.workflowService?.rewireQueueWorkers?.()
 
     const { serverLifecycleFactory } = inspectorState.filesAndMethods
     const loadLifecycle = async () => {
