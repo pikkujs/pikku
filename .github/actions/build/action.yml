@@ -72,6 +72,7 @@ runs:
         path: |
           packages/**/dist/**
           packages/**/bin/**
+          packages/cli/console-app/**
           templates/**/.pikku/**
           templates/**/dist/**
         include-hidden-files: true
