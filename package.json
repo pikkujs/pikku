@@ -87,7 +87,8 @@
     "esbuild": "0.27.2",
     "pikkufabric": "portal:/Users/yasser/git/pikku/fabric",
     "@assistant-ui/core": "0.2.19",
-    "assistant-stream": "0.3.24"
+    "assistant-stream": "0.3.24",
+    "@assistant-ui/tap": "0.9.3"
   },
   "engines": {
     "node": ">=22"
