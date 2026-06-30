@@ -93,14 +93,8 @@ async function makeValidProject(root: string) {
     recursive: true,
   })
   await writeFile(
-    join(root, '.gitignore'),
-    '.pikku\n.pikku-runtime\n.opencode\n.reports\n__fabric_scaffold.vite.config.mjs\n*.gen.ts\n*.gen.js\n',
-    'utf8'
-  )
-  await mkdir(join(root, 'db'), { recursive: true })
-  await writeFile(
     join(root, 'db', 'annotations.ts'),
-    '// db annotations\n',
+    '// db column annotations\nexport const annotations = {}\n',
     'utf8'
   )
   await mkdir(join(root, 'knowledge'), { recursive: true })
@@ -117,6 +111,11 @@ async function makeValidProject(root: string) {
   await writeFile(
     join(root, 'knowledge', 'technology.md'),
     '# Technology\n',
+    'utf8'
+  )
+  await writeFile(
+    join(root, '.gitignore'),
+    '.pikku\n.pikku-runtime\n.opencode\n.reports\n__fabric_scaffold.vite.config.mjs\n*.gen.ts\n*.gen.js\n',
     'utf8'
   )
 }
