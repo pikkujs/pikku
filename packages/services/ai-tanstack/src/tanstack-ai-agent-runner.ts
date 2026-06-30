@@ -1,5 +1,5 @@
 import { chat, toolDefinition, maxIterations } from '@tanstack/ai'
-import { openaiText } from '@tanstack/ai-openai'
+import { openaiChatCompletions } from '@tanstack/ai-openai'
 import type {
   AIAgentRunnerParams,
   AIAgentRunnerService,
@@ -164,7 +164,7 @@ async function runStream(
     )
   }
 
-  const adapter = openaiText(modelName as any)
+  const adapter = openaiChatCompletions(modelName as any)
   const { systemPrompts, modelMessages } = convertMessages(params.messages)
   const tools = buildTools(params)
 
