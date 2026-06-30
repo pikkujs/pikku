@@ -21,6 +21,15 @@ export const createSingletonServices = pikkuServices(
       logger.setLevel(config.logLevel)
     }
 
+    if (process.env.CI === 'true' || process.env.PIKKU_AI_DEBUG === '1') {
+      process.on('unhandledRejection', (reason: any) => {
+        // eslint-disable-next-line no-console
+        console.error(
+          `[unhandledRejection] ${reason instanceof Error ? reason.stack : String(reason)}`
+        )
+      })
+    }
+
     if (!variables) {
       variables = new LocalVariablesService()
     }
