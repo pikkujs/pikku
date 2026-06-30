@@ -448,7 +448,6 @@ export const AgentChat: React.FC = () => {
     threadId,
     setThreadId,
     refetchThreads,
-    dbMessages,
     model,
     temperature,
   } = useAgentPlayground()
@@ -477,7 +476,6 @@ export const AgentChat: React.FC = () => {
     agentName: agentId,
     threadId: effectiveThreadId,
     resourceId: 'default',
-    initialMessages: dbMessages,
     onFinish: onStreamDone,
     model,
     temperature,

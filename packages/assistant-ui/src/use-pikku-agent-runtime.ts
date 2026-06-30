@@ -22,7 +22,6 @@ export interface PikkuAgentRuntimeOptions {
   agentName: string
   threadId: string
   resourceId: string
-  initialMessages?: any[]
   onFinish?: () => void
   credentials?: RequestCredentials
   headers?: Record<string, string>
@@ -39,7 +38,7 @@ export interface PendingApproval {
   toolName: string
   args: unknown
   reason?: string
-  runId: string
+  runId?: string
   type?: 'approval-request' | 'credential-request'
   credentialName?: string
   credentialType?: 'oauth2' | 'apikey'
@@ -352,7 +351,7 @@ export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
               toolName: v.toolName,
               args: v.args,
               reason: v.reason,
-              runId: v.runId ?? '',
+              runId: v.runId,
               type: 'approval-request' as const,
             },
           ])
@@ -364,7 +363,7 @@ export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
               toolCallId: v.toolCallId,
               toolName: v.toolName,
               args: v.args,
-              runId: v.runId ?? '',
+              runId: v.runId,
               type: 'credential-request' as const,
               credentialName: v.credentialName,
               credentialType: v.credentialType,
@@ -386,6 +385,7 @@ export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
     (toolCallId: string, approved: boolean) => {
       const approval = pendingApprovals.find((p) => p.toolCallId === toolCallId)
       if (!approval) return
+      if (!approval.runId) return
       setPendingApprovals((prev) =>
         prev.filter((p) => p.toolCallId !== toolCallId)
       )

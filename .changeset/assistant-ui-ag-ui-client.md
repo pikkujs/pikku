@@ -1,5 +1,5 @@
 ---
-"@pikku/assistant-ui": minor
+"@pikku/assistant-ui": major
 ---
 
 Replace hand-rolled SSE parser with AG-UI client runtime
