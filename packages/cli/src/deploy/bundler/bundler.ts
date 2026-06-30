@@ -148,7 +148,19 @@ export abstract class BaseBundler implements Bundler {
         )
         results.push(result)
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err)
+        // AggregateError (thrown by Bun.build) carries per-file errors in `errors`.
+        const aggErrors =
+          err != null &&
+          typeof err === 'object' &&
+          'errors' in err &&
+          Array.isArray((err as { errors: unknown }).errors)
+            ? (err as { errors: Array<{ message?: unknown }> }).errors
+                .map((e) => e?.message ?? String(e))
+                .join('\n  ')
+            : ''
+        const message =
+          (err instanceof Error ? err.message : String(err)) +
+          (aggErrors ? `\n  ${aggErrors}` : '')
         errors.push({ unitName: unit.name, error: message })
       }
     }
