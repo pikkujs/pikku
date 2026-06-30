@@ -186,7 +186,7 @@ async function runStream(
     messages: modelMessages as any,
     systemPrompts: systemPrompts.map((s) => ({ content: s })),
     tools: tools as any,
-    agentLoopStrategy: maxIterations(params.maxSteps ?? 5),
+    agentLoopStrategy: maxIterations(1),
     ...(params.temperature !== undefined
       ? { modelOptions: { temperature: params.temperature } as any }
       : {}),
