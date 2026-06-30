@@ -1,5 +1,6 @@
 import { LocalVariablesService, LocalSecretService } from '@pikku/core/services'
 import type { CoreSingletonServices } from '@pikku/core'
+import { setSingletonServices } from '@pikku/core'
 import type { ScheduledController } from '@cloudflare/workers-types'
 import { WorkerEntrypoint } from 'cloudflare:workers'
 import { runFetch } from './run-fetch.js'
@@ -61,6 +62,12 @@ export async function setupServices(
     secrets,
     ...platformServices,
   })
+  // Register the global singleton slot the core runners read. runFetch /
+  // runQueueJob / runScheduled call into core (`fetchData` etc.) which resolve
+  // services via the global `getSingletonServices()`, NOT the value returned
+  // here — without this every function-bearing worker throws "Singleton
+  // services not initialized" (CF 1101) on the first request.
+  setSingletonServices(cachedServices)
   return cachedServices
 }
 
