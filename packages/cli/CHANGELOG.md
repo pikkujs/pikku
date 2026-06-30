@@ -1,3 +1,18 @@
+## 0.12.58
+
+### Patch Changes
+
+- 9702d8e: fix(deploy): surface Bun.build AggregateError details in bundle failure messages
+
+  Bun.build() throws an AggregateError with per-file resolution errors in its
+  `errors` array (not in `.message`). The bundler now includes those messages
+  so build logs show the actual "Could not resolve: X" reason instead of a
+  bare "Bundle failed".
+
+- 3d5ffda: Rename the generated `db/schema.d.ts` output file to `db/schema.gen.d.ts` to match the naming convention of `coercion.gen.ts` and `classification.gen.ts`.
+- Updated dependencies [04db6a2]
+  - @pikku/core@0.12.41
+
 ## 0.12.57
 
 ### Patch Changes
