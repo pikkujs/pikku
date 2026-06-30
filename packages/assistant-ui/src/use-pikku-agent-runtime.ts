@@ -17,8 +17,6 @@ import type { Observable } from 'rxjs'
 import { useAgUiRuntime } from '@assistant-ui/react-ag-ui'
 import type { ThreadMessageLike } from '@assistant-ui/react'
 
-// ========== Public types ==========
-
 export interface PikkuAgentRuntimeOptions {
   api: string
   agentName: string
@@ -59,8 +57,6 @@ export const PikkuApprovalContext = createContext<PikkuApprovalContextValue>({
 })
 
 export const usePikkuApproval = () => useContext(PikkuApprovalContext)
-
-// ========== Utility functions ==========
 
 export function isDeniedResult(result: unknown): boolean {
   if (result == null) return false
@@ -239,8 +235,6 @@ export const convertDbMessages = (dbMessages: any[]): ThreadMessageLike[] => {
   return result
 }
 
-// ========== PikkuAgent ==========
-
 type PendingResume = {
   runId: string
   toolCallId: string
@@ -328,8 +322,6 @@ class PikkuAgent extends HttpAgent {
   }
 }
 
-// ========== usePikkuAgentRuntime ==========
-
 export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
   const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>(
     []
@@ -394,7 +386,9 @@ export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
     (toolCallId: string, approved: boolean) => {
       const approval = pendingApprovals.find((p) => p.toolCallId === toolCallId)
       if (!approval) return
-      setPendingApprovals([])
+      setPendingApprovals((prev) =>
+        prev.filter((p) => p.toolCallId !== toolCallId)
+      )
       agent.queueResume({ runId: approval.runId, toolCallId, approved })
       agent.runAgent()
     },

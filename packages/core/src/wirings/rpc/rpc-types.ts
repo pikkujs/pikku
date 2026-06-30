@@ -1,9 +1,9 @@
 export type PikkuRPC<
-  Invoke extends Function = Function,
-  Remote extends Function = Function,
-  startWorkflow extends Function = Function,
-  AgentRun extends Function = Function,
-  AgentStream extends Function = Function,
+  Invoke extends (...args: any[]) => any = (...args: any[]) => any,
+  Remote extends (...args: any[]) => any = (...args: any[]) => any,
+  startWorkflow extends (...args: any[]) => any = (...args: any[]) => any,
+  AgentRun extends (...args: any[]) => any = (...args: any[]) => any,
+  AgentStream extends (...args: any[]) => any = (...args: any[]) => any,
 > = {
   depth: number
   global: boolean

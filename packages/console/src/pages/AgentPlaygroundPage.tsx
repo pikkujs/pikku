@@ -273,7 +273,7 @@ const AgentPlaygroundInner: React.FC<{
               onRefresh={refetchCreds}
             />
           ) : (
-            <AgentChat key={threadId} />
+            <AgentChat key={`${agentId}-${threadId}`} />
           )}
         </Box>
       </Box>

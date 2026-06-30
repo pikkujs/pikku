@@ -41,7 +41,13 @@ export type { AGUIEvent }
 
 function resultToString(result: unknown): string {
   if (typeof result === 'string') return result
-  return JSON.stringify(result)
+  try {
+    return JSON.stringify(result, (_key, val) =>
+      typeof val === 'bigint' ? val.toString() : val
+    )
+  } catch {
+    return String(result)
+  }
 }
 
 export function wrapChannelWithAGUI(inner: AIStreamChannel): AIStreamChannel {
@@ -170,6 +176,7 @@ export function wrapChannelWithAGUI(inner: AIStreamChannel): AIStreamChannel {
         case 'error': {
           endTextMessage()
           endThinkingMessage()
+          runFinishedSent = true
           send({ type: 'RUN_ERROR', message: event.message })
           break
         }
@@ -191,6 +198,7 @@ export function wrapChannelWithAGUI(inner: AIStreamChannel): AIStreamChannel {
 
         case 'approval-request': {
           endTextMessage()
+          endThinkingMessage()
           send({
             type: 'CUSTOM',
             name: 'pikku:approval-request',
@@ -209,6 +217,7 @@ export function wrapChannelWithAGUI(inner: AIStreamChannel): AIStreamChannel {
 
         case 'credential-request': {
           endTextMessage()
+          endThinkingMessage()
           send({
             type: 'CUSTOM',
             name: 'pikku:credential-request',
