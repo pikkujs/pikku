@@ -230,6 +230,64 @@ describe('TanstackAIAgentRunner.stream', () => {
     assert.equal(result.finishReason, 'tool-calls')
   })
 
+  test('emits the usage event after the tool-result event', async () => {
+    const listTodos = {
+      name: 'todos__listTodos',
+      description: 'List todos',
+      inputSchema: { type: 'object', properties: {} },
+      execute: async () => [{ id: '1', title: 'Buy groceries' }],
+    }
+    script = [
+      [
+        chunk({
+          role: 'assistant',
+          tool_calls: [
+            {
+              index: 0,
+              id: 'call_1',
+              type: 'function',
+              function: { name: 'todos__listTodos', arguments: '' },
+            },
+          ],
+        }),
+        chunk({ tool_calls: [{ index: 0, function: { arguments: '{}' } }] }),
+        chunk({}, 'tool_calls', { prompt_tokens: 10, completion_tokens: 3 }),
+      ],
+    ]
+    const { channel, events } = makeChannel()
+    const runner = new TanstackAIAgentRunner()
+    await withTimeout(
+      runner.stream(
+        {
+          ...baseParams,
+          instructions: 'You manage todos.',
+          tools: [listTodos] as any,
+          messages: [
+            {
+              id: 'u1',
+              role: 'user',
+              content: 'list todos',
+              createdAt: new Date(),
+            },
+          ] as any,
+        },
+        channel
+      ),
+      10_000,
+      'usage order'
+    )
+
+    const types = events.map((e) => e.type)
+    const toolResultIndex = types.indexOf('tool-result')
+    const usageIndex = types.indexOf('usage')
+    assert.notEqual(toolResultIndex, -1, 'tool-result must be emitted')
+    assert.notEqual(usageIndex, -1, 'usage must be emitted')
+    assert.ok(
+      toolResultIndex < usageIndex,
+      `usage (idx ${usageIndex}) must follow tool-result (idx ${toolResultIndex}); got order ${types.join(',')}`
+    )
+  })
+
   test('does not execute approval-required tools and signals tool-calls', async () => {
     let executed = 0
     const addTodo = {

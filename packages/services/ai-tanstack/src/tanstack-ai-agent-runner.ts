@@ -184,16 +184,8 @@ async function runStream(
   const completedFromLLMIds = new Set<string>()
   const toolNameMap = new Map<string, string>()
   const argsBuffer = new Map<string, string>()
-
-  const dbg =
-    process.env.PIKKU_TANSTACK_DEBUG === '1' || process.env.CI === 'true'
-  const chunkSeq: string[] = []
-  if (dbg) {
-    // eslint-disable-next-line no-console
-    console.error(
-      `[tanstack] START model=${modelName} msgs=${modelMessages.length} instrLen=${(params.instructions ?? '').length} tools=${tools.length} roles=${modelMessages.map((m: any) => m.role).join(',')}`
-    )
-  }
+  let usagePending = false
+  let approvalBreak = false
 
   const chatStream = chat({
     adapter,
@@ -208,16 +200,6 @@ async function runStream(
 
   for await (const chunk of chatStream as AsyncIterable<any>) {
     const type = chunk.type as string
-
-    if (dbg) {
-      chunkSeq.push(
-        type === 'CUSTOM'
-          ? `CUSTOM:${chunk.name}`
-          : type === 'TOOL_CALL_END'
-            ? `END(${chunk.result === undefined ? 'u' : 'r'})`
-            : type
-      )
-    }
 
     if (type === 'TEXT_MESSAGE_CONTENT') {
       const delta: string = chunk.delta ?? ''
@@ -293,14 +275,7 @@ async function runStream(
           : fr === 'stop'
             ? 'stop'
             : (fr ?? 'unknown')
-      channel?.send({
-        type: 'usage',
-        tokens: {
-          input: stepResult.usage.inputTokens,
-          output: stepResult.usage.outputTokens,
-        },
-        model: modelName,
-      })
+      usagePending = true
       continue
     }
 
@@ -326,19 +301,20 @@ async function runStream(
         channel?.send({ type: 'tool-call', toolCallId: id, toolName, args })
       }
       stepResult.finishReason = 'tool-calls'
+      approvalBreak = true
       break
     }
   }
 
-  if (dbg) {
-    // eslint-disable-next-line no-console
-    console.error(
-      `[tanstack] END textLen=${stepResult.text.length} toolCalls=[${stepResult.toolCalls
-        .map((t) => t.toolName)
-        .join(
-          ','
-        )}] toolResults=${stepResult.toolResults.length} finish=${stepResult.finishReason} seq=${chunkSeq.join(' ')}`
-    )
+  if (usagePending && !approvalBreak && stepResult.finishReason !== 'error') {
+    channel?.send({
+      type: 'usage',
+      tokens: {
+        input: stepResult.usage.inputTokens,
+        output: stepResult.usage.outputTokens,
+      },
+      model: modelName,
+    })
   }
 
   return stepResult
