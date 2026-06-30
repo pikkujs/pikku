@@ -44,7 +44,7 @@ async function run(
     )
   }
   return generateSchemaTypes(fakeIntrospector(columns), {
-    outFile: join(dir, 'schema.gen.d.ts'),
+    outFile: join(dir, 'schema.gen.ts'),
     coercionFile: join(dir, 'coercion.gen.ts'),
     dialect: 'postgres',
     rootDir: dir,

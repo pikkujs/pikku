@@ -449,14 +449,14 @@ export interface CodegenResult {
   /**
    * Per-interface, per-field zod `format` overrides for the zod codegen. Keyed
    * by interface name (PascalCase) and field name (camelCase), matching the
-   * shapes the zod emitter parses out of `schema.gen.d.ts`.
+   * shapes the zod emitter parses out of `schema.gen.ts`.
    */
   zodFormats: Record<string, Record<string, ZodFormat>>
 }
 
 /**
  * Introspect `introspector` and emit:
- *   - `schema.gen.d.ts`        Kysely DB type with classification brands
+ *   - `schema.gen.ts`          Kysely DB type with classification brands
  *   - `coercion.gen.ts`        Runtime CoercionMap for date/bool/json coercion
  *   - `classification.gen.ts`  Data-classification manifest (when manifestFile set)
  */
@@ -528,7 +528,7 @@ export async function generateSchemaTypes(
     enumByName.set(`${e.schema}.${e.name}`, e.values)
   }
 
-  // ── schema.gen.d.ts ──────────────────────────────────────────────────────────
+  // ── schema.gen.ts ────────────────────────────────────────────────────────────
   const warnings: string[] = []
   const zodFormats: Record<string, Record<string, ZodFormat>> = {}
   const interfaces = tables

@@ -366,7 +366,7 @@ wireCLI({
         migrate: pikkuCLICommand({
           func: dbMigrate,
           description:
-            'Apply pending SQL migrations and regenerate db/schema.gen.d.ts',
+            'Apply pending SQL migrations and regenerate db/schema.gen.ts',
         }),
         generate: pikkuCLICommand({
           func: dbGenerate,

@@ -28,7 +28,7 @@ function makeLogger() {
 
 /**
  * Inline Private<T>/Pii<T>/Secret<T> definitions that the test source files use.
- * Mirrors what schema.gen.d.ts emits so the TypeScript program sees the correct
+ * Mirrors what schema.gen.ts emits so the TypeScript program sees the correct
  * structural brand type even without @pikku/core being importable from /tmp.
  */
 // Optional `__classification__?` mirrors what @pikku/core and `pikku db migrate`

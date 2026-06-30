@@ -38,7 +38,7 @@ export interface ZodCodegenOptions {
   outFile: string
   /**
    * Per-interface, per-field `format` overrides. Keyed by the *interface* name
-   * (PascalCase, as it appears in `schema.gen.d.ts`) and the *field* name (camelCase),
+   * (PascalCase, as it appears in `schema.gen.ts`) and the *field* name (camelCase),
    * matching how `parseTables` reads the schema. Computed by `db-codegen` (which
    * owns the snake→Pascal/camel name mapping) so this emitter stays a dumb
    * string→zod translator.

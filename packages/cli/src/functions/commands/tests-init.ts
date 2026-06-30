@@ -269,8 +269,8 @@ export const pikkuTestsInit = pikkuSessionlessFunc<{ force?: boolean }, void>({
     const configImport = toJs(rel(pikkuConfigFactory.file))
     const servicesImport = toJs(rel(singletonServicesFactory.file))
     // coercion/schema may live under outDir/db (new default) or rootDir/db (legacy)
-    const schemaInOutDir = join(config.outDir, 'db', 'schema.gen.d.ts')
-    const schemaInRootDir = join(config.rootDir, 'db', 'schema.gen.d.ts')
+    const schemaInOutDir = join(config.outDir, 'db', 'schema.gen.ts')
+    const schemaInRootDir = join(config.rootDir, 'db', 'schema.gen.ts')
     const schemaFile = existsSync(schemaInOutDir)
       ? schemaInOutDir
       : schemaInRootDir

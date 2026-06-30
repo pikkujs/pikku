@@ -941,7 +941,7 @@ describe('pikku fabric validate', () => {
         await makeValidProject(tmp)
         await writeFile(
           join(tmp, 'packages', 'functions', 'src', 'types', 'db.types.ts'),
-          "export type { DB } from '../../.pikku/db/schema.js'\n",
+          "export type { DB } from '../../.pikku/db/schema.gen.js'\n",
           'utf8'
         )
         const result = await runValidate(tmp)

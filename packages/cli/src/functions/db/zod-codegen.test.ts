@@ -14,7 +14,7 @@ function generate(
   formats?: ZodCodegenOptions['formats']
 ): string {
   const dir = mkdtempSync(join(tmpdir(), 'zod-codegen-'))
-  const schemaFile = join(dir, 'schema.gen.d.ts')
+  const schemaFile = join(dir, 'schema.gen.ts')
   const outFile = join(dir, 'zod.gen.ts')
   writeFileSync(schemaFile, schema, 'utf8')
   generateZodTypes({ schemaFile, outFile, formats })
