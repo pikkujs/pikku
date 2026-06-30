@@ -68,6 +68,16 @@ function collectNamedSteps(steps: WorkflowStepMeta[]): WorkflowPlannedStep[] {
       case 'sleep':
         planned.push({ stepName: step.stepName })
         break
+      case 'suspend':
+        // Runtime stores the suspend step as `__workflow_suspend:${reason}`.
+        // We surface it in the planned ladder with a readable displayName so
+        // the UI shows it in the right position instead of appending it at the
+        // bottom as an unrecognised orphan.
+        planned.push({
+          stepName: `__workflow_suspend:${step.reason}`,
+          displayName: step.reason,
+        })
+        break
       case 'parallel':
         for (const child of step.children) {
           planned.push({ stepName: child.stepName })

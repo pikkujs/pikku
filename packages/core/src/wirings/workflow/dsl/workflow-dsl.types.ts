@@ -240,6 +240,15 @@ export interface SwitchStepMeta {
 }
 
 /**
+ * Suspend step metadata (workflow.suspend())
+ */
+export interface SuspendStepMeta {
+  type: 'suspend'
+  /** Reason string passed to workflow.suspend() — becomes the durable step key */
+  reason: string
+}
+
+/**
  * Filter step metadata (array.filter)
  */
 export interface FilterStepMeta {
@@ -283,6 +292,7 @@ export type WorkflowStepMeta =
   | InlineStepMeta
   | SleepStepMeta
   | CancelStepMeta
+  | SuspendStepMeta
   | SwitchStepMeta
   | FilterStepMeta
   | ArrayPredicateStepMeta

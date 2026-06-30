@@ -43,6 +43,25 @@ export function isWorkflowSleepCall(
 }
 
 /**
+ * Check if a call expression is workflow.suspend()
+ */
+export function isWorkflowSuspendCall(
+  node: ts.CallExpression,
+  _checker: ts.TypeChecker
+): boolean {
+  if (!ts.isPropertyAccessExpression(node.expression)) {
+    return false
+  }
+
+  const propAccess = node.expression
+  return (
+    propAccess.name.text === 'suspend' &&
+    ts.isIdentifier(propAccess.expression) &&
+    propAccess.expression.text === 'workflow'
+  )
+}
+
+/**
  * Check if a throw statement throws WorkflowCancelledException
  * Matches: throw new WorkflowCancelledException(...) or throw WorkflowCancelledException(...)
  */
