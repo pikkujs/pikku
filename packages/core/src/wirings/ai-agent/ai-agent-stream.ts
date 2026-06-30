@@ -159,18 +159,6 @@ function createPersistingChannel(
             break
         }
       }
-      if (process.env.PIKKU_AI_DEBUG === '1' || process.env.CI === 'true') {
-        const extra =
-          event.type === 'text-delta'
-            ? `:${(event as any).text?.length ?? 0}`
-            : event.type === 'tool-call' || event.type === 'tool-result'
-              ? `:${(event as any).toolName}`
-              : event.type === 'error'
-                ? `:${(event as any).message}`
-                : ''
-        // eslint-disable-next-line no-console
-        console.error(`[wire ${threadId.slice(0, 8)}] ${event.type}${extra}`)
-      }
       parent.send(event)
     },
     setState: (s) => parent.setState(s),
