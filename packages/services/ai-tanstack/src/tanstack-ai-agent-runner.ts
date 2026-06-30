@@ -277,7 +277,7 @@ async function runStream(
         },
         model: modelName,
       })
-      break
+      continue
     }
 
     if (type === 'RUN_ERROR') {
