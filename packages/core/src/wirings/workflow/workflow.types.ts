@@ -24,6 +24,7 @@ export type {
   InlineStepMeta,
   SleepStepMeta,
   CancelStepMeta,
+  SuspendStepMeta,
   SetStepMeta,
   SwitchCaseMeta,
   SwitchStepMeta,
