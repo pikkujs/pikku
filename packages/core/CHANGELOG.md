@@ -1,3 +1,9 @@
+## 0.12.41
+
+### Patch Changes
+
+- 04db6a2: Make `rpc` a required property on `PikkuWire`. It is always lazily initialised by the function runner on every invocation regardless of wire type, so marking it optional was misleading.
+
 ## 0.12.40
 
 ### Patch Changes
