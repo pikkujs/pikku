@@ -78,7 +78,9 @@ export class AgentWorld extends World {
     )
     // Wait for either the chat input or a credential prompt to be ready
     await Promise.race([
-      this.page.getByPlaceholder('Message...').waitFor({ state: 'visible' }),
+      this.page
+        .getByPlaceholder('Type a message…')
+        .waitFor({ state: 'visible' }),
       this.page
         .getByText('Connect your accounts')
         .waitFor({ state: 'visible' }),
@@ -92,7 +94,7 @@ export class AgentWorld extends World {
    * Retries submission if the runtime didn't pick it up (happens after approval-resume cycles).
    */
   async sendMessage(message: string) {
-    const input = this.page.getByPlaceholder('Message...')
+    const input = this.page.getByPlaceholder('Type a message…')
     // Wait for textarea to be enabled (runtime back to idle)
     await this.waitForTextareaEnabled()
 
