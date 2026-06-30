@@ -168,10 +168,6 @@ async function runStream(
   const { systemPrompts, modelMessages } = convertMessages(params.messages)
   const tools = buildTools(params)
 
-  const approvalToolNames = new Set(
-    params.tools.filter((t) => t.needsApproval).map((t) => t.name)
-  )
-
   const stepResult: AIAgentStepResult = {
     text: '',
     toolCalls: [],
@@ -184,16 +180,13 @@ async function runStream(
   const completedFromLLMIds = new Set<string>()
   const toolNameMap = new Map<string, string>()
   const argsBuffer = new Map<string, string>()
-  const approvalToolCallIds = new Set<string>()
-  const processedApprovalIds = new Set<string>()
-  let hasApprovalRequests = false
 
   const chatStream = chat({
     adapter,
     messages: modelMessages as any,
     systemPrompts: systemPrompts.map((s) => ({ content: s })),
     tools: tools as any,
-    agentLoopStrategy: maxIterations(1),
+    agentLoopStrategy: maxIterations(params.maxSteps ?? 5),
     ...(params.temperature !== undefined
       ? { modelOptions: { temperature: params.temperature } as any }
       : {}),
@@ -244,9 +237,6 @@ async function runStream(
         } catch {}
         stepResult.toolCalls.push({ toolCallId: id, toolName, args })
         channel?.send({ type: 'tool-call', toolCallId: id, toolName, args })
-        if (approvalToolNames.has(toolName)) {
-          approvalToolCallIds.add(id)
-        }
       }
       continue
     }
@@ -300,17 +290,18 @@ async function runStream(
 
     if (type === 'CUSTOM' && chunk.name === 'approval-requested') {
       const id: string = chunk.value?.toolCallId
-      if (id) {
-        processedApprovalIds.add(id)
+      if (id && !completedFromLLMIds.has(id) && firstSeenToolCallIds.has(id)) {
+        completedFromLLMIds.add(id)
+        const toolName = toolNameMap.get(id) ?? ''
+        const argsStr = argsBuffer.get(id) ?? '{}'
+        let args: unknown = {}
+        try {
+          args = JSON.parse(argsStr)
+        } catch {}
+        stepResult.toolCalls.push({ toolCallId: id, toolName, args })
+        channel?.send({ type: 'tool-call', toolCallId: id, toolName, args })
       }
-      hasApprovalRequests = true
-    }
-
-    if (
-      hasApprovalRequests &&
-      approvalToolCallIds.size > 0 &&
-      processedApprovalIds.size >= approvalToolCallIds.size
-    ) {
+      stepResult.finishReason = 'tool-calls'
       break
     }
   }
