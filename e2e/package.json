@@ -33,11 +33,10 @@
     "tsc": "tsc --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^3.0.37",
     "@pikku/addon-console": "workspace:*",
     "@pikku/addon-graph": "workspace:*",
     "@pikku/addon-hmac-signer": "workspace:*",
-    "@pikku/ai-vercel": "workspace:*",
+    "@pikku/ai-tanstack": "workspace:*",
     "@pikku/better-auth": "workspace:*",
     "@pikku/core": "workspace:*",
     "@pikku/jose": "workspace:*",
@@ -48,7 +47,6 @@
     "@pikku/redis": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
     "@pikku/uws": "workspace:*",
-    "ai": "^6.0.105",
     "better-auth": "^1.6.19",
     "better-sqlite3": "^12.10.0",
     "ioredis": "^5.10.0",

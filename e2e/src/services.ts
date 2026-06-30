@@ -7,9 +7,8 @@ import {
 } from '@pikku/core/services'
 import { pikkuServices } from '#pikku/pikku-types.gen.js'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
-import { VercelAIAgentRunner } from '@pikku/ai-vercel'
+import { TanstackAIAgentRunner } from '@pikku/ai-tanstack'
 import { JoseJWTService } from '@pikku/jose'
-import { createOpenAI } from '@ai-sdk/openai'
 import type { KyselyPikkuDB } from '@pikku/kysely'
 import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
 import { PikkuMetaService } from '../.pikku/pikku-meta-service.gen.js'
@@ -36,9 +35,7 @@ export const createSingletonServices = pikkuServices(
 
     const schema = new CFWorkerSchemaService(logger)
 
-    const aiAgentRunner = new VercelAIAgentRunner({
-      openai: createOpenAI(),
-    })
+    const aiAgentRunner = new TanstackAIAgentRunner()
 
     const backend = process.env.DB_BACKEND ?? 'sqlite'
     let aiStorage: any
