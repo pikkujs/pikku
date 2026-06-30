@@ -24,6 +24,7 @@ export type {
   InlineStepMeta,
   SleepStepMeta,
   CancelStepMeta,
+  SuspendStepMeta,
   SetStepMeta,
   SwitchCaseMeta,
   SwitchStepMeta,
@@ -54,8 +55,10 @@ export interface WorkflowServiceConfig {
 }
 
 export interface WorkflowPlannedStep {
-  /** Human-readable step label for UI timeline */
+  /** Durable step key — matches the runtime step name stored in the DB */
   stepName: string
+  /** Optional human-readable label for the UI timeline (falls back to stepName) */
+  displayName?: string
 }
 
 /**

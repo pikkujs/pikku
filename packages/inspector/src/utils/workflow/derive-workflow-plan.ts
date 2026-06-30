@@ -58,6 +58,16 @@ function containsConditional(steps: WorkflowStepMeta[]): boolean {
   return steps.some((step) => step.type === 'branch' || step.type === 'switch')
 }
 
+/**
+ * Turn an internal snake/kebab reason key into a sentence-case display label.
+ * e.g. "awaiting_approval" → "Awaiting approval", "building-image" → "Building image"
+ */
+function reasonToLabel(reason: string): string {
+  return reason
+    .replace(/[-_]/g, ' ')
+    .replace(/^(.)/, (c) => c.toUpperCase())
+}
+
 /** Flatten named steps (rpc/inline/sleep/parallel children) in source order. */
 function collectNamedSteps(steps: WorkflowStepMeta[]): WorkflowPlannedStep[] {
   const planned: WorkflowPlannedStep[] = []
@@ -67,6 +77,16 @@ function collectNamedSteps(steps: WorkflowStepMeta[]): WorkflowPlannedStep[] {
       case 'inline':
       case 'sleep':
         planned.push({ stepName: step.stepName })
+        break
+      case 'suspend':
+        // Runtime stores the suspend step as `__workflow_suspend:${reason}`.
+        // We surface it in the planned ladder with a readable displayName so
+        // the UI shows it in the right position instead of appending it at the
+        // bottom as an unrecognised orphan.
+        planned.push({
+          stepName: `__workflow_suspend:${step.reason}`,
+          displayName: reasonToLabel(step.reason),
+        })
         break
       case 'parallel':
         for (const child of step.children) {

@@ -7,6 +7,7 @@ import type {
   ParallelGroupStepMeta,
   FanoutStepMeta,
   CancelStepMeta,
+  SuspendStepMeta,
   SetStepMeta,
   SwitchStepMeta,
   SwitchCaseMeta,
@@ -21,6 +22,7 @@ import type {
 import {
   isWorkflowDoCall,
   isWorkflowSleepCall,
+  isWorkflowSuspendCall,
   isThrowCancelException,
   extractCancelReason,
   isParallelFanout,
@@ -512,6 +514,10 @@ function extractExpressionStatement(
       return extractSleepStep(call, context)
     }
 
+    if (isWorkflowSuspendCall(call, context.checker)) {
+      return extractSuspendStep(call, context)
+    }
+
     // Check for parallel group or fanout
     if (isParallelFanout(call)) {
       return extractParallelFanout(call, context)
@@ -692,6 +698,31 @@ function extractSleepStep(
   } catch (error) {
     context.errors.push({
       message: `Failed to extract sleep step: ${error instanceof Error ? error.message : String(error)}`,
+      node: call,
+    })
+    return null
+  }
+}
+
+/**
+ * Extract suspend step from workflow.suspend() call
+ */
+function extractSuspendStep(
+  call: ts.CallExpression,
+  context: ExtractionContext
+): SuspendStepMeta | null {
+  const args = call.arguments
+  if (args.length < 1) return null
+
+  try {
+    const reason = extractStringLiteral(args[0], context.checker)
+    return {
+      type: 'suspend',
+      reason,
+    }
+  } catch (error) {
+    context.errors.push({
+      message: `Failed to extract suspend step: ${error instanceof Error ? error.message : String(error)}`,
       node: call,
     })
     return null

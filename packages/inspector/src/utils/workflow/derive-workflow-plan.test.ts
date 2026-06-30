@@ -119,4 +119,22 @@ describe('deriveWorkflowPlan', () => {
     assert.equal(plan.deterministic, true)
     assert.deepEqual(plan.plannedSteps, [{ stepName: 'a' }])
   })
+
+  test('suspend steps appear in the plan with __workflow_suspend: key and sentence-case displayName', () => {
+    const plan = deriveWorkflowPlan([
+      rpc('build'),
+      { type: 'suspend', reason: 'building' } as WorkflowStepMeta,
+      rpc('publish'),
+      { type: 'suspend', reason: 'awaiting_approval' } as WorkflowStepMeta,
+      { type: 'suspend', reason: 'building-image' } as WorkflowStepMeta,
+    ])
+    assert.equal(plan.deterministic, true)
+    assert.deepEqual(plan.plannedSteps, [
+      { stepName: 'build' },
+      { stepName: '__workflow_suspend:building', displayName: 'Building' },
+      { stepName: 'publish' },
+      { stepName: '__workflow_suspend:awaiting_approval', displayName: 'Awaiting approval' },
+      { stepName: '__workflow_suspend:building-image', displayName: 'Building image' },
+    ])
+  })
 })
