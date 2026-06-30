@@ -10,6 +10,8 @@
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",
     "build": "tsc -b",
+    "test": "bash run-tests.sh",
+    "test:coverage": "bash run-tests.sh --coverage",
     "prepublishOnly": "yarn build"
   },
   "exports": {

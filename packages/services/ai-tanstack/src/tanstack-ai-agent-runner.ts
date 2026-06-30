@@ -168,6 +168,10 @@ async function runStream(
   const { systemPrompts, modelMessages } = convertMessages(params.messages)
   const tools = buildTools(params)
 
+  const allSystemPrompts = params.instructions
+    ? [params.instructions, ...systemPrompts]
+    : systemPrompts
+
   const stepResult: AIAgentStepResult = {
     text: '',
     toolCalls: [],
@@ -184,7 +188,7 @@ async function runStream(
   const chatStream = chat({
     adapter,
     messages: modelMessages as any,
-    systemPrompts: systemPrompts.map((s) => ({ content: s })),
+    systemPrompts: allSystemPrompts.map((s) => ({ content: s })),
     tools: tools as any,
     agentLoopStrategy: maxIterations(1),
     ...(params.temperature !== undefined
