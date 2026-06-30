@@ -185,6 +185,16 @@ async function runStream(
   const toolNameMap = new Map<string, string>()
   const argsBuffer = new Map<string, string>()
 
+  const dbg =
+    process.env.PIKKU_TANSTACK_DEBUG === '1' || process.env.CI === 'true'
+  const chunkSeq: string[] = []
+  if (dbg) {
+    // eslint-disable-next-line no-console
+    console.error(
+      `[tanstack] START model=${modelName} msgs=${modelMessages.length} instrLen=${(params.instructions ?? '').length} tools=${tools.length} roles=${modelMessages.map((m: any) => m.role).join(',')}`
+    )
+  }
+
   const chatStream = chat({
     adapter,
     messages: modelMessages as any,
@@ -198,6 +208,16 @@ async function runStream(
 
   for await (const chunk of chatStream as AsyncIterable<any>) {
     const type = chunk.type as string
+
+    if (dbg) {
+      chunkSeq.push(
+        type === 'CUSTOM'
+          ? `CUSTOM:${chunk.name}`
+          : type === 'TOOL_CALL_END'
+            ? `END(${chunk.result === undefined ? 'u' : 'r'})`
+            : type
+      )
+    }
 
     if (type === 'TEXT_MESSAGE_CONTENT') {
       const delta: string = chunk.delta ?? ''
@@ -308,6 +328,17 @@ async function runStream(
       stepResult.finishReason = 'tool-calls'
       break
     }
+  }
+
+  if (dbg) {
+    // eslint-disable-next-line no-console
+    console.error(
+      `[tanstack] END textLen=${stepResult.text.length} toolCalls=[${stepResult.toolCalls
+        .map((t) => t.toolName)
+        .join(
+          ','
+        )}] toolResults=${stepResult.toolResults.length} finish=${stepResult.finishReason} seq=${chunkSeq.join(' ')}`
+    )
   }
 
   return stepResult
