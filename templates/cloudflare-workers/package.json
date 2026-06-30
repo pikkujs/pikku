@@ -12,7 +12,7 @@
     "start": "wrangler dev"
   },
   "dependencies": {
-    "@pikku/cloudflare": "^0.12.11",
+    "@pikku/cloudflare": "^0.12.12",
     "@pikku/core": "^0.12.41"
   },
   "devDependencies": {

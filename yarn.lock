@@ -5821,7 +5821,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/cloudflare@npm:^0.12.11, @pikku/cloudflare@workspace:*, @pikku/cloudflare@workspace:packages/runtimes/cloudflare":
+"@pikku/cloudflare@npm:^0.12.12, @pikku/cloudflare@workspace:*, @pikku/cloudflare@workspace:packages/runtimes/cloudflare":
   version: 0.0.0-use.local
   resolution: "@pikku/cloudflare@workspace:packages/runtimes/cloudflare"
   dependencies:
@@ -6609,7 +6609,7 @@ __metadata:
   resolution: "@pikku/templates-cloudflare-websocket@workspace:templates/cloudflare-websocket"
   dependencies:
     "@cloudflare/workers-types": "npm:^4.20260317.1"
-    "@pikku/cloudflare": "npm:^0.12.11"
+    "@pikku/cloudflare": "npm:^0.12.12"
     "@pikku/core": "npm:^0.12.41"
     "@types/node": "npm:^24"
     "@types/ws": "npm:^8"
@@ -6623,7 +6623,7 @@ __metadata:
   resolution: "@pikku/templates-cloudflare-workers@workspace:templates/cloudflare-workers"
   dependencies:
     "@cloudflare/workers-types": "npm:^4.20260317.1"
-    "@pikku/cloudflare": "npm:^0.12.11"
+    "@pikku/cloudflare": "npm:^0.12.12"
     "@pikku/core": "npm:^0.12.41"
     "@types/node": "npm:^24"
     typescript: "npm:^5.9.3"
