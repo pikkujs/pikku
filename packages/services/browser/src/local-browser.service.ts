@@ -1,13 +1,11 @@
 import { randomUUID } from 'node:crypto'
+import type { Browser } from 'puppeteer'
 import type {
   BrowserLaunchOptions,
   BrowserLimits,
   BrowserService,
   BrowserSession,
   BrowserSessionInfo,
-  PikkuBrowser,
-  PikkuStagehand,
-  StagehandLaunchOptions,
 } from './browser-service.interface.js'
 
 interface BrowserLogger {
@@ -25,9 +23,10 @@ interface LocalBrowserServiceOptions {
 
 interface LocalSession {
   sessionId: string
-  browser: any
+  browser: Browser
   startTime: number
   attached: boolean
+  keepAlive?: number
   idleTimer?: ReturnType<typeof setTimeout>
 }
 
@@ -37,8 +36,8 @@ interface LocalSession {
  * pool so the session API (`acquire`/`launch`/`connect`/`sessions`) reuses warm
  * Chromium across requests — the same behaviour Cloudflare provides natively.
  *
- * puppeteer / playwright / @browserbasehq/stagehand are lazy-imported inside the
- * relevant method, so a project only needs to install the one it actually calls.
+ * `puppeteer` is lazy-imported inside `launch`, so a project that only ever
+ * runs on Cloudflare (where the browser is provided) never needs it installed.
  *
  * The `puppeteer` peer is pinned (package.json → 22.13.1) to the exact core that
  * `@cloudflare/puppeteer` vendors, so a project renders identically locally and
@@ -65,7 +64,7 @@ export class LocalBrowserService implements BrowserService {
     for (const session of this.sessions_.values()) {
       if (!session.attached) {
         this.attach(session, opts?.keepAlive)
-        return { sessionId: session.sessionId, browser: this.wrap(session) }
+        return this.toSession(session)
       }
     }
     return this.launch(opts)
@@ -73,7 +72,7 @@ export class LocalBrowserService implements BrowserService {
 
   async launch(opts?: BrowserLaunchOptions): Promise<BrowserSession> {
     const puppeteer = await this.loadPuppeteer()
-    const browser = await puppeteer.launch({
+    const browser: Browser = await puppeteer.launch({
       headless: true,
       args: this.launchArgs,
     })
@@ -85,7 +84,7 @@ export class LocalBrowserService implements BrowserService {
     }
     this.sessions_.set(session.sessionId, session)
     this.attach(session, opts?.keepAlive)
-    return { sessionId: session.sessionId, browser: this.wrap(session) }
+    return this.toSession(session)
   }
 
   async connect(sessionId: string): Promise<BrowserSession> {
@@ -94,7 +93,7 @@ export class LocalBrowserService implements BrowserService {
       throw new Error(`No live browser session with id ${sessionId}`)
     }
     this.attach(session)
-    return { sessionId: session.sessionId, browser: this.wrap(session) }
+    return this.toSession(session)
   }
 
   async sessions(): Promise<BrowserSessionInfo[]> {
@@ -116,55 +115,6 @@ export class LocalBrowserService implements BrowserService {
     }
   }
 
-  async getStagehand(opts?: StagehandLaunchOptions): Promise<PikkuStagehand> {
-    const baseURL = process.env.LITELLM_PROXY_URL
-    const apiKey =
-      process.env.LITELLM_BUILDER_API_KEY || process.env.LITELLM_API_KEY
-    if (!baseURL || !apiKey) {
-      throw new Error(
-        'Stagehand needs LITELLM_PROXY_URL and LITELLM_BUILDER_API_KEY (or LITELLM_API_KEY) to route its LLM through the Fabric proxy'
-      )
-    }
-    const mod = await this.load(
-      '@browserbasehq/stagehand',
-      '@browserbasehq/stagehand'
-    )
-    const Stagehand = mod.Stagehand ?? mod.default?.Stagehand ?? mod.default
-    const stagehand = new Stagehand({
-      env: 'LOCAL',
-      modelName: opts?.modelName ?? 'openai/gpt-4o-mini',
-      modelClientOptions: { apiKey, baseURL },
-      localBrowserLaunchOptions: { args: this.launchArgs },
-      verbose: 0,
-    })
-    await stagehand.init()
-    return {
-      page: stagehand.page as any,
-      act: (instruction: string) => stagehand.act(instruction),
-      extract: (args: any) => stagehand.extract(args),
-      observe: (instruction?: string) => stagehand.observe(instruction),
-      close: () => stagehand.close(),
-    }
-  }
-
-  async getPlaywright(opts?: BrowserLaunchOptions): Promise<PikkuBrowser> {
-    const mod = await this.load('playwright', 'playwright')
-    const chromium = mod.chromium ?? mod.default?.chromium
-    const browser = await chromium.launch({
-      headless: true,
-      args: this.launchArgs,
-    })
-    const session: LocalSession = {
-      sessionId: randomUUID(),
-      browser,
-      startTime: Date.now(),
-      attached: true,
-    }
-    this.sessions_.set(session.sessionId, session)
-    if (opts?.keepAlive) this.attach(session, opts.keepAlive)
-    return this.wrap(session)
-  }
-
   /** Close every pooled browser — call on runtime shutdown. */
   async shutdown(): Promise<void> {
     for (const session of this.sessions_.values()) {
@@ -180,22 +130,32 @@ export class LocalBrowserService implements BrowserService {
     this.sessions_.clear()
   }
 
+  private toSession(session: LocalSession): BrowserSession {
+    return {
+      sessionId: session.sessionId,
+      browser: session.browser,
+      release: async () => this.release(session),
+    }
+  }
+
   private attach(session: LocalSession, keepAlive?: number): void {
     session.attached = true
+    if (keepAlive !== undefined) session.keepAlive = keepAlive
     if (session.idleTimer) {
       clearTimeout(session.idleTimer)
       session.idleTimer = undefined
     }
-    if (keepAlive && keepAlive > 0) {
-      // Emulate CF keep_alive: end the session after it stays idle this long.
-      session.idleTimer = setTimeout(() => {
-        void this.endSession(session.sessionId)
-      }, keepAlive)
-    }
   }
 
-  private detach(session: LocalSession): void {
+  /** Mark the session idle and, per keepAlive, schedule it to end (CF keep_alive). */
+  private release(session: LocalSession): void {
     session.attached = false
+    if (session.idleTimer) clearTimeout(session.idleTimer)
+    if (session.keepAlive && session.keepAlive > 0) {
+      session.idleTimer = setTimeout(() => {
+        void this.endSession(session.sessionId)
+      }, session.keepAlive)
+    }
   }
 
   private async endSession(sessionId: string): Promise<void> {
@@ -209,17 +169,6 @@ export class LocalBrowserService implements BrowserService {
       this.logger?.warn(
         `Failed to close browser session ${sessionId}: ${String(err)}`
       )
-    }
-  }
-
-  private wrap(session: LocalSession): PikkuBrowser {
-    return {
-      newPage: () => session.browser.newPage(),
-      disconnect: async () => {
-        // Keep the session warm for reuse; just mark the client detached.
-        this.detach(session)
-      },
-      close: () => this.endSession(session.sessionId),
     }
   }
 

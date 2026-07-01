@@ -19,22 +19,15 @@
     ".": "./dist/index.js"
   },
   "peerDependencies": {
-    "@browserbasehq/stagehand": "*",
-    "playwright": "*",
     "puppeteer": "22.13.1"
   },
   "peerDependenciesMeta": {
-    "@browserbasehq/stagehand": {
-      "optional": true
-    },
-    "playwright": {
-      "optional": true
-    },
     "puppeteer": {
       "optional": true
     }
   },
   "devDependencies": {
+    "puppeteer": "22.13.1",
     "typescript": "^5.9"
   }
 }
