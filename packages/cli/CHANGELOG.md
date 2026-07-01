@@ -1,3 +1,26 @@
+## 0.12.61
+
+### Patch Changes
+
+- 41ce2cb: Upgrade to TypeScript 6 and raise the minimum Node.js version to 22.
+
+  All packages now build against `typescript@^6.0.3` and declare `engines.node >= 22`. Internal tooling (`ts-json-schema-generator`, `zod-to-ts`) was bumped to TypeScript 6-compatible releases.
+
+- Updated dependencies [241e6cf]
+- Updated dependencies [41ce2cb]
+  - @pikku/kysely@0.13.0
+  - @pikku/better-auth@0.12.13
+  - @pikku/bun-server@0.12.2
+  - @pikku/core@0.12.44
+  - @pikku/deploy-cloudflare@0.12.8
+  - @pikku/fetch@0.12.6
+  - @pikku/inspector@0.12.30
+  - @pikku/kysely-node-sqlite@0.12.3
+  - @pikku/node-http-server@0.12.4
+  - @pikku/openapi-parser@0.12.11
+  - @pikku/schedule@0.12.3
+  - @pikku/ws@0.12.3
+
 ## 0.12.60
 
 ### Patch Changes

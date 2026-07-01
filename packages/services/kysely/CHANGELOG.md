@@ -1,3 +1,18 @@
+## 0.13.0
+
+### Minor Changes
+
+- 241e6cf: Add `KyselyAuditService` — a durable `AuditService` that persists AuditEvents to an `audit` table via Kysely (the companion sink to `createAuditedKysely`). Its column mapping matches Fabric's platform audit-queue consumer, so a locally-run project and a deployed stage produce identical rows. Use it as the local/dev audit sink so audit events persist and are queryable without the platform queue.
+
+### Patch Changes
+
+- 41ce2cb: Upgrade to TypeScript 6 and raise the minimum Node.js version to 22.
+
+  All packages now build against `typescript@^6.0.3` and declare `engines.node >= 22`. Internal tooling (`ts-json-schema-generator`, `zod-to-ts`) was bumped to TypeScript 6-compatible releases.
+
+- Updated dependencies [41ce2cb]
+  - @pikku/core@0.12.44
+
 ## 0.12.18
 
 ### Patch Changes

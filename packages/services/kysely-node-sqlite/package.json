@@ -1,6 +1,6 @@
 {
   "name": "@pikku/kysely-node-sqlite",
-  "version": "0.12.2",
+  "version": "0.12.3",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/src/index.js",
@@ -16,15 +16,15 @@
     "node": ">=22.10"
   },
   "dependencies": {
-    "@pikku/kysely": "^0.12.16",
-    "@pikku/kysely-sqlite": "^0.12.6",
+    "@pikku/kysely": "^0.13.0",
+    "@pikku/kysely-sqlite": "^0.12.7",
     "kysely": "^0.29.0"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.34"
+    "@pikku/core": "^0.12.44"
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.34",
+    "@pikku/core": "^0.12.44",
     "@types/node": "^22",
     "typescript": "^6.0.3"
   },
