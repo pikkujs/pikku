@@ -1,5 +1,11 @@
 # @pikku/deploy-cloudflare
 
+## 0.12.7
+
+### Patch Changes
+
+- d720ae8: Expose `serviceNames` (each unit-service's `sourceServiceName`) on `PlatformImports`, so a `PlatformServiceContributor` can gate its imports/emit on a custom platform-specific service being required by the unit — without the OSS adapter needing to know that service by name.
+
 ## 0.12.6
 
 ### Patch Changes
