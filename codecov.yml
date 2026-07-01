@@ -13,6 +13,10 @@ coverage:
 ignore:
   - "packages/cli/src/functions/db/postgres/**"
   - "packages/inspector/src/utils/workflow/dsl/extract-dsl-workflow.ts"
+  # Compile-only wiring aggregator — imported for type-checking, never executed
+  # at runtime (the verifier boots via the generated bootstrap), so it has no
+  # coverable lines.
+  - "verifiers/functions/src/index.ts"
 
 flags:
   unit:
