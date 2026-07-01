@@ -31,6 +31,20 @@ jobs:
       - name: Check no publish-time CLI rebuild
         run: node scripts/check-no-publish-time-cli-rebuild.mjs
 
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          download-build: 'false'
+      - name: Check formatting
+        run: yarn prettier
+      - name: Lint
+        run: yarn lint
+
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -213,10 +227,11 @@ jobs:
         env:
           NODE_OPTIONS: --enable-source-maps
         run: |
+          : > unit-test-failures.txt
           while IFS= read -r script; do
             dir=$(dirname "$script")
             echo "::group::coverage ${dir}"
-            (cd "$dir" && bash run-tests.sh --coverage) || echo "::warning::unit tests failed in ${dir}"
+            (cd "$dir" && bash run-tests.sh --coverage) || { echo "::error::unit tests failed in ${dir}"; echo "$dir" >> unit-test-failures.txt; }
             echo "::endgroup::"
           done < <(find packages -name run-tests.sh -not -path '*/node_modules/*' | sort)
       - name: Merge lcov reports and re-root paths to repo root
@@ -237,6 +252,12 @@ jobs:
           flags: unit
           name: unit-coverage
         continue-on-error: true
+      - name: Fail if any package's unit tests failed
+        run: |
+          if [ -s unit-test-failures.txt ]; then
+            echo "Unit tests failed in:"; cat unit-test-failures.txt
+            exit 1
+          fi
 
   templates:
     name: Templates (${{ matrix.version }}, ${{ matrix.template }}, ${{ matrix.package-manager }})

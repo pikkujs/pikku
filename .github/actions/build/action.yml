@@ -1,21 +1,22 @@
 name: Build
-description: Build all packages, run tests, generate pikku files, and upload build artifact
+description: Build all packages, generate pikku files, build templates + console, and upload build artifact
 
 runs:
   using: composite
   steps:
-    - name: Check formatting
-      shell: bash
-      run: |
-        start=$SECONDS
-        yarn prettier
-        echo "::notice::⏱ Check formatting: $((SECONDS - start))s"
-    - name: Lint
-      shell: bash
-      run: |
-        start=$SECONDS
-        yarn lint
-        echo "::notice::⏱ Lint: $((SECONDS - start))s"
+    - name: Restore TypeScript build cache
+      uses: actions/cache@v4
+      with:
+        # tsc -b is incremental: given the prior tsconfig.tsbuildinfo + emitted
+        # dist it only recompiles projects whose inputs changed. Key on all
+        # package sources + tsconfigs + the lockfile so any change busts it, with
+        # a prefix restore-key so unrelated changes still reuse the newest cache.
+        path: |
+          packages/**/tsconfig.tsbuildinfo
+          packages/**/dist
+        key: ts-build-${{ hashFiles('packages/**/src/**/*.ts', 'packages/**/tsconfig*.json', 'yarn.lock') }}
+        restore-keys: |
+          ts-build-
     - name: Build packages
       shell: bash
       run: |
@@ -46,12 +47,6 @@ runs:
         start=$SECONDS
         yarn build:templates
         echo "::notice::⏱ Build templates: $((SECONDS - start))s"
-    - name: Run tests
-      shell: bash
-      run: |
-        start=$SECONDS
-        yarn test:coverage
-        echo "::notice::⏱ Run tests: $((SECONDS - start))s"
     - name: Generate and type-check console
       shell: bash
       run: |
@@ -76,11 +71,3 @@ runs:
           templates/**/dist/**
         include-hidden-files: true
         retention-days: 1
-
-    - name: Upload unit coverage to Codecov
-      uses: codecov/codecov-action@v5
-      with:
-        directory: packages
-        flags: unit
-        name: unit-coverage
-      continue-on-error: true
