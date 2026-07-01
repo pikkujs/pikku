@@ -4,16 +4,16 @@
 import './functions/http/http.wiring.js'
 import './functions/http/sse.wiring.js'
 import './functions/http/progressive-enhancement.wiring.js'
-import './functions/http/external.wiring.js'
+import './functions/http/addon.wiring.js'
 import './functions/http/zod.wiring.js'
 
 // Channel wirings
 import './functions/channel/channel.wiring.js'
-import './functions/channel/channel-external.wiring.js'
+import './functions/channel/channel-addon.wiring.js'
 
 // CLI wirings
 import './functions/cli/cli.wiring.js'
-import './functions/cli/cli-external.wiring.js'
+import './functions/cli/cli-addon.wiring.js'
 
 // MCP wirings
 import './functions/mcp/mcp.wiring.js'
@@ -31,4 +31,5 @@ import './functions/rpc/rpc.wiring.js'
 import './functions/trigger/trigger.wiring.js'
 
 // Workflow wirings
-import './functions/workflow/workflow.wiring.js'
+import './functions/workflow/workflow.functions.js'
+import './functions/workflow/workflow.graph.js'
