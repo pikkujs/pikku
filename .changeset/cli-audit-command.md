@@ -1,5 +1,5 @@
 ---
-"@pikku/cli": minor
+"@pikku/cli": patch
 ---
 
 feat(cli): add `pikku audit` — dependency security audit written to `.pikku/audit.json`
