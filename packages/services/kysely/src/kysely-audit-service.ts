@@ -13,13 +13,12 @@ const fallbackId = (): string =>
  * Durable {@link AuditService} that persists AuditEvents to an `audit` table
  * via Kysely — the companion sink to {@link createAuditedKysely}.
  *
- * The column mapping mirrors Fabric's platform audit-queue consumer, so a
- * locally-run project and a deployed stage write identical rows (the read side
- * relies only on `type`, `occurred_at`, `actor_user_id`, and the `data` JSON
- * that holds `metadata`). The `audit` table is an optional per-project
- * migration (not in the generated schema), so rows are inserted untyped; all
- * columns are TEXT on every engine and ON CONFLICT DO NOTHING keeps writes
- * idempotent on retries.
+ * The column mapping matches a platform audit-queue consumer, so a locally-run
+ * project and a deployed stage write identical rows (the read side relies only
+ * on `type`, `occurred_at`, `actor_user_id`, and the `data` JSON that holds
+ * `metadata`). The `audit` table is an optional per-project migration (not in
+ * the generated schema), so rows are inserted untyped; all columns are TEXT on
+ * every engine and ON CONFLICT DO NOTHING keeps writes idempotent on retries.
  */
 export class KyselyAuditService implements AuditService {
   constructor(private db: Kysely<any>) {}
