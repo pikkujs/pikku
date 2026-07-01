@@ -28,6 +28,9 @@
   },
   "devDependencies": {
     "puppeteer-core": "22.13.1",
-    "typescript": "^5.9"
+    "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

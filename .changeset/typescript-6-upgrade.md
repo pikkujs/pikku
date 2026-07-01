@@ -1,4 +1,5 @@
 ---
+"@pikku/browser": patch
 "@pikku/addon-console": patch
 "@pikku/addon-graph": patch
 "@pikku/ai-vercel": patch

@@ -5772,7 +5772,7 @@ __metadata:
   resolution: "@pikku/browser@workspace:packages/services/browser"
   dependencies:
     puppeteer-core: "npm:22.13.1"
-    typescript: "npm:^5.9"
+    typescript: "npm:^6.0.3"
   peerDependencies:
     puppeteer-core: 22.13.1
   peerDependenciesMeta:
