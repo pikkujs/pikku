@@ -19,15 +19,15 @@
     ".": "./dist/index.js"
   },
   "peerDependencies": {
-    "puppeteer": "22.13.1"
+    "puppeteer-core": "22.13.1"
   },
   "peerDependenciesMeta": {
-    "puppeteer": {
+    "puppeteer-core": {
       "optional": true
     }
   },
   "devDependencies": {
-    "puppeteer": "22.13.1",
+    "puppeteer-core": "22.13.1",
     "typescript": "^5.9"
   }
 }

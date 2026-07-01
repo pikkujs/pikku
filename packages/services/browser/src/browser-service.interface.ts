@@ -1,8 +1,10 @@
-import type { Browser, Page } from 'puppeteer'
+import type { Browser, Page } from 'puppeteer-core'
 
-// The browser/page handles are puppeteer's own types — `@cloudflare/puppeteer`
-// is an API-compatible fork pinned to the same core version, so one set of types
-// describes both the local and the Cloudflare-backed implementation.
+// The browser/page handles are puppeteer-core's own types — `@cloudflare/puppeteer`
+// is a fork of puppeteer-core pinned to the same version, so one set of types
+// describes both the local and the Cloudflare-backed implementation. We use
+// puppeteer-core (not puppeteer) so nothing ever downloads a Chromium binary;
+// the local runtime points at a system/remote browser (see LocalBrowserService).
 export type { Browser, Page }
 
 export interface BrowserSession {

@@ -5771,12 +5771,12 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/browser@workspace:packages/services/browser"
   dependencies:
-    puppeteer: "npm:22.13.1"
+    puppeteer-core: "npm:22.13.1"
     typescript: "npm:^5.9"
   peerDependencies:
-    puppeteer: 22.13.1
+    puppeteer-core: 22.13.1
   peerDependenciesMeta:
-    puppeteer:
+    puppeteer-core:
       optional: true
   languageName: unknown
   linkType: soft
@@ -21603,20 +21603,6 @@ __metadata:
     devtools-protocol: "npm:0.0.1299070"
     ws: "npm:^8.18.0"
   checksum: 10/ebc04c7cdbb4dddd1052ab5614e62d82324bbaf5ad2eecb52404ac09d446a7469f53a19fe19cd23a04a5bd0e71c164e5d13d07d76658e28d5b1512a6573246a3
-  languageName: node
-  linkType: hard
-
-"puppeteer@npm:22.13.1":
-  version: 22.13.1
-  resolution: "puppeteer@npm:22.13.1"
-  dependencies:
-    "@puppeteer/browsers": "npm:2.2.4"
-    cosmiconfig: "npm:^9.0.0"
-    devtools-protocol: "npm:0.0.1299070"
-    puppeteer-core: "npm:22.13.1"
-  bin:
-    puppeteer: lib/esm/puppeteer/node/cli.js
-  checksum: 10/a64f69385d5d156ce2467246a671339db1bbfe3424a7d09be8b039a9c2ae9eecdd0320ff37ceef3abfc8b3977728fb72f27f0e680ea95aaba2164f5e2636896f
   languageName: node
   linkType: hard
 

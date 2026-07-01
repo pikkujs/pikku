@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import type { Browser } from 'puppeteer'
+import type { Browser } from 'puppeteer-core'
 import type {
   BrowserLaunchOptions,
   BrowserLimits,
@@ -18,6 +18,12 @@ interface LocalBrowserServiceOptions {
   logger?: BrowserLogger
   /** Chromium launch flags; defaults suit containers (no sandbox). */
   launchArgs?: string[]
+  /**
+   * Path to a system Chrome/Chromium. Defaults to $PUPPETEER_EXECUTABLE_PATH,
+   * else puppeteer-core resolves the installed `chrome` channel. Nothing is ever
+   * downloaded — a browser must already be present on the host/image.
+   */
+  executablePath?: string
   maxConcurrentSessions?: number
 }
 
@@ -36,18 +42,22 @@ interface LocalSession {
  * pool so the session API (`acquire`/`launch`/`connect`/`sessions`) reuses warm
  * Chromium across requests — the same behaviour Cloudflare provides natively.
  *
- * `puppeteer` is lazy-imported inside `launch`, so a project that only ever
+ * `puppeteer-core` is lazy-imported inside `launch`, so a project that only ever
  * runs on Cloudflare (where the browser is provided) never needs it installed.
+ * We use puppeteer-core, NOT puppeteer, so installing it never downloads a
+ * Chromium binary — `launch` runs against a system/remote browser via
+ * `executablePath` ($PUPPETEER_EXECUTABLE_PATH) or the installed `chrome` channel.
  *
- * The `puppeteer` peer is pinned (package.json → 22.13.1) to the exact core that
- * `@cloudflare/puppeteer` vendors, so a project renders identically locally and
- * on Cloudflare. That pin is the source of truth `pikku fabric validate` checks
- * against; bump it in lockstep with `@cloudflare/puppeteer` (and the injector).
+ * The `puppeteer-core` peer is pinned (package.json → 22.13.1) to the exact
+ * version `@cloudflare/puppeteer` forks, so a project renders identically locally
+ * and on Cloudflare. That pin is the source of truth `pikku fabric validate`
+ * checks; bump it in lockstep with `@cloudflare/puppeteer` (and the injector).
  */
 export class LocalBrowserService implements BrowserService {
   private readonly sessions_ = new Map<string, LocalSession>()
   private readonly logger?: BrowserLogger
   private readonly launchArgs: string[]
+  private readonly executablePath?: string
   private readonly maxConcurrentSessions: number
   private puppeteerMod?: any
 
@@ -57,6 +67,8 @@ export class LocalBrowserService implements BrowserService {
       '--no-sandbox',
       '--disable-setuid-sandbox',
     ]
+    this.executablePath =
+      options.executablePath ?? process.env.PUPPETEER_EXECUTABLE_PATH
     this.maxConcurrentSessions = options.maxConcurrentSessions ?? 3
   }
 
@@ -72,9 +84,14 @@ export class LocalBrowserService implements BrowserService {
 
   async launch(opts?: BrowserLaunchOptions): Promise<BrowserSession> {
     const puppeteer = await this.loadPuppeteer()
+    // puppeteer-core never downloads Chromium — point it at a system browser
+    // via executablePath, else let it resolve the installed `chrome` channel.
     const browser: Browser = await puppeteer.launch({
       headless: true,
       args: this.launchArgs,
+      ...(this.executablePath
+        ? { executablePath: this.executablePath }
+        : { channel: 'chrome' }),
     })
     const session: LocalSession = {
       sessionId: randomUUID(),
@@ -174,7 +191,7 @@ export class LocalBrowserService implements BrowserService {
 
   private async loadPuppeteer(): Promise<any> {
     if (!this.puppeteerMod) {
-      const mod = await this.load('puppeteer', 'puppeteer')
+      const mod = await this.load('puppeteer-core', 'puppeteer-core')
       this.puppeteerMod = mod.default ?? mod
     }
     return this.puppeteerMod
