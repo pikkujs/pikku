@@ -1,4 +1,5 @@
 import type { Logger } from '@pikku/core/services'
+import type { PostgresConfig } from '@pikku/core'
 import { CamelCasePlugin, Kysely } from 'kysely'
 import { PostgresJSDialect } from 'kysely-postgres-js'
 import postgres from 'postgres'
@@ -11,20 +12,38 @@ export class PikkuKysely<DB> {
   constructor(
     private logger: Logger,
     connectionOrConfig: postgres.Sql<{}> | postgres.Options<{}> | string,
-    defaultSchemaName?: string
+    defaultSchemaName?: string,
+    poolConfig?: PostgresConfig
   ) {
+    // Map the runtime pool config to postgres.js options. Only set keys that
+    // were provided so postgres.js keeps its own defaults otherwise.
+    const poolOptions: postgres.Options<{}> = {}
+    if (poolConfig?.maxPool !== undefined) poolOptions.max = poolConfig.maxPool
+    if (poolConfig?.connectTimeout !== undefined)
+      poolOptions.connect_timeout = poolConfig.connectTimeout
+    if (poolConfig?.idleTimeout !== undefined)
+      poolOptions.idle_timeout = poolConfig.idleTimeout
+    if (poolConfig?.maxLifetime !== undefined)
+      poolOptions.max_lifetime = poolConfig.maxLifetime
+    if (poolConfig?.prepare !== undefined)
+      poolOptions.prepare = poolConfig.prepare
+    if (poolConfig?.statementTimeout !== undefined)
+      poolOptions.connection = {
+        statement_timeout: poolConfig.statementTimeout,
+      }
+
     // Check if it's a postgres.Sql instance, a connection string, or config options
     if (typeof connectionOrConfig === 'function') {
-      // It's a postgres.Sql instance
+      // It's a postgres.Sql instance — already constructed, pool options N/A
       this.postgres = connectionOrConfig as postgres.Sql<{}>
       this.ownsConnection = false
     } else if (typeof connectionOrConfig === 'string') {
       // It's a connection string URL
-      this.postgres = postgres(connectionOrConfig)
+      this.postgres = postgres(connectionOrConfig, poolOptions)
       this.ownsConnection = true
     } else {
       // It's a config object
-      this.postgres = postgres(connectionOrConfig)
+      this.postgres = postgres({ ...connectionOrConfig, ...poolOptions })
       this.ownsConnection = true
     }
 

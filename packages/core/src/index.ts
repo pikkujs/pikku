@@ -31,6 +31,7 @@ export type {
   PikkuWire,
   PikkuRawWire,
   PikkuWiringTypes,
+  PostgresConfig,
   RequireAtLeastOne,
   SerializedError,
   WireServices,

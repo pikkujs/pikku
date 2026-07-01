@@ -193,6 +193,37 @@ export type RequireAtLeastOne<T> = {
 }[keyof T]
 
 /**
+ * Runtime options for the Postgres adapter (@pikku/kysely-postgres).
+ * The connection string itself stays the flat `postgresUrl` config field (the
+ * contract the CLI's db commands read); this block is purely runtime pool
+ * tuning that the CLI never touches.
+ */
+export interface PostgresConfig {
+  /** Max connections in the postgres.js pool. Defaults to postgres.js's 10. */
+  maxPool?: number
+  /** Seconds to wait establishing a new connection before failing. */
+  connectTimeout?: number
+  /** Close a pooled connection after it has been idle this many seconds. */
+  idleTimeout?: number
+  /**
+   * Recycle a connection after this many seconds. Guards against stale TCP
+   * connections silently dropped by load balancers / proxies.
+   */
+  maxLifetime?: number
+  /**
+   * Server-side `statement_timeout` in milliseconds. A query running longer is
+   * cancelled, freeing its connection — defense against a runaway query pinning
+   * a pooled connection and exhausting the pool.
+   */
+  statementTimeout?: number
+  /**
+   * Set `false` behind a transaction-mode connection pooler (pgBouncer,
+   * Supabase pooler) that cannot use prepared statements.
+   */
+  prepare?: boolean
+}
+
+/**
  * Interface for the core configuration settings of Pikku.
  */
 export type CoreConfig<Config extends Record<string, unknown> = {}> = {
@@ -202,6 +233,8 @@ export type CoreConfig<Config extends Record<string, unknown> = {}> = {
   secrets?: {}
 
   workflow?: WorkflowServiceConfig
+  /** Runtime Postgres adapter options (pool sizing). */
+  postgres?: PostgresConfig
 } & Config
 
 /**
