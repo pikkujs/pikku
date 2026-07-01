@@ -22,36 +22,24 @@ runs:
         start=$SECONDS
         yarn build:packages
         echo "::notice::⏱ Build packages: $((SECONDS - start))s"
-    - name: Generate pikku files
-      shell: bash
-      run: |
-        start=$SECONDS
-        yarn pikku
-        echo "::notice::⏱ Generate pikku files: $((SECONDS - start))s"
     - name: Build addons
       shell: bash
       run: |
         start=$SECONDS
         yarn build:addons
         echo "::notice::⏱ Build addons: $((SECONDS - start))s"
-    - name: Regenerate schemas after bootstrap
-      shell: bash
-      run: |
-        start=$SECONDS
-        yarn pikku
-        echo "::notice::⏱ Regenerate schemas: $((SECONDS - start))s"
     - name: Build function-addon template
       shell: bash
       run: |
         start=$SECONDS
         cd templates/function-addon && yarn pikku && yarn build
         echo "::notice::⏱ Build function-addon template: $((SECONDS - start))s"
-    - name: Final pikku regeneration before template builds
+    - name: Generate pikku files
       shell: bash
       run: |
         start=$SECONDS
         yarn pikku
-        echo "::notice::⏱ Final pikku regeneration: $((SECONDS - start))s"
+        echo "::notice::⏱ Generate pikku files: $((SECONDS - start))s"
     - name: Build templates
       shell: bash
       run: |
