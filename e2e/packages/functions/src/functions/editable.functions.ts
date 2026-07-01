@@ -9,6 +9,6 @@ export const editableFunc = pikkuSessionlessFunc<
   tags: ['e2e', 'editable'],
   expose: true,
   func: async (_services, { name }) => {
-    return { greeting: `Hello, ${name}!` }
-  },
+  return { greeting: `Hello, ${name}!` }
+},
 })
