@@ -658,6 +658,42 @@ export async function runValidate(
           )
         )
       }
+
+      // @pikku/browser pins `puppeteer` to the exact core that
+      // @cloudflare/puppeteer vendors, so headless rendering behaves identically
+      // locally and on Cloudflare Browser Rendering. A project using it must pin
+      // that same version, or its local/sandbox output diverges from deploy.
+      const usesBrowser =
+        !!pkg.dependencies?.['@pikku/browser'] ||
+        !!pkg.devDependencies?.['@pikku/browser']
+      if (usesBrowser) {
+        const browserPkg = await readJsonSafe<{
+          peerDependencies?: Record<string, string>
+        }>(join(root, 'node_modules', '@pikku', 'browser', 'package.json'))
+        const required = browserPkg?.peerDependencies?.puppeteer
+        const projectPin =
+          pkg.dependencies?.puppeteer ?? pkg.devDependencies?.puppeteer
+        const slug = (pkg.name ?? dir).replace(/[@/]/g, '-')
+        if (required && !projectPin) {
+          w(
+            `browser-puppeteer-missing-${slug}`,
+            `${pkg.name ?? dir} depends on @pikku/browser but declares no puppeteer — LocalBrowserService.getPuppeteer() will throw at runtime (local/sandbox/server rendering)`,
+            join(dir, 'package.json'),
+            `Add "puppeteer": "${required}" to run headless rendering off Cloudflare.`
+          )
+        } else if (required && projectPin && projectPin !== required) {
+          e(
+            `browser-puppeteer-version-${slug}`,
+            `${pkg.name ?? dir} pins puppeteer "${projectPin}" but @pikku/browser requires "${required}" — local rendering would diverge from Cloudflare Browser Rendering, which vendors that exact puppeteer core`,
+            join(dir, 'package.json'),
+            lines(
+              `Set "puppeteer": "${required}" so headless rendering behaves`,
+              'identically locally and on deploy. Bump it in lockstep with',
+              '@pikku/browser (which tracks @cloudflare/puppeteer) when it changes.'
+            )
+          )
+        }
+      }
     }
   }
 

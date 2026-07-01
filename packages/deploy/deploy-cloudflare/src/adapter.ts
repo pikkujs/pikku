@@ -81,6 +81,13 @@ export type PlatformImports = {
   needsQueue: boolean
   needsWorkflow: boolean
   needsAI: boolean
+  /**
+   * Wired service names required by this unit (from each unit-service's
+   * `sourceServiceName`). Lets a contributor gate its imports on a custom,
+   * platform-specific service being present without the OSS adapter needing to
+   * know that service by name (e.g. a fabric contributor gating on 'browser').
+   */
+  serviceNames: string[]
 }
 
 /**
@@ -244,6 +251,7 @@ export class CloudflareProviderAdapter {
       needsQueue,
       needsWorkflow,
       needsAI,
+      serviceNames: unit.services.map((s) => s.sourceServiceName),
     }
   }
 
