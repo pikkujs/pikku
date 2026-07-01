@@ -32,6 +32,18 @@ export type PikkuBunServerOptions = RunHTTPWiringOptions & {
    * connected clients. Defaults to a fresh `BunEventHubService`.
    */
   eventHub?: BunEventHubService
+  /**
+   * Parsed content of `.pikku/mcp/mcp.gen.json`. When provided and non-empty,
+   * `@pikku/modelcontextprotocol` is dynamically imported and the MCP server is
+   * mounted at `mcpPath` via the SDK's fetch-native (Web Standard) transport.
+   * Import the JSON statically so bundlers (esbuild) inline it — no file read.
+   * Mirrors `PikkuNodeHTTPServerOptions.mcpJson`.
+   */
+  mcpJson?: { tools?: unknown[]; resources?: unknown[]; prompts?: unknown[] }
+  /**
+   * Path the MCP server is mounted at when `mcpJson` is provided. Default `/mcp`.
+   */
+  mcpPath?: string
 }
 
 type WsData = { channelHandler: PikkuLocalChannelHandler }
@@ -60,14 +72,19 @@ export class PikkuBunServer {
   private server: BunServer<WsData> | null = null
   private readonly eventHub: BunEventHubService
   private readonly options: RunHTTPWiringOptions
+  private readonly mcpJson?: PikkuBunServerOptions['mcpJson']
+  private readonly mcpPath: string
+  private mcpHandler?: (request: Request) => Promise<Response>
 
   constructor(
     private readonly config: BunServerConfig,
     private readonly logger: Logger,
     options: PikkuBunServerOptions = {}
   ) {
-    const { eventHub, ...httpOptions } = options
+    const { eventHub, mcpJson, mcpPath, ...httpOptions } = options
     this.eventHub = eventHub ?? new BunEventHubService()
+    this.mcpJson = mcpJson
+    this.mcpPath = mcpPath ?? '/mcp'
     this.options = httpOptions
   }
 
@@ -75,10 +92,42 @@ export class PikkuBunServer {
     compileAllSchemas(this.logger)
     logRegisterRoutes(this.logger)
     logChannels(this.logger)
+    await this.initMCP()
+  }
+
+  private async initMCP(): Promise<void> {
+    const mcpJson = this.mcpJson
+    if (!mcpJson) return
+    const { tools = [], resources = [], prompts = [] } = mcpJson
+    if (tools.length + resources.length + prompts.length === 0) return
+    try {
+      const { PikkuMCPServer } = await import('@pikku/modelcontextprotocol')
+      const mcpServer = new PikkuMCPServer(
+        {
+          name: 'pikku',
+          version: '1.0.0',
+          mcpJSON: mcpJson,
+          capabilities: {
+            ...(tools.length > 0 && { tools: {} }),
+            ...(resources.length > 0 && { resources: {} }),
+            ...(prompts.length > 0 && { prompts: {} }),
+          },
+        },
+        this.logger
+      )
+      await mcpServer.init()
+      const { handler } = mcpServer.createFetchHandler({ path: this.mcpPath })
+      this.mcpHandler = handler
+      this.logger.info(`pikku-bun-server: MCP mounted at ${this.mcpPath}`)
+    } catch (err) {
+      this.logger.warn(
+        `pikku-bun-server: MCP could not be mounted — ${err instanceof Error ? err.message : String(err)}`
+      )
+    }
   }
 
   public async start(): Promise<void> {
-    const { config, logger, options, eventHub } = this
+    const { config, logger, options, eventHub, mcpHandler, mcpPath } = this
 
     this.server = Bun.serve<WsData>({
       port: config.port,
@@ -109,6 +158,13 @@ export class PikkuBunServer {
           return new Response('{"ok":true}', {
             headers: { 'content-type': 'application/json' },
           })
+        }
+
+        if (mcpHandler) {
+          const pathname = new URL(req.url).pathname
+          if (pathname === mcpPath || pathname.startsWith(`${mcpPath}/`)) {
+            return await mcpHandler(req)
+          }
         }
 
         const pikkuReq = new PikkuFetchHTTPRequest(req)

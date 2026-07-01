@@ -8,6 +8,7 @@ import {
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
+import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
 import type {
   ListResourceTemplatesResult,
@@ -213,6 +214,30 @@ export class PikkuMCPServer {
       }
     }
 
+    return { handler }
+  }
+
+  /**
+   * Fetch-native MCP handler for Web-Standard runtimes (bun, workers, deno).
+   * Mirrors `createHTTPRequestHandler` but takes a `Request` and returns a
+   * `Response` via the SDK's WebStandard transport — no `node:http` req/res.
+   * Stateless: a fresh transport + configured server per request (the
+   * recommended web-standard pattern; no session map to leak across requests).
+   */
+  public createFetchHandler(options?: { path?: string }): {
+    handler: (request: Request) => Promise<Response>
+  } {
+    const mcpPath = options?.path ?? '/mcp'
+    const handler = async (request: Request): Promise<Response> => {
+      const url = new URL(request.url)
+      if (url.pathname !== mcpPath) {
+        return new Response(null, { status: 404 })
+      }
+      const transport = new WebStandardStreamableHTTPServerTransport()
+      const server = this.createConfiguredServer()
+      await server.connect(transport)
+      return transport.handleRequest(request)
+    }
     return { handler }
   }
 
