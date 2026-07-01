@@ -1,6 +1,6 @@
 {
   "name": "@pikku/bun-server",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "description": "Pikku server adapter for Bun (Bun.serve)",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
@@ -16,7 +16,7 @@
     "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.38"
+    "@pikku/core": "^0.12.44"
   },
   "devDependencies": {
     "@types/bun": "latest",

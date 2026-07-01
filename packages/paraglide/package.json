@@ -1,6 +1,6 @@
 {
   "name": "@pikku/paraglide",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "description": "Paraglide tooling for pikku apps — generates typed enum-lookup maps from `enum__*` message keys.",

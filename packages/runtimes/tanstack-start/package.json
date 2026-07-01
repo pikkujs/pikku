@@ -1,6 +1,6 @@
 {
   "name": "@pikku/tanstack-start",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",
@@ -20,14 +20,14 @@
     ".": "./dist/index.js"
   },
   "peerDependencies": {
-    "@pikku/better-auth": "^0.12.8",
-    "@pikku/core": "^0.12.34",
+    "@pikku/better-auth": "^0.12.13",
+    "@pikku/core": "^0.12.44",
     "@tanstack/react-start": "^1.0.0",
     "better-auth": "^1.6.0"
   },
   "devDependencies": {
-    "@pikku/better-auth": "^0.12.8",
-    "@pikku/core": "^0.12.34",
+    "@pikku/better-auth": "^0.12.13",
+    "@pikku/core": "^0.12.44",
     "@tanstack/react-start": "^1.132.0",
     "better-auth": "^1.6.19",
     "react": "^19",
