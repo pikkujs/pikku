@@ -6,7 +6,7 @@
     "@pikku/addon-console": "workspace:*",
     "@pikku/addon-graph": "workspace:*",
     "@pikku/better-auth": "^0.12.12",
-    "@pikku/core": "^0.12.42",
+    "@pikku/core": "^0.12.43",
     "@pikku/jose": "workspace:^",
     "@pikku/kysely": "workspace:^",
     "@pikku/schema-cfworker": "^0.12.2",

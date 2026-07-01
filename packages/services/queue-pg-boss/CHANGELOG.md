@@ -1,3 +1,18 @@
+## 0.12.5
+
+### Patch Changes
+
+- 05aba57: fix(scheduler): prune orphaned recurring-task schedules on start
+
+  When a scheduled task is removed from code, its pg-boss schedule row survived and
+  kept producing jobs into a queue with no registered worker — the jobs piled up as
+  'created' forever and could flood the queue (thousands of stuck jobs). `start()`
+  now drops any `pikku-recurring-scheduled-task_*` schedule and queue that is no
+  longer registered, so task removals self-heal on the next boot.
+
+- Updated dependencies [a8022e5]
+  - @pikku/core@0.12.43
+
 ## 0.12.4
 
 ### Patch Changes
