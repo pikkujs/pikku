@@ -1,5 +1,6 @@
 import { existsSync } from 'fs'
 import { pikkuWorkflowComplexFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { assertSingleCoreVersion } from '../../utils/assert-single-core-version.js'
 
 type ScaffoldGenerator =
   | 'pikkuPublicRPC'
@@ -34,6 +35,10 @@ const scaffoldFiles = (
 export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
   title: 'Pikku All',
   func: async ({ logger, config, getInspectorState }, _data, { workflow }) => {
+    // Preflight: a split @pikku/core install silently breaks wiring registration
+    // (workflows/RPCs "disappear"), so refuse to codegen against it.
+    await assertSingleCoreVersion(config.rootDir, logger)
+
     const allImports: string[] = []
     let typesDeclarationFileExists = true
 
