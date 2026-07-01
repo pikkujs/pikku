@@ -22,6 +22,7 @@ import { dbGenerate } from './functions/commands/db-generate.js'
 import { dbSeed } from './functions/commands/db-seed.js'
 import { dbReset } from './functions/commands/db-reset.js'
 import { dbAudit } from './functions/commands/db-audit.js'
+import { pikkuAudit } from './functions/commands/audit.js'
 import {
   workspaceValidate,
   renderWorkspaceValidate,
@@ -221,6 +222,17 @@ wireCLI({
     bootstrap: pikkuCLICommand({
       func: bootstrap,
       description: 'Generate only type files (setup phase only)',
+    }),
+    audit: pikkuCLICommand({
+      func: pikkuAudit,
+      description:
+        'Audit dependencies for security advisories (always) and available updates (--outdated); writes .pikku/audit.json',
+      options: {
+        outdated: {
+          description: 'Also report available dependency updates',
+          default: false,
+        },
+      },
     }),
     watch: pikkuCLICommand({
       func: watch,

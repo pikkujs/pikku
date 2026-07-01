@@ -554,6 +554,149 @@ export async function runValidate(
     }
   }
 
+  // ── undeclared dependencies ────────────────────────────────────────────
+  // Every external module imported from a package's src/ must be declared in
+  // that package's own dependencies/devDependencies/peerDependencies. An
+  // undeclared import still type-checks locally (tsconfig `paths` or root
+  // workspace hoisting resolve it), but the deploy bundle (esbuild / Bun.build)
+  // resolves per-package and fails with "Could not resolve <pkg>. Maybe you
+  // need to bun install?" — aborting the deploy. Catch that class here.
+  {
+    const NODE_BUILTINS = new Set([
+      'assert', 'async_hooks', 'buffer', 'child_process', 'cluster', 'console',
+      'constants', 'crypto', 'dgram', 'dns', 'domain', 'events', 'fs', 'http',
+      'http2', 'https', 'inspector', 'module', 'net', 'os', 'path', 'perf_hooks',
+      'process', 'punycode', 'querystring', 'readline', 'repl', 'stream',
+      'string_decoder', 'timers', 'tls', 'tty', 'url', 'util', 'v8', 'vm',
+      'worker_threads', 'zlib',
+    ])
+    const pkgNameOf = (spec: string): string =>
+      spec.startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0]
+
+    const wsDirs: string[] = []
+    for (const group of ['packages', 'apps', 'backends']) {
+      const groupDir = join(root, group)
+      if (!existsSync(groupDir)) continue
+      try {
+        for (const d of await readdir(groupDir, { withFileTypes: true })) {
+          if (d.isDirectory() && existsSync(join(groupDir, d.name, 'package.json'))) {
+            wsDirs.push(join(groupDir, d.name))
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    // Workspace package names resolve via the monorepo, not npm — never "missing".
+    const wsNames = new Set<string>()
+    for (const dir of wsDirs) {
+      const p = await readJsonSafe<{ name?: string }>(join(dir, 'package.json'))
+      if (p?.name) wsNames.add(p.name)
+    }
+
+    for (const dir of wsDirs) {
+      const pkg = await readJsonSafe<{
+        name?: string
+        dependencies?: Record<string, string>
+        devDependencies?: Record<string, string>
+        peerDependencies?: Record<string, string>
+        optionalDependencies?: Record<string, string>
+      }>(join(dir, 'package.json'))
+      if (!pkg) continue
+      const declared = new Set([
+        ...Object.keys(pkg.dependencies ?? {}),
+        ...Object.keys(pkg.devDependencies ?? {}),
+        ...Object.keys(pkg.peerDependencies ?? {}),
+        ...Object.keys(pkg.optionalDependencies ?? {}),
+      ])
+      // tsconfig `paths` keys (e.g. "@/*") are internal aliases, not packages.
+      const tsconfig = await readJsonSafe<{
+        compilerOptions?: { paths?: Record<string, unknown> }
+      }>(join(dir, 'tsconfig.json'))
+      const aliasPrefixes = Object.keys(tsconfig?.compilerOptions?.paths ?? {}).map(
+        (k) => k.replace(/\*$/, '')
+      )
+
+      const used = new Map<string, string>()
+      for (const file of await listSourceFiles(join(dir, 'src'))) {
+        if (/\.gen\.(ts|tsx)$/.test(file)) continue
+        const txt = await readTextSafe(file)
+        if (!txt) continue
+        const re = /(?:from|import|require)\s*\(?\s*['"]([^'".#][^'"]*)['"]/g
+        let m: RegExpExecArray | null
+        while ((m = re.exec(txt))) {
+          const spec = m[1]
+          if (
+            spec.startsWith('node:') ||
+            spec.startsWith('@/') ||
+            spec.startsWith('~') ||
+            spec.startsWith('virtual:') ||
+            spec.includes('${')
+          ) {
+            continue
+          }
+          if (aliasPrefixes.some((a) => spec === a.replace(/\/$/, '') || spec.startsWith(a))) {
+            continue
+          }
+          const name = pkgNameOf(spec)
+          if (NODE_BUILTINS.has(name) || name === pkg.name || wsNames.has(name)) continue
+          if (!used.has(name)) used.set(name, file)
+        }
+      }
+      const missing = [...used.keys()].filter((n) => !declared.has(n)).sort()
+      if (missing.length) {
+        e(
+          `undeclared-deps-${(pkg.name ?? dir).replace(/[@/]/g, '-')}`,
+          `${pkg.name ?? dir} imports undeclared package(s): ${missing.join(', ')} — the deploy bundle cannot resolve them`,
+          join(dir, 'package.json'),
+          lines(
+            `Add the missing package(s) to ${pkg.name ?? 'this package'}'s dependencies, e.g.:`,
+            ...missing.map((n) => `  "${n}": "<version>"`),
+            'then reinstall. They import-resolve locally via tsconfig paths / root',
+            'hoisting, but esbuild/Bun.build resolves each package independently.'
+          )
+        )
+      }
+
+      // @pikku/browser pins `puppeteer` to the exact core that
+      // @cloudflare/puppeteer vendors, so headless rendering behaves identically
+      // locally and on Cloudflare Browser Rendering. A project using it must pin
+      // that same version, or its local/sandbox output diverges from deploy.
+      const usesBrowser =
+        !!pkg.dependencies?.['@pikku/browser'] ||
+        !!pkg.devDependencies?.['@pikku/browser']
+      if (usesBrowser) {
+        const browserPkg = await readJsonSafe<{
+          peerDependencies?: Record<string, string>
+        }>(join(root, 'node_modules', '@pikku', 'browser', 'package.json'))
+        const required = browserPkg?.peerDependencies?.puppeteer
+        const projectPin =
+          pkg.dependencies?.puppeteer ?? pkg.devDependencies?.puppeteer
+        const slug = (pkg.name ?? dir).replace(/[@/]/g, '-')
+        if (required && !projectPin) {
+          w(
+            `browser-puppeteer-missing-${slug}`,
+            `${pkg.name ?? dir} depends on @pikku/browser but declares no puppeteer — LocalBrowserService.getPuppeteer() will throw at runtime (local/sandbox/server rendering)`,
+            join(dir, 'package.json'),
+            `Add "puppeteer": "${required}" to run headless rendering off Cloudflare.`
+          )
+        } else if (required && projectPin && projectPin !== required) {
+          e(
+            `browser-puppeteer-version-${slug}`,
+            `${pkg.name ?? dir} pins puppeteer "${projectPin}" but @pikku/browser requires "${required}" — local rendering would diverge from Cloudflare Browser Rendering, which vendors that exact puppeteer core`,
+            join(dir, 'package.json'),
+            lines(
+              `Set "puppeteer": "${required}" so headless rendering behaves`,
+              'identically locally and on deploy. Bump it in lockstep with',
+              '@pikku/browser (which tracks @cloudflare/puppeteer) when it changes.'
+            )
+          )
+        }
+      }
+    }
+  }
+
   // ── packages/functions/ ────────────────────────────────────────────────
   const fnDir = join(root, 'packages', 'functions')
 
