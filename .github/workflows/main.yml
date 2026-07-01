@@ -29,6 +29,20 @@ jobs:
       - name: Check no publish-time CLI rebuild
         run: node scripts/check-no-publish-time-cli-rebuild.mjs
 
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          download-build: 'false'
+      - name: Check formatting
+        run: yarn prettier
+      - name: Lint
+        run: yarn lint
+
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -39,6 +53,16 @@ jobs:
         with:
           download-build: 'false'
       - uses: ./.github/actions/build
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: yarn test
 
   e2e:
     name: E2E Standard
@@ -302,6 +326,8 @@ jobs:
     needs:
       [
         validate-deps,
+        lint,
+        unit-tests,
         verifiers,
         verifiers-workflows-db,
         templates,
