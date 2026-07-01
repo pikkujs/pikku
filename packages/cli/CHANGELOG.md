@@ -1,3 +1,20 @@
+## 0.12.62
+
+### Patch Changes
+
+- 029fe2c: Fail `pikku all` when more than one `@pikku/core` version is installed. A split
+  `@pikku/core` produces two separate `pikkuState` registries at runtime, so wirings
+  (workflows, RPCs, queue workers, middleware) register into one copy while the runner
+  reads the other and they silently fail to resolve (e.g. `WorkflowNotFoundError` for a
+  workflow that is clearly registered). The preflight scans the project's `node_modules`,
+  and errors (`PKU717`) with the offending versions/paths. Override with
+  `PIKKU_ALLOW_DUPLICATE_CORE=1` to downgrade to a warning.
+- 7243fec: Add the `pikku-audit` skill documenting the built-in audit runtime: the AuditService sink (Noop / KyselyAuditService / platform-injected), the per-invocation `auditLog` buffer via `createInvocationAudit` in `pikkuWireServices`, the `audit: true` function flag, explicit `auditLog.write()` domain events, and automatic query-level capture via `createAuditedKysely`.
+- Updated dependencies [029fe2c]
+- Updated dependencies [e9a778f]
+  - @pikku/inspector@0.12.31
+  - @pikku/core@0.12.45
+
 ## 0.12.61
 
 ### Patch Changes

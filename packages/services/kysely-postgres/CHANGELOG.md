@@ -1,5 +1,19 @@
 # @pikku/kysely-postgres
 
+## 0.12.11
+
+### Patch Changes
+
+- e9a778f: feat(kysely-postgres): `PikkuKysely` accepts `PostgresConfig` pool options
+
+  New optional 4th constructor arg maps the core `PostgresConfig` onto postgres.js
+  options (`max`, `connect_timeout`, `idle_timeout`, `max_lifetime`, `prepare`,
+  `connection.statement_timeout`). Only provided keys are set, so postgres.js
+  defaults are otherwise preserved. Backward-compatible.
+
+- Updated dependencies [e9a778f]
+  - @pikku/core@0.12.45
+
 ## 0.12.10
 
 ### Patch Changes
