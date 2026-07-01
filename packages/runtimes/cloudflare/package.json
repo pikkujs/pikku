@@ -47,10 +47,10 @@
     "@vitest/runner": "^4.1.9",
     "@vitest/snapshot": "^4.1.9",
     "kysely": "^0.29.0",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.9"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   }
 }

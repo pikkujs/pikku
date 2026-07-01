@@ -20,6 +20,6 @@
   },
   "devDependencies": {
     "@pikku/core": "*",
-    "typescript": "~5.8.0"
+    "typescript": "^6.0.3"
   }
 }

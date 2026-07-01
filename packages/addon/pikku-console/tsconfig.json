@@ -14,6 +14,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "noImplicitAny": false,
+    "types": ["node"],
     "paths": {
       "#pikku": ["./.pikku/pikku-types.gen.ts"]
     }

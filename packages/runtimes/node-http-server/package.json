@@ -29,10 +29,10 @@
   "devDependencies": {
     "@pikku/core": "^0.12.30",
     "@pikku/modelcontextprotocol": "^0.12.4",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "exports": {
     ".": "./dist/index.js"

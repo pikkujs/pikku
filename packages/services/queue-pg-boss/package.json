@@ -21,7 +21,7 @@
     "pg-boss": "^12.14.0"
   },
   "devDependencies": {
-    "typescript": "^5.9"
+    "typescript": "^6.0.3"
   },
   "exports": {
     ".": "./dist/index.js"

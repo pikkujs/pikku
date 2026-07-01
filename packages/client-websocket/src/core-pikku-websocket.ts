@@ -48,7 +48,7 @@ export class CorePikkuWebsocket {
     this.ws.send(JSON.stringify(data))
   }
 
-  public sendBinary(data: ArrayBuffer | Uint8Array) {
+  public sendBinary(data: ArrayBuffer | Uint8Array<ArrayBuffer>) {
     this.ws.send(data)
   }
 

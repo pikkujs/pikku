@@ -81,14 +81,14 @@
   },
   "dependencies": {
     "@changesets/cli": "^2.31.0",
-    "typescript": "~6.0.3"
+    "typescript": "^6.0.3"
   },
   "resolutions": {
     "esbuild": "0.27.2",
     "pikkufabric": "portal:/Users/yasser/git/pikku/fabric"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "lint-staged": {
     "*.ts": [

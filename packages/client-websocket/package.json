@@ -25,12 +25,12 @@
     "prepublishOnly": "yarn build"
   },
   "devDependencies": {
-    "typescript": "^5.9"
+    "typescript": "^6.0.3"
   },
   "optionalDependencies": {
     "ws": "^8.19.0"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   }
 }
