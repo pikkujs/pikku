@@ -17,6 +17,9 @@ interface ScheduledJobData {
   session?: CoreUserSession
 }
 
+/** Prefix for pg-boss queues/schedules backing recurring scheduled tasks. */
+const RECURRING_TASK_PREFIX = 'pikku-recurring-scheduled-task_'
+
 /**
  * pg-boss scheduler service implementation
  * Uses pg-boss's schedule() API to store recurring jobs in PostgreSQL.
@@ -131,8 +134,10 @@ export class PgBossSchedulerService extends SchedulerService {
     const logger = pikkuState(null, 'package', 'singletonServices')!.logger
     const scheduledTasks = getScheduledTasks()
 
+    const expectedCronNames = new Set<string>()
     for (const [name, task] of scheduledTasks) {
-      const cronName = `pikku-recurring-scheduled-task_${name.replace(/[^a-zA-Z0-9_\-.]/g, '_')}`
+      const cronName = `${RECURRING_TASK_PREFIX}${name.replace(/[^a-zA-Z0-9_\-.]/g, '_')}`
+      expectedCronNames.add(cronName)
       await this.pgBoss.createQueue(cronName)
       await this.pgBoss.schedule(cronName, task.schedule, {
         rpcName: name,
@@ -147,6 +152,29 @@ export class PgBossSchedulerService extends SchedulerService {
           await runScheduledTask({ name: rpcName })
         }
       })
+    }
+
+    // Prune orphaned schedules. A task removed from code leaves its pg-boss
+    // schedule behind; with no worker registered it keeps producing jobs that
+    // pile up as 'created' forever (this is how a removed task flooded a queue
+    // with thousands of stuck jobs). Drop any recurring schedule + queue that's
+    // no longer registered so task removals self-heal on the next boot.
+    try {
+      const existing = await this.pgBoss.getSchedules()
+      for (const schedule of existing) {
+        if (
+          schedule.name.startsWith(RECURRING_TASK_PREFIX) &&
+          !expectedCronNames.has(schedule.name)
+        ) {
+          await this.pgBoss.unschedule(schedule.name)
+          await this.pgBoss.deleteQueue(schedule.name)
+          logger.warn(`Pruned orphaned scheduled task queue: ${schedule.name}`)
+        }
+      }
+    } catch (err) {
+      logger.warn(
+        `Failed to prune orphaned scheduled tasks: ${err instanceof Error ? err.message : String(err)}`
+      )
     }
   }
 
