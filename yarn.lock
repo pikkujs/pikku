@@ -5767,6 +5767,25 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/browser@workspace:packages/services/browser":
+  version: 0.0.0-use.local
+  resolution: "@pikku/browser@workspace:packages/services/browser"
+  dependencies:
+    typescript: "npm:^5.9"
+  peerDependencies:
+    "@browserbasehq/stagehand": "*"
+    playwright: "*"
+    puppeteer: 22.13.1
+  peerDependenciesMeta:
+    "@browserbasehq/stagehand":
+      optional: true
+    playwright:
+      optional: true
+    puppeteer:
+      optional: true
+  languageName: unknown
+  linkType: soft
+
 "@pikku/bun-server@npm:^0.12.1, @pikku/bun-server@workspace:*, @pikku/bun-server@workspace:packages/runtimes/bun-server":
   version: 0.0.0-use.local
   resolution: "@pikku/bun-server@workspace:packages/runtimes/bun-server"
