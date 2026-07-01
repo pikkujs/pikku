@@ -16,6 +16,7 @@ export {
   createAuditedKysely,
   type CreateAuditedKyselyOptions,
 } from './create-audited-kysely.js'
+export { KyselyAuditService } from './kysely-audit-service.js'
 
 export {
   SerializePlugin,
