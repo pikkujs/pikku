@@ -1464,154 +1464,155 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     data: any,
     rpcService: any
   ): Promise<void> {
-    // Use step-level lock to prevent concurrent execution of same step
-    await this.withStepLock(runId, stepName, async () => {
-      // Get step state
-      let stepState = await this.getStepState(runId, stepName)
-
-      // Idempotency - if already succeeded, nothing to do
-      if (stepState.status === 'succeeded') {
-        return
+    // Claim the step under the lock ONLY (atomic check-and-mark-running). Do NOT
+    // hold the advisory lock — and its pooled connection — across execution: once
+    // a step is 'running' the guard below makes any concurrent worker return
+    // early, so the work + result persistence run with the lock released. Holding
+    // the lock across executeGraphStep (network I/O + more pool queries) let
+    // concurrent steps exhaust the connection pool and self-deadlock.
+    const claimed = await this.withStepLock(runId, stepName, async () => {
+      const stepState = await this.getStepState(runId, stepName)
+      // Already succeeded, or already claimed by another worker — nothing to do.
+      if (stepState.status === 'succeeded' || stepState.status === 'running') {
+        return null
       }
-
-      // Log warning if already running (race condition)
-      if (stepState.status === 'running') {
-        return
-      }
-
-      // If status is 'failed', this is a retry - create new attempt history
+      // A 'failed' status means this is a retry — start a fresh 'running' attempt.
       if (stepState.status === 'failed') {
-        stepState = await this.createRetryAttempt(stepState.stepId, 'running')
+        return this.createRetryAttempt(stepState.stepId, 'running')
       }
-
       if (stepState.status === 'pending' || stepState.status === 'scheduled') {
         await this.setStepRunning(stepState.stepId)
       }
+      return stepState
+    })
 
-      try {
-        let result: any
+    // Nothing to execute: already succeeded, or another worker owns this step.
+    if (!claimed) {
+      return
+    }
+    const stepState = claimed
 
-        const run = await this.getRun(runId)
-        if (!run) {
-          throw new Error(`Workflow run not found: ${runId}`)
+    try {
+      let result: any
+
+      const run = await this.getRun(runId)
+      if (!run) {
+        throw new Error(`Workflow run not found: ${runId}`)
+      }
+
+      const meta = pikkuState(null, 'workflows', 'meta')
+      const workflowMeta = meta[run.workflow]
+
+      const isGraphWorkflow =
+        workflowMeta?.source === 'graph' ||
+        workflowMeta?.source === 'dynamic-workflow'
+      // Map the physical step key back to its logical node: a revisit instance
+      // is `node#N` (ordinal), which isn't a literal key in `nodes`.
+      let graphNodeId: string | undefined
+      if (isGraphWorkflow && workflowMeta?.nodes) {
+        if (stepName in workflowMeta.nodes) {
+          graphNodeId = stepName
+        } else {
+          const hash = stepName.lastIndexOf('#')
+          const base = hash > 0 ? stepName.slice(0, hash) : undefined
+          if (base && base in workflowMeta.nodes) graphNodeId = base
         }
-
-        const meta = pikkuState(null, 'workflows', 'meta')
-        const workflowMeta = meta[run.workflow]
-
-        const isGraphWorkflow =
-          workflowMeta?.source === 'graph' ||
-          workflowMeta?.source === 'dynamic-workflow'
-        // Map the physical step key back to its logical node: a revisit instance
-        // is `node#N` (ordinal), which isn't a literal key in `nodes`.
-        let graphNodeId: string | undefined
-        if (isGraphWorkflow && workflowMeta?.nodes) {
-          if (stepName in workflowMeta.nodes) {
-            graphNodeId = stepName
-          } else {
-            const hash = stepName.lastIndexOf('#')
-            const base = hash > 0 ? stepName.slice(0, hash) : undefined
-            if (base && base in workflowMeta.nodes) graphNodeId = base
+      }
+      if (graphNodeId) {
+        result = await executeGraphStep(
+          this,
+          rpcService,
+          runId,
+          stepState.stepId,
+          graphNodeId,
+          rpcName,
+          data,
+          run.workflow
+        )
+      } else {
+        // Check if rpcName refers to a sub-workflow
+        const subWorkflowMeta = meta[rpcName]
+        if (subWorkflowMeta) {
+          const childWire: WorkflowRunWire = {
+            type: 'workflow',
+            id: rpcName,
+            parentRunId: runId,
+            parentStepId: stepState.stepId,
+            pikkuUserId: rpcService.wire?.pikkuUserId,
           }
-        }
-        if (graphNodeId) {
-          result = await executeGraphStep(
-            this,
-            rpcService,
-            runId,
-            stepState.stepId,
-            graphNodeId,
+          const shouldInline = !getSingletonServices()?.queueService
+          const { runId: childRunId } = await this.startWorkflow(
             rpcName,
             data,
-            run.workflow
+            childWire,
+            rpcService,
+            { inline: shouldInline }
           )
-        } else {
-          // Check if rpcName refers to a sub-workflow
-          const subWorkflowMeta = meta[rpcName]
-          if (subWorkflowMeta) {
-            const childWire: WorkflowRunWire = {
-              type: 'workflow',
-              id: rpcName,
-              parentRunId: runId,
-              parentStepId: stepState.stepId,
-              pikkuUserId: rpcService.wire?.pikkuUserId,
+          await this.setStepChildRunId(stepState.stepId, childRunId)
+          if (shouldInline) {
+            const childRun = await this.getRun(childRunId)
+            if (childRun?.status === 'failed') {
+              throw new Error(childRun.error?.message || 'Sub-workflow failed')
             }
-            const shouldInline = !getSingletonServices()?.queueService
-            const { runId: childRunId } = await this.startWorkflow(
-              rpcName,
-              data,
-              childWire,
-              rpcService,
-              { inline: shouldInline }
-            )
-            await this.setStepChildRunId(stepState.stepId, childRunId)
-            if (shouldInline) {
-              const childRun = await this.getRun(childRunId)
-              if (childRun?.status === 'failed') {
-                throw new Error(
-                  childRun.error?.message || 'Sub-workflow failed'
-                )
-              }
-              if (childRun?.status === 'cancelled') {
-                throw new Error('Sub-workflow was cancelled')
-              }
-              result = childRun?.output
-            } else {
-              throw new ChildWorkflowStartedException(
-                runId,
-                stepState.stepId,
-                childRunId
-              )
+            if (childRun?.status === 'cancelled') {
+              throw new Error('Sub-workflow was cancelled')
             }
+            result = childRun?.output
           } else {
-            result = await this.invokeStepRpc(
+            throw new ChildWorkflowStartedException(
               runId,
-              stepName,
-              stepState,
-              rpcName,
-              data,
-              rpcService
+              stepState.stepId,
+              childRunId
             )
           }
-        }
-
-        // Store result and mark succeeded
-        await this.setStepResult(stepState.stepId, result)
-
-        // Resume orchestrator to continue workflow
-        await this.resumeWorkflow(runId)
-      } catch (error: any) {
-        if (error instanceof ChildWorkflowStartedException) {
-          this.logger?.debug(
-            `Workflow step '${stepName}': child workflow ${error.childRunId} started, waiting for completion`
+        } else {
+          result = await this.invokeStepRpc(
+            runId,
+            stepName,
+            stepState,
+            rpcName,
+            data,
+            rpcService
           )
-          return
         }
-
-        if (error instanceof RPCNotFoundError) {
-          await this.setStepError(stepState.stepId, error)
-          await this.updateRunStatus(runId, 'suspended', undefined, {
-            message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
-            code: 'RPC_NOT_FOUND',
-          })
-          return
-        }
-
-        // Store error and mark failed
-        await this.setStepError(stepState.stepId, error)
-
-        const maxAttempts = (stepState.retries ?? DEFAULT_STEP_RETRIES) + 1
-        const retriesExhausted = stepState.attemptCount >= maxAttempts
-
-        if (retriesExhausted) {
-          // No more retries - resume orchestrator to mark workflow as failed
-          await this.resumeWorkflow(runId)
-        }
-
-        // Always throw so queue knows the job failed and can retry if needed
-        throw error
       }
-    })
+
+      // Store result and mark succeeded
+      await this.setStepResult(stepState.stepId, result)
+
+      // Resume orchestrator to continue workflow
+      await this.resumeWorkflow(runId)
+    } catch (error: any) {
+      if (error instanceof ChildWorkflowStartedException) {
+        this.logger?.debug(
+          `Workflow step '${stepName}': child workflow ${error.childRunId} started, waiting for completion`
+        )
+        return
+      }
+
+      if (error instanceof RPCNotFoundError) {
+        await this.setStepError(stepState.stepId, error)
+        await this.updateRunStatus(runId, 'suspended', undefined, {
+          message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
+          code: 'RPC_NOT_FOUND',
+        })
+        return
+      }
+
+      // Store error and mark failed
+      await this.setStepError(stepState.stepId, error)
+
+      const maxAttempts = (stepState.retries ?? DEFAULT_STEP_RETRIES) + 1
+      const retriesExhausted = stepState.attemptCount >= maxAttempts
+
+      if (retriesExhausted) {
+        // No more retries - resume orchestrator to mark workflow as failed
+        await this.resumeWorkflow(runId)
+      }
+
+      // Always throw so queue knows the job failed and can retry if needed
+      throw error
+    }
   }
 
   /**
