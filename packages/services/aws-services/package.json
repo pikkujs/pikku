@@ -37,9 +37,9 @@
     "@aws-sdk/s3-request-presigner": "^3.1000.0",
     "@types/sinon": "^21.0.0",
     "sinon": "^21.0.1",
-    "typescript": "^5.9"
+    "typescript": "^6.0.3"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   }
 }

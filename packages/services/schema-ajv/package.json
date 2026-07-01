@@ -25,10 +25,10 @@
     "ajv-formats": "^3.0.1"
   },
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "exports": {
     ".": "./dist/index.js"

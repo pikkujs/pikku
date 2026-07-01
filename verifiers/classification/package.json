@@ -9,7 +9,7 @@
     "@pikku/inspector": "workspace:*",
     "@types/node": "^24",
     "tsx": "^4.21.0",
-    "typescript": "^5.9"
+    "typescript": "^6.0.3"
   },
   "scripts": {
     "test": "yarn tsx --test src/tests/codegen.assert.ts src/tests/codegen-postgres.assert.ts src/tests/audit.assert.ts src/tests/pii-gate.assert.ts"

@@ -8,7 +8,7 @@
     "tsc": "tsc --noEmit"
   },
   "devDependencies": {
-    "typescript": "^5.9"
+    "typescript": "^6.0.3"
   },
   "exports": {
     ".": "./dist/index.js"
