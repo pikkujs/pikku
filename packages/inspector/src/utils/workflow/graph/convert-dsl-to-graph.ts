@@ -389,10 +389,15 @@ export function convertDslToGraph(
 
   const entryNodeIds = nodes.length > 0 ? [nodes[0].nodeId] : []
 
-  // Determine source type based on dsl flag:
+  // Determine source type:
+  // - userFlow: complex workflow whose steps run as actors (user flow)
   // - dsl === true: pure DSL workflow, can be serialized
   // - dsl === false: complex workflow with inline steps, not serializable
-  const source = meta.dsl === false ? 'complex' : 'dsl'
+  const source = meta.userFlow
+    ? 'user-flow'
+    : meta.dsl === false
+      ? 'complex'
+      : 'dsl'
 
   return {
     name: workflowName,

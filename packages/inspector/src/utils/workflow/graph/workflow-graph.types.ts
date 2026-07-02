@@ -177,8 +177,9 @@ export const isFlowNode = (node: SerializedGraphNode): node is FlowNode =>
  * - 'dsl': Pure DSL workflow (pikkuWorkflowFunc) - can be round-tripped to code
  * - 'complex': Complex workflow (pikkuWorkflowComplexFunc) - contains inline steps, not serializable
  * - 'graph': Graph-based workflow (pikkuWorkflowGraph)
+ * - 'user-flow': User flow (pikkuUserFlow) - complex workflow whose steps run as actors
  */
-export type WorkflowSourceType = 'dsl' | 'complex' | 'graph'
+export type WorkflowSourceType = 'dsl' | 'complex' | 'graph' | 'user-flow'
 
 /**
  * Serialized workflow graph - the canonical JSON format

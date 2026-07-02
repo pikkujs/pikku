@@ -169,8 +169,8 @@ function getWorkflowInvocations(
 }
 
 /**
- * Inspector for pikkuWorkflowFunc() and pikkuWorkflowComplexFunc() calls
- * Detects workflow registration and extracts metadata
+ * Inspector for pikkuWorkflowFunc(), pikkuWorkflowComplexFunc() and
+ * pikkuUserFlow() calls. Detects workflow registration and extracts metadata.
  */
 export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   if (!ts.isCallExpression(node)) {
@@ -185,11 +185,15 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     return
   }
 
-  let wrapperType: 'dsl' | 'complex' | null = null
+  let wrapperType: 'dsl' | 'complex' | 'user-flow' | null = null
   if (expression.text === 'pikkuWorkflowFunc') {
     wrapperType = 'dsl'
   } else if (expression.text === 'pikkuWorkflowComplexFunc') {
     wrapperType = 'complex'
+  } else if (expression.text === 'pikkuUserFlow') {
+    // A user flow is a complex workflow whose steps run as actors over the
+    // real transport — same extraction rules as complex, distinct meta.
+    wrapperType = 'user-flow'
   } else {
     return
   }
@@ -277,7 +281,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   // Try DSL workflow extraction first
   // Pass the whole CallExpression node so findWorkflowFunction can find the arrow function
   const result = extractDSLWorkflow(node, checker, {
-    allowInline: wrapperType === 'complex',
+    allowInline: wrapperType !== 'dsl',
   })
 
   if (result.status === 'ok' && result.steps) {
@@ -331,7 +335,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   // For pikkuWorkflowComplexFunc, also run basic extraction so RPCs in
   // patterns the DSL extractor doesn't handle (array+push, nested Promise.all
   // with identifier args, etc.) are still registered as invoked functions.
-  if (wrapperType === 'complex') {
+  if (wrapperType !== 'dsl') {
     getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
   }
 
@@ -346,6 +350,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     errors,
     tags,
     expose,
+    userFlow: wrapperType === 'user-flow' ? true : undefined,
   }
 
   // Workflow functions require platform services that aren't visible

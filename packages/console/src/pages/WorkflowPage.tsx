@@ -63,6 +63,7 @@ const WorkflowPageInner: React.FC<{
         const stepCount = w.nodes ? Object.keys(w.nodes).length : (w.steps?.length ?? 0)
         const badges = []
         if (w.source === 'dynamic-workflow') badges.push({ label: 'Dynamic', tone: 'accent' as const })
+        else if (w.source === 'user-flow') badges.push({ label: 'User Flow', tone: 'accent' as const })
         else if (w.dsl === true) badges.push({ label: 'DSL', tone: 'neutral' as const })
         const metaTags: string[] = []
         if (stepCount > 0) metaTags.push(`${stepCount} ${stepCount === 1 ? 'step' : 'steps'}`)
