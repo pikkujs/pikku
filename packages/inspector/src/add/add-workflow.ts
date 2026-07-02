@@ -224,6 +224,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
 
   // Extract metadata if using object form
   let tags: string[] | undefined
+  let title: string | undefined
   let summary: string | undefined
   let description: string | undefined
   let errors: string[] | undefined
@@ -239,6 +240,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     )
     if (metadata.disabled) return
     tags = metadata.tags
+    title = metadata.title
     summary = metadata.summary
     description = metadata.description
     errors = metadata.errors
@@ -345,6 +347,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     steps,
     context,
     dsl,
+    title,
     summary,
     description,
     errors,
@@ -353,9 +356,29 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     userFlow: wrapperType === 'user-flow' ? true : undefined,
   }
 
+  // User flows are pure stories of remote RPCs (same rule as client-side CLI
+  // renderers): the func may only destructure logger/config — everything else
+  // must go through actor steps so the flow runs against the TARGET
+  // environment, never local services.
+  const funcMeta = state.functions.meta[pikkuFuncId]
+  if (wrapperType === 'user-flow' && funcMeta?.services) {
+    const disallowed = funcMeta.services.services.filter(
+      (svc) => svc !== 'logger' && svc !== 'config'
+    )
+    if (disallowed.length > 0) {
+      logger.critical(
+        ErrorCode.USER_FLOW_HAS_SERVICES,
+        `User flow '${workflowName}' destructures services: ${disallowed.join(', ')}. ` +
+          `User flows may only use 'logger'/'config' — drive everything else through ` +
+          `actor steps (workflow.do(step, rpc, data, { actor: actors.x })) so the flow ` +
+          `runs against the target environment.`
+      )
+      return
+    }
+  }
+
   // Workflow functions require platform services that aren't visible
   // through parameter destructuring (they're accessed via workflow.do/sleep)
-  const funcMeta = state.functions.meta[pikkuFuncId]
   if (funcMeta?.services) {
     for (const svc of [
       'workflowService',

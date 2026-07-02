@@ -321,6 +321,22 @@ export type PikkuCLIInput = {
         personality?: string
       }
     >
+    /**
+     * Environments `pikku userflow run <environment>` can target. `apiUrl`
+     * includes the HTTP prefix (e.g. https://app.example.com/api). The actor
+     * secret is NEVER configured here — it comes from the
+     * USER_FLOW_ACTOR_SECRET environment variable at run time.
+     */
+    environments?: Record<
+      string,
+      {
+        apiUrl: string
+        /** Actor sign-in path under apiUrl. Default: /auth/sign-in/actor */
+        signInPath?: string
+        /** Exposed-RPC prefix under apiUrl. Default: /rpc */
+        rpcPath?: string
+      }
+    >
   }
 
   scaffold?: {

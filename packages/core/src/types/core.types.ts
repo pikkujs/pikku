@@ -287,8 +287,6 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   agentRunService?: AgentRunService
   /** Workflow run service (listing workflow runs) */
   workflowRunService?: WorkflowRunService
-  /** User-flow actor registry (actor name → lazy authenticated client), injected into user flows as `actors` */
-  actors?: UserFlowActors
   /** Credential service for dynamic/managed credentials (OAuth tokens, per-user API keys) */
   credentialService?: CredentialService
   /** Email service for outbound messages and template-backed delivery */
@@ -341,6 +339,8 @@ export type PikkuWire<
   queue: PikkuQueue
   cli: PikkuCLI
   workflow: TypedWorkflow
+  /** User-flow actor registry (user-flow runs only) — pass into workflow.do as `{ actor: actors.x }` */
+  actors: UserFlowActors
   workflowStep: WorkflowStepWire
   graph: PikkuGraphWire
   trigger: PikkuTrigger<TriggerOutput>

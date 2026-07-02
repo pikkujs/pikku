@@ -82,9 +82,8 @@ describe('pikkuUserFlow verification', () => {
   })
 
   test('codegen: pikku.config.json userFlows.actors generates the typed registry', async () => {
-    const gen = await import(
-      '../../.pikku/workflow/pikku-user-flow-actors.gen.js'
-    )
+    const gen =
+      await import('../../.pikku/workflow/pikku-user-flow-actors.gen.js')
     assert.deepEqual(Object.keys(gen.userFlowActorConfigs).sort(), [
       'customer',
       'ops',
@@ -106,10 +105,7 @@ describe('pikkuUserFlow verification', () => {
     const workflowService = new InMemoryWorkflowService()
     const singletonServices = await createSingletonServices(
       await createConfig(),
-      {
-        workflowService,
-        actors: { customer, ops },
-      }
+      { workflowService }
     )
     const rpc = rpcService.getContextRPCService(
       singletonServices as any,
@@ -117,11 +113,13 @@ describe('pikkuUserFlow verification', () => {
       false
     )
 
+    // Actors ride startWorkflow options → the run's wire, never services
     const { runId } = await workflowService.startWorkflow(
       'orderHealthUserFlow',
       { orderId: 'order-7' },
       { type: 'test' },
-      rpc
+      rpc,
+      { actors: { customer, ops } }
     )
 
     const deadline = Date.now() + 10_000

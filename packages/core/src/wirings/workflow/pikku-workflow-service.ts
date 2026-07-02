@@ -67,6 +67,7 @@ import {
   runFromMeta,
 } from './graph/graph-runner.js'
 import type { WorkflowService } from '../../services/workflow-service.js'
+import type { UserFlowActors } from '../../services/user-flow-actors-service.js'
 import {
   PikkuError,
   addError,
@@ -219,6 +220,9 @@ const WORKFLOW_END_STATES: ReadonlySet<string> = new Set([
  */
 export abstract class PikkuWorkflowService implements WorkflowService {
   private inlineRuns = new Set<string>()
+  // User-flow actors per run: live authenticated clients (cookie jars) are
+  // process-local by nature, so they ride this map, never the persisted wire.
+  private runActors = new Map<string, UserFlowActors>()
 
   protected get logger() {
     return getSingletonServices()?.logger
@@ -1072,7 +1076,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     input: I,
     wire: WorkflowRunWire,
     rpcService: any,
-    options?: { inline?: boolean; startNode?: string }
+    options?: { inline?: boolean; startNode?: string; actors?: UserFlowActors }
   ): Promise<{ runId: string }> {
     // Resolve workflow from static meta (root or addon namespace), then dynamic DB
     const resolved = resolveWorkflowMeta(name)
@@ -1136,6 +1140,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       }
     )
 
+    if (options?.actors) {
+      this.runActors.set(runId, options.actors)
+    }
+
     if (shouldInline) {
       this.inlineRuns.add(runId)
       try {
@@ -1171,6 +1179,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         }
       } finally {
         this.inlineRuns.delete(runId)
+        this.runActors.delete(runId)
       }
     } else {
       await this.resumeWorkflow(runId)
@@ -1342,8 +1351,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       const wire: PikkuWire = {
         workflow: workflowWire,
         pikkuUserId: run.wire?.pikkuUserId,
-        session: rpcService.wire?.session,
-        rpc: rpcService.wire?.rpc,
+        session: rpcService?.wire?.session,
+        rpc: rpcService?.wire?.rpc,
+        // User-flow actors registered for this run (see startWorkflow options)
+        actors: this.runActors.get(runId),
       }
       try {
         const result = await runPikkuFunc(
@@ -2196,7 +2207,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       throw new WorkflowStepNameNotString(stepName)
     }
   }
-
 
   private getConfig(): WorkflowServiceConfig {
     const singletonServices = getSingletonServices()

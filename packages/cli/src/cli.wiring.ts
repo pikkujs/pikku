@@ -27,6 +27,7 @@ import {
   workspaceValidate,
   renderWorkspaceValidate,
 } from './functions/commands/workspace-validate.js'
+import { userFlowRun, userFlowList } from './functions/commands/user-flow.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuTestsInit } from './functions/commands/tests-init.js'
 import { pikkuEmailsInit } from './functions/commands/emails-init.js'
@@ -407,6 +408,31 @@ wireCLI({
           render: renderWorkspaceValidate,
           description:
             'Check the project structure for Pikku workspace compatibility',
+        }),
+      },
+    },
+    userflow: {
+      description: 'Run and inspect user flows (pikkuUserFlow)',
+      subcommands: {
+        run: pikkuCLICommand({
+          func: userFlowRun,
+          description:
+            'Run user flows against a configured environment (userFlows.environments in pikku.config.json). Actor secret comes from USER_FLOW_ACTOR_SECRET.',
+          parameters: '<environment>',
+          options: {
+            flows: {
+              description: 'Comma-separated flow names to run (default: all)',
+              short: 'f',
+            },
+            tags: {
+              description: 'Comma-separated tags — run flows matching any',
+              short: 't',
+            },
+          },
+        }),
+        list: pikkuCLICommand({
+          func: userFlowList,
+          description: 'List user flows with names and descriptions',
         }),
       },
     },
