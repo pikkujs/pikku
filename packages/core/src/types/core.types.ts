@@ -244,6 +244,8 @@ export type CoreConfig<Config extends Record<string, unknown> = {}> = {
 export interface CoreUserSession {
   userId?: string
   orgId?: string
+  /** True when the session belongs to a synthetic user-flow actor — lets audits/analytics address synthetic traffic */
+  actor?: boolean
 }
 
 /**

@@ -9,6 +9,7 @@ import {
   resolveImpersonatedSession,
   type ImpersonationOptions,
 } from './auth-session-impersonation.js'
+import { stampActorFlag } from './stamp-actor-flag.js'
 
 type CachedSession = { session: any; user: any }
 
@@ -103,11 +104,10 @@ export const betterAuthStatelessSession = (
             return next()
           }
         }
-        setSession(
-          mapSession
-            ? await mapSession(cached, services as CoreServices)
-            : ({ userId: cached.user.id } as CoreUserSession)
-        )
+        const mapped = mapSession
+          ? await mapSession(cached, services as CoreServices)
+          : ({ userId: cached.user.id } as CoreUserSession)
+        setSession(stampActorFlag(mapped, cached.user))
       }
 
       return next()

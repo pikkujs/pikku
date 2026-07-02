@@ -5,6 +5,7 @@ import type {
 } from '@pikku/core'
 import { pikkuMiddleware } from '@pikku/core'
 import type { BetterAuthInstance } from './define-auth.js'
+import { stampActorFlag } from './stamp-actor-flag.js'
 import {
   resolveImpersonatedSession,
   type ImpersonationOptions,
@@ -144,11 +145,10 @@ export const betterAuthSession = (
             return next()
           }
         }
-        setSession(
-          mapSession
-            ? await mapSession(result, services as CoreServices)
-            : ({ userId: result.user.id } as CoreUserSession)
-        )
+        const mapped = mapSession
+          ? await mapSession(result, services as CoreServices)
+          : ({ userId: result.user.id } as CoreUserSession)
+        setSession(stampActorFlag(mapped, result.user))
       }
 
       return next()
