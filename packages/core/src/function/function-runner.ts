@@ -33,7 +33,11 @@ import {
   createWireServicesCredentialWireProps,
 } from '../services/credential-wire-service.js'
 import { defaultPikkuUserIdResolver } from '../services/pikku-user-id.js'
-import { resolveAuditConfig } from '../services/audit-service.js'
+import {
+  createInvocationAudit,
+  resolveAuditConfig,
+  type AuditLog,
+} from '../services/audit-service.js'
 import { rpcService } from '../wirings/rpc/rpc-runner.js'
 import { closeWireServices } from '../utils.js'
 
@@ -415,15 +419,35 @@ export const runPikkuFunc = async <In = any, Out = any>(
     }
 
     let wireServices: Record<string, unknown> | undefined
+    let invocationAuditLog: AuditLog | undefined
     try {
       wireServices = (await resolvedCreateWireServices?.(
         resolvedSingletonServices,
         invocationWire
       )) as Record<string, unknown> | undefined
-      const services =
+      let services =
         wireServices && Object.keys(wireServices).length > 0
           ? { ...resolvedSingletonServices, ...wireServices }
           : resolvedSingletonServices
+      // The audit gate is per-function, but the auditLog wire service is
+      // created per-transport-invocation — a nested/exposed-RPC call would
+      // otherwise inherit an auditLog constructed while the OUTER wire's
+      // audit was unset (e.g. the generated rpcCaller has no audit config),
+      // silently dropping every write. Re-gate here: if this function
+      // declares audit and the inherited auditLog wasn't built for this
+      // invocation (config identity check), bind a fresh one to this wire.
+      if (
+        resolvedAuditConfig &&
+        resolvedSingletonServices.audit &&
+        services.auditLog?.config !== resolvedAuditConfig
+      ) {
+        invocationAuditLog = createInvocationAudit(
+          resolvedSingletonServices.audit,
+          invocationWire,
+          resolvedSingletonServices.logger
+        )
+        services = { ...services, auditLog: invocationAuditLog }
+      }
       const callerPackageName = packageName
       Object.defineProperty(invocationWire, 'rpc', {
         get() {
@@ -446,6 +470,8 @@ export const runPikkuFunc = async <In = any, Out = any>(
       })
       return await funcConfig.func(services, actualData, invocationWire)
     } finally {
+      // Flush the runner-installed audit buffer before wire services close.
+      await invocationAuditLog?.close()
       if (wireServices && Object.keys(wireServices).length > 0) {
         await closeWireServices(resolvedSingletonServices.logger, wireServices)
       }

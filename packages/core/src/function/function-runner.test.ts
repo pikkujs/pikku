@@ -12,6 +12,7 @@ import type { CoreServices, CorePikkuMiddleware } from '../types/core.types.js'
 import type { CorePermissionGroup } from './functions.types.js'
 import { PikkuSessionService } from '../services/user-session-service.js'
 import { ReadonlySessionError } from '../errors/errors.js'
+import { createInvocationAudit } from '../services/audit-service.js'
 
 beforeEach(() => {
   resetPikkuState()
@@ -1196,6 +1197,113 @@ describe('runPikkuFunc - Integration Tests', () => {
     assert.equal(parentFunctionIdAfterChild, 'rpcParentAuditedChild')
     assert.deepEqual(childAudit, { durability: 'transactional' })
     assert.equal(childFunctionId, 'rpcChildAudited')
+  })
+
+  test('should audit writes from an audited function invoked via exposed rpc (stale outer auditLog)', async () => {
+    // Repro of the exposed-RPC HTTP path: the generated rpcCaller has no
+    // audit config, and createWireServices builds auditLog on ITS wire —
+    // the audited inner function must not inherit that disabled instance.
+    const events: any[] = []
+    const singletonServices = {
+      ...mockSingletonServices,
+      audit: { audit: async (event: any) => events.push(event) },
+    }
+
+    addTestFunction('auditedInner', {
+      audit: true,
+      func: async (services: any) => {
+        await services.auditLog.write({ type: 'booking.update', source: 'explicit' })
+        return 'inner-ok'
+      },
+    })
+
+    addTestFunction('rpcCallerLike', {
+      func: async (_services: any, _data: any, wire: any) => {
+        return wire.rpc.invoke('auditedInner', {})
+      },
+    })
+
+    const result = await runPikkuFunc('http', 'exposed-rpc-route', 'rpcCallerLike', {
+      singletonServices,
+      data: () => ({}),
+      auth: false,
+      wire: {},
+      createWireServices: async (services: any, wire: any) => ({
+        auditLog: createInvocationAudit(services.audit, wire),
+      }),
+    })
+
+    assert.equal(result, 'inner-ok')
+    assert.equal(events.length, 1)
+    assert.equal(events[0].type, 'booking.update')
+    assert.equal(events[0].functionId, 'auditedInner')
+  })
+
+  test('should give an audited rpc sub-call its own audit buffer with child attribution', async () => {
+    const events: any[] = []
+    const singletonServices = {
+      ...mockSingletonServices,
+      audit: { audit: async (event: any) => events.push(event) },
+    }
+
+    addTestFunction('auditedChildWriter', {
+      audit: true,
+      func: async (services: any) => {
+        await services.auditLog.write({ type: 'child.event', source: 'explicit' })
+        return 'child-ok'
+      },
+    })
+
+    addTestFunction('auditedParentWriter', {
+      audit: true,
+      func: async (services: any, _data: any, wire: any) => {
+        await services.auditLog.write({ type: 'parent.event', source: 'explicit' })
+        return wire.rpc.invoke('auditedChildWriter', {})
+      },
+    })
+
+    const result = await runPikkuFunc('rpc', 'audited-parent-child', 'auditedParentWriter', {
+      singletonServices,
+      data: () => ({}),
+      auth: false,
+      wire: {},
+    })
+
+    assert.equal(result, 'child-ok')
+    const byType = Object.fromEntries(events.map((e) => [e.type, e.functionId]))
+    assert.equal(byType['parent.event'], 'auditedParentWriter')
+    assert.equal(byType['child.event'], 'auditedChildWriter')
+  })
+
+  test('should warn via the singleton logger when audit writes are dropped', async () => {
+    const warnings: any[] = []
+    const singletonServices = {
+      ...mockSingletonServices,
+      logger: { ...mockSingletonServices.logger, warn: (msg: any) => warnings.push(msg) },
+      audit: { audit: async () => {} },
+    }
+
+    addTestFunction('unauditedWriter', {
+      func: async (services: any) => {
+        await services.auditLog.write({ type: 'dropped.event', source: 'explicit' })
+        return 'ok'
+      },
+    })
+
+    const result = await runPikkuFunc('rpc', 'unaudited-writer', 'unauditedWriter', {
+      singletonServices,
+      data: () => ({}),
+      auth: false,
+      wire: {},
+      createWireServices: async (services: any, wire: any) => ({
+        auditLog: createInvocationAudit(services.audit, wire, services.logger),
+      }),
+    })
+
+    assert.equal(result, 'ok')
+    assert.equal(warnings.length, 1)
+    assert.match(String(warnings[0]), /dropped/)
+    assert.match(String(warnings[0]), /unauditedWriter/)
   })
 
   test('should expose the resolved base function id after version fallback', async () => {

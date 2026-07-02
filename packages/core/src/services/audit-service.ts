@@ -3,6 +3,7 @@ import type {
   PikkuWire,
   PikkuWiringTypes,
 } from '../types/core.types.js'
+import type { Logger } from './logger.js'
 
 export type AuditDurability = 'best-effort' | 'transactional'
 export type AuditOutcome = 'success' | 'failed' | 'denied'
@@ -68,14 +69,18 @@ class DisabledInvocationAudit implements AuditLog {
   private warned = false
 
   constructor(
-    private readonly wire: PikkuWire<any, any, any, CoreUserSession>
+    private readonly wire: PikkuWire<any, any, any, CoreUserSession>,
+    private readonly logger?: Logger
   ) {}
 
   async write(_event: AuditLogWriteInput): Promise<void> {
     if (!this.warned) {
       this.warned = true
-      ;(this.wire as any).logger?.warn?.(
-        'audit.write() called for an invocation without wire.audit enabled'
+      // Fall back to the singleton logger — wires rarely carry their own, and
+      // a dropped audit write must never be invisible.
+      const logger = (this.wire as any).logger ?? this.logger
+      logger?.warn?.(
+        `audit.write() dropped for '${this.wire.functionId ?? 'unknown function'}' — the function has no audit config (set audit: true on it)`
       )
     }
   }
@@ -91,7 +96,8 @@ class InvocationAuditLog implements AuditLog {
   constructor(
     public readonly config: ResolvedAuditConfig,
     private readonly service: AuditService,
-    private readonly wire: PikkuWire<any, any, any, CoreUserSession>
+    private readonly wire: PikkuWire<any, any, any, CoreUserSession>,
+    private readonly logger?: Logger
   ) {}
 
   async write(event: AuditLogWriteInput): Promise<void> {
@@ -129,10 +135,8 @@ class InvocationAuditLog implements AuditLog {
         await this.service.audit(event)
       }
     } catch (error) {
-      ;(this.wire as any).logger?.warn?.(
-        'best-effort audit flush failed',
-        error
-      )
+      const logger = (this.wire as any).logger ?? this.logger
+      logger?.warn?.('best-effort audit flush failed', error)
     }
   }
 
@@ -171,13 +175,14 @@ export const resolveAuditConfig = (
 
 export const createInvocationAudit = (
   service: AuditService,
-  wire: PikkuWire<any, any, any, CoreUserSession>
+  wire: PikkuWire<any, any, any, CoreUserSession>,
+  logger?: Logger
 ): AuditLog => {
   if (!wire.audit) {
-    return new DisabledInvocationAudit(wire)
+    return new DisabledInvocationAudit(wire, logger)
   }
 
-  return new InvocationAuditLog(wire.audit, service, wire)
+  return new InvocationAuditLog(wire.audit, service, wire, logger)
 }
 
 export const resolveAuditActorFromWire = (
