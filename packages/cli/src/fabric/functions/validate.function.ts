@@ -591,6 +591,52 @@ export async function runValidate(
     }
   }
 
+  // ── scaffold-implied dependencies ──────────────────────────────────────
+  // `scaffold.console` makes codegen import
+  // `@pikku/addon-console/.pikku/pikku-bootstrap.gen.js` from the generated
+  // bootstrap — an import that lives only in *.gen.ts, so the undeclared-deps
+  // src/ scan below never sees it. Without the package installed, `pikku dev`
+  // crash-loops ("Cannot find module '@pikku/addon-console/...'") and a
+  // sandbox never leaves the "migrating" boot phase.
+  if (pikkuConfig?.scaffold?.console) {
+    // The functions package = nearest package.json above the first srcDirectory.
+    const srcDirs = Array.isArray(pikkuConfig.srcDirectories)
+      ? (pikkuConfig.srcDirectories as string[])
+      : []
+    let fnPkgPath: string | null = null
+    if (srcDirs[0]) {
+      let dir = join(root, srcDirs[0])
+      while (dir !== root && dir !== dirname(dir)) {
+        dir = dirname(dir)
+        if (existsSync(join(dir, 'package.json'))) {
+          fnPkgPath = join(dir, 'package.json')
+          break
+        }
+      }
+    }
+    const fnPkg = fnPkgPath
+      ? await readJsonSafe<{
+          dependencies?: Record<string, string>
+          devDependencies?: Record<string, string>
+        }>(fnPkgPath)
+      : null
+    const declared =
+      fnPkg?.dependencies?.['@pikku/addon-console'] ||
+      fnPkg?.devDependencies?.['@pikku/addon-console']
+    if (fnPkgPath && !declared) {
+      e(
+        'missing-addon-console',
+        'pikku.config.json scaffold enables "console" but the functions package does not declare @pikku/addon-console — the generated bootstrap imports it, so `pikku dev` crash-loops with "Cannot find module \'@pikku/addon-console/.pikku/pikku-bootstrap.gen.js\'"',
+        fnPkgPath,
+        lines(
+          `Add it to ${fnPkgPath} dependencies (the functions package, not the root):`,
+          '  "@pikku/addon-console": "^0.12.21"',
+          'then reinstall.'
+        )
+      )
+    }
+  }
+
   // ── undeclared dependencies ────────────────────────────────────────────
   // Every external module imported from a package's src/ must be declared in
   // that package's own dependencies/devDependencies/peerDependencies. An
