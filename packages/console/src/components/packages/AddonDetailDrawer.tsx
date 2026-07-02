@@ -106,6 +106,22 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
 
   const fnRecord = pkg?.functions ?? addon?.functions ?? {}
   const fnNames = Object.keys(fnRecord)
+  const secretsRecord = (pkg?.secrets ?? {}) as Record<
+    string,
+    { displayName?: string; description?: string; secretId?: string } | null
+  >
+  const variablesRecord = (pkg?.variables ?? {}) as Record<
+    string,
+    { displayName?: string; description?: string; variableId?: string } | null
+  >
+  const channelsRecord = pkg?.channels ?? {}
+  const httpRouteRows = Object.entries(pkg?.httpRoutes ?? {}).flatMap(
+    ([method, routes]) =>
+      Object.keys(routes ?? {}).map((route) => ({ method, route }))
+  )
+  const secretNames = Object.keys(secretsRecord)
+  const variableNames = Object.keys(variablesRecord)
+  const channelNames = Object.keys(channelsRecord)
   const surface = [
     {
       icon: FunctionSquare,
@@ -322,6 +338,34 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
                 <Tabs.Tab value="functions">
                   {asI18n(`${m.packages_tab_functions()} (${fnNames.length})`)}
                 </Tabs.Tab>
+                {httpRouteRows.length > 0 && (
+                  <Tabs.Tab value="http">
+                    {asI18n(
+                      `${m.packages_surface_http()} (${httpRouteRows.length})`
+                    )}
+                  </Tabs.Tab>
+                )}
+                {channelNames.length > 0 && (
+                  <Tabs.Tab value="channels">
+                    {asI18n(
+                      `${m.packages_surface_channels()} (${channelNames.length})`
+                    )}
+                  </Tabs.Tab>
+                )}
+                {secretNames.length > 0 && (
+                  <Tabs.Tab value="secrets">
+                    {asI18n(
+                      `${m.packages_surface_secrets()} (${secretNames.length})`
+                    )}
+                  </Tabs.Tab>
+                )}
+                {variableNames.length > 0 && (
+                  <Tabs.Tab value="variables">
+                    {asI18n(
+                      `${m.packages_surface_variables()} (${variableNames.length})`
+                    )}
+                  </Tabs.Tab>
+                )}
               </Tabs.List>
             </Box>
 
@@ -430,9 +474,142 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
                 </Stack>
               )}
             </Tabs.Panel>
+
+            {httpRouteRows.length > 0 && (
+              <Tabs.Panel value="http" p="lg">
+                <BorderedList>
+                  {httpRouteRows.map(({ method, route }, i) => (
+                    <ListRow key={`${method} ${route}`} first={i === 0}>
+                      <Group gap="sm" wrap="nowrap">
+                        <Badge
+                          size="sm"
+                          variant="light"
+                          color="blue"
+                          w={64}
+                          ta="center"
+                        >
+                          {asI18n(method.toUpperCase())}
+                        </Badge>
+                        <Text size="sm" ff="monospace">
+                          {asI18n(route)}
+                        </Text>
+                      </Group>
+                    </ListRow>
+                  ))}
+                </BorderedList>
+              </Tabs.Panel>
+            )}
+
+            {channelNames.length > 0 && (
+              <Tabs.Panel value="channels" p="lg">
+                <BorderedList>
+                  {channelNames.map((name, i) => (
+                    <ListRow key={name} first={i === 0}>
+                      <Text size="sm" fw={500} ff="monospace">
+                        {asI18n(name)}
+                      </Text>
+                    </ListRow>
+                  ))}
+                </BorderedList>
+              </Tabs.Panel>
+            )}
+
+            {secretNames.length > 0 && (
+              <Tabs.Panel value="secrets" p="lg">
+                <BorderedList>
+                  {secretNames.map((name, i) => {
+                    const secret = secretsRecord[name]
+                    return (
+                      <ListRow key={name} first={i === 0}>
+                        <div>
+                          <Group gap="xs" wrap="nowrap">
+                            <Text size="sm" fw={500}>
+                              {asI18n(secret?.displayName ?? name)}
+                            </Text>
+                            {secret?.secretId && (
+                              <Text size="xs" c="dimmed" ff="monospace">
+                                {asI18n(secret.secretId)}
+                              </Text>
+                            )}
+                          </Group>
+                          {secret?.description && (
+                            <Text size="xs" c="dimmed" lineClamp={2}>
+                              {asI18n(secret.description)}
+                            </Text>
+                          )}
+                        </div>
+                      </ListRow>
+                    )
+                  })}
+                </BorderedList>
+              </Tabs.Panel>
+            )}
+
+            {variableNames.length > 0 && (
+              <Tabs.Panel value="variables" p="lg">
+                <BorderedList>
+                  {variableNames.map((name, i) => {
+                    const variable = variablesRecord[name]
+                    return (
+                      <ListRow key={name} first={i === 0}>
+                        <div>
+                          <Group gap="xs" wrap="nowrap">
+                            <Text size="sm" fw={500}>
+                              {asI18n(variable?.displayName ?? name)}
+                            </Text>
+                            {variable?.variableId && (
+                              <Text size="xs" c="dimmed" ff="monospace">
+                                {asI18n(variable.variableId)}
+                              </Text>
+                            )}
+                          </Group>
+                          {variable?.description && (
+                            <Text size="xs" c="dimmed" lineClamp={2}>
+                              {asI18n(variable.description)}
+                            </Text>
+                          )}
+                        </div>
+                      </ListRow>
+                    )
+                  })}
+                </BorderedList>
+              </Tabs.Panel>
+            )}
           </Tabs>
         </Stack>
       )}
     </Drawer>
   )
 }
+
+const BorderedList: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => (
+  <Stack
+    gap={0}
+    style={{
+      border: '1px solid var(--mantine-color-default-border)',
+      borderRadius: 'var(--mantine-radius-md)',
+      overflow: 'hidden',
+    }}
+  >
+    {children}
+  </Stack>
+)
+
+const ListRow: React.FC<{ first: boolean; children: React.ReactNode }> = ({
+  first,
+  children,
+}) => (
+  <Group
+    justify="space-between"
+    px="md"
+    py="xs"
+    wrap="nowrap"
+    style={{
+      borderTop: first ? undefined : '1px solid var(--mantine-color-default-border)',
+    }}
+  >
+    {children}
+  </Group>
+)
