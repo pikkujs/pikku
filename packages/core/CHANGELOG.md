@@ -1,3 +1,23 @@
+## 0.12.48
+
+### Patch Changes
+
+- 5f2c566: Better Auth actor plugin for user flows: `actor({ secret })` adds an `actor`
+  boolean column on `user` and a `POST /sign-in/actor` endpoint (`{ email,
+secret }`, constant-time compare). Actor rows are auto-created on first
+  sign-in; a real (non-actor) user can never be impersonated with the secret.
+  The flag propagates into the pikku core session (`CoreUserSession.actor`) via
+  both `betterAuthSession` and `betterAuthStatelessSession`, so audits and
+  analytics can address synthetic traffic.
+- 8dfddc3: pikkuUserFlow: user flows as workflows. A complex workflow whose steps can run
+  as actors over the real transport — `workflow.do(step, rpc, data, { actor:
+actors.yasser })` — plus `workflow.expectEventually(...)` for polling async
+  effects. Actor steps never queue and never dispatch internally, so auth
+  middleware/permissions are exercised end-to-end; flows double as e2e tests and
+  staged/production health checks. Ships UserFlowActor types +
+  createHttpUserFlowActors (lazy sign-in via `/auth/sign-in/actor` with a
+  server-held secret), inspector source `'user-flow'`, and a console badge.
+
 ## 0.12.47
 
 ### Patch Changes
