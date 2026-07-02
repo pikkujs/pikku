@@ -1,5 +1,5 @@
 ---
-"@pikku/cucumber": minor
+"@pikku/cucumber": patch
 ---
 
 Add `@pikku/cucumber/browser` — a universal Playwright browser-test harness so
