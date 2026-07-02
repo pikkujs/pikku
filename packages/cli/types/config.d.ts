@@ -88,6 +88,7 @@ export interface PikkuCLICoreOutputFiles {
   workflowMapDeclarationFile: string
   workflowTypesFile: string
   workflowMetaDir: string
+  userFlowActorsFile: string
 
   // MCP
   mcpWiringsFile: string
@@ -303,6 +304,23 @@ export type PikkuCLIInput = {
   workflows?: {
     orchestratorQueue?: string
     workerQueue?: string
+  }
+
+  userFlows?: {
+    /**
+     * Global user-flow actor registry — any user flow can impersonate any
+     * actor. Generates a typed `createUserFlowActors` factory (see
+     * `userFlowActorsFile`) and surfaces the personas in the console.
+     */
+    actors?: Record<
+      string,
+      {
+        email: string
+        name?: string
+        jobTitle?: string
+        personality?: string
+      }
+    >
   }
 
   scaffold?: {

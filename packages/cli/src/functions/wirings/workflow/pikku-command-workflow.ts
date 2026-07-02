@@ -3,6 +3,7 @@ import { ErrorCode } from '@pikku/inspector'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeWorkflowTypes } from './serialize-workflow-types.js'
+import { serializeUserFlowActors } from './serialize-user-flow-actors.js'
 import { serializeWorkflowRegistration } from './serialize-workflow-registration.js'
 import { serializeWorkflowMap } from './serialize-workflow-map.js'
 import { serializeWorkflowBootstrapMap } from './serialize-workflow-bootstrap-map.js'
@@ -154,6 +155,15 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
         workflowMapImportPath
       )
     )
+
+    const userFlowActors = config.userFlows?.actors
+    if (userFlowActors && Object.keys(userFlowActors).length > 0) {
+      await writeFileInDir(
+        logger,
+        config.userFlowActorsFile,
+        serializeUserFlowActors(userFlowActors)
+      )
+    }
 
     await writeFileInDir(
       logger,

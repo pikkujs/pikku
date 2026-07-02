@@ -16,5 +16,18 @@
   },
   "scaffold": {
     "workflow": "auth"
+  },
+  "userFlows": {
+    "actors": {
+      "customer": {
+        "email": "customer@actors.local",
+        "jobTitle": "Customer",
+        "personality": "Impatient first-time buyer who abandons slow checkouts"
+      },
+      "ops": {
+        "email": "ops@actors.local",
+        "jobTitle": "Operations manager"
+      }
+    }
   }
 }

@@ -81,6 +81,24 @@ describe('pikkuUserFlow verification', () => {
     )
   })
 
+  test('codegen: pikku.config.json userFlows.actors generates the typed registry', async () => {
+    const gen = await import(
+      '../../.pikku/workflow/pikku-user-flow-actors.gen.js'
+    )
+    assert.deepEqual(Object.keys(gen.userFlowActorConfigs).sort(), [
+      'customer',
+      'ops',
+    ])
+    assert.equal(gen.userFlowActorConfigs.customer.jobTitle, 'Customer')
+
+    const actors = gen.createUserFlowActors({
+      apiUrl: 'http://localhost:9999/api',
+      secret: 'unused',
+    })
+    assert.equal(actors.customer.name, 'customer')
+    assert.equal(typeof actors.ops.invoke, 'function')
+  })
+
   test('runtime: actor steps route through injected actors, internal steps stay in-process', async () => {
     const customer = fakeActor('customer')
     const ops = fakeActor('ops')
