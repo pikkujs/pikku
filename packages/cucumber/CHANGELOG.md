@@ -1,5 +1,14 @@
 # @pikku/cucumber
 
+## 0.12.8
+
+### Patch Changes
+
+- e3ff013: browser harness: actors carry the app's generated PikkuRPC/PikkuFetch clients (BrowserWorld.createClients + actor.clients() with the actor's session cookie), persona-based login steps ("{actor} is logged in" — credentials come from config.personas, the explicit form remains only for invalid-credential tests), and an overridable BrowserWorld.resetAppData() behind "the app data is reset".
+- 6432150: BrowserWorld auth calls (signIn/ensureAccount/waitForServerReady) now use plain fetch + context.addCookies instead of Playwright's APIRequestContext, which crashes under bun (\_parseSetCookieHeader gets a relative response URL → ERR_INVALID_URL on any Set-Cookie response)
+- Updated dependencies [1cd0b2f]
+  - @pikku/core@0.12.47
+
 ## 0.12.7
 
 ### Patch Changes
