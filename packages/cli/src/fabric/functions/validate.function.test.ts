@@ -62,6 +62,7 @@ async function makeValidProject(root: string) {
     dependencies: {
       '@pikku/schema-cfworker': '^0.12.0',
       '@pikku/kysely': '^0.12.0',
+      '@pikku/addon-console': '^0.12.0',
     },
   })
   await writeFile(
@@ -531,6 +532,7 @@ describe('pikku fabric validate', () => {
             '@pikku/cloudflare': '^0.12.6',
             '@pikku/schema-cfworker': '^0.12.0',
             '@pikku/kysely': '^0.12.0',
+            '@pikku/addon-console': '^0.12.0',
           },
           // no type: 'module'
         })
