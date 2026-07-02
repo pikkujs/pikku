@@ -59,6 +59,7 @@ async function makeValidWorkspace(root: string) {
   })
   await writeJson(join(root, 'packages', 'functions', 'package.json'), {
     type: 'module',
+    dependencies: { zod: '^4' },
   })
   await writeFile(
     join(root, 'packages', 'functions', 'src', 'services.ts'),
@@ -147,7 +148,7 @@ describe('pikku workspace validate', () => {
       await makeValidWorkspace(tmp)
       await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
         type: 'module',
-        dependencies: { '@pikku/kysely-postgres': '^1.0.0' },
+        dependencies: { '@pikku/kysely-postgres': '^1.0.0', zod: '^4' },
       })
       await writeFile(
         join(tmp, 'packages', 'functions', 'src', 'services.ts'),
