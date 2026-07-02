@@ -1,4 +1,4 @@
-import { type Browser, type BrowserContext, type Page } from '@playwright/test'
+import type { Browser, BrowserContext, Page } from '@playwright/test'
 import type { BrowserConfig, PersonaCredentials } from './config.js'
 
 /** Runtime problems collected for one page navigation. */
