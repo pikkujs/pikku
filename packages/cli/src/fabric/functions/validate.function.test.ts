@@ -1516,4 +1516,58 @@ describe('i18n + @pikku/mantine convergence — Paraglide (live validate.functio
       await rm(tmp, { recursive: true, force: true })
     }
   })
+
+  describe('deprecated Next.js pikku client', () => {
+    test('nextHTTPFile config + nextjs-http.gen import → errors, ok=false', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        const app = join(tmp, 'apps', 'website', 'pikku')
+        await mkdir(app, { recursive: true })
+        await writeJson(join(tmp, 'apps', 'website', 'pikku.config.json'), {
+          extends: '../../pikku.config.json',
+          nextHTTPFile: './pikku/nextjs-http.gen.ts',
+        })
+        await writeFile(
+          join(app, 'http.ts'),
+          "import { pikku } from './nextjs-http.gen'\nexport { pikku }\n",
+          'utf8'
+        )
+        const result = await runValidate(tmp)
+        assert.strictEqual(result.ok, false)
+        assert.ok(
+          result.findings.some(
+            (f) =>
+              f.id.startsWith('dead-next-codegen-config-') &&
+              f.severity === 'error'
+          ),
+          `expected dead-next-codegen-config finding: ${JSON.stringify(result.findings.map((x) => x.id))}`
+        )
+        assert.ok(
+          result.findings.some(
+            (f) =>
+              f.id.startsWith('dead-next-client-import-') &&
+              f.severity === 'error'
+          ),
+          `expected dead-next-client-import finding: ${JSON.stringify(result.findings.map((x) => x.id))}`
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('valid project (fetch client, no next) → no dead-next findings', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        const result = await runValidate(tmp)
+        assert.ok(
+          !result.findings.some((f) => f.id.startsWith('dead-next-')),
+          `unexpected dead-next finding: ${JSON.stringify(result.findings.map((x) => x.id))}`
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+  })
 })
