@@ -1,3 +1,31 @@
+## 0.12.63
+
+### Patch Changes
+
+- 59bbef5: fix(cli): default the scaffold directory beside `srcDirectories[0]` (e.g.
+  `packages/functions/src/scaffold`) instead of the rootDir-relative
+  `src/scaffold`. In a monorepo the old default silently mis-placed generated
+  scaffold files (auth.gen.ts, auth-secrets.gen.ts) at the repo root where their
+  imports — e.g. `zod` — don't resolve, causing PKU489. Single-package layouts
+  (`srcDirectories: ["./src"]`) are unaffected: the derived default is still
+  `src/scaffold`. Set `scaffold.pikkuDir` explicitly to override.
+- b14df13: `pikku fabric validate`: flag the deprecated Next.js pikku client. Codegen no
+  longer emits `nextHTTPFile`/`nextBackendFile` (`nextjs-http.gen` /
+  `nextjs-backend.gen`), but a frontend left over from a Next→TanStack migration
+  still imports it. That file is gitignored (so `git add -A` never pushes it) AND
+  `pikku all` never regenerates it — so it lingers on the dev's disk (validate/tsc
+  pass locally) yet is absent in the clean build container, where tsc dies with
+  "Cannot find module './nextjs-http.gen'" and aborts the deploy. Validate now
+  errors on both the dead config keys and any surviving `nextjs-*.gen` import,
+  pointing at the fetch client (`PikkuFetch`/`PikkuRPC` + `createPikku`) generated
+  into the functions-sdk.
+- 59bbef5: feat(cli): `pikku validate` now checks that `packages/functions` declares
+  `zod` v4. pikku's generated schemas and the auth scaffold (auth-secrets.gen.ts)
+  both `import { z } from 'zod'`; a missing or non-v4 zod fails codegen (PKU489)
+  or type-checking, so surface it as a validation error with a fix hint.
+- Updated dependencies [1cd0b2f]
+  - @pikku/core@0.12.47
+
 ## 0.12.62
 
 ### Patch Changes
