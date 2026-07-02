@@ -1,5 +1,20 @@
 # @pikku/better-auth
 
+## 0.12.14
+
+### Patch Changes
+
+- 5f2c566: Better Auth actor plugin for user flows: `actor({ secret })` adds an `actor`
+  boolean column on `user` and a `POST /sign-in/actor` endpoint (`{ email,
+secret }`, constant-time compare). Actor rows are auto-created on first
+  sign-in; a real (non-actor) user can never be impersonated with the secret.
+  The flag propagates into the pikku core session (`CoreUserSession.actor`) via
+  both `betterAuthSession` and `betterAuthStatelessSession`, so audits and
+  analytics can address synthetic traffic.
+- Updated dependencies [5f2c566]
+- Updated dependencies [8dfddc3]
+  - @pikku/core@0.12.48
+
 ## 0.12.13
 
 ### Patch Changes

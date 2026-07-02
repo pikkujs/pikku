@@ -1,3 +1,26 @@
+## 0.12.64
+
+### Patch Changes
+
+- d9e0082: User-flow actor registry in pikku.config.json: `userFlows.actors` (email,
+  jobTitle, personality per actor) generates a typed
+  `.pikku/workflow/pikku-user-flow-actors.gen.ts` with `userFlowActorConfigs`
+  and `createUserFlowActors({ apiUrl, secret })` — wire the result as the
+  `actors` singleton service for pikkuUserFlow.
+- 8dfddc3: pikkuUserFlow: user flows as workflows. A complex workflow whose steps can run
+  as actors over the real transport — `workflow.do(step, rpc, data, { actor:
+actors.yasser })` — plus `workflow.expectEventually(...)` for polling async
+  effects. Actor steps never queue and never dispatch internally, so auth
+  middleware/permissions are exercised end-to-end; flows double as e2e tests and
+  staged/production health checks. Ships UserFlowActor types +
+  createHttpUserFlowActors (lazy sign-in via `/auth/sign-in/actor` with a
+  server-held secret), inspector source `'user-flow'`, and a console badge.
+- Updated dependencies [5f2c566]
+- Updated dependencies [8dfddc3]
+  - @pikku/better-auth@0.12.14
+  - @pikku/core@0.12.48
+  - @pikku/inspector@0.12.32
+
 ## 0.12.63
 
 ### Patch Changes
