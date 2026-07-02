@@ -15,6 +15,16 @@ export interface PageIssues {
 }
 
 /**
+ * What the client factory receives: the API base URL plus the actor's current
+ * session as a Cookie header, so the generated PikkuRPC/PikkuFetch clients act
+ * AS this actor.
+ */
+export interface ClientContext {
+  apiUrl: string
+  cookieHeader: string | null
+}
+
+/**
  * ActorSession — one actor's own browser context: an isolated window, cookie
  * jar, and session. Multi-actor scenarios ("the admin" publishes, "a member"
  * sees it live) each get their own ActorSession under one shared Browser.
@@ -23,7 +33,7 @@ export interface PageIssues {
  * requests, and 4xx/5xx app /api responses so a failing step can say exactly
  * what went wrong on which page.
  */
-export class ActorSession {
+export class ActorSession<Clients = unknown> {
   page!: Page
   private context!: BrowserContext
   private issues: PageIssues = blankIssues()
@@ -33,8 +43,27 @@ export class ActorSession {
   constructor(
     readonly name: string,
     readonly persona: PersonaCredentials,
-    private readonly config: BrowserConfig
+    private readonly config: BrowserConfig,
+    private readonly clientFactory?: (ctx: ClientContext) => Clients
   ) {}
+
+  /**
+   * The app's generated, fully-typed pikku clients (PikkuRPC/PikkuFetch),
+   * built by the world's `createClients` factory and carrying THIS actor's
+   * session cookie. Types come from the generated client classes — never cast.
+   */
+  async clients(): Promise<Clients> {
+    if (!this.clientFactory) {
+      throw new Error(
+        '[e2e] no client factory — override createClients() on your BrowserWorld subclass to wire the generated PikkuRPC/PikkuFetch'
+      )
+    }
+    const cookies = await this.context.cookies()
+    const cookieHeader = cookies.length
+      ? cookies.map((c) => `${c.name}=${c.value}`).join('; ')
+      : null
+    return this.clientFactory({ apiUrl: this.config.apiUrl, cookieHeader })
+  }
 
   async open(browser: Browser) {
     this.context = await browser.newContext({
@@ -254,27 +283,6 @@ export class ActorSession {
     await this.context.clearCookies()
     this.signedInAs = undefined
     await this.gotoApp('/')
-  }
-
-  /** Calls an RPC through the browser page so session cookies are included. */
-  async callRpc(name: string, data: Record<string, unknown> = {}) {
-    return this.page.evaluate(
-      async ({ apiUrl, name, data }) => {
-        const res = await fetch(`${apiUrl}/rpc/${name}`, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ data }),
-        })
-        if (!res.ok) {
-          const body = await res.text().catch(() => '')
-          throw new Error(`RPC ${name} failed (${res.status}): ${body}`)
-        }
-        const text = await res.text()
-        return text ? JSON.parse(text) : undefined
-      },
-      { apiUrl: this.config.apiUrl, name, data }
-    )
   }
 
   /** Assert visible text, polling until the timeout (handles late renders). */

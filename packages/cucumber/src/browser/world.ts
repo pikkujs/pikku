@@ -1,5 +1,5 @@
 import { chromium, type Browser } from '@playwright/test'
-import { ActorSession } from './actor-session.js'
+import { ActorSession, type ClientContext } from './actor-session.js'
 import {
   browserConfigFromEnv,
   derivePersona,
@@ -19,11 +19,11 @@ import {
  * dependency on @cucumber/cucumber — the consumer passes it to
  * setWorldConstructor and passes Given/When/Then into registerBrowserSteps.
  */
-export class BrowserWorld {
+export class BrowserWorld<Clients = unknown> {
   readonly config: BrowserConfig
   private browser?: Browser
-  private actors = new Map<string, ActorSession>()
-  private last?: ActorSession
+  private actors = new Map<string, ActorSession<Clients>>()
+  private last?: ActorSession<Clients>
 
   constructor(_cucumberOptions?: unknown, config?: BrowserConfig) {
     this.config = config ?? browserConfigFromEnv()
@@ -34,19 +34,52 @@ export class BrowserWorld {
    * first mention. `undefined` (a `they` step) → the last-referenced actor,
    * or the default actor if none has been named yet.
    */
-  async actor(name?: string): Promise<ActorSession> {
+  async actor(name?: string): Promise<ActorSession<Clients>> {
     if (name === undefined) {
       if (!this.last) return this.actor('the user')
       return this.last
     }
     let session = this.actors.get(name)
     if (!session) {
-      session = new ActorSession(name, this.personaFor(name), this.config)
+      session = new ActorSession<Clients>(
+        name,
+        this.personaFor(name),
+        this.config,
+        this.createClients ? (ctx) => this.createClients!(ctx) : undefined
+      )
       await session.open(await this.launchBrowser())
       this.actors.set(name, session)
     }
     this.last = session
     return session
+  }
+
+  /**
+   * Override to wire the app's GENERATED pikku clients (PikkuRPC/PikkuFetch)
+   * for `actor.clients()` — instantiate them, setServerUrl(ctx.apiUrl), and
+   * set the actor's session via setHeader('Cookie', ctx.cookieHeader).
+   */
+  protected createClients?(ctx: ClientContext): Clients
+
+  /**
+   * Backs the "the app data is reset" step. Override to call the app's own
+   * reset RPC through the generated typed client (preferred); the default
+   * posts to the env-configured reset endpoint (E2E_RESET_URL).
+   */
+  async resetAppData(): Promise<void> {
+    const { resetUrl, resetRpcName } = this.config
+    if (!resetUrl) {
+      throw new Error(
+        '[e2e] "the app data is reset" needs E2E_RESET_URL, or override resetAppData() on your world to call the app\'s reset RPC via its typed client'
+      )
+    }
+    const body = resetRpcName ? JSON.stringify({ rpcName: resetRpcName, data: {} }) : undefined
+    const res = await fetch(resetUrl, {
+      method: 'POST',
+      headers: body ? { 'content-type': 'application/json' } : undefined,
+      body,
+    })
+    if (!res.ok) throw new Error(`[e2e] reset hook ${resetUrl} returned ${res.status}`)
   }
 
   /** The current actor's page — for project-specific steps. */
@@ -58,7 +91,7 @@ export class BrowserWorld {
   }
 
   /** All live actors (e.g. to dump debug state on failure). */
-  allActors(): ActorSession[] {
+  allActors(): ActorSession<Clients>[] {
     return [...this.actors.values()]
   }
 

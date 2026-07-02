@@ -86,6 +86,17 @@ export function registerBrowserSteps({ Given, When, Then, defineParameterType }:
     await actor.gotoApp('/')
   })
 
+  // The actor's persona (config.personas[name]) carries the credentials —
+  // features never repeat them. The explicit as/with-password form exists
+  // only for testing INVALID credentials.
+  Given('{actor} is/are logged in', async function (actor: ActorSession) {
+    await actor.loginViaForm()
+  })
+
+  When('{actor} log(s) in', async function (actor: ActorSession) {
+    await actor.loginViaForm()
+  })
+
   Given(
     '{actor} is/are logged in as {string} with password {string}',
     async function (actor: ActorSession, email: string, password: string) {
@@ -328,19 +339,7 @@ export function registerBrowserSteps({ Given, When, Then, defineParameterType }:
 
   // ── Backend bridge ───────────────────────────────────────────────────────
   When('the app data is reset', async function () {
-    const { resetUrl, resetRpcName } = this.config
-    if (!resetUrl) {
-      throw new Error(
-        '[e2e] "the app data is reset" needs E2E_RESET_URL (a dev-only reset RPC endpoint)'
-      )
-    }
-    const body = resetRpcName ? JSON.stringify({ rpcName: resetRpcName, data: {} }) : undefined
-    const res = await fetch(resetUrl, {
-      method: 'POST',
-      headers: body ? { 'content-type': 'application/json' } : undefined,
-      body,
-    })
-    if (!res.ok) throw new Error(`[e2e] reset hook ${resetUrl} returned ${res.status}`)
+    await this.resetAppData()
   })
 
   // ── Smoke sweep ──────────────────────────────────────────────────────────
