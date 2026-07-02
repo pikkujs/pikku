@@ -1,9 +1,9 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 import { pikkuState } from '@pikku/core/internal'
 
 import type { AddonPackageInfo } from '../services/addon.service.js'
 
-export const getAddonInstalledPackage = pikkuSessionlessFunc<
+export const getAddonInstalledPackage = pikkuFunc<
   { packageName: string },
   AddonPackageInfo | null
 >({
@@ -11,7 +11,6 @@ export const getAddonInstalledPackage = pikkuSessionlessFunc<
   description:
     'Returns the full details of a locally installed addon by reading from pikkuState and .pikku files',
   expose: true,
-  auth: false,
   func: async ({ metaService }, { packageName }) => {
     const factories = pikkuState(packageName, 'package', 'factories')
     if (!factories) return null

@@ -6,6 +6,8 @@ import {
   type Page,
 } from '@playwright/test'
 import { randomUUID } from 'crypto'
+import { Actor } from '@pikku/cucumber'
+import { createAuthClient } from 'better-auth/client'
 import { config } from './types.js'
 import { ADMIN_USER, type SeedUser } from '../../src/auth-fixtures.js'
 
@@ -40,6 +42,46 @@ export class AgentWorld extends World {
   async closeBrowser() {
     await this.context?.close()
     await this.browser?.close()
+  }
+
+  // Console RPCs now require an authenticated session. E2E Standard runs the
+  // non-@console suite, where the console UI isn't served — so authenticate at
+  // the API level with a Better Auth session cookie (an Actor cookie jar) rather
+  // than a browser login. Mirrors tests/steps/auth.steps.ts. Cached per scenario.
+  private consoleActor?: Actor
+
+  private async authenticatedActor(): Promise<Actor> {
+    if (!this.consoleActor) {
+      const actor = new Actor('console', {}, config.apiUrl)
+      const authClient = createAuthClient({
+        baseURL: config.apiUrl,
+        fetchOptions: { customFetchImpl: actor.cookieFetch },
+      })
+      const { error } = await authClient.signIn.email({
+        email: ADMIN_USER.email,
+        password: ADMIN_USER.password,
+      })
+      if (error) {
+        throw new Error(`console auth sign-in failed: ${JSON.stringify(error)}`)
+      }
+      this.consoleActor = actor
+    }
+    return this.consoleActor
+  }
+
+  // Invoke a console RPC over HTTP carrying the Better Auth session cookie.
+  // The raw /rpc response is the function's output.
+  async consoleRpc(name: string, data: unknown = {}): Promise<any> {
+    const actor = await this.authenticatedActor()
+    const res = await actor.cookieFetch(`${config.apiUrl}/rpc/${name}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data }),
+    })
+    if (!res.ok) {
+      throw new Error(`RPC ${name} failed (${res.status}): ${await res.text()}`)
+    }
+    return res.json()
   }
 
   // Sign in through the LoginScreen UI so the AuthGate lets the console render.

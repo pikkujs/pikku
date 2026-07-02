@@ -39,7 +39,7 @@ export const consoleCommand = pikkuSessionlessFunc<
 
     if (!config.scaffold?.console) {
       logger.error(
-        'Console is not enabled. Add { "scaffold": { "console": "no-auth" } } to your pikku.config.json'
+        'Console is not enabled. Add { "scaffold": { "console": "auth" } } to your pikku.config.json (the console requires an authenticated session — set up Better Auth)'
       )
       return
     }

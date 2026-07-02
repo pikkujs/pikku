@@ -159,7 +159,7 @@ export async function runWorkspaceValidate(
         'pikku-config-no-console-scaffold',
         'pikku.config.json missing "scaffold.console" — Fabric cannot introspect the running app (console:getFunctionsMeta and friends 404), so the sandbox builder shows no functions',
         pikkuConfigPath,
-        'Add "console": "no-auth" under "scaffold" in pikku.config.json (use "auth" to require a session)'
+        'Add "console": "auth" under "scaffold" in pikku.config.json — the console requires an authenticated session, so Better Auth must be set up (see the pikku-better-auth skill)'
       )
     }
   }

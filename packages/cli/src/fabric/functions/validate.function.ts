@@ -357,7 +357,7 @@ export async function runValidate(
         severity: 'error',
         surface:
           'app introspection (console:getFunctionsMeta and friends) — the sandbox builder shows no functions',
-        value: '"no-auth"',
+        value: '"auth"',
       },
       {
         key: 'rpc',

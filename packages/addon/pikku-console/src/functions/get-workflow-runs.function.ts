@@ -1,7 +1,7 @@
 import { MissingServiceError } from '@pikku/core/errors'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 
-export const getWorkflowRuns = pikkuSessionlessFunc<
+export const getWorkflowRuns = pikkuFunc<
   { workflowName?: string; status?: string; limit?: number; offset?: number },
   any[]
 >({
@@ -9,7 +9,6 @@ export const getWorkflowRuns = pikkuSessionlessFunc<
   description:
     'Returns a list of workflow runs from the Postgres workflow database. Accepts optional filters: workflowName, status, limit, and offset for pagination. Returns an empty array if workflowRunService is not configured.',
   expose: true,
-  auth: false,
   func: async ({ workflowRunService }, input) => {
     if (!workflowRunService)
       throw new MissingServiceError('workflowRunService is not available')

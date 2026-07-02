@@ -1,7 +1,7 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 import type { StateDiff } from '../services/state-diff.service.js'
 
-export const getStateDiff = pikkuSessionlessFunc<
+export const getStateDiff = pikkuFunc<
   { basePath: string; oursPath?: string },
   StateDiff
 >({

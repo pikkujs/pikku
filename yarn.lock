@@ -6027,7 +6027,6 @@ __metadata:
     "@pikku/kysely-sqlite": "workspace:*"
     "@pikku/redis": "workspace:*"
     "@pikku/schema-cfworker": "workspace:*"
-    "@pikku/uws": "workspace:*"
     "@playwright/test": "npm:^1.50.0"
     "@types/better-sqlite3": "npm:^7.0.0"
     "@types/node": "npm:^22"

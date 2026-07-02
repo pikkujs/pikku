@@ -1,6 +1,6 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 
-export const oauthDisconnect = pikkuSessionlessFunc<{
+export const oauthDisconnect = pikkuFunc<{
   credentialName: string
 }>({
   title: 'OAuth Disconnect',

@@ -14,7 +14,7 @@ type Feature =
 const FEATURE_DEFAULTS: Record<Feature, 'auth' | 'no-auth'> = {
   rpc: 'auth',
   agent: 'auth',
-  console: 'no-auth',
+  console: 'auth',
   workflow: 'auth',
   events: 'auth',
   remoteRpc: 'no-auth',
@@ -39,9 +39,10 @@ async function enableFeature(
     json.scaffold.pikkuDir = 'pikku'
   }
 
-  const value: PikkuScaffoldFeature = noAuth
-    ? 'no-auth'
-    : FEATURE_DEFAULTS[feature]
+  // The console is an admin surface — every RPC requires a session, so it can
+  // never be scaffolded no-auth (the --no-auth flag is ignored for it).
+  const value: PikkuScaffoldFeature =
+    feature === 'console' ? 'auth' : noAuth ? 'no-auth' : FEATURE_DEFAULTS[feature]
   json.scaffold[feature] = value
 
   await writeFile(configPath, JSON.stringify(json, null, 2) + '\n', 'utf-8')

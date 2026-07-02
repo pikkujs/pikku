@@ -1,8 +1,8 @@
 import { NotFoundError } from '@pikku/core'
 import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 
-export const updateEmailTemplate = pikkuSessionlessFunc<
+export const updateEmailTemplate = pikkuFunc<
   {
     templateName: string
     source: string
@@ -13,7 +13,6 @@ export const updateEmailTemplate = pikkuSessionlessFunc<
   description:
     'Overwrites an email template HTML source file (templates/<name>.html) so small edits can be made from the console.',
   expose: true,
-  auth: false,
   func: async ({ metaService, codeEditService }, { templateName, source }) => {
     if (!codeEditService) {
       throw new LocalEnvironmentOnlyError(

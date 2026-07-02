@@ -207,7 +207,7 @@ When(
   'I query console RPC {string}',
   { timeout: 30_000 },
   async function (this: AgentWorld, rpcName: string) {
-    state.consoleResponse = await rpc.invoke(rpcName as never, {})
+    state.consoleResponse = await this.consoleRpc(rpcName)
   }
 )
 
@@ -216,7 +216,7 @@ When(
   { timeout: 30_000 },
   async function (this: AgentWorld, rpcName: string) {
     expect(state.lastRunId).toBeTruthy()
-    state.consoleResponse = await rpc.invoke(rpcName as never, {
+    state.consoleResponse = await this.consoleRpc(rpcName, {
       runId: state.lastRunId,
     })
   }

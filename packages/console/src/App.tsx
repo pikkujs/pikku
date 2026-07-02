@@ -24,6 +24,7 @@ import { ChangesPage } from './pages/ChangesPage'
 import { TestsPage } from './pages/TestsPage'
 import { DatabasePage } from './pages/DatabasePage'
 import { AuthProvidersPage } from './pages/AuthProvidersPage'
+import { SecurityPage } from './pages/SecurityPage'
 
 export const App: React.FC = () => {
   return (
@@ -55,6 +56,7 @@ export const App: React.FC = () => {
         <Route path="/emails" element={<EmailsPage />} />
         <Route path="/secrets" element={<SecretsPage />} />
         <Route path="/variables" element={<VariablesPage />} />
+        <Route path="/security" element={<SecurityPage />} />
         <Route path="/config" element={<Navigate to="/secrets" replace />} />
         <Route path="/credentials" element={<CredentialsPage />} />
         <Route path="/users" element={<AdminUsersPage />} />

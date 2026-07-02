@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 import { pikkuState } from '@pikku/core/internal'
 import type { MetaService } from '@pikku/core/services'
 
@@ -29,11 +29,10 @@ async function readPackageIcon(
   }
 }
 
-export const getInstalledAddons = pikkuSessionlessFunc<null, InstalledAddon[]>({
+export const getInstalledAddons = pikkuFunc<null, InstalledAddon[]>({
   title: 'Get Installed Addons',
   description: 'Returns locally wired addons from pikkuState',
   expose: true,
-  auth: false,
   func: async ({ metaService }) => {
     const addonsMap = pikkuState(null, 'addons', 'packages')
     const result: InstalledAddon[] = []

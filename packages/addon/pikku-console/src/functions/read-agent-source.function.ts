@@ -1,7 +1,7 @@
 import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 
-export const readAgentSource = pikkuSessionlessFunc<
+export const readAgentSource = pikkuFunc<
   { sourceFile: string; exportedName: string },
   { config: Record<string, unknown> }
 >({
@@ -9,7 +9,6 @@ export const readAgentSource = pikkuSessionlessFunc<
   description:
     'Reads the source code of a pikku AI agent definition and returns its config properties.',
   expose: true,
-  auth: false,
   func: async ({ codeEditService }, { sourceFile, exportedName }) => {
     if (!codeEditService) {
       throw new LocalEnvironmentOnlyError(

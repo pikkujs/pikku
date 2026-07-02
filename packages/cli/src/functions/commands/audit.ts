@@ -2,6 +2,11 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { pikkuSessionlessFunc } from '#pikku'
+import type {
+  SecurityAuditIssue,
+  SecurityAuditReport,
+  SecurityAuditUpdate,
+} from '@pikku/core'
 
 // `pikku audit` — dependency security audit. Security advisories are always
 // reported; `--outdated` additionally reports available dependency updates.
@@ -19,44 +24,9 @@ const SEVERITY_ORDER = ['critical', 'high', 'moderate', 'low', 'info'] as const
 type Severity = (typeof SEVERITY_ORDER)[number]
 type PackageManager = 'bun' | 'npm' | 'yarn' | 'pnpm' | 'unknown'
 
-interface AuditIssue {
-  package: string
-  severity: Severity
-  title: string
-  advisoryId: string
-  url: string
-  vulnerableVersions: string
-  cwe: string[]
-  cvssScore: number | null
-  recommendedVersion: string | null
-}
-
-interface AuditUpdate {
-  package: string
-  current: string
-  latest: string
-  level: 'major' | 'minor' | 'patch' | 'unknown'
-}
-
-interface SecurityAuditReport {
-  schemaVersion: number
-  tool: PackageManager
-  generatedAt: string
-  note?: string
-  issues: AuditIssue[]
-  updates: AuditUpdate[]
-  summary: {
-    totalIssues: number
-    critical: number
-    high: number
-    moderate: number
-    low: number
-    totalUpdates: number
-    major: number
-    minor: number
-    patch: number
-  }
-}
+// Artifact shape (SecurityAuditReport / …Issue / …Update) is the canonical type
+// from @pikku/core — imported above. `Severity`/`PackageManager` below are local
+// runtime-helper aliases, not a second copy of the artifact.
 
 const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, '')
 
@@ -82,10 +52,19 @@ function runBun(args: string[], cwd: string): string {
     cwd,
     encoding: 'utf8',
     maxBuffer: 32 * 1024 * 1024,
+    timeout: 120_000,
     env: { ...process.env, NO_COLOR: '1' },
   })
-  // bun audit exits non-zero when advisories are found — the payload is still on
-  // stdout, so read it regardless of exit code.
+  // A launch failure (bun missing, timeout, maxBuffer exceeded) or a non-zero
+  // exit with *no* output means the audit never produced data — surface it so a
+  // failed run can't masquerade as "0 advisories". (bun audit exits non-zero
+  // WHEN it finds advisories, but still writes the payload to stdout, so a
+  // non-zero exit *with* stdout is fine.)
+  if (res.error || (res.status !== 0 && !res.stdout)) {
+    throw new Error(
+      `bun ${args.join(' ')} failed: ${res.error?.message ?? res.stderr ?? `exit ${res.status}`}`
+    )
+  }
   return res.stdout || ''
 }
 
@@ -95,8 +74,8 @@ function normaliseSeverity(sev: unknown): Severity {
 }
 
 // bun audit --json → { "<pkg>": [ { id, url, title, severity, vulnerable_versions, cwe[], cvss:{score} } ] }
-function parseBunAudit(raw: string): AuditIssue[] {
-  const issues: AuditIssue[] = []
+function parseBunAudit(raw: string): SecurityAuditIssue[] {
+  const issues: SecurityAuditIssue[] = []
   let obj: Record<string, any>
   try {
     const start = raw.indexOf('{')
@@ -126,7 +105,7 @@ function parseBunAudit(raw: string): AuditIssue[] {
   return issues
 }
 
-function semverLevel(current: string, latest: string): AuditUpdate['level'] {
+function semverLevel(current: string, latest: string): SecurityAuditUpdate['level'] {
   const c = String(current).replace(/^[^\d]*/, '').split('.').map((n) => parseInt(n, 10))
   const l = String(latest).replace(/^[^\d]*/, '').split('.').map((n) => parseInt(n, 10))
   if (Number.isNaN(c[0]) || Number.isNaN(l[0])) return 'unknown'
@@ -137,8 +116,8 @@ function semverLevel(current: string, latest: string): AuditUpdate['level'] {
 }
 
 // bun outdated has no --json; it prints a table: | Package | Current | Update | Latest |
-function parseBunOutdated(raw: string): AuditUpdate[] {
-  const updates: AuditUpdate[] = []
+function parseBunOutdated(raw: string): SecurityAuditUpdate[] {
+  const updates: SecurityAuditUpdate[] = []
   const seen = new Set<string>()
   for (const line of stripAnsi(raw).split('\n')) {
     if (!line.includes('|')) continue
@@ -156,8 +135,8 @@ function parseBunOutdated(raw: string): AuditUpdate[] {
 
 function summarise(
   tool: PackageManager,
-  issues: AuditIssue[],
-  updates: AuditUpdate[],
+  issues: SecurityAuditIssue[],
+  updates: SecurityAuditUpdate[],
   note?: string,
 ): SecurityAuditReport {
   issues.sort((a, b) => SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity))
@@ -191,11 +170,22 @@ export const pikkuAudit = pikkuSessionlessFunc<AuditInput, void>({
 
     let report: SecurityAuditReport
     if (pm === 'bun') {
-      const issues = parseBunAudit(runBun(['audit', '--json'], root))
-      const updates = includeOutdated ? parseBunOutdated(runBun(['outdated'], root)) : []
-      const latestByPkg = new Map(updates.map((u) => [u.package, u.latest]))
-      for (const i of issues) i.recommendedVersion = latestByPkg.get(i.package) ?? null
-      report = summarise('bun', issues, updates)
+      try {
+        const issues = parseBunAudit(runBun(['audit', '--json'], root))
+        const updates = includeOutdated ? parseBunOutdated(runBun(['outdated'], root)) : []
+        const latestByPkg = new Map(updates.map((u) => [u.package, u.latest]))
+        for (const i of issues) i.recommendedVersion = latestByPkg.get(i.package) ?? null
+        report = summarise('bun', issues, updates)
+      } catch (e) {
+        // A failed run must NOT read as clean — emit a note so the UI shows
+        // "audit not run" instead of a reassuring "no vulnerabilities".
+        report = summarise(
+          'bun',
+          [],
+          [],
+          `Security audit could not run: ${e instanceof Error ? e.message : String(e)}`,
+        )
+      }
     } else {
       report = summarise(
         pm,

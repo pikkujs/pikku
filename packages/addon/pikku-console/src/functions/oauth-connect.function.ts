@@ -1,8 +1,8 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 import { OAuth2Client } from '@pikku/core/oauth2'
 import { randomUUID } from 'crypto'
 
-export const oauthConnect = pikkuSessionlessFunc<
+export const oauthConnect = pikkuFunc<
   { credentialName: string; callbackUrl?: string; userId?: string },
   { authUrl: string }
 >({

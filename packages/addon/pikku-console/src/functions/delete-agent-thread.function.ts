@@ -1,7 +1,7 @@
 import { MissingServiceError } from '@pikku/core/errors'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 
-export const deleteAgentThread = pikkuSessionlessFunc<
+export const deleteAgentThread = pikkuFunc<
   { threadId: string },
   { deleted: boolean }
 >({
@@ -9,7 +9,6 @@ export const deleteAgentThread = pikkuSessionlessFunc<
   description:
     'Deletes an AI agent thread and all its associated messages and runs via cascade.',
   expose: true,
-  auth: false,
   func: async ({ agentRunService }, input) => {
     if (!agentRunService)
       throw new MissingServiceError('agentRunService is not available')
