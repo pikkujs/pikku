@@ -1,3 +1,12 @@
+## 0.12.31
+
+### Patch Changes
+
+- 576f47b: AddonDetailDrawer functions tab renders per-function title, description and category from the registry entry (falls back to the bare function id when absent)
+- bf3f376: AddonDetailDrawer gains HTTP routes / channels / secrets / variables tabs, shown only when the package surface has entries
+- Updated dependencies [4c17f7e]
+  - @pikku/core@0.12.49
+
 ## 0.12.30
 
 ### Patch Changes
