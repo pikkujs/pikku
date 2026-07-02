@@ -1,4 +1,4 @@
-import { createHash } from 'crypto'
+import { createHash } from 'node:crypto'
 
 // Fixed namespace for pikku workflow step invocation IDs. Frozen — changing it
 // would alter every derived invocationId and break dedupe across a deploy.

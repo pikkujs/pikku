@@ -18,7 +18,7 @@ import {
   reconstructStateAt,
   type RunTimeline,
   type ReconstructedRunState,
-} from '@pikku/core/workflow'
+} from '@pikku/core/workflow/timeline'
 
 interface WorkflowRunContextType {
   selectedRunId: string | null

@@ -1,4 +1,4 @@
-import { createHash } from 'crypto'
+import { createHash } from 'node:crypto'
 
 export function canonicalJSON(obj: unknown): string {
   return JSON.stringify(sortDeep(obj))
