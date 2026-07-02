@@ -357,9 +357,13 @@ export const addFunctions: AddWiring = (
     return
   }
 
-  // Match identifiers that contain both "pikku" and "func" (case insensitive)
+  // Match identifiers that contain both "pikku" and "func" (case insensitive),
+  // plus pikkuUserFlow (a workflow wrapper without "func" in its name)
   const pikkuFuncPattern = /pikku.*func/i
-  if (!pikkuFuncPattern.test(expression.text)) {
+  if (
+    !pikkuFuncPattern.test(expression.text) &&
+    expression.text !== 'pikkuUserFlow'
+  ) {
     return
   }
 
