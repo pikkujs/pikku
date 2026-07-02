@@ -5948,10 +5948,15 @@ __metadata:
   resolution: "@pikku/cucumber@workspace:packages/cucumber"
   dependencies:
     "@pikku/fetch": "npm:^0.12.6"
+    "@playwright/test": "npm:^1.50.0"
     "@types/node": "npm:^25.6.0"
     typescript: "npm:^6.0.3"
   peerDependencies:
     "@pikku/core": ^0.12.44
+    "@playwright/test": ^1.50.0
+  peerDependenciesMeta:
+    "@playwright/test":
+      optional: true
   languageName: unknown
   linkType: soft
 
