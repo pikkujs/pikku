@@ -382,24 +382,51 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
                     overflow: 'hidden',
                   }}
                 >
-                  {fnNames.map((name, i) => (
-                    <Group
-                      key={name}
-                      justify="space-between"
-                      px="md"
-                      py="xs"
-                      style={{
-                        borderTop:
-                          i === 0
-                            ? undefined
-                            : '1px solid var(--mantine-color-default-border)',
-                      }}
-                    >
-                      <Text size="sm" fw={500}>
-                        {asI18n(name)}
-                      </Text>
-                    </Group>
-                  ))}
+                  {fnNames.map((name, i) => {
+                    const fn = fnRecord[name] as {
+                      title?: string
+                      description?: string
+                      category?: string
+                    } | null
+                    return (
+                      <Group
+                        key={name}
+                        justify="space-between"
+                        px="md"
+                        py="xs"
+                        wrap="nowrap"
+                        style={{
+                          borderTop:
+                            i === 0
+                              ? undefined
+                              : '1px solid var(--mantine-color-default-border)',
+                        }}
+                      >
+                        <div>
+                          <Group gap="xs" wrap="nowrap">
+                            <Text size="sm" fw={500}>
+                              {asI18n(fn?.title ?? name)}
+                            </Text>
+                            {fn?.title && (
+                              <Text size="xs" c="dimmed" ff="monospace">
+                                {asI18n(name)}
+                              </Text>
+                            )}
+                          </Group>
+                          {fn?.description && (
+                            <Text size="xs" c="dimmed" lineClamp={2}>
+                              {asI18n(fn.description)}
+                            </Text>
+                          )}
+                        </div>
+                        {fn?.category && (
+                          <Badge size="sm" variant="light" color="gray">
+                            {asI18n(fn.category)}
+                          </Badge>
+                        )}
+                      </Group>
+                    )
+                  })}
                 </Stack>
               )}
             </Tabs.Panel>
