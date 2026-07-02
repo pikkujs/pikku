@@ -1,6 +1,10 @@
-## 1.0.0
+## 0.12.13
 
 ### Patch Changes
+
+- Re-release of the changes that were accidentally published as `1.0.0` (a
+  changesets peer-dependency auto-major triggered by `@pikku/kysely@0.13.0`).
+  `1.0.0` was unpublished; this is the same content on the `0.12.x` line.
 
 - 41ce2cb: Upgrade to TypeScript 6 and raise the minimum Node.js version to 22.
 
