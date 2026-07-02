@@ -1,11 +1,11 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 
 export type CredentialUserEntry = {
   userId: string
   credentials: Record<string, boolean>
 }
 
-export const credentialListUsers = pikkuSessionlessFunc<
+export const credentialListUsers = pikkuFunc<
   null,
   { users: CredentialUserEntry[] }
 >({

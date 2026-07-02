@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 import { NotFoundError } from '@pikku/core'
 import type { EmailTemplateMeta } from '@pikku/core/services'
 import {
@@ -32,7 +32,7 @@ export interface RenderEmailPreviewOutput {
   missing: string[]
 }
 
-export const renderEmailPreview = pikkuSessionlessFunc<
+export const renderEmailPreview = pikkuFunc<
   RenderEmailPreviewInput,
   RenderEmailPreviewOutput
 >({
@@ -40,7 +40,6 @@ export const renderEmailPreview = pikkuSessionlessFunc<
   description:
     'Renders an email template preview from emailTemplatesDir using a locale and variable payload.',
   expose: true,
-  auth: false,
   func: async ({ metaService }, input) => {
     const emailsMeta = await metaService.getEmailMeta()
     const templateMeta = emailsMeta.templates[input.templateName] as

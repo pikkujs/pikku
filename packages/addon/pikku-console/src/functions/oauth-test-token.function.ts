@@ -1,7 +1,7 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 import { OAuth2Client } from '@pikku/core/oauth2'
 
-export const oauthTestToken = pikkuSessionlessFunc<
+export const oauthTestToken = pikkuFunc<
   { credentialName: string },
   { valid: boolean; error?: string }
 >({

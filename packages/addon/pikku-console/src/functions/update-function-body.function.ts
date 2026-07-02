@@ -1,7 +1,7 @@
 import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 
-export const updateFunctionBody = pikkuSessionlessFunc<
+export const updateFunctionBody = pikkuFunc<
   {
     sourceFile: string
     exportedName: string
@@ -13,7 +13,6 @@ export const updateFunctionBody = pikkuSessionlessFunc<
   description:
     'Replaces the function body of a pikku function definition in source code and triggers a rebuild.',
   expose: true,
-  auth: false,
   func: async ({ codeEditService }, { sourceFile, exportedName, body }) => {
     if (!codeEditService) {
       throw new LocalEnvironmentOnlyError(

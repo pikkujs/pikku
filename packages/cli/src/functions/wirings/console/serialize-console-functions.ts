@@ -3,9 +3,9 @@ export const serializeConsoleFunctions = (
   _pathToAgentTypes: string,
   globalHTTPPrefix: string = ''
 ) => {
-  return `import { pikkuSessionlessFunc, defineHTTPRoutes, wireHTTPRoutes, ref, wireAddon } from '${pathToPikkuTypes}'
+  return `import { pikkuFunc, defineHTTPRoutes, wireHTTPRoutes, ref, wireAddon } from '${pathToPikkuTypes}'
 
-export const pikkuConsoleSetSecret = pikkuSessionlessFunc<{
+export const pikkuConsoleSetSecret = pikkuFunc<{
   secretId: string
   value: unknown
 }, {
@@ -14,21 +14,19 @@ export const pikkuConsoleSetSecret = pikkuSessionlessFunc<{
   tags: ['pikku'],
   description: 'Set the value of a secret',
   expose: true,
-  auth: false,
   func: async ({ secrets }, { secretId, value }) => {
     await secrets.setSecret(secretId, value)
     return { success: true }
   },
 })
 
-export const pikkuConsoleGetVariable = pikkuSessionlessFunc<
+export const pikkuConsoleGetVariable = pikkuFunc<
   { variableId: string },
   { exists: boolean; value: unknown | null }
 >({
   tags: ['pikku'],
   description: 'Get the current value of a variable',
   expose: true,
-  auth: false,
   func: async ({ variables }, { variableId }) => {
     const exists = await variables.has(variableId)
     if (!exists) {
@@ -44,14 +42,13 @@ export const pikkuConsoleGetVariable = pikkuSessionlessFunc<
   },
 })
 
-export const pikkuConsoleSetVariable = pikkuSessionlessFunc<
+export const pikkuConsoleSetVariable = pikkuFunc<
   { variableId: string; value: unknown },
   { success: boolean }
 >({
   tags: ['pikku'],
   description: 'Set the value of a variable',
   expose: true,
-  auth: false,
   func: async ({ variables }, { variableId, value }) => {
     if (typeof value === 'string') {
       await variables.set(variableId, value)
@@ -62,28 +59,26 @@ export const pikkuConsoleSetVariable = pikkuSessionlessFunc<
   },
 })
 
-export const pikkuConsoleHasSecret = pikkuSessionlessFunc<
+export const pikkuConsoleHasSecret = pikkuFunc<
   { secretId: string },
   { exists: boolean }
 >({
   tags: ['pikku'],
   description: 'Check if a secret exists without reading its value',
   expose: true,
-  auth: false,
   func: async ({ secrets }, { secretId }) => {
     const exists = await secrets.hasSecret(secretId)
     return { exists }
   },
 })
 
-export const pikkuConsoleGetSecret = pikkuSessionlessFunc<
+export const pikkuConsoleGetSecret = pikkuFunc<
   { secretId: string },
   { exists: boolean; value: unknown | null }
 >({
   tags: ['pikku'],
   description: 'Get the current value of a secret',
   expose: true,
-  auth: false,
   func: async ({ secrets }, { secretId }) => {
     const exists = await secrets.hasSecret(secretId)
     if (!exists) {

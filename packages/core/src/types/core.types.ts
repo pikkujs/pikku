@@ -610,6 +610,55 @@ export type CommonWireMeta = {
 }
 
 /**
+ * Dependency security audit artifact — the shape of `.pikku/audit.json` written
+ * by `pikku audit`. Canonical home for the type shared by the CLI (writer), the
+ * console addon (reader), and the console UI (renderer).
+ */
+export type SecuritySeverity = 'critical' | 'high' | 'moderate' | 'low' | 'info'
+export type SecurityUpdateLevel = 'major' | 'minor' | 'patch' | 'unknown'
+
+export interface SecurityAuditIssue {
+  package: string
+  severity: SecuritySeverity
+  title: string
+  advisoryId: string
+  url: string
+  vulnerableVersions: string
+  cwe: string[]
+  cvssScore: number | null
+  recommendedVersion: string | null
+}
+
+export interface SecurityAuditUpdate {
+  package: string
+  current: string
+  latest: string
+  level: SecurityUpdateLevel
+}
+
+export interface SecurityAuditSummary {
+  totalIssues: number
+  critical: number
+  high: number
+  moderate: number
+  low: number
+  totalUpdates: number
+  major: number
+  minor: number
+  patch: number
+}
+
+export interface SecurityAuditReport {
+  schemaVersion: number
+  tool: string
+  generatedAt: string
+  note?: string
+  issues: SecurityAuditIssue[]
+  updates: SecurityAuditUpdate[]
+  summary: SecurityAuditSummary
+}
+
+/**
  * Serialized error for storage
  */
 export interface SerializedError {

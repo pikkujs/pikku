@@ -29,6 +29,7 @@
     "test:changes-console": "cucumber-js --config tests/cucumber.mjs --tags @changes-console",
     "test:auth": "cucumber-js --config tests/cucumber.mjs --tags @auth",
     "test:emails-console": "cucumber-js --config tests/cucumber.mjs --tags @emails-console",
+    "test:security-console": "cucumber-js --config tests/cucumber.mjs --tags @security-console",
     "test:impersonation": "cucumber-js --config tests/cucumber.mjs --tags @impersonation",
     "tsc": "tsc --noEmit"
   },
@@ -47,7 +48,6 @@
     "@pikku/kysely-sqlite": "workspace:*",
     "@pikku/redis": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
-    "@pikku/uws": "workspace:*",
     "ai": "^6.0.105",
     "better-auth": "^1.6.19",
     "better-sqlite3": "^12.10.0",

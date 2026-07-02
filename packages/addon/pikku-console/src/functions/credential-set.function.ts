@@ -1,7 +1,7 @@
 import { MissingServiceError } from '@pikku/core/errors'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 
-export const credentialSet = pikkuSessionlessFunc<
+export const credentialSet = pikkuFunc<
   { name: string; value: unknown; userId?: string },
   { success: boolean }
 >({

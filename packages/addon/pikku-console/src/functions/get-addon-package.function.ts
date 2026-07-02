@@ -1,7 +1,7 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 import type { AddonPackageInfo } from '../services/addon.service.js'
 
-export const getAddonCommunityPackage = pikkuSessionlessFunc<
+export const getAddonCommunityPackage = pikkuFunc<
   { id: string },
   AddonPackageInfo | null
 >({
@@ -9,7 +9,6 @@ export const getAddonCommunityPackage = pikkuSessionlessFunc<
   description:
     'Returns the full details of a community addon by ID from the registry',
   expose: true,
-  auth: false,
   func: async ({ addonService }, { id }) => {
     return await addonService.readAddon(id)
   },

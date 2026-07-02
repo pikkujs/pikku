@@ -1,7 +1,7 @@
 import { MissingServiceError } from '@pikku/core/errors'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 
-export const getAgentThreads = pikkuSessionlessFunc<
+export const getAgentThreads = pikkuFunc<
   { agentName?: string; resourceId?: string; limit?: number; offset?: number },
   any[]
 >({
@@ -9,7 +9,6 @@ export const getAgentThreads = pikkuSessionlessFunc<
   description:
     'Returns a list of AI agent threads from the database. Accepts optional filters: agentName, resourceId, limit, and offset for pagination.',
   expose: true,
-  auth: false,
   func: async ({ agentRunService }, input) => {
     if (!agentRunService)
       throw new MissingServiceError('agentRunService is not available')

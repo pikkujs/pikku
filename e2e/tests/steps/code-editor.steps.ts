@@ -21,22 +21,9 @@ const state: CodeEditorState = {
   agentsMeta: undefined,
 }
 
-async function rpcCall(name: string, data: any = {}): Promise<any> {
-  const res = await fetch(`${config.apiUrl}/rpc/${name}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ data }),
-  })
-  if (!res.ok) {
-    const body = await res.text()
-    throw new Error(`RPC ${name} failed (${res.status}): ${body}`)
-  }
-  return res.json()
-}
-
-async function getFunctionMeta(funcName: string) {
+async function getFunctionMeta(world: AgentWorld, funcName: string) {
   if (state.functionsMeta.length === 0) {
-    state.functionsMeta = await rpcCall('console:getFunctionsMeta')
+    state.functionsMeta = await world.consoleRpc('console:getFunctionsMeta')
   }
   const meta = state.functionsMeta.find(
     (f: any) => f.name === funcName || f.pikkuFuncId === funcName
@@ -45,9 +32,9 @@ async function getFunctionMeta(funcName: string) {
   return meta
 }
 
-async function getAgentMeta(agentKey: string) {
+async function getAgentMeta(world: AgentWorld, agentKey: string) {
   if (!state.agentsMeta) {
-    const allMeta = await rpcCall('console:getAllMeta')
+    const allMeta = await world.consoleRpc('console:getAllMeta')
     state.agentsMeta = allMeta.agentsMeta || {}
   }
   const meta = state.agentsMeta[agentKey]
@@ -60,8 +47,8 @@ async function getAgentMeta(agentKey: string) {
 When(
   'I read the source of function {string}',
   async function (this: AgentWorld, funcName: string) {
-    const meta = await getFunctionMeta(funcName)
-    state.functionSource = await rpcCall('console:readFunctionSource', {
+    const meta = await getFunctionMeta(this, funcName)
+    state.functionSource = await this.consoleRpc('console:readFunctionSource', {
       sourceFile: meta.sourceFile,
       exportedName: meta.exportedName,
     })
@@ -96,7 +83,7 @@ Then('the function body should contain {string}', function (text: string) {
 When(
   'I update the function {string} config:',
   async function (this: AgentWorld, funcName: string, table: any) {
-    const meta = await getFunctionMeta(funcName)
+    const meta = await getFunctionMeta(this, funcName)
     const rows = table.rawTable || table.raw()
     const changes: Record<string, unknown> = {}
     for (let i = 1; i < rows.length; i++) {
@@ -108,11 +95,14 @@ When(
         changes[key] = Number(value)
       else changes[key] = value
     }
-    state.lastUpdateResult = await rpcCall('console:updateFunctionConfig', {
-      sourceFile: meta.sourceFile,
-      exportedName: meta.exportedName,
-      changes,
-    })
+    state.lastUpdateResult = await this.consoleRpc(
+      'console:updateFunctionConfig',
+      {
+        sourceFile: meta.sourceFile,
+        exportedName: meta.exportedName,
+        changes,
+      }
+    )
     // Clear cached meta so next read picks up rebuilt data
     state.functionsMeta = []
     state.functionSource = undefined
@@ -128,8 +118,8 @@ Then('the update should succeed', function () {
 When(
   'I read the body of function {string}',
   async function (this: AgentWorld, funcName: string) {
-    const meta = await getFunctionMeta(funcName)
-    state.functionBody = await rpcCall('console:readFunctionBody', {
+    const meta = await getFunctionMeta(this, funcName)
+    state.functionBody = await this.consoleRpc('console:readFunctionBody', {
       sourceFile: meta.sourceFile,
       exportedName: meta.exportedName,
     })
@@ -140,12 +130,15 @@ When(
   'I update the function {string} body to:',
   { timeout: 60_000 },
   async function (this: AgentWorld, funcName: string, docString: string) {
-    const meta = await getFunctionMeta(funcName)
-    state.lastUpdateResult = await rpcCall('console:updateFunctionBody', {
-      sourceFile: meta.sourceFile,
-      exportedName: meta.exportedName,
-      body: docString,
-    })
+    const meta = await getFunctionMeta(this, funcName)
+    state.lastUpdateResult = await this.consoleRpc(
+      'console:updateFunctionBody',
+      {
+        sourceFile: meta.sourceFile,
+        exportedName: meta.exportedName,
+        body: docString,
+      }
+    )
     state.functionsMeta = []
     state.functionBody = undefined
   }
@@ -156,8 +149,8 @@ When(
 When(
   'I read the source of agent {string}',
   async function (this: AgentWorld, agentKey: string) {
-    const meta = await getAgentMeta(agentKey)
-    state.agentSource = await rpcCall('console:readAgentSource', {
+    const meta = await getAgentMeta(this, agentKey)
+    state.agentSource = await this.consoleRpc('console:readAgentSource', {
       sourceFile: meta.sourceFile,
       exportedName: meta.exportedName,
     })
@@ -184,7 +177,7 @@ When(
   'I update the agent {string} config:',
   { timeout: 60_000 },
   async function (this: AgentWorld, agentKey: string, table: any) {
-    const meta = await getAgentMeta(agentKey)
+    const meta = await getAgentMeta(this, agentKey)
     const rows = table.rawTable || table.raw()
     const changes: Record<string, unknown> = {}
     for (let i = 1; i < rows.length; i++) {
@@ -196,11 +189,14 @@ When(
         changes[key] = Number(value)
       else changes[key] = value
     }
-    state.lastUpdateResult = await rpcCall('console:updateAgentConfig', {
-      sourceFile: meta.sourceFile,
-      exportedName: meta.exportedName,
-      changes,
-    })
+    state.lastUpdateResult = await this.consoleRpc(
+      'console:updateAgentConfig',
+      {
+        sourceFile: meta.sourceFile,
+        exportedName: meta.exportedName,
+        changes,
+      }
+    )
     state.agentsMeta = undefined
     state.agentSource = undefined
   }

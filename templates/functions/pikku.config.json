@@ -27,7 +27,7 @@
     "rpc": "no-auth",
     "agent": "no-auth",
     "workflow": "no-auth",
-    "console": "no-auth",
+    "console": "auth",
     "events": "no-auth",
     "remoteRpc": "no-auth",
     "pikkuDir": "pikku"

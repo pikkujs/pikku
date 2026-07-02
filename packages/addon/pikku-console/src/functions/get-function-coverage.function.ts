@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 import { functionCoveragePath } from '../lib/function-tests-paths.js'
 
 export type CoverageStatus = 'covered' | 'partial' | 'uncovered' | 'unknown'
@@ -29,7 +29,7 @@ export interface FunctionCoverageReport {
   functions: FunctionCoverageEntry[]
 }
 
-export const getFunctionCoverage = pikkuSessionlessFunc<
+export const getFunctionCoverage = pikkuFunc<
   null,
   FunctionCoverageReport | null
 >({
@@ -37,7 +37,6 @@ export const getFunctionCoverage = pikkuSessionlessFunc<
   description:
     'Reads function-coverage.json produced by the function-tests harness and returns it, or null if no coverage data exists yet.',
   expose: true,
-  auth: false,
   func: async ({ metaService }) => {
     if (!metaService?.basePath) return null
     const coveragePath = functionCoveragePath(metaService.basePath)

@@ -1,7 +1,7 @@
 import { MissingServiceError } from '@pikku/core/errors'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 
-export const getAIWorkflows = pikkuSessionlessFunc<
+export const getAIWorkflows = pikkuFunc<
   { agentName?: string },
   Array<{ workflowName: string; graphHash: string; graph: any }>
 >({
@@ -9,7 +9,6 @@ export const getAIWorkflows = pikkuSessionlessFunc<
   description:
     'Returns workflow definitions created by AI agents from the workflow store. Optionally filters by agent name.',
   expose: true,
-  auth: false,
   func: async ({ workflowService }, input) => {
     if (!workflowService)
       throw new MissingServiceError('workflowService is not available')

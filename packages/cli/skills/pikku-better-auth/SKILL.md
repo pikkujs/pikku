@@ -52,6 +52,10 @@ Better Auth owns its own HTTP surface, database tables, and session cookie. The 
 
 You do NOT hand-write routes, the session middleware, or the secret wiring — `pikkuBetterAuth` + the CLI generate all of it. Re-run `pikku auth` (or `pikku all`) to regenerate.
 
+### The console requires Better Auth
+
+The Pikku console (`@pikku/addon-console`, enabled via `scaffold.console` in `pikku.config.json`) is an admin surface: **every console RPC now requires an authenticated session** (the functions are `pikkuFunc`; unauthenticated calls return `403`). So `scaffold.console` alone is **no longer the minimum** — you also need an auth strategy, and Better Auth is the supported one. `pikku all` **throws** if `scaffold.console` is set but no `pikkuBetterAuth(...)` is found in the project. Baseline is "must be logged in"; finer policy (admin-only, org scoping) is layered host-side via tag/HTTP middleware. See `pikku-deps` for the console's Security screen.
+
 ---
 
 ## Standard Setup

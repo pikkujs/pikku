@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 import { pikkuState } from '@pikku/core/internal'
 
 export interface AgentCredentialRequirement {
@@ -8,15 +8,22 @@ export interface AgentCredentialRequirement {
   connected: boolean
 }
 
-export const agentCredentialCheck = pikkuSessionlessFunc<
-  { agentName: string; userId?: string },
+export const agentCredentialCheck = pikkuFunc<
+  { agentName: string },
   { requirements: AgentCredentialRequirement[]; allConnected: boolean }
 >({
   title: 'Agent Credential Check',
   description:
-    'Checks which OAuth credentials an agent needs and whether the user has connected them.',
+    'Checks which OAuth credentials an agent needs and whether the authenticated user has connected them.',
   expose: true,
-  func: async ({ credentialService, wiringService }, { agentName, userId }) => {
+  func: async (
+    { credentialService, wiringService },
+    { agentName },
+    { session }
+  ) => {
+    // Scope to the caller's own session — never accept an arbitrary userId from
+    // input, which would let a caller probe another user's connected credentials.
+    const userId = session?.userId
     const allMeta = await wiringService.readAllMeta()
     const agentMeta = allMeta.agentsMeta?.[agentName]
     if (!agentMeta?.tools?.length) {

@@ -33,6 +33,12 @@ export type {
   PikkuWiringTypes,
   PostgresConfig,
   RequireAtLeastOne,
+  SecurityAuditIssue,
+  SecurityAuditReport,
+  SecurityAuditSummary,
+  SecurityAuditUpdate,
+  SecuritySeverity,
+  SecurityUpdateLevel,
   SerializedError,
   WireServices,
 } from './types/core.types.js'

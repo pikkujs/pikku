@@ -1,6 +1,6 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 
-export const getOpenapis = pikkuSessionlessFunc<
+export const getOpenapis = pikkuFunc<
   { limit: number; offset: number; search?: string },
   {
     apis: Array<{
@@ -21,7 +21,6 @@ export const getOpenapis = pikkuSessionlessFunc<
   title: 'Get OpenAPI Specs',
   description: 'Fetches available OpenAPI specs from the registry.',
   expose: true,
-  auth: false,
   func: async ({ variables }, { limit, offset, search }) => {
     const registryUrl =
       (await variables.get('REGISTRY_URL')) ?? 'https://pikku-registry.fly.dev'

@@ -1,7 +1,7 @@
 import { MissingServiceError } from '@pikku/core/errors'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 
-export const deleteWorkflowRun = pikkuSessionlessFunc<
+export const deleteWorkflowRun = pikkuFunc<
   { runId: string },
   { deleted: boolean }
 >({
@@ -9,7 +9,6 @@ export const deleteWorkflowRun = pikkuSessionlessFunc<
   description:
     'Deletes a workflow run and all its associated steps and history.',
   expose: true,
-  auth: false,
   func: async ({ workflowRunService }, input) => {
     if (!workflowRunService)
       throw new MissingServiceError('workflowRunService is not available')

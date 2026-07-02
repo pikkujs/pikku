@@ -1,7 +1,7 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
 
-export const getWorkflowMetaById = pikkuSessionlessFunc<
+export const getWorkflowMetaById = pikkuFunc<
   { workflowId: string },
   WorkflowsMeta[0] | null
 >({
@@ -9,7 +9,6 @@ export const getWorkflowMetaById = pikkuSessionlessFunc<
   description:
     'Given a workflowId string, reads all workflow metadata from wiringService and returns the matching workflow meta object. Falls back to the workflow store for AI-agent generated workflows. Returns null if no workflow matches the given ID.',
   expose: true,
-  auth: false,
   func: async ({ metaService, workflowService }, input) => {
     const workflowsMeta = await metaService.getWorkflowMeta()
     const workflow = workflowsMeta[input.workflowId]

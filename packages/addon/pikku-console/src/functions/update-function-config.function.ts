@@ -1,8 +1,8 @@
 import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 import type { FunctionConfigChanges } from '../services/code-edit.service.js'
 
-export const updateFunctionConfig = pikkuSessionlessFunc<
+export const updateFunctionConfig = pikkuFunc<
   {
     sourceFile: string
     exportedName: string
@@ -14,7 +14,6 @@ export const updateFunctionConfig = pikkuSessionlessFunc<
   description:
     'Updates the config properties of a pikku function definition in source code and triggers a rebuild.',
   expose: true,
-  auth: false,
   func: async ({ codeEditService }, { sourceFile, exportedName, changes }) => {
     if (!codeEditService) {
       throw new LocalEnvironmentOnlyError(

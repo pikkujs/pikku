@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { spawn } from 'node:child_process'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 import { NotFoundError } from '@pikku/core'
 import type { FunctionCoverageReport } from './get-function-coverage.function.js'
 import { resolveFunctionsDir } from '../lib/function-tests-paths.js'
@@ -18,7 +18,7 @@ function findBin(name: string, searchFrom: string): string {
   return name
 }
 
-export const runFunctionTests = pikkuSessionlessFunc<
+export const runFunctionTests = pikkuFunc<
   null,
   FunctionCoverageReport | null
 >({
@@ -26,7 +26,6 @@ export const runFunctionTests = pikkuSessionlessFunc<
   description:
     'Runs the function-tests suite under c8 and returns the updated coverage report.',
   expose: true,
-  auth: false,
   func: async ({ metaService }) => {
     if (!metaService?.basePath) {
       throw new Error('Meta service is not configured. Ensure the console addon is set up with a MetaService.')

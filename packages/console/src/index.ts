@@ -131,6 +131,29 @@ export { VariablesPage } from './pages/VariablesPage'
 export { EmailsPage } from './pages/EmailsPage'
 export { CredentialsPage } from './pages/CredentialsPage'
 export { AuditPage } from './pages/AuditPage'
+export { SecurityPage } from './pages/SecurityPage'
+export { SecurityAuditView } from './components/security/SecurityAuditView'
+export type {
+  SecurityAuditViewProps,
+  SecurityLens,
+} from './components/security/SecurityAuditView'
+export { UpdateDependencyButton } from './components/security/UpdateDependencyButton'
+export {
+  classifyAdvisory,
+  type AdvisoryCategory,
+} from './components/security/security-classify'
+export {
+  useSecurityAudit,
+  useRunSecurityAudit,
+  useUpdateDependency,
+} from './hooks/useSecurityAudit'
+export type {
+  SecurityAuditReport,
+  SecurityAuditIssue,
+  SecurityAuditUpdate,
+  SecuritySeverity,
+  SecurityUpdateLevel,
+} from './hooks/useSecurityAudit'
 export { AuthProvidersPage, AUTH_PROVIDERS } from './pages/AuthProvidersPage'
 export type {
   AuthProviderDef,

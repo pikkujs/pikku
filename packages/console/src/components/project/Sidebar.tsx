@@ -38,6 +38,7 @@ import {
   Sun,
   Moon,
   UserCog,
+  ShieldCheck,
 } from 'lucide-react'
 import { useState } from 'react'
 import { spotlight } from '@mantine/spotlight'
@@ -87,6 +88,7 @@ export function useDefaultNavSections(): NavSection[] {
       items: [
         { label: m.nav_secrets(), href: '/secrets', icon: KeyRound, matchPrefix: '/secrets' },
         { label: m.nav_env_vars(), href: '/variables', icon: Variable, matchPrefix: '/variables' },
+        { label: m.nav_security(), href: '/security', icon: ShieldCheck, matchPrefix: '/security' },
         { label: m.nav_addons(), href: '/addons', icon: Package, matchPrefix: '/addons' },
       ],
     },

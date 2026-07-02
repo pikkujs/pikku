@@ -1,4 +1,4 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 import type { MetaService } from '@pikku/core/services'
 
 export interface AuthProviderEntry {
@@ -41,11 +41,10 @@ async function readAuthMeta(
   }
 }
 
-export const getAuthProviders = pikkuSessionlessFunc<null, AuthProvidersMeta>({
+export const getAuthProviders = pikkuFunc<null, AuthProvidersMeta>({
   title: 'Get Auth Providers',
   description:
     'Returns the social providers and plugins configured via pikkuBetterAuth(), read from the generated auth-meta.gen.json.',
   expose: true,
-  auth: false,
   func: async ({ metaService }) => readAuthMeta(metaService),
 })

@@ -1,6 +1,6 @@
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 
-export const oauthStatus = pikkuSessionlessFunc<
+export const oauthStatus = pikkuFunc<
   { credentialName: string },
   {
     connected: boolean

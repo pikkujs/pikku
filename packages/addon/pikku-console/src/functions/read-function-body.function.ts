@@ -1,7 +1,7 @@
 import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
-import { pikkuSessionlessFunc } from '#pikku'
+import { pikkuFunc } from '#pikku'
 
-export const readFunctionBody = pikkuSessionlessFunc<
+export const readFunctionBody = pikkuFunc<
   { sourceFile: string; exportedName: string },
   { body: string }
 >({
@@ -9,7 +9,6 @@ export const readFunctionBody = pikkuSessionlessFunc<
   description:
     'Reads the function body (the func: async (...) => { ... } part) from a pikku function definition.',
   expose: true,
-  auth: false,
   func: async ({ codeEditService }, { sourceFile, exportedName }) => {
     if (!codeEditService) {
       throw new LocalEnvironmentOnlyError(
