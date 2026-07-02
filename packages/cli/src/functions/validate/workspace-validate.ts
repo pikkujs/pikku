@@ -229,6 +229,8 @@ export async function runWorkspaceValidate(
   } else {
     type FnPkg = {
       type?: string
+      dependencies?: Record<string, string>
+      devDependencies?: Record<string, string>
     }
     const fnPkgPath = join(fnDir, 'package.json')
     const fnPkg = await readJsonSafe<FnPkg>(fnPkgPath)
@@ -246,6 +248,30 @@ export async function runWorkspaceValidate(
         fnPkgPath,
         'Add "type": "module" to packages/functions/package.json'
       )
+    }
+
+    // zod v4 must be installed in the functions package: pikku's generated
+    // schemas and the auth scaffold (auth-secrets.gen.ts) both `import { z }
+    // from 'zod'`, so a missing/old zod fails codegen (PKU489) or type-checks.
+    if (fnPkg) {
+      const fnDeps = { ...fnPkg.dependencies, ...fnPkg.devDependencies }
+      const zodRange = fnDeps.zod
+      const zodMajor = zodRange?.match(/(\d+)/)?.[1]
+      if (!zodRange) {
+        e(
+          'functions-missing-zod',
+          'packages/functions/package.json does not declare "zod" — pikku schemas and the generated auth scaffold import it',
+          fnPkgPath,
+          'Add "zod": "^4" to packages/functions dependencies'
+        )
+      } else if (zodMajor !== '4') {
+        e(
+          'functions-zod-not-v4',
+          `packages/functions requires zod v4 but found "${zodRange}"`,
+          fnPkgPath,
+          'Set "zod": "^4" in packages/functions dependencies'
+        )
+      }
     }
 
     const servicesPath = join(fnDir, 'src', 'services.ts')
