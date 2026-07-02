@@ -4,6 +4,7 @@
  */
 
 import type { WorkflowRun } from '../workflow.types.js'
+import type { UserFlowActor } from '../../../services/user-flow-actors-service.js'
 
 /**
  * Workflow step options
@@ -15,7 +16,25 @@ export interface WorkflowStepOptions {
   retries?: number
   /** Delay between retry attempts (e.g., '1s', '2s', '2min') */
   retryDelay?: string | number
+  /**
+   * Run this step as an actor (user flows). The RPC is sent through the
+   * actor's authenticated client over the REAL transport — never dispatched
+   * internally — so auth middleware and permissions are exercised end-to-end.
+   * The step is recorded durably like any RPC step.
+   */
+  actor?: UserFlowActor
   // Future: timeout, failFast, priority
+}
+
+/**
+ * Options for workflow.expectEventually() — a durable polling step used by
+ * user flows to await async effects (a notification landing, a job finishing).
+ */
+export interface WorkflowExpectEventuallyOptions extends WorkflowStepOptions {
+  /** Give up after this long (e.g. '30s'). Default '30s'. */
+  within?: string | number
+  /** Poll interval (e.g. '1s'). Default '1s'. */
+  interval?: string | number
 }
 
 /**
@@ -345,6 +364,18 @@ export interface PikkuWorkflowWire {
 
   /** Execute a workflow step (overloaded - RPC or inline form) */
   do: WorkflowWireDoRPC & WorkflowWireDoInline
+
+  /**
+   * Durable polling step (user flows): invoke `rpcName` (as an actor when
+   * `options.as` is set) until `predicate` passes or `options.within` elapses.
+   */
+  expectEventually: <TOutput = any, TInput = any>(
+    stepName: string,
+    rpcName: string,
+    data: TInput,
+    predicate: (output: TOutput) => boolean,
+    options?: WorkflowExpectEventuallyOptions
+  ) => Promise<TOutput>
 
   /** Sleep for a duration */
   sleep: WorkflowWireSleep

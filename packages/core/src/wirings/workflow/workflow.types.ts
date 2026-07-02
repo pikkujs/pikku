@@ -7,6 +7,7 @@ export type { WorkflowService } from '../../services/workflow-service.js'
 // Re-export DSL types from dsl module
 export type {
   WorkflowStepOptions,
+  WorkflowExpectEventuallyOptions,
   WorkflowWireDoRPC,
   WorkflowWireDoInline,
   WorkflowWireSleep,
@@ -324,6 +325,10 @@ export type WorkflowsMeta = Record<
     context?: WorkflowContext
     dsl?: boolean
     expose?: boolean
+    /** True for pikkuUserFlow workflows (complex + actor steps). */
+    userFlow?: boolean
+    /** Actor names a user flow declares (personas it runs steps as). */
+    actors?: string[]
   }
 >
 
@@ -337,12 +342,14 @@ export interface WorkflowRuntimeMeta {
   name: string
   /** Pikku function name (for execution) */
   pikkuFuncId: string
-  /** Source type: 'dsl' (serializable), 'complex' (has inline steps), 'graph' */
-  source: 'dsl' | 'complex' | 'graph' | 'dynamic-workflow'
+  /** Source type: 'dsl' (serializable), 'complex' (has inline steps), 'graph', 'user-flow' (complex + actor steps) */
+  source: 'dsl' | 'complex' | 'graph' | 'dynamic-workflow' | 'user-flow'
   /** Optional description */
   description?: string
   /** Tags for organization */
   tags?: string[]
+  /** Actor names a user flow declares (personas it runs steps as). */
+  actors?: string[]
   /** Serialized nodes */
   nodes?: Record<string, any>
   /** Entry node IDs for graph workflows (computed at build time) */

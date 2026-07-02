@@ -58,6 +58,7 @@ import type {
   WorkflowVersionStatus,
   WorkflowServiceConfig,
   WorkflowStepOptions,
+  WorkflowExpectEventuallyOptions,
 } from './workflow.types.js'
 import {
   continueGraph,
@@ -1760,6 +1761,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     const resolvedStepOptions: WorkflowStepOptions = {
       retries: stepOptions?.retries ?? DEFAULT_STEP_RETRIES,
       retryDelay: stepOptions?.retryDelay,
+      actor: stepOptions?.actor,
     }
     // Check if step already exists
     let stepState: StepState
@@ -1807,14 +1809,18 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     // so the orchestrator's next replay re-dispatches it. Marking `scheduled`
     // first would strand the step (replay sees `scheduled`, pauses, never
     // re-enqueues the job that was never created).
-    const dispatched = await this.dispatchStep(
-      runId,
-      stepName,
-      rpcName,
-      data,
-      resolvedStepOptions,
-      fromStepName
-    )
+    // Actor steps never queue: they are outbound HTTP calls made by the
+    // runner itself, and the actor's session lives on this process.
+    const dispatched = resolvedStepOptions.actor
+      ? false
+      : await this.dispatchStep(
+          runId,
+          stepName,
+          rpcName,
+          data,
+          resolvedStepOptions,
+          fromStepName
+        )
     if (dispatched) {
       await this.setStepScheduled(stepState.stepId)
       throw new WorkflowAsyncException(runId, stepName)
@@ -1830,6 +1836,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       retries,
       retryDelay,
       async (currentStepState) => {
+        // Actor step: send through the actor's authenticated client over the
+        // REAL transport. Never falls back to internal dispatch — that would
+        // bypass auth and fake a green health check.
+        if (resolvedStepOptions.actor) {
+          return resolvedStepOptions.actor.invoke(rpcName, data)
+        }
         // Check if the name refers to a workflow
         const workflowMeta = pikkuState(null, 'workflows', 'meta')[rpcName]
         if (workflowMeta) {
@@ -2119,6 +2131,48 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         }
       },
 
+      // Durable polling step: invoke an RPC (as an actor when options.as is
+      // set) until the predicate passes or `within` elapses. The whole poll is
+      // ONE recorded step, so replay returns the cached outcome.
+      expectEventually: async (
+        stepName: string,
+        rpcName: string,
+        data: any,
+        predicate: (output: any) => boolean,
+        options?: WorkflowExpectEventuallyOptions
+      ) => {
+        this.verifyStepName(stepName)
+        const resolvedRpcName =
+          addonNamespace && !rpcName.includes(':')
+            ? `${addonNamespace}:${rpcName}`
+            : rpcName
+        const within = getDurationInMilliseconds(options?.within ?? '30s')
+        const interval = getDurationInMilliseconds(options?.interval ?? '1s')
+        return await this.inlineStep(
+          runId,
+          stepName,
+          async () => {
+            const deadline = Date.now() + within
+            let last: any
+            while (true) {
+              last = options?.actor
+                ? await options.actor.invoke(resolvedRpcName, data)
+                : await rpcService.rpcWithWire(resolvedRpcName, data, {})
+              if (predicate(last)) return last
+              if (Date.now() + interval > deadline) {
+                throw new Error(
+                  `[workflow] expectEventually '${stepName}' ('${resolvedRpcName}'` +
+                    `${options?.actor ? ` as '${options.actor.name}'` : ''}) did not pass within ${within}ms; ` +
+                    `last result: ${JSON.stringify(last)?.slice(0, 300)}`
+                )
+              }
+              await new Promise((resolve) => setTimeout(resolve, interval))
+            }
+          },
+          options
+        )
+      },
+
       // Implement workflow.sleep()
       sleep: async (stepName: string, duration: string | number) => {
         this.verifyStepName(stepName)
@@ -2142,6 +2196,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       throw new WorkflowStepNameNotString(stepName)
     }
   }
+
 
   private getConfig(): WorkflowServiceConfig {
     const singletonServices = getSingletonServices()

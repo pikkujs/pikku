@@ -29,6 +29,7 @@ import type { DeploymentService } from '../services/deployment-service.js'
 import type { AIStorageService } from '../services/ai-storage-service.js'
 
 import type { ContentService } from '../services/content-service.js'
+import type { UserFlowActors } from '../services/user-flow-actors-service.js'
 import type { AIAgentRunnerService } from '../services/ai-agent-runner-service.js'
 import type { AIRunStateService } from '../services/ai-run-state-service.js'
 import type { AgentRunService } from '../wirings/ai-agent/ai-agent.types.js'
@@ -284,6 +285,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   agentRunService?: AgentRunService
   /** Workflow run service (listing workflow runs) */
   workflowRunService?: WorkflowRunService
+  /** User-flow actor registry (actor name → lazy authenticated client), injected into user flows as `actors` */
+  actors?: UserFlowActors
   /** Credential service for dynamic/managed credentials (OAuth tokens, per-user API keys) */
   credentialService?: CredentialService
   /** Email service for outbound messages and template-backed delivery */
