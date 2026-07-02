@@ -1,9 +1,4 @@
-import {
-  request as playwrightRequest,
-  type Browser,
-  type BrowserContext,
-  type Page,
-} from '@playwright/test'
+import { type Browser, type BrowserContext, type Page } from '@playwright/test'
 import type { BrowserConfig, PersonaCredentials } from './config.js'
 
 /** Runtime problems collected for one page navigation. */
@@ -161,28 +156,74 @@ export class ActorSession<Clients = unknown> {
    * (no page navigation / cookies touched).
    */
   async waitForServerReady(maxMs = 30_000) {
-    const api = await playwrightRequest.newContext({
-      ignoreHTTPSErrors: this.config.ignoreHTTPSErrors,
-    })
-    try {
-      const deadline = Date.now() + maxMs
-      while (Date.now() < deadline) {
-        try {
-          const res = await api.get(this.url('/api/auth/get-session'), {
-            headers: { origin: this.config.appUrl },
-            failOnStatusCode: false,
-            timeout: 5_000,
-          })
-          const s = res.status()
-          if (s !== 502 && s !== 503 && s !== 504) return
-        } catch {
-          // Connection refused/reset — server not back yet; keep polling.
-        }
-        await new Promise((r) => setTimeout(r, 500))
+    const deadline = Date.now() + maxMs
+    while (Date.now() < deadline) {
+      try {
+        const res = await this.authFetch('/api/auth/get-session', {
+          method: 'GET',
+          signal: AbortSignal.timeout(5_000),
+        })
+        const s = res.status
+        if (s !== 502 && s !== 503 && s !== 504) return
+      } catch {
+        // Connection refused/reset — server not back yet; keep polling.
       }
-    } finally {
-      await api.dispose()
+      await new Promise((r) => setTimeout(r, 500))
     }
+  }
+
+  /**
+   * Auth/API calls go through plain `fetch`, NOT Playwright's APIRequestContext:
+   * under bun, playwright's node:http compat hands _parseSetCookieHeader a
+   * RELATIVE response URL, so ANY response carrying Set-Cookie throws
+   * ERR_INVALID_URL and the request times out. fetch works on node and bun.
+   */
+  private authFetch(path: string, init: RequestInit): Promise<Response> {
+    const tlsInit = this.config.ignoreHTTPSErrors
+      ? // bun-only fetch option; unknown keys are ignored on node (where
+        // self-signed CAs are trusted via NODE_EXTRA_CA_CERTS instead)
+        ({ tls: { rejectUnauthorized: false } } as Record<string, unknown>)
+      : {}
+    return fetch(this.url(path), {
+      ...init,
+      ...tlsInit,
+      headers: {
+        'content-type': 'application/json',
+        origin: this.config.appUrl,
+        ...(init.headers ?? {}),
+      },
+    })
+  }
+
+  /** Land a response's Set-Cookie headers in this actor's browser context. */
+  private async applySetCookies(res: Response) {
+    const setCookies = res.headers.getSetCookie?.() ?? []
+    if (setCookies.length === 0) return
+    const cookies = setCookies.map((raw) => {
+      const [pair = '', ...attrs] = raw.split(';')
+      const eq = pair.indexOf('=')
+      const cookie: Parameters<BrowserContext['addCookies']>[0][number] = {
+        name: pair.slice(0, eq).trim(),
+        value: pair.slice(eq + 1).trim(),
+        url: this.config.appUrl,
+      }
+      for (const attr of attrs) {
+        const [k = '', v = ''] = attr.split('=').map((s) => s.trim())
+        const key = k.toLowerCase()
+        if (key === 'max-age') cookie.expires = Math.floor(Date.now() / 1000) + Number(v)
+        else if (key === 'expires' && cookie.expires === undefined)
+          cookie.expires = Math.floor(new Date(v).getTime() / 1000)
+        else if (key === 'httponly') cookie.httpOnly = true
+        else if (key === 'secure') cookie.secure = true
+        else if (key === 'samesite')
+          cookie.sameSite = (v.charAt(0).toUpperCase() + v.slice(1).toLowerCase()) as
+            | 'Strict'
+            | 'Lax'
+            | 'None'
+      }
+      return cookie
+    })
+    await this.context.addCookies(cookies)
   }
 
   /** Resolve once in-flight /api requests have drained (stably), or the cap elapses. */
@@ -208,28 +249,26 @@ export class ActorSession<Clients = unknown> {
    */
   async signIn(credentials: PersonaCredentials = this.persona) {
     if (this.signedInAs === credentials.email) return
-    const headers = { 'content-type': 'application/json', origin: this.config.appUrl }
-    let res = await this.context.request.post(this.url('/api/auth/sign-up/email'), {
-      headers,
-      data: {
+    let res = await this.authFetch('/api/auth/sign-up/email', {
+      method: 'POST',
+      body: JSON.stringify({
         email: credentials.email,
         password: credentials.password,
         name: credentials.name ?? this.name,
-      },
-      failOnStatusCode: false,
+      }),
     })
-    if (!res.ok()) {
-      res = await this.context.request.post(this.url('/api/auth/sign-in/email'), {
-        headers,
-        data: { email: credentials.email, password: credentials.password },
-        failOnStatusCode: false,
+    if (!res.ok) {
+      res = await this.authFetch('/api/auth/sign-in/email', {
+        method: 'POST',
+        body: JSON.stringify({ email: credentials.email, password: credentials.password }),
       })
     }
-    if (!res.ok()) {
+    if (!res.ok) {
       throw new Error(
-        `[e2e] sign-in for ${this.name} failed (${res.status()}): ${(await res.text()).slice(0, 300)}`
+        `[e2e] sign-in for ${this.name} failed (${res.status}): ${(await res.text()).slice(0, 300)}`
       )
     }
+    await this.applySetCookies(res)
     this.signedInAs = credentials.email
   }
 
@@ -239,28 +278,21 @@ export class ActorSession<Clients = unknown> {
    * form isn't auto-redirected away by an existing session.
    */
   async ensureAccount(credentials: PersonaCredentials = this.persona) {
-    const api = await playwrightRequest.newContext({
-      ignoreHTTPSErrors: this.config.ignoreHTTPSErrors,
+    // Deliberately does NOT applySetCookies — the point is an account without a
+    // session in this context, so the login form isn't auto-redirected away.
+    const res = await this.authFetch('/api/auth/sign-up/email', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: credentials.email,
+        password: credentials.password,
+        name: credentials.name ?? this.name,
+      }),
     })
-    try {
-      const headers = { 'content-type': 'application/json', origin: this.config.appUrl }
-      const res = await api.post(this.url('/api/auth/sign-up/email'), {
-        headers,
-        data: {
-          email: credentials.email,
-          password: credentials.password,
-          name: credentials.name ?? this.name,
-        },
-        failOnStatusCode: false,
-      })
-      // 200 → created; a 4xx here usually means "already exists", which is fine.
-      if (!res.ok() && res.status() >= 500) {
-        throw new Error(
-          `[e2e] ensureAccount failed (${res.status()}): ${(await res.text()).slice(0, 300)}`
-        )
-      }
-    } finally {
-      await api.dispose()
+    // 200 → created; a 4xx here usually means "already exists", which is fine.
+    if (!res.ok && res.status >= 500) {
+      throw new Error(
+        `[e2e] ensureAccount failed (${res.status}): ${(await res.text()).slice(0, 300)}`
+      )
     }
   }
 
