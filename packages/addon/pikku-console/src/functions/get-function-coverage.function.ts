@@ -1,6 +1,6 @@
-import { readFile } from 'node:fs/promises'
 import { pikkuSessionlessFunc } from '#pikku'
 import { functionCoveragePath } from '../lib/function-tests-paths.js'
+import { nodeFsPromises } from '../lib/node-builtins.js'
 
 export type CoverageStatus = 'covered' | 'partial' | 'uncovered' | 'unknown'
 
@@ -42,7 +42,7 @@ export const getFunctionCoverage = pikkuSessionlessFunc<
     if (!metaService?.basePath) return null
     const coveragePath = functionCoveragePath(metaService.basePath)
     try {
-      const content = await readFile(coveragePath, 'utf-8')
+      const content = await nodeFsPromises().readFile(coveragePath, 'utf-8')
       return JSON.parse(content) as FunctionCoverageReport
     } catch {
       return null

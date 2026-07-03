@@ -1,4 +1,3 @@
-import { readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { JSONSchema7 } from 'json-schema'
 import type { HTTPWiringsMeta } from '../wirings/http/http.types.js'
@@ -228,9 +227,18 @@ export class LocalMetaService implements MetaService {
     this.basePath = basePath
   }
 
+  // node:fs/promises is loaded lazily via process.getBuiltinModule: a static
+  // import fails Cloudflare Workers upload validation when this class lands in
+  // a deploy bundle (it's only ever constructed on real Node).
+  private fs() {
+    return process.getBuiltinModule(
+      'node:fs/promises'
+    ) as typeof import('node:fs/promises')
+  }
+
   async readFile(relativePath: string): Promise<string | null> {
     try {
-      return await readFile(join(this.basePath, relativePath), 'utf-8')
+      return await this.fs().readFile(join(this.basePath, relativePath), 'utf-8')
     } catch {
       return null
     }
@@ -238,7 +246,7 @@ export class LocalMetaService implements MetaService {
 
   async readDir(relativePath: string): Promise<string[]> {
     try {
-      return await readdir(join(this.basePath, relativePath))
+      return await this.fs().readdir(join(this.basePath, relativePath))
     } catch {
       return []
     }
@@ -246,7 +254,10 @@ export class LocalMetaService implements MetaService {
 
   async readProjectFile(relativePath: string): Promise<string | null> {
     try {
-      return await readFile(join(this.basePath, '..', relativePath), 'utf-8')
+      return await this.fs().readFile(
+        join(this.basePath, '..', relativePath),
+        'utf-8'
+      )
     } catch {
       return null
     }
@@ -568,7 +579,7 @@ export class LocalMetaService implements MetaService {
     const baseDir = emailsMeta.src
     const readEmailFile = async (rel: string): Promise<string | null> => {
       try {
-        return await readFile(join(baseDir, rel), 'utf-8')
+        return await this.fs().readFile(join(baseDir, rel), 'utf-8')
       } catch {
         return null
       }

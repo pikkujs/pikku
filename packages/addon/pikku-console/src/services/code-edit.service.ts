@@ -1,5 +1,5 @@
 import * as ts from 'typescript'
-import { readFile, writeFile } from 'node:fs/promises'
+import { nodeFsPromises } from '../lib/node-builtins.js'
 import { resolve } from 'node:path'
 
 export interface FunctionConfigChanges {
@@ -60,7 +60,7 @@ export class CodeEditService {
     wrapperName: string
   }> {
     const absPath = this.resolvePath(sourceFile)
-    const content = await readFile(absPath, 'utf-8')
+    const content = await nodeFsPromises().readFile(absPath, 'utf-8')
     const callInfo = this.findPikkuCall(content, exportedName)
 
     const config: Record<string, unknown> = {}
@@ -87,7 +87,7 @@ export class CodeEditService {
     exportedName: string
   ): Promise<string> {
     const absPath = this.resolvePath(sourceFile)
-    const content = await readFile(absPath, 'utf-8')
+    const content = await nodeFsPromises().readFile(absPath, 'utf-8')
     const callInfo = this.findPikkuCall(content, exportedName)
 
     if (!callInfo.funcProperty) {
@@ -108,7 +108,7 @@ export class CodeEditService {
     changes: FunctionConfigChanges
   ): Promise<void> {
     const absPath = this.resolvePath(sourceFile)
-    const content = await readFile(absPath, 'utf-8')
+    const content = await nodeFsPromises().readFile(absPath, 'utf-8')
     const callInfo = this.findPikkuCall(content, exportedName)
 
     const result = this.applyPropertyChanges(
@@ -116,7 +116,7 @@ export class CodeEditService {
       callInfo,
       changes as Record<string, unknown>
     )
-    await writeFile(absPath, result, 'utf-8')
+    await nodeFsPromises().writeFile(absPath, result, 'utf-8')
   }
 
   async updateFunctionBody(
@@ -125,7 +125,7 @@ export class CodeEditService {
     newBody: string
   ): Promise<void> {
     const absPath = this.resolvePath(sourceFile)
-    const content = await readFile(absPath, 'utf-8')
+    const content = await nodeFsPromises().readFile(absPath, 'utf-8')
     const callInfo = this.findPikkuCall(content, exportedName)
 
     if (!callInfo.funcProperty) {
@@ -138,7 +138,7 @@ export class CodeEditService {
       content.slice(0, callInfo.funcProperty.valueStart) +
       newBody +
       content.slice(callInfo.funcProperty.valueEnd)
-    await writeFile(absPath, result, 'utf-8')
+    await nodeFsPromises().writeFile(absPath, result, 'utf-8')
   }
 
   async readAgentSource(
@@ -146,7 +146,7 @@ export class CodeEditService {
     exportedName: string
   ): Promise<{ config: Record<string, unknown> }> {
     const absPath = this.resolvePath(sourceFile)
-    const content = await readFile(absPath, 'utf-8')
+    const content = await nodeFsPromises().readFile(absPath, 'utf-8')
     const callInfo = this.findPikkuCall(content, exportedName)
 
     const config: Record<string, unknown> = {}
@@ -165,7 +165,7 @@ export class CodeEditService {
     changes: AgentConfigChanges
   ): Promise<void> {
     const absPath = this.resolvePath(sourceFile)
-    const content = await readFile(absPath, 'utf-8')
+    const content = await nodeFsPromises().readFile(absPath, 'utf-8')
     const callInfo = this.findPikkuCall(content, exportedName)
 
     const result = this.applyPropertyChanges(
@@ -173,7 +173,7 @@ export class CodeEditService {
       callInfo,
       changes as Record<string, unknown>
     )
-    await writeFile(absPath, result, 'utf-8')
+    await nodeFsPromises().writeFile(absPath, result, 'utf-8')
   }
 
   /**
@@ -191,7 +191,7 @@ export class CodeEditService {
       throw new Error(`Invalid email template name: ${templateName}`)
     }
     const filePath = resolve(baseDir, 'templates', `${templateName}.html`)
-    await writeFile(filePath, source, 'utf-8')
+    await nodeFsPromises().writeFile(filePath, source, 'utf-8')
   }
 
   private resolvePath(sourceFile: string): string {
