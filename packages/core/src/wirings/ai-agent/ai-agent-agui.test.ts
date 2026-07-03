@@ -1,5 +1,6 @@
 import { describe, it, mock } from 'node:test'
 import assert from 'node:assert/strict'
+import { EventSchemas } from '@ag-ui/core'
 import { wrapChannelWithAGUI } from './ai-agent-agui.js'
 import type { AIStreamChannel, AIStreamEvent } from './ai-agent.types.js'
 
@@ -197,7 +198,7 @@ describe('wrapChannelWithAGUI — tool calls', () => {
     assert.ok(t.indexOf('TEXT_MESSAGE_END') < t.indexOf('TOOL_CALL_START'))
   })
 
-  it('emits TOOL_CALL_START immediately before TOOL_CALL_END', () => {
+  it('emits TOOL_CALL_START, TOOL_CALL_ARGS, TOOL_CALL_END in sequence', () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
@@ -210,12 +211,14 @@ describe('wrapChannelWithAGUI — tool calls', () => {
 
     const t = types(events)
     const startIdx = t.indexOf('TOOL_CALL_START')
+    const argsIdx = t.indexOf('TOOL_CALL_ARGS')
     const endIdx = t.indexOf('TOOL_CALL_END')
-    assert.ok(startIdx !== -1 && endIdx !== -1)
-    assert.equal(endIdx, startIdx + 1)
+    assert.ok(startIdx !== -1 && argsIdx !== -1 && endIdx !== -1)
+    assert.equal(argsIdx, startIdx + 1)
+    assert.equal(endIdx, argsIdx + 1)
   })
 
-  it('propagates toolCallId and toolCallName to both START and END', () => {
+  it('propagates toolCallId and toolCallName to START, ARGS and END', () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
@@ -227,12 +230,13 @@ describe('wrapChannelWithAGUI — tool calls', () => {
     } as AIStreamEvent)
 
     const start = find(events, 'TOOL_CALL_START')
+    const args = find(events, 'TOOL_CALL_ARGS')
     const end = find(events, 'TOOL_CALL_END')
     assert.equal(start.toolCallId, 'abc')
     assert.equal(start.toolCallName, 'myFunc')
+    assert.equal(args.toolCallId, 'abc')
+    assert.equal(args.delta, '{"n":42}')
     assert.equal(end.toolCallId, 'abc')
-    assert.equal(end.toolCallName, 'myFunc')
-    assert.deepEqual(end.input, { n: 42 })
   })
 
   it('handles multiple tool calls in sequence', () => {
@@ -302,6 +306,7 @@ describe('wrapChannelWithAGUI — run lifecycle', () => {
       tokens: { input: 100, output: 50 },
       model: 'claude-3-5',
     } as AIStreamEvent)
+    wrapped.send({ type: 'done' } as AIStreamEvent)
 
     const f = find(events, 'RUN_FINISHED')
     assert.ok(f)
@@ -344,6 +349,7 @@ describe('wrapChannelWithAGUI — run lifecycle', () => {
       tokens: { input: 1, output: 1 },
       model: 'm',
     } as AIStreamEvent)
+    wrapped.send({ type: 'done' } as AIStreamEvent)
 
     const t = types(events)
     assert.ok(t.indexOf('TEXT_MESSAGE_END') < t.indexOf('RUN_FINISHED'))
@@ -376,7 +382,7 @@ describe('wrapChannelWithAGUI — run lifecycle', () => {
 })
 
 describe('wrapChannelWithAGUI — step events', () => {
-  it('emits STEP_STARTED for step-start', () => {
+  it('emits STEP_STARTED for step-start with the agent in the step name', () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
@@ -388,10 +394,12 @@ describe('wrapChannelWithAGUI — step events', () => {
 
     const s = find(events, 'STEP_STARTED')
     assert.ok(s)
-    assert.equal(s.stepName, 'researcher')
+    assert.ok(
+      typeof s.stepName === 'string' && s.stepName.includes('researcher')
+    )
   })
 
-  it('emits STEP_STARTED with undefined stepName when agent is absent', () => {
+  it('emits STEP_STARTED with a defined stepName when agent is absent', () => {
     const { channel, events } = makeChannel()
     const wrapped = wrapChannelWithAGUI(channel)
 
@@ -399,7 +407,7 @@ describe('wrapChannelWithAGUI — step events', () => {
 
     const s = find(events, 'STEP_STARTED')
     assert.ok(s)
-    assert.equal(s.stepName, undefined)
+    assert.ok(typeof s.stepName === 'string' && s.stepName.length > 0)
   })
 })
 
@@ -647,6 +655,387 @@ describe('wrapChannelWithAGUI — channel proxy', () => {
     assert.equal(wrapped.state, 'open')
     channel.state = 'closed'
     assert.equal(wrapped.state, 'closed')
+  })
+})
+
+/**
+ * Replicates the ordering rules enforced by @ag-ui/client's verifyEvents so
+ * the bridge's output is checked against the same contract the browser
+ * applies. Throws on the first violation.
+ */
+function assertClientAcceptsStream(events: any[]): void {
+  let started = false
+  let finished = false
+  let errored = false
+  const activeTexts = new Set<string>()
+  const activeTools = new Set<string>()
+  const activeSteps = new Set<string>()
+  let thinkingStep = false
+  let thinkingMessage = false
+
+  for (const e of events) {
+    const parsed = EventSchemas.safeParse(e)
+    assert.ok(
+      parsed.success,
+      `event failed @ag-ui/core schema: ${JSON.stringify(e)} — ${JSON.stringify(parsed.success ? [] : parsed.error.issues)}`
+    )
+    assert.ok(!errored, `event '${e.type}' sent after RUN_ERROR`)
+    assert.ok(
+      !finished || e.type === 'RUN_ERROR' || e.type === 'RUN_STARTED',
+      `event '${e.type}' sent after RUN_FINISHED`
+    )
+    if (!started) {
+      started = true
+      assert.ok(
+        e.type === 'RUN_STARTED' || e.type === 'RUN_ERROR',
+        `first event must be RUN_STARTED, got '${e.type}'`
+      )
+    }
+    switch (e.type) {
+      case 'TEXT_MESSAGE_START':
+        assert.ok(!activeTexts.has(e.messageId), 'text already active')
+        activeTexts.add(e.messageId)
+        break
+      case 'TEXT_MESSAGE_CONTENT':
+        assert.ok(activeTexts.has(e.messageId), 'text content without start')
+        break
+      case 'TEXT_MESSAGE_END':
+        assert.ok(activeTexts.delete(e.messageId), 'text end without start')
+        break
+      case 'TOOL_CALL_START':
+        assert.ok(!activeTools.has(e.toolCallId), 'tool already active')
+        activeTools.add(e.toolCallId)
+        break
+      case 'TOOL_CALL_ARGS':
+        assert.ok(activeTools.has(e.toolCallId), 'tool args without start')
+        break
+      case 'TOOL_CALL_END':
+        assert.ok(activeTools.delete(e.toolCallId), 'tool end without start')
+        break
+      case 'STEP_STARTED':
+        assert.ok(
+          !activeSteps.has(e.stepName),
+          `step '${e.stepName}' already active`
+        )
+        activeSteps.add(e.stepName)
+        break
+      case 'STEP_FINISHED':
+        assert.ok(
+          activeSteps.delete(e.stepName),
+          `step '${e.stepName}' not started`
+        )
+        break
+      case 'THINKING_START':
+        assert.ok(!thinkingStep, 'thinking step already active')
+        thinkingStep = true
+        break
+      case 'THINKING_END':
+        assert.ok(thinkingStep, 'thinking end without start')
+        thinkingStep = false
+        break
+      case 'THINKING_TEXT_MESSAGE_START':
+        assert.ok(thinkingStep, 'thinking message outside THINKING_START')
+        assert.ok(!thinkingMessage, 'thinking message already active')
+        thinkingMessage = true
+        break
+      case 'THINKING_TEXT_MESSAGE_CONTENT':
+        assert.ok(thinkingMessage, 'thinking content without start')
+        break
+      case 'THINKING_TEXT_MESSAGE_END':
+        assert.ok(thinkingMessage, 'thinking message end without start')
+        thinkingMessage = false
+        break
+      case 'RUN_FINISHED':
+        assert.equal(activeSteps.size, 0, 'RUN_FINISHED with active steps')
+        assert.equal(activeTexts.size, 0, 'RUN_FINISHED with active text')
+        assert.equal(activeTools.size, 0, 'RUN_FINISHED with active tools')
+        finished = true
+        break
+      case 'RUN_ERROR':
+        errored = true
+        break
+    }
+  }
+}
+
+describe('wrapChannelWithAGUI — AG-UI protocol conformance', () => {
+  it('emits RUN_STARTED with threadId and runId as the first event', () => {
+    const { channel, events } = makeChannel()
+    const wrapped = wrapChannelWithAGUI(channel, {
+      threadId: 'thread-1',
+      runId: 'run-1',
+    })
+
+    wrapped.send({ type: 'text-delta', text: 'hi' } as AIStreamEvent)
+    wrapped.send({ type: 'done' } as AIStreamEvent)
+
+    const first = events[0] as any
+    assert.equal(first.type, 'RUN_STARTED')
+    assert.equal(first.threadId, 'thread-1')
+    assert.equal(first.runId, 'run-1')
+  })
+
+  it('carries the same threadId and runId on RUN_FINISHED', () => {
+    const { channel, events } = makeChannel()
+    const wrapped = wrapChannelWithAGUI(channel, {
+      threadId: 'thread-1',
+      runId: 'run-1',
+    })
+
+    wrapped.send({ type: 'done' } as AIStreamEvent)
+
+    const f = find(events, 'RUN_FINISHED')
+    assert.equal(f.threadId, 'thread-1')
+    assert.equal(f.runId, 'run-1')
+  })
+
+  it('does not emit RUN_FINISHED on mid-run usage; accumulates into final RUN_FINISHED', () => {
+    const { channel, events } = makeChannel()
+    const wrapped = wrapChannelWithAGUI(channel)
+
+    wrapped.send({ type: 'step-start', stepNumber: 0 } as AIStreamEvent)
+    wrapped.send({
+      type: 'tool-call',
+      toolCallId: 'tc1',
+      toolName: 'listTodos',
+      args: {},
+    } as AIStreamEvent)
+    wrapped.send({
+      type: 'tool-result',
+      toolCallId: 'tc1',
+      toolName: 'listTodos',
+      result: ['a'],
+    } as AIStreamEvent)
+    wrapped.send({
+      type: 'usage',
+      tokens: { input: 10, output: 5 },
+      model: 'gpt-4o',
+    } as AIStreamEvent)
+    wrapped.send({ type: 'step-start', stepNumber: 1 } as AIStreamEvent)
+    wrapped.send({
+      type: 'text-delta',
+      text: 'You have 1 todo',
+    } as AIStreamEvent)
+    wrapped.send({
+      type: 'usage',
+      tokens: { input: 20, output: 8 },
+      model: 'gpt-4o',
+    } as AIStreamEvent)
+    wrapped.send({ type: 'done' } as AIStreamEvent)
+
+    const finishes = (events as any[]).filter((e) => e.type === 'RUN_FINISHED')
+    assert.equal(finishes.length, 1)
+    assert.equal((events as any[]).at(-1).type, 'RUN_FINISHED')
+    assert.equal(finishes[0].usage.promptTokens, 30)
+    assert.equal(finishes[0].usage.completionTokens, 13)
+    assert.equal(finishes[0].usage.totalTokens, 43)
+    const t = types(events)
+    assert.ok(
+      t.lastIndexOf('TEXT_MESSAGE_CONTENT') < t.indexOf('RUN_FINISHED'),
+      'text must arrive before RUN_FINISHED'
+    )
+    assertClientAcceptsStream(events as any[])
+  })
+
+  it('swallows events after done so nothing follows RUN_FINISHED', () => {
+    const { channel, events } = makeChannel()
+    const wrapped = wrapChannelWithAGUI(channel)
+
+    wrapped.send({ type: 'done' } as AIStreamEvent)
+    wrapped.send({
+      type: 'usage',
+      tokens: { input: 1, output: 1 },
+      model: 'm',
+    } as AIStreamEvent)
+    wrapped.send({ type: 'text-delta', text: 'late' } as AIStreamEvent)
+    wrapped.send({ type: 'done' } as AIStreamEvent)
+
+    assert.equal((events as any[]).at(-1).type, 'RUN_FINISHED')
+    assert.equal(events.filter((e: any) => e.type === 'RUN_FINISHED').length, 1)
+  })
+
+  it('gives TOOL_CALL_RESULT a messageId', () => {
+    const { channel, events } = makeChannel()
+    const wrapped = wrapChannelWithAGUI(channel)
+
+    wrapped.send({
+      type: 'tool-result',
+      toolCallId: 'tc1',
+      toolName: 'fn',
+      result: 'ok',
+    } as AIStreamEvent)
+
+    const r = find(events, 'TOOL_CALL_RESULT')
+    assert.ok(r.messageId, 'TOOL_CALL_RESULT requires a messageId')
+  })
+
+  it('streams tool args via TOOL_CALL_ARGS between START and END', () => {
+    const { channel, events } = makeChannel()
+    const wrapped = wrapChannelWithAGUI(channel)
+
+    wrapped.send({
+      type: 'tool-call',
+      toolCallId: 'tc1',
+      toolName: 'addTodo',
+      args: { text: 'buy milk' },
+    } as AIStreamEvent)
+
+    const t = types(events)
+    const argsIdx = t.indexOf('TOOL_CALL_ARGS')
+    assert.ok(argsIdx !== -1, 'TOOL_CALL_ARGS must be emitted')
+    assert.ok(t.indexOf('TOOL_CALL_START') < argsIdx)
+    assert.ok(argsIdx < t.indexOf('TOOL_CALL_END'))
+    const args = find(events, 'TOOL_CALL_ARGS')
+    assert.equal(args.delta, '{"text":"buy milk"}')
+  })
+
+  it('wraps thinking messages in THINKING_START / THINKING_END', () => {
+    const { channel, events } = makeChannel()
+    const wrapped = wrapChannelWithAGUI(channel)
+
+    wrapped.send({ type: 'reasoning-delta', text: 'hmm' } as AIStreamEvent)
+    wrapped.send({ type: 'text-delta', text: 'answer' } as AIStreamEvent)
+    wrapped.send({ type: 'done' } as AIStreamEvent)
+
+    const t = types(events)
+    assert.ok(
+      t.indexOf('THINKING_START') < t.indexOf('THINKING_TEXT_MESSAGE_START')
+    )
+    assert.ok(
+      t.indexOf('THINKING_TEXT_MESSAGE_END') < t.indexOf('THINKING_END')
+    )
+    assertClientAcceptsStream(events as any[])
+  })
+
+  it('closes the open step before RUN_FINISHED and keeps step names unique', () => {
+    const { channel, events } = makeChannel()
+    const wrapped = wrapChannelWithAGUI(channel)
+
+    wrapped.send({ type: 'step-start', stepNumber: 0 } as AIStreamEvent)
+    wrapped.send({
+      type: 'step-start',
+      stepNumber: 0,
+      agent: 'todoAgent',
+    } as AIStreamEvent)
+    wrapped.send({ type: 'step-start', stepNumber: 1 } as AIStreamEvent)
+    wrapped.send({ type: 'done' } as AIStreamEvent)
+
+    const startNames = (events as any[])
+      .filter((e) => e.type === 'STEP_STARTED')
+      .map((e) => e.stepName)
+    assert.equal(new Set(startNames).size, startNames.length)
+    assertClientAcceptsStream(events as any[])
+  })
+
+  it('accepts the full multi-agent delegate wire sequence', () => {
+    const { channel, events } = makeChannel()
+    const wrapped = wrapChannelWithAGUI(channel, {
+      threadId: 't1',
+      runId: 'r1',
+    })
+
+    const send = (e: any) => wrapped.send(e as AIStreamEvent)
+    send({ type: 'step-start', stepNumber: 0 })
+    send({
+      type: 'tool-call',
+      toolCallId: 'p1',
+      toolName: 'todoAgent',
+      args: { message: 'list' },
+    })
+    send({
+      type: 'agent-call',
+      agentName: 'todoAgent',
+      session: 's',
+      input: 'list',
+    })
+    send({ type: 'step-start', stepNumber: 0, agent: 'todoAgent' })
+    send({
+      type: 'tool-call',
+      toolCallId: 'c1',
+      toolName: 'todos__listTodos',
+      args: {},
+    })
+    send({
+      type: 'tool-result',
+      toolCallId: 'c1',
+      toolName: 'todos__listTodos',
+      result: ['x'],
+    })
+    send({
+      type: 'usage',
+      tokens: { input: 5, output: 2 },
+      model: 'gpt-4o-mini',
+    })
+    send({ type: 'step-start', stepNumber: 1, agent: 'todoAgent' })
+    for (const chunk of ['You ', 'have ', 'one ', 'todo']) {
+      send({ type: 'text-delta', text: chunk })
+    }
+    send({
+      type: 'usage',
+      tokens: { input: 7, output: 9 },
+      model: 'gpt-4o-mini',
+    })
+    send({
+      type: 'agent-result',
+      agentName: 'todoAgent',
+      session: 's',
+      result: 'You have one todo',
+    })
+    send({
+      type: 'tool-result',
+      toolCallId: 'p1',
+      toolName: 'todoAgent',
+      result: 'You have one todo',
+    })
+    send({
+      type: 'usage',
+      tokens: { input: 11, output: 3 },
+      model: 'gpt-4o-mini',
+    })
+    send({ type: 'step-start', stepNumber: 1 })
+    send({
+      type: 'usage',
+      tokens: { input: 4, output: 1 },
+      model: 'gpt-4o-mini',
+    })
+    send({ type: 'done' })
+
+    assertClientAcceptsStream(events as any[])
+    assert.equal((events as any[]).at(-1).type, 'RUN_FINISHED')
+    assert.ok(find(events, 'CUSTOM', 'pikku:agent-call'))
+    assert.ok(find(events, 'CUSTOM', 'pikku:agent-result'))
+    assert.equal(
+      (events as any[]).filter((e) => e.type === 'TEXT_MESSAGE_CONTENT').length,
+      4
+    )
+  })
+
+  it('approval flow ends with CUSTOM approval-request then RUN_FINISHED', () => {
+    const { channel, events } = makeChannel()
+    const wrapped = wrapChannelWithAGUI(channel)
+
+    wrapped.send({ type: 'step-start', stepNumber: 0 } as AIStreamEvent)
+    wrapped.send({
+      type: 'tool-call',
+      toolCallId: 'tc1',
+      toolName: 'addTodo',
+      args: { text: 'x' },
+    } as AIStreamEvent)
+    wrapped.send({
+      type: 'approval-request',
+      toolCallId: 'tc1',
+      toolName: 'addTodo',
+      args: { text: 'x' },
+      reason: 'Add a todo',
+      runId: 'run-9',
+    } as AIStreamEvent)
+    wrapped.send({ type: 'done' } as AIStreamEvent)
+
+    assertClientAcceptsStream(events as any[])
+    const c = find(events, 'CUSTOM', 'pikku:approval-request')
+    assert.equal(c.value.runId, 'run-9')
+    const t = types(events)
+    assert.ok(t.indexOf('CUSTOM') < t.indexOf('RUN_FINISHED'))
   })
 })
 

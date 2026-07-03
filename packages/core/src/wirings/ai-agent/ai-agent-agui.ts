@@ -6,25 +6,25 @@ type AGUIEvent =
   | { type: 'TEXT_MESSAGE_CONTENT'; messageId: string; delta: string }
   | { type: 'TEXT_MESSAGE_END'; messageId: string }
   | { type: 'TOOL_CALL_START'; toolCallId: string; toolCallName: string }
-  | {
-      type: 'TOOL_CALL_END'
-      toolCallId: string
-      toolCallName: string
-      input: unknown
-    }
+  | { type: 'TOOL_CALL_ARGS'; toolCallId: string; delta: string }
+  | { type: 'TOOL_CALL_END'; toolCallId: string; toolCallName: string }
   | {
       type: 'TOOL_CALL_RESULT'
+      messageId: string
       toolCallId: string
       role: 'tool'
       content: string
     }
+  | { type: 'THINKING_START' }
   | { type: 'THINKING_TEXT_MESSAGE_START'; messageId: string }
   | { type: 'THINKING_TEXT_MESSAGE_CONTENT'; messageId: string; delta: string }
   | { type: 'THINKING_TEXT_MESSAGE_END'; messageId: string }
-  | { type: 'RUN_STARTED'; threadId?: string; runId?: string }
+  | { type: 'THINKING_END' }
+  | { type: 'RUN_STARTED'; threadId: string; runId: string }
   | {
       type: 'RUN_FINISHED'
-      finishReason?: string
+      threadId: string
+      runId: string
       model?: string
       usage?: {
         promptTokens: number
@@ -33,11 +33,16 @@ type AGUIEvent =
       }
     }
   | { type: 'RUN_ERROR'; message: string; code?: string }
-  | { type: 'STEP_STARTED'; stepName?: string }
-  | { type: 'STEP_FINISHED'; stepName?: string }
+  | { type: 'STEP_STARTED'; stepName: string }
+  | { type: 'STEP_FINISHED'; stepName: string }
   | { type: 'CUSTOM'; name: string; value: unknown }
 
 export type { AGUIEvent }
+
+export type AGUIChannelOptions = {
+  threadId?: string
+  runId?: string
+}
 
 function resultToString(result: unknown): string {
   if (typeof result === 'string') return result
@@ -50,12 +55,34 @@ function resultToString(result: unknown): string {
   }
 }
 
-export function wrapChannelWithAGUI(inner: AIStreamChannel): AIStreamChannel {
+export function wrapChannelWithAGUI(
+  inner: AIStreamChannel,
+  options?: AGUIChannelOptions
+): AIStreamChannel {
+  const threadId = options?.threadId ?? randomUUID()
+  const runId = options?.runId ?? randomUUID()
+
   let textMessageId: string | null = null
   let thinkingMessageId: string | null = null
-  let runFinishedSent = false
+  let openStepName: string | null = null
+  let stepSeq = 0
+  let runStartedSent = false
+  let terminal = false
+  let sawUsage = false
+  let usageModel: string | undefined
+  const usageTotals = { input: 0, output: 0 }
 
+  // The AG-UI client rejects any event arriving before RUN_STARTED, so the
+  // run is opened lazily with the first translated event.
   function send(event: AGUIEvent): void {
+    if (!runStartedSent) {
+      runStartedSent = true
+      inner.send({
+        type: 'RUN_STARTED',
+        threadId,
+        runId,
+      } as unknown as AIStreamEvent)
+    }
     inner.send(event as unknown as AIStreamEvent)
   }
 
@@ -69,7 +96,15 @@ export function wrapChannelWithAGUI(inner: AIStreamChannel): AIStreamChannel {
   function endThinkingMessage(): void {
     if (thinkingMessageId) {
       send({ type: 'THINKING_TEXT_MESSAGE_END', messageId: thinkingMessageId })
+      send({ type: 'THINKING_END' })
       thinkingMessageId = null
+    }
+  }
+
+  function endStep(): void {
+    if (openStepName) {
+      send({ type: 'STEP_FINISHED', stepName: openStepName })
+      openStepName = null
     }
   }
 
@@ -84,12 +119,40 @@ export function wrapChannelWithAGUI(inner: AIStreamChannel): AIStreamChannel {
   function ensureThinkingMessage(): string {
     if (!thinkingMessageId) {
       thinkingMessageId = randomUUID()
+      send({ type: 'THINKING_START' })
       send({
         type: 'THINKING_TEXT_MESSAGE_START',
         messageId: thinkingMessageId,
       })
     }
     return thinkingMessageId
+  }
+
+  // The AG-UI client treats RUN_FINISHED as terminal and rejects everything
+  // after it, so it is emitted exactly once — on 'done' — with the usage
+  // accumulated across all steps (per-step 'usage' events must NOT finish
+  // the run: on multi-step tool runs later steps would arrive after
+  // RUN_FINISHED and the client would drop the whole stream).
+  function finishRun(): void {
+    endTextMessage()
+    endThinkingMessage()
+    endStep()
+    send({
+      type: 'RUN_FINISHED',
+      threadId,
+      runId,
+      ...(usageModel ? { model: usageModel } : {}),
+      ...(sawUsage
+        ? {
+            usage: {
+              promptTokens: usageTotals.input,
+              completionTokens: usageTotals.output,
+              totalTokens: usageTotals.input + usageTotals.output,
+            },
+          }
+        : {}),
+    })
+    terminal = true
   }
 
   return {
@@ -105,6 +168,8 @@ export function wrapChannelWithAGUI(inner: AIStreamChannel): AIStreamChannel {
     close: () => inner.close(),
 
     send: (event: AIStreamEvent) => {
+      if (terminal) return
+
       switch (event.type) {
         case 'text-delta': {
           endThinkingMessage()
@@ -137,10 +202,14 @@ export function wrapChannelWithAGUI(inner: AIStreamChannel): AIStreamChannel {
             toolCallName: event.toolName,
           })
           send({
+            type: 'TOOL_CALL_ARGS',
+            toolCallId: event.toolCallId,
+            delta: resultToString(event.args) || '{}',
+          })
+          send({
             type: 'TOOL_CALL_END',
             toolCallId: event.toolCallId,
             toolCallName: event.toolName,
-            input: event.args,
           })
           break
         }
@@ -148,6 +217,7 @@ export function wrapChannelWithAGUI(inner: AIStreamChannel): AIStreamChannel {
         case 'tool-result': {
           send({
             type: 'TOOL_CALL_RESULT',
+            messageId: randomUUID(),
             toolCallId: event.toolCallId,
             role: 'tool',
             content: resultToString(event.result),
@@ -158,41 +228,37 @@ export function wrapChannelWithAGUI(inner: AIStreamChannel): AIStreamChannel {
         case 'usage': {
           endTextMessage()
           endThinkingMessage()
-          if (!runFinishedSent) {
-            runFinishedSent = true
-            send({
-              type: 'RUN_FINISHED',
-              model: event.model,
-              usage: {
-                promptTokens: event.tokens.input,
-                completionTokens: event.tokens.output,
-                totalTokens: event.tokens.input + event.tokens.output,
-              },
-            })
-          }
+          sawUsage = true
+          usageTotals.input += event.tokens.input
+          usageTotals.output += event.tokens.output
+          if (event.model) usageModel = event.model
           break
         }
 
         case 'error': {
           endTextMessage()
           endThinkingMessage()
-          runFinishedSent = true
+          endStep()
           send({ type: 'RUN_ERROR', message: event.message })
+          terminal = true
           break
         }
 
         case 'done': {
-          endTextMessage()
-          endThinkingMessage()
-          if (!runFinishedSent) {
-            runFinishedSent = true
-            send({ type: 'RUN_FINISHED' })
-          }
+          finishRun()
           break
         }
 
+        // Step names must be unique among active steps on the client and
+        // sub-agents reuse step numbers on the shared channel, so each
+        // step-start closes the previous step and gets a sequential name.
         case 'step-start': {
-          send({ type: 'STEP_STARTED', stepName: event.agent })
+          endTextMessage()
+          endThinkingMessage()
+          endStep()
+          stepSeq += 1
+          openStepName = `${event.agent ?? 'step'}#${stepSeq}`
+          send({ type: 'STEP_STARTED', stepName: openStepName })
           break
         }
 

@@ -6029,6 +6029,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/core@workspace:packages/core"
   dependencies:
+    "@ag-ui/core": "npm:0.0.57"
     "@standard-schema/spec": "npm:^1.1.0"
     "@types/json-schema": "npm:^7.0.15"
     "@types/node": "npm:^24.11.0"
