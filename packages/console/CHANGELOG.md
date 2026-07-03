@@ -1,3 +1,38 @@
+## 0.12.33
+
+### Patch Changes
+
+- e57dd65: feat(console): surface the `pikku audit` report in the dev console
+
+  Adds a view-only **Security** screen to the pikku dev console that renders the
+  dependency audit produced by `pikku audit` (`.pikku/audit.json`): known
+  vulnerabilities (severity, advisory, recommended version) and available
+  dependency updates.
+  - `@pikku/core`: exports the canonical `SecurityAuditReport` artifact type (plus
+    `SecurityAuditIssue`/`SecurityAuditUpdate`/`SecurityAuditSummary` and the
+    `SecuritySeverity`/`SecurityUpdateLevel` unions) — a single source of truth
+    shared by the CLI (writer), the console addon (reader) and the console UI.
+  - `@pikku/addon-console`: `getSecurityAudit` reads the audit artifact via the
+    meta service; `runSecurityAudit` triggers `pikku audit --outdated` server-side
+    (regenerating the artifact) — same shape as the Run Tests action;
+    `updateDependency` bumps a package in `package.json` (preserving the `^`/`~`
+    range), runs `bun install`, re-audits, and returns the fresh report.
+  - `@pikku/console`: new `SecurityPage` with a **Run audit** button + reusable
+    presentational `SecurityAuditView` (exported, so downstream consoles can wrap
+    it with their own actions) + `useSecurityAudit`/`useRunSecurityAudit`/
+    `useUpdateDependency` hooks. Issues/Dependencies lenses; per-finding
+    remediation slot right-aligned in the row header (`renderRemediation`,
+    defaulting to the OSS `UpdateDependencyButton`; Fabric swaps in its own
+    sandbox-verified action). Empty state until an audit has been run.
+
+- 9f57d78: Addons page: add an Official filter alongside All | Installed, remove the Community Library hero (headline/stats) in favor of the filter bar, and lock the Addons tab to Installed with the Add button hidden when the console is read-only (deployed stage).
+- 18399a2: The APIs tab now renders through the same gallery/card/drawer as Addons (kind="api" on CommunityGallery/AddonCard/AddonDetailDrawer) instead of a separate table page. The only functional difference is the action: an API is Imported (via installOpenapiAddon, generating a local addon from its OpenAPI spec) rather than Added from an npm package. The drawer shows an operation count instead of the functions/http/channels/secrets/variables tabs, since that data isn't available for an API entry today.
+- e863ee2: Addon/API cards in the gallery no longer carry their own Add/Import button — the action lives only in the detail drawer now (the card just shows an "Added"/"Imported" badge once installed, and click-to-open otherwise). Install and OpenAPI-import mutations now surface a notification on both success and failure instead of failing silently.
+- 6e46f66: Show install/import failures inline in the addon detail drawer (a red Alert above the CTA) instead of a toast notification. Success is already conveyed inline by the card/drawer flipping to the Added/Imported badge, so no separate success message is needed.
+- Updated dependencies [7ebea62]
+- Updated dependencies [e57dd65]
+  - @pikku/core@0.12.51
+
 ## 0.12.32
 
 ### Patch Changes

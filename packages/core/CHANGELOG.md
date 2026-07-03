@@ -1,3 +1,37 @@
+## 0.12.51
+
+### Patch Changes
+
+- 7ebea62: Tree-shake addon registrations in filtered inspector states (per-unit deploy codegen).
+  - `filterInspectorState` drops an addon's `wireAddonDeclarations`/`usedAddons` unless something kept actually references it (kept wiring targeting `namespace:*`, kept agent/MCP tool, or a body-level `rpc.invoke('namespace:*')` from a file that still contains a kept function). The generated per-unit bootstrap no longer imports unused addon package bootstraps — previously every deploy unit registered every addon's entire function surface, which pulled dev-only code (e.g. `@pikku/addon-console`'s static `node:fs` imports) into Cloudflare Worker bundles and failed upload with `No such module "node:fs"`.
+  - Body-level `rpc.invoke()` targets are now tracked per source file (`rpc.invokedFunctionsByFile`) so wiring-level `ref()` targets no longer pin an addon into every unit.
+  - `aggregateRequiredServices` computes addon parent services per used addon function (from the addon's shipped per-function `services` meta) instead of blanket-adding `addonRequiredParentServices` — and matches namespaced ids only, so bare project function names colliding with addon function names no longer force the blanket.
+  - Addon builds keep per-function `services` in the shipped `pikku-functions-meta.gen.json` so parent projects can do the above; addons built before this fall back to the blanket.
+  - HTTP route meta records `refTarget` for `ref('namespace:fn')`-wired routes, so per-unit filtering keeps the addon registration (and only that function's services) when the route deploys.
+
+- e57dd65: feat(console): surface the `pikku audit` report in the dev console
+
+  Adds a view-only **Security** screen to the pikku dev console that renders the
+  dependency audit produced by `pikku audit` (`.pikku/audit.json`): known
+  vulnerabilities (severity, advisory, recommended version) and available
+  dependency updates.
+  - `@pikku/core`: exports the canonical `SecurityAuditReport` artifact type (plus
+    `SecurityAuditIssue`/`SecurityAuditUpdate`/`SecurityAuditSummary` and the
+    `SecuritySeverity`/`SecurityUpdateLevel` unions) — a single source of truth
+    shared by the CLI (writer), the console addon (reader) and the console UI.
+  - `@pikku/addon-console`: `getSecurityAudit` reads the audit artifact via the
+    meta service; `runSecurityAudit` triggers `pikku audit --outdated` server-side
+    (regenerating the artifact) — same shape as the Run Tests action;
+    `updateDependency` bumps a package in `package.json` (preserving the `^`/`~`
+    range), runs `bun install`, re-audits, and returns the fresh report.
+  - `@pikku/console`: new `SecurityPage` with a **Run audit** button + reusable
+    presentational `SecurityAuditView` (exported, so downstream consoles can wrap
+    it with their own actions) + `useSecurityAudit`/`useRunSecurityAudit`/
+    `useUpdateDependency` hooks. Issues/Dependencies lenses; per-finding
+    remediation slot right-aligned in the row header (`renderRemediation`,
+    defaulting to the OSS `UpdateDependencyButton`; Fabric swaps in its own
+    sandbox-verified action). Empty state until an audit has been run.
+
 ## 0.12.50
 
 ### Patch Changes
