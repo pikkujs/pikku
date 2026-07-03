@@ -1,5 +1,5 @@
+import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { nodeFs } from './node-builtins.js'
 
 /**
  * Resolve a project's functions directory from the MetaService basePath.
@@ -14,7 +14,7 @@ import { nodeFs } from './node-builtins.js'
 export function resolveFunctionsDir(basePath: string): string {
   const root = dirname(basePath)
   const monorepo = join(root, 'packages', 'functions')
-  return nodeFs().existsSync(monorepo) ? monorepo : root
+  return existsSync(monorepo) ? monorepo : root
 }
 
 /** Path to the `function-coverage.json` the function-tests harness writes. */

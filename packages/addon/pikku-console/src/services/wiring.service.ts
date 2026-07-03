@@ -1,7 +1,7 @@
 import type { MetaService } from '@pikku/core/services'
 import type { ChannelMeta as CoreChannelMeta } from '@pikku/core/channel'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
-import { nodeFsPromises } from '../lib/node-builtins.js'
+import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { resolveFunctionsDir } from '../lib/function-tests-paths.js'
 import type {
@@ -323,7 +323,7 @@ function parseJsonOrNull(content: string): unknown {
 
 async function readOptionalFile(path: string): Promise<string | null> {
   try {
-    return await nodeFsPromises().readFile(path, 'utf-8')
+    return await readFile(path, 'utf-8')
   } catch {
     return null
   }

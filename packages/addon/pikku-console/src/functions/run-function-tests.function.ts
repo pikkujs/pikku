@@ -1,15 +1,16 @@
+import { existsSync, readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
+import { spawn } from 'node:child_process'
 import { pikkuSessionlessFunc } from '#pikku'
 import { NotFoundError } from '@pikku/core'
 import type { FunctionCoverageReport } from './get-function-coverage.function.js'
 import { resolveFunctionsDir } from '../lib/function-tests-paths.js'
-import { nodeFs, nodeChildProcess } from '../lib/node-builtins.js'
 
 function findBin(name: string, searchFrom: string): string {
   let dir = searchFrom
   for (let i = 0; i < 6; i++) {
     const candidate = join(dir, 'node_modules', '.bin', name)
-    if (nodeFs().existsSync(candidate)) return candidate
+    if (existsSync(candidate)) return candidate
     const parent = dirname(dir)
     if (parent === dir) break
     dir = parent
@@ -31,8 +32,6 @@ export const runFunctionTests = pikkuSessionlessFunc<
       throw new Error('Meta service is not configured. Ensure the console addon is set up with a MetaService.')
     }
 
-    const { existsSync, readFileSync } = nodeFs()
-    const { spawn } = nodeChildProcess()
     const functionsDir = resolveFunctionsDir(metaService.basePath)
     const ftestDir = join(functionsDir, 'tests')
     if (!existsSync(ftestDir)) {

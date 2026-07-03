@@ -1,4 +1,5 @@
-import { nodeFs, nodeFsPromises } from '../lib/node-builtins.js'
+import { existsSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import { join, isAbsolute, resolve } from 'node:path'
 
 /**
@@ -65,8 +66,8 @@ export class StateDiffService {
     const oursPath = this.resolvePath(input.oursPath ?? '.pikku')
     const basePath = this.resolvePath(input.basePath)
 
-    const oursExists = nodeFs().existsSync(oursPath)
-    const baseExists = nodeFs().existsSync(basePath)
+    const oursExists = existsSync(oursPath)
+    const baseExists = existsSync(basePath)
 
     const categories = {} as Record<StateDiffCategory, CategoryDiff>
     const summary = {} as Record<
@@ -96,9 +97,9 @@ export class StateDiffService {
   }
 
   private async readMeta(path: string): Promise<Record<string, unknown>> {
-    if (!nodeFs().existsSync(path)) return {}
+    if (!existsSync(path)) return {}
     try {
-      const raw = await nodeFsPromises().readFile(path, 'utf-8')
+      const raw = await readFile(path, 'utf-8')
       const parsed = JSON.parse(raw) as unknown
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
         return {}
