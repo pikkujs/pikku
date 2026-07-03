@@ -36,6 +36,7 @@ function EntityCard({
   useLocale()
   return (
     <Box
+      data-testid={`entity-card-${item.name}`}
       onClick={() => onOpen(item.name)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

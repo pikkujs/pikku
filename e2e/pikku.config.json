@@ -32,5 +32,26 @@
     "agent": "no-auth",
     "workflow": "no-auth"
   },
-  "emailTemplatesDir": "emails"
+  "emailTemplatesDir": "emails",
+  "userFlows": {
+    "actors": {
+      "shopper": {
+        "email": "shopper@actors.local",
+        "name": "Shopper",
+        "jobTitle": "First-time buyer",
+        "personality": "Impatient shopper who abandons slow checkouts"
+      },
+      "support": {
+        "email": "support@actors.local",
+        "name": "Support",
+        "jobTitle": "Support agent",
+        "personality": "Methodical agent who double-checks every order"
+      }
+    },
+    "environments": {
+      "local": {
+        "apiUrl": "http://localhost:4077"
+      }
+    }
+  }
 }
