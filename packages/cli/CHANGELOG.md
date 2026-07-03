@@ -1,3 +1,27 @@
+## 0.12.68
+
+### Patch Changes
+
+- b45d102: pikku-kysely skill: add a dense query-builder section (joins, aggregates + groupBy/having, insert/update/delete RETURNING, sql template, expression builder, $if, transactions, jsonArrayFrom/jsonObjectFrom relation helpers) and widen the trigger so the skill fires when writing a non-trivial query in a function body, not only when wiring database services. The skill previously covered only service setup, leaving agents to guess the query API.
+- 289706d: Add optional `--tsc` / `--tsc-summary` type-check gate to `pikku all`
+
+  `pikku all` previously never ran the TypeScript compiler for type errors — the
+  inspector builds a program only for AST traversal (with `skipLibCheck`,
+  `types: []`, no `lib`/`paths`) and never requests diagnostics, so real type
+  errors were silently ignored by codegen.
+
+  Two opt-in flags now run a genuine `tsc --noEmit` over the project's own
+  tsconfig after codegen completes (so generated `.pikku` files are included,
+  matching a real build) and fail the run on type errors:
+  - `--tsc` — full diagnostics with code frames.
+  - `--tsc-summary` — a compact one-line-per-error render (flattened messages, no
+    code frames, `node_modules` filtered, capped at 50) that's cheap for AI
+    agents and CI logs.
+
+  Both are off by default (zero cost on a normal run).
+
+- 79cef33: pikku-i18n skill teaches Paraglide (the current template i18n stack) instead of react-i18next
+
 ## 0.12.67
 
 ### Patch Changes
