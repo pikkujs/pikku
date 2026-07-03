@@ -1,5 +1,14 @@
 # @pikku/cucumber
 
+## 0.12.9
+
+### Patch Changes
+
+- 7fd17c1: createFunctionWorld accepts cucumber's real World class: the constructor param was typed `new (options: unknown) => object`, which contravariantly rejected `typeof World` (its constructor takes IWorldOptions). Now `new (options: any) => object`.
+- Updated dependencies [35a9bab]
+- Updated dependencies [92bd643]
+  - @pikku/core@0.12.50
+
 ## 0.12.8
 
 ### Patch Changes
