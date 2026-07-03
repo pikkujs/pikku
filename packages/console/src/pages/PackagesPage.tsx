@@ -13,7 +13,7 @@ import {
   Loader,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
-import { m, mKey } from '@/i18n/messages'
+import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { Package, Globe, Search } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -25,6 +25,8 @@ import { TableListPage } from '../components/layout/TableListPage'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { CommunityGallery } from '../components/packages/CommunityGallery'
 import { PanelProvider } from '../context/PanelContext'
+
+type AddonFilter = 'installed' | 'all'
 
 export interface PackageMeta {
   id: string
@@ -38,131 +40,6 @@ export interface PackageMeta {
   categories: string[]
   functions: Record<string, unknown>
   agents: Record<string, unknown>
-}
-
-interface InstalledAddon {
-  namespace: string
-  packageName: string
-  functionCount: number
-  agentCount: number
-  icon?: string
-  tags?: string[]
-}
-
-const PackageIcon: React.FC<{ icon?: string; name: string }> = ({
-  icon,
-  name,
-}) => {
-  if (icon) {
-    const src = icon.startsWith('<')
-      ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(icon)}`
-      : icon
-    return (
-      <img
-        src={src}
-        width={28}
-        height={28}
-        alt={name}
-        style={{ objectFit: 'contain', display: 'block', borderRadius: 4 }}
-      />
-    )
-  }
-  return (
-    <ThemeIcon size={28} radius="sm" variant="light" color="gray">
-      <Package size={16} />
-    </ThemeIcon>
-  )
-}
-
-const INSTALLED_COLUMNS = () => [
-  {
-    key: 'addon',
-    header: 'ADDON',
-    render: (item: InstalledAddon) => (
-      <Group gap="sm" wrap="nowrap">
-        <PackageIcon icon={item.icon} name={item.namespace} />
-        <div>
-          <Group gap="xs" wrap="nowrap">
-            <Text fw={500} size="sm">
-              {asI18n(item.namespace)}
-            </Text>
-            <Badge size="sm" variant="light" color="gray">
-              {asI18n(item.packageName)}
-            </Badge>
-          </Group>
-          {(item.tags ?? []).length > 0 && (
-            <Group gap={4} mt={2}>
-              {item.tags!.map((tag) => (
-                <Badge key={tag} size="sm" variant="dot">
-                  {asI18n(tag)}
-                </Badge>
-              ))}
-            </Group>
-          )}
-        </div>
-      </Group>
-    ),
-  },
-  {
-    key: 'functions',
-    header: 'FUNCTIONS',
-    render: (item: InstalledAddon) => (
-      <Text size="sm">{asI18n(String(item.functionCount))}</Text>
-    ),
-  },
-  {
-    key: 'agents',
-    header: 'AGENTS',
-    render: (item: InstalledAddon) => (
-      <Text size="sm">{asI18n(String(item.agentCount))}</Text>
-    ),
-  },
-]
-
-const InstalledList: React.FC<{
-  searchQuery: string
-  onSelect: (id: string, source: 'installed' | 'community') => void
-  emptyHero?: React.ReactNode
-}> = ({ searchQuery, onSelect, emptyHero }) => {
-  const rpc = usePikkuRPC()
-  useLocale()
-
-  const { data, isLoading } = useQuery({
-    queryKey: ['installed-addons'],
-    queryFn: async () => {
-      const result = await rpc.invoke('console:getInstalledAddons')
-      return (result ?? []) as InstalledAddon[]
-    },
-    staleTime: 60 * 1000,
-    retry: false,
-  })
-
-  const filtered = useMemo(() => {
-    if (!searchQuery) return data ?? []
-    const q = searchQuery.toLowerCase()
-    return (data ?? []).filter(
-      (item) =>
-        item.namespace.toLowerCase().includes(q) ||
-        item.packageName.toLowerCase().includes(q)
-    )
-  }, [data, searchQuery])
-
-  const columns = useMemo(() => INSTALLED_COLUMNS(), [])
-
-  return (
-    <TableListPage
-      title="Installed Addons"
-      icon={Package}
-      docsHref="https://pikku.dev/docs/external-packages"
-      data={filtered}
-      columns={columns}
-      getKey={(item) => item.namespace}
-      onRowClick={(item) => onSelect(item.packageName, 'installed')}
-      emptyMessage={m.packages_installed_empty_message()}
-      loading={isLoading}
-      emptyHero={emptyHero}
-    />
-  )
 }
 
 const deriveNamespace = (packageName: string) => {
@@ -179,9 +56,10 @@ const deriveNamespace = (packageName: string) => {
   return namespace
 }
 
-const CommunityList: React.FC<{
+const AddonsList: React.FC<{
   searchQuery: string
-}> = ({ searchQuery }) => {
+  filter: AddonFilter
+}> = ({ searchQuery, filter }) => {
   const rpc = usePikkuRPC()
   useLocale()
   const editable = useConsoleEditable()
@@ -224,6 +102,16 @@ const CommunityList: React.FC<{
     [installedAddons]
   )
 
+  // The Installed | All filter narrows the same catalogue to what the project
+  // already has wired; 'all' shows the full community gallery.
+  const visible = useMemo(
+    () =>
+      filter === 'installed'
+        ? (data ?? []).filter((a) => installedNames.has(a.name))
+        : (data ?? []),
+    [data, filter, installedNames]
+  )
+
   if (isLoading) {
     return (
       <Box style={{ flex: 1, minHeight: 0 }}>
@@ -245,9 +133,20 @@ const CommunityList: React.FC<{
     )
   }
 
+  if (filter === 'installed' && visible.length === 0) {
+    return (
+      <EmptyStatePlaceholder
+        icon={Package}
+        title={m.packages_no_installed_title()}
+        description={m.packages_no_installed_description()}
+        docsHref="https://pikku.dev/docs/external-packages"
+      />
+    )
+  }
+
   return (
     <CommunityGallery
-      addons={data}
+      addons={visible}
       searchQuery={searchQuery}
       installedNames={installedNames}
       editable={editable}
@@ -374,30 +273,29 @@ const ApisList: React.FC<{
   )
 }
 
-const ADDON_TABS = [
-  { value: 'installed', label: 'Installed' },
-  { value: 'community', label: 'Community' },
-  { value: 'apis', label: 'APIs' },
-]
-
-const SEARCH_PLACEHOLDER: Record<string, string> = {
-  installed: 'packages.search_installed_placeholder',
-  community: 'packages.search_community_placeholder',
-  apis: 'packages.search_apis_placeholder',
-}
+type MainTab = 'addons' | 'apis'
 
 const PackagesList: React.FC<{
   onSelect: (id: string, source: 'installed' | 'community' | 'api') => void
-  emptyHero?: React.ReactNode
-}> = ({ onSelect, emptyHero }) => {
-  const [tab, setTab] = useState<string>('installed')
+}> = ({ onSelect }) => {
+  const [tab, setTab] = useState<MainTab>('addons')
+  const [filter, setFilter] = useState<AddonFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
   useLocale()
 
   const handleTabChange = (value: string) => {
     setSearchQuery('')
-    setTab(value)
+    setTab(value as MainTab)
   }
+
+  const mainTabs = [
+    { value: 'addons', label: m.packages_tab_addons() },
+    { value: 'apis', label: m.packages_tab_apis() },
+  ]
+  const addonFilters = [
+    { value: 'all', label: m.packages_filter_all() },
+    { value: 'installed', label: m.packages_filter_installed() },
+  ]
 
   return (
     <ResizablePanelLayout
@@ -410,42 +308,46 @@ const PackagesList: React.FC<{
           filters={
             <Group gap="sm" wrap="nowrap">
               <TextInput
-                placeholder={mKey(SEARCH_PLACEHOLDER[tab])}
+                placeholder={
+                  tab === 'apis'
+                    ? m.packages_search_apis_placeholder()
+                    : m.packages_search_addons_placeholder()
+                }
                 leftSection={<Search size={14} />}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 size="xs"
                 style={{ width: 240 }}
               />
+              {tab === 'addons' && (
+                <SegmentedControl
+                  size="xs"
+                  value={filter}
+                  onChange={(v) => setFilter(v as AddonFilter)}
+                  data={addonFilters}
+                />
+              )}
               <SegmentedControl
                 size="xs"
                 value={tab}
                 onChange={handleTabChange}
-                data={ADDON_TABS}
+                data={mainTabs}
               />
             </Group>
           }
         />
       }
     >
-      {tab === 'installed' ? (
-        <InstalledList
-          searchQuery={searchQuery}
-          onSelect={onSelect}
-          emptyHero={emptyHero}
-        />
-      ) : tab === 'apis' ? (
+      {tab === 'apis' ? (
         <ApisList searchQuery={searchQuery} onSelect={onSelect} />
       ) : (
-        <CommunityList searchQuery={searchQuery} />
+        <AddonsList searchQuery={searchQuery} filter={filter} />
       )}
     </ResizablePanelLayout>
   )
 }
 
-const PackagesPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({
-  emptyHero,
-}) => {
+const PackagesPageContent: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const selectedId = searchParams.get('id')
   const source = (searchParams.get('source') ?? 'community') as
@@ -466,17 +368,16 @@ const PackagesPageContent: React.FC<{ emptyHero?: React.ReactNode }> = ({
   return (
     <PackagesList
       onSelect={(id, src) => setSearchParams({ id, source: src })}
-      emptyHero={emptyHero}
     />
   )
 }
 
-export const PackagesPage: React.FC<{ emptyHero?: React.ReactNode }> = ({
-  emptyHero,
-}) => {
+// `emptyHero` is accepted for backwards compat with the fabric console shell
+// but no longer used — the addons tab always renders its own gallery/empty state.
+export const PackagesPage: React.FC<{ emptyHero?: React.ReactNode }> = () => {
   return (
     <PanelProvider>
-      <PackagesPageContent emptyHero={emptyHero} />
+      <PackagesPageContent />
     </PanelProvider>
   )
 }
