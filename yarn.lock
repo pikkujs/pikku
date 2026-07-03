@@ -5759,7 +5759,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/ai-vercel@npm:^0.12.7, @pikku/ai-vercel@workspace:packages/services/ai-vercel":
+"@pikku/ai-vercel@npm:^0.12.7, @pikku/ai-vercel@workspace:*, @pikku/ai-vercel@workspace:packages/services/ai-vercel":
   version: 0.0.0-use.local
   resolution: "@pikku/ai-vercel@workspace:packages/services/ai-vercel"
   dependencies:
@@ -6109,11 +6109,13 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/e2e@workspace:e2e"
   dependencies:
+    "@ai-sdk/openai": "npm:^3.0.37"
     "@cucumber/cucumber": "npm:^11.0.0"
     "@pikku/addon-console": "workspace:*"
     "@pikku/addon-graph": "workspace:*"
     "@pikku/addon-hmac-signer": "workspace:*"
     "@pikku/ai-tanstack": "workspace:*"
+    "@pikku/ai-vercel": "workspace:*"
     "@pikku/better-auth": "workspace:*"
     "@pikku/cli": "workspace:*"
     "@pikku/core": "workspace:*"
@@ -6129,6 +6131,7 @@ __metadata:
     "@playwright/test": "npm:^1.50.0"
     "@types/better-sqlite3": "npm:^7.0.0"
     "@types/node": "npm:^22"
+    ai: "npm:^6.0.105"
     better-auth: "npm:^1.6.19"
     better-sqlite3: "npm:^12.10.0"
     c8: "npm:^10.1.3"
