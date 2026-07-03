@@ -347,6 +347,7 @@ export function checkForApprovals(
           toolCallId: string
           toolName: string
           args: unknown
+          reason?: string
           runId: string
         }>
       }
@@ -357,7 +358,7 @@ export function checkForApprovals(
               sub.toolCallId,
               r.toolName,
               r.args,
-              undefined,
+              sub.reason,
               sub.toolName,
               sub.args,
               r.agentRunId

@@ -1096,6 +1096,7 @@ describe('ai-agent-stream helpers', () => {
                   toolCallId: 'sub-1',
                   toolName: 'deleteTodo',
                   args: { todoId: '1' },
+                  reason: 'Delete the todo "1"',
                   runId: 'sub-run-1',
                 },
               ],
@@ -1123,6 +1124,7 @@ describe('ai-agent-stream helpers', () => {
     assert.equal(approvals[1].toolName, 'sub-agent')
     assert.equal(approvals[1].displayToolName, 'deleteTodo')
     assert.equal(approvals[1].agentRunId, 'sub-run-1')
+    assert.equal(approvals[1].reason, 'Delete the todo "1"')
   })
 
   test('checkForCredentialRequests and appendStepMessages handle structured results', () => {

@@ -92,7 +92,11 @@ const ToolCallDisplay: React.FC<{
   )
   const isCredentialRequest = !!credentialPayload || !!pendingCredential
   const isApproval = status.type === 'requires-action' && !isCredentialRequest
-  const approvalReason = (args as any)?.__approvalReason
+  const approvalReason =
+    (args as any)?.__approvalReason ??
+    pendingApprovals.find(
+      (a) => a.toolCallId === toolCallId && a.type !== 'credential-request'
+    )?.reason
   const displayArgs = { ...args }
   delete (displayArgs as any).__approvalReason
   const [responded, setResponded] = useState<'approved' | 'denied' | null>(null)

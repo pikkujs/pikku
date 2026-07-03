@@ -219,6 +219,7 @@ export type ScopedChannel = AIStreamChannel & {
     toolCallId: string
     toolName: string
     args: unknown
+    reason?: string
     runId: string
   }>
 }
@@ -248,6 +249,7 @@ export function createScopedChannel(
           toolCallId: event.toolCallId,
           toolName: event.toolName,
           args: event.args,
+          ...(event.reason !== undefined ? { reason: event.reason } : {}),
           runId: (event as any).runId,
         })
         return
@@ -538,6 +540,7 @@ export async function buildToolDefs(
                 toolCallId: a.toolCallId,
                 toolName: a.toolName,
                 args: a.args,
+                reason: a.reason,
                 runId: a.runId,
               })),
             }

@@ -149,10 +149,12 @@ const ToolCallDisplay: FunctionComponent<{
 }> = ({ toolCallId, toolName, args, result, status, addResult }) => {
   const colors = useContext(ColorsContext)
   const hideToolCalls = useContext(HideToolCallsContext)
-  const { handleApproval } = usePikkuApproval()
+  const { handleApproval, pendingApprovals } = usePikkuApproval()
   const [expanded, setExpanded] = useState(false)
   const isApproval = status.type === 'requires-action'
-  const approvalReason = (args as any)?.__approvalReason
+  const approvalReason =
+    (args as any)?.__approvalReason ??
+    pendingApprovals.find((a) => a.toolCallId === toolCallId)?.reason
   const displayArgs = { ...args }
   delete (displayArgs as any).__approvalReason
   const [responded, setResponded] = useState<'approved' | 'denied' | null>(null)
