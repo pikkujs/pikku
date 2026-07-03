@@ -45,6 +45,10 @@ export class HttpUserFlowActor implements UserFlowActor {
     this.origin = new URL(config.apiUrl).origin
   }
 
+  get email(): string {
+    return this.actorConfig.email
+  }
+
   async invoke(rpcName: string, data: unknown): Promise<unknown> {
     const cookie = this.cookie ?? (await this.login())
     const res = await this.postRpc(rpcName, data, cookie)

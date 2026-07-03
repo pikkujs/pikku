@@ -44,6 +44,7 @@ const fakeActor = (
   const calls: Array<{ rpcName: string; data: any }> = []
   return {
     name,
+    email: `${name}@actors.local`,
     calls,
     invoke: async (rpcName: string, data: any) => {
       calls.push({ rpcName, data })

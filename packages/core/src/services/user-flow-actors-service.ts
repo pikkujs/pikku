@@ -9,6 +9,8 @@
 export interface UserFlowActor {
   /** Stable actor name (the key in pikku.config.json's actor registry). */
   readonly name: string
+  /** The actor's user email — flows use it for invites/lookups. */
+  readonly email: string
   /** Invoke an exposed RPC as this actor over the real transport. */
   invoke(rpcName: string, data: unknown): Promise<unknown>
 }
