@@ -16,6 +16,7 @@ const makeMetaService = (
   getMcpMeta: async () => ({}),
   getGatewayMeta: async () => ({}),
   getWorkflowMeta: async () => ({}),
+  getUserFlowActorsMeta: async () => ({}),
   getTriggerMeta: async () => ({}),
   getTriggerSourceMeta: async () => ({}),
   getMiddlewareGroupsMeta: async () => ({}),
