@@ -192,6 +192,24 @@ describe('aggregateRequiredServices — per-function addon services', () => {
     assert.ok(!required.has('rpc'))
   })
 
+  test('default framework services in addon function meta never force the blanket', () => {
+    const state = makeState({
+      usedFunctions: ['ext:goodbye'],
+      addonFunctions: {
+        ext: {
+          goodbye: {
+            services: { optimized: true, services: ['logger', 'config'] },
+          },
+        },
+      },
+      addonRequiredParentServices: ['greetingStore', 'auditSink'],
+    })
+    aggregateRequiredServices(state)
+    const required = state.serviceAggregation.requiredServices
+    assert.ok(!required.has('greetingStore'))
+    assert.ok(!required.has('auditSink'))
+  })
+
   test('a ref()-wired route (inline id + namespaced target) aggregates the target services', () => {
     // Shape produced by add-http-route for func: ref('console:streamFunctionTests'):
     // usedFunctions carries both the minted inline id and the addon target.

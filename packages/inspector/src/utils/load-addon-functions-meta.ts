@@ -200,6 +200,7 @@ export async function loadAddonFunctionsMeta(
         // No variables meta — that's fine
       }
       // Load addon serverlessIncompatible service names from pikku-addon-meta.gen.json
+      let loadedParentServices = false
       try {
         const addonMetaPath = require.resolve(
           `${decl.package}/.pikku/console/pikku-addon-meta.gen.json`
@@ -218,29 +219,45 @@ export async function loadAddonFunctionsMeta(
             `Addon '${namespace}' marks [${addonMeta.serverlessIncompatible.join(', ')}] as serverless-incompatible`
           )
         }
+        if (
+          Array.isArray(addonMeta.requiredParentServices) &&
+          addonMeta.requiredParentServices.length > 0
+        ) {
+          for (const service of addonMeta.requiredParentServices) {
+            state.addonRequiredParentServices.push(service)
+          }
+          loadedParentServices = true
+          logger.debug(
+            `Loaded ${addonMeta.requiredParentServices.length} required parent services for '${namespace}' from addon meta`
+          )
+        }
       } catch {
         // No addon meta or no serverlessIncompatible declared — that's fine
       }
 
-      // Load addon required parent services from pikku-services.gen
-      try {
-        const servicesGenPath = require.resolve(
-          `${decl.package}/.pikku/pikku-services.gen.js`
-        )
-        const servicesModule = await import(servicesGenPath)
-        if (
-          servicesModule.requiredParentServices &&
-          Array.isArray(servicesModule.requiredParentServices)
-        ) {
-          for (const service of servicesModule.requiredParentServices) {
-            state.addonRequiredParentServices.push(service)
-          }
-          logger.debug(
-            `Loaded ${servicesModule.requiredParentServices.length} required parent services for '${namespace}' from ${decl.package}`
+      // Fallback for addons built before requiredParentServices shipped in
+      // the addon meta json — needs the compiled pikku-services.gen.js,
+      // which only exists for dist-form addons.
+      if (!loadedParentServices) {
+        try {
+          const servicesGenPath = require.resolve(
+            `${decl.package}/.pikku/pikku-services.gen.js`
           )
+          const servicesModule = await import(servicesGenPath)
+          if (
+            servicesModule.requiredParentServices &&
+            Array.isArray(servicesModule.requiredParentServices)
+          ) {
+            for (const service of servicesModule.requiredParentServices) {
+              state.addonRequiredParentServices.push(service)
+            }
+            logger.debug(
+              `Loaded ${servicesModule.requiredParentServices.length} required parent services for '${namespace}' from ${decl.package}`
+            )
+          }
+        } catch {
+          // No services gen — addon may not have requiredParentServices
         }
-      } catch {
-        // No services gen — addon may not have requiredParentServices
       }
 
       try {

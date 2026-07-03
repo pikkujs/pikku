@@ -132,6 +132,11 @@ export function addRPCInvocations(
           if (namespace) {
             logger.debug(`  → Addon detected: ${namespace}`)
             state.rpc.usedAddons.add(namespace)
+            // A body-level invoke is the only reference to an addon function
+            // that no wiring meta carries — count it as used so its services
+            // aggregate (full builds; filtered states recompute from
+            // invokedFunctionsByFile).
+            state.serviceAggregation.usedFunctions.add(functionRef)
           }
         }
         // Handle template literals like `function-${name}`

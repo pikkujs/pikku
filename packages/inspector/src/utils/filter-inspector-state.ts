@@ -1136,7 +1136,14 @@ export function filterInspectorState(
     for (const [file, invoked] of state.rpc.invokedFunctionsByFile ??
       new Map<string, Set<string>>()) {
       if (!keptFiles.has(file)) continue
-      for (const id of invoked) referencedIds.add(id)
+      for (const id of invoked) {
+        referencedIds.add(id)
+        // Namespaced body invokes have no wiring meta — feed them into
+        // usedFunctions so the target's services aggregate for this unit
+        if (id.includes(':')) {
+          filteredState.serviceAggregation.usedFunctions.add(id)
+        }
+      }
     }
     for (const toolMeta of Object.values(
       filteredState.mcpEndpoints?.toolsMeta ?? {}

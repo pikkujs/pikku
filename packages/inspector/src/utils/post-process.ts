@@ -347,6 +347,15 @@ export function aggregateRequiredServices(
   }
   const parentDeclared = state.addonRequiredParentServices ?? []
   const parentDeclaredSet = new Set(parentDeclared)
+  // Always-present framework services — an addon function using these must
+  // not be inferred as needing the addon services factory
+  const defaultServices = new Set([
+    'config',
+    'logger',
+    'variables',
+    'schema',
+    'secrets',
+  ])
   let usesAddonFn = false
   let addonFactoryNeeded = false
   for (const funcId of usedFunctions) {
@@ -360,8 +369,12 @@ export function aggregateRequiredServices(
     for (const service of services) {
       if (parentDeclaredSet.has(service)) {
         requiredServices.add(service)
-      } else if (!internalServices.has(service)) {
-        // Not parent-provided → created by the addon services factory
+      } else if (
+        !internalServices.has(service) &&
+        !defaultServices.has(service)
+      ) {
+        // Not parent-provided and not a framework default → created by the
+        // addon services factory
         addonFactoryNeeded = true
       }
     }

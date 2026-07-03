@@ -4,26 +4,17 @@ import type {
   CoreSingletonServices,
   CoreUserSession,
 } from '@pikku/core'
-import type { NoopService } from '../src/services/noop-service.js'
 
 export interface Config extends CoreConfig {}
 
 export interface UserSession extends CoreUserSession {}
 
 export interface SingletonServices extends CoreSingletonServices<Config> {
-  noop: NoopService
-  // Parent-provided services (declared via the pikkuAddonServices factory's
-  // second parameter) — used by the treeshaking verifier to assert that a
-  // consumer unit only carries the parent services its used addon functions
-  // actually need.
+  // Parent services the function-addon declares via pikkuAddonServices —
+  // the treeshake assertions check filtered units only require the ones
+  // their used addon functions actually need.
   greetingStore: { greet(name: string): string }
   auditSink: { record(event: string): void }
 }
 
 export interface Services extends CoreServices<SingletonServices> {}
-
-export interface CreateSingletonServices {
-  noop: NoopService
-}
-
-export interface CreateWireServices {}

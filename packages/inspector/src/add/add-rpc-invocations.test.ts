@@ -57,6 +57,25 @@ export const unrelated = () => 'no invocations here'
     }
   })
 
+  test('namespaced body invoke joins serviceAggregation.usedFunctions', async () => {
+    const { state, dir } = await inspectFiles({
+      'caller.ts': `
+declare const rpc: { invoke: (name: string, data?: unknown) => Promise<unknown> }
+export async function doWork() {
+  await rpc.invoke('ext:goodbye')
+  return rpc.invoke('localHelper')
+}
+`,
+    })
+    try {
+      assert.ok(state.serviceAggregation.usedFunctions.has('ext:goodbye'))
+      // Non-namespaced invokes are covered by wiring meta — not added here
+      assert.ok(!state.serviceAggregation.usedFunctions.has('localHelper'))
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
   test('multiple invocations in one file accumulate under that file', async () => {
     const { state, dir } = await inspectFiles({
       'caller.ts': `

@@ -1819,6 +1819,22 @@ describe('addon bootstrap tree-shake', () => {
     assert.strictEqual(filtered.rpc.wireAddonDeclarations.size, 1)
   })
 
+  test('a kept-file body invoke joins the filtered usedFunctions', () => {
+    const state = withAddon((s) => {
+      s.rpc.invokedFunctionsByFile = new Map([
+        ['/test/project/src/api/users.ts', new Set(['console:getSchema'])],
+      ])
+    })
+    const filtered = filterInspectorState(
+      state,
+      { names: ['getUsers'] },
+      mockLogger
+    )
+    assert.ok(
+      filtered.serviceAggregation.usedFunctions.has('console:getSchema')
+    )
+  })
+
   test('drops an addon body-invoked only from filtered-out files', () => {
     const state = withAddon((s) => {
       s.rpc.invokedFunctionsByFile = new Map([
