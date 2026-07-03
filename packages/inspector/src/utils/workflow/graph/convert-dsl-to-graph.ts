@@ -93,6 +93,12 @@ function convertStepToNode(
         rpcName: step.rpcName,
         next: nextNodeId,
       }
+      if (step.actor) {
+        node.actor = step.actor
+      }
+      if (step.expectEventually) {
+        node.expectEventually = true
+      }
       if (step.inputs) {
         if (step.inputs === 'passthrough') {
           // Entire data is passed through - store as reference to trigger
@@ -403,8 +409,10 @@ export function convertDslToGraph(
     name: workflowName,
     pikkuFuncId: meta.pikkuFuncId,
     source,
+    title: meta.title,
     description: meta.description,
     tags: meta.tags,
+    actors: meta.actors,
     context: meta.context,
     nodes: nodesRecord,
     entryNodeIds,

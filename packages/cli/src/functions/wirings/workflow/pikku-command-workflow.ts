@@ -13,7 +13,7 @@ import {
   stripVerboseFields,
   hasVerboseFields,
 } from '../../../utils/strip-verbose-meta.js'
-import { join } from 'path'
+import { join, dirname } from 'path'
 
 type WorkflowCommandInput = {
   bootstrap?: boolean
@@ -162,6 +162,14 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
         logger,
         config.userFlowActorsFile,
         serializeUserFlowActors(userFlowActors)
+      )
+      // JSON twin for the runtime meta service (console personas view). Lives
+      // next to workflow/meta but NOT inside it — getWorkflowMeta() treats
+      // every workflow/meta/*.gen.json as a workflow.
+      await writeFileInDir(
+        logger,
+        join(dirname(config.userFlowActorsFile), 'user-flow-actors.gen.json'),
+        JSON.stringify(userFlowActors, null, 2)
       )
     }
 

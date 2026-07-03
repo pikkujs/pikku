@@ -21,6 +21,8 @@ import type {
 } from '@pikku/core/workflow'
 import {
   isWorkflowDoCall,
+  isWorkflowExpectEventuallyCall,
+  extractActorFromOptions,
   isWorkflowSleepCall,
   isWorkflowSuspendCall,
   isThrowCancelException,
@@ -553,10 +555,15 @@ function extractRpcStep(
     const inputs =
       args.length >= 3 ? extractInputSources(args[2], context) : undefined
 
-    // Extract options from fourth argument
+    // do(step, rpc, data, options?) vs expectEventually(step, rpc, data, predicate, options?)
+    const expectEventually = isWorkflowExpectEventuallyCall(call)
+    const optionsIndex = expectEventually ? 4 : 3
+    const optionsArg =
+      args.length > optionsIndex ? args[optionsIndex] : undefined
+
     const options =
-      args.length >= 4 && ts.isObjectLiteralExpression(args[3])
-        ? extractStepOptions(args[3], context)
+      optionsArg && ts.isObjectLiteralExpression(optionsArg)
+        ? extractStepOptions(optionsArg, context)
         : undefined
 
     return {
@@ -566,6 +573,8 @@ function extractRpcStep(
       outputVar,
       inputs,
       options,
+      actor: extractActorFromOptions(optionsArg),
+      expectEventually: expectEventually || undefined,
     }
   } catch (error) {
     context.errors.push({

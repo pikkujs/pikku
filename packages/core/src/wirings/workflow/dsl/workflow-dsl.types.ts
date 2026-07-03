@@ -109,6 +109,10 @@ export interface RpcStepMeta {
   inputs?: Record<string, InputSource> | 'passthrough'
   /** Step options */
   options?: WorkflowStepOptions
+  /** User-flow actor name this step runs as ({ actor: actors.x }) */
+  actor?: string
+  /** True for workflow.expectEventually polling steps */
+  expectEventually?: boolean
 }
 
 /**

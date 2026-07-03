@@ -142,6 +142,10 @@ export interface FunctionNode extends BaseNode {
   outputVar?: string
   /** Hash of nodeId + RPC input/output schemas for version detection */
   stepHash?: string
+  /** User-flow actor name this step runs as (workflow.do {actor: actors.x}) */
+  actor?: string
+  /** True for workflow.expectEventually polling steps (user flows) */
+  expectEventually?: boolean
 }
 
 /**
@@ -191,10 +195,14 @@ export interface SerializedWorkflowGraph {
   pikkuFuncId: string
   /** Source type: 'dsl' for pikkuWorkflowFunc, 'graph' for pikkuWorkflowGraph */
   source: WorkflowSourceType
+  /** Optional short display name */
+  title?: string
   /** Optional description */
   description?: string
   /** Tags for organization */
   tags?: string[]
+  /** Actor names a user flow's steps run as */
+  actors?: string[]
   /** If true, workflow always executes inline without queues */
   inline?: boolean
   /** Workflow context/state variables (from Zod schema) */

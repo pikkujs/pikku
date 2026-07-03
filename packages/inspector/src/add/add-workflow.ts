@@ -16,7 +16,10 @@ import {
   getPropertyValue,
 } from '../utils/get-property-value.js'
 import { extractDSLWorkflow } from '../utils/workflow/dsl/extract-dsl-workflow.js'
-import { getSourceText } from '../utils/workflow/dsl/patterns.js'
+import {
+  getSourceText,
+  extractActorFromOptions,
+} from '../utils/workflow/dsl/patterns.js'
 
 /**
  * Extract a workflow step's display name without letting a non-static name
@@ -86,7 +89,8 @@ export function collectInvokedRPCs(
 }
 
 /**
- * Scan for workflow.do(), workflow.sleep(), and workflow.cancel() calls to extract workflow steps
+ * Scan for workflow.do(), workflow.expectEventually(), workflow.sleep(), and
+ * workflow.cancel() calls to extract workflow steps
  */
 function getWorkflowInvocations(
   node: ts.Node,
@@ -100,7 +104,12 @@ function getWorkflowInvocations(
     const { name } = node
 
     // Check if this is accessing 'do' or 'sleep' property
-    if (name.text === 'do' || name.text === 'sleep' || name.text === 'cancel') {
+    if (
+      name.text === 'do' ||
+      name.text === 'sleep' ||
+      name.text === 'cancel' ||
+      name.text === 'expectEventually'
+    ) {
       // Check if the parent is a call expression
       const parent = node.parent
       if (ts.isCallExpression(parent) && parent.expression === node) {
@@ -125,6 +134,7 @@ function getWorkflowInvocations(
               type: 'rpc',
               stepName,
               rpcName,
+              actor: extractActorFromOptions(optionsArg),
             })
             state.rpc.invokedFunctions.add(rpcName)
           } else if (isFunctionLike(secondArg)) {
@@ -134,6 +144,20 @@ function getWorkflowInvocations(
               stepName: stepName || '<dynamic>',
               description: description || '<dynamic>',
             })
+          }
+        } else if (name.text === 'expectEventually' && args.length >= 4) {
+          // workflow.expectEventually(stepName, rpcName, data, predicate, options?)
+          const stepName = extractStepName(args[0], checker)
+          if (isStringLike(args[1], checker)) {
+            const rpcName = extractStringLiteral(args[1], checker)
+            steps.push({
+              type: 'rpc',
+              stepName,
+              rpcName,
+              expectEventually: true,
+              actor: extractActorFromOptions(args.length >= 5 ? args[4] : undefined),
+            })
+            state.rpc.invokedFunctions.add(rpcName)
           }
         } else if (name.text === 'sleep' && args.length >= 2) {
           // workflow.sleep(stepName, duration)
@@ -337,9 +361,22 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   // For pikkuWorkflowComplexFunc, also run basic extraction so RPCs in
   // patterns the DSL extractor doesn't handle (array+push, nested Promise.all
   // with identifier args, etc.) are still registered as invoked functions.
+  // When DSL extraction already produced steps this pass is registration-only:
+  // appending to `steps` would duplicate nodes and clobber the graph.
   if (wrapperType !== 'dsl') {
-    getWorkflowInvocations(resolvedFunc, checker, state, workflowName, steps)
+    const sink: WorkflowStepMeta[] = steps.length > 0 ? [] : steps
+    getWorkflowInvocations(resolvedFunc, checker, state, workflowName, sink)
   }
+
+  // Actor names the flow's steps run as (user flows) — powers the console
+  // personas view and the User Flow graph badges.
+  const actorNames = [
+    ...new Set(
+      steps
+        .map((s) => ('actor' in s ? s.actor : undefined))
+        .filter((a): a is string => typeof a === 'string')
+    ),
+  ]
 
   state.workflows.meta[workflowName] = {
     pikkuFuncId,
@@ -354,6 +391,7 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     tags,
     expose,
     userFlow: wrapperType === 'user-flow' ? true : undefined,
+    actors: actorNames.length > 0 ? actorNames : undefined,
   }
 
   // User flows are pure stories of remote RPCs (same rule as client-side CLI

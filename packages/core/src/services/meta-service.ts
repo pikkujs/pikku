@@ -12,6 +12,7 @@ import type {
   MCPPromptMeta,
 } from '../wirings/mcp/mcp.types.js'
 import type { WorkflowsMeta } from '../wirings/workflow/workflow.types.js'
+import type { UserFlowActorConfig } from './user-flow-actors-service.js'
 import type {
   TriggerMeta,
   TriggerSourceMeta,
@@ -170,6 +171,7 @@ export interface MetaService {
   getGatewayMeta(): Promise<GatewaysMeta>
   getRpcMeta(): Promise<RPCMetaRecord>
   getWorkflowMeta(): Promise<WorkflowsMeta>
+  getUserFlowActorsMeta(): Promise<Record<string, UserFlowActorConfig>>
   getTriggerMeta(): Promise<TriggerMeta>
   getTriggerSourceMeta(): Promise<TriggerSourceMeta>
   getFunctionsMeta(): Promise<FunctionsMeta>
@@ -208,6 +210,8 @@ export class LocalMetaService implements MetaService {
   private gatewayMetaCache: GatewaysMeta | null = null
   private rpcMetaCache: RPCMetaRecord | null = null
   private workflowMetaCache: WorkflowsMeta | null = null
+  private userFlowActorsMetaCache: Record<string, UserFlowActorConfig> | null =
+    null
   private triggerMetaCache: TriggerMeta | null = null
   private triggerSourceMetaCache: TriggerSourceMeta | null = null
   private functionsMetaCache: FunctionsMeta | null = null
@@ -258,6 +262,7 @@ export class LocalMetaService implements MetaService {
     this.gatewayMetaCache = null
     this.rpcMetaCache = null
     this.workflowMetaCache = null
+    this.userFlowActorsMetaCache = null
     this.triggerMetaCache = null
     this.triggerSourceMetaCache = null
     this.functionsMetaCache = null
@@ -422,6 +427,14 @@ export class LocalMetaService implements MetaService {
       this.workflowMetaCache = {}
       return this.workflowMetaCache
     }
+  }
+
+  async getUserFlowActorsMeta(): Promise<Record<string, UserFlowActorConfig>> {
+    if (this.userFlowActorsMetaCache) return this.userFlowActorsMetaCache
+
+    const content = await this.readFile('workflow/user-flow-actors.gen.json')
+    this.userFlowActorsMetaCache = content ? JSON.parse(content) : {}
+    return this.userFlowActorsMetaCache!
   }
 
   async getTriggerMeta(): Promise<TriggerMeta> {

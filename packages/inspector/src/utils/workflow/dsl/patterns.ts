@@ -5,7 +5,8 @@ import * as ts from 'typescript'
  */
 
 /**
- * Check if a call expression is workflow.do()
+ * Check if a call expression is workflow.do() or workflow.expectEventually()
+ * (both are RPC steps; expectEventually is the polling variant used by user flows)
  */
 export function isWorkflowDoCall(
   node: ts.CallExpression,
@@ -17,10 +18,55 @@ export function isWorkflowDoCall(
 
   const propAccess = node.expression
   return (
-    propAccess.name.text === 'do' &&
+    (propAccess.name.text === 'do' ||
+      propAccess.name.text === 'expectEventually') &&
     ts.isIdentifier(propAccess.expression) &&
     propAccess.expression.text === 'workflow'
   )
+}
+
+/**
+ * Check if a call expression is workflow.expectEventually()
+ */
+export function isWorkflowExpectEventuallyCall(
+  node: ts.CallExpression
+): boolean {
+  return (
+    ts.isPropertyAccessExpression(node.expression) &&
+    node.expression.name.text === 'expectEventually' &&
+    ts.isIdentifier(node.expression.expression) &&
+    node.expression.expression.text === 'workflow'
+  )
+}
+
+/**
+ * Extract the actor NAME from a step options object literal:
+ * `{ actor: actors.x }` → 'x' (also `actors['x']`). Undefined when absent
+ * or not statically resolvable.
+ */
+export function extractActorFromOptions(
+  optionsArg: ts.Expression | undefined
+): string | undefined {
+  if (!optionsArg || !ts.isObjectLiteralExpression(optionsArg)) return
+  for (const prop of optionsArg.properties) {
+    if (
+      ts.isPropertyAssignment(prop) &&
+      ts.isIdentifier(prop.name) &&
+      prop.name.text === 'actor'
+    ) {
+      const init = prop.initializer
+      if (ts.isPropertyAccessExpression(init)) {
+        return init.name.text
+      }
+      if (
+        ts.isElementAccessExpression(init) &&
+        ts.isStringLiteral(init.argumentExpression)
+      ) {
+        return init.argumentExpression.text
+      }
+    }
+  }
+  return
 }
 
 /**
