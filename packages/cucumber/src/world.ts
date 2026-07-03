@@ -70,7 +70,9 @@ export interface IFunctionWorld {
  *   createFunctionWorld(World, setWorldConstructor, createStubServices)
  */
 export function createFunctionWorld(
-  World: new (options: unknown) => object,
+  // `any`, not `unknown`: cucumber's World constructor takes IWorldOptions,
+  // and `unknown` would contravariantly reject it.
+  World: new (options: any) => object,
   setWorldConstructor: (ctor: unknown) => void,
   factory: StubServicesFactory
 ): void {
