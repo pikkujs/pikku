@@ -35,6 +35,28 @@ function extractStepName(node: ts.Node, checker: ts.TypeChecker): string {
 }
 
 /**
+ * Walk a function body for any `X.expectEventually(...)` call. Used to enforce
+ * that the durable-polling assertion is a user-flow-only primitive — regular
+ * workflows must not carry test/assertion semantics.
+ */
+function containsExpectEventuallyCall(node: ts.Node): boolean {
+  if (
+    ts.isCallExpression(node) &&
+    ts.isPropertyAccessExpression(node.expression) &&
+    node.expression.name.text === 'expectEventually'
+  ) {
+    return true
+  }
+  let found = false
+  ts.forEachChild(node, (child) => {
+    if (!found && !ts.isFunctionDeclaration(child)) {
+      found = containsExpectEventuallyCall(child)
+    }
+  })
+  return found
+}
+
+/**
  * Recursively check if any step has inline type (non-serializable)
  */
 function hasInlineSteps(steps: WorkflowStepMeta[]): boolean {
@@ -155,7 +177,9 @@ function getWorkflowInvocations(
               stepName,
               rpcName,
               expectEventually: true,
-              actor: extractActorFromOptions(args.length >= 5 ? args[4] : undefined),
+              actor: extractActorFromOptions(
+                args.length >= 5 ? args[4] : undefined
+              ),
             })
             state.rpc.invokedFunctions.add(rpcName)
           }
@@ -288,6 +312,21 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     logger.critical(
       ErrorCode.MISSING_FUNC,
       `Could not resolve workflow function for '${workflowName}'.`
+    )
+    return
+  }
+
+  // expectEventually is a user-flow-only assertion primitive — regular
+  // workflows must stay free of test/eval semantics.
+  if (
+    wrapperType !== 'user-flow' &&
+    containsExpectEventuallyCall(resolvedFunc)
+  ) {
+    logger.critical(
+      ErrorCode.EXPECT_EVENTUALLY_USER_FLOW_ONLY,
+      `Workflow '${workflowName}' calls workflow.expectEventually(), which is only ` +
+        `available in user flows (pikkuUserFlow). Move it into a user flow, or drive ` +
+        `the assertion outside the workflow.`
     )
     return
   }
