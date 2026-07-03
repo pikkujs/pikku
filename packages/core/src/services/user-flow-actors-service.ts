@@ -1,3 +1,8 @@
+import type {
+  ConverseOptions,
+  ActorFlowVerdict,
+} from '../wirings/actor-flow/actor-flow.types.js'
+
 /**
  * A user-flow actor: a synthetic user (a normal user row flagged `actor`) that
  * workflow steps can run as. Passed to `workflow.do(step, rpc, data, { actor })`
@@ -13,6 +18,14 @@ export interface UserFlowActor {
   readonly email: string
   /** Invoke an exposed RPC as this actor over the real transport. */
   invoke(rpcName: string, data: unknown): Promise<unknown>
+  /**
+   * Hold a dynamic conversation with a target Pikku AI agent, in THIS actor's
+   * persona (personality/jobTitle). Drives the target over the real transport
+   * as the signed-in actor, answers its tool-approval requests in-persona, and
+   * returns the actor's verdict on whether the task was met. Deterministic
+   * checks are the caller's job — use `invoke` afterwards.
+   */
+  converse(options: ConverseOptions): Promise<ActorFlowVerdict>
 }
 
 /**

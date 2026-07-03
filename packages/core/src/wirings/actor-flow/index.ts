@@ -1,16 +1,22 @@
 /**
  * Actor flow module exports.
  *
- * An actor flow is an LLM-driven actor that plays a configured persona and
- * holds a real conversation with a target Pikku AI agent — approving the
- * agent's tool requests in-persona and evaluating whether the task was met.
+ * An actor holds a dynamic conversation with a target Pikku AI agent via
+ * `actor.converse(...)` — playing its own persona, approving the agent's tool
+ * requests in-persona, and evaluating whether the task was accomplished. The
+ * conversation engine here is transport-agnostic; the actor drives the target
+ * over HTTP.
  */
 export type {
-  CoreActorFlow,
   ActorFlowApprovalPolicy,
-  ActorFlowVerifyContext,
   ActorFlowVerdict,
-  ActorFlowMeta,
-  ActorFlowMetaEntry,
+  ConverseOptions,
+  TargetAgentReply,
+  TargetPendingApproval,
+  TargetAgentDriver,
 } from './actor-flow.types.js'
-export { runActorFlow, type RunActorFlowParams } from './run-actor-flow.js'
+export {
+  runConversation,
+  type RunConversationParams,
+  type PersonaLLM,
+} from './run-conversation.js'

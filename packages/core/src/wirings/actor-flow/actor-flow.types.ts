@@ -1,8 +1,6 @@
-import type { UserFlowActor } from '../../services/user-flow-actors-service.js'
-
 /**
  * How an actor agent answers the target agent's tool-approval requests during
- * the conversation.
+ * a conversation.
  * - `'in-persona'` — the actor agent decides as the persona would (default).
  * - `'always'` — approve every request (stress the happy path).
  * - `'never'` — deny every request (exercise refusal handling).
@@ -10,84 +8,65 @@ import type { UserFlowActor } from '../../services/user-flow-actors-service.js'
 export type ActorFlowApprovalPolicy = 'in-persona' | 'always' | 'never'
 
 /**
- * Context passed to an actor flow's deterministic `verify` hook, which runs
- * after the conversation completes. `actor` is the same authenticated RPC
- * client the persona used, so a verify can query the target environment (e.g.
- * confirm a row was created) and throw to fail the flow.
+ * Options for `actor.converse(...)` — a dynamic conversation an actor holds
+ * with a target Pikku AI agent, in the actor's own persona.
  */
-export interface ActorFlowVerifyContext {
-  actor: UserFlowActor
-}
-
-/**
- * An actor flow: an LLM-driven actor that plays a configured persona
- * (`pikku.config.json` → `userFlows.actors`), holds a real multi-turn
- * conversation with a target Pikku AI agent, answers the agent's tool-approval
- * requests in-persona, and evaluates whether the task was accomplished.
- *
- * Distinct from a user flow (deterministic actor RPC steps): it is
- * non-deterministic and LLM-driven, so it runs via `pikku actor run`, out of
- * the deterministic health-check path.
- */
-export interface CoreActorFlow {
-  /** The persona driving the conversation (from `actors` — a `UserFlowActor`). */
-  actor: UserFlowActor
-  /** Name of the target Pikku AI agent this actor converses with. */
+export interface ConverseOptions {
+  /** Target Pikku AI agent name to converse with. */
   agent: string
-  /** What the actor is trying to get the target agent to accomplish. */
+  /** What the actor is trying to get the agent to accomplish. */
   task: string
+  /** Natural-language success criterion the actor evaluates at the end. */
+  evaluate: string
   /** How the actor answers the agent's tool-approval requests. Default `'in-persona'`. */
   approvals?: ActorFlowApprovalPolicy
-  /** Natural-language success criterion the actor evaluates at the end (LLM verdict). */
-  evaluate: string
-  /** Deterministic assertion run after the conversation; throw to fail the flow. */
-  verify?: (context: ActorFlowVerifyContext) => Promise<void> | void
-  /** Display title. */
-  title?: string
-  /** Display description. */
-  description?: string
-  /** Organizational tags. */
-  tags?: string[]
+  /** Model the persona uses for its own turns/decisions. Falls back to the actor service default. */
+  model?: string
+  /** Hard cap on conversation turns before forcing evaluation. Default 12. */
+  maxTurns?: number
 }
 
 /**
- * The verdict an actor flow produces: the LLM self-evaluation, plus whether the
- * deterministic verify hook (if any) passed.
+ * The verdict a conversation produces: the persona's LLM self-evaluation of
+ * whether the task was met. Deterministic checks are the caller's job — they
+ * already hold the actor and can `actor.invoke(...)` afterwards.
  */
 export interface ActorFlowVerdict {
-  /** Whether the actor judged the task met AND `verify` (if present) passed. */
+  /** Whether the actor judged the task accomplished. */
   passed: boolean
-  /** The actor's reasoning for its `evaluate` verdict. */
+  /** The actor's reasoning for its verdict. */
   reasoning: string
-  /** Error message if the deterministic `verify` hook threw. */
-  verifyError?: string
+  /** The conversation transcript, for debugging/reporting. */
+  transcript: string[]
+}
+
+/** A pending tool-approval request surfaced by the target agent. */
+export interface TargetPendingApproval {
+  toolCallId: string
+  toolName: string
+  args: unknown
+  reason?: string
+}
+
+/** A normalized reply from the target agent, independent of transport. */
+export interface TargetAgentReply {
+  text: string
+  runId: string
+  status?: 'completed' | 'suspended'
+  pendingApprovals?: TargetPendingApproval[]
 }
 
 /**
- * Inspector/CLI metadata for a single actor flow.
+ * Drives the target agent. In production this is HTTP-backed (the actor's
+ * `agentRun` / `agentApprove` calls as the signed-in actor); the conversation
+ * engine only sees this transport-agnostic contract.
  */
-export interface ActorFlowMetaEntry {
-  /** The exported name of the actor flow. */
-  name: string
-  /** Actor (persona) name this flow runs as. */
-  actor: string
-  /** Target Pikku AI agent name. */
-  agent: string
-  /** The task the actor pursues. */
-  task: string
-  /** The natural-language success criterion the actor evaluates. */
-  evaluate: string
-  /** Approval policy (defaults to `'in-persona'` when omitted in source). */
-  approvals?: ActorFlowApprovalPolicy
-  /** True when the flow declares a deterministic `verify` hook. */
-  hasVerify?: boolean
-  /** Display title. */
-  title?: string
-  /** Display description. */
-  description?: string
-  /** Organizational tags. */
-  tags?: string[]
+export interface TargetAgentDriver {
+  /** Send a message, starting or continuing the target agent's run. */
+  run(message: string): Promise<TargetAgentReply>
+  /** Answer the target agent's pending approvals and continue its run. */
+  approve(
+    runId: string,
+    decisions: { toolCallId: string; approved: boolean }[]
+  ): Promise<TargetAgentReply>
 }
-
-/** Actor flows metadata for inspector/CLI, keyed by actor flow name. */
-export type ActorFlowMeta = Record<string, ActorFlowMetaEntry>

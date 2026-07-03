@@ -1,16 +1,17 @@
-import type { CoreActorFlow, ActorFlowVerdict } from './actor-flow.types.js'
+import type {
+  ActorFlowApprovalPolicy,
+  ActorFlowVerdict,
+  TargetAgentDriver,
+  TargetPendingApproval,
+} from './actor-flow.types.js'
 import type { UserFlowActorConfig } from '../../services/user-flow-actors-service.js'
-import type { AIMessage, AIAgentOutput } from '../ai-agent/ai-agent.types.js'
-import type { RunAIAgentParams } from '../ai-agent/ai-agent-prepare.js'
-import { runAIAgent, resumeAIAgentSync } from '../ai-agent/ai-agent-runner.js'
-import { randomUUID } from '../ai-agent/ai-agent-utils.js'
-import { getSingletonServices } from '../../pikku-state.js'
-import { AIProviderNotConfiguredError } from '../../errors/errors.js'
+import type { AIMessage } from '../ai-agent/ai-agent.types.js'
+import type {
+  AIAgentRunnerParams,
+  AIAgentStepResult,
+} from '../../services/ai-agent-runner-service.js'
 
-/**
- * One turn the persona takes: the message it sends to the target agent and
- * whether it considers the task finished.
- */
+/** One turn the persona takes: the message to send and whether it's finished. */
 const PERSONA_TURN_SCHEMA = {
   type: 'object',
   properties: {
@@ -52,25 +53,41 @@ const EVALUATION_SCHEMA = {
 
 const DEFAULT_MAX_TURNS = 12
 
-export interface RunActorFlowParams {
-  /** The actor flow definition (actor client, target agent, task, evaluate, verify). */
-  flow: CoreActorFlow
+/** The LLM call the persona uses for its own turns/decisions/evaluation. */
+export type PersonaLLM = (
+  params: AIAgentRunnerParams
+) => Promise<AIAgentStepResult>
+
+export interface RunConversationParams {
   /** Persona config (personality/jobTitle/name) that shapes how the actor talks. */
   persona: UserFlowActorConfig
-  /** Model the persona (actor agent) uses for its own turns/decisions. */
+  /** Stable persona name (for transcript labelling). */
+  personaName: string
+  /** What the actor is trying to get the target agent to accomplish. */
+  task: string
+  /** Natural-language success criterion the actor evaluates at the end. */
+  evaluate: string
+  /** How the actor answers the target agent's tool-approval requests. */
+  approvals?: ActorFlowApprovalPolicy
+  /** Model the persona uses for its own turns/decisions. */
   model: string
-  /** Resource id for the target agent's thread. Defaults to the actor name. */
-  resourceId?: string
-  /** Thread id for the target agent conversation. Defaults to a fresh uuid. */
-  threadId?: string
-  /** Hard cap on conversation turns before forcing evaluation. Default 12. */
+  /** Hard cap on conversation turns. Default 12. */
   maxTurns?: number
-  /** Params forwarded to runAIAgent for the target agent (session/credentials). */
-  runnerParams?: RunAIAgentParams
+  /** Transport that drives the target agent (HTTP in production). */
+  target: TargetAgentDriver
+  /** The persona's own LLM. */
+  llm: PersonaLLM
+  /** Display name of the target agent (transcript labelling). */
+  agentName: string
 }
 
 function msg(role: AIMessage['role'], content: string): AIMessage {
-  return { id: randomUUID(), role, content, createdAt: new Date() }
+  return {
+    id: globalThis.crypto.randomUUID(),
+    role,
+    content,
+    createdAt: new Date(),
+  }
 }
 
 /** Read a structured `run` result, falling back to parsing JSON from text. */
@@ -89,8 +106,8 @@ function readObject<T>(result: { object?: unknown; text?: string }): T | null {
 }
 
 function personaInstructions(
-  flow: CoreActorFlow,
-  persona: UserFlowActorConfig
+  persona: UserFlowActorConfig,
+  task: string
 ): string {
   return [
     `You are role-playing a real user interacting with an AI assistant. Stay in character at all times — you are the user, not the assistant.`,
@@ -99,7 +116,7 @@ function personaInstructions(
     persona.personality
       ? `Your personality and communication style: ${persona.personality}. Match this tone, vocabulary, and level of detail exactly.`
       : '',
-    `Your goal in this conversation: ${flow.task}.`,
+    `Your goal in this conversation: ${task}.`,
     `Send one message at a time. Set "done" to true only once your goal is clearly accomplished, or clearly impossible.`,
   ]
     .filter(Boolean)
@@ -108,15 +125,11 @@ function personaInstructions(
 
 /** Route the target agent's pending tool approvals through the persona. */
 async function decideApprovals(
-  flow: CoreActorFlow,
-  persona: UserFlowActorConfig,
-  pending: NonNullable<AIAgentOutput['pendingApprovals']>,
-  model: string,
-  aiAgentRunner: NonNullable<
-    ReturnType<typeof getSingletonServices>['aiAgentRunner']
-  >
+  params: RunConversationParams,
+  instructions: string,
+  pending: TargetPendingApproval[]
 ): Promise<{ toolCallId: string; approved: boolean }[]> {
-  const policy = flow.approvals ?? 'in-persona'
+  const policy = params.approvals ?? 'in-persona'
   if (policy === 'always') {
     return pending.map((p) => ({ toolCallId: p.toolCallId, approved: true }))
   }
@@ -131,9 +144,9 @@ async function decideApprovals(
     )
     .join('\n')
 
-  const result = await aiAgentRunner.run({
-    model,
-    instructions: `${personaInstructions(flow, persona)}\nThe assistant is asking permission to run tools on your behalf. Decide whether YOU, as this persona, would allow each one.`,
+  const result = await params.llm({
+    model: params.model,
+    instructions: `${instructions}\nThe assistant is asking permission to run tools on your behalf. Decide whether YOU, as this persona, would allow each one.`,
     messages: [
       msg(
         'user',
@@ -161,76 +174,45 @@ async function decideApprovals(
   })
 }
 
-/** Drive the target agent to a non-suspended reply, routing approvals to the persona. */
+/** Drive the target to a non-suspended reply, routing approvals to the persona. */
 async function converseWithTarget(
-  flow: CoreActorFlow,
-  persona: UserFlowActorConfig,
-  message: string,
-  threadId: string,
-  resourceId: string,
-  model: string,
-  runnerParams: RunAIAgentParams,
-  aiAgentRunner: NonNullable<
-    ReturnType<typeof getSingletonServices>['aiAgentRunner']
-  >
-): Promise<AIAgentOutput> {
-  let output = await runAIAgent(
-    flow.agent,
-    { message, threadId, resourceId },
-    runnerParams
-  )
-
+  params: RunConversationParams,
+  instructions: string,
+  message: string
+) {
+  let reply = await params.target.run(message)
   while (
-    output.status === 'suspended' &&
-    output.pendingApprovals &&
-    output.pendingApprovals.length > 0
+    reply.status === 'suspended' &&
+    reply.pendingApprovals &&
+    reply.pendingApprovals.length > 0
   ) {
     const decisions = await decideApprovals(
-      flow,
-      persona,
-      output.pendingApprovals,
-      model,
-      aiAgentRunner
+      params,
+      instructions,
+      reply.pendingApprovals
     )
-    output = await resumeAIAgentSync(
-      output.runId,
-      decisions,
-      runnerParams,
-      flow.agent
-    )
+    reply = await params.target.approve(reply.runId, decisions)
   }
-
-  return output
+  return reply
 }
 
 /**
- * Run an actor flow: an LLM-driven persona holds a real conversation with a
- * target Pikku AI agent, approves/denies its tool requests in-persona, then
- * evaluates whether the task was accomplished. A deterministic `verify` hook
- * (if present) runs afterwards and can fail the flow regardless of the LLM
- * verdict.
+ * Run a conversation: an LLM-driven persona holds a real multi-turn exchange
+ * with a target agent (driven via the injected transport), answers the target's
+ * tool-approval requests in-persona, then evaluates whether the task was met.
+ * Deterministic checks are the caller's responsibility.
  */
-export async function runActorFlow(
-  params: RunActorFlowParams
+export async function runConversation(
+  params: RunConversationParams
 ): Promise<ActorFlowVerdict> {
-  const { flow, persona, model } = params
   const maxTurns = params.maxTurns ?? DEFAULT_MAX_TURNS
-  const resourceId = params.resourceId ?? `actor-flow:${flow.actor.name}`
-  const threadId = params.threadId ?? randomUUID()
-  const runnerParams = params.runnerParams ?? {}
-
-  const { aiAgentRunner } = getSingletonServices()
-  if (!aiAgentRunner) {
-    throw new AIProviderNotConfiguredError()
-  }
-
-  const instructions = personaInstructions(flow, persona)
+  const instructions = personaInstructions(params.persona, params.task)
   const personaMessages: AIMessage[] = []
   const transcript: string[] = []
 
   for (let turn = 0; turn < maxTurns; turn++) {
-    const personaResult = await aiAgentRunner.run({
-      model,
+    const personaResult = await params.llm({
+      model: params.model,
       instructions,
       messages: personaMessages,
       tools: [],
@@ -248,35 +230,24 @@ export async function runActorFlow(
     }
 
     personaMessages.push(msg('assistant', personaMessage))
-    transcript.push(`${persona.name ?? 'User'}: ${personaMessage}`)
+    transcript.push(`${params.personaName}: ${personaMessage}`)
 
-    const targetOutput = await converseWithTarget(
-      flow,
-      persona,
-      personaMessage,
-      threadId,
-      resourceId,
-      model,
-      runnerParams,
-      aiAgentRunner
-    )
-
-    const reply = targetOutput.text ?? ''
-    personaMessages.push(msg('user', reply))
-    transcript.push(`${flow.agent}: ${reply}`)
+    const reply = await converseWithTarget(params, instructions, personaMessage)
+    personaMessages.push(msg('user', reply.text ?? ''))
+    transcript.push(`${params.agentName}: ${reply.text ?? ''}`)
 
     if (turnData?.done) {
       break
     }
   }
 
-  const evalResult = await aiAgentRunner.run({
-    model,
+  const evalResult = await params.llm({
+    model: params.model,
     instructions: `${instructions}\nThe conversation has ended. Judge honestly whether your goal was accomplished.`,
     messages: [
       msg(
         'user',
-        `Here is the full conversation:\n\n${transcript.join('\n')}\n\nSuccess criterion: ${flow.evaluate}\n\nWas it met?`
+        `Here is the full conversation:\n\n${transcript.join('\n')}\n\nSuccess criterion: ${params.evaluate}\n\nWas it met?`
       ),
     ],
     tools: [],
@@ -286,18 +257,9 @@ export async function runActorFlow(
   })
 
   const verdict = readObject<{ passed: boolean; reasoning: string }>(evalResult)
-  let passed = verdict?.passed ?? false
-  const reasoning = verdict?.reasoning ?? 'No evaluation produced.'
-  let verifyError: string | undefined
-
-  if (flow.verify) {
-    try {
-      await flow.verify({ actor: flow.actor })
-    } catch (error) {
-      passed = false
-      verifyError = error instanceof Error ? error.message : String(error)
-    }
+  return {
+    passed: verdict?.passed ?? false,
+    reasoning: verdict?.reasoning ?? 'No evaluation produced.',
+    transcript,
   }
-
-  return { passed, reasoning, verifyError }
 }
