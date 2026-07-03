@@ -11,7 +11,7 @@ import type {
  * never through internal dispatch. Login is lazy: the first `invoke` signs the
  * actor in and the session is cached for the actor's lifetime.
  */
-export interface UserFlowActor {
+export interface UserFlowActor<TAgentName extends string = string> {
   /** Stable actor name (the key in pikku.config.json's actor registry). */
   readonly name: string
   /** The actor's user email — flows use it for invites/lookups. */
@@ -23,9 +23,10 @@ export interface UserFlowActor {
    * persona (personality/jobTitle). Drives the target over the real transport
    * as the signed-in actor, answers its tool-approval requests in-persona, and
    * returns the actor's verdict on whether the task was met. Deterministic
-   * checks are the caller's job — use `invoke` afterwards.
+   * checks are the caller's job — use `invoke` afterwards. In a typed project
+   * `agent` is constrained to the generated union of agent names.
    */
-  converse(options: ConverseOptions): Promise<ActorFlowVerdict>
+  converse(options: ConverseOptions<TAgentName>): Promise<ActorFlowVerdict>
 }
 
 /**

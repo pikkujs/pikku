@@ -158,10 +158,15 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
 
     const userFlowActors = config.userFlows?.actors
     if (userFlowActors && Object.keys(userFlowActors).length > 0) {
+      const agentMapImportPath = getFileImportRelativePath(
+        config.userFlowActorsFile,
+        config.agentMapDeclarationFile,
+        packageMappings
+      )
       await writeFileInDir(
         logger,
         config.userFlowActorsFile,
-        serializeUserFlowActors(userFlowActors)
+        serializeUserFlowActors(userFlowActors, agentMapImportPath)
       )
       // JSON twin for the runtime meta service (console personas view). Lives
       // next to workflow/meta but NOT inside it — getWorkflowMeta() treats
