@@ -381,11 +381,10 @@ export function serializeInspectorState(
       exposedFiles: Array.from(state.rpc.exposedFiles.entries()),
       invokedFunctions: Array.from(state.rpc.invokedFunctions),
       invokedFunctionsByFile: Array.from(
-        (state.rpc.invokedFunctionsByFile ?? new Map()).entries()
-      ).map(([file, fns]): [string, string[]] => [
-        file,
-        Array.from(fns as Set<string>),
-      ]),
+        (
+          state.rpc.invokedFunctionsByFile ?? new Map<string, Set<string>>()
+        ).entries()
+      ).map(([file, fns]): [string, string[]] => [file, Array.from(fns)]),
       usedAddons: Array.from(state.rpc.usedAddons),
       wireAddonDeclarations: Array.from(
         state.rpc.wireAddonDeclarations.entries()
