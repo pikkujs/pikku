@@ -1,15 +1,3 @@
-/**
- * Addon tree-shaking verifier.
- *
- * Runs filtered codegen (the per-unit deploy path) for units with different
- * relationships to the function-addon and asserts that:
- *  - the addon package bootstrap is only imported when a kept function or
- *    wiring actually reaches into the addon
- *  - requiredSingletonServices only flags the parent services the used addon
- *    functions declare (per-function services meta), falling back to the
- *    addon's full requiredParentServices only when an addon-created service
- *    forces the (monolithic) addon services factory
- */
 import { execFileSync } from 'node:child_process'
 import { readFileSync, rmSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'

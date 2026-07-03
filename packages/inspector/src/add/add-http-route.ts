@@ -389,9 +389,6 @@ export function registerHTTPRoute({
     checker
   )
 
-  // Track used functions/middleware/permissions for service aggregation.
-  // ref()-wired routes dispatch to the addon function at runtime — count the
-  // target as used so its addon registration and services aggregate too.
   state.serviceAggregation.usedFunctions.add(funcName)
   if (refAddonTarget) {
     state.serviceAggregation.usedFunctions.add(refAddonTarget)

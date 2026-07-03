@@ -211,13 +211,6 @@ function _stripVerboseFieldsInner<T>(obj: T): T {
   return result as T
 }
 
-/**
- * Re-attach per-function `services` onto a stripped meta object.
- *
- * Addon meta is consumed by parent-project codegen, which needs each
- * function's `services` to compute per-unit service flags — for an addon
- * build this is not a verbose field.
- */
 export function reattachFunctionServices<
   T extends Record<string, { services?: unknown }>,
 >(minimalMeta: T, fullMeta: T): T {

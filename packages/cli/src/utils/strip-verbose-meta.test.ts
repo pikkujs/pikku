@@ -177,7 +177,6 @@ describe('reattachFunctionServices', () => {
       optimized: true,
       services: ['metaService'],
     })
-    // Other verbose fields stay stripped
     assert.strictEqual(result.getSchema.tags, undefined)
     assert.strictEqual(result.noServices.services, undefined)
   })

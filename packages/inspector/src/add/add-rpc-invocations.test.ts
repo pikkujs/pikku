@@ -69,7 +69,6 @@ export async function doWork() {
     })
     try {
       assert.ok(state.serviceAggregation.usedFunctions.has('ext:goodbye'))
-      // Non-namespaced invokes are covered by wiring meta — not added here
       assert.ok(!state.serviceAggregation.usedFunctions.has('localHelper'))
     } finally {
       await rm(dir, { recursive: true, force: true })
@@ -88,19 +87,16 @@ export async function doWork() {
     })
     try {
       const invoked = [...state.rpc.invokedFunctionsByFile.values()][0]!
-      assert.deepStrictEqual(
-        [...invoked].sort(),
-        ['console:getSchema', 'listTasks']
-      )
+      assert.deepStrictEqual([...invoked].sort(), [
+        'console:getSchema',
+        'listTasks',
+      ])
     } finally {
       await rm(dir, { recursive: true, force: true })
     }
   })
 
   test('wiring-level ref() lands in invokedFunctions but NOT in the by-file map', async () => {
-    // ref() targets belong to their wiring — per-unit filtering must be able
-    // to distinguish them from body-level invocations, so they are
-    // deliberately excluded from invokedFunctionsByFile.
     const { state, dir } = await inspectFiles({
       'wiring.ts': `
 declare const ref: (name: string) => unknown

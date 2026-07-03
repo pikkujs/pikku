@@ -20,9 +20,6 @@ export const pikkuFunctions = pikkuSessionlessFunc<void, boolean | undefined>({
       schema,
     } = config
 
-    // Write minimal JSON (runtime-only fields). Addon builds keep
-    // per-function `services` — parent-project codegen needs it to compute
-    // per-unit service flags.
     let minimalMeta = stripVerboseFields(functions.meta)
     if (config.addonName) {
       minimalMeta = reattachFunctionServices(minimalMeta, functions.meta)

@@ -12,10 +12,6 @@ export interface UserSession extends CoreUserSession {}
 
 export interface SingletonServices extends CoreSingletonServices<Config> {
   noop: NoopService
-  // Parent-provided services (declared via the pikkuAddonServices factory's
-  // second parameter) — used by the treeshaking verifier to assert that a
-  // consumer unit only carries the parent services its used addon functions
-  // actually need.
   greetingStore: { greet(name: string): string }
   auditSink: { record(event: string): void }
 }

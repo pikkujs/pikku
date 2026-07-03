@@ -30,9 +30,6 @@ wireHTTP({
   tags: ['treeshake'],
 })
 
-// ref()-wired addon function using exactly one parent service — the unit
-// keeping this route must import the addon and require greetingStore but
-// NOT auditSink.
 wireHTTP({
   auth: false,
   method: 'post',

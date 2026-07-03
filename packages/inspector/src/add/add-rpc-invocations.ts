@@ -115,12 +115,6 @@ export function addRPCInvocations(
           logger.debug(`• Found RPC invocation: ${functionRef}`)
           state.rpc.invokedFunctions.add(functionRef)
 
-          // Body-level invocations, attributed to their source file. Unlike
-          // wiring-level ref() (whose target is carried by the wiring meta),
-          // this is the only record that a function BODY reaches another
-          // function — per-unit filtering uses it to keep addon
-          // registrations only in units whose kept code actually invokes
-          // the addon.
           let byFile = state.rpc.invokedFunctionsByFile.get(sourceFileName)
           if (!byFile) {
             byFile = new Set()
@@ -132,10 +126,6 @@ export function addRPCInvocations(
           if (namespace) {
             logger.debug(`  → Addon detected: ${namespace}`)
             state.rpc.usedAddons.add(namespace)
-            // A body-level invoke is the only reference to an addon function
-            // that no wiring meta carries — count it as used so its services
-            // aggregate (full builds; filtered states recompute from
-            // invokedFunctionsByFile).
             state.serviceAggregation.usedFunctions.add(functionRef)
           }
         }

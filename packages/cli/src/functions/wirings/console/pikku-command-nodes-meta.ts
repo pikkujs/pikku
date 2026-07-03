@@ -101,9 +101,6 @@ export const pikkuNodesMeta = pikkuSessionlessFunc<void, boolean | undefined>({
       metaData.serverlessIncompatible = serverlessIncompatible
     }
 
-    // Consumers need the addon's parent-service declarations as data — the
-    // pikku-services.gen.js module import only works for compiled (dist)
-    // addons, not source-form workspace addons.
     if (hasParentServices) {
       metaData.requiredParentServices = state.addonRequiredParentServices
     }

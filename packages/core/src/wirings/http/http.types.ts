@@ -226,9 +226,6 @@ export type HTTPFunctionMetaInputTypes = {
 export type HTTPWiringMeta = CommonWireMeta & {
   route: string
   method: HTTPMethod
-  // Namespaced addon function this route dispatches to via ref('ns:fn').
-  // pikkuFuncId stays the inline context id; filtering/aggregation use this
-  // to keep the addon registration and its per-function services.
   refTarget?: string
   params?: string[]
   query?: string[]

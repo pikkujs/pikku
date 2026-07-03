@@ -3,11 +3,6 @@ import { describe, test } from 'node:test'
 import { aggregateRequiredServices } from './post-process.js'
 import type { InspectorState } from '../types.js'
 
-/**
- * Minimal state for exercising aggregateRequiredServices. No typesLookup —
- * mirrors the deserialized per-unit deploy codegen path, where service
- * extraction is skipped and only aggregation runs.
- */
 function makeState(
   overrides: {
     usedFunctions?: string[]
@@ -94,8 +89,6 @@ describe('aggregateRequiredServices — per-function addon services', () => {
       addonFunctions: {
         console: {
           editCode: {
-            // codeEditService is created by the addon services factory —
-            // constructing it needs the addon's full declared parent set
             services: {
               optimized: true,
               services: ['codeEditService', 'metaService'],
@@ -126,12 +119,12 @@ describe('aggregateRequiredServices — per-function addon services', () => {
   })
 
   test('a bare project function colliding with an addon function name adds nothing', () => {
-    // perauset regression: project fn `getAgentThreads` shares its bare name
-    // with console:getAgentThreads — the blanket must not fire
     const state = makeState({
       usedFunctions: ['getAgentThreads'],
       functionsMeta: {
-        getAgentThreads: { services: { optimized: true, services: ['kysely'] } },
+        getAgentThreads: {
+          services: { optimized: true, services: ['kysely'] },
+        },
       },
       addonFunctions: {
         console: {
@@ -211,8 +204,6 @@ describe('aggregateRequiredServices — per-function addon services', () => {
   })
 
   test('a ref()-wired route (inline id + namespaced target) aggregates the target services', () => {
-    // Shape produced by add-http-route for func: ref('console:streamFunctionTests'):
-    // usedFunctions carries both the minted inline id and the addon target.
     const state = makeState({
       usedFunctions: [
         'http:get:/function-tests/stream',

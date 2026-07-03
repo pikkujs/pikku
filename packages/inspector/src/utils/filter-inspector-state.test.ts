@@ -1668,8 +1668,6 @@ describe('addon bootstrap tree-shake', () => {
       ['console', { package: '@pikku/addon-console' }],
     ])
     state.rpc.usedAddons = new Set(['console'])
-    // Wiring-level ref() targets land in invokedFunctions but carry no
-    // caller file — they must NOT keep the addon on their own.
     state.rpc.invokedFunctions = new Set(['console:streamFunctionTests'])
     mutate?.(state)
     return state
@@ -1707,10 +1705,6 @@ describe('addon bootstrap tree-shake', () => {
   })
 
   test('keeps an addon when a kept route ref()-targets one of its functions', () => {
-    // Real inspector shape for `func: ref('console:streamFunctionTests')`:
-    // pikkuFuncId is a minted inline context id; the addon target lives in
-    // refTarget. The inline function meta has no services and no namespace —
-    // only refTarget links the route to the addon.
     const state = withAddon((s) => {
       s.http.meta.get['/function-tests/stream'] = {
         pikkuFuncId: 'http:get:/function-tests/stream',
@@ -1727,7 +1721,6 @@ describe('addon bootstrap tree-shake', () => {
     })
     const filtered = filterInspectorState(
       state,
-      // per-unit deploy codegen passes the minted inline id as the name
       { names: ['http:get:/function-tests/stream'] },
       mockLogger
     )
@@ -1838,10 +1831,7 @@ describe('addon bootstrap tree-shake', () => {
   test('drops an addon body-invoked only from filtered-out files', () => {
     const state = withAddon((s) => {
       s.rpc.invokedFunctionsByFile = new Map([
-        [
-          '/test/project/src/admin/settings.ts',
-          new Set(['console:getSchema']),
-        ],
+        ['/test/project/src/admin/settings.ts', new Set(['console:getSchema'])],
       ])
     })
     const filtered = filterInspectorState(
@@ -1887,7 +1877,9 @@ describe('invokedFunctionsByFile serialization', () => {
   test('deserializing legacy state without the field yields an empty Map', () => {
     const serialized = JSON.parse(
       JSON.stringify(
-        serializeInspectorState(getInitialInspectorState('/test/project') as any)
+        serializeInspectorState(
+          getInitialInspectorState('/test/project') as any
+        )
       )
     )
     delete serialized.rpc.invokedFunctionsByFile

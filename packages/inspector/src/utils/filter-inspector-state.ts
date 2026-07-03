@@ -468,8 +468,6 @@ export function filterInspectorState(
           filteredState.serviceAggregation.usedFunctions.add(
             routeMeta.pikkuFuncId
           )
-          // ref()-wired routes dispatch to an addon function at runtime —
-          // keep the target so the addon registration survives pruning
           if (routeMeta.refTarget) {
             filteredState.serviceAggregation.usedFunctions.add(
               routeMeta.refTarget
@@ -1112,18 +1110,6 @@ export function filterInspectorState(
     filteredState.serviceAggregation.requiredServices.add('queueService')
   }
 
-  // Addon bootstrap tree-shake: a filtered state (e.g. per-unit deploy
-  // codegen) only needs an addon when something kept reaches into it — a
-  // kept wiring whose function id is `namespace:*`, a kept agent listing an
-  // addon tool, a kept MCP tool targeting it, or a body-level
-  // `rpc.invoke('namespace:*')` in a file that still contains a kept
-  // function. Unreferenced addons are dropped so the generated bootstrap
-  // never imports their package bootstrap — which would otherwise register
-  // the addon's ENTIRE function surface into every deploy unit (e.g.
-  // @pikku/addon-console statically imports node:fs, which Cloudflare
-  // rejects at upload). Wiring-level ref() targets are deliberately NOT
-  // consulted globally: a ref belongs to its wiring, and if the wiring was
-  // filtered out the reference goes with it.
   if ((filteredState.rpc.wireAddonDeclarations?.size ?? 0) > 0) {
     const referencedIds = new Set<string>(
       filteredState.serviceAggregation.usedFunctions
@@ -1138,8 +1124,6 @@ export function filterInspectorState(
       if (!keptFiles.has(file)) continue
       for (const id of invoked) {
         referencedIds.add(id)
-        // Namespaced body invokes have no wiring meta — feed them into
-        // usedFunctions so the target's services aggregate for this unit
         if (id.includes(':')) {
           filteredState.serviceAggregation.usedFunctions.add(id)
         }
@@ -1165,8 +1149,6 @@ export function filterInspectorState(
         }
       }
     }
-    // Assign fresh collections — the shallow rpc copy shares these Maps/Sets
-    // with the unfiltered (cached) state, so never mutate them in place.
     filteredState.rpc.wireAddonDeclarations = new Map(
       [...filteredState.rpc.wireAddonDeclarations].filter(([namespace]) =>
         keptNamespaces.has(namespace)

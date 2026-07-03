@@ -231,13 +231,8 @@ export async function loadAddonFunctionsMeta(
             `Loaded ${addonMeta.requiredParentServices.length} required parent services for '${namespace}' from addon meta`
           )
         }
-      } catch {
-        // No addon meta or no serverlessIncompatible declared — that's fine
-      }
+      } catch {}
 
-      // Fallback for addons built before requiredParentServices shipped in
-      // the addon meta json — needs the compiled pikku-services.gen.js,
-      // which only exists for dist-form addons.
       if (!loadedParentServices) {
         try {
           const servicesGenPath = require.resolve(
@@ -255,9 +250,7 @@ export async function loadAddonFunctionsMeta(
               `Loaded ${servicesModule.requiredParentServices.length} required parent services for '${namespace}' from ${decl.package}`
             )
           }
-        } catch {
-          // No services gen — addon may not have requiredParentServices
-        }
+        } catch {}
       }
 
       try {
