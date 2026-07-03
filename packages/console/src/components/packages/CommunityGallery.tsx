@@ -106,7 +106,7 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
       : asI18n(categories.find((c) => c.id === category)?.label ?? category)
 
   return (
-    <Stack gap="xl">
+    <Stack gap="lg" style={{ minHeight: '100%' }}>
       <CommunityHero
         addonCount={addons.length}
         publisherCount={publisherCount}
@@ -118,7 +118,9 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
           display: 'grid',
           gridTemplateColumns: 'minmax(0, 210px) minmax(0, 1fr)',
           gap: 'var(--mantine-spacing-xl)',
-          alignItems: 'start',
+          alignItems: 'stretch',
+          flex: 1,
+          minHeight: 0,
         }}
       >
         <CategoryRail
@@ -128,7 +130,7 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
           onPick={setCategory}
         />
 
-        <Stack gap="md" style={{ minWidth: 0 }}>
+        <Stack gap="md" style={{ minWidth: 0, minHeight: '100%' }}>
           <Group justify="space-between" wrap="nowrap">
             <Group gap="sm" wrap="nowrap">
               <Text fw={700} size="sm">
@@ -151,33 +153,37 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
             </Group>
           </Group>
 
-          {filtered.length === 0 ? (
-            <Stack align="center" gap={6} py={64}>
-              <ThemeIcon size={48} radius="md" variant="light" color="gray">
-                <Search size={22} />
-              </ThemeIcon>
-              <Text fw={600} size="sm">
-                {m.packages_no_matches()}
-              </Text>
-              <Text size="sm" c="dimmed">
-                {m.packages_no_matches_hint()}
-              </Text>
-            </Stack>
-          ) : (
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
-              {filtered.map((addon) => (
-                <AddonCard
-                  key={addon.id}
-                  addon={addon}
-                  installed={installedNames.has(addon.name)}
-                  installing={installingName === addon.name}
-                  editable={editable}
-                  onOpen={setSelected}
-                  onInstall={onInstall}
-                />
-              ))}
-            </SimpleGrid>
-          )}
+          {/* Content region grows to fill, keeping the publish CTA pinned to
+              the bottom whether the grid is short or the list is empty. */}
+          <Box style={{ flex: 1, minHeight: 0 }}>
+            {filtered.length === 0 ? (
+              <Stack align="center" justify="center" gap={6} h="100%">
+                <ThemeIcon size={48} radius="md" variant="light" color="gray">
+                  <Search size={22} />
+                </ThemeIcon>
+                <Text fw={600} size="sm">
+                  {m.packages_no_matches()}
+                </Text>
+                <Text size="sm" c="dimmed">
+                  {m.packages_no_matches_hint()}
+                </Text>
+              </Stack>
+            ) : (
+              <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
+                {filtered.map((addon) => (
+                  <AddonCard
+                    key={addon.id}
+                    addon={addon}
+                    installed={installedNames.has(addon.name)}
+                    installing={installingName === addon.name}
+                    editable={editable}
+                    onOpen={setSelected}
+                    onInstall={onInstall}
+                  />
+                ))}
+              </SimpleGrid>
+            )}
+          </Box>
 
           <PublishCta />
         </Stack>

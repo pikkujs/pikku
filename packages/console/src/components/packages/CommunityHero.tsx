@@ -1,12 +1,5 @@
 import React from 'react'
-import {
-  Paper,
-  Stack,
-  Group,
-  Text,
-  Title,
-  ThemeIcon,
-} from '@pikku/mantine/core'
+import { Paper, Group, Text, Title, ThemeIcon } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import type { I18nNode } from '@pikku/react'
 import { m } from '@/i18n/messages'
@@ -44,38 +37,30 @@ export const CommunityHero: React.FC<CommunityHeroProps> = ({
   return (
     <Paper
       withBorder
-      radius="lg"
-      p="xl"
+      radius="md"
+      px="lg"
+      py="md"
       style={{
         background:
           'linear-gradient(135deg, var(--mantine-color-default) 0%, var(--mantine-color-default-hover) 100%)',
       }}
     >
-      <Stack gap="sm" style={{ maxWidth: 680 }}>
-        <Group gap={6} wrap="nowrap">
-          <ThemeIcon size="sm" radius="sm" variant="transparent" color="blue">
-            <Sparkles size={15} />
+      <Group justify="space-between" align="center" wrap="wrap" gap="md">
+        <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
+          <ThemeIcon size="lg" radius="md" variant="light" color="blue">
+            <Sparkles size={18} />
           </ThemeIcon>
-          <Text
-            size="xs"
-            fw={700}
-            tt="uppercase"
-            c="blue"
-            style={{ letterSpacing: '0.06em' }}
-          >
-            {m.packages_community_eyebrow()}
-          </Text>
+          <div style={{ minWidth: 0 }}>
+            <Title order={4} fw={700} lh={1.2}>
+              {m.packages_community_headline()}
+            </Title>
+            <Text size="sm" c="dimmed" lineClamp={1}>
+              {m.packages_community_subtext()}
+            </Text>
+          </div>
         </Group>
 
-        <Title order={2} fw={700} lh={1.15}>
-          {m.packages_community_headline()}
-        </Title>
-
-        <Text size="sm" c="dimmed">
-          {m.packages_community_subtext()}
-        </Text>
-
-        <Group gap="xl" mt={4}>
+        <Group gap="lg" wrap="nowrap">
           <HeroStat
             icon={Package}
             value={addonCount}
@@ -92,7 +77,7 @@ export const CommunityHero: React.FC<CommunityHeroProps> = ({
             label={m.packages_stat_official()}
           />
         </Group>
-      </Stack>
+      </Group>
     </Paper>
   )
 }

@@ -24,9 +24,10 @@ import { ListPageHeader } from '../components/layout/PageLayout'
 import { TableListPage } from '../components/layout/TableListPage'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { CommunityGallery } from '../components/packages/CommunityGallery'
+import { isOfficialAddon } from '../components/packages/addonCategoryMeta'
 import { PanelProvider } from '../context/PanelContext'
 
-type AddonFilter = 'installed' | 'all'
+type AddonFilter = 'all' | 'official' | 'installed'
 
 export interface PackageMeta {
   id: string
@@ -102,15 +103,16 @@ const AddonsList: React.FC<{
     [installedAddons]
   )
 
-  // The Installed | All filter narrows the same catalogue to what the project
-  // already has wired; 'all' shows the full community gallery.
-  const visible = useMemo(
-    () =>
-      filter === 'installed'
-        ? (data ?? []).filter((a) => installedNames.has(a.name))
-        : (data ?? []),
-    [data, filter, installedNames]
-  )
+  // All | Official | Installed narrows the same catalogue in place: 'installed'
+  // = what the project has wired, 'official' = first-party Pikku packages,
+  // 'all' = the full gallery.
+  const visible = useMemo(() => {
+    const list = data ?? []
+    if (filter === 'installed')
+      return list.filter((a) => installedNames.has(a.name))
+    if (filter === 'official') return list.filter((a) => isOfficialAddon(a.name))
+    return list
+  }, [data, filter, installedNames])
 
   if (isLoading) {
     return (
@@ -283,6 +285,7 @@ const PackagesList: React.FC<{
   ]
   const addonFilters = [
     { value: 'all', label: m.packages_filter_all() },
+    { value: 'official', label: m.packages_filter_official() },
     { value: 'installed', label: m.packages_filter_installed() },
   ]
 
