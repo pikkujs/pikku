@@ -1,3 +1,60 @@
+## 0.12.67
+
+### Patch Changes
+
+- 7ebea62: Tree-shake addon registrations in filtered inspector states (per-unit deploy codegen).
+  - `filterInspectorState` drops an addon's `wireAddonDeclarations`/`usedAddons` unless something kept actually references it (kept wiring targeting `namespace:*`, kept agent/MCP tool, or a body-level `rpc.invoke('namespace:*')` from a file that still contains a kept function). The generated per-unit bootstrap no longer imports unused addon package bootstraps — previously every deploy unit registered every addon's entire function surface, which pulled dev-only code (e.g. `@pikku/addon-console`'s static `node:fs` imports) into Cloudflare Worker bundles and failed upload with `No such module "node:fs"`.
+  - Body-level `rpc.invoke()` targets are now tracked per source file (`rpc.invokedFunctionsByFile`) so wiring-level `ref()` targets no longer pin an addon into every unit.
+  - `aggregateRequiredServices` computes addon parent services per used addon function (from the addon's shipped per-function `services` meta) instead of blanket-adding `addonRequiredParentServices` — and matches namespaced ids only, so bare project function names colliding with addon function names no longer force the blanket.
+  - Addon builds keep per-function `services` in the shipped `pikku-functions-meta.gen.json` so parent projects can do the above; addons built before this fall back to the blanket.
+  - HTTP route meta records `refTarget` for `ref('namespace:fn')`-wired routes, so per-unit filtering keeps the addon registration (and only that function's services) when the route deploys.
+
+- e57dd65: feat(cli): add `pikku audit` — dependency security audit written to `.pikku/audit.json`
+
+  `pikku audit` reports dependency **security advisories** (always) and, with
+  `--outdated`, **available dependency updates**. The normalised result is written
+  to `.pikku/audit.json` (the config `outDir`) so it rides the same meta pipeline
+  as every other generated artifact — uploaded on deploy, readable by tooling.
+
+  Bun is fully supported (`bun audit --json` + `bun outdated`, normalised into a
+  single `SecurityAuditReport` with per-severity/per-update-level counts). Other
+  package managers are detected but currently stubbed with a `note` field until
+  their audit/outdated shapes are normalised. The command never fails a build:
+  advisories are informational and a missing/failed audit yields an empty-but-valid
+  report.
+
+- e57dd65: console addon: require an authenticated session by default
+
+  All exposed console RPCs are now `pikkuFunc` (require a session) instead of
+  `pikkuSessionlessFunc` + `auth: false` — the console is an admin surface, so it
+  should never be reachable anonymously. The two SSE streaming routes
+  (`/workflow-run/:runId/stream`, `/function-tests/stream`) stay sessionless, since
+  their HTTP wiring is intentionally `auth: false`.
+
+  Behaviour change for consumers: a host that mounts `@pikku/addon-console` must
+  provide an authenticated session (e.g. via better-auth) to reach console RPCs —
+  unauthenticated calls now return `403`. Permission policy on top of "must be
+  logged in" (admin-only, org scoping, …) remains host-owned via tag/HTTP
+  middleware; the addon only enforces the baseline.
+
+  `@pikku/cli`:
+  - `pikku all` now **throws** when `scaffold.console` is enabled but no
+    `pikkuBetterAuth(...)` is found in the project — scaffolding the console
+    without an auth strategy would produce a console that 403s on every call, so
+    `scaffold.console` alone is no longer the minimum.
+  - The scaffolded `console.gen.ts` secret/variable RPCs (`setSecret`, `getSecret`,
+    `hasSecret`, `getVariable`, `setVariable`) are now generated as `pikkuFunc`
+    (require a session) instead of `pikkuSessionlessFunc` + `auth: false` — these
+    read/write secrets and must never be anonymous. The two SSE routes stay
+    `auth: false`.
+  - `scaffold.console` is now always `"auth"` (the `"no-auth"` mode is gone for the
+    console): `pikku enable console` writes `"auth"` and ignores `--no-auth`.
+
+- Updated dependencies [7ebea62]
+- Updated dependencies [e57dd65]
+  - @pikku/inspector@0.12.35
+  - @pikku/core@0.12.51
+
 ## 0.12.66
 
 ### Patch Changes

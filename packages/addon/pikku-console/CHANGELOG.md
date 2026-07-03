@@ -1,3 +1,62 @@
+## 0.12.23
+
+### Patch Changes
+
+- b919815: Fix "pikku.config.json not found" on installAddon/installOpenapiAddon (and a matching bug in createSingletonServices' projectRoot for StateDiffService/CodeEditService) in monorepo layouts. These derived the project root as `dirname(metaService.basePath)`, which is only correct when `.pikku` sits directly next to pikku.config.json. In Fabric sandboxes (basePath is `packages/functions/.pikku`), that resolved to `packages/functions` instead of the real root, so pikku.config.json was never found. A new findProjectRoot() walks up from basePath looking for pikku.config.json, matching the CLI's own findConfigFile() behavior.
+- e57dd65: console addon: require an authenticated session by default
+
+  All exposed console RPCs are now `pikkuFunc` (require a session) instead of
+  `pikkuSessionlessFunc` + `auth: false` — the console is an admin surface, so it
+  should never be reachable anonymously. The two SSE streaming routes
+  (`/workflow-run/:runId/stream`, `/function-tests/stream`) stay sessionless, since
+  their HTTP wiring is intentionally `auth: false`.
+
+  Behaviour change for consumers: a host that mounts `@pikku/addon-console` must
+  provide an authenticated session (e.g. via better-auth) to reach console RPCs —
+  unauthenticated calls now return `403`. Permission policy on top of "must be
+  logged in" (admin-only, org scoping, …) remains host-owned via tag/HTTP
+  middleware; the addon only enforces the baseline.
+
+  `@pikku/cli`:
+  - `pikku all` now **throws** when `scaffold.console` is enabled but no
+    `pikkuBetterAuth(...)` is found in the project — scaffolding the console
+    without an auth strategy would produce a console that 403s on every call, so
+    `scaffold.console` alone is no longer the minimum.
+  - The scaffolded `console.gen.ts` secret/variable RPCs (`setSecret`, `getSecret`,
+    `hasSecret`, `getVariable`, `setVariable`) are now generated as `pikkuFunc`
+    (require a session) instead of `pikkuSessionlessFunc` + `auth: false` — these
+    read/write secrets and must never be anonymous. The two SSE routes stay
+    `auth: false`.
+  - `scaffold.console` is now always `"auth"` (the `"no-auth"` mode is gone for the
+    console): `pikku enable console` writes `"auth"` and ignores `--no-auth`.
+
+- e57dd65: feat(console): surface the `pikku audit` report in the dev console
+
+  Adds a view-only **Security** screen to the pikku dev console that renders the
+  dependency audit produced by `pikku audit` (`.pikku/audit.json`): known
+  vulnerabilities (severity, advisory, recommended version) and available
+  dependency updates.
+  - `@pikku/core`: exports the canonical `SecurityAuditReport` artifact type (plus
+    `SecurityAuditIssue`/`SecurityAuditUpdate`/`SecurityAuditSummary` and the
+    `SecuritySeverity`/`SecurityUpdateLevel` unions) — a single source of truth
+    shared by the CLI (writer), the console addon (reader) and the console UI.
+  - `@pikku/addon-console`: `getSecurityAudit` reads the audit artifact via the
+    meta service; `runSecurityAudit` triggers `pikku audit --outdated` server-side
+    (regenerating the artifact) — same shape as the Run Tests action;
+    `updateDependency` bumps a package in `package.json` (preserving the `^`/`~`
+    range), runs `bun install`, re-audits, and returns the fresh report.
+  - `@pikku/console`: new `SecurityPage` with a **Run audit** button + reusable
+    presentational `SecurityAuditView` (exported, so downstream consoles can wrap
+    it with their own actions) + `useSecurityAudit`/`useRunSecurityAudit`/
+    `useUpdateDependency` hooks. Issues/Dependencies lenses; per-finding
+    remediation slot right-aligned in the row header (`renderRemediation`,
+    defaulting to the OSS `UpdateDependencyButton`; Fabric swaps in its own
+    sandbox-verified action). Empty state until an audit has been run.
+
+- Updated dependencies [7ebea62]
+- Updated dependencies [e57dd65]
+  - @pikku/core@0.12.51
+
 ## 0.12.22
 
 ### Patch Changes
