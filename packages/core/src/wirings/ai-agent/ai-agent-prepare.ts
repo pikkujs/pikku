@@ -38,6 +38,11 @@ export type RunAIAgentParams = {
 
 export type StreamAIAgentOptions = {
   requiresToolApproval?: 'all' | 'explicit' | false
+  /**
+   * Invoked as soon as the run's AIRunStateService id exists, so transport
+   * wrappers (e.g. the AG-UI bridge) can stamp the real runId on RUN_STARTED.
+   */
+  onRunCreated?: (runId: string) => void
 }
 
 export class ToolApprovalRequired extends PikkuError {

@@ -878,8 +878,23 @@ describe('streamAIAgent', () => {
         debug: () => {},
       },
       aiAgentRunner: {
-        stream: async (): Promise<AIAgentStepResult> =>
-          makeStepResult({
+        stream: async (
+          _params: unknown,
+          streamChannel: AIStreamChannel | null
+        ): Promise<AIAgentStepResult> => {
+          const credentialResult = {
+            __credentialRequired: true,
+            credentialName: 'github',
+            credentialType: 'oauth2',
+            connectUrl: '/connect',
+          }
+          streamChannel?.send({
+            type: 'tool-result',
+            toolCallId: 'cred-1',
+            toolName: 'secretTool',
+            result: credentialResult,
+          })
+          return makeStepResult({
             toolCalls: [
               { toolCallId: 'cred-1', toolName: 'secretTool', args: { id: 1 } },
             ],
@@ -887,15 +902,11 @@ describe('streamAIAgent', () => {
               {
                 toolCallId: 'cred-1',
                 toolName: 'secretTool',
-                result: {
-                  __credentialRequired: true,
-                  credentialName: 'github',
-                  credentialType: 'oauth2',
-                  connectUrl: '/connect',
-                },
+                result: credentialResult,
               },
             ],
-          }),
+          })
+        },
       },
       aiRunState: {
         createRun: async () => 'run-cred',
@@ -945,6 +956,24 @@ describe('streamAIAgent', () => {
       },
     ])
     assert.ok(events.every((event) => event.type !== 'approval-request'))
+    assert.ok(
+      events.every((event) => event.type !== 'tool-result'),
+      '__credentialRequired tool result must not reach the client'
+    )
+    const credentialEvent = events.find(
+      (event) => event.type === 'credential-request'
+    )
+    assert.ok(credentialEvent, 'credential-request event must be emitted')
+    assert.deepEqual(credentialEvent, {
+      type: 'credential-request',
+      toolCallId: 'cred-1',
+      toolName: 'secretTool',
+      args: { id: 1 },
+      credentialName: 'github',
+      credentialType: 'oauth2',
+      connectUrl: '/connect',
+      runId: 'run-cred',
+    })
     assert.equal(events.at(-1)?.type, 'done')
   })
 
