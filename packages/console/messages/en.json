@@ -174,8 +174,6 @@
   "packages_filter_installed": "Installed",
   "packages_filter_all": "All",
   "packages_search_addons_placeholder": "Search addons...",
-  "packages_no_installed_title": "No addons installed",
-  "packages_no_installed_description": "Install an addon from the catalogue to see it here.",
   "packages_search_installed_placeholder": "Search installed addons...",
   "packages_search_community_placeholder": "Search community addons...",
   "packages_search_apis_placeholder": "Search APIs...",

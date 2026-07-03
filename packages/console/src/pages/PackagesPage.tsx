@@ -133,17 +133,6 @@ const AddonsList: React.FC<{
     )
   }
 
-  if (filter === 'installed' && visible.length === 0) {
-    return (
-      <EmptyStatePlaceholder
-        icon={Package}
-        title={m.packages_no_installed_title()}
-        description={m.packages_no_installed_description()}
-        docsHref="https://pikku.dev/docs/external-packages"
-      />
-    )
-  }
-
   return (
     <CommunityGallery
       addons={visible}
