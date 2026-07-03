@@ -1,5 +1,6 @@
 import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
+import { findProjectRoot } from '../lib/find-project-root.js'
 
 export const installAddon = pikkuSessionlessFunc<
   {
@@ -35,7 +36,7 @@ export const installAddon = pikkuSessionlessFunc<
         'Only available in local development mode'
       )
     }
-    const rootDir = dirname(metaBasePath)
+    const rootDir = findProjectRoot(metaBasePath)
 
     const configPath = join(rootDir, 'pikku.config.json')
     if (!existsSync(configPath)) {

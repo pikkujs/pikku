@@ -5,6 +5,7 @@ import { OAuthService } from './services/oauth.service.js'
 import type { CodeEditService } from './services/code-edit.service.js'
 import { StateDiffService } from './services/state-diff.service.js'
 import { DbSchemaService } from './services/db-schema.service.js'
+import { findProjectRoot } from './lib/find-project-root.js'
 
 export const createSingletonServices = pikkuAddonServices(
   async (
@@ -42,8 +43,7 @@ export const createSingletonServices = pikkuAddonServices(
     let stateDiffService: StateDiffService | null = null
     let dbSchemaService: DbSchemaService | null = null
     if (metaBasePath) {
-      const { dirname } = await import('node:path')
-      const projectRoot = dirname(metaBasePath)
+      const projectRoot = findProjectRoot(metaBasePath)
       stateDiffService = new StateDiffService(projectRoot)
       dbSchemaService = new DbSchemaService(metaService)
       // code-edit.service pulls in the TypeScript compiler and is deliberately a

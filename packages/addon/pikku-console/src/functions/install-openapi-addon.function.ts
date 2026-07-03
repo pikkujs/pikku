@@ -1,5 +1,6 @@
 import { LocalEnvironmentOnlyError } from '@pikku/core/errors'
 import { pikkuSessionlessFunc } from '#pikku'
+import { findProjectRoot } from '../lib/find-project-root.js'
 
 export const installOpenapiAddon = pikkuSessionlessFunc<
   {
@@ -35,7 +36,7 @@ export const installOpenapiAddon = pikkuSessionlessFunc<
     }
     const cp = 'node:child_process'
     const { execFileSync } = await import(cp)
-    const rootDir = dirname(metaBasePath)
+    const rootDir = findProjectRoot(metaBasePath)
 
     const configPath = join(rootDir, 'pikku.config.json')
     if (!existsSync(configPath)) {
