@@ -389,8 +389,13 @@ export function registerHTTPRoute({
     checker
   )
 
-  // Track used functions/middleware/permissions for service aggregation
+  // Track used functions/middleware/permissions for service aggregation.
+  // ref()-wired routes dispatch to the addon function at runtime — count the
+  // target as used so its addon registration and services aggregate too.
   state.serviceAggregation.usedFunctions.add(funcName)
+  if (refAddonTarget) {
+    state.serviceAggregation.usedFunctions.add(refAddonTarget)
+  }
   extractWireNames(middleware).forEach((name) =>
     state.serviceAggregation.usedMiddleware.add(name)
   )
@@ -415,6 +420,7 @@ export function registerHTTPRoute({
   state.http.files.add(sourceFile.fileName)
   state.http.meta[method][fullRoute] = {
     pikkuFuncId: funcName,
+    ...(refAddonTarget && { refTarget: refAddonTarget }),
     ...(packageName && { packageName }),
     route: fullRoute,
     sourceFile: sourceFile.fileName,

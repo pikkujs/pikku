@@ -192,6 +192,34 @@ describe('aggregateRequiredServices — per-function addon services', () => {
     assert.ok(!required.has('rpc'))
   })
 
+  test('a ref()-wired route (inline id + namespaced target) aggregates the target services', () => {
+    // Shape produced by add-http-route for func: ref('console:streamFunctionTests'):
+    // usedFunctions carries both the minted inline id and the addon target.
+    const state = makeState({
+      usedFunctions: [
+        'http:get:/function-tests/stream',
+        'console:streamFunctionTests',
+      ],
+      functionsMeta: {
+        'http:get:/function-tests/stream': {
+          services: { optimized: false, services: [] },
+        },
+      },
+      addonFunctions: {
+        console: {
+          streamFunctionTests: {
+            services: { optimized: true, services: ['metaService'] },
+          },
+        },
+      },
+      addonRequiredParentServices: CONSOLE_PARENT_SERVICES,
+    })
+    aggregateRequiredServices(state)
+    const required = state.serviceAggregation.requiredServices
+    assert.ok(required.has('metaService'))
+    assert.ok(!required.has('aiAgentRunner'))
+  })
+
   test('multiple used addon functions union their parent services', () => {
     const state = makeState({
       usedFunctions: ['console:getSchema', 'console:runAgent'],

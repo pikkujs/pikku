@@ -468,6 +468,13 @@ export function filterInspectorState(
           filteredState.serviceAggregation.usedFunctions.add(
             routeMeta.pikkuFuncId
           )
+          // ref()-wired routes dispatch to an addon function at runtime —
+          // keep the target so the addon registration survives pruning
+          if (routeMeta.refTarget) {
+            filteredState.serviceAggregation.usedFunctions.add(
+              routeMeta.refTarget
+            )
+          }
           // For workflow/agent routes, also add the base name
           // so the workflow/agent definition survives pruning
           const colonIdx = routeMeta.pikkuFuncId.indexOf(':')
