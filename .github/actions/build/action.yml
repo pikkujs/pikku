@@ -67,6 +67,7 @@ runs:
         path: |
           packages/**/dist/**
           packages/**/bin/**
+          packages/**/.pikku/**
           templates/**/.pikku/**
           templates/**/dist/**
         include-hidden-files: true

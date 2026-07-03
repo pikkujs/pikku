@@ -44,16 +44,16 @@ if [ ${#files[@]} -eq 0 ]; then
 fi
 
 # Construct the node command
-node_cmd="node --import tsx --test"
+node_cmd=(node --import tsx --test)
 
 # Append options based on flags
 if [ "$watch_mode" = true ]; then
-  node_cmd="$node_cmd --watch"
+  node_cmd+=(--watch)
 fi
 
 if [ "$coverage_mode" = true ]; then
-  node_cmd="$node_cmd --test-coverage-include=\"src/**/*.{ts,js}\" --test-coverage-exclude=\"**/dist/**\" --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info"
+  node_cmd+=(--test-coverage-include="src/**/*.{ts,js}" --test-coverage-exclude="**/dist/**" --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=lcov.info)
 fi
 
 # Execute the node command with the expanded list of files
-$node_cmd "${files[@]}"
+"${node_cmd[@]}" "${files[@]}"
