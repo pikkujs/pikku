@@ -1,0 +1,24 @@
+{
+  "name": "@pikku/verifiers-addon-treeshake",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "imports": {
+    "#pikku": "./.pikku/pikku-types.gen.ts"
+  },
+  "scripts": {
+    "tsc": "tsc --noEmit",
+    "test": "pikku && tsc --noEmit && npx tsx src/treeshake-services.assert.ts"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*",
+    "@pikku/templates-function-addon": "workspace:*"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@types/node": "^24",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "zod": "^4"
+  }
+}

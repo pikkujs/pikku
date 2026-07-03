@@ -234,6 +234,7 @@ function createMockInspectorState(): Omit<InspectorState, 'typesLookup'> {
       exposedMeta: {},
       exposedFiles: new Map(),
       invokedFunctions: new Set(),
+      invokedFunctionsByFile: new Map(),
     },
     mcpEndpoints: {
       toolsMeta: {
@@ -1655,5 +1656,235 @@ describe('addonServerlessIncompatible serialization roundtrip', () => {
     const restored = deserializeInspectorState(serialized)
     assert.ok(restored.addonServerlessIncompatible instanceof Map)
     assert.strictEqual(restored.addonServerlessIncompatible.size, 0)
+  })
+})
+
+describe('addon bootstrap tree-shake', () => {
+  const withAddon = (
+    mutate?: (state: Omit<InspectorState, 'typesLookup'>) => void
+  ) => {
+    const state = createMockInspectorState()
+    state.rpc.wireAddonDeclarations = new Map([
+      ['console', { package: '@pikku/addon-console' }],
+    ])
+    state.rpc.usedAddons = new Set(['console'])
+    state.rpc.invokedFunctions = new Set(['console:streamFunctionTests'])
+    mutate?.(state)
+    return state
+  }
+
+  test('drops an addon nothing kept references', () => {
+    const state = withAddon()
+    const filtered = filterInspectorState(
+      state,
+      { names: ['getUsers'] },
+      mockLogger
+    )
+    assert.strictEqual(filtered.rpc.wireAddonDeclarations.size, 0)
+    assert.strictEqual(filtered.rpc.usedAddons.size, 0)
+  })
+
+  test('keeps an addon when a kept wiring targets one of its functions', () => {
+    const state = withAddon((s) => {
+      s.http.meta.get['/console/stream'] = {
+        pikkuFuncId: 'console:streamFunctionTests',
+        route: '/console/stream',
+        method: 'GET',
+        tags: [],
+        middleware: [],
+        permissions: [],
+      } as any
+    })
+    const filtered = filterInspectorState(
+      state,
+      { names: ['console:streamFunctionTests'] },
+      mockLogger
+    )
+    assert.strictEqual(filtered.rpc.wireAddonDeclarations.size, 1)
+    assert.ok(filtered.rpc.wireAddonDeclarations.has('console'))
+  })
+
+  test('keeps an addon when a kept route ref()-targets one of its functions', () => {
+    const state = withAddon((s) => {
+      s.http.meta.get['/function-tests/stream'] = {
+        pikkuFuncId: 'http:get:/function-tests/stream',
+        refTarget: 'console:streamFunctionTests',
+        route: '/function-tests/stream',
+        method: 'GET',
+        tags: [],
+        middleware: [],
+        permissions: [],
+      } as any
+      s.functions.meta['http:get:/function-tests/stream'] = {
+        services: { optimized: false, services: [] },
+      } as any
+    })
+    const filtered = filterInspectorState(
+      state,
+      { names: ['http:get:/function-tests/stream'] },
+      mockLogger
+    )
+    assert.strictEqual(filtered.rpc.wireAddonDeclarations.size, 1)
+    assert.ok(filtered.rpc.wireAddonDeclarations.has('console'))
+    assert.ok(
+      filtered.serviceAggregation.usedFunctions.has(
+        'console:streamFunctionTests'
+      )
+    )
+  })
+
+  test('drops the addon when the ref()-wired route is filtered out', () => {
+    const state = withAddon((s) => {
+      s.http.meta.get['/function-tests/stream'] = {
+        pikkuFuncId: 'http:get:/function-tests/stream',
+        refTarget: 'console:streamFunctionTests',
+        route: '/function-tests/stream',
+        method: 'GET',
+        tags: [],
+        middleware: [],
+        permissions: [],
+      } as any
+      s.functions.meta['http:get:/function-tests/stream'] = {
+        services: { optimized: false, services: [] },
+      } as any
+    })
+    const filtered = filterInspectorState(
+      state,
+      { names: ['getUsers'] },
+      mockLogger
+    )
+    assert.strictEqual(filtered.rpc.wireAddonDeclarations.size, 0)
+    assert.ok(
+      !filtered.serviceAggregation.usedFunctions.has(
+        'console:streamFunctionTests'
+      )
+    )
+  })
+
+  test('keeps an addon when a kept MCP tool targets one of its functions', () => {
+    const state = withAddon((s) => {
+      s.mcpEndpoints.toolsMeta['console:getSchema'] = {
+        name: 'console:getSchema',
+        description: 'addon tool',
+        pikkuFuncId: 'console:getSchema',
+        tags: [],
+        middleware: [],
+        permissions: [],
+      } as any
+    })
+    const filtered = filterInspectorState(
+      state,
+      { names: ['console:getSchema'] },
+      mockLogger
+    )
+    assert.strictEqual(filtered.rpc.wireAddonDeclarations.size, 1)
+  })
+
+  test('keeps an addon when a kept agent lists one of its functions as a tool', () => {
+    const state = withAddon((s) => {
+      s.agents = s.agents ?? ({ agentsMeta: {} } as any)
+      s.agents.agentsMeta['support-agent'] = {
+        name: 'support-agent',
+        pikkuFuncId: 'supportAgent',
+        tools: ['console:getSchema'],
+        tags: [],
+      } as any
+    })
+    const filtered = filterInspectorState(
+      state,
+      { names: ['support-agent'] },
+      mockLogger
+    )
+    assert.strictEqual(filtered.rpc.wireAddonDeclarations.size, 1)
+  })
+
+  test('keeps an addon when a kept function body-invokes it', () => {
+    const state = withAddon((s) => {
+      s.rpc.invokedFunctionsByFile = new Map([
+        ['/test/project/src/api/users.ts', new Set(['console:getSchema'])],
+      ])
+    })
+    const filtered = filterInspectorState(
+      state,
+      { names: ['getUsers'] },
+      mockLogger
+    )
+    assert.strictEqual(filtered.rpc.wireAddonDeclarations.size, 1)
+  })
+
+  test('a kept-file body invoke joins the filtered usedFunctions', () => {
+    const state = withAddon((s) => {
+      s.rpc.invokedFunctionsByFile = new Map([
+        ['/test/project/src/api/users.ts', new Set(['console:getSchema'])],
+      ])
+    })
+    const filtered = filterInspectorState(
+      state,
+      { names: ['getUsers'] },
+      mockLogger
+    )
+    assert.ok(
+      filtered.serviceAggregation.usedFunctions.has('console:getSchema')
+    )
+  })
+
+  test('drops an addon body-invoked only from filtered-out files', () => {
+    const state = withAddon((s) => {
+      s.rpc.invokedFunctionsByFile = new Map([
+        ['/test/project/src/admin/settings.ts', new Set(['console:getSchema'])],
+      ])
+    })
+    const filtered = filterInspectorState(
+      state,
+      { names: ['getUsers'] },
+      mockLogger
+    )
+    assert.strictEqual(filtered.rpc.wireAddonDeclarations.size, 0)
+  })
+
+  test('unfiltered state keeps all addons', () => {
+    const state = withAddon()
+    const filtered = filterInspectorState(state, {}, mockLogger)
+    assert.strictEqual(filtered.rpc.wireAddonDeclarations.size, 1)
+  })
+})
+
+describe('invokedFunctionsByFile serialization', () => {
+  test('round-trips through serialize/deserialize', () => {
+    const state = getInitialInspectorState('/test/project')
+    state.rpc.invokedFunctionsByFile = new Map([
+      ['/test/project/src/api/users.ts', new Set(['console:getSchema'])],
+      [
+        '/test/project/src/api/tasks.ts',
+        new Set(['listTasks', 'console:runAgent']),
+      ],
+    ])
+    const restored = deserializeInspectorState(
+      JSON.parse(JSON.stringify(serializeInspectorState(state as any)))
+    )
+    assert.ok(restored.rpc.invokedFunctionsByFile instanceof Map)
+    assert.strictEqual(restored.rpc.invokedFunctionsByFile.size, 2)
+    assert.deepStrictEqual(
+      [
+        ...restored.rpc.invokedFunctionsByFile.get(
+          '/test/project/src/api/tasks.ts'
+        )!,
+      ].sort(),
+      ['console:runAgent', 'listTasks']
+    )
+  })
+
+  test('deserializing legacy state without the field yields an empty Map', () => {
+    const serialized = JSON.parse(
+      JSON.stringify(
+        serializeInspectorState(
+          getInitialInspectorState('/test/project') as any
+        )
+      )
+    )
+    delete serialized.rpc.invokedFunctionsByFile
+    const restored = deserializeInspectorState(serialized)
+    assert.ok(restored.rpc.invokedFunctionsByFile instanceof Map)
+    assert.strictEqual(restored.rpc.invokedFunctionsByFile.size, 0)
   })
 })

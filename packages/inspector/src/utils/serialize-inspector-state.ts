@@ -155,6 +155,7 @@ export interface SerializableInspectorState {
     exposedMeta: InspectorState['rpc']['exposedMeta']
     exposedFiles: Array<[string, { path: string; exportedName: string }]>
     invokedFunctions: string[]
+    invokedFunctionsByFile?: Array<[string, string[]]>
     usedAddons: string[]
     wireAddonDeclarations: Array<
       [
@@ -379,6 +380,11 @@ export function serializeInspectorState(
       exposedMeta: state.rpc.exposedMeta,
       exposedFiles: Array.from(state.rpc.exposedFiles.entries()),
       invokedFunctions: Array.from(state.rpc.invokedFunctions),
+      invokedFunctionsByFile: Array.from(
+        (
+          state.rpc.invokedFunctionsByFile ?? new Map<string, Set<string>>()
+        ).entries()
+      ).map(([file, fns]): [string, string[]] => [file, Array.from(fns)]),
       usedAddons: Array.from(state.rpc.usedAddons),
       wireAddonDeclarations: Array.from(
         state.rpc.wireAddonDeclarations.entries()
@@ -565,6 +571,11 @@ export function deserializeInspectorState(
       exposedMeta: data.rpc.exposedMeta,
       exposedFiles: new Map(data.rpc.exposedFiles),
       invokedFunctions: new Set(data.rpc.invokedFunctions),
+      invokedFunctionsByFile: new Map(
+        (data.rpc.invokedFunctionsByFile || []).map(
+          ([file, fns]): [string, Set<string>] => [file, new Set(fns)]
+        )
+      ),
       usedAddons: new Set(data.rpc.usedAddons || []),
       wireAddonDeclarations: new Map(data.rpc.wireAddonDeclarations || []),
       wireAddonFiles: new Set(data.rpc.wireAddonFiles || []),

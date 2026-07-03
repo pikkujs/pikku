@@ -1,6 +1,10 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
-import { stripVerboseFields, hasVerboseFields } from './strip-verbose-meta.js'
+import {
+  stripVerboseFields,
+  hasVerboseFields,
+  reattachFunctionServices,
+} from './strip-verbose-meta.js'
 
 describe('stripVerboseFields', () => {
   describe('function meta (record with pikkuFuncId)', () => {
@@ -152,5 +156,36 @@ describe('hasVerboseFields', () => {
       },
     }
     assert.strictEqual(hasVerboseFields(meta), true)
+  })
+})
+
+describe('reattachFunctionServices', () => {
+  test('restores services stripped from addon meta', () => {
+    const full = {
+      getSchema: {
+        pikkuFuncId: 'getSchema',
+        services: { optimized: true, services: ['metaService'] },
+        tags: ['console'],
+      },
+      noServices: { pikkuFuncId: 'noServices' },
+    } as any
+    const minimal = stripVerboseFields(full) as any
+    assert.strictEqual(minimal.getSchema.services, undefined)
+
+    const result = reattachFunctionServices(minimal, full) as any
+    assert.deepStrictEqual(result.getSchema.services, {
+      optimized: true,
+      services: ['metaService'],
+    })
+    assert.strictEqual(result.getSchema.tags, undefined)
+    assert.strictEqual(result.noServices.services, undefined)
+  })
+
+  test('ignores functions missing from the minimal meta', () => {
+    const result = reattachFunctionServices(
+      {} as any,
+      { ghost: { services: { optimized: true, services: ['kysely'] } } } as any
+    )
+    assert.deepStrictEqual(result, {})
   })
 })

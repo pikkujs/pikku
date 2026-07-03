@@ -325,20 +325,47 @@ export function aggregateRequiredServices(
   }
 
   // 7. Services that consumed addons need from the parent project.
-  // These are required ONLY by units that actually deploy an addon function;
-  // a unit that merely calls the addon over RPC (or never touches it) must not
-  // carry them, or every per-unit bundle would over-include the addon's
-  // parent-service dependencies (e.g. aiAgentRunner, deploymentService) and
-  // defeat per-unit tree-shaking.
-  const addonFuncIds = new Set<string>()
-  for (const fns of Object.values(state.addonFunctions ?? {})) {
-    for (const id of Object.keys(fns)) addonFuncIds.add(id)
+  const addonFnServices = new Map<string, string[] | undefined>()
+  for (const [namespace, fns] of Object.entries(state.addonFunctions ?? {})) {
+    for (const [id, meta] of Object.entries(fns)) {
+      addonFnServices.set(
+        `${namespace}:${id}`,
+        (meta as { services?: FunctionServicesMeta })?.services?.services
+      )
+    }
   }
-  const unitDeploysAddonFn = [...usedFunctions].some((fn) =>
-    addonFuncIds.has(fn)
-  )
-  if (unitDeploysAddonFn) {
-    for (const service of state.addonRequiredParentServices ?? []) {
+  const parentDeclared = state.addonRequiredParentServices ?? []
+  const parentDeclaredSet = new Set(parentDeclared)
+  const defaultServices = new Set([
+    'config',
+    'logger',
+    'variables',
+    'schema',
+    'secrets',
+  ])
+  let usesAddonFn = false
+  let addonFactoryNeeded = false
+  for (const funcId of usedFunctions) {
+    if (!addonFnServices.has(funcId)) continue
+    usesAddonFn = true
+    const services = addonFnServices.get(funcId)
+    if (!services) {
+      addonFactoryNeeded = true
+      continue
+    }
+    for (const service of services) {
+      if (parentDeclaredSet.has(service)) {
+        requiredServices.add(service)
+      } else if (
+        !internalServices.has(service) &&
+        !defaultServices.has(service)
+      ) {
+        addonFactoryNeeded = true
+      }
+    }
+  }
+  if (usesAddonFn && addonFactoryNeeded) {
+    for (const service of parentDeclared) {
       requiredServices.add(service)
     }
   }

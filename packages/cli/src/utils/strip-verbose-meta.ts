@@ -211,6 +211,17 @@ function _stripVerboseFieldsInner<T>(obj: T): T {
   return result as T
 }
 
+export function reattachFunctionServices<
+  T extends Record<string, { services?: unknown }>,
+>(minimalMeta: T, fullMeta: T): T {
+  for (const [id, meta] of Object.entries(fullMeta)) {
+    if (meta?.services && minimalMeta[id]) {
+      minimalMeta[id].services = meta.services
+    }
+  }
+  return minimalMeta
+}
+
 /**
  * Check if an object has any verbose fields that would be stripped
  */

@@ -226,6 +226,7 @@ export type HTTPFunctionMetaInputTypes = {
 export type HTTPWiringMeta = CommonWireMeta & {
   route: string
   method: HTTPMethod
+  refTarget?: string
   params?: string[]
   query?: string[]
   inputTypes?: HTTPFunctionMetaInputTypes

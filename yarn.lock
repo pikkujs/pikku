@@ -6971,6 +6971,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/verifiers-addon-treeshake@workspace:verifiers/addon-treeshake":
+  version: 0.0.0-use.local
+  resolution: "@pikku/verifiers-addon-treeshake@workspace:verifiers/addon-treeshake"
+  dependencies:
+    "@pikku/cli": "workspace:*"
+    "@pikku/core": "workspace:*"
+    "@pikku/templates-function-addon": "workspace:*"
+    "@types/node": "npm:^24"
+    tsx: "npm:^4.21.0"
+    typescript: "npm:^6.0.3"
+    zod: "npm:^4"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/verifiers-addon@workspace:verifiers/addon":
   version: 0.0.0-use.local
   resolution: "@pikku/verifiers-addon@workspace:verifiers/addon"

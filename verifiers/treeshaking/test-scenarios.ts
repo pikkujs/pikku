@@ -376,9 +376,9 @@ export const scenarios: TestScenario[] = [
     filter: '--names=sendEmail',
     expectedSingletonServices: ['email', 'logger', 'secrets'],
     expectedWireServices: ['userContext'],
-    expectedAddonBootstrap: true,
+    expectedAddonBootstrap: false,
     description:
-      'Addon bootstrap is currently always included when package is a dependency (treeshaking TODO: only include when addon RPC methods are invoked)',
+      'Addon bootstrap is excluded when no kept function or wiring invokes the addon',
   },
 
   // Versioned function filters

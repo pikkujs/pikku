@@ -115,10 +115,18 @@ export function addRPCInvocations(
           logger.debug(`• Found RPC invocation: ${functionRef}`)
           state.rpc.invokedFunctions.add(functionRef)
 
+          let byFile = state.rpc.invokedFunctionsByFile.get(sourceFileName)
+          if (!byFile) {
+            byFile = new Set()
+            state.rpc.invokedFunctionsByFile.set(sourceFileName, byFile)
+          }
+          byFile.add(functionRef)
+
           const namespace = extractNamespace(functionRef)
           if (namespace) {
             logger.debug(`  → Addon detected: ${namespace}`)
             state.rpc.usedAddons.add(namespace)
+            state.serviceAggregation.usedFunctions.add(functionRef)
           }
         }
         // Handle template literals like `function-${name}`

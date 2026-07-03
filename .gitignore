@@ -157,3 +157,4 @@ packages/cli/release/
 # addon-registry verifier install artifacts (shadcn copy + provenance)
 verifiers/addon-registry/consumer/addons/
 verifiers/addon-registry/consumer/pikku-addons.json
+.pikku-shake/

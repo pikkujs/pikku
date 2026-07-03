@@ -6,6 +6,7 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import {
   stripVerboseFields,
   hasVerboseFields,
+  reattachFunctionServices,
 } from '../../../utils/strip-verbose-meta.js'
 
 export const pikkuFunctions = pikkuSessionlessFunc<void, boolean | undefined>({
@@ -19,8 +20,10 @@ export const pikkuFunctions = pikkuSessionlessFunc<void, boolean | undefined>({
       schema,
     } = config
 
-    // Write minimal JSON (runtime-only fields)
-    const minimalMeta = stripVerboseFields(functions.meta)
+    let minimalMeta = stripVerboseFields(functions.meta)
+    if (config.addonName) {
+      minimalMeta = reattachFunctionServices(minimalMeta, functions.meta)
+    }
     await writeFileInDir(
       logger,
       functionsMetaJsonFile,

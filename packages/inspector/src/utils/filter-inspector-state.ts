@@ -468,6 +468,11 @@ export function filterInspectorState(
           filteredState.serviceAggregation.usedFunctions.add(
             routeMeta.pikkuFuncId
           )
+          if (routeMeta.refTarget) {
+            filteredState.serviceAggregation.usedFunctions.add(
+              routeMeta.refTarget
+            )
+          }
           // For workflow/agent routes, also add the base name
           // so the workflow/agent definition survives pruning
           const colonIdx = routeMeta.pikkuFuncId.indexOf(':')
@@ -1103,6 +1108,57 @@ export function filterInspectorState(
     filteredState.serviceAggregation.requiredServices.has('workflowService')
   ) {
     filteredState.serviceAggregation.requiredServices.add('queueService')
+  }
+
+  if ((filteredState.rpc.wireAddonDeclarations?.size ?? 0) > 0) {
+    const referencedIds = new Set<string>(
+      filteredState.serviceAggregation.usedFunctions
+    )
+    const keptFiles = new Set<string>()
+    for (const funcId of filteredState.serviceAggregation.usedFunctions) {
+      const file = filteredState.functions.files.get(funcId)
+      if (file?.path) keptFiles.add(file.path)
+    }
+    for (const [file, invoked] of state.rpc.invokedFunctionsByFile ??
+      new Map<string, Set<string>>()) {
+      if (!keptFiles.has(file)) continue
+      for (const id of invoked) {
+        referencedIds.add(id)
+        if (id.includes(':')) {
+          filteredState.serviceAggregation.usedFunctions.add(id)
+        }
+      }
+    }
+    for (const toolMeta of Object.values(
+      filteredState.mcpEndpoints?.toolsMeta ?? {}
+    ) as Array<{ pikkuFuncId?: string }>) {
+      if (toolMeta.pikkuFuncId) referencedIds.add(toolMeta.pikkuFuncId)
+    }
+    for (const agentMeta of Object.values(
+      filteredState.agents?.agentsMeta ?? {}
+    ) as Array<{ tools?: string[] }>) {
+      for (const tool of agentMeta.tools ?? []) referencedIds.add(tool)
+    }
+    const keptNamespaces = new Set<string>()
+    for (const namespace of filteredState.rpc.wireAddonDeclarations.keys()) {
+      const prefix = `${namespace}:`
+      for (const id of referencedIds) {
+        if (id.startsWith(prefix)) {
+          keptNamespaces.add(namespace)
+          break
+        }
+      }
+    }
+    filteredState.rpc.wireAddonDeclarations = new Map(
+      [...filteredState.rpc.wireAddonDeclarations].filter(([namespace]) =>
+        keptNamespaces.has(namespace)
+      )
+    )
+    filteredState.rpc.usedAddons = new Set(
+      [...filteredState.rpc.usedAddons].filter((namespace) =>
+        keptNamespaces.has(namespace)
+      )
+    )
   }
 
   // Recalculate requiredServices based on filtered functions/middleware/permissions

@@ -482,6 +482,7 @@ export interface InspectorState {
     exposedMeta: Record<string, string>
     exposedFiles: Map<string, { path: string; exportedName: string }>
     invokedFunctions: Set<string>
+    invokedFunctionsByFile: Map<string, Set<string>>
     usedAddons: Set<string>
     wireAddonDeclarations: Map<
       string,
