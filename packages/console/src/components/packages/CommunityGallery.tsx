@@ -26,6 +26,8 @@ interface CommunityGalleryProps {
   installedNames: Set<string>
   editable: boolean
   installingName: string | null
+  /** The most recent install/import failure, if any — shown inline in the drawer for that addon. */
+  actionError?: { name: string; message: string } | null
   /** 'api' swaps card/drawer wording to Import and hides the publish CTA. */
   kind?: 'addon' | 'api'
   onInstall: (addon: PackageMeta) => void
@@ -42,6 +44,7 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
   installedNames,
   editable,
   installingName,
+  actionError,
   kind = 'addon',
   onInstall,
 }) => {
@@ -176,6 +179,7 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
         addon={selected}
         installed={selected ? installedNames.has(selected.name) : false}
         installing={!!selected && installingName === selected.name}
+        error={selected && actionError?.name === selected.name ? actionError.message : null}
         editable={editable}
         kind={kind}
         onClose={() => setSelected(null)}

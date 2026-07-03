@@ -14,6 +14,7 @@ import {
   SimpleGrid,
   Divider,
   Avatar,
+  Alert,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
@@ -30,6 +31,7 @@ import {
   KeyRound,
   Settings2,
   Bot,
+  TriangleAlert,
 } from 'lucide-react'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import type { PackageMeta } from '../../pages/PackagesPage'
@@ -73,6 +75,8 @@ interface AddonDetailDrawerProps {
   installed: boolean
   installing: boolean
   editable: boolean
+  /** Install/import failure message for this addon, shown inline above the CTA. */
+  error?: string | null
   /** 'api' fetches OpenAPI detail instead of a community package and swaps the CTA to Import. */
   kind?: 'addon' | 'api'
   onClose: () => void
@@ -90,6 +94,7 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
   installed,
   installing,
   editable,
+  error,
   kind = 'addon',
   onClose,
   onInstall,
@@ -356,6 +361,21 @@ export const AddonDetailDrawer: React.FC<AddonDetailDrawerProps> = ({
                 {m.packages_docs()}
               </Button>
             </Group>
+
+            {error && (
+              <Alert
+                mt="sm"
+                color="red"
+                variant="light"
+                icon={<TriangleAlert size={15} />}
+              >
+                <Text size="sm">
+                  {isApi
+                    ? m.packages_import_error({ name: addon.displayName || addon.name, message: error })
+                    : m.packages_install_error({ name: addon.displayName || addon.name, message: error })}
+                </Text>
+              </Alert>
+            )}
 
             <Divider my="md" />
 

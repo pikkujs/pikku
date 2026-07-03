@@ -9,7 +9,6 @@ import {
   Center,
   Loader,
 } from '@pikku/mantine/core'
-import { notifications } from '@mantine/notifications'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { Package, Globe, Search } from 'lucide-react'
@@ -92,22 +91,9 @@ const AddonsList: React.FC<{
         namespace: deriveNamespace(addon.name),
         version: addon.version,
       }),
-    onSuccess: (_data, addon) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['installed-addons'] })
       queryClient.invalidateQueries({ queryKey: ['allMeta'] })
-      notifications.show({
-        color: 'green',
-        message: m.packages_install_success({ name: addon.displayName || addon.name }),
-      })
-    },
-    onError: (error, addon) => {
-      notifications.show({
-        color: 'red',
-        message: m.packages_install_error({
-          name: addon.displayName || addon.name,
-          message: error instanceof Error ? error.message : String(error),
-        }),
-      })
     },
   })
 
@@ -157,6 +143,17 @@ const AddonsList: React.FC<{
       installingName={
         installMutation.isPending
           ? (installMutation.variables?.name ?? null)
+          : null
+      }
+      actionError={
+        installMutation.isError
+          ? {
+              name: installMutation.variables?.name ?? '',
+              message:
+                installMutation.error instanceof Error
+                  ? installMutation.error.message
+                  : String(installMutation.error),
+            }
           : null
       }
       onInstall={(addon) => installMutation.mutate(addon)}
@@ -236,22 +233,9 @@ const ApisList: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
         // receives API-kind PackageMeta objects from ApisList's onInstall.
         swaggerUrl: api.swaggerUrl!,
       }),
-    onSuccess: (_data, api) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['installed-addons'] })
       queryClient.invalidateQueries({ queryKey: ['allMeta'] })
-      notifications.show({
-        color: 'green',
-        message: m.packages_import_success({ name: api.displayName || api.name }),
-      })
-    },
-    onError: (error, api) => {
-      notifications.show({
-        color: 'red',
-        message: m.packages_import_error({
-          name: api.displayName || api.name,
-          message: error instanceof Error ? error.message : String(error),
-        }),
-      })
     },
   })
 
@@ -314,6 +298,17 @@ const ApisList: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
       installingName={
         importMutation.isPending
           ? (importMutation.variables?.name ?? null)
+          : null
+      }
+      actionError={
+        importMutation.isError
+          ? {
+              name: importMutation.variables?.name ?? '',
+              message:
+                importMutation.error instanceof Error
+                  ? importMutation.error.message
+                  : String(importMutation.error),
+            }
           : null
       }
       onInstall={(api) => importMutation.mutate(api)}
