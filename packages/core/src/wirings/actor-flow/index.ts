@@ -13,3 +13,4 @@ export type {
   ActorFlowMeta,
   ActorFlowMetaEntry,
 } from './actor-flow.types.js'
+export { runActorFlow, type RunActorFlowParams } from './run-actor-flow.js'
