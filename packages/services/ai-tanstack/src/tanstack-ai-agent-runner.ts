@@ -282,9 +282,10 @@ async function runStream(
     if (type === 'RUN_ERROR') {
       const msg: string =
         chunk.message ?? chunk.error?.message ?? 'Unknown error'
-      channel?.send({ type: 'error', message: msg })
-      stepResult.finishReason = 'error'
-      break
+      // Throw rather than returning finishReason 'error' so core's stream
+      // handler marks the run failed and fires onError — matching the vercel
+      // runner, so the two are interchangeable on the error path too.
+      throw new Error(msg)
     }
 
     if (type === 'CUSTOM' && chunk.name === 'approval-requested') {

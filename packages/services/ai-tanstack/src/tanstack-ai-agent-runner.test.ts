@@ -17,6 +17,8 @@ let baseUrl: string
 let script: SSEChunk[][] = []
 let callIndex = 0
 let seenRequests: Array<{ url: string | undefined; body: any }> = []
+/** Per-call HTTP status override; a non-200 makes the adapter fail the stream. */
+let httpStatus: (number | null)[] = []
 
 function chunk(
   delta: Record<string, unknown>,
@@ -70,8 +72,14 @@ before(async () => {
     req.on('data', (d) => (body += d))
     req.on('end', () => {
       seenRequests.push({ url: req.url, body: JSON.parse(body || '{}') })
+      const status = httpStatus[callIndex] ?? 200
       const chunks = script[callIndex] ?? script[script.length - 1] ?? []
       callIndex++
+      if (status !== 200) {
+        res.writeHead(status, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: { message: 'mock provider error' } }))
+        return
+      }
       res.writeHead(200, { 'Content-Type': 'text/event-stream' })
       for (const c of chunks) res.write(`data: ${JSON.stringify(c)}\n\n`)
       res.write('data: [DONE]\n\n')
@@ -93,6 +101,7 @@ beforeEach(() => {
   script = []
   callIndex = 0
   seenRequests = []
+  httpStatus = []
 })
 
 const baseParams = {
@@ -133,6 +142,38 @@ describe('TanstackAIAgentRunner.stream', () => {
       role: 'system',
       content: 'You are the routing agent. Always delegate.',
     })
+  })
+
+  test('throws when the provider stream errors, rather than completing', async () => {
+    // A non-200 from the completions endpoint surfaces as a RUN_ERROR in the
+    // agent loop. The runner must throw (so core marks the run failed and
+    // fires onError) instead of returning finishReason 'error' — this is what
+    // keeps it interchangeable with the vercel runner on the error path.
+    httpStatus = [400, 400, 400, 400]
+    script = [[]]
+    const { channel } = makeChannel()
+    const runner = new TanstackAIAgentRunner()
+    await assert.rejects(
+      withTimeout(
+        runner.stream(
+          {
+            ...baseParams,
+            instructions: 'x',
+            messages: [
+              {
+                id: 'u1',
+                role: 'user',
+                content: 'hello',
+                createdAt: new Date(),
+              },
+            ] as any,
+          },
+          channel
+        ),
+        20_000,
+        'error-throw'
+      )
+    )
   })
 
   test('streams plain text and reports finishReason stop', async () => {
