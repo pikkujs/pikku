@@ -1,3 +1,18 @@
+## 0.12.50
+
+### Patch Changes
+
+- 35a9bab: UserFlowActor exposes the actor's `email` so flows can use it for
+  invites/lookups instead of hardcoding the config value.
+- 92bd643: User flows in the console: workflow graph extraction now captures
+  `workflow.expectEventually` steps and per-step actor names (`{ actor:
+actors.x }`), workflow meta carries `actors`/`title` into the serialized
+  graph, the CLI emits `user-flow-actors.gen.json` for the new
+  `MetaService.getUserFlowActorsMeta()`, and the console Workflows page gains a
+  Workflows / User Flows / Personas toggle. Also fixes complex-workflow graphs
+  being clobbered by a duplicate basic-extraction pass after successful DSL
+  extraction.
+
 ## 0.12.49
 
 ### Patch Changes

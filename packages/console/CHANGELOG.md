@@ -1,3 +1,20 @@
+## 0.12.32
+
+### Patch Changes
+
+- a9f3e1a: Restructure the addons/packages page: top-level tabs are now Addons | APIs, with an Installed | All filter on the Addons tab. The standalone installed-addons table is removed — the installed view reuses the community gallery filtered to what the project has wired
+- 92bd643: User flows in the console: workflow graph extraction now captures
+  `workflow.expectEventually` steps and per-step actor names (`{ actor:
+actors.x }`), workflow meta carries `actors`/`title` into the serialized
+  graph, the CLI emits `user-flow-actors.gen.json` for the new
+  `MetaService.getUserFlowActorsMeta()`, and the console Workflows page gains a
+  Workflows / User Flows / Personas toggle. Also fixes complex-workflow graphs
+  being clobbered by a duplicate basic-extraction pass after successful DSL
+  extraction.
+- Updated dependencies [35a9bab]
+- Updated dependencies [92bd643]
+  - @pikku/core@0.12.50
+
 ## 0.12.31
 
 ### Patch Changes
