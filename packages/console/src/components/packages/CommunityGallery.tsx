@@ -14,16 +14,11 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { Search, SlidersHorizontal } from 'lucide-react'
 import type { PackageMeta } from '../../pages/PackagesPage'
-import { CommunityHero } from './CommunityHero'
 import { CategoryRail } from './CategoryRail'
 import { AddonCard } from './AddonCard'
 import { PublishCta } from './PublishCta'
 import { AddonDetailDrawer } from './AddonDetailDrawer'
-import {
-  deriveCategories,
-  addonPrimaryCategory,
-  isOfficialAddon,
-} from './addonCategoryMeta'
+import { deriveCategories, addonPrimaryCategory } from './addonCategoryMeta'
 
 interface CommunityGalleryProps {
   addons: PackageMeta[]
@@ -89,15 +84,6 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
     return [...list].sort(comparators[sort])
   }, [addons, category, searchQuery, sort])
 
-  const publisherCount = useMemo(
-    () => new Set(addons.map((a) => a.author).filter(Boolean)).size,
-    [addons]
-  )
-  const officialCount = useMemo(
-    () => addons.filter((a) => isOfficialAddon(a.name)).length,
-    [addons]
-  )
-
   const heading =
     category === 'all'
       ? searchQuery.trim()
@@ -107,12 +93,6 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
 
   return (
     <Stack gap="lg" style={{ minHeight: '100%' }}>
-      <CommunityHero
-        addonCount={addons.length}
-        publisherCount={publisherCount}
-        officialCount={officialCount}
-      />
-
       <Box
         style={{
           display: 'grid',

@@ -272,7 +272,12 @@ const PackagesList: React.FC<{
   const [tab, setTab] = useState<MainTab>('addons')
   const [filter, setFilter] = useState<AddonFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const editable = useConsoleEditable()
   useLocale()
+
+  // A deployed stage is read-only: you can't install into it. Lock the addons
+  // view to what's already wired and point people at a sandbox to add more.
+  const effectiveFilter: AddonFilter = editable ? filter : 'installed'
 
   const handleTabChange = (value: string) => {
     setSearchQuery('')
@@ -311,7 +316,7 @@ const PackagesList: React.FC<{
                 size="xs"
                 style={{ width: 240 }}
               />
-              {tab === 'addons' && (
+              {tab === 'addons' && editable && (
                 <SegmentedControl
                   size="xs"
                   value={filter}
@@ -333,7 +338,7 @@ const PackagesList: React.FC<{
       {tab === 'apis' ? (
         <ApisList searchQuery={searchQuery} onSelect={onSelect} />
       ) : (
-        <AddonsList searchQuery={searchQuery} filter={filter} />
+        <AddonsList searchQuery={searchQuery} filter={effectiveFilter} />
       )}
     </ResizablePanelLayout>
   )

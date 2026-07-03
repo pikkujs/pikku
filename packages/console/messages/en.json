@@ -468,9 +468,6 @@
   "packages_browse": "Browse",
   "packages_all_addons": "All addons",
   "packages_results": "Results",
-  "packages_stat_addons": "addons",
-  "packages_stat_publishers": "publishers",
-  "packages_stat_official": "official",
   "packages_sort_name": "Name",
   "packages_sort_functions": "Most functions",
   "packages_sort_agents": "Most agents",
@@ -536,7 +533,5 @@
   "users_role_admin": "Admin",
   "users_role_user": "User",
   "users_banned": "Banned",
-  "packages_community_headline": "Extend your project in one click.",
-  "packages_community_subtext": "Auth, payments, databases, agents and more — official Pikku packages and community add-ons, ready to install into your project.",
   "packages_no_matches_hint": "Try a different keyword or browse a category."
 }
