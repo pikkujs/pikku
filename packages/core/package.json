@@ -24,6 +24,7 @@
     "./workflow": "./dist/wirings/workflow/index.js",
     "./workflow/timeline": "./dist/wirings/workflow/run-timeline.js",
     "./workflow/types": "./dist/wirings/workflow/workflow.types.js",
+    "./actor-flow": "./dist/wirings/actor-flow/index.js",
     "./channel/local": "./dist/wirings/channel/local/index.js",
     "./channel/serverless": "./dist/wirings/channel/serverless/index.js",
     "./http": "./dist/wirings/http/index.js",

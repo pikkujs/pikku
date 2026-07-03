@@ -118,6 +118,10 @@ export function getInitialInspectorState(rootDir: string): InspectorState {
       graphFiles: new Map(),
       invokedWorkflows: new Set(),
     },
+    actorFlows: {
+      meta: {},
+      files: new Map(),
+    },
     rpc: {
       internalMeta: {},
       internalFiles: new Map(),

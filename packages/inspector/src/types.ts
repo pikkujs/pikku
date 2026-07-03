@@ -6,6 +6,7 @@ import type { ScheduledTasksMeta } from '@pikku/core/scheduler'
 import type { TriggerMeta, TriggerSourceMeta } from '@pikku/core/trigger'
 import type { QueueWorkersMeta } from '@pikku/core/queue'
 import type { WorkflowsMeta } from '@pikku/core/workflow'
+import type { ActorFlowMeta } from '@pikku/core/actor-flow'
 import type {
   MCPResourceMeta,
   MCPToolMeta,
@@ -475,6 +476,10 @@ export interface InspectorState {
     graphMeta: SerializedWorkflowGraphs
     graphFiles: Map<string, { path: string; exportedName: string }>
     invokedWorkflows: Set<string>
+  }
+  actorFlows: {
+    meta: ActorFlowMeta
+    files: Map<string, { path: string; exportedName: string }>
   }
   rpc: {
     internalMeta: Record<string, string>
