@@ -9,6 +9,7 @@ import {
   Center,
   Loader,
 } from '@pikku/mantine/core'
+import { notifications } from '@mantine/notifications'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { Package, Globe, Search } from 'lucide-react'
@@ -91,9 +92,22 @@ const AddonsList: React.FC<{
         namespace: deriveNamespace(addon.name),
         version: addon.version,
       }),
-    onSuccess: () => {
+    onSuccess: (_data, addon) => {
       queryClient.invalidateQueries({ queryKey: ['installed-addons'] })
       queryClient.invalidateQueries({ queryKey: ['allMeta'] })
+      notifications.show({
+        color: 'green',
+        message: m.packages_install_success({ name: addon.displayName || addon.name }),
+      })
+    },
+    onError: (error, addon) => {
+      notifications.show({
+        color: 'red',
+        message: m.packages_install_error({
+          name: addon.displayName || addon.name,
+          message: error instanceof Error ? error.message : String(error),
+        }),
+      })
     },
   })
 
@@ -222,9 +236,22 @@ const ApisList: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
         // receives API-kind PackageMeta objects from ApisList's onInstall.
         swaggerUrl: api.swaggerUrl!,
       }),
-    onSuccess: () => {
+    onSuccess: (_data, api) => {
       queryClient.invalidateQueries({ queryKey: ['installed-addons'] })
       queryClient.invalidateQueries({ queryKey: ['allMeta'] })
+      notifications.show({
+        color: 'green',
+        message: m.packages_import_success({ name: api.displayName || api.name }),
+      })
+    },
+    onError: (error, api) => {
+      notifications.show({
+        color: 'red',
+        message: m.packages_import_error({
+          name: api.displayName || api.name,
+          message: error instanceof Error ? error.message : String(error),
+        }),
+      })
     },
   })
 

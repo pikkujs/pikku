@@ -1,17 +1,9 @@
 import React, { useState } from 'react'
-import {
-  Card,
-  Group,
-  Text,
-  Badge,
-  Button,
-  ThemeIcon,
-  Stack,
-} from '@pikku/mantine/core'
+import { Card, Group, Text, Badge, ThemeIcon, Stack } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
-import { Check, Plus, Download, ShieldCheck, FunctionSquare, Bot, Globe } from 'lucide-react'
+import { Check, ShieldCheck, FunctionSquare, Bot, Globe } from 'lucide-react'
 import type { PackageMeta } from '../../pages/PackagesPage'
 import {
   getCategoryMeta,
@@ -23,23 +15,12 @@ import { AddonStatChip } from './AddonStatChip'
 interface AddonCardProps {
   addon: PackageMeta
   installed: boolean
-  installing: boolean
-  editable: boolean
-  /** 'api' swaps the action verb to Import and the stat row to an operation count. */
+  /** 'api' swaps the badge verb to Imported and the stat row to an operation count. */
   kind?: 'addon' | 'api'
   onOpen: (addon: PackageMeta) => void
-  onInstall: (addon: PackageMeta) => void
 }
 
-export const AddonCard: React.FC<AddonCardProps> = ({
-  addon,
-  installed,
-  installing,
-  editable,
-  kind = 'addon',
-  onOpen,
-  onInstall,
-}) => {
+export const AddonCard: React.FC<AddonCardProps> = ({ addon, installed, kind = 'addon', onOpen }) => {
   useLocale()
   const [hovered, setHovered] = useState(false)
   const isApi = kind === 'api'
@@ -185,42 +166,10 @@ export const AddonCard: React.FC<AddonCardProps> = ({
             </>
           )}
         </Group>
-        {installed ? (
-          <Button
-            size="xs"
-            variant="light"
-            color="green"
-            leftSection={<Check size={13} />}
-            onClick={(e) => {
-              e.stopPropagation()
-              onOpen(addon)
-            }}
-          >
+        {installed && (
+          <Badge size="sm" variant="light" color="green" leftSection={<Check size={11} />}>
             {isApi ? m.packages_imported() : m.packages_added()}
-          </Button>
-        ) : editable ? (
-          <Button
-            size="xs"
-            leftSection={isApi ? <Download size={13} /> : <Plus size={13} />}
-            loading={installing}
-            onClick={(e) => {
-              e.stopPropagation()
-              onInstall(addon)
-            }}
-          >
-            {isApi ? m.packages_import() : m.packages_add()}
-          </Button>
-        ) : (
-          <Button
-            size="xs"
-            variant="default"
-            onClick={(e) => {
-              e.stopPropagation()
-              onOpen(addon)
-            }}
-          >
-            {m.packages_view()}
-          </Button>
+          </Badge>
         )}
       </Group>
     </Card>

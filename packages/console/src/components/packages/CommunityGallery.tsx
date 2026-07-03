@@ -160,11 +160,8 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
                     key={addon.id}
                     addon={addon}
                     installed={installedNames.has(addon.name)}
-                    installing={installingName === addon.name}
-                    editable={editable}
                     kind={kind}
                     onOpen={setSelected}
-                    onInstall={onInstall}
                   />
                 ))}
               </SimpleGrid>
