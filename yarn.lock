@@ -5750,9 +5750,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/ai-tanstack@workspace:packages/services/ai-tanstack"
   dependencies:
-    "@tanstack/ai": "npm:^0.38.0"
+    "@tanstack/ai": "npm:^0.39.0"
     "@tanstack/ai-openai": "npm:^0.15.9"
     typescript: "npm:^5.9"
+    zod: "npm:^4.3.6"
   peerDependencies:
     "@pikku/core": ^0.12.35
   languageName: unknown
@@ -11122,9 +11123,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tanstack/ai@npm:^0.38.0":
-  version: 0.38.0
-  resolution: "@tanstack/ai@npm:0.38.0"
+"@tanstack/ai@npm:^0.39.0":
+  version: 0.39.0
+  resolution: "@tanstack/ai@npm:0.39.0"
   dependencies:
     "@ag-ui/core": "npm:^0.0.52"
     "@standard-schema/spec": "npm:^1.1.0"
@@ -11136,7 +11137,7 @@ __metadata:
   peerDependenciesMeta:
     "@opentelemetry/api":
       optional: true
-  checksum: 10/a6f51a449b0876c69c680777eb8e6b777f315c799882f90398040c28dcbf6401cccf3e360b3bdfd4d4b07a4ce21b41af676afb2cbc9365cee0aadecf32162d51
+  checksum: 10/7a6997184dd9410ac8fa906b04129deb3c478f14021ef27e528e4fc4c2e1461c1206bb6b0223f5c2a913e3766a64acd5dd79186e551ff74096b5006448ad8eb2
   languageName: node
   linkType: hard
 

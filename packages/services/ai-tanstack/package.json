@@ -21,8 +21,9 @@
     "@pikku/core": "^0.12.35"
   },
   "dependencies": {
-    "@tanstack/ai": "^0.38.0",
-    "@tanstack/ai-openai": "^0.15.9"
+    "@tanstack/ai": "^0.39.0",
+    "@tanstack/ai-openai": "^0.15.9",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "typescript": "^5.9"
