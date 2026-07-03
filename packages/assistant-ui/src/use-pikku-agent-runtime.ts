@@ -47,12 +47,12 @@ export interface PendingApproval {
 
 export interface PikkuApprovalContextValue {
   pendingApprovals: PendingApproval[]
-  handleApproval: (toolCallId: string, approved: boolean) => void
+  handleApproval: (toolCallId: string, approved: boolean) => Promise<void>
 }
 
 export const PikkuApprovalContext = createContext<PikkuApprovalContextValue>({
   pendingApprovals: [],
-  handleApproval: () => {},
+  handleApproval: async () => {},
 })
 
 export const usePikkuApproval = () => useContext(PikkuApprovalContext)
@@ -381,16 +381,54 @@ export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
 
   const runtime = useAgUiRuntime({ agent })
 
+  const optionsRef = useRef(options)
+  optionsRef.current = options
+  const resumeChainRef = useRef<Promise<void>>(Promise.resolve())
+
+  // The runtime only aggregates events from runs it starts itself, so the
+  // final approval is queued on the agent and triggered by the caller's
+  // addResult (which makes the runtime start the resume run once every tool
+  // call has a result). Earlier approvals in a batch are acknowledged with
+  // plain requests — their stream carries no content beyond 'done'.
   const handleApproval = useCallback(
-    (toolCallId: string, approved: boolean) => {
+    async (toolCallId: string, approved: boolean) => {
       const approval = pendingApprovals.find((p) => p.toolCallId === toolCallId)
       if (!approval) return
       if (!approval.runId) return
-      setPendingApprovals((prev) =>
-        prev.filter((p) => p.toolCallId !== toolCallId)
+      const remaining = pendingApprovals.filter(
+        (p) => p.toolCallId !== toolCallId
       )
-      agent.queueResume({ runId: approval.runId, toolCallId, approved })
-      agent.runAgent()
+      setPendingApprovals(remaining)
+      const resume = { runId: approval.runId, toolCallId, approved }
+
+      if (remaining.length > 0) {
+        resumeChainRef.current = resumeChainRef.current.then(async () => {
+          const opts = optionsRef.current
+          try {
+            const response = await fetch(
+              `${opts.api}/${opts.agentName}/resume`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Accept: 'text/event-stream',
+                  ...opts.headers,
+                },
+                credentials: opts.credentials,
+                body: JSON.stringify(resume),
+              }
+            )
+            await response.text()
+          } catch (err) {
+            console.error('[pikku] failed to resolve approval', err)
+          }
+        })
+        await resumeChainRef.current
+        return
+      }
+
+      await resumeChainRef.current
+      agent.queueResume(resume)
     },
     [agent, pendingApprovals]
   )

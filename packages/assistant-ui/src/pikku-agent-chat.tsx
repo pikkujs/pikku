@@ -216,9 +216,9 @@ const ToolCallDisplay: FunctionComponent<{
         </pre>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
-            onClick={() => {
+            onClick={async () => {
               setResponded('approved')
-              handleApproval(toolCallId, true)
+              await handleApproval(toolCallId, true)
               addResult?.({ approved: true })
             }}
             style={{
@@ -234,9 +234,9 @@ const ToolCallDisplay: FunctionComponent<{
             Approve
           </button>
           <button
-            onClick={() => {
+            onClick={async () => {
               setResponded('denied')
-              handleApproval(toolCallId, false)
+              await handleApproval(toolCallId, false)
               addResult?.({ approved: false })
             }}
             style={{
