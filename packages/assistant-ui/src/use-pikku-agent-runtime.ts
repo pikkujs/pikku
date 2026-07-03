@@ -47,12 +47,15 @@ export interface PendingApproval {
 
 export interface PikkuApprovalContextValue {
   pendingApprovals: PendingApproval[]
-  handleApproval: (toolCallId: string, approved: boolean) => Promise<void>
+  /** Resolve an approval/credential request. Returns `true` when the request
+   *  was found and acknowledged — callers must gate their `addResult` call on
+   *  this so a stray result can't start a resume run with nothing queued. */
+  handleApproval: (toolCallId: string, approved: boolean) => Promise<boolean>
 }
 
 export const PikkuApprovalContext = createContext<PikkuApprovalContextValue>({
   pendingApprovals: [],
-  handleApproval: async () => {},
+  handleApproval: async () => false,
 })
 
 export const usePikkuApproval = () => useContext(PikkuApprovalContext)
@@ -325,6 +328,14 @@ export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
   const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>(
     []
   )
+  // Authoritative pending list, mutated synchronously so two approval clicks
+  // in the same tick can't both read a stale "remaining" and skip the resume.
+  // State mirrors it purely for rendering.
+  const pendingApprovalsRef = useRef<PendingApproval[]>([])
+  const commitPending = useCallback((next: PendingApproval[]) => {
+    pendingApprovalsRef.current = next
+    setPendingApprovals(next)
+  }, [])
 
   const onFinishRef = useRef(options.onFinish)
   onFinishRef.current = options.onFinish
@@ -336,7 +347,9 @@ export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
     []
   )
 
-  agent.updateOpts(options)
+  useEffect(() => {
+    agent.updateOpts(options)
+  })
 
   useEffect(() => {
     const { unsubscribe } = agent.subscribe({
@@ -344,8 +357,8 @@ export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
         const e = event as AgUiCustomEvent
         if (e.name === 'pikku:approval-request') {
           const v = e.value as any
-          setPendingApprovals((prev) => [
-            ...prev,
+          commitPending([
+            ...pendingApprovalsRef.current,
             {
               toolCallId: v.toolCallId,
               toolName: v.toolName,
@@ -357,8 +370,8 @@ export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
           ])
         } else if (e.name === 'pikku:credential-request') {
           const v = e.value as any
-          setPendingApprovals((prev) => [
-            ...prev,
+          commitPending([
+            ...pendingApprovalsRef.current,
             {
               toolCallId: v.toolCallId,
               toolName: v.toolName,
@@ -377,7 +390,7 @@ export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
       },
     })
     return unsubscribe
-  }, [agent])
+  }, [agent, commitPending])
 
   const runtime = useAgUiRuntime({ agent })
 
@@ -391,14 +404,15 @@ export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
   // call has a result). Earlier approvals in a batch are acknowledged with
   // plain requests — their stream carries no content beyond 'done'.
   const handleApproval = useCallback(
-    async (toolCallId: string, approved: boolean) => {
-      const approval = pendingApprovals.find((p) => p.toolCallId === toolCallId)
-      if (!approval) return
-      if (!approval.runId) return
-      const remaining = pendingApprovals.filter(
+    async (toolCallId: string, approved: boolean): Promise<boolean> => {
+      const approval = pendingApprovalsRef.current.find(
+        (p) => p.toolCallId === toolCallId
+      )
+      if (!approval || !approval.runId) return false
+      const remaining = pendingApprovalsRef.current.filter(
         (p) => p.toolCallId !== toolCallId
       )
-      setPendingApprovals(remaining)
+      commitPending(remaining)
       const resume = { runId: approval.runId, toolCallId, approved }
 
       if (remaining.length > 0) {
@@ -424,13 +438,14 @@ export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
           }
         })
         await resumeChainRef.current
-        return
+        return true
       }
 
       await resumeChainRef.current
       agent.queueResume(resume)
+      return true
     },
-    [agent, pendingApprovals]
+    [agent, commitPending]
   )
 
   return {

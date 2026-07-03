@@ -100,6 +100,7 @@ const ToolCallDisplay: React.FC<{
   const displayArgs = { ...args }
   delete (displayArgs as any).__approvalReason
   const [responded, setResponded] = useState<'approved' | 'denied' | null>(null)
+  const [popupBlocked, setPopupBlocked] = useState(false)
   const oauthTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -113,14 +114,16 @@ const ToolCallDisplay: React.FC<{
 
   const handleApprove = async () => {
     setResponded('approved')
-    await handleApproval(toolCallId, true)
-    addResult?.({ approved: true })
+    if (await handleApproval(toolCallId, true)) {
+      addResult?.({ approved: true })
+    }
   }
 
   const handleDeny = async () => {
     setResponded('denied')
-    await handleApproval(toolCallId, false)
-    addResult?.({ approved: false })
+    if (await handleApproval(toolCallId, false)) {
+      addResult?.({ approved: false })
+    }
   }
 
   if (isApproval && !responded) {
@@ -195,8 +198,9 @@ const ToolCallDisplay: React.FC<{
 
     const approveCredential = async () => {
       setResponded('approved')
-      await handleApproval(toolCallId, true)
-      addResult?.({ approved: true })
+      if (await handleApproval(toolCallId, true)) {
+        addResult?.({ approved: true })
+      }
     }
 
     const handleConnect = () => {
@@ -206,8 +210,14 @@ const ToolCallDisplay: React.FC<{
           'oauth-connect',
           'width=600,height=700'
         )
+        // A blocked popup returns null — don't treat that as "connected", or
+        // the run resumes with no credential and the tool fails again.
+        if (!popup) {
+          setPopupBlocked(true)
+          return
+        }
         oauthTimerRef.current = setInterval(() => {
-          if (!popup || popup.closed) {
+          if (popup.closed) {
             clearInterval(oauthTimerRef.current!)
             oauthTimerRef.current = null
             void approveCredential()
@@ -220,8 +230,9 @@ const ToolCallDisplay: React.FC<{
 
     const handleIgnore = async () => {
       setResponded('denied')
-      await handleApproval(toolCallId, false)
-      addResult?.({ approved: false })
+      if (await handleApproval(toolCallId, false)) {
+        addResult?.({ approved: false })
+      }
     }
 
     return (
@@ -246,6 +257,13 @@ const ToolCallDisplay: React.FC<{
           <strong>{asI18n(cred?.credentialName ?? 'OAuth')}</strong>{' '}
           {m.agent_credential_to_be_connected()}
         </Box>
+        {popupBlocked && (
+          <Text size="xs" c="red" mb="xs">
+            {asI18n(
+              'Popup blocked — allow popups for this site, then click Connect again.'
+            )}
+          </Text>
+        )}
         <Group gap="xs">
           <Button size="xs" variant="light" onClick={handleConnect}>
             {asI18n(`Connect ${cred?.credentialName ?? 'OAuth'}`)}
@@ -449,14 +467,8 @@ const AgentComposer: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
 
 export const AgentChat: React.FC = () => {
   useLocale()
-  const {
-    agentId,
-    threadId,
-    setThreadId,
-    refetchThreads,
-    model,
-    temperature,
-  } = useAgentPlayground()
+  const { agentId, threadId, refetchThreads, model, temperature } =
+    useAgentPlayground()
 
   const onStreamDone = useCallback(() => {
     refetchThreads()
