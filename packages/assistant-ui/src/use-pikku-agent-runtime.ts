@@ -15,7 +15,11 @@ import type {
 } from '@ag-ui/client'
 import type { Observable } from 'rxjs'
 import { useAgUiRuntime } from '@assistant-ui/react-ag-ui'
-import type { ThreadMessageLike } from '@assistant-ui/react'
+import {
+  ExportedMessageRepository,
+  type ThreadMessageLike,
+  type ThreadHistoryAdapter,
+} from '@assistant-ui/react'
 
 export interface PikkuAgentRuntimeOptions {
   api: string
@@ -31,6 +35,11 @@ export interface PikkuAgentRuntimeOptions {
    *  Provide upfront state (e.g. current org/project/branch/deployment IDs)
    *  so the agent can call tools without asking the user. */
   context?: string
+  /** Prior messages to hydrate the thread with (e.g. converted from persisted
+   *  DB history via `convertDbMessages`). Loaded once on mount, so the
+   *  consumer must keep the chat unmounted until these are available (key or
+   *  gate on load) — the runtime does not re-hydrate when they change later. */
+  initialMessages?: ThreadMessageLike[]
 }
 
 export interface PendingApproval {
@@ -392,7 +401,24 @@ export function usePikkuAgentRuntime(options: PikkuAgentRuntimeOptions) {
     return unsubscribe
   }, [agent, commitPending])
 
-  const runtime = useAgUiRuntime({ agent })
+  // Hydrate the thread from prior messages via the AG-UI history adapter,
+  // which useAgUiRuntime loads once on mount. Built once — see the
+  // initialMessages doc note about keeping the chat unmounted until ready.
+  const history = useMemo<ThreadHistoryAdapter | undefined>(() => {
+    if (!options.initialMessages?.length) return undefined
+    const repository = ExportedMessageRepository.fromArray(
+      options.initialMessages
+    )
+    return {
+      load: async () => repository,
+      append: async () => {},
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const runtime = useAgUiRuntime(
+    history ? { agent, adapters: { history } } : { agent }
+  )
 
   const optionsRef = useRef(options)
   optionsRef.current = options

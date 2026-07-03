@@ -112,8 +112,14 @@ const AgentPlaygroundInner: React.FC<{
 }> = ({ agentId, agentData, agentItems, onAgentSelect }) => {
   useLocale()
   const { openAgent } = usePanelContext()
-  const { threadId, setThreadId, threads, createNewThread, refetchThreads } =
-    useAgentPlayground()
+  const {
+    threadId,
+    setThreadId,
+    threads,
+    createNewThread,
+    refetchThreads,
+    dbMessages,
+  } = useAgentPlayground()
   const deleteThread = useDeleteAgentThread()
   const [selectorOpen, setSelectorOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -272,6 +278,10 @@ const AgentPlaygroundInner: React.FC<{
               requirements={requirements}
               onRefresh={refetchCreds}
             />
+          ) : threadId != null && dbMessages === undefined ? (
+            <Center h="100%">
+              <Loader />
+            </Center>
           ) : (
             <AgentChat key={`${agentId}-${threadId}`} />
           )}

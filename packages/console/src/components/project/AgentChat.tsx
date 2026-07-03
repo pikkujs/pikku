@@ -28,6 +28,7 @@ import {
   PikkuApprovalContext,
   usePikkuApproval,
   resolvePikkuToolStatus,
+  convertDbMessages,
   type PikkuToolStatus,
   type MissingCredentialPayload,
 } from '@pikku/assistant-ui'
@@ -467,8 +468,16 @@ const AgentComposer: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
 
 export const AgentChat: React.FC = () => {
   useLocale()
-  const { agentId, threadId, refetchThreads, model, temperature } =
+  const { agentId, threadId, refetchThreads, model, temperature, dbMessages } =
     useAgentPlayground()
+
+  const initialMessages = useMemo(
+    () =>
+      dbMessages && dbMessages.length
+        ? convertDbMessages(dbMessages)
+        : undefined,
+    [dbMessages]
+  )
 
   const onStreamDone = useCallback(() => {
     refetchThreads()
@@ -499,6 +508,7 @@ export const AgentChat: React.FC = () => {
     temperature,
     headers,
     credentials: 'include' as RequestCredentials,
+    initialMessages,
   }
 
   const { runtime, isAwaitingApproval, pendingApprovals, handleApproval } =
