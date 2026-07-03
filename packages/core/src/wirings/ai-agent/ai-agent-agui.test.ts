@@ -1088,3 +1088,40 @@ describe('wrapChannelWithAGUI — realistic full turn', () => {
     assert.equal(t.filter((x) => x === 'TEXT_MESSAGE_START').length, 2)
   })
 })
+
+describe('wrapChannelWithAGUI — late-bound runId', () => {
+  it('resolves getRunId at the first event, not at wrap time', () => {
+    const { channel, events } = makeChannel()
+    let runId: string | undefined
+    const wrapped = wrapChannelWithAGUI(channel, {
+      threadId: 't1',
+      getRunId: () => runId,
+    })
+
+    runId = 'run-from-state-service'
+    wrapped.send({ type: 'text-delta', text: 'hi' } as AIStreamEvent)
+    wrapped.send({ type: 'done' } as AIStreamEvent)
+
+    const started = find(events, 'RUN_STARTED')
+    const finished = find(events, 'RUN_FINISHED')
+    assert.equal(started.runId, 'run-from-state-service')
+    assert.equal(finished.runId, 'run-from-state-service')
+  })
+
+  it('prefers an explicit runId over getRunId and falls back to a UUID', () => {
+    const explicit = makeChannel()
+    wrapChannelWithAGUI(explicit.channel, {
+      runId: 'explicit-run',
+      getRunId: () => 'ignored',
+    }).send({ type: 'done' } as AIStreamEvent)
+    assert.equal(find(explicit.events, 'RUN_STARTED').runId, 'explicit-run')
+
+    const fallback = makeChannel()
+    wrapChannelWithAGUI(fallback.channel, {
+      getRunId: () => undefined,
+    }).send({ type: 'done' } as AIStreamEvent)
+    const started = find(fallback.events, 'RUN_STARTED')
+    assert.ok(started.runId)
+    assert.equal(started.runId, find(fallback.events, 'RUN_FINISHED').runId)
+  })
+})

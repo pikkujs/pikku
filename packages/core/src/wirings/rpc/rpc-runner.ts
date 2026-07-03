@@ -339,16 +339,26 @@ export class ContextAwareRPCService {
       ) => {
         const channel = this.wire.channel as unknown as AIStreamChannel
         if (!channel) throw new Error('No channel available for streaming')
+        let currentRunId: string | undefined
         await streamAIAgent(
           agentName,
           input,
-          wrapChannelWithAGUI(channel, { threadId: input.threadId }),
+          wrapChannelWithAGUI(channel, {
+            threadId: input.threadId,
+            getRunId: () => currentRunId,
+          }),
           {
             sessionService: this.options.sessionService,
             getCredential: this.wire.getCredential?.bind(this.wire),
           },
           undefined,
-          options
+          {
+            ...options,
+            onRunCreated: (runId) => {
+              currentRunId = runId
+              options?.onRunCreated?.(runId)
+            },
+          }
         )
       },
       resume: async (

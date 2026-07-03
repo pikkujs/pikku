@@ -42,6 +42,12 @@ export type { AGUIEvent }
 export type AGUIChannelOptions = {
   threadId?: string
   runId?: string
+  /**
+   * Late-bound runId source, resolved when the run is opened (first event).
+   * Lets the stream path report the AIRunStateService runId on RUN_STARTED
+   * even though that id is only created after the channel is wrapped.
+   */
+  getRunId?: () => string | undefined
 }
 
 function resultToString(result: unknown): string {
@@ -60,7 +66,14 @@ export function wrapChannelWithAGUI(
   options?: AGUIChannelOptions
 ): AIStreamChannel {
   const threadId = options?.threadId ?? randomUUID()
-  const runId = options?.runId ?? randomUUID()
+  let runId: string | null = options?.runId ?? null
+
+  function resolveRunId(): string {
+    if (!runId) {
+      runId = options?.getRunId?.() ?? randomUUID()
+    }
+    return runId
+  }
 
   let textMessageId: string | null = null
   let thinkingMessageId: string | null = null
@@ -80,7 +93,7 @@ export function wrapChannelWithAGUI(
       inner.send({
         type: 'RUN_STARTED',
         threadId,
-        runId,
+        runId: resolveRunId(),
       } as unknown as AIStreamEvent)
     }
     inner.send(event as unknown as AIStreamEvent)
@@ -140,7 +153,7 @@ export function wrapChannelWithAGUI(
     send({
       type: 'RUN_FINISHED',
       threadId,
-      runId,
+      runId: resolveRunId(),
       ...(usageModel ? { model: usageModel } : {}),
       ...(sawUsage
         ? {
