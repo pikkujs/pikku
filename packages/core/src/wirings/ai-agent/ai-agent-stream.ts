@@ -811,12 +811,6 @@ export async function streamAIAgent(
     channel.close()
     return persistingChannel.fullText
   } catch (err) {
-    if (process.env.PIKKU_AI_DEBUG === '1' || process.env.CI === 'true') {
-      // eslint-disable-next-line no-console
-      console.error(
-        `[wire] streamAIAgent THREW: ${err instanceof Error ? err.stack : String(err)}`
-      )
-    }
     for (const mw of aiMiddlewares) {
       if (mw.onError) {
         try {

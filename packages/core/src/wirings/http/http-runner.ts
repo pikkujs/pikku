@@ -368,19 +368,6 @@ const executeRoute = async (
       channelId,
       openingData: await data(),
       send: (data: any) => {
-        if (process.env.CI === 'true' || process.env.PIKKU_AI_DEBUG === '1') {
-          const t = data && typeof data === 'object' ? (data as any).type : '?'
-          const extra =
-            t === 'text-delta'
-              ? `:${((data as any).text ?? '').length}`
-              : t === 'tool-call' || t === 'tool-result'
-                ? `:${(data as any).toolName}`
-                : t === 'step-start'
-                  ? `:${(data as any).stepNumber}`
-                  : ''
-          // eslint-disable-next-line no-console
-          console.error(`[sse ${channelId.slice(0, 6)}] ${t}${extra}`)
-        }
         response.arrayBuffer(isSerializable(data) ? JSON.stringify(data) : data)
       },
       sendBinary: (data) => {
