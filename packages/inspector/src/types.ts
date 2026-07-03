@@ -482,6 +482,11 @@ export interface InspectorState {
     exposedMeta: Record<string, string>
     exposedFiles: Map<string, { path: string; exportedName: string }>
     invokedFunctions: Set<string>
+    // Body-level rpc.invoke() targets keyed by the invoking source file —
+    // used by filterInspectorState to keep addon registrations only where
+    // kept code actually invokes the addon (wiring-level ref() targets are
+    // carried by the wiring meta instead).
+    invokedFunctionsByFile: Map<string, Set<string>>
     usedAddons: Set<string>
     wireAddonDeclarations: Map<
       string,

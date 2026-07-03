@@ -325,20 +325,49 @@ export function aggregateRequiredServices(
   }
 
   // 7. Services that consumed addons need from the parent project.
-  // These are required ONLY by units that actually deploy an addon function;
-  // a unit that merely calls the addon over RPC (or never touches it) must not
-  // carry them, or every per-unit bundle would over-include the addon's
-  // parent-service dependencies (e.g. aiAgentRunner, deploymentService) and
-  // defeat per-unit tree-shaking.
-  const addonFuncIds = new Set<string>()
-  for (const fns of Object.values(state.addonFunctions ?? {})) {
-    for (const id of Object.keys(fns)) addonFuncIds.add(id)
+  // Computed per used addon function: each addon function's shipped meta
+  // lists the services it destructures, so a unit deploying one addon RPC
+  // carries only that function's parent-service needs — never the union
+  // over the addon's whole surface. Addon ids in usedFunctions are always
+  // namespaced (`console:getSchema`); bare project function names that
+  // collide with addon function names must not match.
+  // The addon-level blanket (addonRequiredParentServices) is the fallback
+  // for two cases: the used function ships no services meta (addon built
+  // before per-function services shipped), or it needs an addon-created
+  // service — the addon services factory is monolithic, so constructing
+  // anything needs its full declared parent set.
+  const addonFnServices = new Map<string, string[] | undefined>()
+  for (const [namespace, fns] of Object.entries(state.addonFunctions ?? {})) {
+    for (const [id, meta] of Object.entries(fns)) {
+      addonFnServices.set(
+        `${namespace}:${id}`,
+        (meta as { services?: FunctionServicesMeta })?.services?.services
+      )
+    }
   }
-  const unitDeploysAddonFn = [...usedFunctions].some((fn) =>
-    addonFuncIds.has(fn)
-  )
-  if (unitDeploysAddonFn) {
-    for (const service of state.addonRequiredParentServices ?? []) {
+  const parentDeclared = state.addonRequiredParentServices ?? []
+  const parentDeclaredSet = new Set(parentDeclared)
+  let usesAddonFn = false
+  let addonFactoryNeeded = false
+  for (const funcId of usedFunctions) {
+    if (!addonFnServices.has(funcId)) continue
+    usesAddonFn = true
+    const services = addonFnServices.get(funcId)
+    if (!services) {
+      addonFactoryNeeded = true
+      continue
+    }
+    for (const service of services) {
+      if (parentDeclaredSet.has(service)) {
+        requiredServices.add(service)
+      } else if (!internalServices.has(service)) {
+        // Not parent-provided → created by the addon services factory
+        addonFactoryNeeded = true
+      }
+    }
+  }
+  if (usesAddonFn && addonFactoryNeeded) {
+    for (const service of parentDeclared) {
       requiredServices.add(service)
     }
   }

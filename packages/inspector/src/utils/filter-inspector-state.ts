@@ -1105,6 +1105,66 @@ export function filterInspectorState(
     filteredState.serviceAggregation.requiredServices.add('queueService')
   }
 
+  // Addon bootstrap tree-shake: a filtered state (e.g. per-unit deploy
+  // codegen) only needs an addon when something kept reaches into it — a
+  // kept wiring whose function id is `namespace:*`, a kept agent listing an
+  // addon tool, a kept MCP tool targeting it, or a body-level
+  // `rpc.invoke('namespace:*')` in a file that still contains a kept
+  // function. Unreferenced addons are dropped so the generated bootstrap
+  // never imports their package bootstrap — which would otherwise register
+  // the addon's ENTIRE function surface into every deploy unit (e.g.
+  // @pikku/addon-console statically imports node:fs, which Cloudflare
+  // rejects at upload). Wiring-level ref() targets are deliberately NOT
+  // consulted globally: a ref belongs to its wiring, and if the wiring was
+  // filtered out the reference goes with it.
+  if ((filteredState.rpc.wireAddonDeclarations?.size ?? 0) > 0) {
+    const referencedIds = new Set<string>(
+      filteredState.serviceAggregation.usedFunctions
+    )
+    const keptFiles = new Set<string>()
+    for (const funcId of filteredState.serviceAggregation.usedFunctions) {
+      const file = filteredState.functions.files.get(funcId)
+      if (file?.path) keptFiles.add(file.path)
+    }
+    for (const [file, invoked] of state.rpc.invokedFunctionsByFile ??
+      new Map<string, Set<string>>()) {
+      if (!keptFiles.has(file)) continue
+      for (const id of invoked) referencedIds.add(id)
+    }
+    for (const toolMeta of Object.values(
+      filteredState.mcpEndpoints?.toolsMeta ?? {}
+    ) as Array<{ pikkuFuncId?: string }>) {
+      if (toolMeta.pikkuFuncId) referencedIds.add(toolMeta.pikkuFuncId)
+    }
+    for (const agentMeta of Object.values(
+      filteredState.agents?.agentsMeta ?? {}
+    ) as Array<{ tools?: string[] }>) {
+      for (const tool of agentMeta.tools ?? []) referencedIds.add(tool)
+    }
+    const keptNamespaces = new Set<string>()
+    for (const namespace of filteredState.rpc.wireAddonDeclarations.keys()) {
+      const prefix = `${namespace}:`
+      for (const id of referencedIds) {
+        if (id.startsWith(prefix)) {
+          keptNamespaces.add(namespace)
+          break
+        }
+      }
+    }
+    // Assign fresh collections — the shallow rpc copy shares these Maps/Sets
+    // with the unfiltered (cached) state, so never mutate them in place.
+    filteredState.rpc.wireAddonDeclarations = new Map(
+      [...filteredState.rpc.wireAddonDeclarations].filter(([namespace]) =>
+        keptNamespaces.has(namespace)
+      )
+    )
+    filteredState.rpc.usedAddons = new Set(
+      [...filteredState.rpc.usedAddons].filter((namespace) =>
+        keptNamespaces.has(namespace)
+      )
+    )
+  }
+
   // Recalculate requiredServices based on filtered functions/middleware/permissions
   // Need to cast to InspectorState temporarily for aggregateRequiredServices
   const stateForAggregation = filteredState as InspectorState
