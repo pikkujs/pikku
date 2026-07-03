@@ -111,15 +111,15 @@ const ToolCallDisplay: React.FC<{
     }
   }, [])
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     setResponded('approved')
-    handleApproval(toolCallId, true)
+    await handleApproval(toolCallId, true)
     addResult?.({ approved: true })
   }
 
-  const handleDeny = () => {
+  const handleDeny = async () => {
     setResponded('denied')
-    handleApproval(toolCallId, false)
+    await handleApproval(toolCallId, false)
     addResult?.({ approved: false })
   }
 
@@ -193,6 +193,12 @@ const ToolCallDisplay: React.FC<{
       ? `${serverUrl}${rawConnectUrl}`
       : rawConnectUrl
 
+    const approveCredential = async () => {
+      setResponded('approved')
+      await handleApproval(toolCallId, true)
+      addResult?.({ approved: true })
+    }
+
     const handleConnect = () => {
       if (cred?.credentialType === 'oauth2' && connectUrl) {
         const popup = window.open(
@@ -204,21 +210,17 @@ const ToolCallDisplay: React.FC<{
           if (!popup || popup.closed) {
             clearInterval(oauthTimerRef.current!)
             oauthTimerRef.current = null
-            setResponded('approved')
-            handleApproval(toolCallId, true)
-            addResult?.({ approved: true })
+            void approveCredential()
           }
         }, 500)
       } else {
-        setResponded('approved')
-        handleApproval(toolCallId, true)
-        addResult?.({ approved: true })
+        void approveCredential()
       }
     }
 
-    const handleIgnore = () => {
+    const handleIgnore = async () => {
       setResponded('denied')
-      handleApproval(toolCallId, false)
+      await handleApproval(toolCallId, false)
       addResult?.({ approved: false })
     }
 
@@ -484,6 +486,7 @@ export const AgentChat: React.FC = () => {
     model,
     temperature,
     headers,
+    credentials: 'include' as RequestCredentials,
   }
 
   const { runtime, isAwaitingApproval, pendingApprovals, handleApproval } =
