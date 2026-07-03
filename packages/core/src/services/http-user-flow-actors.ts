@@ -3,6 +3,14 @@ import type {
   UserFlowActorConfig,
   UserFlowActors,
 } from './user-flow-actors-service.js'
+import type {
+  ConverseOptions,
+  ActorFlowVerdict,
+  TargetAgentReply,
+} from '../wirings/actor-flow/actor-flow.types.js'
+import { runConversation } from '../wirings/actor-flow/run-conversation.js'
+import { getSingletonServices } from '../pikku-state.js'
+import { AIProviderNotConfiguredError } from '../errors/errors.js'
 
 export interface HttpUserFlowActorsConfig {
   /**
@@ -23,6 +31,12 @@ export interface HttpUserFlowActorsConfig {
   signInPath?: string
   /** Exposed-RPC path prefix under apiUrl. Default `/rpc`. */
   rpcPath?: string
+  /**
+   * Default model the persona uses when `actor.converse(...)` is called without
+   * an explicit `model`. The persona's own turns/approvals/evaluation run
+   * in-process via the configured `aiAgentRunner`.
+   */
+  model?: string
 }
 
 /**
@@ -55,9 +69,104 @@ export class HttpUserFlowActor implements UserFlowActor {
     if (res.status === 401) {
       // Session expired mid-run — re-login once and retry.
       this.cookie = null
-      return this.readRpcResponse(rpcName, await this.postRpc(rpcName, data, await this.login()))
+      return this.readRpcResponse(
+        rpcName,
+        await this.postRpc(rpcName, data, await this.login())
+      )
     }
     return this.readRpcResponse(rpcName, res)
+  }
+
+  async converse(options: ConverseOptions): Promise<ActorFlowVerdict> {
+    const { aiAgentRunner } = getSingletonServices()
+    if (!aiAgentRunner) {
+      throw new AIProviderNotConfiguredError()
+    }
+    const model = options.model ?? this.config.model
+    if (!model) {
+      throw new Error(
+        `[user-flow] actor '${this.name}' converse needs a model — pass options.model or set 'model' on the actors service`
+      )
+    }
+    const threadId = globalThis.crypto.randomUUID()
+    const resourceId = `actor:${this.name}`
+
+    return runConversation({
+      persona: this.actorConfig,
+      personaName: this.actorConfig.name ?? this.name,
+      agentName: options.agent,
+      task: options.task,
+      evaluate: options.evaluate,
+      approvals: options.approvals,
+      model,
+      maxTurns: options.maxTurns,
+      llm: (params) => aiAgentRunner.run(params),
+      target: {
+        run: (message) =>
+          this.agentRun(options.agent, message, threadId, resourceId),
+        approve: (runId, decisions) =>
+          this.agentApprove(options.agent, runId, decisions),
+      },
+    })
+  }
+
+  /** Start/continue the target agent's run over HTTP as this actor. */
+  private async agentRun(
+    agentName: string,
+    message: string,
+    threadId: string,
+    resourceId: string
+  ): Promise<TargetAgentReply> {
+    const raw = await this.postAgent(`agent/${agentName}`, {
+      message,
+      threadId,
+      resourceId,
+    })
+    return normalizeAgentReply(raw)
+  }
+
+  /** Answer the target agent's pending approvals over HTTP and continue. */
+  private async agentApprove(
+    agentName: string,
+    runId: string,
+    decisions: { toolCallId: string; approved: boolean }[]
+  ): Promise<TargetAgentReply> {
+    const raw = await this.postAgent(`agent/${agentName}/approve`, {
+      runId,
+      approvals: decisions,
+    })
+    return normalizeAgentReply(raw)
+  }
+
+  /** POST an agent HTTP route (raw body, not RPC-wrapped), with one 401 retry. */
+  private async postAgent(subPath: string, body: unknown): Promise<unknown> {
+    const rpcPath = this.config.rpcPath ?? '/rpc'
+    const url = `${this.config.apiUrl}${rpcPath}/${subPath}`
+    const send = (cookie: string) =>
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          origin: this.origin,
+          cookie,
+        },
+        body: JSON.stringify(body),
+      })
+
+    let res = await send(this.cookie ?? (await this.login()))
+    if (res.status === 401) {
+      this.cookie = null
+      res = await send(await this.login())
+    }
+    if (!res.ok) {
+      const text = (await res.text().catch(() => '')).slice(0, 300)
+      throw new Error(
+        `[user-flow] agent call '${subPath}' as '${this.name}' returned ${res.status}: ${text}`
+      )
+    }
+    if (res.status === 204) return undefined
+    const text = await res.text()
+    return text ? JSON.parse(text) : undefined
   }
 
   private async postRpc(rpcName: string, data: unknown, cookie: string) {
@@ -114,6 +223,28 @@ export class HttpUserFlowActor implements UserFlowActor {
     }
     this.cookie = cookie
     return cookie
+  }
+}
+
+/** Normalize an agentRun/agentApprove HTTP response into a TargetAgentReply. */
+function normalizeAgentReply(raw: unknown): TargetAgentReply {
+  const r = (raw ?? {}) as Record<string, unknown>
+  const pending = Array.isArray(r.pendingApprovals)
+    ? (r.pendingApprovals as Array<Record<string, unknown>>).map((p) => ({
+        toolCallId: String(p.toolCallId),
+        toolName: String(p.toolName),
+        args: p.args,
+        reason: typeof p.reason === 'string' ? p.reason : undefined,
+      }))
+    : undefined
+  return {
+    text: typeof r.text === 'string' ? r.text : '',
+    runId: typeof r.runId === 'string' ? r.runId : '',
+    status:
+      r.status === 'completed' || r.status === 'suspended'
+        ? r.status
+        : undefined,
+    pendingApprovals: pending,
   }
 }
 

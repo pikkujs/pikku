@@ -8,7 +8,6 @@ import { addSchedule } from './add/add-schedule.js'
 import { addTrigger } from './add/add-trigger.js'
 import { addQueueWorker } from './add/add-queue-worker.js'
 import { addWorkflow } from './add/add-workflow.js'
-import { addActorFlow } from './add/add-actor-flow.js'
 import { addMCPResource } from './add/add-mcp-resource.js'
 import { addMCPPrompt } from './add/add-mcp-prompt.js'
 import type {
@@ -101,7 +100,6 @@ export const visitSetup = (
   addPermission(logger, node, checker, state, options)
   addApprovalDescription(logger, node, checker, state, options)
   addWorkflow(logger, node, checker, state, options)
-  addActorFlow(logger, node, checker, state, options)
 
   ts.forEachChild(node, (child) =>
     visitSetup(logger, checker, child, state, options)
