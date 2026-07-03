@@ -11,7 +11,7 @@ import {
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
-import { Check, Plus, ShieldCheck, FunctionSquare, Bot } from 'lucide-react'
+import { Check, Plus, Download, ShieldCheck, FunctionSquare, Bot, Globe } from 'lucide-react'
 import type { PackageMeta } from '../../pages/PackagesPage'
 import {
   getCategoryMeta,
@@ -25,6 +25,8 @@ interface AddonCardProps {
   installed: boolean
   installing: boolean
   editable: boolean
+  /** 'api' swaps the action verb to Import and the stat row to an operation count. */
+  kind?: 'addon' | 'api'
   onOpen: (addon: PackageMeta) => void
   onInstall: (addon: PackageMeta) => void
 }
@@ -34,14 +36,16 @@ export const AddonCard: React.FC<AddonCardProps> = ({
   installed,
   installing,
   editable,
+  kind = 'addon',
   onOpen,
   onInstall,
 }) => {
   useLocale()
   const [hovered, setHovered] = useState(false)
+  const isApi = kind === 'api'
   const category = addonPrimaryCategory(addon)
   const { icon: CategoryIcon, color } = getCategoryMeta(category)
-  const official = isOfficialAddon(addon.name)
+  const official = !isApi && isOfficialAddon(addon.name)
   const functionCount = Object.keys(addon.functions ?? {}).length
   const agentCount = Object.keys(addon.agents ?? {}).length
   const iconSrc = addon.icon
@@ -97,7 +101,19 @@ export const AddonCard: React.FC<AddonCardProps> = ({
               {asI18n(addon.name)}
             </Text>
           </div>
-          {official ? (
+          {isApi ? (
+            addon.author && (
+              <Badge
+                size="sm"
+                variant="light"
+                color="gray"
+                tt="none"
+                style={{ flexShrink: 0 }}
+              >
+                {asI18n(addon.author)}
+              </Badge>
+            )
+          ) : official ? (
             <Badge
               size="sm"
               variant="light"
@@ -160,8 +176,14 @@ export const AddonCard: React.FC<AddonCardProps> = ({
         }}
       >
         <Group gap="lg" wrap="nowrap">
-          <AddonStatChip icon={FunctionSquare} value={functionCount} />
-          <AddonStatChip icon={Bot} value={agentCount} />
+          {isApi ? (
+            <AddonStatChip icon={Globe} value={addon.totalOperations ?? 0} />
+          ) : (
+            <>
+              <AddonStatChip icon={FunctionSquare} value={functionCount} />
+              <AddonStatChip icon={Bot} value={agentCount} />
+            </>
+          )}
         </Group>
         {installed ? (
           <Button
@@ -174,19 +196,19 @@ export const AddonCard: React.FC<AddonCardProps> = ({
               onOpen(addon)
             }}
           >
-            {m.packages_added()}
+            {isApi ? m.packages_imported() : m.packages_added()}
           </Button>
         ) : editable ? (
           <Button
             size="xs"
-            leftSection={<Plus size={13} />}
+            leftSection={isApi ? <Download size={13} /> : <Plus size={13} />}
             loading={installing}
             onClick={(e) => {
               e.stopPropagation()
               onInstall(addon)
             }}
           >
-            {m.packages_add()}
+            {isApi ? m.packages_import() : m.packages_add()}
           </Button>
         ) : (
           <Button

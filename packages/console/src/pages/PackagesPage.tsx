@@ -3,16 +3,12 @@ import { useSearchParams } from '../router'
 import { PackageDetailPage } from './PackageDetailPage'
 import {
   Group,
-  Text,
-  ThemeIcon,
-  Badge,
   TextInput,
   SegmentedControl,
   Box,
   Center,
   Loader,
 } from '@pikku/mantine/core'
-import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { Package, Globe, Search } from 'lucide-react'
@@ -21,7 +17,6 @@ import { usePikkuRPC } from '../context/PikkuRpcProvider'
 import { useConsoleEditable } from '../context/ConsoleEditableContext'
 import { ResizablePanelLayout } from '../components/layout/ResizablePanelLayout'
 import { ListPageHeader } from '../components/layout/PageLayout'
-import { TableListPage } from '../components/layout/TableListPage'
 import { EmptyStatePlaceholder } from '../components/layout/EmptyStatePlaceholder'
 import { CommunityGallery } from '../components/packages/CommunityGallery'
 import { isOfficialAddon } from '../components/packages/addonCategoryMeta'
@@ -41,6 +36,10 @@ export interface PackageMeta {
   categories: string[]
   functions: Record<string, unknown>
   agents: Record<string, unknown>
+  // API-only fields (populated when this entry came from the OpenAPI catalogue,
+  // via apiToPackageMeta below) — undefined for regular addons.
+  swaggerUrl?: string
+  totalOperations?: number
 }
 
 const deriveNamespace = (packageName: string) => {
@@ -161,67 +160,35 @@ interface OpenApiEntry {
   openapiVer: string
   swaggerUrl: string
   logo?: string
+  categories?: string[]
+  tags?: string[]
+  totalOperations?: number
 }
 
-const API_COLUMNS = [
-  {
-    key: 'api',
-    header: 'API',
-    render: (item: OpenApiEntry) => (
-      <Group gap="sm" wrap="nowrap">
-        {item.logo ? (
-          <img
-            src={item.logo}
-            width={28}
-            height={28}
-            alt={item.title}
-            style={{ objectFit: 'contain', display: 'block', borderRadius: 4 }}
-          />
-        ) : (
-          <ThemeIcon size={28} radius="sm" variant="light" color="gray">
-            <Globe size={16} />
-          </ThemeIcon>
-        )}
-        <div>
-          <Group gap="xs" wrap="nowrap">
-            <Text fw={500} size="sm">
-              {asI18n(item.title || item.name)}
-            </Text>
-            <Badge size="sm" variant="light" color="gray">
-              {asI18n(item.openapiVer)}
-            </Badge>
-          </Group>
-          {item.description && (
-            <Text size="sm" c="dimmed" truncate style={{ maxWidth: 400 }}>
-              {asI18n(item.description)}
-            </Text>
-          )}
-        </div>
-      </Group>
-    ),
-  },
-  {
-    key: 'provider',
-    header: 'PROVIDER',
-    render: (item: OpenApiEntry) => (
-      <Text size="sm">{asI18n(item.provider)}</Text>
-    ),
-  },
-  {
-    key: 'operations',
-    header: 'OPS',
-    render: (item: any) => (
-      <Text size="sm">{asI18n(String(item.totalOperations ?? '-'))}</Text>
-    ),
-  },
-]
+// APIs render through the exact same gallery/card/drawer as addons — the only
+// difference is the action verb (Import vs Add), handled via `kind` props.
+// Mapping into PackageMeta is what makes that reuse possible.
+const apiToPackageMeta = (item: OpenApiEntry): PackageMeta => ({
+  id: item.name,
+  name: item.name,
+  displayName: item.title || item.name,
+  description: item.description,
+  version: item.version,
+  author: item.provider,
+  icon: item.logo ?? undefined,
+  tags: item.tags ?? [],
+  categories: item.categories ?? [],
+  functions: {},
+  agents: {},
+  swaggerUrl: item.swaggerUrl,
+  totalOperations: item.totalOperations,
+})
 
-const ApisList: React.FC<{
-  searchQuery: string
-  onSelect: (id: string, source: 'installed' | 'community' | 'api') => void
-}> = ({ searchQuery, onSelect }) => {
+const ApisList: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
   const rpc = usePikkuRPC()
   useLocale()
+  const editable = useConsoleEditable()
+  const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({
     queryKey: ['openapis'],
@@ -236,30 +203,93 @@ const ApisList: React.FC<{
     retry: false,
   })
 
-  const filtered = useMemo(() => {
-    if (!searchQuery) return data?.apis ?? []
-    const q = searchQuery.toLowerCase()
-    return (data?.apis ?? []).filter(
-      (item) =>
-        item.title?.toLowerCase().includes(q) ||
-        item.name?.toLowerCase().includes(q) ||
-        item.provider?.toLowerCase().includes(q) ||
-        item.description?.toLowerCase().includes(q)
+  const { data: installedAddons } = useQuery<Array<{ packageName: string }>>({
+    queryKey: ['installed-addons'],
+    queryFn: async () => {
+      const result = await rpc.invoke('console:getInstalledAddons')
+      return (result ?? []) as Array<{ packageName: string }>
+    },
+    staleTime: 60 * 1000,
+  })
+
+  // installOpenapiAddon generates a local addon named @pikku/addon-<slug> and
+  // wires it up — it shows up in getInstalledAddons like any other addon.
+  const importMutation = useMutation({
+    mutationFn: async (api: PackageMeta) =>
+      rpc.invoke('console:installOpenapiAddon', {
+        name: deriveNamespace(api.name),
+        // apiToPackageMeta always sets swaggerUrl — this mutation only ever
+        // receives API-kind PackageMeta objects from ApisList's onInstall.
+        swaggerUrl: api.swaggerUrl!,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['installed-addons'] })
+      queryClient.invalidateQueries({ queryKey: ['allMeta'] })
+    },
+  })
+
+  // installOpenapiAddon registers the generated addon under a DERIVED slug
+  // (@pikku/addon-<slug>), not the catalogue's own name — map installed
+  // slugs back to whichever catalogue entries produced them.
+  const installedSlugs = useMemo(
+    () =>
+      new Set(
+        (installedAddons ?? [])
+          .filter((a) => a.packageName.startsWith('@pikku/addon-'))
+          .map((a) => a.packageName.slice('@pikku/addon-'.length))
+      ),
+    [installedAddons]
+  )
+
+  const apis = useMemo(
+    () => (data?.apis ?? []).map(apiToPackageMeta),
+    [data]
+  )
+
+  const installedNames = useMemo(
+    () =>
+      new Set(
+        apis
+          .filter((api) => installedSlugs.has(deriveNamespace(api.name)))
+          .map((api) => api.name)
+      ),
+    [apis, installedSlugs]
+  )
+
+  if (isLoading) {
+    return (
+      <Box style={{ flex: 1, minHeight: 0 }}>
+        <Center h="100%">
+          <Loader />
+        </Center>
+      </Box>
     )
-  }, [data, searchQuery])
+  }
+
+  if (!data || data.apis.length === 0) {
+    return (
+      <EmptyStatePlaceholder
+        icon={Globe}
+        title={m.packages_no_apis_title()}
+        description={m.packages_no_apis_description()}
+        docsHref="https://pikku.dev/docs/external-packages"
+      />
+    )
+  }
 
   return (
-    <TableListPage
-      title={`APIs (${data?.total ?? '...'})`}
-      icon={Globe}
-      docsHref="https://pikku.dev/docs/external-packages"
-      data={filtered}
-      columns={API_COLUMNS}
-      getKey={(item) => item.name}
-      onRowClick={(item) => onSelect(item.name, 'api' as any)}
-      emptyTitle={m.packages_no_apis_title()}
-      emptyDescription={m.packages_no_apis_description()}
-      loading={isLoading}
+    <CommunityGallery
+      addons={apis}
+      searchQuery={searchQuery}
+      installedNames={installedNames}
+      editable={editable}
+      kind="api"
+      installingName={
+        importMutation.isPending
+          ? (importMutation.variables?.name ?? null)
+          : null
+      }
+      onInstall={(api) => importMutation.mutate(api)}
     />
   )
 }
@@ -336,7 +366,7 @@ const PackagesList: React.FC<{
       }
     >
       {tab === 'apis' ? (
-        <ApisList searchQuery={searchQuery} onSelect={onSelect} />
+        <ApisList searchQuery={searchQuery} />
       ) : (
         <AddonsList searchQuery={searchQuery} filter={effectiveFilter} />
       )}

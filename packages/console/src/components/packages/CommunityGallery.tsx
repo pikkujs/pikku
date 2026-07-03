@@ -26,6 +26,8 @@ interface CommunityGalleryProps {
   installedNames: Set<string>
   editable: boolean
   installingName: string | null
+  /** 'api' swaps card/drawer wording to Import and hides the publish CTA. */
+  kind?: 'addon' | 'api'
   onInstall: (addon: PackageMeta) => void
 }
 
@@ -40,6 +42,7 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
   installedNames,
   editable,
   installingName,
+  kind = 'addon',
   onInstall,
 }) => {
   useLocale()
@@ -88,7 +91,9 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
     category === 'all'
       ? searchQuery.trim()
         ? m.packages_results()
-        : m.packages_all_addons()
+        : kind === 'api'
+          ? m.packages_all_apis()
+          : m.packages_all_addons()
       : asI18n(categories.find((c) => c.id === category)?.label ?? category)
 
   return (
@@ -157,6 +162,7 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
                     installed={installedNames.has(addon.name)}
                     installing={installingName === addon.name}
                     editable={editable}
+                    kind={kind}
                     onOpen={setSelected}
                     onInstall={onInstall}
                   />
@@ -165,7 +171,7 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
             )}
           </Box>
 
-          <PublishCta />
+          {kind === 'addon' && <PublishCta />}
         </Stack>
       </Box>
 
@@ -174,6 +180,7 @@ export const CommunityGallery: React.FC<CommunityGalleryProps> = ({
         installed={selected ? installedNames.has(selected.name) : false}
         installing={!!selected && installingName === selected.name}
         editable={editable}
+        kind={kind}
         onClose={() => setSelected(null)}
         onInstall={onInstall}
       />
