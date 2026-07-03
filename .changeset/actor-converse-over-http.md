@@ -1,6 +1,7 @@
 ---
 '@pikku/core': patch
 '@pikku/inspector': patch
+'@pikku/cli': patch
 ---
 
 Add `actor.converse(...)` — actor agents for user journeys (#850)
@@ -29,3 +30,6 @@ caller's job — they already hold the actor.
 The conversation engine is transport-agnostic (persona LLM + injected target
 driver); the persona's own turns run in-process via the configured
 `aiAgentRunner` (`model` from the call or the actors-service default).
+
+`agent` is typed against the generated agent-name union (`keyof AgentMap`), so
+it's author-time checked and autocompleted in a typed project.
