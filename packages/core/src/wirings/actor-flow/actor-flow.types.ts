@@ -9,11 +9,12 @@ export type ActorFlowApprovalPolicy = 'in-persona' | 'always' | 'never'
 
 /**
  * Options for `actor.converse(...)` — a dynamic conversation an actor holds
- * with a target Pikku AI agent, in the actor's own persona.
+ * with a target Pikku AI agent, in the actor's own persona. `TAgentName` is
+ * bound to the generated union of agent names in a typed project.
  */
-export interface ConverseOptions {
+export interface ConverseOptions<TAgentName extends string = string> {
   /** Target Pikku AI agent name to converse with. */
-  agent: string
+  agent: TAgentName
   /** What the actor is trying to get the agent to accomplish. */
   task: string
   /** Natural-language success criterion the actor evaluates at the end. */
