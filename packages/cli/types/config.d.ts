@@ -388,6 +388,16 @@ export type PikkuCLIInput = {
    */
   security?: boolean
 
+  /**
+   * After codegen, run a real `tsc --noEmit` over the project's tsconfig and
+   * fail on type errors. `tsc` prints full diagnostics with code frames;
+   * `tscSummary` prints a compact one-line-per-error render (no code frames,
+   * capped) that's cheap for AI agents / CI logs. Off by default; enable per
+   * invocation via `pikku all --tsc` / `--tsc-summary`.
+   */
+  tsc?: boolean
+  tscSummary?: boolean
+
   lint?: {
     servicesNotDestructured?: 'off' | 'warn' | 'error'
     wiresNotDestructured?: 'off' | 'warn' | 'error'

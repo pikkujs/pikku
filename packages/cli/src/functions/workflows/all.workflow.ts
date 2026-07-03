@@ -1,6 +1,12 @@
 import { existsSync } from 'fs'
 import { pikkuWorkflowComplexFunc } from '#pikku/workflow/pikku-workflow-types.gen.js'
 import { assertSingleCoreVersion } from '../../utils/assert-single-core-version.js'
+import {
+  PikkuTypecheckFailedError,
+  renderTscFull,
+  renderTscSummary,
+  runProjectTypecheck,
+} from '../../utils/tsc-check.js'
 
 type ScaffoldGenerator =
   | 'pikkuPublicRPC'
@@ -407,5 +413,29 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
 
     await workflow.do('Bootstrap', 'pikkuBootstrap', { allImports })
     await workflow.do('Summary', 'pikkuSummary', null)
+
+    // Opt-in type-check gate (--tsc / --tsc-summary). Runs last, over the
+    // post-codegen project, so generated .pikku files are included — matching a
+    // real build. Printed inside the step; the throw lives in the workflow body
+    // (like assertSingleCoreVersion) so it reliably fails the run.
+    if (config.tsc || config.tscSummary) {
+      const errorCount = await workflow.do('Type check', async () => {
+        const { result, diagnostics, formatHost } = runProjectTypecheck(
+          config.tsconfig,
+          config.rootDir
+        )
+        logger.info(
+          config.tsc
+            ? renderTscFull(diagnostics, config.rootDir, formatHost)
+            : renderTscSummary(result)
+        )
+        return result.errorCount
+      })
+      if (errorCount > 0) {
+        throw new PikkuTypecheckFailedError(
+          `Type check failed: ${errorCount} error${errorCount === 1 ? '' : 's'}`
+        )
+      }
+    }
   },
 })

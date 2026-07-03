@@ -130,6 +130,16 @@ wireCLI({
         'Fail the build on critical diagnostics. Always on; accepted for symmetry with --fail-on-error/--fail-on-warn.',
       default: true,
     },
+    tsc: {
+      description:
+        "After codegen, run a real tsc --noEmit over the project's tsconfig and fail on type errors. Prints full diagnostics with code frames. Off by default.",
+      default: false,
+    },
+    tscSummary: {
+      description:
+        'Like --tsc but prints a compact one-line-per-error summary (no code frames, node_modules filtered, capped) — cheap for AI agents / CI. Fails on type errors.',
+      default: false,
+    },
     userSessionType: {
       description:
         'Specify which UserSession type to use (when multiple exist)',
