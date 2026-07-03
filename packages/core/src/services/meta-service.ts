@@ -1,4 +1,5 @@
 import { join } from 'node:path'
+import type * as NodeFsPromises from 'node:fs/promises'
 import type { JSONSchema7 } from 'json-schema'
 import type { HTTPWiringsMeta } from '../wirings/http/http.types.js'
 import type { ChannelsMeta } from '../wirings/channel/channel.types.js'
@@ -231,9 +232,7 @@ export class LocalMetaService implements MetaService {
   // import fails Cloudflare Workers upload validation when this class lands in
   // a deploy bundle (it's only ever constructed on real Node).
   private fs() {
-    return process.getBuiltinModule(
-      'node:fs/promises'
-    ) as typeof import('node:fs/promises')
+    return process.getBuiltinModule('node:fs/promises') as typeof NodeFsPromises
   }
 
   async readFile(relativePath: string): Promise<string | null> {
