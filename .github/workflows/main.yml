@@ -85,6 +85,7 @@ jobs:
         verifier:
           [
             addon,
+            addon-treeshake,
             # binary,
             classification,
             gateway,
