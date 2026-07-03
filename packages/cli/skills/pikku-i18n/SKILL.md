@@ -1,217 +1,90 @@
 ---
 name: pikku-i18n
-description: 'Wire i18n into a Pikku frontend (Vite SPA, Vite SSR, or Next.js app-router) with react-i18next + i18next. English by default, every user-facing string goes through a `t()` token, and additional languages are served under `/de` `/es` URL prefixes. TRIGGER when: scaffolding or editing a frontend and writing user-facing text, adding a second language, or asked to "make this translatable / use tokens / add i18n". DO NOT TRIGGER for backend functions, error messages thrown from functions, or log output.'
+description: 'Wire i18n into a Pikku frontend with Paraglide JS (inlang). English by default, every user-facing string is a typed message function (`m.some__key()`) compiled from `messages/<locale>.json`, and additional languages are served under `/fr` `/de` URL prefixes. TRIGGER when: scaffolding or editing a frontend and writing user-facing text, adding a second language, or asked to "make this translatable / use tokens / add i18n". DO NOT TRIGGER for backend functions, error messages thrown from functions, or log output.'
 installGroups: [core]
 ---
 
-# Pikku i18n
+# Pikku i18n (Paraglide JS)
 
 ## Agent Operating Procedure
 
 Use this skill as an execution checklist, not reference material.
 
-1. Every user-facing string in a frontend is a token. Never hardcode display text — write `t('some.token')` and put the English copy in `i18n/en.json`. This holds even when the app ships only English; the tokens are the seam a second language slots into later.
-2. One `i18n/<lang>.json` file per language per app, sitting next to the i18n config in a single `i18n/` folder. English (`en`) is the default and is the only locale registered until someone adds another.
-3. Pick the delivery pattern by framework (see below). The token files and config shape are identical across frameworks; only _how the active locale reaches the renderer_ differs.
-4. Validate with the app's own `tsc` then its `build`. For Next.js, a clean `dev` is not enough — run `build`, because the RSC page-data collection step is where i18n wiring mistakes surface.
+1. Every user-facing string in a frontend is a message. Never hardcode display text — add a key to `messages/en.json` and render `m.the__key()`. This holds even when the app ships only English; the messages are the seam a second language slots into later.
+2. One `messages/<locale>.json` per language at the app root (NOT under `src/`), declared in `project.inlang/settings.json`. English (`en`) is `baseLocale` and the only locale until someone adds another.
+3. Messages compile to typed ESM functions in `src/paraglide/` (generated, self-gitignored — never edit or commit it). The Vite plugin compiles during `dev`/`build` with HMR on message edits; run the CLI compile only when you need `tsc` before Vite has ever run.
+4. Validate with the app's own `tsc` then its `build`. The deploy pipeline compiles Paraglide and runs each frontend's `tsc` before building it — an i18n mistake blocks the deploy.
 
-## The rules that don't change
+## The moving parts (starter-template layout)
 
-- Library: `react-i18next` + `i18next`. Nothing else.
-- Locale files live next to the config in an `i18n/` folder — `src/i18n/<lang>.json` (Vite) or `app/i18n/<lang>.json` (Next.js) — imported statically. **Do not** put them under `public/` — Vite cannot `import` from `public/`, and a runtime fetch is unnecessary: UI-string files are a few KB, so static-import every locale and move on. Do not reach for `i18next-http-backend`, lazy `import()`, or per-locale code-splitting.
-- Default locale is `en`. Adding a language = drop `i18n/<lang>.json`, import + register it in the config, done. Its content is then served under the `/<lang>` URL prefix; the default locale needs no prefix.
-- Keys are namespaced by area (`auth.login.title`, `board.createCta`). Interpolate with `{{name}}` and pass `t('key', { name })`.
+- `messages/en.json` — flat keys, `{param}` interpolation, inlang message-format:
+  ```json
+  {
+    "$schema": "https://inlang.com/schema/inlang-message-format",
+    "auth__login__title": "Sign in",
+    "auth__login__description": "Welcome back to {name}."
+  }
+  ```
+  Key convention: lower snake_case, `__` (double underscore) between namespace segments, `_` within a segment — `auth__login__title`, `common__email_placeholder`.
+- `project.inlang/settings.json` — `baseLocale`, `locales`, the `@inlang/plugin-message-format` module, `pathPattern: "./messages/{locale}.json"`.
+- `vite.config.ts` — `paraglideVitePlugin({ project: './project.inlang', outdir: './src/paraglide' })` from `@inlang/paraglide-js` (devDependency), FIRST in the plugins array.
+- `src/paraglide/` — compiled output (`messages.js`, `runtime.js`, per-locale `messages/*.js`). Generated; it writes its own `.gitignore`.
+- `src/i18n/messages.ts` — re-exports the generated `m` wrapped so every message returns a branded `I18nString` (satisfies the `@pikku/mantine` `I18nNode` prop gate) and passes through `maskI18n` for debug mode. **Components import `m` from `@/i18n/messages`, never from `../paraglide/messages.js` directly** — a raw Paraglide call returns a plain `string` and fails the Mantine typing gate.
+- `src/i18n/config.ts` — locale plumbing: `supportedLocales`/`defaultLocale` (re-exported from `../paraglide/runtime.js`), `detectLocale`, `localeDir` (RTL for ar/he/fa/ur), a reactive locale store (`overwriteGetLocale` bridged to `useSyncExternalStore`), `setActiveLocale`, `useLocale()`, and the i18n-debug helpers.
+- `tsconfig.json` — `"allowJs": true, "checkJs": false` so `tsc` can consume Paraglide's JSDoc-typed JS output.
+
+## Using messages in components
+
+```tsx
+import { m } from '@/i18n/messages'
+import { useLocale } from '@/i18n/config'
+
+function LoginPage() {
+  useLocale() // subscribe: re-render m.*() when the locale switches
+  return (
+    <>
+      <Title>{m.auth__login__title()}</Title>
+      <Text>{m.auth__login__description({ name: m.app__name() })}</Text>
+    </>
+  )
+}
+```
+
+- Params: `{name}` in the JSON → `m.auth__login__description({ name })`. Params are typed per message.
+- Any component that renders `m.*()` calls `useLocale()` (bare call is enough); it also returns `{ locale, dir, setLocale }` for switchers.
+- Non-component helpers (formatters, status maps) call `m.some__key()` directly — the functions are plain ESM, no hook needed; the render-time subscription lives in the component that displays the result.
+- Locale switching: the root route persists to localStorage, sets `<html lang dir>` (`localeDir`), and calls `setActiveLocale` — in-SPA re-render, no page reload. Mirror `routes/__root.tsx` in the starter template.
 
 ## Type safety — and why deploys block on i18n
 
-Tokens are **typed**, not stringly-typed. Each config augments i18next's
-`CustomTypeOptions` with `resources: { translation: typeof en }` (the block is in
-every config shape below). i18next flattens `typeof en` into a union of dot-path
-keys, so:
+A message IS a function: a typo'd or deleted key (`m.auth__login__titel()`) is a missing export — a **TypeScript error**, not a silent runtime fallback string. Params are typed too. The deploy pipeline compiles Paraglide then runs each frontend's `tsc` (`"tsc": "tsc --noEmit"` script — keep it in every frontend's `package.json`) **before** building; a type error aborts the deploy. `vite build` does not type-check on its own, so this gate is the only thing standing between a broken message and production.
 
-- `t('auth.login.titel')` (typo) or `t('auth.removed')` (deleted key) is a **TypeScript error**, not a silent runtime `auth.removed` string.
-- An added locale registered as `de satisfies typeof en` fails to compile if `de.json` is missing keys or has drifted from `en.json`.
+The gate catches _invalid_ messages but not _inlined_ strings — the `@pikku/mantine` `I18nNode` prop typing catches those on Mantine props (a raw string literal fails to compile), and i18n-debug covers the rest.
 
-This is enforced at deploy: the build pipeline runs each frontend's `tsc`
-(`yarn tsc` / `tsc --noEmit`) **before** building it, and a type error aborts the
-deploy. `vite build` does not type-check on its own, so this gate is the only
-thing standing between a broken/missing token and production. Keep a `"tsc":
-"tsc --noEmit"` script in every frontend's `package.json` so the gate uses it.
+## Compile step
 
-The type gate catches _invalid_ tokens but not _inlined_ strings — a hardcoded
-`<h1>Welcome</h1>` compiles fine. Catching those is best-effort (the builder
-agent is told never to inline) plus the debug mode below.
-
-## i18n debug mode (find inlined strings)
-
-Each config registers an i18next `postProcessor` named `i18nDebug` that, when
-enabled, masks every _translated_ string to block glyphs (`█`). The trick: with
-it on, anything still readable on screen is text that **never went through a
-token** — i.e. a hardcoded/inlined string. It's a visual leak detector for
-missing i18n, not a runtime feature, so it ships **off by default**.
-
-```ts
-export function isI18nDebug(): boolean {
-  if (typeof process !== 'undefined' && process.env?.I18N_DEBUG === '1')
-    return true
-  if (typeof window === 'undefined') return false
-  const params = new URLSearchParams(window.location.search)
-  if (params.has('i18n-debug')) return params.get('i18n-debug') !== '0'
-  return window.localStorage?.getItem('i18n-debug') === '1'
-}
-
-const i18nDebugPostProcessor = {
-  type: 'postProcessor' as const,
-  name: 'i18nDebug',
-  process: (value: string) =>
-    isI18nDebug() ? value.replace(/\S/g, '█') : value,
-}
-// register on the instance: `.use(i18nDebugPostProcessor)` and add
-// `postProcess: ['i18nDebug']` to `.init({ ... })`.
-```
-
-- **Client (Vite SPA/SSR):** toggle with `?i18n-debug` in the URL or `localStorage['i18n-debug'] = '1'`.
-- **Server (Next.js server components):** there is no per-request URL toggle — enable for a build with `I18N_DEBUG=1` (the helper only checks the env var server-side).
-
-All the bundled templates already wire this; mirror it when hand-wiring i18n in a new app. (A future e2e check can flip the flag and assert no unmasked text renders.)
-
-## Config shape (client / SPA)
-
-`src/i18n/config.ts`:
-
-```ts
-import i18n from 'i18next'
-import { initReactI18next } from 'react-i18next'
-import en from './en.json'
-
-// Typed tokens. i18next flattens this resource type into dot-path keys, so
-// `t('auth.login.title')` is checked and a typo/removed key is a compile error.
-declare module 'i18next' {
-  interface CustomTypeOptions {
-    defaultNS: 'translation'
-    resources: {
-      translation: typeof en
-    }
-  }
-}
-
-export const supportedLocales = ['en'] as const
-export type Locale = (typeof supportedLocales)[number]
-export const defaultLocale: Locale = 'en'
-
-export function detectLocale(pathname: string): Locale {
-  const segment = pathname.split('/')[1]
-  if (supportedLocales.includes(segment as Locale)) return segment as Locale
-  if (typeof navigator !== 'undefined') {
-    const lang = navigator.language?.split('-')[0]
-    if (supportedLocales.includes(lang as Locale)) return lang as Locale
-  }
-  return defaultLocale
-}
-
-i18n.use(initReactI18next).init({
-  resources: { en: { translation: en } },
-  lng:
-    typeof window !== 'undefined'
-      ? detectLocale(window.location.pathname)
-      : defaultLocale,
-  fallbackLng: defaultLocale,
-  interpolation: { escapeValue: false },
-})
-
-export default i18n
-```
-
-Import it once for its side effect at the app entry (`import './i18n/config'` in `main.tsx`), then use the hook in components:
-
-```tsx
-import { useTranslation } from 'react-i18next'
-function Page() {
-  const { t } = useTranslation()
-  return <h1>{t('landing.title')}</h1>
-}
-```
-
-Non-component helpers (formatters, status maps) can't use the hook — import the instance and call it directly:
-
-```ts
-import i18n from '../i18n/config'
-export const prettyStatus = (s: string) => i18n.t(`status.${s}`)
-```
-
-## Per-framework delivery
-
-### Vite SPA
-
-The config above is the whole story. `import './i18n/config'` in `main.tsx`; `useTranslation` everywhere.
-
-### Vite SSR (`@cloudflare/vite-plugin` / Worker)
-
-Same config, but `import './i18n/config'` in **both** the worker entry (`worker.tsx`) and the client entry (`client.tsx`) so the global i18next instance is initialised on each side before `<App/>` renders. The locale JSON is bundled into the Worker (a static import, not a fetch — the Worker never has to fetch its own assets). The shared `<App/>` uses `useTranslation` normally.
-
-### Next.js app-router — server components
-
-Server components **cannot** call `useTranslation`, and they **must not** import `initReactI18next`: it calls React's `createContext`, which throws during RSC page-data collection (`(0 , Y.createContext) is not a function` at build). Use a plain i18next instance and a fixed translator instead.
-
-`app/i18n/config.ts`:
-
-```ts
-import { createInstance } from 'i18next'
-import en from './en.json'
-
-// Typed tokens — same augmentation as the SPA config; `getT()('key')` is
-// checked against en.json's flattened dot-path keys.
-declare module 'i18next' {
-  interface CustomTypeOptions {
-    defaultNS: 'translation'
-    resources: {
-      translation: typeof en
-    }
-  }
-}
-
-export const supportedLocales = ['en'] as const
-export type Locale = (typeof supportedLocales)[number]
-export const defaultLocale: Locale = 'en'
-
-const i18n = createInstance()
-i18n.init({
-  resources: { en: { translation: en } },
-  lng: defaultLocale,
-  fallbackLng: defaultLocale,
-  interpolation: { escapeValue: false },
-})
-
-export function getT(locale: Locale = defaultLocale) {
-  return i18n.getFixedT(locale)
-}
-
-export default i18n
-```
-
-```tsx
-import { getT } from './i18n/config'
-export default function Page() {
-  const t = getT()
-  return <h1>{t('page.title')}</h1>
-}
-```
-
-This works in both `output: 'export'` (static) and dynamic SSR — the static export pre-renders translated HTML at build time.
-
-### Next.js app-router — client components
-
-A `'use client'` component that needs the hook uses the standard `initReactI18next` instance behind an `I18nextProvider`, kept separate from the server `app/i18n/config.ts`. Most starter pages are server components and never need this.
+- **Dev/build:** the Vite plugin compiles automatically; editing `messages/*.json` under a running dev server recompiles + HMRs.
+- **Standalone `tsc` before Vite has run** (fresh clone, CI):
+  ```sh
+  npx @inlang/paraglide-js compile --project ./project.inlang --outdir ./src/paraglide
+  ```
+  This is exactly what the deploy CI does before the per-app `tsc`.
 
 ## Adding a second language
 
-1. `i18n/de.json` mirroring `en.json`'s keys.
-2. In the config: `import de from './de.json'`, add `'de'` to `supportedLocales`, and register it as `de: { translation: de satisfies typeof en }`. The `satisfies typeof en` makes an incomplete or drifted `de.json` a **compile error** — which is what blocks a deploy on missing i18n (see below).
-3. `detectLocale` already resolves `/de/...`; wire the locale segment into routing so `/de` renders the German tree (the default locale stays prefix-free).
+1. `messages/fr.json` mirroring `en.json`'s keys (translate the values, keep `{param}` names identical).
+2. Add `"fr"` to `locales` in `project.inlang/settings.json`.
+3. Recompile (restart/`vite dev` or the CLI compile). A locale file missing keys falls back to the base locale per message.
+4. Content is reachable via the `/<lang>` URL prefix (`detectLocale` already resolves it); the base locale needs no prefix. Expose the switcher via `useLocale().setLocale`.
+
+## i18n debug mode (find inlined strings)
+
+`src/i18n/messages.ts` wraps every message in `maskI18n`: when enabled, every _translated_ string renders as block glyphs (`█`), so anything still readable on screen never went through a message — a hardcoded string. Off by default. Toggle: `?i18n-debug` in the URL, `localStorage['i18n-debug'] = '1'`, or `I18N_DEBUG=1` for SSR. The starter template wires this; mirror it when hand-wiring a new app.
 
 ## What NOT to do
 
-- Don't hardcode display strings "just for now" — that defeats the point; the token is the work.
-- Don't put locale files under `public/` or fetch them at runtime.
-- Don't wire `initReactI18next` into a Next.js server component or any module a server component imports.
+- Don't hardcode display strings "just for now" — the message is the work.
+- Don't edit or commit anything under `src/paraglide/` — it's regenerated; change `messages/*.json` instead.
+- Don't import `m` from `../paraglide/messages.js` in components — go through `@/i18n/messages` (branding + debug mask).
+- Don't reach for i18next/react-i18next or a runtime-fetch translation loader — Paraglide's compiled functions are the whole delivery mechanism.
 - Don't tokenize backend error messages or logs here — those are not frontend display strings.
