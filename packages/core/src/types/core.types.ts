@@ -29,7 +29,7 @@ import type { DeploymentService } from '../services/deployment-service.js'
 import type { AIStorageService } from '../services/ai-storage-service.js'
 
 import type { ContentService } from '../services/content-service.js'
-import type { UserFlowActors } from '../services/user-flow-actors-service.js'
+import type { ScenarioActors } from '../services/scenario-actors-service.js'
 import type { AIAgentRunnerService } from '../services/ai-agent-runner-service.js'
 import type { AIRunStateService } from '../services/ai-run-state-service.js'
 import type { AgentRunService } from '../wirings/ai-agent/ai-agent.types.js'
@@ -244,7 +244,7 @@ export type CoreConfig<Config extends Record<string, unknown> = {}> = {
 export interface CoreUserSession {
   userId?: string
   orgId?: string
-  /** True when the session belongs to a synthetic user-flow actor — lets audits/analytics address synthetic traffic */
+  /** True when the session belongs to a synthetic scenario actor — lets audits/analytics address synthetic traffic */
   actor?: boolean
 }
 
@@ -339,8 +339,8 @@ export type PikkuWire<
   queue: PikkuQueue
   cli: PikkuCLI
   workflow: TypedWorkflow
-  /** User-flow actor registry (user-flow runs only) — pass into workflow.do as `{ actor: actors.x }` */
-  actors: UserFlowActors
+  /** Scenario actor registry (scenario runs only) — pass into workflow.do as `{ actor: actors.x }` */
+  actors: ScenarioActors
   workflowStep: WorkflowStepWire
   graph: PikkuGraphWire
   trigger: PikkuTrigger<TriggerOutput>

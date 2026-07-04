@@ -4,7 +4,7 @@
  */
 
 import type { WorkflowRun } from '../workflow.types.js'
-import type { UserFlowActor } from '../../../services/user-flow-actors-service.js'
+import type { ScenarioActor } from '../../../services/scenario-actors-service.js'
 
 /**
  * Workflow step options
@@ -17,18 +17,18 @@ export interface WorkflowStepOptions {
   /** Delay between retry attempts (e.g., '1s', '2s', '2min') */
   retryDelay?: string | number
   /**
-   * Run this step as an actor (user flows). The RPC is sent through the
+   * Run this step as an actor (scenarios). The RPC is sent through the
    * actor's authenticated client over the REAL transport — never dispatched
    * internally — so auth middleware and permissions are exercised end-to-end.
    * The step is recorded durably like any RPC step.
    */
-  actor?: UserFlowActor
+  actor?: ScenarioActor
   // Future: timeout, failFast, priority
 }
 
 /**
  * Options for workflow.expectEventually() — a durable polling step used by
- * user flows to await async effects (a notification landing, a job finishing).
+ * scenarios to await async effects (a notification landing, a job finishing).
  */
 export interface WorkflowExpectEventuallyOptions extends WorkflowStepOptions {
   /** Give up after this long (e.g. '30s'). Default '30s'. */
@@ -109,7 +109,7 @@ export interface RpcStepMeta {
   inputs?: Record<string, InputSource> | 'passthrough'
   /** Step options */
   options?: WorkflowStepOptions
-  /** User-flow actor name this step runs as ({ actor: actors.x }) */
+  /** Scenario actor name this step runs as ({ actor: actors.x }) */
   actor?: string
   /** True for workflow.expectEventually polling steps */
   expectEventually?: boolean
@@ -370,7 +370,7 @@ export interface PikkuWorkflowWire {
   do: WorkflowWireDoRPC & WorkflowWireDoInline
 
   /**
-   * Durable polling step (user flows): invoke `rpcName` (as an actor when
+   * Durable polling step (scenarios): invoke `rpcName` (as an actor when
    * `options.as` is set) until `predicate` passes or `options.within` elapses.
    */
   expectEventually: <TOutput = any, TInput = any>(

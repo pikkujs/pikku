@@ -37,15 +37,15 @@ export type {
   CopyFileArgs,
 } from './content-service.js'
 export type {
-  UserFlowActor,
-  UserFlowActorConfig,
-  UserFlowActors,
-} from './user-flow-actors-service.js'
+  ScenarioActor,
+  ScenarioActorConfig,
+  ScenarioActors,
+} from './scenario-actors-service.js'
 export {
-  HttpUserFlowActor,
-  createHttpUserFlowActors,
-  type HttpUserFlowActorsConfig,
-} from './http-user-flow-actors.js'
+  HttpScenarioActor,
+  createHttpScenarioActors,
+  type HttpScenarioActorsConfig,
+} from './http-scenario-actors.js'
 export type { JWTService } from './jwt-service.js'
 export type {
   EmailService,

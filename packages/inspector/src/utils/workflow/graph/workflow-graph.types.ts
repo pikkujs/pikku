@@ -142,9 +142,9 @@ export interface FunctionNode extends BaseNode {
   outputVar?: string
   /** Hash of nodeId + RPC input/output schemas for version detection */
   stepHash?: string
-  /** User-flow actor name this step runs as (workflow.do {actor: actors.x}) */
+  /** Scenario actor name this step runs as (workflow.do {actor: actors.x}) */
   actor?: string
-  /** True for workflow.expectEventually polling steps (user flows) */
+  /** True for workflow.expectEventually polling steps (scenarios) */
   expectEventually?: boolean
 }
 
@@ -181,9 +181,9 @@ export const isFlowNode = (node: SerializedGraphNode): node is FlowNode =>
  * - 'dsl': Pure DSL workflow (pikkuWorkflowFunc) - can be round-tripped to code
  * - 'complex': Complex workflow (pikkuWorkflowComplexFunc) - contains inline steps, not serializable
  * - 'graph': Graph-based workflow (pikkuWorkflowGraph)
- * - 'user-flow': User flow (pikkuUserFlow) - complex workflow whose steps run as actors
+ * - 'scenario': Scenario (pikkuScenario) - complex workflow whose steps run as actors
  */
-export type WorkflowSourceType = 'dsl' | 'complex' | 'graph' | 'user-flow'
+export type WorkflowSourceType = 'dsl' | 'complex' | 'graph' | 'scenario'
 
 /**
  * Serialized workflow graph - the canonical JSON format
@@ -201,7 +201,7 @@ export interface SerializedWorkflowGraph {
   description?: string
   /** Tags for organization */
   tags?: string[]
-  /** Actor names a user flow's steps run as */
+  /** Actor names a scenario's steps run as */
   actors?: string[]
   /** If true, workflow always executes inline without queues */
   inline?: boolean

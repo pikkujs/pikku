@@ -1,8 +1,8 @@
 import type {
-  UserFlowActor,
-  UserFlowActorConfig,
-  UserFlowActors,
-} from './user-flow-actors-service.js'
+  ScenarioActor,
+  ScenarioActorConfig,
+  ScenarioActors,
+} from './scenario-actors-service.js'
 import type {
   ConverseOptions,
   ActorFlowVerdict,
@@ -12,7 +12,7 @@ import { runConversation } from '../wirings/actor-flow/run-conversation.js'
 import { getSingletonServices } from '../pikku-state.js'
 import { AIProviderNotConfiguredError } from '../errors/errors.js'
 
-export interface HttpUserFlowActorsConfig {
+export interface HttpScenarioActorsConfig {
   /**
    * Base API URL of the target app, INCLUDING the HTTP prefix — e.g.
    * `https://app.example.com/api` or `http://localhost:4000/api`. Actor
@@ -26,7 +26,7 @@ export interface HttpUserFlowActorsConfig {
    */
   secret: string
   /** Actor name → config (usually from pikku.config.json's actor registry). */
-  actors: Record<string, UserFlowActorConfig>
+  actors: Record<string, ScenarioActorConfig>
   /** Sign-in path under apiUrl. Default: the actor plugin's `/auth/sign-in/actor`. */
   signInPath?: string
   /** Exposed-RPC path prefix under apiUrl. Default `/rpc`. */
@@ -47,14 +47,14 @@ export interface HttpUserFlowActorsConfig {
  * its lifetime; a 401 mid-run re-logs-in once (long health-check runs can
  * outlive a session).
  */
-export class HttpUserFlowActor implements UserFlowActor {
+export class HttpScenarioActor implements ScenarioActor {
   private cookie: string | null = null
   private origin: string
 
   constructor(
     readonly name: string,
-    private actorConfig: UserFlowActorConfig,
-    private config: HttpUserFlowActorsConfig
+    private actorConfig: ScenarioActorConfig,
+    private config: HttpScenarioActorsConfig
   ) {
     this.origin = new URL(config.apiUrl).origin
   }
@@ -85,7 +85,7 @@ export class HttpUserFlowActor implements UserFlowActor {
     const model = options.model ?? this.config.model
     if (!model) {
       throw new Error(
-        `[user-flow] actor '${this.name}' converse needs a model — pass options.model or set 'model' on the actors service`
+        `[scenario] actor '${this.name}' converse needs a model — pass options.model or set 'model' on the actors service`
       )
     }
     const threadId = globalThis.crypto.randomUUID()
@@ -167,7 +167,7 @@ export class HttpUserFlowActor implements UserFlowActor {
     if (!res.ok) {
       const text = (await res.text().catch(() => '')).slice(0, 300)
       throw new Error(
-        `[user-flow] agent call '${subPath}' as '${this.name}' returned ${res.status}: ${text}`
+        `[scenario] agent call '${subPath}' as '${this.name}' returned ${res.status}: ${text}`
       )
     }
     if (res.status === 204) return undefined
@@ -192,7 +192,7 @@ export class HttpUserFlowActor implements UserFlowActor {
     if (!res.ok) {
       const body = (await res.text().catch(() => '')).slice(0, 300)
       throw new Error(
-        `[user-flow] '${rpcName}' as '${this.name}' returned ${res.status}: ${body}`
+        `[scenario] '${rpcName}' as '${this.name}' returned ${res.status}: ${body}`
       )
     }
     if (res.status === 204) return undefined
@@ -214,7 +214,7 @@ export class HttpUserFlowActor implements UserFlowActor {
     if (!res.ok) {
       const body = (await res.text().catch(() => '')).slice(0, 300)
       throw new Error(
-        `[user-flow] actor sign-in failed for '${this.name}' (${res.status}): ${body}`
+        `[scenario] actor sign-in failed for '${this.name}' (${res.status}): ${body}`
       )
     }
     const setCookies = res.headers.getSetCookie?.() ?? []
@@ -224,7 +224,7 @@ export class HttpUserFlowActor implements UserFlowActor {
       .join('; ')
     if (!cookie) {
       throw new Error(
-        `[user-flow] actor sign-in for '${this.name}' returned no session cookie`
+        `[scenario] actor sign-in for '${this.name}' returned no session cookie`
       )
     }
     this.cookie = cookie
@@ -258,12 +258,12 @@ function normalizeAgentReply(raw: unknown): TargetAgentReply {
  * Build the injected `actors` service from the config registry: actor name →
  * lazy HTTP actor. Wire the result as the `actors` singleton service.
  */
-export function createHttpUserFlowActors(
-  config: HttpUserFlowActorsConfig
-): UserFlowActors {
-  const actors: UserFlowActors = {}
+export function createHttpScenarioActors(
+  config: HttpScenarioActorsConfig
+): ScenarioActors {
+  const actors: ScenarioActors = {}
   for (const [name, actorConfig] of Object.entries(config.actors)) {
-    actors[name] = new HttpUserFlowActor(name, actorConfig, config)
+    actors[name] = new HttpScenarioActor(name, actorConfig, config)
   }
   return actors
 }

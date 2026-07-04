@@ -325,9 +325,9 @@ export type WorkflowsMeta = Record<
     context?: WorkflowContext
     dsl?: boolean
     expose?: boolean
-    /** True for pikkuUserFlow workflows (complex + actor steps). */
-    userFlow?: boolean
-    /** Actor names a user flow declares (personas it runs steps as). */
+    /** True for pikkuScenario workflows (complex + actor steps). */
+    scenario?: boolean
+    /** Actor names a scenario declares (personas it runs steps as). */
     actors?: string[]
   }
 >
@@ -342,13 +342,13 @@ export interface WorkflowRuntimeMeta {
   name: string
   /** Pikku function name (for execution) */
   pikkuFuncId: string
-  /** Source type: 'dsl' (serializable), 'complex' (has inline steps), 'graph', 'user-flow' (complex + actor steps) */
-  source: 'dsl' | 'complex' | 'graph' | 'dynamic-workflow' | 'user-flow'
+  /** Source type: 'dsl' (serializable), 'complex' (has inline steps), 'graph', 'scenario' (complex + actor steps) */
+  source: 'dsl' | 'complex' | 'graph' | 'dynamic-workflow' | 'scenario'
   /** Optional description */
   description?: string
   /** Tags for organization */
   tags?: string[]
-  /** Actor names a user flow declares (personas it runs steps as). */
+  /** Actor names a scenario declares (personas it runs steps as). */
   actors?: string[]
   /** Serialized nodes */
   nodes?: Record<string, any>

@@ -41,10 +41,10 @@ const WorkflowPageInner: React.FC<{
   const { data: aiWorkflows } = useAIWorkflows()
   const [searchQuery, setSearchQuery] = useState('')
 
-  const userFlowNames = useMemo(() => {
+  const scenarioNames = useMemo(() => {
     const names = new Set<string>()
     for (const w of Object.values(meta.workflows ?? {}) as any[]) {
-      if (w.source === 'user-flow' || w.userFlow === true) names.add(w.name)
+      if (w.source === 'scenario' || w.scenario === true) names.add(w.name)
     }
     return names
   }, [meta.workflows])
@@ -71,7 +71,7 @@ const WorkflowPageInner: React.FC<{
         const stepCount = w.nodes ? Object.keys(w.nodes).length : (w.steps?.length ?? 0)
         const badges = []
         if (w.source === 'dynamic-workflow') badges.push({ label: 'Dynamic', tone: 'accent' as const })
-        else if (w.source === 'user-flow') badges.push({ label: 'User Flow', tone: 'accent' as const })
+        else if (w.source === 'scenario') badges.push({ label: 'Scenario', tone: 'accent' as const })
         else if (w.dsl === true) badges.push({ label: 'DSL', tone: 'neutral' as const })
         const metaTags: string[] = []
         if (stepCount > 0) metaTags.push(`${stepCount} ${stepCount === 1 ? 'step' : 'steps'}`)
@@ -88,7 +88,7 @@ const WorkflowPageInner: React.FC<{
   }, [meta.workflows, aiWorkflows])
 
   const items = useMemo(() => {
-    const base = allItems.filter((item) => !userFlowNames.has(item.name))
+    const base = allItems.filter((item) => !scenarioNames.has(item.name))
     const q = searchQuery.toLowerCase()
     if (!q) return base
     return base.filter(
@@ -96,7 +96,7 @@ const WorkflowPageInner: React.FC<{
         item.name.toLowerCase().includes(q) ||
         item.description?.toLowerCase().includes(q)
     )
-  }, [allItems, userFlowNames, searchQuery])
+  }, [allItems, scenarioNames, searchQuery])
 
   if (!onOpen && workflowId) {
     return <WorkflowTabContent immersiveDetail={immersiveDetail} />

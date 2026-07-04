@@ -33,8 +33,8 @@ export const FlowsList: React.FC<FlowsListProps> = ({
     return (
       <EmptyStatePlaceholder
         icon={Route}
-        title={m.user_flows_empty_title()}
-        description={m.user_flows_empty_description()}
+        title={m.scenarios_empty_title()}
+        description={m.scenarios_empty_description()}
         docsHref="https://pikku.dev/docs/wiring/workflows"
       />
     )

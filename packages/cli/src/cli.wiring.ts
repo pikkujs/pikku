@@ -27,7 +27,7 @@ import {
   workspaceValidate,
   renderWorkspaceValidate,
 } from './functions/commands/workspace-validate.js'
-import { userFlowRun, userFlowList } from './functions/commands/user-flow.js'
+import { scenarioRun, scenarioList } from './functions/commands/scenario.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuTestsInit } from './functions/commands/tests-init.js'
 import { pikkuEmailsInit } from './functions/commands/emails-init.js'
@@ -421,13 +421,13 @@ wireCLI({
         }),
       },
     },
-    userflow: {
-      description: 'Run and inspect user flows (pikkuUserFlow)',
+    scenario: {
+      description: 'Run and inspect scenarios (pikkuScenario)',
       subcommands: {
         run: pikkuCLICommand({
-          func: userFlowRun,
+          func: scenarioRun,
           description:
-            'Run user flows against a configured environment (userFlows.environments in pikku.config.json). Actor secret comes from USER_FLOW_ACTOR_SECRET.',
+            'Run scenarios against a configured environment (scenarios.environments in pikku.config.json). Actor secret comes from SCENARIO_ACTOR_SECRET.',
           parameters: '<environment>',
           options: {
             flows: {
@@ -441,8 +441,8 @@ wireCLI({
           },
         }),
         list: pikkuCLICommand({
-          func: userFlowList,
-          description: 'List user flows with names and descriptions',
+          func: scenarioList,
+          description: 'List scenarios with names and descriptions',
         }),
       },
     },

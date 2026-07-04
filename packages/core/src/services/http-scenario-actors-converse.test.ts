@@ -2,7 +2,7 @@ import { describe, test, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 
-import { createHttpUserFlowActors } from './http-user-flow-actors.js'
+import { createHttpScenarioActors } from './http-scenario-actors.js'
 import { pikkuState, resetPikkuState } from '../pikku-state.js'
 import type { AIAgentStepResult } from './ai-agent-runner-service.js'
 
@@ -139,7 +139,7 @@ const wireRunner = () => {
   } as any)
 }
 
-describe('HttpUserFlowActor.converse', async () => {
+describe('HttpScenarioActor.converse', async () => {
   const target = await startAgentTarget()
   after(() => {
     target.server.close()
@@ -150,7 +150,7 @@ describe('HttpUserFlowActor.converse', async () => {
     wireRunner()
     target.reset()
 
-    const actors = createHttpUserFlowActors({
+    const actors = createHttpScenarioActors({
       apiUrl: target.apiUrl,
       secret: 'impersonation-secret',
       model: 'test/test-model',
@@ -179,7 +179,7 @@ describe('HttpUserFlowActor.converse', async () => {
     wireRunner()
     target.reset({ authRequired: true })
 
-    const actors = createHttpUserFlowActors({
+    const actors = createHttpScenarioActors({
       apiUrl: target.apiUrl,
       secret: 'impersonation-secret',
       model: 'test/test-model',
@@ -208,7 +208,7 @@ describe('HttpUserFlowActor.converse', async () => {
       },
     } as any)
 
-    const actors = createHttpUserFlowActors({
+    const actors = createHttpScenarioActors({
       apiUrl: target.apiUrl,
       secret: 'impersonation-secret',
       model: 'test/test-model',

@@ -3,17 +3,17 @@ import { resolve } from 'path'
 import { pikkuSessionlessFunc } from '#pikku'
 import {
   InMemoryWorkflowService,
-  createHttpUserFlowActors,
+  createHttpScenarioActors,
 } from '@pikku/core/services'
 import { pikkuState } from '@pikku/core/internal'
 
 import { loadUserBootstrap } from './load-user-project.js'
 
-const isUserFlow = (wf: any) => wf?.userFlow === true
+const isScenario = (wf: any) => wf?.scenario === true
 
-const listUserFlows = (state: any) =>
+const listScenarios = (state: any) =>
   Object.entries(state.workflows?.meta ?? {})
-    .filter(([, wf]) => isUserFlow(wf))
+    .filter(([, wf]) => isScenario(wf))
     .map(([id, wf]: [string, any]) => ({
       id,
       name: wf.name ?? id,
@@ -21,12 +21,12 @@ const listUserFlows = (state: any) =>
       tags: wf.tags ?? [],
     }))
 
-export const userFlowList = pikkuSessionlessFunc<{}, void>({
+export const scenarioList = pikkuSessionlessFunc<{}, void>({
   func: async ({ logger, getInspectorState }) => {
     const state = await getInspectorState()
-    const flows = listUserFlows(state)
+    const flows = listScenarios(state)
     if (flows.length === 0) {
-      logger.info('No user flows found (pikkuUserFlow exports).')
+      logger.info('No scenarios found (pikkuScenario exports).')
       return
     }
     for (const flow of flows) {
@@ -39,7 +39,7 @@ export const userFlowList = pikkuSessionlessFunc<{}, void>({
   },
 })
 
-export const userFlowRun = pikkuSessionlessFunc<
+export const scenarioRun = pikkuSessionlessFunc<
   { environment: string; flows?: string; tags?: string },
   void
 >({
@@ -50,20 +50,20 @@ export const userFlowRun = pikkuSessionlessFunc<
     const state = await getInspectorState(true)
 
     // --- resolve the target environment ---
-    const environments = config.userFlows?.environments ?? {}
+    const environments = config.scenarios?.environments ?? {}
     const env = environments[environment]
     if (!env) {
       const known = Object.keys(environments)
       throw new Error(
-        `Unknown user-flow environment '${environment}'. ` +
+        `Unknown scenario environment '${environment}'. ` +
           (known.length
             ? `Configured environments: ${known.join(', ')}`
-            : `Add userFlows.environments to pikku.config.json, e.g. { "${environment}": { "apiUrl": "https://app.example.com/api" } }`)
+            : `Add scenarios.environments to pikku.config.json, e.g. { "${environment}": { "apiUrl": "https://app.example.com/api" } }`)
       )
     }
 
     // --- select flows ---
-    let selected = listUserFlows(state)
+    let selected = listScenarios(state)
     if (flows) {
       const names = new Set(flows.split(',').map((f) => f.trim()))
       const unknown = [...names].filter(
@@ -71,7 +71,7 @@ export const userFlowRun = pikkuSessionlessFunc<
       )
       if (unknown.length) {
         throw new Error(
-          `Unknown user flow(s): ${unknown.join(', ')}. Available: ${selected.map((f) => f.name).join(', ')}`
+          `Unknown scenario(s): ${unknown.join(', ')}. Available: ${selected.map((f) => f.name).join(', ')}`
         )
       }
       selected = selected.filter((f) => names.has(f.name))
@@ -81,23 +81,23 @@ export const userFlowRun = pikkuSessionlessFunc<
       selected = selected.filter((f) => wanted.some((t) => f.tags.includes(t)))
     }
     if (selected.length === 0) {
-      logger.error('No user flows matched.')
+      logger.error('No scenarios matched.')
       process.exitCode = 1
       return
     }
 
     // --- actors: registry from config, secret STRICTLY from env ---
-    const secret = await variables.get('USER_FLOW_ACTOR_SECRET')
+    const secret = await variables.get('SCENARIO_ACTOR_SECRET')
     if (!secret) {
       throw new Error(
-        'USER_FLOW_ACTOR_SECRET is not set — user-flow actors cannot sign in. ' +
+        'SCENARIO_ACTOR_SECRET is not set — scenario actors cannot sign in. ' +
           'Export it in the environment running this command (never put it in pikku.config.json).'
       )
     }
-    const actors = createHttpUserFlowActors({
+    const actors = createHttpScenarioActors({
       apiUrl: env.apiUrl,
       secret,
-      actors: config.userFlows?.actors ?? {},
+      actors: config.scenarios?.actors ?? {},
       signInPath: env.signInPath,
       rpcPath: env.rpcPath,
     })
@@ -116,8 +116,8 @@ export const userFlowRun = pikkuSessionlessFunc<
     const guardRpc = {
       rpcWithWire: async (rpcName: string) => {
         throw new Error(
-          `User flow tried to run '${rpcName}' as an internal step. Every workflow.do ` +
-            `in a user flow must carry { actor: actors.x } so it executes against ` +
+          `Scenario tried to run '${rpcName}' as an internal step. Every workflow.do ` +
+            `in a scenario must carry { actor: actors.x } so it executes against ` +
             `'${environment}' (${env.apiUrl}), not local services.`
         )
       },
@@ -180,7 +180,7 @@ export const userFlowRun = pikkuSessionlessFunc<
       }
     }
     logger.info(
-      `${results.length - failed.length}/${results.length} user flows passed against '${environment}'`
+      `${results.length - failed.length}/${results.length} scenarios passed against '${environment}'`
     )
     if (failed.length > 0) {
       process.exitCode = 1

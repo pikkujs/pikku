@@ -88,7 +88,7 @@ export interface PikkuCLICoreOutputFiles {
   workflowMapDeclarationFile: string
   workflowTypesFile: string
   workflowMetaDir: string
-  userFlowActorsFile: string
+  scenarioActorsFile: string
 
   // MCP
   mcpWiringsFile: string
@@ -306,11 +306,11 @@ export type PikkuCLIInput = {
     workerQueue?: string
   }
 
-  userFlows?: {
+  scenarios?: {
     /**
-     * Global user-flow actor registry — any user flow can impersonate any
-     * actor. Generates a typed `createUserFlowActors` factory (see
-     * `userFlowActorsFile`) and surfaces the personas in the console.
+     * Global scenario actor registry — any scenario can impersonate any
+     * actor. Generates a typed `createScenarioActors` factory (see
+     * `scenarioActorsFile`) and surfaces the personas in the console.
      */
     actors?: Record<
       string,
@@ -322,10 +322,10 @@ export type PikkuCLIInput = {
       }
     >
     /**
-     * Environments `pikku userflow run <environment>` can target. `apiUrl`
+     * Environments `pikku scenario run <environment>` can target. `apiUrl`
      * includes the HTTP prefix (e.g. https://app.example.com/api). The actor
      * secret is NEVER configured here — it comes from the
-     * USER_FLOW_ACTOR_SECRET environment variable at run time.
+     * SCENARIO_ACTOR_SECRET environment variable at run time.
      */
     environments?: Record<
       string,

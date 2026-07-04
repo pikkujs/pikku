@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import { createOpenAI } from '@ai-sdk/openai'
 import { VercelAIAgentRunner } from '@pikku/ai-vercel'
 import {
-  createHttpUserFlowActors,
-  type UserFlowActors,
+  createHttpScenarioActors,
+  type ScenarioActors,
 } from '@pikku/core/services'
 import { pikkuState } from '@pikku/core/internal'
 import type { ActorFlowVerdict } from '@pikku/core/actor-flow'
@@ -12,7 +12,7 @@ import type { AgentWorld } from '../support/world.js'
 import { config } from '../support/types.js'
 
 /**
- * The actor registry mirrors pikku.config.json's `userFlows.actors`. converse
+ * The actor registry mirrors pikku.config.json's `scenarios.actors`. converse
  * drives the target agent over HTTP as this persona; the persona's own turns
  * run in-process via the aiAgentRunner we wire below.
  */
@@ -32,7 +32,7 @@ const ACTORS = {
 }
 
 /** Build the HTTP actors, wiring an in-process LLM for the persona's own turns. */
-const buildActors = (): UserFlowActors => {
+const buildActors = (): ScenarioActors => {
   pikkuState(null, 'package', 'singletonServices', {
     logger: {
       info: () => {},
@@ -43,10 +43,10 @@ const buildActors = (): UserFlowActors => {
     aiAgentRunner: new VercelAIAgentRunner({ openai: createOpenAI() }),
   } as any)
 
-  return createHttpUserFlowActors({
+  return createHttpScenarioActors({
     apiUrl: config.apiUrl,
     // todo-agent is no-auth, so converse never signs in — the secret is unused.
-    secret: process.env.USER_FLOW_ACTOR_SECRET ?? 'e2e-unused',
+    secret: process.env.SCENARIO_ACTOR_SECRET ?? 'e2e-unused',
     model: 'openai/gpt-4o-mini',
     actors: ACTORS,
   })

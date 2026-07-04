@@ -6,7 +6,7 @@ import * as ts from 'typescript'
 
 /**
  * Check if a call expression is workflow.do() or workflow.expectEventually()
- * (both are RPC steps; expectEventually is the polling variant used by user flows)
+ * (both are RPC steps; expectEventually is the polling variant used by scenarios)
  */
 export function isWorkflowDoCall(
   node: ts.CallExpression,

@@ -1,6 +1,6 @@
 /**
- * Verifies pikkuUserFlow end-to-end through real codegen:
- * - inspector meta: source 'user-flow', actor + internal + expectEventually steps
+ * Verifies pikkuScenario end-to-end through real codegen:
+ * - inspector meta: source 'scenario', actor + internal + expectEventually steps
  * - runtime: the flow runs with injected actors; actor steps go through the
  *   actor (never internal dispatch), internal steps still hit the real function
  *
@@ -14,7 +14,7 @@ import assert from 'node:assert/strict'
 import { test, describe } from 'node:test'
 
 import { InMemoryWorkflowService } from '@pikku/core/services'
-import type { UserFlowActor } from '@pikku/core/services'
+import type { ScenarioActor } from '@pikku/core/services'
 import { rpcService } from '@pikku/core/rpc'
 
 import '../../.pikku/pikku-bootstrap.gen.js'
@@ -40,7 +40,7 @@ async function loadMeta(name: string) {
 
 const fakeActor = (
   name: string
-): UserFlowActor & { calls: Array<{ rpcName: string; data: any }> } => {
+): ScenarioActor & { calls: Array<{ rpcName: string; data: any }> } => {
   const calls: Array<{ rpcName: string; data: any }> = []
   return {
     name,
@@ -61,10 +61,10 @@ const fakeActor = (
   }
 }
 
-describe('pikkuUserFlow verification', () => {
-  test('meta: user flow is inspected with source user-flow and all steps', async () => {
-    const meta = await loadMeta('orderHealthUserFlow')
-    assert.equal(meta.source, 'user-flow')
+describe('pikkuScenario verification', () => {
+  test('meta: scenario is inspected with source scenario and all steps', async () => {
+    const meta = await loadMeta('orderHealthScenario')
+    assert.equal(meta.source, 'scenario')
 
     // Nodes are keyed by step name
     const nodes: Record<string, any> = meta.nodes || {}
@@ -82,16 +82,16 @@ describe('pikkuUserFlow verification', () => {
     )
   })
 
-  test('codegen: pikku.config.json userFlows.actors generates the typed registry', async () => {
+  test('codegen: pikku.config.json scenarios.actors generates the typed registry', async () => {
     const gen =
-      await import('../../.pikku/workflow/pikku-user-flow-actors.gen.js')
-    assert.deepEqual(Object.keys(gen.userFlowActorConfigs).sort(), [
+      await import('../../.pikku/workflow/pikku-scenario-actors.gen.js')
+    assert.deepEqual(Object.keys(gen.scenarioActorConfigs).sort(), [
       'customer',
       'ops',
     ])
-    assert.equal(gen.userFlowActorConfigs.customer.jobTitle, 'Customer')
+    assert.equal(gen.scenarioActorConfigs.customer.jobTitle, 'Customer')
 
-    const actors = gen.createUserFlowActors({
+    const actors = gen.createScenarioActors({
       apiUrl: 'http://localhost:9999/api',
       secret: 'unused',
     })
@@ -116,7 +116,7 @@ describe('pikkuUserFlow verification', () => {
 
     // Actors ride startWorkflow options → the run's wire, never services
     const { runId } = await workflowService.startWorkflow(
-      'orderHealthUserFlow',
+      'orderHealthScenario',
       { orderId: 'order-7' },
       { type: 'test' },
       rpc,
@@ -127,7 +127,7 @@ describe('pikkuUserFlow verification', () => {
     let run = await workflowService.getRun(runId)
     while (run && run.status !== 'completed' && run.status !== 'failed') {
       if (Date.now() > deadline) {
-        throw new Error(`user flow timed out (status: ${run.status})`)
+        throw new Error(`scenario timed out (status: ${run.status})`)
       }
       await new Promise((resolve) => setTimeout(resolve, 25))
       run = await workflowService.getRun(runId)

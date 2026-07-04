@@ -36,7 +36,7 @@ function extractStepName(node: ts.Node, checker: ts.TypeChecker): string {
 
 /**
  * Walk a function body for any `X.expectEventually(...)` call. Used to enforce
- * that the durable-polling assertion is a user-flow-only primitive — regular
+ * that the durable-polling assertion is a scenario-only primitive — regular
  * workflows must not carry test/assertion semantics.
  */
 function containsExpectEventuallyCall(node: ts.Node): boolean {
@@ -218,7 +218,7 @@ function getWorkflowInvocations(
 
 /**
  * Inspector for pikkuWorkflowFunc(), pikkuWorkflowComplexFunc() and
- * pikkuUserFlow() calls. Detects workflow registration and extracts metadata.
+ * pikkuScenario() calls. Detects workflow registration and extracts metadata.
  */
 export const addWorkflow: AddWiring = (logger, node, checker, state) => {
   if (!ts.isCallExpression(node)) {
@@ -233,15 +233,15 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     return
   }
 
-  let wrapperType: 'dsl' | 'complex' | 'user-flow' | null = null
+  let wrapperType: 'dsl' | 'complex' | 'scenario' | null = null
   if (expression.text === 'pikkuWorkflowFunc') {
     wrapperType = 'dsl'
   } else if (expression.text === 'pikkuWorkflowComplexFunc') {
     wrapperType = 'complex'
-  } else if (expression.text === 'pikkuUserFlow') {
-    // A user flow is a complex workflow whose steps run as actors over the
+  } else if (expression.text === 'pikkuScenario') {
+    // A scenario is a complex workflow whose steps run as actors over the
     // real transport — same extraction rules as complex, distinct meta.
-    wrapperType = 'user-flow'
+    wrapperType = 'scenario'
   } else {
     return
   }
@@ -316,16 +316,16 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     return
   }
 
-  // expectEventually is a user-flow-only assertion primitive — regular
+  // expectEventually is a scenario-only assertion primitive — regular
   // workflows must stay free of test/eval semantics.
   if (
-    wrapperType !== 'user-flow' &&
+    wrapperType !== 'scenario' &&
     containsExpectEventuallyCall(resolvedFunc)
   ) {
     logger.critical(
-      ErrorCode.EXPECT_EVENTUALLY_USER_FLOW_ONLY,
+      ErrorCode.EXPECT_EVENTUALLY_SCENARIO_ONLY,
       `Workflow '${workflowName}' calls workflow.expectEventually(), which is only ` +
-        `available in user flows (pikkuUserFlow). Move it into a user flow, or drive ` +
+        `available in scenarios (pikkuScenario). Move it into a scenario, or drive ` +
         `the assertion outside the workflow.`
     )
     return
@@ -407,8 +407,8 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     getWorkflowInvocations(resolvedFunc, checker, state, workflowName, sink)
   }
 
-  // Actor names the flow's steps run as (user flows) — powers the console
-  // personas view and the User Flow graph badges.
+  // Actor names the flow's steps run as (scenarios) — powers the console
+  // personas view and the Scenario graph badges.
   const actorNames = [
     ...new Set(
       steps
@@ -429,24 +429,24 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     errors,
     tags,
     expose,
-    userFlow: wrapperType === 'user-flow' ? true : undefined,
+    scenario: wrapperType === 'scenario' ? true : undefined,
     actors: actorNames.length > 0 ? actorNames : undefined,
   }
 
-  // User flows are pure stories of remote RPCs (same rule as client-side CLI
+  // Scenarios are pure stories of remote RPCs (same rule as client-side CLI
   // renderers): the func may only destructure logger/config — everything else
   // must go through actor steps so the flow runs against the TARGET
   // environment, never local services.
   const funcMeta = state.functions.meta[pikkuFuncId]
-  if (wrapperType === 'user-flow' && funcMeta?.services) {
+  if (wrapperType === 'scenario' && funcMeta?.services) {
     const disallowed = funcMeta.services.services.filter(
       (svc) => svc !== 'logger' && svc !== 'config'
     )
     if (disallowed.length > 0) {
       logger.critical(
-        ErrorCode.USER_FLOW_HAS_SERVICES,
-        `User flow '${workflowName}' destructures services: ${disallowed.join(', ')}. ` +
-          `User flows may only use 'logger'/'config' — drive everything else through ` +
+        ErrorCode.SCENARIO_HAS_SERVICES,
+        `Scenario '${workflowName}' destructures services: ${disallowed.join(', ')}. ` +
+          `Scenarios may only use 'logger'/'config' — drive everything else through ` +
           `actor steps (workflow.do(step, rpc, data, { actor: actors.x })) so the flow ` +
           `runs against the target environment.`
       )

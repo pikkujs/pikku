@@ -1,25 +1,25 @@
-import { pikkuUserFlow } from '#pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuScenario } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
 /**
- * UI-fixture user flow: gives the console a user flow with two actors so the
- * Workflows page's User Flows / Personas views have something to render.
- * Runnable via `pikku userflow run` too — the steps are plain exposed RPCs.
+ * UI-fixture scenario: gives the console a scenario with two actors so the
+ * Workflows page's Scenarios / Personas views have something to render.
+ * Runnable via `pikku scenario run` too — the steps are plain exposed RPCs.
  */
-export const orderSupportUserFlow = pikkuUserFlow<
+export const orderSupportScenario = pikkuScenario<
   { value?: number },
   { doubled: number; message: string }
 >({
-  title: 'Order support (user flow)',
-  tags: ['user-flow'],
+  title: 'Order support (scenario)',
+  tags: ['scenario'],
   func: async ({ logger }, data, { workflow, actors }) => {
     if (!actors?.shopper || !actors?.support) {
       throw new Error(
-        'orderSupportUserFlow needs run actors (shopper + support) — run via `pikku userflow run <environment>`'
+        'orderSupportScenario needs run actors (shopper + support) — run via `pikku scenario run <environment>`'
       )
     }
-    logger.debug('order-support user flow starting')
+    logger.debug('order-support scenario starting')
 
-    // `pikku userflow run` invokes flows with no input, so the story carries
+    // `pikku scenario run` invokes scenarios with no input, so the story carries
     // its own sample order value; a programmatic caller can still override it.
     const value = data?.value ?? 21
 

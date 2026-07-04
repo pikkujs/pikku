@@ -94,7 +94,7 @@ export const PersonaDrawer: React.FC<PersonaDrawerProps> = ({
             </Text>
             {persona.flows.length === 0 ? (
               <Text size="xs" c="dimmed">
-                {asI18n('Not cast in any user flow yet.')}
+                {asI18n('Not cast in any scenario yet.')}
               </Text>
             ) : (
               persona.flows.map((flow) => (
@@ -126,7 +126,7 @@ export const PersonaDrawer: React.FC<PersonaDrawerProps> = ({
 
           <Text size="xs" c="dimmed">
             {asI18n(
-              'Personas are defined in pikku.config.json under userFlows.actors.'
+              'Personas are defined in pikku.config.json under scenarios.actors.'
             )}
           </Text>
         </Stack>

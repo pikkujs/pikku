@@ -2,7 +2,7 @@ import { describe, test, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 
-import { createHttpUserFlowActors } from './http-user-flow-actors.js'
+import { createHttpScenarioActors } from './http-scenario-actors.js'
 
 // Minimal target app: actor sign-in endpoint + exposed RPC endpoint, session
 // via cookie. Mirrors the Better Auth actor plugin's contract.
@@ -13,10 +13,14 @@ const startTarget = async () => {
     const chunks: Buffer[] = []
     req.on('data', (c) => chunks.push(c))
     req.on('end', () => {
-      const body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString()) : {}
+      const body = chunks.length
+        ? JSON.parse(Buffer.concat(chunks).toString())
+        : {}
       if (req.url === '/api/auth/sign-in/actor') {
         if (body.secret !== 'impersonation-secret') {
-          res.writeHead(401).end(JSON.stringify({ message: 'bad actor secret' }))
+          res
+            .writeHead(401)
+            .end(JSON.stringify({ message: 'bad actor secret' }))
           return
         }
         logins++
@@ -58,12 +62,12 @@ const startTarget = async () => {
   }
 }
 
-describe('HttpUserFlowActor', async () => {
+describe('HttpScenarioActor', async () => {
   const target = await startTarget()
   after(() => target.server.close())
 
   const makeActors = (secret = 'impersonation-secret') =>
-    createHttpUserFlowActors({
+    createHttpScenarioActors({
       apiUrl: target.apiUrl,
       secret,
       actors: {
@@ -82,14 +86,20 @@ describe('HttpUserFlowActor', async () => {
   test('logs in lazily once and replays the session cookie on RPCs', async () => {
     const actors = makeActors()
 
-    const first = (await actors.customer!.invoke('createTodo', { title: 'x' })) as any
+    const first = (await actors.customer!.invoke('createTodo', {
+      title: 'x',
+    })) as any
     const second = (await actors.customer!.invoke('listTodos', {})) as any
 
     assert.equal(first.rpcName, 'createTodo')
     assert.deepEqual(first.echoed, { title: 'x' })
     assert.match(first.cookie, /session=s1/)
     assert.match(first.cookie, /csrf=c1/)
-    assert.match(second.cookie, /session=s1/, 'session is cached, not re-minted')
+    assert.match(
+      second.cookie,
+      /session=s1/,
+      'session is cached, not re-minted'
+    )
     assert.equal(target.loginCount(), 1)
   })
 

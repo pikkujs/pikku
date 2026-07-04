@@ -17,7 +17,7 @@
   "scaffold": {
     "workflow": "auth"
   },
-  "userFlows": {
+  "scenarios": {
     "actors": {
       "customer": {
         "email": "customer@actors.local",

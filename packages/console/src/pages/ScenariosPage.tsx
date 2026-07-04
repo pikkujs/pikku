@@ -24,19 +24,19 @@ import type {
 import { OSSConsoleNavigator, useConsoleNavigator } from '../context/ConsoleNavigatorContext'
 import { toEnglishName } from '../lib/strings'
 
-const USER_FLOWS_BASE_PATH = '/tests/userflows'
+const SCENARIOS_BASE_PATH = '/tests/scenarios'
 
-const UserFlowsPageInner: React.FC = () => {
+const ScenariosPageInner: React.FC = () => {
   useLocale()
   const { workflowId, navigateTo } = useConsoleNavigator()
   const { meta, loading } = usePikkuMeta()
-  const [view, setView] = useState<'user-flows' | 'personas'>('user-flows')
+  const [view, setView] = useState<'scenarios' | 'personas'>('scenarios')
   const [searchQuery, setSearchQuery] = useState('')
 
   const flowEntries = useMemo((): FlowEntry[] => {
-    const actors = meta.userFlowActors ?? {}
+    const actors = meta.scenarioActors ?? {}
     return (Object.values(meta.workflows ?? {}) as any[])
-      .filter((w) => w.source === 'user-flow' || w.userFlow === true)
+      .filter((w) => w.source === 'scenario' || w.scenario === true)
       .filter((w) => !(w.tags ?? []).includes('test-fixture'))
       .map((w): FlowEntry => ({
         name: w.name,
@@ -52,13 +52,13 @@ const UserFlowsPageInner: React.FC = () => {
         })),
       }))
       .sort((a, b) => a.name.localeCompare(b.name))
-  }, [meta.workflows, meta.userFlowActors])
+  }, [meta.workflows, meta.scenarioActors])
 
   const personaEntries = useMemo((): PersonaEntry[] => {
-    const actors = meta.userFlowActors ?? {}
+    const actors = meta.scenarioActors ?? {}
     const flowsByActor = new Map<string, PersonaFlowRef[]>()
     for (const w of Object.values(meta.workflows ?? {}) as any[]) {
-      if (!(w.source === 'user-flow' || w.userFlow === true)) continue
+      if (!(w.source === 'scenario' || w.scenario === true)) continue
       if ((w.tags ?? []).includes('test-fixture')) continue
       for (const actor of w.actors ?? []) {
         const list = flowsByActor.get(actor) ?? []
@@ -76,7 +76,7 @@ const UserFlowsPageInner: React.FC = () => {
         flows: flowsByActor.get(key) ?? [],
       }))
       .sort((a, b) => a.name.localeCompare(b.name))
-  }, [meta.userFlowActors, meta.workflows])
+  }, [meta.scenarioActors, meta.workflows])
 
   const filteredFlows = useMemo(() => {
     const q = searchQuery.toLowerCase()
@@ -110,9 +110,9 @@ const UserFlowsPageInner: React.FC = () => {
         hidePanel
         header={
           <ListPageHeader
-            title={asI18n('User Flows')}
+            title={asI18n('Scenarios')}
             description={asI18n(
-              'End-to-end user-flow tests and the personas that run them'
+              'End-to-end scenario tests and the personas that run them'
             )}
             docsHref="https://pikku.dev/docs/wiring/workflows"
             filters={
@@ -122,7 +122,7 @@ const UserFlowsPageInner: React.FC = () => {
                   value={view}
                   onChange={(value) => setView(value as typeof view)}
                   data={[
-                    { label: asI18n('Flows'), value: 'user-flows' },
+                    { label: asI18n('Flows'), value: 'scenarios' },
                     { label: asI18n('Personas'), value: 'personas' },
                   ]}
                 />
@@ -161,8 +161,8 @@ const UserFlowsPageInner: React.FC = () => {
   )
 }
 
-export const UserFlowsPage: React.FC = () => (
-  <OSSConsoleNavigator basePath={USER_FLOWS_BASE_PATH}>
+export const ScenariosPage: React.FC = () => (
+  <OSSConsoleNavigator basePath={SCENARIOS_BASE_PATH}>
     <Suspense
       fallback={
         <Center h="100vh">
@@ -170,7 +170,7 @@ export const UserFlowsPage: React.FC = () => (
         </Center>
       }
     >
-      <UserFlowsPageInner />
+      <ScenariosPageInner />
     </Suspense>
   </OSSConsoleNavigator>
 )
