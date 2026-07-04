@@ -30,6 +30,10 @@ const runScenario = (
     child.stderr.on('data', (d: Buffer) => {
       output += d.toString()
     })
+    child.on('error', (error) => {
+      output += `\nspawn error: ${error.message}`
+      resolvePromise({ code: null, output })
+    })
     child.on('close', (code) => resolvePromise({ code, output }))
   })
 
