@@ -272,10 +272,6 @@ wireCLI({
           description: 'Enable hot module reload',
           default: true,
         },
-        console: {
-          description:
-            'Also serve the Pikku Console UI (optionally specify port, default 51442)',
-        },
       },
     }),
     serve: pikkuCLICommand({
@@ -287,10 +283,6 @@ wireCLI({
           description: 'Port for the server',
           default: '3000',
           short: 'p',
-        },
-        console: {
-          description:
-            'Also serve the Pikku Console UI (optionally specify port, default 51442)',
         },
       },
     }),

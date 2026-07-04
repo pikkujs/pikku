@@ -22,25 +22,20 @@ BeforeAll(async function () {
   const __dirname = dirname(fileURLToPath(import.meta.url))
   const projectDir = resolve(__dirname, '../..')
   const backendPort = new URL(config.apiUrl).port
-  const consolePort = Number(new URL(config.consoleUrl).port)
 
   // Shared actor secret: the server's actor auth plugin and any
   // `pikku userflow run` step both read USER_FLOW_ACTOR_SECRET from the
   // environment, so setting it here lets both sign the same synthetic actors in.
   process.env.USER_FLOW_ACTOR_SECRET ??= 'e2e-actor-secret'
 
-  // Start the backend + console via pikku serve --console <port>
-  // pikkuOnStart in src/lifecycle.ts handles mock OAuth + user seeding
-  backendProcess = spawn(
-    'npx',
-    ['pikku', 'serve', '--port', backendPort, '--console', String(consolePort)],
-    {
-      cwd: projectDir,
-      env: { ...process.env, API_URL: config.apiUrl },
-      stdio: 'pipe',
-      detached: true,
-    }
-  )
+  // Start the backend via pikku serve — it serves the console same-origin at
+  // /console. pikkuOnStart in src/lifecycle.ts handles mock OAuth + user seeding
+  backendProcess = spawn('npx', ['pikku', 'serve', '--port', backendPort], {
+    cwd: projectDir,
+    env: { ...process.env, API_URL: config.apiUrl },
+    stdio: 'pipe',
+    detached: true,
+  })
 
   backendProcess.stderr?.on('data', (d: Buffer) =>
     process.stderr.write(`[backend] ${d}`)

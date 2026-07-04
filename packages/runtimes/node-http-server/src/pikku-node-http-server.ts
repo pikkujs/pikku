@@ -21,16 +21,33 @@ import {
   type RunHTTPWiringOptions,
 } from '@pikku/core/http'
 import { compileAllSchemas } from '@pikku/core/schema'
-import { runQueueJob, type QueueJob, type QueueJobStatus } from '@pikku/core/queue'
+import {
+  runQueueJob,
+  type QueueJob,
+  type QueueJobStatus,
+} from '@pikku/core/queue'
 import { runScheduledTask } from '@pikku/core/scheduler'
 
 import { incomingMessageToRequest } from './request-converter.js'
 import { writeResponse } from './response-writer.js'
 
+export type StaticMount = {
+  /** URL prefix the directory is mounted at, e.g. `/console`. */
+  urlPrefix: string
+  /** Absolute directory the files are served from. */
+  directory: string
+  /**
+   * Serve the mount's `index.html` for unknown GET paths under the prefix so
+   * client-side (SPA) routes deep-link correctly.
+   */
+  spaFallback?: boolean
+}
+
 export type NodeHTTPServerConfig = CoreConfig & {
   port: number
   hostname: string
   content?: LocalContentConfig
+  staticMounts?: StaticMount[]
   healthCheckPath?: string
   /**
    * Time the server will wait for the request headers to be received.
@@ -101,6 +118,26 @@ export type PikkuNodeHTTPServerOptions = {
    */
   dispatchSecret?: string
 } & RunHTTPWiringOptions
+
+const STATIC_MIME_TYPES: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'application/javascript',
+  '.mjs': 'application/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.webmanifest': 'application/manifest+json',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.map': 'application/json',
+  '.txt': 'text/plain; charset=utf-8',
+}
 
 const HARDENING_DEFAULTS = {
   headersTimeout: 30_000,
@@ -318,13 +355,18 @@ export class PikkuNodeHTTPServer {
       if (
         this.options.dispatchJobs &&
         req.method === 'POST' &&
-        (req.url === '/__pikku/queue-job' || req.url === '/__pikku/scheduler-job')
+        (req.url === '/__pikku/queue-job' ||
+          req.url === '/__pikku/scheduler-job')
       ) {
         await this.handleDispatchJob(req, res)
         return
       }
 
       if (await this.handleContentRequest(req, res)) {
+        return
+      }
+
+      if (await this.handleStaticMountRequest(req, res)) {
         return
       }
 
@@ -385,6 +427,87 @@ export class PikkuNodeHTTPServer {
     }
 
     return false
+  }
+
+  private async handleStaticMountRequest(
+    req: IncomingMessage,
+    res: ServerResponse
+  ): Promise<boolean> {
+    const mounts = this.config.staticMounts
+    if (!mounts?.length || (req.method !== 'GET' && req.method !== 'HEAD')) {
+      return false
+    }
+    const requestUrl = this.getRequestUrl(req)
+    if (!requestUrl) {
+      return false
+    }
+    const pathname = decodeURIComponent(requestUrl.pathname)
+
+    for (const mount of mounts) {
+      if (!this.matchesPrefix(pathname, mount.urlPrefix)) {
+        continue
+      }
+      const key = this.contentKey(pathname, mount.urlPrefix)
+      const served = await this.serveStaticFile(req, res, mount, key)
+      if (served) {
+        return true
+      }
+      if (mount.spaFallback) {
+        return await this.serveStaticFile(req, res, mount, 'index.html')
+      }
+      res.writeHead(404)
+      res.end()
+      return true
+    }
+
+    return false
+  }
+
+  private async serveStaticFile(
+    req: IncomingMessage,
+    res: ServerResponse,
+    mount: StaticMount,
+    key: string
+  ): Promise<boolean> {
+    const targetPath =
+      key === ''
+        ? resolve(mount.directory, 'index.html')
+        : this.toTargetPath(mount.directory, key)
+    if (!targetPath) {
+      return false
+    }
+
+    let filePath = targetPath
+    try {
+      let file = await stat(filePath)
+      if (file.isDirectory()) {
+        filePath = resolve(filePath, 'index.html')
+        file = await stat(filePath)
+      }
+      if (!file.isFile()) {
+        return false
+      }
+
+      const extension = filePath.slice(filePath.lastIndexOf('.'))
+      res.writeHead(200, {
+        'content-length': String(file.size),
+        'content-type':
+          STATIC_MIME_TYPES[extension] ?? 'application/octet-stream',
+      })
+      if (req.method === 'HEAD') {
+        res.end()
+        return true
+      }
+      await new Promise<void>((resolvePromise, reject) => {
+        const stream = createReadStream(filePath)
+        stream.on('error', reject)
+        stream.on('end', () => resolvePromise())
+        stream.pipe(res)
+      })
+      return true
+    } catch {
+      return false
+    }
   }
 
   private getRequestUrl(req: IncomingMessage): URL | null {

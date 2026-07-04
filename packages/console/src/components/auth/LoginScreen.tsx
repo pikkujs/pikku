@@ -16,6 +16,7 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { asI18n } from '@pikku/react'
 import { useAuth } from '../../context/AuthContext'
+import { consoleLogoUrl } from '@/lib/assets'
 
 export const LoginScreen: React.FC = () => {
   useLocale()
@@ -41,7 +42,7 @@ export const LoginScreen: React.FC = () => {
             <Box>
               <Center>
                 <img
-                  src="/pikku-console-logo.png"
+                  src={consoleLogoUrl}
                   alt="Pikku Console"
                   width={48}
                   height={48}

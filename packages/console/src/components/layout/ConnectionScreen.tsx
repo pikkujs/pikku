@@ -16,6 +16,7 @@ import { getServerUrl, setServerUrl } from '../../context/serverUrl'
 import { m, mKey } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { asI18n } from '@pikku/react'
+import { consoleLogoUrl } from '@/lib/assets'
 
 function getErrorGuidance(
   error: string,
@@ -78,7 +79,7 @@ export const ConnectionScreen: React.FC<{ error: string }> = ({ error }) => {
           <Box>
             <Center>
               <img
-                src="/pikku-console-logo.png"
+                src={consoleLogoUrl}
                 alt="Pikku Console"
                 width={48}
                 height={48}
