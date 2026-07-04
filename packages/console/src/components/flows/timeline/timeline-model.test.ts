@@ -62,6 +62,19 @@ test('buildFlowTimeline appends nodes unreachable via next in insertion order', 
   )
 })
 
+test('buildFlowTimeline walks every entry root in entryNodeIds order', () => {
+  const nodes = {
+    r1: { nodeId: 'r1', rpcName: 'one' },
+    r3: { nodeId: 'r3', rpcName: 'three' },
+    r2: { nodeId: 'r2', rpcName: 'two' },
+  }
+  const timeline = buildFlowTimeline(nodes as any, ['r1', 'r2', 'r3'])
+  assert.deepEqual(
+    timeline.map((n) => n.nodeId),
+    ['r1', 'r2', 'r3']
+  )
+})
+
 test('summarizeArgs renders $ref paths and primitives', () => {
   assert.equal(
     summarizeArgs({ value: { $ref: 'trigger', path: 'value' } }),

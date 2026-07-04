@@ -17,7 +17,15 @@ export const PersonaCard: React.FC<PersonaCardProps> = ({ persona, onOpen }) => 
   return (
     <Box
       data-testid={`persona-card-${persona.key}`}
+      role={onOpen ? 'button' : undefined}
+      tabIndex={onOpen ? 0 : undefined}
       onClick={() => onOpen?.(persona.key)}
+      onKeyDown={(e) => {
+        if (onOpen && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault()
+          onOpen(persona.key)
+        }
+      }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{

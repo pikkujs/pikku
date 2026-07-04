@@ -69,8 +69,11 @@ export function buildFlowTimeline(
     }
   }
 
-  const entry = entryNodeIds?.[0] ?? Object.keys(nodes)[0]
-  walk(entry)
+  const roots =
+    entryNodeIds && entryNodeIds.length > 0
+      ? entryNodeIds
+      : [Object.keys(nodes)[0]]
+  for (const root of roots) walk(root)
   for (const id of Object.keys(nodes)) {
     if (!visited.has(id)) walk(id)
   }
