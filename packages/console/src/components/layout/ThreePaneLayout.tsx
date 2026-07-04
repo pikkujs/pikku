@@ -13,6 +13,7 @@ interface ThreePaneLayoutProps {
   emptyPanelMessage?: I18nNode
   showTabs?: boolean
   hidePanel?: boolean
+  collapseWhenEmpty?: boolean
 }
 
 export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
@@ -23,12 +24,15 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
   emptyPanelMessage,
   showTabs = false,
   hidePanel = false,
+  collapseWhenEmpty = false,
 }) => {
   const { panels } = usePanelContext()
   const alwaysVisible = !showTabs
 
   const showLeft = !!runsPanel && runsPanelVisible
-  const showRight = !hidePanel && (alwaysVisible || panels.size !== 0)
+  const showRight =
+    !hidePanel &&
+    (panels.size !== 0 || (alwaysVisible && !collapseWhenEmpty))
 
   return (
     <Box className={classes.flexColumn} style={{ flex: 1, minHeight: 0 }}>

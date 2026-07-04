@@ -84,6 +84,30 @@ const suspendingTarget = (): {
   return { target, approvedWith }
 }
 
+/** A target that never completes — always re-suspends for the same approval. */
+const alwaysSuspendingTarget = (): {
+  target: TargetAgentDriver
+  approveCalls: () => number
+} => {
+  let approveCalls = 0
+  const suspended: TargetAgentReply = {
+    text: 'working on it',
+    runId: 'run-stuck',
+    status: 'suspended',
+    pendingApprovals: [
+      { toolCallId: 'tc1', toolName: 'createTodo', args: { title: 'x' } },
+    ],
+  }
+  const target: TargetAgentDriver = {
+    run: async () => suspended,
+    approve: async () => {
+      approveCalls++
+      return suspended
+    },
+  }
+  return { target, approveCalls: () => approveCalls }
+}
+
 const base = {
   persona: { email: 'pm@example.com', name: 'Priya', personality: 'concise' },
   personaName: 'Priya',
@@ -133,5 +157,20 @@ describe('runConversation', () => {
     assert.deepEqual(approvedWith, [[{ toolCallId: 'tc1', approved: false }]])
     assert.ok(!calls.includes('approval'))
     assert.equal(verdict.passed, false)
+  })
+
+  test('caps the approval loop when the target never stops suspending', async () => {
+    const { llm } = scriptedLLM({
+      turns: [{ message: 'please make a todo', done: false }],
+      decisions: [{ toolCallId: 'tc1', approved: true }],
+      evaluation: { passed: false, reasoning: 'never got there' },
+    })
+    const { target, approveCalls } = alwaysSuspendingTarget()
+
+    await assert.rejects(
+      runConversation({ ...base, approvals: 'always', maxApprovalRounds: 3, llm, target }),
+      /approval rounds/
+    )
+    assert.equal(approveCalls(), 3)
   })
 })

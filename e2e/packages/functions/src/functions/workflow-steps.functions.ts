@@ -4,6 +4,7 @@ export const doubleValue = pikkuSessionlessFunc<
   { value: number },
   { result: number }
 >({
+  expose: true,
   func: async (_services, { value }) => ({
     result: value * 2,
   }),
@@ -13,6 +14,7 @@ export const formatMessage = pikkuSessionlessFunc<
   { greeting: string; name: string },
   { message: string }
 >({
+  expose: true,
   func: async (_services, { greeting, name }) => ({
     message: `${greeting}, ${name}!`,
   }),

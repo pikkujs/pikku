@@ -67,6 +67,16 @@ function getStepType(step: any): string {
   return 'unknown'
 }
 
+// The DSL step label (first arg to `workflow.do`) is stored as the nodeId when
+// it is a real label; synthetic `step_N` ids carry no label, so fall back to
+// the rpc/function name in that case.
+function deriveStepName(step: any, stepNodeId: string): string | undefined {
+  if (step.stepName) {
+    return step.stepName
+  }
+  return /^step_\d+$/.test(stepNodeId) ? undefined : stepNodeId
+}
+
 function processStep(
   step: any,
   stepNodeId: string,
@@ -84,7 +94,7 @@ function processStep(
         stepNodeId,
         step.rpcName,
         position,
-        step.stepName,
+        deriveStepName(step, stepNodeId),
         index,
         undefined,
         step
@@ -102,7 +112,7 @@ function processStep(
         stepNodeId,
         'inline',
         position,
-        step.stepName,
+        deriveStepName(step, stepNodeId),
         index,
         undefined,
         step

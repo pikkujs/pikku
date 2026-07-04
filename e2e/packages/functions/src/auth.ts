@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth'
 import { getMigrations } from 'better-auth/db/migration'
 import { admin, bearer } from 'better-auth/plugins'
+import { actor } from '@pikku/better-auth'
 import { pikkuBetterAuth } from '#pikku/pikku-types.gen.js'
 
 /**
@@ -40,7 +41,15 @@ export const auth = pikkuBetterAuth(async ({ secrets, variables, kysely }) => {
       github: await secrets.getSecret('GITHUB_OAUTH'),
     },
     // admin: role/banned session fields + listUsers/impersonation endpoints.
-    plugins: [bearer(), admin()],
+    // actor: `/sign-in/actor` for user-flow actors — only rows flagged
+    // `actor: true` can sign in, gated by the USER_FLOW_ACTOR_SECRET.
+    plugins: [
+      bearer(),
+      admin(),
+      actor({
+        secret: (await variables.get('USER_FLOW_ACTOR_SECRET')) ?? '',
+      }),
+    ],
   })
 
   migrated ??= getMigrations(instance.options).then(({ runMigrations }) =>
