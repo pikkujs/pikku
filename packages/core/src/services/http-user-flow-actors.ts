@@ -138,22 +138,28 @@ export class HttpUserFlowActor implements UserFlowActor {
     return normalizeAgentReply(raw)
   }
 
-  /** POST an agent HTTP route (raw body, not RPC-wrapped), with one 401 retry. */
+  /**
+   * POST an agent HTTP route (raw body, not RPC-wrapped). Signs in lazily: the
+   * first call goes out with whatever cookie we hold (none, for a no-auth
+   * agent), and only a 401 triggers `login()` + one retry. This lets an actor
+   * converse with a no-auth agent without any sign-in wiring, while still
+   * authenticating against agents that require a session.
+   */
   private async postAgent(subPath: string, body: unknown): Promise<unknown> {
     const rpcPath = this.config.rpcPath ?? '/rpc'
     const url = `${this.config.apiUrl}${rpcPath}/${subPath}`
-    const send = (cookie: string) =>
+    const send = (cookie: string | null) =>
       fetch(url, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
           origin: this.origin,
-          cookie,
+          ...(cookie ? { cookie } : {}),
         },
         body: JSON.stringify(body),
       })
 
-    let res = await send(this.cookie ?? (await this.login()))
+    let res = await send(this.cookie)
     if (res.status === 401) {
       this.cookie = null
       res = await send(await this.login())

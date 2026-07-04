@@ -9,11 +9,14 @@ import type { AIAgentStepResult } from './ai-agent-runner-service.js'
 /**
  * Minimal target app exposing the agent HTTP surface: actor sign-in, the agent
  * run route (suspends once for approval, then completes), and the batch approve
- * route (records the decisions).
+ * route (records the decisions). `authRequired` toggles whether the agent
+ * routes reject unauthenticated calls with 401 (to exercise lazy sign-in).
  */
 const startAgentTarget = async () => {
   let agentRuns = 0
-  const approvalsSeen: unknown[] = []
+  let logins = 0
+  let authRequired = false
+  let approvalsSeen: unknown[] = []
   const server: Server = createServer((req, res) => {
     const chunks: Buffer[] = []
     req.on('data', (c) => chunks.push(c))
@@ -27,10 +30,22 @@ const startAgentTarget = async () => {
           .end(JSON.stringify(obj))
 
       if (req.url === '/api/auth/sign-in/actor') {
+        logins++
         res.setHeader('set-cookie', ['session=s1; Path=/; HttpOnly'])
         json({ ok: true })
         return
       }
+
+      const isAgentRoute = req.url?.startsWith('/api/rpc/agent/')
+      if (
+        isAgentRoute &&
+        authRequired &&
+        !(req.headers.cookie ?? '').includes('session=')
+      ) {
+        res.writeHead(401).end()
+        return
+      }
+
       if (req.url === '/api/rpc/agent/todoBot/approve') {
         approvalsSeen.push(body.approvals)
         json({ runId: body.runId, text: 'Created it.', status: 'completed' })
@@ -68,7 +83,14 @@ const startAgentTarget = async () => {
   return {
     server,
     apiUrl: `http://127.0.0.1:${port}/api`,
+    loginCount: () => logins,
     approvalsSeen: () => approvalsSeen,
+    reset: (opts?: { authRequired?: boolean }) => {
+      agentRuns = 0
+      logins = 0
+      approvalsSeen = []
+      authRequired = opts?.authRequired ?? false
+    },
   }
 }
 
@@ -104,6 +126,19 @@ const scriptedRunner = () => {
   }
 }
 
+const wireRunner = () => {
+  resetPikkuState()
+  pikkuState(null, 'package', 'singletonServices', {
+    logger: {
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      debug: () => {},
+    },
+    aiAgentRunner: scriptedRunner(),
+  } as any)
+}
+
 describe('HttpUserFlowActor.converse', async () => {
   const target = await startAgentTarget()
   after(() => {
@@ -112,16 +147,8 @@ describe('HttpUserFlowActor.converse', async () => {
   })
 
   test('converses over HTTP, approves in-persona, returns a verdict', async () => {
-    resetPikkuState()
-    pikkuState(null, 'package', 'singletonServices', {
-      logger: {
-        info: () => {},
-        warn: () => {},
-        error: () => {},
-        debug: () => {},
-      },
-      aiAgentRunner: scriptedRunner(),
-    } as any)
+    wireRunner()
+    target.reset()
 
     const actors = createHttpUserFlowActors({
       apiUrl: target.apiUrl,
@@ -144,6 +171,30 @@ describe('HttpUserFlowActor.converse', async () => {
     assert.deepEqual(target.approvalsSeen(), [
       [{ toolCallId: 'tc1', approved: true }],
     ])
+    // No-auth agent → converse never signs in (lazy login).
+    assert.equal(target.loginCount(), 0)
+  })
+
+  test('signs in lazily and retries once when an agent route returns 401', async () => {
+    wireRunner()
+    target.reset({ authRequired: true })
+
+    const actors = createHttpUserFlowActors({
+      apiUrl: target.apiUrl,
+      secret: 'impersonation-secret',
+      model: 'test/test-model',
+      actors: { pm: { email: 'pm@actors.local' } },
+    })
+
+    const verdict = await actors.pm!.converse({
+      agent: 'todoBot',
+      task: 'make a todo',
+      evaluate: 'a todo exists',
+    })
+
+    assert.equal(verdict.passed, true)
+    // 401 on the first (unauthenticated) call → one sign-in, then cached.
+    assert.equal(target.loginCount(), 1)
   })
 
   test('throws when no AI provider is configured', async () => {
