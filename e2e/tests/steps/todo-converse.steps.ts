@@ -107,14 +107,13 @@ Then(
 Then(
   'the todo list should contain {string}',
   async function (this: AgentWorld, title: string) {
-    const todos = (await todosRpc('todos:listTodos')) as Array<{
-      title?: string
-      text?: string
-    }>
-    const haystack = JSON.stringify(todos)
+    const { todos } = (await todosRpc('todos:listTodos')) as {
+      todos: Array<{ title: string }>
+    }
+    const titles = todos.map((t) => t.title)
     assert.ok(
-      haystack.includes(title),
-      `todo "${title}" not found in the store. Got: ${haystack}`
+      titles.includes(title),
+      `todo "${title}" not found in the store. Got: ${JSON.stringify(titles)}`
     )
   }
 )
