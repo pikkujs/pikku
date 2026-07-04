@@ -12,8 +12,28 @@
 
 import { execFileSync, spawn } from 'child_process'
 import { readFileSync, existsSync, readdirSync, statSync, rmSync } from 'fs'
-import { connect } from 'net'
+import { connect, createServer } from 'net'
 import { join } from 'path'
+
+/**
+ * A fixed port collides with whatever happens to be running on the developer's
+ * machine (e.g. a long-lived `pikku serve`), making the probes below hit the
+ * wrong server. Ask the OS for a free ephemeral port instead.
+ */
+function getFreePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const probe = createServer()
+    probe.once('error', reject)
+    probe.listen(0, '127.0.0.1', () => {
+      const address = probe.address()
+      if (typeof address === 'object' && address) {
+        probe.close(() => resolve(address.port))
+      } else {
+        probe.close(() => reject(new Error('Could not allocate a free port')))
+      }
+    })
+  })
+}
 
 const FUNCTIONS_DIR = join(process.cwd(), '..', '..', 'templates', 'functions')
 const REPO_ROOT = join(process.cwd(), '..', '..')
@@ -130,7 +150,7 @@ await check('entry: bootstrap import + main()', () => {
 // Compile to a single executable with bun, then hit endpoints.
 // ---------------------------------------------------------------------------
 
-const port = 4098
+const port = await getFreePort()
 // Probe over loopback; binding stays 0.0.0.0 (HOST below) but fetching
 // 0.0.0.0 as a client target is unreliable on macOS/Windows.
 const clientHost = '127.0.0.1'
