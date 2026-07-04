@@ -216,6 +216,26 @@ This ensures:
 - All dependencies are correctly linked and installed
 - Tests run in the correct environment
 
+### Running the OSS console on the e2e project
+
+`pikku serve --console <port>` serves the OSS Pikku Console, but the CLI only ships it when the console app is bundled at `packages/cli/console-app`. A plain package build does **not** produce that directory (only `packages/cli/build.sh` copies it), so a freshly-built CLI logs `Console app not found. Please rebuild @pikku/cli with the console app bundled.` and serves no UI.
+
+To spin it up against the e2e project (backend on `4077`, console on `7071` — from `e2e/tests/support/types.ts`):
+
+```bash
+# 1. Build the console and bundle it into the CLI (what build.sh's copy step does)
+cd packages/console && yarn build           # → packages/console/dist
+cd ../cli && rm -rf console-app && cp -r ../console/dist console-app
+chmod +x dist/bin/pikku.js                   # ensure the bin is executable
+
+# 2. Serve the e2e backend + console (pass OPENAI_API_KEY so the agent playground works)
+cd ../../e2e
+OPENAI_API_KEY=<key> API_URL=http://localhost:4077 \
+  npx pikku serve --port 4077 --console 7071
+```
+
+The console is then at **http://localhost:7071** (`Pikku Console running at http://localhost:7071` in the log). The `--console` port must match `consoleUrl` in the e2e config.
+
 ## Git Workflow
 
 **Never run `git stash`.** Multiple agents work this checkout concurrently, so the worktree is routinely dirty with changes you did not make. `git stash` is global to the worktree — it sweeps up every other agent's uncommitted work, not just yours, and silently breaks them.
