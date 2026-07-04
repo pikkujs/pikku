@@ -111,8 +111,11 @@ Then(
       todos: Array<{ title: string }>
     }
     const titles = todos.map((t) => t.title)
+    // The model may add punctuation/casing ("Book the venue."), so match on a
+    // normalized substring rather than exact equality.
+    const needle = title.toLowerCase()
     assert.ok(
-      titles.includes(title),
+      titles.some((t) => t.toLowerCase().includes(needle)),
       `todo "${title}" not found in the store. Got: ${JSON.stringify(titles)}`
     )
   }
