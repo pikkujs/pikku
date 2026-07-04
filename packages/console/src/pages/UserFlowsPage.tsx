@@ -17,7 +17,10 @@ import { ListPageHeader } from '../components/layout/PageLayout'
 import { FlowsList } from '../components/flows/FlowsList'
 import type { FlowEntry } from '../components/flows/flow-types'
 import { PersonasView } from '../components/personas/PersonasView'
-import type { PersonaEntry } from '../components/personas/persona-types'
+import type {
+  PersonaEntry,
+  PersonaFlowRef,
+} from '../components/personas/persona-types'
 import { OSSConsoleNavigator, useConsoleNavigator } from '../context/ConsoleNavigatorContext'
 import { toEnglishName } from '../lib/strings'
 
@@ -34,6 +37,7 @@ const UserFlowsPageInner: React.FC = () => {
     const actors = meta.userFlowActors ?? {}
     return (Object.values(meta.workflows ?? {}) as any[])
       .filter((w) => w.source === 'user-flow' || w.userFlow === true)
+      .filter((w) => !(w.tags ?? []).includes('test-fixture'))
       .map((w): FlowEntry => ({
         name: w.name,
         displayName: toEnglishName(w.name),
@@ -52,10 +56,14 @@ const UserFlowsPageInner: React.FC = () => {
 
   const personaEntries = useMemo((): PersonaEntry[] => {
     const actors = meta.userFlowActors ?? {}
-    const flowsByActor = new Map<string, number>()
+    const flowsByActor = new Map<string, PersonaFlowRef[]>()
     for (const w of Object.values(meta.workflows ?? {}) as any[]) {
+      if (!(w.source === 'user-flow' || w.userFlow === true)) continue
+      if ((w.tags ?? []).includes('test-fixture')) continue
       for (const actor of w.actors ?? []) {
-        flowsByActor.set(actor, (flowsByActor.get(actor) ?? 0) + 1)
+        const list = flowsByActor.get(actor) ?? []
+        list.push({ name: w.name, displayName: toEnglishName(w.name) })
+        flowsByActor.set(actor, list)
       }
     }
     return Object.entries(actors)
@@ -65,7 +73,7 @@ const UserFlowsPageInner: React.FC = () => {
         email: cfg.email,
         jobTitle: cfg.jobTitle,
         personality: cfg.personality,
-        flowCount: flowsByActor.get(key) ?? 0,
+        flows: flowsByActor.get(key) ?? [],
       }))
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [meta.userFlowActors, meta.workflows])
@@ -136,7 +144,11 @@ const UserFlowsPageInner: React.FC = () => {
         }
       >
         {view === 'personas' ? (
-          <PersonasView personas={filteredPersonas} loading={loading} />
+          <PersonasView
+            personas={filteredPersonas}
+            loading={loading}
+            onOpenFlow={(name) => navigateTo('workflows', name)}
+          />
         ) : (
           <FlowsList
             flows={filteredFlows}

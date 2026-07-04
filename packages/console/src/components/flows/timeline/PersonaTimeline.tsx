@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react'
-import { Box, ScrollArea } from '@pikku/mantine/core'
+import { Box, ScrollArea, Center, Stack, Text, ThemeIcon } from '@pikku/mantine/core'
+import { Route } from 'lucide-react'
+import { asI18n } from '@pikku/react'
 import { usePikkuMeta } from '../../../context/PikkuMetaContext'
 import { useWorkflowRunContextSafe } from '../../../context/WorkflowRunContext'
 import { TimelineStep } from './TimelineStep'
@@ -26,6 +28,24 @@ export const PersonaTimeline: React.FC<PersonaTimelineProps> = ({
 
   const actors = meta.userFlowActors ?? {}
   const stepStates = run?.stepStates
+
+  if (timeline.length === 0) {
+    return (
+      <Center h="100%" p="xl">
+        <Stack align="center" gap={10}>
+          <ThemeIcon variant="light" color="gray" size={44} radius="md">
+            <Route size={22} />
+          </ThemeIcon>
+          <Text fw={600}>{asI18n('No steps to show')}</Text>
+          <Text size="sm" c="dimmed" ta="center" maw={360}>
+            {asI18n(
+              'This user flow has no workflow steps — actors call the API directly, or the flow returns without any `workflow.do` calls.'
+            )}
+          </Text>
+        </Stack>
+      </Center>
+    )
+  }
 
   return (
     <ScrollArea h="100%" type="auto">

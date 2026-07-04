@@ -6,7 +6,7 @@ import { pikkuUserFlow } from '#pikku/workflow/pikku-workflow-types.gen.js'
  * Runnable via `pikku userflow run` too — the steps are plain exposed RPCs.
  */
 export const orderSupportUserFlow = pikkuUserFlow<
-  { value: number },
+  { value?: number },
   { doubled: number; message: string }
 >({
   title: 'Order support (user flow)',
