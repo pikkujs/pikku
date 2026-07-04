@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Box, Group, Stack, Text, Badge } from '@pikku/mantine/core'
+import { Route } from 'lucide-react'
 import { asI18n } from '@pikku/react'
 import { PersonaAvatar } from './PersonaAvatar'
 import { personaVisual } from './personaVisual'
@@ -50,17 +51,35 @@ export const PersonaCard: React.FC<PersonaCardProps> = ({ persona, onOpen }) => 
             </Text>
           )}
         </Stack>
-        <Stack gap={8} align="flex-end" style={{ flexShrink: 0 }}>
+        <Stack gap={8} align="flex-end" style={{ flexShrink: 0, maxWidth: 260 }}>
           {persona.jobTitle && (
             <Badge variant="light" color={color} radius="sm" tt="none" fw={500}>
               {asI18n(persona.jobTitle)}
             </Badge>
           )}
-          {persona.flowCount > 0 && (
-            <Text size="xs" ff="monospace" c="dimmed">
-              {asI18n(
-                `in ${persona.flowCount} ${persona.flowCount === 1 ? 'flow' : 'flows'}`
+          {persona.flows.length > 0 ? (
+            <Group gap={6} justify="flex-end" wrap="wrap">
+              {persona.flows.slice(0, 3).map((flow) => (
+                <Badge
+                  key={flow.name}
+                  variant="default"
+                  radius="sm"
+                  tt="none"
+                  fw={500}
+                  leftSection={<Route size={11} />}
+                >
+                  {asI18n(flow.displayName)}
+                </Badge>
+              ))}
+              {persona.flows.length > 3 && (
+                <Text size="xs" c="dimmed">
+                  {asI18n(`+${persona.flows.length - 3}`)}
+                </Text>
               )}
+            </Group>
+          ) : (
+            <Text size="xs" c="dimmed">
+              {asI18n('in no flows')}
             </Text>
           )}
         </Stack>

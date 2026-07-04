@@ -11,11 +11,13 @@ import type { PersonaEntry } from './persona-types'
 type PersonasViewProps = {
   personas: PersonaEntry[]
   loading?: boolean
+  onOpenFlow?: (name: string) => void
 }
 
 export const PersonasView: React.FC<PersonasViewProps> = ({
   personas,
   loading = false,
+  onOpenFlow,
 }) => {
   useLocale()
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
@@ -52,6 +54,7 @@ export const PersonasView: React.FC<PersonasViewProps> = ({
         persona={selected}
         opened={selected !== null}
         onClose={() => setSelectedKey(null)}
+        onOpenFlow={onOpenFlow}
       />
     </>
   )

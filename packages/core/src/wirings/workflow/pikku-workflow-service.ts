@@ -11,6 +11,7 @@ import {
   pikkuState,
 } from '../../pikku-state.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
+import { createHttpUserFlowActors } from '../../services/http-user-flow-actors.js'
 
 const resolveWorkflowMeta = (
   name: string
@@ -1071,6 +1072,46 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * @param options.inline - If true, execute workflow directly without queue service
    * @param options.startNode - Starting node ID for graph workflows (from wire config)
    */
+  /**
+   * Build HTTP user-flow actors for a run started without them (e.g. from the
+   * console). The actors sign in via the actor auth plugin using
+   * USER_FLOW_ACTOR_SECRET — which creates the `actor: true` user rows on first
+   * sign-in — and drive each step over HTTP as that persona. Returns undefined
+   * (so the run proceeds actor-less) when the secret or API base URL is not
+   * configured.
+   */
+  private async resolveUserFlowActors(): Promise<UserFlowActors | undefined> {
+    const services = getSingletonServices()
+    const variables = services?.variables
+    const metaService = services?.metaService
+    if (!variables || !metaService) {
+      return undefined
+    }
+    const secret = await variables.get('USER_FLOW_ACTOR_SECRET')
+    const apiUrl = await variables.get('API_URL')
+    if (!secret || !apiUrl) {
+      services?.logger?.warn(
+        'A user flow was started without actors but USER_FLOW_ACTOR_SECRET / API_URL is not configured — running without actors.'
+      )
+      return undefined
+    }
+    const actorsConfig = await metaService.getUserFlowActorsMeta()
+    if (!actorsConfig || Object.keys(actorsConfig).length === 0) {
+      return undefined
+    }
+    const signInPath =
+      (await variables.get('USER_FLOW_SIGN_IN_PATH')) ??
+      '/api/auth/sign-in/actor'
+    const rpcPath = (await variables.get('USER_FLOW_RPC_PATH')) ?? '/rpc'
+    return createHttpUserFlowActors({
+      apiUrl,
+      secret,
+      actors: actorsConfig,
+      signInPath,
+      rpcPath,
+    })
+  }
+
   public async startWorkflow<I>(
     name: string,
     input: I,
@@ -1140,8 +1181,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       }
     )
 
-    if (options?.actors) {
-      this.runActors.set(runId, options.actors)
+    const actors =
+      options?.actors ??
+      (workflowMeta.source === 'user-flow'
+        ? await this.resolveUserFlowActors()
+        : undefined)
+    if (actors) {
+      this.runActors.set(runId, actors)
     }
 
     if (shouldInline) {
