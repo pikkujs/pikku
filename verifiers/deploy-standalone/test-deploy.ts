@@ -7,8 +7,29 @@
 
 import { execSync, spawn } from 'child_process'
 import { readFileSync, existsSync, readdirSync, statSync } from 'fs'
+import { createServer } from 'net'
 import { join } from 'path'
 import { createHash } from 'crypto'
+
+/**
+ * A fixed port collides with whatever happens to be running on the developer's
+ * machine (e.g. a long-lived `pikku serve`), making the probes below hit the
+ * wrong server. Ask the OS for a free ephemeral port instead.
+ */
+function getFreePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const probe = createServer()
+    probe.once('error', reject)
+    probe.listen(0, '127.0.0.1', () => {
+      const address = probe.address()
+      if (typeof address === 'object' && address) {
+        probe.close(() => resolve(address.port))
+      } else {
+        probe.close(() => reject(new Error('Could not allocate a free port')))
+      }
+    })
+  })
+}
 
 const FUNCTIONS_DIR = join(process.cwd(), '..', '..', 'templates', 'functions')
 const REPO_ROOT = join(process.cwd(), '..', '..')
@@ -279,7 +300,7 @@ check('no infra.json', () => {
 // Runtime test: start bundle, hit endpoints
 // ---------------------------------------------------------------------------
 
-const port = 4099
+const port = await getFreePort()
 
 async function startServer(): Promise<ReturnType<typeof spawn>> {
   const proc = spawn('node', [join(DEPLOY_DIR, unitName, 'bundle.js')], {
