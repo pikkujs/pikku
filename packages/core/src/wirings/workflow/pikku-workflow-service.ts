@@ -60,6 +60,8 @@ import type {
   WorkflowServiceConfig,
   WorkflowStepOptions,
   WorkflowExpectEventuallyOptions,
+  WorkflowExpectErrorOptions,
+  WorkflowExpectServiceOptions,
 } from './workflow.types.js'
 import {
   continueGraph,
@@ -2217,6 +2219,108 @@ export abstract class PikkuWorkflowService implements WorkflowService {
                 )
               }
               await new Promise((resolve) => setTimeout(resolve, interval))
+            }
+          },
+          options
+        )
+      },
+
+      // Error-path step: succeeds only when the RPC throws (optionally
+      // matching the message). One recorded step, like expectEventually.
+      expectError: async (
+        stepName: string,
+        rpcName: string,
+        data: any,
+        options?: WorkflowExpectErrorOptions
+      ) => {
+        this.verifyStepName(stepName)
+        const resolvedRpcName =
+          addonNamespace && !rpcName.includes(':')
+            ? `${addonNamespace}:${rpcName}`
+            : rpcName
+        return await this.inlineStep(
+          runId,
+          stepName,
+          async () => {
+            let result: any
+            try {
+              result = options?.actor
+                ? await options.actor.invoke(resolvedRpcName, data)
+                : await rpcService.rpcWithWire(resolvedRpcName, data, {})
+            } catch (e: any) {
+              const message = e?.message ?? String(e)
+              if (options?.matches) {
+                const matched =
+                  typeof options.matches === 'string'
+                    ? message.includes(options.matches)
+                    : options.matches.test(message)
+                if (!matched) {
+                  throw new Error(
+                    `[workflow] expectError '${stepName}' ('${resolvedRpcName}') threw, but the message did not match ${options.matches}: ${message}`
+                  )
+                }
+              }
+              return message
+            }
+            throw new Error(
+              `[workflow] expectError '${stepName}' ('${resolvedRpcName}') expected an error but the call succeeded: ${JSON.stringify(result)?.slice(0, 300)}`
+            )
+          },
+          options
+        )
+      },
+
+      // Stub-assertion step: pull recorded stub calls from the target server
+      // and assert `service.method` was called (optionally with args/times).
+      expectService: async (
+        stepName: string,
+        serviceMethod: string,
+        options?: WorkflowExpectServiceOptions
+      ) => {
+        this.verifyStepName(stepName)
+        const [service, method] = serviceMethod.split('.')
+        if (!service || !method) {
+          throw new Error(
+            `[workflow] expectService '${stepName}' needs 'service.method', got '${serviceMethod}'`
+          )
+        }
+        await this.inlineStep(
+          runId,
+          stepName,
+          async () => {
+            const rpcName = 'console:getStubCalls'
+            const calls: Array<{
+              service: string
+              method: string
+              args: unknown[]
+            }> = options?.actor
+              ? await options.actor.invoke(rpcName, { service })
+              : await rpcService.rpcWithWire(rpcName, { service }, {})
+            const matching = (calls ?? []).filter(
+              (c) =>
+                c.service === service &&
+                c.method === method &&
+                (options?.calledWith === undefined ||
+                  JSON.stringify(c.args?.[0]) ===
+                    JSON.stringify(options.calledWith))
+            )
+            const expected = options?.times
+            const ok =
+              expected === undefined
+                ? matching.length > 0
+                : matching.length === expected
+            if (!ok) {
+              const seen =
+                (calls ?? [])
+                  .map(
+                    (c) =>
+                      `${c.service}.${c.method}(${JSON.stringify(c.args?.[0])?.slice(0, 120) ?? ''})`
+                  )
+                  .join('\n  ') || '(none)'
+              throw new Error(
+                `[workflow] expectService '${stepName}' expected ${expected ?? 'at least one'} call(s) to '${serviceMethod}'` +
+                  `${options?.calledWith !== undefined ? ` with ${JSON.stringify(options.calledWith)}` : ''}, found ${matching.length}. Recorded:\n  ${seen}`
+              )
             }
           },
           options

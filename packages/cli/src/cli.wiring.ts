@@ -276,6 +276,11 @@ wireCLI({
             'Collect V8 precise coverage in-process; snapshot/reset via the console coverage RPCs',
           default: false,
         },
+        test: {
+          description:
+            'Activate declared test stubs (pikkuTestServices / pikkuTestWireServices); implied by --coverage',
+          default: false,
+        },
       },
     }),
     serve: pikkuCLICommand({

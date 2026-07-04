@@ -164,3 +164,10 @@ export {
   type CoverageRange,
 } from './v8-coverage-service.js'
 export { IstanbulCoverageService } from './istanbul-coverage-service.js'
+export {
+  StubTracker,
+  createStubProxy,
+  createStubHelpers,
+  type StubCall,
+  type PikkuTestStubHelpers,
+} from './stub-tracker.js'
