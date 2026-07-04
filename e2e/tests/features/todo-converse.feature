@@ -7,6 +7,6 @@ Feature: Actor converses with the todo agent
 
   Scenario: Shopper gets a todo created and the store confirms it
     Given the todo list is reset
-    When the "shopper" actor asks the "todo-agent" to add a todo titled "Book the venue"
+    When the "shopper" actor asks the "todoAgent" to add a todo titled "Book the venue"
     Then the actor should conclude the task succeeded
     And the todo list should contain "Book the venue"
