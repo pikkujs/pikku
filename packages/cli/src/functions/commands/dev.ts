@@ -32,11 +32,18 @@ import {
 } from '../db/local-db.js'
 import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
 import { startCoverageService } from './start-coverage.js'
+import { applyTestServices } from './apply-test-services.js'
 import { createDevAIAgentRunner } from './dev-ai-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
 
 export const dev = pikkuSessionlessFunc<
-  { port?: string; watch?: boolean; hmr?: boolean; coverage?: boolean },
+  {
+    port?: string
+    watch?: boolean
+    hmr?: boolean
+    coverage?: boolean
+    test?: boolean
+  },
   void
 >({
   remote: true,
@@ -49,7 +56,7 @@ export const dev = pikkuSessionlessFunc<
       variables,
       devServerRunner,
     },
-    { port, watch, hmr, coverage },
+    { port, watch, hmr, coverage, test },
     { rpc }
   ) => {
     process.env.PIKKU_DEV_QUICK_LOGIN ??= 'true'
@@ -296,10 +303,18 @@ export const dev = pikkuSessionlessFunc<
       ...inMemoryServices,
       getInspectorState,
     })
+    const testServices =
+      test || coverage
+        ? await applyTestServices(logger, inspectorState.filesAndMethods, {
+            ...singletonServices,
+            ...(coverageService ? { coverageService } : {}),
+          })
+        : {}
     const resolvedServices = {
       ...singletonServices,
       getInspectorState,
       ...(coverageService ? { coverageService } : {}),
+      ...testServices,
     }
     pikkuState(null, 'package', 'singletonServices', resolvedServices)
     resolvedServices.workflowService?.wireQueueWorkers?.()

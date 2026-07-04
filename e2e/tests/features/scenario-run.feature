@@ -16,3 +16,7 @@ Feature: Scenario runs
     When I run the "orderSupportScenario" scenario with coverage against the "local" environment
     Then the scenario run reports all flows passed
     And the scenario run reports coverage for "orderSupportScenario"
+
+  Scenario: scenario asserts stubbed service calls and per-actor fault injection
+    When I run the "notificationScenario" scenario against the "local" environment
+    Then the scenario run reports all flows passed

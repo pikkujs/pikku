@@ -38,6 +38,27 @@ export interface WorkflowExpectEventuallyOptions extends WorkflowStepOptions {
 }
 
 /**
+ * Options for workflow.expectError() — an error-path step used by scenarios
+ * to assert an RPC rejects (typically after fault injection via
+ * pikkuTestWireServices).
+ */
+export interface WorkflowExpectErrorOptions extends WorkflowStepOptions {
+  /** Assert the error message matches (string = substring match). */
+  matches?: string | RegExp
+}
+
+/**
+ * Options for workflow.expectService() — asserts a stubbed/spied service
+ * method was called on the target server (via the console getStubCalls RPC).
+ */
+export interface WorkflowExpectServiceOptions extends WorkflowStepOptions {
+  /** Assert a recorded call's first argument deep-equals this value. */
+  calledWith?: unknown
+  /** Assert the exact number of matching calls. Default: at least one. */
+  times?: number
+}
+
+/**
  * Type signature for workflow.do() RPC form - used by inspector
  */
 export type WorkflowWireDoRPC = <TOutput = any, TInput = any>(
@@ -380,6 +401,28 @@ export interface PikkuWorkflowWire {
     predicate: (output: TOutput) => boolean,
     options?: WorkflowExpectEventuallyOptions
   ) => Promise<TOutput>
+
+  /**
+   * Error-path step (scenarios): invoke `rpcName` and succeed only when it
+   * throws — optionally matching the error message. Returns the message.
+   */
+  expectError: <TInput = any>(
+    stepName: string,
+    rpcName: string,
+    data: TInput,
+    options?: WorkflowExpectErrorOptions
+  ) => Promise<string>
+
+  /**
+   * Stub-assertion step (scenarios): fetch recorded stub calls from the
+   * target server (console getStubCalls RPC, requires `pikku dev --test` or
+   * `--coverage`) and assert `service.method` was called.
+   */
+  expectService: (
+    stepName: string,
+    serviceMethod: string,
+    options?: WorkflowExpectServiceOptions
+  ) => Promise<void>
 
   /** Sleep for a duration */
   sleep: WorkflowWireSleep

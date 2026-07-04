@@ -8,6 +8,8 @@ export type { WorkflowService } from '../../services/workflow-service.js'
 export type {
   WorkflowStepOptions,
   WorkflowExpectEventuallyOptions,
+  WorkflowExpectErrorOptions,
+  WorkflowExpectServiceOptions,
   WorkflowWireDoRPC,
   WorkflowWireDoInline,
   WorkflowWireSleep,

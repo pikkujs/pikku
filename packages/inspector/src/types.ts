@@ -381,6 +381,18 @@ export interface InspectorFilesAndMethods {
     type: string
     typePath: string
   }
+  testServicesFactory?: {
+    file: string
+    variable: string
+    type: string
+    typePath: string
+  }
+  testWireServicesFactory?: {
+    file: string
+    variable: string
+    type: string
+    typePath: string
+  }
   serverLifecycleFactory?: {
     file: string
     variable: string
@@ -439,6 +451,8 @@ export interface InspectorState {
   configTypeImportMap: PathToNameAndType
   singletonServicesFactories: PathToNameAndType
   wireServicesFactories: PathToNameAndType
+  testServicesFactories: PathToNameAndType
+  testWireServicesFactories: PathToNameAndType
   wireServicesMeta: Map<string, string[]> // variable name -> singleton services consumed
   addonRequiredParentServices: string[] // services an addon needs from the parent (extracted from pikkuAddonServices 2nd param)
   addonServerlessIncompatible: Map<string, string[]> // namespace → service names that are serverless-incompatible (scoped per addon)

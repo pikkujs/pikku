@@ -86,6 +86,22 @@ export const visitSetup = (
     state
   )
 
+  addFileWithFactory(
+    node,
+    checker,
+    state.testServicesFactories,
+    'CreateTestServices',
+    state
+  )
+
+  addFileWithFactory(
+    node,
+    checker,
+    state.testWireServicesFactories,
+    'CreateTestWireServices',
+    state
+  )
+
   addFileWithFactory(node, checker, state.configFactories, 'CreateConfig')
   addFileWithFactory(
     node,
