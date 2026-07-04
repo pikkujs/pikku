@@ -5,7 +5,7 @@ export const pikku = (options: {
   serverUrl: string
   credentials?: RequestCredentials
 }) => {
-  const fetch = new PikkuFetch()
+  const fetch = new PikkuFetch({ credentials: options.credentials })
   fetch.setServerUrl(options.serverUrl)
   const rpc = new PikkuRPC()
   rpc.setPikkuFetch(fetch)
