@@ -13,7 +13,7 @@ import {
   stripVerboseFields,
   hasVerboseFields,
 } from '../../../utils/strip-verbose-meta.js'
-import { join, dirname } from 'path'
+import { join } from 'path'
 
 type WorkflowCommandInput = {
   bootstrap?: boolean
@@ -168,12 +168,14 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
         config.scenarioActorsFile,
         serializeScenarioActors(scenarioActors, agentMapImportPath)
       )
-      // JSON twin for the runtime meta service (console personas view). Lives
-      // next to workflow/meta but NOT inside it — getWorkflowMeta() treats
-      // every workflow/meta/*.gen.json as a workflow.
+      // JSON twin for the runtime meta service (console personas view). It must
+      // live at <outDir>/workflow/scenario-actors.gen.json — the fixed path
+      // getScenarioActorsMeta() reads — regardless of where scenarioActorsFile
+      // is configured, and NOT inside workflow/meta, since getWorkflowMeta()
+      // treats every workflow/meta/*.gen.json as a workflow.
       await writeFileInDir(
         logger,
-        join(dirname(config.scenarioActorsFile), 'scenario-actors.gen.json'),
+        join(config.outDir, 'workflow', 'scenario-actors.gen.json'),
         JSON.stringify(scenarioActors, null, 2)
       )
     }
