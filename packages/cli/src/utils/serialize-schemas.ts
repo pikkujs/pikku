@@ -19,13 +19,12 @@ export async function saveSchemas(
   supportsImportAttributes: boolean,
   packageName?: string | null
 ) {
-  await writeFileInDir(
-    logger,
-    `${schemaParentDir}/register.gen.ts`,
-    'export const empty = null;'
-  )
-
   if (requiredSchemas.size === 0) {
+    await writeFileInDir(
+      logger,
+      `${schemaParentDir}/register.gen.ts`,
+      'export const empty = null;'
+    )
     logger.info(`• Skipping schemas since none found.\x1b[0m`)
     return
   }

@@ -9,6 +9,11 @@ export const DO_NOT_MODIFY_COMMENT = `/**
  */
 `
 
+let tsWriteGeneration = 0
+const TS_FILE_REGEX = /\.[mc]?tsx?$/
+
+export const getTsWriteGeneration = () => tsWriteGeneration
+
 export const writeFileInDir = async (
   logger: CLILogger,
   path: string,
@@ -49,6 +54,9 @@ export const writeFileInDir = async (
   if (existingContent !== content) {
     await mkdir(dirname(path), { recursive: true })
     await writeFile(path, content, 'utf-8')
+    if (TS_FILE_REGEX.test(path)) {
+      tsWriteGeneration++
+    }
 
     if (logWrite) {
       logger.debug({ message: `✓ File written to ${path}`, type: 'success' })
@@ -90,6 +98,9 @@ export const removeFileInDir = async (
   // Check if file exists before attempting removal
   if (existsSync(path)) {
     await rm(path, { force: true })
+    if (TS_FILE_REGEX.test(path)) {
+      tsWriteGeneration++
+    }
 
     if (logRemove) {
       logger.debug({ message: `✓ File removed at ${path}`, type: 'success' })

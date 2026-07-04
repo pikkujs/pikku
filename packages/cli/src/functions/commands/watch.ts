@@ -4,7 +4,7 @@ import { pikkuDevReloader } from '@pikku/core/dev'
 
 export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
   remote: true,
-  func: async ({ logger, config }, { hmr }, { rpc }) => {
+  func: async ({ logger, config, invalidateInspectorState }, { hmr }, { rpc }) => {
     const watchDirectories = [
       ...new Set([config.emailTemplatesDir, ...config.srcDirectories].filter(Boolean)),
     ] as string[]
@@ -36,6 +36,7 @@ export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
         const handle = async () => {
           try {
             const start = Date.now()
+            invalidateInspectorState()
             await rpc.invoke('all')
             logger.info({
               message: `✓ Generated in ${Date.now() - start}ms`,
