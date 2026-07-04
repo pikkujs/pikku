@@ -25,3 +25,26 @@ test('console RPCs invoke via HTTP /rpc/ path', async () => {
     globalThis.fetch = originalFetch
   }
 })
+
+test('console RPCs forward the credentials mode for cross-origin cookie auth', async () => {
+  const seen: (RequestCredentials | undefined)[] = []
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    seen.push(init?.credentials)
+    return new Response(JSON.stringify({ ok: true }), {
+      headers: { 'content-type': 'application/json' },
+    })
+  }) as typeof fetch
+
+  try {
+    const client = pikku({
+      serverUrl: 'https://example.com/api',
+      credentials: 'include',
+    })
+    await client.rpc.invoke('console:getAllMeta')
+
+    assert.equal(seen[0], 'include')
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})
