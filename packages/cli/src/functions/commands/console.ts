@@ -34,7 +34,9 @@ export const consoleCommand = pikkuSessionlessFunc<
     { rpc }
   ) => {
     const watchDirectories = [
-      ...new Set([config.emailTemplatesDir, ...config.srcDirectories].filter(Boolean)),
+      ...new Set(
+        [config.emailTemplatesDir, ...config.srcDirectories].filter(Boolean)
+      ),
     ] as string[]
 
     if (!config.scaffold?.console) {
@@ -65,9 +67,22 @@ export const consoleCommand = pikkuSessionlessFunc<
       return
     }
 
+    // The console bundle is built with base '/console/' (it is normally served
+    // same-origin by pikku serve/dev), so this standalone server mounts it at
+    // /console too and redirects the root there.
     const server = createServer(async (req, res) => {
       const url = new URL(req.url || '/', `http://localhost:${resolvedPort}`)
-      let filePath = join(consoleDir, url.pathname)
+
+      if (!url.pathname.startsWith('/console')) {
+        res.writeHead(302, { Location: '/console/' })
+        res.end()
+        return
+      }
+
+      const relativePath = url.pathname
+        .slice('/console'.length)
+        .replace(/^\/+/, '')
+      let filePath = join(consoleDir, relativePath)
 
       try {
         const fileStat = await stat(filePath)
@@ -91,9 +106,11 @@ export const consoleCommand = pikkuSessionlessFunc<
     })
 
     server.listen(resolvedPort, () => {
-      logger.info(`Pikku Console running at http://localhost:${resolvedPort}`)
+      logger.info(
+        `Pikku Console running at http://localhost:${resolvedPort}/console`
+      )
       if (openBrowser === 'true') {
-        open(`http://localhost:${resolvedPort}`)
+        open(`http://localhost:${resolvedPort}/console`)
       }
     })
 
@@ -114,7 +131,9 @@ export const consoleCommand = pikkuSessionlessFunc<
     const generatorWatcher = () => {
       watcher.close()
 
-      logger.info(`• Watching directories: \n  - ${watchDirectories.join('\n  - ')}`)
+      logger.info(
+        `• Watching directories: \n  - ${watchDirectories.join('\n  - ')}`
+      )
       watcher = chokidar.watch(watchDirectories, {
         ignoreInitial: true,
         ignored: /.*\.gen\.ts/,

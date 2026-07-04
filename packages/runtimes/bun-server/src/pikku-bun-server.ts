@@ -15,11 +15,26 @@ import type { PikkuLocalChannelHandler } from '@pikku/core/channel/local'
 import { runLocalChannel } from '@pikku/core/channel/local'
 import { compileAllSchemas } from '@pikku/core/schema'
 
+import { resolve } from 'node:path'
+
 import { BunEventHubService } from './bun-event-hub-service.js'
+
+export type StaticMount = {
+  /** URL prefix the directory is mounted at, e.g. `/console`. */
+  urlPrefix: string
+  /** Absolute directory the files are served from. */
+  directory: string
+  /**
+   * Serve the mount's `index.html` for unknown GET paths under the prefix so
+   * client-side (SPA) routes deep-link correctly.
+   */
+  spaFallback?: boolean
+}
 
 export type BunServerConfig = CoreConfig & {
   port: number
   hostname?: string
+  staticMounts?: StaticMount[]
   healthCheckPath?: string
 }
 
@@ -167,6 +182,11 @@ export class PikkuBunServer {
           }
         }
 
+        const staticResponse = await this.serveStaticMounts(req)
+        if (staticResponse) {
+          return staticResponse
+        }
+
         const pikkuReq = new PikkuFetchHTTPRequest(req)
         const pikkuRes = new PikkuFetchHTTPResponse()
         await fetchData(pikkuReq, pikkuRes, {
@@ -223,6 +243,66 @@ export class PikkuBunServer {
     logger.info(
       `pikku-bun-server: listening on http://${config.hostname ?? 'localhost'}:${config.port}`
     )
+  }
+
+  /** The actual bound port (differs from config.port when configured as 0). */
+  public get port(): number {
+    return this.server?.port ?? this.config.port
+  }
+
+  private async serveStaticMounts(req: Request): Promise<Response | null> {
+    const mounts = this.config.staticMounts
+    if (!mounts?.length || (req.method !== 'GET' && req.method !== 'HEAD')) {
+      return null
+    }
+    const pathname = decodeURIComponent(new URL(req.url).pathname)
+
+    for (const mount of mounts) {
+      if (
+        pathname !== mount.urlPrefix &&
+        !pathname.startsWith(`${mount.urlPrefix}/`)
+      ) {
+        continue
+      }
+      const key = pathname.slice(mount.urlPrefix.length).replace(/^\/+/, '')
+      const file = await this.resolveStaticFile(mount, key)
+      if (file) {
+        return new Response(req.method === 'HEAD' ? null : file)
+      }
+      if (mount.spaFallback) {
+        const index = await this.resolveStaticFile(mount, 'index.html')
+        if (index) {
+          return new Response(req.method === 'HEAD' ? null : index)
+        }
+      }
+      return new Response('Not Found', { status: 404 })
+    }
+
+    return null
+  }
+
+  private async resolveStaticFile(
+    mount: StaticMount,
+    key: string
+  ): Promise<ReturnType<typeof Bun.file> | null> {
+    const directory = resolve(mount.directory)
+    const targetPath =
+      key === '' ? resolve(directory, 'index.html') : resolve(directory, key)
+    if (targetPath !== directory && !targetPath.startsWith(`${directory}/`)) {
+      return null
+    }
+    let file = Bun.file(targetPath)
+    if (!(await file.exists())) {
+      const indexPath = resolve(targetPath, 'index.html')
+      if (!indexPath.startsWith(`${directory}/`)) {
+        return null
+      }
+      file = Bun.file(indexPath)
+      if (!(await file.exists())) {
+        return null
+      }
+    }
+    return file
   }
 
   public async stop(): Promise<void> {

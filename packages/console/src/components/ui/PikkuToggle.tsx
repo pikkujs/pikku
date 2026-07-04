@@ -3,6 +3,7 @@ import { Button, Tooltip } from '@pikku/mantine/core'
 import type { I18nNode } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
+import { consoleLogoUrl } from '@/lib/assets'
 
 interface PikkuToggleProps {
   checked: boolean
@@ -28,7 +29,7 @@ export const PikkuToggle: React.FC<PikkuToggleProps> = ({
         aria-pressed={checked}
       >
         <img
-          src="/pikku-console-logo.png"
+          src={consoleLogoUrl}
           alt="Pikku"
           style={{
             width: 14,
