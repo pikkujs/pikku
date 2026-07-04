@@ -44,6 +44,7 @@ import { usePanelContext } from '../../context/PanelContext'
 import { usePikkuRPC } from '../../context/PikkuRpcProvider'
 import { createCanvasDrawerContent } from '../canvas-drawer/CanvasDrawerFactory'
 import { WorkflowTimelineDrawer } from './WorkflowTimelineDrawer'
+import { PersonaTimeline } from '../flows/timeline/PersonaTimeline'
 import { useWorkflowRuns } from '../../hooks/useWorkflowRuns'
 import { RunsPanel, type RunItem } from '../layout/RunsPanel'
 import { WiringNode } from './nodes/WiringNode'
@@ -431,6 +432,7 @@ const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
 
   const workflowSource = workflow.source || 'graph'
   const isComplex = workflowSource === 'complex'
+  const isUserFlow = workflowSource === 'user-flow'
 
   const runContext = useWorkflowRunContextSafe()
 
@@ -502,10 +504,14 @@ const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
             </Alert>
           )}
           <Box style={{ flex: 1, minHeight: 0 }}>
-            <WorkflowCanvasInner
-              workflow={canvasWorkflow}
-              onPaneClick={handlePaneClick}
-            />
+            {isUserFlow ? (
+              <PersonaTimeline workflow={canvasWorkflow} />
+            ) : (
+              <WorkflowCanvasInner
+                workflow={canvasWorkflow}
+                onPaneClick={handlePaneClick}
+              />
+            )}
           </Box>
           <WorkflowTimelineDrawer />
         </Box>

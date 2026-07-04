@@ -1,13 +1,7 @@
 import React, { Suspense, useContext, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import {
-  Group,
-  TextInput,
-  Center,
-  Loader,
-  SegmentedControl,
-} from '@pikku/mantine/core'
-import { GitBranch, Search, UserRound } from 'lucide-react'
+import { Group, TextInput, Center, Loader } from '@pikku/mantine/core'
+import { GitBranch, Search } from 'lucide-react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { usePikkuMeta } from '../context/PikkuMetaContext'
@@ -46,9 +40,6 @@ const WorkflowPageInner: React.FC<{
   const { meta, loading } = usePikkuMeta()
   const { data: aiWorkflows } = useAIWorkflows()
   const [searchQuery, setSearchQuery] = useState('')
-  const [view, setView] = useState<'workflows' | 'user-flows' | 'personas'>(
-    'workflows'
-  )
 
   const userFlowNames = useMemo(() => {
     const names = new Set<string>()
@@ -96,47 +87,8 @@ const WorkflowPageInner: React.FC<{
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [meta.workflows, aiWorkflows])
 
-  const personaItems = useMemo((): EntityCardItem[] => {
-    const actors = meta.userFlowActors ?? {}
-    const flowsByActor = new Map<string, number>()
-    for (const w of Object.values(meta.workflows ?? {}) as any[]) {
-      for (const actor of w.actors ?? []) {
-        flowsByActor.set(actor, (flowsByActor.get(actor) ?? 0) + 1)
-      }
-    }
-    return Object.entries(actors)
-      .map(([key, cfg]: [string, any]): EntityCardItem => {
-        const metaTags: string[] = [cfg.email]
-        if (cfg.jobTitle) metaTags.push(cfg.jobTitle)
-        const flowCount = flowsByActor.get(key) ?? 0
-        return {
-          name: key,
-          displayName: cfg.name ?? key,
-          badges:
-            flowCount > 0
-              ? [
-                  {
-                    label: `${flowCount} ${flowCount === 1 ? 'flow' : 'flows'}`,
-                    tone: 'accent' as const,
-                  },
-                ]
-              : [],
-          meta: metaTags,
-          description: cfg.personality,
-        }
-      })
-      .sort((a, b) => a.name.localeCompare(b.name))
-  }, [meta.userFlowActors, meta.workflows])
-
-  const hasPersonas = personaItems.length > 0
-
   const items = useMemo(() => {
-    const base =
-      view === 'personas'
-        ? personaItems
-        : allItems.filter(
-            (item) => userFlowNames.has(item.name) === (view === 'user-flows')
-          )
+    const base = allItems.filter((item) => !userFlowNames.has(item.name))
     const q = searchQuery.toLowerCase()
     if (!q) return base
     return base.filter(
@@ -144,41 +96,19 @@ const WorkflowPageInner: React.FC<{
         item.name.toLowerCase().includes(q) ||
         item.description?.toLowerCase().includes(q)
     )
-  }, [allItems, personaItems, userFlowNames, view, searchQuery])
+  }, [allItems, userFlowNames, searchQuery])
 
   if (!onOpen && workflowId) {
     return <WorkflowTabContent immersiveDetail={immersiveDetail} />
   }
 
   const handleOpen = (name: string) => {
-    if (view === 'personas') return
     if (onOpen) {
       onOpen(name)
     } else {
       navigateTo('workflows', name)
     }
   }
-
-  const viewOptions = [
-    { label: m.workflows_view_workflows(), value: 'workflows' },
-    { label: m.workflows_view_user_flows(), value: 'user-flows' },
-    ...(hasPersonas
-      ? [{ label: m.workflows_view_personas(), value: 'personas' }]
-      : []),
-  ]
-
-  const emptyTitle =
-    view === 'user-flows'
-      ? m.user_flows_empty_title()
-      : view === 'personas'
-        ? m.personas_empty_title()
-        : m.workflows_empty_title()
-  const emptyDescription =
-    view === 'user-flows'
-      ? m.user_flows_empty_description()
-      : view === 'personas'
-        ? m.personas_empty_description()
-        : m.workflows_empty_description()
 
   return (
     <PanelProvider>
@@ -191,12 +121,6 @@ const WorkflowPageInner: React.FC<{
             docsHref="https://pikku.dev/docs/wiring/workflows"
             filters={
               <Group gap="sm" wrap="nowrap">
-                <SegmentedControl
-                  size="xs"
-                  value={view}
-                  onChange={(value) => setView(value as typeof view)}
-                  data={viewOptions}
-                />
                 <TextInput
                   placeholder={m.workflows_search_placeholder()}
                   leftSection={<Search size={14} />}
@@ -215,12 +139,12 @@ const WorkflowPageInner: React.FC<{
           items={items}
           onOpen={handleOpen}
           loading={loading}
-          icon={view === 'personas' ? UserRound : icon}
-          emptyHero={view === 'workflows' ? emptyHero : undefined}
-          emptyTitle={emptyTitle}
-          emptyDescription={emptyDescription}
+          icon={icon}
+          emptyHero={emptyHero}
+          emptyTitle={m.workflows_empty_title()}
+          emptyDescription={m.workflows_empty_description()}
           docsHref="https://pikku.dev/docs/wiring/workflows"
-          metricSlot={view === 'personas' ? undefined : metricSlot}
+          metricSlot={metricSlot}
         />
       </ResizablePanelLayout>
     </PanelProvider>

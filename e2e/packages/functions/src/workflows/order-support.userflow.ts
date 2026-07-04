@@ -19,10 +19,14 @@ export const orderSupportUserFlow = pikkuUserFlow<
     }
     logger.debug('order-support user flow starting')
 
+    // `pikku userflow run` invokes flows with no input, so the story carries
+    // its own sample order value; a programmatic caller can still override it.
+    const value = data?.value ?? 21
+
     const doubled = await workflow.do(
       'shopper doubles their order',
       'doubleValue',
-      { value: data.value },
+      { value },
       { actor: actors.shopper }
     )
 
