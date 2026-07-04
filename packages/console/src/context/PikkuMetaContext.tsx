@@ -47,7 +47,7 @@ const EMPTY_META: PikkuMetaState = {
   mcpMeta: [],
   gatewayMeta: [],
   workflows: {},
-  userFlowActors: {},
+  scenarioActors: {},
   triggerMeta: {},
   triggerSourceMeta: {},
   middlewareGroupsMeta: {
@@ -113,7 +113,7 @@ export const PikkuMetaProvider: React.FC<{
         mcpMeta: allMeta.mcpMeta,
         gatewayMeta,
         workflows: allMeta.workflows,
-        userFlowActors: allMeta.userFlowActors ?? {},
+        scenarioActors: allMeta.scenarioActors ?? {},
         triggerMeta: allMeta.triggerMeta,
         triggerSourceMeta: allMeta.triggerSourceMeta,
         middlewareGroupsMeta: allMeta.middlewareGroupsMeta,

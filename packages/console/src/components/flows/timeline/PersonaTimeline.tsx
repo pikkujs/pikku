@@ -26,7 +26,7 @@ export const PersonaTimeline: React.FC<PersonaTimelineProps> = ({
     [workflow.nodes, workflow.entryNodeIds]
   )
 
-  const actors = meta.userFlowActors ?? {}
+  const actors = meta.scenarioActors ?? {}
   const stepStates = run?.stepStates
 
   if (timeline.length === 0) {
@@ -39,7 +39,7 @@ export const PersonaTimeline: React.FC<PersonaTimelineProps> = ({
           <Text fw={600}>{asI18n('No steps to show')}</Text>
           <Text size="sm" c="dimmed" ta="center" maw={360}>
             {asI18n(
-              'This user flow has no workflow steps — actors call the API directly, or the flow returns without any `workflow.do` calls.'
+              'This scenario has no workflow steps — actors call the API directly, or the flow returns without any `workflow.do` calls.'
             )}
           </Text>
         </Stack>

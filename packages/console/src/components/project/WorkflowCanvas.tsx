@@ -307,7 +307,7 @@ const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
 
   const workflowSource = workflow.source || 'graph'
   const isComplex = workflowSource === 'complex'
-  const isUserFlow = workflowSource === 'user-flow'
+  const isScenario = workflowSource === 'scenario'
 
   const runContext = useWorkflowRunContextSafe()
 
@@ -395,7 +395,7 @@ const WorkflowCanvasContent: React.FC<WorkflowCanvasProps> = ({
             </Alert>
           )}
           <Box style={{ flex: 1, minHeight: 0 }}>
-            {isUserFlow ? (
+            {isScenario ? (
               <PersonaTimeline workflow={canvasWorkflow} />
             ) : (
               <WorkflowCanvasInner

@@ -4,7 +4,7 @@ import type {
   TargetAgentDriver,
   TargetPendingApproval,
 } from './actor-flow.types.js'
-import type { UserFlowActorConfig } from '../../services/user-flow-actors-service.js'
+import type { ScenarioActorConfig } from '../../services/scenario-actors-service.js'
 import type { AIMessage } from '../ai-agent/ai-agent.types.js'
 import type {
   AIAgentRunnerParams,
@@ -69,7 +69,7 @@ export type PersonaLLM = (
 
 export interface RunConversationParams {
   /** Persona config (personality/jobTitle/name) that shapes how the actor talks. */
-  persona: UserFlowActorConfig
+  persona: ScenarioActorConfig
   /** Stable persona name (for transcript labelling). */
   personaName: string
   /** What the actor is trying to get the target agent to accomplish. */
@@ -117,7 +117,7 @@ function readObject<T>(result: { object?: unknown; text?: string }): T | null {
 }
 
 function personaInstructions(
-  persona: UserFlowActorConfig,
+  persona: ScenarioActorConfig,
   task: string
 ): string {
   return [

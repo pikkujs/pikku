@@ -6,11 +6,14 @@ import type { BetterAuthPlugin } from 'better-auth'
 export interface ActorPluginOptions {
   /**
    * The server-held impersonation secret (e.g. from a wired
-   * `USER_FLOW_ACTOR_SECRET`). Sign-in only ever works for user rows flagged
+   * `SCENARIO_ACTOR_SECRET`). Sign-in only ever works for user rows flagged
    * `actor: true`, so knowing the secret never impersonates real users. A
    * missing/empty secret disables the endpoint entirely.
    */
-  secret: string | undefined | (() => string | undefined | Promise<string | undefined>)
+  secret:
+    | string
+    | undefined
+    | (() => string | undefined | Promise<string | undefined>)
 }
 
 /** Length-hiding constant-time comparison — no early exit on mismatch. */
@@ -26,8 +29,8 @@ const secretsEqual = (a: string, b: string): boolean => {
 }
 
 /**
- * Better Auth plugin for user-flow actors: synthetic users (an `actor`
- * boolean column on `user`) that pikkuUserFlow signs in via
+ * Better Auth plugin for scenario actors: synthetic users (an `actor`
+ * boolean column on `user`) that pikkuScenario signs in via
  * `POST /sign-in/actor` with `{ email, secret }`. Actor rows are auto-created
  * on first sign-in; sign-in for a NON-actor user is always refused. The
  * `actor` flag rides on the user (and from there into the pikku core
@@ -116,7 +119,10 @@ export const actor = (options: ActorPluginOptions): BetterAuthPlugin => {
             })
           }
           await setSessionCookie(ctx, { session, user: user as any })
-          return ctx.json({ token: session.token, user: { id: user.id, email, actor: true } })
+          return ctx.json({
+            token: session.token,
+            user: { id: user.id, email, actor: true },
+          })
         }
       ),
     },

@@ -481,10 +481,10 @@ const _getPikkuCLIConfig = async (
     if (!result.workflowMetaDir) {
       result.workflowMetaDir = join(workflowDir, 'meta')
     }
-    if (!result.userFlowActorsFile) {
-      result.userFlowActorsFile = join(
+    if (!result.scenarioActorsFile) {
+      result.scenarioActorsFile = join(
         workflowDir,
-        'pikku-user-flow-actors.gen.ts'
+        'pikku-scenario-actors.gen.ts'
       )
     }
 

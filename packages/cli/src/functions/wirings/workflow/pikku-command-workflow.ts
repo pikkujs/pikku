@@ -3,7 +3,7 @@ import { ErrorCode } from '@pikku/inspector'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeWorkflowTypes } from './serialize-workflow-types.js'
-import { serializeUserFlowActors } from './serialize-user-flow-actors.js'
+import { serializeScenarioActors } from './serialize-scenario-actors.js'
 import { serializeWorkflowRegistration } from './serialize-workflow-registration.js'
 import { serializeWorkflowMap } from './serialize-workflow-map.js'
 import { serializeWorkflowBootstrapMap } from './serialize-workflow-bootstrap-map.js'
@@ -156,25 +156,25 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
       )
     )
 
-    const userFlowActors = config.userFlows?.actors
-    if (userFlowActors && Object.keys(userFlowActors).length > 0) {
+    const scenarioActors = config.scenarios?.actors
+    if (scenarioActors && Object.keys(scenarioActors).length > 0) {
       const agentMapImportPath = getFileImportRelativePath(
-        config.userFlowActorsFile,
+        config.scenarioActorsFile,
         config.agentMapDeclarationFile,
         packageMappings
       )
       await writeFileInDir(
         logger,
-        config.userFlowActorsFile,
-        serializeUserFlowActors(userFlowActors, agentMapImportPath)
+        config.scenarioActorsFile,
+        serializeScenarioActors(scenarioActors, agentMapImportPath)
       )
       // JSON twin for the runtime meta service (console personas view). Lives
       // next to workflow/meta but NOT inside it — getWorkflowMeta() treats
       // every workflow/meta/*.gen.json as a workflow.
       await writeFileInDir(
         logger,
-        join(dirname(config.userFlowActorsFile), 'user-flow-actors.gen.json'),
-        JSON.stringify(userFlowActors, null, 2)
+        join(dirname(config.scenarioActorsFile), 'scenario-actors.gen.json'),
+        JSON.stringify(scenarioActors, null, 2)
       )
     }
 

@@ -3,14 +3,14 @@ import assert from 'node:assert/strict'
 
 import { InMemoryWorkflowService } from '../../services/in-memory-workflow-service.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
-import type { UserFlowActor } from '../../services/user-flow-actors-service.js'
+import type { ScenarioActor } from '../../services/scenario-actors-service.js'
 
 const noopLogger = { error() {}, info() {}, warn() {}, debug() {} }
 
 const fakeActor = (
   name: string,
   handler: (rpcName: string, data: unknown) => Promise<unknown>
-): UserFlowActor & { calls: Array<{ rpcName: string; data: unknown }> } => {
+): ScenarioActor & { calls: Array<{ rpcName: string; data: unknown }> } => {
   const calls: Array<{ rpcName: string; data: unknown }> = []
   return {
     name,
@@ -31,14 +31,14 @@ const setup = async (
     logger: noopLogger,
     ...services,
   } as any)
-  const runId = await ws.createRun('userFlowTest', {}, true, 'hash', {
+  const runId = await ws.createRun('scenarioTest', {}, true, 'hash', {
     type: 'test',
   } as any)
   ws.registerInlineRun(runId)
   return runId
 }
 
-describe('user-flow actor steps (workflow.do with `actor`)', () => {
+describe('scenario actor steps (workflow.do with `actor`)', () => {
   beforeEach(() => resetPikkuState())
 
   test('routes through the actor over the real transport, never internal rpc', async () => {
@@ -54,7 +54,7 @@ describe('user-flow actor steps (workflow.do with `actor`)', () => {
       },
     }
 
-    const wire = ws.createWorkflowWire('userFlowTest', runId, rpc)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, rpc)
     const result = await wire.do(
       'customer creates todo',
       'createTodo',
@@ -74,7 +74,7 @@ describe('user-flow actor steps (workflow.do with `actor`)', () => {
     let invocations = 0
     const yasser = fakeActor('yasser', async () => ({ n: ++invocations }))
     const runId = await setup(ws)
-    const wire = ws.createWorkflowWire('userFlowTest', runId, {})
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
 
     const first = await wire.do('step', 'someRpc', {}, { actor: yasser })
     assert.deepEqual(first, { n: 1 })
@@ -82,8 +82,13 @@ describe('user-flow actor steps (workflow.do with `actor`)', () => {
     // Simulate replay: reset per-run ordinals so the same logical step name
     // resolves to the same durable step key.
     ;(ws as any).resetStepOrdinals(runId)
-    const replayWire = ws.createWorkflowWire('userFlowTest', runId, {})
-    const replayed = await replayWire.do('step', 'someRpc', {}, { actor: yasser })
+    const replayWire = ws.createWorkflowWire('scenarioTest', runId, {})
+    const replayed = await replayWire.do(
+      'step',
+      'someRpc',
+      {},
+      { actor: yasser }
+    )
 
     assert.deepEqual(replayed, { n: 1 }, 'replay must return the cached result')
     assert.equal(invocations, 1, 'the actor must not be re-invoked on replay')
@@ -106,7 +111,7 @@ describe('user-flow actor steps (workflow.do with `actor`)', () => {
       workflowQueued: true,
     } as any
 
-    const wire = ws.createWorkflowWire('userFlowTest', runId, {})
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
     await wire.do('step', 'queuedRpc', {}, { actor: customer })
 
     assert.equal(queued, 0, 'actor steps are outbound HTTP — never queued')
@@ -116,10 +121,10 @@ describe('user-flow actor steps (workflow.do with `actor`)', () => {
   test('actor step failure surfaces the actor error and fails after retries', async () => {
     const ws = new InMemoryWorkflowService()
     const broken = fakeActor('broken', async () => {
-      throw new Error("[user-flow] 'createTodo' as 'broken' returned 403: nope")
+      throw new Error("[scenario] 'createTodo' as 'broken' returned 403: nope")
     })
     const runId = await setup(ws)
-    const wire = ws.createWorkflowWire('userFlowTest', runId, {})
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
 
     await assert.rejects(
       wire.do('step', 'createTodo', {}, { actor: broken, retries: 2 }),
@@ -139,7 +144,7 @@ describe('workflow.expectEventually', () => {
       notifications: ++polls >= 3 ? ['ping'] : [],
     }))
     const runId = await setup(ws)
-    const wire = ws.createWorkflowWire('userFlowTest', runId, {})
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
 
     const result = await wire.expectEventually(
       'sarah sees the notification',
@@ -157,7 +162,7 @@ describe('workflow.expectEventually', () => {
     const ws = new InMemoryWorkflowService()
     const sarah = fakeActor('sarah', async () => ({ notifications: [] }))
     const runId = await setup(ws)
-    const wire = ws.createWorkflowWire('userFlowTest', runId, {})
+    const wire = ws.createWorkflowWire('scenarioTest', runId, {})
 
     await assert.rejects(
       wire.expectEventually(
@@ -178,7 +183,7 @@ describe('workflow.expectEventually', () => {
     const rpc = {
       rpcWithWire: async () => ({ ready: ++polls >= 2 }),
     }
-    const wire = ws.createWorkflowWire('userFlowTest', runId, rpc)
+    const wire = ws.createWorkflowWire('scenarioTest', runId, rpc)
 
     const result = await wire.expectEventually(
       'job finishes',

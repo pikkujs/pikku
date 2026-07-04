@@ -358,11 +358,11 @@ export const addFunctions: AddWiring = (
   }
 
   // Match identifiers that contain both "pikku" and "func" (case insensitive),
-  // plus pikkuUserFlow (a workflow wrapper without "func" in its name)
+  // plus pikkuScenario (a workflow wrapper without "func" in its name)
   const pikkuFuncPattern = /pikku.*func/i
   if (
     !pikkuFuncPattern.test(expression.text) &&
-    expression.text !== 'pikkuUserFlow'
+    expression.text !== 'pikkuScenario'
   ) {
     return
   }
@@ -494,9 +494,15 @@ export const addFunctions: AddWiring = (
     approvalRequired = getPropertyValue(firstArg, 'approvalRequired') as
       | boolean
       | undefined
-    workflowQueued = getPropertyValue(firstArg, 'workflowQueued') as boolean | undefined
-    workflowRetries = getPropertyValue(firstArg, 'workflowRetries') as number | undefined
-    workflowTimeout = getPropertyValue(firstArg, 'workflowTimeout') as string | undefined
+    workflowQueued = getPropertyValue(firstArg, 'workflowQueued') as
+      | boolean
+      | undefined
+    workflowRetries = getPropertyValue(firstArg, 'workflowRetries') as
+      | number
+      | undefined
+    workflowTimeout = getPropertyValue(firstArg, 'workflowTimeout') as
+      | string
+      | undefined
 
     // Extract approvalDescription identifier reference
     for (const prop of firstArg.properties) {

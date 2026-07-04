@@ -1,23 +1,23 @@
 /**
- * User flow: drives the order API the way users do. A user flow is a pure
+ * Scenario: drives the order API the way users do. A scenario is a pure
  * story of remote RPCs — the func may only use logger/config from services
  * (inspector-enforced); actors arrive on the WIRE, supplied per run by the
- * runner (`pikku userflow run <environment>` or startWorkflow options).
+ * runner (`pikku scenario run <environment>` or startWorkflow options).
  * Runtime friendly — no state reset, safe as a staged/production health check.
  */
 
-import { pikkuUserFlow } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
+import { pikkuScenario } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
-export const orderHealthUserFlow = pikkuUserFlow<
+export const orderHealthScenario = pikkuScenario<
   { orderId: string },
   { status: string; sameOrder: boolean }
 >({
-  title: 'Order health (user flow)',
-  tags: ['user-flow', 'ecommerce'],
+  title: 'Order health (scenario)',
+  tags: ['scenario', 'ecommerce'],
   func: async ({ logger }, data, { workflow, actors }) => {
     if (!actors?.customer || !actors?.ops) {
       throw new Error(
-        'orderHealthUserFlow needs run actors (customer + ops) — pass them via startWorkflow options or `pikku userflow run`'
+        'orderHealthScenario needs run actors (customer + ops) — pass them via startWorkflow options or `pikku scenario run`'
       )
     }
     logger.debug(`order-health flow starting for ${data.orderId}`)
@@ -31,7 +31,7 @@ export const orderHealthUserFlow = pikkuUserFlow<
     )
 
     // A plain internal step still works when the runner provides an rpc
-    // service (the `pikku userflow run` command refuses these on purpose)
+    // service (the `pikku scenario run` command refuses these on purpose)
     const internal = await workflow.do('internal re-read', 'orderGet', {
       orderId: data.orderId,
     })

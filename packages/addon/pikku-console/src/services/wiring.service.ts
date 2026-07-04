@@ -282,7 +282,7 @@ export interface PikkuMetaState {
   mcpMeta: McpItemMeta[]
   gatewayMeta: GatewayItemMeta[]
   workflows: WorkflowsMeta
-  userFlowActors: Record<
+  scenarioActors: Record<
     string,
     { email: string; name?: string; jobTitle?: string; personality?: string }
   >
@@ -729,7 +729,7 @@ export class WiringService {
       mcpMetaRaw,
       gatewayMetaRaw,
       workflows,
-      userFlowActors,
+      scenarioActors,
       triggerMeta,
       triggerSourceMeta,
       middlewareGroupsMeta,
@@ -750,7 +750,7 @@ export class WiringService {
       this.metaService.getMcpMeta(),
       this.metaService.getGatewayMeta(),
       this.metaService.getWorkflowMeta(),
-      this.metaService.getUserFlowActorsMeta(),
+      this.metaService.getScenarioActorsMeta(),
       this.metaService.getTriggerMeta(),
       this.metaService.getTriggerSourceMeta(),
       this.metaService.getMiddlewareGroupsMeta(),
@@ -1028,7 +1028,7 @@ export class WiringService {
       mcpMeta,
       gatewayMeta,
       workflows,
-      userFlowActors,
+      scenarioActors,
       triggerMeta: triggerMeta as unknown as AllMeta['triggerMeta'],
       triggerSourceMeta:
         triggerSourceMeta as unknown as AllMeta['triggerSourceMeta'],

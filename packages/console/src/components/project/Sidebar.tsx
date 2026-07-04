@@ -72,7 +72,7 @@ export function useDefaultNavSections(): NavSection[] {
         { label: m.nav_workflows(), href: '/workflow', icon: GitBranch, matchPrefix: '/workflow' },
         { label: m.nav_agents(), href: '/agents', icon: Bot, matchPrefix: '/agents' },
         { label: m.nav_tests(), href: '/tests', icon: FlaskConical, matchPrefix: '/tests' },
-        { label: asI18n('User Flows'), href: '/tests/userflows', icon: Route, matchPrefix: '/tests/userflows' },
+        { label: asI18n('Scenarios'), href: '/tests/scenarios', icon: Route, matchPrefix: '/tests/scenarios' },
       ],
     },
     {

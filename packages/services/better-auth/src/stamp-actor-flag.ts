@@ -2,7 +2,7 @@ import type { CoreUserSession } from '@pikku/core'
 
 /**
  * Propagate the better-auth `actor` user column (see the actor plugin) into
- * the pikku core session, so synthetic user-flow traffic is addressable in
+ * the pikku core session, so synthetic scenario traffic is addressable in
  * audits/analytics even when a custom mapSession doesn't copy it.
  */
 export const stampActorFlag = <S extends CoreUserSession>(

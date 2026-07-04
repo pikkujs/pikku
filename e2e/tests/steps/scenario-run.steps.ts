@@ -4,22 +4,22 @@ import { spawn } from 'node:child_process'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-interface UserFlowRunResult {
+interface ScenarioRunResult {
   code: number | null
   output: string
 }
 
-let lastRun: UserFlowRunResult | undefined
+let lastRun: ScenarioRunResult | undefined
 
-const runUserFlow = (
+const runScenario = (
   environment: string,
   flow: string
-): Promise<UserFlowRunResult> =>
+): Promise<ScenarioRunResult> =>
   new Promise((resolvePromise) => {
     const projectDir = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
     const child = spawn(
       'npx',
-      ['pikku', 'userflow', 'run', environment, '--flows', flow],
+      ['pikku', 'scenario', 'run', environment, '--flows', flow],
       { cwd: projectDir, env: { ...process.env } }
     )
     let output = ''
@@ -33,18 +33,18 @@ const runUserFlow = (
   })
 
 When(
-  'I run the {string} user flow against the {string} environment',
+  'I run the {string} scenario against the {string} environment',
   async function (flow: string, environment: string) {
-    lastRun = await runUserFlow(environment, flow)
+    lastRun = await runScenario(environment, flow)
   }
 )
 
-Then('the user flow run reports all flows passed', function () {
-  assert.ok(lastRun, 'no user flow run recorded')
+Then('the scenario run reports all flows passed', function () {
+  assert.ok(lastRun, 'no scenario run recorded')
   assert.equal(
     lastRun.code,
     0,
-    `pikku userflow run exited ${lastRun.code}:\n${lastRun.output}`
+    `pikku scenario run exited ${lastRun.code}:\n${lastRun.output}`
   )
   assert.doesNotMatch(
     lastRun.output,
@@ -53,13 +53,13 @@ Then('the user flow run reports all flows passed', function () {
   )
   assert.match(
     lastRun.output,
-    /\b(\d+)\/\1 user flows passed\b/,
+    /\b(\d+)\/\1 scenarios passed\b/,
     `expected every flow to pass:\n${lastRun.output}`
   )
 })
 
-Then('the user flow run exits non-zero', function () {
-  assert.ok(lastRun, 'no user flow run recorded')
+Then('the scenario run exits non-zero', function () {
+  assert.ok(lastRun, 'no scenario run recorded')
   assert.notEqual(
     lastRun.code,
     0,

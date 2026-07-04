@@ -33,7 +33,7 @@
     "workflow": "no-auth"
   },
   "emailTemplatesDir": "emails",
-  "userFlows": {
+  "scenarios": {
     "actors": {
       "shopper": {
         "email": "shopper@actors.local",
