@@ -16,6 +16,7 @@ import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { asI18n } from '@pikku/react'
 import { useAuth } from '../../context/AuthContext'
+import { DevQuickLoginButton } from './DevQuickLoginButton'
 
 export const LoginScreen: React.FC = () => {
   useLocale()
@@ -91,6 +92,8 @@ export const LoginScreen: React.FC = () => {
             <Button type="submit" fullWidth loading={mutation.isPending}>
               {m.auth_sign_in()}
             </Button>
+
+            <DevQuickLoginButton serverUrl={instanceUrl} />
           </Stack>
         </form>
       </Paper>
