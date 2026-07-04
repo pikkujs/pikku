@@ -525,6 +525,7 @@
   "auth_not_authorized_title": "Not authorized",
   "auth_not_authorized_body": "Your account does not have admin access to this console. Ask an administrator for access.",
   "auth_signed_in_as": "Signed in as {email}",
+  "auth_dev_quick_login": "Quick login as {email}",
   "impersonate_button": "Impersonate",
   "impersonate_title": "Impersonate user",
   "impersonate_search_placeholder": "Search users by email",

@@ -1,4 +1,9 @@
 export { createAuthHandler } from './auth-handler.js'
+export {
+  DEV_QUICK_LOGIN_USER,
+  DEV_QUICK_LOGIN_SUBPATH,
+  devQuickLoginEnabled,
+} from './dev-quick-login.js'
 export { createResolvedAuthGetter, getAuthSession } from './auth-api.js'
 export { betterAuthSession } from './auth-session.js'
 export { actor } from './actor-plugin.js'
