@@ -36,6 +36,7 @@ import { CLILoggerForwarder } from './services/cli-logger-forwarder.service.js'
 import { existsSync } from 'fs'
 import { readFile, writeFile } from 'fs/promises'
 import { loadManifest } from './utils/contract-versions.js'
+import { getTsWriteGeneration } from './utils/file-writer.js'
 import { join } from 'path'
 import { NodeBundler } from './deploy/bundler/node-bundler.js'
 import { BunBundler } from './deploy/bundler/bun-bundler.js'
@@ -209,6 +210,8 @@ export const createSingletonServices: CreateSingletonServices<
     | Omit<InspectorState, 'typesLookup'>
     | undefined = preloadedInspectorState
   let unfilteredStateIsSetupOnly = false
+  let inspectedTsGeneration: number | undefined
+  let inspectorInvalidated = false
 
   const getInspectorState = async (
     refresh: boolean = false,
@@ -260,7 +263,10 @@ export const createSingletonServices: CreateSingletonServices<
     // visitRoutes so variables/secrets/etc. are absent from that cache.
     if (
       !unfilteredState ||
-      (refresh && !preloadedInspectorState) ||
+      (refresh &&
+        !preloadedInspectorState &&
+        (inspectorInvalidated ||
+          getTsWriteGeneration() !== inspectedTsGeneration)) ||
       (unfilteredStateIsSetupOnly && !setupOnly && !preloadedInspectorState)
     ) {
       // Run inspector WITHOUT filters to get full state
@@ -308,6 +314,7 @@ export const createSingletonServices: CreateSingletonServices<
       const oldProgram = unfilteredState?.program ?? undefined
       const inspectStart = Date.now()
       unfilteredStateIsSetupOnly = setupOnly
+      const tsGenerationAtInspect = getTsWriteGeneration()
       unfilteredState = await inspect(logger, wiringFiles, {
         setupOnly,
         rootDir,
@@ -343,6 +350,8 @@ export const createSingletonServices: CreateSingletonServices<
       })
 
       logger.debug(`Inspector took ${Date.now() - inspectStart}ms`)
+      inspectedTsGeneration = tsGenerationAtInspect
+      inspectorInvalidated = false
 
       if (
         'diagnostics' in unfilteredState &&
@@ -376,6 +385,10 @@ export const createSingletonServices: CreateSingletonServices<
     return filteredState as InspectorState
   }
 
+  const invalidateInspectorState = () => {
+    inspectorInvalidated = true
+  }
+
   const workflowService = new InMemoryWorkflowService()
 
   // Resolve the runtime ONCE here, then inject runtime-specific implementations.
@@ -390,6 +403,7 @@ export const createSingletonServices: CreateSingletonServices<
     secrets: new LocalSecretService(variables),
     audit: new NoopAuditService(),
     getInspectorState,
+    invalidateInspectorState,
     workflowService,
     bundler: isBun ? new BunBundler() : new NodeBundler(),
     devServerRunner: isBun ? new BunServerRunner() : new NodeServerRunner(),

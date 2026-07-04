@@ -41,7 +41,14 @@ export const dev = pikkuSessionlessFunc<
 >({
   remote: true,
   func: async (
-    { logger, config, getInspectorState, variables, devServerRunner },
+    {
+      logger,
+      config,
+      getInspectorState,
+      invalidateInspectorState,
+      variables,
+      devServerRunner,
+    },
     { port, watch, hmr, coverage },
     { rpc }
   ) => {
@@ -376,6 +383,7 @@ export const dev = pikkuSessionlessFunc<
           const handle = async () => {
             try {
               const start = Date.now()
+              invalidateInspectorState()
               await runAllWithCommandState()
               workflowService.wireQueueWorkers()
               logger.info({

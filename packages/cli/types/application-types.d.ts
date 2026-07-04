@@ -29,6 +29,10 @@ export interface SingletonServices extends CoreSingletonServices<Config> {
     setupOnly?: boolean,
     bootstrapMode?: boolean
   ) => Promise<InspectorState>
+  /** Marks the cached inspector state stale (a watcher saw a source-file
+   *  change) so the next getInspectorState(refresh) truly re-inspects —
+   *  refreshes are otherwise skipped when no generated .ts file changed. */
+  invalidateInspectorState: () => void
   /** Runtime-specific deploy bundler (esbuild for node, Bun.build for bun). */
   bundler: Bundler
   /** Runtime-specific dev server runner (node http+ws, or bun-server). */
