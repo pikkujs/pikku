@@ -83,8 +83,17 @@ async function listSourceFiles(dir: string): Promise<string[]> {
 
 // Heavy/generated dirs pruned during a source walk.
 const SKIP_WALK_DIRS = new Set([
-  'node_modules', '.git', '.next', 'dist', 'build', '.pikku',
-  '.pikku-runtime', '.vite', '.tanstack', '.turbo', '.reports',
+  'node_modules',
+  '.git',
+  '.next',
+  'dist',
+  'build',
+  '.pikku',
+  '.pikku-runtime',
+  '.vite',
+  '.tanstack',
+  '.turbo',
+  '.reports',
 ])
 
 // Recursively list handwritten .ts/.tsx files under a dir, pruning heavy dirs
@@ -646,15 +655,49 @@ export async function runValidate(
   // need to bun install?" — aborting the deploy. Catch that class here.
   {
     const NODE_BUILTINS = new Set([
-      'assert', 'async_hooks', 'buffer', 'child_process', 'cluster', 'console',
-      'constants', 'crypto', 'dgram', 'dns', 'domain', 'events', 'fs', 'http',
-      'http2', 'https', 'inspector', 'module', 'net', 'os', 'path', 'perf_hooks',
-      'process', 'punycode', 'querystring', 'readline', 'repl', 'stream',
-      'string_decoder', 'timers', 'tls', 'tty', 'url', 'util', 'v8', 'vm',
-      'worker_threads', 'zlib',
+      'assert',
+      'async_hooks',
+      'buffer',
+      'child_process',
+      'cluster',
+      'console',
+      'constants',
+      'crypto',
+      'dgram',
+      'dns',
+      'domain',
+      'events',
+      'fs',
+      'http',
+      'http2',
+      'https',
+      'inspector',
+      'module',
+      'net',
+      'os',
+      'path',
+      'perf_hooks',
+      'process',
+      'punycode',
+      'querystring',
+      'readline',
+      'repl',
+      'stream',
+      'string_decoder',
+      'timers',
+      'tls',
+      'tty',
+      'url',
+      'util',
+      'v8',
+      'vm',
+      'worker_threads',
+      'zlib',
     ])
     const pkgNameOf = (spec: string): string =>
-      spec.startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0]
+      spec.startsWith('@')
+        ? spec.split('/').slice(0, 2).join('/')
+        : spec.split('/')[0]
 
     const wsDirs: string[] = []
     for (const group of ['packages', 'apps', 'backends']) {
@@ -662,7 +705,10 @@ export async function runValidate(
       if (!existsSync(groupDir)) continue
       try {
         for (const d of await readdir(groupDir, { withFileTypes: true })) {
-          if (d.isDirectory() && existsSync(join(groupDir, d.name, 'package.json'))) {
+          if (
+            d.isDirectory() &&
+            existsSync(join(groupDir, d.name, 'package.json'))
+          ) {
             wsDirs.push(join(groupDir, d.name))
           }
         }
@@ -697,9 +743,9 @@ export async function runValidate(
       const tsconfig = await readJsonSafe<{
         compilerOptions?: { paths?: Record<string, unknown> }
       }>(join(dir, 'tsconfig.json'))
-      const aliasPrefixes = Object.keys(tsconfig?.compilerOptions?.paths ?? {}).map(
-        (k) => k.replace(/\*$/, '')
-      )
+      const aliasPrefixes = Object.keys(
+        tsconfig?.compilerOptions?.paths ?? {}
+      ).map((k) => k.replace(/\*$/, ''))
 
       const used = new Map<string, string>()
       for (const file of await listSourceFiles(join(dir, 'src'))) {
@@ -719,11 +765,16 @@ export async function runValidate(
           ) {
             continue
           }
-          if (aliasPrefixes.some((a) => spec === a.replace(/\/$/, '') || spec.startsWith(a))) {
+          if (
+            aliasPrefixes.some(
+              (a) => spec === a.replace(/\/$/, '') || spec.startsWith(a)
+            )
+          ) {
             continue
           }
           const name = pkgNameOf(spec)
-          if (NODE_BUILTINS.has(name) || name === pkg.name || wsNames.has(name)) continue
+          if (NODE_BUILTINS.has(name) || name === pkg.name || wsNames.has(name))
+            continue
           if (!used.has(name)) used.set(name, file)
         }
       }
@@ -1637,7 +1688,8 @@ export async function runValidate(
     }
 
     // Scan handwritten frontend/package source for imports of the dead client.
-    const DEAD_IMPORT_RE = /['"][^'"]*\bnextjs-(?:http|backend)\.gen(?:\.[jt]sx?)?['"]/
+    const DEAD_IMPORT_RE =
+      /['"][^'"]*\bnextjs-(?:http|backend)\.gen(?:\.[jt]sx?)?['"]/
     for (const group of ['apps', 'packages']) {
       const groupDir = join(root, group)
       if (!existsSync(groupDir)) continue
@@ -1687,22 +1739,6 @@ export async function runValidate(
       'packages/components/ not found — Fabric design features require a components package',
       join(root, 'packages', 'components'),
       `Create packages/components/ with your shared UI components. See ${designDocUrl}`
-    )
-  }
-
-  // ── packages/functions/tests/ ─────────────────────────────────────────
-  const testsDir = join(fnDir, 'tests')
-  if (!existsSync(testsDir)) {
-    info(
-      'tests-missing',
-      'packages/functions/tests/ not found — no function test harness',
-      testsDir,
-      lines(
-        'Run `pikku tests init` from the repo root.',
-        'That should scaffold `packages/functions/tests/` with the generated function test harness.',
-        'Expected contents include feature files, step definitions, and support files.',
-        'Commit the scaffolded files after generation.'
-      )
     )
   }
 

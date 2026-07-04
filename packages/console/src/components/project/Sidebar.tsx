@@ -32,7 +32,6 @@ import {
   RefreshCw,
   GitCompare,
   Mail,
-  FlaskConical,
   Route,
   Database,
   Users,
@@ -71,8 +70,7 @@ export function useDefaultNavSections(): NavSection[] {
         { label: m.nav_functions(), href: '/functions', icon: FunctionSquare, matchPrefix: '/functions' },
         { label: m.nav_workflows(), href: '/workflow', icon: GitBranch, matchPrefix: '/workflow' },
         { label: m.nav_agents(), href: '/agents', icon: Bot, matchPrefix: '/agents' },
-        { label: m.nav_tests(), href: '/tests', icon: FlaskConical, matchPrefix: '/tests' },
-        { label: asI18n('Scenarios'), href: '/tests/scenarios', icon: Route, matchPrefix: '/tests/scenarios' },
+        { label: asI18n('Scenarios'), href: '/scenarios', icon: Route, matchPrefix: '/scenarios' },
       ],
     },
     {

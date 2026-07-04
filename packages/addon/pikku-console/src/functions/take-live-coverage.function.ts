@@ -1,5 +1,5 @@
 import { pikkuFunc } from '#pikku'
-import type { FunctionCoverageReport } from './get-function-coverage.function.js'
+import type { FunctionCoverageReport } from '../lib/coverage-types.js'
 import {
   mapPreciseCoverage,
   mapLineHitsToReport,

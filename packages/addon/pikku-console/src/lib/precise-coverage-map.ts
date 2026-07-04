@@ -6,7 +6,7 @@ import { TraceMap, originalPositionFor } from '@jridgewell/trace-mapping'
 import type {
   FunctionCoverageEntry,
   FunctionCoverageReport,
-} from '../functions/get-function-coverage.function.js'
+} from './coverage-types.js'
 
 interface CoverageRange {
   startOffset: number

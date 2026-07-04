@@ -10,18 +10,15 @@ import {
   Badge,
   Divider,
   Paper,
-  Progress,
 } from '@pikku/mantine/core'
 import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 import { CodeHighlight } from '@mantine/code-highlight'
-import { CheckCheck, FunctionSquare, LayoutList, Pencil } from 'lucide-react'
+import { FunctionSquare, Pencil } from 'lucide-react'
 import { useFunctionMeta, useSchema } from '../../../hooks/useWirings'
-import { useFunctionSource } from '../../../hooks/useCodeEdit'
 import { SchemaViewer } from '../../ui/SchemaViewer'
 import { PikkuBadge } from '../../ui/PikkuBadge'
-import { PikkuSwitch } from '../../ui/PikkuSwitch'
 import { SidePanel, SidePanelContent, SidePanelHeader } from '../../panel/SidePanel'
 import { usePanelContext } from '../../../context/PanelContext'
 import { funcWrapperDefs } from '../../ui/badge-defs'
@@ -108,41 +105,11 @@ export const FunctionHeader: React.FC<FunctionDetailsFormProps> = ({
   )
 }
 
-export const FunctionTestsPanel: React.FC<FunctionDetailsFormProps> = ({
-  functionName,
-  metadata: passedMetadata,
-}) => {
-  useLocale()
-  const { data: fetchedMeta, isLoading } = useFunctionMeta(functionName)
-  const meta = passedMetadata || fetchedMeta || {}
-
-  if (isLoading && !passedMetadata) {
-    return (
-      <Center py="xl">
-        <Loader size="sm" />
-      </Center>
-    )
-  }
-
-  if (!meta.tests) {
-    return <Text c="dimmed">{m.functions_no_test_data()}</Text>
-  }
-
-  return (
-    <FunctionTestsSection
-      tests={meta.tests}
-      sourceFile={meta.sourceFile}
-      exportedName={meta.exportedName}
-    />
-  )
-}
-
 export const FunctionTabbedPanel: React.FC<FunctionDetailsFormProps> = ({
   functionName,
   metadata: passedMetadata,
 }) => {
   useLocale()
-  const [tab, setTab] = useState<'overview' | 'tests'>('overview')
   const [editing, setEditing] = useState(false)
   const { activePanel, panels, closePanel, goBack } = usePanelContext()
   const { data: fetchedMeta } = useFunctionMeta(functionName)
@@ -157,18 +124,6 @@ export const FunctionTabbedPanel: React.FC<FunctionDetailsFormProps> = ({
         onBack={panelData && panelData.history.length > 0 ? goBack : undefined}
         onClose={() => activePanel && closePanel(activePanel)}
       >
-        {!editing && (
-          <PikkuSwitch
-            ariaLabel={m.functions_panel_sections()}
-            value={tab}
-            onChange={setTab}
-            showAllLabels
-            options={[
-              { value: 'overview', label: m.functions_tab_overview(), icon: <LayoutList size={15} /> },
-              { value: 'tests', label: m.functions_tab_tests(), icon: <CheckCheck size={15} /> },
-            ]}
-          />
-        )}
         {canEdit && !editing && (
           <ActionIcon
             variant="subtle"
@@ -190,311 +145,12 @@ export const FunctionTabbedPanel: React.FC<FunctionDetailsFormProps> = ({
               exportedName={meta.exportedName}
               onClose={() => setEditing(false)}
             />
-          ) : tab === 'overview' ? (
-            <FunctionConfiguration functionName={functionName} metadata={passedMetadata} />
           ) : (
-            <FunctionTestsPanel functionName={functionName} metadata={passedMetadata} />
+            <FunctionConfiguration functionName={functionName} metadata={passedMetadata} />
           )}
         </Box>
       </SidePanelContent>
     </SidePanel>
-  )
-}
-
-function FunctionTestsSection({
-  tests,
-  sourceFile,
-  exportedName,
-}: {
-  tests: any
-  sourceFile?: string
-  exportedName?: string
-}) {
-  useLocale()
-  const missedLines = Array.isArray(tests.missedLines) ? tests.missedLines : []
-  const { data: source, isLoading: isSourceLoading } = useFunctionSource(
-    sourceFile,
-    exportedName,
-    !!sourceFile && !!exportedName
-  )
-
-  return (
-    <Stack gap="lg">
-      <Paper withBorder radius="lg" p="md" bg="rgba(255,255,255,0.02)">
-        <Stack gap="md">
-          <Group gap="sm" wrap="wrap">
-            <Badge
-              variant="light"
-              color={
-                tests.status === 'covered'
-                  ? 'green'
-                  : tests.status === 'partial'
-                    ? 'yellow'
-                    : tests.status === 'uncovered'
-                      ? 'red'
-                      : 'gray'
-              }
-            >
-              {asI18n(tests.status === 'covered'
-                ? `${tests.coveredLines}/${tests.totalLines}`
-                : `${Math.round((tests.ratio ?? 0) * 100)}%`)}
-            </Badge>
-            <Text size="sm" c="dimmed">
-              {tests.scenarios?.length === 0
-                ? m.functions_linked_scenarios_none()
-                : m.functions_linked_scenarios_count({ count: tests.scenarios?.length ?? 0 })}
-            </Text>
-          </Group>
-          <Progress
-            value={(tests.ratio ?? 0) * 100}
-            color={
-              tests.status === 'covered'
-                ? 'green'
-                : tests.status === 'partial'
-                  ? 'yellow'
-                  : tests.status === 'uncovered'
-                    ? 'red'
-                    : 'gray'
-            }
-            radius="xl"
-          />
-        </Stack>
-      </Paper>
-
-      <Stack gap="sm">
-        <Group gap="sm" align="center">
-          <Text
-            ff="monospace"
-            size="xs"
-            fw={700}
-            tt="uppercase"
-            lts="0.12em"
-            c="dimmed"
-          >
-            {m.functions_scenarios_heading()}
-          </Text>
-          <Text ff="monospace" size="xs" c="dimmed">
-            {m.functions_scenarios_linked_count({ count: tests.scenarios?.length ?? 0 })}
-          </Text>
-        </Group>
-        {!tests.scenarios || tests.scenarios.length === 0 ? (
-          <Paper withBorder radius="lg" p="md" bg="rgba(248,113,113,0.08)">
-            <Text size="sm" c="dimmed">
-              {m.functions_no_scenarios_linked()}
-            </Text>
-          </Paper>
-        ) : (
-          <Paper withBorder radius="lg" p={0} bg="rgba(255,255,255,0.02)">
-            <Stack gap={0}>
-              {tests.scenarios.map((scenario: any, index: number) => (
-                <Box key={`${scenario.scenarioName}-${index}`} p="md">
-                  <Stack gap={8}>
-                    <Group gap="xs" wrap="wrap">
-                      <Badge
-                        variant="light"
-                        color={scenario.status === 'fail' ? 'red' : 'green'}
-                      >
-                        {scenario.status === 'fail' ? m.functions_scenario_failing() : m.functions_scenario_passing()}
-                      </Badge>
-                      <Text ff="monospace" size="sm" fw={600} c="white">
-                        {asI18n(scenario.scenarioName)}
-                      </Text>
-                      {scenario.duration && (
-                        <Badge variant="light" color="gray">
-                          {asI18n(scenario.duration)}
-                        </Badge>
-                      )}
-                    </Group>
-                    {scenario.featureName && (
-                      <Text size="sm" c="dimmed">
-                        {asI18n(scenario.featureName)}
-                      </Text>
-                    )}
-                    <Stack gap={2} pl={8}>
-                      {(scenario.steps ?? []).map(
-                        (step: string, stepIndex: number) => (
-                          <HighlightedStep key={stepIndex} step={step} />
-                        )
-                      )}
-                    </Stack>
-                  </Stack>
-                  {index < tests.scenarios.length - 1 && (
-                    <Divider my="md" color="rgba(255,255,255,0.06)" />
-                  )}
-                </Box>
-              ))}
-            </Stack>
-          </Paper>
-        )}
-      </Stack>
-
-      <Stack gap="sm">
-        <Group gap="sm" align="center">
-          <Text
-            ff="monospace"
-            size="xs"
-            fw={700}
-            tt="uppercase"
-            lts="0.12em"
-            c="dimmed"
-          >
-            {m.functions_coverage_gaps()}
-          </Text>
-          <Text ff="monospace" size="xs" c="dimmed">
-            {missedLines.length === 0
-              ? m.functions_coverage_clean()
-              : m.functions_coverage_uncovered_count({ count: missedLines.length })}
-          </Text>
-        </Group>
-        {missedLines.length === 0 ? (
-          <Paper withBorder radius="lg" p="md" bg="rgba(52,211,153,0.08)">
-            <Text size="sm" c="dimmed">
-              {m.functions_coverage_all_covered()}
-            </Text>
-          </Paper>
-        ) : isSourceLoading ? (
-          <Center py="md">
-            <Loader size="sm" />
-          </Center>
-        ) : source &&
-          typeof source === 'object' &&
-          'body' in source &&
-          typeof (source as { body?: unknown }).body === 'string' &&
-          'bodyStartLine' in source &&
-          typeof (source as { bodyStartLine?: unknown }).bodyStartLine ===
-            'number' ? (
-          <Paper
-            withBorder
-            radius="lg"
-            p={0}
-            bg="rgba(255,255,255,0.02)"
-            style={{ overflow: 'hidden' }}
-          >
-            <FunctionCoverageCode
-              body={(source as { body: string }).body}
-              bodyStartLine={
-                (source as { bodyStartLine: number }).bodyStartLine
-              }
-              missedLines={missedLines}
-            />
-          </Paper>
-        ) : (
-          <Paper withBorder radius="lg" p="md" bg="rgba(255,255,255,0.02)">
-            <Stack gap={8}>
-              {missedLines.map((line: number) => (
-                <Group
-                  key={line}
-                  gap="sm"
-                  align="center"
-                  wrap="nowrap"
-                  style={{
-                    borderLeft: '2px solid var(--mantine-color-red-6)',
-                    background: 'rgba(248,113,113,0.08)',
-                    borderRadius: 8,
-                    padding: '8px 10px',
-                  }}
-                >
-                  <Text ff="monospace" size="xs" c="dimmed" w={42}>
-                    {asI18n(String(line))}
-                  </Text>
-                  <Text ff="monospace" size="sm" c="white">
-                    {m.functions_coverage_branch_not_exercised({ line })}
-                  </Text>
-                </Group>
-              ))}
-            </Stack>
-          </Paper>
-        )}
-      </Stack>
-    </Stack>
-  )
-}
-
-function FunctionCoverageCode({
-  body,
-  bodyStartLine,
-  missedLines,
-}: {
-  body: string
-  bodyStartLine: number
-  missedLines: number[]
-}) {
-  const missed = new Set(missedLines)
-  const lines = body.replace(/\n$/, '').split('\n')
-
-  return (
-    <Box ff="monospace" fz="sm">
-      {lines.map((line, index) => {
-        const lineNumber = bodyStartLine + index
-        const isMissed = missed.has(lineNumber)
-        return (
-          <Group
-            key={lineNumber}
-            gap={0}
-            align="stretch"
-            wrap="nowrap"
-            style={{
-              borderLeft: isMissed
-                ? '2px solid var(--mantine-color-red-6)'
-                : '2px solid transparent',
-              background: isMissed ? 'rgba(248,113,113,0.08)' : 'transparent',
-            }}
-          >
-            <Text
-              ff="monospace"
-              size="xs"
-              c="dimmed"
-              px="sm"
-              py={6}
-              style={{
-                width: 64,
-                textAlign: 'right',
-                borderRight: '1px solid rgba(255,255,255,0.06)',
-                userSelect: 'none',
-              }}
-            >
-              {asI18n(String(lineNumber))}
-            </Text>
-            <Text
-              ff="monospace"
-              size="sm"
-              c="white"
-              px="sm"
-              py={6}
-              style={{
-                whiteSpace: 'pre-wrap',
-                flex: 1,
-              }}
-            >
-              {asI18n(line || ' ')}
-            </Text>
-          </Group>
-        )
-      })}
-    </Box>
-  )
-}
-
-function HighlightedStep({ step }: { step: string }) {
-  const keywordMatch = step.match(/^(Given|When|Then|And)\b/)
-  const keyword = keywordMatch?.[1] ?? ''
-  const remainder = keyword ? step.slice(keyword.length).trimStart() : step
-  const isAnd = keyword === 'And'
-
-  return (
-    <Text ff="monospace" size="sm" c="white" pl={isAnd ? 16 : 0}>
-      {keyword ? (
-        <Text
-          component="span"
-          inherit
-          c="var(--mantine-color-violet-4)"
-          fw={600}
-        >
-          {asI18n(keyword)}
-        </Text>
-      ) : null}
-      {asI18n(keyword ? ` ${remainder}` : step)}
-    </Text>
   )
 }
 

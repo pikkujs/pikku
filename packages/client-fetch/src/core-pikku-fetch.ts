@@ -207,7 +207,7 @@ export class CorePikkuFetch {
    * Opens an SSE stream to the given path and calls `handler` for each parsed
    * JSON event. Returns a handle with a `close()` method that aborts the stream.
    *
-   * @param path - Server-relative path (e.g. `/function-tests/stream`)
+   * @param path - Server-relative path (e.g. `/workflow-run/:runId/stream`)
    * @param handler - Called with each decoded JSON event
    * @param onError - Called once if the stream errors (and is not already closed)
    */

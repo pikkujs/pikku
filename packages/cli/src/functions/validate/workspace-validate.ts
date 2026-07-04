@@ -405,16 +405,6 @@ export async function runWorkspaceValidate(
     }
   }
 
-  const testsDir = join(fnDir, 'tests')
-  if (!existsSync(testsDir)) {
-    info(
-      'tests-missing',
-      'packages/functions/tests/ not found — no function test harness',
-      testsDir,
-      'Run `pikku tests init` to scaffold the generated function test harness under packages/functions/tests/ (feature files, step defs, and support files)'
-    )
-  }
-
   const sdkDir = join(root, 'packages', 'functions-sdk')
   if (!existsSync(sdkDir)) {
     info(

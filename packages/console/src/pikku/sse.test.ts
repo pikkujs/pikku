@@ -121,14 +121,14 @@ const FULL_RUN_EVENTS: TestStreamEvent[] = [
   { type: 'done', coverage: null },
 ]
 
-test('subscribeToSSE requests /function-tests/stream with Accept: text/event-stream', async () => {
+test('subscribeToSSE requests /workflow-run/w1/stream with Accept: text/event-stream', async () => {
   const { url, headers } = await collectSSE(
     FULL_RUN_EVENTS,
-    '/function-tests/stream'
+    '/workflow-run/w1/stream'
   )
   assert.ok(
-    url.includes('/function-tests/stream'),
-    `expected URL to include /function-tests/stream, got: ${url}`
+    url.includes('/workflow-run/w1/stream'),
+    `expected URL to include /workflow-run/w1/stream, got: ${url}`
   )
   assert.equal(headers['Accept'], 'text/event-stream')
 })
@@ -136,7 +136,7 @@ test('subscribeToSSE requests /function-tests/stream with Accept: text/event-str
 test('subscribeToSSE delivers scenario-start event with correct fields', async () => {
   const { received } = await collectSSE(
     FULL_RUN_EVENTS,
-    '/function-tests/stream'
+    '/workflow-run/w1/stream'
   )
   const start = received.find((e) => e.type === 'scenario-start') as
     | Extract<TestStreamEvent, { type: 'scenario-start' }>
@@ -150,7 +150,7 @@ test('subscribeToSSE delivers scenario-start event with correct fields', async (
 test('subscribeToSSE delivers step events in order', async () => {
   const { received } = await collectSSE(
     FULL_RUN_EVENTS,
-    '/function-tests/stream'
+    '/workflow-run/w1/stream'
   )
   const steps = received.filter((e) => e.type === 'step') as Extract<
     TestStreamEvent,
@@ -166,7 +166,7 @@ test('subscribeToSSE delivers step events in order', async () => {
 test('subscribeToSSE delivers scenario-done with final status', async () => {
   const { received } = await collectSSE(
     FULL_RUN_EVENTS,
-    '/function-tests/stream'
+    '/workflow-run/w1/stream'
   )
   const done = received.find((e) => e.type === 'scenario-done') as
     | Extract<TestStreamEvent, { type: 'scenario-done' }>
@@ -179,7 +179,7 @@ test('subscribeToSSE delivers scenario-done with final status', async () => {
 test('subscribeToSSE delivers done event and stops', async () => {
   const { received } = await collectSSE(
     FULL_RUN_EVENTS,
-    '/function-tests/stream'
+    '/workflow-run/w1/stream'
   )
   const finish = received.find((e) => e.type === 'done') as
     | Extract<TestStreamEvent, { type: 'done' }>
@@ -225,7 +225,7 @@ test('subscribeToSSE parses events spanning multiple SSE chunks', async () => {
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('timeout')), 5_000)
       client.rpc.subscribeToSSE<TestStreamEvent>(
-        '/function-tests/stream',
+        '/workflow-run/w1/stream',
         (event) => {
           received.push(event)
           if (event.type === 'done') {

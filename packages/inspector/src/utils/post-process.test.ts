@@ -206,17 +206,17 @@ describe('aggregateRequiredServices — per-function addon services', () => {
   test('a ref()-wired route (inline id + namespaced target) aggregates the target services', () => {
     const state = makeState({
       usedFunctions: [
-        'http:get:/function-tests/stream',
-        'console:streamFunctionTests',
+        'http:get:/workflow-run/stream',
+        'console:streamWorkflowRun',
       ],
       functionsMeta: {
-        'http:get:/function-tests/stream': {
+        'http:get:/workflow-run/stream': {
           services: { optimized: false, services: [] },
         },
       },
       addonFunctions: {
         console: {
-          streamFunctionTests: {
+          streamWorkflowRun: {
             services: { optimized: true, services: ['metaService'] },
           },
         },
