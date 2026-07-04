@@ -207,7 +207,15 @@ export async function runConversation(
 ): Promise<ActorFlowVerdict> {
   const maxTurns = params.maxTurns ?? DEFAULT_MAX_TURNS
   const instructions = personaInstructions(params.persona, params.task)
-  const personaMessages: AIMessage[] = []
+  // Seed a kickoff so the very first persona turn has a non-empty message list
+  // (providers reject an empty prompt). It's an instruction TO the persona, so
+  // it never appears in the transcript.
+  const personaMessages: AIMessage[] = [
+    msg(
+      'user',
+      'Begin the conversation now — send your first message to the assistant to work towards your goal.'
+    ),
+  ]
   const transcript: string[] = []
 
   for (let turn = 0; turn < maxTurns; turn++) {

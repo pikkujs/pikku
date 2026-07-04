@@ -31,6 +31,11 @@ const scriptedLLM = (script: {
       (params.outputSchema as { properties?: Record<string, unknown> })
         ?.properties ?? {}
     if ('message' in props) {
+      // Providers reject an empty prompt — every persona turn must carry messages.
+      assert.ok(
+        params.messages.length > 0,
+        'persona turn requested with empty messages'
+      )
       const t = script.turns[turn] ?? script.turns[script.turns.length - 1]
       turn++
       calls.push('turn')
