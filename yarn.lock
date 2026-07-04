@@ -4723,7 +4723,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@jridgewell/trace-mapping@npm:^0.3.12, @jridgewell/trace-mapping@npm:^0.3.24, @jridgewell/trace-mapping@npm:^0.3.28":
+"@jridgewell/trace-mapping@npm:^0.3.12, @jridgewell/trace-mapping@npm:^0.3.24, @jridgewell/trace-mapping@npm:^0.3.25, @jridgewell/trace-mapping@npm:^0.3.28":
   version: 0.3.31
   resolution: "@jridgewell/trace-mapping@npm:0.3.31"
   dependencies:
@@ -5581,6 +5581,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/addon-console@workspace:packages/addon/pikku-console"
   dependencies:
+    "@jridgewell/trace-mapping": "npm:^0.3.25"
     "@pikku/cli": "npm:^0.12.69"
     "@pikku/core": "npm:^0.12.52"
     json-schema: "npm:^0.4.0"

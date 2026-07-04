@@ -8,6 +8,7 @@ import {
   InMemoryWorkflowService,
   InMemoryTriggerService,
   InMemoryAIRunStateService,
+  V8CoverageService,
 } from '@pikku/core/services'
 import {
   KyselyAIStorageService,
@@ -33,15 +34,22 @@ import { createDevAIAgentRunner } from './dev-ai-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
 
 export const serve = pikkuSessionlessFunc<
-  { port?: string; console?: boolean },
+  { port?: string; console?: boolean; coverage?: boolean },
   void
 >({
   remote: true,
   func: async (
     { logger, config, getInspectorState, variables, devServerRunner },
-    { port, console: serveConsole }
+    { port, console: serveConsole, coverage }
   ) => {
     process.env.PIKKU_DEV_QUICK_LOGIN ??= 'true'
+    const coverageService = coverage ? new V8CoverageService() : undefined
+    if (coverageService) {
+      await coverageService.start()
+      logger.info(
+        'V8 precise coverage enabled — snapshot via console:takeLiveCoverage, reset via console:resetLiveCoverage'
+      )
+    }
     const resolvedPort = parseInt(port || '3000', 10)
     const hostname = 'localhost'
     const bindHostname = '127.0.0.1'
@@ -135,6 +143,7 @@ export const serve = pikkuSessionlessFunc<
       ...(aiAgentRunner ? { aiAgentRunner } : {}),
       emailService: new LocalEmailService(),
       metaService: new LocalMetaService(pikkuDir),
+      ...(coverageService ? { coverageService } : {}),
       schedulerService,
       queueService: new InMemoryQueueService(),
       workflowService,
@@ -152,7 +161,11 @@ export const serve = pikkuSessionlessFunc<
       ...inMemoryServices,
       getInspectorState,
     })
-    const resolvedServices = { ...singletonServices, getInspectorState }
+    const resolvedServices = {
+      ...singletonServices,
+      getInspectorState,
+      ...(coverageService ? { coverageService } : {}),
+    }
     pikkuState(null, 'package', 'singletonServices', resolvedServices)
     resolvedServices.workflowService?.wireQueueWorkers?.()
 

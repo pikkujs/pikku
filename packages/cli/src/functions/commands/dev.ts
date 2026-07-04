@@ -10,6 +10,7 @@ import {
   InMemoryWorkflowService,
   InMemoryTriggerService,
   InMemoryAIRunStateService,
+  V8CoverageService,
 } from '@pikku/core/services'
 import {
   KyselyAIStorageService,
@@ -35,16 +36,23 @@ import { createDevAIAgentRunner } from './dev-ai-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
 
 export const dev = pikkuSessionlessFunc<
-  { port?: string; watch?: boolean; hmr?: boolean },
+  { port?: string; watch?: boolean; hmr?: boolean; coverage?: boolean },
   void
 >({
   remote: true,
   func: async (
     { logger, config, getInspectorState, variables, devServerRunner },
-    { port, watch, hmr },
+    { port, watch, hmr, coverage },
     { rpc }
   ) => {
     process.env.PIKKU_DEV_QUICK_LOGIN ??= 'true'
+    const coverageService = coverage ? new V8CoverageService() : undefined
+    if (coverageService) {
+      await coverageService.start()
+      logger.info(
+        'V8 precise coverage enabled — snapshot via console:takeLiveCoverage, reset via console:resetLiveCoverage'
+      )
+    }
     const resolvedPort = parseInt(port || '3000', 10)
     const hostname = 'localhost'
     // Bind on IPv4 loopback explicitly. Under Bun, hostname 'localhost' resolves
@@ -267,6 +275,7 @@ export const dev = pikkuSessionlessFunc<
       ...(aiAgentRunner ? { aiAgentRunner } : {}),
       emailService: new LocalEmailService(),
       metaService: new LocalMetaService(pikkuDir),
+      ...(coverageService ? { coverageService } : {}),
       schedulerService,
       queueService: new InMemoryQueueService(),
       workflowService,
@@ -284,7 +293,11 @@ export const dev = pikkuSessionlessFunc<
       ...inMemoryServices,
       getInspectorState,
     })
-    const resolvedServices = { ...singletonServices, getInspectorState }
+    const resolvedServices = {
+      ...singletonServices,
+      getInspectorState,
+      ...(coverageService ? { coverageService } : {}),
+    }
     pikkuState(null, 'package', 'singletonServices', resolvedServices)
     resolvedServices.workflowService?.wireQueueWorkers?.()
 

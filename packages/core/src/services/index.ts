@@ -154,3 +154,10 @@ export type {
   EmailTemplateLocaleMeta,
   EmailTemplateAssets,
 } from './meta-service.js'
+export {
+  V8CoverageService,
+  type CoverageService,
+  type ScriptCoverage,
+  type FunctionCoverage,
+  type CoverageRange,
+} from './v8-coverage-service.js'

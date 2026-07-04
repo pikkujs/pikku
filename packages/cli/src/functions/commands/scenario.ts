@@ -1,4 +1,5 @@
-import { resolve } from 'path'
+import { resolve, join } from 'node:path'
+import { mkdirSync, writeFileSync } from 'node:fs'
 
 import { pikkuSessionlessFunc } from '#pikku'
 import {
@@ -40,12 +41,12 @@ export const scenarioList = pikkuSessionlessFunc<{}, void>({
 })
 
 export const scenarioRun = pikkuSessionlessFunc<
-  { environment: string; flows?: string; tags?: string },
+  { environment: string; flows?: string; tags?: string; coverage?: boolean },
   void
 >({
   func: async (
     { logger, config, getInspectorState, variables },
-    { environment, flows, tags }
+    { environment, flows, tags, coverage }
   ) => {
     const state = await getInspectorState(true)
 
@@ -132,8 +133,43 @@ export const scenarioRun = pikkuSessionlessFunc<
       error?: string
     }> = []
 
+    // --- per-scenario coverage attribution (server must run with --coverage).
+    // The reset/take RPCs are invoked through an actor's authenticated client
+    // like any other exposed RPC; when the server has no collector (or the
+    // console addon isn't wired) coverage is disabled with a warning.
+    const coverageActor = coverage ? Object.values(actors)[0] : undefined
+    let coverageActive = Boolean(coverageActor)
+    if (coverage && !coverageActor) {
+      logger.warn(
+        '--coverage requires at least one configured actor — skipping coverage.'
+      )
+    }
+    const scenarioCoverage: Record<string, unknown> = {}
+    const invokeCoverage = async (rpcName: string): Promise<any> => {
+      if (!coverageActive || !coverageActor) return null
+      try {
+        return await coverageActor.invoke(rpcName, null)
+      } catch (e: any) {
+        coverageActive = false
+        logger.warn(
+          `Coverage disabled — '${rpcName}' failed against '${environment}': ${e?.message ?? e}. ` +
+            `Is the server running with --coverage and the console addon wired?`
+        )
+        return null
+      }
+    }
+
     for (const flow of selected) {
       const startedAt = Date.now()
+      if (coverageActive) {
+        const reset = await invokeCoverage('console:resetLiveCoverage')
+        if (reset && reset.enabled === false) {
+          coverageActive = false
+          logger.warn(
+            `Coverage disabled — '${environment}' is not collecting (start the server with --coverage).`
+          )
+        }
+      }
       try {
         const { runId } = await workflowService.startWorkflow(
           flow.name,
@@ -166,6 +202,40 @@ export const scenarioRun = pikkuSessionlessFunc<
           error: e?.message ?? String(e),
         })
       }
+      if (coverageActive) {
+        const report = await invokeCoverage('console:takeLiveCoverage')
+        if (report) {
+          scenarioCoverage[flow.name] = report
+          const covered = report.functions?.filter(
+            (f: any) => f.status === 'covered' || f.status === 'partial'
+          )
+          logger.info(
+            `  coverage: ${covered?.length ?? 0}/${report.summary?.total ?? 0} functions exercised by '${flow.name}'`
+          )
+        }
+      }
+    }
+
+    if (coverage && Object.keys(scenarioCoverage).length > 0) {
+      const coverageDir = join(
+        resolve(config.rootDir, config.outDir),
+        'coverage'
+      )
+      mkdirSync(coverageDir, { recursive: true })
+      const outFile = join(coverageDir, 'scenario-coverage.json')
+      writeFileSync(
+        outFile,
+        JSON.stringify(
+          {
+            generatedAt: new Date().toISOString(),
+            environment,
+            scenarios: scenarioCoverage,
+          },
+          null,
+          2
+        ) + '\n'
+      )
+      logger.info(`Scenario coverage → ${outFile}`)
     }
 
     // --- report ---

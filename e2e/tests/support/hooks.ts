@@ -27,7 +27,7 @@ BeforeAll(async function () {
 
   backendProcess = spawn(
     'npx',
-    ['pikku', 'serve', '--port', backendPort, '--console'],
+    ['pikku', 'serve', '--port', backendPort, '--console', '--coverage'],
     {
       cwd: projectDir,
       env: { ...process.env, API_URL: config.apiUrl },

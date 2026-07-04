@@ -22,6 +22,7 @@ export const createSingletonServices = pikkuAddonServices(
       aiRunState,
       deploymentService,
       credentialService,
+      coverageService,
     }
   ) => {
     if (!existingMetaService) {
@@ -74,6 +75,7 @@ export const createSingletonServices = pikkuAddonServices(
       aiAgentRunner,
       schedulerService,
       credentialService,
+      coverageService,
       codeEditService,
       stateDiffService,
       dbSchemaService,

@@ -271,6 +271,11 @@ wireCLI({
           description: 'Enable hot module reload',
           default: true,
         },
+        coverage: {
+          description:
+            'Collect V8 precise coverage in-process; snapshot/reset via the console coverage RPCs',
+          default: false,
+        },
       },
     }),
     serve: pikkuCLICommand({
@@ -285,6 +290,11 @@ wireCLI({
         },
         console: {
           description: 'Also serve the Pikku Console same-origin at /console',
+          default: false,
+        },
+        coverage: {
+          description:
+            'Collect V8 precise coverage in-process; snapshot/reset via the console coverage RPCs',
           default: false,
         },
       },
@@ -412,6 +422,11 @@ wireCLI({
             tags: {
               description: 'Comma-separated tags — run flows matching any',
               short: 't',
+            },
+            coverage: {
+              description:
+                'Reset/snapshot server coverage per scenario (target must run with --coverage); writes coverage/scenario-coverage.json',
+              default: false,
             },
           },
         }),
