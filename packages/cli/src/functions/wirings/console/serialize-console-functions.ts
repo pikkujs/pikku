@@ -98,12 +98,6 @@ export const consoleRoutes = defineHTTPRoutes({
       sse: true,
       func: ref('console:streamWorkflowRun'),
     },
-    functionTestsStream: {
-      route: '/function-tests/stream',
-      method: 'get',
-      sse: true,
-      func: ref('console:streamFunctionTests'),
-    },
   },
 })
 

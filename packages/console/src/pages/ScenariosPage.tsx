@@ -24,7 +24,7 @@ import type {
 import { OSSConsoleNavigator, useConsoleNavigator } from '../context/ConsoleNavigatorContext'
 import { toEnglishName } from '../lib/strings'
 
-const SCENARIOS_BASE_PATH = '/tests/scenarios'
+const SCENARIOS_BASE_PATH = '/scenarios'
 
 const ScenariosPageInner: React.FC = () => {
   useLocale()

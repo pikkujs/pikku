@@ -28,9 +28,7 @@ import {
 } from './functions/commands/workspace-validate.js'
 import { scenarioRun, scenarioList } from './functions/commands/scenario.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
-import { pikkuTestsInit } from './functions/commands/tests-init.js'
 import { pikkuEmailsInit } from './functions/commands/emails-init.js'
-import { pikkuTestsCoverage } from './functions/commands/tests-coverage.js'
 import { pikkuVersionsCheck } from './functions/commands/versions-check.js'
 import { pikkuVersionsUpdate } from './functions/commands/versions-update.js'
 import { pikkuNewFunction } from './functions/commands/new-function.js'
@@ -659,36 +657,6 @@ wireCLI({
               description:
                 'Convert snake_case property names to camelCase in generated Zod schemas',
               default: false,
-            },
-          },
-        }),
-      },
-    },
-    tests: {
-      description: 'Manage function tests',
-      subcommands: {
-        init: pikkuCLICommand({
-          func: pikkuTestsInit,
-          description:
-            'Scaffold the ftest Cucumber harness in your functions package',
-          options: {
-            force: {
-              description: 'Overwrite existing ftest directory',
-            },
-          },
-        }),
-        coverage: pikkuCLICommand({
-          func: pikkuTestsCoverage,
-          description:
-            'Run the tests suite under c8 and emit tests/coverage/function-coverage.json',
-          options: {
-            noRun: {
-              description:
-                'Skip running the suite and only re-analyse an existing coverage-final.json',
-            },
-            aiOut: {
-              description:
-                'Write an AI-ready coverage prompt to the given file path (use - for stdout)',
             },
           },
         }),

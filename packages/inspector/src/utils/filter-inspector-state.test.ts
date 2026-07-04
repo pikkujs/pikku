@@ -1668,7 +1668,7 @@ describe('addon bootstrap tree-shake', () => {
       ['console', { package: '@pikku/addon-console' }],
     ])
     state.rpc.usedAddons = new Set(['console'])
-    state.rpc.invokedFunctions = new Set(['console:streamFunctionTests'])
+    state.rpc.invokedFunctions = new Set(['console:streamWorkflowRun'])
     mutate?.(state)
     return state
   }
@@ -1687,7 +1687,7 @@ describe('addon bootstrap tree-shake', () => {
   test('keeps an addon when a kept wiring targets one of its functions', () => {
     const state = withAddon((s) => {
       s.http.meta.get['/console/stream'] = {
-        pikkuFuncId: 'console:streamFunctionTests',
+        pikkuFuncId: 'console:streamWorkflowRun',
         route: '/console/stream',
         method: 'GET',
         tags: [],
@@ -1697,7 +1697,7 @@ describe('addon bootstrap tree-shake', () => {
     })
     const filtered = filterInspectorState(
       state,
-      { names: ['console:streamFunctionTests'] },
+      { names: ['console:streamWorkflowRun'] },
       mockLogger
     )
     assert.strictEqual(filtered.rpc.wireAddonDeclarations.size, 1)
@@ -1706,45 +1706,43 @@ describe('addon bootstrap tree-shake', () => {
 
   test('keeps an addon when a kept route ref()-targets one of its functions', () => {
     const state = withAddon((s) => {
-      s.http.meta.get['/function-tests/stream'] = {
-        pikkuFuncId: 'http:get:/function-tests/stream',
-        refTarget: 'console:streamFunctionTests',
-        route: '/function-tests/stream',
+      s.http.meta.get['/workflow-run/stream'] = {
+        pikkuFuncId: 'http:get:/workflow-run/stream',
+        refTarget: 'console:streamWorkflowRun',
+        route: '/workflow-run/stream',
         method: 'GET',
         tags: [],
         middleware: [],
         permissions: [],
       } as any
-      s.functions.meta['http:get:/function-tests/stream'] = {
+      s.functions.meta['http:get:/workflow-run/stream'] = {
         services: { optimized: false, services: [] },
       } as any
     })
     const filtered = filterInspectorState(
       state,
-      { names: ['http:get:/function-tests/stream'] },
+      { names: ['http:get:/workflow-run/stream'] },
       mockLogger
     )
     assert.strictEqual(filtered.rpc.wireAddonDeclarations.size, 1)
     assert.ok(filtered.rpc.wireAddonDeclarations.has('console'))
     assert.ok(
-      filtered.serviceAggregation.usedFunctions.has(
-        'console:streamFunctionTests'
-      )
+      filtered.serviceAggregation.usedFunctions.has('console:streamWorkflowRun')
     )
   })
 
   test('drops the addon when the ref()-wired route is filtered out', () => {
     const state = withAddon((s) => {
-      s.http.meta.get['/function-tests/stream'] = {
-        pikkuFuncId: 'http:get:/function-tests/stream',
-        refTarget: 'console:streamFunctionTests',
-        route: '/function-tests/stream',
+      s.http.meta.get['/workflow-run/stream'] = {
+        pikkuFuncId: 'http:get:/workflow-run/stream',
+        refTarget: 'console:streamWorkflowRun',
+        route: '/workflow-run/stream',
         method: 'GET',
         tags: [],
         middleware: [],
         permissions: [],
       } as any
-      s.functions.meta['http:get:/function-tests/stream'] = {
+      s.functions.meta['http:get:/workflow-run/stream'] = {
         services: { optimized: false, services: [] },
       } as any
     })
@@ -1756,7 +1754,7 @@ describe('addon bootstrap tree-shake', () => {
     assert.strictEqual(filtered.rpc.wireAddonDeclarations.size, 0)
     assert.ok(
       !filtered.serviceAggregation.usedFunctions.has(
-        'console:streamFunctionTests'
+        'console:streamWorkflowRun'
       )
     )
   })

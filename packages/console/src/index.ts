@@ -159,7 +159,5 @@ export type {
   AuthProviderDef,
   AuthProviderField,
 } from './pages/AuthProvidersPage'
-export { TestsPage } from './pages/TestsPage'
-export type { TestsPageProps, CoverageReport } from './pages/TestsPage'
 export { NotFoundTitle } from './components/NotFoundTitle'
 export { ConsoleEditableProvider } from './context/ConsoleEditableContext'
