@@ -32,16 +32,16 @@ import {
 } from '../db/local-db.js'
 import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
 import { createDevAIAgentRunner } from './dev-ai-runner.js'
-import { startConsoleServer } from './serve-console.js'
+import { resolveConsoleMount } from './serve-console.js'
 
 export const dev = pikkuSessionlessFunc<
-  { port?: string; watch?: boolean; hmr?: boolean; console?: string | boolean },
+  { port?: string; watch?: boolean; hmr?: boolean },
   void
 >({
   remote: true,
   func: async (
     { logger, config, getInspectorState, variables, devServerRunner },
-    { port, watch, hmr, console: consoleFlag },
+    { port, watch, hmr },
     { rpc }
   ) => {
     // The dev server always allows the console's dev quick login (the endpoint
@@ -298,12 +298,14 @@ export const dev = pikkuSessionlessFunc<
       return m[serverLifecycleFactory.variable]
     }
 
+    const consoleMount = await resolveConsoleMount()
     const pikkuServer = devServerRunner.createServer(
       {
         ...userConfig,
         hostname: bindHostname,
         port: resolvedPort,
         content: localContentConfig,
+        ...(consoleMount ? { staticMounts: [consoleMount] } : {}),
       },
       logger
     )
@@ -315,9 +317,11 @@ export const dev = pikkuSessionlessFunc<
     await pikkuServer.start()
     await lifecycle?.afterStart?.(resolvedServices)
 
-    const consoleServer = consoleFlag
-      ? await startConsoleServer(consoleFlag, hostname, logger)
-      : undefined
+    if (consoleMount) {
+      logger.info(
+        `Pikku Console available at http://${hostname}:${resolvedPort}${consoleMount.urlPrefix}`
+      )
+    }
 
     let configWatcher: FSWatcher | undefined
     let watcher: FSWatcher | undefined
@@ -330,7 +334,6 @@ export const dev = pikkuSessionlessFunc<
         await configWatcher?.close()
         await watcher?.close()
         await pikkuServer.stop()
-        consoleServer?.close()
         await lifecycle?.afterStop?.(resolvedServices)
       } finally {
         process.exit(0)

@@ -10,8 +10,11 @@ export interface TestConfig {
   responseTimeout: number
 }
 
+const apiUrl = process.env.API_URL || 'http://localhost:4077'
+
 export const config: TestConfig = {
-  consoleUrl: process.env.CONSOLE_URL || 'http://localhost:7071',
-  apiUrl: process.env.API_URL || 'http://localhost:4077',
+  // The console is served same-origin by pikku serve at <apiUrl>/console.
+  consoleUrl: process.env.CONSOLE_URL || `${apiUrl}/console`,
+  apiUrl,
   responseTimeout: 60_000,
 }
