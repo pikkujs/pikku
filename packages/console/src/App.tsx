@@ -22,6 +22,7 @@ import { AdminUsersPage } from './pages/AdminUsersPage'
 import { RenderWorkflowPage } from './pages/RenderWorkflowPage'
 import { ChangesPage } from './pages/ChangesPage'
 import { TestsPage } from './pages/TestsPage'
+import { UserFlowsPage } from './pages/UserFlowsPage'
 import { DatabasePage } from './pages/DatabasePage'
 import { AuthProvidersPage } from './pages/AuthProvidersPage'
 import { SecurityPage } from './pages/SecurityPage'
@@ -49,6 +50,7 @@ export const App: React.FC = () => {
         <Route path="/agents/playground" element={<AgentPlaygroundPage />} />
         <Route path="/changes" element={<ChangesPage />} />
         <Route path="/tests" element={<TestsPage showRunButton />} />
+        <Route path="/tests/userflows" element={<UserFlowsPage />} />
         <Route path="/database" element={<DatabasePage />} />
         <Route path="/apis" element={<ApisPage />} />
         <Route path="/jobs" element={<JobsPage />} />

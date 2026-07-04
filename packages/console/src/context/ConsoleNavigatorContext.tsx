@@ -21,14 +21,11 @@ export function useConsoleNavigator(): ConsoleNavigator {
 
 export { Ctx as ConsoleNavigatorCtx }
 
-const SECTION_PATHS: Record<ConsoleSection, string> = {
-  workflows: '/workflow',
-}
-
 /** OSS default — IDs live in the `?id=` query param. */
-export const OSSConsoleNavigator: React.FC<{ children: ReactNode }> = ({
-  children,
-}) => {
+export const OSSConsoleNavigator: React.FC<{
+  children: ReactNode
+  basePath?: string
+}> = ({ children, basePath = '/workflow' }) => {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 
@@ -36,9 +33,8 @@ export const OSSConsoleNavigator: React.FC<{ children: ReactNode }> = ({
     <Ctx.Provider
       value={{
         workflowId: searchParams.get('id'),
-        navigateTo: (section, id) => {
-          const base = SECTION_PATHS[section]
-          navigate(id ? `${base}?id=${encodeURIComponent(id)}` : base)
+        navigateTo: (_section, id) => {
+          navigate(id ? `${basePath}?id=${encodeURIComponent(id)}` : basePath)
         },
       }}
     >

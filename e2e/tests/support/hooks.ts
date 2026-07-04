@@ -24,6 +24,11 @@ BeforeAll(async function () {
   const backendPort = new URL(config.apiUrl).port
   const consolePort = Number(new URL(config.consoleUrl).port)
 
+  // Shared actor secret: the server's actor auth plugin and any
+  // `pikku userflow run` step both read USER_FLOW_ACTOR_SECRET from the
+  // environment, so setting it here lets both sign the same synthetic actors in.
+  process.env.USER_FLOW_ACTOR_SECRET ??= 'e2e-actor-secret'
+
   // Start the backend + console via pikku serve --console <port>
   // pikkuOnStart in src/lifecycle.ts handles mock OAuth + user seeding
   backendProcess = spawn(

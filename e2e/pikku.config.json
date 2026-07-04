@@ -50,7 +50,8 @@
     },
     "environments": {
       "local": {
-        "apiUrl": "http://localhost:4077"
+        "apiUrl": "http://localhost:4077",
+        "signInPath": "/api/auth/sign-in/actor"
       }
     }
   }
