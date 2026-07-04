@@ -1,6 +1,10 @@
 import type { CorePikkuFunctionSessionless } from '@pikku/core/function'
 import { toWebRequest } from '@pikku/core/http'
 import type { BetterAuthInstance } from './define-auth.js'
+import {
+  handleDevQuickLogin,
+  isDevQuickLoginRequest,
+} from './dev-quick-login.js'
 
 /**
  * When the app runs embedded in a cross-site iframe (e.g. the Fabric sandbox
@@ -61,7 +65,11 @@ export const createAuthHandler = (): {
       return
     }
     const auth = (await (services as any).auth()) as BetterAuthInstance
-    const response = await auth.handler(toWebRequest(request))
+    const webRequest = toWebRequest(request)
+    const basePath = (auth as any).options?.basePath ?? '/api/auth'
+    const response = isDevQuickLoginRequest(webRequest, basePath)
+      ? await handleDevQuickLogin(auth, webRequest, (services as any).logger)
+      : await auth.handler(webRequest)
     return crossSiteCookies() ? rewriteSetCookies(response) : response
   },
 })
