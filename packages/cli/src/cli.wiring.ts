@@ -45,6 +45,7 @@ import {
 import {
   enableRpc,
   enableConsole,
+  enableScenarios,
   enableAgent,
   enableWorkflow,
   enableEvents,
@@ -497,6 +498,16 @@ wireCLI({
         console: pikkuCLICommand({
           func: enableConsole,
           description: 'Enable console functions',
+          options: {
+            noAuth: {
+              description: 'Disable auth requirement',
+              default: false,
+            },
+          },
+        }),
+        scenarios: pikkuCLICommand({
+          func: enableScenarios,
+          description: 'Enable scenario instrumentation functions',
           options: {
             noAuth: {
               description: 'Disable auth requirement',

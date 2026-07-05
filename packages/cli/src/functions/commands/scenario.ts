@@ -141,7 +141,7 @@ export const scenarioRun = pikkuSessionlessFunc<
         coverageActive = false
         logger.warn(
           `Coverage disabled — '${rpcName}' failed against '${environment}': ${e?.message ?? e}. ` +
-            `Is the server running with --coverage and the console addon wired?`
+            `Is the server running with --coverage and "scaffold.scenarios" enabled in pikku.config.json?`
         )
         return null
       }
@@ -150,7 +150,7 @@ export const scenarioRun = pikkuSessionlessFunc<
     for (const flow of selected) {
       const startedAt = Date.now()
       if (coverageActive) {
-        const reset = await invokeCoverage('console:resetLiveCoverage')
+        const reset = await invokeCoverage('pikkuScenarioResetLiveCoverage')
         if (reset && reset.enabled === false) {
           coverageActive = false
           logger.warn(
@@ -159,7 +159,7 @@ export const scenarioRun = pikkuSessionlessFunc<
         }
       }
       try {
-        await coverageActor?.invoke('console:resetStubs', null)
+        await coverageActor?.invoke('pikkuScenarioResetStubs', null)
       } catch {}
       try {
         const { runId } = await workflowService.startWorkflow(
@@ -194,7 +194,7 @@ export const scenarioRun = pikkuSessionlessFunc<
         })
       }
       if (coverageActive) {
-        const report = await invokeCoverage('console:takeLiveCoverage')
+        const report = await invokeCoverage('pikkuScenarioTakeLiveCoverage')
         if (report) {
           scenarioCoverage[flow.name] = report
           const covered = report.functions?.filter(
