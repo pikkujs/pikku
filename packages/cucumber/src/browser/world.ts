@@ -8,6 +8,16 @@ import {
 } from './config.js'
 
 /**
+ * A single shared connection to the remote CDP browser, reused across EVERY
+ * scenario/world in this cucumber process. Cucumber builds a fresh world per
+ * scenario, so a per-world connection would reconnect (and, via closeAll, tear
+ * down) the shared remote browser on every scenario — racing its session
+ * recycling and timing out the next connect. Connect once; scenarios get their
+ * own contexts; the socket drops at process exit.
+ */
+let sharedCdpBrowser: Promise<Browser> | undefined
+
+/**
  * BrowserWorld — one scenario's browser plus its actors.
  *
  * Actors are personas driving the app in their OWN browser context (own
@@ -101,7 +111,13 @@ export class BrowserWorld<Clients = unknown> {
     }
     this.actors.clear()
     this.last = undefined
-    await this.browser?.close()
+    // On the remote CDP path the browser is a shared, process-lifetime
+    // connection (see launchBrowser) — dispose only the contexts above; closing
+    // it would recycle the shared remote browser and stall the next scenario's
+    // connect. The socket drops when the cucumber process exits.
+    if (!this.config.cdpUrl) {
+      await this.browser?.close()
+    }
     this.browser = undefined
   }
 
@@ -116,10 +132,20 @@ export class BrowserWorld<Clients = unknown> {
     // chromium in a CPU/RAM-capped sandbox. The remote browser reaches the app at
     // its PUBLIC edge via real DNS, so we do NOT add the host-resolver 127.0.0.1
     // mapping (that's only for a local browser hitting the in-container loopback
-    // edge). browser.close() on a connected browser only clears the contexts this
-    // connection created and disconnects — it never kills the shared browser.
+    // edge). One connection is shared across all scenarios (each gets its own
+    // context via ActorSession); if it drops, the next scenario reconnects.
     if (this.config.cdpUrl) {
-      this.browser = await chromium.connectOverCDP(await resolveCdpWsUrl(this.config.cdpUrl))
+      if (!sharedCdpBrowser) {
+        const cdpUrl = this.config.cdpUrl
+        sharedCdpBrowser = resolveCdpWsUrl(cdpUrl).then(async (ws) => {
+          const browser = await chromium.connectOverCDP(ws)
+          browser.on('disconnected', () => {
+            sharedCdpBrowser = undefined
+          })
+          return browser
+        })
+      }
+      this.browser = await sharedCdpBrowser
       return this.browser
     }
     this.browser = await chromium.launch({
