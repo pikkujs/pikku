@@ -1,3 +1,44 @@
+## 0.12.36
+
+### Patch Changes
+
+- 61c9ce9: Add `actor.converse(...)` — actor agents for user journeys (#850)
+
+  An actor can now hold a dynamic, LLM-driven conversation with a target Pikku AI
+  agent in its own persona:
+
+  ```ts
+  const verdict = await actors.pm.converse({
+    agent: 'todoBot',
+    task: 'Get a todo created for the launch',
+    evaluate: 'A todo about the launch now exists',
+  })
+  // verdict: { passed, reasoning, transcript }
+  // then assert deterministically as the same actor:
+  const todos = await actors.pm.invoke('listTodos', {})
+  ```
+
+  The actor drives the target over the real transport (the agent's own
+  `agentRun` / `agentApprove` HTTP routes, signed in as the actor), plays the
+  persona from its `pikku.config.json` config, answers the agent's tool-approval
+  requests in-persona (`approvals: 'in-persona' | 'always' | 'never'`), and
+  returns its verdict on whether the task was met. Deterministic checks stay the
+  caller's job — they already hold the actor.
+
+  The conversation engine is transport-agnostic (persona LLM + injected target
+  driver); the persona's own turns run in-process via the configured
+  `aiAgentRunner` (`model` from the call or the actors-service default).
+
+  `agent` is typed against the generated agent-name union (`keyof AgentMap`), so
+  it's author-time checked and autocompleted in a typed project.
+
+- 472a349: Rename the userflow concept to scenario (#862). `pikkuUserFlow` becomes `pikkuScenario`, `pikku userflow run/list` becomes `pikku scenario run/list`, the workflow meta flag `userFlow` becomes `scenario`, actor types are now `ScenarioActor`/`ScenarioActors`/`ScenarioActorConfig` (`createHttpScenarioActors`), pikku.config.json's `userFlows` key becomes `scenarios`, the generated actors file is `pikku-scenario-actors.gen.ts` (`createScenarioActors`), the actor sign-in secret env var is `SCENARIO_ACTOR_SECRET`, and the console's User Flows view is now Scenarios.
+- Updated dependencies [61c9ce9]
+- Updated dependencies [f1f39f8]
+- Updated dependencies [c45e98d]
+- Updated dependencies [472a349]
+  - @pikku/core@0.12.52
+
 ## 0.12.35
 
 ### Patch Changes

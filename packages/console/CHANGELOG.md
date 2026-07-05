@@ -1,3 +1,55 @@
+## 0.12.34
+
+### Patch Changes
+
+- aa5af7e: Fix cross-origin cookie auth in the console: `pikku()` now forwards the `credentials` option to `PikkuFetch`, so RPCs (e.g. `console:getAllMeta`) send the session cookie when the console is served on a different origin than the API (`pikku serve --console <port>`). Previously the option was accepted but dropped, causing a 403 and "Failed to load metadata" after sign-in.
+- c45e98d: Run user flows from the console, actors and all (#850)
+
+  Starting a `user-flow` workflow without explicit run actors (as the console's
+  Run button does) now auto-builds HTTP actors from `USER_FLOW_ACTOR_SECRET` and
+  `API_URL`: each actor signs in via the actor auth plugin — which mints the
+  `actor: true` user row on first sign-in — and drives its steps over HTTP as
+  that persona. When the secret or API base URL isn't configured the run simply
+  proceeds without actors (with a warning) instead of failing.
+
+  The workflow-detail view also gains the shared console header: the workflow
+  selector and the "complex workflow" note now live in the header bar, the right
+  details panel hides when it has nothing to show, and step nodes display their
+  DSL labels (e.g. `Double ${item}`).
+
+- d4a2503: Serve the console same-origin at /console (#861). Both dev servers gain
+  `staticMounts` (prefix → directory static serving with SPA fallback and path
+  traversal protection); `pikku serve` / `pikku dev` mount the bundled console
+  app at `/console` on the API port whenever it is bundled, so auth cookies are
+  first-party and no `?server=` param is needed. The console is built with
+  `base: '/console/'` (its router already derives the basename from BASE_URL).
+  The separate `--console <port>` static server is removed; `pikku console`
+  serves the bundle under /console and redirects the root there.
+- c2917eb: Add a dedicated **User Flows** page to the console (#850)
+
+  User flows and their personas now live under Tests → User Flows
+  (`/tests/userflows`) instead of the Workflows page. The page has a
+  `Flows | Personas` view: flow cards show their cast (overlapping persona
+  avatars) and last-run status, personas render as cards with a read-only
+  detail drawer, and opening a flow shows a persona-driven timeline of its
+  steps (actor, status, and per-step RPC args). The Workflows page is now
+  workflows-only. Built with Mantine primitives and theme-aware colours.
+
+- bbbb196: Dev quick login for the console when running locally (#857). The better-auth
+  catch-all handler now serves `<basePath>/dev/quick-login` when
+  `PIKKU_DEV_QUICK_LOGIN` is set AND the request host is a loopback address:
+  GET reports availability, POST idempotently seeds an `admin@pikku.dev` admin
+  user and returns a signed-in session. `pikku serve` / `pikku dev` enable the
+  flag by default (set `PIKKU_DEV_QUICK_LOGIN=false` to opt out), and the
+  console login screen shows a one-click "Quick login as admin@pikku.dev"
+  button whenever a local server advertises the endpoint.
+- 472a349: Rename the userflow concept to scenario (#862). `pikkuUserFlow` becomes `pikkuScenario`, `pikku userflow run/list` becomes `pikku scenario run/list`, the workflow meta flag `userFlow` becomes `scenario`, actor types are now `ScenarioActor`/`ScenarioActors`/`ScenarioActorConfig` (`createHttpScenarioActors`), pikku.config.json's `userFlows` key becomes `scenarios`, the generated actors file is `pikku-scenario-actors.gen.ts` (`createScenarioActors`), the actor sign-in secret env var is `SCENARIO_ACTOR_SECRET`, and the console's User Flows view is now Scenarios.
+- Updated dependencies [61c9ce9]
+- Updated dependencies [f1f39f8]
+- Updated dependencies [c45e98d]
+- Updated dependencies [472a349]
+  - @pikku/core@0.12.52
+
 ## 0.12.33
 
 ### Patch Changes

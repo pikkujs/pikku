@@ -1,5 +1,19 @@
 # @pikku/cucumber
 
+## 0.12.10
+
+### Patch Changes
+
+- 7f9b455: browser world: connect to a remote CDP browser (e.g. Steel) via `cdpUrl` /
+  `XBROWSER_CDP_URL` instead of launching a local chromium. On this path the app is
+  reached at its public edge, so the loopback host-resolver mapping is skipped. Lets
+  CPU/RAM-capped sandboxes run smoke/scenario suites against a shared remote browser.
+- Updated dependencies [61c9ce9]
+- Updated dependencies [f1f39f8]
+- Updated dependencies [c45e98d]
+- Updated dependencies [472a349]
+  - @pikku/core@0.12.52
+
 ## 0.12.9
 
 ### Patch Changes

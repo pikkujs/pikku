@@ -1,3 +1,62 @@
+## 0.12.52
+
+### Patch Changes
+
+- 61c9ce9: Add `actor.converse(...)` — actor agents for user journeys (#850)
+
+  An actor can now hold a dynamic, LLM-driven conversation with a target Pikku AI
+  agent in its own persona:
+
+  ```ts
+  const verdict = await actors.pm.converse({
+    agent: 'todoBot',
+    task: 'Get a todo created for the launch',
+    evaluate: 'A todo about the launch now exists',
+  })
+  // verdict: { passed, reasoning, transcript }
+  // then assert deterministically as the same actor:
+  const todos = await actors.pm.invoke('listTodos', {})
+  ```
+
+  The actor drives the target over the real transport (the agent's own
+  `agentRun` / `agentApprove` HTTP routes, signed in as the actor), plays the
+  persona from its `pikku.config.json` config, answers the agent's tool-approval
+  requests in-persona (`approvals: 'in-persona' | 'always' | 'never'`), and
+  returns its verdict on whether the task was met. Deterministic checks stay the
+  caller's job — they already hold the actor.
+
+  The conversation engine is transport-agnostic (persona LLM + injected target
+  driver); the persona's own turns run in-process via the configured
+  `aiAgentRunner` (`model` from the call or the actors-service default).
+
+  `agent` is typed against the generated agent-name union (`keyof AgentMap`), so
+  it's author-time checked and autocompleted in a typed project.
+
+- f1f39f8: Bound the actor-flow approval loop (#850)
+
+  `converseWithTarget` now caps suspend→approve rounds within a single target turn
+  (default 16, override via `maxApprovalRounds`). A cooperative target completes
+  after a handful of rounds; a buggy or uncooperative one — e.g. re-requesting a
+  tool the persona keeps denying — previously could spin the inner loop forever
+  without ever spending a `maxTurns` credit. Exceeding the cap now throws instead
+  of hanging.
+
+- c45e98d: Run user flows from the console, actors and all (#850)
+
+  Starting a `user-flow` workflow without explicit run actors (as the console's
+  Run button does) now auto-builds HTTP actors from `USER_FLOW_ACTOR_SECRET` and
+  `API_URL`: each actor signs in via the actor auth plugin — which mints the
+  `actor: true` user row on first sign-in — and drives its steps over HTTP as
+  that persona. When the secret or API base URL isn't configured the run simply
+  proceeds without actors (with a warning) instead of failing.
+
+  The workflow-detail view also gains the shared console header: the workflow
+  selector and the "complex workflow" note now live in the header bar, the right
+  details panel hides when it has nothing to show, and step nodes display their
+  DSL labels (e.g. `Double ${item}`).
+
+- 472a349: Rename the userflow concept to scenario (#862). `pikkuUserFlow` becomes `pikkuScenario`, `pikku userflow run/list` becomes `pikku scenario run/list`, the workflow meta flag `userFlow` becomes `scenario`, actor types are now `ScenarioActor`/`ScenarioActors`/`ScenarioActorConfig` (`createHttpScenarioActors`), pikku.config.json's `userFlows` key becomes `scenarios`, the generated actors file is `pikku-scenario-actors.gen.ts` (`createScenarioActors`), the actor sign-in secret env var is `SCENARIO_ACTOR_SECRET`, and the console's User Flows view is now Scenarios.
+
 ## 0.12.51
 
 ### Patch Changes

@@ -1,5 +1,23 @@
 # @pikku/bun-server
 
+## 0.12.4
+
+### Patch Changes
+
+- d4a2503: Serve the console same-origin at /console (#861). Both dev servers gain
+  `staticMounts` (prefix → directory static serving with SPA fallback and path
+  traversal protection); `pikku serve` / `pikku dev` mount the bundled console
+  app at `/console` on the API port whenever it is bundled, so auth cookies are
+  first-party and no `?server=` param is needed. The console is built with
+  `base: '/console/'` (its router already derives the basename from BASE_URL).
+  The separate `--console <port>` static server is removed; `pikku console`
+  serves the bundle under /console and redirects the root there.
+- Updated dependencies [61c9ce9]
+- Updated dependencies [f1f39f8]
+- Updated dependencies [c45e98d]
+- Updated dependencies [472a349]
+  - @pikku/core@0.12.52
+
 ## 0.12.3
 
 ### Patch Changes

@@ -1,5 +1,24 @@
 # @pikku/better-auth
 
+## 0.12.15
+
+### Patch Changes
+
+- bbbb196: Dev quick login for the console when running locally (#857). The better-auth
+  catch-all handler now serves `<basePath>/dev/quick-login` when
+  `PIKKU_DEV_QUICK_LOGIN` is set AND the request host is a loopback address:
+  GET reports availability, POST idempotently seeds an `admin@pikku.dev` admin
+  user and returns a signed-in session. `pikku serve` / `pikku dev` enable the
+  flag by default (set `PIKKU_DEV_QUICK_LOGIN=false` to opt out), and the
+  console login screen shows a one-click "Quick login as admin@pikku.dev"
+  button whenever a local server advertises the endpoint.
+- 472a349: Rename the userflow concept to scenario (#862). `pikkuUserFlow` becomes `pikkuScenario`, `pikku userflow run/list` becomes `pikku scenario run/list`, the workflow meta flag `userFlow` becomes `scenario`, actor types are now `ScenarioActor`/`ScenarioActors`/`ScenarioActorConfig` (`createHttpScenarioActors`), pikku.config.json's `userFlows` key becomes `scenarios`, the generated actors file is `pikku-scenario-actors.gen.ts` (`createScenarioActors`), the actor sign-in secret env var is `SCENARIO_ACTOR_SECRET`, and the console's User Flows view is now Scenarios.
+- Updated dependencies [61c9ce9]
+- Updated dependencies [f1f39f8]
+- Updated dependencies [c45e98d]
+- Updated dependencies [472a349]
+  - @pikku/core@0.12.52
+
 ## 0.12.14
 
 ### Patch Changes
