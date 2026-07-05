@@ -46,12 +46,6 @@ const titleOf = (node: RawNode): string => {
   return node.nodeId
 }
 
-/**
- * Flattens a workflow's runtime node map into an ordered timeline. Nodes are
- * walked via their `next` pointers starting from the entry, with any nodes not
- * reachable that way appended in insertion order. Purely structural branch
- * nodes (empty branch used as a start marker) are dropped.
- */
 export function buildFlowTimeline(
   nodes: Record<string, RawNode> | undefined,
   entryNodeIds?: string[]
@@ -91,7 +85,6 @@ export function buildFlowTimeline(
     }))
 }
 
-/** Renders a compact one-line preview of an RPC step's input arguments. */
 export function summarizeArgs(input?: Record<string, unknown>): string {
   if (!input) return ''
   const parts = Object.entries(input).map(([key, value]) => {

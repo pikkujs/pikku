@@ -15,11 +15,6 @@ import { readFileSync, existsSync, readdirSync, statSync, rmSync } from 'fs'
 import { connect, createServer } from 'net'
 import { join } from 'path'
 
-/**
- * A fixed port collides with whatever happens to be running on the developer's
- * machine (e.g. a long-lived `pikku serve`), making the probes below hit the
- * wrong server. Ask the OS for a free ephemeral port instead.
- */
 function getFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
     const probe = createServer()

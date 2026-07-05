@@ -10,12 +10,6 @@ import {
 
 type Props = { serverUrl: string }
 
-/**
- * One-click sign-in for local development. Renders nothing unless the target
- * server is a loopback address AND reports the dev quick-login endpoint as
- * enabled (only the pikku dev server does). Clicking signs in as the seeded
- * dev admin and reuses the normal session flow.
- */
 export const DevQuickLoginButton: React.FC<Props> = ({ serverUrl }) => {
   const { setServerUrl, refetchSession } = useAuth()
 

@@ -67,9 +67,6 @@ export const consoleCommand = pikkuSessionlessFunc<
       return
     }
 
-    // The console bundle is built with base '/console/' (it is normally served
-    // same-origin by pikku serve/dev), so this standalone server mounts it at
-    // /console too and redirects the root there.
     const server = createServer(async (req, res) => {
       const url = new URL(req.url || '/', `http://localhost:${resolvedPort}`)
 

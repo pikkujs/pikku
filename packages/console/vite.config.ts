@@ -4,8 +4,6 @@ import { paraglideVitePlugin } from '@inlang/paraglide-js'
 import path from 'path'
 
 export default defineConfig({
-  // The console is served same-origin by pikku serve/dev under /console; the
-  // router already derives its basename from BASE_URL (see main.tsx).
   base: '/console/',
   plugins: [
     {
