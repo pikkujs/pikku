@@ -1,3 +1,45 @@
+## 0.12.70
+
+### Patch Changes
+
+- efb0406: Add in-process V8 precise coverage (`pikku dev --coverage` / `pikku serve --coverage`) with per-scenario attribution.
+  - `@pikku/core`: new `V8CoverageService` (node:inspector precise coverage with snapshot + reset), exposed as the optional `coverageService` singleton service.
+  - `@pikku/inspector`: function meta now records `bodyStart`/`bodyEnd` body spans (verbose meta only) so coverage can be mapped without a runtime TypeScript dependency.
+  - `@pikku/cli`: `--coverage` on `pikku dev` and `pikku serve` starts the collector in-process; `pikku scenario run --coverage` resets/snapshots the server between flows and writes `.pikku/coverage/scenario-coverage.json` with per-scenario function coverage.
+  - `@pikku/addon-console`: new exposed `takeLiveCoverage` / `resetLiveCoverage` RPCs; V8 ranges are mapped through inline source maps to original TypeScript lines (offset-based, so esbuild/tsx single-line output keeps full resolution).
+
+- 53eeeab: Skip redundant inspector re-runs in `pikku all` when nothing inspectable changed
+
+  `pikku all` unconditionally re-ran the TypeScript inspector up to 3× per run
+  (after agents, after workflows, after CLI channel) — the dominant cost of
+  codegen. writeFileInDir now tracks a generation counter bumped only when a
+  .ts file is actually written or removed, and getInspectorState skips a
+  refresh when the generation is unchanged since the last inspection. On a
+  no-change run codegen now performs a single inspection (~2× faster; more on
+  CPU-constrained machines like sandboxes).
+
+  Watchers (`pikku dev`/`watch`) call the new
+  `invalidateInspectorState` service before re-running `all`, since user
+  source edits bypass writeFileInDir and must still force a re-inspection.
+
+  Also fixes saveSchemas writing a stub register.gen.ts before every real
+  write — the stub→full flip made every run look dirty and kept the
+  re-inspect gate (and file watchers) churning on no-op runs.
+
+- bda5809: feat(cli): `pikku all --diff` emits a structural diff of the generated `.pikku` meta
+
+  On a successful `pikku all`, `--diff` prints a `PIKKU_DIFF <json>` line on stdout describing what the run added/removed/changed across functions, HTTP wirings, workflows (incl. userflows/scenarios), emails, schedulers, queues, channels, triggers, MCP and agents. The snapshot is taken before codegen overwrites the meta, so the diff is a couple of small JSON reads rather than a second inspection pass, and it is emitted only on exit 0 (a failed codegen produces no diff). Intended for tooling that wants to surface "what changed" after a codegen run.
+
+- fe4f5ca: Add `stub`/`spy`/`isTestRun` core utils with call recording for scenario assertions.
+  - `@pikku/core`: `StubTracker` moves here from `@pikku/cucumber` (which re-exports it), gaining `record`/`getCalls`/`reset`. New plain-import utils backed by a process-wide tracker: `stub(name, impl?)` (recording fake), `spy(name, real)` (record + pass through), `isTestRun()` (reads `PIKKU_TEST_RUN`). Nothing is injected into service factories and no new factory types exist — swap services with a plain `isTestRun()` conditional where needed. New scenario DSL steps: `workflow.expectService('email.send', { calledWith })` asserts recorded stub calls via the console RPC, `workflow.expectError(...)` walks error branches.
+  - `@pikku/cli`: `pikku dev --test` sets `PIKKU_TEST_RUN` and wraps the dev-provided default services (email) in recording spies; independent of `--coverage`, absent from production `pikku serve`. `pikku scenario run` resets recorded calls per flow.
+  - `@pikku/addon-console`: exposed `getStubCalls` / `resetStubs` RPCs next to the coverage snapshot endpoints.
+
+- Updated dependencies [efb0406]
+- Updated dependencies [fe4f5ca]
+  - @pikku/core@0.12.53
+  - @pikku/inspector@0.12.37
+
 ## 0.12.69
 
 ### Patch Changes

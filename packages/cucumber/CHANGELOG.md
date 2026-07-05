@@ -1,5 +1,25 @@
 # @pikku/cucumber
 
+## 0.12.11
+
+### Patch Changes
+
+- d5e95f2: browser world: share one remote-CDP (Steel) connection across all scenarios in a
+  run instead of reconnecting per scenario. Cucumber builds a fresh world per
+  scenario, so the previous per-world connect + closeAll teardown recycled the
+  shared remote browser every scenario and raced its session recycling, timing out
+  the next `connectOverCDP`. Now: connect once, each scenario gets its own context,
+  `closeAll` disposes only contexts on the CDP path, and a dropped connection
+  reconnects on the next scenario.
+- fe4f5ca: Add `stub`/`spy`/`isTestRun` core utils with call recording for scenario assertions.
+  - `@pikku/core`: `StubTracker` moves here from `@pikku/cucumber` (which re-exports it), gaining `record`/`getCalls`/`reset`. New plain-import utils backed by a process-wide tracker: `stub(name, impl?)` (recording fake), `spy(name, real)` (record + pass through), `isTestRun()` (reads `PIKKU_TEST_RUN`). Nothing is injected into service factories and no new factory types exist — swap services with a plain `isTestRun()` conditional where needed. New scenario DSL steps: `workflow.expectService('email.send', { calledWith })` asserts recorded stub calls via the console RPC, `workflow.expectError(...)` walks error branches.
+  - `@pikku/cli`: `pikku dev --test` sets `PIKKU_TEST_RUN` and wraps the dev-provided default services (email) in recording spies; independent of `--coverage`, absent from production `pikku serve`. `pikku scenario run` resets recorded calls per flow.
+  - `@pikku/addon-console`: exposed `getStubCalls` / `resetStubs` RPCs next to the coverage snapshot endpoints.
+
+- Updated dependencies [efb0406]
+- Updated dependencies [fe4f5ca]
+  - @pikku/core@0.12.53
+
 ## 0.12.10
 
 ### Patch Changes
