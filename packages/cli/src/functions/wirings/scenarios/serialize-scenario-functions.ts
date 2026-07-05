@@ -18,8 +18,6 @@ import { pikkuFunc } from '${pathToPikkuTypes}'
 import {
   getStubTracker,
   isTestRun,
-  mapPreciseCoverage,
-  mapLineHitsToReport,
   type CoverageFunctionMeta,
   type FunctionCoverageReport,
   type StubCall,
@@ -36,7 +34,7 @@ export const pikkuScenarioTakeLiveCoverage = pikkuFunc<
   expose: true,
   auth: ${authFlag},
   func: async ({ coverageService, metaService }) => {
-    if (!coverageService || !metaService?.basePath) return null
+    if (!coverageService?.takeReport || !metaService?.basePath) return null
     let functionsMeta: Record<string, CoverageFunctionMeta>
     try {
       const content = await readFile(
@@ -51,15 +49,7 @@ export const pikkuScenarioTakeLiveCoverage = pikkuFunc<
     } catch {
       return null
     }
-    const snapshot = await coverageService.takeCoverage()
-    if (snapshot.kind === 'line-hits') {
-      return mapLineHitsToReport(snapshot.lineHits, functionsMeta)
-    }
-    return mapPreciseCoverage(
-      snapshot.scripts,
-      snapshot.getScriptSource,
-      functionsMeta
-    )
+    return await coverageService.takeReport(functionsMeta)
   },
 })
 

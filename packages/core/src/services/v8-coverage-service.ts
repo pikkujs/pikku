@@ -29,9 +29,53 @@ export type CoverageSnapshot =
     }
   | { kind: 'line-hits'; lineHits: LineHits }
 
+export type CoverageStatus = 'covered' | 'partial' | 'uncovered' | 'unknown'
+
+export interface FunctionCoverageEntry {
+  name: string
+  sourceFile: string
+  exposed: boolean
+  description: string | null
+  coveredLines: number
+  totalLines: number
+  missedLines: number[]
+  ratio: number
+  status: CoverageStatus
+}
+
+export interface FunctionCoverageReport {
+  generatedAt: string
+  summary: {
+    total: number
+    covered: number
+    partial: number
+    uncovered: number
+    unknown: number
+    overallRatio: number
+  }
+  functions: FunctionCoverageEntry[]
+}
+
+export interface CoverageFunctionMeta {
+  name: string
+  sourceFile: string
+  bodySourceFile?: string
+  exportedName?: string
+  expose?: boolean
+  description?: string | null
+  bodyStart?: number
+  bodyEnd?: number
+}
+
 export interface CoverageService {
   start(): Promise<void>
   takeCoverage(): Promise<CoverageSnapshot>
+  /** Maps the current snapshot onto function body spans. Provided by the
+   *  process that booted the coverage backend (the pikku CLI) — absent when
+   *  the runtime only exposes raw snapshots. */
+  takeReport?(
+    functionsMeta: Record<string, CoverageFunctionMeta>
+  ): Promise<FunctionCoverageReport>
   reset(): Promise<void>
   stop(): Promise<void>
 }

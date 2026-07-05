@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.1",
+    "@jridgewell/trace-mapping": "^0.3.25",
     "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.1",
     "@pikku/better-auth": "^0.12.15",
     "@pikku/bun-server": "^0.12.4",
