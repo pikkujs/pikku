@@ -152,7 +152,10 @@ export const serve = pikkuSessionlessFunc<
       ...inMemoryServices,
       getInspectorState,
     })
-    const resolvedServices = { ...singletonServices, getInspectorState }
+    const resolvedServices = {
+      ...singletonServices,
+      getInspectorState,
+    }
     pikkuState(null, 'package', 'singletonServices', resolvedServices)
     resolvedServices.workflowService?.wireQueueWorkers?.()
 

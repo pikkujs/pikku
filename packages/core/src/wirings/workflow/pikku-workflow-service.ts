@@ -1105,12 +1105,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * @param options.inline - If true, execute workflow directly without queue service
    * @param options.startNode - Starting node ID for graph workflows (from wire config)
    */
-  /**
-   * Start a new workflow run
-   * Automatically detects workflow type (DSL or graph) from meta and executes accordingly
-   * @param options.inline - If true, execute workflow directly without queue service
-   * @param options.startNode - Starting node ID for graph workflows (from wire config)
-   */
   public async startWorkflow<I>(
     name: string,
     input: I,

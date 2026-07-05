@@ -38,6 +38,7 @@ import type { WorkflowRunService } from '../wirings/workflow/workflow.types.js'
 import type { CredentialService } from '../services/credential-service.js'
 import type { EmailService } from '../services/email-service.js'
 import type { MetaService } from '../services/meta-service.js'
+import type { CoverageService } from '../services/v8-coverage-service.js'
 import type { SessionStore } from '../services/session-store.js'
 import type {
   AuditDurability,
@@ -150,6 +151,12 @@ export type FunctionMeta = FunctionRuntimeMeta &
       isDirectFunction: boolean
       sourceFile: string
       exportedName: string
+      /** File containing the handler body when it differs from sourceFile (imported handlers) */
+      bodySourceFile?: string
+      /** 1-indexed first line of the handler body (verbose meta; coverage mapping) */
+      bodyStart: number
+      /** 1-indexed last line of the handler body (verbose meta; coverage mapping) */
+      bodyEnd: number
     } & CommonWireMeta
   >
 
@@ -293,6 +300,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   emailService?: EmailService
   /** Meta service for reading .pikku metadata files (filesystem on Node, R2/KV on CF) */
   metaService?: MetaService
+  /** V8 precise-coverage collector (`pikku dev --coverage` only) */
+  coverageService?: CoverageService
   /** Audit service for durable or staged audit event capture */
   audit?: AuditService
   /**

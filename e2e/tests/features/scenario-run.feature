@@ -11,3 +11,8 @@ Feature: Scenario runs
   Scenario: a failing scenario surfaces a non-zero exit code
     When I run the "failingScenario" scenario against the "local" environment
     Then the scenario run exits non-zero
+
+  Scenario: scenario run attributes coverage per scenario
+    When I run the "orderSupportScenario" scenario with coverage against the "local" environment
+    Then the scenario run reports all flows passed
+    And the scenario run reports coverage for "orderSupportScenario"

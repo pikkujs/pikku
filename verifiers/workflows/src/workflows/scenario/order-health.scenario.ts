@@ -1,11 +1,3 @@
-/**
- * Scenario: drives the order API the way users do. A scenario is a pure
- * story of remote RPCs — the func may only use logger/config from services
- * (inspector-enforced); actors arrive on the WIRE, supplied per run by the
- * runner (`pikku scenario run <environment>` or startWorkflow options).
- * Runtime friendly — no state reset, safe as a staged/production health check.
- */
-
 import { pikkuScenario } from '../../../.pikku/workflow/pikku-workflow-types.gen.js'
 
 export const orderHealthScenario = pikkuScenario<
@@ -22,7 +14,6 @@ export const orderHealthScenario = pikkuScenario<
     }
     logger.debug(`order-health flow starting for ${data.orderId}`)
 
-    // The customer reads their order through their authenticated client
     const order = await workflow.do(
       'customer fetches the order',
       'orderGet',
@@ -30,13 +21,10 @@ export const orderHealthScenario = pikkuScenario<
       { actor: actors.customer }
     )
 
-    // A plain internal step still works when the runner provides an rpc
-    // service (the `pikku scenario run` command refuses these on purpose)
     const internal = await workflow.do('internal re-read', 'orderGet', {
       orderId: data.orderId,
     })
 
-    // Ops polls until the order reports a status (async-effect primitive)
     const settled = await workflow.expectEventually(
       'ops sees the order settle',
       'orderGet',

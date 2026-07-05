@@ -4,12 +4,7 @@ import { setSessionCookie } from 'better-auth/cookies'
 import type { BetterAuthPlugin } from 'better-auth'
 
 export interface ActorPluginOptions {
-  /**
-   * The server-held impersonation secret (e.g. from a wired
-   * `SCENARIO_ACTOR_SECRET`). Sign-in only ever works for user rows flagged
-   * `actor: true`, so knowing the secret never impersonates real users. A
-   * missing/empty secret disables the endpoint entirely.
-   */
+  /** Impersonation secret; only `actor: true` rows can sign in, missing/empty disables the endpoint */
   secret:
     | string
     | undefined
@@ -28,14 +23,7 @@ const secretsEqual = (a: string, b: string): boolean => {
   return diff === 0
 }
 
-/**
- * Better Auth plugin for scenario actors: synthetic users (an `actor`
- * boolean column on `user`) that pikkuScenario signs in via
- * `POST /sign-in/actor` with `{ email, secret }`. Actor rows are auto-created
- * on first sign-in; sign-in for a NON-actor user is always refused. The
- * `actor` flag rides on the user (and from there into the pikku core
- * session), so audits and analytics can address synthetic traffic.
- */
+/** Better Auth plugin for scenario actors: `POST /sign-in/actor` with `{ email, secret }`, actor rows auto-created, non-actor sign-in refused */
 export const actor = (options: ActorPluginOptions): BetterAuthPlugin => {
   return {
     id: 'actor',

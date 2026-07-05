@@ -13,13 +13,14 @@ let lastRun: ScenarioRunResult | undefined
 
 const runScenario = (
   environment: string,
-  flow: string
+  flow: string,
+  extraArgs: string[] = []
 ): Promise<ScenarioRunResult> =>
   new Promise((resolvePromise) => {
     const projectDir = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
     const child = spawn(
       'npx',
-      ['pikku', 'scenario', 'run', environment, '--flows', flow],
+      ['pikku', 'scenario', 'run', environment, '--flows', flow, ...extraArgs],
       { cwd: projectDir, env: { ...process.env } }
     )
     let output = ''
@@ -38,6 +39,27 @@ When(
     lastRun = await runScenario(environment, flow)
   }
 )
+
+When(
+  'I run the {string} scenario with coverage against the {string} environment',
+  async function (flow: string, environment: string) {
+    lastRun = await runScenario(environment, flow, ['--coverage'])
+  }
+)
+
+Then('the scenario run reports coverage for {string}', function (flow: string) {
+  assert.ok(lastRun, 'no scenario run recorded')
+  assert.match(
+    lastRun.output,
+    new RegExp(`coverage: [1-9]\\d*/\\d+ functions exercised by '${flow}'`),
+    `expected per-scenario coverage attribution in output:\n${lastRun.output}`
+  )
+  assert.match(
+    lastRun.output,
+    /Scenario coverage → .*scenario-coverage\.json/,
+    `expected scenario-coverage.json to be written:\n${lastRun.output}`
+  )
+})
 
 Then('the scenario run reports all flows passed', function () {
   assert.ok(lastRun, 'no scenario run recorded')

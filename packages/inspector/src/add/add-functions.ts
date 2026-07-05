@@ -1022,6 +1022,29 @@ export const addFunctions: AddWiring = (
     isDirectFunction,
   })
 
+  const handlerSourceFile = handler.getSourceFile()
+  const bodySourceFile =
+    handlerSourceFile.fileName !== sourceFile
+      ? handlerSourceFile.fileName
+      : undefined
+  const lineOf = (pos: number) =>
+    handlerSourceFile.getLineAndCharacterOfPosition(pos).line + 1
+  const handlerBody = handler.body
+  const bodySpan =
+    ts.isBlock(handlerBody) && handlerBody.statements.length > 0
+      ? {
+          bodyStart: lineOf(
+            handlerBody.statements[0].getStart(handlerSourceFile)
+          ),
+          bodyEnd: lineOf(
+            handlerBody.statements[handlerBody.statements.length - 1].getEnd()
+          ),
+        }
+      : {
+          bodyStart: lineOf(handlerBody.getStart(handlerSourceFile)),
+          bodyEnd: lineOf(handlerBody.getEnd()),
+        }
+
   state.functions.meta[pikkuFuncId] = {
     pikkuFuncId,
     functionType: 'user',
@@ -1055,7 +1078,9 @@ export const addFunctions: AddWiring = (
     permissions,
     isDirectFunction,
     sourceFile,
+    bodySourceFile,
     exportedName: exportedName || undefined,
+    ...bodySpan,
   }
 
   // Populate node metadata if node config is present

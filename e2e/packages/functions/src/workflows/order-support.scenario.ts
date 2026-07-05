@@ -1,10 +1,5 @@
 import { pikkuScenario } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
-/**
- * UI-fixture scenario: gives the console a scenario with two actors so the
- * Workflows page's Scenarios / Personas views have something to render.
- * Runnable via `pikku scenario run` too — the steps are plain exposed RPCs.
- */
 export const orderSupportScenario = pikkuScenario<
   { value?: number },
   { doubled: number; message: string }

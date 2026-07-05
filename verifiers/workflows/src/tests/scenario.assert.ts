@@ -1,12 +1,3 @@
-/**
- * Verifies pikkuScenario end-to-end through real codegen:
- * - inspector meta: source 'scenario', actor + internal + expectEventually steps
- * - runtime: the flow runs with injected actors; actor steps go through the
- *   actor (never internal dispatch), internal steps still hit the real function
- *
- * Expects: pikku has been run first to generate .pikku/ files
- */
-
 import { readFile } from 'fs/promises'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -48,7 +39,6 @@ const fakeActor = (
     calls,
     invoke: async (rpcName: string, data: any) => {
       calls.push({ rpcName, data })
-      // Order-shaped response, as the deployed app would return over HTTP
       return {
         id: data.orderId,
         customerId: 'customer-1',
@@ -66,7 +56,6 @@ describe('pikkuScenario verification', () => {
     const meta = await loadMeta('orderHealthScenario')
     assert.equal(meta.source, 'scenario')
 
-    // Nodes are keyed by step name
     const nodes: Record<string, any> = meta.nodes || {}
     assert.ok(
       nodes['customer fetches the order'],
@@ -114,7 +103,6 @@ describe('pikkuScenario verification', () => {
       false
     )
 
-    // Actors ride startWorkflow options → the run's wire, never services
     const { runId } = await workflowService.startWorkflow(
       'orderHealthScenario',
       { orderId: 'order-7' },

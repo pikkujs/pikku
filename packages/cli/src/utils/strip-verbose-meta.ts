@@ -31,6 +31,9 @@ const VERBOSE_FIELDS = new Set([
   'wires',
   'sourceFile',
   'exportedName',
+  'bodySourceFile',
+  'bodyStart',
+  'bodyEnd',
 ])
 
 /**
