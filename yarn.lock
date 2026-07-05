@@ -5838,6 +5838,8 @@ __metadata:
     yaml: "npm:^2.8.2"
     zod: "npm:^4.3.6"
     zod-to-ts: "npm:^2.1.0"
+  peerDependencies:
+    "@pikku/core": ^0.12.53
   bin:
     pikku: dist/bin/pikku.js
   languageName: unknown
@@ -5927,6 +5929,8 @@ __metadata:
     remark-gfm: "npm:^4.0.1"
     typescript: "npm:^6.0.3"
     vite: "npm:^8.0.11"
+  peerDependencies:
+    "@pikku/core": ^0.12.52
   languageName: unknown
   linkType: soft
 
@@ -6150,6 +6154,8 @@ __metadata:
     typescript: "npm:^6.0.3"
     zod: "npm:^4.3.6"
     zod-to-ts: "npm:^2.1.0"
+  peerDependencies:
+    "@pikku/core": ^0.12.53
   languageName: unknown
   linkType: soft
 
@@ -6184,6 +6190,8 @@ __metadata:
     "@pikku/kysely": "npm:^0.13.0"
     kysely: "npm:^0.29.0"
     typescript: "npm:^6.0.3"
+  peerDependencies:
+    "@pikku/core": ^0.12.44
   languageName: unknown
   linkType: soft
 
@@ -6212,6 +6220,8 @@ __metadata:
     kysely-postgres-js: "npm:^3.0.0"
     postgres: "npm:^3.4.8"
     typescript: "npm:^6.0.3"
+  peerDependencies:
+    "@pikku/core": ^0.12.45
   languageName: unknown
   linkType: soft
 
@@ -6223,6 +6233,8 @@ __metadata:
     "@pikku/kysely": "npm:^0.13.0"
     kysely: "npm:^0.29.0"
     typescript: "npm:^6.0.3"
+  peerDependencies:
+    "@pikku/core": ^0.12.44
   languageName: unknown
   linkType: soft
 

@@ -13,13 +13,16 @@
     "prepublishOnly": "yarn build"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.45",
     "@pikku/kysely": "^0.13.0",
     "kysely": "^0.29.0",
     "kysely-postgres-js": "^3.0.0",
     "postgres": "^3.4.8"
   },
+  "peerDependencies": {
+    "@pikku/core": "^0.12.45"
+  },
   "devDependencies": {
+    "@pikku/core": "^0.12.45",
     "typescript": "^6.0.3"
   },
   "exports": {
