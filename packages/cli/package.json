@@ -30,7 +30,6 @@
     "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.1",
     "@pikku/better-auth": "^0.12.15",
     "@pikku/bun-server": "^0.12.4",
-    "@pikku/core": "^0.12.53",
     "@pikku/deploy-cloudflare": "^0.12.8",
     "@pikku/fetch": "^0.12.6",
     "@pikku/inspector": "^0.12.37",
@@ -59,7 +58,11 @@
     "zod": "^4.3.6",
     "zod-to-ts": "^2.1.0"
   },
+  "peerDependencies": {
+    "@pikku/core": "^0.12.53"
+  },
   "devDependencies": {
+    "@pikku/core": "^0.12.53",
     "@types/istanbul-lib-instrument": "^1.7.7",
     "@types/node": "^24.11.0",
     "@types/pg": "^8.11.0",
