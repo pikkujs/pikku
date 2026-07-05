@@ -218,7 +218,7 @@ This ensures:
 
 ### Running the OSS console on the e2e project
 
-`pikku serve` (and `pikku dev`) serve the OSS Pikku Console same-origin at `/console`, but only when the console app is bundled at `packages/cli/console-app`. A plain package build does **not** produce that directory (only `packages/cli/build.sh` copies it), so a freshly-built CLI serves no console UI (the `Pikku Console available at …/console` log line is absent).
+`pikku dev` serves the OSS Pikku Console same-origin at `/console` (and `pikku serve` does too when passed the explicit `--console` flag), but only when the console app is bundled at `packages/cli/console-app`. A plain package build does **not** produce that directory (only `packages/cli/build.sh` copies it), so a freshly-built CLI serves no console UI (the `Pikku Console available at …/console` log line is absent). There is no separate `pikku console` command.
 
 To spin it up against the e2e project (backend on `4077` — from `e2e/tests/support/types.ts`):
 
@@ -231,7 +231,7 @@ chmod +x dist/bin/pikku.js                   # ensure the bin is executable
 # 2. Serve the e2e backend (pass OPENAI_API_KEY so the agent playground works)
 cd ../../e2e
 OPENAI_API_KEY=<key> API_URL=http://localhost:4077 \
-  npx pikku serve --port 4077
+  npx pikku serve --port 4077 --console
 ```
 
 The console is then at **http://localhost:4077/console** (`Pikku Console available at http://localhost:4077/console` in the log). Being same-origin with the API, cookies are first-party and no `?server=` param is needed.

@@ -32,11 +32,14 @@ import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
 import { createDevAIAgentRunner } from './dev-ai-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
 
-export const serve = pikkuSessionlessFunc<{ port?: string }, void>({
+export const serve = pikkuSessionlessFunc<
+  { port?: string; console?: boolean },
+  void
+>({
   remote: true,
   func: async (
     { logger, config, getInspectorState, variables, devServerRunner },
-    { port }
+    { port, console: serveConsole }
   ) => {
     process.env.PIKKU_DEV_QUICK_LOGIN ??= 'true'
     const resolvedPort = parseInt(port || '3000', 10)
@@ -160,7 +163,12 @@ export const serve = pikkuSessionlessFunc<{ port?: string }, void>({
       return m[serverLifecycleFactory.variable]
     }
 
-    const consoleMount = await resolveConsoleMount()
+    const consoleMount = serveConsole ? await resolveConsoleMount() : undefined
+    if (serveConsole && !consoleMount) {
+      logger.warn(
+        'Console app not found. Please rebuild @pikku/cli with the console app bundled.'
+      )
+    }
     const pikkuServer = devServerRunner.createServer(
       {
         ...userConfig,

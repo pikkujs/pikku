@@ -25,12 +25,16 @@ BeforeAll(async function () {
 
   process.env.SCENARIO_ACTOR_SECRET ??= 'e2e-actor-secret'
 
-  backendProcess = spawn('npx', ['pikku', 'serve', '--port', backendPort], {
-    cwd: projectDir,
-    env: { ...process.env, API_URL: config.apiUrl },
-    stdio: 'pipe',
-    detached: true,
-  })
+  backendProcess = spawn(
+    'npx',
+    ['pikku', 'serve', '--port', backendPort, '--console'],
+    {
+      cwd: projectDir,
+      env: { ...process.env, API_URL: config.apiUrl },
+      stdio: 'pipe',
+      detached: true,
+    }
+  )
 
   backendProcess.stderr?.on('data', (d: Buffer) =>
     process.stderr.write(`[backend] ${d}`)
