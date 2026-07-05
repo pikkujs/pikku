@@ -39,7 +39,11 @@ export const pikkuAuth = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
           config.ignoreFiles
         ))
       ) {
-        await writeFileInDir(logger, authTypesFile, serializeAuthTypesBootstrap())
+        await writeFileInDir(
+          logger,
+          authTypesFile,
+          serializeAuthTypesBootstrap()
+        )
       }
       return
     }
@@ -56,7 +60,8 @@ export const pikkuAuth = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
       authFile,
       typesDeclarationFile,
       packageMappings ?? {},
-      state.auth.hasUserSessionMiddleware ?? false
+      state.auth.hasUserSessionMiddleware ?? false,
+      Boolean(config.scaffold?.console)
     )
     // The secrets file sits alongside authFile so re-inspection rediscovers it.
     // It is kept separate from the wiring file because the CLI forbids Zod

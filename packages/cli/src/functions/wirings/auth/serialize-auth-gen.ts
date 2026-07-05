@@ -60,13 +60,30 @@ export interface AuthGenOutput {
  * wiring, the routes flow through inspection into the deploy manifest (one
  * worker for all auth routes).
  */
+// External consoles (served from another origin) cannot carry the session
+// cookie, so they authenticate with 'Authorization: Bearer <PIKKU_CONSOLE_TOKEN>'.
+// The expected token resolves through the secrets service per request and the
+// middleware is a no-op while the secret is unset. Emitted into the same
+// addHTTPMiddleware('*') call as the session middleware: the inspector keys
+// route-middleware groups by pattern, so a second '*' registration from another
+// file would silently displace this one in deployed units.
+const consoleTokenMiddlewareLines = (): string[] => [
+  `  authBearer({`,
+  `    token: {`,
+  `      secretId: 'PIKKU_CONSOLE_TOKEN',`,
+  `      userSession: { userId: 'pikku-console-token' },`,
+  `    },`,
+  `  }),`,
+]
+
 export const serializeAuthGen = (
   definition: AuthDefinition,
   providers: string[],
   authFile: string,
   typesDeclarationFile: string,
   packageMappings: Record<string, string>,
-  hasUserSessionMiddleware = false
+  hasUserSessionMiddleware = false,
+  includeConsoleToken = false
 ): AuthGenOutput => {
   const known = providers.filter((p) => p in PROVIDER_REGISTRY)
 
@@ -189,6 +206,9 @@ export const serializeAuthGen = (
     emitStatefulSession
       ? `import { createAuthHandler, betterAuthSession } from '@pikku/better-auth'`
       : `import { createAuthHandler } from '@pikku/better-auth'`,
+    ...(emitStatefulSession && includeConsoleToken
+      ? [`import { authBearer } from '@pikku/core/middleware'`]
+      : []),
     `import '${configImportPath}'`,
     '',
     // createAuthHandler is called once at module load; the exported handler is a
@@ -205,7 +225,17 @@ export const serializeAuthGen = (
   if (emitStatefulSession) {
     // Stateful: betterAuthSession calls services.auth(), so it stays here with
     // the auth.wiring import.
-    wiring.push(`addHTTPMiddleware('*', [betterAuthSession()])`, '')
+    if (includeConsoleToken) {
+      wiring.push(
+        `addHTTPMiddleware('*', [`,
+        `  betterAuthSession(),`,
+        ...consoleTokenMiddlewareLines(),
+        `])`,
+        ''
+      )
+    } else {
+      wiring.push(`addHTTPMiddleware('*', [betterAuthSession()])`, '')
+    }
   }
   wiring.push(`wireHTTPRoutes({`, `  routes: {`)
   // One catch-all route per method. `{/*splat}` matches both the bare basePath
@@ -233,8 +263,18 @@ export const serializeAuthGen = (
       '',
       `import { addHTTPMiddleware } from '${pikkuTypesImportPath}'`,
       `import { betterAuthStatelessSession } from '@pikku/better-auth'`,
+      ...(includeConsoleToken
+        ? [`import { authBearer } from '@pikku/core/middleware'`]
+        : []),
       '',
-      `addHTTPMiddleware('*', [betterAuthStatelessSession()])`,
+      ...(includeConsoleToken
+        ? [
+            `addHTTPMiddleware('*', [`,
+            `  betterAuthStatelessSession(),`,
+            ...consoleTokenMiddlewareLines(),
+            `])`,
+          ]
+        : [`addHTTPMiddleware('*', [betterAuthStatelessSession()])`]),
       '',
     ]
     output.middleware = middleware.join('\n')

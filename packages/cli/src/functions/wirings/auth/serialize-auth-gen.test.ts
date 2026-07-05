@@ -238,6 +238,43 @@ describe('serializeAuthGen', () => {
     })
   })
 
+  describe('console bearer token (scaffold.console enabled)', () => {
+    const statelessDef = def({ cookieCache: true })
+    const genConsole = (d: AuthDefinition = def()) =>
+      serializeAuthGen(d, ['github'], AUTH_FILE, TYPES_FILE, {}, false, true)
+
+    test('stateless: the middleware file registers authBearer alongside the session verifier', () => {
+      const out = genConsole(statelessDef)
+      assert.ok(out.middleware, 'middleware file should be emitted')
+      const mw = out.middleware!
+      assert.match(mw, /import { authBearer } from '@pikku\/core\/middleware'/)
+      assert.match(
+        mw,
+        /addHTTPMiddleware\('\*', \[\s*betterAuthStatelessSession\(\),\s*authBearer\(\{[\s\S]*?secretId: 'PIKKU_CONSOLE_TOKEN'[\s\S]*?\}\),\s*\]\)/
+      )
+      assert.doesNotMatch(mw, /process\.env/)
+    })
+
+    test('stateful: the wiring file registers authBearer alongside betterAuthSession', () => {
+      const out = genConsole()
+      assert.match(
+        out.wiring,
+        /import { authBearer } from '@pikku\/core\/middleware'/
+      )
+      assert.match(
+        out.wiring,
+        /addHTTPMiddleware\('\*', \[\s*betterAuthSession\(\),\s*authBearer\(\{[\s\S]*?secretId: 'PIKKU_CONSOLE_TOKEN'[\s\S]*?\}\),\s*\]\)/
+      )
+    })
+
+    test('without scaffold.console no authBearer is emitted', () => {
+      const stateful = gen(['github'])
+      const stateless = gen(['github'], statelessDef)
+      assert.doesNotMatch(stateful.wiring, /authBearer/)
+      assert.doesNotMatch(stateless.middleware ?? '', /authBearer/)
+    })
+  })
+
   describe('user-registered global betterAuthSession → CLI steps aside', () => {
     const genSkip = (providers: string[], d: AuthDefinition = def()) =>
       serializeAuthGen(d, providers, AUTH_FILE, TYPES_FILE, {}, true)
