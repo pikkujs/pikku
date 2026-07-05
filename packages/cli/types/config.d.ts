@@ -389,6 +389,15 @@ export type PikkuCLIInput = {
   tsc?: boolean
   tscSummary?: boolean
 
+  /**
+   * After a successful codegen run, emit a structural diff of the generated
+   * `.pikku` meta (functions/wirings/workflows/emails added/removed/changed vs
+   * the state before this run) as a `PIKKU_DIFF <json>` line on stdout. Only
+   * emitted on exit 0. Off by default; enable per invocation via
+   * `pikku all --diff`. Consumed by the sandbox "what changed" build card.
+   */
+  diff?: boolean
+
   lint?: {
     servicesNotDestructured?: 'off' | 'warn' | 'error'
     wiresNotDestructured?: 'off' | 'warn' | 'error'
