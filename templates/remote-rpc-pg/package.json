@@ -14,7 +14,7 @@
     "test:http-fetch": "tsx client/test-remote-rpc.ts"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.52",
+    "@pikku/core": "^0.12.53",
     "@pikku/express": "^0.12.6",
     "@pikku/jose": "^0.12.4",
     "@pikku/kysely-postgres": "^0.12.11",
@@ -28,7 +28,7 @@
     "typescript": "^6.0.3"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.69",
+    "@pikku/cli": "^0.12.70",
     "@types/node": "^24"
   },
   "exports": {
