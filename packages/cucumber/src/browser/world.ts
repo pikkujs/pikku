@@ -112,6 +112,16 @@ export class BrowserWorld<Clients = unknown> {
 
   private async launchBrowser(): Promise<Browser> {
     if (this.browser) return this.browser
+    // Remote/Steel browser: connect over CDP instead of launching a local
+    // chromium in a CPU/RAM-capped sandbox. The remote browser reaches the app at
+    // its PUBLIC edge via real DNS, so we do NOT add the host-resolver 127.0.0.1
+    // mapping (that's only for a local browser hitting the in-container loopback
+    // edge). browser.close() on a connected browser only clears the contexts this
+    // connection created and disconnects — it never kills the shared browser.
+    if (this.config.cdpUrl) {
+      this.browser = await chromium.connectOverCDP(await resolveCdpWsUrl(this.config.cdpUrl))
+      return this.browser
+    }
     this.browser = await chromium.launch({
       headless: !this.config.headed,
       executablePath: this.config.chromiumPath,
@@ -128,4 +138,25 @@ export class BrowserWorld<Clients = unknown> {
     })
     return this.browser
   }
+}
+
+/**
+ * Resolve a dialable ws:// endpoint for a remote CDP base URL. Passing the http
+ * base straight to connectOverCDP makes Playwright fetch /json/version and trust
+ * its `webSocketDebuggerUrl` — but proxies (e.g. Steel's nginx) echo the request
+ * Host and DROP the port, yielding an undialable URL. Fetch it ourselves, then
+ * force host:port back from the base URL.
+ */
+async function resolveCdpWsUrl(cdpBaseUrl: string): Promise<string> {
+  const res = await fetch(new URL('/json/version', cdpBaseUrl))
+  if (!res.ok) throw new Error(`[e2e] remote CDP /json/version returned ${res.status}`)
+  const { webSocketDebuggerUrl } = (await res.json()) as { webSocketDebuggerUrl?: string }
+  if (!webSocketDebuggerUrl) {
+    throw new Error('[e2e] remote CDP /json/version had no webSocketDebuggerUrl')
+  }
+  const base = new URL(cdpBaseUrl)
+  const ws = new URL(webSocketDebuggerUrl)
+  ws.protocol = 'ws:'
+  ws.host = base.host
+  return ws.toString()
 }
