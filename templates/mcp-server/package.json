@@ -22,7 +22,7 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
-    "@pikku/core": "^0.12.55",
+    "@pikku/core": "^0.12.56",
     "@pikku/modelcontextprotocol": "^0.12.1"
   }
 }
