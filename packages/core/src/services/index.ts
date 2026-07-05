@@ -154,20 +154,18 @@ export type {
   EmailTemplateLocaleMeta,
   EmailTemplateAssets,
 } from './meta-service.js'
-export {
-  V8CoverageService,
-  type CoverageService,
-  type CoverageSnapshot,
-  type LineHits,
-  type ScriptCoverage,
-  type FunctionCoverage,
-  type CoverageRange,
-  type CoverageStatus,
-  type FunctionCoverageEntry,
-  type FunctionCoverageReport,
-  type CoverageFunctionMeta,
+export type {
+  CoverageService,
+  CoverageSnapshot,
+  LineHits,
+  ScriptCoverage,
+  FunctionCoverage,
+  CoverageRange,
+  CoverageStatus,
+  FunctionCoverageEntry,
+  FunctionCoverageReport,
+  CoverageFunctionMeta,
 } from './v8-coverage-service.js'
-export { IstanbulCoverageService } from './istanbul-coverage-service.js'
 export {
   StubTracker,
   createStubProxy,
