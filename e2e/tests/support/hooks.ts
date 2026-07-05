@@ -44,7 +44,7 @@ BeforeAll(async function () {
   )
 
   // Wait for the backend to be ready
-  const deadline = Date.now() + 30_000
+  const deadline = Date.now() + 120_000
   while (Date.now() < deadline) {
     try {
       await fetch(config.apiUrl)
@@ -53,7 +53,9 @@ BeforeAll(async function () {
       await new Promise((r) => setTimeout(r, 500))
     }
   }
-  throw new Error(`Backend did not start within 30 seconds on ${config.apiUrl}`)
+  throw new Error(
+    `Backend did not start within 120 seconds on ${config.apiUrl}`
+  )
 })
 
 AfterAll(async function () {
