@@ -57,6 +57,7 @@ export interface PikkuCLICoreOutputFiles {
   publicRpcFile: string
   publicAgentFile: string
   consoleFunctionsFile: string
+  scenariosFunctionsFile: string
   workflowRoutesFile: string
   eventsChannelFile: string
 
@@ -339,6 +340,7 @@ export type PikkuCLIInput = {
     pikkuDir?: string
     rpc?: PikkuScaffoldFeature
     console?: PikkuScaffoldFeature
+    scenarios?: PikkuScaffoldFeature
     agent?: PikkuScaffoldFeature
     workflow?: PikkuScaffoldFeature
     events?: PikkuScaffoldFeature

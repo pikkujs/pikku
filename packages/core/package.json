@@ -57,6 +57,7 @@
     "./dev": "./dist/dev/hot-reload.js"
   },
   "dependencies": {
+    "@jridgewell/trace-mapping": "^0.3.25",
     "@standard-schema/spec": "^1.1.0",
     "@types/json-schema": "^7.0.15",
     "cookie": "^1.1.1",

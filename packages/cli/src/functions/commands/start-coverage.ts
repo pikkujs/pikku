@@ -26,7 +26,7 @@ export async function startCoverageService(
   if (isBunRuntime()) {
     await registerBunCoverageLoader({ rootDir })
     logger.info(
-      'Istanbul coverage enabled (Bun) — snapshot via console:takeLiveCoverage, reset via console:resetLiveCoverage'
+      'Istanbul coverage enabled (Bun) — snapshot via pikkuScenarioTakeLiveCoverage, reset via pikkuScenarioResetLiveCoverage'
     )
     return new IstanbulCoverageService()
   }
@@ -34,7 +34,7 @@ export async function startCoverageService(
   try {
     await coverageService.start()
     logger.info(
-      'V8 precise coverage enabled — snapshot via console:takeLiveCoverage, reset via console:resetLiveCoverage'
+      'V8 precise coverage enabled — snapshot via pikkuScenarioTakeLiveCoverage, reset via pikkuScenarioResetLiveCoverage'
     )
     return coverageService
   } catch (e) {

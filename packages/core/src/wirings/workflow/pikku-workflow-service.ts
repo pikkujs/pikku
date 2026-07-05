@@ -2284,7 +2284,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           runId,
           stepName,
           async () => {
-            const rpcName = 'console:getStubCalls'
+            const rpcName = 'pikkuScenarioGetStubCalls'
             const calls: Array<{
               service: string
               method: string

@@ -11,6 +11,7 @@ import {
 type ScaffoldGenerator =
   | 'pikkuPublicRPC'
   | 'pikkuConsoleFunctions'
+  | 'pikkuScenarioFunctions'
   | 'pikkuPublicAgent'
   | 'pikkuEventsScaffold'
 
@@ -24,6 +25,11 @@ const scaffoldFiles = (
     files.push({
       file: config.consoleFunctionsFile,
       generator: 'pikkuConsoleFunctions',
+    })
+  if (config.scaffold?.scenarios && config.scenariosFunctionsFile)
+    files.push({
+      file: config.scenariosFunctionsFile,
+      generator: 'pikkuScenarioFunctions',
     })
   if (config.scaffold?.agent && config.publicAgentFile)
     files.push({
@@ -182,6 +188,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await Promise.all([
       workflow.do('Public RPC', 'pikkuPublicRPC', null),
       workflow.do('Console functions', 'pikkuConsoleFunctions', null),
+      workflow.do('Scenario functions', 'pikkuScenarioFunctions', null),
       workflow.do('Events scaffold', 'pikkuEventsScaffold', null),
       workflow.do('Emails', 'pikkuEmails', null),
       workflow.do(

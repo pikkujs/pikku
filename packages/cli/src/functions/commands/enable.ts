@@ -6,6 +6,7 @@ import type { PikkuScaffoldFeature } from '../../../types/config.js'
 type Feature =
   | 'rpc'
   | 'console'
+  | 'scenarios'
   | 'agent'
   | 'workflow'
   | 'events'
@@ -15,6 +16,7 @@ const FEATURE_DEFAULTS: Record<Feature, 'auth' | 'no-auth'> = {
   rpc: 'auth',
   agent: 'auth',
   console: 'auth',
+  scenarios: 'auth',
   workflow: 'auth',
   events: 'auth',
   remoteRpc: 'no-auth',
@@ -42,7 +44,11 @@ async function enableFeature(
   // The console is an admin surface — every RPC requires a session, so it can
   // never be scaffolded no-auth (the --no-auth flag is ignored for it).
   const value: PikkuScaffoldFeature =
-    feature === 'console' ? 'auth' : noAuth ? 'no-auth' : FEATURE_DEFAULTS[feature]
+    feature === 'console'
+      ? 'auth'
+      : noAuth
+        ? 'no-auth'
+        : FEATURE_DEFAULTS[feature]
   json.scaffold[feature] = value
 
   await writeFile(configPath, JSON.stringify(json, null, 2) + '\n', 'utf-8')
@@ -57,6 +63,11 @@ export const enableRpc = pikkuVoidFunc({
 export const enableConsole = pikkuVoidFunc({
   func: async ({ logger, config }, data: any) =>
     enableFeature('console', logger, config, data),
+})
+
+export const enableScenarios = pikkuVoidFunc({
+  func: async ({ logger, config }, data: any) =>
+    enableFeature('scenarios', logger, config, data),
 })
 
 export const enableAgent = pikkuVoidFunc({

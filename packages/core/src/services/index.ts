@@ -165,6 +165,15 @@ export {
 } from './v8-coverage-service.js'
 export { IstanbulCoverageService } from './istanbul-coverage-service.js'
 export {
+  mapPreciseCoverage,
+  mapLineHitsToReport,
+  type CoverageStatus,
+  type FunctionCoverageEntry,
+  type FunctionCoverageReport,
+  type CoverageFunctionMeta,
+  type ScriptCoverageInput,
+} from './precise-coverage-map.js'
+export {
   StubTracker,
   createStubProxy,
   getStubTracker,
