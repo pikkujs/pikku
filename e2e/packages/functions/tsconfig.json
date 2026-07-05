@@ -11,6 +11,7 @@
     "resolveJsonModule": true,
     "noEmit": true,
     "noImplicitAny": false,
+    "types": ["node"],
     "paths": {
       "#pikku/*": ["../../.pikku/*"]
     }
