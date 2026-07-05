@@ -1,6 +1,6 @@
 {
   "name": "@pikku/addon-console",
-  "version": "0.12.23",
+  "version": "0.12.24",
   "type": "module",
   "imports": {
     "#pikku": {
@@ -38,11 +38,11 @@
     "test:coverage": "bash run-tests.sh --coverage"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.51"
+    "@pikku/core": "^0.12.52"
   },
   "devDependencies": {
-    "@pikku/cli": "^0.12.67",
-    "@pikku/core": "^0.12.51",
+    "@pikku/cli": "^0.12.69",
+    "@pikku/core": "^0.12.52",
     "oauth2-mock-server": "^7.1.1",
     "typescript": "^6.0.3"
   },

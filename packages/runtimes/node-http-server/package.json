@@ -1,6 +1,6 @@
 {
   "name": "@pikku/node-http-server",
-  "version": "0.12.4",
+  "version": "0.12.5",
   "description": "Pikku node:http server — shared by `pikku dev` and container deployments",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
@@ -18,7 +18,7 @@
     "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.44",
+    "@pikku/core": "^0.12.52",
     "@pikku/modelcontextprotocol": "^0.12.5"
   },
   "peerDependenciesMeta": {
@@ -27,7 +27,7 @@
     }
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.44",
+    "@pikku/core": "^0.12.52",
     "@pikku/modelcontextprotocol": "^0.12.5",
     "typescript": "^6.0.3"
   },

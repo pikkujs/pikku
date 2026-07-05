@@ -1,3 +1,76 @@
+## 0.12.69
+
+### Patch Changes
+
+- 61c9ce9: Add `actor.converse(...)` — actor agents for user journeys (#850)
+
+  An actor can now hold a dynamic, LLM-driven conversation with a target Pikku AI
+  agent in its own persona:
+
+  ```ts
+  const verdict = await actors.pm.converse({
+    agent: 'todoBot',
+    task: 'Get a todo created for the launch',
+    evaluate: 'A todo about the launch now exists',
+  })
+  // verdict: { passed, reasoning, transcript }
+  // then assert deterministically as the same actor:
+  const todos = await actors.pm.invoke('listTodos', {})
+  ```
+
+  The actor drives the target over the real transport (the agent's own
+  `agentRun` / `agentApprove` HTTP routes, signed in as the actor), plays the
+  persona from its `pikku.config.json` config, answers the agent's tool-approval
+  requests in-persona (`approvals: 'in-persona' | 'always' | 'never'`), and
+  returns its verdict on whether the task was met. Deterministic checks stay the
+  caller's job — they already hold the actor.
+
+  The conversation engine is transport-agnostic (persona LLM + injected target
+  driver); the persona's own turns run in-process via the configured
+  `aiAgentRunner` (`model` from the call or the actors-service default).
+
+  `agent` is typed against the generated agent-name union (`keyof AgentMap`), so
+  it's author-time checked and autocompleted in a typed project.
+
+- d4a2503: Serve the console same-origin at /console (#861). Both dev servers gain
+  `staticMounts` (prefix → directory static serving with SPA fallback and path
+  traversal protection); `pikku serve` / `pikku dev` mount the bundled console
+  app at `/console` on the API port whenever it is bundled, so auth cookies are
+  first-party and no `?server=` param is needed. The console is built with
+  `base: '/console/'` (its router already derives the basename from BASE_URL).
+  The separate `--console <port>` static server is removed; `pikku console`
+  serves the bundle under /console and redirects the root there.
+- bbbb196: Dev quick login for the console when running locally (#857). The better-auth
+  catch-all handler now serves `<basePath>/dev/quick-login` when
+  `PIKKU_DEV_QUICK_LOGIN` is set AND the request host is a loopback address:
+  GET reports availability, POST idempotently seeds an `admin@pikku.dev` admin
+  user and returns a signed-in session. `pikku serve` / `pikku dev` enable the
+  flag by default (set `PIKKU_DEV_QUICK_LOGIN=false` to opt out), and the
+  console login screen shows a one-click "Quick login as admin@pikku.dev"
+  button whenever a local server advertises the endpoint.
+- f14a7df: Remove the standalone `pikku console` command — `pikku dev` already serves the console at `/console`, and `pikku serve` now does too when passed the explicit `--console` flag.
+- 472a349: Rename the userflow concept to scenario (#862). `pikkuUserFlow` becomes `pikkuScenario`, `pikku userflow run/list` becomes `pikku scenario run/list`, the workflow meta flag `userFlow` becomes `scenario`, actor types are now `ScenarioActor`/`ScenarioActors`/`ScenarioActorConfig` (`createHttpScenarioActors`), pikku.config.json's `userFlows` key becomes `scenarios`, the generated actors file is `pikku-scenario-actors.gen.ts` (`createScenarioActors`), the actor sign-in secret env var is `SCENARIO_ACTOR_SECRET`, and the console's User Flows view is now Scenarios.
+- c2917eb: Fix: the Pikku CLI no longer force-exits `0`, so a command's `process.exitCode` is honoured (#850)
+
+  `bin/pikku.ts` called `process.exit(0)` unconditionally once a command finished,
+  overriding any exit code the command had set. `pikku userflow run` sets
+  `process.exitCode = 1` when a flow fails, but the process still exited `0` — so
+  CI could not gate on a failed user flow. The CLI now exits with
+  `process.exitCode ?? 0`, making failures observable to CI for every command
+  (throwing commands already exited non-zero via `CLIError`).
+
+- Updated dependencies [61c9ce9]
+- Updated dependencies [f1f39f8]
+- Updated dependencies [c45e98d]
+- Updated dependencies [d4a2503]
+- Updated dependencies [bbbb196]
+- Updated dependencies [472a349]
+  - @pikku/core@0.12.52
+  - @pikku/inspector@0.12.36
+  - @pikku/node-http-server@0.12.5
+  - @pikku/bun-server@0.12.4
+  - @pikku/better-auth@0.12.15
+
 ## 0.12.68
 
 ### Patch Changes
