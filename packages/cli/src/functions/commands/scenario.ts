@@ -157,14 +157,9 @@ export const scenarioRun = pikkuSessionlessFunc<
             `Coverage disabled — '${environment}' is not collecting (start the server with --coverage).`
           )
         }
-        // Stubs reset alongside coverage so expectService assertions are
-        // attributable to this flow. Absent/disabled just means the server
-        // has no test stubs — never disables coverage.
         try {
           await coverageActor?.invoke('console:resetStubs', null)
-        } catch {
-          // servers without test stubs simply skip the reset
-        }
+        } catch {}
       }
       try {
         const { runId } = await workflowService.startWorkflow(

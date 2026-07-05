@@ -5,17 +5,9 @@ import {
 import type { EmailService } from '@pikku/core/services'
 import type { Kysely } from 'kysely'
 
-// Better Auth owns its own user table (outside KyselyPikkuDB) — type just the
-// columns this factory reads, mirroring the impersonation loadUser in
-// middleware.ts.
+// Better Auth's user table lives outside KyselyPikkuDB
 type BetterAuthTables = { user: { id: string; email: string } }
 
-/**
- * Declared test stubs — only activated under `pikku serve --test` (or
- * `--coverage`, which implies it). The e2e suite has no SMTP relay, so the
- * email service is a recording stub scenarios can assert against via
- * workflow.expectService().
- */
 export const createTestServices = pikkuTestServices(
   async (_services, { stub }) => ({
     emailService: stub<EmailService>('emailService', {
@@ -24,11 +16,6 @@ export const createTestServices = pikkuTestServices(
   })
 )
 
-/**
- * Per-invocation fault injection: the support actor's email relay always
- * declines, so scenarios can walk error branches (workflow.expectError)
- * without polluting the happy path for other actors.
- */
 export const createTestWireServices = pikkuTestWireServices(
   async (services, wire, { stub }) => {
     const session = wire.session

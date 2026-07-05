@@ -1,12 +1,5 @@
 import { pikkuScenario } from '#pikku/workflow/pikku-workflow-types.gen.js'
 
-/**
- * Verifies declared test stubs end to end: the shopper's notification lands
- * on the recording email stub (asserted via workflow.expectService →
- * console:getStubCalls), while the support actor's relay is fault-injected
- * through pikkuTestWireServices so the error branch is reachable
- * (workflow.expectError). Requires the server to run with --test/--coverage.
- */
 export const notificationScenario = pikkuScenario<null, { notified: boolean }>({
   title: 'Notification stubs (scenario)',
   tags: ['scenario', 'stubs'],

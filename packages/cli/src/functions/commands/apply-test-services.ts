@@ -12,15 +12,8 @@ interface TestFactoryMetas {
   testWireServicesFactory?: FactoryMeta
 }
 
-/**
- * Activates declared test stubs (pikkuTestServices / pikkuTestWireServices)
- * for a dev-mode server. Returns the services to merge over the resolved
- * singletons: the stub tracker plus whatever the project's test services
- * factory returns. Importing the test wire services module is enough to
- * register its factory — the generated wrapper self-registers in pikkuState,
- * and the function runner applies it per invocation once
- * `testServicesEnabled` is set.
- */
+// Importing the test wire services module is enough to register its factory —
+// the generated wrapper self-registers in pikkuState.
 export const applyTestServices = async (
   logger: {
     info: (msg: string) => void

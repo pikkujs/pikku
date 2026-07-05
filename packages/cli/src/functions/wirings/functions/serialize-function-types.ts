@@ -676,11 +676,7 @@ export const pikkuWireServices = (
 
 /**
  * Creates a Pikku test services factory.
- * Declares test stubs for singleton services — only activated when the server
- * boots in test mode (\`pikku dev --test\` or \`--coverage\`), where the returned
- * services are merged over the real singletons. Never wired into production
- * builds. Use \`stub\` to replace a service (calls are recorded) and \`spy\` to
- * record calls while passing through to the real implementation.
+ * Declares test stubs for singleton services, only activated in test mode.
  *
  * @example
  * \`\`\`typescript
@@ -700,9 +696,7 @@ export const pikkuTestServices = (
 
 /**
  * Creates a Pikku test wire services factory.
- * Mirrors \`createWireServices\` but for test stubs that vary per invocation —
- * e.g. make payments fail only for a specific actor session. Only applied when
- * the server boots in test mode (\`pikku dev --test\` or \`--coverage\`).
+ * Test stubs that vary per invocation, only applied in test mode.
  *
  * @example
  * \`\`\`typescript
