@@ -921,14 +921,14 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   ): JobOptions {
     const retries = stepOptions?.retries ?? DEFAULT_STEP_RETRIES
     const retryDelay = stepOptions?.retryDelay
+    // A concrete retryDelay (15000, '15s') is a fixed backoff; only the literal
+    // 'exponential' — or no delay at all — selects exponential.
     const backoff =
-      typeof retryDelay === 'number'
-        ? { type: 'fixed', delay: retryDelay }
-        : retryDelay === 'exponential'
+      retryDelay !== undefined && retryDelay !== 'exponential'
+        ? { type: 'fixed', delay: getDurationInMilliseconds(retryDelay) }
+        : retries > 0 || retryDelay === 'exponential'
           ? 'exponential'
-          : retries > 0
-            ? 'exponential'
-            : undefined
+          : undefined
     return { attempts: retries + 1, ...(backoff ? { backoff } : {}) }
   }
 

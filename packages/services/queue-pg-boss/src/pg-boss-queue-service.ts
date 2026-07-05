@@ -25,15 +25,20 @@ export const mapPikkuJobToPgBoss = (
   }
 
   if (options?.backoff !== undefined) {
-    if (typeof options.backoff === 'string') {
-      // If backoff is a string, assume it's 'exponential' or 'fixed'
-      pgBossOptions.retryBackoff = options.backoff === 'exponential'
-    } else if (typeof options.backoff === 'object') {
-      pgBossOptions.retryBackoff = options.backoff.type === 'exponential'
-      if (options.backoff.delay !== undefined) {
-        // pg-boss uses seconds, we use milliseconds
-        pgBossOptions.retryDelay = Math.floor(options.backoff.delay / 1000)
-      }
+    const type =
+      typeof options.backoff === 'string' ? options.backoff : options.backoff.type
+    const delay =
+      typeof options.backoff === 'object' ? options.backoff.delay : undefined
+    pgBossOptions.retryBackoff = type === 'exponential'
+    if (delay !== undefined) {
+      // pg-boss uses seconds, we use milliseconds — never round a sub-second
+      // delay down to 0, which pg-boss treats as retry-immediately
+      pgBossOptions.retryDelay = Math.max(1, Math.round(delay / 1000))
+    } else if (type === 'exponential') {
+      // pg-boss computes exponential backoff as retry_delay * 2^n, and the
+      // queue-level retry_delay defaults to 0 — without an explicit base every
+      // "exponential" retry fires immediately. 1s base → ~1s, 2s, 4s, 8s…
+      pgBossOptions.retryDelay = 1
     }
   }
 

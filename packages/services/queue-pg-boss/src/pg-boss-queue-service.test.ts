@@ -16,12 +16,20 @@ describe('mapPikkuJobToPgBoss — retry mapping', () => {
     assert.equal(mapPikkuJobToPgBoss({ attempts: 1 }).retryLimit, 0)
   })
 
-  test("backoff 'exponential' → retryBackoff true", () => {
-    assert.equal(
-      mapPikkuJobToPgBoss({ attempts: 6, backoff: 'exponential' })
-        .retryBackoff,
-      true
-    )
+  test("backoff 'exponential' → retryBackoff true + 1s base delay", () => {
+    const opts = mapPikkuJobToPgBoss({ attempts: 6, backoff: 'exponential' })
+    assert.equal(opts.retryBackoff, true)
+    // pg-boss multiplies retry_delay by 2^n and the queue default is 0 —
+    // without a base, "exponential" retries all fire immediately.
+    assert.equal(opts.retryDelay, 1)
+  })
+
+  test('sub-second fixed delay rounds up to 1s, not down to immediate', () => {
+    const opts = mapPikkuJobToPgBoss({
+      attempts: 4,
+      backoff: { type: 'fixed', delay: 300 },
+    })
+    assert.equal(opts.retryDelay, 1)
   })
 
   test('fixed backoff → retryBackoff false + retryDelay in seconds', () => {

@@ -48,6 +48,13 @@ describe('resolveStepJobOptions — workflow owns retry policy', () => {
     })
   })
 
+  test("duration-string retryDelay ('15s') → fixed backoff in ms", () => {
+    assert.deepEqual(ws.resolve({ retries: 3, retryDelay: '15s' }), {
+      attempts: 4,
+      backoff: { type: 'fixed', delay: 15000 },
+    })
+  })
+
   test("retryDelay: 'exponential' → exponential backoff", () => {
     assert.deepEqual(ws.resolve({ retries: 2, retryDelay: 'exponential' }), {
       attempts: 3,
