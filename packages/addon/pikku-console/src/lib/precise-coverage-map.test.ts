@@ -118,4 +118,53 @@ describe('mapPreciseCoverage', () => {
     assert.equal(imported?.status, 'covered')
     assert.equal(imported?.ratio, 1)
   })
+
+  test('relative sourcemap sources resolve against sourceRoot before matching meta', async () => {
+    // Single-line generated output (esbuild-style) with an inline map whose
+    // sources entry is relative; sourceRoot supplies the absolute prefix.
+    const generated = 'function coveredFn(n){return n*2}coveredFn(1);'
+    const map = {
+      version: 3,
+      sourceRoot: 'file:///proj/src/',
+      sources: ['things.function.ts'],
+      names: [],
+      // every generated column maps to line 2 of the original source
+      mappings: 'AACA,kBAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC',
+    }
+    const inlined =
+      generated +
+      '\n//# sourceMappingURL=data:application/json;base64,' +
+      Buffer.from(JSON.stringify(map)).toString('base64')
+    const report = await mapPreciseCoverage(
+      [
+        {
+          scriptId: '9',
+          url: 'file:///proj/dist/things.function.js',
+          functions: [
+            {
+              functionName: 'coveredFn',
+              isBlockCoverage: true,
+              ranges: [
+                { startOffset: 0, endOffset: generated.length, count: 1 },
+              ],
+            },
+          ],
+        },
+      ],
+      async () => inlined,
+      {
+        coveredFn: {
+          name: 'coveredFn',
+          sourceFile: '/proj/src/things.function.ts',
+          exportedName: 'coveredFn',
+          expose: true,
+          description: null,
+          bodyStart: 2,
+          bodyEnd: 2,
+        },
+      } as any
+    )
+    const covered = report.functions.find((f) => f.name === 'coveredFn')
+    assert.equal(covered?.status, 'covered')
+  })
 })

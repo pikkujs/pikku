@@ -47,4 +47,50 @@ describe('function body spans in meta', () => {
       await rm(rootDir, { recursive: true, force: true })
     }
   })
+
+  test('meta records bodySourceFile when the handler is imported from another file', async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), 'pikku-span-'))
+    const handlerFile = join(rootDir, 'handlers.ts')
+    const wiringFile = join(rootDir, 'my.function.ts')
+    await writeFile(
+      handlerFile,
+      [
+        'export const importedHandler = async (', // line 1
+        '  { logger }: any,', // 2
+        '  data: { n: number }', // 3
+        ') => {', // 4
+        '  const doubled = data.n * 2', // 5
+        '  return { doubled }', // 6
+        '}', // 7
+      ].join('\n')
+    )
+    await writeFile(
+      wiringFile,
+      [
+        "import { pikkuSessionlessFunc } from '@pikku/core'",
+        "import { importedHandler } from './handlers.js'",
+        '',
+        'export const importedProbe = pikkuSessionlessFunc({',
+        '  func: importedHandler,',
+        '})',
+      ].join('\n')
+    )
+    try {
+      const state = await inspect(logger, [wiringFile, handlerFile], {
+        rootDir,
+      })
+      const meta = (state.functions.meta as any).importedProbe
+      assert.ok(meta, 'importedProbe should be inspected')
+      assert.equal(meta.sourceFile, wiringFile)
+      assert.equal(
+        meta.bodySourceFile,
+        handlerFile,
+        `bodySourceFile should be the handler file, got ${meta.bodySourceFile}`
+      )
+      assert.equal(meta.bodyStart, 5)
+      assert.equal(meta.bodyEnd, 6)
+    } finally {
+      await rm(rootDir, { recursive: true, force: true })
+    }
+  })
 })
