@@ -37,20 +37,13 @@ export interface WorkflowExpectEventuallyOptions extends WorkflowStepOptions {
   interval?: string | number
 }
 
-/**
- * Options for workflow.expectError() — an error-path step used by scenarios
- * to assert an RPC rejects (typically after fault injection via
- * pikkuTestWireServices).
- */
+/** Options for workflow.expectError() */
 export interface WorkflowExpectErrorOptions extends WorkflowStepOptions {
   /** Assert the error message matches (string = substring match). */
   matches?: string | RegExp
 }
 
-/**
- * Options for workflow.expectService() — asserts a stubbed/spied service
- * method was called on the target server (via the console getStubCalls RPC).
- */
+/** Options for workflow.expectService() */
 export interface WorkflowExpectServiceOptions extends WorkflowStepOptions {
   /** Assert a recorded call's first argument deep-equals this value. */
   calledWith?: unknown
@@ -402,10 +395,7 @@ export interface PikkuWorkflowWire {
     options?: WorkflowExpectEventuallyOptions
   ) => Promise<TOutput>
 
-  /**
-   * Error-path step (scenarios): invoke `rpcName` and succeed only when it
-   * throws — optionally matching the error message. Returns the message.
-   */
+  /** Error-path step (scenarios): succeeds only when the RPC throws; returns the message */
   expectError: <TInput = any>(
     stepName: string,
     rpcName: string,
@@ -413,11 +403,7 @@ export interface PikkuWorkflowWire {
     options?: WorkflowExpectErrorOptions
   ) => Promise<string>
 
-  /**
-   * Stub-assertion step (scenarios): fetch recorded stub calls from the
-   * target server (console getStubCalls RPC, requires `pikku dev --test` or
-   * `--coverage`) and assert `service.method` was called.
-   */
+  /** Stub-assertion step (scenarios): asserts `service.method` was called on the target server */
   expectService: (
     stepName: string,
     serviceMethod: string,

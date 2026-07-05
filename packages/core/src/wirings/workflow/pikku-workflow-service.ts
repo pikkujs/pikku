@@ -2225,8 +2225,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         )
       },
 
-      // Error-path step: succeeds only when the RPC throws (optionally
-      // matching the message). One recorded step, like expectEventually.
       expectError: async (
         stepName: string,
         rpcName: string,
@@ -2270,8 +2268,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         )
       },
 
-      // Stub-assertion step: pull recorded stub calls from the target server
-      // and assert `service.method` was called (optionally with args/times).
       expectService: async (
         stepName: string,
         serviceMethod: string,

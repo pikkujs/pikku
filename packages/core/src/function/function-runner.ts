@@ -430,9 +430,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
         wireServices && Object.keys(wireServices).length > 0
           ? { ...resolvedSingletonServices, ...wireServices }
           : resolvedSingletonServices
-      // Test-mode per-invocation stubs (pikkuTestWireServices). Applied only
-      // to the project's own functions: the factory is typed against the
-      // app's services, which addon invocations don't carry.
+      // Project functions only — the factory is typed against the app's services
       if (
         packageName === null &&
         pikkuState(null, 'package', 'testServicesEnabled')

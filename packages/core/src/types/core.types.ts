@@ -589,12 +589,7 @@ export type CreateWireServices<
   wire: PikkuRawWire
 ) => Promise<WireServices<Services, SingletonServices>>
 
-/**
- * Defines a function type for creating test stub services
- * (`pikkuTestServices`). Only invoked when the server boots in test mode
- * (`pikku dev --test` / `--coverage`); the returned services are merged over
- * the real singletons.
- */
+/** Test stub services factory (`pikkuTestServices`) — test-mode boots only, merged over the real singletons */
 export type CreateTestServices<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
 > = (
@@ -602,11 +597,7 @@ export type CreateTestServices<
   helpers: PikkuTestStubHelpers
 ) => Promise<Partial<SingletonServices>>
 
-/**
- * Defines a function type for creating per-invocation test stub services
- * (`pikkuTestWireServices`). Mirrors `CreateWireServices` but can vary stubs
- * per wire (e.g. per actor session) — the fault-injection hook for scenarios.
- */
+/** Per-invocation test stub factory (`pikkuTestWireServices`) — can vary stubs per wire, e.g. per actor session */
 export type CreateTestWireServices<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
   Services extends CoreServices<SingletonServices> =
