@@ -3,62 +3,14 @@
 // would collapse every statement onto line 1.
 import { fileURLToPath } from 'node:url'
 import { TraceMap, originalPositionFor } from '@jridgewell/trace-mapping'
+import type {
+  CoverageFunctionMeta,
+  FunctionCoverageEntry,
+  FunctionCoverageReport,
+  ScriptCoverage as ScriptCoverageInput,
+} from '@pikku/core/services'
 
-export type CoverageStatus = 'covered' | 'partial' | 'uncovered' | 'unknown'
-
-export interface FunctionCoverageEntry {
-  name: string
-  sourceFile: string
-  exposed: boolean
-  description: string | null
-  coveredLines: number
-  totalLines: number
-  missedLines: number[]
-  ratio: number
-  status: CoverageStatus
-}
-
-export interface FunctionCoverageReport {
-  generatedAt: string
-  summary: {
-    total: number
-    covered: number
-    partial: number
-    uncovered: number
-    unknown: number
-    overallRatio: number
-  }
-  functions: FunctionCoverageEntry[]
-}
-
-interface CoverageRange {
-  startOffset: number
-  endOffset: number
-  count: number
-}
-
-interface FunctionCoverage {
-  functionName: string
-  isBlockCoverage: boolean
-  ranges: CoverageRange[]
-}
-
-export interface ScriptCoverageInput {
-  scriptId: string
-  url: string
-  functions: FunctionCoverage[]
-}
-
-export interface CoverageFunctionMeta {
-  name: string
-  sourceFile: string
-  bodySourceFile?: string
-  exportedName?: string
-  expose?: boolean
-  description?: string | null
-  bodyStart?: number
-  bodyEnd?: number
-}
+export type { ScriptCoverageInput }
 
 const INLINE_SOURCE_MAP =
   /\/\/# sourceMappingURL=data:application\/json[^,]*;base64,([A-Za-z0-9+/=]+)/

@@ -16,13 +16,15 @@ describe('serializeScenarioFunctions', () => {
     assert.equal(source.match(/expose: true/g)?.length, 4)
   })
 
-  test('imports runtime helpers from @pikku/core, never the console addon', () => {
+  test('imports runtime helpers from @pikku/core, never the console addon or the CLI', () => {
     const source = serializeScenarioFunctions('../pikku-types.gen.js', true)
     assert.match(source, /from '@pikku\/core\/services'/)
-    assert.match(source, /mapPreciseCoverage/)
+    assert.match(source, /coverageService\.takeReport/)
     assert.match(source, /getStubTracker/)
     assert.doesNotMatch(source, /console:/)
     assert.doesNotMatch(source, /wireAddon/)
+    assert.doesNotMatch(source, /@pikku\/cli/)
+    assert.doesNotMatch(source, /trace-mapping/)
   })
 
   test('auth flag follows the scaffold feature value', () => {

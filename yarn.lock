@@ -5581,7 +5581,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/addon-console@workspace:packages/addon/pikku-console"
   dependencies:
-    "@jridgewell/trace-mapping": "npm:^0.3.25"
     "@pikku/cli": "npm:^0.12.70"
     "@pikku/core": "npm:^0.12.53"
     json-schema: "npm:^0.4.0"
@@ -5628,6 +5627,7 @@ __metadata:
   dependencies:
     "@pikku/cli": "npm:*"
     "@pikku/core": "npm:*"
+    "@types/node": "npm:^22"
     typescript: "npm:^6.0.3"
     zod: "npm:^4"
   peerDependencies:
@@ -5642,6 +5642,7 @@ __metadata:
   dependencies:
     "@pikku/cli": "npm:*"
     "@pikku/core": "npm:*"
+    "@types/node": "npm:^22"
     typescript: "npm:^6.0.3"
     zod: "npm:^4"
   peerDependencies:
@@ -5803,6 +5804,7 @@ __metadata:
   resolution: "@pikku/cli@workspace:packages/cli"
   dependencies:
     "@electric-sql/pglite": "npm:^0.5.1"
+    "@jridgewell/trace-mapping": "npm:^0.3.25"
     "@openapi-contrib/json-schema-to-openapi-schema": "npm:^4.3.1"
     "@pikku/better-auth": "npm:^0.12.15"
     "@pikku/bun-server": "npm:^0.12.4"
@@ -6001,6 +6003,7 @@ __metadata:
   dependencies:
     "@pikku/better-auth": "workspace:*"
     "@pikku/core": "npm:*"
+    "@types/node": "npm:^22"
     better-auth: "npm:^1.6.19"
     typescript: "npm:^6.0.3"
     zod: "npm:*"
