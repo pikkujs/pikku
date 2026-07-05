@@ -26,6 +26,14 @@ export interface BrowserConfig {
   locale?: string
   /** Explicit chromium binary (e.g. the sandbox-image system chromium). */
   chromiumPath?: string
+  /**
+   * Remote CDP endpoint (e.g. a Steel browser). When set, connect over CDP to
+   * this shared/remote browser instead of launching a local chromium — so a
+   * CPU/RAM-capped sandbox never runs a browser. The remote browser reaches the
+   * app at its PUBLIC edge, so `appUrl` must be publicly resolvable (no
+   * hostnameOnly loopback mapping is applied on this path).
+   */
+  cdpUrl?: string
   /** Bare hostname mapped to 127.0.0.1 via a chromium host-resolver rule. */
   hostnameOnly?: string
   /** Accept self-signed edge certs (in-container Caddy CA). */
@@ -70,6 +78,7 @@ export function browserConfigFromEnv(
     slowMo: overrides.slowMo ?? (env.HEADED ? 120 : 0),
     locale: overrides.locale ?? env.E2E_LOCALE,
     chromiumPath: overrides.chromiumPath ?? (env.PLAYWRIGHT_CHROMIUM_PATH || undefined),
+    cdpUrl: overrides.cdpUrl ?? (env.XBROWSER_CDP_URL || undefined),
     hostnameOnly: overrides.hostnameOnly ?? (host ? host.split(':')[0] : undefined),
     ignoreHTTPSErrors: overrides.ignoreHTTPSErrors ?? true,
     defaultPersona: overrides.defaultPersona ?? defaultPersona,
