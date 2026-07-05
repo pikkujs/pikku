@@ -1,10 +1,10 @@
-import {
-  V8CoverageService,
-  IstanbulCoverageService,
-  type CoverageService,
-  type CoverageFunctionMeta,
-  type FunctionCoverageReport,
+import type {
+  CoverageService,
+  CoverageFunctionMeta,
+  FunctionCoverageReport,
 } from '@pikku/core/services'
+import { V8CoverageService } from '@pikku/core/services/v8-coverage'
+import { IstanbulCoverageService } from '@pikku/core/services/istanbul-coverage'
 import { registerBunCoverageLoader } from './bun-coverage-loader.js'
 import {
   mapPreciseCoverage,

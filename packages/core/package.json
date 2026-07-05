@@ -47,6 +47,8 @@
     "./errors": "./dist/errors/index.js",
     "./services": "./dist/services/index.js",
     "./services/local-meta": "./dist/services/meta-service.js",
+    "./services/v8-coverage": "./dist/services/v8-coverage-service.js",
+    "./services/istanbul-coverage": "./dist/services/istanbul-coverage-service.js",
     "./services/local-content": "./dist/services/local-content.js",
     "./services/temporary-file-service": "./dist/services/temporary-file-service.js",
     "./services/gopass-secrets": "./dist/services/gopass-secrets.js",
