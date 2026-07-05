@@ -416,6 +416,124 @@ describe('authBearer middleware', () => {
     assert.equal(SessionService.get(), undefined)
   })
 
+  test('should resolve the expected token from the secrets service in secretId mode', async () => {
+    const mockUserSession: CoreUserSession = {
+      userId: 'console-token',
+      role: 'admin',
+    }
+    const SessionService = new PikkuSessionService<CoreUserSession>()
+    const jwtService = {
+      encode: async () => 'token',
+      decode: async () => {
+        assert.fail('JWT decode should not be called in secretId mode')
+        return null
+      },
+    }
+    const secrets = {
+      getSecret: async (secretId: string) => {
+        assert.equal(secretId, 'PIKKU_CONSOLE_TOKEN')
+        return 'secret-token-value'
+      },
+    }
+
+    const middleware = authBearer({
+      token: {
+        secretId: 'PIKKU_CONSOLE_TOKEN',
+        userSession: mockUserSession,
+      },
+    })
+    let nextCalled = false
+
+    await middleware(
+      { jwt: jwtService, secrets } as any,
+      {
+        ...createMiddlewareSessionWireProps(SessionService),
+        http: {
+          request: createMockHTTPRequest({
+            authorization: 'Bearer secret-token-value',
+          }),
+          response: createMockHTTPResponse(),
+        },
+      } as any,
+      async () => {
+        nextCalled = true
+      }
+    )
+
+    assert.equal(nextCalled, true)
+    assert.deepEqual(SessionService.get(), mockUserSession)
+  })
+
+  test('should continue without session when the secret is not configured', async () => {
+    const SessionService = new PikkuSessionService<CoreUserSession>()
+    const secrets = {
+      getSecret: async () => {
+        throw new Error('secret not found')
+      },
+    }
+
+    const middleware = authBearer({
+      token: {
+        secretId: 'PIKKU_CONSOLE_TOKEN',
+        userSession: { userId: 'console-token' },
+      },
+    })
+    let nextCalled = false
+
+    await middleware(
+      { jwt: undefined, secrets } as any,
+      {
+        ...createMiddlewareSessionWireProps(SessionService),
+        http: {
+          request: createMockHTTPRequest({
+            authorization: 'Bearer anything',
+          }),
+          response: createMockHTTPResponse(),
+        },
+      } as any,
+      async () => {
+        nextCalled = true
+      }
+    )
+
+    assert.equal(nextCalled, true)
+    assert.equal(SessionService.get(), undefined)
+  })
+
+  test('should not set session when secret-resolved token does not match', async () => {
+    const SessionService = new PikkuSessionService<CoreUserSession>()
+    const secrets = {
+      getSecret: async () => 'expected-token',
+    }
+
+    const middleware = authBearer({
+      token: {
+        secretId: 'PIKKU_CONSOLE_TOKEN',
+        userSession: { userId: 'console-token' },
+      },
+    })
+    let nextCalled = false
+
+    await middleware(
+      { jwt: undefined, secrets } as any,
+      {
+        ...createMiddlewareSessionWireProps(SessionService),
+        http: {
+          request: createMockHTTPRequest({
+            authorization: 'Bearer wrong-token',
+          }),
+          response: createMockHTTPResponse(),
+        },
+      } as any,
+      async () => {
+        nextCalled = true
+      }
+    )
+
+    assert.equal(nextCalled, true)
+    assert.equal(SessionService.get(), undefined)
+  })
+
   test('should work in static token mode even when jwtService is not available', async () => {
     const mockUserSession: CoreUserSession = { userId: 'static-user' }
     const SessionService = new PikkuSessionService<CoreUserSession>()
