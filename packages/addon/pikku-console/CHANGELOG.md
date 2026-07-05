@@ -1,3 +1,34 @@
+## 0.12.26
+
+### Patch Changes
+
+- cd0cff1: Remove the `pikku tests` harness in favour of scenarios (`pikku scenario run` + `pikku dev --coverage`).
+  - `@pikku/cli`: `pikku tests init` / `pikku tests coverage` are gone, along with the workspace-validate hints that suggested scaffolding the ftest harness.
+  - `@pikku/cucumber`: refactored to e2e-only — keeps `Actor`, the browser world, `createDbUtils`, `PersonaData`, and the `StubTracker` re-export; the in-process function world (`createFunctionWorld`, `registerHooks`, `registerCommonSteps`, stub wires) is removed.
+  - `@pikku/console`: the Tests page is removed; Scenarios moves to `/scenarios`.
+  - `@pikku/addon-console`: `runFunctionTests` / `streamFunctionTests` / `getFunctionCoverage` RPCs are removed — live coverage via `takeLiveCoverage` / `resetLiveCoverage` (from `pikku dev --coverage`) replaces the file-based report.
+
+- ded4f90: `pikku scenario --coverage` no longer requires the console addon
+
+  The scenario instrumentation RPCs (take/reset live coverage, reset stubs, get
+  stub calls) previously shipped inside the console addon, so any project
+  without the addon silently lost scenario coverage and stub assertions — and
+  core's `expectService` hardcoded a `console:` RPC, assuming an addon was
+  installed.
+
+  A new `scaffold.scenarios` feature (`pikku enable scenarios`, or
+  `"scaffold": { "scenarios": "auth" }` in pikku.config.json) generates the
+  four functions into the project scaffold as `pikkuScenario*` exposed RPCs.
+  The scenario runner and `expectService` now invoke those names and the
+  addon copies were removed. The source-map-aware coverage mapping (and its
+  `@jridgewell/trace-mapping` dependency) moved from the addon into the CLI:
+  `@pikku/core` gains only the report types plus an optional
+  `CoverageService.takeReport`, which the CLI-booted coverage service
+  implements and the scaffolded function calls.
+
+- Updated dependencies [ded4f90]
+  - @pikku/core@0.12.54
+
 ## 0.12.25
 
 ### Patch Changes
