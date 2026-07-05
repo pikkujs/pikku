@@ -168,11 +168,8 @@ export const pikkuWorkflow = pikkuSessionlessFunc<
         config.scenarioActorsFile,
         serializeScenarioActors(scenarioActors, agentMapImportPath)
       )
-      // JSON twin for the runtime meta service (console personas view). It must
-      // live at <outDir>/workflow/scenario-actors.gen.json — the fixed path
-      // getScenarioActorsMeta() reads — regardless of where scenarioActorsFile
-      // is configured, and NOT inside workflow/meta, since getWorkflowMeta()
-      // treats every workflow/meta/*.gen.json as a workflow.
+      // Fixed path getScenarioActorsMeta() reads; kept out of workflow/meta,
+      // which getWorkflowMeta() globs as workflows.
       await writeFileInDir(
         logger,
         join(config.outDir, 'workflow', 'scenario-actors.gen.json'),
