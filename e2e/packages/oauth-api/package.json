@@ -33,6 +33,7 @@
   "devDependencies": {
     "@pikku/cli": "*",
     "@pikku/core": "*",
+    "@types/node": "^22",
     "typescript": "^6.0.3",
     "zod": "^4"
   },

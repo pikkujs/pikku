@@ -78,7 +78,7 @@ async function collectSSE(
             resolve()
           }
         },
-        (err) => {
+        (err: unknown) => {
           clearTimeout(timer)
           reject(err)
         }
@@ -226,7 +226,7 @@ test('subscribeToSSE parses events spanning multiple SSE chunks', async () => {
       const timer = setTimeout(() => reject(new Error('timeout')), 5_000)
       client.rpc.subscribeToSSE<TestStreamEvent>(
         '/workflow-run/w1/stream',
-        (event) => {
+        (event: TestStreamEvent) => {
           received.push(event)
           if (event.type === 'done') {
             clearTimeout(timer)
