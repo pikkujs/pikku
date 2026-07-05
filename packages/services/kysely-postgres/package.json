@@ -1,6 +1,6 @@
 {
   "name": "@pikku/kysely-postgres",
-  "version": "0.12.11",
+  "version": "0.12.12",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/src/index.js",
@@ -19,10 +19,10 @@
     "postgres": "^3.4.8"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.45"
+    "@pikku/core": "^0.12.54"
   },
   "devDependencies": {
-    "@pikku/core": "^0.12.45",
+    "@pikku/core": "^0.12.54",
     "typescript": "^6.0.3"
   },
   "exports": {

@@ -16,8 +16,8 @@
   },
   "dependencies": {
     "@pikku/aws-services": "^0.12.6",
-    "@pikku/core": "^0.12.53",
-    "@pikku/kysely-postgres": "^0.12.11",
+    "@pikku/core": "^0.12.54",
+    "@pikku/kysely-postgres": "^0.12.12",
     "@pikku/lambda": "^0.12.4",
     "kysely": "^0.29.0",
     "kysely-postgres-js": "^3.0.0",
