@@ -167,7 +167,9 @@ export { IstanbulCoverageService } from './istanbul-coverage-service.js'
 export {
   StubTracker,
   createStubProxy,
-  createStubHelpers,
+  getStubTracker,
+  isTestRun,
+  stub,
+  spy,
   type StubCall,
-  type PikkuTestStubHelpers,
 } from './stub-tracker.js'

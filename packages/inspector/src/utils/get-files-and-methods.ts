@@ -19,8 +19,6 @@ export type FilesAndMethods = {
   pikkuConfigFactory: Meta
   singletonServicesFactory: Meta
   wireServicesFactory: Meta
-  testServicesFactory: Meta
-  testWireServicesFactory: Meta
   serverLifecycleFactory: Meta
 }
 
@@ -93,8 +91,6 @@ export const getFilesAndMethods = (
     userSessionTypeImportMap,
     configTypeImportMap,
     wireServicesFactories,
-    testServicesFactories,
-    testWireServicesFactories,
     singletonServicesFactories,
     configFactories,
     serverLifecycleFactories,
@@ -150,14 +146,6 @@ export const getFilesAndMethods = (
       wireServicesFactories,
       wireServicesFactoryType,
       errors
-    ),
-    testServicesFactory: getMetaTypes(
-      'CreateTestServices',
-      testServicesFactories ?? new Map()
-    ),
-    testWireServicesFactory: getMetaTypes(
-      'CreateTestWireServices',
-      testWireServicesFactories ?? new Map()
     ),
     serverLifecycleFactory: getMetaTypes(
       'ServerLifecycle',

@@ -1,6 +1,12 @@
-import { describe, test } from 'node:test'
+import { describe, test, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { StubTracker, createStubHelpers } from './stub-tracker.js'
+import {
+  StubTracker,
+  stub,
+  spy,
+  isTestRun,
+  getStubTracker,
+} from './stub-tracker.js'
 
 describe('StubTracker', () => {
   test('records calls and exposes them via getCalls', () => {
@@ -37,17 +43,17 @@ describe('StubTracker', () => {
   })
 })
 
-describe('createStubHelpers', () => {
-  test('stub() records calls and uses the provided implementation', async () => {
-    const tracker = new StubTracker()
-    const { stub } = createStubHelpers(tracker, {})
+describe('stub/spy core utils', () => {
+  beforeEach(() => getStubTracker().reset())
+
+  test('stub() records into the default tracker and uses the implementation', async () => {
     const email = stub<{ send: (msg: unknown) => Promise<{ ok: boolean }> }>(
       'email',
       { send: async () => ({ ok: true }) }
     )
     const result = await email.send({ to: 'a@b.c' })
     assert.deepEqual(result, { ok: true })
-    assert.deepEqual(tracker.getCalls('email')[0], {
+    assert.deepEqual(getStubTracker().getCalls('email')[0], {
       service: 'email',
       method: 'send',
       args: [{ to: 'a@b.c' }],
@@ -55,17 +61,14 @@ describe('createStubHelpers', () => {
   })
 
   test('stub() without an implementation resolves undefined', async () => {
-    const tracker = new StubTracker()
-    const { stub } = createStubHelpers(tracker, {})
     const payments = stub<{ charge: (x: unknown) => Promise<unknown> }>(
       'payments'
     )
     assert.equal(await payments.charge({ amount: 5 }), undefined)
-    assert.equal(tracker.getCalls('payments').length, 1)
+    assert.equal(getStubTracker().getCalls('payments').length, 1)
   })
 
   test('spy() records calls and passes through to the real service', async () => {
-    const tracker = new StubTracker()
     let realCalled = 0
     const real = {
       config: { retries: 3 },
@@ -74,20 +77,28 @@ describe('createStubHelpers', () => {
         return { delivered: msg.to }
       },
     }
-    const { spy } = createStubHelpers(tracker, { email: real })
-    const email = spy<typeof real>('email')
+    const email = spy('email', real)
 
     assert.deepEqual(await email.send({ to: 'a@b.c' }), {
       delivered: 'a@b.c',
     })
     assert.equal(realCalled, 1)
     assert.equal(email.config.retries, 3)
-    assert.equal(tracker.getCalls('email').length, 1)
+    assert.equal(getStubTracker().getCalls('email').length, 1)
+  })
+})
+
+describe('isTestRun', () => {
+  const original = process.env.PIKKU_TEST_RUN
+  afterEach(() => {
+    if (original === undefined) delete process.env.PIKKU_TEST_RUN
+    else process.env.PIKKU_TEST_RUN = original
   })
 
-  test('spy() on a missing service throws', () => {
-    const tracker = new StubTracker()
-    const { spy } = createStubHelpers(tracker, {})
-    assert.throws(() => spy('ghost'), /no real service named 'ghost'/)
+  test('reflects the PIKKU_TEST_RUN environment variable', () => {
+    delete process.env.PIKKU_TEST_RUN
+    assert.equal(isTestRun(), false)
+    process.env.PIKKU_TEST_RUN = 'true'
+    assert.equal(isTestRun(), true)
   })
 })

@@ -6,6 +6,7 @@ import { pikkuDevReloader } from '@pikku/core/dev'
 import {
   ConsoleLogger,
   LocalEmailService,
+  spy,
   InMemoryQueueService,
   InMemoryWorkflowService,
   InMemoryTriggerService,
@@ -32,7 +33,6 @@ import {
 } from '../db/local-db.js'
 import { loadUserBootstrap, loadUserModule } from './load-user-project.js'
 import { startCoverageService } from './start-coverage.js'
-import { applyTestServices } from './apply-test-services.js'
 import { createDevAIAgentRunner } from './dev-ai-runner.js'
 import { resolveConsoleMount } from './serve-console.js'
 
@@ -60,6 +60,9 @@ export const dev = pikkuSessionlessFunc<
     { rpc }
   ) => {
     process.env.PIKKU_DEV_QUICK_LOGIN ??= 'true'
+    if (test) {
+      process.env.PIKKU_TEST_RUN = 'true'
+    }
     const coverageService = coverage
       ? await startCoverageService(logger, config.rootDir)
       : undefined
@@ -283,7 +286,9 @@ export const dev = pikkuSessionlessFunc<
     const inMemoryServices = {
       logger: devLogger,
       ...(aiAgentRunner ? { aiAgentRunner } : {}),
-      emailService: new LocalEmailService(),
+      emailService: test
+        ? spy('emailService', new LocalEmailService())
+        : new LocalEmailService(),
       metaService: new LocalMetaService(pikkuDir),
       ...(coverageService ? { coverageService } : {}),
       schedulerService,
@@ -303,18 +308,10 @@ export const dev = pikkuSessionlessFunc<
       ...inMemoryServices,
       getInspectorState,
     })
-    const testServices =
-      test || coverage
-        ? await applyTestServices(logger, inspectorState.filesAndMethods, {
-            ...singletonServices,
-            ...(coverageService ? { coverageService } : {}),
-          })
-        : {}
     const resolvedServices = {
       ...singletonServices,
       getInspectorState,
       ...(coverageService ? { coverageService } : {}),
-      ...testServices,
     }
     pikkuState(null, 'package', 'singletonServices', resolvedServices)
     resolvedServices.workflowService?.wireQueueWorkers?.()

@@ -44,18 +44,6 @@ export interface SerializableInspectorState {
       { variable: string; type: string | null; typePath: string | null }[],
     ]
   >
-  testServicesFactories: Array<
-    [
-      string,
-      { variable: string; type: string | null; typePath: string | null }[],
-    ]
-  >
-  testWireServicesFactories: Array<
-    [
-      string,
-      { variable: string; type: string | null; typePath: string | null }[],
-    ]
-  >
   wireServicesMeta: Array<[string, string[]]>
   addonRequiredParentServices: string[]
   addonServerlessIncompatible: Array<[string, string[]]>
@@ -330,10 +318,6 @@ export function serializeInspectorState(
       state.singletonServicesFactories.entries()
     ),
     wireServicesFactories: Array.from(state.wireServicesFactories.entries()),
-    testServicesFactories: Array.from(state.testServicesFactories.entries()),
-    testWireServicesFactories: Array.from(
-      state.testWireServicesFactories.entries()
-    ),
     wireServicesMeta: Array.from(state.wireServicesMeta.entries()),
     addonRequiredParentServices: state.addonRequiredParentServices,
     addonServerlessIncompatible: Array.from(
@@ -524,8 +508,6 @@ export function deserializeInspectorState(
     configTypeImportMap: new Map(data.configTypeImportMap),
     singletonServicesFactories: new Map(data.singletonServicesFactories),
     wireServicesFactories: new Map(data.wireServicesFactories),
-    testServicesFactories: new Map(data.testServicesFactories || []),
-    testWireServicesFactories: new Map(data.testWireServicesFactories || []),
     wireServicesMeta: new Map(data.wireServicesMeta),
     addonRequiredParentServices: data.addonRequiredParentServices || [],
     addonServerlessIncompatible: new Map(

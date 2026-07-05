@@ -32,9 +32,9 @@ export const notificationScenario = pikkuScenario<null, { notified: boolean }>({
     )
 
     await workflow.expectError(
-      "the support actor's relay is fault-injected",
+      "the support recipient's relay is fault-injected",
       'notifyShopper',
-      { orderId: 'A-2' },
+      { orderId: 'A-2', recipient: 'support@actors.local' },
       { actor: actors.support }
     )
 

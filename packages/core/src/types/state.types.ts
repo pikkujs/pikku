@@ -55,8 +55,6 @@ import type {
   CreateConfig,
   CreateSingletonServices,
   CreateWireServices,
-  CreateTestServices,
-  CreateTestWireServices,
   CoreConfig,
   CoreSingletonServices,
   CoreServices,
@@ -170,11 +168,6 @@ export interface PikkuPackageState {
         CoreServices,
         CoreUserSession
       >
-      createTestServices?: CreateTestServices<CoreSingletonServices>
-      createTestWireServices?: CreateTestWireServices<
-        CoreSingletonServices,
-        CoreServices
-      >
     } | null
     /** Cached singleton services for this package */
     singletonServices: CoreSingletonServices | null
@@ -190,7 +183,5 @@ export interface PikkuPackageState {
     > | null
     /** Services this addon needs from the parent project */
     requiredParentServices: string[] | null
-    /** True when the server booted in test mode — gates createTestWireServices */
-    testServicesEnabled: boolean | null
   }
 }

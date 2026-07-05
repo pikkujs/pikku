@@ -1,4 +1,5 @@
 import { pikkuFunc } from '#pikku'
+import { getStubTracker } from '@pikku/core/services'
 
 export interface StubCallEntry {
   service: string
@@ -9,10 +10,9 @@ export interface StubCallEntry {
 export const getStubCalls = pikkuFunc<{ service?: string }, StubCallEntry[]>({
   title: 'Get Stub Calls',
   description:
-    'Returns calls recorded against stubbed/spied services (pikkuTestServices). Empty unless the server was started in test mode (pikku dev --test or --coverage).',
+    'Returns calls recorded against stubbed/spied services (via the stub()/spy() core utils). Empty unless the server records service calls (pikku dev --test).',
   expose: true,
-  func: async ({ stubTracker }, data) => {
-    if (!stubTracker) return []
-    return stubTracker.getCalls(data?.service ?? undefined)
+  func: async (_services, data) => {
+    return getStubTracker().getCalls(data?.service ?? undefined)
   },
 })

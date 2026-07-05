@@ -4,7 +4,10 @@ import {
   LocalVariablesService,
   LocalCredentialService,
   InMemoryQueueService,
+  isTestRun,
+  stub,
 } from '@pikku/core/services'
+import type { EmailService } from '@pikku/core/services'
 import { pikkuServices } from '#pikku/pikku-types.gen.js'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import { VercelAIAgentRunner } from '@pikku/ai-vercel'
@@ -15,7 +18,7 @@ import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
 import { PikkuMetaService } from '../.pikku/pikku-meta-service.gen.js'
 
 export const createSingletonServices = pikkuServices(
-  async (config, { variables, secrets, metaService }) => {
+  async (config, { variables, secrets, metaService, emailService }) => {
     const logger = new ConsoleLogger()
 
     if (config.logLevel) {
@@ -163,10 +166,26 @@ export const createSingletonServices = pikkuServices(
       clientSecret: 'mock-github-secret',
     })
 
+    // The e2e suite has no SMTP relay: under `pikku dev --test` the email
+    // service is a recording fake whose support-actor recipient always fails,
+    // so scenarios can assert sends (expectService) and walk the error branch
+    // (expectError). Outside test runs the dev-provided service is forwarded.
+    const email = isTestRun()
+      ? stub<EmailService>('emailService', {
+          send: async ({ to }) => {
+            if (to === 'support@actors.local') {
+              throw new Error('smtp relay declined for support actor')
+            }
+            return { messageId: 'stubbed-message' }
+          },
+        })
+      : emailService
+
     return {
       config,
       variables,
       secrets,
+      emailService: email,
       kysely,
       credentialService,
       jwt,

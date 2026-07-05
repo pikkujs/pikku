@@ -278,7 +278,7 @@ wireCLI({
         },
         test: {
           description:
-            'Activate declared test stubs (pikkuTestServices / pikkuTestWireServices); implied by --coverage',
+            'Test mode: record service calls for scenario assertions and set PIKKU_TEST_RUN for isTestRun()',
           default: false,
         },
       },

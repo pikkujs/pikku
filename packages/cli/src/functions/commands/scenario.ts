@@ -157,10 +157,10 @@ export const scenarioRun = pikkuSessionlessFunc<
             `Coverage disabled — '${environment}' is not collecting (start the server with --coverage).`
           )
         }
-        try {
-          await coverageActor?.invoke('console:resetStubs', null)
-        } catch {}
       }
+      try {
+        await coverageActor?.invoke('console:resetStubs', null)
+      } catch {}
       try {
         const { runId } = await workflowService.startWorkflow(
           flow.name,
