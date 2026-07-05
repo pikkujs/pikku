@@ -167,6 +167,11 @@ wireCLI({
       description: 'Generate all Pikku files (types, schemas, wirings, etc.)',
       isDefault: true,
       options: {
+        diff: {
+          description:
+            'On success, emit a structural diff of the generated .pikku meta (what this run added/removed/changed) as a PIKKU_DIFF <json> line on stdout. Only emitted on exit 0.',
+          default: false,
+        },
         filter: {
           description:
             'Named filter(s) from pikku.config.json filters map (comma-separated)',

@@ -1,8 +1,14 @@
 import { pikkuVoidFunc } from '#pikku'
+import { computeMetaDiff, readMetaSnapshot } from '../../utils/meta-diff.js'
 
 export const all = pikkuVoidFunc({
   remote: true,
-  func: async ({ workflowService, logger }, _data, { rpc }) => {
+  func: async ({ workflowService, logger, config }, _data, { rpc }) => {
+    // --diff: snapshot the meta BEFORE codegen overwrites it, so we can report
+    // exactly what this run changes. Cheap (a few small JSON reads), skipped
+    // unless requested.
+    const beforeMeta = config.diff ? readMetaSnapshot(config.outDir) : null
+
     // Drive the run directly (the CLI is always inline — no queueService) so we
     // can read back the per-step durations already recorded on each step's
     // state. startWorkflow runs the job to completion before returning in inline
@@ -14,6 +20,15 @@ export const all = pikkuVoidFunc({
       rpc,
       { inline: true }
     )
+
+    // Reached only on success (startWorkflow re-throws → non-zero exit above),
+    // so the diff never emits on a failed codegen. Print it as a single marker
+    // line on stdout for the sandbox "what changed" build card to consume.
+    if (beforeMeta) {
+      const diff = computeMetaDiff(beforeMeta, readMetaSnapshot(config.outDir))
+      // eslint-disable-next-line no-console
+      console.log(`PIKKU_DIFF ${JSON.stringify(diff)}`)
+    }
 
     // Per-step timing breakdown for debugging slow runs (e.g. which inspector
     // re-runs dominate). Opt-in via PIKKU_TIMING so normal runs stay quiet.
