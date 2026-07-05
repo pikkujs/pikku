@@ -13,7 +13,6 @@ import { fabricCommands } from './fabric/fabric-commands.js'
 import { all } from './functions/commands/all.js'
 import { bootstrap } from './functions/commands/bootstrap.js'
 import { watch } from './functions/commands/watch.js'
-import { consoleCommand } from './functions/commands/console.js'
 import { login, logout, whoami } from './functions/commands/login.js'
 import { dev } from './functions/commands/dev.js'
 import { serve } from './functions/commands/serve.js'
@@ -284,24 +283,8 @@ wireCLI({
           default: '3000',
           short: 'p',
         },
-      },
-    }),
-    console: pikkuCLICommand({
-      func: consoleCommand,
-      description: 'Start the Pikku Console UI with live file watching',
-      options: {
-        port: {
-          description: 'Port for the console server',
-          default: '51442',
-          short: 'p',
-        },
-        open: {
-          description: 'Open the console in the browser',
-          default: 'false',
-          short: 'o',
-        },
-        hmr: {
-          description: 'Enable hot module reload for registered functions',
+        console: {
+          description: 'Also serve the Pikku Console same-origin at /console',
           default: false,
         },
       },
