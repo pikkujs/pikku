@@ -1,4 +1,4 @@
-import React, { Suspense, useMemo, useState } from 'react'
+import React, { Suspense, useContext, useMemo, useState } from 'react'
 import {
   Group,
   TextInput,
@@ -21,7 +21,11 @@ import type {
   PersonaEntry,
   PersonaFlowRef,
 } from '../components/personas/persona-types'
-import { OSSConsoleNavigator, useConsoleNavigator } from '../context/ConsoleNavigatorContext'
+import {
+  ConsoleNavigatorCtx,
+  OSSConsoleNavigator,
+  useConsoleNavigator,
+} from '../context/ConsoleNavigatorContext'
 import { toEnglishName } from '../lib/strings'
 
 const SCENARIOS_BASE_PATH = '/scenarios'
@@ -161,8 +165,11 @@ const ScenariosPageInner: React.FC = () => {
   )
 }
 
-export const ScenariosPage: React.FC = () => (
-  <OSSConsoleNavigator basePath={SCENARIOS_BASE_PATH}>
+export const ScenariosPage: React.FC = () => {
+  // Host apps (e.g. the Fabric console) provide their own navigator; only
+  // fall back to the OSS query-param navigator when none is present.
+  const hostNavigator = useContext(ConsoleNavigatorCtx)
+  const page = (
     <Suspense
       fallback={
         <Center h="100vh">
@@ -172,5 +179,11 @@ export const ScenariosPage: React.FC = () => (
     >
       <ScenariosPageInner />
     </Suspense>
-  </OSSConsoleNavigator>
-)
+  )
+  if (hostNavigator) return page
+  return (
+    <OSSConsoleNavigator basePath={SCENARIOS_BASE_PATH}>
+      {page}
+    </OSSConsoleNavigator>
+  )
+}
