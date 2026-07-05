@@ -1,13 +1,13 @@
 import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'
 
 export const notifyShopper = pikkuSessionlessFunc<
-  { orderId: string },
+  { orderId: string; recipient?: string },
   { messageId: string | null }
 >({
   expose: true,
-  func: async ({ emailService }, { orderId }) => {
+  func: async ({ emailService }, { orderId, recipient }) => {
     const result = await emailService?.send({
-      to: 'shopper@actors.local',
+      to: recipient ?? 'shopper@actors.local',
       subject: `Order ${orderId} update`,
       text: 'Your order has shipped.',
     })

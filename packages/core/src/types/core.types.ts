@@ -39,10 +39,6 @@ import type { CredentialService } from '../services/credential-service.js'
 import type { EmailService } from '../services/email-service.js'
 import type { MetaService } from '../services/meta-service.js'
 import type { CoverageService } from '../services/v8-coverage-service.js'
-import type {
-  StubTracker,
-  PikkuTestStubHelpers,
-} from '../services/stub-tracker.js'
 import type { SessionStore } from '../services/session-store.js'
 import type {
   AuditDurability,
@@ -306,8 +302,6 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   metaService?: MetaService
   /** V8 precise-coverage collector (`pikku dev --coverage` only) */
   coverageService?: CoverageService
-  /** Records stubbed/spied service calls in test mode (`pikku dev --test`) */
-  stubTracker?: StubTracker
   /** Audit service for durable or staged audit event capture */
   audit?: AuditService
   /**
@@ -588,25 +582,6 @@ export type CreateWireServices<
   services: SingletonServices,
   wire: PikkuRawWire
 ) => Promise<WireServices<Services, SingletonServices>>
-
-/** Test stub services factory (`pikkuTestServices`) — test-mode boots only, merged over the real singletons */
-export type CreateTestServices<
-  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
-> = (
-  services: SingletonServices,
-  helpers: PikkuTestStubHelpers
-) => Promise<Partial<SingletonServices>>
-
-/** Per-invocation test stub factory (`pikkuTestWireServices`) — can vary stubs per wire, e.g. per actor session */
-export type CreateTestWireServices<
-  SingletonServices extends CoreSingletonServices = CoreSingletonServices,
-  Services extends CoreServices<SingletonServices> =
-    CoreServices<SingletonServices>,
-> = (
-  services: SingletonServices,
-  wire: PikkuRawWire,
-  helpers: PikkuTestStubHelpers
-) => Promise<Partial<Services>>
 
 /**
  * Defines a function type for creating config.

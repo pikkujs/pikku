@@ -36,8 +36,7 @@ import {
   addTagPermission as addTagPermissionCore,
   addGlobalPermission as addGlobalPermissionCore,
 } from '@pikku/core/middleware'
-import { pikkuState as __pikkuState, CreateWireServices, CreateTestServices, CreateTestWireServices } from '@pikku/core/internal'
-import type { PikkuTestStubHelpers } from '@pikku/core/services'
+import { pikkuState as __pikkuState, CreateWireServices } from '@pikku/core/internal'
 import type { NodeType } from '@pikku/core/node'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { CorePikkuFunction, CorePikkuFunctionSessionless } from '@pikku/core/function'
@@ -672,49 +671,6 @@ export const pikkuWireServices = (
   const factories = __pikkuState(null, 'package', 'factories')
   __pikkuState(null, 'package', 'factories', { ...factories, createWireServices: func as any })
   return func as unknown as CreateWireServices
-}
-
-/**
- * Creates a Pikku test services factory.
- * Declares test stubs for singleton services, only activated in test mode.
- *
- * @example
- * \`\`\`typescript
- * export const createTestServices = pikkuTestServices(async (services, { stub, spy }) => ({
- *   email: stub('email', { send: async () => ({ ok: true }) }),
- *   payments: spy('payments'),
- * }))
- * \`\`\`
- */
-export const pikkuTestServices = (
-  func: (services: SingletonServices, helpers: PikkuTestStubHelpers) => Promise<Partial<SingletonServices>>
-): CreateTestServices => {
-  const factories = __pikkuState(null, 'package', 'factories')
-  __pikkuState(null, 'package', 'factories', { ...factories, createTestServices: func as any })
-  return func as unknown as CreateTestServices
-}
-
-/**
- * Creates a Pikku test wire services factory.
- * Test stubs that vary per invocation, only applied in test mode.
- *
- * @example
- * \`\`\`typescript
- * export const createTestWireServices = pikkuTestWireServices(async (services, wire, { stub }) => {
- *   const session = await wire.session?.get()
- *   if (session?.actor === 'fraudster') {
- *     return { payments: stub('payments', { charge: async () => { throw new Error('card declined') } }) }
- *   }
- *   return {}
- * })
- * \`\`\`
- */
-export const pikkuTestWireServices = (
-  func: (services: SingletonServices, wire: any, helpers: PikkuTestStubHelpers) => Promise<Partial<Services>>
-): CreateTestWireServices => {
-  const factories = __pikkuState(null, 'package', 'factories')
-  __pikkuState(null, 'package', 'factories', { ...factories, createTestWireServices: func as any })
-  return func as unknown as CreateTestWireServices
 }
 
 /**

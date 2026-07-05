@@ -139,49 +139,47 @@ export function createStubProxy(tracker: StubTracker): Record<string, unknown> {
   })
 }
 
-export interface PikkuTestStubHelpers {
-  /** Replaces a service with `impl`, recording every method call. Methods
-   *  missing from `impl` resolve `undefined`. */
-  stub: <T = any>(service: string, impl?: Partial<T>) => T
-  /** Records every method call but passes through to the real service. */
-  spy: <T = any>(service: string) => T
+const defaultStubTracker = new StubTracker()
+
+/** The process-wide tracker that `stub()`/`spy()` record into — read by the console's getStubCalls/resetStubs RPCs */
+export const getStubTracker = (): StubTracker => defaultStubTracker
+
+/** True when the server was started by `pikku dev --test` (sets PIKKU_TEST_RUN) */
+export const isTestRun = (): boolean =>
+  (globalThis as { process?: { env?: Record<string, string | undefined> } })
+    .process?.env?.PIKKU_TEST_RUN === 'true'
+
+/**
+ * Creates a recording fake for a service. Methods present on `impl` run and
+ * their result is returned; missing methods resolve `undefined`. Every call
+ * is recorded so scenarios can assert via workflow.expectService().
+ */
+export function stub<T = any>(service: string, impl?: Partial<T>): T {
+  return new Proxy((impl ?? {}) as object, {
+    get(target: any, method: string | symbol) {
+      if (typeof method === 'symbol') return target[method]
+      const real = target[method]
+      if (typeof real !== 'function' && real !== undefined) return real
+      return (...args: unknown[]) => {
+        defaultStubTracker.record(service, method, args)
+        return real ? real.apply(target, args) : Promise.resolve(undefined)
+      }
+    },
+  }) as T
 }
 
-export const createStubHelpers = (
-  tracker: StubTracker,
-  realServices: Record<string, any>
-): PikkuTestStubHelpers => ({
-  stub: <T = any>(service: string, impl?: Partial<T>): T => {
-    return new Proxy((impl ?? {}) as object, {
-      get(target: any, method: string | symbol) {
-        if (typeof method === 'symbol') return target[method]
-        const real = target[method]
-        if (typeof real !== 'function' && real !== undefined) return real
-        return (...args: unknown[]) => {
-          tracker.record(service, method, args)
-          return real ? real.apply(target, args) : Promise.resolve(undefined)
-        }
-      },
-    }) as T
-  },
-  spy: <T = any>(service: string): T => {
-    const real = realServices[service]
-    if (!real) {
-      throw new Error(
-        `spy('${service}') — no real service named '${service}' to spy on. Use stub() or add the service first.`
-      )
-    }
-    return new Proxy(real as object, {
-      get(target: any, method: string | symbol) {
-        const value = target[method]
-        if (typeof method === 'symbol' || typeof value !== 'function') {
-          return value
-        }
-        return (...args: unknown[]) => {
-          tracker.record(service, method, args)
-          return value.apply(target, args)
-        }
-      },
-    }) as T
-  },
-})
+/** Wraps a real service so every method call is recorded and passed through */
+export function spy<T extends object>(service: string, real: T): T {
+  return new Proxy(real, {
+    get(target: any, method: string | symbol) {
+      const value = target[method]
+      if (typeof method === 'symbol' || typeof value !== 'function') {
+        return value
+      }
+      return (...args: unknown[]) => {
+        defaultStubTracker.record(service, method, args)
+        return value.apply(target, args)
+      }
+    },
+  }) as T
+}

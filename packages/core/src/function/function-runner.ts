@@ -28,7 +28,6 @@ import { parseVersionedId } from '../version.js'
 import type { SessionService } from '../services/user-session-service.js'
 import { PikkuSessionService } from '../services/user-session-service.js'
 import { ForbiddenError, ReadonlySessionError } from '../errors/errors.js'
-import { createStubHelpers } from '../services/stub-tracker.js'
 import {
   PikkuCredentialWireService,
   createWireServicesCredentialWireProps,
@@ -430,28 +429,6 @@ export const runPikkuFunc = async <In = any, Out = any>(
         wireServices && Object.keys(wireServices).length > 0
           ? { ...resolvedSingletonServices, ...wireServices }
           : resolvedSingletonServices
-      // Project functions only — the factory is typed against the app's services
-      if (
-        packageName === null &&
-        pikkuState(null, 'package', 'testServicesEnabled')
-      ) {
-        const testWireFactory = pikkuState(
-          null,
-          'package',
-          'factories'
-        )?.createTestWireServices
-        const stubTracker = (resolvedSingletonServices as any).stubTracker
-        if (testWireFactory && stubTracker) {
-          const testOverrides = await testWireFactory(
-            services as any,
-            invocationWire,
-            createStubHelpers(stubTracker, services)
-          )
-          if (testOverrides && Object.keys(testOverrides).length > 0) {
-            services = { ...services, ...testOverrides }
-          }
-        }
-      }
       // The audit gate is per-function, but the auditLog wire service is
       // created per-transport-invocation — a nested/exposed-RPC call would
       // otherwise inherit an auditLog constructed while the OUTER wire's
