@@ -151,6 +151,8 @@ export type FunctionMeta = FunctionRuntimeMeta &
       isDirectFunction: boolean
       sourceFile: string
       exportedName: string
+      /** File containing the handler body when it differs from sourceFile (imported handlers) */
+      bodySourceFile?: string
       /** 1-indexed first line of the handler body (verbose meta; coverage mapping) */
       bodyStart: number
       /** 1-indexed last line of the handler body (verbose meta; coverage mapping) */

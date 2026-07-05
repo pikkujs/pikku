@@ -39,6 +39,7 @@ type InspectorSession = {
 
 export class V8CoverageService implements CoverageService {
   private session: InspectorSession | null = null
+  private startPromise: Promise<void> | null = null
 
   private post<T>(method: string, params?: unknown): Promise<T> {
     const session = this.session
@@ -52,8 +53,12 @@ export class V8CoverageService implements CoverageService {
     })
   }
 
-  async start(): Promise<void> {
-    if (this.session) return
+  start(): Promise<void> {
+    this.startPromise ??= this.doStart()
+    return this.startPromise
+  }
+
+  private async doStart(): Promise<void> {
     const inspector = await import('node:inspector')
     this.session = new inspector.Session() as unknown as InspectorSession
     this.session.connect()
@@ -97,6 +102,7 @@ export class V8CoverageService implements CoverageService {
     } finally {
       this.session.disconnect()
       this.session = null
+      this.startPromise = null
     }
   }
 }

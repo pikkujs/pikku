@@ -100,4 +100,22 @@ describe('mapPreciseCoverage', () => {
     const ghost = report.functions.find((f) => f.name === 'ghostFn')
     assert.equal(ghost?.status, 'unknown')
   })
+
+  test('cross-file handlers read hits from bodySourceFile, not the wiring file', async () => {
+    const report = await mapPreciseCoverage(scripts, async () => source, {
+      importedFn: {
+        name: 'importedFn',
+        sourceFile: '/proj/src/wirings.ts',
+        bodySourceFile: '/proj/src/things.function.ts',
+        exportedName: 'importedFn',
+        expose: true,
+        description: null,
+        bodyStart: 2,
+        bodyEnd: 2,
+      },
+    } as any)
+    const imported = report.functions.find((f) => f.name === 'importedFn')
+    assert.equal(imported?.status, 'covered')
+    assert.equal(imported?.ratio, 1)
+  })
 })

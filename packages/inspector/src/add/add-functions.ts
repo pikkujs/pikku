@@ -1023,6 +1023,10 @@ export const addFunctions: AddWiring = (
   })
 
   const handlerSourceFile = handler.getSourceFile()
+  const bodySourceFile =
+    handlerSourceFile.fileName !== sourceFile
+      ? handlerSourceFile.fileName
+      : undefined
   const lineOf = (pos: number) =>
     handlerSourceFile.getLineAndCharacterOfPosition(pos).line + 1
   const handlerBody = handler.body
@@ -1074,6 +1078,7 @@ export const addFunctions: AddWiring = (
     permissions,
     isDirectFunction,
     sourceFile,
+    bodySourceFile,
     exportedName: exportedName || undefined,
     ...bodySpan,
   }

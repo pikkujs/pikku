@@ -43,12 +43,19 @@ export const serve = pikkuSessionlessFunc<
     { port, console: serveConsole, coverage }
   ) => {
     process.env.PIKKU_DEV_QUICK_LOGIN ??= 'true'
-    const coverageService = coverage ? new V8CoverageService() : undefined
+    let coverageService = coverage ? new V8CoverageService() : undefined
     if (coverageService) {
-      await coverageService.start()
-      logger.info(
-        'V8 precise coverage enabled — snapshot via console:takeLiveCoverage, reset via console:resetLiveCoverage'
-      )
+      try {
+        await coverageService.start()
+        logger.info(
+          'V8 precise coverage enabled — snapshot via console:takeLiveCoverage, reset via console:resetLiveCoverage'
+        )
+      } catch (e) {
+        logger.warn(
+          `V8 precise coverage is not supported on this runtime — continuing without coverage: ${e instanceof Error ? e.message : e}`
+        )
+        coverageService = undefined
+      }
     }
     const resolvedPort = parseInt(port || '3000', 10)
     const hostname = 'localhost'

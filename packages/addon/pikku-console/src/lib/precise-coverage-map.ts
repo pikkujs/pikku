@@ -29,6 +29,7 @@ export interface ScriptCoverageInput {
 export interface CoverageFunctionMeta {
   name: string
   sourceFile: string
+  bodySourceFile?: string
   exportedName?: string
   expose?: boolean
   description?: string | null
@@ -114,7 +115,12 @@ async function scriptToLineCoverage(
     if (!tracer) return { file: scriptPath, line: generated.line }
     const original = originalPositionFor(tracer, generated)
     if (original.source == null || original.line == null) return undefined
-    return { file: normalizeSourcePath(original.source), line: original.line }
+    const sourceIndex = tracer.sources.indexOf(original.source)
+    const resolved =
+      sourceIndex >= 0
+        ? (tracer.resolvedSources[sourceIndex] ?? original.source)
+        : original.source
+    return { file: normalizeSourcePath(resolved), line: original.line }
   }
 
   const setHits = (file: string, from: number, to: number, count: number) => {
@@ -155,7 +161,7 @@ export async function mapPreciseCoverage(
   const functions: FunctionCoverageEntry[] = Object.values(functionsMeta)
     .filter((m) => m.sourceFile && !m.sourceFile.endsWith('.gen.ts'))
     .map((m) => {
-      const hits = lineHits.get(m.sourceFile)
+      const hits = lineHits.get(m.bodySourceFile ?? m.sourceFile)
       const covered: number[] = []
       const missed: number[] = []
       if (hits && m.bodyStart !== undefined && m.bodyEnd !== undefined) {
