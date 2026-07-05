@@ -53,13 +53,6 @@ const EVALUATION_SCHEMA = {
 
 const DEFAULT_MAX_TURNS = 12
 
-/**
- * Hard cap on suspend→approve rounds within a single target turn. A cooperative
- * target completes after a handful of tool-approval rounds; a buggy or
- * uncooperative one (e.g. re-requesting a tool the persona keeps denying) could
- * otherwise keep the loop spinning forever inside one turn, never spending a
- * `maxTurns` credit.
- */
 const DEFAULT_MAX_APPROVAL_ROUNDS = 16
 
 /** The LLM call the persona uses for its own turns/decisions/evaluation. */

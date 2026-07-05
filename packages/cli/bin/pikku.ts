@@ -41,8 +41,6 @@ if (existsSync(pikkuCliPath)) {
     const updateCheck = checkForUpdate()
     await PikkuCLI(process.argv.slice(2))
     await updateCheck
-    // Respect any exit code a command set (e.g. `userflow run` on a failed
-    // flow sets process.exitCode = 1); forcing 0 here would mask failures.
     process.exit(process.exitCode ?? 0)
   } catch (error: any) {
     console.error('Failed to run Pikku CLI:', error.message)

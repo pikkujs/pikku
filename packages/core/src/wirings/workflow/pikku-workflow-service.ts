@@ -1066,20 +1066,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     return true
   }
 
-  /**
-   * Start a new workflow run
-   * Automatically detects workflow type (DSL or graph) from meta and executes accordingly
-   * @param options.inline - If true, execute workflow directly without queue service
-   * @param options.startNode - Starting node ID for graph workflows (from wire config)
-   */
-  /**
-   * Build HTTP scenario actors for a run started without them (e.g. from the
-   * console). The actors sign in via the actor auth plugin using
-   * SCENARIO_ACTOR_SECRET — which creates the `actor: true` user rows on first
-   * sign-in — and drive each step over HTTP as that persona. Returns undefined
-   * (so the run proceeds actor-less) when the secret or API base URL is not
-   * configured.
-   */
+  /** Build HTTP scenario actors for a run started without them; undefined when SCENARIO_ACTOR_SECRET or the API URL is missing */
   private async resolveScenarioActors(): Promise<ScenarioActors | undefined> {
     const services = getSingletonServices()
     const variables = services?.variables
@@ -1112,6 +1099,18 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     })
   }
 
+  /**
+   * Start a new workflow run
+   * Automatically detects workflow type (DSL or graph) from meta and executes accordingly
+   * @param options.inline - If true, execute workflow directly without queue service
+   * @param options.startNode - Starting node ID for graph workflows (from wire config)
+   */
+  /**
+   * Start a new workflow run
+   * Automatically detects workflow type (DSL or graph) from meta and executes accordingly
+   * @param options.inline - If true, execute workflow directly without queue service
+   * @param options.startNode - Starting node ID for graph workflows (from wire config)
+   */
   public async startWorkflow<I>(
     name: string,
     input: I,

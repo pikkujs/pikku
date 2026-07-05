@@ -20,14 +20,8 @@ import { resolve } from 'node:path'
 import { BunEventHubService } from './bun-event-hub-service.js'
 
 export type StaticMount = {
-  /** URL prefix the directory is mounted at, e.g. `/console`. */
   urlPrefix: string
-  /** Absolute directory the files are served from. */
   directory: string
-  /**
-   * Serve the mount's `index.html` for unknown GET paths under the prefix so
-   * client-side (SPA) routes deep-link correctly.
-   */
   spaFallback?: boolean
 }
 
@@ -245,7 +239,6 @@ export class PikkuBunServer {
     )
   }
 
-  /** The actual bound port (differs from config.port when configured as 0). */
   public get port(): number {
     return this.server?.port ?? this.config.port
   }

@@ -18,11 +18,6 @@ export const isLocalServerUrl = (serverUrl: string): boolean => {
 const quickLoginUrl = (serverUrl: string): string =>
   `${serverUrl.trim().replace(/\/+$/, '')}${AUTH_BASE_PATH}/dev/quick-login`
 
-/**
- * Probes the backend's dev quick-login endpoint. Returns the status when the
- * server runs with quick login enabled (local dev), null otherwise — including
- * for non-local servers, which are never probed.
- */
 export const fetchDevQuickLoginStatus = async (
   serverUrl: string
 ): Promise<DevQuickLoginStatus | null> => {

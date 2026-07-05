@@ -23,13 +23,8 @@ BeforeAll(async function () {
   const projectDir = resolve(__dirname, '../..')
   const backendPort = new URL(config.apiUrl).port
 
-  // Shared actor secret: the server's actor auth plugin and any
-  // `pikku scenario run` step both read SCENARIO_ACTOR_SECRET from the
-  // environment, so setting it here lets both sign the same synthetic actors in.
   process.env.SCENARIO_ACTOR_SECRET ??= 'e2e-actor-secret'
 
-  // Start the backend via pikku serve — it serves the console same-origin at
-  // /console. pikkuOnStart in src/lifecycle.ts handles mock OAuth + user seeding
   backendProcess = spawn('npx', ['pikku', 'serve', '--port', backendPort], {
     cwd: projectDir,
     env: { ...process.env, API_URL: config.apiUrl },

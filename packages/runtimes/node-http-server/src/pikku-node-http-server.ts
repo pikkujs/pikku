@@ -32,14 +32,8 @@ import { incomingMessageToRequest } from './request-converter.js'
 import { writeResponse } from './response-writer.js'
 
 export type StaticMount = {
-  /** URL prefix the directory is mounted at, e.g. `/console`. */
   urlPrefix: string
-  /** Absolute directory the files are served from. */
   directory: string
-  /**
-   * Serve the mount's `index.html` for unknown GET paths under the prefix so
-   * client-side (SPA) routes deep-link correctly.
-   */
   spaFallback?: boolean
 }
 

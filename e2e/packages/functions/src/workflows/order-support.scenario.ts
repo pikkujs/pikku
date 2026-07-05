@@ -19,8 +19,6 @@ export const orderSupportScenario = pikkuScenario<
     }
     logger.debug('order-support scenario starting')
 
-    // `pikku scenario run` invokes scenarios with no input, so the story carries
-    // its own sample order value; a programmatic caller can still override it.
     const value = data?.value ?? 21
 
     const doubled = await workflow.do(

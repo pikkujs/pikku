@@ -38,9 +38,6 @@ export const serve = pikkuSessionlessFunc<{ port?: string }, void>({
     { logger, config, getInspectorState, variables, devServerRunner },
     { port }
   ) => {
-    // The dev server always allows the console's dev quick login (the endpoint
-    // additionally requires a loopback Host). Set PIKKU_DEV_QUICK_LOGIN=false
-    // to opt out.
     process.env.PIKKU_DEV_QUICK_LOGIN ??= 'true'
     const resolvedPort = parseInt(port || '3000', 10)
     const hostname = 'localhost'

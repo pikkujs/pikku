@@ -41,8 +41,6 @@ export const auth = pikkuBetterAuth(async ({ secrets, variables, kysely }) => {
       github: await secrets.getSecret('GITHUB_OAUTH'),
     },
     // admin: role/banned session fields + listUsers/impersonation endpoints.
-    // actor: `/sign-in/actor` for scenario actors — only rows flagged
-    // `actor: true` can sign in, gated by the SCENARIO_ACTOR_SECRET.
     plugins: [
       bearer(),
       admin(),
