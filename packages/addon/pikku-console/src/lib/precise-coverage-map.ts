@@ -157,7 +157,13 @@ export async function mapPreciseCoverage(
   for (const script of scripts) {
     await scriptToLineCoverage(script, getScriptSource, lineHits)
   }
+  return mapLineHitsToReport(lineHits, functionsMeta)
+}
 
+export function mapLineHitsToReport(
+  lineHits: Map<string, Map<number, number>>,
+  functionsMeta: Record<string, CoverageFunctionMeta>
+): FunctionCoverageReport {
   const functions: FunctionCoverageEntry[] = Object.values(functionsMeta)
     .filter((m) => m.sourceFile && !m.sourceFile.endsWith('.gen.ts'))
     .map((m) => {

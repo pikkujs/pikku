@@ -17,8 +17,12 @@ describe('V8CoverageService', () => {
     await service.start()
     coveredProbe(21)
 
-    const scripts = await service.takeCoverage()
-    const own = scripts.find((s) => s.url.includes('v8-coverage-service.test'))
+    const snapshot = await service.takeCoverage()
+    assert.equal(snapshot.kind, 'v8-scripts')
+    if (snapshot.kind !== 'v8-scripts') return
+    const own = snapshot.scripts.find((s) =>
+      s.url.includes('v8-coverage-service.test')
+    )
     assert.ok(own, 'own test script should appear in precise coverage')
     const probe = own.functions.find((f) =>
       f.functionName.includes('coveredProbe')
@@ -33,8 +37,11 @@ describe('V8CoverageService', () => {
   test('reset clears call counts so attribution per run is possible', async () => {
     coveredProbe(1)
     await service.reset()
-    const scripts = await service.takeCoverage()
-    const own = scripts.find((s) => s.url.includes('v8-coverage-service.test'))
+    const snapshot = await service.takeCoverage()
+    if (snapshot.kind !== 'v8-scripts') return assert.fail('expected scripts')
+    const own = snapshot.scripts.find((s) =>
+      s.url.includes('v8-coverage-service.test')
+    )
     const probe = own?.functions.find((f) =>
       f.functionName.includes('coveredProbe')
     )
@@ -47,10 +54,13 @@ describe('V8CoverageService', () => {
   })
 
   test('getScriptSource returns the executed source for mapping', async () => {
-    const scripts = await service.takeCoverage()
-    const own = scripts.find((s) => s.url.includes('v8-coverage-service.test'))
+    const snapshot = await service.takeCoverage()
+    if (snapshot.kind !== 'v8-scripts') return assert.fail('expected scripts')
+    const own = snapshot.scripts.find((s) =>
+      s.url.includes('v8-coverage-service.test')
+    )
     assert.ok(own)
-    const source = await service.getScriptSource(own.scriptId)
+    const source = await snapshot.getScriptSource(own.scriptId)
     assert.ok(
       source.includes('coveredProbe'),
       'script source should contain the probe function'

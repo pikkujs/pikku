@@ -155,7 +155,9 @@ ENTRY
   for target in bun-linux-x64 bun-linux-arm64 bun-darwin-x64 bun-darwin-arm64 bun-windows-x64; do
     suffix="${target#bun-}"
     echo "  → $target"
-    bun build --compile "--target=$target" "--outfile=release/binaries/pikku-$suffix" dist/bin/pikku-bin.mjs
+    # istanbul-lib-instrument (babel) uses dynamic requires bun can't bundle;
+    # it's only needed for dev --coverage under bun, where node_modules exists.
+    bun build --compile "--target=$target" --external istanbul-lib-instrument "--outfile=release/binaries/pikku-$suffix" dist/bin/pikku-bin.mjs
   done
 
   echo "Native binaries written to release/binaries/"

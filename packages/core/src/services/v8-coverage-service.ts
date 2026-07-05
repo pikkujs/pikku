@@ -19,10 +19,19 @@ export interface ScriptCoverage {
   functions: FunctionCoverage[]
 }
 
+export type LineHits = Map<string, Map<number, number>>
+
+export type CoverageSnapshot =
+  | {
+      kind: 'v8-scripts'
+      scripts: ScriptCoverage[]
+      getScriptSource: (scriptId: string) => Promise<string>
+    }
+  | { kind: 'line-hits'; lineHits: LineHits }
+
 export interface CoverageService {
   start(): Promise<void>
-  takeCoverage(): Promise<ScriptCoverage[]>
-  getScriptSource(scriptId: string): Promise<string>
+  takeCoverage(): Promise<CoverageSnapshot>
   reset(): Promise<void>
   stop(): Promise<void>
 }
@@ -70,11 +79,15 @@ export class V8CoverageService implements CoverageService {
     })
   }
 
-  async takeCoverage(): Promise<ScriptCoverage[]> {
+  async takeCoverage(): Promise<CoverageSnapshot> {
     const { result } = await this.post<{ result: ScriptCoverage[] }>(
       'Profiler.takePreciseCoverage'
     )
-    return result.filter((script) => script.url.startsWith('file://'))
+    return {
+      kind: 'v8-scripts',
+      scripts: result.filter((script) => script.url.startsWith('file://')),
+      getScriptSource: (scriptId) => this.getScriptSource(scriptId),
+    }
   }
 
   async getScriptSource(scriptId: string): Promise<string> {

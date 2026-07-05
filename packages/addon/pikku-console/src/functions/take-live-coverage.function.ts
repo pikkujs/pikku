@@ -2,13 +2,14 @@ import { pikkuFunc } from '#pikku'
 import type { FunctionCoverageReport } from './get-function-coverage.function.js'
 import {
   mapPreciseCoverage,
+  mapLineHitsToReport,
   type CoverageFunctionMeta,
 } from '../lib/precise-coverage-map.js'
 
 export const takeLiveCoverage = pikkuFunc<null, FunctionCoverageReport | null>({
   title: 'Take Live Coverage',
   description:
-    'Snapshots the V8 precise coverage collected since the server started (or since the last resetLiveCoverage) and maps it onto function body spans. Returns null unless the server was started with coverage enabled (pikku dev --coverage).',
+    'Snapshots the live coverage collected since the server started (or since the last resetLiveCoverage) — V8 precise coverage on Node, istanbul instrumentation on Bun — and maps it onto function body spans. Returns null unless the server was started with coverage enabled (pikku dev --coverage).',
   expose: true,
   func: async ({ coverageService, metaService }) => {
     if (!coverageService || !metaService?.basePath) return null
@@ -28,10 +29,13 @@ export const takeLiveCoverage = pikkuFunc<null, FunctionCoverageReport | null>({
     } catch {
       return null
     }
-    const scripts = await coverageService.takeCoverage()
+    const snapshot = await coverageService.takeCoverage()
+    if (snapshot.kind === 'line-hits') {
+      return mapLineHitsToReport(snapshot.lineHits, functionsMeta)
+    }
     return mapPreciseCoverage(
-      scripts,
-      (scriptId) => coverageService.getScriptSource(scriptId),
+      snapshot.scripts,
+      snapshot.getScriptSource,
       functionsMeta
     )
   },

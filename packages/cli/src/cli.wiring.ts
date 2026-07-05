@@ -292,11 +292,6 @@ wireCLI({
           description: 'Also serve the Pikku Console same-origin at /console',
           default: false,
         },
-        coverage: {
-          description:
-            'Collect V8 precise coverage in-process; snapshot/reset via the console coverage RPCs',
-          default: false,
-        },
       },
     }),
     login: pikkuCLICommand({
