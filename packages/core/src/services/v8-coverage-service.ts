@@ -1,16 +1,5 @@
-/**
- * In-process V8 precise-coverage collector for `pikku dev --coverage`.
- *
- * Wraps a `node:inspector` session: `start()` begins precise coverage with
- * call counts, `takeCoverage()` snapshots per-script coverage, `reset()`
- * clears counts so callers can attribute coverage to a single scenario run,
- * and `getScriptSource()` fetches the executed (transpiled) source whose
- * inline source map lets consumers translate offsets back to TypeScript.
- *
- * `node:inspector` is imported lazily inside `start()` so this module stays
- * loadable on runtimes without it (e.g. Cloudflare Workers) as long as
- * coverage is never started there.
- */
+// node:inspector is imported lazily inside start() so this module stays
+// loadable on runtimes without it (e.g. Cloudflare Workers).
 
 export interface CoverageRange {
   startOffset: number

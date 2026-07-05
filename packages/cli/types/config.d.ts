@@ -307,11 +307,7 @@ export type PikkuCLIInput = {
   }
 
   scenarios?: {
-    /**
-     * Global scenario actor registry — any scenario can impersonate any
-     * actor. Generates a typed `createScenarioActors` factory (see
-     * `scenarioActorsFile`) and surfaces the personas in the console.
-     */
+    /** Global scenario actor registry — any scenario can impersonate any actor */
     actors?: Record<
       string,
       {
@@ -321,12 +317,7 @@ export type PikkuCLIInput = {
         personality?: string
       }
     >
-    /**
-     * Environments `pikku scenario run <environment>` can target. `apiUrl`
-     * includes the HTTP prefix (e.g. https://app.example.com/api). The actor
-     * secret is NEVER configured here — it comes from the
-     * SCENARIO_ACTOR_SECRET environment variable at run time.
-     */
+    /** Environments `pikku scenario run <environment>` can target; the actor secret comes from SCENARIO_ACTOR_SECRET, never config */
     environments?: Record<
       string,
       {

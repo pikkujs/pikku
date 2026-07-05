@@ -50,7 +50,6 @@ export const scenarioRun = pikkuSessionlessFunc<
   ) => {
     const state = await getInspectorState(true)
 
-    // --- resolve the target environment ---
     const environments = config.scenarios?.environments ?? {}
     const env = environments[environment]
     if (!env) {
@@ -63,7 +62,6 @@ export const scenarioRun = pikkuSessionlessFunc<
       )
     }
 
-    // --- select flows ---
     let selected = listScenarios(state)
     if (flows) {
       const names = new Set(flows.split(',').map((f) => f.trim()))
@@ -87,7 +85,6 @@ export const scenarioRun = pikkuSessionlessFunc<
       return
     }
 
-    // --- actors: registry from config, secret STRICTLY from env ---
     const secret = await variables.get('SCENARIO_ACTOR_SECRET')
     if (!secret) {
       throw new Error(
@@ -103,10 +100,6 @@ export const scenarioRun = pikkuSessionlessFunc<
       rpcPath: env.rpcPath,
     })
 
-    // --- load the project's generated bootstrap so flows are registered.
-    // Deliberately NO user services: flows may only use logger/config
-    // (inspector-enforced), and internal rpc dispatch is refused below so a
-    // run against staging/production can never touch local services.
     await loadUserBootstrap(resolve(config.rootDir, config.outDir))
     const workflowService = new InMemoryWorkflowService()
     pikkuState(null, 'package', 'singletonServices', {
@@ -124,7 +117,6 @@ export const scenarioRun = pikkuSessionlessFunc<
       },
     }
 
-    // --- run sequentially: flows are stories; parallel actors would share cookie jars ---
     const results: Array<{
       name: string
       status: 'passed' | 'failed'
@@ -133,10 +125,6 @@ export const scenarioRun = pikkuSessionlessFunc<
       error?: string
     }> = []
 
-    // --- per-scenario coverage attribution (server must run with --coverage).
-    // The reset/take RPCs are invoked through an actor's authenticated client
-    // like any other exposed RPC; when the server has no collector (or the
-    // console addon isn't wired) coverage is disabled with a warning.
     const coverageActor = coverage ? Object.values(actors)[0] : undefined
     let coverageActive = Boolean(coverageActor)
     if (coverage && !coverageActor) {
@@ -238,7 +226,6 @@ export const scenarioRun = pikkuSessionlessFunc<
       logger.info(`Scenario coverage → ${outFile}`)
     }
 
-    // --- report ---
     const failed = results.filter((r) => r.status === 'failed')
     for (const r of results) {
       if (r.status === 'passed') {

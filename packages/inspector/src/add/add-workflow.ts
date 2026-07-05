@@ -316,8 +316,6 @@ export const addWorkflow: AddWiring = (logger, node, checker, state) => {
     return
   }
 
-  // expectEventually is a scenario-only assertion primitive — regular
-  // workflows must stay free of test/eval semantics.
   if (
     wrapperType !== 'scenario' &&
     containsExpectEventuallyCall(resolvedFunc)

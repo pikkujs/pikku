@@ -1,15 +1,6 @@
-/**
- * Maps raw V8 precise coverage (from the core CoverageService) onto pikku
- * function body spans, producing the same FunctionCoverageReport shape the
- * console has always consumed.
- *
- * V8 range offsets are translated to original source lines through the
- * script's inline source map (tsx/esbuild transpiled TypeScript). Istanbul's
- * line-based statement maps can't be used here: esbuild emits the whole
- * module on a single generated line, which collapses every statement onto
- * line 1. Mapping each range's start/end offset through the source map keeps
- * per-line resolution regardless of the generated layout.
- */
+// Offsets are mapped through the inline source map rather than line-based
+// statement maps: esbuild emits the whole module on one generated line, which
+// would collapse every statement onto line 1.
 import { fileURLToPath } from 'node:url'
 import { TraceMap, originalPositionFor } from '@jridgewell/trace-mapping'
 import type {
@@ -138,9 +129,7 @@ async function scriptToLineCoverage(
   }
 
   for (const fn of script.functions) {
-    // V8 lists a function's whole span first, then progressively narrower
-    // sub-ranges. Applying them in order means inner ranges overwrite the
-    // outer count, matching V8's override semantics.
+    // Inner ranges overwrite the outer count (V8 override semantics).
     for (const range of fn.ranges) {
       const start = mapOffset(range.startOffset)
       const end = mapOffset(Math.max(range.startOffset, range.endOffset - 1))
