@@ -1,3 +1,21 @@
+## 0.12.74
+
+### Patch Changes
+
+- 60ad8cb: fix dev-server hot reload so edited AND new functions/routes apply without a restart
+  - `@pikku/core`: the hot reloader fed raw zod `input`/`output` schemas into the JSON-schema map, so `compileAllSchemas` threw `Failed to compile schema` on every reload and the reload aborted (only the function body sometimes swapped, half-updated). It now registers function implementations only and leaves schemas to the codegen JSON output. New function exports are registered too (previously only already-registered names were replaced). Reloads write into the startup functions map directly to avoid a race with the dev watcher's codegen-scoped state swap, and re-import via a uniquely-named sibling copy since neither Bun nor tsx bust the module cache on a `?t=` query.
+  - New `reloadGeneratedMeta` (exported from `@pikku/core/dev`) re-reads the regenerated wiring meta + JSON schemas into the running process so new/changed routes, RPCs, queues and agents resolve without a restart.
+  - `@pikku/cli`: `pikku dev` now calls `reloadGeneratedMeta` after each watch-triggered codegen pass and re-imports the changed files once fresh meta is in state, so a NEW route in a changed wiring file registers (its `wireHTTP` no longer no-ops on missing meta).
+  - `@pikku/schema-cfworker`: `compileSchema` recompiles when a schema's value changes (not only on first sight), so hot-reloaded schemas take effect.
+
+- 60ad8cb: fix `pikku all --tsc`/`--tsc-summary` reporting phantom type errors
+
+  The type-check used the CLI's own bundled TypeScript, which could be a different major than the project's (e.g. TS 6 vs a project on TS 5) and emit diagnostics the project's real `tsc` never would — most visibly 10 phantom `TS2591 Cannot find name 'process'` errors on a project that type-checks clean under its own compiler. `runProjectTypecheck` now loads the project's own installed `typescript` (falling back to the bundled one only when the project has none).
+
+- Updated dependencies [60ad8cb]
+- Updated dependencies [8f5c998]
+  - @pikku/core@0.12.57
+
 ## 0.12.73
 
 ### Patch Changes
