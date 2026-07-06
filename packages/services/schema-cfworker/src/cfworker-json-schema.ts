@@ -9,7 +9,9 @@ export class CFWorkerSchemaService implements SchemaService {
   constructor(private logger: Logger) {}
 
   public compileSchema(schema: string, value: any) {
-    if (!this.validators.has(schema)) {
+    // Recompile when the registered schema value changed (dev hot-reload
+    // re-adds schemas after codegen); same-reference calls stay cached.
+    if (!this.validators.has(schema) || this.schemas.get(schema) !== value) {
       this.logger.debug(`Adding json schema for ${schema}`)
       try {
         // We need to deep clone the value to avoid CFWorker's JSON schema validator

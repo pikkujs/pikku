@@ -1,19 +1,19 @@
 import { watch, type FSWatcher } from 'node:fs'
-import { stat, readFile } from 'node:fs/promises'
-import { join, resolve, relative } from 'node:path'
+import { stat, readFile, copyFile, rm } from 'node:fs/promises'
+import { basename, dirname, join, resolve, relative } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 import { register } from 'tsx/esm/api'
 
 import { pikkuState } from '../pikku-state.js'
-import { addFunction } from '../function/function-runner.js'
 import { clearMiddlewareCache } from '../middleware-runner.js'
 import { clearPermissionsCache } from '../permissions.js'
 import { clearChannelMiddlewareCache } from '../wirings/channel/channel-middleware-runner.js'
 import { httpRouter } from '../wirings/http/routers/http-router.js'
-import { addSchema, compileAllSchemas } from '../schema.js'
 import type { Logger } from '../services/logger.js'
 import type { CorePikkuFunctionConfig } from '../function/functions.types.js'
+
+export * from './reload-meta.js'
 
 interface PikkuDevReloaderOptions {
   srcDirectories: string[]
@@ -65,16 +65,37 @@ const ensureTsxRegistered = () => {
   tsxRegistered = true
 }
 
+let tempCounter = 0
+
 const reimportModule = async (
   filePath: string,
   useTsx = false
 ): Promise<Record<string, unknown> | null> => {
   try {
     if (useTsx) {
-      ensureTsxRegistered()
-      return await import(
-        `${pathToFileURL(resolve(filePath)).href}?t=${Date.now()}`
+      // Import a uniquely-named sibling copy: a `?t=` query does NOT bust
+      // the cache on either runtime (Bun keys module identity on the bare
+      // path; tsx's transform cache keys on the file path too), so a fresh
+      // path is the only reliable re-import. Same directory → identical
+      // resolution for relative and package-`imports` (#…) specifiers. The
+      // dot-prefix keeps it out of the watcher.
+      if (!process.versions.bun) {
+        // Node needs tsx's loader to import raw .ts; Bun imports it natively.
+        ensureTsxRegistered()
+      }
+      const abs = resolve(filePath)
+      const tempPath = join(
+        dirname(abs),
+        `.pikku-hot-${++tempCounter}-${basename(abs)}`
       )
+      await copyFile(abs, tempPath)
+      try {
+        return await import(pathToFileURL(tempPath).href)
+      } finally {
+        await rm(tempPath, { force: true }).catch(() => {
+          // Best-effort temp cleanup; a leftover dotfile is watcher-ignored.
+        })
+      }
     }
 
     const content = await readFile(resolve(filePath), 'utf-8')
@@ -91,13 +112,23 @@ const isWatchedTsFile = (filename: string): boolean => {
     filename.endsWith('.ts') &&
     !filename.endsWith('.test.ts') &&
     !filename.endsWith('.d.ts') &&
-    !filename.endsWith('.gen.ts')
+    !filename.endsWith('.gen.ts') &&
+    // Hidden files: editor/sed atomic-write temps and our own hot-reload
+    // sibling copies must never trigger a reload of themselves.
+    !basename(filename).startsWith('.')
   )
+}
+
+export interface PikkuDevReloaderHandle {
+  close: () => void
+  /** Re-import every file changed since the last drain (post-codegen, once
+   *  fresh meta is in state). */
+  reimportPending: () => Promise<void>
 }
 
 export async function pikkuDevReloader(
   options: PikkuDevReloaderOptions
-): Promise<{ close: () => void }> {
+): Promise<PikkuDevReloaderHandle> {
   const { srcDirectories, logger, pikkuDir = '.pikku' } = options
   const absSrcDirs = srcDirectories.map((d) => resolve(d))
   const absPikkuDir = resolve(pikkuDir)
@@ -108,6 +139,7 @@ export async function pikkuDevReloader(
   const handleFileChange = async (changedTsFile: string) => {
     const start = Date.now()
     const reloadedNames: string[] = []
+    const addedNames: string[] = []
 
     const srcDir = absSrcDirs.find((d) => changedTsFile.startsWith(d))
     if (!srcDir) return
@@ -134,54 +166,59 @@ export async function pikkuDevReloader(
       return
     }
 
-    let schemasChanged = false
-
+    // Register every function-config export — replacing known functions AND
+    // adding new ones (a brand-new function becomes callable as soon as its
+    // meta lands via reloadGeneratedMeta after the next codegen pass).
+    // Write into the map captured at startup, NOT pikkuState's current one:
+    // a dev-server watcher may have temporarily swapped in a codegen-scoped
+    // map for the same file event (runAllWithCommandState), and a write to
+    // that map is silently discarded when it restores the original.
+    // Schemas are NOT touched here: `input`/`output` hold raw zod schemas,
+    // while the schema map carries codegen-generated JSON schemas — mixing the
+    // two crashed every reload. Fresh JSON schemas arrive via
+    // reloadGeneratedMeta once codegen has re-emitted them.
     for (const [exportName, exportValue] of Object.entries(mod)) {
-      if (isFunctionConfig(exportValue) && functionsMap.has(exportName)) {
-        addFunction(exportName, exportValue)
-        reloadedNames.push(exportName)
-
-        if (exportValue.input) {
-          addSchema(exportName, exportValue.input)
-          schemasChanged = true
-        }
-        if (exportValue.output) {
-          addSchema(`${exportName}Output`, exportValue.output)
-          schemasChanged = true
-        }
-      }
+      if (!isFunctionConfig(exportValue)) continue
+      const isNew = !functionsMap.has(exportName)
+      functionsMap.set(exportName, exportValue)
+      if (isNew) addedNames.push(exportName)
+      else reloadedNames.push(exportName)
     }
 
-    if (reloadedNames.length > 0) {
-      clearMiddlewareCache()
-      clearPermissionsCache()
-      clearChannelMiddlewareCache()
-      httpRouter.reset()
+    // Re-importing the module re-ran its wire* side effects (wireHTTP et al
+    // are keyed map-sets, so re-registration replaces/adds) — reset the
+    // router and caches even when no function export changed, so a
+    // wiring-only file edit rebuilds the route matchers too.
+    clearMiddlewareCache()
+    clearPermissionsCache()
+    clearChannelMiddlewareCache()
+    httpRouter.reset()
 
-      if (schemasChanged) {
-        try {
-          compileAllSchemas(logger)
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err)
-          if (
-            msg.includes('SchemaService') ||
-            (msg.includes('schema') && msg.includes('not'))
-          ) {
-            logger.warn('Schema recompilation skipped (no SchemaService)')
-          } else {
-            logger.error(`Schema recompilation failed: ${msg}`)
-            return
-          }
-        }
-      }
-
+    if (reloadedNames.length > 0 || addedNames.length > 0) {
       const elapsed = Date.now() - start
-      logger.info(`Hot-reloaded: ${reloadedNames.join(', ')} (${elapsed}ms)`)
+      const parts: string[] = []
+      if (reloadedNames.length > 0) parts.push(reloadedNames.join(', '))
+      if (addedNames.length > 0) parts.push(`new: ${addedNames.join(', ')}`)
+      logger.info(`Hot-reloaded: ${parts.join('; ')} (${elapsed}ms)`)
     }
   }
 
   let debounceTimer: ReturnType<typeof setTimeout> | undefined
   const pendingChanges = new Set<string>()
+  // Files re-imported since the last reimportPending() drain. A dev-server
+  // watcher drains this after its codegen pass so wire* registrations that
+  // were skipped for missing meta (a NEW route) run again with fresh meta.
+  const postCodegenQueue = new Set<string>()
+
+  const safeHandleFileChange = async (file: string) => {
+    try {
+      await handleFileChange(file)
+    } catch (err) {
+      logger.error(
+        `Hot-reload error for ${relative(process.cwd(), file)}: ${err instanceof Error ? err.message : String(err)}`
+      )
+    }
+  }
 
   const scheduleReload = (filePath: string) => {
     pendingChanges.add(filePath)
@@ -190,13 +227,8 @@ export async function pikkuDevReloader(
       const files = [...pendingChanges]
       pendingChanges.clear()
       for (const file of files) {
-        try {
-          await handleFileChange(file)
-        } catch (err) {
-          logger.error(
-            `Hot-reload error for ${relative(process.cwd(), file)}: ${err instanceof Error ? err.message : String(err)}`
-          )
-        }
+        postCodegenQueue.add(file)
+        await safeHandleFileChange(file)
       }
     }, 50)
   }
@@ -227,6 +259,19 @@ export async function pikkuDevReloader(
       if (debounceTimer) clearTimeout(debounceTimer)
       for (const watcher of watchers) {
         watcher.close()
+      }
+    },
+    // Drain the queue of recently re-imported files and import them again.
+    // A dev-server watcher calls this AFTER its codegen pass has refreshed
+    // the generated meta (reloadGeneratedMeta): wire* registrations skip
+    // routes whose meta doesn't exist yet, so a wiring file changed
+    // alongside a NEW function only registers its new route when
+    // re-imported after the fresh meta has landed.
+    reimportPending: async () => {
+      const files = [...postCodegenQueue]
+      postCodegenQueue.clear()
+      for (const file of files) {
+        await safeHandleFileChange(file)
       }
     },
   }

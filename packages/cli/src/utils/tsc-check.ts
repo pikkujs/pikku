@@ -1,6 +1,20 @@
 import ts from 'typescript'
-import { dirname, isAbsolute, relative } from 'node:path'
+import { dirname, isAbsolute, join, relative } from 'node:path'
+import { createRequire } from 'node:module'
 import { PikkuError } from '@pikku/core'
+
+// Type-check with the PROJECT's own TypeScript when it has one — the CLI's
+// bundled compiler can be a different major (e.g. TS 6 vs a project on TS 5)
+// and produce diagnostics the project's real `tsc` never would (seen as
+// phantom TS2591 "Cannot find name 'process'" on a tsconfig that is clean
+// under the project's compiler). Falls back to the CLI's typescript.
+const loadProjectTs = (rootDir: string): typeof ts => {
+  try {
+    return createRequire(join(rootDir, 'noop.cjs'))('typescript')
+  } catch {
+    return ts
+  }
+}
 
 // A type-check failure is expected (the --tsc gate did its job) — throw a
 // PikkuError so the runner logs the message alone, not a stack trace.
@@ -160,13 +174,14 @@ export const runProjectTypecheck = (
   diagnostics: ts.Diagnostic[]
   formatHost: ts.FormatDiagnosticsHost
 } => {
+  const tsImpl = loadProjectTs(rootDir)
   const formatHost: ts.FormatDiagnosticsHost = {
     getCanonicalFileName: (f) => f,
     getCurrentDirectory: () => rootDir,
-    getNewLine: () => ts.sys.newLine,
+    getNewLine: () => tsImpl.sys.newLine,
   }
 
-  const configFile = ts.readConfigFile(tsconfigPath, ts.sys.readFile)
+  const configFile = tsImpl.readConfigFile(tsconfigPath, tsImpl.sys.readFile)
   if (configFile.error) {
     const diagnostics = [configFile.error]
     return {
@@ -176,12 +191,12 @@ export const runProjectTypecheck = (
     }
   }
 
-  const parsed = ts.parseJsonConfigFileContent(
+  const parsed = tsImpl.parseJsonConfigFileContent(
     configFile.config,
-    ts.sys,
+    tsImpl.sys,
     dirname(tsconfigPath)
   )
-  const program = ts.createProgram({
+  const program = tsImpl.createProgram({
     rootNames: parsed.fileNames,
     options: {
       ...parsed.options,
@@ -190,7 +205,10 @@ export const runProjectTypecheck = (
       tsBuildInfoFile: undefined,
     },
   })
-  const diagnostics = [...parsed.errors, ...ts.getPreEmitDiagnostics(program)]
+  const diagnostics = [
+    ...parsed.errors,
+    ...tsImpl.getPreEmitDiagnostics(program),
+  ]
   return {
     result: collectTscDiagnostics(diagnostics, rootDir),
     diagnostics,

@@ -2,7 +2,7 @@ import { join, resolve } from 'path'
 
 import { pikkuSessionlessFunc } from '#pikku'
 import chokidar, { type FSWatcher } from 'chokidar'
-import { pikkuDevReloader } from '@pikku/core/dev'
+import { pikkuDevReloader, reloadGeneratedMeta } from '@pikku/core/dev'
 import {
   ConsoleLogger,
   LocalEmailService,
@@ -365,12 +365,12 @@ export const dev = pikkuSessionlessFunc<
       }
     })
 
-    if (enableHmr) {
-      await pikkuDevReloader({
-        srcDirectories: watchDirectories,
-        logger,
-      })
-    }
+    const devReloader = enableHmr
+      ? await pikkuDevReloader({
+          srcDirectories: watchDirectories,
+          logger,
+        })
+      : undefined
 
     if (enableWatch) {
       const genIgnore = /\.gen\.tsx?$/
@@ -398,6 +398,20 @@ export const dev = pikkuSessionlessFunc<
               invalidateInspectorState()
               await runAllWithCommandState()
               workflowService.wireQueueWorkers()
+              // Pull the regenerated meta + JSON schemas into the running
+              // process so new/changed functions are callable without a
+              // restart (the hot-reloader registers their implementations).
+              await reloadGeneratedMeta({
+                pikkuDir,
+                logger,
+                schemaService: resolvedServices.schema,
+              })
+              // Re-import recently changed files now that the fresh meta is
+              // in state: wire* calls skip routes whose meta doesn't exist,
+              // so a NEW route in a changed wiring file only registers on
+              // this post-codegen pass (the reloader's instant pass ran too
+              // early to see it).
+              await devReloader?.reimportPending()
               logger.info({
                 message: `✓ Generated in ${Date.now() - start}ms`,
                 type: 'timing',

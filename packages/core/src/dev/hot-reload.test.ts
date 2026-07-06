@@ -152,14 +152,12 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
     assert.ok(reloadLog, 'Should log hot-reload message')
   })
 
-  test('should not replace a function that is not registered', async (t) => {
+  test('should register a brand-new function export', async (t) => {
     if (!(await ensureRecursiveWatchAvailable(t, tmpDir))) return
 
     addFunction('registeredFunc', {
       func: async () => ({ name: 'registered' }),
     })
-
-    await writeFunctionModule(tmpDir, 'unknownFunc.ts', '{ name: "unknown" }')
 
     reloader = await pikkuDevReloader({
       srcDirectories: [tmpDir],
@@ -167,14 +165,23 @@ describe('pikkuDevReloader', { concurrency: false }, () => {
       pikkuDir: tmpDir,
     })
 
-    await writeFunctionModule(tmpDir, 'unknownFunc.ts', '{ name: "updated" }')
+    await writeFunctionModule(tmpDir, 'unknownFunc.ts', '{ name: "unknown" }')
 
     await wait(300)
 
-    assert.equal(
-      pikkuState(null, 'function', 'functions').has('unknownFunc'),
-      false
-    )
+    const func = pikkuState(null, 'function', 'functions').get('unknownFunc')!
+    assert.ok(func, 'New function export should be registered')
+    assert.deepEqual(await func.func({} as any, {}, {} as any), {
+      name: 'unknown',
+    })
+    const newLog = mockLogger
+      .getLogs()
+      .find(
+        (l) =>
+          l.message.includes('Hot-reloaded') &&
+          l.message.includes('new: unknownFunc')
+      )
+    assert.ok(newLog, 'Should log the newly registered function')
   })
 
   test('should keep old code when JS import fails', async (t) => {
