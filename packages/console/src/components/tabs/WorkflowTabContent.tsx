@@ -13,17 +13,24 @@ import { asI18n } from '@pikku/react'
 import { m } from '@/i18n/messages'
 import { useLocale } from '@/i18n/config'
 
-export const WorkflowTabContent: React.FC<{ immersiveDetail?: boolean }> = ({
-  immersiveDetail = false,
-}) => {
+export const WorkflowTabContent: React.FC<{
+  immersiveDetail?: boolean
+  /** Render as a viewer only — no WorkflowRunProvider, so no run controls.
+   *  Used for scenarios, which can only be run via `pikku scenario run`
+   *  (actor sign-in cookies can't be minted in the browser). */
+  readOnly?: boolean
+  /** Override the entity id resolved from the navigator (e.g. scenarioId). */
+  entityId?: string | null
+}> = ({ immersiveDetail = false, readOnly = false, entityId }) => {
   const { workflowId, navigateTo } = useConsoleNavigator()
   useLocale()
   const rpc = usePikkuRPC()
+  const resolvedId = entityId ?? workflowId
   const { data: workflow, isLoading } = useQuery({
-    queryKey: ['workflow-meta-by-id', workflowId],
+    queryKey: ['workflow-meta-by-id', resolvedId],
     queryFn: () =>
-      rpc.invoke('console:getWorkflowMetaById', { workflowId: workflowId! }),
-    enabled: !!workflowId,
+      rpc.invoke('console:getWorkflowMetaById', { workflowId: resolvedId! }),
+    enabled: !!resolvedId,
   })
 
   const { meta } = usePikkuMeta()
@@ -48,27 +55,35 @@ export const WorkflowTabContent: React.FC<{ immersiveDetail?: boolean }> = ({
     return (
       <EmptyStatePlaceholder
         icon={GitBranch}
-        title={workflowId ? asI18n(`Workflow "${workflowId}" not found`) : m.workflows_empty_title()}
-        description={workflowId ? m.workflows_not_found_description() : m.workflows_empty_description()}
+        title={resolvedId ? asI18n(`Workflow "${resolvedId}" not found`) : m.workflows_empty_title()}
+        description={resolvedId ? m.workflows_not_found_description() : m.workflows_empty_description()}
         docsHref="https://pikku.dev/docs/core-features/workflows"
       />
     )
   }
 
+  const canvas = (
+    <WorkflowCanvas
+      workflow={workflow}
+      items={workflowItems}
+      onItemSelect={(name) => navigateTo('workflows', name)}
+      immersiveDetail={immersiveDetail}
+    />
+  )
+
   return (
     <PanelProvider>
-      <WorkflowRunProvider
-        workflowName={workflowId!}
-        currentGraphHash={(workflow as any).graphHash}
-        workflowNodes={(workflow as any).nodes}
-      >
-        <WorkflowCanvas
-          workflow={workflow}
-          items={workflowItems}
-          onItemSelect={(name) => navigateTo('workflows', name)}
-          immersiveDetail={immersiveDetail}
-        />
-      </WorkflowRunProvider>
+      {readOnly ? (
+        canvas
+      ) : (
+        <WorkflowRunProvider
+          workflowName={resolvedId!}
+          currentGraphHash={(workflow as any).graphHash}
+          workflowNodes={(workflow as any).nodes}
+        >
+          {canvas}
+        </WorkflowRunProvider>
+      )}
     </PanelProvider>
   )
 }

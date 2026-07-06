@@ -1,10 +1,11 @@
 import { createContext, useContext, type ReactNode } from 'react'
 import { useSearchParams, useNavigate } from '../router'
 
-export type ConsoleSection = 'workflows'
+export type ConsoleSection = 'workflows' | 'scenarios'
 
 export interface ConsoleNavigator {
   workflowId: string | null
+  scenarioId: string | null
   navigateTo: (section: ConsoleSection, id?: string) => void
 }
 
@@ -32,7 +33,11 @@ export const OSSConsoleNavigator: React.FC<{
   return (
     <Ctx.Provider
       value={{
+        // OSS default: each page mounts its own navigator under its own
+        // basePath and reads only the id it cares about, so exposing the same
+        // `?id=` value under both keys is harmless.
         workflowId: searchParams.get('id'),
+        scenarioId: searchParams.get('id'),
         navigateTo: (_section, id) => {
           navigate(id ? `${basePath}?id=${encodeURIComponent(id)}` : basePath)
         },

@@ -32,7 +32,7 @@ const SCENARIOS_BASE_PATH = '/scenarios'
 
 const ScenariosPageInner: React.FC = () => {
   useLocale()
-  const { workflowId, navigateTo } = useConsoleNavigator()
+  const { scenarioId, navigateTo } = useConsoleNavigator()
   const { meta, loading } = usePikkuMeta()
   const [view, setView] = useState<'scenarios' | 'personas'>('scenarios')
   const [searchQuery, setSearchQuery] = useState('')
@@ -104,8 +104,10 @@ const ScenariosPageInner: React.FC = () => {
     )
   }, [personaEntries, searchQuery])
 
-  if (workflowId) {
-    return <WorkflowTabContent immersiveDetail />
+  if (scenarioId) {
+    // Read-only: scenarios run only via `pikku scenario run` (actor sign-in
+    // cookies can't be minted in the browser), never the workflow-start UI.
+    return <WorkflowTabContent immersiveDetail readOnly entityId={scenarioId} />
   }
 
   return (
@@ -151,12 +153,12 @@ const ScenariosPageInner: React.FC = () => {
           <PersonasView
             personas={filteredPersonas}
             loading={loading}
-            onOpenFlow={(name) => navigateTo('workflows', name)}
+            onOpenFlow={(name) => navigateTo('scenarios', name)}
           />
         ) : (
           <FlowsList
             flows={filteredFlows}
-            onOpen={(name) => navigateTo('workflows', name)}
+            onOpen={(name) => navigateTo('scenarios', name)}
             loading={loading}
           />
         )}
