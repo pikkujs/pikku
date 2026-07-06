@@ -780,3 +780,68 @@ describe('camelCase flag', () => {
     )
   })
 })
+
+// ---------------------------------------------------------------------------
+// Function/MCP-tool description synthesis (specs that omit descriptions)
+// ---------------------------------------------------------------------------
+describe('function description synthesis', () => {
+  test('synthesizes a description from operationId when the spec omits one', () => {
+    const spec = makeSpec({
+      operations: [
+        makeOp({
+          operationId: 'contactsControllerGetContacts',
+          method: 'get',
+          path: '/contacts',
+        }),
+      ],
+    })
+
+    const files = generateAddonFromOpenAPI(spec, makeVars(), {
+      oauth: false,
+      secret: false,
+      mcp: true,
+    })
+    const funcFile = files['src/functions/contactsControllerGetContacts.function.ts']
+    assert.ok(funcFile, 'function file should exist')
+    assert.ok(
+      funcFile.includes('description: "Contacts get contacts"'),
+      'humanized operationId (Controller stripped) should be emitted as the description'
+    )
+    assert.ok(funcFile.includes('mcp: true'), 'mcp tool flag should be present')
+  })
+
+  test('falls back to "METHOD /path" when operationId is absent', () => {
+    const spec = makeSpec({
+      operations: [makeOp({ operationId: undefined, method: 'get', path: '/health' })],
+    })
+
+    const files = generateAddonFromOpenAPI(spec, makeVars(), {
+      oauth: false,
+      secret: false,
+    })
+    const key = Object.keys(files).find((k) => k.startsWith('src/functions/'))
+    assert.ok(key, 'a function file should be generated')
+    assert.ok(
+      files[key].includes('description: "GET /health"'),
+      'should fall back to METHOD path when nothing else is available'
+    )
+  })
+
+  test('prefers the spec description over synthesis', () => {
+    const spec = makeSpec({
+      operations: [
+        makeOp({ operationId: 'getPet', description: 'Fetch a single pet by id' }),
+      ],
+    })
+
+    const files = generateAddonFromOpenAPI(spec, makeVars(), {
+      oauth: false,
+      secret: false,
+    })
+    const funcFile = files['src/functions/getPet.function.ts']
+    assert.ok(
+      funcFile.includes('description: "Fetch a single pet by id"'),
+      'the real spec description should win over the synthesized one'
+    )
+  })
+})
