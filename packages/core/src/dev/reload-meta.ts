@@ -63,7 +63,15 @@ export async function reloadGeneratedMeta(
     logger,
     join(dir, 'function/pikku-functions-meta.gen.json')
   )
-  if (functionsMeta) pikkuState(null, 'function', 'meta', functionsMeta)
+  // Merge over the existing map, don't replace it: framework internals like
+  // pikkuWorkflowOrchestrator / the per-workflow queue workers are registered
+  // at service-init (pikku-workflow-service.ts), never in the generated JSON —
+  // a wholesale replace drops them and workflow jobs then fail with
+  // "Function meta not found: pikkuWorkflowOrchestrator".
+  if (functionsMeta) {
+    const existing = pikkuState(null, 'function', 'meta') ?? {}
+    pikkuState(null, 'function', 'meta', { ...existing, ...functionsMeta })
+  }
 
   const httpMeta = await readJson(
     logger,
@@ -81,7 +89,13 @@ export async function reloadGeneratedMeta(
     logger,
     join(dir, 'queue/pikku-queue-workers-wirings-meta.gen.json')
   )
-  if (queueMeta) pikkuState(null, 'queue', 'meta', queueMeta)
+  // Same reason as function meta: the workflow service adds its orchestrator /
+  // step queues (and wf-orchestrator-* / wf-step-* per-workflow queues) here at
+  // init, absent from the generated JSON — merge so they survive the reload.
+  if (queueMeta) {
+    const existing = pikkuState(null, 'queue', 'meta') ?? {}
+    pikkuState(null, 'queue', 'meta', { ...existing, ...queueMeta })
+  }
 
   const agentMeta = await readJson(
     logger,

@@ -75,6 +75,51 @@ describe('reloadGeneratedMeta', { concurrency: false }, () => {
     assert.equal(rpcMeta.newFunc, 'newFunc')
   })
 
+  test('preserves runtime-registered internals (workflow orchestrator) across reload', async () => {
+    // The workflow service registers these at init; they are never in the
+    // generated JSON, so the reload must merge — not replace — the meta maps.
+    pikkuState(null, 'function', 'meta', {
+      pikkuWorkflowOrchestrator: { pikkuFuncId: 'pikkuWorkflowOrchestrator' },
+    })
+    pikkuState(null, 'queue', 'meta', {
+      'pikku-workflow-orchestrator': {
+        pikkuFuncId: 'pikkuWorkflowOrchestrator',
+        name: 'pikku-workflow-orchestrator',
+      },
+    })
+
+    await mkdir(join(tmpDir, 'function'), { recursive: true })
+    await mkdir(join(tmpDir, 'queue'), { recursive: true })
+    await writeFile(
+      join(tmpDir, 'function/pikku-functions-meta.gen.json'),
+      JSON.stringify({ userFunc: { pikkuFuncId: 'userFunc' } })
+    )
+    await writeFile(
+      join(tmpDir, 'queue/pikku-queue-workers-wirings-meta.gen.json'),
+      JSON.stringify({ userQueue: { pikkuFuncId: 'userFunc', name: 'userQueue' } })
+    )
+
+    await reloadGeneratedMeta({
+      pikkuDir: tmpDir,
+      logger: mockLogger,
+      schemaService: mockSchemaService,
+    })
+
+    const functionsMeta = pikkuState(null, 'function', 'meta') as any
+    assert.equal(
+      functionsMeta.pikkuWorkflowOrchestrator?.pikkuFuncId,
+      'pikkuWorkflowOrchestrator',
+      'runtime-registered internal must survive the reload'
+    )
+    assert.equal(functionsMeta.userFunc?.pikkuFuncId, 'userFunc')
+    const queueMeta = pikkuState(null, 'queue', 'meta') as any
+    assert.equal(
+      queueMeta['pikku-workflow-orchestrator']?.pikkuFuncId,
+      'pikkuWorkflowOrchestrator'
+    )
+    assert.equal(queueMeta.userQueue?.name, 'userQueue')
+  })
+
   test('re-adds generated json schemas and recompiles them', async () => {
     const schemasDir = join(tmpDir, 'schemas', 'schemas')
     await mkdir(schemasDir, { recursive: true })
