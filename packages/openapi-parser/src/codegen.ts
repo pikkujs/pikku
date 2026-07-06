@@ -69,12 +69,40 @@ function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
-function humanDescription(parsed: ParsedOperation): string | undefined {
+/**
+ * Turn an operationId like `contactsControllerGetContacts` (or snake/kebab
+ * variants) into a readable phrase — split camel/snake/kebab into words, drop
+ * noise segments ("controller"), and capitalize. Returns undefined if nothing
+ * usable remains.
+ */
+function humanizeOperationId(operationId?: string): string | undefined {
+  if (!operationId) return undefined
+  const words = operationId
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter((w) => w && w.toLowerCase() !== 'controller')
+  if (words.length === 0) return undefined
+  return capitalize(words.join(' ').toLowerCase())
+}
+
+/**
+ * A description for the generated function (and its MCP tool). Prefers the
+ * spec's `description`, then `summary`; when a spec omits both (common), a
+ * synthesized description is still emitted so no function — and no MCP tool —
+ * ships description-less: a humanized operationId, else "METHOD /path".
+ */
+function humanDescription(parsed: ParsedOperation): string {
   const description = parsed.description?.trim()
   if (description && !GENERIC_SUMMARIES.has(description.toLowerCase())) {
     return capitalize(description)
   }
-  return undefined
+  const summary = parsed.summary?.trim()
+  if (summary && !GENERIC_SUMMARIES.has(summary.toLowerCase())) {
+    return capitalize(summary)
+  }
+  return humanizeOperationId(parsed.operationId) ?? `${parsed.method.toUpperCase()} ${parsed.path}`
 }
 
 function getErrorClassesForResponses(
