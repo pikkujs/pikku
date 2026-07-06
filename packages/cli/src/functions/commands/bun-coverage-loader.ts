@@ -55,10 +55,13 @@ export async function registerBunCoverageLoader({
     name: 'pikku-istanbul-coverage',
     setup(build) {
       build.onLoad({ filter }, async (args) => {
-        if (!shouldInstrument(args.path)) return undefined
+        // Bun (≥1.3.14) rejects `return undefined` from onLoad with
+        // "onLoad() expects an object returned", so non-instrumented files
+        // (.gen/.test/.d, node_modules) pass through as an object instead.
         const source = await readFile(args.path, 'utf-8')
-        const contents = instrumenter.instrumentSync(source, args.path)
-        return { contents, loader: args.path.endsWith('.tsx') ? 'tsx' : 'ts' }
+        const loader = args.path.endsWith('.tsx') ? 'tsx' : 'ts'
+        if (!shouldInstrument(args.path)) return { contents: source, loader }
+        return { contents: instrumenter.instrumentSync(source, args.path), loader }
       })
     },
   })
