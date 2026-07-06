@@ -1,3 +1,9 @@
+## 0.12.75
+
+### Patch Changes
+
+- 2404134: Guard `wire.getCredential` in the generated per-user credential addon (`new addon --credential`). `getCredential` is optional on the wire services type, so the emitted `src/services.ts` failed `tsc` with "possibly undefined" out of the box; it now checks before calling.
+
 ## 0.12.74
 
 ### Patch Changes
