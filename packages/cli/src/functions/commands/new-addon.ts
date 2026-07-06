@@ -240,6 +240,9 @@ import { pikkuAddonWireServices } from '#pikku'
 
 export const createWireServices = pikkuAddonWireServices(
   async ({ variables }, wire) => {
+    if (!wire.getCredential) {
+      throw new Error('Credential resolution is not available in this runtime')
+    }
     const cred = await wire.getCredential<{ ${credField}: string }>('${camelName}')
     if (!cred?.${credField}) {
       throw new Error('Missing ${camelName} credential')
