@@ -23,6 +23,7 @@ export type PanelType =
   | 'credentialUser'
   | 'authProvider'
   | 'dbColumn'
+  | 'email'
 
 export interface PanelData {
   type: PanelType
@@ -67,6 +68,7 @@ interface PanelContextType {
   openCredentialUser: (userId: string, metadata?: any) => void
   openAuthProvider: (providerId: string, metadata?: any) => void
   openDbColumn: (tableName: string, columnName: string, metadata?: any) => void
+  openEmail: (templateName: string, metadata?: any) => void
   navigateInPanel: (
     type: PanelType,
     id: string,
@@ -277,6 +279,13 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({ children }) => {
     [openPanelGeneric]
   )
 
+  const openEmail = useCallback(
+    (templateName: string, metadata?: any) => {
+      openPanelGeneric('email', templateName, templateName, metadata)
+    },
+    [openPanelGeneric]
+  )
+
   const navigateInPanel = useCallback(
     (type: PanelType, id: string, title: string, metadata?: any) => {
       setPanels((prev) => {
@@ -404,6 +413,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({ children }) => {
         openCredentialUser,
         openAuthProvider,
         openDbColumn,
+        openEmail,
         navigateInPanel,
         goBack,
         goBackTo,

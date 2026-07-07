@@ -162,3 +162,11 @@ export type {
 } from './pages/AuthProvidersPage'
 export { NotFoundTitle } from './components/NotFoundTitle'
 export { ConsoleEditableProvider } from './context/ConsoleEditableContext'
+// Detail-panel system: lets an embedder (e.g. a canvas/graph view) open the
+// same right-hand configuration panels the pages use, by wire type + id.
+export { PanelProvider, usePanelContext } from './context/PanelContext'
+export type { PanelType, PanelData } from './context/PanelContext'
+export { PanelContainer } from './components/panel/PanelContainer'
+// Needed by an embedder that opens the workflow panel outside a workflow page:
+// the workflow panels read their graph from this context (feed it meta.workflows[id]).
+export { WorkflowProvider } from './context/WorkflowContext'

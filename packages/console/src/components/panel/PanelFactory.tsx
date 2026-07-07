@@ -54,6 +54,7 @@ import {
 import { CredentialUserPanel } from '../project/panels/CredentialUserPanel'
 import { AuthProviderPanel } from '../project/panels/AuthProviderPanel'
 import { DbColumnPanel } from '../project/panels/DbColumnPanel'
+import { EmailPreviewPanel } from '../project/panels/EmailPreviewPanel'
 
 interface PanelChild {
   id: string
@@ -529,6 +530,22 @@ export const createPanelChildren = (panelData: PanelData): PanelChild[] => {
           content: (
             <Box px="md">
               <DbColumnPanel metadata={panelData.metadata} />
+            </Box>
+          ),
+        },
+      ]
+
+    case 'email':
+      return [
+        {
+          id: 'preview',
+          title: 'Email',
+          content: (
+            <Box px="md">
+              <EmailPreviewPanel
+                templateName={panelData.id}
+                metadata={panelData.metadata}
+              />
             </Box>
           ),
         },
