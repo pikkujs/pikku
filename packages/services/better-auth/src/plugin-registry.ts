@@ -24,6 +24,7 @@ export const PLUGIN_REGISTRY: Record<string, AuthPluginDef> = {
   customSession: { displayName: 'Custom Session' },
   deviceAuthorization: { displayName: 'Device Authorization' },
   emailOTP: { displayName: 'Email OTP' },
+  fabric: { displayName: 'Fabric' },
   genericOAuth: { displayName: 'Generic OAuth' },
   haveIBeenPwned: { displayName: 'Have I Been Pwned' },
   jwt: { displayName: 'JWT' },
