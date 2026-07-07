@@ -217,6 +217,7 @@ export const serializeAuthGen = (
     // inspector from the pikkuBetterAuth factory.
     `const authConfigHandler = createAuthHandler()`,
     `export const ${AUTH_HANDLER_FUNC_ID} = pikkuSessionlessFunc({`,
+    `  tags: ['pikku'],`,
     `  func: (services: any, data: any, interaction: any) =>`,
     `    authConfigHandler.func(services, data, interaction),`,
     `})`,
@@ -237,7 +238,9 @@ export const serializeAuthGen = (
       wiring.push(`addHTTPMiddleware('*', [betterAuthSession()])`, '')
     }
   }
-  wiring.push(`wireHTTPRoutes({`, `  routes: {`)
+  // `pikku` tag marks these as scaffold plumbing (not user-authored wiring) so
+  // visualizers like the console's woven build view can hide them.
+  wiring.push(`wireHTTPRoutes({`, `  tags: ['pikku'],`, `  routes: {`)
   // One catch-all route per method. `{/*splat}` matches both the bare basePath
   // and every sub-path under it, so better-auth's internal router sees the full
   // request and handles all of its own endpoints.

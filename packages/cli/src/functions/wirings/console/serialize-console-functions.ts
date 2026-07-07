@@ -91,6 +91,7 @@ export const pikkuConsoleGetSecret = pikkuFunc<
 
 export const consoleRoutes = defineHTTPRoutes({
   auth: false,
+  tags: ['pikku'],
   routes: {
     workflowRunStream: {
       route: '/workflow-run/:runId/stream',

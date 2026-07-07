@@ -245,6 +245,7 @@ export const graphStarter = pikkuSessionlessFunc<
   { workflowName: string; nodeId: string; data?: unknown },
   { runId: string }
 >({
+  tags: ['pikku'],
   auth: ${authFlag},
   // See workflowStarter — destructure workflowService so the analyzer
   // assigns workflow-state capability to this unit.
@@ -255,6 +256,7 @@ export const graphStarter = pikkuSessionlessFunc<
 })
 
 wireHTTPRoutes({
+  tags: ['pikku'],
   auth: ${authFlag},
   routes: {
     workflowStart: {

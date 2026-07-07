@@ -28,6 +28,7 @@ wireHTTP({
   route: '${globalHTTPPrefix}/rpc/:rpcName',
   method: 'post',
   auth: ${authFlag},
+  tags: ['pikku'],
   func: rpcCaller,
 })
 `

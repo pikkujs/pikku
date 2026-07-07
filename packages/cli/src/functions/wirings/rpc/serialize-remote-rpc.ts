@@ -22,6 +22,7 @@ export const remoteRPCHandler = pikkuSessionlessFunc<
 
 wireQueueWorker({
   name: 'pikku-remote-internal-rpc',
+  tags: ['pikku'],
   func: remoteRPCHandler,
 })
 
@@ -29,6 +30,7 @@ wireHTTP({
   route: '/remote/rpc/:rpcName',
   method: 'post',
   auth: false,
+  tags: ['pikku'],
   middleware: [pikkuRemoteAuthMiddleware],
   func: remoteRPCHandler,
 })
