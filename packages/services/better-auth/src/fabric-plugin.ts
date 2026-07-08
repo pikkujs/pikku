@@ -23,7 +23,7 @@ export interface FabricPluginOptions {
 const fabricEmail = (fabricUserId: string): string =>
   `fabric-${fabricUserId.toLowerCase()}@fabric.internal`
 
-const b64urlToBytes = (s: string): Uint8Array => {
+const b64urlToBytes = (s: string): Uint8Array<ArrayBuffer> => {
   const pad = s + '==='.slice((s.length + 3) % 4)
   const bin = atob(pad.replace(/-/g, '+').replace(/_/g, '/'))
   const out = new Uint8Array(bin.length)
@@ -31,7 +31,7 @@ const b64urlToBytes = (s: string): Uint8Array => {
   return out
 }
 
-const pemToDer = (pem: string): Uint8Array => {
+const pemToDer = (pem: string): Uint8Array<ArrayBuffer> => {
   const body = pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '')
   const bin = atob(body)
   const out = new Uint8Array(bin.length)
