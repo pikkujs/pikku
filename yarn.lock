@@ -5814,6 +5814,7 @@ __metadata:
     "@pikku/inspector": "npm:^0.12.38"
     "@pikku/kysely": "npm:^0.13.0"
     "@pikku/kysely-node-sqlite": "npm:^0.12.3"
+    "@pikku/n8n-import": "npm:^0.0.1"
     "@pikku/node-http-server": "npm:^0.12.5"
     "@pikku/openapi-parser": "npm:^0.12.11"
     "@pikku/schedule": "npm:^0.12.3"
@@ -6339,7 +6340,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/n8n-import@workspace:packages/n8n-import":
+"@pikku/n8n-import@npm:^0.0.1, @pikku/n8n-import@workspace:packages/n8n-import":
   version: 0.0.0-use.local
   resolution: "@pikku/n8n-import@workspace:packages/n8n-import"
   dependencies:
