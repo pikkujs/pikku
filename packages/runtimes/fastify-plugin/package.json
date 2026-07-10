@@ -31,7 +31,7 @@
     "cookie": "^1.1.1"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "exports": {
     ".": "./dist/index.js"

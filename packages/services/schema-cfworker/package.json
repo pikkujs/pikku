@@ -24,7 +24,7 @@
     "typescript": "^6.0.3"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "dependencies": {
     "@cfworker/json-schema": "^4.1.1"
