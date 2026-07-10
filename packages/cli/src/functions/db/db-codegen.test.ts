@@ -24,6 +24,12 @@ function fakeIntrospector(columns: ColumnInfo[]): DbIntrospector {
     async getForeignKeys() {
       return []
     },
+    async getAllColumns() {
+      return new Map([['app.widget', columns]])
+    },
+    async getAllForeignKeys() {
+      return new Map()
+    },
     async listEnums() {
       return []
     },

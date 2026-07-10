@@ -1,4 +1,9 @@
-import type { DbIntrospector, ColumnInfo, ForeignKeyInfo, EnumInfo } from '../db-introspector.js'
+import type {
+  DbIntrospector,
+  ColumnInfo,
+  ForeignKeyInfo,
+  EnumInfo,
+} from '../db-introspector.js'
 import type { SyncSqliteDatabase } from './sqlite-runtime.js'
 
 const SKIP_TABLES = new Set(['sqlite_sequence', 'sql_migrations'])
@@ -57,7 +62,9 @@ export class SqliteIntrospector implements DbIntrospector {
   private parseCheckEnums(table: string): Map<string, string[]> {
     const out = new Map<string, string[]>()
     const row = this.db
-      .prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?`)
+      .prepare(
+        `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?`
+      )
       .get(table) as { sql: string | null } | undefined
     const ddl = row?.sql
     if (!ddl) return out
@@ -83,6 +90,23 @@ export class SqliteIntrospector implements DbIntrospector {
       foreignTable: r.table,
       foreignColumn: r.to,
     }))
+  }
+
+  async getAllColumns(): Promise<Map<string, ColumnInfo[]>> {
+    const byTable = new Map<string, ColumnInfo[]>()
+    for (const table of await this.listTables()) {
+      byTable.set(table, await this.getColumns(table))
+    }
+    return byTable
+  }
+
+  async getAllForeignKeys(): Promise<Map<string, ForeignKeyInfo[]>> {
+    const byTable = new Map<string, ForeignKeyInfo[]>()
+    for (const table of await this.listTables()) {
+      const fks = await this.getForeignKeys(table)
+      if (fks.length > 0) byTable.set(table, fks)
+    }
+    return byTable
   }
 
   async listEnums(): Promise<EnumInfo[]> {

@@ -594,8 +594,7 @@ type SchemaMap = Map<string, Set<string>>
 
 async function introspectorToMap(intro: DbIntrospector): Promise<SchemaMap> {
   const map: SchemaMap = new Map()
-  for (const table of await intro.listTables()) {
-    const cols = await intro.getColumns(table)
+  for (const [table, cols] of await intro.getAllColumns()) {
     map.set(table, new Set(cols.map((c) => c.name)))
   }
   return map

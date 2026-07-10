@@ -526,12 +526,11 @@ export async function generateSchemaTypes(
   const dialect: Dialect = options.dialect ?? 'sqlite'
 
   const tableNames = await introspector.listTables()
-  const tables: TableSchema[] = await Promise.all(
-    tableNames.map(async (name) => ({
-      name,
-      columns: await introspector.getColumns(name),
-    }))
-  )
+  const columnsByTable = await introspector.getAllColumns()
+  const tables: TableSchema[] = tableNames.map((name) => ({
+    name,
+    columns: columnsByTable.get(name) ?? [],
+  }))
 
   const explicitAnnotations = options.rootDir
     ? loadAnnotations(options.rootDir)
@@ -652,10 +651,7 @@ export async function generateSchemaTypes(
   // ── pikku-db-schema.gen.json ─────────────────────────────────────────────────
   let schemaJsonBody: string | null = null
   if (options.schemaJsonFile) {
-    const fkResults = await Promise.all(
-      tableNames.map((name) => introspector.getForeignKeys(name))
-    )
-    const fkMap = new Map(tableNames.map((name, i) => [name, fkResults[i]!]))
+    const fkMap = await introspector.getAllForeignKeys()
     const jsonTables = tables.map((t) => ({
       name: t.name,
       columns: t.columns.map((c) => {
