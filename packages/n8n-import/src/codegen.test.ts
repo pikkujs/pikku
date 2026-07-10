@@ -34,9 +34,9 @@ test('linear set/code/integration workflow → pure graph', () => {
     graph,
     /field: "greeting", operation: "set" as const, value: template\("Hello \$0", \[ref\("trigger", "body\.name"\)\]\)/
   )
-  // integration cross-node ref — editFields wraps its output in `item`, so a
-  // downstream ref to a Set node is prefixed with `item.`
-  assert.match(graph, /"sendTo": ref\("setFields", "item\.email"\)/)
+  // integration cross-node ref — editFields exposes its result directly, so a
+  // downstream ref into a Set node targets the field with no prefix
+  assert.match(graph, /"sendTo": ref\("setFields", "email"\)/)
   // node-level note preserved
   assert.match(graph, /notes: "sends the welcome email"/)
   // topology

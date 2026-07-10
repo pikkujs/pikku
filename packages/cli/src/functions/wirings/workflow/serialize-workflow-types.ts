@@ -183,6 +183,8 @@ type GraphNodeConfigMap<FuncMap extends Record<string, string>> = {
       | (() => NodeInputType<FuncMap, K>)
       | ((ref: RefFunction<FuncMap>, template: TemplateFunction) => NodeInputType<FuncMap, K>)
     onError?: Extract<keyof FuncMap, string> | Extract<keyof FuncMap, string>[]
+    /** Free-text node documentation. Non-semantic — excluded from graphHash. */
+    notes?: string
   }
 }
 

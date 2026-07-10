@@ -27,11 +27,14 @@ export const EditFieldsInput = z.object({
     .describe('List of field operations to perform'),
 })
 
-export const EditFieldsOutput = z.object({
-  item: z.record(z.string(), z.unknown()).describe('The transformed object'),
-})
-
-type Output = z.infer<typeof EditFieldsOutput>
+/**
+ * The transformed object, exposed directly as the output so downstream graph
+ * nodes can reference its fields (`ref('setNode', 'email')`) rather than having
+ * to reach through an `item` wrapper.
+ */
+export const EditFieldsOutput = z
+  .record(z.string(), z.unknown())
+  .describe('The transformed object')
 
 const setNestedValue = (
   obj: Record<string, unknown>,
@@ -113,6 +116,6 @@ export const editFields = pikkuSessionlessFunc({
       }
     }
 
-    return { item: result }
+    return result
   },
 })
