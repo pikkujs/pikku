@@ -68,6 +68,34 @@ test('linear set/code/integration workflow → pure graph', () => {
   assert.ok(files['leadEnrichment/leadEnrichment.integrations.json'])
 })
 
+test('modern Edit Fields (Set v3.4) unwraps assignments.assignments into per-field set operations', () => {
+  const parsed = parseN8n(loadFixture('set-edit-fields.json'))
+  const { files } = generateWorkflowFromN8n(parsed)
+
+  const graph = files['editFieldsDemo/editFieldsDemo.graph.ts']
+  assert.ok(graph, 'graph file emitted')
+  assert.match(graph, /editFields: "graph:editFields"/)
+
+  // each assignment becomes its own set operation, classified individually
+  assert.match(
+    graph,
+    /field: "product", operation: "set" as const, value: "widget"/
+  )
+  assert.match(
+    graph,
+    /field: "email", operation: "set" as const, value: ref\("trigger", "body\.email"\)/
+  )
+  assert.match(
+    graph,
+    /field: "greeting", operation: "set" as const, value: template\("Hi \$0", \[ref\("trigger", "body\.name"\)\]\)/
+  )
+
+  // the raw n8n containers must NOT leak through as fields
+  assert.doesNotMatch(graph, /field: "assignments"/)
+  assert.doesNotMatch(graph, /field: "options"/)
+  assert.doesNotMatch(graph, /field: "mode"/)
+})
+
 test('code node with block comments escapes */ so the JSDoc stays valid', () => {
   const parsed = parseN8n(loadFixture('code-block-comment.json'))
   const { files } = generateWorkflowFromN8n(parsed)

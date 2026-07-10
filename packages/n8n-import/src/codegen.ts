@@ -78,6 +78,58 @@ function emitValue(
   return null
 }
 
+/** Top-level Set/Edit-Fields parameters that are node config, never fields. */
+const SET_CONFIG_KEYS = new Set([
+  'mode',
+  'options',
+  'assignments',
+  'values',
+  'include',
+  'includeOtherFields',
+  'keepOnlySet',
+  'duplicateItem',
+])
+
+/**
+ * Extract a Set / Edit Fields node's assignments as a flat `{ field, value }`
+ * list, normalizing across the node's format versions:
+ *  - v3.4 "Edit Fields (Set)": `parameters.assignments.assignments[]` ({ name, value })
+ *  - v2 "Set": `parameters.values.{string,number,boolean,…}[]` ({ name, value })
+ *  - simplified/flat: each remaining top-level parameter key is a field
+ */
+function setAssignments(
+  parameters: Record<string, unknown>
+): { field: string; value: unknown }[] {
+  const container = parameters.assignments as
+    | { assignments?: unknown }
+    | undefined
+  if (container && Array.isArray(container.assignments)) {
+    return container.assignments
+      .filter((a): a is Record<string, unknown> => !!a && typeof a === 'object')
+      .map((a) => ({ field: String(a.name ?? ''), value: a.value }))
+      .filter((a) => a.field)
+  }
+
+  const values = parameters.values
+  if (values && typeof values === 'object') {
+    const out: { field: string; value: unknown }[] = []
+    for (const group of Object.values(values as Record<string, unknown>)) {
+      if (!Array.isArray(group)) continue
+      for (const entry of group) {
+        if (entry && typeof entry === 'object' && 'name' in entry) {
+          const e = entry as Record<string, unknown>
+          out.push({ field: String(e.name ?? ''), value: e.value })
+        }
+      }
+    }
+    if (out.length > 0) return out.filter((a) => a.field)
+  }
+
+  return Object.entries(parameters)
+    .filter(([key]) => !SET_CONFIG_KEYS.has(key))
+    .map(([field, value]) => ({ field, value }))
+}
+
 /**
  * Build the `input: (ref) => ({...})` body for an n8n Set / Edit Fields node,
  * lowering each assignment to a `set` operation for `@pikku/addon-graph`'s
@@ -89,18 +141,18 @@ function emitSetInput(
   setNodeIds: Set<string>
 ): string | null {
   const ops: string[] = []
-  for (const [key, value] of Object.entries(node.parameters)) {
+  for (const { field, value } of setAssignments(node.parameters)) {
     const classified = classifyExpression(value, ctx)
     if (classified.kind === 'transform') {
       ops.push(
-        `        // TODO(n8n expr): ${key} = ${classified.expression.replace(/\n/g, ' ')}`
+        `        // TODO(n8n expr): ${field} = ${classified.expression.replace(/\n/g, ' ')}`
       )
       continue
     }
     const rendered = emitValue(value, ctx, setNodeIds)
     if (rendered === null) continue
     ops.push(
-      `        { field: ${q(key)}, operation: "set" as const, value: ${rendered} },`
+      `        { field: ${q(field)}, operation: "set" as const, value: ${rendered} },`
     )
   }
   if (ops.length === 0) return null
