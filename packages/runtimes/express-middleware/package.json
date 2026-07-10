@@ -31,7 +31,7 @@
     "typescript": "^6.0.3"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "dependencies": {
     "cookie": "^1.1.1"

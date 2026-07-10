@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
       - name: Check published deps for workspace protocol
         run: node scripts/check-no-workspace-protocol.mjs
       - name: Check no publish-time CLI rebuild

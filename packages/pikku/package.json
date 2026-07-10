@@ -20,7 +20,7 @@
     "@pikku/schema-ajv": "^0.12.2"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "devDependencies": {
     "typescript": "^6.0.3"

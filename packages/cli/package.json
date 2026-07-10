@@ -75,7 +75,7 @@
     "cli.schema.json"
   ],
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "exports": {
     ".": "./dist/bin/pikku.js"

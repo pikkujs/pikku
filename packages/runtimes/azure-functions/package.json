@@ -23,7 +23,7 @@
     "typescript": "^6.0.3"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "dependencies": {
     "@azure/functions": "4.11.2",
