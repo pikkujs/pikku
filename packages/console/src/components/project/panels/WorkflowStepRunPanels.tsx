@@ -305,7 +305,7 @@ export const WorkflowStepRetryHistory: React.FC<StepRunPanelProps> = ({
               key={index}
               bullet={icon}
               color={statusDefs[attempt.status]?.color || 'gray'}
-              title={`Attempt ${attempt.attemptCount}`}
+              title={asI18n(`Attempt ${attempt.attemptCount}`)}
             >
               <Group gap="xs">
                 <PikkuBadge type="status" value={attempt.status} />
