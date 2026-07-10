@@ -38,6 +38,9 @@ export const dbReset = pikkuSessionlessFunc<{}, void>({
     )
 
     const { migrate, codegen, zod } = await migrateAndCodegen(resolved)
+    for (const warning of codegen.warnings) {
+      logger.diagnostic(warning)
+    }
     for (const name of migrate.applied) {
       logger.info(`db reset: applied ${name}`)
     }

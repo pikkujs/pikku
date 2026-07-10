@@ -9,6 +9,7 @@ import {
   type ColAnnotation,
 } from './annotation-parser.js'
 import { ZOD_FORMATS, type ZodFormat } from './zod-codegen.js'
+import { ErrorCode, type CodedDiagnostic } from '@pikku/inspector'
 
 // ─── Type aliases ─────────────────────────────────────────────────────────────
 
@@ -190,7 +191,7 @@ function emitInterface(
   dialect: Dialect,
   enumByName: Map<string, string[]>,
   formatHints: Record<string, Record<string, ZodFormat>>,
-  warnings: string[]
+  warnings: CodedDiagnostic[]
 ): string {
   const ifaceName = tableToInterfaceName(table.name)
   const bare = bareTableName(table.name)
@@ -219,10 +220,13 @@ function emitInterface(
       if (!ann?.kind && !ann?.tsType) {
         const suggested = nameSuggestsKind(col.name)
         if (suggested && real && suggested !== real) {
-          warnings.push(
-            `Column "${bare}.${col.name}" is named like a ${suggested} but its DB type ` +
-              `is ${col.type} (${real}). If intentional, set its kind in db/annotations.ts.`
-          )
+          warnings.push({
+            severity: 'warn',
+            code: ErrorCode.DB_COLUMN_NAME_TYPE_CONTRADICTION,
+            message:
+              `Column "${bare}.${col.name}" is named like a ${suggested} but its DB type ` +
+              `is ${col.type} (${real}). If intentional, set its kind in db/annotations.ts.`,
+          })
         }
       }
 
@@ -257,11 +261,14 @@ function emitInterface(
       if (isJsonColumn) {
         const resolved = selectBase(typeAnn, col)
         if (resolved === 'unknown' || resolved === 'any') {
-          warnings.push(
-            `Column "${bare}.${col.name}" is ${col.type} and will be typed as ` +
+          warnings.push({
+            severity: 'warn',
+            code: ErrorCode.DB_JSON_COLUMN_UNTYPED,
+            message:
+              `Column "${bare}.${col.name}" is ${col.type} and will be typed as ` +
               `\`${resolved}\` — JSON/JSONB columns need a concrete TypeScript type. ` +
-              `In db/annotations.ts add: "${col.name}": { kind: 'json', tsType: 'YourType' }.`
-          )
+              `In db/annotations.ts add: "${col.name}": { kind: 'json', tsType: 'YourType' }.`,
+          })
         }
       }
 
@@ -274,10 +281,13 @@ function emitInterface(
         if (base === 'string') {
           ;(formatHints[ifaceName] ??= {})[fieldName] = ann.format
         } else {
-          warnings.push(
-            `Column "${bare}.${col.name}": format '${ann.format}' ignored — its ` +
-              `resolved type is ${base}, not string. Remove the conflicting kind/tsType.`
-          )
+          warnings.push({
+            severity: 'warn',
+            code: ErrorCode.DB_FORMAT_ON_NON_STRING,
+            message:
+              `Column "${bare}.${col.name}": format '${ann.format}' ignored — its ` +
+              `resolved type is ${base}, not string. Remove the conflicting kind/tsType.`,
+          })
         }
       }
 
@@ -444,8 +454,12 @@ export interface CodegenResult {
   classificationMapWritten: boolean
   enumsWritten: boolean
   tables: string[]
-  /** Non-fatal codegen warnings (e.g. name looks like a date but unannotated). */
-  warnings: string[]
+  /**
+   * Non-fatal codegen diagnostics (e.g. name looks like a date but unannotated,
+   * or a JSON column with no concrete `tsType`). The caller surfaces these via
+   * `logger.diagnostic(...)`, so `pikku db --fail-on-warn` can gate on them.
+   */
+  warnings: CodedDiagnostic[]
   /**
    * Per-interface, per-field zod `format` overrides for the zod codegen. Keyed
    * by interface name (PascalCase) and field name (camelCase), matching the
@@ -529,7 +543,7 @@ export async function generateSchemaTypes(
   }
 
   // ── schema.gen.ts ────────────────────────────────────────────────────────────
-  const warnings: string[] = []
+  const warnings: CodedDiagnostic[] = []
   const zodFormats: Record<string, Record<string, ZodFormat>> = {}
   const interfaces = tables
     .map((t) =>
@@ -544,7 +558,6 @@ export async function generateSchemaTypes(
       )
     )
     .join('\n\n')
-  for (const w of warnings) console.warn(`[pikku db] ${w}`)
 
   const dbEntries = tables
     .map((t) => {

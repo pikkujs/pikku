@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { generateSchemaTypes } from './db-codegen.js'
 import type { DbIntrospector, ColumnInfo } from './db-introspector.js'
+import { ErrorCode } from '@pikku/inspector'
 
 function col(
   partial: Partial<ColumnInfo> & { name: string; type: string }
@@ -54,12 +55,27 @@ async function run(
 const jsonWarning = (column: string) =>
   new RegExp(`Column "widget\\.${column}" is .*JSON/JSONB columns need`, 'i')
 
+const hasJsonWarning = (
+  warnings: Awaited<ReturnType<typeof run>>['warnings'],
+  column: string
+) => warnings.some((w) => jsonWarning(column).test(w.message))
+
 test('warns when a jsonb column has no tsType (degrades to unknown)', async () => {
   const result = await run([col({ name: 'spec', type: 'jsonb' })])
   assert.ok(
-    result.warnings.some((w) => jsonWarning('spec').test(w)),
+    hasJsonWarning(result.warnings, 'spec'),
     `expected a json-type warning, got: ${JSON.stringify(result.warnings)}`
   )
+})
+
+test('the json warning is a coded warn-severity diagnostic (so --fail-on-warn can gate it)', async () => {
+  const result = await run([col({ name: 'spec', type: 'jsonb' })])
+  const diagnostic = result.warnings.find((w) =>
+    jsonWarning('spec').test(w.message)
+  )
+  assert.ok(diagnostic, 'expected a json-type diagnostic')
+  assert.equal(diagnostic!.code, ErrorCode.DB_JSON_COLUMN_UNTYPED)
+  assert.equal(diagnostic!.severity, 'warn')
 })
 
 test('warns when a json column is only annotated kind: json (still unknown)', async () => {
@@ -67,7 +83,7 @@ test('warns when a json column is only annotated kind: json (still unknown)', as
     widget: { spec: { kind: 'json' } },
   })
   assert.ok(
-    result.warnings.some((w) => jsonWarning('spec').test(w)),
+    hasJsonWarning(result.warnings, 'spec'),
     `expected a json-type warning, got: ${JSON.stringify(result.warnings)}`
   )
 })
@@ -77,7 +93,7 @@ test('warns when a json column is explicitly typed unknown (allowed but discoura
     widget: { spec: { kind: 'json', tsType: 'unknown' } },
   })
   assert.ok(
-    result.warnings.some((w) => jsonWarning('spec').test(w)),
+    hasJsonWarning(result.warnings, 'spec'),
     `expected a json-type warning, got: ${JSON.stringify(result.warnings)}`
   )
 })
@@ -87,7 +103,7 @@ test('does not warn when a json column has a concrete tsType', async () => {
     widget: { spec: { kind: 'json', tsType: 'WidgetSpec' } },
   })
   assert.ok(
-    !result.warnings.some((w) => jsonWarning('spec').test(w)),
+    !hasJsonWarning(result.warnings, 'spec'),
     `expected no json-type warning, got: ${JSON.stringify(result.warnings)}`
   )
 })
@@ -98,7 +114,8 @@ test('does not warn for non-json columns', async () => {
     col({ name: 'count', type: 'integer' }),
   ])
   assert.equal(
-    result.warnings.filter((w) => /JSON\/JSONB columns need/.test(w)).length,
+    result.warnings.filter((w) => /JSON\/JSONB columns need/.test(w.message))
+      .length,
     0
   )
 })
