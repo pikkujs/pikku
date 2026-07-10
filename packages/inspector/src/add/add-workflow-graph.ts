@@ -254,6 +254,7 @@ interface PikkuWorkflowGraphExtract {
   name?: string
   description?: string
   tags?: string[]
+  notes?: string[]
   disabled?: true
   nodesNode?: ts.ObjectLiteralExpression
   configNode?: ts.ObjectLiteralExpression
@@ -270,6 +271,7 @@ function extractWorkflowGraphConfig(
   let name: string | undefined
   let description: string | undefined
   let tags: string[] | undefined
+  let notes: string[] | undefined
   let disabled: true | undefined
   let nodesNode: ts.ObjectLiteralExpression | undefined
   let configNode: ts.ObjectLiteralExpression | undefined
@@ -294,6 +296,13 @@ function extractWorkflowGraphConfig(
         .filter(ts.isStringLiteral)
         .map((el) => (el as ts.StringLiteral).text)
     } else if (
+      propName === 'notes' &&
+      ts.isArrayLiteralExpression(prop.initializer)
+    ) {
+      notes = prop.initializer.elements
+        .filter(ts.isStringLiteral)
+        .map((el) => (el as ts.StringLiteral).text)
+    } else if (
       propName === 'nodes' &&
       ts.isObjectLiteralExpression(prop.initializer)
     ) {
@@ -306,7 +315,7 @@ function extractWorkflowGraphConfig(
     }
   }
 
-  return { name, description, tags, disabled, nodesNode, configNode }
+  return { name, description, tags, notes, disabled, nodesNode, configNode }
 }
 
 /**
@@ -359,6 +368,7 @@ function extractGraphFromNewFormat(
       onError: undefined,
       retries: undefined,
       retryDelay: undefined,
+      notes: undefined,
     }
   }
 
@@ -386,6 +396,7 @@ function extractGraphFromNewFormat(
           nodes[nodeId].input = nodeConfig.input
           nodes[nodeId].retries = nodeConfig.retries
           nodes[nodeId].retryDelay = nodeConfig.retryDelay
+          nodes[nodeId].notes = nodeConfig.notes
         }
       }
     }
@@ -406,12 +417,14 @@ function extractNodeConfigFromObject(
   input: Record<string, any>
   retries: number | undefined
   retryDelay: string | number | undefined
+  notes: string | undefined
 } {
   let next: any = undefined
   let onError: any = undefined
   let input: Record<string, any> = {}
   let retries: number | undefined = undefined
   let retryDelay: string | number | undefined = undefined
+  let notes: string | undefined = undefined
 
   for (const prop of obj.properties) {
     if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue
@@ -434,10 +447,12 @@ function extractNodeConfigFromObject(
       } else if (ts.isStringLiteral(prop.initializer)) {
         retryDelay = prop.initializer.text
       }
+    } else if (propName === 'notes') {
+      notes = extractStringLiteral(prop.initializer, checker)
     }
   }
 
-  return { next, onError, input, retries, retryDelay }
+  return { next, onError, input, retries, retryDelay, notes }
 }
 
 /**
@@ -526,6 +541,7 @@ export const addWorkflowGraph: AddWiring = (logger, node, checker, state) => {
     source: 'graph',
     description: graphConfig.description,
     tags: graphConfig.tags,
+    notes: graphConfig.notes,
     nodes: graphNodes,
     entryNodeIds,
   }

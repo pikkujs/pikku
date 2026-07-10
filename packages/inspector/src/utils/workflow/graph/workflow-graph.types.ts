@@ -128,6 +128,8 @@ interface BaseNode {
   onError?: string | string[]
   /** Execution options */
   options?: NodeOptions
+  /** Free-text node documentation. Non-semantic — excluded from graphHash. */
+  notes?: string
 }
 
 /**
@@ -209,6 +211,8 @@ export interface SerializedWorkflowGraph {
   context?: WorkflowContext
   /** Serialized nodes */
   nodes: Record<string, SerializedGraphNode>
+  /** Graph-level free-text notes (e.g. imported n8n sticky notes). Non-semantic — excluded from graphHash. */
+  notes?: string[]
   /** Entry node(s) - first nodes to execute */
   entryNodeIds: string[]
   /** Hash of graph topology (nodes, edges, input mappings) */
