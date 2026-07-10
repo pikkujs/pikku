@@ -21,6 +21,21 @@ interface QueryClient {
   end(): Promise<void>
 }
 
+/**
+ * Resolve the SQL type string for a column, preserving array-ness. Postgres
+ * reports every array column with `data_type = 'ARRAY'`; the element type lives
+ * in `udt_name` as the internal array type name (`_text`, `_int4`, `_uuid`, …).
+ * We strip the leading underscore and re-form it as `<element>[]` so downstream
+ * type mapping keeps the array instead of flattening to the scalar element.
+ */
+function resolveColumnType(dataType: string, udtName: string): string {
+  if (dataType === 'ARRAY') {
+    const element = udtName.startsWith('_') ? udtName.slice(1) : udtName
+    return `${element}[]`
+  }
+  return dataType
+}
+
 export class PostgresIntrospector implements DbIntrospector {
   private client: QueryClient
   private ownsClient: boolean
@@ -94,7 +109,7 @@ export class PostgresIntrospector implements DbIntrospector {
 
     return result.rows.map((r) => ({
       name: r.column_name,
-      type: r.data_type,
+      type: resolveColumnType(r.data_type, r.udt_name),
       udtName: r.udt_name,
       notNull: r.is_nullable === 'NO',
       pk: Boolean(r.is_pk),
