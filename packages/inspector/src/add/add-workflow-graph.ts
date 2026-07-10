@@ -184,6 +184,13 @@ function extractNextConfig(
   node: ts.Node,
   _checker: ts.TypeChecker
 ): string | string[] | Record<string, string | string[]> | undefined {
+  // Key-based branch `next` (`{ key: [targets] }`) is authored with an `as any`
+  // cast because the graph's NextConfig can't narrow record targets to node-id
+  // literals; see through that (and parens) so the routing survives into the meta.
+  while (ts.isAsExpression(node) || ts.isParenthesizedExpression(node)) {
+    node = node.expression
+  }
+
   if (ts.isStringLiteral(node)) {
     return node.text
   }

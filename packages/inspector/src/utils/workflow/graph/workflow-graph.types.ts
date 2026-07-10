@@ -76,6 +76,9 @@ export type SerializedNext =
       /** Default target if no conditions match */
       default?: string | string[]
     }
+  // Key-based branching: the running node picks a key via `graph.branch(key)`,
+  // routing to `next[key]`. Keys are branch/output identifiers, not predicates.
+  | Record<string, string | string[]>
 
 /**
  * Node execution options
