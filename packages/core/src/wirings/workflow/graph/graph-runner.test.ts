@@ -677,6 +677,140 @@ describe('graph-runner bugs', () => {
     delete metaState['testInlineMetaGraph']
   })
 
+  test('executeGraphStep dispatches an agent-name node via the agent-run path and returns its result', async () => {
+    const ws = new InMemoryWorkflowService()
+
+    const agentsMeta = pikkuState(null, 'agent', 'agentsMeta')
+    agentsMeta['summarize'] = {
+      name: 'summarize',
+      inputSchema: null,
+      outputSchema: null,
+      workingMemorySchema: null,
+    } as any
+
+    const metaState = pikkuState(null, 'workflows', 'meta')
+    metaState['testAgentNode'] = {
+      name: 'testAgentNode',
+      pikkuFuncId: 'testAgentNode',
+      source: 'graph',
+      entryNodeIds: ['a'],
+      graphHash: 'agent-node-hash',
+      nodes: {
+        a: { nodeId: 'a', rpcName: 'summarize' },
+      },
+    }
+
+    const runId = await ws.createRun(
+      'testAgentNode',
+      {},
+      false,
+      'agent-node-hash',
+      { type: 'test' }
+    )
+    const agentInput = { message: 'hi', threadId: 't', resourceId: 'r' }
+    const step = await ws.insertStepState(runId, 'a', 'summarize', agentInput)
+
+    let agentRunCall: { name: string; input: any } | null = null
+    const rpcService = {
+      rpcWithWire: async () => {
+        throw new Error('should not invoke rpcWithWire for an agent node')
+      },
+      agent: {
+        run: async (name: string, input: any) => {
+          agentRunCall = { name, input }
+          return {
+            runId: 'agent-run-1',
+            result: { summary: 'done' },
+            usage: { inputTokens: 1, outputTokens: 2 },
+          }
+        },
+      },
+    }
+
+    const result = await executeGraphStep(
+      ws,
+      rpcService,
+      runId,
+      step.stepId,
+      'a',
+      'summarize',
+      agentInput,
+      'testAgentNode'
+    )
+
+    assert.deepEqual(result, { summary: 'done' })
+    assert.deepEqual(agentRunCall, { name: 'summarize', input: agentInput })
+
+    delete metaState['testAgentNode']
+    delete agentsMeta['summarize']
+  })
+
+  test('inline graph dispatches an agent node and a downstream node consumes its result', async () => {
+    const ws = new InMemoryWorkflowService()
+
+    const agentsMeta = pikkuState(null, 'agent', 'agentsMeta')
+    agentsMeta['classifier'] = {
+      name: 'classifier',
+      inputSchema: null,
+      outputSchema: null,
+      workingMemorySchema: null,
+    } as any
+
+    let consumed: any = null
+    const rpcService = {
+      rpcWithWire: async (rpcName: string, data: any) => {
+        if (rpcName === 'consume') {
+          consumed = data
+          return { ok: true }
+        }
+        return {}
+      },
+      agent: {
+        run: async () => ({
+          runId: 'r',
+          result: { category: 'urgent' },
+          usage: { inputTokens: 0, outputTokens: 0 },
+        }),
+      },
+    }
+
+    const metaState = pikkuState(null, 'workflows', 'meta')
+    metaState['testInlineAgentNode'] = {
+      name: 'testInlineAgentNode',
+      pikkuFuncId: 'testInlineAgentNode',
+      source: 'graph',
+      entryNodeIds: ['agentNode'],
+      graphHash: 'inline-agent-hash',
+      nodes: {
+        agentNode: {
+          nodeId: 'agentNode',
+          rpcName: 'classifier',
+          next: 'consume',
+        },
+        consume: {
+          nodeId: 'consume',
+          rpcName: 'consume',
+          input: { category: { $ref: 'agentNode', path: 'category' } },
+        },
+      },
+    }
+
+    const { runId } = await runWorkflowGraph(
+      ws,
+      'testInlineAgentNode',
+      { message: 'x', threadId: 't', resourceId: 'r' },
+      rpcService,
+      true
+    )
+
+    const run = await ws.getRun(runId)
+    assert.equal(run?.status, 'completed')
+    assert.deepEqual(consumed, { category: 'urgent' })
+
+    delete metaState['testInlineAgentNode']
+    delete agentsMeta['classifier']
+  })
+
   test('queueGraphNode forwards node retries to queue attempts and backoff', async () => {
     const ws = new InMemoryWorkflowService()
     const enqueued: Array<{ queueName: string; data: any; options: any }> = []
