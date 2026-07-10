@@ -659,6 +659,10 @@ wireCLI({
               description:
                 'Path to OpenAPI YAML/JSON spec to generate functions from',
             },
+            authConfig: {
+              description:
+                'Path to an auth-config JSON overriding the spec (custom auth header, delegated login)',
+            },
             mcp: {
               description:
                 'Add mcp: true to generated functions (expose as MCP tools)',
