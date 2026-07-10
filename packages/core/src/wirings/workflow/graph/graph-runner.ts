@@ -621,6 +621,9 @@ export async function executeGraphStep(
     let result: any
 
     const subWorkflowMeta = pikkuState(null, 'workflows', 'meta')[rpcName]
+    const agentMeta = subWorkflowMeta
+      ? undefined
+      : pikkuState(null, 'agent', 'agentsMeta')[rpcName]
     if (subWorkflowMeta) {
       const childWire: WorkflowRunWire = {
         type: 'workflow',
@@ -650,6 +653,9 @@ export async function executeGraphStep(
       } else {
         throw new ChildWorkflowStartedException(runId, stepId, childRunId)
       }
+    } else if (agentMeta) {
+      const agentRun = await rpcService.agent.run(rpcName, data)
+      result = agentRun.result
     } else {
       result = await invokeGraphNodeRpc(
         workflowService,
@@ -760,6 +766,9 @@ async function executeGraphNodeInline(
     let result: any
 
     const subWorkflowMeta = pikkuState(null, 'workflows', 'meta')[rpcName]
+    const agentMeta = subWorkflowMeta
+      ? undefined
+      : pikkuState(null, 'agent', 'agentsMeta')[rpcName]
     if (subWorkflowMeta) {
       const childWire: WorkflowRunWire = {
         type: 'workflow',
@@ -783,6 +792,9 @@ async function executeGraphNodeInline(
         throw new Error('Sub-workflow was cancelled')
       }
       result = childRun?.output
+    } else if (agentMeta) {
+      const agentRun = await rpcService.agent.run(rpcName, input)
+      result = agentRun.result
     } else {
       result = await invokeGraphNodeRpc(
         workflowService,

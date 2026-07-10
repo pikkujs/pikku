@@ -1,7 +1,8 @@
 export const serializeWorkflowTypes = (
   functionTypesImportPath: string,
   rpcMapImportPath: string,
-  workflowMapImportPath: string
+  workflowMapImportPath: string,
+  agentMapImportPath: string
 ) => {
   return `import { WorkflowCancelledException } from '@pikku/core/workflow'
 import { template } from '@pikku/core/workflow'
@@ -16,6 +17,7 @@ export { WorkflowCancelledException }
 import type { PikkuFunctionSessionless, PikkuFunctionConfig } from '${functionTypesImportPath}'
 import type { FlattenedRPCMap } from '${rpcMapImportPath}'
 import type { FlattenedWorkflowMap } from '${workflowMapImportPath}'
+import type { AgentMap as FlattenedAgentMap } from '${agentMapImportPath}'
 
 export { template }
 
@@ -148,13 +150,19 @@ type InputWithRefs<T> = {
 type NodeInputType<FuncMap extends Record<string, string>, K extends keyof FuncMap> =
   FuncMap[K] extends keyof FlattenedRPCMap
     ? InputWithRefs<FlattenedRPCMap[FuncMap[K]]['input']>
-    : Record<string, unknown>
+    : FuncMap[K] extends keyof FlattenedWorkflowMap
+      ? InputWithRefs<FlattenedWorkflowMap[FuncMap[K]]['input']>
+      : Record<string, unknown>
 
 type NodeOutputKeys<FuncMap extends Record<string, string>, N extends string> =
   N extends keyof FuncMap
     ? FuncMap[N] extends keyof FlattenedRPCMap
       ? keyof FlattenedRPCMap[FuncMap[N]]['output'] & string
-      : string
+      : FuncMap[N] extends keyof FlattenedWorkflowMap
+        ? keyof FlattenedWorkflowMap[FuncMap[N]]['output'] & string
+        : FuncMap[N] extends keyof FlattenedAgentMap
+          ? keyof FlattenedAgentMap[FuncMap[N]]['output'] & string
+          : string
     : string
 
 type RefFunction<FuncMap extends Record<string, string>> = {
@@ -181,7 +189,12 @@ type GraphNodeConfigMap<FuncMap extends Record<string, string>> = {
 type NextConfig<NodeIds extends string> = NodeIds | NodeIds[] | { if: string; then: NodeIds; else?: NodeIds }
 
 export function pikkuWorkflowGraph<
-  const FuncMap extends Record<string, keyof FlattenedRPCMap & string>
+  const FuncMap extends Record<
+    string,
+    | (keyof FlattenedRPCMap & string)
+    | (keyof FlattenedWorkflowMap & string)
+    | (keyof FlattenedAgentMap & string)
+  >
 >(
   config: PikkuWorkflowGraphConfig<FuncMap, GraphNodeConfigMap<FuncMap>>
 ): PikkuWorkflowGraphResult {
