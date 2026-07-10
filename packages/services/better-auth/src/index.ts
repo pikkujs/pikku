@@ -10,6 +10,12 @@ export { actor } from './actor-plugin.js'
 export type { ActorPluginOptions } from './actor-plugin.js'
 export { fabric } from './fabric-plugin.js'
 export type { FabricPluginOptions } from './fabric-plugin.js'
+export { delegatedAuth, DELEGATED_PROVIDER_ID } from './delegated-auth-plugin.js'
+export type {
+  DelegatedAuthOptions,
+  DelegatedCredentials,
+  UpstreamIdentity,
+} from './delegated-auth-plugin.js'
 export { stampActorFlag } from './stamp-actor-flag.js'
 export { betterAuthStatelessSession } from './auth-session-stateless.js'
 export type { BetterAuthStatelessSessionOptions } from './auth-session-stateless.js'
