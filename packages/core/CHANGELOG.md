@@ -1,3 +1,14 @@
+## 0.12.58
+
+### Patch Changes
+
+- 7b17b14: Allow a workflow-graph node's `func` to reference a registered AI agent by name, dispatched as an agent run — exactly like sub-workflows. `executeGraphStep`/`executeGraphNodeInline` now check the agent registry and dispatch matching nodes via the agent-run path (`rpc.agent.run`), so the node's result is the agent's declared output and downstream nodes can `ref()` it. The generated `pikkuWorkflowGraph` wrapper widens its node-func union to also accept `keyof FlattenedWorkflowMap` and `keyof FlattenedAgentMap`, and `ref()` resolves an agent node's output keys.
+- daec082: Drop Node 22 support — the minimum supported runtime is now Node 24 (LTS).
+
+  Node 22 deadlocks `pikku dev` at `loadUserBootstrap` (tsx `register()` + `require(esm)` cycle handling on node 22.12+), and Node 20 is already below our floor. The `engines.node` requirement is raised to `>=24` across all packages, matching `.nvmrc` and the CI test matrix. Closes #751.
+
+- e0fd352: wireGateway: allow `adapter` to be a factory `(services) => GatewayAdapter | Promise<GatewayAdapter>`, resolved lazily on first inbound request (webhook/websocket) or gateway start (listener) and cached. Real platform adapters (WhatsApp Cloud API, Slack) need secrets that only exist after boot, while wireGateway runs at module load — a factory bridges that. Factory adapters register the GET verify route unconditionally since verifyWebhook can't be probed before first resolve.
+
 ## 0.12.57
 
 ### Patch Changes

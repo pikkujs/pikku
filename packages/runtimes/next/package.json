@@ -1,6 +1,6 @@
 {
   "name": "@pikku/next",
-  "version": "0.12.6",
+  "version": "0.12.7",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",
@@ -22,8 +22,8 @@
     "./pikku-session": "./dist/pikku-session.js"
   },
   "peerDependencies": {
-    "@pikku/better-auth": "^0.12.13",
-    "@pikku/core": "^0.12.44",
+    "@pikku/better-auth": "^0.12.17",
+    "@pikku/core": "^0.12.58",
     "better-auth": "^1.6.0",
     "next": "^15",
     "react-dom": "*"
@@ -33,8 +33,8 @@
     "eventemitter3": "^5.0.4"
   },
   "devDependencies": {
-    "@pikku/better-auth": "^0.12.13",
-    "@pikku/core": "^0.12.44",
+    "@pikku/better-auth": "^0.12.17",
+    "@pikku/core": "^0.12.58",
     "@types/react": "^19",
     "better-auth": "^1.6.19",
     "next": "15.5.12",

@@ -1,5 +1,15 @@
 # @pikku/better-auth
 
+## 0.12.17
+
+### Patch Changes
+
+- ac4c3f4: Add the `delegatedAuth()` plugin: `POST /sign-in/delegated` verifies a user's existing credentials against an imported upstream API (via an `authenticate` callback), JIT-provisions a real user keyed by a `providerId: 'delegated'` account row, persists the upstream token per-user (`storeCredential`, before the session is minted), and refreshes name/role on every sign-in. Passwords are never stored.
+- Updated dependencies [7b17b14]
+- Updated dependencies [daec082]
+- Updated dependencies [e0fd352]
+  - @pikku/core@0.12.58
+
 ## 0.12.16
 
 ### Patch Changes
