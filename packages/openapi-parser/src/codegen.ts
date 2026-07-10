@@ -20,6 +20,7 @@ import {
   detectCommonPrefix,
   type NamedOperation,
 } from './naming.js'
+import { authHeaderValue, type AuthConfig } from './auth-config.js'
 
 interface AddonVars {
   name: string
@@ -36,6 +37,8 @@ interface CodegenFlags {
   credential?: 'apikey' | 'bearer' | 'oauth2'
   mcp?: boolean
   camelCase?: boolean
+  /** Operator-supplied auth overrides (custom header, delegated login). */
+  authConfig?: AuthConfig
 }
 
 function safeKey(key: string): string {
@@ -417,8 +420,21 @@ export function generateAddonFromOpenAPI(
     functionExports.push(named.functionName)
   }
 
+  // Delegated login: emit the upstream authenticate() implementation
+  const upstreamAuthExport = flags.authConfig?.delegated
+    ? `authenticate${vars.pascalName}Upstream`
+    : undefined
+  if (flags.authConfig?.delegated) {
+    files[`src/${name}-upstream-auth.ts`] = generateUpstreamAuthFile(
+      vars,
+      flags.authConfig
+    )
+  }
+
   // Generate index.ts with all exports
-  files['src/index.ts'] = generateIndexFile(functionExports)
+  files['src/index.ts'] = generateIndexFile(functionExports, {
+    upstreamAuth: upstreamAuthExport ? { name, export: upstreamAuthExport } : undefined,
+  })
 
   // Generate typed API service class with route map
   files[`src/${name}-api.service.ts`] = generateServiceFile(
@@ -1008,11 +1024,206 @@ function buildOutputSchema(schema: any, ctx: ZodCodegenContext): string {
   return schemaToZod(schema, ctx)
 }
 
-function generateIndexFile(functionExports: string[]): string {
+function generateIndexFile(
+  functionExports: string[],
+  extras?: { upstreamAuth?: { name: string; export: string } }
+): string {
   const lines: string[] = []
   for (const name of functionExports) {
     lines.push(`export { ${name} } from './functions/${name}.function.js'`)
   }
+  if (extras?.upstreamAuth) {
+    lines.push(
+      `export { ${extras.upstreamAuth.export} } from './${extras.upstreamAuth.name}-upstream-auth.js'`
+    )
+  }
+  lines.push('')
+  return lines.join('\n')
+}
+
+/**
+ * Emit `src/<name>-upstream-auth.ts`: a self-contained authenticate() for
+ * delegated login. It performs the upstream login call described by the auth
+ * config, extracts the token, reads identity claims from the decoded JWT
+ * payload (base64url, NOT signature-verified — the token was just received
+ * over TLS from the login we ourselves performed) or the response body, and
+ * returns an identity object structurally compatible with
+ * `@pikku/better-auth`'s `UpstreamIdentity` — without depending on it.
+ */
+function generateUpstreamAuthFile(
+  vars: AddonVars,
+  authConfig: AuthConfig
+): string {
+  const { pascalName } = vars
+  const delegated = authConfig.delegated!
+  const claims = delegated.claims
+  const namePaths = claims.name
+    ? Array.isArray(claims.name)
+      ? claims.name
+      : [claims.name]
+    : []
+
+  const lines: string[] = []
+  lines.push(`export interface ${pascalName}UpstreamIdentity {`)
+  lines.push('  externalId: string')
+  lines.push('  email: string')
+  lines.push('  name?: string')
+  lines.push('  role?: string')
+  lines.push('  tenantId?: string')
+  lines.push(
+    '  credential: { token: string; expiresAt?: number; tenantId?: string }'
+  )
+  lines.push('}')
+  lines.push('')
+  lines.push(
+    `export interface ${pascalName}UpstreamCredentials {`
+  )
+  lines.push('  email?: string')
+  lines.push('  password?: string')
+  lines.push('  apiKey?: string')
+  lines.push('}')
+  lines.push('')
+  lines.push('const pick = (obj: unknown, path: string): unknown =>')
+  lines.push('  path')
+  lines.push("    .split('.')")
+  lines.push('    .reduce<any>(')
+  lines.push(
+    "      (o, key) => (o && typeof o === 'object' ? o[key] : undefined),"
+  )
+  lines.push('      obj')
+  lines.push('    )')
+  lines.push('')
+  lines.push('const str = (value: unknown): string | undefined =>')
+  lines.push(
+    "  typeof value === 'string' && value ? value : typeof value === 'number' ? String(value) : undefined"
+  )
+  lines.push('')
+  lines.push('/** Decode a JWT payload without verifying — see file docblock. */')
+  lines.push('const decodeJwtPayload = (token: string): unknown => {')
+  lines.push("  const part = token.split('.')[1]")
+  lines.push('  if (!part) return undefined')
+  lines.push('  try {')
+  lines.push("    const pad = part + '==='.slice((part.length + 3) % 4)")
+  lines.push(
+    "    const bin = atob(pad.replace(/-/g, '+').replace(/_/g, '/'))"
+  )
+  lines.push(
+    '    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0))'
+  )
+  lines.push('    return JSON.parse(new TextDecoder().decode(bytes))')
+  lines.push('  } catch {')
+  lines.push('    // Not a decodable JWT — caller treats it as missing claims.')
+  lines.push('    return undefined')
+  lines.push('  }')
+  lines.push('}')
+  lines.push('')
+  lines.push('/**')
+  lines.push(
+    ` * Verify credentials against the upstream ${vars.displayName} login and map`
+  )
+  lines.push(
+    ' * its response onto an upstream identity. Returns null when the upstream'
+  )
+  lines.push(
+    ' * rejects the credentials; network errors propagate to the caller.'
+  )
+  lines.push(' */')
+  lines.push(`export const authenticate${pascalName}Upstream = async (`)
+  lines.push(`  credentials: ${pascalName}UpstreamCredentials,`)
+  lines.push('  baseUrl: string')
+  lines.push(`): Promise<${pascalName}UpstreamIdentity | null> => {`)
+  lines.push(
+    "  const headers: Record<string, string> = { 'Content-Type': 'application/json' }"
+  )
+  lines.push('  const body: Record<string, string> = {}')
+  if (delegated.credentials.includes('email')) {
+    lines.push('  if (credentials.email) body.email = credentials.email')
+  }
+  if (delegated.credentials.includes('password')) {
+    lines.push(
+      '  if (credentials.password) body.password = credentials.password'
+    )
+  }
+  if (delegated.credentials.includes('apiKey')) {
+    lines.push(
+      `  if (credentials.apiKey) headers[${JSON.stringify(delegated.apiKeyHeader)}] = credentials.apiKey`
+    )
+  }
+  lines.push('')
+  lines.push(
+    `  const response = await fetch(\`\${baseUrl.replace(/\\/+$/, '')}${delegated.loginPath}\`, {`
+  )
+  lines.push(`    method: ${JSON.stringify(delegated.loginMethod.toUpperCase())},`)
+  lines.push('    headers,')
+  lines.push(
+    '    body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined,'
+  )
+  lines.push('  })')
+  lines.push('  if (!response.ok) return null')
+  lines.push('')
+  lines.push('  const data: unknown = await response.json()')
+  lines.push(`  const token = str(pick(data, ${JSON.stringify(delegated.tokenPath)}))`)
+  lines.push('  if (!token) return null')
+  lines.push('')
+  if (claims.source === 'jwt') {
+    lines.push('  const claims = decodeJwtPayload(token)')
+  } else {
+    lines.push('  const claims = data')
+  }
+  lines.push('  if (!claims) return null')
+  lines.push('')
+  lines.push(
+    `  const externalId = str(pick(claims, ${JSON.stringify(claims.externalId)}))`
+  )
+  lines.push(`  const email = str(pick(claims, ${JSON.stringify(claims.email)}))`)
+  lines.push('  if (!externalId || !email) return null')
+  lines.push('')
+  if (namePaths.length > 0) {
+    const parts = namePaths
+      .map((p) => `str(pick(claims, ${JSON.stringify(p)}))`)
+      .join(', ')
+    lines.push(`  const name = [${parts}]`)
+    lines.push('    .filter((part): part is string => Boolean(part))')
+    lines.push("    .join(' ') || undefined")
+  } else {
+    lines.push('  const name = undefined')
+  }
+  if (claims.role) {
+    lines.push(
+      `  const role = str(pick(claims, ${JSON.stringify(claims.role)}))`
+    )
+  } else {
+    lines.push('  const role = undefined')
+  }
+  if (claims.tenantId) {
+    lines.push(
+      `  const tenantId = str(pick(claims, ${JSON.stringify(claims.tenantId)}))`
+    )
+  } else {
+    lines.push('  const tenantId = undefined')
+  }
+  if (delegated.expiresAtPath) {
+    lines.push(
+      `  const expiresAtRaw = pick(data, ${JSON.stringify(delegated.expiresAtPath)})`
+    )
+  } else if (claims.source === 'jwt') {
+    lines.push("  const expiresAtRaw = pick(claims, 'exp')")
+  } else {
+    lines.push('  const expiresAtRaw = undefined')
+  }
+  lines.push(
+    "  const expiresAt = typeof expiresAtRaw === 'number' ? expiresAtRaw : undefined"
+  )
+  lines.push('')
+  lines.push('  return {')
+  lines.push('    externalId,')
+  lines.push('    email,')
+  lines.push('    name,')
+  lines.push('    role,')
+  lines.push('    tenantId,')
+  lines.push('    credential: { token, expiresAt, tenantId },')
+  lines.push('  }')
+  lines.push('}')
   lines.push('')
   return lines.join('\n')
 }
@@ -1242,13 +1453,28 @@ function generateServiceFile(
   if (flags.credential && flags.credential !== 'oauth2') {
     // Per-user credential: use creds from wire.getCredentials()
     if (flags.credential === 'bearer') {
-      lines.push('    headers.Authorization = `Bearer ${this.creds.token}`')
+      if (flags.authConfig?.headerName) {
+        // Custom auth header (e.g. `authentication: <raw jwt>`) from the auth config.
+        const { header, value } = authHeaderValue(
+          flags.authConfig,
+          'this.creds.token'
+        )
+        lines.push(`    headers[${JSON.stringify(header)}] = ${value}`)
+      } else {
+        lines.push('    headers.Authorization = `Bearer ${this.creds.token}`')
+      }
     } else {
-      // apikey: check spec for custom header name
+      // apikey: auth-config override wins, else check spec for custom header name
       const apiKeyScheme = Object.values(spec.securitySchemes).find(
         (s) => s.type === 'apiKey'
       )
-      if (apiKeyScheme?.name && apiKeyScheme?.in === 'header') {
+      if (flags.authConfig?.headerName) {
+        const { header, value } = authHeaderValue(
+          flags.authConfig,
+          'this.creds.apiKey'
+        )
+        lines.push(`    headers[${JSON.stringify(header)}] = ${value}`)
+      } else if (apiKeyScheme?.name && apiKeyScheme?.in === 'header') {
         lines.push(
           `    headers[${JSON.stringify(apiKeyScheme.name)}] = this.creds.apiKey`
         )
@@ -1271,11 +1497,17 @@ function generateServiceFile(
     lines.push('      body: body ? JSON.stringify(body) : undefined,')
     lines.push('    })')
   } else if (flags.secret) {
-    // Use apiKey details from spec if available
+    // Auth-config override wins, else use apiKey details from spec if available
     const apiKeyScheme = Object.values(spec.securitySchemes).find(
       (s) => s.type === 'apiKey'
     )
-    if (apiKeyScheme?.name && apiKeyScheme?.in === 'header') {
+    if (flags.authConfig?.headerName) {
+      const { header, value } = authHeaderValue(
+        flags.authConfig,
+        'this.creds.apiKey'
+      )
+      lines.push(`    headers[${JSON.stringify(header)}] = ${value}`)
+    } else if (apiKeyScheme?.name && apiKeyScheme?.in === 'header') {
       lines.push(
         `    headers[${JSON.stringify(apiKeyScheme.name)}] = this.creds.apiKey`
       )

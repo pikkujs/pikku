@@ -11,6 +11,15 @@ export {
 export { generateAddonFromOpenAPI } from './codegen.js'
 
 export {
+  AuthConfigSchema,
+  DelegatedLoginSchema,
+  loadAuthConfig,
+  authHeaderValue,
+  type AuthConfig,
+  type DelegatedLoginConfig,
+} from './auth-config.js'
+
+export {
   generateOperationNames,
   detectCommonPrefix,
   type NamedOperation,
