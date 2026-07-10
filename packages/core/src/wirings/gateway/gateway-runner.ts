@@ -8,6 +8,28 @@ import type {
   GatewayOutboundMessage,
   PikkuGateway,
 } from './gateway.types.js'
+
+/**
+ * Lazily resolve a gateway's adapter. Factories are invoked once with the
+ * singleton services and cached (promise-cached, so concurrent first
+ * requests share one construction).
+ */
+const resolvedAdapters = new WeakMap<CoreGateway, Promise<GatewayAdapter>>()
+
+export const resolveGatewayAdapter = (
+  config: CoreGateway,
+  services: CoreSingletonServices
+): Promise<GatewayAdapter> => {
+  let resolved = resolvedAdapters.get(config)
+  if (!resolved) {
+    resolved =
+      typeof config.adapter === 'function'
+        ? Promise.resolve(config.adapter(services))
+        : Promise.resolve(config.adapter)
+    resolvedAdapters.set(config, resolved)
+  }
+  return resolved
+}
 import type {
   PikkuWire,
   PikkuRawWire,
@@ -94,8 +116,10 @@ const wireWebhookGateway = (config: CoreGateway): void => {
   } as any)
 
   // --- GET handler (webhook verification, e.g. WhatsApp challenge) ---------
+  // Factory adapters can't be probed for verifyWebhook until first resolve,
+  // so register the GET route unconditionally for them.
 
-  if (adapter.verifyWebhook) {
+  if (typeof adapter === 'function' || adapter.verifyWebhook) {
     const verifyFuncId = `gateway__${name}__verify`
 
     funcMeta[verifyFuncId] = {
@@ -113,7 +137,7 @@ const wireWebhookGateway = (config: CoreGateway): void => {
 
     const verifyHandler = {
       auth: false,
-      func: createWebhookVerifyHandler(adapter),
+      func: createWebhookVerifyHandler(config),
     }
 
     addFunction(verifyFuncId, verifyHandler as any)
@@ -145,7 +169,7 @@ const wireWebhookGateway = (config: CoreGateway): void => {
  *  6. Auto-send response via adapter if func returns outbound content
  */
 const createWebhookPostHandler = (config: CoreGateway) => {
-  const { name, adapter, func: userFunc, middleware: userMiddleware } = config
+  const { name, func: userFunc, middleware: userMiddleware } = config
   const userFuncConfig = userFunc as {
     func: Function
     middleware?: CorePikkuMiddleware[]
@@ -156,6 +180,8 @@ const createWebhookPostHandler = (config: CoreGateway) => {
     data: unknown,
     wire: PikkuWire
   ) => {
+    const adapter = await resolveGatewayAdapter(config, services)
+
     // Check for POST-based webhook verification (e.g. Slack url_verification)
     if (adapter.verifyWebhook) {
       const verifyResult = await adapter.verifyWebhook(data, wire.http?.request)
@@ -207,12 +233,13 @@ const createWebhookPostHandler = (config: CoreGateway) => {
  * Creates the GET handler for webhook verification challenges.
  * Passes query parameters to the adapter's verifyWebhook method.
  */
-const createWebhookVerifyHandler = (adapter: GatewayAdapter) => {
+const createWebhookVerifyHandler = (config: CoreGateway) => {
   return async (
-    _services: CoreSingletonServices,
+    services: CoreSingletonServices,
     _data: unknown,
     wire: PikkuWire
   ) => {
+    const adapter = await resolveGatewayAdapter(config, services)
     if (!adapter.verifyWebhook) {
       return { error: 'Verification not supported' }
     }
@@ -232,7 +259,7 @@ const createWebhookVerifyHandler = (adapter: GatewayAdapter) => {
 // ---------------------------------------------------------------------------
 
 const wireWebsocketGateway = (config: CoreGateway): void => {
-  const { name, route, adapter } = config
+  const { name, route } = config
   if (!route) {
     throw new Error(`WebSocket gateway '${name}' requires a route`)
   }
@@ -279,7 +306,8 @@ const wireWebsocketGateway = (config: CoreGateway): void => {
   // Register onConnect
   addFunction(connectFuncId, {
     auth: false,
-    func: async (_services: any, _data: unknown, wire: PikkuWire) => {
+    func: async (services: any, _data: unknown, wire: PikkuWire) => {
+      const adapter = await resolveGatewayAdapter(config, services)
       ;(wire as any).gateway = {
         gatewayName: name,
         senderId: '',
@@ -295,6 +323,7 @@ const wireWebsocketGateway = (config: CoreGateway): void => {
   addFunction(messageFuncId, {
     auth: false,
     func: async (services: any, data: unknown, wire: PikkuWire) => {
+      const adapter = await resolveGatewayAdapter(config, services)
       const parsed = adapter.parse(data)
       if (!parsed) return
 
@@ -371,7 +400,6 @@ export const createListenerMessageHandler = (
   config: CoreGateway,
   singletonServices: CoreSingletonServices
 ): ((rawData: unknown) => Promise<void>) => {
-  const { adapter } = config
   const userFuncConfig = config.func as {
     func: Function
     middleware?: CorePikkuMiddleware[]
@@ -379,6 +407,7 @@ export const createListenerMessageHandler = (
   const userMiddleware = config.middleware as CorePikkuMiddleware[] | undefined
 
   return async (rawData: unknown): Promise<void> => {
+    const adapter = await resolveGatewayAdapter(config, singletonServices)
     const parsed = adapter.parse(rawData)
     if (!parsed) return
 

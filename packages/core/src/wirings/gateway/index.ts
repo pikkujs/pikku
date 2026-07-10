@@ -1,6 +1,11 @@
-export { wireGateway, createListenerMessageHandler } from './gateway-runner.js'
+export {
+  wireGateway,
+  createListenerMessageHandler,
+  resolveGatewayAdapter,
+} from './gateway-runner.js'
 export type {
   GatewayAdapter,
+  GatewayAdapterFactory,
   GatewayAttachment,
   GatewayInboundMessage,
   GatewayOutboundMessage,
