@@ -135,6 +135,31 @@ test('no-auth httpRequest → graph:httpRequest with mapped input; authed httpRe
   assert.ok(manifest.find((m) => m.rpcName === 'httpRequest__authFetch'))
 })
 
+test('noop nodes are dropped and their edges rewired through (A → noop → B ⇒ A → B)', () => {
+  const parsed = parseN8n(loadFixture('noop-passthrough.json'))
+  const { files } = generateWorkflowFromN8n(parsed)
+
+  const graph = files['passthroughDemo/passthroughDemo.graph.ts']
+  assert.ok(graph, 'graph file emitted')
+
+  // the two NoOp nodes leave no trace — no node entry, no throwing stub
+  assert.doesNotMatch(graph, /noOp/)
+  assert.ok(!files['passthroughDemo/functions/noOp__noOp.function.ts'])
+  assert.ok(!files['passthroughDemo/functions/noOp__noOp2.function.ts'])
+
+  // the real nodes remain, wired straight through the (removed) noops
+  assert.match(graph, /format: "graph:editFields"/)
+  assert.match(graph, /sendGmail: "gmail__sendGmail"/)
+  assert.match(graph, /format: \{[\s\S]*next: "sendGmail"/)
+
+  // predecessor rewiring survives the noop: Format's $json still resolves to the
+  // trigger (Format's real predecessor is the webhook, via the dropped No Op)
+  assert.match(
+    graph,
+    /field: "email", operation: "set" as const, value: ref\("trigger", "body\.email"\)/
+  )
+})
+
 test('code node with block comments escapes */ so the JSDoc stays valid', () => {
   const parsed = parseN8n(loadFixture('code-block-comment.json'))
   const { files } = generateWorkflowFromN8n(parsed)

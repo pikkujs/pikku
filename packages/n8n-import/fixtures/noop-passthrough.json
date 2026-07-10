@@ -1,0 +1,62 @@
+{
+  "name": "Passthrough Demo",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "demo" }
+    },
+    {
+      "id": "n1",
+      "name": "No Op",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": {}
+    },
+    {
+      "id": "f",
+      "name": "Format",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [400, 0],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "email",
+              "type": "string",
+              "value": "={{ $json.body.email }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n2",
+      "name": "No Op2",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [600, 0],
+      "parameters": {}
+    },
+    {
+      "id": "g",
+      "name": "Send Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [800, 0],
+      "parameters": { "sendTo": "team@example.com", "subject": "Welcome" }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "No Op", "type": "main", "index": 0 }]] },
+    "No Op": { "main": [[{ "node": "Format", "type": "main", "index": 0 }]] },
+    "Format": { "main": [[{ "node": "No Op2", "type": "main", "index": 0 }]] },
+    "No Op2": { "main": [[{ "node": "Send Gmail", "type": "main", "index": 0 }]] }
+  }
+}

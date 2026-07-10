@@ -37,11 +37,10 @@ function classifyByType(type: string): NodeRole {
   if (short === 'code' || short === 'function' || short === 'functionitem')
     return 'code'
   if (short === 'set' || short === 'editfields') return 'set'
-  if (
-    ['if', 'switch', 'merge', 'splitinbatches', 'filter', 'noop'].includes(
-      short
-    )
-  )
+  // A No Op node does nothing — it's a transparent pass-through, dropped from
+  // the graph with its edges rewired straight through.
+  if (short === 'noop') return 'noop'
+  if (['if', 'switch', 'merge', 'splitinbatches', 'filter'].includes(short))
     return 'control'
   return 'integration'
 }

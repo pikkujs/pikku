@@ -23,6 +23,8 @@ export interface Topology {
 function isGraphNode(node: ParsedNode): boolean {
   if (node.disabled) return false
   if (node.role === 'trigger' || node.role === 'agentTool') return false
+  // No Op nodes are transparent — dropped, with their edges rewired through.
+  if (node.role === 'noop') return false
   if (isAbsorbedRole(node.role)) return false
   return true
 }
@@ -34,6 +36,27 @@ export function buildTopology(parsed: ParsedWorkflow): Topology {
   const graphNodes = parsed.nodes.filter(isGraphNode)
   const graphNodeIds = new Set(graphNodes.map((n) => n.nodeId))
 
+  // No Op nodes are transparent: an edge into one continues on to its own
+  // targets (recursively, so chained noops collapse too).
+  const noopNames = new Set(
+    parsed.nodes.filter((n) => n.role === 'noop').map((n) => n.name)
+  )
+  function resolveGraphTargets(name: string, seen: Set<string>): string[] {
+    const id = nameToNodeId[name]
+    if (id && graphNodeIds.has(id)) return [id]
+    if (noopNames.has(name) && !seen.has(name)) {
+      seen.add(name)
+      const out: string[] = []
+      for (const slot of parsed.connections[name]?.main ?? []) {
+        for (const t of slot ?? []) {
+          out.push(...resolveGraphTargets(t.node, seen))
+        }
+      }
+      return out
+    }
+    return []
+  }
+
   const byNodeId: Record<string, NodeTopology> = {}
   for (const node of graphNodes) byNodeId[node.nodeId] = {}
 
@@ -43,12 +66,16 @@ export function buildTopology(parsed: ParsedWorkflow): Topology {
     const sourceId = nameToNodeId[sourceName]
     const mainSlots = ports.main ?? []
 
-    // Map slot targets → graph nodeIds (dropping non-graph targets).
-    const slotTargets = mainSlots.map((slot) =>
-      (slot ?? [])
-        .map((t) => nameToNodeId[t.node])
-        .filter((id): id is string => !!id && graphNodeIds.has(id))
-    )
+    // Map slot targets → graph nodeIds, expanding transparent noops.
+    const slotTargets = mainSlots.map((slot) => {
+      const ids: string[] = []
+      for (const t of slot ?? []) {
+        for (const id of resolveGraphTargets(t.node, new Set())) {
+          if (!ids.includes(id)) ids.push(id)
+        }
+      }
+      return ids
+    })
 
     // Record predecessors for `$json` resolution (target ← source). Only
     // graph-node sources qualify — a trigger predecessor leaves `$json`
