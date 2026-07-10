@@ -10,7 +10,7 @@
     "tsc": "tsc",
     "ncu": "npx npm-check-updates",
     "build": "tsc -b",
-    "test": "echo \"no tests yet\"",
+    "test": "node --import tsx --test src/**/*.test.ts",
     "release": "npm run build && npm test",
     "prepublishOnly": "yarn build"
   },
