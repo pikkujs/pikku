@@ -46,6 +46,17 @@ function classifyByType(type: string): NodeRole {
   return 'integration'
 }
 
+/**
+ * An n8n HTTP Request node with no authentication maps to @pikku/addon-graph's
+ * native `httpRequest`. An authenticated one must route through a credentialed
+ * addon instead of a raw call, so it stays an integration stub (addon-map's job).
+ */
+function isNoAuthHttpRequest(node: N8nNode): boolean {
+  if (typeShort(node.type).toLowerCase() !== 'httprequest') return false
+  const auth = node.parameters?.authentication
+  return auth === undefined || auth === 'none'
+}
+
 /** Nodes that never become graph nodes / agent tools — pure config or decoration. */
 export function isAbsorbedRole(role: NodeRole): boolean {
   return (
@@ -64,6 +75,8 @@ function rpcNameFor(role: NodeRole, node: N8nNode): string {
       return vectorRpcName(node.name)
     case 'set':
       return 'graph:editFields'
+    case 'http':
+      return 'graph:httpRequest'
     default:
       return integrationRpcName(node.type, node.name)
   }
@@ -130,11 +143,16 @@ export function parseN8n(raw: unknown): ParsedWorkflow {
       role = 'agentTool'
     }
 
+    // A no-auth HTTP Request node is @pikku/addon-graph's native httpRequest.
+    if (role === 'integration' && isNoAuthHttpRequest(node)) {
+      role = 'http'
+    }
+
     const nodeId = dedupe(sanitizeIdentifier(node.name), seenNodeIds)
-    // Set / Edit Fields nodes all share @pikku/addon-graph's `editFields` RPC —
-    // a shared addon function, never deduped into per-node names.
+    // Set / Edit Fields and no-auth HTTP nodes all share a @pikku/addon-graph
+    // RPC — a shared addon function, never deduped into per-node names.
     const rpcName =
-      role === 'set'
+      role === 'set' || role === 'http'
         ? rpcNameFor(role, node)
         : dedupe(rpcNameFor(role, node), seenRpcNames)
 

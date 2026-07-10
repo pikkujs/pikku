@@ -96,6 +96,45 @@ test('modern Edit Fields (Set v3.4) unwraps assignments.assignments into per-fie
   assert.doesNotMatch(graph, /field: "mode"/)
 })
 
+test('no-auth httpRequest → graph:httpRequest with mapped input; authed httpRequest stays a stub', () => {
+  const parsed = parseN8n(loadFixture('http-request.json'))
+  const { files, manifest } = generateWorkflowFromN8n(parsed)
+
+  const graph = files['httpDemo/httpDemo.graph.ts']
+  assert.ok(graph, 'graph file emitted')
+
+  // the no-auth node maps to the addon's native httpRequest — a shared RPC
+  assert.match(graph, /fetchData: "graph:httpRequest"/)
+  // method + literal url mapped through; the enum literal must not widen
+  assert.match(graph, /method: "POST" as const/)
+  assert.match(graph, /url: "https:\/\/api\.example\.com\/items"/)
+  // headers / query built from n8n's keypair collections, values classified
+  assert.match(
+    graph,
+    /headers: \{ "X-Token": ref\("trigger", "body\.token"\) \}/
+  )
+  assert.match(graph, /query: \{ "page": "1" \}/)
+  // json body is a pure ref
+  assert.match(graph, /body: ref\("trigger", "body"\)/)
+
+  // httpRequest exposes the response body directly, so a downstream ref into
+  // the http node's output targets the field with no prefix
+  assert.match(graph, /"text": ref\("fetchData", "id"\)/)
+
+  // no stub for the no-auth http node — it uses the addon function
+  assert.ok(!files['httpDemo/functions/graph:httpRequest.function.ts'])
+  assert.equal(
+    manifest.find((m) => m.rpcName === 'graph:httpRequest'),
+    undefined
+  )
+
+  // the authenticated http node cannot be a random addon call — it stays a stub
+  // (addon-map territory) and keeps its integration rpc name
+  assert.match(graph, /authFetch: "httpRequest__authFetch"/)
+  assert.ok(files['httpDemo/functions/httpRequest__authFetch.function.ts'])
+  assert.ok(manifest.find((m) => m.rpcName === 'httpRequest__authFetch'))
+})
+
 test('code node with block comments escapes */ so the JSDoc stays valid', () => {
   const parsed = parseN8n(loadFixture('code-block-comment.json'))
   const { files } = generateWorkflowFromN8n(parsed)

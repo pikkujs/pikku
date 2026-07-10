@@ -1,0 +1,68 @@
+{
+  "name": "Http Demo",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "demo" }
+    },
+    {
+      "id": "h",
+      "name": "Fetch Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [200, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.example.com/items",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "X-Token", "value": "={{ $json.body.token }}" }]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [{ "name": "page", "value": "1" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body }}"
+      }
+    },
+    {
+      "id": "a",
+      "name": "Auth Fetch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [400, 0],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.example.com/secure",
+        "authentication": "genericCredentialType"
+      },
+      "credentials": { "httpHeaderAuth": { "id": "1", "name": "my creds" } }
+    },
+    {
+      "id": "s",
+      "name": "Notify",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [600, 0],
+      "parameters": { "text": "={{ $node[\"Fetch Data\"].json.id }}" }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Fetch Data", "type": "main", "index": 0 }]]
+    },
+    "Fetch Data": {
+      "main": [[{ "node": "Auth Fetch", "type": "main", "index": 0 }]]
+    },
+    "Auth Fetch": {
+      "main": [[{ "node": "Notify", "type": "main", "index": 0 }]]
+    }
+  }
+}

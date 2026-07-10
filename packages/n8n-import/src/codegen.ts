@@ -43,14 +43,11 @@ function safeJson(value: unknown): string | null {
   }
 }
 
-function emitRef(ref: RefPart, setNodeIds: Set<string>): string {
-  // @pikku/addon-graph's `editFields` wraps its result in `{ item }`, so a
-  // reference into a Set node's output is prefixed with `item.`.
-  const path = setNodeIds.has(ref.nodeId)
-    ? ref.path
-      ? `item.${ref.path}`
-      : 'item'
-    : ref.path
+function emitRef(ref: RefPart, prefixes: Map<string, string>): string {
+  // `editFields` wraps its result under `item`, so a reference into such a
+  // node's output is prefixed.
+  const prefix = prefixes.get(ref.nodeId)
+  const path = prefix ? (ref.path ? `${prefix}.${ref.path}` : prefix) : ref.path
   return path ? `ref(${q(ref.nodeId)}, ${q(path)})` : `ref(${q(ref.nodeId)})`
 }
 
@@ -58,21 +55,21 @@ function emitRef(ref: RefPart, setNodeIds: Set<string>): string {
 function emitValue(
   value: unknown,
   ctx: ExprContext,
-  setNodeIds: Set<string>
+  prefixes: Map<string, string>
 ): string | null {
   const classified = classifyExpression(value, ctx)
   if (classified.kind === 'literal') {
     return safeJson(classified.value)
   }
   if (classified.kind === 'ref') {
-    return emitRef(classified, setNodeIds)
+    return emitRef(classified, prefixes)
   }
   if (classified.kind === 'template') {
     const tmpl = classified.parts
       .map((p, i) => p + (i < classified.refs.length ? `$${i}` : ''))
       .join('')
     return `template(${q(tmpl)}, [${classified.refs
-      .map((r) => emitRef(r, setNodeIds))
+      .map((r) => emitRef(r, prefixes))
       .join(', ')}])`
   }
   return null
@@ -138,7 +135,7 @@ function setAssignments(
 function emitSetInput(
   node: ParsedNode,
   ctx: ExprContext,
-  setNodeIds: Set<string>
+  prefixes: Map<string, string>
 ): string | null {
   const ops: string[] = []
   for (const { field, value } of setAssignments(node.parameters)) {
@@ -149,7 +146,7 @@ function emitSetInput(
       )
       continue
     }
-    const rendered = emitValue(value, ctx, setNodeIds)
+    const rendered = emitValue(value, ctx, prefixes)
     if (rendered === null) continue
     ops.push(
       `        { field: ${q(field)}, operation: "set" as const, value: ${rendered} },`
@@ -166,17 +163,92 @@ function emitSetInput(
   ].join('\n')
 }
 
+/** Render an n8n keypair collection (`[{ name, value }]`) as an object literal. */
+function emitParamObject(
+  params: unknown,
+  ctx: ExprContext,
+  prefixes: Map<string, string>
+): string | null {
+  if (!Array.isArray(params)) return null
+  const entries: string[] = []
+  for (const p of params) {
+    if (!p || typeof p !== 'object') continue
+    const name = String((p as Record<string, unknown>).name ?? '')
+    if (!name) continue
+    const rendered = emitValue(
+      (p as Record<string, unknown>).value,
+      ctx,
+      prefixes
+    )
+    if (rendered === null) continue
+    entries.push(`${q(name)}: ${rendered}`)
+  }
+  return entries.length > 0 ? `{ ${entries.join(', ')} }` : null
+}
+
+/**
+ * Build the `input: (ref) => ({...})` body for an n8n HTTP Request node,
+ * mapping its parameters onto @pikku/addon-graph's `httpRequest` contract
+ * (`{ method, url, headers, query, body }`).
+ */
+function emitHttpInput(
+  node: ParsedNode,
+  ctx: ExprContext,
+  prefixes: Map<string, string>
+): string | null {
+  const p = node.parameters
+  const lines: string[] = []
+
+  const method = emitValue(p.method ?? 'GET', ctx, prefixes)
+  // A literal method must keep its enum literal type, not widen to `string`.
+  if (method !== null) {
+    const rendered = /^".*"$/.test(method) ? `${method} as const` : method
+    lines.push(`      method: ${rendered},`)
+  }
+
+  const url = emitValue(p.url, ctx, prefixes)
+  if (url !== null) lines.push(`      url: ${url},`)
+
+  const headers = emitParamObject(
+    (p.headerParameters as Record<string, unknown> | undefined)?.parameters,
+    ctx,
+    prefixes
+  )
+  if (headers) lines.push(`      headers: ${headers},`)
+
+  const query = emitParamObject(
+    (p.queryParameters as Record<string, unknown> | undefined)?.parameters,
+    ctx,
+    prefixes
+  )
+  if (query) lines.push(`      query: ${query},`)
+
+  const bodyParams = (p.bodyParameters as Record<string, unknown> | undefined)
+    ?.parameters
+  if (Array.isArray(bodyParams)) {
+    const body = emitParamObject(bodyParams, ctx, prefixes)
+    if (body) lines.push(`      body: ${body},`)
+  } else if (p.jsonBody !== undefined) {
+    const body = emitValue(p.jsonBody, ctx, prefixes)
+    if (body !== null) lines.push(`      body: ${body},`)
+  }
+
+  if (lines.length === 0) return null
+  return [`(ref) => ({`, ...lines, `    })`].join('\n')
+}
+
 /** Build the `input: (ref) => ({...})` body for a node from its parameters. */
 function emitInput(
   node: ParsedNode,
   ctx: ExprContext,
-  setNodeIds: Set<string>
+  prefixes: Map<string, string>
 ): string | null {
-  if (node.role === 'set') return emitSetInput(node, ctx, setNodeIds)
+  if (node.role === 'set') return emitSetInput(node, ctx, prefixes)
+  if (node.role === 'http') return emitHttpInput(node, ctx, prefixes)
   const lines: string[] = []
   for (const [key, value] of Object.entries(node.parameters)) {
     const classified = classifyExpression(value, ctx)
-    const rendered = emitValue(value, ctx, setNodeIds)
+    const rendered = emitValue(value, ctx, prefixes)
     if (rendered !== null) {
       lines.push(`      ${q(key)}: ${rendered},`)
     } else if (classified.kind === 'transform') {
@@ -199,19 +271,16 @@ function emitNext(next: NextValue): string {
   return `{ ${entries} }`
 }
 
-function usesTemplate(node: ParsedNode, ctx: ExprContext): boolean {
-  return Object.values(node.parameters).some(
-    (v) => classifyExpression(v, ctx).kind === 'template'
-  )
-}
-
 function emitGraphFile(parsed: ParsedWorkflow): string {
   const topo = buildTopology(parsed)
   const constName = `${parsed.slug}Workflow`
 
-  const setNodeIds = new Set(
-    topo.graphNodes.filter((n) => n.role === 'set').map((n) => n.nodeId)
-  )
+  // `editFields` wraps its result under `item`, so a downstream ref into a Set
+  // node's output is prefixed. `httpRequest` exposes the body directly — no prefix.
+  const prefixes = new Map<string, string>()
+  for (const n of topo.graphNodes) {
+    if (n.role === 'set') prefixes.set(n.nodeId, 'item')
+  }
 
   const nodesLines = topo.graphNodes.map(
     // An embedded agent is a native graph node (#910), referenced by its
@@ -229,12 +298,15 @@ function emitGraphFile(parsed: ParsedWorkflow): string {
       predecessorNodeId: t.predecessorNodeId,
       nameToNodeId: topo.nameToNodeId,
     }
-    const wantsInput = node.role === 'integration' || node.role === 'set'
-    if (wantsInput && usesTemplate(node, ctx)) anyTemplate = true
+    const wantsInput =
+      node.role === 'integration' || node.role === 'set' || node.role === 'http'
 
     const parts: string[] = []
-    const input = wantsInput ? emitInput(node, ctx, setNodeIds) : null
-    if (input) parts.push(`      input: ${input},`)
+    const input = wantsInput ? emitInput(node, ctx, prefixes) : null
+    if (input) {
+      parts.push(`      input: ${input},`)
+      if (input.includes('template(')) anyTemplate = true
+    }
     if (t.next !== undefined) parts.push(`      next: ${emitNext(t.next)},`)
     if (t.onError !== undefined)
       parts.push(`      onError: ${emitNext(t.onError as NextValue)},`)
@@ -458,8 +530,9 @@ export function generateWorkflowFromN8n(
   const emittedStubRpc = new Set<string>()
   for (const node of parsed.nodes) {
     if (node.disabled) continue
-    // Set / Edit Fields nodes map to @pikku/addon-graph's `editFields` — no stub.
-    if (node.role === 'set') continue
+    // Set / Edit Fields and no-auth HTTP nodes map to @pikku/addon-graph
+    // functions (`editFields` / `httpRequest`) — no stub.
+    if (node.role === 'set' || node.role === 'http') continue
     if (emittedStubRpc.has(node.rpcName)) continue
     if (
       node.role === 'integration' ||

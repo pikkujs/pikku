@@ -55,6 +55,7 @@ export type NodeRole =
   | 'outputParser'
   | 'vectorStore'
   | 'set'
+  | 'http'
   | 'control'
   | 'sticky'
   | 'other'
