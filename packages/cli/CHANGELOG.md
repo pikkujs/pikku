@@ -1,3 +1,35 @@
+## 0.12.77
+
+### Patch Changes
+
+- 7b17b14: Allow a workflow-graph node's `func` to reference a registered AI agent by name, dispatched as an agent run — exactly like sub-workflows. `executeGraphStep`/`executeGraphNodeInline` now check the agent registry and dispatch matching nodes via the agent-run path (`rpc.agent.run`), so the node's result is the agent's declared output and downstream nodes can `ref()` it. The generated `pikkuWorkflowGraph` wrapper widens its node-func union to also accept `keyof FlattenedWorkflowMap` and `keyof FlattenedAgentMap`, and `ref()` resolves an agent node's output keys.
+- 4f92e6f: `pikku db` schema-codegen warnings are now coded diagnostics routed through the CLI logger instead of raw `console.warn`, so they participate in the existing `--fail-on-warn` gate.
+
+  Each warning now carries a PKU code and `warn` severity: `PKU481` (JSON/JSONB column with no concrete `tsType`, degrading to `unknown`), `PKU480` (column named like a date/bool but whose DB type contradicts it), and `PKU482` (a `format` annotation ignored on a non-string column). Running `pikku db migrate --fail-on-warn` (e.g. in CI) now turns these into a hard failure, forcing the `db/annotations.ts` entry — closing the loophole where an untyped jsonb column silently degrades type-safety. Default behaviour is unchanged: the warnings still print, and only fail the build when `--fail-on-warn` is set.
+
+- 746abda: Fix pathologically slow `pikku db migrate` schema introspection on Postgres. Column and foreign-key introspection previously fanned out one query per table via `Promise.all` on a single `pg.Client`, which serialized every round-trip (emitting the `client.query() while already executing` deprecation warning) and scaled O(tables). It now issues a single set-based `information_schema` sweep for all columns and all foreign keys, turning introspection into a constant number of round-trips regardless of schema size. SQLite is unaffected (its introspection is synchronous and in-process).
+- daec082: Drop Node 22 support — the minimum supported runtime is now Node 24 (LTS).
+
+  Node 22 deadlocks `pikku dev` at `loadUserBootstrap` (tsx `register()` + `require(esm)` cycle handling on node 22.12+), and Node 20 is already below our floor. The `engines.node` requirement is raised to `>=24` across all packages, matching `.nvmrc` and the CI test matrix. Closes #751.
+
+- 08bb644: Fix `pikku db` schema codegen flattening Postgres array columns to scalar types. `text[]`/`int[]`/`uuid[]` columns now generate as `string[]`/`number[]`/`string[]` in `schema.gen.ts` instead of `string`/`number`. The introspector now captures the array element type from `udt_name` (previously every array column was recorded as the opaque `ARRAY`), and `mapType` preserves the `[]` suffix rather than matching the element substring and dropping the array-ness.
+- c8aa272: `pikku new addon --auth-config <path>`: pass an auth-config JSON that overrides the spec's securitySchemes (custom auth header, delegated login). With a `delegated` section the credential mode is forced to `bearer`, the generated per-user services check token expiry (`UnauthorizedError` re-auth signal), the credential schema carries `{ token, expiresAt?, tenantId? }`, and the addon exports a ready `authenticate<Name>Upstream()` for `@pikku/better-auth`'s `delegatedAuth()` plugin.
+- Updated dependencies [7b17b14]
+- Updated dependencies [4f92e6f]
+- Updated dependencies [ac4c3f4]
+- Updated dependencies [daec082]
+- Updated dependencies [e0fd352]
+- Updated dependencies [0f3edd3]
+- Updated dependencies [ad26273]
+  - @pikku/core@0.12.58
+  - @pikku/inspector@0.12.39
+  - @pikku/better-auth@0.12.17
+  - @pikku/fetch@0.12.7
+  - @pikku/schedule@0.12.4
+  - @pikku/node-http-server@0.12.6
+  - @pikku/ws@0.12.4
+  - @pikku/openapi-parser@0.12.13
+
 ## 0.12.76
 
 ### Patch Changes

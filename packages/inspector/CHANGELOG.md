@@ -1,3 +1,26 @@
+## 0.12.39
+
+### Patch Changes
+
+- 4f92e6f: `pikku db` schema-codegen warnings are now coded diagnostics routed through the CLI logger instead of raw `console.warn`, so they participate in the existing `--fail-on-warn` gate.
+
+  Each warning now carries a PKU code and `warn` severity: `PKU481` (JSON/JSONB column with no concrete `tsType`, degrading to `unknown`), `PKU480` (column named like a date/bool but whose DB type contradicts it), and `PKU482` (a `format` annotation ignored on a non-string column). Running `pikku db migrate --fail-on-warn` (e.g. in CI) now turns these into a hard failure, forcing the `db/annotations.ts` entry — closing the loophole where an untyped jsonb column silently degrades type-safety. Default behaviour is unchanged: the warnings still print, and only fail the build when `--fail-on-warn` is set.
+
+- daec082: Drop Node 22 support — the minimum supported runtime is now Node 24 (LTS).
+
+  Node 22 deadlocks `pikku dev` at `loadUserBootstrap` (tsx `register()` + `require(esm)` cycle handling on node 22.12+), and Node 20 is already below our floor. The `engines.node` requirement is raised to `>=24` across all packages, matching `.nvmrc` and the CI test matrix. Closes #751.
+
+- ad26273: Remove 16 dormant `ErrorCode` enum entries that were defined but never emitted anywhere in the framework. These were placeholder registrations that were never wired to a diagnostic, or codes whose emission sites were removed in later refactors (e.g. `PKU901`, `PKU431`). A whole-repo audit found zero emission sites — no user could ever see them — so they only cluttered the registry and demanded docs pages for errors that cannot occur.
+
+  Removed: `PKU300`, `PKU426`, `PKU427`, `PKU431`, `PKU488`, `PKU529`, `PKU568`, `PKU685`, `PKU715`, `PKU736`, `PKU787`, `PKU835`, `PKU836`, `PKU901`, `PKU937`, `PKU975`.
+
+  A new guard test (`error-codes-emitted.test.ts`) fails if any `ErrorCode` value has no `ErrorCode.<NAME>` or raw `PKU###` reference in the source, so dead entries can't silently accumulate again.
+
+- Updated dependencies [7b17b14]
+- Updated dependencies [daec082]
+- Updated dependencies [e0fd352]
+  - @pikku/core@0.12.58
+
 ## 0.12.38
 
 ### Patch Changes

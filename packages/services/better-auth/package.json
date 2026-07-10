@@ -1,6 +1,6 @@
 {
   "name": "@pikku/better-auth",
-  "version": "0.12.16",
+  "version": "0.12.17",
   "author": "yasser.fadl@gmail.com",
   "license": "MIT",
   "module": "dist/index.js",
@@ -18,7 +18,7 @@
     "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.52",
+    "@pikku/core": "^0.12.58",
     "better-auth": "^1.6.0"
   },
   "devDependencies": {

@@ -1,3 +1,16 @@
+## 0.12.4
+
+### Patch Changes
+
+- daec082: Drop Node 22 support — the minimum supported runtime is now Node 24 (LTS).
+
+  Node 22 deadlocks `pikku dev` at `loadUserBootstrap` (tsx `register()` + `require(esm)` cycle handling on node 22.12+), and Node 20 is already below our floor. The `engines.node` requirement is raised to `>=24` across all packages, matching `.nvmrc` and the CI test matrix. Closes #751.
+
+- Updated dependencies [7b17b14]
+- Updated dependencies [daec082]
+- Updated dependencies [e0fd352]
+  - @pikku/core@0.12.58
+
 ## 0.12.3
 
 ### Patch Changes

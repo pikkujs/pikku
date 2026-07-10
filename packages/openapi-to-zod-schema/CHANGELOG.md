@@ -1,5 +1,13 @@
 # @pikku/openapi-to-zod-schema
 
+## 0.12.6
+
+### Patch Changes
+
+- daec082: Drop Node 22 support — the minimum supported runtime is now Node 24 (LTS).
+
+  Node 22 deadlocks `pikku dev` at `loadUserBootstrap` (tsx `register()` + `require(esm)` cycle handling on node 22.12+), and Node 20 is already below our floor. The `engines.node` requirement is raised to `>=24` across all packages, matching `.nvmrc` and the CI test matrix. Closes #751.
+
 ## 0.12.5
 
 ### Patch Changes
