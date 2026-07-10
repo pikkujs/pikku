@@ -20,8 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
       - name: Check published deps for workspace protocol
@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           download-build: 'false'
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           download-build: 'false'
@@ -60,7 +60,7 @@ jobs:
     timeout-minutes: 15
     needs: build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - run: yarn test
 
@@ -72,7 +72,7 @@ jobs:
     timeout-minutes: 10
     needs: build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install native build tools
         run: apt-get update && apt-get install -y build-essential python3 unzip
       - uses: ./.github/actions/setup
@@ -88,7 +88,7 @@ jobs:
   #   timeout-minutes: 10
   #   needs: [e2e, verifiers, templates]
   #   steps:
-  #     - uses: actions/checkout@v4
+  #     - uses: actions/checkout@v7
   #     - name: Install native build tools
   #       run: apt-get update && apt-get install -y build-essential python3
   #     - uses: ./.github/actions/setup
@@ -131,7 +131,7 @@ jobs:
           ]
         package-manager: [yarn, bun]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - run: cd verifiers/${{ matrix.verifier }} && ${{ matrix.package-manager == 'bun' && 'bun run' || 'yarn' }} test
 
@@ -149,7 +149,7 @@ jobs:
         # release (see packages/cli/build.sh).
         os: [ubuntu-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - uses: oven-sh/setup-bun@v2
         with:
@@ -186,7 +186,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - run: cd verifiers/workflows && yarn test:db
     env:
@@ -244,7 +244,7 @@ jobs:
           ]
         package-manager: [yarn]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.version }}
@@ -274,7 +274,7 @@ jobs:
         template: [cli]
         package-manager: [yarn]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.version }}
@@ -306,7 +306,7 @@ jobs:
         version: [24]
         target: [dev, standalone]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.version }}
@@ -339,7 +339,7 @@ jobs:
       published: ${{ steps.changesets.outputs.published }}
       publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
@@ -457,7 +457,7 @@ jobs:
           ]
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Create Template
         run: npm create pikku@latest -- --template ${{ matrix.template }} --version ${{ github.ref_name }} --name ../test-app --install --package-manager npm --stackblitz

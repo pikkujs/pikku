@@ -22,8 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
       - name: Check published deps for workspace protocol
@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           download-build: 'false'
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           download-build: 'false'
@@ -62,7 +62,7 @@ jobs:
     timeout-minutes: 10
     needs: build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - name: Run codegen perf gate
         run: npx tsx benchmarks/bench-codegen-perf.ts
@@ -75,7 +75,7 @@ jobs:
     timeout-minutes: 10
     needs: build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install native build tools
         run: apt-get update && apt-get install -y build-essential python3 unzip
       - uses: ./.github/actions/setup
@@ -91,7 +91,7 @@ jobs:
   #   timeout-minutes: 10
   #   needs: [e2e, verifiers, templates]
   #   steps:
-  #     - uses: actions/checkout@v4
+  #     - uses: actions/checkout@v7
   #     - name: Install native build tools
   #       run: apt-get update && apt-get install -y build-essential python3
   #     - uses: ./.github/actions/setup
@@ -133,7 +133,7 @@ jobs:
           ]
         package-manager: [yarn, bun]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - run: cd verifiers/${{ matrix.verifier }} && ${{ matrix.package-manager == 'bun' && 'bun run' || 'yarn' }} test
 
@@ -151,7 +151,7 @@ jobs:
         # release (see packages/cli/build.sh).
         os: [ubuntu-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - uses: oven-sh/setup-bun@v2
         with:
@@ -188,7 +188,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - run: cd verifiers/workflows && yarn test:db
     env:
@@ -201,12 +201,12 @@ jobs:
     timeout-minutes: 15
     needs: build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - name: Run functions verifier with coverage
         run: cd verifiers/functions && yarn test:coverage
       - name: Upload verifier coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: verifiers/functions/coverage/lcov.info
           flags: verifiers
@@ -219,7 +219,7 @@ jobs:
     timeout-minutes: 20
     needs: build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - name: Run package unit tests with coverage
         # --enable-source-maps so tsx-transpiled line numbers map back to the
@@ -247,7 +247,7 @@ jobs:
           done < <(find packages -name lcov.info -not -path '*/node_modules/*' | sort)
           echo "Merged $(grep -c '^SF:' unit-lcov.info || echo 0) source files into unit-lcov.info"
       - name: Upload unit coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: unit-lcov.info
           flags: unit
@@ -327,7 +327,7 @@ jobs:
           - package-manager: bun
             template: nextjs-full
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.version }}
@@ -353,7 +353,7 @@ jobs:
           fi
       - name: Upload template coverage to Codecov
         if: always()
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: ${{ runner.temp }}/template-coverage/${{ matrix.template }}/report/lcov.info
           flags: templates
@@ -380,7 +380,7 @@ jobs:
         template: [cli]
         package-manager: [yarn]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.version }}
@@ -403,7 +403,7 @@ jobs:
           fi
       - name: Upload template coverage to Codecov
         if: always()
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: ${{ runner.temp }}/template-coverage/${{ matrix.template }}/report/lcov.info
           flags: templates
@@ -432,7 +432,7 @@ jobs:
         version: [24]
         target: [dev, standalone]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.version }}

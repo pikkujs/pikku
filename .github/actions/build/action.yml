@@ -5,7 +5,7 @@ runs:
   using: composite
   steps:
     - name: Restore TypeScript build cache
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         # tsc -b is incremental: given the prior tsconfig.tsbuildinfo + emitted
         # dist it only recompiles projects whose inputs changed. Key on all
@@ -61,7 +61,7 @@ runs:
         echo "::notice::⏱ Build console: $((SECONDS - start))s"
 
     - name: Save build output (for later jobs)
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: build-output
         path: |
