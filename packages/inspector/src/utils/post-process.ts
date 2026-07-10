@@ -639,6 +639,44 @@ export function validateAgentModels(
 }
 
 /**
+ * A `pikkuWorkflowGraph` node that references the `graph:` namespace (e.g.
+ * `graph:editFields`) needs @pikku/addon-graph wired — otherwise the RPC never
+ * registers and codegen fails deep in type-checking with an opaque error. Fail
+ * early with an actionable message pointing at `scaffold: { graph: true }`.
+ */
+export function validateWorkflowGraphAddons(
+  logger: InspectorLogger,
+  state: InspectorState
+): void {
+  const addonGraphWired = Array.from(
+    state.rpc.wireAddonDeclarations.values()
+  ).some((decl) => decl.package === '@pikku/addon-graph')
+  if (addonGraphWired) {
+    return
+  }
+
+  for (const [name, graph] of Object.entries(state.workflows.graphMeta)) {
+    for (const node of Object.values(graph.nodes)) {
+      if (!('rpcName' in node) || typeof node.rpcName !== 'string') {
+        continue
+      }
+      if (!node.rpcName.startsWith('graph:')) {
+        continue
+      }
+      if (state.functions.meta[node.rpcName]) {
+        continue
+      }
+      logger.critical(
+        ErrorCode.WORKFLOW_GRAPH_ADDON_NOT_WIRED,
+        `Workflow graph '${name}' references '${node.rpcName}' but @pikku/addon-graph is not wired. ` +
+          `Enable "scaffold": { "graph": true } in pikku.config.json (and install @pikku/addon-graph), ` +
+          `or wire it manually with wireAddon({ name: 'graph', package: '@pikku/addon-graph' }).`
+      )
+    }
+  }
+}
+
+/**
  * Validates that Zod schemas and wiring side-effects (wireHTTPRoutes,
  * addPermission, addHTTPMiddleware, etc.) do not coexist in the same file.
  *
