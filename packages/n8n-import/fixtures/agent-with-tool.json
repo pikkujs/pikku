@@ -1,0 +1,51 @@
+{
+  "name": "Support Assistant",
+  "nodes": [
+    {
+      "id": "t1",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {}
+    },
+    {
+      "id": "ag",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": { "text": "You are a helpful support assistant. Answer using the tools." }
+    },
+    {
+      "id": "m1",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [200, 200],
+      "parameters": { "model": "gpt-4o", "options": { "temperature": 0.3 } }
+    },
+    {
+      "id": "mem",
+      "name": "Window Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1,
+      "position": [350, 200],
+      "parameters": { "contextWindowLength": 10 }
+    },
+    {
+      "id": "tl",
+      "name": "Lookup Order",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 1,
+      "position": [500, 200],
+      "parameters": { "url": "https://api.shop.test/orders" }
+    }
+  ],
+  "connections": {
+    "Chat Trigger": { "main": [[{ "node": "AI Agent", "type": "main", "index": 0 }]] },
+    "OpenAI Chat Model": { "ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]] },
+    "Window Memory": { "ai_memory": [[{ "node": "AI Agent", "type": "ai_memory", "index": 0 }]] },
+    "Lookup Order": { "ai_tool": [[{ "node": "AI Agent", "type": "ai_tool", "index": 0 }]] }
+  }
+}

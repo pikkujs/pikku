@@ -6339,6 +6339,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/n8n-import@workspace:packages/n8n-import":
+  version: 0.0.0-use.local
+  resolution: "@pikku/n8n-import@workspace:packages/n8n-import"
+  dependencies:
+    typescript: "npm:^6.0.3"
+  languageName: unknown
+  linkType: soft
+
 "@pikku/next@npm:^0.12.6, @pikku/next@workspace:*, @pikku/next@workspace:packages/runtimes/next":
   version: 0.0.0-use.local
   resolution: "@pikku/next@workspace:packages/runtimes/next"
