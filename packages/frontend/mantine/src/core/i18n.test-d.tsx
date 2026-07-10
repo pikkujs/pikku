@@ -14,6 +14,18 @@ import {
   Menu,
   Tabs,
   Stepper,
+  Highlight,
+  Blockquote,
+  Mark,
+  Pill,
+  Avatar,
+  Image,
+  Burger,
+  PillsInput,
+  List,
+  Timeline,
+  Combobox,
+  Input,
 } from './index.js'
 import { asI18n } from '@pikku/react'
 import type { I18nString } from '@pikku/react'
@@ -65,7 +77,9 @@ const _ok_button_attrs = (
 )
 const _ok_title = <Title order={2}>{t('page.title')}</Title>
 const _ok_icon = <ActionIcon aria-label={t('close')} />
-const _ok_input = <TextInput label={t('email')} placeholder={asI18n('you@x.com')} />
+const _ok_input = (
+  <TextInput label={t('email')} placeholder={asI18n('you@x.com')} />
+)
 const _ok_select = (
   <Select data={[]} label={t('country')} nothingFoundMessage={t('none')} />
 )
@@ -111,6 +125,45 @@ const _ok_stepper = (
   </Stepper>
 )
 
+// ── positives: newly-gated components ────────────────────────────────────────
+const _ok_highlight = <Highlight highlight="a">{asI18n('abc')}</Highlight>
+const _ok_blockquote = <Blockquote cite={t('src')}>{t('quote')}</Blockquote>
+const _ok_mark = <Mark>{t('marked')}</Mark>
+const _ok_pill = <Pill>{t('tag')}</Pill>
+const _ok_avatar = <Avatar alt={t('user.avatar')} />
+const _ok_image = <Image alt={t('hero')} />
+const _ok_burger = <Burger aria-label={t('menu')} />
+const _ok_pillsinput = (
+  <PillsInput label={t('recipients')}>
+    <Pill>{t('tag')}</Pill>
+    <PillsInput.Field placeholder={asI18n('add…')} />
+  </PillsInput>
+)
+const _ok_list = (
+  <List>
+    <List.Item>{t('first')}</List.Item>
+  </List>
+)
+const _ok_timeline = (
+  <Timeline active={0}>
+    <Timeline.Item title={t('shipped')}>{t('detail')}</Timeline.Item>
+  </Timeline>
+)
+const _ok_combobox = (
+  <Combobox>
+    <Combobox.Options>
+      <Combobox.Option value="a">{t('opt')}</Combobox.Option>
+      <Combobox.Empty>{t('none')}</Combobox.Empty>
+    </Combobox.Options>
+  </Combobox>
+)
+const _ok_input_parts = (
+  <Input.Wrapper label={t('email')} description={t('hint')}>
+    <Input.Label>{t('email')}</Input.Label>
+    <span />
+  </Input.Wrapper>
+)
+
 // ── negatives: raw unbranded strings MUST fail ───────────────────────────────
 // @ts-expect-error — raw string child
 const _bad_button = <Button>Save</Button>
@@ -137,6 +190,36 @@ const _bad_modal = <Modal opened onClose={() => {}} title="Confirm" />
 const _bad_menu_item = <Menu.Item>Rename</Menu.Item>
 // @ts-expect-error — raw string child on Tabs.Tab
 const _bad_tab = <Tabs.Tab value="a">First</Tabs.Tab>
+// @ts-expect-error — raw string child on Highlight
+const _bad_highlight = <Highlight highlight="a">abc</Highlight>
+// @ts-expect-error — raw string child on Blockquote
+const _bad_blockquote = <Blockquote>Quote</Blockquote>
+// @ts-expect-error — raw string child on Mark
+const _bad_mark = <Mark>marked</Mark>
+// @ts-expect-error — raw string child on Pill
+const _bad_pill = <Pill>tag</Pill>
+// @ts-expect-error — raw string alt on Avatar
+const _bad_avatar = <Avatar alt="user avatar" />
+// @ts-expect-error — raw string alt on Image
+const _bad_image = <Image alt="hero" />
+// @ts-expect-error — raw string aria-label on Burger
+const _bad_burger = <Burger aria-label="menu" />
+// @ts-expect-error — raw string label on PillsInput
+const _bad_pillsinput = <PillsInput label="Recipients" />
+// @ts-expect-error — raw string placeholder on PillsInput.Field
+const _bad_pillsinput_field = <PillsInput.Field placeholder="add…" />
+// @ts-expect-error — raw string child on List.Item
+const _bad_list_item = <List.Item>First</List.Item>
+// @ts-expect-error — raw string title on Timeline.Item
+const _bad_timeline = <Timeline.Item title="Shipped" />
+// @ts-expect-error — raw string child on Combobox.Option
+const _bad_combobox_option = <Combobox.Option value="a">opt</Combobox.Option>
+const _bad_input_wrapper = (
+  // @ts-expect-error — raw string label on Input.Wrapper
+  <Input.Wrapper label="Email">
+    <span />
+  </Input.Wrapper>
+)
 
 void [
   _brand_ltr,
@@ -173,4 +256,29 @@ void [
   _bad_modal,
   _bad_menu_item,
   _bad_tab,
+  _ok_highlight,
+  _ok_blockquote,
+  _ok_mark,
+  _ok_pill,
+  _ok_avatar,
+  _ok_image,
+  _ok_burger,
+  _ok_pillsinput,
+  _ok_list,
+  _ok_timeline,
+  _ok_combobox,
+  _ok_input_parts,
+  _bad_highlight,
+  _bad_blockquote,
+  _bad_mark,
+  _bad_pill,
+  _bad_avatar,
+  _bad_image,
+  _bad_burger,
+  _bad_pillsinput,
+  _bad_pillsinput_field,
+  _bad_list_item,
+  _bad_timeline,
+  _bad_combobox_option,
+  _bad_input_wrapper,
 ]
