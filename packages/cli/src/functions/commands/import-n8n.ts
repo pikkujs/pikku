@@ -41,7 +41,8 @@ export const pikkuImportN8n = pikkuSessionlessFunc<
       process.exit(1)
     }
 
-    const { files, manifest } = generateWorkflowFromN8n(parsed)
+    const { files, manifest, credentialInstances } =
+      generateWorkflowFromN8n(parsed)
 
     const baseDir = out
       ? isAbsolute(out)
@@ -57,6 +58,13 @@ export const pikkuImportN8n = pikkuSessionlessFunc<
     if (manifest.length > 0) {
       logger.info(
         `  ${manifest.length} integration node(s) recorded in ${parsed.slug}.integrations.json`
+      )
+    }
+    if (credentialInstances.length > 0) {
+      logger.info(
+        `  ${credentialInstances.length} addon instance(s) wired in ${parsed.slug}.addons.gen.ts: ${credentialInstances
+          .map((i) => i.instanceName)
+          .join(', ')}`
       )
     }
     const stubCount = written.filter((f) => f.includes('/functions/')).length

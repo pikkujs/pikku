@@ -1,0 +1,57 @@
+{
+  "name": "Dual Slack Notify",
+  "nodes": [
+    {
+      "id": "trigger1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "notify" }
+    },
+    {
+      "id": "slack1",
+      "name": "Notify Marketing",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [200, 0],
+      "parameters": { "channel": "#marketing", "text": "hi marketing" },
+      "credentials": {
+        "slackApi": { "id": "3", "name": "Slack — Marketing" }
+      }
+    },
+    {
+      "id": "slack2",
+      "name": "Notify Support",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [400, 0],
+      "parameters": { "channel": "#support", "text": "hi support" },
+      "credentials": {
+        "slackApi": { "id": "7", "name": "Slack — Support" }
+      }
+    },
+    {
+      "id": "slack3",
+      "name": "Notify Marketing Again",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [600, 0],
+      "parameters": { "channel": "#marketing", "text": "second ping" },
+      "credentials": {
+        "slackApi": { "id": "3", "name": "Slack — Marketing" }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Notify Marketing", "type": "main", "index": 0 }]]
+    },
+    "Notify Marketing": {
+      "main": [[{ "node": "Notify Support", "type": "main", "index": 0 }]]
+    },
+    "Notify Support": {
+      "main": [[{ "node": "Notify Marketing Again", "type": "main", "index": 0 }]]
+    }
+  }
+}

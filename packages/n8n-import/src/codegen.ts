@@ -6,6 +6,11 @@ import {
   type RefPart,
 } from './expressions.js'
 import { toPascalCase } from './naming.js'
+import {
+  deriveCredentialInstances,
+  nodeInstanceBindings,
+  type CredentialInstance,
+} from './credentials.js'
 
 export interface ManifestEntry {
   rpcName: string
@@ -13,6 +18,8 @@ export interface ManifestEntry {
   n8nName: string
   parameters: Record<string, unknown>
   credentials?: Record<string, unknown>
+  /** Addon instance name this node's credential binds to, when it has one. */
+  credentialInstance?: string
   isAgentTool: boolean
   agentName?: string
 }
@@ -21,6 +28,8 @@ export interface GenerateResult {
   /** path -> file content */
   files: Record<string, string>
   manifest: ManifestEntry[]
+  /** Encapsulated addon instances (one per distinct n8n credential). */
+  credentialInstances: CredentialInstance[]
 }
 
 const q = (v: unknown) => JSON.stringify(v)
@@ -141,13 +150,14 @@ function emitGraphFile(parsed: ParsedWorkflow): string {
 }
 
 function envelopeSchemas(inputName: string, outputName: string): string {
+  // Stub bodies are unimplemented, so their I/O shapes are unknown. Keep the
+  // schemas fully permissive: the workflow graph type-checks every node's
+  // `input` mapping against the target's input schema and every `ref(...)` path
+  // against a node's output schema — an opaque stub must accept any mapping and
+  // expose any ref path, or a valid import won't type-check.
   return [
-    `export const ${inputName} = z.object({`,
-    `  items: z.array(z.unknown()).optional(),`,
-    `})`,
-    `export const ${outputName} = z.object({`,
-    `  items: z.array(z.unknown()),`,
-    `})`,
+    `export const ${inputName} = z.any()`,
+    `export const ${outputName} = z.any()`,
   ].join('\n')
 }
 
@@ -292,6 +302,32 @@ function emitAgentFile(parsed: ParsedWorkflow): string {
 }
 
 /**
+ * Emit `wireAddon(...)` declarations — one encapsulated addon instance per
+ * distinct n8n credential, each bound to its own credential via
+ * `credentialOverrides`. Packages are inferred from the n8n credential type and
+ * refined downstream by the addon-map step.
+ */
+function emitAddonsFile(instances: CredentialInstance[]): string {
+  const blocks = instances.map((inst) =>
+    [
+      `wireAddon({`,
+      `  name: ${q(inst.instanceName)},`,
+      `  package: ${q(inst.package)},`,
+      `  credentialOverrides: { ${q(inst.addonCredKey)}: ${q(inst.credentialName)} },`,
+      `})`,
+    ].join('\n')
+  )
+  return [
+    `import { wireAddon } from '@pikku/core/rpc'`,
+    ``,
+    `// TODO(n8n): verify each addon package + credential key — packages are`,
+    `// inferred from the n8n credential type and refined by the addon-map step.`,
+    ...blocks.flatMap((b) => [``, b]),
+    ``,
+  ].join('\n')
+}
+
+/**
  * Generate Pikku source from a parsed n8n workflow. Pure — returns a path→content
  * map plus the integration manifest. No filesystem access.
  */
@@ -300,6 +336,8 @@ export function generateWorkflowFromN8n(
 ): GenerateResult {
   const files: Record<string, string> = {}
   const dir = parsed.slug
+  const credentialInstances = deriveCredentialInstances(parsed)
+  const bindings = nodeInstanceBindings(credentialInstances)
 
   const emitGraph = parsed.shape !== 'agent-only'
   if (emitGraph) {
@@ -339,6 +377,11 @@ export function generateWorkflowFromN8n(
     files[`${dir}/functions/n8nPassthrough.function.ts`] = emitPassthrough()
   }
 
+  if (credentialInstances.length > 0) {
+    files[`${dir}/${parsed.slug}.addons.gen.ts`] =
+      emitAddonsFile(credentialInstances)
+  }
+
   // Manifest: one entry per integration / agent-tool node.
   const agentName = parsed.slug
   const manifest: ManifestEntry[] = parsed.nodes
@@ -349,6 +392,7 @@ export function generateWorkflowFromN8n(
       n8nName: n.name,
       parameters: n.parameters,
       credentials: n.credentials,
+      credentialInstance: bindings[n.rpcName],
       isAgentTool: n.role === 'agentTool',
       agentName: n.role === 'agentTool' ? agentName : undefined,
     }))
@@ -361,5 +405,5 @@ export function generateWorkflowFromN8n(
     )
   }
 
-  return { files, manifest }
+  return { files, manifest, credentialInstances }
 }

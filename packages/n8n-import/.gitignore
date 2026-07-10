@@ -1,4 +1,6 @@
 .corpus/
 harness-report.json
 harness-report.md
+boot-report.json
 .harness-tmp/
+.corpus-ai/

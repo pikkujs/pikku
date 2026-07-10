@@ -45,6 +45,13 @@ export function toPascalCase(input: string): string {
   return camel.charAt(0).toUpperCase() + camel.slice(1)
 }
 
+/** A safe kebab-case token, e.g. "Slack — Marketing" -> "slack-marketing". */
+export function toKebabCase(input: string): string {
+  const parts = words(input)
+  if (parts.length === 0) return 'default'
+  return parts.map((w) => w.toLowerCase()).join('-')
+}
+
 /** A safe camelCase identifier that never starts with a digit or a reserved word. */
 export function sanitizeIdentifier(input: string): string {
   let id = toCamelCase(input)
