@@ -1732,7 +1732,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     data: any,
     rpcService: any
   ): Promise<any> {
+    // Carry the run's pikkuUserId onto the step wire so authed steps rehydrate their
+    // session on the queued path too (the bare job wire lacks it; inline already has it).
+    const run = await this.getRun(runId)
     return rpcService.rpcWithWire(rpcName, data, {
+      ...(run?.wire?.pikkuUserId ? { pikkuUserId: run.wire.pikkuUserId } : {}),
       workflowStep: {
         runId,
         stepId: stepState.stepId,
