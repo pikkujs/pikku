@@ -60,10 +60,25 @@ import {
   JsonInput as MantineJsonInput,
   ColorInput as MantineColorInput,
   PinInput as MantinePinInput,
+  // plain (leaf text / prose)
+  Highlight as MantineHighlight,
+  Blockquote as MantineBlockquote,
+  Mark as MantineMark,
+  Pill as MantinePill,
+  Burger as MantineBurger,
+  // polymorphic (alt / a11y text)
+  Avatar as MantineAvatar,
+  Image as MantineImage,
+  // plain (input wrapper)
+  PillsInput as MantinePillsInput,
   // compound
   Menu as MantineMenu,
   Tabs as MantineTabs,
   Stepper as MantineStepper,
+  List as MantineList,
+  Timeline as MantineTimeline,
+  Combobox as MantineCombobox,
+  Input as MantineInput,
   // factories (top-level components)
   type ButtonFactory,
   type AnchorFactory,
@@ -102,11 +117,29 @@ import {
   type JsonInputFactory,
   type ColorInputFactory,
   type PinInputFactory,
+  type HighlightFactory,
+  type BlockquoteFactory,
+  type MarkFactory,
+  type PillFactory,
+  type BurgerFactory,
+  type AvatarFactory,
+  type ImageFactory,
+  type PillsInputFactory,
   // props for sub-components (their factories aren't root-exported)
   type MenuItemProps,
   type MenuLabelProps,
   type TabsTabProps,
   type StepperStepProps,
+  type ListItemProps,
+  type TimelineItemProps,
+  type ComboboxOptionProps,
+  type ComboboxEmptyProps,
+  type InputWrapperProps,
+  type InputLabelProps,
+  type InputDescriptionProps,
+  type InputErrorProps,
+  type InputPlaceholderProps,
+  type PillsInputFieldProps,
 } from '@mantine/core'
 
 import type { I18nNode, I18nString } from '@pikku/react'
@@ -184,6 +217,29 @@ export const InputBase = MantineInputBase as OverridePoly<
 // ── Plain: children ───────────────────────────────────────────────────────────
 export const Chip = MantineChip as OverrideFactory<ChipFactory, Children>
 export const Title = MantineTitle as OverrideFactory<TitleFactory, Children>
+export const Mark = MantineMark as OverrideFactory<MarkFactory, Children>
+export const Pill = MantinePill as OverrideFactory<PillFactory, Children>
+// Highlight renders its `children` string with the matched substring wrapped —
+// children is a required `string`, so brand it as I18nString, not I18nNode.
+export const Highlight = MantineHighlight as OverridePoly<
+  HighlightFactory,
+  { children: I18nString }
+>
+export const Blockquote = MantineBlockquote as OverrideFactory<
+  BlockquoteFactory,
+  { children?: I18nNode; cite?: I18nNode }
+>
+
+// ── Polymorphic: alt / a11y text is the only visible copy ─────────────────────
+export const Avatar = MantineAvatar as OverridePoly<
+  AvatarFactory,
+  { alt?: I18nString }
+>
+export const Image = MantineImage as OverridePoly<
+  ImageFactory,
+  { alt?: I18nString }
+>
+export const Burger = MantineBurger as OverrideFactory<BurgerFactory, AriaLabel>
 
 // ── Plain: single label-ish prop ─────────────────────────────────────────────
 export const Tooltip = MantineTooltip as OverrideFactory<
@@ -298,6 +354,20 @@ export const Radio = MantineRadio as OverrideFactory<
   RadioFactory,
   { label?: I18nNode; description?: I18nNode }
 >
+// PillsInput is an Input wrapper (label/description/error live on the root); its
+// `.Field` static carries the placeholder. Gate both via a composed factory.
+export const PillsInput = MantinePillsInput as unknown as WithStatics<
+  OverrideFactory<
+    PillsInputFactory,
+    { label?: I18nNode; description?: I18nNode; error?: I18nNode }
+  >,
+  {
+    Field: OverrideFactory<
+      { props: PillsInputFieldProps },
+      { placeholder?: I18nString }
+    >
+  }
+>
 
 // ── Compound components ───────────────────────────────────────────────────────
 // Override the text-bearing statics; WithStatics preserves every OTHER static
@@ -339,5 +409,45 @@ export const Stepper = MantineStepper as unknown as WithStatics<
       { props: StepperStepProps },
       { label?: I18nNode; description?: I18nNode }
     >
+  }
+>
+
+export const List = MantineList as unknown as WithStatics<
+  typeof MantineList,
+  { Item: OverrideFactory<{ props: ListItemProps }, Children> }
+>
+
+export const Timeline = MantineTimeline as unknown as WithStatics<
+  typeof MantineTimeline,
+  {
+    Item: OverrideFactory<
+      { props: TimelineItemProps },
+      { title?: I18nNode; children?: I18nNode }
+    >
+  }
+>
+
+export const Combobox = MantineCombobox as unknown as WithStatics<
+  typeof MantineCombobox,
+  {
+    Option: OverrideFactory<{ props: ComboboxOptionProps }, Children>
+    Empty: OverrideFactory<{ props: ComboboxEmptyProps }, Children>
+  }
+>
+
+// Input is the low-level primitive (InputBase is the common wrapper). Gate the
+// text-bearing statics: the wrapper's label/description/error and the leaf
+// Label/Description/Error/Placeholder children.
+export const Input = MantineInput as unknown as WithStatics<
+  typeof MantineInput,
+  {
+    Wrapper: OverrideFactory<
+      { props: InputWrapperProps },
+      { label?: I18nNode; description?: I18nNode; error?: I18nNode }
+    >
+    Label: OverrideFactory<{ props: InputLabelProps }, Children>
+    Description: OverrideFactory<{ props: InputDescriptionProps }, Children>
+    Error: OverrideFactory<{ props: InputErrorProps }, Children>
+    Placeholder: OverrideFactory<{ props: InputPlaceholderProps }, Children>
   }
 >
