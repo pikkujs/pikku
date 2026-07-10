@@ -39,13 +39,13 @@ describe('addWorkflowGraph — notes extraction', () => {
         "import { pikkuWorkflowGraph } from '@pikku/core/workflow'",
         'export const myGraph = pikkuWorkflowGraph({',
         "  name: 'my-graph',",
-        "  notes: ['imported from n8n sticky note'],",
+        "  notes: ['imported sticky note'],",
         '  nodes: {',
         "    assess: 'assess',",
         "    notify: 'notify',",
         '  },',
         '  config: {',
-        "    assess: { next: 'notify', notes: 'STUB — generated from n8n node \"Assess\"' },",
+        "    assess: { next: 'notify', notes: 'STUB — generated from node \"Assess\"' },",
         '    notify: {},',
         '  },',
         '})',
@@ -58,10 +58,10 @@ describe('addWorkflowGraph — notes extraction', () => {
       })
       const graph = state.workflows.graphMeta['my-graph']
       assert.ok(graph, 'graph meta should be registered')
-      assert.deepEqual(graph.notes, ['imported from n8n sticky note'])
+      assert.deepEqual(graph.notes, ['imported sticky note'])
       assert.equal(
         (graph.nodes['assess'] as { notes?: string }).notes,
-        'STUB — generated from n8n node "Assess"'
+        'STUB — generated from node "Assess"'
       )
       assert.equal(
         (graph.nodes['notify'] as { notes?: string }).notes,

@@ -63,7 +63,7 @@ function rpcNameFor(role: NodeRole, node: N8nNode): string {
     case 'vectorStore':
       return vectorRpcName(node.name)
     case 'set':
-      return 'n8nPassthrough'
+      return 'graph:editFields'
     default:
       return integrationRpcName(node.type, node.name)
   }
@@ -131,9 +131,11 @@ export function parseN8n(raw: unknown): ParsedWorkflow {
     }
 
     const nodeId = dedupe(sanitizeIdentifier(node.name), seenNodeIds)
+    // Set / Edit Fields nodes all share @pikku/addon-graph's `editFields` RPC —
+    // a shared addon function, never deduped into per-node names.
     const rpcName =
       role === 'set'
-        ? 'n8nPassthrough'
+        ? rpcNameFor(role, node)
         : dedupe(rpcNameFor(role, node), seenRpcNames)
 
     nodes.push({

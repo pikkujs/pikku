@@ -30,7 +30,7 @@ function graph(
 test('computeGraphHash: node-level notes do not change the hash', () => {
   const without = computeGraphHash(graph())
   const withNote = computeGraphHash(
-    graph({}, { notes: 'imported from n8n node "Do Thing"' })
+    graph({}, { notes: 'imported node "Do Thing"' })
   )
   assert.strictEqual(withNote, without)
 })

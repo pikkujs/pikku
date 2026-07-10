@@ -3,5 +3,5 @@
   "private": true,
   "type": "module",
   "imports": { "#pikku/*": "./.pikku/*" },
-  "dependencies": { "@pikku/core": "*" }
+  "dependencies": { "@pikku/core": "*", "@pikku/addon-graph": "*" }
 }

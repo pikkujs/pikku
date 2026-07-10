@@ -43,31 +43,91 @@ function safeJson(value: unknown): string | null {
   }
 }
 
-function emitRef(ref: RefPart): string {
-  return ref.path
-    ? `ref(${q(ref.nodeId)}, ${q(ref.path)})`
-    : `ref(${q(ref.nodeId)})`
+function emitRef(ref: RefPart, setNodeIds: Set<string>): string {
+  // @pikku/addon-graph's `editFields` wraps its result in `{ item }`, so a
+  // reference into a Set node's output is prefixed with `item.`.
+  const path = setNodeIds.has(ref.nodeId)
+    ? ref.path
+      ? `item.${ref.path}`
+      : 'item'
+    : ref.path
+  return path ? `ref(${q(ref.nodeId)}, ${q(path)})` : `ref(${q(ref.nodeId)})`
+}
+
+/** Render one classified parameter value as a graph-input expression. */
+function emitValue(
+  value: unknown,
+  ctx: ExprContext,
+  setNodeIds: Set<string>
+): string | null {
+  const classified = classifyExpression(value, ctx)
+  if (classified.kind === 'literal') {
+    return safeJson(classified.value)
+  }
+  if (classified.kind === 'ref') {
+    return emitRef(classified, setNodeIds)
+  }
+  if (classified.kind === 'template') {
+    const tmpl = classified.parts
+      .map((p, i) => p + (i < classified.refs.length ? `$${i}` : ''))
+      .join('')
+    return `template(${q(tmpl)}, [${classified.refs
+      .map((r) => emitRef(r, setNodeIds))
+      .join(', ')}])`
+  }
+  return null
+}
+
+/**
+ * Build the `input: (ref) => ({...})` body for an n8n Set / Edit Fields node,
+ * lowering each assignment to a `set` operation for `@pikku/addon-graph`'s
+ * `editFields` function.
+ */
+function emitSetInput(
+  node: ParsedNode,
+  ctx: ExprContext,
+  setNodeIds: Set<string>
+): string | null {
+  const ops: string[] = []
+  for (const [key, value] of Object.entries(node.parameters)) {
+    const classified = classifyExpression(value, ctx)
+    if (classified.kind === 'transform') {
+      ops.push(
+        `        // TODO(n8n expr): ${key} = ${classified.expression.replace(/\n/g, ' ')}`
+      )
+      continue
+    }
+    const rendered = emitValue(value, ctx, setNodeIds)
+    if (rendered === null) continue
+    ops.push(
+      `        { field: ${q(key)}, operation: "set" as const, value: ${rendered} },`
+    )
+  }
+  if (ops.length === 0) return null
+  return [
+    `(ref) => ({`,
+    `      item: {},`,
+    `      operations: [`,
+    ...ops,
+    `      ],`,
+    `    })`,
+  ].join('\n')
 }
 
 /** Build the `input: (ref) => ({...})` body for a node from its parameters. */
-function emitInput(node: ParsedNode, ctx: ExprContext): string | null {
+function emitInput(
+  node: ParsedNode,
+  ctx: ExprContext,
+  setNodeIds: Set<string>
+): string | null {
+  if (node.role === 'set') return emitSetInput(node, ctx, setNodeIds)
   const lines: string[] = []
   for (const [key, value] of Object.entries(node.parameters)) {
     const classified = classifyExpression(value, ctx)
-    if (classified.kind === 'literal') {
-      const json = safeJson(classified.value)
-      if (json === null) continue
-      lines.push(`      ${q(key)}: ${json},`)
-    } else if (classified.kind === 'ref') {
-      lines.push(`      ${q(key)}: ${emitRef(classified)},`)
-    } else if (classified.kind === 'template') {
-      const tmpl = classified.parts
-        .map((p, i) => p + (i < classified.refs.length ? `$${i}` : ''))
-        .join('')
-      lines.push(
-        `      ${q(key)}: template(${q(tmpl)}, [${classified.refs.map(emitRef).join(', ')}]),`
-      )
-    } else {
+    const rendered = emitValue(value, ctx, setNodeIds)
+    if (rendered !== null) {
+      lines.push(`      ${q(key)}: ${rendered},`)
+    } else if (classified.kind === 'transform') {
       // Tier 3 — not declaratively expressible; preserve verbatim as a TODO.
       lines.push(
         `      // TODO(n8n expr): ${key} = ${classified.expression.replace(/\n/g, ' ')}`
@@ -97,8 +157,16 @@ function emitGraphFile(parsed: ParsedWorkflow): string {
   const topo = buildTopology(parsed)
   const constName = `${parsed.slug}Workflow`
 
+  const setNodeIds = new Set(
+    topo.graphNodes.filter((n) => n.role === 'set').map((n) => n.nodeId)
+  )
+
   const nodesLines = topo.graphNodes.map(
-    (n) => `    ${n.nodeId}: ${q(n.rpcName)},`
+    // An embedded agent is a native graph node (#910), referenced by its
+    // registered agent name — the exported const (`<slug>Agent`), which is the
+    // AgentMap key — not a stub rpc.
+    (n) =>
+      `    ${n.nodeId}: ${q(n.role === 'agent' ? `${parsed.slug}Agent` : n.rpcName)},`
   )
 
   let anyTemplate = false
@@ -113,7 +181,7 @@ function emitGraphFile(parsed: ParsedWorkflow): string {
     if (wantsInput && usesTemplate(node, ctx)) anyTemplate = true
 
     const parts: string[] = []
-    const input = wantsInput ? emitInput(node, ctx) : null
+    const input = wantsInput ? emitInput(node, ctx, setNodeIds) : null
     if (input) parts.push(`      input: ${input},`)
     if (t.next !== undefined) parts.push(`      next: ${emitNext(t.next)},`)
     if (t.onError !== undefined)
@@ -260,18 +328,6 @@ function emitVectorStub(node: ParsedNode): string {
   ].join('\n')
 }
 
-function emitPassthrough(): string {
-  return [
-    `import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'`,
-    ``,
-    `/** Identity node — returns its assembled input. Used for n8n Set / Edit Fields nodes. */`,
-    `export const n8nPassthrough = pikkuSessionlessFunc({`,
-    `  func: async (_services, data) => data,`,
-    `})`,
-    ``,
-  ].join('\n')
-}
-
 function emitAgentFile(parsed: ParsedWorkflow): string {
   const agent = parsed.agentNode!
   const tools = parsed.nodes.filter((n) => n.role === 'agentTool')
@@ -347,14 +403,11 @@ export function generateWorkflowFromN8n(
     files[`${dir}/${parsed.slug}.agent.ts`] = emitAgentFile(parsed)
   }
 
-  let needsPassthrough = false
   const emittedStubRpc = new Set<string>()
   for (const node of parsed.nodes) {
     if (node.disabled) continue
-    if (node.role === 'set') {
-      needsPassthrough = true
-      continue
-    }
+    // Set / Edit Fields nodes map to @pikku/addon-graph's `editFields` — no stub.
+    if (node.role === 'set') continue
     if (emittedStubRpc.has(node.rpcName)) continue
     if (
       node.role === 'integration' ||
@@ -373,10 +426,6 @@ export function generateWorkflowFromN8n(
       emittedStubRpc.add(node.rpcName)
     }
   }
-  if (needsPassthrough) {
-    files[`${dir}/functions/n8nPassthrough.function.ts`] = emitPassthrough()
-  }
-
   if (credentialInstances.length > 0) {
     files[`${dir}/${parsed.slug}.addons.gen.ts`] =
       emitAddonsFile(credentialInstances)

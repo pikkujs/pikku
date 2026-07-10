@@ -211,7 +211,7 @@ export interface SerializedWorkflowGraph {
   context?: WorkflowContext
   /** Serialized nodes */
   nodes: Record<string, SerializedGraphNode>
-  /** Graph-level free-text notes (e.g. imported n8n sticky notes). Non-semantic — excluded from graphHash. */
+  /** Graph-level free-text notes (e.g. imported sticky notes). Non-semantic — excluded from graphHash. */
   notes?: string[]
   /** Entry node(s) - first nodes to execute */
   entryNodeIds: string[]

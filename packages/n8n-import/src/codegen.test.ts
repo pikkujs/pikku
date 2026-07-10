@@ -19,18 +19,24 @@ test('linear set/code/integration workflow → pure graph', () => {
   const graph = files['leadEnrichment/leadEnrichment.graph.ts']
   assert.ok(graph, 'graph file emitted')
   assert.match(graph, /pikkuWorkflowGraph\(/)
-  // Set node → passthrough rpc + its two assembled fields as input
-  assert.match(graph, /setFields: "n8nPassthrough"/)
+  // Set node → @pikku/addon-graph's native editFields, its two assignments
+  // lowered to `set` operations
+  assert.match(graph, /setFields: "graph:editFields"/)
   assert.match(graph, /sendGmail: "gmail__sendGmail"/)
   assert.match(graph, /score: "codeStubScore"/)
-  // Tier-1 ref, Tier-2 template
-  assert.match(graph, /"email": ref\("trigger", "body\.email"\)/)
+  assert.match(graph, /item: \{\}/)
+  // Tier-1 ref, Tier-2 template — as `set` operation values
   assert.match(
     graph,
-    /"greeting": template\("Hello \$0", \[ref\("trigger", "body\.name"\)\]\)/
+    /field: "email", operation: "set" as const, value: ref\("trigger", "body\.email"\)/
   )
-  // integration cross-node ref
-  assert.match(graph, /"sendTo": ref\("setFields", "email"\)/)
+  assert.match(
+    graph,
+    /field: "greeting", operation: "set" as const, value: template\("Hello \$0", \[ref\("trigger", "body\.name"\)\]\)/
+  )
+  // integration cross-node ref — editFields wraps its output in `item`, so a
+  // downstream ref to a Set node is prefixed with `item.`
+  assert.match(graph, /"sendTo": ref\("setFields", "item\.email"\)/)
   // node-level note preserved
   assert.match(graph, /notes: "sends the welcome email"/)
   // topology
@@ -39,8 +45,8 @@ test('linear set/code/integration workflow → pure graph', () => {
   // template import pulled in
   assert.match(graph, /import \{ template \} from '@pikku\/core\/workflow'/)
 
-  // passthrough function emitted once
-  assert.ok(files['leadEnrichment/functions/n8nPassthrough.function.ts'])
+  // no passthrough stub — Set nodes use @pikku/addon-graph's editFields
+  assert.ok(!files['leadEnrichment/functions/n8nPassthrough.function.ts'])
 
   // integration stub
   const gmail = files['leadEnrichment/functions/gmail__sendGmail.function.ts']
@@ -74,6 +80,34 @@ test('code node with block comments escapes */ so the JSDoc stays valid', () => 
     'no raw */ inside JSDoc'
   )
   assert.match(code, /configure ===== \*\\\//)
+})
+
+test('graph-with-agent: graph references the agent by its registered name (#910)', () => {
+  const parsed = parseN8n(
+    JSON.parse(
+      readFileSync(
+        join(fixturesDir, '../fixtures-ai/graph-with-agent-seo-keywords.json'),
+        'utf-8'
+      )
+    )
+  )
+  assert.equal(parsed.shape, 'graph-with-agent')
+
+  const { files } = generateWorkflowFromN8n(parsed)
+  const graph = files[`${parsed.slug}/${parsed.slug}.graph.ts`]
+  const agent = files[`${parsed.slug}/${parsed.slug}.agent.ts`]
+  assert.ok(graph && agent, 'graph + agent files emitted')
+
+  // the agent is exported as `<slug>Agent` — the AgentMap key
+  assert.match(
+    agent,
+    new RegExp(`export const ${parsed.slug}Agent = pikkuAIAgent`)
+  )
+  // the graph node for the agent references that exported const — an agent is a
+  // native graph node (#910), not a stub rpc like "agent__aiAgent"
+  const agentNodeId = parsed.agentNode!.nodeId
+  assert.match(graph, new RegExp(`${agentNodeId}: "${parsed.slug}Agent"`))
+  assert.doesNotMatch(graph, /agent__/)
 })
 
 test('agent + tool workflow → agent-only, no graph', () => {
