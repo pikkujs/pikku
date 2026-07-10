@@ -182,6 +182,7 @@ function emitCodeStub(node: ParsedNode): string {
     (node.parameters.functionCode as string | undefined) ??
     ''
   const preserved = code
+    .replace(/\*\//g, '*\\/')
     .split('\n')
     .map((l) => ` *   ${l}`)
     .join('\n')
@@ -317,7 +318,11 @@ export function generateWorkflowFromN8n(
       continue
     }
     if (emittedStubRpc.has(node.rpcName)) continue
-    if (node.role === 'integration' || node.role === 'agentTool') {
+    if (
+      node.role === 'integration' ||
+      node.role === 'agentTool' ||
+      node.role === 'control'
+    ) {
       files[`${dir}/functions/${node.rpcName}.function.ts`] =
         emitIntegrationStub(node)
       emittedStubRpc.add(node.rpcName)

@@ -62,6 +62,20 @@ test('linear set/code/integration workflow → pure graph', () => {
   assert.ok(files['leadEnrichment/leadEnrichment.integrations.json'])
 })
 
+test('code node with block comments escapes */ so the JSDoc stays valid', () => {
+  const parsed = parseN8n(loadFixture('code-block-comment.json'))
+  const { files } = generateWorkflowFromN8n(parsed)
+  const code = files['commentEscaping/functions/codeStubTransform.function.ts']
+  assert.ok(code)
+  // the original code contains `*/` which must not terminate the JSDoc block
+  const jsdoc = code.slice(code.indexOf('/**'), code.indexOf('*/\n'))
+  assert.ok(
+    !/\*\//.test(jsdoc.replace(/\*\\\//g, '')),
+    'no raw */ inside JSDoc'
+  )
+  assert.match(code, /configure ===== \*\\\//)
+})
+
 test('agent + tool workflow → agent-only, no graph', () => {
   const parsed = parseN8n(loadFixture('agent-with-tool.json'))
   assert.equal(parsed.shape, 'agent-only')

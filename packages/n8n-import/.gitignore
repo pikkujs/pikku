@@ -1,0 +1,4 @@
+.corpus/
+harness-report.json
+harness-report.md
+.harness-tmp/

@@ -1,0 +1,26 @@
+{
+  "name": "Comment Escaping",
+  "nodes": [
+    {
+      "id": "t1",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {}
+    },
+    {
+      "id": "c1",
+      "name": "Transform",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [200, 0],
+      "parameters": {
+        "jsCode": "/* configure ===== */\nconst FIELD_ID = 42 /* inline */\nreturn [{ json: { FIELD_ID } }]"
+      }
+    }
+  ],
+  "connections": {
+    "Schedule": { "main": [[{ "node": "Transform", "type": "main", "index": 0 }]] }
+  }
+}
