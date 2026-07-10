@@ -6,6 +6,7 @@ import {
   type RefPart,
 } from './expressions.js'
 import { toPascalCase } from './naming.js'
+import { normalizeBranch } from './branch.js'
 import {
   deriveCredentialInstances,
   nodeInstanceBindings,
@@ -237,6 +238,43 @@ function emitHttpInput(
   return [`(ref) => ({`, ...lines, `    })`].join('\n')
 }
 
+/**
+ * Build the `input: (ref) => ({...})` body for an n8n IF / Filter / Switch node,
+ * mapping its conditions onto @pikku/addon-graph's `branch` contract
+ * (`{ cases: [{ key, combinator, conditions }], fallback }`). Each operand is
+ * lowered like any other value — a ref, a template, or a literal.
+ */
+function emitBranchInput(
+  node: ParsedNode,
+  ctx: ExprContext,
+  prefixes: Map<string, string>
+): string | null {
+  const spec = normalizeBranch(node)
+  if (!spec) return null
+
+  const caseLines = spec.cases.map((c) => {
+    const conds = c.conditions.map((cond) => {
+      const left = emitValue(cond.left, ctx, prefixes) ?? 'undefined'
+      const parts = [`left: ${left}`]
+      if (cond.right !== undefined) {
+        const right = emitValue(cond.right, ctx, prefixes)
+        if (right !== null) parts.push(`right: ${right}`)
+      }
+      parts.push(
+        `type: ${q(cond.type)} as const`,
+        `operation: ${q(cond.operation)}`
+      )
+      return `{ ${parts.join(', ')} }`
+    })
+    return `        { key: ${q(c.key)}, combinator: ${q(c.combinator)} as const, conditions: [${conds.join(', ')}] },`
+  })
+
+  const lines = [`(ref) => ({`, `      cases: [`, ...caseLines, `      ],`]
+  if (spec.fallback) lines.push(`      fallback: ${q(spec.fallback)},`)
+  lines.push(`    })`)
+  return lines.join('\n')
+}
+
 /** Build the `input: (ref) => ({...})` body for a node from its parameters. */
 function emitInput(
   node: ParsedNode,
@@ -245,6 +283,7 @@ function emitInput(
 ): string | null {
   if (node.role === 'set') return emitSetInput(node, ctx, prefixes)
   if (node.role === 'http') return emitHttpInput(node, ctx, prefixes)
+  if (node.role === 'branch') return emitBranchInput(node, ctx, prefixes)
   const lines: string[] = []
   for (const [key, value] of Object.entries(node.parameters)) {
     const classified = classifyExpression(value, ctx)
@@ -265,10 +304,13 @@ function emitInput(
 function emitNext(next: NextValue): string {
   if (typeof next === 'string') return q(next)
   if (Array.isArray(next)) return `[${next.map(q).join(', ')}]`
+  // Key-based branch next (`graph.branch(key)` routing). The graph's `NextConfig`
+  // can't narrow the record's string-array targets to node-id literals, so — as
+  // the hand-authored graphs do — cast it. See e2e graph-branching.workflow.ts.
   const entries = Object.entries(next)
     .map(([k, v]) => `${q(k)}: [${v.map(q).join(', ')}]`)
     .join(', ')
-  return `{ ${entries} }`
+  return `{ ${entries} } as any`
 }
 
 function emitGraphFile(parsed: ParsedWorkflow): string {
@@ -299,7 +341,10 @@ function emitGraphFile(parsed: ParsedWorkflow): string {
       nameToNodeId: topo.nameToNodeId,
     }
     const wantsInput =
-      node.role === 'integration' || node.role === 'set' || node.role === 'http'
+      node.role === 'integration' ||
+      node.role === 'set' ||
+      node.role === 'http' ||
+      node.role === 'branch'
 
     const parts: string[] = []
     const input = wantsInput ? emitInput(node, ctx, prefixes) : null
@@ -530,9 +575,10 @@ export function generateWorkflowFromN8n(
   const emittedStubRpc = new Set<string>()
   for (const node of parsed.nodes) {
     if (node.disabled) continue
-    // Set / Edit Fields and no-auth HTTP nodes map to @pikku/addon-graph
-    // functions (`editFields` / `httpRequest`) — no stub.
-    if (node.role === 'set' || node.role === 'http') continue
+    // Set / Edit Fields, no-auth HTTP, and IF/Filter/Switch nodes map to
+    // @pikku/addon-graph functions (`editFields` / `httpRequest` / `branch`) — no stub.
+    if (node.role === 'set' || node.role === 'http' || node.role === 'branch')
+      continue
     if (emittedStubRpc.has(node.rpcName)) continue
     if (
       node.role === 'integration' ||

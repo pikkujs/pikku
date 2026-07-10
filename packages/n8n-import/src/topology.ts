@@ -31,7 +31,11 @@ function isGraphNode(node: ParsedNode): boolean {
 
 export function buildTopology(parsed: ParsedWorkflow): Topology {
   const nameToNodeId: Record<string, string> = {}
-  for (const node of parsed.nodes) nameToNodeId[node.name] = node.nodeId
+  const roleByNodeId: Record<string, ParsedNode['role']> = {}
+  for (const node of parsed.nodes) {
+    nameToNodeId[node.name] = node.nodeId
+    roleByNodeId[node.nodeId] = node.role
+  }
 
   const graphNodes = parsed.nodes.filter(isGraphNode)
   const graphNodeIds = new Set(graphNodes.map((n) => n.nodeId))
@@ -96,20 +100,38 @@ export function buildTopology(parsed: ParsedWorkflow): Topology {
     if (!sourceId || !graphNodeIds.has(sourceId)) continue
     const topo = byNodeId[sourceId]!
 
+    // A branch node routes via `graph.branch(key)`, so its `next` must always be
+    // a Record keyed by output-slot index — even a single-output Filter, whose
+    // key must match so a false result can dead-end instead of always flowing on.
+    const isBranch = roleByNodeId[sourceId] === 'branch'
     const nonEmpty = slotTargets.filter((s) => s.length > 0)
     if (nonEmpty.length === 0) {
       // no outgoing
-    } else if (slotTargets.length === 1) {
+    } else if (!isBranch && slotTargets.length === 1) {
       const targets = slotTargets[0]!
       topo.next = targets.length === 1 ? targets[0]! : targets
     } else {
-      // Multiple output slots → branching. Key by slot index (IF => 0/1).
+      // Multiple output slots (or a branch) → key by slot index (IF => 0/1).
       const record: Record<string, string[]> = {}
       slotTargets.forEach((targets, i) => {
         if (targets.length > 0) record[String(i)] = targets
       })
       topo.next = record
     }
+  }
+
+  // A branch node passes its input item through unchanged, so `$json` in a node
+  // downstream of a branch resolves to the branch's own data source, not the
+  // branch's `{ branch }` output. Walk each predecessor back through any branches.
+  for (const node of graphNodes) {
+    const topo = byNodeId[node.nodeId]!
+    let predId = topo.predecessorNodeId
+    const seen = new Set<string>()
+    while (predId && roleByNodeId[predId] === 'branch' && !seen.has(predId)) {
+      seen.add(predId)
+      predId = byNodeId[predId]?.predecessorNodeId
+    }
+    topo.predecessorNodeId = predId
   }
 
   const entryNodeIds = graphNodes

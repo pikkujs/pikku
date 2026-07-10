@@ -14,6 +14,7 @@ import {
   vectorRpcName,
   dedupe,
 } from './naming.js'
+import { normalizeBranch } from './branch.js'
 
 /** Classify an n8n node by its type string. */
 function classifyByType(type: string): NodeRole {
@@ -76,6 +77,8 @@ function rpcNameFor(role: NodeRole, node: N8nNode): string {
       return 'graph:editFields'
     case 'http':
       return 'graph:httpRequest'
+    case 'branch':
+      return 'graph:branch'
     default:
       return integrationRpcName(node.type, node.name)
   }
@@ -147,11 +150,24 @@ export function parseN8n(raw: unknown): ParsedWorkflow {
       role = 'http'
     }
 
+    // An IF / Filter / Switch whose conditions we can normalize maps to
+    // @pikku/addon-graph's native `branch`; ones we can't (e.g. Switch
+    // expression-mode) stay a `control` stub.
+    if (
+      role === 'control' &&
+      normalizeBranch({
+        typeShort: typeShort(node.type),
+        parameters: node.parameters ?? {},
+      })
+    ) {
+      role = 'branch'
+    }
+
     const nodeId = dedupe(sanitizeIdentifier(node.name), seenNodeIds)
-    // Set / Edit Fields and no-auth HTTP nodes all share a @pikku/addon-graph
-    // RPC — a shared addon function, never deduped into per-node names.
+    // Set / Edit Fields, no-auth HTTP, and branch nodes all share a
+    // @pikku/addon-graph RPC — a shared addon function, never deduped.
     const rpcName =
-      role === 'set' || role === 'http'
+      role === 'set' || role === 'http' || role === 'branch'
         ? rpcNameFor(role, node)
         : dedupe(rpcNameFor(role, node), seenRpcNames)
 

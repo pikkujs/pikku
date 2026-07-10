@@ -56,6 +56,7 @@ export type NodeRole =
   | 'vectorStore'
   | 'set'
   | 'http'
+  | 'branch'
   | 'noop'
   | 'control'
   | 'sticky'
