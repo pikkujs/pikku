@@ -5,10 +5,11 @@ import type { InspectorState } from '../types.js'
 import { ErrorCode } from '../error-codes.js'
 
 function stateWithFunctions(
-  meta: InspectorState['functions']['meta']
+  meta: InspectorState['functions']['meta'],
+  dynamicImportIds: string[] = []
 ): InspectorState {
   return {
-    functions: { meta },
+    functions: { meta, dynamicImportIds: new Set(dynamicImportIds) },
     middleware: { definitions: {} },
     permissions: { definitions: {} },
   } as unknown as InspectorState
@@ -27,10 +28,7 @@ describe('computeDiagnostics', () => {
     })
     computeDiagnostics(state)
     assert.equal(state.diagnostics.length, 1)
-    assert.equal(
-      state.diagnostics[0].code,
-      ErrorCode.SERVICES_NOT_DESTRUCTURED
-    )
+    assert.equal(state.diagnostics[0].code, ErrorCode.SERVICES_NOT_DESTRUCTURED)
   })
 
   test('does NOT flag a generated .gen.ts function (user cannot edit it)', () => {
@@ -63,6 +61,45 @@ describe('computeDiagnostics', () => {
         services: { optimized: false, services: [] },
       },
     })
+    computeDiagnostics(state)
+    assert.equal(state.diagnostics.length, 0)
+  })
+
+  test('flags a user-authored function that does a dynamic import in its body', () => {
+    const state = stateWithFunctions(
+      {
+        greedy: {
+          pikkuFuncId: 'greedy',
+          inputSchemaName: null,
+          outputSchemaName: null,
+          sourceFile: '/project/src/greedy.ts',
+          services: { optimized: true, services: ['logger'] },
+        },
+      },
+      ['greedy']
+    )
+    computeDiagnostics(state)
+    assert.equal(
+      state.diagnostics.filter(
+        (d) => d.code === ErrorCode.FUNCTION_DYNAMIC_IMPORT
+      ).length,
+      1
+    )
+  })
+
+  test('does NOT flag a dynamic import in a generated .gen.ts function', () => {
+    const state = stateWithFunctions(
+      {
+        authHandler: {
+          pikkuFuncId: 'authHandler',
+          inputSchemaName: null,
+          outputSchemaName: null,
+          sourceFile: '/project/.pikku/auth.gen.ts',
+          services: { optimized: true, services: [] },
+        },
+      },
+      ['authHandler']
+    )
     computeDiagnostics(state)
     assert.equal(state.diagnostics.length, 0)
   })

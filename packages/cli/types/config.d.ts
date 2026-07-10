@@ -403,6 +403,7 @@ export type PikkuCLIInput = {
   lint?: {
     servicesNotDestructured?: 'off' | 'warn' | 'error'
     wiresNotDestructured?: 'off' | 'warn' | 'error'
+    functionDynamicImport?: 'off' | 'warn' | 'error'
   }
 
   addonMetaJsonFile?: string

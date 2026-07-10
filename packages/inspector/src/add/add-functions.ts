@@ -27,6 +27,33 @@ const isValidVariableName = (name: string) => {
   return regex.test(name)
 }
 
+/**
+ * True when the handler body contains a runtime dynamic `import(...)` call
+ * anywhere (including nested callbacks). Type-only positions like
+ * `import('x').Foo` are `ImportTypeNode`s, not `CallExpression`s with an
+ * `ImportKeyword` callee, so they are intentionally not matched.
+ */
+const handlerHasDynamicImport = (
+  handler: ts.ArrowFunction | ts.FunctionExpression
+): boolean => {
+  let found = false
+  const visit = (node: ts.Node) => {
+    if (found) {
+      return
+    }
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.kind === ts.SyntaxKind.ImportKeyword
+    ) {
+      found = true
+      return
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(handler.body)
+  return found
+}
+
 const nullifyTypes = (type: string | null) => {
   if (
     type === 'void' ||
@@ -1081,6 +1108,10 @@ export const addFunctions: AddWiring = (
     bodySourceFile,
     exportedName: exportedName || undefined,
     ...bodySpan,
+  }
+
+  if (handlerHasDynamicImport(handler)) {
+    state.functions.dynamicImportIds.add(pikkuFuncId)
   }
 
   // Populate node metadata if node config is present
