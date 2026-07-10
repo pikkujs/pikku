@@ -52,5 +52,8 @@ export interface ResolvedFunction {
     auth?: boolean
     tags?: string[]
     rpcEndpoint?: string
+    secretOverrides?: Record<string, string>
+    variableOverrides?: Record<string, string>
+    credentialOverrides?: Record<string, string>
   }
 }
