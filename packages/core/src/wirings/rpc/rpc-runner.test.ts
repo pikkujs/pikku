@@ -9,6 +9,7 @@ import {
   resolveNamespace,
   rpcService,
 } from './rpc-runner.js'
+import { wireAddon } from './wire-addon.js'
 
 const createLogger = () => ({
   debug: () => {},
@@ -489,6 +490,147 @@ describe('ContextAwareRPCService.remote', () => {
     assert.deepEqual(calls, [
       ['remoteFunc', { hi: true }, { userId: 'user-4' }, 'trace-4'],
     ])
+  })
+})
+
+describe('multi-instance addons', () => {
+  const createSecretService = () => ({
+    getSecret: async (key: string) => `secret:${key}`,
+    hasSecret: async () => true,
+    setSecret: async () => {},
+    deleteSecret: async () => {},
+    getSecrets: async () => ({}),
+  })
+
+  test('resolves per-instance secretOverrides and caches singletons per namespace', async () => {
+    const createdServices: any[] = []
+    pikkuState('@addon/slack', 'package', 'factories', {
+      createSingletonServices: async (_config: any, parent: any) => {
+        const token = await parent.secrets.getSecret('slackToken')
+        const svc = { logger: createLogger(), token }
+        createdServices.push(svc)
+        return svc
+      },
+    } as never)
+    registerFunction(
+      'send',
+      async (services: any) => ({ token: services.token }),
+      {
+        packageName: '@addon/slack',
+      }
+    )
+
+    wireAddon({
+      name: 'slack-marketing',
+      package: '@addon/slack',
+      secretOverrides: { slackToken: 'marketing_secret' },
+    })
+    wireAddon({
+      name: 'slack-support',
+      package: '@addon/slack',
+      secretOverrides: { slackToken: 'support_secret' },
+    })
+
+    const service = new ContextAwareRPCService(
+      createServices({ secrets: createSecretService() }),
+      {} as never,
+      { requiresAuth: false }
+    )
+
+    const marketing = await service.rpc('slack-marketing:send', {})
+    const support = await service.rpc('slack-support:send', {})
+
+    assert.deepEqual(marketing, { token: 'secret:marketing_secret' })
+    assert.deepEqual(support, { token: 'secret:support_secret' })
+    assert.equal(createdServices.length, 2)
+    assert.notEqual(createdServices[0], createdServices[1])
+  })
+
+  test('reuses the same per-namespace singleton across intra-addon sibling calls', async () => {
+    let factoryCalls = 0
+    pikkuState('@addon/slack', 'package', 'factories', {
+      createSingletonServices: async (_config: any, parent: any) => {
+        factoryCalls++
+        return {
+          logger: createLogger(),
+          token: await parent.secrets.getSecret('slackToken'),
+        }
+      },
+    } as never)
+
+    registerFunction(
+      'leaf',
+      async (services: any) => ({ token: services.token }),
+      {
+        packageName: '@addon/slack',
+      }
+    )
+    registerFunction(
+      'root',
+      async (_services: any, _data: any, wire: any) =>
+        wire.rpc.invoke('leaf', {}),
+      { packageName: '@addon/slack' }
+    )
+
+    wireAddon({
+      name: 'slack-marketing',
+      package: '@addon/slack',
+      secretOverrides: { slackToken: 'marketing_secret' },
+    })
+
+    const service = new ContextAwareRPCService(
+      createServices({ secrets: createSecretService() }),
+      {} as never,
+      { requiresAuth: false }
+    )
+
+    const result = await service.rpc('slack-marketing:root', {})
+
+    assert.deepEqual(result, { token: 'secret:marketing_secret' })
+    assert.equal(factoryCalls, 1)
+  })
+
+  test('resolves per-instance credentialOverrides via wire.getCredential', async () => {
+    pikkuState('@addon/slack', 'package', 'factories', {
+      createSingletonServices: async () => ({ logger: createLogger() }),
+    } as never)
+    registerFunction(
+      'whoami',
+      async (_services: any, _data: any, wire: any) => ({
+        cred: await wire.getCredential('slack'),
+      }),
+      { packageName: '@addon/slack' }
+    )
+
+    wireAddon({
+      name: 'slack-marketing',
+      package: '@addon/slack',
+      credentialOverrides: { slack: 'marketing_cred' },
+    })
+    wireAddon({
+      name: 'slack-support',
+      package: '@addon/slack',
+      credentialOverrides: { slack: 'support_cred' },
+    })
+
+    const credentialService = {
+      getAll: async (_userId: string) => ({
+        marketing_cred: { token: 'm' },
+        support_cred: { token: 's' },
+      }),
+    }
+
+    const service = new ContextAwareRPCService(
+      createServices({ credentialService }),
+      { pikkuUserId: 'user-1' } as never,
+      { requiresAuth: false }
+    )
+
+    const marketing = await service.rpc('slack-marketing:whoami', {})
+    const support = await service.rpc('slack-support:whoami', {})
+
+    assert.deepEqual(marketing, { cred: { token: 'm' } })
+    assert.deepEqual(support, { cred: { token: 's' } })
   })
 })
 

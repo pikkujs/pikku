@@ -84,7 +84,18 @@ export interface PikkuPackageState {
   addons: {
     packages: Map<
       string,
-      { package: string; rpcEndpoint?: string; auth?: boolean; tags?: string[] }
+      {
+        package: string
+        rpcEndpoint?: string
+        auth?: boolean
+        tags?: string[]
+        /** Per-instance name-aliases: logical name the addon reads -> actual project secret name */
+        secretOverrides?: Record<string, string>
+        /** Per-instance name-aliases: logical name the addon reads -> actual project variable name */
+        variableOverrides?: Record<string, string>
+        /** Per-instance name-aliases: logical name the addon reads -> actual project credential name */
+        credentialOverrides?: Record<string, string>
+      }
     >
   }
   http: {

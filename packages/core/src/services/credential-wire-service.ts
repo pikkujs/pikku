@@ -9,16 +9,22 @@ export class PikkuCredentialWireService {
 
   constructor(
     private credentialService?: CredentialService,
-    private wire?: PikkuRawWire
+    private wire?: PikkuRawWire,
+    private aliases?: Record<string, string>
   ) {}
 
+  private resolveName(name: string): string {
+    return this.aliases?.[name] ?? name
+  }
+
   set(name: string, value: unknown): void {
-    this.credentials[name] = value
+    this.credentials[this.resolveName(name)] = value
   }
 
   get<T = unknown>(name: string): T | null | Promise<T | null> {
-    if (this.loaded) return (this.credentials[name] as T) ?? null
-    return this.lazyLoad().then(() => (this.credentials[name] as T) ?? null)
+    const key = this.resolveName(name)
+    if (this.loaded) return (this.credentials[key] as T) ?? null
+    return this.lazyLoad().then(() => (this.credentials[key] as T) ?? null)
   }
 
   getAll(): Record<string, unknown> | Promise<Record<string, unknown>> {

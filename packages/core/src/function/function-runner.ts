@@ -40,6 +40,80 @@ import {
 } from '../services/audit-service.js'
 import { rpcService } from '../wirings/rpc/rpc-runner.js'
 import { closeWireServices } from '../utils.js'
+import type { SecretService } from '../services/secret-service.js'
+import type { VariablesService } from '../services/variables-service.js'
+
+/**
+ * A single wired addon instance: a namespace (wireAddon `name`) plus the
+ * per-instance name-aliases that remap the logical names the addon reads to
+ * the actual project secret/variable/credential names.
+ */
+export type AddonInstance = {
+  namespace: string
+  secretOverrides?: Record<string, string>
+  variableOverrides?: Record<string, string>
+  credentialOverrides?: Record<string, string>
+}
+
+/**
+ * Wrap a SecretService so that the logical secret names an addon reads are
+ * remapped to the actual project secret names via the instance's overrides.
+ */
+const aliasSecretService = (
+  secrets: SecretService,
+  overrides: Record<string, string>
+): SecretService => {
+  const map = (key: string) => overrides[key] ?? key
+  return {
+    getSecret: <T = string>(key: string) => secrets.getSecret<T>(map(key)),
+    hasSecret: (key: string) => secrets.hasSecret(map(key)),
+    setSecret: (key: string, value: unknown) =>
+      secrets.setSecret(map(key), value),
+    deleteSecret: (key: string) => secrets.deleteSecret(map(key)),
+    getSecrets: async (keys) => {
+      const result = await secrets.getSecrets(keys.map(map))
+      const out: Record<string, unknown> = {}
+      for (const logical of keys) {
+        const real = map(logical)
+        if (real in result)
+          out[logical] = (result as Record<string, unknown>)[real]
+      }
+      return out as never
+    },
+  }
+}
+
+/**
+ * Wrap a VariablesService so that the logical variable names an addon reads
+ * are remapped to the actual project variable names via the instance's overrides.
+ */
+const aliasVariablesService = (
+  variables: VariablesService,
+  overrides: Record<string, string>
+): VariablesService => {
+  const map = (name: string) => overrides[name] ?? name
+  return {
+    get: <T = string>(name: string) => variables.get<T>(map(name)),
+    getVariables: (names) => {
+      const result = variables.getVariables(names.map(map) as never)
+      const remap = (r: Record<string, unknown>) => {
+        const out: Record<string, unknown> = {}
+        for (const logical of names) {
+          const real = map(logical)
+          if (real in r) out[logical] = r[real]
+        }
+        return out
+      }
+      return result instanceof Promise
+        ? (result.then(remap) as never)
+        : (remap(result as Record<string, unknown>) as never)
+    },
+    getAll: () => variables.getAll(),
+    set: (name: string, value: unknown) => variables.set(map(name), value),
+    has: (name: string) => variables.has(map(name)),
+    delete: (name: string) => variables.delete(map(name)),
+  }
+}
 
 async function resolveSession(
   wire: PikkuRawWire,
@@ -105,7 +179,8 @@ const findAddonNamespaceForPackage = (packageName: string): string | null => {
  */
 const wrapWorkflowServiceForPackage = <T extends object>(
   service: T,
-  packageName: string
+  packageName: string,
+  namespace: string | null
 ): T => {
   return new Proxy(service, {
     get(target, prop, receiver) {
@@ -113,9 +188,11 @@ const wrapWorkflowServiceForPackage = <T extends object>(
         const original = Reflect.get(target, prop, receiver) as Function
         return function (this: any, name: string, ...rest: any[]) {
           if (typeof name === 'string' && !name.includes(':')) {
-            const namespace = findAddonNamespaceForPackage(packageName)
-            if (namespace) {
-              name = `${namespace}:${name}`
+            // Prefer the known instance namespace; fall back to the
+            // package's sole namespace when invoked without an instance.
+            const ns = namespace ?? findAddonNamespaceForPackage(packageName)
+            if (ns) {
+              name = `${ns}:${name}`
             }
           }
           return original.call(this, name, ...rest)
@@ -128,10 +205,18 @@ const wrapWorkflowServiceForPackage = <T extends object>(
 
 const getOrCreatePackageSingletonServices = async (
   packageName: string,
-  parentServices: CoreSingletonServices
+  parentServices: CoreSingletonServices,
+  addonInstance?: AddonInstance
 ): Promise<CoreSingletonServices> => {
-  // Check if we already have cached singleton services for this package
-  const cachedServices = pikkuState(packageName, 'package', 'singletonServices')
+  // Singletons are cached per addon INSTANCE (namespace), not per package, so
+  // two wireAddon() instances of the same package each get their own services
+  // built with their own secret/variable overrides. Namespaces are globally
+  // unique, so keying the cache slot by namespace is unambiguous; a bare
+  // package-scoped call (no instance) falls back to per-package caching.
+  const cacheKey = addonInstance?.namespace ?? packageName
+
+  // Check if we already have cached singleton services for this instance
+  const cachedServices = pikkuState(cacheKey, 'package', 'singletonServices')
   if (cachedServices) {
     return cachedServices
   }
@@ -143,16 +228,39 @@ const getOrCreatePackageSingletonServices = async (
     return parentServices
   }
 
+  // Apply this instance's secret/variable overrides by aliasing the resolver
+  // services the addon reads from, so its createSingletonServices resolves
+  // instance-specific secrets/variables.
+  let existingServices = parentServices
+  if (addonInstance?.secretOverrides && parentServices.secrets) {
+    existingServices = {
+      ...existingServices,
+      secrets: aliasSecretService(
+        parentServices.secrets,
+        addonInstance.secretOverrides
+      ),
+    }
+  }
+  if (addonInstance?.variableOverrides && parentServices.variables) {
+    existingServices = {
+      ...existingServices,
+      variables: aliasVariablesService(
+        parentServices.variables,
+        addonInstance.variableOverrides
+      ),
+    }
+  }
+
   // Create config for the package (use parent config if no factory)
-  let config: CoreConfig = parentServices.config
+  let config: CoreConfig = existingServices.config
   if (factories.createConfig) {
-    config = await factories.createConfig(parentServices.variables)
+    config = await factories.createConfig(existingServices.variables)
   }
 
   // Create singleton services for the package, passing parent services as existing
   const packageServices = await factories.createSingletonServices(
     config,
-    parentServices
+    existingServices
   )
 
   // Wrap workflowService so that bare names used inside the addon's functions
@@ -163,12 +271,13 @@ const getOrCreatePackageSingletonServices = async (
   ) {
     packageServices.workflowService = wrapWorkflowServiceForPackage(
       packageServices.workflowService as object,
-      packageName
+      packageName,
+      addonInstance?.namespace ?? null
     ) as typeof packageServices.workflowService
   }
 
   // Cache the services
-  pikkuState(packageName, 'package', 'singletonServices', packageServices)
+  pikkuState(cacheKey, 'package', 'singletonServices', packageServices)
 
   return packageServices
 }
@@ -226,6 +335,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
     sessionService,
     credentialWireService,
     packageName = null,
+    addonInstance,
   }: {
     singletonServices: CoreSingletonServices
     createWireServices?: CreateWireServices
@@ -243,6 +353,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
     sessionService?: SessionService<CoreUserSession>
     credentialWireService?: PikkuCredentialWireService
     packageName?: string | null
+    addonInstance?: AddonInstance
   }
 ): Promise<Out> => {
   wire.wireType ??= wireType
@@ -277,7 +388,11 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
   // For addon packages, get or create their singleton services
   const resolvedSingletonServices = packageName
-    ? await getOrCreatePackageSingletonServices(packageName, singletonServices)
+    ? await getOrCreatePackageSingletonServices(
+        packageName,
+        singletonServices,
+        addonInstance
+      )
     : singletonServices
 
   // Get the package's createWireServices if available
@@ -305,8 +420,24 @@ export const runPikkuFunc = async <In = any, Out = any>(
       : wire
 
   // Set up credential wire service early so middleware can use setCredential.
-  // Skip if already set up (e.g. addon functions reuse the parent wire).
-  if (!resolvedWire.getCredentials) {
+  // An addon instance with credentialOverrides always gets a fresh alias-aware
+  // service so its logical credential names resolve to instance-specific ones,
+  // even when a parent credential service is already present on the wire.
+  // Otherwise skip if already set up (e.g. addon functions reuse the parent wire).
+  if (addonInstance?.credentialOverrides) {
+    // Credentials belong to the consuming project, so resolve them via the
+    // project's credentialService (the addon's own singletons may not carry it).
+    const aliasedCredentialWireService = new PikkuCredentialWireService(
+      singletonServices.credentialService ??
+        resolvedSingletonServices.credentialService,
+      resolvedWire,
+      addonInstance.credentialOverrides
+    )
+    Object.assign(
+      resolvedWire,
+      createWireServicesCredentialWireProps(aliasedCredentialWireService)
+    )
+  } else if (!resolvedWire.getCredentials) {
     const resolvedCredentialWireService =
       credentialWireService ??
       new PikkuCredentialWireService(
@@ -323,12 +454,18 @@ export const runPikkuFunc = async <In = any, Out = any>(
   const invocationWire = resolvedWire as PikkuWire
   const previousFunctionId = invocationWire.functionId
   const previousAudit = invocationWire.audit
+  const previousAddonNamespace = invocationWire.addonNamespace
   const previousRpcDescriptor = Object.getOwnPropertyDescriptor(
     invocationWire,
     'rpc'
   )
   invocationWire.functionId = resolvedFunctionId
   invocationWire.audit = resolvedAuditConfig
+  // Track which addon instance is executing so intra-addon sibling calls
+  // resolve the same per-instance singleton services and overrides.
+  if (addonInstance) {
+    invocationWire.addonNamespace = addonInstance.namespace
+  }
 
   // Convert tags to PermissionMetadata and merge with inheritedPermissions
   let mergedInheritedPermissions: PermissionMetadata[]
@@ -507,6 +644,11 @@ export const runPikkuFunc = async <In = any, Out = any>(
         delete (invocationWire as any).audit
       } else {
         invocationWire.audit = previousAudit
+      }
+      if (previousAddonNamespace === undefined) {
+        delete (invocationWire as any).addonNamespace
+      } else {
+        invocationWire.addonNamespace = previousAddonNamespace
       }
     }
   }

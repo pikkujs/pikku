@@ -6,6 +6,7 @@ import type {
 import type { SessionService } from '../../services/user-session-service.js'
 import type { CoreUserSession } from '../../types/core.types.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
+import type { AddonInstance } from '../../function/function-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
 import type { PikkuRPC, ResolvedFunction } from './rpc-types.js'
@@ -54,6 +55,26 @@ export const resolveNamespace = (
     package: pkgConfig.package,
     function: functionName,
     addonConfig: pkgConfig,
+  }
+}
+
+/**
+ * Build the addon instance descriptor (namespace + per-instance overrides) for
+ * a bare intra-addon call, using the namespace currently executing on the wire.
+ * Returns undefined unless that namespace maps to the resolved package.
+ */
+const addonInstanceForNamespace = (
+  namespace: string | undefined,
+  expectedPackage: string
+): AddonInstance | undefined => {
+  if (!namespace) return undefined
+  const cfg = pikkuState(null, 'addons', 'packages').get(namespace)
+  if (!cfg || cfg.package !== expectedPackage) return undefined
+  return {
+    namespace,
+    secretOverrides: cfg.secretOverrides,
+    variableOverrides: cfg.variableOverrides,
+    credentialOverrides: cfg.credentialOverrides,
   }
 }
 
@@ -164,6 +185,12 @@ export class ContextAwareRPCService {
     // 'namespace:func' boundary via invokeAddonFunction.
     try {
       const resolved = resolvePikkuFunction(funcName, this.packageName)
+      const addonInstance = resolved.packageName
+        ? addonInstanceForNamespace(
+            this.wire.addonNamespace,
+            resolved.packageName
+          )
+        : undefined
       return await runPikkuFunc<In, Out>(
         'rpc',
         funcName,
@@ -174,6 +201,7 @@ export class ContextAwareRPCService {
           data: () => data,
           wire: updatedWire,
           packageName: resolved.packageName,
+          addonInstance,
         }
       )
     } catch (e) {
@@ -228,6 +256,19 @@ export class ContextAwareRPCService {
       ...(funcMeta.tags ?? []),
     ]
 
+    // The namespace is the consumer-facing wireAddon name; it selects the
+    // per-instance singleton services and secret/variable/credential overrides.
+    const namespace = namespacedFunction.slice(
+      0,
+      namespacedFunction.indexOf(':')
+    )
+    const addonInstance: AddonInstance = {
+      namespace,
+      secretOverrides: resolved.addonConfig?.secretOverrides,
+      variableOverrides: resolved.addonConfig?.variableOverrides,
+      credentialOverrides: resolved.addonConfig?.credentialOverrides,
+    }
+
     // Execute the function using runPikkuFunc with the addon package's state
     // We use the parent services (this.services) since addon packages share services
     // Pass the function's tags so tag-based middleware/permissions are applied
@@ -238,6 +279,7 @@ export class ContextAwareRPCService {
       wire,
       packageName: resolved.package,
       tags,
+      addonInstance,
     })
   }
 
@@ -257,12 +299,19 @@ export class ContextAwareRPCService {
 
     try {
       const resolved = resolvePikkuFunction(rpcName, this.packageName)
+      const addonInstance = resolved.packageName
+        ? addonInstanceForNamespace(
+            this.wire.addonNamespace,
+            resolved.packageName
+          )
+        : undefined
       return await runPikkuFunc<In, Out>('rpc', rpcName, resolved.pikkuFuncId, {
         auth: this.options.requiresAuth,
         singletonServices: this.services,
         data: () => data,
         wire: mergedWire,
         packageName: resolved.packageName,
+        addonInstance,
       })
     } catch (e) {
       if (e instanceof RPCNotFoundError && this.services.deploymentService) {

@@ -383,12 +383,14 @@ export function validateSecretOverrides(
   for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
     if (!addonDecl.secretOverrides) continue
 
-    for (const secretKey of Object.keys(addonDecl.secretOverrides)) {
-      if (!secretNames.has(secretKey)) {
+    for (const [logicalName, resolvedName] of Object.entries(
+      addonDecl.secretOverrides
+    )) {
+      if (!secretNames.has(resolvedName)) {
         const availableSecrets = Array.from(secretNames)
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Secret override '${secretKey}' in addon '${namespace}' (${addonDecl.package}) does not exist. Available secrets: ${availableSecrets.join(', ') || 'none'}`
+          `Secret override '${logicalName}' -> '${resolvedName}' in addon '${namespace}' (${addonDecl.package}) targets a secret that does not exist. Available secrets: ${availableSecrets.join(', ') || 'none'}`
         )
       }
     }
@@ -409,12 +411,14 @@ export function validateCredentialOverrides(
   for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
     if (!addonDecl.credentialOverrides) continue
 
-    for (const credentialKey of Object.keys(addonDecl.credentialOverrides)) {
-      if (!credentialNames.has(credentialKey)) {
+    for (const [logicalName, resolvedName] of Object.entries(
+      addonDecl.credentialOverrides
+    )) {
+      if (!credentialNames.has(resolvedName)) {
         const availableCredentials = Array.from(credentialNames)
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Credential override '${credentialKey}' in addon '${namespace}' (${addonDecl.package}) does not exist. Available credentials: ${availableCredentials.join(', ') || 'none'}`
+          `Credential override '${logicalName}' -> '${resolvedName}' in addon '${namespace}' (${addonDecl.package}) targets a credential that does not exist. Available credentials: ${availableCredentials.join(', ') || 'none'}`
         )
       }
     }
@@ -433,12 +437,14 @@ export function validateVariableOverrides(
   for (const [namespace, addonDecl] of wireAddonDeclarations.entries()) {
     if (!addonDecl.variableOverrides) continue
 
-    for (const variableKey of Object.keys(addonDecl.variableOverrides)) {
-      if (!variableNames.has(variableKey)) {
+    for (const [logicalName, resolvedName] of Object.entries(
+      addonDecl.variableOverrides
+    )) {
+      if (!variableNames.has(resolvedName)) {
         const availableVariables = Array.from(variableNames)
         logger.critical(
           ErrorCode.INVALID_VALUE,
-          `Variable override '${variableKey}' in addon '${namespace}' (${addonDecl.package}) does not exist. Available variables: ${availableVariables.join(', ') || 'none'}`
+          `Variable override '${logicalName}' -> '${resolvedName}' in addon '${namespace}' (${addonDecl.package}) targets a variable that does not exist. Available variables: ${availableVariables.join(', ') || 'none'}`
         )
       }
     }
