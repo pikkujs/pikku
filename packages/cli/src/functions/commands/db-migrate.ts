@@ -12,7 +12,12 @@ export const dbMigrate = pikkuSessionlessFunc<{}, void>({
     const userConfig = await loadUserConfigForDb({ config, logger })
     if (!userConfig) return
 
-    const resolved = resolveDb(userConfig, config.rootDir, config.outDir, config.runtimeDir)
+    const resolved = resolveDb(
+      userConfig,
+      config.rootDir,
+      config.outDir,
+      config.runtimeDir
+    )
     if (!resolved) {
       logger.error(
         'pikku db migrate: no database configured — set sqliteDb or postgresUrl in your createConfig.'
@@ -21,6 +26,10 @@ export const dbMigrate = pikkuSessionlessFunc<{}, void>({
     }
 
     const { migrate, codegen, zod } = await migrateAndCodegen(resolved)
+
+    for (const warning of codegen.warnings) {
+      logger.diagnostic(warning)
+    }
 
     if (migrate.applied.length === 0) {
       logger.info(
