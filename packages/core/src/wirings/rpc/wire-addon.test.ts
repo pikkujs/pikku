@@ -27,6 +27,9 @@ describe('wireAddon', () => {
       rpcEndpoint: 'https://rpc.example.com',
       auth: true,
       tags: ['payments', 'billing'],
+      secretOverrides: { apiKey: 'secretName' },
+      variableOverrides: { region: 'eu-west-1' },
+      credentialOverrides: { oauth: 'credentialName' },
     })
   })
 

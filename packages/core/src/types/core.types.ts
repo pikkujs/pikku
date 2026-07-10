@@ -341,6 +341,8 @@ export type PikkuWire<
   traceId: string
   /** Function id for the current invocation */
   functionId: string
+  /** The addon instance namespace (wireAddon name) currently executing, if any */
+  addonNamespace: string
   http: PikkuHTTP<In>
   mcp: PikkuMCP<MCPTools>
   channel: [IsChannel] extends [null]
