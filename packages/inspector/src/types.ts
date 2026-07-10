@@ -101,6 +101,12 @@ export interface InspectorFunctionState {
   meta: FunctionsMeta
   files: Map<string, { path: string; exportedName: string }>
   approvalDescriptions: Record<string, InspectorApprovalDescriptionDefinition>
+  /**
+   * pikkuFuncIds whose handler body performs a runtime dynamic `import(...)`.
+   * Transient lint signal consumed by computeDiagnostics (PKU498) in the same
+   * inspection pass — deliberately not part of the serialized function meta.
+   */
+  dynamicImportIds: Set<string>
 }
 
 export interface InspectorChannelState {

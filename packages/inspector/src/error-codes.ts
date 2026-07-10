@@ -68,6 +68,7 @@ export enum ErrorCode {
   // Optimization diagnostics
   SERVICES_NOT_DESTRUCTURED = 'PKU410',
   WIRES_NOT_DESTRUCTURED = 'PKU411',
+  FUNCTION_DYNAMIC_IMPORT = 'PKU498',
 
   // Dependency integrity errors
   DUPLICATE_CORE_VERSION = 'PKU717',

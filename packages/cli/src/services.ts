@@ -50,6 +50,7 @@ const DIAGNOSTIC_CODE_TO_LINT_KEY: Record<
 > = {
   [ErrorCode.SERVICES_NOT_DESTRUCTURED]: 'servicesNotDestructured',
   [ErrorCode.WIRES_NOT_DESTRUCTURED]: 'wiresNotDestructured',
+  [ErrorCode.FUNCTION_DYNAMIC_IMPORT]: 'functionDynamicImport',
 }
 
 // Default severity for each lint rule when not explicitly configured.
@@ -61,19 +62,23 @@ const DIAGNOSTIC_CODE_TO_LINT_KEY: Record<
 const LINT_DEFAULTS: NonNullable<PikkuCLIConfig['lint']> = {
   servicesNotDestructured: 'error',
   wiresNotDestructured: 'error',
+  functionDynamicImport: 'warn',
 }
 
-function processDiagnostics(
+export function processDiagnostics(
   diagnostics: InspectorDiagnostic[],
-  lint?: PikkuCLIConfig['lint']
+  lint?: PikkuCLIConfig['lint'],
+  log: Pick<CLILogger, 'warn' | 'critical'> = logger
 ): void {
   for (const diagnostic of diagnostics) {
     const lintKey = DIAGNOSTIC_CODE_TO_LINT_KEY[diagnostic.code]
-    const severity = lintKey ? (lint?.[lintKey] ?? LINT_DEFAULTS[lintKey] ?? 'off') : 'off'
+    const severity = lintKey
+      ? (lint?.[lintKey] ?? LINT_DEFAULTS[lintKey] ?? 'off')
+      : 'off'
     if (severity === 'error') {
-      logger.critical(diagnostic.code as ErrorCode, diagnostic.message)
+      log.critical(diagnostic.code as ErrorCode, diagnostic.message)
     } else if (severity === 'warn') {
-      logger.warn(`[${diagnostic.code}] ${diagnostic.message}`)
+      log.warn(`[${diagnostic.code}] ${diagnostic.message}`)
     }
   }
 }

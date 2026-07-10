@@ -719,6 +719,14 @@ export function computeDiagnostics(state: InspectorState): void {
         position: 0,
       })
     }
+    if (state.functions.dynamicImportIds.has(id)) {
+      diagnostics.push({
+        code: ErrorCode.FUNCTION_DYNAMIC_IMPORT,
+        message: `Function '${id}' performs a runtime dynamic 'import(...)' in its body. Move the import to the top of the module (static import) or into your services/wireServices setup — function bodies run on every invocation, so a dynamic import there adds latency and defeats bundling/tree-shaking.`,
+        sourceFile: meta.pikkuFuncId,
+        position: 0,
+      })
+    }
   }
 
   for (const [id, def] of Object.entries(state.middleware.definitions)) {
