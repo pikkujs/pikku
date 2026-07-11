@@ -310,8 +310,33 @@ describe('wireGateway', () => {
       const response = await fetch(request)
       assert.equal(response.status, 200)
 
-      const body = await response.json()
+      // Raw body, not JSON — platforms compare the echo byte-for-byte
+      const body = await response.text()
       assert.equal(body, 'challenge-token-123')
+    })
+
+    test('failed webhook verification returns 401', async () => {
+      const adapter = createMockAdapter({
+        verifyResult: { verified: false },
+      })
+
+      wireGateway({
+        name: 'test-verify-fail',
+        type: 'webhook',
+        route: '/webhooks/verify-fail',
+        adapter,
+        func: { func: async () => {} },
+      })
+
+      httpRouter.initialize()
+
+      const request = new Request(
+        'http://localhost/webhooks/verify-fail?hub.mode=subscribe&hub.verify_token=wrong',
+        { method: 'GET' }
+      )
+
+      const response = await fetch(request)
+      assert.equal(response.status, 401)
     })
 
     test('handles POST-based verification (Slack style)', async () => {

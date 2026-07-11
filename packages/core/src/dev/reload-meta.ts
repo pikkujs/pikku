@@ -9,6 +9,7 @@ import { clearChannelMiddlewareCache } from '../wirings/channel/channel-middlewa
 import { httpRouter } from '../wirings/http/routers/http-router.js'
 import type { Logger } from '../services/logger.js'
 import type { SchemaService } from '../services/schema-service.js'
+import type { HTTPWiringsMeta } from '../wirings/http/http.types.js'
 
 export interface ReloadGeneratedMetaOptions {
   /** The project's generated output directory (the CLI's resolved outDir). */
@@ -77,7 +78,25 @@ export async function reloadGeneratedMeta(
     logger,
     join(dir, 'http/pikku-http-wirings-meta.gen.json')
   )
-  if (httpMeta) pikkuState(null, 'http', 'meta', httpMeta)
+  // Merge per-method for the same reason as function meta: webhook gateways
+  // (wireGateway) register their POST/GET route meta at runtime, never in the
+  // generated JSON — a wholesale replace drops them and every gateway request
+  // then 500s with "Cannot read properties of undefined (reading
+  // 'headersSchemaName')". Generated entries still win per route.
+  if (httpMeta) {
+    const existing = (pikkuState(null, 'http', 'meta') ?? {}) as Record<
+      string,
+      Record<string, unknown>
+    >
+    const merged: Record<string, Record<string, unknown>> = { ...existing }
+    for (const [method, routes] of Object.entries(httpMeta)) {
+      merged[method] = {
+        ...existing[method],
+        ...(routes as Record<string, unknown>),
+      }
+    }
+    pikkuState(null, 'http', 'meta', merged as HTTPWiringsMeta)
+  }
 
   const rpcMeta = await readJson(
     logger,

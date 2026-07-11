@@ -1,4 +1,5 @@
 import { pikkuState } from '../../pikku-state.js'
+import { NotFoundError, UnauthorizedError } from '../../errors/errors.js'
 import { addFunction } from '../../function/function-runner.js'
 import { runMiddleware } from '../../middleware-runner.js'
 import { httpRouter } from '../http/routers/http-router.js'
@@ -150,6 +151,9 @@ const wireWebhookGateway = (config: CoreGateway): void => {
       route,
       func: verifyHandler,
       auth: false,
+      // Challenge echoes must be byte-identical to what the platform sent
+      // (Meta compares the raw body to hub.challenge) — no JSON quoting.
+      returnsJSON: false,
     } as any)
   }
 
@@ -241,16 +245,24 @@ const createWebhookVerifyHandler = (config: CoreGateway) => {
   ) => {
     const adapter = await resolveGatewayAdapter(config, services)
     if (!adapter.verifyWebhook) {
-      return { error: 'Verification not supported' }
+      throw new NotFoundError(
+        `Gateway '${config.name}' does not support webhook verification`
+      )
     }
 
     const query = wire.http?.request?.query()
     const result = await adapter.verifyWebhook(query, wire.http?.request)
-    if (result.verified) {
-      return result.response
+    if (!result.verified) {
+      throw new UnauthorizedError('Webhook verification failed')
     }
-
-    return { error: 'Verification failed' }
+    // Route has returnsJSON: false — string challenges echo as a raw body
+    // (platforms compare byte-for-byte), object responses stay JSON.
+    const response = result.response
+    if (typeof response === 'string' || typeof response === 'number') {
+      return String(response)
+    }
+    wire.http?.response?.header('content-type', 'application/json')
+    return JSON.stringify(response)
   }
 }
 
