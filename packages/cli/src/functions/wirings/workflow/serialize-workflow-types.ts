@@ -170,6 +170,7 @@ type RefFunction<FuncMap extends Record<string, string>> = {
     nodeId: N,
     path: NodeOutputKeys<FuncMap, N>
   ): TypedRef<unknown>
+  <N extends Extract<keyof FuncMap, string>>(nodeId: N): TypedRef<unknown>
   (nodeId: 'trigger' | '$item', path?: string): TypedRef<unknown>
 }
 

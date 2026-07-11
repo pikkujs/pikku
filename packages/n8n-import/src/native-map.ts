@@ -12,7 +12,13 @@
 /** One addon input field sourced from an n8n parameter. */
 export interface NativeFieldSpec {
   /** n8n parameter key(s); the first present value wins. */
-  from: string | string[]
+  from?: string | string[]
+  /**
+   * Source the whole output of the node's data predecessor as this field —
+   * `ref(predecessorNodeId)`. This is how n8n's implicit incoming item stream
+   * maps onto an array-transform addon's `items` input.
+   */
+  fromPredecessor?: boolean
   /** Fallback when none of the source keys are present. */
   default?: unknown
   /** Preserve a string literal's enum type (`"x" as const`) rather than widen. */
@@ -34,6 +40,13 @@ const NATIVE_NODES: Record<string, NativeNodeSpec> = {
         from: ['errorMessage', 'message'],
         default: 'Workflow stopped',
       },
+    },
+  },
+  limit: {
+    rpc: 'graph:limit',
+    fields: {
+      items: { fromPredecessor: true },
+      limit: { from: 'maxItems', default: 1 },
     },
   },
 }

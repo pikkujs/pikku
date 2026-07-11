@@ -257,7 +257,18 @@ function emitNativeInput(node: ParsedNode, ctx: ExprContext): string | null {
   if (!spec) return null
   const lines: string[] = []
   for (const [field, fspec] of Object.entries(spec.fields)) {
-    const froms = Array.isArray(fspec.from) ? fspec.from : [fspec.from]
+    if (fspec.fromPredecessor) {
+      // n8n's implicit incoming item stream → the data predecessor's whole
+      // output (a pathless ref). No predecessor ⇒ nothing to feed.
+      if (!ctx.predecessorNodeId) continue
+      lines.push(`      ${field}: ref(${q(ctx.predecessorNodeId)}),`)
+      continue
+    }
+    const froms = fspec.from
+      ? Array.isArray(fspec.from)
+        ? fspec.from
+        : [fspec.from]
+      : []
     let raw: unknown
     for (const key of froms) {
       if (node.parameters[key] !== undefined) {
