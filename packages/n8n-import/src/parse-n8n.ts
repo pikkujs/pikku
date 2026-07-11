@@ -81,7 +81,7 @@ function rpcNameFor(role: NodeRole, node: N8nNode): string {
     case 'branch':
       return 'graph:branch'
     case 'native':
-      return nativeSpecFor(typeShort(node.type))!.rpc
+      return nativeSpecFor(typeShort(node.type), node.parameters ?? {})!.rpc
     default:
       return integrationRpcName(node.type, node.name)
   }
@@ -170,7 +170,7 @@ export function parseN8n(raw: unknown): ParsedWorkflow {
     // Stop And Error → graph:stopAndError) becomes a native addon call.
     if (
       (role === 'integration' || role === 'control') &&
-      nativeSpecFor(typeShort(node.type))
+      nativeSpecFor(typeShort(node.type), node.parameters ?? {})
     ) {
       role = 'native'
     }

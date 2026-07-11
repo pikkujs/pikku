@@ -253,7 +253,7 @@ function emitBranchInput(node: ParsedNode, ctx: ExprContext): string | null {
  * each addon input field from an n8n parameter per its `native-map` spec.
  */
 function emitNativeInput(node: ParsedNode, ctx: ExprContext): string | null {
-  const spec = nativeSpecFor(node.typeShort)
+  const spec = nativeSpecFor(node.typeShort, node.parameters)
   if (!spec) return null
   const lines: string[] = []
   for (const [field, fspec] of Object.entries(spec.fields)) {
@@ -262,6 +262,10 @@ function emitNativeInput(node: ParsedNode, ctx: ExprContext): string | null {
       // output (a pathless ref). No predecessor ⇒ nothing to feed.
       if (!ctx.predecessorNodeId) continue
       lines.push(`      ${field}: ref(${q(ctx.predecessorNodeId)}),`)
+      continue
+    }
+    if (fspec.fromNodeId) {
+      lines.push(`      ${field}: ${q(node.nodeId)},`)
       continue
     }
     const froms = fspec.from

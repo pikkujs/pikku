@@ -1,0 +1,37 @@
+{
+  "name": "Delayed Ping",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "ping" }
+    },
+    {
+      "id": "w",
+      "name": "Hold",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": { "resume": "timeInterval", "amount": 30, "unit": "seconds" }
+    },
+    {
+      "id": "h",
+      "name": "Ping",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [400, 0],
+      "parameters": { "method": "GET", "url": "https://api.example.com/ping" }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Hold", "type": "main", "index": 0 }]]
+    },
+    "Hold": {
+      "main": [[{ "node": "Ping", "type": "main", "index": 0 }]]
+    }
+  }
+}
