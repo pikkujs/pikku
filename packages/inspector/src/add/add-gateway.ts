@@ -90,9 +90,7 @@ export const addGateway: AddWiring = (
     state.serviceAggregation.usedMiddleware.add(name)
   )
 
-  // Webhook gateways are served over HTTP — project their synthesized POST
-  // (receiver) and GET (verification) wrappers into the compiled HTTP and
-  // function meta so the runtime never has to register meta dynamically.
+  // Project webhook POST/GET wrappers into compiled http + function meta.
   if (typeValue === 'webhook' && routeValue) {
     const wrappers = [
       { method: 'post', funcId: `gateway__${nameValue}__post` },
