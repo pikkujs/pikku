@@ -8,6 +8,7 @@ import {
   InMemoryWorkflowService,
   InMemoryTriggerService,
   InMemoryAIRunStateService,
+  QueueWebhookService,
 } from '@pikku/core/services'
 import {
   KyselyAIStorageService,
@@ -137,6 +138,7 @@ export const serve = pikkuSessionlessFunc<
       metaService: new LocalMetaService(pikkuDir),
       schedulerService,
       queueService: new InMemoryQueueService(),
+      webhookService: new QueueWebhookService(),
       workflowService,
       workflowRunService: workflowService,
       triggerService: new InMemoryTriggerService(),

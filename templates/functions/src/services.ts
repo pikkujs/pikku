@@ -4,6 +4,7 @@ import {
   LocalCredentialService,
   LocalSecretService,
   LocalVariablesService,
+  QueueWebhookService,
 } from '@pikku/core/services'
 import { LocalEventHubService } from '@pikku/core/channel/local'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
@@ -74,6 +75,8 @@ export const createSingletonServices = pikkuServices(
       workflowService: existingServices?.workflowService,
       workflowRunService: existingServices?.workflowRunService,
       queueService: existingServices?.queueService,
+      webhookService:
+        existingServices?.webhookService || new QueueWebhookService(),
       schedulerService: existingServices?.schedulerService,
       deploymentService: existingServices?.deploymentService,
       credentialService:

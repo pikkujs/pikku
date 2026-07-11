@@ -250,9 +250,11 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     ])
 
     let remoteRPC = false
+    let webhook = false
     let workflowRoutes = false
     if (!config.addon) {
       remoteRPC = await workflow.do('Remote RPC', 'pikkuRemoteRPC', null)
+      webhook = await workflow.do('Webhook', 'pikkuWebhook', null)
       if (workflows) {
         workflowRoutes = await workflow.do(
           'Workflow routes',
@@ -262,11 +264,18 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       }
     }
 
-    if (workflows || remoteRPC || workflowRoutes) {
+    if (workflows || remoteRPC || webhook || workflowRoutes) {
       await workflow.do('Re-inspect after workflows', async () =>
         getInspectorState(true)
       )
-      await workflow.do('Re-generate schemas', 'pikkuSchemas', null)
+      const regeneratedSchemas = await workflow.do(
+        'Re-generate schemas',
+        'pikkuSchemas',
+        null
+      )
+      if (regeneratedSchemas && !schemas) {
+        allImports.push(`${config.schemaDirectory}/register.gen.ts`)
+      }
     }
 
     if (!config.addon) {

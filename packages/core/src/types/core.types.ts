@@ -39,6 +39,10 @@ import type { PikkuAIMiddlewareHooks } from '../wirings/ai-agent/ai-agent.types.
 import type { WorkflowRunService } from '../wirings/workflow/workflow.types.js'
 import type { CredentialService } from '../services/credential-service.js'
 import type { EmailService } from '../services/email-service.js'
+import type {
+  WebhookService,
+  WebhookServiceConfig,
+} from '../services/webhook-service.js'
 import type { MetaService } from '../services/meta-service.js'
 import type { CoverageService } from '../services/v8-coverage-service.js'
 import type { SessionStore } from '../services/session-store.js'
@@ -243,6 +247,8 @@ export type CoreConfig<Config extends Record<string, unknown> = {}> = {
   secrets?: {}
 
   workflow?: WorkflowServiceConfig
+  /** Default retry and signing settings for outgoing webhooks. */
+  webhook?: WebhookServiceConfig
   /** Runtime Postgres adapter options (pool sizing). */
   postgres?: PostgresConfig
 } & Config
@@ -302,6 +308,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   credentialService?: CredentialService
   /** Email service for outbound messages and template-backed delivery */
   emailService?: EmailService
+  /** Webhook service for outgoing webhook delivery via a queue */
+  webhookService?: WebhookService
   /** Meta service for reading .pikku metadata files (filesystem on Node, R2/KV on CF) */
   metaService?: MetaService
   /** V8 precise-coverage collector (`pikku dev --coverage` only) */

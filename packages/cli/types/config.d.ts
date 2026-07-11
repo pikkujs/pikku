@@ -57,6 +57,10 @@ export interface PikkuCLICoreOutputFiles {
   // Optional: left undefined when scaffold.graph is not enabled, so consumers must guard.
   graphWiringsFile?: string
 
+  // Outgoing webhook delivery worker (derived from scaffold.pikkuDir when scaffold.webhook is enabled).
+  // Optional: left undefined when scaffold.webhook is not enabled, so consumers must guard.
+  webhookWorkersFile?: string
+
   // Feature-generated files (derived from scaffold.pikkuDir when enabled)
   publicRpcFile: string
   publicAgentFile: string
@@ -351,6 +355,7 @@ export type PikkuCLIInput = {
     workflow?: PikkuScaffoldFeature
     events?: PikkuScaffoldFeature
     remoteRpc?: PikkuScaffoldFeature
+    webhook?: PikkuScaffoldFeature
   }
 
   /**

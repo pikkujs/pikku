@@ -51,6 +51,7 @@ import {
   enableWorkflow,
   enableEvents,
   enableRemoteRpc,
+  enableWebhook,
 } from './functions/commands/enable.js'
 import { pikkuRealtime } from './functions/wirings/realtime/pikku-command-realtime.js'
 import { binary } from './functions/commands/binary.js'
@@ -551,6 +552,17 @@ wireCLI({
           func: enableRemoteRpc,
           description:
             'Enable the remote internal RPC queue worker + HTTP endpoint (scaffolds rpc-remote.gen.ts)',
+          options: {
+            noAuth: {
+              description: 'Disable auth requirement',
+              default: false,
+            },
+          },
+        }),
+        webhook: pikkuCLICommand({
+          func: enableWebhook,
+          description:
+            'Enable the outgoing webhook delivery queue worker (scaffolds webhook.gen.ts)',
           options: {
             noAuth: {
               description: 'Disable auth requirement',

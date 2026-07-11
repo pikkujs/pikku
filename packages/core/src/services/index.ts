@@ -22,6 +22,12 @@ export { LocalCredentialService } from './local-credential-service.js'
 export { LocalVariablesService } from './local-variables.js'
 export { ConsoleLogger, JsonConsoleLogger } from './logger-console.js'
 export { InMemoryWorkflowService } from './in-memory-workflow-service.js'
+export {
+  QueueWebhookService,
+  pikkuWebhookWorkerFunc,
+  DEFAULT_WEBHOOK_RETRIES,
+} from './queue-webhook-service.js'
+export { signWebhookBody, verifyWebhookSignature } from './webhook-signature.js'
 export { InMemoryQueueService } from './in-memory-queue-service.js'
 export { InMemoryTriggerService } from './in-memory-trigger-service.js'
 export { InMemoryAIRunStateService } from './in-memory-ai-run-state-service.js'
@@ -56,6 +62,14 @@ export type {
   SendTemplateEmailInput,
   SendTextEmailInput,
 } from './email-service.js'
+export {
+  PIKKU_WEBHOOK_QUEUE_NAME,
+  type SendWebhookInput,
+  type SendWebhookResult,
+  type WebhookJobData,
+  type WebhookService,
+  type WebhookServiceConfig,
+} from './webhook-service.js'
 export type { Logger } from './logger.js'
 export type { SecretService } from './secret-service.js'
 export type { VariablesService } from './variables-service.js'

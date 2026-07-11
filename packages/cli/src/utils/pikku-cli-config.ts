@@ -320,6 +320,9 @@ const _getPikkuCLIConfig = async (
         'graph.wirings.gen.ts'
       )
     }
+    if (result.scaffold?.webhook && !result.webhookWorkersFile) {
+      result.webhookWorkersFile = join(resolvedScaffoldDir, 'webhook.gen.ts')
+    }
     if (result.scaffold?.workflow && !result.workflowRoutesFile) {
       result.workflowRoutesFile = join(
         resolvedScaffoldDir,

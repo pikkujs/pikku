@@ -11,6 +11,7 @@ type Feature =
   | 'workflow'
   | 'events'
   | 'remoteRpc'
+  | 'webhook'
 
 const FEATURE_DEFAULTS: Record<Feature, 'auth' | 'no-auth'> = {
   rpc: 'auth',
@@ -20,6 +21,7 @@ const FEATURE_DEFAULTS: Record<Feature, 'auth' | 'no-auth'> = {
   workflow: 'auth',
   events: 'auth',
   remoteRpc: 'no-auth',
+  webhook: 'no-auth',
 }
 
 async function enableFeature(
@@ -88,4 +90,9 @@ export const enableEvents = pikkuVoidFunc({
 export const enableRemoteRpc = pikkuVoidFunc({
   func: async ({ logger, config }, data: any) =>
     enableFeature('remoteRpc', logger, config, data),
+})
+
+export const enableWebhook = pikkuVoidFunc({
+  func: async ({ logger, config }, data: any) =>
+    enableFeature('webhook', logger, config, data),
 })
