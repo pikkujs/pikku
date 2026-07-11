@@ -49,6 +49,20 @@ const NATIVE_NODES: Record<string, NativeNodeSpec> = {
       limit: { from: 'maxItems', default: 1 },
     },
   },
+  splitout: {
+    rpc: 'graph:splitOut',
+    fields: {
+      item: { fromPredecessor: true },
+      field: { from: 'fieldToSplitOut', default: '' },
+    },
+  },
+  removeduplicates: {
+    rpc: 'graph:removeDuplicates',
+    fields: {
+      items: { fromPredecessor: true },
+      fields: { default: [] },
+    },
+  },
 }
 
 export function nativeSpecFor(typeShort: string): NativeNodeSpec | undefined {

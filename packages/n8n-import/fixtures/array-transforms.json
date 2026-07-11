@@ -1,0 +1,48 @@
+{
+  "name": "Array Ops",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "arr" }
+    },
+    {
+      "id": "h",
+      "name": "Fetch Rows",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [200, 0],
+      "parameters": { "method": "GET", "url": "https://api.example.com/rows" }
+    },
+    {
+      "id": "s",
+      "name": "Split Items",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [400, 0],
+      "parameters": { "fieldToSplitOut": "data", "include": "noOtherFields" }
+    },
+    {
+      "id": "d",
+      "name": "Dedupe",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 1,
+      "position": [600, 0],
+      "parameters": { "compare": "allFields" }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Fetch Rows", "type": "main", "index": 0 }]]
+    },
+    "Fetch Rows": {
+      "main": [[{ "node": "Split Items", "type": "main", "index": 0 }]]
+    },
+    "Split Items": {
+      "main": [[{ "node": "Dedupe", "type": "main", "index": 0 }]]
+    }
+  }
+}
