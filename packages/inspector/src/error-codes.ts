@@ -72,6 +72,7 @@ export enum ErrorCode {
 
   // Dependency integrity errors
   DUPLICATE_CORE_VERSION = 'PKU717',
+  CORE_VERSION_SKEW = 'PKU718',
 
   // Data classification errors
   PII_IN_OUTPUT = 'PKU910',
