@@ -57,6 +57,7 @@ export type NodeRole =
   | 'set'
   | 'http'
   | 'branch'
+  | 'native'
   | 'noop'
   | 'control'
   | 'sticky'

@@ -15,6 +15,7 @@ import {
   dedupe,
 } from './naming.js'
 import { normalizeBranch } from './branch.js'
+import { nativeSpecFor } from './native-map.js'
 
 /** Classify an n8n node by its type string. */
 function classifyByType(type: string): NodeRole {
@@ -79,6 +80,8 @@ function rpcNameFor(role: NodeRole, node: N8nNode): string {
       return 'graph:httpRequest'
     case 'branch':
       return 'graph:branch'
+    case 'native':
+      return nativeSpecFor(typeShort(node.type))!.rpc
     default:
       return integrationRpcName(node.type, node.name)
   }
@@ -163,11 +166,23 @@ export function parseN8n(raw: unknown): ParsedWorkflow {
       role = 'branch'
     }
 
+    // A node whose type maps 1:1 onto an @pikku/addon-graph function (e.g.
+    // Stop And Error → graph:stopAndError) becomes a native addon call.
+    if (
+      (role === 'integration' || role === 'control') &&
+      nativeSpecFor(typeShort(node.type))
+    ) {
+      role = 'native'
+    }
+
     const nodeId = dedupe(sanitizeIdentifier(node.name), seenNodeIds)
-    // Set / Edit Fields, no-auth HTTP, and branch nodes all share a
-    // @pikku/addon-graph RPC — a shared addon function, never deduped.
+    // Set / Edit Fields, no-auth HTTP, branch, and other native addon nodes all
+    // share a @pikku/addon-graph RPC — a shared addon function, never deduped.
     const rpcName =
-      role === 'set' || role === 'http' || role === 'branch'
+      role === 'set' ||
+      role === 'http' ||
+      role === 'branch' ||
+      role === 'native'
         ? rpcNameFor(role, node)
         : dedupe(rpcNameFor(role, node), seenRpcNames)
 

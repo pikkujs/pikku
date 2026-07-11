@@ -7,6 +7,7 @@ import {
 } from './expressions.js'
 import { toPascalCase } from './naming.js'
 import { normalizeBranch } from './branch.js'
+import { nativeSpecFor } from './native-map.js'
 import {
   deriveCredentialInstances,
   nodeInstanceBindings,
@@ -247,11 +248,41 @@ function emitBranchInput(node: ParsedNode, ctx: ExprContext): string | null {
   return lines.join('\n')
 }
 
+/**
+ * Build the `input: (ref) => ({...})` body for a native addon node, sourcing
+ * each addon input field from an n8n parameter per its `native-map` spec.
+ */
+function emitNativeInput(node: ParsedNode, ctx: ExprContext): string | null {
+  const spec = nativeSpecFor(node.typeShort)
+  if (!spec) return null
+  const lines: string[] = []
+  for (const [field, fspec] of Object.entries(spec.fields)) {
+    const froms = Array.isArray(fspec.from) ? fspec.from : [fspec.from]
+    let raw: unknown
+    for (const key of froms) {
+      if (node.parameters[key] !== undefined) {
+        raw = node.parameters[key]
+        break
+      }
+    }
+    if (raw === undefined) raw = fspec.default
+    if (raw === undefined) continue
+    let rendered = emitValue(raw, ctx)
+    if (rendered === null) continue
+    if (fspec.asConst && /^".*"$/.test(rendered))
+      rendered = `${rendered} as const`
+    lines.push(`      ${field}: ${rendered},`)
+  }
+  if (lines.length === 0) return null
+  return [`(ref) => ({`, ...lines, `    })`].join('\n')
+}
+
 /** Build the `input: (ref) => ({...})` body for a node from its parameters. */
 function emitInput(node: ParsedNode, ctx: ExprContext): string | null {
   if (node.role === 'set') return emitSetInput(node, ctx)
   if (node.role === 'http') return emitHttpInput(node, ctx)
   if (node.role === 'branch') return emitBranchInput(node, ctx)
+  if (node.role === 'native') return emitNativeInput(node, ctx)
   const lines: string[] = []
   for (const [key, value] of Object.entries(node.parameters)) {
     const classified = classifyExpression(value, ctx)
@@ -305,7 +336,8 @@ function emitGraphFile(parsed: ParsedWorkflow): string {
       node.role === 'integration' ||
       node.role === 'set' ||
       node.role === 'http' ||
-      node.role === 'branch'
+      node.role === 'branch' ||
+      node.role === 'native'
 
     const parts: string[] = []
     const input = wantsInput ? emitInput(node, ctx) : null
@@ -536,9 +568,15 @@ export function generateWorkflowFromN8n(
   const emittedStubRpc = new Set<string>()
   for (const node of parsed.nodes) {
     if (node.disabled) continue
-    // Set / Edit Fields, no-auth HTTP, and IF/Filter/Switch nodes map to
-    // @pikku/addon-graph functions (`editFields` / `httpRequest` / `branch`) — no stub.
-    if (node.role === 'set' || node.role === 'http' || node.role === 'branch')
+    // Set / Edit Fields, no-auth HTTP, IF/Filter/Switch, and other native nodes
+    // map to @pikku/addon-graph functions (`editFields` / `httpRequest` /
+    // `branch` / …) — no stub.
+    if (
+      node.role === 'set' ||
+      node.role === 'http' ||
+      node.role === 'branch' ||
+      node.role === 'native'
+    )
       continue
     if (emittedStubRpc.has(node.rpcName)) continue
     if (
