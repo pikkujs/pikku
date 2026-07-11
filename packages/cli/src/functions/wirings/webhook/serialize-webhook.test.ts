@@ -33,13 +33,17 @@ describe('serializeWebhook', () => {
     )
   })
 
-  test('validates the job payload with a zod input schema, not generics', () => {
+  test('types the job payload with an inline TS literal, never an imported type or zod', () => {
     const output = serializeWebhook('./pikku-types.gen.js')
-    assert.ok(output.includes("from 'zod'"))
-    assert.ok(output.includes('input: WebhookDeliverySchema'))
+    assert.ok(output.includes('pikkuSessionlessFunc<'))
+    assert.ok(output.includes('url: string'))
     assert.ok(
-      !/pikkuSessionlessFunc</.test(output),
-      'schema-based functions must not also pass type generics'
+      !output.includes("from 'zod'"),
+      'a zod schema would make the inspector import this file at codegen time, breaking on stale deploy-unit pikku-types imports'
+    )
+    assert.ok(
+      !output.includes('WebhookJobData'),
+      'importing the payload type from @pikku/core would leave the inspector unable to generate its schema'
     )
   })
 })

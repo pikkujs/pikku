@@ -7399,7 +7399,6 @@ __metadata:
     "@types/node": "npm:^24"
     tsx: "npm:^4.20.6"
     typescript: "npm:^6.0.3"
-    zod: "npm:^4"
   languageName: unknown
   linkType: soft
 
