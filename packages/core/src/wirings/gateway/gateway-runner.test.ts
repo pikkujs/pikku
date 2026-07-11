@@ -86,6 +86,31 @@ const setupState = () => {
   } as any)
 }
 
+// Mirrors the inspector's wireGateway -> compiled HTTP/function meta projection
+const seedCompiledMeta = () => {
+  const httpMeta = pikkuState(null, 'http', 'meta') as any
+  const funcMeta = pikkuState(null, 'function', 'meta') as any
+  for (const config of pikkuState(null, 'gateway', 'gateways').values()) {
+    if (config.type !== 'webhook' || !config.route) continue
+    for (const [method, funcId] of [
+      ['post', `gateway__${config.name}__post`],
+      ['get', `gateway__${config.name}__verify`],
+    ] as const) {
+      httpMeta[method][config.route] = {
+        pikkuFuncId: funcId,
+        route: config.route,
+        method,
+      }
+      funcMeta[funcId] = {
+        pikkuFuncId: funcId,
+        inputSchemaName: null,
+        outputSchemaName: null,
+        sessionless: true,
+      }
+    }
+  }
+}
+
 // --- Tests ------------------------------------------------------------------
 
 describe('wireGateway', () => {
@@ -111,6 +136,7 @@ describe('wireGateway', () => {
         },
       })
 
+      seedCompiledMeta()
       httpRouter.initialize()
 
       const request = new Request('http://localhost/webhooks/test', {
@@ -156,6 +182,7 @@ describe('wireGateway', () => {
         },
       })
 
+      seedCompiledMeta()
       httpRouter.initialize()
 
       // Factory must NOT run at wiring time
@@ -197,6 +224,7 @@ describe('wireGateway', () => {
         func: { func: async () => {} },
       })
 
+      seedCompiledMeta()
       httpRouter.initialize()
 
       const response = await fetch(
@@ -225,6 +253,7 @@ describe('wireGateway', () => {
         },
       })
 
+      seedCompiledMeta()
       httpRouter.initialize()
 
       const request = new Request('http://localhost/webhooks/ignore', {
@@ -270,6 +299,7 @@ describe('wireGateway', () => {
         },
       })
 
+      seedCompiledMeta()
       httpRouter.initialize()
 
       const request = new Request('http://localhost/webhooks/mw', {
@@ -300,6 +330,7 @@ describe('wireGateway', () => {
         func: { func: async () => {} },
       })
 
+      seedCompiledMeta()
       httpRouter.initialize()
 
       const request = new Request(
@@ -310,8 +341,33 @@ describe('wireGateway', () => {
       const response = await fetch(request)
       assert.equal(response.status, 200)
 
-      const body = await response.json()
+      const body = await response.text()
       assert.equal(body, 'challenge-token-123')
+    })
+
+    test('failed webhook verification returns 401', async () => {
+      const adapter = createMockAdapter({
+        verifyResult: { verified: false },
+      })
+
+      wireGateway({
+        name: 'test-verify-fail',
+        type: 'webhook',
+        route: '/webhooks/verify-fail',
+        adapter,
+        func: { func: async () => {} },
+      })
+
+      seedCompiledMeta()
+      httpRouter.initialize()
+
+      const request = new Request(
+        'http://localhost/webhooks/verify-fail?hub.mode=subscribe&hub.verify_token=wrong',
+        { method: 'GET' }
+      )
+
+      const response = await fetch(request)
+      assert.equal(response.status, 401)
     })
 
     test('handles POST-based verification (Slack style)', async () => {
@@ -331,6 +387,7 @@ describe('wireGateway', () => {
         func: { func: async () => {} },
       })
 
+      seedCompiledMeta()
       httpRouter.initialize()
 
       const request = new Request('http://localhost/webhooks/slack', {
@@ -368,6 +425,7 @@ describe('wireGateway', () => {
         },
       })
 
+      seedCompiledMeta()
       httpRouter.initialize()
 
       const request = new Request('http://localhost/webhooks/proactive', {
