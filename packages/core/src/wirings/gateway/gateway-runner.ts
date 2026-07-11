@@ -37,7 +37,6 @@ import type {
   CorePikkuMiddleware,
   CoreSingletonServices,
 } from '../../types/core.types.js'
-import type { HTTPWiringMeta } from '../http/http.types.js'
 
 /**
  * Register a messaging gateway.
@@ -80,24 +79,12 @@ const wireWebhookGateway = (config: CoreGateway): void => {
   }
 
   const postFuncId = `gateway__${name}__post`
-  const httpMeta = pikkuState(null, 'http', 'meta')
-  const funcMeta = pikkuState(null, 'function', 'meta')
   const routes = pikkuState(null, 'http', 'routes')
 
   // --- POST handler (main message receiver) --------------------------------
-
-  funcMeta[postFuncId] = {
-    pikkuFuncId: postFuncId,
-    inputSchemaName: null,
-    outputSchemaName: null,
-    sessionless: true,
-  }
-
-  httpMeta['post'][route] = {
-    pikkuFuncId: postFuncId,
-    route,
-    method: 'post',
-  } as HTTPWiringMeta
+  // Meta for these wrapper funcs/routes is compiled — the inspector projects
+  // wireGateway into the generated HTTP + function meta; only the handler
+  // implementations register here, same as every other wire.
 
   const postHandler = {
     auth: false,
@@ -123,19 +110,6 @@ const wireWebhookGateway = (config: CoreGateway): void => {
   if (typeof adapter === 'function' || adapter.verifyWebhook) {
     const verifyFuncId = `gateway__${name}__verify`
 
-    funcMeta[verifyFuncId] = {
-      pikkuFuncId: verifyFuncId,
-      inputSchemaName: null,
-      outputSchemaName: null,
-      sessionless: true,
-    }
-
-    httpMeta['get'][route] = {
-      pikkuFuncId: verifyFuncId,
-      route,
-      method: 'get',
-    } as HTTPWiringMeta
-
     const verifyHandler = {
       auth: false,
       func: createWebhookVerifyHandler(config),
@@ -151,8 +125,7 @@ const wireWebhookGateway = (config: CoreGateway): void => {
       route,
       func: verifyHandler,
       auth: false,
-      // Challenge echoes must be byte-identical to what the platform sent
-      // (Meta compares the raw body to hub.challenge) — no JSON quoting.
+      // challenge echo must be byte-identical — no JSON quoting
       returnsJSON: false,
     } as any)
   }
@@ -255,8 +228,7 @@ const createWebhookVerifyHandler = (config: CoreGateway) => {
     if (!result.verified) {
       throw new UnauthorizedError('Webhook verification failed')
     }
-    // Route has returnsJSON: false — string challenges echo as a raw body
-    // (platforms compare byte-for-byte), object responses stay JSON.
+    // string challenges echo raw (byte-for-byte compare); objects stay JSON
     const response = result.response
     if (typeof response === 'string' || typeof response === 'number') {
       return String(response)
