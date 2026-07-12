@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@pikku/core": "^0.12.62",
+    "@pikku/core": "^0.12.63",
     "@pikku/express-middleware": "^0.12.4",
     "@pikku/jose": "^0.12.4",
     "@pikku/schedule": "^0.12.4",
