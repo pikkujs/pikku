@@ -34,6 +34,11 @@ export interface ExprContext {
    * `ref('trigger', …)`, the only form the generated ref map accepts for it.
    */
   triggerNodeIds?: Set<string>
+  /**
+   * Rewrite map for references at non-graph nodes (dropped No Op passthroughs) →
+   * their terminal data source (`'trigger'` or a graph nodeId). See Topology.
+   */
+  refRewrite?: Record<string, string>
 }
 
 const DOT_PATH = String.raw`(?:\.[A-Za-z_$][\w$]*|\[['"][^'"\]]+['"]\])*`
@@ -56,9 +61,14 @@ function normalizePath(tail: string): string | undefined {
   return parts.length ? parts.join('.') : undefined
 }
 
-/** A reference to a trigger node collapses to the graph's implicit `trigger` input. */
+/**
+ * Resolve a referenced nodeId to the form the generated ref map accepts: a
+ * trigger collapses to the implicit `trigger` input, and a dropped No Op
+ * passthrough resolves to its rewritten data source.
+ */
 function resolveNodeId(nodeId: string, ctx: ExprContext): string {
-  return ctx.triggerNodeIds?.has(nodeId) ? 'trigger' : nodeId
+  if (ctx.triggerNodeIds?.has(nodeId)) return 'trigger'
+  return ctx.refRewrite?.[nodeId] ?? nodeId
 }
 
 /** Try to interpret one `{{ … }}` body as a pure reference. */

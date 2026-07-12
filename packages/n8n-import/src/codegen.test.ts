@@ -288,6 +288,85 @@ test('a reference to a named trigger node lowers to ref("trigger", …), not the
   assert.doesNotMatch(graph, /ref\("telegramTrigger"/)
 })
 
+test('a reference to a dropped noop node follows the same rewiring as its edges (passthrough)', () => {
+  const parsed = parseN8n({
+    name: 'Noop Ref Passthrough',
+    nodes: [
+      {
+        id: 't',
+        name: 'Manual Trigger',
+        type: 'n8n-nodes-base.manualTrigger',
+        parameters: {},
+      },
+      {
+        id: 'f',
+        name: 'Fetch',
+        type: 'n8n-nodes-base.pipedrive',
+        parameters: {},
+      },
+      {
+        id: 'p',
+        name: 'Passthrough',
+        type: 'n8n-nodes-base.noOp',
+        parameters: {},
+      },
+      {
+        id: 'b',
+        name: 'SetB',
+        type: 'n8n-nodes-base.set',
+        parameters: {
+          assignments: {
+            assignments: [
+              {
+                name: 'status',
+                value: '={{ $node["Passthrough"].json.status }}',
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: 'c',
+        name: 'ChatInput',
+        type: 'n8n-nodes-base.noOp',
+        parameters: {},
+      },
+      {
+        id: 'd',
+        name: 'SetC',
+        type: 'n8n-nodes-base.set',
+        parameters: {
+          assignments: {
+            assignments: [
+              { name: 'text', value: '={{ $node["ChatInput"].json.text }}' },
+            ],
+          },
+        },
+      },
+    ],
+    connections: {
+      'Manual Trigger': { main: [[{ node: 'Fetch', type: 'main', index: 0 }]] },
+      Fetch: { main: [[{ node: 'Passthrough', type: 'main', index: 0 }]] },
+      Passthrough: { main: [[{ node: 'SetB', type: 'main', index: 0 }]] },
+      ChatInput: { main: [[{ node: 'SetC', type: 'main', index: 0 }]] },
+    },
+  })
+
+  const { files } = generateWorkflowFromN8n(parsed)
+  const graph = Object.values(files).find((f) =>
+    f.includes('pikkuWorkflowGraph')
+  )!
+  assert.ok(graph)
+  // a mid-flow noop is a passthrough — a ref to it resolves to its graph-node
+  // data source (Fetch), exactly as the dropped edge rewires SetB's predecessor.
+  assert.match(graph, /ref\("fetch", "status"\)/)
+  // an entry noop stands in for the implicit input — a ref to it lowers to trigger.
+  assert.match(graph, /ref\("trigger", "text"\)/)
+  // never a dangling ref at the removed noop nodeIds
+  assert.doesNotMatch(graph, /ref\("passthrough"/)
+  assert.doesNotMatch(graph, /ref\("chatInput"/)
+})
+
 test('workflow name is sanitized to a JS-string-safe value (apostrophes stripped)', () => {
   const parsed = parseN8n({
     name: 'd\'Auto-Post 💥 aux "réseaux"',

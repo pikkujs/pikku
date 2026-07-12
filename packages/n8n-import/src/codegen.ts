@@ -565,6 +565,7 @@ function emitGraphFile(
       predecessorNodeIds: t.predecessorNodeIds,
       nameToNodeId: topo.nameToNodeId,
       triggerNodeIds,
+      refRewrite: topo.refRewrite,
     }
     const wantsInput =
       node.role === 'integration' ||

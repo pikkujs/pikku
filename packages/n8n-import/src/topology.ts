@@ -23,6 +23,14 @@ export interface Topology {
   byNodeId: Record<string, NodeTopology>
   entryNodeIds: string[]
   nameToNodeId: Record<string, string>
+  /**
+   * Rewrite map for references that point at a non-graph node. A No Op is a
+   * passthrough, so `$node["NoOp"].json.x` must resolve to the No Op's upstream
+   * graph-node data source — or the implicit `trigger` input when the No Op is
+   * an entry (fed only by triggers/other noops). Values are terminal nodeIds
+   * (`'trigger'` or a graph nodeId), so no further resolution is needed.
+   */
+  refRewrite: Record<string, string>
 }
 
 /** Nodes that participate in the executable graph (exclude trigger/tool/config). */
@@ -145,5 +153,41 @@ export function buildTopology(parsed: ParsedWorkflow): Topology {
     .map((n) => n.nodeId)
     .filter((id) => !hasIncoming.has(id))
 
-  return { graphNodes, byNodeId, entryNodeIds, nameToNodeId }
+  // Reverse main adjacency by node name — who feeds each node.
+  const mainPredsByName: Record<string, string[]> = {}
+  for (const [sourceName, ports] of Object.entries(parsed.connections)) {
+    for (const slot of ports.main ?? []) {
+      for (const t of slot ?? []) {
+        ;(mainPredsByName[t.node] ??= []).push(sourceName)
+      }
+    }
+  }
+
+  // Walk a No Op's main predecessors back to a terminal data source: the first
+  // graph-node ancestor, or `trigger` if only triggers/noops feed it.
+  function resolveNoopSource(name: string, seen: Set<string>): string {
+    for (const predName of mainPredsByName[name] ?? []) {
+      const predId = nameToNodeId[predName]
+      if (predId && graphNodeIds.has(predId)) return predId
+      if (predId && roleByNodeId[predId] === 'trigger') return 'trigger'
+      if (noopNames.has(predName) && !seen.has(predName)) {
+        seen.add(predName)
+        const r = resolveNoopSource(predName, seen)
+        if (r) return r
+      }
+    }
+    return 'trigger'
+  }
+
+  const refRewrite: Record<string, string> = {}
+  for (const node of parsed.nodes) {
+    if (node.role === 'noop') {
+      refRewrite[node.nodeId] = resolveNoopSource(
+        node.name,
+        new Set([node.name])
+      )
+    }
+  }
+
+  return { graphNodes, byNodeId, entryNodeIds, nameToNodeId, refRewrite }
 }
