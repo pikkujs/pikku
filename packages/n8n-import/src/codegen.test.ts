@@ -245,6 +245,23 @@ test('agent + tool workflow → agent-only, no graph', () => {
   assert.equal(manifest[0]!.agentName, 'supportAssistant')
 })
 
+test('rpcPrefix namespaces stub rpcs (tool refs + stub files) but not workflow/agent names', () => {
+  const parsed = parseN8n(loadFixture('agent-with-tool.json'))
+  const { files } = generateWorkflowFromN8n(parsed, { rpcPrefix: 'w0007_' })
+
+  const agent = files['supportAssistant/supportAssistant.agent.ts']
+  assert.ok(agent)
+  // the agent const name (a workflow/agent name) is NOT prefixed
+  assert.match(agent, /export const supportAssistantAgent = pikkuAIAgent/)
+  // the tool ref + its stub file ARE prefixed
+  assert.match(agent, /ref\("w0007_httpRequestTool__lookupOrder"\)/)
+  assert.ok(
+    files[
+      'supportAssistant/functions/w0007_httpRequestTool__lookupOrder.function.ts'
+    ]
+  )
+})
+
 test('agent with structured output parser → agent output Zod schema + resolved model', () => {
   const parsed = parseN8n(
     JSON.parse(
@@ -264,9 +281,12 @@ test('agent with structured output parser → agent output Zod schema + resolved
   assert.match(agent, /model: 'google\/gemini-1\.5-flash'/)
   assert.match(agent, /temperature: 0\.2/)
 
-  // outputParserStructured (manual inputSchema) → agent `output` Zod schema.
+  // outputParserStructured (manual inputSchema) → agent `output` schema.
   assert.match(agent, /import \{ z \} from 'zod'/)
-  assert.match(agent, /output: z\.object\(/)
+  // inline schemas are rejected (PKU489): emit an exported const + reference it
+  assert.match(agent, /export const LeadExtractorOutput = z\.object\(/)
+  assert.match(agent, /output: LeadExtractorOutput,/)
+  assert.doesNotMatch(agent, /output: z\.object\(/)
   // draft-07 `type: ["string","null"]` normalized to `.nullable()`
   assert.match(agent, /domain: z\.string\(\)\.nullable\(\)/)
   assert.match(agent, /cheapest_plan: z\.number\(\)\.nullable\(\)/)

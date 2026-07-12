@@ -54,7 +54,25 @@ export interface GenerateOptions {
    * resolves; every cross-workflow reference is reported as missing.
    */
   resolveWorkflowRef?: WorkflowRefResolver
+  /**
+   * Prefix applied to every generated *stub* rpc name (integration / agent-tool /
+   * code / vector / unmapped-control). Stub functions are locally defined, so
+   * importing several workflows into one project would otherwise collide on a
+   * shared name (a `DUPLICATE_FUNCTION_NAME` critical). Addon rpcs (`graph:*`,
+   * `service:*`), sub-workflow names, and agent names are shared and never
+   * prefixed. No prefix ⇒ names are unchanged (single-file import).
+   */
+  rpcPrefix?: string
 }
+
+/** Roles whose rpc is a locally-generated stub function (not a shared addon/workflow rpc). */
+const STUB_ROLES = new Set<ParsedNode['role']>([
+  'integration',
+  'agentTool',
+  'code',
+  'vectorStore',
+  'control',
+])
 
 /**
  * Resolve every executeWorkflow / toolWorkflow node to the Pikku workflow name
@@ -772,9 +790,16 @@ function emitAgentFile(
   if (model?.temperature !== undefined)
     modelLines.push(`  temperature: ${model.temperature},`)
 
+  // An agent `output` must reference an exported schema variable — inline
+  // schemas are rejected (PKU489). Emit the Zod as a top-level const.
+  const outputConst = outputZod
+    ? `${toPascalCase(parsed.slug)}Output`
+    : undefined
+
   return [
     imports.join('\n'),
     ``,
+    ...(outputZod ? [`export const ${outputConst} = ${outputZod}`, ``] : []),
     `export const ${parsed.slug}Agent = pikkuAIAgent({`,
     `  name: ${q(parsed.slug)},`,
     `  description: ${q(parsed.name)},`,
@@ -784,7 +809,7 @@ function emitAgentFile(
     tools.length > 0
       ? `  tools: [\n${toolLines.join('\n')}\n  ],`
       : `  tools: [],`,
-    ...(outputZod ? [`  output: ${outputZod.split('\n').join('\n  ')},`] : []),
+    ...(outputConst ? [`  output: ${outputConst},`] : []),
     `})`,
     ``,
   ].join('\n')
@@ -894,6 +919,17 @@ export function generateWorkflowFromN8n(
   )
   if (diagnostics.some((d) => d.type === 'error')) {
     return { files: {}, manifest: [], credentialInstances: [], diagnostics }
+  }
+
+  // Namespace locally-generated stub rpcs so several workflows can share one
+  // project without colliding. A stub whose target is a sub-workflow keeps the
+  // resolved workflow name (no stub is emitted for it).
+  if (opts.rpcPrefix) {
+    for (const node of parsed.nodes) {
+      if (!node.workflowRef && STUB_ROLES.has(node.role)) {
+        node.rpcName = `${opts.rpcPrefix}${node.rpcName}`
+      }
+    }
   }
 
   const files: Record<string, string> = {}
