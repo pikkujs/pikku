@@ -38,6 +38,11 @@ export type RunAIAgentParams = {
 
 export type StreamAIAgentOptions = {
   requiresToolApproval?: 'all' | 'explicit' | false
+  /**
+   * Invoked as soon as the run's AIRunStateService id exists, so transport
+   * wrappers (e.g. the AG-UI bridge) can stamp the real runId on RUN_STARTED.
+   */
+  onRunCreated?: (runId: string) => void
 }
 
 export class ToolApprovalRequired extends PikkuError {
@@ -219,6 +224,7 @@ export type ScopedChannel = AIStreamChannel & {
     toolCallId: string
     toolName: string
     args: unknown
+    reason?: string
     runId: string
   }>
 }
@@ -248,6 +254,7 @@ export function createScopedChannel(
           toolCallId: event.toolCallId,
           toolName: event.toolName,
           args: event.args,
+          ...(event.reason !== undefined ? { reason: event.reason } : {}),
           runId: (event as any).runId,
         })
         return
@@ -538,6 +545,7 @@ export async function buildToolDefs(
                 toolCallId: a.toolCallId,
                 toolName: a.toolName,
                 args: a.args,
+                reason: a.reason,
                 runId: a.runId,
               })),
             }

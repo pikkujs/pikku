@@ -275,6 +275,7 @@ export type AIStreamEvent =
       toolName: string
       args: unknown
       reason?: string
+      runId?: string
       agent?: string
       session?: string
     }

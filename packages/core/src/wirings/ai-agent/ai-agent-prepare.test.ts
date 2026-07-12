@@ -150,6 +150,7 @@ describe('ai-agent-prepare', () => {
       toolCallId: 'tc-1',
       toolName: 'tool-a',
       args: { x: 1 },
+      reason: 'Delete todo "x"',
       runId: 'run-1',
     } as AIStreamEvent)
     channel.send({ type: 'done' } as AIStreamEvent)
@@ -161,6 +162,7 @@ describe('ai-agent-prepare', () => {
         toolCallId: 'tc-1',
         toolName: 'tool-a',
         args: { x: 1 },
+        reason: 'Delete todo "x"',
         runId: 'run-1',
       },
     ])

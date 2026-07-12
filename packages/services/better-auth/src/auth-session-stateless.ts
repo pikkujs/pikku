@@ -53,7 +53,8 @@ export const betterAuthStatelessSession = (
       let secret: string | undefined
       try {
         secret = await (services as any).secrets?.getSecret(secretId)
-      } catch {
+      } catch (e: any) {
+        if (e?.message !== 'Requested secret not found') throw e
         services.logger?.error(
           `betterAuthStatelessSession: secret '${secretId}' not found — session middleware skipped. Ensure ${secretId} is configured.`
         )

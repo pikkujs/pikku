@@ -16,3 +16,15 @@ Feature: AI Agent with OAuth Credential Gating
       """
     And I open the "oauthApiAgent" playground
     Then I should not see "Connect your accounts" in the chat
+
+  Scenario: Mid-chat credential request connects via OAuth popup and resumes
+    Given I set credential "user-oauth" with value:
+      """
+      { "accessToken": "" }
+      """
+    And I open the "oauthApiAgent" playground
+    When I send "Get my profile and show me my access token verbatim"
+    Then I should see "Credential required" in the chat
+    When I connect the OAuth credential via the popup
+    And I wait for the response
+    Then I should see "mock-access-token" in the chat

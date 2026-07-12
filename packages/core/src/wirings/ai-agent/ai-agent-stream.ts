@@ -347,6 +347,7 @@ export function checkForApprovals(
           toolCallId: string
           toolName: string
           args: unknown
+          reason?: string
           runId: string
         }>
       }
@@ -357,7 +358,7 @@ export function checkForApprovals(
               sub.toolCallId,
               r.toolName,
               r.args,
-              undefined,
+              sub.reason,
               sub.toolName,
               sub.args,
               r.agentRunId
@@ -512,7 +513,7 @@ function handleApprovals(
         reason: err.reason,
         runId,
       }
-      channel.send(approvalEvent as any)
+      channel.send(approvalEvent)
     }
     channel.send({ type: 'done' })
     channel.close()
@@ -545,9 +546,22 @@ function handleCredentialRequests(
       pendingApprovals,
     })
 
-    // Don't send credential-request SSE events — the tool result with
-    // __credentialRequired was already streamed. The frontend detects it
-    // from the tool result and shows Connect/Ignore buttons.
+    // The __credentialRequired tool result is suppressed from the stream, so
+    // credential-request events (with the runId needed for /resume) are the
+    // client's signal to show Connect/Ignore buttons — mirroring how
+    // approval-request suspensions work.
+    for (const req of requests) {
+      channel.send({
+        type: 'credential-request',
+        toolCallId: req.toolCallId,
+        toolName: req.toolName,
+        args: req.args,
+        credentialName: req.credentialName,
+        credentialType: req.credentialType,
+        connectUrl: req.connectUrl,
+        runId,
+      })
+    }
     channel.send({ type: 'done' })
     channel.close()
   })()
@@ -654,6 +668,7 @@ export async function streamAIAgent(
     createdAt: new Date(),
     updatedAt: new Date(),
   })
+  options?.onRunCreated?.(runId)
 
   if (storage) {
     await storage.saveMessages(threadId, [userMessage])
@@ -705,6 +720,25 @@ export async function streamAIAgent(
         ).channel as AIStreamChannel)
       : persistingChannel
 
+  // Tool results carrying the __credentialRequired marker must never reach
+  // the client or persisted history: the run suspends with credential-request
+  // events instead (mirroring approvals), and leaving the tool call
+  // unresulted is what lets the client resume it after connecting.
+  const credentialFilteredChannel: AIStreamChannel = {
+    ...wrappedChannel,
+    send: (event: AIStreamEvent) => {
+      if (
+        event.type === 'tool-result' &&
+        event.result !== null &&
+        typeof event.result === 'object' &&
+        '__credentialRequired' in event.result
+      ) {
+        return
+      }
+      wrappedChannel.send(event)
+    },
+  }
+
   // In delegate mode (default), suppress parent's text from reaching the client
   // AFTER a sub-agent has been called. If the parent responds directly (no delegation),
   // its text goes through normally. Sub-agent text bypasses this path entirely
@@ -716,18 +750,18 @@ export async function streamAIAgent(
   }
   const outputChannel = isDelegateMode
     ? {
-        ...wrappedChannel,
+        ...credentialFilteredChannel,
         send: (event: AIStreamEvent) => {
           if (
             delegateState.delegated &&
             (event.type === 'text-delta' || event.type === 'reasoning-delta')
           )
             return
-          wrappedChannel.send(event)
+          credentialFilteredChannel.send(event)
         },
         delegateState,
       }
-    : wrappedChannel
+    : credentialFilteredChannel
 
   try {
     const loopResult = await runStreamStepLoop({
@@ -875,6 +909,16 @@ export async function resumeAIAgent(
         },
       ])
     }
+
+    channel.send({
+      type: 'tool-result',
+      toolCallId: input.toolCallId,
+      toolName:
+        pending.type === 'tool-call' || pending.type === 'credential-request'
+          ? pending.toolName
+          : pending.agentName,
+      result: denialResult,
+    })
 
     // Check remaining pending approvals
     const updatedRun = await aiRunState.getRun(run.runId)

@@ -1,6 +1,7 @@
 import { Given, When, Then } from '@cucumber/cucumber'
 import { expect } from '@playwright/test'
 import { config } from '../support/types.js'
+import type { AgentWorld } from '../support/world.js'
 
 async function rpc(name: string, data: Record<string, unknown> = {}) {
   const res = await fetch(`${config.apiUrl}/rpc/${name}`, {
@@ -338,5 +339,21 @@ Then(
       state.lastWorkflowResult.payload?.error ||
       JSON.stringify(state.lastWorkflowResult).includes(expectedError)
     expect(hasError).toBeTruthy()
+  }
+)
+
+When(
+  'I connect the OAuth credential via the popup',
+  async function (this: AgentWorld) {
+    const popupPromise = this.page.waitForEvent('popup')
+    await this.page
+      .getByRole('button', { name: /^Connect / })
+      .last()
+      .click()
+    const popup = await popupPromise
+    await popup
+      .getByText('success', { exact: false })
+      .waitFor({ state: 'visible', timeout: 15_000 })
+    await popup.close()
   }
 )

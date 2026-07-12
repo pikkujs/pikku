@@ -149,10 +149,14 @@ const ToolCallDisplay: FunctionComponent<{
 }> = ({ toolCallId, toolName, args, result, status, addResult }) => {
   const colors = useContext(ColorsContext)
   const hideToolCalls = useContext(HideToolCallsContext)
-  const { handleApproval } = usePikkuApproval()
+  const { handleApproval, pendingApprovals } = usePikkuApproval()
   const [expanded, setExpanded] = useState(false)
   const isApproval = status.type === 'requires-action'
-  const approvalReason = (args as any)?.__approvalReason
+  const approvalReason =
+    (args as any)?.__approvalReason ??
+    pendingApprovals.find(
+      (a) => a.toolCallId === toolCallId && a.type !== 'credential-request'
+    )?.reason
   const displayArgs = { ...args }
   delete (displayArgs as any).__approvalReason
   const [responded, setResponded] = useState<'approved' | 'denied' | null>(null)
@@ -214,10 +218,11 @@ const ToolCallDisplay: FunctionComponent<{
         </pre>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
-            onClick={() => {
+            onClick={async () => {
               setResponded('approved')
-              handleApproval(toolCallId, true)
-              addResult?.({ approved: true })
+              if (await handleApproval(toolCallId, true)) {
+                addResult?.({ approved: true })
+              }
             }}
             style={{
               padding: '4px 12px',
@@ -232,10 +237,11 @@ const ToolCallDisplay: FunctionComponent<{
             Approve
           </button>
           <button
-            onClick={() => {
+            onClick={async () => {
               setResponded('denied')
-              handleApproval(toolCallId, false)
-              addResult?.({ approved: false })
+              if (await handleApproval(toolCallId, false)) {
+                addResult?.({ approved: false })
+              }
             }}
             style={{
               padding: '4px 12px',
