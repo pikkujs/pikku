@@ -21,7 +21,7 @@ export const serializeFunctionTypes = (
     : 'string'
   const workflowImport =
     workflowTypesImport ||
-    `import type { TypedWorkflow } from '../workflow/pikku-workflow-types.gen.js'`
+    `import type { TypedWorkflow, TypedScenario } from '../workflow/pikku-workflow-types.gen.js'`
 
   return `/**
  * Core function, middleware, and permission types for all wirings
@@ -300,7 +300,7 @@ export type PikkuFunctionSessionless<
     Out,
     RequiredServices,
     Session,
-    PickRequired<PikkuWire<In, Out, false, Session, TypedPikkuRPC, null, any, TypedWorkflow>, RequiredWires>
+    PickRequired<PikkuWire<In, Out, false, Session, TypedPikkuRPC, null, any, TypedWorkflow, unknown, TypedScenario>, RequiredWires>
   >
 
 /**
@@ -321,7 +321,7 @@ export type PikkuFunction<
     Out,
     RequiredServices,
     Session,
-    PickRequired<PikkuWire<In, Out, true, Session, TypedPikkuRPC, null, any, TypedWorkflow>, RequiredWires>
+    PickRequired<PikkuWire<In, Out, true, Session, TypedPikkuRPC, null, any, TypedWorkflow, unknown, TypedScenario>, RequiredWires>
   >
 
 /**

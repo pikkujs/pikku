@@ -11,7 +11,7 @@ import {
   type PikkuWorkflowGraphConfig,
   type PikkuWorkflowGraphResult,
 } from '@pikku/core/workflow'
-import type { PikkuWorkflowWire, WorkflowStepOptions } from '@pikku/core/workflow'
+import type { PikkuWorkflowWire, PikkuScenarioWire, WorkflowStepOptions } from '@pikku/core/workflow'
 
 export { WorkflowCancelledException }
 import type { PikkuFunctionSessionless, PikkuFunctionConfig } from '${functionTypesImportPath}'
@@ -43,6 +43,8 @@ export interface TypedWorkflow extends PikkuWorkflowWire {
   ): Promise<T>
 }
 
+export type TypedScenario = TypedWorkflow & Omit<PikkuScenarioWire, keyof PikkuWorkflowWire>
+
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { InferSchemaOutput, PikkuPermission, PikkuMiddleware, NodeConfig, PikkuApprovalDescription } from '${functionTypesImportPath}'
 import { PikkuError } from '@pikku/core/errors'
@@ -52,6 +54,11 @@ export type PikkuFunctionWorkflow<
   In = unknown,
   Out = never
 > = PikkuFunctionSessionless<In, Out, 'workflow'>
+
+export type PikkuFunctionScenario<
+  In = unknown,
+  Out = never
+> = PikkuFunctionSessionless<In, Out, 'scenario' | 'actors'>
 
 export type PikkuWorkflowConfigWithSchema<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
@@ -113,9 +120,19 @@ export function pikkuWorkflowComplexFunc(func: any) {
   return typeof func === 'function' ? { func } : func
 }
 
+export type PikkuScenarioConfigWithSchema<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
+> = Omit<PikkuWorkflowConfigWithSchema<InputSchema, OutputSchema>, 'func'> & {
+  func: PikkuFunctionScenario<
+    InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown,
+    OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown
+  >
+}
+
 /**
  * A scenario: a complex workflow that drives the app the way users do.
- * Steps run as actors over the REAL transport — \`workflow.do(step, rpc,
+ * Steps run as actors over the REAL transport — \`scenario.do(step, rpc,
  * data, { actor: actors.yasser })\` — so flows double as e2e tests and
  * staged/production health checks (no state reset; scope what you create).
  */
@@ -123,13 +140,13 @@ export function pikkuScenario<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
 >(
-  config: PikkuWorkflowConfigWithSchema<InputSchema, OutputSchema>
-): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'workflow', PikkuFunctionWorkflow<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown>, InputSchema, OutputSchema>
+  config: PikkuScenarioConfigWithSchema<InputSchema, OutputSchema>
+): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'scenario' | 'actors', PikkuFunctionScenario<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown>, InputSchema, OutputSchema>
 export function pikkuScenario<In, Out = unknown>(
   func:
-    | PikkuFunctionWorkflow<In, Out>
-    | PikkuFunctionConfig<In, Out, 'workflow', PikkuFunctionWorkflow<In, Out>>
-): PikkuFunctionConfig<In, Out, 'workflow'>
+    | PikkuFunctionScenario<In, Out>
+    | PikkuFunctionConfig<In, Out, 'scenario' | 'actors', PikkuFunctionScenario<In, Out>>
+): PikkuFunctionConfig<In, Out, 'scenario' | 'actors'>
 export function pikkuScenario(func: any) {
   return typeof func === 'function' ? { func } : func
 }

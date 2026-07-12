@@ -110,4 +110,5 @@ export type {
   WorkflowStepMeta,
   WorkflowStepWire,
   PikkuWorkflowWire,
+  PikkuScenarioWire,
 } from './workflow.types.js'

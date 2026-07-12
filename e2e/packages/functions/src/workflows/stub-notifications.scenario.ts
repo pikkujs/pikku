@@ -3,7 +3,7 @@ import { pikkuScenario } from '#pikku/workflow/pikku-workflow-types.gen.js'
 export const notificationScenario = pikkuScenario<null, { notified: boolean }>({
   title: 'Notification stubs (scenario)',
   tags: ['scenario', 'stubs'],
-  func: async ({ logger }, _data, { workflow, actors }) => {
+  func: async ({ logger }, _data, { scenario, actors }) => {
     if (!actors?.shopper || !actors?.support) {
       throw new Error(
         'notificationScenario needs run actors (shopper + support) — run via `pikku scenario run <environment>`'
@@ -11,14 +11,14 @@ export const notificationScenario = pikkuScenario<null, { notified: boolean }>({
     }
     logger.debug('notification scenario starting')
 
-    await workflow.do(
+    await scenario.do(
       'shopper triggers a shipping notification',
       'notifyShopper',
       { orderId: 'A-1' },
       { actor: actors.shopper }
     )
 
-    await workflow.expectService(
+    await scenario.expectService(
       'the email stub recorded the send',
       'emailService.send',
       {
@@ -31,7 +31,7 @@ export const notificationScenario = pikkuScenario<null, { notified: boolean }>({
       }
     )
 
-    await workflow.expectError(
+    await scenario.expectError(
       "the support recipient's relay is fault-injected",
       'notifyShopper',
       { orderId: 'A-2', recipient: 'support@actors.local' },

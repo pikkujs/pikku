@@ -6,7 +6,7 @@ export const orderSupportScenario = pikkuScenario<
 >({
   title: 'Order support (scenario)',
   tags: ['scenario'],
-  func: async ({ logger }, data, { workflow, actors }) => {
+  func: async ({ logger }, data, { scenario, actors }) => {
     if (!actors?.shopper || !actors?.support) {
       throw new Error(
         'orderSupportScenario needs run actors (shopper + support) — run via `pikku scenario run <environment>`'
@@ -16,14 +16,14 @@ export const orderSupportScenario = pikkuScenario<
 
     const value = data?.value ?? 21
 
-    const doubled = await workflow.do(
+    const doubled = await scenario.do(
       'shopper doubles their order',
       'doubleValue',
       { value },
       { actor: actors.shopper }
     )
 
-    const settled = await workflow.expectEventually(
+    const settled = await scenario.expectEventually(
       'support sees the greeting settle',
       'formatMessage',
       { greeting: 'Hello', name: 'Support' },
