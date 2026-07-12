@@ -1,3 +1,12 @@
+## 0.12.81
+
+### Patch Changes
+
+- 854c342: Fix workspace addon integration: exclude nested pikku projects from inspection (prevents "More than one CoreUserSession/CoreConfig found" when a workspace addon is linked), widen the generated addon service `call()` data param to `unknown` so schema-less function inputs compile, and add `@pikku/inspector` + `@standard-schema/spec` to the generated addon devDependencies so its `.pikku` gen files typecheck.
+- Updated dependencies [854c342]
+  - @pikku/inspector@0.12.42
+  - @pikku/openapi-parser@0.12.15
+
 ## 0.12.80
 
 ### Patch Changes

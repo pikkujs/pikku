@@ -20,7 +20,7 @@
   "devDependencies": {
     "@aws-sdk/client-sqs": "^3.1000.0",
     "@modelcontextprotocol/sdk": "1.27.1",
-    "@pikku/cli": "^0.12.80",
+    "@pikku/cli": "^0.12.81",
     "@pikku/cloudflare": "workspace:*",
     "@pikku/deploy-cloudflare": "workspace:*",
     "@pikku/deploy-serverless": "workspace:*",
