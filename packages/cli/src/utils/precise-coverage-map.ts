@@ -140,7 +140,12 @@ export function mapLineHitsToReport(
   functionsMeta: Record<string, CoverageFunctionMeta>
 ): FunctionCoverageReport {
   const functions: FunctionCoverageEntry[] = Object.values(functionsMeta)
-    .filter((m) => m.sourceFile && !m.sourceFile.endsWith('.gen.ts'))
+    .filter(
+      (m) =>
+        m.sourceFile &&
+        !m.sourceFile.endsWith('.gen.ts') &&
+        m.funcWrapper !== 'pikkuScenario'
+    )
     .map((m) => {
       const hits = lineHits.get(m.bodySourceFile ?? m.sourceFile)
       const covered: number[] = []

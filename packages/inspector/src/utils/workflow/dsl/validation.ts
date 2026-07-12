@@ -1,4 +1,5 @@
 import * as ts from 'typescript'
+import { isWorkflowWireIdentifier } from './patterns.js'
 
 /**
  * Validation rules for DSL workflows
@@ -78,8 +79,7 @@ export function validateNoDisallowedPatterns(
         const propAccess = node.expression
         if (
           propAccess.name.text === 'do' &&
-          ts.isIdentifier(propAccess.expression) &&
-          propAccess.expression.text === 'workflow'
+          isWorkflowWireIdentifier(propAccess.expression)
         ) {
           const secondArg = node.arguments[1]
           if (
@@ -154,8 +154,7 @@ export function validateAwaitedCalls(node: ts.Node): ValidationError[] {
         const propAccess = node.expression
         if (
           (propAccess.name.text === 'do' || propAccess.name.text === 'sleep') &&
-          ts.isIdentifier(propAccess.expression) &&
-          propAccess.expression.text === 'workflow'
+          isWorkflowWireIdentifier(propAccess.expression)
         ) {
           if (!parentIsAwait && !insidePromiseAll) {
             errors.push({

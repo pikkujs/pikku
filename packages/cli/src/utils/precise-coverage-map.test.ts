@@ -84,6 +84,25 @@ describe('mapPreciseCoverage', () => {
     assert.equal(report.summary.uncovered, 1)
   })
 
+  test('scenario functions are excluded from the report and summary', async () => {
+    const report = await mapPreciseCoverage(scripts, async () => source, {
+      ...meta,
+      myScenario: {
+        name: 'myScenario',
+        sourceFile: '/proj/src/journey.scenario.ts',
+        exportedName: 'myScenario',
+        funcWrapper: 'pikkuScenario',
+        bodyStart: 2,
+        bodyEnd: 2,
+      },
+    } as any)
+    assert.equal(
+      report.functions.find((f) => f.name === 'myScenario'),
+      undefined
+    )
+    assert.equal(report.summary.total, 2)
+  })
+
   test('functions whose source never appears in coverage are unknown', async () => {
     const report = await mapPreciseCoverage(scripts, async () => source, {
       ...meta,
