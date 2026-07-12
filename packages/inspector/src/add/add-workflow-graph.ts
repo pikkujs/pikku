@@ -12,6 +12,11 @@ function extractAstValue(
   refParamName: string,
   templateParamName: string | undefined
 ): unknown {
+  // `'GET' as const` / parenthesised values wrap the real initializer — see
+  // through them or the whole property is silently dropped from the meta.
+  while (ts.isAsExpression(expr) || ts.isParenthesizedExpression(expr)) {
+    expr = expr.expression
+  }
   if (ts.isStringLiteral(expr)) {
     return expr.text
   }
@@ -146,10 +151,14 @@ function extractInputMapping(
       ? node.parameters[0].name.text
       : 'ref'
 
+  // The canonical form imports `template` from '@pikku/core/workflow' and calls
+  // it inside a single-param `(ref) => (...)` arrow; the older form passes it as
+  // a second arrow parameter. Support both — default to the imported name so a
+  // `template(...)` value is never dropped just because it isn't a 2nd param.
   const templateParamName =
     node.parameters.length > 1 && ts.isIdentifier(node.parameters[1].name)
       ? node.parameters[1].name.text
-      : undefined
+      : 'template'
 
   const input: Record<string, unknown | DataRef> = {}
 
