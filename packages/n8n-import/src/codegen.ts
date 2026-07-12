@@ -360,8 +360,12 @@ function emitNativeInput(node: ParsedNode, ctx: ExprContext): string | null {
       }
       if (rlValue === undefined) rlValue = fspec.default
       if (rlValue === undefined) continue
-      const rendered = emitValue(rlValue, ctx)
+      if (fspec.values && typeof rlValue === 'string')
+        rlValue = fspec.values[rlValue] ?? rlValue
+      let rendered = emitValue(rlValue, ctx)
       if (rendered === null) continue
+      if (fspec.asConst && /^".*"$/.test(rendered))
+        rendered = `${rendered} as const`
       lines.push(`      ${field}: ${rendered},`)
       continue
     }
@@ -379,6 +383,7 @@ function emitNativeInput(node: ParsedNode, ctx: ExprContext): string | null {
     }
     if (raw === undefined) raw = fspec.default
     if (raw === undefined) continue
+    if (fspec.values && typeof raw === 'string') raw = fspec.values[raw] ?? raw
     let rendered = emitValue(raw, ctx)
     if (rendered === null) continue
     if (fspec.asConst && /^".*"$/.test(rendered))

@@ -279,3 +279,36 @@ test('fixedCollection transforms (sort/renameKeys/aggregate/summarize) wire to g
     !files['collectionTransforms/functions/aggregate__roll.function.ts']
   )
 })
+
+test('dateTime v1 + v2 and crypto v1 normalize onto the single graph fn; sign stays a stub', () => {
+  const parsed = parseN8n(loadFixture('datetime-crypto-versions.json'))
+  assert.equal(parsed.shape, 'pure-graph')
+
+  const { files } = generateWorkflowFromN8n(parsed)
+  const graph = files['datetimeCryptoVersions/datetimeCryptoVersions.graph.ts']
+  assert.ok(graph, 'graph file emitted')
+
+  // both dateTime versions collapse onto graph:dateTime — no versioned addon fn
+  assert.match(graph, /addDays: "graph:dateTime"/)
+  assert.match(graph, /formatV1: "graph:dateTime"/)
+  // v2 addToDate → add, value sourced from `magnitude`, amount/unit mapped
+  assert.match(graph, /operation: "add" as const/)
+  assert.match(graph, /value: ref\("trigger", "ts"\)/)
+  assert.match(graph, /amount: 365/)
+  assert.match(graph, /unit: "days" as const/)
+  // v1 action:format → format, format string from `toFormat`
+  assert.match(graph, /operation: "format" as const/)
+  assert.match(graph, /format: "YYYY-MM-DD"/)
+
+  // crypto v1 hash → graph:crypto with algorithm lowercased (SHA256 → sha256)
+  assert.match(graph, /hash: "graph:crypto"/)
+  assert.match(graph, /operation: "hash" as const/)
+  assert.match(graph, /algorithm: "sha256" as const/)
+  assert.match(graph, /encoding: "hex" as const/)
+
+  // RSA sign has no addon equivalent → stays a stub, not a wrong mapping
+  assert.match(graph, /signIt: "crypto__signIt"/)
+  assert.ok(
+    files['datetimeCryptoVersions/functions/crypto__signIt.function.ts']
+  )
+})

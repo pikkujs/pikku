@@ -51,6 +51,13 @@ export interface NativeFieldSpec {
     /** With `pick`, keep only the first row's scalar. */
     first?: boolean
   }
+  /**
+   * Remap the resolved string value through this table before emitting — for
+   * n8n→addon enum translation (e.g. n8n dateTime `addToDate` → addon `add`,
+   * crypto `SHA256` → `sha256`). A value absent from the table passes through
+   * unchanged. Applies to `from` / `fromRL` scalar sources.
+   */
+  values?: Record<string, string>
   /** Fallback when none of the source keys are present. */
   default?: unknown
   /** Preserve a string literal's enum type (`"x" as const`) rather than widen. */
@@ -208,6 +215,86 @@ const NATIVE_NODES: Record<string, NativeNodeSpec> = {
           },
         },
       },
+    },
+  },
+  datetime: {
+    rpc: 'graph:dateTime',
+    // Both n8n versions map onto the one graph:dateTime — v1 (`action`
+    // format/calculate + `operation` add/subtract) and v2 (`operation`
+    // addToDate/subtractFromDate/formatDate/getTimeBetweenDates) — via
+    // first-present-key sourcing + an operation value-map. roundDate /
+    // extractDate have no clean addon op → stay stubs.
+    applies: (p) => {
+      const op = (p.operation ?? p.action) as string | undefined
+      return (
+        op === undefined ||
+        [
+          'add',
+          'subtract',
+          'calculate',
+          'format',
+          'addToDate',
+          'subtractFromDate',
+          'formatDate',
+          'getCurrentDate',
+          'getTimeBetweenDates',
+        ].includes(op)
+      )
+    },
+    fields: {
+      operation: {
+        from: ['operation', 'action'],
+        values: {
+          add: 'add',
+          subtract: 'subtract',
+          addToDate: 'add',
+          subtractFromDate: 'subtract',
+          format: 'format',
+          formatDate: 'format',
+          getCurrentDate: 'now',
+          getTimeBetweenDates: 'diff',
+        },
+        default: 'now',
+        asConst: true,
+      },
+      value: { from: ['value', 'magnitude', 'date', 'startDate'] },
+      amount: { from: 'duration' },
+      // n8n's diff `units` is a multi-select array (wrong shape for the addon's
+      // single-enum `unit`); only the add/subtract scalar `timeUnit` maps.
+      unit: { from: 'timeUnit', asConst: true },
+      format: { from: ['toFormat', 'format'] },
+      compareWith: { from: 'endDate' },
+    },
+  },
+  crypto: {
+    rpc: 'graph:crypto',
+    // n8n Crypto is v1-only in practice. `sign` (RSA) and binary-file input
+    // have no addon equivalent → stay stubs.
+    applies: (p) =>
+      p.binaryData !== true &&
+      (p.action === undefined ||
+        ['generate', 'hash', 'hmac'].includes(p.action as string)),
+    fields: {
+      operation: {
+        from: 'action',
+        values: { generate: 'uuid', hash: 'hash', hmac: 'hmac' },
+        default: 'hash',
+        asConst: true,
+      },
+      data: { from: 'value' },
+      algorithm: {
+        from: 'type',
+        values: {
+          MD5: 'md5',
+          SHA1: 'sha1',
+          SHA256: 'sha256',
+          SHA384: 'sha384',
+          SHA512: 'sha512',
+        },
+        asConst: true,
+      },
+      key: { from: 'secret' },
+      encoding: { from: 'encoding', asConst: true },
     },
   },
 }
