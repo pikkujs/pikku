@@ -1397,10 +1397,13 @@ function generateServiceFile(
   lines.push('  async call<T>(')
   lines.push("    method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',")
   lines.push('    path: string,')
-  lines.push('    data?: Record<string, unknown>')
+  lines.push('    data?: unknown')
   lines.push('  ): Promise<T> {')
+  lines.push(
+    '    const input = data as Record<string, unknown> | undefined'
+  )
   if (flags.camelCase) {
-    lines.push('    const rawData = data ? _toSnakeCase(data) : data')
+    lines.push('    const rawData = input ? _toSnakeCase(input) : input')
   }
   lines.push('    const route = ROUTES[`${method} ${path}`]')
   lines.push('    let endpoint = path')
@@ -1416,7 +1419,7 @@ function generateServiceFile(
   lines.push('    }')
   lines.push('')
   // When camelCase flag is on, use rawData (snake_case converted) for route matching
-  const dataVar = flags.camelCase ? 'rawData' : 'data'
+  const dataVar = flags.camelCase ? 'rawData' : 'input'
   lines.push(`    if (${dataVar} && route) {`)
   lines.push('      // Interpolate path params')
   lines.push('      for (const param of route.path) {')
