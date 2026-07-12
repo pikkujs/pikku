@@ -233,36 +233,140 @@ const addonBuilt = (dir: string) =>
   )
 
 function parseArgs(argv: string[]) {
-  const a: { dirs: string[]; limit: number; tsc: boolean } = {
+  const a: { dirs: string[]; limit: number; tsc: boolean; batch: number } = {
     dirs: [],
     limit: Infinity,
     tsc: false,
+    batch: 120,
   }
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--dir') a.dirs.push(argv[++i]!)
     else if (argv[i] === '--limit') a.limit = Number(argv[++i])
     else if (argv[i] === '--tsc') a.tsc = true
+    else if (argv[i] === '--batch') a.batch = Number(argv[++i])
   }
   if (!a.dirs.length) a.dirs = ['.corpus', '.corpus-ai']
   return a
 }
 
+/** Built addon packages a generated workflow's graph needs, or null if any is unbuilt. */
+function requiredPackages(gen: Record<string, string>): string[] | null {
+  const pkgs: string[] = []
+  for (const ns of requiredNamespaces(gen)) {
+    const pkg = `@pikku/addon-${ns}`
+    const dir = addonPackageDirs().get(pkg)
+    if (dir && addonBuilt(dir)) pkgs.push(pkg)
+    else return null
+  }
+  return pkgs
+}
+
+interface IncludedItem {
+  uid: string
+  kind: 'graph' | 'agent'
+  files: Record<string, string>
+  pkgs: string[]
+}
+
+/**
+ * Run one batch of workflows through `pikku all --tsc` in its own project so the
+ * generated rpc/workflow map — and the addon type-graphs it pulls in — stays
+ * small enough to type-check at a sane heap. The whole corpus in one project
+ * OOMs; per-batch it doesn't. Returns each included uid's meta presence + which
+ * uids produced tsc errors.
+ */
+function runBatch(
+  items: IncludedItem[],
+  batchDir: string,
+  tsc: boolean
+): {
+  wfPresent: Set<string>
+  agentPresent: Set<string>
+  erroredUids: Set<string>
+  exit: number | null
+} {
+  rmSync(batchDir, { recursive: true, force: true })
+  mkdirSync(batchDir, { recursive: true })
+  cpSync(seedDir, batchDir, { recursive: true })
+
+  const pkgs = new Set<string>()
+  for (const item of items) {
+    for (const p of item.pkgs) pkgs.add(p)
+    for (const [rel, content] of Object.entries(item.files)) {
+      if (rel.endsWith('.addons.gen.ts') || rel.endsWith('.json')) continue
+      const target = join(batchDir, 'src', rel)
+      mkdirSync(dirname(target), { recursive: true })
+      writeFileSync(target, content)
+    }
+  }
+
+  if (pkgs.size) {
+    const blocks = [...pkgs].map(
+      (pkg) =>
+        `wireAddon({ name: '${pkg.slice('@pikku/addon-'.length)}', package: '${pkg}' })`
+    )
+    writeFileSync(
+      join(batchDir, 'src', '_addons.gen.ts'),
+      `import { wireAddon } from '@pikku/core/rpc'\n\n${blocks.join('\n')}\n`
+    )
+  }
+  const scope = join(batchDir, 'node_modules', '@pikku')
+  mkdirSync(scope, { recursive: true })
+  for (const pkg of pkgs) {
+    const dest = join(scope, pkg.slice('@pikku/'.length))
+    if (!existsSync(dest))
+      symlinkSync(addonPackageDirs().get(pkg)!, dest, 'dir')
+  }
+
+  const cmd = ['all', ...(tsc ? ['--tsc'] : []), '-c', 'pikku.config.json']
+  const res = spawnSync(process.execPath, [PIKKU_BIN, ...cmd], {
+    cwd: batchDir,
+    encoding: 'utf8',
+    maxBuffer: 512 * 1024 * 1024,
+    // Built addons are relied on via their prebuilt meta — but a batch's own
+    // graphs + the addon maps they reference still need headroom. 4GB per batch
+    // is plenty and keeps the whole run tractable, unlike one mega-project.
+    env: {
+      ...process.env,
+      NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --max-old-space-size=4096`,
+    },
+  })
+  const out = `${res.stdout ?? ''}${res.stderr ?? ''}`
+
+  const erroredUids = new Set(
+    [...out.matchAll(/src\/(w\d{4})_/g)].map((m) => m[1]!)
+  )
+  const wfMetaDir = join(batchDir, '.pikku', 'workflow', 'meta')
+  const wfMetaBlob = (existsSync(wfMetaDir) ? readdirSync(wfMetaDir) : []).join(
+    '\n'
+  )
+  const agentMetaFile = join(
+    batchDir,
+    '.pikku',
+    'agent',
+    'pikku-agent-wirings-meta.gen.json'
+  )
+  const agentBlob = existsSync(agentMetaFile)
+    ? readFileSync(agentMetaFile, 'utf8')
+    : ''
+
+  const wfPresent = new Set<string>()
+  const agentPresent = new Set<string>()
+  for (const item of items) {
+    const re = new RegExp(`(^|[^0-9])${item.uid}([^0-9]|$)`)
+    if (item.kind === 'graph' && re.test(wfMetaBlob)) wfPresent.add(item.uid)
+    if (item.kind === 'agent' && re.test(agentBlob)) agentPresent.add(item.uid)
+  }
+  return { wfPresent, agentPresent, erroredUids, exit: res.status }
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2))
-  const projectDir = join(packageDir, '.harness-tmp', 'wire-all')
-  rmSync(projectDir, { recursive: true, force: true })
-  mkdirSync(projectDir, { recursive: true })
-  cpSync(seedDir, projectDir, { recursive: true })
 
   let scanned = 0,
     wireable = 0,
-    pureGraph = 0,
-    agentIncluded = 0,
     codegenErr = 0,
-    skipped = 0,
-    included = 0
-  const requiredPkgs = new Set<string>()
-  const includedSlugs: string[] = []
+    skipped = 0
   const includedUids: string[] = []
   const includedAgentUids: string[] = []
 
@@ -316,34 +420,14 @@ function main() {
 
   // Pass B — generate with cross-workflow resolution; a workflow that references
   // a missing / runtime-dynamic sub-workflow is skipped (diagnostic), not stubbed.
-  // Collect the built addons a workflow's graph needs; returns false (and adds
-  // nothing) if any required addon isn't built, so the caller can skip it.
-  const collectAddons = (gen: Record<string, string>): boolean => {
-    const staged: string[] = []
-    for (const ns of requiredNamespaces(gen)) {
-      const pkg = `@pikku/addon-${ns}`
-      const dir = addonPackageDirs().get(pkg)
-      if (dir && addonBuilt(dir)) staged.push(pkg)
-      else return false
-    }
-    for (const pkg of staged) requiredPkgs.add(pkg)
-    return true
-  }
-  const writeGen = (gen: Record<string, string>) => {
-    for (const [rel, content] of Object.entries(gen)) {
-      // addons wired globally below; manifest/json aren't compiled
-      if (rel.endsWith('.addons.gen.ts') || rel.endsWith('.json')) continue
-      const target = join(projectDir, 'src', rel)
-      mkdirSync(dirname(target), { recursive: true })
-      writeFileSync(target, content)
-    }
-  }
-
+  // Nothing is written yet: items are collected, then run in batches so no single
+  // tsc project grows large enough to OOM.
+  const items: IncludedItem[] = []
   for (const { p, uid, kind } of candidates) {
-    if (included >= args.limit) break
+    if (items.length >= args.limit) break
     let gen: Record<string, string>
     try {
-      // stub rpcs are prefixed per-workflow so several imports share one project
+      // stub rpcs are prefixed per-workflow so a batch can share one project
       // without a DUPLICATE_FUNCTION_NAME collision
       const r = generateWorkflowFromN8n(p, {
         resolveWorkflowRef,
@@ -360,119 +444,63 @@ function main() {
     }
 
     if (kind === 'graph') {
-      // must have emitted a graph, and be a pure mapped graph (no generated
-      // function files — no stubs / input-prep / code)
+      // must have emitted a graph, and be a pure mapped graph (no stubs)
       if (!Object.keys(gen).some((k) => k.endsWith('.graph.ts'))) continue
       if (Object.keys(gen).some((k) => k.includes('/functions/'))) continue
-      if (!collectAddons(gen)) continue
-      pureGraph++
-      writeGen(gen)
-      includedSlugs.push(p.slug)
-      includedUids.push(uid)
-      included++
-    } else {
-      // agent workflow: must have emitted an agent; tool stubs are allowed, only
-      // its graph's mapped-native addons must be built
-      if (!Object.keys(gen).some((k) => k.endsWith('.agent.ts'))) continue
-      if (!collectAddons(gen)) continue
-      agentIncluded++
-      writeGen(gen)
-      includedAgentUids.push(uid)
-      included++
-    }
+    } else if (!Object.keys(gen).some((k) => k.endsWith('.agent.ts'))) continue
+    const pkgs = requiredPackages(gen)
+    if (pkgs === null) continue // a required addon isn't built — skip
+    items.push({ uid, kind, files: gen, pkgs })
+    if (kind === 'graph') includedUids.push(uid)
+    else includedAgentUids.push(uid)
   }
 
-  // one global addons file: one minimal wireAddon per required package
-  if (requiredPkgs.size) {
-    const blocks = [...requiredPkgs].map(
-      (pkg) =>
-        `wireAddon({ name: '${pkg.slice('@pikku/addon-'.length)}', package: '${pkg}' })`
+  const pureGraph = includedUids.length
+  const agentIncluded = includedAgentUids.length
+  const allPkgs = new Set(items.flatMap((i) => i.pkgs))
+  console.log(
+    `scanned=${scanned} fullyWireable=${wireable} pureGraph=${pureGraph} agents=${agentIncluded} INCLUDED=${items.length} codegenErr=${codegenErr} skipped(diagnostic)=${skipped}`
+  )
+  console.log(`required addons=${allPkgs.size}`)
+
+  // Run in batches so each tsc project stays small (see runBatch).
+  const nBatches = Math.max(1, Math.ceil(items.length / args.batch))
+  console.log(
+    `\nRunning pikku all${args.tsc ? ' --tsc' : ''} in ${nBatches} batch(es) of up to ${args.batch}...\n`
+  )
+  const wfPresent = new Set<string>()
+  const agentPresent = new Set<string>()
+  const erroredUids = new Set<string>()
+  for (let b = 0; b < nBatches; b++) {
+    const batch = items.slice(b * args.batch, (b + 1) * args.batch)
+    const batchDir = join(packageDir, '.harness-tmp', `batch-${b}`)
+    const r = runBatch(batch, batchDir, args.tsc)
+    r.wfPresent.forEach((u) => wfPresent.add(u))
+    r.agentPresent.forEach((u) => agentPresent.add(u))
+    r.erroredUids.forEach((u) => erroredUids.add(u))
+    console.log(
+      `  batch ${b + 1}/${nBatches}: ${batch.length} wf, exit=${r.exit}, errored=${[...r.erroredUids].length}`
     )
-    const body = `import { wireAddon } from '@pikku/core/rpc'\n\n${blocks.join('\n')}\n`
-    writeFileSync(join(projectDir, 'src', '_addons.gen.ts'), body)
-  }
-  // link built addons
-  const scope = join(projectDir, 'node_modules', '@pikku')
-  mkdirSync(scope, { recursive: true })
-  for (const pkg of requiredPkgs) {
-    const dest = join(scope, pkg.slice('@pikku/'.length))
-    if (!existsSync(dest))
-      symlinkSync(addonPackageDirs().get(pkg)!, dest, 'dir')
   }
 
-  console.log(
-    `scanned=${scanned} fullyWireable=${wireable} pureGraph=${pureGraph} agents=${agentIncluded} INCLUDED=${included} codegenErr=${codegenErr} skipped(diagnostic)=${skipped}`
-  )
-  console.log(`required addons=${requiredPkgs.size}`)
-  console.log(
-    `\nRunning pikku all${args.tsc ? ' --tsc' : ''} over ${included} workflows...\n`
-  )
-
-  const cmd = ['all', ...(args.tsc ? ['--tsc'] : []), '-c', 'pikku.config.json']
-  const t0 = Date.now ? 0 : 0
-  const res = spawnSync(process.execPath, [PIKKU_BIN, ...cmd], {
-    cwd: projectDir,
-    encoding: 'utf8',
-    maxBuffer: 512 * 1024 * 1024,
-  })
-  const out = `${res.stdout ?? ''}${res.stderr ?? ''}`
-  console.log(out.slice(-3000))
-  console.log(`\npikku all exit: ${res.status}`)
-
-  // Agents and pure graphs share one tsc run, so attribute each errored file to
-  // its workflow uid to isolate the agent signal from unrelated graph errors.
-  const erroredUids = new Set(
-    [...out.matchAll(/src\/(w\d{4})_/g)].map((m) => m[1]!)
-  )
   const agentUidSet = new Set(includedAgentUids)
   const agentErrored = [...erroredUids].filter((u) => agentUidSet.has(u))
   const graphErrored = [...erroredUids].filter((u) => !agentUidSet.has(u))
-  if (args.tsc)
-    console.log(
-      `tsc errors by bucket: agent files=${agentErrored.length} workflow(s), graph files=${graphErrored.length} workflow(s)`
-    )
+  const graphClean = pureGraph - graphErrored.length
+  const agentClean = agentIncluded - agentErrored.length
 
-  // check the generated workflow meta for every included workflow (keyed by uid prefix)
-  const wfMetaDir = join(projectDir, '.pikku', 'workflow', 'meta')
-  const wfMetaFiles = existsSync(wfMetaDir) ? readdirSync(wfMetaDir) : []
-  const wfMetaBlob = wfMetaFiles.join('\n')
-  let present = 0
-  const missing: string[] = []
-  for (const uid of includedUids) {
-    if (new RegExp(`(^|[^0-9])${uid}([^0-9]|$)`).test(wfMetaBlob)) present++
-    else missing.push(uid)
-  }
   console.log(
-    `\nWorkflow meta check: ${present}/${includedUids.length} pure graphs present in .pikku/workflow/meta (${wfMetaFiles.length} meta files)`
+    `\nWorkflow meta check: ${wfPresent.size}/${includedUids.length} pure graphs present in workflow meta`
   )
-  if (missing.length)
-    console.log(
-      `MISSING graphs (${missing.length}): ${missing.slice(0, 30).join(', ')}`
-    )
-
-  // agents are collected into one wirings-meta file, not a per-item dir
-  const agentMetaFile = join(
-    projectDir,
-    '.pikku',
-    'agent',
-    'pikku-agent-wirings-meta.gen.json'
-  )
-  const agentBlob = existsSync(agentMetaFile)
-    ? readFileSync(agentMetaFile, 'utf8')
-    : ''
-  let agentPresent = 0
-  const agentMissing: string[] = []
-  for (const uid of includedAgentUids) {
-    if (new RegExp(`(^|[^0-9])${uid}([^0-9]|$)`).test(agentBlob)) agentPresent++
-    else agentMissing.push(uid)
-  }
   console.log(
-    `Agent meta check: ${agentPresent}/${includedAgentUids.length} agents present in .pikku/agent/pikku-agent-wirings-meta.gen.json`
+    `Agent meta check: ${agentPresent.size}/${includedAgentUids.length} agents present in agent meta`
   )
-  if (agentMissing.length)
+  if (args.tsc) {
+    const pct = (n: number, d: number) =>
+      d ? ((100 * n) / d).toFixed(1) : '100.0'
     console.log(
-      `MISSING agents (${agentMissing.length}): ${agentMissing.slice(0, 30).join(', ')}`
+      `\ntsc CLEAN: graphs ${graphClean}/${pureGraph} (${pct(graphClean, pureGraph)}%), agents ${agentClean}/${agentIncluded} (${pct(agentClean, agentIncluded)}%)`
     )
-  void includedSlugs
+  }
 }
 main()
