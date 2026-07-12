@@ -9,6 +9,7 @@ import type {
 } from './types.js'
 import {
   sanitizeIdentifier,
+  sanitizeDisplayName,
   typeShort,
   integrationRpcName,
   codeRpcName,
@@ -156,7 +157,7 @@ export function parseN8n(raw: unknown): ParsedWorkflow {
     throw new Error('Invalid n8n workflow: missing `nodes` array')
   }
 
-  const name = wf.name || 'imported-workflow'
+  const name = sanitizeDisplayName(wf.name || 'imported-workflow')
   const slug = sanitizeIdentifier(name)
   const toolNames = collectAgentToolNames(wf)
 

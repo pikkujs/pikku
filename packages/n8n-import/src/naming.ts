@@ -60,6 +60,24 @@ export function sanitizeIdentifier(input: string): string {
   return id
 }
 
+/**
+ * Make a human-readable name safe to emit as a JS string literal / object key.
+ * A workflow's `name` becomes a key in Pikku's generated workflow map (emitted
+ * single-quoted), so quote characters (`'` `"` `` ` ``), backslashes, and
+ * control characters would break the generated code — strip them. Unicode
+ * (accents, emoji) is valid in a string and kept; whitespace is collapsed.
+ */
+export function sanitizeDisplayName(input: string): string {
+  return (
+    input
+      .replace(/['"`\\]/g, '')
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\u0000-\u001f]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  )
+}
+
 /** Last dotted segment of an n8n type, e.g. "n8n-nodes-base.gmailTool" -> "gmailTool". */
 export function typeShort(type: string): string {
   const seg = type.split('.').pop() ?? type

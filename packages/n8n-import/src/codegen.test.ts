@@ -245,6 +245,75 @@ test('agent + tool workflow → agent-only, no graph', () => {
   assert.equal(manifest[0]!.agentName, 'supportAssistant')
 })
 
+test('a reference to a named trigger node lowers to ref("trigger", …), not the trigger nodeId', () => {
+  const parsed = parseN8n({
+    name: 'Telegram Echo',
+    nodes: [
+      {
+        id: 't',
+        name: 'Telegram Trigger',
+        type: 'n8n-nodes-base.telegramTrigger',
+        parameters: {},
+      },
+      {
+        id: 's',
+        name: 'Set',
+        type: 'n8n-nodes-base.set',
+        parameters: {
+          assignments: {
+            assignments: [
+              {
+                name: 'chatId',
+                value: '={{ $node["Telegram Trigger"].json.message.chat.id }}',
+              },
+            ],
+          },
+        },
+      },
+    ],
+    connections: {
+      'Telegram Trigger': {
+        main: [[{ node: 'Set', type: 'main', index: 0 }]],
+      },
+    },
+  })
+
+  const { files } = generateWorkflowFromN8n(parsed)
+  const graph = Object.values(files).find((f) =>
+    f.includes('pikkuWorkflowGraph')
+  )
+  assert.ok(graph)
+  // the trigger is not a graph node → its data is the implicit `trigger` input
+  assert.match(graph, /ref\("trigger", "message\.chat\.id"\)/)
+  assert.doesNotMatch(graph, /ref\("telegramTrigger"/)
+})
+
+test('workflow name is sanitized to a JS-string-safe value (apostrophes stripped)', () => {
+  const parsed = parseN8n({
+    name: 'd\'Auto-Post 💥 aux "réseaux"',
+    nodes: [
+      {
+        id: 'n1',
+        name: 'No Op',
+        type: 'n8n-nodes-base.noOp',
+        parameters: {},
+      },
+    ],
+    connections: {},
+  })
+  // apostrophe / double-quote / backtick / backslash stripped; unicode kept
+  assert.doesNotMatch(parsed.name, /['"`\\]/)
+  assert.match(parsed.name, /dAuto-Post 💥 aux réseaux/)
+
+  const { files } = generateWorkflowFromN8n(parsed)
+  const graph = Object.values(files).find((f) =>
+    f.includes('pikkuWorkflowGraph')
+  )
+  assert.ok(graph)
+  // the emitted name is a valid single- and double-quoted string (no stray quote)
+  assert.doesNotMatch(graph, /name: "[^"]*'[^"]*"/)
+})
+
 test('rpcPrefix namespaces stub rpcs (tool refs + stub files) but not workflow/agent names', () => {
   const parsed = parseN8n(loadFixture('agent-with-tool.json'))
   const { files } = generateWorkflowFromN8n(parsed, { rpcPrefix: 'w0007_' })

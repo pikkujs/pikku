@@ -552,6 +552,10 @@ function emitGraphFile(
     return `    ${n.nodeId}: ${q(value)},`
   })
 
+  const triggerNodeIds = new Set(
+    parsed.nodes.filter((n) => n.role === 'trigger').map((n) => n.nodeId)
+  )
+
   let anyTemplate = false
   const configBlocks: string[] = []
   for (const node of topo.graphNodes) {
@@ -560,6 +564,7 @@ function emitGraphFile(
       predecessorNodeId: t.predecessorNodeId,
       predecessorNodeIds: t.predecessorNodeIds,
       nameToNodeId: topo.nameToNodeId,
+      triggerNodeIds,
     }
     const wantsInput =
       node.role === 'integration' ||

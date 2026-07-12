@@ -28,6 +28,12 @@ export interface ExprContext {
   predecessorNodeIds?: string[]
   /** Map from original n8n node NAME to sanitized graph nodeId. */
   nameToNodeId: Record<string, string>
+  /**
+   * Sanitized nodeIds of trigger nodes. A trigger is not a graph node — its data
+   * is the graph's implicit `trigger` input — so any reference to one lowers to
+   * `ref('trigger', …)`, the only form the generated ref map accepts for it.
+   */
+  triggerNodeIds?: Set<string>
 }
 
 const DOT_PATH = String.raw`(?:\.[A-Za-z_$][\w$]*|\[['"][^'"\]]+['"]\])*`
@@ -50,6 +56,11 @@ function normalizePath(tail: string): string | undefined {
   return parts.length ? parts.join('.') : undefined
 }
 
+/** A reference to a trigger node collapses to the graph's implicit `trigger` input. */
+function resolveNodeId(nodeId: string, ctx: ExprContext): string {
+  return ctx.triggerNodeIds?.has(nodeId) ? 'trigger' : nodeId
+}
+
 /** Try to interpret one `{{ … }}` body as a pure reference. */
 function asPureRef(body: string, ctx: ExprContext): RefPart | null {
   const expr = body.trim()
@@ -57,13 +68,13 @@ function asPureRef(body: string, ctx: ExprContext): RefPart | null {
   let m = RE_JSON.exec(expr)
   if (m) {
     return {
-      nodeId: ctx.predecessorNodeId ?? 'trigger',
+      nodeId: resolveNodeId(ctx.predecessorNodeId ?? 'trigger', ctx),
       path: normalizePath(m[1] ?? ''),
     }
   }
   m = RE_NODE.exec(expr) ?? RE_PAREN.exec(expr)
   if (m) {
-    const nodeId = ctx.nameToNodeId[m[1]!] ?? 'trigger'
+    const nodeId = resolveNodeId(ctx.nameToNodeId[m[1]!] ?? 'trigger', ctx)
     return { nodeId, path: normalizePath(m[2] ?? '') }
   }
   return null
