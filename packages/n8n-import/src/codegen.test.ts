@@ -22,7 +22,8 @@ test('linear set/code/integration workflow → pure graph', () => {
   // Set node → @pikku/addon-graph's native editFields, its two assignments
   // lowered to `set` operations
   assert.match(graph, /setFields: "graph:editFields"/)
-  assert.match(graph, /sendGmail: "gmail__sendGmail"/)
+  // Pipedrive has no addon and isn't in the integration-map → stays a stub.
+  assert.match(graph, /createDeal: "pipedrive__createDeal"/)
   assert.match(graph, /score: "codeStubScore"/)
   assert.match(graph, /item: \{\}/)
   // Tier-1 ref, Tier-2 template — as `set` operation values
@@ -36,12 +37,12 @@ test('linear set/code/integration workflow → pure graph', () => {
   )
   // integration cross-node ref — editFields exposes its result directly, so a
   // downstream ref into a Set node targets the field with no prefix
-  assert.match(graph, /"sendTo": ref\("setFields", "email"\)/)
+  assert.match(graph, /"email": ref\("setFields", "email"\)/)
   // node-level note preserved
-  assert.match(graph, /notes: "sends the welcome email"/)
+  assert.match(graph, /notes: "creates the deal"/)
   // topology
-  assert.match(graph, /setFields: \{[\s\S]*next: "sendGmail"/)
-  assert.match(graph, /sendGmail: \{[\s\S]*next: "score"/)
+  assert.match(graph, /setFields: \{[\s\S]*next: "createDeal"/)
+  assert.match(graph, /createDeal: \{[\s\S]*next: "score"/)
   // template import pulled in
   assert.match(graph, /import \{ template \} from '@pikku\/core\/workflow'/)
 
@@ -49,10 +50,14 @@ test('linear set/code/integration workflow → pure graph', () => {
   assert.ok(!files['leadEnrichment/functions/n8nPassthrough.function.ts'])
 
   // integration stub
-  const gmail = files['leadEnrichment/functions/gmail__sendGmail.function.ts']
-  assert.ok(gmail)
-  assert.match(gmail, /STUB — generated from n8n node "Send Gmail"/)
-  assert.match(gmail, /throw new Error\("gmail__sendGmail — implement me"\)/)
+  const pipedrive =
+    files['leadEnrichment/functions/pipedrive__createDeal.function.ts']
+  assert.ok(pipedrive)
+  assert.match(pipedrive, /STUB — generated from n8n node "Create Deal"/)
+  assert.match(
+    pipedrive,
+    /throw new Error\("pipedrive__createDeal — implement me"\)/
+  )
 
   // code stub preserves original JS verbatim
   const code = files['leadEnrichment/functions/codeStubScore.function.ts']
@@ -60,11 +65,11 @@ test('linear set/code/integration workflow → pure graph', () => {
   assert.match(code, /Original n8n JavaScript/)
   assert.match(code, /i\.json\.value \* 2/)
 
-  // manifest: gmail is the one integration node
+  // manifest: pipedrive is the one integration node
   assert.equal(manifest.length, 1)
-  assert.equal(manifest[0]!.rpcName, 'gmail__sendGmail')
+  assert.equal(manifest[0]!.rpcName, 'pipedrive__createDeal')
   assert.equal(manifest[0]!.isAgentTool, false)
-  assert.equal(manifest[0]!.n8nType, 'n8n-nodes-base.gmail')
+  assert.equal(manifest[0]!.n8nType, 'n8n-nodes-base.pipedrive')
   assert.ok(files['leadEnrichment/leadEnrichment.integrations.json'])
 })
 
@@ -118,8 +123,11 @@ test('no-auth httpRequest → graph:httpRequest with mapped input; authed httpRe
   assert.match(graph, /body: ref\("trigger", "body"\)/)
 
   // httpRequest exposes the response body directly, so a downstream ref into
-  // the http node's output targets the field with no prefix
-  assert.match(graph, /"text": ref\("fetchData", "id"\)/)
+  // the http node's output targets the field with no prefix. The consumer here
+  // is a mapped Slack node (`slack:chatPostMessage`), so the field key is the
+  // addon's own `text` — an unquoted identifier from the integration-map spec.
+  assert.match(graph, /notify: "slack:chatPostMessage"/)
+  assert.match(graph, /text: ref\("fetchData", "id"\)/)
 
   // no stub for the no-auth http node — it uses the addon function
   assert.ok(!files['httpDemo/functions/graph:httpRequest.function.ts'])
@@ -147,10 +155,11 @@ test('noop nodes are dropped and their edges rewired through (A → noop → B �
   assert.ok(!files['passthroughDemo/functions/noOp__noOp.function.ts'])
   assert.ok(!files['passthroughDemo/functions/noOp__noOp2.function.ts'])
 
-  // the real nodes remain, wired straight through the (removed) noops
+  // the real nodes remain, wired straight through the (removed) noops.
+  // Pipedrive has no addon and isn't in the integration-map, so it stays a stub.
   assert.match(graph, /format: "graph:editFields"/)
-  assert.match(graph, /sendGmail: "gmail__sendGmail"/)
-  assert.match(graph, /format: \{[\s\S]*next: "sendGmail"/)
+  assert.match(graph, /createDeal: "pipedrive__createDeal"/)
+  assert.match(graph, /format: \{[\s\S]*next: "createDeal"/)
 
   // predecessor rewiring survives the noop: Format's $json still resolves to the
   // trigger (Format's real predecessor is the webhook, via the dropped No Op)

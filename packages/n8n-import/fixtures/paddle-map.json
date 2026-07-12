@@ -1,0 +1,1 @@
+{"name":"Pd","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"paddle"}},{"id":"p","name":"Node","type":"n8n-nodes-base.paddle","typeVersion":1,"position":[200,0],"parameters":{"resource":"product","operation":"getAll"}}],"connections":{"Webhook":{"main":[[{"node":"Node","type":"main","index":0}]]}}}

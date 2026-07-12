@@ -1,0 +1,1 @@
+{"name":"Xm","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"xm"}},{"id":"x","name":"Conv","type":"n8n-nodes-base.xml","typeVersion":1,"position":[200,0],"parameters":{"mode":"xmlToJson"}}],"connections":{"Webhook":{"main":[[{"node":"Conv","type":"main","index":0}]]}}}

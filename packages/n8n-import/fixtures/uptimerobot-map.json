@@ -1,0 +1,31 @@
+{
+  "name": "Ur",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {
+        "path": "ur"
+      }
+    },
+    {
+      "id": "p",
+      "name": "Node",
+      "type": "n8n-nodes-base.uptimeRobot",
+      "typeVersion": 1,
+      "position": [200, 0],
+      "parameters": {
+        "resource": "monitor",
+        "operation": "create"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Node", "type": "main", "index": 0 }]]
+    }
+  }
+}

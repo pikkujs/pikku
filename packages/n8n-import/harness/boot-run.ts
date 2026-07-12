@@ -23,6 +23,7 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
@@ -34,6 +35,116 @@ const harnessDir = dirname(fileURLToPath(import.meta.url))
 const packageDir = resolve(harnessDir, '..')
 const repoRoot = resolve(packageDir, '../..')
 const seedDir = join(harnessDir, 'seed')
+// The per-service addons live in a sibling repo (not a workspace of pikku), so
+// their built packages are linked into each probe's node_modules on demand.
+const addonsRepoRoot =
+  process.env.PIKKU_ADDONS_ROOT || resolve(repoRoot, '..', 'addons')
+
+/** Map `@pikku/addon-*` package name → its built dir in the addons repo. */
+let addonDirCache: Map<string, string> | undefined
+function addonPackageDirs(): Map<string, string> {
+  if (addonDirCache) return addonDirCache
+  const out = new Map<string, string>()
+  const pkgsRoot = join(addonsRepoRoot, 'packages')
+  if (existsSync(pkgsRoot)) {
+    for (const cat of readdirSync(pkgsRoot, { withFileTypes: true })) {
+      if (!cat.isDirectory()) continue
+      const catDir = join(pkgsRoot, cat.name)
+      for (const svc of readdirSync(catDir, { withFileTypes: true })) {
+        if (!svc.isDirectory()) continue
+        const dir = join(catDir, svc.name)
+        const pkgJson = join(dir, 'package.json')
+        if (!existsSync(pkgJson)) continue
+        try {
+          const name = JSON.parse(readFileSync(pkgJson, 'utf-8')).name
+          if (typeof name === 'string') out.set(name, dir)
+        } catch {
+          /* skip unreadable package.json */
+        }
+      }
+    }
+  }
+  addonDirCache = out
+  return out
+}
+
+/** Split an `addons.gen.ts` body into its individual `wireAddon({...})` blocks. */
+function wireAddonBlocks(content: string): {
+  header: string
+  blocks: string[]
+} {
+  const marker = '\nwireAddon({'
+  const first = content.indexOf(marker)
+  if (first < 0) return { header: content, blocks: [] }
+  const header = content.slice(0, first)
+  const rest = content.slice(first + 1)
+  return {
+    header,
+    blocks: rest
+      .split(/\n(?=wireAddon\(\{)/)
+      .map((b) => b.trim())
+      .filter(Boolean),
+  }
+}
+
+/** Namespaces a graph actually calls: `"google-drive:filesGet"` → `google-drive`. */
+function requiredAddonNamespaces(files: Record<string, string>): Set<string> {
+  const out = new Set<string>()
+  for (const [rel, content] of Object.entries(files)) {
+    if (!rel.endsWith('.graph.ts')) continue
+    for (const m of content.matchAll(
+      /["']([a-z][a-z0-9-]*):[A-Za-z0-9_]+["']/g
+    )) {
+      if (m[1] !== 'graph') out.add(m[1]!)
+    }
+  }
+  return out
+}
+
+/** An addon is usable only if its consumable build (`dist/.pikku`) is present. */
+function addonIsBuilt(dir: string): boolean {
+  return existsSync(
+    join(dir, 'dist', '.pikku', 'function', 'pikku-functions-meta.gen.json')
+  )
+}
+
+/**
+ * Prepare a probe's per-service addon wiring. `addons.gen.ts` carries two kinds
+ * of `wireAddon`: map-driven ones for addons a graph node actually calls
+ * (`google-drive:filesGet` — must be linked + kept), and forward-looking
+ * credential guesses for stub nodes (`@pikku/addon-slack` inferred from
+ * `slackApi`) that no node calls. Only blocks for addons a graph node references
+ * AND that are genuinely built are kept + linked; the rest are dropped (the stub
+ * nodes don't need them; a graph ref to a missing addon surfaces as a tsc error).
+ */
+function prepareAddons(projectDir: string, files: Record<string, string>) {
+  const required = requiredAddonNamespaces(files)
+  const dirs = addonPackageDirs()
+  const requiredPkgs = new Set<string>()
+  for (const ns of required) {
+    const pkg = `@pikku/addon-${ns}`
+    const dir = dirs.get(pkg)
+    if (dir && addonIsBuilt(dir)) requiredPkgs.add(pkg)
+  }
+  const rewritten: Record<string, string> = {}
+  for (const [rel, content] of Object.entries(files)) {
+    if (!rel.endsWith('.addons.gen.ts')) continue
+    const { header, blocks } = wireAddonBlocks(content)
+    const kept = blocks.filter((block) => {
+      const pkg = block.match(/["'](@pikku\/addon-[a-z0-9-]+)["']/)?.[1]
+      return pkg ? requiredPkgs.has(pkg) : false
+    })
+    rewritten[rel] =
+      kept.length > 0 ? `${header}${kept.join('\n\n')}\n` : header
+  }
+  const scopeDir = join(projectDir, 'node_modules', '@pikku')
+  if (requiredPkgs.size > 0) mkdirSync(scopeDir, { recursive: true })
+  for (const pkg of requiredPkgs) {
+    const dest = join(scopeDir, pkg.slice('@pikku/'.length))
+    if (!existsSync(dest)) symlinkSync(dirs.get(pkg)!, dest, 'dir')
+  }
+  return rewritten
+}
 
 const PIKKU_BIN =
   process.env.PIKKU_BIN ||
@@ -195,14 +306,13 @@ function main() {
 
     const projectDir = mkdtempSync(join(tmpRoot, `w${i}-`))
     cpSync(seedDir, projectDir, { recursive: true })
+    // Mapped nodes reference per-service addon rpcs (`google-drive:filesGet`);
+    // link the built addons in and keep only their wireAddon blocks.
+    const rewrittenAddons = prepareAddons(projectDir, files_)
     for (const [rp, content] of Object.entries(files_)) {
-      // The generated addons.gen.ts wireAddon()s not-yet-installed packages and
-      // is not referenced by any node yet (nodes still call stubs), so it's
-      // forward-looking scaffolding — exclude it from the stub boot test.
-      if (rp.endsWith('.addons.gen.ts')) continue
       const target = join(projectDir, 'src', rp)
       mkdirSync(dirname(target), { recursive: true })
-      writeFileSync(target, content)
+      writeFileSync(target, rewrittenAddons[rp] ?? content)
     }
 
     const gen = runPikku(projectDir)

@@ -25,6 +25,31 @@ function toScreamingSnake(str: string): string {
   return str.replace(/-/g, '_').toUpperCase()
 }
 
+const PROVIDER_OAUTH_DEFAULTS: Array<{
+  match: RegExp
+  authorizationUrl: string
+  tokenUrl: string
+}> = [
+  {
+    match: /(^|\.)googleapis\.com$/,
+    authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+    tokenUrl: 'https://oauth2.googleapis.com/token',
+  },
+]
+
+function providerOAuthDefaults(baseUrl: string | undefined) {
+  if (!baseUrl) {
+    return undefined
+  }
+  let host: string
+  try {
+    host = new URL(baseUrl).host
+  } catch {
+    return undefined
+  }
+  return PROVIDER_OAUTH_DEFAULTS.find((p) => p.match.test(host))
+}
+
 const TLD_SEGMENTS = new Set([
   'com',
   'io',
@@ -105,6 +130,11 @@ function getAddonFiles(
     variable: boolean
     oauth: boolean
     credential?: 'apikey' | 'bearer' | 'oauth2'
+    oauthConfig?: {
+      authorizationUrl: string
+      tokenUrl: string
+      scopes: string[]
+    }
   }
 ): Record<string, string> {
   const {
@@ -117,6 +147,17 @@ function getAddonFiles(
     category,
   } = vars
   const files: Record<string, string> = {}
+
+  // OAuth2 endpoints: real values from the OpenAPI spec when provided, else
+  // placeholders the developer fills in for their own OAuth app.
+  const oauthAuthorizationUrl =
+    flags.oauthConfig?.authorizationUrl ??
+    'https://example.com/oauth2/authorize'
+  const oauthTokenUrl =
+    flags.oauthConfig?.tokenUrl ?? 'https://example.com/oauth2/token'
+  const oauthScopes = (flags.oauthConfig?.scopes ?? ['read', 'write'])
+    .map((s) => `'${s}'`)
+    .join(', ')
 
   // package.json
   files['package.json'] = JSON.stringify(
@@ -364,9 +405,9 @@ const BASE_URL = 'https://api.example.com/v1'
 
 export const ${screamingName}_OAUTH2_CONFIG = {
   tokenSecretId: '${screamingName}_TOKENS',
-  authorizationUrl: 'https://example.com/oauth2/authorize',
-  tokenUrl: 'https://example.com/oauth2/token',
-  scopes: ['read', 'write'],
+  authorizationUrl: '${oauthAuthorizationUrl}',
+  tokenUrl: '${oauthTokenUrl}',
+  scopes: [${oauthScopes}],
 }
 
 export interface RequestOptions {
@@ -589,6 +630,11 @@ export const ${camelName}TokenSchema = z.object({
   refreshToken: z.string().optional(),
 })
 
+export const ${camelName}OAuthAppSchema = z.object({
+  clientId: z.string().describe('OAuth2 app client ID'),
+  clientSecret: z.string().describe('OAuth2 app client secret'),
+})
+
 wireCredential({
   name: '${camelName}',
   displayName: '${displayName}',
@@ -598,9 +644,9 @@ wireCredential({
   oauth2: {
     appCredentialSecretId: '${screamingName}_OAUTH_APP',
     tokenSecretId: '${screamingName}_OAUTH_TOKENS',
-    authorizationUrl: 'https://example.com/oauth2/authorize',
-    tokenUrl: 'https://example.com/oauth2/token',
-    scopes: ['read', 'write'],
+    authorizationUrl: '${oauthAuthorizationUrl}',
+    tokenUrl: '${oauthTokenUrl}',
+    scopes: [${oauthScopes}],
   },
 })
 
@@ -609,6 +655,7 @@ wireSecret({
   displayName: '${displayName} OAuth App',
   description: 'OAuth2 app credentials for ${displayName}',
   secretId: '${screamingName}_OAUTH_APP',
+  schema: ${camelName}OAuthAppSchema,
 })
 `
   } else if (flags.secret) {
@@ -936,16 +983,47 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
 
     // oauth implies secret (unless credential flag is used); credential oauth2 implies oauth
     const effectiveOAuth = oauth || credentialType === 'oauth2'
+
+    // Parse the OpenAPI spec up front (if provided) so the scaffold's credential
+    // wiring and the generated service share ONE OAuth2 config, and reuse the
+    // parsed spec for the typed-function generation below.
+    const spec = openapi ? await parseOpenAPISpec(openapi) : undefined
+    let oauthConfig:
+      | { authorizationUrl: string; tokenUrl: string; scopes: string[] }
+      | undefined
+    if (spec && effectiveOAuth) {
+      const oauthScheme = Object.values(spec.securitySchemes).find(
+        (s) => s.type === 'oauth2'
+      )
+      // Well-known providers often omit the token URL from their OpenAPI spec
+      // (e.g. Google), so fall back to provider defaults keyed on the API host
+      // before the generic placeholder.
+      const provider = providerOAuthDefaults(spec.baseUrl)
+      oauthConfig = {
+        authorizationUrl:
+          oauthScheme?.flows?.authorizationUrl ??
+          provider?.authorizationUrl ??
+          'https://example.com/oauth2/authorize',
+        tokenUrl:
+          oauthScheme?.flows?.tokenUrl ??
+          provider?.tokenUrl ??
+          'https://example.com/oauth2/token',
+        scopes: oauthScheme?.flows?.scopes
+          ? Object.keys(oauthScheme.flows.scopes)
+          : ['read', 'write'],
+      }
+    }
+
     const addonFiles = getAddonFiles(vars, {
       secret: (secret || effectiveOAuth) && !credentialType,
       variable,
       oauth: effectiveOAuth,
       credential: credentialType,
+      oauthConfig,
     })
 
     // If openapi spec provided, generate typed files and merge over scaffold
-    if (openapi) {
-      const spec = await parseOpenAPISpec(openapi)
+    if (spec) {
       const openapiFiles = generateAddonFromOpenAPI(spec, vars, {
         oauth: effectiveOAuth,
         secret: (secret || effectiveOAuth) && !credentialType,

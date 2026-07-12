@@ -4,3 +4,4 @@ harness-report.md
 boot-report.json
 .harness-tmp/
 .corpus-ai/
+.n8n

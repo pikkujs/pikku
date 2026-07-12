@@ -1,0 +1,54 @@
+{
+  "name": "Notion Ops",
+  "nodes": [
+    {
+      "id": "t",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": { "path": "notion" }
+    },
+    {
+      "id": "q",
+      "name": "Query Database",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [200, 0],
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": { "__rl": true, "mode": "id", "value": "db_abc123" }
+      }
+    },
+    {
+      "id": "u",
+      "name": "Update Page",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [400, 0],
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": { "__rl": true, "mode": "id", "value": "page_xyz789" }
+      }
+    },
+    {
+      "id": "b",
+      "name": "Get Blocks",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [600, 0],
+      "parameters": {
+        "resource": "block",
+        "operation": "getAll",
+        "blockId": { "__rl": true, "mode": "id", "value": "block_111" }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Query Database", "type": "main", "index": 0 }]] },
+    "Query Database": { "main": [[{ "node": "Update Page", "type": "main", "index": 0 }]] },
+    "Update Page": { "main": [[{ "node": "Get Blocks", "type": "main", "index": 0 }]] }
+  }
+}

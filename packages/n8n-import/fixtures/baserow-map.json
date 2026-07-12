@@ -1,0 +1,1 @@
+{"name":"Baserow","nodes":[{"id":"t","name":"Webhook","type":"n8n-nodes-base.webhook","typeVersion":1,"position":[0,0],"parameters":{"path":"baserow"}},{"id":"p","name":"Svc","type":"n8n-nodes-base.baserow","typeVersion":1.1,"position":[200,0],"parameters":{"resource":"row","operation":"getAll"}}],"connections":{"Webhook":{"main":[[{"node":"Svc","type":"main","index":0}]]}}}

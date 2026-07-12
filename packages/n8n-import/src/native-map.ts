@@ -9,10 +9,18 @@
  * predecessor ref, which the graph's typed-ref model can't express yet.
  */
 
+import { integrationSpecFor } from './integration-map.js'
+
 /** One addon input field sourced from an n8n parameter. */
 export interface NativeFieldSpec {
   /** n8n parameter key(s); the first present value wins. */
   from?: string | string[]
+  /**
+   * n8n resource-locator parameter key(s) — reads the locator's `.value`
+   * (a literal id, a URL, or an `={{…}}` expression) rather than the whole
+   * `{ __rl, mode, value }` wrapper. First present locator wins.
+   */
+  fromRL?: string | string[]
   /**
    * Source the whole output of the node's data predecessor as this field —
    * `ref(predecessorNodeId)`. This is how n8n's implicit incoming item stream
@@ -92,7 +100,12 @@ export function nativeSpecFor(
   parameters?: Record<string, unknown>
 ): NativeNodeSpec | undefined {
   const spec = NATIVE_NODES[typeShort.toLowerCase()]
-  if (!spec) return undefined
-  if (spec.applies && parameters && !spec.applies(parameters)) return undefined
-  return spec
+  if (spec) {
+    if (spec.applies && parameters && !spec.applies(parameters))
+      return undefined
+    return spec
+  }
+  // Fall through to the per-service integration addons (google-drive, …),
+  // resolved by the node's resource/operation.
+  return integrationSpecFor(typeShort, parameters)
 }

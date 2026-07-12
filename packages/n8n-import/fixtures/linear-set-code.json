@@ -22,13 +22,13 @@
     },
     {
       "id": "c3",
-      "name": "Send Gmail",
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2,
+      "name": "Create Deal",
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 1,
       "position": [400, 0],
-      "parameters": { "sendTo": "={{ $node[\"Set Fields\"].json.email }}", "subject": "Welcome" },
-      "credentials": { "gmailOAuth2": { "id": "1", "name": "Gmail account" } },
-      "notes": "sends the welcome email"
+      "parameters": { "operation": "create", "resource": "deal", "email": "={{ $node[\"Set Fields\"].json.email }}" },
+      "credentials": { "pipedriveApi": { "id": "1", "name": "Pipedrive account" } },
+      "notes": "creates the deal"
     },
     {
       "id": "d4",
@@ -41,7 +41,7 @@
   ],
   "connections": {
     "Webhook": { "main": [[{ "node": "Set Fields", "type": "main", "index": 0 }]] },
-    "Set Fields": { "main": [[{ "node": "Send Gmail", "type": "main", "index": 0 }]] },
-    "Send Gmail": { "main": [[{ "node": "Score", "type": "main", "index": 0 }]] }
+    "Set Fields": { "main": [[{ "node": "Create Deal", "type": "main", "index": 0 }]] },
+    "Create Deal": { "main": [[{ "node": "Score", "type": "main", "index": 0 }]] }
   }
 }

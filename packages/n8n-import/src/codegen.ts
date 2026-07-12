@@ -133,8 +133,12 @@ function emitSetInput(node: ParsedNode, ctx: ExprContext): string | null {
   for (const { field, value } of setAssignments(node.parameters)) {
     const classified = classifyExpression(value, ctx)
     if (classified.kind === 'transform') {
+      // Both the field name and value may be multi-line n8n expressions (a Set
+      // assignment can compute its own key via an IIFE); flatten each to a single
+      // line so it stays inside the `//` comment instead of leaking live code.
+      const oneLine = (s: string) => s.replace(/\s*\n\s*/g, ' ').trim()
       ops.push(
-        `        // TODO(n8n expr): ${field} = ${classified.expression.replace(/\n/g, ' ')}`
+        `        // TODO(n8n expr): ${oneLine(field)} = ${oneLine(classified.expression)}`
       )
       continue
     }
@@ -266,6 +270,27 @@ function emitNativeInput(node: ParsedNode, ctx: ExprContext): string | null {
     }
     if (fspec.fromNodeId) {
       lines.push(`      ${field}: ${q(node.nodeId)},`)
+      continue
+    }
+    if (fspec.fromRL) {
+      const rlKeys = Array.isArray(fspec.fromRL) ? fspec.fromRL : [fspec.fromRL]
+      let rlValue: unknown
+      for (const key of rlKeys) {
+        const loc = node.parameters[key]
+        if (loc && typeof loc === 'object' && '__rl' in (loc as object)) {
+          rlValue = (loc as { value?: unknown }).value
+          break
+        }
+        if (loc !== undefined) {
+          rlValue = loc
+          break
+        }
+      }
+      if (rlValue === undefined) rlValue = fspec.default
+      if (rlValue === undefined) continue
+      const rendered = emitValue(rlValue, ctx)
+      if (rendered === null) continue
+      lines.push(`      ${field}: ${rendered},`)
       continue
     }
     const froms = fspec.from
@@ -540,8 +565,55 @@ function emitAgentFile(parsed: ParsedWorkflow): string {
  * `credentialOverrides`. Packages are inferred from the n8n credential type and
  * refined downstream by the addon-map step.
  */
-function emitAddonsFile(instances: CredentialInstance[]): string {
-  const blocks = instances.map((inst) =>
+/** `google-drive:filesGet` → { namespace: 'google-drive', fn: 'filesGet' }. */
+function splitAddonRpc(
+  rpc: string
+): { namespace: string; fn: string } | undefined {
+  const i = rpc.indexOf(':')
+  if (i < 0) return undefined
+  const namespace = rpc.slice(0, i)
+  if (namespace === 'graph') return undefined
+  return { namespace, fn: rpc.slice(i + 1) }
+}
+
+/**
+ * Distinct per-service addon namespaces referenced by mapped native nodes
+ * (`google-drive:filesGet` → `google-drive` / `@pikku/addon-google-drive`).
+ * These must be `wireAddon`'d so the graph's function-map union includes their
+ * rpcs — otherwise the addon-ref graph nodes don't type-check.
+ */
+function mappedAddonPackages(
+  parsed: ParsedWorkflow
+): { namespace: string; package: string }[] {
+  const byNs = new Map<string, { namespace: string; package: string }>()
+  for (const node of parsed.nodes) {
+    if (node.disabled || node.role !== 'native') continue
+    const split = splitAddonRpc(node.rpcName)
+    if (!split || byNs.has(split.namespace)) continue
+    byNs.set(split.namespace, {
+      namespace: split.namespace,
+      package: `@pikku/addon-${split.namespace}`,
+    })
+  }
+  return [...byNs.values()]
+}
+
+function emitAddonsFile(
+  instances: CredentialInstance[],
+  mappedAddons: { namespace: string; package: string }[]
+): string {
+  // A mapped service is wired plainly by its `mappedBlocks` entry and the graph
+  // references its single namespace (`slack:chatPostMessage`). The forward-looking
+  // per-credential override blocks for that same package are then orphaned — no
+  // graph node calls them and they target credentials that don't exist yet, which
+  // fails inspection (PKU124). Multi-account per-credential namespacing isn't built
+  // yet, so drop them for mapped packages (the manifest still records each node's
+  // credential for the addon-map step).
+  const mappedPackages = new Set(mappedAddons.map((a) => a.package))
+  const keptInstances = instances.filter(
+    (inst) => !mappedPackages.has(inst.package)
+  )
+  const credBlocks = keptInstances.map((inst) =>
     [
       `wireAddon({`,
       `  name: ${q(inst.instanceName)},`,
@@ -550,12 +622,26 @@ function emitAddonsFile(instances: CredentialInstance[]): string {
       `})`,
     ].join('\n')
   )
+  // Addon instances for mapped nodes whose namespace isn't already provisioned
+  // by a credential instance. Credential binding is filled in by the addon-map
+  // step; here we just register the package so its rpcs resolve.
+  const provisioned = new Set(keptInstances.map((i) => i.instanceName))
+  const mappedBlocks = mappedAddons
+    .filter((a) => !provisioned.has(a.namespace))
+    .map((a) =>
+      [
+        `wireAddon({`,
+        `  name: ${q(a.namespace)},`,
+        `  package: ${q(a.package)},`,
+        `})`,
+      ].join('\n')
+    )
   return [
     `import { wireAddon } from '@pikku/core/rpc'`,
     ``,
     `// TODO(n8n): verify each addon package + credential key — packages are`,
     `// inferred from the n8n credential type and refined by the addon-map step.`,
-    ...blocks.flatMap((b) => [``, b]),
+    ...[...credBlocks, ...mappedBlocks].flatMap((b) => [``, b]),
     ``,
   ].join('\n')
 }
@@ -611,9 +697,12 @@ export function generateWorkflowFromN8n(
       emittedStubRpc.add(node.rpcName)
     }
   }
-  if (credentialInstances.length > 0) {
-    files[`${dir}/${parsed.slug}.addons.gen.ts`] =
-      emitAddonsFile(credentialInstances)
+  const mappedAddons = mappedAddonPackages(parsed)
+  if (credentialInstances.length > 0 || mappedAddons.length > 0) {
+    files[`${dir}/${parsed.slug}.addons.gen.ts`] = emitAddonsFile(
+      credentialInstances,
+      mappedAddons
+    )
   }
 
   // Manifest: one entry per integration / agent-tool node.
