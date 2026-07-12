@@ -932,6 +932,29 @@ describe('auth config', () => {
     )
   })
 
+  test('extraHeaders are baked into the service and the upstream-auth login', () => {
+    const spec = makeSpec({ operations: [makeOp()] })
+    const files = generateAddonFromOpenAPI(spec, makeVars(), {
+      oauth: false,
+      secret: false,
+      credential: 'bearer',
+      authConfig: {
+        ...delegatedConfig,
+        extraHeaders: { Origin: 'https://tenant.example.com' },
+      },
+    })
+    const service = files['src/test-api-api.service.ts']
+    assert.ok(
+      service.includes('"Origin": "https://tenant.example.com",'),
+      'service headers init should carry the static header'
+    )
+    const authFile = files['src/test-api-upstream-auth.ts']
+    assert.ok(
+      authFile.includes('"Origin": "https://tenant.example.com",'),
+      'login fetch should carry the static header'
+    )
+  })
+
   test('no delegated config → no upstream-auth file', () => {
     const spec = makeSpec({ operations: [makeOp()] })
     const files = generateAddonFromOpenAPI(spec, makeVars(), {

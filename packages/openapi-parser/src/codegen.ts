@@ -1132,9 +1132,12 @@ function generateUpstreamAuthFile(
   lines.push(`  credentials: ${pascalName}UpstreamCredentials,`)
   lines.push('  baseUrl: string')
   lines.push(`): Promise<${pascalName}UpstreamIdentity | null> => {`)
-  lines.push(
-    "  const headers: Record<string, string> = { 'Content-Type': 'application/json' }"
-  )
+  lines.push('  const headers: Record<string, string> = {')
+  lines.push("    'Content-Type': 'application/json',")
+  for (const [header, value] of Object.entries(authConfig.extraHeaders ?? {})) {
+    lines.push(`    ${JSON.stringify(header)}: ${JSON.stringify(value)},`)
+  }
+  lines.push('  }')
   lines.push('  const body: Record<string, string> = {}')
   if (delegated.credentials.includes('email')) {
     lines.push('  if (credentials.email) body.email = credentials.email')
@@ -1405,6 +1408,11 @@ function generateServiceFile(
   lines.push('    const query: Record<string, string> = {}')
   lines.push('    const headers: Record<string, string> = {')
   lines.push("      'Content-Type': 'application/json',")
+  for (const [header, value] of Object.entries(
+    flags.authConfig?.extraHeaders ?? {}
+  )) {
+    lines.push(`      ${JSON.stringify(header)}: ${JSON.stringify(value)},`)
+  }
   lines.push('    }')
   lines.push('')
   // When camelCase flag is on, use rawData (snake_case converted) for route matching
