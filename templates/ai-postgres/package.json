@@ -16,7 +16,7 @@
     "@ai-sdk/anthropic": "^3.0.50",
     "@ai-sdk/openai": "^3.0.37",
     "@pikku/ai-vercel": "^0.12.7",
-    "@pikku/core": "^0.12.61",
+    "@pikku/core": "^0.12.62",
     "@pikku/express": "^0.12.7",
     "@pikku/kysely-postgres": "^0.12.12",
     "@pikku/schema-cfworker": "^0.12.5",

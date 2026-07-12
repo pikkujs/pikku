@@ -1,3 +1,11 @@
+## 0.12.80
+
+### Patch Changes
+
+- b226948: Scenario context: scenarios now receive a `scenario` wire (was `workflow`) with the scenario-only helpers `expectEventually`/`expectError`/`expectService` plus a new `scenario.runScheduledTask(name)` that fires a cron inline with the system session. `PikkuWorkflowWire` is trimmed to the plain DSL (`do`/`sleep`/`suspend`); the scenario surface lives on the new `PikkuScenarioWire`. Actor calls (`invoke`/`converse`) stay on the `actors` registry. Scenarios are now excluded from `pikku scenario --coverage` totals.
+- Updated dependencies [b226948]
+  - @pikku/core@0.12.62
+
 ## 0.12.79
 
 ### Patch Changes
