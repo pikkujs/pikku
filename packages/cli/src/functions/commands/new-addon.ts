@@ -158,6 +158,8 @@ function getAddonFiles(
       devDependencies: {
         '@pikku/cli': '*',
         '@pikku/core': '*',
+        '@pikku/inspector': '*',
+        '@standard-schema/spec': '^1.1.0',
         typescript: '^5.7.2',
         zod: '^4',
       },
