@@ -462,7 +462,7 @@ test('fixedCollection transforms (sort/renameKeys/aggregate/summarize) wire to g
   assert.match(graph, /items: ref\("fetch"\)/)
   assert.match(
     graph,
-    /sortBy: \[\{ field: "created", order: "desc" \}, \{ field: "name", order: "asc" \}\]/
+    /sortBy: \[\{ field: "created", order: "desc" as const \}, \{ field: "name", order: "asc" as const \}\]/
   )
 
   // renameKeys: currentKey/newKey rows → oldKey/newKey mappings
@@ -474,7 +474,7 @@ test('fixedCollection transforms (sort/renameKeys/aggregate/summarize) wire to g
   // summarize: aggregation enum remapped (average → avg)
   assert.match(
     graph,
-    /aggregations: \[\{ field: "amount", operation: "avg", outputField: "amount" \}\]/
+    /aggregations: \[\{ field: "amount", operation: "avg" as const, outputField: "amount" \}\]/
   )
 
   // none of the four leaves a throwing stub function behind

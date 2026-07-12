@@ -392,8 +392,10 @@ function emitCollection(
         if (typeof src !== 'string' && src.values && typeof raw === 'string') {
           raw = src.values[raw] ?? raw
         }
-        const rendered = emitValue(raw, ctx)
+        let rendered = emitValue(raw, ctx)
         if (rendered === null) continue
+        if (typeof src !== 'string' && src.asConst && /^".*"$/.test(rendered))
+          rendered = `${rendered} as const`
         parts.push(`${outKey}: ${rendered}`)
       }
       if (parts.length) objs.push(`{ ${parts.join(', ')} }`)
@@ -562,7 +564,8 @@ function emitMapConfig(
     `      child: ${q(fan.childRpc)},`,
     `      stepPrefix: ${q(fan.mapNodeId)},`,
   ]
-  if (childInput) lines.push(`      childInput: ${inputObjectBody(childInput)},`)
+  if (childInput)
+    lines.push(`      childInput: ${inputObjectBody(childInput)},`)
   const parts = [`      input: (ref) => ({\n${lines.join('\n')}\n    }),`]
   if (fan.next !== undefined) parts.push(`      next: ${emitNext(fan.next)},`)
   return `    ${fan.mapNodeId}: {\n${parts.join('\n')}\n    },`
@@ -579,19 +582,19 @@ function emitGraphFile(
   const nodesLines = topo.graphNodes
     .filter((n) => !fanout.absorbed.has(n.nodeId))
     .map((n) => {
-    // An embedded agent is a native graph node (#910), referenced by its
-    // registered agent name — the exported const (`<slug>Agent`), which is the
-    // AgentMap key — not a stub rpc. A sub-workflow (executeWorkflow) node
-    // references the target workflow by its registered name (self-recursion →
-    // this workflow's own name).
-    const value =
-      n.role === 'agent'
-        ? `${parsed.slug}Agent`
-        : n.role === 'subworkflow'
-          ? targets.get(n.nodeId)!
-          : n.rpcName
-    return `    ${n.nodeId}: ${q(value)},`
-  })
+      // An embedded agent is a native graph node (#910), referenced by its
+      // registered agent name — the exported const (`<slug>Agent`), which is the
+      // AgentMap key — not a stub rpc. A sub-workflow (executeWorkflow) node
+      // references the target workflow by its registered name (self-recursion →
+      // this workflow's own name).
+      const value =
+        n.role === 'agent'
+          ? `${parsed.slug}Agent`
+          : n.role === 'subworkflow'
+            ? targets.get(n.nodeId)!
+            : n.rpcName
+      return `    ${n.nodeId}: ${q(value)},`
+    })
   for (const fan of fanout.maps) {
     nodesLines.push(`    ${fan.mapNodeId}: "graph:map",`)
   }

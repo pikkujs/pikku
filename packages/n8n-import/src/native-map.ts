@@ -58,7 +58,8 @@ export interface NativeFieldSpec {
     /** Project each row into an object: addon key → n8n row key or `{ from, values }`. */
     map?: Record<
       string,
-      string | { from: string; values?: Record<string, string> }
+      | string
+      | { from: string; values?: Record<string, string>; asConst?: boolean }
     >
     /** Or pick one scalar per row (→ an array, or a single value with `first`). */
     pick?: string
@@ -181,6 +182,7 @@ const NATIVE_NODES: Record<string, NativeNodeSpec> = {
             order: {
               from: 'order',
               values: { ascending: 'asc', descending: 'desc' },
+              asConst: true,
             },
           },
         },
@@ -251,6 +253,7 @@ const NATIVE_NODES: Record<string, NativeNodeSpec> = {
             operation: {
               from: 'aggregation',
               values: { average: 'avg', countUnique: 'countDistinct' },
+              asConst: true,
             },
             outputField: 'field',
           },
