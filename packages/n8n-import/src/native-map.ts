@@ -78,6 +78,24 @@ export interface NativeFieldSpec {
   asConst?: boolean
 }
 
+/**
+ * Some n8n nodes write their single result under a user-named output field
+ * (n8n's "Output Field Name"), whereas the addon returns it under a fixed key.
+ * A downstream `$node["X"].json.<n8nField>` must therefore resolve to the
+ * addon's key, not the n8n name — e.g. dateTime's `formattedDate` → `result`.
+ */
+export interface NativeOutputAliasSpec {
+  /**
+   * n8n parameter key(s) holding the custom output-field name (dot-paths
+   * supported, e.g. `options.outputFieldName`); the first present value wins.
+   */
+  from?: string | string[]
+  /** n8n's default output-field name when the param is absent, e.g. `formattedDate`. */
+  default: string
+  /** The addon output key the aliased field resolves to, e.g. `result`. */
+  to: string
+}
+
 export interface NativeNodeSpec {
   /** The @pikku/addon-graph RPC name, e.g. `graph:stopAndError`. */
   rpc: string
@@ -89,6 +107,11 @@ export interface NativeNodeSpec {
    * non-interval resume modes).
    */
   applies?: (parameters: Record<string, unknown>) => boolean
+  /**
+   * A downstream ref into this node's named output field → the addon output key.
+   * See NativeOutputAliasSpec.
+   */
+  outputAlias?: NativeOutputAliasSpec
 }
 
 const NATIVE_NODES: Record<string, NativeNodeSpec> = {
@@ -229,6 +252,13 @@ const NATIVE_NODES: Record<string, NativeNodeSpec> = {
   },
   datetime: {
     rpc: 'graph:dateTime',
+    // n8n's Date & Time writes its result under a configurable field (default
+    // `formattedDate` in v2); the addon returns it as `result`.
+    outputAlias: {
+      from: ['options.outputFieldName', 'outputFieldName', 'dataPropertyName'],
+      default: 'formattedDate',
+      to: 'result',
+    },
     // Both n8n versions map onto the one graph:dateTime — v1 (`action`
     // format/calculate + `operation` add/subtract) and v2 (`operation`
     // addToDate/subtractFromDate/formatDate/getTimeBetweenDates) — via
@@ -345,4 +375,41 @@ export function nativeSpecFor(
   // Fall through to the per-service integration addons (google-drive, …),
   // resolved by the node's resource/operation.
   return integrationSpecFor(typeShort, parameters)
+}
+
+/** Read a (possibly dot-pathed) parameter value as a plain string. */
+function readParamPath(
+  parameters: Record<string, unknown>,
+  key: string
+): string | undefined {
+  let cur: unknown = parameters
+  for (const seg of key.split('.')) {
+    if (cur == null || typeof cur !== 'object') return undefined
+    cur = (cur as Record<string, unknown>)[seg]
+  }
+  return typeof cur === 'string' && cur.trim() !== '' ? cur : undefined
+}
+
+/**
+ * The output-field alias for a native node instance: the n8n output-field name
+ * this node writes to (custom or default) → the addon output key. Returns
+ * undefined when the node type declares no alias.
+ */
+export function nativeOutputAliasFor(
+  typeShort: string,
+  parameters: Record<string, unknown>
+): { field: string; to: string } | undefined {
+  const spec = nativeSpecFor(typeShort, parameters)
+  const alias = spec?.outputAlias
+  if (!alias) return undefined
+  const keys = alias.from
+    ? Array.isArray(alias.from)
+      ? alias.from
+      : [alias.from]
+    : []
+  for (const k of keys) {
+    const v = readParamPath(parameters, k)
+    if (v) return { field: v, to: alias.to }
+  }
+  return { field: alias.default, to: alias.to }
 }

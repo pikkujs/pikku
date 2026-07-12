@@ -39,6 +39,12 @@ export interface ExprContext {
    * their terminal data source (`'trigger'` or a graph nodeId). See Topology.
    */
   refRewrite?: Record<string, string>
+  /**
+   * Per graph nodeId: n8n output-field name → addon output key. A ref whose
+   * leading path segment is a node's n8n output-field name is remapped onto the
+   * addon key (e.g. dateTime `formattedDate` → `result`). See native-map.
+   */
+  outputAliasByNodeId?: Record<string, Record<string, string>>
 }
 
 const DOT_PATH = String.raw`(?:\.[A-Za-z_$][\w$]*|\[['"][^'"\]]+['"]\])*`
@@ -71,21 +77,52 @@ function resolveNodeId(nodeId: string, ctx: ExprContext): string {
   return ctx.refRewrite?.[nodeId] ?? nodeId
 }
 
+/**
+ * Remap a ref path's leading segment from an n8n output-field name onto the
+ * addon output key when the resolved target node declares an alias.
+ */
+function aliasPath(
+  nodeId: string,
+  path: string | undefined,
+  ctx: ExprContext
+): string | undefined {
+  if (!path) return path
+  const alias = ctx.outputAliasByNodeId?.[nodeId]
+  if (!alias) return path
+  const [head, ...rest] = path.split('.')
+  const to = head !== undefined ? alias[head] : undefined
+  return to ? [to, ...rest].join('.') : path
+}
+
+/** Resolve a raw (nodeId, path) pair through nodeId rewriting and output aliasing. */
+function makeRef(
+  nodeId: string,
+  rawPath: string | undefined,
+  ctx: ExprContext
+): RefPart {
+  const resolved = resolveNodeId(nodeId, ctx)
+  return { nodeId: resolved, path: aliasPath(resolved, rawPath, ctx) }
+}
+
 /** Try to interpret one `{{ … }}` body as a pure reference. */
 function asPureRef(body: string, ctx: ExprContext): RefPart | null {
   const expr = body.trim()
 
   let m = RE_JSON.exec(expr)
   if (m) {
-    return {
-      nodeId: resolveNodeId(ctx.predecessorNodeId ?? 'trigger', ctx),
-      path: normalizePath(m[1] ?? ''),
-    }
+    return makeRef(
+      ctx.predecessorNodeId ?? 'trigger',
+      normalizePath(m[1] ?? ''),
+      ctx
+    )
   }
   m = RE_NODE.exec(expr) ?? RE_PAREN.exec(expr)
   if (m) {
-    const nodeId = resolveNodeId(ctx.nameToNodeId[m[1]!] ?? 'trigger', ctx)
-    return { nodeId, path: normalizePath(m[2] ?? '') }
+    return makeRef(
+      ctx.nameToNodeId[m[1]!] ?? 'trigger',
+      normalizePath(m[2] ?? ''),
+      ctx
+    )
   }
   return null
 }

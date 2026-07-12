@@ -484,6 +484,75 @@ test('fixedCollection transforms (sort/renameKeys/aggregate/summarize) wire to g
   )
 })
 
+test('a ref into a dateTime node’s named output field (formattedDate) resolves to the addon key (result)', () => {
+  const parsed = parseN8n({
+    name: 'DateTime Output Alias',
+    nodes: [
+      {
+        id: 't',
+        name: 'Manual',
+        type: 'n8n-nodes-base.manualTrigger',
+        parameters: {},
+      },
+      {
+        id: 'd',
+        name: 'Format Date',
+        type: 'n8n-nodes-base.dateTime',
+        parameters: {
+          operation: 'formatDate',
+          date: '={{ $json.when }}',
+          format: 'yyyy-MM-dd',
+        },
+      },
+      {
+        id: 'e',
+        name: 'Custom Out',
+        type: 'n8n-nodes-base.dateTime',
+        parameters: {
+          operation: 'formatDate',
+          options: { outputFieldName: 'myDate' },
+        },
+      },
+      {
+        id: 's',
+        name: 'Set',
+        type: 'n8n-nodes-base.set',
+        parameters: {
+          assignments: {
+            assignments: [
+              {
+                name: 'a',
+                value: '={{ $node["Format Date"].json.formattedDate }}',
+              },
+              { name: 'b', value: '={{ $node["Custom Out"].json.myDate }}' },
+            ],
+          },
+        },
+      },
+    ],
+    connections: {
+      Manual: { main: [[{ node: 'Format Date', type: 'main', index: 0 }]] },
+      'Format Date': {
+        main: [[{ node: 'Custom Out', type: 'main', index: 0 }]],
+      },
+      'Custom Out': { main: [[{ node: 'Set', type: 'main', index: 0 }]] },
+    },
+  })
+
+  const { files } = generateWorkflowFromN8n(parsed)
+  const graph = Object.values(files).find((f) =>
+    f.includes('pikkuWorkflowGraph')
+  )!
+  assert.ok(graph)
+  // default output-field name `formattedDate` → the addon key `result`
+  assert.match(graph, /ref\("formatDate", "result"\)/)
+  // a custom `options.outputFieldName` is honored too
+  assert.match(graph, /ref\("customOut", "result"\)/)
+  // no dangling n8n field name survives
+  assert.doesNotMatch(graph, /"formattedDate"/)
+  assert.doesNotMatch(graph, /ref\("customOut", "myDate"\)/)
+})
+
 test('dateTime v1 + v2 and crypto v1 normalize onto the single graph fn; sign stays a stub', () => {
   const parsed = parseN8n(loadFixture('datetime-crypto-versions.json'))
   assert.equal(parsed.shape, 'pure-graph')

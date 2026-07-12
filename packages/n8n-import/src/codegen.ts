@@ -12,7 +12,11 @@ import {
 } from './expressions.js'
 import { toPascalCase } from './naming.js'
 import { normalizeBranch } from './branch.js'
-import { nativeSpecFor, type NativeFieldSpec } from './native-map.js'
+import {
+  nativeSpecFor,
+  nativeOutputAliasFor,
+  type NativeFieldSpec,
+} from './native-map.js'
 import {
   deriveCredentialInstances,
   nodeInstanceBindings,
@@ -556,6 +560,15 @@ function emitGraphFile(
     parsed.nodes.filter((n) => n.role === 'trigger').map((n) => n.nodeId)
   )
 
+  // native nodes whose result is written under a named output field → a
+  // per-node map from that n8n field name to the addon output key.
+  const outputAliasByNodeId: Record<string, Record<string, string>> = {}
+  for (const node of topo.graphNodes) {
+    if (node.role !== 'native') continue
+    const alias = nativeOutputAliasFor(node.typeShort, node.parameters)
+    if (alias) outputAliasByNodeId[node.nodeId] = { [alias.field]: alias.to }
+  }
+
   let anyTemplate = false
   const configBlocks: string[] = []
   for (const node of topo.graphNodes) {
@@ -566,6 +579,7 @@ function emitGraphFile(
       nameToNodeId: topo.nameToNodeId,
       triggerNodeIds,
       refRewrite: topo.refRewrite,
+      outputAliasByNodeId,
     }
     const wantsInput =
       node.role === 'integration' ||
