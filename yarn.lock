@@ -70,6 +70,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@ag-ui/core@npm:^0.0.52":
+  version: 0.0.52
+  resolution: "@ag-ui/core@npm:0.0.52"
+  dependencies:
+    zod: "npm:^3.22.4"
+  checksum: 10/6938253718a7c94eef39d68285d992daf1101f92163342b90a73056f3fa34628f69b61f866ea887ab7e90e857a81cb9dc237bb7507ebf3dbf70478e58d8e44f7
+  languageName: node
+  linkType: hard
+
 "@ag-ui/encoder@npm:0.0.57":
   version: 0.0.57
   resolution: "@ag-ui/encoder@npm:0.0.57"
@@ -5741,6 +5750,19 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@pikku/ai-tanstack@workspace:*, @pikku/ai-tanstack@workspace:packages/services/ai-tanstack":
+  version: 0.0.0-use.local
+  resolution: "@pikku/ai-tanstack@workspace:packages/services/ai-tanstack"
+  dependencies:
+    "@tanstack/ai": "npm:^0.39.0"
+    "@tanstack/ai-openai": "npm:^0.15.9"
+    typescript: "npm:^5.9"
+    zod: "npm:^4.3.6"
+  peerDependencies:
+    "@pikku/core": ^0.12.35
+  languageName: unknown
+  linkType: soft
+
 "@pikku/ai-vercel@npm:^0.12.7, @pikku/ai-vercel@workspace:*, @pikku/ai-vercel@workspace:packages/services/ai-vercel":
   version: 0.0.0-use.local
   resolution: "@pikku/ai-vercel@workspace:packages/services/ai-vercel"
@@ -6104,6 +6126,7 @@ __metadata:
     "@pikku/addon-console": "workspace:*"
     "@pikku/addon-graph": "workspace:*"
     "@pikku/addon-hmac-signer": "workspace:*"
+    "@pikku/ai-tanstack": "workspace:*"
     "@pikku/ai-vercel": "workspace:*"
     "@pikku/better-auth": "workspace:*"
     "@pikku/cli": "workspace:*"
@@ -11129,10 +11152,79 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tanstack/ai-event-client@npm:0.6.8":
+  version: 0.6.8
+  resolution: "@tanstack/ai-event-client@npm:0.6.8"
+  dependencies:
+    "@tanstack/devtools-event-client": "npm:^0.4.1"
+  checksum: 10/534e097bcd24a814ee3a735f2cb32dfcf959c91f165752a53738dab38435f5c660c323f34ecc4c735f8076cdb5e15462d815df498e2f72f711a1d0e8f990f135
+  languageName: node
+  linkType: hard
+
+"@tanstack/ai-openai@npm:^0.15.9":
+  version: 0.15.10
+  resolution: "@tanstack/ai-openai@npm:0.15.10"
+  dependencies:
+    "@tanstack/ai-utils": "npm:0.3.1"
+    "@tanstack/openai-base": "npm:0.9.6"
+    openai: "npm:^6.41.0"
+  peerDependencies:
+    "@tanstack/ai": ^0.39.0
+    zod: ^4.0.0
+  checksum: 10/6d62bf877eaad8cf720229de2834171952e55565c96326ed0b5a52c84d69997c3dc9977af3b3084670cca3d9ecaf3bde485959dbe0b142db2bcef02669481721
+  languageName: node
+  linkType: hard
+
+"@tanstack/ai-utils@npm:0.3.1":
+  version: 0.3.1
+  resolution: "@tanstack/ai-utils@npm:0.3.1"
+  checksum: 10/87ed74118c26acbf4a19028a057dd3769195787a19d181c150b3b6231152cf13315b03660d35e88643542d5a1157981de113765c65fbcbc663706d056db89188
+  languageName: node
+  linkType: hard
+
+"@tanstack/ai@npm:^0.39.0":
+  version: 0.39.1
+  resolution: "@tanstack/ai@npm:0.39.1"
+  dependencies:
+    "@ag-ui/core": "npm:^0.0.52"
+    "@standard-schema/spec": "npm:^1.1.0"
+    "@tanstack/ai-event-client": "npm:0.6.8"
+    "@tanstack/ai-utils": "npm:0.3.1"
+    partial-json: "npm:^0.1.7"
+  peerDependencies:
+    "@opentelemetry/api": ">=1.9.0"
+  peerDependenciesMeta:
+    "@opentelemetry/api":
+      optional: true
+  checksum: 10/144e4628d01eb65caf51b60766ff8e2ff6dfdf75f77614722009208b73d87f10e4d1268cdd24de61e5904144b5a3d8eade73016d720cc94af64a392d43647199
+  languageName: node
+  linkType: hard
+
+"@tanstack/devtools-event-client@npm:^0.4.1":
+  version: 0.4.4
+  resolution: "@tanstack/devtools-event-client@npm:0.4.4"
+  bin:
+    intent: ./bin/intent.js
+  checksum: 10/69e0e2d63d5d0d2b1466be0368452e3c76d7d5bcf06b086521124ecbeeac27b57c7a7cbb0f9498eab3152d5dd2a3397bc7d756d7d2728747aab84157d5e5f490
+  languageName: node
+  linkType: hard
+
 "@tanstack/history@npm:1.162.0":
   version: 1.162.0
   resolution: "@tanstack/history@npm:1.162.0"
   checksum: 10/a92f166469b30dfd19ac45847977e8fc6a38770319fdb7d58a44e0bf8073d334fc121d9b886ecb788206f10e3ad2130d6eb500c1dec610a51b0c940fa266cae6
+  languageName: node
+  linkType: hard
+
+"@tanstack/openai-base@npm:0.9.6":
+  version: 0.9.6
+  resolution: "@tanstack/openai-base@npm:0.9.6"
+  dependencies:
+    "@tanstack/ai-utils": "npm:0.3.1"
+    openai: "npm:^6.41.0"
+  peerDependencies:
+    "@tanstack/ai": ^0.39.0
+  checksum: 10/d46cfeefef79267f02ad376d2726acb9dd34e89f67a85cf158be09389f91d681856e85c65b1c2f795c8a0993d1b3c2ccdd834a75c96530b49a4b91584cd55d81
   languageName: node
   linkType: hard
 
@@ -20641,6 +20733,30 @@ __metadata:
   languageName: node
   linkType: hard
 
+"openai@npm:^6.41.0":
+  version: 6.46.0
+  resolution: "openai@npm:6.46.0"
+  peerDependencies:
+    "@aws-sdk/credential-provider-node": ">=3.972.0 <4"
+    "@smithy/hash-node": ">=4.3.0 <5"
+    "@smithy/signature-v4": ">=5.4.0 <6"
+    ws: ^8.18.0
+    zod: ^3.25 || ^4.0
+  peerDependenciesMeta:
+    "@aws-sdk/credential-provider-node":
+      optional: true
+    "@smithy/hash-node":
+      optional: true
+    "@smithy/signature-v4":
+      optional: true
+    ws:
+      optional: true
+    zod:
+      optional: true
+  checksum: 10/94c3533c664626505c6f73d8c29dc3735e5f923ab77c2a82b8f255687eec1b22b99fe62771e391350575320e1b24ffd86ff1ef68fcb3b955dc6af244f39997a0
+  languageName: node
+  linkType: hard
+
 "openapi-types@npm:^12.1.3":
   version: 12.1.3
   resolution: "openapi-types@npm:12.1.3"
@@ -20996,6 +21112,13 @@ __metadata:
   version: 1.3.3
   resolution: "parseurl@npm:1.3.3"
   checksum: 10/407cee8e0a3a4c5cd472559bca8b6a45b82c124e9a4703302326e9ab60fc1081442ada4e02628efef1eb16197ddc7f8822f5a91fd7d7c86b51f530aedb17dfa2
+  languageName: node
+  linkType: hard
+
+"partial-json@npm:^0.1.7":
+  version: 0.1.7
+  resolution: "partial-json@npm:0.1.7"
+  checksum: 10/6fb8d305638e4747fccfc0649b8a8de99314bfafcc4e3136a3a27c0632857c40b62e6e6bb5f17af00472387393f1d8a58a7865242ca20382af31b593a7bb1f89
   languageName: node
   linkType: hard
 
@@ -24772,6 +24895,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"typescript@npm:^5.9":
+  version: 5.9.3
+  resolution: "typescript@npm:5.9.3"
+  bin:
+    tsc: bin/tsc
+    tsserver: bin/tsserver
+  checksum: 10/c089d9d3da2729fd4ac517f9b0e0485914c4b3c26f80dc0cffcb5de1719a17951e92425d55db59515c1a7ddab65808466debb864d0d56dcf43f27007d0709594
+  languageName: node
+  linkType: hard
+
 "typescript@patch:typescript@npm%3A>=5.9 <7#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^6.0.3#optional!builtin<compat/typescript>":
   version: 6.0.3
   resolution: "typescript@patch:typescript@npm%3A6.0.3#optional!builtin<compat/typescript>::version=6.0.3&hash=5786d5"
@@ -24779,6 +24912,16 @@ __metadata:
     tsc: bin/tsc
     tsserver: bin/tsserver
   checksum: 10/22b67a18dafedf9b1468b64ca20d9aa02ea61d449b65413d8aa6552aeb63f52ef369e86beb25b6b4c91a803d9726ee5c196f391a9b64201263263410a4223ee6
+  languageName: node
+  linkType: hard
+
+"typescript@patch:typescript@npm%3A^5.9#optional!builtin<compat/typescript>":
+  version: 5.9.3
+  resolution: "typescript@patch:typescript@npm%3A5.9.3#optional!builtin<compat/typescript>::version=5.9.3&hash=5786d5"
+  bin:
+    tsc: bin/tsc
+    tsserver: bin/tsserver
+  checksum: 10/696e1b017bc2635f4e0c94eb4435357701008e2f272f553d06e35b494b8ddc60aa221145e286c28ace0c89ee32827a28c2040e3a69bdc108b1a5dc8fb40b72e3
   languageName: node
   linkType: hard
 

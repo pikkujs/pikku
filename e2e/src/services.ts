@@ -10,9 +10,8 @@ import {
 import type { EmailService } from '@pikku/core/services'
 import { pikkuServices } from '#pikku/pikku-types.gen.js'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
-import { VercelAIAgentRunner } from '@pikku/ai-vercel'
+import type { AIAgentRunnerService } from '@pikku/core/services'
 import { JoseJWTService } from '@pikku/jose'
-import { createOpenAI } from '@ai-sdk/openai'
 import type { KyselyPikkuDB } from '@pikku/kysely'
 import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
 import { PikkuMetaService } from '../.pikku/pikku-meta-service.gen.js'
@@ -39,9 +38,17 @@ export const createSingletonServices = pikkuServices(
 
     const schema = new CFWorkerSchemaService(logger)
 
-    const aiAgentRunner = new VercelAIAgentRunner({
-      openai: createOpenAI(),
-    })
+    const aiRunner = process.env.PIKKU_AI_RUNNER ?? 'tanstack'
+    logger.info(`AI agent runner: ${aiRunner}`)
+    let aiAgentRunner: AIAgentRunnerService
+    if (aiRunner === 'vercel') {
+      const { VercelAIAgentRunner } = await import('@pikku/ai-vercel')
+      const { createOpenAI } = await import('@ai-sdk/openai')
+      aiAgentRunner = new VercelAIAgentRunner({ openai: createOpenAI() })
+    } else {
+      const { TanstackAIAgentRunner } = await import('@pikku/ai-tanstack')
+      aiAgentRunner = new TanstackAIAgentRunner()
+    }
 
     const backend = process.env.DB_BACKEND ?? 'sqlite'
     let aiStorage: any

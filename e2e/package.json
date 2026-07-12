@@ -38,6 +38,7 @@
     "@pikku/addon-console": "workspace:*",
     "@pikku/addon-graph": "workspace:*",
     "@pikku/addon-hmac-signer": "workspace:*",
+    "@pikku/ai-tanstack": "workspace:*",
     "@pikku/ai-vercel": "workspace:*",
     "@pikku/better-auth": "workspace:*",
     "@pikku/core": "workspace:*",
