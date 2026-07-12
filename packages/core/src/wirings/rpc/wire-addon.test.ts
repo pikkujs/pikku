@@ -17,9 +17,9 @@ describe('wireAddon', () => {
       auth: true,
       mcp: true,
       tags: ['payments', 'billing'],
-      secretOverrides: { apiKey: 'secretName' },
-      variableOverrides: { region: 'eu-west-1' },
-      credentialOverrides: { oauth: 'credentialName' },
+      secretOverrides: { apiKey: 'STRIPE_API_KEY' },
+      variableOverrides: { region: 'AWS_REGION' },
+      credentialOverrides: { oauth: 'stripeOAuth' },
     })
 
     assert.deepEqual(pikkuState(null, 'addons', 'packages').get('stripe'), {
@@ -27,9 +27,9 @@ describe('wireAddon', () => {
       rpcEndpoint: 'https://rpc.example.com',
       auth: true,
       tags: ['payments', 'billing'],
-      secretOverrides: { apiKey: 'secretName' },
-      variableOverrides: { region: 'eu-west-1' },
-      credentialOverrides: { oauth: 'credentialName' },
+      secretOverrides: { apiKey: 'STRIPE_API_KEY' },
+      variableOverrides: { region: 'AWS_REGION' },
+      credentialOverrides: { oauth: 'stripeOAuth' },
     })
   })
 
