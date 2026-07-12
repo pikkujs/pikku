@@ -41,8 +41,19 @@ export const pikkuImportN8n = pikkuSessionlessFunc<
       process.exit(1)
     }
 
-    const { files, manifest, credentialInstances } =
+    const { files, manifest, credentialInstances, diagnostics } =
       generateWorkflowFromN8n(parsed)
+
+    // A single-file import can only resolve self-references; any cross-workflow
+    // sub-workflow reference is un-importable here. Report and stop rather than
+    // write a partial, un-runnable scaffold.
+    if (diagnostics.some((d) => d.type === 'error')) {
+      logger.error(`Cannot import "${parsed.name}":`)
+      for (const d of diagnostics) {
+        logger.error(`  [${d.reason}] ${d.message}`)
+      }
+      process.exit(1)
+    }
 
     const baseDir = out
       ? isAbsolute(out)

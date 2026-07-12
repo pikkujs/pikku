@@ -24,6 +24,8 @@ export type ClassifiedExpression =
 export interface ExprContext {
   /** nodeId of the immediate predecessor — what `$json` refers to. */
   predecessorNodeId?: string
+  /** All graph-node predecessors in order — the input streams of a join node. */
+  predecessorNodeIds?: string[]
   /** Map from original n8n node NAME to sanitized graph nodeId. */
   nameToNodeId: Record<string, string>
 }

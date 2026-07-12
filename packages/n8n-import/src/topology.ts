@@ -8,6 +8,12 @@ export interface NodeTopology {
   onError?: string | string[]
   /** nodeId of the (first) predecessor — resolves `$json` references. */
   predecessorNodeId?: string
+  /**
+   * All graph-node predecessors, in connection order — the multiple input
+   * streams that feed a join node (n8n Merge). `predecessorNodeId` stays the
+   * first for `$json` resolution.
+   */
+  predecessorNodeIds?: string[]
 }
 
 export interface Topology {
@@ -89,8 +95,9 @@ export function buildTopology(parsed: ParsedWorkflow): Topology {
       for (const targetId of targets) {
         hasIncoming.add(targetId)
         const topo = byNodeId[targetId]
-        if (topo && !topo.predecessorNodeId && sourceIsGraphNode) {
-          topo.predecessorNodeId = sourceId
+        if (topo && sourceIsGraphNode) {
+          if (!topo.predecessorNodeId) topo.predecessorNodeId = sourceId
+          ;(topo.predecessorNodeIds ??= []).push(sourceId!)
         }
       }
     }

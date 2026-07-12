@@ -1,0 +1,61 @@
+{
+  "name": "file multiplexers",
+  "nodes": [
+    {
+      "name": "Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "parameters": {},
+      "position": [0, 0]
+    },
+    {
+      "name": "Load",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "parameters": { "operation": "read", "fileSelector": "in/report.pdf" },
+      "position": [200, 0]
+    },
+    {
+      "name": "ParsePdf",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "parameters": { "operation": "pdf", "binaryPropertyName": "data" },
+      "position": [400, 0]
+    },
+    {
+      "name": "ParseSheet",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "parameters": { "operation": "xlsx" },
+      "position": [600, 0]
+    },
+    {
+      "name": "ParseText",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "parameters": { "operation": "text" },
+      "position": [800, 0]
+    },
+    {
+      "name": "MakeSheet",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1,
+      "parameters": { "operation": "xlsx" },
+      "position": [1000, 0]
+    },
+    {
+      "name": "MakeText",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1,
+      "parameters": { "operation": "toText", "sourceProperty": "body" },
+      "position": [1200, 0]
+    }
+  ],
+  "connections": {
+    "Trigger": { "main": [[{ "node": "Load", "type": "main", "index": 0 }]] },
+    "Load": { "main": [[{ "node": "ParsePdf", "type": "main", "index": 0 }]] },
+    "ParsePdf": { "main": [[{ "node": "ParseSheet", "type": "main", "index": 0 }]] },
+    "ParseSheet": { "main": [[{ "node": "ParseText", "type": "main", "index": 0 }]] },
+    "ParseText": { "main": [[{ "node": "MakeSheet", "type": "main", "index": 0 }]] },
+    "MakeSheet": { "main": [[{ "node": "MakeText", "type": "main", "index": 0 }]] }
+  }
+}

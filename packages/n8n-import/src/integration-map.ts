@@ -12,7 +12,7 @@
  * entry (addon-map skill territory), so partial coverage degrades gracefully.
  */
 
-import type { NativeNodeSpec } from './native-map.js'
+import type { NativeFieldSpec, NativeNodeSpec } from './native-map.js'
 
 interface ResourceMap {
   /** Operation n8n omits from the JSON when it's the resource's default. */
@@ -24,11 +24,69 @@ interface IntegrationNodeMap {
   /** Resource n8n omits from the JSON when it's the node's default. */
   defaultResource: string
   resources: Record<string, ResourceMap>
+  /**
+   * n8n parameter that carries the operation selector. Defaults to `operation`;
+   * the text nodes (xml / markdown) use `mode` instead.
+   */
+  operationParam?: string
 }
 
 const GOOGLE_DRIVE_FOLDER_MIME = 'application/vnd.google-apps.folder'
 
+const HTML_EXTRACT_OP: NativeNodeSpec = {
+  rpc: 'html-extract:htmlExtract',
+  fields: {
+    html: {
+      fromPredecessorPath: { param: 'dataPropertyName', default: 'data' },
+    },
+    extractions: {
+      fromCollection: {
+        path: 'extractionValues.values',
+        map: {
+          key: 'key',
+          cssSelector: 'cssSelector',
+          returnValue: 'returnValue',
+          attribute: 'attribute',
+          returnArray: 'returnArray',
+        },
+      },
+    },
+  },
+}
+
+// extractFromFile carries the file's bytes inline as base64 at the item's
+// `binaryPropertyName` (n8n default `data`) — the shared source for every
+// file-type parse operation.
+const EXTRACT_BINARY_SOURCE: NativeFieldSpec = {
+  fromPredecessorPath: { param: 'binaryPropertyName', default: 'data' },
+}
+
+// n8n Merge combine-family modes join the input branches' objects into one —
+// exactly graph:merge (shallow-merge, later overrides), fed by ALL predecessors.
+// append (concatenate streams) / chooseBranch / combineBySql / removeKeyMatches
+// are a different shape → left unmapped (stub). append needs a concat mode on
+// the addon (follow-up), so it's NOT force-mapped here.
+const MERGE_COMBINE: NativeNodeSpec = {
+  rpc: 'graph:merge',
+  fields: { items: { fromAllPredecessors: true } },
+}
+
 const INTEGRATION_NODES: Record<string, IntegrationNodeMap> = {
+  merge: {
+    operationParam: 'mode',
+    defaultResource: 'default',
+    resources: {
+      default: {
+        defaultOperation: 'append',
+        operations: {
+          combine: MERGE_COMBINE,
+          mergeByKey: MERGE_COMBINE,
+          mergeByIndex: MERGE_COMBINE,
+          mergeByPropertyName: MERGE_COMBINE,
+        },
+      },
+    },
+  },
   googledrive: {
     defaultResource: 'file',
     resources: {
@@ -906,17 +964,15 @@ const INTEGRATION_NODES: Record<string, IntegrationNodeMap> = {
   },
   html: {
     // n8n's HTML node extracts via CSS selectors (→ the html-extract addon) or
-    // converts to a table (→ the html addon). The source HTML is the incoming
-    // item stream, fed from the data predecessor.
+    // converts to a table (→ the html addon). The default "generate HTML
+    // template" op has no addon target, so defaultOperation points at an
+    // unmapped key → those nodes degrade to a stub rather than mis-map.
     defaultResource: 'default',
     resources: {
       default: {
-        defaultOperation: 'extractHtmlContent',
+        defaultOperation: 'generateHtmlTemplate',
         operations: {
-          extractHtmlContent: {
-            rpc: 'html-extract:htmlExtract',
-            fields: { html: { fromPredecessor: true } },
-          },
+          extractHtmlContent: HTML_EXTRACT_OP,
           convertToHtmlTable: {
             rpc: 'html:htmlToTable',
             fields: { data: { fromPredecessor: true } },
@@ -926,24 +982,30 @@ const INTEGRATION_NODES: Record<string, IntegrationNodeMap> = {
     },
   },
   markdown: {
+    // Direction selected by `mode` (default htmlToMarkdown); source is a direct
+    // expression param (`html` / `markdown`), not the incoming item stream.
+    operationParam: 'mode',
     defaultResource: 'default',
     resources: {
       default: {
-        defaultOperation: 'markdownToHtml',
+        defaultOperation: 'htmlToMarkdown',
         operations: {
           markdownToHtml: {
             rpc: 'markdown:markdownToHtml',
-            fields: { markdown: { fromPredecessor: true } },
+            fields: { markdown: { from: 'markdown' } },
           },
           htmlToMarkdown: {
             rpc: 'markdown:htmlToMarkdown',
-            fields: { html: { fromPredecessor: true } },
+            fields: { html: { from: 'html' } },
           },
         },
       },
     },
   },
   xml: {
+    // Direction selected by `mode` (default xmlToJson); the string is read from
+    // the item property named by `dataPropertyName` (default `data`).
+    operationParam: 'mode',
     defaultResource: 'default',
     resources: {
       default: {
@@ -951,10 +1013,148 @@ const INTEGRATION_NODES: Record<string, IntegrationNodeMap> = {
         operations: {
           xmlToJson: {
             rpc: 'xml:xmlToJson',
-            fields: { xml: { fromPredecessor: true } },
+            fields: {
+              xml: {
+                fromPredecessorPath: {
+                  param: 'dataPropertyName',
+                  default: 'data',
+                },
+              },
+            },
           },
           jsonToxml: {
             rpc: 'xml:jsonToXml',
+            fields: {
+              data: {
+                fromPredecessorPath: {
+                  param: 'dataPropertyName',
+                  default: 'data',
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  // n8n filesystem nodes → the graph:readFile / graph:writeFile builtins, which
+  // bridge to the core content service. n8n treats these as raw binary, so the
+  // content is carried base64. The file path maps to the asset `key`; bucket is
+  // left to the content service's default. (glob reads — readBinaryFiles — have
+  // no single-file equivalent and stay stubs.)
+  readwritefile: {
+    defaultResource: 'default',
+    resources: {
+      default: {
+        defaultOperation: 'read',
+        operations: {
+          read: {
+            rpc: 'graph:readFile',
+            fields: {
+              key: { from: 'fileSelector' },
+              encoding: { default: 'base64', asConst: true },
+            },
+          },
+          write: {
+            rpc: 'graph:writeFile',
+            fields: {
+              key: { from: 'fileName' },
+              data: {
+                fromPredecessorPath: {
+                  param: 'dataPropertyName',
+                  default: 'data',
+                },
+              },
+              encoding: { default: 'base64', asConst: true },
+            },
+          },
+        },
+      },
+    },
+  },
+  readbinaryfile: {
+    defaultResource: 'default',
+    resources: {
+      default: {
+        defaultOperation: 'read',
+        operations: {
+          read: {
+            rpc: 'graph:readFile',
+            fields: {
+              key: { from: 'filePath' },
+              encoding: { default: 'base64', asConst: true },
+            },
+          },
+        },
+      },
+    },
+  },
+  writebinaryfile: {
+    defaultResource: 'default',
+    resources: {
+      default: {
+        defaultOperation: 'write',
+        operations: {
+          write: {
+            rpc: 'graph:writeFile',
+            fields: {
+              key: { from: 'fileName' },
+              data: {
+                fromPredecessorPath: {
+                  param: 'dataPropertyName',
+                  default: 'data',
+                },
+              },
+              encoding: { default: 'base64', asConst: true },
+            },
+          },
+        },
+      },
+    },
+  },
+  // n8n extractFromFile — a file-type multiplexer over the item's binary
+  // (carried inline as base64 at `binaryPropertyName`, default `data`). Each
+  // file type routes to the addon that parses it; ops with no clean single-addon
+  // target (text / fromJson / binaryToProperty / xml) stay stubs.
+  extractfromfile: {
+    defaultResource: 'default',
+    resources: {
+      default: {
+        defaultOperation: 'unmapped',
+        operations: {
+          pdf: {
+            rpc: 'read-pdf:readPdf',
+            fields: {
+              base64: EXTRACT_BINARY_SOURCE,
+            },
+          },
+          xlsx: {
+            rpc: 'spreadsheet:xlsxToJson',
+            fields: { base64: EXTRACT_BINARY_SOURCE },
+          },
+          xls: {
+            rpc: 'spreadsheet:xlsxToJson',
+            fields: { base64: EXTRACT_BINARY_SOURCE },
+          },
+          ods: {
+            rpc: 'spreadsheet:xlsxToJson',
+            fields: { base64: EXTRACT_BINARY_SOURCE },
+          },
+        },
+      },
+    },
+  },
+  // n8n convertToFile — produces a file from item data. The spreadsheet output
+  // (xlsx/csv/ods) maps to spreadsheet:jsonToXlsx; the raw toBinary/toText/toJson
+  // "make an in-memory attachment" ops have no single-addon target → stubs.
+  converttofile: {
+    defaultResource: 'default',
+    resources: {
+      default: {
+        defaultOperation: 'unmapped',
+        operations: {
+          xlsx: {
+            rpc: 'spreadsheet:jsonToXlsx',
             fields: { data: { fromPredecessor: true } },
           },
         },
@@ -997,12 +1197,7 @@ const INTEGRATION_NODES: Record<string, IntegrationNodeMap> = {
     resources: {
       default: {
         defaultOperation: 'extract',
-        operations: {
-          extract: {
-            rpc: 'html-extract:htmlExtract',
-            fields: { html: { fromPredecessor: true } },
-          },
-        },
+        operations: { extract: HTML_EXTRACT_OP },
       },
     },
   },
@@ -7280,6 +7475,8 @@ export function integrationSpecFor(
   const resourceKey = (p.resource as string) || node.defaultResource
   const resource = node.resources[resourceKey]
   if (!resource) return undefined
-  const operationKey = (p.operation as string) || resource.defaultOperation
+  const operationKey =
+    (p[node.operationParam ?? 'operation'] as string) ||
+    resource.defaultOperation
   return resource.operations[operationKey]
 }

@@ -1,0 +1,16 @@
+{
+  "name": "Dynamic Dispatcher",
+  "nodes": [
+    { "name": "Trigger", "type": "n8n-nodes-base.manualTrigger", "parameters": {}, "position": [0, 0] },
+    {
+      "name": "Dispatch",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "parameters": { "workflowId": "={{ $json.commands.info.workflowId }}" },
+      "position": [200, 0]
+    }
+  ],
+  "connections": {
+    "Trigger": { "main": [[{ "node": "Dispatch", "type": "main", "index": 0 }]] }
+  }
+}

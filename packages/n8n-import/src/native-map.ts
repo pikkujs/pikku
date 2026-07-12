@@ -28,6 +28,20 @@ export interface NativeFieldSpec {
    * maps onto an array-transform addon's `items` input.
    */
   fromPredecessor?: boolean
+  /**
+   * Source an array of refs to ALL graph-node predecessors — the multiple input
+   * streams that feed a join node (n8n Merge → `[ref(a), ref(b), …]`). Emits
+   * nothing when the node has no graph predecessors.
+   */
+  fromAllPredecessors?: boolean
+  /**
+   * Source a single property of the data predecessor's item — `ref(predId,
+   * <path>)` — where the property name is read from the n8n parameter `param`
+   * (n8n's `dataPropertyName` idiom: the field on the incoming item that holds
+   * the string a text node operates on). Falls back to `default` when the param
+   * is absent or an expression rather than a plain property path.
+   */
+  fromPredecessorPath?: { param: string; default: string }
   /** Source this node's own graph id as a string literal (e.g. a step name). */
   fromNodeId?: boolean
   /**
@@ -156,27 +170,23 @@ const NATIVE_NODES: Record<string, NativeNodeSpec> = {
   },
   aggregate: {
     rpc: 'graph:aggregate',
-    // graph:aggregate collects a single field; only map n8n's single-field case
-    // (multi-field aggregation would silently drop fields → stays a stub).
+    // n8n's default "aggregate individual fields" mode maps 1:1 onto
+    // graph:aggregate's `fields` (each row → one collected output field). The
+    // `aggregateAllItemData` mode (collect whole items) is a different shape →
+    // stays a stub.
     applies: (p) => {
+      const mode = p.aggregate as string | undefined
+      if (mode && mode !== 'aggregateIndividualFields') return false
       const rows = (p.fieldsToAggregate as { fieldToAggregate?: unknown })
         ?.fieldToAggregate
-      return Array.isArray(rows) && rows.length === 1
+      return Array.isArray(rows) && rows.length >= 1
     },
     fields: {
       items: { fromPredecessor: true },
-      field: {
+      fields: {
         fromCollection: {
           path: 'fieldsToAggregate.fieldToAggregate',
-          pick: 'fieldToAggregate',
-          first: true,
-        },
-      },
-      outputField: {
-        fromCollection: {
-          path: 'fieldsToAggregate.fieldToAggregate',
-          pick: 'outputFieldName',
-          first: true,
+          map: { field: 'fieldToAggregate', outputField: 'outputFieldName' },
         },
       },
     },
@@ -222,8 +232,8 @@ const NATIVE_NODES: Record<string, NativeNodeSpec> = {
     // Both n8n versions map onto the one graph:dateTime — v1 (`action`
     // format/calculate + `operation` add/subtract) and v2 (`operation`
     // addToDate/subtractFromDate/formatDate/getTimeBetweenDates) — via
-    // first-present-key sourcing + an operation value-map. roundDate /
-    // extractDate have no clean addon op → stay stubs.
+    // first-present-key sourcing + an operation value-map. roundDate stays a
+    // stub (its addon op depends on the sibling `mode` field, not the op name).
     applies: (p) => {
       const op = (p.operation ?? p.action) as string | undefined
       return (
@@ -238,6 +248,7 @@ const NATIVE_NODES: Record<string, NativeNodeSpec> = {
           'formatDate',
           'getCurrentDate',
           'getTimeBetweenDates',
+          'extractDate',
         ].includes(op)
       )
     },
@@ -253,6 +264,7 @@ const NATIVE_NODES: Record<string, NativeNodeSpec> = {
           formatDate: 'format',
           getCurrentDate: 'now',
           getTimeBetweenDates: 'diff',
+          extractDate: 'extract',
         },
         default: 'now',
         asConst: true,
@@ -264,6 +276,8 @@ const NATIVE_NODES: Record<string, NativeNodeSpec> = {
       unit: { from: 'timeUnit', asConst: true },
       format: { from: ['toFormat', 'format'] },
       compareWith: { from: 'endDate' },
+      // extractDate: n8n's `part` (year/month/week/day/…) → addon `part`.
+      part: { from: 'part', asConst: true },
     },
   },
   crypto: {
@@ -299,10 +313,29 @@ const NATIVE_NODES: Record<string, NativeNodeSpec> = {
   },
 }
 
+// n8n's legacy Item Lists node is a multiplexer over the same array transforms
+// that later became standalone nodes — and it carries the identical parameter
+// shapes (fieldToSplitOut, sortFieldsUi.sortField, fieldsToAggregate, …). So an
+// itemLists op delegates straight to the standalone spec, reusing its field map
+// and `applies` guard. `concatenateItems` has no standalone equivalent → stub.
+const ITEMLISTS_OP_TO_TYPE: Record<string, string> = {
+  splitOutItems: 'splitout',
+  removeDuplicates: 'removeduplicates',
+  sort: 'sort',
+  limit: 'limit',
+  summarize: 'summarize',
+  aggregateItems: 'aggregate',
+}
+
 export function nativeSpecFor(
   typeShort: string,
   parameters?: Record<string, unknown>
 ): NativeNodeSpec | undefined {
+  if (typeShort.toLowerCase() === 'itemlists') {
+    const op = (parameters?.operation as string) ?? 'splitOutItems'
+    const target = ITEMLISTS_OP_TO_TYPE[op]
+    return target ? nativeSpecFor(target, parameters) : undefined
+  }
   const spec = NATIVE_NODES[typeShort.toLowerCase()]
   if (spec) {
     if (spec.applies && parameters && !spec.applies(parameters))

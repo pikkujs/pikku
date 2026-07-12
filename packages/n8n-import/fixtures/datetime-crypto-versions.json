@@ -32,6 +32,17 @@
       "position": [400, 0]
     },
     {
+      "name": "ExtractYear",
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "parameters": {
+        "operation": "extractDate",
+        "date": "={{$json.ts}}",
+        "part": "year"
+      },
+      "position": [500, 0]
+    },
+    {
       "name": "Hash",
       "type": "n8n-nodes-base.crypto",
       "typeVersion": 1,
@@ -54,7 +65,8 @@
   "connections": {
     "Trigger": { "main": [[{ "node": "AddDays", "type": "main", "index": 0 }]] },
     "AddDays": { "main": [[{ "node": "FormatV1", "type": "main", "index": 0 }]] },
-    "FormatV1": { "main": [[{ "node": "Hash", "type": "main", "index": 0 }]] },
+    "FormatV1": { "main": [[{ "node": "ExtractYear", "type": "main", "index": 0 }]] },
+    "ExtractYear": { "main": [[{ "node": "Hash", "type": "main", "index": 0 }]] },
     "Hash": { "main": [[{ "node": "SignIt", "type": "main", "index": 0 }]] }
   }
 }

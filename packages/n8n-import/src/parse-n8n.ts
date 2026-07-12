@@ -5,6 +5,7 @@ import type {
   ParsedWorkflow,
   NodeRole,
   WorkflowShape,
+  WorkflowRef,
 } from './types.js'
 import {
   sanitizeIdentifier,
@@ -23,7 +24,16 @@ function classifyByType(type: string): NodeRole {
   const full = type.toLowerCase()
 
   if (short.endsWith('stickynote')) return 'sticky'
-  if (short.includes('trigger') || short === 'webhook') return 'trigger'
+  // `*trigger*` catches most; `cron` / `interval` are legacy schedule triggers
+  // that predate the naming convention. Triggers are separate wiring, not graph
+  // nodes.
+  if (
+    short.includes('trigger') ||
+    short === 'webhook' ||
+    short === 'cron' ||
+    short === 'interval'
+  )
+    return 'trigger'
   if (full.includes('langchain.agent') || short === 'agent') return 'agent'
   if (
     short.startsWith('lmchat') ||
@@ -36,6 +46,9 @@ function classifyByType(type: string): NodeRole {
   if (short.includes('vectorstore')) return 'vectorStore'
   // langchain tool wrappers + any `*Tool` service node
   if (short.endsWith('tool') || short.startsWith('tool')) return 'agentTool'
+  // Execute Workflow — a sub-workflow call (Pikku `workflow.do(<name>)`). The
+  // tool variant (toolWorkflow) is caught above as an agentTool.
+  if (short === 'executeworkflow') return 'subworkflow'
   if (short === 'code' || short === 'function' || short === 'functionitem')
     return 'code'
   if (short === 'set' || short === 'editfields') return 'set'
@@ -56,6 +69,25 @@ function isNoAuthHttpRequest(node: N8nNode): boolean {
   if (typeShort(node.type).toLowerCase() !== 'httprequest') return false
   const auth = node.parameters?.authentication
   return auth === undefined || auth === 'none'
+}
+
+/**
+ * Read an executeWorkflow / toolWorkflow node's `workflowId` (scalar or
+ * resource-locator) and classify what it points at. `={{ $workflow.id }}` is the
+ * workflow calling itself (recursion); a bare literal is a static id; any other
+ * expression (or an empty value) is a runtime-dynamic target we can't identify.
+ */
+function readWorkflowRef(parameters: Record<string, unknown>): WorkflowRef {
+  const w = parameters.workflowId
+  const raw =
+    w && typeof w === 'object'
+      ? ((w as { value?: unknown }).value ?? '')
+      : (w ?? '')
+  const v = String(raw).trim()
+  if (v.includes('$workflow.id')) return { kind: 'self' }
+  if (v === '' || v.startsWith('=') || v.includes('{{'))
+    return { kind: 'dynamic' }
+  return { kind: 'static', targetId: v }
 }
 
 /** Nodes that never become graph nodes / agent tools — pure config or decoration. */
@@ -142,6 +174,23 @@ export function parseN8n(raw: unknown): ParsedWorkflow {
       continue
     }
 
+    // Respond To Webhook: a Pikku graph's output IS its HTTP response, produced
+    // at the end. A terminal respondToWebhook is therefore a transparent drop.
+    // A mid-flow one (respond early, then keep processing) has no Pikku
+    // equivalent — fail the import loudly rather than silently changing behavior.
+    if (typeShort(node.type).toLowerCase() === 'respondtowebhook') {
+      const out = wf.connections?.[node.name]?.main
+      const hasSuccessors =
+        Array.isArray(out) &&
+        out.some((slot) => Array.isArray(slot) && slot.length > 0)
+      if (hasSuccessors) {
+        throw new Error(
+          `Cannot import "${name}": respondToWebhook node "${node.name}" responds mid-workflow (it has downstream nodes). Pikku graphs produce their response at the end, so respond-early-then-continue is unsupported.`
+        )
+      }
+      role = 'noop'
+    }
+
     // A service node attached to an agent via ai_tool is an agent tool, not a
     // main-flow node — regardless of whether its type ends in `Tool`.
     if (role === 'integration' && toolNames.has(node.name)) {
@@ -186,6 +235,14 @@ export function parseN8n(raw: unknown): ParsedWorkflow {
         ? rpcNameFor(role, node)
         : dedupe(rpcNameFor(role, node), seenRpcNames)
 
+    // executeWorkflow (graph node) and toolWorkflow (agent tool) both carry a
+    // sub-workflow target we resolve at codegen time.
+    const short = typeShort(node.type).toLowerCase()
+    const workflowRef =
+      short === 'executeworkflow' || short === 'toolworkflow'
+        ? readWorkflowRef(node.parameters ?? {})
+        : undefined
+
     nodes.push({
       id: node.id,
       name: node.name,
@@ -199,6 +256,7 @@ export function parseN8n(raw: unknown): ParsedWorkflow {
       disabled: node.disabled ?? false,
       role,
       rpcName,
+      workflowRef,
     })
   }
 

@@ -1,0 +1,33 @@
+{
+  "name": "respond midflow",
+  "nodes": [
+    {
+      "name": "Hook",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": {},
+      "position": [0, 0]
+    },
+    {
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "parameters": {},
+      "position": [200, 0]
+    },
+    {
+      "name": "AfterResponse",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "parameters": {
+        "assignments": {
+          "assignments": [{ "name": "done", "type": "boolean", "value": true }]
+        }
+      },
+      "position": [400, 0]
+    }
+  ],
+  "connections": {
+    "Hook": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] },
+    "Respond": { "main": [[{ "node": "AfterResponse", "type": "main", "index": 0 }]] }
+  }
+}

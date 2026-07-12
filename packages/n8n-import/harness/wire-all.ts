@@ -258,6 +258,7 @@ function main() {
     wireable = 0,
     pureGraph = 0,
     codegenErr = 0,
+    skipped = 0,
     included = 0
   const requiredPkgs = new Set<string>()
   const includedSlugs: string[] = []
@@ -269,12 +270,22 @@ function main() {
     if (existsSync(abs)) files.push(...walk(abs))
   }
 
+  // Pass A — select candidates, assign uids, and index each workflow's own n8n
+  // id → its (uniquified) registered name, so static executeWorkflow references
+  // can be resolved to a real sub-workflow name across the import set.
+  const candidates: Array<{ p: any; uid: string }> = []
+  const idIndex = new Map<string, string>()
   let idx = 0
   for (const f of files) {
-    if (included >= args.limit) break
+    let raw: any
+    try {
+      raw = readWf(f)
+    } catch {
+      continue
+    }
     let p: any
     try {
-      p = parseN8n(readWf(f))
+      p = parseN8n(raw)
     } catch {
       continue
     }
@@ -286,14 +297,31 @@ function main() {
     const uid = `w${idx.toString().padStart(4, '0')}`
     p.name = `${uid} ${p.name}`
     p.slug = `${uid}_${p.slug}`
+    if (raw && raw.id != null) idIndex.set(String(raw.id), p.name)
+    candidates.push({ p, uid })
+    idx++
+  }
+  const resolveWorkflowRef = (id: string) => idIndex.get(id)
+
+  // Pass B — generate with cross-workflow resolution; a workflow that references
+  // a missing / runtime-dynamic sub-workflow is skipped (diagnostic), not stubbed.
+  for (const { p, uid } of candidates) {
+    if (included >= args.limit) break
     let gen: Record<string, string>
     try {
-      gen = generateWorkflowFromN8n(p).files
+      const r = generateWorkflowFromN8n(p, { resolveWorkflowRef })
+      if (r.diagnostics.some((d) => d.type === 'error')) {
+        skipped++
+        continue
+      }
+      gen = r.files
     } catch {
       codegenErr++
       continue
     }
-    // pure mapped graph only: no generated function files (no stubs/input-prep/code)
+    // must have emitted a graph, and be a pure mapped graph (no generated
+    // function files — no stubs / input-prep / code)
+    if (!Object.keys(gen).some((k) => k.endsWith('.graph.ts'))) continue
     if (Object.keys(gen).some((k) => k.includes('/functions/'))) continue
     pureGraph++
     // collect required built addons
@@ -320,7 +348,6 @@ function main() {
     includedSlugs.push(p.slug)
     includedUids.push(uid)
     included++
-    idx++
   }
 
   // one global addons file: one minimal wireAddon per required package
@@ -342,7 +369,7 @@ function main() {
   }
 
   console.log(
-    `scanned=${scanned} fullyWireable=${wireable} pureGraph=${pureGraph} INCLUDED=${included} codegenErr=${codegenErr}`
+    `scanned=${scanned} fullyWireable=${wireable} pureGraph=${pureGraph} INCLUDED=${included} codegenErr=${codegenErr} skipped(diagnostic)=${skipped}`
   )
   console.log(`required addons=${requiredPkgs.size}`)
   console.log(

@@ -1,4 +1,9 @@
-import type { ParsedWorkflow, ParsedNode } from './types.js'
+import type {
+  ParsedWorkflow,
+  ParsedNode,
+  ImportDiagnostic,
+  WorkflowRefResolver,
+} from './types.js'
 import { buildTopology, type NextValue } from './topology.js'
 import {
   classifyExpression,
@@ -32,6 +37,61 @@ export interface GenerateResult {
   manifest: ManifestEntry[]
   /** Encapsulated addon instances (one per distinct n8n credential). */
   credentialInstances: CredentialInstance[]
+  /**
+   * Reasons the workflow could not be imported. When any has `type: 'error'`,
+   * the workflow is skipped — `files` is empty and nothing should be written.
+   */
+  diagnostics: ImportDiagnostic[]
+}
+
+export interface GenerateOptions {
+  /**
+   * Resolve a sub-workflow's n8n id → the registered Pikku workflow name, built
+   * from the whole import set. Absent (single-file import) ⇒ only self-recursion
+   * resolves; every cross-workflow reference is reported as missing.
+   */
+  resolveWorkflowRef?: WorkflowRefResolver
+}
+
+/**
+ * Resolve every executeWorkflow / toolWorkflow node to the Pikku workflow name
+ * it should call. Self-references resolve to the workflow's own name; static ids
+ * go through the import-set resolver; anything unresolved (dangling id or
+ * runtime-dynamic target) produces an error diagnostic that skips the workflow.
+ */
+function resolveSubworkflows(
+  parsed: ParsedWorkflow,
+  resolve?: WorkflowRefResolver
+): { targets: Map<string, string>; diagnostics: ImportDiagnostic[] } {
+  const targets = new Map<string, string>()
+  const diagnostics: ImportDiagnostic[] = []
+  for (const node of parsed.nodes) {
+    if (node.disabled || !node.workflowRef) continue
+    const refKind = node.workflowRef.kind
+    if (refKind === 'self') {
+      targets.set(node.nodeId, parsed.name)
+    } else if (refKind === 'static') {
+      const name = resolve?.(node.workflowRef.targetId!)
+      if (name) targets.set(node.nodeId, name)
+      else
+        diagnostics.push({
+          diagnostic: 'PIKKU_N8N_IMPORT_DIAGNOSTIC',
+          type: 'error',
+          reason: 'missing-subworkflow',
+          message: `Node "${node.name}" references a subflow that doesn't exist (n8n id "${node.workflowRef.targetId}") — not part of the import.`,
+          node: node.name,
+        })
+    } else {
+      diagnostics.push({
+        diagnostic: 'PIKKU_N8N_IMPORT_DIAGNOSTIC',
+        type: 'error',
+        reason: 'dynamic-subworkflow-target',
+        message: `Node "${node.name}" selects its sub-workflow at runtime — the target can't be identified statically.`,
+        node: node.name,
+      })
+    }
+  }
+  return { targets, diagnostics }
 }
 
 const q = (v: unknown) => JSON.stringify(v)
@@ -330,6 +390,26 @@ function emitNativeInput(node: ParsedNode, ctx: ExprContext): string | null {
       lines.push(`      ${field}: ref(${q(ctx.predecessorNodeId)}),`)
       continue
     }
+    if (fspec.fromAllPredecessors) {
+      const preds = ctx.predecessorNodeIds ?? []
+      if (preds.length === 0) continue
+      const refs = preds.map((p) => `ref(${q(p)})`).join(', ')
+      lines.push(`      ${field}: [${refs}],`)
+      continue
+    }
+    if (fspec.fromPredecessorPath) {
+      // n8n's `dataPropertyName` reads a field off the incoming item; when the
+      // data predecessor is the trigger it's excluded from the graph, so fall
+      // back to the implicit 'trigger' input (same id expression lowering uses).
+      const predId = ctx.predecessorNodeId ?? 'trigger'
+      const rawName = node.parameters[fspec.fromPredecessorPath.param]
+      const path =
+        typeof rawName === 'string' && /^[A-Za-z0-9_.]+$/.test(rawName)
+          ? rawName
+          : fspec.fromPredecessorPath.default
+      lines.push(`      ${field}: ref(${q(predId)}, ${q(path)}),`)
+      continue
+    }
     if (fspec.fromNodeId) {
       lines.push(`      ${field}: ${q(node.nodeId)},`)
       continue
@@ -429,17 +509,27 @@ function emitNext(next: NextValue): string {
   return `{ ${entries} } as any`
 }
 
-function emitGraphFile(parsed: ParsedWorkflow): string {
+function emitGraphFile(
+  parsed: ParsedWorkflow,
+  targets: Map<string, string>
+): string {
   const topo = buildTopology(parsed)
   const constName = `${parsed.slug}Workflow`
 
-  const nodesLines = topo.graphNodes.map(
+  const nodesLines = topo.graphNodes.map((n) => {
     // An embedded agent is a native graph node (#910), referenced by its
     // registered agent name — the exported const (`<slug>Agent`), which is the
-    // AgentMap key — not a stub rpc.
-    (n) =>
-      `    ${n.nodeId}: ${q(n.role === 'agent' ? `${parsed.slug}Agent` : n.rpcName)},`
-  )
+    // AgentMap key — not a stub rpc. A sub-workflow (executeWorkflow) node
+    // references the target workflow by its registered name (self-recursion →
+    // this workflow's own name).
+    const value =
+      n.role === 'agent'
+        ? `${parsed.slug}Agent`
+        : n.role === 'subworkflow'
+          ? targets.get(n.nodeId)!
+          : n.rpcName
+    return `    ${n.nodeId}: ${q(value)},`
+  })
 
   let anyTemplate = false
   const configBlocks: string[] = []
@@ -447,6 +537,7 @@ function emitGraphFile(parsed: ParsedWorkflow): string {
     const t = topo.byNodeId[node.nodeId]!
     const ctx: ExprContext = {
       predecessorNodeId: t.predecessorNodeId,
+      predecessorNodeIds: t.predecessorNodeIds,
       nameToNodeId: topo.nameToNodeId,
     }
     const wantsInput =
@@ -607,7 +698,10 @@ function emitVectorStub(node: ParsedNode): string {
   ].join('\n')
 }
 
-function emitAgentFile(parsed: ParsedWorkflow): string {
+function emitAgentFile(
+  parsed: ParsedWorkflow,
+  targets: Map<string, string>
+): string {
   const agent = parsed.agentNode!
   const tools = parsed.nodes.filter((n) => n.role === 'agentTool')
   const systemPrompt =
@@ -617,7 +711,11 @@ function emitAgentFile(parsed: ParsedWorkflow): string {
       ?.systemMessage as string | undefined) ??
     `You are ${parsed.name}.`
 
-  const toolLines = tools.map((t) => `    ref(${q(t.rpcName)}),`)
+  // A toolWorkflow tool references the target workflow by its registered name
+  // (self-recursion → this workflow's own name); other tools ref their stub rpc.
+  const toolLines = tools.map(
+    (t) => `    ref(${q(t.workflowRef ? targets.get(t.nodeId)! : t.rpcName)}),`
+  )
   return [
     `import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'`,
     `import { ref } from '#pikku/pikku-types.gen.js'`,
@@ -728,8 +826,20 @@ function emitAddonsFile(
  * map plus the integration manifest. No filesystem access.
  */
 export function generateWorkflowFromN8n(
-  parsed: ParsedWorkflow
+  parsed: ParsedWorkflow,
+  opts: GenerateOptions = {}
 ): GenerateResult {
+  // Resolve sub-workflow references first: an unresolved one (dangling id or
+  // runtime-dynamic target) makes the whole workflow un-importable — emit the
+  // diagnostic and skip rather than write a graph that can never run.
+  const { targets, diagnostics } = resolveSubworkflows(
+    parsed,
+    opts.resolveWorkflowRef
+  )
+  if (diagnostics.some((d) => d.type === 'error')) {
+    return { files: {}, manifest: [], credentialInstances: [], diagnostics }
+  }
+
   const files: Record<string, string> = {}
   const dir = parsed.slug
   const credentialInstances = deriveCredentialInstances(parsed)
@@ -737,15 +847,18 @@ export function generateWorkflowFromN8n(
 
   const emitGraph = parsed.shape !== 'agent-only'
   if (emitGraph) {
-    files[`${dir}/${parsed.slug}.graph.ts`] = emitGraphFile(parsed)
+    files[`${dir}/${parsed.slug}.graph.ts`] = emitGraphFile(parsed, targets)
   }
   if (parsed.agentNode) {
-    files[`${dir}/${parsed.slug}.agent.ts`] = emitAgentFile(parsed)
+    files[`${dir}/${parsed.slug}.agent.ts`] = emitAgentFile(parsed, targets)
   }
 
   const emittedStubRpc = new Set<string>()
   for (const node of parsed.nodes) {
     if (node.disabled) continue
+    // Sub-workflow references (executeWorkflow / toolWorkflow) resolve to a
+    // workflow name — no stub function.
+    if (node.workflowRef) continue
     // Set / Edit Fields, no-auth HTTP, IF/Filter/Switch, and other native nodes
     // map to @pikku/addon-graph functions (`editFields` / `httpRequest` /
     // `branch` / …) — no stub.
@@ -785,7 +898,10 @@ export function generateWorkflowFromN8n(
   // Manifest: one entry per integration / agent-tool node.
   const agentName = parsed.slug
   const manifest: ManifestEntry[] = parsed.nodes
-    .filter((n) => n.role === 'integration' || n.role === 'agentTool')
+    .filter(
+      (n) =>
+        !n.workflowRef && (n.role === 'integration' || n.role === 'agentTool')
+    )
     .map((n) => ({
       rpcName: n.rpcName,
       n8nType: n.type,
@@ -805,5 +921,5 @@ export function generateWorkflowFromN8n(
     )
   }
 
-  return { files, manifest, credentialInstances }
+  return { files, manifest, credentialInstances, diagnostics }
 }
