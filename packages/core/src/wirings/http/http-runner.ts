@@ -35,6 +35,7 @@ import {
 import { PikkuSessionService } from '../../services/user-session-service.js'
 import { getErrorResponse } from '../../errors/error-handler.js'
 import { handleHTTPError } from '../../handle-error.js'
+import { isProduction } from '../../env.js'
 import { pikkuState } from '../../pikku-state.js'
 import { PikkuFetchHTTPResponse } from './pikku-fetch-http-response.js'
 import { PikkuFetchHTTPRequest } from './pikku-fetch-http-request.js'
@@ -549,7 +550,8 @@ export const fetchData = async <In, Out>(
     logWarningsForStatusCodes = [],
     coerceDataFromSchema = true,
     bubbleErrors = false,
-    exposeErrors = false,
+    // Surface the error message + stack on unexpected 500s unless in production.
+    exposeErrors = !isProduction(),
     generateRequestId,
     traceId: externalTraceId,
   }: RunHTTPWiringOptions = {}
