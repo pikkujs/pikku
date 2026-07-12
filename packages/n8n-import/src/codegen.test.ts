@@ -823,3 +823,28 @@ test('executeWorkflow: a runtime-dynamic target skips the workflow with a diagno
     )
   )
 })
+
+test('collection source → single per-item consumer lowers to a graph:map fanout node', () => {
+  const parsed = parseN8n(loadFixture('sheets-read-fanout.json'))
+  const { files } = generateWorkflowFromN8n(parsed)
+
+  const graph = files['sheetReadFanout/sheetReadFanout.graph.ts']
+  assert.ok(graph, 'graph file emitted')
+
+  // the read node is repointed to the ergonomic array-returning fn
+  assert.match(graph, /read: "google-sheets:readRows"/)
+  // a synthetic map node registers graph:map; the consumer is absorbed
+  assert.match(graph, /postMap: "graph:map"/)
+  assert.doesNotMatch(graph, /\bpost: "graph:httpRequest"/)
+  // the source now flows into the map node, not directly into the consumer
+  assert.match(graph, /read: \{[\s\S]*next: "postMap"/)
+  // the map node fans out over the source array and invokes the consumer rpc
+  assert.match(graph, /items: ref\("read"\)/)
+  assert.match(graph, /child: "graph:httpRequest"/)
+  assert.match(graph, /stepPrefix: "postMap"/)
+  // the consumer's per-item refs are rebound from the source to $item
+  assert.match(graph, /"video": ref\("\$item", "url"\)/)
+  assert.match(graph, /"caption": ref\("\$item", "title"\)/)
+  // no residual ref against the whole array output
+  assert.doesNotMatch(graph, /ref\("read", "url"\)/)
+})

@@ -112,6 +112,14 @@ export interface NativeNodeSpec {
    * See NativeOutputAliasSpec.
    */
   outputAlias?: NativeOutputAliasSpec
+  /**
+   * This operation returns an array of per-item records (a "read"/"list"), so a
+   * single downstream consumer of its `$json` is n8n's implicit per-item loop.
+   * The importer lowers that edge into a `graph:map` fanout node. Only set on
+   * rpcs that return the post-processed per-item shape (e.g. `readRows`,
+   * `listRecordItems`), never the raw REST envelope.
+   */
+  collection?: boolean
 }
 
 const NATIVE_NODES: Record<string, NativeNodeSpec> = {

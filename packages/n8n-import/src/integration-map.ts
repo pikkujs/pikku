@@ -246,7 +246,8 @@ const INTEGRATION_NODES: Record<string, IntegrationNodeMap> = {
             },
           },
           read: {
-            rpc: 'google-sheets:valuesGet',
+            rpc: 'google-sheets:readRows',
+            collection: true,
             fields: {
               spreadsheetId: { fromRL: 'documentId' },
               range: { fromRL: 'sheetName' },
@@ -473,14 +474,16 @@ const INTEGRATION_NODES: Record<string, IntegrationNodeMap> = {
             },
           },
           list: {
-            rpc: 'airtable:listRecords',
+            rpc: 'airtable:listRecordItems',
+            collection: true,
             fields: {
               baseId: { fromRL: ['base', 'application'] },
               tableId: { fromRL: 'table' },
             },
           },
           search: {
-            rpc: 'airtable:listRecords',
+            rpc: 'airtable:listRecordItems',
+            collection: true,
             fields: {
               baseId: { fromRL: ['base', 'application'] },
               tableId: { fromRL: 'table' },

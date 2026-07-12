@@ -5,6 +5,7 @@ import type {
   WorkflowRefResolver,
 } from './types.js'
 import { buildTopology, type NextValue } from './topology.js'
+import { planFanout, type FanoutMap } from './fanout.js'
 import {
   classifyExpression,
   type ExprContext,
@@ -534,14 +535,50 @@ function emitNext(next: NextValue): string {
   return `{ ${entries} } as any`
 }
 
+/**
+ * Strip the `(ref) => (...)` wrapper off an emitted input so its object literal
+ * can be embedded as a `graph:map` childInput value.
+ */
+function inputObjectBody(input: string): string {
+  return input.replace(/^\(ref\) => \(/, '').replace(/\)$/, '')
+}
+
+function emitMapConfig(
+  fan: FanoutMap,
+  child: ParsedNode,
+  baseCtx: ExprContext
+): string {
+  // The consumer is invoked once per item, so its `$json` (predecessor) and any
+  // explicit reference to the source rebind to the per-item `$item`.
+  const childCtx: ExprContext = {
+    ...baseCtx,
+    predecessorNodeId: '$item',
+    predecessorNodeIds: ['$item'],
+    refRewrite: { ...baseCtx.refRewrite, [fan.sourceNodeId]: '$item' },
+  }
+  const childInput = emitInput(child, childCtx)
+  const lines = [
+    `      items: ref(${q(fan.sourceNodeId)}),`,
+    `      child: ${q(fan.childRpc)},`,
+    `      stepPrefix: ${q(fan.mapNodeId)},`,
+  ]
+  if (childInput) lines.push(`      childInput: ${inputObjectBody(childInput)},`)
+  const parts = [`      input: (ref) => ({\n${lines.join('\n')}\n    }),`]
+  if (fan.next !== undefined) parts.push(`      next: ${emitNext(fan.next)},`)
+  return `    ${fan.mapNodeId}: {\n${parts.join('\n')}\n    },`
+}
+
 function emitGraphFile(
   parsed: ParsedWorkflow,
   targets: Map<string, string>
 ): string {
   const topo = buildTopology(parsed)
+  const fanout = planFanout(topo)
   const constName = `${parsed.slug}Workflow`
 
-  const nodesLines = topo.graphNodes.map((n) => {
+  const nodesLines = topo.graphNodes
+    .filter((n) => !fanout.absorbed.has(n.nodeId))
+    .map((n) => {
     // An embedded agent is a native graph node (#910), referenced by its
     // registered agent name — the exported const (`<slug>Agent`), which is the
     // AgentMap key — not a stub rpc. A sub-workflow (executeWorkflow) node
@@ -555,6 +592,9 @@ function emitGraphFile(
           : n.rpcName
     return `    ${n.nodeId}: ${q(value)},`
   })
+  for (const fan of fanout.maps) {
+    nodesLines.push(`    ${fan.mapNodeId}: "graph:map",`)
+  }
 
   const triggerNodeIds = new Set(
     parsed.nodes.filter((n) => n.role === 'trigger').map((n) => n.nodeId)
@@ -569,9 +609,12 @@ function emitGraphFile(
     if (alias) outputAliasByNodeId[node.nodeId] = { [alias.field]: alias.to }
   }
 
+  const childById = new Map(topo.graphNodes.map((n) => [n.nodeId, n]))
+
   let anyTemplate = false
   const configBlocks: string[] = []
   for (const node of topo.graphNodes) {
+    if (fanout.absorbed.has(node.nodeId)) continue
     const t = topo.byNodeId[node.nodeId]!
     const ctx: ExprContext = {
       predecessorNodeId: t.predecessorNodeId,
@@ -594,13 +637,37 @@ function emitGraphFile(
       parts.push(`      input: ${input},`)
       if (input.includes('template(')) anyTemplate = true
     }
-    if (t.next !== undefined) parts.push(`      next: ${emitNext(t.next)},`)
+    // A collection source's edge into its per-item consumer is redirected
+    // through the synthetic map node.
+    const overriddenNext = fanout.sourceNext.get(node.nodeId)
+    if (overriddenNext !== undefined) {
+      parts.push(`      next: ${q(overriddenNext)},`)
+    } else if (t.next !== undefined) {
+      parts.push(`      next: ${emitNext(t.next)},`)
+    }
     if (t.onError !== undefined)
       parts.push(`      onError: ${emitNext(t.onError as NextValue)},`)
     if (node.notes) parts.push(`      notes: ${q(node.notes)},`)
     if (parts.length > 0) {
       configBlocks.push(`    ${node.nodeId}: {\n${parts.join('\n')}\n    },`)
     }
+  }
+
+  for (const fan of fanout.maps) {
+    const child = childById.get(fan.childNodeId)
+    if (!child) continue
+    const tChild = topo.byNodeId[fan.childNodeId]!
+    const baseCtx: ExprContext = {
+      predecessorNodeId: tChild.predecessorNodeId,
+      predecessorNodeIds: tChild.predecessorNodeIds,
+      nameToNodeId: topo.nameToNodeId,
+      triggerNodeIds,
+      refRewrite: topo.refRewrite,
+      outputAliasByNodeId,
+    }
+    const block = emitMapConfig(fan, child, baseCtx)
+    if (block.includes('template(')) anyTemplate = true
+    configBlocks.push(block)
   }
 
   const imports = [
