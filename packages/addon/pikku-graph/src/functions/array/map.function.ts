@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { WorkflowWireDoRPC } from '@pikku/core/workflow'
 import { pikkuSessionlessFunc } from '#pikku'
 
 export const MapInput = z.object({
@@ -74,8 +75,11 @@ export const map = pikkuSessionlessFunc({
     }
 
     const prefix = data.stepPrefix ?? data.child
+    // `child` is a runtime-resolved RPC name (often another addon's, never in
+    // this package's RPCMap), so use the dynamic-name RPC form of do().
+    const doRpc = workflow.do as WorkflowWireDoRPC
     const runChild = (item: unknown, index: number) =>
-      workflow.do(
+      doRpc(
         `${prefix}#${index}`,
         data.child,
         resolveItemTemplate(data.childInput ?? {}, item)
