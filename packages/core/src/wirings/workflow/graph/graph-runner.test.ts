@@ -913,4 +913,62 @@ describe('graph-runner bugs', () => {
       'default retries get exponential backoff so they ride out transient outages'
     )
   })
+
+  test('$item refs pass through resolveSerializedInput unresolved so a fanout node can bind them per-item', async () => {
+    const ws = new InMemoryWorkflowService()
+
+    let received: any = null
+    const mockRpcService = {
+      rpcWithWire: async (rpcName: string, data: any) => {
+        if (rpcName === 'mapFn') {
+          received = data
+          return { ok: true }
+        }
+        return {}
+      },
+    }
+
+    const metaState = pikkuState(null, 'workflows', 'meta')
+    metaState['testItemPassthrough'] = {
+      name: 'testItemPassthrough',
+      pikkuFuncId: 'testItemPassthrough',
+      source: 'graph',
+      entryNodeIds: ['map'],
+      graphHash: 'inline-item-passthrough-hash',
+      nodes: {
+        map: {
+          nodeId: 'map',
+          rpcName: 'mapFn',
+          input: {
+            child: 'postVideo',
+            childInput: {
+              url: { $ref: '$item', path: 'URL VIDEO' },
+              title: { $ref: 'trigger', path: 'campaign' },
+            },
+          },
+        },
+      },
+    } as unknown as WorkflowRuntimeMeta
+
+    await runWorkflowGraph(
+      ws,
+      'testItemPassthrough',
+      { campaign: 'launch' },
+      mockRpcService,
+      true
+    )
+
+    assert.deepEqual(
+      received?.childInput?.url,
+      { $ref: '$item', path: 'URL VIDEO' },
+      '$item ref must survive verbatim so the fanout function can resolve it per element'
+    )
+    assert.equal(
+      received?.childInput?.title,
+      'launch',
+      'non-$item refs must still resolve normally (constant across items)'
+    )
+
+    delete metaState['testItemPassthrough']
+  })
 })
