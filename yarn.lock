@@ -6344,7 +6344,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@pikku/n8n-import@workspace:packages/n8n-import"
   dependencies:
-    "@pikku/openapi-to-zod-schema": "workspace:*"
+    "@pikku/openapi-to-zod-schema": "npm:^0.12.5"
     "@types/to-json-schema": "npm:^0.2.4"
     to-json-schema: "npm:^0.2.5"
     typescript: "npm:^6.0.3"
@@ -6399,7 +6399,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pikku/openapi-to-zod-schema@workspace:*, @pikku/openapi-to-zod-schema@workspace:packages/openapi-to-zod-schema":
+"@pikku/openapi-to-zod-schema@npm:^0.12.5, @pikku/openapi-to-zod-schema@workspace:packages/openapi-to-zod-schema":
   version: 0.0.0-use.local
   resolution: "@pikku/openapi-to-zod-schema@workspace:packages/openapi-to-zod-schema"
   dependencies:

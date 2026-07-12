@@ -18,7 +18,7 @@
     ".": "./dist/index.js"
   },
   "dependencies": {
-    "@pikku/openapi-to-zod-schema": "workspace:*",
+    "@pikku/openapi-to-zod-schema": "^0.12.5",
     "to-json-schema": "^0.2.5"
   },
   "devDependencies": {
