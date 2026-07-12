@@ -1,4 +1,5 @@
 import type { BrowserWorld } from './world.js'
+import { disposeSharedBrowser } from './world.js'
 
 export interface BrowserHookApi {
   Before: (fn: (this: BrowserWorld) => void | Promise<void>) => void
@@ -8,6 +9,7 @@ export interface BrowserHookApi {
       arg: { result?: { status?: string } }
     ) => void | Promise<void>
   ) => void
+  AfterAll?: (fn: () => void | Promise<void>) => void
   setDefaultTimeout?: (ms: number) => void
 }
 
@@ -16,7 +18,7 @@ export interface BrowserHookApi {
  * servers, golden DBs) stays project-side — these hooks only manage the
  * browser and the optional data-reset call.
  */
-export function registerBrowserHooks({ Before, After, setDefaultTimeout }: BrowserHookApi) {
+export function registerBrowserHooks({ Before, After, AfterAll, setDefaultTimeout }: BrowserHookApi) {
   Before(async function () {
     setDefaultTimeout?.(this.config.timeout)
     if (this.config.resetUrl) {
@@ -51,5 +53,9 @@ export function registerBrowserHooks({ Before, After, setDefaultTimeout }: Brows
       }
     }
     await this.closeAll()
+  })
+
+  AfterAll?.(async () => {
+    await disposeSharedBrowser()
   })
 }

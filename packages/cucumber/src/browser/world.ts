@@ -7,15 +7,20 @@ import {
   type PersonaCredentials,
 } from './config.js'
 
-/**
- * A single shared connection to the remote CDP browser, reused across EVERY
- * scenario/world in this cucumber process. Cucumber builds a fresh world per
- * scenario, so a per-world connection would reconnect (and, via closeAll, tear
- * down) the shared remote browser on every scenario — racing its session
- * recycling and timing out the next connect. Connect once; scenarios get their
- * own contexts; the socket drops at process exit.
- */
-let sharedCdpBrowser: Promise<Browser> | undefined
+let sharedRemoteBrowser: Promise<Browser> | undefined
+let sharedRemoteRelease: (() => Promise<void>) | undefined
+
+export interface BrowserConnection {
+  browser: Browser
+  release?: () => Promise<void>
+}
+
+export async function disposeSharedBrowser(): Promise<void> {
+  const release = sharedRemoteRelease
+  sharedRemoteRelease = undefined
+  sharedRemoteBrowser = undefined
+  if (release) await release()
+}
 
 /**
  * BrowserWorld — one scenario's browser plus its actors.
@@ -71,6 +76,8 @@ export class BrowserWorld<Clients = unknown> {
    */
   protected createClients?(ctx: ClientContext): Clients
 
+  protected connectBrowser?(): Promise<BrowserConnection>
+
   /**
    * Backs the "the app data is reset" step. Override to call the app's own
    * reset RPC through the generated typed client (preferred); the default
@@ -111,11 +118,7 @@ export class BrowserWorld<Clients = unknown> {
     }
     this.actors.clear()
     this.last = undefined
-    // On the remote CDP path the browser is a shared, process-lifetime
-    // connection (see launchBrowser) — dispose only the contexts above; closing
-    // it would recycle the shared remote browser and stall the next scenario's
-    // connect. The socket drops when the cucumber process exits.
-    if (!this.config.cdpUrl) {
+    if (!this.config.cdpUrl && !this.connectBrowser) {
       await this.browser?.close()
     }
     this.browser = undefined
@@ -128,24 +131,31 @@ export class BrowserWorld<Clients = unknown> {
 
   private async launchBrowser(): Promise<Browser> {
     if (this.browser) return this.browser
-    // Remote/Steel browser: connect over CDP instead of launching a local
-    // chromium in a CPU/RAM-capped sandbox. The remote browser reaches the app at
-    // its PUBLIC edge via real DNS, so we do NOT add the host-resolver 127.0.0.1
-    // mapping (that's only for a local browser hitting the in-container loopback
-    // edge). One connection is shared across all scenarios (each gets its own
-    // context via ActorSession); if it drops, the next scenario reconnects.
-    if (this.config.cdpUrl) {
-      if (!sharedCdpBrowser) {
-        const cdpUrl = this.config.cdpUrl
-        sharedCdpBrowser = resolveCdpWsUrl(cdpUrl).then(async (ws) => {
-          const browser = await chromium.connectOverCDP(ws)
-          browser.on('disconnected', () => {
-            sharedCdpBrowser = undefined
-          })
-          return browser
-        })
+    if (this.connectBrowser || this.config.cdpUrl) {
+      if (!sharedRemoteBrowser) {
+        const connect: Promise<BrowserConnection> = this.connectBrowser
+          ? this.connectBrowser()
+          : resolveCdpWsUrl(this.config.cdpUrl!).then(async (ws) => ({
+              browser: await chromium.connectOverCDP(ws),
+            }))
+        sharedRemoteBrowser = connect.then(
+          ({ browser, release }) => {
+            sharedRemoteRelease = release
+            browser.on('disconnected', () => {
+              sharedRemoteBrowser = undefined
+              sharedRemoteRelease = undefined
+            })
+            return browser
+          },
+          (err) => {
+            // Clear the cached rejection so the next scenario retries the connect.
+            sharedRemoteBrowser = undefined
+            sharedRemoteRelease = undefined
+            throw err
+          }
+        )
       }
-      this.browser = await sharedCdpBrowser
+      this.browser = await sharedRemoteBrowser
       return this.browser
     }
     this.browser = await chromium.launch({
