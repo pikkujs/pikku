@@ -6258,6 +6258,1010 @@ const INTEGRATION_NODES: Record<string, IntegrationNodeMap> = {
       },
     },
   },
+  gmailtool: {
+    defaultResource: 'message',
+    resources: {
+      message: {
+        defaultOperation: 'send',
+        operations: {
+          send: {
+            // NOTE: the addon's `to` is a structured `[{ email, name? }]` array;
+            // n8n's `sendTo` is a comma-separated string. Shape conversion is
+            // addon-map-step territory, so recipients aren't mapped here.
+            rpc: 'gmail:messageSend',
+            fields: {
+              subject: { from: 'subject' },
+              body: { from: 'message' },
+            },
+          },
+          reply: {
+            rpc: 'gmail:messageReply',
+            fields: {
+              messageId: { from: 'messageId' },
+              body: { from: 'message' },
+            },
+          },
+          get: {
+            rpc: 'gmail:messageGet',
+            fields: { id: { from: 'messageId' } },
+          },
+          getAll: { rpc: 'gmail:messageList', fields: {} },
+          delete: {
+            rpc: 'gmail:messageDelete',
+            fields: { id: { from: 'messageId' } },
+          },
+          markAsRead: {
+            rpc: 'gmail:messageMarkRead',
+            fields: { id: { from: 'messageId' } },
+          },
+          markAsUnread: {
+            rpc: 'gmail:messageMarkUnread',
+            fields: { id: { from: 'messageId' } },
+          },
+          addLabels: {
+            rpc: 'gmail:messageAddLabel',
+            fields: { id: { from: 'messageId' } },
+          },
+          removeLabels: {
+            rpc: 'gmail:messageRemoveLabel',
+            fields: { id: { from: 'messageId' } },
+          },
+        },
+      },
+      label: {
+        defaultOperation: 'getAll',
+        operations: {
+          create: {
+            rpc: 'gmail:labelCreate',
+            fields: { name: { from: 'name' } },
+          },
+          delete: {
+            rpc: 'gmail:labelDelete',
+            fields: { id: { from: 'labelId' } },
+          },
+          get: { rpc: 'gmail:labelGet', fields: { id: { from: 'labelId' } } },
+          getAll: { rpc: 'gmail:labelList', fields: {} },
+        },
+      },
+      draft: {
+        defaultOperation: 'create',
+        operations: {
+          create: {
+            rpc: 'gmail:draftCreate',
+            fields: {
+              subject: { from: 'subject' },
+              body: { from: 'message' },
+            },
+          },
+          delete: {
+            rpc: 'gmail:draftDelete',
+            fields: { id: { from: 'messageId' } },
+          },
+          get: { rpc: 'gmail:draftGet', fields: { id: { from: 'messageId' } } },
+          getAll: { rpc: 'gmail:draftList', fields: {} },
+        },
+      },
+      thread: {
+        defaultOperation: 'getAll',
+        operations: {
+          get: { rpc: 'gmail:threadGet', fields: { id: { from: 'threadId' } } },
+          getAll: { rpc: 'gmail:threadList', fields: {} },
+          delete: {
+            rpc: 'gmail:threadDelete',
+            fields: { id: { from: 'threadId' } },
+          },
+          reply: {
+            rpc: 'gmail:threadReply',
+            fields: {
+              threadId: { from: 'threadId' },
+              body: { from: 'message' },
+            },
+          },
+          trash: {
+            rpc: 'gmail:threadTrash',
+            fields: { id: { from: 'threadId' } },
+          },
+          untrash: {
+            rpc: 'gmail:threadUntrash',
+            fields: { id: { from: 'threadId' } },
+          },
+          addLabels: {
+            rpc: 'gmail:threadAddLabel',
+            fields: { id: { from: 'threadId' } },
+          },
+          removeLabels: {
+            rpc: 'gmail:threadRemoveLabel',
+            fields: { id: { from: 'threadId' } },
+          },
+        },
+      },
+    },
+  },
+  googlecalendartool: {
+    defaultResource: 'event',
+    resources: {
+      event: {
+        defaultOperation: 'create',
+        operations: {
+          create: {
+            rpc: 'google-calendar:eventsInsert',
+            fields: {
+              calendarId: { fromRL: 'calendar' },
+            },
+          },
+          getAll: {
+            rpc: 'google-calendar:eventsList',
+            fields: {
+              calendarId: { fromRL: 'calendar' },
+            },
+          },
+          update: {
+            rpc: 'google-calendar:eventsUpdate',
+            fields: {
+              calendarId: { fromRL: 'calendar' },
+              eventId: { fromRL: 'eventId' },
+            },
+          },
+          get: {
+            rpc: 'google-calendar:eventsGet',
+            fields: {
+              calendarId: { fromRL: 'calendar' },
+              eventId: { fromRL: 'eventId' },
+            },
+          },
+          delete: {
+            rpc: 'google-calendar:eventsDelete',
+            fields: {
+              calendarId: { fromRL: 'calendar' },
+              eventId: { fromRL: 'eventId' },
+            },
+          },
+        },
+      },
+    },
+  },
+  airtabletool: {
+    defaultResource: 'record',
+    resources: {
+      record: {
+        defaultOperation: 'search',
+        operations: {
+          create: {
+            rpc: 'airtable:createRecord',
+            fields: {
+              baseId: { fromRL: ['base', 'application'] },
+              tableId: { fromRL: 'table' },
+            },
+          },
+          append: {
+            rpc: 'airtable:createRecord',
+            fields: {
+              baseId: { fromRL: ['base', 'application'] },
+              tableId: { fromRL: 'table' },
+            },
+          },
+          list: {
+            rpc: 'airtable:listRecords',
+            fields: {
+              baseId: { fromRL: ['base', 'application'] },
+              tableId: { fromRL: 'table' },
+            },
+          },
+          search: {
+            rpc: 'airtable:listRecords',
+            fields: {
+              baseId: { fromRL: ['base', 'application'] },
+              tableId: { fromRL: 'table' },
+            },
+          },
+          read: {
+            rpc: 'airtable:getRecord',
+            fields: {
+              baseId: { fromRL: ['base', 'application'] },
+              tableId: { fromRL: 'table' },
+              recordId: { fromRL: ['id', 'recordId'] },
+            },
+          },
+          get: {
+            rpc: 'airtable:getRecord',
+            fields: {
+              baseId: { fromRL: ['base', 'application'] },
+              tableId: { fromRL: 'table' },
+              recordId: { fromRL: ['id', 'recordId'] },
+            },
+          },
+          update: {
+            rpc: 'airtable:updateRecord',
+            fields: {
+              baseId: { fromRL: ['base', 'application'] },
+              tableId: { fromRL: 'table' },
+              recordId: { fromRL: ['id', 'recordId'] },
+            },
+          },
+          deleteRecord: {
+            rpc: 'airtable:deleteRecord',
+            fields: {
+              baseId: { fromRL: ['base', 'application'] },
+              tableId: { fromRL: 'table' },
+              recordId: { fromRL: ['id', 'recordId'] },
+            },
+          },
+        },
+      },
+    },
+  },
+  postgrestool: {
+    defaultResource: 'default',
+    resources: {
+      default: {
+        defaultOperation: 'executeQuery',
+        operations: {
+          executeQuery: {
+            rpc: 'postgres:executeQuery',
+            fields: { query: { from: 'query' } },
+          },
+          insert: {
+            rpc: 'postgres:insert',
+            fields: { table: { fromRL: 'table' } },
+          },
+          update: {
+            rpc: 'postgres:update',
+            fields: { table: { fromRL: 'table' } },
+          },
+          select: {
+            rpc: 'postgres:select',
+            fields: { table: { fromRL: 'table' } },
+          },
+          upsert: {
+            rpc: 'postgres:upsert',
+            fields: { table: { fromRL: 'table' } },
+          },
+          delete: {
+            rpc: 'postgres:deleteRows',
+            fields: { table: { fromRL: 'table' } },
+          },
+        },
+      },
+    },
+  },
+  supabasetool: {
+    defaultResource: 'row',
+    resources: {
+      row: {
+        defaultOperation: 'getAll',
+        operations: {
+          create: {
+            rpc: 'supabase:insertRows',
+            fields: { table: { fromRL: 'tableId' } },
+          },
+          getAll: {
+            rpc: 'supabase:selectRows',
+            fields: { table: { fromRL: 'tableId' } },
+          },
+          get: {
+            rpc: 'supabase:selectRows',
+            fields: { table: { fromRL: 'tableId' } },
+          },
+          update: {
+            rpc: 'supabase:updateRows',
+            fields: { table: { fromRL: 'tableId' } },
+          },
+          delete: {
+            rpc: 'supabase:deleteRows',
+            fields: { table: { fromRL: 'tableId' } },
+          },
+        },
+      },
+    },
+  },
+  googlesheetstool: {
+    defaultResource: 'sheet',
+    resources: {
+      sheet: {
+        defaultOperation: 'read',
+        operations: {
+          // NOTE: n8n's `sheetName` resource-locator often carries a `gid=N`
+          // value rather than an A1 sheet name; the Sheets API wants A1. The
+          // gid→name resolution is an addon-completeness detail (addon-map step).
+          append: {
+            rpc: 'google-sheets:valuesAppend',
+            fields: {
+              spreadsheetId: { fromRL: 'documentId' },
+              range: { fromRL: 'sheetName' },
+            },
+          },
+          read: {
+            rpc: 'google-sheets:valuesGet',
+            fields: {
+              spreadsheetId: { fromRL: 'documentId' },
+              range: { fromRL: 'sheetName' },
+            },
+          },
+          update: {
+            rpc: 'google-sheets:valuesUpdate',
+            fields: {
+              spreadsheetId: { fromRL: 'documentId' },
+              range: { fromRL: 'sheetName' },
+            },
+          },
+          appendOrUpdate: {
+            rpc: 'google-sheets:valuesUpdate',
+            fields: {
+              spreadsheetId: { fromRL: 'documentId' },
+              range: { fromRL: 'sheetName' },
+            },
+          },
+          clear: {
+            rpc: 'google-sheets:valuesClear',
+            fields: {
+              spreadsheetId: { fromRL: 'documentId' },
+              range: { fromRL: 'sheetName' },
+            },
+          },
+        },
+      },
+      spreadsheet: {
+        defaultOperation: 'create',
+        operations: {
+          create: { rpc: 'google-sheets:create', fields: {} },
+        },
+      },
+    },
+  },
+  googledocstool: {
+    defaultResource: 'document',
+    resources: {
+      document: {
+        defaultOperation: 'create',
+        operations: {
+          create: { rpc: 'google-docs:docsDocumentsCreate', fields: {} },
+          get: { rpc: 'google-docs:docsDocumentsGet', fields: {} },
+          update: { rpc: 'google-docs:docsDocumentsBatchUpdate', fields: {} },
+        },
+      },
+    },
+  },
+  discordtool: {
+    defaultResource: 'message',
+    resources: {
+      message: {
+        defaultOperation: 'send',
+        operations: {
+          send: {
+            rpc: 'discord:messageSend',
+            fields: {
+              channel_id: { fromRL: ['channelId', 'channel'] },
+              content: { from: 'content' },
+            },
+          },
+        },
+      },
+    },
+  },
+  microsoftoutlooktool: {
+    defaultResource: 'message',
+    resources: {
+      message: {
+        defaultOperation: 'send',
+        operations: {
+          send: { rpc: 'microsoft-outlook:userSendMail', fields: {} },
+          reply: { rpc: 'microsoft-outlook:userMessageReply', fields: {} },
+          get: { rpc: 'microsoft-outlook:userGetMessage', fields: {} },
+          getAll: { rpc: 'microsoft-outlook:userListMessage', fields: {} },
+          delete: { rpc: 'microsoft-outlook:userDeleteMessage', fields: {} },
+          move: { rpc: 'microsoft-outlook:userMessageMove', fields: {} },
+          update: { rpc: 'microsoft-outlook:userUpdateMessage', fields: {} },
+        },
+      },
+      draft: {
+        defaultOperation: 'create',
+        operations: {
+          create: { rpc: 'microsoft-outlook:userCreateMessage', fields: {} },
+          get: { rpc: 'microsoft-outlook:userGetMessage', fields: {} },
+          send: { rpc: 'microsoft-outlook:userMessageSend', fields: {} },
+          update: { rpc: 'microsoft-outlook:userUpdateMessage', fields: {} },
+          delete: { rpc: 'microsoft-outlook:userDeleteMessage', fields: {} },
+        },
+      },
+      folder: {
+        defaultOperation: 'create',
+        operations: {
+          create: { rpc: 'microsoft-outlook:userCreateMailFolder', fields: {} },
+          get: { rpc: 'microsoft-outlook:userGetMailFolder', fields: {} },
+          getAll: { rpc: 'microsoft-outlook:userListMailFolder', fields: {} },
+          delete: { rpc: 'microsoft-outlook:userDeleteMailFolder', fields: {} },
+          update: { rpc: 'microsoft-outlook:userUpdateMailFolder', fields: {} },
+        },
+      },
+      folderMessage: {
+        defaultOperation: 'getAll',
+        operations: {
+          getAll: {
+            rpc: 'microsoft-outlook:userMailFolderListMessage',
+            fields: {},
+          },
+        },
+      },
+      event: {
+        defaultOperation: 'create',
+        operations: {
+          create: { rpc: 'microsoft-outlook:userCreateEvent', fields: {} },
+          get: { rpc: 'microsoft-outlook:userGetEvent', fields: {} },
+          getAll: { rpc: 'microsoft-outlook:userListEvent', fields: {} },
+          delete: { rpc: 'microsoft-outlook:userDeleteEvent', fields: {} },
+          update: { rpc: 'microsoft-outlook:userUpdateEvent', fields: {} },
+        },
+      },
+      calendar: {
+        defaultOperation: 'create',
+        operations: {
+          create: { rpc: 'microsoft-outlook:userCreateCalendar', fields: {} },
+          get: { rpc: 'microsoft-outlook:userGetCalendar', fields: {} },
+          getAll: { rpc: 'microsoft-outlook:userListCalendar', fields: {} },
+          delete: { rpc: 'microsoft-outlook:userDeleteCalendar', fields: {} },
+          update: { rpc: 'microsoft-outlook:userUpdateCalendar', fields: {} },
+        },
+      },
+      contact: {
+        defaultOperation: 'create',
+        operations: {
+          create: { rpc: 'microsoft-outlook:userCreateContact', fields: {} },
+          get: { rpc: 'microsoft-outlook:userGetContact', fields: {} },
+          getAll: { rpc: 'microsoft-outlook:userListContact', fields: {} },
+          delete: { rpc: 'microsoft-outlook:userDeleteContact', fields: {} },
+          update: { rpc: 'microsoft-outlook:userUpdateContact', fields: {} },
+        },
+      },
+      messageAttachment: {
+        defaultOperation: 'getAll',
+        operations: {
+          add: {
+            rpc: 'microsoft-outlook:userMessageCreateAttachment',
+            fields: {},
+          },
+          get: {
+            rpc: 'microsoft-outlook:userMessageGetAttachment',
+            fields: {},
+          },
+          getAll: {
+            rpc: 'microsoft-outlook:userMessageListAttachment',
+            fields: {},
+          },
+        },
+      },
+    },
+  },
+  googletaskstool: {
+    defaultResource: 'task',
+    resources: {
+      task: {
+        defaultOperation: 'create',
+        operations: {
+          create: { rpc: 'google-tasks:taskCreate', fields: {} },
+          get: { rpc: 'google-tasks:taskGet', fields: {} },
+          getAll: { rpc: 'google-tasks:taskGetAll', fields: {} },
+          update: { rpc: 'google-tasks:taskUpdate', fields: {} },
+          delete: { rpc: 'google-tasks:taskDelete', fields: {} },
+        },
+      },
+    },
+  },
+  woocommercetool: {
+    defaultResource: 'product',
+    resources: {
+      product: {
+        defaultOperation: 'create',
+        operations: {
+          create: { rpc: 'woocommerce:productCreate', fields: {} },
+          get: { rpc: 'woocommerce:productGet', fields: {} },
+          getAll: { rpc: 'woocommerce:productGetAll', fields: {} },
+          update: { rpc: 'woocommerce:productUpdate', fields: {} },
+          delete: { rpc: 'woocommerce:productDelete', fields: {} },
+        },
+      },
+      order: {
+        defaultOperation: 'create',
+        operations: {
+          create: { rpc: 'woocommerce:orderCreate', fields: {} },
+          get: { rpc: 'woocommerce:orderGet', fields: {} },
+          getAll: { rpc: 'woocommerce:orderGetAll', fields: {} },
+          update: { rpc: 'woocommerce:orderUpdate', fields: {} },
+          delete: { rpc: 'woocommerce:orderDelete', fields: {} },
+        },
+      },
+      customer: {
+        defaultOperation: 'create',
+        operations: {
+          create: { rpc: 'woocommerce:customerCreate', fields: {} },
+          get: { rpc: 'woocommerce:customerGet', fields: {} },
+          getAll: { rpc: 'woocommerce:customerGetAll', fields: {} },
+          update: { rpc: 'woocommerce:customerUpdate', fields: {} },
+          delete: { rpc: 'woocommerce:customerDelete', fields: {} },
+        },
+      },
+    },
+  },
+  telegramtool: {
+    // The n8n Telegram node has no `resource`, only an `operation`; the single
+    // `message` resource carries them all.
+    defaultResource: 'message',
+    resources: {
+      message: {
+        defaultOperation: 'sendMessage',
+        operations: {
+          sendMessage: {
+            rpc: 'telegram:messageSend',
+            fields: { chat_id: { from: 'chatId' }, text: { from: 'text' } },
+          },
+          editMessageText: {
+            rpc: 'telegram:messageEdit',
+            fields: { chat_id: { from: 'chatId' }, text: { from: 'text' } },
+          },
+          deleteMessage: {
+            rpc: 'telegram:messageDelete',
+            fields: { chat_id: { from: 'chatId' } },
+          },
+          sendPhoto: {
+            rpc: 'telegram:messageSendPhoto',
+            fields: { chat_id: { from: 'chatId' } },
+          },
+          sendDocument: {
+            rpc: 'telegram:messageSendDocument',
+            fields: { chat_id: { from: 'chatId' } },
+          },
+          sendChatAction: {
+            rpc: 'telegram:messageSendChatAction',
+            fields: { chat_id: { from: 'chatId' } },
+          },
+          sendLocation: {
+            rpc: 'telegram:messageSendLocation',
+            fields: { chat_id: { from: 'chatId' } },
+          },
+          sendMediaGroup: {
+            rpc: 'telegram:messageSendMediaGroup',
+            fields: { chat_id: { from: 'chatId' } },
+          },
+        },
+      },
+    },
+  },
+  googledrivetool: {
+    defaultResource: 'file',
+    resources: {
+      file: {
+        defaultOperation: 'upload',
+        operations: {
+          download: {
+            // NOTE: the Drive v3 OpenAPI restricts `alt` to `"json"`, so the
+            // spec-derived addon can't express `alt=media` (raw media download).
+            // Mapped to metadata get; media download is an addon-completeness gap.
+            rpc: 'google-drive:filesGet',
+            fields: {
+              fileId: { fromRL: 'fileId' },
+            },
+          },
+          upload: {
+            rpc: 'google-drive:filesCreate',
+            fields: {
+              name: { from: 'name' },
+              parents: { fromRL: 'folderId' },
+            },
+          },
+          createFromText: {
+            rpc: 'google-drive:filesCreate',
+            fields: {
+              name: { from: 'name' },
+              parents: { fromRL: 'folderId' },
+            },
+          },
+          copy: {
+            rpc: 'google-drive:filesCopy',
+            fields: {
+              fileId: { fromRL: 'fileId' },
+              name: { from: 'name' },
+            },
+          },
+          move: {
+            rpc: 'google-drive:filesUpdate',
+            fields: {
+              fileId: { fromRL: 'fileId' },
+              addParents: { fromRL: 'folderId' },
+            },
+          },
+          update: {
+            rpc: 'google-drive:filesUpdate',
+            fields: {
+              fileId: { fromRL: 'fileId' },
+              name: { from: 'newUpdatedFileName' },
+            },
+          },
+          deleteFile: {
+            rpc: 'google-drive:filesDelete',
+            fields: {
+              fileId: { fromRL: 'fileId' },
+            },
+          },
+          share: {
+            rpc: 'google-drive:permissionsCreate',
+            fields: {
+              fileId: { fromRL: 'fileId' },
+              role: { from: 'role', default: 'reader' },
+              type: { from: 'type', default: 'user' },
+              emailAddress: { from: 'emailAddress' },
+            },
+          },
+        },
+      },
+      folder: {
+        defaultOperation: 'create',
+        operations: {
+          create: {
+            rpc: 'google-drive:filesCreate',
+            fields: {
+              name: { from: 'name' },
+              mimeType: { default: GOOGLE_DRIVE_FOLDER_MIME, asConst: true },
+              parents: { fromRL: 'folderId' },
+            },
+          },
+          deleteFolder: {
+            rpc: 'google-drive:filesDelete',
+            fields: {
+              fileId: { fromRL: 'folderId' },
+            },
+          },
+          share: {
+            rpc: 'google-drive:permissionsCreate',
+            fields: {
+              fileId: { fromRL: 'folderId' },
+              role: { from: 'role', default: 'reader' },
+              type: { from: 'type', default: 'user' },
+              emailAddress: { from: 'emailAddress' },
+            },
+          },
+        },
+      },
+      drive: {
+        defaultOperation: 'create',
+        operations: {
+          create: {
+            rpc: 'google-drive:drivesCreate',
+            fields: {
+              name: { from: 'name' },
+            },
+          },
+          deleteDrive: {
+            rpc: 'google-drive:drivesDelete',
+            fields: {
+              driveId: { fromRL: 'driveId' },
+            },
+          },
+          get: {
+            rpc: 'google-drive:drivesGet',
+            fields: {
+              driveId: { fromRL: 'driveId' },
+            },
+          },
+          list: {
+            rpc: 'google-drive:drivesList',
+            fields: {},
+          },
+          update: {
+            rpc: 'google-drive:drivesUpdate',
+            fields: {
+              driveId: { fromRL: 'driveId' },
+              name: { from: 'name' },
+            },
+          },
+        },
+      },
+      fileFolder: {
+        defaultOperation: 'search',
+        operations: {
+          search: {
+            rpc: 'google-drive:filesList',
+            fields: {
+              q: { from: 'queryString' },
+            },
+          },
+        },
+      },
+    },
+  },
+  notiontool: {
+    defaultResource: 'page',
+    resources: {
+      databasePage: {
+        defaultOperation: 'create',
+        operations: {
+          // NOTE: page create/update bodies (parent + properties) are nested n8n
+          // collections not mapped here; the rpc wires, body is refinement work.
+          create: { rpc: 'notion:postPage', fields: {} },
+          getAll: {
+            rpc: 'notion:postDatabaseQuery',
+            fields: {
+              data_source_id: { fromRL: 'databaseId' },
+            },
+          },
+          update: {
+            rpc: 'notion:patchPage',
+            fields: {
+              page_id: { fromRL: 'pageId' },
+            },
+          },
+          get: {
+            rpc: 'notion:retrieveAPage',
+            fields: {
+              page_id: { fromRL: 'pageId' },
+            },
+          },
+        },
+      },
+      database: {
+        defaultOperation: 'get',
+        operations: {
+          get: {
+            rpc: 'notion:retrieveDatabase',
+            fields: {
+              database_id: { fromRL: 'databaseId' },
+            },
+          },
+        },
+      },
+      block: {
+        defaultOperation: 'append',
+        operations: {
+          getAll: {
+            rpc: 'notion:getBlockChildren',
+            fields: {
+              block_id: { fromRL: 'blockId' },
+            },
+          },
+          append: {
+            rpc: 'notion:patchBlockChildren',
+            fields: {
+              block_id: { fromRL: 'blockId' },
+            },
+          },
+        },
+      },
+      page: {
+        defaultOperation: 'create',
+        operations: {
+          create: { rpc: 'notion:postPage', fields: {} },
+        },
+      },
+    },
+  },
+  googleanalyticstool: {
+    defaultResource: 'report',
+    resources: {
+      report: {
+        defaultOperation: 'get',
+        operations: {
+          get: { rpc: 'google-analytics:reportRun', fields: {} },
+          getReport: { rpc: 'google-analytics:reportRun', fields: {} },
+        },
+      },
+    },
+  },
+  jiratool: {
+    defaultResource: 'issue',
+    resources: {
+      issue: {
+        defaultOperation: 'create',
+        operations: {
+          changelog: { rpc: 'jira:getChangeLogs', fields: {} },
+          create: { rpc: 'jira:createIssue', fields: {} },
+          delete: { rpc: 'jira:deleteIssue', fields: {} },
+          get: { rpc: 'jira:getIssue', fields: {} },
+          getAll: { rpc: 'jira:searchForIssuesUsingJql', fields: {} },
+          notify: { rpc: 'jira:notify', fields: {} },
+          transitions: { rpc: 'jira:getTransitions', fields: {} },
+          update: { rpc: 'jira:editIssue', fields: {} },
+        },
+      },
+      issueAttachment: {
+        defaultOperation: 'add',
+        operations: {
+          add: { rpc: 'jira:addAttachment', fields: {} },
+          get: { rpc: 'jira:getAttachment', fields: {} },
+          remove: { rpc: 'jira:removeAttachment', fields: {} },
+        },
+      },
+      issueComment: {
+        defaultOperation: 'add',
+        operations: {
+          add: { rpc: 'jira:addComment', fields: {} },
+          get: { rpc: 'jira:getComment', fields: {} },
+          getAll: { rpc: 'jira:getComments', fields: {} },
+          remove: { rpc: 'jira:deleteComment', fields: {} },
+          update: { rpc: 'jira:updateComment', fields: {} },
+        },
+      },
+      user: {
+        defaultOperation: 'create',
+        operations: {
+          create: { rpc: 'jira:createUser', fields: {} },
+          delete: { rpc: 'jira:removeUser', fields: {} },
+          get: { rpc: 'jira:getUser', fields: {} },
+        },
+      },
+    },
+  },
+  mongodbptool: {
+    defaultResource: 'default',
+    resources: {
+      default: {
+        defaultOperation: 'find',
+        operations: {
+          find: {
+            rpc: 'mongodb:mongoFind',
+            fields: { collection: { from: 'collection' } },
+          },
+          insert: {
+            rpc: 'mongodb:mongoInsertMany',
+            fields: { collection: { from: 'collection' } },
+          },
+          update: {
+            rpc: 'mongodb:mongoUpdateMany',
+            fields: { collection: { from: 'collection' } },
+          },
+          delete: {
+            rpc: 'mongodb:mongoDeleteMany',
+            fields: { collection: { from: 'collection' } },
+          },
+          aggregate: {
+            rpc: 'mongodb:mongoAggregate',
+            fields: { collection: { from: 'collection' } },
+          },
+        },
+      },
+    },
+  },
+  mysqltool: {
+    defaultResource: 'default',
+    resources: {
+      default: {
+        defaultOperation: 'executeQuery',
+        operations: {
+          executeQuery: {
+            rpc: 'mysql:executeQuery',
+            fields: { query: { from: 'query' } },
+          },
+          insert: {
+            rpc: 'mysql:insert',
+            fields: { table: { fromRL: 'table' } },
+          },
+          update: {
+            rpc: 'mysql:update',
+            fields: { table: { fromRL: 'table' } },
+          },
+          select: {
+            rpc: 'mysql:select',
+            fields: { table: { fromRL: 'table' } },
+          },
+          upsert: {
+            rpc: 'mysql:upsert',
+            fields: { table: { fromRL: 'table' } },
+          },
+          delete: {
+            rpc: 'mysql:deleteRows',
+            fields: { table: { fromRL: 'table' } },
+          },
+        },
+      },
+    },
+  },
+  wordpresstool: {
+    defaultResource: 'post',
+    resources: {
+      post: {
+        defaultOperation: 'create',
+        operations: {
+          create: { rpc: 'wordpress:createPost', fields: {} },
+          get: { rpc: 'wordpress:getPost', fields: {} },
+          getAll: { rpc: 'wordpress:listPosts', fields: {} },
+          update: { rpc: 'wordpress:updatePost', fields: {} },
+          delete: { rpc: 'wordpress:deletePost', fields: {} },
+        },
+      },
+      page: {
+        defaultOperation: 'create',
+        operations: {
+          create: { rpc: 'wordpress:createPage', fields: {} },
+          get: { rpc: 'wordpress:getPage', fields: {} },
+          getAll: { rpc: 'wordpress:listPages', fields: {} },
+          update: { rpc: 'wordpress:updatePage', fields: {} },
+          delete: { rpc: 'wordpress:deletePage', fields: {} },
+        },
+      },
+      user: {
+        defaultOperation: 'create',
+        operations: {
+          create: { rpc: 'wordpress:createUser', fields: {} },
+          get: { rpc: 'wordpress:getUser', fields: {} },
+          getAll: { rpc: 'wordpress:listUsers', fields: {} },
+          update: { rpc: 'wordpress:updateUser', fields: {} },
+          delete: { rpc: 'wordpress:deleteUser', fields: {} },
+        },
+      },
+    },
+  },
+  twittertool: {
+    defaultResource: 'tweet',
+    resources: {
+      tweet: {
+        defaultOperation: 'create',
+        operations: {
+          create: { rpc: 'twitter:tweetCreate', fields: {} },
+          delete: { rpc: 'twitter:tweetDelete', fields: {} },
+          like: { rpc: 'twitter:tweetLike', fields: {} },
+          retweet: { rpc: 'twitter:tweetRetweet', fields: {} },
+          search: { rpc: 'twitter:tweetSearch', fields: {} },
+        },
+      },
+      directMessage: {
+        defaultOperation: 'create',
+        operations: {
+          create: { rpc: 'twitter:directMessageCreate', fields: {} },
+        },
+      },
+      list: {
+        defaultOperation: 'add',
+        operations: {
+          add: { rpc: 'twitter:listAdd', fields: {} },
+        },
+      },
+      user: {
+        defaultOperation: 'searchUser',
+        operations: {
+          searchUser: { rpc: 'twitter:userSearch', fields: {} },
+        },
+      },
+    },
+  },
+  emailsendtool: {
+    defaultResource: 'email',
+    resources: {
+      email: {
+        defaultOperation: 'send',
+        operations: {
+          send: {
+            rpc: 'email-send:emailSend',
+            fields: {
+              subject: { from: 'subject' },
+              text: { from: 'text' },
+            },
+          },
+        },
+      },
+    },
+  },
+  redistool: {
+    defaultResource: 'default',
+    resources: {
+      default: {
+        defaultOperation: 'get',
+        operations: {
+          get: { rpc: 'redis:keyGet', fields: { key: { from: 'key' } } },
+          set: {
+            rpc: 'redis:keySet',
+            fields: { key: { from: 'key' }, value: { from: 'value' } },
+          },
+          delete: { rpc: 'redis:keyDelete', fields: { key: { from: 'key' } } },
+          incr: { rpc: 'redis:keyIncr', fields: { key: { from: 'key' } } },
+          keys: {
+            rpc: 'redis:keys',
+            fields: { pattern: { from: 'keyPattern' } },
+          },
+          publish: {
+            rpc: 'redis:publish',
+            fields: { channel: { from: 'channel' } },
+          },
+        },
+      },
+    },
+  },
 }
 
 /**
