@@ -7,7 +7,7 @@ import {
 } from './expressions.js'
 import { toPascalCase } from './naming.js'
 import { normalizeBranch } from './branch.js'
-import { nativeSpecFor } from './native-map.js'
+import { nativeSpecFor, type NativeFieldSpec } from './native-map.js'
 import {
   deriveCredentialInstances,
   nodeInstanceBindings,
@@ -256,6 +256,68 @@ function emitBranchInput(node: ParsedNode, ctx: ExprContext): string | null {
  * Build the `input: (ref) => ({...})` body for a native addon node, sourcing
  * each addon input field from an n8n parameter per its `native-map` spec.
  */
+/** Read a dot-path (`a.b.c`) out of a nested n8n parameter object. */
+function readPath(obj: Record<string, unknown>, path: string): unknown {
+  let current: unknown = obj
+  for (const key of path.split('.')) {
+    if (current == null || typeof current !== 'object') return undefined
+    current = (current as Record<string, unknown>)[key]
+  }
+  return current
+}
+
+type CollectionSpec = NonNullable<NativeFieldSpec['fromCollection']>
+
+/**
+ * Render an n8n `fixedCollection` row array as a graph-input value: an array of
+ * projected objects (`map`), or an array / single scalar (`pick` / `pick+first`).
+ * Each source value is lowered like any other expression (ref / template /
+ * literal), with optional per-key enum remapping. Returns null when empty.
+ */
+function emitCollection(
+  spec: CollectionSpec,
+  parameters: Record<string, unknown>,
+  ctx: ExprContext
+): string | null {
+  const rows = readPath(parameters, spec.path)
+  if (!Array.isArray(rows) || rows.length === 0) return null
+
+  if (spec.pick) {
+    const picked = rows
+      .map((r) => (r as Record<string, unknown>)?.[spec.pick!])
+      .filter((v) => v !== undefined && v !== '')
+    if (spec.first) {
+      if (picked.length === 0) return null
+      return emitValue(picked[0], ctx)
+    }
+    const vals = picked.map((v) => emitValue(v, ctx)).filter((v) => v !== null)
+    return vals.length ? `[${vals.join(', ')}]` : null
+  }
+
+  if (spec.map) {
+    const objs: string[] = []
+    for (const row of rows) {
+      const r = row as Record<string, unknown>
+      const parts: string[] = []
+      for (const [outKey, src] of Object.entries(spec.map)) {
+        const fromKey = typeof src === 'string' ? src : src.from
+        let raw = r?.[fromKey]
+        if (raw === undefined) continue
+        if (typeof src !== 'string' && src.values && typeof raw === 'string') {
+          raw = src.values[raw] ?? raw
+        }
+        const rendered = emitValue(raw, ctx)
+        if (rendered === null) continue
+        parts.push(`${outKey}: ${rendered}`)
+      }
+      if (parts.length) objs.push(`{ ${parts.join(', ')} }`)
+    }
+    return objs.length ? `[${objs.join(', ')}]` : null
+  }
+
+  return null
+}
+
 function emitNativeInput(node: ParsedNode, ctx: ExprContext): string | null {
   const spec = nativeSpecFor(node.typeShort, node.parameters)
   if (!spec) return null
@@ -270,6 +332,16 @@ function emitNativeInput(node: ParsedNode, ctx: ExprContext): string | null {
     }
     if (fspec.fromNodeId) {
       lines.push(`      ${field}: ${q(node.nodeId)},`)
+      continue
+    }
+    if (fspec.fromCollection) {
+      const rendered = emitCollection(
+        fspec.fromCollection,
+        node.parameters,
+        ctx
+      )
+      if (rendered === null) continue
+      lines.push(`      ${field}: ${rendered},`)
       continue
     }
     if (fspec.fromRL) {

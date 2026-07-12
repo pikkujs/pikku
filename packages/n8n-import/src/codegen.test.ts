@@ -237,3 +237,45 @@ test('agent + tool workflow → agent-only, no graph', () => {
   assert.equal(manifest[0]!.isAgentTool, true)
   assert.equal(manifest[0]!.agentName, 'supportAssistant')
 })
+
+test('fixedCollection transforms (sort/renameKeys/aggregate/summarize) wire to graph fns with enum remap', () => {
+  const parsed = parseN8n(loadFixture('collection-transforms.json'))
+  assert.equal(parsed.shape, 'pure-graph')
+
+  const { files } = generateWorkflowFromN8n(parsed)
+  const graph = files['collectionTransforms/collectionTransforms.graph.ts']
+  assert.ok(graph, 'graph file emitted')
+
+  // all four wire to their existing @pikku/addon-graph functions — no stubs
+  assert.match(graph, /sortIt: "graph:sort"/)
+  assert.match(graph, /rename: "graph:renameKeys"/)
+  assert.match(graph, /roll: "graph:aggregate"/)
+  assert.match(graph, /stats: "graph:summarize"/)
+
+  // sort: multi-row fixedCollection → array of objects, order enum remapped
+  // (n8n ascending/descending → addon asc/desc), items from the predecessor
+  assert.match(graph, /items: ref\("fetch"\)/)
+  assert.match(
+    graph,
+    /sortBy: \[\{ field: "created", order: "desc" \}, \{ field: "name", order: "asc" \}\]/
+  )
+
+  // renameKeys: currentKey/newKey rows → oldKey/newKey mappings
+  assert.match(graph, /mappings: \[\{ oldKey: "old", newKey: "new" \}\]/)
+
+  // aggregate: single field picked (first), output field carried through
+  assert.match(graph, /field: "id"/)
+  assert.match(graph, /outputField: "ids"/)
+
+  // summarize: aggregation enum remapped (average → avg)
+  assert.match(
+    graph,
+    /aggregations: \[\{ field: "amount", operation: "avg", outputField: "amount" \}\]/
+  )
+
+  // none of the four leaves a throwing stub function behind
+  assert.ok(!files['collectionTransforms/functions/sort__sortIt.function.ts'])
+  assert.ok(
+    !files['collectionTransforms/functions/aggregate__roll.function.ts']
+  )
+})
