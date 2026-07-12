@@ -226,6 +226,13 @@ test('agent + tool workflow → agent-only, no graph', () => {
   assert.match(agent, /goal: "You are a helpful support assistant/)
   // the ai_tool node is a ref in tools[], not a graph node
   assert.match(agent, /ref\("httpRequestTool__lookupOrder"\)/)
+  // the connected lmChatOpenAi model node → provider-qualified model + temperature
+  assert.match(agent, /model: 'openai\/gpt-4o'/)
+  assert.match(agent, /temperature: 0\.3/)
+  // the connected memoryBufferWindow node → memory.lastMessages from contextWindowLength
+  assert.match(agent, /memory: \{ lastMessages: 10 \}/)
+  // no leftover hardcoded-model TODO once a real model node is resolved
+  assert.doesNotMatch(agent, /TODO\(n8n\): map the connected chat-model/)
 
   // tool stub emitted
   assert.ok(
@@ -236,6 +243,36 @@ test('agent + tool workflow → agent-only, no graph', () => {
   assert.equal(manifest.length, 1)
   assert.equal(manifest[0]!.isAgentTool, true)
   assert.equal(manifest[0]!.agentName, 'supportAssistant')
+})
+
+test('agent with structured output parser → agent output Zod schema + resolved model', () => {
+  const parsed = parseN8n(
+    JSON.parse(
+      readFileSync(
+        join(fixturesDir, '../fixtures-ai/agent-structured-output.json'),
+        'utf-8'
+      )
+    )
+  )
+  assert.equal(parsed.shape, 'agent-only')
+
+  const { files } = generateWorkflowFromN8n(parsed)
+  const agent = files['leadExtractor/leadExtractor.agent.ts']
+  assert.ok(agent, 'agent file emitted')
+
+  // Gemini model node: modelName `models/gemini-1.5-flash` → google/gemini-1.5-flash
+  assert.match(agent, /model: 'google\/gemini-1\.5-flash'/)
+  assert.match(agent, /temperature: 0\.2/)
+
+  // outputParserStructured (manual inputSchema) → agent `output` Zod schema.
+  assert.match(agent, /import \{ z \} from 'zod'/)
+  assert.match(agent, /output: z\.object\(/)
+  // draft-07 `type: ["string","null"]` normalized to `.nullable()`
+  assert.match(agent, /domain: z\.string\(\)\.nullable\(\)/)
+  assert.match(agent, /cheapest_plan: z\.number\(\)\.nullable\(\)/)
+  // `required: ["has_api"]` → not optional; unlisted keys optional
+  assert.match(agent, /has_api: z\.boolean\(\)/)
+  assert.match(agent, /domain: z\.string\(\)\.nullable\(\)\.optional\(\)/)
 })
 
 test('fixedCollection transforms (sort/renameKeys/aggregate/summarize) wire to graph fns with enum remap', () => {

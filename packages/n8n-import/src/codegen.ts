@@ -18,6 +18,9 @@ import {
   nodeInstanceBindings,
   type CredentialInstance,
 } from './credentials.js'
+import { findAgentSubNode } from './ai-subnodes.js'
+import { mapModel } from './model-map.js'
+import { outputParserToZod } from './output-schema.js'
 
 export interface ManifestEntry {
   rpcName: string
@@ -698,6 +701,38 @@ function emitVectorStub(node: ParsedNode): string {
   ].join('\n')
 }
 
+/**
+ * n8n memory sub-node → Pikku agent `memory` config. `memoryBufferWindow` maps
+ * cleanly to `lastMessages` (n8n's default window is 5); other backends
+ * (postgres/redis chat) need a service and are left as a TODO for the operator.
+ */
+function emitMemory(node: ParsedNode): string {
+  if (node.typeShort === 'memoryBufferWindow') {
+    const raw = node.parameters.contextWindowLength
+    const n = typeof raw === 'number' ? raw : 5
+    return `  memory: { lastMessages: ${n} },`
+  }
+  return `  // TODO(n8n): map memory node ${q(node.name)} (${q(node.type)}) to a Pikku memory backend`
+}
+
+/**
+ * Resolve the structured-output parser feeding an agent. n8n may wrap it in an
+ * `outputParserAutofixing` node (the structured parser hangs off *that* node's
+ * `ai_outputParser` port), so unwrap one level when the direct parser carries no
+ * schema of its own.
+ */
+function resolveOutputSchema(
+  parsed: ParsedWorkflow,
+  agentName: string
+): string | undefined {
+  const parser = findAgentSubNode(parsed, agentName, 'ai_outputParser')
+  if (!parser) return undefined
+  const direct = outputParserToZod(parser)
+  if (direct) return direct
+  const inner = findAgentSubNode(parsed, parser.name, 'ai_outputParser')
+  return inner ? outputParserToZod(inner) : undefined
+}
+
 function emitAgentFile(
   parsed: ParsedWorkflow,
   targets: Map<string, string>
@@ -711,24 +746,45 @@ function emitAgentFile(
       ?.systemMessage as string | undefined) ??
     `You are ${parsed.name}.`
 
+  const modelNode = findAgentSubNode(parsed, agent.name, 'ai_languageModel')
+  const model = modelNode ? mapModel(modelNode) : undefined
+  const memoryNode = findAgentSubNode(parsed, agent.name, 'ai_memory')
+  const outputZod = resolveOutputSchema(parsed, agent.name)
+
   // A toolWorkflow tool references the target workflow by its registered name
   // (self-recursion → this workflow's own name); other tools ref their stub rpc.
   const toolLines = tools.map(
     (t) => `    ref(${q(t.workflowRef ? targets.get(t.nodeId)! : t.rpcName)}),`
   )
-  return [
+
+  const imports = [
     `import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'`,
     `import { ref } from '#pikku/pikku-types.gen.js'`,
+  ]
+  if (outputZod) imports.push(`import { z } from 'zod'`)
+
+  const modelLines = model
+    ? [`  model: '${model.model}',`]
+    : [
+        `  // TODO(n8n): map the connected chat-model node to a Pikku model id`,
+        `  model: 'openai/gpt-4o',`,
+      ]
+  if (model?.temperature !== undefined)
+    modelLines.push(`  temperature: ${model.temperature},`)
+
+  return [
+    imports.join('\n'),
     ``,
     `export const ${parsed.slug}Agent = pikkuAIAgent({`,
     `  name: ${q(parsed.slug)},`,
     `  description: ${q(parsed.name)},`,
     `  goal: ${q(systemPrompt)},`,
-    `  // TODO(n8n): map the connected chat-model node to a Pikku model id`,
-    `  model: 'openai/gpt-4o',`,
+    ...modelLines,
+    ...(memoryNode ? [emitMemory(memoryNode)] : []),
     tools.length > 0
       ? `  tools: [\n${toolLines.join('\n')}\n  ],`
       : `  tools: [],`,
+    ...(outputZod ? [`  output: ${outputZod.split('\n').join('\n  ')},`] : []),
     `})`,
     ``,
   ].join('\n')
