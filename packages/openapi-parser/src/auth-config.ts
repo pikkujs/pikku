@@ -41,6 +41,13 @@ export const AuthConfigSchema = z.object({
   headerName: z.string().optional(),
   /** 'raw' sends the bare token; 'bearer' prefixes it. Default: bearer for Authorization, raw for custom headers. */
   headerFormat: z.enum(['raw', 'bearer']).optional(),
+  /**
+   * Static headers sent on EVERY request — the delegated login call and all
+   * proxied API calls. Needed for upstreams that route on a header, e.g. a
+   * multi-tenant API that resolves the tenant from an `Origin` header and
+   * rejects requests without it.
+   */
+  extraHeaders: z.record(z.string(), z.string()).optional(),
   /** Present when end-users sign in with their existing upstream credentials (delegated login). */
   delegated: DelegatedLoginSchema.optional(),
 })
