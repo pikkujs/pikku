@@ -940,7 +940,9 @@ export const pikkuNewAddon = pikkuSessionlessFunc<
 
     // Resolve target directory
     const baseDir = dir || config.scaffold?.addonDir || process.cwd()
-    const addonDir = join(baseDir, name)
+    // Folder mirrors the package name (@pikku/addon-<name>) so a packages/
+    // listing reads as packages/addon-<name>, distinct from app workspaces.
+    const addonDir = join(baseDir, `addon-${name}`)
 
     if (existsSync(addonDir)) {
       logger.error(`Directory already exists: ${addonDir}`)
