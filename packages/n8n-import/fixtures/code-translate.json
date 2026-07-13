@@ -32,10 +32,20 @@
     },
     {
       "id": "c3",
-      "name": "Needs Lodash",
+      "name": "With Env",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [600, 0],
+      "parameters": {
+        "jsCode": "return [{ json: { region: $env.AWS_REGION } }];"
+      }
+    },
+    {
+      "id": "c4",
+      "name": "Needs Lodash",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 0],
       "parameters": {
         "jsCode": "const _ = require('lodash');\nreturn _.uniq($input.all());"
       }
@@ -44,6 +54,7 @@
   "connections": {
     "Webhook": { "main": [[{ "node": "Doubler", "type": "main", "index": 0 }]] },
     "Doubler": { "main": [[{ "node": "Per Item", "type": "main", "index": 0 }]] },
-    "Per Item": { "main": [[{ "node": "Needs Lodash", "type": "main", "index": 0 }]] }
+    "Per Item": { "main": [[{ "node": "With Env", "type": "main", "index": 0 }]] },
+    "With Env": { "main": [[{ "node": "Needs Lodash", "type": "main", "index": 0 }]] }
   }
 }

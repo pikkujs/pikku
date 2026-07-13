@@ -786,11 +786,24 @@ function emitCodeFunction(
   const inputName = `${Pascal}Input`
   const outputName = `${Pascal}Output`
 
+  // n8n's `$env` is the process environment; Pikku reads it through the
+  // variables service. Resolve it once up front (getAll is sync-or-async, so
+  // `await` covers both) into a plain object the original `$env.X` reads hit.
+  const usesEnv = /\$env\b/.test(translation.source)
+  const servicesParam = usesEnv ? '{ variables }' : '_services'
+  const envPreamble = usesEnv
+    ? [
+        `    const $env: Record<string, string | undefined> = await variables.getAll()`,
+        `    void $env`,
+      ]
+    : []
+
   // n8n exposes each upstream item as `{ json }`. Rebuild that shape from the
   // node's own input (never reaching outside it) so the original body runs
   // verbatim. Everything is `any` — the untyped n8n item model — which is what
   // keeps the pasted JavaScript type-checking 1:1.
-  const body =
+  const body = [
+    ...envPreamble,
     translation.mode === 'each'
       ? [
           `    const $items: any[] = Array.isArray((data as any)?.items)`,
@@ -825,7 +838,8 @@ function emitCodeFunction(
           `    void $input`,
           `    void $json`,
           indentBody(translation.source, '    '),
-        ].join('\n')
+        ].join('\n'),
+  ].join('\n')
 
   return [
     `import { z } from 'zod'`,
@@ -839,7 +853,7 @@ function emitCodeFunction(
     `  description: ${q(`Ported from n8n Code node "${node.name}"`)},`,
     `  input: ${inputName},`,
     `  output: ${outputName},`,
-    `  func: async (_services, data) => {`,
+    `  func: async (${servicesParam}, data) => {`,
     body,
     `  },`,
     `})`,

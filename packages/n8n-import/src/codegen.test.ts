@@ -206,6 +206,17 @@ test('pure Code nodes translate to real functions; require() stays a stub', () =
   assert.match(each, /label: `#\$\{\$json\.doubled\}`/)
   assert.doesNotMatch(each, /implement me/)
 
+  // $env → resolved once from the variables service, read as a plain object
+  const env = files['codeTranslate/functions/codeStubWithEnv.function.ts']
+  assert.ok(env)
+  assert.match(env, /func: async \(\{ variables \}, data\) => \{/)
+  assert.match(
+    env,
+    /const \$env: Record<string, string \| undefined> = await variables\.getAll\(\)/
+  )
+  assert.match(env, /region: \$env\.AWS_REGION/)
+  assert.doesNotMatch(env, /implement me/)
+
   // require() is not self-contained → throwing stub with verbatim JS preserved
   const stub = files['codeTranslate/functions/codeStubNeedsLodash.function.ts']
   assert.ok(stub)

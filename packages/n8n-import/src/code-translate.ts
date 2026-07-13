@@ -21,7 +21,6 @@ const BAIL: Array<[RegExp, string]> = [
   [/(?<![.\w])import[\s(]/, 'uses import'],
   [/\$node\b/, 'references another node ($node)'],
   [/\$\(\s*['"`]/, 'references another node ($(...))'],
-  [/\$env\b/, 'reads $env'],
   [/\$vars\b/, 'reads $vars'],
   [/\$secrets\b/, 'reads $secrets'],
   [/\$workflow\b/, 'reads $workflow'],

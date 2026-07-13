@@ -62,11 +62,16 @@ test('a cross-node reference ($(...)) bails to a stub', () => {
   assert.equal(t.translatable, false)
 })
 
-test('$env, await and fetch each bail (side effects / environment)', () => {
+test('$env is translatable (maps to the variables service, not a bail)', () => {
   assert.equal(
-    translateCodeNode(codeNode({ jsCode: 'return $env.KEY' })).translatable,
-    false
+    translateCodeNode(
+      codeNode({ jsCode: 'return [{ json: { k: $env.KEY } }]' })
+    ).translatable,
+    true
   )
+})
+
+test('await and fetch each bail (side effects)', () => {
   assert.equal(
     translateCodeNode(codeNode({ jsCode: 'await x(); return items' }))
       .translatable,
