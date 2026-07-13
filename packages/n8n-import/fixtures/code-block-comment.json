@@ -16,7 +16,7 @@
       "typeVersion": 2,
       "position": [200, 0],
       "parameters": {
-        "jsCode": "/* configure ===== */\nconst FIELD_ID = $('Schedule').first().json.id /* inline */\nreturn [{ json: { FIELD_ID } }]"
+        "jsCode": "/* configure ===== */\nconst _ = require('lodash') /* inline */\nreturn [{ json: { FIELD_ID: 42 } }]"
       }
     }
   ],

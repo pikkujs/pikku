@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { translateCodeNode } from './code-translate.js'
+import { translateCodeNode, extractNodeRefs } from './code-translate.js'
 import type { ParsedNode } from './types.js'
 
 const codeNode = (
@@ -55,11 +55,32 @@ test('require() bails to a stub', () => {
   assert.equal(!t.translatable && /require/.test(t.reason), true)
 })
 
-test('a cross-node reference ($(...)) bails to a stub', () => {
+test('a static cross-node reference is translatable and reports the ref', () => {
   const t = translateCodeNode(
     codeNode({ jsCode: 'return [{ json: { v: $("Other").item.json.v } }]' })
   )
-  assert.equal(t.translatable, false)
+  assert.equal(t.translatable, true)
+  assert.deepEqual(t.translatable && t.refs, ['Other'])
+})
+
+test('$node["X"] and $("Y") refs are both collected, deduped', () => {
+  assert.deepEqual(
+    extractNodeRefs('$("A").first().json.x + $node["B"].json.y + $("A").all()'),
+    ['A', 'B']
+  )
+})
+
+test('a dynamic node reference ($(expr)) bails to a stub', () => {
+  assert.equal(
+    translateCodeNode(codeNode({ jsCode: 'const n = "X"; return $(n).all()' }))
+      .translatable,
+    false
+  )
+  assert.equal(
+    translateCodeNode(codeNode({ jsCode: 'return $node[key].json' }))
+      .translatable,
+    false
+  )
 })
 
 test('$env is translatable (maps to the variables service, not a bail)', () => {

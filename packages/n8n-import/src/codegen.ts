@@ -12,7 +12,11 @@ import {
   type RefPart,
 } from './expressions.js'
 import { toPascalCase } from './naming.js'
-import { translateCodeNode, type CodeTranslation } from './code-translate.js'
+import {
+  translateCodeNode,
+  codeRefKey,
+  type CodeTranslation,
+} from './code-translate.js'
 import { normalizeBranch } from './branch.js'
 import {
   nativeSpecFor,
@@ -407,6 +411,36 @@ function emitCollection(
   return null
 }
 
+/**
+ * Resolve an n8n node name to the graph ref target the way expression lowering
+ * does: unknown names and triggers collapse to `trigger`, dropped No Op
+ * passthroughs follow their rewrite.
+ */
+function codeRefTarget(name: string, ctx: ExprContext): string {
+  const nodeId = ctx.nameToNodeId[name] ?? 'trigger'
+  if (ctx.triggerNodeIds?.has(nodeId)) return 'trigger'
+  return ctx.refRewrite?.[nodeId] ?? nodeId
+}
+
+/**
+ * Wire a translated Code node's graph input: its incoming item stream as
+ * `items: ref(predecessor)`, plus one ref per `$("X")` / `$node["X"]` it reads.
+ * Returns null when the node needs no input (no implicit stream, no refs).
+ */
+function emitCodeInput(
+  translation: Extract<CodeTranslation, { translatable: true }>,
+  ctx: ExprContext
+): string | null {
+  const entries: string[] = []
+  if (translation.usesInput) {
+    entries.push(`items: ref(${q(ctx.predecessorNodeId ?? 'trigger')})`)
+  }
+  for (const name of translation.refs) {
+    entries.push(`${codeRefKey(name)}: ref(${q(codeRefTarget(name, ctx))})`)
+  }
+  return entries.length ? `(ref) => ({ ${entries.join(', ')} })` : null
+}
+
 function emitNativeInput(node: ParsedNode, ctx: ExprContext): string | null {
   const spec = nativeSpecFor(node.typeShort, node.parameters)
   if (!spec) return null
@@ -641,6 +675,11 @@ function emitGraphFile(
       parts.push(`      input: ${input},`)
       if (input.includes('template(')) anyTemplate = true
     }
+    if (node.role === 'code') {
+      const tr = translateCodeNode(node)
+      const codeInput = tr.translatable ? emitCodeInput(tr, ctx) : null
+      if (codeInput) parts.push(`      input: ${codeInput},`)
+    }
     // A collection source's edge into its per-item consumer is redirected
     // through the synthetic map node.
     const overriddenNext = fanout.sourceNext.get(node.nodeId)
@@ -798,17 +837,46 @@ function emitCodeFunction(
       ]
     : []
 
-  // n8n exposes each upstream item as `{ json }`. Rebuild that shape from the
-  // node's own input (never reaching outside it) so the original body runs
-  // verbatim. Everything is `any` — the untyped n8n item model — which is what
-  // keeps the pasted JavaScript type-checking 1:1.
-  const body = [
-    ...envPreamble,
+  // n8n exposes upstream data as an item list (`[{ json }]`). Pikku's graph
+  // hands a node whatever its refs resolve to, so normalise any wired input
+  // (array, object, or nothing) back into that item shape.
+  const itemModel = [
+    `    const toItems = (v: any): any[] =>`,
+    `      Array.isArray(v)`,
+    `        ? v.map((x: any) => (x && typeof x === 'object' && 'json' in x ? x : { json: x }))`,
+    `        : v == null`,
+    `          ? []`,
+    `          : [{ json: v }]`,
+    `    const $items: any[] = toItems((data as any)?.items)`,
+  ]
+
+  // Each `$("X")` / `$node["X"]` reference is wired in as its own ref key; the
+  // shim rebuilds n8n's node-accessor over that input so the body runs verbatim.
+  const refShim =
+    translation.refs.length > 0
+      ? [
+          `    const wrapRef = (items: any[]): any => ({`,
+          `      all: () => items,`,
+          `      first: () => items[0],`,
+          `      last: () => items[items.length - 1],`,
+          `      item: items[0],`,
+          `      json: items[0]?.json,`,
+          `    })`,
+          `    const $node: Record<string, any> = {`,
+          ...translation.refs.map(
+            (name) =>
+              `      ${q(name)}: wrapRef(toItems((data as any)?.${codeRefKey(name)})),`
+          ),
+          `    }`,
+          `    const $ = (name: string): any => $node[name]`,
+          `    void $node`,
+          `    void $`,
+        ]
+      : []
+
+  const modeBody =
     translation.mode === 'each'
       ? [
-          `    const $items: any[] = Array.isArray((data as any)?.items)`,
-          `      ? (data as any).items`,
-          `      : [{ json: data }]`,
           `    return $items.map((item: any) => {`,
           `      const $json = item?.json`,
           `      const $input = {`,
@@ -821,11 +889,8 @@ function emitCodeFunction(
           `      void $input`,
           indentBody(translation.source, '      '),
           `    })`,
-        ].join('\n')
+        ]
       : [
-          `    const $items: any[] = Array.isArray((data as any)?.items)`,
-          `      ? (data as any).items`,
-          `      : [{ json: data }]`,
           `    const items = $items`,
           `    const $input = {`,
           `      all: () => $items,`,
@@ -838,10 +903,18 @@ function emitCodeFunction(
           `    void $input`,
           `    void $json`,
           indentBody(translation.source, '    '),
-        ].join('\n'),
-  ].join('\n')
+        ]
+
+  const body = [...envPreamble, ...itemModel, ...refShim, ...modeBody].join(
+    '\n'
+  )
 
   return [
+    // The body is the node's original JavaScript lowered verbatim; arbitrary
+    // user JS can't be soundly strict-typed (locals built as `{}`, unannotated
+    // callbacks), so the runtime shim keeps it `any` and type-checking is off
+    // for this generated file only. The typed contract is the input/output.
+    `// @ts-nocheck`,
     `import { z } from 'zod'`,
     `import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'`,
     ``,

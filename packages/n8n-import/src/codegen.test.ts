@@ -224,6 +224,42 @@ test('pure Code nodes translate to real functions; require() stays a stub', () =
   assert.match(stub, /implement me/)
 })
 
+test('translated Code nodes wire their input: predecessor stream + cross-node refs', () => {
+  const parsed = parseN8n(loadFixture('code-translate.json'))
+  const { files } = generateWorkflowFromN8n(parsed)
+  const graph = files['codeTranslate/codeTranslate.graph.ts']
+  assert.ok(graph)
+
+  // Doubler reads $input.all(); its predecessor is the trigger (webhook)
+  assert.match(
+    graph,
+    /doubler: \{[\s\S]*?input: \(ref\) => \(\{ items: ref\("trigger"\) \}\)/
+  )
+  // Per Item reads $json; predecessor is Doubler
+  assert.match(
+    graph,
+    /perItem: \{[\s\S]*?input: \(ref\) => \(\{ items: ref\("doubler"\) \}\)/
+  )
+  // Combine Refs reads $json (predecessor) AND $('Doubler') → two refs
+  assert.match(
+    graph,
+    /combineRefs: \{[\s\S]*?input: \(ref\) => \(\{ items: ref\("withEnv"\), __node_Doubler: ref\("doubler"\) \}\)/
+  )
+
+  // the function rebuilds the $node accessor over the wired ref key
+  const combine =
+    files['codeTranslate/functions/codeStubCombineRefs.function.ts']
+  assert.ok(combine)
+  assert.match(combine, /const \$node: Record<string, any> = \{/)
+  assert.match(
+    combine,
+    /"Doubler": wrapRef\(toItems\(\(data as any\)\?\.__node_Doubler\)\)/
+  )
+  assert.match(combine, /const \$ = \(name: string\): any => \$node\[name\]/)
+  assert.match(combine, /\$\('Doubler'\)\.all\(\)/)
+  assert.doesNotMatch(combine, /implement me/)
+})
+
 test('graph-with-agent: graph references the agent by its registered name (#910)', () => {
   const parsed = parseN8n(
     JSON.parse(
