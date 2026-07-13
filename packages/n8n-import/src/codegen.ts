@@ -12,6 +12,7 @@ import {
   type RefPart,
 } from './expressions.js'
 import { toPascalCase } from './naming.js'
+import { translateCodeNode, type CodeTranslation } from './code-translate.js'
 import { normalizeBranch } from './branch.js'
 import {
   nativeSpecFor,
@@ -770,6 +771,82 @@ function emitCodeStub(node: ParsedNode): string {
   ].join('\n')
 }
 
+function indentBody(source: string, pad: string): string {
+  return source
+    .split('\n')
+    .map((line) => (line.trim() === '' ? '' : pad + line))
+    .join('\n')
+}
+
+function emitCodeFunction(
+  node: ParsedNode,
+  translation: Extract<CodeTranslation, { translatable: true }>
+): string {
+  const Pascal = toPascalCase(node.rpcName)
+  const inputName = `${Pascal}Input`
+  const outputName = `${Pascal}Output`
+
+  // n8n exposes each upstream item as `{ json }`. Rebuild that shape from the
+  // node's own input (never reaching outside it) so the original body runs
+  // verbatim. Everything is `any` — the untyped n8n item model — which is what
+  // keeps the pasted JavaScript type-checking 1:1.
+  const body =
+    translation.mode === 'each'
+      ? [
+          `    const $items: any[] = Array.isArray((data as any)?.items)`,
+          `      ? (data as any).items`,
+          `      : [{ json: data }]`,
+          `    return $items.map((item: any) => {`,
+          `      const $json = item?.json`,
+          `      const $input = {`,
+          `        item,`,
+          `        all: () => $items,`,
+          `        first: () => $items[0],`,
+          `        last: () => $items[$items.length - 1],`,
+          `      }`,
+          `      void $json`,
+          `      void $input`,
+          indentBody(translation.source, '      '),
+          `    })`,
+        ].join('\n')
+      : [
+          `    const $items: any[] = Array.isArray((data as any)?.items)`,
+          `      ? (data as any).items`,
+          `      : [{ json: data }]`,
+          `    const items = $items`,
+          `    const $input = {`,
+          `      all: () => $items,`,
+          `      first: () => $items[0],`,
+          `      last: () => $items[$items.length - 1],`,
+          `      item: $items[0],`,
+          `    }`,
+          `    const $json = ($input.first() as any)?.json`,
+          `    void items`,
+          `    void $input`,
+          `    void $json`,
+          indentBody(translation.source, '    '),
+        ].join('\n')
+
+  return [
+    `import { z } from 'zod'`,
+    `import { pikkuSessionlessFunc } from '#pikku/pikku-types.gen.js'`,
+    ``,
+    `export const ${inputName} = z.any()`,
+    `export const ${outputName} = z.any()`,
+    ``,
+    `/** Ported from n8n Code node ${q(node.name)}. */`,
+    `export const ${node.rpcName} = pikkuSessionlessFunc({`,
+    `  description: ${q(`Ported from n8n Code node "${node.name}"`)},`,
+    `  input: ${inputName},`,
+    `  output: ${outputName},`,
+    `  func: async (_services, data) => {`,
+    body,
+    `  },`,
+    `})`,
+    ``,
+  ].join('\n')
+}
+
 function emitVectorStub(node: ParsedNode): string {
   const Pascal = toPascalCase(node.rpcName)
   const inputName = `${Pascal}Input`
@@ -1061,7 +1138,11 @@ export function generateWorkflowFromN8n(
         emitIntegrationStub(node)
       emittedStubRpc.add(node.rpcName)
     } else if (node.role === 'code') {
-      files[`${dir}/functions/${node.rpcName}.function.ts`] = emitCodeStub(node)
+      const translation = translateCodeNode(node)
+      files[`${dir}/functions/${node.rpcName}.function.ts`] =
+        translation.translatable
+          ? emitCodeFunction(node, translation)
+          : emitCodeStub(node)
       emittedStubRpc.add(node.rpcName)
     } else if (node.role === 'vectorStore') {
       files[`${dir}/functions/${node.rpcName}.function.ts`] =

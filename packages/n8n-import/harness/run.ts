@@ -203,7 +203,13 @@ function main() {
         results.push(result)
         return
       }
-      result.hasStub = keys.some((k) => k.includes('/functions/'))
+      // A throwing stub marks itself with "implement me"; a translated Code
+      // node emits a real function file with no such marker. Classify on
+      // content, not on the mere presence of a functions/ file, so translated
+      // workflows can reach `clean`.
+      result.hasStub = Object.entries(emitted).some(
+        ([k, c]) => k.includes('/functions/') && c.includes('implement me')
+      )
       for (const [path, content] of Object.entries(emitted)) {
         // Re-root every workflow under its own namespaced dir.
         const rerooted = path.replace(parsed.slug, projSlug)

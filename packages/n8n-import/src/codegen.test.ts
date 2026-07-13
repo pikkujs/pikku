@@ -59,11 +59,14 @@ test('linear set/code/integration workflow → pure graph', () => {
     /throw new Error\("pipedrive__createDeal — implement me"\)/
   )
 
-  // code stub preserves original JS verbatim
+  // pure code node → real translated function (not a throwing stub)
   const code = files['leadEnrichment/functions/codeStubScore.function.ts']
   assert.ok(code)
-  assert.match(code, /Original n8n JavaScript/)
+  assert.match(code, /Ported from n8n Code node "Score"/)
   assert.match(code, /i\.json\.value \* 2/)
+  assert.doesNotMatch(code, /implement me/)
+  assert.doesNotMatch(code, /Original n8n JavaScript/)
+  assert.match(code, /const items = \$items/)
 
   // manifest: pipedrive is the one integration node
   assert.equal(manifest.length, 1)
@@ -181,6 +184,33 @@ test('code node with block comments escapes */ so the JSDoc stays valid', () => 
     'no raw */ inside JSDoc'
   )
   assert.match(code, /configure ===== \*\\\//)
+})
+
+test('pure Code nodes translate to real functions; require() stays a stub', () => {
+  const parsed = parseN8n(loadFixture('code-translate.json'))
+  const { files } = generateWorkflowFromN8n(parsed)
+
+  // runOnceForAllItems → real function over data.items, no throw
+  const all = files['codeTranslate/functions/codeStubDoubler.function.ts']
+  assert.ok(all)
+  assert.match(all, /Ported from n8n Code node "Doubler"/)
+  assert.match(all, /const items = \$items/)
+  assert.match(all, /item\.json\.value \* 2/)
+  assert.doesNotMatch(all, /implement me/)
+
+  // runOnceForEachItem → per-item map, body returns from the callback
+  const each = files['codeTranslate/functions/codeStubPerItem.function.ts']
+  assert.ok(each)
+  assert.match(each, /\$items\.map\(\(item: any\) => \{/)
+  assert.match(each, /const \$json = item\?\.json/)
+  assert.match(each, /label: `#\$\{\$json\.doubled\}`/)
+  assert.doesNotMatch(each, /implement me/)
+
+  // require() is not self-contained → throwing stub with verbatim JS preserved
+  const stub = files['codeTranslate/functions/codeStubNeedsLodash.function.ts']
+  assert.ok(stub)
+  assert.match(stub, /Original n8n JavaScript/)
+  assert.match(stub, /implement me/)
 })
 
 test('graph-with-agent: graph references the agent by its registered name (#910)', () => {
