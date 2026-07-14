@@ -32,7 +32,7 @@ import { findAgentSubNode } from './ai-subnodes.js'
 import { mapModel } from './model-map.js'
 import { outputParserToZod } from './output-schema.js'
 import { planSubWorkflows, subWorkflowParsed } from './subworkflow.js'
-import { decideShape } from './parse-n8n.js'
+import { decideShape, isChainAgentType } from './parse-n8n.js'
 
 export interface ManifestEntry {
   rpcName: string
@@ -1016,6 +1016,77 @@ function resolveOutputSchema(
   return inner ? outputParserToZod(inner) : undefined
 }
 
+/** Strip n8n's leading `=` expression marker from a prompt string. */
+function stripExprMarker(v: unknown): string | undefined {
+  return typeof v === 'string' && v.trim()
+    ? v.replace(/^=/, '').trim()
+    : undefined
+}
+
+/**
+ * Derive an agent `goal` + `output` Zod for a LangChain *chain* node promoted to
+ * a tools-less agent. Each chain type carries its instruction and (for the
+ * structured ones) its schema in different parameters:
+ *  - chainLlm / chainSummarization: `text` is the prompt; output is free text.
+ *  - informationExtractor: `options.systemPromptTemplate` instructs; the schema
+ *    lives in `inputSchema` / `jsonSchemaExample` (same shape a structured parser
+ *    uses, so `outputParserToZod` reads it directly).
+ *  - textClassifier: `categories` defines the output — one category name.
+ *  - sentimentAnalysis: a fixed positive/neutral/negative classification.
+ */
+function chainAgentSpec(node: ParsedNode): {
+  goal?: string
+  outputZod?: string
+} {
+  const p = node.parameters
+  const options = (p.options as Record<string, unknown> | undefined) ?? {}
+  switch (node.typeShort.toLowerCase()) {
+    case 'chainllm':
+      return { goal: stripExprMarker(p.text) }
+    case 'chainsummarization':
+      return {
+        goal:
+          stripExprMarker(p.text) ??
+          'Summarize the input text concisely, preserving the key points.',
+      }
+    case 'informationextractor':
+      return {
+        goal:
+          stripExprMarker(options.systemPromptTemplate) ??
+          'Extract the requested structured information from the input.',
+        outputZod: outputParserToZod(node),
+      }
+    case 'textclassifier': {
+      const cats = (
+        (p.categories as Record<string, unknown> | undefined)?.categories as
+          | { category?: unknown }[]
+          | undefined
+      )
+        ?.map((c) => (typeof c.category === 'string' ? c.category : undefined))
+        .filter((c): c is string => !!c)
+      const outputZod =
+        cats && cats.length > 0
+          ? `z.object({ category: z.enum([${cats
+              .map((c) => q(c))
+              .join(', ')}]) })`
+          : undefined
+      return {
+        goal:
+          stripExprMarker(options.systemPromptTemplate) ??
+          'Classify the input into exactly one of the configured categories.',
+        outputZod,
+      }
+    }
+    case 'sentimentanalysis':
+      return {
+        goal: 'Analyze the sentiment of the input.',
+        outputZod: `z.object({ sentiment: z.enum(["positive", "neutral", "negative"]) })`,
+      }
+    default:
+      return {}
+  }
+}
+
 function emitAgentFile(
   parsed: ParsedWorkflow,
   targets: Map<string, string>
@@ -1027,17 +1098,26 @@ function emitAgentFile(
   // an rpc tool — workflow graphs are not rpc-registered.
   const tools = agentTools.filter((n) => !n.workflowRef)
   const workflowTools = agentTools.filter((n) => n.workflowRef)
+  // A chain node promoted to a tools-less agent carries its instruction and
+  // schema in type-specific parameters; a real Agent node uses text/systemMessage.
+  const chainSpec = isChainAgentType(agent.typeShort)
+    ? chainAgentSpec(agent)
+    : {}
   const systemPrompt =
-    (agent.parameters.text as string | undefined) ??
-    (agent.parameters.systemMessage as string | undefined) ??
-    ((agent.parameters.options as Record<string, unknown> | undefined)
-      ?.systemMessage as string | undefined) ??
+    chainSpec.goal ??
+    stripExprMarker(agent.parameters.text) ??
+    stripExprMarker(agent.parameters.systemMessage) ??
+    stripExprMarker(
+      (agent.parameters.options as Record<string, unknown> | undefined)
+        ?.systemMessage
+    ) ??
     `You are ${parsed.name}.`
 
   const modelNode = findAgentSubNode(parsed, agent.name, 'ai_languageModel')
   const model = modelNode ? mapModel(modelNode) : undefined
   const memoryNode = findAgentSubNode(parsed, agent.name, 'ai_memory')
-  const outputZod = resolveOutputSchema(parsed, agent.name)
+  const outputZod =
+    chainSpec.outputZod ?? resolveOutputSchema(parsed, agent.name)
 
   // rpc-backed tools ref their stub rpc; sub-workflow-backed tools become
   // `workflows: [ref(<registered graph name>)]` (deduped — several tools may
@@ -1059,7 +1139,7 @@ function emitAgentFile(
   if (outputZod) imports.push(`import { z } from 'zod'`)
 
   const modelLines = model
-    ? [`  model: '${model.model}',`]
+    ? [`  model: ${q(model.model)},`]
     : [
         `  // TODO(n8n): map the connected chat-model node to a Pikku model id`,
         `  model: 'openai/gpt-4o',`,

@@ -19,16 +19,24 @@ const PROVIDER_BY_TYPE: Record<string, string> = {
   lmChatAzureOpenAi: 'openai',
 }
 
+/**
+ * A model id chosen at runtime (`={{ … }}` / an expression) is not a static
+ * Pikku model — treat it as absent so the caller falls back to the TODO default.
+ */
+function isDynamic(v: string): boolean {
+  return v.startsWith('=') || v.includes('{{')
+}
+
 /** Read the model id from a chat-model node (resource-locator, `model`, or `modelName`). */
 function readModelId(parameters: Record<string, unknown>): string | undefined {
   const model = parameters.model
   if (model && typeof model === 'object' && 'value' in model) {
     const v = (model as { value?: unknown }).value
-    if (typeof v === 'string' && v) return v
+    if (typeof v === 'string' && v && !isDynamic(v)) return v
   }
-  if (typeof model === 'string' && model) return model
+  if (typeof model === 'string' && model && !isDynamic(model)) return model
   const modelName = parameters.modelName
-  if (typeof modelName === 'string' && modelName) {
+  if (typeof modelName === 'string' && modelName && !isDynamic(modelName)) {
     // Gemini reports `models/gemini-1.5-flash`; the provider prefix is added below.
     return modelName.replace(/^models\//, '')
   }

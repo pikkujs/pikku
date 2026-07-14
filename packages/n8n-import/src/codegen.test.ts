@@ -327,7 +327,7 @@ test('agent + tool workflow → agent-only, no graph', () => {
   // the ai_tool node is a ref in tools[], not a graph node
   assert.match(agent, /ref\("httpRequestTool__lookupOrder"\)/)
   // the connected lmChatOpenAi model node → provider-qualified model + temperature
-  assert.match(agent, /model: 'openai\/gpt-4o'/)
+  assert.match(agent, /model: "openai\/gpt-4o"/)
   assert.match(agent, /temperature: 0\.3/)
   // the connected memoryBufferWindow node → memory.lastMessages from contextWindowLength
   assert.match(agent, /memory: \{ lastMessages: 10 \}/)
@@ -568,7 +568,7 @@ test('agent with structured output parser → agent output Zod schema + resolved
   assert.ok(agent, 'agent file emitted')
 
   // Gemini model node: modelName `models/gemini-1.5-flash` → google/gemini-1.5-flash
-  assert.match(agent, /model: 'google\/gemini-1\.5-flash'/)
+  assert.match(agent, /model: "google\/gemini-1\.5-flash"/)
   assert.match(agent, /temperature: 0\.2/)
 
   // outputParserStructured (manual inputSchema) → agent `output` schema.
@@ -1010,4 +1010,55 @@ test('collection source → single per-item consumer lowers to a graph:fanout no
   assert.match(graph, /"caption": ref\("\$item", "title"\)/)
   // no residual ref against the whole array output
   assert.doesNotMatch(graph, /ref\("read", "url"\)/)
+})
+
+test('a lone chainLlm node maps to a tools-less pikkuAIAgent (goal from prompt, model from sub-node)', () => {
+  const parsed = parseN8n(loadFixture('ai-chain-llm.json'))
+  const { files } = generateWorkflowFromN8n(parsed)
+
+  const agent = files['themeExtractor/themeExtractor.agent.ts']
+  assert.ok(agent, 'agent file emitted')
+
+  assert.match(agent, /pikkuAIAgent\(\{/)
+  // goal carries the chain's prompt text
+  assert.match(agent, /goal: "Extract a list of themes from this/)
+  // model mapped from the connected lmChatOpenAi sub-node
+  assert.match(agent, /model: "openai\/gpt-4o-mini"/)
+  // tools-less
+  assert.match(agent, /tools: \[\]/)
+
+  // the chain is NOT emitted as a throwing integration stub
+  assert.ok(
+    !Object.keys(files).some(
+      (k) => k.includes('/functions/') && /chainLlm|basicLlmChain/i.test(k)
+    ),
+    'no chain stub function'
+  )
+})
+
+test('a lone informationExtractor maps to a structured-output agent (schema from inputSchema)', () => {
+  const parsed = parseN8n(loadFixture('ai-chain-extractor.json'))
+  const { files } = generateWorkflowFromN8n(parsed)
+  const agent = files['infoExtractor/infoExtractor.agent.ts']
+  assert.ok(agent, 'agent file emitted')
+
+  // goal from the extractor's systemPromptTemplate, not its input `text`
+  assert.match(agent, /goal: "Pull out the person's name and age\."/)
+  // structured output built from the node's own inputSchema
+  assert.match(agent, /import \{ z \} from 'zod'/)
+  assert.match(agent, /export const InfoExtractorOutput = z\.object/)
+  assert.match(agent, /name: z\.string\(\)/)
+  assert.match(agent, /age: z\.number\(\)/)
+  assert.match(agent, /output: InfoExtractorOutput,/)
+})
+
+test('a lone textClassifier maps to an agent whose output is a category enum', () => {
+  const parsed = parseN8n(loadFixture('ai-chain-classifier.json'))
+  const { files } = generateWorkflowFromN8n(parsed)
+  const agent = files['emailClassifier/emailClassifier.agent.ts']
+  assert.ok(agent, 'agent file emitted')
+
+  assert.match(agent, /category: z\.enum\(\["is_appointment", "is_spam"\]\)/)
+  assert.match(agent, /output: EmailClassifierOutput,/)
+  assert.match(agent, /tools: \[\]/)
 })

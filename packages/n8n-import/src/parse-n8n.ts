@@ -34,6 +34,24 @@ export class UnsupportedTopologyError extends Error {
   }
 }
 
+/**
+ * n8n LangChain *chain* nodes (as opposed to the Agent node) — a prompt + model,
+ * no tools. They map onto a tools-less `pikkuAIAgent` (goal = prompt,
+ * output = schema). `chainRetrievalQa` is excluded: it needs a vector store
+ * (blocked on #902), so it stays a stub.
+ */
+const CHAIN_AGENT_TYPES = new Set([
+  'chainllm',
+  'informationextractor',
+  'textclassifier',
+  'chainsummarization',
+  'sentimentanalysis',
+])
+
+export function isChainAgentType(typeShort: string): boolean {
+  return CHAIN_AGENT_TYPES.has(typeShort.toLowerCase())
+}
+
 /** Classify an n8n node by its type string. */
 function classifyByType(type: string): NodeRole {
   const short = typeShort(type).toLowerCase()
@@ -281,6 +299,19 @@ export function parseN8n(raw: unknown, nameHint?: string): ParsedWorkflow {
       rpcName,
       workflowRef,
     })
+  }
+
+  // A lone LangChain chain node (chainLlm, informationExtractor, …) with no
+  // real Agent node maps onto a tools-less agent. Promote it in place so it
+  // flows through the existing single-agent machinery. Multiple chains, or a
+  // chain alongside a real agent, are left as stubs (the graph model wires one
+  // agent per workflow) — a v2 concern.
+  const realAgents = nodes.filter((n) => n.role === 'agent')
+  const chainNodes = nodes.filter(
+    (n) => n.role === 'integration' && isChainAgentType(n.typeShort)
+  )
+  if (realAgents.length === 0 && chainNodes.length === 1) {
+    chainNodes[0]!.role = 'agent'
   }
 
   const shape = decideShape(nodes)
