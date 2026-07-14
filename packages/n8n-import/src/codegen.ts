@@ -574,7 +574,7 @@ function emitNext(next: NextValue): string {
 
 /**
  * Strip the `(ref) => (...)` wrapper off an emitted input so its object literal
- * can be embedded as a `graph:map` childInput value.
+ * can be embedded as a `graph:fanout` childInput value.
  */
 function inputObjectBody(input: string): string {
   return input.replace(/^\(ref\) => \(/, '').replace(/\)$/, '')
@@ -631,7 +631,7 @@ function emitGraphFile(
       return `    ${n.nodeId}: ${q(value)},`
     })
   for (const fan of fanout.maps) {
-    nodesLines.push(`    ${fan.mapNodeId}: "graph:map",`)
+    nodesLines.push(`    ${fan.mapNodeId}: "graph:fanout",`)
   }
 
   const triggerNodeIds = new Set(

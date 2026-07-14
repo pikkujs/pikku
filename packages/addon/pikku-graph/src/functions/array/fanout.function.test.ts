@@ -1,12 +1,11 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { map } from './map.function.js'
+import { fanout } from './fanout.function.js'
 
-const call = (data: any, wire: any) =>
-  (map as any).func({}, data, wire)
+const call = (data: any, wire: any) => (fanout as any).func({}, data, wire)
 
-describe('graph:map fan out', () => {
+describe('graph:fanout fan out', () => {
   test('invokes the child once per item, binding $item refs per element, ordered results', async () => {
     const calls: Array<{ step: string; rpc: string; data: any }> = []
     const workflow = {

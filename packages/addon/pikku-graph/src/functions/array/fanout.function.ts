@@ -2,7 +2,7 @@ import { z } from 'zod'
 import type { WorkflowWireDoRPC } from '@pikku/core/workflow'
 import { pikkuSessionlessFunc } from '#pikku'
 
-export const MapInput = z.object({
+export const FanoutInput = z.object({
   items: z
     .array(z.unknown())
     .describe('The array to fan out over — one child invocation per element'),
@@ -27,7 +27,7 @@ export const MapInput = z.object({
     ),
 })
 
-export const MapOutput = z
+export const FanoutOutput = z
   .array(z.unknown())
   .describe('Child results in the same order as the input items')
 
@@ -58,19 +58,19 @@ function resolveItemTemplate(value: any, item: unknown): any {
   return value
 }
 
-export const map = pikkuSessionlessFunc({
+export const fanout = pikkuSessionlessFunc({
   description:
     'Fan out over an array, invoking a child RPC once per element and collecting the ordered results',
-  node: { displayName: 'Map (Fan Out)', category: 'Array', type: 'action' },
-  input: MapInput,
-  output: MapOutput,
+  node: { displayName: 'Fan Out', category: 'Array', type: 'action' },
+  input: FanoutInput,
+  output: FanoutOutput,
   func: async (_services, data, { workflow }) => {
     if (!workflow) {
-      throw new Error('graph:map can only be called from within a workflow')
+      throw new Error('graph:fanout can only be called from within a workflow')
     }
     if (!Array.isArray(data.items)) {
       throw new Error(
-        `graph:map expected an array to fan out over but received ${typeof data.items}`
+        `graph:fanout expected an array to fan out over but received ${typeof data.items}`
       )
     }
 

@@ -922,7 +922,7 @@ test('executeWorkflow: a runtime-dynamic target skips the workflow with a diagno
   )
 })
 
-test('collection source → single per-item consumer lowers to a graph:map fanout node', () => {
+test('collection source → single per-item consumer lowers to a graph:fanout node', () => {
   const parsed = parseN8n(loadFixture('sheets-read-fanout.json'))
   const { files } = generateWorkflowFromN8n(parsed)
 
@@ -931,8 +931,8 @@ test('collection source → single per-item consumer lowers to a graph:map fanou
 
   // the read node is repointed to the ergonomic array-returning fn
   assert.match(graph, /read: "google-sheets:readRows"/)
-  // a synthetic map node registers graph:map; the consumer is absorbed
-  assert.match(graph, /postMap: "graph:map"/)
+  // a synthetic fanout node registers graph:fanout; the consumer is absorbed
+  assert.match(graph, /postMap: "graph:fanout"/)
   assert.doesNotMatch(graph, /\bpost: "graph:httpRequest"/)
   // the source now flows into the map node, not directly into the consumer
   assert.match(graph, /read: \{[\s\S]*next: "postMap"/)

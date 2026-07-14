@@ -4,9 +4,9 @@
  * n8n runs every node once per incoming item, so a "read"/"list" node that
  * returns an array implicitly loops its downstream consumers. Pikku's graph is
  * declarative (one value per node, no ambient fan-out), so that edge is lowered
- * into an explicit `graph:map` node: the collection source stays a node, and
+ * into an explicit `graph:fanout` node: the collection source stays a node, and
  * its single per-item consumer is pulled out of the graph flow and invoked once
- * per element as the map's `child`, with its `$json` references rebound to the
+ * per element as the fanout's `child`, with its `$json` references rebound to the
  * per-item `$item`.
  *
  * v1 is deliberately single-hop: it only lowers a collection source feeding
@@ -20,7 +20,7 @@ import type { ParsedNode } from './types.js'
 import { nativeSpecFor } from './native-map.js'
 
 export interface FanoutMap {
-  /** Synthetic `graph:map` node id inserted between the source and consumer. */
+  /** Synthetic `graph:fanout` node id inserted between the source and consumer. */
   mapNodeId: string
   /** The collection source whose array output is fanned out over. */
   sourceNodeId: string
@@ -41,13 +41,7 @@ export interface FanoutPlan {
 }
 
 /** Roles whose node exposes a callable rpc that can be a map child. */
-const CHILD_ROLES = new Set([
-  'integration',
-  'http',
-  'native',
-  'set',
-  'code',
-])
+const CHILD_ROLES = new Set(['integration', 'http', 'native', 'set', 'code'])
 
 function isCollectionSource(node: ParsedNode): boolean {
   return nativeSpecFor(node.typeShort, node.parameters)?.collection === true
