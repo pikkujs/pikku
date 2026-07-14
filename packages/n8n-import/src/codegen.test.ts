@@ -778,7 +778,7 @@ test('mid-flow respondToWebhook fails the import loudly', () => {
   )
 })
 
-test('Merge combine → graph:merge fed by all predecessors; append stays a stub', () => {
+test('Merge combine → graph:merge; append → graph:concat, both fed by all predecessors', () => {
   const parsed = parseN8n(loadFixture('merge-modes.json'))
   assert.equal(parsed.shape, 'pure-graph')
 
@@ -786,13 +786,31 @@ test('Merge combine → graph:merge fed by all predecessors; append stays a stub
   const graph = files['mergeModes/mergeModes.graph.ts']
   assert.ok(graph, 'graph file emitted')
 
-  // combine mode → graph:merge, items sourced from BOTH input branches
+  // combine mode → graph:merge (object merge), items sourced from BOTH branches
   assert.match(graph, /combine: "graph:merge"/)
   assert.match(graph, /items: \[ref\("a"\), ref\("b"\)\]/)
 
-  // append mode has no object-merge equivalent → honest stub, not a wrong map
-  assert.match(graph, /appended: "merge__appended"/)
-  assert.ok(files['mergeModes/functions/merge__appended.function.ts'])
+  // append mode concatenates the input streams → graph:concat over all inputs
+  assert.match(graph, /appended: "graph:concat"/)
+  assert.match(graph, /inputs: \[ref\("combine"\)\]/)
+  assert.ok(
+    !files['mergeModes/functions/merge__appended.function.ts'],
+    'append no longer leaves a stub'
+  )
+})
+
+test('Merge with no mode defaults to append → graph:concat (append is the zero-config default)', () => {
+  const parsed = parseN8n(loadFixture('merge-default.json'))
+  const { files } = generateWorkflowFromN8n(parsed)
+  const graph = files[Object.keys(files).find((k) => k.endsWith('.graph.ts'))!]
+  assert.ok(graph, 'graph file emitted')
+  assert.match(graph, /joined: "graph:concat"/)
+  assert.match(graph, /inputs: \[ref\("a"\), ref\("b"\)\]/)
+  assert.equal(
+    Object.keys(files).filter((f) => /\/functions\//.test(f)).length,
+    0,
+    'no stub functions for a bare-append merge of two Set nodes'
+  )
 })
 
 test('itemLists ops delegate to the standalone graph array transforms', () => {

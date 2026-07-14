@@ -63,12 +63,19 @@ const EXTRACT_BINARY_SOURCE: NativeFieldSpec = {
 
 // n8n Merge combine-family modes join the input branches' objects into one —
 // exactly graph:merge (shallow-merge, later overrides), fed by ALL predecessors.
-// append (concatenate streams) / chooseBranch / combineBySql / removeKeyMatches
-// are a different shape → left unmapped (stub). append needs a concat mode on
-// the addon (follow-up), so it's NOT force-mapped here.
+// chooseBranch / combineBySql / removeKeyMatches are a different shape → stub.
 const MERGE_COMBINE: NativeNodeSpec = {
   rpc: 'graph:merge',
   fields: { items: { fromAllPredecessors: true } },
+}
+
+// n8n Merge `append` concatenates the input branches' item streams into one →
+// graph:concat over all predecessors. append is also the node's zero-config
+// default (combine modes require field/position config), so a mode-less Merge
+// resolves here too via `defaultOperation`.
+const MERGE_APPEND: NativeNodeSpec = {
+  rpc: 'graph:concat',
+  fields: { inputs: { fromAllPredecessors: true } },
 }
 
 const INTEGRATION_NODES: Record<string, IntegrationNodeMap> = {
@@ -79,6 +86,7 @@ const INTEGRATION_NODES: Record<string, IntegrationNodeMap> = {
       default: {
         defaultOperation: 'append',
         operations: {
+          append: MERGE_APPEND,
           combine: MERGE_COMBINE,
           mergeByKey: MERGE_COMBINE,
           mergeByIndex: MERGE_COMBINE,
