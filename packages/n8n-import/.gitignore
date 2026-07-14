@@ -5,3 +5,6 @@ boot-report.json
 .harness-tmp/
 .corpus-ai/
 .n8n
+.corpus-dan/
+.corpus-awesome/
+.corpus-zie619-sanitized/

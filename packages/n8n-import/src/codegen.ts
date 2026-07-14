@@ -31,6 +31,8 @@ import {
 import { findAgentSubNode } from './ai-subnodes.js'
 import { mapModel } from './model-map.js'
 import { outputParserToZod } from './output-schema.js'
+import { planSubWorkflows, subWorkflowParsed } from './subworkflow.js'
+import { decideShape } from './parse-n8n.js'
 
 export interface ManifestEntry {
   rpcName: string
@@ -1010,7 +1012,12 @@ function emitAgentFile(
   targets: Map<string, string>
 ): string {
   const agent = parsed.agentNode!
-  const tools = parsed.nodes.filter((n) => n.role === 'agentTool')
+  const agentTools = parsed.nodes.filter((n) => n.role === 'agentTool')
+  // A tool backed by a sub-workflow (self `toolWorkflow` lifted into its own
+  // graph, or an executeWorkflow target) is an agent *workflow* capability, not
+  // an rpc tool — workflow graphs are not rpc-registered.
+  const tools = agentTools.filter((n) => !n.workflowRef)
+  const workflowTools = agentTools.filter((n) => n.workflowRef)
   const systemPrompt =
     (agent.parameters.text as string | undefined) ??
     (agent.parameters.systemMessage as string | undefined) ??
@@ -1023,11 +1030,18 @@ function emitAgentFile(
   const memoryNode = findAgentSubNode(parsed, agent.name, 'ai_memory')
   const outputZod = resolveOutputSchema(parsed, agent.name)
 
-  // A toolWorkflow tool references the target workflow by its registered name
-  // (self-recursion → this workflow's own name); other tools ref their stub rpc.
-  const toolLines = tools.map(
-    (t) => `    ref(${q(t.workflowRef ? targets.get(t.nodeId)! : t.rpcName)}),`
-  )
+  // rpc-backed tools ref their stub rpc; sub-workflow-backed tools become
+  // `workflows: [ref(<registered graph name>)]` (deduped — several tools may
+  // share one lifted sub-workflow).
+  const toolLines = tools.map((t) => `    ref(${q(t.rpcName)}),`)
+  const workflowNames = [
+    ...new Set(
+      workflowTools
+        .map((t) => targets.get(t.nodeId))
+        .filter((n): n is string => !!n)
+    ),
+  ]
+  const workflowLines = workflowNames.map((n) => `    ref(${q(n)}),`)
 
   const imports = [
     `import { pikkuAIAgent } from '#pikku/agent/pikku-agent-types.gen.js'`,
@@ -1063,6 +1077,9 @@ function emitAgentFile(
     tools.length > 0
       ? `  tools: [\n${toolLines.join('\n')}\n  ],`
       : `  tools: [],`,
+    ...(workflowNames.length > 0
+      ? [`  workflows: [\n${workflowLines.join('\n')}\n  ],`]
+      : []),
     ...(outputConst ? [`  output: ${outputConst},`] : []),
     `})`,
     ``,
@@ -1191,12 +1208,41 @@ export function generateWorkflowFromN8n(
   const credentialInstances = deriveCredentialInstances(parsed)
   const bindings = nodeInstanceBindings(credentialInstances)
 
-  const emitGraph = parsed.shape !== 'agent-only'
-  if (emitGraph) {
-    files[`${dir}/${parsed.slug}.graph.ts`] = emitGraphFile(parsed, targets)
+  // Lift self-referencing `toolWorkflow` bodies into their own sub-graphs and
+  // point the agent at them via `workflows: [ref(...)]`. The self tool's target
+  // is remapped from the whole workflow (the old, unrunnable `ref(graph)`) to
+  // its lifted sub-graph.
+  const subPlan = planSubWorkflows(parsed)
+  for (const [toolNodeId, subName] of subPlan.toolToWorkflow) {
+    targets.set(toolNodeId, subName)
   }
-  if (parsed.agentNode) {
-    files[`${dir}/${parsed.slug}.agent.ts`] = emitAgentFile(parsed, targets)
+  for (const sub of subPlan.subWorkflows) {
+    files[`${dir}/${sub.slug}.graph.ts`] = emitGraphFile(
+      subWorkflowParsed(parsed, sub),
+      targets
+    )
+  }
+
+  // The main graph excludes the lifted body nodes and their trigger; recompute
+  // the shape (often collapsing to agent-only once the tool body is gone).
+  const excluded = new Set([
+    ...subPlan.extractedNodeIds,
+    ...subPlan.triggerNodeIds,
+  ])
+  const mainParsed: ParsedWorkflow =
+    excluded.size > 0
+      ? (() => {
+          const mainNodes = parsed.nodes.filter((n) => !excluded.has(n.nodeId))
+          return { ...parsed, nodes: mainNodes, shape: decideShape(mainNodes) }
+        })()
+      : parsed
+
+  const emitGraph = mainParsed.shape !== 'agent-only'
+  if (emitGraph) {
+    files[`${dir}/${parsed.slug}.graph.ts`] = emitGraphFile(mainParsed, targets)
+  }
+  if (mainParsed.agentNode) {
+    files[`${dir}/${parsed.slug}.agent.ts`] = emitAgentFile(mainParsed, targets)
   }
 
   const emittedStubRpc = new Set<string>()

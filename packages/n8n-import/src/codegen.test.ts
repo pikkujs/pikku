@@ -322,6 +322,48 @@ test('agent + tool workflow → agent-only, no graph', () => {
   assert.equal(manifest[0]!.agentName, 'supportAssistant')
 })
 
+test('self-referencing toolWorkflow → lifted sub-graph + agent workflows:[ref], no broken tools ref', () => {
+  const parsed = parseN8n(loadFixture('self-workflow-tool.json'))
+  const { files } = generateWorkflowFromN8n(parsed)
+  const slug = parsed.slug // pageFetcherAssistant
+  const subName = `${slug}_fetchPage`
+
+  // the tool body is lifted into its own sub-workflow graph
+  const subGraph = files[`${slug}/${subName}.graph.ts`]
+  assert.ok(subGraph, 'sub-workflow graph emitted')
+  assert.match(subGraph, /pikkuWorkflowGraph\(/)
+  assert.match(subGraph, new RegExp(`name: "${subName}"`))
+  // the body nodes live in the sub-graph, wired off the executeWorkflowTrigger input
+  assert.match(subGraph, /buildConfig: "graph:editFields"/)
+  assert.match(subGraph, /fetch: "graph:httpRequest"/)
+  assert.match(subGraph, /ref\("trigger", "url"\)/)
+
+  // the agent references the sub-workflow via workflows:[], not a broken tools ref
+  const agent = files[`${slug}/${slug}.agent.ts`]
+  assert.ok(agent, 'agent emitted')
+  assert.match(agent, new RegExp(`workflows: \\[\\s*ref\\("${subName}"\\)`))
+  assert.match(agent, /tools: \[\],/)
+  // never the old, unrunnable whole-graph self-reference
+  assert.doesNotMatch(agent, /ref\("Page Fetcher Assistant"\)/)
+
+  // agent-only after extraction: no main graph, and no throwing tool stub
+  assert.ok(!files[`${slug}/${slug}.graph.ts`], 'no main graph (agent-only)')
+  assert.ok(
+    !Object.keys(files).some((k) => /toolworkflow|fetchpagetool/i.test(k)),
+    'no toolWorkflow stub function'
+  )
+
+  // the body nodes are NOT duplicated into any other graph
+  assert.ok(
+    !Object.entries(files).some(
+      ([k, v]) =>
+        k !== `${slug}/${subName}.graph.ts` &&
+        k.endsWith('.graph.ts') &&
+        v.includes('graph:httpRequest')
+    )
+  )
+})
+
 test('a reference to a named trigger node lowers to ref("trigger", …), not the trigger nodeId', () => {
   const parsed = parseN8n({
     name: 'Telegram Echo',

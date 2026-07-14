@@ -135,7 +135,7 @@ function collectAgentToolNames(wf: N8nWorkflow): Set<string> {
 }
 
 /** Decide the top-level artifact shape from the classified nodes. */
-function decideShape(nodes: ParsedNode[]): WorkflowShape {
+export function decideShape(nodes: ParsedNode[]): WorkflowShape {
   const agents = nodes.filter((n) => n.role === 'agent')
   if (agents.length === 0) return 'pure-graph'
   const mainFlow = nodes.filter(
