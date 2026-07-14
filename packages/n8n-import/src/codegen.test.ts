@@ -146,6 +146,29 @@ test('no-auth httpRequest → graph:httpRequest with mapped input; authed httpRe
   assert.ok(manifest.find((m) => m.rpcName === 'httpRequest__authFetch'))
 })
 
+test('duplicate header / query param names collapse last-wins (no duplicate object keys)', () => {
+  const parsed = parseN8n(loadFixture('http-duplicate-params.json'))
+  const { files } = generateWorkflowFromN8n(parsed)
+  const graph = files['httpDupParams/httpDupParams.graph.ts']
+  assert.ok(graph, 'graph file emitted')
+
+  // n8n keypair collections allow duplicate names; a JS object literal cannot.
+  // Collapse to last-wins (JS object-literal semantics), keeping first position.
+  assert.match(
+    graph,
+    /headers: \{ "Sec-Fetch-Dest": "document", "Accept": "application\/json" \}/
+  )
+  assert.match(graph, /query: \{ "type": "new" \}/)
+
+  // and the emitted literal must not repeat any key (would be TS1117)
+  const headerLine = graph.match(/headers: \{[^}]*\}/)![0]
+  assert.equal(
+    (headerLine.match(/"Sec-Fetch-Dest":/g) ?? []).length,
+    1,
+    'Sec-Fetch-Dest appears exactly once'
+  )
+})
+
 test('noop nodes are dropped and their edges rewired through (A → noop → B ⇒ A → B)', () => {
   const parsed = parseN8n(loadFixture('noop-passthrough.json'))
   const { files } = generateWorkflowFromN8n(parsed)

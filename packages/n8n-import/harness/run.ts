@@ -59,13 +59,14 @@ interface WorkflowResult {
 }
 
 function parseArgs(argv: string[]) {
-  const args = { full: false, dir: '', limit: Infinity, keep: false }
+  const args = { full: false, dir: '', limit: Infinity, keep: false, only: '' }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--full') args.full = true
     else if (a === '--dir') args.dir = argv[++i] ?? ''
     else if (a === '--limit') args.limit = Number(argv[++i])
     else if (a === '--keep') args.keep = true
+    else if (a === '--only') args.only = argv[++i] ?? ''
   }
   return args
 }
@@ -140,7 +141,9 @@ function classifyRoleStatus(role: string): 'supported' | 'stubbed' | 'skipped' {
 function main() {
   const args = parseArgs(process.argv.slice(2))
   const corpusDir = resolveCorpusDir(args)
-  const files = findJsonFiles(corpusDir).slice(0, args.limit)
+  const files = findJsonFiles(corpusDir)
+    .filter((f) => (args.only ? f.includes(args.only) : true))
+    .slice(0, args.limit)
 
   if (files.length === 0) {
     console.error(`No .json workflows found in ${corpusDir}`)

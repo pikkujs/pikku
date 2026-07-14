@@ -252,19 +252,28 @@ function emitSetInput(node: ParsedNode, ctx: ExprContext): string | null {
   ].join('\n')
 }
 
-/** Render an n8n keypair collection (`[{ name, value }]`) as an object literal. */
+/**
+ * Render an n8n keypair collection (`[{ name, value }]`) as an object literal.
+ * n8n allows the same name more than once (e.g. a copy-pasted `Sec-Fetch-Dest`
+ * header); a JS object literal cannot. Collapse duplicates last-wins — the JS
+ * object-literal runtime rule — keeping each key at its first position.
+ */
 function emitParamObject(params: unknown, ctx: ExprContext): string | null {
   if (!Array.isArray(params)) return null
-  const entries: string[] = []
+  const entries = new Map<string, string>()
   for (const p of params) {
     if (!p || typeof p !== 'object') continue
     const name = String((p as Record<string, unknown>).name ?? '')
     if (!name) continue
     const rendered = emitValue((p as Record<string, unknown>).value, ctx)
     if (rendered === null) continue
-    entries.push(`${q(name)}: ${rendered}`)
+    entries.set(name, rendered)
   }
-  return entries.length > 0 ? `{ ${entries.join(', ')} }` : null
+  if (entries.size === 0) return null
+  const parts = [...entries].map(
+    ([name, rendered]) => `${q(name)}: ${rendered}`
+  )
+  return `{ ${parts.join(', ')} }`
 }
 
 /**

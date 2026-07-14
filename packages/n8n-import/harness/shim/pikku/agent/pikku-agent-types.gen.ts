@@ -10,6 +10,7 @@ export type AIAgentConfig = {
   output?: unknown
   tools?: unknown[]
   agents?: unknown[]
+  workflows?: unknown[]
   maxSteps?: number
 }
 
