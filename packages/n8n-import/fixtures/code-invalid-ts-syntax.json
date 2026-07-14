@@ -1,0 +1,37 @@
+{
+  "name": "Invalid TS Syntax",
+  "nodes": [
+    {
+      "id": "t1",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {}
+    },
+    {
+      "id": "c1",
+      "name": "Octal Chat Id",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [200, 0],
+      "parameters": {
+        "jsCode": "const accounts = { \"team\": 00000000 }\nreturn [{ json: { chatId: accounts.team } }]"
+      }
+    },
+    {
+      "id": "c2",
+      "name": "Html Comment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 0],
+      "parameters": {
+        "jsCode": "const a = 1\n<!-- build the html -->\nreturn [{ json: { a } }]"
+      }
+    }
+  ],
+  "connections": {
+    "Schedule": { "main": [[{ "node": "Octal Chat Id", "type": "main", "index": 0 }]] },
+    "Octal Chat Id": { "main": [[{ "node": "Html Comment", "type": "main", "index": 0 }]] }
+  }
+}

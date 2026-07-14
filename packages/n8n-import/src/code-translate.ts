@@ -1,3 +1,4 @@
+import ts from 'typescript'
 import type { ParsedNode } from './types.js'
 
 /**
@@ -58,6 +59,22 @@ const BAIL: Array<[RegExp, string]> = [
 ]
 
 /**
+ * The body is emitted verbatim under `// @ts-nocheck`, which suppresses *type*
+ * errors but not *syntax* errors — legal JavaScript that isn't legal TypeScript
+ * (octal literals like `00000000`, stray HTML comments) is a hard parse failure
+ * @ts-nocheck cannot silence. Parse the body in its emitted function context and
+ * report any syntactic diagnostic, so such nodes fall back to a throwing stub.
+ */
+function hasTsSyntaxError(source: string): boolean {
+  const wrapped = `async function __n8n(){\n${source}\n}`
+  const { diagnostics = [] } = ts.transpileModule(wrapped, {
+    reportDiagnostics: true,
+    compilerOptions: { target: ts.ScriptTarget.Latest },
+  })
+  return diagnostics.some((d) => d.category === ts.DiagnosticCategory.Error)
+}
+
+/**
  * Decide whether an n8n Code node's body can be lowered 1:1 into a Pikku
  * function. Pure module — no fs, no codegen — so it can drive both naming
  * (a translatable node is not a stub) and emission.
@@ -76,6 +93,9 @@ export function translateCodeNode(node: ParsedNode): CodeTranslation {
 
   for (const [pattern, reason] of BAIL)
     if (pattern.test(code)) return { translatable: false, reason }
+
+  if (hasTsSyntaxError(code))
+    return { translatable: false, reason: 'not valid TypeScript syntax' }
 
   const mode: 'all' | 'each' =
     node.parameters.mode === 'runOnceForEachItem' ||

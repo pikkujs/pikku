@@ -124,3 +124,31 @@ test('a `.import(` method call is not mistaken for an ES import', () => {
   )
   assert.equal(t.translatable, true)
 })
+
+test('an octal literal (valid JS, invalid TS) bails to a stub', () => {
+  const t = translateCodeNode(
+    codeNode({
+      jsCode: 'const chatId = 00000000;\nreturn [{ json: { chatId } }]',
+    })
+  )
+  assert.equal(t.translatable, false)
+  assert.equal(!t.translatable && /TypeScript/.test(t.reason), true)
+})
+
+test('an embedded HTML comment (invalid TS syntax) bails to a stub', () => {
+  const t = translateCodeNode(
+    codeNode({
+      jsCode:
+        'const a = 1;\n<!-- Modify the HTML -->\nreturn [{ json: { a } }]',
+    })
+  )
+  assert.equal(t.translatable, false)
+  assert.equal(!t.translatable && /TypeScript/.test(t.reason), true)
+})
+
+test('a body with only undefined n8n identifiers stays translatable (semantic, not syntactic)', () => {
+  const t = translateCodeNode(
+    codeNode({ jsCode: 'return [{ json: { v: $("Other").first().json.v } }]' })
+  )
+  assert.equal(t.translatable, true)
+})
