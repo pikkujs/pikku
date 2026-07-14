@@ -27,6 +27,12 @@ export const AggregateInput = z.object({
     .array(AggregateFieldInput)
     .optional()
     .describe('Collect several fields at once into one output item'),
+  includeAllItems: z
+    .boolean()
+    .optional()
+    .describe(
+      'Collect the entire items into a single list field (n8n aggregateAllItemData)'
+    ),
 })
 
 export const AggregateOutput = z.object({
@@ -68,6 +74,10 @@ export const aggregate = pikkuSessionlessFunc({
         })
       }
       return values
+    }
+
+    if (data.includeAllItems) {
+      return { item: { [data.outputField ?? 'data']: data.items } }
     }
 
     if (data.fields && data.fields.length > 0) {

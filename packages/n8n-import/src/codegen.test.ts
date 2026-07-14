@@ -818,7 +818,7 @@ test('itemLists ops delegate to the standalone graph array transforms', () => {
   assert.ok(files['itemListsModes/functions/itemLists__concat.function.ts'])
 })
 
-test('aggregate: multiple rows → graph:aggregate fields[]; aggregateAllItemData stays a stub', () => {
+test('aggregate: multiple rows → graph:aggregate fields[]; aggregateAllItemData → whole-item mode', () => {
   const parsed = parseN8n(loadFixture('aggregate-multifield.json'))
   assert.equal(parsed.shape, 'pure-graph')
 
@@ -834,10 +834,13 @@ test('aggregate: multiple rows → graph:aggregate fields[]; aggregateAllItemDat
     /fields: \[\{ field: "text" \}, \{ field: "repost\.text", outputField: "repost" \}\]/
   )
 
-  // aggregateAllItemData is a different shape (whole items) → honest stub
-  assert.match(graph, /allData: "aggregate__allData"/)
+  // aggregateAllItemData (collect whole items) → graph:aggregate whole-item mode
+  assert.match(graph, /allData: "graph:aggregate"/)
+  assert.match(graph, /includeAllItems: true/)
+  assert.match(graph, /outputField: "data"/)
   assert.ok(
-    files['aggregateMultiField/functions/aggregate__allData.function.ts']
+    !files['aggregateMultiField/functions/aggregate__allData.function.ts'],
+    'aggregateAllItemData no longer leaves a stub'
   )
 })
 

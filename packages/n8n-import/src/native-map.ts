@@ -354,6 +354,24 @@ const NATIVE_NODES: Record<string, NativeNodeSpec> = {
   },
 }
 
+// n8n's Aggregate `aggregateAllItemData` mode collects the WHOLE incoming items
+// into a single list field (`destinationFieldName`, default `data`) — a
+// different shape from the per-field `aggregateIndividualFields` map above. It
+// lowers onto the same graph:aggregate via its whole-item flag. The field
+// include/exclude sub-modes drop or keep specific keys → those stay a stub.
+const AGGREGATE_ALL_ITEMS: NativeNodeSpec = {
+  rpc: 'graph:aggregate',
+  applies: (p) => {
+    const include = (p.options as Record<string, unknown> | undefined)?.include
+    return include === undefined || include === 'allFields'
+  },
+  fields: {
+    items: { fromPredecessor: true },
+    includeAllItems: { default: true },
+    outputField: { from: 'destinationFieldName', default: 'data' },
+  },
+}
+
 // n8n's legacy Item Lists node is a multiplexer over the same array transforms
 // that later became standalone nodes — and it carries the identical parameter
 // shapes (fieldToSplitOut, sortFieldsUi.sortField, fieldsToAggregate, …). So an
@@ -376,6 +394,14 @@ export function nativeSpecFor(
     const op = (parameters?.operation as string) ?? 'splitOutItems'
     const target = ITEMLISTS_OP_TO_TYPE[op]
     return target ? nativeSpecFor(target, parameters) : undefined
+  }
+  if (
+    typeShort.toLowerCase() === 'aggregate' &&
+    parameters?.aggregate === 'aggregateAllItemData'
+  ) {
+    return AGGREGATE_ALL_ITEMS.applies!(parameters)
+      ? AGGREGATE_ALL_ITEMS
+      : undefined
   }
   const spec = NATIVE_NODES[typeShort.toLowerCase()]
   if (spec) {
