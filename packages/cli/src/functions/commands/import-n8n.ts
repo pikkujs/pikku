@@ -1,5 +1,5 @@
 import { existsSync } from 'fs'
-import { isAbsolute, join, resolve } from 'path'
+import { basename, isAbsolute, join, resolve } from 'path'
 import { mkdir, readFile, writeFile } from 'fs/promises'
 import { pikkuSessionlessFunc } from '#pikku'
 import { parseN8n, generateWorkflowFromN8n } from '@pikku/n8n-import'
@@ -35,7 +35,7 @@ export const pikkuImportN8n = pikkuSessionlessFunc<
     let parsed
     try {
       const raw = JSON.parse(await readFile(inputPath, 'utf-8'))
-      parsed = parseN8n(raw)
+      parsed = parseN8n(raw, basename(inputPath).replace(/\.json$/i, ''))
     } catch (err) {
       logger.error(`Failed to parse n8n workflow: ${(err as Error).message}`)
       process.exit(1)

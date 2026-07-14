@@ -150,14 +150,20 @@ export function decideShape(nodes: ParsedNode[]): WorkflowShape {
 
 /**
  * Parse an n8n workflow export into the normalized IR. Pure — no fs.
+ *
+ * `nameHint` (e.g. the source filename, minus extension) names the workflow when
+ * the export itself is nameless — ~half of real-world exports carry no `name`,
+ * and without a hint they would all collapse onto the same `importedWorkflow`
+ * slug. A present, non-blank `wf.name` always wins over the hint.
  */
-export function parseN8n(raw: unknown): ParsedWorkflow {
+export function parseN8n(raw: unknown, nameHint?: string): ParsedWorkflow {
   const wf = raw as N8nWorkflow
   if (!wf || !Array.isArray(wf.nodes)) {
     throw new Error('Invalid n8n workflow: missing `nodes` array')
   }
 
-  const name = sanitizeDisplayName(wf.name || 'imported-workflow')
+  const rawName = wf.name?.trim() || nameHint?.trim() || 'imported-workflow'
+  const name = sanitizeDisplayName(rawName)
   const slug = sanitizeIdentifier(name)
   const toolNames = collectAgentToolNames(wf)
 
