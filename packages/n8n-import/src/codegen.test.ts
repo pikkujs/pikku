@@ -1095,3 +1095,24 @@ test('multi-chain pipeline → graph wiring N distinct tools-less agents (one .a
     )
   )
 })
+
+test('chain + real Agent → two agents; tools attributed to the Agent, none to the chain (v2.1)', () => {
+  const parsed = parseN8n(loadFixture('ai-chain-plus-agent.json'))
+  assert.equal(parsed.shape, 'graph-with-agent')
+  const { files } = generateWorkflowFromN8n(parsed)
+
+  const graph = files['triageAndReply/triageAndReply.graph.ts']
+  const summarize = files['triageAndReply/triageAndReply_summarize.agent.ts']
+  const replyAgent = files['triageAndReply/triageAndReply_replyAgent.agent.ts']
+  assert.ok(graph && summarize && replyAgent, 'graph + both agent files')
+
+  // graph wires the chain into the real agent
+  assert.match(graph, /summarize: "triageAndReply_summarizeAgent"/)
+  assert.match(graph, /replyAgent: "triageAndReply_replyAgentAgent"/)
+  assert.match(graph, /summarize: \{[^}]*next: "replyAgent"/s)
+
+  // the chain is tools-less
+  assert.match(summarize, /tools: \[\]/)
+  // the real Agent keeps its own tool, not cross-wired to the chain
+  assert.match(replyAgent, /tools: \[\s*ref\("toolHttpRequest__search"\)/)
+})

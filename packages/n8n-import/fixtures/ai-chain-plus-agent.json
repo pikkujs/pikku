@@ -1,0 +1,18 @@
+{
+  "name": "Triage And Reply",
+  "nodes": [
+    { "id": "t", "name": "Webhook", "type": "n8n-nodes-base.webhook", "typeVersion": 1, "position": [0,0], "parameters": { "path": "x" } },
+    { "id": "cl", "name": "Summarize", "type": "@n8n/n8n-nodes-langchain.chainLlm", "typeVersion": 1.4, "position": [200,0], "parameters": { "text": "=Summarize: {{ $json.body }}", "promptType": "define" } },
+    { "id": "ag", "name": "Reply Agent", "type": "@n8n/n8n-nodes-langchain.agent", "typeVersion": 1.7, "position": [400,0], "parameters": { "text": "=Draft a reply", "promptType": "define", "options": { "systemMessage": "You are a helpful assistant. Use the search tool." } } },
+    { "id": "m1", "name": "Model A", "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi", "typeVersion": 1, "position": [200,200], "parameters": { "model": "gpt-4o-mini" } },
+    { "id": "m2", "name": "Model B", "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi", "typeVersion": 1, "position": [400,200], "parameters": { "model": "gpt-4o" } },
+    { "id": "tl", "name": "Search", "type": "@n8n/n8n-nodes-langchain.toolHttpRequest", "typeVersion": 1, "position": [400,300], "parameters": { "url": "https://api.example.com/search" } }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Summarize", "type": "main", "index": 0 }]] },
+    "Summarize": { "main": [[{ "node": "Reply Agent", "type": "main", "index": 0 }]] },
+    "Model A": { "ai_languageModel": [[{ "node": "Summarize", "type": "ai_languageModel", "index": 0 }]] },
+    "Model B": { "ai_languageModel": [[{ "node": "Reply Agent", "type": "ai_languageModel", "index": 0 }]] },
+    "Search": { "ai_tool": [[{ "node": "Reply Agent", "type": "ai_tool", "index": 0 }]] }
+  }
+}

@@ -306,16 +306,14 @@ export function parseN8n(raw: unknown, nameHint?: string): ParsedWorkflow {
   }
 
   // LangChain chain nodes (chainLlm, informationExtractor, …) each map onto a
-  // tools-less agent. Promote them in place so they flow through the agent
-  // machinery — one or many per workflow. A chain alongside a *real* Agent node
-  // is left a stub (tool attribution across mixed agents is a v2.1 concern); the
-  // real agent still emits on its own.
-  const realAgents = nodes.filter((n) => n.role === 'agent')
-  const chainNodes = nodes.filter(
-    (n) => n.role === 'integration' && isChainAgentType(n.typeShort)
-  )
-  if (realAgents.length === 0) {
-    for (const chain of chainNodes) chain.role = 'agent'
+  // tools-less agent. Promote every one so they flow through the agent
+  // machinery — one or many per workflow, and alongside any real Agent node.
+  // Each agent's tools are attributed by its own `ai_tool` connections, so a
+  // chain (which has none) and a real Agent coexist without cross-wiring.
+  for (const node of nodes) {
+    if (node.role === 'integration' && isChainAgentType(node.typeShort)) {
+      node.role = 'agent'
+    }
   }
 
   const shape = decideShape(nodes)
